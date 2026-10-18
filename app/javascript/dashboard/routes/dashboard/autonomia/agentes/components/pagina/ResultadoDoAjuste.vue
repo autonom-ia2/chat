@@ -57,7 +57,8 @@ const cor = computed(() => {
     : 'bg-n-amber-2 ring-n-amber-6';
 });
 // #1428 (entrega B) — as perguntas de prova chegam depois do cartão: "Testando…", depois ✓ ou ⚠ com a lista
-// (pergunta do cliente e resposta do agente; nunca trecho da instrução). Indisponível: linha neutra, sem ✓.
+// (pergunta do cliente e resposta do agente; nunca trecho da instrução). Indisponível, ou nenhuma pergunta
+// que toque a mudança (`total` 0: o placar só conta essas): linha neutra, sem ✓.
 const prova = computed(() => props.resultado.prova || null);
 const provaOk = computed(() => prova.value?.ok === prova.value?.total);
 const verProva = ref(false);
@@ -173,6 +174,15 @@ const podeDesfazer = computed(
       </p>
       <template v-else>
         <p
+          v-if="!prova.total"
+          data-sem-teste
+          class="flex items-center gap-3 m-0 text-sm text-n-slate-11"
+        >
+          <span class="i-lucide-info size-5 shrink-0" aria-hidden="true" />
+          {{ t(`${NS}.PROVA_SEM_TESTE`) }}
+        </p>
+        <p
+          v-else
           class="flex items-center gap-3 m-0 text-sm font-semibold text-n-slate-12"
         >
           <span

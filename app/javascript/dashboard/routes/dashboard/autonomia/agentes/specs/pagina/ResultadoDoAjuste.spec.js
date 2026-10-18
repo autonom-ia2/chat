@@ -194,6 +194,20 @@ describe('ResultadoDoAjuste', () => {
       expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
     });
 
+    it('no check when no question touched the change (only those count)', async () => {
+      const wrapper = montar({ prova: { ...PRONTA, ok: 0, total: 0 } });
+      const prova = wrapper.find('[data-prova]');
+
+      expect(prova.find('[data-sem-teste]').text()).toBe(
+        'As perguntas não testaram a mudança.'
+      );
+      expect(prova.text()).not.toContain('perguntas de prova ok');
+      expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
+      expect(prova.find('.i-lucide-triangle-alert').exists()).toBe(false);
+      await wrapper.find('[data-ver-prova]').trigger('click');
+      expect(prova.findAll('li')).toHaveLength(2);
+    });
+
     it('says it could not test on a neutral line, without a check', () => {
       const prova = montar({
         prova: { status: 'indisponivel', total: 3 },

@@ -39,7 +39,7 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
 
   before do
     allow(Autonomia::Agents::JuizDaProva).to receive(:new).and_return(juiz)
-    allow(juiz).to receive(:julgar) { |itens:, **| Array.new(itens.size, true) }
+    allow(juiz).to receive(:julgar) { |itens:, **| Array.new(itens.size, 'ok') }
   end
 
   describe 'o fechamento do ajuste' do
@@ -98,7 +98,7 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
 
     it 'responde cada pergunta em modo prova, com a feature própria, e grava pronta com o veredito do juiz' do
       agente_responde(resposta('Passo para a equipe.'), resposta(nil, handoff: true))
-      allow(juiz).to receive(:julgar).and_return([true, false])
+      allow(juiz).to receive(:julgar).and_return(%w[ok nao])
 
       provar!
 
@@ -175,16 +175,78 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(estado['prova']['status']).to eq('pendente')
     end
 
-    it 'o Desfazer no meio da prova (depois das respostas) descarta o resultado' do
-      allow(Autonomia::Agents::Answerer).to receive(:new) do
-        agent.reload.desfazer_ajuste!(thread: Autonomia::Agents::BuildThread.find(thread.id)) unless estado.dig('ultimo_ajuste', 'desfeito')
+    # P3 (revisão): o Desfazer depois da primeira resposta para a prova antes da segunda pergunta e do juiz.
+    it 'o Desfazer no meio da prova para na próxima pergunta, sem chamar o juiz' do
+      allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
+        perguntados << kwargs
+        agent.reload.desfazer_ajuste!(thread: Autonomia::Agents::BuildThread.find(thread.id))
         instance_double(Autonomia::Agents::Answerer, answer: resposta('ok'))
       end
 
       provar!
 
+      expect(perguntados.size).to eq(1)
+      expect(juiz).not_to have_received(:julgar)
       expect(estado.dig('ultimo_ajuste', 'desfeito')).to be(true)
       expect(estado['prova']['status']).to eq('pendente')
+    end
+
+    it 'o Desfazer durante a última resposta: o juiz não é chamado' do
+      chamadas = 0
+      allow(Autonomia::Agents::Answerer).to receive(:new) do
+        chamadas += 1
+        agent.reload.desfazer_ajuste!(thread: Autonomia::Agents::BuildThread.find(thread.id)) if chamadas == perguntas.size
+        instance_double(Autonomia::Agents::Answerer, answer: resposta('ok'))
+      end
+
+      provar!
+
+      expect(chamadas).to eq(perguntas.size)
+      expect(juiz).not_to have_received(:julgar)
+    end
+
+    # P2 (revisão): o job repetido depois da prova pronta não gasta nada.
+    it 'repetido depois de pronta: não responde, não julga e não regrava' do
+      agente_responde
+      provar!
+      pronta = estado['prova']
+      perguntados.clear
+
+      provar!
+
+      expect(perguntados).to be_empty
+      expect(juiz).to have_received(:julgar).once
+      expect(estado['prova']).to eq(pronta)
+    end
+
+    it 'nunca regrava uma prova que já saiu de pendente, nem pela guarda do UPDATE' do
+      agente_responde
+      provar!
+      prova = described_class.new(thread.reload, versao_aplicada)
+      allow(prova).to receive(:vigente?).and_return(true)
+
+      expect(prova.send(:gravar!, 'status' => 'indisponivel')).to be(false)
+      expect(estado['prova']['status']).to eq('pronta')
+    end
+
+    # Revisão (MÉDIA): nada de ✓ falso. O placar conta só as perguntas que tocam a mudança.
+    it 'a pergunta que não toca a mudança fica fora do placar' do
+      agente_responde
+      allow(juiz).to receive(:julgar).and_return(%w[ok nao_testa])
+
+      provar!
+
+      expect(estado['prova']).to include('status' => 'pronta', 'ok' => 1, 'total' => 1)
+    end
+
+    it 'nenhuma pergunta toca a mudança: pronta com total 0 (a tela não mostra ✓)' do
+      agente_responde
+      allow(juiz).to receive(:julgar).and_return(%w[nao_testa nao_testa])
+
+      provar!
+
+      expect(estado['prova']).to include('status' => 'pronta', 'ok' => 0, 'total' => 0)
+      expect(estado['prova']['perguntas'].size).to eq(2)
     end
 
     # A corrida: o Desfazer entra entre a conferência e a escrita. A guarda do próprio UPDATE segura sozinha.

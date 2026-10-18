@@ -1349,6 +1349,7 @@
             "PROVA_TESTANDO": "Testing with {n} proof question… | Testing with {n} proof questions…",
             "PROVA": "{ok} of {total} proof questions ok",
             "PROVA_INDISPONIVEL": "I couldn't test it now. Use the test on the side to see how it turned out.",
+            "PROVA_SEM_TESTE": "The questions did not test the change.",
             "VER_PROVA": "See the questions",
             "ESCONDER_PROVA": "Hide the questions",
             "CLIENTE": "Customer:",

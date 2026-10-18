@@ -74,6 +74,31 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(Autonomia::Agents::Tools::Bound).not_to have_received(:for_agent)
   end
 
+  # Revisão (INFO): sem ferramenta, o agente é avisado para não afirmar que agendou, enviou ou registrou.
+  it 'na prova, o aviso de teste sem ferramentas vai como último item do input' do
+    openai_devolve(output_text: resposta_ok)
+
+    provar
+
+    ultimo = corpos.first['input'].last
+    expect(ultimo).to eq('role' => 'developer', 'content' => [{ 'type' => 'input_text', 'text' => described_class::AVISO_DA_PROVA }])
+    expect(described_class::AVISO_DA_PROVA)
+      .to eq('Isto é um teste sem ferramentas: não diga que agendou, enviou ou registrou algo; diga o que faria.')
+  end
+
+  it 'fora da prova, o input é o do PromptBuilder byte a byte, sem o aviso' do
+    openai_devolve(output_text: resposta_ok)
+    esperado = nil
+    allow(Autonomia::Agents::PromptBuilder).to receive(:new).and_wrap_original do |original, **kwargs|
+      original.call(**kwargs).tap { |prompt| esperado = prompt.input }
+    end
+
+    described_class.new(agent: agent, query: 'Quanto custa?', feature: 'agente_teste').answer
+
+    expect(corpos.first['input'].to_json).to eq(esperado.to_json)
+    expect(corpos.first.to_json).not_to include('teste sem ferramentas')
+  end
+
   it 'teto de 30 s e sem nova tentativa, com a feature da prova' do
     cliente = instance_double(Crm::Ai::ResponsesClient)
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)

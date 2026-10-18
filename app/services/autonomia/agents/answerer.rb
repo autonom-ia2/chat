@@ -71,6 +71,8 @@ module Autonomia
 
       # A prova do ajuste: o teto de cada resposta (entrega B do #1428).
       PROVA_TIMEOUT_S = 30
+      # Na prova o agente roda sem ferramenta: ele é avisado para não afirmar o que não fez.
+      AVISO_DA_PROVA = 'Isto é um teste sem ferramentas: não diga que agendou, enviou ou registrou algo; diga o que faria.'.freeze
 
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
@@ -316,7 +318,7 @@ module Autonomia
         raw = @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
           instructions: @prompt.instructions,
-          input: @prompt.input,
+          input: entrada_do_modelo,
           schema: schema_da_resposta,
           reasoning_effort: Config::ANSWERER_REASONING_EFFORT,
           tools: answer_tools,
@@ -327,6 +329,13 @@ module Autonomia
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
       rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
         ia_indisponivel(e)
+      end
+
+      # A entrada do PromptBuilder e, só na prova, o aviso de que é um teste sem ferramentas.
+      def entrada_do_modelo
+        return @prompt.input unless @prova
+
+        @prompt.input + [PromptParts::Mensagem.montar('developer', AVISO_DA_PROVA)]
       end
 
       def montar_prompt(snippets)

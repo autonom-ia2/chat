@@ -17,6 +17,10 @@ class Autonomia::Agents::ProvaDoAjuste
   FORA = %w[insurance_quote].freeze
   # Pendente há mais que isto, a prova não vem mais (o job morreu ou não rodou): a tela mostra "não consegui testar".
   VALIDADE_DO_PENDENTE = 3.minutes
+  # A guarda da escrita, no próprio UPDATE: a prova pendente deste ajuste, que segue o último e não desfeito.
+  AINDA_VALE = "state->'prova'->>'status' = 'pendente' AND state->'prova'->>'versao_id' = :versao " \
+               "AND state->'ultimo_ajuste'->>'versao_id' = :versao " \
+               "AND coalesce(state->'ultimo_ajuste'->>'desfeito', 'false') <> 'true'".freeze
 
   # O campo do schema do ajuste (AjustePorLista): na mesma chamada do Construtor, sem chamada a mais.
   PERGUNTAS_DESCRIPTION =
@@ -48,14 +52,21 @@ class Autonomia::Agents::ProvaDoAjuste
     @versao_id = versao_id
   end
 
+  # Confere antes de cada pergunta e antes do juiz: depois de um Desfazer, para na próxima; repetido depois de pronta,
+  # não gasta nada.
   def rodar!
     return unless vigente?
 
-    perguntas = Array(@thread.state.dig('prova', 'perguntas')).pluck('pergunta')
-    respostas = perguntas.map { |pergunta| responder(pergunta) }
-    return gravar!('status' => 'indisponivel') if respostas.any?(&:nil?)
+    itens = []
+    Array(@thread.state.dig('prova', 'perguntas')).pluck('pergunta').each do |pergunta|
+      return false unless vigente?
 
-    julgar_e_gravar!(perguntas, respostas)
+      resposta = responder(pergunta)
+      return gravar!('status' => 'indisponivel') if resposta.nil?
+
+      itens << resposta.merge('pergunta' => pergunta)
+    end
+    julgar_e_gravar!(itens) if vigente?
   rescue StandardError => e
     Rails.logger.warn("[autonomia][prova_do_ajuste] falhou thread=#{@thread.id} #{e.class}")
     gravar!('status' => 'indisponivel')
@@ -63,12 +74,13 @@ class Autonomia::Agents::ProvaDoAjuste
 
   private
 
-  def julgar_e_gravar!(perguntas, respostas)
-    itens = perguntas.zip(respostas).map { |pergunta, resposta| resposta.merge('pergunta' => pergunta) }
+  # O placar conta só as perguntas que tocam a mudança (`total` 0: nenhuma testou, a tela não mostra ✓).
+  def julgar_e_gravar!(itens)
     veredito = Autonomia::Agents::JuizDaProva.new(account: @thread.account).julgar(pedidos: pedidos_aplicados, itens: itens)
     return gravar!('status' => 'indisponivel') if veredito.nil?
 
-    gravar!('status' => 'pronta', 'ok' => veredito.count(true), 'total' => itens.size, 'perguntas' => itens)
+    gravar!('status' => 'pronta', 'ok' => veredito.count('ok'), 'total' => veredito.count { |item| item != 'nao_testa' },
+            'perguntas' => itens)
   end
 
   # A resposta do agente, pelo mesmo caminho do Testar, sem ferramenta. nil quando a IA falhou. `equipe`: o agente
@@ -89,11 +101,13 @@ class Autonomia::Agents::ProvaDoAjuste
          .map { |item| item.slice('pedido', 'resumo') }.uniq
   end
 
-  # O ajuste desta prova ainda é o último da conversa e ainda vale (não desfeito, o agente com os campos que ele gravou).
+  # A prova ainda está pendente, e o ajuste dela ainda é o último da conversa e vale (não desfeito, o agente com os campos
+  # que ele gravou).
   def vigente?
     @thread.reload
     estado = @thread.state.to_h
-    @thread.agent.present? && estado.dig('prova', 'versao_id') == @versao_id &&
+    prova = estado['prova'].to_h
+    @thread.agent.present? && prova['status'] == 'pendente' && prova['versao_id'] == @versao_id &&
       estado.dig('ultimo_ajuste', 'versao_id') == @versao_id && @thread.agent.conversa_desfazivel&.id == @thread.id
   end
 
@@ -102,9 +116,7 @@ class Autonomia::Agents::ProvaDoAjuste
     return false unless vigente?
 
     prova = @thread.state['prova'].merge(resultado)
-    Autonomia::Agents::BuildThread.where(id: @thread.id)
-                                  .where("state->'prova'->>'versao_id' = :versao AND state->'ultimo_ajuste'->>'versao_id' = :versao " \
-                                         "AND coalesce(state->'ultimo_ajuste'->>'desfeito', 'false') <> 'true'", versao: @versao_id.to_s)
+    Autonomia::Agents::BuildThread.where(id: @thread.id).where(AINDA_VALE, versao: @versao_id.to_s)
                                   .update_all(["state = jsonb_set(state, '{prova}', ?::jsonb)", prova.to_json]) == 1 # rubocop:disable Rails/SkipsModelValidations
   end
 end
