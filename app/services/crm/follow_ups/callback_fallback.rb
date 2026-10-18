@@ -16,17 +16,25 @@ module Crm::FollowUps::CallbackFallback
     { KEY => { 'automation_mode' => follow_up.automation_mode, 'description' => follow_up.description } }
   end
 
-  # Aviso atrasado, caído por falha passageira, de um envio que era automático.
+  # Aviso atrasado, caído por falha passageira, de um envio que era automático, sem outro envio automático do mesmo tipo
+  # esperando no card (o cliente receberia duas mensagens).
   def restorable?(follow_up)
     metadata = follow_up.metadata.to_h
-    follow_up.overdue? && follow_up.reminder_only? && metadata[KEY].is_a?(Hash) && TRANSITORIOS.include?(metadata[FALLBACK_KEY].to_s)
+    follow_up.overdue? && follow_up.reminder_only? && metadata[KEY].is_a?(Hash) &&
+      TRANSITORIOS.include?(metadata[FALLBACK_KEY].to_s) && !other_automatic_send_pending?(follow_up)
   end
 
-  # Atributos que devolvem o envio automático: o modo e a descrição de antes, sem as marcas do aviso.
+  def other_automatic_send_pending?(follow_up)
+    Crm::FollowUp.pending.auto_send_message.where(card_id: follow_up.card_id)
+                 .where("metadata ->> 'source' = ?", follow_up.metadata.to_h['source']).where.not(id: follow_up.id).exists?
+  end
+
+  # Atributos que devolvem o envio automático: o modo e a descrição de antes, sem as marcas do aviso. Quem já dispensou o
+  # aviso volta a ser avisado se o envio cair de novo (a dispensa valia para aquele aviso, não para o próximo).
   def restoring_attributes(follow_up)
     metadata = follow_up.metadata.to_h
     original = metadata.fetch(KEY)
     { automation_mode: original['automation_mode'], description: original['description'],
-      metadata: metadata.except(KEY, FALLBACK_KEY) }
+      metadata: metadata.except(KEY, FALLBACK_KEY, Crm::FollowUps::ReminderDismisser::METADATA_KEY) }
   end
 end

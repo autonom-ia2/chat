@@ -135,6 +135,40 @@ RSpec.describe Crm::FollowUps::CallbackFallback do
       expect(follow_up).to be_reminder_only
     end
 
+    it 'quem dispensou o aviso volta a ser avisado se o envio cair de novo' do
+      vencer!
+      Crm::FollowUps::ReminderDismisser.new(follow_up: follow_up, user: scenario[:user]).perform
+      expect(Crm::FollowUps::ReminderDismisser.dismissed_for?(follow_up: follow_up.reload, user: scenario[:user])).to be(true)
+
+      reagendar!
+      expect(Crm::FollowUps::ReminderDismisser.dismissed_for?(follow_up: follow_up, user: scenario[:user])).to be(false)
+
+      travel_to(follow_up.due_at + 1.minute)
+      vencer!
+
+      expect(follow_up).to be_overdue
+      expect(Crm::FollowUps::ReminderDismisser.dismissed_for?(follow_up: follow_up, user: scenario[:user])).to be(false)
+    end
+
+    it 'já existe outro envio automático do mesmo tipo esperando no card: reagendar o aviso continua só lembrete' do
+      vencer!
+      create_crm_hybrid_follow_up(scenario, source: source).update!(due_at: 1.day.from_now)
+
+      reagendar!
+
+      expect(follow_up).to be_pending
+      expect(follow_up).to be_reminder_only
+    end
+
+    it 'motivo passageiro sem o original guardado (metadata trocado pela API): reagendar não quebra nem vira envio automático' do
+      vencer!
+      follow_up.update!(metadata: follow_up.metadata.except(described_class::KEY))
+
+      expect { reagendar! }.not_to raise_error
+
+      expect(follow_up).to be_reminder_only
+    end
+
     it 'lembrete que sempre foi só lembrete não vira envio automático ao reagendar' do
       follow_up.update!(automation_mode: :reminder_only, status: :overdue)
 
