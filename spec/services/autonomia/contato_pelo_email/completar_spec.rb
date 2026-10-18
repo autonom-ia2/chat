@@ -131,14 +131,25 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
     expect(contact.reload).to have_attributes(name: 'Maria S.', phone_number: '+5511987654321')
   end
 
-  # Pega: o "Maria" que o atendente digitou para maria@x.com ser trocado pela IA.
-  it 'nome igual ao começo do e-mail não é trocado; o telefone segue', :aggregate_failures do
+  # Pega: o lead do formulário do site, que o Chatwoot cria com o nome igual ao começo do e-mail, ficar sem o nome
+  # que o formulário traz.
+  it 'nome igual ao começo do e-mail é trocado', :aggregate_failures do
     contact.update!(name: 'maria.souza')
     responde(nome: 'Maria Souza', telefone: '(11) 98765-4321')
 
     described_class.new(message).perform
 
-    expect(contact.reload).to have_attributes(name: 'maria.souza', phone_number: '+5511987654321')
+    expect(contact.reload).to have_attributes(name: 'Maria Souza', phone_number: '+5511987654321')
+  end
+
+  # Pega: um nome de verdade, digitado pelo atendente, ser trocado pelo que a IA leu.
+  it 'nome que não é provisório fica' do
+    contact.update!(name: 'Maria (diretora)')
+    responde(nome: 'Maria Souza', telefone: '(11) 98765-4321')
+
+    described_class.new(message).perform
+
+    expect(contact.reload.name).to eq('Maria (diretora)')
   end
 
   # Pega: o nome que é o telefone (posto pela plataforma) não ser trocado; e nome sem teto.
