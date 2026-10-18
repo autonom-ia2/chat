@@ -25,9 +25,12 @@ module Waha::RichNative::OutgoingHints
 
   # O texto no formato do WhatsApp (também usado na edição pelo painel, Waha::RichNative::MessageActions). Mensagem do
   # robô, da IA ou de envio automático segue o dialeto do WhatsApp (*x* negrito), como na Cloud.
+  # `pele: true`: o renderer do chat#1740 na main é o Messages::MarkdownRenderers::WhatsAppDaPeleRenderer, o formato
+  # que o app mostra (bloco ``` mono, ~x~, citação em várias linhas, marcador colado em letra fica). É ele que tem
+  # paridade com o conversor do conector; o WhatsAppRenderer do Chatwoot (sem a pele) perde isso.
   def self.whatsapp_text(text, message = nil)
     automatico = message.present? && Messages::EnvioAutomatico.automatico?(message)
-    Messages::MarkdownRendererService.new(text.to_s, CHANNEL, nil, automatico: automatico).render.to_s
+    Messages::MarkdownRendererService.new(text.to_s, CHANNEL, nil, pele: true, automatico: automatico).render.to_s
   end
 
   private
