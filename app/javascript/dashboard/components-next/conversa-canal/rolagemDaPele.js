@@ -35,6 +35,51 @@ export const deveDescer = ({ estavaNoFim, ultimaAntes, ultima }) => {
   return NOSSAS.includes(tipoDa(ultima));
 };
 
+// A faixa de não lidas some depois de lida (pedido do Rodrigo, 18/10): 5 s com a aba
+// visível, ou quando o atendente envia uma mensagem. Ao reabrir, a leitura já foi marcada
+// e a faixa não volta. Dispensada, guarda que abriu na faixa (a rolagem não desce sozinha).
+export const TEMPO_DA_FAIXA_EM_MS = 5000;
+
+export const faixaDispensada = marco =>
+  marco ? { ...marco, primeiraNaoLida: null, dispensada: true } : marco;
+
+// Conta só o tempo com a aba visível: sair da aba pausa, voltar continua de onde parou.
+// Devolve a função que cancela.
+export const agendarFimDaFaixa = (aoFim, tempo = TEMPO_DA_FAIXA_EM_MS) => {
+  let restante = tempo;
+  let relogio = null;
+  let inicio = 0;
+  const pausar = () => {
+    if (!relogio) return;
+    clearTimeout(relogio);
+    relogio = null;
+    restante -= Date.now() - inicio;
+  };
+  const aoMudar = () => {
+    if (document.visibilityState !== 'visible') {
+      pausar();
+      return;
+    }
+    if (relogio) return;
+    inicio = Date.now();
+    relogio = setTimeout(
+      () => {
+        relogio = null;
+        document.removeEventListener('visibilitychange', aoMudar);
+        aoFim();
+      },
+      Math.max(0, restante)
+    );
+  };
+  document.addEventListener('visibilitychange', aoMudar);
+  aoMudar();
+  return () => {
+    document.removeEventListener('visibilitychange', aoMudar);
+    clearTimeout(relogio);
+    relogio = null;
+  };
+};
+
 // Carrega páginas anteriores até `achou()` ou o teto; diz se achou.
 export const buscarAteAchar = async ({
   achou,
@@ -73,8 +118,8 @@ export const naoLidasCarregadas = (mensagens, vistoEm) => {
 
 // A faixa fica na 1ª mensagem do cliente depois da última leitura e conta todas as
 // do cliente dali em diante (o número exato, sem "9+"). Resposta da equipe ou do robô
-// depois da leitura não abre faixa, como no app. Fica parada enquanto a conversa está
-// aberta: ler (que zera a contagem no servidor) não a tira do lugar.
+// depois da leitura não abre faixa, como no app. Ler (que zera a contagem no servidor)
+// não muda o número; a faixa some sozinha depois de lida (agendarFimDaFaixa).
 // Conversa que nenhum atendente abriu (só o robô atendeu): não há marco de leitura, então
 // não há faixa e a conversa abre no fim. Um número aqui seria só o da página carregada.
 export const marcoDeNaoLidas = (conversaId, mensagens, vistoEm) => {

@@ -11,6 +11,7 @@ import {
   slotLevel,
   visibleExtras,
   unmetSuggestion,
+  suggestedLevel,
 } from '../permissionMatrix';
 
 const props = defineProps({
@@ -169,7 +170,7 @@ const onArrow = (event, option) => {
       <button
         type="button"
         class="font-medium underline"
-        @click="emit('grantSuggested', suggestion)"
+        @click="emit('grantSuggested', suggestion, suggestedLevel(module))"
       >
         {{ $t('CUSTOM_ROLE.EDITOR.GRANT_SUGGESTED') }}
       </button>

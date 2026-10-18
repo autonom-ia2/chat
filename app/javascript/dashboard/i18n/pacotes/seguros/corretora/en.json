@@ -1,0 +1,49 @@
+{
+  "CRM_FUNIL": {
+    "MODELOS": {
+      "VENDAS": {
+        "NOME": "Insurance sale",
+        "TEXTO": "From the quote until the policy closes.",
+        "E1": "New contact",
+        "E2": "Quoting",
+        "E3": "Options sent",
+        "E4": "Negotiation",
+        "E5": "Closed"
+      }
+    },
+    "SOBRE": {
+      "IDEIAS": {
+        "PRECO": "asks for a quote",
+        "COMPRAR": "wants to know how much the insurance costs",
+        "COMO_FUNCIONA": "wants to insure a car, a home or a business"
+      }
+    },
+    "TIPO": {
+      "VENDER": {
+        "TEXTO": "Close a new policy or renew one."
+      }
+    }
+  },
+  "CRM_CARD": {
+    "DESFECHO": {
+      "MOTIVO": {
+        "PRECO": "Too expensive",
+        "SUMIU": "Stopped replying",
+        "OUTRO_LUGAR": "Went with another broker",
+        "NAO_ERA_HORA": "The insurer declined"
+      },
+      "PERDEU_TEXTO": "The reason is optional, but it helps you close more next time."
+    },
+    "PASSO": {
+      "FECHADO": "This card is over: {status}. If the customer comes back, tap Reopen."
+    },
+    "RESUMO": {
+      "SEM_CONTATO": "No person is linked to this card yet."
+    },
+    "HISTORICO": {
+      "EVENTO": {
+        "ACTIVITY_LINK_CONTACT": "A person was added to this card"
+      }
+    }
+  }
+}

@@ -21,6 +21,7 @@ module Autonomia
           # mensagem (rodamos fora de request, sem Current.account). message.account
           # é o caminho canônico do core; a conta certa é a dona da conversa/inbox.
           return unless ::Autonomia::Agents::Config.enabled?(message.account)
+          return if recovery_pending?(message)
 
           # vínculo (AgentInbox) + agent.enabled?/active? + conversa pending +
           # unassigned são checados no Job (precisam de DB). Aqui só o mínimo barato.
@@ -35,6 +36,16 @@ module Autonomia
             message.private? ||        # nunca processa notas privadas
             message.activity? ||       # eventos de atividade não são respondíveis
             message.conversation_id.blank?
+        end
+
+        # Aviso de "mensagem não suportada" do WhatsApp com recuperação em curso (chat#1489): a conta tem a flag
+        # `whatsapp_hybrid_recovery` e a mensagem está `hybrid_recovery: pending`. A IA espera; quem decide chamá-la,
+        # uma vez, é a recuperação (WhatsappHybrid::RecoveryAiWake / Operate::NaoSuportada). Sem a flag, ou sem
+        # recuperação (caixa sem WhatsApp API pronto, tipo que não é mensagem nova), igual à main.
+        def recovery_pending?(message)
+          message.inbox&.channel_type == 'Channel::Whatsapp' &&
+            message.account.feature_enabled?(::WhatsappHybrid::UnsupportedRecovery::FEATURE) &&
+            ::WhatsappHybrid::UnsupportedRecovery.pending?(message)
         end
       end
     end

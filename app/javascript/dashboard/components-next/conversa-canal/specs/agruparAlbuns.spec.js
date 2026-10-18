@@ -148,6 +148,34 @@ describe('agruparAlbuns: recebido só com o marcador da Cloud (#1702)', () => {
     expect(eMarcadorDeAlbum(foto())).toBe(false);
   });
 
+  it('modelo do cliente em recuperação (#1489) não é marcador: ele e as 2 fotos ficam soltos', () => {
+    const modelo = marcador({
+      contentAttributes: {
+        isUnsupported: true,
+        unsupportedKind: 'unknown',
+        hybridRecovery: 'pending',
+      },
+    });
+    const fotos = [5, 20].map(s => foto({ createdAt: BASE + s }));
+    expect(eMarcadorDeAlbum(modelo)).toBe(false);
+    const { albuns, marcadores } = agruparDaConversa([modelo, ...fotos], {
+      fuso: FUSO,
+    });
+    expect(albuns.size).toBe(0);
+    expect(marcadores.size).toBe(0);
+    expect(
+      eMarcadorDeAlbum(
+        marcador({
+          contentAttributes: {
+            isUnsupported: true,
+            unsupportedKind: 'unknown',
+            hybridRecovery: 'failed',
+          },
+        })
+      )
+    ).toBe(false);
+  });
+
   it('marcador + 3 fotos viram um álbum e o marcador some da lista', () => {
     const pai = marcador();
     const fotos = [0, 1, 2].map(i => foto({ createdAt: BASE + i }));

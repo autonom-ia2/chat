@@ -50,8 +50,10 @@ import FaixaDeNaoLidas from 'dashboard/components-next/conversa-canal/FaixaDeNao
 import { destacarMensagem } from 'dashboard/components-next/conversa-canal/destaqueDaCitada';
 import { semDuplicadasNaPele } from 'dashboard/components-next/conversa-canal/midia/contatos';
 import {
+  agendarFimDaFaixa,
   buscarAteAchar,
   deveDescer,
+  faixaDispensada,
   marcoDeNaoLidas,
   naoLidasCarregadas,
   pertoDoFim,
@@ -126,8 +128,9 @@ export default {
       isProgrammaticScroll: false,
       messageSentSinceOpened: false,
       labelSuggestions: [],
-      // #1702: faixa de não lidas da pele, parada enquanto a conversa está aberta.
+      // #1702: faixa de não lidas da pele; some depois de lida (alguns segundos na tela).
       naoLidasDaPele: null,
+      cancelarFimDaFaixa: null,
       ultimaDaPele: null,
     };
   },
@@ -342,6 +345,8 @@ export default {
     // until the chat is changed and the flag is reset in the watch for currentChat
     emitter.on(BUS_EVENTS.MESSAGE_SENT, () => {
       this.messageSentSinceOpened = true;
+      // #1702: o atendente respondeu, então leu: a faixa de não lidas sai.
+      if (this.pele) this.dispensarFaixaDaPele(this.currentChat?.id);
     });
   },
 
@@ -355,6 +360,8 @@ export default {
   },
 
   unmounted() {
+    this.desmontada = true;
+    this.cancelarFimDaFaixa?.();
     this.removeBusListeners();
     this.removeScrollListener();
   },
@@ -401,7 +408,8 @@ export default {
         if (
           !messageId &&
           !this.hasUserScrolled &&
-          !this.faixaDaPele?.primeiraNaoLida
+          !this.faixaDaPele?.primeiraNaoLida &&
+          !this.faixaDaPele?.dispensada
         ) {
           this.scrollToBottom();
         }
@@ -471,10 +479,11 @@ export default {
       } catch (error) {
         // Sem as páginas antigas (rede), a faixa conta as não lidas que vieram.
       }
-      if (this.currentChat.id !== conversaId) return;
+      if (this.desmontada || this.currentChat.id !== conversaId) return;
       const { messages } = this.currentChat;
       this.naoLidasDaPele = marcoDeNaoLidas(conversaId, messages, vistoEm);
       this.ultimaDaPele = messages[messages.length - 1]?.id;
+      this.agendarFimDaFaixaDaPele(conversaId);
       if (!posicionar) return;
       await this.esperarATela();
       const faixa = this.conversationPanel.querySelector(
@@ -500,6 +509,31 @@ export default {
         before: maisAntiga.id,
       });
       await this.esperarATela();
+    },
+    agendarFimDaFaixaDaPele(conversaId) {
+      this.cancelarFimDaFaixa?.();
+      this.cancelarFimDaFaixa = null;
+      if (!this.naoLidasDaPele?.quantidade) return;
+      this.cancelarFimDaFaixa = agendarFimDaFaixa(() =>
+        this.dispensarFaixaDaPele(conversaId)
+      );
+    },
+    async dispensarFaixaDaPele(conversaId) {
+      const marco = this.naoLidasDaPele;
+      if (marco?.conversaId !== conversaId || !marco.primeiraNaoLida) return;
+      this.cancelarFimDaFaixa?.();
+      this.cancelarFimDaFaixa = null;
+      // A faixa na tela (ou acima dela) sai sem mexer no que a pessoa está lendo.
+      const painel = this.conversationPanel;
+      const faixa = painel?.querySelector('[data-faixa-nao-lidas]');
+      const compensar =
+        faixa && faixa.offsetTop < painel.scrollTop + painel.clientHeight;
+      const alturaAntes = painel?.scrollHeight ?? 0;
+      this.naoLidasDaPele = faixaDispensada(marco);
+      if (!compensar) return;
+      await this.esperarATela();
+      this.isProgrammaticScroll = true;
+      painel.scrollTop -= alturaAntes - painel.scrollHeight;
     },
     acompanharNovas() {
       const { messages } = this.currentChat;

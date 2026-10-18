@@ -59,12 +59,15 @@ export const podeEntrarNoAlbum = mensagem => {
   );
 };
 
-// O "pai" do álbum que a Cloud entrega como não suportada, do cliente.
+// O "pai" do álbum que a Cloud entrega como não suportada, do cliente. Com
+// hybridRecovery (chat#1489) é uma mensagem de verdade que o WhatsApp API busca no
+// celular (modelo, botões, lista), não o marcador: fica à vista, e as fotos, soltas.
 export const eMarcadorDeAlbum = mensagem =>
   mensagem?.messageType === MESSAGE_TYPES.INCOMING &&
   !mensagem.private &&
   mensagem.contentAttributes?.isUnsupported === true &&
-  mensagem.contentAttributes?.unsupportedKind === 'unknown';
+  mensagem.contentAttributes?.unsupportedKind === 'unknown' &&
+  !mensagem.contentAttributes?.hybridRecovery;
 
 const dentroDaJanela = (desde, atual, janela) => {
   const espera = atual.createdAt - desde.createdAt;

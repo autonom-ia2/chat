@@ -84,12 +84,14 @@ RSpec.describe Crm::Reports::AiUsage do
     %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste agente_builder_conferencia].each do |feature|
       create(:crm_ai_usage_event, account: account, feature: feature, cost_estimate: 0.01)
     end
-    create(:crm_ai_usage_event, account: account, feature: 'agente_teste', cost_estimate: 0.01)
+    %w[agente_teste agente_prova_do_ajuste].each do |feature|
+      create(:crm_ai_usage_event, account: account, feature: feature, cost_estimate: 0.01)
+    end
 
     resources = payload(account: account)[:spend_by_resource].index_by { |row| row[:resource] }
 
     expect(resources['Construtor de agente'][:usage_count]).to eq(5)
-    expect(resources['Assistente de respostas'][:usage_count]).to eq(1)
+    expect(resources['Assistente de respostas'][:usage_count]).to eq(2)
     expect(resources).not_to have_key('Outros')
   end
 

@@ -846,9 +846,9 @@
 - leitura: campanhas
 - intent: Quanto custou cada venda dos meus anúncios?; O que eu faço hoje com os meus anúncios?; Onde vejo as propostas que vieram de anúncio?; Qual anúncio está vendendo e qual não está?; Quanto tempo minha equipe demora para responder quem veio do anúncio?; Por que o número de conversas da Meta é diferente do da plataforma?; Como marco que já fiz a ação do dia?
 - onde_fica: Menu lateral > Campanhas > Anúncios da Meta > aba Resultado
-- pre_requisitos: ser administrador da conta; a conta de anúncios conectada em Anúncios da Meta.
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Anúncios da Meta em Só olha; a conta de anúncios conectada em Anúncios da Meta (quem só olha pede ao administrador para conectar).
 - passos: 1. Na aba Resultado, escolha o período: 7 ou 30 dias; 2. Leia O que fazer hoje: até 3 ações, da mais importante para a menos, cada uma com o porquê; 3. Clique no botão da ação para ir ao trabalho (as propostas paradas, as conversas mais demoradas, o passo 3 da conexão, o anúncio por dentro ou o anúncio no Gerenciador da Meta); 4. Depois de fazer, clique em Feito: a ação fica marcada Feita; se não for fazer, clique em Dispensar e ela sai até amanhã; 5. No caminho do dinheiro, clique em Conversas, Propostas ou Vendas para abrir a lista daquela etapa, com Abrir conversa e Abrir no CRM em cada linha; 6. Confira em Quanto confiar nos números o número da Meta ao lado do nosso.
-- gotchas: as ações são decididas pelos números, e a IA só escreve o texto (com o selo Escrito pela IA); sem IA ligada, o texto vem pela regra, com os mesmos números; abrir uma ação não conta como feita, só o Feito conta; na ação que pede para não mexer no anúncio por causa do preço da concorrência, o botão Entendi já é o Feito; dispensada não volta no mesmo dia, e a vaga vai para a próxima ação; a lista das conversas mais demoradas é sempre dos últimos 30 dias, mesmo com o painel em 7; aumentar orçamento é feito no Gerenciador da Meta, a plataforma só lê os anúncios; o Tempo de resposta é a mediana (metade foi respondida em até esse tempo) e conta resposta de pessoas e de agentes; a comparação com a Meta vai até ontem, porque o gasto de hoje ainda está mudando; a lista da etapa mostra até 50 linhas, e o Kanban filtrado por anúncio ainda não existe.
+- gotchas: as ações são decididas pelos números, e a IA só escreve o texto (com o selo Escrito pela IA); sem IA ligada, o texto vem pela regra, com os mesmos números; abrir uma ação não conta como feita, só o Feito conta; na ação que pede para não mexer no anúncio por causa do preço da concorrência, o botão Entendi já é o Feito; dispensada não volta no mesmo dia, e a vaga vai para a próxima ação; a lista das conversas mais demoradas é sempre dos últimos 30 dias, mesmo com o painel em 7; aumentar orçamento é feito no Gerenciador da Meta, a plataforma só lê os anúncios; o Tempo de resposta é a mediana (metade foi respondida em até esse tempo) e conta resposta de pessoas e de agentes; a comparação com a Meta vai até ontem, porque o gasto de hoje ainda está mudando; a lista da etapa mostra até 50 linhas, e o Kanban filtrado por anúncio ainda não existe; quem só olha (cargo com Anúncios da Meta em Só olha) vê o painel e as listas, sem Feito, Dispensar, Entendi nem a aba Conexão, e as listas mostram só as conversas que essa pessoa já vê na caixa de conversas (sem permissão de conversas, a lista vem vazia), enquanto os números do painel são da conta toda.
 
 ### ver_todas_as_origens_do_contato
 - titulo: Ver todas as origens de um contato no CRM
@@ -1673,7 +1673,7 @@
 - rota: assignment_policy_index
 - intent: Onde eu configuro a distribuição automática de conversas?; Como escolher entre política de atribuição e capacidade do agente?; Onde fica a configuração de passagem da IA para uma pessoa?; Por que só aparece um card nessa tela?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes
-- pre_requisitos: ser administrador da conta
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes; 2. Leia os cards e decida o que quer ajustar; 3. Clique em Política de atribuição para a ordem do rodízio, em Capacidade do agente para limitar quantas conversas cada pessoa aguenta, ou em Transferir para humano (CRM) para a transferência da IA para uma pessoa.
 - gotchas: a tela mostra de um a três cards conforme o que a conta tem liberado; Política de atribuição aparece sempre, Capacidade do agente só com atribuição avançada, e Transferir para humano (CRM) só com o CRM e a IA do CRM ligados; card que sumiu é liberação de recurso, não erro.
 - nav_target: `assignment_policy_index`
@@ -1683,7 +1683,7 @@
 - rota: agent_assignment_policy_index
 - intent: Quais políticas de atribuição já existem?; Quais caixas de entrada estão em cada política?; Como apago uma política que não uso mais?; Onde crio uma política nova?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição
-- pre_requisitos: ser administrador da conta
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Política de atribuição; 2. Confira a ordem, a prioridade e as caixas de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: cada caixa de entrada fica em uma política só, então a mesma caixa nunca aparece em duas linhas; excluir pede confirmação e não tem volta, e as caixas daquela política ficam sem regra de distribuição; conta nova mostra a lista vazia, o que é normal.
 - nav_target: `agent_assignment_policy_index`
@@ -1693,7 +1693,7 @@
 - rota: agent_assignment_policy_create
 - intent: Como crio uma política de atribuição do zero?; Qual a diferença entre rodízio e equilibrado?; Como evito que um agente receba conversa demais?; Por que o modo Equilibrado está bloqueado?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Nova política
-- pre_requisitos: ser administrador da conta
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Escolha a ordem de atribuição e a prioridade; 4. Ajuste a distribuição justa e o descarte de conversas inativas; 5. Clique em Criar política.
 - gotchas: nome e descrição são obrigatórios e o botão fica travado sem os dois; a política nasce com rodízio, 100 conversas por hora por agente e descarte de conversas paradas há mais de 7 dias; Equilibrado exige o plano com atribuição avançada; não dá para escolher as caixas de entrada aqui, só depois de salvar, na tela de edição, para onde o sistema leva sozinho.
 - nav_target: `agent_assignment_policy_create`
@@ -1713,7 +1713,7 @@
 - rota: agent_capacity_policy_index
 - intent: Onde defino o limite de conversas por agente?; Quais políticas de capacidade já existem?; Quem está em cada política de capacidade?; Como apago uma política de capacidade?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente
-- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador
+- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Capacidade do agente; 2. Confira os agentes e os limites de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: a capacidade só muda a distribuição de verdade quando a política de atribuição da caixa está no modo Equilibrado, que também depende do plano; cada agente pertence a uma única política de capacidade; excluir pede confirmação e não tem volta.
 - nav_target: `agent_capacity_policy_index`

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useAdmin } from 'dashboard/composables/useAdmin';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
@@ -19,6 +20,10 @@ import { currentStep } from './metaAdsHelpers';
 // card "Nomes das campanhas da Meta" de Links e QR codes e o Pixel digitado no funil.
 const SALES_STEP = 4;
 const DONE = 5;
+// Quem não é administrador chega aqui com meta_ads_view (#1794): vê só o painel. Conectar e configurar seguem
+// do administrador; sem conexão, a tela diz a quem pedir.
+const { isAdmin } = useAdmin();
+const readOnly = computed(() => !isAdmin.value);
 
 const connection = ref(null);
 const loading = ref(true);
@@ -213,6 +218,22 @@ onMounted(load);
           @click="load"
         />
       </div>
+
+      <template v-else-if="readOnly">
+        <MetaAdsPanel v-if="panelAvailable" read-only />
+        <div
+          v-else
+          data-meta-ads-not-connected
+          class="flex flex-col gap-2 p-6 border border-solid shadow-sm rounded-2xl border-n-weak bg-n-solid-1"
+        >
+          <h2 class="m-0 text-base font-520 text-n-slate-12">
+            {{ $t('CRM_KANBAN.META_ADS_HUB.PAGE.NOT_CONNECTED_TITLE') }}
+          </h2>
+          <p class="m-0 text-sm leading-6 text-n-slate-11">
+            {{ $t('CRM_KANBAN.META_ADS_HUB.PAGE.NOT_CONNECTED_TEXT') }}
+          </p>
+        </div>
+      </template>
 
       <MetaAdsHero v-else-if="showHero" @start="started = true" />
 

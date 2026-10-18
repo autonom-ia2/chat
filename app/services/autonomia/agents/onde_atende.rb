@@ -25,6 +25,9 @@
 # NADA FICA PELA METADE: tudo roda numa transação. Qualquer recusa no meio (Recusa, erro das Areas, validação) desfaz o
 # que já tinha entrado; a tela recebe o código e a mensagem do passo que recusou, e "Nada mudou" é verdade.
 #
+# ALCANCE (regra G, #1788): com `alcancavel`, a caixa que entra e a porta que sai têm de ser alcançáveis por quem pede
+# (fora_do_alcance); a área de hoje numa caixa fora do alcance fica, mesmo fora do pedido. Conferido com tudo travado.
+#
 # TRAVA OS AGENTES (este e o que atende primeiro em X hoje, por id) E DEPOIS AS CAIXAS (por id), a ordem dos caminhos
 # da Autonom.ia (InboxConnector, Areas, TrocarQuemAtende). Quem atende primeiro em X é relido com X travada: se mudou
 # entre a leitura e a trava, recusa com mudou_agora em vez de travar um agente depois de uma caixa.
@@ -56,8 +59,9 @@ class Autonomia::Agents::OndeAtende
   MOTIVO_DA_CAIXA = { principal_parado: :sem_principal, robo_externo: :robo_externo }.freeze
 
   # O pedido da gaveta. `primeiro`: a caixa de "Sim, no canal", ou nil ("Não"). `manter_primeiro`: o canal não mudou, as
-  # portas ficam. `areas`: as caixas de "Recebe quando alguém passar em", ou nil para não mexer nelas.
-  Pedido = Struct.new(:primeiro, :manter_primeiro, :areas, :response_window, :parar, keyword_init: true)
+  # portas ficam. `areas`: as caixas de "Recebe quando alguém passar em", ou nil para não mexer nelas. `alcancavel`: o
+  # Autonomia::Agents::CaixaAlcancavel de quem pede, ou nil para não conferir.
+  Pedido = Struct.new(:primeiro, :manter_primeiro, :areas, :response_window, :parar, :alcancavel, keyword_init: true)
 
   # Quem chama já achou as caixas e o agente na conta (404 fora dela).
   def initialize(agent:, pedido:)
@@ -67,6 +71,7 @@ class Autonomia::Agents::OndeAtende
     @areas = pedido.areas&.uniq(&:id)
     @response_window = pedido.response_window
     @parar = pedido.parar == true
+    @alcancavel = pedido.alcancavel
   end
 
   def perform
@@ -121,10 +126,29 @@ class Autonomia::Agents::OndeAtende
   end
 
   def conferir!
+    conferir_alcance!
     recusa = recusa_do_pedido
     raise Recusa, recusa if recusa
 
     conferir_o_primeiro! if @primeiro
+  end
+
+  # A caixa do "Sim", as portas que saem e as áreas que entram: todas alcançáveis por quem pede.
+  def conferir_alcance!
+    return if @alcancavel.nil?
+
+    atuais = areas_atuais.pluck(:inbox_id)
+    caixas = [@primeiro, *Array(@areas).reject { |caixa| atuais.include?(caixa.id) }].compact
+    caixas += ::Inbox.where(id: portas_atuais.select(:inbox_id)).to_a unless @manter_primeiro
+    fora = caixas.find { |caixa| !@alcancavel.alcanca?(caixa) }
+    raise Recusa.new(:fora_do_alcance, inbox: fora) if fora
+  end
+
+  # As áreas de hoje em caixas fora do alcance de quem pede: ficam, mesmo fora do pedido.
+  def areas_mantidas
+    return areas_atuais.none if @alcancavel.nil?
+
+    areas_atuais.where.not(inbox_id: @alcancavel.filtrar(::Inbox.where(id: areas_atuais.select(:inbox_id))).select(:id))
   end
 
   # O código da recusa que vale antes de mexer em qualquer coisa, ou nil.
@@ -149,7 +173,7 @@ class Autonomia::Agents::OndeAtende
   # "Não" sem nenhuma área (as pedidas, ou as de hoje quando não vieram), tendo hoje onde trabalhar: o agente vai parar.
   def fica_parado?
     sem_portas = @manter_primeiro ? !portas_atuais.exists? : @primeiro.nil?
-    sem_areas = @areas.nil? ? !areas_atuais.exists? : @areas.empty?
+    sem_areas = @areas.nil? ? !areas_atuais.exists? : @areas.empty? && !areas_mantidas.exists?
     sem_portas && sem_areas && vinculos_do_agente.exists?
   end
 
@@ -230,7 +254,7 @@ class Autonomia::Agents::OndeAtende
   def sair_das_areas!
     return if @areas.nil?
 
-    ids = @areas.map(&:id)
+    ids = @areas.map(&:id) + areas_mantidas.pluck(:inbox_id)
     areas_atuais.where.not(inbox_id: ids).includes(:inbox).find_each { |vinculo| sair_da_area!(vinculo.inbox) }
   end
 

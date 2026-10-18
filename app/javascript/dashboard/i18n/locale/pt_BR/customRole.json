@@ -164,6 +164,11 @@
           "LEVEL_VIEW": "Vê os modelos e onde estão em uso.",
           "LEVEL_MANAGE": "Cria, altera e apaga modelos no WhatsApp."
         },
+        "META_ADS": {
+          "NAME": "Anúncios da Meta",
+          "HINT": "Painel dos anúncios do Facebook e do Instagram",
+          "LEVEL_VIEW": "Vê o painel dos anúncios e os resultados. Conectar fica com o administrador."
+        },
         "INBOXES": {
           "NAME": "Caixas de entrada",
           "HINT": "Canais, QR do WhatsApp e membros",
@@ -201,6 +206,12 @@
           "NAME": "SLA",
           "HINT": "Prazos de resposta",
           "LEVEL_MANAGE": "Cria e altera políticas de SLA."
+        },
+        "ASSIGNMENT": {
+          "NAME": "Atribuição de agentes",
+          "HINT": "Quem recebe cada conversa e quantas de cada vez",
+          "LEVEL_MANAGE": "Cria e altera as regras de distribuição e de capacidade.",
+          "SUGGESTION": "Para listar todas as caixas nos formulários, Caixas de entrada precisa estar ao menos em Ver."
         }
       }
     },

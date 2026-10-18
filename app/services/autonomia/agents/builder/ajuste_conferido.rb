@@ -56,6 +56,9 @@ module Autonomia::Agents::Builder::AjusteConferido
     @explicacao_da_correcao = nil
     @pendencia_anterior = pending_question
     @turnos_da_pendencia = @thread.state.to_h['pendencia_turnos'].to_i
+    # O "tira isso" só vai enquanto o Desfazer do último ajuste ainda vale, decidido no começo do turno, antes da escrita
+    # dele (a retomada do mesmo token já passou por aqui antes de escrever).
+    @nao_pedido_vale = ajuste_em_curso(token).present? || @thread.agent&.conversa_desfazivel&.id == @thread.id
     ajuste_em_curso(token) ? :retomar : :seguir
   end
 
@@ -144,9 +147,10 @@ module Autonomia::Agents::Builder::AjusteConferido
   # (que vem pronta em `extra`).
   def perguntar!(token, parsed, mensagens, extra)
     @closed = false
+    # O Desfazer (`ultimo_ajuste`) e o "tira isso" (`nao_pedido_anterior`) sobrevivem ao turno sem mudança: duram até o
+    # próximo ajuste aplicado ou o Desfazer (#1428, parte 3).
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
-             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false,
-                    'nao_pedido_anterior' => nil)
+             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false)
              .merge(extra)
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end
@@ -171,7 +175,8 @@ module Autonomia::Agents::Builder::AjusteConferido
     dados = { 'token' => token, 'mudancas' => mudancas, 'versao_id' => agent.versao_do_construtor&.id,
               'versao_antes_id' => agent.versao_antes_do_construtor&.id,
               'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono', 'pendencia_resolvida'),
-              'agente_updated_at' => agent.reload.updated_at.iso8601(6), 'campos_truncados' => @campos_truncados }
+              'agente_updated_at' => agent.reload.updated_at.iso8601(6), 'campos_truncados' => @campos_truncados,
+              'perguntas_de_prova' => Autonomia::Agents::ProvaDoAjuste.perguntas(parsed) }
     dados if guardar_ajuste!(token, dados, { 'aplicado_em_token' => token })
   end
 

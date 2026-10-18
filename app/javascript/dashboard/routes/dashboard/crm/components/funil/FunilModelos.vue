@@ -2,7 +2,10 @@
 // #1384 — "Começar pronto": cada modelo é um cartão grande com ícone, nome e
 // o caminho do cliente. O escolhido ganha a borda azul e o visto.
 // #1498 — só os modelos do tipo escolhido (Atender tem quatro).
+// #1802 — a corretora também escolhe entre dois de Vender: a pergunta segue o
+// tipo.
 defineProps({
+  tipo: { type: String, default: '' },
   modelo: { type: String, required: true },
   modelos: { type: Array, required: true },
 });
@@ -16,7 +19,11 @@ defineEmits(['escolher']);
       id="funil-modelos-titulo"
       class="mb-0 text-base font-semibold text-n-slate-12"
     >
-      {{ $t('CRM_FUNIL.TIPO.MODELO') }}
+      {{
+        tipo === 'VENDER'
+          ? $t('CRM_FUNIL.TIPO.MODELO_VENDER')
+          : $t('CRM_FUNIL.TIPO.MODELO')
+      }}
     </h3>
     <div
       class="grid gap-3 sm:grid-cols-2"
