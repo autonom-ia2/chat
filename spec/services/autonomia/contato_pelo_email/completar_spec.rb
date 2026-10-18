@@ -89,6 +89,26 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
   end
 
+  # Pega: encaminhamento puro (só o marcador sobra depois do corte) pagar a IA, contar como automático e pausar o
+  # contato (backteste da conta 1 da Autonom.ia, 18/10).
+  it 'encaminhado sem nada escrito por cima: não chama a IA nem conta para a pausa', :aggregate_failures do
+    encaminhado = <<~TEXT
+      ---------- Forwarded message ---------
+      De: Lead Facebook <leads@facebookmail.com>
+      Date: seg., 13 de out. de 2026 às 10:00
+      Subject: Novo lead
+      To: <maria.souza@cliente.com.br>
+
+      Nome: João Lima
+      Telefone: (21) 99999-0000
+    TEXT
+
+    3.times { described_class.new(email!(content: encaminhado)).perform }
+
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    expect(Redis::Alfred.exists?(chave('pausa', contact.id))).to be(false)
+  end
+
   # Pega: o endereço do contato ir ao modelo (decisão de 03/10), o assunto sem teto e o histórico citado junto.
   it 'manda ao modelo do resumo só subject e body: sem from, assunto em 300, com a assinatura, sem o citado', :aggregate_failures do
     responde
