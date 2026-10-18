@@ -714,9 +714,13 @@ export default {
     // 2. Fixes and issue where CC/BCC fields could be reset/lost after assignment/activity actions or message mutations that did not represent a true email context change.
     lastEmail: {
       handler(lastEmail) {
-        // #1786: no e-mail novo quem monta os destinatários é só o responderEmail; um
-        // e-mail novo do cliente no meio da resposta não troca o Para.
-        if (!lastEmail || this.emailNovo) return;
+        if (!lastEmail) return;
+        // #1786: no e-mail novo quem monta os destinatários é o responderEmail; aqui só
+        // se completa a resposta aberta antes de o e-mail chegar.
+        if (this.emailNovo) {
+          this.completarRespostaDoEmail(lastEmail);
+          return;
+        }
         this.setCCAndToEmailsFromLastChat();
       },
       deep: true,
@@ -1516,6 +1520,32 @@ export default {
         : null;
       if (!trocaDeTipo) this.historicoDesligado = false;
       focar();
+    },
+    // #1786: a resposta foi aberta logo depois de trocar de conversa, antes de o e-mail
+    // chegar (Para e Cc saíram sem ele). Quando ele chega, monta os endereços e o
+    // histórico, só enquanto a pessoa não mexeu nos endereços e a resposta é a esse
+    // mesmo e-mail (ou a nenhum). Um e-mail novo do cliente no meio da resposta não troca
+    // nada, e o encaminhado e a nota não têm o que completar.
+    completarRespostaDoEmail(lastEmail) {
+      const montados = this.destinatariosMontados;
+      if (!Object.keys(montados).length || this.isPrivate) return;
+      if (this.modoDoEmail === MODOS_DE_RESPOSTA.ENCAMINHAR) return;
+      const citado = this.citacaoDoEmail?.mensagemId;
+      if (citado && citado !== lastEmail.id) return;
+      const editou = ['toEmails', 'ccEmails', 'bccEmails'].some(
+        campo => (this[campo] || '') !== (montados[campo] || '')
+      );
+      if (editou) return;
+      this.aplicarDestinatarios(
+        montarRespostaDoEmail({
+          modo: this.modoDoEmail,
+          mensagem: lastEmail,
+          contato: this.currentChat?.meta?.sender?.email,
+          caixa: this.inbox,
+        }),
+        false
+      );
+      this.citacaoDoEmail = { tipo: 'historico', mensagemId: lastEmail.id };
     },
     // #1786: o menu do topo troca o tipo da MESMA resposta: continua no e-mail que
     // estava sendo respondido, e o que o atendente escreveu nos endereços fica.
