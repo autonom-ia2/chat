@@ -84,6 +84,13 @@
         "YES": "Yes, Delete ",
         "NO": "No, Keep "
       }
+    },
+    "READABLE_NAME": {
+      "TECHNICAL_PREVIEW": "In filters and automations:",
+      "TECHNICAL_FIXED": "(does not change)",
+      "TECHNICAL_EMPTY": "Use at least 2 letters or numbers in the name.",
+      "TOO_LONG": "Use up to {max} characters in the name.",
+      "SAVE_ERROR": "The label was saved, but its name was not. Edit the label to try again."
     }
   }
 }

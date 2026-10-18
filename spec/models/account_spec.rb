@@ -216,7 +216,9 @@ RSpec.describe Account do
         feature_memoria_ia: 1 << 30,
         feature_conversa_cara_do_canal: 1 << 31,
         # #1489: a posição na lista é o bit; no fim do que está na main.
-        feature_whatsapp_hybrid_recovery: 1 << 32
+        feature_whatsapp_hybrid_recovery: 1 << 32,
+        # #1823: no fim do que está na main; a Orquestração reposiciona antes da vaga.
+        feature_etiquetas_do_whatsapp: 1 << 33
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

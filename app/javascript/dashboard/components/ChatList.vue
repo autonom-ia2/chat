@@ -1,5 +1,6 @@
 <script setup>
 import { ref, unref, provide, computed, watch, onMounted } from 'vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import {
@@ -110,6 +111,7 @@ const teamsList = useMapGetter('teams/getTeams');
 const inboxesList = useMapGetter('inboxes/getInboxes');
 const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const currentAccountId = useMapGetter('getCurrentAccountId');
 
 // Filtro "Funil" (multifunil #1150): id do funil, "none" (Sem assunto) ou vazio (todos os meus). Lembrado por conta e
@@ -314,7 +316,7 @@ const pageTitle = computed(() => {
     return activeTeam.value.name;
   }
   if (props.label) {
-    return `#${props.label}`;
+    return `#${nomeDaEtiqueta(props.label)}`;
   }
   if (props.conversationType === wootConstants.CONVERSATION_TYPE.MENTION) {
     return t('CHAT_LIST.MENTION_HEADING');

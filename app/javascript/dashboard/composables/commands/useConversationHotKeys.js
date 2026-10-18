@@ -1,6 +1,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useRoute } from 'vue-router';
 import { emitter } from 'shared/helpers/mitt';
 import { useConversationLabels } from 'dashboard/composables/useConversationLabels';
@@ -136,6 +137,11 @@ const createDraftMessageAIAssistActions = t => {
 
 export function useConversationHotKeys() {
   const { t } = useI18n();
+  const { nomeDe: nomeDaEtiqueta, ligada: nomeLivreLigado } =
+    useNomeDaEtiqueta();
+  // Com o nome livre (#1823), a barra também acha a etiqueta pelo título técnico.
+  const buscaPeloTitulo = label =>
+    nomeLivreLigado.value ? { keywords: label.title } : {};
   const store = useStore();
   const route = useRoute();
 
@@ -281,7 +287,8 @@ export function useConversationHotKeys() {
   const addLabelActions = computed(() => {
     const availableLabels = inactiveLabels.value.map(label => ({
       id: label.title,
-      title: `#${label.title}`,
+      title: `#${nomeDaEtiqueta(label.title)}`,
+      ...buscaPeloTitulo(label),
       parent: 'add_a_label_to_the_conversation',
       section: t('COMMAND_BAR.SECTIONS.ADD_LABEL'),
       icon: ICON_ADD_LABEL,
@@ -302,7 +309,8 @@ export function useConversationHotKeys() {
   const removeLabelActions = computed(() => {
     const activeLabelsComputed = activeLabels.value.map(label => ({
       id: label.title,
-      title: `#${label.title}`,
+      title: `#${nomeDaEtiqueta(label.title)}`,
+      ...buscaPeloTitulo(label),
       parent: 'remove_a_label_to_the_conversation',
       section: t('COMMAND_BAR.SECTIONS.REMOVE_LABEL'),
       icon: ICON_REMOVE_LABEL,
