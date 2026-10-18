@@ -1,4 +1,5 @@
-# Conexão da conta com os anúncios da Meta (#1034, #1047). Só administrador.
+# Conexão da conta com os anúncios da Meta (#1034, #1047). Ver (READ_ACTIONS): administrador ou `meta_ads_view` (#1794);
+# o resto só administrador (policy Crm::MetaAdsConnection).
 #
 # GET    → estado da conexão (nunca o token), dados do portfólio parceiro da plataforma e se algum funil
 #          ligado ao WhatsApp oficial já avisa a Meta das vendas.
@@ -29,7 +30,8 @@
 # GET   panel_list?step=conversations|quotes|sales|slow_replies&days=7|30 → a lista por trás de cada etapa do
 #       caminho do dinheiro (Crm::MetaAds::Panel::PathList, F5). Só banco. Etapa fora da lista: 422 invalid_step.
 #
-# Quem não é administrador recebe 403 (não 401: a sessão é válida, só falta a permissão).
+# Sem a permissão, 403 (não 401: a sessão é válida, só falta a permissão). As listas que levam a uma conversa
+# mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
 
@@ -37,9 +39,11 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   MAX_TOKEN_LENGTH = 2048
   SELECTION_RESET = { ad_account_id: nil, ad_account_name: nil, ad_account_business_id: nil, ad_account_timezone: nil,
                       pixel_id: nil, pixel_name: nil, verified_at: nil }.freeze
-  READ_ACTIONS = %w[show ad_accounts pixels funnels insights panel panel_ad panel_list].freeze
+  # O que `meta_ads_view` alcança (#1794): o estado da conexão e o painel. Contas, Pixels, funis e a leitura avulsa
+  # são da conexão guiada e do resumo, do administrador (chamam a Meta com o token ou trazem caixas e funis).
+  READ_ACTIONS = %w[show panel panel_ad panel_list].freeze
 
-  before_action :ensure_administrator
+  before_action :ensure_allowed
   before_action :ensure_mode, only: [:ad_accounts, :pixels, :selection]
 
   def show
@@ -103,7 +107,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     connection = current_connection
     return render json: { ad: nil } if connection.blank? || connection.ad_account_id.blank?
 
-    render json: { ad: ::Crm::MetaAds::Panel::AdDetail.new(connection, ad_id: params[:ad_id], days: params[:days]).payload }
+    visible = ::Crm::MetaAds::VisibleConversations.current
+    render json: { ad: ::Crm::MetaAds::Panel::AdDetail.new(connection, ad_id: params[:ad_id], days: params[:days], visible: visible).payload }
   end
 
   def panel_list
@@ -112,7 +117,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     connection = current_connection
     return render json: { list: nil } if connection.blank? || connection.ad_account_id.blank?
 
-    render json: { list: ::Crm::MetaAds::Panel::PathList.new(connection, step: params[:step], days: params[:days]).payload }
+    visible = ::Crm::MetaAds::VisibleConversations.current
+    render json: { list: ::Crm::MetaAds::Panel::PathList.new(connection, step: params[:step], days: params[:days], visible: visible).payload }
   end
 
   def ad_accounts
@@ -175,7 +181,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
   private
 
-  def ensure_administrator
+  def ensure_allowed
     action = policy_action
     return if Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).public_send(action)
 
@@ -215,8 +221,9 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     report.payload.merge(
       meta_comparison: ::Crm::MetaAds::Panel::MetaComparison.new(connection, report).payload,
       response_time: response_time(connection, report),
-      advice: ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report,
-                                                                    shown: !authenticate_by_access_token?)
+      advice: ::Crm::MetaAds::VisibleConversations.current.advice(
+        ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report, shown: !authenticate_by_access_token?)
+      )
     )
   end
 

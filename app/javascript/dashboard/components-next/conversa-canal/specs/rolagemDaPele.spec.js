@@ -347,4 +347,18 @@ describe('BotaoDeDescer', () => {
     expect(selo(wrapper).text()).toBe('2');
     wrapper.unmount();
   });
+
+  it('a faixa que some depois de lida não zera a contagem do botão', async () => {
+    const mensagens = [
+      ...base,
+      { id: 3, conversationId: 5, messageType: 0 },
+      { id: 4, conversationId: 5, messageType: 0 },
+    ];
+    const wrapper = montar({ mensagens, primeiraNaoLida: null });
+    await wrapper.setProps({ primeiraNaoLida: 3 });
+    await wrapper.setProps({ primeiraNaoLida: null });
+    await rolar(wrapper, 500);
+    expect(selo(wrapper).text()).toBe('2');
+    wrapper.unmount();
+  });
 });

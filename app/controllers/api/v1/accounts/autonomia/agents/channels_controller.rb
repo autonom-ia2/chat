@@ -40,8 +40,14 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     @agent = agents_scope.find(params[:agent_id])
   end
 
+  # Regra G (#1788): só mexe no agente da caixa quem a alcança (membro ou inbox_manage); fora dela, 422 com o motivo.
   def fetch_inbox
     @inbox = Current.account.inboxes.find(params[:inbox_id])
+    render_unprocessable(connector_error(:fora_do_alcance)) unless caixa_alcancavel.alcanca?(@inbox)
+  end
+
+  def caixa_alcancavel
+    @caixa_alcancavel ||= ::Autonomia::Agents::CaixaAlcancavel.new(account_user: Current.account_user)
   end
 
   def load_index
@@ -101,12 +107,12 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
     MOTIVO_DA_CAIXA[::Autonomia::Agents::Areas.caixa_aceita_area?(@inbox).codigo]
   end
 
-  # Inboxes da conta que ainda não têm nenhum bot (nem webhook/Gabriela, nem agente nativo).
+  # Inboxes que a pessoa alcança e que ainda não têm nenhum bot (nem webhook/Gabriela, nem agente nativo).
   def eligible_inboxes
     connected_ids = ::Autonomia::Agents::AgentInbox.kept.where(account: Current.account).pluck(:inbox_id)
-    Current.account.inboxes
-           .where.missing(:agent_bot_inbox)
-           .where.not(id: connected_ids)
+    caixa_alcancavel.filtrar(Current.account.inboxes)
+                    .where.missing(:agent_bot_inbox)
+                    .where.not(id: connected_ids)
   end
 
   def connector_error(code)

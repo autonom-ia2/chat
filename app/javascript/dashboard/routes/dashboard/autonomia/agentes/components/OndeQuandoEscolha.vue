@@ -58,6 +58,15 @@ const QUANDO = {
 };
 
 const opcaoSemTipo = canal => {
+  // Regra G (#1788): caixa de que a pessoa não é membro aparece, mas não pode ser escolhida.
+  if (canal.alcanca === false) {
+    return {
+      valor: canal.inbox_id,
+      titulo: canal.name,
+      texto: t('AGENTS.JORNADA.ONDE_QUANDO.FORA_DO_ALCANCE_TEXTO'),
+      desabilitada: true,
+    };
+  }
   const tipo = tipoDoCanal(canal, props.agenteId);
   if (tipo === TIPO_CANAL.EXTERNO) {
     return {

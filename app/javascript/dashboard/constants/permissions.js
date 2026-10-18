@@ -26,6 +26,8 @@ export const SCHEDULING_PERMISSIONS = [
   'agendamento_view',
   'agendamento_manage',
 ];
+// Anúncios da Meta (#1794): ver o painel. Conectar e configurar seguem só do administrador.
+export const META_ADS_VIEW_PERMISSION = 'meta_ads_view';
 
 export const ROLES = ['agent', 'administrator'];
 

@@ -49,9 +49,14 @@ const conversaId = computed(() => props.mensagens[0]?.conversationId);
 const ultimaId = computed(
   () => props.mensagens[props.mensagens.length - 1]?.id
 );
-watch([conversaId, () => props.primeiraNaoLida], recomecar, {
-  immediate: true,
-});
+watch(conversaId, recomecar, { immediate: true });
+// A faixa que some depois de lida não zera a contagem: só a faixa que aparece recomeça.
+watch(
+  () => props.primeiraNaoLida,
+  primeira => {
+    if (primeira) recomecar();
+  }
+);
 // No fim da conversa não há o que contar: o que chegar dali em diante é novo.
 watch([visivel, ultimaId], () => {
   if (!visivel.value) desde.value = inicioDaContagem(props.mensagens, null);
