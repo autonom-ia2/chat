@@ -312,7 +312,7 @@ const excluir = async () => {
       v-if="recolhido"
       type="button"
       class="flex items-center gap-3 w-full min-h-11 px-2 sm:px-4 text-start rounded-lg hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-      :aria-label="t('CONVERSA_CANAL.EMAIL.ABRIR', { nome: nomeMostrado })"
+      :title="t('CONVERSA_CANAL.EMAIL.ABRIR', { nome: nomeMostrado })"
       @click="abertoAqui = true"
     >
       <Avatar
@@ -340,6 +340,7 @@ const excluir = async () => {
         v-if="attachments?.length"
         icon="i-lucide-paperclip"
         class="size-3.5 flex-shrink-0 text-n-slate-11"
+        role="img"
         :aria-label="
           t(
             'CONVERSA_CANAL.EMAIL.ANEXOS',
@@ -397,13 +398,16 @@ const excluir = async () => {
           <button
             v-if="resumoPara"
             type="button"
-            class="inline-flex items-center gap-0.5 mt-0.5 -ms-1 px-1 min-h-6 rounded text-xs text-n-slate-11 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            class="relative inline-flex items-center gap-0.5 mt-0.5 -ms-1 px-1 min-h-6 rounded text-xs after:absolute after:-inset-y-2.5 after:inset-x-0 after:content-[''] text-n-slate-11 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :aria-expanded="verDetalhes"
-            :aria-label="t('CONVERSA_CANAL.EMAIL.MOSTRAR_DETALHES')"
+            :title="t('CONVERSA_CANAL.EMAIL.MOSTRAR_DETALHES')"
             @click="verDetalhes = !verDetalhes"
           >
             <span class="truncate max-w-[18rem] sm:max-w-[28rem]">
               {{ resumoPara }}
+            </span>
+            <span class="sr-only">
+              {{ t('CONVERSA_CANAL.EMAIL.MOSTRAR_DETALHES') }}
             </span>
             <Icon
               :icon="
@@ -528,7 +532,7 @@ const excluir = async () => {
         <button
           v-if="temCitacao"
           type="button"
-          class="inline-flex items-center justify-center mt-2 h-5 px-2 rounded-full bg-n-alpha-2 hover:bg-n-alpha-3 text-n-slate-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          class="relative inline-flex items-center justify-center mt-2 h-5 px-2 rounded-full after:absolute after:-inset-3 after:content-[''] bg-n-alpha-2 hover:bg-n-alpha-3 text-n-slate-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           :aria-expanded="verCitacao"
           :aria-label="
             verCitacao

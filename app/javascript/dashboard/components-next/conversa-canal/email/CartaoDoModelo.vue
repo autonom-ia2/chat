@@ -2,8 +2,8 @@
 // Um modelo na janela "Modelo de e-mail" (#1786): a miniatura é o próprio e-mail,
 // desenhado em escala (600 px de largura reduzidos ao cartão), sem clique nos links.
 // Com miniatura salva em Campanhas, usa a imagem. A prévia é pedida uma vez por modelo.
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
-import { useElementSize } from '@vueuse/core';
+import { computed, ref, useTemplateRef } from 'vue';
+import { useElementSize, useIntersectionObserver } from '@vueuse/core';
 import Icon from 'next/icon/Icon.vue';
 import { preencherModelo } from './modeloDeEmail';
 import { previaDoModelo } from './previasDosModelos';
@@ -21,14 +21,20 @@ const escala = computed(() => (width.value || 200) / LARGURA_DO_EMAIL);
 const html = ref('');
 const falhou = ref(false);
 
-onMounted(async () => {
-  if (props.modelo.miniatura) return;
+const carregar = async () => {
   try {
     const montado = await previaDoModelo(props.modelo.id);
     html.value = `<style>a{pointer-events:none}body{margin:0}</style>${preencherModelo(montado, {})}`;
   } catch {
     falhou.value = true;
   }
+};
+
+// A prévia só é montada quando o cartão aparece na janela (como a galeria de Campanhas).
+const { stop } = useIntersectionObserver(area, ([entrada]) => {
+  if (!entrada?.isIntersecting) return;
+  stop();
+  if (!props.modelo.miniatura) carregar();
 });
 </script>
 
