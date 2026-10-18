@@ -9,6 +9,8 @@
 // como sempre.
 export const LISTA_DO_EMAIL = [
   '!bg-n-surface-1',
+  // O botão redondo do painel do contato flutua no canto: espaço para não cobrir o ⋮.
+  'sm:!pe-16',
   '[&_.message-bubble-container:has([data-cartao-do-email])]:!mb-0',
   // Só a peça que tem o cartão ocupa a linha; o menu de contexto ao lado continua solto.
   '[&_.message-bubble-container>div:has([data-cartao-do-email])]:!block',
@@ -41,6 +43,10 @@ export const COR_DO_SELO = {
   aviso: 'bg-n-slate-3 text-n-slate-11',
   falha: 'bg-n-ruby-3 text-n-ruby-11',
 };
+
+// A nota privada, no amarelo de nota do painel.
+export const PILULA_NOTA =
+  'inline-flex items-center gap-2 h-10 px-5 rounded-full !border !border-solid !border-n-amber-7 bg-n-amber-2 text-sm font-medium text-n-amber-11 hover:bg-n-amber-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-amber-9';
 
 // Botões em pílula do fim da conversa (Responder, Responder a todos, Encaminhar).
 export const PILULA =

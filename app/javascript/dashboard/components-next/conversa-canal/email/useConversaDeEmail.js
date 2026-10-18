@@ -4,7 +4,9 @@
 // topo e às ações. Chave própria, separada da pele do WhatsApp: os componentes do
 // WhatsApp testam só "há pele", e o e-mail não pode herdar o visual deles.
 // Sem a chave, nada é fornecido e a conversa de e-mail é a de sempre.
-import { computed, inject, provide } from 'vue';
+import { computed, inject, provide, ref, watch } from 'vue';
+import { useEmitter } from 'dashboard/composables/emitter';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -13,6 +15,15 @@ import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import { MESSAGE_TYPES } from '../../message/constants';
 import { LISTA_DO_EMAIL, RESPOSTA_DO_EMAIL } from './visualEmail';
+
+// Evento das ações do fim da conversa para a caixa de resposta.
+export const RESPONDER_EMAIL = 'conversaCanal:responderEmail';
+export const MODOS_DE_RESPOSTA = {
+  RESPONDER: 'responder',
+  TODOS: 'todos',
+  ENCAMINHAR: 'encaminhar',
+  NOTA: 'nota',
+};
 
 const CHAVE = Symbol('conversaDeEmail');
 // Escolha de cada atendente (Rodrigo, 17/10): por padrão as mensagens antigas ficam
@@ -35,6 +46,8 @@ const SEM_EMAIL = {
   fuso: computed(() => undefined),
   assunto: computed(() => ''),
   ultimoEmailId: computed(() => null),
+  respostaAberta: computed(() => false),
+  fecharResposta: () => {},
 };
 
 export const useConversaDeEmail = () => {
@@ -64,8 +77,24 @@ export const useConversaDeEmail = () => {
       ''
   );
 
+  // Como no leitor de e-mail (Rodrigo, 18/10): a caixa de resposta só aparece quando
+  // o atendente aperta Responder, Responder a todos, Encaminhar ou Nota privada; fecha
+  // depois do envio, ao trocar de conversa ou no "Fechar". O rascunho continua
+  // guardado pelo Chatwoot.
+  const respostaAberta = ref(false);
+  const fecharResposta = () => {
+    respostaAberta.value = false;
+  };
+  useEmitter(RESPONDER_EMAIL, () => {
+    respostaAberta.value = true;
+  });
+  useEmitter(BUS_EVENTS.MESSAGE_SENT, fecharResposta);
+  watch(() => conversa.value?.id, fecharResposta);
+
   const contexto = {
     ligado,
+    respostaAberta,
+    fecharResposta,
     recolher,
     alternarRecolher,
     fuso: computed(() => fusoDaConta(currentAccount.value)),
@@ -77,17 +106,12 @@ export const useConversaDeEmail = () => {
   return {
     ...contexto,
     classesDaLista: computed(() => (ligado.value ? LISTA_DO_EMAIL : '')),
-    classesDaBarra: computed(() => (ligado.value ? RESPOSTA_DO_EMAIL : '')),
+    classesDaBarra: computed(() => {
+      if (!ligado.value) return '';
+      return respostaAberta.value ? RESPOSTA_DO_EMAIL : '!hidden';
+    }),
   };
 };
 
 // Cartões, topo e ações perguntam aqui. Fora da conversa de e-mail nova: desligado.
 export const useEmailDaConversa = () => inject(CHAVE, SEM_EMAIL);
-
-// Evento das ações do fim da conversa para a caixa de resposta.
-export const RESPONDER_EMAIL = 'conversaCanal:responderEmail';
-export const MODOS_DE_RESPOSTA = {
-  RESPONDER: 'responder',
-  TODOS: 'todos',
-  ENCAMINHAR: 'encaminhar',
-};

@@ -1371,6 +1371,19 @@ export default {
     // #1786: as ações da conversa de e-mail nova montam os destinatários (e o texto do
     // encaminhado) a partir do e-mail escolhido, e o envio segue o de sempre.
     responderEmail({ modo, mensagemId } = {}) {
+      // A caixa acabou de aparecer: o foco vem depois de ela ser desenhada.
+      const focar = () => {
+        this.$nextTick(() => {
+          requestAnimationFrame(() =>
+            this.messageEditor?.focusEditorInputField('start')
+          );
+        });
+      };
+      if (modo === MODOS_DE_RESPOSTA.NOTA) {
+        this.setReplyMode(REPLY_EDITOR_MODES.NOTE);
+        focar();
+        return;
+      }
       const mensagem =
         this.currentChat?.messages?.find(item => item.id === mensagemId) ||
         this.lastEmail;
@@ -1397,7 +1410,7 @@ export default {
       if (resposta.texto && !String(this.message || '').includes(marca)) {
         this.message = `${this.message || ''}${resposta.texto}`;
       }
-      this.$nextTick(() => this.messageEditor?.focusEditorInputField('start'));
+      focar();
     },
     setCcEmails(value) {
       this.bccEmails = value.bccEmails;

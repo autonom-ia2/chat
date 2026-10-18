@@ -377,7 +377,10 @@
       "PARA_EXEMPLO": "Para quem vai este e-mail",
       "ENDERECO_INVALIDO": "Confira os endereços: algum está escrito errado.",
       "ENCAMINHADA": "---------- Mensagem encaminhada ----------",
-      "ESCREVA": "Escreva sua resposta"
+      "ESCREVA": "Escreva sua resposta",
+      "MAIS_OPCOES": "Mais opções",
+      "NOTA_PRIVADA": "Nota privada",
+      "FECHAR_RESPOSTA": "Fechar"
     }
   }
 }

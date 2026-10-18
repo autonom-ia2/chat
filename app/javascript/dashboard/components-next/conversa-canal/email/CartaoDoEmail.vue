@@ -38,6 +38,7 @@ import {
   semRastreio,
 } from './dadosDoEmail';
 import { CARTAO, COR_DO_SELO, SELO } from './visualEmail';
+import MenuDoEmail from './MenuDoEmail.vue';
 
 const ALTURA_LONGA = 400;
 
@@ -203,11 +204,9 @@ const trecho = computed(() =>
 );
 
 const verDetalhes = ref(false);
-const responder = () =>
-  emitter.emit(RESPONDER_EMAIL, {
-    modo: MODOS_DE_RESPOSTA.RESPONDER,
-    mensagemId: id.value,
-  });
+// Responder (à vista) e o menu ⋮ (Responder a todos, Encaminhar) partem deste e-mail.
+const responder = (modo = MODOS_DE_RESPOSTA.RESPONDER) =>
+  emitter.emit(RESPONDER_EMAIL, { modo, mensagemId: id.value });
 </script>
 
 <template>
@@ -371,10 +370,11 @@ const responder = () =>
             :aria-label="t('CONVERSA_CANAL.EMAIL.RESPONDER')"
             :title="t('CONVERSA_CANAL.EMAIL.RESPONDER')"
             data-responder-este
-            @click="responder"
+            @click="responder()"
           >
             <Icon icon="i-lucide-reply" class="size-4" />
           </button>
+          <MenuDoEmail @escolher="responder" />
         </div>
       </header>
 

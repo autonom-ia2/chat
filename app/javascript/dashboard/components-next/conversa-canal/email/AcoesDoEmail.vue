@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import { emitter } from 'shared/helpers/mitt';
 import { MODOS_DE_RESPOSTA, RESPONDER_EMAIL } from './useConversaDeEmail';
-import { PILULA } from './visualEmail';
+import { PILULA, PILULA_NOTA } from './visualEmail';
 
 const { t } = useI18n();
 
@@ -26,6 +26,13 @@ const ACOES = [
     chave: 'ENCAMINHAR',
     icone: 'i-lucide-forward',
   },
+  // A nota privada continua a um toque, agora que a caixa só abre quando pedida.
+  {
+    modo: MODOS_DE_RESPOSTA.NOTA,
+    chave: 'NOTA_PRIVADA',
+    icone: 'i-lucide-lock',
+    nota: true,
+  },
 ];
 
 const agir = modo => emitter.emit(RESPONDER_EMAIL, { modo });
@@ -40,7 +47,7 @@ const agir = modo => emitter.emit(RESPONDER_EMAIL, { modo });
       v-for="acao in ACOES"
       :key="acao.modo"
       type="button"
-      :class="PILULA"
+      :class="acao.nota ? PILULA_NOTA : PILULA"
       :data-acao-do-email="acao.modo"
       @click="agir(acao.modo)"
     >

@@ -377,7 +377,10 @@
       "PARA_EXEMPLO": "Who this email is for",
       "ENDERECO_INVALIDO": "Check the addresses: one of them is misspelled.",
       "ENCAMINHADA": "---------- Forwarded message ----------",
-      "ESCREVA": "Write your reply"
+      "ESCREVA": "Write your reply",
+      "MAIS_OPCOES": "More options",
+      "NOTA_PRIVADA": "Private note",
+      "FECHAR_RESPOSTA": "Close"
     }
   }
 }
