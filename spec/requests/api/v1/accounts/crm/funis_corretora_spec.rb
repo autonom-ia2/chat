@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #1802: os funis da corretora. A "Venda de seguro" é o modelo VENDAS com a frase do corretor (pacote
-# seguros/corretora); Renovação (Vender), Sinistro e Alteração na apólice (Atender) são modelos novos, com o critério
+# seguros/corretora); Renovação (Vender), Sinistro e Endosso (Atender) são modelos novos, com o critério
 # no catálogo base. Conta geral fica com as frases de hoje.
 RSpec.describe 'CRM funis da corretora (#1802)', type: :request do
   let(:nicho) { Autonomia::Agents::Nicho }
@@ -46,9 +46,9 @@ RSpec.describe 'CRM funis da corretora (#1802)', type: :request do
     expect(frases(corretora, template: 'RENOVACAO', total: 5, atender: true)).to all(eq(''))
   end
 
-  it 'Sinistro e Alteração na apólice são de Atender, por modelo e posição' do
+  it 'Sinistro e Endosso são de Atender, por modelo e posição' do
     expect(frases(corretora, template: 'SINISTRO', total: 4, atender: true)).to eq((1..4).map { |n| base("sinistro.e#{n}") })
-    expect(frases(corretora, template: 'ALTERACAO', total: 4, atender: true)).to eq((1..4).map { |n| base("alteracao.e#{n}") })
+    expect(frases(corretora, template: 'ENDOSSO', total: 4, atender: true)).to eq((1..4).map { |n| base("endosso.e#{n}") })
     expect(frases(corretora, template: 'SINISTRO', total: 4)).to all(eq(''))
   end
 

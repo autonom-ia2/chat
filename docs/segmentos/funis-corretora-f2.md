@@ -42,7 +42,7 @@ Os nomes das etapas ficam. Os critérios `legado.*` ganham versão de corretor e
 | Vender | **Venda de seguro** (o "Vendas" com a fala do corretor) | Novo contato · Cotando · Opções enviadas · Negociação · Fechado | Seguro ativo / Não fechou |
 | Vender | **Renovação** | A vencer · Cotando · Opções enviadas · Negociação · Renovado | Renovou / Não renovou |
 | Atender | **Sinistro** | Aberto · Em análise · Falta documento · Encerrado | Encerrado |
-| Atender | **Alteração na apólice** | Pedido · Na seguradora · Falta documento · Feito | Feito |
+| Atender | **Endosso** | Pedido · Na seguradora · Falta documento · Feito | Feito |
 | Atender | Cobrança (igual hoje) | A vencer · Atrasado · Prometeu pagar · Pago | Pago |
 
 Decidido (Multifunnel): a "Venda de seguro" **é o próprio modelo Vendas** (`VENDAS`), com nome, texto, etapas, ideias e critérios trocados no pacote `seguros/corretora`. Fica **no lugar** do "Vendas", sem modelo novo.
@@ -81,10 +81,10 @@ Decidido (Multifunnel): a "Venda de seguro" **é o próprio modelo Vendas** (`VE
   - **Encerrado:** A equipe contou ao cliente a resposta da seguradora sobre o sinistro.
 - **Categorias:** E3 é a espera do cliente (pausa o prazo). E2 é andamento, porque é a corretora quem cobra a seguradora.
 
-#### Alteração na apólice
+#### Endosso
 
-- **Descrição do funil:** "Use o funil Alteração na apólice quando o cliente… quer trocar o carro, mudar o endereço, incluir um motorista ou mudar algo no seguro."
-  - Ideias: "trocou de carro" · "mudou de endereço" · "quer incluir um motorista" (segunda via não é alteração: saiu)
+- **Descrição do funil:** "Use o funil Endosso quando o cliente… quer trocar o carro, mudar o endereço, incluir um motorista ou mudar algo no seguro."
+  - Ideias: "trocou de carro" · "mudou de endereço" · "quer incluir um motorista" (segunda via não é endosso: saiu)
 - **Etapas:**
   - **Pedido:** O cliente pediu uma mudança no seguro e a equipe ainda não disse que pediu à seguradora.
   - **Na seguradora:** A equipe avisou o cliente que pediu a mudança à seguradora e está esperando a resposta dela.
@@ -95,9 +95,9 @@ Decidido (Multifunnel): a "Venda de seguro" **é o próprio modelo Vendas** (`VE
 
 1. **Venda de seguro = VENDAS.** `CRM_FUNIL.MODELOS.VENDAS.*` e `CRM_FUNIL.SOBRE.IDEIAS.{PRECO,COMPRAR,COMO_FUNCIONA}` em `app/javascript/dashboard/i18n/pacotes/seguros/corretora/{pt_BR,en}.json`; `crm.stage_criteria.vendas.e1..e5` em `config/pacotes/seguros/corretora/{pt_BR,en}.yml`. As duas pastas não precisam de registro: o painel acha por `import.meta.glob('./pacotes/**/*.json')` e o servidor (`Autonomia::Segmentos::Catalogo`) usa a pasta como camada; `corretora` já estava em `config/fork_i18n.json`.
 2. **Funis antigos:** `crm.stage_criteria.legado.{novo,em_atendimento,proposta,fechamento}` no pacote da corretora, com o texto da tabela acima. O `legado.perdido` **não** foi mexido: fica o da camada `seguros` (F1).
-3. **Modelos novos** (`funil.js`): `RENOVACAO` (Vender, `venda: true`), `SINISTRO` e `ALTERACAO` (Atender), com `camadas: ['seguros/corretora']`. `modelosDoTipo(tipo, pacote)` filtra pela camada com `camadasDoPacote`; conta sem pacote (ou outro tipo de seguros) vê a lista de hoje. Sinistro e Alteração vêm **antes** dos modelos de todos no Atender, só na corretora: lá o primeiro já marcado é o Sinistro. Na conta geral a ordem e o modelo já marcado (Suporte) são os de hoje. Servidor: chaves novas em `Crm::Pipeline::TEMPLATES` e `RENOVACAO` em `DefaultStageCriteria::SELL_TEMPLATES`. `NAME_KEYS` não mudou: os nomes novos só acham critério por modelo e posição.
-4. **Desfechos do modelo:** `sucesso` e `falha` no item do modelo (`MODELOS.<X>.SUCESSO`/`.FALHA`), em qualquer tipo. Renovação: "Renovou"/"Não renovou"; Sinistro: "Encerrado"; Alteração: "Feito". Só nos funis que nasceram de um modelo da corretora (`metadata.template` em RENOVACAO, SINISTRO ou ALTERACAO, lista `MODELOS_DA_CORRETORA` em `funil.js`), o diálogo de "não deu certo" e o aviso depois de marcar usam o nome próprio ("Não renovou: o que houve?", "Marcar: Não renovou", "Marcado: Renovou."). Todos os outros funis, inclusive a Cobrança e qualquer funil de conta geral com nome próprio, ficam com o texto de hoje. Com dois modelos de Vender, a pergunta acima deles é "Que tipo de venda?" (`CRM_FUNIL.TIPO.MODELO_VENDER`).
-5. **Critérios dos modelos novos:** `crm.stage_criteria.{renovacao,sinistro,alteracao}.e<n>` na base (`config/locales/crm_stage_criteria.{pt_BR,en}.yml`). Nomes, textos e ideias dos modelos novos também na base do `crm.json` (en + pt_BR).
+3. **Modelos novos** (`funil.js`): `RENOVACAO` (Vender, `venda: true`), `SINISTRO` e `ENDOSSO` (Atender), com `camadas: ['seguros/corretora']`. `modelosDoTipo(tipo, pacote)` filtra pela camada com `camadasDoPacote`; conta sem pacote (ou outro tipo de seguros) vê a lista de hoje. Sinistro e Endosso vêm **antes** dos modelos de todos no Atender, só na corretora: lá o primeiro já marcado é o Sinistro. Na conta geral a ordem e o modelo já marcado (Suporte) são os de hoje. Servidor: chaves novas em `Crm::Pipeline::TEMPLATES` e `RENOVACAO` em `DefaultStageCriteria::SELL_TEMPLATES`. `NAME_KEYS` não mudou: os nomes novos só acham critério por modelo e posição.
+4. **Desfechos do modelo:** `sucesso` e `falha` no item do modelo (`MODELOS.<X>.SUCESSO`/`.FALHA`), em qualquer tipo. Renovação: "Renovou"/"Não renovou"; Sinistro: "Encerrado"; Endosso: "Feito". Só nos funis que nasceram de um modelo da corretora (`metadata.template` em RENOVACAO, SINISTRO ou ENDOSSO, lista `MODELOS_DA_CORRETORA` em `funil.js`), o diálogo de "não deu certo" e o aviso depois de marcar usam o nome próprio ("Não renovou: o que houve?", "Marcar: Não renovou", "Marcado: Renovou."). Todos os outros funis, inclusive a Cobrança e qualquer funil de conta geral com nome próprio, ficam com o texto de hoje. Com dois modelos de Vender, a pergunta acima deles é "Que tipo de venda?" (`CRM_FUNIL.TIPO.MODELO_VENDER`).
+5. **Critérios dos modelos novos:** `crm.stage_criteria.{renovacao,sinistro,endosso}.e<n>` na base (`config/locales/crm_stage_criteria.{pt_BR,en}.yml`). Nomes, textos e ideias dos modelos novos também na base do `crm.json` (en + pt_BR).
 6. **Motivos rápidos:** `CRM_CARD.DESFECHO.MOTIVO.{PRECO,SUMIU,OUTRO_LUGAR,NAO_ERA_HORA}` no pacote da corretora: "Achou caro", "Parou de responder", "Fechou com outra corretora", "A seguradora recusou".
 7. **Categorias:** posicionais (Novo, Em andamento, Esperando o cliente, Resolvido), sem variante.
 8. `Autonomia::Insurance::AutoRenewal` (Lia) não foi tocado.

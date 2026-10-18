@@ -140,13 +140,13 @@ export const MODELOS = [
     ideias: ['BATEU', 'ROUBO', 'ACIONAR'],
   },
   {
-    chave: 'ALTERACAO',
+    chave: 'ENDOSSO',
     tipo: 'ATENDER',
     icone: 'i-lucide-file-pen-line',
     tom: 'bg-n-violet-3 text-n-violet-11',
     venda: false,
     camadas: CORRETORA,
-    etapas: etapasDo('ALTERACAO', 4),
+    etapas: etapasDo('ENDOSSO', 4),
     categorias: CATEGORIAS,
     // Traz o nome do sucesso, "Feito"; o outro desfecho fica com o nome
     // padrão do Atender.

@@ -83,12 +83,12 @@ RSpec.describe Crm::Ai::DefaultStageCriteria do
       expect(sell_by_name).not_to include('cuidando do pedido')
     end
 
-    # #1802: Renovação é de Vender; Sinistro e Alteração na apólice, de Atender. Achados só por modelo e posição.
+    # #1802: Renovação é de Vender; Sinistro e Endosso, de Atender. Achados só por modelo e posição.
     it 'knows the broker templates by template and position, each in its own kind' do
       expect(described_class.criteria_for('A vencer', template: 'RENOVACAO', position: 1)).to eq(I18n.t('crm.stage_criteria.renovacao.e1'))
       expect(described_class.criteria_for('Aberto', atender: true, template: 'SINISTRO', position: 1)).to eq(I18n.t('crm.stage_criteria.sinistro.e1'))
-      expect(described_class.criteria_for('Feito', atender: true, template: 'ALTERACAO', position: 4))
-        .to eq(I18n.t('crm.stage_criteria.alteracao.e4'))
+      expect(described_class.criteria_for('Feito', atender: true, template: 'ENDOSSO', position: 4))
+        .to eq(I18n.t('crm.stage_criteria.endosso.e4'))
       expect(described_class.criteria_for('Etapa', atender: true, template: 'RENOVACAO', position: 1)).to be_nil
       expect(described_class.criteria_for('Etapa', template: 'SINISTRO', position: 1)).to be_nil
     end

@@ -4293,9 +4293,9 @@
         "E4": "Encerrado",
         "SUCESSO": "Encerrado"
       },
-      "ALTERACAO": {
-        "NOME": "Alteração na apólice",
-        "TEXTO": "Do pedido de mudança até a apólice nova.",
+      "ENDOSSO": {
+        "NOME": "Endosso",
+        "TEXTO": "Do pedido de endosso até a apólice nova.",
         "E1": "Pedido",
         "E2": "Na seguradora",
         "E3": "Falta documento",

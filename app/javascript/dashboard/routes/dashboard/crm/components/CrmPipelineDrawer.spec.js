@@ -542,7 +542,7 @@ describe('CrmPipelineDrawer Atender', () => {
       await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
       expect(modelos(wrapper)).toEqual([
         'SINISTRO',
-        'ALTERACAO',
+        'ENDOSSO',
         'ATENDIMENTO',
         'POS_VENDA',
         'COBRANCA',

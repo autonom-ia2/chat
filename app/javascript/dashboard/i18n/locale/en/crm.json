@@ -4292,9 +4292,9 @@
         "E4": "Closed",
         "SUCESSO": "Closed"
       },
-      "ALTERACAO": {
-        "NOME": "Policy change",
-        "TEXTO": "From the change request to the new policy.",
+      "ENDOSSO": {
+        "NOME": "Endorsement",
+        "TEXTO": "From the endorsement request to the new policy.",
         "E1": "Requested",
         "E2": "With the insurer",
         "E3": "Missing document",

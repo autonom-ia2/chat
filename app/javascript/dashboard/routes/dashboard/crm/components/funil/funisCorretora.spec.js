@@ -20,14 +20,14 @@ const HOJE = {
 };
 
 describe('modelosDoTipo by account layer', () => {
-  it('broker account sees Renewal next to Sales, and Claim and Policy change first in Serve', () => {
+  it('broker account sees Renewal next to Sales, and Claim and Endorsement first in Serve', () => {
     expect(chaves('VENDER', 'seguros.corretora')).toEqual([
       'VENDAS',
       'RENOVACAO',
     ]);
     expect(chaves('ATENDER', 'seguros.corretora')).toEqual([
       'SINISTRO',
-      'ALTERACAO',
+      'ENDOSSO',
       ...HOJE.ATENDER,
     ]);
   });
@@ -57,7 +57,7 @@ describe('modelosDoTipo by account layer', () => {
     expect(modeloDoFunil({ counts_as_sale: true }).chave).toBe('VENDAS');
   });
 
-  it('Renewal is Sell with both outcomes; Claim and Policy change are Serve, positional categories', () => {
+  it('Renewal is Sell with both outcomes; Claim and Endorsement are Serve, positional categories', () => {
     const modelo = chave => MODELOS.find(item => item.chave === chave);
     expect(modelo('RENOVACAO')).toMatchObject({
       tipo: 'VENDER',
@@ -65,7 +65,7 @@ describe('modelosDoTipo by account layer', () => {
       sucesso: true,
       falha: true,
     });
-    ['SINISTRO', 'ALTERACAO'].forEach(chave => {
+    ['SINISTRO', 'ENDOSSO'].forEach(chave => {
       expect(modelo(chave)).toMatchObject({
         tipo: 'ATENDER',
         venda: false,

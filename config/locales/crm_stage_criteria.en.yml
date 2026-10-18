@@ -42,8 +42,8 @@ en:
         e2: 'The team told the customer it opened the claim (gave a protocol or number) and the insurer is reviewing it. Now it is up to the insurer.'
         e3: 'The team asked the customer for a document, a photo or a police report and they have not sent it yet.'
         e4: 'The team told the customer the insurer''s answer about the claim.'
-      alteracao:
-        e1: 'The customer asked for a change in the policy and the team has not said it asked the insurer yet.'
+      endosso:
+        e1: 'The customer asked for an endorsement (a change in the policy) and the team has not said it asked the insurer yet.'
         e2: 'The team told the customer it asked the insurer for the change and is waiting for its answer.'
         e3: 'The team asked the customer for a document or a detail and they have not sent it yet.'
         e4: 'The team told the customer the change was made or sent the new policy.'

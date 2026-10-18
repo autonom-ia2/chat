@@ -47,9 +47,9 @@ class Crm::Pipeline < ApplicationRecord
 
   MAX_WHEN_TO_USE = 1_000
   # Modelo escolhido ao criar o funil (#1498), guardado em metadata['template']. De Vender: VENDAS e RENOVACAO; os outros
-  # são de Atender. RENOVACAO, SINISTRO e ALTERACAO (#1802) só aparecem na tela para a corretora (camada
+  # são de Atender. RENOVACAO, SINISTRO e ENDOSSO (#1802) só aparecem na tela para a corretora (camada
   # seguros/corretora). Funil antigo não tem: a tela usa o primeiro modelo do tipo.
-  TEMPLATES = %w[VENDAS ATENDIMENTO POS_VENDA COBRANCA AGENDAMENTOS RENOVACAO SINISTRO ALTERACAO].freeze
+  TEMPLATES = %w[VENDAS ATENDIMENTO POS_VENDA COBRANCA AGENDAMENTOS RENOVACAO SINISTRO ENDOSSO].freeze
 
   validates :name, presence: true
   # Multifunil (#1145): o "Quando usar" que a IA lê para saber se um pedido é deste funil.
