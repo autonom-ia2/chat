@@ -16,7 +16,12 @@ class Autonomia::Agents::Operate::HistoricoDaEquipe
   def historico(messages)
     # Anexos: o resumo de localização/contato que chega como anexo (#1715) lê `attachments` de cada mensagem sem texto.
     ActiveRecord::Associations::Preloader.new(records: messages, associations: %i[sender attachments]).call
-    messages.map { |message| pessoa.item_do_historico(message, marca: marca, whatsapp: whatsapp?) }
+    messages.map { |message| pessoa.item_do_historico(message, marca: marca, whatsapp: whatsapp?, autoria: autoria) }
+  end
+
+  # #1807: quem escreveu cada e-mail recebido (flag `email_autoria`); sem a flag, o texto e o histórico de sempre.
+  def autoria
+    @autoria ||= Crm::Email::Autoria.new(@conversation.account)
   end
 
   # A regra do turno, ou nil sem mensagem da equipe na janela.

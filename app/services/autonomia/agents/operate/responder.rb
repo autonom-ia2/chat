@@ -582,11 +582,17 @@ module Autonomia
         # Imagens NÃO entram aqui — vão como input_image.
         def query
           message = last_incoming_message
-          base = message&.content.to_s
+          # #1807: e-mail recebido sem o histórico citado (flag `email_autoria`); o resto, o content de sempre.
+          base = message ? email_autoria.texto(message) : ''
           transcribed = media.transcripts.map { |text| "[áudio do cliente, transcrito automaticamente]: #{text}" }
           texto = [quoted_context(message), base.presence, *transcribed].compact.join("\n")
           # #1669: com a moldura da equipe, a chave dela escrita pelo cliente é neutralizada (segunda camada).
-          equipe.aplica? ? equipe.pergunta(texto) : texto
+          pergunta = equipe.aplica? ? equipe.pergunta(texto) : texto
+          message ? "#{email_autoria.aviso(message)}#{pergunta}" : pergunta
+        end
+
+        def email_autoria
+          equipe.autoria
         end
 
         def last_incoming_message
@@ -630,7 +636,7 @@ module Autonomia
           return equipe.historico(recent_messages) if equipe.aplica?
 
           recent_messages.map do |message|
-            { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s }
+            { role: message.incoming? ? 'user' : 'assistant', content: message.incoming? ? email_autoria.para_ia(message) : message.content.to_s }
           end
         end
 
@@ -638,11 +644,14 @@ module Autonomia
         # e a equipe está fora do horário da caixa (EsperaForaDoHorario). Vão como contexto do turno (`developer`), nunca
         # na instrução do agente (que é do dono), e só com a Fase 2. nil sem nenhum dos dois: o Answerer nem recebe o
         # argumento, e o pedido fica igual ao de antes.
+        # #1807: com e-mail de outro endereço na janela (flag `email_autoria`), a legenda do aviso entra aqui também, com ou
+        # sem a Fase 2.
         def contexto_do_turno
-          return unless equipe.aplica?
+          email = email_autoria.regra(recent_messages)
+          return email unless equipe.aplica?
 
           espera = ::Autonomia::Agents::Operate::EsperaForaDoHorario.new(conversation: @conversation).texto
-          [equipe.regra(recent_messages), espera].compact.join("\n\n").presence
+          [equipe.regra(recent_messages), espera, email].compact.join("\n\n").presence
         end
 
         def equipe
