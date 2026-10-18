@@ -1877,6 +1877,7 @@ export default {
           class="input popover-prosemirror-menu"
           :is-private="isOnPrivateNote"
           :placeholder="messagePlaceHolder"
+          :reload-on-placeholder-change="emailNovo"
           :update-selection-with="updateEditorSelectionWith"
           :min-height="4"
           :disabled="isEditorDisabled"
