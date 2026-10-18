@@ -15,13 +15,14 @@ module Autonomia::Agents::DesfazerAjuste
 
   class AjusteMudou < StandardError; end
 
-  # O ajuste desta conversa ainda pode ser desfeito aqui? (a tela mostra o botão; o desfazer confere de novo sob a trava)
-  def ajuste_desfazivel?(thread)
-    ultimo = thread.state.to_h['ultimo_ajuste'].to_h
-    return false unless guided? && ultimo['desfeito'] != true
+  # A REGRA ÚNICA do Desfazer: a conversa mais nova do agente, parada, com o último ajuste ainda não desfeito, e o agente
+  # ainda como a escrita do Construtor o deixou (o updated_at guardado). nil sem ela. A tela usa (o cartão da conversa e
+  # a faixa "Última mudança", mesmo depois de recarregar) e o desfazer confere de novo sob a trava.
+  def conversa_desfazivel
+    return unless versao_completa? && guided?
 
-    thread.ready? && ultimo['versao_antes_id'].present? && updated_at.iso8601(6) == ultimo['agente_updated_at'] &&
-      !build_threads.where(account_id: account_id).exists?(['id > ?', thread.id])
+    thread = build_threads.where(account_id: account_id).order(id: :desc).first
+    thread if thread&.ready? && ajuste_aberto?(thread.state.to_h['ultimo_ajuste'].to_h)
   end
 
   def desfazer_ajuste!(thread:, created_by: nil)
@@ -33,13 +34,18 @@ module Autonomia::Agents::DesfazerAjuste
     with_lock do
       ultimo = thread.reload.state.to_h['ultimo_ajuste'].to_h
       next true if ultimo['desfeito'] == true
-      raise AjusteMudou unless ajuste_desfazivel?(thread)
+      raise AjusteMudou unless conversa_desfazivel&.id == thread.id
 
       voltar_ao_antes_do_ajuste!(thread, ultimo, created_by)
     end
   end
 
   private
+
+  # O último ajuste ainda não foi desfeito e o agente segue como a escrita do Construtor o deixou.
+  def ajuste_aberto?(ultimo)
+    ultimo['versao_antes_id'].present? && ultimo['desfeito'] != true && updated_at.iso8601(6) == ultimo['agente_updated_at']
+  end
 
   def voltar_ao_antes_do_ajuste!(thread, ultimo, autor)
     antes = instruction_versions.find_by(id: ultimo['versao_antes_id']) || raise(AjusteMudou)

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaBuilderImagesAPI from 'dashboard/api/autonomia/builderImages';
+import AutonomiaBuildThreadsAPI from 'dashboard/api/autonomia/buildThreads';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import AgenteGaveta from '../AgenteGaveta.vue';
@@ -12,6 +13,7 @@ import RespostasRapidas from '../RespostasRapidas.vue';
 import TesteDoAgente from './TesteDoAgente.vue';
 import DialogoAcao from './DialogoAcao.vue';
 import ResultadoDoAjuste from './ResultadoDoAjuste.vue';
+import UltimaMudanca from './UltimaMudanca.vue';
 import { useTesteDoAgente } from '../../composables/useTesteDoAgente';
 import { fecharFrase } from '../../utils/pagina';
 
@@ -254,6 +256,43 @@ const desfazer = async () => {
   }
 };
 
+// #1428 (parte 3) — a faixa "Última mudança" da tela nova (depois do RESET ou de recarregar): o
+// servidor diz, no agente, se a última mudança feita conversando ainda dá para desfazer. Só antes de
+// começar uma conversa nova (que passa a ser a mais nova do agente). Desfeita, o agente é relido e a
+// faixa some sozinha; fica o aviso de desfeito.
+const ultimaMudanca = computed(() =>
+  comecou.value ? null : props.agente.ultima_mudanca_desfazivel || null
+);
+const desfazendoUltima = ref(false);
+const erroDaUltima = ref('');
+const ultimaDesfeita = ref(false);
+
+const relerAgente = async () => {
+  try {
+    await store.dispatch('autonomiaAgents/show', props.agente.id);
+    antes.value = { name: props.agente.name, tone: props.agente.tone };
+  } catch {
+    // Já desfeito no servidor; a página relê o agente ao abrir de novo.
+  }
+};
+
+const desfazerUltima = async () => {
+  if (desfazendoUltima.value || !ultimaMudanca.value) return;
+  desfazendoUltima.value = true;
+  erroDaUltima.value = '';
+  try {
+    await AutonomiaBuildThreadsAPI.desfazer(ultimaMudanca.value.thread_id);
+  } catch (error) {
+    erroDaUltima.value = error?.response?.status === 409 ? 'mudou' : 'falhou';
+    desfazendoUltima.value = false;
+    return;
+  }
+  ultimaDesfeita.value = true;
+  teste.marcarAtualizado();
+  await relerAgente();
+  desfazendoUltima.value = false;
+};
+
 const usarIdeia = ideia => {
   rascunho.value = ideia;
 };
@@ -322,6 +361,26 @@ onBeforeUnmount(() => {
         aria-labelledby="mudar-titulo"
         class="flex flex-col gap-4 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak dark:ring-n-slate-6"
       >
+        <p
+          v-if="ultimaDesfeita && !comecou"
+          data-ultima-desfeita
+          role="status"
+          class="flex items-center gap-3 px-4 py-2 m-0 text-sm rounded-xl bg-n-slate-2 text-n-slate-12"
+        >
+          <span
+            class="i-lucide-undo-2 size-4 shrink-0 text-n-slate-11"
+            aria-hidden="true"
+          />
+          {{ t(`${NS}.CONFERIDO.DESFEITO`, { nome }) }}
+        </p>
+        <UltimaMudanca
+          v-else-if="ultimaMudanca"
+          :ultima="ultimaMudanca"
+          :nome="nome"
+          :desfazendo="desfazendoUltima"
+          :erro="erroDaUltima"
+          @desfazer="desfazerUltima"
+        />
         <div
           data-conversa
           :aria-label="t(`${NS}.CONVERSA`)"

@@ -20,6 +20,8 @@ const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 const imagens = vi.hoisted(() => ({ upload: vi.fn() }));
 vi.mock('dashboard/api/autonomia/builderImages', () => ({ default: imagens }));
+const conversas = vi.hoisted(() => ({ desfazer: vi.fn() }));
+vi.mock('dashboard/api/autonomia/buildThreads', () => ({ default: conversas }));
 
 const no = seletor => document.querySelector(seletor);
 const todos = seletor => [...document.querySelectorAll(seletor)];
@@ -358,6 +360,83 @@ describe('MudarConversando', () => {
         'CONFERIDO.MUDOU_DEPOIS'
       );
       expect(no('[data-desfazer]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  // #1428 (parte 3) — a faixa "Última mudança" na tela nova: o direito de desfazer vem do servidor, no
+  // agente, mesmo depois de recarregar a página.
+  describe('last change strip (pilot)', () => {
+    const ULTIMA = { thread_id: 41, linhas: ['Respostas curtas'] };
+    const comUltima = (
+      agente = { ...AGENTE, ultima_mudanca_desfazivel: ULTIMA }
+    ) => montar({ agente });
+
+    beforeEach(() => {
+      conversas.desfazer.mockReset();
+    });
+
+    it('shows the last change above the new conversation, and nothing without it', async () => {
+      const wrapper = comUltima();
+      await nextTick();
+      expect(no('[data-ultima-mudanca]').textContent).toContain(
+        'CONFERIDO.ULTIMA_MUDANCA'
+      );
+      wrapper.unmount();
+
+      const semUltima = montar();
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      semUltima.unmount();
+    });
+
+    it('goes away when the agent changes, and once a new conversation starts', async () => {
+      const wrapper = comUltima();
+      await nextTick();
+      await wrapper.setProps({ agente: { ...AGENTE } });
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+
+      await wrapper.setProps({
+        agente: { ...AGENTE, ultima_mudanca_desfazivel: ULTIMA },
+      });
+      store.state[`${ESTADO}getMessages`] = [{ role: 'user', content: 'Oi' }];
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('undoes by the thread the server named, re-reads the agent and restarts the phone', async () => {
+      conversas.desfazer.mockResolvedValue({ data: {} });
+      const wrapper = comUltima();
+      await nextTick();
+      expect(no('[data-atualizado]')).toBeNull();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(conversas.desfazer).toHaveBeenCalledWith(41);
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      expect(no('[data-ultima-desfeita]').textContent).toContain(
+        'CONFERIDO.DESFEITO'
+      );
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      expect(no('[data-atualizado]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('after a 409 says the agent changed and hides the undo', async () => {
+      conversas.desfazer.mockRejectedValue({ response: { status: 409 } });
+      const wrapper = comUltima();
+      await nextTick();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(no('[data-erro-desfazer]').textContent).toContain(
+        'CONFERIDO.MUDOU_DEPOIS'
+      );
+      expect(no('[data-desfazer-ultima]')).toBeNull();
+      expect(no('[data-ultima-desfeita]')).toBeNull();
       wrapper.unmount();
     });
   });

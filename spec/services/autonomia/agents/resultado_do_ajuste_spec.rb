@@ -88,6 +88,13 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
     expect(resultado(conferencia)[:pode_desfazer]).to be(false)
   end
 
+  it 'não oferece desfazer sem a versão de antes' do
+    saida = resultado({ 'itens' => [item('tone', 'curto', 'Curto.')] }, 'ultimo_ajuste' => ultimo.merge('versao_antes_id' => nil))
+
+    expect(saida[:pode_desfazer]).to be(false)
+    expect(described_class.ultima_mudanca_desfazivel(agent)).to be_nil
+  end
+
   it 'não oferece desfazer em agente manual' do
     agent.update_columns(mode: Autonomia::Agents::Agent.modes[:manual]) # rubocop:disable Rails/SkipsModelValidations
 
@@ -104,6 +111,18 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
     json = resultado('itens' => [item('instruction', 'curto', 'Curto.'), item('tone', 'x', 'Y.', atendido: false)]).to_json
 
     expect(json).not_to include('campo', 'instruction', 'pedido_pelo_dono', 'atendido', 'Instrução secreta', 'andaime')
+  end
+
+  describe '.ultima_mudanca_desfazivel' do
+    it 'só os aplicados, no máximo 3, sem o ponto final' do
+      resultado('itens' => [item('tone', 'a', 'Um.'), item('greeting', 'b', 'Dois.', atendido: false),
+                            item('handoff_rule', 'c', 'Três.'), item('fallback_message', 'd', 'Quatro.'),
+                            item('human_card', 'e', 'Cinco.')])
+      thread = agent.build_threads.last
+
+      expect(described_class.ultima_mudanca_desfazivel(agent.reload))
+        .to eq(thread_id: thread.id, linhas: %w[Um Três Quatro])
+    end
   end
 
   describe '.mostrar?' do

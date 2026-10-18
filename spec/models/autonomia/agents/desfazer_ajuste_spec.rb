@@ -102,6 +102,14 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
       expect(agent.reload.tone).to eq('cordial e curto')
     end
 
+    it 'recusa a conversa antiga mesmo quando a mais nova também poderia desfazer' do
+      aplicar_ajuste
+      Autonomia::Agents::BuildThread.create!(account: account, agent: agent, status: :ready, state: thread.reload.state)
+
+      expect { desfazer }.to raise_error(described_class::AjusteMudou)
+      expect(agent.reload.tone).to eq('cordial e curto')
+    end
+
     it 'recusa enquanto a conversa está gerando' do
       aplicar_ajuste
       thread.begin_build!

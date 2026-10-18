@@ -1342,7 +1342,9 @@
             "DESFEITO": "Undone. {nome} is back to how it was.",
             "DESFEITO_SOZINHO": "I undid what you had not asked for. {nome} stays as before.",
             "MUDOU_DEPOIS": "{nome} changed after this conversation, so it cannot be undone from here. To go back, use “Previous ways of answering”.",
-            "ERRO": "I could not undo it now. Try again."
+            "ERRO": "I could not undo it now. Try again.",
+            "ULTIMA_MUDANCA": "Last change: {lista}.",
+            "ULTIMA_MUDANCA_SEM_RESUMO": "Last change made by chatting."
           }
         },
         "FOTO": {

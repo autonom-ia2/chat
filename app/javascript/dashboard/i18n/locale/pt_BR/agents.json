@@ -1342,7 +1342,9 @@
             "DESFEITO": "Desfeito. {nome} voltou a ser como antes.",
             "DESFEITO_SOZINHO": "Desfiz o que você não tinha pedido. {nome} continua como antes.",
             "MUDOU_DEPOIS": "{nome} mudou depois desta conversa, então não dá para desfazer daqui. Para voltar, use “Jeitos anteriores de responder”.",
-            "ERRO": "Não consegui desfazer agora. Tente de novo."
+            "ERRO": "Não consegui desfazer agora. Tente de novo.",
+            "ULTIMA_MUDANCA": "Última mudança: {lista}.",
+            "ULTIMA_MUDANCA_SEM_RESUMO": "Última mudança feita conversando."
           }
         },
         "FOTO": {

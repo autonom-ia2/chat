@@ -15,6 +15,23 @@ class Autonomia::Agents::ResultadoDoAjuste
       Autonomia::Agents::Fase2.ligada?(thread.account)
   end
 
+  LINHAS_DA_ULTIMA_MUDANCA = 3
+
+  # A faixa "Última mudança" da tela do agente (sem a conversa aberta, mesmo depois de recarregar): a conversa e até 3
+  # resumos do que entrou. nil quando já não dá para desfazer (a mesma regra do Desfazer, Agent#conversa_desfazivel).
+  def self.ultima_mudanca_desfazivel(agent)
+    thread = agent.conversa_desfazivel
+    return if thread.nil?
+
+    aplicadas = new(thread).linhas.select { |linha| linha[:estado] == 'aplicado' }
+    { thread_id: thread.id, linhas: aplicadas.first(LINHAS_DA_ULTIMA_MUDANCA).map { |linha| sem_ponto(linha[:texto]) } }
+  end
+
+  # O texto que a tela põe dentro de uma frase dela (entre aspas, ou numa lista) vai sem o ponto final.
+  def self.sem_ponto(texto)
+    texto.to_s.strip.chomp('.')
+  end
+
   def initialize(thread)
     @thread = thread
     @conferencia = thread.state.to_h['conferencia'].to_h
@@ -22,14 +39,18 @@ class Autonomia::Agents::ResultadoDoAjuste
   end
 
   def to_h
+    { itens: linhas, faltou_fora: @conferencia['faltou_fora_da_lista'] == true, conferido: conferido?,
+      desfeito_sozinho: desfeito_sozinho?, desfeito: @thread.state.to_h.dig('ultimo_ajuste', 'desfeito') == true,
+      pode_desfazer: @thread.agent.conversa_desfazivel&.id == @thread.id }
+  end
+
+  # Uma linha por pedido (aplicado ou não) e, depois, o que o dono não pediu e mudou.
+  def linhas
     sem_pedido = Autonomia::Agents::Builder::DesfechoDoAjuste.sem_pedido(@itens)
     nao_pedidos = agrupar(sem_pedido_que_mudou(sem_pedido)).map do |grupo|
       { estado: 'sem_pedido', texto: sem_ponto(grupo.first['resumo']) }
     end
-    { itens: agrupar(@itens - sem_pedido).map { |grupo| linha_pedida(grupo) } + nao_pedidos,
-      faltou_fora: @conferencia['faltou_fora_da_lista'] == true, conferido: conferido?, desfeito_sozinho: desfeito_sozinho?,
-      desfeito: @thread.state.to_h.dig('ultimo_ajuste', 'desfeito') == true,
-      pode_desfazer: @thread.agent.ajuste_desfazivel?(@thread) }
+    agrupar(@itens - sem_pedido).map { |grupo| linha_pedida(grupo) } + nao_pedidos
   end
 
   private
@@ -59,9 +80,8 @@ class Autonomia::Agents::ResultadoDoAjuste
     { estado: 'aplicado', texto: grupo.first['resumo'].to_s }
   end
 
-  # O texto que a tela põe dentro de uma frase dela (entre aspas, ou numa lista) vai sem o ponto final.
   def sem_ponto(texto)
-    texto.to_s.strip.chomp('.')
+    self.class.sem_ponto(texto)
   end
 
   # O que o dono não pediu e mudou de fato: o desfecho guarda em `sem_pedido` quando é só parte; quando era tudo e o

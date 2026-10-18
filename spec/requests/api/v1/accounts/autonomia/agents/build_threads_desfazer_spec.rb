@@ -51,6 +51,56 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
     end
   end
 
+  # A faixa "Última mudança" da tela nova (depois do RESET ou de recarregar): vem no GET do agente.
+  describe 'GET /autonomia/agents/:id (ultima_mudanca_desfazivel)' do
+    def ultima_mudanca
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}", headers: administrator.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      response.parsed_body['ultima_mudanca_desfazivel']
+    end
+
+    it 'traz a conversa e os resumos do que entrou, sem campo, instrução nem andaime' do
+      expect(ultima_mudanca).to eq('thread_id' => thread.id, 'linhas' => ['Respostas curtas'])
+      expect(response.body).not_to include('campo', 'Instrução', 'andaime', 'ultimo_ajuste', 'versao_antes_id')
+    end
+
+    it 'some quando o agente muda por outro caminho' do
+      agent.update!(greeting: 'Editado à mão.')
+
+      expect(ultima_mudanca).to be_nil
+    end
+
+    it 'some depois de desfeito' do
+      post "#{url}/desfazer", headers: administrator.create_new_auth_token, as: :json
+
+      expect(ultima_mudanca).to be_nil
+    end
+
+    it 'some quando há uma conversa mais nova do agente' do
+      Autonomia::Agents::BuildThread.create!(account: account, agent: agent, created_by: administrator)
+
+      expect(ultima_mudanca).to be_nil
+    end
+
+    it 'some enquanto a conversa gera um turno novo' do
+      thread.begin_build!
+
+      expect(ultima_mudanca).to be_nil
+    end
+
+    it 'fora do piloto não vem' do
+      Autonomia::Agents::Fase2.desligar!(account)
+
+      expect(ultima_mudanca).to be_nil
+    end
+
+    it 'não vem em agente manual' do
+      agent.update_columns(mode: Autonomia::Agents::Agent.modes[:manual]) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(ultima_mudanca).to be_nil
+    end
+  end
+
   describe 'POST /autonomia/build_threads/:id/desfazer' do
     it 'volta o agente à versão de antes e responde o resultado desfeito' do
       desfazer
