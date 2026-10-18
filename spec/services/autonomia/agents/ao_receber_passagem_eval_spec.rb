@@ -5,12 +5,13 @@ require 'rails_helper'
 # modelo de produção), numa conta com a Fase 2 e a chave da passagem; o canal é o de teste (nada sai para cliente). Um
 # juiz de OUTRO modelo lê cada resposta. Teto de US$ 2 por rodada: o custo é somado pelo consumo gravado
 # (Crm::AiUsageEvent) e a rodada para antes de passar de US$ 1,80. Opcional: `AO_RECEBER_PASSAGEM_EVAL_SAIDA=<arquivo>`
-# grava o relatório; `AO_RECEBER_PASSAGEM_EVAL_CENA=<nome>` roda só uma cena. Agente da página (Clara), não a Lia
-# (decisão do Rodrigo, 18/10).
+# grava o relatório; `AO_RECEBER_PASSAGEM_EVAL_CENA=<nome>` roda só uma cena. Agentes da página (Clara, Bruno), não a
+# Lia (decisão do Rodrigo, 18/10).
 #
-# Mede: o agente fala quando há o que dizer (os exemplos 1 e 2 da Issue e a pergunta sem resposta), cala ou fecha curto
-# quando a pessoa já resolveu (exemplo 3), não usa a nota privada (ela nem vai ao modelo) e não toma como sua a promessa
-# da pessoa. Quem julga o sentido é o modelo juiz, nunca uma lista de palavras.
+# Mede, nas três origens da passagem (pessoa, outro agente, Atribuição do CRM): o agente fala quando há o que dizer (os
+# exemplos 1 e 2 da Issue e a pergunta sem resposta), cala ou fecha curto quando quem atendia já resolveu (exemplo 3),
+# não usa a nota privada (ela nem vai ao modelo) e não toma como sua a promessa de quem atendia antes. Quem julga o
+# sentido é o modelo juiz, nunca uma lista de palavras.
 module AvaliacaoAoReceberPassagem
   JUIZ = 'gpt-5.4'.freeze
   TETO_USD = 1.8
@@ -24,7 +25,15 @@ module AvaliacaoAoReceberPassagem
     Não invente valores, descontos nem prazos: quando não souber, diga que vai confirmar com a equipe.
   TXT
 
-  # Cada cena: a conversa até a passagem (:cliente, :ana, :nota — nota privada da Ana), se calar é aceitável e o certo.
+  BRUNO = <<~TXT.freeze
+    Você é o Bruno, do time de seguro residencial da Vale Seguros no WhatsApp. Responda curto, em português, com simpatia.
+    Cotação de seguro residencial: peça se é casa ou apartamento, o CEP do imóvel e o valor aproximado do imóvel.
+    Não invente valores nem prazos: quando não souber, diga que vai confirmar com a equipe.
+  TXT
+
+  # Quem escreve: :cliente, :ana (pessoa), :nota (nota privada da Ana), :clara e :recepcao (outros agentes de IA, cada um
+  # pelo seu robô). `por`: quem passou (:pessoa — a Ana; :ia — `de`, um agente; :crm — a Atribuição, tirando de `de`).
+  # `recebe`: o agente que recebe a conversa (padrão: a Clara).
   CENAS = [
     { nome: 'pede e a Ana passa calada', pode_calar: false,
       mensagens: [[:cliente, 'Quero cotar o seguro do meu Onix 2022.']],
@@ -57,7 +66,19 @@ module AvaliacaoAoReceberPassagem
                   [:ana, 'Te mando a segunda via por aqui até as 17h.'],
                   [:cliente, 'Ok, obrigado.']],
       certo: 'O certo é ficar calada ou um fecho curto. Se falar, não toma como sua a promessa: não diz "eu te mando" ' \
-             'nem "vou te enviar"; se citar o envio, diz que quem manda é a Ana (ou a equipe), até as 17h.' }
+             'nem "vou te enviar"; se citar o envio, diz que quem manda é a Ana (ou a equipe), até as 17h.' },
+    { nome: 'a Clara passa para o Bruno', pode_calar: false, por: :ia, de: :clara, recebe: :bruno,
+      mensagens: [[:cliente, 'Quero fazer o seguro residencial do meu apartamento.'],
+                  [:clara, 'Que bom! Vou te passar para o Bruno, que cuida de seguro residencial.']],
+      certo: 'Fala (é o Bruno): se apresenta e continua a cotação residencial, pedindo o que falta (CEP do imóvel e valor ' \
+             'aproximado). Não pergunta de novo se é casa ou apartamento. Não repete o aviso da Clara de que ia passar a ' \
+             'conversa e não fala como se fosse a Clara.' },
+    { nome: 'a Atribuição passa com pergunta pendente', pode_calar: false, por: :crm, de: :recepcao,
+      mensagens: [[:cliente, 'Oi, tenho uma dúvida sobre o meu seguro auto.'],
+                  [:recepcao, 'Oi! Aqui é a Recepção da Vale Seguros, já te direciono.'],
+                  [:cliente, 'Vocês abrem sábado?']],
+      certo: 'Fala (é a Clara): responde que sábado abrem das 9h às 12h. Não repete o "já te direciono" da Recepção e não ' \
+             'fala como se fosse a Recepção.' }
   ].freeze
 
   VEREDITO = {
@@ -66,23 +87,26 @@ module AvaliacaoAoReceberPassagem
       type: 'object', additionalProperties: false,
       required: %w[repete_a_pessoa assume_promessa_da_pessoa usa_a_nota_privada se_anuncia_como_ia atende_o_certo justificativa],
       properties: {
-        repete_a_pessoa: { type: 'boolean', description: 'A resposta repete, com as mesmas ideias, o que a Ana já disse ao ' \
-                                                         'cliente (sem acrescentar nada)?' },
-        assume_promessa_da_pessoa: { type: 'boolean', description: 'A Clara fala como se uma promessa, prazo ou ação da ' \
-                                                                   'Ana fosse dela?' },
+        repete_a_pessoa: { type: 'boolean', description: 'A resposta repete, com as mesmas ideias, o que quem atendia ' \
+                                                         'antes (a Ana ou outro agente) já disse ao cliente, sem ' \
+                                                         'acrescentar nada?' },
+        assume_promessa_da_pessoa: { type: 'boolean', description: 'O agente fala como se uma promessa, prazo ou ação de ' \
+                                                                   'quem atendia antes fosse dele, ou fala como se fosse ' \
+                                                                   'quem atendia antes?' },
         usa_a_nota_privada: { type: 'boolean', description: 'A resposta menciona o desconto de 15% ou outro dado que só ' \
                                                             'estava na nota interna? Sem nota na conversa, responda não.' },
-        se_anuncia_como_ia: { type: 'boolean', description: 'A Clara se apresenta como assistente virtual, robô ou IA?' },
+        se_anuncia_como_ia: { type: 'boolean', description: 'O agente se apresenta como assistente virtual, robô ou IA?' },
         atende_o_certo: { type: 'boolean', description: 'A resposta cumpre o critério do que é certo (dado abaixo)?' },
         justificativa: { type: 'string', description: 'Uma frase.' }
       }
     }
   }.freeze
 
-  INSTRUCAO_DO_JUIZ = 'Você avalia a mensagem que a Clara, do time de atendimento de uma corretora, mandou a um cliente no ' \
-                      'WhatsApp logo depois de a Ana, uma pessoa da equipe, passar a conversa para ela. Você recebe a ' \
-                      'conversa com quem escreveu cada mensagem (a nota interna o cliente nunca viu), o critério do que é ' \
-                      'certo e a mensagem. Responda cada campo pelo sentido, sem ser generoso.'.freeze
+  INSTRUCAO_DO_JUIZ = 'Você avalia a mensagem que um agente do time de atendimento de uma corretora mandou a um cliente no ' \
+                      'WhatsApp logo depois de a conversa ser passada para ele (por uma pessoa da equipe, por outro agente ' \
+                      'ou pela Atribuição do CRM). Você recebe a conversa com quem escreveu cada mensagem (a nota interna ' \
+                      'o cliente nunca viu), quem recebeu a conversa, o critério do que é certo e a mensagem. Responda ' \
+                      'cada campo pelo sentido, sem ser generoso.'.freeze
 end
 
 RSpec.describe 'Avaliação paga de ao receber a passagem (#1630)', :eval_pago do # rubocop:disable RSpec/DescribeClass
@@ -95,13 +119,13 @@ RSpec.describe 'Avaliação paga de ao receber a passagem (#1630)', :eval_pago d
     create(:channel_whatsapp, account: conta, provider: 'whatsapp_cloud', sync_templates: false,
                               validate_provider_config: false).inbox
   end
-  let(:agent_bot) { create(:agent_bot, account: conta) }
-  let(:clara) do
-    Autonomia::Agents::Agent.create!(account: conta, name: 'Clara', agent_type: 'custom', status: :active, enabled: true,
-                                     instruction: AvaliacaoAoReceberPassagem::CLARA, config: { 'with_knowledge' => false })
-  end
-  let(:vinculo) { Autonomia::Agents::AgentInbox.create!(agent: clara, inbox: inbox, account: conta, agent_bot: agent_bot) }
   let(:ana) { create(:user, account: conta, role: :agent, name: 'Ana Ribeiro', display_name: 'Ana') }
+  # Os agentes da página, cada um com o seu robô na caixa: a Clara é a porta; o Bruno e a Recepção, áreas.
+  let(:vinculos) do
+    { clara: criar_vinculo('Clara', AvaliacaoAoReceberPassagem::CLARA, porta: true),
+      bruno: criar_vinculo('Bruno', AvaliacaoAoReceberPassagem::BRUNO),
+      recepcao: criar_vinculo('Recepção', 'Você é a Recepção da Vale Seguros. Direcione o cliente ao time certo.') }
+  end
   let(:relatorio) { [] }
 
   around do |example|
@@ -113,33 +137,60 @@ RSpec.describe 'Avaliação paga de ao receber a passagem (#1630)', :eval_pago d
     WebMock.disable_net_connect!(allow_localhost: true)
   end
 
+  def criar_vinculo(nome, instrucao, porta: false)
+    agente = Autonomia::Agents::Agent.create!(account: conta, name: nome, agent_type: 'custom', status: :active, enabled: true,
+                                              instruction: instrucao, config: { 'with_knowledge' => false })
+    return Autonomia::Agents::Areas.vincular!(agent: agente, inbox: inbox) unless porta
+
+    Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: conta, agent_bot: create(:agent_bot, account: conta))
+  end
+
   def custo_ate_agora
     Crm::AiUsageEvent.where(account_id: conta.id).sum(:cost_estimate).to_f
   end
 
-  # A conversa até a passagem e a passagem gravada (Ana → Clara, pedida pela Ana), com a Clara no comando.
+  def recebe(cena)
+    vinculos.fetch(cena.fetch(:recebe, :clara))
+  end
+
+  # A conversa até a passagem e a passagem gravada, com quem recebe no comando.
   def montar_conversa(cena)
-    conversa = create(:conversation, account: conta, inbox: inbox, assignee: nil, ai_assignee: agent_bot)
+    conversa = create(:conversation, account: conta, inbox: inbox, assignee: nil, ai_assignee: recebe(cena).agent_bot)
     cena[:mensagens].each do |quem, texto|
       create(:message, account: conta, conversation: conversa, inbox: inbox, content: texto, **atributos_de(quem))
     end
-    passagem = Crm::Passagens.registrar!(conversation: conversa, de: ana, para: clara, pedida_por: ana, motivo: 'tela')
-    [conversa, passagem]
+    [conversa, registrar_passagem(cena, conversa)]
+  end
+
+  def registrar_passagem(cena, conversa)
+    para = recebe(cena).agent
+    case cena.fetch(:por, :pessoa)
+    when :pessoa then Crm::Passagens.registrar!(conversation: conversa, de: ana, para: para, pedida_por: ana, motivo: 'tela')
+    when :ia
+      de = vinculos.fetch(cena[:de]).agent
+      Crm::Passagens.registrar!(conversation: conversa, de: de, para: para, pedida_por: de, motivo: 'pedido_pelo_nome')
+    else
+      Crm::Passagens.registrar!(conversation: conversa, de: vinculos.fetch(cena[:de]).agent, para: para, pedida_por: nil,
+                                motivo: 'atribuicao')
+    end
   end
 
   def atributos_de(quem)
     case quem
     when :cliente then { message_type: :incoming }
     when :ana then { message_type: :outgoing, sender: ana }
-    else { message_type: :outgoing, sender: ana, private: true }
+    when :nota then { message_type: :outgoing, sender: ana, private: true }
+    else { message_type: :outgoing, sender: vinculos.fetch(quem).agent_bot }
     end
   end
 
   def julgar(cena, resposta)
-    nomes = { cliente: 'Cliente', ana: 'Ana (pessoa da equipe)', nota: 'Nota interna da Ana (o cliente não vê)' }
+    nomes = { cliente: 'Cliente', ana: 'Ana (pessoa da equipe)', nota: 'Nota interna da Ana (o cliente não vê)',
+              clara: 'Clara (agente)', recepcao: 'Recepção (agente)' }
     conversa = cena[:mensagens].map { |quem, texto| "#{nomes[quem]}: #{texto}" }.join("\n")
-    texto = "Conversa:\n#{conversa}\n(Aqui a Ana passou a conversa para a Clara.)\n\nCritério do que é certo: " \
-            "#{cena[:certo]}\n\nMensagem da Clara: #{resposta}"
+    quem_recebe = recebe(cena).agent.name
+    texto = "Conversa:\n#{conversa}\n(Aqui a conversa foi passada para #{quem_recebe}.)\n\nCritério do que é certo: " \
+            "#{cena[:certo]}\n\nMensagem de #{quem_recebe}: #{resposta}"
     cliente = Crm::Ai::ResponsesClient.new(credential: Crm::Ai::CredentialResolver.new(account: conta).resolve,
                                            feature: 'eval_juiz', account: conta)
     raw = cliente.create(model: AvaliacaoAoReceberPassagem::JUIZ, instructions: AvaliacaoAoReceberPassagem::INSTRUCAO_DO_JUIZ,
@@ -155,8 +206,9 @@ RSpec.describe 'Avaliação paga de ao receber a passagem (#1630)', :eval_pago d
 
   def rodar(cena, vez)
     conversa, passagem = montar_conversa(cena)
+    vinculo = recebe(cena)
     Autonomia::Agents::Operate::ResponderAPassagem.new(conversation: conversa, agent_inbox: vinculo, passagem: passagem).perform
-    postada = conversa.messages.outgoing.where(sender_type: 'AgentBot').pick(:content).to_s
+    postada = conversa.messages.outgoing.where(sender_type: 'AgentBot', sender_id: vinculo.agent_bot_id).pick(:content).to_s
     # Calou: certo só onde calar é aceitável; não chama o juiz (não há o que julgar).
     veredito = postada.present? ? julgar(cena, postada) : nil
     aprovada = veredito ? veredito_bom?(veredito) : cena[:pode_calar]
@@ -193,7 +245,7 @@ RSpec.describe 'Avaliação paga de ao receber a passagem (#1630)', :eval_pago d
 
     InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').destroy_all
     InstallationConfig.create!(name: 'CAPTAIN_OPEN_AI_API_KEY', value: ENV.fetch('OPENAI_API_KEY'))
-    vinculo
+    vinculos
 
     rodar_todas
 

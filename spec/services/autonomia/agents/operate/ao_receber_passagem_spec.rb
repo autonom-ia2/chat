@@ -47,10 +47,12 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
                      content: texto, **extras)
   end
 
+  # :pessoa — a Ana se atribui e passa; :crm — a Atribuição tira da porta (o robô); :ia — o agente da porta passa.
   def ana_passa!(agente = area, por: :pessoa)
     conversation.update!(assignee: ana) if por == :pessoa && conversation.reload.assignee_id.nil?
+    origem = { pessoa: ana, crm: porta, ia: agente_da_porta }.fetch(por)
     Autonomia::Agents::PassarParaIa.call(conversation: conversation.reload, agent: agente, por: por, motivo: 'tela',
-                                         origem: ana, pedida_por: por == :pessoa ? ana : nil)
+                                         origem: origem, pedida_por: por == :pessoa ? ana : nil)
   end
 
   def turnos_da_passagem
@@ -166,6 +168,99 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
 
       expect(respostas.count).to eq(2)
       expect(contexto).not_to include('passou esta conversa para você')
+    end
+  end
+
+  describe 'todas as passagens: pela Atribuição do CRM e por outro agente' do
+    before { ia_grava! }
+
+    it ':crm — a Atribuição passa com a pergunta do cliente sem resposta: o agente responde, e o contexto diz "a Atribuição"' do
+      cliente_escreve('Vocês abrem sábado?')
+
+      expect(ana_passa!(por: :crm).codigo).to eq(:passou)
+      expect(turnos_da_passagem.size).to eq(1)
+      rodar_turno!
+
+      expect(respostas.sole).to have_attributes(sender_id: espelho_area.id)
+      expect(contexto).to include('A Atribuição do CRM passou esta conversa para você', 'quem atendia antes')
+      expect(contexto).not_to include('Ana Souza', 'Uma pessoa da equipe')
+    end
+
+    it ':ia — outro agente passa: o contexto diz o nome do agente, sem pessoa' do
+      cliente_escreve('Quero falar com o suporte.')
+
+      expect(ana_passa!(por: :ia).codigo).to eq(:passou)
+      rodar_turno!
+
+      expect(respostas.sole).to have_attributes(sender_id: espelho_area.id)
+      expect(contexto).to include('O agente Porta passou esta conversa para você', '`conversation_closed_for_now`')
+      expect(contexto).not_to include('Uma pessoa da equipe')
+    end
+
+    it ':crm — o turno normal logo depois recebe o contexto da Atribuição, sem o sinal de silêncio' do
+      expect(ana_passa!(por: :crm).codigo).to eq(:passou)
+      clear_enqueued_jobs
+      gatilho(cliente_escreve('Quero falar com o suporte.'))
+
+      rodar_turno!
+
+      expect(respostas.count).to eq(1)
+      expect(contexto).to include('A Atribuição do CRM passou esta conversa para você')
+      expect(contexto).not_to include('conversation_closed_for_now')
+    end
+
+    it 'a Lia não recebe o turno da passagem também por :crm e :ia' do
+      lia = criar_agente('Lia', agent_type: 'insurance_quote')
+      Autonomia::Agents::Areas.vincular!(agent: lia, inbox: inbox)
+      cliente_escreve('Quero cotar o seguro do meu Onix 2022.')
+
+      expect(ana_passa!(lia, por: :crm).codigo).to eq(:passou)
+      expect(ana_passa!(area, por: :ia).codigo).to eq(:passou) # Porta → Área, de volta a uma página: abre
+      expect(turnos_da_passagem.size).to eq(1)
+      expect(ActiveJob::Arguments.deserialize(turnos_da_passagem.sole[:args]).last).to eq(vinculo_area.id)
+    end
+  end
+
+  describe 'turno da passagem que falha' do
+    before { cliente_escreve('Quero cotar o seguro do meu Onix 2022.') }
+
+    def chaves_da_passagem(passagem, mensagem)
+      [described_class.chave(passagem.id),
+       Autonomia::Agents::Operate::PosseDoTurno.chave(conversation.id, mensagem.id, vinculo_area.id)]
+    end
+
+    it 'IA fora: solta a chave da passagem e a posse da última mensagem, sem reenfileirar; um evento futuro pode tentar' do
+      ia_grava!('')
+      ana_passa!
+      passagem = Crm::Passagens.ultima_aberta(conversation)
+
+      linhas = linhas_do_log { rodar_turno! }
+
+      expect(silencios(linhas, 'vazio').size).to eq(1)
+      expect(chaves_da_passagem(passagem, conversation.messages.incoming.last).map { |chave| Redis::Alfred.exists?(chave) })
+        .to eq([false, false])
+      expect(jobs_de(UmTurnoHelper::REPLY_JOB)).to be_empty
+      expect(described_class.abrir(conversation)).to be(true)
+    end
+
+    it 'exceção no turno: também solta a chave da passagem' do
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_raise(StandardError, 'boom')
+      ana_passa!
+      passagem = Crm::Passagens.ultima_aberta(conversation)
+
+      rodar_turno!
+
+      expect(Redis::Alfred.exists?(described_class.chave(passagem.id))).to be(false)
+      expect(respostas).to be_empty
+    end
+
+    it 'o turno que decidiu (respondeu ou calou) mantém a chave: a mesma passagem não abre de novo' do
+      ia_grava!('conversation_closed_for_now')
+      ana_passa!
+
+      rodar_turno!
+
+      expect(described_class.abrir(conversation)).to be(false)
     end
   end
 
@@ -300,27 +395,6 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
       expect(described_class.ligada?(account.reload)).to be(false)
     end
 
-    it 'passagem pelo CRM (por: :crm) não abre o turno da passagem nem lê o registro' do
-      cliente_escreve('Quero falar com o suporte.')
-      allow(Crm::Passagens).to receive(:ultima_aberta).and_call_original
-
-      expect(ana_passa!(por: :crm).codigo).to eq(:passou)
-
-      expect(turnos_da_passagem).to be_empty
-      expect(Crm::Passagens).not_to have_received(:ultima_aberta)
-    end
-
-    it 'passagem que não foi pedida por pessoa não vira contexto do turno normal' do
-      expect(ana_passa!(por: :crm).codigo).to eq(:passou)
-      mensagem = cliente_escreve('Quero falar com o suporte.')
-      gatilho(mensagem)
-
-      rodar_turno!
-
-      expect(respostas.count).to eq(1)
-      expect(contexto).not_to include('passou esta conversa para você')
-    end
-
     it 'outra passagem antes de o turno rodar: o turno da passagem antiga não fala por ninguém' do
       cliente_escreve('Quero cotar o seguro do meu Onix 2022.')
       ana_passa!
@@ -339,6 +413,16 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
 
       trocar_dono!(espelho_area)
 
+      expect(turnos_da_passagem).to be_empty
+    end
+
+    it 'evento de troca sem `por`, mesmo com passagem aberta para o agente: não abre o turno da passagem' do
+      cliente_escreve('Quero falar com o suporte.')
+      Crm::Passagens.registrar!(conversation: conversation, de: porta, para: area, pedida_por: nil, motivo: 'tela')
+
+      trocar_dono!(espelho_area)
+
+      expect(Crm::Passagens.ultima_aberta(conversation).para_id).to eq(area.id)
       expect(turnos_da_passagem).to be_empty
     end
 

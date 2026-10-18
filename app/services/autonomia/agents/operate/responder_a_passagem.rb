@@ -1,10 +1,11 @@
-# #1630: o RESPONDER no turno da passagem de uma pessoa para a IA (Operate::AoReceberPassagem), sem mensagem nova do
-# cliente. É o mesmo turno do atendimento, pelo mesmo `perform` (a mesma instrução, o mesmo histórico público — nota
-# privada nunca vai ao modelo —, a mesma pergunta, as mesmas limpezas da resposta, a mesma elegibilidade conferida com
-# estado fresco e a mesma postagem sob o lock), com estas diferenças, e cada uma tem motivo:
+# #1630: o RESPONDER no turno da passagem para a IA (Operate::AoReceberPassagem: por uma pessoa, pela Atribuição do CRM
+# ou por outro agente), sem mensagem nova do cliente. É o mesmo turno do atendimento, pelo mesmo `perform` (a mesma
+# instrução, o mesmo histórico público — nota privada nunca vai ao modelo —, a mesma pergunta, as mesmas limpezas da
+# resposta, a mesma elegibilidade conferida com estado fresco e a mesma postagem sob o lock), com estas diferenças, e
+# cada uma tem motivo:
 #
-#   1. O contexto do turno diz ao modelo que a conversa acabou de ser passada por uma pessoa, e ensina o sinal de
-#      silêncio: o agente pode não ter nada útil a dizer (a pessoa já resolveu tudo). O silêncio aqui é decisão.
+#   1. O contexto do turno diz ao modelo quem acabou de passar a conversa, e ensina o sinal de silêncio: o agente pode
+#      não ter nada útil a dizer (quem atendia já resolveu tudo). O silêncio aqui é decisão.
 #   2. A âncora é a passagem, não uma mensagem: a resposta leva `autonomia_passagem_id` (CHAVE), e é isso que impede
 #      responder duas vezes à mesma passagem (`already_replied?`). Contra o settle atrasado da última mensagem do
 #      cliente, este turno toma a posse dela (PosseDoTurno) antes da IA: quem chegar primeiro responde, o outro cala.
@@ -12,8 +13,11 @@
 #      passagem) ou se uma pessoa voltou a escrever ao cliente depois dela (atendente responde, não assume). As duas
 #      conferidas antes da IA e de novo na hora de postar.
 #   4. Não devolve a conversa a humanos: nem pela porta de engajamento (fora do público ou do horário, só cala) nem
-#      pelo pedido de passar a humanos do modelo. Uma pessoa acabou de passá-la à IA, e sem mensagem nova do cliente.
+#      pelo pedido de passar a humanos do modelo. A conversa acabou de ser entregue a este agente, sem mensagem nova
+#      do cliente.
 #   5. Entrega numa mensagem (o caminho clássico): a humanizada e a de voz dependem de uma mensagem de origem.
+#   6. Turno que falha (IA fora, resposta vazia, exceção) solta as duas chaves que tomou — a da passagem e a posse da
+#      última mensagem —, para um evento futuro poder tentar. Não reenfileira sozinho.
 class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operate::Responder
   CHAVE = 'autonomia_passagem_id'.freeze
 
@@ -52,7 +56,21 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
     ultima = @conversation.messages.chat.incoming.reorder(:created_at, :id).last
     return true if ultima.nil?
 
-    ::Autonomia::Agents::Operate::PosseDoTurno.tomar?(@conversation.id, ultima.id, @agent_inbox.id, dono: "passagem:#{@passagem.id}")
+    @ultima_id = ultima.id
+    ::Autonomia::Agents::Operate::PosseDoTurno.tomar?(@conversation.id, @ultima_id, @agent_inbox.id, dono: valor_da_posse)
+  end
+
+  def valor_da_posse
+    "passagem:#{@passagem.id}"
+  end
+
+  # O turno falhou (Responder#falha_no_turno, SILENCIOS_DE_FALHA): solta as chaves que este turno tomou, só se ainda
+  # forem dele. Não reenfileira: quem tenta de novo é um evento futuro (outra troca de dono, mensagem do cliente).
+  def soltar_posse
+    ::Autonomia::Agents::Operate::AoReceberPassagem.soltar(@passagem, @agent_inbox)
+    return if @ultima_id.nil?
+
+    ::Autonomia::Agents::Operate::PosseDoTurno.soltar(@conversation.id, @ultima_id, @agent_inbox.id, valor_da_posse)
   end
 
   # A passagem deste turno, com o sinal de silêncio (no turno normal ela vem sem ele).

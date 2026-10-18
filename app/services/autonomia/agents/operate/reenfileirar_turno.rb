@@ -12,7 +12,7 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
   ORIGENS = %i[responder evento_troca].freeze
 
   # O assinante do evento de troca (config/initializers/autonomia_turno.rb). A Fase 2 vem antes de qualquer leitura: conta
-  # fora dela não consulta nem a última mensagem. #1630: passagem de uma pessoa sem turno em andamento refeito abre o
+  # fora dela não consulta nem a última mensagem. #1630: passagem pelo PassarParaIa sem turno em andamento refeito abre o
   # turno da passagem (AoReceberPassagem, com gate próprio); fora do gate, tudo como antes.
   def self.ao_trocar_dono(payload)
     conversation = payload.to_h[:conversation]
@@ -20,7 +20,7 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
     return false unless fase2?(conversation.account)
 
     refez = refazer_em_andamento(conversation)
-    return refez if refez || !passagem_de_pessoa?(conversation, payload)
+    return refez if refez || !passagem_para_ia?(conversation, payload)
 
     ::Autonomia::Agents::Operate::AoReceberPassagem.abrir(conversation)
   # Roda depois do commit de quem trocou o dono (o Sync do CRM, o PassarParaIa), dentro do instrument dele: propagar não
@@ -38,8 +38,9 @@ class Autonomia::Agents::Operate::ReenfileirarTurno
     call(conversation: conversation, message_id: ultima.id, origem: :evento_troca)
   end
 
-  def self.passagem_de_pessoa?(conversation, payload)
-    payload.to_h[:por] == :pessoa && ::Autonomia::Agents::Operate::AoReceberPassagem.ligada?(conversation.account)
+  def self.passagem_para_ia?(conversation, payload)
+    ::Autonomia::Agents::PassarParaIa::POR.include?(payload.to_h[:por]) &&
+      ::Autonomia::Agents::Operate::AoReceberPassagem.ligada?(conversation.account)
   end
 
   def self.fase2?(account)
