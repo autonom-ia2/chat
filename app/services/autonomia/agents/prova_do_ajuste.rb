@@ -18,7 +18,8 @@ class Autonomia::Agents::ProvaDoAjuste
   # Pendente há mais que isto, a prova não vem mais (o job morreu ou não rodou): a tela mostra "não consegui testar".
   VALIDADE_DO_PENDENTE = 3.minutes
   # Só falha da IA (provedor, JSON, rede) vira "indisponível"; o resto sobe para o rastreio do job.
-  FALHAS_DA_IA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, *Crm::Ai::ResponsesClient::NETWORK_ERRORS].freeze
+  FALHAS_DA_IA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, *Crm::Ai::ResponsesClient::NETWORK_ERRORS,
+                  OpenSSL::SSL::SSLError, Errno::EHOSTUNREACH, Errno::ENETUNREACH].freeze
   # A guarda da escrita, no próprio UPDATE: a prova pendente deste ajuste, que segue o último e não desfeito.
   AINDA_VALE = "state->'prova'->>'status' = 'pendente' AND state->'prova'->>'versao_id' = :versao " \
                "AND state->'ultimo_ajuste'->>'versao_id' = :versao " \

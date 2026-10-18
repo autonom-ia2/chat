@@ -334,5 +334,26 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     it 'conversa apagada: não levanta' do
       expect { described_class.perform_now(0, 1) }.not_to raise_error
     end
+
+    # Revisão: sem nova tentativa. A prova repetida gastaria de novo e chegaria depois que a tela desistiu.
+    it 'não reenfileira: retry desligado no Sidekiq e nada volta para a fila quando o erro sobe' do
+      aplicar_ajuste
+      clear_enqueued_jobs
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_raise(NoMethodError)
+
+      expect(described_class.get_sidekiq_options['retry']).to be(false)
+      expect { described_class.perform_now(thread.id, versao_aplicada) }.to raise_error(NoMethodError)
+      expect(described_class).not_to have_been_enqueued
+    end
+
+    it 'erro de rede (SSL, host ou rede inalcançável) vira indisponível' do
+      aplicar_ajuste
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_raise(OpenSSL::SSL::SSLError)
+
+      described_class.perform_now(thread.id, versao_aplicada)
+
+      expect(estado['prova']['status']).to eq('indisponivel')
+      expect(Autonomia::Agents::ProvaDoAjuste::FALHAS_DA_IA).to include(Errno::EHOSTUNREACH, Errno::ENETUNREACH)
+    end
   end
 end

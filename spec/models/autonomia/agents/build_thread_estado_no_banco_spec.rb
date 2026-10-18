@@ -149,6 +149,31 @@ RSpec.describe Autonomia::Agents::BuildThread do
       expect(estado.dig('ultimo_ajuste', 'desfeito')).to be(true)
     end
 
+    # Revisão (mutante m6): a escrita do ajuste em curso parte do banco, não da cópia lida no começo do turno.
+    def marcar_desfeito_por_fora!
+      described_class.where(id: thread.id)
+                     .update_all("state = jsonb_set(state, '{ultimo_ajuste}', '{\"desfeito\": true}'::jsonb)") # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it 'guardar_no_estado!: a marca do Desfazer gravada entre a leitura e a gravação sobrevive' do
+      token = thread.begin_build!
+      marcar_desfeito_por_fora!
+
+      expect(thread.guardar_no_estado!(token, 'ajuste_em_curso' => { 'token' => token })).to be(true)
+
+      expect(estado).to include('ultimo_ajuste' => { 'desfeito' => true }, 'ajuste_em_curso' => { 'token' => token })
+    end
+
+    it 'esquecer_do_estado!: tira só a chave pedida e deixa a marca gravada por fora' do
+      thread.update!(state: { 'ajuste_em_curso' => { 'token' => 'velho' } })
+      token = thread.begin_build!
+      marcar_desfeito_por_fora!
+
+      expect(thread.esquecer_do_estado!(token, ['ajuste_em_curso'])).to be(true)
+
+      expect(estado).to eq('ultimo_ajuste' => { 'desfeito' => true })
+    end
+
     it 'a escrita do turno perdido (token velho) não grava nada' do
       token = thread.begin_build!
       travel_to(10.minutes.from_now) { thread.begin_build! }
