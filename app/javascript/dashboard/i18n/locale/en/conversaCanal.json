@@ -1,5 +1,6 @@
 {
   "CONVERSA_CANAL": {
+    "CONTAGEM_DO_EDITOR": "{atual} / {limite}",
     "FORMULARIO": {
       "NOME": "Form: {nome}",
       "SEM_NOME": "WhatsApp form",
@@ -358,6 +359,8 @@
       "SELO_FALHA": "Not sent",
       "MOSTRAR_DETALHES": "Show details",
       "DE": "From",
+      "ENDERECO_ENTRE_SINAIS": "<{endereco}>",
+      "NOME_E_ENDERECO": "{nome} <{endereco}>",
       "PARA": "To",
       "CC": "Cc",
       "CCO": "Bcc",

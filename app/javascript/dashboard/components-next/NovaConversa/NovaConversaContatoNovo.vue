@@ -68,7 +68,9 @@ const erros = computed(() => {
   return {
     nome: nome.value.trim() ? '' : t(`${P}.FALTA_NOME`),
     email:
-      (temEmail && !podeCriarContato(email.value) && t(`${P}.EMAIL_INVALIDO`)) ||
+      (temEmail &&
+        !podeCriarContato(email.value) &&
+        t(`${P}.EMAIL_INVALIDO`)) ||
       (!temEmail && props.exigeEmail && t(`${P}.FALTA_EMAIL`)) ||
       '',
     telefone: telefoneIncompleto ? t(`${P}.TELEFONE_INVALIDO`) : '',
@@ -138,9 +140,7 @@ const criar = () => {
       <Input
         v-model="email"
         type="email"
-        :label="
-          exigeEmail ? t(`${P}.EMAIL`) : t(`${P}.EMAIL_OPCIONAL`)
-        "
+        :label="exigeEmail ? t(`${P}.EMAIL`) : t(`${P}.EMAIL_OPCIONAL`)"
         :placeholder="t(`${P}.EMAIL_EXEMPLO`)"
         :message="mostrar('email') || (exigeEmail ? t(`${P}.EMAIL_DICA`) : '')"
         :message-type="mostrar('email') ? 'error' : 'info'"

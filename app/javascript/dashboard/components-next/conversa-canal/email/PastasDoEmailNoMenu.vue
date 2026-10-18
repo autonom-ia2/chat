@@ -138,4 +138,6 @@ const estilo = item => {
       </button>
     </li>
   </ul>
+  <!-- Fora da caixa de e-mail nova: não mostra nada. -->
+  <template v-else />
 </template>

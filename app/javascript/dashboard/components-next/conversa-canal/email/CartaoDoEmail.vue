@@ -375,7 +375,11 @@ const excluir = async () => {
               v-if="remetente.endereco && remetente.endereco !== nomeMostrado"
               class="text-xs text-n-slate-11 break-all"
             >
-              &lt;{{ remetente.endereco }}&gt;
+              {{
+                t('CONVERSA_CANAL.EMAIL.ENDERECO_ENTRE_SINAIS', {
+                  endereco: remetente.endereco,
+                })
+              }}
             </span>
             <span v-if="ehCliente" :class="[SELO, COR_DO_SELO.cliente]">
               {{ t('CONVERSA_CANAL.EMAIL.SELO_CLIENTE') }}
@@ -425,7 +429,12 @@ const excluir = async () => {
               {{ t('CONVERSA_CANAL.EMAIL.DE') }}
             </dt>
             <dd class="text-n-slate-12 break-all">
-              {{ remetente.nome }} &lt;{{ remetente.endereco }}&gt;
+              {{
+                t('CONVERSA_CANAL.EMAIL.NOME_E_ENDERECO', {
+                  nome: remetente.nome,
+                  endereco: remetente.endereco,
+                })
+              }}
             </dd>
             <template v-if="destinos.para.length">
               <dt class="text-n-slate-11 text-end">

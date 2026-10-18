@@ -1,5 +1,6 @@
 {
   "CONVERSA_CANAL": {
+    "CONTAGEM_DO_EDITOR": "{atual} / {limite}",
     "FORMULARIO": {
       "NOME": "Formulário: {nome}",
       "SEM_NOME": "Formulário do WhatsApp",
@@ -358,6 +359,8 @@
       "SELO_FALHA": "Não enviado",
       "MOSTRAR_DETALHES": "Mostrar detalhes",
       "DE": "De",
+      "ENDERECO_ENTRE_SINAIS": "<{endereco}>",
+      "NOME_E_ENDERECO": "{nome} <{endereco}>",
       "PARA": "Para",
       "CC": "Cc",
       "CCO": "Cco",

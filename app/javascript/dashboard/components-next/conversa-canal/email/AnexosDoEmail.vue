@@ -123,7 +123,7 @@ const comoFoto = item =>
           )
         }}
       </span>
-      <span v-if="total" aria-hidden="true">·</span>
+      <span v-if="total" aria-hidden="true" class="before:content-['·']" />
       <span v-if="total" class="tabular-nums">{{ total }}</span>
     </p>
     <ul

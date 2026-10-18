@@ -26,6 +26,10 @@ const copiar = async () => {
   useAlert(t('CONTACT_PANEL.COPY_SUCCESSFUL'));
 };
 
+// Classe numa constante: o <pre> cabe numa linha e o texto não ganha quebra do formatador.
+const CAIXA_DO_TEXTO =
+  'max-h-80 overflow-auto p-3 rounded-lg bg-n-alpha-1 text-xs text-n-slate-12 whitespace-pre-wrap break-words font-mono';
+
 defineExpose({ open: () => dialogo.value?.open() });
 </script>
 
@@ -48,10 +52,6 @@ defineExpose({ open: () => dialogo.value?.open() });
         <dd class="text-n-slate-12 break-all font-mono">{{ valor }}</dd>
       </template>
     </dl>
-    <pre
-      v-if="texto"
-      class="max-h-80 overflow-auto p-3 rounded-lg bg-n-alpha-1 text-xs text-n-slate-12 whitespace-pre-wrap break-words font-mono"
-      >{{ texto }}</pre
-    >
+    <pre v-if="texto" :class="CAIXA_DO_TEXTO">{{ texto }}</pre>
   </Dialog>
 </template>

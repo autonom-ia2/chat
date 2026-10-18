@@ -168,4 +168,6 @@ const mover = async acao => {
       @confirm="excluir"
     />
   </div>
+  <!-- Fora de uma conversa aberta: não mostra nada. -->
+  <template v-else />
 </template>

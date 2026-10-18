@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch, useSlots } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import WootEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 
@@ -37,6 +38,7 @@ const emit = defineEmits([
 ]);
 
 const slots = useSlots();
+const { t } = useI18n();
 
 const isFocused = ref(false);
 
@@ -133,7 +135,12 @@ watch(
           v-if="showCharacterCount && !slots.actions"
           class="text-xs tabular-nums text-n-slate-10"
         >
-          {{ characterCount }} / {{ maxLength }}
+          {{
+            t('CONVERSA_CANAL.CONTAGEM_DO_EDITOR', {
+              atual: characterCount,
+              limite: maxLength,
+            })
+          }}
         </span>
         <slot v-else name="actions" />
       </div>
