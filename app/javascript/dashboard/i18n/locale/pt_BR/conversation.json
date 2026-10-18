@@ -419,6 +419,10 @@
       "UNMUTE": "Desilenciar microfone",
       "VIEW_CHAT_HISTORY": "Ver histórico da conversa",
       "GO_TO_CONVERSATION": "Ir para a conversa"
+    },
+    "SO_LEITURA": {
+      "TITULO": "Você só pode ler esta conversa.",
+      "TEXTO": "Para responder, fale com quem cuida da sua equipe."
     }
   },
   "EMAIL_TRANSCRIPT": {

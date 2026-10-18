@@ -419,6 +419,10 @@
       "UNMUTE": "Unmute mic",
       "VIEW_CHAT_HISTORY": "View chat history",
       "GO_TO_CONVERSATION": "Go to conversation thread"
+    },
+    "SO_LEITURA": {
+      "TITULO": "You can only read this conversation.",
+      "TEXTO": "To reply, talk to whoever manages your team."
     }
   },
   "EMAIL_TRANSCRIPT": {

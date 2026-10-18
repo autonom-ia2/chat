@@ -216,11 +216,15 @@ const assigneeTabItems = computed(() => {
 });
 
 // "Em que participo" abre na aba Todos (#1150): a conversa em que a pessoa participa costuma estar com outra pessoa.
+// Quem só lê (#1800) não tem "Minhas": abre na primeira aba que tem.
 function defaultAssigneeTab() {
   const { PARTICIPATING } = wootConstants.CONVERSATION_TYPE;
   const { ALL, ME } = wootConstants.ASSIGNEE_TYPE;
-  const canSeeAll = assigneeTabItems.value.some(item => item.key === ALL);
-  return props.conversationType === PARTICIPATING && canSeeAll ? ALL : ME;
+  const keys = assigneeTabItems.value.map(item => item.key);
+  if (!keys.includes(ME)) return keys[0] || ME;
+  return props.conversationType === PARTICIPATING && keys.includes(ALL)
+    ? ALL
+    : ME;
 }
 
 const showAssigneeInConversationCard = computed(() => {

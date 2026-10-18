@@ -96,15 +96,16 @@ export const applyPageFilters = (conversation, filters) => {
 };
 
 /**
- * Filters conversations based on user role and permissions
+ * Whether the user can operate the conversation (reply, assign, change status), the same rule as
+ * ConversationPolicy#show? on the server. Reading is wider: see applyRoleFilter (#1800).
  *
  * @param {Object} conversation - The conversation object to check permissions for
  * @param {string} role - The user's role (administrator, agent, etc.)
  * @param {Array<string>} permissions - List of permission strings the user has
  * @param {number|string} currentUserId - The ID of the current user
- * @returns {boolean} - Whether the user has permissions to access this conversation
+ * @returns {boolean} - Whether the user can operate this conversation
  */
-export const applyRoleFilter = (
+export const canOperateConversation = (
   conversation,
   role,
   permissions,
@@ -139,6 +140,27 @@ export const applyRoleFilter = (
 
   return false;
 };
+
+const CONVERSATION_OPERATE_KEYS = [
+  'conversation_manage',
+  'conversation_unassigned_manage',
+  'conversation_participating_manage',
+];
+
+// Só lê conversas: tem conversation_view e nenhuma chave de operar. Não começa conversa (create? no servidor, #1800).
+export const readsOnlyConversations = permissions =>
+  permissions.includes('conversation_view') &&
+  !CONVERSATION_OPERATE_KEYS.some(key => permissions.includes(key));
+
+// Ver na lista: quem opera, e quem só lê (conversation_view lê toda conversa da caixa, #1800).
+export const applyRoleFilter = (
+  conversation,
+  role,
+  permissions,
+  currentUserId
+) =>
+  permissions.includes('conversation_view') ||
+  canOperateConversation(conversation, role, permissions, currentUserId);
 
 const SORT_OPTIONS = {
   last_activity_at_asc: ['sortOnLastActivityAt', 'asc'],

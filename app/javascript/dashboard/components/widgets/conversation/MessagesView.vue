@@ -44,6 +44,7 @@ import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { usePeleDaConversa } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
+import AvisoSoLeitura from 'dashboard/components-next/Conversation/AvisoSoLeitura.vue';
 import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
 import { selecao as selecaoParaEncaminhar } from 'dashboard/components-next/conversa-canal/encaminhar/selecaoParaEncaminhar';
 import FaixaDeNaoLidas from 'dashboard/components-next/conversa-canal/FaixaDeNaoLidas.vue';
@@ -70,6 +71,7 @@ export default {
     ResizableEditorWrapper,
     ReferralBubble,
     AvisoJanelaFechada,
+    AvisoSoLeitura,
     EncaminharDaConversa,
     FaixaDeNaoLidas,
   },
@@ -143,8 +145,13 @@ export default {
     isOpen() {
       return this.currentChat?.status === wootConstants.STATUS_TYPE.OPEN;
     },
+    // Quem só lê (#1800) não responde, não aplica etiqueta e não marca como lida: o "lido" é da conversa, de todos.
+    canOperate() {
+      return this.$store.getters.canOperateConversation(this.currentChat);
+    },
     shouldShowLabelSuggestions() {
       return (
+        this.canOperate &&
         this.isOpen &&
         this.captainTasksEnabled &&
         this.isLabelSuggestionFeatureEnabled &&
@@ -352,6 +359,7 @@ export default {
     async fetchSuggestions() {
       // start empty, this ensures that the label suggestions are not shown
       this.labelSuggestions = [];
+      if (!this.canOperate) return;
 
       if (this.isLabelSuggestionDismissed()) {
         return;
@@ -610,6 +618,7 @@ export default {
     },
 
     makeMessagesRead() {
+      if (!this.canOperate) return;
       this.$store.dispatch('markMessagesRead', {
         id: this.currentChat.id,
         // Recibo de leitura no WhatsApp só com a pele (sem ela, como no main).
@@ -648,10 +657,15 @@ export default {
         :href-link-text="$t('CONVERSATION.INSTAGRAM_RESTRICTION_STATUS_LINK')"
       />
       <AvisoJanelaFechada
-        v-if="!currentChat.can_reply && pele && isAWhatsAppCloudChannel"
+        v-if="
+          canOperate &&
+          !currentChat.can_reply &&
+          pele &&
+          isAWhatsAppCloudChannel
+        "
       />
       <Banner
-        v-else-if="!currentChat.can_reply"
+        v-else-if="canOperate && !currentChat.can_reply"
         color-scheme="alert"
         class="mx-2 mt-2 overflow-hidden rounded-lg"
         :banner-message="replyWindowBannerMessage"
@@ -742,8 +756,13 @@ export default {
         </div>
       </div>
       <!-- #1702: modo seleção do encaminhar troca o campo de digitar pela barra. -->
-      <EncaminharDaConversa v-if="pele" :conversation-id="currentChat.id" />
+      <AvisoSoLeitura v-if="!canOperate" />
+      <EncaminharDaConversa
+        v-if="canOperate && pele"
+        :conversation-id="currentChat.id"
+      />
       <ResizableEditorWrapper
+        v-if="canOperate"
         v-show="!(pele && selecaoParaEncaminhar.ativa)"
         ref="resizableEditorWrapperRef"
         :container-height="Math.max(0, containerHeight - topBannerHeight)"

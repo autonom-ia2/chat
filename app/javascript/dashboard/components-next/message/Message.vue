@@ -515,7 +515,7 @@ const payloadForContextMenu = computed(() => {
   };
 });
 
-const contextMenuEnabledOptions = computed(() => {
+const allContextMenuOptions = computed(() => {
   const hasText = !!props.content;
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
 
@@ -547,6 +547,28 @@ const contextMenuEnabledOptions = computed(() => {
       reacaoDoAtendente.visivel.value && !reacaoDoAtendente.bloqueado.value,
     encaminhar: encaminhar.noMenu.value,
   };
+});
+
+// Quem só lê a conversa (#1800) copia, copia o link e baixa o áudio; o resto escreve e o servidor recusa.
+// Fora da conversa aberta (outras telas que mostram mensagens) nada muda.
+const selectedChat = useMapGetter('getSelectedChat');
+const canOperateConversation = useMapGetter('canOperateConversation');
+const isReadOnly = computed(
+  () =>
+    selectedChat.value?.id === props.conversationId &&
+    !canOperateConversation.value(selectedChat.value)
+);
+const READ_ONLY_OPTIONS = ['copy', 'copyLink', 'baixarAudio'];
+
+const contextMenuEnabledOptions = computed(() => {
+  const options = allContextMenuOptions.value;
+  if (!isReadOnly.value) return options;
+  return Object.fromEntries(
+    Object.entries(options).map(([key, enabled]) => [
+      key,
+      enabled && READ_ONLY_OPTIONS.includes(key),
+    ])
+  );
 });
 
 const shouldRenderMessage = computed(() => {
@@ -754,7 +776,7 @@ provideMessageContext({
         />
         <Component :is="componentToRender" />
         <BotaoDeReagir
-          v-if="reacaoDoAtendente.visivel.value"
+          v-if="reacaoDoAtendente.visivel.value && !isReadOnly"
           :mensagem-id="id"
           :lado="orientation"
           :atual="reacaoDoAtendente.atual.value"
@@ -763,7 +785,7 @@ provideMessageContext({
           @reagir="reacaoDoAtendente.reagir"
         />
         <BotaoDeEncaminhar
-          v-if="encaminhar.botaoAoLado.value"
+          v-if="encaminhar.botaoAoLado.value && !isReadOnly"
           :lado="orientation"
           @encaminhar="encaminhar.encaminharDireto"
         />
@@ -773,6 +795,7 @@ provideMessageContext({
         class="[grid-area:meta]"
         :class="flexOrientationClass"
         :error="contentAttributes.externalError"
+        :read-only="isReadOnly"
         @retry="emit('retry')"
       />
     </div>

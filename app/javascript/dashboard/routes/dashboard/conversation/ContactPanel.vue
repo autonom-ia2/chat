@@ -7,6 +7,7 @@ import {
 } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
@@ -78,6 +79,8 @@ const isLinearConnected = computed(
 
 const store = useStore();
 const currentChat = useMapGetter('getSelectedChat');
+// Quem só lê (#1800) não atribui, não mexe em participantes nem roda macro.
+const canOperate = useCanOperateConversation(currentChat);
 const conversationId = computed(() => props.conversationId);
 const conversationMetadataGetter = useMapGetter(
   'conversationMetadata/getConversationMetadata'
@@ -165,7 +168,7 @@ onMounted(() => {
       >
         <template #item="{ element }">
           <div
-            v-if="element.name === 'conversation_actions'"
+            v-if="element.name === 'conversation_actions' && canOperate"
             class="conversation--actions"
           >
             <AccordionItem
@@ -182,7 +185,9 @@ onMounted(() => {
             </AccordionItem>
           </div>
           <div
-            v-else-if="element.name === 'conversation_participants'"
+            v-else-if="
+              element.name === 'conversation_participants' && canOperate
+            "
             class="conversation--actions"
           >
             <AccordionItem
@@ -257,7 +262,7 @@ onMounted(() => {
             </AccordionItem>
           </div>
           <woot-feature-toggle
-            v-else-if="element.name === 'macros'"
+            v-else-if="element.name === 'macros' && canOperate"
             feature-key="macros"
           >
             <AccordionItem

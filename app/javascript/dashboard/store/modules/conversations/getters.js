@@ -1,5 +1,10 @@
 import { MESSAGE_TYPE } from 'shared/constants/messages';
-import { applyPageFilters, applyRoleFilter, sortComparator } from './helpers';
+import {
+  applyPageFilters,
+  applyRoleFilter,
+  canOperateConversation,
+  sortComparator,
+} from './helpers';
 import filterQueryGenerator from 'dashboard/helper/filterQueryGenerator';
 import { matchesFilters } from './helpers/filterHelpers';
 import {
@@ -49,6 +54,18 @@ const getters = {
       .sort((a, b) =>
         sortComparator(a, b, appliedFiltersSortBy || chatSortFilter)
       );
+  },
+  // Quem só lê (conversation_view) vê a conversa mas não responde, atribui nem muda status (#1800).
+  canOperateConversation: (_state, _, __, rootGetters) => conversation => {
+    if (!conversation?.meta) return false;
+    const currentUser = rootGetters.getCurrentUser;
+    const currentAccountId = rootGetters.getCurrentAccountId;
+    return canOperateConversation(
+      conversation,
+      getUserRole(currentUser, currentAccountId),
+      getUserPermissions(currentUser, currentAccountId),
+      currentUser.id
+    );
   },
   getSelectedChat: ({ selectedChatId, allConversations }) => {
     const selectedChat = allConversations.find(
