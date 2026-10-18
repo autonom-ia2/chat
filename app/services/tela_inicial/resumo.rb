@@ -5,6 +5,7 @@
 # - esperam: "Não atendidas" do Chatwoot (sem primeira resposta ou com o cliente esperando), no nome dela.
 # - sem_responsavel: a aba "Não atribuídas" (sem pessoa no nome, inclusive as que o robô passou e esperam alguém).
 # - fora_do_prazo: no nome dela, com o prazo de resposta perdido. nil quando a conta não usa prazos.
+# - com_voce: as abertas no nome dela (o mesmo da aba "Minhas" da lista da conta, sem filtro).
 # - proxima: a dela que espera há mais tempo.
 # Da equipe, os totais da conta: só para quem tem report_manage (a chave dos relatórios; no OSS, o administrador).
 class TelaInicial::Resumo
@@ -18,8 +19,11 @@ class TelaInicial::Resumo
   end
 
   def perform
-    esperam, sem_responsavel = visiveis.unscope(:order).pick(Arel.sql(minhas_sql(NAO_ATENDIDA_SQL)), Arel.sql(SEM_RESPONSAVEL_SQL))
-    resumo = { esperam: esperam, sem_responsavel: sem_responsavel, fora_do_prazo: minhas_fora_do_prazo, proxima: proxima }
+    com_voce, esperam, sem_responsavel = visiveis.unscope(:order).pick(
+      Arel.sql(minhas_sql('TRUE')), Arel.sql(minhas_sql(NAO_ATENDIDA_SQL)), Arel.sql(SEM_RESPONSAVEL_SQL)
+    )
+    resumo = { com_voce: com_voce, esperam: esperam, sem_responsavel: sem_responsavel,
+               fora_do_prazo: minhas_fora_do_prazo, proxima: proxima }
     return resumo unless ve_a_equipe?
 
     resumo.merge(equipe: equipe)

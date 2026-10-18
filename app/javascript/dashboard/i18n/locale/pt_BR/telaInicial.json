@@ -7,6 +7,7 @@
     },
     "ABRIR_PROXIMA": "Abrir a próxima",
     "PROXIMA_ESPERA": "{nome} espera há {tempo}",
+    "PROXIMA_ESPERA_SEM_NOME": "Espera há {tempo}",
     "TUDO_EM_DIA": "Tudo em dia",
     "VER_SEM_RESPONSAVEL": "Ver as sem responsável",
     "VER_TODAS": "Ver todas as conversas",

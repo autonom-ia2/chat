@@ -24,6 +24,7 @@ const dadosCom = (extra = {}) => ({
   nomeDoCliente: item => item?.nome || '',
   esperaHa: () => '3 horas',
   abrir: vi.fn(),
+  verEsperam: vi.fn(),
   verMinhas: vi.fn(),
   verSemResponsavel: vi.fn(),
   verTodas: vi.fn(),
@@ -71,10 +72,10 @@ describe('números', () => {
     const wrapper = montar(TelaInicialResumo, dados);
     await wrapper.find('[data-numero="ESPERAM"]').trigger('click');
     await wrapper.find('[data-numero="SEM_RESPONSAVEL"]').trigger('click');
-    expect(dados.verMinhas).toHaveBeenCalledTimes(1);
-    expect(dados.verSemResponsavel).toHaveBeenCalledTimes(1);
     await wrapper.find('[data-numero="FORA_DO_PRAZO"]').trigger('click');
-    expect(dados.verMinhas).toHaveBeenCalledTimes(2);
+    expect(dados.verEsperam).toHaveBeenCalledTimes(1);
+    expect(dados.verSemResponsavel).toHaveBeenCalledTimes(1);
+    expect(dados.verMinhas).toHaveBeenCalledTimes(1);
   });
 
   it('número zero não é clicável e não troca a aba', async () => {
@@ -92,8 +93,27 @@ describe('números', () => {
     });
     await zerados[0].trigger('click');
     await zerados[1].trigger('click');
-    expect(dados.verMinhas).not.toHaveBeenCalled();
+    expect(dados.verEsperam).not.toHaveBeenCalled();
     expect(dados.verSemResponsavel).not.toHaveBeenCalled();
+  });
+});
+
+describe('sem a próxima', () => {
+  it('ninguém esperando mas algo fora do prazo: título do resumo e a ação do vazio', async () => {
+    const dados = dadosCom({ esperamVoce: 0, proxima: null, foraDoPrazo: 2 });
+    const wrapper = montar(TelaInicialResumo, dados);
+    expect(wrapper.text()).toContain('TELA_INICIAL.RESUMO.TITULO');
+    expect(wrapper.find('[data-abrir-proxima]').exists()).toBe(false);
+    await wrapper.find('[data-acao-do-vazio]').trigger('click');
+    expect(dados.acaoDoVazio.fazer).toHaveBeenCalled();
+  });
+
+  it('contato sem nome: a frase da espera sem o nome', () => {
+    const wrapper = montar(
+      TelaInicialResumo,
+      dadosCom({ proxima: { ...proxima, nome: '' } })
+    );
+    expect(wrapper.text()).toContain('TELA_INICIAL.PROXIMA_ESPERA_SEM_NOME');
   });
 });
 

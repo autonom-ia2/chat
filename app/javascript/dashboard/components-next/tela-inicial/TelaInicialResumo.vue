@@ -14,7 +14,7 @@ const { t } = useI18n();
 const numeros = computed(() => {
   const { esperamVoce, semResponsavel, foraDoPrazo } = props.dados;
   const lista = [
-    { chave: 'ESPERAM', valor: esperamVoce, fazer: props.dados.verMinhas },
+    { chave: 'ESPERAM', valor: esperamVoce, fazer: props.dados.verEsperam },
     {
       chave: 'SEM_RESPONSAVEL',
       valor: semResponsavel,
@@ -149,7 +149,7 @@ const linhaDaEquipe = computed(() => {
           {{ $t('TELA_INICIAL.RESUMO.ERRO') }}
         </p>
         <div
-          v-else-if="dados.pronto && !dados.tudoEmDia"
+          v-else-if="dados.pronto && dados.proxima"
           class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5"
         >
           <button
@@ -164,19 +164,20 @@ const linhaDaEquipe = computed(() => {
               aria-hidden="true"
             />
           </button>
-          <p v-if="dados.proxima" class="mb-0 text-sm text-white/60">
+          <p class="mb-0 text-sm text-white/60">
             {{
-              $t('TELA_INICIAL.PROXIMA_ESPERA', {
-                nome: dados.nomeDoCliente(dados.proxima),
-                tempo: dados.esperaHa(dados.proxima),
-              })
+              dados.nomeDoCliente(dados.proxima)
+                ? $t('TELA_INICIAL.PROXIMA_ESPERA', {
+                    nome: dados.nomeDoCliente(dados.proxima),
+                    tempo: dados.esperaHa(dados.proxima),
+                  })
+                : $t('TELA_INICIAL.PROXIMA_ESPERA_SEM_NOME', {
+                    tempo: dados.esperaHa(dados.proxima),
+                  })
             }}
           </p>
         </div>
-        <div
-          v-else-if="dados.tudoEmDia"
-          class="flex flex-col items-start gap-3"
-        >
+        <div v-else-if="dados.pronto" class="flex flex-col items-start gap-3">
           <button
             type="button"
             data-acao-do-vazio

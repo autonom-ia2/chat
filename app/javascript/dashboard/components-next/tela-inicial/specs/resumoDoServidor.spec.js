@@ -6,6 +6,7 @@ vi.mock('dashboard/api/telaInicial', () => ({
 }));
 
 const doServidor = {
+  com_voce: 5,
   esperam: 4,
   sem_responsavel: 2,
   fora_do_prazo: 3,
@@ -24,6 +25,7 @@ describe('resumoDoServidor', () => {
   it('chama a rota do resumo e traduz os campos', async () => {
     TelaInicialAPI.resumo.mockResolvedValue({ data: doServidor });
     expect(await buscarResumo()).toEqual({
+      comVoce: 5,
       esperamVoce: 4,
       semResponsavel: 2,
       foraDoPrazo: 3,
@@ -42,6 +44,7 @@ describe('resumoDoServidor', () => {
         proxima: null,
       })
     ).toEqual({
+      comVoce: 0,
       esperamVoce: 0,
       semResponsavel: 1,
       foraDoPrazo: null,

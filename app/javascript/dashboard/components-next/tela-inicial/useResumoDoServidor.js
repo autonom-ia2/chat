@@ -35,5 +35,5 @@ export const useResumoDoServidor = () => {
   );
   onMounted(atualizar);
 
-  return { resumo, estado, atualizar };
+  return { resumo, estado };
 };

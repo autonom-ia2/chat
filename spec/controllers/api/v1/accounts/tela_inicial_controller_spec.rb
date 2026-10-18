@@ -26,6 +26,14 @@ RSpec.describe 'Tela inicial API', type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
+  it 'recusa o token de um robô (a rota não está na lista do AccessTokenAuthHelper)' do
+    robo = create(:agent_bot, account: account)
+
+    get rota, headers: { api_access_token: robo.access_token.token }, as: :json
+
+    expect(response).to have_http_status(:unauthorized)
+  end
+
   it 'o agente vê só os números dele, sem a equipe' do
     2.times { conversa(dono: agente) }
     conversa(dono: agente, atendida: true)
@@ -38,7 +46,7 @@ RSpec.describe 'Tela inicial API', type: :request do
 
     corpo = response.parsed_body
     expect(response).to have_http_status(:success)
-    expect(corpo.slice('esperam', 'sem_responsavel')).to eq('esperam' => 2, 'sem_responsavel' => 1)
+    expect(corpo.slice('com_voce', 'esperam', 'sem_responsavel')).to eq('com_voce' => 3, 'esperam' => 2, 'sem_responsavel' => 1)
     expect(corpo['fora_do_prazo']).to be_nil
     expect(corpo).not_to have_key('equipe')
   end

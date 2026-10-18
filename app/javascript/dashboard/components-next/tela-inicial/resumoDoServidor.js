@@ -25,6 +25,7 @@ const daProxima = proxima =>
     : null;
 
 export const lerResumo = dados => ({
+  comVoce: numero(dados?.com_voce),
   esperamVoce: numero(dados?.esperam),
   semResponsavel: numero(dados?.sem_responsavel),
   foraDoPrazo: numeroOuNulo(dados?.fora_do_prazo),
