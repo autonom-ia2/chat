@@ -18,6 +18,8 @@ import {
   profilePermissions,
   sensitiveExtrasOn,
 } from '../permissionMatrix';
+import en from 'dashboard/i18n/locale/en/customRole.json';
+import ptBR from 'dashboard/i18n/locale/pt_BR/customRole.json';
 
 const moduleByKey = key => MODULES.find(module => module.key === key);
 
@@ -352,6 +354,59 @@ describe('permissionMatrix', () => {
       expect(
         unmetSuggestion(assignment, ['assignment_manage', 'inbox_manage'])
       ).toBeNull();
+    });
+  });
+
+  describe('contatos: exportar e excluir (#1845)', () => {
+    const contacts = MODULES.find(module => module.key === 'CONTACTS');
+
+    it('mostra exportar para quem vê e exportar e excluir para quem edita', () => {
+      expect(visibleExtras(contacts, ['contact_view'])).toEqual([
+        'contact_export',
+      ]);
+      expect(visibleExtras(contacts, ['contact_manage'])).toEqual([
+        'contact_export',
+        'contact_delete',
+      ]);
+    });
+
+    it('voltar para ver tira excluir e mantém exportar', () => {
+      const permissions = [
+        'contact_manage',
+        'contact_export',
+        'contact_delete',
+      ];
+      expect(setLevel(contacts, LEVELS.VIEW, permissions)).toEqual([
+        'contact_export',
+        'contact_view',
+      ]);
+    });
+
+    it('sem acesso tira as duas chaves', () => {
+      const permissions = [
+        'contact_manage',
+        'contact_export',
+        'contact_delete',
+      ];
+      expect(setLevel(contacts, LEVELS.NONE, permissions)).toEqual([]);
+    });
+
+    it('trata as duas como sensíveis', () => {
+      expect(sensitiveExtrasOn(['contact_export', 'contact_delete'])).toEqual([
+        'contact_export',
+        'contact_delete',
+      ]);
+    });
+  });
+
+  // A linha do ajuste fino mostra nome e descrição pela chave; sem a tradução, a tela mostra a chave crua (#1845).
+  it('todo ajuste fino tem nome e descrição em en e pt_BR', () => {
+    const extras = MODULES.flatMap(module => module.extras || []);
+    [en, ptBR].forEach(({ CUSTOM_ROLE }) => {
+      extras.forEach(key => {
+        expect(CUSTOM_ROLE.PERMISSIONS[key.toUpperCase()]).toBeTruthy();
+        expect(CUSTOM_ROLE.EXTRAS[key.toUpperCase()]).toBeTruthy();
+      });
     });
   });
 

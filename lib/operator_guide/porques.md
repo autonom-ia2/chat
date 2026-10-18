@@ -188,6 +188,16 @@
 - passos: 1. Abra Contatos; 2. Selecione um ou mais contatos; 3. Use a barra de acoes em massa; 4. Adicione ou remova etiquetas; 5. Abra Marcados com para ver a lista por etiqueta.
 - gotchas: a sidebar mostra etiquetas visiveis; etiquetas ocultas criadas por recursos custom podem nao aparecer como filtro visual.
 
+### exportar_contatos
+- titulo: Exportar a base de contatos
+- rota: contacts_dashboard_index
+- intent: Como exporto meus contatos?; Como baixo a lista de clientes em planilha?; Da para tirar os contatos em CSV?
+- onde_fica: Contatos > Todos os contatos > menu de três pontos no topo > Exportar contatos
+- pre_requisitos: administrador ou função com Exportar contatos
+- passos: 1. Abra Contatos; 2. Se quiser exportar só uma parte, aplique o filtro antes; 3. Abra o menu de três pontos no topo e clique em Exportar contatos; 4. Confirme; 5. O arquivo CSV chega por e-mail quando ficar pronto.
+- gotchas: editar contatos não dá direito a exportar; exportar é um ajuste próprio da função, marcado como sensível porque a planilha leva nome, telefone e e-mail; funções que editavam contatos antes desta mudança continuaram exportando; agente sem função personalizada não exporta.
+- highlight: `contacts-more-actions`
+
 ### importar_contatos_por_csv
 - titulo: Importar contatos por CSV
 - rota: contacts_dashboard_index
@@ -2020,7 +2030,7 @@
 - onde_fica: Contatos > clicar no contato
 - pre_requisitos: contato já cadastrado
 - passos: 1. Abra Contatos e clique no contato; 2. Ajuste os dados à esquerda e salve; 3. Use as abas de atributos, histórico, notas, mídia e mesclar; 4. Em histórico, veja as conversas anteriores; 5. Em notas, registre o que a equipe precisa saber; 6. Para juntar cadastros repetidos, abra mesclar, escolha o contato principal e confirme.
-- gotchas: ao mesclar, o contato principal é o que sobrevive e o outro é excluído, com os dados do principal prevalecendo em caso de conflito, e não há desfazer; excluir contato é permanente; bloquear não apaga o contato, só impede novo contato; e-mail ou telefone repetido é recusado por já pertencer a outro cadastro; abrindo a ficha a partir de um segmento ou de uma etiqueta, a tela é a mesma e o voltar devolve para aquela lista; em Mensagens ativas, abaixo de Atualizar contato, Marcar que não quer receber tira o contato das campanhas e dos follow-ups automáticos, inclusive de campanha já em andamento, e responder a quem escreve segue normal, o que é diferente de bloquear; Desfazer recusa só aparece na recusa Marcado pela equipe; a recusa de origem Prospecção vem do botão Não quer ser contatado no painel do lead e só sai lá, pelo Desfazer: pode ser contatado; a do descadastro de e-mail não se desfaz pela ficha; ao mesclar dois contatos que recusaram, fica a recusa mais firme: a manual, depois a do descadastro de e-mail, depois a da Prospecção; contato novo ou que troca telefone ou e-mail herda sozinho a recusa de e-mail descadastrado ou de lead marcado com Não quer ser contatado.
+- gotchas: ao mesclar, o contato principal é o que sobrevive e o outro é excluído, com os dados do principal prevalecendo em caso de conflito, e não há desfazer; excluir contato é permanente e aparece só para o administrador ou para função com Excluir contatos e empresas; bloquear não apaga o contato, só impede novo contato; e-mail ou telefone repetido é recusado por já pertencer a outro cadastro; abrindo a ficha a partir de um segmento ou de uma etiqueta, a tela é a mesma e o voltar devolve para aquela lista; em Mensagens ativas, abaixo de Atualizar contato, Marcar que não quer receber tira o contato das campanhas e dos follow-ups automáticos, inclusive de campanha já em andamento, e responder a quem escreve segue normal, o que é diferente de bloquear; Desfazer recusa só aparece na recusa Marcado pela equipe; a recusa de origem Prospecção vem do botão Não quer ser contatado no painel do lead e só sai lá, pelo Desfazer: pode ser contatado; a do descadastro de e-mail não se desfaz pela ficha; ao mesclar dois contatos que recusaram, fica a recusa mais firme: a manual, depois a do descadastro de e-mail, depois a da Prospecção; contato novo ou que troca telefone ou e-mail herda sozinho a recusa de e-mail descadastrado ou de lead marcado com Não quer ser contatado.
 - nav_target: `contacts_edit`
 
 ### lista_de_empresas
@@ -2058,7 +2068,7 @@
 - onde_fica: Empresas > clicar na empresa
 - pre_requisitos: empresa cadastrada e contatos existentes para vincular
 - passos: 1. Abra Empresas e clique na empresa; 2. Ajuste nome, domínio, descrição e avatar e atualize; 3. Use as abas de histórico, notas e contatos; 4. Em contatos, adicione pesquisando e confirmando o vínculo; 5. Use remover para desvincular.
-- gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta.
+- gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta; excluir aparece só para o administrador ou para função com Excluir contatos e empresas.
 - nav_target: `companies_dashboard_show`
 
 ### conectar_o_slack_ao_atendimento

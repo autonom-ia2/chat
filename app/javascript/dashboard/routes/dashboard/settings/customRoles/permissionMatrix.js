@@ -35,7 +35,13 @@ export const CRM_EXTRAS_IMPLIED_BY_ADMIN = [
 
 // Extras that touch personal data, money or other people's access. The editor asks
 // for confirmation before turning them on.
-export const SENSITIVE_EXTRAS = ['crm_manage_ai', 'crm_export', CRM_ADMIN];
+export const SENSITIVE_EXTRAS = [
+  'crm_manage_ai',
+  'crm_export',
+  CRM_ADMIN,
+  'contact_export',
+  'contact_delete',
+];
 
 export const MODULE_GROUPS = [
   {
@@ -55,6 +61,9 @@ export const MODULE_GROUPS = [
         key: 'CONTACTS',
         icon: 'i-lucide-contact',
         levels: { view: 'contact_view', manage: 'contact_manage' },
+        // Exportar e excluir são chaves próprias (#1845). Excluir só aparece para quem edita.
+        extras: ['contact_export', 'contact_delete'],
+        manageOnlyExtras: ['contact_delete'],
       },
       {
         key: 'KNOWLEDGE_BASE',
@@ -330,8 +339,12 @@ export const setLevel = (module, level, permissions) => {
     return setConversationLevel(level, permissions);
   if (module.type === 'crm') return setCrmLevel(module, level, permissions);
   // Trocar entre ver e editar mantém as chaves a mais; sem acesso, sai tudo.
+  // Voltar para ver tira as que só valem para quem edita.
+  const manageOnly = level === LEVELS.VIEW ? module.manageOnlyExtras || [] : [];
   const cleared =
-    level === LEVELS.NONE ? keysOf(module) : Object.values(module.levels);
+    level === LEVELS.NONE
+      ? keysOf(module)
+      : [...Object.values(module.levels), ...manageOnly];
   const rest = withoutKeys(permissions, cleared);
   const key = module.levels[level];
   return key ? [...rest, key] : rest;
@@ -344,9 +357,11 @@ export const visibleExtras = (module, permissions) => {
   if (module.type === 'conversations')
     return level === CONVERSATION_LEVELS.LIMITED ? module.extras : [];
   // Editing cards already includes moving them.
-  return level === LEVELS.MANAGE
-    ? module.extras.filter(key => key !== CRM_MOVE_CARDS)
-    : module.extras;
+  if (level === LEVELS.MANAGE)
+    return module.extras.filter(key => key !== CRM_MOVE_CARDS);
+  return module.extras.filter(
+    key => !(module.manageOnlyExtras || []).includes(key)
+  );
 };
 
 // The backend grants these through crm_admin, so they cannot be switched off on their own.
