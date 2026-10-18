@@ -206,11 +206,27 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(enviadas).to be_empty
   end
 
-  it 'opções sem nenhuma opção com título e texto vazio: silêncio "vazio"' do
-    vazias = Autonomia::Agents::Interacao.do_modelo({ 'tipo' => 'opcoes', 'pergunta' => 'Qual?', 'opcoes' => [] }, enderecos: Set.new)
-    responde('', vazias)
+  def vazias(pergunta)
+    Autonomia::Agents::Interacao.do_modelo({ 'tipo' => 'opcoes', 'header' => 'A', 'pergunta' => pergunta, 'opcoes' => [] }, enderecos: Set.new)
+  end
+
+  it 'opções sem nenhuma opção e sem pergunta, com texto vazio: silêncio "vazio"' do
+    responde('', vazias(''))
     expect(perform.status).to eq(:silenced)
     expect(enviadas).to be_empty
+  end
+
+  it 'opções sem nenhuma opção, com pergunta: a resposta e a pergunta em texto, sem rich_message' do
+    responde('Temos vaga amanhã.', vazias('Qual período?'))
+    perform
+    expect(enviadas.sole.content).to eq("Temos vaga amanhã.\n\nQual período?")
+    expect(enviadas.sole.content_attributes).not_to have_key('rich_message')
+  end
+
+  it 'opções sem nenhuma opção, só a pergunta: ainda é resposta' do
+    responde('', vazias('Qual período?'))
+    perform
+    expect(enviadas.sole.content).to eq('Qual período?')
   end
 
   describe 'histórico do modelo' do

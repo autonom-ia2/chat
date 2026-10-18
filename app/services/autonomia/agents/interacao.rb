@@ -77,18 +77,30 @@ module Autonomia::Agents::Interacao
 
   # -> { content:, rich_message:, em_texto: } da mensagem que leva a interação. `texto`: o que vai antes (a resposta,
   # ou o último pedaço dela; nil quando a interação sai sozinha). Opções: o corpo é o texto e a pergunta. Link: o corpo
-  # é o texto. `em_texto`: o corpo com a versão em texto do tipo (as opções numeradas; "rótulo: endereço"). Quando o
-  # formato não sai (canal que o recusa, sem cabeçalho, fora do contrato do tipo), `rich_message` é nil e o conteúdo é
-  # o `em_texto` (o link sozinho: só "rótulo: endereço", sem o rótulo repetido antes).
-  def mensagem(interacao, texto:, conversation:)
+  # é o texto. `em_texto`: a versão em texto (`versao_em_texto`). Quando o formato não sai (opções sem nenhuma opção, canal que
+  # o recusa, sem cabeçalho, fora do contrato do tipo), `rich_message` é nil e o conteúdo é o `em_texto`: a pergunta das
+  # opções nunca se perde. `antes`: o texto que o cliente lê logo antes (o próprio `texto`, ou o último pedaço).
+  def mensagem(interacao, texto:, conversation:, antes: texto)
     corpo = interacao['tipo'] == 'opcoes' ? [texto, interacao['pergunta']].compact_blank.join("\n\n") : texto.to_s
     formato = rich_message(interacao, locale: conversation.account.locale)
-    complemento = RichMessages.type_class(formato['type']).new(formato).fallback_text(corpo)
-    em_texto = [corpo.presence, complemento.presence].compact.join("\n\n")
+    em_texto = versao_em_texto(interacao, formato, texto, antes)
     no_formato = corpo.presence || interacao['rotulo'].to_s # o link sozinho (depois do áudio): o rótulo é o corpo
     return { content: no_formato, rich_message: formato, em_texto: em_texto } if sai_o_formato?(formato, no_formato, conversation)
 
     { content: em_texto, rich_message: nil, em_texto: em_texto }
+  end
+
+  # O texto e a pergunta (sem ela quando `antes` já termina com ela, comparadas depois de strip), mais a versão em texto
+  # do tipo (as opções numeradas; "rótulo: endereço" — o link sozinho, depois do áudio, sem o rótulo repetido antes).
+  def versao_em_texto(interacao, formato, texto, antes)
+    pergunta = interacao['pergunta'] unless repetida?(antes, interacao['pergunta'])
+    corpo = interacao['tipo'] == 'opcoes' ? [texto, pergunta].compact_blank.join("\n\n") : texto.to_s
+    complemento = RichMessages.type_class(formato['type']).new(formato).fallback_text(corpo)
+    [corpo.presence, complemento.presence].compact.join("\n\n")
+  end
+
+  def repetida?(antes, pergunta)
+    pergunta.present? && antes.to_s.strip.end_with?(pergunta.strip)
   end
 
   # Os pedaços da entrega humanizada com a interação no último: as opções num pedaço a mais (a pergunta, com o ritmo de
@@ -105,7 +117,9 @@ module Autonomia::Agents::Interacao
                    else
                      [pedacos[0...-1], pedacos.last]
                    end
-    final = mensagem(interacao, texto: ultimo['text'], conversation: conversation)
+    final = mensagem(interacao, texto: ultimo['text'], conversation: conversation, antes: pedacos.last['text'])
+    return pedacos if final[:content].blank? # só a pergunta, que o último pedaço já traz, e nenhuma opção
+
     com_formato = final[:rich_message] ? { 'corpo' => final[:content], 'rich_message' => final[:rich_message] } : {}
     base + [ultimo.merge('text' => final[:em_texto]).merge(com_formato)]
   end
@@ -163,12 +177,13 @@ module Autonomia::Agents::Interacao
                                           content_attributes: { RichMessages::KEY => formato })).nil?
   end
 
-  # Sem nenhuma opção com título (`opcoes: []`, ou só itens vazios): nil, como se o modelo não tivesse pedido.
+  # Sem nenhuma opção com título (`opcoes: []`, ou só itens vazios): nil sem `pergunta`, como se o modelo não tivesse
+  # pedido; com ela, as opções vazias saem só em texto (o contrato do tipo recusa a lista vazia), e a pergunta fica.
   def opcoes(valor)
     lista = Array(valor['opcoes']).select { |opcao| opcao.is_a?(Hash) && opcao['titulo'].present? }.map do |opcao|
       { 'id' => opcao['id'].to_s, 'title' => opcao['titulo'].to_s, 'description' => opcao['descricao'].presence }
     end
-    return if lista.empty?
+    return if lista.empty? && valor['pergunta'].blank?
 
     { 'tipo' => 'opcoes', 'header' => valor['header'].presence, 'pergunta' => valor['pergunta'].to_s,
       'botao' => valor['botao'].presence, 'opcoes' => lista }

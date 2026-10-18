@@ -108,9 +108,12 @@ RSpec.describe Autonomia::Agents::Interacao do
                                         { 'id' => 'noite', 'title' => 'Noite', 'description' => nil }])
     end
 
-    it 'opções sem nenhuma opção com título viram nenhuma interação' do
+    it 'opções sem nenhuma opção com título: sem pergunta viram nenhuma interação; com ela, a pergunta fica' do
       vazias = [[], [{}], [{ 'id' => 'a', 'titulo' => '', 'descricao' => nil }, { 'id' => 'b', 'titulo' => ' ', 'descricao' => nil }], ['x']]
-      expect(vazias.map { |lista| described_class.do_modelo(pedido.merge('opcoes' => lista), enderecos: Set.new) }).to all(be_nil)
+      sem_pergunta = vazias.map { |lista| described_class.do_modelo(pedido.merge('opcoes' => lista, 'pergunta' => ' '), enderecos: Set.new) }
+      expect(sem_pergunta).to all(be_nil)
+      com_pergunta = vazias.map { |lista| described_class.do_modelo(pedido.merge('opcoes' => lista), enderecos: Set.new) }
+      expect(com_pergunta).to all(include('tipo' => 'opcoes', 'pergunta' => 'Qual período?', 'opcoes' => []))
       com_uma = described_class.do_modelo(pedido.merge('opcoes' => [{ 'id' => 'a', 'titulo' => '' }, tres.first]), enderecos: Set.new)
       expect(com_uma['opcoes']).to eq([{ 'id' => 'manha', 'title' => 'Manhã', 'description' => nil }])
     end
@@ -274,6 +277,25 @@ RSpec.describe Autonomia::Agents::Interacao do
       expect(final).to eq(content: numerada, rich_message: nil, em_texto: numerada)
     end
 
+    it 'opções vazias com pergunta: a resposta e a pergunta, em texto, mesmo na caixa que leva o formato' do
+      janela_aberta
+      vazias = described_class.do_modelo(pedido.merge('opcoes' => []), enderecos: Set.new)
+      final = described_class.mensagem(vazias, texto: 'Temos vaga.', conversation: conversation)
+      expect(final).to eq(content: "Temos vaga.\n\nQual período?", rich_message: nil, em_texto: "Temos vaga.\n\nQual período?")
+      expect(described_class.mensagem(vazias, texto: nil, conversation: conversation)[:content]).to eq('Qual período?')
+    end
+
+    it 'em texto, a pergunta não se repete quando a resposta já termina com ela (depois de strip)' do
+      janela_aberta
+      vazias = described_class.do_modelo(pedido.merge('opcoes' => [], 'pergunta' => ' Qual período? '), enderecos: Set.new)
+      expect(described_class.mensagem(vazias, texto: "Temos vaga. Qual período?\n", conversation: conversation)[:content])
+        .to eq("Temos vaga. Qual período?\n")
+      sem_cabecalho = described_class.mensagem(opcoes.merge('header' => nil), texto: 'Temos vaga. Qual período?', conversation: conversation)
+      expect(sem_cabecalho[:content]).to eq("Temos vaga. Qual período?\n\n1. Manhã\n2. Tarde\n3. Noite")
+      expect(described_class.mensagem(vazias, texto: 'Qual período? Temos vaga.', conversation: conversation)[:content])
+        .to eq("Qual período? Temos vaga.\n\n Qual período? ")
+    end
+
     it 'cabeçalho com mais de 60 caracteres sai em texto' do
       janela_aberta
       final = described_class.mensagem(opcoes.merge('header' => 'a' * 61), texto: nil, conversation: conversation)
@@ -359,6 +381,16 @@ RSpec.describe Autonomia::Agents::Interacao do
       ultimo = described_class.nos_pedacos(pedacos, opcoes.merge('header' => nil), conversation: conversation).last
       expect(ultimo).to include('text' => "Qual período?\n\n1. Manhã\n2. Tarde\n3. Noite")
       expect(ultimo.keys).not_to include('corpo', 'rich_message')
+    end
+
+    it 'opções vazias com pergunta: o pedaço a mais é a pergunta em texto; se o último pedaço já termina com ela, nada muda' do
+      vazias = described_class.do_modelo(pedido.merge('opcoes' => []), enderecos: Set.new)
+      novos = described_class.nos_pedacos(pedacos, vazias, conversation: conversation)
+      expect(novos.size).to eq(3)
+      expect(novos.last).to include('text' => 'Qual período?')
+      expect(novos.last).not_to have_key('rich_message')
+      repetida = [pedacos.first, pedacos.last.merge('text' => 'Amanhã. Qual período?')]
+      expect(described_class.nos_pedacos(repetida, vazias, conversation: conversation)).to eq(repetida)
     end
 
     it 'sem interação ou sem pedaço, nada muda' do
