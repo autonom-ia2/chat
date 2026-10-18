@@ -114,7 +114,7 @@ export const useAlbumEmQuadrados = id => {
   return computed(() => emQuadrados.value.has(id.value));
 };
 
-// O álbum que este balão abre ainda está chegando? { noMarcador, ate } ou null.
+// O álbum que este balão abre ainda está chegando? { esperados, noMarcador, ate } ou null.
 export const useChegadaDoAlbum = id => {
   const chegadas = inject(CHAVE_CHEGADAS, MAPA_VAZIO);
   return computed(() => chegadas.value.get(id.value) || null);

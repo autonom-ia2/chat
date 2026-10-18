@@ -10,6 +10,10 @@ import BotoesDoModelo from '../conversa-canal/BotoesDoModelo.vue';
 import BotaoDeDescer from '../conversa-canal/BotaoDeDescer.vue';
 import { useSequenciaDaConversa } from '../conversa-canal/useSequenciaDaConversa';
 import { useAlbunsDaConversa } from '../conversa-canal/album/useAlbuns';
+import {
+  eMarcadorDoWaha,
+  paraOBalao,
+} from '../conversa-canal/album/albumDoWaha';
 import { usePele } from '../conversa-canal/pele';
 import {
   ocultaNaPele,
@@ -53,8 +57,12 @@ const emit = defineEmits(['retry']);
 
 // #1702: com a pele, mensagem absorvida pela apresentação nova (c2y_hidden, reação
 // que o agente da Autonomia leu) sai da lista antes de tudo, para não quebrar
-// sequência, dia nem álbum.
+// sequência, dia nem álbum. O marcador de álbum do WAHA (#1831) fica, mesmo escondido:
+// é ele que abre o álbum.
 const peleDaLista = usePele();
+// #1831: o marcador do WAHA entra como balão do contato (sequência, álbum e tela).
+const currentChat = useMapGetter('getSelectedChat');
+const contatoDaConversa = computed(() => currentChat.value?.meta?.sender);
 const allMessages = computed(() => {
   const mensagens = useCamelCase(props.messages, {
     deep: true,
@@ -63,9 +71,10 @@ const allMessages = computed(() => {
       'content_attributes.whatsapp_flow_response.response_json',
     ],
   });
-  return peleDaLista.value
-    ? mensagens.filter(mensagem => !ocultaNaPele(mensagem))
-    : mensagens;
+  if (!peleDaLista.value) return mensagens;
+  return mensagens
+    .filter(mensagem => !ocultaNaPele(mensagem) || eMarcadorDoWaha(mensagem))
+    .map(mensagem => paraOBalao(mensagem, contatoDaConversa.value));
 });
 
 // A faixa de não lidas não pode sumir quando a 1ª não lida é uma das escondidas:
@@ -73,8 +82,6 @@ const allMessages = computed(() => {
 const naoLidaDaLista = computed(() =>
   primeiraNaoLidaVisivel(props.messages, allMessages.value, props.firstUnreadId)
 );
-
-const currentChat = useMapGetter('getSelectedChat');
 
 // Cache for fetched reply messages to avoid duplicate API calls
 const fetchedReplyMessages = reactive(new Map());

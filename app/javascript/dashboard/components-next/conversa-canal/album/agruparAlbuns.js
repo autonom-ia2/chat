@@ -5,8 +5,9 @@
 //   'unknown') logo antes das fotos (22 de 22 em produção, out/2026, seguidos de 2+
 //   mídias em até 30 s). O álbum começa nesse marcador, junta as fotos/vídeos do mesmo
 //   cliente que vêm logo depois, até 30 s do marcador, e para no 1º que não entra. O
-//   marcador some da lista. Sem marcador, cada foto fica solta. O WAHA (caixa híbrida)
-//   não grava sinal de álbum por aqui (o conector é de fora deste repositório): solta.
+//   marcador some da lista. Sem marcador, cada foto fica solta. O WAHA anuncia o álbum
+//   com um marcador próprio, que traz a contagem (albumDoWaha): a grade já nasce no
+//   mosaico final, com os quadros que faltam reservados.
 // - Chegando (#1831): as fotos vêm uma a uma, de 11 a 19 s depois do marcador. Enquanto
 //   a janela do marcador está aberta e nada cortou a sequência, o álbum já aparece, com
 //   "Recebendo fotos…" e quadros reservados, desde o marcador sozinho. Nenhuma foto do
@@ -23,6 +24,7 @@ import { continuaASequencia } from '../useSequenciaDaConversa';
 import { eFigurinha } from '../figurinha';
 import { eVisualizacaoUnica } from '../visualizacaoUnica';
 import { deModeloOuCampanha } from '../encaminhar/selecaoParaEncaminhar';
+import { contagemDoWaha, eMarcadorDoWaha } from './albumDoWaha';
 
 // Itens a partir dos quais a sequência vira álbum.
 export const MINIMO_DO_ALBUM = 2;
@@ -67,12 +69,15 @@ export const podeEntrarNoAlbum = mensagem => {
 // O "pai" do álbum que a Cloud entrega como não suportada, do cliente. Com
 // hybridRecovery (chat#1489) é uma mensagem de verdade que o WhatsApp API busca no
 // celular (modelo, botões, lista), não o marcador: fica à vista, e as fotos, soltas.
-export const eMarcadorDeAlbum = mensagem =>
+const eMarcadorDaCloud = mensagem =>
   mensagem?.messageType === MESSAGE_TYPES.INCOMING &&
   !mensagem.private &&
   mensagem.contentAttributes?.isUnsupported === true &&
   mensagem.contentAttributes?.unsupportedKind === 'unknown' &&
   !mensagem.contentAttributes?.hybridRecovery;
+
+export const eMarcadorDeAlbum = mensagem =>
+  eMarcadorDaCloud(mensagem) || eMarcadorDoWaha(mensagem);
 
 const dentroDaJanela = (desde, atual, janela) => {
   const espera = atual.createdAt - desde.createdAt;
@@ -124,27 +129,35 @@ const abreEnvio = mensagem =>
 export const fimDaChegada = marcador =>
   marcador.createdAt + JANELA_DO_ALBUM_EM_SEGUNDOS;
 
-// Ainda chegando: a lista acabou no álbum e a janela do marcador não fechou. Sem
-// `agora`, nada está chegando.
-const aindaChegando = ({ marcador, noFim, agora }) =>
-  agora !== undefined && noFim && agora <= fimDaChegada(marcador);
+// Ainda chegando: a lista acabou no álbum, falta foto anunciada (ou a contagem é
+// desconhecida) e a janela do marcador não fechou. Sem `agora`, nada está chegando.
+const aindaChegando = ({ marcador, itens, noFim, esperados, agora }) => {
+  if (agora === undefined || !noFim) return false;
+  if (esperados && itens.length >= esperados) return false;
+  return agora <= fimDaChegada(marcador);
+};
 
 // Do marcador: o álbum chegando (mesmo com 0 ou 1 item), o álbum pronto (2+) ou nada.
 // Chegando sem item nenhum, o balão do álbum é o do próprio marcador. O álbum do
-// marcador é desenhado em quadrados (a forma com que chegou), pronto ou não.
+// marcador é desenhado em quadrados (a forma com que chegou), pronto ou não. Com a
+// contagem do WAHA, o mosaico final desde o início (sem quadrados).
 const albumDoMarcador = (lista, inicio, opcoes) => {
   const marcador = lista[inicio];
   const { itens, noFim } = itensDoMarcador(lista, inicio, opcoes);
+  const esperados = contagemDoWaha(marcador);
+  const emQuadrados = !esperados;
   const passo = itens.length + 1;
-  if (aindaChegando({ marcador, noFim, agora: opcoes.agora })) {
+  if (
+    aindaChegando({ marcador, itens, noFim, esperados, agora: opcoes.agora })
+  ) {
     const noMarcador = !itens.length;
     return {
       passo,
       chave: noMarcador ? marcador.id : itens[0].id,
       itens,
       escondeMarcador: !noMarcador,
-      emQuadrados: true,
-      chegada: { noMarcador, ate: fimDaChegada(marcador) },
+      emQuadrados,
+      chegada: { esperados, noMarcador, ate: fimDaChegada(marcador) },
     };
   }
   if (itens.length < MINIMO_DO_ALBUM) return { passo: 1 };
@@ -153,7 +166,7 @@ const albumDoMarcador = (lista, inicio, opcoes) => {
     chave: itens[0].id,
     itens,
     escondeMarcador: true,
-    emQuadrados: true,
+    emQuadrados,
   };
 };
 
@@ -172,7 +185,7 @@ const albumQueComecaEm = (lista, inicio, opcoes) => {
 
 // Devolve os álbuns (Map: id do balão que desenha o álbum -> mensagens, na ordem da
 // conversa), os ids dos marcadores que somem da lista, os álbuns ainda chegando
-// (Map: mesmo id -> { noMarcador, ate }) e os desenhados em quadrados (Set de ids, os
+// (Map: mesmo id -> { esperados, noMarcador, ate }) e os desenhados em quadrados (Set de ids, os
 // que vieram de um marcador). `abreBloco` (opcional) diz quem
 // não pode ficar escondido dentro do álbum anterior, como a 1ª não lida, que leva a
 // etiqueta "não lidas" acima dela. `agora` (segundos) liga o álbum chegando (#1831).
@@ -254,10 +267,17 @@ const COLUNAS_DA_GRADE = 2;
 // quadrados de 2 em 2, que só crescem no fim; o quadro que já apareceu não muda de
 // tamanho nem de lugar, nem quando a janela fecha. Chegando, a linha incompleta (ou o
 // álbum ainda sem foto) ganha quadros reservados. Mais de 4: "+N" no 4º, como sempre.
+// Chegando com a contagem do WAHA: o mosaico final desde já, com os quadros que faltam
+// reservados (entram no "+N").
 export const quadrosDoAlbum = (
   itens,
-  { emQuadrados = false, chegando = false } = {}
+  { emQuadrados = false, chegando = false, esperados = null } = {}
 ) => {
+  if (chegando && esperados >= MINIMO_DO_ALBUM) {
+    const total = Math.max(esperados, itens.length);
+    const vagas = Array.from({ length: total }, (_, i) => itens[i] ?? VAGA);
+    return { ...quadrosDoMosaico(vagas), emQuadrados: false };
+  }
   const { quadros, escondidos } = quadrosDoMosaico(itens);
   if (!emQuadrados) return { quadros, escondidos, emQuadrados: false };
   const faltam = quadros.length

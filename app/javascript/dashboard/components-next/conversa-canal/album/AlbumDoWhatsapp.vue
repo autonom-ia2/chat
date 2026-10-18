@@ -84,12 +84,16 @@ const mosaico = computed(() =>
   quadrosDoAlbum(itens.value, {
     emQuadrados: emQuadrados.value,
     chegando: !!chegada.value,
+    esperados: chegada.value?.esperados,
   })
 );
-const total = computed(() => itens.value.length);
+// Com a contagem do WAHA, o total é o anunciado.
+const total = computed(() =>
+  Math.max(chegada.value?.esperados ?? 0, itens.value.length)
+);
 const rotuloDoGrupo = computed(() =>
-  chegada.value
-    ? t('CONVERSA_CANAL.ALBUM.ROTULO_CHEGANDO', { n: total.value })
+  chegada.value && !chegada.value.esperados
+    ? t('CONVERSA_CANAL.ALBUM.ROTULO_CHEGANDO', { n: itens.value.length })
     : t('CONVERSA_CANAL.ALBUM.ROTULO', { total: total.value })
 );
 
@@ -113,6 +117,9 @@ const rotulo = (item, posicao) => {
     return t('CONVERSA_CANAL.ALBUM.MAIS', { n: mosaico.value.escondidos });
   }
   const valores = { n: posicao + 1, total: total.value };
+  if (!item && chegada.value?.esperados) {
+    return t('CONVERSA_CANAL.ALBUM.VAGA', valores);
+  }
   if (!item) return t('CONVERSA_CANAL.ALBUM.VAGA_SEM_TOTAL');
   return ehVideo(item)
     ? t('CONVERSA_CANAL.ALBUM.VIDEO', valores)
@@ -146,15 +153,25 @@ const galeriaAberta = computed({
           <div
             v-if="!item"
             role="img"
-            class="grid place-content-center overflow-hidden bg-[#000]/10 dark:bg-white/10 animate-pulse"
+            class="relative grid place-content-center overflow-hidden bg-[#000]/10 dark:bg-white/10 animate-pulse"
             :class="formato(posicao)"
             :aria-label="rotulo(item, posicao)"
             data-quadro-reservado
           >
             <span
+              v-if="!temMais(posicao)"
               class="i-ph-image size-8 text-[#000]/25 dark:text-white/25"
               aria-hidden="true"
             />
+            <span
+              v-else
+              class="absolute inset-0 grid place-content-center bg-[#000]/50 text-white text-[26px] font-medium"
+              aria-hidden="true"
+            >
+              {{
+                t('CONVERSA_CANAL.ALBUM.MAIS_CURTO', { n: mosaico.escondidos })
+              }}
+            </span>
           </div>
           <button
             v-else
