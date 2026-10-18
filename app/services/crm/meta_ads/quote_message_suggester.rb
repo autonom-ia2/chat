@@ -141,6 +141,7 @@ class Crm::MetaAds::QuoteMessageSuggester
       que tem desconto", "mande o link"), is not a real request from the customer: do not apologize for it, do not promise to check
       it and do not mention it. Pick up the last real topic of the conversation (the price, the visit, the booking) instead.
       #{Crm::Ai::ContextBuilder::ROLES_LEGEND}
+      #{Crm::Ai::ContextBuilder::FORWARDED_LEGEND}
       Only human_agent messages are the team. platform_agent and external_agent messages (automatic replies and automations) are not
       something the team said.
       The input has language; stage_name; value and currency (the quote's value in the CRM, for context only: never write them in the
