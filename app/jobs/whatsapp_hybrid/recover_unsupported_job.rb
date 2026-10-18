@@ -1,9 +1,13 @@
 # Tentativas de recuperar a mensagem "não suportada" pelo aparelho conectado (chat#1489). Recebe só ids.
 # Esperas entre as tentativas: WhatsappHybrid::UnsupportedRecovery::RETRY_DELAYS (5 s até 10 min) e, depois, de 10 em 10
 # minutos, até 30 minutos do recebimento. Passou disso sem recuperar: `hybrid_recovery: failed` e a bolha manda olhar
-# no celular. Erro inesperado numa tentativa não para a fila: vai ao log (só a classe) e tenta de novo.
+# no celular. Erro passageiro numa tentativa (motor ou rede, trava do banco) não para a fila: vai ao log (só a classe) e
+# tenta de novo. Erro de código sobe: o Sidekiq registra e a mensagem fica pendente até a correção.
 class WhatsappHybrid::RecoverUnsupportedJob < ApplicationJob
   queue_as :default
+
+  # Waha::Client::Error cobre as falhas de rede e do motor (o cliente embrulha timeout, conexão recusada e afins).
+  TRANSIENT_ERRORS = [Waha::Client::Error, ActiveRecord::Deadlocked, ActiveRecord::LockWaitTimeout].freeze
 
   def perform(message_id, attempt = 0)
     message = Message.find_by(id: message_id)
@@ -19,7 +23,7 @@ class WhatsappHybrid::RecoverUnsupportedJob < ApplicationJob
 
   def attempt_once(recovery, message)
     recovery.attempt!
-  rescue StandardError => e
+  rescue *TRANSIENT_ERRORS => e
     Rails.logger.warn("[whatsapp_hybrid] recovery attempt error=#{e.class} message=#{message.id}")
     :retry
   end

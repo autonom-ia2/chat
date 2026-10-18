@@ -44,9 +44,15 @@ module WhatsappHybrid::UnsupportedMessageExtension
   def unsupported_details(message)
     type = hash_value(message[:unsupported], :type)
     details = { 'unsupported_type' => type, 'unsupported_error_code' => hash_value(Array(message[:errors]).first, :code) }.compact
-    return details if outgoing_echo
+    return details if outgoing_echo || unreadable_unsupported?(message)
 
     details.merge(WhatsappHybrid::UnsupportedRecovery.initial_attributes(inbox, message[:id], type))
+  end
+
+  # Sem tipo só quando a Meta não manda `unsupported` (o erro 131060). Com `unsupported` fora do formato não dá para
+  # saber se é mensagem nova ou edição, reação, voto: não recupera (fica o aviso).
+  def unreadable_unsupported?(message)
+    message.key?(:unsupported) && !message[:unsupported].is_a?(Hash)
   end
 
   def hash_value(value, key)

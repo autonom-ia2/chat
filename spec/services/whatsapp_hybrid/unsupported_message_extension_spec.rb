@@ -65,6 +65,14 @@ describe WhatsappHybrid::UnsupportedMessageExtension do
       end
     end
 
+    it 'unsupported fora do formato (texto): fica com o aviso, sem recuperação e sem job' do
+      received = nil
+      expect { received = deliver(incoming.merge(unsupported: 'edit')) }.not_to have_enqueued_job(recover_job)
+
+      expect(received.content_attributes).to include('is_unsupported' => true, 'unsupported_error_code' => 131_051)
+      expect(received.content_attributes.keys & %w[hybrid_recovery whatsapp_web_id unsupported_type]).to be_empty
+    end
+
     it 'a nossa IA não é chamada pelo message_created do aviso' do
       allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
       event = Events::Base.new('message.created', Time.zone.now, message: deliver)

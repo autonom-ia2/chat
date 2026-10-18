@@ -33,9 +33,11 @@ module Autonomia::Agents::Operate::RecoveredHeaderNote
                                                       handoff_reason: SKIPPED_REASON, message_id: message_id)
   end
 
-  # A resposta do modelo sem as linhas de contexto. Sem linha nenhuma, o mesmo objeto.
+  # A resposta do modelo sem as linhas de contexto. Sem linha nenhuma, o mesmo objeto, sem tocar no texto (igual à
+  # flag desligada).
   def without_notes(result)
     return result if result.nil? || result.reply.blank?
+    return result unless NOTES.values.any? { |note| result.reply.to_s.include?(note) }
 
     reply = clean(result.reply.to_s)
     return result if reply == result.reply.to_s

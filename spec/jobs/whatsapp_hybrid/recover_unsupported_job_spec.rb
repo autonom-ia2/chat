@@ -74,9 +74,22 @@ describe WhatsappHybrid::RecoverUnsupportedJob do
     expect { described_class.perform_now(0) }.not_to have_enqueued_job(described_class)
   end
 
-  it 'erro inesperado numa tentativa não para as tentativas' do
+  it 'erro passageiro (trava do banco) numa tentativa não para as tentativas' do
     allow_any_instance_of(WhatsappHybrid::UnsupportedRecovery).to receive(:attempt!).and_raise(ActiveRecord::Deadlocked) # rubocop:disable RSpec/AnyInstance
 
     expect { described_class.perform_now(message.id) }.to have_enqueued_job(described_class).with(message.id, 1)
+  end
+
+  it 'erro do motor ou da rede numa tentativa não para as tentativas' do
+    allow_any_instance_of(WhatsappHybrid::UnsupportedRecovery).to receive(:attempt!).and_raise(Waha::Client::Timeout) # rubocop:disable RSpec/AnyInstance
+
+    expect { described_class.perform_now(message.id) }.to have_enqueued_job(described_class).with(message.id, 1)
+  end
+
+  it 'erro de código sobe e não reagenda' do
+    allow_any_instance_of(WhatsappHybrid::UnsupportedRecovery).to receive(:attempt!).and_raise(NoMethodError) # rubocop:disable RSpec/AnyInstance
+
+    expect { described_class.perform_now(message.id) }.to raise_error(NoMethodError)
+    expect(described_class).not_to have_been_enqueued
   end
 end

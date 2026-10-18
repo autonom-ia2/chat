@@ -35,6 +35,13 @@ describe Autonomia::Agents::Operate::RecoveredHeaderNote do
     expect(described_class.without_notes(same)).to be(same)
   end
 
+  it 'sem a linha, nem o espaço das pontas é tocado: o mesmo objeto, como com a flag desligada' do
+    same = result("  Oi, tudo bem?\n\n")
+
+    expect(described_class.without_notes(same)).to be(same)
+    expect(same.reply).to eq("  Oi, tudo bem?\n\n")
+  end
+
   it 'resposta só com a linha: vazia, e o motivo do silêncio é próprio' do
     answered = result(image_note)
     delivered = described_class.without_notes(answered)
