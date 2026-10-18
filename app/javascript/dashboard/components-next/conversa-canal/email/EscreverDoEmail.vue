@@ -5,13 +5,16 @@
 // chave conversa_email_nova (ou sem ninguém pedir), o ícone não carrega nada a mais.
 import { nextTick, ref, useTemplateRef, watch } from 'vue';
 import NovaConversaEntrada from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
+import { usePodeComecarConversa } from 'dashboard/components-next/NovaConversa/usePodeComecarConversa';
 import { pedidoDeEscrever } from './escreverEmail';
 
 const caixaId = ref(null);
 const gatilho = useTemplateRef('gatilho');
+// Quem só lê conversas (#1800) não abre a gaveta, nem por um pedido que sobrou.
+const podeEscrever = usePodeComecarConversa();
 
 watch(pedidoDeEscrever, async pedido => {
-  if (!pedido) return;
+  if (!pedido || !podeEscrever.value) return;
   caixaId.value = pedido.caixaId;
   await nextTick();
   gatilho.value?.click();

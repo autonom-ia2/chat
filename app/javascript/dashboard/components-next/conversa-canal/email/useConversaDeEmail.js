@@ -10,6 +10,7 @@ import { useEventListener } from '@vueuse/core';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
@@ -65,6 +66,7 @@ const SEM_EMAIL = {
   alternarTamanho: () => {},
   formatacao: computed(() => false),
   alternarFormatacao: () => {},
+  podeOperar: computed(() => true),
 };
 
 export const useConversaDeEmail = () => {
@@ -121,8 +123,13 @@ export const useConversaDeEmail = () => {
   useEmitter(BUS_EVENTS.MESSAGE_SENT, fecharResposta);
   watch(() => conversa.value?.id, fecharResposta);
 
+  // Quem só lê a conversa (conversation_view, #1800) não vê Responder, Encaminhar, Nota,
+  // Spam, Lixeira nem Excluir: a mesma regra da main (o servidor recusa do mesmo jeito).
+  const podeOperar = useCanOperateConversation(conversa);
+
   const contexto = {
     ligado,
+    podeOperar,
     respostaAberta,
     fecharResposta,
     tamanho,

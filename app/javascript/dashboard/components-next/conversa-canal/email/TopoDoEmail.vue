@@ -115,7 +115,8 @@ const DADO = 'inline-flex items-center gap-1.5 text-xs text-n-slate-11';
       </div>
     </div>
     <div class="flex flex-wrap items-center gap-1">
-      <AcoesDaPasta />
+      <!-- Só leitura (#1800): sem Spam, Lixeira e Excluir. -->
+      <AcoesDaPasta v-if="email.podeOperar.value" />
       <button
         v-if="emails.length > 1"
         type="button"

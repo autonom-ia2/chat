@@ -14,7 +14,8 @@ import {
 import { PILULA, PILULA_NOTA } from './visualEmail';
 
 const { t } = useI18n();
-// Com a caixa de resposta aberta, a barra sai: os botões estão no topo da caixa.
+// Com a caixa de resposta aberta, a barra sai: os botões estão no topo da caixa. Quem só
+// lê a conversa (#1800) não vê a barra.
 const email = useEmailDaConversa();
 
 const ACOES = [
@@ -47,6 +48,7 @@ const agir = modo => emitter.emit(RESPONDER_EMAIL, { modo });
 
 <template>
   <li
+    v-if="email.podeOperar.value"
     v-show="!email.respostaAberta.value"
     class="list-none mt-auto sticky bottom-0 z-10 w-full max-w-[960px] mx-auto grid grid-cols-2 sm:flex sm:flex-wrap gap-3 py-3 px-2 sm:ps-[68px] bg-n-surface-1 border-t border-n-weak"
     data-acoes-do-email
@@ -64,4 +66,6 @@ const agir = modo => emitter.emit(RESPONDER_EMAIL, { modo });
       {{ t(`CONVERSA_CANAL.EMAIL.${acao.chave}`) }}
     </button>
   </li>
+  <!-- Só leitura: nada para responder. -->
+  <template v-else />
 </template>

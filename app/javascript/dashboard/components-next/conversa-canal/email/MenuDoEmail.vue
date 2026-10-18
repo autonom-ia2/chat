@@ -3,13 +3,15 @@
 // responder a partir deste e-mail (Responder a todos, Encaminhar; o Responder fica à
 // vista, ao lado), o que fazer com ele (Traduzir, Copiar link, Imprimir, Mostrar
 // original), a conversa (Marcar como não lida) e, por último e em vermelho, Excluir.
-// O menu só avisa a escolha; quem faz é o cartão.
+// O menu só avisa a escolha; quem faz é o cartão. Quem só lê a conversa (#1800) vê só o
+// que não muda nada: Copiar link, Imprimir e Mostrar original.
 import { computed, nextTick, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
 import Icon from 'next/icon/Icon.vue';
 
 const props = defineProps({
+  podeOperar: { type: Boolean, default: true },
   podeTraduzir: { type: Boolean, default: false },
   podeExcluir: { type: Boolean, default: false },
 });
@@ -18,7 +20,7 @@ const { t } = useI18n();
 
 const grupos = computed(() =>
   [
-    [
+    props.podeOperar && [
       {
         resposta: 'todos',
         chave: 'RESPONDER_TODOS',
@@ -31,11 +33,12 @@ const grupos = computed(() =>
       },
     ],
     [
-      props.podeTraduzir && {
-        acao: 'traduzir',
-        chave: 'TRADUZIR',
-        icone: 'i-lucide-languages',
-      },
+      props.podeOperar &&
+        props.podeTraduzir && {
+          acao: 'traduzir',
+          chave: 'TRADUZIR',
+          icone: 'i-lucide-languages',
+        },
       { acao: 'copiar-link', chave: 'COPIAR_LINK', icone: 'i-lucide-link' },
       { acao: 'imprimir', chave: 'IMPRIMIR', icone: 'i-lucide-printer' },
       {
@@ -44,8 +47,10 @@ const grupos = computed(() =>
         icone: 'i-lucide-file-code-2',
       },
     ].filter(Boolean),
-    [{ acao: 'nao-lida', chave: 'MARCAR_NAO_LIDA', icone: 'i-lucide-mail' }],
-    props.podeExcluir
+    props.podeOperar && [
+      { acao: 'nao-lida', chave: 'MARCAR_NAO_LIDA', icone: 'i-lucide-mail' },
+    ],
+    props.podeOperar && props.podeExcluir
       ? [
           {
             acao: 'excluir',
@@ -55,7 +60,7 @@ const grupos = computed(() =>
           },
         ]
       : [],
-  ].filter(grupo => grupo.length)
+  ].filter(grupo => grupo && grupo.length)
 );
 
 const aberto = ref(false);

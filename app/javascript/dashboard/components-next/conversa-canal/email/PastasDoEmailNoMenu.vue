@@ -5,13 +5,15 @@
 // - No balão do menu recolhido (`compacto`): sempre embaixo da caixa. O balão do
 //   Chatwoot desenha a caixa dentro de um link; os botões daqui cancelam o link
 //   (preventDefault, que o RouterLink respeita) e fecham o balão eles mesmos.
-// Escrever é ação (abre a gaveta "Nova conversa" já nesta caixa), não rota.
+// Escrever é ação (abre a gaveta "Nova conversa" já nesta caixa), não rota. Quem só lê
+// conversas (#1800) não vê o Escrever; as pastas continuam, para ler o que está nelas.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import Icon from 'next/icon/Icon.vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import NovaConversaEntrada from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
+import { usePodeComecarConversa } from 'dashboard/components-next/NovaConversa/usePodeComecarConversa';
 import { usePopoverState } from 'dashboard/components-next/sidebar/provider';
 import { PASTAS, usePastaDoEmail } from './pastaDoEmail';
 import { caixaDaFolha, useCaixaDeEmailNova } from './caixaDeEmailNova';
@@ -30,6 +32,7 @@ const caixaPorId = useMapGetter('inboxes/getInbox');
 const ehEmailNova = useCaixaDeEmailNova();
 const { pasta, abrirPasta } = usePastaDoEmail();
 const { closeActivePopover } = usePopoverState();
+const podeEscrever = usePodeComecarConversa();
 
 const caixaId = computed(() => caixaDaFolha(props.folha));
 const caixa = computed(() => caixaPorId.value(Number(caixaId.value)) || {});
@@ -94,7 +97,7 @@ const estilo = item => {
   >
     <!-- A gaveta abre com o clique no próprio gatilho (o span dela); o botão só
          desenha a linha, que ocupa a largura toda. -->
-    <li v-if="compacto" class="min-w-0">
+    <li v-if="podeEscrever && compacto" class="min-w-0">
       <button
         type="button"
         :class="[LINHA, estilo({})]"
@@ -107,7 +110,7 @@ const estilo = item => {
         </span>
       </button>
     </li>
-    <li v-else class="min-w-0 [&>span]:!flex [&>span]:w-full">
+    <li v-else-if="podeEscrever" class="min-w-0 [&>span]:!flex [&>span]:w-full">
       <NovaConversaEntrada :caixa-id="caixa.id">
         <template #trigger>
           <button

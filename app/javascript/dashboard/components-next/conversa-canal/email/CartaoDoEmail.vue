@@ -482,6 +482,7 @@ const excluir = async () => {
             {{ dataCurta }}
           </time>
           <button
+            v-if="email.podeOperar.value"
             type="button"
             class="grid place-content-center size-9 rounded-full text-n-slate-11 hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :aria-label="t('CONVERSA_CANAL.EMAIL.RESPONDER')"
@@ -492,6 +493,7 @@ const excluir = async () => {
             <Icon icon="i-lucide-reply" class="size-4" />
           </button>
           <MenuDoEmail
+            :pode-operar="email.podeOperar.value"
             :pode-traduzir="podeTraduzir"
             :pode-excluir="podeExcluir"
             @escolher="responder"
