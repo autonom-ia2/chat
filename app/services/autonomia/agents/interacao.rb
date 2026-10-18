@@ -152,6 +152,36 @@ module Autonomia::Agents::Interacao
     end
   end
 
+  # A mensagem é opções ou link que ESTE agente mandou (a mesma regra do histórico)? Na Lia, nunca. `robos`: os de
+  # `robos(agent)`, para quem chama mais de uma vez no turno não buscar de novo. Usado pelo Responder (PR-C).
+  def oferta_do_agente?(message, agent:, robos: nil)
+    return false if agent.agent_type == 'insurance_quote'
+
+    oferecida?(message, agent, robos || robos(agent))
+  end
+
+  # O id da opção que o cliente tocou nesta mensagem, ou nil. A ÚNICA leitura do toque (PR-C): a Cloud grava
+  # `content_attributes.selected_option` {id da opção oferecida, title} e a oferta em `in_reply_to` (WAHA e Híbrido
+  # gravam a mesma chave depois do #1741). Só o id: quem lê confere contra a oferta, e o título vem dela, nunca do toque.
+  # Id maior que o maior aceito pela Meta (o do botão, `RichMessages::Types::Options::BUTTONS[:id]`) não é de opção.
+  def opcao_tocada(message)
+    escolha = message&.content_attributes.to_h['selected_option']
+    id = escolha['id'] if escolha.is_a?(Hash)
+    id.to_s if id.present? && id.to_s.length <= RichMessages::Types::Options::BUTTONS[:id]
+  end
+
+  # A opção `id` na oferta, como o agente a escreveu ({ 'id', 'title' }), ou nil quando a oferta não tem esse id.
+  def opcao_oferecida(oferta, id)
+    opcoes = oferta.content_attributes.to_h.dig(RichMessages::KEY, 'options')
+    opcao = Array(opcoes).find { |item| item.is_a?(Hash) && item['id'].to_s == id }
+    { 'id' => opcao['id'].to_s, 'title' => opcao['title'] } if opcao
+  end
+
+  # Os robôs-espelho dos vínculos deste agente (`AgentInbox#agent_bot_id`).
+  def robos(agent)
+    ::Autonomia::Agents::AgentInbox.where(account_id: agent.account_id, autonomia_agent_id: agent.id).pluck(:agent_bot_id).to_set
+  end
+
   def oferecida?(message, agent, robos)
     atributos = message&.content_attributes.to_h
     formato = atributos[RichMessages::KEY]
