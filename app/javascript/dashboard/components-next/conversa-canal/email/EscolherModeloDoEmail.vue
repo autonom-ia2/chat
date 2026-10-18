@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Icon from 'next/icon/Icon.vue';
 import CartaoDoModelo from './CartaoDoModelo.vue';
+import { semAcento } from './semAcento';
 
 const props = defineProps({
   modelos: { type: Array, default: () => [] },
@@ -18,14 +19,6 @@ const { t } = useI18n();
 const dialogo = useTemplateRef('dialogo');
 const busca = ref('');
 const categoria = ref('');
-
-const semAcento = texto =>
-  String(texto || '')
-    .normalize('NFD')
-    .split('')
-    .filter(letra => letra.charCodeAt(0) < 0x300 || letra.charCodeAt(0) > 0x36f)
-    .join('')
-    .toLowerCase();
 
 const categorias = computed(() => [
   ...new Set(props.modelos.map(m => m.categoria).filter(Boolean)),

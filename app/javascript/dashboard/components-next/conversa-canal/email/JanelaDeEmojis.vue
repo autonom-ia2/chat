@@ -16,6 +16,7 @@ import {
   buildEmojiSections,
   getRecentEmojis,
 } from 'shared/components/emoji/pickerHelper';
+import { semAcento } from './semAcento';
 
 const props = defineProps({
   // Elemento acima do qual a janela abre (a barra de baixo da caixa de resposta).
@@ -23,7 +24,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['escolher', 'fechar']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const LARGURA = 360;
 const ALTURA = 420;
 const MARGEM = 12;
@@ -48,19 +49,45 @@ const janela = useTemplateRef('janela');
 const grade = useTemplateRef('grade');
 const campo = useTemplateRef('campo');
 
+// Nomes em português (CLDR, via emojibase): carregados só quando o painel está em
+// português, para a busca achar "coração" e "risada" além de "heart" e "smile".
+const nomesEmPortugues = ref({});
+const nomeEmPortugues = emoji =>
+  (nomesEmPortugues.value[emoji.slug] || '').split(' · ')[0];
+const nomeDoEmoji = emoji => nomeEmPortugues(emoji) || emoji.name;
+
+// Cada palavra digitada precisa aparecer no nome (em inglês ou em português):
+// "bandeira brasil" acha "bandeira: Brasil".
+const achados = termo => {
+  const palavras = termo.split(' ').filter(Boolean);
+  const casa = texto => palavras.every(palavra => texto.includes(palavra));
+  return emojiGroups
+    .map(({ name, emojis }) => ({
+      name,
+      emojis: emojis.filter(
+        emoji =>
+          casa(semAcento(`${emoji.slug.replaceAll('_', ' ')} ${emoji.name}`)) ||
+          casa(semAcento(nomesEmPortugues.value[emoji.slug]))
+      ),
+    }))
+    .filter(grupo => grupo.emojis.length);
+};
+
 const secoes = computed(() => {
   const nomeDosRecentes = t('CONVERSA_CANAL.EMAIL.EMOJIS.RECENTES');
-  return buildEmojiSections(busca.value, recentes.value, nomeDosRecentes).map(
-    secao => {
-      const grupo = emojiGroups.find(g => g.name === secao.name);
-      const slug = grupo?.slug || 'recentes';
-      return {
-        ...secao,
-        slug,
-        titulo: t(`CONVERSA_CANAL.EMAIL.EMOJIS.${slug.toUpperCase()}`),
-      };
-    }
-  );
+  const termo = semAcento(busca.value.trim());
+  const base = termo
+    ? achados(termo)
+    : buildEmojiSections('', recentes.value, nomeDosRecentes);
+  return base.map(secao => {
+    const grupo = emojiGroups.find(g => g.name === secao.name);
+    const slug = grupo?.slug || 'recentes';
+    return {
+      ...secao,
+      slug,
+      titulo: t(`CONVERSA_CANAL.EMAIL.EMOJIS.${slug.toUpperCase()}`),
+    };
+  });
 });
 const categorias = computed(() => [
   ...(recentes.value.length ? [{ slug: 'recentes' }] : []),
@@ -124,7 +151,12 @@ const primeiroDaBusca = () => {
 onClickOutside(janela, () => emit('fechar'), {
   ignore: [() => props.ancora],
 });
-onMounted(() => campo.value?.focus());
+onMounted(async () => {
+  campo.value?.focus();
+  if (!String(locale.value).startsWith('pt')) return;
+  const { default: nomes } = await import('./emojisEmPortugues.json');
+  nomesEmPortugues.value = nomes;
+});
 </script>
 
 <template>
@@ -174,7 +206,9 @@ onMounted(() => campo.value?.focus());
           :aria-label="
             t(`CONVERSA_CANAL.EMAIL.EMOJIS.${categoria.slug.toUpperCase()}`)
           "
-          :title="t(`CONVERSA_CANAL.EMAIL.EMOJIS.${categoria.slug.toUpperCase()}`)"
+          :title="
+            t(`CONVERSA_CANAL.EMAIL.EMOJIS.${categoria.slug.toUpperCase()}`)
+          "
           :aria-current="ativa === categoria.slug || undefined"
           @click="irPara(categoria.slug)"
         >
@@ -195,7 +229,7 @@ onMounted(() => campo.value?.focus());
           v-if="!secoes.length"
           class="flex flex-col items-center gap-2 py-12 text-center text-sm text-n-slate-11"
         >
-          <span class="text-3xl" aria-hidden="true">🔍</span>
+          <Icon icon="i-lucide-search-x" class="size-7 text-n-slate-10" />
           {{ t('CONVERSA_CANAL.EMAIL.EMOJIS.NADA') }}
         </p>
         <section v-for="secao in secoes" :key="secao.slug + secao.name">
@@ -211,8 +245,8 @@ onMounted(() => campo.value?.focus());
               :key="secao.slug + emoji.slug"
               type="button"
               class="grid aspect-square place-content-center rounded-lg text-[22px] leading-none transition-transform duration-100 hover:scale-110 hover:bg-n-alpha-2 focus-visible:bg-n-alpha-2 focus-visible:outline-none"
-              :aria-label="emoji.name"
-              :title="emoji.name"
+              :aria-label="nomeDoEmoji(emoji)"
+              :title="nomeDoEmoji(emoji)"
               @mouseenter="destaque = emoji"
               @focus="destaque = emoji"
               @click="escolher(emoji)"
@@ -230,7 +264,11 @@ onMounted(() => campo.value?.focus());
           {{ destaque?.emoji || '😊' }}
         </span>
         <span class="truncate text-xs text-n-slate-11">
-          {{ destaque ? `:${destaque.slug}:` : t('CONVERSA_CANAL.EMAIL.EMOJIS.DICA') }}
+          {{
+            destaque
+              ? nomeEmPortugues(destaque) || `:${destaque.slug}:`
+              : t('CONVERSA_CANAL.EMAIL.EMOJIS.DICA')
+          }}
         </span>
       </footer>
     </div>

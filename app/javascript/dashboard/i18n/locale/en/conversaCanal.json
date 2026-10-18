@@ -501,7 +501,7 @@
       },
       "EMOJIS": {
         "TITULO": "Emojis",
-        "BUSCAR": "Search emoji (in English)",
+        "BUSCAR": "Search emoji (heart, smile…)",
         "CATEGORIAS": "Categories",
         "RECENTES": "Recent",
         "SMILEYS_EMOTION": "Smileys",
@@ -515,7 +515,8 @@
         "FLAGS": "Flags",
         "NADA": "No emoji with this name",
         "DICA": "Pick an emoji"
-      }
+      },
+      "IMAGENS_QUEBRADAS": "1 image of this template does not open (the file was removed or moved). Fix the template in Campaigns before sending. | {total} images of this template do not open (the files were removed or moved). Fix the template in Campaigns before sending."
     }
   }
 }

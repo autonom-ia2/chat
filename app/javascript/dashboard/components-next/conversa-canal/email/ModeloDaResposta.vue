@@ -47,12 +47,7 @@ const origemDoCampo = campo => {
 // Campo conhecido com nome traduzido; o resto, legível: "contact.numero_da_cotacao" →
 // "Numero da cotacao".
 const legivel = chave => {
-  const texto = String(chave)
-    .split('.')
-    .pop()
-    .split('_')
-    .join(' ')
-    .trim();
+  const texto = String(chave).split('.').pop().split('_').join(' ').trim();
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 };
 const rotulo = chave => {
@@ -61,8 +56,9 @@ const rotulo = chave => {
 };
 const faltam = computed(
   () =>
-    props.modelo.campos.filter(c => !String(props.valores[c.chave] ?? '').trim())
-      .length
+    props.modelo.campos.filter(
+      c => !String(props.valores[c.chave] ?? '').trim()
+    ).length
 );
 
 // Prévia sem script (sandbox) e sem clique nos links do modelo.
@@ -76,10 +72,25 @@ const previa = computed(() => {
     ? `${estilo}${html}`
     : `${html.slice(0, fimDoHead)}${estilo}${html.slice(fimDoHead)}`;
 });
+// Imagem do modelo que não abre (arquivo apagado em Campanhas, link de outra stack):
+// avisa antes de enviar, em vez de o cliente receber o e-mail quebrado.
+const imagensQuebradas = ref(0);
+const contarQuebradas = doc => {
+  const imagens = [...(doc?.images || [])];
+  imagensQuebradas.value = imagens.filter(
+    img => img.complete && !img.naturalWidth
+  ).length;
+};
 const medir = () => {
   const doc = moldura.value?.contentDocument;
   const total = doc?.documentElement?.scrollHeight || 0;
   if (total) altura.value = Math.min(ALTURA_MAXIMA, total);
+  contarQuebradas(doc);
+  [...(doc?.images || [])].forEach(img => {
+    if (img.complete) return;
+    img.addEventListener('error', () => contarQuebradas(doc), { once: true });
+    img.addEventListener('load', () => contarQuebradas(doc), { once: true });
+  });
 };
 
 const LINK =
@@ -95,7 +106,10 @@ const LINK =
       class="flex flex-wrap items-center justify-between gap-x-2 ps-3 pe-1 py-1"
     >
       <p class="flex items-center gap-2 min-w-0 text-[13px] text-n-slate-12">
-        <Icon icon="i-ph-layout-fill" class="size-4 flex-shrink-0 text-n-teal-10" />
+        <Icon
+          icon="i-ph-layout-fill"
+          class="size-4 flex-shrink-0 text-n-teal-10"
+        />
         <span class="truncate">
           {{ t('CONVERSA_CANAL.EMAIL.VAI_O_MODELO', { nome: modelo.nome }) }}
         </span>
@@ -111,7 +125,8 @@ const LINK =
       <div class="flex items-center gap-1">
         <button
           type="button"
-          :class="[LINK, 'text-n-slate-11 hover:bg-n-alpha-2']"
+          class="text-n-slate-11 hover:bg-n-alpha-2"
+          :class="[LINK]"
           :aria-expanded="aberto"
           data-ver-modelo
           @click="aberto = !aberto"
@@ -128,7 +143,8 @@ const LINK =
         </button>
         <button
           type="button"
-          :class="[LINK, 'text-n-slate-11 hover:bg-n-alpha-2']"
+          class="text-n-slate-11 hover:bg-n-alpha-2"
+          :class="[LINK]"
           data-tirar-modelo
           @click="emit('tirar')"
         >
@@ -172,6 +188,21 @@ const LINK =
           />
         </label>
       </div>
+      <p
+        v-if="imagensQuebradas"
+        role="alert"
+        class="mb-2 flex items-start gap-2 rounded-lg bg-n-amber-3 px-3 py-2 text-[13px] text-n-amber-11"
+        data-imagens-quebradas
+      >
+        <Icon icon="i-lucide-image-off" class="mt-0.5 size-4 shrink-0" />
+        {{
+          t(
+            'CONVERSA_CANAL.EMAIL.IMAGENS_QUEBRADAS',
+            { total: imagensQuebradas },
+            imagensQuebradas
+          )
+        }}
+      </p>
       <iframe
         ref="moldura"
         :srcdoc="previa"
