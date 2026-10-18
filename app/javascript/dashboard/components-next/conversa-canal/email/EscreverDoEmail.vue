@@ -1,7 +1,8 @@
 <script setup>
 // Gaveta "Nova conversa" do "Escrever" pedido pelo balão do menu recolhido (#1809):
 // fica montada no ícone do menu e abre quando chega um pedido (escreverEmail.js), já
-// com a caixa de e-mail escolhida.
+// com a caixa de e-mail escolhida. A gaveta só monta depois do primeiro pedido: sem a
+// chave conversa_email_nova (ou sem ninguém pedir), o ícone não carrega nada a mais.
 import { nextTick, ref, useTemplateRef, watch } from 'vue';
 import NovaConversaEntrada from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 import { pedidoDeEscrever } from './escreverEmail';
@@ -18,7 +19,7 @@ watch(pedidoDeEscrever, async pedido => {
 </script>
 
 <template>
-  <NovaConversaEntrada :caixa-id="caixaId">
+  <NovaConversaEntrada v-if="caixaId" :caixa-id="caixaId">
     <template #trigger>
       <button
         ref="gatilho"
@@ -29,4 +30,5 @@ watch(pedidoDeEscrever, async pedido => {
       />
     </template>
   </NovaConversaEntrada>
+  <template v-else />
 </template>
