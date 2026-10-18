@@ -6,7 +6,9 @@
 # - tradução pela IA da conta, num job, quando o Google Tradutor não está ligado
 #   (app/controllers/concerns/conversa_canal/traducao_em_segundo_plano.rb);
 # - Spam e Lixeira do painel nas listas de conversa, conversa nova de bloqueado direto no Spam e resposta do cliente
-#   tirando a conversa da Lixeira (#1809).
+#   tirando a conversa da Lixeira (#1809);
+# - "Encaminhar sem Para" na criação da conversa pela API devolve 422, não 500
+#   (app/controllers/concerns/conversa_canal/recusa_do_email_na_api.rb).
 Rails.application.config.to_prepare do
   Messages::MessageBuilder.prepend(ConversaCanal::MessageBuilderComCitacao) unless Messages::MessageBuilder <= ConversaCanal::MessageBuilderComCitacao
   ConversationReplyMailer.prepend(ConversaCanal::EncaminhadoNoMailer) unless ConversationReplyMailer <= ConversaCanal::EncaminhadoNoMailer
@@ -15,4 +17,6 @@ Rails.application.config.to_prepare do
   ConversationFinder.prepend(ConversaCanal::ConversationFinderComPastas) unless ConversationFinder <= ConversaCanal::ConversationFinderComPastas
   Conversation.include(ConversaCanal::SpamDoBloqueado) unless Conversation <= ConversaCanal::SpamDoBloqueado
   Message.prepend(ConversaCanal::PastaNaMensagemDoCliente) unless Message <= ConversaCanal::PastaNaMensagemDoCliente
+  conversas = Api::V1::Accounts::ConversationsController
+  conversas.include(ConversaCanal::RecusaDoEmailNaApi) unless conversas <= ConversaCanal::RecusaDoEmailNaApi
 end

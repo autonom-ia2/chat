@@ -146,10 +146,12 @@ class ConversaCanal::ModeloDeEmail
     sugestao
   end
 
-  # Muda o modelo, chega mensagem nova ou muda o que falta: pergunta de novo.
+  # Muda o modelo, chega mensagem nova ou muda o que falta: pergunta de novo. A chave é da conta e da conversa, e só
+  # leva números e o nome dos campos (nunca o valor sugerido, que tem dados do contato).
   def chave_da_sugestao(chaves)
     ultima = @conversation.messages.maximum(:id)
-    ['conversa_canal/modelo_de_email', @modelo.id, @modelo.updated_at.to_i, @conversation.id, ultima, chaves.join('|')].join('/')
+    ['conversa_canal/modelo_de_email', @conversation.account_id, @conversation.id, @modelo.id, @modelo.updated_at.to_i, ultima,
+     chaves.join('|')].join('/')
   end
 
   def perguntar_a_ia(chaves)

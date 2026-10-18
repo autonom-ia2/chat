@@ -119,9 +119,11 @@ RSpec.describe ConversaCanal::ModeloDeEmail do
     it 'com a chave conversa_email_nova desligada, o pedido do modelo é ignorado, como no Chatwoot' do
       account.disable_features!('conversa_email_nova')
 
-      html = responder('Oi').content_attributes.dig('email', 'html_content', 'reply')
+      mensagem = responder('Oi')
+      html = mensagem.content_attributes.dig('email', 'html_content', 'reply')
 
       expect(html).not_to include('Modelo para Marina')
+      expect(mensagem.content_attributes).not_to have_key('email_modelo')
     end
 
     it 'histórico vai depois do modelo' do

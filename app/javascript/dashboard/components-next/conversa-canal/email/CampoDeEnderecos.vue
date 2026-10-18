@@ -185,7 +185,7 @@ const aoTeclar = evento => {
         role="combobox"
         autocomplete="off"
         :aria-expanded="aberta"
-        :aria-controls="`${id}-lista`"
+        :aria-controls="aberta ? `${id}-lista` : undefined"
         :aria-activedescendant="ativa >= 0 ? `${id}-op-${ativa}` : undefined"
         :aria-invalid="temInvalido || undefined"
         :aria-describedby="temInvalido ? `${id}-erro` : undefined"

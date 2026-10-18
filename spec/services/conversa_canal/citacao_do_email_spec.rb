@@ -49,8 +49,25 @@ RSpec.describe ConversaCanal::CitacaoDoEmail do
   end
 
   it 'encaminhar sem Para é recusado (iria para o próprio cliente) e nada é gravado' do
-    expect { responder('encaminhado') }.to raise_error(ArgumentError, I18n.t('conversa_canal.email.encaminhar_sem_para'))
+    recusa = ConversaCanal::MessageBuilderComCitacao::Recusa
+    expect { responder('encaminhado') }.to raise_error(recusa, I18n.t('conversa_canal.email.encaminhar_sem_para'))
       .and(not_change { conversation.messages.count })
+  end
+
+  describe 'pela API', type: :request do
+    it 'encaminhar sem Para na criação da conversa: 422 com a frase, nada gravado' do
+      admin = create(:user, account: account, role: :administrator)
+      novo = create(:contact, account: account, email: 'novo@exemplo.com.br')
+      parametros = { contact_id: novo.id, inbox_id: inbox.id,
+                     message: { content: 'Segue', content_attributes: { email_citacao: { tipo: 'encaminhado', message_id: original.id } } } }
+
+      expect do
+        post "/api/v1/accounts/#{account.id}/conversations", params: parametros, headers: admin.create_new_auth_token, as: :json
+      end.not_to change(Conversation, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('conversa_canal.email.encaminhar_sem_para', locale: :pt_BR))
+    end
   end
 
   describe 'encaminhado no envio' do

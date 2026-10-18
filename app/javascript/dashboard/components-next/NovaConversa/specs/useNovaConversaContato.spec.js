@@ -164,6 +164,24 @@ describe('useNovaConversaContato', () => {
 
       expect(tela.canalId.value).toBe(11);
     });
+
+    it('sem caixa pedida, a caixa escolhida pela pessoa fica', async () => {
+      fetchContactableInboxes.mockResolvedValue([
+        canal(10, 'A'),
+        canal(11, 'B'),
+      ]);
+      const caixa = ref(10);
+      const tela = useNovaConversaContato({
+        caixaPreferida: () => caixa.value,
+      });
+      await tela.usarContatoDaPagina('1');
+      tela.canalId.value = 11;
+
+      caixa.value = null;
+      await flushPromises();
+
+      expect(tela.canalId.value).toBe(11);
+    });
   });
 
   describe('busca', () => {

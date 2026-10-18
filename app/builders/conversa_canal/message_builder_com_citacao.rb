@@ -8,12 +8,15 @@
 module ConversaCanal::MessageBuilderComCitacao
   private
 
-  # Encaminhar sem Para iria para o próprio cliente (o envio cai no contato da conversa): recusa antes de gravar.
+  # Encaminhar sem Para iria para o próprio cliente (o envio cai no contato da conversa): recusa antes de gravar. A
+  # recusa vira 422 nas rotas da API (ConversaCanal::RecusaDoEmailNaApi), não 500.
+  class Recusa < StandardError; end
+
   def process_emails
     super
     return unless email_novo? && encaminhado? && @message.content_attributes[:to_emails].blank?
 
-    raise ArgumentError, I18n.t('conversa_canal.email.encaminhar_sem_para')
+    raise Recusa, I18n.t('conversa_canal.email.encaminhar_sem_para')
   end
 
   def process_attachments
@@ -26,14 +29,19 @@ module ConversaCanal::MessageBuilderComCitacao
   end
 
   # Depois de montar o e-mail, o HTML do modelo (até 500 mil caracteres) não fica guardado de novo no pedido: a mensagem
-  # já o tem em `email.html_content`. Fica só qual modelo foi usado.
+  # já o tem em `email.html_content`. Fica só qual modelo foi usado. Com a chave desligada o modelo não é usado, e o
+  # pedido sai inteiro.
   def process_email_content
     super
     pedido = pedidos_do_email[:email_modelo]
-    return if !email_novo? || pedido.blank?
+    return if pedido.blank?
 
     atributos = (@message.content_attributes || {}).with_indifferent_access
-    @message.content_attributes = atributos.merge(email_modelo: pedido.to_h.with_indifferent_access.slice(:template_id, :so_modelo))
+    @message.content_attributes = if email_novo?
+                                    atributos.merge(email_modelo: pedido.to_h.with_indifferent_access.slice(:template_id, :so_modelo))
+                                  else
+                                    atributos.except(:email_modelo)
+                                  end
   end
 
   def build_html_content(normalized_content)

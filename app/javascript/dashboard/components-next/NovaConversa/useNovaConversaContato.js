@@ -175,7 +175,9 @@ export function useNovaConversaContato({ caixaPreferida = () => null } = {}) {
 
   // #1809: a gaveta guarda o contato e a caixa ao fechar sem enviar. Aberta de novo
   // pelo "Escrever" de OUTRA caixa, vale a caixa nova (senão o e-mail sairia pela antiga).
+  // Sem caixa pedida (a gaveta não é a do "Escrever"), a escolha da pessoa fica.
   watch(caixaPreferida, nova => {
+    if (nova === null || nova === undefined || nova === '') return;
     const achada = canais.value.find(item => String(item.id) === String(nova));
     if (achada) canalId.value = achada.id;
   });

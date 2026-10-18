@@ -68,6 +68,20 @@ const raiz = ref(null);
 const corpo = ref(null);
 const blocoDaMensagem = ref(null);
 
+// #1809 (decisão do Rodrigo, 18/10): o cartão "Criar contato" com nome, e-mail e
+// telefone só nas contas com a chave conversa_email_nova; sem ela, o "Criar contato"
+// de antes.
+const contaAtual = useMapGetter('getCurrentAccountId');
+const temChave = useMapGetter('accounts/isFeatureEnabledonAccount');
+const contatoNovoCompleto = computed(() =>
+  Boolean(temChave.value(contaAtual.value, 'conversa_email_nova'))
+);
+// #1809: a caixa só vale quando a gaveta é a do "Escrever" do e-mail, com a chave
+// ligada; as outras "Nova conversa" não recebem caixa e não têm a delas trocada.
+const caixaDoEscrever = computed(() =>
+  contatoNovoCompleto.value ? props.caixaId : null
+);
+
 const {
   contato,
   canais,
@@ -87,22 +101,14 @@ const {
   limparContato,
   mudarTermo,
   criarContato,
-} = useNovaConversaContato({ caixaPreferida: () => props.caixaId });
+} = useNovaConversaContato({ caixaPreferida: () => caixaDoEscrever.value });
 // #1809: aberta do "Escrever" da caixa de e-mail, o contato novo precisa de e-mail.
 const caixaPorId = useMapGetter('inboxes/getInbox');
 const caixaPreferidaEhEmail = computed(
   () =>
-    Boolean(props.caixaId) &&
-    caixaPorId.value(Number(props.caixaId))?.channel_type === INBOX_TYPES.EMAIL
-);
-
-// #1809 (decisão do Rodrigo, 18/10): o cartão "Criar contato" com nome, e-mail e
-// telefone só nas contas com a chave conversa_email_nova; sem ela, o "Criar contato"
-// de antes.
-const contaAtual = useMapGetter('getCurrentAccountId');
-const temChave = useMapGetter('accounts/isFeatureEnabledonAccount');
-const contatoNovoCompleto = computed(() =>
-  Boolean(temChave.value(contaAtual.value, 'conversa_email_nova'))
+    Boolean(caixaDoEscrever.value) &&
+    caixaPorId.value(Number(caixaDoEscrever.value))?.channel_type ===
+      INBOX_TYPES.EMAIL
 );
 
 // #1505 — o contato já tem conversa nesta caixa: continuar ou começar outra.
