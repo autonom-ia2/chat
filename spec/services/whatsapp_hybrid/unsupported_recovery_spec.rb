@@ -69,7 +69,8 @@ describe WhatsappHybrid::UnsupportedRecovery do
     end
 
     it 'mantém a posição e o horário da mensagem' do
-      created_at = message.created_at
+      # Relido do banco: no Linux o created_at em memória tem nanossegundos e o Postgres guarda microssegundos.
+      created_at = message.reload.created_at
       stub_engine
 
       expect { attempt! }.not_to(change { conversation.messages.count })
