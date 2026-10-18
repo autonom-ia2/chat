@@ -3,6 +3,7 @@ import { computed, defineComponent, h } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import en from 'dashboard/i18n/locale/en/conversaCanal.json';
+import enConversation from 'dashboard/i18n/locale/en/conversation.json';
 import Message from '../../message/Message.vue';
 import MessageList from '../../message/MessageList.vue';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../message/constants';
@@ -19,7 +20,7 @@ const i18n = () =>
   createI18n({
     legacy: false,
     locale: 'en',
-    messages: { en },
+    messages: { en: { ...en, ...enConversation } },
     missingWarn: false,
     fallbackWarn: false,
   });
@@ -206,6 +207,27 @@ describe('não suportada com tipo (#1702)', () => {
       })
     ).toBe(false);
   });
+
+  it.each([
+    ['pending', 'Fetching the content from the phone'],
+    ['failed', "Couldn't recover this message"],
+  ])(
+    'recuperação pelo WhatsApp API %s (#1489): o estado no lugar de "não mostra aqui"',
+    (estado, texto) => {
+      const wrapper = montar({
+        content: null,
+        contentAttributes: {
+          isUnsupported: true,
+          unsupportedKind: 'unknown',
+          hybridRecovery: estado,
+        },
+      });
+      const tipado = balao(wrapper, 'nao-suportada-tipo');
+      expect(tipado.text()).toContain(texto);
+      expect(tipado.text()).not.toContain('does not show here');
+      expect(tipado.find('.i-ph-device-mobile').exists()).toBe(true);
+    }
+  );
 
   it('sem tipo ou sem a pele, o aviso genérico de sempre', () => {
     expect(balao(montar(naoSuportada(undefined)), 'unsupported').exists()).toBe(

@@ -422,7 +422,7 @@
 # No automático, Resultados) e Configurações abre a página de cartões. Piloto: contas 1, 16 e 18 da Hub2You.
 - name: menu_lateral_novo
   display_name: Menu lateral novo e Configurações em cartões
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Horário único da caixa (#1619, flag #1649). A posição na lista é o bit: entra no FIM, e a Orquestração confere a
@@ -488,11 +488,23 @@
   enabled: false
   column: feature_flags_ext_1
 
+# Recuperar pelo WhatsApp API as mensagens que a Cloud entrega como "não suportada" (#1489). Bit 32 (4294967296): a
+# posição na lista é o bit e a flag vai no fim do que está na main, logo depois de `conversa_cara_do_canal` (bit 31);
+# se outra flag entrar antes na main, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb).
+# Desligada (padrão): a bolha fica com o aviso, como antes, e nenhum job consulta o motor. Ligada: só nas caixas com
+# WhatsApp API conectado, mesmo número e envio automático ligado. Sem migration. Piloto nas contas 47 (stack
+# Autonom.ia) e 1 (stack Hub2You), pelo Super Admin, depois do deploy; ver docs/whatsapp-hibrido-cloud-waha-prd.md (§ 62).
+- name: whatsapp_hybrid_recovery
+  display_name: WhatsApp API recupera mensagens "não suportadas"
+  enabled: false
+  column: feature_flags_ext_1
+
 # Mensagem rica nativa pelo WhatsApp API (#1709): plano B do WhatsApp Híbrido (fase 1) e caixa WAHA comum pelo conector
 # do WAHA (fase 2). Ligada: opções saem como lista, localização e contato saem nativos, e a resposta do cliente à lista
-# é ligada à pergunta. Bit 32 (4294967296), logo depois de `conversa_cara_do_canal` (bit 31, já na main): a posição
-# na lista é o bit, no fim do que está na main (a coluna `feature_flags_ext_1` é bigint, o 32 cabe); outros PRs
-# abertos (#1726) também querem o fim, então o bit sobe conforme a ordem de merge.
+# é ligada à pergunta. Bit 33 (8589934592; a Orquestração chama de "posição 34"), logo depois de
+# `whatsapp_hybrid_recovery` (bit 32, #1489, já na main): a posição na lista é o bit, no fim do que está na main (a
+# coluna `feature_flags_ext_1` é bigint, o 33 cabe); se outra flag entrar antes na main, esta vai para o fim e o bit
+# sobe (ajustar o spec/models/account_spec.rb).
 # Desligada (padrão): o envio é o de antes (tudo como texto, motor padrão; o "Reagir" e o "Editar" do #1709 só com ela).
 # A reação pela pele (`conversa_cara_do_canal`) existe sem ela, pelo PUT /api/reaction do motor padrão. Com as duas
 # desligadas, o webhook da caixa WAHA recebe todo `message_updated`; com a pele ligada e esta desligada, o

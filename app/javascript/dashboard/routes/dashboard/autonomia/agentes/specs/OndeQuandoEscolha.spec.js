@@ -137,6 +137,25 @@ describe('OndeQuandoEscolha', () => {
     wrapper.unmount();
   });
 
+  // Regra G (#1788): caixa de que a pessoa não é membro aparece desabilitada, com o motivo.
+  it('shows an inbox out of reach as disabled, with the reason', async () => {
+    const wrapper = montar({
+      canais: [
+        ...canais,
+        { inbox_id: 14, name: 'Suporte', occupied_by: null, alcanca: false },
+      ],
+    });
+    const fora = opcoes(wrapper, ONDE)[4];
+
+    expect(fora.attributes('aria-disabled')).toBe('true');
+    expect(fora.text()).toContain(
+      'AGENTS.JORNADA.ONDE_QUANDO.FORA_DO_ALCANCE_TEXTO'
+    );
+    await fora.trigger('click');
+    expect(wrapper.emitted('update:onde')).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it('does not let the external inbox be chosen', async () => {
     const wrapper = montar();
     await opcoes(wrapper, ONDE)[2].trigger('click');

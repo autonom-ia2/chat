@@ -215,8 +215,10 @@ RSpec.describe Account do
         feature_crm_avaliar_toda_mensagem: 1 << 29,
         feature_memoria_ia: 1 << 30,
         feature_conversa_cara_do_canal: 1 << 31,
-        # #1709: no fim do que está na main; o bit sobe conforme a ordem de merge.
-        feature_whatsapp_rich_native: 1 << 32
+        # #1489: a posição na lista é o bit; no fim do que está na main.
+        feature_whatsapp_hybrid_recovery: 1 << 32,
+        # #1709: logo depois de whatsapp_hybrid_recovery; o bit sobe conforme a ordem de merge.
+        feature_whatsapp_rich_native: 1 << 33
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

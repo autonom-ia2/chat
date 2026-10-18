@@ -50,12 +50,14 @@ module Autonomia::Agents::AgentVersioning
     return false if version.blank? || version.autonomia_agent_id != id
 
     transaction do
+      travar_conversas! # #1428 (parte 3): as conversas antes do agente, a ordem do Construtor (sem deadlock)
       lock!
       gravar_versao!('antes_de_voltar', created_by&.id) if versao_completa? && !estado_atual_guardado?
       atributos = atributos_da_versao(version)
       sem_andaime = atributos.delete('sem_andaime')
       update_columns(atributos.merge(updated_at: Time.current)) # rubocop:disable Rails/SkipsModelValidations
       gravar_versao!('rollback', created_by&.id, extra: { 'voltou_para' => version.id, 'sem_andaime' => sem_andaime }.compact)
+      depois_de_voltar_por_versoes!(version) # #1428 (parte 3), em DesfazerAjuste
     end
     true
   end

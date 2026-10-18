@@ -137,6 +137,14 @@ module Waha
       post("/api/#{kind}", with_reply_to(body, media[:reply_to]))
     end
 
+    # Uma mensagem guardada pelo motor, pelo id simples do WhatsApp (chat#1489). O GOWS guarda as recebidas: comprovado
+    # em produção no spike de 15/10/2026 (6/6, a mais antiga com 7 dias). Sem mídia: só o texto e os metadados.
+    GET_MESSAGE_TIMEOUT = 10
+
+    def get_message(session, chat_id, id, download_media: false)
+      get("/api/#{session}/chats/#{chat_id}/messages/#{id}?downloadMedia=#{download_media}", timeout: GET_MESSAGE_TIMEOUT)
+    end
+
     # Reação (emoji) a uma mensagem (#1702). message_id no formato do WAHA ("true_<chatId>_<id>"); reaction vazia tira.
     def set_reaction(session:, message_id:, reaction:)
       put('/api/reaction', { session: session, messageId: message_id, reaction: reaction })

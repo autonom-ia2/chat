@@ -1,4 +1,5 @@
-# Anúncios da Meta, F4a (#1100): a IA no painel. Só administrador (policy Crm::MetaAdsConnection :show?).
+# Anúncios da Meta, F4a (#1100): a IA no painel. Administrador ou `meta_ads_view` (#1794, policy Crm::MetaAdsConnection
+# :show?). As propostas paradas do consultor mostram só as conversas visíveis para a pessoa.
 #
 # POST daily_action  {days}    → o texto do consultor (F5, #1110) pela IA: o `Advice` do dia. `days` é aceito e
 #                                ignorado (D5.2: o consultor não depende do período da tela). Já escrito, pela
@@ -12,7 +13,7 @@
 class Api::V1::Accounts::Crm::MetaAdsAiController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
 
-  before_action :ensure_administrator
+  before_action :ensure_allowed
 
   def daily_action
     connection = current_connection
@@ -20,7 +21,7 @@ class Api::V1::Accounts::Crm::MetaAdsAiController < Api::V1::Accounts::Crm::Base
 
     advice = advisor.current(connection, locale: I18n.locale.to_s, shown: !authenticate_by_access_token?)
     immediate = immediate_daily_action(advice)
-    return render json: { daily_action: immediate } if immediate
+    return render json: { daily_action: ::Crm::MetaAds::VisibleConversations.current.advice(immediate) } if immediate
 
     defer_interactive_ai('meta_ads_daily_action', { run_id: advice[:run_id], language: I18n.locale.to_s })
   end
@@ -74,7 +75,7 @@ class Api::V1::Accounts::Crm::MetaAdsAiController < Api::V1::Accounts::Crm::Base
                                       .visible?(conversation)
   end
 
-  def ensure_administrator
+  def ensure_allowed
     return if Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).show?
 
     render json: { error: 'forbidden' }, status: :forbidden
