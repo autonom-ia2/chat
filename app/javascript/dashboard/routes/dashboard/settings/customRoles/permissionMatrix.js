@@ -192,6 +192,19 @@ export const MODULE_GROUPS = [
         settings: true,
         levels: { manage: 'sla_manage' },
       },
+      {
+        // Regras de distribuição e capacidade das conversas (#1797).
+        key: 'ASSIGNMENT',
+        icon: 'i-lucide-user-cog',
+        settings: true,
+        levels: { manage: 'assignment_manage' },
+        // Sem ver as caixas, a função só lista as caixas de que é membro nos formulários.
+        suggests: {
+          level: LEVELS.MANAGE,
+          module: 'INBOXES',
+          targetLevel: LEVELS.VIEW,
+        },
+      },
     ],
   },
 ];
@@ -325,13 +338,20 @@ export const toggleExtra = (module, key, permissions) => {
   return lostConversationScope ? permissions : next;
 };
 
-// A pairing the backend needs for one action (e.g. prospecting → campaigns).
+// A pairing the backend needs for one action (e.g. prospecting → campaigns). The target needs
+// `suggests.targetLevel` (edit by default) or more.
+const LEVEL_RANK = { [LEVELS.NONE]: 0, [LEVELS.VIEW]: 1, [LEVELS.MANAGE]: 2 };
+export const suggestedLevel = module =>
+  module.suggests?.targetLevel || LEVELS.MANAGE;
 export const unmetSuggestion = (module, permissions) => {
   const { suggests } = module;
   if (!suggests || getLevel(module, permissions) !== suggests.level)
     return null;
   const target = moduleByKey(suggests.module);
-  return getLevel(target, permissions) === LEVELS.MANAGE ? null : target;
+  const enough =
+    LEVEL_RANK[getLevel(target, permissions)] >=
+    LEVEL_RANK[suggestedLevel(module)];
+  return enough ? null : target;
 };
 
 export const sensitiveExtrasOn = permissions =>

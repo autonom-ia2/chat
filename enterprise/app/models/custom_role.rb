@@ -49,6 +49,7 @@
 # - 'meta_ads_view': Meta Ads panel, connection state and the panel AI (#1794). Lists that lead to a conversation show
 #   only the conversations the person already sees. Connecting and configuring stay with administrators.
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
+# - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -98,6 +99,7 @@ class CustomRole < ApplicationRecord
     attribute_manage
     macro_manage
     sla_manage
+    assignment_manage
   ].freeze
 
   validates :name, presence: true

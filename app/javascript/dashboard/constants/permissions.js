@@ -16,6 +16,8 @@ export const INBOX_PERMISSIONS = ['inbox_view', 'inbox_manage'];
 export const CANNED_RESPONSE_MANAGE_PERMISSION = 'canned_response_manage';
 // SLA is managed in CRM › SLA (crm_sla_index); the SLA policy API checks this key.
 export const SLA_MANAGE_PERMISSION = 'sla_manage';
+// Regras de distribuição e capacidade (#1797).
+export const ASSIGNMENT_MANAGE_PERMISSION = 'assignment_manage';
 export const PROSPECTING_PERMISSIONS = [
   'prospecting_view',
   'prospecting_manage',
