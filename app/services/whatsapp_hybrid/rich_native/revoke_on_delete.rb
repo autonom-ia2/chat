@@ -22,7 +22,8 @@ class WhatsappHybrid::RichNative::RevokeOnDelete
   # Mensagem nossa, não nota, numa caixa híbrida com a flag: apagar no painel pede o "apagar para todos" ao motor (se
   # tiver id físico). Também o sinal `c2y_revocable` do painel (Waha::RichNative::Revocable).
   def self.revokes?(message, inbox: message.inbox, account: message.account)
-    message.outgoing? && !message.private? && WhatsappHybrid::RichNative.hybrid?(inbox) && Waha::RichNative.enabled?(account)
+    # A flag antes da caixa: sem ela, nem se pergunta se a caixa é híbrida (o sinal roda em todo evento da tela).
+    message.outgoing? && !message.private? && Waha::RichNative.enabled?(account) && WhatsappHybrid::RichNative.hybrid?(inbox)
   end
 
   # O `content_attributes` passou de não apagada para apagada neste commit.
