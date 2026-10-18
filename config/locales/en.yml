@@ -331,6 +331,8 @@ en:
         flow_response: 'Submitted a flow response'
         request_contact_info: 'Would you like to share your phone number with us?'
         unsupported_message: 'This message is unavailable.'
+        unsupported_handoff_note: 'The customer sent a message the official WhatsApp does not show. Check it on the phone.'
+        unsupported_late_note: 'The customer message arrived late and the AI did not reply. Check the conversation.'
       voice_call:
         twilio: 'Voice Call'
         whatsapp: 'WhatsApp Call'

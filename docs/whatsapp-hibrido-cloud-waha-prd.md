@@ -2096,3 +2096,77 @@ O trabalho novo não é “integrar dois WhatsApps”.
 6. UX e telemetria.
 
 O principal gate técnico é comprovar a correlação de IDs WAHA/GOWS com smb_message_echoes da Meta. Esse spike deve anteceder o roteador definitivo.
+
+## 62. Recuperar "não suportada" (chat#1489)
+
+A Cloud entrega como `unsupported` (erros 131051 e 131060) mensagens que o aparelho conectado recebe normalmente.
+No spike de 15/10/2026 (conta 47, caixa 61), 6/6 eram modelos com botões de outra empresa (`templateMessage`), e o
+motor devolveu as 6 em `GET /api/{sessão}/chats/{número}@c.us/messages/{id}?downloadMedia=false`.
+
+**Para todas as caixas WhatsApp (PR 0).**
+- A bolha guarda `unsupported_type` e `unsupported_error_code`.
+- A nossa IA (`Autonomia::Agents::Operate::MessageListener`) só espera quando a conta tem a flag
+  `whatsapp_hybrid_recovery` e o aviso está com recuperação em curso (`hybrid_recovery: pending`). Aviso sem
+  recuperação (caixa sem WhatsApp API pronto, tipo que não é mensagem nova) ou conta sem a flag: igual à main.
+  Instagram e TikTok também usam `is_unsupported` (em mídia): lá a IA segue como antes.
+
+**Com a flag `whatsapp_hybrid_recovery` (PR 2, `feature_flags_ext_1`, desligada por padrão; o bit é a posição no `features.yml` quando entrar na main).**
+- O tipo `unknown` recebido vira a mesma bolha. Flag desligada, ou eco de saída: o caminho de hoje (só log).
+- Só recupera `unsupported.type` de mensagem nova: `hsm`, `interactive`, `button`, `list`, `template` e sem tipo
+  (erro 131060). Edição, reação, voto, fixar, `keep_in_chat` e os demais ficam com o aviso, sem job.
+- Só na caixa cuja conexão está conectada, com o mesmo número e o envio automático ligado (`Connection#routable?`).
+- A bolha nasce com `whatsapp_web_id` (id físico tirado do wamid) e `hybrid_recovery: pending`.
+- `WhatsappHybrid::RecoverUnsupportedJob` pergunta ao motor (pull) em 5 s, 15 s, 30 s, 1 min, 2 min, 5 min, 10 min e
+  depois de 10 em 10 min, até 30 min do recebimento. Resposta sem mensagem, ou mensagem ainda sem nada legível, tenta
+  de novo até o prazo.
+- Casamento: id igual, `fromMe: false`, remetente = contato da conversa, sessão da caixa, uma candidata só (a mesma
+  mensagem devolvida por mais de um chat conta uma vez).
+- Recuperada: a própria mensagem recebe o texto (título, corpo, rodapé e os botões numerados), perde `is_unsupported`,
+  ganha `hybrid_recovery: recovered`, `recovered_via: web` e `hybrid_recovered_at` (UTC, no mesmo update; nunca o
+  `updated_at`). Posição e horário não mudam. Imagem (ou outro arquivo) no cabeçalho do modelo não é baixada: grava
+  `hybrid_recovery_header: image|media` e a bolha avisa para olhar no celular. Depois do commit sai
+  `whatsapp_hybrid.message_recovered` (ActiveSupport::Notifications, só `message_id`, `conversation_id`, `account_id`),
+  uma vez, só na passagem pending → recovered (Multifunil).
+- A IA é chamada uma vez (`WhatsappHybrid::RecoveryAiWake`) quando a recuperação chega em até 2 min, a conversa não
+  está resolvida e ninguém falou depois do aviso: o mesmo contato na mesma caixa, uma pessoa, ou a nossa IA
+  respondendo a esta mensagem ou a uma mais nova. Mensagem do sistema (fora do horário, saudação), atividade, nota,
+  automação e outro robô não contam. Vale também para modelo de outra empresa (`hsm`): o modelo de agentes já
+  instrui a não dar trela para robô.
+- Quando a recuperação não termina em resposta da IA, fica o evento do agente (`Autonomia::Agents::Operate::NaoSuportada`):
+  `skipped_recuperada_tarde` (recuperada depois de 2 min, sem ninguém ter falado), `skipped_recuperacao_falhou`
+  (falha ou prazo de 30 min), `skipped_recuperacao_acordar_falhou` (gravou, mas chamar a IA falhou) ou
+  `skipped_recuperacao_passagem_falhou` (gravou a falha, mas passar a conversa falhou). Os dois últimos não voltam para
+  nova tentativa e vão ao tracker uma vez só. Com a flag ligada, falha e recuperação tarde vão para as pessoas, com a
+  decisão sob o lock, sobre a conversa relida: resolvida, só o evento; alguém falou depois do aviso (atividade e nota
+  privada não contam), evento e nota, sem passar; espelho no comando, `bot_handoff!` (motivo `recuperacao_falhou` ou
+  `recuperacao_tarde`, texto livre no Crm::Entrega), evento `handed_off` e nota; já esperando por pessoa (segunda falha
+  na mesma conversa), só a nota. Notas: "O cliente mandou uma mensagem que o WhatsApp oficial não mostra. Veja no
+  celular." ou "A mensagem do cliente chegou atrasada e a IA não respondeu. Veja a conversa.".
+- Atendente que responde durante a espera do debounce: vale o fluxo normal ("atendente responde, não assume"); a regra
+  de "alguém falou depois" só olha a hora de acordar a IA.
+- Histórico da IA: mensagem com `hybrid_recovery_header` ganha a linha "[contexto interno, não repetir ao cliente: a
+  mensagem tinha uma imagem que não foi lida]" (ou "um arquivo"). Ela nunca vai ao `content` nem ao cliente: se o
+  modelo a repetir, sai da resposta (só a linha exata); sobrando nada, silêncio com motivo `so_contexto_interno`.
+- Falhou (`hybrid_recovery: failed`, motivo em `hybrid_recovery_reason`): `timeout`, `mismatch`, `ambiguous`,
+  `unreadable` (tipo que não lemos), `chat_unknown` (contato sem número), `invalid_id`, `disabled` (flag desligada no
+  meio) ou `media`.
+- Mídia fica para a PR 3: guarda só a legenda (que acorda a IA pela mesma regra, com a marca do arquivo) e a bolha
+  manda olhar no celular. Visualização única não é aberta: fica com o aviso.
+- n8n/AgentBot, regras de automação e webhooks continuam vendo o aviso e o `message_updated` (PR 4).
+
+**Ligar (passo posterior, com OK do Rodrigo).** Super Admin → conta → `whatsapp_hybrid_recovery`, na conta 47 (stack
+Autonom.ia) e na conta 1 (stack Hub2You). Desligar é o mesmo caminho; mensagens já pendentes falham com `disabled` na
+próxima tentativa.
+
+**Fase 2 dos Agentes (#1627 e #1669, mesclados em 16/10):**
+- A recuperada passa pela posse do turno e responde uma vez; outro settle do mesmo turno é barrado (`turno_em_curso`).
+  Se o cliente escreve durante a chamada à IA, `turno_superado` descarta a resposta da recuperada e só a mais nova
+  responde (`spec/jobs/autonomia/agents/operate/reply_job_recuperacao_fase2_spec.rb`).
+- Acordar a IA grava a marca do turno (debounce) só se ela não apontar para uma mensagem mais nova (`jsonb_set`
+  condicional); se apontar, a IA não é acordada pela mensagem velha e o turno da nova cobre as duas.
+- Com a equipe na janela (#1669), o histórico vai pelo `HistoricoDaEquipe` e a linha de contexto da recuperada vai
+  junto. A resposta passa pelas duas limpezas (marca da equipe e linha de contexto).
+- `so_contexto_interno` solta a posse como o `vazio` e grava `skipped_recuperada_so_contexto` (aba Desempenho).
+- Eventos: o #1627 usa o 8, o #1669 o 9 e o #1489 o 10 a 14.
+- A flag `whatsapp_hybrid_recovery` fica no bit 30, no fim do `features.yml` da main de 16/10. Na conta 1 (Fase 2) só
+  liga depois do #1637 (EsperaDoAssunto contando o teto a partir de max(created_at, hybrid_recovered_at)).
