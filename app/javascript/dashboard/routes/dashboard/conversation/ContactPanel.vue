@@ -14,6 +14,8 @@ import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import ContactConversations from './ContactConversations.vue';
 import ConversationAction from './ConversationAction.vue';
 import ConversationParticipant from './ConversationParticipant.vue';
+import AcoesSoLeitura from './AcoesSoLeitura.vue';
+import ParticipantesSoLeitura from './ParticipantesSoLeitura.vue';
 import ContactInfo from './contact/ContactInfo.vue';
 import ContactNotes from './contact/ContactNotes.vue';
 import ConversationInfo from './ConversationInfo.vue';
@@ -168,7 +170,7 @@ onMounted(() => {
       >
         <template #item="{ element }">
           <div
-            v-if="element.name === 'conversation_actions' && canOperate"
+            v-if="element.name === 'conversation_actions'"
             class="conversation--actions"
           >
             <AccordionItem
@@ -179,15 +181,15 @@ onMounted(() => {
               "
             >
               <ConversationAction
+                v-if="canOperate"
                 :conversation-id="conversationId"
                 :inbox-id="inboxId"
               />
+              <AcoesSoLeitura v-else />
             </AccordionItem>
           </div>
           <div
-            v-else-if="
-              element.name === 'conversation_participants' && canOperate
-            "
+            v-else-if="element.name === 'conversation_participants'"
             class="conversation--actions"
           >
             <AccordionItem
@@ -199,8 +201,13 @@ onMounted(() => {
               "
             >
               <ConversationParticipant
+                v-if="canOperate"
                 :conversation-id="conversationId"
                 :inbox-id="inboxId"
+              />
+              <ParticipantesSoLeitura
+                v-else
+                :conversation-id="conversationId"
               />
             </AccordionItem>
           </div>

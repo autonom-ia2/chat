@@ -422,7 +422,10 @@
     },
     "SO_LEITURA": {
       "TITULO": "You can only read this conversation.",
-      "TEXTO": "To reply, talk to whoever manages your team."
+      "TEXTO": "To reply, talk to whoever manages your team.",
+      "NINGUEM": "No one",
+      "SEM_ETIQUETAS": "No labels",
+      "SEM_PARTICIPANTES": "No participants"
     }
   },
   "EMAIL_TRANSCRIPT": {
