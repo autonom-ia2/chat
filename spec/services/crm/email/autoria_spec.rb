@@ -59,12 +59,62 @@ RSpec.describe Crm::Email::Autoria do
   end
 
   # Pega: o CPF de outra pessoa citado embaixo da resposta do cliente chegar à IA.
-  it 'lê só o que foi escrito no e-mail, sem o histórico citado; corte vazio volta ao texto inteiro', :aggregate_failures do
+  it 'lê só o que foi escrito no e-mail, sem o bloco citado; sem texto, o resumo de quem chama', :aggregate_failures do
     citado = "ok, pode seguir\n\n> meu CPF é 987.654.321-00"
-    expect(autoria.texto(email!(from: 'joao@empresa.com.br', content: citado, quoted: 'ok, pode seguir'))).to eq('ok, pode seguir')
-    expect(autoria.texto(email!(from: 'joao@empresa.com.br', content: citado, quoted: ' '))).to eq(citado)
-    expect(autoria.texto(email!(from: 'joao@empresa.com.br', content: '', quoted: '')) { 'Localização: escritório' })
+    expect(autoria.texto(email!(from: 'joao@empresa.com.br', content: citado))).to eq('ok, pode seguir')
+    expect(autoria.texto(email!(from: 'joao@empresa.com.br', content: '')) { 'Localização: escritório' })
       .to eq('Localização: escritório')
+  end
+
+  describe '.texto_novo' do
+    let(:assinatura) { "--\nAna Souza\nCorretora Exemplo\n(11) 98765-4321" }
+
+    # Pega: o corte levar junto a assinatura (quem escreveu, e o telefone que a tela do #1813 usa).
+    it 'tira o bloco citado e mantém a assinatura com o telefone', :aggregate_failures do
+      gmail = "Pode seguir.\n\n#{assinatura}\n\nEm qui., 16 de out. de 2026 às 10:12, João Silva <joao@empresa.com.br> " \
+              "escreveu:\n\n> meu CPF é 123.456.789-00\n> João"
+      outlook = "Pode seguir.\n\n#{assinatura}\n\nDe: João Silva <joao@empresa.com.br>\nEnviado: quinta-feira, 16 de outubro de " \
+                "2026 10:12\nPara: Corretora <corretora@example.com>\nAssunto: Cotação\n\nmeu CPF é 123.456.789-00"
+
+      expect(described_class.texto_novo(email!(from: 'ana@familia.com.br', content: gmail))).to eq("Pode seguir.\n\n#{assinatura}")
+      expect(described_class.texto_novo(email!(from: 'ana@familia.com.br', content: outlook))).to eq("Pode seguir.\n\n#{assinatura}")
+    end
+
+    # Pega: o e-mail anterior colado sem ">" (encaminhado, Outlook) ficar como fala; e o cliente escrevendo
+    # "De:/Para:/Data:" (origem e destino da mudança) perder o texto como se fosse cabeçalho.
+    it 'corta o e-mail anterior sem ">", mas não o texto do cliente que parece cabeçalho', :aggregate_failures do
+      sem_aspas = "Segue o que o RH mandou.\n\nOn Wed, Oct 15, 2026 at 9:00 AM RH <rh@empresa.com.br> wrote:\n\nCPF do titular 123.456.789-00"
+      mudanca = "Quero cotar a mudança:\nDe: Curitiba\nPara: Recife\nData: 10/10/2026\nCarro 2019"
+      frase = "On Monday my wife said:\nwe want the full coverage"
+      no_fim = "Segue.\n\nOn Wed, Oct 15, 2026 at 9:00 AM RH <rh@empresa.com.br> wrote:"
+
+      expect(described_class.texto_novo(email!(from: 'joao@empresa.com.br', content: sem_aspas))).to eq('Segue o que o RH mandou.')
+      expect(described_class.texto_novo(email!(from: 'joao@empresa.com.br', content: mudanca))).to eq(mudanca)
+      expect(described_class.texto_novo(email!(from: 'joao@empresa.com.br', content: frase))).to eq(frase)
+      expect(described_class.texto_novo(email!(from: 'joao@empresa.com.br', content: no_fim))).to eq('Segue.')
+    end
+
+    # Pega: resposta escrita embaixo da citação (bottom-posting) sumir junto com o histórico.
+    it 'mantém o que foi escrito depois do bloco citado' do
+      embaixo = "On Wed, Oct 15, 2026 at 9:00 AM Corretora <corretora@example.com> wrote:\n> qual o CPF?\n\n123.456.789-00, o meu"
+
+      expect(described_class.texto_novo(email!(from: 'joao@empresa.com.br', content: embaixo))).to eq('123.456.789-00, o meu')
+    end
+
+    # Pega: o encaminhamento sem nada escrito sumir da IA (padrão) ou o #1813 mostrar o histórico como fala (sem_fallback).
+    it 'corte vazio: o texto inteiro por padrão; nil com sem_fallback', :aggregate_failures do
+      so_citado = "On Wed, Oct 15, 2026 at 9:00 AM Ana <ana@familia.com.br> wrote:\n> meu CPF é 987.654.321-00"
+      message = email!(from: 'joao@empresa.com.br', content: so_citado)
+
+      expect(described_class.texto_novo(message)).to eq(so_citado)
+      expect(described_class.texto_novo(message, sem_fallback: true)).to be_nil
+    end
+
+    it 'mensagem que não é e-mail recebido devolve o content, também com sem_fallback' do
+      whatsapp = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: '> oi')
+
+      expect(described_class.texto_novo(whatsapp, sem_fallback: true)).to eq('> oi')
+    end
   end
 
   # Pega: endereço com colchete ou quebra de linha fechar o aviso antes da hora ou abrir uma linha nova no prompt.

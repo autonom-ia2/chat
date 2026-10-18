@@ -16,8 +16,10 @@
 #   dado estruturado, com Mail::Address e métodos de string; nunca o texto da pessoa.
 # - Equipe: o endereço é de um usuário da conta. Só muda o aviso: o From pode ser forjado, então não dá força de equipe.
 # - Automática: Message#auto_reply_email? (fora do escritório, aviso de servidor).
-# - Texto sem histórico: `email.text_content.quoted` (ou o do HTML), que o EmailReplyTrimmer já cortou e ninguém lia.
-#   Vazio -> o content inteiro.
+# - Texto sem histórico: `Crm::Email::Autoria.texto_novo(message)`, só o corte do BLOCO CITADO (as linhas que o
+#   EmailReplyTrimmer reconhece como citação, marcador "On ... wrote:"/"Em ... escreveu:" e cabeçalho de e-mail
+#   encaminhado). A assinatura fica: ajuda a IA a saber quem escreveu (e a tela, #1813, usa o telefone dela). O
+#   `quoted` salvo pelo recebimento corta a assinatura também, por isso não é usado. Vazio -> o content inteiro.
 #
 # Flag `email_autoria`: desligada, `de` devolve nil e `texto` devolve o content; tudo fica como antes.
 class Crm::Email::Autoria
@@ -69,12 +71,26 @@ class Crm::Email::Autoria
     texto.split('] ', 2).second.to_s
   end
 
+  # O que a pessoa escreveu NESTE e-mail recebido, sem o bloco citado e com a assinatura. Corte vazio (só histórico
+  # citado, como um encaminhamento sem nada escrito): o content inteiro, ou nil com `sem_fallback: true`. Mensagem que
+  # não é e-mail recebido: o content. Não depende da flag (quem chama decide); quem decide o que é citação é o gem.
+  def self.texto_novo(message, sem_fallback: false)
+    conteudo = message.content.to_s
+    return conteudo unless message.incoming? && message.incoming_email?
+
+    cortado = Crm::Email::BlocoCitado.sem(conteudo)
+    return cortado if cortado.present?
+
+    sem_fallback ? nil : conteudo
+  end
+
   def initialize(account)
     @account = account
     @ligada = self.class.ligada?(account)
     @do_cliente = {}
     @da_equipe = {}
     @resultados = {}
+    @textos = {}
   end
 
   def ligada?
@@ -95,7 +111,7 @@ class Crm::Email::Autoria
   def texto(message)
     return (block_given? ? yield : message.content.to_s) unless @ligada && email_recebido?(message)
 
-    sem_historico(message) || (block_given? ? yield : message.content.to_s)
+    texto_novo_lido(message) || (block_given? ? yield : message.content.to_s)
   end
 
   # O aviso (com espaço no fim) ou '' quando a mensagem é do cliente.
@@ -140,6 +156,13 @@ class Crm::Email::Autoria
 
   private
 
+  # O corte de cada mensagem, uma vez por instância (a janela do agente relê as mesmas mensagens).
+  def texto_novo_lido(message)
+    return self.class.texto_novo(message, sem_fallback: true) unless message.id
+
+    @textos.fetch(message.id) { @textos[message.id] = self.class.texto_novo(message, sem_fallback: true) }
+  end
+
   def calcular(message)
     remetentes = remetentes_de(message)
     return Resultado.new(tipo: AUTOMATICA, remetente: remetentes.first) if message.auto_reply_email?
@@ -153,11 +176,6 @@ class Crm::Email::Autoria
 
   def email_recebido?(message)
     message.incoming? && message.incoming_email?
-  end
-
-  def sem_historico(message)
-    email = dados_do_email(message)
-    [email.dig(:text_content, :quoted), email.dig(:html_content, :quoted)].map { |parte| parte.to_s.strip }.find(&:present?)
   end
 
   def dados_do_email(message)
