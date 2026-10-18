@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../AgenteBotao.vue';
 
@@ -62,6 +62,7 @@ const cor = computed(() => {
 const prova = computed(() => props.resultado.prova || null);
 const provaOk = computed(() => prova.value?.ok === prova.value?.total);
 const verProva = ref(false);
+const listaDaProva = useId();
 
 const podeDesfazer = computed(
   () => props.resultado.pode_desfazer === true && props.erro !== 'mudou'
@@ -194,13 +195,16 @@ const podeDesfazer = computed(
             "
             aria-hidden="true"
           />
-          {{ t(`${NS}.PROVA`, { ok: prova.ok, total: prova.total }) }}
+          {{
+            t(`${NS}.PROVA`, { ok: prova.ok, total: prova.total }, prova.total)
+          }}
         </p>
         <button
           data-ver-prova
           type="button"
           class="inline-flex items-center gap-1 text-sm font-semibold min-h-11 w-fit text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
           :aria-expanded="verProva ? 'true' : 'false'"
+          :aria-controls="listaDaProva"
           @click="verProva = !verProva"
         >
           <span
@@ -210,18 +214,36 @@ const podeDesfazer = computed(
           />
           {{ verProva ? t(`${NS}.ESCONDER_PROVA`) : t(`${NS}.VER_PROVA`) }}
         </button>
-        <ul v-if="verProva" class="flex flex-col gap-3 p-0 m-0 list-none">
+        <ul
+          v-if="verProva"
+          :id="listaDaProva"
+          class="flex flex-col gap-3 p-0 m-0 list-none"
+        >
           <li
             v-for="(item, indice) in prova.perguntas"
             :key="indice"
-            class="flex flex-col gap-1 p-3 text-sm rounded-xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
+            :data-pergunta-ok="String(item.ok ?? 'sem_teste')"
+            class="flex items-start gap-3 p-3 text-sm rounded-xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
           >
-            <span class="text-n-slate-11">
-              {{ t(`${NS}.CLIENTE`) }} {{ item.pergunta }}
-            </span>
-            <span class="text-n-slate-12">
-              <b class="font-semibold">{{ nome }}:</b>
-              {{ item.resposta || t(`${NS}.PROVA_EQUIPE`) }}
+            <span
+              v-if="typeof item.ok === 'boolean'"
+              class="size-5 shrink-0"
+              :class="
+                item.ok
+                  ? 'i-lucide-circle-check text-n-teal-11'
+                  : 'i-lucide-triangle-alert text-n-amber-11'
+              "
+              aria-hidden="true"
+            />
+            <span v-else class="size-5 shrink-0" aria-hidden="true" />
+            <span class="flex flex-col gap-1">
+              <span class="text-n-slate-11">
+                {{ t(`${NS}.CLIENTE`) }} {{ item.pergunta }}
+              </span>
+              <span class="text-n-slate-12">
+                <b class="font-semibold">{{ nome }}:</b>
+                {{ item.resposta || t(`${NS}.PROVA_EQUIPE`) }}
+              </span>
             </span>
           </li>
         </ul>

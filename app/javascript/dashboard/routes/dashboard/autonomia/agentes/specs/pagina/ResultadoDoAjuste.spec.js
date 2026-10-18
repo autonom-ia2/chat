@@ -147,8 +147,9 @@ describe('ResultadoDoAjuste', () => {
           pergunta: 'Quanto custa?',
           resposta: 'Passo para a equipe.',
           equipe: false,
+          ok: true,
         },
-        { pergunta: 'Tem vida?', resposta: null, equipe: true },
+        { pergunta: 'Tem vida?', resposta: null, equipe: true, ok: true },
       ],
     };
 
@@ -182,6 +183,44 @@ describe('ResultadoDoAjuste', () => {
       expect(wrapper.find('[data-ver-prova]').attributes('aria-expanded')).toBe(
         'true'
       );
+    });
+
+    it('uses the singular for one question', () => {
+      const prova = montar({
+        prova: { ...PRONTA, ok: 1, total: 1, perguntas: [PRONTA.perguntas[0]] },
+      }).find('[data-prova]');
+
+      expect(prova.text()).toContain('1 de 1 pergunta de prova ok');
+    });
+
+    it('marks each question: check, warning, or nothing when it does not touch the change', async () => {
+      const wrapper = montar({
+        prova: {
+          ...PRONTA,
+          ok: 1,
+          total: 2,
+          perguntas: [
+            { pergunta: 'A?', resposta: 'a', equipe: false, ok: true },
+            { pergunta: 'B?', resposta: 'b', equipe: false, ok: false },
+            { pergunta: 'C?', resposta: 'c', equipe: false, ok: null },
+          ],
+        },
+      });
+      const botao = wrapper.find('[data-ver-prova]');
+      await botao.trigger('click');
+
+      const itens = wrapper.findAll('[data-prova] li');
+      expect(itens.map(item => item.attributes('data-pergunta-ok'))).toEqual([
+        'true',
+        'false',
+        'sem_teste',
+      ]);
+      expect(itens[0].find('.i-lucide-circle-check').exists()).toBe(true);
+      expect(itens[1].find('.i-lucide-triangle-alert').exists()).toBe(true);
+      expect(itens[2].find('[class*="i-lucide"]').exists()).toBe(false);
+      const lista = wrapper.find('[data-prova] ul');
+      expect(lista.attributes('id')).toBeTruthy();
+      expect(botao.attributes('aria-controls')).toBe(lista.attributes('id'));
     });
 
     it('warns when some answer missed the change', () => {

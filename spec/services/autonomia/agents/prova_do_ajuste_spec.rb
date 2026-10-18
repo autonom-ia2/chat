@@ -106,8 +106,8 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(perguntados).to all(include(prova: true, feature: 'agente_prova_do_ajuste', agent: agent))
       expect(estado['prova']).to include('status' => 'pronta', 'ok' => 1, 'total' => 2, 'versao_id' => versao_aplicada)
       expect(estado['prova']['perguntas']).to eq(
-        [{ 'pergunta' => perguntas[0], 'resposta' => 'Passo para a equipe.', 'equipe' => false },
-         { 'pergunta' => perguntas[1], 'resposta' => nil, 'equipe' => true }]
+        [{ 'pergunta' => perguntas[0], 'resposta' => 'Passo para a equipe.', 'equipe' => false, 'veredito' => 'ok' },
+         { 'pergunta' => perguntas[1], 'resposta' => nil, 'equipe' => true, 'veredito' => 'nao' }]
       )
     end
 
@@ -158,11 +158,37 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(estado['prova']).not_to have_key('ok')
     end
 
-    it 'erro inesperado (o tempo da resposta estourou no meio): indisponível, sem derrubar o job' do
-      allow(Autonomia::Agents::Answerer).to receive(:new).and_raise(Timeout::Error)
+    it 'falha de rede da IA: indisponível, sem derrubar o job' do
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_raise(Net::ReadTimeout)
 
       expect { provar! }.not_to raise_error
       expect(estado['prova']['status']).to eq('indisponivel')
+    end
+
+    it 'erro do provedor: indisponível' do
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_raise(Crm::Ai::ResponsesClient::Error, 'timeout')
+
+      provar!
+
+      expect(estado['prova']['status']).to eq('indisponivel')
+    end
+
+    # Revisão crítica: o que não é falha da IA sobe para o rastreio do job, sem virar "indisponível" em silêncio.
+    it 'erro de código sobe e a prova fica pendente' do
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_raise(NoMethodError)
+
+      expect { provar! }.to raise_error(NoMethodError)
+      expect(estado['prova']['status']).to eq('pendente')
+    end
+
+    # W3: a prova pendente além da validade (o job atrasou na fila) não gasta nada.
+    it 'W3: pendente mais velha que a validade: não responde, não julga e não grava' do
+      agente_responde
+      travel_to((described_class::VALIDADE_DO_PENDENTE + 1.minute).from_now) { provar! }
+
+      expect(perguntados).to be_empty
+      expect(juiz).not_to have_received(:julgar)
+      expect(estado['prova']['status']).to eq('pendente')
     end
 
     it 'depois do Desfazer, descarta: não responde nem grava' do

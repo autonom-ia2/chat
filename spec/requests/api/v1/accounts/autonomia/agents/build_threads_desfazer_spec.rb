@@ -66,11 +66,13 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
 
       it 'pronta: o placar e cada pergunta com a resposta, sem versão, data, campo, instrução nem andaime' do
         prova = com_prova('status' => 'pronta', 'ok' => 1, 'total' => 1,
-                          'perguntas' => [{ 'pergunta' => 'Quanto custa?', 'resposta' => 'Passo para a equipe.', 'equipe' => false }])
+                          'perguntas' => [{ 'pergunta' => 'Quanto custa?', 'resposta' => 'Passo para a equipe.', 'equipe' => false,
+                                            'veredito' => 'ok' }])
 
         expect(prova).to eq('status' => 'pronta', 'ok' => 1, 'total' => 1,
-                            'perguntas' => [{ 'pergunta' => 'Quanto custa?', 'resposta' => 'Passo para a equipe.', 'equipe' => false }])
-        expect(response.body).not_to include('versao_id', 'desde', 'campo', 'Instrução', 'andaime')
+                            'perguntas' => [{ 'pergunta' => 'Quanto custa?', 'resposta' => 'Passo para a equipe.', 'equipe' => false,
+                                              'ok' => true }])
+        expect(response.body).not_to include('versao_id', 'desde', 'veredito', 'campo', 'Instrução', 'andaime')
       end
 
       it 'depois do Desfazer, sem prova' do

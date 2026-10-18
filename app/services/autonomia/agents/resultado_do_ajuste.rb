@@ -65,7 +65,7 @@ class Autonomia::Agents::ResultadoDoAjuste
     return { status: status, total: perguntas.size } unless status == 'pronta'
 
     { status: status, total: dados['total'], ok: dados['ok'],
-      perguntas: perguntas.map { |item| { pergunta: item['pergunta'], resposta: item['resposta'], equipe: item['equipe'] == true } } }
+      perguntas: perguntas.map { |item| pergunta_da_prova(item) } }
   end
 
   # Uma linha por pedido (aplicado ou não) e, depois, o que o dono não pediu e mudou.
@@ -114,6 +114,12 @@ class Autonomia::Agents::ResultadoDoAjuste
     return Array(@conferencia['sem_pedido']) unless @conferencia.key?('desfeito')
 
     desfeito_sozinho? ? [] : sem_pedido
+  end
+
+  # `ok`: true (respeitou a mudança), false (não respeitou) ou nil (a pergunta não toca a mudança). Nunca texto do juiz.
+  def pergunta_da_prova(item)
+    { pergunta: item['pergunta'], resposta: item['resposta'], equipe: item['equipe'] == true,
+      ok: { 'ok' => true, 'nao' => false }[item['veredito']] }
   end
 
   def prova_do_cartao

@@ -17,6 +17,8 @@ class Autonomia::Agents::ProvaDoAjuste
   FORA = %w[insurance_quote].freeze
   # Pendente há mais que isto, a prova não vem mais (o job morreu ou não rodou): a tela mostra "não consegui testar".
   VALIDADE_DO_PENDENTE = 3.minutes
+  # Só falha da IA (provedor, JSON, rede) vira "indisponível"; o resto sobe para o rastreio do job.
+  FALHAS_DA_IA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, *Crm::Ai::ResponsesClient::NETWORK_ERRORS].freeze
   # A guarda da escrita, no próprio UPDATE: a prova pendente deste ajuste, que segue o último e não desfeito.
   AINDA_VALE = "state->'prova'->>'status' = 'pendente' AND state->'prova'->>'versao_id' = :versao " \
                "AND state->'ultimo_ajuste'->>'versao_id' = :versao " \
@@ -67,7 +69,7 @@ class Autonomia::Agents::ProvaDoAjuste
       itens << resposta.merge('pergunta' => pergunta)
     end
     julgar_e_gravar!(itens) if vigente?
-  rescue StandardError => e
+  rescue *FALHAS_DA_IA => e
     Rails.logger.warn("[autonomia][prova_do_ajuste] falhou thread=#{@thread.id} #{e.class}")
     gravar!('status' => 'indisponivel')
   end
@@ -80,7 +82,7 @@ class Autonomia::Agents::ProvaDoAjuste
     return gravar!('status' => 'indisponivel') if veredito.nil?
 
     gravar!('status' => 'pronta', 'ok' => veredito.count('ok'), 'total' => veredito.count { |item| item != 'nao_testa' },
-            'perguntas' => itens)
+            'perguntas' => itens.zip(veredito).map { |item, nota| item.merge('veredito' => nota) })
   end
 
   # A resposta do agente, pelo mesmo caminho do Testar, sem ferramenta. nil quando a IA falhou. `equipe`: o agente
@@ -107,8 +109,14 @@ class Autonomia::Agents::ProvaDoAjuste
     @thread.reload
     estado = @thread.state.to_h
     prova = estado['prova'].to_h
-    @thread.agent.present? && prova['status'] == 'pendente' && prova['versao_id'] == @versao_id &&
+    @thread.agent.present? && prova['status'] == 'pendente' && !vencida?(prova) && prova['versao_id'] == @versao_id &&
       estado.dig('ultimo_ajuste', 'versao_id') == @versao_id && @thread.agent.conversa_desfazivel&.id == @thread.id
+  end
+
+  # Pendente há mais que a validade: a tela já mostra "não consegui testar" e o job não gasta mais nada (cena W3).
+  def vencida?(prova)
+    desde = Time.zone.parse(prova['desde'].to_s)
+    desde.nil? || desde.before?(VALIDADE_DO_PENDENTE.ago)
   end
 
   # Só a chave `prova`, e só se o ajuste continua o mesmo e não desfeito no instante da escrita.

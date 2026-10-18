@@ -7,7 +7,8 @@
 # NENHUM TEXTO LIVRE sai daqui: só { indice, veredito }. -> ['ok' | 'nao' | 'nao_testa' por item, na ordem], ou nil quando o
 # provedor falhou ou a saída não cobre todos os itens (a prova fica "indisponível", nunca um ✓ inventado).
 class Autonomia::Agents::JuizDaProva
-  FEATURE = Autonomia::Agents::ProvaDoAjuste::FEATURE
+  # O custo do juiz vai para o Construtor de agente na Gestão IA; as respostas do agente, para o Assistente de respostas.
+  FEATURE = 'agente_prova_juiz'.freeze
   MODELO = Crm::Ai::Config::MODEL_CLASSIFY
   TIMEOUT_S = 30
   TENTATIVAS = 0

@@ -179,6 +179,14 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
       expect(prova_com('status' => 'pendente')).to be_nil
     end
 
+    it 'pronta: o ok de cada pergunta (true, false ou nil quando não toca a mudança), sem o veredito cru' do
+      perguntas = %w[ok nao nao_testa].map { |nota| { 'pergunta' => nota, 'resposta' => 'r', 'equipe' => false, 'veredito' => nota } }
+      saida = prova_com('status' => 'pronta', 'ok' => 1, 'total' => 2, 'perguntas' => perguntas)
+
+      expect(saida[:perguntas].pluck(:ok)).to eq([true, false, nil])
+      expect(saida[:perguntas].first.keys).to eq(%i[pergunta resposta equipe ok])
+    end
+
     it 'sem a chave: nil' do
       expect(resultado(conferencia)[:prova]).to be_nil
     end

@@ -51,7 +51,7 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     julgar
 
     expect(Crm::Ai::ResponsesClient).to have_received(:new)
-      .with(hash_including(feature: 'agente_prova_do_ajuste', account: account, max_retries: 0))
+      .with(hash_including(feature: 'agente_prova_juiz', account: account, max_retries: 0))
     expect(cliente).to have_received(:create) do |**kwargs|
       expect(kwargs[:model]).not_to eq(Autonomia::Agents::Config::ANSWERER_MODEL)
       expect(kwargs[:schema][:schema][:properties][:resultados][:items][:properties].keys).to eq(%i[indice veredito])
