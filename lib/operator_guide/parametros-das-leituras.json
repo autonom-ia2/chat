@@ -2042,6 +2042,10 @@
       "a rota não tem a action no controller"
     ]
   },
+  "tela_inicial/resumo": {
+    "controller": "api/v1/accounts/tela_inicial#resumo",
+    "parametros": []
+  },
   "waha_inboxes/:inbox_id/connection": {
     "controller": "api/v1/accounts/waha_inboxes#connection",
     "parametros": []

@@ -836,9 +836,7 @@ function toggleSelectAll(check) {
   selectAllConversations(check, conversationList);
 }
 
-// A tela inicial (#1801) pede outra aba quando a pessoa clica num número dela.
 useEmitter(BUS_EVENTS.TELA_INICIAL_ABA, updateAssigneeTab);
-
 useEmitter('fetch_conversation_stats', () => {
   if (hasAppliedFiltersOrActiveFolders.value) return;
   store.dispatch('conversationStats/get', conversationFilters.value);

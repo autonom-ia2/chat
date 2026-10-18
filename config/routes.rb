@@ -107,6 +107,8 @@ Rails.application.routes.draw do
             get :busca, on: :collection
             get :busca_inteligente, on: :collection
           end
+          # Tela inicial da caixa (#1801): o resumo do dia, só leitura.
+          get 'tela_inicial/resumo', to: 'tela_inicial#resumo'
           # Trilha de onboarding (épico #485): progresso pelo estado real da conta.
           resources :onboarding_progress, only: [:index], path: 'onboarding/progress' do
             member do

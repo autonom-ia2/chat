@@ -1,5 +1,3 @@
-import { evaluateSLAStatus } from 'dashboard/helper/slaHelper';
-
 // #1801 — a tela inicial da caixa de conversas (painel da direita sem conversa aberta).
 // Três opções em teste; a escolha vem da URL (?inicio=1|2|3, ?vazio=1 simula "nada esperando").
 export const OPCOES = ['1', '2', '3'];
@@ -35,29 +33,6 @@ export const primeiroNome = nome =>
   String(nome || '')
     .trim()
     .split(' ')[0];
-
-const ehMinha = (conversa, usuarioId) =>
-  conversa.status === 'open' &&
-  conversa.meta?.assignee_type !== 'AgentBot' &&
-  Boolean(usuarioId) &&
-  conversa.meta?.assignee?.id === usuarioId;
-
-// As conversas da pessoa que passaram do prazo de resposta. Sem nenhum prazo nas conversas
-// (a conta não usa prazos), devolve null: a tela não mostra o número.
-export const foraDoPrazo = (conversas, usuarioId) => {
-  const comPrazo = (conversas || []).filter(
-    conversa => ehMinha(conversa, usuarioId) && conversa.applied_sla
-  );
-  if (!comPrazo.length) return null;
-  return comPrazo.filter(
-    conversa =>
-      evaluateSLAStatus({
-        appliedSla: conversa.applied_sla,
-        chat: conversa,
-        slaEvents: conversa.sla_events,
-      }).isSlaMissed
-  );
-};
 
 const MINUTO = 60;
 const HORA = 60;

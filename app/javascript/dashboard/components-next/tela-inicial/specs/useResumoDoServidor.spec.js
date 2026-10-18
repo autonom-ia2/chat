@@ -1,20 +1,31 @@
 import { defineComponent } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import { emitter } from 'shared/helpers/mitt';
-import { buscarFila } from '../filaDoServidor';
+import { buscarResumo } from '../resumoDoServidor';
 import {
   EVENTO_CONVERSAS_MUDARAM,
-  useFilaDoServidor,
-} from '../useFilaDoServidor';
+  useResumoDoServidor,
+} from '../useResumoDoServidor';
 
-vi.mock('../filaDoServidor', () => ({ buscarFila: vi.fn() }));
+vi.mock('../resumoDoServidor', async original => ({
+  ...(await original()),
+  buscarResumo: vi.fn(),
+}));
+
+const resumo = esperamVoce => ({
+  esperamVoce,
+  semResponsavel: 0,
+  foraDoPrazo: null,
+  proxima: null,
+  equipe: null,
+});
 
 const montar = () => {
   let api;
   const wrapper = mount(
     defineComponent({
       setup() {
-        api = useFilaDoServidor();
+        api = useResumoDoServidor();
         return () => null;
       },
     })
@@ -22,7 +33,7 @@ const montar = () => {
   return { wrapper, api: () => api };
 };
 
-describe('useFilaDoServidor', () => {
+describe('useResumoDoServidor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -30,78 +41,58 @@ describe('useFilaDoServidor', () => {
   afterEach(() => vi.useRealTimers());
 
   it('carrega ao abrir', async () => {
-    buscarFila.mockResolvedValue({
-      esperamVoce: 2,
-      esperamAlguem: 1,
-      proxima: null,
-    });
+    buscarResumo.mockResolvedValue(resumo(2));
     const { wrapper, api } = montar();
     await flushPromises();
-    expect(buscarFila).toHaveBeenCalledTimes(1);
+    expect(buscarResumo).toHaveBeenCalledTimes(1);
     expect(api().estado.value).toBe('pronto');
-    expect(api().fila.value.esperamVoce).toBe(2);
+    expect(api().resumo.value.esperamVoce).toBe(2);
     wrapper.unmount();
   });
 
   it('uma rajada de avisos vira uma consulta só', async () => {
-    buscarFila.mockResolvedValue({
-      esperamVoce: 1,
-      esperamAlguem: 0,
-      proxima: null,
-    });
+    buscarResumo.mockResolvedValue(resumo(1));
     const { wrapper, api } = montar();
     await flushPromises();
-    buscarFila.mockResolvedValue({
-      esperamVoce: 5,
-      esperamAlguem: 0,
-      proxima: null,
-    });
+    buscarResumo.mockResolvedValue(resumo(5));
     emitter.emit(EVENTO_CONVERSAS_MUDARAM);
     emitter.emit(EVENTO_CONVERSAS_MUDARAM);
     emitter.emit(EVENTO_CONVERSAS_MUDARAM);
     await vi.advanceTimersByTimeAsync(2000);
     await flushPromises();
-    expect(buscarFila).toHaveBeenCalledTimes(2);
-    expect(api().fila.value.esperamVoce).toBe(5);
+    expect(buscarResumo).toHaveBeenCalledTimes(2);
+    expect(api().resumo.value.esperamVoce).toBe(5);
     wrapper.unmount();
   });
 
-  it('falha sem número bom: estado de erro', async () => {
-    buscarFila.mockRejectedValue(new Error('rede'));
+  it('falha sem resumo bom: estado de erro', async () => {
+    buscarResumo.mockRejectedValue(new Error('rede'));
     const { wrapper, api } = montar();
     await flushPromises();
     expect(api().estado.value).toBe('erro');
     wrapper.unmount();
   });
 
-  it('falha depois de carregar: fica o último número', async () => {
-    buscarFila.mockResolvedValue({
-      esperamVoce: 3,
-      esperamAlguem: 0,
-      proxima: null,
-    });
+  it('falha depois de carregar: fica o último resumo', async () => {
+    buscarResumo.mockResolvedValue(resumo(3));
     const { wrapper, api } = montar();
     await flushPromises();
-    buscarFila.mockRejectedValue(new Error('rede'));
+    buscarResumo.mockRejectedValue(new Error('rede'));
     emitter.emit(EVENTO_CONVERSAS_MUDARAM);
     await vi.advanceTimersByTimeAsync(2000);
     await flushPromises();
     expect(api().estado.value).toBe('pronto');
-    expect(api().fila.value.esperamVoce).toBe(3);
+    expect(api().resumo.value.esperamVoce).toBe(3);
     wrapper.unmount();
   });
 
   it('para de ouvir quando a tela sai', async () => {
-    buscarFila.mockResolvedValue({
-      esperamVoce: 0,
-      esperamAlguem: 0,
-      proxima: null,
-    });
+    buscarResumo.mockResolvedValue(resumo(0));
     const { wrapper } = montar();
     await flushPromises();
     wrapper.unmount();
     emitter.emit(EVENTO_CONVERSAS_MUDARAM);
     await vi.advanceTimersByTimeAsync(2000);
-    expect(buscarFila).toHaveBeenCalledTimes(1);
+    expect(buscarResumo).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,39 +1,60 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-// #1801, opção 2 — o resumo do dia num herói escuro (o mesmo de Automações): números que
-// levam à lista certa e uma ação, abrir a conversa que espera há mais tempo.
+// #1801, opção 2 — o resumo do dia num herói escuro (o mesmo de Automações). Os números vêm
+// do servidor; o número maior que zero leva à lista certa; zero não é clicável. Quem vê os
+// totais da conta ganha uma linha discreta da equipe. Uma ação: abrir a próxima conversa.
 const props = defineProps({
   dados: { type: Object, required: true },
 });
 
+const { t } = useI18n();
+
 const numeros = computed(() => {
-  const { esperamVoce, esperamAlguem, atrasadas } = props.dados;
+  const { esperamVoce, semResponsavel, foraDoPrazo } = props.dados;
   const lista = [
+    { chave: 'ESPERAM', valor: esperamVoce, fazer: props.dados.verMinhas },
     {
-      chave: 'ESPERAM',
-      valor: esperamVoce,
-      fazer: props.dados.verMinhas,
-    },
-    {
-      chave: 'ESPERAM_ALGUEM',
-      valor: esperamAlguem,
+      chave: 'SEM_RESPONSAVEL',
+      valor: semResponsavel,
       fazer: props.dados.verSemResponsavel,
     },
   ];
-  if (atrasadas === null) return lista;
+  if (foraDoPrazo === null) return lista;
   return [
     ...lista,
     {
       chave: 'FORA_DO_PRAZO',
-      valor: atrasadas.length,
-      alerta: atrasadas.length > 0,
-      fazer: () =>
-        atrasadas.length
-          ? props.dados.abrir(atrasadas[0])
-          : props.dados.verMinhas(),
+      valor: foraDoPrazo,
+      alerta: foraDoPrazo > 0,
+      fazer: props.dados.verMinhas,
     },
   ];
+});
+
+const clicavel = numero => props.dados.pronto && numero.valor > 0;
+
+const linhaDaEquipe = computed(() => {
+  const { equipe } = props.dados;
+  if (!equipe || !props.dados.pronto) return '';
+  const partes = [
+    t(
+      'TELA_INICIAL.OPCAO_2.EQUIPE.ESPERAM',
+      { count: equipe.esperam },
+      equipe.esperam
+    ),
+  ];
+  if (equipe.foraDoPrazo !== null) {
+    partes.push(
+      t(
+        'TELA_INICIAL.OPCAO_2.EQUIPE.FORA_DO_PRAZO',
+        { count: equipe.foraDoPrazo },
+        equipe.foraDoPrazo
+      )
+    );
+  }
+  return partes.join(' · ');
 });
 </script>
 
@@ -85,11 +106,18 @@ const numeros = computed(() => {
           :class="numeros.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'"
         >
           <li v-for="numero in numeros" :key="numero.chave">
-            <button
-              type="button"
+            <component
+              :is="clicavel(numero) ? 'button' : 'div'"
+              :type="clicavel(numero) ? 'button' : undefined"
               :data-numero="numero.chave"
-              class="flex flex-col items-start w-full h-full gap-1 p-5 transition text-start rounded-2xl bg-white/5 ring-1 ring-inset ring-white/10 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
-              @click="numero.fazer()"
+              :data-clicavel="clicavel(numero) || undefined"
+              class="flex flex-col items-start w-full h-full gap-1 p-5 transition text-start rounded-2xl bg-white/5 ring-1 ring-inset ring-white/10"
+              :class="
+                clicavel(numero)
+                  ? 'hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white'
+                  : ''
+              "
+              @click="clicavel(numero) && numero.fazer()"
             >
               <span
                 class="text-4xl font-semibold leading-none tabular-nums"
@@ -100,11 +128,12 @@ const numeros = computed(() => {
               <span class="flex items-center gap-1 text-sm text-white/75">
                 {{ $t(`TELA_INICIAL.OPCAO_2.NUMEROS.${numero.chave}`) }}
                 <span
+                  v-if="clicavel(numero)"
                   class="i-lucide-chevron-right size-4 text-white/40 rtl:rotate-180"
                   aria-hidden="true"
                 />
               </span>
-            </button>
+            </component>
           </li>
         </ul>
 
@@ -131,7 +160,7 @@ const numeros = computed(() => {
               aria-hidden="true"
             />
           </button>
-          <p class="mb-0 text-sm text-white/60">
+          <p v-if="dados.proxima" class="mb-0 text-sm text-white/60">
             {{
               $t('TELA_INICIAL.PROXIMA_ESPERA', {
                 nome: dados.nomeDoCliente(dados.proxima),
@@ -156,6 +185,24 @@ const numeros = computed(() => {
               aria-hidden="true"
             />
           </button>
+        </div>
+
+        <div v-if="linhaDaEquipe" class="pt-5 border-t border-white/10">
+          <component
+            :is="dados.equipe && dados.equipe.esperam > 0 ? 'button' : 'p'"
+            :type="dados.equipe.esperam > 0 ? 'button' : undefined"
+            data-equipe
+            class="flex items-center gap-2 mb-0 text-sm transition text-white/60"
+            :class="
+              dados.equipe.esperam > 0
+                ? 'hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white'
+                : ''
+            "
+            @click="dados.equipe.esperam > 0 && dados.verTodas()"
+          >
+            <span class="i-lucide-users size-4" aria-hidden="true" />
+            {{ linhaDaEquipe }}
+          </component>
         </div>
       </div>
     </div>

@@ -24,10 +24,14 @@
       "COM_VOCE": "Nenhuma conversa com você | 1 conversa com você | {count} conversas com você",
       "NUMEROS": {
         "ESPERAM": "Esperam você",
-        "ESPERAM_ALGUEM": "Esperam alguém",
+        "SEM_RESPONSAVEL": "Sem responsável",
         "FORA_DO_PRAZO": "Fora do prazo"
       },
-      "ERRO": "Não deu para carregar os números agora."
+      "ERRO": "Não deu para carregar os números agora.",
+      "EQUIPE": {
+        "ESPERAM": "Na equipe: {count} esperando",
+        "FORA_DO_PRAZO": "{count} fora do prazo"
+      }
     },
     "OPCAO_3": {
       "ACOLHIDA": "Que bom ver você, {nome}",

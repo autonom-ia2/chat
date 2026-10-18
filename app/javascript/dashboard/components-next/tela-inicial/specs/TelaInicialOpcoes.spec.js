@@ -4,11 +4,13 @@ import TelaInicialResumo from '../TelaInicialResumo.vue';
 import TelaInicialMarca from '../TelaInicialMarca.vue';
 
 // #1801 — cada opção tem uma ação principal; sem nada esperando, troca pela ação do vazio.
-const proxima = {
-  id: 12,
-  waiting_since: 1,
-  meta: { sender: { name: 'Marina' } },
-};
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (key, valores) => `${key}=${valores?.count}`,
+  }),
+}));
+
+const proxima = { displayId: 12, nome: 'Marina', desde: 1 };
 
 const dadosCom = (extra = {}) => ({
   nome: 'John',
@@ -19,16 +21,18 @@ const dadosCom = (extra = {}) => ({
   estado: 'pronto',
   pronto: true,
   esperamVoce: 1,
+  semResponsavel: 2,
+  foraDoPrazo: null,
   proxima,
-  atrasadas: null,
+  equipe: null,
   comVoce: 4,
-  esperamAlguem: 2,
   tudoEmDia: false,
-  nomeDoCliente: conversa => conversa?.meta?.sender?.name || '',
+  nomeDoCliente: item => item?.nome || '',
   esperaHa: () => '3 horas',
   abrir: vi.fn(),
   verMinhas: vi.fn(),
   verSemResponsavel: vi.fn(),
+  verTodas: vi.fn(),
   acaoDoVazio: { rotulo: 'VER_SEM_RESPONSAVEL', fazer: vi.fn() },
   ...extra,
 });
@@ -72,16 +76,67 @@ describe('opção 2: números', () => {
     expect(wrapper.findAll('[data-numero]')).toHaveLength(2);
   });
 
-  it('o número leva à lista certa e o fora do prazo abre a mais atrasada', async () => {
-    const atrasada = { id: 99 };
-    const dados = dadosCom({ atrasadas: [atrasada] });
+  it('o número maior que zero leva à lista certa', async () => {
+    const dados = dadosCom({ foraDoPrazo: 3 });
     const wrapper = montar(TelaInicialResumo, dados);
     await wrapper.find('[data-numero="ESPERAM"]').trigger('click');
-    await wrapper.find('[data-numero="ESPERAM_ALGUEM"]').trigger('click');
+    await wrapper.find('[data-numero="SEM_RESPONSAVEL"]').trigger('click');
+    expect(dados.verMinhas).toHaveBeenCalledTimes(1);
+    expect(dados.verSemResponsavel).toHaveBeenCalledTimes(1);
     await wrapper.find('[data-numero="FORA_DO_PRAZO"]').trigger('click');
-    expect(dados.verMinhas).toHaveBeenCalled();
-    expect(dados.verSemResponsavel).toHaveBeenCalled();
-    expect(dados.abrir).toHaveBeenCalledWith(atrasada);
+    expect(dados.verMinhas).toHaveBeenCalledTimes(2);
+  });
+
+  it('número zero não é clicável e não troca a aba', async () => {
+    const dados = dadosCom({
+      esperamVoce: 0,
+      semResponsavel: 0,
+      foraDoPrazo: 0,
+    });
+    const wrapper = montar(TelaInicialResumo, dados);
+    const zerados = wrapper.findAll('[data-numero]');
+    expect(zerados).toHaveLength(3);
+    zerados.forEach(item => {
+      expect(item.element.tagName).toBe('DIV');
+      expect(item.attributes('data-clicavel')).toBeUndefined();
+    });
+    await zerados[0].trigger('click');
+    await zerados[1].trigger('click');
+    expect(dados.verMinhas).not.toHaveBeenCalled();
+    expect(dados.verSemResponsavel).not.toHaveBeenCalled();
+  });
+});
+
+describe('opção 2: equipe', () => {
+  it('agente comum não vê a linha da equipe', () => {
+    const wrapper = montar(TelaInicialResumo, dadosCom());
+    expect(wrapper.find('[data-equipe]').exists()).toBe(false);
+  });
+
+  it('quem vê a conta tem a linha, clicável para todas', async () => {
+    const dados = dadosCom({
+      equipe: { esperam: 12, semResponsavel: 4, foraDoPrazo: 3 },
+    });
+    const wrapper = montar(TelaInicialResumo, dados);
+    const linha = wrapper.find('[data-equipe]');
+    expect(linha.text()).toContain('TELA_INICIAL.OPCAO_2.EQUIPE.ESPERAM=12');
+    expect(linha.text()).toContain(
+      'TELA_INICIAL.OPCAO_2.EQUIPE.FORA_DO_PRAZO=3'
+    );
+    await linha.trigger('click');
+    expect(dados.verTodas).toHaveBeenCalled();
+  });
+
+  it('equipe sem prazos e sem ninguém esperando: só texto, sem clique', async () => {
+    const dados = dadosCom({
+      equipe: { esperam: 0, semResponsavel: 0, foraDoPrazo: null },
+    });
+    const wrapper = montar(TelaInicialResumo, dados);
+    const linha = wrapper.find('[data-equipe]');
+    expect(linha.element.tagName).toBe('P');
+    expect(linha.text()).not.toContain('FORA_DO_PRAZO');
+    await linha.trigger('click');
+    expect(dados.verTodas).not.toHaveBeenCalled();
   });
 });
 
@@ -92,6 +147,7 @@ describe('opção 2: carregando e erro', () => {
       dadosCom({ estado: 'carregando', pronto: false })
     );
     expect(wrapper.find('[data-numero="ESPERAM"]').text()).toContain('–');
+    expect(wrapper.find('[data-numero="ESPERAM"]').element.tagName).toBe('DIV');
     expect(wrapper.find('[data-abrir-proxima]').exists()).toBe(false);
     expect(wrapper.find('[data-acao-do-vazio]').exists()).toBe(false);
   });

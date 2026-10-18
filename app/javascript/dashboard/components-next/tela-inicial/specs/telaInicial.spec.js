@@ -1,5 +1,4 @@
 import {
-  foraDoPrazo,
   horaNoFuso,
   opcaoDaTela,
   periodoDoDia,
@@ -7,14 +6,6 @@ import {
   tempoDeEspera,
   vazioForcado,
 } from '../telaInicial';
-
-const conversa = (id, extra = {}) => ({
-  id,
-  status: 'open',
-  waiting_since: 0,
-  meta: { assignee: { id: 7 }, assignee_type: 'User', sender: { name: 'X' } },
-  ...extra,
-});
 
 describe('telaInicial', () => {
   it('lê a opção da URL e ignora valor fora da lista', () => {
@@ -41,19 +32,6 @@ describe('telaInicial', () => {
   it('pega o primeiro nome', () => {
     expect(primeiroNome('  John Doe ')).toBe('John');
     expect(primeiroNome(undefined)).toBe('');
-  });
-
-  it('sem prazo nas conversas, não conta fora do prazo', () => {
-    expect(foraDoPrazo([conversa(1)], 7)).toBeNull();
-  });
-
-  it('conta as que passaram do prazo de primeira resposta', () => {
-    const agora = Math.floor(Date.now() / 1000);
-    const lista = [
-      conversa(1, { applied_sla: { sla_frt_due_at: agora - 600 } }),
-      conversa(2, { applied_sla: { sla_frt_due_at: agora + 600 } }),
-    ];
-    expect(foraDoPrazo(lista, 7).map(item => item.id)).toEqual([1]);
   });
 
   it('mede a espera na maior unidade inteira', () => {
