@@ -2251,7 +2251,9 @@
         "LOAD_ERROR": "Could not load the Meta connection.",
         "RETRY": "Try again",
         "GROUP": "Campaigns",
-        "BREADCRUMB": "You are here"
+        "BREADCRUMB": "You are here",
+        "NOT_CONNECTED_TITLE": "The ads are not connected yet",
+        "NOT_CONNECTED_TEXT": "Ask an administrator to connect the Meta ads. Then the results show up here."
       },
       "EMPTY": {
         "EYEBROW": "Campaigns",
@@ -2636,6 +2638,7 @@
           "EARLY": "Too early"
         },
         "STALLED_TITLE": "1 stalled quote | {count} stalled quotes",
+        "LIST_SCOPE": "Only the conversations you can see show up here.",
         "STALLED_SINCE": "No reply {time}",
         "OPEN_CONVERSATION": "Open conversation",
         "COUNT": {
