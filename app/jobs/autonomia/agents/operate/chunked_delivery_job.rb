@@ -40,7 +40,7 @@ module Autonomia
           # limpa o "digitando" e encerra esta cadeia. (O novo settle do ReplyJob cuida da nova mensagem.)
           motivo = chunk.blank? ? :sem_pedaco : motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
           typing.off # parando, ou a pausa ANTES deste pedaço já passou e estamos prestes a postar
-          posted, motivo = post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk['text'].to_s) if motivo.nil?
+          posted, motivo = post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk) if motivo.nil?
           # Não postou (re-check no lock reprovou: humano assumiu / agente desligado / turno mudou / já
           # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado. Só a troca de
           # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
@@ -116,7 +116,7 @@ module Autonomia
         # Posta UM pedaço como outgoing do AgentBot-espelho. Idempotente por token composto, dentro do
         # lock (NÃO usar return no bloco — dispararia rollback e descartaria a mensagem postada).
         # -> [a Message postada, nil] ou [nil, motivo] quando não postou (:turno_mudou, :dono_mudou, :ja_postado).
-        def post_chunk!(conversation, agent_inbox, reply_to_message_id, index, text)
+        def post_chunk!(conversation, agent_inbox, reply_to_message_id, index, chunk)
           posted = nil
           motivo = nil
           conversation.with_lock do
@@ -124,22 +124,24 @@ module Autonomia
             # do deliver e o post): turno ainda atual + contrato inteiro (sem responsável, agente
             # ligado/ativo/não-interno/não-sistema, mesma caixa, feature on, allowlist) + idempotência.
             motivo = motivo_da_parada(conversation, agent_inbox, reply_to_message_id, index)
-            posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, text) if motivo.nil?
+            posted = build_message!(conversation, agent_inbox, reply_to_message_id, index, chunk) if motivo.nil?
           end
           [posted, motivo]
         end
 
-        def build_message!(conversation, agent_inbox, reply_to_message_id, index, text)
+        # `rich_message` (#1479): só o último pedaço o traz, com a interação já decidida pelo Responder.
+        def build_message!(conversation, agent_inbox, reply_to_message_id, index, chunk)
           Messages::MessageBuilder.new(
             nil, conversation,
             ActionController::Parameters.new(
-              content: text, message_type: 'outgoing', sender_type: 'AgentBot',
+              content: chunk['text'].to_s, message_type: 'outgoing', sender_type: 'AgentBot',
               sender_id: agent_inbox.agent_bot_id, private: false,
               content_attributes: {
                 autonomia_agent_id: agent_inbox.agent.id,
                 autonomia_reply_to_message_id: reply_to_message_id,
                 autonomia_chunk_index: index,
-                autonomia_chunk_token: chunk_token(reply_to_message_id, index)
+                autonomia_chunk_token: chunk_token(reply_to_message_id, index),
+                **{ RichMessages::KEY => chunk['rich_message'] }.compact
               }
             )
           ).perform

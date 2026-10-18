@@ -44,7 +44,8 @@ module Autonomia::Agents::Operate::RecoveredHeaderNote
 
     ::Autonomia::Agents::AnswerResult.new(
       reply: reply, confidence: result.confidence, handoff: result.handoff, used_knowledge: result.used_knowledge,
-      answered_from_knowledge: result.answered_from_knowledge, raw_reply: result.raw_reply, error: result.error
+      answered_from_knowledge: result.answered_from_knowledge, raw_reply: result.raw_reply, error: result.error,
+      interacao: result.interacao
     )
   end
 

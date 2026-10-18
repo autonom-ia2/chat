@@ -215,7 +215,7 @@ module Autonomia
         # ROLLBACK e descartaria a mensagem recém-postada. Computa-se o Result numa variável.
         def classic_deliver(result)
           outcome = @conversation.with_lock do
-            parada_na_hora_de_postar || Result.replied(post_reply!(result.reply))
+            parada_na_hora_de_postar || Result.replied(post_reply!(result.reply, result.interacao))
           end
 
           # Fase F (ADITIVO/best-effort): só registra quando uma resposta NOVA foi postada
@@ -253,7 +253,8 @@ module Autonomia
           audio = synthesize_audio(result.reply) # fora do lock; nil em falha
           outcome = @conversation.with_lock do
             # Sem áudio (falha na síntese) -> fallback texto.
-            parada_na_hora_de_postar || Result.replied(audio.present? ? post_audio_reply!(audio) : post_reply!(result.reply))
+            parada_na_hora_de_postar ||
+              Result.replied(audio.present? ? post_voz!(audio, result.interacao) : post_reply!(result.reply, result.interacao))
           end
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(agent: @agent, conversation: @conversation, result: result,
@@ -274,6 +275,14 @@ module Autonomia
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] tts_failed agent=#{@agent.id} #{e.class}")
           nil
+        end
+
+        # #1479: o áudio e, logo depois, a interação numa mensagem própria (as opções com a pergunta; o link com o rótulo
+        # no corpo). -> a mensagem de áudio.
+        def post_voz!(audio_bytes, interacao)
+          audio = post_audio_reply!(audio_bytes)
+          post_reply!((interacao['rotulo'] if interacao['tipo'] == 'link'), interacao) if interacao
+          audio
         end
 
         # Mensagem outgoing SÓ-ÁUDIO (espelhamento): mesmo sender/anti-loop do post_reply!, com o anexo de
@@ -309,7 +318,9 @@ module Autonomia
           parada = parada_antes_dos_pedacos
           return parada if parada
 
-          chunks = ::Autonomia::Agents::Operate::ReplyChunker.call(result.reply)
+          # #1479: a interação vai no último pedaço (as opções, num pedaço a mais).
+          chunks = ::Autonomia::Agents::Interacao.nos_pedacos(::Autonomia::Agents::Operate::ReplyChunker.call(result.reply),
+                                                              result.interacao, conversation: @conversation)
           # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
           # antes de publicar, para não se intercalar no meio da frase que o agente ainda está
           # "digitando" (a cadeia pode durar até 90s).
@@ -392,7 +403,8 @@ module Autonomia
         def motivo_do_silencio(result)
           return 'sinal' if silence_signal?(result)
           return 'ia_falhou' if result.nil?
-          return 'vazio' if result.reply.to_s.strip.blank?
+          # #1479: só a pergunta das opções (ou só o link), sem texto antes, ainda é resposta.
+          return 'vazio' if result.reply.to_s.strip.blank? && result.interacao.nil?
 
           nil
         end
@@ -481,7 +493,7 @@ module Autonomia
           ::Autonomia::Agents::AnswerResult.new(reply: limpa, confidence: result.confidence, handoff: result.handoff,
                                                 used_knowledge: result.used_knowledge,
                                                 answered_from_knowledge: result.answered_from_knowledge,
-                                                raw_reply: result.raw_reply, error: result.error)
+                                                raw_reply: result.raw_reply, error: result.error, interacao: result.interacao)
         end
 
         # #1606: o turno que FALHOU (IA sem resultado, resposta vazia, exceção) pode ser retomado — pela troca de dono ou
@@ -679,22 +691,34 @@ module Autonomia
         # Caminho CANÔNICO channel-agnóstico (= Crm::FollowUps::MessageSender): a entrega
         # por canal (WhatsApp/Instagram/email/webchat) é feita pelos jobs de canal do
         # Chatwoot disparados nos callbacks da Message outgoing. Nada por-canal aqui.
-        def post_reply!(text)
+        # `interacao` (#1479): opções ou link pedidos pelo modelo (ver `com_interacao`). nil: a mensagem de sempre.
+        def post_reply!(text, interacao = nil)
+          content, formato = com_interacao(text, interacao)
           Messages::MessageBuilder.new(
             nil,
             @conversation,
             ActionController::Parameters.new(
-              content: text,
+              content: content,
               message_type: 'outgoing',
               sender_type: 'AgentBot',
               sender_id: @agent_inbox.agent_bot_id, # AgentBot nativo-espelho
               private: false,
               content_attributes: {
                 autonomia_agent_id: @agent.id,
-                autonomia_reply_to_message_id: @reply_to_message_id
+                autonomia_reply_to_message_id: @reply_to_message_id,
+                **formato
               }
             )
           ).perform
+        end
+
+        # #1479: -> [o conteúdo, as chaves do formato]. O formato sai em `rich_message`; quando a caixa não o leva, o
+        # conteúdo traz a versão em texto e não há chave. Sem interação: o texto e nenhuma chave.
+        def com_interacao(text, interacao)
+          return [text, {}] if interacao.nil?
+
+          final = ::Autonomia::Agents::Interacao.mensagem(interacao, texto: text, conversation: @conversation)
+          [final[:content], { RichMessages::KEY => final[:rich_message] }.compact]
         end
       end
     end
