@@ -69,7 +69,8 @@
       "LABEL_MANAGE": "Edit labels",
       "ATTRIBUTE_MANAGE": "Edit custom attributes",
       "MACRO_MANAGE": "Edit team macros",
-      "SLA_MANAGE": "Edit SLA policies"
+      "SLA_MANAGE": "Edit SLA policies",
+      "CONVERSATION_VIEW": "Reads the other conversations of the inbox"
     },
     "MATRIX": {
       "GROUPS": {
@@ -98,7 +99,11 @@
           "NAME": "Conversations",
           "HINT": "Which conversations this person handles",
           "LEVEL_LIMITED": "Sees conversations assigned to them and the ones they take part in.",
-          "LEVEL_ALL": "Sees and answers every conversation in the account."
+          "LEVEL_ALL": "Sees and answers every conversation in the account.",
+          "SLOT_VIEW": "View",
+          "SLOT_MANAGE": "Handle",
+          "REACH": "Handles:",
+          "LEVEL_VIEW": "Reads the conversations of their inboxes, without replying or changing anything."
         },
         "CONTACTS": {
           "NAME": "Contacts and companies",
@@ -269,7 +274,8 @@
       "CRM_MANAGE_AI": "Sets up and accepts AI suggestions. This has a cost.",
       "CRM_EXPORT": "Downloads the list with customer data.",
       "CRM_ADMIN": "Turns on everything above, plus CRM SLA and integration tokens.",
-      "PROSPECTING_VIEW_ALL_SEARCHES": "Without this, they only see their own searches."
+      "PROSPECTING_VIEW_ALL_SEARCHES": "Without this, they only see their own searches.",
+      "CONVERSATION_VIEW": "Also reads the inbox conversations they do not handle, without replying."
     },
     "EDITOR": {
       "NEW_TITLE": "Adjust what is different",
@@ -291,7 +297,7 @@
       "FOOTER_COUNT": "No area granted | 1 area granted | {n} areas granted",
       "ADMIN_ONLY": {
         "TITLE": "Always administrator only",
-        "ITEMS": "Agents, teams, assignment, bots, integrations, account settings, security, billing, audit logs and custom roles.",
+        "ITEMS": "Agents, teams, bots, integrations, account settings, security, billing, audit logs and custom roles.",
         "GUIDE": "The Platform Guide follows this role: it only shows and does what the person can do."
       },
       "SENSITIVE_CONFIRM": {

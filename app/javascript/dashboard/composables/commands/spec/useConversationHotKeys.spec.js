@@ -29,6 +29,7 @@ describe('useConversationHotKeys', () => {
       dispatch: vi.fn(),
       getters: {
         getSelectedChat: mockCurrentChat,
+        canOperateConversation: () => true,
         'draftMessages/getReplyEditorMode': REPLY_EDITOR_MODES.REPLY,
         getContextMenuChatId: null,
         'teams/getTeams': mockTeamsList,

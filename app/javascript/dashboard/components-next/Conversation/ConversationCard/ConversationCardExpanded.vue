@@ -19,6 +19,8 @@ import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadg
 
 const props = defineProps({
   chat: { type: Object, required: true },
+  // Quem só lê a conversa (#1800) não seleciona para ação em massa.
+  selectable: { type: Boolean, default: true },
   currentContact: { type: Object, required: true },
   assignee: { type: Object, default: () => ({}) },
   inbox: { type: Object, default: () => ({}) },
@@ -102,7 +104,11 @@ const selectedModel = computed({
   >
     <!-- LEFT SECTION -->
     <div class="flex items-center gap-2 min-w-0 flex-1">
-      <div class="flex items-center justify-center flex-shrink-0" @click.stop>
+      <div
+        v-if="selectable"
+        class="flex items-center justify-center flex-shrink-0"
+        @click.stop
+      >
         <Checkbox v-model="selectedModel" />
       </div>
 

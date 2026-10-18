@@ -69,6 +69,22 @@ RSpec.describe Conversations::UnreadCounts::Counter do
     )
   end
 
+  # #1800: quem só lê conta o que a lista mostra (toda conversa das caixas dela); sem a chave, um cargo sem o trio
+  # segue zerado.
+  it 'counts every unread conversation of the inboxes for a role that only reads conversations' do
+    role = CustomRole.create!(account: account, name: 'Leitura', permissions: %w[conversation_view])
+    agent.account_users.find_by(account: account).update!(custom_role: role)
+    create_unread_conversation(account: account, inbox: visible_inbox, labels: [label.title], team: visible_team)
+    create_unread_conversation(account: account, inbox: hidden_inbox, labels: [label.title], team: visible_team)
+
+    result = described_class.new(account: account, user: agent).perform
+
+    expect(result).to include(all_count: 1, inboxes: { visible_inbox.id.to_s => 1 })
+
+    role.update!(permissions: %w[crm_view])
+    expect(described_class.new(account: account, user: agent).perform).to include(all_count: 0)
+  end
+
   it 'counts unread conversations across all account inboxes for admins' do
     create_unread_conversation(account: account, inbox: visible_inbox, labels: [label.title], team: visible_team)
     create_unread_conversation(account: account, inbox: hidden_inbox, labels: [label.title], team: visible_team)
