@@ -105,7 +105,7 @@ const podeDesfazer = computed(
             class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
             aria-hidden="true"
           />
-          <span>
+          <span class="relative">
             <span class="sr-only">{{ t(`${NS}.APLICADO`) }}</span>
             {{ item.texto }}
           </span>
