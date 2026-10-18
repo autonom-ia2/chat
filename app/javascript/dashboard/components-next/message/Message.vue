@@ -362,6 +362,9 @@ const componentToRender = computed(() => {
 
   if (contatosJuntos.value) return ContatosDoWhatsapp;
 
+  // #1831: o álbum chegando ainda sem foto fica no balão do marcador (não suportada).
+  if (album.value?.length === 0) return AlbumDoWhatsapp;
+
   if (balaoDoWhatsapp.value) return balaoDoWhatsapp.value;
 
   if (richMessageBubble.value) return richMessageBubble.value;
