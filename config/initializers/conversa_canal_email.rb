@@ -14,5 +14,5 @@ Rails.application.config.to_prepare do
   mensagens.prepend(ConversaCanal::TraducaoEmSegundoPlano) unless mensagens <= ConversaCanal::TraducaoEmSegundoPlano
   ConversationFinder.prepend(ConversaCanal::ConversationFinderComPastas) unless ConversationFinder <= ConversaCanal::ConversationFinderComPastas
   Conversation.include(ConversaCanal::SpamDoBloqueado) unless Conversation <= ConversaCanal::SpamDoBloqueado
-  Message.include(ConversaCanal::VoltaDaLixeira) unless Message <= ConversaCanal::VoltaDaLixeira
+  Message.prepend(ConversaCanal::PastaNaMensagemDoCliente) unless Message <= ConversaCanal::PastaNaMensagemDoCliente
 end

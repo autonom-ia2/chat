@@ -2,7 +2,8 @@
 #   GET :conversation_id → { pasta: 'spam' | 'lixeira' | nil }
 #   PUT :conversation_id { pasta: 'spam' | 'lixeira' | '' } → { pasta } ('' volta para a Entrada)
 #   DELETE :conversation_id → exclui de verdade, só conversa que já está na Lixeira (422 fora dela)
-# Quem vê a conversa move (ConversationPolicy#show?), como no Gmail: nada é apagado, tudo volta com um toque.
+# Quem vê a conversa move (ConversationPolicy#show?), como no Gmail: nada é apagado, tudo volta com um toque. O Spam vale
+# só para o remetente nesta caixa (ConversaCanal::RemetenteNoSpam) e não mexe no contato.
 # "Excluir para sempre" também é de quem tem acesso à caixa (decisão do Rodrigo, 18/10), não só do administrador como
 # o "apagar conversa" do Chatwoot; por isso só vale dentro da Lixeira. Usa o mesmo serviço do Chatwoot (apaga em
 # segundo plano e impede o IMAP de trazer o e-mail de volta).
@@ -16,7 +17,6 @@ class Api::V1::Accounts::ConversaCanal::PastasDoEmailController < Api::V1::Accou
   end
 
   def update
-    autorizar_bloqueio
     pasta = ConversaCanal::MoverParaPasta.new(conversation: @conversa, pasta: pasta_pedida, user: Current.user).perform
     render json: { pasta: pasta }
   rescue ConversaCanal::MoverParaPasta::Recusa => e
@@ -35,16 +35,6 @@ class Api::V1::Accounts::ConversaCanal::PastasDoEmailController < Api::V1::Accou
 
   def pasta_pedida
     params.permit(:pasta)[:pasta]
-  end
-
-  # Spam e "Não é spam" mexem no bloqueio do contato: valem as permissões de editar o contato (no EE, a função
-  # personalizada sem `contact_manage` recebe 401, como na tela de contatos). Lixeira e Entrada não mexem.
-  def autorizar_bloqueio
-    contato = @conversa.contact
-    return if contato.blank?
-
-    sai_do_spam = ConversaCanal::PastaDoEmail.exists?(conversation_id: @conversa.id, pasta: 'spam')
-    authorize contato, :update? if pasta_pedida == 'spam' || sai_do_spam
   end
 
   def carregar_conversa

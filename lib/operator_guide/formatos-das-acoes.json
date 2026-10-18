@@ -433,7 +433,7 @@
     "modelo": "ConversaCanal::PastaDoEmail",
     "origem": [
       "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:26",
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:51"
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
     ],
     "sem_corpo": true
   },
@@ -4661,21 +4661,14 @@
   },
   "PATCH conversa_canal/pastas_do_email/:conversation_id": {
     "campos": {
-      "pasta": {
-        "tipo": "string",
-        "um_de": [
-          "spam",
-          "lixeira"
-        ]
-      }
+      "pasta": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/conversa_canal/pastas_do_email#update",
-    "modelo": "ConversaCanal::PastaDoEmail",
     "origem": [
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:18",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
       "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:37",
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:51"
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
     ],
     "sem_corpo": false
   },
@@ -22955,21 +22948,14 @@
   },
   "PUT conversa_canal/pastas_do_email/:conversation_id": {
     "campos": {
-      "pasta": {
-        "tipo": "string",
-        "um_de": [
-          "spam",
-          "lixeira"
-        ]
-      }
+      "pasta": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/conversa_canal/pastas_do_email#update",
-    "modelo": "ConversaCanal::PastaDoEmail",
     "origem": [
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:18",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
       "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:37",
-      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:51"
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
     ],
     "sem_corpo": false
   },
