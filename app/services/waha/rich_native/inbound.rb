@@ -6,7 +6,8 @@
 #   caixa; caixa antiga sem esse registro: um administrador da conta). De qualquer outro (agente, robô, job), as chaves
 #   saem e nada mais muda: um agente não reescreve nem esconde mensagem dos outros por aqui.
 # - flag `whatsapp_rich_native` DESLIGADA (ou caixa que não é a WAHA comum): nada mais muda. A mensagem fica IGUAL à da
-#   main (mesmo texto, tipo e privacidade). Exceções, mensagens que a main nunca recebe: o voto de uma enquete nativa e
+#   main (mesmo texto, tipo e privacidade); o cabeçalho de álbum do conector guarda `waha_album` com as contagens
+#   (Waha::RichNative::Inbound::Album.keep). Exceções, mensagens que a main nunca recebe: o voto de uma enquete nativa e
 #   a resposta a um evento nativo (enviados quando a flag estava ligada) e o aviso de visualização única que o motor não
 #   abriu viram atividade escondida (texto comum faria a IA responder "Sim").
 # - flag LIGADA na caixa WAHA comum: cada chave vira a apresentação nova (Waha::RichNative::Inbound::<Tipo>), numa ordem
@@ -90,6 +91,8 @@ class Waha::RichNative::Inbound
   def self.apply_without_flag(message, present)
     return unless message.incoming?
 
+    # O cabeçalho de álbum fica como na main, com as contagens (a pele junta as fotos por elas).
+    Waha::RichNative::Inbound::Album.keep(message, present['waha_album']) if present.key?('waha_album')
     key = HIDDEN_WITHOUT_FLAG.keys.find { |candidate| present.key?(candidate) }
     return hide!(message, HIDDEN_WITHOUT_FLAG[key]) if key
 

@@ -18,7 +18,6 @@ describe Waha::RichNative::Inbound do
     let(:keys) do
       {
         waha_media: { kind: 'voice', ptt: true },
-        waha_album: { expected_images: 3, expected_videos: 0 },
         waha_location: { latitude: -23.5, longitude: -46.6, name: 'Praça', live: false },
         waha_contacts: [{ full_name: 'Ana Souza', phones: ['+55 11 99999-0000'] }],
         waha_quote: { wa_id: 'W1', body: 'antiga', has_media: false },
@@ -41,6 +40,22 @@ describe Waha::RichNative::Inbound do
         expect(blob_name(message)).to eq('no-filename.oga')
       end
       expect(conversation.reload.messages.activity).to be_empty
+    end
+
+    # A pele junta as fotos pelo marcador (#1702, agruparAlbuns.js): o cabeçalho do álbum guarda só as contagens.
+    it 'keeps waha_album (only the counts) on the album header, which stays as in main' do
+      header = from_connector({ waha_album: { expected_images: 3, expected_videos: 1, extra: 'x' } }, content: 'Mensagem de Álbum Recebida')
+
+      expect(header).to be_incoming
+      expect(header.content).to eq('Mensagem de Álbum Recebida')
+      expect(header.content_attributes['waha_album']).to eq('expected_images' => 3, 'expected_videos' => 1)
+      expect(described_class.hidden?(header)).to be(false)
+    end
+
+    it 'drops waha_album sent by someone who is not the connector' do
+      header = from_connector({ waha_album: { expected_images: 3, expected_videos: 0 } }, content: 'Álbum', user: agent)
+
+      expect(header.content_attributes).not_to have_key('waha_album')
     end
 
     it 'hides only what main never receives: the view once notice of the engine and the event reply' do
@@ -83,6 +98,7 @@ describe Waha::RichNative::Inbound do
 
       expect(described_class.hidden?(header)).to be(true)
       expect(header.content).to eq('Cabeçalho do álbum registrado (as fotos vêm em seguida)')
+      expect(header.content_attributes['waha_album']).to eq('expected_images' => 4, 'expected_videos' => 0)
       expect(conversation.reload.messages.incoming).to be_empty
     end
 
