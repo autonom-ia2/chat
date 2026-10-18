@@ -11,12 +11,14 @@ describe Waha::RichNative::Revocable do
     let(:inbox) { create(:channel_api, additional_attributes: { 'provider' => 'waha', 'session' => 's1' }).inbox }
     let(:conversation) { create(:conversation, inbox: inbox, account: inbox.account) }
 
-    it 'is true for our public message, with or without the flag' do
+    before { inbox.account.enable_features!(Waha::RichNative::FLAG) }
+
+    it 'is true for our public message only with the flag (without it, false: the menu keeps the texts of today)' do
       message = message_in(inbox, conversation)
 
       expect(described_class.for(message)).to be(true)
-      inbox.account.enable_features!(Waha::RichNative::FLAG)
-      expect(described_class.for(message)).to be(true)
+      inbox.account.disable_features!(Waha::RichNative::FLAG)
+      expect(described_class.for(message.reload)).to be(false)
     end
 
     it 'is false for a failed message (it never reached the customer)' do

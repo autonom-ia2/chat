@@ -193,7 +193,26 @@ describe ConversaCanal::ReacaoDoAtendente do
 
       expect(client).to have_received(:set_reaction)
         .with(session: 'sessao-1', message_id: 'false_5511937016094@c.us_3EB0DDDD', reaction: '👍')
+      # Sem a flag, o motor padrão, como na main (ConversaCanal::ClienteDoMotor).
+      expect(Waha::Client).to have_received(:new).with(no_args)
+    end
+
+    it 'com a flag, o caminho de sempre (motor que não declara a reação) usa o motor da caixa' do
+      allow(Waha::EngineCapabilities).to receive(:actions).and_return([])
+      conversa.contact.update!(custom_attributes: { 'waha_whatsapp_chat_id' => '5511937016094@c.us' })
+      recebida.update!(source_id: 'false_5511937016094@c.us_3EB0EEEE')
+
+      reagir(recebida, '👍')
+
       expect(Waha::Client).to have_received(:new).with(config: have_attributes(api_url: engine))
+    end
+
+    it 'pelo conector, recusa mensagem de modelo e letra no lugar do emoji, sem pedir o envio' do
+      modelo = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :template, content: 'm')
+
+      expect { reagir(modelo, '👍') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.mensagem_invalida'))
+      expect { reagir(recebida, '1') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.emoji_invalido'))
+      expect(Waha::RichNative::MessageActionDeliveryJob).not_to have_received(:request!)
     end
   end
 

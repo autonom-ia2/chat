@@ -1,11 +1,14 @@
 # "Apagar para todos" (chat#1709): o sinal por mensagem `c2y_revocable`, que vai ao painel junto da mensagem (JSON da
-# API e evento da tela). É true quando apagar no painel apaga também no WhatsApp do cliente:
+# API e evento da tela). Só com a flag `whatsapp_rich_native` na conta (sem ela, false: o menu fica como hoje). É true
+# quando apagar no painel apaga também no WhatsApp do cliente:
 # - caixa WAHA comum (Channel::Api com provider 'waha'): mensagem nossa (de saída) que não é nota. O conector apaga no
-#   WhatsApp quando a mensagem fica `deleted`, com ou sem a flag `whatsapp_rich_native`;
+#   WhatsApp quando a mensagem fica `deleted`;
 # - caixa híbrida com a flag: mensagem nossa, não nota, com id físico do motor, a mesma regra do
 #   WhatsappHybrid::RichNative::RevokeOnDelete (é ele que pede o apagar ao motor);
 # - mensagem que falhou (nunca chegou ao cliente) e fora disso, false: apagar some só do painel.
-# Inbox e conta vêm pela conversa (já carregada com a lista), para a lista não buscar uma caixa por mensagem.
+# Custo (roda em todo evento e em toda mensagem da lista): primeiro os campos da própria mensagem, depois a flag da
+# conta; inbox e conta vêm pela conversa, que a lista de mensagens já tem carregada (a mensagem aponta a mesma
+# conversa), então a lista não busca uma caixa nem uma conta por mensagem (spec conta as consultas).
 module Waha::RichNative::Revocable
   KEY = :c2y_revocable
 
@@ -16,6 +19,8 @@ module Waha::RichNative::Revocable
     return false unless message.outgoing? && !message.private? && !message.failed?
 
     conversation = message.conversation
+    return false unless Waha::RichNative.enabled?(conversation.account)
+
     waha_inbox?(conversation.inbox) || hybrid_revocable?(message, conversation.inbox, conversation.account)
   rescue StandardError => e
     # Sinal de tela: um erro aqui não pode derrubar a lista de mensagens; fica o rótulo de sempre.

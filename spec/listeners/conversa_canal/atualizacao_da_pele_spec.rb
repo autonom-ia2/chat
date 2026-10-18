@@ -83,17 +83,13 @@ describe ConversaCanal::AtualizacaoDaPele do
       expect(WebhookJob).to have_received(:perform_later).with(webhook.url, anything, :account_webhook, any_args)
     end
 
-    # #1709 (Waha::RichNative::SilentUpdate): na caixa WAHA a reação gravada nunca vai ao conector, com ou sem a pele;
-    # ele leria o `message_updated` como pedido de reenvio e mandaria a mensagem de novo ao cliente.
-    it 'com a pele desligada, a caixa WAHA também não recebe a reação (o conector reenviaria); a conta recebe' do
+    it 'com a pele desligada, manda ao webhook da caixa API como na main' do
       account.disable_features!('conversa_cara_do_canal')
-      webhook = create(:webhook, account: account, subscriptions: ['message_updated'], url: 'https://conta.test/hook')
       allow(WebhookJob).to receive(:perform_later)
 
       WebhookListener.instance.message_updated(evento(reacao))
 
-      expect(WebhookJob).not_to have_received(:perform_later).with('https://conector.test/chatwoot', any_args)
-      expect(WebhookJob).to have_received(:perform_later).with(webhook.url, anything, :account_webhook, any_args)
+      expect(WebhookJob).to have_received(:perform_later).with('https://conector.test/chatwoot', anything, :api_inbox_webhook, any_args)
     end
 
     it 'caixa API de integração própria (sem WAHA) recebe a atualização da pele como na main' do

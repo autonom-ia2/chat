@@ -98,6 +98,41 @@ RSpec.describe 'WAHA message actions API', type: :request do
       expect(events).to be_empty
     end
 
+    # A mesma regra da reação pela pele (Whatsapp::EmojiDeReacao): letra, número e sinal do teclado não são emoji.
+    it 'refuses ASCII in place of the emoji (422, nothing stored)' do
+      message = ours
+      %w[a 1 #].each do |ascii|
+        react(message, ascii)
+        expect(response).to have_http_status(:unprocessable_entity), ascii
+      end
+      expect(message.reload.content_attributes).not_to have_key('reactions')
+      expect(events).to be_empty
+    end
+
+    # O pedido que nem sai não é sucesso calado: a nota "não chegou ao WhatsApp", na hora.
+    it 'leaves the not-delivered note when the broadcast guard blocks the conversation' do
+      message = ours
+      allow(Autonomia::Channels::BroadcastGuard).to receive(:blocked_conversation?).and_return(true)
+
+      react(message, '👍')
+
+      expect(response).to have_http_status(:ok)
+      expect(events).to be_empty
+      expect(conversation.messages.where(private: true).pluck(:content))
+        .to contain_exactly(I18n.t('waha.message_actions.reaction_not_delivered', locale: account.locale))
+    end
+
+    it 'leaves the not-delivered note when the inbox has no webhook address' do
+      message = ours
+      channel.update_column(:webhook_url, '') # rubocop:disable Rails/SkipsModelValidations
+
+      Waha::RichNative::MessageActions.deliver(message.reload, Waha::RichNative::MessageActions::EDIT_EVENT)
+
+      expect(events).to be_empty
+      expect(conversation.messages.where(private: true).pluck(:content))
+        .to contain_exactly(I18n.t('waha.message_actions.edit_not_delivered', locale: account.locale))
+    end
+
     it 'refuses the view once notice (rodada de correção, item 10)' do
       notice = create(:message, message_type: :incoming, content: 'Você recebeu uma mensagem de visualização única.',
                                 conversation: conversation, inbox: channel.inbox, account: account)

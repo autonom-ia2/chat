@@ -83,3 +83,38 @@ O #1740 já traz parte do #1702b (base comum `848b48c12`): 4 commits só dele, 1
   de conversa_canal: **564 exemplos, 1 falha** (`silent_update_spec.rb:67`, acima), 1 pendente.
 - Vitest: `components-next/message`, `components-next/conversa-canal`, `modules/conversations/components`: **596 testes, 2
   falhas** (as duas acima).
+
+## Merge real (18/10/2026): o que de fato foi feito
+
+Base: `origin/main` `d6e00a776f` (já com #1729, #1753, #1772, #1724, #1793 e o renderer do #1740). O merge é o
+`0cc839c0db`; os ajustes vêm em commits pequenos por cima. A ordem da demo (1740 → 1702b → 1709) não vale mais: o 1702b
+e o 1740 chegaram à main como #1724/#1793 e o renderer.
+
+Conflitos textuais:
+- `config/features.yml` / `spec/models/account_spec.rb`: a main já tinha `memoria_ia` (30) e `conversa_cara_do_canal`
+  (31); `whatsapp_rich_native` foi para o **bit 32**. O comentário da flag diz o que vale com e sem ela.
+- `app/services/waha/client.rb`: `set_reaction` (#1702) + `include Waha::Client::RichSends`.
+- `MessageList.vue`: como no passo 3.5, mais: com a pele, o marcador escondido com `waha_album` passa ao álbum.
+- `Message.vue` / `MessageContextMenu.vue`: como nos passos 3.6 e 3.7; `hasMessageExtras` só conta sem a pele; o menu
+  ganha "Apagar para todos" com `c2y_revocable`.
+- `SharedCard.vue`: o aviso "Localização em tempo real" (pele) e a legenda (`note`, #1709).
+- `formatos-das-acoes.json` / `-cobertura.md`: regenerados (622 ações).
+
+Integração (passos 8 a 11 da demo, com o que mudou):
+- `ReacaoDoAtendente`: delega para `MessageActions.react!` (passo 8), com as validações de emoji e de mensagem
+  reagível; `sem_identificacao` não (o conector não usa `source_id`). Emoji: uma regra só, `Whatsapp::EmojiDeReacao`,
+  também no `react!` (ASCII recusado).
+- `ClienteDoMotor` (passo 9): o motor da caixa **só com a flag**; sem ela, `Waha::Client.new` como na main.
+- `ReacaoNoWaha` / `LeituraNoCanal` (passos 10 e 11): pelo `ClienteDoMotor`.
+- `AiLocationText` / `AiContactText`: formatam pelo `ResumoDaMensagemRica` (#1753); o `ResponderLocation` não repete o
+  resumo que o histórico da equipe (Fase 2) já escreveu.
+- `SilentUpdate`: não delega ao `so_da_pele?` (ele não aceita `content` na edição); as 11 chaves são as mesmas. Silencia
+  **só com a flag ou a pele** na conta; com as duas desligadas, igual à main (o `atualizacao_da_pele_spec` da main
+  segue intacto).
+- `OutgoingHints.whatsapp_text`: `pele: true` (o `WhatsAppDaPeleRenderer` é o que tem paridade com o conector).
+- `waha_album` fica na mensagem (com e sem a flag, só do conector).
+- `c2y_revocable` (mensagem) só com a flag, nunca em mensagem que falhou; `whatsapp_api_group` (conversa). Spec conta as
+  consultas: nenhum dos dois consulta por item da lista.
+- `MessageActions.deliver`: pedido que nem sai (sem webhook, trava de transmissão) deixa a nota "não chegou".
+
+Pendência da demo resolvida na main: o `webhook_sem_atualizacao_da_pele` já só corta a caixa WAHA (o n8n recebe).

@@ -67,10 +67,14 @@ module Waha::RichNative::MessageActions
 
   # O evento vai ao webhook da caixa com as mesmas travas da entrega de sempre (endereço e trava de transmissão), por um
   # job que tenta de novo e, se não chegar, deixa a nota na conversa (Waha::RichNative::MessageActionDeliveryJob).
-  # O job monta o evento na hora da entrega, do estado atual da mensagem.
+  # O job monta o evento na hora da entrega, do estado atual da mensagem. Se o pedido nem pode sair (caixa sem webhook,
+  # trava de transmissão), a mesma nota, na hora: gravado no painel, mas não chegou ao WhatsApp.
   def deliver(message, event)
     channel = message.inbox.channel
-    return if channel.webhook_url.blank? || ::Autonomia::Channels::BroadcastGuard.blocked_conversation?(message.conversation)
+    if channel.webhook_url.blank? || ::Autonomia::Channels::BroadcastGuard.blocked_conversation?(message.conversation)
+      Rails.logger.error("[waha] message action not sent message=#{message.id} #{event} blocked_or_no_webhook")
+      return Waha::RichNative::MessageActionDeliveryJob.note_not_delivered!(message, event)
+    end
 
     Waha::RichNative::MessageActionDeliveryJob.request!(message, event)
   end

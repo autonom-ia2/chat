@@ -52,13 +52,9 @@ class ConversaCanal::ReacaoDoAtendente
     remetente.validar!
   end
 
-  # Um emoji só (um grafema: 👍🏽 e ❤️ têm mais de um código, mas são um desenho) ou vazio para tirar a reação. Letra,
-  # número e sinal do teclado (ASCII) não são emoji; o teto de bytes barra o grafema inflado com marcas combinantes.
+  # Um emoji só ou vazio para tirar a reação: a regra única do Whatsapp::EmojiDeReacao.
   def um_emoji_ou_vazio?
-    return false if @emoji.nil?
-    return true if @emoji.empty?
-
-    @emoji.bytesize <= Whatsapp::ReactionRecorder::MAXIMO_DE_BYTES && !@emoji.ascii_only? && @emoji.grapheme_clusters.size == 1
+    Whatsapp::EmojiDeReacao.valido?(@emoji)
   end
 
   def reagivel?
@@ -92,8 +88,11 @@ class ConversaCanal::ReacaoDoAtendente
     waha? && Waha::RichNative::MessageActions.allowed?(conversa, 'react')
   end
 
+  # As validações do caminho de sempre que valem aqui: emoji e mensagem reagível (nem nota, atividade, modelo nem
+  # apagada). `sem_identificacao` não: o conector acha a mensagem pelo id do chat2you, sem `source_id`.
   def reagir_pelo_conector
     recusar!(:emoji_invalido) unless um_emoji_ou_vazio?
+    recusar!(:mensagem_invalida) unless reagivel?
     motivo = Waha::RichNative::MessageActions.react!(@message, user: @user, emoji: @emoji)
     recusar!(MOTIVOS_DO_CONECTOR.fetch(motivo, :mensagem_invalida)) if motivo
 

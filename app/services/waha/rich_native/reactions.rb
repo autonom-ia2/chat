@@ -12,13 +12,13 @@ module Waha::RichNative::Reactions
   KEY = 'reactions'.freeze
   CONTACT_TYPE = 'Contact'.freeze
   USER_TYPE = 'User'.freeze
-  # O WhatsApp reage com um emoji só (um grafema, que pode juntar vários códigos: bandeira, tom de pele).
-  MAX_GRAPHEMES = 1
 
   module_function
 
+  # O WhatsApp reage com um emoji só (um grafema, que pode juntar vários códigos: bandeira, tom de pele); vazio remove.
+  # A mesma regra da reação pela pele (Whatsapp::EmojiDeReacao): letra, número e sinal do teclado são recusados.
   def valid_emoji?(emoji)
-    emoji.is_a?(String) && emoji.grapheme_clusters.size <= MAX_GRAPHEMES && emoji.bytesize <= 64
+    Whatsapp::EmojiDeReacao.valido?(emoji)
   end
 
   # O contato reagindo.

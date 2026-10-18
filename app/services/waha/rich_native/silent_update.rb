@@ -8,7 +8,8 @@
 # e, dentro de `content_attributes`, só SILENT_KEYS (reação, recibo de leitura, prévia de link, áudio ouvido, apagada
 # pelo cliente, voto agregado na enquete, resposta ao evento e edição; `content` só muda junto com o histórico). Os
 # webhooks da conta, a tela (ActionCable) e o robô seguem recebendo a atualização. Qualquer outra
-# mudança (status, apagar, erro de envio) vai ao conector como sempre.
+# mudança (status, apagar, erro de envio) vai ao conector como sempre. Só com a flag `whatsapp_rich_native` ou a pele
+# (`conversa_cara_do_canal`) ligada na conta; com as duas desligadas, igual à main.
 module Waha::RichNative::SilentUpdate
   # EXATAMENTE a lista do `ConversaCanal::AtualizacaoDaPele::CHAVES` (#1702, na main): o que a tela grava na "pele" da
   # mensagem e nunca pode chegar ao conector (ele reenvia a mensagem em todo `message_updated` com `external_error`,
@@ -47,9 +48,14 @@ module Waha::RichNative::SilentUpdate
 
   private
 
+  # Só com a flag `whatsapp_rich_native` ou a pele (`conversa_cara_do_canal`) na conta, as duas frentes que gravam
+  # essas marcas pelo painel; com as duas desligadas, o webhook da caixa recebe tudo, como na main.
   def waha_silent_update?(message, previous_changes)
     inbox = message.inbox
-    inbox.channel_type == 'Channel::Api' && inbox.channel.try(:waha_provider?) && Waha::RichNative::SilentUpdate.silent?(previous_changes)
+    return false unless inbox.channel_type == 'Channel::Api' && inbox.channel.try(:waha_provider?)
+    return false unless Waha::RichNative.enabled?(message.account) || ConversaCanal::Pele.ligada?(message.account)
+
+    Waha::RichNative::SilentUpdate.silent?(previous_changes)
   rescue StandardError => e
     Rails.logger.error("[waha] rich native silent update message=#{message.id} #{e.class}")
     false

@@ -88,13 +88,18 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
     # A ação já foi superada por uma mais nova, que entrega (ou avisa) por conta própria: sem nota falsa.
     return if superseded?(message_id, event, delivery_id)
 
-    message = Message.find_by(id: message_id)
-    key = NOT_DELIVERED_KEYS[event]
     Rails.logger.error("[waha] message action not delivered message=#{message_id} #{error.is_a?(Symbol) ? error : error.class}")
+    self.class.note_not_delivered!(Message.find_by(id: message_id), event)
+  end
+
+  # A nota privada "a reação/edição não chegou ao WhatsApp". Também quando o pedido nem sai (caixa sem webhook, trava de
+  # transmissão: Waha::RichNative::MessageActions.deliver): o atendente nunca fica com um sucesso calado.
+  def self.note_not_delivered!(message, event)
+    key = NOT_DELIVERED_KEYS[event]
     return if message.nil? || key.nil?
 
-    Messages::MessageBuilder.new(nil, message.conversation, { content: note_text(message.account, key), message_type: 'outgoing',
-                                                              private: true }).perform
+    text = I18n.t(key, locale: message.account.locale, default: I18n.t(key))
+    Messages::MessageBuilder.new(nil, message.conversation, { content: text, message_type: 'outgoing', private: true }).perform
   end
 
   private
@@ -115,9 +120,5 @@ class Waha::RichNative::MessageActionDeliveryJob < ApplicationJob
       entry.is_a?(Hash) && entry['sender_type'] == Waha::RichNative::Reactions::USER_TYPE
     end
     reaction&.dig('emoji').to_s
-  end
-
-  def note_text(account, key)
-    I18n.t(key, locale: account.locale, default: I18n.t(key))
   end
 end

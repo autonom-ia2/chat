@@ -15,6 +15,8 @@ describe Waha::RichNative::SilentUpdate do
                      content_attributes: { external_error: nil })
   end
 
+  before { account.enable_features!(Waha::RichNative::FLAG) }
+
   def inbox_payloads(changes)
     payloads = []
     allow(WebhookJob).to receive(:perform_later) { |_url, payload, kind, **| payloads << payload if kind == :api_inbox_webhook }
@@ -72,6 +74,22 @@ describe Waha::RichNative::SilentUpdate do
     ].each do |changes|
       expect(inbox_payloads(changes).size).to eq(1), changes.inspect
     end
+  end
+
+  # "Sem a flag, nada muda": com a flag e a pele desligadas, o webhook da caixa recebe tudo, como na main.
+  it 'sends the reaction update to the connector as in main when the flag and the pele are both off' do
+    account.disable_features!(Waha::RichNative::FLAG)
+    reaction = { 'content_attributes' => [{}, { 'reactions' => [{ 'emoji' => '👍' }] }] }
+
+    expect(inbox_payloads(reaction).size).to eq(1)
+  end
+
+  it 'silences with the pele on even without the flag' do
+    account.disable_features!(Waha::RichNative::FLAG)
+    account.enable_features!(ConversaCanal::Pele::FLAG)
+    reaction = { 'content_attributes' => [{}, { 'reactions' => [{ 'emoji' => '👍' }] }] }
+
+    expect(inbox_payloads(reaction)).to be_empty
   end
 
   it 'still sends the update of a reaction in a non-WAHA API inbox' do
