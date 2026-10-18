@@ -904,6 +904,10 @@
     "controller": "api/v1/accounts/contacts#summary",
     "parametros": []
   },
+  "conversa_canal/ditados/disponivel": {
+    "controller": "api/v1/accounts/conversa_canal/ditados#disponivel",
+    "parametros": []
+  },
   "conversa_canal/encaminhamentos": {
     "controller": "api/v1/accounts/conversa_canal/encaminhamentos#index",
     "parametros": [

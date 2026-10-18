@@ -1,6 +1,22 @@
 # Conversation with the channel's look (#1702): messages for the reply box "+".
 en:
   conversa_canal:
+    ditado:
+      sem_ia: 'To dictate, AI must be turned on. Ask an account admin to connect the OpenAI key in Settings.'
+      sem_audio: 'The audio did not arrive. Record again.'
+      grande: 'The audio is too long. Record in smaller parts.'
+      vazio: 'Could not understand what was said. Speak again, closer to the microphone.'
+      falhou: 'Could not transcribe right now. Try again in a moment.'
+    email:
+      escreveu: 'On %{data}, %{remetente} wrote:'
+      encaminhada: '---------- Forwarded message ---------'
+      de: 'From'
+      data: 'Date'
+      assunto: 'Subject'
+      para: 'To'
+      data_completa: '%{dia_da_semana}, %{mes} %{dia}, %{ano} at %{hora}'
+      dias_curtos: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      meses_curtos: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     lugares:
       sem_chave: 'Address search is not set up on the platform yet. Use the Google Maps coordinates.'
       nao_encontrado: 'Place not found. Search again.'

@@ -4,7 +4,7 @@
 // sugestão dos contatos. Embaixo, o assunto que o e-mail vai levar (o servidor monta
 // "Re: <assunto da conversa>"). Mesmo contrato do ReplyEmailHead (v-model dos três
 // campos), então o envio é o de sempre. O tipo de resposta fica no TopoDaResposta.
-import { computed, ref, watch } from 'vue';
+import { computed, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CampoDeEnderecos from './CampoDeEnderecos.vue';
 import { useEmailDaConversa } from './useConversaDeEmail';
@@ -16,13 +16,19 @@ const cco = defineModel('bccEmails', { type: String, default: '' });
 const { t } = useI18n();
 const email = useEmailDaConversa();
 
+// Cc e Cco aparecem quando têm endereço e somem quando a resposta nova chega vazia
+// (Responder depois de um Responder a todos). Quem está apagando o último endereço
+// com o cursor no campo continua vendo o campo.
 const verCc = ref(Boolean(cc.value));
 const verCco = ref(Boolean(cco.value));
+const cabeca = useTemplateRef('cabeca');
+const comFoco = seletor =>
+  Boolean(cabeca.value?.querySelector(seletor)?.contains(document.activeElement));
 watch(cc, valor => {
-  if (valor) verCc.value = true;
+  verCc.value = Boolean(valor) || (verCc.value && comFoco('[data-campo-cc]'));
 });
 watch(cco, valor => {
-  if (valor) verCco.value = true;
+  verCco.value = Boolean(valor) || (verCco.value && comFoco('[data-campo-cco]'));
 });
 
 const assunto = computed(() =>
@@ -34,7 +40,7 @@ const LINK =
 </script>
 
 <template>
-  <div class="flex flex-col" data-cabeca-da-resposta>
+  <div ref="cabeca" class="flex flex-col" data-cabeca-da-resposta>
     <CampoDeEnderecos
       v-model="para"
       :rotulo="t('CONVERSA_CANAL.EMAIL.PARA')"

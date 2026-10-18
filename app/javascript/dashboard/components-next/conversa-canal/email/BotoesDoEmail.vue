@@ -1,17 +1,15 @@
 <script setup>
 // Botões próprios da resposta de e-mail (#1786), na barra de baixo da caixa:
 // "Aa" mostra a barra de formatação fixa acima do texto; Modelos abre as respostas
-// prontas; Descartar apaga o rascunho (com confirmação) e fecha a caixa.
+// prontas (lista com busca, sem escrever "/" no texto); Descartar apaga o rascunho
+// (com confirmação) e fecha a caixa. Um fio separa os nossos dos botões do Chatwoot.
 // `parte` escolhe o grupo: "esquerda" (Aa e Modelos) ou "direita" (Descartar).
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import { emitter } from 'shared/helpers/mitt';
-import {
-  DESCARTAR_EMAIL,
-  MODELOS_DO_EMAIL,
-  useEmailDaConversa,
-} from './useConversaDeEmail';
+import ModelosDoEmail from './ModelosDoEmail.vue';
+import { DESCARTAR_EMAIL, useEmailDaConversa } from './useConversaDeEmail';
 
 defineProps({
   parte: {
@@ -40,7 +38,7 @@ const descartar = () => {
     <button
       type="button"
       class="font-semibold text-[15px] tracking-tight"
-      :class="email.formatacao.value ? '!bg-n-alpha-2' : ''"
+      :data-ligado="email.formatacao.value || undefined"
       :aria-pressed="email.formatacao.value"
       :aria-label="t('CONVERSA_CANAL.EMAIL.FORMATACAO')"
       :title="t('CONVERSA_CANAL.EMAIL.FORMATACAO')"
@@ -49,15 +47,12 @@ const descartar = () => {
     >
       <span aria-hidden="true">Aa</span>
     </button>
-    <button
-      type="button"
-      :aria-label="t('CONVERSA_CANAL.EMAIL.MODELOS')"
-      :title="t('CONVERSA_CANAL.EMAIL.MODELOS')"
-      data-modelos-do-email
-      @click="emitter.emit(MODELOS_DO_EMAIL)"
-    >
-      <Icon icon="i-lucide-file-text" class="size-[22px]" />
-    </button>
+    <ModelosDoEmail />
+    <span
+      class="w-px h-6 mx-1.5 bg-n-weak flex-shrink-0"
+      aria-hidden="true"
+      data-separador-da-barra
+    />
   </template>
   <button
     v-else

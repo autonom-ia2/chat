@@ -16,6 +16,9 @@ export const LISTA_DO_EMAIL = [
   // A faixa de 64 px que o Chatwoot reserva no começo da lista ("carregando
   // anteriores") vira só o que precisa: o assunto fica logo abaixo da barra de cima.
   '[&>li:has(+[data-topo-do-email])]:!min-h-0',
+  // Ela também empurra conversa curta para baixo (margem automática): no e-mail o
+  // assunto fica no alto e só a barra de responder desce (mt-auto no AcoesDoEmail).
+  '[&>li:has(+[data-topo-do-email])]:!mt-0',
   '[&_.message-bubble-container:has([data-cartao-do-email])]:!mb-0',
   // Só a peça que tem o cartão ocupa a linha; o menu de contexto ao lado continua solto.
   '[&_.message-bubble-container>div:has([data-cartao-do-email])]:!block',
@@ -37,13 +40,24 @@ export const RESPOSTA_DO_EMAIL = [
   '[&_.reply-box]:shadow-[0_1px_2px_rgba(0,0,0,0.12),0_1px_3px_1px_rgba(0,0,0,0.06)]',
   // Botões da barra de baixo.
   '[&_.left-wrap]:!gap-0.5',
-  '[&_.left-wrap_button:not([role=menuitem])]:!size-10',
-  '[&_.left-wrap_button:not([role=menuitem])]:!p-0',
-  '[&_.left-wrap_button:not([role=menuitem])]:!rounded-full',
-  '[&_.left-wrap_button:not([role=menuitem])]:!bg-transparent',
-  '[&_.left-wrap_button:not([role=menuitem])]:!text-n-slate-12',
-  '[&_.left-wrap_button:not([role=menuitem]):hover]:!bg-n-alpha-2',
-  "[&_.left-wrap_button:not([role=menuitem])_span[class*='i-']]:!size-[22px]",
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!size-10',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!p-0',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!rounded-full',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!bg-transparent',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre])]:!text-n-slate-12',
+  '[&_.left-wrap_button:not([role=menuitem]):not([data-livre]):hover]:!bg-n-alpha-2',
+  "[&_.left-wrap_button:not([role=menuitem]):not([data-livre])_span[class*='i-']]:!size-[22px]",
+  // Contorno só no teclado (o clique não deixa anel), como na caixa do WhatsApp.
+  '[&_.left-wrap_button:focus]:!outline-none',
+  '[&_.left-wrap_button:focus-visible]:!outline',
+  '[&_.left-wrap_button:focus-visible]:!outline-2',
+  '[&_.left-wrap_button:focus-visible]:!outline-offset-1',
+  '[&_.left-wrap_button:focus-visible]:!outline-n-brand',
+  // Botão que liga e desliga (assinatura, formatação) mostra quando está ligado.
+  '[&_.left-wrap_button[data-ligado]]:!bg-n-blue-3',
+  '[&_.left-wrap_button[data-ligado]]:!text-n-blue-11',
+  // No celular o fio que separa os grupos sobra.
+  'max-sm:[&_[data-separador-da-barra]]:!hidden',
   '[&_.right-wrap]:!items-center',
   '[&_.right-wrap]:!gap-1',
   // No celular a barra de baixo quebra em duas linhas: ferramentas em cima, Enviar

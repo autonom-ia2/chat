@@ -13363,6 +13363,21 @@
     ],
     "sem_corpo": false
   },
+  "POST conversa_canal/ditados": {
+    "campos": {
+      "audio": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/conversa_canal/ditados#create",
+    "motivos": [
+      "leitura crua sem tipo: audio (repassada a ConversaCanal::Ditado.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/ditados_controller.rb:15",
+      "app/controllers/api/v1/accounts/conversa_canal/ditados_controller.rb:16"
+    ],
+    "sem_corpo": false
+  },
   "POST conversa_canal/encaminhamentos": {
     "campos": {
       "conversation_id": {},

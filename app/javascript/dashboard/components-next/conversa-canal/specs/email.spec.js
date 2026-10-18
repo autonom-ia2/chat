@@ -9,19 +9,11 @@ import {
   semRastreio,
 } from '../email/dadosDoEmail';
 import { montarRespostaDoEmail } from '../email/respostaDoEmail';
+import { semCitacaoDosLeitores } from '../email/citacaoDosLeitores';
 import {
   MODOS_DE_RESPOSTA,
   emailNovoNaCaixa,
 } from '../email/useConversaDeEmail';
-
-const t = (chave, params) =>
-  ({
-    'CONVERSA_CANAL.EMAIL.ENCAMINHADA': '---- encaminhada ----',
-    'CONVERSA_CANAL.EMAIL.DE': 'De',
-    'CONVERSA_CANAL.EMAIL.DATA': 'Data',
-    'CONVERSA_CANAL.EMAIL.ASSUNTO': 'Assunto',
-    'CONVERSA_CANAL.EMAIL.PARA': 'Para',
-  })[chave] || `${chave}${params ? JSON.stringify(params) : ''}`;
 
 describe('conversa de e-mail (#1786)', () => {
   it('só liga na caixa de e-mail com a chave da conta', () => {
@@ -177,11 +169,9 @@ describe('conversa de e-mail (#1786)', () => {
         mensagem,
         contato: 'marina@ex.com',
         caixa,
-        t,
       });
       expect(r.para).toContain('marina@ex.com');
       expect(r.cc).toBe('');
-      expect(r.texto).toBe('');
     });
 
     it('Responder a todos: quem estava em cópia vai junto', () => {
@@ -190,25 +180,56 @@ describe('conversa de e-mail (#1786)', () => {
         mensagem,
         contato: 'marina@ex.com',
         caixa,
-        t,
       });
       expect(`${r.para}, ${r.cc}`).toContain('paulo@ex.com');
       expect(`${r.para}, ${r.cc}`).not.toContain('comercial@loja.com');
     });
 
-    it('Encaminhar: destinatário em branco e o e-mail original citado', () => {
-      const r = montarRespostaDoEmail({
-        modo: MODOS_DE_RESPOSTA.ENCAMINHAR,
-        mensagem,
-        contato: 'marina@ex.com',
-        caixa,
-        t,
-      });
-      expect([r.para, r.cc, r.cco]).toEqual(['', '', '']);
-      expect(r.texto).toContain('---- encaminhada ----');
-      expect(r.texto).toContain('De: marina@ex.com');
-      expect(r.texto).toContain('Assunto: Proposta');
-      expect(r.texto).toContain('Segue a proposta.');
+    it('Encaminhar: destinatário em branco; o original vai pelo servidor, formatado', () => {
+      expect(
+        montarRespostaDoEmail({
+          modo: MODOS_DE_RESPOSTA.ENCAMINHAR,
+          mensagem,
+          contato: 'marina@ex.com',
+          caixa,
+        })
+      ).toEqual({ para: '', cc: '', cco: '' });
+    });
+  });
+
+  describe('semCitacaoDosLeitores', () => {
+    it('tira o histórico do iPhone (blockquote type=cite)', () => {
+      const { html, achou } = semCitacaoDosLeitores(
+        '<div>Perfeito, vou ler hoje.</div><div>Enviado do meu iPhone</div><blockquote type="cite">Em 17 de out., Ana escreveu: oi</blockquote>'
+      );
+      expect(achou).toBe(true);
+      expect(html).toContain('Enviado do meu iPhone');
+      expect(html).not.toContain('Ana escreveu');
+    });
+
+    it('corta do bloco "De:" do Outlook (divRplyFwdMsg) até o fim', () => {
+      const { html, achou } = semCitacaoDosLeitores(
+        '<div><p>Segue a lista.</p><div id="divRplyFwdMsg"><b>De:</b> Ana</div><p>texto antigo</p></div>'
+      );
+      expect(achou).toBe(true);
+      expect(html).toContain('Segue a lista.');
+      expect(html).not.toContain('De:');
+      expect(html).not.toContain('texto antigo');
+    });
+
+    it('reconhece o fio do Outlook para Windows, em qualquer idioma', () => {
+      const { html, achou } = semCitacaoDosLeitores(
+        '<p>Bom dia</p><div style="border:none; border-top:solid #E1E1E1 1.0pt; padding:3pt"><b>De:</b> Ana</div><p>antigo</p>'
+      );
+      expect(achou).toBe(true);
+      expect(html).toContain('Bom dia');
+      expect(html).not.toContain('antigo');
+    });
+
+    it('e-mail sem citação fica igual', () => {
+      const { html, achou } = semCitacaoDosLeitores('<p>Oi, tudo bem?</p>');
+      expect(achou).toBe(false);
+      expect(html).toBe('<p>Oi, tudo bem?</p>');
     });
   });
 });

@@ -37,7 +37,8 @@ export const TAMANHOS = {
   EXPANDIDA: 'expandida',
   JANELA: 'janela',
 };
-// Pedidos da caixa de resposta do e-mail para o ReplyBox (descartar, respostas prontas).
+// Pedidos da caixa de resposta do e-mail para o ReplyBox: descartar e pôr uma resposta
+// pronta no texto (leva o conteúdo).
 export const DESCARTAR_EMAIL = 'conversaCanal:descartarEmail';
 export const MODELOS_DO_EMAIL = 'conversaCanal:modelosDoEmail';
 

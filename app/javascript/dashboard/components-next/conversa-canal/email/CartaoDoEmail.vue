@@ -13,7 +13,6 @@ import { allowedCssProperties } from 'lettersanitizer';
 import Icon from 'next/icon/Icon.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import FormattedContent from 'next/message/bubbles/Text/FormattedContent.vue';
-import AttachmentChips from 'next/message/chips/AttachmentChips.vue';
 import TranslationToggle from 'dashboard/components-next/message/TranslationToggle.vue';
 import { EmailQuoteExtractor } from 'dashboard/helper/emailQuoteExtractor.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
@@ -39,6 +38,12 @@ import {
 } from './dadosDoEmail';
 import { CARTAO, COR_DO_SELO, SELO } from './visualEmail';
 import MenuDoEmail from './MenuDoEmail.vue';
+import AnexosDoEmail from './AnexosDoEmail.vue';
+import { semCitacaoDosLeitores } from './citacaoDosLeitores';
+import OriginalDoEmail from './OriginalDoEmail.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import { useAcoesDoEmail } from './useAcoesDoEmail';
+import { useRecursosDoEmail } from './recursosDoEmail';
 
 const ALTURA_LONGA = 400;
 
@@ -52,6 +57,7 @@ const {
   createdAt,
   inboxId,
   status,
+  conversationId,
 } = useMessageContext();
 const { t, locale } = useI18n();
 const email = useEmailDaConversa();
@@ -158,13 +164,32 @@ const textoDoLetter = computed(() =>
 const conteudoDoPainel = computed(() =>
   traduzido.value ? translationContent.value : content.value
 );
-const htmlSemCitacao = computed(() =>
-  EmailQuoteExtractor.extractQuotes(htmlCompleto.value)
+// Citação do Gmail e afins pelo extrator do Chatwoot; a do iPhone e a do Outlook em
+// português pelo nosso (citacaoDosLeitores.js).
+const citacaoDosLeitores = computed(() =>
+  semCitacaoDosLeitores(htmlCompleto.value)
 );
-const temCitacao = computed(() =>
-  EmailQuoteExtractor.hasQuotes(htmlCompleto.value)
+const htmlSemCitacao = computed(() =>
+  EmailQuoteExtractor.extractQuotes(citacaoDosLeitores.value.html)
+);
+const temCitacao = computed(
+  () =>
+    citacaoDosLeitores.value.achou ||
+    EmailQuoteExtractor.hasQuotes(htmlCompleto.value)
 );
 const verCitacao = ref(false);
+// O corpo no estilo do texto do painel; a citação aberta fica como no Gmail (fio à
+// esquerda, cinza, sem as aspas e o itálico que o "prose" põe em blockquote).
+const CLASSES_DO_CORPO = [
+  'prose prose-bubble !max-w-none letter-render',
+  'prose-blockquote:not-italic prose-blockquote:font-normal prose-blockquote:text-n-slate-11',
+  'prose-blockquote:border-s-2 prose-blockquote:border-n-slate-6',
+  '[&_blockquote_p]:before:content-none [&_blockquote_p]:after:content-none',
+  // Outlook escreve cada linha num <p class="MsoNormal"> sem margem, e as linhas em
+  // branco como parágrafo com espaço: sem isto o "prose" abre buracos entre elas. O
+  // sanitizador renomeia a classe para "<id>_MsoNormal", daí o "contém".
+  '[&_[class*=MsoNormal]]:!my-0',
+].join(' ');
 const CSS_PERMITIDO = [
   ...allowedCssProperties,
   'transform',
@@ -175,7 +200,10 @@ const corpo = useTemplateRef('corpo');
 const longo = ref(false);
 const inteiro = ref(false);
 onMounted(() => {
-  longo.value = (corpo.value?.scrollHeight || 0) > ALTURA_LONGA;
+  // O e-mail mais recente aparece sempre inteiro; só os antigos longos encolhem.
+  longo.value =
+    id.value !== email.ultimoEmailId.value &&
+    (corpo.value?.scrollHeight || 0) > ALTURA_LONGA;
 });
 
 // Recolhido só com a opção ligada, e nunca o último e-mail.
@@ -207,6 +235,71 @@ const verDetalhes = ref(false);
 // Responder (à vista) e o menu ⋮ (Responder a todos, Encaminhar) partem deste e-mail.
 const responder = (modo = MODOS_DE_RESPOSTA.RESPONDER) =>
   emitter.emit(RESPONDER_EMAIL, { modo, mensagemId: id.value });
+
+// O resto do ⋮ (Traduzir, Copiar link, Imprimir, Mostrar original, Não lida, Excluir).
+const acoes = useAcoesDoEmail({ conversationId, messageId: id });
+const emProcesso = computed(
+  () => falhou.value || status.value === MESSAGE_STATUS.PROGRESS
+);
+const temTexto = computed(() => Boolean(content.value || temEmail.value));
+const { recursos } = useRecursosDoEmail(
+  useMapGetter('getCurrentAccountId').value
+);
+const podeTraduzir = computed(
+  () =>
+    recursos.value.traducao &&
+    temTexto.value &&
+    !emProcesso.value &&
+    !hasTranslations.value
+);
+const podeExcluir = computed(
+  () =>
+    !emProcesso.value &&
+    (temTexto.value || Boolean(attachments.value?.length))
+);
+const assuntoDoEmail = computed(
+  () => contentAttributes.value?.email?.subject || email.assunto.value || ''
+);
+const linhasDoCabecalho = computed(() => [
+  [
+    t('CONVERSA_CANAL.EMAIL.DE'),
+    remetente.value.endereco
+      ? `${remetente.value.nome} <${remetente.value.endereco}>`
+      : remetente.value.nome,
+  ],
+  [t('CONVERSA_CANAL.EMAIL.PARA'), destinos.value.para.join(', ')],
+  [t('CONVERSA_CANAL.EMAIL.CC'), destinos.value.cc.join(', ')],
+  [t('CONVERSA_CANAL.EMAIL.CCO'), destinos.value.cco.join(', ')],
+  [t('CONVERSA_CANAL.EMAIL.DATA'), dataCompleta.value],
+  [t('CONVERSA_CANAL.EMAIL.ASSUNTO'), assuntoDoEmail.value],
+]);
+const linhasDoOriginal = computed(() => [
+  ...linhasDoCabecalho.value,
+  ['Message-ID', contentAttributes.value?.email?.messageId || ''],
+  [
+    t('CONVERSA_CANAL.EMAIL.EM_RESPOSTA_A'),
+    contentAttributes.value?.email?.inReplyTo || '',
+  ],
+]);
+const original = useTemplateRef('original');
+const confirmarExclusao = useTemplateRef('confirmarExclusao');
+const fazer = {
+  traduzir: acoes.traduzir,
+  'copiar-link': acoes.copiarLink,
+  imprimir: () =>
+    acoes.imprimir({
+      assunto: assuntoDoEmail.value,
+      linhas: linhasDoCabecalho.value,
+      corpoHtml: corpo.value?.innerHTML || '',
+    }),
+  original: () => original.value?.open(),
+  'nao-lida': acoes.marcarComoNaoLida,
+  excluir: () => confirmarExclusao.value?.open(),
+};
+const excluir = async () => {
+  confirmarExclusao.value?.close();
+  await acoes.excluir();
+};
 </script>
 
 <template>
@@ -244,6 +337,18 @@ const responder = (modo = MODOS_DE_RESPOSTA.RESPONDER) =>
       <span class="flex-1 min-w-0 truncate text-sm text-n-slate-11">
         {{ trecho }}
       </span>
+      <Icon
+        v-if="attachments?.length"
+        icon="i-lucide-paperclip"
+        class="size-3.5 flex-shrink-0 text-n-slate-11"
+        :aria-label="
+          t(
+            'CONVERSA_CANAL.EMAIL.ANEXOS',
+            { total: attachments.length },
+            attachments.length
+          )
+        "
+      />
       <time
         class="flex-shrink-0 text-xs text-n-slate-11 tabular-nums"
         :title="dataCompleta"
@@ -374,7 +479,12 @@ const responder = (modo = MODOS_DE_RESPOSTA.RESPONDER) =>
           >
             <Icon icon="i-lucide-reply" class="size-4" />
           </button>
-          <MenuDoEmail @escolher="responder" />
+          <MenuDoEmail
+            :pode-traduzir="podeTraduzir"
+            :pode-excluir="podeExcluir"
+            @escolher="responder"
+            @acao="nome => fazer[nome]()"
+          />
         </div>
       </header>
 
@@ -382,7 +492,11 @@ const responder = (modo = MODOS_DE_RESPOSTA.RESPONDER) =>
         <div
           ref="corpo"
           class="relative text-sm text-n-slate-12"
-          :class="{ 'max-h-[400px] overflow-hidden': longo && !inteiro }"
+          :class="
+            longo && !inteiro
+              ? 'max-h-[400px] overflow-hidden'
+              : 'overflow-x-auto [&_img]:h-auto [&_img]:max-w-full'
+          "
           data-corpo-do-email
         >
           <FormattedContent
@@ -392,7 +506,7 @@ const responder = (modo = MODOS_DE_RESPOSTA.RESPONDER) =>
           <Letter
             v-else
             :key="`${verCitacao ? 'c' : 's'}-${traduzido ? 't' : 'o'}`"
-            class-name="prose prose-bubble !max-w-none letter-render"
+            :class-name="CLASSES_DO_CORPO"
             :allowed-css-properties="CSS_PERMITIDO"
             :html="verCitacao ? htmlCompleto : htmlSemCitacao"
             :text="textoDoLetter"
@@ -438,23 +552,25 @@ const responder = (modo = MODOS_DE_RESPOSTA.RESPONDER) =>
           :showing-original="verOriginal"
           @toggle="verOriginal = !verOriginal"
         />
-        <div
+        <AnexosDoEmail
           v-if="Array.isArray(attachments) && attachments.length"
-          class="mt-4 pt-3 border-t border-n-weak"
-          data-anexos-do-email
-        >
-          <p class="mb-2 text-xs font-medium text-n-slate-11">
-            {{
-              t(
-                'CONVERSA_CANAL.EMAIL.ANEXOS',
-                { total: attachments.length },
-                attachments.length
-              )
-            }}
-          </p>
-          <AttachmentChips :attachments="attachments" class="gap-2" />
-        </div>
+          :anexos="attachments"
+        />
       </section>
+      <OriginalDoEmail
+        ref="original"
+        :linhas="linhasDoOriginal"
+        :texto="contentAttributes?.email?.textContent?.full || ''"
+      />
+      <Dialog
+        ref="confirmarExclusao"
+        type="alert"
+        :title="t('CONVERSA_CANAL.EMAIL.EXCLUIR_TITULO')"
+        :description="t('CONVERSA_CANAL.EMAIL.EXCLUIR_TEXTO')"
+        :confirm-button-label="t('CONVERSA_CANAL.EMAIL.EXCLUIR')"
+        :cancel-button-label="t('CONVERSA_CANAL.EMAIL.CANCELAR')"
+        @confirm="excluir"
+      />
     </template>
   </article>
 </template>

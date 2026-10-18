@@ -75,6 +75,11 @@ class Rack::Attack
     req.ip if req.get? && req.path.include?('/conversa_canal/lugares')
   end
 
+  # Ditado da resposta de e-mail (#1786): cada um é uma transcrição paga na IA da conta.
+  throttle('conversa_canal_ditados/ip', limit: 20, period: 1.minute) do |req|
+    req.ip if req.post? && req.path.include?('/conversa_canal/ditados')
+  end
+
   # Reagir e encaminhar (#1702) saem no WhatsApp do cliente: uma pessoa no painel não passa disso; script com token, sim.
   throttle('conversa_canal_acoes/ip', limit: 60, period: 1.minute) do |req|
     req.ip if req.post? && (req.path.include?('/conversa_canal/reacoes') || req.path.include?('/conversa_canal/encaminhamentos'))

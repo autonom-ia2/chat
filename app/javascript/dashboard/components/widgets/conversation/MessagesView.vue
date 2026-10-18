@@ -99,6 +99,7 @@ export default {
     const { pele, classesDaLista, classesDaBarra } = usePeleDaConversa();
     // #1786: conversa de e-mail com a cara do Gmail, atrás da chave própria.
     const {
+      ligado: emailNovo,
       classesDaLista: classesDoEmail,
       classesDaBarra: classesDaRespostaDoEmail,
     } = useConversaDeEmail();
@@ -121,6 +122,7 @@ export default {
       pele,
       classesDaLista,
       classesDaBarra,
+      emailNovo,
       classesDoEmail,
       classesDaRespostaDoEmail,
       isImpersonating,
@@ -591,6 +593,11 @@ export default {
     },
     scrollToBottom() {
       this.isProgrammaticScroll = true;
+      // #1786: no e-mail novo o mais recente está no topo; é lá que a conversa abre.
+      if (this.emailNovo) {
+        this.conversationPanel.scrollTop = 0;
+        return;
+      }
       let relevantMessages = [];
 
       // label suggestions are not part of the messages list
@@ -645,8 +652,10 @@ export default {
             conversationId: this.currentChat.id,
             before: this.currentChat.messages[0].id,
           });
-          const heightDifference =
-            this.conversationPanel.scrollHeight - this.heightBeforeLoad;
+          // #1786: no e-mail novo os antigos entram embaixo; a tela não precisa pular.
+          const heightDifference = this.emailNovo
+            ? 0
+            : this.conversationPanel.scrollHeight - this.heightBeforeLoad;
           this.conversationPanel.scrollTop =
             this.scrollTopBeforeLoad + heightDifference;
           this.setScrollParams();
@@ -667,7 +676,13 @@ export default {
         this.hasUserScrolled = true;
       }
       emitter.emit(BUS_EVENTS.ON_MESSAGE_LIST_SCROLL);
-      this.fetchPreviousMessages(e.target.scrollTop);
+      // #1786: no e-mail novo os antigos ficam embaixo: carrega perto do fim.
+      const alvo = e.target;
+      this.fetchPreviousMessages(
+        this.emailNovo
+          ? alvo.scrollHeight - alvo.scrollTop - alvo.clientHeight
+          : alvo.scrollTop
+      );
     },
 
     makeMessagesRead() {

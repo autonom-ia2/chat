@@ -485,6 +485,9 @@ Rails.application.routes.draw do
           # #1702 — o "+" da conversa com a cara do canal: busca de endereço (Google) e formulários aprovados (Meta).
           namespace :conversa_canal do
             resources :lugares, only: [:index, :show]
+            resources :ditados, only: [:create] do
+              get :disponivel, on: :collection
+            end
             resources :reacoes, only: [:create]
             resources :encaminhamentos, only: [:index, :create]
             resources :formularios, only: [:index] do
