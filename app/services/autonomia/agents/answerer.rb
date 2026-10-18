@@ -167,28 +167,17 @@ module Autonomia
 
       private
 
-      # #1479: a interação pedida pelo modelo; o endereço do link precisa ser um dos que o dono escreveu.
+      # #1479: a interação pedida pelo modelo; o endereço do link precisa ser um dos que o dono autorizou
+      # (`Interacao::Enderecos.do_dono`): a instrução e a base, os botões de link que já saíram validados, e a saída de
+      # ferramenta só com host que a instrução ou a base já trazem.
       def interacao_do_turno(parsed, snippets)
         return unless @interacao
 
-        Interacao.do_modelo(parsed['interacao'], enderecos: Interacao::Enderecos.dos_textos(fontes_do_dono(snippets)))
-      end
-
-      # Onde o DONO escreveu: a instrução, a base de conhecimento, o que o agente já mandou nesta conversa e as saídas das
-      # ferramentas do turno. A fala do cliente, os documentos dele e a memória não contam.
-      def fontes_do_dono(snippets)
-        falas_do_agente = Array(@history).select { |item| (item[:role] || item['role']).to_s == 'assistant' }
-                                         .flat_map { |item| textos(item[:content] || item['content']) }
-        [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }, *falas_do_agente, *@saidas_do_turno]
-      end
-
-      def textos(valor)
-        case valor
-        when String then [valor]
-        when Hash then valor.values.flat_map { |item| textos(item) }
-        when Array then valor.flat_map { |item| textos(item) }
-        else []
-        end
+        enderecos = Interacao::Enderecos.do_dono(
+          dono: [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }],
+          ferramentas: @saidas_do_turno.to_a, conversation: @delivery&.conversation
+        )
+        Interacao.do_modelo(parsed['interacao'], enderecos: enderecos)
       end
 
       # A FALA COM PREÇO SAI CONFERIDA (fatia 3 do #420). Quando `ver_resultado_da_cotacao` rodou neste turno, a
@@ -422,9 +411,17 @@ module Autonomia
           anotar_leitura(tools_by_slug[call['name'].to_s], output, recusou: Tools::Recusa.registradas > recusas_antes)
           registrar_chamada(call, output, inicio)
           saida = output.to_s.truncate(8_000)
-          (@saidas_do_turno ||= []) << saida if @interacao
+          # #1479: só a saída de ferramenta (HTTP, sistema) pode trazer endereço para o botão; a de especialista ou
+          # ajudante não (pode repetir o que o cliente disse).
+          (@saidas_do_turno ||= []) << saida if @interacao && ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
           { type: 'function_call_output', call_id: call['call_id'], output: saida }
         end
+      end
+
+      # A chamada foi a uma ferramenta do agente, e não a um especialista ou ajudante (que tem a precedência no despacho).
+      def ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
+        nome = call['name'].to_s
+        specialists_by_function[nome].nil? && tools_by_slug.key?(nome)
       end
 
       # DADO DE SISTEMA NO TURNO (#1361). Quem diz que a chamada recusou é o registro de recusas (`Tools::Recusa`),

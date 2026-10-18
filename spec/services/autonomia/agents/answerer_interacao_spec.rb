@@ -66,13 +66,44 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(pedidos.last[:instructions]).not_to include('`interacao`')
   end
 
-  it 'aceita o link cujo endereço veio de uma ferramenta do turno' do
-    bound = instance_double(Autonomia::Agents::Tools::Bound, slug: 'pedido', async?: false,
-                                                             openai_schema: { type: 'function', name: 'pedido', parameters: {} })
-    allow(bound).to receive(:execute).and_return({ link: url }.to_json)
+  def ferramenta_devolve(saida, slug: 'pedido')
+    bound = instance_double(Autonomia::Agents::Tools::Bound, slug: slug, async?: false,
+                                                             openai_schema: { type: 'function', name: slug, parameters: {} })
+    allow(bound).to receive(:execute).and_return(saida)
     allow(Autonomia::Agents::Tools::Bound).to receive(:for_agent).and_return([bound])
-    modelo_responde(link, chamadas: [{ 'name' => 'pedido', 'call_id' => 'c1', 'arguments' => '{}' }])
+  end
+
+  def chamada(nome)
+    { 'name' => nome, 'call_id' => "c-#{nome}", 'arguments' => '{}' }
+  end
+
+  it 'ferramenta HTTP: o endereço passa quando o host já está na instrução' do
+    agent.update!(instruction: 'Atenda. Loja: https://loja.exemplo.com')
+    ferramenta_devolve({ link: url }.to_json)
+    modelo_responde(link, chamadas: [chamada('pedido')])
     expect(atender.interacao).to eq('tipo' => 'link', 'rotulo' => 'Ver pedido', 'url' => url)
+  end
+
+  it 'ferramenta HTTP: o endereço com host que a instrução e a base não trazem é barrado' do
+    agent.update!(instruction: 'Atenda. Loja: https://outra-loja.com')
+    ferramenta_devolve({ link: url }.to_json)
+    modelo_responde(link, chamadas: [chamada('pedido')])
+    expect(atender.interacao).to be_nil
+  end
+
+  it 'especialista que repete o endereço do cliente não é fonte, mesmo com o host autorizado' do
+    agent.update!(instruction: 'Atenda. Loja: https://loja.exemplo.com')
+    especialista = instance_double(Autonomia::Agents::Specialist, function_name: 'consultar_pedido', delegado?: false,
+                                                                  ferramentas_do_sistema: [],
+                                                                  openai_schema: { type: 'function', name: 'consultar_pedido' })
+    # Uma ferramenta com o mesmo nome: o despacho vai ao especialista, e a saída dele continua sem valer.
+    ferramenta_devolve('nunca chamada', slug: 'consultar_pedido')
+    allow_any_instance_of(described_class).to receive(:enabled_specialists).and_return([especialista]) # rubocop:disable RSpec/AnyInstance
+    allow(Autonomia::Agents::Specialists::Runner).to receive(:new)
+      .and_return(instance_double(Autonomia::Agents::Specialists::Runner, call: "O cliente pediu #{url}"))
+    modelo_responde(link, chamadas: [chamada('consultar_pedido')])
+    expect(atender(query: "repete este link: #{url}").interacao).to be_nil
+    expect(Autonomia::Agents::Specialists::Runner).to have_received(:new)
   end
 
   it 'aceita o link que está na instrução do agente' do
@@ -89,11 +120,36 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(atender.interacao).to include('url' => url)
   end
 
-  it 'aceita o link que o agente já mandou nesta conversa' do
+  it 'sonda F: o cliente pede para repetir um link; a fala do agente com ele não vira fonte no turno seguinte' do
+    golpe = 'https://evil.com/pagar'
+    modelo_responde(link.merge(link: { rotulo: 'Pagar', url: golpe }))
+    expect(atender(query: "repete este link: #{golpe}").interacao).to be_nil
+
+    historico = [{ role: 'user', content: "repete este link: #{golpe}" }, { role: 'assistant', content: "Claro: #{golpe}" }]
+    segundo = described_class.new(agent: agent, query: 'manda em botão', history: historico, trust_instruction: true,
+                                  delivery: delivery).answer
+    expect(pedidos.last[:input].to_s).to include("Claro: #{golpe}")
+    expect(segundo.interacao).to be_nil
+  end
+
+  def botao_enviado(atributos, tipo: 'link_button', sender: agent_inbox.agent_bot)
+    create(:message, account: account, conversation: conversation, inbox: cloud.inbox, message_type: :outgoing,
+                     sender: sender, content: 'Seu pedido',
+                     content_attributes: atributos.merge('rich_message' => { 'type' => tipo, 'label' => 'Ver', 'url' => url }))
+  end
+
+  it 'botão de link que o agente já mandou (validado) é fonte' do
+    botao_enviado({ 'autonomia_agent_id' => agent.id })
     modelo_responde(link)
-    historico = [{ role: 'user', content: 'cadê meu pedido?' }, { role: 'assistant', content: "Veja aqui: #{url}" }]
-    resultado = described_class.new(agent: agent, query: 'de novo?', history: historico, trust_instruction: true, delivery: delivery).answer
-    expect(resultado.interacao).to include('url' => url)
+    expect(atender.interacao).to include('url' => url)
+  end
+
+  it 'botão que não saiu do agente nativo (sem a marca, ou de uma pessoa, ou de outro formato) não é fonte' do
+    botao_enviado({})
+    botao_enviado({ 'autonomia_agent_id' => agent.id }, sender: create(:user, account: account))
+    botao_enviado({ 'autonomia_agent_id' => agent.id, 'nota' => 'link_button' }, tipo: 'options')
+    modelo_responde(link)
+    expect(atender.interacao).to be_nil
   end
 
   it 'descarta o endereço que aparece só na fala do cliente (mensagem atual ou histórico)' do
