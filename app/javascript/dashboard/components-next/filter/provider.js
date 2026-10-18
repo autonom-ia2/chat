@@ -2,6 +2,7 @@ import { computed, h, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useOperators } from './operators';
 import { useMapGetter } from 'dashboard/composables/store.js';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useChannelIcon } from 'next/icon/provider';
 import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
 import { useCrmOrigin } from 'dashboard/routes/dashboard/crm/composables/useCrmOrigin';
@@ -54,6 +55,7 @@ import languages from 'dashboard/components/widgets/conversation/advancedFilterI
  */
 export function useConversationFilterContext() {
   const { t } = useI18n();
+  const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 
   const conversationAttributes = useMapGetter(
     'attributes/getConversationAttributes'
@@ -270,7 +272,7 @@ export function useConversationFilterContext() {
       options: labels.value.map(label => {
         return {
           id: label.title,
-          name: label.title,
+          name: nomeDaEtiqueta(label.title),
           icon: h('span', {
             class: `rounded-full`,
             style: {

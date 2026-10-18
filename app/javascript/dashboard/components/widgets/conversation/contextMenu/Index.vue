@@ -7,7 +7,7 @@ import {
   getSortedAgentsByAvailability,
   getAgentsByUpdatedPresence,
 } from 'dashboard/helper/agentHelper.js';
-import { picoSearch } from '@chatwoot/pico-search';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import MenuItem from './menuItem.vue';
 import MenuItemWithSubmenu from './menuItemWithSubmenu.vue';
 import wootConstants from 'dashboard/constants/globals';
@@ -85,8 +85,11 @@ export default {
   ],
   setup() {
     const { isAdmin } = useAdmin();
+    const { nomeDe, buscar } = useNomeDaEtiqueta();
     return {
       isAdmin,
+      nomeDaEtiqueta: nomeDe,
+      buscarEtiquetas: buscar,
     };
   },
   data() {
@@ -224,7 +227,7 @@ export default {
     },
     filteredLabels() {
       const labels = this.labelSearchQuery
-        ? picoSearch(this.labels, this.labelSearchQuery, ['title'])
+        ? this.buscarEtiquetas(this.labels, this.labelSearchQuery)
         : this.labels;
       // Assigned labels first, keeping each group's existing order.
       const isAssigned = label => this.conversationLabels.includes(label.title);
@@ -284,7 +287,7 @@ export default {
         ...(type === 'agent' && { thumbnail: option.thumbnail }),
         ...(type === 'agent' && { status: option.availability_status }),
         ...(type === 'text' && { label: option.label }),
-        ...(type === 'label' && { label: option.title }),
+        ...(type === 'label' && { label: this.nomeDaEtiqueta(option.title) }),
         ...(type === 'agent' && { label: option.name }),
         ...(type === 'team' && { label: option.name }),
       };
