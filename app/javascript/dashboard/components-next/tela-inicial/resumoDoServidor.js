@@ -10,7 +10,6 @@ const daEquipe = equipe =>
   equipe
     ? {
         esperam: numero(equipe.esperam),
-        semResponsavel: numero(equipe.sem_responsavel),
         foraDoPrazo: numeroOuNulo(equipe.fora_do_prazo),
       }
     : null;

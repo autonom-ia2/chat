@@ -24,16 +24,13 @@ const numeros = computed(() => {
   if (foraDoPrazo === null) return lista;
   return [
     ...lista,
-    {
-      chave: 'FORA_DO_PRAZO',
-      valor: foraDoPrazo,
-      alerta: foraDoPrazo > 0,
-      fazer: props.dados.verMinhas,
-    },
+    // Só informa: não há lista "fora do prazo" no painel para abrir.
+    { chave: 'FORA_DO_PRAZO', valor: foraDoPrazo, alerta: foraDoPrazo > 0 },
   ];
 });
 
-const clicavel = numero => props.dados.pronto && numero.valor > 0;
+const clicavel = numero =>
+  props.dados.pronto && numero.valor > 0 && Boolean(numero.fazer);
 
 const linhaDaEquipe = computed(() => {
   const { equipe } = props.dados;
@@ -64,7 +61,7 @@ const linhaDaEquipe = computed(() => {
     class="flex items-center justify-center w-full h-full p-4 overflow-auto bg-n-surface-1 md:p-10"
   >
     <div
-      class="relative w-full max-w-3xl px-6 py-8 overflow-hidden text-white shadow-xl rounded-3xl bg-n-heroi ring-1 ring-inset ring-white/10 md:px-10 md:py-10"
+      class="relative w-full max-w-3xl px-6 py-8 overflow-hidden text-white shadow-xl rounded-3xl bg-n-heroi dark:bg-[#12305E] ring-1 ring-inset ring-white/10 md:px-10 md:py-10"
     >
       <span
         aria-hidden="true"
@@ -90,7 +87,7 @@ const linhaDaEquipe = computed(() => {
                 : $t('TELA_INICIAL.RESUMO.TITULO')
             }}
           </h1>
-          <p class="mb-0 text-base text-white/75">
+          <p v-if="dados.pronto" class="mb-0 text-base text-white/75">
             {{
               $t(
                 'TELA_INICIAL.RESUMO.COM_VOCE',
@@ -147,6 +144,14 @@ const linhaDaEquipe = computed(() => {
           class="mb-0 text-sm text-white/75"
         >
           {{ $t('TELA_INICIAL.RESUMO.ERRO') }}
+          <button
+            type="button"
+            data-tentar-de-novo
+            class="font-semibold text-white underline underline-offset-2 hover:text-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+            @click="dados.tentarDeNovo()"
+          >
+            {{ $t('TELA_INICIAL.RESUMO.TENTAR_DE_NOVO') }}
+          </button>
         </p>
         <div
           v-else-if="dados.pronto && dados.proxima"
@@ -155,7 +160,7 @@ const linhaDaEquipe = computed(() => {
           <button
             type="button"
             data-abrir-proxima
-            class="inline-flex items-center justify-center gap-3 px-6 text-base font-semibold transition bg-white min-h-12 rounded-xl text-n-heroi hover:bg-n-blue-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            class="inline-flex items-center justify-center gap-3 px-6 text-base font-semibold transition bg-white min-h-12 rounded-xl text-n-heroi hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             @click="dados.abrir(dados.proxima)"
           >
             {{ $t('TELA_INICIAL.ABRIR_PROXIMA') }}
@@ -181,7 +186,7 @@ const linhaDaEquipe = computed(() => {
           <button
             type="button"
             data-acao-do-vazio
-            class="inline-flex items-center justify-center gap-3 px-6 text-base font-semibold transition bg-white min-h-12 rounded-xl text-n-heroi hover:bg-n-blue-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            class="inline-flex items-center justify-center gap-3 px-6 text-base font-semibold transition bg-white min-h-12 rounded-xl text-n-heroi hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             @click="dados.acaoDoVazio.fazer()"
           >
             {{ $t(`TELA_INICIAL.${dados.acaoDoVazio.rotulo}`) }}
@@ -203,7 +208,7 @@ const linhaDaEquipe = computed(() => {
                 ? 'hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white'
                 : ''
             "
-            @click="dados.equipe.esperam > 0 && dados.verTodas()"
+            @click="dados.equipe.esperam > 0 && dados.verEquipe()"
           >
             <span class="i-lucide-users size-4" aria-hidden="true" />
             {{ linhaDaEquipe }}

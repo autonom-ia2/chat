@@ -50,10 +50,12 @@ export default {
       }
       return this.$t('CONVERSATION.404');
     },
-    // #1801: com a flag ligada na conta, o resumo do dia no lugar do aviso.
+    // #1801: com a flag ligada na conta e caixa conectada, o resumo do dia no lugar do aviso. Fica
+    // na tela enquanto a lista carrega (troca de aba, rolagem), sem piscar o spinner por cima.
     temTelaInicial() {
       return (
         !this.isOnExpandedLayout &&
+        this.inboxesList.length > 0 &&
         this.isCloudFeatureEnabled(FEATURE_FLAGS.TELA_INICIAL_RESUMO)
       );
     },
@@ -76,7 +78,10 @@ export default {
 </script>
 
 <template>
-  <div :class="emptyClassName">
+  <div v-if="temTelaInicial" :class="emptyClassName">
+    <TelaInicial />
+  </div>
+  <div v-else :class="emptyClassName">
     <woot-loading-state
       v-if="uiFlags.isFetching || loadingChatList"
       :message="loadingIndicatorMessage"
@@ -93,12 +98,11 @@ export default {
 
     <div
       v-else-if="!uiFlags.isFetching && !loadingChatList"
-      class="flex flex-col items-center justify-center w-full h-full"
+      class="flex flex-col items-center justify-center h-full"
     >
-      <TelaInicial v-if="temTelaInicial" />
       <!-- No conversations available -->
       <EmptyStateMessage
-        v-else-if="!allConversations.length"
+        v-if="!allConversations.length"
         :message="$t('CONVERSATION.NO_MESSAGE_1')"
       />
       <EmptyStateMessage

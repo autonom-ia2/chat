@@ -2,7 +2,8 @@
 #
 # Da pessoa, sobre as conversas abertas que ela pode ver (Conversations::PermissionFilterService, que o EE estende com
 # as funções personalizadas):
-# - esperam: "Não atendidas" do Chatwoot (sem primeira resposta ou com o cliente esperando), no nome dela.
+# - esperam: "Não atendidas" do Chatwoot (sem primeira resposta ou com o cliente esperando), no nome dela. O SQL repete
+#   o scope Conversation.unattended para caber na mesma agregação; o spec de paridade compara com o ConversationFinder.
 # - sem_responsavel: a aba "Não atribuídas" (sem pessoa no nome, inclusive as que o robô passou e esperam alguém).
 # - fora_do_prazo: no nome dela, com o prazo de resposta perdido. nil quando a conta não usa prazos.
 # - com_voce: as abertas no nome dela (o mesmo da aba "Minhas" da lista da conta, sem filtro).
@@ -19,9 +20,10 @@ class TelaInicial::Resumo
   end
 
   def perform
+    # Sem permissão de conversa, o EE devolve Conversation.none, e o pick vem nil (o ConversationFinder faz o mesmo).
     com_voce, esperam, sem_responsavel = visiveis.unscope(:order).pick(
       Arel.sql(minhas_sql('TRUE')), Arel.sql(minhas_sql(NAO_ATENDIDA_SQL)), Arel.sql(SEM_RESPONSAVEL_SQL)
-    )
+    ) || [0, 0, 0]
     resumo = { com_voce: com_voce, esperam: esperam, sem_responsavel: sem_responsavel,
                fora_do_prazo: minhas_fora_do_prazo, proxima: proxima }
     return resumo unless ve_a_equipe?
@@ -50,9 +52,8 @@ class TelaInicial::Resumo
 
   def equipe
     da_conta = account.conversations.open
-    esperam, sem_responsavel = da_conta.pick(Arel.sql("COUNT(*) FILTER (WHERE #{NAO_ATENDIDA_SQL})"), Arel.sql(SEM_RESPONSAVEL_SQL))
     fora = da_conta.joins(:applied_sla).merge(AppliedSla.missed).count if usa_prazo?
-    { esperam: esperam, sem_responsavel: sem_responsavel, fora_do_prazo: fora }
+    { esperam: da_conta.unattended.count, fora_do_prazo: fora }
   end
 
   def usa_prazo?
@@ -62,8 +63,8 @@ class TelaInicial::Resumo
   end
 
   def proxima
-    conversa = visiveis.where(assignee_id: user.id).where(NAO_ATENDIDA_SQL)
-                       .sort_on_waiting_since(:asc).includes(:contact).first
+    conversa = visiveis.where(assignee_id: user.id).unattended
+                       .sort_on_waiting_since(:asc).preload(:contact).first
     return if conversa.blank?
 
     {

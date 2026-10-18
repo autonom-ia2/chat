@@ -21,6 +21,7 @@
         "FORA_DO_PRAZO": "Fora do prazo"
       },
       "ERRO": "Não deu para carregar os números agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
       "EQUIPE": {
         "ESPERAM": "Na equipe: {count} esperando",
         "FORA_DO_PRAZO": "{count} fora do prazo"

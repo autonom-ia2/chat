@@ -36,7 +36,7 @@ export const useTelaInicial = () => {
     }).format(agora.value)
   );
 
-  const { resumo, estado } = useResumoDoServidor();
+  const { resumo, estado, atualizar } = useResumoDoServidor();
   const pronto = computed(() => estado.value === 'pronto');
   // Em dia: ninguém esperando e nada fora do prazo (conta sem prazos conta como em dia).
   const tudoEmDia = computed(
@@ -63,9 +63,9 @@ export const useTelaInicial = () => {
       )
     );
   };
-  // Cada número leva à lista que ele conta. A tela também aparece numa caixa, etiqueta ou time
-  // (lista filtrada), então sempre volta à lista da conta; trocar de lista põe a aba em "Minhas",
-  // por isso a aba vai depois da navegação.
+  // Cada número leva à lista que ele conta. A tela também aparece numa caixa, etiqueta, time ou
+  // pasta (lista filtrada), então sempre volta à lista da conta. A aba vai depois da navegação:
+  // sair de "Em que participo" reescreve a aba (watcher do ChatList) no mesmo ciclo da rota.
   const irPara = async (rota, aba) => {
     await router.push({ name: rota, params: { accountId: contaId.value } });
     await nextTick();
@@ -74,9 +74,10 @@ export const useTelaInicial = () => {
   const { ME, UNASSIGNED, ALL } = wootConstants.ASSIGNEE_TYPE;
   // "Esperam você" é a lista "Não atendidas" do Chatwoot na aba "Minhas": o mesmo critério do número.
   const verEsperam = () => irPara('conversation_unattended', ME);
-  const verMinhas = () => irPara('home', ME);
   const verSemResponsavel = () => irPara('home', UNASSIGNED);
   const verTodas = () => irPara('home', ALL);
+  // A linha da equipe conta as não atendidas da conta: a mesma lista, na aba "Todos".
+  const verEquipe = () => irPara('conversation_unattended', ALL);
   // Com tudo respondido, a ação leva a quem ainda não tem ninguém cuidando; sem elas, a todas.
   const acaoDoVazio = computed(() =>
     resumo.value.semResponsavel > 0
@@ -99,9 +100,10 @@ export const useTelaInicial = () => {
     esperaHa,
     abrir,
     verEsperam,
-    verMinhas,
     verSemResponsavel,
     verTodas,
+    verEquipe,
+    tentarDeNovo: atualizar,
     acaoDoVazio,
   };
 };

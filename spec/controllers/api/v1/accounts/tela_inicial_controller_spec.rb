@@ -16,6 +16,7 @@ RSpec.describe 'Tela inicial API', type: :request do
   end
 
   before do
+    account.enable_features!('tela_inicial_resumo')
     create(:inbox_member, user: agente, inbox: caixa)
     create(:inbox_member, user: colega, inbox: caixa)
   end
@@ -24,6 +25,14 @@ RSpec.describe 'Tela inicial API', type: :request do
     get rota, as: :json
 
     expect(response).to have_http_status(:unauthorized)
+  end
+
+  it 'conta sem a flag: 404, sem contar nada' do
+    account.disable_features!('tela_inicial_resumo')
+
+    get rota, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:not_found)
   end
 
   it 'recusa o token de um robô (a rota não está na lista do AccessTokenAuthHelper)' do
@@ -63,7 +72,7 @@ RSpec.describe 'Tela inicial API', type: :request do
     corpo = response.parsed_body
     expect(corpo['esperam']).to eq(1)
     expect(corpo['sem_responsavel']).to eq(2)
-    expect(corpo['equipe']).to eq('esperam' => 4, 'sem_responsavel' => 2, 'fora_do_prazo' => nil)
+    expect(corpo['equipe']).to eq('esperam' => 4, 'fora_do_prazo' => nil)
   end
 
   it 'a próxima é a dele que espera há mais tempo' do
@@ -96,7 +105,8 @@ RSpec.describe 'Tela inicial API', type: :request do
 
     get rota, headers: admin.create_new_auth_token, as: :json
 
-    expect(response.parsed_body['equipe']).to include('esperam' => 0, 'sem_responsavel' => 0)
+    expect(response.parsed_body.slice('com_voce', 'esperam', 'sem_responsavel')).to eq('com_voce' => 0, 'esperam' => 0, 'sem_responsavel' => 0)
+    expect(response.parsed_body['equipe']).to include('esperam' => 0)
   end
 
   it 'conta de outra pessoa responde 401' do

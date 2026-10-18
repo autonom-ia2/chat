@@ -21,6 +21,7 @@
         "FORA_DO_PRAZO": "Past due"
       },
       "ERRO": "Could not load the numbers right now.",
+      "TENTAR_DE_NOVO": "Try again",
       "EQUIPE": {
         "ESPERAM": "Team: {count} waiting",
         "FORA_DO_PRAZO": "{count} past due"

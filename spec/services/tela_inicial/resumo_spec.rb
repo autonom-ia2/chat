@@ -55,14 +55,56 @@ RSpec.describe TelaInicial::Resumo do
       conversa
       conversa(inbox: create(:inbox, account: account))
 
-      expect(resumo_de(agente)[:equipe]).to eq(esperam: 3, sem_responsavel: 2, fora_do_prazo: nil)
+      expect(resumo_de(agente)[:equipe]).to eq(esperam: 3, fora_do_prazo: nil)
       expect(resumo_de(agente)[:sem_responsavel]).to eq(1)
+    end
+
+    it 'sem nenhuma permissão de conversa: zero, nunca nil' do
+      com_papel(%w[report_manage])
+      conversa(dono: agente)
+
+      expect(resumo_de(agente)).to include(com_voce: 0, esperam: 0, sem_responsavel: 0, proxima: nil)
     end
 
     it 'só com conversation_manage não recebe a equipe' do
       com_papel(%w[conversation_manage])
 
       expect(resumo_de(agente)).not_to have_key(:equipe)
+    end
+  end
+
+  # Os números da tela são os da lista. Se a regra de "não atendida" ou das abas mudar num lado só, isto quebra.
+  describe 'paridade com a lista (ConversationFinder)' do
+    # O ConversationFinder lê a conta do Current, como na requisição.
+    def lista_de(user, filtros = {})
+      Current.account = account
+      ConversationFinder.new(user, filtros).perform_meta_only[:count]
+    ensure
+      Current.reset
+    end
+
+    before do
+      conversa(dono: agente)
+      conversa(dono: agente).update!(first_reply_created_at: 1.hour.ago, waiting_since: nil)
+      conversa(dono: agente).update!(first_reply_created_at: 1.hour.ago, waiting_since: 5.minutes.ago)
+      conversa(dono: admin)
+      conversa
+      conversa(inbox: create(:inbox, account: account))
+    end
+
+    [:admin, :agente].each do |quem|
+      it "#{quem}: com você, sem responsável e esperam batem com as abas" do
+        user = public_send(quem)
+        resumo = resumo_de(user)
+
+        expect(resumo[:com_voce]).to eq(lista_de(user)[:mine_count])
+        expect(resumo[:sem_responsavel]).to eq(lista_de(user)[:unassigned_count])
+        expect(resumo[:esperam]).to eq(lista_de(user, conversation_type: 'unattended')[:mine_count])
+      end
+    end
+
+    it 'a equipe bate com "Não atendidas" na aba Todos do administrador' do
+      expect(resumo_de(admin)[:equipe][:esperam]).to eq(lista_de(admin, conversation_type: 'unattended')[:all_count])
     end
   end
 

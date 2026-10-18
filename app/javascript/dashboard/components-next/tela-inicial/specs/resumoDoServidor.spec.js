@@ -30,7 +30,7 @@ describe('resumoDoServidor', () => {
       semResponsavel: 2,
       foraDoPrazo: 3,
       proxima: { displayId: 4, nome: 'Ana Lima', desde: 1000 },
-      equipe: { esperam: 12, semResponsavel: 2, foraDoPrazo: 5 },
+      equipe: { esperam: 12, foraDoPrazo: 5 },
     });
     expect(TelaInicialAPI.resumo).toHaveBeenCalledTimes(1);
   });

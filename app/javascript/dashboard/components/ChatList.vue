@@ -836,7 +836,18 @@ function toggleSelectAll(check) {
   selectAllConversations(check, conversationList);
 }
 
-useEmitter(BUS_EVENTS.TELA_INICIAL_ABA, updateAssigneeTab);
+// #1801: a tela inicial pede uma aba. Aba que a pessoa não tem é ignorada; com filtro avançado
+// aplicado, o filtro sai junto (senão a lista seguiria filtrada e o clique pareceria não fazer nada).
+function abrirAbaDaTelaInicial(aba) {
+  if (!assigneeTabItems.value.some(item => item.key === aba)) return;
+  if (!hasAppliedFilters.value) {
+    updateAssigneeTab(aba);
+    return;
+  }
+  activeAssigneeTab.value = aba;
+  resetAndFetchData();
+}
+useEmitter(BUS_EVENTS.TELA_INICIAL_ABA, abrirAbaDaTelaInicial);
 useEmitter('fetch_conversation_stats', () => {
   if (hasAppliedFiltersOrActiveFolders.value) return;
   store.dispatch('conversationStats/get', conversationFilters.value);
