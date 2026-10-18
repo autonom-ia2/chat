@@ -59,6 +59,33 @@ RSpec.describe ConversaCanal::ModeloDeEmail do
     end
   end
 
+  describe 'o que vai para a IA (decisão de 03/10)' do
+    before do
+      contato.update!(phone_number: '+5511999990000', custom_attributes: { 'plano' => 'Empresarial', 'cpf' => '123.456.789-00' })
+      allow(cliente).to receive(:create).and_return(text: { campos: [] }.to_json)
+    end
+
+    def entrada_enviada
+      campos(com_ia: true)
+      enviada = nil
+      expect(cliente).to have_received(:create) { |argumentos| enviada = argumentos[:input] }
+      enviada
+    end
+
+    it 'leva o nome, sem o e-mail, o telefone e os atributos do contato' do
+      enviada = entrada_enviada
+
+      expect(JSON.parse(enviada)['contato']).to eq('nome' => 'Marina Costa')
+      expect(enviada).not_to include('marina@exemplo.com.br', '5511999990000', '123.456.789-00', 'Empresarial')
+    end
+
+    it 'não leva o nome quando ele é o provisório (o começo do e-mail)' do
+      contato.update!(name: 'marina')
+
+      expect(JSON.parse(entrada_enviada)['contato']).to eq({})
+    end
+  end
+
   describe 'na resposta enviada' do
     let(:html_do_modelo) do
       '<html><head><style>.x{color:red}</style></head><body><div class="corpo">Modelo para Marina</div>' \

@@ -142,19 +142,25 @@ class ConversaCanal::ModeloDeEmail
 
   INSTRUCOES = <<~PROMPT.strip.freeze
     Você preenche as variáveis de um modelo de e-mail que um atendente vai mandar para este cliente.
-    Para cada chave pedida, devolva o valor SOMENTE se ele estiver escrito na conversa ou nos dados do contato.
+    Para cada chave pedida, devolva o valor SOMENTE se ele estiver escrito na conversa ou no nome do contato.
     Se não estiver claro, devolva valor vazio. Nunca invente nome, número, data, valor ou empresa.
     Responda com o texto do valor, sem explicação.
   PROMPT
   private_constant :INSTRUCOES
 
+  # Decisão do Rodrigo (03/10): o e-mail, o telefone e os atributos do contato não vão para a IA. O e-mail e o telefone
+  # já entram sem IA (`valor_conhecido`); o nome só vai quando é nome de verdade, não o que a plataforma pôs no lugar.
   def entrada(chaves)
-    {
-      chaves: chaves,
-      contato: { nome: @contato&.name, email: @contato&.email, telefone: @contato&.phone_number,
-                 atributos: @contato&.custom_attributes.to_h },
-      conversa: trecho_da_conversa
-    }
+    { chaves: chaves, contato: { nome: nome_para_a_ia }.compact, conversa: trecho_da_conversa }
+  end
+
+  # A mesma regra de Autonomia::Decisores::Aplicador#nome_provisorio?: vazio, o e-mail, o começo dele ou o telefone.
+  def nome_para_a_ia
+    nome = @contato&.name.to_s.strip
+    email = @contato&.email.to_s
+    provisorio = nome.empty? || nome.casecmp?(email) || nome.casecmp?(email.split('@').first.to_s) ||
+                 nome == @contato&.phone_number.to_s
+    nome unless provisorio
   end
 
   def trecho_da_conversa
