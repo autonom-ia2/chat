@@ -2243,6 +2243,33 @@
 - gotchas: os valores não saem conforme cada seguradora responde, o comparativo chega quando a cotação inteira termina, o que costuma levar de 1 a 2 minutos, e passando disso sai um aviso de espera escrito pelo agente, nunca uma lista de preços solta; o que vai ao cliente é o arquivo, nunca o link do portal, porque aquele endereço abre sem senha e traz o nome do segurado, e quando o arquivo falha nada é enviado no lugar; a proposta de uma seguradora é outro documento, gerado pela própria seguradora com o mesmo preço informado, e pedir duas seguradoras gera dois arquivos sem abrir cotação nova; seguradora que recusou não é anunciada ao cliente, e se ele perguntar o motivo sai por categoria, como veículo ou região, nunca o texto do portal; problema de credencial da corretora nunca chega ao cliente, ele aparece em Cotação > Conexões; na cotação de empresa o condutor deixa de ser opcional, precisa ser pessoa física com CPF e vínculo real, e a razão social não é perguntada, o sistema busca pelo CNPJ.
 - nav_target: `autonomia_insurance_agent`
 
+### marcar_email_como_spam
+- titulo: Marcar e-mail como spam
+- rota: inbox_conversation
+- intent: Como mando um e-mail para o spam?; Como paro de receber e-mail de um remetente?; Onde fica o Spam da caixa de e-mail?; Marquei como spam sem querer, como desfaço?
+- onde_fica: Conversas > abrir a conversa de uma caixa de e-mail > botão Spam no topo do e-mail; a pasta Spam fica no menu lateral, embaixo da caixa de e-mail
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
+- passos: 1. Abra a conversa de e-mail; 2. Toque em Spam no topo; 3. A conversa sai da Entrada, fica resolvida e vai para a pasta Spam; 4. Para desfazer, abra a pasta Spam no menu, abra a conversa e toque em Não é spam.
+- gotchas: o Spam vale só para aquele remetente naquela caixa de e-mail: e-mail novo dele nessa caixa cai direto no Spam, já resolvido; o contato não fica bloqueado, e o WhatsApp e as outras caixas dele seguem normais; Não é spam devolve a conversa à Entrada, reabre e o remetente volta a chegar; nada muda na conta de e-mail do cliente (Gmail, Outlook); voltar de uma conversa aberta pelo Spam volta para a lista do Spam.
+
+### mover_email_para_a_lixeira
+- titulo: Mover e-mail para a Lixeira e excluir para sempre
+- rota: inbox_conversation
+- intent: Como apago um e-mail?; Onde fica a Lixeira do e-mail?; Como restauro uma conversa da Lixeira?; Como excluo uma conversa de e-mail para sempre?
+- onde_fica: Conversas > abrir a conversa de uma caixa de e-mail > botão Lixeira no topo do e-mail; a pasta Lixeira fica no menu lateral, embaixo da caixa de e-mail
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
+- passos: 1. Abra a conversa de e-mail; 2. Toque em Lixeira no topo; 3. A conversa sai da Entrada e fica resolvida, sem apagar nada; 4. Para trazer de volta, abra a pasta Lixeira, abra a conversa e toque em Restaurar (ela volta aberta); 5. Para apagar de vez, dentro da Lixeira toque em Excluir para sempre e confirme.
+- gotchas: se o cliente responder no mesmo e-mail, a conversa sai sozinha da Lixeira e volta para a Entrada; Excluir para sempre só existe dentro da Lixeira, apaga os e-mails, as notas e os anexos para toda a equipe e não tem desfazer (o cliente continua com a cópia dele); pelo Guia, excluir para sempre sempre pede confirmação.
+
+### escrever_email_novo
+- titulo: Escrever um e-mail novo pela caixa de e-mail
+- rota: inbox_dashboard
+- intent: Como escrevo um e-mail novo?; Onde fica o Escrever do e-mail?; Como mando um e-mail para um cliente que ainda não escreveu?; Como uso um modelo de e-mail das Campanhas num e-mail novo?
+- onde_fica: Menu lateral > caixa de e-mail > Escrever (acima de Spam e Lixeira); abre a gaveta de nova conversa já nessa caixa
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
+- passos: 1. Toque em Escrever, embaixo da caixa de e-mail no menu; 2. Em Para quem, procure o contato ou, se não achar, crie no cartão Criar contato com nome e e-mail; 3. Escreva o assunto e a mensagem; pelo + dá para pôr um modelo de e-mail das Campanhas, anexo, emoji ou ditar; 4. Clique em Enviar mensagem.
+- gotchas: o e-mail sai pela caixa de onde você tocou em Escrever, mesmo que um rascunho de outra caixa tenha ficado guardado; o contato novo pela caixa de e-mail precisa de e-mail; se o contato já tem conversa nessa caixa, a tela oferece continuar aquela conversa, com o histórico e o Re: do assunto.
+
 
 ### _fora_do_guia
 - portals_: editor de portais do Chatwoot, travado para todos; a Central de Ajuda da plataforma e so leitura e vem do repositorio (#501)
