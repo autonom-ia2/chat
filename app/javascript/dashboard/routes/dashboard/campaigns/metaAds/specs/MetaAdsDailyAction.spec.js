@@ -186,6 +186,44 @@ describe('Anúncios da Meta · o que fazer hoje, até 3 ações (#1110, F5)', ()
     expect(CrmMetaAdsConnectionAPI.dailyAction).not.toHaveBeenCalled();
   });
 
+  // #1794: quem só tem meta_ads_view vê as ações e abre as listas, sem gesto do consultor nem passo da conexão.
+  it('read-only: no Done, Dismiss, acknowledge or connection step, and opening a list records nothing', async () => {
+    const withCards = {
+      ...STALLED,
+      cards: [{ id: 5, title: 'Ana', value: 900, conversation_id: 77 }],
+    };
+    const wrapper = await mountAction({
+      advice: advice([withCards, FIX, AUCTION]),
+      readOnly: true,
+    });
+
+    expect(wrapper.find('[data-action-accept]').exists()).toBe(false);
+    expect(wrapper.find('[data-action-dismiss]').exists()).toBe(false);
+    expect(
+      item(wrapper, FIX.id).find('[data-panel-action-button]').exists()
+    ).toBe(false);
+    expect(
+      item(wrapper, AUCTION.id).find('[data-panel-action-button]').exists()
+    ).toBe(false);
+
+    await item(wrapper, STALLED.id)
+      .find('[data-panel-action-button]')
+      .trigger('click');
+    expect(wrapper.emitted('act')[0][0].id).toBe(STALLED.id);
+    expect(CrmMetaAdsConnectionAPI.openAdvice).not.toHaveBeenCalled();
+  });
+
+  it('read-only: without a stalled quote from the person inboxes, the list button does not show', async () => {
+    const wrapper = await mountAction({
+      advice: advice([STALLED]),
+      readOnly: true,
+    });
+
+    expect(
+      item(wrapper, STALLED.id).find('[data-panel-action-button]').exists()
+    ).toBe(false);
+  });
+
   it('writes the rule text with the facts formatted by type (pt_BR)', async () => {
     useRealI18n('pt_BR');
     const wrapper = await mountAction({

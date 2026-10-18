@@ -16,6 +16,8 @@ export const INBOX_PERMISSIONS = ['inbox_view', 'inbox_manage'];
 export const CANNED_RESPONSE_MANAGE_PERMISSION = 'canned_response_manage';
 // SLA is managed in CRM › SLA (crm_sla_index); the SLA policy API checks this key.
 export const SLA_MANAGE_PERMISSION = 'sla_manage';
+// Regras de distribuição e capacidade (#1797).
+export const ASSIGNMENT_MANAGE_PERMISSION = 'assignment_manage';
 export const PROSPECTING_PERMISSIONS = [
   'prospecting_view',
   'prospecting_manage',
@@ -26,6 +28,8 @@ export const SCHEDULING_PERMISSIONS = [
   'agendamento_view',
   'agendamento_manage',
 ];
+// Anúncios da Meta (#1794): ver o painel. Conectar e configurar seguem só do administrador.
+export const META_ADS_VIEW_PERMISSION = 'meta_ads_view';
 
 export const ROLES = ['agent', 'administrator'];
 

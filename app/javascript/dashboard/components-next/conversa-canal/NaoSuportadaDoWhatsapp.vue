@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n';
 import BaseBubble from '../message/bubbles/Base.vue';
 import { useMessageContext } from '../message/provider.js';
 import { tipoNaoSuportado } from './marcasDaMensagem';
+import { hybridRecoveryNoteKey } from '../message/helpers/hybridRecovery.js';
 
 const { contentAttributes } = useMessageContext();
 const { t } = useI18n();
@@ -32,6 +33,15 @@ const TEXTOS = {
 };
 
 const tipo = computed(() => tipoNaoSuportado(contentAttributes.value));
+
+// chat#1489: o WhatsApp API ainda busca no celular (pending) ou não conseguiu (failed).
+// O estado vem em contentAttributes.hybridRecovery (texto); recuperada não chega aqui.
+const ESTADOS_DA_RECUPERACAO = ['pending', 'failed'];
+const textoDaRecuperacao = computed(() =>
+  ESTADOS_DA_RECUPERACAO.includes(contentAttributes.value?.hybridRecovery)
+    ? hybridRecoveryNoteKey(contentAttributes.value)
+    : null
+);
 </script>
 
 <template>
@@ -45,7 +55,7 @@ const tipo = computed(() => tipoNaoSuportado(contentAttributes.value));
         :class="ICONES[tipo]"
         aria-hidden="true"
       />
-      <span>{{ t(TEXTOS[tipo]) }}</span>
+      <span>{{ t(textoDaRecuperacao || TEXTOS[tipo]) }}</span>
     </p>
   </BaseBubble>
 </template>

@@ -20,6 +20,8 @@ const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 const imagens = vi.hoisted(() => ({ upload: vi.fn() }));
 vi.mock('dashboard/api/autonomia/builderImages', () => ({ default: imagens }));
+const conversas = vi.hoisted(() => ({ desfazer: vi.fn() }));
+vi.mock('dashboard/api/autonomia/buildThreads', () => ({ default: conversas }));
 
 const no = seletor => document.querySelector(seletor);
 const todos = seletor => [...document.querySelectorAll(seletor)];
@@ -262,6 +264,217 @@ describe('MudarConversando', () => {
     expect(aviso.textContent).toContain('que você não pediu');
     const ordem = todos('[data-feito], [data-mensagem="assistant"]');
     expect(ordem.indexOf(aviso)).toBeLessThan(ordem.indexOf(cartao));
+    wrapper.unmount();
+  });
+
+  // #1428 (parte 3, piloto) — com o resultado do servidor, o cartão pedido por pedido no lugar do FEITO.
+  describe('with the result of the adjustment (pilot)', () => {
+    const RESULTADO = {
+      itens: [
+        { estado: 'aplicado', texto: 'Respostas curtas.' },
+        { estado: 'nao_aplicado', texto: 'preço com a equipe' },
+      ],
+      faltou_fora: false,
+      conferido: true,
+      desfeito: false,
+      desfeito_sozinho: false,
+      pode_desfazer: true,
+    };
+
+    const comResultado = async (resultado = RESULTADO, agente = AGENTE) => {
+      const wrapper = montar();
+      store.state[`${ESTADO}getThread`] = { id: 55 };
+      store.state[`${ESTADO}getMessages`] = [
+        { role: 'user', content: 'Curto e preço com a equipe' },
+        { role: 'assistant', content: 'Qual equipe?' },
+      ];
+      store.state[`${ESTADO}getStatus`] = 'open';
+      store.state[`${ESTADO}getPhase`] = 'interviewing';
+      store.state[`${ESTADO}getThreadState`] = { parcial: true, resultado };
+      store.state[`${ESTADO}getAgent`] = agente && { ...agente, tone: 'curto' };
+      await nextTick();
+      return wrapper;
+    };
+
+    it('shows the card before the open question, and Pronto stays plain while something is missing', async () => {
+      const wrapper = await comResultado();
+
+      expect(no('[data-feito]')).toBeNull();
+      expect(no('[data-parcial]')).toBeNull();
+      const cartao = no('[data-conferido]');
+      const pergunta = todos('[data-mensagem="assistant"]').pop();
+      const ordem = todos('[data-conferido], [data-mensagem="assistant"]');
+      expect(ordem.indexOf(cartao)).toBeLessThan(ordem.indexOf(pergunta));
+      expect(todos('[data-item]').map(item => item.dataset.item)).toEqual([
+        'aplicado',
+        'nao_aplicado',
+      ]);
+      expect(no('[data-pronto]').className).not.toContain('bg-n-blue-11');
+      wrapper.unmount();
+    });
+
+    it('makes Pronto primary when everything asked went in', async () => {
+      const wrapper = await comResultado({
+        ...RESULTADO,
+        itens: [
+          { estado: 'aplicado', texto: 'Curto.' },
+          { estado: 'sem_pedido', texto: 'Saudação nova' },
+        ],
+      });
+
+      expect(no('[data-pronto]').className).toContain('bg-n-blue-11');
+      wrapper.unmount();
+    });
+
+    it('undoes through the store and starts the test phone over', async () => {
+      // Sem o agente relido (a leitura dele pode falhar), o celular recomeça pelo próprio Desfazer.
+      const wrapper = await comResultado(RESULTADO, null);
+      expect(no('[data-atualizado]')).toBeNull();
+
+      no('[data-desfazer]').click();
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}desfazerAjuste`, {
+        threadId: 55,
+      });
+      expect(no('[data-atualizado]')).not.toBeNull();
+      expect(no('[data-erro-desfazer]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('after a 409 says the agent changed and hides the undo', async () => {
+      const wrapper = await comResultado();
+      store.dispatch.mockImplementation(async acao => {
+        if (acao === `${ESTADO}desfazerAjuste`) {
+          throw Object.assign(new Error('conflito'), {
+            response: { status: 409 },
+          });
+        }
+        return null;
+      });
+
+      no('[data-desfazer]').click();
+      await flushPromises();
+
+      expect(no('[data-erro-desfazer]').textContent).toContain(
+        'CONFERIDO.MUDOU_DEPOIS'
+      );
+      expect(no('[data-desfazer]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  // #1428 (parte 3) — a faixa "Última mudança" na tela nova: o direito de desfazer vem do servidor, no
+  // agente, mesmo depois de recarregar a página.
+  describe('last change strip (pilot)', () => {
+    const ULTIMA = { thread_id: 41, linhas: ['Respostas curtas'] };
+    const comUltima = (
+      agente = { ...AGENTE, ultima_mudanca_desfazivel: ULTIMA }
+    ) => montar({ agente });
+
+    beforeEach(() => {
+      conversas.desfazer.mockReset();
+    });
+
+    it('shows the last change above the new conversation, and nothing without it', async () => {
+      const wrapper = comUltima();
+      await nextTick();
+      expect(no('[data-ultima-mudanca]').textContent).toContain(
+        'CONFERIDO.ULTIMA_MUDANCA'
+      );
+      wrapper.unmount();
+
+      const semUltima = montar();
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      semUltima.unmount();
+    });
+
+    it('goes away when the agent changes, while thinking and behind the result card', async () => {
+      const wrapper = comUltima();
+      await nextTick();
+      await wrapper.setProps({ agente: { ...AGENTE } });
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+
+      await wrapper.setProps({
+        agente: { ...AGENTE, ultima_mudanca_desfazivel: ULTIMA },
+      });
+      store.state[`${ESTADO}getStatus`] = 'processing';
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+
+      store.state[`${ESTADO}getStatus`] = 'ready';
+      store.state[`${ESTADO}getThreadState`] = {
+        resultado: { itens: [], conferido: true, pode_desfazer: true },
+      };
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('stays after a question in the same conversation (no result card)', async () => {
+      const wrapper = comUltima();
+      store.state[`${ESTADO}getMessages`] = [
+        { role: 'user', content: 'O que ele faz?' },
+        { role: 'assistant', content: 'Ele atende os clientes.' },
+      ];
+      store.state[`${ESTADO}getStatus`] = 'open';
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('undoes by the thread the server named, re-reads the agent and restarts the phone', async () => {
+      conversas.desfazer.mockResolvedValue({ data: {} });
+      const wrapper = comUltima();
+      await nextTick();
+      expect(no('[data-atualizado]')).toBeNull();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(conversas.desfazer).toHaveBeenCalledWith(41);
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      expect(no('[data-ultima-desfeita]').textContent).toContain(
+        'CONFERIDO.DESFEITO'
+      );
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      expect(no('[data-atualizado]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('after a 409 says the agent changed and hides the undo', async () => {
+      conversas.desfazer.mockRejectedValue({ response: { status: 409 } });
+      const wrapper = comUltima();
+      await nextTick();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(no('[data-erro-desfazer]').textContent).toContain(
+        'CONFERIDO.MUDOU_DEPOIS'
+      );
+      expect(no('[data-desfazer-ultima]')).toBeNull();
+      expect(no('[data-ultima-desfeita]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  // #1428 (parte 3, F3): o Desfazer cancelou o pedido em voo desta conversa.
+  it('says the request was canceled by the undo, without a retry', async () => {
+    const wrapper = montar();
+    store.state[`${ESTADO}getThread`] = { id: 55 };
+    store.state[`${ESTADO}getStatus`] = 'failed';
+    store.state[`${ESTADO}getError`] = 'failed';
+    store.state[`${ESTADO}getThreadState`] = {
+      error: 'superada_pelo_desfazer',
+    };
+    await nextTick();
+
+    const erro = no('[data-erro]');
+    expect(erro.textContent).toContain('MUDAR_VISTA.CANCELADO_PELO_DESFAZER');
+    expect(erro.textContent).not.toContain('MUDAR_VISTA.ERRO_GARANTIA');
+    expect(erro.querySelector('button')).toBeNull();
     wrapper.unmount();
   });
 

@@ -482,6 +482,11 @@
           "policy": "Policy",
           "audience": "Outside the target audience",
           "schedule": "Outside the schedule",
+          "recuperacao_falhou": "WhatsApp message not shown (check the phone)",
+          "recuperada_tarde": "WhatsApp message arrived late",
+          "recuperacao_acordar_falhou": "WhatsApp message recovered, AI not called",
+          "recuperacao_passagem_falhou": "WhatsApp message not shown, handoff not done",
+          "recuperada_so_contexto": "Recovered message: AI reply was only internal context",
           "other": "Other / unspecified"
         }
       },
@@ -742,6 +747,7 @@
         "OCUPADO_TEXTO": "Put {nome} in their place",
         "EXTERNO": "{canal} · An external agent already answers here",
         "EXTERNO_TEXTO": "An external agent already answers here. To use this channel, stop the external agent first.",
+        "FORA_DO_ALCANCE_TEXTO": "You are not a member of this channel. Ask an administrator to change the agent here.",
         "TROCA": "{outro} stops answering on {canal}, but stays on your list. The open conversations on {canal} go back to the team.",
         "TROCA_PARA": "{outro} is on no other channel: it stops answering until you choose a channel for it.",
         "TODOS_OCUPADOS": "All your channels already have an agent. Put {nome} in the place of one of them or connect another channel.",
@@ -1309,6 +1315,7 @@
           "JEITO_NOVO": "The way of talking changed too. Test it on the side.",
           "ERRO": "I could not answer right now.",
           "ERRO_GARANTIA": "Nothing changed in {nome}.",
+          "CANCELADO_PELO_DESFAZER": "This change was undone while I was working; this request was canceled. Ask again if you want.",
           "SAIR_TITULO": "Leave without finishing?",
           "SAIR_TEXTO": "Nothing changes in {nome}.",
           "CONTINUAR_AQUI": "Stay here",
@@ -1326,6 +1333,24 @@
             "B": "More formal",
             "C": "More relaxed",
             "D": "Shorter answers"
+          },
+          "CONFERIDO": {
+            "TITULO_TUDO": "Done. I changed {n} thing in {nome}. | Done. I changed {n} things in {nome}.",
+            "TITULO_MUDEI": "I changed {n} thing in {nome}. | I changed {n} things in {nome}.",
+            "TITULO_PARTE": "I changed {ok} of {total} requests in {nome}.",
+            "NAO_CONFERIDO": "I changed {nome}, but could not double-check it. Test it on the side to see if it is how you want.",
+            "APLICADO": "Applied:",
+            "DUVIDA": "I could not apply: “{pedido}”.",
+            "SEM_PEDIDO": "I also changed, without you asking: {lista}. If you do not want it, just tell me what to remove.",
+            "FALTOU_FORA": "Part of what you asked did not go in. See the question right below.",
+            "DESFAZER": "Undo",
+            "DESFAZENDO": "Undoing…",
+            "DESFEITO": "Undone. {nome} is back to how it was.",
+            "DESFEITO_SOZINHO": "I undid what you had not asked for. {nome} stays as before.",
+            "MUDOU_DEPOIS": "{nome} changed after this conversation, so it cannot be undone from here. To go back, use “Previous ways of answering”.",
+            "ERRO": "I could not undo it now. Try again.",
+            "ULTIMA_MUDANCA": "Last change: {lista}.",
+            "ULTIMA_MUDANCA_SEM_RESUMO": "Last change made by chatting."
           }
         },
         "FOTO": {
@@ -1689,6 +1714,7 @@
         "SO_PESSOAS": "Served only by people; {nome} receives when someone hands over",
         "SO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over",
         "OUTRO_ROBO": "An external agent answers on this channel. A team agent cannot join a channel with an external agent yet.",
+        "FORA_DO_ALCANCE": "You are not a member of this channel. Ask an administrator to change the agent here.",
         "AVISO_PESSOAS": "Served only by people; {nome} receives when someone hands over. New conversations stay with the people.",
         "AVISO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over. New conversations stay with the people.",
         "SAI_PESSOAS": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to the people on the team.",

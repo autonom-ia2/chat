@@ -1,4 +1,5 @@
 <script setup>
+import { basicoDaTrilhaConcluido, passosPendentes } from './trilhaBasica';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useWindowSize } from '@vueuse/core';
 import { useRoute } from 'vue-router';
@@ -45,16 +46,15 @@ const { isAllowed, resolvePath, isCollapsed, sidebarWidth } =
 const { brandedColor } = useBrandedSidebar();
 const tema = computed(() => temaDoMenu(Boolean(brandedColor.value)));
 
-// Primeiros passos: a pílula diz quantos faltam, e o item sai do topo quando a trilha termina.
+// Primeiros passos: a pílula diz quantos faltam, e o item sai do topo quando o básico da trilha está feito (vira
+// cartão em Configurações; ver trilhaBasica.js).
 const trilha = useOnboardingTrail();
 const temPrimeirosPassos = computed(() =>
   props.itens.some(item => item.name === 'FirstSteps')
 );
-const pendentes = computed(
-  () => trilha.passos.value.filter(passo => passo.status === 'pendente').length
-);
-const trilhaConcluida = computed(
-  () => trilha.total.value > 0 && pendentes.value === 0
+const pendentes = computed(() => passosPendentes(trilha.passos.value));
+const basicoConcluido = computed(() =>
+  basicoDaTrilhaConcluido(trilha.passos.value)
 );
 watch(
   temPrimeirosPassos,
@@ -68,7 +68,7 @@ const organizado = computed(() =>
   organizeForkMenu(props.itens, {
     t,
     accountScopedRoute,
-    trilhaConcluida: trilhaConcluida.value,
+    basicoConcluido: basicoConcluido.value,
   })
 );
 

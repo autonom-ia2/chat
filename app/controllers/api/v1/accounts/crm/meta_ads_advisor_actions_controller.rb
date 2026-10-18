@@ -1,5 +1,6 @@
 # Os gestos da pessoa sobre cada ação do consultor de anúncios (#1110, F5). Só administrador (policy
-# Crm::MetaAdsConnection :show?, a mesma da ação do dia).
+# Crm::MetaAdsConnection :update?): quem só tem `meta_ads_view` vê o consultor, mas não age sobre ele (#1794). Vira
+# `meta_ads_manage` no lote das chaves protegidas.
 #
 # POST advisor_actions/:id/open    → primeiro clique no botão principal. Idempotente, não muda o status (D5.9).
 # POST advisor_actions/:id/accept  → "Feito". Só de `open`; senão 422 not_open.
@@ -34,7 +35,7 @@ class Api::V1::Accounts::Crm::MetaAdsAdvisorActionsController < Api::V1::Account
   private
 
   def ensure_administrator
-    return if Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).show?
+    return if Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).update?
 
     render json: { error: 'forbidden' }, status: :forbidden
   end

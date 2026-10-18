@@ -1,6 +1,9 @@
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import { frontendURL } from '../../../../helper/URLHelper';
-import { CRM_MANAGE_AI_PERMISSION } from 'dashboard/constants/permissions';
+import {
+  ASSIGNMENT_MANAGE_PERMISSION,
+  CRM_MANAGE_AI_PERMISSION,
+} from 'dashboard/constants/permissions';
 
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const AssignmentPolicyIndex = () => import('./Index.vue');
@@ -28,6 +31,7 @@ const ensureCrmAiEnabled = (to, _from, next) => {
   next({ name: 'home', params: to.params });
 };
 
+// Regras de distribuição e capacidade: administrador ou assignment_manage (#1797).
 export default {
   routes: [
     {
@@ -46,7 +50,7 @@ export default {
           component: AssignmentPolicyIndex,
           meta: {
             featureFlag: FEATURE_FLAGS.ASSIGNMENT_V2,
-            permissions: ['administrator'],
+            permissions: ['administrator', ASSIGNMENT_MANAGE_PERMISSION],
           },
         },
         {
@@ -55,7 +59,7 @@ export default {
           component: AgentAssignmentIndex,
           meta: {
             featureFlag: FEATURE_FLAGS.ASSIGNMENT_V2,
-            permissions: ['administrator'],
+            permissions: ['administrator', ASSIGNMENT_MANAGE_PERMISSION],
           },
         },
         {
@@ -64,7 +68,7 @@ export default {
           component: AgentAssignmentCreate,
           meta: {
             featureFlag: FEATURE_FLAGS.ASSIGNMENT_V2,
-            permissions: ['administrator'],
+            permissions: ['administrator', ASSIGNMENT_MANAGE_PERMISSION],
           },
         },
         {
@@ -73,7 +77,7 @@ export default {
           component: AgentAssignmentEdit,
           meta: {
             featureFlag: FEATURE_FLAGS.ASSIGNMENT_V2,
-            permissions: ['administrator'],
+            permissions: ['administrator', ASSIGNMENT_MANAGE_PERMISSION],
           },
         },
         {
@@ -82,7 +86,7 @@ export default {
           component: AgentCapacityIndex,
           meta: {
             featureFlag: FEATURE_FLAGS.ADVANCED_ASSIGNMENT,
-            permissions: ['administrator'],
+            permissions: ['administrator', ASSIGNMENT_MANAGE_PERMISSION],
           },
         },
         {
@@ -91,7 +95,7 @@ export default {
           component: AgentCapacityCreate,
           meta: {
             featureFlag: FEATURE_FLAGS.ADVANCED_ASSIGNMENT,
-            permissions: ['administrator'],
+            permissions: ['administrator', ASSIGNMENT_MANAGE_PERMISSION],
           },
         },
         {
@@ -100,7 +104,7 @@ export default {
           component: AgentCapacityEdit,
           meta: {
             featureFlag: FEATURE_FLAGS.ADVANCED_ASSIGNMENT,
-            permissions: ['administrator'],
+            permissions: ['administrator', ASSIGNMENT_MANAGE_PERMISSION],
           },
         },
       ],

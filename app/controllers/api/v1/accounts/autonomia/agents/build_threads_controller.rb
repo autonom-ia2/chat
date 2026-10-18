@@ -1,7 +1,20 @@
 class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Accounts::Autonomia::BaseController
-  before_action :fetch_thread, only: [:show, :messages, :retry_build]
+  before_action :fetch_thread, only: [:show, :messages, :retry_build, :desfazer]
+  rescue_from ::Autonomia::Agents::DesfazerAjuste::AjusteMudou, with: :render_ajuste_mudou
+  rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
 
   def show; end
+
+  # #1428 (parte 3, piloto) — desfaz o último ajuste desta conversa: o agente volta, exato, à versão de antes. O cliente
+  # não manda id de versão; quem decide é o state da thread, sob a trava do agente. Manual e Agente de Cotação: 422;
+  # fora do piloto: 404 (o model recusa).
+  def desfazer
+    return head :not_found if @thread.agent.nil?
+
+    @thread.agent.desfazer_ajuste!(thread: @thread, created_by: Current.user)
+    @thread.reload
+    render :show
+  end
 
   # Abre a conversa do Construtor e dispara a geração assíncrona em job (begin_build! gera o build_token;
   # o SubmitJob roda a chamada SÍNCRONA ao modelo em poucos segundos) e retorna 202. O front faz polling
@@ -53,11 +66,20 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # retry_build porque `retry` é palavra reservada do Ruby; a rota expõe POST :retry.
   def retry_build
     return render_unprocessable(I18n.t('autonomia.build_thread.retry_unavailable')) unless @thread.failed? || @thread.processing?
+    # #1428 (parte 3): o Desfazer cancelou este pedido; refazer a geração o aplicaria sem a pessoa pedir de novo.
+    if @thread.state.to_h['error'] == ::Autonomia::Agents::DesfazerAjuste::SUPERADA
+      return render_unprocessable(I18n.t('autonomia.build_thread.pedir_de_novo'))
+    end
 
     claim_build_and_enqueue
   end
 
   private
+
+  # 409 com código estável: o agente mudou depois do ajuste (ou há conversa mais nova); o caminho é Versões.
+  def render_ajuste_mudou
+    render json: { error: I18n.t('autonomia.build_thread.ajuste_mudou'), code: 'agente_mudou' }, status: :conflict
+  end
 
   # Tema 14 (#1434): a marca de origem do ajudante (`papel: 'ajudante'`) só nasce com a Fase 2 ligada na conta. Sem ela,
   # o pedido abre a conversa de sempre (sem a marca), como a tela faz.

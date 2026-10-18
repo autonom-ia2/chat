@@ -93,12 +93,12 @@ export const routes = [
     component: () => import('../campaigns/pages/TrackedLinksPage.vue'),
   },
   {
-    // Anúncios da Meta (#1047): conexão guiada. A conexão é só de administrador
-    // (a API responde 403 aos demais), atrás da flag por conta meta_ads_hub.
+    // Anúncios da Meta (#1047): conexão guiada e painel, atrás da flag por conta meta_ads_hub.
+    // Ver: administrador ou meta_ads_view (#1794). Conectar e configurar: só administrador.
     path: frontendURL('accounts/:accountId/campaigns/meta-ads'),
     name: 'campaigns_meta_ads_index',
     meta: {
-      permissions: ['administrator'],
+      permissions: ['administrator', 'meta_ads_view'],
       featureFlag: FEATURE_FLAGS.META_ADS_HUB,
     },
     beforeEnter: ensureCrmEnabled,
