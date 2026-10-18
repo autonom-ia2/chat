@@ -61,31 +61,37 @@ module Autonomia::Agents::Interacao
   end
 
   # A interação pedida pelo modelo, com chaves em texto e só os campos do tipo; nil quando não pediu, quando o tipo
-  # não existe ou quando o endereço do link não está em `contexto` (o texto do turno).
-  def do_modelo(valor, contexto:)
+  # não existe ou quando o link não é http(s) com host IGUAL a um dos `enderecos` do dono (`Enderecos.dos_textos`).
+  # O link recusado não sai nem em texto: a resposta segue sem ele.
+  def do_modelo(valor, enderecos:)
     return unless valor.is_a?(Hash)
 
     case valor['tipo']
     when 'opcoes' then opcoes(valor)
-    when 'link' then link(valor['link'], contexto.to_s)
+    when 'link' then link(valor['link'], enderecos)
     end
   end
 
-  # -> { content:, rich_message: } da mensagem que leva a interação. `texto`: o que vai antes (a resposta, ou o
-  # último pedaço dela; nil quando a interação sai sozinha). Opções: o corpo é o texto e a pergunta. Link: o corpo é o
-  # texto. Quando o formato não sai (canal que o recusa, sem cabeçalho, fora do contrato do tipo), `rich_message` é
-  # nil e o conteúdo é o corpo com a versão em texto do tipo.
+  # -> { content:, rich_message:, em_texto: } da mensagem que leva a interação. `texto`: o que vai antes (a resposta,
+  # ou o último pedaço dela; nil quando a interação sai sozinha). Opções: o corpo é o texto e a pergunta. Link: o corpo
+  # é o texto. `em_texto`: o corpo com a versão em texto do tipo (as opções numeradas; "rótulo: endereço"). Quando o
+  # formato não sai (canal que o recusa, sem cabeçalho, fora do contrato do tipo), `rich_message` é nil e o conteúdo é
+  # o `em_texto`.
   def mensagem(interacao, texto:, conversation:)
     corpo = interacao['tipo'] == 'opcoes' ? [texto, interacao['pergunta']].compact_blank.join("\n\n") : texto.to_s
     formato = rich_message(interacao, locale: conversation.account.locale)
-    return { content: corpo, rich_message: formato } if sai_o_formato?(formato, corpo, conversation)
-
     complemento = RichMessages.type_class(formato['type']).new(formato).fallback_text(corpo)
-    { content: [corpo.presence, complemento.presence].compact.join("\n\n"), rich_message: nil }
+    em_texto = [corpo.presence, complemento.presence].compact.join("\n\n")
+    return { content: corpo, rich_message: formato, em_texto: em_texto } if sai_o_formato?(formato, corpo, conversation)
+
+    { content: em_texto, rich_message: nil, em_texto: em_texto }
   end
 
   # Os pedaços da entrega humanizada com a interação no último: as opções num pedaço a mais (a pergunta, com o ritmo de
   # um pedaço seguinte), o link no último pedaço da resposta. Sem pedaço nenhum, nada muda (quem chama vai ao clássico).
+  # DEPLOY COM AS STACKS MISTURADAS: o `text` do último pedaço é sempre a versão em texto inteira (as opções numeradas,
+  # o "rótulo: endereço"), que um worker antigo manda como está; o corpo que vai junto do formato fica em `corpo`, que
+  # só o worker novo lê (ChunkedDeliveryJob#build_message!).
   def nos_pedacos(pedacos, interacao, conversation:)
     return pedacos if interacao.nil? || pedacos.empty?
 
@@ -96,7 +102,23 @@ module Autonomia::Agents::Interacao
                      [pedacos[0...-1], pedacos.last]
                    end
     final = mensagem(interacao, texto: ultimo['text'], conversation: conversation)
-    base + [ultimo.merge('text' => final[:content], 'rich_message' => final[:rich_message]).compact]
+    com_formato = final[:rich_message] ? { 'corpo' => final[:content], 'rich_message' => final[:rich_message] } : {}
+    base + [ultimo.merge('text' => final[:em_texto]).merge(com_formato)]
+  end
+
+  # A interação com os textos que o cliente lê (cabeçalho, pergunta, botão da lista, título e descrição das opções,
+  # rótulo do link) passados pela mesma limpeza da resposta (o bloco: #1669 marca da equipe, #1489 linha recuperada).
+  # Id e endereço ficam como estão. nil continua nil.
+  def limpa(interacao)
+    return if interacao.nil?
+
+    limpar = ->(texto) { texto.is_a?(String) ? yield(texto) : texto }
+    return interacao.merge('rotulo' => limpar.call(interacao['rotulo'])) if interacao['tipo'] == 'link'
+
+    opcoes = interacao['opcoes'].map do |opcao|
+      opcao.merge('title' => limpar.call(opcao['title']), 'description' => limpar.call(opcao['description']))
+    end
+    interacao.merge(%w[header pergunta botao].index_with { |campo| limpar.call(interacao[campo]) }).merge('opcoes' => opcoes)
   end
 
   # O `rich_message` (chaves em texto) da interação. O botão da lista sem texto do modelo sai no idioma da conta.
@@ -127,8 +149,9 @@ module Autonomia::Agents::Interacao
       'botao' => valor['botao'].presence, 'opcoes' => lista }
   end
 
-  def link(valor, contexto)
-    return unless valor.is_a?(Hash) && valor['url'].is_a?(String) && valor['url'].present? && contexto.include?(valor['url'])
+  def link(valor, enderecos)
+    endereco = Enderecos.normalizado(valor['url']) if valor.is_a?(Hash)
+    return unless endereco && enderecos.include?(endereco)
 
     { 'tipo' => 'link', 'rotulo' => valor['rotulo'].to_s, 'url' => valor['url'] }
   end

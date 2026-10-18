@@ -488,12 +488,14 @@ module Autonomia
           return result if result.nil? || !equipe.aplica?
 
           limpa = equipe.resposta(result.reply)
-          return result if limpa == result.reply
+          # #1479: os textos da interação passam pela mesma limpeza.
+          interacao = ::Autonomia::Agents::Interacao.limpa(result.interacao) { |texto| equipe.resposta(texto) }
+          return result if limpa == result.reply && interacao == result.interacao
 
           ::Autonomia::Agents::AnswerResult.new(reply: limpa, confidence: result.confidence, handoff: result.handoff,
                                                 used_knowledge: result.used_knowledge,
                                                 answered_from_knowledge: result.answered_from_knowledge,
-                                                raw_reply: result.raw_reply, error: result.error, interacao: result.interacao)
+                                                raw_reply: result.raw_reply, error: result.error, interacao: interacao)
         end
 
         # #1606: o turno que FALHOU (IA sem resultado, resposta vazia, exceção) pode ser retomado — pela troca de dono ou

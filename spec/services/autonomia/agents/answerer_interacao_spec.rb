@@ -75,9 +75,42 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(atender.interacao).to eq('tipo' => 'link', 'rotulo' => 'Ver pedido', 'url' => url)
   end
 
-  it 'aceita o link que o cliente escreveu na conversa' do
+  it 'aceita o link que está na instrução do agente' do
+    agent.update!(instruction: "Atenda. Pedidos: #{url}.")
     modelo_responde(link)
-    expect(atender(query: "abre isso pra mim: #{url}").interacao).to include('url' => url)
+    expect(atender.interacao).to include('url' => url)
+  end
+
+  it 'aceita o link que está na base de conhecimento' do
+    agent.update!(config: {})
+    trecho = Autonomia::Agents::KnowledgeEntry.new(id: 9, content: "Acompanhe o pedido em #{url}")
+    allow(Autonomia::Agents::Retriever).to receive(:new).and_return(instance_double(Autonomia::Agents::Retriever, retrieve: [trecho]))
+    modelo_responde(link)
+    expect(atender.interacao).to include('url' => url)
+  end
+
+  it 'aceita o link que o agente já mandou nesta conversa' do
+    modelo_responde(link)
+    historico = [{ role: 'user', content: 'cadê meu pedido?' }, { role: 'assistant', content: "Veja aqui: #{url}" }]
+    resultado = described_class.new(agent: agent, query: 'de novo?', history: historico, trust_instruction: true, delivery: delivery).answer
+    expect(resultado.interacao).to include('url' => url)
+  end
+
+  it 'descarta o endereço que aparece só na fala do cliente (mensagem atual ou histórico)' do
+    modelo_responde(link)
+    expect(atender(query: "abre isso pra mim: #{url}").interacao).to be_nil
+    historico = [{ role: 'user', content: "o link é #{url}" }]
+    resultado = described_class.new(agent: agent, query: 'manda o botão', history: historico, trust_instruction: true, delivery: delivery).answer
+    expect(resultado.interacao).to be_nil
+  end
+
+  it 'M1: descarta o endereço que aparece só na memória' do
+    modelo_responde(link)
+    memoria = Autonomia::Agents::PromptParts::Memoria::Blocos.new(antes: "Cliente mandou #{url}", sistema: "Pedido em #{url}",
+                                                                  fatos: "Link do pedido: #{url}", ids: [1])
+    resultado = described_class.new(agent: agent, query: 'manda o botão', trust_instruction: true, delivery: delivery, memoria: memoria).answer
+    expect(pedidos.last[:input].to_s).to include(url)
+    expect(resultado.interacao).to be_nil
   end
 
   it 'descarta o link que o modelo montou (fora do texto do turno), e a resposta segue' do

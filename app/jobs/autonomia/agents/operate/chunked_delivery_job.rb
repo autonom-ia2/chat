@@ -129,12 +129,13 @@ module Autonomia
           [posted, motivo]
         end
 
-        # `rich_message` (#1479): só o último pedaço o traz, com a interação já decidida pelo Responder.
+        # `rich_message` (#1479): só o último pedaço o traz, com a interação já decidida pelo Responder. Com ele, o conteúdo
+        # é o `corpo`; o `text` desse pedaço é a versão em texto inteira, para o worker que ainda não conhece o formato.
         def build_message!(conversation, agent_inbox, reply_to_message_id, index, chunk)
           Messages::MessageBuilder.new(
             nil, conversation,
             ActionController::Parameters.new(
-              content: chunk['text'].to_s, message_type: 'outgoing', sender_type: 'AgentBot',
+              content: (chunk['rich_message'] ? chunk['corpo'] : chunk['text']).to_s, message_type: 'outgoing', sender_type: 'AgentBot',
               sender_id: agent_inbox.agent_bot_id, private: false,
               content_attributes: {
                 autonomia_agent_id: agent_inbox.agent.id,

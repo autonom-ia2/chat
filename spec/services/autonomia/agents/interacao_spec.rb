@@ -16,9 +16,20 @@ RSpec.describe Autonomia::Agents::Interacao do
      { 'id' => 'noite', 'titulo' => 'Noite', 'descricao' => nil }]
   end
   let(:pedido) { { 'tipo' => 'opcoes', 'header' => 'Agendamento', 'pergunta' => 'Qual período?', 'opcoes' => tres, 'botao' => nil, 'link' => nil } }
-  let(:opcoes) { described_class.do_modelo(pedido, contexto: '') }
-  let(:link) { described_class.do_modelo({ 'tipo' => 'link', 'link' => { 'rotulo' => 'Abrir proposta', 'url' => url } }, contexto: "veja #{url}") }
+  let(:opcoes) { described_class.do_modelo(pedido, enderecos: Set.new) }
+  let(:link) { pede_link(url, "veja #{url}") }
   let(:url) { 'https://exemplo.com.br/proposta?a=1&b=2' }
+  let(:numerada) { "Temos vaga.\n\nQual período?\n\n1. Manhã\n2. Tarde\n3. Noite" }
+
+  # Os endereços que o dono escreveu nestes textos.
+  def donos(*textos)
+    described_class::Enderecos.dos_textos(textos)
+  end
+
+  # O modelo pede um botão para `pedido`; o dono escreveu `textos`.
+  def pede_link(pedido, *textos)
+    described_class.do_modelo({ 'tipo' => 'link', 'link' => { 'rotulo' => 'Abrir proposta', 'url' => pedido } }, enderecos: donos(*textos))
+  end
 
   def janela_aberta(conversa = conversation)
     create(:message, message_type: :incoming, content: 'oi', conversation: conversa, inbox: conversa.inbox, account: account)
@@ -78,7 +89,7 @@ RSpec.describe Autonomia::Agents::Interacao do
 
   describe '.do_modelo' do
     it 'ignora o que não é interação' do
-      expect([nil, 'opcoes', { 'tipo' => 'mapa' }].map { |valor| described_class.do_modelo(valor, contexto: '') }).to all(be_nil)
+      expect([nil, 'opcoes', { 'tipo' => 'mapa' }].map { |valor| described_class.do_modelo(valor, enderecos: Set.new) }).to all(be_nil)
     end
 
     it 'guarda as opções; sem texto do modelo, o botão da lista fica para a entrega' do
@@ -89,21 +100,62 @@ RSpec.describe Autonomia::Agents::Interacao do
     end
 
     it 'usa o botão da lista escolhido pelo modelo' do
-      expect(described_class.do_modelo(pedido.merge('botao' => 'Ver horários'), contexto: '')['botao']).to eq('Ver horários')
+      expect(described_class.do_modelo(pedido.merge('botao' => 'Ver horários'), enderecos: Set.new)['botao']).to eq('Ver horários')
     end
 
-    it 'aceita o link cujo endereço está no texto do turno' do
+    it 'aceita o link IGUAL a um endereço que o dono escreveu' do
       expect(link).to eq('tipo' => 'link', 'rotulo' => 'Abrir proposta', 'url' => url)
     end
 
-    it 'descarta o link cujo endereço não está no texto do turno' do
-      pedido_de_link = { 'tipo' => 'link', 'link' => { 'rotulo' => 'Abrir', 'url' => 'https://inventado.com/x' } }
-      expect(described_class.do_modelo(pedido_de_link, contexto: 'veja https://inventado.com/')).to be_nil
+    it 'descarta o link sem endereço' do
+      expect(described_class.do_modelo({ 'tipo' => 'link', 'link' => { 'rotulo' => 'Abrir', 'url' => '' } }, enderecos: Set.new)).to be_nil
+      expect(described_class.do_modelo({ 'tipo' => 'link', 'link' => nil }, enderecos: Set.new)).to be_nil
     end
 
-    it 'descarta o link sem endereço' do
-      expect(described_class.do_modelo({ 'tipo' => 'link', 'link' => { 'rotulo' => 'Abrir', 'url' => '' } }, contexto: 'x')).to be_nil
-      expect(described_class.do_modelo({ 'tipo' => 'link', 'link' => nil }, contexto: 'x')).to be_nil
+    # As sondas da revisão do link: endereço inteiro, só de fonte do dono, http(s) com host.
+    describe 'sondas do link' do
+      it 'L1: pedaço de um endereço do dono não vale' do
+        expect(pede_link('https://loja.com/pedido/42', 'Pague em https://loja.com/pedido/42/pagar')).to be_nil
+        expect(pede_link('https://loja.com/pedido', 'Pague em https://loja.com/pedido?id=42')).to be_nil
+      end
+
+      it 'L2: endereço a mais (outro host ou caminho além do que o dono escreveu) não vale' do
+        expect(pede_link('https://loja.com.golpe.net/pagar', 'Site: https://loja.com')).to be_nil
+        expect(pede_link('https://loja.com/admin', 'Site: https://loja.com')).to be_nil
+        expect(pede_link('https://inventado.com/x', 'veja https://inventado.com/')).to be_nil
+      end
+
+      it 'L3: só o esquema e o host aceitam diferença de maiúsculas; o resto tem de ser igual' do
+        expect(pede_link('https://loja.exemplo.com/Fatura/8841', 'Pague em HTTPS://Loja.Exemplo.COM/Fatura/8841')).to be_present
+        expect(pede_link('https://loja.exemplo.com/fatura/8841', 'Pague em https://loja.exemplo.com/Fatura/8841')).to be_nil
+      end
+
+      it 'L4: só http ou https, com host' do
+        expect(pede_link('javascript:alert(1)', 'veja javascript:alert(1)')).to be_nil
+        expect(pede_link('ftp://loja.com/arquivo', 'baixe em ftp://loja.com/arquivo')).to be_nil
+        expect(pede_link('https:///sem-host', 'veja https:///sem-host')).to be_nil
+        expect(pede_link('loja.com/pagar', 'veja loja.com/pagar')).to be_nil
+        expect(pede_link('httpx://loja.com/pagar', 'veja httpx://loja.com/pagar')).to be_nil
+      end
+
+      it 'L5: o endereço inteiro sai do texto sem a pontuação colada, e com acento' do
+        texto = 'Pague em https://loja.com/f/8841. Ou (https://loja.com/f/9), ou [aqui](https://loja.com/f/7) ou ' \
+                'https://loja.com/serviços/limpeza!'
+        expect(%w[https://loja.com/f/8841 https://loja.com/f/9 https://loja.com/f/7 https://loja.com/serviços/limpeza]
+                 .map { |pedido| pede_link(pedido, texto).present? }).to all(be(true))
+        expect(pede_link('https://loja.com/servi', texto)).to be_nil
+      end
+    end
+  end
+
+  describe '.limpa' do
+    it 'passa cabeçalho, pergunta, botão, títulos, descrições e rótulo pelo bloco; id e endereço não' do
+      lista = opcoes.merge('opcoes' => [{ 'id' => 'a', 'title' => 'Manhã', 'description' => 'cedo' }], 'botao' => 'Ver')
+      limpa = described_class.limpa(lista, &:upcase)
+      expect(limpa).to include('header' => 'AGENDAMENTO', 'pergunta' => 'QUAL PERÍODO?', 'botao' => 'VER',
+                               'opcoes' => [{ 'id' => 'a', 'title' => 'MANHÃ', 'description' => 'CEDO' }])
+      expect(described_class.limpa(link, &:upcase)).to eq(link.merge('rotulo' => 'ABRIR PROPOSTA'))
+      expect(described_class.limpa(nil) { |texto| texto }).to be_nil
     end
   end
 
@@ -137,7 +189,7 @@ RSpec.describe Autonomia::Agents::Interacao do
     it 'mais de 3 opções sai como lista, até 10' do
       janela_aberta
       dez = (1..10).map { |n| { 'id' => "o#{n}", 'titulo' => "Opção #{n}", 'descricao' => nil } }
-      interacao = described_class.do_modelo(pedido.merge('opcoes' => dez), contexto: '')
+      interacao = described_class.do_modelo(pedido.merge('opcoes' => dez), enderecos: Set.new)
       final = described_class.mensagem(interacao, texto: nil, conversation: conversation)
       expect(final[:content]).to eq('Qual período?')
       expect(RichMessages.build(Message.new(content_attributes: { 'rich_message' => final[:rich_message] }))
@@ -147,7 +199,7 @@ RSpec.describe Autonomia::Agents::Interacao do
     it 'mais de 10 opções sai em texto, com as opções numeradas' do
       janela_aberta
       onze = (1..11).map { |n| { 'id' => "o#{n}", 'titulo' => "Opção #{n}", 'descricao' => nil } }
-      interacao = described_class.do_modelo(pedido.merge('opcoes' => onze), contexto: '')
+      interacao = described_class.do_modelo(pedido.merge('opcoes' => onze), enderecos: Set.new)
       final = described_class.mensagem(interacao, texto: nil, conversation: conversation)
       expect(final[:rich_message]).to be_nil
       expect(final[:content]).to start_with("Qual período?\n\n1. Opção 1\n2. Opção 2")
@@ -157,7 +209,7 @@ RSpec.describe Autonomia::Agents::Interacao do
     it 'sem cabeçalho sai em texto: a pergunta e as opções numeradas' do
       janela_aberta
       final = described_class.mensagem(opcoes.merge('header' => nil), texto: 'Temos vaga.', conversation: conversation)
-      expect(final).to eq(content: "Temos vaga.\n\nQual período?\n\n1. Manhã\n2. Tarde\n3. Noite", rich_message: nil)
+      expect(final).to eq(content: numerada, rich_message: nil, em_texto: numerada)
     end
 
     it 'cabeçalho com mais de 60 caracteres sai em texto' do
@@ -180,7 +232,7 @@ RSpec.describe Autonomia::Agents::Interacao do
     it 'e-mail e chat do site nunca recebem rich_message' do
       [create(:channel_email, account: account), create(:channel_widget, account: account)].each do |channel|
         final = described_class.mensagem(opcoes, texto: 'Temos vaga.', conversation: conversa_em(channel))
-        expect(final).to eq(content: "Temos vaga.\n\nQual período?\n\n1. Manhã\n2. Tarde\n3. Noite", rich_message: nil)
+        expect(final).to eq(content: numerada, rich_message: nil, em_texto: numerada)
       end
     end
 
@@ -188,13 +240,14 @@ RSpec.describe Autonomia::Agents::Interacao do
       janela_aberta
       final = described_class.mensagem(link, texto: 'Sua proposta está pronta.', conversation: conversation)
       expect(final).to eq(content: 'Sua proposta está pronta.',
-                          rich_message: { 'type' => 'link_button', 'label' => 'Abrir proposta', 'url' => url })
+                          rich_message: { 'type' => 'link_button', 'label' => 'Abrir proposta', 'url' => url },
+                          em_texto: "Sua proposta está pronta.\n\nAbrir proposta: #{url}")
     end
 
     it 'link fora do contrato (rótulo longo) sai em texto, com o endereço' do
       janela_aberta
       final = described_class.mensagem(link.merge('rotulo' => 'a' * 21), texto: 'Sua proposta.', conversation: conversation)
-      expect(final).to eq(content: "Sua proposta.\n\n#{'a' * 21}: #{url}", rich_message: nil)
+      expect(final).to eq(content: "Sua proposta.\n\n#{'a' * 21}: #{url}", rich_message: nil, em_texto: "Sua proposta.\n\n#{'a' * 21}: #{url}")
     end
 
     it 'não grava nem acrescenta mensagem à conversa ao conferir' do
@@ -209,11 +262,11 @@ RSpec.describe Autonomia::Agents::Interacao do
 
     before { janela_aberta }
 
-    it 'opções: um pedaço a mais, com a pergunta e o formato; os outros sem formato' do
+    it 'opções: um pedaço a mais, com a pergunta (corpo) e o formato; os outros sem formato' do
       novos = described_class.nos_pedacos(pedacos, opcoes, conversation: conversation)
       expect(novos.size).to eq(3)
       expect(novos.first(2)).to eq(pedacos)
-      expect(novos.last).to include('text' => 'Qual período?', 'rich_message' => hash_including('type' => 'options'))
+      expect(novos.last).to include('corpo' => 'Qual período?', 'rich_message' => hash_including('type' => 'options'))
       expect(novos.last['delay_ms']).to be_a(Integer)
     end
 
@@ -221,7 +274,20 @@ RSpec.describe Autonomia::Agents::Interacao do
       novos = described_class.nos_pedacos(pedacos, link, conversation: conversation)
       expect(novos.size).to eq(2)
       expect(novos.first).to eq(pedacos.first)
-      expect(novos.last).to include('text' => 'Amanhã.', 'rich_message' => hash_including('type' => 'link_button'))
+      expect(novos.last).to include('corpo' => 'Amanhã.', 'rich_message' => hash_including('type' => 'link_button'))
+    end
+
+    # Deploy com as stacks misturadas: o worker antigo não conhece `rich_message` nem `corpo` e manda o `text`.
+    it 'o text do último pedaço é a versão em texto inteira, para o worker antigo' do
+      expect(described_class.nos_pedacos(pedacos, opcoes, conversation: conversation).last['text'])
+        .to eq("Qual período?\n\n1. Manhã\n2. Tarde\n3. Noite")
+      expect(described_class.nos_pedacos(pedacos, link, conversation: conversation).last['text']).to eq("Amanhã.\n\nAbrir proposta: #{url}")
+    end
+
+    it 'sem o formato (caixa que o recusa), o pedaço é só texto, sem corpo' do
+      ultimo = described_class.nos_pedacos(pedacos, opcoes.merge('header' => nil), conversation: conversation).last
+      expect(ultimo).to include('text' => "Qual período?\n\n1. Manhã\n2. Tarde\n3. Noite")
+      expect(ultimo.keys).not_to include('corpo', 'rich_message')
     end
 
     it 'sem interação ou sem pedaço, nada muda' do

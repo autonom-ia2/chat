@@ -15,11 +15,13 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:opcoes) do
     Autonomia::Agents::Interacao.do_modelo(
       { 'tipo' => 'opcoes', 'header' => 'Agendamento', 'pergunta' => 'Qual período?',
-        'opcoes' => [{ 'id' => 'manha', 'titulo' => 'Manhã' }, { 'id' => 'tarde', 'titulo' => 'Tarde' }] }, contexto: ''
+        'opcoes' => [{ 'id' => 'manha', 'titulo' => 'Manhã' }, { 'id' => 'tarde', 'titulo' => 'Tarde' }] }, enderecos: Set.new
     )
   end
   let(:url) { 'https://loja.exemplo.com/pedido/42' }
-  let(:link) { Autonomia::Agents::Interacao.do_modelo({ 'tipo' => 'link', 'link' => { 'rotulo' => 'Ver pedido', 'url' => url } }, contexto: url) }
+  let(:link) do
+    Autonomia::Agents::Interacao.do_modelo({ 'tipo' => 'link', 'link' => { 'rotulo' => 'Ver pedido', 'url' => url } }, enderecos: Set[url])
+  end
 
   around do |example|
     with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true', AI_HUMANIZE_DELIVERY: 'false', AI_AGENT_MEDIA: 'false') { example.run }
@@ -109,7 +111,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       responde("Temos vaga amanhã.\n\nO atendimento dura uma hora.", opcoes)
       perform
       pedacos = pedacos_agendados
-      expect(pedacos.last).to include('text' => 'Qual período?', 'rich_message' => hash_including('type' => 'options'))
+      expect(pedacos.last).to include('corpo' => 'Qual período?', 'rich_message' => hash_including('type' => 'options'))
       expect(pedacos[0...-1]).to all(satisfy { |pedaco| !pedaco.key?('rich_message') })
 
       pedacos.each_index do |indice|
@@ -124,7 +126,20 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       responde('Seu pedido saiu.', link)
       perform
       expect(pedacos_agendados.size).to eq(1)
-      expect(pedacos_agendados.last).to include('text' => 'Seu pedido saiu.', 'rich_message' => hash_including('url' => url))
+      expect(pedacos_agendados.last).to include('corpo' => 'Seu pedido saiu.', 'rich_message' => hash_including('url' => url))
+    end
+
+    # Deploy com as stacks misturadas: o worker antigo só lê `text` (não conhece `rich_message` nem `corpo`). O pedaço
+    # que ele recebe manda a versão em texto inteira, e nunca a pergunta sem as opções.
+    it 'o worker que ainda não conhece o formato manda as opções numeradas' do
+      responde('Temos vaga amanhã.', opcoes)
+      perform
+      como_o_antigo_le = pedacos_agendados.map { |pedaco| pedaco.except('rich_message', 'corpo') }
+      como_o_antigo_le.each_index do |indice|
+        Autonomia::Agents::Operate::ChunkedDeliveryJob.new.perform(conversation.id, agent_inbox.id, nil, como_o_antigo_le, indice, {})
+      end
+      expect(enviadas.last.content).to eq("Qual período?\n\n1. Manhã\n2. Tarde")
+      expect(enviadas.last.content_attributes).not_to have_key('rich_message')
     end
   end
 
@@ -185,6 +200,35 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     perform
     expect(enviadas.last.content).to eq("Temos vaga.\n\nQual período?")
     expect(enviadas.last.content_attributes['rich_message']).to include('type' => 'options')
+  end
+
+  it '#1489: a linha de contexto sai também do cabeçalho, da pergunta, dos títulos e do rótulo' do
+    nota = Autonomia::Agents::Operate::RecoveredHeaderNote::NOTES['image']
+    suja = opcoes.merge('header' => "Agendamento #{nota}", 'pergunta' => "Qual período?\n#{nota}",
+                        'opcoes' => [{ 'id' => 'manha', 'title' => "Manhã #{nota}" }, { 'id' => 'tarde', 'title' => 'Tarde' }])
+    responde('', suja)
+    perform
+    expect(enviadas.last.content).to eq('Qual período?')
+    expect(enviadas.last.content_attributes['rich_message']).to include('header' => 'Agendamento')
+    expect(enviadas.last.content_attributes['rich_message']['options'].pluck('title')).to eq(%w[Manhã Tarde])
+
+    rotulo = Autonomia::Agents::Operate::RecoveredHeaderNote.without_notes(
+      Autonomia::Agents::AnswerResult.new(reply: 'ok', confidence: 1, handoff: {}, interacao: link.merge('rotulo' => "Ver #{nota}"))
+    )
+    expect(rotulo.interacao).to eq(link.merge('rotulo' => 'Ver'))
+  end
+
+  it '#1669: a marca da equipe sai também dos textos da interação' do
+    equipe = instance_double(Autonomia::Agents::Operate::HistoricoDaEquipe, aplica?: true)
+    allow(equipe).to receive(:resposta) { |texto| texto.delete_prefix('[EQUIPE] ') }
+    allow(Autonomia::Agents::Operate::HistoricoDaEquipe).to receive(:new).and_return(equipe)
+    suja = opcoes.merge('header' => '[EQUIPE] Agendamento', 'pergunta' => '[EQUIPE] Qual período?')
+    resultado = Autonomia::Agents::AnswerResult.new(reply: 'Temos vaga.', confidence: 1, handoff: {}, interacao: suja)
+
+    limpo = described_class.new(conversation: conversation, agent_inbox: agent_inbox).send(:sem_marca_da_equipe, resultado)
+
+    expect(limpo.reply).to eq('Temos vaga.')
+    expect(limpo.interacao).to include('header' => 'Agendamento', 'pergunta' => 'Qual período?')
   end
 
   # O `classic_deliver` passa a interação ao `post_reply!`: uma subclasse que o sobrescreve com um argumento só faria

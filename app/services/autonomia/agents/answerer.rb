@@ -161,22 +161,25 @@ module Autonomia
           handoff: { should: parsed['should_handoff'] == true, reason: parsed['handoff_reason'].presence },
           used_knowledge: used_knowledge(parsed['used_snippet_ids'], snippets, parsed),
           answered_from_knowledge: parsed['answered_from_knowledge'] == true,
-          raw_reply: parsed['reply'], interacao: interacao_do_turno(parsed)
+          raw_reply: parsed['reply'], interacao: interacao_do_turno(parsed, snippets)
         )
       end
 
       private
 
-      # #1479: a interação pedida pelo modelo, conferida contra o texto do turno (o endereço do link precisa estar nele).
-      def interacao_do_turno(parsed)
+      # #1479: a interação pedida pelo modelo; o endereço do link precisa ser um dos que o dono escreveu.
+      def interacao_do_turno(parsed, snippets)
         return unless @interacao
 
-        Interacao.do_modelo(parsed['interacao'], contexto: texto_do_turno)
+        Interacao.do_modelo(parsed['interacao'], enderecos: Interacao::Enderecos.dos_textos(fontes_do_dono(snippets)))
       end
 
-      # Tudo o que o modelo leu neste turno: instruções, conversa e saídas das ferramentas.
-      def texto_do_turno
-        [@prompt.instructions, *textos(@prompt.input), *@saidas_do_turno].join("\n")
+      # Onde o DONO escreveu: a instrução, a base de conhecimento, o que o agente já mandou nesta conversa e as saídas das
+      # ferramentas do turno. A fala do cliente, os documentos dele e a memória não contam.
+      def fontes_do_dono(snippets)
+        falas_do_agente = Array(@history).select { |item| (item[:role] || item['role']).to_s == 'assistant' }
+                                         .flat_map { |item| textos(item[:content] || item['content']) }
+        [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }, *falas_do_agente, *@saidas_do_turno]
       end
 
       def textos(valor)

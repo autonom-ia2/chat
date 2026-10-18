@@ -36,17 +36,25 @@ module Autonomia::Agents::Operate::RecoveredHeaderNote
   # A resposta do modelo sem as linhas de contexto. Sem linha nenhuma, o mesmo objeto, sem tocar no texto (igual à
   # flag desligada).
   def without_notes(result)
-    return result if result.nil? || result.reply.blank?
-    return result unless NOTES.values.any? { |note| result.reply.to_s.include?(note) }
+    return result if result.nil?
 
-    reply = clean(result.reply.to_s)
-    return result if reply == result.reply.to_s
+    reply = sem_nota(result.reply)
+    # #1479: os textos da interação (cabeçalho, pergunta, títulos, rótulo) passam pela mesma limpeza.
+    interacao = ::Autonomia::Agents::Interacao.limpa(result.interacao) { |texto| sem_nota(texto) }
+    return result if reply == result.reply && interacao == result.interacao
 
     ::Autonomia::Agents::AnswerResult.new(
       reply: reply, confidence: result.confidence, handoff: result.handoff, used_knowledge: result.used_knowledge,
       answered_from_knowledge: result.answered_from_knowledge, raw_reply: result.raw_reply, error: result.error,
-      interacao: result.interacao
+      interacao: interacao
     )
+  end
+
+  # O texto sem as linhas de contexto; sem linha nenhuma, o mesmo texto.
+  def sem_nota(texto)
+    return texto unless texto.is_a?(String) && NOTES.values.any? { |note| texto.include?(note) }
+
+    clean(texto)
   end
 
   # O motivo do silêncio quando a resposta era só a linha de contexto; nil nos outros casos.
