@@ -40,7 +40,7 @@ Ciclo completo de modelos dentro do Chat2You, para leigo ("QI 70"), sem perder d
 | Prod hub2you: 14 caixas Cloud, 1 WABA por conta, nenhuma WABA dividida; token da Autonom.ia compartilhado por 5 caixas de 4 contas (WABAs diferentes) | consulta read-only 11/10/2026 |
 | Prod autonomia: nenhuma caixa Cloud | consulta read-only 11/10/2026 |
 | Status hoje só pelo sync (~5 min); webhook `message_template_status_update` é descartado | código (`whatsapp_events_job.rb`) |
-| Criador de modelo já existe (avisos do agendamento, #1280) | código (`Crm::BookingV2::NoticeTemplates::Creator`) |
+| Criador de modelo já existe (avisos do agendamento, #1280) | código (`Crm::BookingV2::NoticeTemplates::Creator`; retirado no #1612, os avisos usam `Whatsapp::Templates::Garantir`) |
 
 ### Preço por mensagem entregue no Brasil (tabela oficial em vigor desde 01/10/2026)
 
@@ -152,7 +152,8 @@ E. Proteções: alterar mostra o que é afetado; apagar bloqueado com uso agenda
 ### Agendamento (alinhado com a sessão "Página de agendamento CRM", 11/10/2026, main 6779968b1c)
 
 - Cliente Graph novo em arquivo próprio; `Crm::BookingV2::NoticeTemplates::{Creator,Requests,Suggester}` e
-  `NoticeTemplatesJob` intocados (migrar o Creator é PR deles, depois).
+  `NoticeTemplatesJob` intocados (migrar o Creator é PR deles, depois). Atualização: o #1612 retirou o Creator e o
+  Requests; o `NoticeTemplatesJob` ficou como casca.
 - Sync com `fields=`: a Graph devolve só o pedido. Pedir no mínimo `id,name,language,status,category,components,
   rejected_reason` (+ quality/categoria corrigida). Spec de regressão com item sem `category`/`components`.
 - Nomes protegidos: `Catalog.kinds.map { |kind| Catalog.name_for(kind) }`, idioma `Catalog::LANGUAGE` (pode acrescentar

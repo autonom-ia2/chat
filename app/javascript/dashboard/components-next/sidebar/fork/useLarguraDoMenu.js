@@ -9,7 +9,7 @@ export const LARGURA_RECOLHIDA = 56;
 // O provider.js grava 200px ao abrir pelo duplo clique na borda: no menu novo vale a largura padrão.
 const LARGURA_DO_UPSTREAM = 200;
 // Entre 768 e 1279 px a tela é média: sem escolha da pessoa, o menu começa recolhido.
-const TELA_MEDIA_DE = 768;
+export const TELA_MEDIA_DE = 768;
 const TELA_MEDIA_ATE = 1279;
 
 const larguraDoMenuNovo = largura =>
@@ -29,10 +29,13 @@ export function useLarguraDoMenu({
   isCollapsed,
   uiSettings,
   updateUISettings,
+  // Tela de trabalho (#1781): abrir e recolher ali valem só naquela visita, sem mexer na escolha salva.
+  telaDeTrabalho = ref(false),
 }) {
   const { width: larguraDaJanela } = useWindowSize();
   const celular = computed(() => larguraDaJanela.value < TELA_MEDIA_DE);
-  // Escolha da pessoa: arrastou a borda, usou o botão ou o atalho (tudo grava `sidebar_width`).
+  // Escolha da pessoa: arrastou a borda, usou o botão ou o atalho (grava `sidebar_width`). Em tela de trabalho
+  // (#1781) o botão e o atalho não gravam: abrir ou recolher ali vale só naquela visita.
   const escolheu = computed(() => Boolean(uiSettings.value?.sidebar_width));
   const anuncio = ref('');
 
@@ -58,7 +61,34 @@ export function useLarguraDoMenu({
     sidebarWidth.value = larguraDoMenuNovo(sidebarWidth.value);
   });
 
+  // Largura aberta: a salva, se a pessoa deixou aberto; senão a última aberta antes de recolher.
+  const larguraAberta = () => {
+    const salva = uiSettings.value?.sidebar_width;
+    return salva && salva > LARGURA_RECOLHIDA
+      ? larguraDoMenuNovo(salva)
+      : larguraDoMenuNovo(uiSettings.value?.menu_largura_aberta);
+  };
+
+  // Recolher sem gravar: o recolher sozinho das telas de trabalho não é escolha da pessoa.
+  const recolherSemSalvar = () => {
+    sidebarWidth.value = LARGURA_RECOLHIDA;
+    anuncio.value = 'FORK_SIDEBAR.ANUNCIO_RECOLHIDO';
+  };
+
+  const alternarSemSalvar = () => {
+    if (!isCollapsed.value) {
+      recolherSemSalvar();
+      return;
+    }
+    sidebarWidth.value = larguraAberta();
+    anuncio.value = 'FORK_SIDEBAR.ANUNCIO_ABERTO';
+  };
+
   const alternar = () => {
+    if (telaDeTrabalho.value) {
+      alternarSemSalvar();
+      return;
+    }
     if (isCollapsed.value) {
       const aberta = larguraDoMenuNovo(uiSettings.value?.menu_largura_aberta);
       sidebarWidth.value = aberta;
@@ -84,5 +114,5 @@ export function useLarguraDoMenu({
     alternar();
   });
 
-  return { alternar, anuncio, celular };
+  return { alternar, anuncio, celular, recolherSemSalvar, aplicar };
 }

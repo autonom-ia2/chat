@@ -1304,6 +1304,7 @@
           "VOCE": "Você:",
           "CONVERSA": "Conversa",
           "FEITO": "Pronto. {nome} já usa o que você contou.",
+          "PARCIAL": "Parte do que você pediu já entrou. {nome} já usa essa parte.",
           "NOME_NOVO": "O nome agora é {nome}.",
           "VOLTAR_NOME": "Voltar para {nome}",
           "JEITO_NOVO": "O jeito de falar também mudou. Teste ao lado.",

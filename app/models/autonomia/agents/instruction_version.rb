@@ -41,8 +41,11 @@ class Autonomia::Agents::InstructionVersion < ApplicationRecord
   validates :instruction_hash, presence: true
   validates :reason, presence: true
 
-  # #1428 — a aplicação do Construtor que não mudou nada fica no banco (rastro), mas não vira linha na lista.
-  scope :na_lista, -> { where.not('metadata @> ?', { sem_mudanca: true }.to_json) }
+  # #1428 — a aplicação do Construtor que não mudou nada fica no banco (rastro), mas não vira linha na lista. Nem a
+  # primeira escrita de um turno com correção (`fora_da_lista`): uma aplicação, uma linha.
+  scope :na_lista, lambda {
+    where.not('metadata @> ?', { sem_mudanca: true }.to_json).where.not('metadata @> ?', { fora_da_lista: true }.to_json)
+  }
 
   # Versões que o Construtor grava: a instrução é dele, seja qual for o modo gravado.
   DO_CONSTRUTOR = %w[builder_create builder_adjust].freeze

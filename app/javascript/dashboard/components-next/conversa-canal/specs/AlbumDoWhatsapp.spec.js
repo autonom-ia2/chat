@@ -9,6 +9,14 @@ import { PELES, fornecerFuso, fornecerPele } from '../pele';
 import { provideMessageContext } from '../../message/provider.js';
 import en from '../../../i18n/locale/en/conversaCanal.json';
 
+// O "pai" do álbum que a Cloud entrega como não suportada, logo antes das fotos.
+const marcadorDoAlbum = primeira => ({
+  ...primeira,
+  id: -1,
+  attachments: [],
+  contentAttributes: { isUnsupported: true, unsupportedKind: 'unknown' },
+});
+
 const BASE = Date.UTC(2026, 9, 16, 18, 0) / 1000;
 const item = (id, fileType = 'image', extras = {}) => ({
   id,
@@ -41,7 +49,8 @@ const montar = (mensagens, { pele = PELES.WHATSAPP } = {}) => {
   const Conversa = defineComponent({
     setup() {
       const { escondida } = useAlbunsDaConversa(
-        computed(() => mensagens),
+        // O álbum recebido começa no marcador da Cloud (o "pai" não suportado).
+        computed(() => [marcadorDoAlbum(mensagens[0]), ...mensagens]),
         computed(() => null)
       );
       contexto.escondida = escondida;
@@ -90,6 +99,8 @@ describe('AlbumDoWhatsapp (#1702)', () => {
     expect(contexto.escondida(1)).toBe(false);
     expect(contexto.escondida(2)).toBe(true);
     expect(contexto.escondida(3)).toBe(true);
+    // O marcador da Cloud ("pai" do álbum) some da lista.
+    expect(contexto.escondida(-1)).toBe(true);
   });
 
   it('2 itens lado a lado; 4 em grade 2x2', () => {

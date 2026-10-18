@@ -1,8 +1,14 @@
 // Álbum de fotos e vídeos (#1702). A Cloud API entrega uma mensagem por foto; no app,
-// fotos e vídeos mandados juntos pela mesma pessoa viram um balão-mosaico. Desde 2025 o
-// app agrupa também com legenda: a legenda fica embaixo do mosaico (AlbumDoWhatsapp).
-// A regra exata do WhatsApp não é pública: o app já exigiu 4 itens e desde dez/2024
-// agrupa a partir de 2 (WABetaInfo, iOS 24.25.80). Ficamos com o observado em 2026.
+// fotos e vídeos mandados juntos viram um balão-mosaico, com a legenda embaixo
+// (AlbumDoWhatsapp). Só o álbum de verdade junta: foto mandada uma a uma fica solta.
+// - Recebido: a Cloud entrega o "pai" do álbum como não suportada (unsupported_kind
+//   'unknown') logo antes das fotos (22 de 22 em produção, out/2026, seguidos de 2+
+//   mídias em até 30 s). O álbum começa nesse marcador, junta as fotos/vídeos do mesmo
+//   cliente que vêm logo depois, até 30 s do marcador, e para no 1º que não entra. O
+//   marcador some da lista. Sem marcador, cada foto fica solta. O WAHA (caixa híbrida)
+//   não grava sinal de álbum por aqui (o conector é de fora deste repositório): solta.
+// - Enviado pela plataforma: várias fotos do mesmo envio são criadas quase juntas
+//   (até 3 s entre uma e outra) e seguem em álbum, como o app faz para quem manda junto.
 import {
   ATTACHMENT_TYPES,
   MESSAGE_STATUS,
@@ -15,9 +21,10 @@ import { deModeloOuCampanha } from '../encaminhar/selecaoParaEncaminhar';
 
 // Itens a partir dos quais a sequência vira álbum.
 export const MINIMO_DO_ALBUM = 2;
-// Espera máxima entre um item e o seguinte. Itens mandados de uma vez chegam no
-// mesmo segundo ou quase; vídeo grande demora um pouco mais para subir.
+// Recebido: até quanto depois do marcador um item ainda é do álbum.
 export const JANELA_DO_ALBUM_EM_SEGUNDOS = 30;
+// Enviado: itens do mesmo envio nascem no mesmo segundo ou quase.
+export const JANELA_DO_ENVIO_EM_SEGUNDOS = 3;
 // Quantos quadros o mosaico mostra; o resto vira "+N" sobre o último.
 export const QUADROS_DO_MOSAICO = 4;
 
@@ -52,37 +59,90 @@ export const podeEntrarNoAlbum = mensagem => {
   );
 };
 
-const seguidas = (anterior, atual, fuso) => {
-  if (!podeEntrarNoAlbum(anterior) || !podeEntrarNoAlbum(atual)) return false;
-  const espera = atual.createdAt - anterior.createdAt;
-  if (espera < 0 || espera > JANELA_DO_ALBUM_EM_SEGUNDOS) return false;
-  // Mesmo lado, mesma pessoa e mesmo dia: a regra de sequência da pele.
-  return continuaASequencia(anterior, atual, fuso);
+// O "pai" do álbum que a Cloud entrega como não suportada, do cliente.
+export const eMarcadorDeAlbum = mensagem =>
+  mensagem?.messageType === MESSAGE_TYPES.INCOMING &&
+  !mensagem.private &&
+  mensagem.contentAttributes?.isUnsupported === true &&
+  mensagem.contentAttributes?.unsupportedKind === 'unknown';
+
+const dentroDaJanela = (desde, atual, janela) => {
+  const espera = atual.createdAt - desde.createdAt;
+  return espera >= 0 && espera <= janela;
 };
 
-// Devolve um Map: id do 1º item -> mensagens do álbum, na ordem da conversa.
-// `abreBloco` (opcional) diz quem não pode ficar escondido dentro do álbum anterior,
-// como a 1ª não lida, que leva a etiqueta "não lidas" acima dela.
-export const agruparAlbuns = (
+// Recebido: do marcador em diante, enquanto o item entra, é da mesma pessoa e chega
+// até 30 s depois do marcador.
+const itensDoMarcador = (lista, inicio, { fuso, abreBloco }) => {
+  const marcador = lista[inicio];
+  const itens = [];
+  for (let i = inicio + 1; i < lista.length; i += 1) {
+    const atual = lista[i];
+    const entra =
+      podeEntrarNoAlbum(atual) &&
+      !(itens.length && abreBloco(atual)) &&
+      dentroDaJanela(marcador, atual, JANELA_DO_ALBUM_EM_SEGUNDOS) &&
+      continuaASequencia(marcador, atual, fuso);
+    if (!entra) break;
+    itens.push(atual);
+  }
+  return itens;
+};
+
+// Enviado: itens nossos seguidos, criados até 3 s um do outro, pela mesma pessoa.
+const itensDoEnvio = (lista, inicio, { fuso, abreBloco }) => {
+  const itens = [lista[inicio]];
+  for (let i = inicio + 1; i < lista.length; i += 1) {
+    const anterior = itens.at(-1);
+    const atual = lista[i];
+    const entra =
+      atual.messageType === MESSAGE_TYPES.OUTGOING &&
+      podeEntrarNoAlbum(atual) &&
+      !abreBloco(atual) &&
+      dentroDaJanela(anterior, atual, JANELA_DO_ENVIO_EM_SEGUNDOS) &&
+      continuaASequencia(anterior, atual, fuso);
+    if (!entra) break;
+    itens.push(atual);
+  }
+  return itens;
+};
+
+const abreEnvio = mensagem =>
+  mensagem.messageType === MESSAGE_TYPES.OUTGOING &&
+  podeEntrarNoAlbum(mensagem);
+
+// Devolve os álbuns (Map: id do 1º item -> mensagens, na ordem da conversa) e os ids
+// dos marcadores que abriram álbum (somem da lista). `abreBloco` (opcional) diz quem
+// não pode ficar escondido dentro do álbum anterior, como a 1ª não lida, que leva a
+// etiqueta "não lidas" acima dela.
+export const agruparDaConversa = (
   lista,
   { fuso, abreBloco = () => false } = {}
 ) => {
   const albuns = new Map();
-  let bloco = [];
-  const fechar = () => {
-    if (bloco.length >= MINIMO_DO_ALBUM) albuns.set(bloco[0].id, bloco);
-    bloco = [];
-  };
-  lista.forEach((mensagem, i) => {
-    const anterior = lista[i - 1];
-    const junta =
-      anterior && !abreBloco(mensagem) && seguidas(anterior, mensagem, fuso);
-    if (!junta) fechar();
-    if (podeEntrarNoAlbum(mensagem)) bloco.push(mensagem);
-  });
-  fechar();
-  return albuns;
+  const marcadores = new Set();
+  const opcoes = { fuso, abreBloco };
+  let i = 0;
+  while (i < lista.length) {
+    const mensagem = lista[i];
+    let itens = [];
+    if (eMarcadorDeAlbum(mensagem)) itens = itensDoMarcador(lista, i, opcoes);
+    else if (abreEnvio(mensagem)) itens = itensDoEnvio(lista, i, opcoes);
+    // Os itens vêm logo depois do marcador (ou a partir do próprio envio).
+    const doMarcador = itens[0] !== mensagem;
+    if (itens.length >= MINIMO_DO_ALBUM) {
+      albuns.set(itens[0].id, itens);
+      if (doMarcador) marcadores.add(mensagem.id);
+      i += itens.length + (doMarcador ? 1 : 0);
+    } else {
+      i += 1;
+    }
+  }
+  return { albuns, marcadores };
 };
+
+export const agruparAlbuns = (lista, opcoes) =>
+  agruparDaConversa(lista, opcoes).albuns;
 
 // Do menos para o mais adiantado: o álbum mostra o tique do item mais atrasado.
 const ORDEM_DOS_TIQUES = [

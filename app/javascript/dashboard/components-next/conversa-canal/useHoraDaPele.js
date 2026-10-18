@@ -3,7 +3,11 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFuso, usePele } from './pele';
-import { horaDaMensagem, idiomaDoPainel } from './dataDaConversa';
+import {
+  dataEHoraDaMensagem,
+  horaDaMensagem,
+  idiomaDoPainel,
+} from './dataDaConversa';
 
 export const useHoraDaPele = criadaEm => {
   const pele = usePele();
@@ -13,6 +17,23 @@ export const useHoraDaPele = criadaEm => {
   return computed(() => {
     if (!pele.value || !criadaEm.value) return '';
     return horaDaMensagem(
+      criadaEm.value,
+      fuso.value,
+      idiomaDoPainel(locale.value)
+    );
+  });
+};
+
+// A dica da hora (data e hora completas) no mesmo fuso do balão; sem pele, vazio e a
+// dica segue no fuso do navegador, como sempre.
+export const useDicaDaHoraDaPele = criadaEm => {
+  const pele = usePele();
+  const fuso = useFuso();
+  const { locale } = useI18n();
+
+  return computed(() => {
+    if (!pele.value || !criadaEm.value) return '';
+    return dataEHoraDaMensagem(
       criadaEm.value,
       fuso.value,
       idiomaDoPainel(locale.value)

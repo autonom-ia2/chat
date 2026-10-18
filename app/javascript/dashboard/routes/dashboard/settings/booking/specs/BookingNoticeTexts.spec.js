@@ -24,8 +24,6 @@ vi.mock('dashboard/api/crmBookingPages', () => ({
   default: {
     noticeTextSuggestions: vi.fn(),
     noticeTemplateSuggestions: vi.fn(() => new Promise(() => {})),
-    noticeTemplateRequests: vi.fn(),
-    createNoticeTemplates: vi.fn(),
   },
 }));
 vi.mock('dashboard/api/whatsappApiMessageTemplates', () => ({

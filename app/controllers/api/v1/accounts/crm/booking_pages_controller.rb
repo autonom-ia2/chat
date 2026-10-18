@@ -116,17 +116,9 @@ class Api::V1::Accounts::Crm::BookingPagesController < Api::V1::Accounts::Crm::B
     render_unprocessable('crm.booking_v2.people_invalid')
   end
 
-  # Modelos de aviso do WhatsApp oficial (#1272): sugestão da IA e criação na Meta (`Crm::BookingPageNoticeTemplates`).
+  # Modelos de aviso do WhatsApp oficial (#1272): sugestão da IA (`Crm::BookingPageNoticeTemplates`).
   def notice_template_suggestions
     render_notice_template_suggestions
-  end
-
-  def notice_templates
-    render_notice_template_requests
-  end
-
-  def create_notice_templates
-    render_created_notice_templates
   end
 
   # "Escrever com IA" o texto de um aviso (#1354, `Crm::BookingPageNoticeTexts`): devolve opções, não salva.
