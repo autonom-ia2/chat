@@ -42,14 +42,16 @@ module Autonomia
         # `message` = a Message outgoing postada (liga o evento ao feedback do atendente).
         # Fontes por resposta (#284): só os IDs dos knowledge_entries citados + o modelo — nunca o
         # conteúdo do trecho (já vive em knowledge_entries) nem prompt/instruction.
-        def self.replied(agent:, conversation:, result:, message: nil)
+        # `metadata`: os ids dos fatos de memória enviados ao modelo (#1755, `memoria_fact_ids`), como os used_entry_ids.
+        def self.replied(agent:, conversation:, result:, message: nil, metadata: {})
           create!(
             agent: agent, conversation: conversation, event_type: :replied,
             confidence: result&.confidence,
             answered_from_knowledge: result&.answered_from_knowledge || false,
             message_id: message&.id,
             used_entry_ids: used_entry_ids(result),
-            model: ::Autonomia::Agents::Config::ANSWERER_MODEL
+            model: ::Autonomia::Agents::Config::ANSWERER_MODEL,
+            metadata: metadata.to_h
           )
         end
 

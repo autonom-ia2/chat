@@ -11,7 +11,7 @@
 #   `category_change_not_allowed`, sem chamada à Graph; trocar de tipo é criar um modelo novo;
 # - o estado do Chat2You fica no perfil (`WhatsappTemplateProfile`), que sobrevive ao sync. A lista da caixa só recebe o
 #   modelo criado/alterado até o próximo sync trazer a versão da Meta, gravado por `ChannelList` (trava na linha do
-#   canal; o mesmo escritor do sync e do `NoticeTemplates::Creator`, #1382).
+#   canal; o mesmo escritor do sync e do `Garantir`, #1382).
 class Whatsapp::Templates::Manager
   # Pedido recusado por regra nossa: `code` vai para a tela traduzido; `details` completa (o uso, o modelo que já existe).
   class Refused < StandardError
@@ -173,12 +173,10 @@ class Whatsapp::Templates::Manager
     profile&.header_file&.attached? ? profile.header_file.filename.to_s : nil
   end
 
-  # O arquivo guardado de cada cartão do carrossel (#1334): a campanha mostra "vai a foto aprovada".
+  # O arquivo guardado de cada cartão do carrossel (#1334): a campanha mostra "vai a foto aprovada"; a conversa monta a
+  # galeria do modelo (#1716, `CardMedia.listed`).
   def card_media(profile)
-    return [] unless profile
-
-    profile.card_files.map { |file| { 'card_index' => file.blob.metadata['card_index'].to_i, 'file_name' => file.filename.to_s } }
-           .sort_by { |media| media['card_index'] }
+    profile ? Whatsapp::Templates::CardMedia.listed(profile) : []
   end
 
   def profile_for(template)

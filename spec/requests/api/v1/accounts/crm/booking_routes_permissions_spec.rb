@@ -65,13 +65,12 @@ RSpec.describe 'Agendamento: matriz de permissões das rotas novas', type: :requ
         # Passou da policy e parou na regra do envio: a página não tem caixa de avisos.
         test_invite: [422, ->(_) { [:post, "#{member}/test_invite", { phone: '+5511912345678' }] }],
         notice_template_suggestions: [200, ->(_) { [:post, "#{member}/notice_template_suggestions", { inbox_id: cloud.id, kinds: %w[booked] }] }],
-        notice_templates: [200, ->(_) { [:get, "#{member}/notice_templates", { inbox_id: cloud.id }] }],
-        create_notice_templates: [202, ->(_) { [:post, "#{member}/notice_templates/create", { inbox_id: cloud.id, kinds: %w[booked] }] }],
         notice_text_suggestions: [200, ->(_) { [:post, "#{member}/notice_text_suggestions", { kind: 'day_before' }] }]
       }
     end
-    # Tudo aqui escreve ou prepara uma escrita: administrador e agendamento_manage. Criar na Meta, só o administrador.
-    let(:expected) { routes.keys.index_with { %i[admin manage] }.merge(create_notice_templates: %i[admin]) }
+    # Tudo aqui escreve ou prepara uma escrita: administrador e agendamento_manage. Criar modelo na Meta pela página
+    # (v1) saiu em #1612: nenhum perfil tem essa rota.
+    let(:expected) { routes.keys.index_with { %i[admin manage] } }
 
     around do |example|
       with_modified_env('CRM_KANBAN_ENABLED' => 'true', 'CRM_CALENDAR_MEETINGS_ENABLED' => 'true', 'CRM_AI_ENABLED' => 'true') { example.run }
@@ -99,17 +98,23 @@ RSpec.describe 'Agendamento: matriz de permissões das rotas novas', type: :requ
       expect_matrix(people, routes, expected)
     end
 
-    it 'quem é negado não muda nada: nem reunião passada, nem modelo pedido à Meta' do
+    it 'quem é negado não muda nada: nem reunião passada' do
       meeting = create_internal_meeting(world: world, starts_at: Time.utc(2026, 10, 20, 13, 0, 0),
                                         metadata: { 'booking_profile_id' => world.profile.id })
 
       people.except(:admin, :manage).each_value do |user|
         call(user, :post, "#{base}/reassign", { from_user_id: world.host.id, to_user_id: admin.id })
-        call(user, :post, "#{member}/notice_templates/create", { inbox_id: cloud.id, kinds: %w[booked] })
       end
-      call(people[:manage], :post, "#{member}/notice_templates/create", { inbox_id: cloud.id, kinds: %w[booked] })
 
       expect(meeting.reload.created_by_id).to eq(world.host.id)
+    end
+
+    it 'ninguém cria modelo na Meta pela página (v1, retirado em #1612): a rota não existe para nenhum perfil' do
+      people.each_value do |user|
+        call(user, :post, "#{member}/notice_templates/create", { inbox_id: cloud.id, kinds: %w[booked] })
+        expect(response).to have_http_status(:not_found)
+      end
+
       expect(enqueued_jobs.count { |job| job['job_class'] == 'Crm::BookingV2::NoticeTemplatesJob' }).to eq(0)
     end
   end

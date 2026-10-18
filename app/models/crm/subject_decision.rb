@@ -5,6 +5,8 @@
 # aberto), create (assunto novo no funil). state: o que aconteceu — applied (feito, modo Automática), suggested
 # (esperando uma pessoa, modo Sugerir), expired (sugestão vencida por outra), kept (nada a mudar), doubt (a IA não teve
 # certeza: nada muda), no_content, no_quota, failed.
+# touched_card_ids (#1693): os cards que a mensagem tocou, o principal primeiro, para a IA do CRM avaliar numa chamada
+# só. Nulo: não calculado (sem a flag `crm_avaliar_toda_mensagem`, dúvida, falha); vazio: nenhum assunto ("obrigado!").
 class Crm::SubjectDecision < ApplicationRecord
   self.table_name = 'crm_subject_decisions'
 

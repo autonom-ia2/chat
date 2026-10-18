@@ -1154,6 +1154,95 @@
         "ABRIR": "Ver autorização"
       },
       "SO_ADMIN": "Só quem administra a conta pode mudar."
+    },
+    "CONVERSA": {
+      "SELO": {
+        "um": "Produto",
+        "varios": "Vários produtos",
+        "carrossel": "Carrossel de produtos",
+        "cartoes": "Carrossel de fotos"
+      },
+      "VOLTAR": "Voltar",
+      "ENVIAR": "Enviar",
+      "ERRO_GERAL": "Não deu para enviar agora. Tente de novo em instantes.",
+      "ESGOTADO": "“{nome}” acabou no catálogo. Troque o produto para enviar. | Estes produtos acabaram no catálogo: {nome}. Troque-os para enviar.",
+      "PREVIA": {
+        "TITULO": "Como o cliente vê",
+        "PRODUTO": "Produto do catálogo",
+        "PRODUTOS": "Produtos",
+        "ITENS": "{n} item | {n} itens",
+        "AO_TOCAR": "Ao tocar em “{botao}”, o cliente vê:",
+        "CARTOES": "Cartões do carrossel"
+      },
+      "CARTAO": {
+        "TITULO": "Cartão {n} de {total}",
+        "AJUDA": "Escolha a foto deste cartão e complete o texto.",
+        "FOTO": "Foto do cartão",
+        "FOTO_AJUDA": "Use uma foto do modelo ou envie uma do computador.",
+        "FOTO_AJUDA_GALERIA": "Use uma das fotos do modelo.",
+        "GALERIA": "Fotos do modelo",
+        "GALERIA_FALHOU": "Não consegui mostrar as fotos do modelo. Feche e abra o modelo de novo.",
+        "SEM_GALERIA": "Este modelo não tem fotos guardadas. Peça a quem cuida dos modelos para enviar, ou escolha outro modelo.",
+        "USAR_FOTO": "Usar a foto {nome}",
+        "DO_COMPUTADOR": "Foto do computador: {nome}",
+        "DO_COMPUTADOR_BOTAO": "Enviar foto do computador",
+        "ENVIANDO": "Enviando {nome}…",
+        "ERRO_TIPO": "Esse arquivo não é uma foto. Escolha uma foto JPG ou PNG.",
+        "ERRO_GRANDE": "Esta foto tem {tamanho} MB, e o WhatsApp aceita até 5 MB. Diminua a foto (salvar de novo em tamanho menor resolve) ou use uma foto do modelo.",
+        "ERRO_ENVIO": "Não deu para enviar a foto. Tente de novo.",
+        "TEXTO": "Texto do cartão",
+        "ESPACO": "[espaço {n}]",
+        "CAMPO": "O que vai no espaço {n}",
+        "EXEMPLO": "Ex.: {exemplo}",
+        "PROXIMO": "Próximo cartão",
+        "REVISAR": "Conferir tudo"
+      },
+      "CONFIRA": {
+        "TITULO": "Confira e envie",
+        "AJUDA": {
+          "um": "Veja como o cliente vai receber. Se estiver certo, é só enviar.",
+          "varios": "Veja como o cliente vai receber. A ordem da lista é a ordem em que ele vê os produtos.",
+          "carrossel": "Veja como o cliente vai receber. Os cartões seguem a ordem da lista.",
+          "cartoes": "Veja todos os cartões. Se estiver certo, é só enviar."
+        },
+        "CARTOES": "{n} cartões",
+        "CARTAO_N": "Cartão {n}",
+        "ALTERAR": "Alterar",
+        "ALTERAR_N": "Alterar o cartão {n}",
+        "TEXTO": "Texto da mensagem"
+      },
+      "PRODUTOS": {
+        "TITULO": {
+          "um": "Produto que vai",
+          "varios": "Produtos que vão, na ordem",
+          "carrossel": "Cartões que vão, na ordem"
+        },
+        "ACABOU": "Acabou no catálogo. Troque por outro.",
+        "SUBIR": "Subir {nome}",
+        "DESCER": "Descer {nome}",
+        "TROCAR": {
+          "um": "Trocar produto",
+          "varios": "Alterar produtos",
+          "carrossel": "Alterar produtos"
+        }
+      },
+      "SEM_CATALOGO": {
+        "TITULO": "Este WhatsApp não tem catálogo de produtos",
+        "AJUDA": "Sem catálogo, não dá para enviar este modelo.",
+        "TEXTO": "Este modelo mostra produtos do catálogo, mas o catálogo não está ligado a este número do WhatsApp.",
+        "PASSO_1": "Abra o Gerenciador de Comércio da Meta.",
+        "PASSO_2": "Ligue o catálogo da loja à conta do WhatsApp deste número.",
+        "PASSO_3": "Volte aqui e escolha o modelo de novo.",
+        "OUTRO_MODELO": "Escolher outro modelo"
+      },
+      "IDIOMA": "Idioma: {idioma}",
+      "CUPOM": "Código do cupom",
+      "VALIDADE": "A oferta vale até (fuso da conta: {zona})",
+      "VALIDADE_AJUDA": "O cliente vê a contagem regressiva até essa hora.",
+      "VALIDADE_TITULO": "A oferta vale até",
+      "VALIDADE_SEM_FUSO": "A conta ainda não tem fuso horário. Quem administra a conta escolhe em Configurações > Conta, e aí dá para mandar esta oferta.",
+      "VALIDADE_PASSADA": "Essa hora já passou. Escolha uma data à frente.",
+      "CUPOM_FALTA": "Escreva o código do cupom, com até {n} letras e números, para enviar."
     }
   }
 }

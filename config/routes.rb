@@ -405,6 +405,14 @@ Rails.application.routes.draw do
             get 'calendar/available_slots', to: 'calendar#available_slots'
             get :inbox_settings, to: 'inbox_settings#index'
             patch 'inbox_settings/:inbox_id', to: 'inbox_settings#update'
+            # Memória das IAs (#1601): o catálogo de chaves (admin) e os fatos do card com a procedência.
+            get 'memoria/chaves', to: 'memoria_chaves#index'
+            patch 'memoria/chaves/:id', to: 'memoria_chaves#update'
+            get 'memoria/cards/:card_id/fatos', to: 'memoria_fatos#index'
+            post 'memoria/cards/:card_id/fatos', to: 'memoria_fatos#create'
+            post 'memoria/cards/:card_id/fatos/:id/nao_vale_mais', to: 'memoria_fatos#nao_vale_mais'
+            post 'memoria/cards/:card_id/fatos/:id/aceitar', to: 'memoria_fatos#aceitar'
+            post 'memoria/cards/:card_id/fatos/:id/destravar', to: 'memoria_fatos#destravar'
             get :caixas, to: 'caixas#index'
             get 'caixas/:inbox_id', to: 'caixas#show'
             put 'caixas/:inbox_id', to: 'caixas#update'
@@ -452,10 +460,8 @@ Rails.application.routes.draw do
                 get :people
                 put :people, action: :update_people
                 post :test_invite
-                # Modelos de aviso do WhatsApp oficial (#1272): sugestão da IA, estado dos pedidos e criação na Meta.
+                # Modelos de aviso do WhatsApp oficial (#1272): sugestão da IA entre os aprovados da caixa.
                 post :notice_template_suggestions
-                get :notice_templates
-                post 'notice_templates/create', action: :create_notice_templates
                 # Texto dos avisos com IA (#1354): opções para um aviso, nada salvo.
                 post :notice_text_suggestions
               end
@@ -474,6 +480,15 @@ Rails.application.routes.draw do
             resource :booking_stats, only: [:show] do
               get :opened_not_booked
               post 'opened_not_booked/:invite_id/resend', action: :resend, as: :resend_opened_not_booked
+            end
+          end
+          # #1702 — o "+" da conversa com a cara do canal: busca de endereço (Google) e formulários aprovados (Meta).
+          namespace :conversa_canal do
+            resources :lugares, only: [:index, :show]
+            resources :reacoes, only: [:create]
+            resources :encaminhamentos, only: [:index, :create]
+            resources :formularios, only: [:index] do
+              get :primeira_tela, on: :member
             end
           end
           namespace :autonomia do
@@ -501,6 +516,8 @@ Rails.application.routes.draw do
               resources :sources, only: [:index, :create, :destroy], controller: 'agents/sources' do
                 member { post :resync }
               end
+              # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
+              put 'onde_atende', to: 'agents/onde_atende#update'
               resources :channels, only: [:index, :create, :destroy],
                                    controller: 'agents/channels', param: :inbox_id
               resources :tools, only: [:index, :show, :create, :update, :destroy],
@@ -954,6 +971,13 @@ Rails.application.routes.draw do
             # Catálogo de produtos da WABA da caixa para a Nova campanha (#1418): só leitura, controller do fork.
             resource :whatsapp_catalog, only: [:show], module: :inboxes do
               get :products
+            end
+            # Modelo de produto e carrossel pela conversa (#1716): para quem atende a caixa, sem a tela de Modelos.
+            resource :whatsapp_conversation_assets, only: [], module: :inboxes do
+              get :catalog
+              get :products
+              get :template
+              post :media
             end
           end
           # Tela de Modelos do WhatsApp (#1332): as caixas que têm modelos e o preço por envio.

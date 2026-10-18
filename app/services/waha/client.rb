@@ -110,6 +110,12 @@ module Waha
       post('/api/stopTyping', { session: session, chatId: chat_id }, timeout: timeout)
     end
 
+    # Lida (tiques azuis) das mensagens não lidas do chat (#1702). Sem messageIds: o motor marca todas as não lidas do
+    # chat (o filtro por id só existe nos motores NOWEB e GOWS). https://waha.devlike.pro/docs/how-to/send-messages/
+    def send_seen(session:, chat_id:, timeout: DEFAULT_TIMEOUT)
+      post('/api/sendSeen', { session: session, chatId: chat_id }, timeout: timeout)
+    end
+
     # ---- ENVIO DIRETO (WhatsApp Híbrido, chat#1067) ----
     # O id é gerado antes do envio para a mensagem já ter identidade quando o eco da Meta chegar.
     def new_message_id(session)
@@ -134,6 +140,11 @@ module Waha
 
     def get_message(session, chat_id, id, download_media: false)
       get("/api/#{session}/chats/#{chat_id}/messages/#{id}?downloadMedia=#{download_media}", timeout: GET_MESSAGE_TIMEOUT)
+    end
+
+    # Reação (emoji) a uma mensagem (#1702). message_id no formato do WAHA ("true_<chatId>_<id>"); reaction vazia tira.
+    def set_reaction(session:, message_id:, reaction:)
+      put('/api/reaction', { session: session, messageId: message_id, reaction: reaction })
     end
 
     # ---- APPS (conector de mensagens) ----

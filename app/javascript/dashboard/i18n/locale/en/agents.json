@@ -433,19 +433,22 @@
       "CONFIDENCE_HIGH": "High (hands off often)",
       "CONFIDENCE_HINT": "Below {pct}% confidence, the agent hands the conversation to a human instead of guessing.",
       "HISTORY": {
-        "TITLE": "Instruction history",
-        "HINT": "Every automatic refresh and manual edit is saved. Restore a previous version if something goes wrong.",
+        "TITLE": "Agent history",
+        "HINT": "The whole agent (instruction, tone, greeting and the rest) is saved when you change it by chatting, edit the instruction or go back to a version, and when the files update it. Restore a previous version if something goes wrong.",
         "LOADING": "Loading history…",
         "EMPTY": "No versions yet.",
         "META": "{date} · {author}",
         "RESTORE": "Restore",
         "REASON": {
+          "BUILDER": "Changed by chatting",
           "KB_REFRESH": "Knowledge base update",
           "MANUAL_EDIT": "Manual edit",
-          "ROLLBACK": "Restored version"
+          "ROLLBACK": "Restored version",
+          "BASE": "As it was before changing by chatting",
+          "BEFORE_ROLLBACK": "As it was before going back"
         },
-        "LOAD_ERROR": "We couldn't load the instruction history.",
-        "RESTORE_SUCCESS": "Instruction restored.",
+        "LOAD_ERROR": "We couldn't load the agent history.",
+        "RESTORE_SUCCESS": "Agent restored to how it was in this version.",
         "RESTORE_ERROR": "We couldn't restore this version. Please try again."
       }
     },
@@ -758,9 +761,14 @@
         "QUEM_RECEBE": "When it does not know, {nome} hands the conversation to the team. Who receives it is set in Assignment.",
         "ESCOLHER_QUEM_RECEBE": "Choose who receives",
         "QUEM_RECEBE_SEM_PERMISSAO": "Ask an administrator to choose who receives.",
-        "TAMBEM": "Also receives when someone hands over on:",
-        "TAMBEM_TEXTO": "Choose the other channels where {nome} gets the conversation when someone hands it over. There, {nome} does not answer first.",
-        "TAMBEM_NENHUMA": "There is no other channel to choose yet."
+        "TAMBEM": "Receives when someone hands over in:",
+        "TAMBEM_TEXTO": "Check the channels where {nome} receives the conversation when someone hands it over. In them, {nome} does not answer first.",
+        "TAMBEM_NENHUMA": "There is no other channel to choose yet.",
+        "PRIMEIRO_PERGUNTA": "Does {nome} answer new conversations first?",
+        "PRIMEIRO_SIM": "Yes, in the channel:",
+        "PRIMEIRO_NAO": "No, only when someone hands over the conversation",
+        "PRIMEIRO_CANAL": "Channel where {nome} answers first",
+        "HORARIO_DE_CADA": "The hours are those of each channel where {nome} receives the conversation."
       },
       "COMPOSITOR": {
         "ESCREVA": "Write your answer",
@@ -1058,10 +1066,6 @@
         "ERRO_ABRIR": "Could not open {nome} right now.",
         "ERRO_ABRIR_SEM_NOME": "Could not open this agent right now.",
         "ERRO_ABRIR_GARANTIA": "Nothing was changed.",
-        "RESPONDE_NO": "Answers on {canal} · {quando}",
-        "PARADO_NO": "On {canal} · {quando}",
-        "RESPONDE_EM_N": "Answers on 1 channel · {quando} | Answers on {n} channels · {quando}",
-        "PARADO_EM_N": "On 1 channel · {quando} | On {n} channels · {quando}",
         "NENHUM_CANAL": "Not on any channel yet.",
         "QUANDO": {
           "ALWAYS": "always",
@@ -1096,10 +1100,18 @@
         },
         "BLOCO_ONDE": {
           "TITULO": "Where and when it answers",
-          "TEXTO": "On {canal}, {quando}.",
-          "TEXTO_N": "On 1 channel, {quando}. | On {n} channels, {quando}.",
           "ALTERAR_ARIA": "Change where and when it answers",
           "ESCOLHER_CANAL": "Choose channel",
+          "PRIMEIRO": "Answers first in {canal} · {quando}",
+          "PRIMEIRO_N": "Answers first in 1 channel · {quando} | Answers first in {n} channels · {quando}",
+          "PRIMEIRO_E_RECEBE": "Answers first in {canal} and receives in {caixas} when someone hands over · {quando} | Answers first in {canal} and receives in {caixas} when someone hands over · {quando}",
+          "PRIMEIRO_N_E_RECEBE": "Answers first in 1 channel and receives in {caixas} when someone hands over · {quando} | Answers first in {n} channels and receives in {caixas} when someone hands over · {quando}",
+          "RECEBE": "Receives in {caixas} when someone hands over the conversation · {quando} | Receives in {caixas} when someone hands over the conversation · {quando}",
+          "NENHUM_LUGAR": "Does not answer anywhere.",
+          "PARADO": "In {canais} · {quando} | In {canais} · {quando}",
+          "PARADO_N": "In 1 channel · {quando} | In {n} channels · {quando}",
+          "TEXTO": "On {canal}, {quando}.",
+          "TEXTO_N": "On 1 channel, {quando}. | On {n} channels, {quando}.",
           "TAMBEM": "Also receives when someone hands over on: {caixas}."
         },
         "BLOCO_JEITO": {
@@ -1243,10 +1255,6 @@
           "ONDE": "Where",
           "QUANDO": "When",
           "QUANDO_ROTULO": "When it answers",
-          "NAO_ATENDER": "Do not answer anywhere",
-          "NAO_ATENDER_TITULO": "Do not answer anywhere?",
-          "NAO_ATENDER_TEXTO": "{nome} leaves {canal}. The conversations there go back to the team.",
-          "NAO_ATENDER_CONFIRMAR": "Do not answer",
           "SEM_CANAL": "You have not connected any channel yet.",
           "PARADO": "To change the channel, {nome} needs to start answering again.",
           "VOLTAR": "Start answering again",
@@ -1259,10 +1267,17 @@
           "PRONTO": "Done. It applies to the next conversations.",
           "ERRO": "Could not save.",
           "ERRO_GARANTIA": "Nothing changed.",
-          "CONTINUA_NO_ANTIGO": "{nome} started answering on {novo}, but is still on {antigo} too.",
           "LER_ERRO": "Could not show your channels right now.",
           "LER_ERRO_GARANTIA": "Nothing changed.",
-          "CARREGANDO_CANAIS": "Loading your channels…"
+          "CARREGANDO_CANAIS": "Loading your channels…",
+          "PARADO_AVISO": "This way, {nome} will not receive conversations in any channel.",
+          "PARADO_CONFIRMAR": "Confirm",
+          "PARADO_VOLTAR": "Go back",
+          "NAO_ATENDER": "Do not answer anywhere",
+          "NAO_ATENDER_TITULO": "Do not answer anywhere?",
+          "NAO_ATENDER_TEXTO": "{nome} leaves {canal}. The conversations there go back to the team.",
+          "NAO_ATENDER_CONFIRMAR": "Do not answer",
+          "CONTINUA_NO_ANTIGO": "{nome} started answering on {novo}, but is still on {antigo} too."
         },
         "HORARIO": {
           "DIAS": {
@@ -1293,6 +1308,7 @@
           "VOCE": "You:",
           "CONVERSA": "Conversation",
           "FEITO": "Done. {nome} already uses what you told.",
+          "PARCIAL": "Part of what you asked already went in. {nome} already uses it.",
           "NOME_NOVO": "The name is now {nome}.",
           "VOLTAR_NOME": "Go back to {nome}",
           "JEITO_NOVO": "The way of talking changed too. Test it on the side.",
@@ -1343,7 +1359,8 @@
           "LISTA": "Ways of answering, newest first",
           "CARREGANDO": "Loading the previous ways",
           "MOTIVO": {
-            "KB_REFRESH": "Changed on its own when the files and websites changed",
+            "BUILDER": "Changed by chatting",
+            "KB_REFRESH": "Updated from the files and websites",
             "MANUAL_EDIT": "Written by you",
             "ROLLBACK": "Went back to a previous way",
             "ROLLBACK_DE": "Went back to the way from {quando}"
@@ -1444,7 +1461,11 @@
             "NOTA": "This is only an example. {nome} writes in their own words and shows the times that are really free during the chat."
           }
         },
-        "INTERRUPTOR_AJUDANTE": "{nome} helping other agents"
+        "INTERRUPTOR_AJUDANTE": "{nome} helping other agents",
+        "RESPONDE_NO": "Answers on {canal} · {quando}",
+        "PARADO_NO": "On {canal} · {quando}",
+        "RESPONDE_EM_N": "Answers on 1 channel · {quando} | Answers on {n} channels · {quando}",
+        "PARADO_EM_N": "On 1 channel · {quando} | On {n} channels · {quando}"
       },
       "CRIAR": {
         "TITULO": "Create agent",
@@ -1666,7 +1687,6 @@
         "ERRO_LER_GARANTIA": "Nothing changed in {nome}. Try again in a moment.",
         "ERRO": "Could not put {nome} on the team.",
         "ERRO_GARANTIA": "The channels that were already set stay as they are. Try again.",
-        "FEITO": "Done. {nome} now works on the chosen channels.",
         "CARREGANDO": "Reading the channels",
         "SALVANDO": "Saving…",
         "COMECAR_TEXTO": "{nome} receives the conversation when someone hands over, on the channels you choose.",
@@ -1676,7 +1696,8 @@
         "OUTRO_ROBO": "An external agent answers on this channel. A team agent cannot join a channel with an external agent yet.",
         "AVISO_PESSOAS": "Served only by people; {nome} receives when someone hands over. New conversations stay with the people.",
         "AVISO_PESSOAS_SEM_NOME": "Served only by people; the agent you are creating receives when someone hands over. New conversations stay with the people.",
-        "SAI_PESSOAS": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to the people on the team."
+        "SAI_PESSOAS": "{nome} leaves the team of this channel. Conversations that were with {nome} go back to the people on the team.",
+        "FEITO": "Done. {nome} now works on the chosen channels."
       },
       "ONDE": {
         "TITULO": "Where {nome} works",

@@ -135,4 +135,41 @@ RSpec.describe 'Autonomia journeys - builder threads', type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
     expect(thread.reload.messages).to be_blank
   end
+
+  # #1514 (decisão do Rodrigo, 17/10/2026) — agente MANUAL: a instrução é do dono; o Construtor não a reescreve.
+  describe 'agente em modo manual' do
+    let(:manual) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Manual', agent_type: 'support', mode: :manual,
+                                       instruction: 'texto do dono', status: :draft, enabled: false, actuation: :external)
+    end
+
+    it 'recusa abrir o Mudar conversando antes de gastar modelo' do
+      expect do
+        post "/api/v1/accounts/#{account.id}/autonomia/build_threads",
+             params: { autonomia_agent_id: manual.id, message: 'Responda em 2 frases' },
+             headers: administrator.create_new_auth_token, as: :json
+      end.not_to change(Autonomia::Agents::BuildThread, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.modo_manual', raise: true))
+    end
+
+    it 'deixa a tela consultar a conversa de ajuste (show só lê)' do
+      thread = Autonomia::Agents::BuildThread.create!(account: account, agent: manual, status: :ready)
+
+      get "/api/v1/accounts/#{account.id}/autonomia/build_threads/#{thread.id}",
+          headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'recusa mensagem nova numa conversa de ajuste aberta antes de o agente virar manual' do
+      thread = Autonomia::Agents::BuildThread.create!(account: account, agent: manual, status: :ready)
+
+      expect { post_message(thread.id, message: 'Responda em 2 frases') }
+        .not_to have_enqueued_job(Autonomia::Agents::Builder::SubmitJob)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.agents.modo_manual', raise: true))
+    end
+  end
 end

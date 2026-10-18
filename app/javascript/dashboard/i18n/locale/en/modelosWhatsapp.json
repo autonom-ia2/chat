@@ -1154,6 +1154,95 @@
         "ABRIR": "See permission"
       },
       "SO_ADMIN": "Only account administrators can change this."
+    },
+    "CONVERSA": {
+      "SELO": {
+        "um": "Product",
+        "varios": "Several products",
+        "carrossel": "Product carousel",
+        "cartoes": "Photo carousel"
+      },
+      "VOLTAR": "Back",
+      "ENVIAR": "Send",
+      "ERRO_GERAL": "Could not send right now. Try again in a moment.",
+      "ESGOTADO": "“{nome}” sold out in the catalog. Swap the product to send. | These products sold out in the catalog: {nome}. Swap them to send.",
+      "PREVIA": {
+        "TITULO": "What the customer sees",
+        "PRODUTO": "Catalog product",
+        "PRODUTOS": "Products",
+        "ITENS": "{n} item | {n} items",
+        "AO_TOCAR": "When tapping “{botao}”, the customer sees:",
+        "CARTOES": "Carousel cards"
+      },
+      "CARTAO": {
+        "TITULO": "Card {n} of {total}",
+        "AJUDA": "Pick the photo for this card and complete the text.",
+        "FOTO": "Card photo",
+        "FOTO_AJUDA": "Use a photo from the template or upload one from your computer.",
+        "FOTO_AJUDA_GALERIA": "Use one of the template photos.",
+        "GALERIA": "Template photos",
+        "GALERIA_FALHOU": "Could not load the template photos. Close and open the template again.",
+        "SEM_GALERIA": "This template has no saved photos. Ask whoever manages the templates to send it, or pick another template.",
+        "USAR_FOTO": "Use photo {nome}",
+        "DO_COMPUTADOR": "Photo from your computer: {nome}",
+        "DO_COMPUTADOR_BOTAO": "Upload photo from computer",
+        "ENVIANDO": "Uploading {nome}…",
+        "ERRO_TIPO": "This file is not a photo. Pick a JPG or PNG photo.",
+        "ERRO_GRANDE": "This photo is {tamanho} MB, and WhatsApp accepts up to 5 MB. Make the photo smaller (saving it again at a smaller size works) or use a template photo.",
+        "ERRO_ENVIO": "Could not upload the photo. Try again.",
+        "TEXTO": "Card text",
+        "ESPACO": "[blank {n}]",
+        "CAMPO": "What goes in blank {n}",
+        "EXEMPLO": "E.g.: {exemplo}",
+        "PROXIMO": "Next card",
+        "REVISAR": "Review everything"
+      },
+      "CONFIRA": {
+        "TITULO": "Review and send",
+        "AJUDA": {
+          "um": "See how the customer will get it. If it looks right, just send.",
+          "varios": "See how the customer will get it. The list order is the order the customer sees.",
+          "carrossel": "See how the customer will get it. The cards follow the order of the list.",
+          "cartoes": "See all the cards. If it looks right, just send."
+        },
+        "CARTOES": "{n} cards",
+        "CARTAO_N": "Card {n}",
+        "ALTERAR": "Change",
+        "ALTERAR_N": "Change card {n}",
+        "TEXTO": "Message text"
+      },
+      "PRODUTOS": {
+        "TITULO": {
+          "um": "Product being sent",
+          "varios": "Products being sent, in order",
+          "carrossel": "Cards being sent, in order"
+        },
+        "ACABOU": "Sold out in the catalog. Swap it for another.",
+        "SUBIR": "Move {nome} up",
+        "DESCER": "Move {nome} down",
+        "TROCAR": {
+          "um": "Swap product",
+          "varios": "Change products",
+          "carrossel": "Change products"
+        }
+      },
+      "SEM_CATALOGO": {
+        "TITULO": "This WhatsApp has no product catalog",
+        "AJUDA": "Without a catalog, this template cannot be sent.",
+        "TEXTO": "This template shows catalog products, but no catalog is linked to this WhatsApp number.",
+        "PASSO_1": "Open Meta Commerce Manager.",
+        "PASSO_2": "Link the store catalog to the WhatsApp account of this number.",
+        "PASSO_3": "Come back and pick the template again.",
+        "OUTRO_MODELO": "Pick another template"
+      },
+      "IDIOMA": "Language: {idioma}",
+      "CUPOM": "Coupon code",
+      "VALIDADE": "The offer is valid until (account time zone: {zona})",
+      "VALIDADE_AJUDA": "The customer sees a countdown until this time.",
+      "VALIDADE_TITULO": "The offer is valid until",
+      "VALIDADE_SEM_FUSO": "This account has no time zone yet. An administrator chooses it in Settings > Account, and then you can send this offer.",
+      "VALIDADE_PASSADA": "This time has already passed. Choose a later date.",
+      "CUPOM_FALTA": "Type the coupon code, with up to {n} letters and numbers, to send."
     }
   }
 }

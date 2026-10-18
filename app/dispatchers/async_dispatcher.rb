@@ -8,7 +8,7 @@ class AsyncDispatcher < BaseDispatcher
     publish(event_object.method_name, event_object)
   end
 
-  def listeners
+  def listeners # rubocop:disable Metrics/MethodLength
     [
       AutomationRuleListener.instance,
       Autonomia::Agents::Operate::MessageListener.instance,
@@ -28,7 +28,9 @@ class AsyncDispatcher < BaseDispatcher
       # #1305: a confirmação da IA na conversa dispensa o aviso "ao marcar" repetido.
       Crm::BookingNoticeToldListener.instance,
       # #1524: o toque em "Parar avisos" no modelo do aviso para os avisos do contato.
-      Crm::BookingNoticeStopReplyListener.instance
+      Crm::BookingNoticeStopReplyListener.instance,
+      # #1601: a memória das IAs (autoria das mensagens); só enfileira, atrás da flag `memoria_ia`.
+      Crm::MemoriaListener.instance
     ]
   end
 end

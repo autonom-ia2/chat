@@ -2,9 +2,15 @@
 import { computed, ref } from 'vue';
 import BaseBubble from 'next/message/bubbles/Base.vue';
 import FormattedContent from './FormattedContent.vue';
+import PreviaDeLink from 'dashboard/components-next/conversa-canal/PreviaDeLink.vue';
+import { usePreviaDeLink } from 'dashboard/components-next/conversa-canal/usePreviaDeLink';
+import DocumentoDoWhatsapp from 'dashboard/components-next/conversa-canal/midia/DocumentoDoWhatsapp.vue';
+import MidiaComLegenda from 'dashboard/components-next/conversa-canal/midia/MidiaComLegenda.vue';
+import { usePele } from 'dashboard/components-next/conversa-canal/pele';
+import { cortarTextoLongo } from 'dashboard/components-next/conversa-canal/textoLongo';
 import AttachmentChips from 'next/message/chips/AttachmentChips.vue';
 import TranslationToggle from 'dashboard/components-next/message/TranslationToggle.vue';
-import { MESSAGE_TYPES } from '../../constants';
+import { ATTACHMENT_TYPES, MESSAGE_TYPES } from '../../constants';
 import { MESSAGE_STATUS } from 'shared/constants/messages';
 import { useMessageContext } from '../../provider.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
@@ -19,6 +25,26 @@ const { content, attachments, contentAttributes, messageType, status } =
 const { hasTranslations, translationContent } =
   useTranslations(contentAttributes);
 
+const previaDeLink = usePreviaDeLink();
+
+// #1702: com a pele, documento, foto e vídeo com legenda ficam como no app (cartão ou
+// mídia no tamanho do app, em cima da legenda); os outros anexos seguem nos chips.
+const pele = usePele();
+const ehDocumento = anexo => anexo.fileType === ATTACHMENT_TYPES.FILE;
+const MIDIAS = [ATTACHMENT_TYPES.IMAGE, ATTACHMENT_TYPES.VIDEO];
+const ehMidia = anexo => MIDIAS.includes(anexo.fileType);
+const doTipo = filtro =>
+  computed(() => (pele.value ? (attachments.value || []).filter(filtro) : []));
+const documentos = doTipo(ehDocumento);
+const midias = doTipo(ehMidia);
+const outrosAnexos = computed(() =>
+  pele.value
+    ? (attachments.value || []).filter(
+        anexo => !ehDocumento(anexo) && !ehMidia(anexo)
+      )
+    : attachments.value
+);
+
 const renderOriginal = ref(false);
 
 const renderContent = computed(() => {
@@ -32,6 +58,12 @@ const renderContent = computed(() => {
 
   return content.value;
 });
+
+// #1702: com a pele, texto longo sai cortado com "Ler mais", como no app (textoLongo.js).
+const lerTudo = ref(false);
+const textoCortado = computed(() =>
+  pele.value && !lerTudo.value ? cortarTextoLongo(renderContent.value) : null
+);
 
 const isTemplate = computed(() => {
   return messageType.value === MESSAGE_TYPES.TEMPLATE;
@@ -66,7 +98,26 @@ const handleSeeOriginal = () => {
       <span v-if="isEmpty" class="text-n-slate-11">
         {{ $t('CONVERSATION.NO_CONTENT') }}
       </span>
-      <FormattedContent v-if="renderContent" :content="renderContent" />
+      <MidiaComLegenda v-for="midia in midias" :key="midia.id" :anexo="midia" />
+      <DocumentoDoWhatsapp
+        v-for="documento in documentos"
+        :key="documento.id"
+        :anexo="documento"
+      />
+      <PreviaDeLink v-if="previaDeLink" :previa="previaDeLink" />
+      <FormattedContent
+        v-if="renderContent"
+        :content="textoCortado || renderContent"
+      />
+      <button
+        v-if="textoCortado"
+        type="button"
+        class="-mt-3 self-start text-[14.2px] leading-[19px] font-medium text-[#027EB5] dark:text-[#53BDEB] hover:underline"
+        data-ler-mais
+        @click="lerTudo = true"
+      >
+        {{ $t('CONVERSA_CANAL.TEXTO_LONGO.LER_MAIS') }}
+      </button>
       <span
         v-if="contactInfoRequestState === 'pending'"
         class="text-xs font-medium text-n-slate-11"
@@ -105,7 +156,7 @@ const handleSeeOriginal = () => {
         :showing-original="renderOriginal"
         @toggle="handleSeeOriginal"
       />
-      <AttachmentChips :attachments="attachments" class="gap-2" />
+      <AttachmentChips :attachments="outrosAnexos" class="gap-2" />
       <template v-if="isTemplate">
         <div
           v-if="contentAttributes.submittedEmail"

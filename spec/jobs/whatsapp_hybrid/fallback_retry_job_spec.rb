@@ -34,6 +34,19 @@ RSpec.describe WhatsappHybrid::FallbackRetryJob, :aggregate_failures do
     expect(message.reload.content_attributes['whatsapp_transport_outcome']).to eq('accepted')
   end
 
+  # A trava de rajada (Message#prevent_message_flooding) roda em todo update!; a espera pelo limite por minuto não pode virar
+  # falha só porque a conversa está em rajada.
+  it 'conversa em rajada: assume a espera e reenvia, em vez de fechar a mensagem como falha' do
+    message
+    allow(Limits).to receive(:conversation_message_per_minute_limit).and_return(0)
+
+    expect { described_class.perform_now(message.id) }.not_to raise_error
+
+    expect(client).to have_received(:send_text).once
+    expect(message.reload.content_attributes['whatsapp_transport_outcome']).to eq('accepted')
+    expect(message).not_to be_failed
+  end
+
   it 'erro inesperado no pedido de envio: pode ter saído, fica uncertain, e um job repetido não reenvia' do
     allow(client).to receive(:send_text).and_raise(RuntimeError, 'motor quebrou')
 

@@ -121,6 +121,14 @@ describe('#ConversationAPI', () => {
       );
     });
 
+    it('#markMessageRead asks for the WhatsApp read receipt when the conversation was opened', () => {
+      conversationAPI.markMessageRead({ id: 12, readReceipt: true });
+      expect(axiosMock.post).toHaveBeenCalledWith(
+        `/api/v1/conversations/12/update_last_seen`,
+        { read_receipt: true }
+      );
+    });
+
     it('#toggleTyping', () => {
       conversationAPI.toggleTyping({
         conversationId: 12,

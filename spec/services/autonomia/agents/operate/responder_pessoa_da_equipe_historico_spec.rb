@@ -127,7 +127,8 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(resultado.message.content).to eq('[Importante] O valor não muda.')
     end
 
-    # Envios automáticos gravados em nome da Ana não foram ela escrevendo: seguem como hoje (assistant, sem moldura).
+    # Envios automáticos gravados em nome da Ana não foram ela escrevendo: não ganham a moldura da equipe. Desde o #1691
+    # ganham a da mensagem automática do canal (a IA também não os escreveu).
     {
       'follow-up do CRM' => { content_attributes: { 'crm_follow_up_id' => 7 } },
       'convite/lembrete do Agendamento' => { content_attributes: { 'crm_booking_invite_id' => 3 } },
@@ -136,7 +137,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       'campanha' => { additional_attributes: { 'campaign_id' => 9 } },
       'campanha da API do WhatsApp' => { additional_attributes: { 'whatsapp_api_campaign_id' => 9 } }
     }.each do |envio, marcas|
-      it "#{envio} em nome da Ana não ganha a moldura" do
+      it "#{envio} em nome da Ana ganha a moldura de mensagem automática, não a da equipe" do
         escreve(:incoming, 'Oi')
         escreve(:outgoing, 'Lembrete: seu boleto vence amanhã.', sender: ana, **marcas)
         ultima = escreve(:incoming, 'Ok, obrigado')
@@ -144,7 +145,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
         responder(ultima)
 
-        expect(historicos.sole.second).to eq(role: 'assistant', content: 'Lembrete: seu boleto vence amanhã.')
+        expect(historicos.sole.second).to eq(role: 'user', content: moldura.automatica('Lembrete: seu boleto vence amanhã.', marca))
       end
     end
 

@@ -574,12 +574,43 @@ en:
       invalid_kind: 'Invalid material kind. Use "knowledge" or "media".'
       limit_reached: 'This agent already has the maximum of %{limit} knowledge materials. Remove one before adding another.'
     agents:
+      modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
+      # #1428 — "Change by chatting" (pilot): messages the builder shows the owner after an adjustment.
+      ajuste:
+        sem_pedido: 'I did not find a change to make in that message. What do you want to change in the agent?'
+        incompleto: 'I need a bit more context to make that change. Can you give more details?'
+        sem_mudanca: 'The agent was already like that, so nothing changed. Do you want to change something else?'
+        superado: 'A newer adjustment of this agent is already in progress. Nothing was changed by this message.'
+        agente_apagado: 'This agent was deleted. Nothing was changed.'
+        nao_consegui: 'I could not apply: %{pedidos}.'
+        nao_consegui_tudo: 'I could not apply everything you asked for.'
+        de_outro_jeito: 'Can you tell me what you want in another way?'
+        conflito: 'I changed what you asked, but this may conflict with what the agent already does: %{pedidos}. Do you want to keep it like this?'
+        correcao_superada: 'Part of what you asked was left out: a newer adjustment of this agent started while I was checking. Review the agent when it finishes.'
+        agente_mudou: 'The agent was changed some other way while I was checking, so I did not fix what was missing. Review the agent and tell me what you still want to change.'
+        sem_resposta: 'I could not answer that right now. Can you ask in another way?'
+        tambem_mudei: 'I also changed this, which you did not ask for: %{resumos}. If you do not want it, just tell me what to remove.'
+        desfiz_nao_pedido: 'I undid what you had not asked for: %{resumos}. What do you want to change?'
+        nao_desfiz: 'The agent was changed some other way while I was checking, so I did not undo what you had not asked for: %{resumos}. Review the agent and tell me what you want.'
+        nao_conferido: 'I tried again to apply what was missing, but there was no time left to check it. Review the agent: %{pedidos}.'
       sem_onde_trabalhar: 'This agent is not on any channel yet. Choose a channel to start answering.'
       caixa_externo:
         caixa_com_agente_da_plataforma: 'This channel is handled by AI agents. To change who answers first, use the AI agent tab of the channel.'
         desconectar_agente_da_plataforma: 'This channel is handled by an AI agent. To change who answers first, use the AI agent tab of the channel.'
         agente_da_plataforma: 'This is a platform AI agent. To make it answer first, use the AI agent tab of the channel.'
+      # #1720 — the single "Save" of the Where and when drawer. Nothing changes when it refuses.
+      onde_atende:
+        pedido_invalido: "Could not understand the request. Reload and try again."
+        agente_interno: "%{nome} works only inside the dashboard and does not answer customers."
+        agente_parado: "%{nome} is not answering right now. Turn it on before changing where it answers."
+        fase2_off: "Receiving when someone hands over the conversation is not available for this account yet."
+        confirmar_parado: "This way, %{nome} will not receive conversations in any channel. Confirm to keep it like this."
+        canal_com_outro_sistema: "An agent from another system answers first in %{canal}. Nothing changed."
+        primeiro_recusado: "%{nome} cannot answer first in %{canal} right now. Nothing changed."
+        saida_recusada: "Could not take %{nome} out of %{canal}. Nothing changed."
+        mudou_agora: "Someone changed these channels just now. Reload and try again."
+        generico: "Could not save where %{nome} answers. Nothing changed."
       quem_atende:
         pedido_invalido: 'Choose one AI agent, or nobody.'
         agente_interno: 'This agent only works inside the dashboard and cannot answer customers.'

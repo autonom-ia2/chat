@@ -81,14 +81,14 @@ RSpec.describe Crm::Reports::AiUsage do
   # muda: as fases somam no mesmo recurso do rótulo antigo, e o Testar continua onde sempre esteve.
   it 'keeps the builder phases and the agent test under the resources they were counted before' do
     account = create(:account)
-    %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste].each do |feature|
+    %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste agente_builder_conferencia].each do |feature|
       create(:crm_ai_usage_event, account: account, feature: feature, cost_estimate: 0.01)
     end
     create(:crm_ai_usage_event, account: account, feature: 'agente_teste', cost_estimate: 0.01)
 
     resources = payload(account: account)[:spend_by_resource].index_by { |row| row[:resource] }
 
-    expect(resources['Construtor de agente'][:usage_count]).to eq(4)
+    expect(resources['Construtor de agente'][:usage_count]).to eq(5)
     expect(resources['Assistente de respostas'][:usage_count]).to eq(1)
     expect(resources).not_to have_key('Outros')
   end

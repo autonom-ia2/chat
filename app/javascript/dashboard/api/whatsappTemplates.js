@@ -16,7 +16,8 @@ const SUGGESTION_POLL = { intervalMs: 1500, timeoutMs: 120 * 1000 };
 // GET  whatsapp_message_prices    → { payload: { currency, prices, free_tier, service_usage } }
 // GET  campaign_journey/campaign_pauses · POST campaign_journey/campaign_pauses/:id/resume
 // GET  inboxes/:inboxId/whatsapp_catalog            → { catalog: { name, product_count } | null } (#1418)
-// GET  inboxes/:inboxId/whatsapp_catalog/products?q=&after= → { payload: [{ id, name, price, image_url, available }], meta: { after } }
+// GET  inboxes/:inboxId/whatsapp_catalog/products?q=&after= → { payload: [{ id, name, price, sale_price, image_url, available }], meta: { after } }
+//      …/products?ids[]= → os produtos escolhidos, relidos (#1716)
 // POST whatsapp_template_suggestions  { mode: create|improve, goal | text + improvements, tone, category } (#1333)
 //   → 202 + poll_url (job); `suggest` busca o resultado: { payload } ou { error, message }
 // GET  whatsapp_template_consent · POST { operacao: ligar|desligar, marcas, versao_aviso } (#1586)
@@ -78,13 +79,14 @@ class WhatsappTemplatesAPI extends ApiClient {
     return axios.get(`${this.url}inboxes/${inboxId}/whatsapp_catalog`);
   }
 
-  getCatalogProducts(inboxId, { search = '', after = '' } = {}) {
+  getCatalogProducts(inboxId, { search = '', after = '', ids = [] } = {}) {
     return axios.get(
       `${this.url}inboxes/${inboxId}/whatsapp_catalog/products`,
       {
         params: {
           ...(search ? { q: search } : {}),
           ...(after ? { after } : {}),
+          ...(ids.length ? { ids } : {}),
         },
       }
     );

@@ -8,9 +8,13 @@ import { useI18n } from 'vue-i18n';
 import { useMessageContext } from '../../../provider.js';
 import Frame from '../Frame.vue';
 import ActionRow from '../ActionRow.vue';
+import FormularioDoWhatsapp from '../../../../conversa-canal/formulario/FormularioDoWhatsapp.vue';
+import { usePele } from '../../../../conversa-canal/pele';
 
 const { contentAttributes } = useMessageContext();
 const { t } = useI18n();
+// #1702: na conversa com a cara do WhatsApp, o balão como o cliente vê no celular.
+const pele = usePele();
 
 // Os campos vêm de quem chamou a API: só texto entra na tela.
 const textOf = value => (typeof value === 'string' ? value : '');
@@ -26,7 +30,15 @@ const formLabel = computed(() =>
 </script>
 
 <template>
+  <FormularioDoWhatsapp
+    v-if="pele"
+    :header="textOf(richMessage.header)"
+    :footer="textOf(richMessage.footer)"
+    :cta="cta"
+    :nome="name"
+  />
   <Frame
+    v-else
     bubble-name="rich-flow"
     :header="textOf(richMessage.header)"
     :footer="textOf(richMessage.footer)"

@@ -1,6 +1,6 @@
 module Crm
   module Ai
-    class StageClassifier
+    class StageClassifier # rubocop:disable Metrics/ClassLength
       EXTRACTED_ATTR_ITEM = {
         type: 'object',
         properties: {
@@ -84,6 +84,13 @@ module Crm
         }
       }.freeze
 
+      # Memória das IAs (#1601): só com a flag `memoria_ia`, o mesmo schema com `memoria_ops` (Crm::Memoria::Esquema).
+      CLASSIFICATION_SCHEMA_MEMORIA = Crm::Memoria::Esquema.com_memoria(CLASSIFICATION_SCHEMA)
+
+      # O pacote do funil de um card na avaliação conjunta (#1693); o resto da entrada é a conversa, que vai uma vez só.
+      PACOTE = %i[card pipeline stages conversation_summary handoff_enabled handoff_trigger eligible_agents attribute_schema
+                  known_attributes memoria memoria_chaves].freeze
+
       def initialize(card:, client:, stages:, context:, model: Config::MODEL_CLASSIFY, reasoning_effort: 'low',
                      handoff_enabled: false, handoff_trigger: '', eligible_agents: [], attribute_schema: { contact: [], conversation: [] })
         @card = card
@@ -98,12 +105,18 @@ module Crm
         @attribute_schema = attribute_schema
       end
 
+      # Memória das IAs (#1601): o ContextBuilder com a memória traz os ids locais; sem ela, nada muda aqui.
+      def memoria? = @context.to_h.key?(:memoria_refs)
+
+      # Os ids locais (m1..mN) das mensagens e o agendamento desta avaliação, para o Escritor (nunca vão ao modelo).
+      def memoria_interna = @context.slice(:memoria_refs, :memoria_token)
+
       def perform
         response = @client.create(
           model: @model,
           instructions: instructions,
           input: user_input,
-          schema: CLASSIFICATION_SCHEMA,
+          schema: memoria? ? CLASSIFICATION_SCHEMA_MEMORIA : CLASSIFICATION_SCHEMA,
           reasoning_effort: @reasoning_effort
         )
 
@@ -111,19 +124,25 @@ module Crm
           model_used: @model,
           usage: response[:usage],
           response_id: response[:response_id]
-        )
+        ).merge(memoria_interna)
       end
+
+      # A parte deste card na avaliação conjunta (Crm::Ai::ClassificacaoConjunta), com os mesmos campos de sempre.
+      def pacote = entrada.slice(*PACOTE)
+
+      # A conversa e os outros pedidos abertos, iguais para todos os cards da avaliação conjunta.
+      def conversa = entrada.except(*PACOTE).merge(other_subjects_payload)
 
       private
 
       # Prefixo ESTÁVEL (call-invariant) p/ prompt caching — constante congelada em ClassifierPrompt::TEXT (ou a
       # variante com os agentes de IA, #1593). Estágios/critérios DINÂMICOS ficam no user_input. Ver ClassifierPrompt.
-      def instructions
-        ClassifierPrompt.para(@eligible_agents)
-      end
+      def instructions = ClassifierPrompt.para(@eligible_agents, memoria: memoria?)
 
-      def user_input
-        {
+      def user_input = entrada.merge(other_subjects_payload).to_json
+
+      def entrada
+        @entrada ||= {
           card: card_payload,
           pipeline: pipeline_payload,
           stages: @stages.map { |stage| stage_payload(stage) },
@@ -142,8 +161,11 @@ module Crm
           default_hour: @context.dig(:temporal, :default_hour) || 9,
           attribute_schema: @attribute_schema,
           known_attributes: known_attributes_payload
-        }.merge(other_subjects_payload).to_json
+        }.merge(memoria_payload).freeze
       end
+
+      # Com a memória: os fatos já registrados (com id e versão) e as chaves de vários itens. Sem ela, nada muda.
+      def memoria_payload = memoria? ? { memoria: @context[:memoria_fatos].to_a, memoria_chaves: @context[:memoria_chaves].to_a } : {}
 
       # Só quando a conversa tem outros pedidos (#1147): com um pedido só, a entrada fica igual à de antes.
       def other_subjects_payload
