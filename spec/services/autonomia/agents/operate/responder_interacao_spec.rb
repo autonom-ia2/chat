@@ -237,7 +237,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     Rails.root.glob('app/services/autonomia/agents/operate/responder_*.rb').each do |arquivo|
       "Autonomia::Agents::Operate::#{arquivo.basename('.rb').to_s.camelize}".safe_constantize
     end
-    expect(described_class.descendants).to include(Autonomia::Agents::Operate::ResponderAoEvento)
+    expect(described_class.descendants).to include(Autonomia::Agents::Operate::ResponderAoEvento, Autonomia::Agents::Operate::ResponderAPassagem)
     expect(([described_class] + described_class.descendants).map { |classe| classe.instance_method(:post_reply!).arity }).to all(eq(-2))
   end
 end
