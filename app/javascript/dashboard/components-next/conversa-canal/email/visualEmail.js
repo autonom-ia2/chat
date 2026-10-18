@@ -11,6 +11,11 @@ export const LISTA_DO_EMAIL = [
   '!bg-n-surface-1',
   // O botão redondo do painel do contato flutua no canto: espaço para não cobrir o ⋮.
   'sm:!pe-16',
+  // A barra de responder fica presa no rodapé: sem recuo embaixo, nada vaza por baixo.
+  '!pb-0',
+  // A faixa de 64 px que o Chatwoot reserva no começo da lista ("carregando
+  // anteriores") vira só o que precisa: o assunto fica logo abaixo da barra de cima.
+  '[&>li:has(+[data-topo-do-email])]:!min-h-0',
   '[&_.message-bubble-container:has([data-cartao-do-email])]:!mb-0',
   // Só a peça que tem o cartão ocupa a linha; o menu de contexto ao lado continua solto.
   '[&_.message-bubble-container>div:has([data-cartao-do-email])]:!block',

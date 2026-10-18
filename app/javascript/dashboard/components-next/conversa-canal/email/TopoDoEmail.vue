@@ -13,7 +13,7 @@ const email = useEmailDaConversa();
 
 <template>
   <li
-    class="list-none w-full max-w-[960px] mx-auto flex flex-wrap items-start justify-between gap-x-4 gap-y-2 pt-6 pb-4 px-2 sm:px-4 border-b border-n-weak"
+    class="list-none w-full max-w-[960px] mx-auto flex flex-wrap items-start justify-between gap-x-4 gap-y-2 pt-4 pb-3 px-2 sm:px-4 border-b border-n-weak"
     data-topo-do-email
   >
     <h2

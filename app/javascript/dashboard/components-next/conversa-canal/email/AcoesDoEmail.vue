@@ -1,6 +1,7 @@
 <script setup>
-// Fim da conversa de e-mail (#1786): Responder, Responder a todos e Encaminhar, como
-// no leitor de e-mail. Cada botão avisa a caixa de resposta, que já sabe montar os
+// Barra de responder da conversa de e-mail (#1786): Responder, Responder a todos,
+// Encaminhar e Nota privada. Fica presa no rodapé da conversa enquanto o atendente lê,
+// mesmo num e-mail longo (Rodrigo, 18/10). Cada botão avisa a caixa de resposta, que já sabe montar os
 // destinatários (getRecipients) e envia pelo mesmo caminho de sempre.
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
@@ -40,14 +41,14 @@ const agir = modo => emitter.emit(RESPONDER_EMAIL, { modo });
 
 <template>
   <li
-    class="list-none w-full max-w-[960px] mx-auto flex flex-wrap gap-3 py-6 ps-[60px] sm:ps-[68px] pe-2"
+    class="list-none sticky bottom-0 z-10 w-full max-w-[960px] mx-auto grid grid-cols-2 sm:flex sm:flex-wrap gap-3 py-3 px-2 sm:ps-[68px] bg-n-surface-1 border-t border-n-weak"
     data-acoes-do-email
   >
     <button
       v-for="acao in ACOES"
       :key="acao.modo"
       type="button"
-      :class="acao.nota ? PILULA_NOTA : PILULA"
+      :class="[acao.nota ? PILULA_NOTA : PILULA, 'justify-center sm:justify-start']"
       :data-acao-do-email="acao.modo"
       @click="agir(acao.modo)"
     >
