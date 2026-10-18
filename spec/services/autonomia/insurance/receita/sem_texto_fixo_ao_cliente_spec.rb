@@ -23,6 +23,8 @@ module TextoAoCliente
       { tipo: :nota_privada, motivo: 'o que a IA não conseguiu antes de encaminhar, para a equipe' },
     'app/services/autonomia/agents/operate/aviso_ao_atendente.rb::Autonomia::Agents::Operate::AvisoAoAtendente#postar_nota' =>
       { tipo: :nota_privada, motivo: 'o evento da cotação de que a IA não falou, para quem atende' },
+    'app/services/autonomia/agents/operate/nao_suportada.rb::Autonomia::Agents::Operate::NaoSuportada#nota' =>
+      { tipo: :nota_privada, motivo: 'a mensagem "não suportada" que o WhatsApp API não recuperou, para a equipe (#1489)' },
     'app/services/autonomia/agents/operate/reaction_materializer.rb::Autonomia::Agents::Operate::ReactionMaterializer#call' =>
       { tipo: :outro, motivo: 'mensagem de ENTRADA (incoming) que registra a reação do cliente para o modelo ler; ' \
                               'não sai para o canal' },

@@ -34,7 +34,7 @@
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:17",
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:25",
-      "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:29"
+      "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:30"
     ],
     "sem_corpo": true
   },
@@ -6285,7 +6285,8 @@
           "label_manage",
           "attribute_manage",
           "macro_manage",
-          "sla_manage"
+          "sla_manage",
+          "assignment_manage"
         ]
       }
     },
@@ -8163,7 +8164,7 @@
     "modelo": "User",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:11",
-      "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:33",
+      "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:34",
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:25"
     ],
     "sem_corpo": false
@@ -16180,7 +16181,8 @@
           "label_manage",
           "attribute_manage",
           "macro_manage",
-          "sla_manage"
+          "sla_manage",
+          "assignment_manage"
         ]
       }
     },
@@ -24420,7 +24422,8 @@
           "label_manage",
           "attribute_manage",
           "macro_manage",
-          "sla_manage"
+          "sla_manage",
+          "assignment_manage"
         ]
       }
     },

@@ -482,6 +482,11 @@
           "policy": "Policy",
           "audience": "Outside the target audience",
           "schedule": "Outside the schedule",
+          "recuperacao_falhou": "WhatsApp message not shown (check the phone)",
+          "recuperada_tarde": "WhatsApp message arrived late",
+          "recuperacao_acordar_falhou": "WhatsApp message recovered, AI not called",
+          "recuperacao_passagem_falhou": "WhatsApp message not shown, handoff not done",
+          "recuperada_so_contexto": "Recovered message: AI reply was only internal context",
           "other": "Other / unspecified"
         }
       },

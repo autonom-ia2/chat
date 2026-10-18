@@ -13,6 +13,7 @@ import {
   toggleExtra,
   isExtraLocked,
   unmetSuggestion,
+  suggestedLevel,
   profilePermissions,
   sensitiveExtrasOn,
 } from '../permissionMatrix';
@@ -258,6 +259,22 @@ describe('permissionMatrix', () => {
         unmetSuggestion(prospecting, ['prospecting_manage', 'campaign_manage'])
       ).toBeNull();
       expect(unmetSuggestion(prospecting, ['prospecting_view'])).toBeNull();
+    });
+
+    // #1797: distribuição pede ver as caixas, e ver já basta.
+    it('points to inboxes at view level for assignment', () => {
+      const assignment = moduleByKey('ASSIGNMENT');
+
+      expect(unmetSuggestion(assignment, ['assignment_manage']).key).toBe(
+        'INBOXES'
+      );
+      expect(suggestedLevel(assignment)).toBe('view');
+      expect(
+        unmetSuggestion(assignment, ['assignment_manage', 'inbox_view'])
+      ).toBeNull();
+      expect(
+        unmetSuggestion(assignment, ['assignment_manage', 'inbox_manage'])
+      ).toBeNull();
     });
   });
 
