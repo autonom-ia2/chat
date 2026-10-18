@@ -366,7 +366,9 @@ module Autonomia
       def enabled_agent_tools
         @enabled_agent_tools ||= begin
           reserved = enabled_specialists.flat_map(&:ferramentas_do_sistema).map(&:to_s).to_set
-          Tools::Bound.for_agent(@agent).reject { |tool| reserved.include?(tool.slug) }
+          # #1630: o turno da passagem não recebe as ferramentas que passam a conversa adiante.
+          sem_passar = @delivery.try(:turno_da_passagem?)
+          Tools::Bound.for_agent(@agent).reject { |tool| reserved.include?(tool.slug) || (sem_passar && tool.passa_a_conversa?) }
         end
       end
 

@@ -16,8 +16,11 @@
 #      pelo pedido de passar a humanos do modelo. A conversa acabou de ser entregue a este agente, sem mensagem nova
 #      do cliente.
 #   5. Entrega numa mensagem (o caminho clássico): a humanizada e a de voz dependem de uma mensagem de origem.
-#   6. Turno que falha (IA fora, resposta vazia, exceção) solta as duas chaves que tomou — a da passagem e a posse da
-#      última mensagem —, para um evento futuro poder tentar. Não reenfileira sozinho.
+#   6. Turno que falha (IA fora, resposta vazia, exceção) solta a posse da última mensagem do cliente que tomou, para o
+#      turno dessa mensagem poder ser refeito (ReenfileirarTurno). Não reenfileira sozinho, e a chave da passagem fica
+#      (AoReceberPassagem: a próxima tentativa só viria de outra passagem, com outra chave).
+#   7. Sem as ferramentas que passam a conversa (`passa_a_conversa?`): o turno da passagem não abre assunto nem passa a
+#      conversa adiante, então não há vai e volta entre agentes sem o cliente (Tools::Delivery#turno_da_passagem?).
 class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operate::Responder
   CHAVE = 'autonomia_passagem_id'.freeze
 
@@ -64,10 +67,9 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
     "passagem:#{@passagem.id}"
   end
 
-  # O turno falhou (Responder#falha_no_turno, SILENCIOS_DE_FALHA): solta as chaves que este turno tomou, só se ainda
-  # forem dele. Não reenfileira: quem tenta de novo é um evento futuro (outra troca de dono, mensagem do cliente).
+  # O turno falhou (Responder#falha_no_turno, SILENCIOS_DE_FALHA): solta a posse da última mensagem que este turno tomou,
+  # só se ainda for dele (compare-and-delete). Não reenfileira.
   def soltar_posse
-    ::Autonomia::Agents::Operate::AoReceberPassagem.soltar(@passagem, @agent_inbox)
     return if @ultima_id.nil?
 
     ::Autonomia::Agents::Operate::PosseDoTurno.soltar(@conversation.id, @ultima_id, @agent_inbox.id, valor_da_posse)
@@ -110,12 +112,20 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
     ::Autonomia::Agents::Operate::MessageMedia::EMPTY
   end
 
+  # O contexto de entrega deste turno: ancorado na passagem e marcado como turno da passagem (sem as ferramentas que
+  # passam a conversa adiante).
+  def delivery
+    @delivery ||= ::Autonomia::Agents::Tools::Delivery.new(conversation: @conversation, agent_inbox: @agent_inbox,
+                                                           passagem: @passagem.id)
+  end
+
   def already_replied?
     @conversation.messages.outgoing.where(sender_type: 'AgentBot').where('content_attributes::text LIKE ?', "%#{CHAVE}%")
                  .any? { |message| message.content_attributes.to_h[CHAVE].to_s == @passagem.id.to_s }
   end
 
-  def post_reply!(text)
+  # `_interacao`: o segundo argumento que o post_reply! do Responder ganha no #1479; aqui ainda não é usado.
+  def post_reply!(text, _interacao = nil)
     Messages::MessageBuilder.new(
       nil, @conversation,
       ActionController::Parameters.new(
