@@ -25,8 +25,9 @@ class Api::V1::Accounts::AgentCapacityPolicies::UsersController < Api::V1::Accou
     @agent_capacity_policy = Current.account.agent_capacity_policies.find(params[:agent_capacity_policy_id])
   end
 
+  # Só quem está nesta política: tirar pela política A não mexe em quem está na B (#1797).
   def fetch_user
-    @account_user = Current.account.account_users.find_by!(user_id: params[:id])
+    @account_user = @agent_capacity_policy.account_users.find_by!(user_id: params[:id])
   end
 
   def permitted_params

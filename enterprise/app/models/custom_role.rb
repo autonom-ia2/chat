@@ -47,6 +47,7 @@
 # - 'whatsapp_templates_view' / 'whatsapp_templates_manage': WhatsApp (Cloud) message templates of the inboxes (#1330).
 #   manage creates, edits, duplicates and deletes them at Meta; platform templates stay read-only.
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
+# - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -95,6 +96,7 @@ class CustomRole < ApplicationRecord
     attribute_manage
     macro_manage
     sla_manage
+    assignment_manage
   ].freeze
 
   validates :name, presence: true

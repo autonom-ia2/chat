@@ -1807,8 +1807,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde eu configuro a distribuição automática de conversas?; Como escolher entre política de atribuição e capacidade do agente?; Onde fica a configuração de passagem da IA para uma pessoa?; Por que só aparece um card nessa tela?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes
 - rota: `assignment_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/index`
-- gate: feature flag `assignment_v2`; papel `administrator`
-- pre_requisitos: ser administrador da conta
+- gate: feature flag `assignment_v2`; papel `administrator` ou `assignment_manage`
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes; 2. Leia os cards e decida o que quer ajustar; 3. Clique em Política de atribuição para a ordem do rodízio, em Capacidade do agente para limitar quantas conversas cada pessoa aguenta, ou em Transferir para humano (CRM) para a transferência da IA para uma pessoa.
 - gotchas: a tela mostra de um a três cards conforme o que a conta tem liberado; Política de atribuição aparece sempre, Capacidade do agente só com atribuição avançada, e Transferir para humano (CRM) só com o CRM e a IA do CRM ligados; card que sumiu é liberação de recurso, não erro.
 - nav_target: `assignment_policy_index`
@@ -1817,8 +1817,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Quais políticas de atribuição já existem?; Quais caixas de entrada estão em cada política?; Como apago uma política que não uso mais?; Onde crio uma política nova?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição
 - rota: `agent_assignment_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/assignment`
-- gate: feature flag `assignment_v2`; papel `administrator`
-- pre_requisitos: ser administrador da conta
+- gate: feature flag `assignment_v2`; papel `administrator` ou `assignment_manage`
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Política de atribuição; 2. Confira a ordem, a prioridade e as caixas de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: cada caixa de entrada fica em uma política só, então a mesma caixa nunca aparece em duas linhas; excluir pede confirmação e não tem volta, e as caixas daquela política ficam sem regra de distribuição; conta nova mostra a lista vazia, o que é normal.
 - nav_target: `agent_assignment_policy_index`
@@ -1827,8 +1827,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como crio uma política de atribuição do zero?; Qual a diferença entre rodízio e equilibrado?; Como evito que um agente receba conversa demais?; Por que o modo Equilibrado está bloqueado?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Nova política
 - rota: `agent_assignment_policy_create` - `/app/accounts/:accountId/settings/assignment-policy/assignment/create`
-- gate: feature flag `assignment_v2`; papel `administrator`
-- pre_requisitos: ser administrador da conta
+- gate: feature flag `assignment_v2`; papel `administrator` ou `assignment_manage`
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Escolha a ordem de atribuição e a prioridade; 4. Ajuste a distribuição justa e o descarte de conversas inativas; 5. Clique em Criar política.
 - gotchas: nome e descrição são obrigatórios e o botão fica travado sem os dois; a política nasce com rodízio, 100 conversas por hora por agente e descarte de conversas paradas há mais de 7 dias; Equilibrado exige o plano com atribuição avançada; não dá para escolher as caixas de entrada aqui, só depois de salvar, na tela de edição, para onde o sistema leva sozinho.
 - nav_target: `agent_assignment_policy_create`
@@ -1837,7 +1837,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como coloco uma caixa de entrada nessa política?; Como mudo o limite de conversas por agente?; Como tiro uma caixa de entrada da política?; Por que a caixa saiu da outra política quando eu vinculei aqui?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Alterar
 - rota: `agent_assignment_policy_edit` - `/app/accounts/:accountId/settings/assignment-policy/assignment/edit/:id`
-- gate: feature flag `assignment_v2`; papel `administrator`
+- gate: feature flag `assignment_v2`; papel `administrator` ou `assignment_manage`
 - pre_requisitos: ter uma política de atribuição já criada
 - passos: 1. Na lista, clique em Alterar na política desejada; 2. Ajuste ordem, prioridade, distribuição justa e descarte de inativas; 3. Clique em Atualizar política para gravar esses campos; 4. Em Caixas de entrada adicionadas, vincule e desvincule as caixas.
 - gotchas: esta é a única tela com a seção de caixas de entrada, e já vem preenchida com a política existente; uma caixa só pode estar em uma política, e vincular aqui desvincula da anterior, com aviso antes; vincular e desvincular caixa vale na hora, enquanto os demais campos só valem depois do botão Atualizar política; o intervalo de conversas inativas aceita de 1 hora a 999 dias, e em branco desliga o descarte.
@@ -1847,8 +1847,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde defino o limite de conversas por agente?; Quais políticas de capacidade já existem?; Quem está em cada política de capacidade?; Como apago uma política de capacidade?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente
 - rota: `agent_capacity_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/capacity`
-- gate: feature flag `advanced_assignment`; papel `administrator`
-- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador
+- gate: feature flag `advanced_assignment`; papel `administrator` ou `assignment_manage`
+- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Capacidade do agente; 2. Confira os agentes e os limites de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: a capacidade só muda a distribuição de verdade quando a política de atribuição da caixa está no modo Equilibrado, que também depende do plano; cada agente pertence a uma única política de capacidade; excluir pede confirmação e não tem volta.
 - nav_target: `agent_capacity_policy_index`
@@ -1857,7 +1857,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como crio uma política de capacidade?; Como limito o número máximo de conversas por caixa?; Quais conversas não devem contar no limite do agente?; Onde adiciono os agentes nessa política?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente > Nova política
 - rota: `agent_capacity_policy_create` - `/app/accounts/:accountId/settings/assignment-policy/capacity/create`
-- gate: feature flag `advanced_assignment`; papel `administrator`
+- gate: feature flag `advanced_assignment`; papel `administrator` ou `assignment_manage`
 - pre_requisitos: ter atribuição avançada liberada no plano
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Defina as regras de exclusão, escolhendo as etiquetas e o tempo que não contam na capacidade; 4. Clique em Criar política.
 - gotchas: a política nasce sem ninguém dentro, porque as seções de limite por caixa e de agentes só existem na tela de edição, para onde o sistema leva ao salvar; as etiquetas de exclusão precisam já existir na conta para poderem ser escolhidas.
@@ -1867,7 +1867,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como adiciono agentes a uma política de capacidade?; Como defino o máximo de conversas por caixa de entrada?; Como mudo a capacidade de uma pessoa específica?; Por que o agente saiu da outra política de capacidade?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente > Alterar
 - rota: `agent_capacity_policy_edit` - `/app/accounts/:accountId/settings/assignment-policy/capacity/edit/:id`
-- gate: feature flag `advanced_assignment`; papel `administrator`
+- gate: feature flag `advanced_assignment`; papel `administrator` ou `assignment_manage`
 - pre_requisitos: ter uma política de capacidade criada e os agentes cadastrados na conta
 - passos: 1. Na lista, clique em Alterar na política desejada; 2. Em limites por caixa de entrada, escolha a caixa e o máximo de conversas; 3. Em agentes atribuídos, use Adicionar agente; 4. Ajuste nome, descrição e regras de exclusão e clique em Atualizar política.
 - gotchas: todo agente entra com capacidade 20 por padrão, então ajuste se o time não for homogêneo; um agente só pode estar em uma política de capacidade, e vincular aqui tira ele da anterior; mexer em agente e em limite por caixa vale na hora, enquanto nome, descrição e exclusões só valem depois do botão Atualizar política.

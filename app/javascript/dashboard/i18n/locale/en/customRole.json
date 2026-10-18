@@ -196,6 +196,12 @@
           "NAME": "SLA",
           "HINT": "Response time policies",
           "LEVEL_MANAGE": "Creates and edits SLA policies."
+        },
+        "ASSIGNMENT": {
+          "NAME": "Agent assignment",
+          "HINT": "Who receives each conversation and how many at a time",
+          "LEVEL_MANAGE": "Creates and changes the assignment and capacity rules.",
+          "SUGGESTION": "To list every inbox in the forms, Inboxes needs at least View."
         }
       }
     },
