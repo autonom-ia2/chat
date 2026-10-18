@@ -166,6 +166,27 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
       expect(agent.reload.tone).to eq('cordial')
     end
 
+    # Custo (a volta por Versões vale para todas as contas): a trava não lê `messages`, que não tem teto.
+    it 'o Desfazer e a volta travam as conversas só pelas colunas leves, em ordem de id' do
+      aplicar_ajuste
+      consultas = []
+      assinatura = ActiveSupport::Notifications.subscribe('sql.active_record') { |*, dados| consultas << dados[:sql] }
+      begin
+        desfazer
+        agent.reload.restore_instruction!(agent.instruction_versions.find_by!(reason: 'base'), created_by: user)
+      ensure
+        ActiveSupport::Notifications.unsubscribe(assinatura)
+      end
+
+      tabela = '"autonomia_agent_build_threads"'
+      travas = consultas.select { |sql| sql.include?(tabela) && sql.include?('FOR UPDATE') }
+      expect(travas.size).to eq(2)
+      expect(travas).to all(start_with("SELECT #{tabela}.\"id\", #{tabela}.\"status\", #{tabela}.\"build_token\" FROM")
+                              .and(include("ORDER BY #{tabela}.\"id\" ASC"))
+                              .and(include("#{tabela}.\"account_id\" = ")))
+      expect(travas.join).not_to include('messages')
+    end
+
     it 'a chave do config que não existia antes sai, em vez de ficar nil' do
       agent.update!(config: agent.config.except('voice'))
       respostas << saida('voice' => 'feminina', 'mudancas' => [mudanca('voice', fala, 'Voz feminina.')])

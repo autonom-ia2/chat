@@ -60,7 +60,7 @@ module Autonomia::Agents::DesfazerAjuste
     return true if ultimo['desfeito'] == true
     raise AjusteMudou unless conversa_desfazivel&.id == thread.id
 
-    em_voo.each { |conversa| conversa.mark_failed!(conversa.build_token, SUPERADA) }
+    cancelar_em_voo!(em_voo)
     voltar_ao_antes_do_ajuste!(thread, ultimo, autor)
   end
 
@@ -87,8 +87,21 @@ module Autonomia::Agents::DesfazerAjuste
 
   # A ORDEM DAS TRAVAS, a mesma da escrita do Construtor: as conversas do agente primeiro (só as da conta, por id),
   # depois o agente. O Desfazer e a volta por Versões seguem esta ordem; ninguém trava o agente e depois a conversa.
+  # Só as colunas leves: `messages` não tem teto, e a volta por Versões vale para todas as contas.
   def travar_conversas!
-    build_threads.where(account_id: account_id).order(:id).lock.to_a
+    build_threads.where(account_id: account_id).order(:id).lock.select(:id, :status, :build_token).to_a
+  end
+
+  # O pedido em voo perde a vez: falha como o mark_failed! faria (sem o ajuste em curso nem o "tira isso"), sob a trava
+  # que já temos, sem carregar a conversa. A escrita atrasada do job falha na guarda (status e token).
+  def cancelar_em_voo!(conversas)
+    return if conversas.empty?
+
+    modelo = Autonomia::Agents::BuildThread
+    falha = { 'error' => SUPERADA, 'error_fields' => [], 'applied' => false }.to_json
+    sql = "status = ?, updated_at = ?, state = (state - 'ajuste_em_curso' - 'nao_pedido_anterior') || ?::jsonb"
+    em_voo = modelo.where(id: conversas.map(&:id), status: modelo.statuses[:processing])
+    em_voo.update_all([sql, modelo.statuses[:failed], Time.current, falha]) # rubocop:disable Rails/SkipsModelValidations
   end
 
   # A volta por Versões encerra o Desfazer pela conversa: o ajuste guardado e o "tira isso" saem das conversas do agente
