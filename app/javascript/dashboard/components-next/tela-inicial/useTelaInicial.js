@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n';
 import { useNow } from '@vueuse/core';
 import { useMapGetter } from 'dashboard/composables/store';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
-import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import { idiomaDoPainel } from 'dashboard/components-next/conversa-canal/dataDaConversa';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
@@ -55,25 +54,28 @@ export const useTelaInicial = () => {
     return t(`TELA_INICIAL.TEMPO.${unidade}`, { count: valor }, valor);
   };
 
-  const abrir = proxima => {
-    if (!proxima) return;
-    router.push(
-      frontendURL(
-        conversationUrl({ accountId: contaId.value, id: proxima.displayId })
-      )
-    );
-  };
   // Cada número leva à lista que ele conta. A tela também aparece numa caixa, etiqueta, time ou
   // pasta (lista filtrada), então sempre volta à lista da conta. A aba vai depois da navegação:
   // sair de "Em que participo" reescreve a aba (watcher do ChatList) no mesmo ciclo da rota.
-  const irPara = async (rota, aba) => {
-    await router.push({ name: rota, params: { accountId: contaId.value } });
+  const irPara = async (rota, aba, params = {}) => {
+    await router.push({
+      name: rota,
+      params: { accountId: contaId.value, ...params },
+    });
     await nextTick();
     if (aba) emitter.emit(BUS_EVENTS.TELA_INICIAL_ABA, aba);
   };
   const { ME, UNASSIGNED, ALL } = wootConstants.ASSIGNEE_TYPE;
   // "Esperam você" é a lista "Não atendidas" do Chatwoot na aba "Minhas": o mesmo critério do número.
   const verEsperam = () => irPara('conversation_unattended', ME);
+  // A próxima abre dentro da lista onde ela está ("Não atendidas", aba "Minhas"), e não sobre
+  // a lista que estava aberta antes: a conversa aparece selecionada na lista.
+  const abrir = proxima => {
+    if (!proxima) return undefined;
+    return irPara('conversation_through_unattended', ME, {
+      conversationId: proxima.displayId,
+    });
+  };
   const verSemResponsavel = () => irPara('home', UNASSIGNED);
   const verTodas = () => irPara('home', ALL);
   // A linha da equipe conta as não atendidas da conta: a mesma lista, na aba "Todos".

@@ -61,6 +61,15 @@ describe('useTelaInicial: para onde cada número leva', () => {
     expect(ordem).toEqual([`rota:${rota}`, `aba:${aba}`]);
   });
 
+  it('abrir a próxima: a conversa dentro de "Não atendidas", na aba Minhas', async () => {
+    await useTelaInicial().abrir({ displayId: 4 });
+    expect(push).toHaveBeenCalledWith({
+      name: 'conversation_through_unattended',
+      params: { accountId: 7, conversationId: 4 },
+    });
+    expect(ordem).toEqual(['rota:conversation_through_unattended', 'aba:me']);
+  });
+
   it('em dia sem ninguém esperando; a ação do vazio vai às sem responsável', () => {
     const dados = useTelaInicial();
     expect(dados.tudoEmDia.value).toBe(true);
