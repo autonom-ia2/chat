@@ -4,6 +4,9 @@
 # Só para a conversa de e-mail nova (chave `conversa_email_nova`); os outros canais seguem só com o Google.
 # Roda num job (ConversaCanal::TraduzirEmailJob): o HTML vai e volta inteiro e passa dos 15 s da requisição.
 class ConversaCanal::TraducaoDoEmail
+  # Vai para o rastreador no lugar do erro da IA: a mensagem do provedor (ou o JSON quebrado) pode trazer o e-mail.
+  class FalhaNaIa < StandardError; end
+
   # E-mail muito grande (newsletter com HTML pesado) não vai para a IA: custo e tempo sem retorno.
   LIMITE_DE_CARACTERES = 60_000
   # Os idiomas que o painel oferece (os mesmos da troca de idioma do perfil e da conta).
@@ -47,7 +50,7 @@ class ConversaCanal::TraducaoDoEmail
     JSON.parse(resposta[:text])['traducao'].to_s.presence
   rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
     Rails.logger.warn("[ConversaCanal::TraducaoDoEmail] message_id=#{@message.id} erro=#{e.class.name}")
-    ChatwootExceptionTracker.new(e, account: @message.account).capture_exception
+    ChatwootExceptionTracker.new(FalhaNaIa.new(e.class.name), account: @message.account).capture_exception
     nil
   end
 

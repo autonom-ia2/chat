@@ -43,6 +43,35 @@ RSpec.describe 'Tradução do e-mail pela IA da conta' do
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
+    describe 'uma tradução por vez para a mensagem e o idioma' do
+      before { Redis::Alfred.delete(ConversaCanal::TraduzirEmailJob.trava(message.id, 'pt_BR')) }
+
+      after { Redis::Alfred.delete(ConversaCanal::TraduzirEmailJob.trava(message.id, 'pt_BR')) }
+
+      it 'cliques repetidos enquanto ela corre: um job só, e todos respondem 202' do
+        expect { 3.times { traduzir } }.to have_enqueued_job(ConversaCanal::TraduzirEmailJob).exactly(:once)
+
+        expect(response).to have_http_status(:accepted)
+      end
+
+      it 'outro idioma da mesma mensagem é outra tradução' do
+        Redis::Alfred.delete(ConversaCanal::TraduzirEmailJob.trava(message.id, 'en'))
+
+        expect { traduzir && traduzir('en') }.to have_enqueued_job(ConversaCanal::TraduzirEmailJob).twice
+      ensure
+        Redis::Alfred.delete(ConversaCanal::TraduzirEmailJob.trava(message.id, 'en'))
+      end
+
+      it 'o job solta a trava no fim, mesmo quando a IA falha' do
+        allow(cliente).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error, 'timeout')
+        traduzir
+
+        ConversaCanal::TraduzirEmailJob.perform_now(message.id, 'pt_BR')
+
+        expect { traduzir }.to have_enqueued_job(ConversaCanal::TraduzirEmailJob).once
+      end
+    end
+
     it 'já traduzido para o idioma: 200, sem job' do
       message.update!(translations: { 'pt_BR' => '<p>Olá</p>' })
 
@@ -85,6 +114,18 @@ RSpec.describe 'Tradução do e-mail pela IA da conta' do
 
       expect { described_class.perform_now(message.id, 'pt_BR') }.not_to raise_error
       expect(message.reload.translations).to be_blank
+    end
+
+    it 'IA falhou: o rastreador recebe só a classe do erro, sem a mensagem do provedor' do
+      allow(cliente).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error, 'Olá Ana, segue o contrato')
+      rastreador = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador)
+
+      described_class.perform_now(message.id, 'pt_BR')
+
+      expect(ChatwootExceptionTracker).to have_received(:new) do |erro, **|
+        expect(erro.message).to eq('Crm::Ai::ResponsesClient::Error')
+      end
     end
   end
 end

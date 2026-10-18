@@ -13605,7 +13605,7 @@
     "controller": "api/v1/accounts/conversations/messages#translate",
     "modelo": "Message",
     "origem": [
-      "app/controllers/concerns/conversa_canal/traducao_em_segundo_plano.rb:6",
+      "app/controllers/concerns/conversa_canal/traducao_em_segundo_plano.rb:8",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
