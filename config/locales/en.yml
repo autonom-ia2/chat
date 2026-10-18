@@ -578,6 +578,8 @@ en:
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'
       conflito_de_trava: 'The agent changed at the same time. Try again.'
+      # #1479: text of the button that opens the list of options the AI sends, when the AI does not choose one.
+      botao_das_opcoes: 'See options'
       instrucao_mantida: "The Quote Agent's instruction is maintained by Autonom.ia and cannot be edited here. Its name, business hours and behavior were chosen in the Quotes tab when the agent was created."
       # #1428 — "Change by chatting" (pilot): messages the builder shows the owner after an adjustment.
       ajuste:
