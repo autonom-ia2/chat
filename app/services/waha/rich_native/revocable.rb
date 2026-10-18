@@ -4,7 +4,7 @@
 #   WhatsApp quando a mensagem fica `deleted`, com ou sem a flag `whatsapp_rich_native`;
 # - caixa híbrida com a flag: mensagem nossa, não nota, com id físico do motor, a mesma regra do
 #   WhatsappHybrid::RichNative::RevokeOnDelete (é ele que pede o apagar ao motor);
-# - fora disso, false: apagar some só do painel.
+# - mensagem que falhou (nunca chegou ao cliente) e fora disso, false: apagar some só do painel.
 # Inbox e conta vêm pela conversa (já carregada com a lista), para a lista não buscar uma caixa por mensagem.
 module Waha::RichNative::Revocable
   KEY = :c2y_revocable
@@ -12,7 +12,8 @@ module Waha::RichNative::Revocable
   module_function
 
   def for(message)
-    return false unless message.outgoing? && !message.private?
+    # A que falhou nunca chegou ao cliente: apagar some só do painel.
+    return false unless message.outgoing? && !message.private? && !message.failed?
 
     conversation = message.conversation
     waha_inbox?(conversation.inbox) || hybrid_revocable?(message, conversation.inbox, conversation.account)

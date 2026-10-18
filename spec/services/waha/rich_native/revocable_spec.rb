@@ -19,6 +19,10 @@ describe Waha::RichNative::Revocable do
       expect(described_class.for(message)).to be(true)
     end
 
+    it 'is false for a failed message (it never reached the customer)' do
+      expect(described_class.for(message_in(inbox, conversation, status: :failed))).to be(false)
+    end
+
     it 'is false for a note and for a customer message' do
       expect(described_class.for(message_in(inbox, conversation, private: true))).to be(false)
       expect(described_class.for(message_in(inbox, conversation, message_type: :incoming))).to be(false)
@@ -44,6 +48,7 @@ describe Waha::RichNative::Revocable do
       expect(described_class.for(sent)).to be(true)
       expect(described_class.for(message_in(inbox, conversation, source_id: nil))).to be(false)
       expect(described_class.for(message_in(inbox, conversation, source_id: '3EB0NOTE', private: true))).to be(false)
+      expect(described_class.for(message_in(inbox, conversation, source_id: '3EB0FAIL', status: :failed))).to be(false)
     end
   end
 
