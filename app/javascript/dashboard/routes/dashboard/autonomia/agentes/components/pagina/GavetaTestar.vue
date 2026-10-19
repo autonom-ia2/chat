@@ -14,13 +14,20 @@ const props = defineProps({
   atendendo: { type: Boolean, default: false },
   podeMudar: { type: Boolean, default: false },
   pergunta: { type: String, default: '' },
+  // #1427 (mockup) — com o material (composables/useMaterialDoAgente), o Testar ganha o clipe: foto
+  // vai ao agente só no teste; arquivo, com o sim da pessoa, entra na base pelo material.
+  material: { type: Object, default: null },
 });
 
-const emit = defineEmits(['fechar', 'errado']);
+const emit = defineEmits(['fechar', 'errado', 'verMaterial']);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA.TESTE';
-const teste = useTesteDoAgente(toRef(props, 'agente'));
+const teste = useTesteDoAgente(toRef(props, 'agente'), {
+  textoSoFoto: t('AGENTS.JORNADA.CRIAR.CONFIRA.FOTO'),
+  perguntarAoAgente: props.material ? props.material.testar : null,
+});
+const aprender = arquivo => props.material?.enviar({ arquivo });
 const celular = ref(null);
 
 onMounted(() => {
@@ -51,7 +58,10 @@ onBeforeUnmount(() => teste.parar());
       :nome="nome"
       :tipo="agente.agent_type"
       :pode-mudar="podeMudar"
+      :com-clipe="Boolean(material)"
       @errado="emit('errado', $event)"
+      @aprender="aprender"
+      @ver-material="emit('verMaterial')"
     />
   </AgenteGaveta>
 </template>

@@ -8,6 +8,8 @@ import AgenteErro from '../AgenteErro.vue';
 import MaterialLinha from './MaterialLinha.vue';
 import PerguntasParaConferir from './PerguntasParaConferir.vue';
 import DialogoAcao from './DialogoAcao.vue';
+import AutotesteDoMaterial from './AutotesteDoMaterial.vue';
+import UmProblemaPorVez from './UmProblemaPorVez.vue';
 import {
   MAX_ARQUIVO,
   MAX_FONTES,
@@ -29,9 +31,13 @@ const props = defineProps({
   // Só na primeira leitura (as releituras mantêm a lista na tela).
   carregandoFontes: { type: Boolean, default: false },
   erroLer: { type: Boolean, default: false },
+  // #1426 (mockup) — o material com estado real (composables/useMaterialDoAgente). Presente, a lista,
+  // o envio e o tirar passam por ele, e no topo aparecem o "um problema por vez" e o autoteste.
+  // Ausente, a gaveta é a de hoje.
+  material: { type: Object, default: null },
 });
 
-const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler']);
+const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler', 'corrigir']);
 
 const { t } = useI18n();
 const store = useStore();
@@ -51,7 +57,15 @@ const tirando = ref(null);
 const dialogoTirar = ref(null);
 const botaoArquivo = ref(null);
 
-const lista = computed(() => props.fontes || []);
+const lista = computed(() =>
+  props.material ? props.material.fontes.value : props.fontes || []
+);
+const problemas = computed(() => props.material?.problemas.value || []);
+const autoteste = computed(() => props.material?.autoteste.value || null);
+const estadoDe = fonte =>
+  props.material ? props.material.estadoDe(fonte) : '';
+const resolvendo = ref('');
+const fontePorId = id => lista.value.find(fonte => fonte.id === id) || null;
 
 // "Além da conversa, {nome} usa estes arquivos e sites…" só quando há arquivo ou site; sem eles, o
 // vazio já diz que sabe só o que foi contado.
@@ -73,17 +87,21 @@ const salvar = async acao => {
   }
 };
 
-const criar = descritor =>
-  store.dispatch('autonomiaSources/create', {
+const criar = descritor => {
+  if (props.material) return props.material.enviar(descritor);
+  return store.dispatch('autonomiaSources/create', {
     agentId: props.agente.id,
     descriptor: { ...descritor, kind: 'knowledge' },
   });
+};
 
-const remover = fonte =>
-  store.dispatch('autonomiaSources/remove', {
+const remover = fonte => {
+  if (props.material) return props.material.tirar(fonte.id);
+  return store.dispatch('autonomiaSources/remove', {
     agentId: props.agente.id,
     sourceId: fonte.id,
   });
+};
 
 const alternarAdicionar = async () => {
   adicionando.value = !adicionando.value;
@@ -222,6 +240,18 @@ const pedirTirar = fonte => {
 };
 
 const tirar = () => remover(tirando.value);
+
+// #1426 — as saídas do cartão "um problema por vez".
+const resolver = async (problemaId, escolha) => {
+  resolvendo.value = problemaId;
+  try {
+    await props.material.resolver(problemaId, escolha);
+  } finally {
+    resolvendo.value = '';
+  }
+};
+const mandarOutroDoProblema = id => escolherArquivo(fontePorId(id));
+const tirarDoProblema = id => pedirTirar(fontePorId(id));
 </script>
 
 <template>
@@ -229,6 +259,39 @@ const tirar = () => remover(tirando.value);
     <p v-if="resumo" data-resumo class="m-0 text-sm text-n-slate-11">
       {{ resumo }}
     </p>
+
+    <template v-if="material">
+      <UmProblemaPorVez
+        v-if="problemas.length"
+        :problemas="problemas"
+        :nome="nome"
+        :pode-gerenciar="podeGerenciar"
+        :resolvendo="resolvendo"
+        @resolver="resolver"
+        @mandar-outro="mandarOutroDoProblema"
+        @tirar="tirarDoProblema"
+        @corrigir="emit('corrigir', $event)"
+      />
+      <p
+        v-else-if="material.lido.value && !material.emAndamento.value"
+        data-tudo-certo
+        role="status"
+        class="flex items-center gap-2 p-3 m-0 text-sm rounded-xl bg-n-teal-2 text-n-slate-12"
+      >
+        <span
+          class="i-lucide-circle-check size-4 text-n-teal-11"
+          aria-hidden="true"
+        />
+        {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.TUDO_CERTO', { nome }) }}
+      </p>
+      <AutotesteDoMaterial
+        v-if="autoteste"
+        :autoteste="autoteste"
+        :nome="nome"
+        :pode-gerenciar="podeGerenciar"
+        @testar-de-novo="material.pedirAutoteste()"
+      />
+    </template>
 
     <div
       v-if="podeGerenciar && adicionando"
@@ -247,7 +310,11 @@ const tirar = () => remover(tirando.value);
         <span class="flex flex-col text-start">
           <span>{{ t(`${NS}.ENVIAR_ARQUIVO`) }}</span>
           <span class="text-xs font-normal text-n-slate-11">
-            {{ t(`${NS}.ENVIAR_ARQUIVO_TEXTO`) }}
+            {{
+              material
+                ? t(`${NS}.ENVIAR_ARQUIVO_TEXTO_FOTO`)
+                : t(`${NS}.ENVIAR_ARQUIVO_TEXTO`)
+            }}
           </span>
         </span>
       </AgenteBotao>
@@ -329,6 +396,8 @@ const tirar = () => remover(tirando.value);
         :fonte="fonte"
         :nome-agente="nome"
         :relendo="fonte.id in relendo"
+        :estado="estadoDe(fonte)"
+        :pode-reler="!material"
         :pode-gerenciar="podeGerenciar"
         @ler-de-novo="lerDeNovo"
         @tirar="pedirTirar"

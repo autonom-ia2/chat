@@ -36,6 +36,8 @@ import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
 import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
 import { useFase2 } from '../composables/useFase2';
+import { useMaterialDoAgente } from '../composables/useMaterialDoAgente';
+import { useDemoMaterial } from '../prototipo/useDemoMaterial';
 import {
   ehAjudante,
   falaComCliente,
@@ -95,6 +97,9 @@ const fontes = useMapGetter('autonomiaSources/getKnowledgeSources');
 const flagsFontes = useMapGetter('autonomiaSources/getUIFlags');
 const agendaNova = useAgendaNovaNaConta();
 const usuario = useMapGetter('getCurrentUser');
+// #1426/#1427 (mockup) — só no painel de desenvolvimento com `?demo=material`: o material com estado
+// real, conferências, autoteste e o clipe no Testar, pelo adaptador falso. Fora disso, null.
+const material = useDemoMaterial() ? useMaterialDoAgente() : null;
 
 const aberta = ref(null);
 const vista = ref('pagina');
@@ -434,6 +439,7 @@ const carregarTudo = async () => {
   if (ajudante.value) ajudaDoAgente.carregar(Number(props.agentId));
   lerFontes();
   lerPerguntas();
+  material?.ler();
 };
 
 const tentarDeNovo = () => {
@@ -463,6 +469,17 @@ const mudarDaGaveta = () => {
   nomeSugerido.value = '';
   mudar('geral');
 };
+
+// #1426 — "Corrigir conversando" do problema: com pergunta e resposta, abre como o "Respondeu errado?".
+const corrigirDoMaterial = inicial =>
+  inicial ? mudar('teste', inicial) : mudar('geral');
+
+const quantasFontes = computed(() =>
+  material ? material.fontes.value.length : listaDeFontes.value.length
+);
+const problemasNoMaterial = computed(() =>
+  material ? material.problemas.value.length : 0
+);
 
 const sairDoMudar = () => {
   vista.value = 'pagina';
@@ -804,7 +821,8 @@ const tirarPergunta = id => {
           :tem-canal="temCanal"
           :texto-onde="textoOnde"
           :tambem-recebe="tambemRecebeEm.map(canal => canal.name)"
-          :quantas-fontes="listaDeFontes.length"
+          :quantas-fontes="quantasFontes"
+          :problemas-no-material="problemasNoMaterial"
           :quantas-perguntas="perguntas.length"
           :equipe="equipe"
           :fase2="fase2"
@@ -829,8 +847,10 @@ const tirarPergunta = id => {
         :atendendo="trabalhando"
         :pode-mudar="podeMudar"
         :pergunta="perguntaDoTeste"
+        :material="material"
         @fechar="fechar"
         @errado="mudar('teste', $event)"
+        @ver-material="abrir(GAVETA.SABE)"
       />
       <GavetaOQueSabe
         v-else-if="aberta === GAVETA.SABE"
@@ -839,9 +859,13 @@ const tirarPergunta = id => {
         :pode-gerenciar="podeGerenciar"
         :perguntas="perguntas"
         :fontes="listaDeFontes"
-        :carregando-fontes="fontesLidas === null"
-        :erro-ler="fontesFalharam"
+        :carregando-fontes="
+          material ? !material.lido.value : fontesLidas === null
+        "
+        :erro-ler="material ? material.erro.value : fontesFalharam"
+        :material="material"
         @fechar="fechar"
+        @corrigir="corrigirDoMaterial"
         @reler="lerFontes"
         @pergunta-resolvida="tirarPergunta"
       />

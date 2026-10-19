@@ -1105,7 +1105,8 @@
           "VER_ARIA": "Ver o que sabe",
           "N_FONTES": "1 arquivo ou site | {n} arquivos e sites",
           "SO_CONVERSA": "Só o que você contou na conversa",
-          "N_PERGUNTAS": "Há 1 pergunta de cliente para conferir. | Há {n} perguntas de clientes para conferir."
+          "N_PERGUNTAS": "Há 1 pergunta de cliente para conferir. | Há {n} perguntas de clientes para conferir.",
+          "N_PROBLEMAS": "1 coisa no material precisa de você. | {n} coisas no material precisam de você."
         },
         "BLOCO_ONDE": {
           "TITULO": "Onde e quando responde",
@@ -1229,7 +1230,14 @@
               "B": "Quero trocar um produto",
               "C": "Quero falar com uma pessoa"
             }
-          }
+          },
+          "APRENDER": "Quer que {nome} aprenda com {arquivo}?",
+          "APRENDER_TEXTO": "Se sim, {nome} lê, revisa e passa a usar com seus clientes. Se não, o arquivo não fica guardado.",
+          "APRENDER_SIM": "Sim, aprender",
+          "APRENDER_NAO": "Não, obrigado",
+          "APRENDENDO": "{arquivo} entrou no que {nome} sabe. Está sendo lido e revisado.",
+          "NAO_GUARDOU": "{nome} não guardou {arquivo}.",
+          "VER_MATERIAL": "Ver o que {nome} sabe"
         },
         "SABE": {
           "TITULO": "O que {nome} sabe",
@@ -1268,7 +1276,13 @@
           "PERGUNTA": "Pergunta",
           "RESPOSTA_ROTULO": "Resposta",
           "ENSINAR": "Ensinar",
-          "ENSINOU": "Pronto. {nome} já sabe responder isso."
+          "ENSINOU": "Pronto. {nome} já sabe responder isso.",
+          "REVISANDO": "Revisando…",
+          "ATENCAO": "Precisa de você",
+          "LENDO_PAGINA": "Lendo a página {feito} de {total}…",
+          "LENDO_LOTE": "Lendo a parte {feito} de {total}…",
+          "LENDO_FOTO": "Lendo o texto da foto…",
+          "ENVIAR_ARQUIVO_TEXTO_FOTO": "Cardápio, tabela de preços, catálogo ou foto deles. Até 25 MB."
         },
         "ONDE": {
           "TITULO": "Onde e quando {nome} responde",
@@ -1512,7 +1526,71 @@
         "RESPONDE_NO": "Responde no {canal} · {quando}",
         "PARADO_NO": "No {canal} · {quando}",
         "RESPONDE_EM_N": "Responde em 1 canal · {quando} | Responde em {n} canais · {quando}",
-        "PARADO_EM_N": "Em 1 canal · {quando} | Em {n} canais · {quando}"
+        "PARADO_EM_N": "Em 1 canal · {quando} | Em {n} canais · {quando}",
+        "MATERIAL": {
+          "TUDO_CERTO": "Tudo certo. {nome} usa todo o material com seus clientes.",
+          "AUTOTESTE": {
+            "TITULO": "Teste automático",
+            "RODANDO": "Testando {nome} com {total} perguntas… {feitas} de {total}",
+            "BASE_MUDOU": "O material mudou, então {nome} está sendo testado de novo.",
+            "ACERTOU": "{nome} acertou {certas} de {total} perguntas sobre o seu material.",
+            "FORA_OK": "Nas {n} perguntas que não estão no material, {nome} disse que não sabia e passou para a equipe.",
+            "FORA_ERRO": "Em perguntas que não estão no material, {nome} inventou resposta.",
+            "VER": "Ver as {n} perguntas",
+            "DO_MATERIAL": "do material",
+            "DE_FORA": "fora do material",
+            "CERTA": "Certa",
+            "ERRADA": "Errada",
+            "DE_NOVO": "Testar de novo"
+          },
+          "PROBLEMA": {
+            "ROTULO": "O que precisa de você no material",
+            "CONTAGEM": "Precisa de você · {atual} de {total}",
+            "CONTINUA": "{agente} continua atendendo com o resto do material.",
+            "PULAR": "Pular por agora",
+            "VAZIO": {
+              "TITULO": "{nome} está vazio",
+              "TEXTO": "Não achei nada escrito nele. Pode ser um formulário em branco ou só uma imagem.",
+              "MANDAR": "Mandar outro",
+              "TIRAR": "Tirar este arquivo"
+            },
+            "OCR": {
+              "TITULO": "Não deu para ler a foto {nome}",
+              "TEXTO": "Ela parece borrada ou escura. {agente} não usa o que está nela.",
+              "MANDAR": "Mandar outra foto",
+              "ESCREVER": "Escrever o que está nela"
+            },
+            "DUPLICADO": {
+              "TITULO": "{nome} e {outro} são iguais",
+              "TEXTO": "Com os dois, quando um mudar, {agente} pode responder com o antigo.",
+              "UM_SO": "Ficar só com {nome}",
+              "OS_DOIS": "Manter os dois"
+            },
+            "SEM_CABECALHO": {
+              "TITULO": "A tabela de {nome} não diz o que é cada coluna",
+              "TEXTO": "Sem os títulos, {agente} não sabe se um número é preço, quantidade ou código. A primeira linha é assim:",
+              "AMOSTRA": "Primeira linha da tabela",
+              "MANDAR": "Mandar com os títulos",
+              "EXPLICAR": "Explicar conversando"
+            },
+            "CONTRADICAO": {
+              "TITULO": "Dois materiais dizem coisas diferentes sobre o {assunto}",
+              "TEXTO": "Escolha o que vale. O outro continua aqui, mas {agente} passa a usar o que você escolher.",
+              "QUAL": "Qual vale?",
+              "ONDE": "Está em {onde}",
+              "USAR": "Usar este"
+            },
+            "AUTOTESTE": {
+              "TITULO": "No teste automático, {agente} errou uma resposta",
+              "TEXTO": "O seu material diz outra coisa.",
+              "PERGUNTA": "Pergunta",
+              "RESPONDEU": "{agente} respondeu",
+              "MATERIAL": "O material",
+              "CORRIGIR": "Corrigir conversando",
+              "CERTA": "A resposta está certa"
+            }
+          }
+        }
       },
       "CRIAR": {
         "TITULO": "Criar agente",

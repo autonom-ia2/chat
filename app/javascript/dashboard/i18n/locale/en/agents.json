@@ -1105,7 +1105,8 @@
           "VER_ARIA": "View what it knows",
           "N_FONTES": "1 file or website | {n} files and websites",
           "SO_CONVERSA": "Only what you told in the conversation",
-          "N_PERGUNTAS": "There is 1 customer question to check. | There are {n} customer questions to check."
+          "N_PERGUNTAS": "There is 1 customer question to check. | There are {n} customer questions to check.",
+          "N_PROBLEMAS": "1 thing in the material needs you. | {n} things in the material need you."
         },
         "BLOCO_ONDE": {
           "TITULO": "Where and when it answers",
@@ -1229,7 +1230,14 @@
               "B": "I want to exchange a product",
               "C": "I want to talk to a person"
             }
-          }
+          },
+          "APRENDER": "Do you want {nome} to learn from {arquivo}?",
+          "APRENDER_TEXTO": "If yes, {nome} reads it, reviews it and starts using it with your customers. If not, the file is not kept.",
+          "APRENDER_SIM": "Yes, learn",
+          "APRENDER_NAO": "No, thanks",
+          "APRENDENDO": "{arquivo} was added to what {nome} knows. It is being read and reviewed.",
+          "NAO_GUARDOU": "{nome} did not keep {arquivo}.",
+          "VER_MATERIAL": "See what {nome} knows"
         },
         "SABE": {
           "TITULO": "What {nome} knows",
@@ -1268,7 +1276,13 @@
           "PERGUNTA": "Question",
           "RESPOSTA_ROTULO": "Answer",
           "ENSINAR": "Teach",
-          "ENSINOU": "Done. {nome} now knows how to answer this."
+          "ENSINOU": "Done. {nome} now knows how to answer this.",
+          "REVISANDO": "Reviewing…",
+          "ATENCAO": "Needs you",
+          "LENDO_PAGINA": "Reading page {feito} of {total}…",
+          "LENDO_LOTE": "Reading part {feito} of {total}…",
+          "LENDO_FOTO": "Reading the text in the photo…",
+          "ENVIAR_ARQUIVO_TEXTO_FOTO": "Menu, price list, catalog or a photo of them. Up to 25 MB."
         },
         "ONDE": {
           "TITULO": "Where and when {nome} answers",
@@ -1512,7 +1526,71 @@
         "RESPONDE_NO": "Answers on {canal} · {quando}",
         "PARADO_NO": "On {canal} · {quando}",
         "RESPONDE_EM_N": "Answers on 1 channel · {quando} | Answers on {n} channels · {quando}",
-        "PARADO_EM_N": "On 1 channel · {quando} | On {n} channels · {quando}"
+        "PARADO_EM_N": "On 1 channel · {quando} | On {n} channels · {quando}",
+        "MATERIAL": {
+          "TUDO_CERTO": "All set. {nome} uses all the material with your customers.",
+          "AUTOTESTE": {
+            "TITULO": "Automatic test",
+            "RODANDO": "Testing {nome} with {total} questions… {feitas} of {total}",
+            "BASE_MUDOU": "The material changed, so {nome} is being tested again.",
+            "ACERTOU": "{nome} got {certas} of {total} questions about your material right.",
+            "FORA_OK": "In the {n} questions that are not in the material, {nome} said it did not know and handed over to the team.",
+            "FORA_ERRO": "In questions that are not in the material, {nome} made up an answer.",
+            "VER": "See the {n} questions",
+            "DO_MATERIAL": "from the material",
+            "DE_FORA": "not in the material",
+            "CERTA": "Right",
+            "ERRADA": "Wrong",
+            "DE_NOVO": "Test again"
+          },
+          "PROBLEMA": {
+            "ROTULO": "What needs you in the material",
+            "CONTAGEM": "Needs you · {atual} of {total}",
+            "CONTINUA": "{agente} keeps working with the rest of the material.",
+            "PULAR": "Skip for now",
+            "VAZIO": {
+              "TITULO": "{nome} is empty",
+              "TEXTO": "I found nothing written in it. It may be a blank form or just an image.",
+              "MANDAR": "Send another one",
+              "TIRAR": "Remove this file"
+            },
+            "OCR": {
+              "TITULO": "Could not read the photo {nome}",
+              "TEXTO": "It looks blurry or dark. {agente} does not use what is in it.",
+              "MANDAR": "Send another photo",
+              "ESCREVER": "Write what is in it"
+            },
+            "DUPLICADO": {
+              "TITULO": "{nome} and {outro} are the same",
+              "TEXTO": "With both, when one changes, {agente} may answer with the old one.",
+              "UM_SO": "Keep only {nome}",
+              "OS_DOIS": "Keep both"
+            },
+            "SEM_CABECALHO": {
+              "TITULO": "The table in {nome} does not say what each column is",
+              "TEXTO": "Without titles, {agente} cannot tell if a number is a price, a quantity or a code. The first row looks like this:",
+              "AMOSTRA": "First row of the table",
+              "MANDAR": "Send it with titles",
+              "EXPLICAR": "Explain in the chat"
+            },
+            "CONTRADICAO": {
+              "TITULO": "Two materials say different things about the {assunto}",
+              "TEXTO": "Choose which one is right. The other stays here, but {agente} starts using the one you choose.",
+              "QUAL": "Which one is right?",
+              "ONDE": "It is in {onde}",
+              "USAR": "Use this one"
+            },
+            "AUTOTESTE": {
+              "TITULO": "In the automatic test, {agente} got an answer wrong",
+              "TEXTO": "Your material says something else.",
+              "PERGUNTA": "Question",
+              "RESPONDEU": "{agente} answered",
+              "MATERIAL": "The material",
+              "CORRIGIR": "Fix it in the chat",
+              "CERTA": "The answer is right"
+            }
+          }
+        }
       },
       "CRIAR": {
         "TITULO": "Create agent",

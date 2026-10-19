@@ -6,6 +6,7 @@ import CelularConversa from '../CelularConversa.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
 import RespostasRapidas from '../RespostasRapidas.vue';
+import CompositorAA from '../CompositorAA.vue';
 import { AVISO_TESTE } from '../../composables/useTesteDoAgente';
 
 // #1181 PR3 (protótipo testPhone, T08 e a coluna de T11) — o celular de teste: perguntas prontas do
@@ -18,9 +19,12 @@ const props = defineProps({
   nome: { type: String, required: true },
   tipo: { type: String, default: 'support' },
   podeMudar: { type: Boolean, default: false },
+  // #1427 (mockup, tema 5) — o clipe da etapa Confira. Foto vai ao agente só neste teste; arquivo
+  // pergunta "Quer que {nome} aprenda com isto?" e, com o sim, a página manda para a base (tema 4).
+  comClipe: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['errado']);
+const emit = defineEmits(['errado', 'aprender', 'verMaterial']);
 
 const { t } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA.TESTE';
@@ -48,9 +52,13 @@ const enviar = async () => {
   await props.teste.enviar(pergunta);
 };
 
+const compositor = ref(null);
+const focar = () =>
+  props.comClipe ? compositor.value?.focar() : campo.value?.focus();
+
 const perguntar = pergunta => {
   props.teste.enviar(pergunta);
-  campo.value?.focus();
+  focar();
 };
 
 const aoTeclar = evento => {
@@ -61,10 +69,29 @@ const aoTeclar = evento => {
 
 const limpar = () => {
   props.teste.limpar();
-  campo.value?.focus();
+  focar();
 };
 
-const focar = () => campo.value?.focus();
+// #1427 — arquivos que não são foto esperam a resposta da pessoa, um de cada vez.
+const ehFoto = arquivo => (arquivo?.type || '').startsWith('image/');
+const oferecidos = ref([]);
+const respondidos = ref([]);
+const oferta = computed(() => oferecidos.value[0] || null);
+
+const enviarComClipe = async ({ texto: escrito, anexos }) => {
+  texto.value = '';
+  const fotos = anexos.filter(ehFoto);
+  oferecidos.value = [...oferecidos.value, ...anexos.filter(a => !ehFoto(a))];
+  if (escrito || fotos.length) await props.teste.enviar(escrito, fotos);
+};
+
+const responderOferta = aprender => {
+  const arquivo = oferta.value;
+  oferecidos.value = oferecidos.value.slice(1);
+  respondidos.value = [...respondidos.value, { nome: arquivo.name, aprender }];
+  if (aprender) emit('aprender', arquivo);
+};
+
 defineExpose({ focar });
 </script>
 
@@ -167,7 +194,83 @@ defineExpose({ focar });
       :desabilitado="digitando"
       @escolher="perguntar"
     />
-    <form class="relative flex items-end gap-2" @submit.prevent="enviar">
+    <ul
+      v-if="comClipe && respondidos.length"
+      data-respondidos
+      class="flex flex-col gap-2 p-0 m-0 list-none"
+    >
+      <li
+        v-for="(item, i) in respondidos"
+        :key="i"
+        role="status"
+        class="flex flex-wrap items-center gap-2 p-3 text-sm rounded-xl"
+        :class="item.aprender ? 'bg-n-teal-2' : 'bg-n-slate-2'"
+      >
+        <span
+          aria-hidden="true"
+          class="size-4 shrink-0"
+          :class="
+            item.aprender
+              ? 'i-lucide-book-open text-n-teal-11'
+              : 'i-lucide-x text-n-slate-11'
+          "
+        />
+        <span class="grow text-n-slate-12">
+          {{
+            item.aprender
+              ? t(`${NS}.APRENDENDO`, { nome, arquivo: item.nome })
+              : t(`${NS}.NAO_GUARDOU`, { nome, arquivo: item.nome })
+          }}
+        </span>
+        <button
+          v-if="item.aprender"
+          type="button"
+          data-ver-material
+          class="px-1 text-sm font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+          @click="emit('verMaterial')"
+        >
+          {{ t(`${NS}.VER_MATERIAL`, { nome }) }}
+        </button>
+      </li>
+    </ul>
+    <section
+      v-if="comClipe && oferta"
+      data-aprender
+      :aria-label="t(`${NS}.APRENDER`, { nome, arquivo: oferta.name })"
+      class="flex flex-col gap-3 p-4 rounded-2xl bg-n-blue-2 ring-1 ring-inset ring-n-blue-6"
+    >
+      <p
+        class="flex items-start gap-2 m-0 text-sm font-semibold text-n-slate-12"
+      >
+        <span class="i-lucide-file-text size-5 shrink-0" aria-hidden="true" />
+        {{ t(`${NS}.APRENDER`, { nome, arquivo: oferta.name }) }}
+      </p>
+      <p class="m-0 text-sm text-n-slate-11">
+        {{ t(`${NS}.APRENDER_TEXTO`, { nome }) }}
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <AgenteBotao data-aprender-sim @click="responderOferta(true)">
+          {{ t(`${NS}.APRENDER_SIM`) }}
+        </AgenteBotao>
+        <AgenteBotao
+          data-aprender-nao
+          variante="contorno"
+          @click="responderOferta(false)"
+        >
+          {{ t(`${NS}.APRENDER_NAO`) }}
+        </AgenteBotao>
+      </div>
+    </section>
+    <CompositorAA
+      v-if="comClipe"
+      ref="compositor"
+      v-model="texto"
+      anexar
+      :placeholder="t(`${NS}.ESCREVA`)"
+      :enviando="digitando"
+      @enviar="enviarComClipe"
+    />
+    <form v-else class="relative flex items-end gap-2" @submit.prevent="enviar">
       <label :for="campoId" class="sr-only">{{ t(`${NS}.ESCREVA`) }}</label>
       <textarea
         :id="campoId"

@@ -81,8 +81,15 @@ const partesDaResposta = dados => {
   return dados?.reply ? [{ texto: dados.reply, espera: 0 }] : [];
 };
 
-export function useTesteDoAgente(agente, { textoSoFoto = '' } = {}) {
+// `perguntarAoAgente` troca a chamada da API (mockup #1427: o adaptador falso responde no lugar).
+export function useTesteDoAgente(
+  agente,
+  { textoSoFoto = '', perguntarAoAgente = null } = {}
+) {
   const store = useStore();
+  const perguntarAoServidor =
+    perguntarAoAgente ||
+    (payload => store.dispatch('autonomiaAgents/test', payload));
   const mensagens = ref([]);
   const digitando = ref(false);
   const aviso = ref(null);
@@ -152,7 +159,7 @@ export function useTesteDoAgente(agente, { textoSoFoto = '' } = {}) {
     }, ESPERA_MAXIMA_MS);
 
     try {
-      const dados = await store.dispatch('autonomiaAgents/test', {
+      const dados = await perguntarAoServidor({
         agentId: agente.value.id,
         message: pergunta,
         history: anterior,
