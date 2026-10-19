@@ -131,8 +131,10 @@ RSpec.describe 'Eval pago #1910: a IA de assunto cria o card na coluna certa' do
 
   def com_custo(&)
     callback = ->(*, payload) { saida[:custo_usd] += payload[:cost].to_f }
-    ActiveSupport::Notifications.subscribed(callback, Crm::Ai::UsageRecorder::EVENT_NAME, &)
+    resultado = ActiveSupport::Notifications.subscribed(callback, Crm::Ai::UsageRecorder::EVENT_NAME, &)
     raise "teto do eval estourado: US$ #{saida[:custo_usd].round(4)}" if saida[:custo_usd] > AssuntoNaEtapaEval::TETO_USD
+
+    resultado
   end
 
   def stub_jev(pipeline)
