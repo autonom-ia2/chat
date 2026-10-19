@@ -5,6 +5,7 @@
 // foto do corpo abre a imagem, como antes (#1869).
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue';
 import { semRastreio } from './dadosDoEmail';
+import { telaDoPainel } from './cssDaMoldura';
 import { abrirImagemDoCorpo } from './imagemDoCorpo';
 import {
   SANDBOX_DO_EMAIL,
@@ -20,18 +21,52 @@ const emit = defineEmits(['altura']);
 
 // Quantos quadros esperar o documento novo aparecer antes de contar só com o "load".
 const QUADROS_DE_ESPERA = 120;
+// Teto da altura, e um disjuntor de última proteção (o vh e a @media de altura já viram
+// medida fixa em cssDaMoldura.js): mais de 20 mudanças em 1 s sem imagem carregando nem
+// clique da pessoa → a medida pausa. Imagem que carrega, largura nova ou clique religam.
+const ALTURA_MAXIMA = 60000;
+const MUDANCAS_POR_SEGUNDO = 20;
+const UM_SEGUNDO = 1000;
 
 const moldura = useTemplateRef('moldura');
-const documento = computed(() => documentoIsolado(props.html, { semRastreio }));
+const documento = computed(() =>
+  documentoIsolado(props.html, { semRastreio, tela: telaDoPainel() })
+);
 const altura = ref(0);
 
 let documentoLigado = null;
 let observador = null;
 let espera = 0;
+let recentes = [];
+let pausada = false;
+let larguraMedida = 0;
 
-const medir = () => {
-  const raiz = documentoLigado?.documentElement;
-  if (!raiz || !moldura.value) return;
+const definirAltura = nova => {
+  altura.value = nova;
+  emit('altura', nova);
+};
+
+const religar = () => {
+  recentes = [];
+  pausada = false;
+};
+
+// Largura nova (janela ou painel) explica a mudança: o disjuntor religa.
+const religarSeMudouALargura = () => {
+  const largura = moldura.value.clientWidth;
+  if (largura === larguraMedida) return;
+  larguraMedida = largura;
+  religar();
+};
+
+const mudouDemais = () => {
+  const agora = performance.now();
+  recentes = [...recentes.filter(t => agora - t < UM_SEGUNDO), agora];
+  return recentes.length > MUDANCAS_POR_SEGUNDO;
+};
+
+const alturaDoConteudo = () => {
+  const raiz = documentoLigado.documentElement;
   // Barra de rolagem de lado (e-mail mais largo que a tela), quando ocupa lugar.
   const barra = Math.max(0, moldura.value.clientHeight - raiz.clientHeight);
   // O que passa do fim do <body> (margem negativa, por exemplo) também conta.
@@ -40,15 +75,32 @@ const medir = () => {
     ? corpo.getBoundingClientRect().top + corpo.scrollHeight
     : 0;
   const conteudo = Math.max(raiz.getBoundingClientRect().height, fimDoCorpo);
-  const nova = Math.ceil(conteudo) + barra;
+  return Math.min(ALTURA_MAXIMA, Math.ceil(conteudo) + barra);
+};
+
+// `explicada`: a mudança veio de imagem carregando (não conta para o disjuntor).
+const medir = ({ explicada = false } = {}) => {
+  if (!documentoLigado?.documentElement || !moldura.value) return;
+  // Escondida (aba, recolhida): sem largura, a medida seria 0 e não vale.
+  if (!moldura.value.clientWidth) return;
+  religarSeMudouALargura();
+  if (pausada) return;
+  const nova = alturaDoConteudo();
   if (nova === altura.value) return;
-  altura.value = nova;
-  emit('altura', nova);
+  if (!explicada && mudouDemais()) pausada = true;
+  definirAltura(nova);
+};
+
+const medirSozinho = () => medir();
+const aoCarregar = () => {
+  religar();
+  medir({ explicada: true });
 };
 
 const desligar = () => {
   documentoLigado?.removeEventListener('click', abrirImagemDoCorpo);
-  documentoLigado?.removeEventListener('load', medir, true);
+  documentoLigado?.removeEventListener('load', aoCarregar, true);
+  documentoLigado?.removeEventListener('click', religar);
   observador?.disconnect();
   observador = null;
   documentoLigado = null;
@@ -57,11 +109,15 @@ const desligar = () => {
 const ligar = doc => {
   desligar();
   documentoLigado = doc;
+  religar();
+  larguraMedida = 0;
   doc.addEventListener('click', abrirImagemDoCorpo);
-  // Imagem que termina de carregar muda a altura.
-  doc.addEventListener('load', medir, true);
+  // Imagem que termina de carregar muda a altura (e explica a mudança). Clique da pessoa
+  // (abrir um <details>, por exemplo) também.
+  doc.addEventListener('load', aoCarregar, true);
+  doc.addEventListener('click', religar);
   if (typeof ResizeObserver !== 'undefined') {
-    observador = new ResizeObserver(medir);
+    observador = new ResizeObserver(medirSozinho);
     observador.observe(doc.documentElement);
     if (doc.body) observador.observe(doc.body);
   }
@@ -114,7 +170,7 @@ defineExpose({ htmlParaImprimir: () => corpoParaImprimir(documento.value) });
     :sandbox="SANDBOX_DO_EMAIL"
     :title="titulo"
     referrerpolicy="no-referrer"
-    class="block w-full border-0 bg-white"
+    class="block w-full border-0 bg-white dark:rounded-lg"
     :style="{ height: `${altura}px` }"
     data-corpo-isolado-do-email
     @load="carregou"

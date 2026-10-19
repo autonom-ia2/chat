@@ -6,6 +6,7 @@ import {
   documentoIsolado,
 } from '../email/documentoDoEmail';
 import { semRastreio } from '../email/dadosDoEmail';
+import { htmlComCssSeguro } from '../email/estiloSeguroDoEmail';
 import CorpoIsoladoDoEmail from '../email/CorpoIsoladoDoEmail.vue';
 
 // #1884: o e-mail HTML do remetente vai inteiro, isolado, para uma moldura sem script.
@@ -91,6 +92,10 @@ describe('documento isolado do e-mail (#1884)', () => {
       "default-src 'none'",
     ].forEach(regra => expect(csp).toContain(regra));
     expect(csp).toContain('img-src http: https: data:');
+    expect(csp).toContain('font-src data:;');
+    expect(
+      doc.querySelector('meta[name="referrer"]').getAttribute('content')
+    ).toBe('no-referrer');
     expect(
       doc.querySelector('meta[name="color-scheme"]').getAttribute('content')
     ).toBe('light');
@@ -222,12 +227,138 @@ describe('documento isolado do e-mail (#1884)', () => {
     ]);
   });
 
+  it('a altura da moldura fica no <html>, onde nenhuma regra do remetente ganha dela', () => {
+    const doc = ler(
+      documentoIsolado(
+        '<style>:root:root{height:20000px!important}</style><p>oi</p>'
+      )
+    );
+    expect(doc.documentElement.getAttribute('style')).toContain(
+      'height:auto!important'
+    );
+  });
+
+  it('vh e @media de altura valem para a janela do painel; tema escuro sai', () => {
+    const tela = {
+      altura: 900,
+      largura: 1200,
+      combina: condicao => condicao.includes('min-height'),
+    };
+    const doc = ler(
+      documentoIsolado(
+        `<html lang="pt-BR" dir="rtl"><head><style>
+        body{min-height:100vh}
+        @media (min-height: 500px){.a{color:red}}
+        @media (max-height: 300px){.b{color:blue}}
+        @media (prefers-color-scheme: dark){.c{color:white}}
+        @media (prefers-color-scheme: light){.d{color:black}}
+        @media (max-width: 480px){.e{width:100%}}
+        </style></head><body><p style="height:50vh">x</p></body></html>`,
+        { tela }
+      )
+    );
+    const css = [...doc.querySelectorAll('style')]
+      .map(estilo => estilo.textContent)
+      .join('\n');
+    expect(css).toContain('min-height: 900px');
+    expect(css).not.toContain('vh');
+    expect(css).toContain('.a');
+    expect(css).not.toContain('.b');
+    expect(css).not.toContain('.c');
+    expect(css).toContain('.d');
+    expect(css).toContain('max-width: 480px');
+    expect(doc.querySelector('p').getAttribute('style')).toContain('450px');
+    expect(doc.documentElement.getAttribute('lang')).toBe('pt-BR');
+    expect(doc.documentElement.getAttribute('dir')).toBe('rtl');
+  });
+
+  it('@media mista: tema e altura decididos aqui, a largura fica com a moldura', () => {
+    const tela = {
+      altura: 900,
+      largura: 1200,
+      combina: condicao => condicao.includes('portrait'),
+    };
+    const doc = ler(
+      documentoIsolado(
+        `<style>
+        @media (max-width: 600px) and (prefers-color-scheme: light){.a{color:red}}
+        @media not (prefers-color-scheme: dark){.b{color:blue}}
+        @media (max-width: 480px) and (orientation: portrait){.c{color:green}}
+        @media (max-width: 480px) and (orientation: landscape){.d{color:gray}}
+        </style><p>oi</p>`,
+        { tela }
+      )
+    );
+    const todo = [...doc.querySelectorAll('style')]
+      .map(estilo => estilo.textContent)
+      .join('\n');
+    expect(todo).toContain('.a');
+    expect(todo).not.toContain('prefers-color-scheme');
+    expect(todo).toContain('.b');
+    expect(todo).toContain('.c');
+    expect(todo).not.toContain('.d');
+    expect(todo).not.toContain('orientation');
+    expect(todo).toContain('@media (max-width: 600px)');
+    expect(todo).toContain('@media (max-width: 480px)');
+  });
+
+  it('botão, lista e caixa de texto: sai a tag, o texto fica (os dois caminhos)', () => {
+    const html = '<p><button>Botão</button><textarea>Nota</textarea></p>';
+    const doc = ler(documentoIsolado(html));
+    expect(doc.querySelector('button, textarea')).toBeNull();
+    expect(doc.body.textContent).toContain('Botão');
+    expect(doc.body.textContent).toContain('Nota');
+    expect(htmlComCssSeguro(html)).toContain('<button>Botão</button>');
+  });
+
+  it('imagem com largura e altura nos atributos guarda a proporção (espaçador 1×20)', () => {
+    const doc = ler(
+      documentoIsolado(
+        '<img id="e" src="https://x.test/e.gif" width="1" height="20">' +
+          '<img id="a" src="https://x.test/a.gif" height="20">' +
+          '<img id="p" src="https://x.test/p.gif" width="100%" height="20">'
+      )
+    );
+    expect(doc.getElementById('e').getAttribute('style')).toContain(
+      'aspect-ratio:1 / 20'
+    );
+    expect(doc.getElementById('a').getAttribute('style') || '').not.toContain(
+      'aspect-ratio'
+    );
+    expect(doc.getElementById('p').getAttribute('style') || '').not.toContain(
+      'aspect-ratio'
+    );
+  });
+
+  it('svg e math relidos não derrubam o sanitizador: o e-mail abre', () => {
+    [
+      '<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>',
+      '<form><math><mtext></form><form><mglyph><style></math><p>oi</p>',
+    ].forEach(ataque => {
+      const doc = ler(documentoIsolado(ataque));
+      expect(doc.querySelector('math, img[onerror]')).toBeNull();
+      expect(() => htmlComCssSeguro(ataque)).not.toThrow();
+    });
+  });
+
   it('Imprimir leva o corpo limpo, com o estilo do <body>, sem o CSS da moldura', () => {
     const impresso = corpoParaImprimir(documentoIsolado(CONVITE));
-    const div = ler(impresso).body.firstElementChild;
+    const div = ler(impresso).body.querySelector('[style]');
     expect(div.style.backgroundColor).toBe('rgb(243, 242, 239)');
-    expect(div.querySelector('table.coluna')).not.toBeNull();
+    expect(ler(impresso).querySelector('table')).not.toBeNull();
     expect(impresso).not.toContain('overflow-y');
+  });
+
+  it('Imprimir: o CSS do remetente fica com escopo e não esconde o cabeçalho', () => {
+    const impresso = corpoParaImprimir(
+      documentoIsolado(
+        '<style>dl, h1 {display:none} body{background:red}</style><p>oi</p>'
+      )
+    );
+    const regras = ler(impresso).querySelector('style').textContent;
+    expect(regras).toContain('#email_impresso dl');
+    expect(regras).not.toContain('body');
+    expect(regras.startsWith('dl')).toBe(false);
   });
 });
 

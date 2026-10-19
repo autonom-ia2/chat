@@ -28,7 +28,7 @@ const CSP = [
   "default-src 'none'",
   'img-src http: https: data: blob:',
   "style-src 'unsafe-inline'",
-  'font-src http: https: data:',
+  'font-src data:',
   "script-src 'none'",
   "object-src 'none'",
   "frame-src 'none'",
@@ -49,16 +49,21 @@ const PADRAO_DO_LEITOR = [
   ':root{color-scheme:light}',
   'body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;color:#1f1f1f}',
   'img{max-width:100%}',
+  // Imagem estreitada mantém a proporção dos atributos; peso zero: o remetente ganha.
+  ':where(img[width][height]){height:auto}',
   'img:not(a img){cursor:zoom-in}',
   'a:focus-visible{outline:2px solid #2563eb;outline-offset:2px;border-radius:2px}',
 ].join('\n');
 
-// Vem depois do CSS do remetente: a altura sai do conteúdo (a moldura cresce com ele),
-// sem rolagem de cima para baixo. Largo demais, rola de lado, como hoje.
-export const MARCA_DA_MOLDURA = 'data-moldura-do-email';
-const DA_MOLDURA = [
-  'html{height:auto!important;min-height:0!important;max-height:none!important;overflow-y:hidden!important;overflow-x:auto!important}',
-].join('\n');
+// No atributo style do <html>: com !important, nenhuma regra do remetente ganha dele
+// (nem `:root:root{height:…!important}`). A altura sai do conteúdo (a moldura cresce
+// com ele), sem rolagem de cima para baixo. Largo demais, rola de lado, como hoje.
+const DA_MOLDURA =
+  'height:auto!important;min-height:0!important;max-height:none!important;overflow-y:hidden!important;overflow-x:auto!important';
+
+// Na impressão o CSS do remetente volta a ter escopo (como no balão antigo): não alcança
+// o cabeçalho da impressão (Assunto, De, Para) nem a página.
+const ESCOPO_DA_IMPRESSAO = 'email_impresso';
 
 const lerDocumento = html =>
   new DOMParser().parseFromString(String(html || ''), 'text/html');
@@ -146,6 +151,26 @@ const atributosDoCorpo = (doc, semRastreio) => {
   return fundo ? [...atributos, ['background', fundo]] : atributos;
 };
 
+// Imagem estreitada (max-width) fica com a proporção que o remetente desenhou nos
+// atributos (espaçador 1×20 continua 1×20), não com a do arquivo. O CSS do remetente
+// que fixa a altura continua ganhando.
+const PROPORCAO = 'aspect-ratio';
+const tamanho = valor => {
+  const numero = Number(String(valor || '').trim());
+  return Number.isFinite(numero) && numero > 0 ? numero : 0;
+};
+const manterProporcao = imagem => {
+  const largura = tamanho(imagem.getAttribute('width'));
+  const alturaDaImagem = tamanho(imagem.getAttribute('height'));
+  const estilo = imagem.getAttribute('style') || '';
+  if (!largura || !alturaDaImagem || estilo.includes(PROPORCAO)) return;
+  const antes = estilo.trim() ? `${estilo.trim()};` : '';
+  imagem.setAttribute(
+    'style',
+    `${antes}${PROPORCAO}:${largura} / ${alturaDaImagem}`
+  );
+};
+
 const limparLinksEImagens = doc => {
   doc.querySelectorAll('a').forEach(link => {
     const endereco = linkSeguro(link.getAttribute('href') || '');
@@ -158,6 +183,7 @@ const limparLinksEImagens = doc => {
     const endereco = imagemSegura(imagem.getAttribute('src'));
     if (endereco) imagem.setAttribute('src', endereco);
     else imagem.removeAttribute('src');
+    manterProporcao(imagem);
   });
 };
 
@@ -191,20 +217,32 @@ const montarCabeca = doc => {
       content: CSP,
     }),
     elemento(doc, 'meta', { name: 'color-scheme', content: 'light' }),
+    elemento(doc, 'meta', { name: 'referrer', content: 'no-referrer' }),
     elemento(doc, 'base', { target: '_blank' }),
     elemento(doc, 'style', {}, PADRAO_DO_LEITOR)
   );
 };
 
 const semMudar = endereco => endereco;
+// Sem janela (teste): uma tela de notebook comum.
+const TELA_PADRAO = { altura: 800, largura: 1280, combina: () => false };
 
 // O documento que vai no srcdoc da moldura. `semRastreio` troca endereço de imagem e
 // de link (o mesmo de hoje: tira o pixel e o clique rastreado das Campanhas).
-export const documentoIsolado = (html, { semRastreio = semMudar } = {}) => {
+// `tela`: a janela do painel (cssDaMoldura.js), onde valem vh e @media de altura.
+export const documentoIsolado = (
+  html,
+  { semRastreio = semMudar, tela = TELA_PADRAO } = {}
+) => {
   const original = lerDocumento(html);
+  const raizOriginal = original.documentElement;
+  const lingua = raizOriginal.getAttribute('lang');
+  const direcao = raizOriginal.getAttribute('dir');
   const atributos = atributosDoCorpo(original, semRastreio);
   envolverOCorpo(original);
-  prepararEstilos(original, { conferirUrls: true });
+  // Antes do sanitizador: svg e math relidos viram <style> sem folha, e ele lança.
+  semMarcacaoPerigosa(original.documentElement);
+  prepararEstilos(original, { conferirUrls: true, tela });
   const limpo = sanitize(comoTexto(original), '', {
     noWrapper: true,
     preserveCssPriority: true,
@@ -217,21 +255,27 @@ export const documentoIsolado = (html, { semRastreio = semMudar } = {}) => {
   semMarcacaoPerigosa(doc.body);
   limparLinksEImagens(doc);
   montarCabeca(doc);
-  doc.body.append(
-    elemento(doc, 'style', { [MARCA_DA_MOLDURA]: '' }, DA_MOLDURA)
-  );
+  doc.documentElement.setAttribute('style', DA_MOLDURA);
+  if (lingua) doc.documentElement.setAttribute('lang', lingua);
+  if (direcao) doc.documentElement.setAttribute('dir', direcao);
   return comoTexto(doc);
 };
 
-// Para Imprimir: o corpo já limpo, com o estilo do <body> numa div, sem o CSS da moldura.
+// Para Imprimir: o corpo já limpo, com o estilo do <body> numa div, e o CSS do remetente
+// com escopo de novo.
 export const corpoParaImprimir = srcdoc => {
   const doc = lerDocumento(srcdoc);
-  doc.querySelectorAll(`[${MARCA_DA_MOLDURA}]`).forEach(no => no.remove());
   const div = doc.createElement('div');
   const estilo = doc.body.getAttribute('style');
   if (estilo) div.setAttribute('style', estilo);
   const fundo = doc.body.getAttribute('bgcolor');
   if (fundo && !div.style.backgroundColor) div.style.backgroundColor = fundo;
   div.append(...doc.body.childNodes);
-  return div.outerHTML;
+  doc.body.replaceChildren(div);
+  prepararEstilos(doc, { conferirUrls: true });
+  return sanitize(comoTexto(doc), '', {
+    id: ESCOPO_DA_IMPRESSAO,
+    preserveCssPriority: true,
+    allowedCssProperties: CSS_PERMITIDO,
+  });
 };
