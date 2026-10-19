@@ -14,6 +14,8 @@ import {
 import messageReadActions from './actions/messageReadActions';
 import messageTranslateActions from './actions/messageTranslateActions';
 import * as Sentry from '@sentry/vue';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 import {
   filtrosDoEndereco,
   naCaixa,
@@ -85,9 +87,12 @@ const needsCrmFunnel = (state, conversationId) => {
 };
 
 // Filtros pelo link (#1883): com eles ligados na lista comum, conversa nova ou mudada pelo websocket faz o servidor
-// reler a lista uma vez, 2,5 s depois do primeiro evento da rajada (sob tráfego contínuo, no máximo uma releitura a
-// cada 2,5 s), em vez de o painel decidir se ela entra.
+// reler a lista, em vez de o painel decidir se ela entra. Throttle: a primeira mudança agenda uma releitura para 2,5 s
+// depois, e as que chegam até lá vão nela (no máximo uma releitura a cada 2,5 s).
 export const RELEITURA_AO_VIVO_MS = 2500;
+// Até 5 páginas carregadas, a releitura relê todas e troca a lista no lugar (a paginação fica, a rolagem não vai ao topo); acima
+// disso, volta à página 1.
+export const PAGINAS_RELIDAS_NO_MAXIMO = 5;
 const filtroDoLinkNosParametros = params =>
   Boolean(params?.daIa || params?.esperandoMin);
 // Ligado = a lista pediu com o filtro, sem filtro avançado por cima, e quem está na tela é a caixa com o link. Fora da
@@ -111,22 +116,15 @@ const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
   }, RELEITURA_AO_VIVO_MS);
 };
 
-// Com mais de uma página carregada, só a primeira é lida de novo e somada à lista: o que entrou aparece no topo e a
-// rolagem fica onde está. Se a primeira página já traz tudo o que a aba tem (o contador da aba diz), ela é a lista
-// inteira e o que saiu do filtro sai junto; senão, o que saiu fica até a lista ser aberta de novo (a página 1 sozinha
-// não diz se a conversa saiu do filtro ou só desceu para a página 2).
-const CONTADOR_DA_ABA = {
-  me: 'mine_count',
-  unassigned: 'unassigned_count',
-  all: 'all_count',
+// Geração da lista: sobe a cada leitura ou esvaziamento da lista. A releitura das páginas guarda a geração em que
+// começou; se outra leitura ou um esvaziamento vier no meio, a resposta é de uma lista que já não existe e é descartada.
+let geracaoDaLista = 0;
+const novaGeracaoDaLista = () => {
+  geracaoDaLista += 1;
+  return geracaoDaLista;
 };
-// eslint-disable-next-line no-unused-vars
-const semPagina = ({ page, ...lista }) => JSON.stringify(lista);
-const primeiraPaginaTrazTudo = (payload, meta, assigneeType) => {
-  const total = meta?.[CONTADOR_DA_ABA[assigneeType]];
-  return Number.isInteger(total) && payload.length >= total;
-};
-// Como no UPDATE_CONVERSATION: a conversa que o websocket já atualizou depois do pedido não volta ao estado antigo, e
+
+// Como no UPDATE_CONVERSATION: a conversa que o websocket já atualizou depois do pedido fica na versão da lista, e
 // continua dentro ou fora do filtro como estava.
 const separarPeloWebsocket = (payload, lista) => {
   const naLista = new Map(lista.map(conversa => [conversa.id, conversa]));
@@ -134,52 +132,58 @@ const separarPeloWebsocket = (payload, lista) => {
     naLista.get(conversa.id)?.updated_at > conversa.updated_at;
   return {
     novas: payload.filter(conversa => !atrasada(conversa)),
-    atrasadas: payload.filter(atrasada).map(({ id }) => id),
+    atrasadas: payload.filter(atrasada).map(({ id }) => naLista.get(id)),
   };
 };
-// Só a última soma pedida vale: uma resposta mais velha que chega depois é descartada.
-let ultimaSoma = 0;
-const somarPrimeiraPaginaDoFiltroDoLink = async ({
-  commit,
-  dispatch,
-  state,
-}) => {
-  ultimaSoma += 1;
-  const estaSoma = ultimaSoma;
-  const params = { ...state.conversationFilters, page: 1 };
+const semRepetidas = conversas => [
+  ...new Map(conversas.map(conversa => [conversa.id, conversa])).values(),
+];
+
+// Com 2 a 5 páginas carregadas: relê as páginas 1..N e troca a lista de uma vez, só quando todas chegam. A paginação
+// fica onde está (a próxima rolagem pede a página N+1) e a conversa que saiu do filtro sai.
+const releerAsPaginasDoFiltroDoLink = async (
+  { commit, dispatch, state },
+  paginas
+) => {
+  const geracao = novaGeracaoDaLista();
+  const params = state.conversationFilters;
   const request = await dispatch(
     'conversationStats/onListRequestStarted',
     params
   );
-  const {
-    data: { data },
-  } = await ConversationApi.get(params);
-  if (estaSoma !== ultimaSoma) return;
-  // A lista mudou enquanto a leitura vinha (outro filtro, outra aba, outra caixa): a resposta é de outra lista.
-  if (semPagina(state.conversationFilters) !== semPagina(params)) return;
+  const respostas = await Promise.all(
+    Array.from({ length: paginas }, (_, indice) =>
+      ConversationApi.get({ ...params, page: indice + 1 })
+    )
+  );
+  if (geracao !== geracaoDaLista) return;
+  const lidas = semRepetidas(
+    respostas.flatMap(({ data: { data } }) => data.payload)
+  );
   const { novas, atrasadas } = separarPeloWebsocket(
-    data.payload,
+    lidas,
     state.allConversations
   );
-  const atrasadasQueEstavam = atrasadas.filter(id =>
+  const atrasadasQueEstavam = atrasadas.filter(({ id }) =>
     state.idsDoFiltroDoLink.includes(id)
   );
   commit(types.SET_IDS_DO_FILTRO_DO_LINK, {
-    ids: [...novas.map(({ id }) => id), ...atrasadasQueEstavam],
-    substituir: primeiraPaginaTrazTudo(
-      data.payload,
-      data.meta,
-      params.assigneeType
-    ),
+    ids: [...novas, ...atrasadasQueEstavam].map(({ id }) => id),
+    substituir: true,
   });
-  commit(types.SET_ALL_CONVERSATION, novas);
-  dispatch('conversationStats/set', { meta: data.meta, request });
+  commit(types.REPLACE_CONVERSATION_LIST, [...novas, ...atrasadas]);
+  dispatch('conversationStats/set', {
+    meta: respostas[0].data.data.meta,
+    request,
+  });
 };
 
 // actions
 const actions = {
-  // A primeira página de novo, no lugar da lista (o mesmo que a releitura ao reconectar faz). Com uma página chegando
-  // (a rolagem pedindo a próxima), espera ela chegar e tenta de novo, para não cancelar a rolagem.
+  // Relê a lista com o filtro do link. Com uma página chegando (a rolagem pedindo a próxima), espera ela chegar e tenta
+  // de novo, para não cancelar a rolagem. Com 2 a 5 páginas carregadas, relê todas e troca a lista sem mexer na rolagem.
+  // Com uma só, ou mais de 5, volta à primeira página no lugar da lista (o mesmo que a releitura ao reconectar faz); a
+  // conversa aberta continua aberta e, se a lista tinha mais de 5 páginas, a rolagem vai ao topo.
   releerFiltroDoLink: async contexto => {
     const { dispatch, state, rootState, rootGetters } = contexto;
     if (!filtroDoLinkAtivo(state, rootState)) return;
@@ -187,12 +191,12 @@ const actions = {
       agendarReleituraDoFiltroDoLink(contexto);
       return;
     }
-    const pagina = rootGetters['conversationPage/getCurrentPageFilter'](
+    const paginas = rootGetters['conversationPage/getCurrentPageFilter'](
       state.conversationFilters.assigneeType
     );
-    if (pagina > 1) {
+    if (paginas > 1 && paginas <= PAGINAS_RELIDAS_NO_MAXIMO) {
       try {
-        await somarPrimeiraPaginaDoFiltroDoLink(contexto);
+        await releerAsPaginasDoFiltroDoLink(contexto, paginas);
       } catch (error) {
         // O próximo evento do websocket (ou a releitura de um minuto) tenta de novo.
         Sentry.captureException(error);
@@ -201,6 +205,9 @@ const actions = {
     }
     await dispatch('updateChatListFilters', { page: 1, updatedWithin: null });
     await dispatch('fetchAllConversations', { replaceExisting: true });
+    if (paginas > PAGINAS_RELIDAS_NO_MAXIMO) {
+      emitter.emit(BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO);
+    }
   },
 
   // Filtro "Funil" da lista (#1150). O websocket não traz os funis da conversa (crm_pipeline_ids): o payload também vai
@@ -251,6 +258,7 @@ const actions = {
     { commit, state, dispatch },
     { replaceExisting = false } = {}
   ) => {
+    novaGeracaoDaLista();
     return conversationListRequest.run(async signal => {
       const params = state.conversationFilters;
       const countRequest = await dispatch(
@@ -289,6 +297,7 @@ const actions = {
   },
 
   fetchFilteredConversations: async ({ commit, dispatch, state }, params) => {
+    novaGeracaoDaLista();
     return conversationListRequest.run(async signal => {
       const {
         replaceExisting = false,
@@ -330,6 +339,7 @@ const actions = {
   },
 
   emptyAllConversations({ commit }) {
+    novaGeracaoDaLista();
     commit(types.EMPTY_ALL_CONVERSATION);
   },
 

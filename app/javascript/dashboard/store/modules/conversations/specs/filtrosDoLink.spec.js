@@ -2,10 +2,13 @@ import { applyPageFilters, filterPeloFiltroDoLink } from '../helpers';
 import getters from '../getters';
 import actions, {
   RELEITURA_AO_VIVO_MS,
+  PAGINAS_RELIDAS_NO_MAXIMO,
   cancelarReleituraDoFiltroDoLink,
 } from '../actions';
 import { mutations } from '../index';
 import types from '../../../mutation-types';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), show: vi.fn() }));
 vi.mock('../../../../api/inbox/conversation', () => ({ default: api }));
@@ -21,6 +24,13 @@ const conversa = (id, extra = {}) => ({
   updated_at: 10,
   ...extra,
 });
+
+const esvaziarPromessas = async () => {
+  for (let vez = 0; vez < 10; vez += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    await Promise.resolve();
+  }
+};
 
 const resposta = ids => ({
   data: { data: { payload: ids.map(id => conversa(id)), meta: {} } },
@@ -215,53 +225,205 @@ describe('filtros pelo link (#1883)', () => {
       });
     });
 
-    it('com mais páginas carregadas, soma a primeira página sem mexer na rolagem', async () => {
-      const dispatch = vi.fn().mockResolvedValue({ id: 1 });
-      const commit = vi.fn();
-      api.get.mockResolvedValueOnce(resposta([12]));
-
-      await actions.releerFiltroDoLink({
-        dispatch,
-        commit,
-        state: estado({ daIa: true, page: 4, assigneeType: 'all' }),
-        rootState: naCaixa({ da_ia: '1' }),
-        rootGetters: paginaAtual(3),
-      });
-
-      expect(api.get).toHaveBeenCalledWith(
-        expect.objectContaining({ daIa: true, page: 1 })
-      );
-      expect(commit).toHaveBeenCalledWith(types.SET_IDS_DO_FILTRO_DO_LINK, {
-        ids: [12],
-        substituir: false,
-      });
-      expect(commit).toHaveBeenCalledWith(types.SET_ALL_CONVERSATION, [
-        expect.objectContaining({ id: 12 }),
-      ]);
-      const acoes = dispatch.mock.calls.map(([acao]) => acao);
-      expect(acoes).not.toContain('updateChatListFilters');
-      expect(acoes).not.toContain('fetchAllConversations');
-      expect(acoes).not.toContain('conversationPage/reset');
-    });
-
-    it('com mais páginas, se a lista mudou enquanto a leitura vinha, a resposta é descartada', async () => {
-      const commit = vi.fn();
-      const state = estado({ daIa: true, page: 4, assigneeType: 'all' });
-      api.get.mockImplementationOnce(async () => {
-        state.conversationFilters = { esperandoMin: 30, page: 1 };
-        return resposta([12]);
-      });
-
-      await actions.releerFiltroDoLink({
+    describe('com mais de uma página carregada', () => {
+      // Cada leitura da API fica pendente até o teste responder, para controlar a ordem de chegada.
+      const leiturasPendentes = () => {
+        const fila = [];
+        api.get.mockImplementation(
+          params =>
+            new Promise(resolve => {
+              fila.push({ params, responder: ids => resolve(resposta(ids)) });
+            })
+        );
+        return fila;
+      };
+      const contextoCom = ({ paginas, lista = [], ids = [] }) => ({
+        commit: vi.fn(),
         dispatch: vi.fn(),
-        commit,
-        state,
+        state: estado(
+          { daIa: true, page: paginas + 1, assigneeType: 'all' },
+          { allConversations: lista, idsDoFiltroDoLink: ids }
+        ),
         rootState: naCaixa({ da_ia: '1' }),
-        rootGetters: paginaAtual(3),
+        rootGetters: paginaAtual(paginas),
+      });
+      const gravados = (commit, tipo) =>
+        commit.mock.calls.filter(([nome]) => nome === tipo).map(([, v]) => v);
+      const idsDe = conversas => conversas.map(({ id }) => id);
+      let aviso;
+      beforeEach(() => {
+        aviso = vi.spyOn(emitter, 'emit');
+      });
+      afterEach(() => aviso.mockRestore());
+
+      it('com 3 páginas, a conversa que saiu do filtro some e a rolagem e a paginação ficam', async () => {
+        const lista = [1, 2, 3, 4, 5, 6, 7].map(id => conversa(id));
+        const contexto = contextoCom({
+          paginas: 3,
+          lista,
+          ids: idsDe(lista),
+        });
+        api.get.mockImplementation(async ({ page }) =>
+          resposta({ 1: [1, 2], 2: [3, 4], 3: [6, 7] }[page])
+        );
+
+        await actions.releerFiltroDoLink(contexto);
+
+        expect(api.get.mock.calls.map(([params]) => params.page)).toEqual([
+          1, 2, 3,
+        ]);
+        expect(
+          gravados(contexto.commit, types.SET_IDS_DO_FILTRO_DO_LINK)
+        ).toEqual([{ ids: [1, 2, 3, 4, 6, 7], substituir: true }]);
+        expect(
+          gravados(contexto.commit, types.REPLACE_CONVERSATION_LIST).map(idsDe)
+        ).toEqual([[1, 2, 3, 4, 6, 7]]);
+        const acoes = contexto.dispatch.mock.calls.map(([acao]) => acao);
+        expect(acoes).not.toContain('updateChatListFilters');
+        expect(acoes).not.toContain('fetchAllConversations');
+        expect(acoes).not.toContain('conversationPage/reset');
+        expect(aviso).not.toHaveBeenCalledWith(
+          BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO
+        );
       });
 
-      expect(api.get).toHaveBeenCalledTimes(1);
-      expect(commit).not.toHaveBeenCalled();
+      it('com 6 páginas, a lista volta para a primeira página e a rolagem vai ao topo', async () => {
+        const contexto = contextoCom({
+          paginas: PAGINAS_RELIDAS_NO_MAXIMO + 1,
+        });
+
+        await actions.releerFiltroDoLink(contexto);
+
+        expect(api.get).not.toHaveBeenCalled();
+        expect(contexto.dispatch).toHaveBeenNthCalledWith(
+          1,
+          'updateChatListFilters',
+          { page: 1, updatedWithin: null }
+        );
+        expect(contexto.dispatch).toHaveBeenNthCalledWith(
+          2,
+          'fetchAllConversations',
+          { replaceExisting: true }
+        );
+        expect(aviso).toHaveBeenCalledWith(
+          BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO
+        );
+      });
+
+      it('a lista fica intacta até a última página chegar, e troca de uma vez', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 3 });
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(3));
+        fila[0].responder([1, 2]);
+        fila[1].responder([3, 4]);
+        await esvaziarPromessas();
+
+        expect(contexto.commit).not.toHaveBeenCalled();
+
+        fila[2].responder([5]);
+        await releitura;
+
+        expect(
+          gravados(contexto.commit, types.REPLACE_CONVERSATION_LIST).map(idsDe)
+        ).toEqual([[1, 2, 3, 4, 5]]);
+        expect(
+          gravados(contexto.commit, types.SET_IDS_DO_FILTRO_DO_LINK)
+        ).toHaveLength(1);
+      });
+
+      it('lista esvaziada no meio da releitura: as páginas que faltam são descartadas e nada grava', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 3 });
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(3));
+        fila[0].responder([1, 2]);
+        actions.emptyAllConversations({ commit: vi.fn() });
+        fila[1].responder([3, 4]);
+        fila[2].responder([5]);
+        await releitura;
+
+        expect(contexto.commit).not.toHaveBeenCalled();
+      });
+
+      it('lista lida de novo no meio (página 1, outro filtro): a releitura antiga não grava por cima', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 2 });
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(2));
+        const leituraNova = actions.fetchAllConversations({
+          commit: vi.fn(),
+          dispatch: vi.fn(),
+          state: estado({ esperandoMin: 30, page: 1 }),
+        });
+        await vi.waitFor(() => expect(fila).toHaveLength(3));
+        fila[2].responder([9]);
+        await leituraNova;
+        fila[0].responder([1]);
+        fila[1].responder([2]);
+        await releitura;
+
+        expect(contexto.commit).not.toHaveBeenCalled();
+      });
+
+      it('duas releituras: a mais velha, que chega depois, é descartada', async () => {
+        const fila = leiturasPendentes();
+        const primeira = contextoCom({ paginas: 2 });
+        const segunda = contextoCom({ paginas: 2 });
+
+        const velha = actions.releerFiltroDoLink(primeira);
+        await vi.waitFor(() => expect(fila).toHaveLength(2));
+        const nova = actions.releerFiltroDoLink(segunda);
+        await vi.waitFor(() => expect(fila).toHaveLength(4));
+        fila[2].responder([9]);
+        fila[3].responder([10]);
+        await nova;
+        fila[0].responder([1]);
+        fila[1].responder([2]);
+        await velha;
+
+        expect(primeira.commit).not.toHaveBeenCalled();
+        expect(
+          gravados(segunda.commit, types.SET_IDS_DO_FILTRO_DO_LINK)
+        ).toEqual([{ ids: [9, 10], substituir: true }]);
+      });
+
+      it('a conversa que o websocket atualizou depois do pedido fica na versão da lista, dentro ou fora do filtro como estava', async () => {
+        const lista = [
+          conversa(4, { updated_at: 20 }),
+          conversa(5, { updated_at: 20 }),
+        ];
+        const contexto = contextoCom({ paginas: 2, lista, ids: [4] });
+        api.get.mockImplementation(async ({ page }) =>
+          page === 1
+            ? {
+                data: {
+                  data: {
+                    payload: [
+                      conversa(4, { updated_at: 10 }),
+                      conversa(5, { updated_at: 10 }),
+                    ],
+                    meta: {},
+                  },
+                },
+              }
+            : resposta([9])
+        );
+
+        await actions.releerFiltroDoLink(contexto);
+
+        expect(
+          gravados(contexto.commit, types.SET_IDS_DO_FILTRO_DO_LINK)
+        ).toEqual([{ ids: [9, 4], substituir: true }]);
+        const [trocada] = gravados(
+          contexto.commit,
+          types.REPLACE_CONVERSATION_LIST
+        );
+        expect(trocada.find(({ id }) => id === 4).updated_at).toBe(20);
+      });
     });
 
     it('com a próxima página chegando, não cancela a rolagem: espera, e relê quando ela chega', async () => {
@@ -292,114 +454,6 @@ describe('filtros pelo link (#1883)', () => {
       expect(buscas()).toBe(1);
       expect(contexto.dispatch).toHaveBeenCalledWith('fetchAllConversations', {
         replaceExisting: true,
-      });
-    });
-
-    describe('com mais páginas, a soma da primeira página', () => {
-      const somar = async ({ payload, meta = {}, lista = [], ids = [] }) => {
-        const commit = vi.fn();
-        api.get.mockResolvedValueOnce({ data: { data: { payload, meta } } });
-        await actions.releerFiltroDoLink({
-          dispatch: vi.fn(),
-          commit,
-          state: estado(
-            { daIa: true, page: 3, assigneeType: 'all' },
-            { allConversations: lista, idsDoFiltroDoLink: ids }
-          ),
-          rootState: naCaixa({ da_ia: '1' }),
-          rootGetters: paginaAtual(2),
-        });
-        const chamada = tipo =>
-          commit.mock.calls.find(([nome]) => nome === tipo)?.[1];
-        return {
-          ids: chamada(types.SET_IDS_DO_FILTRO_DO_LINK),
-          conversas: chamada(types.SET_ALL_CONVERSATION),
-        };
-      };
-
-      it('quando a página 1 traz tudo o que a aba tem, ela troca os ids (o que saiu do filtro sai)', async () => {
-        const { ids } = await somar({
-          payload: [conversa(12)],
-          meta: { all_count: 1 },
-        });
-        expect(ids).toEqual({ ids: [12], substituir: true });
-
-        const vazia = await somar({ payload: [], meta: { all_count: 0 } });
-        expect(vazia.ids).toEqual({ ids: [], substituir: true });
-      });
-
-      it('quando a aba tem mais que a página 1, só soma', async () => {
-        const { ids } = await somar({
-          payload: [conversa(12)],
-          meta: { all_count: 40 },
-        });
-        expect(ids).toEqual({ ids: [12], substituir: false });
-      });
-
-      it('não volta ao estado antigo a conversa que o websocket já atualizou', async () => {
-        const { conversas } = await somar({
-          payload: [
-            conversa(4, { updated_at: 10 }),
-            conversa(7, { updated_at: 30 }),
-          ],
-          lista: [
-            conversa(4, { updated_at: 20 }),
-            conversa(7, { updated_at: 20 }),
-          ],
-        });
-        expect(conversas.map(({ id }) => id)).toEqual([7]);
-      });
-
-      it('a conversa que o websocket atualizou continua dentro ou fora do filtro como estava', async () => {
-        const lista = [
-          conversa(4, { updated_at: 20 }),
-          conversa(5, { updated_at: 20 }),
-        ];
-        const payload = [
-          conversa(4, { updated_at: 10 }),
-          conversa(5, { updated_at: 10 }),
-          conversa(9, { updated_at: 30 }),
-        ];
-
-        const { ids } = await somar({
-          payload,
-          lista,
-          ids: [4],
-          meta: { all_count: 3 },
-        });
-
-        expect(ids).toEqual({ ids: [9, 4], substituir: true });
-      });
-
-      it('duas somas fora de ordem: a resposta mais velha, que chega depois, é descartada', async () => {
-        let responderPrimeira;
-        api.get
-          .mockImplementationOnce(
-            () =>
-              new Promise(resolve => {
-                responderPrimeira = () => resolve(resposta([4]));
-              })
-          )
-          .mockResolvedValueOnce(resposta([9]));
-        const commit = vi.fn();
-        const contexto = {
-          dispatch: vi.fn(),
-          commit,
-          state: estado({ daIa: true, page: 3, assigneeType: 'all' }),
-          rootState: naCaixa({ da_ia: '1' }),
-          rootGetters: paginaAtual(2),
-        };
-
-        const primeira = actions.releerFiltroDoLink(contexto);
-        await vi.waitFor(() => expect(api.get).toHaveBeenCalledTimes(1));
-        await actions.releerFiltroDoLink(contexto);
-        responderPrimeira();
-        await primeira;
-
-        const idsGravados = commit.mock.calls
-          .filter(([tipo]) => tipo === types.SET_IDS_DO_FILTRO_DO_LINK)
-          .map(([, valor]) => valor.ids);
-        expect(idsGravados).toEqual([[9]]);
       });
     });
   });

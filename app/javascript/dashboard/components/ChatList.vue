@@ -306,6 +306,7 @@ const {
   daIa: daIaDoLink,
   esperandoMin: esperandoDoLink,
   limparTudo: limparTudoDoLink,
+  irParaALista,
 } = useFiltrosDoLinkNaCaixa();
 const idsDoFiltroDoLink = useMapGetter('getIdsDoFiltroDoLink');
 const filtroDoLink = computed(() => {
@@ -761,7 +762,8 @@ function openLastItemAfterDeleteInFolder() {
 }
 
 function redirectToConversationList() {
-  router.push(buildConversationListPath());
+  // #1883: com o filtro do link ligado, a lista volta filtrada.
+  irParaALista(buildConversationListPath(), temFiltroDoLink.value);
 }
 
 async function assignPriority(priority, conversationId = null) {
@@ -909,6 +911,12 @@ function abrirAbaDaTelaInicial(aba) {
   resetAndFetchData();
 }
 useEmitter(BUS_EVENTS.TELA_INICIAL_ABA, abrirAbaDaTelaInicial);
+// #1883: a releitura voltou a lista longa (mais de 5 páginas) para a primeira página.
+const conversationListComponentRef = ref(null);
+useEmitter(BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO, () => {
+  const lista = conversationListComponentRef.value?.conversationListRef;
+  if (lista) lista.scrollTop = 0;
+});
 useEmitter('fetch_conversation_stats', () => {
   if (hasAppliedFiltersOrActiveFolders.value) return;
   store.dispatch('conversationStats/get', conversationFilters.value);
@@ -1092,6 +1100,7 @@ watch(appliedFilters, () => resetBulkActions());
       @select-all-conversations="toggleSelectAll"
     />
     <ConversationList
+      ref="conversationListComponentRef"
       :conversation-list="conversationList"
       :is-loading="chatListLoading"
       :show-end-of-list-message="showEndOfListMessage"

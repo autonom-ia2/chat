@@ -156,6 +156,54 @@ describe('useFiltrosDoLinkNaCaixa', () => {
     expect(filtros.daIa.value).toBe(true);
   });
 
+  describe('irParaALista (marcar como não lida, excluir)', () => {
+    it('com o filtro ligado, a conversa volta para a lista com o link', async () => {
+      const { router, filtros } = await montar(
+        '/app/accounts/1/dashboard?da_ia=1&esperando_min=30'
+      );
+      await router.push('/app/accounts/1/conversations/7');
+
+      await filtros.irParaALista('/app/accounts/1/dashboard', true);
+
+      expect(router.currentRoute.value.name).toBe('home');
+      expect(router.currentRoute.value.query).toEqual({
+        da_ia: '1',
+        esperando_min: '30',
+      });
+    });
+
+    it('com o filtro desligado (pasta ou filtro avançado), volta sem o link', async () => {
+      const { router, filtros } = await montar(
+        '/app/accounts/1/dashboard?da_ia=1'
+      );
+      await router.push('/app/accounts/1/conversations/7');
+
+      await filtros.irParaALista('/app/accounts/1/dashboard', false);
+
+      expect(router.currentRoute.value.query).toEqual({});
+    });
+  });
+
+  describe('enderecoComLink (Ctrl/Cmd+clique)', () => {
+    it('na lista filtrada, o endereço da conversa leva o link', async () => {
+      const { filtros } = await montar(
+        '/app/accounts/1/dashboard?esperando_min=30&da_ia=0'
+      );
+
+      expect(filtros.enderecoComLink('/app/accounts/1/conversations/7')).toBe(
+        '/app/accounts/1/conversations/7?esperando_min=30'
+      );
+    });
+
+    it('fora da lista filtrada, o endereço fica como está', async () => {
+      const { filtros } = await montar('/app/accounts/1/crm');
+
+      expect(filtros.enderecoComLink('/app/accounts/1/conversations/7')).toBe(
+        '/app/accounts/1/conversations/7'
+      );
+    });
+  });
+
   describe('limparTudo (a seta "Limpar filtros")', () => {
     it('com o link no endereço, um clique tira o link e não relê à parte', async () => {
       const { router, filtros } = await montar(

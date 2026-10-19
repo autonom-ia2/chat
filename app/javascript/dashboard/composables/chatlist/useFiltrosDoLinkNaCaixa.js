@@ -126,7 +126,31 @@ export const useFiltrosDoLinkNaCaixa = () => {
     if (!filtroLigado) reler();
   };
 
-  return { daIa, esperandoMin, limpar, limparTudo };
+  // O link do filtro ligado, só com valores que a caixa oferece.
+  const linkDoFiltro = computed(() => ({
+    ...(daIa.value ? { da_ia: '1' } : {}),
+    ...(esperandoMin.value
+      ? { esperando_min: String(esperandoMin.value) }
+      : {}),
+  }));
+
+  // Voltar da conversa para a lista (marcar como não lida, excluir): com o filtro ligado, a lista volta filtrada.
+  const irParaALista = (path, filtroLigado) =>
+    router.push({ path, query: filtroLigado ? linkDoFiltro.value : {} });
+
+  // Endereço da conversa para abrir em outra aba (Ctrl/Cmd+clique): leva o link, como o clique normal.
+  const enderecoComLink = path =>
+    router.resolve({ path, query: linkDoFiltro.value }).fullPath;
+
+  return {
+    daIa,
+    esperandoMin,
+    limpar,
+    limparTudo,
+    linkDoFiltro,
+    irParaALista,
+    enderecoComLink,
+  };
 };
 
 // Com "esperando" ligado: relê a lista uma vez por minuto com a aba do navegador visível, e logo que ela volta a ficar
