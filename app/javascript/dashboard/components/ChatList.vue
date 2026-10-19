@@ -1,6 +1,7 @@
 <script setup>
 import { ref, unref, provide, computed, watch, onMounted } from 'vue';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
+import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import {
@@ -289,17 +290,22 @@ const conversationListPagination = computed(() => {
   return currentPage.value + 1;
 });
 
+// #1809: Spam e Lixeira da caixa de e-mail (a pasta vem do endereço, ?pasta=).
+const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
+
 const conversationFilters = computed(() => {
   return {
     inboxId: props.conversationInbox ? props.conversationInbox : undefined,
     assigneeType: activeAssigneeTab.value,
-    status: activeStatus.value,
+    // #1809: Spam e Lixeira resolvem a conversa; dentro da pasta, todos os status.
+    status: pastaDoEmail.value ? 'all' : activeStatus.value,
     sortBy: activeSortBy.value,
     page: conversationListPagination.value,
     labels: props.label ? [props.label] : undefined,
     teamId: props.teamId || undefined,
     conversationType: props.conversationType || undefined,
     crmPipelineId: (isCrmEnabled && crmPipelineId.value) || undefined,
+    pasta: pastaDoEmail.value || undefined,
   };
 });
 
@@ -311,6 +317,9 @@ const activeTeam = computed(() => {
 });
 
 const pageTitle = computed(() => {
+  if (pastaDoEmail.value) {
+    return t(`CONVERSA_CANAL.EMAIL.PASTA.${pastaDoEmail.value.toUpperCase()}`);
+  }
   if (hasAppliedFilters.value) {
     return t('CHAT_LIST.TAB_HEADING');
   }
@@ -918,6 +927,7 @@ watch(
   computed(() => props.label),
   () => resetAndFetchData()
 );
+watch([pastaDoEmail, versaoDasPastas], () => resetAndFetchData());
 watch(
   computed(() => props.conversationType),
   (type, previousType) => {

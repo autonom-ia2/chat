@@ -11,6 +11,9 @@ import BotaoDeDescer from '../conversa-canal/BotaoDeDescer.vue';
 import { useSequenciaDaConversa } from '../conversa-canal/useSequenciaDaConversa';
 import { useAlbunsDaConversa } from '../conversa-canal/album/useAlbuns';
 import { usePele } from '../conversa-canal/pele';
+import TopoDoEmail from '../conversa-canal/email/TopoDoEmail.vue';
+import AcoesDoEmail from '../conversa-canal/email/AcoesDoEmail.vue';
+import { useEmailDaConversa } from '../conversa-canal/email/useConversaDeEmail';
 import {
   ocultaNaPele,
   primeiraNaoLidaVisivel,
@@ -72,6 +75,8 @@ const temAlbumDoWaha = atributos => {
   const album = atributos?.waha_album ?? atributos?.wahaAlbum;
   return Boolean(album) && typeof album === 'object';
 };
+// #1786: assunto no topo e Responder / Responder a todos / Encaminhar no fim.
+const emailNovo = useEmailDaConversa().ligado;
 const allMessages = computed(() => {
   const comPele = Boolean(peleDaLista.value);
   const passa = message =>
@@ -91,6 +96,11 @@ const allMessages = computed(() => {
       )
     : mensagens;
 });
+
+// #1786: na conversa de e-mail nova o mais recente fica no topo (Rodrigo, 18/10).
+const mensagensNaOrdem = computed(() =>
+  emailNovo.value ? [...allMessages.value].reverse() : allMessages.value
+);
 
 // A faixa de não lidas não pode sumir quando a 1ª não lida é uma das escondidas:
 // desce para a próxima que aparece.
@@ -220,10 +230,12 @@ const getInReplyToMessage = parentMessage => {
 <template>
   <ul class="px-4 bg-n-surface-1">
     <slot name="beforeAll" />
-    <template v-for="(message, index) in allMessages" :key="message.id">
+    <TopoDoEmail v-if="emailNovo" :mensagens="mensagensNaOrdem" />
+    <template v-for="(message, index) in mensagensNaOrdem" :key="message.id">
       <SeparadorDeDia v-if="abreODia(index)" :quando="message.createdAt" />
+      <!-- #1786: com o mais recente no topo, a faixa "não lida" cairia no lugar errado. -->
       <slot
-        v-if="naoLidaDaLista && message.id === naoLidaDaLista"
+        v-if="naoLidaDaLista && message.id === naoLidaDaLista && !emailNovo"
         name="unreadBadge"
       />
       <Message
@@ -231,7 +243,7 @@ const getInReplyToMessage = parentMessage => {
         v-bind="message"
         :is-email-inbox="isAnEmailChannel"
         :in-reply-to="getInReplyToMessage(message)"
-        :group-with-next="shouldGroupWithNext(index, allMessages)"
+        :group-with-next="shouldGroupWithNext(index, mensagensNaOrdem)"
         :inbox-supports-reply-to="inboxSupportsReplyTo"
         :current-user-id="currentUserId"
         data-clarity-mask="True"
@@ -239,6 +251,7 @@ const getInReplyToMessage = parentMessage => {
       />
       <BotoesDoModelo v-if="pele" parte="carrossel" :message="message" />
     </template>
+    <AcoesDoEmail v-if="emailNovo && allMessages.length" />
     <slot name="after" />
     <BotaoDeDescer
       v-if="pele"

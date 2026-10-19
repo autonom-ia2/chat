@@ -7,6 +7,7 @@ import NovaConversaTexto from './NovaConversaTexto.vue';
 import NovaConversaPronta from './NovaConversaPronta.vue';
 import NovaConversaEmail from './NovaConversaEmail.vue';
 import NovaConversaAnexo from './NovaConversaAnexo.vue';
+import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
 import { MODOS, TIPOS, aceitaAnexo } from './novaConversa';
 
 // #1459 — "Sua mensagem": o que aparece depende do canal escolhido. Escrever
@@ -42,6 +43,13 @@ const pronta = ref(null);
 
 const modelosDaCaixa = useMapGetter('inboxes/getConversationWhatsAppTemplates');
 const modelos = computed(() => modelosDaCaixa.value(props.canal.id));
+
+// #1809 — e-mail com a conversa nova ligada: a barra da resposta (com o "+") no
+// lugar do "Anexar arquivo" solto.
+const ehCaixaDeEmailNova = useCaixaDeEmailNova();
+const emailNovo = computed(
+  () => props.tipo === TIPOS.EMAIL && ehCaixaDeEmailNova(props.canal.id)
+);
 
 const livre = computed(() => props.tipo === TIPOS.WHATSAPP_LIVRE);
 const comEscolha = computed(() => livre.value && modelos.value.length > 0);
@@ -141,14 +149,16 @@ defineExpose({ montar: () => pronta.value?.montar() ?? null });
       v-model:mensagem="mensagem"
       v-model:cc="cc"
       v-model:bcc="bcc"
+      v-model:anexos="anexos"
       :canal="canal"
       :assinatura="assinatura"
       :com-assinatura="comAssinatura"
       :com-assunto="!continuando"
+      :barra-nova="emailNovo"
     />
 
     <NovaConversaAnexo
-      v-if="aceitaAnexo(canal) && !escolhePronta"
+      v-if="aceitaAnexo(canal) && !escolhePronta && !emailNovo"
       v-model="anexos"
     />
   </section>

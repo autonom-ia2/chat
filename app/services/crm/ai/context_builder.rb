@@ -1,6 +1,6 @@
 module Crm
   module Ai
-    class ContextBuilder
+    class ContextBuilder # rubocop:disable Metrics/ClassLength -- já passava do teto com a main + #1761 (177)
       MAX_RECENT_MESSAGES = 12
       MAX_MESSAGES_CAP = 40
       MAX_OTHER_SUBJECTS = 5
@@ -198,9 +198,11 @@ module Crm
         [MAX_RECENT_MESSAGES * conversation_count, MAX_MESSAGES_CAP].min
       end
 
+      # #1807 (flag `email_autoria`): e-mail de outro endereço que não o do cliente ganha o aviso na frente e
+      # "email_autoria" (outra_pessoa, equipe, automatica); o papel continua `customer` (é a resposta da conversa).
       def format_message(message)
         forwarded = forwarded_by_team?(message)
-        content = message_content(message).truncate(2000)
+        content, marca_do_email = email_autoria.marcar(message, message_content(message).truncate(2000))
         payload = {
           **(@numeracao ? @numeracao.ref_de(message) : {}),
           role: role_for(message),
@@ -208,10 +210,13 @@ module Crm
           created_at: message.created_at.iso8601
         }
         payload[:forwarded] = true if forwarded
+        payload.merge!(marca_do_email)
         # Só desambigua a origem quando há mais de uma conversa; senão é ruído no prompt.
         payload[:conversation_id] = message.conversation_id if conversation_ids.size > 1
         payload
       end
+
+      def email_autoria = (@email_autoria ||= Crm::Email::Autoria.new(@card.account))
 
       def forwarded_by_team?(message)
         attributes = message.content_attributes.to_h
@@ -267,7 +272,8 @@ module Crm
       # don't process (video, document).
       def message_content(message)
         parts = []
-        text = message.content.to_s.strip
+        # #1807: e-mail recebido sem o histórico citado (com a flag); o resto, o content de sempre.
+        text = email_autoria.texto(message).strip
         parts << text if text.present?
         message.attachments.each { |attachment| parts << media_fragment(attachment) }
         parts.compact_blank.join("\n").presence || '[mensagem sem texto]'

@@ -29,8 +29,10 @@ module Crm::Memoria::Normal
   end
 
   # O texto de uma mensagem como prova: o conteúdo e o que se tirou dos anexos (transcrição do áudio, legenda da imagem).
-  def texto_da_mensagem(message)
-    partes = [message.content.to_s]
+  # #1807 (flag `email_autoria`): do e-mail recebido, só o que foi escrito nele, sem o histórico citado (o CPF de outra
+  # pessoa citado embaixo da resposta do cliente não prova nada sobre ele).
+  def texto_da_mensagem(message, autoria: nil)
+    partes = [(autoria || Crm::Email::Autoria.new(message.account)).texto(message)]
     message.attachments.each do |anexo|
       meta = anexo.meta.to_h
       partes << meta['transcribed_text'].to_s << meta['ai_caption'].to_s
