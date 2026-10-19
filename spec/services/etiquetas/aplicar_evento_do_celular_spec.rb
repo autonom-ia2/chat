@@ -113,6 +113,32 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(Etiquetas::DoCelular.sole).to have_attributes(nome: 'Nome novo', evento_em: Time.iso8601(as('13:00')))
       end
 
+      it 'nome vazio não apaga o nome guardado; a cor muda' do
+        aplicar('criada')
+
+        aplicar('renomeada', nome: '', color_index: 9, at: as('13:00'))
+        aplicar('renomeada', nome: nil, color_index: 10, at: as('14:00'))
+
+        expect(Etiquetas::DoCelular.sole).to have_attributes(nome: 'Novo cliente 🔥', color_index: 10)
+      end
+
+      it 'corrida em etiqueta_se_faltar: outro evento grava o mesmo título entre a busca e a criação' do
+        aplicar('apagada', at: as('12:00')) # marca sem Label
+        concorrente = nil
+        allow(Label).to receive(:transaction).and_wrap_original do |original, *args, **opcoes, &bloco|
+          if concorrente.nil?
+            concorrente = :criando
+            concorrente = create(:label, account: account, title: 'novo_cliente')
+          end
+          original.call(*args, **opcoes, &bloco)
+        end
+
+        aplicar('criada', at: as('13:00'))
+
+        expect(account.labels.pluck(:id)).to eq([concorrente.id])
+        expect(Etiquetas::DoCelular.vivas.sole).to have_attributes(label_id: concorrente.id, criada_pelo_celular: false)
+      end
+
       it 'sem correspondência ainda: cria como em criada' do
         aplicar('renomeada', nome: 'Pago')
 
@@ -134,7 +160,8 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(contato.reload.label_list).to eq(['novo_cliente'])
       end
 
-      it 'fora de ordem: apagada (mais nova) antes da criada (mais velha) não cria nada' do
+      it 'fora de ordem: apagada (mais nova) antes da criada (mais velha) não cria nada; a vinculada só deixa log' do
+        allow(Rails.logger).to receive(:info)
         aplicar('apagada', at: as('13:00'))
         aplicar('criada', at: as('12:00'))
         aplicar('vinculada', at: as('12:30'))
@@ -143,6 +170,8 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(Etiquetas::DoCelular.vivas.count).to eq(0)
         expect(Etiquetas::DoCelular.sole).to have_attributes(label_id: nil, apagada_em: Time.iso8601(as('13:00')))
         expect(contato.reload.label_list).to be_empty
+        expect(Rails.logger).to have_received(:info)
+          .with(a_string_including('vinculada de etiqueta apagada no celular', 'label_wa_id=3', 'acao=vinculada'))
       end
 
       it 'fora de ordem: apagada (mais velha) depois da criada (mais nova) é descartada' do
@@ -313,6 +342,53 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(Etiquetas::DoCelular.sole.nome).to eq('Nome novo')
       end
 
+      it 'vinculada mais velha que a renomeada, no mesmo contato: é aplicada, sem mudar o nome e sem log de descarte' do
+        aplicar('renomeada', nome: 'Nome novo', at: as('14:00'))
+        allow(Rails.logger).to receive(:info)
+
+        aplicar('vinculada', nome: 'Nome antigo', color_index: 1, at: as('13:00'))
+
+        expect(contato.reload.label_list).to eq(['nome_novo'])
+        expect(Etiquetas::DoCelular.sole).to have_attributes(nome: 'Nome novo', color_index: 4,
+                                                             evento_em: Time.iso8601(as('14:00')))
+        expect(Rails.logger).not_to have_received(:info).with(a_string_including('descartado'))
+      end
+
+      it 'vinculada e desvinculada mais novas nunca mudam nome, cor nem o relógio da etiqueta' do
+        aplicar('criada')
+
+        aplicar('vinculada', nome: 'Outro nome', color_index: 9, at: as('13:00'))
+        aplicar('desvinculada', nome: 'Mais outro', color_index: 11, at: as('14:00'))
+
+        expect(Etiquetas::DoCelular.sole).to have_attributes(nome: 'Novo cliente 🔥', color_index: 4,
+                                                             evento_em: Time.iso8601(as('12:00')))
+      end
+
+      it 'vinculada de etiqueta apagada no celular: não mexe no contato e deixa log' do
+        aplicar('criada')
+        aplicar('apagada', at: as('13:00'))
+        allow(Rails.logger).to receive(:info)
+
+        aplicar('vinculada', at: as('14:00'))
+
+        expect(contato.reload.label_list).to be_empty
+        expect(Rails.logger).to have_received(:info)
+          .with(a_string_including('vinculada de etiqueta apagada no celular', "inbox=#{inbox.id}", 'label_wa_id=3'))
+      end
+
+      it 'a nota só vai para a fila depois do commit da transação' do
+        conversa
+        base = ActiveRecord::Base.connection.open_transactions
+        abertas_na_fila = []
+        allow(Conversations::ActivityMessageJob).to receive(:perform_later) do
+          abertas_na_fila << ActiveRecord::Base.connection.open_transactions
+        end
+
+        aplicar('vinculada')
+
+        expect(abertas_na_fila).to eq([base])
+      end
+
       it 'duas etiquetas do celular seguidas no mesmo contato: as duas ficam' do
         recente = conversa
 
@@ -406,6 +482,12 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
       expect(described_class.titulo_tecnico('Pós-venda 2026!')).to eq('pós-venda_2026')
       expect(described_class.titulo_tecnico("Cafe\u0301")).to eq('café')
       expect(described_class.titulo_tecnico('🔥')).to eq('')
+    end
+
+    it 'só o espaço separa palavras, como o split(" ") do painel: tab e quebra de linha somem' do
+      expect(described_class.titulo_tecnico("a\tb")).to eq('ab')
+      expect(described_class.titulo_tecnico("pago\nhoje")).to eq('pagohoje')
+      expect(described_class.titulo_tecnico('pago hoje')).to eq('pago_hoje')
     end
   end
 end

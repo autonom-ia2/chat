@@ -76,6 +76,11 @@
       "file": "telaInicial.json"
     }
   ],
+  "servidor": [
+    {
+      "file": "etiquetas_do_celular"
+    }
+  ],
   "pacotes": {
     "painel": "app/javascript/dashboard/i18n/pacotes",
     "servidor": "config/pacotes",

@@ -5,15 +5,19 @@
 #   atributos onde o conector WAHA guarda o chat id, Waha::ContactChatId). Não acha: nada muda (fica só o log de quem chama).
 # - Ordem: o `at` do último vinculada/desvinculada aplicado no contato fica em Etiquetas::DoCelularNoContato; evento mais
 #   velho é descartado.
-# - As etiquetas do contato e da conversa são lidas e gravadas sob trava da linha (with_lock): outra etiqueta posta ao
-#   mesmo tempo no mesmo contato não se perde.
-# - Quando a conversa muda de fato, ela ganha a nota de atividade "O WhatsApp do celular adicionou/removeu a etiqueta X"
-#   (protótipo aprovado), no idioma da conta e no mesmo formato das notas de etiqueta do Chatwoot. X é o nome legível:
-#   nome livre, senão o nome do celular, senão o derivado do título. Sem mudança, sem nota; no contato, nunca.
-# Devolve :aplicado, ou o motivo do descarte (texto) para o log.
+# - Travas, sempre nesta ordem: correspondência (já travada por quem chama) → contato → conversa. O contato é travado
+#   antes de gravar o vínculo (cuja chave estrangeira pede FOR KEY SHARE nele), para nenhuma transação subir de KEY SHARE
+#   para FOR UPDATE no meio do caminho. Sob as travas, as etiquetas do contato e da conversa são lidas e gravadas: outra
+#   etiqueta posta ao mesmo tempo no mesmo contato não se perde.
+# - Quando a conversa muda de fato, `nota` traz a nota de atividade "O WhatsApp do celular adicionou/removeu a etiqueta
+#   X" (protótipo aprovado), que quem chama enfileira depois do commit (Etiquetas::NotaDoCelular). Sem mudança, sem nota;
+#   no contato, nunca.
+# `aplicar` devolve :aplicado, ou o motivo do descarte (texto) para o log.
 class Etiquetas::EtiquetaNoContato
   CONVERSA_EM_ANDAMENTO = %i[open pending].freeze
   CHAVES_DO_CHAT_ID = [Waha::ContactChatId::CHAT_ID, Waha::ContactChatId::JID, Waha::ContactChatId::LID].freeze
+
+  attr_reader :nota
 
   def initialize(registro:, evento:, at:)
     @registro = registro
@@ -26,14 +30,15 @@ class Etiquetas::EtiquetaNoContato
     contato = contato_do_evento
     return 'contato não encontrado' if contato.nil?
 
-    vinculo = Etiquetas::DoCelularNoContato.find_or_initialize_by(etiqueta_do_celular: @registro, contact: contato)
-    return "mais velho que o último aplicado no contato (#{vinculo.evento_em.iso8601})" if mais_velho?(vinculo)
+    contato.with_lock do
+      vinculo = Etiquetas::DoCelularNoContato.find_or_initialize_by(etiqueta_do_celular: @registro, contact: contato)
+      next "mais velho que o último aplicado no contato (#{vinculo.evento_em.iso8601})" if mais_velho?(vinculo)
 
-    vinculo.update!(vinculada: operacao == :adicionar, evento_em: @at)
-    trocar_etiqueta(contato, operacao)
-    conversa = conversa_em_andamento_de(contato)
-    anotar(conversa, operacao) if conversa && trocar_etiqueta(conversa, operacao)
-    :aplicado
+      vinculo.update!(vinculada: operacao == :adicionar, evento_em: @at)
+      trocar_etiqueta(contato, operacao)
+      trocar_na_conversa(contato, operacao)
+      :aplicado
+    end
   end
 
   private
@@ -46,42 +51,24 @@ class Etiquetas::EtiquetaNoContato
     @registro.label.title
   end
 
-  # Devolve true quando as etiquetas mudaram.
+  # Lê e grava as etiquetas de um registro já travado. Devolve true quando elas mudaram.
   def trocar_etiqueta(registro, operacao)
-    registro.with_lock do
-      atuais = registro.label_list.to_a
-      novas = operacao == :adicionar ? atuais | [titulo] : atuais - [titulo]
-      next false if novas.sort == atuais.sort
+    atuais = registro.label_list.to_a
+    novas = operacao == :adicionar ? atuais | [titulo] : atuais - [titulo]
+    return false if novas.sort == atuais.sort
 
-      registro.update_labels(novas)
-      true
+    registro.update_labels(novas)
+    true
+  end
+
+  def trocar_na_conversa(contato, operacao)
+    conversa = conversa_em_andamento_de(contato)
+    return if conversa.nil?
+
+    conversa.with_lock do
+      @nota = Etiquetas::NotaDoCelular.new(conversa: conversa, registro: @registro, operacao: operacao) if
+        trocar_etiqueta(conversa, operacao)
     end
-  end
-
-  def anotar(conversa, operacao)
-    chave = operacao == :adicionar ? 'adicionada' : 'removida'
-    conteudo = I18n.with_locale(idioma_da_conta) do
-      I18n.t("etiquetas_do_celular.atividade.#{chave}", etiqueta: nome_legivel)
-    end
-    Conversations::ActivityMessageJob.perform_later(
-      conversa, { account_id: conversa.account_id, inbox_id: conversa.inbox_id, message_type: :activity, content: conteudo }
-    )
-  end
-
-  def idioma_da_conta
-    locale = @inbox.account.locale.presence&.to_sym
-    I18n.available_locales.include?(locale) ? locale : I18n.default_locale
-  end
-
-  # Mesma ordem do painel (helper nomeDaEtiqueta.js): nome livre → nome do celular → derivado do título
-  # ("aguardando_retorno" vira "Aguardando retorno"), sem regex.
-  def nome_legivel
-    Etiquetas::Nome.find_by(label: @registro.label)&.nome.presence || @registro.nome.presence || nome_do_titulo
-  end
-
-  def nome_do_titulo
-    palavras = titulo.split('_').compact_blank.join(' ')
-    palavras[0].to_s.upcase + palavras[1..].to_s
   end
 
   def conversa_em_andamento_de(contato)

@@ -24,4 +24,22 @@ RSpec.describe WhatsappLabels::AplicarEvento do
 
     expect(Etiquetas::DoCelular.sole).to have_attributes(label_wa_id: '7', nome: 'Pago', color_index: 2)
   end
+
+  it 'evento malformado é descartado com log (classe, caixa e ação), sem o telefone e sem nova tentativa' do
+    account = create(:account)
+    account.enable_features!('etiquetas_do_celular')
+    inbox = create(:inbox, account: account)
+    allow(Rails.logger).to receive(:warn)
+
+    [{ acao: 'arquivada', at: '2026-10-19T12:00:00Z' }, { acao: 'criada', at: 'ontem' }].each do |extra|
+      evento = { inbox_id: inbox.id, contact_phone: '+5511999990001', label_wa_id: '7', nome: 'Pago' }.merge(extra)
+      expect { described_class.perform_now(evento) }.not_to raise_error
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_including('Etiquetas::AplicarEventoDoCelular::EventoInvalido', "inbox=#{inbox.id}", "acao=#{extra[:acao]}"))
+    end
+
+    expect(Rails.logger).not_to have_received(:warn).with(a_string_including('5511999990001'))
+    expect(described_class).not_to have_been_enqueued
+    expect(Etiquetas::DoCelular.count).to eq(0)
+  end
 end

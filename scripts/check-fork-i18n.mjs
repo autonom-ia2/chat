@@ -7,6 +7,7 @@ import {
   camadasEncontradas,
   checarPacotes,
   parametros as parameters,
+  parametrosRuby,
 } from './i18n-pacotes/checar.mjs';
 import { checarCobertura } from './i18n-pacotes/cobertura.mjs';
 
@@ -82,6 +83,51 @@ for (const {
   }
 }
 
+// Catálogos do servidor do fork (#1823): config/locales/<file>.<idioma>.yml, en e pt_BR com
+// as mesmas chaves e os mesmos parâmetros (%{x}), raiz igual ao idioma e fora do Crowdin.
+const servidor = registry.servidor || [];
+const fontesDoCrowdin = crowdin.files.map(({ source }) => source);
+for (const { file } of servidor) {
+  const porIdioma = registry.requiredLocales.map(locale => {
+    const path = `config/locales/${file}.${locale}.yml`;
+    assert(existsSync(path), `Missing required ${path}`);
+    assert(
+      !fontesDoCrowdin.some(
+        source =>
+          source === `/${path}` ||
+          (source.startsWith('/config/locales/') && source.includes('*'))
+      ),
+      `crowdin.yml covers ${path}; fork server catalogs stay out of Crowdin`
+    );
+    const yml = YAML.parse(readFileSync(path, 'utf8'));
+    assert.deepEqual(
+      Object.keys(yml || {}),
+      [locale],
+      `Root of ${path} must be only "${locale}:"`
+    );
+    return [locale, new Map(leaves(yml[locale]))];
+  });
+  const [, fonte] = porIdioma.find(
+    ([locale]) => locale === registry.defaultSourceLocale
+  );
+  for (const [locale, mensagens] of porIdioma) {
+    assert.deepEqual(
+      [...mensagens.keys()].sort(),
+      [...fonte.keys()].sort(),
+      `Keys differ: ${file}.${locale}.yml`
+    );
+    for (const [key, value] of mensagens) {
+      assert(value.trim(), `Empty ${file}.${locale}.yml:${key}`);
+      assert.deepEqual(
+        parametrosRuby(value),
+        parametrosRuby(fonte.get(key)),
+        `Parameters differ: ${file}.${locale}.yml:${key}`
+      );
+      messages += 1;
+    }
+  }
+}
+
 if (process.env.CROWDIN_SYNC === 'true') {
   assert(
     process.env.PR_BASE_SHA,
@@ -116,5 +162,5 @@ const pacotes =
   camadasEncontradas(registry.pacotes.painel).length +
   camadasEncontradas(registry.pacotes.servidor).length;
 console.log(
-  `${registry.catalogs.length} fork catalogs checked; ${messages} messages compiled; en/pt_BR keys and parameters covered; ${pacotes} translation packs checked.`
+  `${registry.catalogs.length} fork catalogs and ${servidor.length} server catalogs checked; ${messages} messages compiled; en/pt_BR keys and parameters covered; ${pacotes} translation packs checked.`
 );

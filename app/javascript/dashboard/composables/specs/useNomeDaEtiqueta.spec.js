@@ -160,6 +160,24 @@ describe('useNomeDaEtiqueta', () => {
     expect(nomeDe('vip')).toBe('Vip');
   });
 
+  it('does not cache a failed load of the names: the next load tries again', async () => {
+    NomesDeEtiquetasAPI.listar.mockRejectedValueOnce(new Error('falhou'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    montar({ accountId: 19 });
+    await flushPromises();
+    expect(ultimaApi.nomeDe('vip')).toBe('Vip');
+
+    // Troca de conta e volta: carga comum (sem forçar), que só vai à API
+    // porque a falha não deixou a conta 19 no cache.
+    montar({ accountId: 20 });
+    await flushPromises();
+    const { nomeDe } = montar({ accountId: 19 });
+    await flushPromises();
+
+    expect(NomesDeEtiquetasAPI.listar).toHaveBeenCalledTimes(3);
+    expect(nomeDe('vip')).toBe('Cliente VIP');
+  });
+
   it('keeps the loaded names when a forced reload fails', async () => {
     const { nomeDe, recarregar } = montar({ accountId: 17 });
     await flushPromises();
