@@ -506,6 +506,27 @@ describe('#crmKanban pipeline inbox actions', () => {
     });
     expect(commit).toHaveBeenCalledWith(types.SET_CRM_CALENDAR_EVENTS, events);
   });
+
+  // #1883: no Meu dia tudo o que filtra fica no "Mostrar"; o filtro do Kanban não pode virar filtro escondido.
+  it('fetches the Meu dia without the board filters when asked', async () => {
+    CrmKanbanAPI.getCalendarEvents.mockResolvedValue({ data: { payload: [] } });
+
+    await actions.fetchCalendarEvents(
+      {
+        commit: vi.fn(),
+        state: {
+          filters: { ...defaultFilters(), ownerId: 3, staleDays: '7' },
+        },
+      },
+      { semFiltrosDoQuadro: true, pipeline_id: 2, from: 'a', to: 'b' }
+    );
+
+    expect(CrmKanbanAPI.getCalendarEvents).toHaveBeenLastCalledWith({
+      pipeline_id: 2,
+      from: 'a',
+      to: 'b',
+    });
+  });
 });
 
 describe('#crmKanban board filters', () => {

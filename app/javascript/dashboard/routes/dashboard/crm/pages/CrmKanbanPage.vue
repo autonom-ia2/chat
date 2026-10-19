@@ -838,6 +838,7 @@ const loadCurrentCalendar = async () => {
         ? funilDoCalendario.value || undefined
         : currentPipelineId.value,
       include_completed: store.getters['crmKanban/getCalendarIncludeCompleted'],
+      semFiltrosDoQuadro: calendarioOuro.value,
       ...range,
     });
   } catch {
@@ -891,6 +892,21 @@ const handleServerFilterRefetch = () => {
   refetchTimer = setTimeout(() => loadActiveView(true), 400);
 };
 
+// #1883: o responsável que veio pelo link só vale se for alguém da equipe que a pessoa enxerga. Confere assim que
+// a equipe carrega, antes da primeira busca, para não ir ao servidor com um dono que vai cair.
+const donoDoLinkPorConferir = ref(false);
+const conferirDonoDoLink = async () => {
+  if (!donoDoLinkPorConferir.value) return;
+  donoDoLinkPorConferir.value = false;
+  const { ownerId } = filters.value;
+  const conhecido =
+    String(ownerId) === String(currentUser.value?.id) ||
+    agents.value.some(agent => String(agent.id) === String(ownerId));
+  if (conhecido) return;
+  filters.value = { ...filters.value, ownerId: '' };
+  await store.dispatch('crmKanban/setFilters', filters.value);
+};
+
 const refreshData = async () => {
   loadError.value = '';
   try {
@@ -903,7 +919,13 @@ const refreshData = async () => {
       store.dispatch('labels/get'),
       loadCampaignOptions(),
     ]);
+    await conferirDonoDoLink();
     const fetchedPipelines = await store.dispatch('crmKanban/fetchPipelines');
+    // #1883: o funil do Meu dia que veio pelo link só vale se a pessoa enxerga esse funil.
+    const funilVisivel = fetchedPipelines.find(
+      pipeline => String(pipeline.id) === String(funilDoCalendario.value)
+    );
+    funilDoCalendario.value = funilVisivel?.id ?? null;
     if (fetchedPipelines.length > 0) {
       const currentStillExists = fetchedPipelines.some(
         pipeline => String(pipeline.id) === String(currentPipelineId.value)
@@ -917,11 +939,6 @@ const refreshData = async () => {
         ? currentPipelineId.value
         : fetchedPipelines[0].id;
       if (requested) nextPipelineId = requested.id;
-      // #1883: o funil do Meu dia que veio pelo link só vale se a pessoa enxerga esse funil.
-      const funilVisivel = fetchedPipelines.find(
-        pipeline => String(pipeline.id) === String(funilDoCalendario.value)
-      );
-      funilDoCalendario.value = funilVisivel?.id ?? null;
       if (String(currentPipelineId.value) === String(nextPipelineId)) {
         await loadActiveView(true);
         return;
@@ -2310,20 +2327,6 @@ useEmitter(BUS_EVENTS.CRM_OPEN_CARD, cardId =>
   openCardFromBoard({ id: Number(cardId) })
 );
 
-// #1883: o responsável do link só vale se for alguém da equipe que a pessoa enxerga; e a aba de
-// resultado segue o tipo do funil ("ganhos" num funil de Atender vira "resolvidos").
-const ajustarFiltrosDoLink = async doLink => {
-  if (!doLink) return;
-  await alignResultFilter();
-  const { ownerId } = filters.value;
-  const conhecido =
-    String(ownerId) === String(currentUser.value?.id) ||
-    agents.value.some(agent => String(agent.id) === String(ownerId));
-  if (!ownerId || conhecido) return;
-  filters.value = { ...filters.value, ownerId: '' };
-  await applyFilters();
-};
-
 onMounted(async () => {
   // Filtros do link: "Ver no CRM" do resultado da campanha (#1007) e os "Ver" do Números (#1883).
   // Partem do zero, para nenhum filtro antigo da sessão somar ao do link.
@@ -2332,10 +2335,12 @@ onMounted(async () => {
     : filtrosDoLink(route.query, { currentUserId: currentUser.value?.id });
   if (doLink) {
     filters.value = { ...defaultFilters(), ...doLink };
+    donoDoLinkPorConferir.value = Boolean(doLink.ownerId);
     await store.dispatch('crmKanban/setFilters', filters.value);
   }
   await refreshData();
-  await ajustarFiltrosDoLink(doLink);
+  // A aba de resultado segue o tipo do funil ("ganhos" num funil de Atender vira "resolvidos").
+  if (doLink) await alignResultFilter();
   clearPipelineFromQuery();
   // Seed the per-pipeline column layout for the resolved initial pipeline.
   if (currentPipelineId.value) {

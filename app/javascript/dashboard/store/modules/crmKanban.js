@@ -946,12 +946,14 @@ export const actions = {
     }
   },
 
+  // `semFiltrosDoQuadro`: o Meu dia (#1883) filtra só pelo próprio "Mostrar", nunca pelo filtro do Kanban.
   fetchCalendarEvents: async ({ commit, state: $state }, payload = {}) => {
+    const { semFiltrosDoQuadro, ...params } = payload;
     commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingCalendar: true });
     try {
       const response = await CrmKanbanAPI.getCalendarEvents({
-        ...normalizeFilters($state.filters),
-        ...payload,
+        ...(semFiltrosDoQuadro ? {} : normalizeFilters($state.filters)),
+        ...params,
       });
       commit(types.SET_CRM_CALENDAR_EVENTS, response.data.payload || []);
       return response.data.payload || [];

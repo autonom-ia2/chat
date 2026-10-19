@@ -354,6 +354,14 @@ describe('CrmKanbanPage', () => {
       });
       expect(calendario.props('funil')).toBe(1);
       expect(replace).toHaveBeenLastCalledWith({ query: {} });
+      // O filtro do Kanban (de outra visita) não vira filtro escondido do Meu dia.
+      const busca = dispatch.mock.calls.filter(
+        ([tipo]) => tipo === 'crmKanban/fetchCalendarEvents'
+      );
+      expect(busca.at(-1)[1]).toMatchObject({
+        pipeline_id: 1,
+        semFiltrosDoQuadro: true,
+      });
       wrapper.unmount();
 
       route.query = { funil: '5' };
