@@ -70,6 +70,21 @@ RSpec.describe 'Pacote de tradução da conta nas requisições', type: :request
     end
   end
 
+  # #1802, lote 4: o erro de endereço da identidade visual traz o exemplo da corretora.
+  it 'recusa o endereço do site com o exemplo do pacote na corretora e com o geral na conta seguinte' do
+    exemplo_do_erro = lambda do |(account, admin, _pipeline)|
+      post "/api/v1/accounts/#{account.id}/brand_kit_imports", params: { url: 'ftp://site.com.br' },
+                                                               headers: auth_headers(admin), as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      response.parsed_body['error_message']
+    end
+
+    with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') do
+      expect(exemplo_do_erro.call(conta_com_card_ganho('seguros', 'corretora'))).to include('https://suacorretora.com.br')
+      expect(exemplo_do_erro.call(conta_com_card_ganho('geral'))).to include('https://suaempresa.com.br')
+    end
+  end
+
   describe 'GET /api/v1/accounts/:id' do
     it 'traz o nome do pacote da conta' do
       account, admin, = conta_com_card_ganho('seguros', 'corretora')
