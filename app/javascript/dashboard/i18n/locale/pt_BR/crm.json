@@ -5968,6 +5968,11 @@
     "EMPTY": "Nenhuma conversa neste funil."
   },
   "FORK_CONVERSATION_LIST": {
-    "PARTICIPATING": "Em que participo"
+    "PARTICIPATING": "Em que participo",
+    "FILTRO_DO_LINK": {
+      "DA_IA": "Recebidas da IA",
+      "ESPERANDO": "Esperando há mais de {n} min",
+      "DA_IA_ESPERANDO": "Da IA, esperando +{n} min"
+    }
   }
 }
