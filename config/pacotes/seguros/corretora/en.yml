@@ -22,3 +22,7 @@ en:
         next_follow_up_at: 'Next follow-up'
     follow_up_reminder:
       card: 'Card: %{card}'
+  # Error when importing the brand kit from the website (F2, lote 4).
+  brand_kits:
+    import_errors:
+      invalid_url: 'Enter the full website address, for example https://yourbrokerage.com.'

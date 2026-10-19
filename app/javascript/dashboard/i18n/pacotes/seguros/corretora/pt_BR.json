@@ -833,9 +833,9 @@
       "ROUTING": {
         "PREVIEW": {
           "FOLLOW_UP_WEB": "O Carlos não responde a cotação há 2 dias. O lembrete do CRM sai pelo WhatsApp API às 10:00.",
-          "FOLLOW_UP_TEMPLATE": "O Carlos não responde a cotação há 2 dias. O lembrete do CRM sai como mensagem pronta pelo número oficial.",
+          "FOLLOW_UP_TEMPLATE": "O Carlos não responde a cotação há 2 dias. O lembrete do CRM sai como mensagem aprovada pelo número oficial.",
           "AGENT_WEB": "A Ana, da equipe, manda a segunda via para a Maria 3 dias depois. A resposta sai pelo WhatsApp API.",
-          "AGENT_TEMPLATE": "A Ana, da equipe, quer mandar a segunda via para a Maria 3 dias depois. Ela só consegue mandar uma mensagem pronta."
+          "AGENT_TEMPLATE": "A Ana, da equipe, quer mandar a segunda via para a Maria 3 dias depois. Ela só consegue mandar uma mensagem aprovada."
         },
         "WHO": {
           "ORIGINS": {
@@ -845,6 +845,242 @@
           }
         }
       }
+    }
+  },
+  "CAMPAIGN": {
+    "SMS": {
+      "EMPTY_STATE": {
+        "SUBTITLE": "Mande um SMS para várias pessoas de uma vez: aviso de parcela, de vistoria ou de renovação. Clique em 'Criar campanha' para começar."
+      }
+    },
+    "WHATSAPP": {
+      "EMPTY_STATE": {
+        "SUBTITLE": "Mande um modelo aprovado para várias pessoas de uma vez: renovação, parcela ou seguro novo. Clique em \"Criar campanha\" para começar."
+      }
+    },
+    "WHATSAPP_API": {
+      "CREATE": {
+        "FORM": {
+          "TITLE": {
+            "PLACEHOLDER": "Ex.: Renovação do seguro do carro, novembro"
+          }
+        }
+      }
+    },
+    "EMAIL_SENDER": {
+      "DIALOG": {
+        "DOMAIN_PLACEHOLDER": "ex.: mail.suacorretora.com.br",
+        "FROM_EMAIL_PLACEHOLDER": "ex.: seguros{'@'}suacorretora.com.br"
+      }
+    },
+    "EMAIL_CAMPAIGN": {
+      "DIALOG": {
+        "NAME_PLACEHOLDER": "ex.: Renovação de novembro",
+        "FROM_NAME_PLACEHOLDER": "ex.: Sua Corretora de Seguros",
+        "REPLY_TO_PLACEHOLDER": "ex.: atendimento{'@'}suacorretora.com.br",
+        "FROM_EMAIL_PLACEHOLDER": "ex.: seguros{'@'}suacorretora.com.br"
+      },
+      "BUILDER": {
+        "SAVE_TEMPLATE_NAME_PLACEHOLDER": "ex.: Lembrete de renovação"
+      },
+      "AI": {
+        "COMPOSER": {
+          "BRIEF_PLACEHOLDER": "Ex.: e-mail para quem tem o seguro do carro vencendo no mês que vem, tom amigável, convite para cotar a renovação",
+          "ASSET_DESCRIPTION_PLACEHOLDER": "O que é este recurso? Ex.: tabela de coberturas do seguro do carro",
+          "ROLE_PRODUCT": "Seguro"
+        }
+      }
+    }
+  },
+  "CAMPAIGN_JOURNEY": {
+    "AUDIENCES": {
+      "EMPTY_SUBTITLE": "Público é uma lista de pessoas, como a sua carteira de clientes. Suba a planilha de clientes que você tira do sistema da corretora para criar o primeiro."
+    },
+    "NEW_AUDIENCE": {
+      "NAME_PLACEHOLDER": "Ex.: Seguro do carro vencendo em novembro",
+      "FILE_HINT": "CSV ou Excel. Nome e celular ou e-mail. Vencimento, seguradora e placa também ajudam: dá para usar na mensagem.",
+      "COLUMNS": {
+        "OTHER_HINT": "Ficam guardadas para usar na mensagem, como o vencimento do seguro"
+      }
+    },
+    "NEW_CAMPAIGN": {
+      "MESSAGE": {
+        "NAME_PLACEHOLDER": "Ex.: Renovação do seguro do carro em novembro"
+      },
+      "VARIABLES": {
+        "HINT": "As colunas guardadas no público podem ser usadas aqui, como o vencimento ou a seguradora."
+      },
+      "API": {
+        "MESSAGE_PLACEHOLDER": "Ex.: Olá, tudo bem? O seu seguro vence este mês. Quer que a gente cote a renovação?"
+      },
+      "SMS": {
+        "MESSAGE_PLACEHOLDER": "Texto curto, ex.: a parcela do seu seguro vence amanhã."
+      },
+      "EMAIL": {
+        "FROM_NAME_PLACEHOLDER": "Ex.: Sua Corretora de Seguros"
+      }
+    },
+    "LIVE_CHAT": {
+      "URL_PLACEHOLDER": "https://www.suacorretora.com.br/seguro-auto",
+      "NAME_PLACEHOLDER": "Ex.: Boas-vindas na página do seguro do carro",
+      "TEXT_PLACEHOLDER": "Oi! Quer cotar o seguro do seu carro?"
+    }
+  },
+  "CAMPAIGN_IMPORT": {
+    "FIELDS": {
+      "CAMPAIGN_NAME_PLACEHOLDER": "Ex.: renovacao_auto_novembro"
+    }
+  },
+  "RESULT_JOURNEY": {
+    "OVERVIEW": {
+      "TOTALS": {
+        "DEALS": "Viraram cards no CRM"
+      }
+    }
+  },
+  "BRAND_KITS": {
+    "PREVIEW": {
+      "SAMPLE_SUBJECT": "Seu seguro com quem cuida de você",
+      "SAMPLE_TITLE": "Seu seguro com quem cuida de você",
+      "SAMPLE_TEXT": "A gente cota em várias seguradoras e manda as opções pelo WhatsApp.",
+      "ITEM_1": "Cotação em várias seguradoras",
+      "ITEM_2": "Ajuda na hora do sinistro",
+      "ITEM_3": "Aviso antes do vencimento",
+      "SAMPLE_BUTTON": "Quero uma cotação",
+      "SAMPLE_NOTE": "A cotação é sem compromisso."
+    },
+    "FOOTER": {
+      "COMPANY": "Nome da corretora",
+      "LINK_PLACEHOLDER": "instagram.com/suacorretora"
+    },
+    "READER": {
+      "ADDRESS_PLACEHOLDER": "suacorretora.com.br"
+    }
+  },
+  "MODELOS_WHATSAPP": {
+    "VAZIO": {
+      "TITULO": "Crie sua primeira mensagem para o WhatsApp aprovar e avise da parcela, da vistoria ou da renovação."
+    },
+    "TEXTO": {
+      "TIPO": {
+        "aviso": {
+          "PARA": "Parcela, vistoria, apólice emitida, sinistro. Custa menos por envio."
+        },
+        "divulgacao": {
+          "PARA": "Renovação, seguro novo, oferta. Custa mais por envio."
+        }
+      }
+    },
+    "OBJETIVOS": {
+      "boas_vindas": {
+        "TEXTO": "Olá, [nome_cliente]! Aqui é da [nome_empresa]. Que bom ter você com a gente. Quando precisar de cotação, segunda via ou ajuda com o seu seguro, é só mandar mensagem por aqui."
+      },
+      "lembrete": {
+        "TEXTO": "Olá, [nome_cliente]! Lembrete do seu horário com [nome_empresa]: dia [data], às [horario]. Você confirma? Toque em uma das opções abaixo."
+      },
+      "promocao": {
+        "TITULO": "Oferta de seguro",
+        "PARA": "Para avisar de um desconto com prazo para fazer o seguro.",
+        "TEXTO": "Oi, [nome_cliente]! Até [data], você tem [desconto] de desconto para fazer o seu seguro com [nome_empresa]. Quer uma cotação? Veja no botão abaixo."
+      },
+      "cobranca": {
+        "TITULO": "Parcela a vencer",
+        "PARA": "Para lembrar o cliente da parcela do seguro que vai vencer.",
+        "TEXTO": "Olá, [nome_cliente]. Lembrete de [nome_empresa]: a parcela do seu seguro, de [valor], vence em [data]. Se já pagou, pode desconsiderar. Se for boleto, confira se está no nome da seguradora. Se precisar da segunda via, toque no botão abaixo."
+      },
+      "retomar": {
+        "TITULO": "Retomar a cotação",
+        "PARA": "Para voltar a falar com quem pediu cotação e sumiu.",
+        "TEXTO": "Oi, [nome_cliente]! Aqui é da [nome_empresa]. Ficou alguma dúvida sobre a cotação do seu seguro? É só responder aqui que a gente continua."
+      }
+    },
+    "CAMPOS": {
+      "nome_empresa": {
+        "ROTULO": "Nome da corretora",
+        "EXEMPLO": "Sua Corretora"
+      },
+      "link": {
+        "EXEMPLO": "suacorretora.com.br/v/123"
+      }
+    },
+    "TIPOS_DE_BOTAO": {
+      "site": {
+        "EXEMPLO": "Ex.: Fazer a vistoria"
+      }
+    },
+    "EXTRAS": {
+      "RODAPE_EXEMPLO": "Ex.: Sua Corretora · atendimento de segunda a sexta",
+      "TOPO_AJUDA": "Opcional. O mesmo arquivo vai para todas as pessoas que receberem. Use para algo igual para todos (tabela de coberturas, regulamento). Boleto, apólice ou documento de cada cliente não vão aqui."
+    },
+    "TOPOS": {
+      "documento": {
+        "AJUDA": "Escolha um PDF. O mesmo arquivo vai para todas as pessoas: não use para boleto, apólice ou documento de uma pessoa só."
+      }
+    },
+    "FORMATOS": {
+      "carrossel": {
+        "NOME_PADRAO": "Nossos seguros",
+        "TEXTO": "Oi, [nome_cliente]! Veja alguns seguros que a gente faz para você:",
+        "BOTAO": "Quero cotar",
+        "CARTAO_1": {
+          "TEXTO": "Seguro do carro: a gente cota em várias seguradoras."
+        },
+        "CARTAO_2": {
+          "TEXTO": "Seguro da casa: cotação sem compromisso."
+        }
+      },
+      "formulario": {
+        "NOME_PADRAO": "Dados para a cotação",
+        "TEXTO": "Oi, [nome_cliente]! Leva 1 minuto: preencha o formulário e a gente prepara a sua cotação."
+      }
+    },
+    "IA": {
+      "OBJETIVO_EXEMPLO": "Ex.: avisar que a apólice foi emitida e vai chegar por aqui"
+    },
+    "JANELA": {
+      "GAVETA": {
+        "O_QUE_EXEMPLO": "Ex.: avisar que o seguro vence este mês e que dá para cotar a renovação respondendo",
+        "LINK_DIGITADO": "Link não pode ser digitado no texto. Use o botão do campo (ex.: o link da vistoria, vindo do público).",
+        "PARECE_LINK": "Parece um link. Para link, use o botão do campo (ex.: o link da vistoria)."
+      }
+    },
+    "CATALOGO_DE_CAMPOS": {
+      "negocio": {
+        "titulo": "Título do card",
+        "valor": "Valor do card"
+      },
+      "minha_empresa": {
+        "nome": "Nome da minha corretora",
+        "endereco": "Endereço da minha corretora",
+        "telefone": "Telefone da minha corretora",
+        "site": "Site da minha corretora"
+      }
+    },
+    "SITUACOES": {
+      "pausado": {
+        "DICA": "mande só para quem conhece a sua corretora e deixe claro, logo no começo, quem está falando."
+      },
+      "desativado": {
+        "DICA": "duplique o modelo, reescreva o texto dizendo logo no começo quem está falando, e mande só para quem conhece a sua corretora."
+      }
+    },
+    "PONTE": {
+      "SINAL": {
+        "ruim": "O WhatsApp está vendo muita gente bloquear ou denunciar o modelo \"{nome}\". Ele pode pausar o modelo a qualquer momento, e a campanha para junto. Dá para enviar, mas o melhor é mandar só para quem conhece a sua corretora.",
+        "atencao": "Algumas pessoas bloquearam ou denunciaram o modelo \"{nome}\". Se piorar, o WhatsApp pausa o modelo e a campanha para junto. Dá para enviar, mas mande só para quem conhece a sua corretora."
+      }
+    },
+    "SAUDE": {
+      "SINAIS": {
+        "bom": {
+          "TEXTO": "Quase ninguém bloqueou ou denunciou esta mensagem. Continue mandando para quem conhece a sua corretora."
+        }
+      }
+    }
+  },
+  "WHATSAPP_TEMPLATES": {
+    "PARSER": {
+      "DOCUMENT_NAME_PLACEHOLDER": "Informe o nome do arquivo do documento (ex.: Apolice_2026.pdf)"
     }
   }
 }
