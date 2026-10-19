@@ -47,6 +47,13 @@
 - Use `components-next/choice-select/ChoiceSelect.vue`: teclado do padrão WAI-ARIA *select-only combobox* (`dashboard/helper/choiceKeys.js`), leitor de tela e alvo de toque de 44 px.
 - Ao tocar numa tela que ainda tenha `<select>`, troque todos os dela.
 
+## Telefone: um campo só (regra do Rodrigo, 18/10/2026)
+
+- Todo campo em que a pessoa digita um telefone no painel usa `components-next/conversa-canal/mais/CampoDeTelefone.vue` (com `telefoneDoPais.js`). Ele traz país com bandeira e DDI, Brasil por padrão, e formata o número no jeito do país enquanto se digita (libphonenumber-js, mesmo modelo do PhoneCountryInput do Orth/google-saas). O valor só sai quando o número é válido para o país, já no formato E.164 (`+5511987654321`).
+- Em tela nova, não use `<input type="tel">` solto, máscara feita à mão nem o `PhoneNumberInput` do Chatwoot. Ao tocar numa tela que tenha um desses, troque.
+- O servidor continua validando o E.164. O campo não substitui essa validação.
+- Exceção: bundle público leve (`public_booking_v2`) tem campo próprio por causa do peso no 4G. Unificar ali só com medida de peso antes e depois, em PR do dono da página.
+
 ## General Guidelines
 
 - Prefer the smallest production-ready change that solves the current problem.
