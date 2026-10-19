@@ -5,6 +5,7 @@
 // Álbum chegando (#1831): a conta usa a hora de agora, e um relógio refaz a conta quando
 // a janela do álbum fecha, para o "Recebendo fotos…" sair sozinho.
 import { computed, inject, onBeforeUnmount, provide, ref, watch } from 'vue';
+import { useMapGetter } from 'dashboard/composables/store';
 import { useFuso, usePele } from '../pele';
 import { agruparDaConversa } from './agruparAlbuns';
 import { agruparContatos } from '../midia/contatos';
@@ -52,6 +53,7 @@ export const useAlbunsDaConversa = (mensagens, primeiraNaoLida) => {
   // Muda quando uma janela fecha, só para a conta ser refeita; a hora usada é sempre
   // a de agora (uma mensagem nova também refaz a conta).
   const janelaFechou = ref(0);
+  const conversa = useMapGetter('getSelectedChat');
 
   const agrupados = computed(() => {
     if (!pele.value) return VAZIO;
@@ -60,6 +62,7 @@ export const useAlbunsDaConversa = (mensagens, primeiraNaoLida) => {
       fuso: fuso.value,
       abreBloco: mensagem => mensagem.id === primeiraNaoLida?.value,
       agora: agoraEmSegundos(),
+      grupo: conversa.value?.whatsapp_api_group === true,
     });
   });
   const albuns = computed(() => agrupados.value.albuns);

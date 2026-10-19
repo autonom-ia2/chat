@@ -87,10 +87,13 @@ const dentroDaJanela = (desde, atual, janela) => {
 // Recebido: do marcador em diante, enquanto o item entra, é da mesma pessoa e chega
 // até 30 s depois do marcador. `noFim` diz se a lista acabou (o álbum ainda pode
 // crescer) ou se algo cortou a sequência (não cresce mais).
+// O do WAHA para na quantidade que anunciou: a foto seguinte já não é do álbum.
 const itensDoMarcador = (lista, inicio, { fuso, abreBloco }) => {
   const marcador = lista[inicio];
+  const teto = contagemDoWaha(marcador);
   const itens = [];
   for (let i = inicio + 1; i < lista.length; i += 1) {
+    if (teto && itens.length >= teto) return { itens, noFim: false };
     const atual = lista[i];
     const entra =
       podeEntrarNoAlbum(atual) &&
@@ -176,8 +179,13 @@ const albumDoEnvio = (lista, inicio, opcoes) => {
   return { passo: itens.length, chave: itens[0].id, itens };
 };
 
+// Em grupo o marcador do WAHA só some: toda recebida vem com o contato do grupo, e a
+// foto de outro participante entraria no álbum (`whatsapp_api_group`, #1741).
 const albumQueComecaEm = (lista, inicio, opcoes) => {
   const mensagem = lista[inicio];
+  if (opcoes.grupo && eMarcadorDoWaha(mensagem)) {
+    return { passo: 1, escondeMarcador: true };
+  }
   if (eMarcadorDeAlbum(mensagem)) return albumDoMarcador(lista, inicio, opcoes);
   if (abreEnvio(mensagem)) return albumDoEnvio(lista, inicio, opcoes);
   return { passo: 1 };
@@ -189,15 +197,16 @@ const albumQueComecaEm = (lista, inicio, opcoes) => {
 // que vieram de um marcador). `abreBloco` (opcional) diz quem
 // não pode ficar escondido dentro do álbum anterior, como a 1ª não lida, que leva a
 // etiqueta "não lidas" acima dela. `agora` (segundos) liga o álbum chegando (#1831).
+// `grupo`: conversa de grupo, onde o marcador do WAHA não abre álbum.
 export const agruparDaConversa = (
   lista,
-  { fuso, abreBloco = () => false, agora } = {}
+  { fuso, abreBloco = () => false, agora, grupo = false } = {}
 ) => {
   const albuns = new Map();
   const marcadores = new Set();
   const chegadas = new Map();
   const emQuadrados = new Set();
-  const opcoes = { fuso, abreBloco, agora };
+  const opcoes = { fuso, abreBloco, agora, grupo };
   let i = 0;
   while (i < lista.length) {
     const album = albumQueComecaEm(lista, i, opcoes);

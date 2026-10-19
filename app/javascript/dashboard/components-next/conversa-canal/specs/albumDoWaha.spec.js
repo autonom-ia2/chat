@@ -165,3 +165,49 @@ describe('álbum do WAHA chegando, com a contagem (#1831)', () => {
     expect(chegadas.size).toBe(0);
   });
 });
+
+describe('álbum do WAHA: limites (#1831 com o #1741)', () => {
+  it('para na quantidade anunciada: a foto seguinte fica solta', () => {
+    const pai = doWaha('atividade', {
+      contentAttributes: {
+        wahaAlbum: { expectedImages: 2, expectedVideos: 0 },
+        c2yHidden: true,
+      },
+    });
+    const fotos = [1, 2, 3].map(s => foto({ createdAt: BASE + s }));
+    const { albuns } = agrupar([pai, ...fotos], BASE + 4);
+    expect(albuns.get(fotos[0].id)).toEqual(fotos.slice(0, 2));
+    expect(albuns.has(fotos[2].id)).toBe(false);
+  });
+
+  it('mensagem nossa não entra no álbum do cliente', () => {
+    const pai = doWaha('atividade');
+    const nossa = foto({
+      createdAt: BASE + 1,
+      messageType: 1,
+      senderId: 1,
+      senderType: 'User',
+      sender: { id: 1, type: 'user' },
+    });
+    const { albuns } = agrupar(
+      [pai, nossa],
+      BASE + JANELA_DO_ALBUM_EM_SEGUNDOS + 1
+    );
+    expect(albuns.has(nossa.id)).toBe(false);
+  });
+
+  it.each(['recebida', 'atividade'])(
+    'em grupo o marcador %s só some: as fotos ficam soltas',
+    formato => {
+      const pai = doWaha(formato);
+      const fotos = [1, 2].map(s => foto({ createdAt: BASE + s }));
+      const { albuns, marcadores, chegadas } = agruparDaConversa(
+        [pai, ...fotos].map(mensagem => paraOBalao(mensagem, CONTATO)),
+        { fuso: FUSO, agora: BASE + 3, grupo: true }
+      );
+      expect(albuns.size).toBe(0);
+      expect(chegadas.size).toBe(0);
+      expect([...marcadores]).toEqual([pai.id]);
+    }
+  );
+});
