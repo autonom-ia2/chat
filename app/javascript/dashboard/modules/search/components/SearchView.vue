@@ -11,6 +11,7 @@ import {
   ROLES,
   CONVERSATION_PERMISSIONS,
   CONTACT_PERMISSIONS,
+  CONTACT_VIEW_PERMISSION,
   PORTAL_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 import { usePolicy } from 'dashboard/composables/usePolicy';
@@ -94,6 +95,7 @@ const TABS_CONFIG = {
   all: {
     permissions: [
       CONTACT_PERMISSIONS,
+      CONTACT_VIEW_PERMISSION,
       ...ROLES,
       ...CONVERSATION_PERMISSIONS,
       PORTAL_PERMISSIONS,
@@ -101,7 +103,7 @@ const TABS_CONFIG = {
     count: () => null, // No count for all tab
   },
   contacts: {
-    permissions: [...ROLES, CONTACT_PERMISSIONS],
+    permissions: [...ROLES, CONTACT_PERMISSIONS, CONTACT_VIEW_PERMISSION],
     count: () => mappedContacts.value.length,
   },
   conversations: {
@@ -145,7 +147,7 @@ const tabs = computed(() => {
 const totalSearchResultsCount = computed(() => {
   const permissionCounts = [
     {
-      permissions: [...ROLES, CONTACT_PERMISSIONS],
+      permissions: [...ROLES, CONTACT_PERMISSIONS, CONTACT_VIEW_PERMISSION],
       count: () => contacts.value.length,
     },
     {
@@ -407,7 +409,11 @@ onUnmounted(() => {
         <div class="w-full max-w-5xl mx-auto px-4 pb-6">
           <div v-if="showResultsSection">
             <Policy
-              :permissions="[...ROLES, CONTACT_PERMISSIONS]"
+              :permissions="[
+                ...ROLES,
+                CONTACT_PERMISSIONS,
+                CONTACT_VIEW_PERMISSION,
+              ]"
               class="flex flex-col justify-center"
             >
               <SearchResultContactsList

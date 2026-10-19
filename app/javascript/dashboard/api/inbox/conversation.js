@@ -18,6 +18,7 @@ class ConversationApi extends ApiClient {
       sortBy,
       updatedWithin,
       crmPipelineId,
+      pasta,
     },
     options = {}
   ) {
@@ -34,6 +35,8 @@ class ConversationApi extends ApiClient {
         sort_by: sortBy,
         updated_within: updatedWithin,
         crm_pipeline_id: crmPipelineId,
+        // #1809: Spam ou Lixeira da caixa de e-mail (ConversaCanal::ConversationFinderComPastas).
+        pasta,
       },
     });
   }

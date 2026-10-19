@@ -8,6 +8,13 @@ export const createMessagePayload = (payload, message) => {
   payload.append('message[content]', content);
   if (cc_emails) payload.append('message[cc_emails]', cc_emails);
   if (bcc_emails) payload.append('message[bcc_emails]', bcc_emails);
+  // #1809: o modelo de e-mail da gaveta "Escrever" (o MessageBuilder lê o JSON).
+  if (message.content_attributes) {
+    payload.append(
+      'message[content_attributes]',
+      JSON.stringify(message.content_attributes)
+    );
+  }
 };
 
 export const createConversationPayload = ({ params, contactId, files }) => {

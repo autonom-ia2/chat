@@ -35,6 +35,20 @@ class ContactPolicy < ApplicationPolicy
     true
   end
 
+  # Ligar e ver a origem do contato da conversa (#1849): no OSS, quem vê o contato.
+  def call?
+    show?
+  end
+
+  def origins?
+    show?
+  end
+
+  # Vincular o contato a um card do CRM (#1849): no OSS, quem vê o contato.
+  def attach?
+    show?
+  end
+
   def destroy_custom_attributes?
     true
   end

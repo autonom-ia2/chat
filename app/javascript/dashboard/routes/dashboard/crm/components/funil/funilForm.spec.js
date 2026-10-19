@@ -2,7 +2,9 @@ import {
   TIPO_AVISO,
   avisarEm,
   etapaDoAviso,
+  moedaDoFunil,
   payloadDoFunil,
+  simboloDaMoeda,
 } from './funilForm';
 
 const etapas = () => [
@@ -73,5 +75,52 @@ describe('payloadDoFunil', () => {
       undefined,
       undefined,
     ]);
+  });
+});
+
+// #1876 — a meta usa a moeda do funil: o rótulo mostra o símbolo dela e salvar
+// não troca a moeda por real.
+describe('moeda da meta', () => {
+  const pipeline = { metadata: { goals: { currency: 'USD' } } };
+
+  it('reads the funnel currency and falls back to BRL', () => {
+    expect(moedaDoFunil(pipeline)).toBe('USD');
+    expect(moedaDoFunil({ metadata: {} })).toBe('BRL');
+    expect(moedaDoFunil(null)).toBe('BRL');
+    expect(moedaDoFunil({ metadata: { goals: { currency: 'R$' } } })).toBe(
+      'BRL'
+    );
+  });
+
+  it('shows the symbol of the funnel currency', () => {
+    expect(simboloDaMoeda('USD', 'pt-BR')).toBe('US$');
+    expect(simboloDaMoeda('BRL', 'pt-BR')).toBe('R$');
+    expect(simboloDaMoeda('EUR', 'en')).toBe('€');
+  });
+
+  it('keeps the funnel currency when saving the goal', () => {
+    const form = {
+      name: 'Vendas',
+      description: '',
+      whenToUse: '',
+      countsAsSale: true,
+      outcomeLabels: { success: '', failure: '' },
+      monthlyTarget: '500',
+      metaSync: { enabled: false, events: {}, datasetId: '', pixelId: '' },
+      googleSync: { enabled: false, events: {}, conversionNames: { won: '' } },
+      stages: [],
+    };
+
+    const { pipeline: payload } = payloadDoFunil({
+      form,
+      pipeline,
+      editando: true,
+      ia: false,
+    });
+
+    expect(payload.goal).toEqual({
+      monthly_target_cents: 50000,
+      currency: 'USD',
+    });
   });
 });

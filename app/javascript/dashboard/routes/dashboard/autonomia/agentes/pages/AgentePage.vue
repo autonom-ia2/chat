@@ -36,6 +36,7 @@ import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
 import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
 import { useFase2 } from '../composables/useFase2';
+import { precisaDeVoce } from '../utils/estadoDoMaterial';
 import {
   ehAjudante,
   falaComCliente,
@@ -400,6 +401,10 @@ watch([fontes, lendoFontes], ([lista, lendo]) => {
   fontesLidas.value = lista || [];
 });
 const listaDeFontes = computed(() => fontesLidas.value || []);
+// #1426 — "N coisas no material precisam de você" no quadro: só na Fase 2, que mostra o estado real de cada material.
+const problemasNoMaterial = computed(() =>
+  fase2.value ? listaDeFontes.value.filter(precisaDeVoce).length : 0
+);
 
 const lerFontes = async () => {
   fontesFalharam.value = false;
@@ -806,6 +811,7 @@ const tirarPergunta = id => {
           :tambem-recebe="tambemRecebeEm.map(canal => canal.name)"
           :quantas-fontes="listaDeFontes.length"
           :quantas-perguntas="perguntas.length"
+          :problemas-no-material="problemasNoMaterial"
           :equipe="equipe"
           :fase2="fase2"
           :caixas="caixas"
@@ -841,6 +847,7 @@ const tirarPergunta = id => {
         :fontes="listaDeFontes"
         :carregando-fontes="fontesLidas === null"
         :erro-ler="fontesFalharam"
+        :fase2="fase2"
         @fechar="fechar"
         @reler="lerFontes"
         @pergunta-resolvida="tirarPergunta"

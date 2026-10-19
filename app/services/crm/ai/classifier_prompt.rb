@@ -305,6 +305,6 @@ module Crm::Ai::ClassifierPrompt
   end
 
   def self.com_email(prefixo, email_autoria)
-    email_autoria ? "#{prefixo}\n\n#{Crm::Email::Autoria::LEGENDA}" : prefixo
+    email_autoria ? "#{prefixo}\n\n#{Crm::Email::Autoria::LEGENDA}\n\n#{Crm::Email::SaidaDaCopia::INSTRUCAO}" : prefixo
   end
 end

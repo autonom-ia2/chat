@@ -29,8 +29,9 @@ module Crm::Cards::CompanyFilters
 
   private
 
+  # Sem ver contatos não há filtro nem busca por empresa (#1849).
   def company_filter_supported?
-    defined?(Company)
+    defined?(Company) && @conversation_visibility.full_contact?
   end
 
   def prospecting_company_sql(extra = nil)

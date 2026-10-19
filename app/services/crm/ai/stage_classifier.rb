@@ -119,7 +119,7 @@ module Crm
           model: @model,
           instructions: instructions,
           input: user_input,
-          schema: memoria? ? CLASSIFICATION_SCHEMA_MEMORIA : CLASSIFICATION_SCHEMA,
+          schema: esquema,
           reasoning_effort: @reasoning_effort
         )
 
@@ -128,6 +128,12 @@ module Crm
           usage: response[:usage],
           response_id: response[:response_id]
         ).merge(memoria_interna)
+      end
+
+      # #1828: com a flag `email_autoria`, o campo `saida_da_copia` no fim; sem ela, o schema de sempre.
+      def esquema
+        base = memoria? ? CLASSIFICATION_SCHEMA_MEMORIA : CLASSIFICATION_SCHEMA
+        email_autoria? ? Crm::Email::SaidaDaCopia.com_saida(base) : base
       end
 
       # A parte deste card na avaliação conjunta (Crm::Ai::ClassificacaoConjunta), com os mesmos campos de sempre.

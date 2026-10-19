@@ -94,7 +94,9 @@ class Autonomia::Guide::Acoes
     'POST crm/meta_ads_connection/selection', 'PATCH crm/meta_ads_connection/funnel',
     'PATCH crm/meta_ads_connection/destinations',
     # #1069 — entrar com o Facebook grava uma credencial nova da Meta e troca de onde a plataforma lê.
-    'POST crm/meta_ads_connection/facebook_login'
+    'POST crm/meta_ads_connection/facebook_login',
+    # #1809 — "Excluir para sempre" da Lixeira do e-mail apaga a conversa pelo DeleteObjectJob, como o DELETE da conversa.
+    'DELETE conversa_canal/pastas_do_email/:conversation_id'
   ].freeze
 
   # O que só a pessoa faz, na tela, e por isso nem entra no catálogo (nem com confirmação). #1586: o aceite do dono

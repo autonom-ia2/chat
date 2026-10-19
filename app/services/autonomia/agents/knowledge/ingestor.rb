@@ -24,7 +24,7 @@ module Autonomia
         end
 
         def perform
-          text = Processors.for(@source).extract
+          text = Processors::Dispatcher.for(@source).extract
           # B2.1/B2.2 — chunker ADAPTATIVO (janela por tipo/estilo via source_type + assinatura) já
           # devolvendo a metadata determinística por chunk (heading/material_type/keywords/char_span).
           entries = Chunker.new(text, source_type: @source.source_type).chunks_with_metadata
