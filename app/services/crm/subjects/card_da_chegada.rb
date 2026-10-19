@@ -29,8 +29,13 @@ class Crm::Subjects::CardDaChegada
   end
 
   def adotavel?(pipeline)
+    intacto? && pode_ir_para?(pipeline) && dono_pode?(pipeline)
+  end
+
+  # Ainda é o card vazio da chegada: desta conversa, aberto, sem nome, nunca mudou de etapa e ninguém mexeu.
+  def intacto?
     @card.open? && @card.conversation_id == @conversation.id && criado_na_chegada? &&
-      !Crm::Subjects::Naming.named?(@card) && !mexido? && pode_ir_para?(pipeline) && dono_pode?(pipeline)
+      !Crm::Subjects::Naming.named?(@card) && !mexido?
   end
 
   def mover_para(pipeline)

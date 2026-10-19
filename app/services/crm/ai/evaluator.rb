@@ -2,6 +2,10 @@ module Crm
   module Ai
     class Evaluator # rubocop:disable Metrics/ClassLength -- no teto (175) antes do #1828; a saída da cópia é uma linha
       Result = Struct.new(:status, :suggestion, :error, keyword_init: true)
+      # #1918: card que uma pessoa moveu de etapa há menos que isto não é movido de novo pela IA sozinha, em nenhum
+      # gatilho automático: no máximo vira sugestão. O mesmo tempo do respeito à escolha de assunto feita por uma pessoa
+      # (Crm::Subjects::RESPEITO_AO_FOCO, #1260). "Avaliar agora" é a pessoa pedindo e não tem essa trava.
+      RESPEITO_AO_MOVIMENTO = Crm::Subjects::RESPEITO_AO_FOCO
 
       # tocado (#1693): a IA de assunto disse que a mensagem é sobre este card; ele é avaliado mesmo fora do foco.
       def initialize(card:, trigger: 'message', tocado: false)
@@ -200,6 +204,7 @@ module Crm
       def auto_move_allowed?
         settings = Config.pipeline_ai_settings(@card.pipeline)
         return false unless settings[:auto_move_enabled]
+        return false if pessoa_moveu_ha_pouco?
 
         return true if Config::AUTO_MOVE_COOLDOWN_SECONDS <= 0
 
@@ -209,6 +214,15 @@ module Crm
         true
       rescue ArgumentError
         false
+      end
+
+      # A linha do tempo do card: a troca de etapa feita por uma pessoa (no quadro, em lote ou aceitando uma sugestão).
+      def pessoa_moveu_ha_pouco?
+        return false if @trigger == 'manual'
+        return @pessoa_moveu if defined?(@pessoa_moveu)
+
+        @pessoa_moveu = Crm::Activity.exists?(account_id: @card.account_id, card_id: @card.id, actor_type: 'user', event_type: 'move',
+                                              created_at: RESPEITO_AO_MOVIMENTO.ago..)
       end
 
       def stage_criteria_present?(stage)

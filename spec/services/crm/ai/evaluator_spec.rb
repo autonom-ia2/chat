@@ -102,6 +102,51 @@ RSpec.describe Crm::Ai::Evaluator do
     expect(result.suggestion.to_stage_id).to eq(target_stage.id)
   end
 
+  # #1918: card movido por uma pessoa há pouco não é movido de novo pela IA sozinha em nenhum gatilho automático (a
+  # mensagem, que também é o gatilho do EvaluateCardJob agendado pelo StaleCardsJob); "Avaliar agora" é a pessoa pedindo.
+  describe 'movido por uma pessoa há pouco' do
+    def preparar
+      account, admin = create_account_and_user
+      pipeline, stage = create_crm_pipeline(account: account, user: admin)
+      pipeline.update!(metadata: { 'ai' => { 'auto_move_enabled' => true } })
+      proposta = create_crm_stage(account: account, pipeline: pipeline, name: 'Proposta', position: 1)
+      alvo = create_crm_stage(account: account, pipeline: pipeline, name: 'Fechamento', position: 2)
+      alvo.update!(metadata: { 'ai_criteria' => 'Cliente aceitou' })
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL')
+      travel_to(1.hour.ago) { Crm::Cards::Mover.new(card: card, actor: admin, target_stage: proposta).perform }
+      ia_responde(alvo)
+      card
+    end
+
+    def ia_responde(alvo)
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(
+        instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'test' })
+      )
+      allow(Crm::Ai::StageClassifier).to receive(:new).and_return(
+        instance_double(Crm::Ai::StageClassifier, perform: { suggested_stage_id: alvo.id, confidence: 0.95, reasoning: 'x', model_used: 'm' })
+      )
+      allow(Crm::Cards::CurrentSubject).to receive(:card?).and_return(true)
+    end
+
+    it 'gatilho automático: vira sugestão, sem mover' do
+      card = preparar
+
+      result = described_class.new(card: card, trigger: 'message').perform
+
+      expect(result.status).to eq(:suggested)
+      expect(card.reload.stage.name).to eq('Proposta')
+    end
+
+    it '"Avaliar agora": move' do
+      card = preparar
+
+      result = described_class.new(card: card, trigger: 'manual').perform
+
+      expect(result.status).to eq(:auto_moved)
+      expect(card.reload.stage.name).to eq('Fechamento')
+    end
+  end
+
   it 'applies extracted attributes even when the stage does not change' do
     ENV.delete('CRM_AI_ATTR_EXTRACTION')
     account, admin = create_account_and_user
