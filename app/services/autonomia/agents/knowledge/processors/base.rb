@@ -34,13 +34,14 @@ module Autonomia
 
           # Caminho temporário em disco do anexo (alguns parsers precisam de File/path).
           # Cede o bloco com o path e remove o tmpfile ao fim.
-          def with_tempfile
+          # #1426 (revisão adversarial) — a extensão sai do tipo do material (lista fechada), nunca do nome que o cliente
+          # mandou; quem já baixou e conferiu os bytes os passa (`bytes:`), e o disco recebe exatamente o que foi conferido.
+          def with_tempfile(bytes: nil, extensao: ".#{@source.source_type}")
             raise ExtractionError, 'missing_attachment' unless attached?
 
-            ext = File.extname(@source.reference.to_s).presence || ".#{@source.source_type}"
-            file = Tempfile.new(['autonomia_source', ext])
+            file = Tempfile.new(['autonomia_source', extensao])
             file.binmode
-            file.write(@source.file.download)
+            file.write(bytes || @source.file.download)
             file.flush
             file.rewind
             yield file.path

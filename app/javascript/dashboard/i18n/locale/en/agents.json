@@ -1105,7 +1105,8 @@
           "VER_ARIA": "View what it knows",
           "N_FONTES": "1 file or website | {n} files and websites",
           "SO_CONVERSA": "Only what you told in the conversation",
-          "N_PERGUNTAS": "There is 1 customer question to check. | There are {n} customer questions to check."
+          "N_PERGUNTAS": "There is 1 customer question to check. | There are {n} customer questions to check.",
+          "N_PROBLEMAS": "1 thing in the material needs you. | {n} things in the material need you."
         },
         "BLOCO_ONDE": {
           "TITULO": "Where and when it answers",
@@ -1244,6 +1245,7 @@
           "SITE_MANDAR": "Send",
           "SITE_ERRO": "Check the website address. E.g.: www.yourstore.com",
           "GRANDE": "This file is larger than 25 MB. Try a smaller one.",
+          "FOTO_GRANDE": "This photo is larger than 5 MB. Send a smaller one.",
           "LIMITE": "There are already {n} files and websites. Remove one to send another.",
           "LENDO": "Reading…",
           "PRONTO": "Ready",
@@ -1268,7 +1270,11 @@
           "PERGUNTA": "Question",
           "RESPOSTA_ROTULO": "Answer",
           "ENSINAR": "Teach",
-          "ENSINOU": "Done. {nome} now knows how to answer this."
+          "ENSINOU": "Done. {nome} now knows how to answer this.",
+          "REVISANDO": "Reviewing…",
+          "ATENCAO": "Needs you",
+          "ATENCAO_TEXTO": "{nome} does not use this material until you send another one.",
+          "LENDO_FOTO": "Reading the text in the photo…"
         },
         "ONDE": {
           "TITULO": "Where and when {nome} answers",
