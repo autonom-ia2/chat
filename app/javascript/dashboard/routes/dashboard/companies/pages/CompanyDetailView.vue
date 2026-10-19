@@ -332,7 +332,7 @@ onBeforeUnmount(() => {
             <LembreteNaFicha
               :empresa="{ id: company.id, name: company.name }"
             />
-            <Policy :permissions="['administrator']">
+            <Policy :permissions="['administrator', 'contact_delete']">
               <RelationshipActionMenu
                 :actions="[
                   {
@@ -355,7 +355,10 @@ onBeforeUnmount(() => {
         surface="company_details"
         :read-only="!canManageRelationshipRecords"
       />
-      <Policy v-if="!navigationEnabled" :permissions="['administrator']">
+      <Policy
+        v-if="!navigationEnabled"
+        :permissions="['administrator', 'contact_delete']"
+      >
         <section
           class="flex flex-col items-start w-full gap-4 pt-6 border-t border-n-strong"
         >

@@ -138,6 +138,8 @@ module Autonomia
 
       def answer_no_turno
         @conferencia_da_fala = conferencia_da_fala
+        # #1479: opções e botão de link na resposta ao cliente. Desligado, o pedido ao modelo fica o de antes.
+        @interacao = @trust_instruction && Interacao.disponivel?(agent: @agent, delivery: @delivery, audience: @audience)
         # Tema 14: o relógio do prazo da resposta começa aqui, e não na primeira consulta ao ajudante.
         @orcamento_dos_ajudantes = Ajudantes::Orcamento.new
         snippets = retrieve_snippets
@@ -168,11 +170,30 @@ module Autonomia
           handoff: { should: parsed['should_handoff'] == true, reason: parsed['handoff_reason'].presence },
           used_knowledge: used_knowledge(parsed['used_snippet_ids'], snippets, parsed),
           answered_from_knowledge: parsed['answered_from_knowledge'] == true,
-          raw_reply: parsed['reply']
+          raw_reply: parsed['reply'], interacao: interacao_do_turno(parsed, snippets)
         )
       end
 
       private
+
+      # #1479: a interação pedida pelo modelo; o endereço do link precisa ser um dos que o dono autorizou
+      # (`Interacao::Enderecos.do_dono`): a instrução e a base, e a saída de ferramenta dentro de um endereço delas. O
+      # link recusado vai à telemetria do turno (sem o endereço) e a resposta segue sem ele. Os endereços do dono só são
+      # lidos quando o modelo pediu um link.
+      def interacao_do_turno(parsed, snippets)
+        return unless @interacao
+
+        pedido = parsed['interacao']
+        return Interacao.do_modelo(pedido, enderecos: Set.new) unless pedido.is_a?(Hash) && pedido['tipo'] == 'link'
+
+        enderecos = Interacao::Enderecos.do_dono(dono: [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }],
+                                                 ferramentas: @saidas_do_turno.to_a)
+        Interacao.do_modelo(pedido, enderecos: enderecos).tap { |interacao| link_recusado if interacao.nil? }
+      end
+
+      def link_recusado
+        ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:link_recusado, conversation_id: @delivery.conversation.id, agent: @agent.id)
+      end
 
       # A FALA COM PREÇO SAI CONFERIDA (fatia 3 do #420). Quando `ver_resultado_da_cotacao` rodou neste turno, a
       # resposta passa por `ConferenciaDePrecos`, que pode pedir ao modelo uma reescrita (`reescrever`).
@@ -341,7 +362,7 @@ module Autonomia
       def montar_prompt(snippets)
         PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets, images: @images,
                           documents: @documents, audience: @audience, contexto_do_turno: @contexto_do_turno,
-                          memoria: @memoria)
+                          memoria: @memoria, interacao: @interacao == true)
       end
 
       # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
@@ -354,7 +375,9 @@ module Autonomia
 
       # O agente de cotação declara, na própria resposta, o que a fala diz (`ConferenciaDaFala::SCHEMA_DA_RESPOSTA`).
       def schema_da_resposta
-        @conferencia_da_fala ? ConferenciaDaFala::SCHEMA_DA_RESPOSTA : PromptBuilder::ANSWER_SCHEMA
+        return ConferenciaDaFala::SCHEMA_DA_RESPOSTA if @conferencia_da_fala
+
+        @interacao ? PromptBuilder::ANSWER_SCHEMA_COM_INTERACAO : PromptBuilder::ANSWER_SCHEMA
       end
 
       def answer_tools
@@ -414,8 +437,18 @@ module Autonomia
           output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
           anotar_leitura(tools_by_slug[call['name'].to_s], output, recusou: Tools::Recusa.registradas > recusas_antes)
           registrar_chamada(call, output, inicio)
-          { type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(8_000) }
+          saida = output.to_s.truncate(8_000)
+          # #1479: só a saída de ferramenta (HTTP, sistema) pode trazer endereço para o botão; a de especialista ou
+          # ajudante não (pode repetir o que o cliente disse).
+          (@saidas_do_turno ||= []) << saida if @interacao && ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
+          { type: 'function_call_output', call_id: call['call_id'], output: saida }
         end
+      end
+
+      # A chamada foi a uma ferramenta do agente, e não a um especialista ou ajudante (que tem a precedência no despacho).
+      def ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
+        nome = call['name'].to_s
+        specialists_by_function[nome].nil? && tools_by_slug.key?(nome)
       end
 
       # DADO DE SISTEMA NO TURNO (#1361). Quem diz que a chamada recusou é o registro de recusas (`Tools::Recusa`),

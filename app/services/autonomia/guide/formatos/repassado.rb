@@ -49,9 +49,19 @@ module Autonomia::Guide::Formatos::Repassado
   def definicoes(classe)
     classe.ancestors.flat_map do |modulo|
       (modulo.instance_methods(false) + modulo.private_instance_methods(false)).filter_map do |nome|
-        definicao(modulo.instance_method(nome))
+        metodo = do_proprio_modulo(modulo, nome)
+        definicao(metodo) if metodo
       end
     end
+  end
+
+  # Numa classe com `prepend`, `instance_method` devolve o método do módulo que está por cima, e o da
+  # própria classe (o que o `super` alcança) ficava sem leitura (#1809: o `filter_by_status` das pastas
+  # do e-mail escondeu o `params[:status]` do ConversationFinder). Desce pela cadeia até o do módulo.
+  def do_proprio_modulo(modulo, nome)
+    metodo = modulo.instance_method(nome)
+    metodo = metodo.super_method while metodo && metodo.owner != modulo
+    metodo
   end
 
   def definicao(metodo)

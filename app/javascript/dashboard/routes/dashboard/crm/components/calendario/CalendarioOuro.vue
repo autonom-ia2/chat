@@ -45,6 +45,8 @@ const props = defineProps({
   podeCaixas: { type: Boolean, default: false },
   // Caixas da conta: dizem se há agenda do Google/Microsoft para marcar reunião.
   caixas: { type: Array, default: () => [] },
+  // #1883: filtro que veio pelo link do Números ({ quem, tipos }); abre o "Mostrar" com ele ligado.
+  filtroInicial: { type: Object, default: null },
 });
 
 const emit = defineEmits([
@@ -72,6 +74,7 @@ const cal = useCalendarioOuro({
   props,
   fuso,
   ehAdmin: computed(() => props.ehAdmin),
+  inicial: props.filtroInicial,
 });
 const { hoje, visao, dia, janela, itens, marcas } = cal;
 
@@ -86,7 +89,11 @@ watch(
   { immediate: true }
 );
 
-const mostrarAberto = ref(false);
+const mostrarAberto = ref(Boolean(props.filtroInicial));
+// O funil escolhido também é filtro ligado: conta no número do botão "Mostrar".
+const filtrosNoBotao = computed(
+  () => cal.filtrosLigados.value + (props.funil ? 1 : 0)
+);
 const VISOES = [
   { id: 'dia', icone: 'i-lucide-list-checks' },
   { id: 'semana', icone: 'i-lucide-columns-3' },
@@ -344,10 +351,10 @@ const escolherDia = chave => {
             t('CRM_CALENDARIO.MOSTRAR.BOTAO')
           }}</span>
           <span
-            v-if="cal.filtrosLigados.value"
+            v-if="filtrosNoBotao"
             class="grid size-5 place-items-center rounded-full bg-n-blue-9 text-xs font-semibold text-white"
           >
-            {{ cal.filtrosLigados.value }}
+            {{ filtrosNoBotao }}
           </span>
         </button>
       </div>
@@ -425,6 +432,7 @@ const escolherDia = chave => {
             :fuso="fuso"
             :idioma="idioma"
             :nome-de="nomeDe"
+            :eh-meu="cal.ehMeu"
             :concluindo="concluindo"
             :recem-feitos="recemFeitos"
             @concluir="concluir"

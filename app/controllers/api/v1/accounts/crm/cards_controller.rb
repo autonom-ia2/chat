@@ -186,7 +186,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def link_contact
-    contact = Current.account.contacts.find(params[:contact_id])
+    contact = attachable_contact!(params[:contact_id])
     @card = ::Crm::Cards::ContactLinker.new(card: @card, contact: contact, actor: Current.user).link
     broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     render :show
@@ -252,10 +252,16 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     expected_close_at pipeline_id stage_id owner_id team_id contact_id
   ].freeze
 
+  # O card devolve o contato vinculado (#1849): só vincula quem vê esse contato.
+  def attachable_contact!(contact_id)
+    Current.account.contacts.find(contact_id).tap { |contact| authorize contact, :attach? }
+  end
+
   def upsert_existing_card!(card, permitted_params)
     @card = card
     authorize @card, :update?
     attributes = permitted_params.slice(*UPSERT_ATTRIBUTES.map(&:to_s)).compact
+    attributes['contact_id'] = attachable_contact!(attributes['contact_id']).id if attributes['contact_id'].present?
     ensure_move_allowed!(@card, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
     ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: upsert_pipeline_id(attributes) || @card.pipeline_id) if attributes.key?('owner_id')
     # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.

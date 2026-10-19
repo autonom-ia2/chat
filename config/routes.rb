@@ -107,6 +107,8 @@ Rails.application.routes.draw do
             get :busca, on: :collection
             get :busca_inteligente, on: :collection
           end
+          # Tela inicial da caixa (#1801): o resumo do dia, só leitura.
+          get 'tela_inicial/resumo', to: 'tela_inicial#resumo'
           # Trilha de onboarding (épico #485): progresso pelo estado real da conta.
           resources :onboarding_progress, only: [:index], path: 'onboarding/progress' do
             member do
@@ -485,6 +487,13 @@ Rails.application.routes.draw do
           # #1702 — o "+" da conversa com a cara do canal: busca de endereço (Google) e formulários aprovados (Meta).
           namespace :conversa_canal do
             resources :lugares, only: [:index, :show]
+            resources :ditados, only: [:create] do
+              get :disponivel, on: :collection
+            end
+            resources :modelos_de_email, only: [:index, :show] do
+              get :previa, on: :member
+            end
+            resources :pastas_do_email, only: [:show, :update, :destroy], param: :conversation_id
             resources :reacoes, only: [:create]
             resources :encaminhamentos, only: [:index, :create]
             resources :formularios, only: [:index] do
@@ -553,6 +562,9 @@ Rails.application.routes.draw do
             post 'builder_images', to: 'agents/builder_images#create'
             # Agent-facing copilot for a live conversation (V1, gated by the kanban key).
             post 'conversations/:conversation_id/copilot', to: 'conversation_copilot#create'
+            # #1872 — o ✨ do editor de e-mail: o copiloto está disponível? E o texto sem conversa (gaveta Escrever).
+            get 'copilot/status', to: 'text_copilot#status'
+            post 'copilot/text', to: 'text_copilot#create'
             # Guia da Plataforma — onboarding/suporte read-only, global/auto-on por conta elegível.
             post 'guide/chat', to: 'guide#chat'
             # #572 — a pergunta vira job; a tela busca a resposta aqui.
@@ -742,6 +754,8 @@ Rails.application.routes.draw do
                 member do
                   post :translate
                   post :retry
+                  post :reaction, to: 'message_reactions#create' # fork chat#1709: reagir pela caixa WAHA
+                  patch :content, to: 'message_edits#update' # fork chat#1709: editar pela caixa WAHA
                 end
               end
               resource :contact_info_request, only: [:create]
@@ -935,6 +949,8 @@ Rails.application.routes.draw do
             end
           end
           resources :labels, only: [:index, :show, :create, :update, :destroy]
+          # Nome livre das etiquetas (#1823, F1a): controller e tabela do fork, um nome por etiqueta.
+          resources :nomes_de_etiquetas, only: [:index, :update, :destroy], param: :label_id
 
           resources :notifications, only: [:index, :update, :destroy] do
             collection do

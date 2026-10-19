@@ -1,6 +1,8 @@
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { debounce } from '@chatwoot/utils';
 import { useMapGetter } from 'dashboard/composables/store';
+import ContactAPI from 'dashboard/api/contacts';
+import camelcaseKeys from 'camelcase-keys';
 import {
   buildContactableInboxesList,
   createContactSearcher,
@@ -15,7 +17,9 @@ import { ordenarCanais } from './novaConversa';
 // que é quem diz se o WhatsApp aceita texto livre).
 const ESPERA_DA_BUSCA = 400;
 
-export function useNovaConversaContato() {
+// `caixaPreferida` (#1809): quem abre a gaveta de uma caixa (o "Escrever" do e-mail)
+// começa com ela marcada, se o contato alcança essa caixa.
+export function useNovaConversaContato({ caixaPreferida = () => null } = {}) {
   const buscar = createContactSearcher();
   const caixas = useMapGetter('inboxes/getInboxes');
   const contatoPorId = useMapGetter('contacts/getContactById');
@@ -49,7 +53,10 @@ export function useNovaConversaContato() {
     // "Começar pronto": o primeiro da ordem já vem marcado. Recarregando os
     // canais do mesmo contato, o que a pessoa escolheu continua escolhido.
     const mantem = canais.value.some(item => item.id === canalId.value);
-    if (!mantem) canalId.value = canais.value[0]?.id ?? null;
+    const preferida = canais.value.find(
+      item => String(item.id) === String(caixaPreferida() ?? '')
+    );
+    if (!mantem) canalId.value = (preferida || canais.value[0])?.id ?? null;
   };
 
   const carregarCanais = async () => {
@@ -138,17 +145,42 @@ export function useNovaConversaContato() {
     procurar(texto, ultimaBusca);
   };
 
-  const criarContato = async () => {
+  // #1809: o contato novo vem com nome, e-mail e telefone conferidos no formulário
+  // (NovaConversaContatoNovo). Sem os dados (outros pontos de entrada), como antes: o
+  // nome sai do e-mail ou do telefone digitado.
+  const criarComDados = async ({ nome, email, telefone }) => {
+    const { data } = await ContactAPI.create({
+      name: nome,
+      ...(email ? { email } : {}),
+      ...(telefone ? { phone_number: telefone } : {}),
+    });
+    return camelcaseKeys(data.payload.contact, { deep: true });
+  };
+
+  const criarContato = async dados => {
     criando.value = true;
     erroAoCriar.value = false;
     try {
-      await escolherContato(await createNewContact(termo.value.trim()));
+      await escolherContato(
+        dados?.nome
+          ? await criarComDados(dados)
+          : await createNewContact(termo.value.trim())
+      );
     } catch (error) {
       erroAoCriar.value = true;
     } finally {
       criando.value = false;
     }
   };
+
+  // #1809: a gaveta guarda o contato e a caixa ao fechar sem enviar. Aberta de novo
+  // pelo "Escrever" de OUTRA caixa, vale a caixa nova (senão o e-mail sairia pela antiga).
+  // Sem caixa pedida (a gaveta não é a do "Escrever"), a escolha da pessoa fica.
+  watch(caixaPreferida, nova => {
+    if (nova === null || nova === undefined || nova === '') return;
+    const achada = canais.value.find(item => String(item.id) === String(nova));
+    if (achada) canalId.value = achada.id;
+  });
 
   return {
     contato,

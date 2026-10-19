@@ -449,9 +449,12 @@ class CrmKanbanAPI extends ApiClient {
 
   // POST /crm/follow_ups/:id/reschedule — { due_at }. Past-guard for
   // auto_send_message mode is enforced server-side.
-  rescheduleFollowUp(id, dueAt) {
+  // `remindersOnly` (#1855): o lote do calendário só move lembrete; envio ao
+  // cliente é recusado pelo servidor.
+  rescheduleFollowUp(id, dueAt, { remindersOnly = false } = {}) {
     return axios.post(`${this.url}/follow_ups/${id}/reschedule`, {
       due_at: dueAt,
+      ...(remindersOnly ? { reminders_only: true } : {}),
     });
   }
 

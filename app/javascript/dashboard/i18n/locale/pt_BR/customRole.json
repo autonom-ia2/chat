@@ -51,6 +51,8 @@
       "CRM_ADMIN": "Administrador do CRM (acesso total)",
       "CRM_EXPORT": "Exportar a lista do CRM para Excel",
       "CONTACT_VIEW": "Ver contatos",
+      "CONTACT_EXPORT": "Exportar contatos",
+      "CONTACT_DELETE": "Excluir contatos e empresas",
       "KNOWLEDGE_BASE_VIEW": "Ver base de conhecimento",
       "AUTONOMIA_VIEW": "Ver e testar Agentes Autonom.ia",
       "AUTONOMIA_MANAGE": "Editar Agentes Autonom.ia",
@@ -69,7 +71,8 @@
       "LABEL_MANAGE": "Editar etiquetas",
       "ATTRIBUTE_MANAGE": "Editar atributos personalizados",
       "MACRO_MANAGE": "Editar macros da equipe",
-      "SLA_MANAGE": "Editar políticas de SLA"
+      "SLA_MANAGE": "Editar políticas de SLA",
+      "CONVERSATION_VIEW": "Lê as outras conversas da caixa"
     },
     "MATRIX": {
       "GROUPS": {
@@ -98,13 +101,17 @@
           "NAME": "Conversas",
           "HINT": "Quais conversas a pessoa atende",
           "LEVEL_LIMITED": "Vê as conversas atribuídas a ela e as que participa.",
-          "LEVEL_ALL": "Vê e atende todas as conversas da conta."
+          "LEVEL_ALL": "Vê e atende todas as conversas da conta.",
+          "SLOT_VIEW": "Ver",
+          "SLOT_MANAGE": "Atender",
+          "REACH": "Atende:",
+          "LEVEL_VIEW": "Lê as conversas das caixas dela, sem responder nem mudar nada."
         },
         "CONTACTS": {
           "NAME": "Contatos e empresas",
           "HINT": "Contatos, empresas e relacionamentos",
           "LEVEL_VIEW": "Abre e consulta contatos. Não altera.",
-          "LEVEL_MANAGE": "Cria, edita, importa e exporta contatos."
+          "LEVEL_MANAGE": "Cria, edita e importa contatos."
         },
         "KNOWLEDGE_BASE": {
           "NAME": "Base de conhecimento",
@@ -269,7 +276,10 @@
       "CRM_MANAGE_AI": "Configura e aceita sugestões da IA. Gera custo.",
       "CRM_EXPORT": "Baixa a lista com dados de clientes.",
       "CRM_ADMIN": "Liga tudo acima, o SLA do CRM e os tokens de integração.",
-      "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas."
+      "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas.",
+      "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder.",
+      "CONTACT_EXPORT": "Baixa a base de contatos numa planilha.",
+      "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez."
     },
     "EDITOR": {
       "NEW_TITLE": "Ajuste o que for diferente",
@@ -291,7 +301,7 @@
       "FOOTER_COUNT": "Nenhuma área liberada | 1 área liberada | {n} áreas liberadas",
       "ADMIN_ONLY": {
         "TITLE": "Sempre do administrador",
-        "ITEMS": "Agentes, times, atribuição, robôs, integrações, conta, segurança, cobrança, auditoria e funções personalizadas.",
+        "ITEMS": "Agentes, times, robôs, integrações, conta, segurança, cobrança, auditoria e funções personalizadas.",
         "GUIDE": "O Guia da Plataforma segue esta função: só mostra e só faz o que a pessoa pode fazer."
       },
       "SENSITIVE_CONFIRM": {

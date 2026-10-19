@@ -17,6 +17,13 @@ module Enterprise::SearchService
 
   private
 
+  # Sem contact_view a busca não abre a base de contatos (#1849); as conversas seguem achando pelo contato.
+  def filter_contacts
+    return super if ContactPolicy.new({ user: current_user, account: current_account, account_user: account_user }, Contact).index?
+
+    @contacts = current_account.contacts.none.page(params[:page]).per(15)
+  end
+
   def build_where_conditions
     conditions = { account_id: current_account.id }
     conditions[:inbox_id] = accessable_inbox_ids unless should_skip_inbox_filtering?

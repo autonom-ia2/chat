@@ -291,15 +291,20 @@ module Crm::Ai::ClassifierPrompt
   MEMORIA
 
   # O prefixo desta chamada: com algum agente de IA entre os elegíveis, a variante que explica o rótulo. Com a memória, o
-  # parágrafo dela no fim.
-  def self.para(eligible_agents, memoria: false)
+  # parágrafo dela no fim. Com a flag `email_autoria` (#1807), a legenda do aviso de e-mail depois de tudo (o cache das
+  # contas sem a flag não muda).
+  def self.para(eligible_agents, memoria: false, email_autoria: false)
     base = Array(eligible_agents).any? { |nome| Crm::AgentesIa.rotulo_de_agente?(nome) } ? TEXT_COM_AGENTES_IA : TEXT
-    memoria ? "#{base}\n\n#{MEMORIA}" : base
+    com_email(memoria ? "#{base}\n\n#{MEMORIA}" : base, email_autoria)
   end
 
   # O prefixo da avaliação conjunta (#1693), com a mesma escolha da variante dos agentes de IA.
-  def self.para_varios(eligible_agents, memoria: false)
+  def self.para_varios(eligible_agents, memoria: false, email_autoria: false)
     base = para(eligible_agents).equal?(TEXT) ? TEXT_VARIOS : TEXT_VARIOS_COM_AGENTES_IA
-    memoria ? "#{base}\n\n#{MEMORIA}" : base
+    com_email(memoria ? "#{base}\n\n#{MEMORIA}" : base, email_autoria)
+  end
+
+  def self.com_email(prefixo, email_autoria)
+    email_autoria ? "#{prefixo}\n\n#{Crm::Email::Autoria::LEGENDA}\n\n#{Crm::Email::SaidaDaCopia::INSTRUCAO}" : prefixo
   end
 end

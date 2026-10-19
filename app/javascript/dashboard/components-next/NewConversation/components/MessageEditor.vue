@@ -12,7 +12,11 @@ const props = defineProps({
   channelType: { type: String, default: '' },
   medium: { type: String, default: '' },
   copilot: { type: Object, default: null },
+  // #1809: emoji e ditado da gaveta "Escrever" entram no ponto do cursor.
+  updateSelectionWith: { type: String, default: '' },
 });
+
+const emit = defineEmits(['clearSelection']);
 
 const editorKey = computed(() => `editor-${props.channelType}-${props.medium}`);
 
@@ -80,7 +84,9 @@ const executeCopilotAction = (action, data) => {
           :send-with-signature="sendWithSignature"
           :channel-type="channelType"
           :medium="medium"
+          :update-selection-with="updateSelectionWith"
           @execute-copilot-action="executeCopilotAction"
+          @clear-selection="emit('clearSelection')"
         />
       </div>
     </Transition>

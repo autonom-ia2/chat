@@ -29,6 +29,8 @@ const props = defineProps({
   inboxes: { type: Array, default: () => [] },
   canManage: { type: Boolean, default: false },
   canCreateContact: { type: Boolean, default: false },
+  // Escolher dos contatos busca na base: sem ver contatos, só vale a pessoa que já veio da conversa (#1849).
+  canPickContact: { type: Boolean, default: true },
   initialContact: { type: Object, default: null },
   // #1423 — a gaveta mostra um passo por vez (1 = cliente, 2 = negócio).
   passo: { type: Number, default: 1, validator: v => [1, 2].includes(v) },
@@ -42,7 +44,10 @@ const label = textosCom({ t, te }, TEXTOS, 'CRM_KANBAN.OPPORTUNITY');
 const C = 'CRM_CARD.CRIAR';
 const formId = `crm-opportunity-${useId()}`;
 const element = ref(null);
-const mode = ref('existing');
+const podeEscolher = computed(
+  () => props.canPickContact || Boolean(props.initialContact)
+);
+const mode = ref(podeEscolher.value ? 'existing' : 'none');
 const contact = ref(props.initialContact);
 const registration = ref(null);
 const registrationDraft = ref(newRegistrationDraft());
@@ -152,7 +157,12 @@ const faltaNome = computed(
   () => (tentou.value || mexeuNoNome.value) && !form.value.title.trim()
 );
 const opcoesDaPessoa = computed(() => [
-  { valor: 'existing', chave: 'EXISTENTE', icone: 'i-lucide-book-user' },
+  {
+    valor: 'existing',
+    chave: 'EXISTENTE',
+    icone: 'i-lucide-book-user',
+    desligada: !podeEscolher.value,
+  },
   {
     valor: 'new',
     chave: 'NOVA',
@@ -217,7 +227,8 @@ const changeMode = next => {
   if (
     sending.value ||
     validating.value ||
-    (next === 'new' && !props.canCreateContact)
+    (next === 'new' && !props.canCreateContact) ||
+    (next === 'existing' && !podeEscolher.value)
   )
     return;
   mode.value = next;
@@ -367,7 +378,7 @@ defineExpose({
             <span class="text-sm text-n-slate-11">
               {{
                 opcao.desligada
-                  ? t(`${C}.PESSOA.NOVA.SEM_PERMISSAO`)
+                  ? t(`${C}.PESSOA.${opcao.chave}.SEM_PERMISSAO`)
                   : t(`${C}.PESSOA.${opcao.chave}.TEXTO`)
               }}
             </span>

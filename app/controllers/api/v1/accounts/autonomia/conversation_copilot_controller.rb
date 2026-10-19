@@ -4,9 +4,12 @@
 # ENV kill-switch, so it stays inert until the customer has the kanban feature.
 class Api::V1::Accounts::Autonomia::ConversationCopilotController < Api::V1::Accounts::BaseController
   include DeferInteractiveAi
+  include LimiteDoCopiloto
 
   before_action :ensure_copilot_enabled
   before_action :set_conversation
+  # #1872: cada pedido chama a IA paga da conta; limite por pessoa (LimiteDoCopiloto).
+  before_action :limitar_copiloto!, only: [:create, :chat]
 
   def create
     defer_interactive_ai('copilot_run', {

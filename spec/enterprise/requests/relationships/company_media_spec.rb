@@ -77,9 +77,19 @@ RSpec.describe 'Company media access', type: :request do
     expect(response.parsed_body['payload'].length).to eq(1)
   end
 
-  it 'applies custom-role restrictions to metadata and thumbnails' do
+  it 'closes company media to a custom role without contact_view (#1849)' do
     attachment
     role = create(:custom_role, account: account, permissions: ['conversation_participating_manage'])
+    agent.account_users.find_by!(account: account).update!(custom_role: role)
+    create(:inbox_member, user: agent, inbox: conversation.inbox)
+    conversation.update!(assignee: agent)
+    get url, headers: agent.create_new_auth_token
+    expect(response).to have_http_status(:unauthorized)
+  end
+
+  it 'applies custom-role restrictions to metadata and thumbnails' do
+    attachment
+    role = create(:custom_role, account: account, permissions: %w[conversation_participating_manage contact_view])
     agent.account_users.find_by!(account: account).update!(custom_role: role)
     create(:inbox_member, user: agent, inbox: conversation.inbox)
     get url, headers: agent.create_new_auth_token

@@ -3,6 +3,7 @@
 // vários contatos (ContatosDoWhatsapp), com o mesmo comportamento.
 import { useAlert } from 'dashboard/composables';
 import { useStore } from 'dashboard/composables/store';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import { useI18n } from 'vue-i18n';
 import {
   DuplicateContactException,
@@ -21,6 +22,7 @@ const semNome = (contato, digitos) =>
 export const useAcoesDoContato = () => {
   const store = useStore();
   const { t } = useI18n();
+  const { canManageRelationshipRecords } = useRelationshipPermissions();
 
   const buscarPorTelefone = async telefone => {
     const query = {
@@ -42,6 +44,9 @@ export const useAcoesDoContato = () => {
   // alguém já deu ao contato não é trocado.
   const acharOuCriar = async (digitos, nome) => {
     const contato = await buscarPorTelefone(`+${digitos}`);
+    // Quem só vê contatos não cadastra (#1849): diz o caminho em vez do erro cru.
+    if (!contato && !canManageRelationshipRecords.value)
+      throw new ExceptionWithMessage(t('CONVERSA_CANAL.CONTATO.SEM_CADASTRO'));
     if (!contato) {
       const criado = await store.dispatch('contacts/create', {
         name: nome,
