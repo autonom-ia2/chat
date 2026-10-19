@@ -11,8 +11,10 @@
 # lead do formulário do site (conta 16 da hub2you em 18/10: todos os leads com o nome igual ao começo do e-mail), e o
 # formulário traz o nome de verdade.
 #
-# Formulário de site: o e-mail sai do endereço fixo do site, que é o contato. Só grava quando o e-mail escrito no
-# formulário é um endereço do próprio contato; senão juntaria vários clientes num contato só. No e-mail de pessoa, o
+# Formulário de site: grava quando o e-mail escrito no formulário é um endereço do próprio contato — o caso da conta 16
+# da hub2you, em que o Chatwoot cria um contato por lead, com o e-mail do lead (o From ou o Reply-To). O site que
+# manda todos os leads do mesmo endereço fixo, sem o do lead, NÃO é atendido: o contato é o do site, e gravar juntaria
+# vários clientes num contato só (a pausa de 24 h desse contato só poupa a IA). No e-mail de pessoa, o
 # e-mail da assinatura diferente do From NÃO trava: é comum (quem escreve do gmail e assina com o da empresa, ou a
 # assinatura com o "comercial@" da empresa), e travar perderia o telefone dessa gente (revisão do #1813, item 34).
 #
