@@ -223,8 +223,14 @@ RSpec.describe Crm::FollowUps::CallbackFallback do
 
     it 'envio automático (mensagem marcada) fica de fora' do
       expect(follow_up).to be_auto_send_message
+      due_at = follow_up.due_at
 
       expect { adiar_em_lote! }.to raise_error(Crm::FollowUps::Rescheduler::NotAReminderError)
+
+      follow_up.reload
+      expect(follow_up).to be_pending
+      expect(follow_up).to be_auto_send_message
+      expect(follow_up.due_at.to_i).to eq(due_at.to_i)
     end
 
     it 'lembrete comum atrasado passa para o novo horário' do

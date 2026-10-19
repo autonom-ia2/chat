@@ -204,9 +204,13 @@ RSpec.describe 'CRM calendar API', type: :request do
                                                   'callback_original' => { 'automation_mode' => 'auto_send_message' } })
       account.crm_follow_ups.create!(card: card, title: 'Ligar', due_at: '2026-10-14T19:30:00Z', timezone: 'UTC',
                                      created_by: user)
+      # Sem passar pelas validações de envio (caixa, modelo): aqui só importa o modo.
+      account.crm_follow_ups.new(card: card, title: 'Mensagem marcada', due_at: '2026-10-14T19:30:00Z', timezone: 'UTC',
+                                 automation_mode: :auto_send_message, created_by: user).save!(validate: false)
 
       expect(eventos['Aviso de envio']).to include('automatic_send' => true)
       expect(eventos['Ligar']).to include('automatic_send' => false)
+      expect(eventos['Mensagem marcada']).to include('automatic_send' => true)
     end
 
     it 'não manda o contato de um lembrete quando ele não é o do card nem o da conversa' do
