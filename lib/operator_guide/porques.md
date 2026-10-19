@@ -537,7 +537,16 @@
 - onde_fica: No menu novo: Acompanhar > CRM > aba Números. No menu antigo: Sidebar > CRM > CRM Dashboard
 - pre_requisitos: ao menos um funil com cards; metas e dados de reuniões aparecem quando houver configuração/dados.
 - passos: Abra CRM Dashboard; selecione funil; escolha período; revise os números do topo, funil, fechados, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram. Os números do topo seguem o tipo do funil: num funil de Vender, ganhos, perdidos, valores e meta do mês; num funil de Atender, **Resolvidos** e **Cancelados**.
-- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados.
+- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados. Com Números por papel ligado na conta, esta é a visão **Equipe**: só administrador e função com "Visualizar relatórios do CRM" a veem, com o seletor **Só eu · Equipe** no topo; o atendente sem função passa a ver só os próprios números (fluxo ver_meus_numeros_do_mes).
+
+### ver_meus_numeros_do_mes
+- titulo: Ver os meus números do mês (Só eu)
+- rota: crm_dashboard_index
+- intent: "Quanto eu vendi este mês?"; "Quantos casos eu resolvi?"; "Como vai o meu mês?"; "Por que não vejo mais os números da equipe?"; "Quantos clientes a IA me passou?"
+- onde_fica: No menu novo: Acompanhar > CRM > aba Números (quem vê a equipe escolhe **Só eu** no seletor). No menu antigo: Sidebar > CRM > CRM Dashboard. Na tela inicial da caixa, no computador: **Como vai o seu mês**.
+- pre_requisitos: Números por papel ligado na conta (flag crm_numeros_lentes); ao menos um funil.
+- passos: Abra Números; leia o topo (o seu mês até agora: vendas e valor, ou casos resolvidos); use o botão do topo para abrir a sua lista (retornos atrasados, senão negociações paradas, senão os seus cards); veja o próximo passo, os blocos Vendendo e Atendendo, **A IA te ajudou** e a barra da equipe; troque de mês pelas setas; **Como contamos** explica as regras.
+- gotchas: o papel vem do tipo do funil (Vender ou Atender) dos seus cards; a venda conta para quem era o Responsável quando ela foi fechada, não para quem marcou o fechamento; vendas antigas, de antes desse registro, contam pelo Responsável atual e a tela avisa; a barra da equipe mostra só a porcentagem da meta, sem nomes nem valores; a meta por pessoa ainda não existe, por isso o topo mostra só o mês até agora; o atendente sem função não vê mais o valor dos colegas nem o gasto da IA; o mês é o do fuso da conta.
 
 ### usar_calendario_crm_e_agendar_reuniao
 - titulo: Usar calendário CRM e agendar reunião

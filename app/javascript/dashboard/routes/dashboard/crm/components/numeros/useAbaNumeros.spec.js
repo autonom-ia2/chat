@@ -9,6 +9,7 @@ const estado = {
   funcao: null,
   chaves: [],
   rotaAbre: true,
+  porPapel: false,
 };
 
 vi.mock('dashboard/components-next/sidebar/fork/useMenuNovo', async () => {
@@ -27,6 +28,7 @@ vi.mock('dashboard/composables/store', () => ({
       }),
       getCurrentRole: ref(estado.papel),
       getCurrentCustomRoleId: ref(estado.funcao),
+      'accounts/isFeatureEnabledonAccount': ref(() => estado.porPapel),
     })[chave],
 }));
 
@@ -51,6 +53,7 @@ describe('useAbaNumeros', () => {
       funcao: null,
       chaves: [],
       rotaAbre: true,
+      porPapel: false,
     });
   });
 
@@ -69,6 +72,14 @@ describe('useAbaNumeros', () => {
     expect(mostrar()).toBe(true);
     estado.chaves = ['crm_admin'];
     expect(mostrar()).toBe(true);
+  });
+
+  it('com Números por papel (#1897), quem só trabalha no CRM também vê a aba', () => {
+    Object.assign(estado, { papel: 'agent', funcao: 7, chaves: ['crm_view'] });
+    estado.porPapel = true;
+    expect(mostrar()).toBe(true);
+    estado.chaves = ['conversation_manage'];
+    expect(mostrar()).toBe(false);
   });
 
   it('sem a permissão da rota, a aba não aparece', () => {

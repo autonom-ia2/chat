@@ -7,6 +7,8 @@ import { useI18n } from 'vue-i18n';
 // totais da conta ganha uma linha discreta da equipe. Uma ação: abrir a próxima conversa.
 const props = defineProps({
   dados: { type: Object, required: true },
+  // #1897: o destino do rodapé "Como vai o seu mês" (CRM › Números), ou nada.
+  comoVaiOMes: { type: Object, default: null },
 });
 
 const { t } = useI18n();
@@ -213,6 +215,21 @@ const linhaDaEquipe = computed(() => {
             <span class="i-lucide-users size-4" aria-hidden="true" />
             {{ linhaDaEquipe }}
           </component>
+        </div>
+
+        <div v-if="comoVaiOMes" class="pt-5 border-t border-white/10">
+          <RouterLink
+            :to="comoVaiOMes"
+            data-como-vai-o-mes
+            class="inline-flex items-center gap-2 text-sm font-medium transition min-h-11 text-white/75 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+          >
+            <span class="i-lucide-chart-column size-4" aria-hidden="true" />
+            {{ $t('CRM_NUMEROS_V2.TELA_INICIAL') }}
+            <span
+              class="i-lucide-arrow-right size-4 rtl:rotate-180"
+              aria-hidden="true"
+            />
+          </RouterLink>
         </div>
       </div>
     </div>
