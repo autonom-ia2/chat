@@ -10,7 +10,7 @@ import SharedCard from './SharedCard.vue';
 import { mapHrefOf, pointOf } from './mapLink.js';
 import { usePele } from '../../../conversa-canal/pele';
 
-const { contentAttributes, attachments, sender } = useMessageContext();
+const { contentAttributes, attachments, sender, content } = useMessageContext();
 const { t } = useI18n();
 
 // Vem do celular do cliente: só texto entra na tela (as coordenadas, o mapLink valida).
@@ -59,6 +59,7 @@ const heading = computed(() => {
     :heading="heading"
     :title="textOf(location.name)"
     :detail="textOf(location.address)"
+    :note="textOf(content)"
     :action-label="t('RICH_MESSAGE.LOCATION.SEE_ON_MAP')"
     :action-href="mapHref"
     :mapa="point"

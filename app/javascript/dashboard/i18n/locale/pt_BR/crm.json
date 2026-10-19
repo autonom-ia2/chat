@@ -1181,6 +1181,7 @@
       "CARD_LOST": "Negócio marcado como perdido.",
       "CARD_RESOLVED": "Card marcado como resolvido.",
       "CARD_CANCELLED": "Card marcado como cancelado.",
+      "CARD_MARKED_AS": "Marcado: {label}.",
       "CARD_REOPENED": "Negócio reaberto.",
       "CARD_CLOSE_ERROR": "Não foi possível atualizar o status do negócio.",
       "CARD_MOVED": "Card movido.",
@@ -4274,6 +4275,35 @@
         "E3": "Prometeu pagar",
         "E4": "Pago",
         "SUCESSO": "Pago"
+      },
+      "RENOVACAO": {
+        "NOME": "Renovação",
+        "TEXTO": "Do aviso de vencimento até o seguro renovado.",
+        "E1": "A vencer",
+        "E2": "Cotando",
+        "E3": "Opções enviadas",
+        "E4": "Negociação",
+        "E5": "Renovado",
+        "SUCESSO": "Renovou",
+        "FALHA": "Não renovou"
+      },
+      "SINISTRO": {
+        "NOME": "Sinistro",
+        "TEXTO": "Do aviso do cliente até a resposta da seguradora.",
+        "E1": "Aberto",
+        "E2": "Em análise",
+        "E3": "Falta documento",
+        "E4": "Encerrado",
+        "SUCESSO": "Encerrado"
+      },
+      "ENDOSSO": {
+        "NOME": "Endosso",
+        "TEXTO": "Do pedido de endosso até a apólice nova.",
+        "E1": "Pedido",
+        "E2": "Na seguradora",
+        "E3": "Falta documento",
+        "E4": "Feito",
+        "SUCESSO": "Feito"
       }
     },
     "ETAPAS": {
@@ -4380,7 +4410,16 @@
         "ENTREGA": "pergunta da entrega",
         "PAGAR": "quer pagar",
         "SEGUNDA_VIA": "pede a segunda via",
-        "ATRASADO": "está com o pagamento atrasado"
+        "ATRASADO": "está com o pagamento atrasado",
+        "VAI_VENCER": "está com o seguro perto de vencer",
+        "RENOVAR": "quer renovar o seguro",
+        "AVISO_RENOVACAO": "recebeu o aviso de renovação",
+        "BATEU": "bateu o carro ou teve um dano",
+        "ROUBO": "foi roubado",
+        "ACIONAR": "quer acionar o seguro",
+        "TROCOU_CARRO": "trocou de carro",
+        "MUDOU_ENDERECO": "mudou de endereço",
+        "INCLUIR_MOTORISTA": "quer incluir um motorista"
       },
       "NOTA": "Anotação da equipe (se quiser)",
       "NOTA_AJUDA": "Só para a sua equipe ler. Não muda nada no funil."
@@ -4625,6 +4664,7 @@
         "TEXTO": "Resolver algo para quem já é cliente."
       },
       "MODELO": "Que tipo de atendimento?",
+      "MODELO_VENDER": "Que tipo de venda?",
       "PREVIA_TITULO": "Seu quadro aparece aqui",
       "PREVIA_TEXTO": "Escolha para que serve o funil e mostramos as etapas prontas.",
       "ROTULO": "Para que serve"
@@ -4728,7 +4768,9 @@
         "SUMIU": "Parou de responder",
         "NAO_PRECISA": "Não precisa mais"
       },
-      "CANCELAR_EXEMPLO": "Por que foi cancelado?"
+      "CANCELAR_EXEMPLO": "Por que foi cancelado?",
+      "PERDEU_TITULO_ROTULO": "{rotulo}: o que houve?",
+      "PERDEU_CONFIRMA_ROTULO": "Marcar: {rotulo}"
     },
     "ARQUIVAR": {
       "BOTAO": "Arquivar",

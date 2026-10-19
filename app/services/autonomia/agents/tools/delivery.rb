@@ -14,7 +14,7 @@
 # SEM contexto (Testar, Copiloto, playground) a ferramenta continua no catálogo e devolve erro
 # nomeado. Sumir do catálogo faria o Testar mentir sobre o agente de produção.
 class Autonomia::Agents::Tools::Delivery
-  attr_reader :conversation, :agent_inbox, :origin_message_id, :runs, :evento, :execucao_do_evento
+  attr_reader :conversation, :agent_inbox, :origin_message_id, :runs, :evento, :execucao_do_evento, :passagem
 
   # `origin_message_id` é a mensagem do cliente que abriu o turno. Ela entra na execução no momento
   # da criação (e não na promoção) porque é a chave que distingue um PEDIDO NOVO de um RETRY do
@@ -27,13 +27,23 @@ class Autonomia::Agents::Tools::Delivery
   #
   # `execucao_do_evento` é a cotação daquele evento: com ela, a fala que ninguém conferiu com leitura no turno é
   # conferida contra o resultado DELA, e não contra o de outro bem da conversa (`Answerer#conferir_precos`).
-  def initialize(conversation:, agent_inbox:, origin_message_id: nil, evento: nil, execucao_do_evento: nil)
+  #
+  # `passagem` é o id da passagem que abriu o turno da passagem (#1630, `Operate::ResponderAPassagem`), ou nil. Com ele
+  # o principal não recebe as ferramentas que passam a conversa (`Answerer#enabled_agent_tools`).
+  # rubocop:disable Metrics/ParameterLists
+  def initialize(conversation:, agent_inbox:, origin_message_id: nil, evento: nil, execucao_do_evento: nil, passagem: nil)
     @conversation = conversation
     @agent_inbox = agent_inbox
     @origin_message_id = origin_message_id
     @evento = evento
     @execucao_do_evento = execucao_do_evento
+    @passagem = passagem
     @runs = []
+  end
+  # rubocop:enable Metrics/ParameterLists
+
+  def turno_da_passagem?
+    @passagem.present?
   end
 
   def turno_de_evento?
@@ -49,6 +59,8 @@ class Autonomia::Agents::Tools::Delivery
                  "mensagem:#{@origin_message_id}"
                elsif turno_de_evento?
                  "evento:#{@execucao_do_evento&.id}:#{@evento}"
+               elsif turno_da_passagem?
+                 "passagem:#{@passagem}"
                else
                  "entrega:#{SecureRandom.uuid}"
                end

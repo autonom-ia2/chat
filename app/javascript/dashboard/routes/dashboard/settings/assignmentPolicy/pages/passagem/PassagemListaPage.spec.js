@@ -20,6 +20,10 @@ vi.mock('vue-router', () => ({
 vi.mock('dashboard/composables/useAdmin', () => ({
   useAdmin: () => ({ isAdmin: ref(estado.admin) }),
 }));
+// #1797: a volta também olha assignment_manage; aqui a função não tem.
+vi.mock('dashboard/composables/useCanManage', () => ({
+  useHasCustomRolePermission: () => ref(false),
+}));
 vi.mock('dashboard/composables/store', () => ({
   useMapGetter: () =>
     ref((_conta, recurso) => estado.recursos.includes(recurso)),

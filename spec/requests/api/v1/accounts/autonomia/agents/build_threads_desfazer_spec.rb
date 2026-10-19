@@ -49,6 +49,40 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
 
       expect(response.parsed_body.dig('payload', 'state')).not_to have_key('resultado')
     end
+
+    # #1428 (entrega B) — as perguntas de prova vão dentro do resultado: a pergunta do cliente e a resposta do agente.
+    describe 'a prova' do
+      def com_prova(prova)
+        versao = thread.reload.state.dig('ultimo_ajuste', 'versao_id')
+        thread.update!(state: thread.state.merge('prova' => { 'versao_id' => versao, 'desde' => Time.current.iso8601 }.merge(prova)))
+        get url, headers: administrator.create_new_auth_token, as: :json
+        response.parsed_body.dig('payload', 'state', 'resultado', 'prova')
+      end
+
+      it 'pendente: só o status e quantas perguntas' do
+        expect(com_prova('status' => 'pendente', 'perguntas' => [{ 'pergunta' => 'Quanto custa?' }]))
+          .to eq('status' => 'pendente', 'total' => 1)
+      end
+
+      it 'pronta: o placar e cada pergunta com a resposta, sem versão, data, campo, instrução nem andaime' do
+        prova = com_prova('status' => 'pronta', 'ok' => 1, 'total' => 1,
+                          'perguntas' => [{ 'pergunta' => 'Quanto custa?', 'resposta' => 'Passo para a equipe.', 'equipe' => false,
+                                            'veredito' => 'ok' }])
+
+        expect(prova).to eq('status' => 'pronta', 'ok' => 1, 'total' => 1,
+                            'perguntas' => [{ 'pergunta' => 'Quanto custa?', 'resposta' => 'Passo para a equipe.', 'equipe' => false,
+                                              'ok' => true }])
+        expect(response.body).not_to include('versao_id', 'desde', 'veredito', 'campo', 'Instrução', 'andaime')
+      end
+
+      it 'depois do Desfazer, sem prova' do
+        versao = thread.state.dig('ultimo_ajuste', 'versao_id')
+        thread.update!(state: thread.state.merge('prova' => { 'status' => 'pendente', 'versao_id' => versao }))
+        desfazer
+
+        expect(response.parsed_body.dig('payload', 'state', 'resultado')).to include('desfeito' => true, 'prova' => nil)
+      end
+    end
   end
 
   # A faixa "Última mudança" da tela nova (depois do RESET ou de recarregar): vem no GET do agente.

@@ -68,13 +68,15 @@ class Autonomia::Agents::Operate::ResponderAoEvento < Autonomia::Agents::Operate
     @evento.publicado?(@conversation)
   end
 
-  def post_reply!(text)
+  # `interacao` (#1479): a mesma do turno do cliente (`com_interacao`).
+  def post_reply!(text, interacao = nil)
+    content, formato = com_interacao(text, interacao)
     Messages::MessageBuilder.new(
       nil, @conversation,
       ActionController::Parameters.new(
-        content: text, message_type: 'outgoing', sender_type: 'AgentBot',
+        content: content, message_type: 'outgoing', sender_type: 'AgentBot',
         sender_id: @agent_inbox.agent_bot_id, private: false,
-        content_attributes: { 'autonomia_agent_id' => @agent.id, ::Autonomia::Agents::Tools::Evento::CHAVE => @evento.marca }
+        content_attributes: { 'autonomia_agent_id' => @agent.id, ::Autonomia::Agents::Tools::Evento::CHAVE => @evento.marca }.merge(formato)
       )
     ).perform
   end

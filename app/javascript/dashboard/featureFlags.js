@@ -62,6 +62,8 @@ export const FEATURE_FLAGS = {
   CRM_MENSAGEM_MARCADA: 'crm_mensagem_marcada',
   MEMORIA_IA: 'memoria_ia',
   CONVERSA_CARA_DO_CANAL: 'conversa_cara_do_canal',
+  ETIQUETAS_DO_WHATSAPP: 'etiquetas_do_whatsapp',
+  TELA_INICIAL_RESUMO: 'tela_inicial_resumo',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

@@ -98,7 +98,7 @@ class ConversaCanal::LeituraNoCanal
     return false if sessao.blank? || chat_id.exclude?(JID_SEPARATOR)
     return false if Crm::WhatsappGroupDetector.group_conversation?(@conversation)
 
-    (@waha_client || Waha::Client.new).send_seen(session: sessao, chat_id: chat_id, timeout: TIMEOUT)
+    (@waha_client || ConversaCanal::ClienteDoMotor.para(canal)).send_seen(session: sessao, chat_id: chat_id, timeout: TIMEOUT)
     true
   rescue Waha::Client::Error => e
     # A mensagem do erro do cliente traz URL e corpo: no log, só a classe e o status.

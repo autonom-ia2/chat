@@ -39,8 +39,8 @@ vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
     canManageRelationshipRecords: canManage,
   }),
 }));
-vi.mock('dashboard/composables/useAdmin', () => ({
-  useAdmin: () => ({ isAdmin: ref(false) }),
+vi.mock('dashboard/composables/usePolicy', () => ({
+  usePolicy: () => ({ checkPermissions: () => false }),
 }));
 vi.mock('shared/composables/useExactTimestamp', () => ({
   useExactTimestamp: () => () => 'date',
@@ -86,6 +86,7 @@ function mountPanel(component, props = {}) {
         custom_attributes: { seats: 0, active: false },
       }),
       getCurrentUser: () => ({ id: 1 }),
+      canOperateConversation: () => () => true,
       getCurrentAccountId: () => 1,
       'contactNotes/getUIFlags': () => ({}),
       'contactNotes/getAllNotesByContactId': () => () => [

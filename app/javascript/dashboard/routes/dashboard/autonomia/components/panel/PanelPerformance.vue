@@ -59,7 +59,8 @@ const isLoading = computed(() => uiFlags.value.fetching);
 const isError = computed(() => uiFlags.value.error);
 const isEmpty = computed(() => {
   const a = data.value;
-  return !!a && a.replies_sent + a.handoff_count === 0;
+  const silenced = (a?.silences ?? []).reduce((sum, row) => sum + row.count, 0);
+  return !!a && a.replies_sent + a.handoff_count + silenced === 0;
 });
 
 const stats = computed(() => {
@@ -164,6 +165,16 @@ const REASON_LABEL_KEYS = {
 };
 const reasonLabel = reason =>
   t(REASON_LABEL_KEYS[reason] ?? 'AGENTS.PERFORMANCE.REASONS.OTHER');
+
+// fork chat#1709: the turns the AI kept quiet on purpose (no handoff), counted by event type.
+const silences = computed(() => data.value?.silences ?? []);
+const SILENCE_LABEL_KEYS = {
+  mensagem_sem_suporte:
+    'AGENTS.PERFORMANCE.SILENCES.CODES.mensagem_sem_suporte',
+  mensagem_apagada: 'AGENTS.PERFORMANCE.SILENCES.CODES.mensagem_apagada',
+  escolha_retirada: 'AGENTS.PERFORMANCE.SILENCES.CODES.escolha_retirada',
+};
+const silenceLabel = reason => t(SILENCE_LABEL_KEYS[reason]);
 
 const insight = computed(() => data.value?.insight ?? null);
 const insightTitle = computed(() => {
@@ -344,6 +355,27 @@ const closeDrilldown = () => {
           >
             <span class="truncate text-n-slate-11">{{
               reasonLabel(row.reason)
+            }}</span>
+            <span class="font-medium text-n-slate-12">{{ row.count }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div
+        v-if="silences.length"
+        class="flex flex-col gap-3 px-4 py-4 border rounded-xl border-n-weak bg-n-solid-1"
+      >
+        <h3 class="text-sm font-medium text-n-slate-12">
+          {{ t('AGENTS.PERFORMANCE.SILENCES.TITLE') }}
+        </h3>
+        <ul class="flex flex-col gap-2">
+          <li
+            v-for="row in silences"
+            :key="row.reason"
+            class="flex items-center justify-between gap-3 text-sm"
+          >
+            <span class="truncate text-n-slate-11">{{
+              silenceLabel(row.reason)
             }}</span>
             <span class="font-medium text-n-slate-12">{{ row.count }}</span>
           </li>

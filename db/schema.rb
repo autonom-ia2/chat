@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_07_090000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3412,6 +3412,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_07_090000) do
     t.index ["name", "template_type", "locale"], name: "index_email_templates_on_installation_scope", unique: true, where: "((account_id IS NULL) AND (inbox_id IS NULL))"
   end
 
+  create_table "etiquetas_nomes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "label_id", null: false
+    t.string "nome", limit: 80, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_etiquetas_nomes_on_account_id"
+    t.index ["label_id"], name: "index_etiquetas_nomes_on_label_id", unique: true
+  end
+
   create_table "folders", force: :cascade do |t|
     t.integer "account_id", null: false
     t.integer "category_id", null: false
@@ -4410,6 +4420,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_07_090000) do
   add_foreign_key "email_suppression_states", "accounts", on_delete: :cascade
   add_foreign_key "email_suppressions", "accounts"
   add_foreign_key "email_template_import_ai_quotas", "accounts", on_delete: :cascade
+  add_foreign_key "etiquetas_nomes", "accounts", on_delete: :cascade
+  add_foreign_key "etiquetas_nomes", "labels", on_delete: :cascade
   add_foreign_key "idempotency_keys", "accounts"
   add_foreign_key "inboxes", "portals"
   add_foreign_key "mcp_integration_tokens", "account_users", on_delete: :nullify

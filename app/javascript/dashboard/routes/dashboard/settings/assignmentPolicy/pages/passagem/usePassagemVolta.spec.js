@@ -5,6 +5,7 @@ const estado = vi.hoisted(() => ({
   query: {},
   params: { accountId: '16', pipelineId: '6' },
   admin: true,
+  atribuicao: false,
   recursos: ['assignment_v2'],
 }));
 
@@ -15,6 +16,9 @@ vi.mock('vue-router', () => ({
 vi.mock('dashboard/composables/useAdmin', () => ({
   useAdmin: () => ({ isAdmin: ref(estado.admin) }),
 }));
+vi.mock('dashboard/composables/useCanManage', () => ({
+  useHasCustomRolePermission: () => ref(estado.atribuicao),
+}));
 vi.mock('dashboard/composables/store', () => ({
   useMapGetter: () =>
     ref((_conta, recurso) => estado.recursos.includes(recurso)),
@@ -23,6 +27,7 @@ vi.mock('dashboard/composables/store', () => ({
 beforeEach(() => {
   estado.query = {};
   estado.admin = true;
+  estado.atribuicao = false;
   estado.recursos = ['assignment_v2'];
 });
 
@@ -61,6 +66,15 @@ describe('usePassagemVolta: a lista de funis', () => {
     estado.admin = false;
     expect(usePassagemVolta().daLista.value.destino).toEqual({
       name: 'crm_kanban_index',
+    });
+  });
+
+  // #1797: a função com assignment_manage também chega a Atribuição pelo menu.
+  it('função com assignment_manage: volta para Atribuição de agentes', () => {
+    estado.admin = false;
+    estado.atribuicao = true;
+    expect(usePassagemVolta().daLista.value.destino).toEqual({
+      name: 'assignment_policy_index',
     });
   });
 });

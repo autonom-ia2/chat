@@ -25,6 +25,13 @@ module Enterprise::Api::V1::Accounts::ConversationsController
 
   private
 
+  # Quem só lê (conversation_view sem o trio) não começa conversa (#1800). Antes do contact_inbox, que já grava o
+  # vínculo contato↔caixa.
+  def contact_inbox
+    authorize Conversation, :create?
+    super
+  end
+
   def copilot_params
     params.permit(:previous_history, :message, :assistant_id)
   end

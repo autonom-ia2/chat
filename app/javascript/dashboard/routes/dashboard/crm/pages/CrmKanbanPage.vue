@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { defaultFilters } from 'dashboard/store/modules/crmKanban';
 import { useCrmPermissions } from '../composables/useCrmPermissions';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
@@ -65,6 +66,7 @@ import {
   countsAsSale,
   outcomeLabels,
   outcomeStatuses,
+  avisoDoDesfecho,
 } from '../helpers/cardOutcome';
 import { ehCobranca } from '../components/funil/funil';
 import {
@@ -127,6 +129,7 @@ const inboxes = useMapGetter('inboxes/getInboxes');
 const agents = useMapGetter('agents/getAgents');
 const teams = useMapGetter('teams/getTeams');
 const accountLabels = useMapGetter('labels/getLabels');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const {
   canManageCards,
   canViewCrm,
@@ -342,7 +345,7 @@ const resultChoices = computed(() =>
 const labelOptions = computed(() =>
   accountLabels.value.map(label => ({
     value: label.id,
-    label: label.title,
+    label: nomeDaEtiqueta(label.title),
     color: label.color,
   }))
 );
@@ -1517,15 +1520,6 @@ const archiveCard = async () => {
   }
 };
 
-// Keyed on the status the server actually wrote: a non-sale funnel turns "won" into resolved (#1144).
-const CLOSE_ALERT_KEYS = {
-  won: 'CARD_WON',
-  lost: 'CARD_LOST',
-  resolved: 'CARD_RESOLVED',
-  cancelled: 'CARD_CANCELLED',
-  open: 'CARD_REOPENED',
-};
-
 const closeCardDeal = async payload => {
   const cardId = selectedCard.value?.id;
   if (!cardId) return;
@@ -1536,15 +1530,7 @@ const closeCardDeal = async payload => {
     if (selectedCard.value?.id === cardId) {
       selectedCard.value = detailedCard;
     }
-    // #1498 — reabrir num funil de Atender diz "Atendimento reaberto".
-    const reaberto = funilDeVenda.value
-      ? 'CARD_REOPENED'
-      : 'CARD_REOPENED_ATENDER';
-    useAlert(
-      t(
-        `CRM_KANBAN.ALERTS.${detailedCard?.status === 'open' ? reaberto : CLOSE_ALERT_KEYS[detailedCard?.status] || reaberto}`
-      )
-    );
+    useAlert(avisoDoDesfecho(t, detailedCard?.status, selectedPipeline.value));
   } catch (error) {
     avisarErro(
       error,

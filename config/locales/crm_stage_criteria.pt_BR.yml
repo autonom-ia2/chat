@@ -30,6 +30,23 @@ pt_BR:
         e2: 'O cliente escolheu dia e hora e o horário ficou marcado. O atendimento ainda não aconteceu.'
         e3: 'O cliente não pôde vir ou pediu outro dia. Falta escolher o novo horário.'
         e4: 'O cliente veio no horário marcado e foi atendido.'
+      # #1802: modelos da corretora (camada seguros/corretora). O texto mora aqui, no catálogo base.
+      renovacao:
+        e1: 'Falamos com o cliente da renovação do seguro que vai vencer, mas ainda não começamos a cotar.'
+        e2: 'A equipe disse ao cliente que está cotando a renovação. Ainda não mandou as opções.'
+        e3: 'A equipe mandou as opções da renovação e o cliente ainda não escolheu.'
+        e4: 'O cliente quer renovar, mas está acertando detalhes: desconto, cobertura ou forma de pagamento.'
+        e5: 'O cliente disse que aceita a renovação: escolheu a opção, mandou os dados para pagar ou pediu para emitir.'
+      sinistro:
+        e1: 'O cliente contou que teve um sinistro (batida, roubo ou dano) e a equipe ainda não disse que abriu o aviso.'
+        e2: 'A equipe disse ao cliente que abriu o sinistro (deu protocolo ou número) e a seguradora está analisando. A vez é da seguradora.'
+        e3: 'A equipe pediu ao cliente um documento, foto ou boletim de ocorrência e ele ainda não mandou.'
+        e4: 'A equipe contou ao cliente a resposta da seguradora sobre o sinistro.'
+      endosso:
+        e1: 'O cliente pediu um endosso (mudança na apólice) e a equipe ainda não disse que pediu à seguradora.'
+        e2: 'A equipe avisou o cliente que pediu a mudança à seguradora e está esperando a resposta dela.'
+        e3: 'A equipe pediu ao cliente um documento ou um dado e ele ainda não mandou.'
+        e4: 'A equipe avisou o cliente que a mudança foi feita ou mandou a apólice nova.'
       legado:
         novo: 'Primeiro contato ou lead recém-criado. Cliente demonstrou interesse inicial, fez primeira pergunta ou respondeu pela primeira vez. Ainda não há diagnóstico de necessidade nem proposta enviada.'
         em_atendimento: 'Conversa ativa com qualificação em andamento: agente ou IA está entendendo necessidade, coletando dados, tirando dúvidas ou agendando. Ainda não houve envio formal de proposta, orçamento ou condições comerciais.'

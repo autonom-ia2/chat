@@ -132,8 +132,15 @@ const etapaDoCard = computed(
 const migalha = computed(() => [funil.value?.name].filter(Boolean));
 
 // ——— Desfecho (ST-01 a ST-07) ———
-const { status, venda, rotulosProprios, rotuloGanhar, rotuloPerder, desfecho } =
-  useCardDesfecho({ t, card, funil });
+const {
+  status,
+  venda,
+  rotulosProprios,
+  rotuloGanhar,
+  rotuloPerder,
+  perdaPadrao,
+  desfecho,
+} = useCardDesfecho({ t, card, funil });
 const { nome, titulo, subtitulo } = useCardNomes({ t, card, venda });
 
 // ——— Partes do card ———
@@ -582,6 +589,7 @@ defineExpose({
     ref="dialogoPerdeu"
     :rotulo="rotuloPerder"
     :venda="venda"
+    :padrao="perdaPadrao"
     @confirmar="fecharNegocio"
   />
   <transition

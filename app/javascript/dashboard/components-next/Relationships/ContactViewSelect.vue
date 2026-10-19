@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import RelationshipBreadcrumb from './RelationshipBreadcrumb.vue';
@@ -12,6 +13,7 @@ const router = useRouter();
 const { t } = useI18n();
 const segments = useMapGetter('customViews/getContactCustomViews');
 const labels = useMapGetter('labels/getLabelsOnSidebar');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const views = computed(() => [
   {
     value: 'all',
@@ -31,7 +33,7 @@ const views = computed(() => [
   })),
   ...labels.value.map(label => ({
     value: `label-${label.title}`,
-    label: `${t('SIDEBAR.TAGGED_WITH')}: ${label.title}`,
+    label: `${t('SIDEBAR.TAGGED_WITH')}: ${nomeDaEtiqueta(label.title)}`,
     name: 'contacts_dashboard_labels_index',
     params: { label: label.title },
   })),

@@ -1857,6 +1857,10 @@
     "controller": "api/v1/accounts/macros#show",
     "parametros": []
   },
+  "nomes_de_etiquetas": {
+    "controller": "api/v1/accounts/nomes_de_etiquetas#index",
+    "parametros": []
+  },
   "notification_settings": {
     "controller": "api/v1/accounts/notification_settings#show",
     "parametros": []
@@ -2041,6 +2045,10 @@
     "motivos": [
       "a rota não tem a action no controller"
     ]
+  },
+  "tela_inicial/resumo": {
+    "controller": "api/v1/accounts/tela_inicial#resumo",
+    "parametros": []
   },
   "waha_inboxes/:inbox_id/connection": {
     "controller": "api/v1/accounts/waha_inboxes#connection",

@@ -1,0 +1,426 @@
+{
+  "CRM_FUNIL": {
+    "MODELOS": {
+      "VENDAS": {
+        "NOME": "Venda de seguro",
+        "TEXTO": "Da cotação até o seguro fechar.",
+        "E1": "Novo contato",
+        "E2": "Cotando",
+        "E3": "Opções enviadas",
+        "E4": "Negociação",
+        "E5": "Fechado"
+      }
+    },
+    "SOBRE": {
+      "IDEIAS": {
+        "PRECO": "pede uma cotação",
+        "COMPRAR": "quer saber quanto fica o seguro",
+        "COMO_FUNCIONA": "quer fazer o seguro do carro, da casa ou da empresa",
+        "PAGAR": "quer pagar a parcela",
+        "SEGUNDA_VIA": "pede a segunda via do boleto",
+        "ATRASADO": "está com a parcela atrasada"
+      },
+      "EXEMPLO": "Ex.: pede uma cotação ou avisa um sinistro"
+    },
+    "TIPO": {
+      "VENDER": {
+        "TEXTO": "Fechar um seguro novo ou renovar."
+      }
+    },
+    "ETAPA": {
+      "EXEMPLO": "Ex.: o cliente recebeu as opções da cotação e está pensando."
+    },
+    "VENDAS": {
+      "TITULO": "Saiba quantos seguros este funil fecha",
+      "TEXTO": "Os seguros fechados aqui entram no painel, junto da meta do mês.",
+      "META": "Meta de produção por mês"
+    },
+    "RESUMO": {
+      "TIPO_VENDER": "{tipo}: conquistar um cliente novo. Cada seguro fechado conta no painel.",
+      "META": "Meta de produção de {valor} por mês.",
+      "COBRAR_LEMBRETES": "Lembramos da parcela antes, no dia e depois do vencimento."
+    },
+    "ANUNCIOS": {
+      "GOOGLE": {
+        "NOME_EXEMPLO": "Ex.: Seguro fechado"
+      }
+    },
+    "PREVIA": {
+      "VENDAS_TEXTO": "Exemplo com 40% da meta já fechada.",
+      "META_EXEMPLO": "{valor} fechados até agora",
+      "SEM_META": "Sem meta, o painel mostra só o total fechado.",
+      "MSG_NOSSA": "Segue a cotação com as opções. Qualquer dúvida, é só chamar.",
+      "MSG_RETORNO": "Oi, Ana! Conseguiu olhar as opções da cotação? Se quiser, cotamos outra cobertura para você.",
+      "LEMBRETE_TEXTO": "A Ana não responde desde segunda. Próximo passo: perguntar se ficou alguma dúvida na cotação.",
+      "ANUNCIO_FECHOU": "A Ana fechou o seguro de {valor}."
+    },
+    "ATENDER": {
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "MSG": "Oi, {nome}! Seguimos cuidando do seu pedido com a seguradora. Assim que tiver novidade, eu te aviso."
+        },
+        "COBRAR": {
+          "TITULO": "Lembrar da parcela",
+          "MSG_ANTES": "Oi, {nome}! Passando para lembrar que a parcela do seu seguro, de {valor}, vence sexta.",
+          "MSG_NO_DIA": "Oi, {nome}! A parcela do seu seguro, de {valor}, vence hoje. Se já pagou, pode ignorar.",
+          "MSG_DEPOIS": "Oi, {nome}! Ainda não vimos o pagamento da parcela de {valor}. Posso te ajudar com alguma coisa?"
+        }
+      }
+    }
+  },
+  "CRM_CARD": {
+    "DESFECHO": {
+      "MOTIVO": {
+        "PRECO": "Achou caro",
+        "SUMIU": "Parou de responder",
+        "OUTRO_LUGAR": "Fechou com outra corretora",
+        "NAO_ERA_HORA": "A seguradora recusou"
+      },
+      "PERDEU_TEXTO": "Contar o motivo é opcional, mas ajuda a fechar mais da próxima vez.",
+      "GANHOU_TEXTO": "Confira o valor. Ele entra no painel do CRM."
+    },
+    "PASSO": {
+      "FECHADO": "Este card terminou: {status}. Se o cliente voltar, toque em Reabrir."
+    },
+    "RESUMO": {
+      "SEM_CONTATO": "Ainda não há uma pessoa ligada a este card.",
+      "NEGOCIO_DE": "Seguro: {titulo}",
+      "NEGOCIO": "Seguro",
+      "AVISO_FACEBOOK": "Quando a cotação avança, avisamos o Facebook e o Instagram.",
+      "MAIS_DETALHES_DICA": "De onde veio, o que já aconteceu, mais do seguro e arquivar",
+      "MAIS_NEGOCIO": "Mais do seguro",
+      "JA_COMPROU": "Já fechou seguro com você.",
+      "COBRANCA_FRASE": "{titulo}: parcela de {valor}, vence {vencimento}.",
+      "COBRANCA_SEM_DATA": "{titulo}: parcela de {valor}, sem vencimento.",
+      "COBRANCA_VENCEU": "{titulo}: parcela de {valor}, venceu {vencimento}."
+    },
+    "HISTORICO": {
+      "EVENTO": {
+        "ACTIVITY_LINK_CONTACT": "Uma pessoa foi ligada a este card",
+        "ACTIVITY_UPDATE": "Os dados do seguro mudaram",
+        "ACTIVITY_UNLINK_CONTACT": "A pessoa foi tirada deste card"
+      },
+      "GRUPO": {
+        "NEGOCIO": "Etapas e seguro"
+      }
+    },
+    "SAIR": {
+      "NEGOCIO": "as mudanças no seguro"
+    },
+    "NEGOCIO": {
+      "TELA": "Seguro",
+      "TITULO": "Sobre o seguro",
+      "TEXTO": "Qual seguro {nome} quer, quanto custa e quanta pressa tem.",
+      "NOME": "Qual seguro",
+      "TITULO_EXEMPLO": "Ex.: Seguro do carro",
+      "TITULO_FALTA": "Escreva qual é o seguro.",
+      "VALOR": "Valor do seguro",
+      "OBSERVACOES_EXEMPLO": "Ex.: prefere pagar no cartão em 10x"
+    },
+    "RETORNO": {
+      "SEU_TEXTO_EXEMPLO": "Oi! Conseguiu ver as opções da cotação?",
+      "TITULO_EXEMPLO": "Ex.: Cobrar a emissão da seguradora · Pedir a CNH"
+    },
+    "AGENDA": {
+      "LEMBRETE_EXEMPLO": "Ex.: Cobrar a emissão da seguradora · Pedir a CNH"
+    },
+    "ORIGEM": {
+      "AVISO_TEXTO": "Quando a cotação avança, avisamos os anúncios para trazerem clientes parecidos."
+    },
+    "CRIAR": {
+      "TITULO_2": "Sobre o seguro",
+      "TEXTO_2": "Diga qual é o seguro e em que etapa ele entra. O resto pode ficar para depois.",
+      "TITULO_2_COBRANCA": "Sobre a parcela",
+      "TEXTO_2_COBRANCA": "Diga de qual seguro é a parcela, o valor e o vencimento. O resto pode ficar para depois."
+    },
+    "PESSOA": {
+      "LINKED_CONTACT": "Pessoa deste card",
+      "EMPTY_TITLE": "Este card ainda não tem uma pessoa",
+      "EDIT_HELP": "O que você muda aqui vale para esta pessoa em todo lugar. O card não muda."
+    },
+    "CHAMAR": {
+      "REACTIVATE_CONFIRM_BODY": "Este cliente pediu para não receber mensagens automáticas. Se você religar, elas voltam a sair. Se outro card dele ainda estiver parado pelo mesmo pedido, ou se o pedido veio de outro lugar (equipe, prospecção ou e-mail), continua parado até isso ser desfeito lá. Seu nome fica registrado.",
+      "RESET_KEPT_OTHER_CARDS": "Religado. O pedido do cliente continua valendo por causa de outro card dele."
+    },
+    "CONTATO": {
+      "TEXTO": "A pessoa: nome, telefone, e-mail e campos. Vale para todos os cards dela."
+    },
+    "ASSUNTO": {
+      "TITULO_EXEMPLO": "Ex.: Endosso para trocar o carro"
+    },
+    "COBRANCA": {
+      "TITULO": "Sobre a parcela",
+      "TEXTO": "De quanto é a parcela de {nome}, quando vence e se prometeu pagar.",
+      "NOME": "De qual seguro é a parcela",
+      "TITULO_EXEMPLO": "Ex.: Seguro do carro · parcela 3 de 10",
+      "VALOR": "Valor da parcela"
+    }
+  },
+  "CRM_DASHBOARD": {
+    "ORIGIN": {
+      "TITLE": "Produção por origem",
+      "REVENUE": "Produção"
+    }
+  },
+  "CRM_KANBAN": {
+    "DASHBOARD": {
+      "META_SYNC": {
+        "REVENUE": "Valor enviado"
+      },
+      "KPI": {
+        "GOAL": "Meta de produção do mês"
+      }
+    },
+    "ACTIONS": {
+      "NEW_CARD": "Nova cotação",
+      "VIEW_OPPORTUNITIES": "Ver cotações"
+    },
+    "FILTERS": {
+      "SHORTCUT_MINE": "Minhas cotações"
+    },
+    "DRAWER": {
+      "CARD_FIELDS": {
+        "HELP": "Informações próprias deste seguro.",
+        "EMPTY_ADMIN": "Ainda não há campos do card. Crie em Configurações → Atributos personalizados → Card. Ex.: Seguradora atual, Vencimento do seguro, Placa."
+      }
+    },
+    "CALENDAR": {
+      "QUICK_ADD": {
+        "TITLE_PLACEHOLDER": "Ex.: Mandar as opções da cotação",
+        "CONTACT_LABEL": "Contato / card",
+        "DEAL_LABEL": "Card",
+        "DEAL_PLACEHOLDER": "Buscar card…",
+        "ADVANCED_HINT": "Escolha o card e clique em Continuar. Abrimos o card para você ajustar os detalhes.",
+        "MEETING_HINT": "Escolha o card e clique em Continuar para configurar a reunião (caixa de entrada, convidados, horário).",
+        "MEETING_HINT_AGENDA": "Escolha o card e toque em Continuar para ver os dias e horários livres."
+      },
+      "EVENT": {
+        "OPEN_DEAL": "Abrir card"
+      },
+      "MEETING_SCHEDULER": {
+        "SUBTITLE": "Agende uma reunião sobre este seguro e envie convites de agenda aos convidados.",
+        "DEAL": "Card: {deal}",
+        "DEAL_FALLBACK": "Card #{id}",
+        "TITLE_PLACEHOLDER": "Ex.: Apresentar as opções da cotação"
+      },
+      "MEETING_DETAIL": {
+        "DEAL_LABEL": "Card"
+      }
+    },
+    "CONVERSATION": {
+      "SUBJECTS": {
+        "TITLE_PLACEHOLDER": "Ex.: Cotação do seguro do carro"
+      }
+    },
+    "PIPELINE_DRAWER": {
+      "NAME_PLACEHOLDER": "Ex.: Venda de seguro, Renovação, Sinistro",
+      "STAGE_NAME_PLACEHOLDER": "Ex.: Esperando a emissão",
+      "WHEN_TO_USE_HELP": "A IA lê este texto para saber quando uma conversa é deste funil. Diga quais seguros ou casos entram aqui.",
+      "WHEN_TO_USE_PLACEHOLDER": "Ex.: cotação de seguro do carro, da casa e de vida."
+    },
+    "STAGE_AUTOMATIONS": {
+      "RULE_NAME_PLACEHOLDER": "Ex.: Lembrar de cobrar a emissão"
+    },
+    "AI_SETTINGS": {
+      "ATTRIBUTE_EXTRACTION_HELP": "Extrai dados da conversa (placa, CEP de pernoite, seguradora atual, vencimento e afins) e preenche qualquer campo customizado vazio do contato ou da conversa. Campo já preenchido nunca é sobrescrito.",
+      "AUTO_FOLLOWUP": {
+        "TONE_PLACEHOLDER": "informal, trate por você, seja breve…"
+      }
+    },
+    "PIPELINE_EDITOR": {
+      "CRITERIA_TIP": "Use sinais concretos, como “mandou as opções da cotação”.",
+      "META_PROGRESS": {
+        "INTEREST": {
+          "HELP": "O cliente pediu uma cotação ou informação."
+        },
+        "QUALIFIED": {
+          "HELP": "Já sabemos qual seguro o cliente quer e temos os dados para cotar."
+        },
+        "PROPOSAL": {
+          "TITLE": "Cotação em avaliação",
+          "HELP": "O cliente recebeu as opções da cotação e está escolhendo."
+        },
+        "NEGOTIATION": {
+          "HELP": "O cliente está acertando valor, coberturas ou forma de pagamento."
+        }
+      }
+    },
+    "TRACKED_LINKS": {
+      "SUBTITLE": "Crie um link ou QR por campanha, corretor ou escritório. Conversas iniciadas por ele chegam atribuídas no CRM.",
+      "NAME_PLACEHOLDER": "Ex.: QR do escritório · Centro",
+      "PREFILLED_PLACEHOLDER": "Ex.: Olá! Quero cotar o seguro do meu carro",
+      "EMPTY": "Nenhum link rastreável ainda. Crie o primeiro para atribuir conversas do escritório, de cada corretor ou da bio.",
+      "PAGE": {
+        "NAME_PLACEHOLDER": "Ex.: Escritório Centro · recepção",
+        "MESSAGE_PLACEHOLDER": "Olá! Quero fazer uma cotação de seguro.",
+        "ATTRIBUTION_HINT": "Use uma origem para cada escritório, corretor, parceiro, divulgação ou página do site. Quando a conversa começa, a origem fica registrada no CRM.",
+        "USAGE_DIRECT_HINT": "Escritório, corretor, bio e material impresso.",
+        "WEBSITE_NAME_PLACEHOLDER": "Ex.: Página do seguro do carro"
+      }
+    },
+    "META_ADS_HUB": {
+      "PANEL": {
+        "ACTION": {
+          "STALLED_QUOTES": {
+            "TEXT": "1 cotação de anúncio está parada há mais de {days} dias. Ela veio de \"{ad}\". | {count} cotações de anúncio estão paradas há mais de {days} dias. A maior parte veio de \"{ad}\".",
+            "WHY": "Por quê: somam {value} em negociação. Retomar quem já pediu cotação custa menos que anunciar de novo.",
+            "BUTTON": "Ver a cotação | Ver as {count} cotações"
+          }
+        },
+        "PATH": {
+          "QUOTES": "cotação | cotações"
+        },
+        "OPEN_QUOTES": "Seguros a fechar: 1 cotação aberta | Seguros a fechar: {count} cotações abertas",
+        "AD_QUOTES": "1 cotação aberta | {count} cotações abertas",
+        "STALLED_TITLE": "1 cotação parada | {count} cotações paradas",
+        "PATH_LIST": {
+          "TITLE_QUOTES": "Cotações",
+          "TOTAL_QUOTES": "1 cotação | {count} cotações"
+        }
+      },
+      "AD_DETAIL": {
+        "TILES": {
+          "QUOTES": "Cotações"
+        },
+        "MEANWHILE": "1 cotação aberta deste anúncio espera resposta. Retomar essa conversa é o que dá para fazer agora. | {count} cotações abertas deste anúncio esperam resposta. Retomar essas conversas é o que dá para fazer agora.",
+        "MEANWHILE_SEE": "Ver as cotações",
+        "QUOTES_TITLE": "Cotações deste anúncio",
+        "QUOTES_EMPTY": "Nenhuma cotação deste anúncio neste período ainda.",
+        "WON": "Seguro fechado"
+      }
+    },
+    "BOOKING": {
+      "ADMIN": {
+        "SUBTITLE": "Deixe o cliente marcar um horário numa caixa de entrada com calendário. Compartilhe o link público, sem precisar de login.",
+        "TITLE_PLACEHOLDER": "Ex.: Conversa sobre o seu seguro",
+        "PIPELINE": "Funil do cliente",
+        "STAGE": "Etapa do cliente"
+      }
+    },
+    "BOOKING_AGENDA": {
+      "ERRORS": {
+        "NO_CONTACT": "Este card não tem cliente. Vincule um contato primeiro."
+      }
+    },
+    "PASSAGEM": {
+      "QUANDO": {
+        "IDEIA_2": "Quando o cliente escolher a opção e quiser fechar o seguro",
+        "IDEIA_3": "Quando o cliente avisar um sinistro ou reclamar"
+      },
+      "PREVIA": {
+        "QUANDO_SIM_MSG": "Não entendi o valor da cotação. Quero falar com alguém."
+      }
+    },
+    "COMPANY_OPPORTUNITIES": {
+      "HELP": "Seguros e atendimentos dos contatos ligados a esta empresa. Só os que você pode acessar."
+    },
+    "CONTACT_OPPORTUNITIES": {
+      "TAB": "Seguros",
+      "TITLE": "Seguros no CRM",
+      "HELP": "Seguros e atendimentos deste contato em todos os funis. Só os que você pode acessar.",
+      "SEARCH": "Buscar seguro",
+      "SEARCH_HINT": "Nome do card. Ex.: seguro do carro",
+      "EMPTY": "Nenhum seguro nesta consulta"
+    },
+    "OPPORTUNITY": {
+      "CONTEXT": {
+        "LABEL": "Novo card",
+        "OPEN_NEW_TAB": "Novo card: abre o CRM em outra aba",
+        "UNAVAILABLE": "Você não tem permissão para criar cards aqui.",
+        "LOADING": "Carregando o contato para o novo card…",
+        "READY": "O contato está pronto. Abra o card para continuar.",
+        "OPEN": "Abrir card"
+      }
+    },
+    "RELATIONSHIP": {
+      "SAME_OPPORTUNITY": "O contato será ligado a este card. Os dados do card continuam como estão.",
+      "DEAL_COMPANY_LABEL": "Empresa deste card",
+      "SAVE_CONFLICT": "Não foi possível concluir o vínculo. Confira se o contato já existe ou se este card tem conversas de outra pessoa.",
+      "OPPORTUNITY_DETAILS": "Detalhes do card",
+      "FIELDS_SHARED": "Mesmos campos e valores da ficha em Relacionamentos. Cada alteração é salva separada do card.",
+      "COMPANY_FORM": {
+        "UNLINK_CONTEXT": "O vínculo será removido do cadastro de {name} e dos cards desse contato. Os dados dos cards continuam.",
+        "EDIT_HELP": "Este é o cadastro compartilhado da empresa. As alterações também aparecem em Relacionamentos, sem mudar os dados do card.",
+        "LINK_HELP": "A empresa será ligada ao cadastro de {name} e usada em todos os cards desse contato.",
+        "UNLINK_HELP": "O contato ficará sem empresa. Nenhum contato, empresa, card, conversa ou arquivo será excluído. As mídias da empresa seguem o vínculo atual."
+      }
+    }
+  },
+  "CRM_SLA": {
+    "POLICIES": {
+      "DIALOG": {
+        "NAME": {
+          "PLACEHOLDER": "Ex.: Sinistro com resposta rápida"
+        }
+      }
+    }
+  },
+  "AUTOMACOES": {
+    "MODELOS": {
+      "ORCAMENTO": {
+        "TITULO": "Marcar quem pede cotação",
+        "TEXTO": "Quem pede cotação recebe uma etiqueta e não fica esquecido na fila.",
+        "QUANDO": "O cliente pede uma cotação",
+        "FAZ": "Coloca a etiqueta cotação",
+        "PEDIDO": "Quero uma automação: quando chegar uma mensagem de cliente pedindo cotação de seguro, colocar a etiqueta cotação na conversa."
+      }
+    },
+    "HEROI": {
+      "EXEMPLO": "Ex.: quando um cliente avisar um sinistro, passar para quem cuida de sinistros",
+      "IDEIAS": {
+        "ORCAMENTO": "Marcar quem pede cotação"
+      }
+    }
+  },
+  "CRM_CAIXAS": {
+    "SOZINHO": {
+      "AUTO_UM_EXEMPLO": "O cliente pede dois seguros diferentes: são dois cards em {funil}.",
+      "MENSAGEM": "Oi! Quanto fica o seguro do meu carro?",
+      "MENSAGEM_DOIS_PEDIDOS": "Quero cotar o seguro do carro e também o da casa."
+    }
+  },
+  "CRM_LEMBRETE": {
+    "SERIE": {
+      "LIGADO_CARD": "Card: {nome}"
+    },
+    "LIGAR": {
+      "NADA_TEXTO": "Fica só no calendário. Ex.: conferir as renovações da semana.",
+      "CONTATO_TEXTO": "Mesmo sem card aberto. Ex.: aniversário.",
+      "CARD": "Um card do funil",
+      "QUAL_CARD": "Qual card?"
+    }
+  },
+  "CRM_CALENDARIO": {
+    "EXEMPLO": {
+      "LEMBRETE": "Ex.: ligar para o cliente sobre a renovação na sexta",
+      "FECHAR": "O dia em que o seguro deve fechar"
+    },
+    "ITEM": {
+      "ACAO": {
+        "VER_NEGOCIO": "Ver card"
+      }
+    },
+    "NOVO": {
+      "COM_QUEM_TEXTO": "Procure pelo nome do cliente ou do card.",
+      "BUSCA_ROTULO": "Nome do cliente ou do card",
+      "SEM_NEGOCIO": "Ainda sem card",
+      "SEM_NEGOCIO_TEXTO": "{nome} ainda não tem um card. A reunião é marcada no card do cliente. Por enquanto, marque um lembrete.",
+      "SEM_NEGOCIO_CURTO": "Sem card"
+    }
+  },
+  "CRM_MENSAGEM_MARCADA": {
+    "PARA_QUEM": {
+      "ROTULO": "Procure o cliente ou o card",
+      "PELO_NEGOCIO": "Outro WhatsApp: marque pelo card"
+    },
+    "CONFIRMAR": {
+      "SE_FALHAR": "Se não der para enviar, {nome} vê um aviso na tela e o motivo fica no card.",
+      "SE_FALHAR_SEM_DONO": "Se não der para enviar, quem cuida da conversa vê um aviso na tela e o motivo fica no card.",
+      "ONDE_APARECE": "Aparece no calendário e no card até sair."
+    },
+    "PRONTO": {
+      "ONDE": "Ela já está no calendário e no card. Dá para mudar ou cancelar até a hora de sair.",
+      "ABRIR_NEGOCIO": "Abrir o card"
+    }
+  }
+}

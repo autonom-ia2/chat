@@ -31,8 +31,48 @@
       "CHOSEN": "O cliente tocou em \"{title}\"",
       "MIRROR": "Cópia do que o cliente recebeu. Só o cliente pode tocar nestas opções."
     },
+    "POLL": {
+      "MIRROR": "Cópia da enquete que o cliente recebeu. Só o cliente pode votar.",
+      "SINGLE": "Enquete: uma resposta",
+      "MULTIPLE": "Enquete: uma ou mais respostas",
+      "VOTED": "Votou: {titles}",
+      "NO_VOTE": "Sem voto"
+    },
+    "EVENT": {
+      "MIRROR": "Cópia do convite de evento que o cliente recebeu. Só o cliente pode responder.",
+      "WHEN_RANGE": "{start} até {end}",
+      "RESPONSES": "Vou: {going} · Não vou: {notGoing} · Talvez: {maybe}",
+      "NO_RESPONSE": "Sem resposta"
+    },
     "SENT_AS_TEXT": {
       "LABEL": "Enviado como texto"
     }
+  },
+  "MESSAGE_ACTIONS": {
+    "REACTIONS_LABEL": "Reações",
+    "REACTION_BY_CONTACT": "do cliente",
+    "REACTION_BY_BUSINESS": "da empresa",
+    "REACTION_BY_YOU": "da empresa, feita por você",
+    "REACTION_BY_BOTH": "do cliente e da empresa",
+    "REACT": "Reagir",
+    "REACT_TITLE": "Reagir à mensagem",
+    "REACT_WITH": "Reagir com {emoji}",
+    "MORE_EMOJIS": "Mais emojis",
+    "REMOVE_REACTION": "Tirar a reação da empresa",
+    "DELETE_FOR_EVERYONE": "Apagar para todos",
+    "DELETE_FOR_EVERYONE_CONFIRMATION": "A mensagem some também do WhatsApp do cliente. Não dá para desfazer",
+    "EDIT": "Editar",
+    "EDIT_TITLE": "Editar mensagem",
+    "EDIT_DESCRIPTION": "O cliente vê a mensagem marcada como editada no WhatsApp. Dá para editar até {minutes} minutos depois do envio.",
+    "EDIT_LABEL": "Texto novo",
+    "EDIT_SAVE": "Salvar",
+    "EDITED": "editada",
+    "EDIT_HISTORY": "Textos anteriores",
+    "EDIT_HISTORY_TOGGLE": "Mostrar ou esconder os textos anteriores",
+    "EDITED_BY_CONTACT": "Cliente escreveu antes:",
+    "EDITED_BY_PHONE": "Antes da edição no celular da empresa:",
+    "EDITED_BY_YOU": "Antes da sua edição:",
+    "EDITED_BY_AGENT": "Antes da edição de um atendente:",
+    "ERROR": "Não deu certo. Tente de novo."
   }
 }

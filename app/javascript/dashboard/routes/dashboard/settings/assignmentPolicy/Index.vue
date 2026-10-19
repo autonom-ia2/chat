@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter, useRoute } from 'vue-router';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useCanManage } from 'dashboard/composables/useCanManage';
+import { CRM_MANAGE_AI_PERMISSION } from 'dashboard/constants/permissions';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import AssignmentCard from 'dashboard/components-next/AssignmentPolicy/AssignmentCard/AssignmentCard.vue';
@@ -15,6 +17,9 @@ const accountId = computed(() => Number(route.params.accountId));
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
+// Com assignment_manage (#1797) a função chega aqui; o cartão da passagem do CRM só para quem abre a rota dela
+// (administrador ou crm_manage_ai).
+const canManageAi = useCanManage(CRM_MANAGE_AI_PERMISSION);
 
 const agentAssignments = computed(() => {
   const assignments = [
@@ -51,6 +56,7 @@ const agentAssignments = computed(() => {
   );
 
   const hasCrm =
+    canManageAi.value &&
     isFeatureEnabledonAccount.value(accountId.value, 'crm') &&
     window.globalConfig?.CRM_KANBAN_ENABLED === 'true' &&
     window.globalConfig?.CRM_AI_ENABLED === 'true';
