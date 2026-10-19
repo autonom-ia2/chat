@@ -30,9 +30,9 @@ const cortarDaqui = elemento => {
   }
 };
 
-export const semCitacaoDosLeitores = html => {
-  const raiz = document.createElement('div');
-  raiz.innerHTML = DOMPurify.sanitize(String(html || ''));
+// Corta, na própria árvore (o body do documento ou uma div), a citação dos leitores e
+// diz se achou. O #1884 usa direto no documento inteiro, sem perder <head> e <body>.
+export const cortarCitacaoDosLeitores = raiz => {
   let achou = false;
 
   raiz.querySelectorAll('blockquote[type="cite"]').forEach(bloco => {
@@ -55,5 +55,12 @@ export const semCitacaoDosLeitores = html => {
   // Histórico em texto, com ">" no começo das linhas (Mail do iPhone, texto puro).
   if (cortarCitacaoComSinal(raiz)) achou = true;
 
+  return achou;
+};
+
+export const semCitacaoDosLeitores = html => {
+  const raiz = document.createElement('div');
+  raiz.innerHTML = DOMPurify.sanitize(String(html || ''));
+  const achou = cortarCitacaoDosLeitores(raiz);
   return { html: raiz.innerHTML, achou };
 };

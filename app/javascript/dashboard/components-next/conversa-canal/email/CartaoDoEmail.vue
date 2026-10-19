@@ -9,7 +9,6 @@ import { computed, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Letter } from 'vue-letter';
 import { sanitizeTextForRender } from '@chatwoot/utils';
-import { allowedCssProperties } from 'lettersanitizer';
 import Icon from 'next/icon/Icon.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import FormattedContent from 'next/message/bubbles/Text/FormattedContent.vue';
@@ -40,6 +39,8 @@ import { CARTAO, COR_DO_SELO, SELO } from './visualEmail';
 import MenuDoEmail from './MenuDoEmail.vue';
 import AnexosDoEmail from './AnexosDoEmail.vue';
 import { semCitacaoDosLeitores } from './citacaoDosLeitores';
+import { CSS_PERMITIDO, citacaoDoDocumento } from './documentoDoEmail';
+import CorpoIsoladoDoEmail from './CorpoIsoladoDoEmail.vue';
 import { abrirImagemDoCorpo } from './imagemDoCorpo';
 import OriginalDoEmail from './OriginalDoEmail.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -165,18 +166,30 @@ const textoDoLetter = computed(() =>
 const conteudoDoPainel = computed(() =>
   traduzido.value ? translationContent.value : content.value
 );
+// #1884: o HTML que o remetente mandou vai inteiro para a moldura isolada, como ele
+// desenhou. O que não é HTML de remetente (texto puro, o que o painel enviou, modelos
+// e campanhas nossos) segue pelo caminho de sempre, igual ao de antes.
+const htmlDoRemetente = computed(
+  () =>
+    recebido.value && Boolean(contentAttributes.value?.email?.htmlContent?.full)
+);
 // Citação do Gmail e afins pelo extrator do Chatwoot; a do iPhone e a do Outlook em
-// português pelo nosso (citacaoDosLeitores.js).
+// português pelo nosso (citacaoDosLeitores.js). No HTML do remetente, no documento
+// inteiro, sem perder o <head> e o <body>.
+const documentoSemCitacao = computed(() =>
+  htmlDoRemetente.value ? citacaoDoDocumento(htmlCompleto.value) : null
+);
 const citacaoDosLeitores = computed(() =>
   semCitacaoDosLeitores(htmlCompleto.value)
 );
 const htmlSemCitacao = computed(() =>
   EmailQuoteExtractor.extractQuotes(citacaoDosLeitores.value.html)
 );
-const temCitacao = computed(
-  () =>
-    citacaoDosLeitores.value.achou ||
-    EmailQuoteExtractor.hasQuotes(htmlCompleto.value)
+const temCitacao = computed(() =>
+  documentoSemCitacao.value
+    ? documentoSemCitacao.value.achou
+    : citacaoDosLeitores.value.achou ||
+      EmailQuoteExtractor.hasQuotes(htmlCompleto.value)
 );
 const verCitacao = ref(false);
 // O corpo no estilo do texto do painel; a citação aberta fica como no Gmail (fio à
@@ -191,21 +204,17 @@ const CLASSES_DO_CORPO = [
   // sanitizador renomeia a classe para "<id>_MsoNormal", daí o "contém".
   '[&_[class*=MsoNormal]]:!my-0',
 ].join(' ');
-const CSS_PERMITIDO = [
-  ...allowedCssProperties,
-  'transform',
-  'transform-origin',
-];
 
 const corpo = useTemplateRef('corpo');
+const isolado = useTemplateRef('isolado');
 const longo = ref(false);
 const inteiro = ref(false);
-onMounted(() => {
-  // O e-mail mais recente aparece sempre inteiro; só os antigos longos encolhem.
-  longo.value =
-    id.value !== email.ultimoEmailId.value &&
-    (corpo.value?.scrollHeight || 0) > ALTURA_LONGA;
-});
+// O e-mail mais recente aparece sempre inteiro; só os antigos longos encolhem.
+const encolher = altura => {
+  longo.value = id.value !== email.ultimoEmailId.value && altura > ALTURA_LONGA;
+};
+// A moldura do HTML do remetente só sabe a altura depois de carregar (@altura).
+onMounted(() => encolher(corpo.value?.scrollHeight || 0));
 
 // Recolhido só com a opção ligada, e nunca o último e-mail.
 const abertoAqui = ref(false);
@@ -290,7 +299,9 @@ const fazer = {
     acoes.imprimir({
       assunto: assuntoDoEmail.value,
       linhas: linhasDoCabecalho.value,
-      corpoHtml: corpo.value?.innerHTML || '',
+      corpoHtml: htmlDoRemetente.value
+        ? isolado.value?.htmlParaImprimir() || ''
+        : corpo.value?.innerHTML || '',
     }),
   original: () => original.value?.open(),
   'nao-lida': acoes.marcarComoNaoLida,
@@ -518,6 +529,15 @@ const excluir = async () => {
           <FormattedContent
             v-if="enviado && content && !temEmail"
             :content="conteudoDoPainel"
+          />
+          <CorpoIsoladoDoEmail
+            v-else-if="htmlDoRemetente"
+            ref="isolado"
+            :html="verCitacao ? htmlCompleto : documentoSemCitacao.html"
+            :titulo="
+              t('CONVERSA_CANAL.EMAIL.CORPO_ISOLADO', { nome: nomeMostrado })
+            "
+            @altura="encolher"
           />
           <Letter
             v-else

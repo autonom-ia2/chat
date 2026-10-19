@@ -16,6 +16,8 @@ import { useMessageContext } from '../../provider.js';
 import { MESSAGE_TYPES } from 'next/message/constants.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
 import CartaoDoEmail from 'dashboard/components-next/conversa-canal/email/CartaoDoEmail.vue';
+import CorpoIsoladoDoEmail from 'dashboard/components-next/conversa-canal/email/CorpoIsoladoDoEmail.vue';
+import { citacaoDoDocumento } from 'dashboard/components-next/conversa-canal/email/documentoDoEmail';
 import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 
 const { content, contentAttributes, attachments, messageType } =
@@ -85,13 +87,32 @@ const fullHTML = computed(() => {
   return originalEmailHtml.value;
 });
 
+// #1884: o HTML recebido do remetente vai inteiro para a moldura isolada, com o mesmo
+// extrator de citação de sempre (só o do Chatwoot), aplicado no documento inteiro.
+const senderHtml = computed(
+  () =>
+    messageType.value === MESSAGE_TYPES.INCOMING &&
+    Boolean(contentAttributes?.value?.email?.htmlContent?.full)
+);
+const unquotedDocument = computed(() =>
+  senderHtml.value
+    ? citacaoDoDocumento(fullHTML.value, { leitores: false })
+    : null
+);
+
 const unquotedHTML = computed(() =>
   EmailQuoteExtractor.extractQuotes(fullHTML.value)
 );
 
 const hasQuotedMessage = computed(() =>
-  EmailQuoteExtractor.hasQuotes(fullHTML.value)
+  unquotedDocument.value
+    ? unquotedDocument.value.achou
+    : EmailQuoteExtractor.hasQuotes(fullHTML.value)
 );
+
+const measureIsolatedBody = height => {
+  isExpandable.value = height > 400;
+};
 
 // Ensure unique keys for <Letter> when toggling between original and translated views.
 // This forces Vue to re-render the component and update content correctly.
@@ -155,8 +176,14 @@ const handleSeeOriginal = () => {
           :content="messageContent"
         />
         <template v-else>
+          <CorpoIsoladoDoEmail
+            v-if="senderHtml"
+            :html="showQuotedMessage ? fullHTML : unquotedDocument.html"
+            :titulo="$t('CONVERSA_CANAL.EMAIL.CORPO_DO_EMAIL')"
+            @altura="measureIsolatedBody"
+          />
           <Letter
-            v-if="showQuotedMessage"
+            v-else-if="showQuotedMessage"
             :key="`letter-quoted-${translationKeySuffix}`"
             class-name="prose prose-bubble !max-w-none letter-render"
             :allowed-css-properties="[
