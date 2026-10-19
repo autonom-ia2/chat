@@ -56,6 +56,29 @@ RSpec.describe Autonomia::CentralDeAjuda::VarianteDoPacote do
     end
   end
 
+  it 'never gives the brokerage words to another kind of insurance account' do
+    with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') do
+      leitura = leitura_de(conta('seguros', 'seguradora'))
+      mover = leitura.artigo('10.03')
+
+      expect(leitura.central(mover)['pacote']).to eq('seguros')
+      expect(mover.content).to include('**Fechou o seguro**')
+      expect(mover.content).not_to include('**Seguro**, **Agenda**')
+    end
+  end
+
+  it 'speaks of the plan, not the insurance, to a health and benefits account' do
+    with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') do
+      leitura = leitura_de(conta('seguros', 'saude_beneficios'))
+      fechar = leitura.artigo('10.04')
+
+      expect(fechar.title).to eq('Fechou o plano, não fechou, reabrir e arquivar')
+      expect(fechar.content).to include('**Marcar: fechou o plano**')
+      expect(fechar.content).not_to include('seguro')
+      expect(leitura.central(fechar)['pacote']).to eq('seguros/saude_beneficios')
+    end
+  end
+
   it 'finds the variant by the words of the brokerage' do
     with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') do
       resultado = leitura_de(conta('seguros', 'corretora')).buscar('fechou o seguro')

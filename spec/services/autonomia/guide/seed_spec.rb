@@ -65,6 +65,18 @@ RSpec.describe Autonomia::Guide::Seed do
       end
     end
 
+    it 'gives health and benefits its own base, with the plan instead of the insurance' do
+      saude = create(:account)
+      saude.update!(internal_attributes: { nicho::NICHO_KEY => 'seguros', nicho::PERFIL_KEY => 'saude_beneficios' })
+
+      with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') do
+        caminho = described_class.kb_path_for(saude)
+        expect(caminho).to eq(Autonomia::Guide::BaseDoPacote::PASTA.join('seguros/saude_beneficios/guia-produto.md'))
+        expect(File.read(caminho)).to include('**Fechou o plano**')
+        expect(File.read(caminho)).not_to include('**Fechou o seguro**')
+      end
+    end
+
     it 'keeps the brokerage on the general base with the switch off' do
       with_modified_env(AUTONOMIA_PACOTES_ENABLED: nil) do
         expect(described_class.kb_path_for(corretora)).to eq(described_class::KB_PATH)

@@ -509,7 +509,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `contacts_edit`
 
 ### Mover card, marcar que fechou o seguro ou que não fechou, resolver, cancelar ou reabrir
-- intent: "Como movo um card de etapa?"; "Como marco que fechou o seguro?"; "Como marco que o cliente não fechou?"; "O cliente fechou com outra corretora, como marco?"; "Como reabro um card que não fechou?"; "Como marco um atendimento como resolvido?"; "Como cancelo um atendimento?"
+- intent: "Como movo um card de etapa?"; "Como marco que fechou o seguro?"; "Como marco que o cliente não fechou?"; "O cliente fechou com a concorrência, como marco?"; "Como reabro um card que não fechou?"; "Como marco um atendimento como resolvido?"; "Como cancelo um atendimento?"
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
