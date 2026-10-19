@@ -575,6 +575,8 @@ en:
     material:
       problema_invalido: 'This item was already resolved or changed. The page was updated.'
       autoteste_indisponivel: 'There is no approved material to test yet.'
+      autoteste_espere: 'Wait a little to test again.'
+      autoteste_amanha: 'This agent was already tested many times today. You can test again tomorrow.'
     source:
       invalid_kind: 'This kind of material is not available. Reload the page and try again.'
       arquivo_grande: 'The file is too large. The maximum size is 25 MB.'

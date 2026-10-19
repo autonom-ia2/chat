@@ -1,11 +1,13 @@
 # #1426 (tema 4b) — o AUTOTESTE do material: no máximo 10 perguntas, 8 do material e 2 de fora dele. O agente responde
 # como no Testar, SEM ferramenta nenhuma (o mesmo modo `prova` do #1428: nada é executado nem chega a cliente), e um
-# juiz dá o veredito (JuizDoAutoteste). Roda quando a pessoa pede ("Testar de novo", sem limite) ou quando a base muda
-# (BaseMudouJob: no máximo uma rodada automática a cada 30 min por agente, e só se a base mudou desde a última).
+# juiz dá o veredito (JuizDoAutoteste). Roda quando a pessoa pede ("Testar de novo": um a cada 2 min, 10 por dia) ou
+# quando a base muda (BaseMudouJob: no máximo uma rodada automática a cada 30 min por agente, e só se a base mudou
+# desde a última). Os limites por dia: LimiteDoAutoteste.
 #
 # CUSTO: teto de US$ 2 por rodada, com contagem real (MedidorDeCusto). Antes de cada chamada a rodada confere se cabe;
-# se não couber, PARA ANTES e fica "parado" (motivo `teto`). O custo sai da chave de IA da conta (CredentialResolver),
-# como o resto dos Agentes, e aparece na Gestão IA com os rótulos `agente_autoteste_*`.
+# se não couber, PARA ANTES e fica "parado" (motivo `teto`). O teto pode passar em até uma chamada (a estimativa da
+# próxima é piso, não garantia). O custo sai da chave de IA da conta (app `crm_kanban_ai`) ou, sem ela, da chave da
+# plataforma (CredentialResolver), como o resto dos Agentes, e aparece na Gestão IA com os rótulos `agente_autoteste_*`.
 #
 # Guarda em config['autoteste'] (ConfigDoMaterial, escrita atômica):
 #   rodada, estado (rodando | pronto | parado), motivo (teto | indisponivel), quando (pedido | base_mudou), desde,
@@ -17,6 +19,7 @@
 # problemas que ele mostra).
 class Autonomia::Agents::Material::Autoteste
   CHAVE = 'autoteste'.freeze
+  LIMITE = Autonomia::Agents::Material::LimiteDoAutoteste
   RESPOSTA_FEATURE = 'agente_autoteste_resposta'.freeze
   # Rodando há mais que isto, a rodada morreu (worker caiu): a tela mostra "não consegui terminar" e libera de novo.
   VALIDADE_DA_RODADA = 15.minutes
@@ -28,17 +31,15 @@ class Autonomia::Agents::Material::Autoteste
 
   class << self
     # Começa uma rodada (estado `rodando`) e a enfileira. Com uma rodada viva, devolve a dela, sem outra. nil fora do
-    # material da Fase 2 ou sem material aprovado.
+    # material da Fase 2 ou sem material aprovado. Passado o limite: o pedido da pessoa levanta LimiteDoAutoteste::Excedido;
+    # a rodada automática só não abre (nil).
     def pedir!(agent, quando:)
       return unless Autonomia::Agents::Material.conferir?(agent) && agent.sources.knowledge_sources.servable.exists?
 
-      rodada = nil
-      estado = agent.alterar_chave_do_material!(CHAVE) do |atual|
-        next if viva?(atual)
+      rodada, bloqueio, estado = abrir_rodada(agent, quando)
+      raise LIMITE::Excedido, bloqueio if bloqueio && quando == 'pedido'
+      return if bloqueio
 
-        rodada = SecureRandom.hex(8)
-        nova_rodada(atual, rodada, quando, agent)
-      end
       Autonomia::Agents::Material::AutotesteJob.perform_later(agent.id, rodada) if rodada
       estado
     end
@@ -65,6 +66,22 @@ class Autonomia::Agents::Material::Autoteste
     end
 
     private
+
+    # Sob a trava da linha: confere o limite, conta e abre. -> [rodada aberta ou nil, motivo do bloqueio ou nil, estado]
+    def abrir_rodada(agent, quando)
+      plataforma = LIMITE.da_plataforma?(agent)
+      rodada = bloqueio = nil
+      estado = agent.alterar_chave_do_material!(CHAVE) do |atual|
+        next if viva?(atual)
+
+        bloqueio = LIMITE.bloqueio(atual, quando, plataforma)
+        next if bloqueio
+
+        rodada = SecureRandom.hex(8)
+        LIMITE.contar(nova_rodada(atual, rodada, quando, agent), atual, quando, plataforma)
+      end
+      [rodada, bloqueio, estado]
+    end
 
     def nova_rodada(atual, rodada, quando, agent)
       base = atual.is_a?(Hash) ? atual.slice('itens', 'rodada_dos_itens', 'ultima_automatica') : {}

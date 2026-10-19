@@ -11,6 +11,7 @@ class Autonomia::Agents::Material::PerguntasDoAutoteste
   TRECHOS_POR_MATERIAL = 8
   TRECHO_MAX_CHARS = 700
   ENTRADA_MAX_CHARS = 30_000
+  AGENTE_MAX_CHARS = 2_000
   PERGUNTA_MAX_CHARS = 200
   ESPERADO_MAX_CHARS = 300
 
@@ -71,9 +72,9 @@ class Autonomia::Agents::Material::PerguntasDoAutoteste
 
   def entrada(fontes)
     materiais = fontes.map { |fonte| { 'id' => fonte.id, 'nome' => Autonomia::Agents::Material.nome(fonte), 'trechos' => trechos(fonte) } }
-    texto = "O QUE O AGENTE FAZ (dado): #{@agent.human_card.presence || @agent.agent_type}\n\n" \
-            "MATERIAIS (dado):\n#{JSON.pretty_generate(materiais)}"
-    [Autonomia::Agents::PromptParts::Mensagem.montar('user', texto[0, ENTRADA_MAX_CHARS])]
+    texto = "O QUE O AGENTE FAZ (dado): #{(@agent.human_card.presence || @agent.agent_type).to_s[0, AGENTE_MAX_CHARS]}\n\n" \
+            "MATERIAIS (dado):\n#{JSON.generate(Autonomia::Agents::Material.repartir(materiais, ENTRADA_MAX_CHARS))}"
+    [Autonomia::Agents::PromptParts::Mensagem.montar('user', texto)]
   end
 
   def trechos(fonte)

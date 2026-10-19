@@ -1606,7 +1606,8 @@
             "ERRADA": "Wrong",
             "TESTAR": "Test now",
             "TENTAR_DE_NOVO": "Try again",
-            "DE_NOVO": "Test again"
+            "DE_NOVO": "Test again",
+            "AMOSTRA": "The test is a sample; check the answers."
           },
           "TUDO_CERTO": "All good. {nome} uses all the material with your customers."
         }

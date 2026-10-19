@@ -79,3 +79,17 @@ Placar: 10 de 10.
 Observação sobre C2: o OCR da foto borrada devolveu 2 caracteres. No caminho real da ingestão isso não chega à
 conferência: a extração vazia vira o problema "vazio" (`empty_extraction`). A cena prova que a conferência também
 reprova leitura ruim quando há texto.
+
+## Rodada 4 (revisão adversarial A1): só C6, C7 e C8
+
+A instrução das contradições mudou: o `diz` de cada lado agora tem de ser trecho EXATO daquele material, conferido no
+código contra o texto lido dele (o que não confere é descartado), e o prompt do agente recebe só "no assunto X, vale
+o material «nome»". Rodei só as três cenas de contradição, com teto de US$ 0,30 (`CONFERENCIAS_EVAL_TETO=0.30`).
+
+| Cena | Saída | Aprovada |
+|---|---|---|
+| C6 | 1 contradição, "horário de sábado": "no sábado das 9h às 13h." × "sábado das 9h às 12h." (trechos exatos) | sim |
+| C7 | nenhuma | sim |
+| C8 | nenhuma | sim |
+
+Custo: US$ 0,0041. **Total gasto no eval do PR 2: US$ 0,170 de US$ 2.**

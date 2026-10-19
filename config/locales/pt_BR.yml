@@ -1324,6 +1324,8 @@ pt_BR:
     material:
       problema_invalido: 'Isto já foi resolvido ou mudou. A página foi atualizada.'
       autoteste_indisponivel: 'Ainda não há material aprovado para testar.'
+      autoteste_espere: 'Espere um pouco para testar de novo.'
+      autoteste_amanha: 'Este agente já foi testado muitas vezes hoje. Amanhã dá para testar de novo.'
     source:
       invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."
       arquivo_grande: "O arquivo é grande demais. O tamanho máximo é 25 MB."

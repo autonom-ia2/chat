@@ -136,6 +136,13 @@ const botao = computed(() => {
         </li>
       </ul>
     </details>
+    <p
+      v-if="!rodando && temResultado"
+      data-aviso-amostra
+      class="m-0 text-xs text-n-slate-11"
+    >
+      {{ t(`${NS}.AMOSTRA`) }}
+    </p>
     <AgenteBotao
       v-if="podeGerenciar && !rodando"
       data-testar-de-novo

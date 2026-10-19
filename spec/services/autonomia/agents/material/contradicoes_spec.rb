@@ -39,6 +39,42 @@ RSpec.describe Autonomia::Agents::Material::Contradicoes do
     expect(agent.config.dig('conferencia_da_base', 'hash_da_base')).to eq(Autonomia::Agents::Material.hash_da_base(agent))
   end
 
+  it '"diz" que não está naquele material (forjado, ou tirado do outro) descarta a contradição', :aggregate_failures do
+    forjado = horario_de_sabado.merge(diz_b: 'Plano X sai por R$ 0')
+    trocado = horario_de_sabado.merge(diz_b: 'das 9h às 13h') # está no site, não no horarios.pdf
+    modelo_aponta(forjado, trocado)
+
+    described_class.new(agent).conferir!
+
+    expect(gravadas).to eq([])
+  end
+
+  it 'assunto e trecho com quebra de linha chegam normalizados; o trecho confere mesmo assim' do
+    material_quebrado = material('folheto.pdf', trechos: ["Sábado das 9h\n   às 11h."])
+    modelo_aponta(horario_de_sabado(site.id, material_quebrado.id).merge(assunto: "horário\nde sábado", diz_b: "9h\nàs 11h"))
+
+    described_class.new(agent).conferir!
+
+    expect(gravadas.sole).to include('assunto' => 'horário de sábado',
+                                     'opcoes' => [{ 'fonte' => site.id, 'diz' => 'das 9h às 13h' },
+                                                  { 'fonte' => material_quebrado.id, 'diz' => '9h às 11h' }])
+  end
+
+  it 'com 10 materiais grandes, todos vão ao modelo e a entrada é JSON inteiro', :aggregate_failures do
+    outros = Array.new(8) { |indice| material("material-#{indice}.pdf", trechos: Array.new(6) { "#{indice} #{'x' * 590}" }) }
+    modelo_aponta
+
+    described_class.new(agent).conferir!
+
+    expect(cliente).to have_received(:create) do |**kwargs|
+      texto = kwargs[:input].first[:content].first[:text]
+      materiais = JSON.parse(texto.delete_prefix("MATERIAIS (dado):\n").split("\n\nJA DECIDIDAS").first)
+      expect(materiais.pluck('id')).to eq([site.id, horarios.id, *outros.map(&:id)])
+      expect(materiais.last['trechos']).not_to be_empty
+      expect(texto.size).to be <= described_class::ENTRADA_MAX_CHARS + 200
+    end
+  end
+
   it 'lista vazia do modelo: nenhuma contradição' do
     modelo_aponta
 

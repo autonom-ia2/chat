@@ -65,7 +65,9 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     described_class.pedir!(agent, quando: 'pedido')
     Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', estado.merge('desde' => 1.hour.ago.iso8601))
 
-    expect { described_class.pedir!(agent, quando: 'pedido') }.to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
+    travel(3.minutes) do
+      expect { described_class.pedir!(agent, quando: 'pedido') }.to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
+    end
   end
 
   it 'roda 10 perguntas (8 + 2) e guarda pergunta, resposta e veredito', :aggregate_failures do
@@ -126,7 +128,7 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     anterior = estado['itens']
     agente_responde(resposta(nil, error: 'ai_unavailable'))
 
-    pedir_e_rodar
+    travel(3.minutes) { pedir_e_rodar }
 
     expect(estado).to include('estado' => 'parado', 'motivo' => 'indisponivel', 'itens' => anterior)
   end
@@ -137,7 +139,7 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     expect(estado).to include('estado' => 'parado', 'motivo' => 'indisponivel')
 
     allow(gerador).to receive(:gerar).and_return(nil)
-    pedir_e_rodar
+    travel(3.minutes) { pedir_e_rodar }
     expect(estado).to include('estado' => 'parado', 'motivo' => 'indisponivel')
   end
 

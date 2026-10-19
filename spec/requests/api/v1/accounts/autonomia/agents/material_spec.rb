@@ -93,6 +93,18 @@ RSpec.describe 'Autonomia agents - material', type: :request do
     expect(response.parsed_body.dig('autoteste', 'estado')).to eq('rodando')
   end
 
+  it 'pedido de novo antes de 2 min: 429 com o texto leigo, sem abrir rodada', :aggregate_failures do
+    material('cardapio.pdf')
+    post "#{base}/material/autoteste", headers: administrator.create_new_auth_token
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste',
+                                                       agent.reload.config['autoteste'].merge('estado' => 'pronto'))
+
+    expect { post "#{base}/material/autoteste", headers: administrator.create_new_auth_token }
+      .not_to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
+    expect(response).to have_http_status(:too_many_requests)
+    expect(response.parsed_body).to include('error' => I18n.t('autonomia.material.autoteste_espere'), 'code' => 'autoteste_espere')
+  end
+
   it 'sem material aprovado, o autoteste é recusado (422)' do
     post "#{base}/material/autoteste", headers: administrator.create_new_auth_token
 

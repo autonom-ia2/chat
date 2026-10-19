@@ -44,6 +44,21 @@ RSpec.describe Autonomia::Agents::Material::PerguntasDoAutoteste do
     end
   end
 
+  it 'com 10 materiais grandes, todos vão ao modelo e a entrada é JSON inteiro', :aggregate_failures do
+    outros = Array.new(9) { |indice| material("material-#{indice}.pdf", trechos: Array.new(8) { "#{indice} #{'x' * 690}" }) }
+    modelo_escreve(do_material: [{ pergunta: 'Preço?', resposta: 'R$ 25', fonte: cardapio.id }], de_fora: [])
+
+    described_class.new(agent).gerar
+
+    expect(cliente).to have_received(:create) do |**kwargs|
+      texto = kwargs[:input].first[:content].first[:text]
+      materiais = JSON.parse(texto.split("MATERIAIS (dado):\n").last)
+      expect(materiais.pluck('id')).to eq([cardapio.id, *outros.map(&:id)])
+      expect(materiais.last['trechos']).not_to be_empty
+      expect(texto.size).to be <= described_class::ENTRADA_MAX_CHARS + described_class::AGENTE_MAX_CHARS + 100
+    end
+  end
+
   it 'nenhuma pergunta do material, sem material aprovado ou provedor fora: nil', :aggregate_failures do
     modelo_escreve(do_material: [], de_fora: [{ pergunta: 'Bolo?' }])
     expect(described_class.new(agent).gerar).to be_nil

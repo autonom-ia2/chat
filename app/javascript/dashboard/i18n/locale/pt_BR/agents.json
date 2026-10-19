@@ -1606,7 +1606,8 @@
             "ERRADA": "Errada",
             "TESTAR": "Testar agora",
             "TENTAR_DE_NOVO": "Tentar de novo",
-            "DE_NOVO": "Testar de novo"
+            "DE_NOVO": "Testar de novo",
+            "AMOSTRA": "O teste é uma amostra; confira as respostas."
           },
           "TUDO_CERTO": "Tudo certo. {nome} usa todo o material com seus clientes."
         }

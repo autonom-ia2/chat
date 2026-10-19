@@ -270,6 +270,9 @@ describe('AutotesteDoMaterial', () => {
       'disse que não sabia e passou para a equipe'
     );
     expect(no(wrapper, '[data-testar-de-novo]').text()).toBe('Testar de novo');
+    expect(no(wrapper, '[data-aviso-amostra]').text()).toBe(
+      'O teste é uma amostra; confira as respostas.'
+    );
   });
 
   it('inventou numa de fora: aviso âmbar', () => {
@@ -315,6 +318,7 @@ describe('AutotesteDoMaterial', () => {
     );
     expect(no(wrapper, '[data-testar-de-novo]').text()).toBe('Testar agora');
     expect(no(wrapper, '[data-perguntas]').exists()).toBe(false);
+    expect(no(wrapper, '[data-aviso-amostra]').exists()).toBe(false);
   });
 });
 

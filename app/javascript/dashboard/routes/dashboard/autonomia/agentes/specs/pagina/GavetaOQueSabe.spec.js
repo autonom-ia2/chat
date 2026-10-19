@@ -768,6 +768,26 @@ describe('GavetaOQueSabe', () => {
       wrapper.unmount();
     });
 
+    it('testar de novo além do limite: o texto do servidor ao lado, sem quebrar', async () => {
+      preparar([PRONTA]);
+      const conferencias = conferenciasCom({
+        autoteste: { estado: 'pronto', resultados: [] },
+      });
+      conferencias.pedirAutoteste.mockRejectedValue({
+        response: {
+          status: 429,
+          data: { error: 'Espere um pouco para testar de novo.' },
+        },
+      });
+      const wrapper = montar({ fase2: true, conferencias });
+      await clicar('[data-testar-de-novo]');
+      expect(no('[data-erro-conferencia]').textContent).toContain(
+        'Espere um pouco para testar de novo.'
+      );
+      expect(no('[data-testar-de-novo]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
     it('testar de novo pede o autoteste', async () => {
       preparar([PRONTA]);
       const conferencias = conferenciasCom({

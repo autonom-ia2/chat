@@ -16,12 +16,15 @@ class Api::V1::Accounts::Autonomia::Agents::MaterialController < Api::V1::Accoun
     render_unprocessable(I18n.t('autonomia.material.problema_invalido'))
   end
 
-  # "Testar de novo": sem limite de pedidos; com uma rodada em andamento, devolve a dela.
+  # "Testar de novo": com uma rodada em andamento, devolve a dela. Um pedido a cada 2 min e 10 rodadas por dia por agente
+  # (LimiteDoAutoteste): passado o limite, 429 com o texto leigo para a tela mostrar ao lado do botão.
   def autoteste
     estado = ::Autonomia::Agents::Material::Autoteste.pedir!(@agent, quando: 'pedido')
     return render_unprocessable(I18n.t('autonomia.material.autoteste_indisponivel')) if estado.nil?
 
     render json: retrato
+  rescue ::Autonomia::Agents::Material::LimiteDoAutoteste::Excedido => e
+    render json: { error: I18n.t("autonomia.material.autoteste_#{e.motivo}"), code: "autoteste_#{e.motivo}" }, status: :too_many_requests
   end
 
   private

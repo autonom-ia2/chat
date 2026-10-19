@@ -7,9 +7,10 @@ require 'rails_helper'
 # Cenas: C1/C2 foto do cardápio (OCR local de verdade + conferência), C3/C4 planilha sem/com títulos, C5 PDF de texto
 # corrido, C6/C7/C8 contradição entre materiais (uma de verdade, duas que não são), A1 autoteste numa base limpa e A2
 # autoteste com um material reprovado no meio (o fato some: vira cartão). Opcional: `CONFERENCIAS_EVAL_SAIDA=<arquivo>`
-# grava o relatório; `CONFERENCIAS_EVAL_CENA=<nome>` roda só uma cena.
+# grava o relatório; `CONFERENCIAS_EVAL_CENA=<nome>[,<nome>...]` roda só essas cenas; `CONFERENCIAS_EVAL_TETO=<usd>`
+# baixa o teto da rodada (nunca acima de US$ 2).
 module AvaliacaoDasConferencias
-  TETO_USD = 2.0
+  TETO_USD = [ENV.fetch('CONFERENCIAS_EVAL_TETO', '2.0').to_f, 2.0].min
   # O que cada cena deve custar, no máximo, para começar (o real é gravado no relatório).
   ESTIMATIVA = { conferencia: 0.02, contradicao: 0.08, autoteste: 0.6 }.freeze
   FOTOS = Rails.root.join('spec/fixtures/files/autonomia/foto_da_criacao')
@@ -223,9 +224,9 @@ RSpec.describe 'Avaliação paga das conferências e do autoteste do material (#
   end
 
   def cenas_escolhidas
-    nome = ENV.fetch('CONFERENCIAS_EVAL_CENA', nil).presence
-    escolhidas = nome ? AvaliacaoDasConferencias::CENAS.select { |cena| cena[:nome] == nome } : AvaliacaoDasConferencias::CENAS
-    expect(escolhidas).not_to be_empty, "cena desconhecida: #{nome}"
+    nomes = ENV.fetch('CONFERENCIAS_EVAL_CENA', '').split(',').map(&:strip).compact_blank
+    escolhidas = nomes.any? ? AvaliacaoDasConferencias::CENAS.select { |cena| nomes.include?(cena[:nome]) } : AvaliacaoDasConferencias::CENAS
+    expect(escolhidas.size).to eq(nomes.size), "cena desconhecida: #{nomes}" if nomes.any?
     escolhidas
   end
 
