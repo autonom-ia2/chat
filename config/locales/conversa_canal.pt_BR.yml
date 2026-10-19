@@ -1,6 +1,28 @@
 # Conversa com a cara do canal (#1702): mensagens do "+" da caixa de resposta.
 pt_BR:
   conversa_canal:
+    pastas:
+      so_email: Spam e Lixeira existem só nas conversas de e-mail.
+      pasta_invalida: Essa pasta não existe. Use Spam ou Lixeira.
+      so_na_lixeira: Para excluir de vez, mova a conversa para a Lixeira primeiro.
+    ditado:
+      sem_ia: 'Para ditar, a IA precisa estar ligada. Peça para quem administra a conta conectar a chave da OpenAI em Configurações.'
+      sem_audio: 'Não chegou o áudio. Grave de novo.'
+      grande: 'O áudio ficou grande demais. Grave em partes menores.'
+      vazio: 'Não deu para entender o que foi dito. Fale de novo, mais perto do microfone.'
+      falhou: 'Não deu para transcrever agora. Tente de novo em instantes.'
+    email:
+      escreveu: 'Em %{data}, %{remetente} escreveu:'
+      prefixo_encaminhado: 'Enc:'
+      encaminhar_sem_para: 'Coloque em Para quem vai receber o encaminhado.'
+      encaminhada: '---------- Mensagem encaminhada ----------'
+      de: 'De'
+      data: 'Data'
+      assunto: 'Assunto'
+      para: 'Para'
+      data_completa: '%{dia_da_semana}, %{dia} de %{mes} de %{ano} às %{hora}'
+      dias_curtos: ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.']
+      meses_curtos: ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.']
     lugares:
       sem_chave: 'A busca de endereço ainda não está ligada na plataforma. Use as coordenadas do Google Maps.'
       nao_encontrado: 'Não achei este lugar. Procure de novo.'

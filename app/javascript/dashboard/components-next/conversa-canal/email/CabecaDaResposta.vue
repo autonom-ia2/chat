@@ -1,0 +1,112 @@
+<script setup>
+// Destinatários da resposta na conversa de e-mail nova (#1786): Para sempre à vista
+// (no Encaminhar vem vazio), Cc e Cco abrem num toque, cada endereço como etiqueta com
+// sugestão dos contatos. Embaixo, o assunto que o e-mail vai levar (o servidor monta
+// "Re: <assunto da conversa>"). Mesmo contrato do ReplyEmailHead (v-model dos três
+// campos), então o envio é o de sempre. O tipo de resposta fica no TopoDaResposta.
+import { computed, ref, useTemplateRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import CampoDeEnderecos from './CampoDeEnderecos.vue';
+import { assuntoDaResposta } from './dadosDoEmail';
+import { useEmailDaConversa } from './useConversaDeEmail';
+
+// No Encaminhar o assunto é "Enc:" (o servidor monta) e o Para vazio trava o envio.
+const props = defineProps({ encaminhar: { type: Boolean, default: false } });
+const para = defineModel('toEmails', { type: String, default: '' });
+const cc = defineModel('ccEmails', { type: String, default: '' });
+const cco = defineModel('bccEmails', { type: String, default: '' });
+
+const { t } = useI18n();
+const email = useEmailDaConversa();
+
+// Cc e Cco aparecem quando têm endereço e somem quando a resposta nova chega vazia
+// (Responder depois de um Responder a todos). Quem está apagando o último endereço
+// com o cursor no campo continua vendo o campo.
+const verCc = ref(Boolean(cc.value));
+const verCco = ref(Boolean(cco.value));
+const cabeca = useTemplateRef('cabeca');
+const comFoco = seletor =>
+  Boolean(
+    cabeca.value?.querySelector(seletor)?.contains(document.activeElement)
+  );
+watch(cc, valor => {
+  verCc.value = Boolean(valor) || (verCc.value && comFoco('[data-campo-cc]'));
+});
+watch(cco, valor => {
+  verCco.value =
+    Boolean(valor) || (verCco.value && comFoco('[data-campo-cco]'));
+});
+
+const assunto = computed(() =>
+  props.encaminhar && email.assunto.value
+    ? `${t('CONVERSA_CANAL.EMAIL.PREFIXO_ENCAMINHADO')} ${email.assunto.value}`
+    : assuntoDaResposta(email.assunto.value)
+);
+const semPara = computed(
+  () => props.encaminhar && !String(para.value || '').trim()
+);
+
+const LINK =
+  'min-h-9 px-2 rounded-full text-sm text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand';
+</script>
+
+<template>
+  <div ref="cabeca" class="flex flex-col" data-cabeca-da-resposta>
+    <CampoDeEnderecos
+      v-model="para"
+      :rotulo="t('CONVERSA_CANAL.EMAIL.PARA')"
+      :placeholder="t('CONVERSA_CANAL.EMAIL.PARA_EXEMPLO')"
+      data-campo-para
+    >
+      <div class="flex items-center flex-shrink-0">
+        <button
+          v-if="!verCc"
+          type="button"
+          :class="LINK"
+          data-abrir-cc
+          @click="verCc = true"
+        >
+          {{ t('CONVERSA_CANAL.EMAIL.CC') }}
+        </button>
+        <button
+          v-if="!verCco"
+          type="button"
+          :class="LINK"
+          data-abrir-cco
+          @click="verCco = true"
+        >
+          {{ t('CONVERSA_CANAL.EMAIL.CCO') }}
+        </button>
+      </div>
+    </CampoDeEnderecos>
+    <p
+      v-if="semPara"
+      class="px-1 pt-1 text-xs text-n-slate-11"
+      data-encaminhar-sem-para
+    >
+      {{ t('CONVERSA_CANAL.EMAIL.ENCAMINHAR_SEM_PARA') }}
+    </p>
+    <CampoDeEnderecos
+      v-if="verCc"
+      v-model="cc"
+      :rotulo="t('CONVERSA_CANAL.EMAIL.CC')"
+      data-campo-cc
+    />
+    <CampoDeEnderecos
+      v-if="verCco"
+      v-model="cco"
+      :rotulo="t('CONVERSA_CANAL.EMAIL.CCO')"
+      data-campo-cco
+    />
+    <p
+      v-if="assunto"
+      class="flex items-center gap-2 min-h-10 px-1 border-b border-n-weak text-sm"
+      data-assunto-da-resposta
+    >
+      <span class="w-16 flex-shrink-0 text-n-slate-11">
+        {{ t('CONVERSA_CANAL.EMAIL.ASSUNTO_CURTO') }}
+      </span>
+      <span class="truncate text-n-slate-12">{{ assunto }}</span>
+    </p>
+  </div>
+</template>

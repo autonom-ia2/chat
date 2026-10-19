@@ -24,6 +24,9 @@ import {
   tipoDeMensagem,
   usaModelo,
 } from './novaConversa';
+import { useModeloDoEmailNaGaveta } from './useModeloDoEmailNaGaveta';
+import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
+import { assuntoDaResposta } from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
 
 // #1459 — a mensagem e o envio. Conversa nova: a mesma chamada da tela antiga
 // (`contactConversations/create`), com os mesmos formatos de payload.
@@ -40,6 +43,11 @@ const formVazio = () => ({
   modelo: null,
   camposProntos: false,
   textoDoModelo: '',
+  // #1809: modelo de e-mail do "+" (useModeloDoEmailNaGaveta).
+  modeloDoEmail: null,
+  valoresDoModelo: {},
+  // #1809: "Não enviar o histórico" ao continuar uma conversa de e-mail.
+  historicoDesligado: false,
 });
 
 const formatoDe = canal =>
@@ -94,8 +102,46 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   const previa = computed(() =>
     comModelo.value ? form.textoDoModelo : form.mensagem
   );
+  const modeloDoEmail = useModeloDoEmailNaGaveta({
+    form,
+    contato,
+    canal,
+    destino,
+  });
 
-  const limpar = () => Object.assign(form, formVazio());
+  // #1809 — continuando uma conversa de e-mail (com a chave conversa_email_nova), o
+  // último e-mail vai como histórico no fim, como na resposta: sempre, a não ser que
+  // a pessoa tire. O assunto é o da conversa, com "Re: ".
+  const ehCaixaDeEmailNova = useCaixaDeEmailNova();
+  const historico = computed(() => {
+    const emailNovo =
+      tipo.value === TIPOS.EMAIL && ehCaixaDeEmailNova(canal.value?.id);
+    return emailNovo && destino.value
+      ? (continuar?.ultimoEmail.value ?? null)
+      : null;
+  });
+  const comHistorico = computed(
+    () => Boolean(historico.value) && !form.historicoDesligado
+  );
+  const assuntoDaConversa = computed(() =>
+    destino.value ? assuntoDaResposta(continuar?.assunto.value) : ''
+  );
+  // O assunto que o e-mail leva: o da conversa ("Re: ...") ou o digitado na nova.
+  const assuntoNaPrevia = computed(() =>
+    destino.value ? assuntoDaConversa.value : form.assunto
+  );
+  const comCitacao = atributos =>
+    comHistorico.value
+      ? {
+          ...atributos,
+          email_citacao: { tipo: 'historico', message_id: historico.value.id },
+        }
+      : atributos;
+
+  const limpar = () => {
+    modeloDoEmail.cancelar();
+    Object.assign(form, formVazio());
+  };
 
   // Trocar de canal muda o que a mensagem pode ter: a assinatura só vale no
   // e-mail, a formatação que o canal novo não aceita sai, e a mensagem
@@ -119,6 +165,15 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
       bcc: form.bcc,
     });
   };
+
+  // #1809: "Não enviar o histórico" vale para esta conversa; mudar de destino volta ao
+  // padrão (vai junto), como cada Responder na resposta.
+  watch(
+    () => destino.value?.displayId ?? null,
+    () => {
+      form.historicoDesligado = false;
+    }
+  );
 
   watch(canal, (novo, antigo) => {
     if (novo?.id !== antigo?.id) aoTrocarDeCanal(novo, antigo);
@@ -171,7 +226,7 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
       contatoId: contato.value?.id ?? null,
       nome: contato.value?.name || '',
       texto,
-      assunto: email && !destino.value ? form.assunto : '',
+      assunto: email ? assuntoNaPrevia.value : '',
       email,
       chaveDoCanal: chaveDoCanal(canal.value),
       caixa: canal.value?.name || '',
@@ -188,6 +243,9 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     try {
       const onde = await mandar();
       const { contatoId, ...confirmacao } = retrato;
+      // #1809: entrou numa conversa que continua; o próximo e-mail cita o que acabou
+      // de sair, então a gaveta pergunta de novo ao servidor.
+      if (destino.value) continuar?.carregar();
       enviada.value = { ...onde, ...confirmacao };
       if (String(contato.value?.id ?? null) === String(contatoId)) limpar();
     } catch (error) {
@@ -223,25 +281,38 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
       form.textoDoModelo || pronta.pendingMessageContent || pronta.message
     );
 
-  const criarComEscrita = () =>
+  // #1809: com modelo de e-mail, a mensagem leva o `email_modelo` (o servidor monta
+  // e limpa o HTML no MessageBuilder, como na resposta).
+  const comAtributos = (params, atributos) =>
+    atributos
+      ? {
+          ...params,
+          message: { ...params.message, content_attributes: atributos },
+        }
+      : params;
+
+  const criarComEscrita = ({ mensagem, atributos }) =>
     criarConversa(
-      prepareNewMessagePayload({
-        targetInbox: canal.value,
-        selectedContact: contato.value,
-        message: form.mensagem,
-        subject: tipo.value === TIPOS.EMAIL ? form.assunto : '',
-        ccEmails: tipo.value === TIPOS.EMAIL ? form.cc : '',
-        bccEmails: tipo.value === TIPOS.EMAIL ? form.bcc : '',
-        currentUser: usuario.value,
-        attachedFiles: form.anexos,
-        directUploadsEnabled: Boolean(config.value.directUploadsEnabled),
-      }),
+      comAtributos(
+        prepareNewMessagePayload({
+          targetInbox: canal.value,
+          selectedContact: contato.value,
+          message: mensagem,
+          subject: tipo.value === TIPOS.EMAIL ? form.assunto : '',
+          ccEmails: tipo.value === TIPOS.EMAIL ? form.cc : '',
+          bccEmails: tipo.value === TIPOS.EMAIL ? form.bcc : '',
+          currentUser: usuario.value,
+          attachedFiles: form.anexos,
+          directUploadsEnabled: Boolean(config.value.directUploadsEnabled),
+        }),
+        atributos
+      ),
       false
     );
 
   // Mesmo formato da caixa de resposta: texto, anexos e cópias do e-mail. O
   // assunto é o da conversa, que já existe.
-  const responderComEscrita = () => {
+  const responderComEscrita = ({ mensagem, atributos }) => {
     const email = tipo.value === TIPOS.EMAIL;
     const anexos = form.anexos.length
       ? {
@@ -252,18 +323,25 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
         }
       : {};
     return responderNaConversa({
-      message: form.mensagem,
+      message: mensagem,
       ccEmails: email ? form.cc : '',
       bccEmails: email ? form.bcc : '',
       ...anexos,
+      ...(atributos ? { contentAttributes: atributos } : {}),
     });
   };
 
-  const enviarEscrita = () =>
-    despachar(
-      destino.value ? responderComEscrita() : criarComEscrita(),
-      form.mensagem
+  const enviarEscrita = () => {
+    const doTexto =
+      tipo.value === TIPOS.EMAIL
+        ? modeloDoEmail.noEnvio(form.mensagem)
+        : { mensagem: form.mensagem, atributos: null };
+    const envio = { ...doTexto, atributos: comCitacao(doTexto.atributos) };
+    return despachar(
+      destino.value ? responderComEscrita(envio) : criarComEscrita(envio),
+      envio.mensagem
     );
+  };
 
   // `montarPronta` devolve o modelo preenchido (ou null se faltar campo).
   const enviar = montarPronta => {
@@ -278,6 +356,10 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     tipo,
     destino,
     comModelo,
+    modeloDoEmail,
+    historico,
+    comHistorico,
+    assuntoNaPrevia,
     comAssinatura,
     assinatura,
     falta,
