@@ -42,11 +42,20 @@ describe Waha::AntesDoEnvio do
     Redis::Alfred.scan_each(match: 'conversa_canal:leitura:mensagem:*') { |key| Redis::Alfred.delete(key) }
   end
 
-  it 'salva o contato e marca a conversa como lida antes da resposta' do
-    described_class.para_payload(payload_de(resposta))
+  it 'salva o contato e marca a conversa como lida antes de o webhook levar a resposta ao conector' do
+    message = resposta
+    ordem = []
+    allow(Webhooks::Trigger).to receive(:execute) { ordem << :webhook }
+    WebMock.after_request { |req, _| ordem << req.method if req.uri.to_s.start_with?(base) }
+
+    WebhookJob.perform_now(canal.webhook_url, payload_de(message), :api_inbox_webhook)
 
     expect(WebMock).to have_requested(:put, salvar_url).with(body: { firstName: 'Patricia', lastName: 'Stephane' }.to_json)
     expect(WebMock).to have_requested(:post, seen_url).once
+    expect(ordem.last).to eq(:webhook)
+    expect(ordem.count(:webhook)).to eq(1)
+  ensure
+    WebMock::CallbackRegistry.reset
   end
 
   it 'campanha salva o contato mas não marca como lida' do
@@ -75,11 +84,34 @@ describe Waha::AntesDoEnvio do
   end
 
   it 'falha do motor não impede o webhook' do
+    message = resposta
     stub_request(:get, contato_url).to_timeout
     stub_request(:post, seen_url).to_timeout
     allow(Rails.logger).to receive(:info)
+    allow(Webhooks::Trigger).to receive(:execute)
 
-    expect { described_class.para_payload(payload_de(resposta)) }.not_to raise_error
+    WebhookJob.perform_now(canal.webhook_url, payload_de(message), :api_inbox_webhook)
+
+    expect(WebMock).to have_requested(:get, contato_url)
+    expect(Webhooks::Trigger).to have_received(:execute)
+      .with(canal.webhook_url, payload_de(message), :api_inbox_webhook, secret: nil, delivery_id: nil)
+  end
+
+  it 'conversa de grupo não toca a agenda' do
+    contato.update!(custom_attributes: { 'waha_whatsapp_chat_id' => '120363000000000000@g.us' })
+
+    described_class.para_payload(payload_de(resposta))
+
+    expect(WebMock).not_to have_requested(:get, contato_url)
+  end
+
+  it 'sem a lida do #1702 (conversa_cara_do_canal), salva o contato mas não marca como lida' do
+    account.disable_features!('conversa_cara_do_canal')
+
+    described_class.para_payload(payload_de(resposta))
+
+    expect(WebMock).to have_requested(:put, salvar_url)
+    expect(WebMock).not_to have_requested(:post, seen_url)
   end
 
   it 'o WebhookJob da caixa passa por aqui antes de entregar; os outros tipos de webhook não' do

@@ -555,10 +555,10 @@
 # envio pelo WAHA (Híbrido e caixa WAHA comum, inclusive campanha WhatsApp API), o contato é consultado e salvo na
 # agenda do celular, sem sobrescrever nome que o dono salvou (Waha::AgendaDoContato); e a resposta ao cliente (atendente,
 # robô, follow-up, automação; não campanha) marca a conversa como lida antes de sair (ConversaCanal::LeituraAoResponder,
-# que usa a lida do #1702 e depende também de `conversa_cara_do_canal`). Posição 41 na feature_flags_ext_1, bit 40
-# (1099511627776), depois de `etiquetas_do_celular` (tabela da Orquestração, 19/10): se a ordem da main mudar, a posição
-# acompanha (ajustar o spec/models/account_spec.rb). Desligada (padrão): tudo como antes. Sem migration. Nasce ligada nas
-# contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+# que usa a lida do #1702 e depende também de `conversa_cara_do_canal`). A posição na feature_flags_ext_1 é o lugar
+# desta entrada entre as da coluna (o spec/models/account_spec.rb pina o bit real); a Orquestração reservou a 41 (bit 40,
+# 1099511627776) para depois das 38 a 40 da fila e reemite se a ordem de merge mudar. Desligada (padrão): tudo como antes.
+# Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
 - name: whatsapp_agenda_do_contato
   display_name: Contato na agenda do aparelho e lida ao responder (WhatsApp API)
   enabled: false

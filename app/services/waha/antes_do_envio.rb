@@ -1,9 +1,12 @@
 # #1865 — caixa WAHA comum: quem envia é o conector dentro do motor (o chat2you só manda o webhook `message_created`).
 # Antes do webhook sair, no próprio WebhookJob (fila dele, fora do EventDispatcherJob), o contato fica salvo na agenda do
 # aparelho (Waha::AgendaDoContato) e, se for resposta, a conversa fica lida (ConversaCanal::LeituraAoResponder).
-# O ritmo é o de quem cria a mensagem: a campanha WhatsApp API cria uma por vez, com 3 a 8 s entre destinatários
-# (WhatsappApiCampaigns::DeliveryEngine), e cada webhook leva o próprio passo; a leitura e o salvamento só acontecem na
-# primeira mensagem a cada contato (depois, o Redis responde). Nada daqui impede o webhook: falha vira log.
+# Custo: só na primeira mensagem a cada contato (depois, o Redis responde), até alguns segundos com o motor lento; depois
+# de uma falha, o contato fica um tempo sem nova tentativa (Waha::AgendaDoContato::FALHA_TTL). A campanha WhatsApp API
+# continua criando uma mensagem por vez, com 3 a 8 s entre destinatários (WhatsappApiCampaigns::DeliveryEngine), e
+# cada webhook leva o próprio salvamento: o intervalo real varia esses segundos, como já varia com a fila. Duas
+# mensagens ao mesmo contato não se ultrapassam: a segunda espera a decisão da primeira (trava do AgendaDoContato).
+# Nada daqui impede o webhook: falha vira log.
 class Waha::AntesDoEnvio
   EVENT = 'message_created'.freeze
 

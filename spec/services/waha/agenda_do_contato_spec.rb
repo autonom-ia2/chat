@@ -24,6 +24,43 @@ describe Waha::AgendaDoContato do
 
   after { Redis::Alfred.delete(chave) }
 
+  it 'contato que o motor não conhece (404) conta como agenda vazia e é salvo' do
+    allow(client).to receive(:contact).and_raise(Waha::Client::NotFound, 'WAHA GET -> 404')
+
+    garantir
+
+    expect(client).to have_received(:upsert_contact)
+  end
+
+  it 'depois de uma falha não tenta de novo a cada mensagem' do
+    allow(client).to receive(:contact).and_raise(Waha::Client::Timeout, 'sem resposta')
+
+    2.times { garantir }
+
+    expect(client).to have_received(:contact).once
+    expect(Redis::Alfred.ttl(chave)).to be_between(1, described_class::FALHA_TTL)
+  end
+
+  it 'a segunda mensagem ao mesmo contato espera a primeira decidir e não repete o motor' do
+    Redis::Alfred.set("#{chave}:trava", '1', nx: true, ex: 15)
+    allow(client).to receive(:contact)
+    allow(Kernel).to receive(:sleep) { Redis::Alfred.delete("#{chave}:trava") }
+
+    garantir
+
+    expect(Kernel).to have_received(:sleep).once
+    expect(client).not_to have_received(:contact)
+  end
+
+  it 'a marca no Redis não guarda o nome do contato' do
+    na_agenda('')
+
+    garantir
+
+    expect(Redis::Alfred.get(chave)).not_to include('Lays')
+    expect(Redis::Alfred.get(chave)).not_to include(Digest::SHA256.hexdigest('Lays Ferreira')[0, 16])
+  end
+
   it 'salva pelo número quando a agenda não tem o contato, dividindo nome e sobrenome' do
     na_agenda('')
 

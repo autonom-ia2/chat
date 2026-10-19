@@ -6,7 +6,10 @@
 # caixa WAHA comum marca no Waha::AntesDoEnvio, antes de o webhook mandar a resposta ao conector.
 # Reaproveita ConversaCanal::LeituraNoCanal: a mesma flag da lida (`conversa_cara_do_canal`), o mesmo prazo e a mesma
 # marca `read_receipt_sent_at` (a IA da Autonomia, que já marca junto do "digitando", não manda de novo).
-# Só com a flag `whatsapp_agenda_do_contato`. A lida não atrasa nem trava a resposta: falha vira log.
+# Só com a flag `whatsapp_agenda_do_contato`. Vale também para a caixa WhatsApp oficial (Cloud), como combinado no #1865.
+# A lida vem antes da resposta, como no app (leu, depois responde). Custa uma chamada à Meta (até TIMEOUT de
+# ConversaCanal::LeituraNoCanal quando a Meta não responde) e só na primeira resposta depois de cada mensagem recebida;
+# falha vira log e a resposta segue. Se a resposta falhar depois, os tiques azuis ficam: quem respondeu leu.
 module ConversaCanal::LeituraAoResponder
   # Resposta ao cliente: sai para ele e não é nota, modelo aprovado nem campanha (que não responde a nada).
   def self.resposta?(message)
