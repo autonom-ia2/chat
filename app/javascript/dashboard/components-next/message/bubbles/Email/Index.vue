@@ -17,6 +17,7 @@ import { MESSAGE_TYPES } from 'next/message/constants.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
 import CartaoDoEmail from 'dashboard/components-next/conversa-canal/email/CartaoDoEmail.vue';
 import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
+import { htmlComCssSeguro } from 'dashboard/components-next/conversa-canal/email/estiloSeguroDoEmail';
 
 const { content, contentAttributes, attachments, messageType } =
   useMessageContext();
@@ -88,6 +89,9 @@ const fullHTML = computed(() => {
 const unquotedHTML = computed(() =>
   EmailQuoteExtractor.extractQuotes(fullHTML.value)
 );
+// O CSS do remetente não pode escapar do <style> ao passar pelo vue-letter (estiloSeguroDoEmail).
+const fullHTMLSeguro = computed(() => htmlComCssSeguro(fullHTML.value));
+const unquotedHTMLSeguro = computed(() => htmlComCssSeguro(unquotedHTML.value));
 
 const hasQuotedMessage = computed(() =>
   EmailQuoteExtractor.hasQuotes(fullHTML.value)
@@ -164,14 +168,14 @@ const handleSeeOriginal = () => {
               'transform',
               'transform-origin',
             ]"
-            :html="fullHTML"
+            :html="fullHTMLSeguro"
             :text="textToShow"
           />
           <Letter
             v-else
             :key="`letter-unquoted-${translationKeySuffix}`"
             class-name="prose prose-bubble !max-w-none letter-render"
-            :html="unquotedHTML"
+            :html="unquotedHTMLSeguro"
             :allowed-css-properties="[
               ...allowedCssProperties,
               'transform',
