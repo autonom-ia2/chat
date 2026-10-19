@@ -196,7 +196,10 @@ describe('documento isolado do e-mail (#1884)', () => {
     const doc = ler(srcdoc);
     expect(doc.body.textContent).toContain('texto');
     expect(srcdoc).toContain('.b');
-    expect(doc.querySelector('.b').getAttribute('style')).toBeNull();
+    // Sai só a declaração com o endereço quebrado; o resto do estilo fica.
+    expect(doc.querySelector('.b').getAttribute('style') || '').not.toContain(
+      'url('
+    );
   });
 
   it('imagem só com endereço completo web ou embutida: relativa não pede nada ao painel', () => {
@@ -397,6 +400,18 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(srcdoc).not.toContain('/x/y');
     expect(srcdoc).not.toContain('//mau.test');
     expect(srcdoc).toContain('https://ok.test/f.png');
+  });
+
+  it('")" dentro das aspas não devolve o endereço relativo (os dois caminhos)', () => {
+    const html = `<style>.a{background:url("/X)y")} @media (max-width:600px){.b{background-image:url("/M)y")}}</style>
+      <p class="a" style='background-image:url("/I)z")'>a</p>
+      <table background='") ; color:red; x:url("/T'><tr><td>b</td></tr></table>`;
+    const srcdoc = documentoIsolado(html);
+    ['/X)y', '/M)y', '/I)z', '/T'].forEach(rel =>
+      expect(srcdoc).not.toContain(rel)
+    );
+    const antigo = htmlComCssSeguro(html, { conferirUrls: true });
+    ['/X)y', '/M)y', '/I)z'].forEach(rel => expect(antigo).not.toContain(rel));
   });
 
   it('HTML que derruba a limpeza vira texto: o e-mail não some', () => {

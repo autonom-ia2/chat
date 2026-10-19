@@ -10,6 +10,7 @@
 // estrutura (CSSOM e DOM), sem regex.
 
 import { regraDaMoldura, semUnidadeDaTela } from './cssDaMoldura';
+import { semUrlInsegura } from './enderecoDoEmail';
 
 const INICIO_DE_URL = 'url(';
 
@@ -54,10 +55,17 @@ const regraLimpavel = regra => {
   return false;
 };
 
+// Com `conferirUrls`, cada declaração com endereço inseguro sai (enderecoDoEmail.js).
+const semUrlsInseguras = regra => {
+  if (regra instanceof CSSStyleRule) semUrlInsegura(regra.style);
+  else [...regra.cssRules].forEach(filha => semUrlInsegura(filha.style));
+};
+
 const regrasSeguras = (folha, conferirUrls, tela) => {
   try {
-    return [...folha.cssRules]
-      .filter(regraLimpavel)
+    const limpaveis = [...folha.cssRules].filter(regraLimpavel);
+    if (conferirUrls) limpaveis.forEach(semUrlsInseguras);
+    return limpaveis
       .map(regra => (tela ? regraDaMoldura(regra, tela) : regra.cssText))
       .filter(texto => texto && cssSeguro(texto, conferirUrls))
       .join('\n');
@@ -86,6 +94,7 @@ export const prepararEstilos = (
     estilo.textContent = regrasSeguras(estilo.sheet, conferirUrls, tela);
   });
   doc.querySelectorAll('[style]').forEach(elemento => {
+    if (conferirUrls) semUrlInsegura(elemento.style);
     const texto = elemento.style.cssText;
     if (!cssSeguro(texto, conferirUrls)) {
       elemento.removeAttribute('style');

@@ -13,6 +13,7 @@ import {
 } from 'dashboard/helper/emailQuoteExtractor.js';
 import { cortarCitacaoDosLeitores } from './citacaoDosLeitores';
 import { prepararEstilos, semMarcacaoPerigosa } from './estiloSeguroDoEmail';
+import { imagemSegura, linkSeguro } from './enderecoDoEmail';
 
 // Nunca allow-scripts: com allow-same-origin junto, o e-mail sairia da moldura.
 export const SANDBOX_DO_EMAIL =
@@ -22,7 +23,12 @@ export const CSS_PERMITIDO = [
   ...allowedCssProperties,
   'transform',
   'transform-origin',
-  // Comuns em e-mail de hoje e mantidos pelo Gmail.
+];
+
+// Só na moldura (recortada, isolada do painel): comuns em e-mail de hoje e mantidos pelo
+// Gmail. No Letter, que fica no documento do painel, uma sombra poderia pintar fora.
+const CSS_DA_MOLDURA = [
+  ...CSS_PERMITIDO,
   'justify-content',
   'align-items',
   'gap',
@@ -45,10 +51,6 @@ export const CSP_DO_EMAIL = [
   "media-src 'none'",
   "base-uri 'none'",
 ].join('; ');
-
-const PROTOCOLOS_DE_LINK = ['http:', 'https:', 'mailto:', 'tel:'];
-const PROTOCOLOS_DE_IMAGEM = ['http:', 'https:'];
-const IMAGEM_EMBUTIDA = 'data:image/';
 
 export const MARCA_DA_PROPORCAO = 'data-proporcao';
 
@@ -115,24 +117,6 @@ export const citacaoDoDocumento = (html, { leitores = true } = {}) => {
     html: comoTexto(doc),
     achou: achouDosLeitores || achouDoChatwoot,
   };
-};
-
-// Só endereço completo: relativo resolveria contra o painel (pedido com a sessão do atendente).
-const enderecoCom = protocolos => endereco => {
-  try {
-    const url = new URL(String(endereco || '').trim());
-    return protocolos.includes(url.protocol) ? url.href : '';
-  } catch {
-    return '';
-  }
-};
-const linkSeguro = enderecoCom(PROTOCOLOS_DE_LINK);
-const imagemWeb = enderecoCom(PROTOCOLOS_DE_IMAGEM);
-
-const imagemSegura = endereco => {
-  const texto = String(endereco || '').trim();
-  if (texto.toLowerCase().startsWith(IMAGEM_EMBUTIDA)) return texto;
-  return imagemWeb(texto);
 };
 
 // O estilo e a direção do <body> vão para uma div por cima de tudo, que o sanitizador
@@ -291,7 +275,7 @@ const montarDocumento = (html, semRastreio, tela) => {
   const limpo = sanitize(comoTexto(original), '', {
     noWrapper: true,
     preserveCssPriority: true,
-    allowedCssProperties: CSS_PERMITIDO,
+    allowedCssProperties: CSS_DA_MOLDURA,
     rewriteExternalLinks: semRastreio,
     rewriteExternalResources: imagemSemRastreio(semRastreio),
   });
@@ -358,7 +342,7 @@ export const corpoParaImprimir = srcdoc => {
   const limpo = sanitize(comoTexto(doc), '', {
     id: ESCOPO_DA_IMPRESSAO,
     preserveCssPriority: true,
-    allowedCssProperties: CSS_PERMITIDO,
+    allowedCssProperties: CSS_DA_MOLDURA,
     // Como na tela: imagem embutida (data:image) fica, endereço relativo sai.
     rewriteExternalResources: imagemSemRastreio(semMudar),
   });
