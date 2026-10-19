@@ -111,10 +111,20 @@ const filtroDoLinkAtivo = (state, rootState) =>
   naCaixa(rootState?.route) &&
   filtroDoLinkNosParametros(filtrosDoEndereco(rootState.route));
 let releituraAgendada = null;
+
+// Geração da lista: sobe a cada leitura, esvaziamento ou troca de aba. A releitura das páginas e a leitura comum
+// guardam a geração em que começaram; se outra leitura, um esvaziamento ou uma troca de aba vier no meio, a resposta
+// é de uma lista que já não existe e é descartada.
+let geracaoDaLista = 0;
+const novaGeracaoDaLista = () => {
+  geracaoDaLista += 1;
+  return geracaoDaLista;
+};
 let ultimaReleituraEm = -Infinity;
 // Uma releitura por vez: o evento que chega com uma em andamento fica para depois dela, em vez de começar outra que
 // descartaria a primeira (sob tráfego contínuo, a lista nunca seria trocada).
 let releituraEmCurso = false;
+let releituraDaVez = 0;
 let releituraPendente = false;
 // Releitura descartada (rolagem contínua puxando páginas descarta todas) é refeita sozinha; a 5ª seguida agenda uma
 // última, depois do piso, para a lista não ficar velha. Se essa também cair, a próxima vem do próximo evento ao vivo
@@ -128,6 +138,9 @@ export const cancelarReleituraDoFiltroDoLink = () => {
   releituraEmCurso = false;
   releituraPendente = false;
   descartesSeguidos = 0;
+  // A releitura em andamento, se houver, é da caixa que saiu: a resposta dela é descartada.
+  releituraDaVez += 1;
+  novaGeracaoDaLista();
 };
 const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
   if (!filtroDoLinkAtivo(state, rootState)) return;
@@ -136,9 +149,13 @@ const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
     return;
   }
   if (releituraAgendada) return;
-  const espera = Math.max(
-    RELEITURA_AO_VIVO_MS,
-    ultimaReleituraEm + PISO_ENTRE_RELEITURAS_MS - Date.now()
+  // Entre 2,5 s e o piso (relógio do sistema que volta não estica a espera).
+  const espera = Math.min(
+    PISO_ENTRE_RELEITURAS_MS,
+    Math.max(
+      RELEITURA_AO_VIVO_MS,
+      ultimaReleituraEm + PISO_ENTRE_RELEITURAS_MS - Date.now()
+    )
   );
   releituraAgendada = setTimeout(() => {
     releituraAgendada = null;
@@ -160,15 +177,6 @@ const comTempoLimite = async ler => {
   } finally {
     clearTimeout(relogio);
   }
-};
-
-// Geração da lista: sobe a cada leitura, esvaziamento ou troca de aba. A releitura das páginas e a leitura comum
-// guardam a geração em que começaram; se outra leitura, um esvaziamento ou uma troca de aba vier no meio, a resposta
-// é de uma lista que já não existe e é descartada.
-let geracaoDaLista = 0;
-const novaGeracaoDaLista = () => {
-  geracaoDaLista += 1;
-  return geracaoDaLista;
 };
 
 // Como no UPDATE_CONVERSATION: a conversa que o websocket já atualizou depois do pedido fica na versão da lista, e
@@ -236,7 +244,8 @@ const releerAsPaginasDoFiltroDoLink = async (
 };
 
 // Uma página só, ou mais de 5: volta à primeira página no lugar da lista, sem acender o carregando do rodapé. A rolagem
-// vai ao topo só se a lista foi trocada. Passado o tempo-limite, a leitura é cancelada.
+// vai ao topo só se a lista foi trocada. Passado o tempo-limite, a leitura é cancelada. Devolve se trocou a lista (uma
+// rolagem que pede a próxima página no meio cancela esta leitura, e ela conta como descartada).
 const voltarAPrimeiraPaginaDoFiltroDoLink = async (
   { dispatch, state },
   paginas
@@ -254,9 +263,11 @@ const voltarAPrimeiraPaginaDoFiltroDoLink = async (
     if (isAbortError(error)) dispatch('invalidateConversationListRequests');
     throw error;
   }
-  if (paginas > PAGINAS_RELIDAS_NO_MAXIMO && state.allConversations !== antes) {
+  const trocou = state.allConversations !== antes;
+  if (paginas > PAGINAS_RELIDAS_NO_MAXIMO && trocou) {
     emitter.emit(BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO);
   }
+  return trocou;
 };
 
 // actions
@@ -283,30 +294,33 @@ const actions = {
     const paginas = rootGetters['conversationPage/getCurrentPageFilter'](
       state.conversationFilters.assigneeType
     );
+    releituraDaVez += 1;
+    const estaReleitura = releituraDaVez;
     releituraEmCurso = true;
     ultimaReleituraEm = Date.now();
     try {
-      if (paginas > 1 && paginas <= PAGINAS_RELIDAS_NO_MAXIMO) {
-        // Descartada (a lista foi lida, esvaziada ou trocou de aba no meio): relê de novo depois; a 5ª seguida agenda a
-        // última.
-        const trocou = await releerAsPaginasDoFiltroDoLink(contexto, paginas);
-        descartesSeguidos = trocou ? 0 : descartesSeguidos + 1;
-        if (!trocou && descartesSeguidos <= DESCARTES_SEGUIDOS_NO_MAXIMO) {
-          releituraPendente = true;
-        }
-      } else {
-        await voltarAPrimeiraPaginaDoFiltroDoLink(contexto, paginas);
-        descartesSeguidos = 0;
+      const trocou =
+        paginas > 1 && paginas <= PAGINAS_RELIDAS_NO_MAXIMO
+          ? await releerAsPaginasDoFiltroDoLink(contexto, paginas)
+          : await voltarAPrimeiraPaginaDoFiltroDoLink(contexto, paginas);
+      // Descartada (a lista foi lida, esvaziada ou trocou de aba no meio): relê de novo depois; a 5ª seguida agenda a
+      // última.
+      descartesSeguidos = trocou ? 0 : descartesSeguidos + 1;
+      if (!trocou && descartesSeguidos <= DESCARTES_SEGUIDOS_NO_MAXIMO) {
+        releituraPendente = true;
       }
     } catch (error) {
       // Tempo-limite ou leitura cancelada não é erro; o próximo evento do websocket (ou a releitura de um minuto) tenta
       // de novo.
       if (!isAbortError(error)) Sentry.captureException(error);
     } finally {
-      releituraEmCurso = false;
-      if (releituraPendente) {
-        releituraPendente = false;
-        agendarReleituraDoFiltroDoLink(contexto);
+      // Cancelada no meio (a caixa desmontou): a releitura de agora não mexe nas marcas da que veio depois.
+      if (estaReleitura === releituraDaVez) {
+        releituraEmCurso = false;
+        if (releituraPendente) {
+          releituraPendente = false;
+          agendarReleituraDoFiltroDoLink(contexto);
+        }
       }
     }
   },

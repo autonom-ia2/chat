@@ -112,6 +112,25 @@ describe('filtros pelo link (#1883)', () => {
       });
     });
 
+    it('a leitura silenciosa (releitura do filtro do link) não acende o carregando do rodapé; a comum acende', async () => {
+      const commit = vi.fn();
+      const state = { conversationFilters: { daIa: true, page: 1 } };
+      api.get.mockResolvedValue(resposta([4]));
+
+      await actions.fetchAllConversations(
+        { commit, dispatch: vi.fn(), state },
+        { replaceExisting: true, silenciosa: true }
+      );
+      expect(commit).not.toHaveBeenCalledWith(types.SET_LIST_LOADING_STATUS);
+      expect(commit).toHaveBeenCalledWith(types.SET_IDS_DO_FILTRO_DO_LINK, {
+        ids: [4],
+        substituir: true,
+      });
+
+      await actions.fetchAllConversations({ commit, dispatch: vi.fn(), state });
+      expect(commit).toHaveBeenCalledWith(types.SET_LIST_LOADING_STATUS);
+    });
+
     it('sem o filtro não guarda nada', async () => {
       const commit = vi.fn();
       api.get.mockResolvedValueOnce(resposta([4]));
@@ -615,6 +634,46 @@ describe('filtros pelo link (#1883)', () => {
         expect(releituras(contexto.dispatch) - antes).toBe(
           DESCARTES_SEGUIDOS_NO_MAXIMO - 1
         );
+      });
+
+      it('caixa desmontada com a releitura em voo: a resposta dela não grava e não solta a releitura que veio depois', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 2 });
+
+        const antiga = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(2));
+        cancelarReleituraDoFiltroDoLink();
+        const nova = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(4));
+        fila[0].responder([1]);
+        fila[1].responder([2]);
+        await antiga;
+
+        expect(contexto.commit).not.toHaveBeenCalled();
+        // A nova segue em curso: outra releitura pedida agora fica para depois dela.
+        await actions.releerFiltroDoLink(contexto);
+        expect(fila).toHaveLength(4);
+
+        fila[2].responder([3]);
+        fila[3].responder([4]);
+        await nova;
+        expect(
+          gravados(contexto.commit, types.REPLACE_CONVERSATION_LIST).map(idsDe)
+        ).toEqual([[3, 4]]);
+      });
+
+      it('com 6 páginas, a volta à página 1 cancelada por uma rolagem conta como descartada e é relida depois', async () => {
+        const contexto = contextoCom({
+          paginas: PAGINAS_RELIDAS_NO_MAXIMO + 1,
+        });
+        // A leitura da página 1 foi cancelada: a lista não trocou.
+        contexto.dispatch = vi.fn(async () => {});
+
+        await actions.releerFiltroDoLink(contexto);
+        expect(releituras(contexto.dispatch)).toBe(0);
+
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
+        expect(releituras(contexto.dispatch)).toBe(1);
       });
 
       it('página seguinte que chega depois da troca da lista é descartada (a página não avança)', async () => {
