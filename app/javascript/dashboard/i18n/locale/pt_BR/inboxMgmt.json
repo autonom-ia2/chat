@@ -1747,6 +1747,7 @@
       "UPDATE": "Atualizar configurações do IMAP",
       "TOGGLE_AVAILABILITY": "Habilitar a configuração IMAP para esta caixa de entrada",
       "TOGGLE_HELP": "Ativar o IMAP ajudará o usuário a receber e-mails",
+      "READ_SYNC_HELP": "O lido dos e-mails só é sincronizado com o servidor de e-mail com o IMAP ligado. Caixa só com encaminhamento não sincroniza.",
       "EDIT": {
         "SUCCESS_MESSAGE": "Configurações IMAP atualizadas com sucesso",
         "ERROR_MESSAGE": "Não é possível atualizar as configurações IMAP"

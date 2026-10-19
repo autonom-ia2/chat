@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_141500) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_160000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1779,6 +1779,33 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_141500) do
     t.index ["identifier", "account_id"], name: "uniq_identifier_per_account_contact", unique: true
     t.index ["name", "email", "phone_number", "identifier"], name: "index_contacts_on_name_email_phone_number_identifier", opclass: :gin_trgm_ops, using: :gin
     t.index ["phone_number", "account_id"], name: "index_contacts_on_phone_number_and_account_id"
+  end
+
+  create_table "conversa_canal_email_lido_caixas", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.datetime "ponto_de_partida", null: false
+    t.datetime "sincronizado_em"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_conversa_canal_email_lido_caixas_on_account_id"
+    t.index ["inbox_id"], name: "index_conversa_canal_email_lido_caixas_on_inbox_id", unique: true
+  end
+
+  create_table "conversa_canal_email_lidos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "message_id", null: false
+    t.bigint "uid"
+    t.bigint "uidvalidity"
+    t.boolean "seen_no_servidor", default: false, null: false
+    t.datetime "desmarcado_no_servidor_em"
+    t.datetime "sincronizado_em"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_conversa_canal_email_lidos_on_account_id"
+    t.index ["inbox_id", "uid"], name: "index_conversa_canal_email_lidos_on_inbox_id_and_uid"
+    t.index ["message_id"], name: "index_conversa_canal_email_lidos_on_message_id", unique: true
   end
 
   create_table "conversa_canal_pastas_do_email", force: :cascade do |t|
@@ -4286,6 +4313,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_141500) do
   add_foreign_key "campaign_recipients", "inboxes", on_delete: :cascade
   add_foreign_key "campaign_reply_codes", "accounts", on_delete: :cascade
   add_foreign_key "contacts", "users", column: "opted_out_by_id", on_delete: :nullify, validate: false
+  add_foreign_key "conversa_canal_email_lido_caixas", "accounts", on_delete: :cascade
+  add_foreign_key "conversa_canal_email_lido_caixas", "inboxes", on_delete: :cascade
+  add_foreign_key "conversa_canal_email_lidos", "accounts", on_delete: :cascade
+  add_foreign_key "conversa_canal_email_lidos", "inboxes", on_delete: :cascade
+  add_foreign_key "conversa_canal_email_lidos", "messages", on_delete: :cascade
   add_foreign_key "conversa_canal_pastas_do_email", "conversations", on_delete: :cascade
   add_foreign_key "conversa_canal_remetentes_no_spam", "accounts", on_delete: :cascade
   add_foreign_key "conversa_canal_remetentes_no_spam", "inboxes", on_delete: :cascade
