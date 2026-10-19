@@ -91,9 +91,14 @@ const consultar = async contaId => {
     }
     return data?.available === true;
   } catch (erro) {
-    // Sem resposta, o ✨ fica fora; o erro fica no console para quem investiga.
+    // Sem resposta, o ✨ fica fora; status e mensagem ficam no console para quem investiga (o
+    // erro inteiro do axios leva os cabeçalhos de login da requisição).
     // eslint-disable-next-line no-console
-    console.error('IA do e-mail: falha ao consultar a disponibilidade', erro);
+    console.error(
+      'IA do e-mail: falha ao consultar a disponibilidade',
+      erro?.response?.status,
+      erro?.message
+    );
     return false;
   }
 };
