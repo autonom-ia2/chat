@@ -17,7 +17,9 @@ class Crm::Ai::QuoteVerifier
   def verified?
     return false if @quote.length < MIN_QUOTE_LENGTH
 
-    Array(@messages).any? { |message| normalize_for_quote(message[:content]).include?(@quote) }
+    # Cópia encaminhada pela equipe (#1760) é texto de outra pessoa: não prova pendência desta conversa.
+    Array(@messages).reject { |message| message[:forwarded] }
+                    .any? { |message| normalize_for_quote(message[:content]).include?(@quote) }
   end
 
   private

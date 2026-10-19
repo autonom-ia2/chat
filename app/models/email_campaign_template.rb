@@ -26,6 +26,8 @@
 class EmailCampaignTemplate < ApplicationRecord
   # account is optional: account_id IS NULL marks a GLOBAL gallery template shared with every account.
   belongs_to :account, optional: true
+  # Images the template shows stay attached to it, so deleting the source campaign keeps them (#1822).
+  include RetainsEmailImages
 
   # Real compiled email HTML/MJML easily exceeds ApplicationRecord's global 20k text cap;
   # declare an explicit (generous) limit so the global guard skips these columns.

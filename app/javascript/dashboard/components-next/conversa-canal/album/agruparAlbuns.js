@@ -7,6 +7,11 @@
 //   cliente que vêm logo depois, até 30 s do marcador, e para no 1º que não entra. O
 //   marcador some da lista. Sem marcador, cada foto fica solta. O WAHA (caixa híbrida)
 //   não grava sinal de álbum por aqui (o conector é de fora deste repositório): solta.
+// - Chegando (#1831): as fotos vêm uma a uma, de 11 a 19 s depois do marcador. Enquanto
+//   a janela do marcador está aberta e nada cortou a sequência, o álbum já aparece, com
+//   "Recebendo fotos…" e quadros reservados, desde o marcador sozinho. Nenhuma foto do
+//   álbum aparece solta antes de entrar nele. O álbum do marcador fica em quadrados de
+//   2 em 2, chegando e depois: fechada a janela, nenhum quadro muda de lugar.
 // - Enviado pela plataforma: várias fotos do mesmo envio são criadas quase juntas
 //   (até 3 s entre uma e outra) e seguem em álbum, como o app faz para quem manda junto.
 import {
@@ -59,12 +64,15 @@ export const podeEntrarNoAlbum = mensagem => {
   );
 };
 
-// O "pai" do álbum que a Cloud entrega como não suportada, do cliente.
+// O "pai" do álbum que a Cloud entrega como não suportada, do cliente. Com
+// hybridRecovery (chat#1489) é uma mensagem de verdade que o WhatsApp API busca no
+// celular (modelo, botões, lista), não o marcador: fica à vista, e as fotos, soltas.
 export const eMarcadorDeAlbum = mensagem =>
   mensagem?.messageType === MESSAGE_TYPES.INCOMING &&
   !mensagem.private &&
   mensagem.contentAttributes?.isUnsupported === true &&
-  mensagem.contentAttributes?.unsupportedKind === 'unknown';
+  mensagem.contentAttributes?.unsupportedKind === 'unknown' &&
+  !mensagem.contentAttributes?.hybridRecovery;
 
 const dentroDaJanela = (desde, atual, janela) => {
   const espera = atual.createdAt - desde.createdAt;
@@ -72,7 +80,8 @@ const dentroDaJanela = (desde, atual, janela) => {
 };
 
 // Recebido: do marcador em diante, enquanto o item entra, é da mesma pessoa e chega
-// até 30 s depois do marcador.
+// até 30 s depois do marcador. `noFim` diz se a lista acabou (o álbum ainda pode
+// crescer) ou se algo cortou a sequência (não cresce mais).
 const itensDoMarcador = (lista, inicio, { fuso, abreBloco }) => {
   const marcador = lista[inicio];
   const itens = [];
@@ -83,10 +92,10 @@ const itensDoMarcador = (lista, inicio, { fuso, abreBloco }) => {
       !(itens.length && abreBloco(atual)) &&
       dentroDaJanela(marcador, atual, JANELA_DO_ALBUM_EM_SEGUNDOS) &&
       continuaASequencia(marcador, atual, fuso);
-    if (!entra) break;
+    if (!entra) return { itens, noFim: false };
     itens.push(atual);
   }
-  return itens;
+  return { itens, noFim: true };
 };
 
 // Enviado: itens nossos seguidos, criados até 3 s um do outro, pela mesma pessoa.
@@ -111,34 +120,81 @@ const abreEnvio = mensagem =>
   mensagem.messageType === MESSAGE_TYPES.OUTGOING &&
   podeEntrarNoAlbum(mensagem);
 
-// Devolve os álbuns (Map: id do 1º item -> mensagens, na ordem da conversa) e os ids
-// dos marcadores que abriram álbum (somem da lista). `abreBloco` (opcional) diz quem
+// Até quando (segundos) o álbum do marcador ainda recebe fotos.
+export const fimDaChegada = marcador =>
+  marcador.createdAt + JANELA_DO_ALBUM_EM_SEGUNDOS;
+
+// Ainda chegando: a lista acabou no álbum e a janela do marcador não fechou. Sem
+// `agora`, nada está chegando.
+const aindaChegando = ({ marcador, noFim, agora }) =>
+  agora !== undefined && noFim && agora <= fimDaChegada(marcador);
+
+// Do marcador: o álbum chegando (mesmo com 0 ou 1 item), o álbum pronto (2+) ou nada.
+// Chegando sem item nenhum, o balão do álbum é o do próprio marcador. O álbum do
+// marcador é desenhado em quadrados (a forma com que chegou), pronto ou não.
+const albumDoMarcador = (lista, inicio, opcoes) => {
+  const marcador = lista[inicio];
+  const { itens, noFim } = itensDoMarcador(lista, inicio, opcoes);
+  const passo = itens.length + 1;
+  if (aindaChegando({ marcador, noFim, agora: opcoes.agora })) {
+    const noMarcador = !itens.length;
+    return {
+      passo,
+      chave: noMarcador ? marcador.id : itens[0].id,
+      itens,
+      escondeMarcador: !noMarcador,
+      emQuadrados: true,
+      chegada: { noMarcador, ate: fimDaChegada(marcador) },
+    };
+  }
+  if (itens.length < MINIMO_DO_ALBUM) return { passo: 1 };
+  return {
+    passo,
+    chave: itens[0].id,
+    itens,
+    escondeMarcador: true,
+    emQuadrados: true,
+  };
+};
+
+const albumDoEnvio = (lista, inicio, opcoes) => {
+  const itens = itensDoEnvio(lista, inicio, opcoes);
+  if (itens.length < MINIMO_DO_ALBUM) return { passo: 1 };
+  return { passo: itens.length, chave: itens[0].id, itens };
+};
+
+const albumQueComecaEm = (lista, inicio, opcoes) => {
+  const mensagem = lista[inicio];
+  if (eMarcadorDeAlbum(mensagem)) return albumDoMarcador(lista, inicio, opcoes);
+  if (abreEnvio(mensagem)) return albumDoEnvio(lista, inicio, opcoes);
+  return { passo: 1 };
+};
+
+// Devolve os álbuns (Map: id do balão que desenha o álbum -> mensagens, na ordem da
+// conversa), os ids dos marcadores que somem da lista, os álbuns ainda chegando
+// (Map: mesmo id -> { noMarcador, ate }) e os desenhados em quadrados (Set de ids, os
+// que vieram de um marcador). `abreBloco` (opcional) diz quem
 // não pode ficar escondido dentro do álbum anterior, como a 1ª não lida, que leva a
-// etiqueta "não lidas" acima dela.
+// etiqueta "não lidas" acima dela. `agora` (segundos) liga o álbum chegando (#1831).
 export const agruparDaConversa = (
   lista,
-  { fuso, abreBloco = () => false } = {}
+  { fuso, abreBloco = () => false, agora } = {}
 ) => {
   const albuns = new Map();
   const marcadores = new Set();
-  const opcoes = { fuso, abreBloco };
+  const chegadas = new Map();
+  const emQuadrados = new Set();
+  const opcoes = { fuso, abreBloco, agora };
   let i = 0;
   while (i < lista.length) {
-    const mensagem = lista[i];
-    let itens = [];
-    if (eMarcadorDeAlbum(mensagem)) itens = itensDoMarcador(lista, i, opcoes);
-    else if (abreEnvio(mensagem)) itens = itensDoEnvio(lista, i, opcoes);
-    // Os itens vêm logo depois do marcador (ou a partir do próprio envio).
-    const doMarcador = itens[0] !== mensagem;
-    if (itens.length >= MINIMO_DO_ALBUM) {
-      albuns.set(itens[0].id, itens);
-      if (doMarcador) marcadores.add(mensagem.id);
-      i += itens.length + (doMarcador ? 1 : 0);
-    } else {
-      i += 1;
-    }
+    const album = albumQueComecaEm(lista, i, opcoes);
+    if (album.escondeMarcador) marcadores.add(lista[i].id);
+    if (album.chave !== undefined) albuns.set(album.chave, album.itens);
+    if (album.chegada) chegadas.set(album.chave, album.chegada);
+    if (album.emQuadrados) emQuadrados.add(album.chave);
+    i += album.passo;
   }
-  return { albuns, marcadores };
+  return { albuns, marcadores, chegadas, emQuadrados };
 };
 
 export const agruparAlbuns = (lista, opcoes) =>
@@ -187,4 +243,30 @@ export const quadrosDoMosaico = itens => {
       ? itens.length - (QUADROS_DO_MOSAICO - 1)
       : 0;
   return { quadros, escondidos };
+};
+
+// Quadro reservado: a foto ainda não chegou.
+export const VAGA = null;
+// Grade em quadrados: de 2 em 2, a linha incompleta fechada por um reservado.
+const COLUNAS_DA_GRADE = 2;
+
+// Quadros do álbum (#1831). Enviado pela plataforma: o mosaico de sempre. Do marcador:
+// quadrados de 2 em 2, que só crescem no fim; o quadro que já apareceu não muda de
+// tamanho nem de lugar, nem quando a janela fecha. Chegando, a linha incompleta (ou o
+// álbum ainda sem foto) ganha quadros reservados. Mais de 4: "+N" no 4º, como sempre.
+export const quadrosDoAlbum = (
+  itens,
+  { emQuadrados = false, chegando = false } = {}
+) => {
+  const { quadros, escondidos } = quadrosDoMosaico(itens);
+  if (!emQuadrados) return { quadros, escondidos, emQuadrados: false };
+  const faltam = quadros.length
+    ? quadros.length % COLUNAS_DA_GRADE
+    : COLUNAS_DA_GRADE;
+  const reservados = chegando ? faltam : 0;
+  return {
+    quadros: [...quadros, ...Array(reservados).fill(VAGA)],
+    escondidos,
+    emQuadrados: true,
+  };
 };

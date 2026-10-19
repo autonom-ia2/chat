@@ -146,8 +146,13 @@ export default {
     isOpen() {
       return this.currentChat?.status === wootConstants.STATUS_TYPE.OPEN;
     },
+    // Quem só lê (#1800) não responde, não aplica etiqueta e não marca como lida: o "lido" é da conversa, de todos.
+    canOperate() {
+      return this.$store.getters.canOperateConversation(this.currentChat);
+    },
     shouldShowLabelSuggestions() {
       return (
+        this.canOperate &&
         this.isOpen &&
         this.captainTasksEnabled &&
         this.isLabelSuggestionFeatureEnabled &&
@@ -324,8 +329,13 @@ export default {
       }
       this.fetchAllAttachmentsFromCurrentChat();
       this.fetchSuggestions();
+      this.fetchParticipantsForReading();
       this.messageSentSinceOpened = false;
       this.resetReplyEditorHeight();
+    },
+    // A lista de participantes chegou e liberou responder: marca como lida o que ficou para trás (#1800).
+    canOperate(pode, podia) {
+      if (pode && !podia) this.makeMessagesRead();
     },
   },
 
@@ -346,6 +356,7 @@ export default {
     if (this.pele) this.$nextTick(() => this.rolarNaPele());
     this.fetchAllAttachmentsFromCurrentChat();
     this.fetchSuggestions();
+    this.fetchParticipantsForReading();
   },
 
   unmounted() {
@@ -356,9 +367,17 @@ export default {
   },
 
   methods: {
+    // Quem só lê e também atende as em que participa (#1800): a lista de participantes decide se responde aqui.
+    fetchParticipantsForReading() {
+      if (this.canOperate || !this.currentChat.id) return;
+      this.$store.dispatch('conversationWatchers/show', {
+        conversationId: this.currentChat.id,
+      });
+    },
     async fetchSuggestions() {
       // start empty, this ensures that the label suggestions are not shown
       this.labelSuggestions = [];
+      if (!this.canOperate) return;
 
       if (this.isLabelSuggestionDismissed()) {
         return;
@@ -644,6 +663,7 @@ export default {
     },
 
     makeMessagesRead() {
+      if (!this.canOperate) return;
       this.$store.dispatch('markMessagesRead', {
         id: this.currentChat.id,
         // Recibo de leitura no WhatsApp só com a pele (sem ela, como no main).
@@ -682,15 +702,28 @@ export default {
         :href-link-text="$t('CONVERSATION.INSTAGRAM_RESTRICTION_STATUS_LINK')"
       />
       <AvisoJanelaFechada
-        v-if="!currentChat.can_reply && pele && isAWhatsAppCloudChannel"
+        v-if="
+          canOperate &&
+          !currentChat.can_reply &&
+          pele &&
+          isAWhatsAppCloudChannel
+        "
       />
       <Banner
-        v-else-if="!currentChat.can_reply"
+        v-else-if="canOperate && !currentChat.can_reply"
         color-scheme="alert"
         class="mx-2 mt-2 overflow-hidden rounded-lg"
         :banner-message="replyWindowBannerMessage"
         :href-link="replyWindowLink"
         :href-link-text="replyWindowLinkText"
+      />
+      <!-- Quem só lê (#1800): a regra do cargo, em tom neutro, junto dos outros avisos de "não dá para responder". -->
+      <Banner
+        v-if="!canOperate"
+        color-scheme="secondary"
+        class="ms-2 me-16 mt-2 min-h-12 !h-auto overflow-hidden rounded-lg"
+        :banner-message="$t('CONVERSATION.SO_LEITURA.TEXTO')"
+        data-aviso-so-leitura
       />
       <Banner
         v-if="hasDuplicateInstagramInbox"
@@ -776,8 +809,12 @@ export default {
         </div>
       </div>
       <!-- #1702: modo seleção do encaminhar troca o campo de digitar pela barra. -->
-      <EncaminharDaConversa v-if="pele" :conversation-id="currentChat.id" />
+      <EncaminharDaConversa
+        v-if="canOperate && pele"
+        :conversation-id="currentChat.id"
+      />
       <ResizableEditorWrapper
+        v-if="canOperate"
         v-show="!(pele && selecaoParaEncaminhar.ativa)"
         ref="resizableEditorWrapperRef"
         :container-height="Math.max(0, containerHeight - topBannerHeight)"

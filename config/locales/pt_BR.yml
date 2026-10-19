@@ -317,6 +317,8 @@ pt_BR:
         call_permission_request_body: 'Gostaríamos de ligar para você em relação à sua conversa.'
         flow_response: 'Enviou uma resposta de um Flow'
         unsupported_message: 'Esta mensagem não está disponível.'
+        unsupported_handoff_note: 'O cliente mandou uma mensagem que o WhatsApp oficial não mostra. Veja no celular.'
+        unsupported_late_note: 'A mensagem do cliente chegou atrasada e a IA não respondeu. Veja a conversa.'
         request_contact_info: "Você pode compartilhar seu número de telefone com a gente?"
       voice_call:
         twilio: 'Chamada de Voz'
@@ -1044,6 +1046,8 @@ pt_BR:
     agents:
       modo_manual: 'Este agente está no modo manual: a instrução foi escrita à mão. Edite a instrução à mão ou volte o agente para o modo guiado para mudar conversando.'
       conflito_de_trava: 'O agente mudou ao mesmo tempo. Tente de novo.'
+      # #1479: texto do botão que abre a lista de opções que a IA manda, quando a IA não escolhe um.
+      botao_das_opcoes: 'Ver opções'
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       # #1428 — "Mudar conversando" (piloto): as mensagens que o Construtor mostra ao dono depois de um ajuste.
       ajuste:

@@ -82,6 +82,14 @@
     "UNSUPPORTED_MESSAGE_INSTAGRAM": "This message is unsupported. You can view this message on the Instagram app.",
     "UNSUPPORTED_MESSAGE_TIKTOK": "This message is unsupported. You can view this message on the TikTok app.",
     "UNSUPPORTED_MESSAGE_WHATSAPP": "This message is unsupported. You can view this message on the WhatsApp app.",
+    "HYBRID_RECOVERY": {
+      "PENDING": "Fetching the content from the phone…",
+      "FAILED": "Couldn't recover this message. Check it on the phone.",
+      "MEDIA": "This message has media. Check it on the phone.",
+      "RECOVERED": "recovered from the phone",
+      "HEADER_IMAGE": "This message has an image. Check it on the phone.",
+      "HEADER_MEDIA": "This message has media. Check it on the phone."
+    },
     "WHATSAPP_FLOW_RESPONSE": "Submitted a flow response",
     "WHATSAPP_REFERRAL": {
       "AD": "Ad"
@@ -419,6 +427,15 @@
       "UNMUTE": "Unmute mic",
       "VIEW_CHAT_HISTORY": "View chat history",
       "GO_TO_CONVERSATION": "Go to conversation thread"
+    },
+    "SO_LEITURA": {
+      "TEXTO": "You can read this conversation, but not reply. To reply, ask whoever manages your team.",
+      "RESUMO": "Conversation summary",
+      "QUEM_ATENDE": "Handled by",
+      "NINGUEM": "No one yet",
+      "TIME": "Team",
+      "ETIQUETAS": "Labels",
+      "SEM_PARTICIPANTES": "No participants"
     }
   },
   "EMAIL_TRANSCRIPT": {

@@ -7,13 +7,31 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 
 // #1423 — "Perdeu?" (ST-06): o motivo é opcional, com atalhos de um toque.
 // Fora de venda, o título e o botão usam o nome do desfecho do funil.
+// #1802 — em venda também, quando o funil tem nome próprio para o desfecho
+// (Renovação: "Não renovou"); `padrao` é a venda sem nome próprio.
 const props = defineProps({
   rotulo: { type: String, required: true },
   venda: { type: Boolean, default: true },
+  padrao: { type: Boolean, default: true },
 });
 const emit = defineEmits(['confirmar']);
 
 const { t } = useI18n();
+
+const titulo = computed(() => {
+  if (!props.venda)
+    return t('CRM_KANBAN.DRAWER.CLOSE_AS_TITLE', { label: props.rotulo });
+  return props.padrao
+    ? t('CRM_CARD.DESFECHO.PERDEU_TITULO')
+    : t('CRM_CARD.DESFECHO.PERDEU_TITULO_ROTULO', { rotulo: props.rotulo });
+});
+const confirma = computed(() => {
+  if (!props.venda)
+    return t('CRM_KANBAN.DRAWER.MARK_AS', { label: props.rotulo });
+  return props.padrao
+    ? t('CRM_CARD.DESFECHO.PERDEU_CONFIRMA')
+    : t('CRM_CARD.DESFECHO.PERDEU_CONFIRMA_ROTULO', { rotulo: props.rotulo });
+});
 const dialogo = ref(null);
 const motivo = ref('');
 // #1498 — em Atender, motivos de quem não precisa mais (nada de "achou caro").
@@ -46,11 +64,7 @@ defineExpose({ abrir, fechar });
     ref="dialogo"
     data-dialogo-perdeu
     type="alert"
-    :title="
-      venda
-        ? t('CRM_CARD.DESFECHO.PERDEU_TITULO')
-        : t('CRM_KANBAN.DRAWER.CLOSE_AS_TITLE', { label: props.rotulo })
-    "
+    :title="titulo"
     :description="
       venda
         ? t('CRM_CARD.DESFECHO.PERDEU_TEXTO')
@@ -99,11 +113,7 @@ defineExpose({ abrir, fechar });
         />
         <Button
           type="submit"
-          :label="
-            venda
-              ? t('CRM_CARD.DESFECHO.PERDEU_CONFIRMA')
-              : t('CRM_KANBAN.DRAWER.MARK_AS', { label: props.rotulo })
-          "
+          :label="confirma"
           icon="i-lucide-circle-x"
           ruby
           class="!min-h-11"

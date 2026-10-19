@@ -103,6 +103,12 @@ class Autonomia::Guide::Acoes
   # A chave é a resposta que o Guia dá ao pedido (autonomia.guide.only_on_screen.*), com o caminho da tela.
   SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent' }.freeze
 
+  # O que é encanamento do painel, não ação de quem usa: nem entra no catálogo nem tem formato. #1841: o registro
+  # de erro do navegador; o Guia chamando isso só gravaria linha falsa no log de diagnóstico.
+  FORA_DO_GUIA = ['POST client_errors'].freeze
+
+  def self.fora_do_catalogo?(acao) = SO_NA_TELA.key?(acao.to_s) || FORA_DO_GUIA.include?(acao.to_s)
+
   # O que só se faz na tela: a resposta diz onde, em vez de "isto o Guia não faz" (também em `formato_da_acao`).
   def self.so_na_tela(acao)
     I18n.t("autonomia.guide.only_on_screen.#{SO_NA_TELA.fetch(acao.to_s)}")
@@ -129,7 +135,7 @@ class Autonomia::Guide::Acoes
 
       recurso = ::Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))
       acao = "#{verbo} #{recurso}" if recurso
-      acao unless SO_NA_TELA.key?(acao)
+      acao unless self.class.fora_do_catalogo?(acao)
     end.uniq.sort
   end
 

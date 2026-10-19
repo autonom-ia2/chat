@@ -8,7 +8,9 @@
 # nem é lido. A exceção é o esquema JSON da coluna (`Esquemas`): ele é a regra
 # declarada, e o tipo do campo sai dele.
 module Autonomia::Guide::Formatos::Modelo
-  LISTA_GRANDE = 40
+  # Acima disto a lista vira resumo, para não pôr no prompt listas como a de fusos (597). As permissões de cargo (41)
+  # e os idiomas (42) precisam ir inteiros: sem eles o Guia não sabe que valor gravar (#1833).
+  LISTA_GRANDE = 60
   EXEMPLOS = 5
   TIPOS = {
     string: 'string', text: 'string', citext: 'string', uuid: 'string', integer: 'inteiro', bigint: 'inteiro',

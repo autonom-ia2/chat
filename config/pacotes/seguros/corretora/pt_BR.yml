@@ -1,0 +1,24 @@
+# Pacote de tradução por conta (#1550), camada seguros/corretora (#1802). Só folhas que existem em config/locales;
+# veja docs/segmentos/README.md e docs/segmentos/funis-corretora-f2.md.
+pt_BR:
+  crm:
+    stage_criteria:
+      # "Venda de seguro" é o modelo Vendas com a fala do corretor (mesma chave vendas.e<n>).
+      vendas:
+        e1: 'O cliente chegou agora e quer um seguro. Ainda não disse o ramo nem mandou os dados para cotar.'
+        e2: 'O cliente está mandando os dados para cotar, ou a equipe disse que está cotando. Ainda não mandou as opções.'
+        e3: 'A equipe mandou as opções da cotação e o cliente está pensando ou comparando. Ainda não escolheu.'
+        e4: 'O cliente quer fechar, mas está acertando detalhes: desconto, franquia, cobertura, forma de pagamento ou parcelas.'
+        e5: 'O cliente escolheu a opção e disse sim: mandou os dados para pagar ou pediu para emitir.'
+      # Funis antigos (nome da etapa): os nomes não mudam, só a frase. O "perdido" segue o da camada seguros (F1).
+      legado:
+        novo: 'O cliente chegou agora: mandou a primeira mensagem ou pediu uma cotação. Ainda não disse o ramo nem mandou os dados do seguro.'
+        em_atendimento: 'O cliente está mandando os dados para cotar (ramo, placa ou endereço, CEP de pernoite, condutor, seguradora atual), ou a equipe disse que está cotando. Ainda não mandou as opções.'
+        proposta: 'A equipe já mandou as opções da cotação e o cliente está comparando ou pensando. Ainda não disse qual vai fechar.'
+        fechamento: 'O cliente escolheu a opção e disse que quer fechar: pediu o link de pagamento, mandou os dados do cartão ou pediu para emitir.'
+    # Planilha do CRM e e-mail de lembrete (Lote 1 da F2).
+    export:
+      columns:
+        next_follow_up_at: 'Próximo retorno'
+    follow_up_reminder:
+      card: 'Card: %{card}'

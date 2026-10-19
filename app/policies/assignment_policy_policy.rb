@@ -1,21 +1,28 @@
 class AssignmentPolicyPolicy < ApplicationPolicy
   def index?
-    @account_user.administrator?
+    allowed?
   end
 
   def show?
-    @account_user.administrator?
+    allowed?
   end
 
   def create?
-    @account_user.administrator?
+    allowed?
   end
 
   def update?
-    @account_user.administrator?
+    allowed?
   end
 
   def destroy?
-    @account_user.administrator?
+    allowed?
+  end
+
+  private
+
+  # Funções personalizadas, lote 3 (#1797): administrador ou cargo com `assignment_manage` (OSS: administrator?).
+  def allowed?
+    @account_user&.permission_granted?('assignment_manage') || false
   end
 end

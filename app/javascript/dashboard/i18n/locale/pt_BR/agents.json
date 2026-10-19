@@ -482,7 +482,20 @@
           "policy": "Política",
           "audience": "Fora do público-alvo",
           "schedule": "Fora do horário de atuação",
+          "recuperacao_falhou": "Mensagem que o WhatsApp não mostrou (ver no celular)",
+          "recuperada_tarde": "Mensagem do WhatsApp que chegou atrasada",
+          "recuperacao_acordar_falhou": "Mensagem do WhatsApp recuperada sem chamar a IA",
+          "recuperacao_passagem_falhou": "Mensagem do WhatsApp sem passagem para a equipe",
+          "recuperada_so_contexto": "Mensagem recuperada: a IA só repetiu o contexto interno",
           "other": "Outro / não especificado"
+        }
+      },
+      "SILENCES": {
+        "TITLE": "Quando a IA ficou calada",
+        "CODES": {
+          "mensagem_sem_suporte": "Mensagem que o WhatsApp só mostra no celular",
+          "mensagem_apagada": "Mensagem apagada pelo cliente",
+          "escolha_retirada": "Voto ou resposta retirada pelo cliente"
         }
       },
       "INSIGHT": {
@@ -1156,6 +1169,17 @@
           "NOTA_RESPONDIDAS": "Esta semana, {nome} respondeu {n} conversa e passou {m} para a equipe. | Esta semana, {nome} respondeu {n} conversas e passou {m} para a equipe.",
           "NOTA_PASSADAS": "Quando não soube responder."
         },
+        "SILENCIOS": {
+          "TITULO": "Quando {nome} não respondeu",
+          "TEXTO": "Esta semana, {nome} não respondeu nestes casos porque não havia nada para responder. Foi de propósito.",
+          "VAZIO": "{nome} não deixou de responder nenhuma vez esta semana.",
+          "VEZES": "{n} vez | {n} vezes",
+          "MOTIVOS": {
+            "mensagem_sem_suporte": "O cliente mandou algo que o sistema não abre",
+            "mensagem_apagada": "O cliente apagou a mensagem",
+            "escolha_retirada": "O cliente desfez a escolha"
+          }
+        },
         "CONVERSAS": {
           "TITULO": "Conversas desta semana",
           "MOSTRAR": "Mostrar",
@@ -1345,7 +1369,15 @@
             "MUDOU_DEPOIS": "{nome} mudou depois desta conversa, então não dá para desfazer daqui. Para voltar, use “Jeitos anteriores de responder”.",
             "ERRO": "Não consegui desfazer agora. Tente de novo.",
             "ULTIMA_MUDANCA": "Última mudança: {lista}.",
-            "ULTIMA_MUDANCA_SEM_RESUMO": "Última mudança feita conversando."
+            "ULTIMA_MUDANCA_SEM_RESUMO": "Última mudança feita conversando.",
+            "PROVA_TESTANDO": "Testando com {n} pergunta de prova… | Testando com {n} perguntas de prova…",
+            "PROVA": "{ok} de {total} pergunta de prova ok | {ok} de {total} perguntas de prova ok",
+            "PROVA_INDISPONIVEL": "Não consegui testar agora. Use o teste ao lado para ver como ficou.",
+            "PROVA_SEM_TESTE": "As perguntas não testaram a mudança.",
+            "VER_PROVA": "Ver as perguntas",
+            "ESCONDER_PROVA": "Esconder as perguntas",
+            "CLIENTE": "Cliente:",
+            "PROVA_EQUIPE": "Passaria a conversa para a equipe."
           }
         },
         "FOTO": {

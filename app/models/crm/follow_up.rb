@@ -92,6 +92,8 @@ class Crm::FollowUp < ApplicationRecord
 
   scope :active, -> { where(status: [statuses[:pending], statuses[:overdue]]) }
   scope :due, ->(time = Time.current) { pending.where(due_at: ..time) }
+  # Pré-voo (#1624): o que vence depois de `from` e até `to`; o que já venceu é do DueProcessor.
+  scope :due_within, ->(from, to) { pending.where('crm_follow_ups.due_at > ? AND crm_follow_ups.due_at <= ?', from, to) }
 
   private
 

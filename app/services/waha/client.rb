@@ -122,22 +122,36 @@ module Waha
       get("/api/#{session}/new-message-id")['id']
     end
 
-    def send_text(session:, chat_id:, text:, id:)
-      post('/api/sendText', { session: session, chatId: chat_id, text: text, id: id })
+    # reply_to (chat#1709, fase 3): o id físico da mensagem citada (só o id, sem "true_<chat>_"). nil = a chave não vai
+    # no corpo, e o pedido fica igual ao de antes.
+    def send_text(session:, chat_id:, text:, id:, reply_to: nil)
+      post('/api/sendText', with_reply_to({ session: session, chatId: chat_id, text: text, id: id }, reply_to))
     end
 
-    # kind: sendImage | sendFile | sendVoice | sendVideo. media: { file: { url:, mimetype:, filename: }, caption: }
+    # kind: sendImage | sendFile | sendVoice | sendVideo. media: { file: { url:, mimetype:, filename: }, caption:, reply_to: }
+    # (`reply_to`, chat#1709 fase 3: o id físico da mensagem citada; sem ele, o pedido de antes).
     def send_media(kind, session:, chat_id:, id:, media:)
       body = { session: session, chatId: chat_id, file: media[:file], id: id }
       body[:caption] = media[:caption] if media[:caption].present?
       body[:convert] = true if %w[sendVoice sendVideo].include?(kind)
-      post("/api/#{kind}", body)
+      post("/api/#{kind}", with_reply_to(body, media[:reply_to]))
+    end
+
+    # Uma mensagem guardada pelo motor, pelo id simples do WhatsApp (chat#1489). O GOWS guarda as recebidas: comprovado
+    # em produção no spike de 15/10/2026 (6/6, a mais antiga com 7 dias). Sem mídia: só o texto e os metadados.
+    GET_MESSAGE_TIMEOUT = 10
+
+    def get_message(session, chat_id, id, download_media: false)
+      get("/api/#{session}/chats/#{chat_id}/messages/#{id}?downloadMedia=#{download_media}", timeout: GET_MESSAGE_TIMEOUT)
     end
 
     # Reação (emoji) a uma mensagem (#1702). message_id no formato do WAHA ("true_<chatId>_<id>"); reaction vazia tira.
     def set_reaction(session:, message_id:, reaction:)
       put('/api/reaction', { session: session, messageId: message_id, reaction: reaction })
     end
+
+    # ---- ENVIO NATIVO DE MENSAGEM RICA E AÇÕES (chat#1709): Waha::Client::RichSends ----
+    include Waha::Client::RichSends
 
     # ---- APPS (conector de mensagens) ----
     def create_app(session:, app_id:, config:, app: 'chatwoot')

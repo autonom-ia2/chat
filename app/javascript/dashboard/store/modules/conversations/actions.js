@@ -267,7 +267,7 @@ const actions = {
   },
 
   syncActiveConversationMessages: async (
-    { commit, state, dispatch },
+    { commit, state, dispatch, getters },
     { conversationId }
   ) => {
     const { allConversations, syncConversationsMessages } = state;
@@ -306,7 +306,10 @@ const actions = {
         conversationId,
         messageId: null,
       });
-      dispatch('markMessagesRead', { id: conversationId }, { root: true });
+      // Quem só lê não marca como lida (#1800).
+      if (getters.canOperateConversation(selectedChat)) {
+        dispatch('markMessagesRead', { id: conversationId }, { root: true });
+      }
     } catch (error) {
       // Handle error
     }

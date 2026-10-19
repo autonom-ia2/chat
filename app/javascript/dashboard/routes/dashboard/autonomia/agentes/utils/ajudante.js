@@ -17,9 +17,9 @@ export const nomesQueAjuda = agente =>
     .map(principal => principal.name)
     .join(', ');
 
-// Pode ser escolhido como principal? Só agentes que falam com cliente: o Copiloto, os ajudantes (internos)
-// e os rascunhos ficam fora; a Cotação aparece bloqueada com o motivo (o servidor também a recusa).
-const falaComCliente = agente =>
+// Fala com o cliente: o Copiloto e os ajudantes (internos) não. Usado para escolher o principal (os rascunhos
+// ficam fora; a Cotação aparece bloqueada com o motivo, e o servidor também a recusa) e na página do agente.
+export const falaComCliente = agente =>
   agente.actuation !== 'internal' && !ehAjudante(agente);
 
 const terminado = agente => Boolean(agente.status) && agente.status !== 'draft';
