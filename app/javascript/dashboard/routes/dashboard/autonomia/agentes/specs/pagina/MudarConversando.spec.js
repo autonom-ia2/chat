@@ -561,12 +561,15 @@ describe('MudarConversando', () => {
   describe('ready answers under the open question', () => {
     const OPCOES = ['Passar para a equipe', 'Não falar de preço'];
 
-    const comPergunta = (estado = { opcoes_de_resposta: OPCOES }) => {
+    const PERGUNTA = 'Que preço ele deve dizer?';
+    const comPergunta = (
+      estado = { next_question: PERGUNTA, opcoes_de_resposta: OPCOES }
+    ) => {
       store.state[`${ESTADO}getThread`] = { id: 55 };
       store.state[`${ESTADO}getPhase`] = 'interviewing';
       store.state[`${ESTADO}getMessages`] = [
         { role: 'user', content: 'Fale do preço' },
-        { role: 'assistant', content: 'Que preço ele deve dizer?' },
+        { role: 'assistant', content: PERGUNTA },
       ];
       store.state[`${ESTADO}getThreadState`] = estado;
     };
@@ -622,6 +625,7 @@ describe('MudarConversando', () => {
 
       store.state[`${ESTADO}getPhase`] = 'interviewing';
       store.state[`${ESTADO}getThreadState`] = {
+        next_question: PERGUNTA,
         opcoes_de_resposta: OPCOES,
         resultado: { itens: [], desfeito: true },
       };
@@ -630,8 +634,63 @@ describe('MudarConversando', () => {
       wrapper.unmount();
     });
 
+    it('only shows them under the exact question the server sent them with', async () => {
+      comPergunta({
+        next_question: 'Outra pergunta',
+        opcoes_de_resposta: OPCOES,
+      });
+      const wrapper = montar();
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+
+      store.state[`${ESTADO}getThreadState`] = {
+        next_question: PERGUNTA,
+        opcoes_de_resposta: OPCOES,
+      };
+      await nextTick();
+      expect(no('[data-opcoes]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('lets a long answer without spaces wrap inside the button', async () => {
+      comPergunta();
+      const wrapper = montar();
+      await nextTick();
+
+      expect(todos('[data-opcoes] button')[0].className).toContain(
+        'break-words'
+      );
+      wrapper.unmount();
+    });
+
+    it('goes away after the undo by the last change strip, and the conversation is read again', async () => {
+      conversas.desfazer.mockResolvedValue({ data: {} });
+      comPergunta();
+      const wrapper = montar({
+        agente: {
+          ...AGENTE,
+          ultima_mudanca_desfazivel: { thread_id: 41, linhas: ['Curtas'] },
+        },
+      });
+      await nextTick();
+      expect(no('[data-opcoes]')).not.toBeNull();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(conversas.desfazer).toHaveBeenCalledWith(41);
+      expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}fetch`, {
+        threadId: 55,
+      });
+      expect(no('[data-opcoes]')).toBeNull();
+      wrapper.unmount();
+    });
+
     it('shows at most four', async () => {
-      comPergunta({ opcoes_de_resposta: ['A', 'B', 'C', 'D', 'E'] });
+      comPergunta({
+        next_question: PERGUNTA,
+        opcoes_de_resposta: ['A', 'B', 'C', 'D', 'E'],
+      });
       const wrapper = montar();
       await nextTick();
 

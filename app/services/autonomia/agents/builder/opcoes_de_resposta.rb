@@ -22,14 +22,20 @@ module Autonomia::Agents::Builder::OpcoesDeResposta
 
   module_function
 
-  # As opções que o modelo escreveu: sem as vazias, repetidas ou longas demais, até 4. Com menos de duas não há
-  # escolha, e nenhuma vai.
+  # As opções que o modelo escreveu, sem disfarce (TextoSemDisfarce, #1669: sem invisíveis de formato, em NFKC e com os
+  # espaços unificados), e então sem as vazias, repetidas ou longas demais, até 4. Com menos de duas não há escolha, e
+  # nenhuma vai.
   def filtrar(parsed)
     lista = parsed.to_h['opcoes_de_resposta']
     return [] unless lista.is_a?(Array)
 
-    validas = lista.map { |opcao| opcao.to_s.strip }.reject { |opcao| opcao.empty? || opcao.length > MAX_CHARS }
+    validas = lista.map { |opcao| visivel(opcao) }.reject { |opcao| opcao.empty? || opcao.length > MAX_CHARS }
     escolhidas = validas.uniq.first(MAXIMO)
     escolhidas.size < 2 ? [] : escolhidas
+  end
+
+  # O texto que a pessoa vê, numa linha só: o que sobra só com espaço invisível (NBSP, U+3164) fica vazio.
+  def visivel(opcao)
+    Autonomia::Agents::Operate::TextoSemDisfarce.normalizado(opcao.to_s).split.join(' ')
   end
 end

@@ -36,6 +36,20 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(opcoes_de(['Sim', longa, 'Não'])).to eq(%w[Sim Não])
     end
 
+    # Revisão adversarial da entrega C (2): o texto passa pelo TextoSemDisfarce (#1669) antes do tamanho e das repetidas.
+    it 'tira os invisíveis de formato e descarta a que só tinha espaço invisível' do
+      tags = (0xE0020..0xE007F).first(5).pack('U*')
+      escritas = ["Sim#{tags}", "N\u200Bão", "\u202EAgora", "\u00A0\u3164", 'Sim', "Mais\u00A0tarde"]
+
+      expect(opcoes_de(escritas)).to eq(['Sim', 'Não', 'Agora', 'Mais tarde'])
+    end
+
+    it 'a que fica longa só por invisíveis não é descartada pelo tamanho' do
+      invisiveis = "\u200B" * described_class::OpcoesDeResposta::MAX_CHARS
+
+      expect(opcoes_de(["Sim#{invisiveis}", 'Não'])).to eq(%w[Sim Não])
+    end
+
     it 'com menos de duas não há escolha: nenhuma' do
       expect(opcoes_de(['Sim'])).to eq([])
       expect(opcoes_de('Sim')).to eq([])
@@ -215,6 +229,26 @@ RSpec.describe Autonomia::Agents::Builder do
                                 'opcoes_de_resposta' => [texto('opcoes_do_conflito.manter'),
                                                          texto('opcoes_do_conflito.mudar')])
     end
+  end
+
+  # Revisão crítica da entrega C (1): o turno legado esquece as opções que o piloto deixou; religar não as traz de volta.
+  it 'piloto desligado, turno legado, piloto religado: a conversa não traz as opções velhas' do
+    respostas << saida('needs_more_info' => true, 'next_question' => 'Que preço?', 'opcoes_de_resposta' => opcoes)
+    run_turn
+    Autonomia::Agents::Fase2.desligar!(account)
+    thread.append_message!('user', 'Troque a saudação')
+    respostas << saida('greeting' => 'Olá')
+    described_class.new(account: account.reload, build_thread: thread.reload).tap do |legado|
+      allow(legado).to receive_messages(credential: { api_key: 'k' }, client: fake_client)
+      legado.run!(thread.begin_build!)
+    end
+    Autonomia::Agents::Fase2.ligar!(account)
+
+    corpo = ApplicationController.render(template: 'api/v1/accounts/autonomia/agents/build_threads/show', formats: [:json],
+                                         assigns: { thread: thread.reload })
+
+    expect(estado).not_to have_key('opcoes_de_resposta')
+    expect(JSON.parse(corpo).dig('payload', 'state')).not_to have_key('opcoes_de_resposta')
   end
 
   it 'mark_failed! zera as opções' do

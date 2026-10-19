@@ -296,6 +296,19 @@ const relerAgente = async () => {
   }
 };
 
+// #1428 (entrega C) — o Desfazer pela faixa tira do servidor as respostas prontas da pergunta aberta:
+// a conversa na tela é relida para não ficar com as de antes.
+const relerConversa = async () => {
+  if (!thread.value?.id) return;
+  try {
+    await store.dispatch('autonomiaBuildThreads/fetch', {
+      threadId: thread.value.id,
+    });
+  } catch {
+    // A faixa já diz que desfez; as opções saem pela condição de `ultimaDesfeita`.
+  }
+};
+
 const desfazerUltima = async () => {
   if (desfazendoUltima.value || !ultimaMudanca.value) return;
   desfazendoUltima.value = true;
@@ -310,20 +323,25 @@ const desfazerUltima = async () => {
   ultimaDesfeita.value = true;
   teste.marcarAtualizado();
   await relerAgente();
+  await relerConversa();
   desfazendoUltima.value = false;
 };
 
 // #1428 (entrega C) — as respostas prontas da pergunta aberta (`opcoes_de_resposta` do state: as que o
 // Construtor escreveu, ou os botões fixos do conflito). Ficam logo abaixo da última pergunta enquanto ela
-// está aberta e somem quando o dono responde, tocando ou escrevendo, ou desfaz o ajuste. Tocar é o mesmo
-// que escrever e mandar; o foco vai para o campo, que segue ali, em vez de sumir com o botão.
+// está aberta e somem quando o dono responde, tocando ou escrevendo, ou desfaz o ajuste (pelo cartão ou
+// pela faixa). Só valem para a pergunta que o servidor mandou com elas: a última mensagem é exatamente o
+// `next_question` do state (comparação do texto inteiro, sem ler linguagem). Tocar é o mesmo que escrever
+// e mandar; o foco vai para o campo, que segue ali, em vez de sumir com o botão.
 const MAX_OPCOES = 4;
 const opcoesDaPergunta = computed(() => {
   const ultima = visiveis.value[visiveis.value.length - 1];
   const aberta =
     fase.value === 'interviewing' &&
     ultima?.role === 'assistant' &&
-    !resultado.value?.desfeito;
+    ultima.content === estadoDaConversa.value?.next_question &&
+    !resultado.value?.desfeito &&
+    !ultimaDesfeita.value;
   if (pensando.value || !aberta) return [];
   return (estadoDaConversa.value?.opcoes_de_resposta || []).slice(
     0,
