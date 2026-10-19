@@ -561,3 +561,17 @@
   display_name: Conversa de e-mail com a cara do Gmail
   enabled: false
   column: feature_flags_ext_1
+
+# Contato salvo na agenda do aparelho antes de enviar pelo WhatsApp API e lida ao responder (#1865). Ligada: antes do
+# envio pelo WAHA (Híbrido e caixa WAHA comum, inclusive campanha WhatsApp API), o contato é consultado e salvo na
+# agenda do celular, sem sobrescrever nome que o dono salvou (Waha::AgendaDoContato); e a resposta ao cliente (atendente,
+# robô, follow-up, automação; não campanha) marca a conversa como lida antes de sair (ConversaCanal::LeituraAoResponder,
+# que usa a lida do #1702 e depende também de `conversa_cara_do_canal`). Posição 39 na feature_flags_ext_1, bit 38
+# (274877906944), logo depois de `conversa_email_nova` (tabela da Orquestração, 19/10): a posição na lista é o bit; se
+# outra flag entrar antes na main, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb). Desligada
+# (padrão): tudo como antes.
+# Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: whatsapp_agenda_do_contato
+  display_name: Contato na agenda do aparelho e lida ao responder (WhatsApp API)
+  enabled: false
+  column: feature_flags_ext_1
