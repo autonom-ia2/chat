@@ -1,6 +1,7 @@
 class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
   before_action :campaign, except: [:index, :create]
   before_action :check_authorization
+  before_action :authorize_send, only: [:create, :update]
 
   def index
     @campaigns = Current.account.campaigns
@@ -22,6 +23,11 @@ class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
   end
 
   private
+
+  # A scheduled one-off campaign goes out by itself at scheduled_at: setting it needs campaign_send (#1898).
+  def authorize_send
+    authorize(Campaign, :send_campaign?) if params.dig(:campaign, :scheduled_at).present?
+  end
 
   def campaign
     @campaign ||= Current.account.campaigns.find_by(display_id: params[:id])

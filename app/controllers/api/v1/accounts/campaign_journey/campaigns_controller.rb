@@ -3,7 +3,9 @@
 #   whatsapp_api   — WhatsApp API (#999, docs/campaigns/publicos/api-999.md);
 #   email          — e-mail draft for the existing builder flow (#999, api-999.md);
 #   sms            — SMS, Twilio SMS or Bandwidth (#1004, docs/campaigns/publicos/api-1004.md).
-# CAMPAIGN_JOURNEY_ENABLED off → 404; campaign_manage required (CampaignPolicy#create?), otherwise 401.
+# CAMPAIGN_JOURNEY_ENABLED off → 404; campaign_manage required (CampaignPolicy#create?), otherwise 401. Every channel but
+# e-mail sends or schedules right away, so it also needs campaign_send (CampaignPolicy#send_campaign?, #1898). The e-mail
+# one is a draft: sending it goes through the e-mail campaign screen (EmailCampaignPolicy#send_now?).
 class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Accounts::BaseController
   CHANNELS = %w[whatsapp_cloud whatsapp_api email sms].freeze
 
@@ -81,6 +83,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
 
   def check_authorization
     authorize(Campaign, :create?)
+    authorize(Campaign, :send_campaign?) unless params[:channel].to_s == ::CampaignJourney::EmailCampaignCreator::CHANNEL
   end
 
   def ensure_campaign_journey_enabled

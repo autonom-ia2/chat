@@ -1,3 +1,4 @@
+# Creating a WhatsApp API campaign sends it, so it needs campaign_send (#1898), like resuming.
 class WhatsappApiCampaignPolicy < ApplicationPolicy
   def index?
     @account_user.permission_granted?('campaign_view')
@@ -8,7 +9,7 @@ class WhatsappApiCampaignPolicy < ApplicationPolicy
   end
 
   def create?
-    @account_user.permission_granted?('campaign_manage')
+    @account_user.permission_granted?('campaign_send')
   end
 
   def pause?
@@ -16,7 +17,7 @@ class WhatsappApiCampaignPolicy < ApplicationPolicy
   end
 
   def resume?
-    @account_user.permission_granted?('campaign_manage')
+    @account_user.permission_granted?('campaign_send')
   end
 
   def cancel?
