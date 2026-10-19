@@ -4,6 +4,7 @@ import { nextTick } from 'vue';
 import { createStore } from 'vuex';
 import ReplyBox from '../ReplyBox.vue';
 import WhatsappTemplates from '../WhatsappTemplates/Modal.vue';
+import JanelaDeEmojis from 'dashboard/components-next/emoji/JanelaDeEmojis.vue';
 
 const CHANNELS = [
   { name: 'WhatsApp Cloud', inbox: { channel_type: 'Channel::Whatsapp' } },
@@ -95,6 +96,8 @@ const mountWith = ({
   drafts,
   inboxes,
   isMetaMessageSendingDisabled,
+  stubs = {},
+  attachTo,
 }) => {
   const store = buildStore({
     inbox,
@@ -110,8 +113,9 @@ const mountWith = ({
       mocks: { $t: key => key },
       // The bottom panel sits inside a <Transition>, which shallowMount stubs
       // without rendering its children.
-      stubs: { transition: false },
+      stubs: { transition: false, ...stubs },
     },
+    attachTo,
   });
   return { wrapper, store };
 };
@@ -123,7 +127,101 @@ const bottomPanel = wrapper =>
 const editor = wrapper =>
   wrapper.findComponent({ name: 'WootMessageEditor' }).props();
 
+// #1895: a janela de emojis de verdade, aberta pelo botão do rosto da barra de baixo.
+const REAL_EMOJI_WINDOW = {
+  ReplyBottomPanel: false,
+  NextButton: false,
+  Button: false,
+  JanelaDeEmojis: false,
+  TeleportWithDirection: { template: '<div><slot /></div>' },
+};
+const mountWithEmojiWindow = () =>
+  mountWith({
+    inbox: { channel_type: 'Channel::Whatsapp' },
+    stubs: REAL_EMOJI_WINDOW,
+    attachTo: document.body,
+  }).wrapper;
+const faceButton = wrapper => wrapper.find('[data-emoji-da-resposta]');
+const emojiWindow = () => document.querySelector('[data-janela-de-emojis]');
+
 describe('ReplyBox', () => {
+  describe('emoji window opened by the face button (#1895)', () => {
+    let wrapper;
+
+    beforeEach(() => {
+      wrapper = mountWithEmojiWindow();
+    });
+
+    afterEach(() => {
+      wrapper.unmount();
+      document.body.innerHTML = '';
+    });
+
+    it('opens on a real click and inserts the chosen emoji', async () => {
+      expect(emojiWindow()).toBeNull();
+      await faceButton(wrapper).trigger('click');
+      expect(emojiWindow()).not.toBeNull();
+
+      const emoji = emojiWindow().querySelector('.grid button');
+      emoji.click();
+      await nextTick();
+      expect(editor(wrapper).updateSelectionWith).toBe(
+        emoji.textContent.trim()
+      );
+    });
+
+    it('anchors on the bottom bar that holds the face button', async () => {
+      await faceButton(wrapper).trigger('click');
+      const janela = wrapper.findComponent(JanelaDeEmojis);
+      expect(janela.props('ancora').classList.contains('left-wrap')).toBe(true);
+      expect(janela.props('ancora').contains(faceButton(wrapper).element)).toBe(
+        true
+      );
+    });
+
+    it('closes on a click outside', async () => {
+      await faceButton(wrapper).trigger('click');
+      document.body.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true })
+      );
+      document.body.click();
+      await nextTick();
+      expect(emojiWindow()).toBeNull();
+    });
+
+    it('closes on a second click on the face button, without reopening', async () => {
+      await faceButton(wrapper).trigger('click');
+      faceButton(wrapper).element.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true })
+      );
+      await faceButton(wrapper).trigger('click');
+      await nextTick();
+      expect(emojiWindow()).toBeNull();
+      expect(wrapper.vm.showEmojiPicker).toBe(false);
+    });
+
+    it('closes on Escape pressed anywhere and gives the focus back', async () => {
+      faceButton(wrapper).element.focus();
+      await faceButton(wrapper).trigger('click');
+      await nextTick();
+      expect(document.activeElement.matches('[data-buscar-emoji]')).toBe(true);
+
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
+      await nextTick();
+      expect(emojiWindow()).toBeNull();
+      expect(document.activeElement).toBe(faceButton(wrapper).element);
+    });
+
+    it('closes when the copilot takes over the bottom bar', async () => {
+      await faceButton(wrapper).trigger('click');
+      wrapper.vm.copilot.showEditor.value = true;
+      await nextTick();
+      expect(wrapper.vm.showEmojiPicker).toBe(false);
+    });
+  });
+
   describe('Instagram incident restriction', () => {
     it('opens in note mode and restores only the private-note draft', async () => {
       const { wrapper, store } = mountWith({
@@ -181,6 +279,28 @@ describe('ReplyBox', () => {
   });
 
   describe.each(CHANNELS)('$name', ({ name, inbox }) => {
+    // #1895: a janela de emojis própria do fork em todos os canais, no lugar da do Chatwoot.
+    it('opens the fork emoji window and inserts the chosen emoji', async () => {
+      const { wrapper } = mountWith({ inbox });
+      expect(wrapper.findComponent(JanelaDeEmojis).exists()).toBe(false);
+
+      bottomPanel(wrapper).toggleEmojiPicker();
+      await nextTick();
+      const janela = wrapper.findComponent(JanelaDeEmojis);
+      expect(janela.exists()).toBe(true);
+      expect(wrapper.findComponent({ name: 'EmojiIconPicker' }).exists()).toBe(
+        false
+      );
+
+      janela.vm.$emit('escolher', '😀');
+      await nextTick();
+      expect(editor(wrapper).updateSelectionWith).toBe('😀');
+
+      janela.vm.$emit('fechar');
+      await nextTick();
+      expect(wrapper.findComponent(JanelaDeEmojis).exists()).toBe(false);
+    });
+
     it('locks the composer and hides template sends when a bot owns a pending conversation', () => {
       const { wrapper } = mountWith({
         inbox,
