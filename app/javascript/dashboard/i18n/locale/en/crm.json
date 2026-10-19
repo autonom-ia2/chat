@@ -5246,7 +5246,8 @@
       "PESSOA": {
         "EXISTENTE": {
           "TITULO": "Already in contacts",
-          "TEXTO": "Search by name, phone or email."
+          "TEXTO": "Search by name, phone or email.",
+          "SEM_PERMISSAO": "Your role does not open the contact list. For a customer who already talks to you, create the card from their conversation."
         },
         "NOVA": {
           "TITULO": "New person",
@@ -5415,7 +5416,8 @@
     "CONTATO": {
       "TELA": "Contact",
       "TITULO": "Contact: {nome}",
-      "TEXTO": "The person: name, phone, email and fields. It counts for all their deals."
+      "TEXTO": "The person: name, phone, email and fields. It counts for all their deals.",
+      "TEXTO_BASICO": "The person: name, phone and email."
     },
     "EMPRESA": {
       "TELA": "Company",
@@ -5760,7 +5762,7 @@
       "AMANHA": "Tomorrow",
       "PARA_HOJE": "For today",
       "ATRASADOS": "Left behind",
-      "ADIAR_TODOS": "Move all to tomorrow",
+      "ADIAR_MEUS": "Move mine to tomorrow",
       "AGORA": "Now, {hora}",
       "PROXIMOS": "Next days",
       "PROXIMO": "Next: {dia} — {titulo}.",

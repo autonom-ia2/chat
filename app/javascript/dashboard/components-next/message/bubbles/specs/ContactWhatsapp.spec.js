@@ -8,6 +8,13 @@ import { provideMessageContext } from '../../provider.js';
 import { PELES, fornecerPele } from '../../../conversa-canal/pele';
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+const podeVerContatos = ref(true);
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({
+    canViewRelationshipRecords: podeVerContatos,
+    canManageRelationshipRecords: podeVerContatos,
+  }),
+}));
 
 // #1702: "Conversar" e "Salvar contato" acham o contato pelo telefone, criam quando
 // não existe e completam o nome quando o cadastro não tem um de verdade.
@@ -67,6 +74,14 @@ describe('Contato recebido com a pele do WhatsApp', () => {
     const { wrapper } = montar(null);
     expect(wrapper.find('[data-conversar-com-contato]').exists()).toBe(true);
     expect(wrapper.findAll('button')).toHaveLength(2);
+  });
+
+  it('sem ver contatos, mostra o cartão sem Conversar nem Salvar (#1849)', () => {
+    podeVerContatos.value = false;
+    const { wrapper } = montar(null);
+    expect(wrapper.find('[data-conversar-com-contato]').exists()).toBe(false);
+    expect(wrapper.findAll('button')).toHaveLength(0);
+    podeVerContatos.value = true;
   });
 
   it('cria o contato quando o telefone não existe', async () => {

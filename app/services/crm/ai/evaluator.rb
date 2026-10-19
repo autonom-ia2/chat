@@ -1,6 +1,6 @@
 module Crm
   module Ai
-    class Evaluator
+    class Evaluator # rubocop:disable Metrics/ClassLength -- no teto (175) antes do #1828; a saída da cópia é uma linha
       Result = Struct.new(:status, :suggestion, :error, keyword_init: true)
 
       # tocado (#1693): a IA de assunto disse que a mensagem é sobre este card; ele é avaliado mesmo fora do foco.
@@ -47,6 +47,8 @@ module Crm
         regra = handoff_config.slice(:enabled, :trigger) if conjunta
         # Memória das IAs (#1601): `memoria_ops` gravado no card ANTES de aplicar; o retry do job aplica sem pagar de novo.
         Crm::Memoria::Pendente.guardar!(card: @card, classificacao: classification)
+        # #1828: quem não é o cliente e pediu para sair da cópia (de carona nesta avaliação, flag `email_autoria`).
+        Crm::Email::SaidaDaCopia.aplicar!(@card, classification[:saida_da_copia])
         result = apply_classification(classification)
         return result.tap { Crm::Memoria::Pendente.descartar!(@card) } if @pipeline_mudou
 

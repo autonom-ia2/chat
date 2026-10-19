@@ -1116,10 +1116,12 @@ export const actions = {
   // endpoint (past-guard for WhatsApp lives server-side in Rescheduler). The
   // returned follow-up carries its parent card; realtime keeps the list/board
   // in sync, so we only upsert the follow-up here.
-  rescheduleFollowUp: async ({ commit }, { id, dueAt }) => {
+  rescheduleFollowUp: async ({ commit }, { id, dueAt, remindersOnly }) => {
     commit(types.SET_CRM_KANBAN_UI_FLAG, { isReschedulingFollowUp: true });
     try {
-      const response = await CrmKanbanAPI.rescheduleFollowUp(id, dueAt);
+      const response = await CrmKanbanAPI.rescheduleFollowUp(id, dueAt, {
+        remindersOnly,
+      });
       commit(types.UPSERT_CRM_FOLLOW_UP, response.data.payload);
       return response.data.payload;
     } finally {

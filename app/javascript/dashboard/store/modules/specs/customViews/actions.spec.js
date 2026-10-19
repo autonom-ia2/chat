@@ -224,8 +224,9 @@ describe('#actions', () => {
 
     it('prefetches the contact of a contact filter', async () => {
       const dispatch = vi.fn();
+      const rootGetters = { getCurrentRole: 'administrator' };
       await actions.setActiveConversationFolder(
-        { commit, dispatch },
+        { commit, dispatch, rootGetters },
         contactFilterView
       );
       expect(dispatch).toHaveBeenCalledWith(
@@ -233,6 +234,25 @@ describe('#actions', () => {
         { id: 42 },
         { root: true }
       );
+    });
+
+    it('does not prefetch the contact for a role without contact_view', async () => {
+      const dispatch = vi.fn();
+      const rootGetters = {
+        getCurrentRole: 'agent',
+        getCurrentCustomRoleId: 7,
+        getCurrentAccountId: 1,
+        getCurrentUser: {
+          accounts: [
+            { id: 1, permissions: ['conversation_participating_manage'] },
+          ],
+        },
+      };
+      await actions.setActiveConversationFolder(
+        { commit, dispatch, rootGetters },
+        contactFilterView
+      );
+      expect(dispatch).not.toHaveBeenCalled();
     });
 
     it('does not prefetch without a contact filter', async () => {

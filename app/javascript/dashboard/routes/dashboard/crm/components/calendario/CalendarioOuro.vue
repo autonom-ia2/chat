@@ -425,6 +425,7 @@ const escolherDia = chave => {
             :fuso="fuso"
             :idioma="idioma"
             :nome-de="nomeDe"
+            :eh-meu="cal.ehMeu"
             :concluindo="concluindo"
             :recem-feitos="recemFeitos"
             @concluir="concluir"

@@ -14,6 +14,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import CrmConversationSubjects from './CrmConversationSubjects.vue';
 import CrmCopilotPanel from 'dashboard/routes/dashboard/crm/components/CrmCopilotPanel.vue';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 
 export default {
   components: {
@@ -36,10 +37,12 @@ export default {
       includeAIAssignees: true,
     });
     const { canViewCrm, canManageCards } = useCrmPermissions();
+    const { canViewRelationshipRecords } = useRelationshipPermissions();
     return {
       agentsList,
       canViewCrm,
       canManageCards,
+      canViewRelationshipRecords,
     };
   },
   data() {
@@ -209,7 +212,8 @@ export default {
     contactId: {
       immediate: true,
       handler(newContactId) {
-        if (!newContactId) return;
+        // As etiquetas do contato são da ficha: sem ver contatos, não busca (#1849).
+        if (!newContactId || !this.canViewRelationshipRecords) return;
         if (this.contactLabelTitlesFor(newContactId)?.length) return;
         this.$store.dispatch('contactLabels/get', newContactId);
       },

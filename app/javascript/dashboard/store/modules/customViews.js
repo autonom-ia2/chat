@@ -2,6 +2,7 @@ import * as MutationHelpers from 'shared/helpers/vuex/mutationHelpers';
 import types from '../mutation-types';
 import CustomViewsAPI from '../../api/customViews';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { canViewRelationshipRecordsFrom } from 'dashboard/composables/useRelationshipPermissions';
 
 const VIEW_TYPES = {
   CONVERSATION: 'conversation',
@@ -162,11 +163,13 @@ export const actions = {
       commit(types.SET_CUSTOM_VIEW_UI_FLAG, { isDeleting: false });
     }
   },
-  setActiveConversationFolder({ commit, dispatch }, data) {
+  setActiveConversationFolder({ commit, dispatch, rootGetters }, data) {
     commit(types.SET_ACTIVE_CONVERSATION_FOLDER, data);
     // prefetch the contact of a contact filter so the UI can show its name
+    // (só quem vê contatos abre a ficha, #1849)
     const contactId = getFolderContactId(data);
-    if (contactId) dispatch('contacts/show', { id: contactId }, { root: true });
+    if (contactId && canViewRelationshipRecordsFrom(rootGetters))
+      dispatch('contacts/show', { id: contactId }, { root: true });
   },
 };
 
