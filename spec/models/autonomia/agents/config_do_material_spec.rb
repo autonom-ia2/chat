@@ -16,6 +16,14 @@ RSpec.describe Autonomia::Agents::ConfigDoMaterial do
     expect(agent.reload.config).to include('voice' => 'feminina', 'guardrails' => ['Não invente.'], 'autoteste' => resultado)
   end
 
+  it 'a escrita do sistema não mexe no updated_at do agente (o Desfazer do #1428 o compara)' do
+    antes = agent.reload.updated_at
+
+    travel(1.minute) { described_class_gravar('autoteste', resultado) }
+
+    expect(agent.reload.updated_at).to eq(antes)
+  end
+
   it 'recusa chave que não é do material' do
     expect { Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'voice', 'x') }.to raise_error(ArgumentError)
   end

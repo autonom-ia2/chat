@@ -490,17 +490,25 @@ module Autonomia
         # #1426 (tema 4b) — na Fase 2 (fora da Lia), a conferência do material entra ANTES de o parecer ser gravado: o
         # material nunca aparece "Pronto" para depois virar "Precisa de você". Leitura ruim ou tabela sem cabeçalho
         # reprovam (needs_resend). O resumo exato do texto (`hash_do_texto`) serve para achar duplicado. Falha da IA na
-        # conferência não reprova nada. Fora da Fase 2, o parecer de sempre.
+        # conferência não reprova nada. Só confere o que o parecer aprovou (o reprovado ou sem parecer já pede a pessoa: a
+        # chamada seria gasto sem efeito). Fora da Fase 2, o parecer de sempre.
         def com_conferencia(attrs)
           return attrs unless @source.kind_knowledge? && Autonomia::Agents::Material.conferir?(@agent)
 
-          conferencia = Autonomia::Agents::Material::ConferenciaDoMaterial.new(source: @source, amostra: sample_chunks_text).conferir
-          metadata = (@source.metadata || {}).except('conferencia').merge('hash_do_texto' => hash_do_texto)
-          metadata = metadata.merge('conferencia' => conferencia) if conferencia
-          attrs = attrs.merge(metadata: metadata)
-          return attrs if conferencia.nil? || conferencia['problema'].nil?
+          conferencia = conferir_material if attrs[:review_status] == 'accepted'
+          conferido = attrs.merge(metadata: metadata_conferida(conferencia))
+          return conferido if conferencia.nil? || conferencia['problema'].nil?
 
-          attrs.merge(review_status: 'needs_resend', review_summary: nil)
+          conferido.merge(review_status: 'needs_resend', review_summary: nil)
+        end
+
+        def metadata_conferida(conferencia)
+          metadata = (@source.metadata || {}).except('conferencia').merge('hash_do_texto' => hash_do_texto)
+          conferencia ? metadata.merge('conferencia' => conferencia) : metadata
+        end
+
+        def conferir_material
+          Autonomia::Agents::Material::ConferenciaDoMaterial.new(source: @source, amostra: sample_chunks_text).conferir
         end
 
         # Medida objetiva (código): o texto inteiro lido deste material, na ordem.

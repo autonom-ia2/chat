@@ -30,6 +30,27 @@ RSpec.describe Autonomia::Agents::Material::MedidorDeCusto do
     expect(medidor.gasto).to be_within(0.000001).of(0.02)
   end
 
+  it 'duas rodadas medindo ao mesmo tempo, em threads diferentes, não somam o custo uma da outra', :aggregate_failures do
+    medidores = [described_class.new, described_class.new]
+    abertas = Queue.new
+    liberar = Queue.new
+    rodadas = medidores.zip([0.02, 0.5]).map do |medidor, custo|
+      Thread.new do
+        medidor.medir(:resposta) do
+          abertas << true
+          liberar.pop
+          aviso(custo)
+        end
+      end
+    end
+    2.times { abertas.pop }
+    2.times { liberar << true }
+    rodadas.each(&:join)
+
+    expect(medidores.first.gasto).to be_within(0.000001).of(0.02)
+    expect(medidores.last.gasto).to be_within(0.000001).of(0.5)
+  end
+
   it 'não conta o que acontece fora da medição' do
     medidor = described_class.new
     aviso(1.0)

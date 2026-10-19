@@ -30,6 +30,15 @@ RSpec.describe Autonomia::Agents::Material::DecisoesDoMaterial do
                                  "outra coisa.\n- Sobre horário de sábado: vale \"das 9h às 12h\".")
   end
 
+  it 'material escolhido tirado ou reprovado: a escolha sai do contexto na hora', :aggregate_failures do
+    gravar(pdf.id)
+    pdf.update!(review_status: 'needs_resend')
+    expect(contexto).not_to include('QUANDO OS MATERIAIS DIVERGEM')
+
+    pdf.destroy!
+    expect(contexto).not_to include('QUANDO OS MATERIAIS DIVERGEM')
+  end
+
   it 'sem escolha, fora da Fase 2 ou na Lia: o contexto de antes', :aggregate_failures do
     gravar(nil)
     sem_decisao = contexto

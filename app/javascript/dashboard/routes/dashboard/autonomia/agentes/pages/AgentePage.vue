@@ -418,7 +418,9 @@ const marcaDasFontes = computed(() =>
     )
     .join('|')
 );
-watch(marcaDasFontes, lerConferencias);
+watch(marcaDasFontes, () => {
+  if (comConferencias.value) conferencias.lerDepoisDaMudanca();
+});
 
 // #1426 — "N coisas no material precisam de você" no quadro: só na Fase 2, que mostra o estado real de cada material.
 // Conta os cartões do "um problema por vez" e os materiais que precisam da pessoa sem cartão (ex.: reprovado na revisão

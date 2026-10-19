@@ -73,6 +73,17 @@ RSpec.describe Autonomia::Agents::Material::Contradicoes do
     end
   end
 
+  it 'o modelo repetindo uma já decidida (mesmo id) não a duplica: fica a decidida' do
+    modelo_aponta(horario_de_sabado)
+    described_class.new(agent).conferir!
+    decidida = gravadas.sole.merge('escolha' => site.id)
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'conferencia_da_base', { 'contradicoes' => [decidida] })
+
+    described_class.new(agent).conferir!
+
+    expect(gravadas).to eq([decidida])
+  end
+
   it 'decidida cujo material saiu deixa de valer' do
     decidida = { 'id' => 'contradicao-x', 'assunto' => 'preço', 'escolha' => site.id,
                  'opcoes' => [{ 'fonte' => site.id, 'diz' => 'R$ 25' }, { 'fonte' => horarios.id, 'diz' => 'R$ 27' }] }

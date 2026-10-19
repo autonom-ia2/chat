@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #1426 (tema 4b, termo t4d) — o autoteste: no máximo 10 perguntas (8 do material + 2 de fora), o agente responde como
-# no Testar sem ferramenta (modo prova), o juiz dá o veredito, e a rodada guarda pergunta, resposta, veredito e trechos.
+# no Testar sem ferramenta (modo prova), o juiz dá o veredito, e a rodada guarda pergunta, resposta e veredito.
 # Teto de custo por rodada com contagem real: para ANTES de passar. O gerador, o agente e o juiz são dublados aqui.
 RSpec.describe Autonomia::Agents::Material::Autoteste do
   include_context 'with material do agente'
@@ -46,6 +46,14 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     described_class.new(agent, estado['rodada'], medidor: medidor).rodar!
   end
 
+  it 'o job que começa atrasado na fila (mais que a validade da rodada) ainda roda: o prazo conta do começo' do
+    described_class.pedir!(agent, quando: 'pedido')
+
+    travel(20.minutes) { described_class.new(agent, estado['rodada']).rodar! }
+
+    expect(estado['estado']).to eq('pronto')
+  end
+
   it 'pedir! começa a rodada e enfileira o job; com uma rodada viva, não abre outra', :aggregate_failures do
     expect { described_class.pedir!(agent, quando: 'pedido') }.to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
     expect(estado).to include('estado' => 'rodando', 'quando' => 'pedido', 'feitas' => 0)
@@ -60,17 +68,16 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     expect { described_class.pedir!(agent, quando: 'pedido') }.to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
   end
 
-  it 'roda 10 perguntas (8 + 2) e guarda pergunta, resposta, veredito e trechos usados', :aggregate_failures do
+  it 'roda 10 perguntas (8 + 2) e guarda pergunta, resposta e veredito', :aggregate_failures do
     pedir_e_rodar
 
-    expect(estado).to include('estado' => 'pronto', 'feitas' => 10, 'total' => 10)
+    expect(estado).to include('estado' => 'pronto', 'feitas' => 10, 'total' => 10, 'rodada_dos_itens' => estado['rodada'])
     itens = estado['itens']
     expect(itens.size).to eq(10)
     expect(itens.count { |item| item['origem'] == 'material' }).to eq(8)
     expect(itens.count { |item| item['origem'] == 'fora' }).to eq(2)
     expect(itens.first).to include('pergunta' => 'Pergunta 0?', 'esperado' => 'Resposta 0', 'resposta' => 'O X-Burger custa R$ 25.',
                                    'veredito' => 'certo', 'equipe' => false)
-    expect(itens.first['trechos']).to eq([{ 'id' => 77, 'fonte' => 'cardapio.pdf', 'trecho' => 'X-Burger R$ 25.' }])
     expect(itens.last['veredito']).to eq('recusou')
   end
 

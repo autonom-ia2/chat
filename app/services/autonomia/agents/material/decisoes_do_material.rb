@@ -1,6 +1,7 @@
 # #1426 (tema 4b) — o que o dono escolheu quando dois materiais se contradizem. Os dois materiais continuam na base
 # (decisão do Rodrigo, 19/10); o agente recebe, junto dos trechos, qual vale em cada assunto. Só na Fase 2, fora da Lia,
-# e só com escolha gravada: sem ela, o bloco de contexto fica byte a byte o de antes.
+# e só com escolha gravada: sem ela, o bloco de contexto fica byte a byte o de antes. A escolha só vale enquanto o
+# material escolhido estiver em uso (tirado ou reprovado, sai daqui na hora, sem esperar a próxima conferência).
 module Autonomia::Agents::Material::DecisoesDoMaterial
   module_function
 
@@ -15,8 +16,12 @@ module Autonomia::Agents::Material::DecisoesDoMaterial
   end
 
   def decididas(agent)
-    Array(agent.chave_do_material(Autonomia::Agents::Material::Contradicoes::CHAVE).to_h['contradicoes'])
-      .select { |item| item['escolha'].present? }
+    escolhidas = Array(agent.chave_do_material(Autonomia::Agents::Material::Contradicoes::CHAVE).to_h['contradicoes'])
+                 .select { |item| item['escolha'].present? }
+    return [] if escolhidas.empty?
+
+    em_uso = agent.sources.knowledge_sources.servable.where(id: escolhidas.pluck('escolha')).pluck(:id)
+    escolhidas.select { |item| em_uso.include?(item['escolha']) }
   end
 
   def linha(item)

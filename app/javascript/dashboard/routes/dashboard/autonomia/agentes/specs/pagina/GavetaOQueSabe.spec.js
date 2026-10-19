@@ -735,6 +735,39 @@ describe('GavetaOQueSabe', () => {
       wrapper.unmount();
     });
 
+    it('duplicado: "ficar só com X" tira o repetido pelo Tirar, depois de confirmar', async () => {
+      preparar([PRONTA, fonte(5)]);
+      const conferencias = conferenciasCom({
+        problemas: [
+          {
+            id: 'duplicado-4-5',
+            tipo: 'duplicado',
+            fontes: [4, 5],
+            nome: 'arquivo-4.pdf',
+            outro: 'arquivo-5.pdf',
+            manter: 4,
+            tirar: 5,
+          },
+        ],
+      });
+      const wrapper = montar({ fase2: true, conferencias });
+      await clicar('[data-acao="um-so"]');
+      expect(store.dispatch).not.toHaveBeenCalledWith(
+        'autonomiaSources/remove',
+        expect.anything()
+      );
+      await clicar('[data-confirmar]');
+      expect(store.dispatch).toHaveBeenLastCalledWith(
+        'autonomiaSources/remove',
+        {
+          agentId: 7,
+          sourceId: 5,
+        }
+      );
+      expect(conferencias.resolver).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
     it('testar de novo pede o autoteste', async () => {
       preparar([PRONTA]);
       const conferencias = conferenciasCom({

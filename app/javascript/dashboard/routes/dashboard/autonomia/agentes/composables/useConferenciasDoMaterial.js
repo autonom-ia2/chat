@@ -6,6 +6,9 @@ import MaterialAPI from 'dashboard/api/autonomia/material';
 // muda (um material terminou a revisão, entrou ou saiu), e aqui a releitura se repete sozinha enquanto o autoteste
 // roda. É ela que faz o resultado e os cartões novos aparecerem sem recarregar.
 export const RELEITURA_DO_AUTOTESTE_MS = 3000;
+// A base mudou: as contradições e a rodada automática só começam 2 min depois (BaseMudouJob::ESPERA). Uma releitura a
+// mais, com folga, mostra o "rodando" e o que elas acharem sem recarregar.
+export const RELEITURA_DEPOIS_DA_BASE_MS = 150000;
 
 const doAutoteste = salvo =>
   salvo
@@ -28,6 +31,7 @@ export function useConferenciasDoMaterial({ agentId, api = MaterialAPI }) {
   const lido = ref(false);
   const erro = ref(false);
   let relogio = null;
+  let relogioDaBase = null;
   let parado = false;
 
   const aplicar = ({ data } = {}) => {
@@ -58,6 +62,12 @@ export function useConferenciasDoMaterial({ agentId, api = MaterialAPI }) {
     agendar(ler);
   };
 
+  const lerDepoisDaMudanca = () => {
+    clearTimeout(relogioDaBase);
+    ler();
+    if (!parado) relogioDaBase = setTimeout(ler, RELEITURA_DEPOIS_DA_BASE_MS);
+  };
+
   // As ações levantam o erro para quem chamou mostrar ao lado do botão.
   const agir = async acao => {
     aplicar(await acao());
@@ -71,6 +81,7 @@ export function useConferenciasDoMaterial({ agentId, api = MaterialAPI }) {
   const parar = () => {
     parado = true;
     pararReleitura();
+    clearTimeout(relogioDaBase);
   };
 
   if (getCurrentInstance()) onBeforeUnmount(parar);
@@ -81,6 +92,7 @@ export function useConferenciasDoMaterial({ agentId, api = MaterialAPI }) {
     lido,
     erro,
     ler,
+    lerDepoisDaMudanca,
     resolver,
     pedirAutoteste,
     parar,

@@ -90,7 +90,8 @@ RSpec.describe Autonomia::Agents::Material::Problemas do
       { 'pergunta' => 'Abre domingo?', 'origem' => 'material', 'veredito' => 'certo' },
       { 'pergunta' => 'Aceita Pix?', 'origem' => 'material', 'veredito' => 'errado', 'confirmada' => true }
     ]
-    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', { 'rodada' => 'r1', 'estado' => 'pronto', 'itens' => itens })
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste',
+                                                       { 'rodada' => 'r1', 'rodada_dos_itens' => 'r1', 'estado' => 'pronto', 'itens' => itens })
 
     expect(do_tipo('autoteste')).to eq([{ 'id' => 'autoteste-r1-0', 'tipo' => 'autoteste', 'fontes' => [],
                                           'pergunta' => 'Entregam no Centro?', 'resposta' => 'Não entregamos.', 'equipe' => false,

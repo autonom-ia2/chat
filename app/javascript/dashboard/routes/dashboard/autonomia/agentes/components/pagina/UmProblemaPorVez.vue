@@ -7,7 +7,8 @@ import EscolhaRadio from '../EscolhaRadio.vue';
 // #1426 (tema 4b) — "um problema por vez" (mockup aprovado em 19/10): o que as conferências e o autoteste acharam no
 // material, um cartão de cada vez, com "1 de N", uma explicação simples e no máximo duas saídas. Nada trava: "Pular por
 // agora" passa para o próximo, e o agente segue atendendo com o resto do material. Nada se resolve sozinho: cada saída é
-// a pessoa que escolhe. Quem só vê lê o cartão, sem as ações.
+// a pessoa que escolhe. Quem só vê lê o cartão, sem as ações. "Ficar só com X" (duplicado) tira o repetido pelo
+// mesmo caminho do "Tirar" da gaveta, com a mesma confirmação.
 // Tipos (Material::Problemas): vazio, ocr (leitura ruim), sem_cabecalho (tabela sem títulos), duplicado, contradicao,
 // paginas_de_fora (o material vale com o que foi lido), autoteste (resposta errada) e autoteste_fora (inventou numa
 // pergunta de fora do material).
@@ -221,17 +222,13 @@ const corrigirResposta = () =>
         </AgenteBotao>
       </template>
       <template v-else-if="atual.tipo === 'duplicado'">
-        <AgenteBotao
-          data-acao="um-so"
-          :carregando="salvando"
-          @click="resolver('um_so')"
-        >
+        <AgenteBotao data-acao="um-so" @click="emit('tirar', atual.tirar)">
           {{ t(`${NS}.DUPLICADO.UM_SO`, dados) }}
         </AgenteBotao>
         <AgenteBotao
           data-acao="os-dois"
           variante="contorno"
-          :inativo="salvando"
+          :carregando="salvando"
           @click="resolver('os_dois')"
         >
           {{ t(`${NS}.DUPLICADO.OS_DOIS`) }}

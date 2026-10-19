@@ -73,7 +73,9 @@ class Autonomia::Agents::Material::Contradicoes
       decididas = Array(base['contradicoes']).select do |item|
         item['escolha'].present? && item['opcoes'].to_a.all? { |opcao| ids.include?(opcao['fonte']) }
       end
-      base.merge('contradicoes' => decididas + novas, 'hash_da_base' => Autonomia::Agents::Material.hash_da_base(@agent),
+      # O modelo pode repetir uma já decidida (mesmo id): fica a decidida.
+      ineditas = novas.reject { |nova| decididas.any? { |item| item['id'] == nova['id'] } }
+      base.merge('contradicoes' => decididas + ineditas, 'hash_da_base' => Autonomia::Agents::Material.hash_da_base(@agent),
                  'conferida_em' => Time.current.iso8601)
     end
   end

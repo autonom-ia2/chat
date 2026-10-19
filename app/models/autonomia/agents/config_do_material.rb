@@ -19,14 +19,15 @@ module Autonomia::Agents::ConfigDoMaterial
 
   class_methods do
     # Grava `valor` em `chave`, só nela, num UPDATE só. `onde` (opcional) é uma guarda a mais no mesmo UPDATE (ex.: a
-    # rodada do autoteste ainda é a vigente). true se gravou.
+    # rodada do autoteste ainda é a vigente). true se gravou. NÃO mexe no `updated_at`: é estado do sistema, não edição
+    # do dono, e o Desfazer e a correção do ajuste (#1428) usam o `updated_at` para saber se o agente mudou.
     def gravar_chave_do_material!(agent_id, chave, valor, onde: nil)
       raise ArgumentError, "chave fora do material: #{chave}" unless CHAVES.include?(chave)
 
       escopo = where(id: agent_id)
       escopo = escopo.where(onde) if onde
-      escopo.update_all(["config = jsonb_set(COALESCE(config, '{}'::jsonb), ?::text[], ?::jsonb, true), updated_at = ?", # rubocop:disable Rails/SkipsModelValidations
-                         "{#{chave}}", valor.to_json, Time.current]) == 1
+      escopo.update_all(["config = jsonb_set(COALESCE(config, '{}'::jsonb), ?::text[], ?::jsonb, true)", # rubocop:disable Rails/SkipsModelValidations
+                         "{#{chave}}", valor.to_json]) == 1
     end
   end
 

@@ -10,8 +10,9 @@
 # Guarda em config['autoteste'] (ConfigDoMaterial, escrita atômica):
 #   rodada, estado (rodando | pronto | parado), motivo (teto | indisponivel), quando (pedido | base_mudou), desde,
 #   feitas, total, gasto_usd, hash_da_base, ultima_automatica,
+#   rodada_dos_itens (a rodada que produziu os itens: o id dos cartões não muda quando outra rodada começa),
 #   itens: o ÚLTIMO resultado completo — [{ pergunta, origem (material | fora), esperado, fonte, resposta, equipe,
-#          veredito (certo | errado | recusou | inventou), trechos: [{ id, fonte, trecho }], confirmada }]
+#          veredito (certo | errado | recusou | inventou), confirmada }]
 # Os itens só são trocados quando a rodada termina: a rodada que para no meio não apaga o resultado anterior (nem os
 # problemas que ele mostra).
 class Autonomia::Agents::Material::Autoteste
@@ -20,7 +21,8 @@ class Autonomia::Agents::Material::Autoteste
   # Rodando há mais que isto, a rodada morreu (worker caiu): a tela mostra "não consegui terminar" e libera de novo.
   VALIDADE_DA_RODADA = 15.minutes
   INTERVALO_AUTOMATICO = 30.minutes
-  TRECHO_MAX_CHARS = 200
+  # Base mudou com uma rodada rodando: confere de novo depois disto (a rodada leva 1 a 3 min).
+  ESPERA_DA_RODADA_VIVA = 5.minutes
   FALHAS_DA_IA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, *Crm::Ai::ResponsesClient::NETWORK_ERRORS,
                   OpenSSL::SSL::SSLError, Errno::EHOSTUNREACH, Errno::ENETUNREACH].freeze
 
@@ -41,14 +43,21 @@ class Autonomia::Agents::Material::Autoteste
       estado
     end
 
-    # A rodada automática: só sem rodada viva, 30 min depois da última automática e com a base mudada desde a última.
-    def automatica_permitida?(agent)
+    # A rodada automática: só com a base mudada desde a última rodada, sem rodada viva e 30 min depois da última
+    # automática. Devolve QUANDO ela pode rodar (agora, ou mais tarde: o fim dos 30 min, ou daqui a pouco se há rodada
+    # viva), ou nil quando a base é a mesma da última rodada (nada novo a testar).
+    def quando_automatica(agent)
       atual = agent.chave_do_material(CHAVE).to_h
-      return false if viva?(atual)
+      return if atual['hash_da_base'] == Autonomia::Agents::Material.hash_da_base(agent)
 
       ultima = Time.zone.parse(atual['ultima_automatica'].to_s)
-      (ultima.nil? || ultima.before?(INTERVALO_AUTOMATICO.ago)) &&
-        atual['hash_da_base'] != Autonomia::Agents::Material.hash_da_base(agent)
+      livre = [ultima && (ultima + INTERVALO_AUTOMATICO), Time.current].compact.max
+      viva?(atual) ? [livre, ESPERA_DA_RODADA_VIVA.from_now].max : livre
+    end
+
+    def automatica_permitida?(agent)
+      quando = quando_automatica(agent)
+      quando.present? && !quando.future?
     end
 
     def viva?(estado)
@@ -63,7 +72,7 @@ class Autonomia::Agents::Material::Autoteste
     private
 
     def nova_rodada(atual, rodada, quando, agent)
-      base = atual.is_a?(Hash) ? atual.slice('itens', 'ultima_automatica') : {}
+      base = atual.is_a?(Hash) ? atual.slice('itens', 'rodada_dos_itens', 'ultima_automatica') : {}
       base = base.merge('ultima_automatica' => Time.current.iso8601) if quando == 'base_mudou'
       base.merge('rodada' => rodada, 'estado' => 'rodando', 'motivo' => nil, 'quando' => quando, 'desde' => Time.current.iso8601,
                  'feitas' => 0, 'total' => 0, 'gasto_usd' => 0.0, 'hash_da_base' => Autonomia::Agents::Material.hash_da_base(agent))
@@ -77,6 +86,7 @@ class Autonomia::Agents::Material::Autoteste
   end
 
   def rodar!
+    comecar!
     return unless vigente?
 
     itens = perguntas
@@ -126,7 +136,8 @@ class Autonomia::Agents::Material::Autoteste
     return if vereditos == :parou
     return parar!('indisponivel') if vereditos.nil?
 
-    finalizar!('estado' => 'pronto', 'itens' => itens.zip(vereditos).map { |item, veredito| item.merge('veredito' => veredito) })
+    julgados = itens.zip(vereditos).map { |item, veredito| item.merge('veredito' => veredito) }
+    finalizar!('estado' => 'pronto', 'rodada_dos_itens' => @rodada, 'itens' => julgados)
   end
 
   # Cabe no teto? Mede e chama; não cabe, para antes (`:parou`).
@@ -146,15 +157,13 @@ class Autonomia::Agents::Material::Autoteste
     equipe = resultado.handoff[:should] == true
     return if resultado.error.present? || (texto.nil? && !equipe)
 
-    { 'resposta' => texto, 'equipe' => equipe, 'trechos' => trechos(resultado.used_knowledge) }
+    { 'resposta' => texto, 'equipe' => equipe }
   end
 
-  def trechos(usados)
-    Array(usados).filter_map do |usado|
-      next if usado[:id].nil?
-
-      { 'id' => usado[:id], 'fonte' => usado[:source], 'trecho' => usado[:content].to_s.strip[0, TRECHO_MAX_CHARS] }
-    end
+  # O prazo da rodada conta do começo do job, não do pedido: com a fila atrasada, a rodada não nasce vencida. Só a
+  # rodada vigente (outra pedida no meio vence).
+  def comecar!
+    alterar! { |atual| atual.merge('desde' => Time.current.iso8601) }
   end
 
   def vigente?

@@ -80,7 +80,7 @@ class Autonomia::Agents::Material::Problemas
       next if item['confirmada'] || %w[errado inventou].exclude?(item['veredito'])
 
       fonte = @por_id[item['fonte']]
-      { 'id' => "autoteste-#{estado['rodada']}-#{indice}", 'tipo' => item['origem'] == 'fora' ? 'autoteste_fora' : 'autoteste',
+      { 'id' => "autoteste-#{estado['rodada_dos_itens']}-#{indice}", 'tipo' => item['origem'] == 'fora' ? 'autoteste_fora' : 'autoteste',
         'fontes' => [], 'pergunta' => item['pergunta'], 'resposta' => item['resposta'], 'equipe' => item['equipe'] == true,
         'esperado' => item['esperado'], 'onde' => fonte && nome(fonte) }.compact
     end

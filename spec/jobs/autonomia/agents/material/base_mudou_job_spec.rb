@@ -50,6 +50,25 @@ RSpec.describe Autonomia::Agents::Material::BaseMudouJob do
     expect { described_class.perform_now(agent.id, marca) }.not_to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
   end
 
+  it 'base mudada dentro dos 30 min: o aviso volta quando a rodada automática pode rodar, e então roda', :aggregate_failures do
+    described_class.agendar(agent)
+    described_class.perform_now(agent.id, marca)
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste',
+                                                       agent.reload.config['autoteste'].merge('estado' => 'pronto'))
+    ultima = Time.zone.parse(agent.reload.config.dig('autoteste', 'ultima_automatica'))
+    material('horarios.pdf')
+    described_class.agendar(agent)
+    nova = marca
+
+    expect { described_class.perform_now(agent.id, nova) }
+      .to have_enqueued_job(described_class).with(agent.id, nova).at(a_value_within(1.second).of(ultima + 30.minutes))
+    expect(agent.reload.config.dig('autoteste', 'estado')).to eq('pronto')
+
+    travel_to(ultima + 31.minutes) do
+      expect { described_class.perform_now(agent.id, nova) }.to have_enqueued_job(Autonomia::Agents::Material::AutotesteJob)
+    end
+  end
+
   it 'fora da Fase 2 e na Lia: não agenda', :aggregate_failures do
     Autonomia::Agents::Fase2.desligar!(account)
     expect { described_class.agendar(agent.reload) }.not_to have_enqueued_job(described_class)

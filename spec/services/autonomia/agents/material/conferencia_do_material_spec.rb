@@ -112,6 +112,17 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
       expect(fonte.metadata['conferencia']).to eq('problema' => nil, 'amostra' => [])
     end
 
+    it 'parecer que já reprovou: sem a chamada da conferência (gasto sem efeito), com o resumo do texto', :aggregate_failures do
+      parecer[:recommendation] = 'reenviar'
+
+      revisar
+
+      expect(cliente).to have_received(:create).once
+      expect(fonte.review_status).to eq('needs_resend')
+      expect(fonte.metadata).not_to include('conferencia')
+      expect(fonte.metadata['hash_do_texto']).to eq(Digest::SHA256.hexdigest(amostra))
+    end
+
     it 'fora da Fase 2: uma chamada só (a revisão), sem conferência nem marca nova' do
       Autonomia::Agents::Fase2.desligar!(account)
 

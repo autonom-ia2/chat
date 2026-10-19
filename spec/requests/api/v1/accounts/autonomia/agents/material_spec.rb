@@ -40,7 +40,7 @@ RSpec.describe 'Autonomia agents - material', type: :request do
     itens = [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'veredito' => 'certo', 'esperado' => 'segredo',
                'trechos' => [{ 'id' => 1 }] },
              { 'pergunta' => 'Vende bolo?', 'origem' => 'fora', 'veredito' => 'recusou' }]
-    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', { 'rodada' => 'r', 'estado' => 'pronto',
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', { 'rodada' => 'r', 'rodada_dos_itens' => 'r', 'estado' => 'pronto',
                                                                                 'feitas' => 2, 'total' => 2, 'itens' => itens })
 
     ler

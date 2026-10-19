@@ -4,6 +4,7 @@ import { withFullI18n } from 'test-i18n';
 import UmProblemaPorVez from '../../components/pagina/UmProblemaPorVez.vue';
 import AutotesteDoMaterial from '../../components/pagina/AutotesteDoMaterial.vue';
 import {
+  RELEITURA_DEPOIS_DA_BASE_MS,
   RELEITURA_DO_AUTOTESTE_MS,
   useConferenciasDoMaterial,
 } from '../../composables/useConferenciasDoMaterial';
@@ -82,7 +83,7 @@ describe('UmProblemaPorVez', () => {
     expect(wrapper.emitted('resolver')).toEqual([['contradicao-a', 4]]);
   });
 
-  it('duplicado: ficar com um só ou manter os dois, sempre pela escolha da pessoa', async () => {
+  it('duplicado: ficar com um só (pelo Tirar, com confirmação) ou manter os dois', async () => {
     const wrapper = montarProblemas([
       {
         id: 'duplicado-4-5',
@@ -98,6 +99,9 @@ describe('UmProblemaPorVez', () => {
     expect(no(wrapper, '[data-acao="um-so"]').text()).toBe(
       'Ficar só com horarios.pdf'
     );
+    await no(wrapper, '[data-acao="um-so"]').trigger('click');
+    expect(wrapper.emitted('tirar')).toEqual([[5]]);
+    expect(wrapper.emitted('resolver')).toBeUndefined();
     await no(wrapper, '[data-acao="os-dois"]').trigger('click');
     expect(wrapper.emitted('resolver')).toEqual([['duplicado-4-5', 'os_dois']]);
   });
@@ -378,6 +382,24 @@ describe('useConferenciasDoMaterial', () => {
     expect(api.pedirAutoteste).toHaveBeenCalledWith(7);
     expect(conferencias.autoteste.value.estado).toBe('rodando');
     conferencias.parar();
+  });
+
+  it('a base mudou: lê agora e mais uma vez depois da espera das conferências (uma só, mesmo em rajada)', async () => {
+    const api = { get: vi.fn().mockResolvedValue(resposta([], null)) };
+    const conferencias = useConferenciasDoMaterial({ agentId: () => 7, api });
+
+    conferencias.lerDepoisDaMudanca();
+    conferencias.lerDepoisDaMudanca();
+    await flushPromises();
+    expect(api.get).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(RELEITURA_DEPOIS_DA_BASE_MS);
+    expect(api.get).toHaveBeenCalledTimes(3);
+
+    conferencias.lerDepoisDaMudanca();
+    conferencias.parar();
+    await vi.advanceTimersByTimeAsync(RELEITURA_DEPOIS_DA_BASE_MS);
+    expect(api.get).toHaveBeenCalledTimes(4);
   });
 
   it('falha na leitura: marca o erro sem apagar o que já estava na tela', async () => {

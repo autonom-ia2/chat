@@ -37,11 +37,11 @@ RSpec.describe Autonomia::Agents::Material::Resolver do
     expect { resolver('contradicao-a', '999') }.to raise_error(described_class::Invalido)
   end
 
-  it 'duplicado "ficar com um só": tira o mais novo e revalida a base' do
-    expect { resolver("duplicado-#{site.id}-#{pdf.id}", 'um_so') }
-      .to have_enqueued_job(Autonomia::Agents::Knowledge::RecomputeOverallJob).with(agent.id)
+  # "Ficar só com X" é o Tirar da gaveta (com confirmação), não uma escolha aqui: nada é apagado por este caminho.
+  it 'duplicado com "um_so": Invalido, e os dois materiais ficam' do
+    expect { resolver("duplicado-#{site.id}-#{pdf.id}", 'um_so') }.to raise_error(described_class::Invalido)
 
-    expect(agent.sources.pluck(:id)).to eq([site.id])
+    expect(agent.sources.count).to eq(2)
   end
 
   it 'duplicado "manter os dois": os dois ficam e o par não volta' do
@@ -53,7 +53,7 @@ RSpec.describe Autonomia::Agents::Material::Resolver do
 
   it 'autoteste "a resposta está certa": o item conta como certo e sai da lista' do
     Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', {
-                                                         'rodada' => 'r1', 'estado' => 'pronto',
+                                                         'rodada' => 'r1', 'rodada_dos_itens' => 'r1', 'estado' => 'pronto',
                                                          'itens' => [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'veredito' => 'errado' }]
                                                        })
     resolver("duplicado-#{site.id}-#{pdf.id}", 'os_dois')
@@ -62,6 +62,18 @@ RSpec.describe Autonomia::Agents::Material::Resolver do
 
     expect(agent.reload.config.dig('autoteste', 'itens', 0, 'confirmada')).to be(true)
     expect(Autonomia::Agents::Material::Problemas.new(agent).lista).to be_empty
+  end
+
+  it 'autoteste: com outra rodada já rodando, o cartão aberto (da rodada dos itens) ainda se resolve' do
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', {
+                                                         'rodada' => 'r2', 'rodada_dos_itens' => 'r1', 'estado' => 'rodando',
+                                                         'itens' => [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'veredito' => 'errado' }]
+                                                       })
+    resolver("duplicado-#{site.id}-#{pdf.id}", 'os_dois')
+
+    resolver('autoteste-r1-0', 'certa')
+
+    expect(agent.reload.config.dig('autoteste', 'itens', 0, 'confirmada')).to be(true)
   end
 
   it 'problema que não existe mais, ou sem escolha nesta tela: Invalido', :aggregate_failures do
