@@ -55,8 +55,9 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
 
   private
 
+  # A Lia (instrução mantida) fica como na main: relê a qualquer momento.
   def lendo_na_fase2?
-    Autonomia::Agents::Fase2.ligada?(Current.account) && @source.lendo_agora?
+    Autonomia::Agents::Fase2.ligada?(Current.account) && !@source.agent&.instrucao_mantida? && @source.lendo_agora?
   end
 
   # #1426 (revisão adversarial) — a conferência do teto e a gravação correm sob a trava da linha do agente, como na foto

@@ -63,7 +63,8 @@ const botaoArquivo = ref(null);
 const lista = computed(() => props.fontes || []);
 const estadoDe = fonte => (props.fase2 ? estadoDoMaterial(fonte) : '');
 
-// #1426 — "Revisando…" parado além do teto da releitura (o worker caiu): a linha libera "Ler de novo". O relógio
+// #1426 — "Lendo…" ou "Revisando…" parado além do teto da releitura (o worker caiu): a linha libera "Ler de novo",
+// para arquivo e foto (o servidor aceita a releitura do que passou do mesmo teto). Só na Fase 2 (estadoDe). O relógio
 // anda a cada 30 s com a gaveta aberta, porque a store já parou de reler.
 const RELOGIO_DO_PARADO_MS = 30000;
 const relogio = ref(Date.now());
@@ -71,8 +72,9 @@ const relogioDoParado = setInterval(() => {
   relogio.value = Date.now();
 }, RELOGIO_DO_PARADO_MS);
 onBeforeUnmount(() => clearInterval(relogioDoParado));
-const paradoRevisando = fonte =>
-  estadoDe(fonte) === ESTADO_MATERIAL.REVISANDO &&
+const ESTADOS_QUE_PARAM = [ESTADO_MATERIAL.LENDO, ESTADO_MATERIAL.REVISANDO];
+const paradoAlemDoTeto = fonte =>
+  ESTADOS_QUE_PARAM.includes(estadoDe(fonte)) &&
   relogio.value - Date.parse(fonte.updated_at || '') > TETO_DA_RELEITURA_MS;
 
 // "Além da conversa, {nome} usa estes arquivos e sites…" só quando há arquivo ou site; sem eles, o
@@ -366,7 +368,7 @@ const tirar = () => remover(tirando.value);
         :nome-agente="nome"
         :relendo="fonte.id in relendo"
         :estado="estadoDe(fonte)"
-        :reler-parado="podeGerenciar && paradoRevisando(fonte)"
+        :reler-parado="podeGerenciar && paradoAlemDoTeto(fonte)"
         :pode-gerenciar="podeGerenciar"
         @ler-de-novo="lerDeNovo"
         @tirar="pedirTirar"

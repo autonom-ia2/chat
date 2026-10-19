@@ -167,6 +167,18 @@ RSpec.describe Autonomia::Agents::Source do
     end
   end
 
+  # S6 — a leitura nova começa sem a marca da anterior.
+  describe '#begin_ingestion! and the pages left out' do
+    it 'drops the pages left out by the previous reading' do
+      source.update_columns(metadata: { 'paginas_de_fora' => { 'ocr_falhou' => [1] }, 'chunk_count' => 3 }) # rubocop:disable Rails/SkipsModelValidations
+
+      source.begin_ingestion!
+
+      expect(source.reload.metadata).not_to have_key('paginas_de_fora')
+      expect(source.metadata['chunk_count']).to eq(3)
+    end
+  end
+
   # Q1 — o OCR do PDF confere, antes de cada página, que esta leitura ainda é a vigente.
   describe '#leitura_vigente?' do
     it 'is true while this reading is the active one and false after another one wins' do

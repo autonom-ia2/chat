@@ -140,7 +140,8 @@ module Autonomia
         # (entries já servidos) se este re-sync falhar por extração vazia — senão a fonte ficaria
         # needs_review+failed (e mesmo restaurando só o status, sem review_summary o Retriever perderia
         # a exclusão "fora do negócio" e o Construtor leria contexto em branco). Restaura tudo.
-        base = (metadata || {})
+        # #1426 — as páginas de fora da leitura anterior saem já aqui: a leitura nova escreve as dela no fim.
+        base = (metadata || {}).except(PAGINAS_DE_FORA)
         # CORRIDA: se a fonte JÁ estava `processing` (um re-sync anterior em curso), os campos de
         # review já estão rebaixados/em branco — NÃO os capture (preservaria lixo). Mantém o
         # prev_review verdadeiro do re-sync anterior. Só captura snapshot fresco quando não-processing.

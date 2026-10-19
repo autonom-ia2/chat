@@ -262,6 +262,44 @@ describe('GavetaOQueSabe', () => {
       wrapper.unmount();
     });
 
+    // S4 — também o "Lendo…" parado além do teto, para arquivo e foto; o que acabou de começar, não; fora da Fase 2, não.
+    it('lets a file or photo stuck in reading be read again, only in the Fase 2', async () => {
+      const antigo = new Date(Date.now() - 3600 * 1000).toISOString();
+      const recente = new Date().toISOString();
+      const lendo = { status: 'processing', review: null };
+      preparar([
+        fonte(2, { ...lendo, updated_at: antigo }),
+        fonte(3, {
+          ...lendo,
+          updated_at: antigo,
+          source_type: 'foto',
+          reference: 'tabela.jpg',
+        }),
+        fonte(4, { ...lendo, updated_at: recente }),
+      ]);
+      const LER = 'AGENTS.JORNADA.PAGINA.SABE.LER_DE_NOVO';
+      const opcoes = async indice => {
+        const wrapper = montar({ fase2: indice !== 'fora' });
+        await nextTick();
+        todos('[data-fonte] [aria-haspopup="menu"]')[
+          indice === 'fora' ? 0 : indice
+        ].click();
+        await nextTick();
+        const textos = todos('[role="menuitem"]').map(i =>
+          i.textContent.trim()
+        );
+        wrapper.unmount();
+        return textos;
+      };
+
+      expect(await opcoes(0)).toContain(LER);
+      expect(await opcoes(1)).toContain(LER);
+      expect(await opcoes(2)).toEqual(['AGENTS.JORNADA.PAGINA.SABE.TIRAR']);
+      expect(await opcoes('fora')).toEqual([
+        'AGENTS.JORNADA.PAGINA.SABE.TIRAR',
+      ]);
+    });
+
     it('says it is reading the text of the photo of the creation', async () => {
       preparar([
         fonte(6, {

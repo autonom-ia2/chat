@@ -27,7 +27,8 @@ const props = defineProps({
   // Texto no lugar de "{nome} ainda não usa este…" (ex.: arquivo grande demais).
   problema: { type: String, default: '' },
   nomeEmDuasLinhas: { type: Boolean, default: false },
-  // #1426 — arquivo parado em "Revisando…" além do teto da releitura (o worker caiu): libera "Ler de novo".
+  // #1426 — arquivo ou foto parado em "Lendo…" ou "Revisando…" além do teto da releitura (o worker caiu): libera
+  // "Ler de novo".
   relerParado: { type: Boolean, default: false },
 });
 

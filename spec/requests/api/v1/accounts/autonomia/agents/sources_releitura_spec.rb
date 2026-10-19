@@ -46,6 +46,19 @@ RSpec.describe 'Autonomia sources - releitura', type: :request do
       expect(response).to have_http_status(:accepted)
     end
 
+    # S3 — a Lia fica como na main: relê a qualquer momento.
+    it 'reads again a material of the Lia that is still being read' do
+      lia = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote', status: :draft)
+      da_lia = lia.sources.create!(account: account, source_type: 'txt', reference: 'tabela.txt', status: :ready)
+      da_lia.begin_ingestion!
+
+      expect do
+        post "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}/sources/#{da_lia.id}/resync",
+             headers: administrator.create_new_auth_token
+      end.to have_enqueued_job(Autonomia::Agents::Knowledge::IngestJob)
+      expect(response).to have_http_status(:accepted)
+    end
+
     it 'reads again a material that is not being read' do
       expect { reler }.to have_enqueued_job(Autonomia::Agents::Knowledge::IngestJob)
       expect(response).to have_http_status(:accepted)

@@ -50,20 +50,16 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Rasterizacao do
     e.message == 'nao_e_pdf' && !File.exist?(argumentos)
   end
 
-  # P3 — o cabeçalho vale nos primeiros 1024 bytes, como os leitores de PDF aceitam: lixo ou comentário antes dele.
-  it 'accepts the PDF header within the first 1024 bytes' do
-    expect(recusado?("% comentario\n%PDF-1.4\n")).to be(false)
-    expect(recusado?("#{'x' * 1000}\n%PDF-1.4\n")).to be(false)
+  it 'accepts a file that starts with %PDF- at byte 0' do
+    expect(recusado?("%PDF-1.4\n%%EOF\n")).to be(false)
   end
 
-  it 'refuses the PDF header after the first 1024 bytes' do
-    expect(recusado?("#{'x' * 1024}%PDF-1.4\n")).to be(true)
-  end
-
-  # P3 — medido no ghostscript 10.05.1: um arquivo que começa com %!PS (mesmo depois de espaço, linha vazia ou Ctrl-D) e
-  # traz %PDF- adiante é executado como PostScript, mesmo com `pdf:`. Qualquer %! antes do cabeçalho: recusado.
-  it 'refuses a PostScript mark before the PDF header, and never runs ImageMagick' do
-    ["%!PS-Adobe-3.0\n%PDF-1.4\n", " %!PS\n%PDF-1.4\n", "\n%!PS\n%PDF-1.4\n", "\x04%!PS\n%PDF-1.4\n", "LIXO\n%!PS\n%PDF-1.4\n"]
+  # S2 — qualquer coisa antes de %PDF- é recusada e o ImageMagick nunca roda: lixo, comentário, BOM, DOS EPS, PJL, PostScript
+  # em ASCII puro e as marcas %! (medido no ghostscript 10.05.1: %!PS antes de %PDF- é executado como PostScript com `pdf:`).
+  it 'refuses anything before the PDF header, and never runs ImageMagick' do
+    ["% comentario\n%PDF-1.4\n", "LIXO\n%PDF-1.4\n", "\xEF\xBB\xBF%PDF-1.4\n", "\xC5\xD0\xD3\xC6\x20\x00\x00\x00%PDF-1.4\n",
+     "\e%-12345X@PJL ENTER LANGUAGE = PDF\n%PDF-1.4\n", "(x) print\n%PDF-1.4\n",
+     "%!PS-Adobe-3.0\n%PDF-1.4\n", " %!PS\n%PDF-1.4\n", "\n%!PS\n%PDF-1.4\n", "\x04%!PS\n%PDF-1.4\n", "LIXO\n%!PS\n%PDF-1.4\n"]
       .each { |conteudo| expect(recusado?(conteudo)).to be(true), conteudo.inspect }
   end
 
