@@ -894,7 +894,7 @@
   },
   "CAMPAIGN_JOURNEY": {
     "AUDIENCES": {
-      "EMPTY_SUBTITLE": "An audience is a list of people, like your book of customers. Upload the spreadsheet from your brokerage system to create the first one."
+      "EMPTY_SUBTITLE": "An audience is a list of people, like your book of customers. Upload the customer spreadsheet you export from your brokerage system to create the first one."
     },
     "NEW_AUDIENCE": {
       "NAME_PLACEHOLDER": "e.g. Car insurance due in November",
