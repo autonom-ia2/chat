@@ -3531,6 +3531,9 @@
       "ADD_TOGGLE": "Set service hours (SLA) right after creating"
     }
   },
+  "CRM_FILTRO_DO_LINK": {
+    "FECHADO_NO_MES": "Closed: this month"
+  },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Autonom.ia Copilot",
     "RESET": "New chat",
