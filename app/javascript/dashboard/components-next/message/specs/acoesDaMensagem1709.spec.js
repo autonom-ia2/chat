@@ -48,6 +48,7 @@ const storeCom = conversa =>
       getCurrentAccountId: () => 1,
       getCurrentUser: () => ({}),
       getCurrentRole: () => 'agent',
+      canOperateConversation: () => () => true,
       getUISettings: () => ({}),
     },
     actions: { deleteMessage: vi.fn() },

@@ -185,6 +185,7 @@ const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
 
 // fork chat#1709 (fase 3): reagir e editar pelo painel, só com a ação no campo da conversa.
+// Também serve ao "só leitura" do #1800, mais abaixo.
 const selectedChat = useMapGetter('getSelectedChat');
 const messageActionDialogs = ref(null);
 const isReactable = computed(() => canReact(selectedChat.value, props));
@@ -594,8 +595,7 @@ const allContextMenuOptions = computed(() => {
 });
 
 // Quem só lê a conversa (#1800) copia, copia o link e baixa o áudio; o resto escreve e o servidor recusa.
-// Fora da conversa aberta (outras telas que mostram mensagens) nada muda.
-const selectedChat = useMapGetter('getSelectedChat');
+// Fora da conversa aberta (outras telas que mostram mensagens) nada muda. `selectedChat` é o mesmo do #1709, acima.
 const canOperateConversation = useMapGetter('canOperateConversation');
 const isReadOnly = computed(
   () =>
