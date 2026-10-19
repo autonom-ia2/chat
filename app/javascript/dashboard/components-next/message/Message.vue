@@ -49,6 +49,11 @@ import { campaignRefFor } from 'dashboard/components-next/CampaignJourney/useCam
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
+// fork chat#1709 (fase 3): reações coladas na mensagem, selo "editada" e reagir/editar pela caixa WAHA comum.
+import MessageReactions from './actions/MessageReactions.vue';
+import EditedMark from './actions/EditedMark.vue';
+import MessageActionDialogs from './actions/MessageActionDialogs.vue';
+import { canEdit, canReact } from './actions/messageActions.js';
 import { useAudioParaBaixar } from 'dashboard/components-next/conversa-canal/audio/useAudioParaBaixar';
 import AlbumDoWhatsapp from 'dashboard/components-next/conversa-canal/album/AlbumDoWhatsapp.vue';
 import {
@@ -144,6 +149,8 @@ const props = defineProps({
   call: { type: Object, default: null }, // eslint-disable-line vue/no-unused-properties
   content: { type: String, default: null },
   contentAttributes: { type: Object, default: () => ({}) },
+  // chat#1709: apagar no painel apaga também no WhatsApp do cliente ("Apagar para todos").
+  c2yRevocable: { type: Boolean, default: false },
   contentType: {
     type: String,
     default: 'text',
@@ -151,7 +158,7 @@ const props = defineProps({
   },
   conversationId: { type: Number, required: true },
   createdAt: { type: Number, required: true }, // eslint-disable-line vue/no-unused-properties
-  currentUserId: { type: Number, required: true }, // eslint-disable-line vue/no-unused-properties
+  currentUserId: { type: Number, required: true },
   groupWithNext: { type: Boolean, default: false },
   inboxId: { type: Number, default: null }, // eslint-disable-line vue/no-unused-properties
   inboxSupportsReplyTo: { type: Object, default: () => ({}) },
@@ -176,6 +183,31 @@ const inboxGetter = useMapGetter('inboxes/getInbox');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
 const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
+
+// fork chat#1709 (fase 3): reagir e editar pelo painel, só com a ação no campo da conversa.
+// Também serve ao "só leitura" do #1800, mais abaixo.
+const selectedChat = useMapGetter('getSelectedChat');
+const messageActionDialogs = ref(null);
+const isReactable = computed(() => canReact(selectedChat.value, props));
+// A janela de edição é conferida na hora em que o menu abre (o computed não anda sozinho com o relógio).
+const menuOpenedAt = ref(Date.now() / 1000);
+// Só o autor ou um administrador edita, como o servidor confere.
+const currentRole = useMapGetter('getCurrentRole');
+const isEditable = computed(() =>
+  canEdit(selectedChat.value, props, menuOpenedAt.value, {
+    userId: props.currentUserId,
+    isAdmin: currentRole.value === 'administrator',
+  })
+);
+const messageReactions = computed(() =>
+  Array.isArray(props.contentAttributes?.reactions)
+    ? props.contentAttributes.reactions
+    : []
+);
+const isEdited = computed(() => !!props.contentAttributes?.editedAt);
+const hasMessageExtras = computed(
+  () => messageReactions.value.length > 0 || isEdited.value
+);
 
 const isCaptainMessage = computed(() => {
   const senderType = props.sender?.type ?? props.senderType;
@@ -362,6 +394,9 @@ const componentToRender = computed(() => {
 
   if (contatosJuntos.value) return ContatosDoWhatsapp;
 
+  // #1831: o álbum chegando ainda sem foto fica no balão do marcador (não suportada).
+  if (album.value?.length === 0) return AlbumDoWhatsapp;
+
   if (balaoDoWhatsapp.value) return balaoDoWhatsapp.value;
 
   if (richMessageBubble.value) return richMessageBubble.value;
@@ -416,6 +451,12 @@ const componentToRender = computed(() => {
     const fileType = props.attachments[0].fileType;
 
     if (fileType === ATTACHMENT_TYPES.FALLBACK) return FallbackBubble;
+    // fork chat#1709: a localização ao vivo do WhatsApp pode vir com legenda no content; o cartão de mapa a mostra.
+    if (
+      fileType === ATTACHMENT_TYPES.LOCATION &&
+      props.contentAttributes?.sharedLocation
+    )
+      return LocationBubble;
 
     if (!props.content) {
       if (fileType === ATTACHMENT_TYPES.IMAGE) return ImageBubble;
@@ -512,10 +553,11 @@ const payloadForContextMenu = computed(() => {
     content_attributes: props.contentAttributes,
     content: props.content,
     conversation_id: props.conversationId,
+    c2y_revocable: props.c2yRevocable,
   };
 });
 
-const contextMenuEnabledOptions = computed(() => {
+const allContextMenuOptions = computed(() => {
   const hasText = !!props.content;
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
 
@@ -546,7 +588,31 @@ const contextMenuEnabledOptions = computed(() => {
     reagir:
       reacaoDoAtendente.visivel.value && !reacaoDoAtendente.bloqueado.value,
     encaminhar: encaminhar.noMenu.value,
+    // #1709: com a pele vale o "Reagir" dela (acima); o "Editar" do #1709 vale sempre.
+    react: isReactable.value && !pele.value,
+    edit: isEditable.value,
   };
+});
+
+// Quem só lê a conversa (#1800) copia, copia o link e baixa o áudio; o resto escreve e o servidor recusa.
+// Fora da conversa aberta (outras telas que mostram mensagens) nada muda. `selectedChat` é o mesmo do #1709, acima.
+const canOperateConversation = useMapGetter('canOperateConversation');
+const isReadOnly = computed(
+  () =>
+    selectedChat.value?.id === props.conversationId &&
+    !canOperateConversation.value(selectedChat.value)
+);
+const READ_ONLY_OPTIONS = ['copy', 'copyLink', 'baixarAudio'];
+
+const contextMenuEnabledOptions = computed(() => {
+  const options = allContextMenuOptions.value;
+  if (!isReadOnly.value) return options;
+  return Object.fromEntries(
+    Object.entries(options).map(([key, enabled]) => [
+      key,
+      enabled && READ_ONLY_OPTIONS.includes(key),
+    ])
+  );
 });
 
 const shouldRenderMessage = computed(() => {
@@ -587,6 +653,7 @@ function openContextMenu(e) {
   if (e.type === 'contextmenu') {
     useTrack(ACCOUNT_EVENTS.OPEN_MESSAGE_CONTEXT_MENU);
   }
+  menuOpenedAt.value = Date.now() / 1000;
   contextMenuPosition.value = {
     x: e.pageX || e.clientX,
     y: e.pageY || e.clientY,
@@ -739,8 +806,10 @@ provideMessageContext({
           'ltr:ml-8 rtl:mr-8 justify-end': orientation === ORIENTATION.RIGHT,
           'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT,
           'flex-col items-start gap-2': anuncioForaDoBalao,
-          'flex-col gap-1': isCampaignMessage,
-          'items-end': isCampaignMessage && orientation === ORIENTATION.RIGHT,
+          'flex-col gap-1': isCampaignMessage || (hasMessageExtras && !pele),
+          'items-end':
+            (isCampaignMessage || (hasMessageExtras && !pele)) &&
+            orientation === ORIENTATION.RIGHT,
         }"
         @contextmenu="openContextMenu($event)"
       >
@@ -754,7 +823,7 @@ provideMessageContext({
         />
         <Component :is="componentToRender" />
         <BotaoDeReagir
-          v-if="reacaoDoAtendente.visivel.value"
+          v-if="reacaoDoAtendente.visivel.value && !isReadOnly"
           :mensagem-id="id"
           :lado="orientation"
           :atual="reacaoDoAtendente.atual.value"
@@ -763,9 +832,20 @@ provideMessageContext({
           @reagir="reacaoDoAtendente.reagir"
         />
         <BotaoDeEncaminhar
-          v-if="encaminhar.botaoAoLado.value"
+          v-if="encaminhar.botaoAoLado.value && !isReadOnly"
           :lado="orientation"
           @encaminhar="encaminhar.encaminharDireto"
+        />
+        <!-- #1709: com a pele valem o RotuloEditada e o SeloDeReacoes dela. -->
+        <EditedMark
+          v-if="isEdited && !pele"
+          :history="contentAttributes.editHistory"
+          :current-user-id="currentUserId"
+        />
+        <MessageReactions
+          v-if="messageReactions.length && !pele"
+          :reactions="messageReactions"
+          :current-user-id="currentUserId"
         />
       </div>
       <MessageError
@@ -773,6 +853,7 @@ provideMessageContext({
         class="[grid-area:meta]"
         :class="flexOrientationClass"
         :error="contentAttributes.externalError"
+        :read-only="isReadOnly"
         @retry="emit('retry')"
       />
     </div>
@@ -788,6 +869,16 @@ provideMessageContext({
         @close="closeContextMenu"
         @reply-to="handleReplyTo"
         @encaminhar="encaminhar.iniciarSelecao"
+        @react="messageActionDialogs?.openReaction()"
+        @edit="messageActionDialogs?.openEdit()"
+      />
+      <MessageActionDialogs
+        v-if="isReactable || isEditable"
+        ref="messageActionDialogs"
+        :conversation-id="conversationId"
+        :message-id="id"
+        :content="content || ''"
+        :reactions="messageReactions"
       />
     </div>
   </div>

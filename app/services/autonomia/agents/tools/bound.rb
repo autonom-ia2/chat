@@ -58,6 +58,11 @@ class Autonomia::Agents::Tools::Bound
     native? && @native.async?
   end
 
+  # Só nativa pode passar a conversa (Native::Base.passa_a_conversa?); a HTTP do dono da conta não tem como.
+  def passa_a_conversa?
+    native? && @native.passa_a_conversa?
+  end
+
   # -> String para o modelo.
   #
   # `delivery` é o contexto do turno de atendimento (conversa + vínculo do agente). Vem por CHAMADA

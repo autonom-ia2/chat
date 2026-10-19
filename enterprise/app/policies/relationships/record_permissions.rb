@@ -1,6 +1,6 @@
 # Shared records have separate write permission from CRM opportunities.
 # Preserve the native administrator/plain-agent contract; granular keys apply
-# to custom roles only. Deletion continues to use the existing admin-only policy.
+# to custom roles only. Deletion needs contact_delete (or administrator), never plain agent (#1845).
 module Relationships::RecordPermissions
   private
 

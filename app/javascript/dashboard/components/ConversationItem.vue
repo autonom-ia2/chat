@@ -7,6 +7,7 @@ import ConversationCard from './widgets/conversation/ConversationCard.vue';
 import ConversationCardExpanded from 'dashboard/components-next/Conversation/ConversationCard/ConversationCardExpanded.vue';
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import ConversationContextMenu from './widgets/conversation/contextMenu/Index.vue';
+import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 
 const props = defineProps({
   source: { type: Object, required: true },
@@ -52,6 +53,9 @@ watch(
 );
 
 const currentChat = useMapGetter('getSelectedChat');
+// Quem só lê a conversa (#1800): sem seleção em massa e, no menu, só abrir em nova aba e copiar o link.
+const canOperate = useCanOperateConversation(computed(() => props.source));
+const READ_ONLY_MENU = ['open-new-tab', 'copy-link'];
 const inboxesList = useMapGetter('inboxes/getInboxes');
 const activeInbox = useMapGetter('getSelectedInbox');
 const accountId = useMapGetter('getCurrentAccountId');
@@ -191,6 +195,7 @@ const onDeleteConversation = () => {
     :show-assignee="showAssigneeForExpandedCard"
     :show-inbox-name="showInboxName"
     :is-inbox-view="isInboxView"
+    :selectable="canOperate"
     @select-conversation="onExpandedSelect"
     @de-select-conversation="onExpandedSelect"
     @click="onCardClick"
@@ -208,6 +213,7 @@ const onDeleteConversation = () => {
     :is-active-chat="isActiveChat"
     :show-assignee="showAssignee"
     :show-inbox-name="showInboxName"
+    :selectable="canOperate"
     @click="onCardClick"
     @contextmenu="openContextMenu"
     @select-conversation="selectConversation"
@@ -229,6 +235,7 @@ const onDeleteConversation = () => {
       :has-unread-messages="source.unread_count > 0"
       :conversation-labels="source.labels"
       :conversation-url="conversationPath"
+      :allowed-options="canOperate ? [] : READ_ONLY_MENU"
       @update-conversation="onUpdateConversation"
       @assign-agent="onAssignAgent"
       @assign-label="onAssignLabel"

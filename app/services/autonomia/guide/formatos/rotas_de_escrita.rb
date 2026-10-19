@@ -22,7 +22,7 @@ module Autonomia::Guide::Formatos::RotasDeEscrita
 
     recurso = ::Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))
     return unless recurso
-    return if ::Autonomia::Guide::Acoes::SO_NA_TELA.key?("#{verbo} #{recurso}")
+    return if ::Autonomia::Guide::Acoes.fora_do_catalogo?("#{verbo} #{recurso}")
 
     Rota.new(acao: "#{verbo} #{recurso}", controller: rota.defaults[:controller], action: rota.defaults[:action],
              partes: rota.required_parts.map(&:to_s))

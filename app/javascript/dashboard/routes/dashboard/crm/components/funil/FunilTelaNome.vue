@@ -25,6 +25,7 @@ const nome = defineModel({ type: String, default: '' });
   <template v-if="tipo">
     <FunilModelos
       v-if="modelos.length > 1"
+      :tipo="tipo"
       :modelo="modelo"
       :modelos="modelos"
       @escolher="$emit('escolher', $event)"

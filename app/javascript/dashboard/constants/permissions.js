@@ -16,6 +16,8 @@ export const INBOX_PERMISSIONS = ['inbox_view', 'inbox_manage'];
 export const CANNED_RESPONSE_MANAGE_PERMISSION = 'canned_response_manage';
 // SLA is managed in CRM › SLA (crm_sla_index); the SLA policy API checks this key.
 export const SLA_MANAGE_PERMISSION = 'sla_manage';
+// Regras de distribuição e capacidade (#1797).
+export const ASSIGNMENT_MANAGE_PERMISSION = 'assignment_manage';
 export const PROSPECTING_PERMISSIONS = [
   'prospecting_view',
   'prospecting_manage',
@@ -45,6 +47,10 @@ export const CONVERSATION_UNASSIGNED_PERMISSIONS =
 export const CONVERSATION_PARTICIPATING_PERMISSIONS =
   'conversation_participating_manage';
 
+// Lê as conversas da caixa sem operar (#1800). Não entra em CONVERSATION_PERMISSIONS: essa lista abre também
+// respostas prontas, macros e alertas de quem atende.
+export const CONVERSATION_VIEW_PERMISSION = 'conversation_view';
+
 export const CONTACT_PERMISSIONS = 'contact_manage';
 
 export const REPORTS_PERMISSIONS = 'report_manage';
@@ -70,6 +76,7 @@ export const ASSIGNEE_TYPE_TAB_PERMISSIONS = {
       ...ROLES,
       MANAGE_ALL_CONVERSATION_PERMISSIONS,
       CONVERSATION_PARTICIPATING_PERMISSIONS,
+      CONVERSATION_VIEW_PERMISSION,
     ],
   },
 };

@@ -106,9 +106,10 @@ class Crm::Email::Autoria
     resultado
   end
 
-  # #1813: o e-mail recebido saiu de um endereço do próprio cliente (o From/Reply-To é um dos endereços dele). Ao
-  # contrário de `de`, não depende da flag e responde "sim" de forma positiva: sem remetente ou sem endereço do cliente
-  # para comparar, é false (quem completa o contato não pode ler e-mail de quem está em cópia como sendo do dono).
+  # #1813: o e-mail recebido saiu de um endereço do próprio cliente. É a regra única de "do cliente": o `calcular` também
+  # a usa. O remetente é o `email.from` que o recebimento grava (Reply-To, senão From). Ao contrário de `de`, não depende
+  # da flag (quem chama decide pela dele) e responde "sim" de forma positiva: mensagem que não é e-mail recebido, sem
+  # remetente ou sem endereço do cliente para comparar é false (quem está em cópia não é lido como o dono).
   def do_cliente?(message)
     return false unless email_recebido?(message)
 
@@ -116,8 +117,10 @@ class Crm::Email::Autoria
   end
 
   # #1813: o endereço (escrito num formulário, por exemplo) é um dos endereços do cliente desta mensagem; mesma
-  # normalização (Mail::Address, minúsculas) do resto da classe.
+  # normalização (Mail::Address, minúsculas) do resto da classe. Também sem flag; fora de e-mail recebido, false.
   def endereco_do_cliente?(message, endereco)
+    return false unless email_recebido?(message)
+
     normalizado = normalizar(endereco)
     normalizado.present? && enderecos_do_cliente(message).include?(normalizado)
   end
@@ -184,8 +187,7 @@ class Crm::Email::Autoria
     return Resultado.new(tipo: AUTOMATICA, remetente: remetentes.first) if message.auto_reply_email?
     return if remetentes.empty?
 
-    do_cliente = enderecos_do_cliente(message)
-    return if do_cliente.empty? || remetentes.intersect?(do_cliente)
+    return if enderecos_do_cliente(message).empty? || do_cliente?(message)
 
     Resultado.new(tipo: remetentes.any? { |endereco| da_equipe?(endereco) } ? EQUIPE : OUTRA_PESSOA, remetente: remetentes.first)
   end

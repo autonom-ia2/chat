@@ -17,6 +17,8 @@ module Crm
       include Crm::FollowUps::HybridFreeForm
       # Lembrete de Atender (#1498): o mesmo envio, com o motivo e os fatos do card.
       include Crm::FollowUps::ServiceReminderContext
+      # Pré-voo (#1624): composição gravada e modelo do tipo (retorno) antes do texto livre pelo Híbrido.
+      include Crm::FollowUps::RetornoPorModelo
 
       Result = Struct.new(:status, :error, :retry_at, keyword_init: true) do
         def self.sent
@@ -56,10 +58,13 @@ module Crm
         return entrega_do_lembrete if entrega_do_lembrete
 
         # Fora das 24h o template vem primeiro; sem candidato nenhum e com o Híbrido pronto, vai ao texto livre.
-        @send_mode = messaging_window.can_send_session_message? ? :free_form : :choose_template
-        @candidates = @send_mode == :choose_template ? callback_template_candidates : []
-        detect_hybrid_free_form
-        composition = compose_with_hybrid_retry
+        definir_modo_e_candidatos
+        composition = composicao_gravada || compose
+        # Nenhum modelo aprovado serve: o modelo do tipo (retorno) vem antes do texto livre pelo Híbrido (#1624).
+        entrega = entrega_pelo_modelo_do_tipo(composition)
+        return entrega if entrega
+
+        composition = recompor_em_texto_livre(composition)
 
         return Result.fallback('closure') if closure?(composition)
         return Result.fallback(skip_reason) unless composable?(composition)
@@ -83,21 +88,13 @@ module Crm
 
       private
 
-      # Contato excluído do follow-up de IA: o retorno combinado vira lembrete humano, a IA não envia.
-      def precondition_fallback_reason
-        return 'card_archived' if @card&.archived?
-        return 'no_conversation' if @follow_up.conversation.blank?
-
-        contact = @follow_up.conversation.contact
-        return Crm::FollowUps::MessageSender::OPTED_OUT_REASON if contact.opted_out?
-
-        'contact_disabled' if Crm::Ai::Config.contact_followup_disabled?(contact)
-      end
-
       def deliver
         send_result = Crm::FollowUps::MessageSender.new(follow_up: @follow_up).perform
         case send_result.status
-        when :sent, :skipped then Result.sent
+        when :sent
+          registrar_envio_fora_da_janela(send_result.message)
+          Result.sent
+        when :skipped then Result.sent
         when :opted_out then Result.fallback(send_result.error)
         else fail_or_fallback(send_result.error)
         end
@@ -177,7 +174,7 @@ module Crm
       end
 
       def skip_reason
-        @send_mode == :choose_template ? 'no_template' : 'not_composable'
+        @send_mode == :choose_template ? (@motivo_do_modelo.presence || 'no_template') : 'not_composable'
       end
 
       # Escreve follow_up.metadata para o MessageSender pegar o ramo certo (idêntico ao AutoFollowupRunner).

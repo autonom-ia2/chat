@@ -27,6 +27,16 @@ module Autonomia
         }
       }.freeze
 
+      # O mesmo schema com o campo `interacao` (#1479: opções e botão de link), pedido só quando
+      # `Interacao.disponivel?`. Separado de propósito: a Lia monta o dela sobre o ANSWER_SCHEMA (ConferenciaDaFala).
+      ANSWER_SCHEMA_COM_INTERACAO = {
+        name: 'autonomia_agent_answer_interacao',
+        schema: ANSWER_SCHEMA[:schema].merge(
+          properties: ANSWER_SCHEMA[:schema][:properties].merge(interacao: ::Autonomia::Agents::Interacao::SCHEMA),
+          required: ANSWER_SCHEMA[:schema][:required] + ['interacao']
+        )
+      }.freeze
+
       # KB-quality Bloco A (2026-07-03): 800→1500 para o trecho recuperado chegar mais INTEIRO ao LLM
       # (menos fato cortado no meio). No-op nos chunks atuais de ~600 chars; prepara o Bloco B (chunks
       # adaptativos maiores). A janela de contexto do modelo acomoda 12 trechos × 1500 com folga.
@@ -84,9 +94,11 @@ module Autonomia
       # memoria:  PromptParts::Memoria::Blocos (#1601/#1755): "antes desta conversa" logo depois do segmento, o estado
       #           dito pelo sistema (`developer`) e os fatos (`user`, com cerca) logo antes da pergunta. Vazio (padrão):
       #           o input fica byte a byte o de antes.
+      # interacao: true acrescenta às instruções a regra do campo `interacao` (#1479). false (padrão): nada muda.
       def initialize(agent:, query:, history: [], snippets: [], images: [], documents: [], audience: :customer,
-                     contexto_do_turno: nil, memoria: nil)
+                     contexto_do_turno: nil, memoria: nil, interacao: false)
         @agent = agent
+        @interacao = interacao
         @contexto_do_turno = contexto_do_turno.presence
         @memoria = memoria || PromptParts::Memoria::Blocos.vazio
         # C1 (custo): teto no que vai ao LLM — a query composta pode embutir transcrição+moldura do
@@ -117,7 +129,8 @@ module Autonomia
           guardrails_block,
           handoff_block,
           fallback_block,
-          output_format
+          output_format,
+          (::Autonomia::Agents::Interacao::INSTRUCAO if @interacao)
         ].compact_blank.join("\n\n")
       end
 

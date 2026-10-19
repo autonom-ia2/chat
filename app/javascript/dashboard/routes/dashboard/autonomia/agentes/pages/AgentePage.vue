@@ -10,6 +10,7 @@ import AgenteErro from '../components/AgenteErro.vue';
 import PaginaHeroi from '../components/pagina/PaginaHeroi.vue';
 import PaginaBlocos from '../components/pagina/PaginaBlocos.vue';
 import AgenteSemana from '../components/pagina/AgenteSemana.vue';
+import AgenteSilencios from '../components/pagina/AgenteSilencios.vue';
 import DialogoAcao from '../components/pagina/DialogoAcao.vue';
 import GavetaTestar from '../components/pagina/GavetaTestar.vue';
 import GavetaOQueSabe from '../components/pagina/GavetaOQueSabe.vue';
@@ -35,7 +36,12 @@ import { useAgendaNovaNaConta } from '../composables/useAgendaNovaNaConta';
 import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
 import { useFase2 } from '../composables/useFase2';
-import { ehAjudante, nomesQueAjuda, quemAjuda } from '../utils/ajudante';
+import {
+  ehAjudante,
+  falaComCliente,
+  nomesQueAjuda,
+  quemAjuda,
+} from '../utils/ajudante';
 import { ESTADO, TRABALHANDO } from '../utils/estadoDoAgente';
 import { caixasDaEquipe, recebeEmOutrasCaixas } from '../utils/ondeTrabalha';
 import { horariosDasCaixas } from '../utils/horarios';
@@ -163,6 +169,10 @@ const ajuda = computed(() =>
 const cotacao = computed(() => ehCotacao(agente.value));
 const manual = computed(() => ehManual(agente.value));
 const interno = computed(() => ehInterno(agente.value));
+// #1709: "Quando {nome} não respondeu" só no agente que fala com o cliente (sem ajudante, interno nem cotação).
+const mostraSilencios = computed(
+  () => Boolean(agente.value) && falaComCliente(agente.value) && !cotacao.value
+);
 const podeMudar = computed(
   () => podeGerenciar.value && podeMudarConversando(agente.value)
 );
@@ -777,6 +787,12 @@ const tirarPergunta = id => {
           :nome="nome"
           :pode-abrir="podeGerenciar && !cotacao"
           @abrir="abrir(GAVETA.CONVERSAS, { aba: $event })"
+        />
+        <AgenteSilencios
+          :agent-id="agente.id"
+          :nome="nome"
+          :numeros="semana.numerosDe(agente.id)"
+          :fala-com-cliente="mostraSilencios"
         />
         <PaginaBlocos
           :agente="agente"

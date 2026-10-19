@@ -190,6 +190,16 @@ RSpec.describe Crm::Email::Autoria do
       expect(desligada.endereco_do_cliente?(message, ' Joao@Empresa.com.br ')).to be(true)
       expect(desligada.endereco_do_cliente?(message, 'ana@familia.com.br')).to be(false)
       expect(desligada.endereco_do_cliente?(message, nil)).to be(false)
+      expect(desligada.endereco_do_cliente?(whatsapp, 'joao@empresa.com.br')).to be(false)
+    end
+
+    # Pega: o `calcular` e o `do_cliente?` divergirem (duas regras de "é do cliente").
+    it 'o calcular usa a mesma regra', :aggregate_failures do
+      cliente = email!(from: ' Joao <JOAO@empresa.com.br> ')
+      outra = email!(from: 'ana@familia.com.br')
+
+      expect([autoria.do_cliente?(cliente), autoria.de(cliente)]).to eq([true, nil])
+      expect([autoria.do_cliente?(outra), autoria.de(outra)&.tipo]).to eq([false, 'outra_pessoa'])
     end
 
     it 'contato sem nenhum endereço: nunca é do cliente' do

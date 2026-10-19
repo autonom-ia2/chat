@@ -1,6 +1,8 @@
 // Desfecho do card conforme o funil (#1144). Funil que conta como venda fecha em
 // won/lost; os outros fecham em resolved/cancelled, e nunca entram em venda.
 // O funil pode dar nome próprio aos dois desfechos (metadata.outcome_labels).
+import { usaNomeDoDesfecho } from '../components/funil/funil';
+
 export const SUCCESS_STATUSES = ['won', 'resolved'];
 export const FAILURE_STATUSES = ['lost', 'cancelled'];
 export const CLOSED_STATUSES = [...SUCCESS_STATUSES, ...FAILURE_STATUSES];
@@ -30,6 +32,37 @@ export const cardStatusLabel = (t, status, pipeline) => {
   return t(
     `CRM_KANBAN.DRAWER.STATUS_${String(status || 'open').toUpperCase()}`
   );
+};
+
+// #1802 — o nome que um funil de modelo da corretora deu ao desfecho deste
+// status (Renovação: "Renovou"). Vazio no card aberto, no funil sem nome e em
+// todo funil que não é de modelo da corretora (esses avisam como sempre).
+export const rotuloProprio = (status, pipeline) => {
+  const grupo = outcomeGroup(status);
+  if (!grupo || !usaNomeDoDesfecho(pipeline)) return '';
+  return pipeline.metadata.outcome_labels?.[grupo] || '';
+};
+
+// Keyed on the status the server actually wrote: a non-sale funnel turns "won" into resolved (#1144).
+const CLOSE_ALERT_KEYS = {
+  won: 'CARD_WON',
+  lost: 'CARD_LOST',
+  resolved: 'CARD_RESOLVED',
+  cancelled: 'CARD_CANCELLED',
+};
+
+// O aviso depois de marcar ou reabrir o card. #1498 — reabrir num funil de
+// Atender diz "Atendimento reaberto". #1802 — o funil de modelo da corretora
+// com nome próprio para o desfecho avisa com esse nome ("Marcado: Renovou.").
+export const avisoDoDesfecho = (t, status, pipeline) => {
+  const proprio = rotuloProprio(status, pipeline);
+  if (proprio) return t('CRM_KANBAN.ALERTS.CARD_MARKED_AS', { label: proprio });
+  const reaberto = countsAsSale(pipeline)
+    ? 'CARD_REOPENED'
+    : 'CARD_REOPENED_ATENDER';
+  const chave =
+    status === 'open' ? reaberto : CLOSE_ALERT_KEYS[status] || reaberto;
+  return t(`CRM_KANBAN.ALERTS.${chave}`);
 };
 
 // Nome dos dois desfechos do funil, para botões, abas e filtros.

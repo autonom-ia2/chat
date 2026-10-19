@@ -69,6 +69,19 @@ RSpec.describe Crm::Email::Autoria do
     expect(para_a_ia.sole).not_to have_key(:email_autoria)
   end
 
+  # #1813. Pega: o contato pelo e-mail ler a Ana em cópia como o João, ou a lista com o João no Reply-To como outra
+  # pessoa; e depender da flag `email_autoria` (quem chama decide pela flag dele).
+  it 'do_cliente? pelo e-mail recebido de verdade, com a flag desligada', :aggregate_failures do
+    lista = pela_reply_mailbox('email_autoria_lista_reply_to.eml')
+    ana = pela_reply_mailbox('email_autoria_ana_em_copia.eml')
+    account.disable_features!(described_class::FLAG)
+    autoria = described_class.new(account.reload)
+
+    expect(autoria.do_cliente?(lista)).to be(true)
+    expect(autoria.do_cliente?(ana)).to be(false)
+    expect(autoria.endereco_do_cliente?(ana, 'Joao@Empresa.com.br')).to be(true)
+  end
+
   # Pega: o follow-up que retoma a pergunta da Ana deixar de passar na trava de citação; o aviso servir de citação.
   it 'a citação do que a Ana escreveu prova a pendência; o aviso, não', :aggregate_failures do
     pela_reply_mailbox('email_autoria_ana_em_copia.eml')

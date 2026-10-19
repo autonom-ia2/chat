@@ -7,11 +7,26 @@ class ConversationPolicy < ApplicationPolicy
     administrator?
   end
 
+  # Porta de toda escrita na conversa. Leitura usa view? (#1800).
   def show?
-    administrator? || agent_bot? || agent_can_view_conversation?
+    member_access?
+  end
+
+  # Começar conversa nova: a caixa já é conferida no controller. O EE pergunta e recusa quem só lê (#1800).
+  def create?
+    true
+  end
+
+  # Ler a conversa (GET). No OSS é o mesmo que show?; o EE também deixa passar quem só lê (conversation_view).
+  def view?
+    show?
   end
 
   private
+
+  def member_access?
+    administrator? || agent_bot? || agent_can_view_conversation?
+  end
 
   # Caixa ou time, e o funil do card libera (#1148): o acesso por funil vale também para quem chega pelo time.
   def agent_can_view_conversation?

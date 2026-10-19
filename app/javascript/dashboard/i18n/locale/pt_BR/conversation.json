@@ -427,6 +427,15 @@
       "UNMUTE": "Desilenciar microfone",
       "VIEW_CHAT_HISTORY": "Ver histórico da conversa",
       "GO_TO_CONVERSATION": "Ir para a conversa"
+    },
+    "SO_LEITURA": {
+      "TEXTO": "Você pode ler esta conversa, mas não responder. Para responder, peça a quem cuida da sua equipe.",
+      "RESUMO": "Resumo da conversa",
+      "QUEM_ATENDE": "Quem atende",
+      "NINGUEM": "Ninguém ainda",
+      "TIME": "Time",
+      "ETIQUETAS": "Etiquetas",
+      "SEM_PARTICIPANTES": "Ninguém participa"
     }
   },
   "EMAIL_TRANSCRIPT": {
