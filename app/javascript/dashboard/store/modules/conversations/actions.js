@@ -126,18 +126,26 @@ const primeiraPaginaTrazTudo = (payload, meta, assigneeType) => {
   const total = meta?.[CONTADOR_DA_ABA[assigneeType]];
   return Number.isInteger(total) && payload.length >= total;
 };
-// Como no UPDATE_CONVERSATION: a conversa que o websocket já atualizou depois do pedido não volta ao estado antigo.
-const maisNovasQueAsDaLista = (payload, lista) => {
+// Como no UPDATE_CONVERSATION: a conversa que o websocket já atualizou depois do pedido não volta ao estado antigo, e
+// continua dentro ou fora do filtro como estava.
+const separarPeloWebsocket = (payload, lista) => {
   const naLista = new Map(lista.map(conversa => [conversa.id, conversa]));
-  return payload.filter(
-    conversa => !(naLista.get(conversa.id)?.updated_at > conversa.updated_at)
-  );
+  const atrasada = conversa =>
+    naLista.get(conversa.id)?.updated_at > conversa.updated_at;
+  return {
+    novas: payload.filter(conversa => !atrasada(conversa)),
+    atrasadas: payload.filter(atrasada).map(({ id }) => id),
+  };
 };
+// Só a última soma pedida vale: uma resposta mais velha que chega depois é descartada.
+let ultimaSoma = 0;
 const somarPrimeiraPaginaDoFiltroDoLink = async ({
   commit,
   dispatch,
   state,
 }) => {
+  ultimaSoma += 1;
+  const estaSoma = ultimaSoma;
   const params = { ...state.conversationFilters, page: 1 };
   const request = await dispatch(
     'conversationStats/onListRequestStarted',
@@ -146,20 +154,25 @@ const somarPrimeiraPaginaDoFiltroDoLink = async ({
   const {
     data: { data },
   } = await ConversationApi.get(params);
+  if (estaSoma !== ultimaSoma) return;
   // A lista mudou enquanto a leitura vinha (outro filtro, outra aba, outra caixa): a resposta é de outra lista.
   if (semPagina(state.conversationFilters) !== semPagina(params)) return;
+  const { novas, atrasadas } = separarPeloWebsocket(
+    data.payload,
+    state.allConversations
+  );
+  const atrasadasQueEstavam = atrasadas.filter(id =>
+    state.idsDoFiltroDoLink.includes(id)
+  );
   commit(types.SET_IDS_DO_FILTRO_DO_LINK, {
-    ids: data.payload.map(({ id }) => id),
+    ids: [...novas.map(({ id }) => id), ...atrasadasQueEstavam],
     substituir: primeiraPaginaTrazTudo(
       data.payload,
       data.meta,
       params.assigneeType
     ),
   });
-  commit(
-    types.SET_ALL_CONVERSATION,
-    maisNovasQueAsDaLista(data.payload, state.allConversations)
-  );
+  commit(types.SET_ALL_CONVERSATION, novas);
   dispatch('conversationStats/set', { meta: data.meta, request });
 };
 

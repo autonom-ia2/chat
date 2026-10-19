@@ -131,6 +131,7 @@ describe('filtros pelo link (#1883)', () => {
       allConversations: [],
       appliedFilters: [],
       listLoadingStatus: false,
+      idsDoFiltroDoLink: [],
       conversationFilters: filtros,
       ...extra,
     });
@@ -295,7 +296,7 @@ describe('filtros pelo link (#1883)', () => {
     });
 
     describe('com mais páginas, a soma da primeira página', () => {
-      const somar = async ({ payload, meta = {}, lista = [] }) => {
+      const somar = async ({ payload, meta = {}, lista = [], ids = [] }) => {
         const commit = vi.fn();
         api.get.mockResolvedValueOnce({ data: { data: { payload, meta } } });
         await actions.releerFiltroDoLink({
@@ -303,7 +304,7 @@ describe('filtros pelo link (#1883)', () => {
           commit,
           state: estado(
             { daIa: true, page: 3, assigneeType: 'all' },
-            { allConversations: lista }
+            { allConversations: lista, idsDoFiltroDoLink: ids }
           ),
           rootState: naCaixa({ da_ia: '1' }),
           rootGetters: paginaAtual(2),
@@ -347,6 +348,58 @@ describe('filtros pelo link (#1883)', () => {
           ],
         });
         expect(conversas.map(({ id }) => id)).toEqual([7]);
+      });
+
+      it('a conversa que o websocket atualizou continua dentro ou fora do filtro como estava', async () => {
+        const lista = [
+          conversa(4, { updated_at: 20 }),
+          conversa(5, { updated_at: 20 }),
+        ];
+        const payload = [
+          conversa(4, { updated_at: 10 }),
+          conversa(5, { updated_at: 10 }),
+          conversa(9, { updated_at: 30 }),
+        ];
+
+        const { ids } = await somar({
+          payload,
+          lista,
+          ids: [4],
+          meta: { all_count: 3 },
+        });
+
+        expect(ids).toEqual({ ids: [9, 4], substituir: true });
+      });
+
+      it('duas somas fora de ordem: a resposta mais velha, que chega depois, é descartada', async () => {
+        let responderPrimeira;
+        api.get
+          .mockImplementationOnce(
+            () =>
+              new Promise(resolve => {
+                responderPrimeira = () => resolve(resposta([4]));
+              })
+          )
+          .mockResolvedValueOnce(resposta([9]));
+        const commit = vi.fn();
+        const contexto = {
+          dispatch: vi.fn(),
+          commit,
+          state: estado({ daIa: true, page: 3, assigneeType: 'all' }),
+          rootState: naCaixa({ da_ia: '1' }),
+          rootGetters: paginaAtual(2),
+        };
+
+        const primeira = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(api.get).toHaveBeenCalledTimes(1));
+        await actions.releerFiltroDoLink(contexto);
+        responderPrimeira();
+        await primeira;
+
+        const idsGravados = commit.mock.calls
+          .filter(([tipo]) => tipo === types.SET_IDS_DO_FILTRO_DO_LINK)
+          .map(([, valor]) => valor.ids);
+        expect(idsGravados).toEqual([[9]]);
       });
     });
   });
