@@ -12,6 +12,7 @@ import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import { parseAPIErrorResponse } from 'dashboard/store/utils/api';
 import { CONVERSATION_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import MessageApi from 'dashboard/api/inbox/message';
+import { CSP_DO_EMAIL } from './documentoDoEmail';
 
 // Folha de impressão: só o e-mail, letra legível, sem o painel em volta.
 const ESTILO_DA_IMPRESSAO = `
@@ -22,6 +23,8 @@ const ESTILO_DA_IMPRESSAO = `
   dd { margin: 0; }
   img { max-width: 100%; }
   blockquote { margin: 0 0 0 .8ex; border-left: 1px solid #ccc; padding-left: 1ex; }
+  #email_impresso { line-height: normal; }
+  :where(img[data-proporcao]) { height: auto; }
 `;
 
 const TRADUZINDO_NO_SERVIDOR = 202;
@@ -117,6 +120,7 @@ export const useAcoesDoEmail = ({ conversationId, messageId }) => {
     const moldura = document.createElement('iframe');
     moldura.setAttribute('sandbox', 'allow-same-origin allow-modals');
     moldura.setAttribute('aria-hidden', 'true');
+    moldura.setAttribute('referrerpolicy', 'no-referrer');
     moldura.className = 'fixed size-0 border-0 opacity-0 pointer-events-none';
     const cabecalho = linhas
       .filter(([, valor]) => valor)
@@ -125,7 +129,7 @@ export const useAcoesDoEmail = ({ conversationId, messageId }) => {
           `<dt>${escapar(rotulo)}</dt><dd>${escapar(valor)}</dd>`
       )
       .join('');
-    moldura.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><title>${escapar(
+    moldura.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${CSP_DO_EMAIL}"><meta name="referrer" content="no-referrer"><title>${escapar(
       assunto
     )}</title><style>${ESTILO_DA_IMPRESSAO}</style></head><body><h1>${escapar(
       assunto

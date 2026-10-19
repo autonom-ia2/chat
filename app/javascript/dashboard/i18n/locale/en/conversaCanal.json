@@ -390,6 +390,8 @@
       "RESPONDER_TODOS": "Reply all",
       "ENCAMINHAR": "Forward",
       "EXIBIR_TUDO": "View entire message",
+      "CORPO_ISOLADO": "Message from {nome}",
+      "CORPO_DO_EMAIL": "Email message",
       "MOSTRAR_CITACAO": "Show quoted text",
       "ESCONDER_CITACAO": "Hide quoted text",
       "ANEXOS": "{total} attachment | {total} attachments",
