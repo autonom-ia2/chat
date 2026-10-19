@@ -41,6 +41,7 @@ import MenuDoEmail from './MenuDoEmail.vue';
 import AnexosDoEmail from './AnexosDoEmail.vue';
 import { semCitacaoDosLeitores } from './citacaoDosLeitores';
 import { abrirImagemDoCorpo } from './imagemDoCorpo';
+import { htmlComCssSeguro } from './estiloSeguroDoEmail';
 import OriginalDoEmail from './OriginalDoEmail.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import { useAcoesDoEmail } from './useAcoesDoEmail';
@@ -179,6 +180,10 @@ const temCitacao = computed(
     EmailQuoteExtractor.hasQuotes(htmlCompleto.value)
 );
 const verCitacao = ref(false);
+// O CSS do remetente não pode escapar do <style> ao passar pelo vue-letter (estiloSeguroDoEmail).
+const htmlDoLetter = computed(() =>
+  htmlComCssSeguro(verCitacao.value ? htmlCompleto.value : htmlSemCitacao.value)
+);
 // O corpo no estilo do texto do painel; a citação aberta fica como no Gmail (fio à
 // esquerda, cinza, sem as aspas e o itálico que o "prose" põe em blockquote).
 const CLASSES_DO_CORPO = [
@@ -524,7 +529,7 @@ const excluir = async () => {
             :key="`${verCitacao ? 'c' : 's'}-${traduzido ? 't' : 'o'}`"
             :class-name="CLASSES_DO_CORPO"
             :allowed-css-properties="CSS_PERMITIDO"
-            :html="verCitacao ? htmlCompleto : htmlSemCitacao"
+            :html="htmlDoLetter"
             :text="textoDoLetter"
             :rewrite-external-resources="semRastreio"
             :rewrite-external-links="semRastreio"
