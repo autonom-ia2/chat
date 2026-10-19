@@ -64,6 +64,9 @@ describe('estadoDoMaterial', () => {
       }).unidade
     ).toBe('lote');
     expect(progressoDoMaterial({})).toBeNull();
+    expect(
+      progressoDoMaterial({ progresso: { feito: 0, total: 80 } })
+    ).toBeNull();
   });
 });
 
@@ -130,6 +133,15 @@ describe('adaptador falso do material', () => {
       certasDeFora: 2,
     });
     expect(retrato.autoteste.resultados).toHaveLength(10);
+  });
+
+  it('arquivo novo entra com o nome dele (descritor { file }, como a store) e começa lendo', async () => {
+    const { fonte } = comRelogio();
+    const arquivo = new File(['x'], 'lanche.png', { type: 'image/png' });
+    const retrato = await fonte.enviar({ file: arquivo });
+    const novo = retrato.fontes.find(item => item.reference === 'lanche.png');
+    expect(novo.source_type).toBe('foto');
+    expect(estadoDoMaterial(novo, retrato.problemas)).toBe('lendo');
   });
 
   it('ficar com um só tira o duplicado da base', async () => {

@@ -31,10 +31,11 @@ export const estadoDoMaterial = (fonte, problemas = []) => {
   return ESTADO_MATERIAL.PRONTO;
 };
 
-// 4c — "Página 12 de 80" ou "Parte 3 de 9". Sem progresso conhecido, nada (fica só "Lendo…").
+// 4c — "Página 12 de 80" ou "Parte 3 de 9". Sem progresso conhecido ou antes da primeira página,
+// nada (fica só "Lendo…": "página 0 de 80" não diz nada à pessoa).
 export const progressoDoMaterial = fonte => {
   const progresso = fonte?.progresso;
-  if (!progresso?.total) return null;
+  if (!progresso?.total || !(progresso.feito >= 1)) return null;
   const feito = Math.min(progresso.feito || 0, progresso.total);
   return {
     feito,

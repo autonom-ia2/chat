@@ -104,7 +104,7 @@ const foraOk = computed(
           <span class="grow">
             {{ item.pergunta }}
             <span
-              class="px-1.5 ms-1 text-xs rounded-md bg-n-slate-3 text-n-slate-11"
+              class="inline-block px-1.5 ms-1 text-xs rounded-md whitespace-nowrap bg-n-slate-3 text-n-slate-11"
             >
               {{
                 item.origem === 'fora'
@@ -122,7 +122,7 @@ const foraOk = computed(
     <AgenteBotao
       v-if="podeGerenciar && !rodando"
       data-testar-de-novo
-      class="self-start"
+      class="self-start -ms-4"
       variante="fantasma"
       icone="i-lucide-refresh-cw"
       @click="emit('testarDeNovo')"

@@ -275,7 +275,8 @@ export const criarMaterialFalso = ({
   };
 
   // Arquivo, foto ou site novo: lê em lotes (página por página), revisa e muda a base.
-  const enviar = async ({ arquivo, url }) => {
+  // Mesmo descritor do autonomiaSources/create: { file } ou { url }.
+  const enviar = async ({ file: arquivo, url }) => {
     await esperar(espera);
     proximoId += 1;
     const foto = (arquivo?.type || '').startsWith('image/');

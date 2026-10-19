@@ -27,7 +27,7 @@ const teste = useTesteDoAgente(toRef(props, 'agente'), {
   textoSoFoto: t('AGENTS.JORNADA.CRIAR.CONFIRA.FOTO'),
   perguntarAoAgente: props.material ? props.material.testar : null,
 });
-const aprender = arquivo => props.material?.enviar({ arquivo });
+const aprender = arquivo => props.material?.enviar({ file: arquivo });
 const celular = ref(null);
 
 onMounted(() => {

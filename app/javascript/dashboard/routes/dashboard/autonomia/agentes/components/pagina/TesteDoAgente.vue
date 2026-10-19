@@ -203,34 +203,36 @@ defineExpose({ focar });
         v-for="(item, i) in respondidos"
         :key="i"
         role="status"
-        class="flex flex-wrap items-center gap-2 p-3 text-sm rounded-xl"
+        class="flex items-start gap-2 p-3 text-sm rounded-xl"
         :class="item.aprender ? 'bg-n-teal-2' : 'bg-n-slate-2'"
       >
         <span
           aria-hidden="true"
-          class="size-4 shrink-0"
+          class="mt-0.5 size-4 shrink-0"
           :class="
             item.aprender
               ? 'i-lucide-book-open text-n-teal-11'
               : 'i-lucide-x text-n-slate-11'
           "
         />
-        <span class="grow text-n-slate-12">
-          {{
-            item.aprender
-              ? t(`${NS}.APRENDENDO`, { nome, arquivo: item.nome })
-              : t(`${NS}.NAO_GUARDOU`, { nome, arquivo: item.nome })
-          }}
+        <span class="flex flex-col items-start min-w-0 grow">
+          <span class="text-n-slate-12 [overflow-wrap:anywhere]">
+            {{
+              item.aprender
+                ? t(`${NS}.APRENDENDO`, { nome, arquivo: item.nome })
+                : t(`${NS}.NAO_GUARDOU`, { nome, arquivo: item.nome })
+            }}
+          </span>
+          <button
+            v-if="item.aprender"
+            type="button"
+            data-ver-material
+            class="px-1 text-sm font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+            @click="emit('verMaterial')"
+          >
+            {{ t(`${NS}.VER_MATERIAL`, { nome }) }}
+          </button>
         </span>
-        <button
-          v-if="item.aprender"
-          type="button"
-          data-ver-material
-          class="px-1 text-sm font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
-          @click="emit('verMaterial')"
-        >
-          {{ t(`${NS}.VER_MATERIAL`, { nome }) }}
-        </button>
       </li>
     </ul>
     <section
