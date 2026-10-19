@@ -4,10 +4,18 @@ import actions, {
   RELEITURA_AO_VIVO_MS,
   DESCARTES_SEGUIDOS_NO_MAXIMO,
   PAGINAS_RELIDAS_NO_MAXIMO,
+  PISO_ENTRE_RELEITURAS_MS,
+  TEMPO_LIMITE_DA_RELEITURA_MS,
   cancelarReleituraDoFiltroDoLink,
 } from '../actions';
 import { mutations } from '../index';
 import types from '../../../mutation-types';
+import * as Sentry from '@sentry/vue';
+
+vi.mock('@sentry/vue', async importOriginal => ({
+  ...(await importOriginal()),
+  captureException: vi.fn(),
+}));
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 
@@ -46,6 +54,18 @@ describe('filtros pelo link (#1883)', () => {
         filterPeloFiltroDoLink(lista, true, [4, 9]).map(({ id }) => id)
       ).toEqual([4, 9]);
       expect(filterPeloFiltroDoLink(lista, true, [])).toEqual([]);
+    });
+
+    it('a conversa aberta continua na lista filtrada enquanto está aberta, mesmo fora do filtro; trocando de conversa, sai', () => {
+      // O servidor parou de mandar a 7 (ela deixou de casar com o filtro), mas a pessoa está nela.
+      const aberta = filterPeloFiltroDoLink(lista, true, [4, 9], 7);
+      expect(aberta.map(({ id }) => id)).toEqual([4, 7, 9]);
+
+      const outra = filterPeloFiltroDoLink(lista, true, [4, 9], 4);
+      expect(outra.map(({ id }) => id)).toEqual([4, 9]);
+
+      const nenhuma = filterPeloFiltroDoLink(lista, true, [4, 9], undefined);
+      expect(nenhuma.map(({ id }) => id)).toEqual([4, 9]);
     });
 
     it('sem o filtro, a lista fica como está', () => {
@@ -223,6 +243,7 @@ describe('filtros pelo link (#1883)', () => {
       });
       expect(dispatch).toHaveBeenNthCalledWith(2, 'fetchAllConversations', {
         replaceExisting: true,
+        silenciosa: true,
       });
     });
 
@@ -256,6 +277,97 @@ describe('filtros pelo link (#1883)', () => {
         aviso = vi.spyOn(emitter, 'emit');
       });
       afterEach(() => aviso.mockRestore());
+
+      it('tráfego contínuo: releituras a pelo menos 10 s uma da outra, e a última vem depois do último evento', async () => {
+        const inicios = [];
+        const contexto = contextoCom({ paginas: 2 });
+        contexto.dispatch = vi.fn(acao =>
+          acao === 'releerFiltroDoLink'
+            ? actions.releerFiltroDoLink(contexto)
+            : undefined
+        );
+        api.get.mockImplementation(async ({ page }) => {
+          if (page === 1) inicios.push(Date.now());
+          return resposta([page]);
+        });
+        const comeco = Date.now();
+
+        for (let segundo = 0; segundo < 35; segundo += 1) {
+          actions.updateConversation(contexto, conversa(100 + segundo));
+          // eslint-disable-next-line no-await-in-loop
+          await vi.advanceTimersByTimeAsync(1000);
+        }
+        const ultimoEvento = Date.now() - 1000;
+        await vi.advanceTimersByTimeAsync(PISO_ENTRE_RELEITURAS_MS * 2);
+
+        expect(inicios[0] - comeco).toBe(RELEITURA_AO_VIVO_MS);
+        inicios.slice(1).forEach((inicio, indice) => {
+          expect(inicio - inicios[indice]).toBeGreaterThanOrEqual(
+            PISO_ENTRE_RELEITURAS_MS
+          );
+        });
+        expect(inicios.length).toBeLessThanOrEqual(5);
+        expect(inicios.at(-1)).toBeGreaterThan(ultimoEvento);
+      });
+
+      it('página pendurada: passado o tempo-limite, a releitura é abandonada sem erro e o próximo evento relê', async () => {
+        const erro = Sentry.captureException;
+        erro.mockClear();
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 2 });
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(2));
+        await vi.advanceTimersByTimeAsync(TEMPO_LIMITE_DA_RELEITURA_MS);
+        await releitura;
+
+        expect(fila.every(({ params }) => params)).toBe(true);
+        expect(contexto.commit).not.toHaveBeenCalled();
+        expect(erro).not.toHaveBeenCalled();
+        actions.updateConversation(contexto, conversa(5));
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
+        expect(releituras(contexto.dispatch)).toBe(1);
+      });
+
+      it('a leitura pendurada recebe o signal que o tempo-limite cancela', async () => {
+        const sinais = [];
+        api.get.mockImplementation(
+          (_, { signal }) =>
+            new Promise(() => {
+              sinais.push(signal);
+            })
+        );
+        const releitura = actions.releerFiltroDoLink(
+          contextoCom({ paginas: 2 })
+        );
+        await vi.waitFor(() => expect(sinais).toHaveLength(2));
+        expect(sinais.some(({ aborted }) => aborted)).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(TEMPO_LIMITE_DA_RELEITURA_MS);
+        await releitura;
+
+        expect(sinais.every(({ aborted }) => aborted)).toBe(true);
+      });
+
+      it('mais de 5 páginas e a leitura pendurada: passado o tempo-limite, cancela a leitura e libera a próxima', async () => {
+        const contexto = contextoCom({
+          paginas: PAGINAS_RELIDAS_NO_MAXIMO + 1,
+        });
+        contexto.dispatch = vi.fn(acao =>
+          acao === 'fetchAllConversations' ? new Promise(() => {}) : undefined
+        );
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.advanceTimersByTimeAsync(TEMPO_LIMITE_DA_RELEITURA_MS);
+        await releitura;
+
+        expect(contexto.dispatch).toHaveBeenCalledWith(
+          'invalidateConversationListRequests'
+        );
+        actions.updateConversation(contexto, conversa(5));
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
+        expect(releituras(contexto.dispatch)).toBe(1);
+      });
 
       it('com 3 páginas, a conversa que saiu do filtro some e a rolagem e a paginação ficam', async () => {
         const lista = [1, 2, 3, 4, 5, 6, 7].map(id => conversa(id));
@@ -318,7 +430,7 @@ describe('filtros pelo link (#1883)', () => {
         expect(contexto.dispatch).toHaveBeenNthCalledWith(
           2,
           'fetchAllConversations',
-          { replaceExisting: true }
+          { replaceExisting: true, silenciosa: true }
         );
         expect(aviso).toHaveBeenCalledWith(
           BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO
@@ -407,7 +519,7 @@ describe('filtros pelo link (#1883)', () => {
         await releitura;
 
         expect(contexto.commit).not.toHaveBeenCalled();
-        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
         expect(releituras(contexto.dispatch)).toBe(1);
       });
 
@@ -430,7 +542,7 @@ describe('filtros pelo link (#1883)', () => {
         await releitura;
 
         expect(contexto.commit).not.toHaveBeenCalled();
-        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
         expect(releituras(contexto.dispatch)).toBe(1);
       });
 
@@ -456,27 +568,27 @@ describe('filtros pelo link (#1883)', () => {
         await releitura;
       };
 
-      it('releitura descartada seguidas vezes para no teto; volta no próximo evento ao vivo', async () => {
+      it('releitura descartada seguidas vezes: a 5ª agenda uma última depois do piso; depois só no próximo evento', async () => {
         const fila = leiturasPendentes();
         const contexto = contextoCom({ paginas: 2 });
 
-        for (let vez = 1; vez < DESCARTES_SEGUIDOS_NO_MAXIMO; vez += 1) {
+        for (let vez = 1; vez <= DESCARTES_SEGUIDOS_NO_MAXIMO; vez += 1) {
           // eslint-disable-next-line no-await-in-loop
           await releituraDescartada(fila, contexto);
-          vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+          vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
           expect(releituras(contexto.dispatch)).toBe(vez);
         }
         await releituraDescartada(fila, contexto);
-        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS * 4);
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS * 3);
         expect(releituras(contexto.dispatch)).toBe(
-          DESCARTES_SEGUIDOS_NO_MAXIMO - 1
+          DESCARTES_SEGUIDOS_NO_MAXIMO
         );
         expect(contexto.commit).not.toHaveBeenCalled();
 
         actions.updateConversation(contexto, conversa(5));
-        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
         expect(releituras(contexto.dispatch)).toBe(
-          DESCARTES_SEGUIDOS_NO_MAXIMO
+          DESCARTES_SEGUIDOS_NO_MAXIMO + 1
         );
       });
 
@@ -487,7 +599,7 @@ describe('filtros pelo link (#1883)', () => {
           for (let vez = 0; vez < vezes; vez += 1) {
             // eslint-disable-next-line no-await-in-loop
             await releituraDescartada(fila, contexto);
-            vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+            vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
           }
         };
 
@@ -550,7 +662,7 @@ describe('filtros pelo link (#1883)', () => {
         expect(
           gravados(contexto.commit, types.REPLACE_CONVERSATION_LIST)
         ).toHaveLength(1);
-        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
         expect(releituras(contexto.dispatch)).toBe(1);
       });
 
@@ -571,7 +683,7 @@ describe('filtros pelo link (#1883)', () => {
         expect(
           gravados(contexto.commit, types.SET_IDS_DO_FILTRO_DO_LINK)
         ).toEqual([{ ids: [1, 2], substituir: true }]);
-        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
         expect(releituras(contexto.dispatch)).toBe(1);
       });
 
@@ -586,7 +698,7 @@ describe('filtros pelo link (#1883)', () => {
         await releitura;
 
         expect(contexto.commit).not.toHaveBeenCalled();
-        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
         expect(releituras(contexto.dispatch)).toBe(0);
       });
 
@@ -666,6 +778,7 @@ describe('filtros pelo link (#1883)', () => {
       expect(buscas()).toBe(1);
       expect(contexto.dispatch).toHaveBeenCalledWith('fetchAllConversations', {
         replaceExisting: true,
+        silenciosa: true,
       });
     });
   });

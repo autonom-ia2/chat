@@ -21,7 +21,10 @@ import {
   filtrosDoEndereco,
   naCaixa,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
-import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
+import {
+  isAbortError,
+  useAbortableRequest,
+} from 'dashboard/composables/useAbortableRequest';
 import {
   handleVoiceCallCreated,
   handleVoiceCallUpdated,
@@ -89,10 +92,14 @@ const needsCrmFunnel = (state, conversationId) => {
 
 // Filtros pelo link (#1883): com eles ligados na lista comum, conversa nova ou mudada pelo websocket faz o servidor
 // reler a lista, em vez de o painel decidir se ela entra. Throttle: a primeira mudança agenda uma releitura para 2,5 s
-// depois, e as que chegam até lá vão nela (no máximo uma releitura a cada 2,5 s).
+// depois, e as que chegam até lá vão nela. Sob tráfego contínuo, as releituras ficam a pelo menos 10 s uma da outra; os
+// eventos do intervalo se juntam na releitura do fim dele, que já lê o último.
 export const RELEITURA_AO_VIVO_MS = 2500;
-// Até 5 páginas carregadas, a releitura relê todas e troca a lista no lugar (a paginação fica, a rolagem não vai ao topo); acima
-// disso, volta à página 1.
+export const PISO_ENTRE_RELEITURAS_MS = 10000;
+// Uma releitura que passa disso é abandonada (a rede pendurou): libera a próxima.
+export const TEMPO_LIMITE_DA_RELEITURA_MS = 20000;
+// Até 5 páginas carregadas, a releitura relê todas e troca a lista no lugar (a paginação fica, a rolagem não vai ao
+// topo); acima disso, volta à página 1.
 export const PAGINAS_RELIDAS_NO_MAXIMO = 5;
 const filtroDoLinkNosParametros = params =>
   Boolean(params?.daIa || params?.esperandoMin);
@@ -104,18 +111,20 @@ const filtroDoLinkAtivo = (state, rootState) =>
   naCaixa(rootState?.route) &&
   filtroDoLinkNosParametros(filtrosDoEndereco(rootState.route));
 let releituraAgendada = null;
+let ultimaReleituraEm = -Infinity;
 // Uma releitura por vez: o evento que chega com uma em andamento fica para depois dela, em vez de começar outra que
 // descartaria a primeira (sob tráfego contínuo, a lista nunca seria trocada).
 let releituraEmCurso = false;
 let releituraPendente = false;
-// Releitura descartada é refeita sozinha até 5 vezes seguidas (rolagem contínua puxando páginas descarta todas);
-// passado isso, ela só volta no próximo evento ao vivo (ou na releitura de um minuto, que existe com "esperando").
-// Releitura que grava, ou filtro que deixou de valer, zera a contagem.
+// Releitura descartada (rolagem contínua puxando páginas descarta todas) é refeita sozinha; a 5ª seguida agenda uma
+// última, depois do piso, para a lista não ficar velha. Se essa também cair, a próxima vem do próximo evento ao vivo
+// (ou da releitura de um minuto, que existe com "esperando"). Releitura que grava, ou filtro que sai, zera a contagem.
 export const DESCARTES_SEGUIDOS_NO_MAXIMO = 5;
 let descartesSeguidos = 0;
 export const cancelarReleituraDoFiltroDoLink = () => {
   clearTimeout(releituraAgendada);
   releituraAgendada = null;
+  ultimaReleituraEm = -Infinity;
   releituraEmCurso = false;
   releituraPendente = false;
   descartesSeguidos = 0;
@@ -127,10 +136,30 @@ const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
     return;
   }
   if (releituraAgendada) return;
+  const espera = Math.max(
+    RELEITURA_AO_VIVO_MS,
+    ultimaReleituraEm + PISO_ENTRE_RELEITURAS_MS - Date.now()
+  );
   releituraAgendada = setTimeout(() => {
     releituraAgendada = null;
     dispatch('releerFiltroDoLink');
-  }, RELEITURA_AO_VIVO_MS);
+  }, espera);
+};
+// Corre a leitura com o tempo-limite: passado ele, a leitura é cancelada (signal) e a releitura termina com AbortError.
+const comTempoLimite = async ler => {
+  const controle = new AbortController();
+  let relogio;
+  const estouro = new Promise((_, rejeitar) => {
+    relogio = setTimeout(() => {
+      controle.abort();
+      rejeitar(new DOMException('releitura sem resposta', 'AbortError'));
+    }, TEMPO_LIMITE_DA_RELEITURA_MS);
+  });
+  try {
+    return await Promise.race([ler(controle.signal), estouro]);
+  } finally {
+    clearTimeout(relogio);
+  }
 };
 
 // Geração da lista: sobe a cada leitura, esvaziamento ou troca de aba. A releitura das páginas e a leitura comum
@@ -170,9 +199,11 @@ const releerAsPaginasDoFiltroDoLink = async (
     'conversationStats/onListRequestStarted',
     params
   );
-  const respostas = await Promise.all(
-    Array.from({ length: paginas }, (_, indice) =>
-      ConversationApi.get({ ...params, page: indice + 1 })
+  const respostas = await comTempoLimite(signal =>
+    Promise.all(
+      Array.from({ length: paginas }, (_, indice) =>
+        ConversationApi.get({ ...params, page: indice + 1 }, { signal })
+      )
     )
   );
   if (geracao !== geracaoDaLista) return false;
@@ -204,14 +235,25 @@ const releerAsPaginasDoFiltroDoLink = async (
   return true;
 };
 
-// Mais de 5 páginas: volta à primeira página no lugar da lista. A rolagem vai ao topo só se a lista foi trocada.
+// Uma página só, ou mais de 5: volta à primeira página no lugar da lista, sem acender o carregando do rodapé. A rolagem
+// vai ao topo só se a lista foi trocada. Passado o tempo-limite, a leitura é cancelada.
 const voltarAPrimeiraPaginaDoFiltroDoLink = async (
   { dispatch, state },
   paginas
 ) => {
   const antes = state.allConversations;
   await dispatch('updateChatListFilters', { page: 1, updatedWithin: null });
-  await dispatch('fetchAllConversations', { replaceExisting: true });
+  try {
+    await comTempoLimite(() =>
+      dispatch('fetchAllConversations', {
+        replaceExisting: true,
+        silenciosa: true,
+      })
+    );
+  } catch (error) {
+    if (isAbortError(error)) dispatch('invalidateConversationListRequests');
+    throw error;
+  }
   if (paginas > PAGINAS_RELIDAS_NO_MAXIMO && state.allConversations !== antes) {
     emitter.emit(BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO);
   }
@@ -242,12 +284,14 @@ const actions = {
       state.conversationFilters.assigneeType
     );
     releituraEmCurso = true;
+    ultimaReleituraEm = Date.now();
     try {
       if (paginas > 1 && paginas <= PAGINAS_RELIDAS_NO_MAXIMO) {
-        // Descartada (a lista foi lida, esvaziada ou trocou de aba no meio): relê de novo depois, até o teto.
+        // Descartada (a lista foi lida, esvaziada ou trocou de aba no meio): relê de novo depois; a 5ª seguida agenda a
+        // última.
         const trocou = await releerAsPaginasDoFiltroDoLink(contexto, paginas);
         descartesSeguidos = trocou ? 0 : descartesSeguidos + 1;
-        if (!trocou && descartesSeguidos < DESCARTES_SEGUIDOS_NO_MAXIMO) {
+        if (!trocou && descartesSeguidos <= DESCARTES_SEGUIDOS_NO_MAXIMO) {
           releituraPendente = true;
         }
       } else {
@@ -255,8 +299,9 @@ const actions = {
         descartesSeguidos = 0;
       }
     } catch (error) {
-      // O próximo evento do websocket (ou a releitura de um minuto) tenta de novo.
-      Sentry.captureException(error);
+      // Tempo-limite ou leitura cancelada não é erro; o próximo evento do websocket (ou a releitura de um minuto) tenta
+      // de novo.
+      if (!isAbortError(error)) Sentry.captureException(error);
     } finally {
       releituraEmCurso = false;
       if (releituraPendente) {
@@ -312,7 +357,7 @@ const actions = {
 
   fetchAllConversations: async (
     { commit, state, dispatch },
-    { replaceExisting = false } = {}
+    { replaceExisting = false, silenciosa = false } = {}
   ) => {
     const geracao = novaGeracaoDaLista();
     return conversationListRequest.run(async signal => {
@@ -322,7 +367,8 @@ const actions = {
         params
       );
       if (signal.aborted) return;
-      commit(types.SET_LIST_LOADING_STATUS);
+      // #1883: a releitura do filtro do link troca a lista sem acender o carregando do rodapé.
+      if (!silenciosa) commit(types.SET_LIST_LOADING_STATUS);
       try {
         const {
           data: { data },

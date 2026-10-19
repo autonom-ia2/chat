@@ -54,11 +54,20 @@ export const filterByUnattended = (
 };
 
 // Filtros pelo link (#1883): quem decide o que entra é o servidor. Com o filtro ligado, a lista mostra só as conversas
-// que ele mandou (os ids guardados na store); a que chega ou muda pelo websocket espera a próxima releitura.
-export const filterPeloFiltroDoLink = (conversations, ligado, ids) => {
+// que ele mandou (os ids guardados na store); a que chega ou muda pelo websocket espera a próxima releitura. A conversa
+// aberta fica na lista enquanto estiver aberta, mesmo que tenha deixado de casar com o filtro; ao trocar de conversa,
+// ela sai.
+export const filterPeloFiltroDoLink = (
+  conversations,
+  ligado,
+  ids,
+  idDaAberta
+) => {
   if (!ligado) return conversations;
   const doServidor = new Set(ids);
-  return conversations.filter(({ id }) => doServidor.has(id));
+  return conversations.filter(
+    ({ id }) => doServidor.has(id) || (Boolean(idDaAberta) && id === idDaAberta)
+  );
 };
 
 export const applyPageFilters = (conversation, filters) => {

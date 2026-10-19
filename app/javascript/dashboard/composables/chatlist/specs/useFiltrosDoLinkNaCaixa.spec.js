@@ -2,6 +2,7 @@ import { defineComponent, h, ref, nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import {
+  filtroDoLinkDaLista,
   filtrosDoEndereco,
   useFiltrosDoLinkNaCaixa,
   useReleituraPeriodica,
@@ -51,6 +52,39 @@ describe('filtrosDoEndereco', () => {
         filtrosDoEndereco({ query: { da_ia: 'sim', esperando_min: valor } })
       ).toEqual({ daIa: false, esperandoMin: null });
     });
+  });
+});
+
+describe('filtroDoLinkDaLista (o filtro que a lista pede)', () => {
+  const nulo = { daIa: undefined, esperandoMin: undefined };
+
+  it('com o link, pede os dois valores', () => {
+    expect(filtroDoLinkDaLista({ daIa: true, esperandoMin: 30 })).toEqual({
+      daIa: true,
+      esperandoMin: 30,
+    });
+  });
+
+  it('no Spam ou na Lixeira, a pasta manda: filtro nulo', () => {
+    expect(
+      filtroDoLinkDaLista({ daIa: true, esperandoMin: 30, pasta: 'spam' })
+    ).toEqual(nulo);
+  });
+
+  it('com filtro avançado ou pasta salva, filtro nulo', () => {
+    expect(
+      filtroDoLinkDaLista({
+        daIa: true,
+        esperandoMin: 30,
+        filtroAvancado: true,
+      })
+    ).toEqual(nulo);
+  });
+
+  it('sem o link, as duas chaves vêm vazias (o merge da store não guarda valor antigo)', () => {
+    expect(filtroDoLinkDaLista({ daIa: false, esperandoMin: null })).toEqual(
+      nulo
+    );
   });
 });
 

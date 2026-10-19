@@ -48,6 +48,21 @@ export const filtrosDoEndereco = destino => ({
   esperandoMin: minutosValidos(destino?.query?.esperando_min),
 });
 
+// O filtro que a lista pede ao servidor. No Spam e na Lixeira a pasta manda; com filtro avançado ou pasta salva, a lista
+// vem de outro pedido e o link não vale. Sempre as duas chaves: o merge dos filtros da store (UPDATE_CHAT_LIST_FILTERS)
+// não deixa valor antigo para trás.
+export const filtroDoLinkDaLista = ({
+  daIa,
+  esperandoMin,
+  pasta,
+  filtroAvancado,
+}) => {
+  if (pasta || filtroAvancado) {
+    return { daIa: undefined, esperandoMin: undefined };
+  }
+  return { daIa: daIa || undefined, esperandoMin: esperandoMin ?? undefined };
+};
+
 export const naCaixa = destino =>
   LISTAS.includes(destino?.name) || CONVERSAS.includes(destino?.name);
 

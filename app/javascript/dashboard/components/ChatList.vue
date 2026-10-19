@@ -1,11 +1,21 @@
 <script setup>
-import { ref, unref, provide, computed, watch, onMounted } from 'vue';
+import {
+  ref,
+  unref,
+  provide,
+  computed,
+  watch,
+  onMounted,
+  onBeforeUnmount,
+} from 'vue';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
 import {
+  filtroDoLinkDaLista,
   useFiltrosDoLinkNaCaixa,
   useReleituraPeriodica,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
+import { cancelarReleituraDoFiltroDoLink } from 'dashboard/store/modules/conversations/actions';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import {
@@ -309,16 +319,18 @@ const {
   irParaALista,
 } = useFiltrosDoLinkNaCaixa();
 const idsDoFiltroDoLink = useMapGetter('getIdsDoFiltroDoLink');
-const filtroDoLink = computed(() => {
-  // Sempre as duas chaves: o merge dos filtros da store (UPDATE_CHAT_LIST_FILTERS) não deixa valor antigo para trás.
-  if (pastaDoEmail.value || hasAppliedFiltersOrActiveFolders.value) {
-    return { daIa: undefined, esperandoMin: undefined };
-  }
-  return {
-    daIa: daIaDoLink.value || undefined,
-    esperandoMin: esperandoDoLink.value ?? undefined,
-  };
-});
+const filtroDoLink = computed(() =>
+  filtroDoLinkDaLista({
+    daIa: daIaDoLink.value,
+    esperandoMin: esperandoDoLink.value,
+    pasta: pastaDoEmail.value,
+    filtroAvancado: hasAppliedFiltersOrActiveFolders.value,
+  })
+);
+// A conversa aberta fica na lista filtrada enquanto estiver aberta.
+const conversaAberta = useMapGetter('getSelectedChat');
+// Saindo da caixa, nenhuma releitura agendada roda por baixo.
+onBeforeUnmount(cancelarReleituraDoFiltroDoLink);
 const temFiltroDoLink = computed(() =>
   Boolean(filtroDoLink.value.daIa || filtroDoLink.value.esperandoMin)
 );
@@ -430,7 +442,8 @@ const conversationList = computed(() => {
     localConversationList = filterPeloFiltroDoLink(
       localConversationList,
       Boolean(filters.daIa || filters.esperandoMin),
-      idsDoFiltroDoLink.value
+      idsDoFiltroDoLink.value,
+      conversaAberta.value?.id
     );
   } else {
     localConversationList = [...chatLists.value];
