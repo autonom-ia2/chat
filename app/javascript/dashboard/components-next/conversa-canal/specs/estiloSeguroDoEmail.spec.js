@@ -17,14 +17,6 @@ describe('htmlComCssSeguro', () => {
     expect(doc.getElementById('b').getAttribute('style')).toContain('red');
   });
 
-  it('tira o style inline com url() que o sanitizador não consegue decodificar', () => {
-    const doc = corpo(
-      '<p id="a" style="background:url(%E0%A4%A)">x</p><p id="b" style="background:url(https://x.test/a.png)">y</p>'
-    );
-    expect(doc.getElementById('a').hasAttribute('style')).toBe(false);
-    expect(doc.getElementById('b').getAttribute('style')).toContain('x.test');
-  });
-
   it('sem folha de estilo legível, o <style> sai inteiro (nunca passa sem conferir)', () => {
     const doc = corpo(
       '<style>p{font-family:"\\3c /style\\3e \\3c img src=x onerror=alert(1)\\3e "}</style><p>oi</p>'

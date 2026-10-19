@@ -3,39 +3,13 @@
 //    sanitizador regrava a folha (cssText do CSSOM). Lido de novo, o resto vira marcação.
 // 2. Ele só limpa as regras de estilo do 1º nível (e de um @media): o que vem aninhado mais
 //    fundo (@supports, @media dentro de @media, CSS aninhado) sai sem escopo nem filtro.
-// 3. url() com "%" quebrado faz o decodeURI dele lançar, e o e-mail não abre.
 // Antes de sanitizar, as regras com esses defeitos saem; o resto do CSS fica. Lê a
 // estrutura (CSSOM e DOM), sem regex.
-
-const INICIO_DE_URL = 'url(';
-
-const urlsDoCss = texto => {
-  const urls = [];
-  let inicio = texto.indexOf(INICIO_DE_URL);
-  while (inicio >= 0) {
-    const fim = texto.indexOf(')', inicio);
-    if (fim < 0) break;
-    urls.push(texto.slice(inicio + INICIO_DE_URL.length, fim));
-    inicio = texto.indexOf(INICIO_DE_URL, fim);
-  }
-  return urls;
-};
-
-const decodifica = endereco => {
-  try {
-    decodeURI(endereco);
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 // O texto já normalizado pelo navegador (cssText): é o que o sanitizador vai regravar.
 // Dentro de <style>, só "</" fecha o bloco; "<" sozinho (`width < 600px`) é CSS válido.
 const FECHA_TAG = '</';
-const cssSeguro = texto =>
-  !texto.includes(FECHA_TAG) &&
-  urlsDoCss(texto.toLowerCase()).every(decodifica);
+const cssSeguro = texto => !texto.includes(FECHA_TAG);
 
 // Só o que o sanitizador sabe limpar: regra de estilo sem regra aninhada, ou @media só com
 // regras assim. O resto ele não descartaria por inteiro, e sairia sem escopo.
@@ -57,7 +31,13 @@ const regrasSeguras = folha => {
       .map(regra => regra.cssText)
       .filter(cssSeguro)
       .join('\n');
-  } catch {
+  } catch (erro) {
+    // Sem conferir, nenhuma regra passa: o e-mail sai sem o CSS dele, nunca com CSS sem filtro.
+    // eslint-disable-next-line no-console
+    console.error(
+      'E-mail: CSS do remetente não pôde ser conferido',
+      erro?.message
+    );
     return '';
   }
 };
