@@ -53,25 +53,12 @@ export const filterByUnattended = (
     : shouldFilter;
 };
 
-// "Esperando há mais de N minutos" pelo link (#1883): a mesma regra do servidor, com o waiting_since da conversa (em
-// segundos; 0 = ninguém esperando). A conversa respondida sai da lista na hora.
-export const filterByEsperando = (shouldFilter, esperandoMin, waitingSince) => {
-  if (!esperandoMin) return shouldFilter;
-  if (!waitingSince) return false;
-  const esperandoHa = Date.now() / 1000 - waitingSince;
-  return shouldFilter && esperandoHa >= esperandoMin * 60;
-};
-
-// "Recebidas da IA" pelo link (#1883): só o servidor sabe quem a IA passou. Com o filtro ligado, a lista mostra só as
-// conversas que ele mandou (os ids guardados na store): a conversa nova que chega pelo websocket não entra. A exceção é
-// a marca de espera de pessoa (o robô passou e ninguém estava online), que vem na própria conversa.
-export const filterRecebidasDaIa = (conversations, daIa, ids) => {
-  if (!daIa) return conversations;
-  const recebidas = new Set(ids);
-  return conversations.filter(
-    ({ id, additional_attributes: atributos }) =>
-      recebidas.has(id) || Boolean(atributos?.bot_handoff_waiting_since)
-  );
+// Filtros pelo link (#1883): quem decide o que entra é o servidor. Com o filtro ligado, a lista mostra só as conversas
+// que ele mandou (os ids guardados na store); a que chega ou muda pelo websocket espera a próxima releitura.
+export const filterPeloFiltroDoLink = (conversations, ligado, ids) => {
+  if (!ligado) return conversations;
+  const doServidor = new Set(ids);
+  return conversations.filter(({ id }) => doServidor.has(id));
 };
 
 export const applyPageFilters = (conversation, filters) => {
@@ -82,7 +69,6 @@ export const applyPageFilters = (conversation, filters) => {
     teamId,
     conversationType,
     crmPipelineId,
-    esperandoMin,
   } = filters;
   const {
     status: chatStatus,
@@ -113,7 +99,6 @@ export const applyPageFilters = (conversation, filters) => {
     chatPipelineIds,
     hasHiddenPipeline
   );
-  shouldFilter = filterByEsperando(shouldFilter, esperandoMin, waitingSince);
 
   return shouldFilter;
 };

@@ -1,35 +1,51 @@
-import { ref } from 'vue';
+import { defineComponent, h, ref, nextTick } from 'vue';
+import { mount } from '@vue/test-utils';
+import { createRouter, createMemoryHistory } from 'vue-router';
+import {
+  filtrosDoEndereco,
+  useFiltrosDoLinkNaCaixa,
+  useReleituraPeriodica,
+  RELEITURA_PERIODICA_MS,
+} from '../useFiltrosDoLinkNaCaixa';
 
-const rota = ref({ name: 'home', params: {}, query: {} });
-const ouvintes = [];
-const replace = vi.fn(async destino => {
-  rota.value = { ...rota.value, ...destino };
-  ouvintes.forEach(ouvinte => ouvinte(rota.value));
-});
+const Vazio = { render: () => null };
+const rotas = [
+  { path: '/app/accounts/:accountId/dashboard', name: 'home' },
+  { path: '/app/accounts/:accountId/inbox/:inbox_id', name: 'inbox_dashboard' },
+  {
+    path: '/app/accounts/:accountId/conversations/:conversation_id',
+    name: 'inbox_conversation',
+  },
+  { path: '/app/accounts/:accountId/crm', name: 'crm_kanban_index' },
+  { path: '/app/accounts/:accountId/contacts', name: 'contacts_dashboard' },
+].map(rota => ({ ...rota, component: Vazio }));
 
-vi.mock('vue-router', () => ({
-  useRoute: () => new Proxy({}, { get: (_alvo, chave) => rota.value[chave] }),
-  useRouter: () => ({
-    replace,
-    afterEach: ouvinte => ouvintes.push(ouvinte),
-  }),
-}));
-
-const navegar = destino => {
-  rota.value = { params: {}, query: {}, ...destino };
-  ouvintes.forEach(ouvinte => ouvinte(rota.value));
+const montar = async inicio => {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: rotas,
+  });
+  let filtros;
+  const Teste = defineComponent({
+    setup() {
+      filtros = useFiltrosDoLinkNaCaixa();
+      return () => h('div');
+    },
+  });
+  await router.push(inicio);
+  await router.isReady();
+  mount(Teste, { global: { plugins: [router] } });
+  return { router, filtros };
 };
 
 describe('filtrosDoEndereco', () => {
-  it('lê da_ia=1 e esperando_min dentro de 1..1440', async () => {
-    const { filtrosDoEndereco } = await import('../useFiltrosDoLinkNaCaixa');
+  it('lê da_ia=1 e esperando_min dentro de 1..1440', () => {
     expect(
       filtrosDoEndereco({ query: { da_ia: '1', esperando_min: '30' } })
     ).toEqual({ daIa: true, esperandoMin: 30 });
   });
 
-  it('ignora valor que a caixa não oferece', async () => {
-    const { filtrosDoEndereco } = await import('../useFiltrosDoLinkNaCaixa');
+  it('ignora valor que a caixa não oferece', () => {
     ['0', '1441', '-1', 'abc', '30.5', '0x1e', ''].forEach(valor => {
       expect(
         filtrosDoEndereco({ query: { da_ia: 'sim', esperando_min: valor } })
@@ -39,81 +55,147 @@ describe('filtrosDoEndereco', () => {
 });
 
 describe('useFiltrosDoLinkNaCaixa', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    ouvintes.length = 0;
-    replace.mockClear();
-    rota.value = { name: 'home', params: {}, query: {} };
-  });
-
   it('a lista que abre pelo link liga o filtro', async () => {
-    rota.value = { name: 'home', params: {}, query: { da_ia: '1' } };
-    const { useFiltrosDoLinkNaCaixa } = await import(
-      '../useFiltrosDoLinkNaCaixa'
-    );
-    const { daIa, esperandoMin } = useFiltrosDoLinkNaCaixa();
+    const { filtros } = await montar('/app/accounts/1/dashboard?da_ia=1');
 
-    expect(daIa.value).toBe(true);
-    expect(esperandoMin.value).toBe(null);
+    expect(filtros.daIa.value).toBe(true);
+    expect(filtros.esperandoMin.value).toBe(null);
   });
 
-  it('abrir uma conversa mantém o filtro da lista; voltar pelo menu, sem o link, desliga', async () => {
-    rota.value = { name: 'home', params: {}, query: { esperando_min: '30' } };
-    const { useFiltrosDoLinkNaCaixa } = await import(
-      '../useFiltrosDoLinkNaCaixa'
+  it('abrir uma conversa da lista filtrada leva o link junto; voltar pelo menu, sem o link, desliga', async () => {
+    const { router, filtros } = await montar(
+      '/app/accounts/1/dashboard?esperando_min=30'
     );
-    const { esperandoMin } = useFiltrosDoLinkNaCaixa();
 
-    navegar({ name: 'inbox_conversation', params: { conversation_id: 7 } });
-    expect(esperandoMin.value).toBe(30);
+    await router.push('/app/accounts/1/conversations/7');
+    expect(router.currentRoute.value.query).toEqual({ esperando_min: '30' });
+    expect(filtros.esperandoMin.value).toBe(30);
 
-    navegar({ name: 'inbox_dashboard', params: { inbox_id: 3 } });
-    expect(esperandoMin.value).toBe(null);
+    await router.push('/app/accounts/1/conversations/8');
+    expect(filtros.esperandoMin.value).toBe(30);
+
+    await router.push('/app/accounts/1/inbox/3');
+    expect(filtros.esperandoMin.value).toBe(null);
   });
 
-  it('outra tela (fora da caixa) não mexe no filtro', async () => {
-    rota.value = { name: 'home', params: {}, query: { da_ia: '1' } };
-    const { useFiltrosDoLinkNaCaixa } = await import(
-      '../useFiltrosDoLinkNaCaixa'
+  it('caixa filtrada → CRM → conversa pelo card: a lista NÃO vem filtrada', async () => {
+    const { router, filtros } = await montar(
+      '/app/accounts/1/dashboard?da_ia=1'
     );
-    const { daIa } = useFiltrosDoLinkNaCaixa();
 
-    navegar({ name: 'crm_kanban_index' });
-    expect(daIa.value).toBe(true);
+    await router.push('/app/accounts/1/crm');
+    expect(filtros.daIa.value).toBe(false);
+
+    await router.push('/app/accounts/1/conversations/7');
+    expect(router.currentRoute.value.query).toEqual({});
+    expect(filtros.daIa.value).toBe(false);
+  });
+
+  it('Contatos → conversa também chega sem filtro', async () => {
+    const { router, filtros } = await montar(
+      '/app/accounts/1/dashboard?da_ia=1'
+    );
+    await router.push('/app/accounts/1/contacts');
+    await router.push('/app/accounts/1/conversations/9');
+
+    expect(filtros.daIa.value).toBe(false);
   });
 
   it('limpar tira só os parâmetros do link e mantém o resto do endereço', async () => {
-    rota.value = {
-      name: 'inbox_dashboard',
-      params: { inbox_id: 3 },
-      query: { da_ia: '1', esperando_min: '30', pasta: 'spam' },
-    };
-    const { useFiltrosDoLinkNaCaixa } = await import(
-      '../useFiltrosDoLinkNaCaixa'
+    const { router, filtros } = await montar(
+      '/app/accounts/1/inbox/3?da_ia=1&esperando_min=30&pasta=spam'
     );
-    const { daIa, esperandoMin, limpar } = useFiltrosDoLinkNaCaixa();
 
-    await limpar();
+    await filtros.limpar();
 
-    expect(replace).toHaveBeenCalledWith({
-      name: 'inbox_dashboard',
-      params: { inbox_id: 3 },
-      query: { pasta: 'spam' },
-    });
-    expect([daIa.value, esperandoMin.value]).toEqual([false, null]);
+    expect(router.currentRoute.value.query).toEqual({ pasta: 'spam' });
+    expect([filtros.daIa.value, filtros.esperandoMin.value]).toEqual([
+      false,
+      null,
+    ]);
   });
 
-  it('limpar dentro de uma conversa desliga sem trocar de tela', async () => {
-    rota.value = { name: 'home', params: {}, query: { da_ia: '1' } };
-    const { useFiltrosDoLinkNaCaixa } = await import(
-      '../useFiltrosDoLinkNaCaixa'
+  it('limpar dentro da conversa aberta tira o link dela também', async () => {
+    const { router, filtros } = await montar(
+      '/app/accounts/1/dashboard?da_ia=1'
     );
-    const { daIa, esperandoMin, limpar } = useFiltrosDoLinkNaCaixa();
-    navegar({ name: 'inbox_conversation', params: { conversation_id: 7 } });
+    await router.push('/app/accounts/1/conversations/7');
 
-    await limpar();
+    await filtros.limpar();
 
-    expect(replace).not.toHaveBeenCalled();
-    expect([daIa.value, esperandoMin.value]).toEqual([false, null]);
+    expect(router.currentRoute.value.name).toBe('inbox_conversation');
+    expect(router.currentRoute.value.query).toEqual({});
+    expect(filtros.daIa.value).toBe(false);
+  });
+
+  describe('limparTudo (a seta "Limpar filtros")', () => {
+    it('com o link no endereço, um clique tira o link e não relê à parte', async () => {
+      const { router, filtros } = await montar(
+        '/app/accounts/1/dashboard?da_ia=1'
+      );
+      const reler = vi.fn();
+
+      await filtros.limparTudo(reler);
+
+      expect(router.currentRoute.value.query).toEqual({});
+      expect(reler).not.toHaveBeenCalled();
+    });
+
+    it('sem o link, só relê (o filtro avançado sai na releitura)', async () => {
+      const { filtros } = await montar('/app/accounts/1/dashboard');
+      const reler = vi.fn();
+
+      await filtros.limparTudo(reler);
+
+      expect(reler).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('useReleituraPeriodica', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const montarReleitura = ligado => {
+    const reler = vi.fn();
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          useReleituraPeriodica(ligado, reler);
+          return () => h('div');
+        },
+      })
+    );
+    return { reler, wrapper };
+  };
+
+  it('relê uma vez por minuto só com o filtro ligado', async () => {
+    const ligado = ref(true);
+    const { reler, wrapper } = montarReleitura(ligado);
+
+    vi.advanceTimersByTime(RELEITURA_PERIODICA_MS * 2);
+    expect(reler).toHaveBeenCalledTimes(2);
+
+    ligado.value = false;
+    await nextTick();
+    vi.advanceTimersByTime(RELEITURA_PERIODICA_MS * 3);
+    expect(reler).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
+  it('não relê com a aba do navegador escondida, e para ao desmontar', () => {
+    const visibilidade = vi
+      .spyOn(document, 'visibilityState', 'get')
+      .mockReturnValue('hidden');
+    const { reler, wrapper } = montarReleitura(ref(true));
+
+    vi.advanceTimersByTime(RELEITURA_PERIODICA_MS);
+    expect(reler).not.toHaveBeenCalled();
+
+    visibilidade.mockReturnValue('visible');
+    wrapper.unmount();
+    vi.advanceTimersByTime(RELEITURA_PERIODICA_MS);
+    expect(reler).not.toHaveBeenCalled();
+    visibilidade.mockRestore();
   });
 });

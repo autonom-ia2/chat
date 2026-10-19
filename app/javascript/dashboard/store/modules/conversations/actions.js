@@ -80,8 +80,34 @@ const needsCrmFunnel = (state, conversationId) => {
   return !Array.isArray(listed?.crm_pipeline_ids);
 };
 
+// Filtros pelo link (#1883): com eles ligados na lista comum, conversa nova ou mudada pelo websocket faz o servidor
+// reler a lista uma vez, 2,5 s depois do primeiro evento da rajada (sob tráfego contínuo, no máximo uma releitura a
+// cada 2,5 s), em vez de o painel decidir se ela entra.
+export const RELEITURA_AO_VIVO_MS = 2500;
+const filtroDoLinkNosParametros = params =>
+  Boolean(params?.daIa || params?.esperandoMin);
+const filtroDoLinkAtivo = state =>
+  filtroDoLinkNosParametros(state?.conversationFilters) &&
+  !state.appliedFilters?.length;
+let releituraAgendada = null;
+const agendarReleituraDoFiltroDoLink = (state, dispatch) => {
+  if (!filtroDoLinkAtivo(state)) return;
+  if (releituraAgendada) return;
+  releituraAgendada = setTimeout(() => {
+    releituraAgendada = null;
+    dispatch('releerFiltroDoLink');
+  }, RELEITURA_AO_VIVO_MS);
+};
+
 // actions
 const actions = {
+  // A primeira página de novo, no lugar da lista (o mesmo que a releitura ao reconectar faz).
+  releerFiltroDoLink: async ({ dispatch, state }) => {
+    if (!filtroDoLinkAtivo(state)) return;
+    await dispatch('updateChatListFilters', { page: 1, updatedWithin: null });
+    await dispatch('fetchAllConversations', { replaceExisting: true });
+  },
+
   // Filtro "Funil" da lista (#1150). O websocket não traz os funis da conversa (crm_pipeline_ids): o payload também vai
   // ao contato pelo widget. Com filtro de funil (e sem pasta ou filtro avançado), a conversa da lista que está sem os
   // funis, ou cujo card mudou, tem os funis lidos da API. Só o campo muda, e só em conversa que ainda está na lista: a
@@ -145,12 +171,12 @@ const actions = {
 
         if (signal.aborted) return;
 
-        // "Recebidas da IA" pelo link (#1883): o painel não sabe quem a IA passou; guarda o que o servidor mandou.
-        if (params.daIa) {
-          commit(
-            types.ADD_IDS_RECEBIDAS_DA_IA,
-            data.payload.map(({ id }) => id)
-          );
+        // Filtros pelo link (#1883): quem decide o que entra é o servidor; guarda o que ele mandou.
+        if (filtroDoLinkNosParametros(params)) {
+          commit(types.SET_IDS_DO_FILTRO_DO_LINK, {
+            ids: data.payload.map(({ id }) => id),
+            substituir: replaceExisting,
+          });
         }
         buildConversationList(
           { commit, dispatch },
@@ -558,6 +584,7 @@ const actions = {
   },
 
   addConversation({ commit, state, dispatch, rootState }, conversation) {
+    agendarReleituraDoFiltroDoLink(state, dispatch);
     const { currentInbox, appliedFilters } = state;
     const {
       inbox_id: inboxId,
@@ -595,6 +622,7 @@ const actions = {
   },
 
   updateConversation({ commit, dispatch, state, rootGetters }, conversation) {
+    agendarReleituraDoFiltroDoLink(state, dispatch);
     const sender = conversation.meta?.sender;
     const needsFunnel = needsCrmFunnel(state, conversation.id);
 

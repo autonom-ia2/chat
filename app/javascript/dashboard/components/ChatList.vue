@@ -2,7 +2,10 @@
 import { ref, unref, provide, computed, watch, onMounted } from 'vue';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
-import { useFiltrosDoLinkNaCaixa } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
+import {
+  useFiltrosDoLinkNaCaixa,
+  useReleituraPeriodica,
+} from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import {
@@ -58,7 +61,7 @@ import {
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
 import {
   sortComparator,
-  filterRecebidasDaIa,
+  filterPeloFiltroDoLink,
 } from '../store/modules/conversations/helpers';
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
@@ -302,9 +305,9 @@ const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
 const {
   daIa: daIaDoLink,
   esperandoMin: esperandoDoLink,
-  limpar: limparFiltroDoLink,
+  limparTudo: limparTudoDoLink,
 } = useFiltrosDoLinkNaCaixa();
-const idsRecebidasDaIa = useMapGetter('getIdsRecebidasDaIa');
+const idsDoFiltroDoLink = useMapGetter('getIdsDoFiltroDoLink');
 const filtroDoLink = computed(() => {
   // Sempre as duas chaves: o merge dos filtros da store (UPDATE_CHAT_LIST_FILTERS) não deixa valor antigo para trás.
   if (pastaDoEmail.value || hasAppliedFiltersOrActiveFolders.value) {
@@ -423,10 +426,10 @@ const conversationList = computed(() => {
     } else {
       localConversationList = [...allChatList.value(filters)];
     }
-    localConversationList = filterRecebidasDaIa(
+    localConversationList = filterPeloFiltroDoLink(
       localConversationList,
-      filters.daIa,
-      idsRecebidasDaIa.value
+      Boolean(filters.daIa || filters.esperandoMin),
+      idsDoFiltroDoLink.value
     );
   } else {
     localConversationList = [...chatLists.value];
@@ -974,14 +977,17 @@ watch([pastaDoEmail, versaoDasPastas], () => resetAndFetchData());
 // Os valores do link, não o filtro já combinado: aplicar um filtro avançado não pode disparar uma releitura que o apaga.
 watch([daIaDoLink, esperandoDoLink], () => resetAndFetchData());
 
-// A seta "Limpar filtros" do topo: com o filtro do link, tira o link (e o watch acima relê a lista).
+// A seta "Limpar filtros" do topo: um clique limpa tudo. Com o link no endereço (mesmo com o filtro avançado por cima),
+// tira o link e o watch acima relê a lista, o que também tira o avançado.
 function onResetFilters() {
-  if (temFiltroDoLink.value) {
-    limparFiltroDoLink();
-    return;
-  }
-  resetAndFetchData();
+  limparTudoDoLink(resetAndFetchData);
 }
+
+// "Esperando há mais de N min": a conversa que cruza o limite entra numa releitura por minuto.
+useReleituraPeriodica(
+  computed(() => Boolean(filtroDoLink.value.esperandoMin)),
+  () => store.dispatch('releerFiltroDoLink')
+);
 watch(
   computed(() => props.conversationType),
   (type, previousType) => {

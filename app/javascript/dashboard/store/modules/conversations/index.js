@@ -24,8 +24,8 @@ const state = {
   syncConversationsMessages: {},
   conversationFilters: {},
   copilotAssistant: {},
-  // Filtro "Recebidas da IA" pelo link (#1883): ids que o servidor mandou com o filtro ligado.
-  idsRecebidasDaIa: [],
+  // Filtros pelo link (#1883): ids que o servidor mandou com o filtro ligado.
+  idsDoFiltroDoLink: [],
 };
 
 const getConversationById = _state => conversationId => {
@@ -91,7 +91,7 @@ export const mutations = {
   },
   [types.EMPTY_ALL_CONVERSATION](_state) {
     _state.allConversations = [];
-    _state.idsRecebidasDaIa = [];
+    _state.idsDoFiltroDoLink = [];
     _state.selectedChatId = null;
   },
   [types.SET_ALL_MESSAGES_LOADED](_state, conversationId) {
@@ -280,10 +280,10 @@ export const mutations = {
     );
   },
 
-  [types.ADD_IDS_RECEBIDAS_DA_IA](_state, ids) {
-    _state.idsRecebidasDaIa = [
-      ...new Set([..._state.idsRecebidasDaIa, ...ids]),
-    ];
+  // Página seguinte soma; releitura (substituir) troca a lista inteira.
+  [types.SET_IDS_DO_FILTRO_DO_LINK](_state, { ids, substituir = false }) {
+    const antes = substituir ? [] : _state.idsDoFiltroDoLink;
+    _state.idsDoFiltroDoLink = [...new Set([...antes, ...ids])];
   },
 
   // Filtro "Funil" (#1150): só os funis da conversa que ainda está na lista; o resto do objeto fica como está.

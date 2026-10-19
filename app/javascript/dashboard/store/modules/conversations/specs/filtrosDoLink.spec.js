@@ -1,128 +1,186 @@
-import {
-  applyPageFilters,
-  filterByEsperando,
-  filterRecebidasDaIa,
-} from '../helpers';
+import { applyPageFilters, filterPeloFiltroDoLink } from '../helpers';
 import getters from '../getters';
-import actions from '../actions';
+import actions, { RELEITURA_AO_VIVO_MS } from '../actions';
 import { mutations } from '../index';
 import types from '../../../mutation-types';
 
-const api = vi.hoisted(() => ({ get: vi.fn() }));
+const api = vi.hoisted(() => ({ get: vi.fn(), show: vi.fn() }));
 vi.mock('../../../../api/inbox/conversation', () => ({ default: api }));
 
-// Filtros pelo link na caixa (Números F2, #1883). A espera se confere no painel (waiting_since vem na conversa); as
-// recebidas da IA, só o servidor sabe: a lista guarda os ids que ele mandou com o filtro ligado.
-const AGORA = new Date('2026-10-19T12:00:00Z');
-const segundos = data => Math.floor(data.getTime() / 1000);
-const conversa = (id, waitingSince) => ({
+// Filtros pelo link na caixa (Números F2, #1883). Quem decide o que entra é o servidor: a lista guarda os ids que ele
+// mandou, e conversa nova ou mudada pelo websocket faz o servidor reler a lista.
+const conversa = (id, extra = {}) => ({
   id,
   status: 'open',
   inbox_id: 1,
   labels: [],
-  meta: {},
-  waiting_since: waitingSince,
+  meta: { sender: { id: 1 } },
+  updated_at: 10,
+  ...extra,
+});
+
+const resposta = ids => ({
+  data: { data: { payload: ids.map(id => conversa(id)), meta: {} } },
 });
 
 describe('filtros pelo link (#1883)', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(AGORA);
-  });
+  describe('#filterPeloFiltroDoLink', () => {
+    const lista = [conversa(4), conversa(7), conversa(9)];
 
-  afterEach(() => vi.useRealTimers());
-
-  describe('#filterByEsperando', () => {
-    const haMinutos = minutos => segundos(AGORA) - minutos * 60;
-
-    it('sem o filtro não mexe na lista', () => {
-      expect(filterByEsperando(true, null, 0)).toBe(true);
-      expect(filterByEsperando(false, null, haMinutos(90))).toBe(false);
+    it('com o filtro, só o que o servidor mandou', () => {
+      expect(
+        filterPeloFiltroDoLink(lista, true, [4, 9]).map(({ id }) => id)
+      ).toEqual([4, 9]);
+      expect(filterPeloFiltroDoLink(lista, true, [])).toEqual([]);
     });
 
-    it('só entra quem espera há N minutos ou mais', () => {
-      expect(filterByEsperando(true, 30, haMinutos(31))).toBe(true);
-      expect(filterByEsperando(true, 30, haMinutos(30))).toBe(true);
-      expect(filterByEsperando(true, 30, haMinutos(10))).toBe(false);
+    it('sem o filtro, a lista fica como está', () => {
+      expect(filterPeloFiltroDoLink(lista, false, [])).toBe(lista);
     });
 
-    it('conversa respondida (waiting_since 0) não entra', () => {
-      expect(filterByEsperando(true, 30, 0)).toBe(false);
-      expect(filterByEsperando(true, 30, undefined)).toBe(false);
+    it('a marca de espera na conversa não decide nada no painel (o servidor decide)', () => {
+      const comMarca = conversa(11, {
+        additional_attributes: { bot_handoff_waiting_since: '2026-10-19' },
+      });
+      expect(filterPeloFiltroDoLink([comMarca], true, [])).toEqual([]);
     });
 
-    it('vale dentro do applyPageFilters', () => {
-      const filtros = { status: 'open', esperandoMin: 30 };
-      expect(applyPageFilters(conversa(1, haMinutos(45)), filtros)).toBe(true);
-      expect(applyPageFilters(conversa(2, haMinutos(5)), filtros)).toBe(false);
+    it('a espera não é reaplicada com o relógio do navegador', () => {
+      const respondida = conversa(5, { waiting_since: 0 });
+      expect(
+        applyPageFilters(respondida, { status: 'open', esperandoMin: 30 })
+      ).toBe(true);
     });
   });
 
-  describe('recebidas da IA', () => {
-    it('a lista lida com da_ia guarda os ids que o servidor mandou', async () => {
-      api.get.mockResolvedValue({
-        data: {
-          data: { payload: [conversa(4, 0), conversa(9, 0)], meta: {} },
-        },
-      });
+  describe('ids do servidor', () => {
+    beforeEach(() => api.get.mockReset());
+
+    it('a lista lida com o filtro guarda os ids; a releitura substitui', async () => {
       const commit = vi.fn();
-      const dispatch = vi.fn();
-      const state = { conversationFilters: { daIa: true, page: 1 } };
-
-      await actions.fetchAllConversations({ commit, dispatch, state });
-
-      expect(commit).toHaveBeenCalledWith(
-        types.ADD_IDS_RECEBIDAS_DA_IA,
-        [4, 9]
-      );
-    });
-
-    it('sem da_ia não guarda nada', async () => {
-      api.get.mockResolvedValue({
-        data: { data: { payload: [conversa(4, 0)], meta: {} } },
-      });
-      const commit = vi.fn();
-      const state = { conversationFilters: { page: 1 } };
+      const state = { conversationFilters: { esperandoMin: 30, page: 1 } };
+      api.get.mockResolvedValueOnce(resposta([4, 9]));
 
       await actions.fetchAllConversations({ commit, dispatch: vi.fn(), state });
+      expect(commit).toHaveBeenCalledWith(types.SET_IDS_DO_FILTRO_DO_LINK, {
+        ids: [4, 9],
+        substituir: false,
+      });
+
+      api.get.mockResolvedValueOnce(resposta([9]));
+      await actions.fetchAllConversations(
+        { commit, dispatch: vi.fn(), state },
+        { replaceExisting: true }
+      );
+      expect(commit).toHaveBeenCalledWith(types.SET_IDS_DO_FILTRO_DO_LINK, {
+        ids: [9],
+        substituir: true,
+      });
+    });
+
+    it('sem o filtro não guarda nada', async () => {
+      const commit = vi.fn();
+      api.get.mockResolvedValueOnce(resposta([4]));
+
+      await actions.fetchAllConversations({
+        commit,
+        dispatch: vi.fn(),
+        state: { conversationFilters: { page: 1 } },
+      });
 
       expect(commit).not.toHaveBeenCalledWith(
-        types.ADD_IDS_RECEBIDAS_DA_IA,
+        types.SET_IDS_DO_FILTRO_DO_LINK,
         expect.anything()
       );
     });
 
-    it('com o filtro, a conversa nova do websocket (fora dos ids) não entra na lista', () => {
-      const lista = [conversa(4, 0), conversa(7, 0), conversa(9, 0)];
+    it('página seguinte soma, releitura troca, lista vazia limpa', () => {
+      const state = { allConversations: [], idsDoFiltroDoLink: [] };
 
-      expect(
-        filterRecebidasDaIa(lista, true, [4, 9]).map(({ id }) => id)
-      ).toEqual([4, 9]);
-      expect(filterRecebidasDaIa(lista, true, [])).toEqual([]);
-      expect(filterRecebidasDaIa(lista, undefined, [])).toBe(lista);
-    });
+      mutations[types.SET_IDS_DO_FILTRO_DO_LINK](state, { ids: [4, 9] });
+      mutations[types.SET_IDS_DO_FILTRO_DO_LINK](state, { ids: [9, 12] });
+      expect(getters.getIdsDoFiltroDoLink(state)).toEqual([4, 9, 12]);
 
-    it('a conversa que o robô passou e espera pessoa entra mesmo fora dos ids (a marca vem no websocket)', () => {
-      const passou = {
-        ...conversa(11, 0),
-        additional_attributes: { bot_handoff_waiting_since: '2026-10-19' },
-      };
-      const semMarca = { ...conversa(12, 0), additional_attributes: {} };
-
-      expect(
-        filterRecebidasDaIa([passou, semMarca], true, []).map(({ id }) => id)
-      ).toEqual([11]);
-    });
-
-    it('os ids somam as páginas e saem quando a lista esvazia', () => {
-      const state = { allConversations: [], idsRecebidasDaIa: [] };
-
-      mutations[types.ADD_IDS_RECEBIDAS_DA_IA](state, [4, 9]);
-      mutations[types.ADD_IDS_RECEBIDAS_DA_IA](state, [9, 12]);
-      expect(getters.getIdsRecebidasDaIa(state)).toEqual([4, 9, 12]);
+      mutations[types.SET_IDS_DO_FILTRO_DO_LINK](state, {
+        ids: [12],
+        substituir: true,
+      });
+      expect(getters.getIdsDoFiltroDoLink(state)).toEqual([12]);
 
       mutations[types.EMPTY_ALL_CONVERSATION](state);
-      expect(getters.getIdsRecebidasDaIa(state)).toEqual([]);
+      expect(getters.getIdsDoFiltroDoLink(state)).toEqual([]);
+    });
+  });
+
+  describe('releitura ao vivo', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    const estado = filtros => ({
+      allConversations: [],
+      appliedFilters: [],
+      conversationFilters: filtros,
+    });
+    const releituras = dispatch =>
+      dispatch.mock.calls.filter(([acao]) => acao === 'releerFiltroDoLink')
+        .length;
+
+    it('uma rajada de eventos do websocket vira uma releitura só, depois do intervalo', () => {
+      const dispatch = vi.fn();
+      const state = estado({ daIa: true });
+      const contexto = { commit: vi.fn(), dispatch, state, rootGetters: {} };
+
+      actions.updateConversation(contexto, conversa(4));
+      actions.updateConversation(contexto, conversa(7));
+      actions.addConversation(
+        { ...contexto, rootState: { route: {} } },
+        conversa(8)
+      );
+      expect(releituras(dispatch)).toBe(0);
+
+      vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+      expect(releituras(dispatch)).toBe(1);
+
+      actions.updateConversation(contexto, conversa(9));
+      vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+      expect(releituras(dispatch)).toBe(2);
+    });
+
+    it('sem o filtro do link, ou com o filtro avançado, não relê', () => {
+      const dispatch = vi.fn();
+      const contexto = { commit: vi.fn(), dispatch, rootGetters: {} };
+
+      actions.updateConversation(
+        { ...contexto, state: estado({}) },
+        conversa(4)
+      );
+      actions.updateConversation(
+        {
+          ...contexto,
+          state: { ...estado({ esperandoMin: 30 }), appliedFilters: [{}] },
+        },
+        conversa(5)
+      );
+      vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS * 2);
+
+      expect(releituras(dispatch)).toBe(0);
+    });
+
+    it('a releitura volta à primeira página e troca a lista', async () => {
+      const dispatch = vi.fn();
+
+      await actions.releerFiltroDoLink({
+        dispatch,
+        state: estado({ esperandoMin: 30, page: 3 }),
+      });
+
+      expect(dispatch).toHaveBeenNthCalledWith(1, 'updateChatListFilters', {
+        page: 1,
+        updatedWithin: null,
+      });
+      expect(dispatch).toHaveBeenNthCalledWith(2, 'fetchAllConversations', {
+        replaceExisting: true,
+      });
     });
   });
 });

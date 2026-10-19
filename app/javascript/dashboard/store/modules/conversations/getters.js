@@ -89,7 +89,7 @@ const getters = {
   getSelectedChatAttachmentsLoaded: ({ selectedChatId, attachments }) =>
     selectedChatId !== null && attachments[selectedChatId] !== undefined,
   getChatListFilters: ({ conversationFilters }) => conversationFilters,
-  getIdsRecebidasDaIa: ({ idsRecebidasDaIa }) => idsRecebidasDaIa,
+  getIdsDoFiltroDoLink: ({ idsDoFiltroDoLink }) => idsDoFiltroDoLink,
   getLastEmailInSelectedChat: (stage, _getters) => {
     const selectedChat = _getters.getSelectedChat;
     const { messages = [] } = selectedChat;
