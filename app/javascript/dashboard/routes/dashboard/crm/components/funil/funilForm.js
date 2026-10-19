@@ -43,6 +43,33 @@ const CENTAVOS = 100;
 export const metaDoMes = centavos =>
   centavos ? Number(centavos) / CENTAVOS : '';
 
+// #1876 — a meta é na moeda do funil (metadata.goals.currency); sem ela, ou com
+// um código que o navegador não conhece (gravado errado pela API), real.
+const MOEDA_PADRAO = 'BRL';
+const moedaConhecida = moeda => {
+  try {
+    return Boolean(
+      new Intl.NumberFormat('en', { style: 'currency', currency: moeda })
+    );
+  } catch {
+    return false;
+  }
+};
+export const moedaDoFunil = pipeline => {
+  const moeda = pipeline?.metadata?.goals?.currency;
+  return moeda && moedaConhecida(moeda) ? moeda : MOEDA_PADRAO;
+};
+
+// O mesmo símbolo dos valores da gaveta (US$ em português), para o rótulo e o
+// valor nunca divergirem.
+export const simboloDaMoeda = (moeda, idioma) =>
+  new Intl.NumberFormat(idioma, {
+    style: 'currency',
+    currency: moeda,
+  })
+    .formatToParts(0)
+    .find(parte => parte.type === 'currency')?.value || moeda;
+
 // Board stages expose funnel_stage_type top-level; stages API payloads carry it
 // inside metadata. Read both so opening the drawer never wipes the mapping.
 // total_cards_count conta todos os status (aberto, ganho, perdido, arquivado):
@@ -95,7 +122,7 @@ export const payloadDoFunil = ({ form, pipeline, editando, ia, modelo }) => ({
         Number(form.monthlyTarget) > 0
           ? Math.round(Number(form.monthlyTarget) * CENTAVOS)
           : 0,
-      currency: 'BRL',
+      currency: moedaDoFunil(pipeline),
     },
     // Always emitted so toggling Meta sync off persists enabled:false.
     meta_sync: {

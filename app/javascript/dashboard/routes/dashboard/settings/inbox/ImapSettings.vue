@@ -6,6 +6,7 @@ import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SingleSelectDropdown from './components/SingleSelectDropdown.vue';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 export default {
   components: {
@@ -45,7 +46,18 @@ export default {
     password: { required },
   },
   computed: {
-    ...mapGetters({ uiFlags: 'inboxes/getUIFlags' }),
+    ...mapGetters({
+      uiFlags: 'inboxes/getUIFlags',
+      accountId: 'getCurrentAccountId',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+    }),
+    // #1870 — o lido do e-mail só sincroniza com o servidor pelo IMAP.
+    isEmailLidoSincronizado() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.EMAIL_LIDO_SINCRONIZADO
+      );
+    },
   },
   watch: {
     inbox() {
@@ -121,6 +133,9 @@ export default {
         {{ $t('INBOX_MGMT.IMAP.TOGGLE_AVAILABILITY') }}
       </label>
       <p>{{ $t('INBOX_MGMT.IMAP.TOGGLE_HELP') }}</p>
+      <p v-if="isEmailLidoSincronizado" data-test="imap-read-sync-help">
+        {{ $t('INBOX_MGMT.IMAP.READ_SYNC_HELP') }}
+      </p>
       <div v-if="isIMAPEnabled" class="mb-6">
         <woot-input
           v-model="address"

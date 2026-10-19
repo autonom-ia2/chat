@@ -93,6 +93,21 @@ RSpec.describe AutomationRules::CrmActions do
       expect(card.reload).to be_lost
     end
 
+    # #1876: a automação fecha sem autor; o fechamento grava quem estava com a conversa, o time e o funil.
+    it 'crm_mark_card_won grava o responsável da conversa, o time e o funil no fechamento' do
+      conversation.update!(assignee: user)
+      card = create_card
+
+      run_action('crm_mark_card_won')
+
+      activity = card.activities.find_by(event_type: 'won')
+      expect(activity.actor_type).to eq('system')
+      expect(activity.payload['closed_with']).to eq(
+        'responsible' => { 'type' => 'agent', 'id' => user.id, 'name' => user.name },
+        'owner_id' => nil, 'team_id' => nil, 'pipeline_id' => pipeline.id
+      )
+    end
+
     it 'crm_assign_card_owner define o dono só com agente da conta' do
       card = create_card
       outsider = create(:user)

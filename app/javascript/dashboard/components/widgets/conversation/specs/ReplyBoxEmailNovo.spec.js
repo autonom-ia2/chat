@@ -26,6 +26,62 @@ vi.mock(
   })
 );
 
+// #1872: a IA do cliente no e-mail novo (o copiloto da Autonom.ia), no lugar do Captain.
+const ia = vi.hoisted(() => ({
+  execute: vi.fn(),
+  disponivel: null,
+  // O Captain e o copiloto do Chatwoot: nada disso pode ser chamado no e-mail novo.
+  captain: { processEvent: vi.fn(), followUp: vi.fn() },
+  chatwoot: {
+    execute: vi.fn(),
+    sendFollowUp: vi.fn(),
+    accept: vi.fn(),
+    toggleEditor: vi.fn(),
+    setContentReady: vi.fn(),
+    reset: vi.fn(),
+  },
+}));
+vi.mock('dashboard/composables/useCaptain', async () => {
+  const { ref } = await import('vue');
+  return {
+    useCaptain: () => ({
+      ...ia.captain,
+      captainTasksEnabled: ref(true),
+      currentChat: ref(null),
+    }),
+  };
+});
+vi.mock(
+  'dashboard/components-next/conversa-canal/email/useIaDoEmail',
+  async original => {
+    const { ref } = await import('vue');
+    const real = await original();
+    return {
+      ...real,
+      useIaDoEmail: opcoes => {
+        const fake = real.useIaDoEmail(opcoes);
+        ia.disponivel = ref(true);
+        return { ...fake, disponivel: ia.disponivel, execute: ia.execute };
+      },
+    };
+  }
+);
+vi.mock('dashboard/composables/useCopilotReply', async () => {
+  const { ref } = await import('vue');
+  return {
+    useCopilotReply: () => ({
+      ...ia.chatwoot,
+      showEditor: ref(false),
+      isGenerating: ref(false),
+      isContentReady: ref(false),
+      generatedContent: ref(''),
+      isActive: ref(false),
+      isButtonDisabled: ref(false),
+      editorTransitionKey: ref('rich'),
+    }),
+  };
+});
+
 const EMAIL = { channel_type: 'Channel::Email', email: 'loja@exemplo.com' };
 const conversa = (id, email) => ({
   id,
@@ -93,6 +149,7 @@ const montar = () => {
         // O ReplyBox foca o editor num requestAnimationFrame depois de abrir a resposta;
         // o stub raso não teria o método e o erro estouraria depois do teste.
         WootMessageEditor: {
+          name: 'WootMessageEditor',
           template: '<div />',
           methods: { focusEditorInputField: vi.fn() },
         },
@@ -252,5 +309,33 @@ describe('ReplyBox na conversa de e-mail nova', () => {
       tipo: 'historico',
       mensagemId: 10,
     });
+  });
+});
+
+describe('o ✨ do e-mail novo usa a IA do cliente (#1872)', () => {
+  it('o editor mostra o ✨ pela disponibilidade do copiloto, não pelo Captain', async () => {
+    const { wrapper } = montar();
+    const editor = () => wrapper.findComponent({ name: 'WootMessageEditor' });
+    expect(editor().attributes('copilot-available')).toBe('true');
+    ia.disponivel.value = false;
+    await nextTick();
+    expect(editor().attributes('copilot-available')).toBe('false');
+  });
+
+  it('as ações do ✨ vão para a IA do cliente; o Captain e o copiloto do Chatwoot não são chamados', () => {
+    const { wrapper } = montar();
+    wrapper.vm.executeCopilotAction('improve', 'oi');
+    wrapper.vm.copilot.sendFollowUp('mais curto');
+    wrapper.vm.copilot.toggleEditor();
+    wrapper.vm.copilot.setContentReady();
+    wrapper.vm.onSubmitCopilotReply();
+
+    expect(ia.execute).toHaveBeenCalledWith('improve', 'oi');
+    Object.values(ia.captain).forEach(espiao =>
+      expect(espiao).not.toHaveBeenCalled()
+    );
+    ['execute', 'sendFollowUp', 'accept', 'toggleEditor', 'setContentReady']
+      .map(nome => ia.chatwoot[nome])
+      .forEach(espiao => expect(espiao).not.toHaveBeenCalled());
   });
 });

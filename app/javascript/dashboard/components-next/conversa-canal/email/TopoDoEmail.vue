@@ -1,7 +1,7 @@
 <script setup>
 // Topo da conversa de e-mail (#1786): o assunto uma vez, grande, como no leitor de
 // e-mail, e logo abaixo o resumo da conversa: a caixa, quantos e-mails, quem está nela
-// (fotos) e quantos anexos. À direita, recolher as mensagens antigas (por padrão
+// (fotos), quantos anexos e o e-mail anterior/seguinte do mesmo contato. À direita, recolher as mensagens antigas (por padrão
 // abertas; a escolha fica guardada para cada atendente).
 // O assunto do FUNIL (CRM) é outra coisa e continua no seletor da caixa de resposta.
 import { computed } from 'vue';
@@ -13,6 +13,7 @@ import { MESSAGE_TYPES } from '../../message/constants.js';
 import { useEmailDaConversa } from './useConversaDeEmail';
 import { remetenteDoEmail } from './dadosDoEmail';
 import AcoesDaPasta from './AcoesDaPasta.vue';
+import EmailsVizinhos from './EmailsVizinhos.vue';
 
 const props = defineProps({
   // As mensagens da lista, já em camelCase.
@@ -112,6 +113,7 @@ const DADO = 'inline-flex items-center gap-1.5 text-xs text-n-slate-11';
           <Icon icon="i-lucide-paperclip" class="size-3.5" />
           {{ t('CONVERSA_CANAL.EMAIL.ANEXOS', { total: anexos }, anexos) }}
         </span>
+        <EmailsVizinhos />
       </div>
     </div>
     <div class="flex flex-wrap items-center gap-1">

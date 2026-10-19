@@ -42,7 +42,10 @@ import wootConstants, {
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { usePeleDaConversa } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
-import { useConversaDeEmail } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
+import {
+  CONVERSAS_DO_CONTATO,
+  useConversaDeEmail,
+} from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
 import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
@@ -95,6 +98,12 @@ export default {
       useContactConversationNavigation();
 
     provide('contextMenuElementTarget', conversationPanelRef);
+    // #1786: no e-mail novo as vizinhas aparecem no topo do e-mail (EmailsVizinhos).
+    provide(CONVERSAS_DO_CONTATO, {
+      olderConversation,
+      newerConversation,
+      buildConversationPath,
+    });
     // #1702: conversa com a cara do canal (WhatsApp), atrás da chave da conta.
     const { pele, classesDaLista, classesDaBarra } = usePeleDaConversa();
     // #1786: conversa de e-mail com a cara do Gmail, atrás da chave própria.
@@ -768,15 +777,21 @@ export default {
     >
       <template #beforeAll>
         <transition name="slide-up">
+          <!-- #1786: no e-mail novo o conteúdo começa no topo (sem first:mt-auto) e o
+          espaço do carregando só existe enquanto carrega. -->
           <!-- eslint-disable-next-line vue/require-toggle-inside-transition -->
           <li
             class="min-h-[4rem] flex flex-shrink-0 flex-grow-0 items-center flex-auto justify-center max-w-full mt-0 mr-0 mb-1 ml-0 relative first:mt-auto last:mb-0"
+            :class="{
+              '!mt-0': emailNovo,
+              '!hidden': emailNovo && !shouldShowSpinner,
+            }"
           >
             <Spinner v-if="shouldShowSpinner" class="text-n-brand" />
           </li>
         </transition>
         <ContactConversationLink
-          v-if="olderConversation && listLoadingStatus"
+          v-if="olderConversation && listLoadingStatus && !emailNovo"
           direction="older"
           :conversation="olderConversation"
           :to="buildConversationPath(olderConversation.id)"
@@ -808,7 +823,7 @@ export default {
           :conversation-id="currentChat.id"
         />
         <ContactConversationLink
-          v-if="newerConversation"
+          v-if="newerConversation && !emailNovo"
           direction="newer"
           :conversation="newerConversation"
           :to="buildConversationPath(newerConversation.id)"

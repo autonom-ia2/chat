@@ -128,11 +128,24 @@ export const RESPOSTA_EM_JANELA = [
   '[&_.resizable-editor-body]:!max-h-none',
 ].join(' ');
 
+// Botões da régua do Chatwoot que o e-mail novo não usa (prop `hiddenMenuOptions` do
+// editor). Imagem no texto: o "+" da barra de baixo já anexa (#1786/#1809). O ✨ fica: ele
+// usa a IA do cliente (#1872), e o editor só o mostra onde o copiloto da Autonom.ia está
+// disponível (prop `copilotAvailable`), nunca pelo Captain.
+export const FORA_DA_REGUA = ['imageUpload'];
+
+// "Aa" desligado: nenhuma régua. O Chatwoot abre a barra flutuante ao selecionar texto,
+// presa logo abaixo da seleção, e ela tapava a linha de baixo (#1809). No e-mail a
+// formatação mora no "Aa", como no Gmail; os atalhos (Ctrl+B, Ctrl+I) seguem valendo.
+export const REGUA_SO_NO_AA =
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!hidden';
+
 // "Aa": a barra de formatação do editor, que o Chatwoot só mostra sobre o texto
 // selecionado, vira uma régua fixa acima do texto, no padrão dos botões da caixa: em
-// grupos (IA | negrito, itálico, código | link | listas | imagem | desfazer, refazer),
-// com fio entre eles, botão ativo em azul e desligado apagado. Presa no topo da área que
-// rola, com fundo sólido e borda, na resposta e na gaveta "Escrever".
+// grupos (✨ | negrito, itálico, código | link | listas | desfazer, refazer), com fio
+// entre eles, botão ativo em azul e desligado apagado. Presa no topo da área que rola,
+// com fundo sólido e borda, na resposta e na gaveta "Escrever". Os fios dependem de o ✨
+// estar na régua ou não (o menu do e-mail sem FORA_DA_REGUA, com e sem ele; o teste confere).
 export const FORMATACAO_FIXA = [
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!flex',
   '[&_.popover-prosemirror-menu_.ProseMirror-menubar]:!flex-wrap',
@@ -164,18 +177,38 @@ export const FORMATACAO_FIXA = [
   '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:hover]:!bg-n-alpha-2',
   '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:hover]:!text-n-slate-12',
   '[&_.popover-prosemirror-menu_.ProseMirror-menuitem_svg]:!size-[18px]',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:!ms-3',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:relative',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:absolute',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:-start-2',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:top-2',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:bottom-2',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:w-px',
-  '[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:bg-n-weak',
-  "[&_.popover-prosemirror-menu_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8),:nth-child(9))]:before:content-['']",
+  // Sem o ✨ (copiloto indisponível): fios antes do 4º, 5º e 7º botão.
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:not(:has(.ProseMirror-copilot))_.ProseMirror-menuitem:is(:nth-child(4),:nth-child(5),:nth-child(7))]:!ms-3',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:not(:has(.ProseMirror-copilot))_.ProseMirror-menuitem:is(:nth-child(4),:nth-child(5),:nth-child(7))]:relative',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:not(:has(.ProseMirror-copilot))_.ProseMirror-menuitem:is(:nth-child(4),:nth-child(5),:nth-child(7))]:before:absolute',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:not(:has(.ProseMirror-copilot))_.ProseMirror-menuitem:is(:nth-child(4),:nth-child(5),:nth-child(7))]:before:-start-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:not(:has(.ProseMirror-copilot))_.ProseMirror-menuitem:is(:nth-child(4),:nth-child(5),:nth-child(7))]:before:top-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:not(:has(.ProseMirror-copilot))_.ProseMirror-menuitem:is(:nth-child(4),:nth-child(5),:nth-child(7))]:before:bottom-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:not(:has(.ProseMirror-copilot))_.ProseMirror-menuitem:is(:nth-child(4),:nth-child(5),:nth-child(7))]:before:w-px',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:not(:has(.ProseMirror-copilot))_.ProseMirror-menuitem:is(:nth-child(4),:nth-child(5),:nth-child(7))]:before:bg-n-weak',
+  "[&_.popover-prosemirror-menu_.ProseMirror-menubar:not(:has(.ProseMirror-copilot))_.ProseMirror-menuitem:is(:nth-child(4),:nth-child(5),:nth-child(7))]:before:content-['']",
+  // Com o ✨ na frente (#1872): um fio depois dele, e os outros um botão adiante.
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:has(.ProseMirror-copilot)_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8))]:!ms-3',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:has(.ProseMirror-copilot)_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8))]:relative',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:has(.ProseMirror-copilot)_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8))]:before:absolute',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:has(.ProseMirror-copilot)_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8))]:before:-start-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:has(.ProseMirror-copilot)_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8))]:before:top-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:has(.ProseMirror-copilot)_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8))]:before:bottom-2',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:has(.ProseMirror-copilot)_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8))]:before:w-px',
+  '[&_.popover-prosemirror-menu_.ProseMirror-menubar:has(.ProseMirror-copilot)_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8))]:before:bg-n-weak',
+  "[&_.popover-prosemirror-menu_.ProseMirror-menubar:has(.ProseMirror-copilot)_.ProseMirror-menuitem:is(:nth-child(2),:nth-child(5),:nth-child(6),:nth-child(8))]:before:content-['']",
   '[&_.popover-prosemirror-menu_.ProseMirror-menu-active]:!bg-n-blue-3',
   '[&_.popover-prosemirror-menu_.ProseMirror-menu-active]:!text-n-blue-11',
   '[&_.popover-prosemirror-menu_.ProseMirror-menu-disabled]:!opacity-40',
+  // Botão que não se aplica ali (as listas, com o cursor numa lista) o ProseMirror
+  // esconde com `display: none` no ícone, e a régua ficava com um buraco (#1809).
+  // Na régua fixa ele fica no lugar, apagado e sem clique, como os desligados.
+  // Depende do `display: none` que o ProseMirror escreve no ícone: se o Chatwoot mudar
+  // isso, o buraco volta. A causa raiz é o menu do editor não ter estado "desligado"
+  // para esses itens; o conserto definitivo é o Editor.vue marcar o item como desligado.
+  "[&_.popover-prosemirror-menu_.ProseMirror-menuitem>.ProseMirror-icon[style*='none']]:!flex",
+  "[&_.popover-prosemirror-menu_.ProseMirror-menuitem>.ProseMirror-icon[style*='none']]:!opacity-40",
+  "[&_.popover-prosemirror-menu_.ProseMirror-menuitem>.ProseMirror-icon[style*='none']]:!pointer-events-none",
 ].join(' ');
 
 export const CARTAO = 'w-full max-w-[960px] mx-auto border-b border-n-weak';
