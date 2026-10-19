@@ -441,15 +441,16 @@ describe('estadoDoMaterial com os problemas das conferências', () => {
     review: { status: 'accepted', reviewed_at: '2026-10-19T12:00:00Z' },
   };
 
-  it('duplicado ou contradição pedem a pessoa; páginas de fora só avisam', () => {
-    expect(estadoDoMaterial(fonte, [CONTRADICAO])).toBe(
-      ESTADO_MATERIAL.ATENCAO
-    );
-    expect(
-      estadoDoMaterial(fonte, [{ tipo: 'paginas_de_fora', fontes: [4] }])
-    ).toBe(ESTADO_MATERIAL.PRONTO);
-    expect(precisaDeVoce(fonte, [CONTRADICAO])).toBe(true);
+  // Achado na conferência visual: a linha dizia "não usa este material até você mandar outro" num material em uso.
+  it('duplicado, contradição e páginas de fora não mudam a linha: o material segue em uso', () => {
+    expect(estadoDoMaterial(fonte)).toBe(ESTADO_MATERIAL.PRONTO);
     expect(precisaDeVoce(fonte)).toBe(false);
+    expect(
+      estadoDoMaterial({
+        ...fonte,
+        review: { ...fonte.review, status: 'needs_resend' },
+      })
+    ).toBe(ESTADO_MATERIAL.ATENCAO);
   });
 });
 

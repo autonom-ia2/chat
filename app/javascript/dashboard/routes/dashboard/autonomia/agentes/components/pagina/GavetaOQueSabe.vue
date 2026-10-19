@@ -68,8 +68,9 @@ const botaoArquivo = ref(null);
 const lista = computed(() => props.fontes || []);
 const problemas = computed(() => props.conferencias?.problemas.value || []);
 const autoteste = computed(() => props.conferencias?.autoteste.value || null);
-const estadoDe = fonte =>
-  props.fase2 ? estadoDoMaterial(fonte, problemas.value) : '';
+// O estado da linha é o da leitura e da revisão. Duplicado, contradição e páginas de fora não reprovam: o material
+// continua em uso e o que pede a pessoa fica no cartão "um problema por vez", não na linha.
+const estadoDe = fonte => (props.fase2 ? estadoDoMaterial(fonte) : '');
 
 // #1426 — "Lendo…" ou "Revisando…" parado além do teto da releitura (o worker caiu): a linha libera "Ler de novo",
 // para arquivo e foto (o servidor aceita a releitura do que passou do mesmo teto). Só na Fase 2 (estadoDe). O relógio

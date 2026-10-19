@@ -22,29 +22,18 @@ export const aguardandoRevisao = fonte =>
   fonte?.review?.status === 'needs_review' &&
   !fonte?.review?.reviewed_at;
 
-// #1426 (4b) — um problema das conferências neste material (duplicado, contradição) também pede a pessoa. As páginas de
-// fora, não: o material vale com o que foi lido, e o cartão só avisa.
-const SO_AVISO = ['paginas_de_fora'];
-const temProblema = (fonte, problemas) =>
-  problemas.some(
-    problema =>
-      !SO_AVISO.includes(problema.tipo) &&
-      (problema.fontes || []).includes(fonte?.id)
-  );
-
-export const estadoDoMaterial = (fonte, problemas = []) => {
+export const estadoDoMaterial = fonte => {
   if (fonte?.status === 'failed') return ESTADO_MATERIAL.FALHA;
   if (LENDO.includes(fonte?.status)) return ESTADO_MATERIAL.LENDO;
   if (aguardandoRevisao(fonte)) return ESTADO_MATERIAL.REVISANDO;
   const parecer = fonte?.review?.status;
   if (parecer && parecer !== 'accepted') return ESTADO_MATERIAL.ATENCAO;
-  if (temProblema(fonte, problemas)) return ESTADO_MATERIAL.ATENCAO;
   return ESTADO_MATERIAL.PRONTO;
 };
 
-export const precisaDeVoce = (fonte, problemas = []) =>
+export const precisaDeVoce = fonte =>
   [ESTADO_MATERIAL.ATENCAO, ESTADO_MATERIAL.FALHA].includes(
-    estadoDoMaterial(fonte, problemas)
+    estadoDoMaterial(fonte)
   );
 
 export const ehFotoDaBase = fonte => fonte?.source_type === 'foto';

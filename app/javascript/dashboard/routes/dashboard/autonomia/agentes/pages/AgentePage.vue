@@ -430,7 +430,7 @@ const problemasNoMaterial = computed(() => {
   const cartoes = comConferencias.value ? conferencias.problemas.value : [];
   const comCartao = new Set(cartoes.flatMap(problema => problema.fontes || []));
   const semCartao = listaDeFontes.value.filter(
-    fonte => !comCartao.has(fonte.id) && precisaDeVoce(fonte, cartoes)
+    fonte => !comCartao.has(fonte.id) && precisaDeVoce(fonte)
   );
   return cartoes.length + semCartao.length;
 });

@@ -684,7 +684,7 @@ describe('GavetaOQueSabe', () => {
       wrapper.unmount();
     });
 
-    it('mostra o cartão e o autoteste; o material com problema pede a pessoa', () => {
+    it('mostra o cartão e o autoteste; a linha do material da contradição segue "Pronto" (não reprova)', () => {
       preparar([PRONTA]);
       const conferencias = conferenciasCom({
         problemas: [CONTRADICAO],
@@ -694,6 +694,7 @@ describe('GavetaOQueSabe', () => {
       expect(no('[data-um-problema]').dataset.tipo).toBe('contradicao');
       expect(no('[data-autoteste]').dataset.estado).toBe('nunca');
       expect(no('[data-tudo-certo]')).toBeNull();
+      expect(no('[data-fonte]').dataset.estado).toBe('pronto');
       wrapper.unmount();
     });
 
