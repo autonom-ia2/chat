@@ -277,6 +277,89 @@ describe('CrmKanbanPage', () => {
     });
   });
 
+  // #1894 — com o Meu dia ligado, a aba Calendário leva ao endereço do Meu dia, nunca ao calendário antigo.
+  describe('aba Calendário com o Meu dia ligado', () => {
+    const botaoCalendario = pagina =>
+      pagina
+        .findAll('[role="group"] button')
+        .find(botao => botao.text() === 'CRM_KANBAN.VIEWS.CALENDAR');
+
+    afterEach(() => {
+      route.query = {};
+      route.params = {};
+      push.mockClear();
+      replace.mockClear();
+      wrapper?.unmount();
+    });
+
+    it('leva ao Meu dia em vez de abrir o calendário antigo', async () => {
+      route.params = { accountId: '18' };
+      wrapper = await mountPage({ account: { calendarioOuro: true } });
+      await botaoCalendario(wrapper).trigger('click');
+      expect(push).toHaveBeenCalledWith({
+        name: 'crm_calendar_index',
+        params: { accountId: '18' },
+        query: {},
+      });
+      expect(wrapper.findComponent({ name: 'CrmCalendar' }).exists()).toBe(
+        false
+      );
+    });
+
+    it('?view=calendar com o menu novo também vai para o Meu dia', async () => {
+      route.params = { accountId: '18' };
+      route.query = { view: 'calendar' };
+      wrapper = await mountPage({
+        account: { calendarioOuro: true, menuNovo: true },
+      });
+      expect(replace).toHaveBeenCalledWith({
+        name: 'crm_calendar_index',
+        params: { accountId: '18' },
+        query: {},
+      });
+    });
+
+    it('flag do Meu dia que chega depois da tela: vai para o Meu dia sem buscar o calendário antigo', async () => {
+      route.params = { accountId: '18' };
+      route.query = { view: 'calendar', new_contact_id: '7' };
+      wrapper = await mountPage({ account: { menuNovo: true } });
+      dispatch.mockClear();
+      storeGetters['accounts/getAccount'].value = () => ({
+        id: 1,
+        features: { crm_calendario_ouro: true },
+      });
+      await flushPromises();
+      expect(replace).toHaveBeenLastCalledWith({
+        name: 'crm_calendar_index',
+        params: { accountId: '18' },
+        query: { new_contact_id: '7' },
+      });
+      expect(
+        dispatch.mock.calls.filter(
+          ([tipo]) => tipo === 'crmKanban/fetchCalendarEvents'
+        )
+      ).toHaveLength(0);
+    });
+
+    it('navegação recusada volta ao quadro', async () => {
+      route.params = { accountId: '18' };
+      push.mockResolvedValueOnce({ type: 4 });
+      wrapper = await mountPage({ account: { calendarioOuro: true } });
+      await botaoCalendario(wrapper).trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[role="group"] [aria-pressed="true"]').text()).toBe(
+        'CRM_KANBAN.VIEWS.KANBAN'
+      );
+    });
+
+    it('sem o Meu dia, a aba abre o calendário de sempre', async () => {
+      route.params = { accountId: '18' };
+      wrapper = await mountPage();
+      await botaoCalendario(wrapper).trigger('click');
+      expect(push).not.toHaveBeenCalled();
+    });
+  });
+
   // #1883 — os "Ver" do Números abrem o Kanban, a Lista e o Meu dia já filtrados, com o filtro à vista.
   describe('filtros que chegam pelo link', () => {
     const filtrosGravados = () =>

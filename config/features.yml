@@ -595,11 +595,9 @@
 # (quem vende, quem atende, quem vende e atende; o papel vem do tipo do funil), com o seletor "Só eu · Equipe" para quem
 # vê a equipe (administrador e função com `crm_view_reports`), e o agente comum (e a função só com `crm_view`) deixa de
 # ver os números da equipe, o valor dos colegas e o gasto da IA (Crm::ReportPolicy, Decisão 2). Desligada (padrão): a
-# tela de hoje. Posição provisória 43 na feature_flags_ext_1, bit 42 (4398046511104), da tabela da Orquestração
-# (19/10): posição provisória, confirmar com a Orquestração. A posição na lista é o bit: nesta branch ela é a 41ª
-# (bit 40), porque as posições 41 e 42 da tabela ainda não estão na main; no merge ela vai para o fim da main e o
-# spec/models/account_spec.rb acompanha.
-# Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+# tela de hoje. Posição 41 na feature_flags_ext_1 (1099511627776 = 1 << 40), logo depois de `email_lido_sincronizado`
+# (tabela da Orquestração, 19/10).
+# Sem migration: nasce desligada e nenhuma migration liga conta.
 - name: crm_numeros_lentes
   display_name: CRM › Números por papel (visão "Só eu")
   enabled: false
