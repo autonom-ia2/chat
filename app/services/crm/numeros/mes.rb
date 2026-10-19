@@ -42,7 +42,7 @@ class Crm::Numeros::Mes
   end
 
   def ler(chave)
-    ano, mes, *resto = chave.split('-')
+    ano, mes, *resto = chave.split('-', -1)
     raise Invalido unless resto.empty? && digitos?(ano, 4) && digitos?(mes, 2) && (1..12).cover?(mes.to_i)
 
     inicio = @zone.local(ano.to_i, mes.to_i, 1)

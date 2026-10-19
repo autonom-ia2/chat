@@ -19,12 +19,14 @@ class Crm::Numeros::Credito
   def perform
     meus = fechados.select { |fechado| responsavel_de(fechado) == @user.id }
     ganhos = meus.select { |fechado| fechado[:status] == 'won' }
+    resolvidos = meus.select { |fechado| fechado[:status] == 'resolved' }
     {
       vendas: ganhos.size,
       valores: por_moeda(ganhos),
-      resolvidos: meus.count { |fechado| fechado[:status] == 'resolved' },
+      resolvidos: resolvidos.size,
       estimado: meus.any? { |fechado| fechamentos[fechado[:id]].nil? },
-      ganhos: ganhos.pluck(:id)
+      ganhos: ganhos.pluck(:id),
+      resolvidos_ids: resolvidos.pluck(:id)
     }
   end
 
@@ -36,7 +38,7 @@ class Crm::Numeros::Credito
 
   def fechados
     @fechados ||= @account.crm_cards.where(status: STATUSES.map { |status| Crm::Card.statuses[status] }, closed_at: @range)
-                          .limit(MAX_CARDS)
+                          .order(:id).limit(MAX_CARDS)
                           .pluck(*CAMPOS).map { |linha| CAMPOS.zip(linha).to_h }
   end
 

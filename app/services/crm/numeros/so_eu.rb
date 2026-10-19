@@ -14,7 +14,7 @@ class Crm::Numeros::SoEu
     @mes = mes
     @visiveis = acesso.apply(account.crm_pipelines)
     @do_painel = acesso.apply_to_reports(account.crm_pipelines)
-    @cards = Crm::Numeros::MeusCards.new(account: account, user: user)
+    @cards = Crm::Numeros::MeusCards.new(account: account, user: user, visiveis: @visiveis)
   end
 
   def perform
@@ -22,7 +22,7 @@ class Crm::Numeros::SoEu
 
     {
       vazio: false, papel: papel, mes: @mes.info, moeda: moeda, estimado: credito[:estimado],
-      funis: { vendas: funil(@cards.vendendo, :venda), suporte: funil(@cards.atendendo, :atende) },
+      funis: { vendas: @cards.funil(:venda), suporte: @cards.funil(:atende) },
       topo: vende? ? topo_de_venda : topo_de_atendimento,
       proximo: proximo, vendendo: vende? ? vendendo : nil, atendendo: atende? ? atendendo : nil,
       iaAjudou: ia_ajudou, equipePct: vende? ? Crm::Numeros::EquipePct.new(**equipe_args).perform : nil
@@ -50,8 +50,8 @@ class Crm::Numeros::SoEu
   def papeis
     @papeis ||= begin
       proprios = []
-      proprios << :venda if credito[:vendas].positive? || @cards.vendendo.exists?
-      proprios << :atende if credito[:resolvidos].positive? || @cards.atendendo.exists?
+      proprios << :venda if credito[:vendas].positive? || @cards.algum?(:venda)
+      proprios << :atende if credito[:resolvidos].positive? || @cards.algum?(:atende)
       proprios.presence || pelos_funis_visiveis
     end
   end
@@ -62,11 +62,6 @@ class Crm::Numeros::SoEu
     papeis << :venda if tipos.include?(true)
     papeis << :atende if tipos.include?(false)
     papeis.presence || [:venda]
-  end
-
-  def funil(cards, tipo)
-    ids = tipo == :venda ? @cards.venda_ids : @cards.atende_ids
-    @cards.funil_principal(cards, @visiveis.where(id: ids))
   end
 
   def moeda
@@ -102,7 +97,7 @@ class Crm::Numeros::SoEu
   end
 
   def topo_de_atendimento
-    lembretes = @cards.atrasados(@cards.atendendo).count
+    lembretes = @cards.atrasados(@cards.abertos_no_funil(:atende)).count
     { escopo: 'eu', medida: 'resolvidos', feito: credito[:resolvidos], meta: nil, esperadoPct: esperado_pct,
       frase: { tipo: 'eu_atende', noPrazo: nil, falta: nil, dias: @mes.info[:diasRestantes] },
       botao: lembretes.positive? ? { tipo: 'meus_lembretes', n: lembretes } : { tipo: 'meus_casos' } }
@@ -110,10 +105,10 @@ class Crm::Numeros::SoEu
 
   # Em cascata: retornos atrasados, senão negociações paradas, senão os cards.
   def botao_de_venda
-    atrasados = @cards.atrasados(@cards.vendendo).count
+    atrasados = @cards.atrasados(@cards.abertos_no_funil(:venda)).count
     return { tipo: 'meus_atrasados', n: atrasados } if atrasados.positive?
 
-    parados = @cards.parados(@cards.vendendo)
+    parados = @cards.parados(@cards.abertos_no_funil(:venda))
     total = parados.count
     return { tipo: 'meus_cards' } if total.zero?
 
@@ -122,18 +117,26 @@ class Crm::Numeros::SoEu
 
   def vendendo
     { escopo: 'eu', itens: [
-      { tipo: 'fechadas', n: credito[:vendas], valor: valor_vendido },
-      { tipo: 'andamento', n: @cards.vendendo.count },
-      { tipo: 'atrasados', n: @cards.atrasados(@cards.vendendo).count }
+      { tipo: 'fechadas', n: credito[:vendas], valor: valor_vendido, lista: na_lista?(:venda, credito[:ganhos]) },
+      { tipo: 'andamento', n: @cards.abertos_no_funil(:venda).count },
+      { tipo: 'atrasados', n: @cards.atrasados(@cards.abertos_no_funil(:venda)).count }
     ] }
   end
 
   def atendendo
     { escopo: 'eu', itens: [
-      { tipo: 'resolvidos', n: credito[:resolvidos] },
+      { tipo: 'resolvidos', n: credito[:resolvidos], lista: na_lista?(:atende, credito[:resolvidos_ids]) },
       { tipo: 'com_voce', n: @account.conversations.open.where(assignee_id: @user.id).count },
       { tipo: 'deu_certo', n: pesquisas_enviadas }
     ] }
+  end
+
+  # O "Ver" dos fechados abre a Lista do funil principal com responsável = eu (dono atual). Só vira link quando ela
+  # mostra exatamente os cards creditados (crédito pelo responsável no fechamento e um funil só); senão, número sem link.
+  def na_lista?(tipo, creditados)
+    return false if @mes.fechado?
+
+    @cards.fechados_na_lista(tipo, @mes.inicio).sort == creditados.sort
   end
 
   # "Receberam o 'deu tudo certo?'": a pesquisa de satisfação enviada no mês nas conversas que estão com a pessoa.
@@ -145,7 +148,7 @@ class Crm::Numeros::SoEu
   def proximo
     return [] if @mes.fechado? || !vende?
 
-    [Crm::Numeros::CampanhaComVoce.new(account: @account, cards: @cards.vendendo, range: @mes.range).perform]
+    [Crm::Numeros::CampanhaComVoce.new(account: @account, cards: @cards.abertos_no_funil(:venda), range: @mes.range).perform]
       .compact.first(MAX_PROXIMO)
   end
 

@@ -33,7 +33,7 @@ RSpec.describe Crm::Numeros::Mes do
 
   it 'recusa mês futuro, mês além do limite e texto que não é mês' do
     travel_to Time.utc(2026, 10, 19, 15, 0) do
-      %w[2026-11 2025-09 2026-13 2026-1 outubro 2026-10-01].each do |chave|
+      %w[2026-11 2025-09 2026-13 2026-1 outubro 2026-10-01 2026-10-].each do |chave|
         expect { mes(chave) }.to raise_error(described_class::Invalido), chave
       end
     end

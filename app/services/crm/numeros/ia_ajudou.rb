@@ -5,6 +5,8 @@
 #
 # `viraram`: dessas conversas, quantas têm uma venda do mês creditada à pessoa. `ia`: o nome da IA quando foi uma só.
 class Crm::Numeros::IaAjudou
+  MAX_CONVERSAS = 2_000
+
   def initialize(account:, user:, range:, ganhos:)
     @account = account
     @user = user
@@ -38,6 +40,7 @@ class Crm::Numeros::IaAjudou
     chave = Conversation::BOT_HANDOFF_WAITING_SINCE_KEY
     @account.conversations.where(assignee_id: @user.id)
             .where('conversations.additional_attributes::text LIKE ?', "%#{Conversation.sanitize_sql_like(chave)}%")
+            .limit(MAX_CONVERSAS)
             .pluck(:id, :additional_attributes)
             .filter_map { |id, atributos| id if no_mes?(marca_de(atributos, chave)) }
   end

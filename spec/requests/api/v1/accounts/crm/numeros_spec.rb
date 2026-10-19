@@ -78,9 +78,13 @@ RSpec.describe 'Api::V1::Accounts::Crm::Numeros', type: :request do
         expect(response).to have_http_status(:unauthorized), who.to_s
         call(people[who], "#{base}/ai_usage")
         expect(response).to have_http_status(:unauthorized), who.to_s
+        call(people[who], "#{base}/meta_conversions/summary")
+        expect(response).to have_http_status(:unauthorized), who.to_s
       end
       %i[admin gestor socio].each do |who|
         call(people[who], "#{base}/reports/summary")
+        expect(response).to have_http_status(:ok), who.to_s
+        call(people[who], "#{base}/meta_conversions/summary")
         expect(response).to have_http_status(:ok), who.to_s
       end
     end
@@ -113,7 +117,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::Numeros', type: :request do
       expect(body['topo']).to include('escopo' => 'eu', 'feito' => 6200.0, 'meta' => nil, 'fechadas' => 1,
                                       'botao' => { 'tipo' => 'meus_atrasados', 'n' => 1 })
       expect(body['vendendo']['itens']).to eq([
-                                                { 'tipo' => 'fechadas', 'n' => 1, 'valor' => 6200.0 },
+                                                { 'tipo' => 'fechadas', 'n' => 1, 'valor' => 6200.0, 'lista' => true },
                                                 { 'tipo' => 'andamento', 'n' => 2 },
                                                 { 'tipo' => 'atrasados', 'n' => 1 }
                                               ])

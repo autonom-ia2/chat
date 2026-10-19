@@ -73,6 +73,16 @@ RSpec.describe Crm::Numeros::SoEu do
     expect(so_eu[:topo][:botao]).to eq(tipo: 'meus_parados', n: 1, valor: 2500.0)
   end
 
+  it 'só dá link aos fechados quando a Lista mostra exatamente os cards creditados' do
+    venda = card(sale, value_cents: 10_000)
+    close(venda)
+    expect(so_eu[:vendendo][:itens].first).to include(tipo: 'fechadas', n: 1, lista: true)
+
+    venda.update!(owner: admin)
+    expect(so_eu[:vendendo][:itens].first).to include(n: 1, lista: false)
+    expect(so_eu(chave: '2026-09')[:vendendo][:itens].first).to include(lista: false)
+  end
+
   it '"A IA te ajudou": a passagem da IA no mês e a venda que veio dela, com o nome quando é uma IA só' do
     chat = conversation
     Crm::Passagem.create!(account: account, conversation: chat, de_type: 'AgentBot', de_id: 1, de_nome: 'Sofia',
