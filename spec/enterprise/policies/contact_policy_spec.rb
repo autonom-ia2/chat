@@ -13,7 +13,25 @@ RSpec.describe 'Enterprise::ContactPolicy', type: :policy do
   let(:agent_context) { { user: agent, account: account, account_user: account_user } }
 
   permissions :export? do
-    context 'when agent has contact_manage permission' do
+    context 'when agent has only contact_manage permission' do
+      it { expect(contact_policy).not_to permit(agent_context, contact) }
+    end
+
+    context 'when agent has contact_export permission' do
+      let(:custom_role) { create(:custom_role, account: account, permissions: ['contact_export']) }
+
+      it { expect(contact_policy).to permit(agent_context, contact) }
+    end
+  end
+
+  permissions :destroy? do
+    context 'when agent has only contact_manage permission' do
+      it { expect(contact_policy).not_to permit(agent_context, contact) }
+    end
+
+    context 'when agent has contact_delete permission' do
+      let(:custom_role) { create(:custom_role, account: account, permissions: ['contact_delete']) }
+
       it { expect(contact_policy).to permit(agent_context, contact) }
     end
   end

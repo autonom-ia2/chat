@@ -10,6 +10,9 @@
 # link, em silêncio; sem entrega, a mensagem fica parada e o erro aparece no rastreador.
 # Pelo mesmo motivo, mensagem com `rich_message` apagada entre o evento e a entrega não é entregue à caixa.
 # Sem `rich_message`, a entrega original e mais nada.
+# A validação é do ENVIO (chat#1709): o `message_updated` (status, edição) de uma mensagem que já tem a marca de como
+# sai (`rich_message_sent_as`, gravada na criação) e não falhou é entregue sem validar de novo. Revalidar ali recusava
+# depois o que já saiu: o convite de evento, cuja data precisa estar no futuro, falharia quando a data passasse.
 module RichMessages::ApiInboxWebhook
   MESSAGE_EVENTS = %w[message_created message_updated].freeze
 
@@ -33,16 +36,29 @@ module RichMessages::ApiInboxWebhook
     message = Message.find_by(id: payload[:id])
     return nil unless message
     return payload unless RichMessages.goes_to_channel?(message)
+    return text_payload(message, payload) if already_sent?(payload, message)
 
-    error = RichMessages.error_for(message)
-    return payload.merge(content: RichMessages.text_with_fallback(message, payload[:content])) if error.nil?
-
-    RichMessages.fail!(message, error) if !message.failed? && reaches_inbox_webhook?(payload, inbox)
-    nil
+    validated_payload(message, payload, inbox)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
     Rails.logger.error("[rich_messages] api_inbox_webhook message=#{payload[:id]} #{e.class}")
     nil
+  end
+
+  def validated_payload(message, payload, inbox)
+    error = RichMessages.error_for(message)
+    return text_payload(message, payload) if error.nil?
+
+    RichMessages.fail!(message, error) if !message.failed? && reaches_inbox_webhook?(payload, inbox)
+    nil
+  end
+
+  def text_payload(message, payload)
+    payload.merge(content: RichMessages.text_with_fallback(message, payload[:content]))
+  end
+
+  def already_sent?(payload, message)
+    payload[:event] == 'message_updated' && message.content_attributes.to_h[RichMessages::SENT_AS_KEY].present? && !message.failed?
   end
 
   # As mesmas saídas antecipadas do método original: sem endereço de webhook ou destino de transmissão bloqueado.

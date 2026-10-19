@@ -126,7 +126,7 @@ class Autonomia::Decisores::Estado
 
   def ler_ultima_mensagem
     mensagem = message || conversation&.messages&.incoming&.reorder(id: :desc)&.first
-    { last_message: mensagem&.content.to_s.strip.first(MAX_CARACTERES).presence }
+    { last_message: mensagem && textos([mensagem]).first }
   end
 
   def ler_conversa
@@ -204,18 +204,24 @@ class Autonomia::Decisores::Estado
     texto.length == 10 && texto[4] == '-' && texto[7] == '-'
   end
 
+  # #1807 (flag `email_autoria`): e-mail recebido sem o histórico citado; o de outro endereço sempre diz quem escreveu.
   def textos(lista, com_autor: false)
     lista.filter_map do |mensagem|
-      texto = mensagem.content.to_s.strip.first(MAX_CARACTERES).presence
-      next texto unless com_autor && texto
+      texto = email_autoria.texto(mensagem).strip.first(MAX_CARACTERES).presence
+      next texto unless texto && (com_autor || email_autoria.de(mensagem))
 
       "#{autor(mensagem)}: #{texto}"
     end
   end
 
+  # #1807: e-mail de outro endereço que não o do cliente diz quem escreveu, sem o endereço (o e-mail não vai ao Jev).
   def autor(mensagem)
-    mensagem.incoming? ? 'Customer' : 'Team'
+    return 'Team' unless mensagem.incoming?
+
+    Crm::Email::Autoria::AUTOR_SEM_ENDERECO.fetch(email_autoria.de(mensagem)&.tipo, 'Customer')
   end
+
+  def email_autoria = (@email_autoria ||= Crm::Email::Autoria.new(conversation&.account))
 
   def recebidas
     ultimas(conversation&.messages&.incoming)

@@ -75,4 +75,50 @@ RSpec.describe ConversationPolicy, type: :policy do
       end
     end
   end
+
+  # #1800: conversation_view lê sem operar. view? passa; show? (porta da escrita) não.
+  context 'when role grants only conversation_view' do
+    let(:custom_role) { create(:custom_role, account: account, permissions: ['conversation_view']) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: create(:user, account: account, role: :agent)) }
+
+    before { agent_account_user.update!(role: :agent, custom_role: custom_role) }
+
+    it 'reads but does not operate conversations of its inbox' do
+      policy = described_class.new(context, conversation)
+
+      expect(policy.view?).to be(true)
+      expect(policy.show?).to be(false)
+      expect(described_class.new(context, Conversation).create?).to be(false)
+    end
+
+    it 'does not read conversations of other inboxes' do
+      outside = create(:conversation, account: account, inbox: create(:inbox, account: account))
+
+      expect(described_class.new(context, outside).view?).to be(false)
+    end
+  end
+
+  context 'when role grants only the trio' do
+    let(:custom_role) { create(:custom_role, account: account, permissions: ['conversation_participating_manage']) }
+
+    before { agent_account_user.update!(role: :agent, custom_role: custom_role) }
+
+    it 'reads exactly what it operates' do
+      mine = create(:conversation, account: account, inbox: inbox, assignee: agent)
+      other = create(:conversation, account: account, inbox: inbox, assignee: nil)
+
+      expect(described_class.new(context, mine)).to have_attributes(view?: true, show?: true, create?: true)
+      expect(described_class.new(context, other)).to have_attributes(view?: false, show?: false)
+    end
+  end
+
+  # O caminho do robô não depende de função: AgentBot passa em show? e view?, com conversation_view existindo na conta.
+  it 'keeps letting the agent bot read and operate' do
+    create(:custom_role, account: account, permissions: ['conversation_view'])
+    bot = create(:agent_bot, account: account)
+    conversation = create(:conversation, account: account, inbox: inbox)
+    policy = described_class.new({ user: bot, account: account, account_user: nil }, conversation)
+
+    expect(policy).to have_attributes(show?: true, view?: true)
+  end
 end

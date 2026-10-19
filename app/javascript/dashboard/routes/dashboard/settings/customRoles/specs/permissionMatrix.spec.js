@@ -9,6 +9,7 @@ import {
   getLevel,
   setLevel,
   levelSlots,
+  slotLevel,
   visibleExtras,
   toggleExtra,
   isExtraLocked,
@@ -17,6 +18,8 @@ import {
   profilePermissions,
   sensitiveExtrasOn,
 } from '../permissionMatrix';
+import en from 'dashboard/i18n/locale/en/customRole.json';
+import ptBR from 'dashboard/i18n/locale/pt_BR/customRole.json';
 
 const moduleByKey = key => MODULES.find(module => module.key === key);
 
@@ -120,6 +123,81 @@ describe('permissionMatrix', () => {
         toggleExtra(conversations, 'conversation_participating_manage', limited)
       ).toEqual(limited);
     });
+
+    describe('só ler (#1800)', () => {
+      it('maps conversation_view alone to view', () => {
+        const permissions = setLevel(conversations, CONVERSATION_LEVELS.VIEW, [
+          'conversation_manage',
+          'conversation_unassigned_manage',
+          'conversation_participating_manage',
+          'contact_view',
+        ]);
+
+        expect(permissions).toEqual(['contact_view', 'conversation_view']);
+        expect(getLevel(conversations, permissions)).toBe(
+          CONVERSATION_LEVELS.VIEW
+        );
+        expect(visibleExtras(conversations, permissions)).toEqual([]);
+      });
+
+      it('keeps the trio as the level and reading as an extra of limited', () => {
+        const permissions = [
+          'conversation_participating_manage',
+          'conversation_view',
+        ];
+
+        expect(getLevel(conversations, permissions)).toBe(
+          CONVERSATION_LEVELS.LIMITED
+        );
+        expect(visibleExtras(conversations, permissions)).toContain(
+          'conversation_view'
+        );
+        expect(
+          toggleExtra(conversations, 'conversation_view', permissions)
+        ).toEqual(['conversation_participating_manage']);
+      });
+
+      it('handling starts with own conversations and keeps reading the others', () => {
+        expect(setLevel(conversations, LEVELS.MANAGE, [])).toEqual([
+          'conversation_participating_manage',
+        ]);
+        expect(
+          setLevel(conversations, LEVELS.MANAGE, ['conversation_view'])
+        ).toEqual(['conversation_participating_manage', 'conversation_view']);
+      });
+
+      it('handling keeps the current reach', () => {
+        const all = setLevel(conversations, CONVERSATION_LEVELS.ALL, []);
+
+        expect(setLevel(conversations, LEVELS.MANAGE, all)).toEqual(all);
+        expect(
+          setLevel(conversations, CONVERSATION_LEVELS.LIMITED, all)
+        ).toEqual([
+          'conversation_unassigned_manage',
+          'conversation_participating_manage',
+        ]);
+      });
+
+      it('all drops reading, which it already covers', () => {
+        expect(
+          setLevel(conversations, CONVERSATION_LEVELS.ALL, [
+            'conversation_view',
+          ])
+        ).not.toContain('conversation_view');
+      });
+
+      it('lights the handle position for own and all', () => {
+        expect(slotLevel(conversations, CONVERSATION_LEVELS.LIMITED)).toBe(
+          LEVELS.MANAGE
+        );
+        expect(slotLevel(conversations, CONVERSATION_LEVELS.ALL)).toBe(
+          LEVELS.MANAGE
+        );
+        expect(slotLevel(conversations, CONVERSATION_LEVELS.VIEW)).toBe(
+          LEVELS.VIEW
+        );
+      });
+    });
   });
 
   describe('crm', () => {
@@ -204,10 +282,11 @@ describe('permissionMatrix', () => {
         LEVELS.VIEW,
         null,
       ]);
+      // Conversas: não vê, só lê, atende (as próprias ou todas, escolhidas embaixo; #1800).
       expect(levelSlots(moduleByKey('CONVERSATIONS'))).toEqual([
-        CONVERSATION_LEVELS.NONE,
-        CONVERSATION_LEVELS.LIMITED,
-        CONVERSATION_LEVELS.ALL,
+        LEVELS.NONE,
+        LEVELS.VIEW,
+        LEVELS.MANAGE,
       ]);
     });
   });
@@ -275,6 +354,65 @@ describe('permissionMatrix', () => {
       expect(
         unmetSuggestion(assignment, ['assignment_manage', 'inbox_manage'])
       ).toBeNull();
+    });
+  });
+
+  describe('contatos: exportar e excluir (#1845)', () => {
+    const contacts = MODULES.find(module => module.key === 'CONTACTS');
+
+    it('mostra exportar para quem vê e exportar e excluir para quem edita', () => {
+      expect(visibleExtras(contacts, ['contact_view'])).toEqual([
+        'contact_export',
+      ]);
+      expect(visibleExtras(contacts, ['contact_manage'])).toEqual([
+        'contact_export',
+        'contact_delete',
+      ]);
+    });
+
+    it('mostra excluir já ligado num cargo que só vê, para dar para desligar', () => {
+      expect(
+        visibleExtras(contacts, ['contact_view', 'contact_delete'])
+      ).toEqual(['contact_export', 'contact_delete']);
+    });
+
+    it('voltar para ver tira excluir e mantém exportar', () => {
+      const permissions = [
+        'contact_manage',
+        'contact_export',
+        'contact_delete',
+      ];
+      expect(setLevel(contacts, LEVELS.VIEW, permissions)).toEqual([
+        'contact_export',
+        'contact_view',
+      ]);
+    });
+
+    it('sem acesso tira as duas chaves', () => {
+      const permissions = [
+        'contact_manage',
+        'contact_export',
+        'contact_delete',
+      ];
+      expect(setLevel(contacts, LEVELS.NONE, permissions)).toEqual([]);
+    });
+
+    it('trata as duas como sensíveis', () => {
+      expect(sensitiveExtrasOn(['contact_export', 'contact_delete'])).toEqual([
+        'contact_export',
+        'contact_delete',
+      ]);
+    });
+  });
+
+  // A linha do ajuste fino mostra nome e descrição pela chave; sem a tradução, a tela mostra a chave crua (#1845).
+  it('todo ajuste fino tem nome e descrição em en e pt_BR', () => {
+    const extras = MODULES.flatMap(module => module.extras || []);
+    [en, ptBR].forEach(({ CUSTOM_ROLE }) => {
+      extras.forEach(key => {
+        expect(CUSTOM_ROLE.PERMISSIONS[key.toUpperCase()]).toBeTruthy();
+        expect(CUSTOM_ROLE.EXTRAS[key.toUpperCase()]).toBeTruthy();
+      });
     });
   });
 

@@ -20,6 +20,8 @@
 # - 'conversation_manage': Can manage all conversations.
 # - 'conversation_unassigned_manage': Can manage unassigned conversations and assign to self.
 # - 'conversation_participating_manage': Can manage conversations they are participating in (assigned to or a participant).
+# - 'conversation_view': Can read every conversation of their inboxes (messages and notes) without operating on them.
+#   Writes keep requiring the trio above (#1800).
 # - 'contact_manage': Can manage contacts.
 # - 'report_manage': Can manage reports.
 # - 'knowledge_base_manage': Can manage knowledge base portals.
@@ -34,6 +36,8 @@
 #
 # Module keys: '<module>_manage' implies '<module>_view' (see Enterprise::AccountUser#permission_granted?).
 # - 'contact_view' / 'knowledge_base_view': read-only access to contacts / help center.
+# - 'contact_export': export the contact base (split from contact_manage in #1845; roles that had contact_manage kept it).
+# - 'contact_delete': delete contacts and companies, one by one or in bulk (#1845).
 # - 'autonomia_view': view and test Autonom.ia agents. 'autonomia_manage': create, train and publish them.
 # - 'campaign_view': view campaigns and their reports. 'campaign_manage': create, send and import lists.
 # - 'inbox_view': view every inbox configuration. 'inbox_manage': create, connect and configure inboxes.
@@ -63,6 +67,7 @@ class CustomRole < ApplicationRecord
     conversation_manage
     conversation_unassigned_manage
     conversation_participating_manage
+    conversation_view
     contact_manage
     report_manage
     knowledge_base_manage
@@ -75,6 +80,8 @@ class CustomRole < ApplicationRecord
     crm_admin
     crm_export
     contact_view
+    contact_export
+    contact_delete
     knowledge_base_view
     autonomia_view
     autonomia_manage

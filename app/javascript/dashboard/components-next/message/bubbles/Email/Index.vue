@@ -15,9 +15,14 @@ import TranslationToggle from 'dashboard/components-next/message/TranslationTogg
 import { useMessageContext } from '../../provider.js';
 import { MESSAGE_TYPES } from 'next/message/constants.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
+import CartaoDoEmail from 'dashboard/components-next/conversa-canal/email/CartaoDoEmail.vue';
+import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
+import { htmlComCssSeguro } from 'dashboard/components-next/conversa-canal/email/estiloSeguroDoEmail';
 
 const { content, contentAttributes, attachments, messageType } =
   useMessageContext();
+// #1786: com a conversa de e-mail nova ligada, o cartão com a cara do Gmail.
+const emailNovo = useEmailDaConversa().ligado;
 
 const isExpandable = ref(false);
 const isExpanded = ref(false);
@@ -84,6 +89,9 @@ const fullHTML = computed(() => {
 const unquotedHTML = computed(() =>
   EmailQuoteExtractor.extractQuotes(fullHTML.value)
 );
+// O CSS do remetente não pode escapar do <style> ao passar pelo vue-letter (estiloSeguroDoEmail).
+const fullHTMLSeguro = computed(() => htmlComCssSeguro(fullHTML.value));
+const unquotedHTMLSeguro = computed(() => htmlComCssSeguro(unquotedHTML.value));
 
 const hasQuotedMessage = computed(() =>
   EmailQuoteExtractor.hasQuotes(fullHTML.value)
@@ -103,7 +111,9 @@ const handleSeeOriginal = () => {
 </script>
 
 <template>
+  <CartaoDoEmail v-if="emailNovo" />
   <BaseBubble
+    v-else
     class="w-full"
     :class="{
       'bg-n-slate-4': isIncoming,
@@ -158,14 +168,14 @@ const handleSeeOriginal = () => {
               'transform',
               'transform-origin',
             ]"
-            :html="fullHTML"
+            :html="fullHTMLSeguro"
             :text="textToShow"
           />
           <Letter
             v-else
             :key="`letter-unquoted-${translationKeySuffix}`"
             class-name="prose prose-bubble !max-w-none letter-render"
-            :html="unquotedHTML"
+            :html="unquotedHTMLSeguro"
             :allowed-css-properties="[
               ...allowedCssProperties,
               'transform',

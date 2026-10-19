@@ -29,22 +29,30 @@
 # rescheduled through this class.
 class Crm::FollowUps::Rescheduler
   class PastDueError < StandardError; end
+  class NotAReminderError < StandardError; end
 
-  def initialize(follow_up:, user:, due_at:)
+  # reminders_only (#1855): o reagendamento em lote do calendário ("Passar os meus para amanhã") só move lembrete de uma
+  # pessoa. Envio ao cliente, inclusive o aviso de um que caiu, é recusado e fica como está; item a item, segue como antes.
+  def initialize(follow_up:, user:, due_at:, reminders_only: false)
     @follow_up = follow_up
     @user = user
     @due_at = normalize_due_at(due_at)
+    @reminders_only = reminders_only
   end
 
   def perform
+    raise NotAReminderError, 'not_a_reminder' if @reminders_only && Crm::FollowUps::CallbackFallback.automatic_send?(@follow_up)
+
     validate_due_at!
 
     # Idempotent: skip persistence and side effects when nothing changed.
     return @follow_up if unchanged?
 
     @follow_up.transaction do
+      restoring = restoring_automatic_send?
       @follow_up.update!(due_at: @due_at)
       @follow_up.update!(status: :pending) if @follow_up.overdue?
+      @follow_up.update!(Crm::FollowUps::CallbackFallback.restoring_attributes(@follow_up)) if restoring
       Crm::FollowUps::SnoozeHandler.apply(@follow_up) if @follow_up.pending?
       Crm::FollowUps::CardNextDueUpdater.update(@follow_up.card)
       log_activity
@@ -70,10 +78,15 @@ class Crm::FollowUps::Rescheduler
     # WhatsApp auto-send cannot be scheduled in the past — there is no way to
     # send a message at a time that has already elapsed. Mirrors the
     # server-side guard called out in the manifest (R5).
-    return unless @follow_up.auto_send_message?
+    return unless @follow_up.auto_send_message? || restoring_automatic_send?
     return if @due_at.future?
 
     raise PastDueError, 'due_at must be in the future for auto-send follow-ups'
+  end
+
+  # Aviso da equipe que caiu por falha passageira da Meta (CallbackFallback): reagendar tenta o envio automático de novo.
+  def restoring_automatic_send?
+    Crm::FollowUps::CallbackFallback.restorable?(@follow_up)
   end
 
   def unchanged?

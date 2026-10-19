@@ -135,4 +135,135 @@ describe('ResultadoDoAjuste', () => {
         .text()
     ).toBe('Desfiz o que você não tinha pedido. Bia continua como antes.');
   });
+  // #1428 (entrega B) — as perguntas de prova, como no protótipo aprovado: "Testando…", depois ✓ ou ⚠
+  // com a lista que abre e fecha; indisponível é uma linha neutra, nunca ✓.
+  describe('proof questions', () => {
+    const PRONTA = {
+      status: 'pronta',
+      ok: 2,
+      total: 2,
+      perguntas: [
+        {
+          pergunta: 'Quanto custa?',
+          resposta: 'Passo para a equipe.',
+          equipe: false,
+          ok: true,
+        },
+        { pergunta: 'Tem vida?', resposta: null, equipe: true, ok: true },
+      ],
+    };
+
+    it('shows the testing line while pending', () => {
+      const prova = montar({ prova: { status: 'pendente', total: 3 } }).find(
+        '[data-prova]'
+      );
+
+      expect(prova.text()).toBe('Testando com 3 perguntas de prova…');
+      expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
+    });
+
+    it('shows the score with a check, and the list only when opened', async () => {
+      const wrapper = montar({ prova: PRONTA });
+      const prova = wrapper.find('[data-prova]');
+
+      expect(prova.text()).toContain('2 de 2 perguntas de prova ok');
+      expect(prova.find('.i-lucide-circle-check').exists()).toBe(true);
+      expect(prova.findAll('li')).toHaveLength(0);
+
+      await wrapper.find('[data-ver-prova]').trigger('click');
+
+      const linhas = prova.findAll('li').map(linha => linha.text());
+      expect(linhas).toEqual([
+        'Cliente: Quanto custa?Bia: Passo para a equipe.',
+        'Cliente: Tem vida?Bia: Passaria a conversa para a equipe.',
+      ]);
+      expect(wrapper.find('[data-ver-prova]').text()).toBe(
+        'Esconder as perguntas'
+      );
+      expect(wrapper.find('[data-ver-prova]').attributes('aria-expanded')).toBe(
+        'true'
+      );
+    });
+
+    it('uses the singular for one question', () => {
+      const prova = montar({
+        prova: { ...PRONTA, ok: 1, total: 1, perguntas: [PRONTA.perguntas[0]] },
+      }).find('[data-prova]');
+
+      expect(prova.text()).toContain('1 de 1 pergunta de prova ok');
+    });
+
+    it('marks each question: check, warning, or nothing when it does not touch the change', async () => {
+      const wrapper = montar({
+        prova: {
+          ...PRONTA,
+          ok: 1,
+          total: 2,
+          perguntas: [
+            { pergunta: 'A?', resposta: 'a', equipe: false, ok: true },
+            { pergunta: 'B?', resposta: 'b', equipe: false, ok: false },
+            { pergunta: 'C?', resposta: 'c', equipe: false, ok: null },
+          ],
+        },
+      });
+      const botao = wrapper.find('[data-ver-prova]');
+      await botao.trigger('click');
+
+      const itens = wrapper.findAll('[data-prova] li');
+      expect(itens.map(item => item.attributes('data-pergunta-ok'))).toEqual([
+        'true',
+        'false',
+        'sem_teste',
+      ]);
+      expect(itens[0].find('.i-lucide-circle-check').exists()).toBe(true);
+      expect(itens[1].find('.i-lucide-triangle-alert').exists()).toBe(true);
+      expect(itens[2].find('[class*="i-lucide"]').exists()).toBe(false);
+      const lista = wrapper.find('[data-prova] ul');
+      expect(lista.attributes('id')).toBeTruthy();
+      expect(botao.attributes('aria-controls')).toBe(lista.attributes('id'));
+    });
+
+    it('warns when some answer missed the change', () => {
+      const prova = montar({ prova: { ...PRONTA, ok: 1 } }).find(
+        '[data-prova]'
+      );
+
+      expect(prova.text()).toContain('1 de 2 perguntas de prova ok');
+      expect(prova.find('.i-lucide-triangle-alert').exists()).toBe(true);
+      expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
+    });
+
+    it('no check when no question touched the change (only those count)', async () => {
+      const wrapper = montar({ prova: { ...PRONTA, ok: 0, total: 0 } });
+      const prova = wrapper.find('[data-prova]');
+
+      expect(prova.find('[data-sem-teste]').text()).toBe(
+        'As perguntas não testaram a mudança.'
+      );
+      expect(prova.text()).not.toContain('perguntas de prova ok');
+      expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
+      expect(prova.find('.i-lucide-triangle-alert').exists()).toBe(false);
+      await wrapper.find('[data-ver-prova]').trigger('click');
+      expect(prova.findAll('li')).toHaveLength(2);
+    });
+
+    it('says it could not test on a neutral line, without a check', () => {
+      const prova = montar({
+        prova: { status: 'indisponivel', total: 3 },
+      }).find('[data-prova]');
+
+      expect(prova.text()).toBe(
+        'Não consegui testar agora. Use o teste ao lado para ver como ficou.'
+      );
+      expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
+      expect(prova.find('.i-lucide-triangle-alert').exists()).toBe(false);
+    });
+
+    it('no proof block without a proof, nor once undone', () => {
+      expect(montar().find('[data-prova]').exists()).toBe(false);
+      expect(
+        montar({ desfeito: true, prova: PRONTA }).find('[data-prova]').exists()
+      ).toBe(false);
+    });
+  });
 });

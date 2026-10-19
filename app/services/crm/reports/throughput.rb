@@ -50,7 +50,14 @@ module Crm
 
       def bucketed(outcome)
         closed_in_range.where(status: Crm::Card.statuses[outcome])
-                       .group(Arel.sql("date_trunc('#{bucket}', closed_at)")).count
+                       .group(Arel.sql(bucket_sql)).count
+      end
+
+      # #1876: o dia do gráfico é o da conta. closed_at fica em UTC sem fuso; a conversão leva ao relógio local antes de
+      # cortar no dia/semana/mês.
+      def bucket_sql
+        local_zone = Crm::Card.connection.quote(zone.tzinfo.name)
+        "date_trunc('#{bucket}', crm_cards.closed_at AT TIME ZONE 'UTC' AT TIME ZONE #{local_zone})"
       end
     end
   end

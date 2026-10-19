@@ -90,10 +90,11 @@ class Api::V1::Accounts::Crm::FollowUpsController < Api::V1::Accounts::Crm::Base
     @follow_up = Crm::FollowUps::Rescheduler.new(
       follow_up: @follow_up,
       user: Current.user,
-      due_at: params[:due_at]
+      due_at: params[:due_at],
+      reminders_only: ActiveModel::Type::Boolean.new.cast(params[:reminders_only]) == true
     ).perform
     render :show
-  rescue Crm::FollowUps::Rescheduler::PastDueError => e
+  rescue Crm::FollowUps::Rescheduler::PastDueError, Crm::FollowUps::Rescheduler::NotAReminderError => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
 

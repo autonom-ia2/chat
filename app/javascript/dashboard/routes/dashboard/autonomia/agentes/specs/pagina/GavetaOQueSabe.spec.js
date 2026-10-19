@@ -1,7 +1,7 @@
 import { nextTick, reactive } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import GavetaOQueSabe from '../../components/pagina/GavetaOQueSabe.vue';
-import { MAX_ARQUIVO } from '../../utils/pagina';
+import { MAX_ARQUIVO, MAX_FOTO } from '../../utils/pagina';
 
 // T09 · O que sabe: arquivos e sites em palavras (sem nota nem %), mandar arquivo (até 25 MB) ou site,
 // ler de novo, tirar com confirmação, erro padrão e as perguntas de clientes (FAQ que já existe).
@@ -110,6 +110,225 @@ describe('GavetaOQueSabe', () => {
     expect(texto).not.toContain('87');
     expect(texto).not.toContain('0.9');
     wrapper.unmount();
+  });
+
+  // #1426 — na Fase 2, "Pronto" só depois de a revisão aprovar: Lendo → Revisando → Pronto ou Precisa de você.
+  describe('real state of the material (Fase 2)', () => {
+    const REVISADO = '2026-10-19T12:00:00Z';
+
+    it('shows reading, reviewing, ready and needs-you in words', async () => {
+      preparar([
+        fonte(1, { status: 'processing', review: { status: 'needs_review' } }),
+        fonte(2, { review: { status: 'needs_review', reviewed_at: null } }),
+        fonte(3, { review: { status: 'accepted', reviewed_at: REVISADO } }),
+        fonte(4, { review: { status: 'needs_resend', reviewed_at: REVISADO } }),
+        fonte(5, { status: 'failed' }),
+      ]);
+      const wrapper = montar({ fase2: true });
+      await nextTick();
+
+      expect(todos('[data-fonte]').map(f => f.dataset.estado)).toEqual([
+        'lendo',
+        'revisando',
+        'pronto',
+        'atencao',
+        'falha',
+      ]);
+      const textos = todos('[data-estado-texto]').map(e => e.textContent);
+      expect(textos[1]).toContain('SABE.REVISANDO');
+      expect(textos[1]).not.toContain('SABE.PRONTO');
+      expect(textos[3]).toContain('SABE.ATENCAO');
+      wrapper.unmount();
+    });
+
+    it('shows the short reason of a material sent back and offers to send another', async () => {
+      preparar([
+        fonte(4, {
+          review: {
+            status: 'needs_resend',
+            reviewed_at: REVISADO,
+            reason: 'A foto saiu cortada.',
+          },
+        }),
+        fonte(5, { review: { status: 'needs_resend', reviewed_at: REVISADO } }),
+      ]);
+      const wrapper = montar({ fase2: true });
+      await nextTick();
+
+      const problemas = todos('[data-problema]').map(p => p.textContent);
+      expect(problemas[0]).toContain('A foto saiu cortada.');
+      expect(problemas[1]).toContain('SABE.ATENCAO_TEXTO');
+      expect(todos('[data-mandar-outro]')).toHaveLength(2);
+      expect(no('[data-fonte]').textContent).not.toContain('SABE.FALHA_TEXTO');
+      wrapper.unmount();
+    });
+
+    it('sends an image as a photo (read and reviewed) only with Fase 2', async () => {
+      const imagem = { name: 'tabela.jpg', type: 'image/jpeg', size: 10 };
+      let wrapper = montar({ fase2: true });
+      await clicar('[data-mandar]');
+      escolherArquivo(imagem);
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 7,
+        descriptor: { file: imagem, kind: 'knowledge', sourceType: 'foto' },
+      });
+      wrapper.unmount();
+      document.body.innerHTML = '';
+
+      store.dispatch.mockClear();
+      wrapper = montar();
+      await clicar('[data-mandar]');
+      escolherArquivo(imagem);
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 7,
+        descriptor: { file: imagem, kind: 'knowledge' },
+      });
+      wrapper.unmount();
+    });
+
+    // R4 — foto acima de 5 MB nem sai; recusa do servidor mostra a mensagem dele, sem "Tentar de novo".
+    it('stops a photo above 5 MB before sending it', async () => {
+      const wrapper = montar({ fase2: true });
+      await clicar('[data-mandar]');
+      escolherArquivo({
+        name: 'tabela.jpg',
+        type: 'image/jpeg',
+        size: MAX_FOTO + 1,
+      });
+      await flushPromises();
+
+      expect(no('[data-erro-arquivo]').textContent).toContain(
+        'SABE.FOTO_GRANDE'
+      );
+      expect(store.dispatch).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('shows the message of a refusal by the server and does not offer to try again', async () => {
+      const recusa = new Error('Este arquivo não é uma foto.');
+      recusa.status = 422;
+      store.dispatch.mockRejectedValueOnce(recusa);
+      const wrapper = montar({ fase2: true });
+      await clicar('[data-mandar]');
+      escolherArquivo({ name: 'tabela.png', type: 'image/png', size: 10 });
+      await flushPromises();
+
+      expect(no('[data-erro-arquivo]').textContent).toContain(
+        'Este arquivo não é uma foto.'
+      );
+      expect(no('[data-erro-salvar]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('lets a file stuck in review be read again after the polling gave up', async () => {
+      const recente = new Date().toISOString();
+      const antigo = new Date(Date.now() - 3600 * 1000).toISOString();
+      preparar([
+        fonte(2, {
+          updated_at: antigo,
+          review: { status: 'needs_review', reviewed_at: null },
+        }),
+        fonte(3, {
+          updated_at: recente,
+          review: { status: 'needs_review', reviewed_at: null },
+        }),
+      ]);
+      const wrapper = montar({ fase2: true });
+      await nextTick();
+      const menus = todos('[data-fonte] [aria-haspopup="menu"]');
+
+      menus[0].click();
+      await nextTick();
+      expect(todos('[role="menuitem"]').map(i => i.textContent.trim())).toEqual(
+        [
+          'AGENTS.JORNADA.PAGINA.SABE.LER_DE_NOVO',
+          'AGENTS.JORNADA.PAGINA.SABE.TIRAR',
+        ]
+      );
+      todos('[role="menuitem"]')[0].click();
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/resync', {
+        agentId: 7,
+        sourceId: 2,
+      });
+
+      menus[1].click();
+      await nextTick();
+      expect(todos('[role="menuitem"]').map(i => i.textContent.trim())).toEqual(
+        ['AGENTS.JORNADA.PAGINA.SABE.TIRAR']
+      );
+      wrapper.unmount();
+    });
+
+    // S4 — também o "Lendo…" parado além do teto, para arquivo e foto; o que acabou de começar, não; fora da Fase 2, não.
+    it('lets a file or photo stuck in reading be read again, only in the Fase 2', async () => {
+      const antigo = new Date(Date.now() - 3600 * 1000).toISOString();
+      const recente = new Date().toISOString();
+      const lendo = { status: 'processing', review: null };
+      preparar([
+        fonte(2, { ...lendo, updated_at: antigo }),
+        fonte(3, {
+          ...lendo,
+          updated_at: antigo,
+          source_type: 'foto',
+          reference: 'tabela.jpg',
+        }),
+        fonte(4, { ...lendo, updated_at: recente }),
+      ]);
+      const LER = 'AGENTS.JORNADA.PAGINA.SABE.LER_DE_NOVO';
+      const opcoes = async indice => {
+        const wrapper = montar({ fase2: indice !== 'fora' });
+        await nextTick();
+        todos('[data-fonte] [aria-haspopup="menu"]')[
+          indice === 'fora' ? 0 : indice
+        ].click();
+        await nextTick();
+        const textos = todos('[role="menuitem"]').map(i =>
+          i.textContent.trim()
+        );
+        wrapper.unmount();
+        return textos;
+      };
+
+      expect(await opcoes(0)).toContain(LER);
+      expect(await opcoes(1)).toContain(LER);
+      expect(await opcoes(2)).toEqual(['AGENTS.JORNADA.PAGINA.SABE.TIRAR']);
+      expect(await opcoes('fora')).toEqual([
+        'AGENTS.JORNADA.PAGINA.SABE.TIRAR',
+      ]);
+    });
+
+    it('says it is reading the text of the photo of the creation', async () => {
+      preparar([
+        fonte(6, {
+          source_type: 'foto',
+          reference: 'tabela.jpg',
+          status: 'processing',
+          review: null,
+        }),
+      ]);
+      const wrapper = montar({ fase2: true });
+      await nextTick();
+
+      expect(no('[data-estado-texto]').textContent).toContain(
+        'SABE.LENDO_FOTO'
+      );
+      expect(no('[data-fonte] .i-lucide-image')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('keeps today states without the Fase 2', async () => {
+      preparar([
+        fonte(2, { review: { status: 'needs_review', reviewed_at: null } }),
+      ]);
+      const wrapper = montar();
+      await nextTick();
+
+      expect(no('[data-fonte]').dataset.estado).toBe('pronto');
+      wrapper.unmount();
+    });
   });
 
   it('says it knows only the conversation when there are no files', async () => {

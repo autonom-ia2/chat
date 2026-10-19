@@ -18,10 +18,14 @@ const ANEXO = {
   fallbackTitle: 'Praça da Sé, Praça da Sé, São Paulo - SP',
 };
 
-const montarRecebida = ({ sharedLocation, anexo = ANEXO } = {}) =>
+const montarRecebida = ({
+  sharedLocation,
+  anexo = ANEXO,
+  content = null,
+} = {}) =>
   montarMensagem({
     messageType: MESSAGE_TYPES.INCOMING,
-    content: null,
+    content,
     sender: { id: 3, name: 'Carlos Souza', type: 'contact' },
     attachments: [anexo],
     contentAttributes: sharedLocation ? { sharedLocation } : {},
@@ -164,5 +168,16 @@ describe('bolha da localização recebida', () => {
     expect(wrapper.get('a').attributes('href')).toBe(
       'https://maps.google.com/?q=-23.5505,-46.6333'
     );
+  });
+
+  // fork chat#1709 (demo integrada): a localização ao vivo do WhatsApp vem com a legenda do cliente no content.
+  it('mostra o cartão de mapa e a legenda da localização ao vivo', () => {
+    const wrapper = montarRecebida({
+      content: 'Estou chegando',
+      sharedLocation: { latitude: -23.5505, longitude: -46.6333, live: true },
+    });
+
+    expect(nomes(wrapper)).toEqual(['received-location']);
+    expect(wrapper.text()).toContain('Estou chegando');
   });
 });

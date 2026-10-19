@@ -6,6 +6,7 @@
     "TITULO_SEM_CONTATO": "Com quem você quer falar?",
     "TEXTO": "Escolha por onde falar e escreva a mensagem.",
     "FECHAR": "Fechar",
+    "MAIS_ABAIXO": "Descer para ver o resto",
     "ALTERAR": "Alterar",
     "ALTERAR_PARTE": "Alterar {parte}",
     "MIGALHA": {
@@ -20,7 +21,9 @@
       "NADA_CRIAR": "Ninguém encontrado. Você pode criar o contato agora.",
       "CRIAR": "Criar contato {valor}",
       "ERRO": "Não deu para procurar agora. Tente de novo.",
-      "ERRO_CRIAR": "Não deu para criar o contato. Tente de novo."
+      "ERRO_CRIAR": "Não deu para criar o contato. Tente de novo.",
+      "NOME_DO_CONTATO": "Nome do contato",
+      "NOME_EXEMPLO": "Por exemplo: Marina Costa"
     },
     "POR_ONDE": {
       "TITULO": "Por onde",
@@ -63,26 +66,27 @@
       "PLACEHOLDER": "Escreva aqui o que você quer dizer",
       "ESCREVER": "Escrever a mensagem",
       "ESCREVER_TEXTO": "Você escreve do seu jeito.",
-      "PRONTA": "Usar uma mensagem pronta",
-      "PRONTA_TEXTO": "Um modelo aprovado pelo WhatsApp.",
-      "SO_PRONTA_TITULO": "Escolha uma mensagem pronta",
-      "SO_PRONTA_TEXTO": "No WhatsApp, a primeira mensagem para um cliente precisa ser uma mensagem pronta, aprovada pelo WhatsApp.",
-      "ESCOLHIDA": "Mensagem pronta",
-      "PROCURAR": "Procurar mensagem pronta",
-      "NENHUMA_BUSCA": "Nenhuma mensagem pronta com esse nome.",
-      "SEM_PRONTA": "Este número ainda não tem mensagem pronta aprovada.",
+      "PRONTA": "Usar uma mensagem aprovada",
+      "PRONTA_TEXTO": "Um texto que o WhatsApp já aprovou.",
+      "SO_PRONTA_TITULO": "Escolha uma mensagem aprovada",
+      "SO_PRONTA_TEXTO": "No WhatsApp, a primeira mensagem para um cliente precisa ser uma mensagem aprovada pelo WhatsApp.",
+      "ESCOLHIDA": "Mensagem aprovada",
+      "PROCURAR": "Procurar mensagem aprovada",
+      "NENHUMA_BUSCA": "Nenhuma mensagem aprovada com esse nome.",
+      "SEM_PRONTA": "Este número ainda não tem mensagem aprovada.",
       "SEM_PRONTA_PECA": "Peça a quem administra a conta para criar uma.",
-      "CRIAR_PRONTA": "Criar mensagem pronta",
+      "CRIAR_PRONTA": "Criar mensagem para aprovar",
       "ASSUNTO": "Assunto",
       "ASSUNTO_PLACEHOLDER": "Sobre o que é o e-mail",
       "MAIS_OPCOES": "Mais opções",
       "MENOS_OPCOES": "Menos opções",
       "ANEXAR": "Anexar arquivo",
+      "FERRAMENTAS": "Ferramentas do e-mail",
       "COMPLETE": "Complete a mensagem",
       "CAMPO_ROTULO": "O que entra no lugar de ⟨{campo}⟩",
       "CAMPO_FALADO": "campo {campo}",
       "CAMPO_EXEMPLO": "Ex.: {exemplo}",
-      "SO_PRONTA_CONVERSA": "Agora, nesta conversa, o WhatsApp só aceita mensagem pronta. Isso acontece quando a pessoa não escreve há mais de 24 horas."
+      "SO_PRONTA_CONVERSA": "Agora, nesta conversa, o WhatsApp só aceita mensagem aprovada. Isso acontece quando a pessoa não escreve há mais de 24 horas."
     },
     "PREVIA": {
       "TITULO": "Como {nome} recebe",
@@ -91,7 +95,8 @@
       "AGORA": "agora",
       "DE": "De",
       "ASSUNTO": "Assunto",
-      "SEM_ASSUNTO": "Sem assunto"
+      "SEM_ASSUNTO": "Sem assunto",
+      "HISTORICO": "{nome} escreveu:"
     },
     "RODAPE": {
       "CANCELAR": "Cancelar",
@@ -101,8 +106,8 @@
         "CANAL": "Escolha por onde falar",
         "ASSUNTO": "Escreva o assunto",
         "MENSAGEM": "Escreva a mensagem",
-        "MODELO": "Escolha uma mensagem pronta",
-        "CAMPOS": "Preencha os campos da mensagem pronta",
+        "MODELO": "Escolha uma mensagem aprovada",
+        "CAMPOS": "Preencha os campos da mensagem aprovada",
         "CONVERSA": "Aguarde, conferindo a conversa"
       }
     },
@@ -123,6 +128,25 @@
       "TITULO": "A mensagem não foi enviada",
       "PADRAO": "Nada do que você escreveu se perdeu. Tente enviar de novo."
     },
-    "TEXTO_BUSCA": "Procure pelo nome, telefone ou e-mail."
+    "TEXTO_BUSCA": "Procure pelo nome, telefone ou e-mail.",
+    "CONTATO_NOVO": {
+      "TITULO": "Contato novo",
+      "NOME": "Nome",
+      "NOME_EXEMPLO": "Por exemplo: Marina Costa",
+      "EMAIL": "E-mail",
+      "EMAIL_EXEMPLO": "nome{'@'}empresa.com.br",
+      "TELEFONE": "Telefone (opcional)",
+      "FALTA_NOME": "Escreva o nome do contato.",
+      "FALTA_EMAIL": "Escreva o e-mail: é para ele que o e-mail vai.",
+      "EMAIL_INVALIDO": "Confira o e-mail: parece incompleto.",
+      "TELEFONE_INVALIDO": "Confira o telefone: use o DDD, como (11) 98765-4321.",
+      "FALTA_CONTATO": "Escreva um e-mail ou um telefone.",
+      "CRIAR": "Criar contato e continuar",
+      "SUBTITULO": "Fica salvo nos Contatos e já entra nesta conversa.",
+      "EMAIL_OPCIONAL": "E-mail (opcional)",
+      "EMAIL_DICA": "É para este endereço que o e-mail vai.",
+      "TELEFONE_DICA": "Ajuda quando a pessoa também fala pelo WhatsApp.",
+      "PAIS": "País"
+    }
   }
 }

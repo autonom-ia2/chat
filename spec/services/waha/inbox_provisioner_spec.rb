@@ -63,6 +63,7 @@ RSpec.describe Waha::InboxProvisioner do
             enabled: true,
             config: hash_including(
               groups: 'OFF',
+              linkPreview: 'OFF',
               conversations: hash_including(
                 outgoing: 'message',
                 syncMessageStatus: true,

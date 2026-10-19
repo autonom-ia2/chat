@@ -92,7 +92,9 @@ module Autonomia
       # limite (pipeline distinto). Aplicado no SourcesController#create e refletido no dropzone do FE.
       MAX_KNOWLEDGE_SOURCES = 30
 
-      SOURCE_TYPES = %w[link pdf xlsx docx json txt md].freeze
+      # #1426 — `foto`: a foto mandada na criação, lida por OCR (Processors::Foto) e revisada como os outros.
+      FOTO = 'foto'.freeze
+      SOURCE_TYPES = (%w[link pdf xlsx docx json txt md] + [FOTO]).freeze
       # Teto de tamanho do ANEXO comprimido (defesa contra upload gigante / zip-bomb). O cap do
       # tamanho DESCOMPRIMIDO de docx/xlsx é aplicado no processor.
       MAX_FILE_BYTES = 25.megabytes
@@ -111,7 +113,18 @@ module Autonomia
       validates :review_label, inclusion: { in: REVIEW_LABELS }, allow_nil: true
       validate :file_within_limits
 
-      store_accessor :metadata, :fingerprint, :byte_size, :chunk_count, :mime
+      store_accessor :metadata, :fingerprint, :byte_size, :chunk_count, :mime, :origem
+
+      # #1426 — a foto da criação divide a imagem (o mesmo blob) com a conversa do Construtor. Tirá-la da base solta o
+      # anexo sem apagar a imagem, que a conversa ainda mostra e lê.
+      ORIGEM_FOTO_DA_CRIACAO = 'foto_da_criacao'.freeze
+      # #1426 — as páginas do PDF que ficaram de fora da leitura (teto, página grande, prazo), para o aviso ao dono.
+      PAGINAS_DE_FORA = 'paginas_de_fora'.freeze
+      # #1426 — teto da releitura, o mesmo do painel (TETO_DA_RELEITURA_MS em autonomiaSources.js).
+      TETO_DA_RELEITURA = 10.minutes
+      attr_accessor :paginas_de_fora
+
+      before_destroy :soltar_foto_da_conversa, prepend: true # antes do has_one_attached apagar o anexo
 
       # token-guard idêntico ao padrão EmailCampaign#ai_guarded_update: marca processing + novo
       # sync_token; toda escrita posterior (mark_ready!/mark_failed!) só vence se o token ainda for
@@ -127,7 +140,8 @@ module Autonomia
         # (entries já servidos) se este re-sync falhar por extração vazia — senão a fonte ficaria
         # needs_review+failed (e mesmo restaurando só o status, sem review_summary o Retriever perderia
         # a exclusão "fora do negócio" e o Construtor leria contexto em branco). Restaura tudo.
-        base = (metadata || {})
+        # #1426 — as páginas de fora da leitura anterior saem já aqui: a leitura nova escreve as dela no fim.
+        base = (metadata || {}).except(PAGINAS_DE_FORA)
         # CORRIDA: se a fonte JÁ estava `processing` (um re-sync anterior em curso), os campos de
         # review já estão rebaixados/em branco — NÃO os capture (preservaria lixo). Mantém o
         # prev_review verdadeiro do re-sync anterior. Só captura snapshot fresco quando não-processing.
@@ -139,6 +153,7 @@ module Autonomia
                           'quality_score' => quality_score, 'confidence' => confidence,
                           'reviewed_at' => reviewed_at&.iso8601 }
                       end
+        prev_review = prev_review.merge('legado' => true) if !processing? && legado_sem_parecer?
         prev_metadata = base.merge('prev_review' => prev_review)
         update_columns(status: self.class.statuses[:processing], sync_token: token,
                        error: nil, sync_status: nil, metadata: prev_metadata,
@@ -153,10 +168,27 @@ module Autonomia
       # nada, preservando a recuperabilidade E o isolamento "fora do negócio" (que o Retriever lê do
       # review_summary). accepted continua accepted; needs_review continua excluído (sem promover).
       # Token-guard. Usado pelo ProcessJob no EmptyExtraction quando há entries.
+      # #1426 — na Fase 2, material antigo de verdade (de antes da Revisora: pronto, sem parecer e sem data de revisão, marcado
+      # `legado` no begin_ingestion!) volta sem parecer, como estava: "pronto" na tela e servido na busca. Com `needs_review`
+      # ele ficaria "Revisando…" para sempre. Material novo nunca revisado (também sem parecer) NÃO leva a marca e volta
+      # `needs_review`, fora da busca. Fora da Fase 2, como antes.
       def restore_previous_generation!(token)
-        guarded_update(token, previous_review_attributes.merge(
-                                status: self.class.statuses[:ready], error: nil, sync_status: nil, synced_at: Time.current
-                              ))
+        anterior = previous_review_attributes
+        anterior = anterior.merge(review_status: nil) if legado_marcado?
+        anterior = anterior.merge(status: self.class.statuses[:ready], error: nil, sync_status: nil, synced_at: Time.current)
+        guarded_update(token, com_paginas_desta_leitura(anterior))
+      end
+
+      # #1426 (revisão adversarial) — a leitura que este job faz ainda é a vigente: mesmo token e ainda lendo. O OCR do PDF
+      # confere antes de cada página e para quando outra leitura venceu.
+      def leitura_vigente?
+        self.class.exists?(id: id, sync_token: sync_token, status: self.class.statuses[:processing])
+      end
+
+      # #1426 — lendo agora, e não parado: começou há menos que o teto da releitura (o mesmo TETO_DA_RELEITURA_MS do painel,
+      # depois do qual a tela libera "Ler de novo" num material parado).
+      def lendo_agora?
+        processing? && updated_at > TETO_DA_RELEITURA.ago
       end
 
       # GAP (A) — mídia de ENVIO: caminho NOVO, sem ingestão. NÃO embeda, NÃO chama a revisora; só
@@ -169,10 +201,12 @@ module Autonomia
                        synced_at: Time.current, updated_at: Time.current)
       end
 
+      # #1426 — as páginas do PDF que ficaram de fora nesta leitura (Processors::Pdf põe em `paginas_de_fora`, só em
+      # memória) vão junto, sob a mesma guarda de token: um job superado não escreve. Sem nada de fora, a marca some. Vale
+      # também para restore_previous_generation! e mark_failed! (metadata_desta_leitura).
       def mark_ready!(token, chunk_count:)
-        new_metadata = (metadata || {}).merge('chunk_count' => chunk_count)
         guarded_update(token, status: self.class.statuses[:ready], error: nil,
-                              metadata: new_metadata, synced_at: Time.current)
+                              metadata: metadata_desta_leitura.merge('chunk_count' => chunk_count), synced_at: Time.current)
       end
 
       # FALHA DE REPROCESSO: begin_ingestion! rebaixou o parecer para needs_review ANTES do reprocesso.
@@ -182,9 +216,8 @@ module Autonomia
       # BOA. Restaura o snapshot do parecer anterior junto com o `failed`: accepted volta a accepted
       # (entries antigos continuam servíveis); nunca-revisado permanece needs_review (sem promover).
       def mark_failed!(token, message)
-        guarded_update(token, previous_review_attributes.merge(
-                                status: self.class.statuses[:failed], error: message.to_s.truncate(500)
-                              ))
+        falha = previous_review_attributes.merge(status: self.class.statuses[:failed], error: message.to_s.truncate(500))
+        guarded_update(token, com_paginas_desta_leitura(falha))
       end
 
       # Grava o parecer da IA Revisora. Corre DEPOIS de mark_ready! (status já é `ready`), por isso
@@ -210,6 +243,29 @@ module Autonomia
       # criados por um job superseded antes do review). needs_resend/needs_review seguem excluídos
       # (fiel). NOTA: uma fonte legada genuína (review_status nil, servida via legado) que falhar no
       # re-sync passa a needs_review — tradeoff seguro e raro (re-revisar reativa).
+      # #1426 — material de antes da Revisora: já pronto, sem parecer e sem data de revisão. Material novo (ainda não lido)
+      # não é pronto e não entra. Só a Fase 2 usa a marca (restore_previous_generation!).
+      def legado_sem_parecer?
+        kind_knowledge? && ready? && review_status.nil? && reviewed_at.nil? && Autonomia::Agents::Fase2.ligada?(account)
+      end
+
+      # A marca só nasce na Fase 2; conferida de novo aqui, para a conta que saiu do piloto no meio da leitura voltar à main.
+      def legado_marcado?
+        (metadata || {}).dig('prev_review', 'legado') == true && Autonomia::Agents::Fase2.ligada?(account)
+      end
+
+      # O metadata com o que ficou de fora NESTA leitura (Source#paginas_de_fora): a marca da leitura anterior sai sempre.
+      def metadata_desta_leitura
+        base = (metadata || {}).except(PAGINAS_DE_FORA)
+        paginas_de_fora.present? ? base.merge(PAGINAS_DE_FORA => paginas_de_fora) : base
+      end
+
+      # Só escreve o metadata quando a marca muda (sem marca antes nem agora, a escrita é a de sempre).
+      def com_paginas_desta_leitura(attrs)
+        novo = metadata_desta_leitura
+        novo == (metadata || {}) ? attrs : attrs.merge(metadata: novo)
+      end
+
       def previous_review_attributes
         prev = (metadata || {})['prev_review'] || {}
         status_value = prev['review_status']
@@ -236,8 +292,18 @@ module Autonomia
       def file_within_limits
         return unless file.attached?
 
-        errors.add(:file, 'too_large') if file.blob.byte_size > MAX_FILE_BYTES
-        errors.add(:file, 'unsupported_content_type') unless ALLOWED_CONTENT_TYPES.include?(file.blob.content_type)
+        # #1426 — a mensagem vai inteira para a tela (422): texto para quem manda o arquivo, nunca código.
+        errors.add(:base, I18n.t('autonomia.source.arquivo_grande')) if file.blob.byte_size > MAX_FILE_BYTES
+        errors.add(:base, I18n.t('autonomia.source.arquivo_tipo')) unless allowed_content_types.include?(file.blob.content_type)
+      end
+
+      def soltar_foto_da_conversa
+        file.detach if origem == ORIGEM_FOTO_DA_CRIACAO && file.attached?
+      end
+
+      # Imagem só na foto (#1426), e a foto só com imagem.
+      def allowed_content_types
+        source_type == FOTO ? Autonomia::Agents::Config::IMAGE_CONTENT_TYPES : ALLOWED_CONTENT_TYPES
       end
 
       # Escreve só se a ingestão identificada por `token` ainda for a ativa e ainda processing.

@@ -65,6 +65,27 @@ RSpec.describe Crm::Reports::Summary do
     end
   end
 
+  # #1876: o mês da meta é o da conta, não o do servidor (UTC). 31/10 às 22h em São Paulo é 01/11 01h em UTC.
+  describe 'goal month in the account timezone' do
+    def won_at(time, value_cents)
+      card = create_card(sale, status: :won, value_cents: value_cents)
+      card.update_columns(closed_at: time) # rubocop:disable Rails/SkipsModelValidations
+      card
+    end
+
+    it 'counts a sale closed on 31/10 at 22h (São Paulo) in October, and one closed on 30/09 at 23h out of it' do
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+      sale.first.update!(metadata: { 'goals' => { 'monthly_target_cents' => 100_000, 'currency' => 'BRL' } })
+      won_at(Time.utc(2026, 11, 1, 1, 0), 30_000)
+      won_at(Time.utc(2026, 10, 1, 2, 0), 50_000)
+      won_at(Time.utc(2026, 10, 15, 12, 0), 7_000)
+
+      goal = travel_to(Time.utc(2026, 11, 1, 2, 0)) { summary_for(sale.first)[:goal] }
+
+      expect(goal).to include(month_label: '10/2026', achieved_cents: 37_000)
+    end
+  end
+
   describe 'people, conversations and cards' do
     it 'counts one person, one conversation and three cards for a conversation with three open cards' do
       conversation = new_conversation

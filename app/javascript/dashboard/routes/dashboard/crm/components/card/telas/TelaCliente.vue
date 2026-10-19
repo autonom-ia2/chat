@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import Input from 'dashboard/components-next/input/Input.vue';
 import PhoneNumberInput from 'dashboard/components-next/phonenumberinput/PhoneNumberInput.vue';
 import CrmCardRelationshipPanel from '../../CrmCardRelationshipPanel.vue';
+import CardPessoaBasica from './CardPessoaBasica.vue';
 import { useCardContato } from '../useCardContato';
 import { textosCom } from '../textos';
 
@@ -19,6 +20,8 @@ const props = defineProps({
   podeRegistros: { type: Boolean, default: false },
   // 'pessoa' (tela Contato) ou 'empresa' (tela Empresa).
   parte: { type: String, default: 'pessoa' },
+  // Sem ver contatos (#1849), só nome, telefone e e-mail da pessoa do card.
+  podeVerContatos: { type: Boolean, default: true },
 });
 const emit = defineEmits(['guard', 'mudou']);
 
@@ -80,7 +83,9 @@ defineExpose({
     class="flex flex-col gap-4 [&_button]:min-h-11"
     :data-tela="parte === 'empresa' ? 'empresa' : 'contato'"
   >
+    <CardPessoaBasica v-if="!podeVerContatos" :contato="card.contact" />
     <CrmCardRelationshipPanel
+      v-else
       ref="painel"
       :key="`${route.params.accountId}:${card.id}`"
       :card="card"

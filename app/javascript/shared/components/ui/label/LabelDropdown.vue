@@ -2,9 +2,9 @@
 import LabelDropdownItem from './LabelDropdownItem.vue';
 import Hotkey from 'dashboard/components/base/Hotkey.vue';
 import AddLabelModal from 'dashboard/routes/dashboard/settings/labels/AddLabel.vue';
-import { picoSearch } from '@chatwoot/pico-search';
 import { sanitizeLabel } from 'shared/helpers/sanitizeData';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 
 export default {
   components: {
@@ -29,6 +29,17 @@ export default {
     },
   },
   emits: ['update', 'add', 'remove'],
+  setup() {
+    // Nome livre das etiquetas (#1823): busca e "Criar etiqueta" pelos dois nomes.
+    const { ligada, buscar, etiquetaDoTexto } = useNomeDaEtiqueta();
+    return {
+      nomeLivreLigado: ligada,
+      buscarEtiquetas: buscar,
+      etiquetaDoTexto,
+      // Tecla do atalho (não é texto traduzível); em variável para o gate de i18n.
+      atalhoDoSeletor: 'L',
+    };
+  },
 
   data() {
     return {
@@ -46,7 +57,7 @@ export default {
     filteredActiveLabels() {
       if (!this.search) return this.accountLabels;
 
-      return picoSearch(this.accountLabels, this.search, ['title']);
+      return this.buscarEtiquetas(this.accountLabels, this.search);
     },
 
     noResult() {
@@ -54,16 +65,24 @@ export default {
     },
 
     hasExactMatchInResults() {
+      // Flag ligada: "aguardando retorno", "Aguardando retorno" e
+      // "aguardando_retorno" são a mesma etiqueta, e o nome guardado também conta.
+      if (this.nomeLivreLigado) {
+        return !!this.etiquetaDoTexto(this.accountLabels, this.search);
+      }
       return this.filteredActiveLabels.some(
         label => label.title === this.search
       );
     },
 
     shouldShowCreate() {
+      if (this.nomeLivreLigado && this.hasExactMatchInResults) return false;
       return this.allowCreation && this.filteredActiveLabels.length < 3;
     },
 
     parsedSearch() {
+      // Flag ligada: o formulário aceita espaço e converte no envio (#1823).
+      if (this.nomeLivreLigado) return this.search.trim();
       return sanitizeLabel(this.search);
     },
   },
@@ -119,7 +138,7 @@ export default {
       <Hotkey
         custom-class="border border-solid text-n-slate-12 bg-n-slate-2 text-xxs border-n-strong flex-shrink-0"
       >
-        {{ 'L' }}
+        {{ atalhoDoSeletor }}
       </Hotkey>
     </div>
     <div class="flex-auto flex-grow-0 flex-shrink-0 mb-2 max-h-8">

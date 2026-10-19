@@ -75,6 +75,21 @@ class Rack::Attack
     req.ip if req.get? && req.path.include?('/conversa_canal/lugares')
   end
 
+  # Ditado da resposta de e-mail (#1786): cada um é uma transcrição paga na IA da conta.
+  throttle('conversa_canal_ditados/ip', limit: 20, period: 1.minute) do |req|
+    req.ip if req.post? && req.path.include?('/conversa_canal/ditados')
+  end
+
+  # Traduzir mensagem: sem o Google, o e-mail novo (#1786) traduz pela IA da conta, uma chamada paga por pedido.
+  throttle('conversa_canal_traducoes/ip', limit: 30, period: 1.minute) do |req|
+    req.ip if req.post? && req.path.include?('/messages/') && req.path.end_with?('/translate')
+  end
+
+  # Abrir um modelo de e-mail (#1786) pode chamar a IA da conta para sugerir os campos. A prévia (miniatura) não chama.
+  throttle('conversa_canal_modelos_de_email/ip', limit: 30, period: 1.minute) do |req|
+    req.ip if req.get? && req.path.include?('/conversa_canal/modelos_de_email/') && !req.path.end_with?('/previa')
+  end
+
   # Reagir e encaminhar (#1702) saem no WhatsApp do cliente: uma pessoa no painel não passa disso; script com token, sim.
   throttle('conversa_canal_acoes/ip', limit: 60, period: 1.minute) do |req|
     req.ip if req.post? && (req.path.include?('/conversa_canal/reacoes') || req.path.include?('/conversa_canal/encaminhamentos'))
@@ -108,6 +123,11 @@ class Rack::Attack
 
   throttle('public_google_conversions/ip', limit: 60, period: 1.minute) do |req|
     req.ip if req.get? && req.path.start_with?('/google_conversions/')
+  end
+
+  # Browser errors (#1841): a loop in a broken page must not flood the log.
+  throttle('client_errors/ip', limit: 30, period: 1.minute) do |req|
+    req.ip if req.post? && req.path_without_extensions.end_with?('/client_errors')
   end
 
   ###-----------------------------------------------###

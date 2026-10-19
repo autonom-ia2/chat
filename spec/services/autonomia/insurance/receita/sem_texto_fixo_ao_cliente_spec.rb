@@ -19,6 +19,9 @@ module TextoAoCliente
   PONTOS = {
     'app/jobs/autonomia/agents/operate/chunked_delivery_job.rb::Autonomia::Agents::Operate::ChunkedDeliveryJob#build_message!' =>
       { tipo: :fala_do_modelo, motivo: 'cada pedaço da resposta do modelo, fatiada para o WhatsApp' },
+    'app/services/autonomia/agents/interacao.rb::Autonomia::Agents::Interacao#sai_o_formato?' =>
+      { tipo: :outro, motivo: 'mensagem montada só em memória, nunca gravada nem enviada: confere se as opções ou o link ' \
+                              'da resposta do modelo podem sair no formato (#1479)' },
     'app/services/autonomia/agents/nota_do_encaminhamento.rb::Autonomia::Agents::NotaDoEncaminhamento#criar' =>
       { tipo: :nota_privada, motivo: 'o que a IA não conseguiu antes de encaminhar, para a equipe' },
     'app/services/autonomia/agents/operate/aviso_ao_atendente.rb::Autonomia::Agents::Operate::AvisoAoAtendente#postar_nota' =>
@@ -32,6 +35,8 @@ module TextoAoCliente
       { tipo: :anexo_sem_texto, motivo: 'o áudio sintetizado da resposta do modelo, sem texto junto' },
     'app/services/autonomia/agents/operate/responder.rb::Autonomia::Agents::Operate::Responder#post_reply!' =>
       { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno' },
+    'app/services/autonomia/agents/operate/responder_a_passagem.rb::Autonomia::Agents::Operate::ResponderAPassagem#post_reply!' =>
+      { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno aberto pela passagem de uma pessoa (#1630)' },
     'app/services/autonomia/agents/operate/responder_ao_evento.rb::Autonomia::Agents::Operate::ResponderAoEvento#post_reply!' =>
       { tipo: :fala_do_modelo, motivo: 'a resposta do modelo no turno acionado por um evento da cotação' },
     'app/services/autonomia/agents/tools/async_publisher.rb::Autonomia::Agents::Tools::AsyncPublisher#build_message!' =>

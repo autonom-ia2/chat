@@ -226,7 +226,7 @@ describe('CalendarioOuro', () => {
 
     const secao = () => wrapper.find('[data-secao="atrasados"]');
     expect(secao().text()).not.toContain('Coisa antiga');
-    // "Passar tudo" só leva o que a pessoa está vendo.
+    // "Passar os meus" só leva o que está à vista.
     await wrapper.find('[data-adiar-todos]').trigger('click');
     expect(
       wrapper.emitted('adiarAtrasados')[0][0].eventos.map(e => e.id)
@@ -259,7 +259,7 @@ describe('CalendarioOuro', () => {
     );
   });
 
-  it('"Passar tudo para amanhã" leva os atrasados para amanhã, 09:00', async () => {
+  it('"Passar os meus para amanhã" leva os atrasados para amanhã, 09:00', async () => {
     const wrapper = montar();
     await flushPromises();
     await wrapper.find('[data-adiar-todos]').trigger('click');
@@ -267,6 +267,74 @@ describe('CalendarioOuro', () => {
     const [carga] = wrapper.emitted('adiarAtrasados')[0];
     expect(carga.eventos.map(e => e.id)).toEqual(['follow_up_1']);
     expect(carga.quando).toBe('2026-10-15T12:00:00.000Z');
+  });
+
+  // #1855: o aviso de um envio ao cliente que falhou aparece em "Ficou para
+  // trás", mas o lote não o leva: só lembrete de uma pessoa passa para amanhã.
+  const AVISO_DE_ENVIO = {
+    id: 'follow_up_9',
+    event_type: 'follow_up_reminder_only',
+    title: 'Retorno não saiu',
+    starts_at: '2026-10-13T15:00:00Z',
+    status: 'overdue',
+    assignee_id: 1,
+    automatic_send: true,
+  };
+
+  it('"Passar os meus para amanhã" deixa de fora o aviso de envio ao cliente', async () => {
+    const wrapper = montar({ events: [...EVENTOS, AVISO_DE_ENVIO] });
+    await flushPromises();
+    expect(wrapper.find('[data-secao="atrasados"]').text()).toContain(
+      'Retorno não saiu'
+    );
+
+    await wrapper.find('[data-adiar-todos]').trigger('click');
+
+    const [carga] = wrapper.emitted('adiarAtrasados')[0];
+    expect(carga.eventos.map(e => e.id)).toEqual(['follow_up_1']);
+  });
+
+  it('sem lembrete para passar, o "Passar os meus" não aparece', async () => {
+    const wrapper = montar({ events: [AVISO_DE_ENVIO] });
+    await flushPromises();
+
+    expect(wrapper.find('[data-secao="atrasados"]').exists()).toBe(true);
+    expect(wrapper.find('[data-adiar-todos]').exists()).toBe(false);
+  });
+
+  // Opção 2 do #1855: o administrador vê a equipe, mas o lote só leva os dele.
+  const DA_EQUIPE = {
+    id: 'follow_up_7',
+    event_type: 'follow_up_reminder_only',
+    title: 'Lembrete da Paula',
+    starts_at: '2026-10-13T14:00:00Z',
+    status: 'overdue',
+    assignee_id: 2,
+  };
+
+  it('administrador vê o atrasado da equipe, mas "Passar os meus" só leva os dele', async () => {
+    const wrapper = montar({ events: [...EVENTOS, DA_EQUIPE] });
+    await flushPromises();
+    expect(wrapper.find('[data-secao="atrasados"]').text()).toContain(
+      'Lembrete da Paula'
+    );
+    expect(wrapper.find('[data-adiar-todos]').text()).toBe(
+      'CRM_CALENDARIO.DIA.ADIAR_MEUS'
+    );
+
+    await wrapper.find('[data-adiar-todos]').trigger('click');
+
+    const [carga] = wrapper.emitted('adiarAtrasados')[0];
+    expect(carga.eventos.map(e => e.id)).toEqual(['follow_up_1']);
+  });
+
+  it('sem atrasado da própria pessoa, o "Passar os meus" não aparece', async () => {
+    const semDono = { ...DA_EQUIPE, id: 'follow_up_6', assignee_id: null };
+    const wrapper = montar({ events: [DA_EQUIPE, semDono] });
+    await flushPromises();
+
+    expect(wrapper.find('[data-secao="atrasados"]').exists()).toBe(true);
+    expect(wrapper.find('[data-adiar-todos]').exists()).toBe(false);
   });
 
   it('a ação da linha abre a conversa pelo número dela', async () => {
@@ -304,6 +372,42 @@ describe('CalendarioOuro', () => {
     ]);
     com.findComponent(NovoStub).vm.$emit('escolher', 'mensagem');
     expect(com.emitted('novo')[0][0].type).toBe('whatsapp');
+  });
+
+  // #1883: "retornos atrasados da equipe" do Números, pelo link.
+  it('o filtro do link abre o Mostrar ligado e filtra a lista', async () => {
+    const agente = montar({
+      ehAdmin: false,
+      funil: 4,
+      filtroInicial: { quem: 'todos', tipos: ['lembrete'] },
+    });
+    await flushPromises();
+
+    expect(agente.find('[data-mostrar]').exists()).toBe(true);
+    expect(agente.find('[data-quem="todos"]').attributes('aria-pressed')).toBe(
+      'true'
+    );
+    expect(
+      agente.find('[data-mostrar-tipo="fechar"]').attributes('aria-checked')
+    ).toBe('false');
+    expect(
+      agente.find('[data-mostrar-tipo="lembrete"]').attributes('aria-checked')
+    ).toBe('true');
+    expect(agente.text()).toContain('Da Paula');
+    expect(agente.text()).not.toContain('Plano anual');
+    // Quem (equipe, fora do padrão do agente), o tipo desligado e o funil.
+    expect(agente.find('[data-mostrar-abrir]').text()).toContain('3');
+
+    // Desligar no próprio controle volta ao normal.
+    await agente.find('[data-mostrar-tipo="fechar"]').trigger('click');
+    expect(agente.text()).toContain('Plano anual');
+  });
+
+  it('sem filtro no link, o Mostrar fica fechado e nada muda', async () => {
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-mostrar]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Plano anual');
   });
 
   it('sem WhatsApp conectado, "Mensagens marcadas" não aparece no Mostrar', async () => {

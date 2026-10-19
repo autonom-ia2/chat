@@ -94,6 +94,12 @@ const etapasDo = (chave, total) =>
     (_, indice) => `${FUNIL}.MODELOS.${chave}.E${indice + 1}`
   );
 
+// #1802 — `camadas`: o modelo só aparece para a conta com uma dessas camadas do
+// pacote (camadasDoPacote); sem o campo, aparece para todas. `sucesso` e
+// `falha` trazem o nome dos desfechos (MODELOS.<X>.SUCESSO e .FALHA), que vai
+// para metadata.outcome_labels ao criar o funil.
+const CORRETORA = ['seguros/corretora'];
+
 export const MODELOS = [
   {
     chave: 'VENDAS',
@@ -103,6 +109,49 @@ export const MODELOS = [
     venda: true,
     etapas: etapasDo('VENDAS', 5),
     ideias: ['PRECO', 'COMPRAR', 'COMO_FUNCIONA'],
+  },
+  {
+    chave: 'RENOVACAO',
+    tipo: 'VENDER',
+    icone: 'i-lucide-refresh-cw',
+    tom: 'bg-n-blue-3 text-n-blue-11',
+    venda: true,
+    camadas: CORRETORA,
+    etapas: etapasDo('RENOVACAO', 5),
+    // Termina em "Renovou / Não renovou".
+    sucesso: true,
+    falha: true,
+    ideias: ['VAI_VENCER', 'RENOVAR', 'AVISO_RENOVACAO'],
+  },
+  // Os dois de Atender da corretora vêm antes dos de todos: são o dia a dia
+  // dela, e o primeiro do tipo já chega marcado.
+  {
+    chave: 'SINISTRO',
+    tipo: 'ATENDER',
+    icone: 'i-lucide-shield-alert',
+    tom: 'bg-n-ruby-3 text-n-ruby-11',
+    venda: false,
+    camadas: CORRETORA,
+    etapas: etapasDo('SINISTRO', 4),
+    categorias: CATEGORIAS,
+    // Traz o nome do sucesso, "Encerrado"; o outro desfecho fica com o nome
+    // padrão do Atender.
+    sucesso: true,
+    ideias: ['BATEU', 'ROUBO', 'ACIONAR'],
+  },
+  {
+    chave: 'ENDOSSO',
+    tipo: 'ATENDER',
+    icone: 'i-lucide-file-pen-line',
+    tom: 'bg-n-violet-3 text-n-violet-11',
+    venda: false,
+    camadas: CORRETORA,
+    etapas: etapasDo('ENDOSSO', 4),
+    categorias: CATEGORIAS,
+    // Traz o nome do sucesso, "Feito"; o outro desfecho fica com o nome
+    // padrão do Atender.
+    sucesso: true,
+    ideias: ['TROCOU_CARRO', 'MUDOU_ENDERECO', 'INCLUIR_MOTORISTA'],
   },
   {
     chave: 'ATENDIMENTO',
@@ -147,6 +196,15 @@ export const MODELOS = [
     ideias: ['MARCAR', 'REMARCAR', 'HORARIOS'],
   },
 ];
+// #1802 — os modelos da corretora (os que têm camada). Só o funil que nasceu
+// de um deles usa o nome próprio do desfecho no diálogo de "não deu certo" e
+// no aviso depois de marcar; os outros funis ficam com o texto de sempre.
+export const MODELOS_DA_CORRETORA = MODELOS.filter(
+  modelo => modelo.camadas
+).map(modelo => modelo.chave);
+export const usaNomeDoDesfecho = funil =>
+  MODELOS_DA_CORRETORA.includes(funil?.metadata?.template);
+
 // #1548 (passo 2) — variante do modelo por tipo de conta: a própria lista de
 // categorias. Chave = camada do pacote da F1 (#1550); conta sem pacote (ou com
 // AUTONOMIA_PACOTES_ENABLED desligado) não tem camada e fica com o modelo de
@@ -160,11 +218,20 @@ export const categoriasDoModelo = (modelo, pacote) => {
   return camada ? VARIANTES[camada][modelo.chave] : modelo.categorias;
 };
 
-export const modelosDoTipo = tipo =>
-  MODELOS.filter(modelo => modelo.tipo === tipo);
+// #1802 — os modelos do tipo que a conta vê: os de todas as contas e os da
+// camada dela. Conta sem pacote vê a lista de sempre.
+const valeNaConta = (modelo, camadas) =>
+  !modelo.camadas || modelo.camadas.some(camada => camadas.includes(camada));
 
-// O modelo de um funil salvo (metadata.template); sem ele (funis de antes do
-// #1498), o primeiro modelo do tipo.
+export const modelosDoTipo = (tipo, pacote) => {
+  const camadas = camadasDoPacote(pacote);
+  return MODELOS.filter(
+    modelo => modelo.tipo === tipo && valeNaConta(modelo, camadas)
+  );
+};
+
+// O modelo de um funil salvo (metadata.template), mesmo um da camada; sem ele
+// (funis de antes do #1498), o primeiro modelo do tipo que vale para todas.
 export const modeloDoFunil = funil => {
   const tipo = tipoDaVenda(funil?.counts_as_sale !== false);
   const salvo = MODELOS.find(

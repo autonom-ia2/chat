@@ -7,6 +7,8 @@ json.message_type message.message_type_before_type_cast
 json.content_type message.content_type
 json.status message.status
 json.content_attributes message.content_attributes
+# chat#1709: apagar no painel apaga também no WhatsApp do cliente ("Apagar para todos").
+json.c2y_revocable Waha::RichNative::Revocable.for(message)
 # #1702: qual modelo de WhatsApp a mensagem usou (nome e idioma), para a conversa desenhar os botões dele.
 # A jornada de campanha só grava o nome (campaign_template_name): sem idioma, vale o primeiro modelo com esse nome.
 # #1717: e a foto do que foi enviado (`enviado`, versão 1); na campanha ela fica em campaign_template_enviado.

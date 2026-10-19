@@ -1,0 +1,31 @@
+{
+  "TELA_INICIAL": {
+    "TEMPO": {
+      "MINUTOS": "1 minute | {count} minutes",
+      "HORAS": "1 hour | {count} hours",
+      "DIAS": "1 day | {count} days"
+    },
+    "ABRIR_PROXIMA": "Open the next one",
+    "PROXIMA_ESPERA": "{nome} has been waiting for {tempo}",
+    "PROXIMA_ESPERA_SEM_NOME": "Waiting for {tempo}",
+    "TUDO_EM_DIA": "All caught up",
+    "VER_SEM_RESPONSAVEL": "See unassigned",
+    "VER_TODAS": "See all conversations",
+    "RESUMO": {
+      "TITULO": "Today at a glance",
+      "COM_VOCE": "No conversations with you | 1 conversation with you | {count} conversations with you",
+      "CARREGANDO": "–",
+      "NUMEROS": {
+        "ESPERAM": "Waiting for you",
+        "SEM_RESPONSAVEL": "Unassigned",
+        "FORA_DO_PRAZO": "Past due"
+      },
+      "ERRO": "Could not load the numbers right now.",
+      "TENTAR_DE_NOVO": "Try again",
+      "EQUIPE": {
+        "ESPERAM": "Team: {count} waiting",
+        "FORA_DO_PRAZO": "{count} past due"
+      }
+    }
+  }
+}

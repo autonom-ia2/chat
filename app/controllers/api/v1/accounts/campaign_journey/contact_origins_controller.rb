@@ -7,7 +7,7 @@ class Api::V1::Accounts::CampaignJourney::ContactOriginsController < Api::V1::Ac
 
   def show
     contact = Current.account.contacts.find(params[:id])
-    authorize contact, :show?
+    authorize contact, :origins?
 
     render json: { payload: { marks: marks_for(contact), audiences: audiences_for(contact) } }
   end

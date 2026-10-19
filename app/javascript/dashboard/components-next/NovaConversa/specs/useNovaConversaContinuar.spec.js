@@ -19,6 +19,9 @@ vi.mock('dashboard/composables/store', () => ({
       getCurrentAccountId: 7,
       'globalConfig/get': { directUploadsEnabled: false },
       getMessageSignature: '',
+      // #1809: caixa sem a conversa de e-mail nova (sem histórico).
+      'inboxes/getInbox': () => ({}),
+      'accounts/isFeatureEnabledonAccount': () => false,
     };
     return ref(getters[nome]);
   },
@@ -44,6 +47,9 @@ const montar = () => {
     tipo: ref(TIPOS.EMAIL),
     esperando: ref(false),
     oculta: ref(false),
+    assunto: ref(''),
+    ultimoEmail: ref(null),
+    carregar: vi.fn(),
   };
   return {
     contato,

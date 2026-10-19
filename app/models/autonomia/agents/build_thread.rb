@@ -146,13 +146,13 @@ module Autonomia
         atual = state || {}
         return false unless chaves.any? { |chave| atual.key?(chave) }
 
-        guarded_update(token, state: atual.except(*chaves))
+        guarded_update(token, {}, tirar: chaves)
       end
 
       # #1428 — grava chaves no `state` sem mudar o status, guardado pelo token. Toca o updated_at: o turno longo do
       # ajuste (conferência e correção) não passa por preso.
       def guardar_no_estado!(token, chaves)
-        guarded_update(token, state: (state || {}).merge(chaves))
+        guarded_update(token, {}, juntar: chaves)
       end
 
       # E3 — janela de "geração presa": o SubmitJob é síncrono e leva segundos; se a thread ficou
@@ -200,8 +200,9 @@ module Autonomia
         # reemite — em especial `no_materials_declared` (gravada uma única vez pelo controller).
         # Sem o merge, a 1ª geração após a declaração "não tenho material" zerava a flag e o portão
         # de materiais voltava a travar o fechamento da instrução (caminho feliz preso).
-        new_state = (self.state || {}).merge(state)
-        guarded_update(token, status: self.class.statuses[:ready], state: new_state)
+        # #1428 (W4): o merge é no banco, no próprio UPDATE, sobre o state de lá (não a cópia em memória): o que outro
+        # caminho gravou no meio do turno (a prova, a marca do Desfazer) sobrevive. Chave a apagar vai como nil (null).
+        guarded_update(token, { status: self.class.statuses[:ready] }, juntar: state)
       end
 
       # FALHA NUNCA SILENCIOSA: além do código do erro, guardamos QUAIS campos reprovaram na validação
@@ -209,14 +210,14 @@ module Autonomia
       # troca o genérico "envie outra mensagem" por uma orientação real. `fields` são nomes de coluna,
       # nunca conteúdo.
       def mark_failed!(token, message, fields: [])
-        # #1428: o ajuste em curso (piloto) acaba com a falha; a chave só existe no piloto.
+        # #1428: o ajuste em curso e as opções da pergunta (piloto) acabam com a falha; as chaves só existem no piloto.
         atual = self.state || {}
-        new_state = atual.merge(%w[ajuste_em_curso nao_pedido_anterior].select { |chave| atual.key?(chave) }.index_with(nil)).merge(
+        falha = %w[ajuste_em_curso nao_pedido_anterior opcoes_de_resposta].select { |chave| atual.key?(chave) }.index_with(nil).merge(
           'error' => message.to_s.truncate(500),
           'error_fields' => Array(fields).map(&:to_s).uniq,
           'applied' => false
         )
-        guarded_update(token, status: self.class.statuses[:failed], state: new_state)
+        guarded_update(token, { status: self.class.statuses[:failed] }, juntar: falha)
       end
 
       # push de uma mensagem no jsonb `messages` ([{role, content, at}]). Sem token-guard: é a
@@ -254,13 +255,22 @@ module Autonomia
 
       # Escreve só se a geração identificada por `token` ainda for a ativa e ainda processing.
       # update_all atômico fecha a janela entre checagem e escrita. Retorna true se ganhou (1 linha).
-      def guarded_update(token, attrs)
+      # #1428 (W4): `juntar` (chaves a gravar, nil vira null) e `tirar` (chaves a apagar) mexem no state DO BANCO, no
+      # mesmo UPDATE: nunca regravam o state inteiro a partir da cópia em memória.
+      def guarded_update(token, attrs, juntar: nil, tirar: nil)
         return false if token.blank?
 
-        rows = self.class.where(id: id, build_token: token, status: self.class.statuses[:processing])
-                   .update_all(attrs.merge(updated_at: Time.current))
+        sets = [self.class.sanitize_sql_for_assignment(attrs.merge(updated_at: Time.current))]
+        sets << expressao_do_estado(juntar, tirar) if juntar || tirar
+        rows = self.class.where(id: id, build_token: token, status: self.class.statuses[:processing]).update_all(sets.join(', '))
         reload if rows.positive?
         rows.positive?
+      end
+
+      # `coalesce(state, {}) - ARRAY[tirar] || juntar`, numa só sanitização (nenhum valor é relido como marcador).
+      def expressao_do_estado(juntar, tirar)
+        self.class.sanitize_sql_array(["state = (coalesce(state, '{}'::jsonb) - ?::text[]) || ?::jsonb",
+                                       "{#{Array(tirar).map { |chave| chave.to_s.to_json }.join(',')}}", juntar.to_h.to_json])
       end
     end
   end

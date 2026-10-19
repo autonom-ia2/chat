@@ -14,6 +14,11 @@ module Autonomia
       # e Captain::MessageReport (respostas marcadas como erradas).
       OUTCOME_METRICS = %w[handled resolved_without_human handed_off reopened wrong_replies].freeze
 
+      # #1709: os turnos em que a IA ficou calada de propósito (mensagem do cliente sem conteúdo para responder). Não são
+      # handoff (a conversa não foi passada a ninguém) e por isso não entram em top_handoff_reasons: têm lista própria.
+      # Tipo do evento (skipped_<motivo>) => motivo.
+      SILENCE_TYPES = %w[mensagem_sem_suporte mensagem_apagada escolha_retirada].index_by { |reason| "skipped_#{reason}" }.freeze
+
       INSIGHT_MIN_EVENTS = 10
       HIGH_HANDOFF_RATE  = 0.4
       LOW_KNOWLEDGE_RATE = 0.3
@@ -42,6 +47,7 @@ module Autonomia
           avg_confidence: avg_confidence,
           knowledge_answer_rate: knowledge_answer_rate,
           top_handoff_reasons: top_handoff_reasons,
+          silences: silences,
           timeline: timeline,
           insight: insight,
           outcomes: outcomes
@@ -128,6 +134,12 @@ module Autonomia
               .map { |reason, count| { reason: reason, count: count } }
               .sort_by { |row| -row[:count] }
               .first(TOP_REASONS_LIMIT)
+      end
+
+      # [{ reason:, count: }] dos silêncios de propósito (SILENCE_TYPES), só os que aconteceram, do mais frequente.
+      def silences
+        SILENCE_TYPES.filter_map { |type, reason| { reason: reason, count: counts_by_type[type].to_i } if counts_by_type[type].to_i.positive? }
+                     .sort_by { |row| -row[:count] }
       end
 
       def curate_reason(reason)

@@ -40,7 +40,7 @@ class Crm::Ai::ClassificacaoConjunta
   end
 
   def perform
-    response = @client.create(model: @model, instructions: instructions, input: entrada.to_json, schema: memoria? ? SCHEMA_MEMORIA : SCHEMA,
+    response = @client.create(model: @model, instructions: instructions, input: entrada.to_json, schema: esquema,
                               reasoning_effort: @reasoning_effort)
     por_card(JSON.parse(response[:text]), response)
   end
@@ -49,8 +49,16 @@ class Crm::Ai::ClassificacaoConjunta
 
   def instructions
     Crm::Ai::ClassifierPrompt.para_varios(@classificadores.flat_map { |classificador| classificador.pacote[:eligible_agents] },
-                                          memoria: memoria?)
+                                          memoria: memoria?, email_autoria: @classificadores.first.email_autoria?)
   end
+
+  # #1828: com a flag `email_autoria`, `saida_da_copia` no topo (é da conversa, não de um card); sem ela, o de sempre.
+  def esquema
+    base = memoria? ? SCHEMA_MEMORIA : SCHEMA
+    email_autoria? ? Crm::Email::SaidaDaCopia.com_saida(base) : base
+  end
+
+  def email_autoria? = @classificadores.first.email_autoria?
 
   # A conversa e os ids locais (m1..mN) saem do primeiro classificador: são os dele que vão ao modelo. O agendamento é
   # o de cada card.
@@ -83,7 +91,7 @@ class Crm::Ai::ClassificacaoConjunta
 
       classificacoes[item['card_id']] = item.with_indifferent_access.merge(
         model_used: @model, usage: response[:usage], response_id: response[:response_id]
-      ).merge(memoria_de(item['card_id']))
+      ).merge(memoria_de(item['card_id'])).merge(resposta.slice(Crm::Email::SaidaDaCopia::CAMPO))
     end
   end
 end

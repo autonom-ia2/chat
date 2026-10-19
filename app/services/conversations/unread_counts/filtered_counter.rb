@@ -170,11 +170,8 @@ class Conversations::UnreadCounts::FilteredCounter
   def delete_filter_count!(filter_id) = store.delete_filter_count!(account_id: account.id, filter_id: filter_id).then { nil }
 
   def unread_open_accessible_conversations
-    @unread_open_accessible_conversations ||= Conversations::PermissionFilterService.new(
-      unread_conversations.open,
-      user,
-      account
-    ).perform
+    @unread_open_accessible_conversations ||= Conversations::PermissionFilterService
+                                              .new(unread_conversations.open, user, account, for_reading: true).perform
   end
 
   def unread_conversations

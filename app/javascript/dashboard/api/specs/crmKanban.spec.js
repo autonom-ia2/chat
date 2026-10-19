@@ -206,6 +206,21 @@ describe('#CrmKanbanAPI', () => {
       '/api/v1/accounts/85/crm/follow_ups/5/dismiss_reminder'
     );
 
+    crmKanban.rescheduleFollowUp(5, '2026-10-15T12:00:00.000Z');
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/follow_ups/5/reschedule',
+      { due_at: '2026-10-15T12:00:00.000Z' }
+    );
+
+    // #1855: o lote do calendário pede só lembretes.
+    crmKanban.rescheduleFollowUp(5, '2026-10-15T12:00:00.000Z', {
+      remindersOnly: true,
+    });
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/follow_ups/5/reschedule',
+      { due_at: '2026-10-15T12:00:00.000Z', reminders_only: true }
+    );
+
     crmKanban.getCalendarEvents({ pipeline_id: 7 });
     expect(axiosMock.get).toHaveBeenCalledWith(
       '/api/v1/accounts/85/crm/calendar/events',

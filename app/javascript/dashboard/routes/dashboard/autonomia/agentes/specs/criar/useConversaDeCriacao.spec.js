@@ -269,6 +269,36 @@ describe('useConversaDeCriacao', () => {
     expect(conversa.estadoDoMaterial(material())).toBe('atencao');
   });
 
+  it('with Fase 2, a material is only ready after the review approves it (#1426)', async () => {
+    prepararStore({
+      getCurrentAccountId: 1,
+      'accounts/getAccount': () => ({ autonomia_agents_fase2: true }),
+    });
+    comThread();
+    store.dispatch.mockImplementation(async acao =>
+      acao === 'autonomiaSources/create' ? { id: 31 } : null
+    );
+    const { conversa } = montar();
+    await conversa.enviar({ anexos: [arquivo('t.pdf', 'application/pdf')] });
+    await flushPromises();
+    const material = () => conversa.materiais.value[0];
+
+    store.state['autonomiaSources/getSources'] = [
+      { id: 31, status: 'ready', review: { status: 'needs_review' } },
+    ];
+    expect(conversa.estadoDoMaterial(material())).toBe('lendo');
+    store.state['autonomiaSources/getSources'] = [
+      {
+        id: 31,
+        status: 'ready',
+        review: { status: 'accepted', reviewed_at: '2026-10-19T10:00:00Z' },
+      },
+    ];
+    expect(conversa.estadoDoMaterial(material())).toBe('pronto');
+    store.state['autonomiaSources/getSources'] = [{ id: 31, status: 'failed' }];
+    expect(conversa.estadoDoMaterial(material())).toBe('atencao');
+  });
+
   it('keeps the last known state of a material while the knowledge base reloads (no blinking)', async () => {
     comThread();
     store.dispatch.mockImplementation(async acao =>

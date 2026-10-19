@@ -5,6 +5,9 @@ import ConversationAction from './ConversationAction.vue';
 
 const canView = ref(true);
 const canManage = ref(false);
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({ canViewRelationshipRecords: ref(true) }),
+}));
 vi.mock('dashboard/routes/dashboard/crm/composables/useCrmPermissions', () => ({
   useCrmPermissions: () => ({ canViewCrm: canView, canManageCards: canManage }),
 }));

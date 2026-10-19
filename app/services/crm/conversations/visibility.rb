@@ -5,6 +5,13 @@ class Crm::Conversations::Visibility
     @account_user = account_user
   end
 
+  # #1849 (D7): quem não vê a base de contatos recebe o contato do card enxuto, sem empresa, e não filtra por empresa.
+  def full_contact?
+    return @full_contact if defined?(@full_contact)
+
+    @full_contact = Crm::Cards::ContactReading.full?(user: @user, account_user: @account_user)
+  end
+
   # Acesso por funil (#1148, parte C): o CRM passa pela mesma regra da lista de conversas.
   def visible?(conversation)
     return false unless base_visible?(conversation)

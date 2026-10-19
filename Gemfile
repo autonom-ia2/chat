@@ -222,12 +222,10 @@ gem 'firecrawl-sdk', '~> 1.0', require: 'firecrawl'
 gem 'pdf-reader', '~> 2.12'
 gem 'roo', '~> 2.10'
 gem 'rubyzip', '~> 2.3', require: 'zip' # docx (Zip::File) + dep do roo
-# OCR de PDF escaneado (sem camada de texto): rtesseract (wrapper do binário tesseract) +
-# mini_magick (wrapper imagemagick p/ rasterizar páginas). Ruby-puro; dependem de binários de
-# sistema (tesseract-ocr, tesseract-ocr-data-por, poppler-utils) instalados na imagem — o
-# processador degrada com segurança se o binário faltar em runtime.
+# OCR de PDF escaneado (sem camada de texto) e da foto da criação: os binários imagemagick (Processors::Rasterizacao) e
+# tesseract (Processors::Ocr) são chamados direto, com limite e tempo máximo; vêm da imagem (docker/Dockerfile). Sem o
+# binário, o OCR falha com segurança. mini_magick já não é chamado pelo OCR; segue no bundle pelo image_processing.
 gem 'mini_magick', '~> 4.12'
-gem 'rtesseract', '~> 3.1'
 
 ##-- autonomia: identidade visual importada do site (#1076) e importar modelo de e-mail (#1099) --##
 # Lê as folhas de estilo já baixadas pelo SafeFetch (cores, fontes) e leva as regras de <style> para dentro das tags
