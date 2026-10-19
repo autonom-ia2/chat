@@ -29,14 +29,15 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
 
   # A IA dublada guarda o que recebeu (para conferir o contexto e o histórico) e responde `resposta_da_ia`.
   # `durante` roda no meio da chamada (quem escreve durante a IA); `passar_a_humanos` é o pedido de handoff do modelo.
-  def ia_grava!(texto = nil, durante: nil, passar_a_humanos: false)
+  def ia_grava!(texto = nil, durante: nil, passar_a_humanos: false, interacao: nil)
     allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
       pedidos << kwargs
       resposta = instance_double(Autonomia::Agents::Answerer)
       allow(resposta).to receive(:answer) do
         durante&.call
         Autonomia::Agents::AnswerResult.new(reply: texto || resposta_da_ia, confidence: 0.9, used_knowledge: [],
-                                            handoff: { should: passar_a_humanos, reason: nil }, answered_from_knowledge: false)
+                                            handoff: { should: passar_a_humanos, reason: nil }, answered_from_knowledge: false,
+                                            interacao: interacao)
       end
       resposta
     end
@@ -108,6 +109,28 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
       expect(respostas).to be_empty
       expect(silencios(linhas, 'sinal').size).to eq(1)
       expect(linhas.grep(/sinal_na_passagem conv=#{conversation.id}/).size).to eq(1)
+    end
+
+    # #1479 PR-C: o turno da passagem não tem mensagem nova do cliente. Um toque antigo numa oferta do agente, já
+    # respondido, não vira o dado `opcao_tocada` neste turno.
+    it 'toque antigo numa oferta do agente, já respondido: o turno da passagem não leva o dado do toque' do
+      oferta = create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing,
+                                sender: espelho_area, content: 'Qual período?',
+                                content_attributes: { 'autonomia_agent_id' => area.id,
+                                                      'rich_message' => { 'type' => 'options', 'header' => 'Agendamento',
+                                                                          'options' => [{ 'id' => 'tarde', 'title' => 'Tarde' }] } })
+      create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :incoming, content: 'Tarde',
+                       content_attributes: { 'in_reply_to' => oferta.id, 'selected_option' => { 'id' => 'tarde', 'title' => 'Tarde' } })
+      create(:message, account: account, conversation: conversation, inbox: inbox, message_type: :outgoing, sender: espelho_area,
+                       content: 'Anotado, à tarde.', content_attributes: { 'autonomia_agent_id' => area.id })
+      ana_passa!
+
+      linhas = linhas_do_log { rodar_turno! }
+
+      expect(pedidos).not_to be_empty
+      expect(contexto).to include('passou esta conversa para você')
+      expect(contexto).not_to include('opcao_tocada')
+      expect(linhas.grep(/opcao_tocada/)).to be_empty
     end
 
     it 'nota privada nunca vai ao modelo; o que a Ana escreveu em público vai, marcado como dela' do
@@ -410,9 +433,47 @@ RSpec.describe Autonomia::Agents::Operate::AoReceberPassagem, :um_turno do
     it 'nenhuma nativa de hoje passa a conversa (o padrão é não passar)' do
       expect(Autonomia::Agents::Tools::Registry.all.select(&:passa_a_conversa?)).to be_empty
     end
+  end
 
-    it 'post_reply! aceita o segundo argumento do #1479 (ignorado)' do
-      expect(Autonomia::Agents::Operate::ResponderAPassagem.instance_method(:post_reply!).arity).to eq(-2)
+  # #1479: o turno da passagem oferece opções e link pelas mesmas regras do turno normal (Responder#com_interacao), e a
+  # resposta continua ancorada na passagem.
+  describe 'opções no turno da passagem' do
+    let(:opcoes) do
+      Autonomia::Agents::Interacao.do_modelo(
+        { 'tipo' => 'opcoes', 'header' => 'Seguro', 'pergunta' => 'Qual cobertura?',
+          'opcoes' => [{ 'id' => 'basica', 'titulo' => 'Básica' }, { 'id' => 'completa', 'titulo' => 'Completa' }] }, enderecos: Set.new
+      )
+    end
+
+    before { ia_grava!('Sigo daqui com a sua cotação.', interacao: opcoes) }
+
+    def responde_na_passagem!
+      cliente_escreve('Quero cotar o seguro do meu Onix 2022.')
+      ana_passa!
+      rodar_turno!
+      respostas.sole
+    end
+
+    context 'when the inbox is WhatsApp Cloud' do
+      let(:inbox) do
+        create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false).inbox
+      end
+
+      it 'a resposta leva as opções e a chave da passagem' do
+        resposta = responde_na_passagem!
+
+        expect(resposta.content).to eq("Sigo daqui com a sua cotação.\n\nQual cobertura?")
+        expect(resposta.content_attributes['rich_message']).to include('type' => 'options', 'header' => 'Seguro')
+        expect(resposta.content_attributes['autonomia_passagem_id']).to eq(Crm::Passagens.ultima_aberta(conversation).id)
+      end
+    end
+
+    it 'chat do site: as opções saem numeradas no texto, sem rich_message, com a chave da passagem' do
+      resposta = responde_na_passagem!
+
+      expect(resposta.content).to eq("Sigo daqui com a sua cotação.\n\nQual cobertura?\n\n1. Básica\n2. Completa")
+      expect(resposta.content_attributes).not_to have_key('rich_message')
+      expect(resposta.content_attributes['autonomia_passagem_id']).to eq(Crm::Passagens.ultima_aberta(conversation).id)
     end
   end
 

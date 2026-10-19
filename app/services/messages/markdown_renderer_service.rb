@@ -12,7 +12,8 @@ class Messages::MarkdownRendererService
     'Channel::TwilioSms' => :render_plain_text
   }.freeze
 
-  # Só o WhatsApp usa os dois, e só com a pele ligada na conta (ConversaCanal::Pele, #1702):
+  # Só o WhatsApp usa os dois: com a pele ligada na conta (ConversaCanal::Pele, #1702) e no `waha_text` da caixa WAHA
+  # com a flag `whatsapp_rich_native` (Waha::RichNative::OutgoingHints, chat#1709, sempre `pele: true`):
   # `pele`: o texto sai no formato do app (WhatsAppDaPeleRenderer). Sem ela, segue o caminho do Chatwoot.
   # `automatico`: a mensagem é de robô, IA ou envio automático (Messages::EnvioAutomatico):
   # lê o texto no dialeto do app (*x* negrito) em vez de markdown.

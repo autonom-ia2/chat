@@ -9,8 +9,14 @@
 #   https://developers.facebook.com/docs/whatsapp/cloud-api/messages/reaction-messages
 #   https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages
 # - Caixa WhatsApp API (WAHA): PUT /api/reaction; sem janela de 24 h, e vale para recebida ou enviada, como no app.
+# - Caixa WAHA comum com a flag `whatsapp_rich_native` e motor que declara a reação (#1709): quem grava
+#   (Waha::RichNative::Reactions, a reação é da empresa) e leva ao cliente (evento c2y_message_reaction ao conector) é o
+#   Waha::RichNative::MessageActions.react!; aqui não se chama o PUT /api/reaction nem o `gravar`.
 class ConversaCanal::ReacaoDoAtendente
   class Recusa < StandardError; end
+
+  # Recusa do Waha::RichNative::MessageActions.react! (#1709) -> frase da tela; outro motivo cai em mensagem_invalida.
+  MOTIVOS_DO_CONECTOR = { forbidden: :caixa_sem_reacao, invalid: :mensagem_invalida }.freeze
 
   def initialize(message:, user:, emoji:)
     @message = message
@@ -21,6 +27,8 @@ class ConversaCanal::ReacaoDoAtendente
 
   # -> a mensagem reagida, com as reações gravadas. Levanta Recusa com a frase para a tela.
   def perform
+    return reagir_pelo_conector if pelo_conector?
+
     validar!
     remetente.enviar(@emoji)
     gravar
@@ -44,22 +52,14 @@ class ConversaCanal::ReacaoDoAtendente
     remetente.validar!
   end
 
-  # Um emoji só (um grafema: 👍🏽 e ❤️ têm mais de um código, mas são um desenho) ou vazio para tirar a reação. Letra,
-  # número e sinal do teclado (ASCII) não são emoji; o teto de bytes barra o grafema inflado com marcas combinantes.
+  # Um emoji só ou vazio para tirar a reação: a regra única do Whatsapp::EmojiDeReacao.
   def um_emoji_ou_vazio?
-    return false if @emoji.nil?
-    return true if @emoji.empty?
-
-    @emoji.bytesize <= Whatsapp::ReactionRecorder::MAXIMO_DE_BYTES && !@emoji.ascii_only? && @emoji.grapheme_clusters.size == 1
+    Whatsapp::EmojiDeReacao.valido?(@emoji)
   end
 
+  # A regra única do Whatsapp::MensagemReagivel (a mesma do painel na caixa WAHA).
   def reagivel?
-    return false if @message.private? || @message.activity? || @message.template?
-
-    atributos = @message.content_attributes.to_h
-    return false if atributos['deleted'] || atributos['deleted_by_contact_at']
-
-    @message.incoming? || @message.outgoing?
+    Whatsapp::MensagemReagivel.reagivel?(@message)
   end
 
   def remetente
@@ -78,6 +78,21 @@ class ConversaCanal::ReacaoDoAtendente
 
   def waha?
     canal.is_a?(Channel::Api) && canal.waha_provider?
+  end
+
+  def pelo_conector?
+    waha? && Waha::RichNative::MessageActions.allowed?(conversa, 'react')
+  end
+
+  # As validações do caminho de sempre que valem aqui: emoji e mensagem reagível (nem nota, atividade, modelo nem
+  # apagada). `sem_identificacao` não: o conector acha a mensagem pelo id do chat2you, sem `source_id`.
+  def reagir_pelo_conector
+    recusar!(:emoji_invalido) unless um_emoji_ou_vazio?
+    recusar!(:mensagem_invalida) unless reagivel?
+    motivo = Waha::RichNative::MessageActions.react!(@message, user: @user, emoji: @emoji)
+    recusar!(MOTIVOS_DO_CONECTOR.fetch(motivo, :mensagem_invalida)) if motivo
+
+    @message.reload
   end
 
   def gravar

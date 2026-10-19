@@ -742,6 +742,8 @@ Rails.application.routes.draw do
                 member do
                   post :translate
                   post :retry
+                  post :reaction, to: 'message_reactions#create' # fork chat#1709: reagir pela caixa WAHA
+                  patch :content, to: 'message_edits#update' # fork chat#1709: editar pela caixa WAHA
                 end
               end
               resource :contact_info_request, only: [:create]
@@ -935,6 +937,8 @@ Rails.application.routes.draw do
             end
           end
           resources :labels, only: [:index, :show, :create, :update, :destroy]
+          # Nome livre das etiquetas (#1823, F1a): controller e tabela do fork, um nome por etiqueta.
+          resources :nomes_de_etiquetas, only: [:index, :update, :destroy], param: :label_id
 
           resources :notifications, only: [:index, :update, :destroy] do
             collection do

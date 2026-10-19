@@ -1,0 +1,60 @@
+pt_BR:
+  waha:
+    rich_payload:
+      list_button: "Ver opções"
+      location_title: "Localização"
+    call:
+      ringing_voice: "Ligação de voz recebida"
+      ringing_video: "Ligação de vídeo recebida"
+      missed_voice: "Ligação de voz perdida"
+      missed_video: "Ligação de vídeo perdida"
+      declined_voice: "Ligação de voz recusada"
+      declined_video: "Ligação de vídeo recusada"
+      answered: "Ligação atendida no celular"
+      ended: "Ligação atendida e encerrada"
+    hidden:
+      reaction: "Reação registrada na mensagem"
+      edit: "Edição registrada na mensagem"
+      call: "Ligação registrada"
+      poll_vote: "Voto na enquete registrado"
+      album: "Cabeçalho do álbum registrado (as fotos vêm em seguida)"
+      revoke: "Exclusão pelo cliente registrada na mensagem"
+      revoke_business: "Exclusão pela empresa registrada na mensagem"
+      event_response: "Resposta ao evento registrada"
+      view_once: "Visualização única registrada"
+    view_once_unavailable: "Você recebeu uma mensagem de visualização única. Por motivos de privacidade, você só pode abrir essa mensagem no seu celular."
+    media_unavailable:
+      voice: "Mensagem de voz não recebida (o download falhou)"
+      audio: "Áudio não recebido (o download falhou)"
+      image: "Foto não recebida (o download falhou)"
+      video: "Vídeo não recebido (o download falhou)"
+      document: "Arquivo não recebido (o download falhou)"
+      sticker: "Figurinha não recebida (o download falhou)"
+    ephemeral:
+      "on": "Mensagens temporárias ativadas (%{duration}). O conteúdo fica guardado no chat2you."
+      "off": "Mensagens temporárias desativadas."
+      hours:
+        one: "%{count} hora"
+        other: "%{count} horas"
+      days:
+        one: "%{count} dia"
+        other: "%{count} dias"
+    ai:
+      poll_vote: "Votou na enquete '%{question}': %{options}"
+      event_response: "Respondeu ao convite '%{name}': %{response}"
+      poll_vote_choice: "Votou: %{options}"
+      event_response_choice: "Respondeu ao convite: %{response}"
+      choice_no_longer_valid: "(o cliente retirou ou trocou esta escolha depois; ela não vale mais)"
+      event_answers:
+        going: "Vou"
+        not_going: "Não vou"
+        maybe: "Talvez"
+    message_actions:
+      reaction_invalid: "Esta mensagem não pode receber reação. Use um emoji só."
+      edit_invalid: "Esta mensagem não pode mais ser editada. Só texto enviado há menos de %{minutes} minutos, sem anexo nem formato especial e com até %{max_length} caracteres, pode ser editado."
+      edit_not_author: "Só quem enviou a mensagem, ou um administrador, pode editá-la."
+      reaction_not_delivered: "A reação não chegou ao WhatsApp do cliente. Ela ficou registrada só aqui no chat2you."
+      edit_not_delivered: "A edição não chegou ao WhatsApp do cliente. O cliente continua vendo o texto anterior."
+  whatsapp_hybrid:
+    rich_native:
+      restore_failed: "A mensagem não saiu: o WhatsApp API recusou o formato e o texto não pôde ser enviado. Reenvie a mensagem."

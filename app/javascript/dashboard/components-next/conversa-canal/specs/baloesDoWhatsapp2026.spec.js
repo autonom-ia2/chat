@@ -624,8 +624,11 @@ describe('c2y_hidden (#1702)', () => {
     expect(wrapper.find('#message2').exists()).toBe(false);
   });
 
-  it('sem a pele, aparece como sempre', () => {
-    expect(montarLista(null).find('#message2').exists()).toBe(true);
+  // #1709: a recebida com c2y_hidden (voto, aviso trocado pela mídia) some com ou sem a pele (isHidden sempre ligado).
+  it('sem a pele, a recebida com c2y_hidden também some (isHidden sempre ligado)', () => {
+    const wrapper = montarLista(null);
+    expect(wrapper.find('#message1').exists()).toBe(true);
+    expect(wrapper.find('#message2').exists()).toBe(false);
   });
 });
 
