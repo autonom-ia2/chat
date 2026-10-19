@@ -1,26 +1,29 @@
 # #1865 — antes de uma mensagem sair, o chat2you pode ter trabalho a fazer (salvar o contato na agenda do aparelho,
 # marcar a conversa como lida), e isso leva alguns segundos na primeira vez. Sem cuidado, a mensagem seguinte da mesma
-# conversa, que não tem trabalho, sairia antes. Aqui a mensagem com trabalho segura a conversa até sair; as outras da
-# mesma conversa esperam (até ESPERA_MAXIMA) antes de seguir. Mensagem sem trabalho e sem ninguém na frente não paga nada.
-# A trava tem dono (token) e prazo (TTL); Redis fora do ar não trava o envio: segue sem ordem, com log.
+# conversa, que não tem trabalho, passaria na frente. Aqui a mensagem com trabalho segura a conversa até sair, e as
+# outras da mesma conversa esperam um pouco (até ESPERA_MAXIMA) antes de seguir.
+#
+# Reduz a troca de ordem; não a garante. O envio já roda em paralelo nas filas (dois jobs da mesma conversa não têm
+# ordem garantida, antes ou depois do #1865), e uma ordem estrita pediria uma fila por conversa. Por isso: uma tentativa
+# só, espera curta (a espera ocupa a thread da fila) e, sem trava, o envio segue com log. Mensagem sem trabalho e sem
+# ninguém na frente não paga nada. A trava tem dono (token) e prazo (TTL); Redis fora do ar não trava o envio.
 module ConversaCanal::EnvioEmOrdem
   TTL = 60
-  ESPERA_MAXIMA = 15
+  ESPERA_MAXIMA = 5
   PASSO_DA_ESPERA = 0.2
-  TENTATIVAS = 3
 
   module_function
 
   # trabalho: lambda que diz se esta mensagem tem algo a fazer antes de sair. O bloco é o trabalho mais o envio.
   def executar(conversation, trabalho, &)
     chave = "conversa_canal:envio_em_ordem:#{conversation.id}"
-    TENTATIVAS.times do
-      esperar(chave)
-      return yield unless trabalho.call
+    esperar(chave)
+    return yield unless trabalho.call
 
-      token = SecureRandom.hex(8)
-      return segurando(chave, token, &) if travar(chave, token)
-    end
+    token = SecureRandom.hex(8)
+    return segurando(chave, token, &) if travar(chave, token)
+
+    Rails.logger.info("[conversa_canal][envio_em_ordem] sem trava conversation=#{conversation.id}")
     yield
   end
 

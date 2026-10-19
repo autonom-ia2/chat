@@ -6,7 +6,8 @@
 # continua criando uma mensagem por vez, com 3 a 8 s entre destinatários (WhatsappApiCampaigns::DeliveryEngine), e
 # cada webhook leva o próprio salvamento: o intervalo real varia esses segundos, como já varia com a fila.
 # Ordem: com trabalho a fazer, a mensagem segura a conversa até o webhook sair (ConversaCanal::EnvioEmOrdem), e a
-# seguinte da mesma conversa espera. Nada daqui impede o webhook: falha vira log.
+# seguinte da mesma conversa espera um pouco: reduz a troca de ordem, não a garante. Nada daqui impede o webhook: falha
+# vira log.
 class Waha::AntesDoEnvio
   EVENT = 'message_created'.freeze
 

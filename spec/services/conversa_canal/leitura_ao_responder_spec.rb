@@ -63,6 +63,23 @@ describe ConversaCanal::LeituraAoResponder do
     expect(lida_pedida?).to be(false)
   end
 
+  it 'Híbrido: contato por salvar só conta como trabalho quando a mensagem vai sair pelo WhatsApp API' do
+    contato.update!(name: 'Celmo Junior')
+    WhatsappHybrid::Connection.create!(account: account, inbox: caixa, session_name: 'hybrid-x', status: 'connected',
+                                       connected_phone: canal.phone_number.delete('^0-9'), risk_accepted_at: Time.current,
+                                       status_checked_at: Time.current)
+    Redis::Alfred.delete('waha:agenda:hybrid-x:5511937016094@c.us')
+    message = resposta
+    router = instance_double(WhatsappHybrid::Router)
+    allow(WhatsappHybrid::Router).to receive(:new).and_return(router)
+
+    allow(router).to receive(:route_for).and_return(:cloud)
+    expect(described_class.agenda_do_hibrido_a_fazer?(message)).to be(false)
+
+    allow(router).to receive(:route_for).and_return(:web)
+    expect(described_class.agenda_do_hibrido_a_fazer?(message)).to be(true)
+  end
+
   it 'a falha da lida não impede a resposta' do
     message = resposta
     allow(ConversaCanal::LeituraNoCanal).to receive(:new).and_raise(StandardError)

@@ -10,8 +10,8 @@
 #   vazia e sobrescreveria o nome do dono.
 # - O Redis só evita repetir a leitura: guarda um resumo (HMAC) do nome decidido. Sem a marca (Redis perdido), um nome
 #   diferente na agenda conta como do dono.
-# - A ordem das mensagens (a segunda não sai antes da primeira enquanto esta salva o contato) é do
-#   ConversaCanal::EnvioEmOrdem, em volta deste salvamento e do envio; `a_fazer?` diz se há trabalho.
+# - Para a segunda mensagem não passar na frente da primeira enquanto esta salva o contato, o ConversaCanal::EnvioEmOrdem
+#   envolve este salvamento e o envio; `a_fazer?` diz se há trabalho.
 # - Sem agenda: grupo, transmissão e canal. Sem nome, ou nome que é o próprio telefone: nada a salvar.
 # - Nunca trava o envio: qualquer falha vira log (só a classe; a mensagem do erro traz URL e corpo), o envio segue e o
 #   contato fica FALHA_TTL sem nova tentativa (motor lento não atrasa cada mensagem). Um 404 do motor também é falha,

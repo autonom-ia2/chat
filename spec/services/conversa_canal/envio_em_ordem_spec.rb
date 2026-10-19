@@ -54,6 +54,25 @@ describe ConversaCanal::EnvioEmOrdem do
     expect(Redis::Alfred.get(chave)).to eq('outra')
   end
 
+  it 'solta a trava quando o envio levanta erro' do
+    expect { described_class.executar(conversation, -> { true }) { raise ArgumentError } }.to raise_error(ArgumentError)
+
+    expect(Redis::Alfred.exists?(chave)).to be(false)
+  end
+
+  it 'com outra mensagem segurando além da espera, segue sem trava e registra' do
+    Redis::Alfred.set(chave, 'da-frente', nx: true, ex: 60)
+    allow(Kernel).to receive(:sleep) { travel(1.second) }
+    saiu = false
+
+    described_class.executar(conversation, -> { true }) { saiu = true }
+
+    expect(saiu).to be(true)
+    expect(Kernel).to have_received(:sleep).at_most(30).times
+    expect(Rails.logger).to have_received(:info).with("[conversa_canal][envio_em_ordem] sem trava conversation=#{conversation.id}")
+    expect(Redis::Alfred.get(chave)).to eq('da-frente')
+  end
+
   it 'Redis fora do ar não impede o envio' do
     allow(Redis::Alfred).to receive(:exists?).and_raise(Redis::CannotConnectError)
     allow(Redis::Alfred).to receive(:set).and_raise(Redis::CannotConnectError)
