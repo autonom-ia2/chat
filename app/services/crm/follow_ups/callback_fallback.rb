@@ -24,6 +24,12 @@ module Crm::FollowUps::CallbackFallback
       TRANSITORIOS.include?(metadata[FALLBACK_KEY].to_s) && !other_automatic_send_pending?(follow_up)
   end
 
+  # #1855: é ou foi envio ao cliente: mensagem automática, ou o aviso de uma que caiu para a equipe (tem o original guardado).
+  # O "Passar tudo para amanhã" do calendário deixa esses de fora: um clique em lote nunca manda mensagem a cliente.
+  def automatic_send?(follow_up)
+    follow_up.auto_send_message? || follow_up.metadata.to_h[KEY].is_a?(Hash)
+  end
+
   def other_automatic_send_pending?(follow_up)
     Crm::FollowUp.pending.auto_send_message.where(card_id: follow_up.card_id)
                  .where("metadata ->> 'source' = ?", follow_up.metadata.to_h['source']).where.not(id: follow_up.id).exists?

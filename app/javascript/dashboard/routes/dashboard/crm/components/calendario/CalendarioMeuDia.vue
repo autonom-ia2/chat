@@ -76,6 +76,9 @@ const atrasadosVisiveis = computed(() =>
     ? [...atrasadosAntigos.value, ...atrasadosRecentes.value]
     : atrasadosRecentes.value
 );
+// "Passar tudo" só leva lembrete de uma pessoa (#1855); o aviso de um envio ao
+// cliente que falhou fica, para ser reagendado um a um.
+const adiaveis = computed(() => atrasadosVisiveis.value.filter(i => !i.envio));
 
 const proximosDias = computed(() => {
   if (!ehHoje.value) return [];
@@ -201,13 +204,14 @@ const ATALHOS = ['AMANHA', 'TRES_DIAS', 'SEMANA'];
           </span>
         </h3>
         <Button
+          v-if="adiaveis.length"
           data-adiar-todos
           :label="t(`${N}.ADIAR_TODOS`)"
           icon="i-lucide-calendar-arrow-up"
           slate
           ghost
           class="!min-h-11"
-          @click="emit('adiarAtrasados', atrasadosVisiveis)"
+          @click="emit('adiarAtrasados', adiaveis)"
         />
       </header>
       <ul class="m-0 flex list-none flex-col gap-2 p-0">

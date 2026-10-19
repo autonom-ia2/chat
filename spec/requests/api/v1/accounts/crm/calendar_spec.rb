@@ -194,6 +194,21 @@ RSpec.describe 'CRM calendar API', type: :request do
       expect(eventos['Não saiu'].to_json).not_to include('sender_required')
     end
 
+    # #1855: a tela deixa fora do "Passar tudo para amanhã" o que é envio ao cliente, inclusive o aviso de um que falhou.
+    it 'diz se o lembrete é envio ao cliente (aviso de envio que falhou) ou tarefa de uma pessoa' do
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Plano anual', contact: contact)
+      aviso = account.crm_follow_ups.create!(card: card, title: 'Aviso de envio', due_at: '2026-10-14T19:30:00Z',
+                                             timezone: 'UTC', created_by: user)
+      aviso.update!(status: :overdue, metadata: { 'callback_fallback' => 'meta_fora',
+                                                  'callback_original' => { 'automation_mode' => 'auto_send_message' } })
+      account.crm_follow_ups.create!(card: card, title: 'Ligar', due_at: '2026-10-14T19:30:00Z', timezone: 'UTC',
+                                     created_by: user)
+
+      expect(eventos['Aviso de envio']).to include('automatic_send' => true)
+      expect(eventos['Ligar']).to include('automatic_send' => false)
+    end
+
     it 'não manda o contato de um lembrete quando ele não é o do card nem o da conversa' do
       pipeline, stage = create_crm_pipeline(account: account, user: user)
       outro = create(:contact, account: account, name: 'Outra Pessoa', phone_number: '+5511900000000')

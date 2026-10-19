@@ -269,6 +269,39 @@ describe('CalendarioOuro', () => {
     expect(carga.quando).toBe('2026-10-15T12:00:00.000Z');
   });
 
+  // #1855: o aviso de um envio ao cliente que falhou aparece em "Ficou para
+  // trás", mas o lote não o leva: só lembrete de uma pessoa passa para amanhã.
+  const AVISO_DE_ENVIO = {
+    id: 'follow_up_9',
+    event_type: 'follow_up_reminder_only',
+    title: 'Retorno não saiu',
+    starts_at: '2026-10-13T15:00:00Z',
+    status: 'overdue',
+    assignee_id: 1,
+    automatic_send: true,
+  };
+
+  it('"Passar tudo para amanhã" deixa de fora o aviso de envio ao cliente', async () => {
+    const wrapper = montar({ events: [...EVENTOS, AVISO_DE_ENVIO] });
+    await flushPromises();
+    expect(wrapper.find('[data-secao="atrasados"]').text()).toContain(
+      'Retorno não saiu'
+    );
+
+    await wrapper.find('[data-adiar-todos]').trigger('click');
+
+    const [carga] = wrapper.emitted('adiarAtrasados')[0];
+    expect(carga.eventos.map(e => e.id)).toEqual(['follow_up_1']);
+  });
+
+  it('sem lembrete para passar, o "Passar tudo" não aparece', async () => {
+    const wrapper = montar({ events: [AVISO_DE_ENVIO] });
+    await flushPromises();
+
+    expect(wrapper.find('[data-secao="atrasados"]').exists()).toBe(true);
+    expect(wrapper.find('[data-adiar-todos]').exists()).toBe(false);
+  });
+
   it('a ação da linha abre a conversa pelo número dela', async () => {
     const wrapper = montar();
     await flushPromises();

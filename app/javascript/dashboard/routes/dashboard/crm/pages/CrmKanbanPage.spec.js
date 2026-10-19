@@ -428,6 +428,26 @@ describe('CrmKanbanPage', () => {
       );
     });
 
+    // #1855: o lote pede ao servidor só lembretes; envio ao cliente é recusado.
+    it('"Passar tudo" pede o reagendamento só de lembretes', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      dispatch.mockClear();
+      ouro().vm.$emit('adiarAtrasados', {
+        eventos: [{ id: 'follow_up_1' }],
+        quando: '2026-10-15T12:00:00.000Z',
+      });
+      await flushPromises();
+
+      expect(dispatch).toHaveBeenCalledWith('crmKanban/rescheduleFollowUp', {
+        id: '1',
+        dueAt: '2026-10-15T12:00:00.000Z',
+        remindersOnly: true,
+      });
+    });
+
     it('reunião marcada no Meu dia avisa e recarrega o calendário', async () => {
       wrapper = await mountPage({
         calendarOnly: true,
