@@ -13874,7 +13874,7 @@
     "controller": "api/v1/accounts/conversations#unread",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:135",
+      "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:20",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": true
@@ -13892,6 +13892,7 @@
     "origem": [
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:9",
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:26",
+      "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:14",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false

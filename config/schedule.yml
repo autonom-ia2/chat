@@ -365,3 +365,10 @@ waha_engine_capabilities_refresh_job:
   cron: '*/5 * * * *'
   class: 'Waha::EngineCapabilitiesRefreshJob'
   queue: scheduled_jobs
+
+# "Lido" do e-mail sincronizado com o servidor do cliente (#1870): apaga, em lotes, as linhas sem mudança há mais de 30
+# dias (fora das janelas de leitura e escrita; inclui as que ficaram para trás num recomeço da caixa), às 07:15 UTC.
+conversa_canal_limpar_email_lidos_job:
+  cron: '15 7 * * *'
+  class: 'ConversaCanal::LimparEmailLidosJob'
+  queue: low
