@@ -4,10 +4,11 @@
 #
 # #1426 (revisão adversarial) — antes, cada página era aberta pelo nome "arquivo.pdf[N]", que não existe em disco: o OCR
 # do PDF escaneado falhava sempre, em silêncio. Agora funciona, e por isso só roda na Fase 2 (piloto) e nunca na Lia;
-# fora disso o resultado é o de antes: o texto original e o aviso no log.
+# fora disso o resultado é o de antes: o texto original e o aviso no log (`fora_da_fase2` ou `agente_protegido`).
 #
 # Ficam de fora, e vão para o aviso ao dono (`ocr_*` em paginas_de_fora): as páginas depois de MAX_PAGINAS_OCR, a que a
-# 300 DPI passaria do teto de pixels (MediaBox × UserUnit), e as que não couberam no prazo total.
+# 300 DPI passaria do teto de pixels (MediaBox × UserUnit), as que não couberam no prazo total e as que o ImageMagick
+# ou o tesseract recusaram (`ocr_falhou`).
 module Autonomia::Agents::Knowledge::Processors::PdfOcr
   # Pixels por ponto da página no OCR: o PDF mede em pontos (72 por polegada) e a página é lida a 300 DPI.
   DPI_POR_PONTO = Autonomia::Agents::Knowledge::Processors::Rasterizacao::DPI / 72.0
@@ -24,6 +25,9 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
   # (1000 × 1400 pt) rasteriza e 27,3 MP (1050 × 1500 pt) falha por falta de cache. A3 tem 17,4 MP; A2 (34,8 MP) fica de
   # fora. Sem este teto, uma página que passasse da conta derrubava o OCR do PDF inteiro.
   MAX_PIXELS_PAGINA = 24_000_000
+  # Falhas de UMA página (o ImageMagick ou o tesseract a recusou): ela é pulada e as outras seguem.
+  FALHAS_DA_PAGINA = [Autonomia::Agents::Knowledge::Processors::Rasterizacao::Falhou,
+                      Autonomia::Agents::Knowledge::Processors::Ocr::Falhou].freeze
 
   # O relógio do prazo (monotônico), à parte para o spec controlar o tempo.
   def self.agora
@@ -32,15 +36,19 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
 
   private
 
-  def ocr_na_conta?
-    fase2_na_conta? && !(@source.respond_to?(:agent) && @source.agent&.instrucao_mantida?)
+  # Por que o OCR não roda neste material: fora do piloto, ou agente protegido (a Lia, de instrução mantida). nil = roda.
+  def motivo_sem_ocr
+    return 'fora_da_fase2' unless fase2_na_conta?
+
+    'agente_protegido' if @source.respond_to?(:agent) && @source.agent&.instrucao_mantida?
   end
 
   # Só as falhas esperadas (binário ausente ou que recusou, tempo estourado, PDF que o leitor não entende) voltam ao
   # texto original com aviso no log. Qualquer outra vai ao Sentry e sobe: é bug, não PDF ruim.
   def ocr_fallback(text, path, pages)
-    unless ocr_na_conta?
-      Rails.logger.warn('[autonomia] pdf_ocr_unavailable: fora_da_fase2')
+    motivo = motivo_sem_ocr
+    if motivo
+      Rails.logger.warn("[autonomia] pdf_ocr_unavailable: #{motivo}")
       return text
     end
 
@@ -66,24 +74,36 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
   def ocr_pages(pdf_path, pages)
     candidatas = pages.first(MAX_PAGINAS_OCR).each_with_index.to_a
     cabem, grandes = candidatas.partition { |page, _| pagina_cabe?(page) }
-    lidas, prazo = ler_no_prazo(pdf_path, cabem)
-    anotar_ocr(alem: pages.size - candidatas.size, grandes: numeros(grandes), prazo: prazo)
-    lidas.join("\n")
+    leitura = ler_no_prazo(pdf_path, cabem)
+    raise leitura[:erro] if leitura[:lidas].empty? && leitura[:erro]
+
+    anotar_ocr(alem: pages.size - candidatas.size, grandes: numeros(grandes), prazo: leitura[:prazo], falhou: leitura[:falhou])
+    leitura[:lidas].join("\n")
   end
 
-  # Lê as páginas em ordem enquanto houver prazo; as que sobrarem voltam pelos números.
+  # Lê as páginas em ordem enquanto houver prazo; as que sobrarem vão para `prazo`. Se todas as tentadas falharem,
+  # ocr_pages levanta a última falha: o resultado é o de antes (texto original e o aviso).
   def ler_no_prazo(pdf_path, paginas)
     relogio = Autonomia::Agents::Knowledge::Processors::PdfOcr
     limite = relogio.agora + PRAZO_OCR
-    lidas = []
+    leitura = { lidas: [], prazo: [], falhou: [], erro: nil }
     paginas.each_with_index do |(_, index), posicao|
-      return [lidas, numeros(paginas.drop(posicao))] if relogio.agora > limite
+      return leitura.merge(prazo: numeros(paginas.drop(posicao))) if relogio.agora > limite
 
-      lidas << Autonomia::Agents::Knowledge::Processors::Rasterizacao.pagina(pdf_path, index) do |png|
-        Autonomia::Agents::Knowledge::Processors::Ocr.ler(png)
-      end
+      leitura = ler_pagina(pdf_path, index, leitura)
     end
-    [lidas, []]
+    leitura
+  end
+
+  # Uma página que o ImageMagick ou o tesseract recusa é pulada e anotada em `falhou`; as outras seguem. Sem o tesseract
+  # (Ocr::Indisponivel) nenhuma página vai funcionar: sobe e para tudo.
+  def ler_pagina(pdf_path, index, leitura)
+    processadores = Autonomia::Agents::Knowledge::Processors
+    texto = processadores::Rasterizacao.pagina(pdf_path, index) { |png| processadores::Ocr.ler(png) }
+    leitura.merge(lidas: leitura[:lidas] + [texto])
+  rescue *FALHAS_DA_PAGINA => e
+    Rails.logger.warn("[autonomia] pdf_ocr_pagina_falhou pagina=#{index + 1} #{e.class}: #{e.message}")
+    leitura.merge(falhou: leitura[:falhou] + [index + 1], erro: e)
   end
 
   def numeros(paginas)
@@ -97,11 +117,12 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
     pixels <= MAX_PIXELS_PAGINA
   end
 
-  def anotar_ocr(alem:, grandes:, prazo:)
-    return if alem.zero? && grandes.empty? && prazo.empty?
+  def anotar_ocr(alem:, grandes:, prazo:, falhou:)
+    return if alem.zero? && [grandes, prazo, falhou].all?(&:empty?)
 
     @paginas_de_fora = @paginas_de_fora.merge(
-      'ocr_teto' => MAX_PAGINAS_OCR, 'ocr_alem_do_teto' => alem, 'ocr_grandes' => grandes, 'ocr_prazo' => prazo
+      'ocr_teto' => MAX_PAGINAS_OCR, 'ocr_alem_do_teto' => alem, 'ocr_grandes' => grandes, 'ocr_prazo' => prazo,
+      'ocr_falhou' => falhou
     )
   end
 end

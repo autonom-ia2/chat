@@ -147,6 +147,42 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         expect(processor.extract.strip).to eq('')
       end
 
+      # Uma página que o ImageMagick ou o tesseract recusa é pulada; as outras entram e a recusada vai para o aviso.
+      it 'skips a page that fails and keeps the others' do
+        stub_pages([' ', ' ', ' '])
+        stub_ocr('TEXTO RECONHECIDO VIA OCR DO SCAN')
+        allow(rasterizacao).to receive(:pagina).with(anything, 1).and_raise(rasterizacao::Falhou, 'imagemagick_exit_1')
+        allow(ocr).to receive(:ler).with('/tmp/pagina-2.png').and_raise(ocr::Falhou, 'tesseract_exit_1')
+        allow(Rails.logger).to receive(:warn)
+
+        expect(processor.extract).to eq('TEXTO RECONHECIDO VIA OCR DO SCAN')
+        expect(source).to have_received(:paginas_de_fora=).with(hash_including('ocr_falhou' => [2, 3]))
+        expect(Rails.logger).to have_received(:warn).with(/pdf_ocr_pagina_falhou pagina=2 /)
+        expect(Rails.logger).not_to have_received(:warn).with(/pdf_ocr_unavailable/)
+      end
+
+      it 'keeps the behavior of today when every page fails: original text and the same warning' do
+        stub_pages([' ', ' '])
+        allow(rasterizacao).to receive(:pagina).and_raise(rasterizacao::Falhou, 'imagemagick_exit_1')
+        allow(Rails.logger).to receive(:warn)
+
+        expect(processor.extract).to eq(" \n \n")
+        expect(rasterizacao).to have_received(:pagina).twice
+        expect(Rails.logger).to have_received(:warn).with(/pdf_ocr_unavailable: .*imagemagick_exit_1/)
+        expect(source).not_to have_received(:paginas_de_fora=)
+      end
+
+      # Sem o tesseract nenhuma página vai funcionar: para na primeira.
+      it 'stops at the first page when tesseract is missing' do
+        stub_pages([' ', ' '])
+        stub_ocr('x')
+        allow(ocr).to receive(:ler).and_raise(ocr::Indisponivel, 'tesseract_missing')
+
+        expect(processor.extract).to eq(" \n \n")
+        expect(rasterizacao).to have_received(:pagina).once
+        expect(source).not_to have_received(:paginas_de_fora=)
+      end
+
       # K3 — erro que não é de PDF ruim nem de binário é bug: vai ao Sentry e sobe.
       it 'sends an unexpected error to the tracker and raises it' do
         stub_pages([''])
@@ -185,9 +221,11 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         lia = described_class.new(material(agent: instance_double(Autonomia::Agents::Agent, instrucao_mantida?: true)))
         stub_pages([' '])
         stub_ocr('nunca')
+        allow(Rails.logger).to receive(:warn)
 
         expect(lia.extract).to eq(" \n")
         expect(rasterizacao).not_to have_received(:pagina)
+        expect(Rails.logger).to have_received(:warn).with('[autonomia] pdf_ocr_unavailable: agente_protegido')
       end
 
       it 'runs the OCR for an agent of the Fase 2 that is not the Lia' do
@@ -208,7 +246,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         expect(rasterizacao).to have_received(:pagina).twice
         expect(rasterizacao).not_to have_received(:pagina).with(anything, 2)
         expect(source).to have_received(:paginas_de_fora=)
-          .with('ocr_teto' => 2, 'ocr_alem_do_teto' => 1, 'ocr_grandes' => [], 'ocr_prazo' => [])
+          .with('ocr_teto' => 2, 'ocr_alem_do_teto' => 1, 'ocr_grandes' => [], 'ocr_prazo' => [], 'ocr_falhou' => [])
       end
 
       # K4 — o OCR do PDF tem prazo total; as páginas que não couberam vão para o aviso com o motivo `prazo`.
