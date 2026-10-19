@@ -32,6 +32,11 @@ module Autonomia::Agents::Builder::TextosDoAjuste
     texto(:conflito, locale, pedidos: lista(mudancas, 'pedido'))
   end
 
+  # #1428 (entrega C) — os dois botões fixos da pergunta do conflito, que é do código (decisão do Rodrigo, 18/10).
+  def opcoes_do_conflito(locale)
+    [texto('opcoes_do_conflito.manter', locale), texto('opcoes_do_conflito.mudar', locale)]
+  end
+
   # Tudo o que entrou não tinha sido pedido e foi desfeito.
   def desfiz_o_nao_pedido(itens, locale)
     texto(:desfiz_nao_pedido, locale, resumos: lista(itens, 'resumo'))
