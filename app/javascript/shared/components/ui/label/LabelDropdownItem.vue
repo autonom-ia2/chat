@@ -1,5 +1,6 @@
 <script>
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 
 export default {
   components: {
@@ -20,6 +21,10 @@ export default {
     },
   },
   emits: ['selectLabel'],
+  setup() {
+    const { nomeDe } = useNomeDaEtiqueta();
+    return { nomeDe };
+  },
 
   methods: {
     onClick() {
@@ -49,9 +54,9 @@ export default {
         />
         <span
           class="overflow-hidden text-ellipsis whitespace-nowrap leading-[1.1]"
-          :title="title"
+          :title="nomeDe(title)"
         >
-          {{ title }}
+          {{ nomeDe(title) }}
         </span>
       </div>
     </NextButton>

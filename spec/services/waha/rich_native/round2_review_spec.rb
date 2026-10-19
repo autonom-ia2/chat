@@ -289,7 +289,11 @@ describe 'WAHA rich native round 2 review' do # rubocop:disable RSpec/DescribeCl
   describe 'location and contact for the AI (ResponderLocation)' do
     let(:responder) { Autonomia::Agents::Operate::Responder.allocate }
 
-    before { responder.instance_variable_set(:@conversation, conversation) }
+    before do
+      responder.instance_variable_set(:@conversation, conversation)
+      # #1848: o histórico pergunta ao agente se as opções e o link são dele (Interacao.no_historico).
+      responder.instance_variable_set(:@agent, criar_principal(conversation.account))
+    end
 
     def ai_reads(message)
       allow(responder).to receive_messages(recent_messages: [message], last_incoming_message: message,

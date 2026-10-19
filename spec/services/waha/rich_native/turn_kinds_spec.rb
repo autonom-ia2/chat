@@ -145,6 +145,7 @@ describe Waha::RichNative::TurnKinds do
       stored!(['Tarde'])
       responder = Autonomia::Agents::Operate::Responder.allocate
       responder.instance_variable_set(:@conversation, conversation)
+      responder.instance_variable_set(:@agent, criar_principal(conversation.account))
       allow(responder).to receive_messages(recent_messages: [superseded, current],
                                            equipe: instance_double(Autonomia::Agents::Operate::HistoricoDaEquipe, aplica?: false))
       allow(Waha::RichNative::AiChoiceText).to receive(:for).and_call_original

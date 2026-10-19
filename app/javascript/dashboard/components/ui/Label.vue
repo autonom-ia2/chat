@@ -1,5 +1,6 @@
 <script>
 import { getContrastingTextColor } from '@chatwoot/utils';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 
 export default {
   props: {
@@ -45,6 +46,10 @@ export default {
     },
   },
   emits: ['remove'],
+  setup() {
+    const { nomeDe } = useNomeDaEtiqueta();
+    return { nomeDe };
+  },
   computed: {
     textColor() {
       if (this.variant === 'smooth') return '';
@@ -97,9 +102,9 @@ export default {
       class="label-color-dot flex-shrink-0"
     />
     <span v-if="!href" class="whitespace-nowrap text-ellipsis overflow-hidden">
-      {{ title }}
+      {{ nomeDe(title) }}
     </span>
-    <a v-else :href="href" :style="anchorStyle">{{ title }}</a>
+    <a v-else :href="href" :style="anchorStyle">{{ nomeDe(title) }}</a>
     <button
       v-if="showClose"
       class="label-close--button p-0"

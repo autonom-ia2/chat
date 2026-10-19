@@ -5,10 +5,15 @@ import validations, { getLabelTitleErrorMessage } from './validations';
 import { useVuelidate } from '@vuelidate/core';
 
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import NomeTecnicoDaEtiqueta from './NomeTecnicoDaEtiqueta.vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
+import { TAMANHO_MAXIMO_DO_NOME } from 'dashboard/helper/nomeDaEtiqueta';
+import { nomeLivreEditavel, nomeLivreLongoDemais } from './nomeLivre';
 
 export default {
   components: {
     NextButton,
+    NomeTecnicoDaEtiqueta,
   },
   props: {
     selectedResponse: {
@@ -18,29 +23,72 @@ export default {
   },
   emits: ['close'],
   setup() {
-    return { v$: useVuelidate() };
+    const { ligada, guardarNome, nomeDe } = useNomeDaEtiqueta();
+    return {
+      v$: useVuelidate(),
+      nomeLegivelLigado: ligada,
+      guardarNome,
+      nomeDe,
+    };
   },
   data() {
     return {
       title: '',
+      nomeInicial: '',
       description: '',
       showOnSidebar: true,
       color: '',
     };
   },
-  validations,
+  validations() {
+    // Flag ligada (#1823): o campo edita só o nome livre; o `title` não muda.
+    if (!this.nomeLegivelLigado) return validations;
+    return { ...validations, title: { nomeLivreEditavel } };
+  },
   computed: {
     ...mapGetters({
       uiFlags: 'labels/getUIFlags',
     }),
     pageTitle() {
-      return `${this.$t('LABEL_MGMT.EDIT.TITLE')} - ${
-        this.selectedResponse.title
-      }`;
+      const nome = this.nomeLegivelLigado
+        ? this.nomeInicial
+        : this.selectedResponse.title;
+      return `${this.$t('LABEL_MGMT.EDIT.TITLE')} - ${nome}`;
+    },
+    nomeAtual() {
+      return this.nomeDe(this.selectedResponse.title);
+    },
+    // Flag ligada (#1823): editar nunca renomeia o `title`. O Labels::UpdateService
+    // só acompanha conversas e contatos; automações, macros, filtros salvos, CRM
+    // e n8n que usam o nome técnico quebrariam sem aviso.
+    dadosDaEtiqueta() {
+      const dados = {
+        id: this.selectedResponse.id,
+        color: this.color,
+        description: this.description,
+        show_on_sidebar: this.showOnSidebar,
+      };
+      if (this.nomeLegivelLigado) return dados;
+      return { ...dados, title: this.title.toLowerCase() };
     },
     labelTitleErrorMessage() {
+      if (this.nomeLegivelLigado) {
+        return nomeLivreLongoDemais(this.title)
+          ? this.$t('LABEL_MGMT.READABLE_NAME.TOO_LONG', {
+              max: TAMANHO_MAXIMO_DO_NOME,
+            })
+          : '';
+      }
       const errorMessage = getLabelTitleErrorMessage(this.v$);
       return this.$t(errorMessage);
+    },
+  },
+  watch: {
+    // Os nomes chegaram depois de o formulário abrir: troca o campo que ninguém mexeu.
+    nomeAtual(novo) {
+      if (this.title !== this.nomeInicial) return;
+      this.title = novo;
+      this.nomeInicial = novo;
     },
   },
   mounted() {
@@ -50,23 +98,39 @@ export default {
     onClose() {
       this.$emit('close');
     },
+    // Só guarda o nome que a pessoa mudou: salvar sem mexer não fixa o nome
+    // derivado do título. O nome fica preso ao id da etiqueta, não ao título.
+    async guardarNomeSeMudou() {
+      if (!this.nomeLegivelLigado || this.title === this.nomeInicial) {
+        return true;
+      }
+      const { id } = this.selectedResponse;
+      try {
+        await this.guardarNome(id, this.title.trim());
+        return true;
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Nome da etiqueta: falha ao gravar', id, error);
+        return false;
+      }
+    },
     setFormValues() {
-      this.title = this.selectedResponse.title;
+      this.title = this.nomeAtual;
+      this.nomeInicial = this.title;
       this.description = this.selectedResponse.description;
       this.showOnSidebar = this.selectedResponse.show_on_sidebar;
       this.color = this.selectedResponse.color;
     },
     editLabel() {
       this.$store
-        .dispatch('labels/update', {
-          id: this.selectedResponse.id,
-          color: this.color,
-          description: this.description,
-          title: this.title.toLowerCase(),
-          show_on_sidebar: this.showOnSidebar,
-        })
-        .then(() => {
-          useAlert(this.$t('LABEL_MGMT.EDIT.API.SUCCESS_MESSAGE'));
+        .dispatch('labels/update', this.dadosDaEtiqueta)
+        .then(async () => {
+          const nomeGuardado = await this.guardarNomeSeMudou();
+          useAlert(
+            nomeGuardado
+              ? this.$t('LABEL_MGMT.EDIT.API.SUCCESS_MESSAGE')
+              : this.$t('LABEL_MGMT.READABLE_NAME.SAVE_ERROR')
+          );
           setTimeout(() => this.onClose(), 10);
         })
         .catch(() => {
@@ -83,13 +147,21 @@ export default {
     <form class="flex flex-wrap mx-0" @submit.prevent="editLabel">
       <woot-input
         v-model="title"
-        :class="{ error: v$.title.$error }"
-        class="w-full label-name--input"
+        :class="{
+          error: v$.title.$error,
+          'label-name--input': !nomeLegivelLigado,
+        }"
+        class="w-full"
         :label="$t('LABEL_MGMT.FORM.NAME.LABEL')"
         :placeholder="$t('LABEL_MGMT.FORM.NAME.PLACEHOLDER')"
         :error="labelTitleErrorMessage"
         @input="v$.title.$touch"
         @blur="v$.title.$touch"
+      />
+      <NomeTecnicoDaEtiqueta
+        v-if="nomeLegivelLigado"
+        :tecnico="selectedResponse.title"
+        fixo
       />
       <woot-input
         v-model="description"

@@ -15,8 +15,8 @@ fica para depois.
 | SSM `/chatwoot/prod/env` (us-east-1, perfil `hub2you`) | versão **597**, 96 chaves |
 | Motor wa-hub `GET /api/server/version` (do container web, com `WAHA_API_KEY`) | HTTP 200, `2026.9.2` PLUS, `autonomia.patch = c2y-rich-5`, `rich_native = options, location, contact, poll, link_button, event`, `list_reply`, `poll_vote`, `reactions`, `edit`, `event_response`, `view_once_notice` = true |
 | Cache `cache:waha/engine_capabilities*` no Redis | vazio (esperado: o job ainda não existe em produção) |
-| Contas com a posição 34 (bit 33, `8589934592`) de `feature_flags_ext_1` | 0 |
-| `feature_flags_ext_1` hoje | conta 16 = `8589934583`, conta 18 = `8589901815` (posição 34 desligada nas duas) |
+| Contas com a posição 35 (bit 34, `17179869184`) de `feature_flags_ext_1` | 0 |
+| `feature_flags_ext_1` hoje | conta 16 = `8589934583`, conta 18 = `8589901815` (lido antes do #1839; a posição 35 está desligada nas duas) |
 | Conexões do Híbrido nas contas 16 e 18 | nenhuma (a flag só muda a caixa WAHA comum nelas) |
 
 Caixas WAHA (`Channel::Api`, `provider = waha`) das contas 16 e 18:
@@ -173,31 +173,31 @@ Notas:
 
 ## (3) A flag `whatsapp_rich_native`
 
-Coluna `feature_flags_ext_1`, posição 34, valor `8589934592` (`1 << 33`). A posição foi conferida no
-`config/features.yml` do head do PR, onde a flag é a 34ª com `column: feature_flags_ext_1`. A main de hoje tem 33
-flags nessa coluna e termina em `whatsapp_hybrid_recovery`. **Antes de gravar**, conferir a posição na imagem no ar:
+Coluna `feature_flags_ext_1`, posição 35, valor `17179869184` (`1 << 34`). A posição foi conferida no
+`config/features.yml` do head do PR, onde a flag é a 35ª com `column: feature_flags_ext_1`. Na tabela v4 da Orquestração (18/10), a 34
+é a `etiquetas_do_whatsapp` (#1839), que entrou antes. **Antes de gravar**, conferir a posição na imagem no ar:
 `git show <sha_no_ar>:config/features.yml`, procurando o nome, nunca o número.
 
 ```sql
 -- conferência / backup antes (guardar a saída)
-SELECT id, feature_flags_ext_1, (feature_flags_ext_1 & 8589934592) <> 0 AS rich_native
+SELECT id, feature_flags_ext_1, (feature_flags_ext_1 & 17179869184) <> 0 AS rich_native
 FROM accounts WHERE id IN (16, 18) ORDER BY id;
--- esperado hoje: 16 = 8589934583 f ; 18 = 8589901815 f
+-- esperado: rich_native = f nas duas. Os valores mudam se a etiquetas_do_whatsapp (posição 34) já tiver sido ligada.
 
 BEGIN;
 DO $$
 DECLARE n int;
 BEGIN
-  UPDATE accounts SET feature_flags_ext_1 = feature_flags_ext_1 | 8589934592
-   WHERE id IN (16, 18) AND (feature_flags_ext_1 & 8589934592) = 0;
+  UPDATE accounts SET feature_flags_ext_1 = feature_flags_ext_1 | 17179869184
+   WHERE id IN (16, 18) AND (feature_flags_ext_1 & 17179869184) = 0;
   GET DIAGNOSTICS n = ROW_COUNT;
   IF n <> 2 THEN RAISE EXCEPTION 'esperava 2 contas, afetou %', n; END IF;
 END $$;
 COMMIT;
--- depois: as duas com rich_native = t; 16 = 17179869175, 18 = 17179836407 (se os valores de antes não mudaram)
+-- depois: as duas com rich_native = t (o valor de antes + 17179869184).
 
 -- rollback (coluna feature_flags_ext_1, NUNCA feature_flags)
-UPDATE accounts SET feature_flags_ext_1 = feature_flags_ext_1 & ~8589934592 WHERE id IN (16, 18);
+UPDATE accounts SET feature_flags_ext_1 = feature_flags_ext_1 & ~17179869184 WHERE id IN (16, 18);
 -- esperado: UPDATE 2; efeito imediato. O cache do motor expira sozinho em até 10 min e é inofensivo sem a flag.
 ```
 

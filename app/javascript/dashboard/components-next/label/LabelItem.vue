@@ -1,5 +1,6 @@
 <script setup>
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 
 const props = defineProps({
   readOnly: { type: Boolean, default: false },
@@ -14,6 +15,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['remove', 'hover']);
+
+const { nomeDe } = useNomeDaEtiqueta();
 
 const handleRemoveLabel = () => {
   emit('remove', props.label);
@@ -37,7 +40,7 @@ const handleMouseEnter = () => {
       :style="{ backgroundColor: label.color }"
     />
     <span class="text-sm text-n-slate-12 ltr:mr-px rtl:ml-px">
-      {{ label.title }}
+      {{ nomeDe(label.title) }}
     </span>
     <div
       v-if="!readOnly"
