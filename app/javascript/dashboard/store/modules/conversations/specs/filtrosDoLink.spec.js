@@ -102,6 +102,18 @@ describe('filtros pelo link (#1883)', () => {
       expect(filterRecebidasDaIa(lista, undefined, [])).toBe(lista);
     });
 
+    it('a conversa que o robô passou e espera pessoa entra mesmo fora dos ids (a marca vem no websocket)', () => {
+      const passou = {
+        ...conversa(11, 0),
+        additional_attributes: { bot_handoff_waiting_since: '2026-10-19' },
+      };
+      const semMarca = { ...conversa(12, 0), additional_attributes: {} };
+
+      expect(
+        filterRecebidasDaIa([passou, semMarca], true, []).map(({ id }) => id)
+      ).toEqual([11]);
+    });
+
     it('os ids somam as páginas e saem quando a lista esvazia', () => {
       const state = { allConversations: [], idsRecebidasDaIa: [] };
 

@@ -63,11 +63,15 @@ export const filterByEsperando = (shouldFilter, esperandoMin, waitingSince) => {
 };
 
 // "Recebidas da IA" pelo link (#1883): só o servidor sabe quem a IA passou. Com o filtro ligado, a lista mostra só as
-// conversas que ele mandou (os ids guardados na store): a conversa nova que chega pelo websocket não entra.
+// conversas que ele mandou (os ids guardados na store): a conversa nova que chega pelo websocket não entra. A exceção é
+// a marca de espera de pessoa (o robô passou e ninguém estava online), que vem na própria conversa.
 export const filterRecebidasDaIa = (conversations, daIa, ids) => {
   if (!daIa) return conversations;
   const recebidas = new Set(ids);
-  return conversations.filter(({ id }) => recebidas.has(id));
+  return conversations.filter(
+    ({ id, additional_attributes: atributos }) =>
+      recebidas.has(id) || Boolean(atributos?.bot_handoff_waiting_since)
+  );
 };
 
 export const applyPageFilters = (conversation, filters) => {

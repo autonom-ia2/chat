@@ -77,6 +77,55 @@ RSpec.describe ConversationFinder do
     end
   end
 
+  # O robô passou e ninguém estava online: sem passagem gravada, só a marca de espera de pessoa (#1377).
+  describe 'da_ia=1 com a marca de espera de pessoa' do
+    let(:chave) { Conversation::BOT_HANDOFF_WAITING_SINCE_KEY }
+    let!(:com_marca) do
+      conversa(waiting_since: 45.minutes.ago).tap do |c|
+        c.update!(additional_attributes: { chave => 45.minutes.ago.iso8601, 'browser' => 'x' })
+      end
+    end
+    # JSON dentro de string (formato visto em produção em outros campos): a marca vale do mesmo jeito.
+    let!(:marca_em_json_duplo) do
+      conversa(waiting_since: 10.minutes.ago).tap do |c|
+        c.update_columns(additional_attributes: { chave => 10.minutes.ago.iso8601 }.to_json) # rubocop:disable Rails/SkipsModelValidations
+      end
+    end
+    let!(:marca_vazia) do
+      conversa.tap { |c| c.update!(additional_attributes: { chave => nil }) }
+    end
+
+    before { conversa.tap { |c| c.update!(additional_attributes: { 'browser' => 'x' }) } }
+
+    it 'entra quem tem a marca, em objeto ou em JSON duplo; marca vazia ou ausente, não' do
+      expect(perform(admin, da_ia: '1')[:conversations]).to contain_exactly(com_marca, marca_em_json_duplo)
+      expect(marca_vazia.reload.additional_attributes).to eq(chave => nil)
+    end
+
+    it 'a marca não fura a visibilidade' do
+      fora = conversa(caixa: outra_inbox).tap { |c| c.update!(additional_attributes: { chave => Time.current.iso8601 }) }
+
+      expect(perform(agent, da_ia: '1')[:conversations]).to contain_exactly(com_marca, marca_em_json_duplo)
+      expect(perform(admin, da_ia: '1')[:conversations]).to include(fora)
+    end
+
+    it 'com esperando_min, a espera é a do waiting_since' do
+      expect(perform(admin, da_ia: '1', esperando_min: '30')[:conversations]).to contain_exactly(com_marca)
+    end
+
+    it 'a passagem do robô preenche a marca e o waiting_since juntos' do
+      robo = create(:agent_bot, account: account)
+      create(:agent_bot_inbox, inbox: inbox, agent_bot: robo)
+      conversation = conversa.tap { |c| c.update_columns(waiting_since: nil, assignee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
+
+      conversation.bot_handoff!
+
+      expect(conversation.reload.bot_handoff_waiting?).to be(true)
+      expect(conversation.waiting_since).to be_present
+      expect(perform(admin, da_ia: '1')[:conversations]).to include(conversation)
+    end
+  end
+
   describe 'esperando_min' do
     let!(:ha_uma_hora) { conversa(waiting_since: 1.hour.ago) }
     let!(:ha_dez_minutos) { conversa(waiting_since: 10.minutes.ago) }
