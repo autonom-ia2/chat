@@ -87,6 +87,9 @@ describe('moeda da meta', () => {
     expect(moedaDoFunil(pipeline)).toBe('USD');
     expect(moedaDoFunil({ metadata: {} })).toBe('BRL');
     expect(moedaDoFunil(null)).toBe('BRL');
+    expect(moedaDoFunil({ metadata: { goals: { currency: 'R$' } } })).toBe(
+      'BRL'
+    );
   });
 
   it('shows the symbol of the funnel currency', () => {

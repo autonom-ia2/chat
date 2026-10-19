@@ -31,7 +31,7 @@ class Crm::Reports::OriginMetrics
       INNER JOIN conversations ON conversations.id = eligible_cards.conversation_id
         AND conversations.account_id = eligible_cards.account_id
       INNER JOIN visible_conversation_ids ON visible_conversation_ids.id = conversations.id
-      WHERE jsonb_exists(conversations.additional_attributes, 'campaign')
+      WHERE jsonb_typeof(conversations.additional_attributes -> 'campaign') = 'object'
       UNION ALL
       SELECT
         eligible_cards.card_id,
@@ -46,24 +46,28 @@ class Crm::Reports::OriginMetrics
       INNER JOIN conversations ON conversations.id = crm_card_conversations.conversation_id
         AND conversations.account_id = eligible_cards.account_id
       INNER JOIN visible_conversation_ids ON visible_conversation_ids.id = conversations.id
-      WHERE jsonb_exists(conversations.additional_attributes, 'campaign')
+      WHERE jsonb_typeof(conversations.additional_attributes -> 'campaign') = 'object'
     ),
     canonical_cards AS (
       SELECT DISTINCT ON (card_id)
-        candidate_origins.campaign,
+        jsonb_strip_nulls(jsonb_build_object(
+          'source', campaign ->> 'source', 'source_type', campaign ->> 'source_type',
+          'ctwa_clid', campaign ->> 'ctwa_clid', 'gclid', campaign ->> 'gclid', 'ttclid', campaign ->> 'ttclid',
+          'fbclid', campaign ->> 'fbclid', 'utm_source', campaign ->> 'utm_source', 'utm_medium', campaign ->> 'utm_medium'
+        )) AS signal,
         candidate_origins.currency,
         candidate_origins.value_cents
       FROM candidate_origins
       ORDER BY card_id, touched_at ASC NULLS FIRST, conversation_id ASC
     ),
     cards_without_origin AS (
-      SELECT NULL::jsonb AS campaign, eligible_cards.currency, eligible_cards.value_cents
+      SELECT eligible_cards.currency, eligible_cards.value_cents
       FROM eligible_cards
       WHERE NOT EXISTS (
         SELECT 1
         FROM conversations
         WHERE conversations.account_id = eligible_cards.account_id
-          AND jsonb_exists(conversations.additional_attributes, 'campaign')
+          AND jsonb_typeof(conversations.additional_attributes -> 'campaign') = 'object'
           AND (
             conversations.id = eligible_cards.conversation_id
             OR conversations.id IN (
@@ -75,9 +79,13 @@ class Crm::Reports::OriginMetrics
           )
       )
     )
-    SELECT campaign, currency, value_cents FROM canonical_cards
-    UNION ALL
-    SELECT campaign, currency, value_cents FROM cards_without_origin
+    SELECT signal, currency, COUNT(*) AS won_count, SUM(value_cents) AS value_cents
+    FROM (
+      SELECT signal, currency, value_cents FROM canonical_cards
+      UNION ALL
+      SELECT NULL::jsonb AS signal, currency, value_cents FROM cards_without_origin
+    ) AS sales
+    GROUP BY signal, currency
   SQL
 
   # visible_ids_sql: as conversas que a pessoa vê; card_filters/binds: as vendas que entram (conta, período, funil).
@@ -90,26 +98,26 @@ class Crm::Reports::OriginMetrics
   def perform
     query = format(ORIGIN_METRICS_SQL, visible_ids: @visible_ids_sql, card_filters: @card_filters)
     sql = ActiveRecord::Base.sanitize_sql_array([query, *@binds])
-    rows = ActiveRecord::Base.connection.select_all(sql).group_by { |row| origin_source(row['campaign']) }
-    rows.map { |source, sales| origin_row(source, sales) }.sort_by { |row| origin_order(row) }
+    groups = ActiveRecord::Base.connection.select_all(sql).group_by { |row| origin_source(row['signal']) }
+    groups.map { |source, rows| origin_row(source, rows) }.sort_by { |row| origin_order(row) }
   end
 
   private
 
   # #1876: o toque sem `source` (gravado antes do campo existir) tem a origem resolvida pela regra do próprio toque, a
-  # mesma de Ctwa::CampaignBuilder; nunca vira anúncio por padrão.
-  def origin_source(raw_campaign)
-    campaign = raw_campaign.is_a?(String) ? JSON.parse(raw_campaign) : raw_campaign
-    return NO_ORIGIN unless campaign.is_a?(Hash) && campaign.present?
+  # mesma de Ctwa::CampaignBuilder.source_for; nunca vira anúncio por padrão. O SQL traz só os campos que essa regra lê.
+  def origin_source(raw_signal)
+    signal = raw_signal.is_a?(String) ? JSON.parse(raw_signal) : raw_signal
+    return NO_ORIGIN if signal.blank?
 
-    campaign['source'].presence || Ctwa::CampaignBuilder.source_for(campaign.symbolize_keys)
+    signal['source'].to_s.presence || Ctwa::CampaignBuilder.source_for(signal.symbolize_keys)
   end
 
-  def origin_row(source, sales)
-    totals = sales.group_by { |sale| sale['currency'] }.sort.map do |currency, list|
-      { currency: currency, value_cents: list.sum { |sale| sale['value_cents'].to_i } }
+  def origin_row(source, rows)
+    totals = rows.group_by { |row| row['currency'] }.sort.map do |currency, list|
+      { currency: currency, value_cents: list.sum { |row| row['value_cents'].to_i } }
     end
-    { source: source, won_count: sales.size, won_value_by_currency: totals }
+    { source: source, won_count: rows.sum { |row| row['won_count'].to_i }, won_value_by_currency: totals }
   end
 
   # Mais vendas primeiro; "Sem origem" sempre por último.

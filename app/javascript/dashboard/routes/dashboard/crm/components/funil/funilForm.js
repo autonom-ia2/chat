@@ -43,10 +43,22 @@ const CENTAVOS = 100;
 export const metaDoMes = centavos =>
   centavos ? Number(centavos) / CENTAVOS : '';
 
-// #1876 — a meta é na moeda do funil (metadata.goals.currency); sem ela, real.
+// #1876 — a meta é na moeda do funil (metadata.goals.currency); sem ela, ou com
+// um código que o navegador não conhece (gravado errado pela API), real.
 const MOEDA_PADRAO = 'BRL';
-export const moedaDoFunil = pipeline =>
-  pipeline?.metadata?.goals?.currency || MOEDA_PADRAO;
+const moedaConhecida = moeda => {
+  try {
+    return Boolean(
+      new Intl.NumberFormat('en', { style: 'currency', currency: moeda })
+    );
+  } catch {
+    return false;
+  }
+};
+export const moedaDoFunil = pipeline => {
+  const moeda = pipeline?.metadata?.goals?.currency;
+  return moeda && moedaConhecida(moeda) ? moeda : MOEDA_PADRAO;
+};
 
 export const simboloDaMoeda = (moeda, idioma) =>
   new Intl.NumberFormat(idioma, {

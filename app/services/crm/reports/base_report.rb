@@ -5,7 +5,8 @@ module Crm
     # is_default) and the analysis time window.
     #
     # #1876: o relógio dos relatórios é o fuso da conta (Crm::Timezone::Resolver), nunca o do servidor. Vale para o
-    # período padrão, para a data sem fuso que chega no parâmetro, para o dia/semana/mês dos gráficos e para o mês da meta.
+    # período padrão, para a data sem fuso que chega no parâmetro, para o dia/semana/mês do gráfico de fechados
+    # (Throughput) e para o mês da meta (Summary). O gráfico de uso de IA (AiUsage) ainda corta o dia em UTC.
     class BaseReport
       DEFAULT_RANGE_DAYS = 30
       MAX_RANGE_DAYS = 366
