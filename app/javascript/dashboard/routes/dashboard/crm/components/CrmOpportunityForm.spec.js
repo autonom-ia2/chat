@@ -96,6 +96,35 @@ it('explains the new-contact permission without blocking an existing contact', (
     wrapper.find('[data-pessoa="existing"]').attributes('disabled')
   ).toBeUndefined();
 });
+it('sem ver contatos, não oferece escolher da base e começa sem pessoa (#1849)', () => {
+  wrapper = makeForm({
+    passo: 1,
+    canCreateContact: false,
+    canPickContact: false,
+    initialContact: null,
+  });
+  expect(
+    wrapper.find('[data-pessoa="existing"]').attributes('disabled')
+  ).toBeDefined();
+  expect(wrapper.find('[data-pessoa="none"]').attributes('aria-pressed')).toBe(
+    'true'
+  );
+});
+
+it('sem ver contatos, a pessoa que veio da conversa continua escolhida (#1849)', () => {
+  wrapper = makeForm({
+    passo: 1,
+    canPickContact: false,
+    initialContact: { id: 9, name: 'Da conversa' },
+  });
+  expect(
+    wrapper.find('[data-pessoa="existing"]').attributes('disabled')
+  ).toBeUndefined();
+  expect(
+    wrapper.find('[data-pessoa="existing"]').attributes('aria-pressed')
+  ).toBe('true');
+});
+
 it('requires an explicit contact or an explicit choice to continue without one', async () => {
   wrapper = makeForm({ passo: 1 });
   wrapper.vm.form.title = 'Negociação';

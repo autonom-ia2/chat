@@ -1,6 +1,8 @@
 class Api::V1::Accounts::Contacts::AttachmentsController < Api::V1::Accounts::Contacts::BaseController
   RESULTS_PER_PAGE = 100
 
+  before_action -> { authorize @contact, :show? }
+
   def index
     conversations = Conversations::PermissionFilterService.new(
       Current.account.conversations.where(contact_id: @contact.id),
