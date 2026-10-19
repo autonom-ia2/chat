@@ -189,12 +189,14 @@ const periodSeriesLabel = computed(() => {
   return t(PERIOD_SERIES_LABEL_KEYS[selectedPeriod.value.key]);
 });
 
-const weeklySpendCollection = computed(() => ({
-  labels: timeSeries.value.map(point => formatBucket(point.timestamp)),
-  datasets: [
+// #1876: formato do @chatwoot/viz (categories/series); o antigo labels/datasets deixava o gráfico vazio desde o #15458.
+const weeklySpendChart = computed(() => ({
+  categories: timeSeries.value.map(point => formatBucket(point.timestamp)),
+  series: [
     {
+      id: 'spend',
       label: periodSeriesLabel.value,
-      backgroundColor: '#2563eb',
+      color: '#2563eb',
       data: timeSeries.value.map(point =>
         Number(point[chartMoneyKey.value] || point.cost_usd || 0)
       ),
@@ -540,7 +542,11 @@ onMounted(fetchUsage);
             {{ t('CRM_AI_USAGE.EMPTY.SERIES') }}
           </p>
           <div v-else class="h-64">
-            <BarChart :collection="weeklySpendCollection" />
+            <BarChart
+              :data="weeklySpendChart"
+              :height="232"
+              :aria-label="periodSeriesLabel"
+            />
           </div>
         </section>
       </div>
