@@ -121,7 +121,9 @@ const hasMetaData = computed(() => {
 // Joins a [{ currency, value_cents }] list into a single multi-currency string,
 // honoring the locked rule that currencies are never summed together.
 const formatCurrencyList = list => {
-  if (!list || !list.length) return formatMoney(0, 'BRL');
+  // #1876: o zero sai na moeda da meta do funil, não sempre em real.
+  if (!list || !list.length)
+    return formatMoney(0, summary.value?.goal?.currency);
   return list
     .map(entry => formatMoney(entry.value_cents, entry.currency))
     .join(' · ');

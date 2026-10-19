@@ -60,11 +60,12 @@ export const moedaDoFunil = pipeline => {
   return moeda && moedaConhecida(moeda) ? moeda : MOEDA_PADRAO;
 };
 
+// O mesmo símbolo dos valores da gaveta (US$ em português), para o rótulo e o
+// valor nunca divergirem.
 export const simboloDaMoeda = (moeda, idioma) =>
   new Intl.NumberFormat(idioma, {
     style: 'currency',
     currency: moeda,
-    currencyDisplay: 'narrowSymbol',
   })
     .formatToParts(0)
     .find(parte => parte.type === 'currency')?.value || moeda;

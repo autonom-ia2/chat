@@ -93,7 +93,7 @@ describe('moeda da meta', () => {
   });
 
   it('shows the symbol of the funnel currency', () => {
-    expect(simboloDaMoeda('USD', 'pt-BR')).toBe('$');
+    expect(simboloDaMoeda('USD', 'pt-BR')).toBe('US$');
     expect(simboloDaMoeda('BRL', 'pt-BR')).toBe('R$');
     expect(simboloDaMoeda('EUR', 'en')).toBe('€');
   });

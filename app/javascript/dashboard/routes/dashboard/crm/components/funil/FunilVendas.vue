@@ -9,7 +9,7 @@ import { TIPOS, tipoDaVenda } from './funil';
 defineProps({
   padraoSucesso: { type: String, required: true },
   padraoFracasso: { type: String, required: true },
-  // #1876 — símbolo da moeda do funil (R$, $, €…).
+  // #1876 — símbolo da moeda do funil (R$, US$, €…).
   moeda: { type: String, required: true },
 });
 
