@@ -8,14 +8,16 @@
 # - apagada: a correspondência deixa de valer (fica a marca `apagada_em`); o `Label` fica, com tudo em que já está.
 # - vinculada / desvinculada: põe ou tira a etiqueta do contato e da conversa não resolvida mais recente dele na caixa
 #   (Etiquetas::EtiquetaNoContato). Nunca mudam o nome nem a cor de uma correspondência que já existe. Vinculada sem
-#   correspondência cria como em criada; desvinculada sem correspondência, e as duas com a etiqueta apagada no celular,
-#   só deixam log.
+#   correspondência cria como em criada, mas com o relógio da etiqueta no piso (PISO_DO_RELOGIO): a criada/renomeada
+#   que chegar depois sempre vence e traz o nome e a cor dela. Desvinculada sem correspondência, e as duas com a
+#   etiqueta apagada no celular, só deixam log.
 # Ordem: os eventos de uma etiqueta do celular passam um de cada vez (trava na linha da correspondência) e o `at` decide,
 # em dois relógios separados: criada/renomeada/apagada contra o último evento da etiqueta (`evento_em`), e
 # vinculada/desvinculada contra o último do mesmo contato (Etiquetas::DoCelularNoContato). Evento mais velho que o do seu
 # relógio é descartado com log. Repetir o evento não duplica nada.
-# Travas, sempre nesta ordem: correspondência → contato → conversa. A nota de atividade na conversa só é enfileirada
-# depois do commit. Erro não é engolido: sobe para o job; evento malformado (EventoInvalido) o job descarta com log.
+# Travas, sempre nesta ordem: correspondência → contato → conversa. A nota de atividade na conversa é enfileirada no
+# callback de commit da transação; se o enfileiramento falha, o erro sobe com log. Erro não é engolido: sobe para o
+# job; evento malformado (EventoInvalido) o job descarta com log.
 class Etiquetas::AplicarEventoDoCelular
   # Evento que nunca vai dar certo (ação desconhecida, `at` inválido): o job descarta em vez de tentar de novo.
   class EventoInvalido < ArgumentError; end
@@ -27,6 +29,8 @@ class Etiquetas::AplicarEventoDoCelular
   ACEITOS_ALEM_DE_LETRA = (('0'..'9').to_a + [SEPARADOR, '-']).freeze
   TAMANHO_MINIMO_DO_TITULO = 2 # a validação do Label pede ao menos dois caracteres
   PREFIXO_SEM_TITULO = 'whatsapp'.freeze
+  # Relógio da etiqueta numa correspondência criada por uma vinculada: qualquer criada/renomeada/apagada é mais nova.
+  PISO_DO_RELOGIO = Time.at(0).utc
 
   # Título técnico de um nome do celular, pelas mesmas regras do formulário (`tituloTecnicoDoNome` no painel), sem regex:
   # minúsculo, palavras unidas por "_", só letra (de qualquer alfabeto com maiúscula e minúscula), dígito, "_" e "-",
@@ -63,12 +67,22 @@ class Etiquetas::AplicarEventoDoCelular
     return descartar('caixa não existe mais') if @inbox.nil?
     return descartar('flag desligada na conta') unless conta.feature_enabled?(FLAG)
 
-    ActiveRecord::Base.transaction { aplicar(acao) }
-    @notas.each(&:enfileirar)
+    ActiveRecord::Base.transaction do |transacao|
+      aplicar(acao)
+      transacao.after_commit { enfileirar_notas } if @notas.any?
+    end
     nil
   end
 
   private
+
+  def enfileirar_notas
+    @notas.each(&:enfileirar)
+  rescue StandardError => e
+    Rails.logger.error("#{LOG} nota de atividade não enfileirada: #{e.class} inbox=#{@evento[:inbox_id]} " \
+                       "acao=#{@evento[:acao]}")
+    raise
+  end
 
   def aplicar(acao)
     case acao
@@ -110,10 +124,10 @@ class Etiquetas::AplicarEventoDoCelular
     registro.update!(**atributos, **etiqueta_se_faltar(registro))
   end
 
-  # vinculada: a correspondência como está (cria se não houver, como em criada). Nome, cor e o relógio da etiqueta não
-  # mudam; a ordem do vínculo é a do contato.
+  # vinculada: a correspondência como está (cria se não houver, com o relógio da etiqueta no piso). Nome, cor e o
+  # relógio da etiqueta não mudam; a ordem do vínculo é a do contato.
   def vincular
-    registro = correspondencia_travada || criar_correspondencia
+    registro = correspondencia_travada || criar_correspondencia(evento_em: PISO_DO_RELOGIO)
     return descartar("vinculada de etiqueta apagada no celular label_wa_id=#{label_wa_id}") if registro.apagada?
 
     trocar_no_contato(:adicionar, registro)
@@ -137,16 +151,16 @@ class Etiquetas::AplicarEventoDoCelular
   # Cria o `Label` (se preciso) e a correspondência juntos: se a correspondência não grava, o `Label` também não fica.
   # Outro evento da mesma etiqueta criando ao mesmo tempo bate no índice único; aí este espera a trava dele e segue com
   # o que ele gravou.
-  def criar_correspondencia(tentar_de_novo: true)
+  def criar_correspondencia(evento_em: @at, tentar_de_novo: true)
     Etiquetas::DoCelular.transaction(requires_new: true) do
       label, criada = etiqueta_para_o_nome
-      Etiquetas::DoCelular.create!(account: conta, inbox: @inbox, label: label, label_wa_id: label_wa_id, evento_em: @at,
+      Etiquetas::DoCelular.create!(account: conta, inbox: @inbox, label: label, label_wa_id: label_wa_id, evento_em: evento_em,
                                    nome: @evento[:nome], color_index: @evento[:color_index], criada_pelo_celular: criada)
     end
   rescue ActiveRecord::RecordNotUnique
     raise unless tentar_de_novo
 
-    correspondencia_travada || criar_correspondencia(tentar_de_novo: false)
+    correspondencia_travada || criar_correspondencia(evento_em: evento_em, tentar_de_novo: false)
   end
 
   # Só a corrida conta: índice único, ou o título do `Label` que outro evento acabou de gravar. Qualquer outro motivo sobe.
@@ -179,21 +193,31 @@ class Etiquetas::AplicarEventoDoCelular
   end
 
   # Apagada antes de criada (fora de ordem) deixa só a marca, sem `Label`, para o "criada" mais velho ser descartado.
-  def apagar
+  def apagar(tentar_de_novo: true)
     registro = correspondencia_travada
-    if registro.nil?
-      return Etiquetas::DoCelular.create!(account: conta, inbox: @inbox, label_wa_id: label_wa_id, evento_em: @at,
-                                          apagada_em: @at, nome: @evento[:nome], color_index: @evento[:color_index])
-    end
+    return criar_marca_de_apagada(tentar_de_novo) if registro.nil?
     return unless evento_novo_para?(registro)
 
     registro.update!(evento_em: @at, apagada_em: @at)
   end
 
+  # Outro evento da mesma etiqueta criando ao mesmo tempo bate no índice único: espera a trava dele e apaga o que ele
+  # gravou (como em criar_correspondencia).
+  def criar_marca_de_apagada(tentar_de_novo)
+    Etiquetas::DoCelular.transaction(requires_new: true) do
+      Etiquetas::DoCelular.create!(account: conta, inbox: @inbox, label_wa_id: label_wa_id, evento_em: @at,
+                                   apagada_em: @at, nome: @evento[:nome], color_index: @evento[:color_index])
+    end
+  rescue ActiveRecord::RecordNotUnique
+    raise unless tentar_de_novo
+
+    apagar(tentar_de_novo: false)
+  end
+
   def desvincular
     registro = correspondencia_travada
-    return descartar("#{self.class.name}: desvinculada sem correspondência label_wa_id=#{label_wa_id}") if registro&.label.nil?
-    return descartar("#{self.class.name}: desvinculada de etiqueta apagada label_wa_id=#{label_wa_id}") if registro.apagada?
+    return descartar("desvinculada sem correspondência label_wa_id=#{label_wa_id}") if registro&.label.nil?
+    return descartar("desvinculada de etiqueta apagada label_wa_id=#{label_wa_id}") if registro.apagada?
 
     trocar_no_contato(:remover, registro)
   end

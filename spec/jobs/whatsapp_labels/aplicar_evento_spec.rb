@@ -25,6 +25,23 @@ RSpec.describe WhatsappLabels::AplicarEvento do
     expect(Etiquetas::DoCelular.sole).to have_attributes(label_wa_id: '7', nome: 'Pago', color_index: 2)
   end
 
+  it 'não põe os argumentos (com o telefone) no log do ActiveJob' do
+    saida = StringIO.new
+    logger_original = ActiveJob::Base.logger
+    ActiveJob::Base.logger = ActiveSupport::TaggedLogging.new(Logger.new(saida))
+    servico = instance_double(Etiquetas::AplicarEventoDoCelular, perform: nil)
+    allow(Etiquetas::AplicarEventoDoCelular).to receive(:new).and_return(servico)
+
+    described_class.perform_later({ inbox_id: 1, acao: 'vinculada', contact_phone: '+5511999990001' })
+    described_class.perform_now({ inbox_id: 1, acao: 'vinculada', contact_phone: '+5511999990001' })
+
+    expect(described_class.log_arguments?).to be(false)
+    expect(saida.string).to include('WhatsappLabels::AplicarEvento')
+    expect(saida.string).not_to include('5511999990001')
+  ensure
+    ActiveJob::Base.logger = logger_original
+  end
+
   it 'evento malformado é descartado com log (classe, caixa e ação), sem o telefone e sem nova tentativa' do
     account = create(:account)
     account.enable_features!('etiquetas_do_celular')

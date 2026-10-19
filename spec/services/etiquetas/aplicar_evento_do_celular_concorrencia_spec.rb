@@ -57,10 +57,18 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular, :relationships_committed_fixtu
     prontas = Queue.new
     resultados = Queue.new
     eventos.each { |um_evento| workers << em_thread(um_evento, largada, prontas, resultados) }
-    eventos.size.times { prontas.pop }
+    eventos.size.times { tirar(prontas, 'as threads não ficaram prontas') }
     eventos.size.times { largada << true }
     workers.each { |worker| expect(worker.join(prazo)).not_to be_nil, 'thread presa: trava sem fim' }
-    Array.new(eventos.size) { resultados.pop }
+    Array.new(eventos.size) { tirar(resultados, 'thread terminou sem resultado') }
+  end
+
+  # `pop` com prazo: fila vazia depois dele é falha clara, não espera sem fim.
+  def tirar(fila, motivo)
+    item = fila.pop(timeout: prazo)
+    raise "#{motivo} em #{prazo}s" if item.nil?
+
+    item
   end
 
   def em_thread(um_evento, largada, prontas, resultados)
@@ -68,11 +76,13 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular, :relationships_committed_fixtu
       ActiveRecord::Base.connection_pool.with_connection do |conexao|
         conexao.execute("SET lock_timeout = '#{prazo / 2}s'")
         prontas << true
-        largada.pop
+        tirar(largada, 'a largada não veio')
         described_class.new(um_evento).perform
         resultados << :ok
       rescue StandardError => e
         resultados << e.class.name
+      ensure
+        conexao.execute('RESET lock_timeout') # a conexão volta ao pool: o prazo não vaza para outros specs
       end
     end
   end

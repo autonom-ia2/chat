@@ -190,6 +190,23 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(Etiquetas::DoCelular.vivas.sole).to have_attributes(nome: 'Novo cliente', apagada_em: nil)
       end
 
+      it 'apagada que bate no índice único (outro evento criou ao mesmo tempo) espera e apaga o que ele gravou' do
+        aplicar('criada', at: as('12:00'))
+        servico = described_class.new(evento('apagada', at: as('13:00')))
+        primeira = true
+        allow(servico).to receive(:correspondencia_travada).and_wrap_original do |original|
+          if primeira
+            primeira = false
+            next nil
+          end
+          original.call
+        end
+
+        servico.perform
+
+        expect(Etiquetas::DoCelular.sole).to have_attributes(apagada_em: Time.iso8601(as('13:00')))
+      end
+
       it 'criada depois de uma apagada que chegou antes (marca sem Label) cria o Label' do
         aplicar('apagada', at: as('12:00'))
         aplicar('criada', at: as('13:00'))
@@ -228,6 +245,17 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         aplicar('vinculada')
 
         expect(Etiquetas::DoCelular.sole.label.title).to eq('novo_cliente')
+      end
+
+      it 'correspondência criada por vinculada fica com o relógio no piso: a criada mais velha que chega depois vence' do
+        aplicar('vinculada', nome: 'Do vínculo', color_index: 1, at: as('10:00'))
+        expect(Etiquetas::DoCelular.sole.evento_em).to eq(described_class::PISO_DO_RELOGIO)
+
+        aplicar('criada', nome: 'Da criação', color_index: 6, at: as('05:00'))
+
+        expect(Etiquetas::DoCelular.sole).to have_attributes(nome: 'Da criação', color_index: 6,
+                                                             evento_em: Time.iso8601(as('05:00')))
+        expect(contato.reload.label_list).to eq(['do_vínculo'])
       end
 
       it 'é idempotente e mantém as etiquetas que o contato já tinha' do
@@ -376,6 +404,17 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
           .with(a_string_including('vinculada de etiqueta apagada no celular', "inbox=#{inbox.id}", 'label_wa_id=3'))
       end
 
+      it 'falha ao enfileirar a nota depois do commit: o erro sobe, com log' do
+        conversa
+        allow(Conversations::ActivityMessageJob).to receive(:perform_later).and_raise(RuntimeError, 'fila fora do ar')
+        allow(Rails.logger).to receive(:error)
+
+        expect { aplicar('vinculada') }.to raise_error(RuntimeError, 'fila fora do ar')
+        expect(Rails.logger).to have_received(:error)
+          .with(a_string_including('nota de atividade não enfileirada', 'RuntimeError', 'acao=vinculada'))
+        expect(contato.reload.label_list).to eq(['novo_cliente'])
+      end
+
       it 'a nota só vai para a fila depois do commit da transação' do
         conversa
         base = ActiveRecord::Base.connection.open_transactions
@@ -465,7 +504,7 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(Etiquetas::DoCelular.count).to eq(0)
         expect(contato.reload.label_list).to eq(['novo_cliente'])
         expect(Rails.logger).to have_received(:info)
-          .with(a_string_including('Etiquetas::AplicarEventoDoCelular', "inbox=#{inbox.id}", 'label_wa_id=3'))
+          .with(a_string_including('desvinculada sem correspondência', "inbox=#{inbox.id}", 'label_wa_id=3'))
       end
     end
 

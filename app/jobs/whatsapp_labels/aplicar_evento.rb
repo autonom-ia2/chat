@@ -6,6 +6,8 @@
 # Erro de banco sobe (a fila tenta de novo); evento malformado é descartado com log.
 class WhatsappLabels::AplicarEvento < ApplicationJob
   queue_as :default
+  # O evento traz o telefone do contato: os argumentos não vão para o log do ActiveJob.
+  self.log_arguments = false
 
   # Evento malformado (ação desconhecida, `at` inválido) nunca vai dar certo: descarta com log, sem o telefone.
   discard_on Etiquetas::AplicarEventoDoCelular::EventoInvalido do |job, error|
