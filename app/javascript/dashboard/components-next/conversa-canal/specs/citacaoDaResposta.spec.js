@@ -62,8 +62,9 @@ describe('CitacaoDaResposta', () => {
       html_content: { full: '<p>Oi</p>' },
     });
     await comHtml.get('[data-ver-citacao]').trigger('click');
-    expect(comHtml.get('[data-letter]').attributes('data-html')).toBe(
-      '<p>Oi</p>'
+    // O HTML passa pelo htmlComCssSeguro (documento inteiro) antes do vue-letter.
+    expect(comHtml.get('[data-letter]').attributes('data-html')).toContain(
+      '<body><p>Oi</p></body>'
     );
   });
 });
