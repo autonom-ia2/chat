@@ -249,14 +249,47 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(Etiquetas::DoCelular.count).to eq(1)
       end
 
-      it 'não usa autor falso: sem usuário, o Chatwoot não grava nota de atividade da etiqueta' do
+      it 'nota na conversa só quando muda: adiciona → 1, repete → nenhuma nova, remove → 1; sem autor falso' do
+        account.update!(locale: 'pt_BR')
         recente = conversa
+        notas = -> { recente.messages.activity.order(:id).pluck(:content) }
+
+        perform_enqueued_jobs(only: Conversations::ActivityMessageJob) { aplicar('vinculada') }
+        expect(notas.call).to eq(['O WhatsApp do celular adicionou a etiqueta Novo cliente 🔥'])
+
+        perform_enqueued_jobs(only: Conversations::ActivityMessageJob) { aplicar('vinculada', at: as('12:30')) }
+        expect(notas.call.size).to eq(1)
+
+        perform_enqueued_jobs(only: Conversations::ActivityMessageJob) { aplicar('desvinculada', at: as('13:00')) }
+        expect(notas.call.last).to eq('O WhatsApp do celular removeu a etiqueta Novo cliente 🔥')
+        expect(notas.call.size).to eq(2)
+        expect(Current.executed_by).to be_nil
+      end
+
+      it 'nota usa o nome livre, senão o do celular, senão o derivado do título; idioma da conta' do
+        recente = conversa
+        aplicar('criada')
+        Etiquetas::Nome.create!(account: account, label: account.labels.sole, nome: 'Cliente novo')
+
+        perform_enqueued_jobs(only: Conversations::ActivityMessageJob) do
+          aplicar('vinculada')
+          aplicar('vinculada', label_wa_id: '6', nome: 'Pago ✅')
+          aplicar('vinculada', label_wa_id: '7', nome: nil)
+        end
+
+        expect(recente.messages.activity.order(:id).pluck(:content))
+          .to eq(['WhatsApp on the phone added the label Cliente novo',
+                  'WhatsApp on the phone added the label Pago ✅',
+                  'WhatsApp on the phone added the label Whatsapp 7'])
+      end
+
+      it 'sem conversa em andamento: muda o contato e não cria nota' do
+        conversa(status: :resolved)
 
         perform_enqueued_jobs(only: Conversations::ActivityMessageJob) { aplicar('vinculada') }
 
-        expect(recente.reload.label_list).to eq(['novo_cliente'])
-        expect(recente.messages.activity).to be_empty
-        expect(Current.executed_by).to be_nil
+        expect(contato.reload.label_list).to eq(['novo_cliente'])
+        expect(Message.activity.count).to eq(0)
       end
 
       it 'vinculada mais velha que a última desvinculada no mesmo contato é descartada' do

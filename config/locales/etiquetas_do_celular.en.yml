@@ -1,0 +1,5 @@
+en:
+  etiquetas_do_celular:
+    atividade:
+      adicionada: "WhatsApp on the phone added the label %{etiqueta}"
+      removida: "WhatsApp on the phone removed the label %{etiqueta}"

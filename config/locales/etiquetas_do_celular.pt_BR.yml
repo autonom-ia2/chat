@@ -1,0 +1,5 @@
+pt_BR:
+  etiquetas_do_celular:
+    atividade:
+      adicionada: "O WhatsApp do celular adicionou a etiqueta %{etiqueta}"
+      removida: "O WhatsApp do celular removeu a etiqueta %{etiqueta}"

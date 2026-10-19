@@ -7,6 +7,9 @@
 #   velho é descartado.
 # - As etiquetas do contato e da conversa são lidas e gravadas sob trava da linha (with_lock): outra etiqueta posta ao
 #   mesmo tempo no mesmo contato não se perde.
+# - Quando a conversa muda de fato, ela ganha a nota de atividade "O WhatsApp do celular adicionou/removeu a etiqueta X"
+#   (protótipo aprovado), no idioma da conta e no mesmo formato das notas de etiqueta do Chatwoot. X é o nome legível:
+#   nome livre, senão o nome do celular, senão o derivado do título. Sem mudança, sem nota; no contato, nunca.
 # Devolve :aplicado, ou o motivo do descarte (texto) para o log.
 class Etiquetas::EtiquetaNoContato
   CONVERSA_EM_ANDAMENTO = %i[open pending].freeze
@@ -29,7 +32,7 @@ class Etiquetas::EtiquetaNoContato
     vinculo.update!(vinculada: operacao == :adicionar, evento_em: @at)
     trocar_etiqueta(contato, operacao)
     conversa = conversa_em_andamento_de(contato)
-    trocar_etiqueta(conversa, operacao) if conversa
+    anotar(conversa, operacao) if conversa && trocar_etiqueta(conversa, operacao)
     :aplicado
   end
 
@@ -43,12 +46,42 @@ class Etiquetas::EtiquetaNoContato
     @registro.label.title
   end
 
+  # Devolve true quando as etiquetas mudaram.
   def trocar_etiqueta(registro, operacao)
     registro.with_lock do
       atuais = registro.label_list.to_a
       novas = operacao == :adicionar ? atuais | [titulo] : atuais - [titulo]
-      registro.update_labels(novas) unless novas.sort == atuais.sort
+      next false if novas.sort == atuais.sort
+
+      registro.update_labels(novas)
+      true
     end
+  end
+
+  def anotar(conversa, operacao)
+    chave = operacao == :adicionar ? 'adicionada' : 'removida'
+    conteudo = I18n.with_locale(idioma_da_conta) do
+      I18n.t("etiquetas_do_celular.atividade.#{chave}", etiqueta: nome_legivel)
+    end
+    Conversations::ActivityMessageJob.perform_later(
+      conversa, { account_id: conversa.account_id, inbox_id: conversa.inbox_id, message_type: :activity, content: conteudo }
+    )
+  end
+
+  def idioma_da_conta
+    locale = @inbox.account.locale.presence&.to_sym
+    I18n.available_locales.include?(locale) ? locale : I18n.default_locale
+  end
+
+  # Mesma ordem do painel (helper nomeDaEtiqueta.js): nome livre → nome do celular → derivado do título
+  # ("aguardando_retorno" vira "Aguardando retorno"), sem regex.
+  def nome_legivel
+    Etiquetas::Nome.find_by(label: @registro.label)&.nome.presence || @registro.nome.presence || nome_do_titulo
+  end
+
+  def nome_do_titulo
+    palavras = titulo.split('_').compact_blank.join(' ')
+    palavras[0].to_s.upcase + palavras[1..].to_s
   end
 
   def conversa_em_andamento_de(contato)
