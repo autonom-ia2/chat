@@ -17,8 +17,13 @@ module Enterprise::ContactPolicy
     update?
   end
 
+  # Exporting the base left contact_manage in #1845; the migration gave contact_export to roles that had it.
   def export?
-    @account_user.custom_role&.permissions&.include?('contact_manage') || super
+    @account_user.permission_granted?('contact_export')
+  end
+
+  def destroy?
+    @account_user.permission_granted?('contact_delete')
   end
 
   def import?

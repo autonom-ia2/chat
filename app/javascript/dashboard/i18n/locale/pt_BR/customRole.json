@@ -51,6 +51,8 @@
       "CRM_ADMIN": "Administrador do CRM (acesso total)",
       "CRM_EXPORT": "Exportar a lista do CRM para Excel",
       "CONTACT_VIEW": "Ver contatos",
+      "CONTACT_EXPORT": "Exportar contatos",
+      "CONTACT_DELETE": "Excluir contatos e empresas",
       "KNOWLEDGE_BASE_VIEW": "Ver base de conhecimento",
       "AUTONOMIA_VIEW": "Ver e testar Agentes Autonom.ia",
       "AUTONOMIA_MANAGE": "Editar Agentes Autonom.ia",
@@ -109,7 +111,7 @@
           "NAME": "Contatos e empresas",
           "HINT": "Contatos, empresas e relacionamentos",
           "LEVEL_VIEW": "Abre e consulta contatos. Não altera.",
-          "LEVEL_MANAGE": "Cria, edita, importa e exporta contatos."
+          "LEVEL_MANAGE": "Cria, edita e importa contatos."
         },
         "KNOWLEDGE_BASE": {
           "NAME": "Base de conhecimento",
@@ -275,7 +277,9 @@
       "CRM_EXPORT": "Baixa a lista com dados de clientes.",
       "CRM_ADMIN": "Liga tudo acima, o SLA do CRM e os tokens de integração.",
       "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas.",
-      "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder."
+      "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder.",
+      "CONTACT_EXPORT": "Baixa a base de contatos numa planilha.",
+      "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez."
     },
     "EDITOR": {
       "NEW_TITLE": "Ajuste o que for diferente",
