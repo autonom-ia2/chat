@@ -27,6 +27,19 @@ RSpec.describe Crm::Reports::Throughput do
     )
   end
 
+  # #1876: o dia do gráfico é o da conta. Ganho em 31/10 às 22h de São Paulo (01/11 01h UTC) é do dia 31.
+  it 'buckets by day in the account timezone' do
+    account.update!(reporting_timezone: 'America/Sao_Paulo')
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Tarde', currency: 'BRL')
+    travel_to(Time.utc(2026, 11, 1, 1, 0)) { card.update!(status: :won) }
+    window = { since: '2026-10-30T03:00:00Z', until: '2026-11-02T03:00:00Z', group_by: 'day', pipeline_id: pipeline.id }
+
+    result = described_class.new(account: account, params: window).perform
+
+    expect(result[:series]).to eq([{ date: '2026-10-31', won: 1, lost: 0, resolved: 0, cancelled: 0 }])
+  end
+
   it 'reports a service funnel as resolved and cancelled, never as won or lost' do
     pipeline, stage = create_crm_pipeline(account: account, user: user, name: 'Sinistros')
     close_card(pipeline, stage, :won)

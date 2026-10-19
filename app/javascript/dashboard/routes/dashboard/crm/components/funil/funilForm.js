@@ -43,6 +43,20 @@ const CENTAVOS = 100;
 export const metaDoMes = centavos =>
   centavos ? Number(centavos) / CENTAVOS : '';
 
+// #1876 — a meta é na moeda do funil (metadata.goals.currency); sem ela, real.
+const MOEDA_PADRAO = 'BRL';
+export const moedaDoFunil = pipeline =>
+  pipeline?.metadata?.goals?.currency || MOEDA_PADRAO;
+
+export const simboloDaMoeda = (moeda, idioma) =>
+  new Intl.NumberFormat(idioma, {
+    style: 'currency',
+    currency: moeda,
+    currencyDisplay: 'narrowSymbol',
+  })
+    .formatToParts(0)
+    .find(parte => parte.type === 'currency')?.value || moeda;
+
 // Board stages expose funnel_stage_type top-level; stages API payloads carry it
 // inside metadata. Read both so opening the drawer never wipes the mapping.
 // total_cards_count conta todos os status (aberto, ganho, perdido, arquivado):
@@ -95,7 +109,7 @@ export const payloadDoFunil = ({ form, pipeline, editando, ia, modelo }) => ({
         Number(form.monthlyTarget) > 0
           ? Math.round(Number(form.monthlyTarget) * CENTAVOS)
           : 0,
-      currency: 'BRL',
+      currency: moedaDoFunil(pipeline),
     },
     // Always emitted so toggling Meta sync off persists enabled:false.
     meta_sync: {
