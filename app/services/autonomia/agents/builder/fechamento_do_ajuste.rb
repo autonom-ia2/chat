@@ -138,12 +138,16 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
     return :nada if regras_do_ajuste.comparavel(@thread.agent) == antes
 
     { mudancas: mudancas, versao_id: @thread.agent.versao_do_construtor&.id,
-      resposta: resposta.merge(parsed.slice('needs_more_info', 'next_question'), parsed.slice('resposta_ao_dono').compact_blank) }
+      resposta: resposta.merge(parsed.slice('needs_more_info', 'next_question', 'opcoes_de_resposta'),
+                               parsed.slice('resposta_ao_dono').compact_blank) }
   end
 
-  # A correção não aplicou: a explicação dela (texto do Construtor) entra na pergunta ao dono.
+  # A correção não aplicou: a explicação dela (texto do Construtor) entra na pergunta ao dono, com as opções dela.
   def explicacao_da_correcao(parsed)
-    @explicacao_da_correcao = parsed['next_question'].to_s.strip.presence if parsed['needs_more_info'] == true
+    if parsed['needs_more_info'] == true
+      @explicacao_da_correcao = parsed['next_question'].to_s.strip.presence
+      @opcoes_da_correcao = opcoes_do_modelo(parsed)
+    end
     :nada
   end
 

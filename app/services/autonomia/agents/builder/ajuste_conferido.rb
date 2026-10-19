@@ -36,6 +36,11 @@ module Autonomia::Agents::Builder::AjusteConferido
     Autonomia::Agents::Builder::AjustePorLista
   end
 
+  # #1428 (entrega C) — as respostas prontas que o modelo escreveu para a pergunta dele (OpcoesDeResposta).
+  def opcoes_do_modelo(parsed)
+    Autonomia::Agents::Builder::OpcoesDeResposta.filtrar(parsed)
+  end
+
   def texto_do_ajuste(chave, **)
     Autonomia::Agents::Builder::TextosDoAjuste.texto(chave, idioma_do_ajuste, **)
   end
@@ -54,6 +59,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     @conferencias_ms = []
     @campos_truncados = []
     @explicacao_da_correcao = nil
+    @opcoes_da_correcao = []
     @pendencia_anterior = pending_question
     @turnos_da_pendencia = @thread.state.to_h['pendencia_turnos'].to_i
     # O "tira isso" só vai enquanto o Desfazer do último ajuste ainda vale, decidido no começo do turno, antes da escrita
@@ -108,7 +114,15 @@ module Autonomia::Agents::Builder::AjusteConferido
                 else
                   pendencia_no_estado(pendencia_mantida(parsed), parsed, origem: :mantida, laco: false)
                 end
-    perguntar!(token, parsed, [texto], { 'so_pergunta' => motivo == :pergunta }.merge(pendencia))
+    perguntar!(token, parsed, [texto], { 'so_pergunta' => motivo == :pergunta }.merge(pendencia, opcoes_da_pergunta(parsed, motivo)))
+  end
+
+  # Só a pergunta do próprio modelo leva as opções dele (o esclarecimento sem texto cai no texto fixo, sem opções);
+  # perguntar! zera as de qualquer outro fim de turno.
+  def opcoes_da_pergunta(parsed, motivo)
+    return {} unless motivo == :esclarecimento && pergunta_do_modelo(parsed)
+
+    { 'opcoes_de_resposta' => opcoes_do_modelo(parsed) }
   end
 
   # A escrita gravou e nada mudou (o modelo listou o que já estava assim): não fecha como aplicado. Ao dono, só o texto
@@ -116,7 +130,7 @@ module Autonomia::Agents::Builder::AjusteConferido
   def sem_mudanca!(token, parsed, extra = {}, texto: nil)
     pergunta = pergunta_do_modelo(parsed)
     pendencia = if pergunta
-                  pendencia_no_estado(pergunta, parsed, origem: :modelo, laco: true)
+                  pendencia_no_estado(pergunta, parsed, origem: :modelo, laco: true).merge('opcoes_de_resposta' => opcoes_do_modelo(parsed))
                 else
                   pendencia_no_estado(pendencia_mantida(parsed), parsed, origem: :mantida, laco: false)
                 end
@@ -150,7 +164,8 @@ module Autonomia::Agents::Builder::AjusteConferido
     # O Desfazer (`ultimo_ajuste`) e o "tira isso" (`nao_pedido_anterior`) sobrevivem ao turno sem mudança: duram até o
     # próximo ajuste aplicado ou o Desfazer (#1428, parte 3).
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
-             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false)
+             .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false,
+                    'opcoes_de_resposta' => [])
              .merge(extra)
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end
@@ -174,7 +189,8 @@ module Autonomia::Agents::Builder::AjusteConferido
     agent = @thread.agent
     dados = { 'token' => token, 'mudancas' => mudancas, 'versao_id' => agent.versao_do_construtor&.id,
               'versao_antes_id' => agent.versao_antes_do_construtor&.id,
-              'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono', 'pendencia_resolvida'),
+              'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono', 'pendencia_resolvida',
+                                         'opcoes_de_resposta'),
               'agente_updated_at' => agent.reload.updated_at.iso8601(6), 'campos_truncados' => @campos_truncados,
               'perguntas_de_prova' => Autonomia::Agents::ProvaDoAjuste.perguntas(parsed) }
     dados if guardar_ajuste!(token, dados, { 'aplicado_em_token' => token })

@@ -42,6 +42,30 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
       expect(response.body).not_to include('campo', 'Instrução', 'andaime', 'ultimo_ajuste', 'versao_antes_id')
     end
 
+    # #1428 (entrega C) — as respostas prontas da pergunta aberta.
+    it 'traz as opções de resposta da pergunta aberta' do
+      thread.update!(state: thread.state.merge('opcoes_de_resposta' => ['Manter assim', 'Quero mudar']))
+
+      get url, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response.parsed_body.dig('payload', 'state', 'opcoes_de_resposta')).to eq(['Manter assim', 'Quero mudar'])
+    end
+
+    it 'com o piloto desligado no meio da conversa, não traz as opções que ficaram no state' do
+      thread.update!(state: thread.state.merge('opcoes_de_resposta' => ['Manter assim', 'Quero mudar']))
+      Autonomia::Agents::Fase2.desligar!(account)
+
+      get url, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response.parsed_body.dig('payload', 'state')).not_to have_key('opcoes_de_resposta')
+    end
+
+    it 'sem a chave no state (fora do piloto), não traz opções' do
+      get url, headers: administrator.create_new_auth_token, as: :json
+
+      expect(response.parsed_body.dig('payload', 'state')).not_to have_key('opcoes_de_resposta')
+    end
+
     it 'fora do piloto não traz o resultado' do
       Autonomia::Agents::Fase2.desligar!(account)
 
@@ -152,6 +176,16 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
       expect(agent.config).to include('guardrails' => ['Não invente.'], 'model' => 'gpt-x')
       expect(response.parsed_body.dig('payload', 'state', 'resultado')).to include('desfeito' => true, 'pode_desfazer' => false)
       expect(response.body).not_to include('Instrução', 'andaime', 'campo')
+    end
+
+    it 'tira as respostas prontas da pergunta: ela não vale mais' do
+      thread.update!(state: thread.state.merge('opcoes_de_resposta' => ['Manter assim', 'Quero mudar']))
+
+      desfazer
+
+      expect(response).to have_http_status(:ok)
+      expect(thread.reload.state).not_to have_key('opcoes_de_resposta')
+      expect(response.parsed_body.dig('payload', 'state')).not_to have_key('opcoes_de_resposta')
     end
 
     it 'pedir de novo responde 200 sem versão nova' do
