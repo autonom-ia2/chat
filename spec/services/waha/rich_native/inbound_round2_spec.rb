@@ -52,6 +52,27 @@ describe Waha::RichNative::Inbound do
       expect(described_class.hidden?(header)).to be(false)
     end
 
+    # #1831b: contagem fora do que o WhatsApp manda não vira álbum; a tela trata igual (albumDoWaha.js).
+    it 'does not keep waha_album when a count is out of range, not an integer, or the album is empty' do
+      [{ expected_images: 1_000_000_000, expected_videos: 0 }, { expected_images: 101 }, { expected_images: -1, expected_videos: 2 },
+       { expected_images: '3' }, { expected_images: 2.5 }, { expected_images: true }, { expected_images: 0, expected_videos: 0 },
+       {}].each do |album|
+        header = from_connector({ waha_album: album }, content: 'Mensagem de Álbum Recebida')
+
+        expect(header.content_attributes).not_to have_key('waha_album')
+      end
+    end
+
+    it 'keeps waha_album at the limit and counts a missing or null count as 0' do
+      limit = from_connector({ waha_album: { expected_images: 100, expected_videos: 100 } }, content: 'Mensagem de Álbum Recebida')
+      missing = from_connector({ waha_album: { expected_images: 3 } }, content: 'Mensagem de Álbum Recebida')
+      null = from_connector({ waha_album: { expected_images: 2, expected_videos: nil } }, content: 'Mensagem de Álbum Recebida')
+
+      expect(limit.content_attributes['waha_album']).to eq('expected_images' => 100, 'expected_videos' => 100)
+      expect(missing.content_attributes['waha_album']).to eq('expected_images' => 3, 'expected_videos' => 0)
+      expect(null.content_attributes['waha_album']).to eq('expected_images' => 2, 'expected_videos' => 0)
+    end
+
     it 'drops waha_album sent by someone who is not the connector' do
       header = from_connector({ waha_album: { expected_images: 3, expected_videos: 0 } }, content: 'Álbum', user: agent)
 
@@ -100,6 +121,13 @@ describe Waha::RichNative::Inbound do
       expect(header.content).to eq('Cabeçalho do álbum registrado (as fotos vêm em seguida)')
       expect(header.content_attributes['waha_album']).to eq('expected_images' => 4, 'expected_videos' => 0)
       expect(conversation.reload.messages.incoming).to be_empty
+    end
+
+    it 'still hides an album header with invalid counts, without waha_album' do
+      header = from_connector({ waha_album: { expected_images: 1_000_000_000, expected_videos: 0 } }, content: 'Mensagem de Álbum Recebida')
+
+      expect(described_class.hidden?(header)).to be(true)
+      expect(header.content_attributes).not_to have_key('waha_album')
     end
 
     it 'turns a location into the map card of the official API, live included' do
