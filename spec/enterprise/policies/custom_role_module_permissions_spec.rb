@@ -99,6 +99,14 @@ RSpec.describe 'Custom role module permissions', type: :policy do # rubocop:disa
       expect(WhatsappApiCampaignPolicy.new(context, WhatsappApiCampaign).resume?).to be(true)
     end
 
+    it 'never lets campaign_send send without campaign_manage' do
+      context = context_for(custom_role_user('campaign_send'))
+
+      expect(CampaignPolicy.new(context, Campaign).send_campaign?).to be(false)
+      expect(EmailCampaignPolicy.new(context, email_campaign).send_now?).to be(false)
+      expect(WhatsappApiCampaignPolicy.new(context, WhatsappApiCampaign).create?).to be(false)
+    end
+
     it 'never lets campaign_send reach another account e-mail campaign' do
       context = context_for(custom_role_user('campaign_manage', 'campaign_send'))
       foreign = build(:email_campaign, account: create(:account))

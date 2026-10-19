@@ -65,7 +65,7 @@ class EmailCampaignPolicy < ApplicationPolicy
 
   # Sending is its own key (#1898): who only builds leaves the campaign ready for someone else.
   def send_own?
-    permission_granted?('campaign_send') && own_account?
+    manage_own? && permission_granted?('campaign_send')
   end
 
   def own_account?

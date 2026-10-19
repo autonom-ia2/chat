@@ -441,7 +441,8 @@
           "IMPORT": "Importação concluída",
           "HYGIENE": "Endereços verificados",
           "PROVIDER": "Reputação do envio dentro do limite",
-          "AUDIENCE_CHANNEL": "E-mail ligado no público"
+          "AUDIENCE_CHANNEL": "E-mail ligado no público",
+          "ANEXO": "Anexo escolhido de novo (o arquivo não fica guardado na campanha pronta)"
         },
         "CONTENT": "Conteúdo",
         "CONTENT_DETAIL": "Assunto: {subject}",
@@ -452,7 +453,9 @@
           "QUEM_MONTA": "Você monta e deixa pronta. Quem pode disparar confere e envia.",
           "QUEM_DISPARA": "{nome} montou e deixou pronta. Confira e envie.",
           "SALVA": "Pronta para disparar. Quem pode disparar envia pela lista.",
-          "ERRO": "Não deu para deixar pronta. Tente de novo."
+          "ERRO": "Não deu para deixar pronta. Tente de novo.",
+          "SALVA_COM_ANEXO": "Pronta para disparar. O anexo não fica guardado: quem disparar escolhe o arquivo de novo.",
+          "ERRO_LISTA": "Não deu para carregar as campanhas prontas para disparar. Recarregue a página."
         }
       },
       "API": {

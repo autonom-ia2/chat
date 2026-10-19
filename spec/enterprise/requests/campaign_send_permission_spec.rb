@@ -51,6 +51,28 @@ RSpec.describe 'Campaign send permission (#1898)', :aggregate_failures, type: :r
     end
   end
 
+  describe 'journey e-mail (only a draft is born)' do
+    let(:identity) { create(:email_sender_identity, account: account, domain: 'loja.com.br', from_email: 'ola@loja.com.br') }
+    let(:replies_inbox) { create(:channel_email, account: account, email: 'respostas@loja.com.br').inbox }
+    let(:audience_content) { "Nome,Celular,Email\nAna Souza,11987654321,ana@alfa.com.br\n" }
+    let(:audience) do
+      saved_audience(account: account, user: admin, content: audience_content, mapping: { 'name' => 0, 'phone' => 1, 'email' => 2 })
+    end
+
+    before { allow(EmailCampaigns::RecipientPreflightJob).to receive(:enqueue) }
+
+    it 'lets who only builds create the e-mail draft' do
+      post "/api/v1/accounts/#{account.id}/campaign_journey/campaigns",
+           params: { campaign_import_id: audience.id, channel: 'email',
+                     campaign: { title: 'Novidades', delivery_mode: 'ses', sender_identity_id: identity.id, from_name: 'Loja',
+                                 from_email: 'ola@loja.com.br', reply_to_inbox_id: replies_inbox.id } },
+           headers: headers(builder), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(EmailCampaign.find(response.parsed_body['id'])).to be_draft
+    end
+  end
+
   describe 'paused campaign' do
     let(:channel) { journey_cloud_channel(account) }
     let(:campaign) do
@@ -113,7 +135,7 @@ RSpec.describe 'Campaign send permission (#1898)', :aggregate_failures, type: :r
   end
 
   describe 'classic campaign' do
-    let(:inbox) { create(:inbox, account: account) }
+    let(:inbox) { journey_twilio_sms_inbox(account) }
 
     def create_classic(as:, **attrs)
       post "/api/v1/accounts/#{account.id}/campaigns",
@@ -129,16 +151,24 @@ RSpec.describe 'Campaign send permission (#1898)', :aggregate_failures, type: :r
 
     it 'refuses scheduling an existing campaign for who only builds' do
       campaign = create(:campaign, account: account, inbox: inbox)
+      scheduled_at = campaign.scheduled_at
 
       patch "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}",
             params: { campaign: { scheduled_at: 1.day.from_now.iso8601 } }, headers: headers(builder), as: :json
 
       expect(response).to have_http_status(:unauthorized)
-      expect(campaign.reload.scheduled_at).to be_nil
+      expect(campaign.reload.scheduled_at).to eq(scheduled_at)
     end
 
-    it 'lets who only builds create a campaign that is not scheduled' do
+    it 'refuses an SMS campaign without a date for who only builds (the model sends it now)' do
       create_classic(as: builder)
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(account.campaigns.count).to eq(0)
+    end
+
+    it 'lets who only builds create a site campaign, which never goes out by itself' do
+      create_classic(as: builder, inbox_id: create(:inbox, account: account).id)
 
       expect(response).to have_http_status(:ok)
     end

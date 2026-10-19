@@ -24,9 +24,16 @@ class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
 
   private
 
-  # A scheduled one-off campaign goes out by itself at scheduled_at: setting it needs campaign_send (#1898).
+  # A one-off campaign (SMS, WhatsApp) goes out by itself at scheduled_at, which the model fills with now when it is
+  # blank: creating one, or changing when it goes, needs campaign_send (#1898). Ongoing ones (site) stay with manage.
   def authorize_send
-    authorize(Campaign, :send_campaign?) if params.dig(:campaign, :scheduled_at).present?
+    authorize(Campaign, :send_campaign?) if sends_campaign?
+  end
+
+  def sends_campaign?
+    return params[:campaign]&.key?(:scheduled_at) if action_name == 'update'
+
+    Current.account.campaigns.new(campaign_params).tap(&:valid?).one_off?
   end
 
   def campaign

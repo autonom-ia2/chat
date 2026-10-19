@@ -509,8 +509,18 @@ const onChannelLabel = computed(() =>
     ? t(`${NS}.REVIEW.ON_CHANNEL_EMAIL`)
     : t(`${NS}.REVIEW.ON_CHANNEL`)
 );
+// A campaign left ready with a WhatsApp API attachment: the file did not travel with it, so it is picked again.
+const anexoCheck = computed(() =>
+  podeDisparar.value &&
+  prontaAberta.value?.draft?.anexo &&
+  draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_API
+    ? [{ key: 'anexo', ok: Boolean(forms.mediaFile.value) }]
+    : []
+);
 const reviewChecks = computed(() =>
-  isEmailChannel.value ? emailChecks(forms.emailCampaign.value) : []
+  isEmailChannel.value
+    ? emailChecks(forms.emailCampaign.value)
+    : anexoCheck.value
 );
 
 const reachable = computed(() => {
@@ -756,14 +766,17 @@ const deixarPronta = async () => {
   submitError.value = '';
   try {
     const { step, ...journey } = draft.value;
+    // The WhatsApp API attachment is a file in this browser: the draft keeps only its name, and who sends picks it again.
+    const anexo =
+      forms.mediaFile.value?.name || prontaAberta.value?.draft?.anexo || '';
     await guardarPronta({
       id: prontaAberta.value?.id,
       title: draft.value.title,
       channel: draft.value.channel,
-      draft: journey,
+      draft: { ...journey, anexo },
     });
     clearDraft(accountId.value);
-    useAlert(t(`${NS}.REVIEW.PRONTA.SALVA`));
+    useAlert(t(`${NS}.REVIEW.PRONTA.${anexo ? 'SALVA_COM_ANEXO' : 'SALVA'}`));
     router.push({ name: 'campaigns_journey_index' });
   } catch {
     submitError.value = t(`${NS}.REVIEW.PRONTA.ERRO`);

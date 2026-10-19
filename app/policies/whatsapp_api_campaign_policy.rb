@@ -9,7 +9,7 @@ class WhatsappApiCampaignPolicy < ApplicationPolicy
   end
 
   def create?
-    @account_user.permission_granted?('campaign_send')
+    @account_user.permission_granted?('campaign_manage') && @account_user.permission_granted?('campaign_send')
   end
 
   def pause?
@@ -17,7 +17,7 @@ class WhatsappApiCampaignPolicy < ApplicationPolicy
   end
 
   def resume?
-    @account_user.permission_granted?('campaign_send')
+    @account_user.permission_granted?('campaign_manage') && @account_user.permission_granted?('campaign_send')
   end
 
   def cancel?

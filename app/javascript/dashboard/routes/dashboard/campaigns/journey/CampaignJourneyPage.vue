@@ -9,6 +9,7 @@ import {
 // `?channel=` (old addresses, PRD A3) preselects the channel filter.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
@@ -246,6 +247,7 @@ const loadProntas = async () => {
     prontas.value = await listarProntas();
   } catch {
     prontas.value = [];
+    useAlert(t('CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW.PRONTA.ERRO_LISTA'));
   }
 };
 

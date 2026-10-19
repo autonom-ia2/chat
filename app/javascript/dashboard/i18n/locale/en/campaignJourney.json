@@ -441,7 +441,8 @@
           "IMPORT": "Import finished",
           "HYGIENE": "Addresses checked",
           "PROVIDER": "Sending reputation within the limit",
-          "AUDIENCE_CHANNEL": "Email on in the audience"
+          "AUDIENCE_CHANNEL": "Email on in the audience",
+          "ANEXO": "Attachment picked again (the file does not stay in a campaign left ready)"
         },
         "CONTENT": "Content",
         "CONTENT_DETAIL": "Subject: {subject}",
@@ -452,7 +453,9 @@
           "QUEM_MONTA": "You build it and mark it ready. Someone who can send reviews and sends it.",
           "QUEM_DISPARA": "{nome} built it and marked it ready. Review and send.",
           "SALVA": "Ready to send. Someone who can send will send it from the list.",
-          "ERRO": "Could not mark it as ready. Try again."
+          "ERRO": "Could not mark it as ready. Try again.",
+          "SALVA_COM_ANEXO": "Ready to send. The attachment is not kept: whoever sends picks the file again.",
+          "ERRO_LISTA": "Could not load the campaigns left ready to send. Reload the page."
         }
       },
       "API": {

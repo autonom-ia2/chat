@@ -26,6 +26,7 @@ const { t, locale } = useI18n();
 const store = useStore();
 const canManage = useCanManage('campaign_manage');
 const canSend = useCanManage('campaign_send');
+const PRONTA = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW.PRONTA';
 // The server draft that left this e-mail ready, if any. Sending it removes the draft on the server.
 const pronta = ref(null);
 const loadPronta = async () => {
@@ -35,16 +36,18 @@ const loadPronta = async () => {
       prontas.find(item => item.draft?.emailCampaignId === props.campaign.id) ||
       null;
   } catch {
+    // Without the list, "Deixar pronta" would create a second draft: say so instead of guessing.
     pronta.value = null;
+    useAlert(t(`${PRONTA}.ERRO_LISTA`));
   }
 };
 const UX = 'CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE';
-const PRONTA = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW.PRONTA';
 const isSavingPronta = ref(false);
 const deixarPronta = async () => {
   isSavingPronta.value = true;
   try {
-    await guardarPronta({
+    // Keeps the saved draft: a second click updates it instead of creating another one.
+    pronta.value = await guardarPronta({
       id: pronta.value?.id,
       title: props.campaign.name,
       channel: 'email',
