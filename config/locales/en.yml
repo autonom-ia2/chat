@@ -575,6 +575,7 @@ en:
     source:
       invalid_kind: 'Invalid material kind. Use "knowledge" or "media".'
       limit_reached: 'This agent already has the maximum of %{limit} knowledge materials. Remove one before adding another.'
+      foto_fora_da_fase2: 'Photos as knowledge material are not available on this account yet. Send a PDF, spreadsheet or text file.'
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'
       conflito_de_trava: 'The agent changed at the same time. Try again.'

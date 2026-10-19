@@ -9,6 +9,7 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   def create
     kind = resolved_kind
     return render_unprocessable(I18n.t('autonomia.source.invalid_kind')) if kind.nil?
+    return render_unprocessable(I18n.t('autonomia.source.foto_fora_da_fase2')) if foto_fora_da_fase2?
 
     if knowledge_limit_reached?(kind)
       return render_unprocessable(
@@ -81,6 +82,11 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   def knowledge_limit_reached?(kind)
     kind == 'knowledge' &&
       @agent.sources.knowledge_sources.count >= Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES
+  end
+
+  # #1426 — a foto como material (tipo `foto`, lida por OCR e revisada) só existe na Fase 2 dos Agentes.
+  def foto_fora_da_fase2?
+    source_params[:source_type] == Autonomia::Agents::Source::FOTO && !Autonomia::Agents::Fase2.ligada?(Current.account)
   end
 
   def fetch_agent

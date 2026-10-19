@@ -1324,6 +1324,7 @@ pt_BR:
     source:
       invalid_kind: "Tipo de material inválido. Use \"knowledge\" ou \"media\"."
       limit_reached: "Este agente já tem o máximo de %{limit} materiais de conhecimento. Remova um antes de adicionar outro."
+      foto_fora_da_fase2: "Foto como material ainda não está disponível nesta conta. Mande um PDF, uma planilha ou um arquivo de texto."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."
