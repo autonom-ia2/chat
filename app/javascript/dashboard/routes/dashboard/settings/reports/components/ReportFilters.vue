@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
 import { useRoute, useRouter } from 'vue-router';
@@ -45,6 +46,7 @@ const props = defineProps({
 const emit = defineEmits(['filterChange']);
 
 const { t } = useI18n();
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
@@ -54,7 +56,7 @@ const buildReportFilterList = (items, type) => {
 
   return items.map(item => ({
     id: item.id,
-    name: item.name || item.title,
+    name: item.name || nomeDaEtiqueta(item.title),
     type,
   }));
 };

@@ -18,6 +18,7 @@ import campaignJourney from './campaignJourney.json';
 import novaConversa from './novaConversa.json';
 import horarioDoCanal from './horarioDoCanal.json';
 import sidebarFork from './sidebarFork.json';
+import telaInicial from './telaInicial.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -90,6 +91,7 @@ export default {
   ...novaConversa,
   ...horarioDoCanal,
   ...sidebarFork,
+  ...telaInicial,
   ...brandKits,
   ...booking,
   ...resultJourney,

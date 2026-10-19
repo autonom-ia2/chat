@@ -19,6 +19,9 @@ module TextoAoCliente
   PONTOS = {
     'app/jobs/autonomia/agents/operate/chunked_delivery_job.rb::Autonomia::Agents::Operate::ChunkedDeliveryJob#build_message!' =>
       { tipo: :fala_do_modelo, motivo: 'cada pedaço da resposta do modelo, fatiada para o WhatsApp' },
+    'app/services/autonomia/agents/interacao.rb::Autonomia::Agents::Interacao#sai_o_formato?' =>
+      { tipo: :outro, motivo: 'mensagem montada só em memória, nunca gravada nem enviada: confere se as opções ou o link ' \
+                              'da resposta do modelo podem sair no formato (#1479)' },
     'app/services/autonomia/agents/nota_do_encaminhamento.rb::Autonomia::Agents::NotaDoEncaminhamento#criar' =>
       { tipo: :nota_privada, motivo: 'o que a IA não conseguiu antes de encaminhar, para a equipe' },
     'app/services/autonomia/agents/operate/aviso_ao_atendente.rb::Autonomia::Agents::Operate::AvisoAoAtendente#postar_nota' =>

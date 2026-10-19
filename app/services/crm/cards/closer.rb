@@ -79,6 +79,10 @@ module Crm
       end
 
       def activity_payload
+        outcome_payload.merge(closed_with_payload)
+      end
+
+      def outcome_payload
         case @target_status
         when :won
           { value_cents: @card.value_cents, currency: @card.currency }
@@ -87,6 +91,22 @@ module Crm
         else
           {}
         end
+      end
+
+      # #1876: quem era o responsável, o time e o funil na hora do fechamento — não quem clicou nem quem vier depois. É
+      # a base do crédito das metas; vale também para o fechamento da automação, que não tem autor.
+      def closed_with_payload
+        return {} unless Crm::Cards::Outcome::CLOSED_STATUSES.include?(@target_status.to_s)
+
+        responsible = @card.current_responsible
+        {
+          closed_with: {
+            responsible: responsible&.slice(:type, :id, :name),
+            owner_id: @card.owner_id,
+            team_id: @card.team_id,
+            pipeline_id: @card.pipeline_id
+          }
+        }
       end
     end
   end

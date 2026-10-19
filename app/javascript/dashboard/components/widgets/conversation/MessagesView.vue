@@ -42,6 +42,10 @@ import wootConstants, {
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { usePeleDaConversa } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import {
+  CONVERSAS_DO_CONTATO,
+  useConversaDeEmail,
+} from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
 import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
@@ -94,8 +98,20 @@ export default {
       useContactConversationNavigation();
 
     provide('contextMenuElementTarget', conversationPanelRef);
+    // #1786: no e-mail novo as vizinhas aparecem no topo do e-mail (EmailsVizinhos).
+    provide(CONVERSAS_DO_CONTATO, {
+      olderConversation,
+      newerConversation,
+      buildConversationPath,
+    });
     // #1702: conversa com a cara do canal (WhatsApp), atrás da chave da conta.
     const { pele, classesDaLista, classesDaBarra } = usePeleDaConversa();
+    // #1786: conversa de e-mail com a cara do Gmail, atrás da chave própria.
+    const {
+      ligado: emailNovo,
+      classesDaLista: classesDoEmail,
+      classesDaBarra: classesDaRespostaDoEmail,
+    } = useConversaDeEmail();
     // #1702: superadmin entrando como o usuário não marca a mensagem como lida no WhatsApp do cliente.
     const { isImpersonating } = useImpersonation();
 
@@ -115,6 +131,9 @@ export default {
       pele,
       classesDaLista,
       classesDaBarra,
+      emailNovo,
+      classesDoEmail,
+      classesDaRespostaDoEmail,
       isImpersonating,
       selecaoParaEncaminhar,
     };
@@ -146,8 +165,13 @@ export default {
     isOpen() {
       return this.currentChat?.status === wootConstants.STATUS_TYPE.OPEN;
     },
+    // Quem só lê (#1800) não responde, não aplica etiqueta e não marca como lida: o "lido" é da conversa, de todos.
+    canOperate() {
+      return this.$store.getters.canOperateConversation(this.currentChat);
+    },
     shouldShowLabelSuggestions() {
       return (
+        this.canOperate &&
         this.isOpen &&
         this.captainTasksEnabled &&
         this.isLabelSuggestionFeatureEnabled &&
@@ -324,8 +348,13 @@ export default {
       }
       this.fetchAllAttachmentsFromCurrentChat();
       this.fetchSuggestions();
+      this.fetchParticipantsForReading();
       this.messageSentSinceOpened = false;
       this.resetReplyEditorHeight();
+    },
+    // A lista de participantes chegou e liberou responder: marca como lida o que ficou para trás (#1800).
+    canOperate(pode, podia) {
+      if (pode && !podia) this.makeMessagesRead();
     },
   },
 
@@ -346,6 +375,7 @@ export default {
     if (this.pele) this.$nextTick(() => this.rolarNaPele());
     this.fetchAllAttachmentsFromCurrentChat();
     this.fetchSuggestions();
+    this.fetchParticipantsForReading();
   },
 
   unmounted() {
@@ -356,9 +386,17 @@ export default {
   },
 
   methods: {
+    // Quem só lê e também atende as em que participa (#1800): a lista de participantes decide se responde aqui.
+    fetchParticipantsForReading() {
+      if (this.canOperate || !this.currentChat.id) return;
+      this.$store.dispatch('conversationWatchers/show', {
+        conversationId: this.currentChat.id,
+      });
+    },
     async fetchSuggestions() {
       // start empty, this ensures that the label suggestions are not shown
       this.labelSuggestions = [];
+      if (!this.canOperate) return;
 
       if (this.isLabelSuggestionDismissed()) {
         return;
@@ -564,6 +602,11 @@ export default {
     },
     scrollToBottom() {
       this.isProgrammaticScroll = true;
+      // #1786: no e-mail novo o mais recente está no topo; é lá que a conversa abre.
+      if (this.emailNovo) {
+        this.conversationPanel.scrollTop = 0;
+        return;
+      }
       let relevantMessages = [];
 
       // label suggestions are not part of the messages list
@@ -618,8 +661,10 @@ export default {
             conversationId: this.currentChat.id,
             before: this.currentChat.messages[0].id,
           });
-          const heightDifference =
-            this.conversationPanel.scrollHeight - this.heightBeforeLoad;
+          // #1786: no e-mail novo os antigos entram embaixo; a tela não precisa pular.
+          const heightDifference = this.emailNovo
+            ? 0
+            : this.conversationPanel.scrollHeight - this.heightBeforeLoad;
           this.conversationPanel.scrollTop =
             this.scrollTopBeforeLoad + heightDifference;
           this.setScrollParams();
@@ -640,10 +685,17 @@ export default {
         this.hasUserScrolled = true;
       }
       emitter.emit(BUS_EVENTS.ON_MESSAGE_LIST_SCROLL);
-      this.fetchPreviousMessages(e.target.scrollTop);
+      // #1786: no e-mail novo os antigos ficam embaixo: carrega perto do fim.
+      const alvo = e.target;
+      this.fetchPreviousMessages(
+        this.emailNovo
+          ? alvo.scrollHeight - alvo.scrollTop - alvo.clientHeight
+          : alvo.scrollTop
+      );
     },
 
     makeMessagesRead() {
+      if (!this.canOperate) return;
       this.$store.dispatch('markMessagesRead', {
         id: this.currentChat.id,
         // Recibo de leitura no WhatsApp só com a pele (sem ela, como no main).
@@ -682,15 +734,28 @@ export default {
         :href-link-text="$t('CONVERSATION.INSTAGRAM_RESTRICTION_STATUS_LINK')"
       />
       <AvisoJanelaFechada
-        v-if="!currentChat.can_reply && pele && isAWhatsAppCloudChannel"
+        v-if="
+          canOperate &&
+          !currentChat.can_reply &&
+          pele &&
+          isAWhatsAppCloudChannel
+        "
       />
       <Banner
-        v-else-if="!currentChat.can_reply"
+        v-else-if="canOperate && !currentChat.can_reply"
         color-scheme="alert"
         class="mx-2 mt-2 overflow-hidden rounded-lg"
         :banner-message="replyWindowBannerMessage"
         :href-link="replyWindowLink"
         :href-link-text="replyWindowLinkText"
+      />
+      <!-- Quem só lê (#1800): a regra do cargo, em tom neutro, junto dos outros avisos de "não dá para responder". -->
+      <Banner
+        v-if="!canOperate"
+        color-scheme="secondary"
+        class="ms-2 me-16 mt-2 min-h-12 !h-auto overflow-hidden rounded-lg"
+        :banner-message="$t('CONVERSATION.SO_LEITURA.TEXTO')"
+        data-aviso-so-leitura
       />
       <Banner
         v-if="hasDuplicateInstagramInbox"
@@ -702,7 +767,7 @@ export default {
     <MessageList
       ref="conversationPanelRef"
       class="conversation-panel flex-shrink flex-grow basis-px flex flex-col overflow-y-auto relative h-full m-0 pb-4"
-      :class="classesDaLista"
+      :class="[classesDaLista, classesDoEmail]"
       :current-user-id="currentUserId"
       :first-unread-id="primeiraNaoLidaDaLista"
       :is-an-email-channel="isAnEmailChannel"
@@ -712,15 +777,21 @@ export default {
     >
       <template #beforeAll>
         <transition name="slide-up">
+          <!-- #1786: no e-mail novo o conteúdo começa no topo (sem first:mt-auto) e o
+          espaço do carregando só existe enquanto carrega. -->
           <!-- eslint-disable-next-line vue/require-toggle-inside-transition -->
           <li
             class="min-h-[4rem] flex flex-shrink-0 flex-grow-0 items-center flex-auto justify-center max-w-full mt-0 mr-0 mb-1 ml-0 relative first:mt-auto last:mb-0"
+            :class="{
+              '!mt-0': emailNovo,
+              '!hidden': emailNovo && !shouldShowSpinner,
+            }"
           >
             <Spinner v-if="shouldShowSpinner" class="text-n-brand" />
           </li>
         </transition>
         <ContactConversationLink
-          v-if="olderConversation && listLoadingStatus"
+          v-if="olderConversation && listLoadingStatus && !emailNovo"
           direction="older"
           :conversation="olderConversation"
           :to="buildConversationPath(olderConversation.id)"
@@ -752,14 +823,17 @@ export default {
           :conversation-id="currentChat.id"
         />
         <ContactConversationLink
-          v-if="newerConversation"
+          v-if="newerConversation && !emailNovo"
           direction="newer"
           :conversation="newerConversation"
           :to="buildConversationPath(newerConversation.id)"
         />
       </template>
     </MessageList>
-    <div class="flex relative flex-col bg-n-surface-1" :class="classesDaBarra">
+    <div
+      class="flex relative flex-col bg-n-surface-1"
+      :class="[classesDaBarra, classesDaRespostaDoEmail]"
+    >
       <div
         v-if="isAnyoneTyping"
         class="absolute flex items-center w-full h-0 -top-7"
@@ -776,8 +850,12 @@ export default {
         </div>
       </div>
       <!-- #1702: modo seleção do encaminhar troca o campo de digitar pela barra. -->
-      <EncaminharDaConversa v-if="pele" :conversation-id="currentChat.id" />
+      <EncaminharDaConversa
+        v-if="canOperate && pele"
+        :conversation-id="currentChat.id"
+      />
       <ResizableEditorWrapper
+        v-if="canOperate"
         v-show="!(pele && selecaoParaEncaminhar.ativa)"
         ref="resizableEditorWrapperRef"
         :container-height="Math.max(0, containerHeight - topBannerHeight)"

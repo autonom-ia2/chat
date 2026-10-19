@@ -1746,6 +1746,7 @@
       "UPDATE": "Update IMAP settings",
       "TOGGLE_AVAILABILITY": "Enable IMAP configuration for this inbox",
       "TOGGLE_HELP": "Enabling IMAP will help the user to receive email",
+      "READ_SYNC_HELP": "Read status syncs with your mail server only while IMAP is enabled. Forwarding-only inboxes don't sync it.",
       "EDIT": {
         "SUCCESS_MESSAGE": "IMAP settings updated successfully",
         "ERROR_MESSAGE": "Unable to update IMAP settings"

@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import NovaConversaCartao from './NovaConversaCartao.vue';
+import NovaConversaContatoNovo from './NovaConversaContatoNovo.vue';
 import { contatoLegivel, podeCriarContato } from './novaConversa';
 import { SINAIS } from './modeloPronto';
 
@@ -16,6 +17,11 @@ const props = defineProps({
   erroNaBusca: { type: Boolean, default: false },
   criando: { type: Boolean, default: false },
   erroAoCriar: { type: Boolean, default: false },
+  // #1809: gaveta aberta do "Escrever" da caixa de e-mail: o contato novo precisa de e-mail.
+  exigeEmail: { type: Boolean, default: false },
+  // #1809 (decisão do Rodrigo, 18/10): o cartão com nome, e-mail e telefone só com a
+  // chave conversa_email_nova; sem ela, o "Criar contato <valor>" de antes.
+  contatoNovoCompleto: { type: Boolean, default: false },
 });
 
 defineEmits(['buscar', 'escolher', 'criar', 'alterar']);
@@ -113,6 +119,24 @@ const podeCriar = computed(
           </button>
         </li>
       </ul>
+      <div
+        v-else-if="semAchados && contatoNovoCompleto"
+        class="flex flex-col items-start gap-3 px-1"
+      >
+        <p class="mb-0 text-[0.9375rem] text-n-slate-11">
+          {{ $t(`${P}.NADA_CRIAR`) }}
+        </p>
+        <!-- #1809: em vez de só "Criar contato <valor>", o contato nasce com nome,
+             e-mail e telefone conferidos pela pessoa. -->
+        <NovaConversaContatoNovo
+          v-if="!erroNaBusca"
+          :termo="termo"
+          :criando="criando"
+          :erro-ao-criar="erroAoCriar"
+          :exige-email="exigeEmail"
+          @criar="dados => $emit('criar', dados)"
+        />
+      </div>
       <div v-else-if="semAchados" class="flex flex-col items-start gap-3 px-1">
         <p class="mb-0 text-[0.9375rem] text-n-slate-11">
           {{ $t(podeCriar ? `${P}.NADA_CRIAR` : `${P}.NADA`) }}

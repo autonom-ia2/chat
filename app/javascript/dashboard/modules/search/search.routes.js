@@ -3,6 +3,7 @@ import {
   ROLES,
   CONVERSATION_PERMISSIONS,
   CONTACT_PERMISSIONS,
+  CONTACT_VIEW_PERMISSION,
   PORTAL_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 
@@ -17,6 +18,7 @@ export const routes = [
         ...ROLES,
         ...CONVERSATION_PERMISSIONS,
         CONTACT_PERMISSIONS,
+        CONTACT_VIEW_PERMISSION,
         PORTAL_PERMISSIONS,
       ],
     },

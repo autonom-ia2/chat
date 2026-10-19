@@ -178,7 +178,12 @@ module Crm
                            'foi pedido ao cliente, o andamento, se já resolveu) e trate "resolvido", "já paguei" ou "não preciso mais" ' \
                            'como encerramento.'.freeze
 
+      # #1807: com a flag `email_autoria`, a legenda do aviso de e-mail vai no fim, em todo modo.
       def instructions
+        "#{instructions_for_mode}#{Crm::Email::Autoria.legenda(@card&.account)}"
+      end
+
+      def instructions_for_mode
         return purpose_instructions if %i[service callback].include?(@purpose)
         return reminder_instructions if @mode == :reminder
 

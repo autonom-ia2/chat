@@ -1,0 +1,31 @@
+{
+  "TELA_INICIAL": {
+    "TEMPO": {
+      "MINUTOS": "1 minuto | {count} minutos",
+      "HORAS": "1 hora | {count} horas",
+      "DIAS": "1 dia | {count} dias"
+    },
+    "ABRIR_PROXIMA": "Abrir a próxima",
+    "PROXIMA_ESPERA": "{nome} espera há {tempo}",
+    "PROXIMA_ESPERA_SEM_NOME": "Espera há {tempo}",
+    "TUDO_EM_DIA": "Tudo em dia",
+    "VER_SEM_RESPONSAVEL": "Ver as sem responsável",
+    "VER_TODAS": "Ver todas as conversas",
+    "RESUMO": {
+      "TITULO": "Resumo de hoje",
+      "COM_VOCE": "Nenhuma conversa com você | 1 conversa com você | {count} conversas com você",
+      "CARREGANDO": "–",
+      "NUMEROS": {
+        "ESPERAM": "Esperam você",
+        "SEM_RESPONSAVEL": "Sem responsável",
+        "FORA_DO_PRAZO": "Fora do prazo"
+      },
+      "ERRO": "Não deu para carregar os números agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "EQUIPE": {
+        "ESPERAM": "Na equipe: {count} esperando",
+        "FORA_DO_PRAZO": "{count} fora do prazo"
+      }
+    }
+  }
+}

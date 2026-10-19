@@ -26,6 +26,13 @@ import { miniaturaDoAnexoCitado, previaDoAnexoCitado } from '../citacaoDoAnexo';
 // Detalhes do balão (#1702): apagada só aqui, a que falhou, a dica da hora no fuso da
 // conta, citação de mídia, ligação da Cloud e "Ler mais".
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
+// Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({
+    canViewRelationshipRecords: { value: true },
+    canManageRelationshipRecords: { value: true },
+  }),
+}));
 
 // 17/10/2025 17:00 UTC = 14:00 em São Paulo. O teste roda com TZ=UTC: se a dica usasse
 // o fuso do navegador, sairia 5:00 PM.

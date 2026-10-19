@@ -21,7 +21,10 @@ json.pending_follow_up_id pending&.id
 json.next_occurrences(upcoming.first(next_limit).map(&:iso8601))
 json.recipient_names(Crm::FollowUps::RecipientResolver.new(pending || series.recipient_preview).users.map(&:name))
 json.contact { json.extract! series.contact, :id, :name } if series.contact.present?
-json.company { json.extract! series.company, :id, :name } if series.company.present?
+# Sem ver contatos, sem empresa (#1849, D7).
+if series.company.present? && Crm::Cards::ContactReading.full?(user: Current.user, account_user: Current.account_user)
+  json.company { json.extract! series.company, :id, :name }
+end
 json.card { json.extract! series.card, :id, :title, :pipeline_id } if series.card.present?
 json.created_by { json.extract! series.created_by, :id, :name } if series.created_by.present?
 json.history(series.follow_ups.where.not(status: :pending).order(occurrence_at: :desc).limit(history_limit)) do |follow_up|

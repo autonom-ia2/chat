@@ -109,4 +109,32 @@ describe('pollAiRequest', () => {
       '/api/v1/accounts/85/ai_requests/request-4'
     );
   });
+
+  // #1872: quem descarta o pedido para o poll na hora, sem ir até o timeout.
+  it('stops polling when the signal is aborted', async () => {
+    window.axios.get.mockResolvedValue({ data: { status: 'pending' } });
+    const controle = new AbortController();
+
+    const request = pollAiRequest(
+      Promise.resolve({
+        status: 202,
+        data: { poll_url: '/api/v1/accounts/85/ai_requests/request-9' },
+      }),
+      { signal: controle.signal }
+    );
+    const rejection = expect(request).rejects.toMatchObject({
+      code: 'ai_request_aborted',
+    });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(window.axios.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/ai_requests/request-9',
+      { signal: controle.signal }
+    );
+    controle.abort();
+    await vi.advanceTimersByTimeAsync(5000);
+
+    await rejection;
+    expect(window.axios.get).toHaveBeenCalledTimes(1);
+  });
 });

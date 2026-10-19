@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (226 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (230 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -84,7 +84,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como atribuo uma conversa a alguem?; Onde passo atendimento para outro agente?; Como atribuo a conversa a um time?
 - onde_fica: Conversas > abrir conversa > painel de acoes/atribuicao
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: conversa existente; agente/time disponivel e com acesso a caixa de entrada
 - passos: 1. Abra a conversa; 2. Localize o bloco de atribuicao no painel lateral; 3. Escolha agente ou time; 4. Confirme a mudanca; 5. Verifique se o nome aparece na conversa.
 - gotchas: agentes sem acesso a caixa de entrada podem nao aparecer; usuarios com permissao restrita podem nao conseguir atuar em conversas de terceiros.
@@ -94,7 +94,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como marco conversa como resolvida?; Onde encerro um atendimento?; Como tiro uma conversa da fila aberta?
 - onde_fica: Conversas > abrir conversa > botao/status de resolver
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: conversa aberta ou pendente
 - passos: 1. Abra a conversa; 2. Revise se nao ha pendencias; 3. Clique para marcar como resolvida; 4. Confirme se a conversa saiu da lista de abertas; 5. Reabra se precisar continuar atendimento.
 - gotchas: configuracoes de auto-resolucao podem resolver conversas por inatividade; resolver nao apaga o historico.
@@ -104,7 +104,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como faco snooze de uma conversa?; Onde adio um atendimento?; Quero que a conversa volte depois.; Como removo da fila ate uma data?
 - onde_fica: Conversas > abrir conversa > acoes da conversa > Adiar
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: conversa existente
 - passos: 1. Abra a conversa; 2. Use a acao de adiar; 3. Escolha um preset ou data/hora; 4. Confirme; 5. Acompanhe quando ela voltar para a fila.
 - gotchas: conversa adiada pode sumir da lista principal ate o horario escolhido; use filtros/status se precisar encontra-la antes.
@@ -114,7 +114,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como marco uma conversa como urgente?; Onde altero prioridade?; Como tiro prioridade alta de uma conversa?
 - onde_fica: Conversas > abrir conversa > painel de acoes > prioridade
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: conversa existente
 - passos: 1. Abra a conversa; 2. Localize o campo de prioridade; 3. Selecione a prioridade desejada; 4. Aguarde a confirmacao; 5. Use filtros/ordenacao para priorizar a fila.
 - gotchas: prioridade organiza a operacao, mas nao altera sozinho SLA, atribuicao ou automacoes ja configuradas.
@@ -124,7 +124,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como coloco etiqueta em uma conversa?; Onde removo uma tag do atendimento?; Como organizo conversas por etiquetas?
 - onde_fica: Conversas > abrir conversa > painel de acoes > etiquetas
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: etiqueta criada em Configuracoes > Etiquetas
 - passos: 1. Abra a conversa; 2. Clique em etiquetas no painel lateral; 3. Pesquise a etiqueta; 4. Adicione ou remova; 5. Use a sidebar de etiquetas para consultar depois.
 - gotchas: etiquetas ocultas ou especificas de importacao custom podem nao aparecer na sidebar; etiquetas de conversa e contato podem ser usadas em contextos diferentes.
@@ -134,7 +134,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como filtro conversas?; Onde vejo conversas por canal, time ou etiqueta?; Como encontro uma fila especifica?
 - onde_fica: Conversas > Todas; tambem na sidebar em Canais, Times e Etiquetas
 - rota: `home` - `/app/accounts/:accountId/dashboard`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - cobre: inbox_view, inbox_view_conversation, inbox_dashboard, conversation_through_inbox, label_conversations, conversations_through_label, team_conversations, conversations_through_team, conversations_through_folders, conversation_participating, conversation_through_participating
 - pre_requisitos: conversas existentes; filtros/canais/times/etiquetas conforme o caso
 - passos: 1. Abra Conversas; 2. Use a sidebar para escolher Todas, Canal, Time ou Etiqueta; 3. Ajuste status e filtros da lista; 4. Abra a conversa desejada; 5. Limpe filtros para voltar a visao geral.
@@ -146,7 +146,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde ficam as pastas de conversas?; Como abro uma visao salva?; Como uso uma custom view de atendimentos?
 - onde_fica: Conversas > Pastas/Visoes customizadas
 - rota: `folder_conversations` - `/app/accounts/:accountId/custom_view/:id`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: visao customizada de conversa criada
 - passos: 1. Abra Conversas; 2. Expanda Pastas/Visoes customizadas na sidebar; 3. Selecione a visao; 4. Revise os filtros aplicados; 5. Abra os atendimentos listados.
 - gotchas: se a custom view foi removida ou nao esta disponivel, a rota redireciona para `home`.
@@ -156,7 +156,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde vejo conversas em que fui mencionado?; Como encontro minhas mencoes?; Onde estao os atendimentos com @?
 - onde_fica: Conversas > Mencoes
 - rota: `conversation_mentions` - `/app/accounts/:accountId/mentions/conversations`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - cobre: conversation_through_mentions
 - pre_requisitos: haver mencoes em conversas acessiveis ao usuario
 - passos: 1. Abra Conversas; 2. Clique em Mencoes na sidebar; 3. Revise a lista; 4. Abra a conversa; 5. Responda ou acompanhe conforme necessario.
@@ -167,7 +167,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde vejo conversas sem atendimento?; Como acho conversas nao atribuidas?; Onde esta a fila de nao atendidas?
 - onde_fica: Conversas > Nao atendidas
 - rota: `conversation_unattended` - `/app/accounts/:accountId/unattended/conversations`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - cobre: conversation_through_unattended
 - pre_requisitos: conversas abertas sem atendimento/atribuicao conforme a regra da plataforma
 - passos: 1. Abra Conversas; 2. Clique em Nao atendidas; 3. Revise a fila; 4. Atribua a um agente/time; 5. Responda ou resolva.
@@ -204,6 +204,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Contatos; 2. Selecione um ou mais contatos; 3. Use a barra de acoes em massa; 4. Adicione ou remova etiquetas; 5. Abra Marcados com para ver a lista por etiqueta.
 - gotchas: a sidebar mostra etiquetas visiveis; etiquetas ocultas criadas por recursos custom podem nao aparecer como filtro visual.
 - nav_target: `contacts_dashboard_labels_index`
+
+### Exportar a base de contatos
+- intent: Como exporto meus contatos?; Como baixo a lista de clientes em planilha?; Da para tirar os contatos em CSV?
+- onde_fica: Contatos > Todos os contatos > menu de três pontos no topo > Exportar contatos
+- rota: `contacts_dashboard_index` - `/app/accounts/:accountId/contacts`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: administrador ou função com Exportar contatos
+- passos: 1. Abra Contatos; 2. Se quiser exportar só uma parte, aplique o filtro antes; 3. Abra o menu de três pontos no topo e clique em Exportar contatos; 4. Confirme; 5. O arquivo CSV chega por e-mail quando ficar pronto.
+- gotchas: editar contatos não dá direito a exportar; exportar é um ajuste próprio da função, marcado como sensível porque a planilha leva nome, telefone e e-mail; funções que editavam contatos antes desta mudança continuaram exportando; agente sem função personalizada não exporta.
+- nav_target: `contacts_dashboard_index`
+- highlight: `contacts-more-actions`
 
 ### Importar contatos por CSV
 - intent: Como importo contatos?; Onde subo uma planilha CSV de contatos?; Como faco importacao nativa de contatos?
@@ -1231,11 +1242,11 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como busco uma conversa?; Onde procuro mensagens antigas?; Como acho contato pela busca?; Como encontro artigo da Central de Ajuda?
 - onde_fica: Barra superior/sidebar > campo de busca ou atalho Cmd/Ctrl+K
 - rota: `search` - `/app/accounts/:accountId/search/:tab?`
-- gate: papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `contact_manage` ou `knowledge_base_manage`
+- gate: papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `contact_manage` ou `contact_view` ou `knowledge_base_manage`
 - perfil: `administrator` e `agent` podem buscar conforme acesso; custom role com `conversation_manage`, `conversation_unassigned_manage` ou `conversation_participating_manage` ve conversas/mensagens; custom role com `contact_manage` ve contatos; custom role com `knowledge_base_manage` ve artigos. Se o perfil nao puder, explique que a busca so mostra tipos de resultado permitidos ao usuario.
 - pre_requisitos: existir dado acessivel ao usuario; para artigos, Central de Ajuda habilitada
 - passos: 1. Abra a busca global pela sidebar ou atalho; 2. Digite o termo e pressione enter; 3. Use as abas Tudo, Contatos, Conversas, Mensagens e Artigos conforme aparecerem; 4. Use Ver mais ou Carregar mais quando houver muitos resultados; 5. Abra o item encontrado para navegar ao detalhe.
-- gotchas: a aba Tudo mostra apenas alguns resultados por tipo; filtros avancados de data, remetente e caixa de entrada so entram no payload quando `advanced_search` esta ativo; resultados seguem permissao e acesso a caixa de entrada/contato/artigo.
+- gotchas: a aba Tudo mostra apenas alguns resultados por tipo; filtros avancados de data, remetente e caixa de entrada so entram no payload quando `advanced_search` esta ativo; resultados seguem permissao e acesso a caixa de entrada/contato/artigo; função sem Ver contatos não tem a aba Contatos e não acha contato pela busca, mas continua achando a conversa pelo nome ou telefone do cliente.
 - nav_target: `search`
 - highlight: `global-search`
 
@@ -1401,7 +1412,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como ordeno minhas conversas?; Onde mudo a ordem da lista?; Como mostro só conversas resolvidas/pendentes/adiadas?; Como vejo conversas por prioridade ou não lidas?
 - onde_fica: Conversas > cabeçalho da lista > botão de ordenação (ícone de setas)
 - rota: `home` - `/app/accounts/:accountId/dashboard`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: estar na lista de conversas (sem filtro avançado/pasta ativos)
 - passos: 1. Abra Conversas; 2. Clique no botão de ordenação (ícone de setas) no topo da lista; 3. Em Status escolha Abertas, Resolvidas, Pendentes, Adiadas ou Todas; 4. Em Ordenar por escolha por última atividade, criação, prioridade, não lidas ou tempo de espera; 5. A preferência fica salva para as próximas visitas.
 - gotchas: o botão de ordenação só aparece na visão padrão da lista — quando há filtro avançado ou pasta aplicada ele some; a escolha de status/ordem é salva nas preferências do usuário (uiSettings) e não é um filtro avançado.
@@ -1412,10 +1423,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como começo uma nova conversa?; Onde envio a primeira mensagem para um contato?; Como crio um atendimento do zero?; Como mando mensagem proativa por WhatsApp/e-mail?
 - onde_fica: Topo do menu lateral > botão de nova conversa (ícone de lápis); ou Contatos > abrir o contato > botão Enviar mensagem. Os dois abrem a mesma tela, que desliza pela direita.
 - rota: `home` - `/app/accounts/:accountId/dashboard`
-- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: existir ao menos uma caixa de entrada que permita criar conversa; contato existente ou criar um novo no fluxo
-- passos: 1. Clique no lápis no topo do menu lateral (ou em Enviar mensagem, na página do contato); 2. Pelo lápis, digite o nome, o telefone ou o e-mail em Para quem e clique na pessoa (pela página do contato ela já vem escolhida); 3. Em Por onde, confira o canal: o primeiro já vem marcado, e com mais de um você pode trocar; 4. Escreva em Sua mensagem ou, no WhatsApp, escolha uma mensagem pronta e complete os campos dela; à direita, a prévia mostra como a pessoa recebe; 5. Clique em Enviar mensagem; 6. Na confirmação, clique em Abrir a conversa.
-- gotchas: no WhatsApp oficial, a primeira mensagem para um cliente precisa ser uma mensagem pronta (modelo aprovado pelo WhatsApp); só dá para escrever livremente quando o mesmo número também está ligado na aba WhatsApp API da caixa; sem nenhuma mensagem pronta aprovada, a tela avisa e quem administra a conta pode criar uma; o contato precisa ter telefone ou e-mail, senão a tela mostra Completar o cadastro; fechar pelo X, pela tecla Esc ou clicando fora guarda o que você escreveu, e Cancelar apaga; o botão Enviar mensagem só acende quando não falta nada, e o texto ao lado dele diz o que falta; nas contas em que a tela nova está desligada, o mesmo botão abre a tela antiga, uma janelinha ao lado do botão.
+- passos: 1. Clique no lápis no topo do menu lateral (ou em Enviar mensagem, na página do contato); 2. Pelo lápis, digite o nome, o telefone ou o e-mail em Para quem e clique na pessoa (pela página do contato ela já vem escolhida); 3. Em Por onde, confira o canal: o primeiro já vem marcado, e com mais de um você pode trocar; 4. Escreva em Sua mensagem ou, no WhatsApp, escolha uma mensagem aprovada e complete os campos dela; à direita, a prévia mostra como a pessoa recebe; 5. Clique em Enviar mensagem; 6. Na confirmação, clique em Abrir a conversa.
+- gotchas: no WhatsApp oficial, a primeira mensagem para um cliente precisa ser uma mensagem aprovada (modelo aprovado pelo WhatsApp); só dá para escrever livremente quando o mesmo número também está ligado na aba WhatsApp API da caixa; sem nenhuma mensagem aprovada, a tela avisa e quem administra a conta pode criar uma; o contato precisa ter telefone ou e-mail, senão a tela mostra Completar o cadastro; fechar pelo X, pela tecla Esc ou clicando fora guarda o que você escreveu, e Cancelar apaga; o botão Enviar mensagem só acende quando não falta nada, e o texto ao lado dele diz o que falta; nas contas em que a tela nova está desligada, o mesmo botão abre a tela antiga, uma janelinha ao lado do botão; função sem Ver contatos não tem Nova conversa no menu, porque ela busca na base; essa pessoa começa conversa nova pelo botão Nova mensagem no painel do contato de uma conversa que ela já vê.
 - nav_target: `home`
 - highlight: `conversations-compose-new`
 
@@ -2155,7 +2166,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - cobre: contacts_edit_segment, contacts_edit_label
 - pre_requisitos: contato já cadastrado
 - passos: 1. Abra Contatos e clique no contato; 2. Ajuste os dados à esquerda e salve; 3. Use as abas de atributos, histórico, notas, mídia e mesclar; 4. Em histórico, veja as conversas anteriores; 5. Em notas, registre o que a equipe precisa saber; 6. Para juntar cadastros repetidos, abra mesclar, escolha o contato principal e confirme.
-- gotchas: ao mesclar, o contato principal é o que sobrevive e o outro é excluído, com os dados do principal prevalecendo em caso de conflito, e não há desfazer; excluir contato é permanente; bloquear não apaga o contato, só impede novo contato; e-mail ou telefone repetido é recusado por já pertencer a outro cadastro; abrindo a ficha a partir de um segmento ou de uma etiqueta, a tela é a mesma e o voltar devolve para aquela lista; em Mensagens ativas, abaixo de Atualizar contato, Marcar que não quer receber tira o contato das campanhas e dos follow-ups automáticos, inclusive de campanha já em andamento, e responder a quem escreve segue normal, o que é diferente de bloquear; Desfazer recusa só aparece na recusa Marcado pela equipe; a recusa de origem Prospecção vem do botão Não quer ser contatado no painel do lead e só sai lá, pelo Desfazer: pode ser contatado; a do descadastro de e-mail não se desfaz pela ficha; ao mesclar dois contatos que recusaram, fica a recusa mais firme: a manual, depois a do descadastro de e-mail, depois a da Prospecção; contato novo ou que troca telefone ou e-mail herda sozinho a recusa de e-mail descadastrado ou de lead marcado com Não quer ser contatado.
+- gotchas: ao mesclar, o contato principal é o que sobrevive e o outro é excluído, com os dados do principal prevalecendo em caso de conflito, e não há desfazer; excluir contato é permanente, e o botão Excluir contato aparece só para o administrador ou para função com Excluir contatos e empresas; mesclar fica com quem edita contatos, porque junta os dados no principal; bloquear não apaga o contato, só impede novo contato; e-mail ou telefone repetido é recusado por já pertencer a outro cadastro; abrindo a ficha a partir de um segmento ou de uma etiqueta, a tela é a mesma e o voltar devolve para aquela lista; em Mensagens ativas, abaixo de Atualizar contato, Marcar que não quer receber tira o contato das campanhas e dos follow-ups automáticos, inclusive de campanha já em andamento, e responder a quem escreve segue normal, o que é diferente de bloquear; Desfazer recusa só aparece na recusa Marcado pela equipe; a recusa de origem Prospecção vem do botão Não quer ser contatado no painel do lead e só sai lá, pelo Desfazer: pode ser contatado; a do descadastro de e-mail não se desfaz pela ficha; ao mesclar dois contatos que recusaram, fica a recusa mais firme: a manual, depois a do descadastro de e-mail, depois a da Prospecção; contato novo ou que troca telefone ou e-mail herda sozinho a recusa de e-mail descadastrado ou de lead marcado com Não quer ser contatado; função sem Ver contatos não abre a lista nem a ficha: na conversa e no card ela vê só nome, telefone e e-mail do cliente, além de ligar, mandar nova mensagem e ver a origem.
 - nav_target: `contacts_edit`
 
 ### Cadastrar empresas e achar a que você procura
@@ -2195,7 +2206,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `companies`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage`
 - pre_requisitos: empresa cadastrada e contatos existentes para vincular
 - passos: 1. Abra Empresas e clique na empresa; 2. Ajuste nome, domínio, descrição e avatar e atualize; 3. Use as abas de histórico, notas e contatos; 4. Em contatos, adicione pesquisando e confirmando o vínculo; 5. Use remover para desvincular.
-- gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta.
+- gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta; excluir aparece só para o administrador ou para função com Excluir contatos e empresas.
 - nav_target: `companies_dashboard_show`
 
 ### Levar as conversas para o Slack
@@ -2379,6 +2390,36 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. O cliente pede a cotação pelo WhatsApp e responde o que o agente perguntar; 2. A cotação fecha quando todas as seguradoras tiveram desfecho; 3. O comparativo chega como arquivo PDF na conversa, com o que respondeu; 4. Se o cliente pedir uma seguradora, ele recebe o documento daquela seguradora; 5. A equipe assume a conversa no horário configurado.
 - gotchas: os valores não saem conforme cada seguradora responde, o comparativo chega quando a cotação inteira termina, o que costuma levar de 1 a 2 minutos, e passando disso sai um aviso de espera escrito pelo agente, nunca uma lista de preços solta; o que vai ao cliente é o arquivo, nunca o link do portal, porque aquele endereço abre sem senha e traz o nome do segurado, e quando o arquivo falha nada é enviado no lugar; a proposta de uma seguradora é outro documento, gerado pela própria seguradora com o mesmo preço informado, e pedir duas seguradoras gera dois arquivos sem abrir cotação nova; seguradora que recusou não é anunciada ao cliente, e se ele perguntar o motivo sai por categoria, como veículo ou região, nunca o texto do portal; problema de credencial da corretora nunca chega ao cliente, ele aparece em Cotação > Conexões; na cotação de empresa o condutor deixa de ser opcional, precisa ser pessoa física com CPF e vínculo real, e a razão social não é perguntada, o sistema busca pelo CNPJ.
 - nav_target: `autonomia_insurance_agent`
+
+### Marcar e-mail como spam
+- intent: Como mando um e-mail para o spam?; Como paro de receber e-mail de um remetente?; Onde fica o Spam da caixa de e-mail?; Marquei como spam sem querer, como desfaço?
+- onde_fica: Conversas > abrir a conversa de uma caixa de e-mail > botão Spam no topo do e-mail; a pasta Spam fica no menu lateral, embaixo da caixa de e-mail
+- rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
+- passos: 1. Abra a conversa de e-mail; 2. Toque em Spam no topo; 3. A conversa sai da Entrada, fica resolvida e vai para a pasta Spam; 4. Para desfazer, abra a pasta Spam no menu, abra a conversa e toque em Não é spam.
+- gotchas: o Spam vale só para aquele remetente naquela caixa de e-mail: e-mail novo dele nessa caixa cai direto no Spam, já resolvido; o contato não fica bloqueado, e o WhatsApp e as outras caixas dele seguem normais; Não é spam devolve a conversa à Entrada, reabre e o remetente volta a chegar; nada muda na conta de e-mail do cliente (Gmail, Outlook); voltar de uma conversa aberta pelo Spam volta para a lista do Spam.
+- nav_target: `inbox_conversation`
+
+### Mover e-mail para a Lixeira e excluir para sempre
+- intent: Como apago um e-mail?; Onde fica a Lixeira do e-mail?; Como restauro uma conversa da Lixeira?; Como excluo uma conversa de e-mail para sempre?
+- onde_fica: Conversas > abrir a conversa de uma caixa de e-mail > botão Lixeira no topo do e-mail; a pasta Lixeira fica no menu lateral, embaixo da caixa de e-mail
+- rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
+- passos: 1. Abra a conversa de e-mail; 2. Toque em Lixeira no topo; 3. A conversa sai da Entrada e fica resolvida, sem apagar nada; 4. Para trazer de volta, abra a pasta Lixeira, abra a conversa e toque em Restaurar (ela volta aberta); 5. Para apagar de vez, dentro da Lixeira toque em Excluir para sempre e confirme.
+- gotchas: se o cliente responder no mesmo e-mail, a conversa sai sozinha da Lixeira e volta para a Entrada; Excluir para sempre só existe dentro da Lixeira, apaga os e-mails, as notas e os anexos para toda a equipe e não tem desfazer (o cliente continua com a cópia dele); pelo Guia, excluir para sempre sempre pede confirmação.
+- nav_target: `inbox_conversation`
+
+### Escrever um e-mail novo pela caixa de e-mail
+- intent: Como escrevo um e-mail novo?; Onde fica o Escrever do e-mail?; Como mando um e-mail para um cliente que ainda não escreveu?; Como uso um modelo de e-mail das Campanhas num e-mail novo?
+- onde_fica: Menu lateral > caixa de e-mail > Escrever (acima de Spam e Lixeira); abre a gaveta de nova conversa já nessa caixa
+- rota: `inbox_dashboard` - `/app/accounts/:accountId/inbox/:inbox_id`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
+- passos: 1. Toque em Escrever, embaixo da caixa de e-mail no menu; 2. Em Para quem, procure o contato ou, se não achar, crie no cartão Criar contato com nome e e-mail; 3. Escreva o assunto e a mensagem; pelo + dá para pôr um modelo de e-mail das Campanhas, anexo, emoji ou ditar; 4. Clique em Enviar mensagem.
+- gotchas: o e-mail sai pela caixa de onde você tocou em Escrever, mesmo que um rascunho de outra caixa tenha ficado guardado; o contato novo pela caixa de e-mail precisa de e-mail; se o contato já tem conversa nessa caixa, a tela oferece continuar aquela conversa, com o histórico e o Re: do assunto.
+- nav_target: `inbox_dashboard`
 
 ### Abrir Relacionamentos
 - intent: Onde ficam contatos e empresas?; Como configuro campos personalizados?; Onde estão os segmentos?

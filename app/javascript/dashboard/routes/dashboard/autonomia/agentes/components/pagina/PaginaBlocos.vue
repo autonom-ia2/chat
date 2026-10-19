@@ -33,6 +33,8 @@ const props = defineProps({
   tambemRecebe: { type: Array, default: () => [] },
   quantasFontes: { type: Number, default: 0 },
   quantasPerguntas: { type: Number, default: 0 },
+  // #1426 — materiais que precisam do dono (a revisão não aprovou ou não deu para ler). Só a Fase 2 manda.
+  problemasNoMaterial: { type: Number, default: 0 },
   // #1433: linhas da L2 em que o agente está na equipe, ou null quando ele não é agente da equipe.
   equipe: { type: Array, default: null },
   caixas: { type: Array, default: () => [] },
@@ -229,6 +231,23 @@ onMounted(() => {
                   `${NS}.BLOCO_SABE.N_PERGUNTAS`,
                   { n: quantasPerguntas },
                   quantasPerguntas
+                )
+              }}
+            </p>
+            <p
+              v-if="podeGerenciar && problemasNoMaterial"
+              data-problemas-no-material
+              class="flex items-center gap-1.5 px-2.5 py-1 m-0 text-sm font-medium rounded-lg w-fit bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12"
+            >
+              <span
+                class="i-lucide-hand size-4 shrink-0 text-n-amber-11"
+                aria-hidden="true"
+              />
+              {{
+                t(
+                  `${NS}.BLOCO_SABE.N_PROBLEMAS`,
+                  { n: problemasNoMaterial },
+                  problemasNoMaterial
                 )
               }}
             </p>

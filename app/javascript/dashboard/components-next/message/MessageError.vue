@@ -11,6 +11,8 @@ import { ORIENTATION, MESSAGE_STATUS } from './constants';
 
 const props = defineProps({
   error: { type: String, required: true },
+  // Quem só lê a conversa (#1800) não reenvia.
+  readOnly: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['retry']);
@@ -30,6 +32,7 @@ const canRetry = computed(() => {
   const hasContent = content.value !== null;
   const hasAttachments = attachments.value && attachments.value.length > 0;
   return (
+    !props.readOnly &&
     meta.value.podeReenviar &&
     !hasOneDayPassed(createdAt.value) &&
     (hasContent || hasAttachments)

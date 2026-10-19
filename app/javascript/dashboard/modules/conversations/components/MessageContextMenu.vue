@@ -52,7 +52,7 @@ export default {
       default: false,
     },
   },
-  emits: ['open', 'close', 'replyTo', 'encaminhar'],
+  emits: ['open', 'close', 'replyTo', 'encaminhar', 'react', 'edit'],
   setup() {
     const { getPlainText } = useMessageFormatter();
 
@@ -83,6 +83,20 @@ export default {
     },
     messageContent() {
       return this.message.content;
+    },
+    // chat#1709: apagar no painel apaga também no WhatsApp do cliente.
+    isRevocable() {
+      return (this.message.c2y_revocable ?? this.message.c2yRevocable) === true;
+    },
+    deleteLabel() {
+      return this.isRevocable
+        ? this.$t('MESSAGE_ACTIONS.DELETE_FOR_EVERYONE')
+        : this.$t('CONVERSATION.CONTEXT_MENU.DELETE');
+    },
+    deleteConfirmationMessage() {
+      return this.isRevocable
+        ? this.$t('MESSAGE_ACTIONS.DELETE_FOR_EVERYONE_CONFIRMATION')
+        : this.$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.MESSAGE');
     },
     contentAttributes() {
       return useSnakeCase(
@@ -160,6 +174,15 @@ export default {
       this.$emit('replyTo', this.message);
       this.handleClose();
     },
+    // fork chat#1709: reagir e editar pela caixa WAHA comum (o diálogo fica no Message.vue).
+    handleReact() {
+      this.handleClose();
+      this.$emit('react');
+    },
+    handleEdit() {
+      this.handleClose();
+      this.$emit('edit');
+    },
     openDeleteModal() {
       this.handleClose();
       this.showDeleteModal = true;
@@ -231,7 +254,7 @@ export default {
       :on-close="closeDeleteModal"
       :on-confirm="confirmDeletion"
       :title="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.TITLE')"
-      :message="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.MESSAGE')"
+      :message="deleteConfirmationMessage"
       :confirm-text="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.DELETE')"
       :reject-text="$t('CONVERSATION.CONTEXT_MENU.DELETE_CONFIRMATION.CANCEL')"
     />
@@ -277,6 +300,24 @@ export default {
           }"
           variant="icon"
           @click.stop="handleEncaminhar"
+        />
+        <MenuItem
+          v-if="enabledOptions['react']"
+          :option="{
+            icon: 'emoji-add',
+            label: $t('MESSAGE_ACTIONS.REACT'),
+          }"
+          variant="icon"
+          @click.stop="handleReact"
+        />
+        <MenuItem
+          v-if="enabledOptions['edit']"
+          :option="{
+            icon: 'edit',
+            label: $t('MESSAGE_ACTIONS.EDIT'),
+          }"
+          variant="icon"
+          @click.stop="handleEdit"
         />
         <MenuItem
           v-if="enabledOptions['copy']"
@@ -349,7 +390,7 @@ export default {
           v-if="enabledOptions['delete']"
           :option="{
             icon: 'delete',
-            label: $t('CONVERSATION.CONTEXT_MENU.DELETE'),
+            label: deleteLabel,
           }"
           variant="icon"
           @click.stop="openDeleteModal"

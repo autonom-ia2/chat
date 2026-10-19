@@ -10,10 +10,16 @@ import PerguntasParaConferir from './PerguntasParaConferir.vue';
 import DialogoAcao from './DialogoAcao.vue';
 import {
   MAX_ARQUIVO,
+  MAX_FOTO,
   MAX_FONTES,
   enderecoDoSite,
   nomeDaFonte,
 } from '../../utils/pagina';
+import {
+  ESTADO_MATERIAL,
+  estadoDoMaterial,
+} from '../../utils/estadoDoMaterial';
+import { TETO_DA_RELEITURA_MS } from 'dashboard/store/modules/autonomiaSources';
 
 // #1181 PR3 (protótipo T09) — "O que {nome} sabe": o resumo, os arquivos e sites (lendo, pronto ou
 // não consegui ler) e, para quem gerencia, mandar arquivo (até 25 MB) ou site, ler de novo, tirar e
@@ -29,6 +35,9 @@ const props = defineProps({
   // Só na primeira leitura (as releituras mantêm a lista na tela).
   carregandoFontes: { type: Boolean, default: false },
   erroLer: { type: Boolean, default: false },
+  // #1426 — na Fase 2 cada linha mostra o estado real (Lendo → Revisando → Pronto ou Precisa de você). Fora dela, o de
+  // hoje.
+  fase2: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler']);
@@ -52,6 +61,21 @@ const dialogoTirar = ref(null);
 const botaoArquivo = ref(null);
 
 const lista = computed(() => props.fontes || []);
+const estadoDe = fonte => (props.fase2 ? estadoDoMaterial(fonte) : '');
+
+// #1426 — "Lendo…" ou "Revisando…" parado além do teto da releitura (o worker caiu): a linha libera "Ler de novo",
+// para arquivo e foto (o servidor aceita a releitura do que passou do mesmo teto). Só na Fase 2 (estadoDe). O relógio
+// anda a cada 30 s com a gaveta aberta, porque a store já parou de reler.
+const RELOGIO_DO_PARADO_MS = 30000;
+const relogio = ref(Date.now());
+const relogioDoParado = setInterval(() => {
+  relogio.value = Date.now();
+}, RELOGIO_DO_PARADO_MS);
+onBeforeUnmount(() => clearInterval(relogioDoParado));
+const ESTADOS_QUE_PARAM = [ESTADO_MATERIAL.LENDO, ESTADO_MATERIAL.REVISANDO];
+const paradoAlemDoTeto = fonte =>
+  ESTADOS_QUE_PARAM.includes(estadoDe(fonte)) &&
+  relogio.value - Date.parse(fonte.updated_at || '') > TETO_DA_RELEITURA_MS;
 
 // "Além da conversa, {nome} usa estes arquivos e sites…" só quando há arquivo ou site; sem eles, o
 // vazio já diz que sabe só o que foi contado.
@@ -66,17 +90,27 @@ const salvar = async acao => {
   try {
     await acao();
     adicionando.value = false;
-  } catch {
-    falhaSalvar.value = acao;
+  } catch (erro) {
+    // #1426 — recusa do servidor (422): a mensagem dele vai para a tela, sem "Tentar de novo" (repetir não adianta).
+    if (erro?.status === 422) erroArquivo.value = erro.message;
+    else falhaSalvar.value = acao;
   } finally {
     salvando.value = false;
   }
 };
 
+// #1426 — na Fase 2, imagem vai como foto (lida por OCR e revisada); fora dela, como hoje.
+const ehImagem = arquivo => (arquivo?.type || '').startsWith('image/');
 const criar = descritor =>
   store.dispatch('autonomiaSources/create', {
     agentId: props.agente.id,
-    descriptor: { ...descritor, kind: 'knowledge' },
+    descriptor: {
+      ...descritor,
+      kind: 'knowledge',
+      ...(props.fase2 && ehImagem(descritor.file)
+        ? { sourceType: 'foto' }
+        : {}),
+    },
   });
 
 const remover = fonte =>
@@ -105,6 +139,10 @@ const aoEscolherArquivo = evento => {
   const trocando = substituir.value;
   if (arquivo.size > MAX_ARQUIVO) {
     erroArquivo.value = t(`${NS}.GRANDE`);
+    return;
+  }
+  if (props.fase2 && ehImagem(arquivo) && arquivo.size > MAX_FOTO) {
+    erroArquivo.value = t(`${NS}.FOTO_GRANDE`);
     return;
   }
   if (!trocando && lista.value.length >= MAX_FONTES) {
@@ -329,6 +367,8 @@ const tirar = () => remover(tirando.value);
         :fonte="fonte"
         :nome-agente="nome"
         :relendo="fonte.id in relendo"
+        :estado="estadoDe(fonte)"
+        :reler-parado="podeGerenciar && paradoAlemDoTeto(fonte)"
         :pode-gerenciar="podeGerenciar"
         @ler-de-novo="lerDeNovo"
         @tirar="pedirTirar"

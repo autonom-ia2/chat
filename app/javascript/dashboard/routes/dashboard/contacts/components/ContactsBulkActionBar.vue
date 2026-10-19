@@ -121,7 +121,7 @@ const handleRemoveLabels = labels => {
             />
           </Policy>
           <div class="w-px h-3 bg-n-weak rounded-lg" />
-          <Policy :permissions="['administrator']">
+          <Policy :permissions="['administrator', 'contact_delete']">
             <Button
               v-tooltip.bottom="t('CONTACTS_BULK_ACTIONS.DELETE_CONTACTS')"
               sm

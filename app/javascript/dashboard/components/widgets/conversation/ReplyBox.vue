@@ -8,6 +8,14 @@ import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 
 import ReplyToMessage from './ReplyToMessage.vue';
 import CitacaoNaResposta from 'dashboard/components-next/conversa-canal/CitacaoNaResposta.vue';
+import { FORA_DA_REGUA } from 'dashboard/components-next/conversa-canal/email/visualEmail';
+import MenuDaIaDoEmail from 'dashboard/components-next/conversa-canal/email/MenuDaIaDoEmail.vue';
+import AvisoDaSugestao from 'dashboard/components-next/conversa-canal/email/AvisoDaSugestao.vue';
+import {
+  useIaDoEmail,
+  respostaComIa,
+  assinaturaNoTexto,
+} from 'dashboard/components-next/conversa-canal/email/useIaDoEmail';
 import CrmReplySubject from './CrmReplySubject.vue';
 import CrmRepasseDoAssunto from './CrmRepasseDoAssunto.vue';
 import AttachmentPreview from 'dashboard/components/widgets/AttachmentsPreview.vue';
@@ -18,6 +26,7 @@ import CopilotReplyBottomPanel from 'dashboard/components/widgets/WootWriter/Cop
 import ArticleSearchPopover from 'dashboard/routes/dashboard/helpcenter/components/ArticleSearch/SearchPopover.vue';
 import CopilotEditorSection from './CopilotEditorSection.vue';
 import MessageSignatureMissingAlert from './MessageSignatureMissingAlert.vue';
+import AvisoDeAssinatura from 'dashboard/components-next/conversa-canal/email/AvisoDeAssinatura.vue';
 import ReplyBoxBanner from './ReplyBoxBanner.vue';
 import WhatsappApiReplyHint from './WhatsappApiReplyHint.vue';
 import QuotedEmailPreview from './QuotedEmailPreview.vue';
@@ -36,6 +45,7 @@ import ContentTemplates from './ContentTemplates/ContentTemplatesModal.vue';
 import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
 import { trimContent, debounce, getRecipients } from '@chatwoot/utils';
+import { semQuemSaiuDaCopia } from 'dashboard/helper/semQuemSaiuDaCopia';
 import wootConstants from 'dashboard/constants/globals';
 import {
   extractQuotedEmailText,
@@ -54,6 +64,7 @@ import {
   getEffectiveChannelType,
   getAgentVariables,
   getContactVariables,
+  resolveVariablesInMessage,
 } from 'dashboard/helper/editorHelper';
 import { useCopilotReply } from 'dashboard/composables/useCopilotReply';
 import { useMacroExecution } from 'dashboard/composables/useMacroExecution';
@@ -63,6 +74,28 @@ import {
 } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
 import { ABRIR_MODELOS_DO_WHATSAPP } from 'dashboard/components-next/conversa-canal/pele';
 import GravadorDoWhatsapp from 'dashboard/components-next/conversa-canal/GravadorDoWhatsapp.vue';
+import CabecaDaResposta from 'dashboard/components-next/conversa-canal/email/CabecaDaResposta.vue';
+import TopoDaResposta from 'dashboard/components-next/conversa-canal/email/TopoDaResposta.vue';
+import CitacaoDaResposta from 'dashboard/components-next/conversa-canal/email/CitacaoDaResposta.vue';
+import ModeloDaResposta from 'dashboard/components-next/conversa-canal/email/ModeloDaResposta.vue';
+import JanelaDeEmojis from 'dashboard/components-next/conversa-canal/email/JanelaDeEmojis.vue';
+import ModelosDeEmailAPI from 'dashboard/api/modelosDeEmail';
+import {
+  montarModelo,
+  preencherModelo,
+  textoDoModelo,
+} from 'dashboard/components-next/conversa-canal/email/modeloDeEmail';
+import {
+  DESCARTAR_EMAIL,
+  MODELO_DE_CAMPANHA,
+  MODELOS_DO_EMAIL,
+  MODOS_DE_RESPOSTA,
+  RESPONDER_EMAIL,
+  useEmailDaConversa,
+} from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
+import { lerEndereco } from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
+import { montarRespostaDoEmail } from 'dashboard/components-next/conversa-canal/email/respostaDoEmail';
+import { validEmailsByComma } from './helpers/emailHeadHelper';
 import ConversationResolveAttributesModal from 'dashboard/components-next/ConversationWorkflow/ConversationResolveAttributesModal.vue';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
 import { createPendingMessage } from 'dashboard/helper/commons';
@@ -83,10 +116,16 @@ export default {
     AttachmentPreview,
     AudioRecorder,
     GravadorDoWhatsapp,
+    CabecaDaResposta,
+    TopoDaResposta,
+    CitacaoDaResposta,
+    ModeloDaResposta,
+    JanelaDeEmojis,
     ReplyBoxBanner,
     WhatsappApiReplyHint,
     EmojiIconPicker,
     MessageSignatureMissingAlert,
+    AvisoDeAssinatura,
     ReplyBottomPanel,
     ReplyEmailHead,
     ReplyToMessage,
@@ -100,6 +139,8 @@ export default {
     QuotedEmailPreview,
     CopilotEditorSection,
     CopilotReplyBottomPanel,
+    MenuDaIaDoEmail,
+    AvisoDaSugestao,
     ConversationResolveAttributesModal,
   },
   mixins: [inboxMixin, fileUploadMixin],
@@ -114,14 +155,31 @@ export default {
     } = useUISettings();
 
     const messageEditor = useTemplateRef('messageEditor');
-    const copilot = useCopilotReply();
     const macroExecution = useMacroExecution();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
     // #1702: barra e campo do WhatsApp na conversa com a cara do canal.
     const { classesDaResposta, textoDoCampo, ehWhatsapp } = usePeleDaResposta();
+    // #1786: na conversa de e-mail nova, Responder / Responder a todos / Encaminhar.
+    const { ligado: emailNovo, fecharResposta: fecharRespostaDoEmail } =
+      useEmailDaConversa();
 
     // Options API state and methods live on the instance proxy
     const { proxy } = getCurrentInstance();
+    // #1872: no e-mail novo o ✨ usa a IA do cliente (copiloto da Autonom.ia), nunca o Captain;
+    // nos outros canais segue o do Chatwoot. A assinatura não vai para a IA e volta ao aceitar.
+    const iaDoEmail = useIaDoEmail({
+      ativo: () => emailNovo.value,
+      conversaId: () => proxy.conversationId,
+      rascunho: () => proxy.message,
+      assinatura: () =>
+        assinaturaNoTexto({
+          ligada: !proxy.isPrivate && proxy.sendWithSignature,
+          texto: proxy.messageSignature,
+          channelType: proxy.channelType,
+          medium: proxy.inbox?.medium,
+        }),
+    });
+    const copilot = respostaComIa(emailNovo, useCopilotReply(), iaDoEmail);
     useKeyboardEvents({
       Escape: {
         action: () => proxy.hideEmojiPicker(),
@@ -164,11 +222,15 @@ export default {
       fetchQuotedReplyFlagFromUISettings,
       messageEditor,
       copilot,
+      iaDoEmail,
       shortcutKey,
       macroExecution,
       classesDaResposta,
       ehWhatsapp,
+      emailNovo,
+      fecharRespostaDoEmail,
       textoDoCampo,
+      FORA_DA_REGUA,
     };
   },
   data() {
@@ -202,6 +264,18 @@ export default {
       newConversationModalActive: false,
       showArticleSearchPopover: false,
       hasRecordedAudio: false,
+      modoDoEmail: MODOS_DE_RESPOSTA.TODOS,
+      // #1786: o que vai junto da resposta de e-mail (histórico ou encaminhado) e a
+      // escolha de não mandar o histórico, só desta resposta.
+      citacaoDoEmail: null,
+      historicoDesligado: false,
+      // #1786: modelo de e-mail das Campanhas escolhido no "+" e os valores dos campos.
+      modeloDoEmail: null,
+      valoresDoModelo: {},
+      // #1786: o último pedido de modelo (descarta resposta atrasada) e os destinatários
+      // que a resposta montou (para a troca de tipo não apagar o que foi editado à mão).
+      pedidoDoModelo: 0,
+      destinatariosMontados: {},
       // #1702: a seta do gravador do WhatsApp para e envia; o envio sai quando o áudio vira anexo.
       enviarAudioAoAnexar: false,
       copilotAcceptedMessages: {},
@@ -334,6 +408,10 @@ export default {
         return this.$t('CONVERSATION.FOOTER.MESSAGING_RESTRICTED');
       }
       if (!this.isPrivate && this.textoDoCampo) return this.textoDoCampo;
+      // #1786: no e-mail novo, uma frase simples no lugar do atalho técnico.
+      if (!this.isPrivate && this.emailNovo) {
+        return this.$t('CONVERSA_CANAL.EMAIL.ESCREVA');
+      }
       return this.isPrivate
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
@@ -347,13 +425,32 @@ export default {
     isReplyButtonDisabled() {
       if (this.isEditorDisabled) return true;
       if (this.isATwitterInbox) return true;
+      // #1786: endereço errado, ou Encaminhar sem Para (o envio cairia no cliente).
+      if (this.emailNovo && !this.isPrivate && !this.destinatariosDoEmailOk)
+        return true;
       if (this.hasAttachments || this.hasRecordedAudio) return false;
+      // #1786: com um modelo de e-mail, dá para enviar só o modelo.
+      if (this.emailNovo && this.modeloDoEmail && !this.isPrivate) {
+        return this.message.length > this.maxLength;
+      }
 
       return (
         this.isMessageEmpty ||
         this.message.length === 0 ||
         this.message.length > this.maxLength
       );
+    },
+    encaminhandoEmail() {
+      return this.modoDoEmail === MODOS_DE_RESPOSTA.ENCAMINHAR;
+    },
+    destinatariosDoEmailOk() {
+      const campos = [this.toEmails, this.ccEmails, this.bccEmails];
+      if (!campos.every(campo => validEmailsByComma(String(campo || ''))))
+        return false;
+      if (!this.encaminhandoEmail) return true;
+      return String(this.toEmails || '')
+        .split(',')
+        .some(item => item.trim());
     },
     sender() {
       return {
@@ -421,6 +518,8 @@ export default {
       );
     },
     replyButtonLabel() {
+      // #1786: no e-mail novo o botão diz o destino ("Enviar para Marina") ou "Salvar nota".
+      if (this.emailNovo) return this.rotuloDoEnvioDoEmail;
       let sendMessageText = this.$t('CONVERSATION.REPLYBOX.SEND');
       if (this.isPrivate) {
         sendMessageText = this.$t('CONVERSATION.REPLYBOX.CREATE');
@@ -429,6 +528,43 @@ export default {
         ? `(${this.shortcutKey})`
         : '(↵)';
       return `${sendMessageText} ${keyLabel}`;
+    },
+    modoDoTopoDoEmail() {
+      return this.isPrivate ? MODOS_DE_RESPOSTA.NOTA : this.modoDoEmail;
+    },
+    mensagemCitadaDoEmail() {
+      const id = this.citacaoDoEmail?.mensagemId;
+      return id
+        ? this.currentChat?.messages?.find(item => item.id === id)
+        : null;
+    },
+    rotuloDoEnvioDoEmail() {
+      if (this.isPrivate) return this.$t('CONVERSA_CANAL.EMAIL.SALVAR_NOTA');
+      const lista = campo =>
+        String(campo || '')
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean);
+      const primeiro = lista(this.toEmails)[0];
+      if (!primeiro) return this.$t('CONVERSA_CANAL.EMAIL.ENVIAR');
+      // Com Cc/Cco ou vários no Para: "Enviar para Marina e mais 1".
+      const outros =
+        lista(this.toEmails).length +
+        lista(this.ccEmails).length +
+        lista(this.bccEmails).length -
+        1;
+      const contato = this.currentChat?.meta?.sender || {};
+      const { endereco } = lerEndereco(primeiro);
+      const nome =
+        endereco.toLowerCase() === String(contato.email || '').toLowerCase()
+          ? String(contato.name || '').split(' ')[0]
+          : endereco;
+      return outros > 0
+        ? this.$t('CONVERSA_CANAL.EMAIL.ENVIAR_PARA_VARIOS', {
+            nome,
+            total: outros,
+          })
+        : this.$t('CONVERSA_CANAL.EMAIL.ENVIAR_PARA', { nome });
     },
     replyBoxClass() {
       return {
@@ -551,7 +687,8 @@ export default {
       return truncatePreviewText(this.quotedEmailText, 80);
     },
     shouldShowQuotedReplyToggle() {
-      return this.isAnEmailChannel && !this.isOnPrivateNote;
+      // #1786: no e-mail novo o histórico é o cartão embaixo do texto (vai por padrão).
+      return this.isAnEmailChannel && !this.isOnPrivateNote && !this.emailNovo;
     },
     shouldShowQuotedPreview() {
       return (
@@ -605,6 +742,12 @@ export default {
     lastEmail: {
       handler(lastEmail) {
         if (!lastEmail) return;
+        // #1786: no e-mail novo quem monta os destinatários é o responderEmail; aqui só
+        // se completa a resposta aberta antes de o e-mail chegar.
+        if (this.emailNovo) {
+          this.completarRespostaDoEmail(lastEmail);
+          return;
+        }
         this.setCCAndToEmailsFromLastChat();
       },
       deep: true,
@@ -613,6 +756,7 @@ export default {
       if (conversationId !== oldConversationId) {
         this.switchDraftContext(conversationId, this.effectiveReplyMode);
         this.resetRecorderAndClearAttachments();
+        this.zerarRespostaDoEmail();
       }
     },
     message() {
@@ -660,6 +804,10 @@ export default {
     this.fetchAndSetReplyTo();
     emitter.on(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
     emitter.on(ABRIR_MODELOS_DO_WHATSAPP, this.openWhatsappTemplateModal);
+    emitter.on(RESPONDER_EMAIL, this.responderEmail);
+    emitter.on(DESCARTAR_EMAIL, this.descartarEmail);
+    emitter.on(MODELOS_DO_EMAIL, this.inserirModeloDoEmail);
+    emitter.on(MODELO_DE_CAMPANHA, this.carregarModeloDeCampanha);
 
     // A hacky fix to solve the drag and drop
     // Is showing on top of new conversation modal drag and drop
@@ -674,6 +822,10 @@ export default {
     document.removeEventListener('paste', this.onPaste);
     emitter.off(BUS_EVENTS.TOGGLE_REPLY_TO_MESSAGE, this.onReplyToMessage);
     emitter.off(ABRIR_MODELOS_DO_WHATSAPP, this.openWhatsappTemplateModal);
+    emitter.off(RESPONDER_EMAIL, this.responderEmail);
+    emitter.off(DESCARTAR_EMAIL, this.descartarEmail);
+    emitter.off(MODELOS_DO_EMAIL, this.inserirModeloDoEmail);
+    emitter.off(MODELO_DE_CAMPANHA, this.carregarModeloDeCampanha);
     emitter.off(
       BUS_EVENTS.NEW_CONVERSATION_MODAL,
       this.onNewConversationModalActive
@@ -735,6 +887,8 @@ export default {
       );
     },
     getMessageWithQuotedEmailText(message) {
+      // #1786: no e-mail novo o histórico vai pelo servidor, formatado (email_citacao).
+      if (this.emailNovo) return message;
       if (!this.shouldIncludeQuotedEmail()) {
         return message;
       }
@@ -1099,6 +1253,8 @@ export default {
     },
     clearMessage() {
       this.message = '';
+      this.modeloDoEmail = null;
+      this.valoresDoModelo = {};
       this.clearCopilotAcceptedMessage();
       if (this.sendWithSignature && !this.isPrivate) {
         // if signature is enabled, append it to the message
@@ -1346,7 +1502,205 @@ export default {
       if (this.toEmails && !this.isOnPrivateNote) {
         messagePayload.toEmails = this.toEmails;
       }
-      return messagePayload;
+      return this.comModeloDoEmail(this.comCitacaoDoEmail(messagePayload));
+    },
+    // #1786: as ações da conversa de e-mail nova montam os destinatários (e o texto do
+    // encaminhado) a partir do e-mail escolhido, e o envio segue o de sempre.
+    responderEmail({ modo, mensagemId, trocaDeTipo = false } = {}) {
+      // A caixa acabou de aparecer: o foco vem depois de ela ser desenhada.
+      const focar = () => {
+        this.$nextTick(() => {
+          requestAnimationFrame(() =>
+            this.messageEditor?.focusEditorInputField('start')
+          );
+        });
+      };
+      // Trocar só entre nota e resposta: o Chatwoot tira os anexos nessa troca (regras
+      // de envio diferentes); reabrir no mesmo modo mantém os anexos.
+      if (modo === MODOS_DE_RESPOSTA.NOTA) {
+        if (!this.isPrivate) this.setReplyMode(REPLY_EDITOR_MODES.NOTE);
+        focar();
+        return;
+      }
+      const mensagem =
+        this.currentChat?.messages?.find(item => item.id === mensagemId) ||
+        this.lastEmail;
+      const resposta = montarRespostaDoEmail({
+        modo,
+        mensagem,
+        contato: this.currentChat?.meta?.sender?.email,
+        caixa: this.inbox,
+      });
+      this.modoDoEmail = modo;
+      if (this.isPrivate) this.setReplyMode(REPLY_EDITOR_MODES.REPLY);
+      this.aplicarDestinatarios(resposta, trocaDeTipo);
+      // O histórico vai junto por padrão; o encaminhado mostra o original embaixo.
+      // O servidor monta o HTML (ConversaCanal::CitacaoDoEmail).
+      this.citacaoDoEmail = mensagem?.id
+        ? {
+            tipo:
+              modo === MODOS_DE_RESPOSTA.ENCAMINHAR
+                ? 'encaminhado'
+                : 'historico',
+            mensagemId: mensagem.id,
+          }
+        : null;
+      if (!trocaDeTipo) this.historicoDesligado = false;
+      focar();
+    },
+    // #1786: a resposta foi aberta logo depois de trocar de conversa, antes de o e-mail
+    // chegar (Para e Cc saíram sem ele). Quando ele chega, monta os endereços e o
+    // histórico, só enquanto a pessoa não mexeu nos endereços e a resposta é a esse
+    // mesmo e-mail (ou a nenhum). Um e-mail novo do cliente no meio da resposta não troca
+    // nada, e o encaminhado e a nota não têm o que completar.
+    completarRespostaDoEmail(lastEmail) {
+      const montados = this.destinatariosMontados;
+      if (!Object.keys(montados).length || this.isPrivate) return;
+      if (this.modoDoEmail === MODOS_DE_RESPOSTA.ENCAMINHAR) return;
+      const citado = this.citacaoDoEmail?.mensagemId;
+      if (citado && citado !== lastEmail.id) return;
+      const editou = ['toEmails', 'ccEmails', 'bccEmails'].some(
+        campo => (this[campo] || '') !== (montados[campo] || '')
+      );
+      if (editou) return;
+      this.aplicarDestinatarios(
+        montarRespostaDoEmail({
+          modo: this.modoDoEmail,
+          mensagem: lastEmail,
+          contato: this.currentChat?.meta?.sender?.email,
+          caixa: this.inbox,
+        }),
+        false
+      );
+      this.citacaoDoEmail = { tipo: 'historico', mensagemId: lastEmail.id };
+    },
+    // #1786: o menu do topo troca o tipo da MESMA resposta: continua no e-mail que
+    // estava sendo respondido, e o que o atendente escreveu nos endereços fica.
+    trocarTipoDoEmail(modo) {
+      this.responderEmail({
+        modo,
+        mensagemId: this.citacaoDoEmail?.mensagemId,
+        trocaDeTipo: true,
+      });
+    },
+    // Na troca de tipo, um campo editado à mão (diferente do que foi montado) fica.
+    aplicarDestinatarios(resposta, preservarEditados) {
+      const novos = {
+        toEmails: resposta.para,
+        ccEmails: resposta.cc,
+        bccEmails: resposta.cco,
+      };
+      const montados = this.destinatariosMontados;
+      Object.entries(novos).forEach(([campo, valor]) => {
+        const editado = (this[campo] || '') !== (montados[campo] || '');
+        if (preservarEditados && editado) return;
+        this[campo] = valor;
+      });
+      this.destinatariosMontados = novos;
+    },
+    // #1786: o estado da resposta de e-mail é da conversa: ao trocar, nada passa para a
+    // outra (o modelo preenchido com os dados de um contato iria para outro).
+    zerarRespostaDoEmail() {
+      this.modeloDoEmail = null;
+      this.valoresDoModelo = {};
+      this.citacaoDoEmail = null;
+      this.modoDoEmail = MODOS_DE_RESPOSTA.TODOS;
+      this.historicoDesligado = false;
+      this.destinatariosMontados = {};
+      this.pedidoDoModelo += 1;
+    },
+    // #1786: pede ao servidor o histórico ou o encaminhado formatado junto da resposta.
+    comCitacaoDoEmail(payload) {
+      const citacao = this.citacaoDoEmail;
+      if (!this.emailNovo || this.isPrivate || !citacao) return payload;
+      if (citacao.tipo === 'historico' && this.historicoDesligado)
+        return payload;
+      return {
+        ...payload,
+        contentAttributes: {
+          ...payload.contentAttributes,
+          email_citacao: { tipo: citacao.tipo, message_id: citacao.mensagemId },
+        },
+      };
+    },
+    // #1786: o modelo escolhido no "+" chega com os campos já preenchidos pelo contato e
+    // pela IA; o navegador compila o MJML sem o rodapé de descadastro.
+    // Só vale a resposta do último pedido, na mesma conversa: trocar de modelo ou de
+    // conversa no meio do caminho descarta a que chegar atrasada.
+    async carregarModeloDeCampanha(id) {
+      this.pedidoDoModelo += 1;
+      const pedido = this.pedidoDoModelo;
+      const conversaId = this.currentChat.id;
+      const valeAinda = () =>
+        pedido === this.pedidoDoModelo && this.currentChat?.id === conversaId;
+      try {
+        const { data } = await ModelosDeEmailAPI.abrir(id, conversaId);
+        const html = await montarModelo({ mjml: data.mjml, html: data.html });
+        if (!valeAinda()) return;
+        if (!html) throw new Error('modelo vazio');
+        this.modeloDoEmail = {
+          id: data.id,
+          nome: data.nome,
+          html,
+          campos: data.campos,
+        };
+        this.valoresDoModelo = Object.fromEntries(
+          data.campos.map(campo => [campo.chave, campo.valor])
+        );
+      } catch {
+        if (valeAinda())
+          useAlert(this.$t('CONVERSA_CANAL.EMAIL.MODELO_FALHOU'));
+      }
+    },
+    // #1786: a janela de emojis do e-mail abre em cima da barra de baixo da caixa.
+    ancoraDosEmojis() {
+      // O ReplyBox tem mais de uma raiz ($el não é a caixa): procura a barra na página.
+      return document.querySelector('.reply-box .left-wrap');
+    },
+    atualizarCampoDoModelo(chave, valor) {
+      this.valoresDoModelo = { ...this.valoresDoModelo, [chave]: valor };
+    },
+    tirarModeloDoEmail() {
+      this.modeloDoEmail = null;
+      this.valoresDoModelo = {};
+    },
+    // #1786: o modelo preenchido vai junto; sem texto do atendente, sai só o modelo (o
+    // conteúdo da mensagem vira o texto do modelo, que o CRM e a IA leem).
+    comModeloDoEmail(payload) {
+      if (!this.emailNovo || this.isPrivate || !this.modeloDoEmail)
+        return payload;
+      const html = preencherModelo(
+        this.modeloDoEmail.html,
+        this.valoresDoModelo
+      );
+      const soModelo = !String(payload.message || '').trim();
+      return {
+        ...payload,
+        message: soModelo ? textoDoModelo(html) : payload.message,
+        contentAttributes: {
+          ...payload.contentAttributes,
+          email_modelo: {
+            template_id: this.modeloDoEmail.id,
+            html,
+            so_modelo: soModelo,
+          },
+        },
+      };
+    },
+    // #1786: Descartar apaga o rascunho e os anexos e fecha a caixa do e-mail novo.
+    descartarEmail() {
+      this.clearMessage();
+      this.attachedFiles = [];
+      this.removeFromDraft();
+      this.fecharRespostaDoEmail();
+    },
+    // #1786: a resposta pronta escolhida na lista entra no ponto do cursor, com as
+    // variáveis trocadas e a formatação (o mesmo caminho do "/").
+    inserirModeloDoEmail(conteudo) {
+      emitter.emit(
+        BUS_EVENTS.INSERT_INTO_RICH_EDITOR,
+        resolveVariablesInMessage(conteudo, this.messageVariables)
+      );
     },
     setCcEmails(value) {
       this.bccEmails = value.bccEmails;
@@ -1357,11 +1711,21 @@ export default {
       const { email: inboxEmail, forward_to_email: forwardToEmail } =
         this.inbox;
 
-      const { cc, bcc, to } = getRecipients(
-        this.lastEmail,
-        conversationContact,
-        inboxEmail,
-        forwardToEmail
+      // #1828: quem pediu para sair da cópia desta conversa não volta no preenchimento.
+      const { cc, bcc, to } = semQuemSaiuDaCopia(
+        getRecipients(
+          this.lastEmail,
+          conversationContact,
+          inboxEmail,
+          forwardToEmail
+        ),
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.EMAIL_AUTORIA
+        )
+          ? this.currentChat?.additional_attributes?.email_saiu_da_copia
+          : undefined,
+        conversationContact
       );
 
       this.toEmails = to.join(', ');
@@ -1446,7 +1810,13 @@ export default {
     :is-on-private-note="isOnPrivateNote"
   />
   <div class="reply-box" :class="replyBoxClass">
+    <TopoDaResposta
+      v-if="emailNovo"
+      :modo="modoDoTopoDoEmail"
+      @trocar-modo="trocarTipoDoEmail"
+    />
     <ReplyTopPanel
+      v-else
       :mode="replyType"
       :conversation-id="conversationId"
       :is-reply-restricted="!canSendPublicReply"
@@ -1500,8 +1870,15 @@ export default {
           :message="inReplyTo"
           @dismiss="resetReplyToMessage"
         />
+        <!-- #1786: no e-mail novo, a janela própria (flutua; a caixa com rolagem cortava a do Chatwoot). -->
+        <JanelaDeEmojis
+          v-if="showEmojiPicker && emailNovo"
+          :ancora="ancoraDosEmojis()"
+          @escolher="addIntoEditor"
+          @fechar="hideEmojiPicker"
+        />
         <EmojiIconPicker
-          v-if="showEmojiPicker"
+          v-else-if="showEmojiPicker"
           v-on-clickaway="hideEmojiPicker"
           mode="emoji"
           class="emoji-dialog"
@@ -1510,8 +1887,15 @@ export default {
           }"
           @select="addIntoEditor($event.value)"
         />
+        <CabecaDaResposta
+          v-if="showReplyHead && isDefaultEditorMode && emailNovo"
+          v-model:cc-emails="ccEmails"
+          v-model:bcc-emails="bccEmails"
+          v-model:to-emails="toEmails"
+          :encaminhar="encaminhandoEmail"
+        />
         <ReplyEmailHead
-          v-if="showReplyHead && isDefaultEditorMode"
+          v-else-if="showReplyHead && isDefaultEditorMode"
           v-model:cc-emails="ccEmails"
           v-model:bcc-emails="bccEmails"
           v-model:to-emails="toEmails"
@@ -1560,6 +1944,9 @@ export default {
           class="input popover-prosemirror-menu"
           :is-private="isOnPrivateNote"
           :placeholder="messagePlaceHolder"
+          :reload-on-placeholder-change="emailNovo"
+          :hidden-menu-options="emailNovo ? FORA_DA_REGUA : []"
+          :copilot-available="emailNovo ? iaDoEmail.disponivel.value : null"
           :update-selection-with="updateEditorSelectionWith"
           :min-height="4"
           :disabled="isEditorDisabled"
@@ -1582,10 +1969,49 @@ export default {
           @execute-macro="onExecuteMacro"
           @clear-selection="clearEditorSelection"
           @execute-copilot-action="executeCopilotAction"
+        >
+          <template
+            v-if="emailNovo"
+            #copilot-menu="{ hasContent, run, close, root }"
+          >
+            <MenuDaIaDoEmail
+              :tem-texto="hasContent"
+              :editor="root"
+              tem-conversa
+              @executar="run"
+              @fechar="close"
+            />
+          </template>
+        </WootMessageEditor>
+        <AvisoDaSugestao
+          v-if="emailNovo && iaDoEmail.avisoDasVariaveis.value"
+          :texto="iaDoEmail.avisoDasVariaveis.value"
         />
 
+        <ModeloDaResposta
+          v-if="emailNovo && !isPrivate && modeloDoEmail && isDefaultEditorMode"
+          :modelo="modeloDoEmail"
+          :valores="valoresDoModelo"
+          @campo="atualizarCampoDoModelo"
+          @tirar="tirarModeloDoEmail"
+        />
+        <CitacaoDaResposta
+          v-if="
+            emailNovo &&
+            !isPrivate &&
+            citacaoDoEmail &&
+            mensagemCitadaDoEmail &&
+            isDefaultEditorMode
+          "
+          :mensagem="mensagemCitadaDoEmail"
+          :tipo="citacaoDoEmail.tipo"
+          :desligado="historicoDesligado"
+          @alternar="historicoDesligado = !historicoDesligado"
+        />
         <QuotedEmailPreview
-          v-if="shouldShowQuotedPreview && isDefaultEditorMode"
+          v-else-if="
+            shouldShowQuotedPreview && isDefaultEditorMode && !emailNovo
+          "
           :quoted-email-text="quotedEmailText"
           :preview-text="quotedEmailPreviewText"
           class="mb-2"
@@ -1603,8 +2029,16 @@ export default {
             @remove-attachment="removeAttachment"
           />
         </div>
-        <MessageSignatureMissingAlert
+        <AvisoDeAssinatura
           v-if="
+            emailNovo &&
+            isSignatureEnabledForInbox &&
+            !isSignatureAvailable &&
+            isDefaultEditorMode
+          "
+        />
+        <MessageSignatureMissingAlert
+          v-else-if="
             isSignatureEnabledForInbox &&
             !isSignatureAvailable &&
             isDefaultEditorMode

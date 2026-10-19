@@ -6,10 +6,18 @@ import { getRandomColor } from 'dashboard/helper/labelColor';
 import { useVuelidate } from '@vuelidate/core';
 
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import NomeTecnicoDaEtiqueta from './NomeTecnicoDaEtiqueta.vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
+import {
+  TAMANHO_MAXIMO_DO_NOME,
+  tituloTecnicoDoNome,
+} from 'dashboard/helper/nomeDaEtiqueta';
+import { nomeLivreLongoDemais, nomeLivreValido } from './nomeLivre';
 
 export default {
   components: {
     NextButton,
+    NomeTecnicoDaEtiqueta,
   },
   props: {
     prefillTitle: {
@@ -19,7 +27,12 @@ export default {
   },
   emits: ['close'],
   setup() {
-    return { v$: useVuelidate() };
+    const { ligada, guardarNome } = useNomeDaEtiqueta();
+    return {
+      v$: useVuelidate(),
+      nomeLegivelLigado: ligada,
+      guardarNome,
+    };
   },
   data() {
     return {
@@ -29,33 +42,72 @@ export default {
       showOnSidebar: true,
     };
   },
-  validations,
+  validations() {
+    // Flag ligada (#1823): digita-se o nome livre; valida-se o `title` que sai dele.
+    if (!this.nomeLegivelLigado) return validations;
+    return { ...validations, title: { nomeLivreValido } };
+  },
   computed: {
     ...mapGetters({
       uiFlags: 'labels/getUIFlags',
     }),
+    tituloTecnico() {
+      if (!this.nomeLegivelLigado) return this.title.toLowerCase();
+      return tituloTecnicoDoNome(this.title);
+    },
     labelTitleErrorMessage() {
+      if (this.nomeLegivelLigado) {
+        return nomeLivreLongoDemais(this.title)
+          ? this.$t('LABEL_MGMT.READABLE_NAME.TOO_LONG', {
+              max: TAMANHO_MAXIMO_DO_NOME,
+            })
+          : '';
+      }
       const errorMessage = getLabelTitleErrorMessage(this.v$);
       return this.$t(errorMessage);
     },
   },
   mounted() {
     this.color = getRandomColor();
-    this.title = this.prefillTitle.toLowerCase();
+    this.title = this.nomeLegivelLigado
+      ? this.prefillTitle
+      : this.prefillTitle.toLowerCase();
   },
   methods: {
     onClose() {
       this.$emit('close');
+    },
+    // O nome livre vai depois da etiqueta criada (o id vem da lista da store).
+    // Se falhar, a etiqueta fica com o nome derivado do título e a pessoa sabe.
+    async guardarNomeDaCriada() {
+      const criada = this.$store.getters['labels/getLabels'].find(
+        ({ title }) => title === this.tituloTecnico
+      );
+      if (!criada) return false;
+      try {
+        await this.guardarNome(criada.id, this.title.trim());
+        return true;
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Nome da etiqueta: falha ao gravar', criada.id, error);
+        return false;
+      }
     },
     async addLabel() {
       try {
         await this.$store.dispatch('labels/create', {
           color: this.color,
           description: this.description,
-          title: this.title.toLowerCase(),
+          title: this.tituloTecnico,
           show_on_sidebar: this.showOnSidebar,
         });
-        useAlert(this.$t('LABEL_MGMT.ADD.API.SUCCESS_MESSAGE'));
+        const nomeGuardado =
+          !this.nomeLegivelLigado || (await this.guardarNomeDaCriada());
+        useAlert(
+          nomeGuardado
+            ? this.$t('LABEL_MGMT.ADD.API.SUCCESS_MESSAGE')
+            : this.$t('LABEL_MGMT.READABLE_NAME.SAVE_ERROR')
+        );
         this.onClose();
       } catch (error) {
         const errorMessage =
@@ -76,14 +128,22 @@ export default {
     <form class="flex flex-wrap mx-0" @submit.prevent="addLabel">
       <woot-input
         v-model="title"
-        :class="{ error: v$.title.$error }"
-        class="w-full label-name--input"
+        :class="{
+          error: v$.title.$error,
+          'label-name--input': !nomeLegivelLigado,
+        }"
+        class="w-full"
         :label="$t('LABEL_MGMT.FORM.NAME.LABEL')"
         :placeholder="$t('LABEL_MGMT.FORM.NAME.PLACEHOLDER')"
         :error="labelTitleErrorMessage"
         data-testid="label-title"
         @input="v$.title.$touch"
         @blur="v$.title.$touch"
+      />
+      <NomeTecnicoDaEtiqueta
+        v-if="nomeLegivelLigado"
+        :tecnico="tituloTecnico"
+        :nome-digitado="title"
       />
 
       <woot-input

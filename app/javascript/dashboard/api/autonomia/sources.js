@@ -30,9 +30,10 @@ class AutonomiaSourcesAPI extends ApiClient {
 
     if (descriptor.file) {
       const formData = new FormData();
+      // #1426 — `sourceType` explícito (a foto, na Fase 2) vence o tipo pela extensão.
       formData.append(
         'source[source_type]',
-        inferFileSourceType(descriptor.file.name)
+        descriptor.sourceType || inferFileSourceType(descriptor.file.name)
       );
       formData.append('source[reference]', descriptor.file.name);
       // saber/enviar group (backend gap #2). Sent when present; the backend
