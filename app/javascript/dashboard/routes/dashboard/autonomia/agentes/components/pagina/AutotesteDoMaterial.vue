@@ -93,7 +93,7 @@ const botao = computed(() => {
     >
       {{
         foraOk
-          ? t(`${NS}.FORA_OK`, { nome, n: autoteste.deFora })
+          ? t(`${NS}.FORA_OK`, { nome, n: autoteste.deFora }, autoteste.deFora)
           : t(`${NS}.FORA_ERRO`, { nome })
       }}
     </p>
@@ -101,7 +101,13 @@ const botao = computed(() => {
       <summary
         class="flex items-center text-sm font-semibold cursor-pointer min-h-11 text-n-blue-11"
       >
-        {{ t(`${NS}.VER`, { n: autoteste.resultados.length }) }}
+        {{
+          t(
+            `${NS}.VER`,
+            { n: autoteste.resultados.length },
+            autoteste.resultados.length
+          )
+        }}
       </summary>
       <ul class="flex flex-col gap-1 p-0 m-0 list-none">
         <li

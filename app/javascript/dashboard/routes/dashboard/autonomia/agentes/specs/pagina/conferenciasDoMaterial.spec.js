@@ -275,6 +275,17 @@ describe('AutotesteDoMaterial', () => {
     );
   });
 
+  it('singular quando há uma pergunta só: sem "Nas 1 perguntas"', () => {
+    const wrapper = montar(autoteste({ deFora: 1, certasDeFora: 1 }));
+
+    expect(no(wrapper, '[data-fora]').text()).toBe(
+      'Na pergunta que não está no material, Bia disse que não sabia e passou para a equipe.'
+    );
+    expect(no(wrapper, '[data-perguntas] summary').text()).toBe(
+      'Ver a pergunta'
+    );
+  });
+
   it('inventou numa de fora: aviso âmbar', () => {
     const wrapper = montar(autoteste({ certasDeFora: 1 }));
 
