@@ -39,7 +39,12 @@ import { CARTAO, COR_DO_SELO, SELO } from './visualEmail';
 import MenuDoEmail from './MenuDoEmail.vue';
 import AnexosDoEmail from './AnexosDoEmail.vue';
 import { semCitacaoDosLeitores } from './citacaoDosLeitores';
-import { CSS_PERMITIDO, citacaoDoDocumento } from './documentoDoEmail';
+import {
+  CSS_PERMITIDO,
+  citacaoDoDocumento,
+  imagemSemRastreio,
+  linkSemRastreio,
+} from './documentoDoEmail';
 import CorpoIsoladoDoEmail from './CorpoIsoladoDoEmail.vue';
 import { abrirImagemDoCorpo } from './imagemDoCorpo';
 import { htmlComCssSeguro } from './estiloSeguroDoEmail';
@@ -194,8 +199,15 @@ const temCitacao = computed(() =>
 );
 const verCitacao = ref(false);
 // O CSS do remetente não pode escapar do <style> ao passar pelo vue-letter (estiloSeguroDoEmail).
+// Imagem e url() do CSS só com endereço completo (relativo pediria ao painel); link só
+// web, e-mail e telefone.
+const recursoSemRastreio = imagemSemRastreio(semRastreio);
+const linkDoLetter = linkSemRastreio(semRastreio);
 const htmlDoLetter = computed(() =>
-  htmlComCssSeguro(verCitacao.value ? htmlCompleto.value : htmlSemCitacao.value)
+  htmlComCssSeguro(
+    verCitacao.value ? htmlCompleto.value : htmlSemCitacao.value,
+    { conferirUrls: true }
+  )
 );
 // O corpo no estilo do texto do painel; a citação aberta fica como no Gmail (fio à
 // esquerda, cinza, sem as aspas e o itálico que o "prose" põe em blockquote).
@@ -551,8 +563,8 @@ const excluir = async () => {
             :allowed-css-properties="CSS_PERMITIDO"
             :html="htmlDoLetter"
             :text="textoDoLetter"
-            :rewrite-external-resources="semRastreio"
-            :rewrite-external-links="semRastreio"
+            :rewrite-external-resources="recursoSemRastreio"
+            :rewrite-external-links="linkDoLetter"
           />
           <div
             v-if="longo && !inteiro"

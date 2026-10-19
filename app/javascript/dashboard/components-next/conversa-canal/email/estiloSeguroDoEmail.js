@@ -3,8 +3,9 @@
 //    sanitizador regrava a folha (cssText do CSSOM). Lido de novo, o resto vira marcação.
 // 2. Ele só limpa as regras de estilo do 1º nível (e de um @media): o que vem aninhado mais
 //    fundo (@supports, @media dentro de @media, CSS aninhado) sai sem escopo nem filtro.
-// 3. Com a reescrita de endereços (moldura isolada, #1884), url() com "%" quebrado faz o
-//    decodeURI dele lançar, e o e-mail não abre: com `conferirUrls`, essas regras também saem.
+// 3. Com a reescrita de endereços (moldura isolada e Letter com `rewrite-external-*`,
+//    #1884), url() com "%" quebrado faz o decodeURI dele lançar, e o e-mail não abre: com
+//    `conferirUrls`, essas regras também saem.
 // Antes de sanitizar, as regras com esses defeitos saem; o resto do CSS fica. Lê a
 // estrutura (CSSOM e DOM), sem regex.
 
@@ -94,9 +95,17 @@ export const prepararEstilos = (
   });
 };
 
+// svg e math relidos pelo sanitizador viram <style> sem folha, e ele lança. Saem antes:
+// o svg inteiro (o sanitizador já o tirava), o math vira só o texto (como ele fazia).
+const semSvgNemMath = raiz => {
+  raiz.querySelectorAll('svg').forEach(no => no.remove());
+  raiz.querySelectorAll('math').forEach(no => {
+    no.querySelectorAll('style').forEach(estilo => estilo.remove());
+    no.replaceWith(no.ownerDocument.createTextNode(no.textContent));
+  });
+};
+
 // Nunca no corpo do e-mail, venha de onde vier.
-// svg e math relidos pelo sanitizador viram <style> sem folha, e ele lança: saem antes.
-const RELIDOS_COM_PERIGO = ['svg', 'math'].join(',');
 const PROIBIDOS = [
   'script',
   'noscript',
@@ -112,13 +121,12 @@ const PROIBIDOS = [
   'embed',
   'applet',
   'input',
-  'svg',
-  'math',
 ].join(',');
 // Saem só as tags: o texto de dentro fica (como o sanitizador sempre fez).
 const SO_A_TAG = ['form', 'button', 'select', 'textarea'].join(',');
 
 export const semMarcacaoPerigosa = raiz => {
+  semSvgNemMath(raiz);
   raiz.querySelectorAll(PROIBIDOS).forEach(no => no.remove());
   raiz
     .querySelectorAll(SO_A_TAG)
@@ -133,11 +141,12 @@ export const semMarcacaoPerigosa = raiz => {
 
 // Na entrada do vue-letter, em todo lugar que mostra HTML de remetente: as regras de CSS
 // defeituosas saem antes de o sanitizador regravar a folha. O resto do e-mail fica igual.
-export const htmlComCssSeguro = html => {
+// `conferirUrls`: quando o Letter reescreve endereços (rewrite-external-*).
+export const htmlComCssSeguro = (html, { conferirUrls = false } = {}) => {
   if (!html) return html;
   const doc = new DOMParser().parseFromString(String(html), 'text/html');
   // O resto da limpeza do balão antigo continua com o sanitizador, como sempre.
-  doc.querySelectorAll(RELIDOS_COM_PERIGO).forEach(no => no.remove());
-  prepararEstilos(doc);
+  semSvgNemMath(doc.documentElement);
+  prepararEstilos(doc, { conferirUrls });
   return doc.documentElement.outerHTML;
 };

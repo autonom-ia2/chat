@@ -24,7 +24,7 @@ export const CSS_PERMITIDO = [
   'transform-origin',
 ];
 
-const CSP = [
+export const CSP_DO_EMAIL = [
   "default-src 'none'",
   'img-src http: https: data: blob:',
   "style-src 'unsafe-inline'",
@@ -171,6 +171,14 @@ const manterProporcao = imagem => {
   );
 };
 
+// O srcdoc herda o endereço do painel: endereço relativo (no <img> ou no url() do CSS)
+// viraria pedido ao painel com a sessão do atendente.
+export const imagemSemRastreio = semRastreio => endereco =>
+  imagemSegura(semRastreio(endereco));
+// Link só web, e-mail e telefone (nunca javascript:), também no Letter.
+export const linkSemRastreio = semRastreio => endereco =>
+  linkSeguro(semRastreio(endereco));
+
 const limparLinksEImagens = doc => {
   doc.querySelectorAll('a').forEach(link => {
     const endereco = linkSeguro(link.getAttribute('href') || '');
@@ -214,7 +222,7 @@ const montarCabeca = doc => {
     elemento(doc, 'meta', { charset: 'utf-8' }),
     elemento(doc, 'meta', {
       'http-equiv': 'Content-Security-Policy',
-      content: CSP,
+      content: CSP_DO_EMAIL,
     }),
     elemento(doc, 'meta', { name: 'color-scheme', content: 'light' }),
     elemento(doc, 'meta', { name: 'referrer', content: 'no-referrer' }),
@@ -227,13 +235,7 @@ const semMudar = endereco => endereco;
 // Sem janela (teste): uma tela de notebook comum.
 const TELA_PADRAO = { altura: 800, largura: 1280, combina: () => false };
 
-// O documento que vai no srcdoc da moldura. `semRastreio` troca endereço de imagem e
-// de link (o mesmo de hoje: tira o pixel e o clique rastreado das Campanhas).
-// `tela`: a janela do painel (cssDaMoldura.js), onde valem vh e @media de altura.
-export const documentoIsolado = (
-  html,
-  { semRastreio = semMudar, tela = TELA_PADRAO } = {}
-) => {
+const montarDocumento = (html, semRastreio, tela) => {
   const original = lerDocumento(html);
   const raizOriginal = original.documentElement;
   const lingua = raizOriginal.getAttribute('lang');
@@ -248,7 +250,7 @@ export const documentoIsolado = (
     preserveCssPriority: true,
     allowedCssProperties: CSS_PERMITIDO,
     rewriteExternalLinks: semRastreio,
-    rewriteExternalResources: semRastreio,
+    rewriteExternalResources: imagemSemRastreio(semRastreio),
   });
   const doc = lerDocumento(`<!doctype html><html><body>${limpo}</body></html>`);
   devolverAoCorpo(doc, atributos);
@@ -259,6 +261,43 @@ export const documentoIsolado = (
   if (lingua) doc.documentElement.setAttribute('lang', lingua);
   if (direcao) doc.documentElement.setAttribute('dir', direcao);
   return comoTexto(doc);
+};
+
+// Se o HTML derrubar a limpeza, o e-mail aparece como texto, nunca some da conversa.
+const documentoSoTexto = html => {
+  const original = lerDocumento(html);
+  original.querySelectorAll('style, script, title').forEach(no => no.remove());
+  const doc = lerDocumento('<!doctype html><html><body></body></html>');
+  montarCabeca(doc);
+  doc.documentElement.setAttribute('style', DA_MOLDURA);
+  doc.body.append(
+    elemento(
+      doc,
+      'div',
+      { style: 'white-space:pre-wrap;padding:8px' },
+      original.body?.textContent?.trim() || ''
+    )
+  );
+  return comoTexto(doc);
+};
+
+// O documento que vai no srcdoc da moldura. `semRastreio` troca endereço de imagem e
+// de link (o mesmo de hoje: tira o pixel e o clique rastreado das Campanhas).
+// `tela`: a janela do painel (cssDaMoldura.js), onde valem vh e @media de altura.
+export const documentoIsolado = (
+  html,
+  { semRastreio = semMudar, tela = TELA_PADRAO } = {}
+) => {
+  try {
+    return montarDocumento(html, semRastreio, tela);
+  } catch (erro) {
+    // eslint-disable-next-line no-console
+    console.error(
+      'E-mail: o HTML do remetente não pôde ser limpo',
+      erro?.message
+    );
+    return documentoSoTexto(html);
+  }
 };
 
 // Para Imprimir: o corpo já limpo, com o estilo do <body> numa div, e o CSS do remetente
@@ -277,5 +316,7 @@ export const corpoParaImprimir = srcdoc => {
     id: ESCOPO_DA_IMPRESSAO,
     preserveCssPriority: true,
     allowedCssProperties: CSS_PERMITIDO,
+    // Como na tela: imagem embutida (data:image) fica, endereço relativo sai.
+    rewriteExternalResources: imagemSemRastreio(semMudar),
   });
 };

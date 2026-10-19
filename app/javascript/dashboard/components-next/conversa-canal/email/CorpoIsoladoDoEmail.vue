@@ -92,6 +92,11 @@ const medir = ({ explicada = false } = {}) => {
 };
 
 const medirSozinho = () => medir();
+// Clique da pessoa (abrir um <details>, por exemplo): religa e mede na hora.
+const aoClicar = () => {
+  religar();
+  medir();
+};
 const aoCarregar = () => {
   religar();
   medir({ explicada: true });
@@ -100,7 +105,7 @@ const aoCarregar = () => {
 const desligar = () => {
   documentoLigado?.removeEventListener('click', abrirImagemDoCorpo);
   documentoLigado?.removeEventListener('load', aoCarregar, true);
-  documentoLigado?.removeEventListener('click', religar);
+  documentoLigado?.removeEventListener('click', aoClicar);
   observador?.disconnect();
   observador = null;
   documentoLigado = null;
@@ -115,7 +120,7 @@ const ligar = doc => {
   // Imagem que termina de carregar muda a altura (e explica a mudança). Clique da pessoa
   // (abrir um <details>, por exemplo) também.
   doc.addEventListener('load', aoCarregar, true);
-  doc.addEventListener('click', religar);
+  doc.addEventListener('click', aoClicar);
   if (typeof ResizeObserver !== 'undefined') {
     observador = new ResizeObserver(medirSozinho);
     observador.observe(doc.documentElement);

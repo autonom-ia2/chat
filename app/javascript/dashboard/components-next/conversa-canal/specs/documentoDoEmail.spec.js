@@ -211,7 +211,7 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(doc.body.getAttribute('background')).toBeNull();
   });
 
-  it('a CSP também proíbe <base> com endereço', () => {
+  it('a CSP também proíbe <base> com endereço (base-uri)', () => {
     const csp = ler(documentoIsolado('<p>x</p>'))
       .querySelector('meta[http-equiv="Content-Security-Policy"]')
       .getAttribute('content');
@@ -227,7 +227,7 @@ describe('documento isolado do e-mail (#1884)', () => {
     ]);
   });
 
-  it('a altura da moldura fica no <html>, onde nenhuma regra do remetente ganha dela', () => {
+  it('a altura da moldura vai no style do <html> (inline !important, acima do CSS do remetente)', () => {
     const doc = ler(
       documentoIsolado(
         '<style>:root:root{height:20000px!important}</style><p>oi</p>'
@@ -302,6 +302,26 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(todo).toContain('@media (max-width: 480px)');
   });
 
+  it('fórmula (math) vira texto nos dois caminhos; o crash do sanitizador não volta', () => {
+    const html = '<p>Área: <math><mi>x</mi><mo>+</mo><mn>1</mn></math> m²</p>';
+    expect(ler(documentoIsolado(html)).body.textContent).toContain('x+1');
+    const antigo = htmlComCssSeguro(html);
+    expect(antigo).not.toContain('<math');
+    expect(antigo).toContain('x+1');
+  });
+
+  it('Imprimir mantém a imagem embutida (data:image) e tira a relativa', () => {
+    const impresso = corpoParaImprimir(
+      documentoIsolado(
+        '<img id="d" src="data:image/png;base64,iVBORw0KGgo="><p style="background:url(/x)">a</p>'
+      )
+    );
+    expect(ler(impresso).querySelector('img').getAttribute('src')).toContain(
+      'data:image/png'
+    );
+    expect(impresso).not.toContain('url(/x)');
+  });
+
   it('botão, lista e caixa de texto: sai a tag, o texto fica (os dois caminhos)', () => {
     const html = '<p><button>Botão</button><textarea>Nota</textarea></p>';
     const doc = ler(documentoIsolado(html));
@@ -328,6 +348,44 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(doc.getElementById('p').getAttribute('style') || '').not.toContain(
       'aspect-ratio'
     );
+  });
+
+  it('endereço relativo no CSS e na tabela não chega ao painel; o completo fica', () => {
+    const srcdoc = documentoIsolado(
+      `<style>.a{background:url(/api/v1/profile)} .b{background:url(https://ok.test/f.png)}</style>
+      <table background="/rails/active_storage/x"><tr>
+      <td style="background-image:url('/x/y')">a</td>
+      <td style="background-image:url(//mau.test/f.png)">b</td></tr></table>`
+    );
+    expect(srcdoc).not.toContain('/api/v1/profile');
+    expect(srcdoc).not.toContain('/rails/active_storage');
+    expect(srcdoc).not.toContain('/x/y');
+    expect(srcdoc).not.toContain('//mau.test');
+    expect(srcdoc).toContain('https://ok.test/f.png');
+  });
+
+  it('HTML que derruba a limpeza vira texto: o e-mail não some', () => {
+    const erro = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const original = window.DOMParser.prototype.parseFromString;
+    let chamadas = 0;
+    const quebrar = vi
+      .spyOn(window.DOMParser.prototype, 'parseFromString')
+      .mockImplementation(function ler2(...args) {
+        chamadas += 1;
+        if (chamadas === 2) throw new Error('quebrou');
+        return original.apply(this, args);
+      });
+    const doc = ler(
+      documentoIsolado('<style>p{color:red}</style><p>Olá, cliente</p>')
+    );
+    quebrar.mockRestore();
+    expect(doc.body.textContent).toContain('Olá, cliente');
+    expect(doc.body.textContent).not.toContain('color');
+    expect(
+      doc.querySelector('meta[http-equiv="Content-Security-Policy"]')
+    ).not.toBeNull();
+    expect(erro).toHaveBeenCalled();
+    erro.mockRestore();
   });
 
   it('svg e math relidos não derrubam o sanitizador: o e-mail abre', () => {

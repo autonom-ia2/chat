@@ -133,17 +133,31 @@ const decidirParte = (parte, tela) => {
   return null;
 };
 
-// Uma condição (entre vírgulas): true (vale sempre), false (nunca) ou o que sobra dela.
-const decidirCondicao = (condicao, tela) => {
-  const negada = condicao.toLowerCase().startsWith(NEGACAO);
-  const partes = (negada ? condicao.slice(NEGACAO.length) : condicao).split(E);
-  const decisoes = partes.map(parte => decidirParte(parte, tela));
-  if (negada) {
-    return decisoes.includes(null) ? condicao : !decisoes.every(Boolean);
+// As partes ligadas por " and " (sem diferença de maiúscula).
+const partesDe = texto => {
+  const minusculo = texto.toLowerCase();
+  const partes = [];
+  let inicio = 0;
+  let achou = minusculo.indexOf(E, inicio);
+  while (achou >= 0) {
+    partes.push(texto.slice(inicio, achou));
+    inicio = achou + E.length;
+    achou = minusculo.indexOf(E, inicio);
   }
-  if (decisoes.includes(false)) return false;
+  return [...partes, texto.slice(inicio)];
+};
+
+// Uma condição (entre vírgulas): true (vale sempre), false (nunca) ou o que sobra dela.
+// O `not` vale para a condição inteira: uma parte falsa a torna sempre verdadeira.
+export const decidirCondicao = (condicao, tela) => {
+  const negada = condicao.toLowerCase().startsWith(NEGACAO);
+  const partes = partesDe(negada ? condicao.slice(NEGACAO.length) : condicao);
+  const decisoes = partes.map(parte => decidirParte(parte, tela));
+  if (decisoes.includes(false)) return negada;
   const resto = partes.filter((_, i) => decisoes[i] === null);
-  return resto.length ? resto.join(E) : true;
+  if (!resto.length) return !negada;
+  const sobra = resto.join(E);
+  return negada ? `${NEGACAO}${sobra}` : sobra;
 };
 
 const mediaDaMoldura = (regra, tela) => {
@@ -162,7 +176,8 @@ export const regraDaMoldura = (regra, tela) => {
   return semUnidadeDaTela(regra.cssText, tela);
 };
 
-// A janela do painel, onde o e-mail estaria no Gmail.
+// A janela do painel, onde o e-mail estaria no Gmail. Lida ao montar o e-mail: mudar o
+// tamanho da janela depois não recalcula (recalcular recarregaria a moldura inteira).
 export const telaDoPainel = () => ({
   altura: window.innerHeight,
   largura: window.innerWidth,

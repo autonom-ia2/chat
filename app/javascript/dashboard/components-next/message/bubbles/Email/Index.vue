@@ -17,7 +17,10 @@ import { MESSAGE_TYPES } from 'next/message/constants.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
 import CartaoDoEmail from 'dashboard/components-next/conversa-canal/email/CartaoDoEmail.vue';
 import CorpoIsoladoDoEmail from 'dashboard/components-next/conversa-canal/email/CorpoIsoladoDoEmail.vue';
-import { citacaoDoDocumento } from 'dashboard/components-next/conversa-canal/email/documentoDoEmail';
+import {
+  citacaoDoDocumento,
+  imagemSemRastreio,
+} from 'dashboard/components-next/conversa-canal/email/documentoDoEmail';
 import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import { htmlComCssSeguro } from 'dashboard/components-next/conversa-canal/email/estiloSeguroDoEmail';
 
@@ -105,8 +108,15 @@ const unquotedHTML = computed(() =>
   EmailQuoteExtractor.extractQuotes(fullHTML.value)
 );
 // O CSS do remetente não pode escapar do <style> ao passar pelo vue-letter (estiloSeguroDoEmail).
-const fullHTMLSeguro = computed(() => htmlComCssSeguro(fullHTML.value));
-const unquotedHTMLSeguro = computed(() => htmlComCssSeguro(unquotedHTML.value));
+// Imagem e url() do CSS (inclusive image-set) só com endereço completo: relativo
+// pediria ao painel.
+const recursoSeguro = imagemSemRastreio(endereco => endereco);
+const fullHTMLSeguro = computed(() =>
+  htmlComCssSeguro(fullHTML.value, { conferirUrls: true })
+);
+const unquotedHTMLSeguro = computed(() =>
+  htmlComCssSeguro(unquotedHTML.value, { conferirUrls: true })
+);
 
 const hasQuotedMessage = computed(() =>
   unquotedDocument.value
@@ -196,6 +206,7 @@ const handleSeeOriginal = () => {
               'transform-origin',
             ]"
             :html="fullHTMLSeguro"
+            :rewrite-external-resources="recursoSeguro"
             :text="textToShow"
           />
           <Letter
@@ -203,6 +214,7 @@ const handleSeeOriginal = () => {
             :key="`letter-unquoted-${translationKeySuffix}`"
             class-name="prose prose-bubble !max-w-none letter-render"
             :html="unquotedHTMLSeguro"
+            :rewrite-external-resources="recursoSeguro"
             :allowed-css-properties="[
               ...allowedCssProperties,
               'transform',
