@@ -5760,7 +5760,7 @@
       "AMANHA": "Tomorrow",
       "PARA_HOJE": "For today",
       "ATRASADOS": "Left behind",
-      "ADIAR_TODOS": "Move all to tomorrow",
+      "ADIAR_MEUS": "Move mine to tomorrow",
       "AGORA": "Now, {hora}",
       "PROXIMOS": "Next days",
       "PROXIMO": "Next: {dia} — {titulo}.",

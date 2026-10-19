@@ -18,6 +18,7 @@ const props = defineProps({
   fuso: { type: String, required: true },
   idioma: { type: String, required: true },
   nomeDe: { type: Function, required: true },
+  ehMeu: { type: Function, required: true },
   concluindo: { type: Array, default: () => [] },
   recemFeitos: { type: Array, default: () => [] },
 });
@@ -76,9 +77,12 @@ const atrasadosVisiveis = computed(() =>
     ? [...atrasadosAntigos.value, ...atrasadosRecentes.value]
     : atrasadosRecentes.value
 );
-// "Passar tudo" só leva lembrete de uma pessoa (#1855); o aviso de um envio ao
-// cliente que falhou fica, para ser reagendado um a um.
-const adiaveis = computed(() => atrasadosVisiveis.value.filter(i => !i.envio));
+// "Passar os meus" (#1855) só leva lembrete da própria pessoa, mesmo quando o
+// administrador vê a equipe (opção 2). O aviso de um envio ao cliente que
+// falhou fica, para ser reagendado um a um.
+const adiaveis = computed(() =>
+  atrasadosVisiveis.value.filter(i => !i.envio && props.ehMeu(i))
+);
 
 const proximosDias = computed(() => {
   if (!ehHoje.value) return [];
@@ -206,7 +210,7 @@ const ATALHOS = ['AMANHA', 'TRES_DIAS', 'SEMANA'];
         <Button
           v-if="adiaveis.length"
           data-adiar-todos
-          :label="t(`${N}.ADIAR_TODOS`)"
+          :label="t(`${N}.ADIAR_MEUS`)"
           icon="i-lucide-calendar-arrow-up"
           slate
           ghost

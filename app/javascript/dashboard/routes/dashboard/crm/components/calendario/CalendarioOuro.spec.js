@@ -302,6 +302,40 @@ describe('CalendarioOuro', () => {
     expect(wrapper.find('[data-adiar-todos]').exists()).toBe(false);
   });
 
+  // Opção 2 do #1855: o administrador vê a equipe, mas o lote só leva os dele.
+  const DA_EQUIPE = {
+    id: 'follow_up_7',
+    event_type: 'follow_up_reminder_only',
+    title: 'Lembrete da Paula',
+    starts_at: '2026-10-13T14:00:00Z',
+    status: 'overdue',
+    assignee_id: 2,
+  };
+
+  it('administrador vê o atrasado da equipe, mas "Passar os meus" só leva os dele', async () => {
+    const wrapper = montar({ events: [...EVENTOS, DA_EQUIPE] });
+    await flushPromises();
+    expect(wrapper.find('[data-secao="atrasados"]').text()).toContain(
+      'Lembrete da Paula'
+    );
+    expect(wrapper.find('[data-adiar-todos]').text()).toBe(
+      'CRM_CALENDARIO.DIA.ADIAR_MEUS'
+    );
+
+    await wrapper.find('[data-adiar-todos]').trigger('click');
+
+    const [carga] = wrapper.emitted('adiarAtrasados')[0];
+    expect(carga.eventos.map(e => e.id)).toEqual(['follow_up_1']);
+  });
+
+  it('sem atrasado da própria pessoa, o "Passar os meus" não aparece', async () => {
+    const wrapper = montar({ events: [DA_EQUIPE] });
+    await flushPromises();
+
+    expect(wrapper.find('[data-secao="atrasados"]').exists()).toBe(true);
+    expect(wrapper.find('[data-adiar-todos]').exists()).toBe(false);
+  });
+
   it('a ação da linha abre a conversa pelo número dela', async () => {
     const wrapper = montar();
     await flushPromises();
