@@ -22,3 +22,7 @@ pt_BR:
         next_follow_up_at: 'Próximo retorno'
     follow_up_reminder:
       card: 'Card: %{card}'
+  # Erro ao trazer a identidade visual do site (Lote 4 da F2).
+  brand_kits:
+    import_errors:
+      invalid_url: 'Digite o endereço completo do site, por exemplo https://suacorretora.com.br.'
