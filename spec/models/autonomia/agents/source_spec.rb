@@ -99,5 +99,26 @@ RSpec.describe Autonomia::Agents::Source do
     it 'refuses a document in a foto source' do
       expect(com_anexo('foto', 'application/pdf')).not_to be_valid
     end
+
+    # A4 — a foto da criação divide a imagem com a conversa do Construtor: tirar da base não apaga a imagem.
+    it 'keeps the image of the conversation when the photo of the creation leaves the base' do
+      blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('png'), filename: 'tabela.png', content_type: 'image/png',
+                                                    identify: false)
+      foto = described_class.create!(account: account, agent: agent, source_type: 'foto', reference: 'tabela.png',
+                                     origem: described_class::ORIGEM_FOTO_DA_CRIACAO, file: blob)
+
+      perform_enqueued_jobs { foto.destroy! }
+
+      expect(ActiveStorage::Blob.exists?(blob.id)).to be(true)
+    end
+
+    it 'still removes the image of a photo that was sent straight to the base' do
+      foto = com_anexo('foto', 'image/jpeg').tap(&:save!)
+      blob_id = foto.file.blob.id
+
+      perform_enqueued_jobs { foto.destroy! }
+
+      expect(ActiveStorage::Blob.exists?(blob_id)).to be(false)
+    end
   end
 end

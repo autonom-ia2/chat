@@ -1,4 +1,4 @@
-import { actions } from '../../autonomiaSources';
+import { actions, TETO_DA_RELEITURA_MS } from '../../autonomiaSources';
 
 // #1426 — a releitura da lista de materiais. Ela segue enquanto algo está sendo lido OU já foi lido e espera a revisão
 // (needs_review sem reviewed_at): é o que faz a reprovação chegar sem recarregar. Para quando tudo assenta, nunca se
@@ -76,7 +76,7 @@ describe('#autonomiaSources schedulePoll', () => {
 
     const leituras = dispatch.mock.calls.filter(([nome]) => nome === 'fetch');
     expect(leituras.length).toBeGreaterThan(10);
-    expect(leituras.length).toBeLessThanOrEqual(200);
+    expect(leituras.length).toBe(TETO_DA_RELEITURA_MS / 4000);
   });
 
   it('starts counting again when the person sends something new', async () => {

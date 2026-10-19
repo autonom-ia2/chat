@@ -113,7 +113,12 @@ module Autonomia
       validates :review_label, inclusion: { in: REVIEW_LABELS }, allow_nil: true
       validate :file_within_limits
 
-      store_accessor :metadata, :fingerprint, :byte_size, :chunk_count, :mime
+      store_accessor :metadata, :fingerprint, :byte_size, :chunk_count, :mime, :origem
+
+      # #1426 — a foto da criação divide a imagem (o mesmo blob) com a conversa do Construtor. Tirá-la da base solta o
+      # anexo sem apagar a imagem, que a conversa ainda mostra e lê.
+      ORIGEM_FOTO_DA_CRIACAO = 'foto_da_criacao'.freeze
+      before_destroy :soltar_foto_da_conversa, prepend: true # antes do has_one_attached apagar o anexo
 
       # token-guard idêntico ao padrão EmailCampaign#ai_guarded_update: marca processing + novo
       # sync_token; toda escrita posterior (mark_ready!/mark_failed!) só vence se o token ainda for
@@ -240,6 +245,10 @@ module Autonomia
 
         errors.add(:file, 'too_large') if file.blob.byte_size > MAX_FILE_BYTES
         errors.add(:file, 'unsupported_content_type') unless allowed_content_types.include?(file.blob.content_type)
+      end
+
+      def soltar_foto_da_conversa
+        file.detach if origem == ORIGEM_FOTO_DA_CRIACAO && file.attached?
       end
 
       # Imagem só na foto (#1426), e a foto só com imagem.

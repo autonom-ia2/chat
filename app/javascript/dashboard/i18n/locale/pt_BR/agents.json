@@ -1272,6 +1272,7 @@
           "ENSINOU": "Pronto. {nome} já sabe responder isso.",
           "REVISANDO": "Revisando…",
           "ATENCAO": "Precisa de você",
+          "ATENCAO_TEXTO": "{nome} não usa este material até você mandar outro.",
           "LENDO_FOTO": "Lendo o texto da foto…"
         },
         "ONDE": {

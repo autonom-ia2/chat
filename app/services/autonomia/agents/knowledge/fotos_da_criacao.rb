@@ -5,6 +5,11 @@
 # turno da pessoa, as mesmas que o Construtor acabou de ler. Reaproveita a imagem já enviada (o mesmo blob, sem
 # segunda cópia); um turno gerado de novo não repete a foto. Só com a Fase 2 ligada e só na criação (agente em
 # rascunho): o ajuste de um agente que já atende não muda. A Lia (instrução mantida) fica de fora.
+#
+# A foto passa pela mesma conferência da porta (FotoConferida: tipo pelos bytes, tamanho e pixels). A checagem de
+# repetida e de base cheia e a gravação correm sob a trava da linha do agente: dois turnos ao mesmo tempo não gravam a
+# mesma foto duas vezes nem passam do teto. A foto vai marcada como da criação (`origem`): tirá-la da base não apaga a
+# imagem da conversa (Source#soltar_foto_da_conversa).
 class Autonomia::Agents::Knowledge::FotosDaCriacao
   PROPOSITO = :autonomia_builder_image
 
@@ -41,22 +46,26 @@ class Autonomia::Agents::Knowledge::FotosDaCriacao
     blob = ActiveStorage::Blob.find_signed(signed_id, purpose: PROPOSITO)
     return if blob.blank?
     return unless blob.metadata['autonomia_account_id'].to_s == @account.id.to_s
-    return unless Autonomia::Agents::Config::IMAGE_CONTENT_TYPES.include?(blob.content_type)
     return if blob.byte_size > Autonomia::Agents::Config::MAX_IMAGE_BYTES
+    return if Autonomia::Agents::Knowledge::FotoConferida.problema(blob.download)
 
     blob
   end
 
   def guardar(blob)
-    return if ja_na_base?(blob) || base_cheia?
+    source = @agent.with_lock { nova_fonte(blob) unless ja_na_base?(blob) || base_cheia? }
+    Autonomia::Agents::Knowledge::IngestJob.perform_later(source.id) if source
+  end
 
+  def nova_fonte(blob)
     source = @agent.sources.new(account: @account, kind: :knowledge, source_type: Autonomia::Agents::Source::FOTO,
                                 reference: blob.filename.to_s)
     source.byte_size = blob.byte_size
     source.mime = blob.content_type
+    source.origem = Autonomia::Agents::Source::ORIGEM_FOTO_DA_CRIACAO
     source.file.attach(blob)
     source.save!
-    Autonomia::Agents::Knowledge::IngestJob.perform_later(source.id)
+    source
   end
 
   def ja_na_base?(blob)

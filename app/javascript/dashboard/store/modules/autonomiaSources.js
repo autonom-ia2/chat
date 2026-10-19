@@ -13,6 +13,8 @@ const POLL_INTERVAL = 4000;
 // #1426 — teto da releitura: ~10 min seguidos sem tudo assentar (um catálogo grande com OCR cabe). Volta a contar
 // quando a pessoa manda ou relê um material.
 const MAX_POLL_ROUNDS = 150;
+// Quanto a releitura dura antes de desistir: além disso, um material parado em "Revisando…" pode ser lido de novo.
+export const TETO_DA_RELEITURA_MS = MAX_POLL_ROUNDS * POLL_INTERVAL;
 const INGESTING_STATUSES = ['pending', 'processing'];
 
 let pollTimer = null;

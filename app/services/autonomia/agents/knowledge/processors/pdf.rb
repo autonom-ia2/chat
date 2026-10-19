@@ -5,7 +5,7 @@ module Autonomia
         # pdf: extração de texto via gem `pdf-reader` (PDF::Reader). A gem é opcional neste fork —
         # se ausente, degrada p/ UnsupportedFormat (a fonte vira `failed` com mensagem clara) em vez
         # de quebrar o boot. Concatena o texto de cada página. Quando o PDF é escaneado (sem camada
-        # de texto), a extração normal volta vazia; nesse caso cai p/ OCR (rtesseract + mini_magick).
+        # de texto), a extração normal volta vazia; nesse caso cai p/ OCR (mini_magick + Processors::Ocr).
         class Pdf < Base
           # Abaixo deste tamanho (após strip) a extração é "quase vazia" (PDF escaneado / só imagem):
           # vale tentar OCR em vez de marcar a fonte como falha por texto ausente.
@@ -44,13 +44,12 @@ module Autonomia
           private
 
           # PDF escaneado: rasteriza cada página (mini_magick/imagemagick, que lê PDF via poppler)
-          # e passa por OCR (rtesseract -> binário tesseract, idioma pt-BR). Guardado: se gem ou
+          # e passa por OCR (Processors::Ocr -> binário tesseract, idioma pt-BR, com tempo máximo). Guardado: se gem ou
           # binário faltarem em runtime, loga aviso e devolve o texto original (vazio) — nunca
           # levanta erro novo que quebre a ingestão. Deps de sistema instaladas na imagem prod
           # (docker/Dockerfile: tesseract-ocr tesseract-ocr-data-por poppler-utils).
           def ocr_fallback(text)
             require 'mini_magick'
-            require 'rtesseract'
             ocr = +''
             with_tempfile { |path| ocr << ocr_pages(path) }
             ocr = ocr.force_encoding('UTF-8').scrub('').strip

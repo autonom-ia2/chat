@@ -363,6 +363,31 @@ RSpec.describe Autonomia::Agents::Builder do
         # Assert
         expect(thread.reload.state['applied']).to be(true)
       end
+
+      # C1 — o status que o Construtor lê não conta a foto reprovada como pendente nem pede para esperar por ela.
+      it 'does not tell the Construtor to wait for the photo' do
+        status = builder.send(:materials_status_context)
+
+        expect(status).to include('aguardando revisão/reenvio: 0')
+        expect(status).not_to include('Só feche a instrução')
+        expect(status).to include('foto já vista na conversa')
+      end
+    end
+
+    # C2 — material que não deu para ler não é base: o Construtor pergunta se cria sem base, e o fechamento avisa.
+    context 'when the only knowledge material could not be read' do
+      before do
+        thread.append_message!('user', 'Quero uma SDR')
+        stub_model_output(interview_payload)
+        builder.run!(thread.begin_build!)
+        Autonomia::Agents::Source.create!(account: account, agent: thread.reload.agent, source_type: 'pdf',
+                                          status: :failed, review_status: 'needs_review')
+      end
+
+      it 'treats the base as empty' do
+        expect(builder.send(:no_knowledge_gap?)).to be(true)
+        expect(builder.send(:materials_status_context)).to include('NÃO há material de conhecimento')
+      end
     end
   end
 

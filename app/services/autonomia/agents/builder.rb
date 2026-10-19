@@ -1540,7 +1540,8 @@ module Autonomia
         return false if adjust_mode? || no_materials_declared? || !with_knowledge?
 
         agent = @thread.agent
-        agent.blank? || !agent.sources.knowledge_sources.exists?
+        # #1426: material que não deu para ler não é base (o aviso "NÃO há material" usa a mesma conta).
+        agent.blank? || !agent.sources.knowledge_sources.where.not(status: :failed).exists?
       end
 
       # E1 — anexa a pergunta do Construtor como mensagem `assistant` persistida, para o build_input
@@ -1747,7 +1748,8 @@ module Autonomia
 
         knowledge = agent ? agent.sources.knowledge_sources.order(created_at: :desc).limit(10).to_a : []
         accepted = knowledge.count { |s| s.review_status == 'accepted' }
-        pending = knowledge.count { |s| s.review_status != 'accepted' }
+        # #1426: a foto da criação reprovada ou ilegível já chegou na conversa; não fica "aguardando" nem segura o fechamento.
+        pending = knowledge.count { |s| s.review_status != 'accepted' && !foto_que_ficou_fora?(s) }
 
         lines = ['CONTEXTO INTERNO (não é fala do usuário). STATUS DOS MATERIAIS DE CONHECIMENTO:']
         if knowledge.any?
@@ -1768,7 +1770,7 @@ module Autonomia
         # A cobrança "pergunte UMA vez se pode criar SEM base" é de CRIAÇÃO. Em AJUSTE o agente já existe
         # (a decisão de base já foi tomada) e emiti-la fazia o Construtor reabrir a pergunta em todo
         # ajuste de agente sem KB — a mesma regressão de knowledge_intent_context, pela outra ponta.
-        if knowledge.empty? && !no_materials_declared? && with_knowledge? && !adjust_mode?
+        if knowledge.none? { |s| !s.failed? } && !no_materials_declared? && with_knowledge? && !adjust_mode?
           lines << 'NÃO há material de conhecimento. ANTES de fechar, pergunte UMA vez se pode criar o agente SEM base ' \
                    'de conhecimento (ela encaminha para um humano quando faltar informação) e só feche depois que o ' \
                    'usuário confirmar OU pedir explicitamente para fechar.'
@@ -1780,6 +1782,7 @@ module Autonomia
       # recebeu ("- tabela.pdf: pronto"). failed = falha técnica de leitura; review_status = veredito da
       # Revisora. Espelha os estados que o MaterialCard mostra no painel.
       def material_state_label(source)
+        return 'foto já vista na conversa; fica fora da base até o dono resolver' if foto_que_ficou_fora?(source)
         return 'falha ao ler, aguardando reenvio' if source.status == 'failed'
 
         case source.review_status
@@ -1788,6 +1791,11 @@ module Autonomia
         when 'needs_review' then 'confiança baixa'
         else 'em análise'
         end
+      end
+
+      # #1426 — a foto da criação que a revisão reprovou ou que não deu para ler: o Construtor já a viu na conversa.
+      def foto_que_ficou_fora?(source)
+        source.source_type == Autonomia::Agents::Source::FOTO && (source.failed? || source.review_status == 'needs_resend')
       end
 
       # MODO AJUSTE (§6.2): quando o agente já tem instrução, injeta a CONFIG e a INSTRUÇÃO ATUAIS como

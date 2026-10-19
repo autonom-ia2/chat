@@ -8,12 +8,13 @@ RSpec.describe Autonomia::Agents::Knowledge::FotosDaCriacao do
     Autonomia::Agents::Agent.create!(account: account, name: 'Bia', agent_type: 'custom', status: :draft)
   end
   let(:thread) { Autonomia::Agents::BuildThread.create!(account: account, agent: agent) }
+  let(:png) { Rails.root.join('spec/fixtures/files/autonomia/foto_da_criacao/cardapio-legivel.png').binread }
 
   before { Autonomia::Agents::Fase2.ligar!(account) }
 
-  def foto(nome = 'tabela.jpg', conta: account)
+  def foto(nome = 'tabela.png', conta: account, bytes: png)
     blob = ActiveStorage::Blob.create_and_upload!(
-      io: StringIO.new('jpg-bytes'), filename: nome, content_type: 'image/jpeg', identify: false,
+      io: StringIO.new(bytes), filename: nome, content_type: 'image/png', identify: false,
       metadata: { autonomia_account_id: conta.id }
     )
     blob.signed_id(purpose: :autonomia_builder_image, expires_in: 1.day)
@@ -37,10 +38,10 @@ RSpec.describe Autonomia::Agents::Knowledge::FotosDaCriacao do
 
     source = fotos_na_base.sole
     expect(source).to be_kind_knowledge
-    expect(source.reference).to eq('tabela.jpg')
+    expect(source.reference).to eq('tabela.png')
     expect(source.file).to be_attached
-    expect(source.file.blob.content_type).to eq('image/jpeg')
-    expect(source.metadata['mime']).to eq('image/jpeg')
+    expect(source.metadata['mime']).to eq('image/png')
+    expect(source.origem).to eq(Autonomia::Agents::Source::ORIGEM_FOTO_DA_CRIACAO)
   end
 
   it 'reuses the uploaded photo instead of storing a second copy' do
@@ -69,15 +70,37 @@ RSpec.describe Autonomia::Agents::Knowledge::FotosDaCriacao do
 
   it 'only takes the photos of the last turn (earlier turns were handled when they were built)' do
     # Arrange
-    mandar(foto('antiga.jpg'))
+    mandar(foto('antiga.png'))
     thread.append_message!('assistant', 'Entendi.')
-    mandar(foto('nova.jpg'))
+    mandar(foto('nova.png'))
 
     # Act
     described_class.new(thread).para_base!
 
     # Assert
-    expect(fotos_na_base.pluck(:reference)).to eq(['nova.jpg'])
+    expect(fotos_na_base.pluck(:reference)).to eq(['nova.png'])
+  end
+
+  # A2 — a mesma conferência da porta: tipo pelos bytes e teto de pixels (bomba de pixels).
+  it 'ignores what is not a real photo, or a pixel bomb' do
+    bomba = ["\x89PNG\r\n\x1a\n", [13].pack('N'), 'IHDR', [14_000, 14_000].pack('NN'), "\x00" * 64].map(&:b).join
+    mandar(foto('texto.png', bytes: "/etc/passwd\n"), foto('bomba.png', bytes: bomba))
+
+    described_class.new(thread).para_base!
+
+    expect(fotos_na_base).to be_empty
+  end
+
+  # A7 — a checagem e a gravação correm sob a trava da linha do agente.
+  it 'checks and writes under the lock of the agent' do
+    mandar(foto)
+    allow(agent).to receive(:with_lock).and_call_original
+    allow(thread).to receive(:agent).and_return(agent)
+
+    described_class.new(thread).para_base!
+
+    expect(agent).to have_received(:with_lock)
+    expect(fotos_na_base.count).to eq(1)
   end
 
   it 'ignores a photo uploaded by another account' do

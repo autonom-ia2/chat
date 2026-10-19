@@ -14,7 +14,11 @@ import {
   enderecoDoSite,
   nomeDaFonte,
 } from '../../utils/pagina';
-import { estadoDoMaterial } from '../../utils/estadoDoMaterial';
+import {
+  ESTADO_MATERIAL,
+  estadoDoMaterial,
+} from '../../utils/estadoDoMaterial';
+import { TETO_DA_RELEITURA_MS } from 'dashboard/store/modules/autonomiaSources';
 
 // #1181 PR3 (protótipo T09) — "O que {nome} sabe": o resumo, os arquivos e sites (lendo, pronto ou
 // não consegui ler) e, para quem gerencia, mandar arquivo (até 25 MB) ou site, ler de novo, tirar e
@@ -58,6 +62,18 @@ const botaoArquivo = ref(null);
 const lista = computed(() => props.fontes || []);
 const estadoDe = fonte => (props.fase2 ? estadoDoMaterial(fonte) : '');
 
+// #1426 — "Revisando…" parado além do teto da releitura (o worker caiu): a linha libera "Ler de novo". O relógio
+// anda a cada 30 s com a gaveta aberta, porque a store já parou de reler.
+const RELOGIO_DO_PARADO_MS = 30000;
+const relogio = ref(Date.now());
+const relogioDoParado = setInterval(() => {
+  relogio.value = Date.now();
+}, RELOGIO_DO_PARADO_MS);
+onBeforeUnmount(() => clearInterval(relogioDoParado));
+const paradoRevisando = fonte =>
+  estadoDe(fonte) === ESTADO_MATERIAL.REVISANDO &&
+  relogio.value - Date.parse(fonte.updated_at || '') > TETO_DA_RELEITURA_MS;
+
 // "Além da conversa, {nome} usa estes arquivos e sites…" só quando há arquivo ou site; sem eles, o
 // vazio já diz que sabe só o que foi contado.
 const resumo = computed(() => {
@@ -78,10 +94,18 @@ const salvar = async acao => {
   }
 };
 
+// #1426 — na Fase 2, imagem vai como foto (lida por OCR e revisada); fora dela, como hoje.
+const ehImagem = arquivo => (arquivo?.type || '').startsWith('image/');
 const criar = descritor =>
   store.dispatch('autonomiaSources/create', {
     agentId: props.agente.id,
-    descriptor: { ...descritor, kind: 'knowledge' },
+    descriptor: {
+      ...descritor,
+      kind: 'knowledge',
+      ...(props.fase2 && ehImagem(descritor.file)
+        ? { sourceType: 'foto' }
+        : {}),
+    },
   });
 
 const remover = fonte =>
@@ -335,6 +359,7 @@ const tirar = () => remover(tirando.value);
         :nome-agente="nome"
         :relendo="fonte.id in relendo"
         :estado="estadoDe(fonte)"
+        :reler-parado="podeGerenciar && paradoRevisando(fonte)"
         :pode-gerenciar="podeGerenciar"
         @ler-de-novo="lerDeNovo"
         @tirar="pedirTirar"

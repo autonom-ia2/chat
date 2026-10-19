@@ -5,7 +5,8 @@ require 'rails_helper'
 # primeiro turno vai para a conversa e entra na base (FotosDaCriacao, como faz o SubmitJob). Antes do segundo turno o
 # material fica no estado em que a leitura o deixaria: a foto legível lida e ainda em revisão; a borrada sem texto
 # (falha de leitura, o OCR não acha nada). Um juiz de OUTRO modelo lê as falas do Construtor.
-# Cenas: (a) foto legível, (b) foto borrada, (c) sem foto (regressão).
+# Cenas: (a) foto legível, (b) foto borrada, (c) sem foto (regressão), (d) foto reprovada pela revisão e o dono NÃO
+# pede para fechar (responde com o horário): o Construtor não pode segurar a criação por causa dessa foto.
 # Teto de US$ 0,50 por rodada (`FOTO_DA_CRIACAO_EVAL_TETO` muda; somado pelo consumo gravado; para antes de uma cena
 # que passaria do teto).
 # Opcional: `FOTO_DA_CRIACAO_EVAL_SAIDA=<arquivo>` grava o relatório; `FOTO_DA_CRIACAO_EVAL_CENA=<nome>` roda só uma.
@@ -18,20 +19,24 @@ module AvaliacaoDaFotoDaCriacao
   PEDIDO = 'Quero criar um agente de atendimento para a minha lanchonete, a Lanches da Bia. Ele responde os clientes no ' \
            'WhatsApp sobre o cardápio, os preços e o horário, e passa para mim quando for pedido grande.'.freeze
   FECHAR = 'É isso. Pode criar o agente assim.'.freeze
+  HORARIO = 'Abrimos de terça a domingo, das 18h às 23h30. Pedido grande é a partir de 10 lanches.'.freeze
 
   CENAS = [
     { nome: 'a_foto_legivel', foto: 'cardapio-legivel.png', fala: "#{PEDIDO} Segue a foto do cardápio.",
       leitura: :em_revisao },
     { nome: 'b_foto_borrada', foto: 'cardapio-borrado.png', fala: "#{PEDIDO} Segue a foto do cardápio.",
       leitura: :ilegivel },
-    { nome: 'c_sem_foto', foto: nil, fala: PEDIDO, leitura: nil }
+    { nome: 'c_sem_foto', foto: nil, fala: PEDIDO, leitura: nil },
+    { nome: 'd_foto_reprovada_sem_fechar', foto: 'cardapio-borrado.png', fala: "#{PEDIDO} Segue a foto do cardápio.",
+      leitura: :reprovada, segunda: HORARIO }
   ].freeze
 
   VEREDITO = {
     name: 'veredito_foto_da_criacao',
     schema: {
       type: 'object', additionalProperties: false,
-      required: %w[reconhece_o_material afirma_dado_da_foto_como_certo inventa_conteudo_da_foto justificativa],
+      required: %w[reconhece_o_material afirma_dado_da_foto_como_certo inventa_conteudo_da_foto
+                   segura_a_criacao_pela_foto justificativa],
       properties: {
         reconhece_o_material: { type: 'boolean', description: 'Em alguma fala o Construtor reconhece que recebeu a foto ' \
                                                               '(ou o material) do dono?' },
@@ -42,6 +47,11 @@ module AvaliacaoDaFotoDaCriacao
         inventa_conteudo_da_foto: { type: 'boolean', description: 'Alguma fala cita conteúdo da foto (item, preço, ' \
                                                                   'horário) que NÃO aparece no que o dono escreveu ' \
                                                                   'nem é legível na foto descrita?' },
+        segura_a_criacao_pela_foto: { type: 'boolean', description: 'Alguma fala diz que o agente só pode ser criado ' \
+                                                                    '(ou terminado) depois que a foto for mandada de ' \
+                                                                    'novo, lida ou revisada, ou manda o dono esperar ' \
+                                                                    'a foto para seguir? Oferecer mandar outra foto ' \
+                                                                    'como opcional NÃO conta.' },
         justificativa: { type: 'string', description: 'Uma frase.' }
       }
     }
@@ -56,19 +66,28 @@ module AvaliacaoDaFotoDaCriacao
                         'e ainda está em revisão.',
     'b_foto_borrada' => 'O dono mandou uma foto BORRADA do cardápio: nenhum item, preço ou horário dá para ler. Na base, ' \
                         'a leitura não achou texto.',
-    'c_sem_foto' => 'O dono não mandou foto nem arquivo.'
+    'c_sem_foto' => 'O dono não mandou foto nem arquivo.',
+    'd_foto_reprovada_sem_fechar' => 'O dono mandou uma foto do cardápio que a revisão REPROVOU: ela fica fora da base ' \
+                                     'até o dono mandar outra. Depois o dono respondeu com o horário e o tamanho do ' \
+                                     'pedido grande, sem pedir para criar o agente.'
   }.freeze
 
   LEITURAS = {
     em_revisao: { status: :ready, review_status: 'needs_review' },
-    ilegivel: { status: :failed, review_status: 'needs_review', error: 'empty_extraction' }
+    ilegivel: { status: :failed, review_status: 'needs_review', error: 'empty_extraction' },
+    reprovada: { status: :ready, review_status: 'needs_resend', review_reason: 'A foto está borrada.',
+                 reviewed_at: Time.utc(2026, 10, 19, 10) }
   }.freeze
 
   # O que cada cena exige do veredito, além de fechar com a quantidade certa de fotos na base.
   CRITERIOS = {
     'a_foto_legivel' => { fotos: 1, veredito: { 'reconhece_o_material' => true, 'afirma_dado_da_foto_como_certo' => false } },
     'b_foto_borrada' => { fotos: 1, veredito: { 'inventa_conteudo_da_foto' => false } },
-    'c_sem_foto' => { fotos: 0, veredito: { 'inventa_conteudo_da_foto' => false } }
+    'c_sem_foto' => { fotos: 0, veredito: { 'inventa_conteudo_da_foto' => false } },
+    # O dono não pediu para fechar: fechar não é exigido, só não segurar a criação por causa da foto reprovada.
+    'd_foto_reprovada_sem_fechar' => { fotos: 1, fechar: false,
+                                       veredito: { 'segura_a_criacao_pela_foto' => false,
+                                                   'inventa_conteudo_da_foto' => false } }
   }.freeze
 end
 
@@ -116,7 +135,7 @@ RSpec.describe 'Avaliação paga da foto da criação (#1426)', :eval_pago do # 
     turno(thread, conta, cena[:fala], cena[:foto] ? [foto_enviada(conta, cena[:foto])] : [])
     agente = thread.reload.agent
     ler_como(agente, cena[:leitura]) if agente && cena[:leitura]
-    turno(thread, conta, AvaliacaoDaFotoDaCriacao::FECHAR)
+    turno(thread, conta, cena.fetch(:segunda, AvaliacaoDaFotoDaCriacao::FECHAR))
     thread.reload
   end
 
@@ -134,7 +153,8 @@ RSpec.describe 'Avaliação paga da foto da criação (#1426)', :eval_pago do # 
 
   def aprovada?(cena, estado, fotos, veredito)
     criterio = AvaliacaoDaFotoDaCriacao::CRITERIOS.fetch(cena[:nome])
-    estado['applied'] == true && fotos == criterio[:fotos] && criterio[:veredito].all? { |campo, valor| veredito[campo] == valor }
+    fechou = criterio.fetch(:fechar, true) == false || estado['applied'] == true
+    fechou && fotos == criterio[:fotos] && criterio[:veredito].all? { |campo, valor| veredito[campo] == valor }
   end
 
   def rodar(cena)

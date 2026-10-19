@@ -141,16 +141,90 @@ describe('GavetaOQueSabe', () => {
       wrapper.unmount();
     });
 
-    it('shows only the label on a material sent back, without the problem card', async () => {
+    it('shows the short reason of a material sent back and offers to send another', async () => {
       preparar([
-        fonte(4, { review: { status: 'needs_resend', reviewed_at: REVISADO } }),
+        fonte(4, {
+          review: {
+            status: 'needs_resend',
+            reviewed_at: REVISADO,
+            reason: 'A foto saiu cortada.',
+          },
+        }),
+        fonte(5, { review: { status: 'needs_resend', reviewed_at: REVISADO } }),
       ]);
       const wrapper = montar({ fase2: true });
       await nextTick();
 
-      expect(no('[data-fonte]').textContent).toContain('SABE.ATENCAO');
-      expect(no('[data-mandar-outro]')).toBeNull();
+      const problemas = todos('[data-problema]').map(p => p.textContent);
+      expect(problemas[0]).toContain('A foto saiu cortada.');
+      expect(problemas[1]).toContain('SABE.ATENCAO_TEXTO');
+      expect(todos('[data-mandar-outro]')).toHaveLength(2);
       expect(no('[data-fonte]').textContent).not.toContain('SABE.FALHA_TEXTO');
+      wrapper.unmount();
+    });
+
+    it('sends an image as a photo (read and reviewed) only with Fase 2', async () => {
+      const imagem = { name: 'tabela.jpg', type: 'image/jpeg', size: 10 };
+      let wrapper = montar({ fase2: true });
+      await clicar('[data-mandar]');
+      escolherArquivo(imagem);
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 7,
+        descriptor: { file: imagem, kind: 'knowledge', sourceType: 'foto' },
+      });
+      wrapper.unmount();
+      document.body.innerHTML = '';
+
+      store.dispatch.mockClear();
+      wrapper = montar();
+      await clicar('[data-mandar]');
+      escolherArquivo(imagem);
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/create', {
+        agentId: 7,
+        descriptor: { file: imagem, kind: 'knowledge' },
+      });
+      wrapper.unmount();
+    });
+
+    it('lets a file stuck in review be read again after the polling gave up', async () => {
+      const recente = new Date().toISOString();
+      const antigo = new Date(Date.now() - 3600 * 1000).toISOString();
+      preparar([
+        fonte(2, {
+          updated_at: antigo,
+          review: { status: 'needs_review', reviewed_at: null },
+        }),
+        fonte(3, {
+          updated_at: recente,
+          review: { status: 'needs_review', reviewed_at: null },
+        }),
+      ]);
+      const wrapper = montar({ fase2: true });
+      await nextTick();
+      const menus = todos('[data-fonte] [aria-haspopup="menu"]');
+
+      menus[0].click();
+      await nextTick();
+      expect(todos('[role="menuitem"]').map(i => i.textContent.trim())).toEqual(
+        [
+          'AGENTS.JORNADA.PAGINA.SABE.LER_DE_NOVO',
+          'AGENTS.JORNADA.PAGINA.SABE.TIRAR',
+        ]
+      );
+      todos('[role="menuitem"]')[0].click();
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaSources/resync', {
+        agentId: 7,
+        sourceId: 2,
+      });
+
+      menus[1].click();
+      await nextTick();
+      expect(todos('[role="menuitem"]').map(i => i.textContent.trim())).toEqual(
+        ['AGENTS.JORNADA.PAGINA.SABE.TIRAR']
+      );
       wrapper.unmount();
     });
 

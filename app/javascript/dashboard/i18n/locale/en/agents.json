@@ -1272,6 +1272,7 @@
           "ENSINOU": "Done. {nome} now knows how to answer this.",
           "REVISANDO": "Reviewing…",
           "ATENCAO": "Needs you",
+          "ATENCAO_TEXTO": "{nome} does not use this material until you send another one.",
           "LENDO_FOTO": "Reading the text in the photo…"
         },
         "ONDE": {

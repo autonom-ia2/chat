@@ -48,3 +48,22 @@ falas do dono ao juiz.
   cerca de US$ 0,16. Corrigido antes da 2ª.
 - 2ª rodada: US$ 0,1876 (consumo gravado), teto ajustado para o que sobrava (0,34).
 - Total desta rodada: cerca de US$ 0,35, dentro do teto de US$ 0,50.
+
+## Rodada da revisão (C1): foto reprovada sem pedido de fechar
+
+Data: 19/10/2026. Teto desta rodada: US$ 0,25. Motivo: a revisão apontou que a foto reprovada contava como material
+"pendente" no status que o Construtor vê, o que podia fazê-lo segurar a criação. Corrigido no `Builder` (foto reprovada
+ou ilegível sai de `pending` e aparece como "já vista na conversa; fica fora da base até o dono resolver").
+
+- (d) `d_foto_reprovada_sem_fechar`: foto na base com `review_status = needs_resend`; no segundo turno o dono responde
+  com o horário e o tamanho do pedido grande, sem pedir para criar. Fechar não é exigido; a cena exige que nenhuma fala
+  segure a criação por causa da foto (campo novo do juiz, `segura_a_criacao_pela_foto`) e que não invente conteúdo.
+
+Comando: o mesmo de cima, com `FOTO_DA_CRIACAO_EVAL_CENA=d_foto_reprovada_sem_fechar FOTO_DA_CRIACAO_EVAL_TETO=0.25`.
+
+| Cena | Fechou | Fotos na base | Juiz | Aprovada |
+|---|---|---|---|---|
+| d_foto_reprovada_sem_fechar | não (não foi pedido) | 1 | reconhece que a foto veio desfocada; não segura a criação esperando outra; não inventa conteúdo | sim |
+
+Placar: 1 de 1. Custo: US$ 0,048 (consumo gravado). Total do tema 4 até aqui: cerca de US$ 0,40, dentro do teto de
+US$ 2.

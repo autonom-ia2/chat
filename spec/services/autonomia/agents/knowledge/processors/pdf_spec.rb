@@ -30,15 +30,14 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     end
 
     context 'when the text layer is near-empty (scanned PDF)' do
-      # Stub da pilha de OCR (libs externas mini_magick + rtesseract) p/ não exigir binários.
+      # Stub da pilha de OCR (mini_magick + Processors::Ocr) p/ não exigir binários.
       def stub_ocr(text)
         # MiniMagick::Image expõe `density` via method_missing (opções do imagemagick), então
         # um double simples é mais fiel que um verified double aqui.
         image = double('mm_image', path: '/tmp/page-0.png', density: nil) # rubocop:disable RSpec/VerifiedDoubles
         allow(MiniMagick::Image).to receive(:open).and_return(image)
         allow(image).to receive(:pages).and_return([image])
-        rtesseract = instance_double(RTesseract, to_s: text)
-        allow(RTesseract).to receive(:new).and_return(rtesseract)
+        allow(Autonomia::Agents::Knowledge::Processors::Ocr).to receive(:ler).and_return(text)
       end
 
       it 'falls back to OCR and returns the OCR text' do

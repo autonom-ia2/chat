@@ -27,6 +27,8 @@ const props = defineProps({
   // Texto no lugar de "{nome} ainda não usa este…" (ex.: arquivo grande demais).
   problema: { type: String, default: '' },
   nomeEmDuasLinhas: { type: Boolean, default: false },
+  // #1426 — arquivo parado em "Revisando…" além do teto da releitura (o worker caiu): libera "Ler de novo".
+  relerParado: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['lerDeNovo', 'tirar', 'mandarOutro']);
@@ -52,9 +54,20 @@ const ICONE_DO_ESTADO = {
   falha: 'i-lucide-triangle-alert',
 };
 const nome = computed(() => nomeDaFonte(props.fonte));
+// #1426 — o que aparece embaixo da linha amarela: o motivo da revisão (curto e em linguagem simples, escrito pelo
+// Revisor) ou, sem ele, o texto padrão; o cartão "um problema por vez" vem no PR 2.
+const textoDoProblema = computed(() => {
+  if (estado.value === 'atencao') {
+    return (
+      props.fonte.review?.reason ||
+      t(`${NS}.ATENCAO_TEXTO`, { nome: props.nomeAgente })
+    );
+  }
+  return props.problema || t(`${NS}.FALHA_TEXTO`, { nome: props.nomeAgente });
+});
 
 const itens = computed(() => [
-  ...(site.value && props.podeReler
+  ...((site.value && props.podeReler) || props.relerParado
     ? [{ chave: 'ler', texto: t(`${NS}.LER_DE_NOVO`) }]
     : []),
   { chave: 'tirar', texto: t(`${NS}.TIRAR`), perigo: true },
@@ -143,9 +156,9 @@ const escolher = chave => {
         @escolher="escolher"
       />
     </div>
-    <div v-if="estado === 'falha'" class="flex flex-col items-start gap-2">
-      <p class="m-0 text-sm text-n-slate-12">
-        {{ problema || t(`${NS}.FALHA_TEXTO`, { nome: nomeAgente }) }}
+    <div v-if="amarelo" class="flex flex-col items-start gap-2">
+      <p data-problema class="m-0 text-sm text-n-slate-12">
+        {{ textoDoProblema }}
       </p>
       <AgenteBotao
         v-if="podeGerenciar"

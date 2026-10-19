@@ -9,13 +9,9 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   def create
     kind = resolved_kind
     return render_unprocessable(I18n.t('autonomia.source.invalid_kind')) if kind.nil?
-    return render_unprocessable(I18n.t('autonomia.source.foto_fora_da_fase2')) if foto_fora_da_fase2?
 
-    if knowledge_limit_reached?(kind)
-      return render_unprocessable(
-        I18n.t('autonomia.source.limit_reached', limit: Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES)
-      )
-    end
+    recusa = recusa_do_envio(kind)
+    return render_unprocessable(recusa) if recusa
 
     @source = @agent.sources.new(source_params)
     @source.account = Current.account
@@ -47,6 +43,7 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   def resync
     # #284 (2b) — a fonte sintética "FAQ aprovadas" não tem arquivo para reprocessar.
     return render_unprocessable(I18n.t('autonomia.faq.resync_not_allowed')) if Autonomia::Agents::Faq::KnowledgeWriter.faq_source?(@source)
+    return render_unprocessable(I18n.t('autonomia.source.foto_fora_da_fase2')) if foto?(@source.source_type) && !fase2?
 
     Autonomia::Agents::Knowledge::IngestJob.perform_later(@source.id)
     render :show, status: :accepted
@@ -76,6 +73,17 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
     Autonomia::Agents::Source.kinds.key?(raw) ? raw : nil
   end
 
+  # A mensagem de recusa do envio, ou nil: arquivo que não é upload, foto recusada e, por último, o teto da base.
+  def recusa_do_envio(kind)
+    return I18n.t('autonomia.source.file_invalid') unless arquivo_enviado_ou_nenhum?
+
+    recusa = recusa_da_foto(kind)
+    return I18n.t("autonomia.source.#{recusa}") if recusa
+    return unless knowledge_limit_reached?(kind)
+
+    I18n.t('autonomia.source.limit_reached', limit: Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES)
+  end
+
   # Teto só para CONHECIMENTO (mídia de envio tem pipeline próprio, sem limite). Conta as fontes
   # knowledge já existentes do agente; ao atingir o teto, o create responde 422 (o FE já desabilita
   # o dropzone, isto é a defesa de servidor).
@@ -84,9 +92,41 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
       @agent.sources.knowledge_sources.count >= Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES
   end
 
-  # #1426 — a foto como material (tipo `foto`, lida por OCR e revisada) só existe na Fase 2 dos Agentes.
-  def foto_fora_da_fase2?
-    source_params[:source_type] == Autonomia::Agents::Source::FOTO && !Autonomia::Agents::Fase2.ligada?(Current.account)
+  # #1426 (revisão adversarial) — o arquivo vem só como upload. Um texto em `file` seria lido pelo ActiveStorage como
+  # signed_id e anexaria um blob que já existe, inclusive de outra conta. A tela sempre manda o arquivo.
+  def arquivo_enviado_ou_nenhum?
+    params[:file].blank? || params[:file].is_a?(ActionDispatch::Http::UploadedFile)
+  end
+
+  # #1426 — a foto como material (tipo `foto`, lida por OCR e revisada): só na Fase 2, só no que o agente sabe, nunca na
+  # Lia (instrução mantida pela Autonom.ia) e só uma imagem de verdade, conferida pelos BYTES (FotoConferida), nunca pelo
+  # tipo que o cliente declarou. Devolve a chave i18n da recusa, ou nil.
+  def recusa_da_foto(kind)
+    return unless foto?(source_params[:source_type])
+    return 'foto_fora_da_fase2' unless fase2?
+    return 'foto_so_no_que_sabe' unless kind == 'knowledge'
+    return 'foto_agente_de_cotacao' if @agent.instrucao_mantida?
+    return 'foto_sem_arquivo' if params[:file].blank?
+
+    problema = foto_conferida(params[:file])
+    "foto_#{problema}" if problema
+  end
+
+  def foto_conferida(arquivo)
+    return :tamanho if arquivo.size > Autonomia::Agents::Config::MAX_IMAGE_BYTES
+
+    arquivo.tempfile.rewind
+    Autonomia::Agents::Knowledge::FotoConferida.problema(arquivo.tempfile.read)
+  ensure
+    arquivo.tempfile.rewind
+  end
+
+  def foto?(source_type)
+    source_type == Autonomia::Agents::Source::FOTO
+  end
+
+  def fase2?
+    Autonomia::Agents::Fase2.ligada?(Current.account)
   end
 
   def fetch_agent
