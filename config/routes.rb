@@ -389,6 +389,8 @@ Rails.application.routes.draw do
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/accept', to: 'conversation_cards#accept_suggestion'
             post 'conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss', to: 'conversation_cards#dismiss_suggestion'
             get :kanban, to: 'kanban#index'
+            # CRM › Números por papel (#1897): a visão "Só eu" de quem abre, atrás da flag `crm_numeros_lentes`.
+            get :numeros, to: 'numeros#show'
             scope :reports, controller: :reports do
               get :pipelines, action: :pipelines, as: :crm_report_pipelines
               get :summary, action: :summary, as: :crm_report_summary

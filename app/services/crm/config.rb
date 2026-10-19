@@ -22,6 +22,11 @@ module Crm
       calendar_meetings_enabled? && account.feature_enabled?('crm_booking_v2')
     end
 
+    # CRM › Números por papel (#1897, F3 do #1871): a visão "Só eu" e o fim da visão da equipe para o agente comum.
+    def self.numeros_lentes_enabled?(account)
+      account.present? && account.feature_enabled?('crm_numeros_lentes')
+    end
+
     def self.calendar_ms_simulate?
       return BOOLEAN.cast(ENV['CRM_CALENDAR_MS_SIMULATE']) == true if ENV.key?('CRM_CALENDAR_MS_SIMULATE')
 
