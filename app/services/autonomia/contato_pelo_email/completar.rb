@@ -5,8 +5,8 @@
 # dado do dono.
 #
 # A gravação é a do Decisores::Aplicador, sem `trocar`: telefone só quando vazio (no formato +55..., pelo
-# Decisores::Telefone, e o de outro contato vai para a biografia), e-mail só quando vazio — o e-mail do contato nunca é
-# trocado. O nome, só quando é provisório (#nome_trocavel?): vazio, o e-mail, o começo do e-mail ou o telefone. O
+# Decisores::Telefone, e o de outro contato vai para a biografia), e-mail só quando vazio e já é um endereço do cliente
+# nesta caixa — o e-mail do contato nunca é trocado. O nome, só quando é provisório (#nome_trocavel?): vazio, o e-mail, o começo do e-mail ou o telefone. O
 # começo do e-mail entra de propósito: é o nome que o Chatwoot dá a todo lead do formulário do site (conta 16 da
 # hub2you em 18/10: todos os leads com o nome igual ao começo do e-mail), e o formulário traz o nome de verdade.
 #
@@ -82,7 +82,7 @@ class Autonomia::ContatoPeloEmail::Completar
 
   # O teto vem antes da marca "lido": o e-mail barrado pelo teto não fica marcado como lido sem ter sido.
   def ler_e_gravar(credencial)
-    return motivo('teto_diario', nivel: :warn) unless freios.dentro_do_teto?
+    return motivo('teto_diario', nivel: :warn) unless freios.dentro_do_teto?(chave_da_instalacao: credencial[:source] == :system)
     return motivo('ja_lido') unless freios.primeira_leitura?(@message.id)
 
     ler_pago(credencial)
@@ -123,11 +123,21 @@ class Autonomia::ContatoPeloEmail::Completar
   def gravar(leitura)
     resultado, ignorados, mudou = contato.with_lock do
       antes = ficha
-      fora = leitura.valores.key?('nome') && !nome_trocavel? ? ['nome'] : []
+      fora = campos_fora(leitura.valores)
       [aplicador.aplicar(leitura.valores.except(*fora)), fora, ficha != antes]
     end
     registrar(leitura.tipo, resultado, ignorados)
     freios.pausar_por_nada_novo unless mudou
+  end
+
+  # O nome só troca quando é provisório. O e-mail só entra quando já é um endereço do cliente nesta caixa (o From ou o
+  # da conversa): o e-mail da assinatura pode ser de outra pessoa ("comercial@") ou plantado no corpo, e o gravado
+  # passaria a contar como do cliente na Crm::Email::Autoria.
+  def campos_fora(valores)
+    fora = []
+    fora << 'nome' if valores.key?('nome') && !nome_trocavel?
+    fora << 'email' if valores.key?('email') && !Crm::Email::Autoria.new(@account).endereco_do_cliente?(@message, valores['email'])
+    fora
   end
 
   def ficha

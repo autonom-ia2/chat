@@ -389,6 +389,54 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
     expect(contact.reload).to have_attributes(name: 'Maria Souza', phone_number: '+5511987654321', email: 'maria.souza@cliente.com.br')
   end
 
+  # Pega (revisão final): o e-mail da assinatura gravado no contato sem e-mail passaria a contar como do cliente na
+  # Autoria, e o de outra pessoa (ou plantado no corpo) deixaria de ter o aviso "escrito por outra pessoa".
+  it 'contato sem e-mail: o e-mail da assinatura que não é do cliente não é gravado', :aggregate_failures do
+    contact.update!(email: nil)
+    create(:contact_inbox, contact: contact, inbox: inbox, source_id: 'maria.souza@cliente.com.br')
+    responde(nome: 'Maria Souza', email: 'comercial@empresa.com.br', telefone: '(11) 98765-4321')
+
+    described_class.new(message).perform
+
+    expect(contact.reload).to have_attributes(name: 'Maria Souza', phone_number: '+5511987654321', email: nil)
+  end
+
+  it 'contato sem e-mail: o e-mail que já é do cliente nesta caixa é gravado' do
+    contact.update!(email: nil)
+    create(:contact_inbox, contact: contact, inbox: inbox, source_id: 'maria.souza@cliente.com.br')
+    responde(email: 'Maria.Souza@cliente.com.br')
+
+    described_class.new(message).perform
+
+    expect(contact.reload.email).to eq('maria.souza@cliente.com.br')
+  end
+
+  # Pega (revisão final): a chave da instalação paga por todas as contas; o teto por conta sozinho não freia o total.
+  it 'com a chave da instalação, passou do teto da instalação: não chama a IA', :aggregate_failures do
+    allow(Crm::Ai::CredentialResolver).to receive(:new)
+      .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', source: :system }))
+    responde(telefone: '(11) 98765-4321')
+    dia = Time.now.utc.to_date.iso8601
+    Redis::Alfred.set(chave('teto_instalacao', dia), Autonomia::ContatoPeloEmail::Freios::TETO_DIARIO_DA_INSTALACAO, ex: 60)
+
+    described_class.new(message).perform
+
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    expect(contact.reload.phone_number).to be_blank
+  end
+
+  it 'com a chave da própria conta, o teto da instalação não se aplica' do
+    allow(Crm::Ai::CredentialResolver).to receive(:new)
+      .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', source: :hook }))
+    responde(telefone: '(11) 98765-4321')
+    dia = Time.now.utc.to_date.iso8601
+    Redis::Alfred.set(chave('teto_instalacao', dia), Autonomia::ContatoPeloEmail::Freios::TETO_DIARIO_DA_INSTALACAO, ex: 60)
+
+    described_class.new(message).perform
+
+    expect(contact.reload.phone_number).to eq('+5511987654321')
+  end
+
   # Pega (LOW do #1813): o segundo e-mail do lead, que chegou enquanto o primeiro era lido, cair na pausa que o primeiro
   # pôs — e ele pode ser justamente o que traz o telefone. O e-mail que chega depois da pausa continua barrado.
   it 'a pausa vale para o e-mail que chega depois dela, não para o que já estava na fila', :aggregate_failures do

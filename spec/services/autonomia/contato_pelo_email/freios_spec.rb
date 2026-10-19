@@ -24,4 +24,25 @@ RSpec.describe Autonomia::ContatoPeloEmail::Freios do
     expect(freios.pausado?(1.minute.ago)).to be(false)
     expect(freios.pausado?(Time.current)).to be(true)
   end
+
+  # Pega (revisão final): o "nada novo" de 24 h trocar a pausa de 30 dias dos automáticos.
+  it 'a pausa curta não encurta a longa que já está valendo' do
+    3.times { freios.automatico! }
+
+    freios.pausar_por_nada_novo
+
+    expect(Redis::Alfred.ttl("#{described_class::PREFIXO}:pausa:9")).to be > 24.hours.to_i
+  end
+
+  # Pega (revisão final): a chave da instalação pagar sem teto total.
+  it 'o teto da instalação só conta com a chave da instalação', :aggregate_failures do
+    chave_da_instalacao = "#{described_class::PREFIXO}:teto_instalacao:#{Time.now.utc.to_date.iso8601}"
+
+    expect(freios.dentro_do_teto?).to be(true)
+    expect(Redis::Alfred.get(chave_da_instalacao)).to be_nil
+
+    Redis::Alfred.set(chave_da_instalacao, described_class::TETO_DIARIO_DA_INSTALACAO, ex: 60)
+    expect(freios.dentro_do_teto?(chave_da_instalacao: true)).to be(false)
+    expect(freios.dentro_do_teto?).to be(true)
+  end
 end

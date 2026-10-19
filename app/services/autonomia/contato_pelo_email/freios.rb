@@ -7,7 +7,8 @@
 # - Contador de automáticos: zera numa leitura `pessoa` ou `formulario`; expira sozinho.
 # - Trava: uma leitura por contato de cada vez (dois e-mails seguidos não pagam duas leituras que gravam por cima).
 # - Leitura única por mensagem: a nova tentativa do job não paga a IA de novo pelo mesmo e-mail.
-# - Teto diário de chamadas por conta.
+# - Teto diário de chamadas por conta e, quando a IA é paga pela chave da instalação, também um teto da instalação
+#   inteira (o teto por conta sozinho deixaria N contas x 500 chamadas por dia na mesma chave).
 class Autonomia::ContatoPeloEmail::Freios
   PREFIXO = 'autonomia:contato_pelo_email'.freeze
   AUTOMATICOS_PARA_PAUSAR = 3
@@ -15,6 +16,7 @@ class Autonomia::ContatoPeloEmail::Freios
   PAUSA_AUTOMATICOS = 30.days
   PAUSA_NADA_NOVO = 24.hours
   TETO_DIARIO = 500
+  TETO_DIARIO_DA_INSTALACAO = 2000
   TRAVA_POR = 5.minutes
   LIDO_POR = 1.day
   SEPARADOR = ':'.freeze
@@ -65,10 +67,14 @@ class Autonomia::ContatoPeloEmail::Freios
     Redis::Alfred.set(chave('lido', message_id), 1, nx: true, ex: LIDO_POR.to_i) ? true : false
   end
 
-  # Conta mais uma chamada da conta hoje (UTC). -> false quando passou do teto.
-  def dentro_do_teto?
-    chave_do_dia = chave('teto', "#{@account_id}:#{Time.now.utc.to_date.iso8601}")
-    contar(chave_do_dia, 1.day + 1.hour) <= TETO_DIARIO
+  # Conta mais uma chamada da conta hoje (UTC) e, com a chave da instalação, mais uma da instalação.
+  # -> false quando passou de algum dos tetos.
+  def dentro_do_teto?(chave_da_instalacao: false)
+    dia = Time.now.utc.to_date.iso8601
+    return false if contar(chave('teto', "#{@account_id}:#{dia}"), 1.day + 1.hour) > TETO_DIARIO
+    return true unless chave_da_instalacao
+
+    contar(chave('teto_instalacao', dia), 1.day + 1.hour) <= TETO_DIARIO_DA_INSTALACAO
   end
 
   private
@@ -84,8 +90,12 @@ class Autonomia::ContatoPeloEmail::Freios
     end
   end
 
-  # Guarda o motivo e o começo da pausa (segundos), para #pausado? saber quais e-mails chegaram antes dela.
+  # Guarda o motivo e o começo da pausa (segundos), para #pausado? saber quais e-mails chegaram antes dela. Nunca
+  # encurta a pausa que já está valendo: o "nada novo" (24 h) de uma leitura que pegou a trava logo depois da pausa de
+  # 30 dias dos automáticos não pode trocá-la.
   def pausar(tempo, motivo)
+    return if Redis::Alfred.ttl(chave('pausa', @contato_id)).to_i > tempo.to_i
+
     Redis::Alfred.setex(chave('pausa', @contato_id), [motivo, Time.current.to_i].join(SEPARADOR), tempo.to_i)
   end
 
