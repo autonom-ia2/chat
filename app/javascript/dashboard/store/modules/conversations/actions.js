@@ -108,8 +108,9 @@ let releituraAgendada = null;
 // descartaria a primeira (sob tráfego contínuo, a lista nunca seria trocada).
 let releituraEmCurso = false;
 let releituraPendente = false;
-// Releitura descartada é refeita sozinha até 5 vezes seguidas (rolagem contínua puxando páginas descarta todas); passado
-// isso, ela só volta no próximo evento ao vivo ou na releitura de um minuto.
+// Releitura descartada é refeita sozinha até 5 vezes seguidas (rolagem contínua puxando páginas descarta todas);
+// passado isso, ela só volta no próximo evento ao vivo (ou na releitura de um minuto, que existe com "esperando").
+// Releitura que grava, ou filtro que deixou de valer, zera a contagem.
 export const DESCARTES_SEGUIDOS_NO_MAXIMO = 5;
 let descartesSeguidos = 0;
 export const cancelarReleituraDoFiltroDoLink = () => {
@@ -224,7 +225,10 @@ const actions = {
   // conversa aberta continua aberta e, se a lista tinha mais de 5 páginas, a rolagem vai ao topo.
   releerFiltroDoLink: async contexto => {
     const { state, rootState, rootGetters } = contexto;
-    if (!filtroDoLinkAtivo(state, rootState)) return;
+    if (!filtroDoLinkAtivo(state, rootState)) {
+      descartesSeguidos = 0;
+      return;
+    }
     // Pedida direto (releitura de um minuto, aba visível de novo) com outra em andamento: fica para depois dela.
     if (releituraEmCurso) {
       releituraPendente = true;
@@ -248,6 +252,7 @@ const actions = {
         }
       } else {
         await voltarAPrimeiraPaginaDoFiltroDoLink(contexto, paginas);
+        descartesSeguidos = 0;
       }
     } catch (error) {
       // O próximo evento do websocket (ou a releitura de um minuto) tenta de novo.
