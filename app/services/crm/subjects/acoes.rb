@@ -8,11 +8,12 @@ module Crm::Subjects::Acoes
     Crm::Cards::Focus.new(account: conversation.account, card: card, conversation: conversation).perform
   end
 
-  # source: quem deu nome ao assunto ('ai' para a IA de assunto, 'agente' para o agente de IA).
-  def criar(conversation:, pipeline:, titulo:, source:)
+  # source: quem deu nome ao assunto ('ai' para a IA de assunto, 'agente' para o agente de IA). etapa: a coluna escolhida
+  # pela IA de assunto (#1910); sem ela, a 1ª etapa.
+  def criar(conversation:, pipeline:, titulo:, source:, etapa: nil)
     Crm::Cards::Creator.new(
       account: conversation.account, user: nil, conversation: conversation,
-      params: { pipeline_id: pipeline.id, stage_id: pipeline.stages.order(:position, :id).first.id, title: titulo,
+      params: { pipeline_id: pipeline.id, stage_id: (etapa || Crm::Subjects::Etapa.primeira(pipeline)).id, title: titulo,
                 metadata: { 'subject' => { 'source' => source, 'named_at' => Time.current.iso8601 } } }
     ).perform
   end
