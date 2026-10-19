@@ -23,6 +23,24 @@ describe RichMessages::Types::Poll do
       .to eq("Vem amanhã?\n\n1. Sim\n2. Não\nPode escolher mais de uma")
   end
 
+  # Enviada como texto (Cloud, grupo, motor sem enquete), o cliente responde pelo número ("2", "1 e 3"). Quem casa a
+  # resposta com a opção é o modelo, que lê esse texto: o número N tem de continuar sendo a opção N, e a linha do
+  # aviso não pode virar opção.
+  it 'keeps the numbering of a multiple-answer poll sent as text: number N is option N, the hint is no option' do
+    three = options + [{ 'id' => 'talvez', 'title' => 'Talvez' }]
+    poll = described_class.new(payload.merge('options' => three, 'multiple' => true))
+    lines = poll.fallback_text('Vem amanhã?').split("\n")
+
+    numbered = lines.reject { |line| line == described_class::MULTIPLE_HINT }
+    expect(numbered.size).to eq(three.size)
+    three.each.with_index(1) do |option, number|
+      expect(lines.find { |line| line.start_with?("#{number}. ") }).to eq("#{number}. #{option['title']}")
+    end
+    expect(lines.last).to eq(described_class::MULTIPLE_HINT)
+    expect(lines.count { |line| line.start_with?("#{three.size + 1}.") }).to eq(0)
+    expect(described_class::MULTIPLE_HINT.start_with?(*('0'..'9').to_a)).to be(false)
+  end
+
   it 'goes to the Cloud API as text, question and options' do
     expect(described_class.new(payload).whatsapp_cloud_payload('Vem amanhã?'))
       .to eq(type: 'text', text: { body: "Vem amanhã?\n\n1. Sim\n2. Não", preview_url: false })
