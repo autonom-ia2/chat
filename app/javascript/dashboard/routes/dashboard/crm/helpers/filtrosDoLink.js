@@ -1,0 +1,72 @@
+// #1883 — filtros que chegam pelo link (os "Ver" do Números). Cada parâmetro é o
+// nome do filtro que a tela já tem: no Kanban e na Lista, o mesmo da API; no Meu
+// dia, o do painel "Mostrar". Valor que a tela não oferece é ignorado, nunca vira
+// filtro escondido.
+import {
+  CRM_CAMPAIGN_QUERY,
+  campaignSourceIdsFromQuery,
+} from 'dashboard/components-next/CampaignResult/resultMetrics';
+import { ORDEM_DOS_TIPOS } from '../components/calendario/itensDoCalendario';
+
+const EU = 'me';
+const DIAS_PARADO = ['3', '7', '14', '30'];
+const RESPONSAVEIS = ['agent', 'bot', 'none'];
+const RESULTADOS = ['open', 'won', 'lost', 'resolved', 'cancelled', 'archived'];
+const FECHADO_EM = ['this_month'];
+const QUEM = ['todos', 'meus'];
+
+export const CHAVES_DO_LINK = [
+  'owner_id',
+  'stale_days',
+  'responsible_kind',
+  'result',
+  'closed_in',
+  CRM_CAMPAIGN_QUERY,
+];
+export const CHAVES_DO_MEU_DIA = ['quem', 'tipos', 'funil'];
+
+const idPositivo = valor => {
+  const numero = Number(valor);
+  return Number.isInteger(numero) && numero > 0 ? numero : null;
+};
+
+const dono = (valor, currentUserId) =>
+  valor === EU ? idPositivo(currentUserId) : idPositivo(valor);
+
+const daLista = (lista, valor) => (lista.includes(valor) ? valor : null);
+
+const semVazios = filtro => {
+  const cheio = Object.fromEntries(
+    Object.entries(filtro).filter(([, valor]) =>
+      Array.isArray(valor) ? valor.length : valor !== null
+    )
+  );
+  return Object.keys(cheio).length ? cheio : null;
+};
+
+export const filtrosDoLink = (query = {}, { currentUserId } = {}) =>
+  semVazios({
+    ownerId: query.owner_id ? dono(query.owner_id, currentUserId) : null,
+    staleDays: daLista(DIAS_PARADO, query.stale_days),
+    responsibleKind: daLista(RESPONSAVEIS, query.responsible_kind),
+    result: daLista(RESULTADOS, query.result),
+    closedIn: daLista(FECHADO_EM, query.closed_in),
+    campaignSourceIds: campaignSourceIdsFromQuery(query),
+  });
+
+const tiposDoLink = valor =>
+  typeof valor === 'string'
+    ? valor.split(',').filter(tipo => ORDEM_DOS_TIPOS.includes(tipo))
+    : [];
+
+export const filtroDoMeuDiaPeloLink = (query = {}) =>
+  semVazios({
+    quem: daLista(QUEM, query.quem),
+    tipos: tiposDoLink(query.tipos),
+    funil: idPositivo(query.funil) ? String(query.funil) : null,
+  });
+
+export const semChaves = (query, chaves) =>
+  Object.fromEntries(
+    Object.entries(query).filter(([chave]) => !chaves.includes(chave))
+  );

@@ -18,10 +18,10 @@
       "APAGAR": "Apagar"
     },
     "VAZIO": {
-      "TITULO": "Crie sua primeira mensagem pronta para falar com clientes pelo WhatsApp."
+      "TITULO": "Crie sua primeira mensagem para o WhatsApp aprovar e fale com clientes mesmo depois de 24 horas."
     },
     "SEM_NUMERO": {
-      "TITULO": "Conecte um número do WhatsApp oficial para criar mensagens prontas.",
+      "TITULO": "Conecte um número do WhatsApp oficial para criar mensagens e mandar para aprovação.",
       "CONECTAR": "Conectar WhatsApp"
     },
     "LISTA": {
@@ -402,7 +402,7 @@
         "PARA": "O cliente toca e liga para você.",
         "EXEMPLO": "Ex.: Falar com a gente",
         "VALOR": "Telefone",
-        "VALOR_EXEMPLO": "+55 11 4000-0000"
+        "PAIS": "País do telefone"
       },
       "copiar_codigo": {
         "ROTULO": "Copiar código",

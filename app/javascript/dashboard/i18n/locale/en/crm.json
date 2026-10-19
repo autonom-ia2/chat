@@ -151,7 +151,7 @@
         "CAMPAIGN_EMAIL": "Email campaign",
         "CAMPAIGN_LIVE_CHAT": "Live chat campaign",
         "CAMPAIGN_SMS": "SMS campaign",
-        "UNKNOWN": "Unknown"
+        "NONE": "No source"
       }
     }
   },
@@ -532,6 +532,7 @@
         "TITLE": "Follow-ups",
         "PENDING": "Pending",
         "OVERDUE": "Overdue",
+        "OVERDUE_BY": "AI {ai} · Team {human}",
         "DUE_SOON": "Due in 48h"
       },
       "WORKLOAD": {
@@ -1578,7 +1579,7 @@
       "WHEN_TO_USE": "When to use",
       "WHEN_TO_USE_HELP": "The AI reads this to know when a conversation belongs to this pipeline. Name the products or cases that come here.",
       "WHEN_TO_USE_PLACEHOLDER": "E.g.: sales of our two products, AI Agents and Chat2You.",
-      "MONTHLY_TARGET": "Monthly sales target (R$)",
+      "MONTHLY_TARGET": "Monthly sales target",
       "MONTHLY_TARGET_PLACEHOLDER": "E.g. 50000",
       "MONTHLY_TARGET_HELP": "Drives the Goal box on the dashboard. Leave empty for no target.",
       "REQUIRED": "Required",
@@ -3532,6 +3533,9 @@
       "ADD_TOGGLE": "Set service hours (SLA) right after creating"
     }
   },
+  "CRM_FILTRO_DO_LINK": {
+    "FECHADO_NO_MES": "Closed: this month"
+  },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Autonom.ia Copilot",
     "RESET": "New chat",
@@ -4431,7 +4435,6 @@
       "META": "Monthly sales goal",
       "META_AJUDA": "Shows on the dashboard. Leave it empty if you have no goal.",
       "META_EXEMPLO": "50000",
-      "MOEDA": "R$",
       "NOMES": "What to call the result (optional)",
       "NOMES_AJUDA": "If empty, we use “{sucesso}” and “{fracasso}”.",
       "SUCESSO": "When it works out",

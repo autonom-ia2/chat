@@ -12,14 +12,14 @@ import {
   baixarPeloLink,
   doActiveStorage,
   enderecoParaBaixar,
+  enderecoSeguro,
 } from '../midia/enderecoParaBaixar';
 import { baixarAudio } from '../audio/useAudioParaBaixar';
 
 // Produção (17/10): baixar dava erro. O bucket não tem CORS, e o fetch do painel
 // falhava depois do redirect do Active Storage. Agora é link direto para o Active
 // Storage com `disposition=attachment`: o próprio armazenamento entrega como download.
-const DO_STORAGE =
-  'https://app.test/rails/active_storage/blobs/redirect/abc--1/boleto%20maio.pdf';
+const DO_STORAGE = `${window.location.origin}/rails/active_storage/blobs/redirect/abc--1/boleto%20maio.pdf`;
 const DE_FORA = 'https://cdn.externo.test/arquivo.pdf';
 
 const i18n = () =>
@@ -64,6 +64,24 @@ describe('endereço para baixar (#1702)', () => {
     expect(enderecoParaBaixar(undefined)).toBe('');
     expect(doActiveStorage(null)).toBe(false);
   });
+
+  // #1869: o endereço do anexo vai para um href; só endereço web passa.
+  // O endereço de script é montado em partes: o literal cai na regra no-script-url.
+  const SCRIPT = ['javascript', 'alert(1)'].join(':');
+  it('endereço de script e data: não viram link', () => {
+    [SCRIPT, 'data:text/html,oi'].forEach(perigoso => {
+      expect(enderecoSeguro(perigoso)).toBe('');
+      expect(enderecoParaBaixar(perigoso)).toBe('');
+      expect(doActiveStorage(perigoso)).toBe(false);
+    });
+    expect(enderecoSeguro(DE_FORA)).toBe(DE_FORA);
+  });
+
+  it('outro site com caminho do Active Storage é de fora', () => {
+    const imitacao = 'https://outro.test/rails/active_storage/blobs/x/a.pdf';
+    expect(doActiveStorage(imitacao)).toBe(false);
+    expect(enderecoParaBaixar(imitacao)).toBe(imitacao);
+  });
 });
 
 describe('baixar pelo link, sem fetch (#1702)', () => {
@@ -105,7 +123,7 @@ describe('baixar pelo link, sem fetch (#1702)', () => {
 
   it('o "Baixar" do menu do áudio usa o mesmo link', () => {
     baixarAudio({
-      dataUrl: 'https://app.test/rails/active_storage/blobs/redirect/x/voz.ogg',
+      dataUrl: `${window.location.origin}/rails/active_storage/blobs/redirect/x/voz.ogg`,
       fileType: 'audio',
     });
 
@@ -156,12 +174,12 @@ describe('cartão do documento (#1702)', () => {
     const cartao = montar({
       dataUrl: DO_STORAGE,
       extension: 'pdf',
-      thumbUrl: 'https://app.test/rails/active_storage/representations/p.png',
+      thumbUrl: `${window.location.origin}/rails/active_storage/representations/p.png`,
     });
 
     const previa = cartao.find('[data-previa-do-pdf]');
     expect(previa.attributes('src')).toBe(
-      'https://app.test/rails/active_storage/representations/p.png'
+      `${window.location.origin}/rails/active_storage/representations/p.png`
     );
     const raiz = cartao.find('[data-documento-do-whatsapp]').element;
     expect(raiz.firstElementChild).toBe(previa.element);
@@ -174,7 +192,7 @@ describe('cartão do documento (#1702)', () => {
     const cartao = montar({
       dataUrl: DO_STORAGE,
       extension: 'pdf',
-      thumbUrl: 'https://app.test/rails/active_storage/representations/p.png',
+      thumbUrl: `${window.location.origin}/rails/active_storage/representations/p.png`,
     });
 
     await cartao.find('[data-previa-do-pdf]').trigger('error');
@@ -192,10 +210,9 @@ describe('cartão do documento (#1702)', () => {
     ).toBe(false);
     expect(
       montar({
-        dataUrl:
-          'https://app.test/rails/active_storage/blobs/redirect/y/a.docx',
+        dataUrl: `${window.location.origin}/rails/active_storage/blobs/redirect/y/a.docx`,
         extension: 'docx',
-        thumbUrl: 'https://app.test/t.png',
+        thumbUrl: `${window.location.origin}/t.png`,
       })
         .find('[data-previa-do-pdf]')
         .exists()

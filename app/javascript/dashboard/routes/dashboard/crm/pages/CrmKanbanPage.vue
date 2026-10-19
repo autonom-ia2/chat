@@ -19,7 +19,13 @@ import {
 import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 import crmMeetingsAPI from 'dashboard/api/crmMeetings';
 import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
-import { campaignSourceIdsFromQuery } from 'dashboard/components-next/CampaignResult/resultMetrics';
+import {
+  CHAVES_DO_LINK,
+  CHAVES_DO_MEU_DIA,
+  filtroDoMeuDiaPeloLink,
+  filtrosDoLink,
+  semChaves,
+} from '../helpers/filtrosDoLink';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CompanyAPI from 'dashboard/api/companies';
 import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
@@ -167,15 +173,19 @@ const router = useRouter();
 const isCalendarOnly = computed(() => route.meta?.calendarOnly === true);
 // Calendário "Meu dia" (#1568): com a flag da conta, a página do calendário
 // abre a tela nova; desligada, a de sempre, sem mudança nenhuma.
-const calendarioOuro = computed(
+const meuDiaLigado = computed(
   () =>
-    isCalendarOnly.value &&
     getAccount.value(currentAccountId.value)?.features?.[
       FEATURE_FLAGS.CRM_CALENDARIO_OURO
     ] === true
 );
+const calendarioOuro = computed(
+  () => isCalendarOnly.value && meuDiaLigado.value
+);
 // No "Meu dia", o funil é opcional: vazio = todos os funis (decisão 2 do #1568).
-const funilDoCalendario = ref(null);
+// #1883: o link do Números pode abrir o Meu dia já filtrado (quem, tipos e funil).
+const filtroDoMeuDia = filtroDoMeuDiaPeloLink(route.query);
+const funilDoCalendario = ref(filtroDoMeuDia?.funil ?? null);
 
 const currentPipelineId = ref('');
 // Menu novo (#1617): `?view=list|calendar` abre já na vista (a página Números volta por aqui) e a troca de
@@ -189,11 +199,45 @@ const vistaDoEndereco = () =>
 const viewMode = ref(
   isCalendarOnly.value ? 'calendar' : vistaDoEndereco() || 'kanban'
 );
+// #1883: ao recarregar ou abrir o link numa aba nova, a flag da conta chega depois da tela.
+watch(menuNovo, ligado => {
+  const vista = vistaDoEndereco();
+  if (ligado && vista && viewMode.value === 'kanban' && !isCalendarOnly.value)
+    viewMode.value = vista;
+});
 // The two CRM routes share this component, so the instance is reused on navigation:
 // keep viewMode in sync with the route (force calendar on the calendar-only page).
 watch(isCalendarOnly, only => {
   viewMode.value = only ? 'calendar' : 'kanban';
 });
+// #1894: com o Meu dia ligado, o calendário mora no endereço dele (crm_calendar_index), não numa vista do quadro;
+// a aba e o `?view=calendar` levam até lá, e o calendário antigo nunca abre.
+const meuDiaNoLugarDoCalendario = mode =>
+  mode === 'calendar' && meuDiaLigado.value && !isCalendarOnly.value;
+// Leva o resto do endereço (ex.: new_contact_id), menos o `view`. Navegação recusada volta ao quadro, para a área
+// não ficar vazia.
+const irParaOMeuDia = navegar => {
+  const query = Object.fromEntries(
+    Object.entries(route.query).filter(([chave]) => chave !== 'view')
+  );
+  return Promise.resolve(
+    navegar({
+      name: 'crm_calendar_index',
+      params: { accountId: route.params.accountId },
+      query,
+    })
+  ).then(falha => {
+    if (falha) viewMode.value = 'kanban';
+  });
+};
+// #1894: `?view=calendar` (ou a flag que chega depois da tela) com o Meu dia ligado troca o endereço pelo do Meu dia.
+watch(
+  [viewMode, meuDiaLigado],
+  ([vista]) => {
+    if (meuDiaNoLugarDoCalendario(vista)) irParaOMeuDia(router.replace);
+  },
+  { immediate: true }
+);
 const filters = ref({ ...storedFilters.value });
 const drawerMode = ref('create');
 const selectedCard = ref(null);
@@ -645,6 +689,12 @@ const activeFilterChips = computed(() => {
       label: `${t('CRM_KANBAN.FILTERS.RESULT')}: ${resultLabel}`,
     });
   }
+  if (f.closedIn && viewMode.value === 'list') {
+    chips.push({
+      key: 'closedIn',
+      label: t('CRM_FILTRO_DO_LINK.FECHADO_NO_MES'),
+    });
+  }
   if (f.stageIds?.length) {
     const names = f.stageIds
       .map(id => labelForOption(stageOptions, id))
@@ -812,6 +862,8 @@ const loadMoreList = async () => {
 };
 
 const loadCurrentCalendar = async () => {
+  // #1894: a caminho do Meu dia, o calendário antigo não busca nada (a resposta dele cairia no Meu dia).
+  if (meuDiaNoLugarDoCalendario(viewMode.value)) return;
   if (!calendarioOuro.value && !currentPipelineId.value) return;
   loadError.value = '';
   // The calendar emits range-change with the visible window; use that when
@@ -830,6 +882,7 @@ const loadCurrentCalendar = async () => {
         ? funilDoCalendario.value || undefined
         : currentPipelineId.value,
       include_completed: store.getters['crmKanban/getCalendarIncludeCompleted'],
+      semFiltrosDoQuadro: calendarioOuro.value,
       ...range,
     });
   } catch {
@@ -883,6 +936,23 @@ const handleServerFilterRefetch = () => {
   refetchTimer = setTimeout(() => loadActiveView(true), 400);
 };
 
+// #1883: o responsável que veio pelo link só vale se for alguém da equipe que a pessoa enxerga. Confere assim que
+// a equipe carrega, antes da primeira busca, para não ir ao servidor com um dono que vai cair.
+const donoDoLinkPorConferir = ref(false);
+const conferirDonoDoLink = async () => {
+  if (!donoDoLinkPorConferir.value) return;
+  donoDoLinkPorConferir.value = false;
+  // Sem a equipe carregada não dá para julgar: fica o dono do link (o servidor só devolve o que a pessoa vê).
+  if (!agents.value.length) return;
+  const { ownerId } = filters.value;
+  const conhecido =
+    String(ownerId) === String(currentUser.value?.id) ||
+    agents.value.some(agent => String(agent.id) === String(ownerId));
+  if (conhecido) return;
+  filters.value = { ...filters.value, ownerId: '' };
+  await store.dispatch('crmKanban/setFilters', filters.value);
+};
+
 const refreshData = async () => {
   loadError.value = '';
   try {
@@ -895,7 +965,13 @@ const refreshData = async () => {
       store.dispatch('labels/get'),
       loadCampaignOptions(),
     ]);
+    await conferirDonoDoLink();
     const fetchedPipelines = await store.dispatch('crmKanban/fetchPipelines');
+    // #1883: o funil do Meu dia que veio pelo link só vale se a pessoa enxerga esse funil.
+    const funilVisivel = fetchedPipelines.find(
+      pipeline => String(pipeline.id) === String(funilDoCalendario.value)
+    );
+    funilDoCalendario.value = funilVisivel?.id ?? null;
     if (fetchedPipelines.length > 0) {
       const currentStillExists = fetchedPipelines.some(
         pipeline => String(pipeline.id) === String(currentPipelineId.value)
@@ -1059,10 +1135,16 @@ const openHandoffSettings = async () => {
 };
 
 // Depois de abrir o funil pedido, tira o `pipeline_id` do endereço: trocar de funil no quadro não o atualiza.
+// #1883: os filtros do link também saem; dali em diante quem manda é o controle de filtro da tela.
+const ROTAS_COM_LINK = {
+  crm_kanban_index: ['pipeline_id', ...CHAVES_DO_LINK],
+  crm_calendar_index: CHAVES_DO_MEU_DIA,
+};
 const clearPipelineFromQuery = () => {
-  if (route.name !== 'crm_kanban_index') return;
-  if (route.query.pipeline_id === undefined) return;
-  const { pipeline_id: _pipeline, ...query } = route.query;
+  const chaves = ROTAS_COM_LINK[route.name];
+  if (!chaves) return;
+  const query = semChaves(route.query, chaves);
+  if (Object.keys(query).length === Object.keys(route.query).length) return;
   router.replace({ query });
 };
 
@@ -2273,6 +2355,10 @@ watch(
 );
 
 const setViewMode = mode => {
+  if (meuDiaNoLugarDoCalendario(mode)) {
+    irParaOMeuDia(router.push);
+    return;
+  }
   viewMode.value = mode;
   if (!menuNovo.value || isCalendarOnly.value) return;
   const resto = Object.fromEntries(
@@ -2292,13 +2378,19 @@ useEmitter(BUS_EVENTS.CRM_OPEN_CARD, cardId =>
 );
 
 onMounted(async () => {
-  // "Ver no CRM" of a campaign result (#1007) opens the board filtered by that campaign mark.
-  const campaignSourceIds = campaignSourceIdsFromQuery(route.query);
-  if (campaignSourceIds.length) {
-    filters.value = { ...filters.value, campaignSourceIds };
+  // Filtros do link: "Ver no CRM" do resultado da campanha (#1007) e os "Ver" do Números (#1883).
+  // Partem do zero, para nenhum filtro antigo da sessão somar ao do link.
+  const doLink = isCalendarOnly.value
+    ? null
+    : filtrosDoLink(route.query, { currentUserId: currentUser.value?.id });
+  if (doLink) {
+    filters.value = { ...defaultFilters(), ...doLink };
+    donoDoLinkPorConferir.value = Boolean(doLink.ownerId);
     await store.dispatch('crmKanban/setFilters', filters.value);
   }
   await refreshData();
+  // A aba de resultado segue o tipo do funil ("ganhos" num funil de Atender vira "resolvidos").
+  if (doLink) await alignResultFilter();
   clearPipelineFromQuery();
   // Seed the per-pipeline column layout for the resolved initial pipeline.
   if (currentPipelineId.value) {
@@ -2858,6 +2950,7 @@ onUnmounted(() => {
       :current-user-id="currentUser?.id"
       :funil="funilDoCalendario"
       :funis="pipelineOptions"
+      :filtro-inicial="filtroDoMeuDia"
       :eh-admin="currentRole === 'administrator'"
       :tem-whatsapp="temWhatsappConectado"
       :reunioes-ligadas="isMeetingFeatureEnabled"
@@ -2878,7 +2971,7 @@ onUnmounted(() => {
       @retry="loadCurrentCalendar"
     />
     <section
-      v-else-if="viewMode === 'calendar'"
+      v-else-if="viewMode === 'calendar' && !meuDiaLigado"
       class="flex min-h-0 flex-1 flex-col px-8 pb-4 pt-1"
     >
       <CrmCalendar

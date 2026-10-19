@@ -43,9 +43,10 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
 
   # Marco de "reset do cronômetro" da Gestão de IA: piso de EXIBIÇÃO via ENV CRM_AI_USAGE_BASELINE_AT
   # (iso8601). Ausente → sem piso (idêntico ao anterior). Nada é apagado; ajustar/remover a ENV
-  # restaura a janela completa. Esconde a telemetria pré-fix de custo/cache que poluía as médias.
+  # restaura a janela completa. Esconde a telemetria pré-fix de custo/cache que poluía as médias. O marco é da
+  # instalação: lido no relógio do servidor, não no fuso da conta (#1876).
   def since
-    [super, parse_time(ENV['CRM_AI_USAGE_BASELINE_AT'].presence)].compact.max
+    [super, parse_time(ENV['CRM_AI_USAGE_BASELINE_AT'].presence, in_zone: Time.zone)].compact.max
   end
 
   def usage_scope

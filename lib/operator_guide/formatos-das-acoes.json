@@ -103,9 +103,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/sources#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:87",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:91"
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:32",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:167",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:171"
     ],
     "sem_corpo": true
   },
@@ -10713,7 +10713,8 @@
           "docx",
           "json",
           "txt",
-          "md"
+          "md",
+          "foto"
         ]
       }
     },
@@ -10747,22 +10748,26 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:9",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:175",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:80",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:137",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:135",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:124",
       "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:95",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:58",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:73",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:87"
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:94",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:93",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:167"
     ],
     "sem_corpo": false
   },
   "POST autonomia/agents/:agent_id/sources/:id/resync": {
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/sources#resync",
+    "modelo": "Autonomia::Agents::Source",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:46",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:87",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:91"
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:167",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:171"
     ],
     "sem_corpo": true
   },
@@ -11054,10 +11059,10 @@
       "leitura crua sem tipo: draft, instruction, task, tone"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:11",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:14",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:17",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:16",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -11082,10 +11087,42 @@
       "leitura crua sem tipo: message"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:34",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:36",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:39",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:63"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/copilot/text": {
+    "campos": {
+      "draft": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "instruction": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "task": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "tone": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/text_copilot#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:18",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:55",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:49"
     ],
     "sem_corpo": false
   },
@@ -13875,7 +13912,7 @@
     "controller": "api/v1/accounts/conversations#unread",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:135",
+      "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:20",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": true
@@ -13893,6 +13930,7 @@
     "origem": [
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:9",
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:26",
+      "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:14",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false

@@ -6,6 +6,7 @@
     "TITULO_SEM_CONTATO": "Com quem você quer falar?",
     "TEXTO": "Escolha por onde falar e escreva a mensagem.",
     "FECHAR": "Fechar",
+    "MAIS_ABAIXO": "Descer para ver o resto",
     "ALTERAR": "Alterar",
     "ALTERAR_PARTE": "Alterar {parte}",
     "MIGALHA": {
@@ -65,16 +66,16 @@
       "PLACEHOLDER": "Escreva aqui o que você quer dizer",
       "ESCREVER": "Escrever a mensagem",
       "ESCREVER_TEXTO": "Você escreve do seu jeito.",
-      "PRONTA": "Usar uma mensagem pronta",
-      "PRONTA_TEXTO": "Um modelo aprovado pelo WhatsApp.",
-      "SO_PRONTA_TITULO": "Escolha uma mensagem pronta",
-      "SO_PRONTA_TEXTO": "No WhatsApp, a primeira mensagem para um cliente precisa ser uma mensagem pronta, aprovada pelo WhatsApp.",
-      "ESCOLHIDA": "Mensagem pronta",
-      "PROCURAR": "Procurar mensagem pronta",
-      "NENHUMA_BUSCA": "Nenhuma mensagem pronta com esse nome.",
-      "SEM_PRONTA": "Este número ainda não tem mensagem pronta aprovada.",
+      "PRONTA": "Usar uma mensagem aprovada",
+      "PRONTA_TEXTO": "Um texto que o WhatsApp já aprovou.",
+      "SO_PRONTA_TITULO": "Escolha uma mensagem aprovada",
+      "SO_PRONTA_TEXTO": "No WhatsApp, a primeira mensagem para um cliente precisa ser uma mensagem aprovada pelo WhatsApp.",
+      "ESCOLHIDA": "Mensagem aprovada",
+      "PROCURAR": "Procurar mensagem aprovada",
+      "NENHUMA_BUSCA": "Nenhuma mensagem aprovada com esse nome.",
+      "SEM_PRONTA": "Este número ainda não tem mensagem aprovada.",
       "SEM_PRONTA_PECA": "Peça a quem administra a conta para criar uma.",
-      "CRIAR_PRONTA": "Criar mensagem pronta",
+      "CRIAR_PRONTA": "Criar mensagem para aprovar",
       "ASSUNTO": "Assunto",
       "ASSUNTO_PLACEHOLDER": "Sobre o que é o e-mail",
       "MAIS_OPCOES": "Mais opções",
@@ -85,7 +86,7 @@
       "CAMPO_ROTULO": "O que entra no lugar de ⟨{campo}⟩",
       "CAMPO_FALADO": "campo {campo}",
       "CAMPO_EXEMPLO": "Ex.: {exemplo}",
-      "SO_PRONTA_CONVERSA": "Agora, nesta conversa, o WhatsApp só aceita mensagem pronta. Isso acontece quando a pessoa não escreve há mais de 24 horas."
+      "SO_PRONTA_CONVERSA": "Agora, nesta conversa, o WhatsApp só aceita mensagem aprovada. Isso acontece quando a pessoa não escreve há mais de 24 horas."
     },
     "PREVIA": {
       "TITULO": "Como {nome} recebe",
@@ -105,8 +106,8 @@
         "CANAL": "Escolha por onde falar",
         "ASSUNTO": "Escreva o assunto",
         "MENSAGEM": "Escreva a mensagem",
-        "MODELO": "Escolha uma mensagem pronta",
-        "CAMPOS": "Preencha os campos da mensagem pronta",
+        "MODELO": "Escolha uma mensagem aprovada",
+        "CAMPOS": "Preencha os campos da mensagem aprovada",
         "CONVERSA": "Aguarde, conferindo a conversa"
       }
     },

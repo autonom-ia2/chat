@@ -6,6 +6,7 @@
     "TITULO_SEM_CONTATO": "Who do you want to talk to?",
     "TEXTO": "Choose where to talk and write the message.",
     "FECHAR": "Close",
+    "MAIS_ABAIXO": "Scroll down to see the rest",
     "ALTERAR": "Change",
     "ALTERAR_PARTE": "Change {parte}",
     "MIGALHA": {
@@ -65,16 +66,16 @@
       "PLACEHOLDER": "Write what you want to say here",
       "ESCREVER": "Write the message",
       "ESCREVER_TEXTO": "You write it your way.",
-      "PRONTA": "Use a ready-made message",
-      "PRONTA_TEXTO": "A message approved by WhatsApp.",
-      "SO_PRONTA_TITULO": "Choose a ready-made message",
-      "SO_PRONTA_TEXTO": "On WhatsApp, the first message to a customer must be a ready-made message approved by WhatsApp.",
-      "ESCOLHIDA": "Ready-made message",
-      "PROCURAR": "Search ready-made messages",
-      "NENHUMA_BUSCA": "No ready-made message with that name.",
-      "SEM_PRONTA": "This number has no approved ready-made message yet.",
+      "PRONTA": "Use an approved message",
+      "PRONTA_TEXTO": "A text WhatsApp has already approved.",
+      "SO_PRONTA_TITULO": "Choose an approved message",
+      "SO_PRONTA_TEXTO": "On WhatsApp, the first message to a customer must be a message approved by WhatsApp.",
+      "ESCOLHIDA": "Approved message",
+      "PROCURAR": "Search approved messages",
+      "NENHUMA_BUSCA": "No approved message with that name.",
+      "SEM_PRONTA": "This number has no approved message yet.",
       "SEM_PRONTA_PECA": "Ask whoever manages the account to create one.",
-      "CRIAR_PRONTA": "Create a ready-made message",
+      "CRIAR_PRONTA": "Create a message for approval",
       "ASSUNTO": "Subject",
       "ASSUNTO_PLACEHOLDER": "What the email is about",
       "MAIS_OPCOES": "More options",
@@ -85,7 +86,7 @@
       "CAMPO_ROTULO": "What goes in place of ⟨{campo}⟩",
       "CAMPO_FALADO": "field {campo}",
       "CAMPO_EXEMPLO": "E.g. {exemplo}",
-      "SO_PRONTA_CONVERSA": "Right now WhatsApp only accepts a ready-made message in this conversation. This happens when the customer has not written for more than 24 hours."
+      "SO_PRONTA_CONVERSA": "Right now WhatsApp only accepts an approved message in this conversation. This happens when the customer has not written for more than 24 hours."
     },
     "PREVIA": {
       "TITULO": "How {nome} receives it",
@@ -105,8 +106,8 @@
         "CANAL": "Choose where to talk",
         "ASSUNTO": "Write the subject",
         "MENSAGEM": "Write the message",
-        "MODELO": "Choose a ready-made message",
-        "CAMPOS": "Fill in the fields of the ready-made message",
+        "MODELO": "Choose an approved message",
+        "CAMPOS": "Fill in the fields of the approved message",
         "CONVERSA": "Wait, checking the conversation"
       }
     },

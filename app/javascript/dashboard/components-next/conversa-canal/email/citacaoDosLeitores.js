@@ -3,6 +3,7 @@
 // do Outlook em qualquer idioma (o extrator só procura "From:" e "Sent:" em inglês).
 // Lê a estrutura do HTML (DOM), sem regex. Devolve o HTML sem a citação e se achou.
 import DOMPurify from 'dompurify';
+import { cortarCitacaoComSinal } from './citacaoComSinal';
 
 // Outlook marca o começo da resposta citada com estes ids (web, Windows e Mac).
 const INICIOS_DO_OUTLOOK = [
@@ -29,9 +30,9 @@ const cortarDaqui = elemento => {
   }
 };
 
-export const semCitacaoDosLeitores = html => {
-  const raiz = document.createElement('div');
-  raiz.innerHTML = DOMPurify.sanitize(String(html || ''));
+// Corta, na própria árvore (o body do documento ou uma div), a citação dos leitores e
+// diz se achou. O #1884 usa direto no documento inteiro, sem perder <head> e <body>.
+export const cortarCitacaoDosLeitores = raiz => {
   let achou = false;
 
   raiz.querySelectorAll('blockquote[type="cite"]').forEach(bloco => {
@@ -51,5 +52,15 @@ export const semCitacaoDosLeitores = html => {
     cortarDaqui(inicio);
   }
 
+  // Histórico em texto, com ">" no começo das linhas (Mail do iPhone, texto puro).
+  if (cortarCitacaoComSinal(raiz)) achou = true;
+
+  return achou;
+};
+
+export const semCitacaoDosLeitores = html => {
+  const raiz = document.createElement('div');
+  raiz.innerHTML = DOMPurify.sanitize(String(html || ''));
+  const achou = cortarCitacaoDosLeitores(raiz);
   return { html: raiz.innerHTML, achou };
 };

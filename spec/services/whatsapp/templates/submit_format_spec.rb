@@ -61,7 +61,7 @@ RSpec.describe Whatsapp::Templates::SubmitFormat do
     end
 
     prontos.each do |pronto|
-      label = "#{pronto['idioma']}/#{pronto['chave']}"
+      label = "#{pronto['idioma']}/#{pronto['pacote'] || 'geral'}/#{pronto['chave']}"
 
       it "#{label} passa na forma que a Meta exige" do
         expect(described_class.problems(pronto['corpo'])).to eq([])

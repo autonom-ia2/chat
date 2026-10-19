@@ -30,8 +30,10 @@ import {
   lerMetaSync,
   lerResultados,
   metaDoMes,
+  moedaDoFunil,
   payloadDoFunil,
   resultadosPadrao,
+  simboloDaMoeda,
 } from './funil/funilForm';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
@@ -235,10 +237,15 @@ const mudarEtapa = mudanca => {
 };
 
 // ——— Dados de apoio ———
+// #1876 — a meta mostra a moeda do funil, não sempre real.
+const moedaDaMeta = computed(() => moedaDoFunil(props.pipeline));
+const simboloDaMeta = computed(() =>
+  simboloDaMoeda(moedaDaMeta.value, locale.value.replace('_', '-'))
+);
 const formatMoney = value =>
   new Intl.NumberFormat(locale.value.replace('_', '-'), {
     style: 'currency',
-    currency: 'BRL',
+    currency: moedaDaMeta.value,
     maximumFractionDigits: 0,
   }).format(Number(value));
 const juntarNomes = nomes =>
@@ -638,6 +645,7 @@ useFixedPanelPresence(computed(() => props.show));
               v-model:meta="form.monthlyTarget"
               v-model:sucesso="form.outcomeLabels.success"
               v-model:fracasso="form.outcomeLabels.failure"
+              :moeda="simboloDaMeta"
               :padrao-sucesso="defaultOutcomeLabels.success"
               :padrao-fracasso="defaultOutcomeLabels.failure"
             />
