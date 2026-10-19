@@ -7,10 +7,12 @@ const corpo = html =>
   new DOMParser().parseFromString(htmlComCssSeguro(html), 'text/html');
 
 describe('htmlComCssSeguro', () => {
-  it('tira o style inline com "<" e mantém o inline comum', () => {
+  it('tira o style inline com "</" e mantém o inline comum (e o "<" sozinho)', () => {
     const doc = corpo(
-      '<p id="a" style="font-family:\'a<b\'">x</p><p id="b" style="color:red">y</p>'
+      '<p id="a" style="font-family:\'a</b\'">x</p><p id="b" style="color:red">y</p>' +
+        '<p id="c" style="font-family:\'a<b\'">z</p>'
     );
+    expect(doc.getElementById('c').getAttribute('style')).toContain('a<b');
     expect(doc.getElementById('a').hasAttribute('style')).toBe(false);
     expect(doc.getElementById('b').getAttribute('style')).toContain('red');
   });
