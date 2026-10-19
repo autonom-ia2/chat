@@ -32,6 +32,8 @@ const props = defineProps({
   podeRegistros: { type: Boolean, default: false },
   // A conta usa empresas (feature companies).
   empresas: { type: Boolean, default: false },
+  // Sem ver contatos (#1849): a pessoa só para ver e sem a empresa.
+  podeVerContatos: { type: Boolean, default: true },
   arquivando: { type: Boolean, default: false },
   // #1498 — Negócio (Vender) ou Assunto (Atender), e Cobrança.
   jeito: { type: Object, required: true },
@@ -70,7 +72,9 @@ const respondeNoPasso = computed(
 const contato = computed(() => props.card.contact || null);
 const ehCliente = computed(() => contato.value?.contact_type === 'customer');
 const empresa = computed(() => props.card.company?.name || '');
-const mostraEmpresa = computed(() => props.empresas || Boolean(empresa.value));
+const mostraEmpresa = computed(
+  () => props.podeVerContatos && (props.empresas || Boolean(empresa.value))
+);
 
 // ——— Negócio ———
 const posicao = computed(() =>
@@ -214,14 +218,18 @@ const temConversa = computed(() =>
         parte="contato"
         icone="i-lucide-contact-round"
         tom="bg-n-teal-3 text-n-teal-11"
-        :titulo="t(`${R}.CONTATO_EMPRESA`)"
-        :acao="podeGerenciar || podeRegistros ? 'alterar' : 'ver'"
+        :titulo="t(`${R}.${podeVerContatos ? 'CONTATO_EMPRESA' : 'CONTATO'}`)"
+        :acao="
+          podeVerContatos && (podeGerenciar || podeRegistros)
+            ? 'alterar'
+            : 'ver'
+        "
         :rotulo-acao="t(`${R}.CONTATO`)"
         @abrir="$emit('abrir', 'contato')"
       >
         <template #titulo>
           <span class="inline-flex flex-wrap items-center gap-2">
-            {{ t(`${R}.CONTATO_EMPRESA`) }}
+            {{ t(`${R}.${podeVerContatos ? 'CONTATO_EMPRESA' : 'CONTATO'}`) }}
             <CustomerBadge
               v-if="contato"
               :contact="contato"

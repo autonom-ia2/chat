@@ -11,6 +11,7 @@ import { usePele } from '../../conversa-canal/pele';
 import { numeroParaConversar } from '../../conversa-canal/midia/contatos';
 import { useAcoesDoContato } from '../../conversa-canal/midia/useAcoesDoContato';
 import NovaConversaEntrada from '../../NovaConversa/NovaConversaEntrada.vue';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 
 const { attachments, contentAttributes } = useMessageContext();
 // #1702: com a pele do WhatsApp, o cartão de contato do app.
@@ -83,8 +84,13 @@ async function talkToContact() {
   if (id) contactToTalk.value = id;
 }
 
+// Salvar e Conversar procuram o número na base de contatos: pedem ver contatos (#1849).
+const { canViewRelationshipRecords } = useRelationshipPermissions();
 const temAcao = computed(
-  () => formattedPhoneNumber.value && !isContactInfoResponse.value
+  () =>
+    canViewRelationshipRecords.value &&
+    formattedPhoneNumber.value &&
+    !isContactInfoResponse.value
 );
 
 const action = computed(() => ({

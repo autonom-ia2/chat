@@ -14,7 +14,7 @@ class Crm::Cards::CreateParamsResolver
 
     resolve_account_record(:pipeline_id, @account.crm_pipelines)
     resolve_account_record(:stage_id, @account.crm_pipeline_stages)
-    resolve_account_record(:contact_id, @account.contacts)
+    resolve_contact_id
     resolve_inbox_id
     resolve_account_record(:owner_id, @account.users)
     resolve_account_record(:team_id, @account.teams)
@@ -27,6 +27,15 @@ class Crm::Cards::CreateParamsResolver
     return if @attributes[attribute].blank?
 
     @attributes[attribute] = relation.find(@attributes[attribute]).id
+  end
+
+  # O card devolve o contato vinculado (#1849): só vincula quem vê esse contato.
+  def resolve_contact_id
+    return if @attributes[:contact_id].blank?
+
+    contact = @account.contacts.find(@attributes[:contact_id])
+    Pundit.authorize(@user_context, contact, :attach?)
+    @attributes[:contact_id] = contact.id
   end
 
   def resolve_inbox_id
