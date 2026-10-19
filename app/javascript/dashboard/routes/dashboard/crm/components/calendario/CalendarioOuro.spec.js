@@ -226,7 +226,7 @@ describe('CalendarioOuro', () => {
 
     const secao = () => wrapper.find('[data-secao="atrasados"]');
     expect(secao().text()).not.toContain('Coisa antiga');
-    // "Passar tudo" só leva o que a pessoa está vendo.
+    // "Passar os meus" só leva o que está à vista.
     await wrapper.find('[data-adiar-todos]').trigger('click');
     expect(
       wrapper.emitted('adiarAtrasados')[0][0].eventos.map(e => e.id)
@@ -259,7 +259,7 @@ describe('CalendarioOuro', () => {
     );
   });
 
-  it('"Passar tudo para amanhã" leva os atrasados para amanhã, 09:00', async () => {
+  it('"Passar os meus para amanhã" leva os atrasados para amanhã, 09:00', async () => {
     const wrapper = montar();
     await flushPromises();
     await wrapper.find('[data-adiar-todos]').trigger('click');
@@ -281,7 +281,7 @@ describe('CalendarioOuro', () => {
     automatic_send: true,
   };
 
-  it('"Passar tudo para amanhã" deixa de fora o aviso de envio ao cliente', async () => {
+  it('"Passar os meus para amanhã" deixa de fora o aviso de envio ao cliente', async () => {
     const wrapper = montar({ events: [...EVENTOS, AVISO_DE_ENVIO] });
     await flushPromises();
     expect(wrapper.find('[data-secao="atrasados"]').text()).toContain(
@@ -294,7 +294,7 @@ describe('CalendarioOuro', () => {
     expect(carga.eventos.map(e => e.id)).toEqual(['follow_up_1']);
   });
 
-  it('sem lembrete para passar, o "Passar tudo" não aparece', async () => {
+  it('sem lembrete para passar, o "Passar os meus" não aparece', async () => {
     const wrapper = montar({ events: [AVISO_DE_ENVIO] });
     await flushPromises();
 
@@ -329,7 +329,8 @@ describe('CalendarioOuro', () => {
   });
 
   it('sem atrasado da própria pessoa, o "Passar os meus" não aparece', async () => {
-    const wrapper = montar({ events: [DA_EQUIPE] });
+    const semDono = { ...DA_EQUIPE, id: 'follow_up_6', assignee_id: null };
+    const wrapper = montar({ events: [DA_EQUIPE, semDono] });
     await flushPromises();
 
     expect(wrapper.find('[data-secao="atrasados"]').exists()).toBe(true);

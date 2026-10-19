@@ -94,7 +94,7 @@ export const paraItem = (evento, { fuso, agora }) => {
     atrasado: tipo === 'lembrete' && !feito && !virtual && inicio < agora,
     podeConcluir: tipo === 'lembrete' && !feito && !virtual,
     // #1855: envio ao cliente (mensagem marcada, ou o aviso de uma que não
-    // saiu). Fica fora do "Passar tudo para amanhã".
+    // saiu). Fica fora do "Passar os meus para amanhã".
     envio: tipo === 'mensagem' || evento.automatic_send === true,
     // #1590: por que a mensagem marcada não saiu (código; a frase é da tela).
     falha: evento.send_error_code || '',

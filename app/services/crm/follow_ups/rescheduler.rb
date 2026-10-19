@@ -31,7 +31,7 @@ class Crm::FollowUps::Rescheduler
   class PastDueError < StandardError; end
   class NotAReminderError < StandardError; end
 
-  # reminders_only (#1855): o reagendamento em lote do calendário ("Passar tudo para amanhã") só move lembrete de uma
+  # reminders_only (#1855): o reagendamento em lote do calendário ("Passar os meus para amanhã") só move lembrete de uma
   # pessoa. Envio ao cliente, inclusive o aviso de um que caiu, é recusado e fica como está; item a item, segue como antes.
   def initialize(follow_up:, user:, due_at:, reminders_only: false)
     @follow_up = follow_up

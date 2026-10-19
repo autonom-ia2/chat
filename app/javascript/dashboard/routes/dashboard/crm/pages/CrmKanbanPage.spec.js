@@ -403,7 +403,7 @@ describe('CrmKanbanPage', () => {
       );
     });
 
-    it('"Passar tudo" diz quantos passaram quando parte falha', async () => {
+    it('"Passar os meus" diz quantos passaram quando parte falha', async () => {
       wrapper = await mountPage({
         calendarOnly: true,
         account: { calendarioOuro: true },
@@ -429,7 +429,7 @@ describe('CrmKanbanPage', () => {
     });
 
     // #1855: o lote pede ao servidor só lembretes; envio ao cliente é recusado.
-    it('"Passar tudo" pede o reagendamento só de lembretes', async () => {
+    it('"Passar os meus" pede o reagendamento só de lembretes', async () => {
       wrapper = await mountPage({
         calendarOnly: true,
         account: { calendarioOuro: true },
