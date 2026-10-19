@@ -78,4 +78,26 @@ RSpec.describe Autonomia::Agents::Source do
       expect(fresh.review_status).to eq('needs_review')
     end
   end
+
+  # #1426 — a foto da criação é material da base: tipo próprio, com anexo de imagem. Imagem continua recusada nos outros
+  # tipos (um "pdf" que é foto não passa).
+  describe 'foto' do
+    def com_anexo(source_type, content_type)
+      source = described_class.new(account: account, agent: agent, source_type: source_type, reference: 'x')
+      source.file.attach(io: StringIO.new('bytes'), filename: 'x', content_type: content_type, identify: false)
+      source
+    end
+
+    it 'accepts a photo as a foto source' do
+      expect(com_anexo('foto', 'image/jpeg')).to be_valid
+    end
+
+    it 'refuses a photo in a source of another type' do
+      expect(com_anexo('pdf', 'image/jpeg')).not_to be_valid
+    end
+
+    it 'refuses a document in a foto source' do
+      expect(com_anexo('foto', 'application/pdf')).not_to be_valid
+    end
+  end
 end

@@ -340,6 +340,30 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(thread.state['applied']).to be(false)
       end
     end
+
+    # #1426 — a foto da criação já chegou ao Construtor na conversa; a cópia dela na base, reprovada, não segura o
+    # fechamento (o agente só não a usa até a pessoa resolver).
+    context 'when only the photo of the creation was sent back by the reviewer' do
+      before do
+        thread.append_message!('user', 'Quero uma SDR')
+        stub_model_output(interview_payload)
+        builder.run!(thread.begin_build!)
+        Autonomia::Agents::Source.create!(account: account, agent: thread.reload.agent, source_type: 'foto',
+                                          status: :ready, review_status: 'needs_resend')
+        thread.append_message!('user', 'é isso')
+      end
+
+      it 'lets the model close the instruction' do
+        # Arrange
+        stub_model_output(interview_payload('needs_more_info' => false, 'next_question' => ''))
+
+        # Act
+        builder.run!(thread.begin_build!)
+
+        # Assert
+        expect(thread.reload.state['applied']).to be(true)
+      end
+    end
   end
 
   # O ApplicationRecord valida o tamanho de TODA coluna string (255) e text (20.000). Sem teto, o

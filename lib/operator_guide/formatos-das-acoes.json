@@ -10689,7 +10689,8 @@
           "docx",
           "json",
           "txt",
-          "md"
+          "md",
+          "foto"
         ]
       }
     },

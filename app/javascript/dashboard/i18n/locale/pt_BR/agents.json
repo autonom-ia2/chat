@@ -1105,7 +1105,8 @@
           "VER_ARIA": "Ver o que sabe",
           "N_FONTES": "1 arquivo ou site | {n} arquivos e sites",
           "SO_CONVERSA": "Só o que você contou na conversa",
-          "N_PERGUNTAS": "Há 1 pergunta de cliente para conferir. | Há {n} perguntas de clientes para conferir."
+          "N_PERGUNTAS": "Há 1 pergunta de cliente para conferir. | Há {n} perguntas de clientes para conferir.",
+          "N_PROBLEMAS": "1 coisa no material precisa de você. | {n} coisas no material precisam de você."
         },
         "BLOCO_ONDE": {
           "TITULO": "Onde e quando responde",
@@ -1268,7 +1269,10 @@
           "PERGUNTA": "Pergunta",
           "RESPOSTA_ROTULO": "Resposta",
           "ENSINAR": "Ensinar",
-          "ENSINOU": "Pronto. {nome} já sabe responder isso."
+          "ENSINOU": "Pronto. {nome} já sabe responder isso.",
+          "REVISANDO": "Revisando…",
+          "ATENCAO": "Precisa de você",
+          "LENDO_FOTO": "Lendo o texto da foto…"
         },
         "ONDE": {
           "TITULO": "Onde e quando {nome} responde",

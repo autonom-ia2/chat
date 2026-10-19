@@ -1840,7 +1840,9 @@ module Autonomia
         # GAP (A): só fontes de CONHECIMENTO travam o portão. Mídias de envio (kind=media) nunca são
         # revisadas (review_status nil), então nunca disparam needs_resend — escopo explícito por
         # garantia/clareza.
-        agent.sources.knowledge_sources.where(review_status: 'needs_resend').exists?
+        # #1426: a foto da criação já chegou ao Construtor na conversa; a cópia dela na base não segura o fechamento.
+        agent.sources.knowledge_sources.where(review_status: 'needs_resend')
+             .where.not(source_type: Autonomia::Agents::Source::FOTO).exists?
       end
 
       # O rótulo de uso varia pela fase da CHAMADA; a chave de cache NÃO (#1367): uma só por conta, a mesma nas

@@ -92,7 +92,9 @@ module Autonomia
       # limite (pipeline distinto). Aplicado no SourcesController#create e refletido no dropzone do FE.
       MAX_KNOWLEDGE_SOURCES = 30
 
-      SOURCE_TYPES = %w[link pdf xlsx docx json txt md].freeze
+      # #1426 — `foto`: a foto mandada na criação, lida por OCR (Processors::Foto) e revisada como os outros.
+      FOTO = 'foto'.freeze
+      SOURCE_TYPES = (%w[link pdf xlsx docx json txt md] + [FOTO]).freeze
       # Teto de tamanho do ANEXO comprimido (defesa contra upload gigante / zip-bomb). O cap do
       # tamanho DESCOMPRIMIDO de docx/xlsx é aplicado no processor.
       MAX_FILE_BYTES = 25.megabytes
@@ -237,7 +239,12 @@ module Autonomia
         return unless file.attached?
 
         errors.add(:file, 'too_large') if file.blob.byte_size > MAX_FILE_BYTES
-        errors.add(:file, 'unsupported_content_type') unless ALLOWED_CONTENT_TYPES.include?(file.blob.content_type)
+        errors.add(:file, 'unsupported_content_type') unless allowed_content_types.include?(file.blob.content_type)
+      end
+
+      # Imagem só na foto (#1426), e a foto só com imagem.
+      def allowed_content_types
+        source_type == FOTO ? Autonomia::Agents::Config::IMAGE_CONTENT_TYPES : ALLOWED_CONTENT_TYPES
       end
 
       # Escreve só se a ingestão identificada por `token` ainda for a ativa e ainda processing.

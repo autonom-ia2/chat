@@ -10,7 +10,6 @@ module Autonomia
           # Abaixo deste tamanho (após strip) a extração é "quase vazia" (PDF escaneado / só imagem):
           # vale tentar OCR em vez de marcar a fonte como falha por texto ausente.
           OCR_MIN_CHARS = 20
-          OCR_LANGUAGE = 'por'.freeze
 
           # OCR é OPCIONAL porque o custo dele não tem teto: rasteriza página por página a 300 DPI e
           # passa cada uma pelo tesseract. Num PDF escaneado de poucos MB isso são dezenas de páginas
@@ -69,7 +68,7 @@ module Autonomia
             image.pages.each_with_index do |page, index|
               page_image = MiniMagick::Image.open(page.path)
               page_image.density(300)
-              out << RTesseract.new(page_image.path, lang: OCR_LANGUAGE).to_s.to_s
+              out << Ocr.ler(page_image.path)
               out << "\n" if index < image.pages.size - 1
             end
             out

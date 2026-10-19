@@ -14,6 +14,7 @@ import {
   enderecoDoSite,
   nomeDaFonte,
 } from '../../utils/pagina';
+import { estadoDoMaterial } from '../../utils/estadoDoMaterial';
 
 // #1181 PR3 (protótipo T09) — "O que {nome} sabe": o resumo, os arquivos e sites (lendo, pronto ou
 // não consegui ler) e, para quem gerencia, mandar arquivo (até 25 MB) ou site, ler de novo, tirar e
@@ -29,6 +30,9 @@ const props = defineProps({
   // Só na primeira leitura (as releituras mantêm a lista na tela).
   carregandoFontes: { type: Boolean, default: false },
   erroLer: { type: Boolean, default: false },
+  // #1426 — na Fase 2 cada linha mostra o estado real (Lendo → Revisando → Pronto ou Precisa de você). Fora dela, o de
+  // hoje.
+  fase2: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler']);
@@ -52,6 +56,7 @@ const dialogoTirar = ref(null);
 const botaoArquivo = ref(null);
 
 const lista = computed(() => props.fontes || []);
+const estadoDe = fonte => (props.fase2 ? estadoDoMaterial(fonte) : '');
 
 // "Além da conversa, {nome} usa estes arquivos e sites…" só quando há arquivo ou site; sem eles, o
 // vazio já diz que sabe só o que foi contado.
@@ -329,6 +334,7 @@ const tirar = () => remover(tirando.value);
         :fonte="fonte"
         :nome-agente="nome"
         :relendo="fonte.id in relendo"
+        :estado="estadoDe(fonte)"
         :pode-gerenciar="podeGerenciar"
         @ler-de-novo="lerDeNovo"
         @tirar="pedirTirar"

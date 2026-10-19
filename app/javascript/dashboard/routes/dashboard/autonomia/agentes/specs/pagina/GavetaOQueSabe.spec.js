@@ -112,6 +112,79 @@ describe('GavetaOQueSabe', () => {
     wrapper.unmount();
   });
 
+  // #1426 — na Fase 2, "Pronto" só depois de a revisão aprovar: Lendo → Revisando → Pronto ou Precisa de você.
+  describe('real state of the material (Fase 2)', () => {
+    const REVISADO = '2026-10-19T12:00:00Z';
+
+    it('shows reading, reviewing, ready and needs-you in words', async () => {
+      preparar([
+        fonte(1, { status: 'processing', review: { status: 'needs_review' } }),
+        fonte(2, { review: { status: 'needs_review', reviewed_at: null } }),
+        fonte(3, { review: { status: 'accepted', reviewed_at: REVISADO } }),
+        fonte(4, { review: { status: 'needs_resend', reviewed_at: REVISADO } }),
+        fonte(5, { status: 'failed' }),
+      ]);
+      const wrapper = montar({ fase2: true });
+      await nextTick();
+
+      expect(todos('[data-fonte]').map(f => f.dataset.estado)).toEqual([
+        'lendo',
+        'revisando',
+        'pronto',
+        'atencao',
+        'falha',
+      ]);
+      const textos = todos('[data-estado-texto]').map(e => e.textContent);
+      expect(textos[1]).toContain('SABE.REVISANDO');
+      expect(textos[1]).not.toContain('SABE.PRONTO');
+      expect(textos[3]).toContain('SABE.ATENCAO');
+      wrapper.unmount();
+    });
+
+    it('shows only the label on a material sent back, without the problem card', async () => {
+      preparar([
+        fonte(4, { review: { status: 'needs_resend', reviewed_at: REVISADO } }),
+      ]);
+      const wrapper = montar({ fase2: true });
+      await nextTick();
+
+      expect(no('[data-fonte]').textContent).toContain('SABE.ATENCAO');
+      expect(no('[data-mandar-outro]')).toBeNull();
+      expect(no('[data-fonte]').textContent).not.toContain('SABE.FALHA_TEXTO');
+      wrapper.unmount();
+    });
+
+    it('says it is reading the text of the photo of the creation', async () => {
+      preparar([
+        fonte(6, {
+          source_type: 'foto',
+          reference: 'tabela.jpg',
+          status: 'processing',
+          review: null,
+        }),
+      ]);
+      const wrapper = montar({ fase2: true });
+      await nextTick();
+
+      expect(no('[data-estado-texto]').textContent).toContain(
+        'SABE.LENDO_FOTO'
+      );
+      expect(no('[data-fonte] .i-lucide-image')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('keeps today states without the Fase 2', async () => {
+      preparar([
+        fonte(2, { review: { status: 'needs_review', reviewed_at: null } }),
+      ]);
+      const wrapper = montar();
+      await nextTick();
+
+      expect(no('[data-fonte]').dataset.estado).toBe('pronto');
+      wrapper.unmount();
+    });
+  });
+
   it('says it knows only the conversation when there are no files', async () => {
     const wrapper = montar();
     await nextTick();

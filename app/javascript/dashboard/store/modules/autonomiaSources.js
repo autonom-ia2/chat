@@ -1,5 +1,6 @@
 import AutonomiaSourcesAPI from '../../api/autonomia/sources';
 import { throwErrorMessage } from 'dashboard/store/utils/api';
+import { aguardandoRevisao } from 'dashboard/routes/dashboard/autonomia/agentes/utils/estadoDoMaterial';
 
 // Knowledge sources are a per-agent sub-resource (no global records-by-id list),
 // so this module is hand-rolled rather than using the CRUD factory. State holds
@@ -9,17 +10,22 @@ import { throwErrorMessage } from 'dashboard/store/utils/api';
 // `pending`/`processing` and only flips to `ready`/`failed` later. We poll
 // `fetch` while any source is still ingesting so the UI reflects progress.
 const POLL_INTERVAL = 4000;
+// #1426 — teto da releitura: ~10 min seguidos sem tudo assentar (um catálogo grande com OCR cabe). Volta a contar
+// quando a pessoa manda ou relê um material.
+const MAX_POLL_ROUNDS = 150;
 const INGESTING_STATUSES = ['pending', 'processing'];
 
 let pollTimer = null;
+let pollRounds = 0;
 
 // A source is still "settling" while it ingests (pending/processing) OR while it
-// has finished ingesting (`ready`) but the quality review has not landed yet
-// (`review.status == null`). The Revisor runs after ingestion, so a `ready`
-// source with no review is still in flight as far as the Materiais UI cares.
+// has finished ingesting but the quality review has not landed yet. #1426: the
+// ingestion writes `needs_review` at its start, so "no review yet" is
+// needs_review without `reviewed_at` (utils/estadoDoMaterial). A source with no
+// verdict at all (older than the Revisor, or a media to send) never gets one, so
+// it does not keep the loop alive.
 const isIngesting = source =>
-  INGESTING_STATUSES.includes(source?.status) ||
-  (source?.status === 'ready' && source?.review?.status == null);
+  INGESTING_STATUSES.includes(source?.status) || aguardandoRevisao(source);
 
 export const state = {
   records: [],
@@ -139,7 +145,7 @@ export const actions = {
       const { data } = await AutonomiaSourcesAPI.create(agentId, descriptor);
       const source = data.payload || data;
       commit('UPSERT', source);
-      dispatch('schedulePoll', { agentId, records: [source] });
+      dispatch('schedulePoll', { agentId, records: [source], novo: true });
       return source;
     } catch (error) {
       return throwErrorMessage(error);
@@ -167,7 +173,7 @@ export const actions = {
       const { data } = await AutonomiaSourcesAPI.resync(agentId, sourceId);
       const source = data.payload || data;
       commit('UPSERT', source);
-      dispatch('schedulePoll', { agentId, records: [source] });
+      dispatch('schedulePoll', { agentId, records: [source], novo: true });
       return source;
     } catch (error) {
       return throwErrorMessage(error);
@@ -177,16 +183,25 @@ export const actions = {
   },
 
   // Starts a single polling loop while any source is still ingesting; clears
-  // itself once everything settles. Idempotent: never stacks timers.
-  schedulePoll: ({ dispatch }, { agentId, records = [] }) => {
-    if (pollTimer || !records.some(isIngesting)) return;
+  // itself once everything settles or after MAX_POLL_ROUNDS rounds in a row.
+  // `novo`: the person just sent or re-read a source, so the count starts over.
+  // Idempotent: never stacks timers.
+  schedulePoll: ({ dispatch }, { agentId, records = [], novo = false }) => {
+    if (novo) pollRounds = 0;
+    if (!records.some(isIngesting)) {
+      if (!pollTimer) pollRounds = 0;
+      return;
+    }
+    if (pollTimer || pollRounds >= MAX_POLL_ROUNDS) return;
     pollTimer = setTimeout(async () => {
       pollTimer = null;
+      pollRounds += 1;
       await dispatch('fetch', { agentId });
     }, POLL_INTERVAL);
   },
 
   stopPolling: () => {
+    pollRounds = 0;
     if (pollTimer) {
       clearTimeout(pollTimer);
       pollTimer = null;

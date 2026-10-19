@@ -13,7 +13,8 @@ module Autonomia
             'json' => Json,
             'pdf'  => Pdf,
             'xlsx' => Xlsx,
-            'docx' => Docx
+            'docx' => Docx,
+            'foto' => Foto
           }.freeze
 
           def self.for(source)
