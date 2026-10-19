@@ -8,6 +8,8 @@ import AgenteErro from '../AgenteErro.vue';
 import MaterialLinha from './MaterialLinha.vue';
 import PerguntasParaConferir from './PerguntasParaConferir.vue';
 import DialogoAcao from './DialogoAcao.vue';
+import UmProblemaPorVez from './UmProblemaPorVez.vue';
+import AutotesteDoMaterial from './AutotesteDoMaterial.vue';
 import {
   MAX_ARQUIVO,
   MAX_FOTO,
@@ -38,9 +40,12 @@ const props = defineProps({
   // #1426 — na Fase 2 cada linha mostra o estado real (Lendo → Revisando → Pronto ou Precisa de você). Fora dela, o de
   // hoje.
   fase2: { type: Boolean, default: false },
+  // #1426 (4b) — as conferências e o autoteste do material (composables/useConferenciasDoMaterial). Só na Fase 2 e fora
+  // da Lia; null: a gaveta fica sem o "um problema por vez" e sem o autoteste.
+  conferencias: { type: Object, default: null },
 });
 
-const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler']);
+const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler', 'corrigir']);
 
 const { t } = useI18n();
 const store = useStore();
@@ -61,7 +66,10 @@ const dialogoTirar = ref(null);
 const botaoArquivo = ref(null);
 
 const lista = computed(() => props.fontes || []);
-const estadoDe = fonte => (props.fase2 ? estadoDoMaterial(fonte) : '');
+const problemas = computed(() => props.conferencias?.problemas.value || []);
+const autoteste = computed(() => props.conferencias?.autoteste.value || null);
+const estadoDe = fonte =>
+  props.fase2 ? estadoDoMaterial(fonte, problemas.value) : '';
 
 // #1426 — "Lendo…" ou "Revisando…" parado além do teto da releitura (o worker caiu): a linha libera "Ler de novo",
 // para arquivo e foto (o servidor aceita a releitura do que passou do mesmo teto). Só na Fase 2 (estadoDe). O relógio
@@ -260,6 +268,50 @@ const pedirTirar = fonte => {
 };
 
 const tirar = () => remover(tirando.value);
+
+// #1426 (4b) — as saídas do cartão "um problema por vez". Mandar outro troca o material (como no "Mandar outro" da
+// linha); mandar novo (páginas de fora) acrescenta um arquivo sem tirar o lido. Escolha que o servidor recusa (o
+// problema já mudou): a lista é relida e o aviso fica ao lado.
+const resolvendo = ref('');
+const erroConferencia = ref('');
+const fontePorId = id => lista.value.find(fonte => fonte.id === id) || null;
+const resolver = async (problemaId, escolha) => {
+  resolvendo.value = problemaId;
+  erroConferencia.value = '';
+  try {
+    await props.conferencias.resolver(problemaId, escolha);
+  } catch (erro) {
+    erroConferencia.value = erro?.response?.data?.error || t(`${NS}.ERRO`);
+    props.conferencias.ler();
+  } finally {
+    resolvendo.value = '';
+  }
+};
+const mandarOutroDoProblema = id => escolherArquivo(fontePorId(id));
+const tirarDoProblema = id => pedirTirar(fontePorId(id));
+
+const pedindoAutoteste = ref(false);
+const testarDeNovo = async () => {
+  pedindoAutoteste.value = true;
+  erroConferencia.value = '';
+  try {
+    await props.conferencias.pedirAutoteste();
+  } catch (erro) {
+    erroConferencia.value = erro?.response?.data?.error || t(`${NS}.ERRO`);
+  } finally {
+    pedindoAutoteste.value = false;
+  }
+};
+
+// "Tudo certo" só quando as conferências já leram, nada precisa da pessoa e nenhum material ainda está sendo lido ou
+// revisado (antes disso, "tudo certo" seria cedo).
+const tudoCerto = computed(
+  () =>
+    Boolean(props.conferencias?.lido.value) &&
+    lista.value.length > 0 &&
+    !problemas.value.length &&
+    lista.value.every(fonte => estadoDe(fonte) === ESTADO_MATERIAL.PRONTO)
+);
 </script>
 
 <template>
@@ -267,6 +319,47 @@ const tirar = () => remover(tirando.value);
     <p v-if="resumo" data-resumo class="m-0 text-sm text-n-slate-11">
       {{ resumo }}
     </p>
+
+    <template v-if="conferencias">
+      <UmProblemaPorVez
+        v-if="problemas.length"
+        :problemas="problemas"
+        :nome="nome"
+        :pode-gerenciar="podeGerenciar"
+        :resolvendo="resolvendo"
+        @resolver="resolver"
+        @mandar-outro="mandarOutroDoProblema"
+        @mandar-novo="escolherArquivo()"
+        @tirar="tirarDoProblema"
+        @corrigir="emit('corrigir', $event)"
+      />
+      <p
+        v-else-if="tudoCerto"
+        data-tudo-certo
+        role="status"
+        class="flex items-center gap-2 p-3 m-0 text-sm rounded-xl bg-n-teal-2 text-n-slate-12"
+      >
+        <span
+          class="i-lucide-circle-check size-4 text-n-teal-11"
+          aria-hidden="true"
+        />
+        {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.TUDO_CERTO', { nome }) }}
+      </p>
+      <AgenteErro
+        v-if="erroConferencia"
+        data-erro-conferencia
+        tom="ambar"
+        :titulo="erroConferencia"
+      />
+      <AutotesteDoMaterial
+        v-if="autoteste"
+        :autoteste="autoteste"
+        :nome="nome"
+        :pode-gerenciar="podeGerenciar"
+        :pedindo="pedindoAutoteste"
+        @testar-de-novo="testarDeNovo"
+      />
+    </template>
 
     <div
       v-if="podeGerenciar && adicionando"

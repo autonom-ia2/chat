@@ -1,4 +1,4 @@
-import { nextTick, reactive } from 'vue';
+import { nextTick, reactive, ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import GavetaOQueSabe from '../../components/pagina/GavetaOQueSabe.vue';
 import { MAX_ARQUIVO, MAX_FOTO } from '../../utils/pagina';
@@ -642,6 +642,120 @@ describe('GavetaOQueSabe', () => {
       await flushPromises();
       expect(faq.ignore).toHaveBeenCalledWith(7, 12);
       wrapper.unmount();
+    });
+  });
+
+  // #1426 (4b) — com as conferências (Fase 2, fora da Lia): o "um problema por vez" e o autoteste no topo.
+  describe('conferências e autoteste', () => {
+    const conferenciasCom = ({ problemas = [], autoteste = null } = {}) => ({
+      problemas: ref(problemas),
+      autoteste: ref(autoteste),
+      lido: ref(true),
+      erro: ref(false),
+      ler: vi.fn(),
+      resolver: vi.fn().mockResolvedValue(),
+      pedirAutoteste: vi.fn().mockResolvedValue(),
+    });
+    const PRONTA = fonte(4, {
+      review: { status: 'accepted', reviewed_at: '2026-10-19T12:00:00Z' },
+    });
+    const CONTRADICAO = {
+      id: 'contradicao-a',
+      tipo: 'contradicao',
+      fontes: [4],
+      assunto: 'sábado',
+      opcoes: [{ valor: 4, onde: 'arquivo-4.pdf', diz: '13h' }],
+    };
+    const PAGINAS = {
+      id: 'paginas-4',
+      tipo: 'paginas_de_fora',
+      fontes: [4],
+      nome: 'arquivo-4.pdf',
+      total: 40,
+      lidas: 30,
+      motivos: ['limite'],
+    };
+
+    it('sem conferências (fora da Fase 2 ou na Lia), a gaveta de antes', () => {
+      preparar([PRONTA]);
+      const wrapper = montar({ fase2: true });
+      expect(no('[data-um-problema]')).toBeNull();
+      expect(no('[data-autoteste]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('mostra o cartão e o autoteste; o material com problema pede a pessoa', () => {
+      preparar([PRONTA]);
+      const conferencias = conferenciasCom({
+        problemas: [CONTRADICAO],
+        autoteste: { estado: 'nunca', resultados: [] },
+      });
+      const wrapper = montar({ fase2: true, conferencias });
+      expect(no('[data-um-problema]').dataset.tipo).toBe('contradicao');
+      expect(no('[data-autoteste]').dataset.estado).toBe('nunca');
+      expect(no('[data-tudo-certo]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('escolha recusada pelo servidor: aviso ao lado e a lista é relida', async () => {
+      preparar([PRONTA]);
+      const conferencias = conferenciasCom({ problemas: [CONTRADICAO] });
+      conferencias.resolver.mockRejectedValue({
+        response: { data: { error: 'Isto já foi resolvido.' } },
+      });
+      const wrapper = montar({ fase2: true, conferencias });
+      todos('[role="radio"]')[0].click();
+      await nextTick();
+      await clicar('[data-acao="usar"]');
+      expect(conferencias.resolver).toHaveBeenCalledWith('contradicao-a', 4);
+      expect(no('[data-erro-conferencia]').textContent).toContain(
+        'Isto já foi resolvido.'
+      );
+      expect(conferencias.ler).toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('páginas de fora: "mandar o resto" acrescenta um arquivo sem tirar o lido', async () => {
+      preparar([PRONTA]);
+      const conferencias = conferenciasCom({ problemas: [PAGINAS] });
+      const wrapper = montar({ fase2: true, conferencias });
+      await clicar('[data-acao="mandar-novo"]');
+      escolherArquivo(
+        new File(['x'], 'resto.pdf', { type: 'application/pdf' })
+      );
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaSources/create',
+        expect.objectContaining({ agentId: 7 })
+      );
+      expect(store.dispatch).not.toHaveBeenCalledWith(
+        'autonomiaSources/remove',
+        expect.anything()
+      );
+      wrapper.unmount();
+    });
+
+    it('testar de novo pede o autoteste', async () => {
+      preparar([PRONTA]);
+      const conferencias = conferenciasCom({
+        autoteste: { estado: 'parado', resultados: [] },
+      });
+      const wrapper = montar({ fase2: true, conferencias });
+      await clicar('[data-testar-de-novo]');
+      expect(conferencias.pedirAutoteste).toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('"tudo certo" só sem problema e com todo material pronto', () => {
+      preparar([PRONTA]);
+      const wrapper = montar({ fase2: true, conferencias: conferenciasCom() });
+      expect(no('[data-tudo-certo]')).not.toBeNull();
+      wrapper.unmount();
+
+      preparar([PRONTA, fonte(5, { status: 'processing' })]);
+      const lendo = montar({ fase2: true, conferencias: conferenciasCom() });
+      expect(no('[data-tudo-certo]')).toBeNull();
+      lendo.unmount();
     });
   });
 });

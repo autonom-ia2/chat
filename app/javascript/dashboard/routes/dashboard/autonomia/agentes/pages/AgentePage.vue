@@ -37,6 +37,7 @@ import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
 import { useFase2 } from '../composables/useFase2';
 import { precisaDeVoce } from '../utils/estadoDoMaterial';
+import { useConferenciasDoMaterial } from '../composables/useConferenciasDoMaterial';
 import {
   ehAjudante,
   falaComCliente,
@@ -401,10 +402,36 @@ watch([fontes, lendoFontes], ([lista, lendo]) => {
   fontesLidas.value = lista || [];
 });
 const listaDeFontes = computed(() => fontesLidas.value || []);
-// #1426 — "N coisas no material precisam de você" no quadro: só na Fase 2, que mostra o estado real de cada material.
-const problemasNoMaterial = computed(() =>
-  fase2.value ? listaDeFontes.value.filter(precisaDeVoce).length : 0
+// #1426 (4b) — conferências e autoteste do material: só na Fase 2 e fora da Lia (o servidor também recusa).
+const conferencias = useConferenciasDoMaterial({
+  agentId: () => Number(props.agentId),
+});
+const comConferencias = computed(() => fase2.value && !cotacao.value);
+const lerConferencias = () => {
+  if (comConferencias.value) conferencias.ler();
+};
+// A lista de materiais mudou de verdade (entrou, saiu, terminou a leitura ou a revisão): os problemas podem ter mudado.
+const marcaDasFontes = computed(() =>
+  listaDeFontes.value
+    .map(
+      fonte => `${fonte.id}:${fonte.status}:${fonte.review?.reviewed_at || ''}`
+    )
+    .join('|')
 );
+watch(marcaDasFontes, lerConferencias);
+
+// #1426 — "N coisas no material precisam de você" no quadro: só na Fase 2, que mostra o estado real de cada material.
+// Conta os cartões do "um problema por vez" e os materiais que precisam da pessoa sem cartão (ex.: reprovado na revisão
+// por outro motivo).
+const problemasNoMaterial = computed(() => {
+  if (!fase2.value) return 0;
+  const cartoes = comConferencias.value ? conferencias.problemas.value : [];
+  const comCartao = new Set(cartoes.flatMap(problema => problema.fontes || []));
+  const semCartao = listaDeFontes.value.filter(
+    fonte => !comCartao.has(fonte.id) && precisaDeVoce(fonte, cartoes)
+  );
+  return cartoes.length + semCartao.length;
+});
 
 const lerFontes = async () => {
   fontesFalharam.value = false;
@@ -438,6 +465,7 @@ const carregarTudo = async () => {
   if (estado.value !== ESTADO_PAGINA.PRONTO) return;
   if (ajudante.value) ajudaDoAgente.carregar(Number(props.agentId));
   lerFontes();
+  lerConferencias();
   lerPerguntas();
 };
 
@@ -462,6 +490,11 @@ const mudar = (origem, inicial = null) => {
   testeInicial.value = inicial;
   vista.value = 'mudar';
 };
+
+// #1426 (4b) — "Corrigir conversando" do cartão do autoteste abre como o "Respondeu errado?" do Testar (pergunta e
+// resposta); "Escrever o que está nela" e "Explicar conversando" abrem o Mudar conversando geral.
+const corrigirDoMaterial = inicial =>
+  inicial ? mudar('teste', inicial) : mudar('geral');
 
 // "Mudar conversando" da nota da gaveta Nome / Foto e nome: mesmo efeito do botão do herói.
 const mudarDaGaveta = () => {
@@ -848,7 +881,9 @@ const tirarPergunta = id => {
         :carregando-fontes="fontesLidas === null"
         :erro-ler="fontesFalharam"
         :fase2="fase2"
+        :conferencias="comConferencias ? conferencias : null"
         @fechar="fechar"
+        @corrigir="corrigirDoMaterial"
         @reler="lerFontes"
         @pergunta-resolvida="tirarPergunta"
       />

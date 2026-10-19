@@ -1321,6 +1321,9 @@ pt_BR:
     image_required: "É preciso enviar um arquivo de imagem."
     image_invalid_type: "Tipo de imagem não aceito. Use PNG, JPEG, GIF ou WebP."
     image_too_large: "A imagem é grande demais. O tamanho máximo é 5 MB."
+    material:
+      problema_invalido: 'Isto já foi resolvido ou mudou. A página foi atualizada.'
+      autoteste_indisponivel: 'Ainda não há material aprovado para testar.'
     source:
       invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."
       arquivo_grande: "O arquivo é grande demais. O tamanho máximo é 25 MB."

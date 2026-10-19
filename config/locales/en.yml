@@ -572,6 +572,9 @@ en:
       not_pending: 'This suggestion was already reviewed.'
       embedding_failed: 'Could not add this FAQ to the knowledge base: the AI credential is missing or failed. Try again.'
       resync_not_allowed: 'Approved FAQs are added one by one from the suggestions list; there is nothing to resync.'
+    material:
+      problema_invalido: 'This item was already resolved or changed. The page was updated.'
+      autoteste_indisponivel: 'There is no approved material to test yet.'
     source:
       invalid_kind: 'This kind of material is not available. Reload the page and try again.'
       arquivo_grande: 'The file is too large. The maximum size is 25 MB.'

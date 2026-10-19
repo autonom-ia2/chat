@@ -1519,7 +1519,97 @@
         "RESPONDE_NO": "Responde no {canal} · {quando}",
         "PARADO_NO": "No {canal} · {quando}",
         "RESPONDE_EM_N": "Responde em 1 canal · {quando} | Responde em {n} canais · {quando}",
-        "PARADO_EM_N": "Em 1 canal · {quando} | Em {n} canais · {quando}"
+        "PARADO_EM_N": "Em 1 canal · {quando} | Em {n} canais · {quando}",
+        "MATERIAL": {
+          "PROBLEMA": {
+            "ROTULO": "O que precisa de você no material",
+            "CONTAGEM": "Precisa de você · {atual} de {total}",
+            "CONTINUA": "{agente} continua atendendo com o resto do material.",
+            "PULAR": "Pular por agora",
+            "VAZIO": {
+              "TITULO": "{nome} está vazio",
+              "TEXTO": "Não achei nada escrito nele. Pode ser um formulário em branco ou só uma imagem.",
+              "MANDAR": "Mandar outro",
+              "TIRAR": "Tirar este arquivo"
+            },
+            "OCR": {
+              "TITULO": "Não deu para ler a foto {nome}",
+              "TEXTO": "Ela parece borrada ou escura. {agente} não usa o que está nela.",
+              "MANDAR": "Mandar outra foto",
+              "TITULO_ARQUIVO": "Não deu para ler {nome}",
+              "TEXTO_ARQUIVO": "A leitura saiu com muitos erros, como numa página escaneada borrada. {agente} não usa o que está nele.",
+              "MANDAR_ARQUIVO": "Mandar outro",
+              "ESCREVER": "Escrever o que está nela"
+            },
+            "DUPLICADO": {
+              "TITULO": "{nome} e {outro} são iguais",
+              "TEXTO": "Com os dois, quando um mudar, {agente} pode responder com o antigo.",
+              "UM_SO": "Ficar só com {nome}",
+              "OS_DOIS": "Manter os dois"
+            },
+            "SEM_CABECALHO": {
+              "TITULO": "A tabela de {nome} não diz o que é cada coluna",
+              "TEXTO": "Sem os títulos, {agente} não sabe se um número é preço, quantidade ou código. A primeira linha é assim:",
+              "AMOSTRA": "Primeira linha da tabela",
+              "MANDAR": "Mandar com os títulos",
+              "EXPLICAR": "Explicar conversando"
+            },
+            "CONTRADICAO": {
+              "TITULO": "Dois materiais dizem coisas diferentes sobre o {assunto}",
+              "TEXTO": "Escolha o que vale. O outro continua aqui, mas {agente} passa a usar o que você escolher.",
+              "QUAL": "Qual vale?",
+              "ONDE": "Está em {onde}",
+              "USAR": "Usar este"
+            },
+            "PAGINAS": {
+              "TITULO": "Li {lidas} das {total} páginas de {nome}",
+              "TEXTO": "{agente} usa o que foi lido. O resto ficou de fora porque {motivos}.",
+              "TITULO_SEM_TOTAL": "Parte de {nome} ficou de fora",
+              "TEXTO_SEM_TOTAL": "{agente} usa o que foi lido. O resto ficou de fora porque {motivos}.",
+              "MANDAR": "Mandar o resto em outro arquivo",
+              "MOTIVO": {
+                "LIMITE": "o arquivo passa do número de páginas que dá para ler de uma vez",
+                "GRANDE": "algumas páginas são grandes demais para ler",
+                "TEMPO": "a leitura levou mais tempo do que o permitido",
+                "FALHA": "algumas páginas não puderam ser lidas"
+              }
+            },
+            "AUTOTESTE": {
+              "TITULO": "No teste automático, {agente} errou uma resposta",
+              "TEXTO": "O seu material diz outra coisa.",
+              "PERGUNTA": "Pergunta",
+              "RESPONDEU": "{agente} respondeu",
+              "PASSOU": "Passou a conversa para a equipe.",
+              "MATERIAL": "O material",
+              "MATERIAL_DIZ": "{onde} diz: \"{texto}\"",
+              "CORRIGIR": "Corrigir conversando",
+              "CERTA": "A resposta está certa"
+            },
+            "AUTOTESTE_FORA": {
+              "TITULO": "No teste automático, {agente} inventou uma resposta",
+              "TEXTO": "A pergunta não está no seu material. O certo era dizer que não sabe e passar para a equipe."
+            }
+          },
+          "AUTOTESTE": {
+            "TITULO": "Teste automático",
+            "RODANDO": "Testando {nome} com {total} perguntas… {feitas} de {total}",
+            "BASE_MUDOU": "O material mudou, então {nome} está sendo testado de novo.",
+            "ACERTOU": "{nome} acertou {certas} de {total} perguntas sobre o seu material.",
+            "FORA_OK": "Nas {n} perguntas que não estão no material, {nome} disse que não sabia e passou para a equipe.",
+            "FORA_ERRO": "Em perguntas que não estão no material, {nome} inventou resposta.",
+            "NUNCA": "{nome} ainda não foi testado com o seu material.",
+            "PARADO": "Não consegui terminar o teste agora.",
+            "VER": "Ver as {n} perguntas",
+            "DO_MATERIAL": "do material",
+            "DE_FORA": "fora do material",
+            "CERTA": "Certa",
+            "ERRADA": "Errada",
+            "TESTAR": "Testar agora",
+            "TENTAR_DE_NOVO": "Tentar de novo",
+            "DE_NOVO": "Testar de novo"
+          },
+          "TUDO_CERTO": "Tudo certo. {nome} usa todo o material com seus clientes."
+        }
       },
       "CRIAR": {
         "TITULO": "Criar agente",
