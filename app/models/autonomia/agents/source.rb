@@ -171,6 +171,16 @@ module Autonomia
                               ))
       end
 
+      # #1426 — as páginas do PDF escaneado que ficaram fora do OCR (teto de páginas ou página grande demais), para o
+      # aviso ao dono: { teto, alem_do_teto, grandes }. nil apaga a marca (nada ficou de fora nesta leitura).
+      PAGINAS_FORA_DO_OCR = 'ocr_paginas_de_fora'.freeze
+      def marcar_paginas_fora_do_ocr!(de_fora)
+        atual = metadata || {}
+        novo = atual.except(PAGINAS_FORA_DO_OCR)
+        novo = novo.merge(PAGINAS_FORA_DO_OCR => de_fora) if de_fora
+        update_columns(metadata: novo) unless novo == atual
+      end
+
       # GAP (A) — mídia de ENVIO: caminho NOVO, sem ingestão. NÃO embeda, NÃO chama a revisora; só
       # marca `ready` e guarda os metadados de exibição (nome/tipo já vêm de reference/source_type +
       # metadata byte_size/mime do upload). Sem token-guard porque não há pipeline concorrente de

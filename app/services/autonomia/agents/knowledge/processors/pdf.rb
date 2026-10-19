@@ -12,6 +12,12 @@ module Autonomia
           OCR_MIN_CHARS = 20
           # Pixels por ponto da página no OCR: o PDF mede em pontos (72 por polegada) e a página é lida a 300 DPI.
           DPI_POR_PONTO = Rasterizacao::DPI / 72.0
+          # Teto de páginas no OCR do PDF escaneado. Medido em 19/10 na base da imagem (Alpine 3.21, ImageMagick 7.1.1,
+          # tesseract 5.5): uma página A4 leva ~0,8 s para rasterizar a 300 DPI e 0,4 a 0,8 s de OCR, então 30 páginas
+          # são ~1 min de job, com folga para página densa e máquina carregada (e cada uma tem o seu tempo máximo).
+          # 30 cobre cardápio, tabela de preços e manual curto, o material de um pequeno negócio; um escaneado maior
+          # quase sempre é arquivo inteiro. O resto fica de fora e vai para o metadata, para o dono ser avisado.
+          MAX_PAGINAS_OCR = 30
 
           # OCR é OPCIONAL porque o custo dele não tem teto: rasteriza página por página a 300 DPI e
           # passa cada uma pelo tesseract. Num PDF escaneado de poucos MB isso são dezenas de páginas
@@ -50,8 +56,14 @@ module Autonomia
           # tesseract-ocr tesseract-ocr-data-por poppler-utils).
           #
           # #1426 (revisão adversarial) — antes, cada página era aberta pelo nome "arquivo.pdf[N]", que não existe em
-          # disco: o OCR do PDF escaneado falhava sempre, em silêncio (só o aviso no log).
+          # disco: o OCR do PDF escaneado falhava sempre, em silêncio (só o aviso no log). Agora funciona, e por isso só
+          # roda na Fase 2 (piloto); fora dela o resultado é o de antes: o texto original e o aviso no log.
           def ocr_fallback(text, path, pages)
+            unless ocr_na_conta?
+              Rails.logger.warn('[autonomia] pdf_ocr_unavailable: fora_da_fase2')
+              return text
+            end
+
             ocr = ocr_pages(path, pages).force_encoding('UTF-8').scrub('').strip
             ocr.length >= OCR_MIN_CHARS ? ocr : text
           rescue StandardError => e
@@ -59,22 +71,31 @@ module Autonomia
             text
           end
 
-          # Uma imagem por página (300 DPI p/ OCR legível), OCR em cada uma, com quebra de linha entre páginas. Página
-          # que a 300 DPI passaria do teto de pixels da foto (MediaBox grande: A1 ou maior) é pulada, sem rasterizar.
-          def ocr_pages(pdf_path, pages)
-            pages.each_with_index.filter_map do |page, index|
-              next unless pagina_cabe?(page, index)
-
-              Rasterizacao.pagina(pdf_path, index) { |png| Ocr.ler(png) }
-            end.join("\n")
+          def ocr_na_conta?
+            @source.respond_to?(:account) && Autonomia::Agents::Fase2.ligada?(@source.account)
           end
 
-          def pagina_cabe?(page, index)
-            pixels = (page.width.abs * DPI_POR_PONTO) * (page.height.abs * DPI_POR_PONTO)
-            return true if pixels <= Autonomia::Agents::Knowledge::FotoConferida::MAX_PIXELS
+          # Uma imagem por página (300 DPI p/ OCR legível), OCR em cada uma, com quebra de linha entre páginas. Ficam de
+          # fora as páginas depois de MAX_PAGINAS_OCR e a que a 300 DPI passaria do teto de pixels da foto (MediaBox
+          # grande: A1 ou maior), sem rasterizar; o que ficou de fora vai para o log e o metadata do material.
+          def ocr_pages(pdf_path, pages)
+            cabem, grandes = pages.first(MAX_PAGINAS_OCR).each_with_index.partition { |page, _| pagina_cabe?(page) }
+            registrar_paginas_de_fora(total: pages.size, grandes: grandes.map { |_, index| index + 1 })
+            cabem.map { |_, index| Rasterizacao.pagina(pdf_path, index) { |png| Ocr.ler(png) } }.join("\n")
+          end
 
-            Rails.logger.warn("[autonomia] pdf_ocr_pagina_grande pagina=#{index + 1} pixels=#{pixels.round}")
-            false
+          def pagina_cabe?(page)
+            pixels = (page.width.abs * DPI_POR_PONTO) * (page.height.abs * DPI_POR_PONTO)
+            pixels <= Autonomia::Agents::Knowledge::FotoConferida::MAX_PIXELS
+          end
+
+          # `ocr_paginas_de_fora` no metadata: { teto, alem_do_teto (quantas), grandes (números das páginas) }. Some
+          # quando nada ficou de fora. É o que o PR 2 usa para avisar o dono.
+          def registrar_paginas_de_fora(total:, grandes:)
+            alem = [total - MAX_PAGINAS_OCR, 0].max
+            de_fora = { 'teto' => MAX_PAGINAS_OCR, 'alem_do_teto' => alem, 'grandes' => grandes } if alem.positive? || grandes.any?
+            Rails.logger.warn("[autonomia] pdf_ocr_paginas_de_fora alem_do_teto=#{alem} grandes=#{grandes.join(',')}") if de_fora
+            @source.marcar_paginas_fora_do_ocr!(de_fora) if @source.respond_to?(:marcar_paginas_fora_do_ocr!)
           end
 
           def ensure_gem!
