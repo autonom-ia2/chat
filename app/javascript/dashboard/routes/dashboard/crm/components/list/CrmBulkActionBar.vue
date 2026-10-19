@@ -36,10 +36,15 @@ const props = defineProps({
     type: Object,
     default: null,
   },
-  // O que a pessoa pode fazer em massa (#1874): cada botão só aparece com a permissão da ação.
+  // O que a pessoa pode fazer em massa (#1874): cada botão só aparece com a permissão da ação. Sem a prop, nenhum.
   permissions: {
     type: Object,
-    default: () => ({ move: true, assign: true, status: true, archive: true }),
+    default: () => ({
+      move: false,
+      assign: false,
+      status: false,
+      archive: false,
+    }),
   },
 });
 

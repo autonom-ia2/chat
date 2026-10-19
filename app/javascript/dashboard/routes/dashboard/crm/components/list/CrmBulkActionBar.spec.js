@@ -33,8 +33,14 @@ const rotulos = wrapper =>
     .concat(wrapper.find('[data-owner]').exists() ? ['ASSIGN'] : []);
 
 describe('CrmBulkActionBar', () => {
-  it('mostra tudo por padrão', () => {
-    expect(rotulos(montar(undefined))).toEqual([
+  it('sem a permissão, não mostra nenhuma ação', () => {
+    expect(rotulos(montar(undefined))).toEqual(['CRM_KANBAN.BULK.CLEAR']);
+  });
+
+  it('com tudo, mostra todas as ações', () => {
+    expect(
+      rotulos(montar({ move: true, assign: true, status: true, archive: true }))
+    ).toEqual([
       'CRM_KANBAN.BULK.MOVE',
       'CRM_KANBAN.BULK.STATUS',
       'CRM_KANBAN.BULK.DELETE',
