@@ -165,6 +165,14 @@ class Crm::Card < ApplicationRecord
     nil
   end
 
+  # Quem carrega o card agora (#1151): o dono; sem dono (card antigo, dono tirado em lote), o que o quadro mostra — a
+  # pessoa da conversa, o robô da caixa ou ninguém. Carga de trabalho e o registro do fechamento (#1876) leem daqui.
+  def current_responsible
+    return { type: 'agent', id: owner.id, name: owner.name } if owner.present?
+
+    responsible_descriptor
+  end
+
   # O robô atribuído à conversa (#1377); sem ele, o robô ativo da caixa.
   def responsible_agent_bot
     conversation_bot = primary_conversation&.ai_assignee

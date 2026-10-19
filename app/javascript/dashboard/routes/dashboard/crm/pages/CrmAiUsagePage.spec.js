@@ -27,13 +27,13 @@ vi.mock('shared/components/charts/BarChart.vue', () => ({
   default: {
     name: 'BarChart',
     props: {
-      collection: {
+      data: {
         type: Object,
         default: () => ({}),
       },
     },
     template:
-      '<div data-test-id="bar-chart">{{ collection.labels.join(",") }}</div>',
+      '<div data-test-id="bar-chart">{{ data.categories.join(",") }}</div>',
   },
 }));
 
