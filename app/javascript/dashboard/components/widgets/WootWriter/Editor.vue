@@ -8,6 +8,7 @@ import {
   watch,
   onMounted,
   useTemplateRef,
+  useSlots,
   nextTick,
 } from 'vue';
 
@@ -74,6 +75,7 @@ import { createTypingIndicator } from '@chatwoot/utils';
 import { checkFileSizeLimit } from 'shared/helpers/FileHelper';
 import { uploadFile } from 'dashboard/helper/uploadHelper';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { trocarRegua } from 'dashboard/components-next/conversa-canal/email/reguaDoEditor';
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -83,6 +85,9 @@ const props = defineProps({
   reloadOnPlaceholderChange: { type: Boolean, default: false },
   // #1809: botões da régua que este editor não mostra (o e-mail novo tira a imagem).
   hiddenMenuOptions: { type: Array, default: () => [] },
+  // #1872: o ✨ do e-mail novo segue a IA do cliente (copiloto da Autonom.ia), não o Captain.
+  // null (padrão) = como o Chatwoot; true/false = o ✨ aparece ou não.
+  copilotAvailable: { type: Boolean, default: null },
   disabled: { type: Boolean, default: false },
   isPrivate: { type: Boolean, default: false },
   enableSuggestions: { type: Boolean, default: true },
@@ -126,6 +131,10 @@ const emit = defineEmits([
 
 const { t } = useI18n();
 const { captainTasksEnabled } = useCaptain();
+const slots = useSlots();
+const showCopilot = computed(
+  () => props.copilotAvailable ?? captainTasksEnabled.value
+);
 
 const TYPING_INDICATOR_IDLE_TIME = 4000;
 const MAXIMUM_FILE_UPLOAD_SIZE = 4; // in MB
@@ -150,10 +159,7 @@ const editorSchema = computed(() => {
   const formatType = props.isPrivate
     ? PRIVATE_NOTE_FORMATTING
     : effectiveChannelType.value;
-  const formatting = getFormattingForEditor(
-    formatType,
-    captainTasksEnabled.value
-  );
+  const formatting = getFormattingForEditor(formatType, showCopilot.value);
   return buildMessageSchema(formatting.marks, formatting.nodes);
 });
 
@@ -161,10 +167,7 @@ const editorMenuOptions = computed(() => {
   const formatType = props.isPrivate
     ? PRIVATE_NOTE_FORMATTING
     : effectiveChannelType.value || DEFAULT_FORMATTING;
-  const formatting = getFormattingForEditor(
-    formatType,
-    captainTasksEnabled.value
-  );
+  const formatting = getFormattingForEditor(formatType, showCopilot.value);
 
   return formatting.menu.filter(
     option => !props.hiddenMenuOptions.includes(option)
@@ -495,15 +498,30 @@ function openFileBrowser() {
   imageUpload.value.click();
 }
 
+let cliqueComecouNoBrilho = false;
+
 function handleCopilotClick() {
   const isOpening = !showSelectionMenu.value;
-  if (isOpening) {
+  // #1872: o menu do slot (IA do cliente) não é o Captain: sem o evento dele.
+  if (isOpening && !slots['copilot-menu']) {
     useTrack(CAPTAIN_EVENTS.EDITOR_AI_MENU_OPENED, {
       conversationId: props.conversationId,
       entryPoint: 'inline',
     });
   }
+  // #1872: o ✨ abre o menu do slot no mousedown; o clique termina no mouseup, às vezes já dentro
+  // do menu, e chega ao clique-fora como clique de fora. Ele não fecha o que acabou de abrir.
+  cliqueComecouNoBrilho = isOpening && Boolean(slots['copilot-menu']);
   showSelectionMenu.value = isOpening;
+}
+
+// #1872: o clique-fora do menu do slot ignora clique dentro dele e o clique que começou no ✨.
+function handleClickOutsideDoSlot(event) {
+  const comecouNoBrilho = cliqueComecouNoBrilho;
+  cliqueComecouNoBrilho = false;
+  if (comecouNoBrilho) return;
+  if (event.target.closest('.ProseMirror-copilot, [data-menu-da-ia]')) return;
+  showSelectionMenu.value = false;
 }
 
 function handleClickOutside(event) {
@@ -905,6 +923,29 @@ watch(
   () => editorView?.setProps({})
 );
 
+// #1872: a disponibilidade da IA do e-mail chega depois de montar; só a régua se refaz, com ou
+// sem o ✨, sem perder o texto, o cursor e o desfazer de quem já digitou.
+watch(
+  computed(() => props.copilotAvailable),
+  () => {
+    if (!editorView) return;
+    // Refazer a régua tira e recoloca o texto no DOM, e o foco caía no BODY: o que a pessoa
+    // digitava em seguida se perdia. Com o foco no texto, ele volta (a seleção vem no estado).
+    const estavaNoTexto = editorView.hasFocus();
+    state = trocarRegua(editorView.state, {
+      placeholder: props.placeholder,
+      methods: {
+        onImageUpload: openFileBrowser,
+        onCopilotClick: handleCopilotClick,
+      },
+      plugins: plugins.value,
+      enabledMenuOptions: editorMenuOptions.value,
+    });
+    editorView.updateState(state);
+    if (estavaNoTexto) editorView.focus();
+  }
+);
+
 watch(
   computed(() => props.updateSelectionWith),
   (newValue, oldValue) => {
@@ -1017,8 +1058,22 @@ useEmitter(BUS_EVENTS.INSERT_INTO_RICH_EDITOR, content => {
       :search-key="toolSearchKey"
       @select-tool="content => insertSpecialContent('tool', content)"
     />
+    <!-- #1872: quem passa o slot troca o menu do ✨ (o e-mail novo usa a IA do cliente). -->
+    <div
+      v-if="showSelectionMenu && $slots['copilot-menu']"
+      v-on-click-outside="handleClickOutsideDoSlot"
+      class="absolute top-14 z-50 start-0"
+    >
+      <slot
+        name="copilot-menu"
+        :has-content="!isBodyEmpty(modelValue)"
+        :run="handleCopilotAction"
+        :close="() => (showSelectionMenu = false)"
+        :root="editorRoot"
+      />
+    </div>
     <CopilotMenuBar
-      v-if="showSelectionMenu"
+      v-else-if="showSelectionMenu"
       v-on-click-outside="handleClickOutside"
       :has-selection="isTextSelected"
       :is-editor-menu-popover="isEditorMenuPopover"
