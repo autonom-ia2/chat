@@ -68,6 +68,7 @@ RSpec.describe Autonomia::Guide::Seed do
     it 'keeps the brokerage on the general base with the switch off' do
       with_modified_env(AUTONOMIA_PACOTES_ENABLED: nil) do
         expect(described_class.kb_path_for(corretora)).to eq(described_class::KB_PATH)
+        expect(described_class.versao_da_instalacao).to eq(described_class.kb_version)
       end
     end
 

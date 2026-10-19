@@ -23,3 +23,12 @@ Rode `pnpm guia:build` depois de mexer aqui.
 - intent: "Como crio uma cotação nova?"; "Como adiciono um card no funil?"; "Como associo contato, caixa e responsável?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Nova cotação (num funil de Atender, o botão se chama Novo atendimento)
 - passos: Clique em **Nova cotação** (ou **Novo atendimento**, num funil de Atender); em **Quem é o cliente?** (Passo 1 de 2), escolha **Já está nos contatos** (procure e clique em **Procurar**), **Pessoa nova** ou **Sem pessoa por enquanto**, e clique em **Continuar**. Para pessoa nova, a empresa pode ficar sem, ser escolhida ou criada. Em **Sobre o seguro** (Passo 2 de 2), escreva **Qual seguro** (único obrigatório; ex.: nome do cliente · seguro do carro), confira **Funil**, **Em que etapa entra**, **Quem cuida** e **Caixa de entrada**; abra **Mais detalhes** para o resto; confira o resumo do rodapé e clique em **Colocar no funil**.
+
+### configurar_link_publico_de_agendamento
+- intent: "Como crio um link de agenda?"; "Onde configuro /book/:slug?"; "Como deixo o link da agenda mais curto?"; "Como mudo o endereço da página de agendamento?"; "Como cada corretor tem seu próprio link?"
+
+### passar_reunioes_para_outra_pessoa
+- intent: Como passo as reuniões de um corretor para outro?; Alguém saiu de férias, como troco quem atende as reuniões marcadas?; Como mudo o responsável das reuniões futuras de uma vez?; Por que algumas reuniões não passaram para a outra pessoa?
+
+### configurar_pagina_de_agendamento_em_caixa_compartilhada_e_links_por_agente
+- intent: "Como vários corretores usam o mesmo e-mail para agenda?"; "Como gero um link de agendamento para cada agente?"; "O que significa caixa compartilhada no booking?"

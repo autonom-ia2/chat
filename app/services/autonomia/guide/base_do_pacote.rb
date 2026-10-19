@@ -19,7 +19,7 @@ module Autonomia::Guide::BaseDoPacote
 
   def versao_com(versao_geral)
     arquivos = Dir.glob(PASTA.join('**', ARQUIVO).to_s)
-    return versao_geral if arquivos.empty?
+    return versao_geral if arquivos.empty? || !::Autonomia::Segmentos::Pacotes.enabled?
 
     Digest::SHA256.hexdigest([versao_geral, *arquivos.map { |arquivo| File.read(arquivo) }].join)[0, 16]
   end

@@ -99,7 +99,7 @@ class Autonomia::CentralDeAjuda::Leitura
       variante ? ::Autonomia::CentralDeAjuda::ArtigoDoPacote.new(artigo, variante) : artigo
     end
   rescue StandardError => e
-    Rails.logger.error("[central_de_ajuda][leitura] account=#{@account&.id} variante do pacote: #{e.class}")
+    Rails.logger.error("[central_de_ajuda][leitura] account=#{@account&.id} variante do pacote: #{e.class}: #{e.message}")
     lista
   end
 

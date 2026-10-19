@@ -590,7 +590,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `crm_calendar_index`
 
 ### Configurar link público de agendamento
-- intent: "Como crio um link de agenda?"; "Onde configuro /book/:slug?"; "Como deixo o link da agenda mais curto?"; "Como mudo o endereço da página de agendamento?"; "Como cada vendedor tem seu próprio link?"
+- intent: "Como crio um link de agenda?"; "Onde configuro /book/:slug?"; "Como deixo o link da agenda mais curto?"; "Como mudo o endereço da página de agendamento?"; "Como cada corretor tem seu próprio link?"
 - onde_fica: Sidebar > CRM > CRM Calendar > Agendamento
 - pre_requisitos: caixa Google/Microsoft com calendário ativo; funil/etapa padrão recomendado; agentes membros da caixa para links por agente.
 - passos: Abra CRM Calendar; clique em Agendamento; habilite o perfil da caixa; defina duração, janela, fuso, dias e horário; escolha modo fixo ou por agente; salve e copie a URL.
@@ -653,7 +653,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `settings_booking`
 
 ### Passar as reuniões de uma pessoa para outra
-- intent: Como passo as reuniões de um vendedor para outro?; Alguém saiu de férias, como troco quem atende as reuniões marcadas?; Como mudo o responsável das reuniões futuras de uma vez?; Por que algumas reuniões não passaram para a outra pessoa?
+- intent: Como passo as reuniões de um corretor para outro?; Alguém saiu de férias, como troco quem atende as reuniões marcadas?; Como mudo o responsável das reuniões futuras de uma vez?; Por que algumas reuniões não passaram para a outra pessoa?
 - onde_fica: No menu novo: Acompanhar > Agenda > Páginas e links. No menu antigo: CRM > Agendamento > Páginas e links > cartão da página > Passar reuniões
 - rota: `settings_booking` - `/app/accounts/:accountId/crm/booking`
 - gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
@@ -1317,7 +1317,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `settings_inboxes_page_channel`
 
 ### Configurar pagina de agendamento em caixa compartilhada e links por agente
-- intent: "Como varios vendedores usam o mesmo e-mail para agenda?"; "Como gero um link de agendamento para cada agente?"; "O que significa caixa compartilhada no booking?"
+- intent: "Como vários corretores usam o mesmo e-mail para agenda?"; "Como gero um link de agendamento para cada agente?"; "O que significa caixa compartilhada no booking?"
 - onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: Sidebar > CRM > CRM Calendar > Agendamento
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
