@@ -528,7 +528,34 @@
         "NADA": "Nenhum emoji com esse nome",
         "DICA": "Escolha um emoji"
       },
-      "IMAGENS_QUEBRADAS": "1 imagem deste modelo não abre (o arquivo foi apagado ou mudou de lugar). Corrija o modelo em Campanhas antes de enviar. | {total} imagens deste modelo não abrem (os arquivos foram apagados ou mudaram de lugar). Corrija o modelo em Campanhas antes de enviar."
+      "IMAGENS_QUEBRADAS": "1 imagem deste modelo não abre (o arquivo foi apagado ou mudou de lugar). Corrija o modelo em Campanhas antes de enviar. | {total} imagens deste modelo não abrem (os arquivos foram apagados ou mudaram de lugar). Corrija o modelo em Campanhas antes de enviar.",
+      "IA": {
+        "TITULO": "IA do e-mail",
+        "MELHORAR": "Melhorar o texto",
+        "CORRIGIR": "Corrigir ortografia e gramática",
+        "MUDAR_TOM": "Mudar o tom",
+        "TOM": {
+          "PROFISSIONAL": "Profissional",
+          "CASUAL": "Casual",
+          "DIRETO": "Direto",
+          "CONFIANTE": "Confiante",
+          "AMIGAVEL": "Amigável"
+        },
+        "SUGERIR_RESPOSTA": "Sugerir resposta",
+        "RESUMIR": "Resumir a conversa",
+        "ESCREVA_ANTES": "Escreva o texto primeiro, e a IA melhora.",
+        "PEDIR_AJUSTE": "Peça um ajuste à IA (ex.: deixe mais curto)",
+        "ACAO_INDISPONIVEL": "Essa ação da IA não existe no e-mail.",
+        "PRECISA_DA_CONVERSA": "Essa ação da IA precisa de uma conversa. No e-mail novo, a IA mexe só no texto.",
+        "TEXTO_LONGO": "O texto passou do tamanho que a IA aceita (até {limite} caracteres). Melhore por partes.",
+        "SEM_RESPOSTA": "A IA não respondeu. Confira se a chave de IA da conta está conectada em Configurações → Integrações e tente de novo.",
+        "FALHOU": "Não deu para falar com a IA agora. Seu texto não mudou; tente de novo daqui a pouco.",
+        "DEMOROU": "A IA demorou demais para responder. Seu texto não mudou; tente de novo.",
+        "VARIAVEIS_MUDARAM": "Confira as variáveis antes de aceitar: o texto tinha {antes} e a sugestão tem {agora}.",
+        "NENHUMA_VARIAVEL": "nenhuma",
+        "INSTRUCAO_LONGA": "O pedido à IA passou do tamanho aceito (até {limite} caracteres). Encurte o pedido.",
+        "MUITOS_PEDIDOS": "Muitos pedidos à IA em um minuto. Espere um pouco e peça de novo."
+      }
     }
   }
 }

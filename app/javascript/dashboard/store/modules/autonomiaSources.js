@@ -1,5 +1,9 @@
 import AutonomiaSourcesAPI from '../../api/autonomia/sources';
-import { throwErrorMessage } from 'dashboard/store/utils/api';
+import {
+  parseAPIErrorResponse,
+  throwErrorMessage,
+} from 'dashboard/store/utils/api';
+import { aguardandoRevisao } from 'dashboard/routes/dashboard/autonomia/agentes/utils/estadoDoMaterial';
 
 // Knowledge sources are a per-agent sub-resource (no global records-by-id list),
 // so this module is hand-rolled rather than using the CRUD factory. State holds
@@ -9,9 +13,15 @@ import { throwErrorMessage } from 'dashboard/store/utils/api';
 // `pending`/`processing` and only flips to `ready`/`failed` later. We poll
 // `fetch` while any source is still ingesting so the UI reflects progress.
 const POLL_INTERVAL = 4000;
+// #1426 — teto da releitura: ~10 min seguidos sem tudo assentar (um catálogo grande com OCR cabe). Volta a contar
+// quando a pessoa manda ou relê um material.
+const MAX_POLL_ROUNDS = 150;
+// Quanto a releitura dura antes de desistir: além disso, um material parado em "Revisando…" pode ser lido de novo.
+export const TETO_DA_RELEITURA_MS = MAX_POLL_ROUNDS * POLL_INTERVAL;
 const INGESTING_STATUSES = ['pending', 'processing'];
 
 let pollTimer = null;
+let pollRounds = 0;
 
 // A source is still "settling" while it ingests (pending/processing) OR while it
 // has finished ingesting (`ready`) but the quality review has not landed yet
@@ -20,6 +30,26 @@ let pollTimer = null;
 const isIngesting = source =>
   INGESTING_STATUSES.includes(source?.status) ||
   (source?.status === 'ready' && source?.review?.status == null);
+
+// #1426 — na Fase 2 (piloto) a ingestão grava `needs_review` já no começo, então
+// "revisão ainda não chegou" é needs_review sem `reviewed_at`
+// (utils/estadoDoMaterial); material sem parecer nenhum (de antes da Revisora, ou
+// mídia de envio) nunca recebe um e não prende a releitura, que tem teto. Fora da
+// Fase 2, a releitura é a de antes, sem teto.
+const assentandoNaFase2 = source =>
+  INGESTING_STATUSES.includes(source?.status) || aguardandoRevisao(source);
+
+const fase2Ligada = rootGetters =>
+  rootGetters?.['accounts/getAccount']?.(rootGetters.getCurrentAccountId)
+    ?.autonomia_agents_fase2 === true;
+
+// O erro da API com o status HTTP: a tela distingue a recusa (422, repetir não
+// adianta) da falha que vale tentar de novo.
+const falhaDaApi = error => {
+  const falha = new Error(parseAPIErrorResponse(error));
+  falha.status = error?.response?.status;
+  return falha;
+};
 
 export const state = {
   records: [],
@@ -139,10 +169,10 @@ export const actions = {
       const { data } = await AutonomiaSourcesAPI.create(agentId, descriptor);
       const source = data.payload || data;
       commit('UPSERT', source);
-      dispatch('schedulePoll', { agentId, records: [source] });
+      dispatch('schedulePoll', { agentId, records: [source], novo: true });
       return source;
     } catch (error) {
-      return throwErrorMessage(error);
+      throw falhaDaApi(error);
     } finally {
       commit('SET_UI_FLAG', { creatingItem: false });
     }
@@ -167,10 +197,10 @@ export const actions = {
       const { data } = await AutonomiaSourcesAPI.resync(agentId, sourceId);
       const source = data.payload || data;
       commit('UPSERT', source);
-      dispatch('schedulePoll', { agentId, records: [source] });
+      dispatch('schedulePoll', { agentId, records: [source], novo: true });
       return source;
     } catch (error) {
-      return throwErrorMessage(error);
+      throw falhaDaApi(error);
     } finally {
       commit('SET_UI_FLAG', { resyncingItem: false });
     }
@@ -178,15 +208,28 @@ export const actions = {
 
   // Starts a single polling loop while any source is still ingesting; clears
   // itself once everything settles. Idempotent: never stacks timers.
-  schedulePoll: ({ dispatch }, { agentId, records = [] }) => {
-    if (pollTimer || !records.some(isIngesting)) return;
+  // #1426 — na Fase 2 também espera a revisão chegar, com teto de MAX_POLL_ROUNDS
+  // rodadas seguidas; `novo` (a pessoa mandou ou releu um material) zera a conta.
+  schedulePoll: (
+    { dispatch, rootGetters },
+    { agentId, records = [], novo = false }
+  ) => {
+    const fase2 = fase2Ligada(rootGetters);
+    if (novo) pollRounds = 0;
+    if (!records.some(fase2 ? assentandoNaFase2 : isIngesting)) {
+      if (!pollTimer) pollRounds = 0;
+      return;
+    }
+    if (pollTimer || (fase2 && pollRounds >= MAX_POLL_ROUNDS)) return;
     pollTimer = setTimeout(async () => {
       pollTimer = null;
+      pollRounds += 1;
       await dispatch('fetch', { agentId });
     }, POLL_INTERVAL);
   },
 
   stopPolling: () => {
+    pollRounds = 0;
     if (pollTimer) {
       clearTimeout(pollTimer);
       pollTimer = null;

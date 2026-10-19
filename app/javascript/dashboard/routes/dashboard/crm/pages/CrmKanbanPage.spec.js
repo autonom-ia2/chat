@@ -121,6 +121,7 @@ const setGetters = ({
   role = 'administrator',
   keys,
   menuNovo = false,
+  agents = [],
 } = {}) => {
   Object.assign(storeGetters, {
     getCurrentRole: ref(role),
@@ -152,7 +153,7 @@ const setGetters = ({
     }),
     getCurrentAccountId: ref(1),
     'inboxes/getInboxes': ref(inboxes),
-    'agents/getAgents': ref([]),
+    'agents/getAgents': ref(agents),
     'teams/getTeams': ref([]),
     'accounts/isRTL': ref(false),
     'labels/getLabels': ref([]),
@@ -249,6 +250,18 @@ describe('CrmKanbanPage', () => {
       expect(replace).not.toHaveBeenCalled();
     });
 
+    // #1883: ao recarregar (ou abrir o link numa aba nova), a flag da conta chega depois da tela.
+    it('flag que chega depois da tela ainda abre na vista do endereço', async () => {
+      route.query = { view: 'list' };
+      wrapper = await mountPage();
+      expect(vistaMarcada(wrapper)).toBe('CRM_KANBAN.VIEWS.KANBAN');
+
+      storeGetters['accounts/isFeatureEnabledonAccount'].value = (_id, flag) =>
+        flag === 'menu_lateral_novo';
+      await flushPromises();
+      expect(vistaMarcada(wrapper)).toBe('CRM_KANBAN.VIEWS.LIST');
+    });
+
     it('flag ligada: abre na vista do endereço e grava a troca com replace', async () => {
       route.query = { view: 'list', pipeline_id: undefined };
       wrapper = await mountPage({ account: { menuNovo: true } });
@@ -261,6 +274,120 @@ describe('CrmKanbanPage', () => {
       route.query = { view: 'calendar' };
       await botaoDaVista(wrapper, 'CRM_KANBAN.VIEWS.KANBAN').trigger('click');
       expect(replace).toHaveBeenLastCalledWith({ query: {} });
+    });
+  });
+
+  // #1883 — os "Ver" do Números abrem o Kanban, a Lista e o Meu dia já filtrados, com o filtro à vista.
+  describe('filtros que chegam pelo link', () => {
+    const filtrosGravados = () =>
+      dispatch.mock.calls.filter(([type]) => type === 'crmKanban/setFilters');
+    const ultimoFiltro = () => filtrosGravados().at(-1)[1];
+
+    afterEach(() => {
+      route.query = {};
+      delete route.name;
+      replace.mockClear();
+      dispatch.mockClear();
+      wrapper?.unmount();
+    });
+
+    it('Kanban: parado há mais de 7 dias e responsável = eu, com os chips e o endereço limpo', async () => {
+      route.name = 'crm_kanban_index';
+      route.query = { pipeline_id: '1', stale_days: '7', owner_id: 'me' };
+      wrapper = await mountPage();
+
+      expect(ultimoFiltro()).toMatchObject({ staleDays: '7', ownerId: 1 });
+      const texto = wrapper.text();
+      expect(texto).toContain('CRM_KANBAN.FILTERS.STALE');
+      expect(texto).toContain('CRM_KANBAN.FILTERS.OWNER');
+      expect(texto).toContain('CRM_KANBAN.ACTIONS.CLEAR_FILTERS');
+      expect(replace).toHaveBeenLastCalledWith({ query: {} });
+    });
+
+    it('Kanban: pessoa que a tela não conhece não vira filtro', async () => {
+      route.name = 'crm_kanban_index';
+      route.query = { stale_days: '7', owner_id: '99' };
+      wrapper = await mountPage({
+        account: {
+          agents: [
+            { id: 1, name: 'Eu' },
+            { id: 2, name: 'Ana' },
+          ],
+        },
+      });
+
+      expect(ultimoFiltro()).toMatchObject({ staleDays: '7', ownerId: '' });
+      expect(wrapper.text()).not.toContain('CRM_KANBAN.FILTERS.OWNER');
+    });
+
+    it('Kanban: sem a equipe carregada, o dono do link fica', async () => {
+      route.name = 'crm_kanban_index';
+      route.query = { owner_id: '2' };
+      wrapper = await mountPage();
+
+      expect(ultimoFiltro()).toMatchObject({ ownerId: 2 });
+    });
+
+    it('Lista: ganhos do mês sem responsável, com o chip do mês', async () => {
+      route.name = 'crm_kanban_index';
+      route.query = {
+        view: 'list',
+        result: 'won',
+        closed_in: 'this_month',
+        responsible_kind: 'none',
+      };
+      wrapper = await mountPage({ account: { menuNovo: true } });
+
+      expect(ultimoFiltro()).toMatchObject({
+        result: 'won',
+        closedIn: 'this_month',
+        responsibleKind: 'none',
+      });
+      expect(wrapper.text()).toContain('CRM_FILTRO_DO_LINK.FECHADO_NO_MES');
+      expect(replace).toHaveBeenLastCalledWith({ query: { view: 'list' } });
+    });
+
+    it('sem filtro no link, a sessão segue com o filtro que já tinha', async () => {
+      route.name = 'crm_kanban_index';
+      route.query = { pipeline_id: '1' };
+      wrapper = await mountPage();
+
+      expect(filtrosGravados()).toHaveLength(0);
+    });
+
+    it('Meu dia: quem, tipos e funil vão para o calendário; funil fora do acesso não', async () => {
+      route.name = 'crm_calendar_index';
+      route.query = { quem: 'todos', tipos: 'lembrete', funil: '1' };
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      const calendario = wrapper.findComponent({ name: 'CalendarioOuro' });
+      expect(calendario.props('filtroInicial')).toEqual({
+        quem: 'todos',
+        tipos: ['lembrete'],
+        funil: '1',
+      });
+      expect(calendario.props('funil')).toBe(1);
+      expect(replace).toHaveBeenLastCalledWith({ query: {} });
+      // O filtro do Kanban (de outra visita) não vira filtro escondido do Meu dia.
+      const busca = dispatch.mock.calls.filter(
+        ([tipo]) => tipo === 'crmKanban/fetchCalendarEvents'
+      );
+      expect(busca.at(-1)[1]).toMatchObject({
+        pipeline_id: 1,
+        semFiltrosDoQuadro: true,
+      });
+      wrapper.unmount();
+
+      route.query = { funil: '5' };
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      expect(
+        wrapper.findComponent({ name: 'CalendarioOuro' }).props('funil')
+      ).toBeNull();
     });
   });
 

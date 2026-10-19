@@ -21,10 +21,20 @@ module Autonomia
           return if thread.blank? || !active?(thread, token)
 
           build(thread, token)
+          fotos_para_base(thread)
           notify_creator(thread)
         end
 
         private
+
+        # #1426 — a foto da criação entra na base depois do turno (o rascunho já existe). Um erro aqui não derruba o
+        # turno, que já foi gerado: vai ao log e ao Sentry com a thread, e a foto segue na conversa com o Construtor.
+        def fotos_para_base(thread)
+          Autonomia::Agents::Knowledge::FotosDaCriacao.new(thread.reload).para_base!
+        rescue StandardError => e
+          Rails.logger.error("[Autonomia::Agents::Builder::SubmitJob] fotos_da_criacao_failed thread=#{thread.id} #{e.class}")
+          ChatwootExceptionTracker.new(e, account: thread.account).capture_exception
+        end
 
         def build(thread, token)
           Autonomia::Agents::Builder.new(account: thread.account, build_thread: thread).run!(token)

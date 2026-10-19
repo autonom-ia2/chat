@@ -7,14 +7,24 @@
 // aviso de assinatura logo acima). Passando do teto, o conteúdo rola por dentro, sem levar
 // a gaveta junto, e a barra fica fora da rolagem: sempre à vista e sem cobrir o cursor.
 // A régua de formatação fica atrás do "Aa" (sem ela, nem a barra flutuante do Chatwoot).
-// Sem o ✨ do Captain, que não usamos (FORA_DA_REGUA).
+// O ✨ da régua usa a IA do cliente (copiloto da Autonom.ia, #1872), nunca o Captain: só
+// onde o copiloto está disponível, só as ações de texto (aqui ainda não há conversa), e a
+// sugestão aparece no lugar do texto com Descartar e Aceitar.
 import { computed, ref } from 'vue';
 import WootEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
+import CopilotEditorSection from 'dashboard/components/widgets/conversation/CopilotEditorSection.vue';
+import CopilotReplyBottomPanel from 'dashboard/components/widgets/WootWriter/CopilotReplyBottomPanel.vue';
 import AttachmentPreviews from 'dashboard/components-next/NewConversation/components/AttachmentPreviews.vue';
 import AvisoDeAssinatura from 'dashboard/components-next/conversa-canal/email/AvisoDeAssinatura.vue';
 import CampoDeEnderecos from 'dashboard/components-next/conversa-canal/email/CampoDeEnderecos.vue';
 import ModeloDaResposta from 'dashboard/components-next/conversa-canal/email/ModeloDaResposta.vue';
 import CitacaoDaResposta from 'dashboard/components-next/conversa-canal/email/CitacaoDaResposta.vue';
+import MenuDaIaDoEmail from 'dashboard/components-next/conversa-canal/email/MenuDaIaDoEmail.vue';
+import AvisoDaSugestao from 'dashboard/components-next/conversa-canal/email/AvisoDaSugestao.vue';
+import {
+  useIaDoEmail,
+  assinaturaNoTexto,
+} from 'dashboard/components-next/conversa-canal/email/useIaDoEmail';
 import {
   FORA_DA_REGUA,
   FORMATACAO_FIXA,
@@ -43,6 +53,34 @@ const formatacao = ref(false);
 // Cópia já preenchida (rascunho de antes) nasce aberta: ninguém envia cópia sem ver.
 const verCc = ref(Boolean(cc.value));
 const verCco = ref(Boolean(bcc.value));
+
+// #1872: sem conversa ainda, a IA mexe só no texto.
+const {
+  disponivel: iaDisponivel,
+  avisoDasVariaveis: iaAviso,
+  isActive: iaAtiva,
+  showEditor: iaMostrando,
+  isGenerating: iaPensando,
+  generatedContent: iaSugestao,
+  isButtonDisabled: iaOcupada,
+  execute: executarIa,
+  sendFollowUp: ajustarIa,
+  setContentReady: iaPronta,
+  reset: descartarIa,
+  accept: aceitarIa,
+} = useIaDoEmail({
+  rascunho: () => mensagem.value,
+  assinatura: () =>
+    assinaturaNoTexto({
+      ligada: props.comAssinatura,
+      texto: props.assinatura,
+      channelType: props.canal.channelType,
+      medium: props.canal.medium,
+    }),
+});
+const aceitarSugestao = () => {
+  mensagem.value = aceitarIa();
+};
 
 const enderecoDoPara = computed(() =>
   props.para?.email ? `<${props.para.email}>` : ''
@@ -114,7 +152,18 @@ const EDITOR =
       </div>
 
       <div class="px-4 pt-3" :class="EDITOR">
+        <CopilotEditorSection
+          v-if="iaAtiva"
+          :show-copilot-editor="iaMostrando"
+          :is-generating-content="iaPensando"
+          :generated-content="iaSugestao"
+          :placeholder="$t('CONVERSA_CANAL.EMAIL.IA.PEDIR_AJUSTE')"
+          data-sugestao-da-ia
+          @content-ready="iaPronta"
+          @send="ajustarIa"
+        />
         <WootEditor
+          v-else
           v-model="mensagem"
           class="popover-prosemirror-menu"
           :editor-id="`nova-conversa-email-${canal.id}`"
@@ -130,8 +179,20 @@ const EDITOR =
           :medium="canal.medium || ''"
           :update-selection-with="inserir"
           :hidden-menu-options="FORA_DA_REGUA"
+          :copilot-available="iaDisponivel"
           @clear-selection="inserir = ''"
-        />
+          @execute-copilot-action="executarIa"
+        >
+          <template #copilot-menu="{ hasContent, run, close, root }">
+            <MenuDaIaDoEmail
+              :tem-texto="hasContent"
+              :editor="root"
+              @executar="run"
+              @fechar="close"
+            />
+          </template>
+        </WootEditor>
+        <AvisoDaSugestao v-if="iaAtiva && iaAviso" :texto="iaAviso" />
       </div>
 
       <div v-if="daGaveta?.modelo.value" class="px-3">
@@ -166,7 +227,16 @@ const EDITOR =
       <div v-if="comAssinatura && !assinatura" class="px-3 pt-2">
         <AvisoDeAssinatura />
       </div>
+      <CopilotReplyBottomPanel
+        v-if="iaAtiva"
+        class="pt-3"
+        :is-generating-content="iaOcupada"
+        data-decidir-sugestao
+        @submit="aceitarSugestao"
+        @cancel="descartarIa"
+      />
       <NovaConversaBarraDoEmail
+        v-else
         v-model:anexos="anexos"
         v-model:formatacao="formatacao"
         :canal="canal"

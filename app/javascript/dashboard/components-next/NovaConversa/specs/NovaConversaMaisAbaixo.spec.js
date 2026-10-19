@@ -40,4 +40,16 @@ describe('NovaConversaMaisAbaixo', () => {
     await seta.trigger('click');
     expect(estado.rolar).toHaveBeenCalledOnce();
   });
+
+  // #1872 — a seta some no fim da lista: se o clique a focasse, o foco sumiria junto.
+  it('o clique na seta não tira o foco de onde está', () => {
+    abaixo.value = true;
+    const seta = montar().get('[data-mais-abaixo]').element;
+    const pressionar = new MouseEvent('mousedown', {
+      bubbles: true,
+      cancelable: true,
+    });
+    seta.dispatchEvent(pressionar);
+    expect(pressionar.defaultPrevented).toBe(true);
+  });
 });

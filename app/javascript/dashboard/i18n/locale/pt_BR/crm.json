@@ -151,7 +151,7 @@
         "CAMPAIGN_EMAIL": "Campanha e-mail",
         "CAMPAIGN_LIVE_CHAT": "Campanha chat ao vivo",
         "CAMPAIGN_SMS": "Campanha SMS",
-        "UNKNOWN": "Desconhecida"
+        "NONE": "Sem origem"
       }
     }
   },
@@ -532,6 +532,7 @@
         "TITLE": "Retornos",
         "PENDING": "Pendentes",
         "OVERDUE": "Vencidos",
+        "OVERDUE_BY": "IA {ai} · Equipe {human}",
         "DUE_SOON": "Vencem em 48h"
       },
       "WORKLOAD": {
@@ -1578,7 +1579,7 @@
       "WHEN_TO_USE": "Quando usar",
       "WHEN_TO_USE_HELP": "A IA lê este texto para saber quando uma conversa é deste funil. Diga quais produtos ou casos entram aqui.",
       "WHEN_TO_USE_PLACEHOLDER": "Ex.: venda dos nossos dois produtos, Agentes de IA e Chat2You.",
-      "MONTHLY_TARGET": "Meta mensal de vendas (R$)",
+      "MONTHLY_TARGET": "Meta mensal de vendas",
       "MONTHLY_TARGET_PLACEHOLDER": "Ex.: 50000",
       "MONTHLY_TARGET_HELP": "Alimenta o box de Meta no dashboard. Deixe vazio para sem meta.",
       "REQUIRED": "Obrigatório",
@@ -3531,6 +3532,9 @@
       "ADD_TOGGLE": "Definir horário de atendimento (SLA) logo após criar"
     }
   },
+  "CRM_FILTRO_DO_LINK": {
+    "FECHADO_NO_MES": "Fechado: este mês"
+  },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Copiloto Autonom.ia",
     "RESET": "Nova conversa",
@@ -4430,7 +4434,6 @@
       "META": "Meta de vendas por mês",
       "META_AJUDA": "Aparece no painel. Deixe vazio se não tiver meta.",
       "META_EXEMPLO": "50000",
-      "MOEDA": "R$",
       "NOMES": "Como chamar o resultado (se quiser)",
       "NOMES_AJUDA": "Em branco, usamos “{sucesso}” e “{fracasso}”.",
       "SUCESSO": "Quando dá certo",
