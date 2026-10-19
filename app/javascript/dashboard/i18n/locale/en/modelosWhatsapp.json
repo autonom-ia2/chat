@@ -402,7 +402,7 @@
         "PARA": "The customer taps it and calls you.",
         "EXEMPLO": "E.g.: Talk to us",
         "VALOR": "Phone",
-        "VALOR_EXEMPLO": "+55 11 4000-0000"
+        "PAIS": "Phone country"
       },
       "copiar_codigo": {
         "ROTULO": "Copy code",
