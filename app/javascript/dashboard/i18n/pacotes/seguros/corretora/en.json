@@ -1141,11 +1141,16 @@
           },
           "PASSOS": {
             "UM": {
-              "QUANDO_EXEMPLO": "Use when the client asks whether the policy has been issued, until when it is valid or whether the installment is up to date. Brings the insurer, the policy period and the installment status."
+              "QUANDO_EXEMPLO": "Use when the client asks whether the policy has been issued, until when it is valid or whether the installment is up to date. Brings the insurer, the policy period and the installment status.",
+              "NOME_AJUDA_VAZIO": "So you can find it on the list. E.g.: Policy lookup"
             },
             "TRES": {
               "DESCRICAO_EXEMPLO": "The car plate or the client's CPF, the way they sent it."
             }
+          },
+          "LISTA": {
+            "VAZIO": "This agent does not look anything up in other systems yet. Add a tool when it needs data from outside, like a client policy.",
+            "CONTEXTO": "Tools let {nome} look things up in other systems during the conversation, like policies, calendar or customer records. The agent decides on its own when to use each one, based on what is written in \"When to use\"."
           }
         }
       },

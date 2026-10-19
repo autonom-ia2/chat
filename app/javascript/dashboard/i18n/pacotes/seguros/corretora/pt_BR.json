@@ -1141,11 +1141,16 @@
           },
           "PASSOS": {
             "UM": {
-              "QUANDO_EXEMPLO": "Use quando o cliente perguntar se a apólice já saiu, até quando ela vale ou se a parcela está em dia. Traz a seguradora, a vigência e a situação das parcelas."
+              "QUANDO_EXEMPLO": "Use quando o cliente perguntar se a apólice já saiu, até quando ela vale ou se a parcela está em dia. Traz a seguradora, a vigência e a situação das parcelas.",
+              "NOME_AJUDA_VAZIO": "Para você reconhecer na lista. Ex.: Consulta de apólice"
             },
             "TRES": {
               "DESCRICAO_EXEMPLO": "A placa do carro ou o CPF do cliente, do jeito que ele mandou."
             }
+          },
+          "LISTA": {
+            "VAZIO": "Este agente ainda não consulta nenhum outro sistema. Adicione uma ferramenta quando ele precisar buscar um dado fora daqui, como a apólice de um cliente.",
+            "CONTEXTO": "Ferramentas deixam {nome} consultar outros sistemas durante a conversa, como apólices, agenda ou cadastro. O agente decide sozinho quando usar cada uma, pelo que está escrito em \"Quando usar\"."
           }
         }
       },

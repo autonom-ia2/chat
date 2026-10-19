@@ -12,11 +12,11 @@
 #   - Só orientação e vocabulário do ramo. Nenhuma frase pronta de cliente: o modelo copia frase (a tabela 3B do
 #     #1545 é referência e caso de eval, nunca conteúdo daqui).
 #
-# O conteúdo mora em config/pacotes/seguros/<tipo>/agentes.md, um texto por tipo de conta de seguros, lido uma vez no
+# O conteúdo mora em config/agentes_por_pacote/seguros/<tipo>/agentes.md, um texto por tipo de conta de seguros, lido uma vez no
 # boot. Vale só com o interruptor AUTONOMIA_PACOTES_ENABLED ligado e conta de seguros (as camadas de
 # Autonomia::Segmentos::Pacotes); conta geral, interruptor desligado ou tipo sem arquivo devolve nil.
 module Autonomia::Segmentos::Bloco
-  PASTA = Rails.root.join('config/pacotes')
+  PASTA = Rails.root.join('config/agentes_por_pacote')
   ARQUIVO = 'agentes.md'
 
   TEXTOS = Dir.glob(PASTA.join('*', '*', ARQUIVO).to_s).to_h do |arquivo|

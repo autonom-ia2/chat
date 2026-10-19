@@ -9,7 +9,7 @@
 - A conta tem nome neutro ("Grupo Vale") e o agente, instrução genérica. Assim, o tipo da conta só chega ao modelo pelo bloco.
 - Duas variantes, intercaladas:
   - `sem_bloco`: `Bloco.for` devolve nil, como hoje;
-  - `com_bloco`: o texto de `config/pacotes/seguros/<tipo>/agentes.md`.
+  - `com_bloco`: o texto de `config/agentes_por_pacote/seguros/<tipo>/agentes.md`.
 - O juiz é o gpt-5.4 e não sabe qual variante está julgando.
 - A Lia (`insurance_quote`) e a conta 43 ficaram fora. Os dados são de teste, no banco `chatwoot_test_1802l6`.
 

@@ -4,7 +4,7 @@ require 'rails_helper'
 # `AUTONOMIA_EVAL_PAGO=1`, `SEGMENTO_EVAL=1` e `OPENAI_API_KEY`. Pelo Responder de verdade, com a montagem de verdade
 # (PromptParts::SegmentoDaConta, Fase 2 ligada). Duas variantes, intercaladas:
 #   - `sem_bloco`: Bloco.for devolve nil (como hoje em produção);
-#   - `com_bloco`: o texto do tipo da conta, de config/pacotes/seguros/<tipo>/agentes.md.
+#   - `com_bloco`: o texto do tipo da conta, de config/agentes_por_pacote/seguros/<tipo>/agentes.md.
 # A conta tem nome neutro e o agente, instrução genérica: o que muda entre as variantes é só o bloco. O juiz, de outro
 # modelo, não sabe a variante. Teto somado pelo consumo gravado (juiz incluído). `SEGMENTO_EVAL_SAIDA=<arquivo>` grava
 # o relatório; `SEGMENTO_EVAL_TIPO=<tipo>` roda só um tipo.
