@@ -152,26 +152,24 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     expect(estado['rodada']).to eq('nova')
   end
 
-  describe '.automatica_permitida?' do
-    it 'sim na primeira vez; não com a mesma base; sim de novo quando a base muda depois de 30 min', :aggregate_failures do
-      expect(described_class.automatica_permitida?(agent)).to be(true)
+  describe '.quando_automatica' do
+    it 'agora na primeira vez; nil com a mesma base; base mudada antes de 30 min: o fim dos 30 min', :aggregate_failures do
+      expect(described_class.quando_automatica(agent)).to be_within(1.second).of(Time.current)
 
       described_class.pedir!(agent, quando: 'base_mudou')
       described_class.new(agent, estado['rodada']).rodar!
-      expect(described_class.automatica_permitida?(agent)).to be(false)
+      expect(described_class.quando_automatica(agent)).to be_nil
 
+      ultima = Time.zone.parse(estado['ultima_automatica'])
       material('horarios.pdf')
-      expect(described_class.automatica_permitida?(agent)).to be(false) # base mudou, mas há menos de 30 min
-
-      travel 31.minutes do
-        expect(described_class.automatica_permitida?(agent.reload)).to be(true)
-      end
+      expect(described_class.quando_automatica(agent)).to be_within(1.second).of(ultima + 30.minutes)
     end
 
-    it 'não com uma rodada viva' do
+    it 'base mudada com uma rodada viva: daqui a pouco, nunca agora' do
       described_class.pedir!(agent, quando: 'pedido')
+      material('horarios.pdf')
 
-      expect(described_class.automatica_permitida?(agent)).to be(false)
+      expect(described_class.quando_automatica(agent)).to be_within(1.second).of(described_class::ESPERA_DA_RODADA_VIVA.from_now)
     end
   end
 

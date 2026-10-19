@@ -55,11 +55,6 @@ class Autonomia::Agents::Material::Autoteste
       viva?(atual) ? [livre, ESPERA_DA_RODADA_VIVA.from_now].max : livre
     end
 
-    def automatica_permitida?(agent)
-      quando = quando_automatica(agent)
-      quando.present? && !quando.future?
-    end
-
     def viva?(estado)
       estado.is_a?(Hash) && estado['estado'] == 'rodando' && !vencida?(estado)
     end
