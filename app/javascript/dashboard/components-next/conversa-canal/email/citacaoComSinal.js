@@ -37,6 +37,8 @@ const QUEBRAM_LINHA = new Set([
   'UL',
 ]);
 const COM_CONTEUDO_SEM_TEXTO = ['IMG', 'VIDEO', 'AUDIO', 'PICTURE', 'SVG'];
+// Texto que o leitor não vê (o CSS de um <style> no corpo, #1884) não é linha do e-mail.
+const SEM_LINHAS = new Set(['STYLE', 'SCRIPT', 'TEMPLATE']);
 
 // As linhas do e-mail como o leitor as vê, cada uma com o ponto do DOM onde começa.
 const linhasDoHtml = raiz => {
@@ -59,7 +61,7 @@ const linhasDoHtml = raiz => {
       });
       return;
     }
-    if (no.nodeType !== Node.ELEMENT_NODE) return;
+    if (no.nodeType !== Node.ELEMENT_NODE || SEM_LINHAS.has(no.tagName)) return;
     if (no.tagName === 'BR') {
       quebrar();
       return;
@@ -113,7 +115,8 @@ export const cortarCitacaoComSinal = raiz => {
   if (inicio <= 0) return false;
 
   const { no, posicao } = linhas[inicio].inicio;
-  const trecho = document.createRange();
+  // A raiz pode ser de outro documento (o e-mail inteiro lido pelo DOMParser, #1884).
+  const trecho = raiz.ownerDocument.createRange();
   trecho.setStart(no, posicao);
   trecho.setEnd(raiz, raiz.childNodes.length);
   trecho.deleteContents();
