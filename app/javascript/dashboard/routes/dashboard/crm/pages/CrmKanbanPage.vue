@@ -185,6 +185,12 @@ const vistaDoEndereco = () =>
 const viewMode = ref(
   isCalendarOnly.value ? 'calendar' : vistaDoEndereco() || 'kanban'
 );
+// #1883: ao recarregar ou abrir o link numa aba nova, a flag da conta chega depois da tela.
+watch(menuNovo, ligado => {
+  const vista = vistaDoEndereco();
+  if (ligado && vista && viewMode.value === 'kanban' && !isCalendarOnly.value)
+    viewMode.value = vista;
+});
 // The two CRM routes share this component, so the instance is reused on navigation:
 // keep viewMode in sync with the route (force calendar on the calendar-only page).
 watch(isCalendarOnly, only => {

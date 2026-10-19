@@ -249,6 +249,18 @@ describe('CrmKanbanPage', () => {
       expect(replace).not.toHaveBeenCalled();
     });
 
+    // #1883: ao recarregar (ou abrir o link numa aba nova), a flag da conta chega depois da tela.
+    it('flag que chega depois da tela ainda abre na vista do endereço', async () => {
+      route.query = { view: 'list' };
+      wrapper = await mountPage();
+      expect(vistaMarcada(wrapper)).toBe('CRM_KANBAN.VIEWS.KANBAN');
+
+      storeGetters['accounts/isFeatureEnabledonAccount'].value = (_id, flag) =>
+        flag === 'menu_lateral_novo';
+      await flushPromises();
+      expect(vistaMarcada(wrapper)).toBe('CRM_KANBAN.VIEWS.LIST');
+    });
+
     it('flag ligada: abre na vista do endereço e grava a troca com replace', async () => {
       route.query = { view: 'list', pipeline_id: undefined };
       wrapper = await mountPage({ account: { menuNovo: true } });
