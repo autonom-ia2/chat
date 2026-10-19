@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { defaultFilters } from 'dashboard/store/modules/crmKanban';
 import { useCrmPermissions } from '../composables/useCrmPermissions';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
@@ -128,6 +129,7 @@ const inboxes = useMapGetter('inboxes/getInboxes');
 const agents = useMapGetter('agents/getAgents');
 const teams = useMapGetter('teams/getTeams');
 const accountLabels = useMapGetter('labels/getLabels');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const {
   canManageCards,
   canViewCrm,
@@ -343,7 +345,7 @@ const resultChoices = computed(() =>
 const labelOptions = computed(() =>
   accountLabels.value.map(label => ({
     value: label.id,
-    label: label.title,
+    label: nomeDaEtiqueta(label.title),
     color: label.color,
   }))
 );

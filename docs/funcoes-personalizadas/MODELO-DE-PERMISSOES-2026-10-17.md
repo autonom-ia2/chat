@@ -1709,3 +1709,17 @@ Os 8 chats donos de módulo leram a versão 3. Nenhum contrariou o modelo. Tudo 
 1. O Rodrigo decide as dúvidas abertas (seções 7.2, 7.3 e 7.4).
 2. Abrir o épico com uma Issue por etapa, na ordem da seção 6.
 3. Começar a etapa 3 pelo primeiro lote, com a lista de arquivos enviada à Orquestração e ao chat dono. Chaves protegidas só depois do merge do PR #1783.
+
+---
+
+## 9. Decisões do Rodrigo em 18/10 (noite)
+
+| Dúvida | Decisão |
+|---|---|
+| D7 (contato dentro da conversa e do card sem `contact_view`) | **(a)** nome, telefone e e-mail do contato daquela conversa. Ficha completa, notas e demais abas exigem `contact_view` |
+| 7.4-2 (excluir em massa arquiva) | **(b)** arquivar fica em `crm_delete_cards`, junto com excluir; a tela passa a dizer "Arquivar" |
+| 7.4-3 (WhatsApp API cria e dispara junto) | **(a)** vira rascunho + disparar; disparo exige `campaign_send`. Mudança de fluxo: mockup antes de codar |
+| 7.4-4 (e-mail de teste) | **(a)** `campaign_manage` |
+| 7.4-5 (caixa da campanha) | **(a)** ser membro da caixa é o alcance da campanha; o servidor passa a exigir |
+
+O teste completo do épico ficou para o fim, com o roteiro em `ROTEIRO-TESTE-FINAL.md`.

@@ -63,11 +63,18 @@ class Crm::FollowUps::OptOutDecision
     @card.with_lock do
       next false unless pending?
 
-      contact = opted_out ? Crm::FollowUps::CardOptOut.contact_for(@card) : nil
+      contact = opted_out && !de_outro_endereco? ? Crm::FollowUps::CardOptOut.contact_for(@card) : nil
       @card.update!(metadata: decided_metadata(decision, motivo, opted_out, contact))
       contact&.opt_out!(source: 'follow_up_reply')
       true
     end
+  end
+
+  # #1807 (flag `email_autoria`): o pedido para parar mandado de um e-mail que não é do cliente (alguém em cópia, a
+  # equipe, resposta automática) para a cadência DESTE card (o "sim" segura o planner), mas não marca o contato: quem
+  # pediu pode não ser ele. Se for o próprio cliente de outro endereço, mesclar os contatos resolve.
+  def de_outro_endereco?
+    Crm::Email::Autoria.new(@card.account).de(@message).present?
   end
 
   def decided_metadata(decision, motivo, opted_out, contact)

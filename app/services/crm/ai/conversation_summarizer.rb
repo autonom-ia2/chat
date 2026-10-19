@@ -98,7 +98,7 @@ module Crm
       end
 
       def instructions
-        <<~PROMPT.strip
+        texto = <<~PROMPT.strip
           Você resume conversas de atendimento/vendas em português do Brasil para um card de CRM.
           Produza um resumo objetivo (3 a 5 frases) com o contexto, o que o cliente quer, decisões e próximos passos.
           #{ContextBuilder::ROLES_LEGEND}
@@ -110,6 +110,7 @@ module Crm
           falar com o cliente.
           Não invente informações. Responda apenas com JSON válido no schema solicitado.
         PROMPT
+        "#{texto}#{Crm::Email::Autoria.legenda(@account)}"
       end
 
       def user_input(context)

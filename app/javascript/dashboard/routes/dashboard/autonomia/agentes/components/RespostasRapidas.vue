@@ -1,10 +1,13 @@
 <script setup>
 // #1181 (DECISOES.md item 3) — "ideias para começar": só no primeiro turno, preenchem o campo e a
 // pessoa pode editar antes de mandar. Não fingem responder pergunta da IA.
+// #1428 (entrega C) — `empilhar`: as respostas prontas a uma pergunta do Construtor são frases mais
+// longas; no celular, uma por linha na largura toda, para o texto não espremer dentro da pílula.
 const props = defineProps({
   opcoes: { type: Array, required: true },
   rotulo: { type: String, default: '' },
   desabilitado: { type: Boolean, default: false },
+  empilhar: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['escolher']);
@@ -19,14 +22,20 @@ const escolher = opcao => {
   <div
     role="group"
     :aria-label="rotulo || undefined"
-    class="flex flex-wrap gap-2"
+    class="flex gap-2"
+    :class="empilhar ? 'flex-col sm:flex-row sm:flex-wrap' : 'flex-wrap'"
   >
     <button
       v-for="opcao in opcoes"
       :key="opcao"
       type="button"
       :aria-disabled="desabilitado ? 'true' : undefined"
-      class="px-4 text-sm transition rounded-full min-h-11 bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-slate-7 hover:bg-n-slate-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+      class="px-4 text-sm transition min-h-11 bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-slate-7 hover:bg-n-slate-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11 aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+      :class="
+        empilhar
+          ? 'py-2 text-start rounded-xl sm:rounded-full min-w-0 max-w-full break-words'
+          : 'rounded-full'
+      "
       @click="escolher(opcao)"
     >
       {{ opcao }}

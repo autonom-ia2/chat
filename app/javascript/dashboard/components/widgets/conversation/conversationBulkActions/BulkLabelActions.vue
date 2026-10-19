@@ -2,6 +2,7 @@
 import { ref, useTemplateRef, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useToggle } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 
@@ -38,6 +39,7 @@ const emit = defineEmits(['assign', 'remove']);
 const { t } = useI18n();
 
 const labels = useMapGetter('labels/getLabels');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 
 const containerRef = useTemplateRef('containerRef');
 const [showDropdown, toggleDropdown] = useToggle(false);
@@ -83,7 +85,8 @@ const labelMenuItems = computed(() => {
   return visibleLabels.value.map(label => ({
     action: 'select',
     value: label.title,
-    label: label.title,
+    label: nomeDaEtiqueta(label.title),
+    searchText: label.title,
     color: label.color,
     id: label.id,
     isSelected: isLabelSelected(label.title),

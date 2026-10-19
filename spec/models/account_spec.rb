@@ -217,8 +217,16 @@ RSpec.describe Account do
         feature_conversa_cara_do_canal: 1 << 31,
         # #1489: a posição na lista é o bit; no fim do que está na main.
         feature_whatsapp_hybrid_recovery: 1 << 32,
-        # #1786: posição 38 reservada (1 << 37); no fim do que está na main até a vaga.
-        feature_conversa_email_nova: 1 << 33
+        # #1823: posição 34 (tabela v4 da Orquestração).
+        feature_etiquetas_do_whatsapp: 1 << 33,
+        # #1709: posição 35, logo depois de etiquetas_do_whatsapp (tabela v4 da Orquestração).
+        feature_whatsapp_rich_native: 1 << 34,
+        # #1801: posição 36, logo depois de whatsapp_rich_native (tabela da Orquestração).
+        feature_tela_inicial_resumo: 1 << 35,
+        # #1807: posição 37, logo depois de tela_inicial_resumo (tabela da Orquestração, 19/10).
+        feature_email_autoria: 1 << 36,
+        # #1786: posição 38, logo depois de email_autoria (tabela da Orquestração, 19/10).
+        feature_conversa_email_nova: 1 << 37
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

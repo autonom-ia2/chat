@@ -957,6 +957,16 @@
     ],
     "sem_corpo": true
   },
+  "DELETE nomes_de_etiquetas/:label_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/nomes_de_etiquetas#destroy",
+    "modelo": "Etiquetas::Nome",
+    "origem": [
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:24",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:47"
+    ],
+    "sem_corpo": true
+  },
   "DELETE notifications/:id": {
     "completo": true,
     "controller": "api/v1/accounts/notifications#destroy",
@@ -4718,6 +4728,24 @@
     ],
     "sem_corpo": false
   },
+  "PATCH conversations/:conversation_id/messages/:id/content": {
+    "campos": {
+      "content": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/message_edits#update",
+    "modelo": "User",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:8",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:24",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:11",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
   "PATCH conversations/:conversation_id/participants": {
     "campos": {
       "user_ids": {
@@ -6328,6 +6356,8 @@
           "crm_admin",
           "crm_export",
           "contact_view",
+          "contact_export",
+          "contact_delete",
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
@@ -7547,6 +7577,24 @@
       "app/controllers/api/v1/accounts/macros_controller.rb:36",
       "app/controllers/api/v1/accounts/macros_controller.rb:30",
       "app/controllers/api/v1/accounts/macros_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH nomes_de_etiquetas/:label_id": {
+    "campos": {
+      "nome": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/nomes_de_etiquetas#update",
+    "modelo": "Etiquetas::Nome",
+    "origem": [
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:19",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:20",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:47"
     ],
     "sem_corpo": false
   },
@@ -13561,6 +13609,24 @@
     ],
     "sem_corpo": false
   },
+  "POST conversations/:conversation_id/messages/:id/reaction": {
+    "campos": {
+      "emoji": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/message_reactions#create",
+    "modelo": "User",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:7",
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:20",
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:10",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
   "POST conversations/:conversation_id/messages/:id/retry": {
     "campos": {
       "external_error": {},
@@ -16240,6 +16306,8 @@
           "crm_admin",
           "crm_export",
           "contact_view",
+          "contact_export",
+          "contact_delete",
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
@@ -24537,6 +24605,8 @@
           "crm_admin",
           "crm_export",
           "contact_view",
+          "contact_export",
+          "contact_delete",
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
@@ -25751,6 +25821,24 @@
       "app/controllers/api/v1/accounts/macros_controller.rb:36",
       "app/controllers/api/v1/accounts/macros_controller.rb:30",
       "app/controllers/api/v1/accounts/macros_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
+  "PUT nomes_de_etiquetas/:label_id": {
+    "campos": {
+      "nome": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/nomes_de_etiquetas#update",
+    "modelo": "Etiquetas::Nome",
+    "origem": [
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:19",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:20",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:47"
     ],
     "sem_corpo": false
   },

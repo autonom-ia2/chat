@@ -107,6 +107,25 @@ RSpec.describe Autonomia::Agents::Analytics do
       expect(payload[:timeline].sum { |point| point[:handoffs] }).to eq(2)
     end
 
+    # #1709 (rodada de correção, item 9): os silêncios de propósito não são handoff e têm lista própria.
+    it 'counts the deliberate silences by event type, outside the handoff reasons' do
+      conv = conversation
+      { skipped_mensagem_sem_suporte: 'mensagem_sem_suporte', skipped_mensagem_apagada: 'mensagem_apagada' }.each do |type, reason|
+        Autonomia::Agents::AgentEvent.create!(agent: agent, account: account, conversation_id: conv.id, event_type: type, handoff_reason: reason)
+      end
+      Autonomia::Agents::AgentEvent.create!(agent: agent, account: account, conversation_id: conv.id, event_type: :skipped_mensagem_sem_suporte,
+                                            handoff_reason: 'mensagem_sem_suporte')
+      Autonomia::Agents::AgentEvent.create!(agent: agent, account: account, conversation_id: conv.id, event_type: :skipped_escolha_retirada,
+                                            handoff_reason: 'escolha_retirada', created_at: 40.days.ago)
+
+      payload = described_class.new(agent: agent, range: '7d').call
+
+      expect(payload[:silences]).to eq([{ reason: 'mensagem_sem_suporte', count: 2 }, { reason: 'mensagem_apagada', count: 1 }])
+      expect(payload[:top_handoff_reasons]).to eq([])
+      expect(payload[:handoff_count]).to eq(0)
+      expect(payload[:conversations_handled]).to eq(0)
+    end
+
     # #380 (rodada 4) — a Lia MUDA por escolhas incompletas não atendeu ninguém: o evento existe para o
     # corretor ver a causa do silêncio, não para inflar "Conversas atendidas" nem a lista do clique.
     it 'does not count a conversation where the agent stayed silent for incomplete choices as handled' do

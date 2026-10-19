@@ -1,5 +1,6 @@
 <script setup>
 import { ref, unref, provide, computed, watch, onMounted } from 'vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
@@ -40,6 +41,7 @@ import { useEmitter } from 'dashboard/composables/emitter';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
 
 import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 import wootConstants from 'dashboard/constants/globals';
 import advancedFilterOptions from './widgets/conversation/advancedFilterItems';
@@ -111,6 +113,7 @@ const teamsList = useMapGetter('teams/getTeams');
 const inboxesList = useMapGetter('inboxes/getInboxes');
 const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const currentAccountId = useMapGetter('getCurrentAccountId');
 
 // Filtro "Funil" (multifunil #1150): id do funil, "none" (Sem assunto) ou vazio (todos os meus). Lembrado por conta e
@@ -327,7 +330,7 @@ const pageTitle = computed(() => {
     return activeTeam.value.name;
   }
   if (props.label) {
-    return `#${props.label}`;
+    return `#${nomeDaEtiqueta(props.label)}`;
   }
   if (props.conversationType === wootConstants.CONVERSATION_TYPE.MENTION) {
     return t('CHAT_LIST.MENTION_HEADING');
@@ -848,6 +851,18 @@ function toggleSelectAll(check) {
   selectAllConversations(check, conversationList);
 }
 
+// #1801: a tela inicial pede uma aba. Aba que a pessoa não tem é ignorada; com filtro avançado
+// aplicado, o filtro sai junto (senão a lista seguiria filtrada e o clique pareceria não fazer nada).
+function abrirAbaDaTelaInicial(aba) {
+  if (!assigneeTabItems.value.some(item => item.key === aba)) return;
+  if (!hasAppliedFilters.value) {
+    updateAssigneeTab(aba);
+    return;
+  }
+  activeAssigneeTab.value = aba;
+  resetAndFetchData();
+}
+useEmitter(BUS_EVENTS.TELA_INICIAL_ABA, abrirAbaDaTelaInicial);
 useEmitter('fetch_conversation_stats', () => {
   if (hasAppliedFiltersOrActiveFolders.value) return;
   store.dispatch('conversationStats/get', conversationFilters.value);

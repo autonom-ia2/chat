@@ -34,6 +34,6 @@ class CompanyPolicy < ApplicationPolicy
   end
 
   def destroy?
-    @account_user.administrator?
+    @account_user.permission_granted?('contact_delete')
   end
 end

@@ -362,3 +362,127 @@ Autonom.ia). Regra decidida em 14/10/2026:
   no motor (conectada, subindo ou com QR; uma consulta à lista de sessões, guardada por 1 minuto; motor fora = sem
   aviso). O número vem do aparelho da sessão quando o motor informa, senão do nome da sessão; celular brasileiro com e
   sem o 9 (antes de 6 a 9) é o mesmo número (`WhatsappHybrid::SameNumberInboxes`).
+
+## Mensagem rica nativa pelo WhatsApp API (#1709, fase 1)
+
+Atrás da flag por conta `whatsapp_rich_native` ("Mensagens ricas nativas pelo WhatsApp API (Híbrido e WAHA)"),
+desligada por padrão; ligar é com a Orquestração. Sem a flag, nada muda: opções, localização e contato saem como texto
+pelo WhatsApp API, com a marca "Enviado como texto" (#1555).
+
+Com a flag, quando a mensagem sai pelo WhatsApp API (rota direta ou plano B do 131047):
+
+| Formato do painel (`rich_message`) | Sai pelo motor | Observação |
+|---|---|---|
+| `options` | `sendList` (lista) | Sempre lista, mesmo com até 3 opções sem descrição: o motor GOWS não tem botões (`sendButtons` = 501). Botão padrão "Ver opções" (i18n, idioma da conta) quando falta `button`. |
+| `location` | `sendLocation` | Nome e endereço vão juntos no título (o motor só tem título); sem os dois, "Localização". |
+| `contact` | `sendContactVcard` | `wa_id` vai como `whatsappId` só quando veio. |
+| `link_button`, `location_request`, `flow`, `link_preview` | texto, como antes | |
+
+**Limites da lista** (não cabe: sai texto, como antes): título da linha até 24, descrição até 72, botão até 20, no
+máximo 10 linhas, tudo em uma linha só. O título da lista é o cabeçalho; sem cabeçalho, é o corpo, que então precisa
+caber em 60 caracteres e numa linha só.
+
+**`rowId` com referência.** Cada linha leva `<id da opção>|<id da mensagem no Chatwoot>` (separador fixo `|`, só quando
+cabe nos 200 do `rowId`; senão, só o id da opção). Lista com algum id de opção que tem `|` não sai nativa: sai texto,
+como antes; assim todo `rowId` nativo com `|` é nosso, com a referência numérica no fim. O `list_reply.id` da Meta volta igual
+ao `rowId` enviado (teste de 16/10/2026: veio "manha", o `rowId` mandado). Na volta, o recebimento separa pelo último
+`|` (sem regex) e grava `selected_option.id` SEMPRE com o id ORIGINAL da opção (o robô lê o mesmo de antes), confira
+ou não a referência (ex.: lista de uma conversa anterior), com ou sem a flag. `in_reply_to` = a mensagem referida, se
+ela é lista nativa desta conversa (uma consulta por id; vale até com a flag desligada depois do envio). Senão, com a
+flag, `in_reply_to` = a última lista nativa da conversa com uma opção de `id` igual ao da opção (comparação exata; 50
+últimas mensagens nossas). Sem a flag, não há busca. Resposta que aponta uma mensagem (`context`) nunca passa por isso.
+
+**Resultado do envio.**
+- Saiu nativa: `rich_message_sent_as: 'native'` (a bolha mostra o formato) e nenhuma marca de texto. A marca e o
+  `source_id` são gravados sem as validações do modelo (a de rajada recusaria numa conversa movimentada); falha nessa
+  gravação vai para o log e o tracker, sem derrubar o envio.
+- Id físico: `source_id` e Redis guardam o id curto (`3EB0...`), o mesmo formato do texto, que é o que o ack do webhook
+  híbrido procura. `sendLocation` e `sendContactVcard` levam o id gerado antes. O `sendList` não aceita id antes: vale o
+  da resposta (`id._serialized` termina no id físico, conferido no teste real de 16/10/2026).
+- Recusa explícita do motor (4xx ou 501), em que nada saiu: vai UMA vez o texto de sempre, com a marca 'text'. As
+  recusas do WhatsApp que o envio já trata (463, 475) seguem como hoje. Se o `source_id` não voltar ao id gerado antes
+  do texto, nada sai: a mensagem fica `failed` com o motivo próprio e resultado 'failed' (gravados sem validação), o
+  erro vai ao tracker, a sessão é relida (como depois de todo erro do motor) e a campanha recebe a queda (manda o
+  modelo, como em toda falha certa). Se nem essa gravação passar (banco fora), o erro original é relançado e o job
+  falha à vista (Sidekiq e tracker); o `source_id` provisório impede um novo envio pelo motor.
+- 5xx, conexão fechada ou sem resposta: pode ter saído. Fica incerto, com o aviso de conferir no celular, sem texto por
+  cima.
+- Antes do pedido da lista, o `source_id` recebe um valor provisório e único (`waha-native-pending-<id da mensagem>`):
+  com `source_id`, um novo SendReplyJob não reenvia a mensagem se algo quebrar depois do pedido. A resposta troca pelo
+  id físico; na recusa explícita, volta o id gerado, que o texto leva ao motor. Nem o ack (Redis pelo id físico) nem a
+  ligação da resposta (id da mensagem no `rowId`) leem o provisório.
+- **Limitação aceita:** a lista sem resposta (incerta) ou com resposta sem id fica com o `source_id` provisório; o ack
+  dela não a encontra (o log traz a classe da resposta e o id da mensagem). Como a Meta não ecoa lista enviada pelo
+  aparelho, não há eco que a duplique.
+
+**O que a tela e o código consultam.**
+- A conversa traz `whatsapp_api_rich_native` (lista de tipos) ao lado de `whatsapp_api_reply`, no JSON e no evento ao
+  vivo. Duas linhas no core, no mesmo padrão do `whatsapp_api_reply` (jbuilder da conversa e
+  `Conversations::EventDataPresenter`), que calculam o `whatsapp_api_reply?` uma vez e o reaproveitam. Vazia sem a flag,
+  dentro da janela, com a conexão pausada ou caída. Sem consulta por conversa: a flag é lida da conta já carregada ou
+  da conta do request (`Current.account`).
+- `RichMessages.delivery_mode` responde `:native` só com `message:` (argumento opcional novo) e a mesma regra do envio
+  (roteador `route_for` com a origem da mensagem, e tradutor). Sem a mensagem, o modo de antes (`:text`), para qualquer
+  tipo. Quem consulta hoje: só o aviso de agendamento (`Crm::BookingV2::Notices::Button`, com `link_button`).
+
+**Chaves de `content_attributes`:** `rich_message` (pedido, não muda), `rich_message_sent_as` ('native' ou 'text'),
+`in_reply_to` (id numérico da lista respondida), `selected_option` (`{ id, title }`, id original da opção) e as
+`whatsapp_transport*` do WebTransport (não mudam).
+
+**Código.** `Waha::RichNative` (flag, marca, referência do `rowId`, `types_for`; comum à fase 2, caixa WAHA comum),
+`Waha::RichPayload` (tradução, independente do Híbrido), `Waha::Client#send_list`/`#send_location`/
+`#send_contact_vcard`, e `WhatsappHybrid::RichNative` (prepends em `WhatsappHybrid::WebTransport`, `RichMessages` e
+`Whatsapp::IncomingMessageBaseService`, em `config/initializers/whatsapp_rich_native.rb`). `web_transport.rb` e o
+`echo_reconciler` não foram editados. Decisão e validação: `docs/audit/2026-10-16-1709-ricas-waha-fase1.md`.
+
+## Mensagem rica nativa na caixa WAHA comum (#1709, fase 2)
+
+Na caixa WAHA comum (`Channel::Api` com provider `waha`), quem envia é o **conector do WAHA** (customizado por outro
+construtor). O chat2you não chama o motor: decide na criação, entrega o pedido no webhook da caixa e lê a volta.
+
+**Decisão única, na criação** (`before_create`, `Waha::RichNative::ApiInboxDecision`). A mensagem é nativa só se
+todas valerem; senão, `rich_message_sent_as: 'text'`, como hoje:
+- flag `whatsapp_rich_native` na conta;
+- o `webhook_url` da caixa começa (`start_with?`, com a barra final) pela URL de um motor listado em
+  `WAHA_RICH_NATIVE_ENGINES` (URLs separadas por vírgula; vazia por padrão = tudo em texto);
+- o motor declara o tipo em `GET /api/server/version`, campo `autonomia.rich_native` (ex.:
+  `{ patch: 'c2y-rich-1', rich_native: ['options','location','contact'], list_reply: true }`); `options` só com
+  `list_reply: true`. Quem lê o motor é o `Waha::EngineCapabilitiesRefreshJob` (cron a cada 5 min; sem HTTP sem a
+  lista no ENV ou sem conta com a flag), que guarda por 10 min (cobre duas rodadas com falha); a criação de mensagem e
+  a lista de conversas só leem esse cache, nunca chamam o motor. Sem valor no cache (motor nunca lido, ou falhando há
+  mais de 10 min) = nenhum tipo. Todos os motores da lista usam a mesma chave (`WAHA_API_KEY`); 401/403 vai ao
+  rastreador de erros com o nome do motor, no máximo uma vez por hora por motor. O webhook da caixa sempre tem
+  caminho (`<motor>/webhooks/chatwoot/...`): `webhook_url` igual à raiz do motor não casa e fica em texto;
+- o tradutor monta o pedido (`Waha::RichPayload.build`, com o `content` cru);
+- e as travas de sempre da caixa API: vai ao canal, caixa com webhook, conversa sem trava de transmissão, formato sem
+  erro.
+
+**Saída (contrato `waha_native`).** Mensagem marcada `native`, no `message_created` do webhook da caixa:
+`content_attributes.waha_native = { kind: 'sendList' | 'sendLocation' | 'sendContactVcard', payload: {...} }`, sem
+`session` e `chatId` (o conector os põe). Na lista, `rowId` = `<id da opção>|<id da mensagem>`. O `content` continua o
+texto de reserva (corpo + versão em texto): motor sem o conector customizado manda o texto completo. A entrega lê só a
+marca: se a capacidade do motor mudar entre a criação e a entrega, marca e pedido seguem iguais. O `message_updated`
+não leva o pedido.
+
+**Entrada (contrato `waha_list_reply`).** O conector cria a mensagem RECEBIDA com
+`content_attributes.waha_list_reply = { row_id, title }` (em toda caixa). Sem a flag, a chave fica exatamente como o
+conector mandou, igual à main. Com a flag (`Waha::RichNative::ListReply`, na criação), a chave sai, e só vira escolha
+se uma lista NATIVA nossa da MESMA conversa e caixa ofereceu essa opção: com referência, a lista citada; sem
+referência, a última lista nativa da conversa com esse id (nas 50 últimas mensagens nossas: uma escolha forjada só
+pode apontar uma opção que nós mesmos oferecemos nessas listas; limite aceito). Aí grava
+`selected_option = { id original da opção, title }` (separado pelo último `|`, sem regex) e `in_reply_to` = a lista
+(se o conector não preencheu; `in_reply_to_external_id` só com o id físico, nunca o provisório). Sem lista que confira
+(forja, lista de outra conversa), a mensagem fica como texto comum.
+
+**Forja.** `waha_native` nunca é gravado em mensagem nenhuma, venha de onde vier (callback `before_create`). Pela API
+de mensagens, com ou sem a flag, `rich_message_sent_as` também sai;
+`waha_list_reply` só fica em mensagem recebida (é como o conector cria), e mesmo assim só vira escolha com uma lista
+nativa conferida.
+
+**Reenvio.** O reenvio sai pelo `message_updated`, que não leva o pedido ao motor: o cliente recebe o texto, e a marca
+da mensagem passa de 'native' a 'text'.
+
+**Tela e consultas.** `whatsapp_api_rich_native` da conversa e `RichMessages.delivery_mode(message:)` respondem também
+pela caixa WAHA, com as mesmas condições (os tipos que o motor declara). Na lista de conversas, sem consulta ao banco
+(caixa e canal já carregados; conta do request). Sem migration. Decisão e validação:
+`docs/audit/2026-10-16-1709-ricas-waha-fase2.md`.

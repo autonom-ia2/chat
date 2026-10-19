@@ -54,22 +54,46 @@ const props = defineProps({
 
 const emit = defineEmits(['retry']);
 
+// fork chat#1709 (fase 3): o registro escondido de reação, edição, voto retirado e toque de ligação (atividade com
+// `c2y_hidden`) não aparece na conversa; a mudança já está na mensagem a que ele se refere. Também se esconde a
+// mensagem RECEBIDA com a chave: o voto na enquete e a resposta ao convite (turno do cliente para a IA; o voto aparece
+// agregado na enquete) e o aviso de visualização única trocado pela mídia. Mensagem nossa (saída) nunca se esconde. O
+// servidor só grava a chave nesses casos (a API não a forja).
+const HIDDEN_TYPES = [MESSAGE_TYPES.ACTIVITY, MESSAGE_TYPES.INCOMING];
+const isHidden = message =>
+  HIDDEN_TYPES.includes(message.message_type) &&
+  message.content_attributes?.c2y_hidden === true;
+
 // #1702: com a pele, mensagem absorvida pela apresentação nova (c2y_hidden, reação
-// que o agente da Autonomia leu) sai da lista antes de tudo, para não quebrar
-// sequência, dia nem álbum.
+// que o agente da Autonomia leu) também sai da lista antes de tudo, para não quebrar
+// sequência, dia nem álbum. O isHidden (#1709) vale sempre; o ocultaNaPele soma por cima.
+// Exceção, só com a pele: o marcador de álbum do WAHA (`waha_album`, escondido) passa,
+// porque é ele que junta as fotos no álbum (useAlbunsDaConversa); a pele o esconde ao
+// desenhar. Sem a pele, ele some como as outras escondidas.
 const peleDaLista = usePele();
+const temAlbumDoWaha = atributos => {
+  const album = atributos?.waha_album ?? atributos?.wahaAlbum;
+  return Boolean(album) && typeof album === 'object';
+};
 // #1786: assunto no topo e Responder / Responder a todos / Encaminhar no fim.
 const emailNovo = useEmailDaConversa().ligado;
 const allMessages = computed(() => {
-  const mensagens = useCamelCase(props.messages, {
+  const comPele = Boolean(peleDaLista.value);
+  const passa = message =>
+    !isHidden(message) ||
+    (comPele && temAlbumDoWaha(message.content_attributes));
+  const mensagens = useCamelCase(props.messages.filter(passa), {
     deep: true,
     stopPaths: [
       'content_attributes.translations',
       'content_attributes.whatsapp_flow_response.response_json',
     ],
   });
-  return peleDaLista.value
-    ? mensagens.filter(mensagem => !ocultaNaPele(mensagem))
+  return comPele
+    ? mensagens.filter(
+        mensagem =>
+          !ocultaNaPele(mensagem) || temAlbumDoWaha(mensagem.contentAttributes)
+      )
     : mensagens;
 });
 

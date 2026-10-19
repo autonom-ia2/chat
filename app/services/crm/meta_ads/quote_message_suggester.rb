@@ -129,7 +129,12 @@ class Crm::MetaAds::QuoteMessageSuggester
   # inventado ou plantado. A proposta "parada" conta mensagem de qualquer lado, então às vezes quem espera é o
   # cliente: aí a mensagem responde primeiro. Só o texto muda; o schema, as chaves e a decisão
   # (closed/declined/nothing_open) seguem os mesmos.
+  # #1807: com a flag `email_autoria`, a legenda do aviso de e-mail vai no fim.
   def instructions
+    "#{base_instructions}#{Crm::Email::Autoria.legenda(@card.account)}"
+  end
+
+  def base_instructions
     <<~TEXT
       You write the WhatsApp message that someone from a small business will send to pick up a stalled quote. The customer came from
       an ad, asked for a price and received a quote, and then the conversation stopped: sometimes the customer went quiet, sometimes

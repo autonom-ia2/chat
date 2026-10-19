@@ -7,6 +7,9 @@ import { picoSearch } from '@chatwoot/pico-search';
 
 import AddLabel from './AddLabel.vue';
 import EditLabel from './EditLabel.vue';
+import NomeDaEtiquetaCelula from './NomeDaEtiquetaCelula.vue';
+import EtiquetasEmCartoes from './EtiquetasEmCartoes.vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -19,6 +22,13 @@ import {
 const getters = useStoreGetters();
 const store = useStore();
 const { t } = useI18n();
+// Nome livre das etiquetas (#1823): só com a flag `etiquetas_do_whatsapp`.
+const {
+  ligada: nomeLivreLigado,
+  buscar: buscarEtiquetas,
+  nomeDe: nomeDaEtiqueta,
+  recarregar: recarregarNomes,
+} = useNomeDaEtiqueta();
 
 const loading = ref({});
 const showAddPopup = ref(false);
@@ -32,6 +42,12 @@ const records = computed(() => getters['labels/getLabels'].value);
 const filteredRecords = computed(() => {
   const query = searchQuery.value.trim();
   if (!query) return records.value;
+  if (nomeLivreLigado.value) {
+    return buscarEtiquetas(records.value, query, [
+      { name: 'title', weight: 4 },
+      'description',
+    ]);
+  }
   return picoSearch(records.value, query, [
     { name: 'title', weight: 4 },
     'description',
@@ -39,7 +55,9 @@ const filteredRecords = computed(() => {
 });
 const uiFlags = computed(() => getters['labels/getUIFlags'].value);
 
-const deleteMessage = computed(() => ` ${selectedLabel.value.title}?`);
+const deleteMessage = computed(
+  () => ` ${nomeDaEtiqueta(selectedLabel.value.title)}?`
+);
 
 const openAddPopup = () => {
   showAddPopup.value = true;
@@ -94,6 +112,8 @@ const tableHeaders = computed(() => {
 
 onBeforeMount(() => {
   store.dispatch('labels/get');
+  // Reabrir a tela traz o nome que outro atendente gravou.
+  recarregarNomes();
 });
 </script>
 
@@ -128,7 +148,19 @@ onBeforeMount(() => {
       </BaseSettingsHeader>
     </template>
     <template #body>
+      <EtiquetasEmCartoes
+        v-if="nomeLivreLigado"
+        class="md:hidden"
+        :items="filteredRecords"
+        :loading="loading"
+        :no-data-message="
+          searchQuery ? $t('LABEL_MGMT.NO_RESULTS') : $t('LABEL_MGMT.LIST.404')
+        "
+        @editar="openEditPopup"
+        @apagar="openDeletePopup"
+      />
       <BaseTable
+        :class="{ 'hidden md:block': nomeLivreLigado }"
         :headers="tableHeaders"
         :items="filteredRecords"
         :no-data-message="
@@ -139,9 +171,7 @@ onBeforeMount(() => {
           <BaseTableRow v-for="label in items" :key="label.title" :item="label">
             <template #default>
               <BaseTableCell>
-                <span class="text-body-main text-n-slate-12">
-                  {{ label.title }}
-                </span>
+                <NomeDaEtiquetaCelula :titulo="label.title" />
               </BaseTableCell>
 
               <BaseTableCell>

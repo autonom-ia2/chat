@@ -256,7 +256,7 @@ const handleAvatarDelete = async () => {
     />
     <ContactCustomerSection :contact="selectedContact" :read-only="readOnly" />
     <ContactOptOutSection :contact="selectedContact" :read-only="readOnly" />
-    <Policy :permissions="['administrator']">
+    <Policy :permissions="['administrator', 'contact_delete']">
       <div
         class="flex flex-col items-start w-full gap-4 pt-6 border-t border-n-strong"
       >

@@ -21,6 +21,8 @@ vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 const imagens = vi.hoisted(() => ({ upload: vi.fn() }));
 vi.mock('dashboard/api/autonomia/builderImages', () => ({ default: imagens }));
 const conversas = vi.hoisted(() => ({ desfazer: vi.fn() }));
+const sentry = vi.hoisted(() => ({ captureException: vi.fn() }));
+vi.mock('@sentry/vue', () => sentry);
 vi.mock('dashboard/api/autonomia/buildThreads', () => ({ default: conversas }));
 
 const no = seletor => document.querySelector(seletor);
@@ -555,5 +557,197 @@ describe('MudarConversando', () => {
     wrapper.unmount();
     expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}stopPolling`);
     expect(store.commit).toHaveBeenCalledWith(`${ESTADO}RESET`);
+  });
+
+  // #1428 (entrega C) — as respostas prontas da pergunta aberta: tocar é o mesmo que escrever e mandar.
+  describe('ready answers under the open question', () => {
+    const OPCOES = ['Passar para a equipe', 'Não falar de preço'];
+
+    const PERGUNTA = 'Que preço ele deve dizer?';
+    const comPergunta = (
+      estado = { next_question: PERGUNTA, opcoes_de_resposta: OPCOES }
+    ) => {
+      store.state[`${ESTADO}getThread`] = { id: 55 };
+      store.state[`${ESTADO}getPhase`] = 'interviewing';
+      store.state[`${ESTADO}getMessages`] = [
+        { role: 'user', content: 'Fale do preço' },
+        { role: 'assistant', content: PERGUNTA },
+      ];
+      store.state[`${ESTADO}getThreadState`] = estado;
+    };
+
+    it('shows them as real buttons in a labelled group, right after the question and out of the live region', async () => {
+      comPergunta();
+      const wrapper = montar();
+      await nextTick();
+
+      const grupo = no('[data-opcoes]');
+      expect(grupo.getAttribute('role')).toBe('group');
+      expect(grupo.getAttribute('aria-label')).toBe(
+        'AGENTS.JORNADA.PAGINA.MUDAR_VISTA.OPCOES_ROTULO'
+      );
+      const botoes = todos('[data-opcoes] button');
+      expect(botoes.map(botao => botao.textContent.trim())).toEqual(OPCOES);
+      expect(botoes.every(botao => botao.type === 'button')).toBe(true);
+      expect(botoes[0].className).toContain('min-h-11');
+      expect(grupo.closest('[aria-live]')).toBeNull();
+      expect(grupo.previousElementSibling.matches('[data-conversa]')).toBe(
+        true
+      );
+      expect(
+        todos('[data-conversa] [data-mensagem]').at(-1).dataset.mensagem
+      ).toBe('assistant');
+      wrapper.unmount();
+    });
+
+    it('sends the tapped answer as the owner message and keeps the draft', async () => {
+      comPergunta();
+      const wrapper = montar();
+      await escrever('rascunho meu');
+
+      todos('[data-opcoes] button')[1].click();
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}send`, {
+        threadId: 55,
+        content: 'Não falar de preço',
+        extra: { image_signed_ids: [] },
+      });
+      expect(no('form textarea').value).toBe('rascunho meu');
+      expect(document.activeElement).toBe(no('form textarea'));
+      wrapper.unmount();
+    });
+
+    it('does not show them when the turn is not an open question, nor after the undo', async () => {
+      comPergunta();
+      store.state[`${ESTADO}getPhase`] = 'reviewing';
+      const wrapper = montar();
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+
+      store.state[`${ESTADO}getPhase`] = 'interviewing';
+      store.state[`${ESTADO}getThreadState`] = {
+        next_question: PERGUNTA,
+        opcoes_de_resposta: OPCOES,
+        resultado: { itens: [], desfeito: true },
+      };
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('only shows them under the exact question the server sent them with', async () => {
+      comPergunta({
+        next_question: 'Outra pergunta',
+        opcoes_de_resposta: OPCOES,
+      });
+      const wrapper = montar();
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+
+      store.state[`${ESTADO}getThreadState`] = {
+        next_question: PERGUNTA,
+        opcoes_de_resposta: OPCOES,
+      };
+      await nextTick();
+      expect(no('[data-opcoes]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('lets a long answer without spaces wrap inside the button', async () => {
+      comPergunta();
+      const wrapper = montar();
+      await nextTick();
+
+      expect(todos('[data-opcoes] button')[0].className).toContain(
+        'break-words'
+      );
+      wrapper.unmount();
+    });
+
+    it('goes away after the undo by the last change strip, and the conversation is read again', async () => {
+      conversas.desfazer.mockResolvedValue({ data: {} });
+      comPergunta();
+      const wrapper = montar({
+        agente: {
+          ...AGENTE,
+          ultima_mudanca_desfazivel: { thread_id: 41, linhas: ['Curtas'] },
+        },
+      });
+      await nextTick();
+      expect(no('[data-opcoes]')).not.toBeNull();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(conversas.desfazer).toHaveBeenCalledWith(41);
+      expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}fetch`, {
+        threadId: 55,
+      });
+      expect(no('[data-opcoes]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('shows at most four', async () => {
+      comPergunta({
+        next_question: PERGUNTA,
+        opcoes_de_resposta: ['A', 'B', 'C', 'D', 'E'],
+      });
+      const wrapper = montar();
+      await nextTick();
+
+      expect(todos('[data-opcoes] button')).toHaveLength(4);
+      wrapper.unmount();
+    });
+
+    it('hides them once the owner answered, while thinking, and without options', async () => {
+      comPergunta();
+      const wrapper = montar();
+      await nextTick();
+      expect(no('[data-opcoes]')).not.toBeNull();
+
+      store.state[`${ESTADO}getUIFlags`] = { sending: true, creating: false };
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+
+      store.state[`${ESTADO}getUIFlags`] = { sending: false, creating: false };
+      store.state[`${ESTADO}getMessages`] = [
+        ...store.state[`${ESTADO}getMessages`],
+        { role: 'user', content: 'Não falar de preço' },
+      ];
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+
+      comPergunta({});
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('reports a failed re-read after the undo by the strip, and the answers still go away', async () => {
+      conversas.desfazer.mockResolvedValue({ data: {} });
+      const falha = new Error('rede');
+      store.dispatch.mockImplementation(async acao => {
+        if (acao === `${ESTADO}fetch`) throw falha;
+        return null;
+      });
+      sentry.captureException.mockClear();
+      comPergunta();
+      const wrapper = montar({
+        agente: {
+          ...AGENTE,
+          ultima_mudanca_desfazivel: { thread_id: 41, linhas: ['Curtas'] },
+        },
+      });
+      await nextTick();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(sentry.captureException).toHaveBeenCalledWith(falha);
+      expect(no('[data-opcoes]')).toBeNull();
+      expect(no('[data-ultima-desfeita]')).not.toBeNull();
+      wrapper.unmount();
+    });
   });
 });

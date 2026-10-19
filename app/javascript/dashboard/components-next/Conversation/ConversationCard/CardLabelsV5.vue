@@ -3,6 +3,7 @@ import { ref, computed, nextTick, useSlots, watch, useAttrs } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useThrottleFn } from '@vueuse/core';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Label from 'dashboard/components-next/label/Label.vue';
@@ -25,6 +26,7 @@ const slots = useSlots();
 const { t } = useI18n();
 
 const accountLabels = useMapGetter('labels/getLabels');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 
 const activeLabels = computed(() => {
   return accountLabels.value.filter(({ title }) =>
@@ -109,11 +111,13 @@ const hiddenLabelsTooltip = computed(() => {
   if (!props.disableToggle) return '';
   // When all labels are hidden, show all label titles
   if (allLabelsHidden.value) {
-    return activeLabels.value.map(label => label.title).join(', ');
+    return activeLabels.value
+      .map(label => nomeDaEtiqueta(label.title))
+      .join(', ');
   }
   if (!showExpandLabelButton.value) return '';
   const hiddenLabels = activeLabels.value.slice(labelPosition.value + 1);
-  return hiddenLabels.map(label => label.title).join(', ');
+  return hiddenLabels.map(label => nomeDaEtiqueta(label.title)).join(', ');
 });
 
 const tooltipText = computed(() => {
