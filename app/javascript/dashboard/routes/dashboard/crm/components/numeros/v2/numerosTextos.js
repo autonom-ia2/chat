@@ -69,7 +69,8 @@ const chaveDaFrase = (frase, semMeta) => {
       ? ['EU_VENDE_ATENDE_SEM_PRAZO', frase.resolvidos]
       : ['EU_VENDE_ATENDE', frase.resolvidos];
   if (semPrazo(frase)) return ['EU_ATENDE_SEM_PRAZO', frase.dias];
-  if (semMeta || frase.falta <= 0) return ['EU_ATENDE_SEM_FALTA'];
+  if (semMeta || (frase.falta !== null && frase.falta <= 0))
+    return ['EU_ATENDE_SEM_FALTA'];
   return ['EU_ATENDE'];
 };
 

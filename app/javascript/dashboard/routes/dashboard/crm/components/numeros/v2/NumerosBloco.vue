@@ -42,7 +42,7 @@ const itens = computed(() =>
   props.bloco.itens.map(item => ({
     ...item,
     ...numero(item),
-    destino: props.destinoDe(item.tipo, { escopo: props.bloco.escopo }),
+    destino: props.destinoDe(item.tipo, { item }),
   }))
 );
 </script>

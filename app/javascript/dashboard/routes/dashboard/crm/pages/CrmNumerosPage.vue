@@ -88,7 +88,7 @@ onMounted(() => {
       </Banner>
     </template>
   </CrmNumerosSoEu>
-  <CrmDashboardPage v-else>
+  <CrmDashboardPage v-else-if="abreNumeros">
     <template v-if="ligado" #topo>
       <div class="flex flex-col gap-3 px-6 pt-4">
         <ResultsToggle

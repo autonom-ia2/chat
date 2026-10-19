@@ -39,16 +39,20 @@ const comoContamos = ref(null);
 
 const mes = computed(() => route.query.mes || undefined);
 
+// Só a última resposta vale: trocar de mês depressa não deixa a resposta antiga por cima.
+let pedido = 0;
 const carregar = async () => {
+  pedido += 1;
+  const este = pedido;
   carregando.value = true;
   falhou.value = false;
   try {
     const { data } = await CrmNumerosAPI.show({ mes: mes.value });
-    dados.value = data;
+    if (este === pedido) dados.value = data;
   } catch {
-    falhou.value = true;
+    if (este === pedido) falhou.value = true;
   } finally {
-    carregando.value = false;
+    if (este === pedido) carregando.value = false;
   }
 };
 watch(mes, carregar, { immediate: true });
@@ -190,6 +194,7 @@ const destinoDoTopo = computed(() => {
 
       <template v-else-if="dados">
         <NumerosTopo
+          :key="`topo-${dados.moeda}`"
           :topo="dados.topo"
           :mes="dados.mes"
           :mes-nome="mesNome"
@@ -200,6 +205,7 @@ const destinoDoTopo = computed(() => {
         <NumerosProximoPasso :itens="dados.proximo" :destino-de="destinoDe" />
         <NumerosBloco
           v-if="dados.vendendo"
+          :key="`vendendo-${dados.moeda}`"
           tipo="vendendo"
           :bloco="dados.vendendo"
           :moeda="dados.moeda"

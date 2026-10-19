@@ -17,8 +17,10 @@ const kanban = (funilId, extra = {}) => ({
 const lista = (funilId, extra) => kanban(funilId, { view: 'list', ...extra });
 const ATRASADOS = { follow_up_status: 'overdue' };
 const PARADOS = { stale_days: '7' };
-// "Fechado no mês" só existe para o mês de hoje; mês fechado não vira link.
-const doMes = (fechado, destino) => (fechado ? null : destino);
+// "Fechado no mês" só existe para o mês de hoje, e a Lista filtra pelo dono atual: o servidor diz (`lista`) se
+// ela mostra exatamente os cards creditados; senão, o número fica sem link.
+const doMes = (fechado, item, destino) =>
+  fechado || item?.lista === false ? null : destino;
 
 export const DESTINOS = {
   meus_atrasados: ({ funis }) => kanban(funis.vendas, ATRASADOS),
@@ -26,16 +28,18 @@ export const DESTINOS = {
   meus_cards: ({ funis }) => kanban(funis.vendas),
   meus_lembretes: ({ funis }) => kanban(funis.suporte, ATRASADOS),
   meus_casos: ({ funis }) => kanban(funis.suporte),
-  fechadas: ({ funis, fechado }) =>
+  fechadas: ({ funis, fechado, item }) =>
     doMes(
       fechado,
+      item,
       lista(funis.vendas, { result: 'won', closed_in: 'this_month' })
     ),
   andamento: ({ funis }) => kanban(funis.vendas),
   atrasados: ({ funis }) => kanban(funis.vendas, ATRASADOS),
-  resolvidos: ({ funis, fechado }) =>
+  resolvidos: ({ funis, fechado, item }) =>
     doMes(
       fechado,
+      item,
       lista(funis.suporte, { result: 'resolved', closed_in: 'this_month' })
     ),
   com_voce: () => ({ name: 'home' }),

@@ -147,6 +147,7 @@ describe('destinos', () => {
       closed_in: 'this_month',
     });
     expect(destino('fechadas', { funis, fechado: true })).toBeNull();
+    expect(destino('resolvidos', { funis, item: { lista: false } })).toBeNull();
   });
 
   it('opens the campaign + me in the Kanban', () => {
