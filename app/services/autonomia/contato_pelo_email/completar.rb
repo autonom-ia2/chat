@@ -6,9 +6,10 @@
 #
 # A gravação é a do Decisores::Aplicador, sem `trocar`: telefone só quando vazio (no formato +55..., pelo
 # Decisores::Telefone, e o de outro contato vai para a biografia), e-mail só quando vazio e já é um endereço do cliente
-# nesta caixa — o e-mail do contato nunca é trocado. O nome, só quando é provisório (#nome_trocavel?): vazio, o e-mail, o começo do e-mail ou o telefone. O
-# começo do e-mail entra de propósito: é o nome que o Chatwoot dá a todo lead do formulário do site (conta 16 da
-# hub2you em 18/10: todos os leads com o nome igual ao começo do e-mail), e o formulário traz o nome de verdade.
+# nesta caixa — o e-mail do contato nunca é trocado. O nome, só quando é provisório (#nome_trocavel?): vazio, o
+# e-mail, o começo do e-mail ou o telefone. O começo do e-mail entra de propósito: é o nome que o Chatwoot dá a todo
+# lead do formulário do site (conta 16 da hub2you em 18/10: todos os leads com o nome igual ao começo do e-mail), e o
+# formulário traz o nome de verdade.
 #
 # Formulário de site: o e-mail sai do endereço fixo do site, que é o contato. Só grava quando o e-mail escrito no
 # formulário é um endereço do próprio contato; senão juntaria vários clientes num contato só. No e-mail de pessoa, o

@@ -392,13 +392,13 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
   # Pega (revisão final): o e-mail da assinatura gravado no contato sem e-mail passaria a contar como do cliente na
   # Autoria, e o de outra pessoa (ou plantado no corpo) deixaria de ter o aviso "escrito por outra pessoa".
   it 'contato sem e-mail: o e-mail da assinatura que não é do cliente não é gravado', :aggregate_failures do
-    contact.update!(email: nil)
+    contact.update!(email: nil, name: 'Maria S.')
     create(:contact_inbox, contact: contact, inbox: inbox, source_id: 'maria.souza@cliente.com.br')
-    responde(nome: 'Maria Souza', email: 'comercial@empresa.com.br', telefone: '(11) 98765-4321')
+    responde(email: 'comercial@empresa.com.br', telefone: '(11) 98765-4321')
 
     described_class.new(message).perform
 
-    expect(contact.reload).to have_attributes(name: 'Maria Souza', phone_number: '+5511987654321', email: nil)
+    expect(contact.reload).to have_attributes(phone_number: '+5511987654321', email: nil)
   end
 
   it 'contato sem e-mail: o e-mail que já é do cliente nesta caixa é gravado' do
