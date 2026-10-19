@@ -6,7 +6,11 @@ import NovaConversaEntrada from '../NovaConversaEntrada.vue';
 // #1459 — a ponte escolhe a tela pela flag de conta `nova_conversa_tela`:
 // ligada, a gaveta nova; desligada, o popover antigo. Props, slot e evento
 // passam direto para a que estiver montada.
-const estado = vi.hoisted(() => ({ features: null, pedidos: [] }));
+const estado = vi.hoisted(() => ({
+  features: null,
+  pedidos: [],
+  permissoes: [],
+}));
 
 // Um dublê por tela, com a mesma interface pública das duas de verdade: props
 // `contactId` e `align`, evento `close` e o slot `trigger`, que recebe o
@@ -29,6 +33,9 @@ vi.mock('dashboard/composables/store', () => ({
   useMapGetter: nome => {
     const getters = {
       getCurrentAccountId: 7,
+      getCurrentUser: {
+        accounts: [{ id: 7, permissions: estado.permissoes }],
+      },
       'accounts/isFeatureEnabledonAccount': (contaId, flag) => {
         estado.pedidos.push([contaId, flag]);
         return estado.features.value[flag] || false;
@@ -58,6 +65,19 @@ describe('NovaConversaEntrada', () => {
   beforeEach(() => {
     estado.features = ref({});
     estado.pedidos = [];
+    estado.permissoes = [];
+  });
+
+  // #1804: quem só lê conversas não vê "Nova conversa" em nenhum ponto de entrada.
+  it('não aparece para quem só lê conversas; aparece se ela também atende', () => {
+    estado.permissoes = ['conversation_view', 'contact_view'];
+    expect(montar().find('[data-tela]').exists()).toBe(false);
+
+    estado.permissoes = [
+      'conversation_view',
+      'conversation_participating_manage',
+    ];
+    expect(montar().find('[data-tela="antiga"]').exists()).toBe(true);
   });
 
   it('monta a gaveta nova com a flag ligada na conta atual', () => {

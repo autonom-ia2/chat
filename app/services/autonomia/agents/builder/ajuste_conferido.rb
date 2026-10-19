@@ -175,7 +175,8 @@ module Autonomia::Agents::Builder::AjusteConferido
     dados = { 'token' => token, 'mudancas' => mudancas, 'versao_id' => agent.versao_do_construtor&.id,
               'versao_antes_id' => agent.versao_antes_do_construtor&.id,
               'resposta' => parsed.slice('needs_more_info', 'next_question', 'resposta_ao_dono', 'pendencia_resolvida'),
-              'agente_updated_at' => agent.reload.updated_at.iso8601(6), 'campos_truncados' => @campos_truncados }
+              'agente_updated_at' => agent.reload.updated_at.iso8601(6), 'campos_truncados' => @campos_truncados,
+              'perguntas_de_prova' => Autonomia::Agents::ProvaDoAjuste.perguntas(parsed) }
     dados if guardar_ajuste!(token, dados, { 'aplicado_em_token' => token })
   end
 

@@ -9,8 +9,8 @@ module Crm
     class DefaultStageCriteria
       I18N_SCOPE = 'crm.stage_criteria'.freeze
       NAME_LOCALE = :pt_BR
-      # O único modelo de Vender; os outros são de Atender (Crm::Pipeline::TEMPLATES).
-      SELL_TEMPLATES = %w[VENDAS].freeze
+      # Os modelos de Vender; os outros são de Atender (Crm::Pipeline::TEMPLATES). RENOVACAO: corretora (#1802).
+      SELL_TEMPLATES = %w[VENDAS RENOVACAO].freeze
 
       # Nome da etapa → chave do critério. Funil de Vender lê só este mapa. Ele já tinha nomes de etapas de Atender
       # (#1384); ficam aqui para os funis que existem não mudarem.

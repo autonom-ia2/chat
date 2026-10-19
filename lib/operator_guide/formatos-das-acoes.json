@@ -34,7 +34,7 @@
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:17",
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:25",
-      "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:29"
+      "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:30"
     ],
     "sem_corpo": true
   },
@@ -432,7 +432,7 @@
     "controller": "api/v1/accounts/conversations/draft_messages#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:14",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": true
   },
@@ -457,7 +457,7 @@
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations/messages_controller.rb:2",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -474,7 +474,7 @@
       "app/controllers/api/v1/accounts/conversations/participants_controller.rb:33",
       "app/controllers/api/v1/accounts/conversations/participants_controller.rb:37",
       "app/controllers/api/v1/accounts/conversations/participants_controller.rb:34",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -484,7 +484,7 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/api/v1/accounts/conversations_controller.rb:141",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": true
   },
@@ -944,6 +944,16 @@
     "origem": [
       "app/controllers/api/v1/accounts/macros_controller.rb:45",
       "app/controllers/api/v1/accounts/macros_controller.rb:70"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE nomes_de_etiquetas/:label_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/nomes_de_etiquetas#destroy",
+    "modelo": "Etiquetas::Nome",
+    "origem": [
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:24",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:47"
     ],
     "sem_corpo": true
   },
@@ -4476,8 +4486,50 @@
       "locale": {
         "padrao": "en",
         "tipo": "string",
-        "um_de_resumo": "42 valores aceitos, por exemplo: en, ar, nl, fr, de",
-        "valida_no_servidor": true
+        "um_de": [
+          "en",
+          "ar",
+          "nl",
+          "fr",
+          "de",
+          "it",
+          "ja",
+          "ko",
+          "pt",
+          "ru",
+          "es",
+          "ml",
+          "ca",
+          "el",
+          "pt_BR",
+          "ro",
+          "ta",
+          "fa",
+          "zh_TW",
+          "vi",
+          "da",
+          "tr",
+          "cs",
+          "fi",
+          "id",
+          "sv",
+          "hu",
+          "no",
+          "zh_CN",
+          "pl",
+          "sk",
+          "uk",
+          "th",
+          "lv",
+          "is",
+          "he",
+          "lt",
+          "sr",
+          "bg",
+          "et",
+          "uz",
+          "sl"
+        ]
       },
       "name": {
         "nao_pode_ficar_vazio": true,
@@ -4623,8 +4675,8 @@
     "controller": "api/v1/accounts/conversations/draft_messages#update",
     "origem": [
       "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:9",
-      "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:26",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:31",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -4649,7 +4701,25 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:26",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH conversations/:conversation_id/messages/:id/content": {
+    "campos": {
+      "content": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/message_edits#update",
+    "modelo": "User",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:8",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:24",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:11",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -4665,7 +4735,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/participants_controller.rb:19",
       "app/controllers/api/v1/accounts/conversations/participants_controller.rb:58",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -4692,7 +4762,7 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:23",
       "app/controllers/api/v1/accounts/conversations_controller.rb:153",
       "app/controllers/api/v1/accounts/conversations_controller.rb:151",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -6250,6 +6320,7 @@
           "conversation_manage",
           "conversation_unassigned_manage",
           "conversation_participating_manage",
+          "conversation_view",
           "contact_manage",
           "report_manage",
           "knowledge_base_manage",
@@ -6262,6 +6333,8 @@
           "crm_admin",
           "crm_export",
           "contact_view",
+          "contact_export",
+          "contact_delete",
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
@@ -6285,7 +6358,8 @@
           "label_manage",
           "attribute_manage",
           "macro_manage",
-          "sla_manage"
+          "sla_manage",
+          "assignment_manage"
         ]
       }
     },
@@ -7483,6 +7557,24 @@
     ],
     "sem_corpo": false
   },
+  "PATCH nomes_de_etiquetas/:label_id": {
+    "campos": {
+      "nome": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/nomes_de_etiquetas#update",
+    "modelo": "Etiquetas::Nome",
+    "origem": [
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:19",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:20",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:47"
+    ],
+    "sem_corpo": false
+  },
   "PATCH notification_settings": {
     "campos": {
       "selected_email_flags": {
@@ -8163,7 +8255,7 @@
     "modelo": "User",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:11",
-      "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:33",
+      "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:34",
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:25"
     ],
     "sem_corpo": false
@@ -13380,13 +13472,13 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations_controller.rb:40",
       "app/controllers/api/v1/accounts/conversations_controller.rb:43",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:204",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:202",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:211",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:209",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:221",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:205",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:203",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:212",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:210",
+      "app/controllers/api/v1/accounts/conversations_controller.rb:222",
       "app/controllers/concerns/hmac_concern.rb:3",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:233"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:234"
     ],
     "sem_corpo": false
   },
@@ -13414,7 +13506,7 @@
       "app/controllers/api/v1/accounts/conversations/assignments_controller.rb:18",
       "app/controllers/api/v1/accounts/conversations/assignments_controller.rb:46",
       "app/controllers/api/v1/accounts/conversations/assignments_controller.rb:4",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -13423,7 +13515,7 @@
     "controller": "api/v1/accounts/conversations/contact_info_requests#create",
     "origem": [
       "app/controllers/api/v1/accounts/conversations/contact_info_requests_controller.rb:2",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": true
   },
@@ -13451,7 +13543,7 @@
     "origem": [
       "app/controllers/concerns/label_concern.rb:2",
       "app/controllers/api/v1/accounts/conversations/labels_controller.rb:11",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -13475,7 +13567,25 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:10",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:81",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
+  "POST conversations/:conversation_id/messages/:id/reaction": {
+    "campos": {
+      "emoji": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/message_reactions#create",
+    "modelo": "User",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:7",
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:20",
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:10",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -13500,7 +13610,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:38",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -13525,7 +13635,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:46",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -13541,7 +13651,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/participants_controller.rb:10",
       "app/controllers/api/v1/accounts/conversations/participants_controller.rb:58",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -13557,7 +13667,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:13",
       "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:33",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -13578,7 +13688,7 @@
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:2",
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:3",
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:6",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -13594,7 +13704,7 @@
     "origem": [
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:11",
       "app/controllers/concerns/conversation_custom_attributes_concern.rb:12",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -13604,7 +13714,7 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/api/v1/accounts/conversations_controller.rb:62",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": true
   },
@@ -13631,7 +13741,7 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:23",
       "app/controllers/api/v1/accounts/conversations_controller.rb:153",
       "app/controllers/api/v1/accounts/conversations_controller.rb:151",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -13660,7 +13770,7 @@
       "app/controllers/api/v1/accounts/conversations_controller.rb:184",
       "app/controllers/api/v1/accounts/conversations_controller.rb:86",
       "app/controllers/api/v1/accounts/conversations_controller.rb:101",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -13689,7 +13799,7 @@
       "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:27",
       "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:26",
       "app/controllers/concerns/conversations/channel_typing/toggle_endpoint.rb:25",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -13707,7 +13817,7 @@
       "app/controllers/api/v1/accounts/conversations_controller.rb:72",
       "app/controllers/api/v1/accounts/conversations_controller.rb:77",
       "app/controllers/api/v1/accounts/conversations_controller.rb:73",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -13717,7 +13827,7 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/api/v1/accounts/conversations_controller.rb:67",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": true
   },
@@ -13727,7 +13837,7 @@
     "modelo": "Conversation",
     "origem": [
       "app/controllers/api/v1/accounts/conversations_controller.rb:135",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": true
   },
@@ -13744,7 +13854,7 @@
     "origem": [
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:9",
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:26",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -16145,6 +16255,7 @@
           "conversation_manage",
           "conversation_unassigned_manage",
           "conversation_participating_manage",
+          "conversation_view",
           "contact_manage",
           "report_manage",
           "knowledge_base_manage",
@@ -16157,6 +16268,8 @@
           "crm_admin",
           "crm_export",
           "contact_view",
+          "contact_export",
+          "contact_delete",
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
@@ -16180,7 +16293,8 @@
           "label_manage",
           "attribute_manage",
           "macro_manage",
-          "sla_manage"
+          "sla_manage",
+          "assignment_manage"
         ]
       }
     },
@@ -22718,8 +22832,50 @@
       "locale": {
         "padrao": "en",
         "tipo": "string",
-        "um_de_resumo": "42 valores aceitos, por exemplo: en, ar, nl, fr, de",
-        "valida_no_servidor": true
+        "um_de": [
+          "en",
+          "ar",
+          "nl",
+          "fr",
+          "de",
+          "it",
+          "ja",
+          "ko",
+          "pt",
+          "ru",
+          "es",
+          "ml",
+          "ca",
+          "el",
+          "pt_BR",
+          "ro",
+          "ta",
+          "fa",
+          "zh_TW",
+          "vi",
+          "da",
+          "tr",
+          "cs",
+          "fi",
+          "id",
+          "sv",
+          "hu",
+          "no",
+          "zh_CN",
+          "pl",
+          "sk",
+          "uk",
+          "th",
+          "lv",
+          "is",
+          "he",
+          "lt",
+          "sr",
+          "bg",
+          "et",
+          "uz",
+          "sl"
+        ]
       },
       "name": {
         "nao_pode_ficar_vazio": true,
@@ -22836,8 +22992,8 @@
     "controller": "api/v1/accounts/conversations/draft_messages#update",
     "origem": [
       "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:9",
-      "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:26",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/draft_messages_controller.rb:31",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -22862,7 +23018,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:26",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -22878,7 +23034,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/participants_controller.rb:19",
       "app/controllers/api/v1/accounts/conversations/participants_controller.rb:58",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -22905,7 +23061,7 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations_controller.rb:23",
       "app/controllers/api/v1/accounts/conversations_controller.rb:153",
       "app/controllers/api/v1/accounts/conversations_controller.rb:151",
-      "app/controllers/api/v1/accounts/conversations_controller.rb:197"
+      "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
   },
@@ -24385,6 +24541,7 @@
           "conversation_manage",
           "conversation_unassigned_manage",
           "conversation_participating_manage",
+          "conversation_view",
           "contact_manage",
           "report_manage",
           "knowledge_base_manage",
@@ -24397,6 +24554,8 @@
           "crm_admin",
           "crm_export",
           "contact_view",
+          "contact_export",
+          "contact_delete",
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
@@ -24420,7 +24579,8 @@
           "label_manage",
           "attribute_manage",
           "macro_manage",
-          "sla_manage"
+          "sla_manage",
+          "assignment_manage"
         ]
       }
     },
@@ -25610,6 +25770,24 @@
       "app/controllers/api/v1/accounts/macros_controller.rb:36",
       "app/controllers/api/v1/accounts/macros_controller.rb:30",
       "app/controllers/api/v1/accounts/macros_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
+  "PUT nomes_de_etiquetas/:label_id": {
+    "campos": {
+      "nome": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/nomes_de_etiquetas#update",
+    "modelo": "Etiquetas::Nome",
+    "origem": [
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:19",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:20",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:47"
     ],
     "sem_corpo": false
   },

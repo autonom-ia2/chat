@@ -50,7 +50,22 @@ class Autonomia::Agents::ResultadoDoAjuste
   def to_h
     { itens: linhas, faltou_fora: @conferencia['faltou_fora_da_lista'] == true, conferido: conferido?,
       desfeito_sozinho: desfeito_sozinho?, desfeito: @thread.state.to_h.dig('ultimo_ajuste', 'desfeito') == true,
-      pode_desfazer: @thread.agent.conversa_desfazivel&.id == @thread.id }
+      pode_desfazer: @thread.agent.conversa_desfazivel&.id == @thread.id, prova: prova }
+  end
+
+  # #1428 (entrega B) — as perguntas de prova do último ajuste: só a do ajuste que está no cartão e que não foi desfeito.
+  # Enquanto pendente, só quantas são; pronta, a pergunta e a resposta de cada uma (nunca o veredito por item nem texto do
+  # juiz). Pendente há tempo demais vira indisponível: o job não vem mais.
+  def prova
+    dados = prova_do_cartao
+    return if dados.nil?
+
+    perguntas = Array(dados['perguntas'])
+    status = status_da_prova(dados)
+    return { status: status, total: perguntas.size } unless status == 'pronta'
+
+    { status: status, total: dados['total'], ok: dados['ok'],
+      perguntas: perguntas.map { |item| pergunta_da_prova(item) } }
   end
 
   # Uma linha por pedido (aplicado ou não) e, depois, o que o dono não pediu e mudou.
@@ -99,6 +114,26 @@ class Autonomia::Agents::ResultadoDoAjuste
     return Array(@conferencia['sem_pedido']) unless @conferencia.key?('desfeito')
 
     desfeito_sozinho? ? [] : sem_pedido
+  end
+
+  # `ok`: true (respeitou a mudança), false (não respeitou) ou nil (a pergunta não toca a mudança). Nunca texto do juiz.
+  def pergunta_da_prova(item)
+    { pergunta: item['pergunta'], resposta: item['resposta'], equipe: item['equipe'] == true,
+      ok: { 'ok' => true, 'nao' => false }[item['veredito']] }
+  end
+
+  def prova_do_cartao
+    dados = @thread.state.to_h['prova']
+    ultimo = @thread.state.to_h['ultimo_ajuste'].to_h
+    return unless dados.is_a?(Hash) && dados['versao_id'] == ultimo['versao_id']
+
+    dados unless ultimo['desfeito'] == true || desfeito_sozinho?
+  end
+
+  def status_da_prova(dados)
+    desde = Time.zone.parse(dados['desde'].to_s)
+    vencida = desde&.before?(Autonomia::Agents::ProvaDoAjuste::VALIDADE_DO_PENDENTE.ago)
+    dados['status'] == 'pendente' && vencida ? 'indisponivel' : dados['status']
   end
 
   def desfeito_sozinho?

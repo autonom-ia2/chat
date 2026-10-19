@@ -98,6 +98,12 @@ class Autonomia::Agents::Tools::Native::Base
       false
     end
 
+    # A ferramenta passa a conversa a outro atendente ou abre outro assunto (#1630)? O turno da passagem não a recebe:
+    # sem cliente falando, uma passagem não pode gerar outra (vai e volta entre agentes).
+    def passa_a_conversa?
+      false
+    end
+
     # O que o modelo lê ao aceitar o disparo. Curto e sem promessa de prazo — ele usa isto para
     # avisar o cliente na MESMA resposta (a rodada de ferramentas é única: a segunda chamada ao
     # modelo já vai sem `tools`, então não há segunda chance de falar).

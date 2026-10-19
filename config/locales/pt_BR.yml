@@ -1046,6 +1046,8 @@ pt_BR:
     agents:
       modo_manual: 'Este agente está no modo manual: a instrução foi escrita à mão. Edite a instrução à mão ou volte o agente para o modo guiado para mudar conversando.'
       conflito_de_trava: 'O agente mudou ao mesmo tempo. Tente de novo.'
+      # #1479: texto do botão que abre a lista de opções que a IA manda, quando a IA não escolhe um.
+      botao_das_opcoes: 'Ver opções'
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       # #1428 — "Mudar conversando" (piloto): as mensagens que o Construtor mostra ao dono depois de um ajuste.
       ajuste:

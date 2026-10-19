@@ -210,8 +210,8 @@ const changeExtra = (module, key) => {
   );
 };
 
-const grantSuggested = target => {
-  permissions.value = setLevel(target, LEVELS.MANAGE, permissions.value);
+const grantSuggested = (target, level = LEVELS.MANAGE) => {
+  permissions.value = setLevel(target, level, permissions.value);
   const group = MODULE_GROUPS.find(item => item.modules.includes(target));
   if (!openGroups.value.includes(group.key)) {
     openGroups.value = [...openGroups.value, group.key];

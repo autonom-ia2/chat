@@ -69,6 +69,13 @@ describe ConversaCanal::ReacaoDoAtendente do
       expect(a_request(:post, 'https://graph.facebook.com/v24.0/123/messages')).not_to have_been_made
     end
 
+    it 'recusa mensagem de modelo, sem pedir à Meta' do
+      modelo = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :template, source_id: 'wamid.T')
+
+      expect { reagir(modelo, '👍') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.mensagem_invalida'))
+      expect(a_request(:post, 'https://graph.facebook.com/v24.0/123/messages')).not_to have_been_made
+    end
+
     it 'recusa nota privada' do
       nota = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :outgoing, private: true,
                               source_id: 'wamid.C')
@@ -139,6 +146,83 @@ describe ConversaCanal::ReacaoDoAtendente do
 
       expect { reagir(recebida, '👍') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.waha_recusou'))
       expect(recebida.reload.content_attributes).not_to have_key('reactions')
+    end
+  end
+
+  # #1709: caixa WAHA comum com a flag e motor que declara a reação: vai pelo conector (MessageActions.react!), sem
+  # PUT /api/reaction e sem o gravar do #1702; recusa do conector vira Recusa.
+  context 'with caixa WAHA cujo motor declara a reação (whatsapp_rich_native)' do
+    let(:engine) { 'https://waha.example' }
+    let(:caixa) do
+      create(:channel_api, account: account, webhook_url: "#{engine}/webhooks/chatwoot/abc",
+                           additional_attributes: { 'provider' => 'waha', 'session' => 'sessao-1' }).inbox
+    end
+    let(:conversa) { create(:conversation, account: account, inbox: caixa) }
+    let(:client) { instance_double(Waha::Client, set_reaction: {}) }
+    let(:recebida) { create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :incoming, content: 'oi') }
+
+    around { |example| with_modified_env(WAHA_RICH_NATIVE_ENGINES: "#{engine}/") { example.run } }
+
+    before do
+      allow(Waha::Client).to receive(:new).and_return(client)
+      allow(Waha::EngineCapabilities).to receive(:actions) { |url| url == "#{engine}/" ? %w[react edit] : [] }
+      allow(Waha::RichNative::MessageActionDeliveryJob).to receive(:request!)
+      account.enable_features!(Waha::RichNative::FLAG)
+    end
+
+    it 'grava a reação da empresa e pede o envio ao conector, sem source_id e sem o PUT /api/reaction' do
+      resultado = reagir(recebida, '👍')
+
+      expect(resultado.content_attributes['reactions']).to contain_exactly(include('emoji' => '👍', 'sender_type' => 'User'))
+      expect(Waha::RichNative::MessageActionDeliveryJob).to have_received(:request!).with(recebida, 'c2y_message_reaction')
+      expect(client).not_to have_received(:set_reaction)
+    end
+
+    it 'recusa do conector vira Recusa: mensagem que não se reage' do
+      nota = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :outgoing, private: true, content: 'n')
+
+      expect { reagir(nota, '👍') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.mensagem_invalida'))
+      expect(client).not_to have_received(:set_reaction)
+    end
+
+    it 'recusa emoji fora do formato antes do conector' do
+      expect { reagir(recebida, 'A') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.emoji_invalido'))
+      expect(Waha::RichNative::MessageActionDeliveryJob).not_to have_received(:request!)
+    end
+
+    it 'sem a flag: o caminho do #1702 (PUT /api/reaction no motor da caixa)' do
+      account.disable_features!(Waha::RichNative::FLAG)
+      contato = conversa.contact
+      contato.update!(custom_attributes: { 'waha_whatsapp_chat_id' => '5511937016094@c.us' })
+      recebida.update!(source_id: 'false_5511937016094@c.us_3EB0DDDD')
+
+      reagir(recebida, '👍')
+
+      expect(client).to have_received(:set_reaction)
+        .with(session: 'sessao-1', message_id: 'false_5511937016094@c.us_3EB0DDDD', reaction: '👍')
+      # Sem a flag, o motor padrão, como na main (ConversaCanal::ClienteDoMotor).
+      expect(Waha::Client).to have_received(:new).with(no_args)
+    end
+
+    it 'com a flag, o caminho de sempre (motor que não declara a reação) usa o motor da caixa' do
+      allow(Waha::EngineCapabilities).to receive(:actions).and_return([])
+      conversa.contact.update!(custom_attributes: { 'waha_whatsapp_chat_id' => '5511937016094@c.us' })
+      recebida.update!(source_id: 'false_5511937016094@c.us_3EB0EEEE')
+
+      reagir(recebida, '👍')
+
+      expect(Waha::Client).to have_received(:new).with(config: have_attributes(api_url: engine))
+    end
+
+    it 'pelo conector, recusa modelo, apagada pelo cliente e letra no lugar do emoji, sem pedir o envio' do
+      modelo = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :template, content: 'm')
+      apagada = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :incoming, content: 'x',
+                                 content_attributes: { 'deleted_by_contact_at' => Time.current.iso8601 })
+
+      expect { reagir(modelo, '👍') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.mensagem_invalida'))
+      expect { reagir(apagada, '👍') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.mensagem_invalida'))
+      expect { reagir(recebida, '1') }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.reacoes.emoji_invalido'))
+      expect(Waha::RichNative::MessageActionDeliveryJob).not_to have_received(:request!)
     end
   end
 

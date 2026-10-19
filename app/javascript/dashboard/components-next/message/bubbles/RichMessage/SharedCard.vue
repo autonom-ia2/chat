@@ -15,6 +15,8 @@ defineProps({
   heading: { type: String, default: '' },
   title: { type: String, default: '' },
   detail: { type: String, default: '' },
+  // Texto livre de quem compartilhou (a legenda da localização ao vivo), abaixo do detalhe.
+  note: { type: String, default: '' },
   actionLabel: { type: String, default: '' },
   actionHref: { type: String, default: '' },
   // #1702: "lat,long" da localização; com a pele do WhatsApp, vira a miniatura do mapa.
@@ -56,6 +58,12 @@ defineProps({
           >
             <span class="i-ph-broadcast size-4 shrink-0" aria-hidden="true" />
             {{ aviso }}
+          </div>
+          <div
+            v-if="note"
+            class="text-sm text-n-slate-12 break-words whitespace-pre-line"
+          >
+            {{ note }}
           </div>
         </div>
       </div>

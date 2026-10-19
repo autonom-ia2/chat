@@ -86,6 +86,20 @@ RSpec.describe Crm::Email::Destinatarios do
     expect(resposta_da_ia).to include(to_emails: ['joao@empresa.com.br'], cc_emails: [], bcc_emails: [])
   end
 
+  # Pega: a resposta do turno da passagem (post_reply! próprio, fora do Responder) derrubar a cópia; e a chave da
+  # passagem sumir com os destinatários.
+  it 'a resposta da IA na passagem também mantém a Ana em cópia', :aggregate_failures do
+    recebido!(from: 'joao@empresa.com.br', cc: ['ana@familia.com.br'])
+    passagem = instance_double(Crm::Passagem, id: 7)
+    responder = Autonomia::Agents::Operate::ResponderAPassagem.new(conversation: conversation.reload, agent_inbox: agent_inbox,
+                                                                   passagem: passagem)
+
+    responder.send(:post_reply!, 'Sigo daqui.')
+    atributos = conversation.messages.outgoing.reorder(:id).last.content_attributes
+    expect(atributos).to include(to_emails: ['joao@empresa.com.br'], cc_emails: ['ana@familia.com.br'])
+    expect(atributos['autonomia_passagem_id']).to eq(7)
+  end
+
   # Pega: a flag desligada mudar a resposta da IA.
   it 'sem a flag, a resposta da IA não leva cópia, como antes' do
     account.disable_features!(Crm::Email::Autoria::FLAG)

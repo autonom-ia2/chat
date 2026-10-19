@@ -36,6 +36,8 @@ describe RichMessages::ApiInboxWebhook do
 
       it 'does not deliver an invalid rich_message to the inbox webhook and fails the message with the reason' do
         message = outgoing(content_attributes: { rich_message: rich_message.merge(url: 'exemplo.com.br') })
+        # Recusada na criação, ela nasce sem a marca de como sai: o `message_updated` também valida.
+        expect(message.content_attributes).not_to have_key(RichMessages::SENT_AS_KEY)
 
         payloads = inbox_webhook_payloads(event_method, message)
 
@@ -163,5 +165,22 @@ describe RichMessages::ApiInboxWebhook do
 
     expect(payloads[:inbox]).to be_empty
     expect(message.reload.external_error).to eq(RichMessages::NO_TEXT_VERSION)
+  end
+
+  # chat#1709 (rodada de correção, item 4): o convite de evento precisa de data futura no envio; depois que a data passa,
+  # o `message_updated` (status, edição) não o recusa nem o marca como falha.
+  it 'keeps delivering the message_updated of an event invitation after its date has passed' do
+    account.enable_features!(Waha::RichNative::FLAG)
+    start_at = 2.days.from_now.change(usec: 0).iso8601
+    message = outgoing(content: 'Visita técnica', content_attributes: { rich_message: { type: 'event', start_at: start_at } })
+    expect(inbox_webhook_payloads(:message_created, message)[:inbox].size).to eq(1)
+
+    travel 3.days do
+      payloads = inbox_webhook_payloads(:message_updated, message.reload)
+
+      expect(payloads[:inbox].size).to eq(1)
+      expect(message.reload.status).not_to eq('failed')
+      expect(message.external_error).to be_nil
+    end
   end
 end

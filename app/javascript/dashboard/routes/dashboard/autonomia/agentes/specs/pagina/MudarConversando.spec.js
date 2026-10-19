@@ -313,6 +313,33 @@ describe('MudarConversando', () => {
       wrapper.unmount();
     });
 
+    // #1428 (entrega B) — a prova chega depois do cartão: a página pede à store que acompanhe só ela.
+    it('follows the proof while it is pending, and only then', async () => {
+      const wrapper = await comResultado({
+        ...RESULTADO,
+        prova: { status: 'pendente', total: 3 },
+      });
+      const acompanhar = () =>
+        store.dispatch.mock.calls.filter(
+          ([acao]) => acao === `${ESTADO}acompanharProva`
+        );
+
+      expect(acompanhar()).toEqual([
+        [`${ESTADO}acompanharProva`, { threadId: 55 }],
+      ]);
+      expect(no('[data-prova]').dataset.status).toBe('pendente');
+
+      store.state[`${ESTADO}getThreadState`] = {
+        resultado: {
+          ...RESULTADO,
+          prova: { status: 'pronta', ok: 3, total: 3, perguntas: [] },
+        },
+      };
+      await nextTick();
+      expect(acompanhar()).toHaveLength(1);
+      wrapper.unmount();
+    });
+
     it('makes Pronto primary when everything asked went in', async () => {
       const wrapper = await comResultado({
         ...RESULTADO,

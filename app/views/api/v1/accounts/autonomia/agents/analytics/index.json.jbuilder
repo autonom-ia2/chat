@@ -11,6 +11,11 @@ json.top_handoff_reasons @analytics[:top_handoff_reasons] do |row|
   json.count row[:count]
 end
 
+json.silences @analytics[:silences] do |row|
+  json.reason row[:reason]
+  json.count row[:count]
+end
+
 json.outcomes do
   json.handled @analytics[:outcomes][:handled]
   json.resolved_without_human @analytics[:outcomes][:resolved_without_human]

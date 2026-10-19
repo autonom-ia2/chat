@@ -33,6 +33,17 @@ RSpec.describe 'Autonomia agent analytics', type: :request do
     end
   end
 
+  # #1709 (rodada de correção, item 9): os silêncios de propósito vão ao painel numa lista própria.
+  it 'sends the deliberate silences of the AI' do
+    Autonomia::Agents::AgentEvent.create!(agent: agent, account: account, conversation_id: conversation.id,
+                                          event_type: :skipped_mensagem_apagada, handoff_reason: 'mensagem_apagada')
+
+    get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/analytics",
+        params: { range: '7d' }, headers: administrator.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['silences']).to eq([{ 'reason' => 'mensagem_apagada', 'count' => 1 }])
+  end
+
   describe 'GET .../analytics/conversations' do
     it 'lists the conversations behind a metric with the drilldown record shape' do
       get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/analytics/conversations",

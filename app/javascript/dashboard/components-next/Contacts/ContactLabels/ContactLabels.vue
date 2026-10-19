@@ -2,6 +2,7 @@
 import { computed, watch, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 
 import LabelItem from 'dashboard/components-next/label/LabelItem.vue';
 import AddLabel from 'dashboard/components-next/label/AddLabel.vue';
@@ -25,6 +26,7 @@ const showDropdown = ref(false);
 const hoveredLabel = ref(null);
 
 const allLabels = useMapGetter('labels/getLabels');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const contactLabels = useMapGetter('contactLabels/getContactLabels');
 
 const savedLabels = computed(() => {
@@ -37,7 +39,8 @@ const savedLabels = computed(() => {
 const labelMenuItems = computed(() => {
   return allLabels.value
     ?.map(label => ({
-      label: label.title,
+      label: nomeDaEtiqueta(label.title),
+      searchText: label.title,
       value: label.id,
       thumbnail: { name: label.title, color: label.color },
       isSelected: savedLabels.value.some(
