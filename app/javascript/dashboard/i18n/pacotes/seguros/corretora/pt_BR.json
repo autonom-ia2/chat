@@ -623,7 +623,7 @@
         "TEXTO": "Textos que você usa sempre, como pedir a CNH ou mandar a segunda via, a um clique na conversa."
       },
       "CANAIS": {
-        "TEXTO": "WhatsApp, e-mail, Instagram e site: por onde o cliente pede cotação e fala com você."
+        "TEXTO": "WhatsApp, e-mail, Instagram e site: por onde as pessoas pedem cotação e falam com você."
       },
       "USUARIOS": {
         "TEXTO": "Quem da corretora entra na plataforma e o que cada pessoa pode fazer."
@@ -750,8 +750,8 @@
     "PROFILES": {
       "SDR": {
         "NAME": "Corretor",
-        "SHORT": "Cota e fecha seguros novos",
-        "WHO": "Para quem faz a cotação, manda as opções e fecha seguros novos."
+        "SHORT": "Atende pedidos de cotação e fecha seguros novos",
+        "WHO": "Para quem atende os pedidos de cotação, manda as opções e fecha seguros novos."
       },
       "SALES_MANAGER": {
         "SHORT": "Cuida dos funis e da meta de produção",
@@ -808,7 +808,7 @@
       },
       "EMAIL_CHANNEL": {
         "EMAIL": {
-          "SUBTITLE": "E-mail para onde seus clientes mandam pedidos de cotação, apólices e documentos"
+          "SUBTITLE": "E-mail para onde as pessoas mandam pedidos de cotação, apólices e documentos"
         }
       }
     },

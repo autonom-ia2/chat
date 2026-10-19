@@ -623,7 +623,7 @@
         "TEXTO": "Texts you always use, like asking for the driver's license or sending a duplicate bill, one click away in the conversation."
       },
       "CANAIS": {
-        "TEXTO": "WhatsApp, email, Instagram and website: where customers ask for quotes and talk to you."
+        "TEXTO": "WhatsApp, email, Instagram and website: where people ask for quotes and talk to you."
       },
       "USUARIOS": {
         "TEXTO": "Who at the brokerage signs in and what each person can do."
@@ -750,8 +750,8 @@
     "PROFILES": {
       "SDR": {
         "NAME": "Broker",
-        "SHORT": "Quotes and closes new insurance",
-        "WHO": "For people who quote, send the options and close new insurance."
+        "SHORT": "Handles quote requests and closes new insurance",
+        "WHO": "For people who handle quote requests, send the options and close new insurance."
       },
       "SALES_MANAGER": {
         "SHORT": "Looks after the pipelines and the production target",
@@ -808,7 +808,7 @@
       },
       "EMAIL_CHANNEL": {
         "EMAIL": {
-          "SUBTITLE": "Email address where your customers send quote requests, policies and documents"
+          "SUBTITLE": "Email address where people send quote requests, policies and documents"
         }
       }
     },

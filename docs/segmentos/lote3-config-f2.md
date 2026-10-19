@@ -19,7 +19,7 @@ São 68 textos do painel.
   - etiquetas de exemplo: auto, residencial, vistoria pendente e sinistro;
   - campos de exemplo: Seguradora, Vencimento do seguro, Ramo e Placa.
 - **Funções personalizadas:**
-  - perfil "Corretor" (cota e fecha seguros novos);
+  - perfil "Corretor" (atende pedidos de cotação e fecha seguros novos; não dá acesso ao módulo Cotação, que é da Lia);
   - gestor com "meta de produção";
   - atendente com dúvidas, segunda via e endosso;
   - no CRM, "card" no lugar de "oportunidade".
@@ -32,7 +32,7 @@ São 68 textos do painel.
 
 ## O que ficou de fora, e por quê
 
-- **SLA:** a tela não está no menu.
+- **SLA das configurações (`SLA.FORM.*`):** a tela antiga não está no menu. O menu "Prazos" abre o SLA do CRM, que entrou no lote 1.
 - **Os passos da trilha (`trilha.yml`):** são texto fixo no código, e o pacote não alcança.
 - **O setor do onboarding e o cadastro e login (`v3`):** também não carregam pacote. Vai como lacuna.
 - **O "cotando" da trilha e o caso de uso do WhatsApp no pt geral:** precisam ser neutralizados no catálogo geral. É o lote 0, com PR por dono.
@@ -60,7 +60,7 @@ São 68 textos do painel.
 | 5 | `SETTINGS_INICIO.CARTOES.ETIQUETAS.TEXTO` | Nomes e cores para separar conversas e clientes. | Nomes e cores para separar conversas e contatos, como auto, residencial e sinistro. |
 | 6 | `SETTINGS_INICIO.CARTOES.CAMPOS.TEXTO` | Informações a mais que você quer guardar de cada cliente. | Informações a mais de cada contato, como seguradora, vencimento do seguro e placa do carro. |
 | 7 | `SETTINGS_INICIO.CARTOES.RESPOSTAS.TEXTO` | Textos que você usa sempre, a um clique na conversa. | Textos que você usa sempre, como pedir a CNH ou mandar a segunda via, a um clique na conversa. |
-| 8 | `SETTINGS_INICIO.CARTOES.CANAIS.TEXTO` | WhatsApp, e-mail, Instagram e site: por onde o cliente fala com você. | WhatsApp, e-mail, Instagram e site: por onde o cliente pede cotação e fala com você. |
+| 8 | `SETTINGS_INICIO.CARTOES.CANAIS.TEXTO` | WhatsApp, e-mail, Instagram e site: por onde o cliente fala com você. | WhatsApp, e-mail, Instagram e site: por onde as pessoas pedem cotação e falam com você. |
 | 9 | `SETTINGS_INICIO.CARTOES.USUARIOS.TEXTO` | Quem entra na plataforma e o que cada pessoa pode fazer. | Quem da corretora entra na plataforma e o que cada pessoa pode fazer. |
 
 ### Onboarding e Orquestração: trilha e entrada (7)
@@ -115,8 +115,8 @@ São 68 textos do painel.
 | 40 | `CUSTOM_ROLE.FORM.NAME.PLACEHOLDER` | Ex.: Atendente noturno | Ex.: Atendente de sinistro |
 | 41 | `CUSTOM_ROLE.FORM.DESCRIPTION.PLACEHOLDER` | Ex.: Equipe de plantão que atende só as próprias conversas | Ex.: Quem cuida de sinistro e segunda via, só nas próprias conversas |
 | 42 | `CUSTOM_ROLE.PROFILES.SDR.NAME` | Vendedor (SDR) | Corretor |
-| 43 | `CUSTOM_ROLE.PROFILES.SDR.SHORT` | Prospecta e cuida do funil | Cota e fecha seguros novos |
-| 44 | `CUSTOM_ROLE.PROFILES.SDR.WHO` | Para quem prospecta e qualifica leads. | Para quem faz a cotação, manda as opções e fecha seguros novos. |
+| 43 | `CUSTOM_ROLE.PROFILES.SDR.SHORT` | Prospecta e cuida do funil | Atende pedidos de cotação e fecha seguros novos |
+| 44 | `CUSTOM_ROLE.PROFILES.SDR.WHO` | Para quem prospecta e qualifica leads. | Para quem atende os pedidos de cotação, manda as opções e fecha seguros novos. |
 | 45 | `CUSTOM_ROLE.PROFILES.SALES_MANAGER.SHORT` | Dono dos funis e da meta | Cuida dos funis e da meta de produção |
 | 46 | `CUSTOM_ROLE.PROFILES.SALES_MANAGER.WHO` | Para quem é dono do funil e da meta comercial. | Para quem cuida dos funis e da meta de produção da corretora. |
 | 47 | `CUSTOM_ROLE.PROFILES.AGENT.WHO` | Para quem atende clientes e cuida das próprias conversas. | Para quem atende os clientes no dia a dia: dúvidas, segunda via e endosso. |
@@ -136,7 +136,7 @@ São 68 textos do painel.
 | 56 | `INBOX_MGMT.ADD.WEBSITE_NAME.PLACEHOLDER` | Informe o nome do seu site (por exemplo: Acme Inc) | Informe o nome do seu site (ex.: o nome da sua corretora) |
 | 57 | `INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_WELCOME_TAGLINE.PLACEHOLDER` | Nós tornamos simples a conexão conosco. Pergunte qualquer assunto ou compartilhe seus comentários. | Peça sua cotação, a segunda via ou avise um sinistro por aqui. |
 | 58 | `INBOX_MGMT.ADD.WEBSITE_CHANNEL.CHANNEL_GREETING_MESSAGE.PLACEHOLDER` | Acme Inc normalmente responde em algumas horas. | Respondemos em horário comercial. Em caso de batida ou pane, ligue para a assistência 24 horas da sua seguradora. |
-| 60 | `INBOX_MGMT.ADD.EMAIL_CHANNEL.EMAIL.SUBTITLE` | E-mail para onde os seus clientes lhe enviam tickets de suporte | E-mail para onde seus clientes mandam pedidos de cotação, apólices e documentos |
+| 60 | `INBOX_MGMT.ADD.EMAIL_CHANNEL.EMAIL.SUBTITLE` | E-mail para onde os seus clientes lhe enviam tickets de suporte | E-mail para onde as pessoas mandam pedidos de cotação, apólices e documentos |
 | 61 | `INBOX_MGMT.EDIT.SENDER_NAME_SECTION.BUSINESS_NAME.PLACEHOLDER` | Insira o nome de sua empresa | Nome da corretora |
 | 62 | `INBOX_MGMT.PRE_CHAT_FORM.PRE_CHAT_MESSAGE.PLACEHOLDER` | Esta mensagem será visível para os usuários junto com o formulário | Ex.: Para agilizar a cotação, conte seu nome e qual seguro você procura. |
 
