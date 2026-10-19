@@ -116,6 +116,7 @@ export const oQueFalta = ({
   assunto = '',
   modelo = null,
   camposProntos = false,
+  modeloDoEmail = null,
 }) => {
   if (!contato?.id) return 'CONTATO';
   if (!canal) return 'CANAL';
@@ -128,6 +129,8 @@ export const oQueFalta = ({
     return camposProntos ? '' : 'CAMPOS';
   }
   if (tipo === TIPOS.EMAIL && comAssunto && !assunto.trim()) return 'ASSUNTO';
+  // #1809: com modelo de e-mail, dá para enviar só o modelo (como na resposta).
+  if (tipo === TIPOS.EMAIL && modeloDoEmail) return '';
   return mensagem.trim() ? '' : 'MENSAGEM';
 };
 
