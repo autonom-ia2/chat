@@ -16,9 +16,9 @@ vi.mock('dashboard/api/crmBookingPages', () => ({
 }));
 
 const OLD_HINT =
-  'Escolha o negócio e clique em Continuar para configurar a reunião (caixa de entrada, convidados, horário).';
+  'Escolha o card e clique em Continuar para configurar a reunião (caixa de entrada, convidados, horário).';
 const NEW_HINT =
-  'Escolha o negócio e toque em Continuar para ver os dias e horários livres.';
+  'Escolha o card e toque em Continuar para ver os dias e horários livres.';
 
 const openQuickAdd = async (props = {}) => {
   const wrapper = mount(CrmCalendarQuickAdd, {
@@ -101,6 +101,6 @@ describe('CrmCalendarQuickAdd', () => {
     });
 
     expect(crmBookingPagesAPI.bookable).not.toHaveBeenCalled();
-    expect(hint(wrapper)).toContain('abriremos o card dele');
+    expect(hint(wrapper)).toContain('abriremos o card para configurar');
   });
 });
