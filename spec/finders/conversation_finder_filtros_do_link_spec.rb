@@ -91,7 +91,7 @@ RSpec.describe ConversationFinder do
     end
 
     it 'valor fora de 1..1440 ou que não é inteiro é ignorado' do
-      ['0', '1441', '-5', 'abc', '30.5', '0x1e', ''].each do |valor|
+      ['0', '1441', '-5', 'abc', '30.5', '0x1e', '', ' 30', '+30', '1_0'].each do |valor|
         expect(perform(admin, esperando_min: valor)[:conversations].size).to eq(3), "valor #{valor.inspect}"
       end
     end

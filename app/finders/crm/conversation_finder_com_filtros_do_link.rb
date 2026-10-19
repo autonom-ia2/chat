@@ -27,8 +27,12 @@ module Crm::ConversationFinderComFiltrosDoLink
     @conversations = @conversations.where(waiting_since: ..minutos_esperando.minutes.ago)
   end
 
+  # Só dígitos (o Integer aceitaria " 30", "+30" e "1_0"), a mesma regra do painel.
   def minutos_esperando
-    minutos = Integer(params[:esperando_min].to_s, 10, exception: false)
+    valor = params[:esperando_min].to_s
+    return if valor.empty? || valor.count('0-9') != valor.length
+
+    minutos = valor.to_i
     minutos if ESPERANDO_MIN.cover?(minutos)
   end
 
