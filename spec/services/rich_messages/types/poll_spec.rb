@@ -13,6 +13,14 @@ describe RichMessages::Types::Poll do
   it 'is the class of the poll type, with a numbered text version' do
     expect(RichMessages.type_class('poll')).to eq(described_class)
     expect(described_class.new(payload).fallback_text('Vem amanhã?')).to eq("1. Sim\n2. Não")
+    expect(described_class.new(payload.merge('multiple' => false)).fallback_text('Vem amanhã?')).to eq("1. Sim\n2. Não")
+  end
+
+  it 'adds the "more than one" line to the text version when multiple is true' do
+    poll = described_class.new(payload.merge('multiple' => true))
+    expect(poll.fallback_text('Vem amanhã?')).to eq("1. Sim\n2. Não\nPode escolher mais de uma")
+    expect(poll.whatsapp_cloud_payload('Vem amanhã?')[:text][:body])
+      .to eq("Vem amanhã?\n\n1. Sim\n2. Não\nPode escolher mais de uma")
   end
 
   it 'goes to the Cloud API as text, question and options' do

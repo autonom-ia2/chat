@@ -17,16 +17,17 @@ vi.mock('dashboard/api/wahaMessageActions', () => ({
   default: { react: vi.fn() },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+const WAHA = { channel_type: 'Channel::Api', waha_provider: 'waha' };
+const CLOUD = { channel_type: 'Channel::Whatsapp', provider: 'whatsapp_cloud' };
+// Cada teste escolhe a caixa e a conversa (a de sempre: WAHA com 'react').
+const loja = vi.hoisted(() => ({ conversa: null, caixa: null }));
 vi.mock('dashboard/composables/store', async () => {
   const { computed: calculado } = await import('vue');
   const getters = {
-    getSelectedChat: { whatsapp_api_message_actions: ['react'] },
-    'inboxes/getInbox': () => ({
-      channel_type: 'Channel::Api',
-      waha_provider: 'waha',
-    }),
+    getSelectedChat: () => loja.conversa,
+    'inboxes/getInbox': () => () => loja.caixa,
   };
-  return { useMapGetter: nome => calculado(() => getters[nome]) };
+  return { useMapGetter: nome => calculado(getters[nome]) };
 });
 
 // Mesmo formato que o Message.vue passa: isPrivate vem de props.private e a apagada
@@ -64,7 +65,9 @@ const montar = (extras = {}) => {
 
 describe('useReacaoDoAtendente pela caixa (#1709)', () => {
   beforeEach(() => {
-    ConversaCanalAPI.reagir.mockReset();
+    loja.conversa = { whatsapp_api_message_actions: ['react'] };
+    loja.caixa = WAHA;
+    ConversaCanalAPI.reagir.mockReset().mockResolvedValue({});
     WahaMessageActionsAPI.react.mockReset().mockResolvedValue({});
     useAlert.mockReset();
   });
@@ -98,5 +101,36 @@ describe('useReacaoDoAtendente pela caixa (#1709)', () => {
     await reacao.reagir('👍');
     expect(useAlert).toHaveBeenCalledWith('Reação inválida');
     expect(reacao.atual.value).toBe('');
+  });
+
+  it('o mesmo emoji de novo tira a reação: manda vazio pela caixa', async () => {
+    const reacao = montar({
+      contentAttributes: {
+        reactions: [{ emoji: '👍', senderType: 'User', senderId: 1 }],
+      },
+    });
+    expect(reacao.atual.value).toBe('👍');
+    await reacao.reagir('👍');
+    await flushPromises();
+    expect(WahaMessageActionsAPI.react).toHaveBeenCalledWith(9, 5, '');
+    expect(reacao.atual.value).toBe('');
+  });
+
+  it('mensagem apagada pelo cliente (deletedByContactAt) não tem botão de reagir', () => {
+    const reacao = montar({
+      contentAttributes: { reactions: [], deletedByContactAt: 1760000000 },
+    });
+    expect(reacao.visivel.value).toBe(false);
+  });
+
+  it('na Cloud a reação vai pela rota de sempre, nunca pela caixa', async () => {
+    loja.conversa = { can_reply: true };
+    loja.caixa = CLOUD;
+    const reacao = montar({ messageType: 0, sourceId: 'wamid.abc' });
+    expect(reacao.visivel.value).toBe(true);
+    await reacao.reagir('❤️');
+    await flushPromises();
+    expect(ConversaCanalAPI.reagir).toHaveBeenCalledWith(9, 5, '❤️');
+    expect(WahaMessageActionsAPI.react).not.toHaveBeenCalled();
   });
 });

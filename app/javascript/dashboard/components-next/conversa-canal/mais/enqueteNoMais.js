@@ -8,10 +8,9 @@ export const FLAG_DA_ENQUETE = 'whatsapp_rich_native';
 
 export const ENQUETE = { NATIVA: 'nativa', TEXTO: 'texto' };
 
-// A lista vem da conversa do store (snake_case) ou já convertida (camelCase).
+// A lista vem da conversa do store (snake_case).
 export const tiposNativosDaConversa = conversa => {
-  const tipos =
-    conversa?.whatsapp_api_rich_native ?? conversa?.whatsappApiRichNative;
+  const tipos = conversa?.whatsapp_api_rich_native;
   return Array.isArray(tipos) ? tipos : [];
 };
 

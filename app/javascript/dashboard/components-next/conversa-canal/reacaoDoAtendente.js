@@ -48,11 +48,18 @@ const estadoPelasAcoes = (conversa, mensagem) => {
     : NAO_REAGE;
 };
 
+// Na caixa híbrida, a mensagem cujo id provisório do WAHA não virou o id do WhatsApp
+// (`waha-native-pending-…`) não reage por nenhum caminho: o WhatsApp não a acharia.
+const ID_PROVISORIO_DO_WAHA = 'waha-native-pending-';
+const comIdProvisorio = mensagem =>
+  String(mensagem.sourceId ?? '').startsWith(ID_PROVISORIO_DO_WAHA);
+
 // WhatsApp oficial e híbrido: só mensagem do cliente (doc da Meta) e com a janela
 // de 24 h aberta; o híbrido fora da janela (whatsapp_api_reply) também não reage.
 // WAHA: recebida ou enviada, sem janela. Com 'react' nas ações da conversa, vale a
 // regra do conector (estadoPelasAcoes).
 export const estadoDaReacao = ({ caixa, conversa, mensagem }) => {
+  if (comIdProvisorio(mensagem)) return NAO_REAGE;
   if (reagePelaCaixa(conversa)) return estadoPelasAcoes(conversa, mensagem);
   const cloud = ehCloud(caixa);
   if (!cloud && !ehWaha(caixa)) return NAO_REAGE;

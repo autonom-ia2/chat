@@ -34,13 +34,19 @@ const MONTADORES = {
   contato: montarContato,
   enquete: montarEnquete,
 };
+const montado = computed(() =>
+  props.viraTexto ? MONTADORES[props.tipo]?.({ ...props.campos }) || {} : {}
+);
+// A enquete que ainda não passa (montarEnquete recusa) não tem versão em texto: a
+// prévia diz o que falta, em vez de mostrar um texto que não é o que vai sair.
+const enqueteIncompleta = computed(
+  () => props.viraTexto && props.tipo === 'enquete' && !montado.value.pedido
+);
 const emTexto = computed(() => {
   if (!props.viraTexto) return '';
-  const { pedido } = MONTADORES[props.tipo]?.({ ...props.campos }) || {};
+  const { pedido } = montado.value;
   if (pedido) return textoParaQuemNaoTemFormato(pedido);
-  return props.tipo === 'enquete'
-    ? props.campos.pergunta
-    : props.campos.mensagem;
+  return props.tipo === 'enquete' ? '' : props.campos.mensagem;
 });
 
 const { t } = useI18n();
@@ -83,7 +89,14 @@ const vazio = texto => !String(texto || '').trim();
       :class="BALAO"
     >
       <BicoDoBalao lado="right" class="text-[#D9FDD3] dark:text-[#144D37]" />
-      <p class="whitespace-pre-wrap break-words">
+      <p
+        v-if="enqueteIncompleta"
+        class="italic text-[#666666] dark:text-[#A7A8A8] break-words"
+        data-previa-vazia
+      >
+        {{ t('CONVERSA_CANAL.PREVIA.ENQUETE_INCOMPLETA') }}
+      </p>
+      <p v-else class="whitespace-pre-wrap break-words">
         {{ emTexto || t('CONVERSA_CANAL.PREVIA.SUA_MENSAGEM') }}
       </p>
       <div class="text-end text-[11px] text-[#666666] dark:text-[#FFFFFF]/60">

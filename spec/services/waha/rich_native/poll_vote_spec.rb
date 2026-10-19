@@ -52,7 +52,8 @@ describe Waha::RichNative::PollVote do
     payload = inbox_payload(message)
 
     expect(message.reload.content_attributes['rich_message_sent_as']).to eq('native')
-    expect(payload[:content]).to eq("Vem amanhã?\n\n1. Sim\n2. Não")
+    # A versão em texto (para o conector sem enquete) leva o aviso de mais de uma resposta (Poll::MULTIPLE_HINT).
+    expect(payload[:content]).to eq("Vem amanhã?\n\n1. Sim\n2. Não\nPode escolher mais de uma")
     expect(payload[:content_attributes]['waha_native']).to eq(
       'kind' => 'sendPoll', 'payload' => { 'poll' => { 'name' => 'Vem amanhã?', 'options' => %w[Sim Não], 'multipleAnswers' => true } }
     )

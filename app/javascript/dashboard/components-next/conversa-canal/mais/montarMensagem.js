@@ -352,11 +352,19 @@ export const montarFormulario = (campos, { tela, token }) => {
 const numeradas = rico =>
   rico.options.map((opcao, i) => `${i + 1}. ${opcao.title}`).join('\n');
 
+// Enquete com mais de uma resposta: a linha que o servidor acrescenta
+// (Poll::MULTIPLE_HINT, em português como lá).
+export const AVISO_DE_VARIAS = 'Pode escolher mais de uma';
+const daEnquete = rico =>
+  [numeradas(rico), rico.multiple === true ? AVISO_DE_VARIAS : '']
+    .filter(Boolean)
+    .join('\n');
+
 const COMPLEMENTO = {
   link_button: rico => `${rico.label}: ${rico.url}`,
   options: numeradas,
   // A Cloud oficial não tem enquete: a pergunta e as opções numeradas (Poll#fallback_text).
-  poll: numeradas,
+  poll: daEnquete,
   location: rico =>
     [rico.name, rico.address, mapHrefOf(rico.latitude, rico.longitude)]
       .filter(Boolean)
