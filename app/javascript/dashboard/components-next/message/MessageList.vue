@@ -11,8 +11,8 @@ import BotaoDeDescer from '../conversa-canal/BotaoDeDescer.vue';
 import { useSequenciaDaConversa } from '../conversa-canal/useSequenciaDaConversa';
 import { useAlbunsDaConversa } from '../conversa-canal/album/useAlbuns';
 import {
-  eMarcadorDoWaha,
   paraOBalao,
+  temMarcaDoWaha,
 } from '../conversa-canal/album/albumDoWaha';
 import { usePele } from '../conversa-canal/pele';
 import TopoDoEmail from '../conversa-canal/email/TopoDoEmail.vue';
@@ -98,7 +98,7 @@ const allMessages = computed(() => {
   });
   if (!comPele) return mensagens;
   return mensagens
-    .filter(mensagem => !ocultaNaPele(mensagem) || eMarcadorDoWaha(mensagem))
+    .filter(mensagem => !ocultaNaPele(mensagem) || temMarcaDoWaha(mensagem))
     .map(mensagem => paraOBalao(mensagem, contatoDaConversa.value));
 });
 

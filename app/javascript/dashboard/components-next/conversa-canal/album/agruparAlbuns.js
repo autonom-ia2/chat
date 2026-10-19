@@ -5,9 +5,11 @@
 //   'unknown') logo antes das fotos (22 de 22 em produção, out/2026, seguidos de 2+
 //   mídias em até 30 s). O álbum começa nesse marcador, junta as fotos/vídeos do mesmo
 //   cliente que vêm logo depois, até 30 s do marcador, e para no 1º que não entra. O
-//   marcador some da lista. Sem marcador, cada foto fica solta. O WAHA anuncia o álbum
-//   com um marcador próprio, que traz a contagem (albumDoWaha): a grade já nasce no
-//   mosaico final, com os quadros que faltam reservados.
+//   marcador some da lista. Sem marcador, cada foto fica solta.
+// - WAHA: o marcador próprio traz a contagem (albumDoWaha). O balão do álbum é o do
+//   marcador, do começo ao fim (a chave não muda e o balão não remonta), e a grade nasce
+//   e fica no tamanho anunciado: o que não chegou fica reservado, com "Não chegou"
+//   depois da janela. Nunca volta ao mosaico só das fotos que chegaram.
 // - Chegando (#1831): as fotos vêm uma a uma, de 11 a 19 s depois do marcador. Enquanto
 //   a janela do marcador está aberta e nada cortou a sequência, o álbum já aparece, com
 //   "Recebendo fotos…" e quadros reservados, desde o marcador sozinho. Nenhuma foto do
@@ -24,7 +26,12 @@ import { continuaASequencia } from '../useSequenciaDaConversa';
 import { eFigurinha } from '../figurinha';
 import { eVisualizacaoUnica } from '../visualizacaoUnica';
 import { deModeloOuCampanha } from '../encaminhar/selecaoParaEncaminhar';
-import { contagemDoWaha, eMarcadorDoWaha } from './albumDoWaha';
+import {
+  contagemDoWaha,
+  eMarcadorDoWaha,
+  temMarcaDoWaha,
+  temRemetente,
+} from './albumDoWaha';
 
 // Itens a partir dos quais a sequência vira álbum.
 export const MINIMO_DO_ALBUM = 2;
@@ -86,14 +93,12 @@ const dentroDaJanela = (desde, atual, janela) => {
 
 // Recebido: do marcador em diante, enquanto o item entra, é da mesma pessoa e chega
 // até 30 s depois do marcador. `noFim` diz se a lista acabou (o álbum ainda pode
-// crescer) ou se algo cortou a sequência (não cresce mais).
-// O do WAHA para na quantidade que anunciou: a foto seguinte já não é do álbum.
+// crescer) ou se algo cortou a sequência (não cresce mais). O item recusado corta a
+// sequência e fica solto.
 const itensDoMarcador = (lista, inicio, { fuso, abreBloco }) => {
   const marcador = lista[inicio];
-  const teto = contagemDoWaha(marcador);
   const itens = [];
   for (let i = inicio + 1; i < lista.length; i += 1) {
-    if (teto && itens.length >= teto) return { itens, noFim: false };
     const atual = lista[i];
     const entra =
       podeEntrarNoAlbum(atual) &&
@@ -104,6 +109,27 @@ const itensDoMarcador = (lista, inicio, { fuso, abreBloco }) => {
     itens.push(atual);
   }
   return { itens, noFim: true };
+};
+
+// WAHA: como o da Cloud, até a quantidade anunciada. A foto que chega depois da janela
+// do marcador ainda ocupa a vaga se vier até 30 s depois da anterior do álbum, sem nada
+// no meio. O item recusado não ocupa vaga: corta a sequência e fica solto.
+const itensDoAnuncio = (lista, inicio, esperados, { fuso, abreBloco }) => {
+  const marcador = lista[inicio];
+  const itens = [];
+  for (let i = inicio + 1; i < lista.length; i += 1) {
+    if (itens.length >= esperados) break;
+    const atual = lista[i];
+    const anterior = itens.at(-1) ?? marcador;
+    const entra =
+      podeEntrarNoAlbum(atual) &&
+      !(itens.length && abreBloco(atual)) &&
+      dentroDaJanela(anterior, atual, JANELA_DO_ALBUM_EM_SEGUNDOS) &&
+      continuaASequencia(marcador, atual, fuso);
+    if (!entra) break;
+    itens.push(atual);
+  }
+  return itens;
 };
 
 // Enviado: itens nossos seguidos, criados até 3 s um do outro, pela mesma pessoa.
@@ -128,39 +154,44 @@ const abreEnvio = mensagem =>
   mensagem.messageType === MESSAGE_TYPES.OUTGOING &&
   podeEntrarNoAlbum(mensagem);
 
-// Até quando (segundos) o álbum do marcador ainda recebe fotos.
-export const fimDaChegada = marcador =>
-  marcador.createdAt + JANELA_DO_ALBUM_EM_SEGUNDOS;
-
-// Ainda chegando: a lista acabou no álbum, falta foto anunciada (ou a contagem é
-// desconhecida) e a janela do marcador não fechou. Sem `agora`, nada está chegando.
-const aindaChegando = ({ marcador, itens, noFim, esperados, agora }) => {
-  if (agora === undefined || !noFim) return false;
-  if (esperados && itens.length >= esperados) return false;
-  return agora <= fimDaChegada(marcador);
+// A janela do marcador, no relógio do navegador (`agora`, segundos). Fecha no que vier
+// primeiro: 30 s depois de criado (idade negativa, de relógio atrasado, conta como 0) ou
+// 30 s depois que esta tela o viu (`vistoEm`), o que limita o "Recebendo fotos…" de um
+// relógio atrasado. Sem foto nenhuma, só conta o visto: com o relógio adiantado, o
+// marcador não vira "mensagem não carregada" antes de 30 s à vista. Sem `agora`, fechada;
+// sem `vistoEm`, só a idade.
+const janelaDoMarcador = (marcador, { agora, vistoEm }, semFoto) => {
+  if (agora === undefined) return { aberta: false };
+  const visto = vistoEm?.(marcador.id);
+  const fimPeloVisto =
+    visto === undefined ? Infinity : visto + JANELA_DO_ALBUM_EM_SEGUNDOS;
+  // Idade negativa conta como 0: a janela anda com o relógio até ele alcançar a criação.
+  const fimPelaIdade =
+    Math.min(marcador.createdAt, agora) + JANELA_DO_ALBUM_EM_SEGUNDOS;
+  const ate =
+    semFoto && visto !== undefined
+      ? fimPeloVisto
+      : Math.min(fimPelaIdade, fimPeloVisto);
+  return { aberta: agora <= ate, ate };
 };
 
-// Do marcador: o álbum chegando (mesmo com 0 ou 1 item), o álbum pronto (2+) ou nada.
+// Da Cloud: o álbum chegando (mesmo com 0 ou 1 item), o álbum pronto (2+) ou nada.
 // Chegando sem item nenhum, o balão do álbum é o do próprio marcador. O álbum do
-// marcador é desenhado em quadrados (a forma com que chegou), pronto ou não. Com a
-// contagem do WAHA, o mosaico final desde o início (sem quadrados).
+// marcador é desenhado em quadrados (a forma com que chegou), pronto ou não.
 const albumDoMarcador = (lista, inicio, opcoes) => {
   const marcador = lista[inicio];
   const { itens, noFim } = itensDoMarcador(lista, inicio, opcoes);
-  const esperados = contagemDoWaha(marcador);
-  const emQuadrados = !esperados;
   const passo = itens.length + 1;
-  if (
-    aindaChegando({ marcador, itens, noFim, esperados, agora: opcoes.agora })
-  ) {
+  const janela = janelaDoMarcador(marcador, opcoes, !itens.length);
+  if (noFim && janela.aberta) {
     const noMarcador = !itens.length;
     return {
       passo,
       chave: noMarcador ? marcador.id : itens[0].id,
       itens,
       escondeMarcador: !noMarcador,
-      emQuadrados,
-      chegada: { esperados, noMarcador, ate: fimDaChegada(marcador) },
+      emQuadrados: true,
+      chegada: { esperados: null, noMarcador, ate: janela.ate },
     };
   }
   if (itens.length < MINIMO_DO_ALBUM) return { passo: 1 };
@@ -169,7 +200,36 @@ const albumDoMarcador = (lista, inicio, opcoes) => {
     chave: itens[0].id,
     itens,
     escondeMarcador: true,
-    emQuadrados,
+    emQuadrados: true,
+  };
+};
+
+// Marcador do WAHA que não abre álbum: some, e as fotos ficam soltas.
+const SEM_ALBUM = { passo: 1, escondeMarcador: true };
+
+// Do WAHA: o balão é sempre o do marcador, na grade do tamanho anunciado. Não abre
+// álbum em grupo (toda recebida vem com o contato do grupo, e a foto de outro
+// participante entraria; `whatsapp_api_group`, #1741), com contagem inválida nem sem
+// remetente. Sem foto nenhuma e com a janela fechada, o marcador fica como o da Cloud
+// ("mensagem não carregada").
+const albumDoAnuncio = (lista, inicio, opcoes) => {
+  const marcador = lista[inicio];
+  const esperados = contagemDoWaha(marcador);
+  if (opcoes.grupo || esperados === null || !temRemetente(marcador)) {
+    return SEM_ALBUM;
+  }
+  const itens = itensDoAnuncio(lista, inicio, esperados, opcoes);
+  const janela = janelaDoMarcador(marcador, opcoes, !itens.length);
+  const chegando = janela.aberta && itens.length < esperados;
+  if (!itens.length && !chegando) return { passo: 1 };
+  return {
+    passo: itens.length + 1,
+    chave: marcador.id,
+    itens,
+    anunciados: esperados,
+    ...(chegando
+      ? { chegada: { esperados, noMarcador: true, ate: janela.ate } }
+      : {}),
   };
 };
 
@@ -179,13 +239,10 @@ const albumDoEnvio = (lista, inicio, opcoes) => {
   return { passo: itens.length, chave: itens[0].id, itens };
 };
 
-// Em grupo o marcador do WAHA só some: toda recebida vem com o contato do grupo, e a
-// foto de outro participante entraria no álbum (`whatsapp_api_group`, #1741).
+// O marcador do WAHA vem antes: depois do paraOBalao ele também parece o da Cloud.
 const albumQueComecaEm = (lista, inicio, opcoes) => {
   const mensagem = lista[inicio];
-  if (opcoes.grupo && eMarcadorDoWaha(mensagem)) {
-    return { passo: 1, escondeMarcador: true };
-  }
+  if (temMarcaDoWaha(mensagem)) return albumDoAnuncio(lista, inicio, opcoes);
   if (eMarcadorDeAlbum(mensagem)) return albumDoMarcador(lista, inicio, opcoes);
   if (abreEnvio(mensagem)) return albumDoEnvio(lista, inicio, opcoes);
   return { passo: 1 };
@@ -193,20 +250,22 @@ const albumQueComecaEm = (lista, inicio, opcoes) => {
 
 // Devolve os álbuns (Map: id do balão que desenha o álbum -> mensagens, na ordem da
 // conversa), os ids dos marcadores que somem da lista, os álbuns ainda chegando
-// (Map: mesmo id -> { esperados, noMarcador, ate }) e os desenhados em quadrados (Set de ids, os
-// que vieram de um marcador). `abreBloco` (opcional) diz quem
-// não pode ficar escondido dentro do álbum anterior, como a 1ª não lida, que leva a
-// etiqueta "não lidas" acima dela. `agora` (segundos) liga o álbum chegando (#1831).
-// `grupo`: conversa de grupo, onde o marcador do WAHA não abre álbum.
+// (Map: mesmo id -> { esperados, noMarcador, ate }), os desenhados em quadrados (Set de
+// ids, os da Cloud que vieram de um marcador) e os anunciados pelo WAHA (Map: mesmo id
+// -> quantos). `abreBloco` (opcional) diz quem não pode ficar escondido dentro do álbum
+// anterior, como a 1ª não lida, que leva a etiqueta "não lidas" acima dela. `agora`
+// (segundos, relógio do navegador) liga o álbum chegando (#1831); `vistoEm(id)` diz
+// quando esta tela viu o marcador. `grupo`: conversa de grupo.
 export const agruparDaConversa = (
   lista,
-  { fuso, abreBloco = () => false, agora, grupo = false } = {}
+  { fuso, abreBloco = () => false, agora, vistoEm, grupo = false } = {}
 ) => {
   const albuns = new Map();
   const marcadores = new Set();
   const chegadas = new Map();
   const emQuadrados = new Set();
-  const opcoes = { fuso, abreBloco, agora, grupo };
+  const anunciados = new Map();
+  const opcoes = { fuso, abreBloco, agora, vistoEm, grupo };
   let i = 0;
   while (i < lista.length) {
     const album = albumQueComecaEm(lista, i, opcoes);
@@ -214,9 +273,10 @@ export const agruparDaConversa = (
     if (album.chave !== undefined) albuns.set(album.chave, album.itens);
     if (album.chegada) chegadas.set(album.chave, album.chegada);
     if (album.emQuadrados) emQuadrados.add(album.chave);
+    if (album.anunciados) anunciados.set(album.chave, album.anunciados);
     i += album.passo;
   }
-  return { albuns, marcadores, chegadas, emQuadrados };
+  return { albuns, marcadores, chegadas, emQuadrados, anunciados };
 };
 
 export const agruparAlbuns = (lista, opcoes) =>
@@ -272,17 +332,17 @@ export const VAGA = null;
 // Grade em quadrados: de 2 em 2, a linha incompleta fechada por um reservado.
 const COLUNAS_DA_GRADE = 2;
 
-// Quadros do álbum (#1831). Enviado pela plataforma: o mosaico de sempre. Do marcador:
+// Quadros do álbum (#1831). Enviado pela plataforma: o mosaico de sempre. Da Cloud:
 // quadrados de 2 em 2, que só crescem no fim; o quadro que já apareceu não muda de
 // tamanho nem de lugar, nem quando a janela fecha. Chegando, a linha incompleta (ou o
 // álbum ainda sem foto) ganha quadros reservados. Mais de 4: "+N" no 4º, como sempre.
-// Chegando com a contagem do WAHA: o mosaico final desde já, com os quadros que faltam
-// reservados (entram no "+N").
+// Do WAHA (`esperados`): o mosaico do tamanho anunciado, chegando e depois, com os
+// quadros que faltam reservados (entram no "+N").
 export const quadrosDoAlbum = (
   itens,
   { emQuadrados = false, chegando = false, esperados = null } = {}
 ) => {
-  if (chegando && esperados >= MINIMO_DO_ALBUM) {
+  if (esperados > 0) {
     const total = Math.max(esperados, itens.length);
     const vagas = Array.from({ length: total }, (_, i) => itens[i] ?? VAGA);
     return { ...quadrosDoMosaico(vagas), emQuadrados: false };
@@ -298,4 +358,16 @@ export const quadrosDoAlbum = (
     escondidos,
     emQuadrados: true,
   };
+};
+
+// A forma de cada quadro, como no app: 2 lado a lado em pé, 3 com o 1º largo em cima,
+// o resto quadrado. Em quadrados, tudo quadrado. O balão troca o nome pela classe.
+export const FORMAS = { QUADRADO: 'quadrado', ALTO: 'alto', LARGO: 'largo' };
+
+export const formaDoQuadro = (mosaico, posicao) => {
+  if (mosaico.emQuadrados) return FORMAS.QUADRADO;
+  const quantos = mosaico.quadros.length;
+  if (quantos === 2) return FORMAS.ALTO;
+  if (quantos === 3 && posicao === 0) return FORMAS.LARGO;
+  return FORMAS.QUADRADO;
 };

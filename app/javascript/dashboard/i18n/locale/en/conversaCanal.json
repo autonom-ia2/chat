@@ -206,7 +206,9 @@
       "MAIS": "{n} more photos and videos. Tap to open",
       "MAIS_CURTO": "+{n}",
       "ROTULO_CHEGANDO": "Album arriving, {n} received so far",
-      "VAGA": "Photo {n} of {total} is still arriving",
+      "VAGA": "Photo or video {n} of {total} is still arriving",
+      "VAGA_NAO_CHEGOU": "Photo or video {n} of {total}: didn't arrive",
+      "NAO_CHEGOU": "Didn't arrive",
       "VAGA_SEM_TOTAL": "Next photo still arriving",
       "RECEBENDO": "Receiving photos…",
       "APAGADAS_EM_PARTE": "{apagadas} of {total} photos deleted. Try again for the rest."

@@ -6,7 +6,8 @@
 // com legenda, a legenda vem embaixo do mosaico e a hora no fim dela, como no app.
 // Citação de um item do álbum rola até o quadro dele e o destaca por um instante.
 // Chegando (#1831): o balão já aparece com "Recebendo fotos…" e quadros reservados, que
-// as fotos preenchem sem tirar nenhum quadro do lugar (quadrosDoAlbum).
+// as fotos preenchem sem tirar nenhum quadro do lugar (quadrosDoAlbum). Do WAHA, a
+// grade fica no tamanho anunciado também depois: o que não chegou diz "Não chegou".
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTimeoutFn } from '@vueuse/core';
@@ -22,7 +23,9 @@ import {
 } from '../../message/provider.js';
 import { ATTACHMENT_TYPES, MESSAGE_VARIANTS } from '../../message/constants';
 import {
+  FORMAS,
   atributosDoAlbum,
+  formaDoQuadro,
   legendasDoAlbum,
   quadrosDoAlbum,
   tiqueDoAlbum,
@@ -30,6 +33,7 @@ import {
 import {
   useAlbumDaMensagem,
   useAlbumEmQuadrados,
+  useAnunciadoDoAlbum,
   useChegadaDoAlbum,
 } from './useAlbuns';
 
@@ -41,14 +45,18 @@ const album = useAlbumDaMensagem(contexto.id);
 const itens = computed(() => album.value || []);
 const chegada = useChegadaDoAlbum(contexto.id);
 const emQuadrados = useAlbumEmQuadrados(contexto.id);
+const anunciados = useAnunciadoDoAlbum(contexto.id);
 
 // A hora é a do último item e o tique é o do item mais atrasado, como no app. As
-// reações de todos os itens aparecem juntas no selo do álbum. Chegando sem foto, o
-// balão é o do marcador (não suportada): ganha a cor de mensagem do cliente.
+// reações de todos os itens aparecem juntas no selo do álbum. Quando o balão é o do
+// marcador (não suportada: o da Cloud chegando sem foto, o do WAHA sempre), ganha a cor
+// de mensagem do cliente.
 provideMessageContext({
   ...contexto,
   variant: computed(() =>
-    chegada.value?.noMarcador ? MESSAGE_VARIANTS.USER : contexto.variant.value
+    chegada.value?.noMarcador || anunciados.value
+      ? MESSAGE_VARIANTS.USER
+      : contexto.variant.value
   ),
   createdAt: computed(
     () => itens.value.at(-1)?.createdAt ?? contexto.createdAt.value
@@ -84,28 +92,30 @@ const mosaico = computed(() =>
   quadrosDoAlbum(itens.value, {
     emQuadrados: emQuadrados.value,
     chegando: !!chegada.value,
-    esperados: chegada.value?.esperados,
+    esperados: anunciados.value,
   })
 );
 // Com a contagem do WAHA, o total é o anunciado.
 const total = computed(() =>
-  Math.max(chegada.value?.esperados ?? 0, itens.value.length)
+  Math.max(anunciados.value ?? 0, itens.value.length)
 );
 const rotuloDoGrupo = computed(() =>
-  chegada.value && !chegada.value.esperados
+  chegada.value && !anunciados.value
     ? t('CONVERSA_CANAL.ALBUM.ROTULO_CHEGANDO', { n: itens.value.length })
     : t('CONVERSA_CANAL.ALBUM.ROTULO', { total: total.value })
 );
 
-// Classes literais por quantidade e posição (o Tailwind só gera o que lê no código).
-// Em quadrados (álbum do marcador): o próximo entra no fim e ninguém se mexe.
-const formato = posicao => {
-  if (mosaico.value.emQuadrados) return 'aspect-square';
-  const quantos = mosaico.value.quadros.length;
-  if (quantos === 2) return 'aspect-[3/4]';
-  if (quantos === 3 && posicao === 0) return 'col-span-2 aspect-[2/1]';
-  return 'aspect-square';
+// Classes literais por forma (o Tailwind só gera o que lê no .vue). Em quadrados
+// (álbum da Cloud): o próximo entra no fim e ninguém se mexe.
+const CLASSE_DA_FORMA = {
+  [FORMAS.QUADRADO]: 'aspect-square',
+  [FORMAS.ALTO]: 'aspect-[3/4]',
+  [FORMAS.LARGO]: 'col-span-2 aspect-[2/1]',
 };
+const formato = posicao =>
+  CLASSE_DA_FORMA[formaDoQuadro(mosaico.value, posicao)];
+// Vaga do WAHA com a janela fechada: a foto ou o vídeo não chegou.
+const naoChegou = computed(() => Boolean(anunciados.value && !chegada.value));
 
 const anexo = item => item.attachments[0];
 const ehVideo = item => anexo(item).fileType === ATTACHMENT_TYPES.VIDEO;
@@ -117,7 +127,10 @@ const rotulo = (item, posicao) => {
     return t('CONVERSA_CANAL.ALBUM.MAIS', { n: mosaico.value.escondidos });
   }
   const valores = { n: posicao + 1, total: total.value };
-  if (!item && chegada.value?.esperados) {
+  if (!item && naoChegou.value) {
+    return t('CONVERSA_CANAL.ALBUM.VAGA_NAO_CHEGOU', valores);
+  }
+  if (!item && anunciados.value) {
     return t('CONVERSA_CANAL.ALBUM.VAGA', valores);
   }
   if (!item) return t('CONVERSA_CANAL.ALBUM.VAGA_SEM_TOTAL');
@@ -153,13 +166,21 @@ const galeriaAberta = computed({
           <div
             v-if="!item"
             role="img"
-            class="relative grid place-content-center overflow-hidden bg-[#000]/10 dark:bg-white/10 animate-pulse"
-            :class="formato(posicao)"
+            class="relative grid place-content-center overflow-hidden bg-[#000]/10 dark:bg-white/10"
+            :class="[formato(posicao), naoChegou ? '' : 'animate-pulse']"
             :aria-label="rotulo(item, posicao)"
             data-quadro-reservado
           >
             <span
-              v-if="!temMais(posicao)"
+              v-if="!temMais(posicao) && naoChegou"
+              class="px-2 text-center text-[13px] leading-[17px] text-[#000]/60 dark:text-white/60"
+              aria-hidden="true"
+              data-nao-chegou
+            >
+              {{ t('CONVERSA_CANAL.ALBUM.NAO_CHEGOU') }}
+            </span>
+            <span
+              v-else-if="!temMais(posicao)"
               class="i-ph-image size-8 text-[#000]/25 dark:text-white/25"
               aria-hidden="true"
             />

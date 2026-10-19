@@ -3,7 +3,9 @@
 // os contatos mandados de uma vez (mesmo sourceId, uma mensagem por contato) viram um
 // cartão só, desenhado pela 1ª mensagem.
 // Álbum chegando (#1831): a conta usa a hora de agora, e um relógio refaz a conta quando
-// a janela do álbum fecha, para o "Recebendo fotos…" sair sozinho.
+// a janela do álbum fecha, para o "Recebendo fotos…" sair sozinho. A tela guarda quando
+// viu cada marcador pela 1ª vez (relógio do navegador), que limita a janela de um
+// relógio atrasado ou adiantado (janelaDoMarcador).
 import { computed, inject, onBeforeUnmount, provide, ref, watch } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useFuso, usePele } from '../pele';
@@ -14,12 +16,14 @@ const CHAVE_ALBUNS = Symbol('albunsDaConversa');
 const CHAVE_CONTATOS = Symbol('contatosDaConversa');
 const CHAVE_CHEGADAS = Symbol('albunsChegando');
 const CHAVE_QUADRADOS = Symbol('albunsEmQuadrados');
+const CHAVE_ANUNCIADOS = Symbol('albunsAnunciados');
 
 const VAZIO = {
   albuns: new Map(),
   marcadores: new Set(),
   chegadas: new Map(),
   emQuadrados: new Set(),
+  anunciados: new Map(),
 };
 
 const agoraEmSegundos = () => Date.now() / 1000;
@@ -54,6 +58,12 @@ export const useAlbunsDaConversa = (mensagens, primeiraNaoLida) => {
   // a de agora (uma mensagem nova também refaz a conta).
   const janelaFechou = ref(0);
   const conversa = useMapGetter('getSelectedChat');
+  // id do marcador -> quando esta tela o viu pela 1ª vez (segundos). Só cresce.
+  const vistos = new Map();
+  const vistoEm = id => {
+    if (!vistos.has(id)) vistos.set(id, agoraEmSegundos());
+    return vistos.get(id);
+  };
 
   const agrupados = computed(() => {
     if (!pele.value) return VAZIO;
@@ -62,6 +72,7 @@ export const useAlbunsDaConversa = (mensagens, primeiraNaoLida) => {
       fuso: fuso.value,
       abreBloco: mensagem => mensagem.id === primeiraNaoLida?.value,
       agora: agoraEmSegundos(),
+      vistoEm,
       grupo: conversa.value?.whatsapp_api_group === true,
     });
   });
@@ -73,6 +84,10 @@ export const useAlbunsDaConversa = (mensagens, primeiraNaoLida) => {
     CHAVE_QUADRADOS,
     computed(() => agrupados.value.emQuadrados)
   );
+  provide(
+    CHAVE_ANUNCIADOS,
+    computed(() => agrupados.value.anunciados)
+  );
   useRelogioDasChegadas(chegadas, () => {
     janelaFechou.value += 1;
   });
@@ -82,13 +97,13 @@ export const useAlbunsDaConversa = (mensagens, primeiraNaoLida) => {
   );
   provide(CHAVE_CONTATOS, contatos);
 
-  // Os itens 2, 3… do álbum não ganham balão próprio: aparecem no mosaico do 1º. O
-  // marcador do álbum (o "pai" que a Cloud não mostra) também some. Idem os contatos
-  // 2, 3… do mesmo envio.
+  // Os itens do álbum não ganham balão próprio: aparecem no mosaico do balão que o
+  // desenha (a chave: o 1º item, ou o marcador do WAHA). O marcador da Cloud com fotos
+  // também some. Idem os contatos 2, 3… do mesmo envio.
   const escondidas = computed(() => {
     const ids = new Set(agrupados.value.marcadores);
-    const esconderOsOutros = itens =>
-      itens.slice(1).forEach(item => ids.add(item.id));
+    const esconderOsOutros = (itens, chave) =>
+      itens.forEach(item => item.id !== chave && ids.add(item.id));
     albuns.value.forEach(esconderOsOutros);
     // O grupo de contatos vem na ordem do envio: some todo item que não é o balão
     // que desenha o cartão (a chave do mapa).
@@ -121,6 +136,12 @@ export const useAlbumEmQuadrados = id => {
 export const useChegadaDoAlbum = id => {
   const chegadas = inject(CHAVE_CHEGADAS, MAPA_VAZIO);
   return computed(() => chegadas.value.get(id.value) || null);
+};
+
+// Quantas fotos e vídeos o WAHA anunciou para o álbum que este balão abre, ou null.
+export const useAnunciadoDoAlbum = id => {
+  const anunciados = inject(CHAVE_ANUNCIADOS, MAPA_VAZIO);
+  return computed(() => anunciados.value.get(id.value) ?? null);
 };
 
 // As mensagens de contato do mesmo envio que este balão abre (2+), ou null.
