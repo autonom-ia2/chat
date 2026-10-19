@@ -20,7 +20,9 @@
       "NADA_CRIAR": "No one found. You can create the contact now.",
       "CRIAR": "Create contact {valor}",
       "ERRO": "Could not search right now. Try again.",
-      "ERRO_CRIAR": "Could not create the contact. Try again."
+      "ERRO_CRIAR": "Could not create the contact. Try again.",
+      "NOME_DO_CONTATO": "Contact name",
+      "NOME_EXEMPLO": "For example: Marina Costa"
     },
     "POR_ONDE": {
       "TITULO": "Through",
@@ -78,6 +80,7 @@
       "MAIS_OPCOES": "More options",
       "MENOS_OPCOES": "Fewer options",
       "ANEXAR": "Attach a file",
+      "FERRAMENTAS": "Email tools",
       "COMPLETE": "Complete the message",
       "CAMPO_ROTULO": "What goes in place of ⟨{campo}⟩",
       "CAMPO_FALADO": "field {campo}",
@@ -91,7 +94,8 @@
       "AGORA": "now",
       "DE": "From",
       "ASSUNTO": "Subject",
-      "SEM_ASSUNTO": "No subject"
+      "SEM_ASSUNTO": "No subject",
+      "HISTORICO": "{nome} wrote:"
     },
     "RODAPE": {
       "CANCELAR": "Cancel",
@@ -123,6 +127,25 @@
       "TITULO": "The message was not sent",
       "PADRAO": "Nothing you wrote was lost. Try sending again."
     },
-    "TEXTO_BUSCA": "Search by name, phone number or email."
+    "TEXTO_BUSCA": "Search by name, phone number or email.",
+    "CONTATO_NOVO": {
+      "TITULO": "New contact",
+      "NOME": "Name",
+      "NOME_EXEMPLO": "For example: Marina Costa",
+      "EMAIL": "Email",
+      "EMAIL_EXEMPLO": "name{'@'}company.com",
+      "TELEFONE": "Phone (optional)",
+      "FALTA_NOME": "Type the contact name.",
+      "FALTA_EMAIL": "Type the email: the email goes to this address.",
+      "EMAIL_INVALIDO": "Check the email: it looks incomplete.",
+      "TELEFONE_INVALIDO": "Check the phone: use the area code, like (11) 98765-4321.",
+      "FALTA_CONTATO": "Type an email or a phone.",
+      "CRIAR": "Create contact and continue",
+      "SUBTITULO": "Saved in Contacts and added to this conversation.",
+      "EMAIL_OPCIONAL": "Email (optional)",
+      "EMAIL_DICA": "The email goes to this address.",
+      "TELEFONE_DICA": "Helps when this person also writes on WhatsApp.",
+      "PAIS": "Country"
+    }
   }
 }

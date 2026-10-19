@@ -1,8 +1,17 @@
 <script setup>
-import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onUnmounted,
+  provide,
+  ref,
+  useId,
+  watch,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import { useStore } from 'dashboard/composables/store';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import { emitter } from 'shared/helpers/mitt';
@@ -23,6 +32,7 @@ import { useNovaConversa } from './useNovaConversa';
 import { useContinuarConversa } from './useContinuarConversa';
 import { useFocoPreso } from './useFocoPreso';
 import { useCriarMensagemPronta } from './useCriarMensagemPronta';
+import { EMAIL_DA_GAVETA } from './useModeloDoEmailNaGaveta';
 import {
   TELAS,
   TIPOS,
@@ -41,6 +51,8 @@ const props = defineProps({
   // A gaveta abre sempre do mesmo lado; `align` fica pela compatibilidade.
   // eslint-disable-next-line vue/no-unused-properties
   align: { type: String, default: 'end' },
+  // #1809: "Escrever" da caixa de e-mail abre a gaveta já nesta caixa.
+  caixaId: { type: [Number, String], default: null },
 });
 
 const emit = defineEmits(['close']);
@@ -55,6 +67,20 @@ const aberta = ref(false);
 const raiz = ref(null);
 const corpo = ref(null);
 const blocoDaMensagem = ref(null);
+
+// #1809 (decisão do Rodrigo, 18/10): o cartão "Criar contato" com nome, e-mail e
+// telefone só nas contas com a chave conversa_email_nova; sem ela, o "Criar contato"
+// de antes.
+const contaAtual = useMapGetter('getCurrentAccountId');
+const temChave = useMapGetter('accounts/isFeatureEnabledonAccount');
+const contatoNovoCompleto = computed(() =>
+  Boolean(temChave.value(contaAtual.value, 'conversa_email_nova'))
+);
+// #1809: a caixa só vale quando a gaveta é a do "Escrever" do e-mail, com a chave
+// ligada; as outras "Nova conversa" não recebem caixa e não têm a delas trocada.
+const caixaDoEscrever = computed(() =>
+  contatoNovoCompleto.value ? props.caixaId : null
+);
 
 const {
   contato,
@@ -75,7 +101,15 @@ const {
   limparContato,
   mudarTermo,
   criarContato,
-} = useNovaConversaContato();
+} = useNovaConversaContato({ caixaPreferida: () => caixaDoEscrever.value });
+// #1809: aberta do "Escrever" da caixa de e-mail, o contato novo precisa de e-mail.
+const caixaPorId = useMapGetter('inboxes/getInbox');
+const caixaPreferidaEhEmail = computed(
+  () =>
+    Boolean(caixaDoEscrever.value) &&
+    caixaPorId.value(Number(caixaDoEscrever.value))?.channel_type ===
+      INBOX_TYPES.EMAIL
+);
 
 // #1505 — o contato já tem conversa nesta caixa: continuar ou começar outra.
 const continuar = useContinuarConversa({ contato, canal });
@@ -102,7 +136,31 @@ const {
   limpar,
   enviar,
   enviarPronta,
+  modeloDoEmail,
+  historico,
+  comHistorico,
+  assuntoNaPrevia,
 } = useNovaConversa({ contato, canal, continuar });
+
+// #1809 — para quem vai e o modelo de e-mail do "+", para a caixa do e-mail.
+provide(EMAIL_DA_GAVETA, {
+  para: computed(() =>
+    contato.value
+      ? { nome: contato.value.name || '', email: contato.value.email || '' }
+      : null
+  ),
+  modelo: computed(() => form.modeloDoEmail),
+  valores: computed(() => form.valoresDoModelo),
+  escolher: modeloDoEmail.escolher,
+  campo: modeloDoEmail.campo,
+  tirar: modeloDoEmail.tirar,
+  // O histórico ao continuar uma conversa de e-mail (CitacaoDaResposta).
+  historico,
+  historicoDesligado: computed(() => form.historicoDesligado),
+  alternarHistorico: () => {
+    form.historicoDesligado = !form.historicoDesligado;
+  },
+});
 const continuando = computed(() => Boolean(conversaDaMensagem.value));
 // Entra numa conversa que já existe: a que vai continuar, ou a oculta da
 // caixa com "Reabrir a mesma conversa", onde a criação cai sozinha.
@@ -254,11 +312,15 @@ watch(carregandoCanais, carregando => {
 // de e-mail) trata o próprio Esc; a gaveta não fecha por baixo dele.
 const SOBREPOSTOS =
   '[data-popover-content], dialog.ProseMirror-prompt-backdrop';
+// Um <dialog> aberto por cima (a janela "Modelo de e-mail", #1809) trata o Esc; vale
+// mesmo com o foco fora dele.
+const comJanelaPorCima = () => Boolean(document.querySelector('dialog[open]'));
 
 useKeyboardEvents({
   Escape: {
     action: evento => {
       if (!aberta.value || evento.target?.closest?.(SOBREPOSTOS)) return;
+      if (comJanelaPorCima()) return;
       fechar();
     },
     allowOnFocusedInput: true,
@@ -349,6 +411,8 @@ useFixedPanelPresence(aberta);
                 :erro-na-busca="erroNaBusca"
                 :criando="criando"
                 :erro-ao-criar="erroAoCriar"
+                :exige-email="caixaPreferidaEhEmail"
+                :contato-novo-completo="contatoNovoCompleto"
                 @buscar="mudarTermo"
                 @escolher="escolherContato"
                 @criar="criarContato"
@@ -410,7 +474,11 @@ useFixedPanelPresence(aberta);
                 :nome="nome"
                 :email="tipo === TIPOS.EMAIL"
                 :texto="previa"
-                :assunto="continuando ? '' : form.assunto"
+                :modelo-html="
+                  tipo === TIPOS.EMAIL ? modeloDoEmail.htmlDaPrevia.value : ''
+                "
+                :assunto="assuntoNaPrevia"
+                :historico="comHistorico ? historico : null"
                 :remetente="canal?.name || ''"
                 :endereco-do-remetente="linhaDoCanal(canal)"
               />

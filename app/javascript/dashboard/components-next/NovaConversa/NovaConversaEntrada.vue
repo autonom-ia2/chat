@@ -1,11 +1,8 @@
 <script setup>
-import { computed } from 'vue';
-import { useMapGetter } from 'dashboard/composables/store';
-import { getUserPermissions } from 'dashboard/helper/permissionsHelper';
-import { readsOnlyConversations } from 'dashboard/store/modules/conversations/helpers';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import NovaConversaGaveta from './NovaConversaGaveta.vue';
 import { useNovaConversaLigada } from './novaConversaLigada';
+import { usePodeComecarConversa } from './usePodeComecarConversa';
 
 // #1459 — ponte entre a tela nova e a antiga. Os pontos de uso importam este
 // componente no lugar do ComposeConversation; props, slot `trigger` e evento
@@ -16,14 +13,7 @@ defineOptions({ inheritAttrs: false });
 const ligada = useNovaConversaLigada();
 
 // Quem só lê conversas (#1800) não começa conversa nova, em nenhum ponto de entrada.
-const currentUser = useMapGetter('getCurrentUser');
-const accountId = useMapGetter('getCurrentAccountId');
-const podeComecar = computed(
-  () =>
-    !readsOnlyConversations(
-      getUserPermissions(currentUser.value, accountId.value)
-    )
-);
+const podeComecar = usePodeComecarConversa();
 </script>
 
 <template>
@@ -36,4 +26,5 @@ const podeComecar = computed(
       <slot name="trigger" v-bind="escopo" />
     </template>
   </component>
+  <template v-else />
 </template>

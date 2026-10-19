@@ -161,6 +161,7 @@ export const useCalendarioOuro = ({ props, fuso, ehAdmin }) => {
     janela,
     itens,
     marcas,
+    ehMeu,
     andar,
     irParaHoje,
     noPeriodoDeHoje,

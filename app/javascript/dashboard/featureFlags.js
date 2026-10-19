@@ -65,6 +65,7 @@ export const FEATURE_FLAGS = {
   ETIQUETAS_DO_WHATSAPP: 'etiquetas_do_whatsapp',
   TELA_INICIAL_RESUMO: 'tela_inicial_resumo',
   EMAIL_AUTORIA: 'email_autoria',
+  CONVERSA_EMAIL_NOVA: 'conversa_email_nova',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

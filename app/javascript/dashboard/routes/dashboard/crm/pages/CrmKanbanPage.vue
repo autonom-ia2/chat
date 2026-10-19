@@ -2150,13 +2150,15 @@ const ouroProximoPasso = async ({ evento, titulo, quando, fuso }) => {
 };
 
 // Só aquela vez de cada lembrete (o reschedule mexe na linha, nunca na
-// repetição). Se parte falhar, diz quantos passaram.
+// repetição). Se parte falhar, diz quantos passaram. Só lembretes (#1855): o
+// servidor recusa envio ao cliente, para o lote nunca mandar mensagem.
 const ouroAdiarAtrasados = async ({ eventos, quando }) => {
   const resultados = await Promise.allSettled(
     eventos.map(evento =>
       store.dispatch('crmKanban/rescheduleFollowUp', {
         id: idDoLembrete(evento),
         dueAt: quando,
+        remindersOnly: true,
       })
     )
   );
