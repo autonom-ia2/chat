@@ -158,11 +158,17 @@ const abreEnvio = mensagem =>
 // primeiro: 30 s depois de criado (idade negativa, de relógio atrasado, conta como 0) ou
 // 30 s depois que esta tela o viu (`vistoEm`), o que limita o "Recebendo fotos…" de um
 // relógio atrasado. Sem foto nenhuma, só conta o visto: com o relógio adiantado, o
-// marcador não vira "mensagem não carregada" antes de 30 s à vista. Sem `agora`, fechada;
-// sem `vistoEm`, só a idade.
+// marcador não vira "mensagem não carregada" antes de 30 s à vista. O visto só vale
+// para marcador recente (idade, no relógio do navegador, abaixo de 5 min): ao abrir uma
+// conversa antiga, o álbum que nunca chegou já aparece como "mensagem não carregada".
+// Sem `agora`, fechada; sem `vistoEm`, só a idade.
+export const IDADE_DO_MARCADOR_RECENTE_EM_SEGUNDOS = 5 * 60;
+
 const janelaDoMarcador = (marcador, { agora, vistoEm }, semFoto) => {
   if (agora === undefined) return { aberta: false };
-  const visto = vistoEm?.(marcador.id);
+  const recente =
+    agora - marcador.createdAt < IDADE_DO_MARCADOR_RECENTE_EM_SEGUNDOS;
+  const visto = recente ? vistoEm?.(marcador.id) : undefined;
   const fimPeloVisto =
     visto === undefined ? Infinity : visto + JANELA_DO_ALBUM_EM_SEGUNDOS;
   // Idade negativa conta como 0: a janela anda com o relógio até ele alcançar a criação.

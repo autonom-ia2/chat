@@ -1,5 +1,6 @@
 import {
   FORMAS,
+  IDADE_DO_MARCADOR_RECENTE_EM_SEGUNDOS,
   JANELA_DO_ALBUM_EM_SEGUNDOS,
   VAGA,
   agruparDaConversa,
@@ -404,7 +405,8 @@ describe('janela pelo relógio do navegador (#1831)', () => {
 
   it('relógio adiantado, sem foto: só vira "não carregada" 30 s depois de visto', () => {
     const pai = doWaha('atividade');
-    const visto = BASE + 3600;
+    // 2 min adiantado: o marcador ainda é recente.
+    const visto = BASE + 120;
     const vistoEm = () => visto;
     const logo = agrupar([pai], visto + 5, { vistoEm });
     expect(logo.albuns.get(pai.id)).toEqual([]);
@@ -419,7 +421,7 @@ describe('janela pelo relógio do navegador (#1831)', () => {
   it('relógio adiantado, com foto: a janela já fechou e a grade fica', () => {
     const pai = doWaha('atividade');
     const a = foto({ createdAt: BASE + 1 });
-    const visto = BASE + 3600;
+    const visto = BASE + 120;
     const { albuns, chegadas } = agrupar([pai, a], visto + 1, {
       vistoEm: () => visto,
     });
@@ -432,7 +434,7 @@ describe('janela pelo relógio do navegador (#1831)', () => {
       content: null,
       contentAttributes: { isUnsupported: true, unsupportedKind: 'unknown' },
     });
-    const visto = BASE + 3600;
+    const visto = BASE + 120;
     const logo = agruparDaConversa([pai], {
       fuso: FUSO,
       agora: visto + 5,
@@ -443,5 +445,50 @@ describe('janela pelo relógio do navegador (#1831)', () => {
       noMarcador: true,
       ate: visto + JANELA_DO_ALBUM_EM_SEGUNDOS,
     });
+  });
+
+  // Conversa antiga: idade (relógio do navegador) a partir de 5 min.
+  const ANTIGA = BASE + IDADE_DO_MARCADOR_RECENTE_EM_SEGUNDOS;
+
+  it('conversa antiga, WAHA sem foto: já é "mensagem não carregada", sem esperar', () => {
+    const pai = doWaha('atividade');
+    const { albuns, marcadores, chegadas } = agrupar([pai], ANTIGA, {
+      vistoEm: () => ANTIGA,
+    });
+    expect(albuns.size).toBe(0);
+    expect(marcadores.size).toBe(0);
+    expect(chegadas.size).toBe(0);
+  });
+
+  it('conversa antiga, Cloud sem foto: já é "mensagem não carregada", sem esperar', () => {
+    const pai = texto({
+      content: null,
+      contentAttributes: { isUnsupported: true, unsupportedKind: 'unknown' },
+    });
+    const { albuns, marcadores, chegadas } = agruparDaConversa([pai], {
+      fuso: FUSO,
+      agora: ANTIGA,
+      vistoEm: () => ANTIGA,
+    });
+    expect(albuns.size).toBe(0);
+    expect(marcadores.size).toBe(0);
+    expect(chegadas.size).toBe(0);
+  });
+
+  it('conversa antiga com 2 de 4: a grade fica, sem "Recebendo"', () => {
+    const pai = doWaha('atividade');
+    const fotos = [1, 2].map(s => foto({ createdAt: BASE + s }));
+    const { albuns, chegadas } = agrupar([pai, ...fotos], ANTIGA, {
+      vistoEm: () => ANTIGA,
+    });
+    expect(albuns.get(pai.id)).toEqual(fotos);
+    expect(chegadas.size).toBe(0);
+  });
+
+  it('um pouco antes de 5 min, ainda recente: espera 30 s à vista', () => {
+    const pai = doWaha('atividade');
+    const quase = ANTIGA - 1;
+    const { chegadas } = agrupar([pai], quase, { vistoEm: () => quase });
+    expect(chegadas.get(pai.id).ate).toBe(quase + JANELA_DO_ALBUM_EM_SEGUNDOS);
   });
 });
