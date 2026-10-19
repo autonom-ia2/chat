@@ -708,7 +708,7 @@ pt_BR:
       subject: 'Lembrete: %{title}'
       push_title: 'Lembrete: %{title}'
       greeting: 'Olá %{name},'
-      card: 'Negócio: %{card}'
+      card: 'Card: %{card}'
       due_at: 'Vence em: %{time}'
       cta: 'Abrir CRM'
     meetings:

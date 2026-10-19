@@ -101,6 +101,6 @@ describe('CrmCalendarQuickAdd', () => {
     });
 
     expect(crmBookingPagesAPI.bookable).not.toHaveBeenCalled();
-    expect(hint(wrapper)).toContain('abriremos o card para configurar');
+    expect(hint(wrapper)).toContain('para configurar os detalhes nele');
   });
 });

@@ -1102,7 +1102,7 @@ en:
       subject: 'Reminder: %{title}'
       push_title: 'Reminder: %{title}'
       greeting: 'Hi %{name},'
-      card: 'Deal: %{card}'
+      card: 'Card: %{card}'
       due_at: 'Due: %{time}'
       cta: 'Open CRM'
     meetings:

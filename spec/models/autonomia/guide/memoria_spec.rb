@@ -23,7 +23,7 @@ RSpec.describe Autonomia::Guide::Memoria do
       expect(bloco).to include("##{dela.id} Prefere respostas com lista", "##{da_corretora.id} Funil do Zé")
       expect(bloco).not_to include('Fala curto comigo')
       expect(bloco).to start_with("[#{described_class::CABECALHO}")
-      expect(bloco).to include('Sobre a pessoa:', 'Sobre a corretora:')
+      expect(bloco).to include('Sobre a pessoa:', 'Sobre a empresa:')
     end
 
     it 'fica vazio sem memória e sem pessoa', :aggregate_failures do

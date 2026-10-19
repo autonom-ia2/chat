@@ -111,7 +111,7 @@
         "REACHED_NOTE": "receberam a mensagem",
         "REPLIED": "Responderam",
         "REPLIED_NOTE": "{rate} das alcançadas · todos no CRM",
-        "DEALS": "Viraram negócio no CRM",
+        "DEALS": "Viraram card no CRM",
         "DEALS_NOTE": "cards com marca de campanha · {won} ganhos",
         "EMAIL_HEALTH": "Saúde do e-mail",
         "EMAIL_HEALTH_NOTE": "bounce permanente · limite 5% · reclamações {complaints} (limite 0,1%)"
