@@ -32,6 +32,9 @@ export const defaultFilters = () => ({
   // status). The board ignores `result` (fetchBoard strips it), so this only
   // shapes the List default — surfaced by the status tabs in the list toolbar.
   result: 'open',
+  // #1883: "fechado neste mês" (`this_month`), só da Lista, como o `result`. O mês
+  // é calculado no servidor, no fuso da conta; por isso força o refetch no realtime.
+  closedIn: '',
   // PR14.7b/c high-value filters. Realtime contract per filter:
   //  - stageIds / teamId / valueMin / valueMax / staleDays / campaignSourceIds
   //    are evaluable from a single card payload and ARE mirrored in
@@ -69,6 +72,7 @@ export const SERVER_ONLY_FILTER_KEYS = [
   'responsibleKind',
   'aiPending',
   'labelIds',
+  'closedIn',
 ];
 
 export const hasServerOnlyFilters = filters =>
@@ -275,6 +279,7 @@ const normalizeFilters = filters => {
   if (filters.followUpStatus) params.follow_up_status = filters.followUpStatus;
   // List-only "Resultado" filter; the board strips it in fetchBoard.
   if (filters.result) params.result = filters.result;
+  if (filters.closedIn) params.closed_in = filters.closedIn;
   if (filters.stageIds?.length) params.stage_ids = filters.stageIds.join(',');
   if (filters.labelIds?.length) params.label_ids = filters.labelIds.join(',');
   if (filters.campaignSourceIds?.length)
@@ -525,7 +530,11 @@ export const actions = {
     try {
       // The board is strictly open-only; never forward the List-only `result`
       // filter so won/lost/archived selections cannot leak into board fetches.
-      const { result, ...boardFilters } = normalizeFilters($state.filters);
+      const {
+        result,
+        closed_in: _closedIn,
+        ...boardFilters
+      } = normalizeFilters($state.filters);
       // An explicit stageIds payload (used to refetch specific columns) wins;
       // otherwise keep the Stage filter's stage_ids from normalizeFilters.
       const response = await CrmKanbanAPI.getBoard({

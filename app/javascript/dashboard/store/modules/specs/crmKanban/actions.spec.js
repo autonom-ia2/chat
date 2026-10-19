@@ -728,6 +728,50 @@ describe('#crmKanban board filters', () => {
     );
   });
 
+  // #1883: "ganhos do mês" do Números. O mês é calculado no servidor, no fuso da conta.
+  it('sends closed_in to the list and never to the board', async () => {
+    const commit = vi.fn();
+    const filters = {
+      ...defaultFilters(),
+      result: 'won',
+      closedIn: 'this_month',
+    };
+    CrmKanbanAPI.getCards.mockResolvedValue({
+      data: { payload: [], meta: { count: 0 } },
+    });
+    CrmKanbanAPI.getBoard.mockResolvedValue({
+      data: { payload: { pipeline: { id: 7 }, stages: [] } },
+    });
+
+    await actions.fetchCardsList(
+      { commit, state: { filters } },
+      { pipelineId: 7 }
+    );
+    await actions.fetchBoard({ commit, state: { filters } }, { pipelineId: 7 });
+
+    expect(CrmKanbanAPI.getCards.mock.calls[0][0]).toMatchObject({
+      result: 'won',
+      closed_in: 'this_month',
+    });
+    expect(CrmKanbanAPI.getBoard.mock.calls[0][0].closed_in).toBeUndefined();
+  });
+
+  it('refetches on a realtime event while "closed this month" is active', () => {
+    const commit = vi.fn();
+    actions.handleRealtimeCardEvent(
+      {
+        commit,
+        state: {
+          board: { pipeline: { id: 7 } },
+          filters: { ...defaultFilters(), closedIn: 'this_month' },
+        },
+      },
+      { event: 'crm.card.updated', card: { id: 1, pipeline_id: 7 } }
+    );
+
+    expect(emitter.emit).toHaveBeenCalledWith(BUS_EVENTS.CRM_BOARD_REFETCH);
+  });
+
   it('refetches (emits CRM_BOARD_REFETCH) instead of upserting when a server-only filter is active', () => {
     const commit = vi.fn();
     actions.handleRealtimeCardEvent(

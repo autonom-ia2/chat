@@ -19,7 +19,13 @@ import {
 import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 import crmMeetingsAPI from 'dashboard/api/crmMeetings';
 import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
-import { campaignSourceIdsFromQuery } from 'dashboard/components-next/CampaignResult/resultMetrics';
+import {
+  CHAVES_DO_LINK,
+  CHAVES_DO_MEU_DIA,
+  filtroDoMeuDiaPeloLink,
+  filtrosDoLink,
+  semChaves,
+} from '../helpers/filtrosDoLink';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CompanyAPI from 'dashboard/api/companies';
 import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
@@ -163,7 +169,9 @@ const calendarioOuro = computed(
     ] === true
 );
 // No "Meu dia", o funil é opcional: vazio = todos os funis (decisão 2 do #1568).
-const funilDoCalendario = ref(null);
+// #1883: o link do Números pode abrir o Meu dia já filtrado (quem, tipos e funil).
+const filtroDoMeuDia = filtroDoMeuDiaPeloLink(route.query);
+const funilDoCalendario = ref(filtroDoMeuDia?.funil ?? null);
 
 const currentPipelineId = ref('');
 // Menu novo (#1617): `?view=list|calendar` abre já na vista (a página Números volta por aqui) e a troca de
@@ -633,6 +641,12 @@ const activeFilterChips = computed(() => {
       label: `${t('CRM_KANBAN.FILTERS.RESULT')}: ${resultLabel}`,
     });
   }
+  if (f.closedIn && viewMode.value === 'list') {
+    chips.push({
+      key: 'closedIn',
+      label: t('CRM_FILTRO_DO_LINK.FECHADO_NO_MES'),
+    });
+  }
   if (f.stageIds?.length) {
     const names = f.stageIds
       .map(id => labelForOption(stageOptions, id))
@@ -897,6 +911,11 @@ const refreshData = async () => {
         ? currentPipelineId.value
         : fetchedPipelines[0].id;
       if (requested) nextPipelineId = requested.id;
+      // #1883: o funil do Meu dia que veio pelo link só vale se a pessoa enxerga esse funil.
+      const funilVisivel = fetchedPipelines.find(
+        pipeline => String(pipeline.id) === String(funilDoCalendario.value)
+      );
+      funilDoCalendario.value = funilVisivel?.id ?? null;
       if (String(currentPipelineId.value) === String(nextPipelineId)) {
         await loadActiveView(true);
         return;
@@ -1047,10 +1066,16 @@ const openHandoffSettings = async () => {
 };
 
 // Depois de abrir o funil pedido, tira o `pipeline_id` do endereço: trocar de funil no quadro não o atualiza.
+// #1883: os filtros do link também saem; dali em diante quem manda é o controle de filtro da tela.
+const ROTAS_COM_LINK = {
+  crm_kanban_index: ['pipeline_id', ...CHAVES_DO_LINK],
+  crm_calendar_index: CHAVES_DO_MEU_DIA,
+};
 const clearPipelineFromQuery = () => {
-  if (route.name !== 'crm_kanban_index') return;
-  if (route.query.pipeline_id === undefined) return;
-  const { pipeline_id: _pipeline, ...query } = route.query;
+  const chaves = ROTAS_COM_LINK[route.name];
+  if (!chaves) return;
+  const query = semChaves(route.query, chaves);
+  if (Object.keys(query).length === Object.keys(route.query).length) return;
   router.replace({ query });
 };
 
@@ -2279,14 +2304,32 @@ useEmitter(BUS_EVENTS.CRM_OPEN_CARD, cardId =>
   openCardFromBoard({ id: Number(cardId) })
 );
 
+// #1883: o responsável do link só vale se for alguém da equipe que a pessoa enxerga; e a aba de
+// resultado segue o tipo do funil ("ganhos" num funil de Atender vira "resolvidos").
+const ajustarFiltrosDoLink = async doLink => {
+  if (!doLink) return;
+  await alignResultFilter();
+  const { ownerId } = filters.value;
+  const conhecido =
+    String(ownerId) === String(currentUser.value?.id) ||
+    agents.value.some(agent => String(agent.id) === String(ownerId));
+  if (!ownerId || conhecido) return;
+  filters.value = { ...filters.value, ownerId: '' };
+  await applyFilters();
+};
+
 onMounted(async () => {
-  // "Ver no CRM" of a campaign result (#1007) opens the board filtered by that campaign mark.
-  const campaignSourceIds = campaignSourceIdsFromQuery(route.query);
-  if (campaignSourceIds.length) {
-    filters.value = { ...filters.value, campaignSourceIds };
+  // Filtros do link: "Ver no CRM" do resultado da campanha (#1007) e os "Ver" do Números (#1883).
+  // Partem do zero, para nenhum filtro antigo da sessão somar ao do link.
+  const doLink = isCalendarOnly.value
+    ? null
+    : filtrosDoLink(route.query, { currentUserId: currentUser.value?.id });
+  if (doLink) {
+    filters.value = { ...defaultFilters(), ...doLink };
     await store.dispatch('crmKanban/setFilters', filters.value);
   }
   await refreshData();
+  await ajustarFiltrosDoLink(doLink);
   clearPipelineFromQuery();
   // Seed the per-pipeline column layout for the resolved initial pipeline.
   if (currentPipelineId.value) {
@@ -2844,6 +2887,7 @@ onUnmounted(() => {
       :current-user-id="currentUser?.id"
       :funil="funilDoCalendario"
       :funis="pipelineOptions"
+      :filtro-inicial="filtroDoMeuDia"
       :eh-admin="currentRole === 'administrator'"
       :tem-whatsapp="temWhatsappConectado"
       :reunioes-ligadas="isMeetingFeatureEnabled"

@@ -3531,6 +3531,9 @@
       "ADD_TOGGLE": "Definir horário de atendimento (SLA) logo após criar"
     }
   },
+  "CRM_FILTRO_DO_LINK": {
+    "FECHADO_NO_MES": "Fechado: este mês"
+  },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Copiloto Autonom.ia",
     "RESET": "Nova conversa",
