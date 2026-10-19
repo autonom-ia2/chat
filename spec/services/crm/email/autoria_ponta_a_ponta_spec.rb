@@ -131,7 +131,8 @@ RSpec.describe Crm::Email::Autoria do
     legenda = described_class::LEGENDA
     classificador = Crm::Ai::StageClassifier.new(card: card, client: nil, stages: [], context: {}, eligible_agents: [])
 
-    expect(classificador.send(:instructions)).to eq("#{Crm::Ai::ClassifierPrompt::TEXT}\n\n#{legenda}")
+    expect(classificador.send(:instructions))
+      .to eq("#{Crm::Ai::ClassifierPrompt::TEXT}\n\n#{legenda}\n\n#{Crm::Email::SaidaDaCopia::INSTRUCAO}")
     expect(Crm::Ai::ConversationSummarizer.new(card: card).send(:instructions)).to end_with(legenda)
     expect(Crm::Ai::FollowUpComposer.new(card: card, client: nil, context: {}).send(:instructions)).to end_with(legenda)
     expect(Crm::MetaAds::QuoteMessageSuggester.new(card: card, conversation: conversation, language: 'pt-BR').send(:instructions))

@@ -178,6 +178,10 @@
     "controller": "api/v1/accounts/autonomia/conversation_copilot#agents",
     "parametros": []
   },
+  "autonomia/copilot/status": {
+    "controller": "api/v1/accounts/autonomia/text_copilot#status",
+    "parametros": []
+  },
   "autonomia/decisores": {
     "controller": "api/v1/accounts/autonomia/decisores#index",
     "parametros": []
@@ -904,6 +908,10 @@
     "controller": "api/v1/accounts/contacts#summary",
     "parametros": []
   },
+  "conversa_canal/ditados/disponivel": {
+    "controller": "api/v1/accounts/conversa_canal/ditados#disponivel",
+    "parametros": []
+  },
   "conversa_canal/encaminhamentos": {
     "controller": "api/v1/accounts/conversa_canal/encaminhamentos#index",
     "parametros": [
@@ -935,15 +943,38 @@
       "sessao"
     ]
   },
+  "conversa_canal/modelos_de_email": {
+    "controller": "api/v1/accounts/conversa_canal/modelos_de_email#index",
+    "parametros": []
+  },
+  "conversa_canal/modelos_de_email/:id": {
+    "controller": "api/v1/accounts/conversa_canal/modelos_de_email#show",
+    "parametros": [
+      "contact_id",
+      "conversation_id",
+      "inbox_id"
+    ]
+  },
+  "conversa_canal/modelos_de_email/:id/previa": {
+    "controller": "api/v1/accounts/conversa_canal/modelos_de_email#previa",
+    "parametros": []
+  },
+  "conversa_canal/pastas_do_email/:conversation_id": {
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#show",
+    "parametros": []
+  },
   "conversations": {
     "controller": "api/v1/accounts/conversations#index",
     "parametros": [
       "assignee_type",
       "conversation_type",
       "crm_pipeline_id",
+      "da_ia",
+      "esperando_min",
       "inbox_id",
       "labels",
       "page",
+      "pasta",
       "q",
       "sort_by",
       "source_id",
@@ -1000,9 +1031,12 @@
       "assignee_type",
       "conversation_type",
       "crm_pipeline_id",
+      "da_ia",
+      "esperando_min",
       "inbox_id",
       "labels",
       "page",
+      "pasta",
       "q",
       "sort_by",
       "source_id",
@@ -1017,9 +1051,12 @@
       "assignee_type",
       "conversation_type",
       "crm_pipeline_id",
+      "da_ia",
+      "esperando_min",
       "inbox_id",
       "labels",
       "page",
+      "pasta",
       "q",
       "sort_by",
       "source_id",

@@ -56,6 +56,9 @@ export const useCardMoldura = ({
   function textoDa(nomeDaTela) {
     if (nomeDaTela === 'reuniao-nova' && estado.reuniaoExterna.value)
       return 'TEXTO_EXTERNA';
+    // #1849: sem "Ver contatos", a tela do contato mostra só nome, telefone e e-mail.
+    if (nomeDaTela === 'contato' && !permissoes.verContatos?.value)
+      return 'TEXTO_BASICO';
     return 'TEXTO';
   }
 

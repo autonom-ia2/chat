@@ -92,11 +92,16 @@ RSpec.describe 'Api::V1::Accounts::Crm::BookingInvites', type: :request do
       someone = role_user('crm_view', 'conversation_manage')
       theirs = create_booking_invite(world: world, created_by: someone)
 
-      { admin => [theirs, mine], people[:view] => [theirs, mine], world.host => [mine] }.each do |user, invites|
+      # Pelo contato, só quem vê contatos (#1849); o agente sem função continua vendo.
+      viewer = role_user('agendamento_view', 'crm_view', 'conversation_manage', 'contact_view')
+      { admin => [theirs, mine], viewer => [theirs, mine], world.host => [mine] }.each do |user, invites|
         call(user, :get, base, { contact_id: world.contact.id })
         expect(response).to have_http_status(:ok)
         expect(body['payload'].pluck('id')).to eq(invites.map(&:id))
       end
+
+      call(people[:view], :get, base, { contact_id: world.contact.id })
+      expect(response).to have_http_status(:unauthorized)
     end
 
     it 'lets a plain agent cancel only the own invites' do

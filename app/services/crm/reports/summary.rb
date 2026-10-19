@@ -103,6 +103,7 @@ module Crm
       # Sales target attainment for the CURRENT month (a quota is monthly,
       # independent of the dashboard period selector). Returns nil when no goal
       # is set. `month_elapsed` powers the pacing indicator (attainment vs time).
+      # #1876: o mês é o do fuso da conta; no relógio do servidor, a venda de 31/10 às 22h caía em novembro.
       def goal_payload
         config = (pipeline.metadata || {})['goals']
         return if config.blank?
@@ -111,21 +112,23 @@ module Crm
         return if target.zero?
 
         currency = config['currency'].presence || 'BRL'
-        month_start = Time.current.beginning_of_month
-        achieved = pipeline_cards.where(status: Crm::Card.statuses[:won])
-                                 .where(currency: currency)
-                                 .where(closed_at: month_start..Time.current)
-                                 .sum(:value_cents)
-        month_span = Time.current.end_of_month - month_start
+        current = now
+        month = current.beginning_of_month..current
+        achieved = won_in(month, currency)
+        month_span = current.end_of_month - month.begin
 
         {
           target_cents: target,
           currency: currency,
           achieved_cents: achieved,
           attainment: (achieved.to_f / target).round(4),
-          month_elapsed: month_span.zero? ? 0 : ((Time.current - month_start) / month_span).round(4),
-          month_label: month_start.strftime('%m/%Y')
+          month_elapsed: month_span.zero? ? 0 : ((current - month.begin) / month_span).round(4),
+          month_label: month.begin.strftime('%m/%Y')
         }
+      end
+
+      def won_in(period, currency)
+        pipeline_cards.where(status: Crm::Card.statuses[:won], currency: currency, closed_at: period).sum(:value_cents)
       end
     end
   end

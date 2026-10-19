@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 626 |
-| Sem corpo | 186 |
-| Com corpo | 440 |
-| Com corpo e formato completo | 361 (82,0%) |
-| Com corpo e formato incompleto | 79 |
+| No catálogo | 631 |
+| Sem corpo | 187 |
+| Com corpo | 444 |
+| Com corpo e formato completo | 364 (82,0%) |
+| Com corpo e formato incompleto | 80 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 202 |
-| Leituras cruas tipadas | 157 de 244 |
+| Leituras cruas tipadas | 162 de 250 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 65 |
+| leitura crua sem tipo | 66 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -64,6 +64,7 @@ Uma ação pode ter mais de um motivo.
 - `POST captain/tasks/rewrite` — leitura crua sem tipo: content (repassada a Captain::RewriteService.new), operation (repassada a Captain::RewriteService.new)
 - `POST contacts/export` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:47); leitura crua sem tipo: column_names
 - `POST contacts/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:63); params inteiro repassado a ::Contacts::FilterService.new
+- `POST conversa_canal/ditados` — leitura crua sem tipo: audio (repassada a ConversaCanal::Ditado.new)
 - `POST conversations` — params inteiro repassado a ConversationBuilder.new; leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)
 - `POST conversations/:conversation_id/direct_uploads` — termina em código de fora do repositório (super em ActiveStorage::DirectUploadsController)
 - `POST conversations/:conversation_id/messages` — params inteiro repassado a Messages::MessageBuilder.new
@@ -152,6 +153,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/conference#create` call_sid — o código não converte nem compara o valor
 - `api/v1/accounts/conference#destroy` call_sid — o código não converte nem compara o valor
 - `api/v1/accounts/contacts#export` column_names — o código não converte nem compara o valor
+- `api/v1/accounts/conversa_canal/ditados#create` audio — repassada a ConversaCanal::Ditado.new
 - `api/v1/accounts/conversations#create` message — repassada a Messages::MessageBuilder.new
 - `api/v1/accounts/conversations#toggle_typing_status` typing_status — repassada a Conversations::ChannelTyping::DeliverJob.perform_later
 - `api/v1/accounts/conversations#transcript` email — repassada a ConversationReplyMailer.with(account: @conversation.accou...
@@ -209,8 +211,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 373 |
-| Com parâmetros conhecidos | 322 |
+| No catálogo | 379 |
+| Com parâmetros conhecidos | 328 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

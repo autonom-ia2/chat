@@ -193,6 +193,68 @@ RSpec.describe Crm::FollowUps::CallbackFallback do
     end
   end
 
+  # #1855: "Passar tudo para amanhã" do calendário só move lembrete de uma pessoa. Um clique em lote nunca devolve envio
+  # ao cliente; o reagendamento item a item (acima) continua tentando o envio de novo.
+  describe 'reagendar em lote, só lembretes (reminders_only)' do
+    def adiar_em_lote!(alvo = follow_up)
+      Crm::FollowUps::Rescheduler.new(follow_up: alvo.reload, user: scenario[:user], due_at: future, reminders_only: true).perform
+    end
+
+    it 'aviso de envio que caiu por falha passageira fica de fora: não move e não volta a envio automático' do
+      vencer!
+      due_at = follow_up.due_at
+
+      expect { adiar_em_lote! }.to raise_error(Crm::FollowUps::Rescheduler::NotAReminderError)
+
+      follow_up.reload
+      expect(follow_up).to be_overdue
+      expect(follow_up).to be_reminder_only
+      expect(follow_up.due_at.to_i).to eq(due_at.to_i)
+      expect(follow_up.metadata).to include('callback_original', 'callback_fallback' => motivo)
+    end
+
+    it 'aviso de envio que caiu por motivo que não é passageiro também fica de fora' do
+      runner_devolve_fallback('no_template')
+      Crm::FollowUps::DueProcessor.new(now: Time.current).perform
+
+      expect { adiar_em_lote! }.to raise_error(Crm::FollowUps::Rescheduler::NotAReminderError)
+      expect(follow_up.reload).to be_overdue
+    end
+
+    it 'envio automático (mensagem marcada) fica de fora' do
+      expect(follow_up).to be_auto_send_message
+      due_at = follow_up.due_at
+
+      expect { adiar_em_lote! }.to raise_error(Crm::FollowUps::Rescheduler::NotAReminderError)
+
+      follow_up.reload
+      expect(follow_up).to be_pending
+      expect(follow_up).to be_auto_send_message
+      expect(follow_up.due_at.to_i).to eq(due_at.to_i)
+    end
+
+    it 'lembrete comum atrasado passa para o novo horário' do
+      follow_up.update!(automation_mode: :reminder_only, status: :overdue)
+
+      adiar_em_lote!
+
+      follow_up.reload
+      expect(follow_up).to be_pending
+      expect(follow_up).to be_reminder_only
+      expect(follow_up.due_at.to_i).to eq(future.to_i)
+    end
+
+    it 'lembrete que adia a conversa (snooze_conversation) passa para o novo horário' do
+      follow_up.update!(automation_mode: :snooze_conversation, status: :overdue)
+
+      adiar_em_lote!
+
+      expect(follow_up.reload).to be_pending
+      expect(follow_up).to be_snooze_conversation
+      expect(follow_up.due_at.to_i).to eq(future.to_i)
+    end
+  end
+
   it 'o cliente não consegue forjar nem apagar a marca de volta pela API' do
     expect(Crm::FollowUps::MetadataSanitizer::SERVER_OWNED_KEYS).to include('callback_original')
   end

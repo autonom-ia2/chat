@@ -600,5 +600,487 @@
     "ATTRIBUTES": {
       "HINT": "They become contact attributes, like insurer and plate"
     }
+  },
+  "SETTINGS_INICIO": {
+    "GRUPOS": {
+      "SUA_EMPRESA": "Your brokerage"
+    },
+    "CARTOES": {
+      "DADOS_EMPRESA": {
+        "TITULO": "Brokerage details",
+        "TEXTO": "Brokerage name, language and time zone."
+      },
+      "TIMES": {
+        "TEXTO": "Groups of people to share the work, such as Sales, Renewals and Claims."
+      },
+      "ETIQUETAS": {
+        "TEXTO": "Names and colors to sort conversations and contacts, such as auto, home and claims."
+      },
+      "CAMPOS": {
+        "TEXTO": "Extra details about each contact, such as insurer, policy expiry date and license plate."
+      },
+      "RESPOSTAS": {
+        "TEXTO": "Texts you always use, like asking for the driver's license or sending a duplicate bill, one click away in the conversation."
+      },
+      "CANAIS": {
+        "TEXTO": "WhatsApp, email, Instagram and website: where people ask for quotes and talk to you."
+      },
+      "USUARIOS": {
+        "TEXTO": "Who at the brokerage signs in and what each person can do."
+      }
+    }
+  },
+  "ONBOARDING_TRAIL": {
+    "TITLE": "Let's get your brokerage ready to serve customers",
+    "DONE_TITLE": "Your brokerage is up and running",
+    "DONE_SUBTITLE": "The essentials are done: you receive, reply and organize quotes and renewals. What is left is fine tuning, at your own pace.",
+    "ETAPAS": {
+      "organizar": "Organize sales and renewals"
+    }
+  },
+  "ONBOARDING_NEXT": {
+    "PLACEHOLDERS": {
+      "ENTER_COMPANY_NAME": "Your brokerage name",
+      "ENTER_WEBSITE": "www.yourbrokerage.com"
+    },
+    "COMPANY_DETAILS": "Brokerage details"
+  },
+  "GENERAL_SETTINGS": {
+    "FORM": {
+      "NAME": {
+        "PLACEHOLDER": "Your brokerage name"
+      },
+      "SUPPORT_EMAIL": {
+        "PLACEHOLDER": "Your brokerage's service email"
+      },
+      "AUTO_RESOLVE": {
+        "MESSAGE": {
+          "PLACEHOLDER": "We closed this chat because we didn't hear back. Need a quote, a duplicate bill or help with a claim? Just send us a message."
+        }
+      }
+    }
+  },
+  "PROFILE_SETTINGS": {
+    "FORM": {
+      "MESSAGE_SIGNATURE": {
+        "PLACEHOLDER": "E.g. Ana Souza · Insurance broker"
+      }
+    }
+  },
+  "CONVERSATION_WORKFLOW": {
+    "INDEX": {
+      "HEADER": {
+        "DESCRIPTION": "Choose what must be filled in before closing a conversation, such as the line of insurance."
+      }
+    },
+    "REQUIRED_ATTRIBUTES": {
+      "DESCRIPTION": "Before closing a conversation, the team fills in these fields, such as the line of insurance or the insurer."
+    }
+  },
+  "AGENT_MGMT": {
+    "DESCRIPTION": "Here are the people at the brokerage who sign in: those who sell, those who serve customers and those who handle renewals and claims.",
+    "ADD": {
+      "DESC": "Invite who will serve customers: sales, renewals or claims."
+    }
+  },
+  "TEAMS_SETTINGS": {
+    "DESCRIPTION": "Teams group people by topic, such as Sales, Renewals and Claims. One person can be in several teams, and a conversation can go straight to the right team.",
+    "FORM": {
+      "NAME": {
+        "PLACEHOLDER": "E.g. Sales, Renewals, Claims"
+      },
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g. Handles claim notices and missing documents."
+      }
+    }
+  },
+  "LABEL_MGMT": {
+    "DESCRIPTION": "Labels sort conversations and contacts by topic, such as auto, home, pending inspection or claims. You add a label from the panel next to the conversation or contact.",
+    "LIST": {
+      "404": "No labels yet. To start, create auto, home and claims."
+    },
+    "ADD": {
+      "DESC": "Labels sort conversations by topic, such as renewals or claims."
+    },
+    "FORM": {
+      "NAME": {
+        "PLACEHOLDER": "E.g. pending-inspection",
+        "VALID_ERROR": "No spaces: use a hyphen. E.g. duplicate-bill"
+      },
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g. The car inspection is still pending"
+      }
+    }
+  },
+  "ATTRIBUTES_MGMT": {
+    "DESCRIPTION": "Extra fields keep what the brokerage needs to know about each contact or conversation, such as current insurer, policy expiry date, line of insurance and license plate. They can be text, list, number or date.",
+    "ADD": {
+      "FORM": {
+        "NAME": {
+          "PLACEHOLDER": "E.g. Policy expiry date"
+        },
+        "DESC": {
+          "PLACEHOLDER": "E.g. Day the current policy expires"
+        },
+        "TYPE": {
+          "LIST": {
+            "PLACEHOLDER": "E.g. Auto, Home, Life. Type each one and press Enter"
+          }
+        },
+        "KEY": {
+          "PLACEHOLDER": "E.g. policy_expiry"
+        }
+      }
+    },
+    "LIST": {
+      "EMPTY_RESULT": {
+        "404": "No extra fields yet. To start: Insurer, Policy expiry date, Line of insurance and License plate."
+      }
+    }
+  },
+  "CUSTOM_ROLE": {
+    "FORM": {
+      "NAME": {
+        "PLACEHOLDER": "E.g. Claims agent"
+      },
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g. People who handle claims and duplicate bills, only in their own conversations"
+      }
+    },
+    "PROFILES": {
+      "SDR": {
+        "NAME": "Broker",
+        "SHORT": "Handles quote requests and closes new insurance",
+        "WHO": "For people who handle quote requests, send the options and close new insurance."
+      },
+      "SALES_MANAGER": {
+        "SHORT": "Looks after the pipelines and the production target",
+        "WHO": "For people who look after the pipelines and the brokerage's production target."
+      },
+      "AGENT": {
+        "WHO": "For people who serve customers day to day: questions, duplicate bills and endorsements."
+      },
+      "PHRASES": {
+        "MANAGE_DEALS": "Create and move cards in the CRM",
+        "EDIT_DEALS": "Edit cards in the CRM"
+      }
+    },
+    "MATRIX": {
+      "MODULES": {
+        "CRM": {
+          "HINT": "Sales, renewal and claims pipelines, and the calendar",
+          "LEVEL_VIEW": "Sees the board and the cards. Does not change them.",
+          "LEVEL_MANAGE": "Creates, edits and moves cards: quotes, renewals and claims."
+        }
+      }
+    },
+    "EXTRAS": {
+      "CRM_MOVE_CARDS": "Drags cards between stages without editing anything else."
+    }
+  },
+  "INBOX_MGMT": {
+    "ADD": {
+      "WHATSAPP_API": {
+        "CHANNEL_NAME": {
+          "PLACEHOLDER": "E.g. Sales or Claims"
+        }
+      },
+      "CHANNEL_NAME": {
+        "PLACEHOLDER": "Enter the inbox name (e.g. Brokerage service)"
+      },
+      "WEBSITE_NAME": {
+        "PLACEHOLDER": "Enter your website name (e.g. your brokerage name)"
+      },
+      "WEBSITE_CHANNEL": {
+        "CHANNEL_WELCOME_TAGLINE": {
+          "PLACEHOLDER": "Ask for a quote, a duplicate bill or report a claim here."
+        },
+        "CHANNEL_GREETING_MESSAGE": {
+          "PLACEHOLDER": "We reply during business hours. In case of a crash or breakdown, call your insurer's 24-hour assistance."
+        }
+      },
+      "WHATSAPP": {
+        "EMBEDDED_SIGNUP": {
+          "ACCESS_REQUEST": {
+            "USE_CASE_PLACEHOLDER": "For example, we are an insurance brokerage and use WhatsApp to send quotes, answer policy questions and follow up on renewals."
+          }
+        }
+      },
+      "EMAIL_CHANNEL": {
+        "EMAIL": {
+          "SUBTITLE": "Email address where people send quote requests, policies and documents"
+        }
+      }
+    },
+    "EDIT": {
+      "SENDER_NAME_SECTION": {
+        "BUSINESS_NAME": {
+          "PLACEHOLDER": "Brokerage name"
+        }
+      }
+    },
+    "PRE_CHAT_FORM": {
+      "PRE_CHAT_MESSAGE": {
+        "PLACEHOLDER": "E.g. To speed up your quote, tell us your name and which insurance you need."
+      }
+    },
+    "CSAT": {
+      "MESSAGE": {
+        "PLACEHOLDER": "E.g. How was the brokerage's service today?"
+      }
+    },
+    "WHATSAPP_HYBRID": {
+      "ROUTING": {
+        "PREVIEW": {
+          "FOLLOW_UP_WEB": "Carlos has not replied to the quote for 2 days. The CRM reminder goes out through WhatsApp API at 10:00.",
+          "FOLLOW_UP_TEMPLATE": "Carlos has not replied to the quote for 2 days. The CRM reminder goes out as an approved template through the official number.",
+          "AGENT_WEB": "Ana, from the team, sends Maria the duplicate bill 3 days later. The reply goes out through WhatsApp API.",
+          "AGENT_TEMPLATE": "Ana, from the team, wants to send Maria the duplicate bill 3 days later. She can only send an approved template."
+        },
+        "WHO": {
+          "ORIGINS": {
+            "HUMAN": {
+              "EXAMPLE": "When someone on the team picks up a stalled quote."
+            }
+          }
+        }
+      }
+    }
+  },
+  "CAMPAIGN": {
+    "SMS": {
+      "EMPTY_STATE": {
+        "SUBTITLE": "Send one SMS to many people at once: an installment, inspection or renewal notice. Click 'Create campaign' to get started."
+      }
+    },
+    "WHATSAPP": {
+      "EMPTY_STATE": {
+        "SUBTITLE": "Send an approved template to many people at once: renewal, installment or new insurance. Click \"Create campaign\" to get started."
+      }
+    },
+    "WHATSAPP_API": {
+      "CREATE": {
+        "FORM": {
+          "TITLE": {
+            "PLACEHOLDER": "E.g.: Car insurance renewal, November"
+          }
+        }
+      }
+    },
+    "EMAIL_SENDER": {
+      "DIALOG": {
+        "DOMAIN_PLACEHOLDER": "e.g. mail.yourbrokerage.com",
+        "FROM_EMAIL_PLACEHOLDER": "e.g. insurance{'@'}yourbrokerage.com"
+      }
+    },
+    "EMAIL_CAMPAIGN": {
+      "DIALOG": {
+        "NAME_PLACEHOLDER": "e.g. November renewals",
+        "FROM_NAME_PLACEHOLDER": "e.g. Your Insurance Brokerage",
+        "REPLY_TO_PLACEHOLDER": "e.g. service{'@'}yourbrokerage.com",
+        "FROM_EMAIL_PLACEHOLDER": "e.g. insurance{'@'}yourbrokerage.com"
+      },
+      "BUILDER": {
+        "SAVE_TEMPLATE_NAME_PLACEHOLDER": "e.g. Renewal reminder"
+      },
+      "AI": {
+        "COMPOSER": {
+          "BRIEF_PLACEHOLDER": "E.g.: email to customers whose car insurance is due next month, friendly tone, invitation to quote the renewal",
+          "ASSET_DESCRIPTION_PLACEHOLDER": "What is this asset? E.g. car insurance coverage table",
+          "ROLE_PRODUCT": "Insurance"
+        }
+      }
+    }
+  },
+  "CAMPAIGN_JOURNEY": {
+    "AUDIENCES": {
+      "EMPTY_SUBTITLE": "An audience is a list of people, like your book of customers. Upload the customer spreadsheet you export from your brokerage system to create the first one."
+    },
+    "NEW_AUDIENCE": {
+      "NAME_PLACEHOLDER": "e.g. Car insurance due in November",
+      "FILE_HINT": "CSV or Excel. Name and mobile or email. Due date, insurer and plate help too: you can use them in the message.",
+      "COLUMNS": {
+        "OTHER_HINT": "Kept to use in the message, like the insurance due date"
+      }
+    },
+    "NEW_CAMPAIGN": {
+      "MESSAGE": {
+        "NAME_PLACEHOLDER": "e.g. Car insurance renewal in November"
+      },
+      "VARIABLES": {
+        "HINT": "Columns kept in the audience can be used here, like the due date or the insurer."
+      },
+      "API": {
+        "MESSAGE_PLACEHOLDER": "e.g. Hi, how are you? Your insurance is due this month. Want us to quote the renewal?"
+      },
+      "SMS": {
+        "MESSAGE_PLACEHOLDER": "Short text, e.g. your insurance installment is due tomorrow."
+      },
+      "EMAIL": {
+        "FROM_NAME_PLACEHOLDER": "e.g. Your Insurance Brokerage"
+      }
+    },
+    "LIVE_CHAT": {
+      "URL_PLACEHOLDER": "https://www.yourbrokerage.com/car-insurance",
+      "NAME_PLACEHOLDER": "e.g. Welcome on the car insurance page",
+      "TEXT_PLACEHOLDER": "Hi! Want a quote for your car insurance?"
+    }
+  },
+  "CAMPAIGN_IMPORT": {
+    "FIELDS": {
+      "CAMPAIGN_NAME_PLACEHOLDER": "Example: car_renewal_november"
+    }
+  },
+  "RESULT_JOURNEY": {
+    "OVERVIEW": {
+      "TOTALS": {
+        "DEALS": "Became CRM cards"
+      }
+    }
+  },
+  "BRAND_KITS": {
+    "PREVIEW": {
+      "SAMPLE_SUBJECT": "Your insurance with people who care",
+      "SAMPLE_TITLE": "Your insurance with people who care",
+      "SAMPLE_TEXT": "We get quotes from several insurers and send you the options on WhatsApp.",
+      "ITEM_1": "Quotes from several insurers",
+      "ITEM_2": "Help when you have a claim",
+      "ITEM_3": "A heads-up before your insurance is due",
+      "SAMPLE_BUTTON": "I want a quote",
+      "SAMPLE_NOTE": "The quote comes with no commitment."
+    },
+    "FOOTER": {
+      "COMPANY": "Brokerage name",
+      "LINK_PLACEHOLDER": "instagram.com/yourbrokerage"
+    },
+    "READER": {
+      "ADDRESS_PLACEHOLDER": "yourbrokerage.com"
+    }
+  },
+  "MODELOS_WHATSAPP": {
+    "VAZIO": {
+      "TITULO": "Create your first message for WhatsApp to approve and remind people about an installment, an inspection or a renewal."
+    },
+    "TEXTO": {
+      "TIPO": {
+        "aviso": {
+          "PARA": "Installment, inspection, policy issued, claim. Costs less per send."
+        },
+        "divulgacao": {
+          "PARA": "Renewal, new insurance, offer. Costs more per send."
+        }
+      }
+    },
+    "OBJETIVOS": {
+      "boas_vindas": {
+        "TEXTO": "Hello, [nome_cliente]! This is [nome_empresa]. Glad to have you with us. Whenever you need a quote, a copy of a document or help with your insurance, just send us a message here."
+      },
+      "lembrete": {
+        "TEXTO": "Hello, [nome_cliente]! A reminder of your appointment with [nome_empresa]: on [data], at [horario]. Do you confirm? Tap one of the options below."
+      },
+      "promocao": {
+        "TITULO": "Insurance offer",
+        "PARA": "To tell about a time-limited discount on insurance.",
+        "TEXTO": "Hi, [nome_cliente]! Until [data], you get [desconto] off your insurance with [nome_empresa]. Want a quote? See the button below."
+      },
+      "cobranca": {
+        "TITULO": "Installment due",
+        "PARA": "To remind the customer of an insurance installment coming due.",
+        "TEXTO": "Hello, [nome_cliente]. A reminder from [nome_empresa]: your insurance installment of [valor] is due on [data]. If you have already paid, please disregard. If it is a bank slip, check that it is in the insurer's name. If you need a copy, tap the button below."
+      },
+      "retomar": {
+        "TITULO": "Resume the quote",
+        "PARA": "To talk again to someone who asked for a quote and went quiet.",
+        "TEXTO": "Hi, [nome_cliente]! This is [nome_empresa]. Any questions left about your insurance quote? Just reply here and we will pick it up."
+      }
+    },
+    "CAMPOS": {
+      "nome_empresa": {
+        "ROTULO": "Brokerage name",
+        "EXEMPLO": "Your Brokerage"
+      },
+      "link": {
+        "EXEMPLO": "yourbrokerage.com/v/123"
+      }
+    },
+    "TIPOS_DE_BOTAO": {
+      "site": {
+        "EXEMPLO": "E.g.: Do the inspection"
+      }
+    },
+    "EXTRAS": {
+      "RODAPE_EXEMPLO": "E.g.: Your Brokerage · open Monday to Friday",
+      "TOPO_AJUDA": "Optional. The same file goes to everyone who receives the message. Use it for something that is the same for everyone (coverage table, rules). A bill, policy or document for each customer does not go here."
+    },
+    "TOPOS": {
+      "documento": {
+        "AJUDA": "Pick a PDF. The same file goes to everyone: do not use it for one person's bill, policy or document."
+      }
+    },
+    "FORMATOS": {
+      "carrossel": {
+        "NOME_PADRAO": "Our insurance",
+        "TEXTO": "Hi, [nome_cliente]! Here are some insurance options we can set up for you:",
+        "BOTAO": "Get a quote",
+        "CARTAO_1": {
+          "TEXTO": "Car insurance: we get quotes from several insurers."
+        },
+        "CARTAO_2": {
+          "TEXTO": "Home insurance: a quote with no commitment."
+        }
+      },
+      "formulario": {
+        "NOME_PADRAO": "Quote details",
+        "TEXTO": "Hi, [nome_cliente]! It takes 1 minute: fill in the form and we will prepare your quote."
+      }
+    },
+    "IA": {
+      "OBJETIVO_EXEMPLO": "E.g.: let the customer know the policy was issued and will arrive here"
+    },
+    "JANELA": {
+      "GAVETA": {
+        "O_QUE_EXEMPLO": "E.g.: let them know their insurance is due this month and they can get a renewal quote by replying",
+        "LINK_DIGITADO": "Links cannot be typed in the text. Use the field button (e.g. the inspection link, from the audience).",
+        "PARECE_LINK": "This looks like a link. For links, use the field button (e.g. the inspection link)."
+      }
+    },
+    "CATALOGO_DE_CAMPOS": {
+      "negocio": {
+        "titulo": "Card title",
+        "valor": "Card value"
+      },
+      "minha_empresa": {
+        "nome": "My brokerage name",
+        "endereco": "My brokerage address",
+        "telefone": "My brokerage phone",
+        "site": "My brokerage website"
+      }
+    },
+    "SITUACOES": {
+      "pausado": {
+        "DICA": "send only to people who know your brokerage and say who is talking right at the start."
+      },
+      "desativado": {
+        "DICA": "duplicate the template, rewrite the text saying right at the start who is talking, and send it only to people who know your brokerage."
+      }
+    },
+    "PONTE": {
+      "SINAL": {
+        "ruim": "WhatsApp sees many people blocking or reporting the template \"{nome}\". It can pause the template at any time, and the campaign stops with it. You can send, but it is best to send only to people who know your brokerage.",
+        "atencao": "Some people blocked or reported the template \"{nome}\". If it gets worse, WhatsApp pauses the template and the campaign stops with it. You can send, but send only to people who know your brokerage."
+      }
+    },
+    "SAUDE": {
+      "SINAIS": {
+        "bom": {
+          "TEXTO": "Almost nobody blocked or reported this message. Keep sending it to people who know your brokerage."
+        }
+      }
+    }
+  },
+  "WHATSAPP_TEMPLATES": {
+    "PARSER": {
+      "DOCUMENT_NAME_PLACEHOLDER": "Enter document filename (e.g., Policy_2026.pdf)"
+    }
   }
 }

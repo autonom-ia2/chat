@@ -76,6 +76,39 @@ RSpec.describe Autonomia::Agents::Retriever do
     end
   end
 
+  # #1426 (decisão do Rodrigo) — material reprovado na revisão fica fora da base: o agente não o usa até a pessoa
+  # resolver e segue atendendo com o resto. Vale pelo vetorial e pelo reforço lexical.
+  describe 'material sent back by the review' do
+    let(:embedding_service) { instance_double(Autonomia::Agents::EmbeddingService) }
+    let(:vector) { Array.new(1536) { 0.01 } }
+
+    before do
+      allow(embedding_service).to receive(:embed).and_return(vector)
+      allow(Autonomia::Agents::EmbeddingService).to receive(:new).and_return(embedding_service)
+    end
+
+    def entry_of(review_status, content)
+      source = agent.sources.create!(account: account, source_type: 'txt', status: :ready,
+                                     review_status: review_status, reference: "#{review_status}.txt")
+      agent.knowledge_entries.create!(account: account, source: source, content: content, status: :ready,
+                                      chunk_index: 0, metadata: {}, embedding: vector)
+    end
+
+    it 'keeps the rejected material out and answers with the rest' do
+      # Arrange
+      approved = entry_of('accepted', 'pastel de carne custa 8 reais')
+      rejected = entry_of('needs_resend', 'pastel de carne custa 80 reais')
+      reviewing = entry_of('needs_review', 'pastel de carne custa 9 reais')
+
+      # Act
+      ids = described_class.new(agent: agent).retrieve('pastel de carne').map(&:id)
+
+      # Assert
+      expect(ids).to include(approved.id)
+      expect(ids).not_to include(rejected.id, reviewing.id)
+    end
+  end
+
   # B1 — modelo 3-large ativo: NN pela coluna halfvec `embedding_large` (SQL cru), não pela gem
   # neighbor sobre :embedding. Prova end-to-end do caminho grande no banco real (halfvec 3072 + hnsw).
   describe 'large embedding path (3-large / halfvec)' do

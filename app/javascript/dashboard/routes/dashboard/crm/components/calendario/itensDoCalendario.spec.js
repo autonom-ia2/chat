@@ -25,6 +25,20 @@ describe('itensDoCalendario', () => {
     expect(item({ ...mensagem, send_error_code: null }).falha).toBe('');
   });
 
+  it('marca o que é envio ao cliente, inclusive o aviso de um que não saiu (#1855)', () => {
+    const base = {
+      id: 'follow_up_3',
+      event_type: 'follow_up_reminder_only',
+      starts_at: '2026-10-13T12:00:00Z',
+      status: 'overdue',
+    };
+    expect(item(base).envio).toBe(false);
+    expect(item({ ...base, automatic_send: true }).envio).toBe(true);
+    expect(
+      item({ ...base, event_type: 'follow_up_auto_send_message' }).envio
+    ).toBe(true);
+  });
+
   it('o vencimento é dia todo, no dia que o back manda, sem hora', () => {
     const vencimento = item({
       id: 'expected_close_1',

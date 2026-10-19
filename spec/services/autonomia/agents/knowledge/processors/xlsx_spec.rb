@@ -5,7 +5,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Xlsx do
 
   # Fonte com anexo ActiveStorage falso: with_tempfile (real) escreve o download num tempfile.
   # ActiveStorage delega #download dinamicamente (method_missing -> blob); verified double não o vê.
-  let(:source) { double('source', reference: 'planilha.xlsx', file: file) } # rubocop:disable RSpec/VerifiedDoubles
+  let(:source) { double('source', reference: 'planilha.xlsx', source_type: 'xlsx', file: file) } # rubocop:disable RSpec/VerifiedDoubles
   let(:file) { double('attachment', attached?: true, download: 'xlsx-bytes') } # rubocop:disable RSpec/VerifiedDoubles
   let(:book) { instance_double(Roo::Excelx) }
 

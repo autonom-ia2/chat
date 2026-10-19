@@ -264,6 +264,40 @@ RSpec.describe 'CTWA campaigns API', type: :request do
     expect(response.parsed_body['origin_metrics']).to eq([])
   end
 
+  # #1876: origem sem `source` não é anúncio por padrão; a origem sai do próprio toque. Venda sem toque nenhum entra na
+  # linha "Sem origem" (`none`), em vez de sumir da soma.
+  it 'derives a blank origin from the touch itself and counts sales with no origin as none' do
+    account, user = create_account_and_user
+    inbox = create_crm_inbox(account: account, members: [user])
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    closed_at = Time.zone.parse('2026-07-04T10:00:00Z')
+    touches = {
+      'link' => { 'source_id' => 'link:abc', 'source_type' => 'tracked_link' },
+      'chat' => { 'source_id' => 'campaign:live_chat:3', 'source_type' => 'campaign_live_chat' },
+      'ad' => { 'source_id' => 'ad-9', 'ctwa_clid' => 'clid-9' }
+    }
+    touches.each_value do |touch|
+      conversation = create_conversation_with_touches(account: account, inbox: inbox, touches: [touch.merge('touched_at' => '2026-07-01T10:00:00Z')])
+      create_closed_card(account: account, pipeline: pipeline, stage: stage, conversation: conversation,
+                         value_cents: 1_000, currency: 'BRL', status: :won, closed_at: closed_at)
+    end
+    no_origin = create_crm_conversation(account: account, inbox: inbox, contact: create(:contact, account: account))
+    create_closed_card(account: account, pipeline: pipeline, stage: stage, conversation: no_origin,
+                       value_cents: 4_000, currency: 'BRL', status: :won, closed_at: closed_at)
+
+    get "/api/v1/accounts/#{account.id}/ctwa_campaigns",
+        params: { include_origin_metrics: true, pipeline_id: pipeline.id, since: '2026-07-01T00:00:00Z', until: '2026-07-31T23:59:59Z' },
+        headers: auth_headers(user)
+
+    rows = response.parsed_body['origin_metrics'].to_h { |row| [row['source'], [row['won_count'], row['won_value_by_currency']]] }
+    one_sale = [1, [{ 'currency' => 'BRL', 'value_cents' => 1_000 }]]
+    expect(rows).to eq(
+      'tracked_link' => one_sale, 'campaign_live_chat' => one_sale, 'meta_ctwa' => one_sale,
+      'none' => [1, [{ 'currency' => 'BRL', 'value_cents' => 4_000 }]]
+    )
+    expect(response.parsed_body['origin_metrics'].last['source']).to eq('none')
+  end
+
   it 'hides campaigns from inboxes outside the agent visibility (admin still sees them)' do
     account, admin = create_account_and_user
     outsider, = create_crm_agent(account: account)

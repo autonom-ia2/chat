@@ -1,7 +1,7 @@
 # Roteiro do teste final — funções personalizadas (épico #1784)
 
 Guardado em 18/10/2026 por decisão do Rodrigo: "deixa esse teste guardado e seguimos e no fim fazemos o teste completo".
-Roda no fim do épico, na conta 16 (Hub2you, stack hub2you, chat.hub2you.ai). Cobre os lotes #1791, #1796, #1798, #1803, #1835 e o lote 5a (#1845); os lotes seguintes acrescentam testes aqui.
+Roda no fim do épico, na conta 16 (Hub2you, stack hub2you, chat.hub2you.ai). Cobre os lotes #1791, #1796, #1798, #1803, #1835, 5a (#1845) e 5b (#1849); os lotes seguintes acrescentam testes aqui.
 
 **Quem prepara:** criar a pessoa de teste e a função exige escrita em produção. Ou o Rodrigo faz a preparação e entra com a pessoa no Chrome que o Claude controla, ou libera a escrita para o Claude. O Claude não cria conta nem digita senha.
 
@@ -77,6 +77,19 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
 4. Ligue também **Excluir** e salve. Na janela anônima: a área **Excluir contato**, a lixeira no painel da conversa, o **Excluir** em massa e o **Excluir empresa** aparecem e funcionam. Use um contato e uma empresa criados só para o teste.
 5. Troque Contatos para **Ver**. O ajuste **Excluir** some (só vale para quem edita); **Exportar** continua.
 6. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `contact_manage` antes do deploy tem `contact_export` depois.
+
+## Teste 7: quem não vê contatos (#1849)
+
+1. Edite a função. Em **Contatos e empresas**, escolha **Sem acesso**. Em **Conversas**, deixe **Atender** e **Só as próprias**. Salve.
+2. Na janela normal, atribua à pessoa uma conversa de teste.
+3. Na janela anônima (recarregue a página), o esperado:
+   - o menu não tem **Contatos**, **Empresas** nem **Nova conversa**;
+   - a busca global não tem a aba **Contatos**, mas acha a conversa pelo nome ou telefone do cliente;
+   - na conversa, o painel da direita mostra só nome, telefone e e-mail do cliente, com **Nova mensagem** e **Ligar**, mais a **Origem** e as **conversas anteriores**. Não aparecem atributos, notas, editar, mesclar nem o link para a ficha;
+   - **Nova mensagem** abre a Nova conversa já com esse cliente;
+   - no CRM, a gaveta do card mostra a pessoa só com nome, telefone e e-mail, sem empresa; ao criar oportunidade, **Escolher dos contatos** fica desligado;
+   - num cartão de contato recebido pelo WhatsApp, não aparecem **Salvar contato** nem **Conversar**.
+4. Volte a função para **Ver** em Contatos. Tudo volta: lista, ficha completa, busca, **Nova conversa** e filtro de empresa no Kanban.
 
 ## No fim (limpeza)
 

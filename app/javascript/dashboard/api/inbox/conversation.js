@@ -18,6 +18,9 @@ class ConversationApi extends ApiClient {
       sortBy,
       updatedWithin,
       crmPipelineId,
+      pasta,
+      daIa,
+      esperandoMin,
     },
     options = {}
   ) {
@@ -34,6 +37,11 @@ class ConversationApi extends ApiClient {
         sort_by: sortBy,
         updated_within: updatedWithin,
         crm_pipeline_id: crmPipelineId,
+        // #1809: Spam ou Lixeira da caixa de e-mail (ConversaCanal::ConversationFinderComPastas).
+        pasta,
+        // #1883: filtros pelo link do Números (Crm::ConversationFinderComFiltrosDoLink).
+        da_ia: daIa ? 1 : undefined,
+        esperando_min: esperandoMin || undefined,
       },
     });
   }
@@ -116,6 +124,8 @@ class ConversationApi extends ApiClient {
     teamId,
     conversationType,
     crmPipelineId,
+    daIa,
+    esperandoMin,
   }) {
     return axios.get(`${this.url}/meta`, {
       params: {
@@ -126,6 +136,8 @@ class ConversationApi extends ApiClient {
         team_id: teamId,
         conversation_type: conversationType,
         crm_pipeline_id: crmPipelineId,
+        da_ia: daIa ? 1 : undefined,
+        esperando_min: esperandoMin || undefined,
       },
     });
   }

@@ -8,6 +8,7 @@ import ConversationCardExpanded from 'dashboard/components-next/Conversation/Con
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import ConversationContextMenu from './widgets/conversation/contextMenu/Index.vue';
 import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
+import { useFiltrosDoLinkNaCaixa } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
 
 const props = defineProps({
   source: { type: Object, required: true },
@@ -21,6 +22,8 @@ const props = defineProps({
 
 const router = useRouter();
 const store = useStore();
+// #1883: a conversa aberta em outra aba (Ctrl/Cmd+clique) leva o filtro do link, como o clique normal.
+const { enderecoComLink } = useFiltrosDoLinkNaCaixa();
 
 const selectConversation = inject('selectConversation');
 const deSelectConversation = inject('deSelectConversation');
@@ -104,7 +107,7 @@ const onCardClick = e => {
   if (e.metaKey || e.ctrlKey) {
     e.preventDefault();
     window.open(
-      `${window.chatwootConfig.hostURL}${path}`,
+      `${window.chatwootConfig.hostURL}${enderecoComLink(path)}`,
       '_blank',
       'noopener,noreferrer'
     );

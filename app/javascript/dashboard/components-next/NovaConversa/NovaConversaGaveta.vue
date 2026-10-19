@@ -1,8 +1,17 @@
 <script setup>
-import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onUnmounted,
+  provide,
+  ref,
+  useId,
+  watch,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import { useStore } from 'dashboard/composables/store';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import { emitter } from 'shared/helpers/mitt';
@@ -18,11 +27,13 @@ import NovaConversaPrevia from './NovaConversaPrevia.vue';
 import NovaConversaEnviada from './NovaConversaEnviada.vue';
 import NovaConversaErro from './NovaConversaErro.vue';
 import NovaConversaRodape from './NovaConversaRodape.vue';
+import NovaConversaMaisAbaixo from './NovaConversaMaisAbaixo.vue';
 import { useNovaConversaContato } from './useNovaConversaContato';
 import { useNovaConversa } from './useNovaConversa';
 import { useContinuarConversa } from './useContinuarConversa';
 import { useFocoPreso } from './useFocoPreso';
 import { useCriarMensagemPronta } from './useCriarMensagemPronta';
+import { EMAIL_DA_GAVETA } from './useModeloDoEmailNaGaveta';
 import {
   TELAS,
   TIPOS,
@@ -41,6 +52,8 @@ const props = defineProps({
   // A gaveta abre sempre do mesmo lado; `align` fica pela compatibilidade.
   // eslint-disable-next-line vue/no-unused-properties
   align: { type: String, default: 'end' },
+  // #1809: "Escrever" da caixa de e-mail abre a gaveta já nesta caixa.
+  caixaId: { type: [Number, String], default: null },
 });
 
 const emit = defineEmits(['close']);
@@ -54,7 +67,23 @@ const tituloId = `nova-conversa-titulo-${useId()}`;
 const aberta = ref(false);
 const raiz = ref(null);
 const corpo = ref(null);
+const conteudoDoCorpo = ref(null);
+const idDoCorpo = useId();
 const blocoDaMensagem = ref(null);
+
+// #1809 (decisão do Rodrigo, 18/10): o cartão "Criar contato" com nome, e-mail e
+// telefone só nas contas com a chave conversa_email_nova; sem ela, o "Criar contato"
+// de antes.
+const contaAtual = useMapGetter('getCurrentAccountId');
+const temChave = useMapGetter('accounts/isFeatureEnabledonAccount');
+const contatoNovoCompleto = computed(() =>
+  Boolean(temChave.value(contaAtual.value, 'conversa_email_nova'))
+);
+// #1809: a caixa só vale quando a gaveta é a do "Escrever" do e-mail, com a chave
+// ligada; as outras "Nova conversa" não recebem caixa e não têm a delas trocada.
+const caixaDoEscrever = computed(() =>
+  contatoNovoCompleto.value ? props.caixaId : null
+);
 
 const {
   contato,
@@ -75,7 +104,15 @@ const {
   limparContato,
   mudarTermo,
   criarContato,
-} = useNovaConversaContato();
+} = useNovaConversaContato({ caixaPreferida: () => caixaDoEscrever.value });
+// #1809: aberta do "Escrever" da caixa de e-mail, o contato novo precisa de e-mail.
+const caixaPorId = useMapGetter('inboxes/getInbox');
+const caixaPreferidaEhEmail = computed(
+  () =>
+    Boolean(caixaDoEscrever.value) &&
+    caixaPorId.value(Number(caixaDoEscrever.value))?.channel_type ===
+      INBOX_TYPES.EMAIL
+);
 
 // #1505 — o contato já tem conversa nesta caixa: continuar ou começar outra.
 const continuar = useContinuarConversa({ contato, canal });
@@ -102,7 +139,31 @@ const {
   limpar,
   enviar,
   enviarPronta,
+  modeloDoEmail,
+  historico,
+  comHistorico,
+  assuntoNaPrevia,
 } = useNovaConversa({ contato, canal, continuar });
+
+// #1809 — para quem vai e o modelo de e-mail do "+", para a caixa do e-mail.
+provide(EMAIL_DA_GAVETA, {
+  para: computed(() =>
+    contato.value
+      ? { nome: contato.value.name || '', email: contato.value.email || '' }
+      : null
+  ),
+  modelo: computed(() => form.modeloDoEmail),
+  valores: computed(() => form.valoresDoModelo),
+  escolher: modeloDoEmail.escolher,
+  campo: modeloDoEmail.campo,
+  tirar: modeloDoEmail.tirar,
+  // O histórico ao continuar uma conversa de e-mail (CitacaoDaResposta).
+  historico,
+  historicoDesligado: computed(() => form.historicoDesligado),
+  alternarHistorico: () => {
+    form.historicoDesligado = !form.historicoDesligado;
+  },
+});
 const continuando = computed(() => Boolean(conversaDaMensagem.value));
 // Entra numa conversa que já existe: a que vai continuar, ou a oculta da
 // caixa com "Reabrir a mesma conversa", onde a criação cai sozinha.
@@ -254,11 +315,15 @@ watch(carregandoCanais, carregando => {
 // de e-mail) trata o próprio Esc; a gaveta não fecha por baixo dele.
 const SOBREPOSTOS =
   '[data-popover-content], dialog.ProseMirror-prompt-backdrop';
+// Um <dialog> aberto por cima (a janela "Modelo de e-mail", #1809) trata o Esc; vale
+// mesmo com o foco fora dele.
+const comJanelaPorCima = () => Boolean(document.querySelector('dialog[open]'));
 
 useKeyboardEvents({
   Escape: {
     action: evento => {
       if (!aberta.value || evento.target?.closest?.(SOBREPOSTOS)) return;
+      if (comJanelaPorCima()) return;
       fechar();
     },
     allowOnFocusedInput: true,
@@ -314,108 +379,131 @@ useFixedPanelPresence(aberta);
           @fechar="fechar"
         />
 
-        <div ref="corpo" class="min-h-0 flex-1 overflow-y-auto">
-          <NovaConversaEnviada
-            v-if="tela === TELAS.ENVIADA"
-            :texto="enviada.texto"
-            :email="enviada.email"
-            :assunto="enviada.assunto"
-            :chave-do-canal="enviada.chaveDoCanal"
-            :caixa="enviada.caixa"
-            :endereco="enviada.endereco"
-            :numero="enviada.numero"
-          />
+        <!-- Mais conteúdo embaixo do que cabe: esmaecido e seta (NovaConversaMaisAbaixo). -->
+        <div class="relative flex min-h-0 flex-1 flex-col">
           <div
-            v-else
-            class="grid min-h-full grid-cols-[minmax(0,1fr)]"
-            :class="{
-              'lg:grid-cols-[minmax(0,1fr)_26rem]': tela === TELAS.ESCREVENDO,
-            }"
+            :id="idDoCorpo"
+            ref="corpo"
+            class="min-h-0 flex-1 overflow-y-auto"
           >
-            <main
-              class="flex min-w-0 flex-col gap-6 px-5 py-7 sm:px-8"
-              :class="{
-                'mx-auto w-full max-w-3xl': tela !== TELAS.ESCREVENDO,
-              }"
-            >
-              <NovaConversaErro v-if="erro" :texto="erro" />
+            <div ref="conteudoDoCorpo" class="grid min-h-full">
+              <NovaConversaEnviada
+                v-if="tela === TELAS.ENVIADA"
+                :texto="enviada.texto"
+                :email="enviada.email"
+                :assunto="enviada.assunto"
+                :chave-do-canal="enviada.chaveDoCanal"
+                :caixa="enviada.caixa"
+                :endereco="enviada.endereco"
+                :numero="enviada.numero"
+              />
+              <div
+                v-else
+                class="grid min-h-full grid-cols-[minmax(0,1fr)]"
+                :class="{
+                  'lg:grid-cols-[minmax(0,1fr)_26rem]':
+                    tela === TELAS.ESCREVENDO,
+                }"
+              >
+                <main
+                  class="flex min-w-0 flex-col gap-6 px-5 py-7 sm:px-8"
+                  :class="{
+                    'mx-auto w-full max-w-3xl': tela !== TELAS.ESCREVENDO,
+                  }"
+                >
+                  <NovaConversaErro v-if="erro" :texto="erro" />
 
-              <NovaConversaParaQuem
-                v-if="!contactId"
-                :contato="contato"
-                :termo="termo"
-                :resultados="resultados"
-                :buscando="buscando"
-                :erro-na-busca="erroNaBusca"
-                :criando="criando"
-                :erro-ao-criar="erroAoCriar"
-                @buscar="mudarTermo"
-                @escolher="escolherContato"
-                @criar="criarContato"
-                @alterar="limparContato"
-              />
+                  <NovaConversaParaQuem
+                    v-if="!contactId"
+                    :contato="contato"
+                    :termo="termo"
+                    :resultados="resultados"
+                    :buscando="buscando"
+                    :erro-na-busca="erroNaBusca"
+                    :criando="criando"
+                    :erro-ao-criar="erroAoCriar"
+                    :exige-email="caixaPreferidaEhEmail"
+                    :contato-novo-completo="contatoNovoCompleto"
+                    @buscar="mudarTermo"
+                    @escolher="escolherContato"
+                    @criar="criarContato"
+                    @alterar="limparContato"
+                  />
 
-              <NovaConversaSemCanal
-                v-if="tela === TELAS.SEM_CANAL"
-                :nome="primeiroNome(nome)"
-                @completar="completarCadastro"
-              />
-              <NovaConversaPorOnde
-                v-else-if="contato"
-                v-model="canalId"
-                :canais="canais"
-                :carregando="carregandoCanais"
-                :erro="erroNosCanais"
-                @tentar="carregarCanais"
-              />
+                  <NovaConversaSemCanal
+                    v-if="tela === TELAS.SEM_CANAL"
+                    :nome="primeiroNome(nome)"
+                    @completar="completarCadastro"
+                  />
+                  <NovaConversaPorOnde
+                    v-else-if="contato"
+                    v-model="canalId"
+                    :canais="canais"
+                    :carregando="carregandoCanais"
+                    :erro="erroNosCanais"
+                    @tentar="carregarCanais"
+                  />
 
-              <NovaConversaOndeEntra
-                v-if="canal && conversaExistente"
-                v-model="escolha"
-                :conversa="conversaExistente"
-                :carregando="continuando && carregandoConversa"
-                :erro="continuando && erroNaConversa"
-                @tentar="carregarConversa"
-              />
+                  <NovaConversaOndeEntra
+                    v-if="canal && conversaExistente"
+                    v-model="escolha"
+                    :conversa="conversaExistente"
+                    :carregando="continuando && carregandoConversa"
+                    :erro="continuando && erroNaConversa"
+                    @tentar="carregarConversa"
+                  />
 
-              <NovaConversaMensagem
-                v-if="canal && !esperandoConversa"
-                ref="blocoDaMensagem"
-                :key="`${canal.id}-${tipo}`"
-                v-model:modo="form.modo"
-                v-model:mensagem="form.mensagem"
-                v-model:assunto="form.assunto"
-                v-model:cc="form.cc"
-                v-model:bcc="form.bcc"
-                v-model:anexos="form.anexos"
-                v-model:modelo="form.modelo"
-                :canal="canal"
-                :tipo="tipo"
-                :assinatura="assinatura"
-                :com-assinatura="comAssinatura"
-                :pode-criar-pronta="podeCriarPronta"
-                :continuando="continuando"
-                @update:campos-prontos="form.camposProntos = $event"
-                @update:texto-do-modelo="form.textoDoModelo = $event"
-                @enviar-pronta="enviarPronta"
-                @criar-pronta="criarPronta"
-              />
-            </main>
+                  <NovaConversaMensagem
+                    v-if="canal && !esperandoConversa"
+                    ref="blocoDaMensagem"
+                    :key="`${canal.id}-${tipo}`"
+                    v-model:modo="form.modo"
+                    v-model:mensagem="form.mensagem"
+                    v-model:assunto="form.assunto"
+                    v-model:cc="form.cc"
+                    v-model:bcc="form.bcc"
+                    v-model:anexos="form.anexos"
+                    v-model:modelo="form.modelo"
+                    :canal="canal"
+                    :tipo="tipo"
+                    :assinatura="assinatura"
+                    :com-assinatura="comAssinatura"
+                    :pode-criar-pronta="podeCriarPronta"
+                    :continuando="continuando"
+                    @update:campos-prontos="form.camposProntos = $event"
+                    @update:texto-do-modelo="form.textoDoModelo = $event"
+                    @enviar-pronta="enviarPronta"
+                    @criar-pronta="criarPronta"
+                  />
+                </main>
 
-            <aside
-              v-if="tela === TELAS.ESCREVENDO"
-              class="min-w-0 border-t border-n-weak bg-n-alpha-1 px-5 py-7 sm:px-8 lg:border-s lg:border-t-0 lg:px-5"
-            >
-              <NovaConversaPrevia
-                :nome="nome"
-                :email="tipo === TIPOS.EMAIL"
-                :texto="previa"
-                :assunto="continuando ? '' : form.assunto"
-                :remetente="canal?.name || ''"
-                :endereco-do-remetente="linhaDoCanal(canal)"
-              />
-            </aside>
+                <aside
+                  v-if="tela === TELAS.ESCREVENDO"
+                  class="min-w-0 border-t border-n-weak bg-n-alpha-1 px-5 py-7 sm:px-8 lg:border-s lg:border-t-0 lg:px-5"
+                >
+                  <NovaConversaPrevia
+                    :nome="nome"
+                    :email="tipo === TIPOS.EMAIL"
+                    :texto="previa"
+                    :modelo-html="
+                      tipo === TIPOS.EMAIL
+                        ? modeloDoEmail.htmlDaPrevia.value
+                        : ''
+                    "
+                    :assunto="assuntoNaPrevia"
+                    :historico="comHistorico ? historico : null"
+                    :remetente="canal?.name || ''"
+                    :endereco-do-remetente="linhaDoCanal(canal)"
+                  />
+                </aside>
+              </div>
+            </div>
           </div>
+          <NovaConversaMaisAbaixo
+            :caixa="corpo"
+            :conteudo="conteudoDoCorpo"
+            :controla="idDoCorpo"
+          />
         </div>
 
         <NovaConversaRodape

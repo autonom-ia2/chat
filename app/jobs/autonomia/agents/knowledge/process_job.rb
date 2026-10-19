@@ -22,7 +22,7 @@ module Autonomia
         rescue Ingestor::Superseded
           # Outra ingestão (re-sync) venceu o token enquanto extraíamos: este job vira no-op e NÃO
           # toca o conhecimento (que já pertence à geração nova). Nada a marcar.
-          nil
+          Rails.logger.info("[autonomia] leitura_superada source=#{source_id}")
         rescue Ingestor::EmptyExtraction => e
           # Re-sync extraiu vazio: se a fonte JÁ tinha conhecimento bom, PRESERVA a geração anterior
           # (não apaga, restaura o estado/recuperabilidade); só marca failed se nunca houve entries.

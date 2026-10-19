@@ -225,9 +225,14 @@ RSpec.describe Account do
         feature_tela_inicial_resumo: 1 << 35,
         # #1807: posição 37, logo depois de tela_inicial_resumo (tabela da Orquestração, 19/10).
         feature_email_autoria: 1 << 36,
-        # #1813: posição 39 (1 << 38) depois do #1846 (conversa_email_nova, 38); até ele entrar, fica no fim do que
-        # está na main.
-        feature_contato_pelo_email: 1 << 37
+        # #1786: posição 38, logo depois de email_autoria (tabela da Orquestração, 19/10).
+        feature_conversa_email_nova: 1 << 37,
+        # #1865: posição 39, logo depois de conversa_email_nova (tabela da Orquestração, 19/10).
+        feature_whatsapp_agenda_do_contato: 1 << 38,
+        # #1870: posição 40, logo depois de whatsapp_agenda_do_contato (tabela da Orquestração, 19/10).
+        feature_email_lido_sincronizado: 1 << 39,
+        # #1813: no fim da lista (posição definitiva pela tabela da Orquestração na hora da vaga).
+        feature_contato_pelo_email: 1 << 40
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

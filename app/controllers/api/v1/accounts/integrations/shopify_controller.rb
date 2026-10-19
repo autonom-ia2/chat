@@ -4,6 +4,8 @@ class Api::V1::Accounts::Integrations::ShopifyController < Api::V1::Accounts::In
   before_action :fetch_hook, except: [:auth]
   before_action :check_authorization, only: [:destroy]
   before_action :validate_contact, only: [:orders]
+  # Os pedidos trazem dados do cliente (#1849): só para quem vê o contato.
+  before_action -> { authorize contact, :show? }, only: [:orders]
 
   def auth
     shop_domain = params[:shop_domain]

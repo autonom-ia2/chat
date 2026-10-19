@@ -1105,7 +1105,8 @@
           "VER_ARIA": "Ver o que sabe",
           "N_FONTES": "1 arquivo ou site | {n} arquivos e sites",
           "SO_CONVERSA": "Só o que você contou na conversa",
-          "N_PERGUNTAS": "Há 1 pergunta de cliente para conferir. | Há {n} perguntas de clientes para conferir."
+          "N_PERGUNTAS": "Há 1 pergunta de cliente para conferir. | Há {n} perguntas de clientes para conferir.",
+          "N_PROBLEMAS": "1 coisa no material precisa de você. | {n} coisas no material precisam de você."
         },
         "BLOCO_ONDE": {
           "TITULO": "Onde e quando responde",
@@ -1244,6 +1245,7 @@
           "SITE_MANDAR": "Mandar",
           "SITE_ERRO": "Confira o endereço do site. Ex.: www.sualoja.com.br",
           "GRANDE": "Este arquivo passa de 25 MB. Tente um menor.",
+          "FOTO_GRANDE": "Esta foto passa de 5 MB. Mande uma menor.",
           "LIMITE": "Já são {n} arquivos e sites. Tire um para mandar outro.",
           "LENDO": "Lendo…",
           "PRONTO": "Pronto",
@@ -1268,7 +1270,11 @@
           "PERGUNTA": "Pergunta",
           "RESPOSTA_ROTULO": "Resposta",
           "ENSINAR": "Ensinar",
-          "ENSINOU": "Pronto. {nome} já sabe responder isso."
+          "ENSINOU": "Pronto. {nome} já sabe responder isso.",
+          "REVISANDO": "Revisando…",
+          "ATENCAO": "Precisa de você",
+          "ATENCAO_TEXTO": "{nome} não usa este material até você mandar outro.",
+          "LENDO_FOTO": "Lendo o texto da foto…"
         },
         "ONDE": {
           "TITULO": "Onde e quando {nome} responde",

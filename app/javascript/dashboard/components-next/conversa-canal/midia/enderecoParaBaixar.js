@@ -5,19 +5,32 @@
 // está e abre noutra aba.
 const CAMINHO_DO_ACTIVE_STORAGE = '/rails/active_storage/';
 
+const PROTOCOLOS_DE_LINK = ['http:', 'https:'];
+
+// Só endereço web vira link: `javascript:` ou `data:` no anexo não chega ao href.
 const lerEndereco = url => {
   try {
-    return new URL(url, window.location.href);
+    const endereco = new URL(url, window.location.href);
+    return PROTOCOLOS_DE_LINK.includes(endereco.protocol) ? endereco : null;
   } catch {
     return null;
   }
 };
 
-export const doActiveStorage = url =>
-  !!url && !!lerEndereco(url)?.pathname.includes(CAMINHO_DO_ACTIVE_STORAGE);
+export const enderecoSeguro = url => (url && lerEndereco(url) ? url : '');
+
+// Do Active Storage é o daqui mesmo (mesma origem); outro site com esse caminho é de fora.
+export const doActiveStorage = url => {
+  const endereco = url && lerEndereco(url);
+  return (
+    !!endereco &&
+    endereco.origin === window.location.origin &&
+    endereco.pathname.includes(CAMINHO_DO_ACTIVE_STORAGE)
+  );
+};
 
 export const enderecoParaBaixar = url => {
-  if (!doActiveStorage(url)) return url || '';
+  if (!doActiveStorage(url)) return enderecoSeguro(url);
   const endereco = lerEndereco(url);
   endereco.searchParams.set('disposition', 'attachment');
   return endereco.toString();
