@@ -4,10 +4,17 @@ const PROTOCOLOS_DE_LINK = ['http:', 'https:', 'mailto:', 'tel:'];
 const PROTOCOLOS_DE_IMAGEM = ['http:', 'https:'];
 const IMAGEM_EMBUTIDA = 'data:image/';
 
+// Completo de verdade: o mesmo resolvido contra qualquer página. `http:/x` (esquema sem
+// "//") parece completo sozinho, mas na página de mesmo esquema vira caminho do painel.
+const BASES_DE_PROVA = ['https://a.invalid/', 'http://b.invalid/'];
 const enderecoCom = protocolos => endereco => {
   try {
-    const url = new URL(String(endereco || '').trim());
-    return protocolos.includes(url.protocol) ? url.href : '';
+    const texto = String(endereco || '').trim();
+    const url = new URL(texto);
+    const independente = BASES_DE_PROVA.every(
+      base => new URL(texto, base).href === url.href
+    );
+    return independente && protocolos.includes(url.protocol) ? url.href : '';
   } catch {
     return '';
   }

@@ -21,6 +21,10 @@ describe('enderecoDoEmail', () => {
   it('imagem só completa web ou embutida; link só web, e-mail e telefone', () => {
     expect(imagemSegura('/X)y')).toBe('');
     expect(imagemSegura('//painel.test/x')).toBe('');
+    ['http:/X)x', 'http:X)x', 'http:\\X', 'HTTP:/X', 'https:/rota?a=)'].forEach(
+      endereco => expect(imagemSegura(endereco)).toBe('')
+    );
+    expect(linkSeguro('https:/rota')).toBe('');
     // eslint-disable-next-line no-script-url
     expect(imagemSegura('javascript:alert(1)')).toBe('');
     expect(imagemSegura('https://ok.test/a.png')).toBe('https://ok.test/a.png');
