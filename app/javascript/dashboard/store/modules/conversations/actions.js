@@ -145,6 +145,13 @@ const actions = {
 
         if (signal.aborted) return;
 
+        // "Recebidas da IA" pelo link (#1883): o painel não sabe quem a IA passou; guarda o que o servidor mandou.
+        if (params.daIa) {
+          commit(
+            types.ADD_IDS_RECEBIDAS_DA_IA,
+            data.payload.map(({ id }) => id)
+          );
+        }
         buildConversationList(
           { commit, dispatch },
           params,

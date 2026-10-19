@@ -69,6 +69,20 @@ describe('ChatListHeader', () => {
     );
   });
 
+  it('filtro pelo link (#1883): mostra o título do filtro e a seta que limpa, sem salvar como pasta', async () => {
+    const wrapper = mountHeader({
+      pageTitle: 'Recebidas da IA',
+      hasLinkFilter: true,
+    });
+
+    expect(wrapper.find('h1').text()).toBe('Recebidas da IA');
+    expect(wrapper.find('[icon="i-lucide-save"]').exists()).toBe(false);
+    const limpar = wrapper.find('[icon="i-lucide-chevron-left"]');
+    expect(limpar.exists()).toBe(true);
+    await limpar.trigger('click');
+    expect(wrapper.emitted('resetFilters')).toHaveLength(1);
+  });
+
   it('keeps the folder controls when a folder is active', () => {
     const wrapper = mountHeader({
       hasAppliedFilters: true,

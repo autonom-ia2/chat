@@ -53,6 +53,23 @@ export const filterByUnattended = (
     : shouldFilter;
 };
 
+// "Esperando há mais de N minutos" pelo link (#1883): a mesma regra do servidor, com o waiting_since da conversa (em
+// segundos; 0 = ninguém esperando). A conversa respondida sai da lista na hora.
+export const filterByEsperando = (shouldFilter, esperandoMin, waitingSince) => {
+  if (!esperandoMin) return shouldFilter;
+  if (!waitingSince) return false;
+  const esperandoHa = Date.now() / 1000 - waitingSince;
+  return shouldFilter && esperandoHa >= esperandoMin * 60;
+};
+
+// "Recebidas da IA" pelo link (#1883): só o servidor sabe quem a IA passou. Com o filtro ligado, a lista mostra só as
+// conversas que ele mandou (os ids guardados na store): a conversa nova que chega pelo websocket não entra.
+export const filterRecebidasDaIa = (conversations, daIa, ids) => {
+  if (!daIa) return conversations;
+  const recebidas = new Set(ids);
+  return conversations.filter(({ id }) => recebidas.has(id));
+};
+
 export const applyPageFilters = (conversation, filters) => {
   const {
     inboxId,
@@ -61,6 +78,7 @@ export const applyPageFilters = (conversation, filters) => {
     teamId,
     conversationType,
     crmPipelineId,
+    esperandoMin,
   } = filters;
   const {
     status: chatStatus,
@@ -91,6 +109,7 @@ export const applyPageFilters = (conversation, filters) => {
     chatPipelineIds,
     hasHiddenPipeline
   );
+  shouldFilter = filterByEsperando(shouldFilter, esperandoMin, waitingSince);
 
   return shouldFilter;
 };
