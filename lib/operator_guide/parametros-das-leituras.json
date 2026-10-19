@@ -1666,6 +1666,10 @@
     "controller": "api/v1/accounts/email_oauth_apps#show",
     "parametros": []
   },
+  "etiquetas_do_celular": {
+    "controller": "api/v1/accounts/etiquetas_do_celular#index",
+    "parametros": []
+  },
   "inbox_members/:inbox_id": {
     "controller": "api/v1/accounts/inbox_members#show",
     "parametros": []

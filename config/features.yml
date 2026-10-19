@@ -539,3 +539,14 @@
   display_name: Tela inicial com o resumo do dia
   enabled: false
   column: feature_flags_ext_1
+
+# Etiquetas do WhatsApp do celular (#1823, F1b): o que se faz com as etiquetas no app WhatsApp Business do celular de
+# uma caixa WAHA vira etiqueta da plataforma, no contato e na conversa aberta mais recente (WhatsappLabels::AplicarEvento,
+# chamado pelo webhook de etiquetas do Híbrido). Flag própria, separada de `etiquetas_do_whatsapp` (nome livre, que vai
+# ser ligada em todas as contas): sem esta, o job descarta o evento, a leitura `etiquetas_do_celular` responde 404 e o
+# selo do WhatsApp não aparece. Posição a definir pela Orquestração (no fim da feature_flags_ext_1; se outra flag
+# entrar antes na main, o bit sobe — ajustar o spec/models/account_spec.rb). Tabela própria `etiquetas_do_celular`.
+- name: etiquetas_do_celular
+  display_name: Etiquetas do WhatsApp do celular viram etiquetas da plataforma
+  enabled: false
+  column: feature_flags_ext_1

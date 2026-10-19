@@ -941,6 +941,8 @@ Rails.application.routes.draw do
           resources :labels, only: [:index, :show, :create, :update, :destroy]
           # Nome livre das etiquetas (#1823, F1a): controller e tabela do fork, um nome por etiqueta.
           resources :nomes_de_etiquetas, only: [:index, :update, :destroy], param: :label_id
+          # Etiquetas do WhatsApp do celular (#1823, F1b): leitura da correspondência com as etiquetas da plataforma.
+          resources :etiquetas_do_celular, only: [:index]
 
           resources :notifications, only: [:index, :update, :destroy] do
             collection do
