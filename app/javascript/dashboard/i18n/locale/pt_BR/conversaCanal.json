@@ -226,6 +226,9 @@
       "MAIS": "Mais {n} fotos e vídeos. Toque para abrir",
       "MAIS_CURTO": "+{n}",
       "ROTULO_CHEGANDO": "Álbum chegando, {n} recebidas até agora",
+      "VAGA": "Foto ou vídeo {n} de {total} ainda chegando",
+      "VAGA_NAO_CHEGOU": "Foto ou vídeo {n} de {total}: não chegou",
+      "NAO_CHEGOU": "Não chegou",
       "VAGA_SEM_TOTAL": "Próxima foto ainda chegando",
       "RECEBENDO": "Recebendo fotos…",
       "APAGADAS_EM_PARTE": "{apagadas} de {total} fotos apagadas. Tente de novo para as outras."
