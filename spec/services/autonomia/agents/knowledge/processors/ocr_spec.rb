@@ -62,4 +62,15 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Ocr do
     expect { com_path(pasta) { described_class.ler('/tmp/foto.png') } }
       .to raise_error(described_class::Indisponivel, 'tesseract_missing')
   end
+
+  # V4 — o tempo estourado mata o GRUPO: um filho que o tesseract deixou rodando também morre.
+  it 'kills the whole process group on timeout, children included' do
+    filho = File.join(pasta, 'filho')
+    tesseract_falso("sleep 30 & echo $! > #{filho}; wait")
+
+    expect { com_path("#{pasta}:/usr/bin:/bin") { described_class.ler('/tmp/foto.png', tempo: 1) } }
+      .to raise_error(described_class::Indisponivel, 'tesseract_timeout')
+
+    expect { Process.kill(0, File.read(filho).to_i) }.to raise_error(Errno::ESRCH)
+  end
 end

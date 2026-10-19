@@ -8,6 +8,8 @@
 module Autonomia::Agents::Knowledge::DimensoesDaImagem
   # Marcadores JPEG de início de quadro (SOF0..SOF15, menos DHT, JPG e DAC), onde moram altura e largura.
   JPEG_SOF = ([0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF]).freeze
+  JPEG_SOS = 0xDA # início dos dados da imagem: nenhum cabeçalho de quadro vem depois dele
+  JPEG_SOF_MINIMO = 7 # tamanho (2) + precisão (1) + altura (2) + largura (2)
   GIF_FIM = 0x3B
   GIF_EXTENSAO = 0x21
   GIF_QUADRO = 0x2C
@@ -124,18 +126,33 @@ module Autonomia::Agents::Knowledge::DimensoesDaImagem
     a | (b << 8) | (c << 16)
   end
 
-  # Percorre os segmentos (FF xx + tamanho big-endian) até o início de quadro: precisão (1), altura (2), largura (2).
+  # Percorre os segmentos (FF xx + tamanho big-endian, que conta os próprios 2 bytes) até o início da imagem (SOS): o
+  # início de quadro traz precisão (1), altura (2), largura (2). Mais de um início de quadro (o decodificador poderia usar
+  # outro que não o conferido), segmento de tamanho menor que 2 ou arquivo cortado antes do SOS: [nil, nil], e quem chama
+  # recusa.
   def jpeg(bytes)
+    quadros = jpeg_quadros(bytes)
+    quadros&.size == 1 ? quadros.first : [nil, nil]
+  end
+
+  def jpeg_quadros(bytes)
     posicao = 2
-    while posicao + 9 <= bytes.bytesize
-      return [nil, nil] unless bytes.getbyte(posicao) == 0xFF
-
+    quadros = []
+    while posicao + 4 <= bytes.bytesize && bytes.getbyte(posicao) == 0xFF
       marcador = bytes.getbyte(posicao + 1)
-      tamanho = bytes.byteslice(posicao + 2, 2).unpack1('n')
-      return bytes.byteslice(posicao + 5, 4).unpack('nn').reverse if JPEG_SOF.include?(marcador)
+      return quadros if marcador == JPEG_SOS
 
+      tamanho = bytes.byteslice(posicao + 2, 2).unpack1('n')
+      return unless segmento_jpeg_cabe?(bytes, posicao, marcador, tamanho)
+
+      quadros << bytes.byteslice(posicao + 5, 4).unpack('nn').reverse if JPEG_SOF.include?(marcador)
       posicao += 2 + tamanho
     end
-    [nil, nil]
+  end
+
+  # O tamanho conta os próprios 2 bytes; o do início de quadro precisa trazer ao menos altura e largura.
+  def segmento_jpeg_cabe?(bytes, posicao, marcador, tamanho)
+    minimo = JPEG_SOF.include?(marcador) ? JPEG_SOF_MINIMO : 2
+    tamanho >= minimo && posicao + 2 + tamanho <= bytes.bytesize
   end
 end

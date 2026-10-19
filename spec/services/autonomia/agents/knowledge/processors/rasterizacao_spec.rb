@@ -16,25 +16,45 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Rasterizacao do
     File.chmod(0o755, caminho)
   end
 
+  def documento(conteudo = "%PDF-1.4\n%%EOF\n")
+    File.join(pasta, 'doc.pdf').tap { |caminho| File.binwrite(caminho, conteudo) }
+  end
+
   def com_path(path, &)
     with_modified_env(PATH: path, &)
   end
 
   def rasterizar(tempo: described_class::TEMPO_MAXIMO)
     com_path("#{pasta}:/usr/bin:/bin") do
-      described_class.pagina('/tmp/doc.pdf', 2, tempo: tempo) { |png| File.read(png) }
+      described_class.pagina(documento, 2, tempo: tempo) { |png| File.read(png) }
     end
   end
 
-  it 'rasterizes one page at 300 DPI with the resource limits before the input' do
+  it 'rasterizes one page at 300 DPI with the resource limits before the input, forcing the PDF reader' do
     programa_falso('magick')
 
     expect(rasterizar).to eq('png')
 
     lidos = File.readlines(argumentos, chomp: true)
+    entrada = "pdf:#{File.join(pasta, 'doc.pdf')}[2]"
     expect(lidos.first(described_class::LIMITES.size)).to eq(described_class::LIMITES)
-    expect(lidos).to include('-density', '300', '/tmp/doc.pdf[2]')
-    expect(lidos.index('/tmp/doc.pdf[2]')).to be > lidos.index('-density')
+    expect(lidos).to include('-density', '300', entrada)
+    expect(lidos.index(entrada)).to be > lidos.index('-density')
+  end
+
+  # V4: um PostScript com %PDF- depois do byte 0 seria interpretado pelo ghostscript; nunca chega ao ImageMagick.
+  it 'refuses a file that does not start with %PDF- and never runs ImageMagick' do
+    programa_falso('magick')
+    postscript = documento("%!PS-Adobe-3.0\n%PDF-1.4\n(x) print\n")
+
+    expect { com_path("#{pasta}:/usr/bin:/bin") { described_class.pagina(postscript, 0) { nil } } }
+      .to raise_error(described_class::Falhou, 'nao_e_pdf')
+    expect(File).not_to exist(argumentos)
+  end
+
+  it 'refuses an empty or missing file' do
+    expect { described_class.pagina(documento(''), 0) { nil } }.to raise_error(described_class::Falhou, 'nao_e_pdf')
+    expect { described_class.pagina(File.join(pasta, 'nada.pdf'), 0) { nil } }.to raise_error(described_class::Falhou, 'nao_e_pdf')
   end
 
   it 'uses the old ImageMagick name when magick is not installed' do
@@ -61,7 +81,29 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Rasterizacao do
   end
 
   it 'fails clearly when ImageMagick is not installed' do
-    expect { com_path(pasta) { described_class.pagina('/tmp/doc.pdf', 0) { nil } } }
+    expect { com_path(pasta) { described_class.pagina(documento, 0) { nil } } }
       .to raise_error(described_class::Falhou, 'imagemagick_ausente')
+  end
+
+  # V4 — o tempo estourado mata o GRUPO (o ImageMagick chama o ghostscript): o filho também morre.
+  it 'kills the whole process group on timeout, children included' do
+    filho = File.join(pasta, 'filho')
+    programa_falso('magick', "sleep 30 & echo $! > #{filho}; wait")
+
+    expect { rasterizar(tempo: 1) }.to raise_error(described_class::Falhou, 'rasterizacao_timeout')
+    expect { Process.kill(0, File.read(filho).to_i) }.to raise_error(Errno::ESRCH)
+  end
+
+  it 'removes the temporary page when the reading fails' do
+    programa_falso('magick')
+    lida = nil
+    quebra = proc do |png|
+      lida = png
+      raise 'ocr quebrou'
+    end
+
+    expect { com_path("#{pasta}:/usr/bin:/bin") { described_class.pagina(documento, 0, &quebra) } }
+      .to raise_error(RuntimeError, 'ocr quebrou')
+    expect(File).not_to exist(File.dirname(lida))
   end
 end

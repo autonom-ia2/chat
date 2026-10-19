@@ -86,4 +86,44 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Foto do
 
     expect { processor.extract }.to raise_error(described_class::ExtractionError, 'foto_ocr_failed')
   end
+
+  # V4 — um PNG de verdade com uma lista de caminhos colada no fim passa como PNG, mas o tesseract (um falso no PATH, que
+  # grava o que recebeu) só recebe o arquivo temporário .png, e o temporário some, com sucesso ou com erro.
+  context 'with a polyglot PNG followed by a list of paths' do
+    let(:pasta) { Dir.mktmpdir }
+    let(:bytes) { png + "\n/etc/passwd\n/root/.ssh/id_rsa\n".b }
+    let(:source) { double('source', reference: '/etc/passwd;rm -rf.png', source_type: 'foto', file: file) } # rubocop:disable RSpec/VerifiedDoubles
+
+    after { FileUtils.remove_entry(pasta) }
+
+    def tesseract_falso(saida)
+      caminho = File.join(pasta, 'tesseract')
+      File.write(caminho, "#!/bin/sh\nprintf '%s\\n' \"$@\" > #{pasta}/argv\n#{saida}\n")
+      File.chmod(0o755, caminho)
+    end
+
+    def ler_com_o_falso
+      with_modified_env(PATH: "#{pasta}:/usr/bin:/bin") { processor.extract }
+    end
+
+    it 'passes only the temporary .png to tesseract and removes it afterwards' do
+      tesseract_falso('echo Pastel')
+
+      expect(ler_com_o_falso).to eq('Pastel')
+
+      argv = File.readlines(File.join(pasta, 'argv'), chomp: true)
+      expect(argv.size).to eq(4)
+      expect(argv.first).to start_with(Dir.tmpdir).and end_with('.png')
+      expect(argv.drop(1)).to eq(%w[stdout -l por])
+      expect(argv.join).not_to include('passwd', 'ssh', 'rm -rf')
+      expect(File).not_to exist(argv.first)
+    end
+
+    it 'removes the temporary file when tesseract fails' do
+      tesseract_falso('exit 1')
+
+      expect { ler_com_o_falso }.to raise_error(described_class::ExtractionError, 'foto_ocr_failed')
+      expect(File).not_to exist(File.readlines(File.join(pasta, 'argv'), chomp: true).first)
+    end
+  end
 end

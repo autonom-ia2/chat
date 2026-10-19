@@ -122,15 +122,95 @@ RSpec.describe Autonomia::Agents::Source do
     end
   end
 
+  # K5 — as páginas do PDF que ficaram de fora vão no mark_ready!, sob a guarda de token.
+  describe '#mark_ready! with the pages left out' do
+    let(:de_fora) { { 'ocr_teto' => 30, 'ocr_alem_do_teto' => 2 } }
+
+    it 'records the pages left out with the current token' do
+      token = source.begin_ingestion!
+      source.paginas_de_fora = de_fora
+
+      expect(source.mark_ready!(token, chunk_count: 3)).to be(true)
+      expect(source.reload.metadata).to include('paginas_de_fora' => de_fora, 'chunk_count' => 3)
+    end
+
+    it 'does not write anything from a superseded job' do
+      antigo = source.begin_ingestion!
+      atual = described_class.find(source.id).begin_ingestion!
+      source.paginas_de_fora = de_fora
+
+      expect(source.mark_ready!(antigo, chunk_count: 3)).to be(false)
+      expect(described_class.find(source.id)).to have_attributes(status: 'processing', sync_token: atual)
+      expect(described_class.find(source.id).metadata).not_to have_key('paginas_de_fora')
+    end
+
+    it 'clears the mark when nothing was left out in the new reading' do
+      source.update_columns(metadata: { 'paginas_de_fora' => de_fora }) # rubocop:disable Rails/SkipsModelValidations
+      token = source.begin_ingestion!
+
+      source.mark_ready!(token, chunk_count: 1)
+
+      expect(source.reload.metadata).not_to have_key('paginas_de_fora')
+    end
+  end
+
   # R6 — releitura que volta vazia: a geração anterior volta como estava.
   describe '#restore_previous_generation!' do
-    it 'brings an old material with no verdict back as ready, not reviewing forever' do
-      antigo = described_class.create!(account: account, agent: agent, source_type: 'txt', status: :ready)
+    let(:antigo) { described_class.create!(account: account, agent: agent, source_type: 'txt', status: :ready) }
+
+    context 'with the Fase 2 on' do
+      before { Autonomia::Agents::Fase2.ligar!(account) }
+
+      it 'brings an old material with no verdict back as ready, not reviewing forever' do
+        token = antigo.begin_ingestion!
+        expect(antigo.reload.metadata.dig('prev_review', 'legado')).to be(true)
+
+        antigo.restore_previous_generation!(token)
+
+        expect(antigo.reload).to have_attributes(status: 'ready', review_status: nil, reviewed_at: nil)
+      end
+
+      # K1 — a corrida da sonda: material novo (nunca revisado), duas leituras seguidas e a segunda volta vazia. Sem
+      # parecer também, mas não é legado: volta needs_review, fora da busca, e nunca é servido sem revisão.
+      it 'keeps a new, never reviewed material out of the search after a race of two readings' do
+        novo = described_class.create!(account: account, agent: agent, source_type: 'txt', reference: 'a.txt')
+        novo.begin_ingestion!
+        token_b = novo.reload.begin_ingestion!
+
+        novo.reload.restore_previous_generation!(token_b)
+
+        expect(novo.reload).to have_attributes(status: 'ready', review_status: 'needs_review')
+        expect(novo.metadata['prev_review']).not_to have_key('legado')
+      end
+
+      it 'does not mark as old a material that already has a review date' do
+        revisado = described_class.create!(account: account, agent: agent, source_type: 'txt', status: :ready, reviewed_at: 1.day.ago)
+        token = revisado.begin_ingestion!
+
+        revisado.restore_previous_generation!(token)
+
+        expect(revisado.reload.review_status).to eq('needs_review')
+      end
+    end
+
+    # Fora da Fase 2, idêntico à main: sem parecer anterior volta needs_review.
+    it 'brings an old material with no verdict back as needs_review outside the Fase 2' do
       token = antigo.begin_ingestion!
+      expect(antigo.reload.metadata['prev_review']).not_to have_key('legado')
 
       antigo.restore_previous_generation!(token)
 
-      expect(antigo.reload).to have_attributes(status: 'ready', review_status: nil, reviewed_at: nil)
+      expect(antigo.reload).to have_attributes(status: 'ready', review_status: 'needs_review')
+    end
+
+    it 'goes back to the main when the account leaves the Fase 2 in the middle of the reading' do
+      Autonomia::Agents::Fase2.ligar!(account)
+      token = antigo.begin_ingestion!
+      Autonomia::Agents::Fase2.desligar!(account)
+
+      antigo.reload.restore_previous_generation!(token)
+
+      expect(antigo.reload.review_status).to eq('needs_review')
     end
 
     it 'brings a reviewed material back with its verdict' do

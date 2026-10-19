@@ -118,6 +118,10 @@ module Autonomia
       # #1426 — a foto da criação divide a imagem (o mesmo blob) com a conversa do Construtor. Tirá-la da base solta o
       # anexo sem apagar a imagem, que a conversa ainda mostra e lê.
       ORIGEM_FOTO_DA_CRIACAO = 'foto_da_criacao'.freeze
+      # #1426 — as páginas do PDF que ficaram de fora da leitura (teto, página grande, prazo), para o aviso ao dono.
+      PAGINAS_DE_FORA = 'paginas_de_fora'.freeze
+      attr_accessor :paginas_de_fora
+
       before_destroy :soltar_foto_da_conversa, prepend: true # antes do has_one_attached apagar o anexo
 
       # token-guard idêntico ao padrão EmailCampaign#ai_guarded_update: marca processing + novo
@@ -146,6 +150,7 @@ module Autonomia
                           'quality_score' => quality_score, 'confidence' => confidence,
                           'reviewed_at' => reviewed_at&.iso8601 }
                       end
+        prev_review = prev_review.merge('legado' => true) if !processing? && legado_sem_parecer?
         prev_metadata = base.merge('prev_review' => prev_review)
         update_columns(status: self.class.statuses[:processing], sync_token: token,
                        error: nil, sync_status: nil, metadata: prev_metadata,
@@ -160,25 +165,16 @@ module Autonomia
       # nada, preservando a recuperabilidade E o isolamento "fora do negócio" (que o Retriever lê do
       # review_summary). accepted continua accepted; needs_review continua excluído (sem promover).
       # Token-guard. Usado pelo ProcessJob no EmptyExtraction quando há entries.
-      # #1426 — material antigo, de antes da Revisora (sem parecer nenhum), volta sem parecer, como estava: "pronto" na tela
-      # e servido na busca. Com `needs_review` ele ficaria "Revisando…" para sempre, porque nenhuma revisão vai chegar.
+      # #1426 — na Fase 2, material antigo de verdade (de antes da Revisora: pronto, sem parecer e sem data de revisão, marcado
+      # `legado` no begin_ingestion!) volta sem parecer, como estava: "pronto" na tela e servido na busca. Com `needs_review`
+      # ele ficaria "Revisando…" para sempre. Material novo nunca revisado (também sem parecer) NÃO leva a marca e volta
+      # `needs_review`, fora da busca. Fora da Fase 2, como antes.
       def restore_previous_generation!(token)
-        sem_parecer_antes = (metadata || {}).dig('prev_review', 'review_status').nil?
         anterior = previous_review_attributes
-        anterior = anterior.merge(review_status: nil) if sem_parecer_antes
+        anterior = anterior.merge(review_status: nil) if legado_marcado?
         guarded_update(token, anterior.merge(
                                 status: self.class.statuses[:ready], error: nil, sync_status: nil, synced_at: Time.current
                               ))
-      end
-
-      # #1426 — as páginas do PDF escaneado que ficaram fora do OCR (teto de páginas ou página grande demais), para o
-      # aviso ao dono: { teto, alem_do_teto, grandes }. nil apaga a marca (nada ficou de fora nesta leitura).
-      PAGINAS_FORA_DO_OCR = 'ocr_paginas_de_fora'.freeze
-      def marcar_paginas_fora_do_ocr!(de_fora)
-        atual = metadata || {}
-        novo = atual.except(PAGINAS_FORA_DO_OCR)
-        novo = novo.merge(PAGINAS_FORA_DO_OCR => de_fora) if de_fora
-        update_columns(metadata: novo) unless novo == atual
       end
 
       # GAP (A) — mídia de ENVIO: caminho NOVO, sem ingestão. NÃO embeda, NÃO chama a revisora; só
@@ -191,8 +187,11 @@ module Autonomia
                        synced_at: Time.current, updated_at: Time.current)
       end
 
+      # #1426 — as páginas do PDF que ficaram de fora nesta leitura (Processors::Pdf põe em `paginas_de_fora`, só em
+      # memória) vão junto, sob a mesma guarda de token: um job superado não escreve. Sem nada de fora, a marca some.
       def mark_ready!(token, chunk_count:)
-        new_metadata = (metadata || {}).merge('chunk_count' => chunk_count)
+        new_metadata = (metadata || {}).except(PAGINAS_DE_FORA).merge('chunk_count' => chunk_count)
+        new_metadata = new_metadata.merge(PAGINAS_DE_FORA => paginas_de_fora) if paginas_de_fora.present?
         guarded_update(token, status: self.class.statuses[:ready], error: nil,
                               metadata: new_metadata, synced_at: Time.current)
       end
@@ -232,6 +231,17 @@ module Autonomia
       # criados por um job superseded antes do review). needs_resend/needs_review seguem excluídos
       # (fiel). NOTA: uma fonte legada genuína (review_status nil, servida via legado) que falhar no
       # re-sync passa a needs_review — tradeoff seguro e raro (re-revisar reativa).
+      # #1426 — material de antes da Revisora: já pronto, sem parecer e sem data de revisão. Material novo (ainda não lido)
+      # não é pronto e não entra. Só a Fase 2 usa a marca (restore_previous_generation!).
+      def legado_sem_parecer?
+        ready? && review_status.nil? && reviewed_at.nil? && Autonomia::Agents::Fase2.ligada?(account)
+      end
+
+      # A marca só nasce na Fase 2; conferida de novo aqui, para a conta que saiu do piloto no meio da leitura voltar à main.
+      def legado_marcado?
+        (metadata || {}).dig('prev_review', 'legado') == true && Autonomia::Agents::Fase2.ligada?(account)
+      end
+
       def previous_review_attributes
         prev = (metadata || {})['prev_review'] || {}
         status_value = prev['review_status']
