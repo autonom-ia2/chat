@@ -598,6 +598,9 @@ en:
         desfiz_nao_pedido: 'I undid what you had not asked for: %{resumos}. What do you want to change?'
         nao_desfiz: 'The agent was changed some other way while I was checking, so I did not undo what you had not asked for: %{resumos}. Review the agent and tell me what you want.'
         nao_conferido: 'I tried again to apply what was missing, but there was no time left to check it. Review the agent: %{pedidos}.'
+        opcoes_do_conflito:
+          manter: 'Keep it like this'
+          mudar: 'I want to change it'
       sem_onde_trabalhar: 'This agent is not on any channel yet. Choose a channel to start answering.'
       caixa_externo:
         caixa_com_agente_da_plataforma: 'This channel is handled by AI agents. To change who answers first, use the AI agent tab of the channel.'

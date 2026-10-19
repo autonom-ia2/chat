@@ -57,7 +57,7 @@ module Autonomia::Agents::Builder::AjustePorLista
     }
   }.freeze
 
-  NOVOS_CAMPOS = %w[so_pergunta mudancas resposta_ao_dono pendencia_resolvida perguntas_de_prova].freeze
+  NOVOS_CAMPOS = %w[so_pergunta mudancas resposta_ao_dono pendencia_resolvida perguntas_de_prova opcoes_de_resposta].freeze
 
   # O schema do Construtor com os campos novos. `next_question` ganha a descrição do que ela leva no ajuste.
   SCHEMA = begin
@@ -71,7 +71,8 @@ module Autonomia::Agents::Builder::AjustePorLista
       mudancas: { type: 'array', items: MUDANCA, description: MUDANCAS_DESCRIPTION },
       resposta_ao_dono: { type: 'string', description: RESPOSTA_AO_DONO_DESCRIPTION },
       pendencia_resolvida: { type: 'boolean', description: pendencia::PENDENCIA_RESOLVIDA_DESCRIPTION },
-      perguntas_de_prova: { type: 'array', items: { type: 'string' }, description: Autonomia::Agents::ProvaDoAjuste::PERGUNTAS_DESCRIPTION }
+      perguntas_de_prova: { type: 'array', items: { type: 'string' }, description: Autonomia::Agents::ProvaDoAjuste::PERGUNTAS_DESCRIPTION },
+      opcoes_de_resposta: Autonomia::Agents::Builder::OpcoesDeResposta::SCHEMA
     )
     { name: 'autonomia_agent_build_ajuste',
       schema: base.merge(properties: propriedades,

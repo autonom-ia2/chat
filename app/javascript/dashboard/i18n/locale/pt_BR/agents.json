@@ -1305,6 +1305,7 @@
           "TESTE_TITULO": "Teste como se fosse seu cliente",
           "TESTAR_NOME": "Testar {nome}",
           "PENSANDO": "Pensando…",
+          "OPCOES_ROTULO": "Respostas prontas. Toque numa ou escreva a sua.",
           "ASSISTENTE": "Assistente de criação:",
           "VOCE": "Você:",
           "CONVERSA": "Conversa",

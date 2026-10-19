@@ -61,6 +61,7 @@ const erroDoDesfazer = ref('');
 const desfazendoUltima = ref(false);
 const erroDaUltima = ref('');
 const ultimaDesfeita = ref(false);
+const secao = ref(null);
 // Saiu da tela com o start/send ainda em voo: quando ele voltar, a store refaria a conversa e o
 // poll. `saiu` faz a limpeza de novo nessa hora.
 let saiu = false;
@@ -209,14 +210,15 @@ const tentarMandar = async envio => {
   }
 };
 
-const enviar = async ({ texto, anexos }) => {
+// `manterRascunho`: a resposta tocada não apaga o que o dono estava escrevendo.
+const enviar = async ({ texto, anexos }, { manterRascunho = false } = {}) => {
   if (pensando.value) return;
   const imagens = anexos.filter(arquivo =>
     (arquivo.type || '').startsWith('image/')
   );
   const arquivos = anexos.filter(arquivo => !imagens.includes(arquivo));
   const conteudo = texto || anexos.map(arquivo => arquivo.name).join(', ');
-  rascunho.value = '';
+  if (!manterRascunho) rascunho.value = '';
   feito.value = null;
   erroDoDesfazer.value = '';
   ultimaDesfeita.value = false;
@@ -311,6 +313,29 @@ const desfazerUltima = async () => {
   desfazendoUltima.value = false;
 };
 
+// #1428 (entrega C) — as respostas prontas da pergunta aberta (`opcoes_de_resposta` do state: as que o
+// Construtor escreveu, ou os botões fixos do conflito). Ficam logo abaixo da última pergunta enquanto ela
+// está aberta e somem quando o dono responde, tocando ou escrevendo, ou desfaz o ajuste. Tocar é o mesmo
+// que escrever e mandar; o foco vai para o campo, que segue ali, em vez de sumir com o botão.
+const MAX_OPCOES = 4;
+const opcoesDaPergunta = computed(() => {
+  const ultima = visiveis.value[visiveis.value.length - 1];
+  const aberta =
+    fase.value === 'interviewing' &&
+    ultima?.role === 'assistant' &&
+    !resultado.value?.desfeito;
+  if (pensando.value || !aberta) return [];
+  return (estadoDaConversa.value?.opcoes_de_resposta || []).slice(
+    0,
+    MAX_OPCOES
+  );
+});
+
+const responderComOpcao = opcao => {
+  secao.value?.querySelector('textarea')?.focus();
+  enviar({ texto: opcao, anexos: [] }, { manterRascunho: true });
+};
+
 const usarIdeia = ideia => {
   rascunho.value = ideia;
 };
@@ -376,6 +401,7 @@ onBeforeUnmount(() => {
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
       <section
+        ref="secao"
         aria-labelledby="mudar-titulo"
         class="flex flex-col gap-4 p-5 shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak dark:ring-n-slate-6"
       >
@@ -560,6 +586,16 @@ onBeforeUnmount(() => {
             @acao="tentarDeNovo"
           />
         </div>
+        <!-- Fora da região aria-live: a pergunta é lida; os botões, só quando a pessoa chega neles. -->
+        <RespostasRapidas
+          v-if="opcoesDaPergunta.length"
+          data-opcoes
+          class="-mt-1 ps-10"
+          empilhar
+          :opcoes="opcoesDaPergunta"
+          :rotulo="t(`${NS}.OPCOES_ROTULO`)"
+          @escolher="responderComOpcao"
+        />
 
         <p
           v-if="!feito && !resultado"
