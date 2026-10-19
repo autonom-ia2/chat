@@ -4,7 +4,7 @@
 # campaign filter uses (Crm::Cards::SharedFilters#apply_campaign_filter), so the trigram index on the
 # mirror serves both. A contact counts once per campaign, whatever the number of conversations.
 #
-# "Viraram card no CRM" (Gestão): CRM cards linked to a conversation marked by the campaign, as the
+# "Viraram cards no CRM" (Gestão): CRM cards linked to a conversation marked by the campaign, as the
 # primary conversation or through crm_card_conversations — the cards the Kanban shows when filtered by
 # that campaign. `won` is the part of them already won.
 class CampaignJourney::ResultReplies
