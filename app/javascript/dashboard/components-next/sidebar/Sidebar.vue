@@ -30,10 +30,8 @@ import {
   INSURANCE_PERMISSIONS,
   SLA_MANAGE_PERMISSION,
   META_ADS_VIEW_PERMISSION,
-  ROLES,
-  CONTACT_PERMISSIONS,
-  CONTACT_VIEW_PERMISSION,
 } from 'dashboard/constants/permissions.js';
+import { canViewRelationshipRecordsFrom } from 'dashboard/composables/useRelationshipPermissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import SidebarGroup from './SidebarGroup.vue';
@@ -192,15 +190,18 @@ const currentCustomRoleId = useMapGetter('getCurrentCustomRoleId');
 const isAdministrator = computed(() => currentRole.value === 'administrator');
 // Quem só lê conversas (#1800) não começa conversa nova.
 // Nova conversa busca o contato na base: pede ver contatos (#1849). Sem isso, a pessoa começa pelo painel do contato.
-const canStartConversation = computed(() => {
-  const permissions = getUserPermissions(currentUser.value, accountId.value);
-  return (
-    !readsOnlyConversations(permissions) &&
-    [...ROLES, CONTACT_VIEW_PERMISSION, CONTACT_PERMISSIONS].some(key =>
-      permissions.includes(key)
-    )
-  );
-});
+const canStartConversation = computed(
+  () =>
+    !readsOnlyConversations(
+      getUserPermissions(currentUser.value, accountId.value)
+    ) &&
+    canViewRelationshipRecordsFrom({
+      getCurrentRole: currentRole.value,
+      getCurrentCustomRoleId: currentCustomRoleId.value,
+      getCurrentUser: currentUser.value,
+      getCurrentAccountId: accountId.value,
+    })
+);
 const hasAnyPermission = keys => {
   const permissions = getUserPermissions(currentUser.value, accountId.value);
   return keys.some(key => permissions.includes(key));
