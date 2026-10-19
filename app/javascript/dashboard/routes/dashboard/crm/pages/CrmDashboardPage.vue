@@ -189,13 +189,15 @@ const openWorkItems = computed(() => openWork(summary.value));
 
 const throughputSets = computed(() => throughputDatasets(throughput.value));
 
-const throughputCollection = computed(() => {
+// #1876: formato do @chatwoot/viz (categories/series); o antigo labels/datasets deixava o gráfico vazio desde o #15458.
+const throughputChart = computed(() => {
   const series = throughput.value?.series || [];
   return {
-    labels: series.map(point => point.date),
-    datasets: throughputSets.value.map(set => ({
+    categories: series.map(point => point.date),
+    series: throughputSets.value.map(set => ({
+      id: set.key,
       label: t(`CRM_KANBAN.DASHBOARD.THROUGHPUT.${set.labelKey}`),
-      backgroundColor: set.color,
+      color: set.color,
       data: series.map(point => point[set.key] || 0),
     })),
   };
@@ -846,7 +848,11 @@ onMounted(async () => {
           {{ t('CRM_KANBAN.DASHBOARD.THROUGHPUT.EMPTY') }}
         </p>
         <div v-else class="h-64">
-          <BarChart :collection="throughputCollection" />
+          <BarChart
+            :data="throughputChart"
+            :height="232"
+            :aria-label="t('CRM_KANBAN.DASHBOARD.THROUGHPUT.TITLE')"
+          />
         </div>
       </section>
 
