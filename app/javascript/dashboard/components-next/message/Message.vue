@@ -4,6 +4,7 @@ import { useTimeoutFn } from '@vueuse/core';
 import { provideMessageContext } from './provider.js';
 import { useTrack } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import { emitter } from 'shared/helpers/mitt';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
@@ -557,6 +558,9 @@ const payloadForContextMenu = computed(() => {
   };
 });
 
+// Quem tem cargo só apaga com a chave (#1893); administrador e agente sem cargo seguem apagando.
+const canDeleteMessage = useCanManage('conversation_message_delete');
+
 const allContextMenuOptions = computed(() => {
   const hasText = !!props.content;
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
@@ -571,7 +575,8 @@ const allContextMenuOptions = computed(() => {
     delete:
       (hasText || hasAttachments) &&
       !isFailedOrProcessing &&
-      !isMessageDeleted.value,
+      !isMessageDeleted.value &&
+      canDeleteMessage.value,
     cannedResponse: isOutgoing && hasText && !isMessageDeleted.value,
     copyLink: !isFailedOrProcessing,
     translate: !isFailedOrProcessing && !isMessageDeleted.value && hasText,

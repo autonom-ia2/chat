@@ -72,7 +72,8 @@
       "ATTRIBUTE_MANAGE": "Edit custom attributes",
       "MACRO_MANAGE": "Edit team macros",
       "SLA_MANAGE": "Edit SLA policies",
-      "CONVERSATION_VIEW": "Reads the other conversations of the inbox"
+      "CONVERSATION_VIEW": "Reads the other conversations of the inbox",
+      "CONVERSATION_MESSAGE_DELETE": "Delete messages"
     },
     "MATRIX": {
       "GROUPS": {
@@ -278,6 +279,7 @@
       "CRM_ADMIN": "Turns on everything above, plus CRM SLA and integration tokens.",
       "PROSPECTING_VIEW_ALL_SEARCHES": "Without this, they only see their own searches.",
       "CONVERSATION_VIEW": "Also reads the inbox conversations they do not handle, without replying.",
+      "CONVERSATION_MESSAGE_DELETE": "Deletes messages in the conversations they handle. The attachment is removed and the message shows as deleted.",
       "CONTACT_EXPORT": "Downloads the contact base as a spreadsheet.",
       "CONTACT_DELETE": "Deletes contacts and companies, one by one or in bulk."
     },

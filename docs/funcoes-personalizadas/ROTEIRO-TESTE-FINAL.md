@@ -91,6 +91,15 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
    - num cartão de contato recebido pelo WhatsApp, não aparecem **Salvar contato** nem **Conversar**.
 4. Volte a função para **Ver** em Contatos. Tudo volta: lista, ficha completa, busca, **Nova conversa** e filtro de empresa no Kanban.
 
+## Teste 9: apagar mensagem (#1893)
+
+1. Edite a função. Em **Conversas**, deixe **Atender** e **Só as próprias**, sem ligar **Apagar mensagens**. Salve.
+2. Na janela anônima, abra uma conversa de teste atribuída à pessoa. No menu da mensagem (botão direito ou os três pontos), **Apagar** não aparece. Responder, copiar e os outros itens seguem lá.
+3. Volte à função. Em **Ajustes finos** de Conversas, ligue **Apagar mensagens** (pede confirmação) e salve. Na janela anônima, recarregue: **Apagar** aparece e apaga. Use uma mensagem enviada só para o teste.
+4. Troque Conversas para **Todas**: o ajuste **Apagar mensagens** continua visível e ligado. Troque para **Só olha**: o ajuste some e, ao voltar para **Atender**, vem desligado.
+5. Com uma pessoa sem função (agente comum), **Apagar** segue aparecendo como antes.
+6. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha alguma das três chaves de atender conversa antes do deploy tem `conversation_message_delete` depois; quem tinha só `conversation_view` não ganhou.
+
 ## No fim (limpeza)
 
 1. Remova a pessoa de teste em **Configurações → Usuários**, para não contar no plano.

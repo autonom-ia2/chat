@@ -22,6 +22,8 @@
 # - 'conversation_participating_manage': Can manage conversations they are participating in (assigned to or a participant).
 # - 'conversation_view': Can read every conversation of their inboxes (messages and notes) without operating on them.
 #   Writes keep requiring the trio above (#1800).
+# - 'conversation_message_delete': Can delete messages in the conversations they operate (#1893). Agents without a
+#   custom role keep deleting as before.
 # - 'contact_manage': Can manage contacts.
 # - 'report_manage': Can manage reports.
 # - 'knowledge_base_manage': Can manage knowledge base portals.
@@ -68,6 +70,7 @@ class CustomRole < ApplicationRecord
     conversation_unassigned_manage
     conversation_participating_manage
     conversation_view
+    conversation_message_delete
     contact_manage
     report_manage
     knowledge_base_manage

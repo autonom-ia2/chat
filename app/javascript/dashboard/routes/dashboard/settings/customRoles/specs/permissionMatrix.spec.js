@@ -200,6 +200,64 @@ describe('permissionMatrix', () => {
     });
   });
 
+  describe('conversas: apagar mensagens (#1893)', () => {
+    const conversations = moduleByKey('CONVERSATIONS');
+    const DELETE = 'conversation_message_delete';
+
+    it('aparece para quem atende as próprias ou todas, e não para quem só lê', () => {
+      expect(
+        visibleExtras(conversations, ['conversation_participating_manage'])
+      ).toContain(DELETE);
+      expect(
+        visibleExtras(
+          conversations,
+          setLevel(conversations, CONVERSATION_LEVELS.ALL, [])
+        )
+      ).toEqual([DELETE]);
+      expect(visibleExtras(conversations, ['conversation_view'])).toEqual([]);
+    });
+
+    it('atender não liga a chave sozinho', () => {
+      expect(setLevel(conversations, LEVELS.MANAGE, [])).not.toContain(DELETE);
+      expect(
+        setLevel(conversations, CONVERSATION_LEVELS.ALL, [])
+      ).not.toContain(DELETE);
+    });
+
+    it('trocar entre as próprias e todas mantém a chave', () => {
+      const all = [
+        ...setLevel(conversations, CONVERSATION_LEVELS.ALL, []),
+        DELETE,
+      ];
+      const limited = setLevel(conversations, CONVERSATION_LEVELS.LIMITED, all);
+
+      expect(limited).toContain(DELETE);
+      expect(
+        setLevel(conversations, CONVERSATION_LEVELS.ALL, limited)
+      ).toContain(DELETE);
+    });
+
+    it('só ler ou sem acesso tira a chave', () => {
+      const permissions = ['conversation_participating_manage', DELETE];
+
+      expect(
+        setLevel(conversations, CONVERSATION_LEVELS.VIEW, permissions)
+      ).toEqual(['conversation_view']);
+      expect(
+        setLevel(conversations, CONVERSATION_LEVELS.NONE, permissions)
+      ).toEqual([]);
+    });
+
+    it('desligar a chave mantém o alcance e ela é sensível', () => {
+      const permissions = ['conversation_participating_manage', DELETE];
+
+      expect(toggleExtra(conversations, DELETE, permissions)).toEqual([
+        'conversation_participating_manage',
+      ]);
+      expect(sensitiveExtrasOn(permissions)).toEqual([DELETE]);
+    });
+  });
+
   describe('crm', () => {
     const crm = moduleByKey('CRM');
 

@@ -72,7 +72,8 @@
       "ATTRIBUTE_MANAGE": "Editar atributos personalizados",
       "MACRO_MANAGE": "Editar macros da equipe",
       "SLA_MANAGE": "Editar políticas de SLA",
-      "CONVERSATION_VIEW": "Lê as outras conversas da caixa"
+      "CONVERSATION_VIEW": "Lê as outras conversas da caixa",
+      "CONVERSATION_MESSAGE_DELETE": "Apagar mensagens"
     },
     "MATRIX": {
       "GROUPS": {
@@ -278,6 +279,7 @@
       "CRM_ADMIN": "Liga tudo acima, o SLA do CRM e os tokens de integração.",
       "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas.",
       "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder.",
+      "CONVERSATION_MESSAGE_DELETE": "Apaga mensagens das conversas que atende. O anexo some e a mensagem fica como apagada.",
       "CONTACT_EXPORT": "Baixa a base de contatos numa planilha.",
       "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez."
     },

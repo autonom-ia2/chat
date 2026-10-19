@@ -16,6 +16,8 @@ const CONVERSATION_ALL = 'conversation_manage';
 const CONVERSATION_UNASSIGNED = 'conversation_unassigned_manage';
 const CONVERSATION_PARTICIPATING = 'conversation_participating_manage';
 const CONVERSATION_VIEW = 'conversation_view';
+// Apagar mensagem é chave própria (#1893): só para quem atende, nas próprias ou em todas.
+const CONVERSATION_MESSAGE_DELETE = 'conversation_message_delete';
 const CONVERSATION_KEYS = [
   CONVERSATION_ALL,
   CONVERSATION_UNASSIGNED,
@@ -41,6 +43,7 @@ export const SENSITIVE_EXTRAS = [
   CRM_ADMIN,
   'contact_export',
   'contact_delete',
+  CONVERSATION_MESSAGE_DELETE,
 ];
 
 export const MODULE_GROUPS = [
@@ -55,6 +58,7 @@ export const MODULE_GROUPS = [
           CONVERSATION_UNASSIGNED,
           CONVERSATION_PARTICIPATING,
           CONVERSATION_VIEW,
+          CONVERSATION_MESSAGE_DELETE,
         ],
       },
       {
@@ -307,7 +311,10 @@ const setConversationLevel = (level, permissions) => {
     CONVERSATION_VIEW,
   ]);
   if (level === CONVERSATION_LEVELS.ALL) return [...rest, ...CONVERSATION_KEYS];
-  if (level === CONVERSATION_LEVELS.VIEW) return [...rest, CONVERSATION_VIEW];
+  // Quem deixa de atender deixa de apagar mensagens.
+  const notOperating = withoutKeys(rest, [CONVERSATION_MESSAGE_DELETE]);
+  if (level === CONVERSATION_LEVELS.VIEW)
+    return [...notOperating, CONVERSATION_VIEW];
   if (level === CONVERSATION_LEVELS.LIMITED || level === LEVELS.MANAGE) {
     if (
       isConversationManaging(getLevel({ type: 'conversations' }, permissions))
@@ -323,7 +330,7 @@ const setConversationLevel = (level, permissions) => {
       ...(keepsReading ? [CONVERSATION_VIEW] : []),
     ];
   }
-  return rest;
+  return notOperating;
 };
 
 const setCrmLevel = (module, level, permissions) => {
@@ -354,8 +361,12 @@ export const setLevel = (module, level, permissions) => {
 export const visibleExtras = (module, permissions) => {
   const level = getLevel(module, permissions);
   if (!module.extras || level === LEVELS.NONE) return [];
-  if (module.type === 'conversations')
-    return level === CONVERSATION_LEVELS.LIMITED ? module.extras : [];
+  if (module.type === 'conversations') {
+    if (level === CONVERSATION_LEVELS.LIMITED) return module.extras;
+    return level === CONVERSATION_LEVELS.ALL
+      ? [CONVERSATION_MESSAGE_DELETE]
+      : [];
+  }
   // Editing cards already includes moving them.
   if (level === LEVELS.MANAGE)
     return module.extras.filter(key => key !== CRM_MOVE_CARDS);
