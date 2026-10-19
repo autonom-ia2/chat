@@ -1,7 +1,9 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { SINAIS } from './modeloPronto';
+import { htmlDePrevia } from 'dashboard/components-next/conversa-canal/email/modeloDeEmail';
+import { remetenteDoEmail } from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
 
 // #1459 — um e-mail como cartão: de quem, assunto e corpo. Serve à prévia e à
 // confirmação. O editor entrega o corpo com marcação de formatação; aqui ele
@@ -14,6 +16,10 @@ const props = defineProps({
   corpo: { type: String, default: '' },
   // O que mostrar, apagado, enquanto o corpo está vazio.
   fantasma: { type: String, default: '' },
+  // #1809: o modelo de e-mail, como o cliente vai ver (sem script, links sem clique).
+  modeloHtml: { type: String, default: '' },
+  // #1809: o e-mail citado no fim (histórico ao continuar a conversa), do store.
+  historico: { type: Object, default: null },
 });
 
 const P = 'NOVA_CONVERSA.PREVIA';
@@ -23,6 +29,32 @@ const texto = computed(() => getPlainText(props.corpo).trim());
 const enderecoEntreParenteses = computed(
   () => `${SINAIS.abreParenteses}${props.endereco}${SINAIS.fechaParenteses}`
 );
+
+const ALTURA_MAXIMA = 520;
+const moldura = useTemplateRef('moldura');
+const altura = ref(320);
+const modeloSemClique = computed(() => htmlDePrevia(props.modeloHtml));
+const medir = () => {
+  const total =
+    moldura.value?.contentDocument?.documentElement?.scrollHeight || 0;
+  if (total) altura.value = Math.min(ALTURA_MAXIMA, total);
+};
+
+// Quem escreveu o e-mail citado e o texto dele, como o cliente vê no fim do e-mail.
+const quemCitou = computed(
+  () =>
+    remetenteDoEmail({
+      contentAttributes: { email: props.historico?.content_attributes?.email },
+      sender: props.historico?.sender,
+      recebido: true,
+    }).nome
+);
+const textoCitado = computed(() => {
+  const email = props.historico?.content_attributes?.email || {};
+  return String(
+    email.text_content?.full || props.historico?.content || ''
+  ).trim();
+});
 </script>
 
 <template>
@@ -60,7 +92,32 @@ const enderecoEntreParenteses = computed(
       class="mb-0 min-h-24 whitespace-pre-wrap break-words p-4 text-sm leading-relaxed"
       :class="texto ? 'text-n-slate-12' : 'text-n-slate-10'"
     >
-      {{ texto || fantasma }}
+      {{ texto || (modeloHtml ? '' : fantasma) }}
     </p>
+    <iframe
+      v-if="modeloHtml"
+      ref="moldura"
+      :srcdoc="modeloSemClique"
+      sandbox="allow-same-origin"
+      class="block w-full rounded-b-2xl border-0 border-t border-solid border-n-weak bg-white"
+      :style="{ height: `${altura}px` }"
+      :title="$t('CONVERSA_CANAL.EMAIL.PREVIA_DO_MODELO')"
+      data-previa-do-modelo-na-gaveta
+      @load="medir"
+    />
+    <div
+      v-if="historico"
+      class="border-t border-n-weak p-4 text-sm"
+      data-previa-do-historico
+    >
+      <p class="mb-2 text-n-slate-11">
+        {{ $t(`${P}.HISTORICO`, { nome: quemCitou }) }}
+      </p>
+      <p
+        class="mb-0 max-h-48 overflow-hidden whitespace-pre-wrap break-words border-s-2 border-n-slate-6 ps-3 text-n-slate-11"
+      >
+        {{ textoCitado }}
+      </p>
+    </div>
   </article>
 </template>

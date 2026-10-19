@@ -79,6 +79,8 @@ const props = defineProps({
   modelValue: { type: String, default: '' },
   editorId: { type: String, default: '' },
   placeholder: { type: String, default: '' },
+  // #1786: só a resposta de e-mail nova redesenha o editor quando o texto do campo muda.
+  reloadOnPlaceholderChange: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
   isPrivate: { type: Boolean, default: false },
   enableSuggestions: { type: Boolean, default: true },
@@ -882,6 +884,15 @@ watch(
   computed(() => props.isPrivate),
   () => {
     reloadState(props.modelValue);
+  }
+);
+
+// #1786: o texto do campo pode mudar depois de abrir (idioma carregado, chave da conta,
+// e-mail com a cara do Gmail); o ProseMirror só o lê ao montar o estado.
+watch(
+  computed(() => props.placeholder),
+  () => {
+    if (props.reloadOnPlaceholderChange) reloadState(props.modelValue);
   }
 );
 

@@ -427,6 +427,16 @@
     ],
     "sem_corpo": true
   },
+  "DELETE conversa_canal/pastas_do_email/:conversation_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#destroy",
+    "modelo": "ConversaCanal::PastaDoEmail",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:26",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
+    ],
+    "sem_corpo": true
+  },
   "DELETE conversations/:conversation_id/draft_messages": {
     "completo": true,
     "controller": "api/v1/accounts/conversations/draft_messages#destroy",
@@ -4656,6 +4666,19 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH conversa_canal/pastas_do_email/:conversation_id": {
+    "campos": {
+      "pasta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:37",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
     ],
     "sem_corpo": false
   },
@@ -13411,6 +13434,21 @@
     ],
     "sem_corpo": false
   },
+  "POST conversa_canal/ditados": {
+    "campos": {
+      "audio": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/conversa_canal/ditados#create",
+    "motivos": [
+      "leitura crua sem tipo: audio (repassada a ConversaCanal::Ditado.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/ditados_controller.rb:15",
+      "app/controllers/api/v1/accounts/conversa_canal/ditados_controller.rb:16"
+    ],
+    "sem_corpo": false
+  },
   "POST conversa_canal/encaminhamentos": {
     "campos": {
       "conversation_id": {},
@@ -13633,7 +13671,7 @@
     "controller": "api/v1/accounts/conversations/messages#translate",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:46",
+      "app/controllers/concerns/conversa_canal/traducao_em_segundo_plano.rb:8",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
@@ -22973,6 +23011,19 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
+    ],
+    "sem_corpo": false
+  },
+  "PUT conversa_canal/pastas_do_email/:conversation_id": {
+    "campos": {
+      "pasta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:37",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
     ],
     "sem_corpo": false
   },

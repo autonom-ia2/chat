@@ -20,7 +20,9 @@
       "NADA_CRIAR": "Ninguém encontrado. Você pode criar o contato agora.",
       "CRIAR": "Criar contato {valor}",
       "ERRO": "Não deu para procurar agora. Tente de novo.",
-      "ERRO_CRIAR": "Não deu para criar o contato. Tente de novo."
+      "ERRO_CRIAR": "Não deu para criar o contato. Tente de novo.",
+      "NOME_DO_CONTATO": "Nome do contato",
+      "NOME_EXEMPLO": "Por exemplo: Marina Costa"
     },
     "POR_ONDE": {
       "TITULO": "Por onde",
@@ -78,6 +80,7 @@
       "MAIS_OPCOES": "Mais opções",
       "MENOS_OPCOES": "Menos opções",
       "ANEXAR": "Anexar arquivo",
+      "FERRAMENTAS": "Ferramentas do e-mail",
       "COMPLETE": "Complete a mensagem",
       "CAMPO_ROTULO": "O que entra no lugar de ⟨{campo}⟩",
       "CAMPO_FALADO": "campo {campo}",
@@ -91,7 +94,8 @@
       "AGORA": "agora",
       "DE": "De",
       "ASSUNTO": "Assunto",
-      "SEM_ASSUNTO": "Sem assunto"
+      "SEM_ASSUNTO": "Sem assunto",
+      "HISTORICO": "{nome} escreveu:"
     },
     "RODAPE": {
       "CANCELAR": "Cancelar",
@@ -123,6 +127,25 @@
       "TITULO": "A mensagem não foi enviada",
       "PADRAO": "Nada do que você escreveu se perdeu. Tente enviar de novo."
     },
-    "TEXTO_BUSCA": "Procure pelo nome, telefone ou e-mail."
+    "TEXTO_BUSCA": "Procure pelo nome, telefone ou e-mail.",
+    "CONTATO_NOVO": {
+      "TITULO": "Contato novo",
+      "NOME": "Nome",
+      "NOME_EXEMPLO": "Por exemplo: Marina Costa",
+      "EMAIL": "E-mail",
+      "EMAIL_EXEMPLO": "nome{'@'}empresa.com.br",
+      "TELEFONE": "Telefone (opcional)",
+      "FALTA_NOME": "Escreva o nome do contato.",
+      "FALTA_EMAIL": "Escreva o e-mail: é para ele que o e-mail vai.",
+      "EMAIL_INVALIDO": "Confira o e-mail: parece incompleto.",
+      "TELEFONE_INVALIDO": "Confira o telefone: use o DDD, como (11) 98765-4321.",
+      "FALTA_CONTATO": "Escreva um e-mail ou um telefone.",
+      "CRIAR": "Criar contato e continuar",
+      "SUBTITULO": "Fica salvo nos Contatos e já entra nesta conversa.",
+      "EMAIL_OPCIONAL": "E-mail (opcional)",
+      "EMAIL_DICA": "É para este endereço que o e-mail vai.",
+      "TELEFONE_DICA": "Ajuda quando a pessoa também fala pelo WhatsApp.",
+      "PAIS": "País"
+    }
   }
 }
