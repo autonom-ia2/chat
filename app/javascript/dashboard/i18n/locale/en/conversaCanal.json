@@ -28,6 +28,7 @@
       "CONTATO": "Contact",
       "BOTAO_DE_LINK": "Link button",
       "OPCOES": "Reply options",
+      "ENQUETE": "Poll",
       "FORMULARIO": "Form",
       "DOCUMENTO": "Document",
       "FOTOS_E_VIDEOS": "Photos & videos",
@@ -61,7 +62,11 @@
         "nomeDoContatoLongo": "The name can have up to 100 characters.",
         "textoDoBotaoLongo": "The button text can have up to 30 characters.",
         "cabecalho": "Write the header.",
-        "cabecalhoLongo": "The header can have up to 60 characters."
+        "cabecalhoLongo": "The header can have up to 60 characters.",
+        "pergunta": "Write the question.",
+        "perguntaLonga": "The question can have up to 255 characters.",
+        "opcoesDaEnqueteDemais": "Use at most 12 options.",
+        "opcaoDaEnqueteLonga": "Each option can have up to 100 characters."
       },
       "BOTAO_DE_LINK": {
         "TITULO": "Send a link button",
@@ -83,6 +88,15 @@
         "NOME_DA_LISTA": "List button name",
         "NOME_DA_LISTA_AJUDA": "With more than 3 options, the customer taps this button to see the list.",
         "LISTA_PADRAO": "See options"
+      },
+      "ENQUETE": {
+        "TITULO": "Send a poll",
+        "AJUDA": "The customer votes with one tap inside WhatsApp. The votes show up here.",
+        "AJUDA_TEXTO": "This conversation has no WhatsApp poll: the customer gets the question and the numbered options as text, and answers by typing.",
+        "PERGUNTA": "Question",
+        "OPCOES": "Options",
+        "MAIS_UMA": "One more option",
+        "VARIAS_RESPOSTAS": "Allow more than one answer"
       },
       "LOCALIZACAO": {
         "TITULO": "Send a location",
@@ -133,7 +147,13 @@
       "BOTAO": "Button",
       "ENVIAR_LOCALIZACAO": "Send location",
       "LISTA": "See options",
-      "VIRA_TEXTO": "On this number the customer gets it as text, like this:"
+      "VIRA_TEXTO": "On this number the customer gets it as text, like this:",
+      "SUA_PERGUNTA": "Your question shows here",
+      "ENQUETE_UMA": "Select one option",
+      "ENQUETE_VARIAS": "Select one or more options",
+      "ENQUETE_VIRA_TEXTO": "No WhatsApp poll in this conversation. The customer gets it as text, like this:",
+      "ENQUETE_INCOMPLETA": "Write the question and at least 2 options to see how it looks.",
+      "ENQUETE_AVISO_VARIAS": "You can choose more than one"
     },
     "JANELA_FECHADA": {
       "TEXTO": "It has been 24 hours since the customer last wrote. To talk to them again, send a template.",

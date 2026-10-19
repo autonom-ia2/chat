@@ -25,10 +25,15 @@ class RichMessages::Types::Poll
   ID_REPEATED = 'Duas opções da enquete têm o mesmo identificador.'.freeze
   TITLE_REPEATED = 'Duas opções da enquete têm o mesmo título.'.freeze
   MULTIPLE_INVALID = 'O campo multiple da enquete precisa ser verdadeiro ou falso.'.freeze
+  # Na versão em texto, o aviso de que dá para marcar mais de uma. Vai ao cliente, então sai no idioma da conta
+  # (config/locales/rich_messages.*.yml); o painel mostra o mesmo texto na prévia (montarMensagem.js).
+  MULTIPLE_HINT_KEY = 'rich_messages.poll.multiple_hint'.freeze
 
-  def initialize(payload)
+  # locale: o idioma da conta (passado por Waha::RichNative::PollGate#build); nil = o idioma corrente.
+  def initialize(payload, locale: nil)
     @options = payload['options']
     @multiple = payload['multiple']
+    @locale = locale
   end
 
   def error_for(body)
@@ -43,12 +48,18 @@ class RichMessages::Types::Poll
     { type: 'text', text: { body: [body.presence, fallback_text(body)].compact.join("\n\n"), preview_url: false } }
   end
 
-  # As opções numeradas, uma por linha. Sem palavras: serve a qualquer idioma.
+  # As opções numeradas, uma por linha; com `multiple`, a linha do aviso (multiple_hint) no fim.
   def fallback_text(_body)
-    @options.map.with_index(1) { |option, number| "#{number}. #{option['title']}" }.join("\n")
+    lines = @options.map.with_index(1) { |option, number| "#{number}. #{option['title']}" }
+    lines << multiple_hint if @multiple == true
+    lines.join("\n")
   end
 
   private
+
+  def multiple_hint
+    I18n.t(MULTIPLE_HINT_KEY, locale: @locale.presence || I18n.locale)
+  end
 
   def options_count?
     @options.is_a?(Array) && @options.size.between?(OPTIONS_MIN, OPTIONS_MAX)
