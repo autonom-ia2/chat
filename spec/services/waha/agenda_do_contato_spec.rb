@@ -24,12 +24,27 @@ describe Waha::AgendaDoContato do
 
   after { Redis::Alfred.delete(chave) }
 
-  it 'contato que o motor não conhece (404) conta como agenda vazia e é salvo' do
+  it '404 do motor é falha, nunca agenda vazia: não salva por cima' do
     allow(client).to receive(:contact).and_raise(Waha::Client::NotFound, 'WAHA GET -> 404')
 
     garantir
 
-    expect(client).to have_received(:upsert_contact)
+    expect(client).not_to have_received(:upsert_contact)
+    expect(Redis::Alfred.get(chave)).to eq(described_class::FALHOU)
+  end
+
+  it 'Redis fora do ar ao gravar a falha não levanta' do
+    allow(client).to receive(:contact).and_raise(Waha::Client::Timeout, 'sem resposta')
+    allow(Redis::Alfred).to receive(:setex).and_raise(Redis::CannotConnectError)
+
+    expect { garantir }.not_to raise_error
+  end
+
+  it 'a_fazer? diz se ainda há o que decidir para este nome' do
+    na_agenda('')
+    agenda = described_class.new(client: client, session: 'sessao-1', contact: contact)
+
+    expect { agenda.garantir }.to change(agenda, :a_fazer?).from(true).to(false)
   end
 
   it 'depois de uma falha não tenta de novo a cada mensagem' do
@@ -41,24 +56,13 @@ describe Waha::AgendaDoContato do
     expect(Redis::Alfred.ttl(chave)).to be_between(1, described_class::FALHA_TTL)
   end
 
-  it 'a segunda mensagem ao mesmo contato espera a primeira decidir e não repete o motor' do
-    Redis::Alfred.set("#{chave}:trava", '1', nx: true, ex: 15)
-    allow(client).to receive(:contact)
-    allow(Kernel).to receive(:sleep) { Redis::Alfred.delete("#{chave}:trava") }
-
-    garantir
-
-    expect(Kernel).to have_received(:sleep).once
-    expect(client).not_to have_received(:contact)
-  end
-
-  it 'a marca no Redis não guarda o nome do contato' do
+  it 'a marca no Redis é um HMAC com a chave do app, sem o nome do contato' do
     na_agenda('')
 
     garantir
 
-    expect(Redis::Alfred.get(chave)).not_to include('Lays')
-    expect(Redis::Alfred.get(chave)).not_to include(Digest::SHA256.hexdigest('Lays Ferreira')[0, 16])
+    hmac = OpenSSL::HMAC.hexdigest('SHA256', Rails.application.secret_key_base, 'Lays Ferreira')[0, 32]
+    expect(Redis::Alfred.get(chave)).to eq("s:#{hmac}")
   end
 
   it 'salva pelo número quando a agenda não tem o contato, dividindo nome e sobrenome' do

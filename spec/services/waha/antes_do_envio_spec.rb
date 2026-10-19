@@ -40,6 +40,14 @@ describe Waha::AntesDoEnvio do
     create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :incoming, content: 'Olá', created_at: 1.minute.ago)
     Redis::Alfred.delete('waha:agenda:5511888880000:5511991177389@c.us')
     Redis::Alfred.scan_each(match: 'conversa_canal:leitura:mensagem:*') { |key| Redis::Alfred.delete(key) }
+    Redis::Alfred.delete("conversa_canal:envio_em_ordem:#{conversa.id}")
+  end
+
+  it 'o webhook sai sempre, mesmo quando a mensagem não é da caixa WAHA' do
+    saiu = false
+    described_class.em_ordem({ event: 'message_created', id: 0, message_type: 'outgoing' }) { saiu = true }
+
+    expect(saiu).to be(true)
   end
 
   it 'salva o contato e marca a conversa como lida antes de o webhook levar a resposta ao conector' do
@@ -59,7 +67,7 @@ describe Waha::AntesDoEnvio do
   end
 
   it 'campanha salva o contato mas não marca como lida' do
-    described_class.para_payload(payload_de(resposta(additional_attributes: { 'whatsapp_api_campaign_id' => 7 })))
+    described_class.em_ordem(payload_de(resposta(additional_attributes: { 'whatsapp_api_campaign_id' => 7 }))) { nil }
 
     expect(WebMock).to have_requested(:put, salvar_url)
     expect(WebMock).not_to have_requested(:post, seen_url)
@@ -68,7 +76,7 @@ describe Waha::AntesDoEnvio do
   it 'sem a flag não chama o motor' do
     account.disable_features!('whatsapp_agenda_do_contato')
 
-    described_class.para_payload(payload_de(resposta))
+    described_class.em_ordem(payload_de(resposta)) { nil }
 
     expect(WebMock).not_to have_requested(:get, contato_url)
     expect(WebMock).not_to have_requested(:post, seen_url)
@@ -76,9 +84,9 @@ describe Waha::AntesDoEnvio do
 
   it 'ignora nota privada, mensagem recebida e outros eventos' do
     message = resposta
-    described_class.para_payload(payload_de(message).merge(private: true))
-    described_class.para_payload(payload_de(message).merge(message_type: 'incoming'))
-    described_class.para_payload(payload_de(message).merge(event: 'message_updated'))
+    described_class.em_ordem(payload_de(message).merge(private: true)) { nil }
+    described_class.em_ordem(payload_de(message).merge(message_type: 'incoming')) { nil }
+    described_class.em_ordem(payload_de(message).merge(event: 'message_updated')) { nil }
 
     expect(WebMock).not_to have_requested(:get, contato_url)
   end
@@ -100,7 +108,7 @@ describe Waha::AntesDoEnvio do
   it 'conversa de grupo não toca a agenda' do
     contato.update!(custom_attributes: { 'waha_whatsapp_chat_id' => '120363000000000000@g.us' })
 
-    described_class.para_payload(payload_de(resposta))
+    described_class.em_ordem(payload_de(resposta)) { nil }
 
     expect(WebMock).not_to have_requested(:get, contato_url)
   end
@@ -108,7 +116,7 @@ describe Waha::AntesDoEnvio do
   it 'sem a lida do #1702 (conversa_cara_do_canal), salva o contato mas não marca como lida' do
     account.disable_features!('conversa_cara_do_canal')
 
-    described_class.para_payload(payload_de(resposta))
+    described_class.em_ordem(payload_de(resposta)) { nil }
 
     expect(WebMock).to have_requested(:put, salvar_url)
     expect(WebMock).not_to have_requested(:post, seen_url)
