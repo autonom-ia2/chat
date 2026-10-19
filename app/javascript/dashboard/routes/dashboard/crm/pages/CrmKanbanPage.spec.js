@@ -121,6 +121,7 @@ const setGetters = ({
   role = 'administrator',
   keys,
   menuNovo = false,
+  agents = [],
 } = {}) => {
   Object.assign(storeGetters, {
     getCurrentRole: ref(role),
@@ -152,7 +153,7 @@ const setGetters = ({
     }),
     getCurrentAccountId: ref(1),
     'inboxes/getInboxes': ref(inboxes),
-    'agents/getAgents': ref([]),
+    'agents/getAgents': ref(agents),
     'teams/getTeams': ref([]),
     'accounts/isRTL': ref(false),
     'labels/getLabels': ref([]),
@@ -306,10 +307,25 @@ describe('CrmKanbanPage', () => {
     it('Kanban: pessoa que a tela não conhece não vira filtro', async () => {
       route.name = 'crm_kanban_index';
       route.query = { stale_days: '7', owner_id: '99' };
-      wrapper = await mountPage();
+      wrapper = await mountPage({
+        account: {
+          agents: [
+            { id: 1, name: 'Eu' },
+            { id: 2, name: 'Ana' },
+          ],
+        },
+      });
 
       expect(ultimoFiltro()).toMatchObject({ staleDays: '7', ownerId: '' });
       expect(wrapper.text()).not.toContain('CRM_KANBAN.FILTERS.OWNER');
+    });
+
+    it('Kanban: sem a equipe carregada, o dono do link fica', async () => {
+      route.name = 'crm_kanban_index';
+      route.query = { owner_id: '2' };
+      wrapper = await mountPage();
+
+      expect(ultimoFiltro()).toMatchObject({ ownerId: 2 });
     });
 
     it('Lista: ganhos do mês sem responsável, com o chip do mês', async () => {

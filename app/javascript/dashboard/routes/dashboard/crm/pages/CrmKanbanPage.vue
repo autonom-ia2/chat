@@ -898,6 +898,8 @@ const donoDoLinkPorConferir = ref(false);
 const conferirDonoDoLink = async () => {
   if (!donoDoLinkPorConferir.value) return;
   donoDoLinkPorConferir.value = false;
+  // Sem a equipe carregada não dá para julgar: fica o dono do link (o servidor só devolve o que a pessoa vê).
+  if (!agents.value.length) return;
   const { ownerId } = filters.value;
   const conhecido =
     String(ownerId) === String(currentUser.value?.id) ||
