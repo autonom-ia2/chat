@@ -614,8 +614,9 @@ module Autonomia
           message ? "#{email_autoria.aviso(message)}#{pergunta}" : pergunta
         end
 
+        # Própria do turno, não da moldura da equipe (HistoricoDaEquipe): o e-mail vale com ou sem a Fase 2.
         def email_autoria
-          equipe.autoria
+          @email_autoria ||= ::Crm::Email::Autoria.new(@conversation.account)
         end
 
         def last_incoming_message
