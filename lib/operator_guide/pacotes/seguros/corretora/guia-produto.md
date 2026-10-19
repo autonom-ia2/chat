@@ -478,14 +478,14 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-card`
 
-### Criar uma oportunidade pela ficha do contato
-- intent: "Como crio uma oportunidade para este contato?"; "Como levo o contato de Relacionamentos para o CRM?"
-- onde_fica: Sidebar > Relacionamentos > Contatos > abrir contato > Nova oportunidade
+### Criar um card pela ficha do contato
+- intent: "Como crio um card para este contato?"; "Como crio uma cotação para este contato?"; "Como levo o contato de Relacionamentos para o CRM?"
+- onde_fica: Sidebar > Relacionamentos > Contatos > abrir contato > Novo card
 - rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
 - gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: navegação de Relacionamentos e CRM habilitados; permissão de visualizar CRM e gerenciar oportunidades; acesso ao contato; funil com etapa disponível.
-- passos: Na ficha do contato, clique em **Nova oportunidade**. O CRM abre em outra aba com a pessoa e sua empresa cadastrada selecionadas. Preencha os dados do negócio e confirme em **Colocar no funil**. O card criado abre com o mesmo contato vinculado. **Voltar ao contato** retorna à ficha; se houver dados comerciais não salvos, confirme o descarte ou continue editando.
-- gotchas: a aba original e seu preenchimento não salvo permanecem abertos. A oportunidade usa o cadastro salvo, não alterações ainda não confirmadas na ficha. Abrir o formulário não cria nenhum registro. Contato indisponível mostra erro e permite tentar novamente ou cancelar, sem virar card avulso silenciosamente. Usuário somente leitura não vê a ação. Sem funil/etapa, selecione ou crie um disponível conforme suas permissões.
+- passos: Na ficha do contato, clique em **Novo card**. O CRM abre em outra aba com a pessoa e sua empresa cadastrada selecionadas. Preencha os dados do seguro e confirme em **Colocar no funil**. O card criado abre com o mesmo contato vinculado. **Voltar ao contato** retorna à ficha; se houver dados comerciais não salvos, confirme o descarte ou continue editando.
+- gotchas: a aba original e seu preenchimento não salvo permanecem abertos. O card usa o cadastro salvo, não alterações ainda não confirmadas na ficha. Abrir o formulário não cria nenhum registro. Contato indisponível mostra erro e permite tentar novamente ou cancelar, sem virar card avulso silenciosamente. Usuário somente leitura não vê a ação. Sem funil/etapa, selecione ou crie um disponível conforme suas permissões.
 - nav_target: `contacts_edit`
 
 ### Consultar oportunidades na ficha do contato
@@ -525,7 +525,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: permissão de gerenciar funis.
 - passos: Ao criar o funil, responda **Para que serve este funil?**. **Vender** é para conquistar um cliente novo: o card termina em Fechou o seguro ou Não fechou, tem valor, entra na meta do mês e pode avisar os Anúncios. **Atender** é para resolver algo para quem já é cliente: o card termina em Resolvido ou Cancelado, sem valor, sem meta e sem Anúncios. Em Vender, os modelos prontos são **Venda de seguro** e **Renovação** (termina em Renovou ou Não renovou). Em Atender: **Sinistro** e **Endosso** (terminam em Encerrado e Feito), e também **Suporte**, **Pós-venda**, **Cobrança** e **Agendamento**. Num funil que já existe, abra **Editar funil**; o primeiro cartão do resumo é **Para que serve**; clique em **Alterar**, escolha Vender ou Atender e salve.
-- gotchas: no modelo Cobrança o card termina em Pago ou Cancelado e mostra o valor a receber, o vencimento e "Prometeu pagar em"; num funil de Atender o Kanban mostra **Novo atendimento** em vez de Nova oportunidade e não mostra valor (só a Cobrança mostra o valor a receber); card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Seguro ativo e não faz o contato virar cliente); funis que já existiam: os que contavam como venda viraram Vender e os outros, Atender; nada muda sozinho.
+- gotchas: no modelo Cobrança o card termina em Pago ou Cancelado e mostra o valor a receber, o vencimento e "Prometeu pagar em"; num funil de Atender o Kanban mostra **Novo atendimento** em vez de Nova cotação e não mostra valor (só a Cobrança mostra o valor a receber); card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Seguro ativo e não faz o contato virar cliente); funis que já existiam: os que contavam como venda viraram Vender e os outros, Atender; nada muda sozinho.
 - nav_target: `crm_kanban_index`
 
 ### Criar follow-ups e lembretes no CRM
