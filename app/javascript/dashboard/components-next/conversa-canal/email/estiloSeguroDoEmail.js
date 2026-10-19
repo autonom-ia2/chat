@@ -1,10 +1,12 @@
-// Duas falhas do lettersanitizer 1.0.8 que o e-mail do remetente consegue provocar (#1884):
+// Falhas do lettersanitizer 1.0.8 que o CSS do remetente consegue provocar (#1891):
 // 1. CSS com "<" escapado (`\3c /style\3e`) volta como "</style>" de verdade quando o
-//    sanitizador regrava a folha. Lido de novo, o resto vira marcação (meta refresh,
-//    atributos on*), fora da lista do sanitizador.
-// 2. url() com "%" quebrado faz o decodeURI do sanitizador lançar, e o e-mail não abre.
-// Antes de sanitizar, as regras de CSS com esses defeitos saem (o resto do CSS fica). Depois,
-// por garantia, sai o que nunca pode estar no corpo. Lê a estrutura (CSSOM e DOM), sem regex.
+//    sanitizador regrava a folha (cssText do CSSOM). Lido de novo, o resto vira marcação.
+// 2. Ele só limpa as regras de estilo do 1º nível (e de um @media): o que vem aninhado mais
+//    fundo (@supports, @media dentro de @media, CSS aninhado) sai sem escopo nem filtro.
+// 3. Com a reescrita de endereços (moldura isolada, #1884), url() com "%" quebrado faz o
+//    decodeURI dele lançar, e o e-mail não abre: com `conferirUrls`, essas regras também saem.
+// Antes de sanitizar, as regras com esses defeitos saem; o resto do CSS fica. Lê a
+// estrutura (CSSOM e DOM), sem regex.
 
 const INICIO_DE_URL = 'url(';
 
@@ -30,31 +32,65 @@ const decodifica = endereco => {
 };
 
 // O texto já normalizado pelo navegador (cssText): é o que o sanitizador vai regravar.
-const cssSeguro = texto =>
-  !texto.includes('<') && urlsDoCss(texto.toLowerCase()).every(decodifica);
+// Dentro de <style>, só "</" fecha o bloco; "<" sozinho (`width < 600px`) é CSS válido.
+const FECHA_TAG = '</';
+const cssSeguro = (texto, conferirUrls) =>
+  !texto.includes(FECHA_TAG) &&
+  (!conferirUrls || urlsDoCss(texto.toLowerCase()).every(decodifica));
 
-const regrasSeguras = folha => {
+// Só o que o sanitizador sabe limpar: regra de estilo sem regra aninhada, ou @media só com
+// regras assim. O resto ele não descartaria por inteiro, e sairia sem escopo.
+const semAninhadas = regra => !regra.cssRules?.length;
+const regraLimpavel = regra => {
+  if (regra instanceof CSSStyleRule) return semAninhadas(regra);
+  if (regra instanceof CSSMediaRule) {
+    return [...regra.cssRules].every(
+      filha => filha instanceof CSSStyleRule && semAninhadas(filha)
+    );
+  }
+  return false;
+};
+
+const regrasSeguras = (folha, conferirUrls) => {
   try {
     return [...folha.cssRules]
+      .filter(regraLimpavel)
       .map(regra => regra.cssText)
-      .filter(cssSeguro)
+      .filter(texto => cssSeguro(texto, conferirUrls))
       .join('\n');
-  } catch {
+  } catch (erro) {
+    // Sem conferir, nenhuma regra passa: o e-mail sai sem o CSS dele, nunca com CSS sem filtro.
+    // eslint-disable-next-line no-console
+    console.error(
+      'E-mail: CSS do remetente não pôde ser conferido',
+      erro?.message
+    );
     return '';
   }
 };
 
-export const prepararEstilos = doc => {
+export const prepararEstilos = (doc, { conferirUrls = false } = {}) => {
   doc.querySelectorAll('style').forEach(estilo => {
     if (!estilo.sheet) {
       estilo.remove();
       return;
     }
-    estilo.textContent = regrasSeguras(estilo.sheet);
+    estilo.textContent = regrasSeguras(estilo.sheet, conferirUrls);
   });
   doc.querySelectorAll('[style]').forEach(elemento => {
-    if (!cssSeguro(elemento.style.cssText)) elemento.removeAttribute('style');
+    if (!cssSeguro(elemento.style.cssText, conferirUrls)) {
+      elemento.removeAttribute('style');
+    }
   });
+};
+
+// Na entrada do vue-letter, em todo lugar que mostra HTML de remetente: as regras de CSS
+// defeituosas saem antes de o sanitizador regravar a folha. O resto do e-mail fica igual.
+export const htmlComCssSeguro = html => {
+  if (!html) return html;
+  const doc = new DOMParser().parseFromString(String(html), 'text/html');
+  prepararEstilos(doc);
+  return doc.documentElement.outerHTML;
 };
 
 // Nunca no corpo do e-mail, venha de onde vier.

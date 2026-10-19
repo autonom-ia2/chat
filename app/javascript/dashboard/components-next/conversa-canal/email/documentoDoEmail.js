@@ -204,7 +204,7 @@ export const documentoIsolado = (html, { semRastreio = semMudar } = {}) => {
   const original = lerDocumento(html);
   const atributos = atributosDoCorpo(original, semRastreio);
   envolverOCorpo(original);
-  prepararEstilos(original);
+  prepararEstilos(original, { conferirUrls: true });
   const limpo = sanitize(comoTexto(original), '', {
     noWrapper: true,
     preserveCssPriority: true,
