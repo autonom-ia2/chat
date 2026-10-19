@@ -4,6 +4,7 @@
 // e-mail corporativo (Rodrigo, 18/10). "Ver" mostra o e-mail citado; "Não enviar o
 // histórico" tira só desta resposta, e "Pôr de volta" desfaz.
 // Encaminhar: o cartão "Mensagem encaminhada" com o original formatado, só leitura.
+// Os dois nascem fechados (Rodrigo, 19/10): "Ver" abre para quem quiser conferir.
 // O servidor monta o HTML de verdade (ConversaCanal::CitacaoDoEmail).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -25,7 +26,7 @@ const props = defineProps({
 const emit = defineEmits(['alternar']);
 
 const { t } = useI18n();
-const aberto = ref(props.tipo === 'encaminhado');
+const aberto = ref(false);
 
 const dados = computed(() => props.mensagem?.content_attributes?.email || {});
 const quem = computed(
@@ -36,9 +37,9 @@ const quem = computed(
       recebido: true,
     }).nome
 );
-const html = computed(
-  () => dados.value.html_content?.full || props.mensagem?.content || ''
-);
+// O servidor só preenche html_content quando o e-mail tem parte HTML (MailPresenter).
+// Sem ela, o corpo vai como texto, linha a linha: usado como HTML, virava uma linha só.
+const html = computed(() => dados.value.html_content?.full || '');
 const texto = computed(
   () => dados.value.text_content?.full || props.mensagem?.content || ''
 );
@@ -50,7 +51,7 @@ const CSS_PERMITIDO = [
 ];
 
 const LINK =
-  'inline-flex items-center gap-1 min-h-9 px-3 rounded-full text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand';
+  'inline-flex items-center gap-1 min-h-11 px-3 rounded-full text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand';
 </script>
 
 <template>

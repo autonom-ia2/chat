@@ -27,6 +27,7 @@ import NovaConversaPrevia from './NovaConversaPrevia.vue';
 import NovaConversaEnviada from './NovaConversaEnviada.vue';
 import NovaConversaErro from './NovaConversaErro.vue';
 import NovaConversaRodape from './NovaConversaRodape.vue';
+import NovaConversaMaisAbaixo from './NovaConversaMaisAbaixo.vue';
 import { useNovaConversaContato } from './useNovaConversaContato';
 import { useNovaConversa } from './useNovaConversa';
 import { useContinuarConversa } from './useContinuarConversa';
@@ -66,6 +67,8 @@ const tituloId = `nova-conversa-titulo-${useId()}`;
 const aberta = ref(false);
 const raiz = ref(null);
 const corpo = ref(null);
+const conteudoDoCorpo = ref(null);
+const idDoCorpo = useId();
 const blocoDaMensagem = ref(null);
 
 // #1809 (decisão do Rodrigo, 18/10): o cartão "Criar contato" com nome, e-mail e
@@ -376,114 +379,131 @@ useFixedPanelPresence(aberta);
           @fechar="fechar"
         />
 
-        <div ref="corpo" class="min-h-0 flex-1 overflow-y-auto">
-          <NovaConversaEnviada
-            v-if="tela === TELAS.ENVIADA"
-            :texto="enviada.texto"
-            :email="enviada.email"
-            :assunto="enviada.assunto"
-            :chave-do-canal="enviada.chaveDoCanal"
-            :caixa="enviada.caixa"
-            :endereco="enviada.endereco"
-            :numero="enviada.numero"
-          />
+        <!-- Mais conteúdo embaixo do que cabe: esmaecido e seta (NovaConversaMaisAbaixo). -->
+        <div class="relative flex min-h-0 flex-1 flex-col">
           <div
-            v-else
-            class="grid min-h-full grid-cols-[minmax(0,1fr)]"
-            :class="{
-              'lg:grid-cols-[minmax(0,1fr)_26rem]': tela === TELAS.ESCREVENDO,
-            }"
+            :id="idDoCorpo"
+            ref="corpo"
+            class="min-h-0 flex-1 overflow-y-auto"
           >
-            <main
-              class="flex min-w-0 flex-col gap-6 px-5 py-7 sm:px-8"
-              :class="{
-                'mx-auto w-full max-w-3xl': tela !== TELAS.ESCREVENDO,
-              }"
-            >
-              <NovaConversaErro v-if="erro" :texto="erro" />
+            <div ref="conteudoDoCorpo" class="grid min-h-full">
+              <NovaConversaEnviada
+                v-if="tela === TELAS.ENVIADA"
+                :texto="enviada.texto"
+                :email="enviada.email"
+                :assunto="enviada.assunto"
+                :chave-do-canal="enviada.chaveDoCanal"
+                :caixa="enviada.caixa"
+                :endereco="enviada.endereco"
+                :numero="enviada.numero"
+              />
+              <div
+                v-else
+                class="grid min-h-full grid-cols-[minmax(0,1fr)]"
+                :class="{
+                  'lg:grid-cols-[minmax(0,1fr)_26rem]':
+                    tela === TELAS.ESCREVENDO,
+                }"
+              >
+                <main
+                  class="flex min-w-0 flex-col gap-6 px-5 py-7 sm:px-8"
+                  :class="{
+                    'mx-auto w-full max-w-3xl': tela !== TELAS.ESCREVENDO,
+                  }"
+                >
+                  <NovaConversaErro v-if="erro" :texto="erro" />
 
-              <NovaConversaParaQuem
-                v-if="!contactId"
-                :contato="contato"
-                :termo="termo"
-                :resultados="resultados"
-                :buscando="buscando"
-                :erro-na-busca="erroNaBusca"
-                :criando="criando"
-                :erro-ao-criar="erroAoCriar"
-                :exige-email="caixaPreferidaEhEmail"
-                :contato-novo-completo="contatoNovoCompleto"
-                @buscar="mudarTermo"
-                @escolher="escolherContato"
-                @criar="criarContato"
-                @alterar="limparContato"
-              />
+                  <NovaConversaParaQuem
+                    v-if="!contactId"
+                    :contato="contato"
+                    :termo="termo"
+                    :resultados="resultados"
+                    :buscando="buscando"
+                    :erro-na-busca="erroNaBusca"
+                    :criando="criando"
+                    :erro-ao-criar="erroAoCriar"
+                    :exige-email="caixaPreferidaEhEmail"
+                    :contato-novo-completo="contatoNovoCompleto"
+                    @buscar="mudarTermo"
+                    @escolher="escolherContato"
+                    @criar="criarContato"
+                    @alterar="limparContato"
+                  />
 
-              <NovaConversaSemCanal
-                v-if="tela === TELAS.SEM_CANAL"
-                :nome="primeiroNome(nome)"
-                @completar="completarCadastro"
-              />
-              <NovaConversaPorOnde
-                v-else-if="contato"
-                v-model="canalId"
-                :canais="canais"
-                :carregando="carregandoCanais"
-                :erro="erroNosCanais"
-                @tentar="carregarCanais"
-              />
+                  <NovaConversaSemCanal
+                    v-if="tela === TELAS.SEM_CANAL"
+                    :nome="primeiroNome(nome)"
+                    @completar="completarCadastro"
+                  />
+                  <NovaConversaPorOnde
+                    v-else-if="contato"
+                    v-model="canalId"
+                    :canais="canais"
+                    :carregando="carregandoCanais"
+                    :erro="erroNosCanais"
+                    @tentar="carregarCanais"
+                  />
 
-              <NovaConversaOndeEntra
-                v-if="canal && conversaExistente"
-                v-model="escolha"
-                :conversa="conversaExistente"
-                :carregando="continuando && carregandoConversa"
-                :erro="continuando && erroNaConversa"
-                @tentar="carregarConversa"
-              />
+                  <NovaConversaOndeEntra
+                    v-if="canal && conversaExistente"
+                    v-model="escolha"
+                    :conversa="conversaExistente"
+                    :carregando="continuando && carregandoConversa"
+                    :erro="continuando && erroNaConversa"
+                    @tentar="carregarConversa"
+                  />
 
-              <NovaConversaMensagem
-                v-if="canal && !esperandoConversa"
-                ref="blocoDaMensagem"
-                :key="`${canal.id}-${tipo}`"
-                v-model:modo="form.modo"
-                v-model:mensagem="form.mensagem"
-                v-model:assunto="form.assunto"
-                v-model:cc="form.cc"
-                v-model:bcc="form.bcc"
-                v-model:anexos="form.anexos"
-                v-model:modelo="form.modelo"
-                :canal="canal"
-                :tipo="tipo"
-                :assinatura="assinatura"
-                :com-assinatura="comAssinatura"
-                :pode-criar-pronta="podeCriarPronta"
-                :continuando="continuando"
-                @update:campos-prontos="form.camposProntos = $event"
-                @update:texto-do-modelo="form.textoDoModelo = $event"
-                @enviar-pronta="enviarPronta"
-                @criar-pronta="criarPronta"
-              />
-            </main>
+                  <NovaConversaMensagem
+                    v-if="canal && !esperandoConversa"
+                    ref="blocoDaMensagem"
+                    :key="`${canal.id}-${tipo}`"
+                    v-model:modo="form.modo"
+                    v-model:mensagem="form.mensagem"
+                    v-model:assunto="form.assunto"
+                    v-model:cc="form.cc"
+                    v-model:bcc="form.bcc"
+                    v-model:anexos="form.anexos"
+                    v-model:modelo="form.modelo"
+                    :canal="canal"
+                    :tipo="tipo"
+                    :assinatura="assinatura"
+                    :com-assinatura="comAssinatura"
+                    :pode-criar-pronta="podeCriarPronta"
+                    :continuando="continuando"
+                    @update:campos-prontos="form.camposProntos = $event"
+                    @update:texto-do-modelo="form.textoDoModelo = $event"
+                    @enviar-pronta="enviarPronta"
+                    @criar-pronta="criarPronta"
+                  />
+                </main>
 
-            <aside
-              v-if="tela === TELAS.ESCREVENDO"
-              class="min-w-0 border-t border-n-weak bg-n-alpha-1 px-5 py-7 sm:px-8 lg:border-s lg:border-t-0 lg:px-5"
-            >
-              <NovaConversaPrevia
-                :nome="nome"
-                :email="tipo === TIPOS.EMAIL"
-                :texto="previa"
-                :modelo-html="
-                  tipo === TIPOS.EMAIL ? modeloDoEmail.htmlDaPrevia.value : ''
-                "
-                :assunto="assuntoNaPrevia"
-                :historico="comHistorico ? historico : null"
-                :remetente="canal?.name || ''"
-                :endereco-do-remetente="linhaDoCanal(canal)"
-              />
-            </aside>
+                <aside
+                  v-if="tela === TELAS.ESCREVENDO"
+                  class="min-w-0 border-t border-n-weak bg-n-alpha-1 px-5 py-7 sm:px-8 lg:border-s lg:border-t-0 lg:px-5"
+                >
+                  <NovaConversaPrevia
+                    :nome="nome"
+                    :email="tipo === TIPOS.EMAIL"
+                    :texto="previa"
+                    :modelo-html="
+                      tipo === TIPOS.EMAIL
+                        ? modeloDoEmail.htmlDaPrevia.value
+                        : ''
+                    "
+                    :assunto="assuntoNaPrevia"
+                    :historico="comHistorico ? historico : null"
+                    :remetente="canal?.name || ''"
+                    :endereco-do-remetente="linhaDoCanal(canal)"
+                  />
+                </aside>
+              </div>
+            </div>
           </div>
+          <NovaConversaMaisAbaixo
+            :caixa="corpo"
+            :conteudo="conteudoDoCorpo"
+            :controla="idDoCorpo"
+          />
         </div>
 
         <NovaConversaRodape

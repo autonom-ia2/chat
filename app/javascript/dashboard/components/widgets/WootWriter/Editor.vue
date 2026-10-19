@@ -81,6 +81,8 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   // #1786: só a resposta de e-mail nova redesenha o editor quando o texto do campo muda.
   reloadOnPlaceholderChange: { type: Boolean, default: false },
+  // #1809: botões da régua que este editor não mostra (o e-mail novo tira a imagem).
+  hiddenMenuOptions: { type: Array, default: () => [] },
   disabled: { type: Boolean, default: false },
   isPrivate: { type: Boolean, default: false },
   enableSuggestions: { type: Boolean, default: true },
@@ -164,7 +166,9 @@ const editorMenuOptions = computed(() => {
     captainTasksEnabled.value
   );
 
-  return formatting.menu;
+  return formatting.menu.filter(
+    option => !props.hiddenMenuOptions.includes(option)
+  );
 });
 
 const createState = (content, placeholder, plugins = [], methods = {}) => {
