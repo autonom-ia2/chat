@@ -38,6 +38,7 @@ O `prontos.spec.js` passa a montar cada pronto também com o texto composto da c
 
 - **Sem artigo antes do nome da empresa:** "com [nome_empresa]" e "Lembrete de [nome_empresa]". O artigo erra quando o nome é masculino (Agendamento e Modelos WhatsApp).
 - **O carrossel não promete cobertura:** os cartões de exemplo falam de cotar em várias seguradoras e de cotação sem compromisso, e não de guincho, carro reserva ou assistência 24 horas (revisão).
+- **Nome "mensagem aprovada"** (#1863, decisão do Rodrigo): o vazio de Modelos diz "para o WhatsApp aprovar", porque o que a pessoa cria ainda passa pela análise. As duas prévias do Híbrido do lote 3 (`INBOX_MGMT.WHATSAPP_HYBRID.ROUTING.PREVIEW.FOLLOW_UP_TEMPLATE` e `AGENT_TEMPLATE`) passam a dizer "mensagem aprovada" (só pt_BR; o en já dizia "approved template").
 - **Fora o exemplo de assunto do diálogo de e-mail** (`CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.SUBJECT_PLACEHOLDER`): nenhuma tela usa essa chave (tester).
 - **"Pessoas" no lugar de "clientes"** nos vazios de SMS, WhatsApp e Modelos: a vistoria e o seguro novo são para quem ainda não comprou. É a regra da Base de Clientes.
 - **"Valor do card" no lugar de "Valor do seguro":** o valor do card fica "Valor", porque o card pode ser de sinistro ou de parcela (decisão do lote 1).
@@ -96,7 +97,7 @@ O `prontos.spec.js` passa a montar cada pronto também com o texto composto da c
 
 | # | Chave | Geral | Corretora |
 |---|---|---|---|
-| 1 | `MODELOS_WHATSAPP.VAZIO.TITULO` | Crie sua primeira mensagem pronta para falar com clientes pelo WhatsApp. | Crie sua primeira mensagem pronta para avisar da parcela, da vistoria ou da renovação. |
+| 1 | `MODELOS_WHATSAPP.VAZIO.TITULO` | Crie sua primeira mensagem pronta para falar com clientes pelo WhatsApp. | Crie sua primeira mensagem para o WhatsApp aprovar e avise da parcela, da vistoria ou da renovação. |
 | 2 | `MODELOS_WHATSAPP.TEXTO.TIPO.aviso.PARA` | Pedido, horário, pagamento, entrega. Custa menos por envio. | Parcela, vistoria, apólice emitida, sinistro. Custa menos por envio. |
 | 3 | `MODELOS_WHATSAPP.TEXTO.TIPO.divulgacao.PARA` | Oferta, novidade, convite. Custa mais por envio. | Renovação, seguro novo, oferta. Custa mais por envio. |
 | 4 | `MODELOS_WHATSAPP.OBJETIVOS.boas_vindas.TEXTO` | Olá, [nome_cliente]! Aqui é da [nome_empresa]. Que bom ter você com a gente. Quando precisar de alguma coisa, é só mandar mensagem por aqui. | Olá, [nome_cliente]! Aqui é da [nome_empresa]. Que bom ter você com a gente. Quando precisar de cotação, segunda via ou ajuda com o seu seguro, é só mandar mensagem por aqui. |

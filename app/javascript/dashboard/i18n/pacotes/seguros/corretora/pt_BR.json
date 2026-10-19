@@ -833,9 +833,9 @@
       "ROUTING": {
         "PREVIEW": {
           "FOLLOW_UP_WEB": "O Carlos não responde a cotação há 2 dias. O lembrete do CRM sai pelo WhatsApp API às 10:00.",
-          "FOLLOW_UP_TEMPLATE": "O Carlos não responde a cotação há 2 dias. O lembrete do CRM sai como mensagem pronta pelo número oficial.",
+          "FOLLOW_UP_TEMPLATE": "O Carlos não responde a cotação há 2 dias. O lembrete do CRM sai como mensagem aprovada pelo número oficial.",
           "AGENT_WEB": "A Ana, da equipe, manda a segunda via para a Maria 3 dias depois. A resposta sai pelo WhatsApp API.",
-          "AGENT_TEMPLATE": "A Ana, da equipe, quer mandar a segunda via para a Maria 3 dias depois. Ela só consegue mandar uma mensagem pronta."
+          "AGENT_TEMPLATE": "A Ana, da equipe, quer mandar a segunda via para a Maria 3 dias depois. Ela só consegue mandar uma mensagem aprovada."
         },
         "WHO": {
           "ORIGINS": {
@@ -959,7 +959,7 @@
   },
   "MODELOS_WHATSAPP": {
     "VAZIO": {
-      "TITULO": "Crie sua primeira mensagem pronta para avisar da parcela, da vistoria ou da renovação."
+      "TITULO": "Crie sua primeira mensagem para o WhatsApp aprovar e avise da parcela, da vistoria ou da renovação."
     },
     "TEXTO": {
       "TIPO": {
