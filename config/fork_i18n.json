@@ -71,6 +71,9 @@
     },
     {
       "file": "sidebarFork.json"
+    },
+    {
+      "file": "telaInicial.json"
     }
   ],
   "pacotes": {
