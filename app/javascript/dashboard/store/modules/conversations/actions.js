@@ -14,6 +14,10 @@ import {
 import messageReadActions from './actions/messageReadActions';
 import messageTranslateActions from './actions/messageTranslateActions';
 import * as Sentry from '@sentry/vue';
+import {
+  filtrosDoEndereco,
+  naCaixa,
+} from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import {
   handleVoiceCallCreated,
@@ -86,12 +90,20 @@ const needsCrmFunnel = (state, conversationId) => {
 export const RELEITURA_AO_VIVO_MS = 2500;
 const filtroDoLinkNosParametros = params =>
   Boolean(params?.daIa || params?.esperandoMin);
-const filtroDoLinkAtivo = state =>
+// Ligado = a lista pediu com o filtro, sem filtro avançado por cima, e quem está na tela é a caixa com o link. Fora da
+// caixa (CRM, Contatos) os filtros guardados no store não fazem a lista ser relida por baixo.
+const filtroDoLinkAtivo = (state, rootState) =>
   filtroDoLinkNosParametros(state?.conversationFilters) &&
-  !state.appliedFilters?.length;
+  !state.appliedFilters?.length &&
+  naCaixa(rootState?.route) &&
+  filtroDoLinkNosParametros(filtrosDoEndereco(rootState.route));
 let releituraAgendada = null;
-const agendarReleituraDoFiltroDoLink = (state, dispatch) => {
-  if (!filtroDoLinkAtivo(state)) return;
+export const cancelarReleituraDoFiltroDoLink = () => {
+  clearTimeout(releituraAgendada);
+  releituraAgendada = null;
+};
+const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
+  if (!filtroDoLinkAtivo(state, rootState)) return;
   if (releituraAgendada) return;
   releituraAgendada = setTimeout(() => {
     releituraAgendada = null;
@@ -99,11 +111,55 @@ const agendarReleituraDoFiltroDoLink = (state, dispatch) => {
   }, RELEITURA_AO_VIVO_MS);
 };
 
+// Com mais de uma página carregada, só a primeira é lida de novo e somada à lista: o que entrou aparece no topo e a
+// rolagem fica onde está. A que saiu do filtro, nesse caso, sai quando a lista for aberta de novo.
+// eslint-disable-next-line no-unused-vars
+const semPagina = ({ page, ...lista }) => JSON.stringify(lista);
+const somarPrimeiraPaginaDoFiltroDoLink = async ({
+  commit,
+  dispatch,
+  state,
+}) => {
+  const params = { ...state.conversationFilters, page: 1 };
+  const request = await dispatch(
+    'conversationStats/onListRequestStarted',
+    params
+  );
+  const {
+    data: { data },
+  } = await ConversationApi.get(params);
+  // A lista mudou enquanto a leitura vinha (outro filtro, outra aba, outra caixa): a resposta é de outra lista.
+  if (semPagina(state.conversationFilters) !== semPagina(params)) return;
+  commit(types.SET_IDS_DO_FILTRO_DO_LINK, {
+    ids: data.payload.map(({ id }) => id),
+  });
+  commit(types.SET_ALL_CONVERSATION, data.payload);
+  dispatch('conversationStats/set', { meta: data.meta, request });
+};
+
 // actions
 const actions = {
-  // A primeira página de novo, no lugar da lista (o mesmo que a releitura ao reconectar faz).
-  releerFiltroDoLink: async ({ dispatch, state }) => {
-    if (!filtroDoLinkAtivo(state)) return;
+  // A primeira página de novo, no lugar da lista (o mesmo que a releitura ao reconectar faz). Com uma página chegando
+  // (a rolagem pedindo a próxima), espera ela chegar e tenta de novo, para não cancelar a rolagem.
+  releerFiltroDoLink: async contexto => {
+    const { dispatch, state, rootState, rootGetters } = contexto;
+    if (!filtroDoLinkAtivo(state, rootState)) return;
+    if (state.listLoadingStatus) {
+      agendarReleituraDoFiltroDoLink(contexto);
+      return;
+    }
+    const pagina = rootGetters['conversationPage/getCurrentPageFilter'](
+      state.conversationFilters.assigneeType
+    );
+    if (pagina > 1) {
+      try {
+        await somarPrimeiraPaginaDoFiltroDoLink(contexto);
+      } catch (error) {
+        // O próximo evento do websocket (ou a releitura de um minuto) tenta de novo.
+        Sentry.captureException(error);
+      }
+      return;
+    }
     await dispatch('updateChatListFilters', { page: 1, updatedWithin: null });
     await dispatch('fetchAllConversations', { replaceExisting: true });
   },
@@ -584,7 +640,7 @@ const actions = {
   },
 
   addConversation({ commit, state, dispatch, rootState }, conversation) {
-    agendarReleituraDoFiltroDoLink(state, dispatch);
+    agendarReleituraDoFiltroDoLink({ state, rootState, dispatch });
     const { currentInbox, appliedFilters } = state;
     const {
       inbox_id: inboxId,
@@ -621,8 +677,11 @@ const actions = {
     }
   },
 
-  updateConversation({ commit, dispatch, state, rootGetters }, conversation) {
-    agendarReleituraDoFiltroDoLink(state, dispatch);
+  updateConversation(
+    { commit, dispatch, state, rootState, rootGetters },
+    conversation
+  ) {
+    agendarReleituraDoFiltroDoLink({ state, rootState, dispatch });
     const sender = conversation.meta?.sender;
     const needsFunnel = needsCrmFunnel(state, conversation.id);
 

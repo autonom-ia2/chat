@@ -128,6 +128,18 @@ describe('useFiltrosDoLinkNaCaixa', () => {
     expect(filtros.daIa.value).toBe(false);
   });
 
+  it('clicar de novo na conversa aberta, na lista filtrada, mantém o filtro', async () => {
+    const { router, filtros } = await montar(
+      '/app/accounts/1/dashboard?da_ia=1'
+    );
+    await router.push('/app/accounts/1/conversations/7');
+
+    await router.push('/app/accounts/1/conversations/7');
+
+    expect(router.currentRoute.value.query).toEqual({ da_ia: '1' });
+    expect(filtros.daIa.value).toBe(true);
+  });
+
   describe('limparTudo (a seta "Limpar filtros")', () => {
     it('com o link no endereço, um clique tira o link e não relê à parte', async () => {
       const { router, filtros } = await montar(
@@ -139,6 +151,18 @@ describe('useFiltrosDoLinkNaCaixa', () => {
 
       expect(router.currentRoute.value.query).toEqual({});
       expect(reler).not.toHaveBeenCalled();
+    });
+
+    it('com link que a caixa não oferece (?da_ia=0), tira o link e relê', async () => {
+      const { router, filtros } = await montar(
+        '/app/accounts/1/dashboard?da_ia=0'
+      );
+      const reler = vi.fn();
+
+      await filtros.limparTudo(reler);
+
+      expect(router.currentRoute.value.query).toEqual({});
+      expect(reler).toHaveBeenCalledTimes(1);
     });
 
     it('sem o link, só relê (o filtro avançado sai na releitura)', async () => {
@@ -195,7 +219,26 @@ describe('useReleituraPeriodica', () => {
     visibilidade.mockReturnValue('visible');
     wrapper.unmount();
     vi.advanceTimersByTime(RELEITURA_PERIODICA_MS);
+    document.dispatchEvent(new Event('visibilitychange'));
     expect(reler).not.toHaveBeenCalled();
+    visibilidade.mockRestore();
+  });
+
+  it('relê logo que a aba volta a ficar visível, só com o filtro ligado', async () => {
+    const visibilidade = vi
+      .spyOn(document, 'visibilityState', 'get')
+      .mockReturnValue('visible');
+    const ligado = ref(true);
+    const { reler, wrapper } = montarReleitura(ligado);
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(reler).toHaveBeenCalledTimes(1);
+
+    ligado.value = false;
+    await nextTick();
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(reler).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
     visibilidade.mockRestore();
   });
 });

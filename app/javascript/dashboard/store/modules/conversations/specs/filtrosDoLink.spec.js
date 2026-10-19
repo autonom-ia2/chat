@@ -1,6 +1,9 @@
 import { applyPageFilters, filterPeloFiltroDoLink } from '../helpers';
 import getters from '../getters';
-import actions, { RELEITURA_AO_VIVO_MS } from '../actions';
+import actions, {
+  RELEITURA_AO_VIVO_MS,
+  cancelarReleituraDoFiltroDoLink,
+} from '../actions';
 import { mutations } from '../index';
 import types from '../../../mutation-types';
 
@@ -113,13 +116,26 @@ describe('filtros pelo link (#1883)', () => {
   });
 
   describe('releitura ao vivo', () => {
-    beforeEach(() => vi.useFakeTimers());
-    afterEach(() => vi.useRealTimers());
+    beforeEach(() => {
+      vi.useFakeTimers();
+      api.get.mockReset();
+      cancelarReleituraDoFiltroDoLink();
+    });
+    afterEach(() => {
+      cancelarReleituraDoFiltroDoLink();
+      vi.useRealTimers();
+    });
 
-    const estado = filtros => ({
+    const naCaixa = query => ({ route: { name: 'home', query } });
+    const estado = (filtros, extra = {}) => ({
       allConversations: [],
       appliedFilters: [],
+      listLoadingStatus: false,
       conversationFilters: filtros,
+      ...extra,
+    });
+    const paginaAtual = pagina => ({
+      'conversationPage/getCurrentPageFilter': () => pagina,
     });
     const releituras = dispatch =>
       dispatch.mock.calls.filter(([acao]) => acao === 'releerFiltroDoLink')
@@ -127,15 +143,17 @@ describe('filtros pelo link (#1883)', () => {
 
     it('uma rajada de eventos do websocket vira uma releitura só, depois do intervalo', () => {
       const dispatch = vi.fn();
-      const state = estado({ daIa: true });
-      const contexto = { commit: vi.fn(), dispatch, state, rootGetters: {} };
+      const contexto = {
+        commit: vi.fn(),
+        dispatch,
+        state: estado({ daIa: true }),
+        rootState: naCaixa({ da_ia: '1' }),
+        rootGetters: {},
+      };
 
       actions.updateConversation(contexto, conversa(4));
       actions.updateConversation(contexto, conversa(7));
-      actions.addConversation(
-        { ...contexto, rootState: { route: {} } },
-        conversa(8)
-      );
+      actions.addConversation(contexto, conversa(8));
       expect(releituras(dispatch)).toBe(0);
 
       vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
@@ -146,32 +164,45 @@ describe('filtros pelo link (#1883)', () => {
       expect(releituras(dispatch)).toBe(2);
     });
 
-    it('sem o filtro do link, ou com o filtro avançado, não relê', () => {
+    it('sem o filtro do link, com o filtro avançado, ou fora da caixa (CRM), não relê', () => {
       const dispatch = vi.fn();
       const contexto = { commit: vi.fn(), dispatch, rootGetters: {} };
+      const link = naCaixa({ esperando_min: '30' });
 
       actions.updateConversation(
-        { ...contexto, state: estado({}) },
+        { ...contexto, state: estado({}), rootState: naCaixa({}) },
         conversa(4)
       );
       actions.updateConversation(
         {
           ...contexto,
-          state: { ...estado({ esperandoMin: 30 }), appliedFilters: [{}] },
+          state: estado({ esperandoMin: 30 }, { appliedFilters: [{}] }),
+          rootState: link,
         },
         conversa(5)
+      );
+      actions.updateConversation(
+        {
+          ...contexto,
+          state: estado({ esperandoMin: 30 }),
+          rootState: { route: { name: 'crm_kanban_index', query: {} } },
+        },
+        conversa(6)
       );
       vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS * 2);
 
       expect(releituras(dispatch)).toBe(0);
     });
 
-    it('a releitura volta à primeira página e troca a lista', async () => {
+    it('só a primeira página carregada: a releitura volta à página 1 e troca a lista', async () => {
       const dispatch = vi.fn();
 
       await actions.releerFiltroDoLink({
         dispatch,
-        state: estado({ esperandoMin: 30, page: 3 }),
+        commit: vi.fn(),
+        state: estado({ esperandoMin: 30, page: 2, assigneeType: 'me' }),
+        rootState: naCaixa({ esperando_min: '30' }),
+        rootGetters: paginaAtual(1),
       });
 
       expect(dispatch).toHaveBeenNthCalledWith(1, 'updateChatListFilters', {
@@ -181,6 +212,74 @@ describe('filtros pelo link (#1883)', () => {
       expect(dispatch).toHaveBeenNthCalledWith(2, 'fetchAllConversations', {
         replaceExisting: true,
       });
+    });
+
+    it('com mais páginas carregadas, soma a primeira página sem mexer na rolagem', async () => {
+      const dispatch = vi.fn().mockResolvedValue({ id: 1 });
+      const commit = vi.fn();
+      api.get.mockResolvedValueOnce(resposta([12]));
+
+      await actions.releerFiltroDoLink({
+        dispatch,
+        commit,
+        state: estado({ daIa: true, page: 4, assigneeType: 'all' }),
+        rootState: naCaixa({ da_ia: '1' }),
+        rootGetters: paginaAtual(3),
+      });
+
+      expect(api.get).toHaveBeenCalledWith(
+        expect.objectContaining({ daIa: true, page: 1 })
+      );
+      expect(commit).toHaveBeenCalledWith(types.SET_IDS_DO_FILTRO_DO_LINK, {
+        ids: [12],
+      });
+      expect(commit).toHaveBeenCalledWith(types.SET_ALL_CONVERSATION, [
+        expect.objectContaining({ id: 12 }),
+      ]);
+      const acoes = dispatch.mock.calls.map(([acao]) => acao);
+      expect(acoes).not.toContain('updateChatListFilters');
+      expect(acoes).not.toContain('fetchAllConversations');
+      expect(acoes).not.toContain('conversationPage/reset');
+    });
+
+    it('com mais páginas, se a lista mudou enquanto a leitura vinha, a resposta é descartada', async () => {
+      const commit = vi.fn();
+      const state = estado({ daIa: true, page: 4, assigneeType: 'all' });
+      api.get.mockImplementationOnce(async () => {
+        state.conversationFilters = { esperandoMin: 30, page: 1 };
+        return resposta([12]);
+      });
+
+      await actions.releerFiltroDoLink({
+        dispatch: vi.fn(),
+        commit,
+        state,
+        rootState: naCaixa({ da_ia: '1' }),
+        rootGetters: paginaAtual(3),
+      });
+
+      expect(api.get).toHaveBeenCalledTimes(1);
+      expect(commit).not.toHaveBeenCalled();
+    });
+
+    it('com a próxima página chegando, não cancela a rolagem: espera e relê depois', async () => {
+      const dispatch = vi.fn();
+      const contexto = {
+        dispatch,
+        commit: vi.fn(),
+        state: estado({ daIa: true }, { listLoadingStatus: true }),
+        rootState: naCaixa({ da_ia: '1' }),
+        rootGetters: paginaAtual(1),
+      };
+
+      await actions.releerFiltroDoLink(contexto);
+      expect(dispatch).not.toHaveBeenCalledWith(
+        'fetchAllConversations',
+        expect.anything()
+      );
+
+      vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+      expect(releituras(dispatch)).toBe(1);
     });
   });
 });

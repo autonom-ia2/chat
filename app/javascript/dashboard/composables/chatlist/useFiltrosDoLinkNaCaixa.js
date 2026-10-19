@@ -48,7 +48,7 @@ export const filtrosDoEndereco = destino => ({
   esperandoMin: minutosValidos(destino?.query?.esperando_min),
 });
 
-const naCaixa = destino =>
+export const naCaixa = destino =>
   LISTAS.includes(destino?.name) || CONVERSAS.includes(destino?.name);
 
 const doLink = destino =>
@@ -58,11 +58,13 @@ const doLink = destino =>
     )
   );
 
+// O "Limpar" troca o endereço por um sem o link; enquanto ele navega, a guarda não devolve o link.
+let limpando = false;
+
 // Guarda do roteador: da lista filtrada (ou da conversa aberta nela) para uma conversa, o link vai junto.
 export const levarLinkParaConversa = (destino, origem) => {
+  if (limpando) return true;
   if (!CONVERSAS.includes(destino.name) || !naCaixa(origem)) return true;
-  // Mesma tela sem o link: é o "Limpar", não uma conversa nova.
-  if (destino.path === origem.path) return true;
   const link = doLink(origem);
   if (!Object.keys(link).length || Object.keys(doLink(destino)).length) {
     return true;
@@ -99,25 +101,32 @@ export const useFiltrosDoLinkNaCaixa = () => {
     if (!linkNoEndereco.value) return;
     const query = { ...route.query };
     PARAMETROS.forEach(chave => delete query[chave]);
-    await router.replace({ name: route.name, params: route.params, query });
+    limpando = true;
+    try {
+      await router.replace({ name: route.name, params: route.params, query });
+    } finally {
+      limpando = false;
+    }
   };
 
-  // A seta "Limpar filtros": com o link no endereço, um clique tira o link e quem relê a lista tira o resto (o filtro
-  // avançado); sem o link, só relê.
+  // A seta "Limpar filtros": um clique tira tudo. Com o filtro do link ligado, tirar o link já relê a lista (e a releitura
+  // tira o filtro avançado); com o link no endereço mas sem valor que a caixa ofereça (`?da_ia=0`), tira e relê.
   const limparTudo = async reler => {
-    if (linkNoEndereco.value) {
-      await limpar();
-      return;
-    }
-    reler();
+    const filtroLigado = Boolean(daIa.value || esperandoMin.value);
+    if (linkNoEndereco.value) await limpar();
+    if (!filtroLigado) reler();
   };
 
   return { daIa, esperandoMin, limpar, limparTudo };
 };
 
-// Com "esperando" ligado e a aba do navegador visível, relê a lista uma vez por minuto.
+// Com "esperando" ligado: relê a lista uma vez por minuto com a aba do navegador visível, e logo que ela volta a ficar
+// visível.
 export const useReleituraPeriodica = (ligado, reler) => {
   let relogio = null;
+  const aoVoltarAVer = () => {
+    if (ligado.value && document.visibilityState === 'visible') reler();
+  };
   const parar = () => {
     clearInterval(relogio);
     relogio = null;
@@ -133,5 +142,9 @@ export const useReleituraPeriodica = (ligado, reler) => {
     },
     { immediate: true }
   );
-  onBeforeUnmount(parar);
+  document.addEventListener('visibilitychange', aoVoltarAVer);
+  onBeforeUnmount(() => {
+    parar();
+    document.removeEventListener('visibilitychange', aoVoltarAVer);
+  });
 };
