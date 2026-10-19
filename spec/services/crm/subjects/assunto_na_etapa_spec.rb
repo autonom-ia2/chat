@@ -273,6 +273,18 @@ RSpec.describe 'IA de assunto cria o card na coluna certa' do # rubocop:disable 
 
       expect(chegada.reload).to have_attributes(title: 'Sinistro do Onix', stage_id: primeira(pos_venda).id)
     end
+
+    it 'pessoa escolheu o assunto há pouco (#1260): o card só ganha o nome, fica na coluna e nenhuma automação roda' do
+      message, chegada = chega('Bati o carro ontem')
+      Crm::CardConversation.where(card: chegada, conversation: conversation)
+                           .update_all(focused_at: Time.current, focused_by_id: admin.id) # rubocop:disable Rails/SkipsModelValidations
+      pedido(pos_venda, 'Sinistro do Onix', chave(pos_venda, 'Sinistros'))
+
+      identify(message)
+
+      expect(chegada.reload).to have_attributes(title: 'Sinistro do Onix', stage_id: primeira(pos_venda).id)
+      expect(entradas_de_etapa).to be_empty
+    end
   end
 
   # C36 (#1711) e vários assuntos (#1693) vivem atrás da flag `crm_avaliar_toda_mensagem`.

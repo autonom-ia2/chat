@@ -16,8 +16,9 @@ class Crm::Subjects::CardDaChegada
     chegada if chegada.adotavel?(pipeline)
   end
 
-  # #1910: o card da chegada no mesmo funil do pedido, que a IA de assunto pode levar à etapa escolhida. Mesmas guardas,
-  # sem a troca de funil (o acesso e o dono já são daquele funil).
+  # #1910: o card da chegada no mesmo funil do pedido, que a IA de assunto pode levar à etapa escolhida. Só as guardas do
+  # card intocado: sem troca de funil (o acesso e o dono já são daquele funil) e sem depender de `crm_avaliar_toda_mensagem`,
+  # que é a flag da troca de funil; quem liga isto é `crm_assunto_na_etapa`. O modo da caixa quem confere é o Applier.
   def self.no_funil(conversation:, card:)
     chegada = new(card, conversation)
     chegada if chegada.intocado?

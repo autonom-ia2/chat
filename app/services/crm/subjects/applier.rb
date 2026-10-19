@@ -163,14 +163,19 @@ class Crm::Subjects::Applier
 
   # #1910: o card da chegada sem nome, no mesmo funil do pedido, ganha o nome e vai para a etapa escolhida. As guardas
   # do C36 (criado na chegada, nunca mudou de etapa, sem mexida de pessoa) são lidas antes do nome, que muda o card.
+  # Respeita a pessoa como a criação (#1260): quando criar viraria sugestão, o card só ganha o nome e fica onde está.
   def dar_nome_e_levar(card, titulo, etapa)
-    chegada = Crm::Subjects::CardDaChegada.no_funil(conversation: @conversation, card: card) if etapa
+    chegada = Crm::Subjects::CardDaChegada.no_funil(conversation: @conversation, card: card) if levar_a_etapa?(card, etapa)
     resultado = dar_nome(card, titulo)
     return resultado unless chegada && resultado[:state] == 'applied'
 
     chegada.mover_para(card.pipeline, etapa)
     entrar_depois(card, etapa)
     resultado
+  end
+
+  def levar_a_etapa?(card, etapa)
+    etapa.present? && modo_efetivo('create', { pipeline: card.pipeline }) == 'auto'
   end
 
   # C36: confere de novo dentro do lock (a pessoa pode ter mexido enquanto a IA pensava), leva o card ao funil do
