@@ -3,7 +3,13 @@ import { defineComponent, ref } from 'vue';
 import { useQuemVeNumeros } from './useQuemVeNumeros';
 
 // Quem vê o quê em CRM › Números (#1897): a mesma matriz da Crm::NumerosPolicy.
-const estado = { papel: 'agent', funcao: null, chaves: [], porPapel: true };
+const estado = {
+  papel: 'agent',
+  funcao: null,
+  chaves: [],
+  porPapel: true,
+  contaCarregada: true,
+};
 
 vi.mock('dashboard/composables/store', () => ({
   useMapGetter: chave =>
@@ -15,10 +21,13 @@ vi.mock('dashboard/composables/store', () => ({
       getCurrentRole: ref(estado.papel),
       getCurrentCustomRoleId: ref(estado.funcao),
       'accounts/isFeatureEnabledonAccount': ref(() => estado.porPapel),
+      'accounts/getAccount': ref(() =>
+        estado.contaCarregada ? { id: 1, features: {} } : {}
+      ),
     })[chave],
 }));
 
-const quemVe = () => {
+const montar = () => {
   let api;
   mount(
     defineComponent({
@@ -28,6 +37,10 @@ const quemVe = () => {
       },
     })
   );
+  return api;
+};
+const quemVe = () => {
+  const api = montar();
   return [api.veSoEu.value, api.veEquipe.value];
 };
 
@@ -65,5 +78,23 @@ describe('useQuemVeNumeros', () => {
     expect(quemVe()).toEqual([false, true]);
     Object.assign(estado, pessoas.crm, { porPapel: false });
     expect(quemVe()).toEqual([false, false]);
+  });
+});
+
+describe('useQuemVeNumeros antes da conta carregar', () => {
+  // Na carga direta da página as flags da conta ainda não chegaram: sem esperar,
+  // o agente sem função parece "sem a flag", monta o painel da equipe e leva 401.
+  it('não está pronto e não abre nenhuma das visões', () => {
+    Object.assign(estado, { papel: 'agent', funcao: null, chaves: [] });
+    Object.assign(estado, { porPapel: false, contaCarregada: false });
+    const api = montar();
+    expect(api.pronto.value).toBe(false);
+    expect([api.veSoEu.value, api.veEquipe.value]).toEqual([false, false]);
+    expect(api.abreNumeros.value).toBe(false);
+  });
+
+  it('fica pronto quando a conta chega', () => {
+    Object.assign(estado, { porPapel: true, contaCarregada: true });
+    expect(montar().pronto.value).toBe(true);
   });
 });

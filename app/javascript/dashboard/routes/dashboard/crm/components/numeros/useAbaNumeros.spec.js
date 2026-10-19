@@ -29,6 +29,7 @@ vi.mock('dashboard/composables/store', () => ({
       getCurrentRole: ref(estado.papel),
       getCurrentCustomRoleId: ref(estado.funcao),
       'accounts/isFeatureEnabledonAccount': ref(() => estado.porPapel),
+      'accounts/getAccount': ref(() => ({ id: 1, features: {} })),
     })[chave],
 }));
 

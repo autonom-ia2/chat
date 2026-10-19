@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -18,7 +18,7 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const accountId = useMapGetter('getCurrentAccountId');
-const { ligado, administrador, veEquipe, veSoEu, abreNumeros } =
+const { pronto, ligado, administrador, veEquipe, veSoEu, abreNumeros } =
   useQuemVeNumeros();
 
 const visoes = computed(() =>
@@ -63,11 +63,17 @@ const mostrarAviso = computed(
   () => ligado.value && administrador.value && !avisoFechado.value
 );
 
-onMounted(() => {
-  lerAviso();
-  if (!abreNumeros.value)
-    router.replace({ name: 'crm_kanban_index', params: route.params });
-});
+onMounted(lerAviso);
+
+// Quem não abre Números vai para o Kanban, mas só depois que as flags da conta chegam.
+watch(
+  pronto,
+  carregou => {
+    if (carregou && !abreNumeros.value)
+      router.replace({ name: 'crm_kanban_index', params: route.params });
+  },
+  { immediate: true }
+);
 </script>
 
 <template>

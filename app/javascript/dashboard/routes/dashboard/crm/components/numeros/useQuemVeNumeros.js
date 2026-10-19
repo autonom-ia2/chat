@@ -21,6 +21,13 @@ export function useQuemVeNumeros() {
   const isFeatureEnabledonAccount = useMapGetter(
     'accounts/isFeatureEnabledonAccount'
   );
+  const getAccount = useMapGetter('accounts/getAccount');
+
+  // Na carga direta da página as flags da conta chegam depois: até lá ninguém vê
+  // nada (sem isso o agente sem função parece "sem a flag" e abre a equipe).
+  const pronto = computed(() =>
+    Boolean(getAccount.value(accountId.value)?.features)
+  );
 
   const ligado = computed(() =>
     Boolean(
@@ -38,16 +45,18 @@ export function useQuemVeNumeros() {
   };
 
   const veEquipe = computed(() => {
+    if (!pronto.value) return false;
     if (administrador.value) return true;
     if (semFuncao.value) return !ligado.value;
     return temChave(CRM_VIEW_REPORTS_PERMISSION);
   });
   const veSoEu = computed(
     () =>
+      pronto.value &&
       ligado.value &&
       (administrador.value || semFuncao.value || temChave(CRM_VIEW_PERMISSION))
   );
   const abreNumeros = computed(() => veEquipe.value || veSoEu.value);
 
-  return { ligado, administrador, veEquipe, veSoEu, abreNumeros };
+  return { pronto, ligado, administrador, veEquipe, veSoEu, abreNumeros };
 }
