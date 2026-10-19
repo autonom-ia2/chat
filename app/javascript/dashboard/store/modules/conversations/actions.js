@@ -108,11 +108,16 @@ let releituraAgendada = null;
 // descartaria a primeira (sob tráfego contínuo, a lista nunca seria trocada).
 let releituraEmCurso = false;
 let releituraPendente = false;
+// Releitura descartada é refeita sozinha até 5 vezes seguidas (rolagem contínua puxando páginas descarta todas); passado
+// isso, ela só volta no próximo evento ao vivo ou na releitura de um minuto.
+export const DESCARTES_SEGUIDOS_NO_MAXIMO = 5;
+let descartesSeguidos = 0;
 export const cancelarReleituraDoFiltroDoLink = () => {
   clearTimeout(releituraAgendada);
   releituraAgendada = null;
   releituraEmCurso = false;
   releituraPendente = false;
+  descartesSeguidos = 0;
 };
 const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
   if (!filtroDoLinkAtivo(state, rootState)) return;
@@ -235,9 +240,12 @@ const actions = {
     releituraEmCurso = true;
     try {
       if (paginas > 1 && paginas <= PAGINAS_RELIDAS_NO_MAXIMO) {
-        // Descartada (a lista foi lida, esvaziada ou trocou de aba no meio): relê de novo depois.
+        // Descartada (a lista foi lida, esvaziada ou trocou de aba no meio): relê de novo depois, até o teto.
         const trocou = await releerAsPaginasDoFiltroDoLink(contexto, paginas);
-        if (!trocou) releituraPendente = true;
+        descartesSeguidos = trocou ? 0 : descartesSeguidos + 1;
+        if (!trocou && descartesSeguidos < DESCARTES_SEGUIDOS_NO_MAXIMO) {
+          releituraPendente = true;
+        }
       } else {
         await voltarAPrimeiraPaginaDoFiltroDoLink(contexto, paginas);
       }

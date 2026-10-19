@@ -2,6 +2,7 @@ import { applyPageFilters, filterPeloFiltroDoLink } from '../helpers';
 import getters from '../getters';
 import actions, {
   RELEITURA_AO_VIVO_MS,
+  DESCARTES_SEGUIDOS_NO_MAXIMO,
   PAGINAS_RELIDAS_NO_MAXIMO,
   cancelarReleituraDoFiltroDoLink,
 } from '../actions';
@@ -431,6 +432,44 @@ describe('filtros pelo link (#1883)', () => {
         expect(contexto.commit).not.toHaveBeenCalled();
         vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
         expect(releituras(contexto.dispatch)).toBe(1);
+      });
+
+      it('releitura descartada seguidas vezes para no teto; volta no próximo evento ao vivo', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 2 });
+        // Uma releitura que a rolagem descarta: a página seguinte é pedida enquanto as páginas da releitura vêm.
+        const releituraDescartada = async () => {
+          const inicio = fila.length;
+          const releitura = actions.releerFiltroDoLink(contexto);
+          await vi.waitFor(() => expect(fila).toHaveLength(inicio + 2));
+          const proximaPagina = actions.fetchAllConversations({
+            commit: vi.fn(),
+            dispatch: vi.fn(),
+            state: estado({ daIa: true, page: 3, assigneeType: 'all' }),
+          });
+          await vi.waitFor(() => expect(fila).toHaveLength(inicio + 3));
+          fila.slice(inicio).forEach(({ responder }) => responder([1]));
+          await Promise.all([releitura, proximaPagina]);
+        };
+
+        for (let vez = 1; vez < DESCARTES_SEGUIDOS_NO_MAXIMO; vez += 1) {
+          // eslint-disable-next-line no-await-in-loop
+          await releituraDescartada();
+          vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+          expect(releituras(contexto.dispatch)).toBe(vez);
+        }
+        await releituraDescartada();
+        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS * 4);
+        expect(releituras(contexto.dispatch)).toBe(
+          DESCARTES_SEGUIDOS_NO_MAXIMO - 1
+        );
+        expect(contexto.commit).not.toHaveBeenCalled();
+
+        actions.updateConversation(contexto, conversa(5));
+        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        expect(releituras(contexto.dispatch)).toBe(
+          DESCARTES_SEGUIDOS_NO_MAXIMO
+        );
       });
 
       it('página seguinte que chega depois da troca da lista é descartada (a página não avança)', async () => {
