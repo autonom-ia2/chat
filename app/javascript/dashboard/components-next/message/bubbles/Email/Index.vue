@@ -20,7 +20,9 @@ import CorpoIsoladoDoEmail from 'dashboard/components-next/conversa-canal/email/
 import {
   citacaoDoDocumento,
   imagemSemRastreio,
+  linkSemRastreio,
 } from 'dashboard/components-next/conversa-canal/email/documentoDoEmail';
+import { semRastreio } from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
 import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import { htmlComCssSeguro } from 'dashboard/components-next/conversa-canal/email/estiloSeguroDoEmail';
 
@@ -108,9 +110,10 @@ const unquotedHTML = computed(() =>
   EmailQuoteExtractor.extractQuotes(fullHTML.value)
 );
 // O CSS do remetente não pode escapar do <style> ao passar pelo vue-letter (estiloSeguroDoEmail).
-// Imagem e url() do CSS (inclusive image-set) só com endereço completo: relativo
-// pediria ao painel.
-const recursoSeguro = imagemSemRastreio(endereco => endereco);
+// Imagem e url() do CSS (inclusive image-set) só com endereço completo (relativo pediria
+// ao painel), sem o pixel das Campanhas; link só web, e-mail e telefone.
+const recursoSeguro = imagemSemRastreio(semRastreio);
+const linkSeguroDoLetter = linkSemRastreio(semRastreio);
 const fullHTMLSeguro = computed(() =>
   htmlComCssSeguro(fullHTML.value, { conferirUrls: true })
 );
@@ -207,6 +210,7 @@ const handleSeeOriginal = () => {
             ]"
             :html="fullHTMLSeguro"
             :rewrite-external-resources="recursoSeguro"
+            :rewrite-external-links="linkSeguroDoLetter"
             :text="textToShow"
           />
           <Letter
@@ -215,6 +219,7 @@ const handleSeeOriginal = () => {
             class-name="prose prose-bubble !max-w-none letter-render"
             :html="unquotedHTMLSeguro"
             :rewrite-external-resources="recursoSeguro"
+            :rewrite-external-links="linkSeguroDoLetter"
             :allowed-css-properties="[
               ...allowedCssProperties,
               'transform',

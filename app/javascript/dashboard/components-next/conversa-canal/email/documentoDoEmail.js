@@ -345,6 +345,7 @@ export const corpoParaImprimir = srcdoc => {
     allowedCssProperties: CSS_DA_MOLDURA,
     // Como na tela: imagem embutida (data:image) fica, endereço relativo sai.
     rewriteExternalResources: imagemSemRastreio(semMudar),
+    rewriteExternalLinks: linkSemRastreio(semMudar),
   });
   // O sanitizador tira a proporção da imagem: volta, como na tela.
   const impresso = lerDocumento(limpo);
