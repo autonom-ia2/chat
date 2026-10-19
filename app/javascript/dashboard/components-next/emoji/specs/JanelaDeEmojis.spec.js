@@ -55,4 +55,39 @@ describe('JanelaDeEmojis', () => {
     expect(emojisNaGrade(wrapper)).toEqual([]);
     expect(wrapper.text()).toContain('CONVERSA_CANAL.EMAIL.EMOJIS.NADA');
   });
+
+  it('acompanha a âncora quando a página rola', async () => {
+    idioma.atual = 'en';
+    const ancora = document.createElement('div');
+    document.body.appendChild(ancora);
+    let topo = 600;
+    ancora.getBoundingClientRect = () => ({
+      left: 100,
+      top: topo,
+      bottom: topo + 40,
+      right: 500,
+      width: 400,
+      height: 40,
+      x: 100,
+      y: topo,
+    });
+    const wrapper = mount(JanelaDeEmojis, {
+      props: { ancora },
+      global: {
+        stubs: { Icon: true, TeleportWithDirection: { template: '<slot />' } },
+      },
+    });
+    await flushPromises();
+    const fundo = () =>
+      wrapper.find('[data-janela-de-emojis]').element.style.bottom;
+    const antes = fundo();
+
+    topo = 500;
+    window.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+
+    expect(Number.parseFloat(fundo())).toBe(Number.parseFloat(antes) + 100);
+    wrapper.unmount();
+    ancora.remove();
+  });
 });

@@ -21,8 +21,9 @@ vi.mock('dashboard/composables/useKeyboardEvents', () => ({
 
 const SEND = 'COMPOSE_NEW_CONVERSATION.FORM.ACTION_BUTTONS.SEND';
 
-const mountButtons = props =>
+const mountButtons = (props, attachTo) =>
   mount(ActionButtons, {
+    attachTo,
     props: { hasSelectedInbox: true, inboxId: 7, ...props },
     global: {
       stubs: {
@@ -102,11 +103,17 @@ describe('ActionButtons', () => {
   });
 
   it('closes the emoji window on Esc', async () => {
-    const wrapper = mountButtons();
+    const wrapper = mountButtons({}, document.body);
     await wrapper.find('[data-emoji-da-nova-conversa]').trigger('click');
 
-    await wrapper.find('[data-janela-de-emojis]').trigger('keydown.esc');
+    wrapper
+      .find('[data-buscar-emoji]')
+      .element.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
+    await wrapper.vm.$nextTick();
     expect(wrapper.find('[data-janela-de-emojis]').exists()).toBe(false);
+    wrapper.unmount();
   });
 
   it('hides the emoji button on template-only WhatsApp', () => {

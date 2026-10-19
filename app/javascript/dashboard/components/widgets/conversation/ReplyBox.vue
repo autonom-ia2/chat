@@ -1,5 +1,5 @@
 <script>
-import { getCurrentInstance, useTemplateRef } from 'vue';
+import { getCurrentInstance, useTemplateRef, watch } from 'vue';
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -174,6 +174,10 @@ export default {
         }),
     });
     const copilot = respostaComIa(emailNovo, useCopilotReply(), iaDoEmail);
+    // #1895: com o copiloto ativo a barra de baixo (âncora da janela de emojis) some.
+    watch(copilot.isActive, ativo => {
+      if (ativo) proxy.hideEmojiPicker();
+    });
     useKeyboardEvents({
       Escape: {
         action: () => proxy.hideEmojiPicker(),
@@ -1639,8 +1643,7 @@ export default {
     },
     // #1786/#1895: a janela de emojis abre em cima da barra de baixo da caixa.
     ancoraDosEmojis() {
-      // O ReplyBox tem mais de uma raiz ($el não é a caixa): procura a barra na página.
-      return document.querySelector('.reply-box .left-wrap');
+      return this.$refs.painelDeBaixo?.barraDosEmojis?.() || null;
     },
     atualizarCampoDoModelo(chave, valor) {
       this.valoresDoModelo = { ...this.valoresDoModelo, [chave]: valor };
@@ -2041,6 +2044,7 @@ export default {
       />
       <ReplyBottomPanel
         v-else
+        ref="painelDeBaixo"
         key="reply-bottom-panel"
         :conversation-id="conversationId"
         :enable-multiple-file-upload="enableMultipleFileUpload"
