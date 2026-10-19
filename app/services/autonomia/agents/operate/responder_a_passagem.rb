@@ -132,7 +132,8 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
       ActionController::Parameters.new(
         content: content, message_type: 'outgoing', sender_type: 'AgentBot',
         sender_id: @agent_inbox.agent_bot_id, private: false,
-        content_attributes: { 'autonomia_agent_id' => @agent.id, CHAVE => @passagem.id }.merge(formato)
+        content_attributes: { 'autonomia_agent_id' => @agent.id, CHAVE => @passagem.id }.merge(formato),
+        **destinatarios_do_email # #1828: no e-mail, a resposta da passagem também mantém a cópia.
       )
     ).perform
   end

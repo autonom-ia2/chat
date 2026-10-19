@@ -37,6 +37,7 @@ import ContentTemplates from './ContentTemplates/ContentTemplatesModal.vue';
 import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
 import { trimContent, debounce, getRecipients } from '@chatwoot/utils';
+import { semQuemSaiuDaCopia } from 'dashboard/helper/semQuemSaiuDaCopia';
 import wootConstants from 'dashboard/constants/globals';
 import {
   extractQuotedEmailText,
@@ -1684,11 +1685,21 @@ export default {
       const { email: inboxEmail, forward_to_email: forwardToEmail } =
         this.inbox;
 
-      const { cc, bcc, to } = getRecipients(
-        this.lastEmail,
-        conversationContact,
-        inboxEmail,
-        forwardToEmail
+      // #1828: quem pediu para sair da cópia desta conversa não volta no preenchimento.
+      const { cc, bcc, to } = semQuemSaiuDaCopia(
+        getRecipients(
+          this.lastEmail,
+          conversationContact,
+          inboxEmail,
+          forwardToEmail
+        ),
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          FEATURE_FLAGS.EMAIL_AUTORIA
+        )
+          ? this.currentChat?.additional_attributes?.email_saiu_da_copia
+          : undefined,
+        conversationContact
       );
 
       this.toEmails = to.join(', ');
