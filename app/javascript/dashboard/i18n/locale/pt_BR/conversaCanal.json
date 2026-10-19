@@ -374,6 +374,8 @@
       "RESPONDER_TODOS": "Responder a todos",
       "ENCAMINHAR": "Encaminhar",
       "EXIBIR_TUDO": "Exibir toda a mensagem",
+      "CORPO_ISOLADO": "Mensagem de {nome}",
+      "CORPO_DO_EMAIL": "Mensagem do e-mail",
       "MOSTRAR_CITACAO": "Mostrar o texto citado",
       "ESCONDER_CITACAO": "Esconder o texto citado",
       "ANEXOS": "{total} anexo | {total} anexos",
