@@ -218,7 +218,9 @@ RSpec.describe Account do
         # #1489: a posição na lista é o bit; no fim do que está na main.
         feature_whatsapp_hybrid_recovery: 1 << 32,
         # #1823: posição 34 (tabela v4 da Orquestração).
-        feature_etiquetas_do_whatsapp: 1 << 33
+        feature_etiquetas_do_whatsapp: 1 << 33,
+        # #1709: posição 35, logo depois de etiquetas_do_whatsapp (tabela v4 da Orquestração).
+        feature_whatsapp_rich_native: 1 << 34
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

@@ -145,7 +145,9 @@ RSpec.describe Message do
         },
         sentiment: {},
         sender: message.sender.push_event_data,
-        echo_id: 'random-echo_id'
+        echo_id: 'random-echo_id',
+        # chat#1709: o sinal do "Apagar para todos" (Waha::RichNative::RevocableEventData).
+        c2y_revocable: false
       }
     end
 

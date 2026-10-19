@@ -490,6 +490,14 @@
           "other": "Outro / não especificado"
         }
       },
+      "SILENCES": {
+        "TITLE": "Quando a IA ficou calada",
+        "CODES": {
+          "mensagem_sem_suporte": "Mensagem que o WhatsApp só mostra no celular",
+          "mensagem_apagada": "Mensagem apagada pelo cliente",
+          "escolha_retirada": "Voto ou resposta retirada pelo cliente"
+        }
+      },
       "INSIGHT": {
         "HIGH_HANDOFF_TITLE": "Muitas conversas estão sendo transferidas",
         "LOW_KNOWLEDGE_TITLE": "Poucas respostas vieram da sua base de conhecimento",
@@ -1160,6 +1168,17 @@
           "PASSADAS": "passada para a equipe | passadas para a equipe",
           "NOTA_RESPONDIDAS": "Esta semana, {nome} respondeu {n} conversa e passou {m} para a equipe. | Esta semana, {nome} respondeu {n} conversas e passou {m} para a equipe.",
           "NOTA_PASSADAS": "Quando não soube responder."
+        },
+        "SILENCIOS": {
+          "TITULO": "Quando {nome} não respondeu",
+          "TEXTO": "Esta semana, {nome} não respondeu nestes casos porque não havia nada para responder. Foi de propósito.",
+          "VAZIO": "{nome} não deixou de responder nenhuma vez esta semana.",
+          "VEZES": "{n} vez | {n} vezes",
+          "MOTIVOS": {
+            "mensagem_sem_suporte": "O cliente mandou algo que o sistema não abre",
+            "mensagem_apagada": "O cliente apagou a mensagem",
+            "escolha_retirada": "O cliente desfez a escolha"
+          }
         },
         "CONVERSAS": {
           "TITULO": "Conversas desta semana",

@@ -35,8 +35,12 @@ class WhatsappHybrid::Router
     connection.present? && WhatsappHybrid::Config.routing_enabled? && connection.routable? && contact_phone.present?
   end
 
-  # Botões, listas, carrossel, formulário e pesquisa são recursos Meta: pelo WhatsApp Web viram
-  # texto solto (e chamam atenção de bloqueio). Só texto e anexos passam pelo Web.
+  # Só mensagem `text` (com ou sem anexo) passa pelo WhatsApp API. Os formatos próprios da Meta (botões e lista do
+  # Chatwoot, carrossel, formulário, pesquisa: content_type próprio) não passam: pelo Web virariam texto solto.
+  # Mensagem com `rich_message` (chat#1473) passa quando o tipo tem versão em texto (RichMessages.text_capable?): sem a
+  # flag `whatsapp_rich_native`, sai como texto; com a flag (chat#1709), lista, localização, contato, enquete e convite
+  # saem no formato nativo do motor (WhatsappHybrid::RichNative::Transport), e a recusa explícita do motor (4xx) manda o
+  # texto uma vez.
   # Conexão pausada (#1487) nunca serve: tudo sai pela oficial, como caixa sem Híbrido.
   def web_allowed_for?(message)
     return false if connection.nil? || connection.paused?

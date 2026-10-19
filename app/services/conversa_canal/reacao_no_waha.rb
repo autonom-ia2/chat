@@ -7,9 +7,10 @@
 class ConversaCanal::ReacaoNoWaha
   LADOS = %w[true_ false_].freeze
 
-  def initialize(message:, client: Waha::Client.new)
+  # Sem `client:`, o do motor da caixa (ConversaCanal::ClienteDoMotor, #1709).
+  def initialize(message:, client: nil)
     @message = message
-    @client = client
+    @client = client || ConversaCanal::ClienteDoMotor.para(message.inbox.channel)
   end
 
   def validar!
