@@ -285,11 +285,25 @@ describe('filtros pelo link (#1883)', () => {
         expect(aviso).not.toHaveBeenCalledWith(
           BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO
         );
+        // O mesmo que a leitura comum faz com o que chega: etiquetas e contatos.
+        expect(contexto.dispatch).toHaveBeenCalledWith(
+          'conversationLabels/setBulkConversationLabels',
+          expect.arrayContaining([expect.objectContaining({ id: 6 })])
+        );
+        expect(gravados(contexto.commit, 'contacts/SET_CONTACTS')).toHaveLength(
+          1
+        );
       });
 
       it('com 6 páginas, a lista volta para a primeira página e a rolagem vai ao topo', async () => {
         const contexto = contextoCom({
           paginas: PAGINAS_RELIDAS_NO_MAXIMO + 1,
+        });
+        // A leitura da página 1 troca a lista.
+        contexto.dispatch = vi.fn(async acao => {
+          if (acao === 'fetchAllConversations') {
+            contexto.state.allConversations = [conversa(1)];
+          }
         });
 
         await actions.releerFiltroDoLink(contexto);
@@ -367,6 +381,105 @@ describe('filtros pelo link (#1883)', () => {
         await releitura;
 
         expect(contexto.commit).not.toHaveBeenCalled();
+      });
+
+      it('com 6 páginas, se a leitura da página 1 não trocou a lista, a rolagem fica', async () => {
+        const contexto = contextoCom({
+          paginas: PAGINAS_RELIDAS_NO_MAXIMO + 1,
+        });
+
+        await actions.releerFiltroDoLink(contexto);
+
+        expect(aviso).not.toHaveBeenCalledWith(
+          BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO
+        );
+      });
+
+      it('troca de aba no meio da releitura: nada grava na aba nova, e ela é relida depois', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 3 });
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(3));
+        actions.invalidateConversationListRequests({ commit: vi.fn() });
+        fila.forEach(({ responder }) => responder([1]));
+        await releitura;
+
+        expect(contexto.commit).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        expect(releituras(contexto.dispatch)).toBe(1);
+      });
+
+      it('página seguinte pedida durante a releitura: a releitura é descartada e relida depois', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 2 });
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(2));
+        const proximaPagina = actions.fetchAllConversations({
+          commit: vi.fn(),
+          dispatch: vi.fn(),
+          state: estado({ daIa: true, page: 3, assigneeType: 'all' }),
+        });
+        await vi.waitFor(() => expect(fila).toHaveLength(3));
+        fila[2].responder([20]);
+        await proximaPagina;
+        fila[0].responder([1]);
+        fila[1].responder([2]);
+        await releitura;
+
+        expect(contexto.commit).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        expect(releituras(contexto.dispatch)).toBe(1);
+      });
+
+      it('página seguinte que chega depois da troca da lista é descartada (a página não avança)', async () => {
+        const fila = leiturasPendentes();
+        const commitDaPagina = vi.fn();
+        const proximaPagina = actions.fetchAllConversations({
+          commit: commitDaPagina,
+          dispatch: vi.fn(),
+          state: estado({ daIa: true, page: 3, assigneeType: 'all' }),
+        });
+        await vi.waitFor(() => expect(fila).toHaveLength(1));
+        const contexto = contextoCom({ paginas: 2 });
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(3));
+        fila[1].responder([1]);
+        fila[2].responder([2]);
+        await releitura;
+        fila[0].responder([30]);
+        await proximaPagina;
+
+        expect(
+          gravados(contexto.commit, types.REPLACE_CONVERSATION_LIST)
+        ).toHaveLength(1);
+        const gravadosDaPagina = commitDaPagina.mock.calls.map(
+          ([tipo]) => tipo
+        );
+        expect(gravadosDaPagina).not.toContain(types.SET_ALL_CONVERSATION);
+        expect(gravadosDaPagina).not.toContain(types.SET_IDS_DO_FILTRO_DO_LINK);
+        expect(gravadosDaPagina).toContain(types.CLEAR_LIST_LOADING_STATUS);
+      });
+
+      it('evento do websocket durante uma releitura não começa outra: fica para depois dela', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 2 });
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(2));
+        actions.updateConversation(contexto, conversa(5));
+        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS * 2);
+        expect(releituras(contexto.dispatch)).toBe(0);
+
+        fila.forEach(({ responder }) => responder([1]));
+        await releitura;
+        expect(
+          gravados(contexto.commit, types.REPLACE_CONVERSATION_LIST)
+        ).toHaveLength(1);
+        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        expect(releituras(contexto.dispatch)).toBe(1);
       });
 
       it('duas releituras: a mais velha, que chega depois, é descartada', async () => {

@@ -6,6 +6,7 @@ import { createPendingMessage } from 'dashboard/helper/commons';
 import filterQueryGenerator from 'dashboard/helper/filterQueryGenerator';
 import {
   buildConversationList,
+  setContacts,
   isOnMentionsView,
   isOnParticipatingView,
   isOnUnattendedView,
@@ -103,12 +104,22 @@ const filtroDoLinkAtivo = (state, rootState) =>
   naCaixa(rootState?.route) &&
   filtroDoLinkNosParametros(filtrosDoEndereco(rootState.route));
 let releituraAgendada = null;
+// Uma releitura por vez: o evento que chega com uma em andamento fica para depois dela, em vez de começar outra que
+// descartaria a primeira (sob tráfego contínuo, a lista nunca seria trocada).
+let releituraEmCurso = false;
+let releituraPendente = false;
 export const cancelarReleituraDoFiltroDoLink = () => {
   clearTimeout(releituraAgendada);
   releituraAgendada = null;
+  releituraEmCurso = false;
+  releituraPendente = false;
 };
 const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
   if (!filtroDoLinkAtivo(state, rootState)) return;
+  if (releituraEmCurso) {
+    releituraPendente = true;
+    return;
+  }
   if (releituraAgendada) return;
   releituraAgendada = setTimeout(() => {
     releituraAgendada = null;
@@ -116,8 +127,9 @@ const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
   }, RELEITURA_AO_VIVO_MS);
 };
 
-// Geração da lista: sobe a cada leitura ou esvaziamento da lista. A releitura das páginas guarda a geração em que
-// começou; se outra leitura ou um esvaziamento vier no meio, a resposta é de uma lista que já não existe e é descartada.
+// Geração da lista: sobe a cada leitura, esvaziamento ou troca de aba. A releitura das páginas e a leitura comum
+// guardam a geração em que começaram; se outra leitura, um esvaziamento ou uma troca de aba vier no meio, a resposta
+// é de uma lista que já não existe e é descartada.
 let geracaoDaLista = 0;
 const novaGeracaoDaLista = () => {
   geracaoDaLista += 1;
@@ -140,7 +152,7 @@ const semRepetidas = conversas => [
 ];
 
 // Com 2 a 5 páginas carregadas: relê as páginas 1..N e troca a lista de uma vez, só quando todas chegam. A paginação
-// fica onde está (a próxima rolagem pede a página N+1) e a conversa que saiu do filtro sai.
+// fica onde está (a próxima rolagem pede a página N+1) e a conversa que saiu do filtro sai. Devolve se trocou a lista.
 const releerAsPaginasDoFiltroDoLink = async (
   { commit, dispatch, state },
   paginas
@@ -156,7 +168,7 @@ const releerAsPaginasDoFiltroDoLink = async (
       ConversationApi.get({ ...params, page: indice + 1 })
     )
   );
-  if (geracao !== geracaoDaLista) return;
+  if (geracao !== geracaoDaLista) return false;
   const lidas = semRepetidas(
     respostas.flatMap(({ data: { data } }) => data.payload)
   );
@@ -172,10 +184,27 @@ const releerAsPaginasDoFiltroDoLink = async (
     substituir: true,
   });
   commit(types.REPLACE_CONVERSATION_LIST, [...novas, ...atrasadas]);
+  // O mesmo que a leitura comum faz com o que chega (buildConversationList): etiquetas e contatos das conversas.
+  dispatch('conversationLabels/setBulkConversationLabels', novas);
+  setContacts(commit, novas);
   dispatch('conversationStats/set', {
     meta: respostas[0].data.data.meta,
     request,
   });
+  return true;
+};
+
+// Mais de 5 páginas: volta à primeira página no lugar da lista. A rolagem vai ao topo só se a lista foi trocada.
+const voltarAPrimeiraPaginaDoFiltroDoLink = async (
+  { dispatch, state },
+  paginas
+) => {
+  const antes = state.allConversations;
+  await dispatch('updateChatListFilters', { page: 1, updatedWithin: null });
+  await dispatch('fetchAllConversations', { replaceExisting: true });
+  if (paginas > PAGINAS_RELIDAS_NO_MAXIMO && state.allConversations !== antes) {
+    emitter.emit(BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO);
+  }
 };
 
 // actions
@@ -185,7 +214,7 @@ const actions = {
   // Com uma só, ou mais de 5, volta à primeira página no lugar da lista (o mesmo que a releitura ao reconectar faz); a
   // conversa aberta continua aberta e, se a lista tinha mais de 5 páginas, a rolagem vai ao topo.
   releerFiltroDoLink: async contexto => {
-    const { dispatch, state, rootState, rootGetters } = contexto;
+    const { state, rootState, rootGetters } = contexto;
     if (!filtroDoLinkAtivo(state, rootState)) return;
     if (state.listLoadingStatus) {
       agendarReleituraDoFiltroDoLink(contexto);
@@ -194,19 +223,24 @@ const actions = {
     const paginas = rootGetters['conversationPage/getCurrentPageFilter'](
       state.conversationFilters.assigneeType
     );
-    if (paginas > 1 && paginas <= PAGINAS_RELIDAS_NO_MAXIMO) {
-      try {
-        await releerAsPaginasDoFiltroDoLink(contexto, paginas);
-      } catch (error) {
-        // O próximo evento do websocket (ou a releitura de um minuto) tenta de novo.
-        Sentry.captureException(error);
+    releituraEmCurso = true;
+    try {
+      if (paginas > 1 && paginas <= PAGINAS_RELIDAS_NO_MAXIMO) {
+        // Descartada (a lista foi lida, esvaziada ou trocou de aba no meio): relê de novo depois.
+        const trocou = await releerAsPaginasDoFiltroDoLink(contexto, paginas);
+        if (!trocou) releituraPendente = true;
+      } else {
+        await voltarAPrimeiraPaginaDoFiltroDoLink(contexto, paginas);
       }
-      return;
-    }
-    await dispatch('updateChatListFilters', { page: 1, updatedWithin: null });
-    await dispatch('fetchAllConversations', { replaceExisting: true });
-    if (paginas > PAGINAS_RELIDAS_NO_MAXIMO) {
-      emitter.emit(BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO);
+    } catch (error) {
+      // O próximo evento do websocket (ou a releitura de um minuto) tenta de novo.
+      Sentry.captureException(error);
+    } finally {
+      releituraEmCurso = false;
+      if (releituraPendente) {
+        releituraPendente = false;
+        agendarReleituraDoFiltroDoLink(contexto);
+      }
     }
   },
 
@@ -258,7 +292,7 @@ const actions = {
     { commit, state, dispatch },
     { replaceExisting = false } = {}
   ) => {
-    novaGeracaoDaLista();
+    const geracao = novaGeracaoDaLista();
     return conversationListRequest.run(async signal => {
       const params = state.conversationFilters;
       const countRequest = await dispatch(
@@ -273,6 +307,12 @@ const actions = {
         } = await ConversationApi.get(params, { signal });
 
         if (signal.aborted) return;
+        // #1883: a lista foi trocada no meio (releitura do filtro do link, esvaziamento, outra aba): esta página é da
+        // lista anterior. A página não avança, e a próxima rolagem pede de novo.
+        if (geracao !== geracaoDaLista) {
+          commit(types.CLEAR_LIST_LOADING_STATUS);
+          return;
+        }
 
         // Filtros pelo link (#1883): quem decide o que entra é o servidor; guarda o que ele mandou.
         if (filtroDoLinkNosParametros(params)) {
@@ -853,6 +893,7 @@ const actions = {
   },
 
   invalidateConversationListRequests({ commit }) {
+    novaGeracaoDaLista();
     conversationListRequest.abort();
     commit(types.CLEAR_LIST_LOADING_STATUS);
   },
