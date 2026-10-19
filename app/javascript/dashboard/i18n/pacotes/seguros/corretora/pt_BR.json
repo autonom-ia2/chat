@@ -894,7 +894,7 @@
   },
   "CAMPAIGN_JOURNEY": {
     "AUDIENCES": {
-      "EMPTY_SUBTITLE": "Público é uma lista de pessoas, como a sua carteira de clientes. Suba a planilha do seu sistema da corretora para criar o primeiro."
+      "EMPTY_SUBTITLE": "Público é uma lista de pessoas, como a sua carteira de clientes. Suba a planilha de clientes que você tira do sistema da corretora para criar o primeiro."
     },
     "NEW_AUDIENCE": {
       "NAME_PLACEHOLDER": "Ex.: Seguro do carro vencendo em novembro",

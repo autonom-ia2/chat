@@ -31,7 +31,7 @@ O `prontos.spec.js` passa a montar cada pronto também com o texto composto da c
 
 - **Título "Lembrete de vencimento ou renovação" da biblioteca de e-mail:** o corpo do modelo fala de "assinatura". Trocar só o título deixaria a troca pela metade. Entra junto com os modelos de e-mail de seguro (lacuna L4).
 - **Prontos novos de corretor (N1 a N15) e os 10 botões novos:** exigem código em `constants.js` (dono Modelos WhatsApp). Ficam para um PR próprio.
-- **Neutralizar o geral:** os exemplos de Campanhas que citam seguro no catálogo geral ("Auto vencendo em outubro", "seguro auto") são o lote 0, com PR do dono.
+- **Neutralizar o geral:** os exemplos de Campanhas que citam seguro no catálogo geral ("Auto vencendo em outubro", "seguro auto") são o lote 0: a abrir, dono Campanhas, depende do OK do Rodrigo.
 - **Não se mexe:** autorização para criar modelos (consentimento versionado), cupom, catálogo de produtos, código de verificação, prontos de sistema, modelos já aprovados na Meta, prompts de IA e a Lia.
 
 ## Ajustes sobre o inventário
@@ -62,7 +62,7 @@ O `prontos.spec.js` passa a montar cada pronto também com o texto composto da c
 | 11 | `CAMPAIGN.EMAIL_CAMPAIGN.AI.COMPOSER.BRIEF_PLACEHOLDER` | Ex.: e-mail promocional sobre o novo plano de seguro auto, tom amigável, chamada para desconto | Ex.: e-mail para quem tem o seguro do carro vencendo no mês que vem, tom amigável, convite para cotar a renovação |
 | 12 | `CAMPAIGN.EMAIL_CAMPAIGN.AI.COMPOSER.ASSET_DESCRIPTION_PLACEHOLDER` | O que é este recurso? Ex.: vídeo de depoimento do cliente | O que é este recurso? Ex.: tabela de coberturas do seguro do carro |
 | 13 | `CAMPAIGN.EMAIL_CAMPAIGN.AI.COMPOSER.ROLE_PRODUCT` | Produto | Seguro |
-| 14 | `CAMPAIGN_JOURNEY.AUDIENCES.EMPTY_SUBTITLE` | Público é uma lista de pessoas. Suba uma planilha para criar o primeiro. | Público é uma lista de pessoas, como a sua carteira de clientes. Suba a planilha do seu sistema da corretora para criar o primeiro. |
+| 14 | `CAMPAIGN_JOURNEY.AUDIENCES.EMPTY_SUBTITLE` | Público é uma lista de pessoas. Suba uma planilha para criar o primeiro. | Público é uma lista de pessoas, como a sua carteira de clientes. Suba a planilha de clientes que você tira do sistema da corretora para criar o primeiro. |
 | 15 | `CAMPAIGN_JOURNEY.NEW_AUDIENCE.NAME_PLACEHOLDER` | Ex.: Auto vencendo em outubro | Ex.: Seguro do carro vencendo em novembro |
 | 16 | `CAMPAIGN_JOURNEY.NEW_AUDIENCE.FILE_HINT` | CSV ou Excel. Nome e celular ou e-mail; empresa e outras colunas são bem-vindas. | CSV ou Excel. Nome e celular ou e-mail. Vencimento, seguradora e placa também ajudam: dá para usar na mensagem. |
 | 17 | `CAMPAIGN_JOURNEY.NEW_AUDIENCE.COLUMNS.OTHER_HINT` | Ficam guardadas para usar na mensagem | Ficam guardadas para usar na mensagem, como o vencimento do seguro |
