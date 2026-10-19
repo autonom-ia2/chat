@@ -5,9 +5,12 @@
 // compactado), o nome inteiro ao passar o mouse, a sigla e o tamanho. Tocar abre; o
 // botão redondo baixa. Sem miniatura (servidor sem processador de imagem), a foto usa o
 // arquivo original; sem ele também, vira cartão de arquivo.
+// #1869: vídeo que o navegador toca mostra a primeira imagem e abre na galeria; o que
+// ele não toca (o .mov do iPhone no Chrome) ou que dá erro vira cartão de arquivo, que
+// abre noutra aba. Baixar é link direto ao Active Storage com `disposition=attachment`
+// (o bucket não tem CORS; o atributo `download` sozinho não vale depois do redirect).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getFileInfo } from '@chatwoot/utils';
 import Icon from 'next/icon/Icon.vue';
 import FileIcon from 'next/icon/FileIcon.vue';
 import GalleryView from 'dashboard/components/widgets/conversation/components/GalleryView.vue';
@@ -15,6 +18,13 @@ import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 import { useMessageContext } from '../../message/provider.js';
 import { ATTACHMENT_TYPES } from '../../message/constants.js';
 import { idiomaDoPainel } from '../dataDaConversa';
+import {
+  doActiveStorage,
+  enderecoParaBaixar,
+  enderecoSeguro,
+} from '../midia/enderecoParaBaixar';
+import { extensaoDoArquivo, nomeDoArquivo } from '../midia/tamanhoDoArquivo';
+import { tocaNoNavegador } from './videoNoNavegador';
 
 const props = defineProps({
   anexos: { type: Array, required: true },
@@ -69,22 +79,26 @@ const tamanho = bytes => {
 
 const itens = computed(() =>
   props.anexos.map(anexo => {
-    const { name, type } = getFileInfo(anexo.dataUrl || '');
-    const tipo = String(type || anexo.extension || '').toLowerCase();
+    const tipo = extensaoDoArquivo(anexo).toLowerCase();
     const ehFoto = anexo.fileType === ATTACHMENT_TYPES.IMAGE;
-    const ehMidia = [ATTACHMENT_TYPES.VIDEO, ATTACHMENT_TYPES.AUDIO].includes(
-      anexo.fileType
-    );
+    const ehVideo = anexo.fileType === ATTACHMENT_TYPES.VIDEO;
+    const ehMidia = ehVideo || anexo.fileType === ATTACHMENT_TYPES.AUDIO;
     const familia =
       FAMILIAS[ehMidia ? 'midia' : FAMILIA_DO_TIPO[tipo] || 'outro'];
     return {
       anexo,
       ehFoto,
-      nome: decodeURIComponent(name || ''),
+      ehVideo,
+      videoToca: ehVideo && tocaNoNavegador(tipo),
+      nome: nomeDoArquivo(anexo),
       tipo,
       sigla: familia.sigla || tipo.toUpperCase().slice(0, 4),
       cor: familia.cor,
       tamanho: tamanho(anexo.fileSize),
+      linkDeAbrir: enderecoSeguro(anexo.dataUrl),
+      linkDeBaixar: enderecoParaBaixar(anexo.dataUrl),
+      // Endereço de fora do Active Storage não vira download: abre noutra aba.
+      deFora: !doActiveStorage(anexo.dataUrl),
     };
   })
 );
@@ -108,6 +122,20 @@ const falhouFoto = anexo => {
 };
 const comoFoto = item =>
   item.ehFoto && (tentativa.value[item.anexo.id] || 0) < 2;
+
+// Vídeo que dá erro ao carregar vira cartão de arquivo.
+const videoFalhou = ref({});
+const comoVideo = item => item.videoToca && !videoFalhou.value[item.anexo.id];
+const falhouVideo = anexo => {
+  videoFalhou.value = { ...videoFalhou.value, [anexo.id]: true };
+};
+// "#t=0.1" faz o navegador mostrar a primeira imagem sem tocar.
+const quadroDoVideo = anexo => `${anexo.dataUrl}#t=0.1`;
+const marca = item => {
+  if (item.ehFoto) return 'foto';
+  if (comoVideo(item)) return 'video';
+  return item.tipo || 'arquivo';
+};
 </script>
 
 <template>
@@ -126,14 +154,17 @@ const comoFoto = item =>
       <span v-if="total" aria-hidden="true" class="before:content-['·']" />
       <span v-if="total" class="tabular-nums">{{ total }}</span>
     </p>
+    <!-- Clique direito aqui fica com o menu do navegador ("Salvar link como…"), não
+    com o menu da mensagem, que bloqueia o dele. -->
     <ul
       class="reset-base list-none grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-2.5 max-w-[44rem]"
+      @contextmenu.stop
     >
       <li
         v-for="item in itens"
         :key="item.anexo.id"
         class="list-none group relative flex flex-col min-w-0 overflow-hidden rounded-xl border border-n-weak bg-n-surface-1 transition-shadow hover:shadow-[0_1px_3px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.08)] focus-within:shadow-[0_1px_3px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.08)]"
-        :data-anexo="item.ehFoto ? 'foto' : item.tipo || 'arquivo'"
+        :data-anexo="marca(item)"
       >
         <button
           v-if="comoFoto(item)"
@@ -152,9 +183,34 @@ const comoFoto = item =>
             @error="falhouFoto(item.anexo)"
           />
         </button>
+        <button
+          v-else-if="comoVideo(item)"
+          type="button"
+          class="relative block aspect-[16/10] w-full overflow-hidden bg-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
+          :aria-label="
+            t('CONVERSA_CANAL.EMAIL.ABRIR_ANEXO', { nome: item.nome })
+          "
+          data-abrir-video
+          @click="naGaleria = item.anexo"
+        >
+          <video
+            class="size-full object-cover pointer-events-none"
+            preload="metadata"
+            muted
+            playsinline
+            :src="quadroDoVideo(item.anexo)"
+            @error="falhouVideo(item.anexo)"
+          />
+          <span
+            class="absolute inset-0 m-auto grid place-content-center size-11 rounded-full bg-n-slate-12/60 text-n-slate-1 pointer-events-none"
+            aria-hidden="true"
+          >
+            <Icon icon="i-lucide-play" class="size-5 ms-0.5" />
+          </span>
+        </button>
         <a
           v-else
-          :href="item.anexo.dataUrl"
+          :href="item.linkDeAbrir"
           target="_blank"
           rel="noopener noreferrer"
           class="grid place-content-center aspect-[16/10] w-full focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
@@ -162,8 +218,15 @@ const comoFoto = item =>
           :aria-label="
             t('CONVERSA_CANAL.EMAIL.ABRIR_ANEXO', { nome: item.nome })
           "
+          data-abrir-anexo
         >
-          <FileIcon :file-type="item.tipo" class="size-9" />
+          <Icon
+            v-if="item.ehVideo"
+            icon="i-lucide-file-play"
+            class="size-9"
+            aria-hidden="true"
+          />
+          <FileIcon v-else :file-type="item.tipo" class="size-9" />
         </a>
         <div class="flex items-center gap-1 min-w-0 ps-3 pe-1 py-1.5">
           <div class="flex-1 min-w-0">
@@ -178,9 +241,11 @@ const comoFoto = item =>
             </p>
           </div>
           <a
-            :href="item.anexo.dataUrl"
-            download
-            class="grid place-content-center flex-shrink-0 size-9 rounded-full text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            :href="item.linkDeBaixar"
+            :download="item.deFora ? undefined : item.nome"
+            :target="item.deFora ? '_blank' : undefined"
+            :rel="item.deFora ? 'noopener noreferrer' : undefined"
+            class="grid place-content-center flex-shrink-0 size-11 rounded-full text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :aria-label="
               t('CONVERSA_CANAL.EMAIL.BAIXAR_ANEXO', { nome: item.nome })
             "

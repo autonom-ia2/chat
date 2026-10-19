@@ -8,6 +8,7 @@ import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 
 import ReplyToMessage from './ReplyToMessage.vue';
 import CitacaoNaResposta from 'dashboard/components-next/conversa-canal/CitacaoNaResposta.vue';
+import { FORA_DA_REGUA } from 'dashboard/components-next/conversa-canal/email/visualEmail';
 import CrmReplySubject from './CrmReplySubject.vue';
 import CrmRepasseDoAssunto from './CrmRepasseDoAssunto.vue';
 import AttachmentPreview from 'dashboard/components/widgets/AttachmentsPreview.vue';
@@ -205,6 +206,7 @@ export default {
       emailNovo,
       fecharRespostaDoEmail,
       textoDoCampo,
+      FORA_DA_REGUA,
     };
   },
   data() {
@@ -1919,6 +1921,7 @@ export default {
           :is-private="isOnPrivateNote"
           :placeholder="messagePlaceHolder"
           :reload-on-placeholder-change="emailNovo"
+          :hidden-menu-options="emailNovo ? FORA_DA_REGUA : []"
           :update-selection-with="updateEditorSelectionWith"
           :min-height="4"
           :disabled="isEditorDisabled"

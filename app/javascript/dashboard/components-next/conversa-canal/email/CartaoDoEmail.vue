@@ -40,6 +40,7 @@ import { CARTAO, COR_DO_SELO, SELO } from './visualEmail';
 import MenuDoEmail from './MenuDoEmail.vue';
 import AnexosDoEmail from './AnexosDoEmail.vue';
 import { semCitacaoDosLeitores } from './citacaoDosLeitores';
+import { abrirImagemDoCorpo } from './imagemDoCorpo';
 import OriginalDoEmail from './OriginalDoEmail.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import { useAcoesDoEmail } from './useAcoesDoEmail';
@@ -505,13 +506,14 @@ const excluir = async () => {
       <section class="mt-3 ps-[60px] sm:ps-[68px] pe-2 sm:pe-4">
         <div
           ref="corpo"
-          class="relative text-sm text-n-slate-12"
+          class="relative text-sm text-n-slate-12 [&_img:not(a_img)]:cursor-zoom-in"
           :class="
             longo && !inteiro
               ? 'max-h-[400px] overflow-hidden'
               : 'overflow-x-auto [&_img]:h-auto [&_img]:max-w-full'
           "
           data-corpo-do-email
+          @click="abrirImagemDoCorpo"
         >
           <FormattedContent
             v-if="enviado && content && !temEmail"

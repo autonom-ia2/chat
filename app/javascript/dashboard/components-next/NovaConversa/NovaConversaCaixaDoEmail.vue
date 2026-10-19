@@ -6,7 +6,8 @@
 // (CitacaoDaResposta, como na resposta); os anexos; e no pé, fixa, a barra (com o
 // aviso de assinatura logo acima). Passando do teto, o conteúdo rola por dentro, sem levar
 // a gaveta junto, e a barra fica fora da rolagem: sempre à vista e sem cobrir o cursor.
-// A régua de formatação fica atrás do "Aa".
+// A régua de formatação fica atrás do "Aa" (sem ela, nem a barra flutuante do Chatwoot).
+// Sem o ✨ do Captain, que não usamos (FORA_DA_REGUA).
 import { computed, ref } from 'vue';
 import WootEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import AttachmentPreviews from 'dashboard/components-next/NewConversation/components/AttachmentPreviews.vue';
@@ -14,7 +15,11 @@ import AvisoDeAssinatura from 'dashboard/components-next/conversa-canal/email/Av
 import CampoDeEnderecos from 'dashboard/components-next/conversa-canal/email/CampoDeEnderecos.vue';
 import ModeloDaResposta from 'dashboard/components-next/conversa-canal/email/ModeloDaResposta.vue';
 import CitacaoDaResposta from 'dashboard/components-next/conversa-canal/email/CitacaoDaResposta.vue';
-import { FORMATACAO_FIXA } from 'dashboard/components-next/conversa-canal/email/visualEmail';
+import {
+  FORA_DA_REGUA,
+  FORMATACAO_FIXA,
+  REGUA_SO_NO_AA,
+} from 'dashboard/components-next/conversa-canal/email/visualEmail';
 import NovaConversaBarraDoEmail from './NovaConversaBarraDoEmail.vue';
 
 const props = defineProps({
@@ -56,7 +61,7 @@ const EDITOR =
     role="group"
     aria-labelledby="nova-conversa-email-rotulo"
     class="flex max-h-[calc(100dvh-19rem)] flex-col rounded-2xl border border-n-weak bg-n-surface-1 shadow-[0_1px_2px_rgba(0,0,0,0.12),0_1px_3px_1px_rgba(0,0,0,0.06)] transition focus-within:border-n-blue-8"
-    :class="formatacao ? FORMATACAO_FIXA : ''"
+    :class="formatacao ? FORMATACAO_FIXA : REGUA_SO_NO_AA"
     data-caixa-do-email
   >
     <div
@@ -118,13 +123,13 @@ const EDITOR =
           "
           :focus-on-mount="false"
           enable-variables
-          enable-captain-tools
           :signature="assinatura"
           allow-signature
           :send-with-signature="comAssinatura"
           :channel-type="canal.channelType"
           :medium="canal.medium || ''"
           :update-selection-with="inserir"
+          :hidden-menu-options="FORA_DA_REGUA"
           @clear-selection="inserir = ''"
         />
       </div>
