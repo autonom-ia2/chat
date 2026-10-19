@@ -708,12 +708,12 @@
         "VALID_ERROR": "Sem espaço: use hífen. Ex.: segunda-via"
       },
       "DESCRIPTION": {
-        "PLACEHOLDER": "Ex.: Cliente que ainda precisa fazer a vistoria do carro"
+        "PLACEHOLDER": "Ex.: Falta fazer a vistoria do carro"
       }
     }
   },
   "ATTRIBUTES_MGMT": {
-    "DESCRIPTION": "Campos extras guardam o que a corretora precisa saber de cada contato, como a seguradora atual, o vencimento do seguro, o ramo e a placa do carro. Pode ser texto, lista, número ou data.",
+    "DESCRIPTION": "Campos extras guardam o que a corretora precisa saber de cada contato ou conversa, como a seguradora atual, o vencimento do seguro, o ramo e a placa do carro. Pode ser texto, lista, número ou data.",
     "ADD": {
       "FORM": {
         "NAME": {

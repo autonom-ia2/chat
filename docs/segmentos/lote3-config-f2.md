@@ -43,6 +43,9 @@ São 68 textos do painel.
 - **"Corretor" no lugar de "Vendedor (SDR)":** o Rodrigo decidiu "corretor", nunca vendedor nem produtor.
 - **"Endosso" no lugar de "alteração na apólice":** é o nome certo para a mudança na apólice.
 - **"Contato" no lugar de "cliente" nas etiquetas e nos campos:** valem para qualquer pessoa, não só para quem comprou. É a regra da Base de Clientes.
+- **Base de Clientes:** a vistoria pendente vira "Falta fazer a vistoria do carro", porque ainda não é cliente. Os campos extras passam a valer para "contato ou conversa".
+
+**Donos que deram OK:** Sidebar, Max, Base de Clientes, Funções personalizadas, Híbrido e Modelos WhatsApp. A trilha (`ONBOARDING_TRAIL`) não tem sessão dona ativa: fica com o "sem objeção" da Orquestração e com o OK do Max no texto.
 
 ## Os textos, por dono
 
@@ -96,9 +99,9 @@ São 68 textos do painel.
 | 29 | `LABEL_MGMT.LIST.404` | Não há etiquetas disponíveis nesta conta. | Nenhuma etiqueta ainda. Para começar, crie auto, residencial e sinistro. |
 | 30 | `LABEL_MGMT.ADD.DESC` | Etiquetas permitem agrupar as conversas. | Etiquetas separam as conversas por assunto, como renovação ou sinistro. |
 | 31 | `LABEL_MGMT.FORM.NAME.PLACEHOLDER` | Nome da etiqueta | Ex.: vistoria-pendente |
-| 32 | `LABEL_MGMT.FORM.DESCRIPTION.PLACEHOLDER` | Descrição da etiqueta | Ex.: Cliente que ainda precisa fazer a vistoria do carro |
+| 32 | `LABEL_MGMT.FORM.DESCRIPTION.PLACEHOLDER` | Descrição da etiqueta | Ex.: Falta fazer a vistoria do carro |
 | 33 | `LABEL_MGMT.FORM.NAME.VALID_ERROR` | Somente Letras, Números, Hífen e Sublinhado são permitidos | Sem espaço: use hífen. Ex.: segunda-via |
-| 34 | `ATTRIBUTES_MGMT.DESCRIPTION` | Um atributo personalizado controla detalhes adicionais sobre seus contatos ou conversas — como o plano de assinatura ou a data de sua primeira compra. Você pode adicionar diferentes tipos de atributos personalizados, como texto, listas ou números, para capturar as informações específicas que você precisa. | Campos extras guardam o que a corretora precisa saber de cada contato, como a seguradora atual, o vencimento do seguro, o ramo e a placa do carro. Pode ser texto, lista, número ou data. |
+| 34 | `ATTRIBUTES_MGMT.DESCRIPTION` | Um atributo personalizado controla detalhes adicionais sobre seus contatos ou conversas — como o plano de assinatura ou a data de sua primeira compra. Você pode adicionar diferentes tipos de atributos personalizados, como texto, listas ou números, para capturar as informações específicas que você precisa. | Campos extras guardam o que a corretora precisa saber de cada contato ou conversa, como a seguradora atual, o vencimento do seguro, o ramo e a placa do carro. Pode ser texto, lista, número ou data. |
 | 35 | `ATTRIBUTES_MGMT.ADD.FORM.NAME.PLACEHOLDER` | Digite um nome de exibição de atributo personalizado | Ex.: Vencimento do seguro |
 | 36 | `ATTRIBUTES_MGMT.ADD.FORM.DESC.PLACEHOLDER` | Inserir descrição do atributo personalizado | Ex.: Dia em que o seguro atual vence |
 | 37 | `ATTRIBUTES_MGMT.ADD.FORM.TYPE.LIST.PLACEHOLDER` | Por favor, digite o valor e pressione Enter | Ex.: Auto, Residencial, Vida. Digite cada um e aperte Enter |

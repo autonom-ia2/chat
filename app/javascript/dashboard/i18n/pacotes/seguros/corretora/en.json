@@ -708,12 +708,12 @@
         "VALID_ERROR": "No spaces: use a hyphen. E.g. duplicate-bill"
       },
       "DESCRIPTION": {
-        "PLACEHOLDER": "E.g. Customer who still needs the car inspection"
+        "PLACEHOLDER": "E.g. The car inspection is still pending"
       }
     }
   },
   "ATTRIBUTES_MGMT": {
-    "DESCRIPTION": "Extra fields keep what the brokerage needs to know about each contact, such as current insurer, policy expiry date, line of insurance and license plate. They can be text, list, number or date.",
+    "DESCRIPTION": "Extra fields keep what the brokerage needs to know about each contact or conversation, such as current insurer, policy expiry date, line of insurance and license plate. They can be text, list, number or date.",
     "ADD": {
       "FORM": {
         "NAME": {
