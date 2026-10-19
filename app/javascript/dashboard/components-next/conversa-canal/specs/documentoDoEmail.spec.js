@@ -388,7 +388,7 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(imagem.hasAttribute('data-proporcao')).toBe(true);
   });
 
-  it('endereço relativo no CSS e na tabela não chega ao painel; o completo fica', () => {
+  it('endereço relativo no CSS e na tabela não chega ao painel; o de outro host fica', () => {
     const srcdoc = documentoIsolado(
       `<style>.a{background:url(/api/v1/profile)} .b{background:url(https://ok.test/f.png)}</style>
       <table background="/rails/active_storage/x"><tr>
@@ -398,7 +398,8 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(srcdoc).not.toContain('/api/v1/profile');
     expect(srcdoc).not.toContain('/rails/active_storage');
     expect(srcdoc).not.toContain('/x/y');
-    expect(srcdoc).not.toContain('//mau.test');
+    // `//host` é de outro host (vale como https, como no Gmail), não do painel.
+    expect(srcdoc).toContain('https://mau.test/f.png');
     expect(srcdoc).toContain('https://ok.test/f.png');
   });
 

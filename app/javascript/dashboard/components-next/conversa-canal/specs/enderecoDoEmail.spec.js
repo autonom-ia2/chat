@@ -20,7 +20,7 @@ describe('enderecoDoEmail', () => {
 
   it('imagem só completa web ou embutida; link só web, e-mail e telefone', () => {
     expect(imagemSegura('/X)y')).toBe('');
-    expect(imagemSegura('//painel.test/x')).toBe('');
+    expect(imagemSegura('//cdn.test/x.png')).toBe('https://cdn.test/x.png');
     ['http:/X)x', 'http:X)x', 'http:\\X', 'HTTP:/X', 'https:/rota?a=)'].forEach(
       endereco => expect(imagemSegura(endereco)).toBe('')
     );

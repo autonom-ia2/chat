@@ -66,7 +66,10 @@ const religarSeMudouALargura = () => {
 
 const mudouDemais = () => {
   const agora = performance.now();
-  recentes = [...recentes.filter(t => agora - t < UM_SEGUNDO), agora];
+  const noUltimoSegundo = recentes.filter(t => agora - t < UM_SEGUNDO);
+  // Um segundo sem mudança: o laço acabou, as retomadas recomeçam.
+  if (!noUltimoSegundo.length) retomadas = 0;
+  recentes = [...noUltimoSegundo, agora];
   return recentes.length > MUDANCAS_POR_SEGUNDO;
 };
 

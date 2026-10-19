@@ -7,9 +7,13 @@ const IMAGEM_EMBUTIDA = 'data:image/';
 // Completo de verdade: o mesmo resolvido contra qualquer página. `http:/x` (esquema sem
 // "//") parece completo sozinho, mas na página de mesmo esquema vira caminho do painel.
 const BASES_DE_PROVA = ['https://a.invalid/', 'http://b.invalid/'];
+// `//cdn/x` (sem esquema) é endereço completo de outro host: vale como https, como no Gmail.
+const SEM_ESQUEMA = '//';
+const comEsquema = texto =>
+  texto.startsWith(SEM_ESQUEMA) ? `https:${texto}` : texto;
 const enderecoCom = protocolos => endereco => {
   try {
-    const texto = String(endereco || '').trim();
+    const texto = comEsquema(String(endereco || '').trim());
     const url = new URL(texto);
     const independente = BASES_DE_PROVA.every(
       base => new URL(texto, base).href === url.href

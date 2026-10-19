@@ -59,7 +59,7 @@ export const MARCA_DA_PROPORCAO = 'data-proporcao';
 const PADRAO_DO_LEITOR = [
   ':root{color-scheme:light}',
   'body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222}',
-  ':where(a){color:#15c}',
+  ':where(a[href]){color:#15c}',
   'img{max-width:100%}',
   // Imagem estreitada mantém a proporção dos atributos (manterProporcao); peso zero: o
   // remetente ganha.
