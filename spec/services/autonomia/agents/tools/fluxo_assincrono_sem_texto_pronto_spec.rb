@@ -81,9 +81,11 @@ RSpec.describe 'Fluxo assíncrono sem texto pronto' do # rubocop:disable RSpec/D
     it 'o turno de evento so publica o texto que o modelo devolveu' do
       chamada = chamadas_ao_builder('app/services/autonomia/agents/operate/responder_ao_evento.rb').sole
 
-      expect(parametro(chamada, :content)).to eq('text')
+      # #1479: o conteúdo é o texto do modelo, ou a versão em texto da interação que o próprio modelo pediu.
+      expect(parametro(chamada, :content)).to eq('content')
       expect(parametro(chamada, :private)).to eq('false')
       entrega = File.read(Rails.root.join('app/services/autonomia/agents/operate/responder_ao_evento.rb'))
+      expect(entrega).to include('content, formato = com_interacao(text, interacao)')
       expect(entrega).to include('outcome = classic_deliver(result)')
     end
   end

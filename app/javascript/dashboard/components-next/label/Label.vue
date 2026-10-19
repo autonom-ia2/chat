@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 
 const props = defineProps({
   label: {
@@ -42,6 +43,8 @@ const labelColor = computed(() => {
 });
 
 const colorClasses = computed(() => COLOR_CLASSES[props.color]);
+
+const { nomeDe } = useNomeDaEtiqueta();
 </script>
 
 <template>
@@ -64,7 +67,7 @@ const colorClasses = computed(() => COLOR_CLASSES[props.color]);
       class="whitespace-nowrap"
       :class="compact ? 'text-label-small' : 'text-label !font-420'"
     >
-      {{ labelTitle }}
+      {{ nomeDe(labelTitle) }}
     </span>
     <slot name="action" />
   </div>

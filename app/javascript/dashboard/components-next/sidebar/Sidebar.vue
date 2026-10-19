@@ -7,6 +7,7 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useBrandedSidebar } from 'dashboard/composables/useBrandedSidebar';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
@@ -449,6 +450,7 @@ useEventListener(document, 'touchend', onResizeEnd);
 
 const inboxes = useMapGetter('inboxes/getInboxes');
 const labels = useMapGetter('labels/getLabelsOnSidebar');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const allUnreadCount = useMapGetter(
   'conversationUnreadCounts/getAllUnreadCount'
 );
@@ -737,7 +739,7 @@ const menuItems = computed(() => {
           showTreeLine: true,
           children: sortedLabels.value.map(label => ({
             name: `${label.title}-${label.id}`,
-            label: label.title,
+            label: nomeDaEtiqueta(label.title),
             badgeCount: getLabelUnreadCount.value(label.id),
             icon: h('span', {
               class: `size-[8px] rounded-sm`,
@@ -948,7 +950,7 @@ const menuItems = computed(() => {
           showTreeLine: true,
           children: labels.value.map(label => ({
             name: `${label.title}-${label.id}`,
-            label: label.title,
+            label: nomeDaEtiqueta(label.title),
             icon: h('span', {
               class: `size-[8px] rounded-sm`,
               style: { backgroundColor: label.color },

@@ -1857,6 +1857,10 @@
     "controller": "api/v1/accounts/macros#show",
     "parametros": []
   },
+  "nomes_de_etiquetas": {
+    "controller": "api/v1/accounts/nomes_de_etiquetas#index",
+    "parametros": []
+  },
   "notification_settings": {
     "controller": "api/v1/accounts/notification_settings#show",
     "parametros": []
