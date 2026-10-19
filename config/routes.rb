@@ -566,6 +566,9 @@ Rails.application.routes.draw do
             post 'builder_images', to: 'agents/builder_images#create'
             # Agent-facing copilot for a live conversation (V1, gated by the kanban key).
             post 'conversations/:conversation_id/copilot', to: 'conversation_copilot#create'
+            # #1872 — o ✨ do editor de e-mail: o copiloto está disponível? E o texto sem conversa (gaveta Escrever).
+            get 'copilot/status', to: 'text_copilot#status'
+            post 'copilot/text', to: 'text_copilot#create'
             # Guia da Plataforma — onboarding/suporte read-only, global/auto-on por conta elegível.
             post 'guide/chat', to: 'guide#chat'
             # #572 — a pergunta vira job; a tela busca a resposta aqui.

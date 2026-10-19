@@ -17,6 +17,7 @@ import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import {
   FORMATACAO_FIXA,
+  REGUA_SO_NO_AA,
   LISTA_DO_EMAIL,
   RESPOSTA_DO_EMAIL,
   RESPOSTA_EXPANDIDA,
@@ -46,6 +47,8 @@ export const MODELOS_DO_EMAIL = 'conversaCanal:modelosDoEmail';
 export const MODELO_DE_CAMPANHA = 'conversaCanal:modeloDeCampanha';
 
 const CHAVE = Symbol('conversaDeEmail');
+// As conversas anterior e seguinte do contato, que o MessagesView já busca (EmailsVizinhos).
+export const CONVERSAS_DO_CONTATO = Symbol('conversasDoContato');
 // Escolha de cada atendente (Rodrigo, 17/10): por padrão as mensagens antigas ficam
 // abertas; recolher é opção.
 const RECOLHER = 'conversa_email_recolher_antigas';
@@ -160,7 +163,8 @@ export const useConversaDeEmail = () => {
         RESPOSTA_DO_EMAIL,
         tamanho.value === TAMANHOS.EXPANDIDA ? RESPOSTA_EXPANDIDA : '',
         tamanho.value === TAMANHOS.JANELA ? RESPOSTA_EM_JANELA : '',
-        formatacao.value ? FORMATACAO_FIXA : '',
+        // Régua só com o "Aa": sem ele, a barra flutuante não cobre o texto selecionado.
+        formatacao.value ? FORMATACAO_FIXA : REGUA_SO_NO_AA,
       ].join(' ');
     }),
   };

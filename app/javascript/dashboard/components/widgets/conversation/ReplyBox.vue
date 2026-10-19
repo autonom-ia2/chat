@@ -8,6 +8,14 @@ import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 
 import ReplyToMessage from './ReplyToMessage.vue';
 import CitacaoNaResposta from 'dashboard/components-next/conversa-canal/CitacaoNaResposta.vue';
+import { FORA_DA_REGUA } from 'dashboard/components-next/conversa-canal/email/visualEmail';
+import MenuDaIaDoEmail from 'dashboard/components-next/conversa-canal/email/MenuDaIaDoEmail.vue';
+import AvisoDaSugestao from 'dashboard/components-next/conversa-canal/email/AvisoDaSugestao.vue';
+import {
+  useIaDoEmail,
+  respostaComIa,
+  assinaturaNoTexto,
+} from 'dashboard/components-next/conversa-canal/email/useIaDoEmail';
 import CrmReplySubject from './CrmReplySubject.vue';
 import CrmRepasseDoAssunto from './CrmRepasseDoAssunto.vue';
 import AttachmentPreview from 'dashboard/components/widgets/AttachmentsPreview.vue';
@@ -131,6 +139,8 @@ export default {
     QuotedEmailPreview,
     CopilotEditorSection,
     CopilotReplyBottomPanel,
+    MenuDaIaDoEmail,
+    AvisoDaSugestao,
     ConversationResolveAttributesModal,
   },
   mixins: [inboxMixin, fileUploadMixin],
@@ -145,7 +155,6 @@ export default {
     } = useUISettings();
 
     const messageEditor = useTemplateRef('messageEditor');
-    const copilot = useCopilotReply();
     const macroExecution = useMacroExecution();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
     // #1702: barra e campo do WhatsApp na conversa com a cara do canal.
@@ -156,6 +165,21 @@ export default {
 
     // Options API state and methods live on the instance proxy
     const { proxy } = getCurrentInstance();
+    // #1872: no e-mail novo o ✨ usa a IA do cliente (copiloto da Autonom.ia), nunca o Captain;
+    // nos outros canais segue o do Chatwoot. A assinatura não vai para a IA e volta ao aceitar.
+    const iaDoEmail = useIaDoEmail({
+      ativo: () => emailNovo.value,
+      conversaId: () => proxy.conversationId,
+      rascunho: () => proxy.message,
+      assinatura: () =>
+        assinaturaNoTexto({
+          ligada: !proxy.isPrivate && proxy.sendWithSignature,
+          texto: proxy.messageSignature,
+          channelType: proxy.channelType,
+          medium: proxy.inbox?.medium,
+        }),
+    });
+    const copilot = respostaComIa(emailNovo, useCopilotReply(), iaDoEmail);
     useKeyboardEvents({
       Escape: {
         action: () => proxy.hideEmojiPicker(),
@@ -198,6 +222,7 @@ export default {
       fetchQuotedReplyFlagFromUISettings,
       messageEditor,
       copilot,
+      iaDoEmail,
       shortcutKey,
       macroExecution,
       classesDaResposta,
@@ -205,6 +230,7 @@ export default {
       emailNovo,
       fecharRespostaDoEmail,
       textoDoCampo,
+      FORA_DA_REGUA,
     };
   },
   data() {
@@ -1919,6 +1945,8 @@ export default {
           :is-private="isOnPrivateNote"
           :placeholder="messagePlaceHolder"
           :reload-on-placeholder-change="emailNovo"
+          :hidden-menu-options="emailNovo ? FORA_DA_REGUA : []"
+          :copilot-available="emailNovo ? iaDoEmail.disponivel.value : null"
           :update-selection-with="updateEditorSelectionWith"
           :min-height="4"
           :disabled="isEditorDisabled"
@@ -1941,6 +1969,23 @@ export default {
           @execute-macro="onExecuteMacro"
           @clear-selection="clearEditorSelection"
           @execute-copilot-action="executeCopilotAction"
+        >
+          <template
+            v-if="emailNovo"
+            #copilot-menu="{ hasContent, run, close, root }"
+          >
+            <MenuDaIaDoEmail
+              :tem-texto="hasContent"
+              :editor="root"
+              tem-conversa
+              @executar="run"
+              @fechar="close"
+            />
+          </template>
+        </WootMessageEditor>
+        <AvisoDaSugestao
+          v-if="emailNovo && iaDoEmail.avisoDasVariaveis.value"
+          :texto="iaDoEmail.avisoDasVariaveis.value"
         />
 
         <ModeloDaResposta

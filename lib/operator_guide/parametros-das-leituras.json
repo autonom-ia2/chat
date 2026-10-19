@@ -182,6 +182,10 @@
     "controller": "api/v1/accounts/autonomia/conversation_copilot#agents",
     "parametros": []
   },
+  "autonomia/copilot/status": {
+    "controller": "api/v1/accounts/autonomia/text_copilot#status",
+    "parametros": []
+  },
   "autonomia/decisores": {
     "controller": "api/v1/accounts/autonomia/decisores#index",
     "parametros": []

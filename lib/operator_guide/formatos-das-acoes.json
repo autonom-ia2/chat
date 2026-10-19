@@ -11083,10 +11083,10 @@
       "leitura crua sem tipo: draft, instruction, task, tone"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:11",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:14",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:17",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:16",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -11111,10 +11111,42 @@
       "leitura crua sem tipo: message"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:34",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:36",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:39",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:63"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/copilot/text": {
+    "campos": {
+      "draft": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "instruction": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "task": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "tone": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/text_copilot#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:18",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:55",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:49"
     ],
     "sem_corpo": false
   },
@@ -13904,7 +13936,7 @@
     "controller": "api/v1/accounts/conversations#unread",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:135",
+      "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:20",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": true
@@ -13922,6 +13954,7 @@
     "origem": [
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:9",
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:26",
+      "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:14",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
