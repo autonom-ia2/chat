@@ -16,11 +16,33 @@ describe RichMessages::Types::Poll do
     expect(described_class.new(payload.merge('multiple' => false)).fallback_text('Vem amanhã?')).to eq("1. Sim\n2. Não")
   end
 
-  it 'adds the "more than one" line to the text version when multiple is true' do
-    poll = described_class.new(payload.merge('multiple' => true))
+  it 'adds the "more than one" line to the text version when multiple is true, in the given locale' do
+    poll = described_class.new(payload.merge('multiple' => true), locale: 'pt_BR')
     expect(poll.fallback_text('Vem amanhã?')).to eq("1. Sim\n2. Não\nPode escolher mais de uma")
     expect(poll.whatsapp_cloud_payload('Vem amanhã?')[:text][:body])
       .to eq("Vem amanhã?\n\n1. Sim\n2. Não\nPode escolher mais de uma")
+    expect(described_class.new(payload.merge('multiple' => true), locale: 'en').fallback_text('Vem amanhã?'))
+      .to eq("1. Sim\n2. Não\nYou can choose more than one")
+  end
+
+  # O aviso vai ao cliente: o formato montado pela mensagem (RichMessages.build, via Waha::RichNative::PollGate) usa o
+  # idioma da conta.
+  describe 'the text version of a message, in the account locale' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+
+    def text_of(locale)
+      account.update!(locale: locale)
+      message = Message.new(account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                            content: 'Vem amanhã?', content_attributes: { 'rich_message' => payload.merge('multiple' => true) })
+      RichMessages.text_with_fallback(message, message.content)
+    end
+
+    it 'goes in Portuguese to a pt_BR account and in English to an en account, numbering intact' do
+      expect(text_of('pt_BR')).to eq("Vem amanhã?\n\n1. Sim\n2. Não\nPode escolher mais de uma")
+      expect(text_of('en')).to eq("Vem amanhã?\n\n1. Sim\n2. Não\nYou can choose more than one")
+    end
   end
 
   # Enviada como texto (Cloud, grupo, motor sem enquete), o cliente responde pelo número ("2", "1 e 3"). Quem casa a
@@ -28,17 +50,18 @@ describe RichMessages::Types::Poll do
   # aviso não pode virar opção.
   it 'keeps the numbering of a multiple-answer poll sent as text: number N is option N, the hint is no option' do
     three = options + [{ 'id' => 'talvez', 'title' => 'Talvez' }]
-    poll = described_class.new(payload.merge('options' => three, 'multiple' => true))
+    poll = described_class.new(payload.merge('options' => three, 'multiple' => true), locale: 'pt_BR')
     lines = poll.fallback_text('Vem amanhã?').split("\n")
+    hint = 'Pode escolher mais de uma'
 
-    numbered = lines.reject { |line| line == described_class::MULTIPLE_HINT }
+    numbered = lines.reject { |line| line == hint }
     expect(numbered.size).to eq(three.size)
     three.each.with_index(1) do |option, number|
       expect(lines.find { |line| line.start_with?("#{number}. ") }).to eq("#{number}. #{option['title']}")
     end
-    expect(lines.last).to eq(described_class::MULTIPLE_HINT)
+    expect(lines.last).to eq(hint)
     expect(lines.count { |line| line.start_with?("#{three.size + 1}.") }).to eq(0)
-    expect(described_class::MULTIPLE_HINT.start_with?(*('0'..'9').to_a)).to be(false)
+    expect(hint.start_with?(*('0'..'9').to_a)).to be(false)
   end
 
   it 'goes to the Cloud API as text, question and options' do

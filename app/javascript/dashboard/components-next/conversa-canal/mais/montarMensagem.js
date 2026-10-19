@@ -353,10 +353,10 @@ const numeradas = rico =>
   rico.options.map((opcao, i) => `${i + 1}. ${opcao.title}`).join('\n');
 
 // Enquete com mais de uma resposta: a linha que o servidor acrescenta
-// (Poll::MULTIPLE_HINT, em português como lá).
-export const AVISO_DE_VARIAS = 'Pode escolher mais de uma';
-const daEnquete = rico =>
-  [numeradas(rico), rico.multiple === true ? AVISO_DE_VARIAS : '']
+// (rich_messages.poll.multiple_hint). Quem chama passa o texto traduzido
+// (CONVERSA_CANAL.PREVIA.ENQUETE_AVISO_VARIAS).
+const daEnquete = (rico, { avisoDeVarias = '' } = {}) =>
+  [numeradas(rico), rico.multiple === true ? avisoDeVarias : '']
     .filter(Boolean)
     .join('\n');
 
@@ -373,9 +373,10 @@ const COMPLEMENTO = {
   location_request: () => '',
 };
 
-export const textoParaQuemNaoTemFormato = pedido => {
+export const textoParaQuemNaoTemFormato = (pedido, textos = {}) => {
   const complemento = COMPLEMENTO[pedido.richMessage.type]?.(
-    pedido.richMessage
+    pedido.richMessage,
+    textos
   );
   return [pedido.content, complemento].filter(Boolean).join('\n\n');
 };

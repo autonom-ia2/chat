@@ -8,8 +8,9 @@ import { createI18n } from 'vue-i18n';
 import MaisDoWhatsapp from '../mais/MaisDoWhatsapp.vue';
 import JanelaDoMais from '../mais/JanelaDoMais.vue';
 import PreviaDoMais from '../mais/PreviaDoMais.vue';
+import enCanal from 'dashboard/i18n/locale/en/conversaCanal.json';
+import ptCanal from 'dashboard/i18n/locale/pt_BR/conversaCanal.json';
 import {
-  AVISO_DE_VARIAS,
   LIMITES,
   montarEnquete,
   textoParaQuemNaoTemFormato,
@@ -73,11 +74,21 @@ describe('montarEnquete (#1702 com o #1709)', () => {
     );
   });
 
-  it('em texto com mais de uma resposta: a linha do servidor no fim', () => {
+  it('em texto com mais de uma resposta: a linha do aviso, traduzida, no fim', () => {
     const { pedido } = montarEnquete(campos({ variasRespostas: true }));
-    expect(AVISO_DE_VARIAS).toBe('Pode escolher mais de uma');
-    expect(textoParaQuemNaoTemFormato(pedido)).toBe(
+    const avisoDeVarias = 'Pode escolher mais de uma';
+    expect(textoParaQuemNaoTemFormato(pedido, { avisoDeVarias })).toBe(
       'Qual dia?\n\n1. Segunda\n2. Terça\nPode escolher mais de uma'
+    );
+  });
+
+  // O mesmo texto do servidor (config/locales/rich_messages.*.yml).
+  it('o aviso de várias tem o texto do servidor em en e pt_BR', () => {
+    expect(enCanal.CONVERSA_CANAL.PREVIA.ENQUETE_AVISO_VARIAS).toBe(
+      'You can choose more than one'
+    );
+    expect(ptCanal.CONVERSA_CANAL.PREVIA.ENQUETE_AVISO_VARIAS).toBe(
+      'Pode escolher mais de uma'
     );
   });
 });
@@ -179,7 +190,10 @@ describe('PreviaDoMais: enquete', () => {
   it('em texto com mais de uma resposta: mostra a linha do aviso', () => {
     const wrapper = montar(true, { ...CAMPOS, variasRespostas: true });
     expect(wrapper.find('[data-previa-vazia]').exists()).toBe(false);
-    expect(wrapper.text()).toContain('Pode escolher mais de uma');
+    expect(wrapper.text()).toContain('2. Terça');
+    expect(wrapper.text()).toContain(
+      'CONVERSA_CANAL.PREVIA.ENQUETE_AVISO_VARIAS'
+    );
   });
 
   it('nativa: pergunta e opções para votar', () => {

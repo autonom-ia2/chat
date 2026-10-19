@@ -42,14 +42,17 @@ const montado = computed(() =>
 const enqueteIncompleta = computed(
   () => props.viraTexto && props.tipo === 'enquete' && !montado.value.pedido
 );
+const { t } = useI18n();
+
 const emTexto = computed(() => {
   if (!props.viraTexto) return '';
   const { pedido } = montado.value;
-  if (pedido) return textoParaQuemNaoTemFormato(pedido);
+  if (pedido)
+    return textoParaQuemNaoTemFormato(pedido, {
+      avisoDeVarias: t('CONVERSA_CANAL.PREVIA.ENQUETE_AVISO_VARIAS'),
+    });
   return props.tipo === 'enquete' ? '' : props.campos.mensagem;
 });
-
-const { t } = useI18n();
 
 const BALAO =
   'relative max-w-full rounded-lg ltr:rounded-tr-none rtl:rounded-tl-none bg-[#D9FDD3] dark:bg-[#144D37] text-[#0A0A0A] dark:text-[#FAFAFA] text-sm shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';

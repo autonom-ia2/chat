@@ -152,7 +152,8 @@
       "ENQUETE_UMA": "Select one option",
       "ENQUETE_VARIAS": "Select one or more options",
       "ENQUETE_VIRA_TEXTO": "No WhatsApp poll in this conversation. The customer gets it as text, like this:",
-      "ENQUETE_INCOMPLETA": "Write the question and at least 2 options to see how it looks."
+      "ENQUETE_INCOMPLETA": "Write the question and at least 2 options to see how it looks.",
+      "ENQUETE_AVISO_VARIAS": "You can choose more than one"
     },
     "JANELA_FECHADA": {
       "TEXTO": "It has been 24 hours since the customer last wrote. To talk to them again, send a template.",

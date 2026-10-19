@@ -152,7 +152,8 @@
       "ENQUETE_UMA": "Selecione uma opção",
       "ENQUETE_VARIAS": "Selecione uma ou mais opções",
       "ENQUETE_VIRA_TEXTO": "Esta conversa não tem enquete do WhatsApp. O cliente recebe em texto, assim:",
-      "ENQUETE_INCOMPLETA": "Escreva a pergunta e pelo menos 2 opções para ver como fica."
+      "ENQUETE_INCOMPLETA": "Escreva a pergunta e pelo menos 2 opções para ver como fica.",
+      "ENQUETE_AVISO_VARIAS": "Pode escolher mais de uma"
     },
     "JANELA_FECHADA": {
       "TEXTO": "Já passaram 24 horas desde a última mensagem do cliente. Para voltar a falar com ele, mande um modelo.",

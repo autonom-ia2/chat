@@ -80,7 +80,6 @@ class Whatsapp::Templates::ReenvioDoModelo
   end
 
   # Só grava (sem Meta): levanta se a gravação falhar, para a transação de quem chama desfazer.
-  # Só pode ser chamado depois de `conferir` devolver :conferido (usa os @conferidos que ele preencheu).
   def criar_conferido
     { status: :criado, message: criar(@conferidos) }
   end
