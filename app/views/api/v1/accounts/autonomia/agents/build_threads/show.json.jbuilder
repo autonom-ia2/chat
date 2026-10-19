@@ -22,6 +22,11 @@ json.payload do
     json.applied @thread.state['applied']
     # #1428 (piloto): o ajuste aplicou parte e ainda falta algo ou pergunta. Só existe onde o piloto rodou.
     json.parcial @thread.state['parcial'] if @thread.state.key?('parcial')
+    # #1428 (entrega C, piloto): as respostas prontas da pergunta aberta (do Construtor, ou os botões fixos do conflito).
+    # Só com o piloto ligado: desligado no meio da conversa (o rollback), as do último turno do piloto não aparecem.
+    if @thread.state.key?('opcoes_de_resposta') && Autonomia::Agents::Fase2.ligada?(@thread.account)
+      json.opcoes_de_resposta Array(@thread.state['opcoes_de_resposta'])
+    end
     # #1428 (parte 3, piloto): o último ajuste pedido por pedido e se ainda dá para desfazer. Só textos que o Construtor
     # escreveu para o dono (`pedido`, `resumo`); nunca o campo, a conferência, a instrução ou o andaime.
     json.resultado Autonomia::Agents::ResultadoDoAjuste.new(@thread).to_h if Autonomia::Agents::ResultadoDoAjuste.mostrar?(@thread)
