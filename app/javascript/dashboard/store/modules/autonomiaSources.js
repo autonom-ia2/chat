@@ -1,5 +1,8 @@
 import AutonomiaSourcesAPI from '../../api/autonomia/sources';
-import { throwErrorMessage } from 'dashboard/store/utils/api';
+import {
+  parseAPIErrorResponse,
+  throwErrorMessage,
+} from 'dashboard/store/utils/api';
 import { aguardandoRevisao } from 'dashboard/routes/dashboard/autonomia/agentes/utils/estadoDoMaterial';
 
 // Knowledge sources are a per-agent sub-resource (no global records-by-id list),
@@ -21,13 +24,32 @@ let pollTimer = null;
 let pollRounds = 0;
 
 // A source is still "settling" while it ingests (pending/processing) OR while it
-// has finished ingesting but the quality review has not landed yet. #1426: the
-// ingestion writes `needs_review` at its start, so "no review yet" is
-// needs_review without `reviewed_at` (utils/estadoDoMaterial). A source with no
-// verdict at all (older than the Revisor, or a media to send) never gets one, so
-// it does not keep the loop alive.
+// has finished ingesting (`ready`) but the quality review has not landed yet
+// (`review.status == null`). The Revisor runs after ingestion, so a `ready`
+// source with no review is still in flight as far as the Materiais UI cares.
 const isIngesting = source =>
+  INGESTING_STATUSES.includes(source?.status) ||
+  (source?.status === 'ready' && source?.review?.status == null);
+
+// #1426 — na Fase 2 (piloto) a ingestão grava `needs_review` já no começo, então
+// "revisão ainda não chegou" é needs_review sem `reviewed_at`
+// (utils/estadoDoMaterial); material sem parecer nenhum (de antes da Revisora, ou
+// mídia de envio) nunca recebe um e não prende a releitura, que tem teto. Fora da
+// Fase 2, a releitura é a de antes, sem teto.
+const assentandoNaFase2 = source =>
   INGESTING_STATUSES.includes(source?.status) || aguardandoRevisao(source);
+
+const fase2Ligada = rootGetters =>
+  rootGetters?.['accounts/getAccount']?.(rootGetters.getCurrentAccountId)
+    ?.autonomia_agents_fase2 === true;
+
+// O erro da API com o status HTTP: a tela distingue a recusa (422, repetir não
+// adianta) da falha que vale tentar de novo.
+const falhaDaApi = error => {
+  const falha = new Error(parseAPIErrorResponse(error));
+  falha.status = error?.response?.status;
+  return falha;
+};
 
 export const state = {
   records: [],
@@ -150,7 +172,7 @@ export const actions = {
       dispatch('schedulePoll', { agentId, records: [source], novo: true });
       return source;
     } catch (error) {
-      return throwErrorMessage(error);
+      throw falhaDaApi(error);
     } finally {
       commit('SET_UI_FLAG', { creatingItem: false });
     }
@@ -178,23 +200,27 @@ export const actions = {
       dispatch('schedulePoll', { agentId, records: [source], novo: true });
       return source;
     } catch (error) {
-      return throwErrorMessage(error);
+      throw falhaDaApi(error);
     } finally {
       commit('SET_UI_FLAG', { resyncingItem: false });
     }
   },
 
   // Starts a single polling loop while any source is still ingesting; clears
-  // itself once everything settles or after MAX_POLL_ROUNDS rounds in a row.
-  // `novo`: the person just sent or re-read a source, so the count starts over.
-  // Idempotent: never stacks timers.
-  schedulePoll: ({ dispatch }, { agentId, records = [], novo = false }) => {
+  // itself once everything settles. Idempotent: never stacks timers.
+  // #1426 — na Fase 2 também espera a revisão chegar, com teto de MAX_POLL_ROUNDS
+  // rodadas seguidas; `novo` (a pessoa mandou ou releu um material) zera a conta.
+  schedulePoll: (
+    { dispatch, rootGetters },
+    { agentId, records = [], novo = false }
+  ) => {
+    const fase2 = fase2Ligada(rootGetters);
     if (novo) pollRounds = 0;
-    if (!records.some(isIngesting)) {
+    if (!records.some(fase2 ? assentandoNaFase2 : isIngesting)) {
       if (!pollTimer) pollRounds = 0;
       return;
     }
-    if (pollTimer || pollRounds >= MAX_POLL_ROUNDS) return;
+    if (pollTimer || (fase2 && pollRounds >= MAX_POLL_ROUNDS)) return;
     pollTimer = setTimeout(async () => {
       pollTimer = null;
       pollRounds += 1;

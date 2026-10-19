@@ -38,6 +38,19 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Ocr do
     expect { Process.kill(0, pid) }.to raise_error(Errno::ESRCH)
   end
 
+  # X5 — saída sem fim: lê só até o teto, encerra o tesseract na hora e não espera o tempo máximo.
+  it 'stops tesseract when its output passes the ceiling' do
+    marca = File.join(pasta, 'pid')
+    tesseract_falso("echo $$ > #{marca}; exec yes 'linha de texto'")
+
+    inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    expect { com_path("#{pasta}:/usr/bin:/bin") { described_class.ler('/tmp/foto.png', tempo: 30) } }
+      .to raise_error(described_class::Falhou, 'tesseract_saida_grande')
+
+    expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 10
+    expect { Process.kill(0, File.read(marca).to_i) }.to raise_error(Errno::ESRCH)
+  end
+
   it 'reports a refusal by tesseract' do
     tesseract_falso('exit 1')
 

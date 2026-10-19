@@ -7,6 +7,7 @@
 # - Pixels: até MAX_PIXELS, lidos do cabeçalho (sem decodificar a imagem). 40 MP cobre foto de celular (12 a 24 MP, e
 #   48 MP só no modo de alta resolução, que raramente cabe em 5 MB) e página escaneada (A4 a 300 DPI tem 8,7 MP); acima
 #   disso é bomba de pixels: um PNG de 5 MB pode declarar 14.000 × 14.000 e pedir gigabytes ao OCR.
+# - Animação (GIF de vários quadros, WebP animado): recusada; foto de material é imagem parada.
 #
 # Usado na porta (SourcesController), na foto da criação (FotosDaCriacao) e de novo no processador, logo antes do OCR.
 module Autonomia::Agents::Knowledge::FotoConferida
@@ -14,13 +15,14 @@ module Autonomia::Agents::Knowledge::FotoConferida
 
   module_function
 
-  # nil quando a foto passa; senão o motivo: :tipo, :tamanho ou :pixels.
+  # nil quando a foto passa; senão o motivo: :tipo, :tamanho, :animada ou :pixels.
   def problema(bytes)
     bytes = bytes.to_s.b
     return :tamanho if bytes.bytesize > Autonomia::Agents::Config::MAX_IMAGE_BYTES
 
     tipo = Marcel::MimeType.for(StringIO.new(bytes))
     return :tipo unless Autonomia::Agents::Config::IMAGE_CONTENT_TYPES.include?(tipo)
+    return :animada if Autonomia::Agents::Knowledge::DimensoesDaImagem.animada?(bytes, tipo)
 
     largura, altura = Autonomia::Agents::Knowledge::DimensoesDaImagem.ler(bytes, tipo)
     return :pixels if largura.nil? || altura.nil? || largura * altura > MAX_PIXELS

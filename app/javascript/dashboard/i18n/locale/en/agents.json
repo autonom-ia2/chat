@@ -1245,6 +1245,7 @@
           "SITE_MANDAR": "Send",
           "SITE_ERRO": "Check the website address. E.g.: www.yourstore.com",
           "GRANDE": "This file is larger than 25 MB. Try a smaller one.",
+          "FOTO_GRANDE": "This photo is larger than 5 MB. Send a smaller one.",
           "LIMITE": "There are already {n} files and websites. Remove one to send another.",
           "LENDO": "Reading…",
           "PRONTO": "Ready",

@@ -160,8 +160,13 @@ module Autonomia
       # nada, preservando a recuperabilidade E o isolamento "fora do negócio" (que o Retriever lê do
       # review_summary). accepted continua accepted; needs_review continua excluído (sem promover).
       # Token-guard. Usado pelo ProcessJob no EmptyExtraction quando há entries.
+      # #1426 — material antigo, de antes da Revisora (sem parecer nenhum), volta sem parecer, como estava: "pronto" na tela
+      # e servido na busca. Com `needs_review` ele ficaria "Revisando…" para sempre, porque nenhuma revisão vai chegar.
       def restore_previous_generation!(token)
-        guarded_update(token, previous_review_attributes.merge(
+        sem_parecer_antes = (metadata || {}).dig('prev_review', 'review_status').nil?
+        anterior = previous_review_attributes
+        anterior = anterior.merge(review_status: nil) if sem_parecer_antes
+        guarded_update(token, anterior.merge(
                                 status: self.class.statuses[:ready], error: nil, sync_status: nil, synced_at: Time.current
                               ))
       end
@@ -243,8 +248,9 @@ module Autonomia
       def file_within_limits
         return unless file.attached?
 
-        errors.add(:file, 'too_large') if file.blob.byte_size > MAX_FILE_BYTES
-        errors.add(:file, 'unsupported_content_type') unless allowed_content_types.include?(file.blob.content_type)
+        # #1426 — a mensagem vai inteira para a tela (422): texto para quem manda o arquivo, nunca código.
+        errors.add(:base, I18n.t('autonomia.source.arquivo_grande')) if file.blob.byte_size > MAX_FILE_BYTES
+        errors.add(:base, I18n.t('autonomia.source.arquivo_tipo')) unless allowed_content_types.include?(file.blob.content_type)
       end
 
       def soltar_foto_da_conversa

@@ -120,12 +120,16 @@ RSpec.describe Autonomia::Agents::Knowledge::FotosDaCriacao do
       agent.sources.create!(account: account, source_type: 'txt', reference: "doc-#{i}.txt")
     end
     mandar(foto)
+    allow(Rails.logger).to receive(:info)
 
     # Act
     described_class.new(thread).para_base!
 
     # Assert
     expect(fotos_na_base).to be_empty
+    limite = Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES
+    expect(Rails.logger).to have_received(:info)
+      .with("[autonomia][fotos_da_criacao] base_cheia agent=#{agent.id} materiais=#{limite}")
   end
 
   it 'does nothing without the Fase 2' do

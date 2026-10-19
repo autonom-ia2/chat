@@ -341,52 +341,94 @@ RSpec.describe Autonomia::Agents::Builder do
       end
     end
 
-    # #1426 — a foto da criação já chegou ao Construtor na conversa; a cópia dela na base, reprovada, não segura o
-    # fechamento (o agente só não a usa até a pessoa resolver).
-    context 'when only the photo of the creation was sent back by the reviewer' do
+    # #1426 — os materiais no status do Construtor (MateriaisDaFase2).
+    describe 'materials of the Fase 2' do
+      let(:agente) { thread.reload.agent }
+
       before do
         thread.append_message!('user', 'Quero uma SDR')
         stub_model_output(interview_payload)
         builder.run!(thread.begin_build!)
-        Autonomia::Agents::Source.create!(account: account, agent: thread.reload.agent, source_type: 'foto',
-                                          status: :ready, review_status: 'needs_resend')
-        thread.append_message!('user', 'é isso')
       end
 
-      it 'lets the model close the instruction' do
-        # Arrange
-        stub_model_output(interview_payload('needs_more_info' => false, 'next_question' => ''))
-
-        # Act
-        builder.run!(thread.begin_build!)
-
-        # Assert
-        expect(thread.reload.state['applied']).to be(true)
+      def material(source_type, **atributos)
+        origem = atributos.delete(:origem)
+        source = Autonomia::Agents::Source.new(account: account, agent: agente, source_type: source_type, **atributos)
+        source.origem = origem if origem
+        source.save!
+        source
       end
 
-      # C1 — o status que o Construtor lê não conta a foto reprovada como pendente nem pede para esperar por ela.
-      it 'does not tell the Construtor to wait for the photo' do
-        status = builder.send(:materials_status_context)
-
-        expect(status).to include('aguardando revisão/reenvio: 0')
-        expect(status).not_to include('Só feche a instrução')
-        expect(status).to include('foto já vista na conversa')
-      end
-    end
-
-    # C2 — material que não deu para ler não é base: o Construtor pergunta se cria sem base, e o fechamento avisa.
-    context 'when the only knowledge material could not be read' do
-      before do
-        thread.append_message!('user', 'Quero uma SDR')
-        stub_model_output(interview_payload)
-        builder.run!(thread.begin_build!)
-        Autonomia::Agents::Source.create!(account: account, agent: thread.reload.agent, source_type: 'pdf',
-                                          status: :failed, review_status: 'needs_review')
+      def foto_da_criacao_reprovada
+        material('foto', status: :ready, review_status: 'needs_resend',
+                         origem: Autonomia::Agents::Source::ORIGEM_FOTO_DA_CRIACAO)
       end
 
-      it 'treats the base as empty' do
-        expect(builder.send(:no_knowledge_gap?)).to be(true)
-        expect(builder.send(:materials_status_context)).to include('NÃO há material de conhecimento')
+      # A foto da criação já chegou ao Construtor na conversa; a cópia dela na base, reprovada, não segura o
+      # fechamento (o agente só não a usa até a pessoa resolver).
+      context 'when only the photo of the creation was sent back by the reviewer' do
+        before do
+          foto_da_criacao_reprovada
+          thread.append_message!('user', 'é isso')
+        end
+
+        it 'lets the model close the instruction' do
+          # Arrange
+          stub_model_output(interview_payload('needs_more_info' => false, 'next_question' => ''))
+
+          # Act
+          builder.run!(thread.begin_build!)
+
+          # Assert
+          expect(thread.reload.state['applied']).to be(true)
+        end
+
+        # C1 — o status que o Construtor lê não conta a foto reprovada como pendente nem pede para esperar por ela.
+        it 'does not tell the Construtor to wait for the photo' do
+          status = builder.send(:materials_status_context)
+
+          expect(status).to include('aguardando revisão/reenvio: 0')
+          expect(status).not_to include('Só feche a instrução')
+          expect(status).to include('foto já vista na conversa')
+        end
+
+        # R2 — e ela não é base: sendo a única, o Construtor pergunta se cria sem base e o fechamento avisa.
+        it 'treats the base as empty in the Fase 2' do
+          Autonomia::Agents::Fase2.ligar!(account)
+
+          expect(builder.send(:no_knowledge_gap?)).to be(true)
+          expect(builder.send(:materials_status_context)).to include('NÃO há material de conhecimento')
+        end
+      end
+
+      # R1 — a foto mandada pela gaveta "O que sabe" é um material como os outros: reprovada, segura o fechamento.
+      context 'when a photo sent from the drawer was sent back by the reviewer' do
+        before { material('foto', status: :ready, review_status: 'needs_resend') }
+
+        it 'holds the closing and never calls it a photo already seen in the conversation' do
+          status = builder.send(:materials_status_context)
+
+          expect(builder.send(:materials_pending?, agente)).to be(true)
+          expect(status).to include('aguardando revisão/reenvio: 1')
+          expect(status).not_to include('foto já vista na conversa')
+        end
+      end
+
+      # C2 + R3 — material que não deu para ler não é base, só na Fase 2; fora dela, nada muda.
+      context 'when the only knowledge material could not be read' do
+        before { material('pdf', status: :failed, review_status: 'needs_review') }
+
+        it 'treats the base as empty in the Fase 2' do
+          Autonomia::Agents::Fase2.ligar!(account)
+
+          expect(builder.send(:no_knowledge_gap?)).to be(true)
+          expect(builder.send(:materials_status_context)).to include('NÃO há material de conhecimento')
+        end
+
+        it 'keeps counting it as material outside the Fase 2, as before' do
+          expect(builder.send(:no_knowledge_gap?)).to be(false)
+          expect(builder.send(:materials_status_context)).not_to include('NÃO há material de conhecimento')
+        end
       end
     end
   end

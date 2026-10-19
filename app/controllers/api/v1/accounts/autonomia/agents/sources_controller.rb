@@ -13,11 +13,9 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
     recusa = recusa_do_envio(kind)
     return render_unprocessable(recusa) if recusa
 
-    @source = @agent.sources.new(source_params)
-    @source.account = Current.account
-    @source.kind = kind
-    attach_file
-    @source.save!
+    @source = gravar_dentro_do_teto(kind)
+    return render_unprocessable(limite_atingido) if @source.nil?
+
     # GAP (A) — pipeline por `kind`. knowledge segue o caminho ATUAL (ingest → embed → revisora).
     # media é caminho NOVO: NÃO enfileira IngestJob (sem embed/revisora); só armazena e marca ready.
     if @source.kind_media?
@@ -43,7 +41,10 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   def resync
     # #284 (2b) — a fonte sintética "FAQ aprovadas" não tem arquivo para reprocessar.
     return render_unprocessable(I18n.t('autonomia.faq.resync_not_allowed')) if Autonomia::Agents::Faq::KnowledgeWriter.faq_source?(@source)
-    return render_unprocessable(I18n.t('autonomia.source.foto_fora_da_fase2')) if foto?(@source.source_type) && !fase2?
+
+    # #1426 — a foto relida passa pelas mesmas recusas da chegada (sem a parte do upload, que já está guardado).
+    recusa = foto?(@source.source_type) && recusa_da_foto_no_agente(@source.kind)
+    return render_unprocessable(I18n.t("autonomia.source.#{recusa}")) if recusa
 
     Autonomia::Agents::Knowledge::IngestJob.perform_later(@source.id)
     render :show, status: :accepted
@@ -51,14 +52,29 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
 
   private
 
+  # #1426 (revisão adversarial) — a conferência do teto e a gravação correm sob a trava da linha do agente, como na foto
+  # da criação (FotosDaCriacao): dois envios ao mesmo tempo não passam do teto. O job vai fora da trava. nil = teto.
+  def gravar_dentro_do_teto(kind)
+    @agent.with_lock do
+      next if knowledge_limit_reached?(kind)
+
+      source = @agent.sources.new(source_params)
+      source.account = Current.account
+      source.kind = kind
+      attach_file(source)
+      source.save!
+      source
+    end
+  end
+
   # Anexa o arquivo (quando há) e popula metadata visível (byte_size/mime) a partir do upload.
-  def attach_file
+  def attach_file(source)
     file = params[:file]
     return if file.blank?
 
-    @source.file.attach(file)
-    @source.byte_size = file.size if file.respond_to?(:size)
-    @source.mime = file.content_type if file.respond_to?(:content_type)
+    source.file.attach(file)
+    source.byte_size = file.size if file.respond_to?(:size)
+    source.mime = file.content_type if file.respond_to?(:content_type)
   end
 
   # GAP (A) — aceita `kind` em `source[:kind]` OU `descriptor[:kind]` (o FE manda no descriptor do
@@ -73,14 +89,16 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
     Autonomia::Agents::Source.kinds.key?(raw) ? raw : nil
   end
 
-  # A mensagem de recusa do envio, ou nil: arquivo que não é upload, foto recusada e, por último, o teto da base.
+  # A mensagem de recusa do envio, ou nil: arquivo que não é upload ou foto recusada. O teto da base é conferido depois,
+  # sob a trava (gravar_dentro_do_teto).
   def recusa_do_envio(kind)
     return I18n.t('autonomia.source.file_invalid') unless arquivo_enviado_ou_nenhum?
 
     recusa = recusa_da_foto(kind)
-    return I18n.t("autonomia.source.#{recusa}") if recusa
-    return unless knowledge_limit_reached?(kind)
+    I18n.t("autonomia.source.#{recusa}") if recusa
+  end
 
+  def limite_atingido
     I18n.t('autonomia.source.limit_reached', limit: Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES)
   end
 
@@ -103,13 +121,21 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   # tipo que o cliente declarou. Devolve a chave i18n da recusa, ou nil.
   def recusa_da_foto(kind)
     return unless foto?(source_params[:source_type])
-    return 'foto_fora_da_fase2' unless fase2?
-    return 'foto_so_no_que_sabe' unless kind == 'knowledge'
-    return 'foto_agente_de_cotacao' if @agent.instrucao_mantida?
+
+    recusa = recusa_da_foto_no_agente(kind)
+    return recusa if recusa
     return 'foto_sem_arquivo' if params[:file].blank?
 
     problema = foto_conferida(params[:file])
     "foto_#{problema}" if problema
+  end
+
+  # As recusas da foto que não dependem do arquivo: valem na chegada e na releitura.
+  def recusa_da_foto_no_agente(kind)
+    return 'foto_fora_da_fase2' unless fase2?
+    return 'foto_so_no_que_sabe' unless kind.to_s == 'knowledge'
+
+    'foto_agente_de_cotacao' if @agent.instrucao_mantida?
   end
 
   def foto_conferida(arquivo)

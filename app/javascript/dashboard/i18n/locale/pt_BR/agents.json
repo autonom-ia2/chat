@@ -1245,6 +1245,7 @@
           "SITE_MANDAR": "Mandar",
           "SITE_ERRO": "Confira o endereço do site. Ex.: www.sualoja.com.br",
           "GRANDE": "Este arquivo passa de 25 MB. Tente um menor.",
+          "FOTO_GRANDE": "Esta foto passa de 5 MB. Mande uma menor.",
           "LIMITE": "Já são {n} arquivos e sites. Tire um para mandar outro.",
           "LENDO": "Lendo…",
           "PRONTO": "Pronto",

@@ -1,8 +1,9 @@
 import { actions, TETO_DA_RELEITURA_MS } from '../../autonomiaSources';
 
-// #1426 — a releitura da lista de materiais. Ela segue enquanto algo está sendo lido OU já foi lido e espera a revisão
-// (needs_review sem reviewed_at): é o que faz a reprovação chegar sem recarregar. Para quando tudo assenta, nunca se
-// prende num material sem parecer (de antes da revisão, ou mídia de envio) e tem teto.
+// #1426 — a releitura da lista de materiais. Na Fase 2 ela segue enquanto algo está sendo lido OU já foi lido e espera
+// a revisão (needs_review sem reviewed_at): é o que faz a reprovação chegar sem recarregar. Para quando tudo assenta,
+// nunca se prende num material sem parecer (de antes da revisão, ou mídia de envio) e tem teto. Fora da Fase 2, a de
+// antes.
 const REVISADO = '2026-10-19T12:00:00Z';
 const fonte = (status, review = null, extra = {}) => ({
   id: 1,
@@ -13,11 +14,31 @@ const fonte = (status, review = null, extra = {}) => ({
 });
 const revisando = fonte('ready', { status: 'needs_review', reviewed_at: null });
 
-const agendar = records => {
+const comFase2 = ligada => ({
+  getCurrentAccountId: 3,
+  'accounts/getAccount': id =>
+    id === 3 ? { autonomia_agents_fase2: ligada } : null,
+});
+
+const agendar = (records, rootGetters = comFase2(true)) => {
   const dispatch = vi.fn().mockResolvedValue(undefined);
-  actions.schedulePoll({ dispatch }, { agentId: 7, records });
+  actions.schedulePoll({ dispatch, rootGetters }, { agentId: 7, records });
   return dispatch;
 };
+
+// Uma releitura que se reagenda a cada leitura, como o fetch de verdade.
+const releituraSemFim = (records, rootGetters) => {
+  const dispatch = vi.fn();
+  const ler = () =>
+    actions.schedulePoll({ dispatch, rootGetters }, { agentId: 7, records });
+  dispatch.mockImplementation(async nome => {
+    if (nome === 'fetch') ler();
+  });
+  ler();
+  return dispatch;
+};
+const leituras = dispatch =>
+  dispatch.mock.calls.filter(([nome]) => nome === 'fetch').length;
 
 describe('#autonomiaSources schedulePoll', () => {
   beforeEach(() => {
@@ -30,72 +51,104 @@ describe('#autonomiaSources schedulePoll', () => {
     vi.useRealTimers();
   });
 
-  it('keeps reading while a source was read but the review has not landed', () => {
-    const dispatch = agendar([revisando]);
+  describe('with the Fase 2', () => {
+    it('keeps reading while a source was read but the review has not landed', () => {
+      const dispatch = agendar([revisando]);
 
-    vi.advanceTimersByTime(4000);
+      vi.advanceTimersByTime(4000);
 
-    expect(dispatch).toHaveBeenCalledWith('fetch', { agentId: 7 });
-  });
-
-  it('keeps reading while a source is being read', () => {
-    const dispatch = agendar([fonte('processing')]);
-
-    vi.advanceTimersByTime(4000);
-
-    expect(dispatch).toHaveBeenCalledWith('fetch', { agentId: 7 });
-  });
-
-  it.each([
-    ['approved', fonte('ready', { status: 'accepted', reviewed_at: REVISADO })],
-    [
-      'sent back',
-      fonte('ready', { status: 'needs_resend', reviewed_at: REVISADO }),
-    ],
-    ['older than the review (no verdict)', fonte('ready', { status: null })],
-    ['a media to send', fonte('ready', null, { kind: 'media' })],
-    ['failed', fonte('failed', { status: 'needs_review', reviewed_at: null })],
-  ])('stops once the source is %s', (_, record) => {
-    const dispatch = agendar([record]);
-
-    vi.advanceTimersByTime(60000);
-
-    expect(dispatch).not.toHaveBeenCalled();
-  });
-
-  it('gives up after a ceiling of rounds, even if the review never lands', async () => {
-    const dispatch = vi.fn();
-    const ler = () =>
-      actions.schedulePoll({ dispatch }, { agentId: 7, records: [revisando] });
-    dispatch.mockImplementation(async nome => {
-      if (nome === 'fetch') ler();
+      expect(dispatch).toHaveBeenCalledWith('fetch', { agentId: 7 });
     });
-    ler();
 
-    await vi.runAllTimersAsync();
+    it('keeps reading while a source is being read', () => {
+      const dispatch = agendar([fonte('processing')]);
 
-    const leituras = dispatch.mock.calls.filter(([nome]) => nome === 'fetch');
-    expect(leituras.length).toBeGreaterThan(10);
-    expect(leituras.length).toBe(TETO_DA_RELEITURA_MS / 4000);
+      vi.advanceTimersByTime(4000);
+
+      expect(dispatch).toHaveBeenCalledWith('fetch', { agentId: 7 });
+    });
+
+    it.each([
+      [
+        'approved',
+        fonte('ready', { status: 'accepted', reviewed_at: REVISADO }),
+      ],
+      [
+        'sent back',
+        fonte('ready', { status: 'needs_resend', reviewed_at: REVISADO }),
+      ],
+      ['older than the review (no verdict)', fonte('ready', { status: null })],
+      ['a media to send', fonte('ready', null, { kind: 'media' })],
+      [
+        'failed',
+        fonte('failed', { status: 'needs_review', reviewed_at: null }),
+      ],
+    ])('stops once the source is %s', (_, record) => {
+      const dispatch = agendar([record]);
+
+      vi.advanceTimersByTime(60000);
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('gives up after a ceiling of rounds, even if the review never lands', async () => {
+      const dispatch = releituraSemFim([revisando], comFase2(true));
+
+      await vi.runAllTimersAsync();
+
+      expect(leituras(dispatch)).toBe(TETO_DA_RELEITURA_MS / 4000);
+    });
+
+    it('starts counting again when the person sends something new', async () => {
+      const rootGetters = comFase2(true);
+      const dispatch = releituraSemFim([revisando], rootGetters);
+      await vi.runAllTimersAsync();
+      dispatch.mockClear();
+
+      actions.schedulePoll(
+        { dispatch, rootGetters },
+        { agentId: 7, records: [revisando], novo: true }
+      );
+      vi.advanceTimersByTime(4000);
+
+      expect(dispatch).toHaveBeenCalledWith('fetch', { agentId: 7 });
+    });
   });
 
-  it('starts counting again when the person sends something new', async () => {
-    const dispatch = vi.fn();
-    const ler = () =>
-      actions.schedulePoll({ dispatch }, { agentId: 7, records: [revisando] });
-    dispatch.mockImplementation(async nome => {
-      if (nome === 'fetch') ler();
+  // R3 — fora da Fase 2, a releitura é idêntica à de antes do #1426.
+  describe('outside the Fase 2', () => {
+    const semFase2 = comFase2(false);
+
+    it('does not wait for the review once the source has any verdict', () => {
+      const dispatch = agendar([revisando], semFase2);
+
+      vi.advanceTimersByTime(60000);
+
+      expect(dispatch).not.toHaveBeenCalled();
     });
-    ler();
-    await vi.runAllTimersAsync();
-    dispatch.mockClear();
 
-    actions.schedulePoll(
-      { dispatch },
-      { agentId: 7, records: [revisando], novo: true }
-    );
-    vi.advanceTimersByTime(4000);
+    it('keeps reading a ready source with no verdict yet, as before', () => {
+      const dispatch = agendar([fonte('ready', null)], semFase2);
 
-    expect(dispatch).toHaveBeenCalledWith('fetch', { agentId: 7 });
+      vi.advanceTimersByTime(4000);
+
+      expect(dispatch).toHaveBeenCalledWith('fetch', { agentId: 7 });
+    });
+
+    it('has no ceiling of rounds, as before', async () => {
+      const dispatch = releituraSemFim([fonte('processing')], semFase2);
+
+      await vi.advanceTimersByTimeAsync(TETO_DA_RELEITURA_MS + 40000);
+
+      expect(leituras(dispatch)).toBeGreaterThan(TETO_DA_RELEITURA_MS / 4000);
+    });
+
+    it('treats a store without the account getters as outside the Fase 2', () => {
+      const dispatch = agendar([revisando], {});
+
+      vi.advanceTimersByTime(60000);
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
   });
 });

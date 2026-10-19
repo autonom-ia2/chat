@@ -121,4 +121,25 @@ RSpec.describe Autonomia::Agents::Source do
       expect(ActiveStorage::Blob.exists?(blob_id)).to be(false)
     end
   end
+
+  # R6 — releitura que volta vazia: a geração anterior volta como estava.
+  describe '#restore_previous_generation!' do
+    it 'brings an old material with no verdict back as ready, not reviewing forever' do
+      antigo = described_class.create!(account: account, agent: agent, source_type: 'txt', status: :ready)
+      token = antigo.begin_ingestion!
+
+      antigo.restore_previous_generation!(token)
+
+      expect(antigo.reload).to have_attributes(status: 'ready', review_status: nil, reviewed_at: nil)
+    end
+
+    it 'brings a reviewed material back with its verdict' do
+      token = source.begin_ingestion!
+
+      source.restore_previous_generation!(token)
+
+      expect(source.reload).to have_attributes(status: 'ready', review_status: 'accepted')
+      expect(source.reviewed_at).to be_present
+    end
+  end
 end

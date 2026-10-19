@@ -1,7 +1,7 @@
 import { nextTick, reactive } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import GavetaOQueSabe from '../../components/pagina/GavetaOQueSabe.vue';
-import { MAX_ARQUIVO } from '../../utils/pagina';
+import { MAX_ARQUIVO, MAX_FOTO } from '../../utils/pagina';
 
 // T09 · O que sabe: arquivos e sites em palavras (sem nota nem %), mandar arquivo (até 25 MB) ou site,
 // ler de novo, tirar com confirmação, erro padrão e as perguntas de clientes (FAQ que já existe).
@@ -185,6 +185,40 @@ describe('GavetaOQueSabe', () => {
         agentId: 7,
         descriptor: { file: imagem, kind: 'knowledge' },
       });
+      wrapper.unmount();
+    });
+
+    // R4 — foto acima de 5 MB nem sai; recusa do servidor mostra a mensagem dele, sem "Tentar de novo".
+    it('stops a photo above 5 MB before sending it', async () => {
+      const wrapper = montar({ fase2: true });
+      await clicar('[data-mandar]');
+      escolherArquivo({
+        name: 'tabela.jpg',
+        type: 'image/jpeg',
+        size: MAX_FOTO + 1,
+      });
+      await flushPromises();
+
+      expect(no('[data-erro-arquivo]').textContent).toContain(
+        'SABE.FOTO_GRANDE'
+      );
+      expect(store.dispatch).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('shows the message of a refusal by the server and does not offer to try again', async () => {
+      const recusa = new Error('Este arquivo não é uma foto.');
+      recusa.status = 422;
+      store.dispatch.mockRejectedValueOnce(recusa);
+      const wrapper = montar({ fase2: true });
+      await clicar('[data-mandar]');
+      escolherArquivo({ name: 'tabela.png', type: 'image/png', size: 10 });
+      await flushPromises();
+
+      expect(no('[data-erro-arquivo]').textContent).toContain(
+        'Este arquivo não é uma foto.'
+      );
+      expect(no('[data-erro-salvar]')).toBeNull();
       wrapper.unmount();
     });
 

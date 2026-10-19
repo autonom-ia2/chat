@@ -573,7 +573,9 @@ en:
       embedding_failed: 'Could not add this FAQ to the knowledge base: the AI credential is missing or failed. Try again.'
       resync_not_allowed: 'Approved FAQs are added one by one from the suggestions list; there is nothing to resync.'
     source:
-      invalid_kind: 'Invalid material kind. Use "knowledge" or "media".'
+      invalid_kind: 'This kind of material is not available. Reload the page and try again.'
+      arquivo_grande: 'The file is too large. The maximum size is 25 MB.'
+      arquivo_tipo: 'This kind of file cannot be read. Send a PDF, spreadsheet, Word document or text file.'
       limit_reached: 'This agent already has the maximum of %{limit} knowledge materials. Remove one before adding another.'
       foto_fora_da_fase2: 'Photos as knowledge material are not available on this account yet. Send a PDF, spreadsheet or text file.'
       foto_so_no_que_sabe: 'A photo can only be added to what the agent knows.'
@@ -582,6 +584,7 @@ en:
       foto_tipo: 'This file is not a photo. Send a PNG, JPEG, GIF or WebP image.'
       foto_tamanho: 'The photo is too large. The maximum size is 5 MB.'
       foto_pixels: 'The photo has too many pixels. Send a smaller photo (up to 40 megapixels).'
+      foto_animada: 'Animated images do not work as material. Send a still photo.'
       file_invalid: 'Send the file itself.'
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'

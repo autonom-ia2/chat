@@ -1322,7 +1322,9 @@ pt_BR:
     image_invalid_type: "Tipo de imagem não aceito. Use PNG, JPEG, GIF ou WebP."
     image_too_large: "A imagem é grande demais. O tamanho máximo é 5 MB."
     source:
-      invalid_kind: "Tipo de material inválido. Use \"knowledge\" ou \"media\"."
+      invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."
+      arquivo_grande: "O arquivo é grande demais. O tamanho máximo é 25 MB."
+      arquivo_tipo: "Este tipo de arquivo não dá para ler. Mande um PDF, uma planilha, um documento do Word ou um arquivo de texto."
       limit_reached: "Este agente já tem o máximo de %{limit} materiais de conhecimento. Remova um antes de adicionar outro."
       foto_fora_da_fase2: "Foto como material ainda não está disponível nesta conta. Mande um PDF, uma planilha ou um arquivo de texto."
       foto_so_no_que_sabe: "Foto só entra no que o agente sabe."
@@ -1331,6 +1333,7 @@ pt_BR:
       foto_tipo: "Este arquivo não é uma foto. Mande uma imagem PNG, JPEG, GIF ou WebP."
       foto_tamanho: "A foto é grande demais. O tamanho máximo é 5 MB."
       foto_pixels: "A foto tem pixels demais. Mande uma foto menor (até 40 megapixels)."
+      foto_animada: "Imagem animada não serve como material. Mande uma foto parada."
       file_invalid: "Mande o próprio arquivo."
     insurance:
       errors:

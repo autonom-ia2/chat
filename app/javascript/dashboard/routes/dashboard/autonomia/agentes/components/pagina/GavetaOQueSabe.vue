@@ -10,6 +10,7 @@ import PerguntasParaConferir from './PerguntasParaConferir.vue';
 import DialogoAcao from './DialogoAcao.vue';
 import {
   MAX_ARQUIVO,
+  MAX_FOTO,
   MAX_FONTES,
   enderecoDoSite,
   nomeDaFonte,
@@ -87,8 +88,10 @@ const salvar = async acao => {
   try {
     await acao();
     adicionando.value = false;
-  } catch {
-    falhaSalvar.value = acao;
+  } catch (erro) {
+    // #1426 — recusa do servidor (422): a mensagem dele vai para a tela, sem "Tentar de novo" (repetir não adianta).
+    if (erro?.status === 422) erroArquivo.value = erro.message;
+    else falhaSalvar.value = acao;
   } finally {
     salvando.value = false;
   }
@@ -134,6 +137,10 @@ const aoEscolherArquivo = evento => {
   const trocando = substituir.value;
   if (arquivo.size > MAX_ARQUIVO) {
     erroArquivo.value = t(`${NS}.GRANDE`);
+    return;
+  }
+  if (props.fase2 && ehImagem(arquivo) && arquivo.size > MAX_FOTO) {
+    erroArquivo.value = t(`${NS}.FOTO_GRANDE`);
     return;
   }
   if (!trocando && lista.value.length >= MAX_FONTES) {

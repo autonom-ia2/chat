@@ -122,5 +122,32 @@ RSpec.describe 'Autonomia sources - foto', type: :request do
         .to have_enqueued_job(Autonomia::Agents::Knowledge::IngestJob)
       expect(response).to have_http_status(:accepted)
     end
+
+    # X6 — a releitura aplica as mesmas recusas da chegada (sem a parte do upload).
+    context 'with the Fase 2 and a foto that should not be there' do
+      before { Autonomia::Agents::Fase2.ligar!(account) }
+
+      def reler(fonte, agente = agent)
+        post "/api/v1/accounts/#{account.id}/autonomia/agents/#{agente.id}/sources/#{fonte.id}/resync",
+             headers: administrator.create_new_auth_token
+      end
+
+      it 'refuses to read again a foto kept as a media to send' do
+        foto.update!(kind: :media)
+
+        expect { reler(foto) }.not_to have_enqueued_job(Autonomia::Agents::Knowledge::IngestJob)
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq(I18n.t('autonomia.source.foto_so_no_que_sabe'))
+      end
+
+      it 'refuses to read again a foto of the quote agent (Lia)' do
+        lia = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote', status: :draft)
+        da_lia = lia.sources.create!(account: account, source_type: 'foto', reference: 'tabela.png', status: :ready)
+
+        expect { reler(da_lia, lia) }.not_to have_enqueued_job(Autonomia::Agents::Knowledge::IngestJob)
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq(I18n.t('autonomia.source.foto_agente_de_cotacao'))
+      end
+    end
   end
 end

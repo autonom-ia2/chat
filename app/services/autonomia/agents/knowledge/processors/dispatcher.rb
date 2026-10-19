@@ -2,9 +2,9 @@ module Autonomia
   module Agents
     module Knowledge
       module Processors
-        # Mapa source_type -> classe de processador. Contrato público (spec): Processors.for(source).
-        # O método vive na classe Dispatcher (zeitwerk: dispatcher.rb -> Processors::Dispatcher) e é
-        # exposto como Processors.for por conveniência/compatibilidade com o spec.
+        # Mapa source_type -> classe de processador: Processors::Dispatcher.for(source).
+        # #1426 — o atalho `Processors.for` saiu: ele só existia depois de este arquivo carregar, e com
+        # carga sob demanda (dev, teste) o primeiro uso quebrava com NoMethodError.
         class Dispatcher
           MAP = {
             'link' => Link,
@@ -23,10 +23,6 @@ module Autonomia
 
             klass.new(source)
           end
-        end
-
-        def self.for(source)
-          Dispatcher.for(source)
         end
       end
     end

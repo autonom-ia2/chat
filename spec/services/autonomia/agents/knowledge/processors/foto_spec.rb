@@ -29,6 +29,24 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Foto do
     expect(ocr).to have_received(:ler).with(a_string_ending_with('.png'))
   end
 
+  # X3/X4 — um download só: o disco recebe os bytes conferidos, com a extensão do tipo detectado neles.
+  context 'when the client named the photo with another extension' do
+    let(:source) { double('source', reference: 'tabela.sh', source_type: 'foto', file: file) } # rubocop:disable RSpec/VerifiedDoubles
+
+    it 'downloads once and writes the checked bytes with the extension of the detected type' do
+      gravado = nil
+      allow(ocr).to receive(:ler) do |caminho|
+        gravado = [File.extname(caminho), File.binread(caminho)]
+        'Pastel'
+      end
+
+      processor.extract
+
+      expect(file).to have_received(:download).once
+      expect(gravado).to eq(['.png', png.b])
+    end
+  end
+
   it 'returns empty text for a photo without readable text (the ingestion marks it as not read)' do
     allow(ocr).to receive(:ler).and_return(" \n ")
 
