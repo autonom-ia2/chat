@@ -1,4 +1,11 @@
-import { computed, getCurrentInstance, ref, watch } from 'vue';
+import {
+  computed,
+  effectScope,
+  getCurrentInstance,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue';
 import { picoSearch } from '@chatwoot/pico-search';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import NomesDeEtiquetasAPI from 'dashboard/api/nomesDeEtiquetas';
@@ -13,6 +20,8 @@ import {
 // Uma carga por conta para todos os chips da tela; quem cria ou edita atualiza o
 // cache na hora. Os outros atendentes veem o nome novo ao recarregar o painel ou
 // ao reabrir Configurações › Etiquetas (`recarregar`). Sem websocket.
+// Falha na carga não entra no cache: a conta fica sem chave e a próxima carga
+// (Configurações › Etiquetas, troca de conta ou de flag) tenta de novo.
 const nomesPorConta = ref({});
 const pedidos = new Map();
 // Nomes gravados aqui enquanto a lista da conta carrega: a lista que chega
@@ -39,9 +48,7 @@ const carregar = (accountId, { forcar = false } = {}) => {
       comNomes(accountId, Object.fromEntries([...lista, ...gravados]));
     })
     .catch(error => {
-      // Falhou: a tela segue com o que já tinha (ou o nome derivado do título),
-      // sem nova tentativa a cada chip; Configurações › Etiquetas tenta de novo.
-      if (!nomesPorConta.value[accountId]) comNomes(accountId, {});
+      // Falhou: a tela segue com o que já tinha (ou o nome derivado do título).
       // eslint-disable-next-line no-console
       console.error('Nomes das etiquetas: falha ao carregar', error);
     })
@@ -59,17 +66,20 @@ const carregar = (accountId, { forcar = false } = {}) => {
 const vinculosPorConta = ref({});
 const pedidosDeVinculos = new Map();
 
-const agruparPorEtiqueta = lista =>
-  lista.reduce((porEtiqueta, item) => {
+// Agrupa em uma passada: { [label_id]: [vínculo, …] }.
+const agruparPorEtiqueta = lista => {
+  const porEtiqueta = {};
+  lista.forEach(item => {
     const vinculo = {
       caixa: item.caixa,
       inboxId: item.inbox_id,
       nomeNoCelular: item.nome_no_celular,
       criadaPeloCelular: item.criada_pelo_celular,
     };
-    const atuais = porEtiqueta[item.label_id] || [];
-    return { ...porEtiqueta, [item.label_id]: [...atuais, vinculo] };
-  }, {});
+    (porEtiqueta[item.label_id] ||= []).push(vinculo);
+  });
+  return porEtiqueta;
+};
 
 const carregarVinculos = (accountId, { forcar = false } = {}) => {
   if (!accountId) return Promise.resolve();
@@ -86,10 +96,7 @@ const carregarVinculos = (accountId, { forcar = false } = {}) => {
       };
     })
     .catch(error => {
-      // Falhou: sem selo do WhatsApp até a próxima carga; os nomes seguem.
-      if (!vinculosPorConta.value[accountId]) {
-        vinculosPorConta.value = { ...vinculosPorConta.value, [accountId]: {} };
-      }
+      // Falhou: sem selo do WhatsApp até a próxima carga, que tenta de novo.
       // eslint-disable-next-line no-console
       console.error('Etiquetas do celular: falha ao carregar', error);
     })
@@ -100,12 +107,16 @@ const carregarVinculos = (accountId, { forcar = false } = {}) => {
 
 const SEM_VINCULOS = Object.freeze([]);
 
-// A store vem da instância, lida com cuidado (como no useHorarioUnicoCaixa):
-// montado sem a store do painel, a flag conta como desligada e nada muda.
-export function useNomeDaEtiqueta() {
-  const instancia = getCurrentInstance();
-  const getter = nome => instancia?.proxy?.$store?.getters?.[nome];
+// Estado único do módulo, para todos os chips da tela: as flags, o mapa título →
+// id e os dois watches que disparam as cargas existem uma vez só (singleton), não
+// um por chip. Com as flags desligadas, nenhum watch carrega nada.
+// A store vem da instância que usa o composable, lida com cuidado (como no
+// useHorarioUnicoCaixa): sem a store do painel, as flags contam como desligadas.
+const storeAtual = shallowRef(null);
+const getter = nome => storeAtual.value?.getters?.[nome];
+let estado = null;
 
+const criarEstado = () => {
   const accountId = computed(() => getter('getCurrentAccountId'));
   const flagLigada = flag =>
     Boolean(
@@ -118,30 +129,43 @@ export function useNomeDaEtiqueta() {
   const celularLigado = computed(() =>
     flagLigada(FEATURE_FLAGS.ETIQUETAS_DO_CELULAR)
   );
-
-  if (instancia) {
-    watch(
-      [ligada, accountId],
-      ([estaLigada, conta]) => {
-        if (estaLigada) carregar(conta);
-      },
-      { immediate: true }
-    );
-    watch(
-      [celularLigado, accountId],
-      ([estaLigado, conta]) => {
-        if (estaLigado) carregarVinculos(conta);
-      },
-      { immediate: true }
-    );
-  }
-
-  const etiquetas = computed(() => getter('labels/getLabels') || []);
   // Só o que é etiqueta da conta ganha nome: `Label.vue` e o chip antigo também
   // mostram texto que não é etiqueta (SLA, Linear) e esse fica como está.
   const idPorTitulo = computed(
-    () => new Map(etiquetas.value.map(({ id, title }) => [title, id]))
+    () =>
+      new Map(
+        (getter('labels/getLabels') || []).map(({ id, title }) => [title, id])
+      )
   );
+
+  watch(
+    [ligada, accountId],
+    ([estaLigada, conta]) => {
+      if (estaLigada) carregar(conta);
+    },
+    { immediate: true }
+  );
+  watch(
+    [celularLigado, accountId],
+    ([estaLigado, conta]) => {
+      if (estaLigado) carregarVinculos(conta);
+    },
+    { immediate: true }
+  );
+  return { accountId, ligada, celularLigado, idPorTitulo };
+};
+
+const estadoCompartilhado = () => {
+  estado ||= effectScope(true).run(criarEstado);
+  return estado;
+};
+
+export function useNomeDaEtiqueta() {
+  // Chamado fora de um componente (ou sem a store): não troca a store dos outros.
+  const store = getCurrentInstance()?.proxy?.$store;
+  if (store && storeAtual.value !== store) storeAtual.value = store;
+  const { accountId, ligada, celularLigado, idPorTitulo } =
+    estadoCompartilhado();
   const nomesDaConta = computed(
     () => nomesPorConta.value[accountId.value] || {}
   );

@@ -13,7 +13,7 @@ class Api::V1::Accounts::EtiquetasDoCelularController < Api::V1::Accounts::BaseC
 
   def index
     authorize(Label, :index?)
-    registros = Etiquetas::DoCelular.where(account: Current.account, inbox_id: Current.user.assigned_inboxes.select(:id))
+    registros = Etiquetas::DoCelular.vivas.where(account: Current.account, inbox_id: Current.user.assigned_inboxes.select(:id))
                                     .includes(:inbox).order(:id)
     render json: { payload: registros.map { |registro| item(registro) } }
   end

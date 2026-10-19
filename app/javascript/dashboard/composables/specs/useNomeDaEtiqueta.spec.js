@@ -1,5 +1,5 @@
 import { defineComponent, h, nextTick } from 'vue';
-import { mount, flushPromises } from '@vue/test-utils';
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import NomesDeEtiquetasAPI from 'dashboard/api/nomesDeEtiquetas';
 import EtiquetasDoCelularAPI from 'dashboard/api/etiquetasDoCelular';
@@ -12,6 +12,9 @@ vi.mock('dashboard/api/nomesDeEtiquetas', () => ({
 vi.mock('dashboard/api/etiquetasDoCelular', () => ({
   default: { listar: vi.fn() },
 }));
+
+// Estado único no módulo, que segue a store do último componente montado.
+enableAutoUnmount(afterEach);
 
 const ETIQUETAS = [
   { id: 1, title: 'aguardando_retorno' },
@@ -243,25 +246,50 @@ describe('useNomeDaEtiqueta', () => {
       expect(NomesDeEtiquetasAPI.listar).not.toHaveBeenCalled();
     });
 
-    it('loads the links once per account and survives a failure', async () => {
+    it('loads the links once per account for many chips (one shared loader)', async () => {
+      montar({ accountId: 33, celular: true });
       montar({ accountId: 33, celular: true });
       montar({ accountId: 33, celular: true });
       await flushPromises();
+
       expect(EtiquetasDoCelularAPI.listar).toHaveBeenCalledTimes(1);
+    });
 
-      EtiquetasDoCelularAPI.listar.mockRejectedValue(new Error('falhou'));
+    it('does not cache a failed load: the next load tries again', async () => {
+      EtiquetasDoCelularAPI.listar.mockRejectedValueOnce(new Error('falhou'));
       vi.spyOn(console, 'error').mockImplementation(() => {});
-      const { vinculosDe } = montar({ accountId: 34, celular: true });
+      const { vinculosDe, recarregar } = montar({
+        accountId: 34,
+        celular: true,
+      });
       await flushPromises();
-
       expect(vinculosDe('aguardando_retorno')).toEqual([]);
+
+      await recarregar();
+
+      expect(EtiquetasDoCelularAPI.listar).toHaveBeenCalledTimes(2);
+      expect(vinculosDe('aguardando_retorno')).toHaveLength(2);
     });
   });
 
-  it('counts the flag as off when mounted without the dashboard store', () => {
-    mount(Sonda);
+  it('counts the flag as off when mounted without the dashboard store', async () => {
+    // Módulo novo: o estado é único por módulo e os outros testes já deram store.
+    vi.resetModules();
+    const { useNomeDaEtiqueta: semStore } = await import(
+      '../useNomeDaEtiqueta'
+    );
+    let api;
+    mount(
+      defineComponent({
+        setup() {
+          api = semStore();
+          return () => h('span');
+        },
+      })
+    );
 
-    expect(ultimaApi.ligada.value).toBe(false);
-    expect(ultimaApi.nomeDe('vip')).toBe('vip');
+    expect(api.ligada.value).toBe(false);
+    expect(api.celularLigado.value).toBe(false);
+    expect(api.nomeDe('vip')).toBe('vip');
   });
 });

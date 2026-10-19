@@ -3415,16 +3415,29 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_183000) do
   create_table "etiquetas_do_celular", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false
-    t.bigint "label_id", null: false
+    t.bigint "label_id"
     t.string "label_wa_id", null: false
-    t.string "nome", null: false
+    t.string "nome"
     t.integer "color_index"
     t.boolean "criada_pelo_celular", default: false, null: false
+    t.datetime "evento_em", null: false
+    t.datetime "apagada_em"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_etiquetas_do_celular_on_account_id"
     t.index ["inbox_id", "label_wa_id"], name: "index_etiquetas_do_celular_on_inbox_id_and_label_wa_id", unique: true
     t.index ["label_id"], name: "index_etiquetas_do_celular_on_label_id"
+  end
+
+  create_table "etiquetas_do_celular_contatos", force: :cascade do |t|
+    t.bigint "etiqueta_do_celular_id", null: false
+    t.bigint "contact_id", null: false
+    t.boolean "vinculada", default: false, null: false
+    t.datetime "evento_em", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["contact_id"], name: "index_etiquetas_do_celular_contatos_on_contact_id"
+    t.index ["etiqueta_do_celular_id", "contact_id"], name: "index_etiquetas_do_celular_contatos_unicos", unique: true
   end
 
   create_table "etiquetas_nomes", force: :cascade do |t|
@@ -4438,6 +4451,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_09_183000) do
   add_foreign_key "etiquetas_do_celular", "accounts", on_delete: :cascade
   add_foreign_key "etiquetas_do_celular", "inboxes", on_delete: :cascade
   add_foreign_key "etiquetas_do_celular", "labels", on_delete: :cascade
+  add_foreign_key "etiquetas_do_celular_contatos", "contacts", on_delete: :cascade
+  add_foreign_key "etiquetas_do_celular_contatos", "etiquetas_do_celular", column: "etiqueta_do_celular_id", on_delete: :cascade
   add_foreign_key "etiquetas_nomes", "accounts", on_delete: :cascade
   add_foreign_key "etiquetas_nomes", "labels", on_delete: :cascade
   add_foreign_key "idempotency_keys", "accounts"

@@ -16,6 +16,10 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
     described_class.new(evento(acao, **extra)).perform
   end
 
+  def as(hora)
+    "2026-10-19T#{hora}:00Z"
+  end
+
   def conversa(status: :open, contact: contato, ultima: Time.current)
     create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox, status: status,
                           last_activity_at: ultima)
@@ -93,12 +97,20 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         label = account.labels.sole
         Etiquetas::Nome.create!(account: account, label: label, nome: 'Cliente novo')
 
-        aplicar('renomeada', nome: 'Cliente quente', color_index: 7)
+        aplicar('renomeada', nome: 'Cliente quente', color_index: 7, at: as('13:00'))
 
         expect(label.reload.title).to eq('novo_cliente')
         expect(Etiquetas::Nome.sole.nome).to eq('Cliente novo')
-        expect(Etiquetas::DoCelular.sole).to have_attributes(nome: 'Cliente quente', color_index: 7)
+        expect(Etiquetas::DoCelular.sole).to have_attributes(nome: 'Cliente quente', color_index: 7,
+                                                             evento_em: Time.iso8601(as('13:00')))
         expect(account.labels.count).to eq(1)
+      end
+
+      it 'renomeada mais velha que a última aplicada é descartada' do
+        aplicar('renomeada', nome: 'Nome novo', at: as('13:00'))
+        aplicar('renomeada', nome: 'Nome antigo', at: as('11:00'))
+
+        expect(Etiquetas::DoCelular.sole).to have_attributes(nome: 'Nome novo', evento_em: Time.iso8601(as('13:00')))
       end
 
       it 'sem correspondência ainda: cria como em criada' do
@@ -110,15 +122,50 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
     end
 
     describe 'apagada' do
-      it 'remove a correspondência; a etiqueta daqui fica, inclusive no contato' do
+      it 'a correspondência deixa de valer; a etiqueta daqui fica, inclusive no contato' do
         aplicar('vinculada')
         label = account.labels.sole
 
-        2.times { aplicar('apagada') }
+        2.times { aplicar('apagada', at: as('13:00')) }
 
-        expect(Etiquetas::DoCelular.count).to eq(0)
+        expect(Etiquetas::DoCelular.vivas.count).to eq(0)
+        expect(Etiquetas::DoCelular.sole.apagada_em).to eq(Time.iso8601(as('13:00')))
         expect(Label.exists?(label.id)).to be(true)
         expect(contato.reload.label_list).to eq(['novo_cliente'])
+      end
+
+      it 'fora de ordem: apagada (mais nova) antes da criada (mais velha) não cria nada' do
+        aplicar('apagada', at: as('13:00'))
+        aplicar('criada', at: as('12:00'))
+        aplicar('vinculada', at: as('12:30'))
+
+        expect(account.labels.count).to eq(0)
+        expect(Etiquetas::DoCelular.vivas.count).to eq(0)
+        expect(Etiquetas::DoCelular.sole).to have_attributes(label_id: nil, apagada_em: Time.iso8601(as('13:00')))
+        expect(contato.reload.label_list).to be_empty
+      end
+
+      it 'fora de ordem: apagada (mais velha) depois da criada (mais nova) é descartada' do
+        aplicar('criada', at: as('13:00'))
+        aplicar('apagada', at: as('12:00'))
+
+        expect(Etiquetas::DoCelular.vivas.sole.label.title).to eq('novo_cliente')
+      end
+
+      it 'criada de novo depois de apagada (mais nova) volta a valer, com o Label que já existia' do
+        aplicar('criada', at: as('12:00'))
+        aplicar('apagada', at: as('13:00'))
+        aplicar('criada', nome: 'Novo cliente', at: as('14:00'))
+
+        expect(account.labels.count).to eq(1)
+        expect(Etiquetas::DoCelular.vivas.sole).to have_attributes(nome: 'Novo cliente', apagada_em: nil)
+      end
+
+      it 'criada depois de uma apagada que chegou antes (marca sem Label) cria o Label' do
+        aplicar('apagada', at: as('12:00'))
+        aplicar('criada', at: as('13:00'))
+
+        expect(Etiquetas::DoCelular.vivas.sole).to have_attributes(label: account.labels.sole, criada_pelo_celular: true)
       end
     end
 
@@ -202,13 +249,78 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(Etiquetas::DoCelular.count).to eq(1)
       end
 
-      it 'deixa a nota de atividade na conversa em nome do sistema de automação' do
+      it 'não usa autor falso: sem usuário, o Chatwoot não grava nota de atividade da etiqueta' do
         recente = conversa
 
         perform_enqueued_jobs(only: Conversations::ActivityMessageJob) { aplicar('vinculada') }
 
-        atividade = recente.messages.activity.last
-        expect(atividade.content).to include(I18n.t('automation.system_name'), 'novo_cliente')
+        expect(recente.reload.label_list).to eq(['novo_cliente'])
+        expect(recente.messages.activity).to be_empty
+        expect(Current.executed_by).to be_nil
+      end
+
+      it 'vinculada mais velha que a última desvinculada no mesmo contato é descartada' do
+        aplicar('desvinculada', at: as('13:00')) # sem correspondência: só log
+        aplicar('vinculada', at: as('13:00'))
+        aplicar('desvinculada', at: as('14:00'))
+        aplicar('vinculada', at: as('13:30'))
+
+        expect(contato.reload.label_list).to be_empty
+        expect(Etiquetas::DoCelularNoContato.sole).to have_attributes(vinculada: false, evento_em: Time.iso8601(as('14:00')))
+      end
+
+      it 'a ordem é por contato: vinculada atrasada de outro contato não é descartada pela etiqueta' do
+        outro = create(:contact, account: account, phone_number: '+5511999990009')
+        create(:contact_inbox, contact: outro, inbox: inbox)
+        aplicar('renomeada', nome: 'Nome novo', at: as('14:00'))
+
+        aplicar('vinculada', contact_phone: '+5511999990009', chat_id: nil, nome: 'Nome antigo', at: as('13:00'))
+
+        expect(outro.reload.label_list).to eq(['nome_novo'])
+        expect(Etiquetas::DoCelular.sole.nome).to eq('Nome novo')
+      end
+
+      it 'duas etiquetas do celular seguidas no mesmo contato: as duas ficam' do
+        recente = conversa
+
+        aplicar('vinculada')
+        aplicar('vinculada', label_wa_id: '4', nome: 'Pago', at: as('12:01'))
+
+        expect(contato.reload.label_list).to contain_exactly('novo_cliente', 'pago')
+        expect(recente.reload.label_list).to contain_exactly('novo_cliente', 'pago')
+      end
+
+      it 'não perde etiqueta gravada por outro processo entre a leitura e a escrita (trava na linha)' do
+        aplicar('criada')
+        registro = Etiquetas::DoCelular.sole
+        obsoleto = Contact.find(contato.id)
+        obsoleto.label_list # lido antes de outro processo gravar
+        contato.update_labels(['vip'])
+        servico = Etiquetas::EtiquetaNoContato.new(registro: registro, evento: evento('vinculada').with_indifferent_access,
+                                                   at: Time.iso8601(as('12:00')))
+        allow(servico).to receive(:contato_do_evento).and_return(obsoleto)
+
+        expect(servico.aplicar(:adicionar)).to eq(:aplicado)
+        expect(contato.reload.label_list).to contain_exactly('vip', 'novo_cliente')
+      end
+
+      it 'nome vazio: título whatsapp_<id> e nenhum Label órfão' do
+        aplicar('vinculada', nome: nil, label_wa_id: '77')
+
+        expect(account.labels.pluck(:title)).to eq(['whatsapp_77'])
+        expect(Etiquetas::DoCelular.sole).to have_attributes(nome: nil, label: account.labels.sole)
+        expect(contato.reload.label_list).to eq(['whatsapp_77'])
+      end
+
+      it 'se a correspondência não grava, o Label criado junto também não fica' do
+        allow(Etiquetas::DoCelular).to receive(:create!).and_raise(ActiveRecord::RecordInvalid.new(Etiquetas::DoCelular.new))
+
+        expect { aplicar('vinculada') }.to raise_error(ActiveRecord::RecordInvalid)
+        expect(account.labels.count).to eq(0)
+      end
+
+      it 'at inválido não é engolido' do
+        expect { aplicar('vinculada', at: 'ontem') }.to raise_error(ArgumentError, /at inválido/)
       end
     end
 
@@ -218,11 +330,20 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         aplicar('vinculada')
         contato.update_labels(contato.reload.label_list + ['vip'])
 
-        2.times { aplicar('desvinculada') }
+        2.times { aplicar('desvinculada', at: as('13:00')) }
 
         expect(contato.reload.label_list).to eq(['vip'])
         expect(recente.reload.label_list).to be_empty
         expect(Etiquetas::DoCelular.count).to eq(1)
+      end
+
+      it 'de etiqueta apagada no celular: não mexe no contato' do
+        aplicar('vinculada')
+        aplicar('apagada', at: as('13:00'))
+
+        aplicar('desvinculada', at: as('14:00'))
+
+        expect(contato.reload.label_list).to eq(['novo_cliente'])
       end
 
       it 'sem correspondência: não cria etiqueta nem correspondência e não mexe no contato; só registra no log' do

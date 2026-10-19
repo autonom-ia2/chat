@@ -45,7 +45,7 @@ const labelColor = computed(() => {
 
 const colorClasses = computed(() => COLOR_CLASSES[props.color]);
 
-const { nomeDe } = useNomeDaEtiqueta();
+const { nomeDe, celularLigado } = useNomeDaEtiqueta();
 </script>
 
 <template>
@@ -70,7 +70,11 @@ const { nomeDe } = useNomeDaEtiqueta();
     >
       {{ nomeDe(labelTitle) }}
     </span>
-    <EtiquetaDoWhatsappIcone :titulo="labelTitle" pequeno />
+    <EtiquetaDoWhatsappIcone
+      v-if="celularLigado"
+      :titulo="labelTitle"
+      pequeno
+    />
     <slot name="action" />
   </div>
 </template>

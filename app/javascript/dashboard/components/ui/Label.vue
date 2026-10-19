@@ -49,8 +49,8 @@ export default {
   },
   emits: ['remove'],
   setup() {
-    const { nomeDe } = useNomeDaEtiqueta();
-    return { nomeDe };
+    const { nomeDe, celularLigado } = useNomeDaEtiqueta();
+    return { nomeDe, celularLigado };
   },
   computed: {
     textColor() {
@@ -107,7 +107,7 @@ export default {
       {{ nomeDe(title) }}
     </span>
     <a v-else :href="href" :style="anchorStyle">{{ nomeDe(title) }}</a>
-    <EtiquetaDoWhatsappIcone :titulo="title" pequeno />
+    <EtiquetaDoWhatsappIcone v-if="celularLigado" :titulo="title" pequeno />
     <button
       v-if="showClose"
       class="label-close--button p-0"

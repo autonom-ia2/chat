@@ -10,7 +10,7 @@ RSpec.describe 'Etiquetas do celular', type: :request do
 
   before do
     Etiquetas::DoCelular.create!(account: account, inbox: inbox, label: etiqueta, label_wa_id: '3', nome: 'Novo cliente 🔥',
-                                 color_index: 4, criada_pelo_celular: true)
+                                 color_index: 4, criada_pelo_celular: true, evento_em: Time.current)
   end
 
   def listar(user: agente)
@@ -44,7 +44,8 @@ RSpec.describe 'Etiquetas do celular', type: :request do
     it 'agente fora da caixa não vê o vínculo nem o nome da caixa; o administrador vê todas' do
       outra_caixa = create(:inbox, account: account, name: 'Caixa do financeiro')
       create(:inbox_member, user: agente, inbox: inbox)
-      Etiquetas::DoCelular.create!(account: account, inbox: outra_caixa, label: etiqueta, label_wa_id: '9', nome: 'Pago')
+      Etiquetas::DoCelular.create!(account: account, inbox: outra_caixa, label: etiqueta, label_wa_id: '9', nome: 'Pago',
+                                   evento_em: Time.current)
 
       listar
       expect(response.parsed_body['payload'].pluck('inbox_id')).to eq([inbox.id])
@@ -58,11 +59,21 @@ RSpec.describe 'Etiquetas do celular', type: :request do
       expect(response.parsed_body['payload'].pluck('inbox_id')).to eq([inbox.id, outra_caixa.id])
     end
 
+    it 'não mostra etiqueta apagada no celular' do
+      Etiquetas::DoCelular.sole.update!(apagada_em: Time.current)
+      create(:inbox_member, user: agente, inbox: inbox)
+
+      listar
+
+      expect(response.parsed_body['payload']).to eq([])
+    end
+
     it 'não mostra correspondência de outra conta' do
       create(:inbox_member, user: agente, inbox: inbox)
       outra = create(:account)
       Etiquetas::DoCelular.create!(account: outra, inbox: create(:inbox, account: outra),
-                                   label: create(:label, account: outra, title: 'de_fora'), label_wa_id: '1', nome: 'De fora')
+                                   label: create(:label, account: outra, title: 'de_fora'), label_wa_id: '1', nome: 'De fora',
+                                   evento_em: Time.current)
 
       listar
 

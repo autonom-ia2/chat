@@ -17,7 +17,7 @@ const props = defineProps({
 
 const emit = defineEmits(['remove', 'hover']);
 
-const { nomeDe } = useNomeDaEtiqueta();
+const { nomeDe, celularLigado } = useNomeDaEtiqueta();
 
 const handleRemoveLabel = () => {
   emit('remove', props.label);
@@ -43,7 +43,11 @@ const handleMouseEnter = () => {
     <span class="text-sm text-n-slate-12 ltr:mr-px rtl:ml-px">
       {{ nomeDe(label.title) }}
     </span>
-    <EtiquetaDoWhatsappIcone :titulo="label.title" class="ltr:ml-1 rtl:mr-1" />
+    <EtiquetaDoWhatsappIcone
+      v-if="celularLigado"
+      :titulo="label.title"
+      class="ltr:ml-1 rtl:mr-1"
+    />
     <div
       v-if="!readOnly"
       class="w-0 flex relative ltr:left-1 rtl:right-1 flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-out"
