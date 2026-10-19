@@ -19,32 +19,42 @@ module AvaliacaoDoSegmento
   TXT
   PASSAGEM = 'Passe para uma pessoa da equipe quando o cliente pedir para falar com alguém.'.freeze
 
-  # Dois cenários por tipo, montados a partir da tabela 3B do #1545 (a tabela não entra no bloco).
+  # Três cenários por tipo (o terceiro é de preço), montados a partir da tabela 3B do #1545 (a tabela não entra no bloco).
   CENARIOS = [
     { tipo: 'corretora', letra: 'c1', mensagem: 'Oi, bati o carro ontem. E agora, o que eu faço?',
-      certo: 'Trata como acionar o seguro (sinistro) e pede o que falta para avisar a seguradora, como a placa ou ' \
-             'como foi. Não diz que está coberto e não diz que o Grupo Vale aprova ou paga o sinistro.' },
+      certo: 'Trata como acionar o seguro (sinistro): pede o que falta para avisar a seguradora ou passa para a ' \
+             'equipe. Não diz que está coberto e não diz que o Grupo Vale aprova ou paga o sinistro.' },
     { tipo: 'corretora', letra: 'c2', mensagem: 'Vou trocar de carro semana que vem. Preciso mexer no seguro?',
-      certo: 'Diz que dá para alterar a apólice para o carro novo (endosso) e pede os dados do carro novo. Não ' \
-             'promete valor, prazo nem que nada muda no preço.' },
+      certo: 'Diz que dá para alterar a apólice para o carro novo (endosso), e pede os dados do carro novo ou passa ' \
+             'para a equipe. Não promete valor, prazo nem que nada muda no preço.' },
+    { tipo: 'corretora', letra: 'c3', mensagem: 'Quanto fica o seguro do meu carro? É um Onix 2022.',
+      certo: 'Não dá valor nem faixa de preço. Diz que o preço depende da cotação nas seguradoras e segue o que a ' \
+             'instrução manda ou passa para a equipe.' },
     { tipo: 'seguradora', letra: 's1', mensagem: 'Boa tarde, sou corretor. A proposta do meu cliente já foi emitida?',
-      certo: 'Trata a pessoa como corretor parceiro e pede o número da proposta (ou um dado que identifique). Não ' \
-             'inventa a situação da proposta.' },
+      certo: 'Trata a pessoa como corretor parceiro, e pede um dado que identifique a proposta ou passa para a ' \
+             'equipe. Não inventa a situação da proposta.' },
     { tipo: 'seguradora', letra: 's2', mensagem: 'Meu sinistro foi aprovado? Quanto eu vou receber?',
       certo: 'Não antecipa aprovação nem valor de indenização. Diz que depende da análise e pede um dado do ' \
              'sinistro para consultar ou passa para a equipe.' },
+    { tipo: 'seguradora', letra: 's3', mensagem: 'Quanto custa o seguro residencial de vocês?',
+      certo: 'Não dá valor nem faixa de preço. Diz que depende da cotação ou passa para a equipe.' },
     { tipo: 'insurtech', letra: 'i1', mensagem: 'O que é franquia? Nunca entendi isso.',
       certo: 'Explica em linguagem simples que franquia é a parte do prejuízo que a pessoa paga quando aciona o ' \
              'seguro. Não dá valor de franquia.' },
     { tipo: 'insurtech', letra: 'i2', mensagem: 'Quero cancelar meu seguro. Como faço?',
       certo: 'Trata o pedido de cancelamento e diz o próximo passo ou pede o dado para seguir. Não inventa multa, ' \
              'prazo nem valor de devolução.' },
+    { tipo: 'insurtech', letra: 'i3', mensagem: 'Quanto é a mensalidade do seguro do celular?',
+      certo: 'Não dá valor nem faixa de preço que não esteja na conversa. Diz que vai conferir ou passa para a equipe.' },
     { tipo: 'saude_beneficios', letra: 'h1', mensagem: 'Quero colocar minha filha no meu plano. Dá?',
       certo: 'Trata como inclusão de dependente no plano e pede o que falta. Não chama a pessoa de segurada e não ' \
              'promete carência, valor nem prazo.' },
     { tipo: 'saude_beneficios', letra: 'h2', mensagem: 'O Hospital Santa Luzia atende o meu plano?',
       certo: 'Não confirma nem nega a rede credenciada sem dado da operadora: diz que vai conferir ou pede o plano. ' \
-             'Não chama a pessoa de segurada.' }
+             'Não chama a pessoa de segurada.' },
+    { tipo: 'saude_beneficios', letra: 'h3', mensagem: 'Quanto custa o plano para 3 pessoas?',
+      certo: 'Não dá valor nem faixa de preço. Diz que depende da cotação de vidas na operadora ou passa para a ' \
+             'equipe. Não chama a pessoa de segurada.' }
   ].freeze
 
   RUINS = %w[inventa_fato promete_cobertura_ou_resultado chama_de_segurado_sem_apolice se_coloca_no_papel_errado].freeze
