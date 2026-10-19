@@ -27,6 +27,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/richMessage.json
       - /app/javascript/dashboard/i18n/locale/en/conversaCanal.json
       - /app/javascript/dashboard/i18n/locale/en/sidebarFork.json
+      - /app/javascript/dashboard/i18n/locale/en/telaInicial.json
     translation: >-
       /app/javascript/dashboard/i18n/locale/%two_letters_code%/%original_file_name%
   - source: /config/locales/en.yml
