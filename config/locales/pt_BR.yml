@@ -1322,8 +1322,20 @@ pt_BR:
     image_invalid_type: "Tipo de imagem não aceito. Use PNG, JPEG, GIF ou WebP."
     image_too_large: "A imagem é grande demais. O tamanho máximo é 5 MB."
     source:
-      invalid_kind: "Tipo de material inválido. Use \"knowledge\" ou \"media\"."
+      invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."
+      arquivo_grande: "O arquivo é grande demais. O tamanho máximo é 25 MB."
+      arquivo_tipo: "Este tipo de arquivo não dá para ler. Mande um PDF, uma planilha, um documento do Word ou um arquivo de texto."
       limit_reached: "Este agente já tem o máximo de %{limit} materiais de conhecimento. Remova um antes de adicionar outro."
+      foto_fora_da_fase2: "Foto como material ainda não está disponível nesta conta. Mande um PDF, uma planilha ou um arquivo de texto."
+      foto_so_no_que_sabe: "Foto só entra no que o agente sabe."
+      foto_agente_de_cotacao: "O agente de cotação não recebe foto como material."
+      foto_sem_arquivo: "Mande o arquivo da foto."
+      foto_tipo: "Este arquivo não é uma foto. Mande uma imagem PNG, JPEG, GIF ou WebP."
+      foto_tamanho: "A foto é grande demais. O tamanho máximo é 5 MB."
+      foto_pixels: "A foto tem pixels demais. Mande uma foto menor (até 40 megapixels)."
+      foto_animada: "Imagem animada não serve como material. Mande uma foto parada."
+      lendo_ainda: "Este material ainda está sendo lido. Espere terminar para ler de novo."
+      file_invalid: "Mande o próprio arquivo."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

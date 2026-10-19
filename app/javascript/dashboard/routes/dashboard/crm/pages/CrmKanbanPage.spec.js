@@ -47,6 +47,9 @@ vi.mock('../composables/useCrmPermissions', () => ({
 }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({ canViewRelationshipRecords: ref(true) }),
+}));
 vi.mock('dashboard/composables/emitter', () => ({ useEmitter: vi.fn() }));
 vi.mock('dashboard/api/crmMeetings', () => ({ default: {} }));
 vi.mock('dashboard/api/ctwaCampaigns', () => ({
@@ -403,7 +406,7 @@ describe('CrmKanbanPage', () => {
       );
     });
 
-    it('"Passar tudo" diz quantos passaram quando parte falha', async () => {
+    it('"Passar os meus" diz quantos passaram quando parte falha', async () => {
       wrapper = await mountPage({
         calendarOnly: true,
         account: { calendarioOuro: true },
@@ -426,6 +429,26 @@ describe('CrmKanbanPage', () => {
       expect(useAlert).toHaveBeenCalledWith(
         'CRM_CALENDARIO.ALERTA.ADIADOS_PARCIAL:{"ok":2,"total":3}'
       );
+    });
+
+    // #1855: o lote pede ao servidor só lembretes; envio ao cliente é recusado.
+    it('"Passar os meus" pede o reagendamento só de lembretes', async () => {
+      wrapper = await mountPage({
+        calendarOnly: true,
+        account: { calendarioOuro: true },
+      });
+      dispatch.mockClear();
+      ouro().vm.$emit('adiarAtrasados', {
+        eventos: [{ id: 'follow_up_1' }],
+        quando: '2026-10-15T12:00:00.000Z',
+      });
+      await flushPromises();
+
+      expect(dispatch).toHaveBeenCalledWith('crmKanban/rescheduleFollowUp', {
+        id: '1',
+        dueAt: '2026-10-15T12:00:00.000Z',
+        remindersOnly: true,
+      });
     });
 
     it('reunião marcada no Meu dia avisa e recarrega o calendário', async () => {

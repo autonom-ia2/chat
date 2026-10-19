@@ -20,6 +20,7 @@ import {
   showsSales,
   throughputDatasets,
 } from '../helpers/dashboardOutcomes';
+import { originRows as buildOriginRows } from '../helpers/dashboardOrigins';
 
 const { t } = useI18n();
 const { resolvedLocale } = useLocale();
@@ -30,70 +31,6 @@ const PERIODS = [
   { key: 'LAST_90', days: 90, groupBy: 'week' },
   { key: 'LAST_365', days: 365, groupBy: 'month' },
 ];
-
-const ORIGIN_SOURCES = [
-  {
-    key: 'meta_ctwa',
-    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.META_CTWA',
-    icon: 'i-lucide-message-circle',
-    barClass: 'bg-n-blue-9',
-  },
-  {
-    key: 'meta_organic',
-    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.META_ORGANIC',
-    icon: 'i-lucide-leaf',
-    barClass: 'bg-n-teal-9',
-  },
-  {
-    key: 'google_ads',
-    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.GOOGLE_ADS',
-    icon: 'i-lucide-search',
-    barClass: 'bg-n-amber-9',
-  },
-  {
-    key: 'tiktok_ads',
-    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.TIKTOK_ADS',
-    icon: 'i-lucide-music-2',
-    barClass: 'bg-n-violet-9',
-  },
-  {
-    key: 'meta_paid',
-    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.META_PAID',
-    icon: 'i-lucide-badge-dollar-sign',
-    barClass: 'bg-n-ruby-9',
-  },
-  {
-    key: 'tracked_link',
-    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.TRACKED_LINK',
-    icon: 'i-lucide-link',
-    barClass: 'bg-n-slate-9',
-  },
-  {
-    key: 'campaign_whatsapp',
-    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.CAMPAIGN_WHATSAPP',
-    icon: 'i-lucide-send',
-    barClass: 'bg-n-iris-9',
-  },
-  {
-    key: 'campaign_email',
-    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.CAMPAIGN_EMAIL',
-    icon: 'i-lucide-mail',
-    barClass: 'bg-n-brand',
-  },
-  {
-    key: 'campaign_sms',
-    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.CAMPAIGN_SMS',
-    icon: 'i-lucide-message-square-text',
-    barClass: 'bg-n-teal-9',
-  },
-];
-
-const ORIGIN_FALLBACK = {
-  key: 'unknown',
-  labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.UNKNOWN',
-  icon: 'i-lucide-circle-help',
-  barClass: 'bg-n-slate-8',
-};
 
 // Com o menu novo (#1617) a página se chama Números e ganha o seletor do CRM.
 const { ligado: menuNovo } = useMenuNovo();
@@ -184,7 +121,9 @@ const hasMetaData = computed(() => {
 // Joins a [{ currency, value_cents }] list into a single multi-currency string,
 // honoring the locked rule that currencies are never summed together.
 const formatCurrencyList = list => {
-  if (!list || !list.length) return formatMoney(0, 'BRL');
+  // #1876: o zero sai na moeda da meta do funil, não sempre em real.
+  if (!list || !list.length)
+    return formatMoney(0, summary.value?.goal?.currency);
   return list
     .map(entry => formatMoney(entry.value_cents, entry.currency))
     .join(' · ');
@@ -250,13 +189,15 @@ const openWorkItems = computed(() => openWork(summary.value));
 
 const throughputSets = computed(() => throughputDatasets(throughput.value));
 
-const throughputCollection = computed(() => {
+// #1876: formato do @chatwoot/viz (categories/series); o antigo labels/datasets deixava o gráfico vazio desde o #15458.
+const throughputChart = computed(() => {
   const series = throughput.value?.series || [];
   return {
-    labels: series.map(point => point.date),
-    datasets: throughputSets.value.map(set => ({
+    categories: series.map(point => point.date),
+    series: throughputSets.value.map(set => ({
+      id: set.key,
       label: t(`CRM_KANBAN.DASHBOARD.THROUGHPUT.${set.labelKey}`),
-      backgroundColor: set.color,
+      color: set.color,
       data: series.map(point => point[set.key] || 0),
     })),
   };
@@ -275,73 +216,7 @@ const workloadLabel = entry => {
   return entry.name || `#${entry.key}`;
 };
 
-const originConfigByKey = computed(() =>
-  Object.fromEntries(ORIGIN_SOURCES.map(source => [source.key, source]))
-);
-
-const originLabels = computed(() => ({
-  meta_ctwa: t('CRM_DASHBOARD.ORIGIN.SOURCES.META_CTWA'),
-  meta_organic: t('CRM_DASHBOARD.ORIGIN.SOURCES.META_ORGANIC'),
-  google_ads: t('CRM_DASHBOARD.ORIGIN.SOURCES.GOOGLE_ADS'),
-  tiktok_ads: t('CRM_DASHBOARD.ORIGIN.SOURCES.TIKTOK_ADS'),
-  meta_paid: t('CRM_DASHBOARD.ORIGIN.SOURCES.META_PAID'),
-  tracked_link: t('CRM_DASHBOARD.ORIGIN.SOURCES.TRACKED_LINK'),
-  unknown: t('CRM_DASHBOARD.ORIGIN.SOURCES.UNKNOWN'),
-}));
-
-const originLabel = source =>
-  originLabels.value[source] || originLabels.value[ORIGIN_FALLBACK.key];
-
-const normalizedOriginSource = source => {
-  if (!source) return 'meta_ctwa';
-  return originConfigByKey.value[source] ? source : ORIGIN_FALLBACK.key;
-};
-
-const emptyOriginRow = source => ({
-  source,
-  wonCount: 0,
-  valueList: [],
-});
-
-const originRows = computed(() => {
-  const rowsBySource = Object.fromEntries(
-    ORIGIN_SOURCES.map(source => [source.key, emptyOriginRow(source.key)])
-  );
-
-  originMetrics.value.forEach(metric => {
-    const source = normalizedOriginSource(metric.source);
-    if (!rowsBySource[source]) rowsBySource[source] = emptyOriginRow(source);
-    rowsBySource[source] = {
-      ...rowsBySource[source],
-      wonCount: Number(metric.won_count || 0),
-      valueList: metric.won_value_by_currency || [],
-    };
-  });
-
-  const orderedSources = [
-    ...ORIGIN_SOURCES.map(source => source.key),
-    ...(rowsBySource[ORIGIN_FALLBACK.key] ? [ORIGIN_FALLBACK.key] : []),
-  ];
-
-  return orderedSources
-    .map(source => {
-      const row = rowsBySource[source];
-      const valueList = [...row.valueList].sort((a, b) =>
-        String(a.currency || '').localeCompare(String(b.currency || ''))
-      );
-      const config = originConfigByKey.value[source] || ORIGIN_FALLBACK;
-
-      return {
-        source,
-        icon: config.icon,
-        barClass: config.barClass,
-        label: originLabel(source),
-        wonCount: row.wonCount,
-        valueList,
-      };
-    })
-    .filter(row => row.wonCount > 0 || row.valueList.length > 0);
-});
+const originRows = computed(() => buildOriginRows(originMetrics.value));
 
 const hasOriginRows = computed(() => originRows.value.length > 0);
 
@@ -761,7 +636,7 @@ onMounted(async () => {
                 :class="row.icon"
               />
               <span class="text-sm font-medium truncate text-n-slate-12">
-                {{ row.label }}
+                {{ t(row.labelKey) }}
               </span>
             </div>
             <div
@@ -939,6 +814,18 @@ onMounted(async () => {
               <p class="m-0 text-xs text-n-slate-11">
                 {{ t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.OVERDUE') }}
               </p>
+              <p
+                v-if="followUps?.overdue_by && followUps.overdue > 0"
+                data-overdue-by
+                class="m-0 text-xs text-n-slate-10"
+              >
+                {{
+                  t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.OVERDUE_BY', {
+                    ai: formatNumber(followUps.overdue_by.ai),
+                    human: formatNumber(followUps.overdue_by.human),
+                  })
+                }}
+              </p>
             </div>
             <div>
               <p class="m-0 text-2xl font-semibold text-n-slate-12">
@@ -961,7 +848,11 @@ onMounted(async () => {
           {{ t('CRM_KANBAN.DASHBOARD.THROUGHPUT.EMPTY') }}
         </p>
         <div v-else class="h-64">
-          <BarChart :collection="throughputCollection" />
+          <BarChart
+            :data="throughputChart"
+            :height="232"
+            :aria-label="t('CRM_KANBAN.DASHBOARD.THROUGHPUT.TITLE')"
+          />
         </div>
       </section>
 

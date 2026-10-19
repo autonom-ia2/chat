@@ -152,6 +152,8 @@ module Waha
 
     # ---- ENVIO NATIVO DE MENSAGEM RICA E AÇÕES (chat#1709): Waha::Client::RichSends ----
     include Waha::Client::RichSends
+    # ---- AGENDA DO APARELHO (#1865): Waha::Client::Agenda ----
+    include Waha::Client::Agenda
 
     # ---- APPS (conector de mensagens) ----
     def create_app(session:, app_id:, config:, app: 'chatwoot')
@@ -214,8 +216,8 @@ module Waha
       request(:get, path, timeout: timeout)
     end
 
-    def put(path, body)
-      request(:put, path, body)
+    def put(path, body, timeout: DEFAULT_TIMEOUT)
+      request(:put, path, body, timeout: timeout)
     end
 
     def delete(path)

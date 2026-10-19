@@ -605,11 +605,18 @@ module Autonomia
         # Imagens NÃO entram aqui — vão como input_image.
         def query
           message = last_incoming_message
-          base = message&.content.to_s
+          # #1807: e-mail recebido sem o histórico citado (flag `email_autoria`); o resto, o content de sempre.
+          base = message ? email_autoria.texto(message) : ''
           transcribed = media.transcripts.map { |text| "[áudio do cliente, transcrito automaticamente]: #{text}" }
           texto = [quoted_context(message), base.presence, *transcribed].compact.join("\n")
           # #1669: com a moldura da equipe, a chave dela escrita pelo cliente é neutralizada (segunda camada).
-          equipe.aplica? ? equipe.pergunta(texto) : texto
+          pergunta = equipe.aplica? ? equipe.pergunta(texto) : texto
+          message ? "#{email_autoria.aviso(message)}#{pergunta}" : pergunta
+        end
+
+        # Própria do turno, não da moldura da equipe (HistoricoDaEquipe): o e-mail vale com ou sem a Fase 2.
+        def email_autoria
+          @email_autoria ||= ::Crm::Email::Autoria.new(@conversation.account)
         end
 
         def last_incoming_message
@@ -694,7 +701,7 @@ module Autonomia
           itens = if equipe.aplica?
                     equipe.historico(recent_messages)
                   else
-                    recent_messages.map { |message| { role: message.incoming? ? 'user' : 'assistant', content: message.content.to_s } }
+                    recent_messages.map { |message| { role: message.incoming? ? 'user' : 'assistant', content: conteudo_do_historico(message) } }
                   end
           # #1479: as opções e o link que o agente mandou entram com a versão em texto (o modelo sabe o que ofereceu).
           itens = ::Autonomia::Agents::Interacao.no_historico(itens, recent_messages, agent: @agent)
@@ -702,15 +709,23 @@ module Autonomia
           ::Autonomia::Agents::Operate::RecoveredHeaderNote.com_contexto(itens, recent_messages)
         end
 
+        # #1807: e-mail recebido com o aviso de quem escreveu e sem o histórico citado (flag `email_autoria`).
+        def conteudo_do_historico(message)
+          message.incoming? ? email_autoria.para_ia(message) : message.content.to_s
+        end
+
         # #1669: a regra do turno quando a janela tem mensagem da equipe com moldura. #1691: a conversa espera uma pessoa
         # e a equipe está fora do horário da caixa (EsperaForaDoHorario). Vão como contexto do turno (`developer`), nunca
         # na instrução do agente (que é do dono), e só com a Fase 2. nil sem nenhum dos dois: o Answerer nem recebe o
         # argumento, e o pedido fica igual ao de antes.
+        # #1807: com e-mail de outro endereço na janela (flag `email_autoria`), a legenda do aviso entra aqui também, com ou
+        # sem a Fase 2.
         def contexto_do_turno
-          return unless equipe.aplica?
+          email = email_autoria.regra(recent_messages)
+          return email unless equipe.aplica?
 
           espera = ::Autonomia::Agents::Operate::EsperaForaDoHorario.new(conversation: @conversation).texto
-          [equipe.regra(recent_messages), espera].compact.join("\n\n").presence
+          [equipe.regra(recent_messages), espera, email].compact.join("\n\n").presence
         end
 
         # #1630: o item `developer` do turno: o contexto de sempre e, se uma pessoa passou a conversa a este agente e ele
@@ -796,9 +811,19 @@ module Autonomia
                 autonomia_agent_id: @agent.id,
                 autonomia_reply_to_message_id: @reply_to_message_id,
                 **formato
-              }
+              },
+              **destinatarios_do_email
             )
           ).perform
+        end
+
+        # #1828 (flag `email_autoria`): no e-mail, a resposta da IA mantém a cópia como o "Responder a todos" do painel
+        # (Crm::Email::Destinatarios), sem quem pediu para sair. Sem a flag, ou fora do e-mail, nada muda: a resposta vai
+        # só ao cliente, como antes. Também na resposta da passagem (ResponderAPassagem#post_reply!).
+        def destinatarios_do_email
+          return {} unless @conversation.inbox&.email? && email_autoria.ligada?
+
+          ::Crm::Email::Destinatarios.new(@conversation).para_a_ia.to_h { |campo, enderecos| [:"#{campo}_emails", enderecos.join(',')] }
         end
 
         # #1479: -> [o conteúdo, as chaves do formato]. O formato sai em `rich_message`; quando a caixa não o leva, o

@@ -5,12 +5,18 @@ module Autonomia
         # pdf: extração de texto via gem `pdf-reader` (PDF::Reader). A gem é opcional neste fork —
         # se ausente, degrada p/ UnsupportedFormat (a fonte vira `failed` com mensagem clara) em vez
         # de quebrar o boot. Concatena o texto de cada página. Quando o PDF é escaneado (sem camada
-        # de texto), a extração normal volta vazia; nesse caso cai p/ OCR (rtesseract + mini_magick).
+        # de texto), a extração normal volta vazia; nesse caso cai p/ OCR (PdfOcr: Rasterizacao + Ocr).
         class Pdf < Base
+          include PdfOcr
+
           # Abaixo deste tamanho (após strip) a extração é "quase vazia" (PDF escaneado / só imagem):
           # vale tentar OCR em vez de marcar a fonte como falha por texto ausente.
           OCR_MIN_CHARS = 20
-          OCR_LANGUAGE = 'por'.freeze
+          # #1426 (revisão adversarial) — na Fase 2, teto de páginas da extração de TEXTO. Ler a camada de texto é barato
+          # (milissegundos por página), mas sem teto um PDF de milhares de páginas vira uma base enorme de um material só.
+          # 300 páginas cobrem manual, catálogo e tabela completos; o que passar fica de fora e o dono é avisado. Fora
+          # da Fase 2 e na Lia (agente protegido), sem teto, como antes.
+          MAX_PAGINAS_TEXTO = 300
 
           # OCR é OPCIONAL porque o custo dele não tem teto: rasteriza página por página a 300 DPI e
           # passa cada uma pelo tesseract. Num PDF escaneado de poucos MB isso são dezenas de páginas
@@ -29,50 +35,46 @@ module Autonomia
 
           def extract
             ensure_gem!
-            text = +''
-            with_tempfile do |path|
-              reader = PDF::Reader.new(path)
-              reader.pages.each { |page| text << page.text << "\n" }
-            end
-            text = text.force_encoding('UTF-8').scrub('')
-            return text unless text.strip.length < OCR_MIN_CHARS
+            @paginas_de_fora = {}
+            texto = with_tempfile do |path|
+              paginas = paginas_do_texto(PDF::Reader.new(path).pages)
+              text = paginas.map { |page| "#{page.text}\n" }.join.force_encoding('UTF-8').scrub('')
+              next text unless @ocr && text.strip.length < OCR_MIN_CHARS
 
-            @ocr ? ocr_fallback(text) : text
+              ocr_fallback(text, path, paginas)
+            end
+            registrar_paginas_de_fora
+            texto
           rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError => e
             raise ExtractionError, "pdf_parse_failed: #{e.message}"
           end
 
           private
 
-          # PDF escaneado: rasteriza cada página (mini_magick/imagemagick, que lê PDF via poppler)
-          # e passa por OCR (rtesseract -> binário tesseract, idioma pt-BR). Guardado: se gem ou
-          # binário faltarem em runtime, loga aviso e devolve o texto original (vazio) — nunca
-          # levanta erro novo que quebre a ingestão. Deps de sistema instaladas na imagem prod
-          # (docker/Dockerfile: tesseract-ocr tesseract-ocr-data-por poppler-utils).
-          def ocr_fallback(text)
-            require 'mini_magick'
-            require 'rtesseract'
-            ocr = +''
-            with_tempfile { |path| ocr << ocr_pages(path) }
-            ocr = ocr.force_encoding('UTF-8').scrub('').strip
-            ocr.length >= OCR_MIN_CHARS ? ocr : text
-          rescue LoadError, StandardError => e
-            Rails.logger.warn("[autonomia] pdf_ocr_unavailable: #{e.class}: #{e.message}")
-            text
+          def fase2_na_conta?
+            @source.respond_to?(:account) && Autonomia::Agents::Fase2.ligada?(@source.account)
           end
 
-          # Rasteriza o PDF em uma imagem por página (300 DPI p/ OCR legível) e OCR-a cada uma,
-          # juntando com quebra de linha entre páginas.
-          def ocr_pages(pdf_path)
-            image = MiniMagick::Image.open(pdf_path)
-            out = +''
-            image.pages.each_with_index do |page, index|
-              page_image = MiniMagick::Image.open(page.path)
-              page_image.density(300)
-              out << RTesseract.new(page_image.path, lang: OCR_LANGUAGE).to_s.to_s
-              out << "\n" if index < image.pages.size - 1
-            end
-            out
+          # A Lia (instrução mantida pela Autonom.ia) fica como na main, também na Fase 2.
+          def agente_protegido?
+            @source.respond_to?(:agent) && @source.agent&.instrucao_mantida? == true
+          end
+
+          def paginas_do_texto(pages)
+            return pages unless fase2_na_conta? && !agente_protegido? && pages.size > MAX_PAGINAS_TEXTO
+
+            alem = pages.size - MAX_PAGINAS_TEXTO
+            @paginas_de_fora = @paginas_de_fora.merge('texto_teto' => MAX_PAGINAS_TEXTO, 'texto_alem_do_teto' => alem)
+            pages.first(MAX_PAGINAS_TEXTO)
+          end
+
+          # O que ficou de fora desta leitura vai para o log e para o material (Source#paginas_de_fora, gravado pelo
+          # mark_ready! sob a guarda de token), para o aviso ao dono.
+          def registrar_paginas_de_fora
+            return if @paginas_de_fora.empty?
+
+            Rails.logger.warn("[autonomia] pdf_paginas_de_fora #{@paginas_de_fora.to_json}")
+            @source.paginas_de_fora = @paginas_de_fora if @source.respond_to?(:paginas_de_fora=)
           end
 
           def ensure_gem!

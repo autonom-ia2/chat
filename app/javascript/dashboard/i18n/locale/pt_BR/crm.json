@@ -151,7 +151,7 @@
         "CAMPAIGN_EMAIL": "Campanha e-mail",
         "CAMPAIGN_LIVE_CHAT": "Campanha chat ao vivo",
         "CAMPAIGN_SMS": "Campanha SMS",
-        "UNKNOWN": "Desconhecida"
+        "NONE": "Sem origem"
       }
     }
   },
@@ -532,6 +532,7 @@
         "TITLE": "Retornos",
         "PENDING": "Pendentes",
         "OVERDUE": "Vencidos",
+        "OVERDUE_BY": "IA {ai} · Equipe {human}",
         "DUE_SOON": "Vencem em 48h"
       },
       "WORKLOAD": {
@@ -1578,7 +1579,7 @@
       "WHEN_TO_USE": "Quando usar",
       "WHEN_TO_USE_HELP": "A IA lê este texto para saber quando uma conversa é deste funil. Diga quais produtos ou casos entram aqui.",
       "WHEN_TO_USE_PLACEHOLDER": "Ex.: venda dos nossos dois produtos, Agentes de IA e Chat2You.",
-      "MONTHLY_TARGET": "Meta mensal de vendas (R$)",
+      "MONTHLY_TARGET": "Meta mensal de vendas",
       "MONTHLY_TARGET_PLACEHOLDER": "Ex.: 50000",
       "MONTHLY_TARGET_HELP": "Alimenta o box de Meta no dashboard. Deixe vazio para sem meta.",
       "REQUIRED": "Obrigatório",
@@ -4430,7 +4431,6 @@
       "META": "Meta de vendas por mês",
       "META_AJUDA": "Aparece no painel. Deixe vazio se não tiver meta.",
       "META_EXEMPLO": "50000",
-      "MOEDA": "R$",
       "NOMES": "Como chamar o resultado (se quiser)",
       "NOMES_AJUDA": "Em branco, usamos “{sucesso}” e “{fracasso}”.",
       "SUCESSO": "Quando dá certo",
@@ -5247,7 +5247,8 @@
       "PESSOA": {
         "EXISTENTE": {
           "TITULO": "Já está nos contatos",
-          "TEXTO": "Procure pelo nome, telefone ou e-mail."
+          "TEXTO": "Procure pelo nome, telefone ou e-mail.",
+          "SEM_PERMISSAO": "Sua função não abre a lista de contatos. Para um cliente que já conversa com vocês, crie o card pela conversa dele."
         },
         "NOVA": {
           "TITULO": "Pessoa nova",
@@ -5416,7 +5417,8 @@
     "CONTATO": {
       "TELA": "Contato",
       "TITULO": "Contato: {nome}",
-      "TEXTO": "A pessoa: nome, telefone, e-mail e campos. Vale para todos os negócios dela."
+      "TEXTO": "A pessoa: nome, telefone, e-mail e campos. Vale para todos os negócios dela.",
+      "TEXTO_BASICO": "A pessoa: nome, telefone e e-mail."
     },
     "EMPRESA": {
       "TELA": "Empresa",
@@ -5761,7 +5763,7 @@
       "AMANHA": "Amanhã",
       "PARA_HOJE": "Para hoje",
       "ATRASADOS": "Ficou para trás",
-      "ADIAR_TODOS": "Passar tudo para amanhã",
+      "ADIAR_MEUS": "Passar os meus para amanhã",
       "AGORA": "Agora, {hora}",
       "PROXIMOS": "Próximos dias",
       "PROXIMO": "Próximo: {dia} — {titulo}.",

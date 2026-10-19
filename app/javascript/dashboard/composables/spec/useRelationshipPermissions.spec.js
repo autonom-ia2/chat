@@ -70,3 +70,28 @@ it('fails closed for an unresolved seat', () => {
     false
   );
 });
+describe('ver contatos (#1849)', () => {
+  it.each([
+    [['contact_view'], true],
+    [['contact_manage'], true],
+    [['conversation_participating_manage', 'crm_view'], false],
+    [[], false],
+  ])('com %j vê a base: %s', (permissions, esperado) => {
+    context.state.accounts[0].permissions = permissions;
+    expect(useRelationshipPermissions().canViewRelationshipRecords.value).toBe(
+      esperado
+    );
+  });
+
+  it('administrador e agente sem função continuam vendo', () => {
+    context.state.accounts[0].permissions = [];
+    Object.assign(context.state, { role: 'administrator', customRoleId: 7 });
+    expect(useRelationshipPermissions().canViewRelationshipRecords.value).toBe(
+      true
+    );
+    Object.assign(context.state, { role: 'agent', customRoleId: null });
+    expect(useRelationshipPermissions().canViewRelationshipRecords.value).toBe(
+      true
+    );
+  });
+});

@@ -10,14 +10,34 @@ class AutonomiaCopilotAPI extends ApiClient {
 
   // task: 'summarize' | 'draft' | 'rewrite' | 'refine'
   // draft/tone/instruction are used by rewrite/refine.
-  run(conversationId, { task, draft, tone, instruction } = {}) {
+  // #1872: polling = { timeoutMs, signal } do pollAiRequest (opcional).
+  run(conversationId, { task, draft, tone, instruction } = {}, polling = {}) {
     return pollAiRequest(
       axios.post(`${this.url}/conversations/${conversationId}/copilot`, {
         task,
         draft,
         tone,
         instruction,
-      })
+      }),
+      polling
+    );
+  }
+
+  // #1872 — o copiloto está disponível para a conta (gates + chave da IA)? → { available }
+  status() {
+    return axios.get(`${this.url}/copilot/status`);
+  }
+
+  // #1872 — só o texto, sem conversa (e-mail novo da gaveta Escrever): task 'rewrite' | 'refine'.
+  runText({ task, draft, tone, instruction } = {}, polling = {}) {
+    return pollAiRequest(
+      axios.post(`${this.url}/copilot/text`, {
+        task,
+        draft,
+        tone,
+        instruction,
+      }),
+      polling
     );
   }
 

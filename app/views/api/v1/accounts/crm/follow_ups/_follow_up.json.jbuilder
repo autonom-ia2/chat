@@ -29,7 +29,10 @@ json.recipient_mode follow_up.recipient_mode
 json.recipient_user_ids follow_up.recipient_user_ids
 json.recipient_team_id follow_up.recipient_team_id
 json.company_id follow_up.company_id
-json.company { json.extract! follow_up.company, :id, :name } if follow_up.company.present?
+# Sem ver contatos, sem empresa (#1849, D7).
+if follow_up.company.present? && Crm::Cards::ContactReading.full?(user: Current.user, account_user: Current.account_user)
+  json.company { json.extract! follow_up.company, :id, :name }
+end
 if follow_up.series.present?
   json.series do
     json.extract! follow_up.series, :id, :frequency, :weekdays, :weekdays_only, :ends_mode, :ends_on, :occurrences_count,

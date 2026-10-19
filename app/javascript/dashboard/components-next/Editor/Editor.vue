@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch, useSlots } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import WootEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 
@@ -26,11 +27,18 @@ const props = defineProps({
   sendWithSignature: { type: Boolean, default: false },
   channelType: { type: String, default: '' },
   medium: { type: String, default: '' },
+  // #1809: emoji e ditado da gaveta "Escrever" entram no ponto do cursor.
+  updateSelectionWith: { type: String, default: '' },
 });
 
-const emit = defineEmits(['update:modelValue', 'executeCopilotAction']);
+const emit = defineEmits([
+  'update:modelValue',
+  'executeCopilotAction',
+  'clearSelection',
+]);
 
 const slots = useSlots();
+const { t } = useI18n();
 
 const isFocused = ref(false);
 
@@ -110,7 +118,9 @@ watch(
         :send-with-signature="sendWithSignature"
         :channel-type="channelType"
         :medium="medium"
+        :update-selection-with="updateSelectionWith"
         @input="handleInput"
+        @clear-selection="emit('clearSelection')"
         @focus="handleFocus"
         @blur="handleBlur"
         @execute-copilot-action="
@@ -125,7 +135,12 @@ watch(
           v-if="showCharacterCount && !slots.actions"
           class="text-xs tabular-nums text-n-slate-10"
         >
-          {{ characterCount }} / {{ maxLength }}
+          {{
+            t('CONVERSA_CANAL.CONTAGEM_DO_EDITOR', {
+              atual: characterCount,
+              limite: maxLength,
+            })
+          }}
         </span>
         <slot v-else name="actions" />
       </div>
