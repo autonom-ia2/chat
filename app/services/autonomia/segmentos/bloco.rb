@@ -12,12 +12,21 @@
 #   - Só orientação e vocabulário do ramo. Nenhuma frase pronta de cliente: o modelo copia frase (a tabela 3B do
 #     #1545 é referência e caso de eval, nunca conteúdo daqui).
 #
-# Por enquanto devolve nil sempre. A Segmentação preenche o conteúdo e acrescenta a checagem do interruptor
-# AUTONOMIA_PACOTES_ENABLED.
+# O conteúdo mora em config/pacotes/seguros/<tipo>/agentes.md, um texto por tipo de conta de seguros, lido uma vez no
+# boot. Vale só com o interruptor AUTONOMIA_PACOTES_ENABLED ligado e conta de seguros (as camadas de
+# Autonomia::Segmentos::Pacotes); conta geral, interruptor desligado ou tipo sem arquivo devolve nil.
 module Autonomia::Segmentos::Bloco
+  PASTA = Rails.root.join('config/pacotes')
+  ARQUIVO = 'agentes.md'
+
+  TEXTOS = Dir.glob(PASTA.join('*', '*', ARQUIVO).to_s).to_h do |arquivo|
+    [Pathname(arquivo).dirname.relative_path_from(PASTA).to_s.freeze, File.read(arquivo).strip.freeze]
+  end.freeze
+
   module_function
 
-  def for(_account)
-    nil
+  def for(account)
+    camada = Autonomia::Segmentos::Pacotes.camadas(account).last
+    camada && TEXTOS[camada]
   end
 end
