@@ -256,6 +256,25 @@ describe('permissionMatrix', () => {
       ]);
       expect(sensitiveExtrasOn(permissions)).toEqual([DELETE]);
     });
+
+    // O formato que a migration gera: só conversation_manage, sem os alcances guardados.
+    it('desliga a chave num cargo antigo de todas as conversas', () => {
+      expect(
+        toggleExtra(conversations, DELETE, ['conversation_manage', DELETE])
+      ).toEqual(['conversation_manage']);
+    });
+
+    it('de todas para as próprias num cargo antigo começa pelas próprias e mantém a chave', () => {
+      const limited = setLevel(conversations, CONVERSATION_LEVELS.LIMITED, [
+        'conversation_manage',
+        DELETE,
+      ]);
+
+      expect(limited).toEqual([DELETE, 'conversation_participating_manage']);
+      expect(getLevel(conversations, limited)).toBe(
+        CONVERSATION_LEVELS.LIMITED
+      );
+    });
   });
 
   describe('crm', () => {

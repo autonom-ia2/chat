@@ -94,7 +94,7 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
 ## Teste 9: apagar mensagem (#1893)
 
 1. Edite a função. Em **Conversas**, deixe **Atender** e **Só as próprias**, sem ligar **Apagar mensagens**. Salve.
-2. Na janela anônima, abra uma conversa de teste atribuída à pessoa. No menu da mensagem (botão direito ou os três pontos), **Apagar** não aparece. Responder, copiar e os outros itens seguem lá.
+2. Na janela anônima, abra uma conversa de teste atribuída à pessoa. No menu da mensagem (botão direito ou os três pontos), **Apagar** não aparece. Responder, copiar e os outros itens seguem lá. Numa conversa de e-mail, o ⋮ do e-mail também não tem **Excluir**.
 3. Volte à função. Em **Ajustes finos** de Conversas, ligue **Apagar mensagens** (pede confirmação) e salve. Na janela anônima, recarregue: **Apagar** aparece e apaga. Use uma mensagem enviada só para o teste.
 4. Troque Conversas para **Todas**: o ajuste **Apagar mensagens** continua visível e ligado. Troque para **Só olha**: o ajuste some e, ao voltar para **Atender**, vem desligado.
 5. Com uma pessoa sem função (agente comum), **Apagar** segue aparecendo como antes.

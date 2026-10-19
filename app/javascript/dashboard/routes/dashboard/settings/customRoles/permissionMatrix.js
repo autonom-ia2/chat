@@ -318,10 +318,15 @@ const setConversationLevel = (level, permissions) => {
   if (level === CONVERSATION_LEVELS.LIMITED || level === LEVELS.MANAGE) {
     if (
       isConversationManaging(getLevel({ type: 'conversations' }, permissions))
-    )
-      return level === LEVELS.MANAGE
-        ? permissions
-        : withoutKeys(permissions, [CONVERSATION_ALL]);
+    ) {
+      if (level === LEVELS.MANAGE) return permissions;
+      // Sair de todas para as próprias sem alcance guardado começa pelas próprias.
+      const limited = withoutKeys(permissions, [CONVERSATION_ALL]);
+      const hasScope = limited.some(
+        k => k === CONVERSATION_UNASSIGNED || k === CONVERSATION_PARTICIPATING
+      );
+      return hasScope ? limited : [...limited, CONVERSATION_PARTICIPATING];
+    }
     // Quem só olhava passa a atender as próprias e continua lendo as outras.
     const keepsReading = permissions.includes(CONVERSATION_VIEW);
     return [
@@ -390,9 +395,13 @@ export const toggleExtra = (module, key, permissions) => {
     return unique([...permissions, key, ...implied]);
   }
   const next = withoutKeys(permissions, [key]);
-  // A limited conversation level needs at least one scope.
+  // A limited conversation level needs at least one scope. Só os dois alcances contam: desligar outro ajuste
+  // (ler as outras, apagar mensagens) nunca é barrado por isso.
+  const isScopeKey =
+    key === CONVERSATION_UNASSIGNED || key === CONVERSATION_PARTICIPATING;
   const lostConversationScope =
     module.type === 'conversations' &&
+    isScopeKey &&
     !next.some(
       k => k === CONVERSATION_UNASSIGNED || k === CONVERSATION_PARTICIPATING
     );
