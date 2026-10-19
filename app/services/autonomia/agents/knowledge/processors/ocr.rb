@@ -11,9 +11,10 @@ module Autonomia::Agents::Knowledge::Processors::Ocr
   # Uma página A4 densa dá 3 a 5 KB de texto; 1 MB é mais de 200 páginas dessas. Acima disso não é leitura de foto.
   TETO_DA_SAIDA = 1.megabyte
 
-  # Sem o tesseract na máquina, ou estourou o tempo: o OCR não está disponível para este arquivo.
+  # Sem o tesseract na máquina: o OCR não está disponível para nenhum arquivo.
   class Indisponivel < StandardError; end
-  # O tesseract rodou e recusou o arquivo, ou devolveu mais texto do que o teto.
+  # O tesseract recusou o arquivo, estourou o tempo (#1426: falha deste arquivo, não da máquina; no PDF a página é
+  # pulada) ou devolveu mais texto do que o teto.
   class Falhou < StandardError; end
 
   module_function
@@ -44,7 +45,7 @@ module Autonomia::Agents::Knowledge::Processors::Ocr
     matar(espera.pid)
     espera.join
     leitura.join
-    raise Indisponivel, 'tesseract_timeout'
+    raise Falhou, 'tesseract_timeout'
   end
 
   def matar(pid)

@@ -3,8 +3,8 @@
 #
 # Antes do OCR, os bytes são conferidos de novo (FotoConferida: tipo pelo conteúdo, tamanho, animação e pixels): o
 # tesseract nunca recebe o que não for imagem. Um download só: o arquivo temporário recebe os mesmos bytes conferidos,
-# com a extensão do tipo detectado neles. Sem o OCR na máquina ou com o tempo estourado, falha com
-# `foto_ocr_unavailable`.
+# com a extensão do tipo detectado neles. Sem o OCR na máquina, falha com `foto_ocr_unavailable`; o tesseract que recusa
+# a foto ou estoura o tempo dá `foto_ocr_failed`.
 class Autonomia::Agents::Knowledge::Processors::Foto < Autonomia::Agents::Knowledge::Processors::Base
   OCR = Autonomia::Agents::Knowledge::Processors::Ocr
   EXTENSOES = { 'image/png' => '.png', 'image/jpeg' => '.jpg', 'image/gif' => '.gif', 'image/webp' => '.webp' }.freeze

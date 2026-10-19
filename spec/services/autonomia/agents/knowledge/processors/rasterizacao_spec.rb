@@ -42,14 +42,29 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Rasterizacao do
     expect(lidos.index(entrada)).to be > lidos.index('-density')
   end
 
-  # V4: um PostScript com %PDF- depois do byte 0 seria interpretado pelo ghostscript; nunca chega ao ImageMagick.
-  it 'refuses a file that does not start with %PDF- and never runs ImageMagick' do
+  def recusado?(conteudo)
     programa_falso('magick')
-    postscript = documento("%!PS-Adobe-3.0\n%PDF-1.4\n(x) print\n")
+    com_path("#{pasta}:/usr/bin:/bin") { described_class.pagina(documento(conteudo), 0) { nil } }
+    false
+  rescue described_class::Falhou => e
+    e.message == 'nao_e_pdf' && !File.exist?(argumentos)
+  end
 
-    expect { com_path("#{pasta}:/usr/bin:/bin") { described_class.pagina(postscript, 0) { nil } } }
-      .to raise_error(described_class::Falhou, 'nao_e_pdf')
-    expect(File).not_to exist(argumentos)
+  # P3 — o cabeçalho vale nos primeiros 1024 bytes, como os leitores de PDF aceitam: lixo ou comentário antes dele.
+  it 'accepts the PDF header within the first 1024 bytes' do
+    expect(recusado?("% comentario\n%PDF-1.4\n")).to be(false)
+    expect(recusado?("#{'x' * 1000}\n%PDF-1.4\n")).to be(false)
+  end
+
+  it 'refuses the PDF header after the first 1024 bytes' do
+    expect(recusado?("#{'x' * 1024}%PDF-1.4\n")).to be(true)
+  end
+
+  # P3 — medido no ghostscript 10.05.1: um arquivo que começa com %!PS (mesmo depois de espaço, linha vazia ou Ctrl-D) e
+  # traz %PDF- adiante é executado como PostScript, mesmo com `pdf:`. Qualquer %! antes do cabeçalho: recusado.
+  it 'refuses a PostScript mark before the PDF header, and never runs ImageMagick' do
+    ["%!PS-Adobe-3.0\n%PDF-1.4\n", " %!PS\n%PDF-1.4\n", "\n%!PS\n%PDF-1.4\n", "\x04%!PS\n%PDF-1.4\n", "LIXO\n%!PS\n%PDF-1.4\n"]
+      .each { |conteudo| expect(recusado?(conteudo)).to be(true), conteudo.inspect }
   end
 
   it 'refuses an empty or missing file' do

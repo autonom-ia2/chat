@@ -7,8 +7,9 @@
 # fora disso o resultado é o de antes: o texto original e o aviso no log (`fora_da_fase2` ou `agente_protegido`).
 #
 # Ficam de fora, e vão para o aviso ao dono (`ocr_*` em paginas_de_fora): as páginas depois de MAX_PAGINAS_OCR, a que a
-# 300 DPI passaria do teto de pixels (MediaBox × UserUnit), as que não couberam no prazo total e as que o ImageMagick
-# ou o tesseract recusaram (`ocr_falhou`).
+# 300 DPI passaria do teto de pixels ou não tem tamanho legível (`ocr_grandes`), as que não couberam no prazo total
+# (`ocr_prazo`) e as que o ImageMagick ou o tesseract recusaram (`ocr_falhou`). Antes de cada página, confere que esta
+# leitura ainda é a vigente: se outra venceu, para sem gravar nada (Ingestor::Superseded, o no-op do ProcessJob).
 module Autonomia::Agents::Knowledge::Processors::PdfOcr
   # Pixels por ponto da página no OCR: o PDF mede em pontos (72 por polegada) e a página é lida a 300 DPI.
   DPI_POR_PONTO = Autonomia::Agents::Knowledge::Processors::Rasterizacao::DPI / 72.0
@@ -17,15 +18,15 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
   # cardápio, tabela de preços e manual curto, o material de um pequeno negócio; um escaneado maior quase sempre é
   # arquivo inteiro.
   MAX_PAGINAS_OCR = 30
-  # Prazo total do OCR de um PDF: 5 min, cinco vezes o esperado para 30 páginas. Cada página ainda tem o seu tempo
-  # máximo (Rasterizacao e Ocr); o prazo segura a soma, para o job não ficar preso numa sequência de páginas lentas.
+  # Prazo total do OCR de um PDF: 5 min, cinco vezes o esperado para 30 páginas. Cada página recebe o menor entre o seu
+  # tempo máximo e o que resta do prazo, então a soma nunca passa dele.
   PRAZO_OCR = 300
   # Teto de pixels de uma página a 300 DPI. Menor que o da foto (40 MP) porque o ImageMagick, com os limites da
   # Rasterizacao, não comporta mais: medido em 19/10 na imagem (Alpine 3.21, ImageMagick 7.1.1-41 Q16-HDRI), 24,3 MP
   # (1000 × 1400 pt) rasteriza e 27,3 MP (1050 × 1500 pt) falha por falta de cache. A3 tem 17,4 MP; A2 (34,8 MP) fica de
-  # fora. Sem este teto, uma página que passasse da conta derrubava o OCR do PDF inteiro.
+  # fora.
   MAX_PIXELS_PAGINA = 24_000_000
-  # Falhas de UMA página (o ImageMagick ou o tesseract a recusou): ela é pulada e as outras seguem.
+  # Falhas de UMA página (o ImageMagick ou o tesseract a recusou, ou estourou o tempo): ela é pulada e as outras seguem.
   FALHAS_DA_PAGINA = [Autonomia::Agents::Knowledge::Processors::Rasterizacao::Falhou,
                       Autonomia::Agents::Knowledge::Processors::Ocr::Falhou].freeze
 
@@ -40,11 +41,12 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
   def motivo_sem_ocr
     return 'fora_da_fase2' unless fase2_na_conta?
 
-    'agente_protegido' if @source.respond_to?(:agent) && @source.agent&.instrucao_mantida?
+    'agente_protegido' if agente_protegido?
   end
 
   # Só as falhas esperadas (binário ausente ou que recusou, tempo estourado, PDF que o leitor não entende) voltam ao
-  # texto original com aviso no log. Qualquer outra vai ao Sentry e sobe: é bug, não PDF ruim.
+  # texto original com aviso no log. Outra leitura que venceu sobe como está (no-op do job). Qualquer outra falha vai ao
+  # Sentry e sobe: é bug, não PDF ruim.
   def ocr_fallback(text, path, pages)
     motivo = motivo_sem_ocr
     if motivo
@@ -54,6 +56,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
 
     ocr = ocr_pages(path, pages).force_encoding('UTF-8').scrub('').strip
     ocr.length >= Autonomia::Agents::Knowledge::Processors::Pdf::OCR_MIN_CHARS ? ocr : text
+  rescue Autonomia::Agents::Knowledge::Ingestor::Superseded
+    raise
   rescue StandardError => e
     raise_inesperada!(e) unless falha_esperada?(e)
     Rails.logger.warn("[autonomia] pdf_ocr_unavailable: #{e.class}: #{e.message}")
@@ -61,8 +65,7 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
   end
 
   def falha_esperada?(erro)
-    processadores = Autonomia::Agents::Knowledge::Processors
-    [processadores::Rasterizacao::Falhou, processadores::Ocr::Indisponivel, processadores::Ocr::Falhou,
+    [*FALHAS_DA_PAGINA, Autonomia::Agents::Knowledge::Processors::Ocr::Indisponivel,
      PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError].any? { |classe| erro.is_a?(classe) }
   end
 
@@ -71,50 +74,64 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
     raise erro
   end
 
+  # Se todas as páginas tentadas falharem, o que ficou de fora é anotado e a última falha sobe: o resultado é o de
+  # antes (texto original e o aviso), agora com o aviso ao dono.
   def ocr_pages(pdf_path, pages)
     candidatas = pages.first(MAX_PAGINAS_OCR).each_with_index.to_a
     cabem, grandes = candidatas.partition { |page, _| pagina_cabe?(page) }
     leitura = ler_no_prazo(pdf_path, cabem)
+    anotar_ocr(alem: pages.size - candidatas.size, grandes: numeros(grandes), prazo: leitura[:prazo], falhou: leitura[:falhou])
     raise leitura[:erro] if leitura[:lidas].empty? && leitura[:erro]
 
-    anotar_ocr(alem: pages.size - candidatas.size, grandes: numeros(grandes), prazo: leitura[:prazo], falhou: leitura[:falhou])
     leitura[:lidas].join("\n")
   end
 
-  # Lê as páginas em ordem enquanto houver prazo; as que sobrarem vão para `prazo`. Se todas as tentadas falharem,
-  # ocr_pages levanta a última falha: o resultado é o de antes (texto original e o aviso).
+  # Lê as páginas em ordem enquanto houver prazo; as que sobrarem vão para `prazo`.
   def ler_no_prazo(pdf_path, paginas)
-    relogio = Autonomia::Agents::Knowledge::Processors::PdfOcr
-    limite = relogio.agora + PRAZO_OCR
+    limite = Autonomia::Agents::Knowledge::Processors::PdfOcr.agora + PRAZO_OCR
     leitura = { lidas: [], prazo: [], falhou: [], erro: nil }
     paginas.each_with_index do |(_, index), posicao|
-      return leitura.merge(prazo: numeros(paginas.drop(posicao))) if relogio.agora > limite
+      return leitura.merge(prazo: numeros(paginas.drop(posicao))) unless restante(limite).positive?
 
-      leitura = ler_pagina(pdf_path, index, leitura)
+      conferir_leitura_vigente!
+      leitura = ler_pagina(pdf_path, index, limite, leitura)
     end
     leitura
   end
 
-  # Uma página que o ImageMagick ou o tesseract recusa é pulada e anotada em `falhou`; as outras seguem. Sem o tesseract
-  # (Ocr::Indisponivel) nenhuma página vai funcionar: sobe e para tudo.
-  def ler_pagina(pdf_path, index, leitura)
+  # Uma página que o ImageMagick ou o tesseract recusa é pulada e anotada em `falhou` (em `prazo`, se o prazo acabou no
+  # meio dela); as outras seguem. Sem o tesseract (Ocr::Indisponivel) nenhuma página vai funcionar: sobe e para tudo.
+  def ler_pagina(pdf_path, index, limite, leitura)
     processadores = Autonomia::Agents::Knowledge::Processors
-    texto = processadores::Rasterizacao.pagina(pdf_path, index) { |png| processadores::Ocr.ler(png) }
+    tempo = [processadores::Rasterizacao::TEMPO_MAXIMO, restante(limite)].min
+    texto = processadores::Rasterizacao.pagina(pdf_path, index, tempo: tempo) do |png|
+      processadores::Ocr.ler(png, tempo: restante(limite).clamp(0.1, processadores::Ocr::TEMPO_MAXIMO))
+    end
     leitura.merge(lidas: leitura[:lidas] + [texto])
   rescue *FALHAS_DA_PAGINA => e
     Rails.logger.warn("[autonomia] pdf_ocr_pagina_falhou pagina=#{index + 1} #{e.class}: #{e.message}")
-    leitura.merge(falhou: leitura[:falhou] + [index + 1], erro: e)
+    motivo = restante(limite).positive? ? :falhou : :prazo
+    leitura.merge(motivo => leitura[motivo] + [index + 1]).merge(erro: e)
+  end
+
+  def restante(limite)
+    limite - Autonomia::Agents::Knowledge::Processors::PdfOcr.agora
+  end
+
+  def conferir_leitura_vigente!
+    return unless @source.respond_to?(:leitura_vigente?)
+    raise Autonomia::Agents::Knowledge::Ingestor::Superseded, 'leitura_superada' unless @source.leitura_vigente?
   end
 
   def numeros(paginas)
     paginas.map { |_, index| index + 1 }
   end
 
-  # /UserUnit (PDF 1.6) multiplica o tamanho de cada unidade da página; sem ela, 1.
   def pagina_cabe?(page)
-    unidade = page.attributes[:UserUnit].is_a?(Numeric) ? page.attributes[:UserUnit].to_f : 1.0
-    pixels = (page.width.abs * unidade * DPI_POR_PONTO) * (page.height.abs * unidade * DPI_POR_PONTO)
-    pixels <= MAX_PIXELS_PAGINA
+    largura, altura = Autonomia::Agents::Knowledge::Processors::TamanhoDaPagina.em_pontos(page)
+    return false if largura.nil?
+
+    (largura * DPI_POR_PONTO) * (altura * DPI_POR_PONTO) <= MAX_PIXELS_PAGINA
   end
 
   def anotar_ocr(alem:, grandes:, prazo:, falhou:)

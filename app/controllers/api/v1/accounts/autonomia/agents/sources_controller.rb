@@ -41,6 +41,9 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   def resync
     # #284 (2b) — a fonte sintética "FAQ aprovadas" não tem arquivo para reprocessar.
     return render_unprocessable(I18n.t('autonomia.faq.resync_not_allowed')) if Autonomia::Agents::Faq::KnowledgeWriter.faq_source?(@source)
+    # #1426 (revisão adversarial) — na Fase 2, nada de ler de novo o que ainda está sendo lido: a leitura nova não para o OCR
+    # da anterior. Parado além do teto da releitura (o worker caiu) pode.
+    return render_unprocessable(I18n.t('autonomia.source.lendo_ainda')) if lendo_na_fase2?
 
     # #1426 — a foto relida passa pelas mesmas recusas da chegada (sem a parte do upload, que já está guardado).
     recusa = foto?(@source.source_type) && recusa_da_foto_no_agente(@source.kind)
@@ -51,6 +54,10 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   end
 
   private
+
+  def lendo_na_fase2?
+    Autonomia::Agents::Fase2.ligada?(Current.account) && @source.lendo_agora?
+  end
 
   # #1426 (revisão adversarial) — a conferência do teto e a gravação correm sob a trava da linha do agente, como na foto
   # da criação (FotosDaCriacao): dois envios ao mesmo tempo não passam do teto. O job vai fora da trava. nil = teto.

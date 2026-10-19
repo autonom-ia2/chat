@@ -14,8 +14,11 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   let(:pdf_ocr) { Autonomia::Agents::Knowledge::Processors::PdfOcr }
 
   # Padrão: A4 em pontos (72 por polegada), que a 300 DPI dá 8,7 MP.
-  def stub_pages(page_texts, tamanho: { width: 595, height: 842 }, attributes: {})
-    pages = page_texts.map { |text| instance_double(PDF::Reader::Page, text: text, attributes: attributes, **tamanho) }
+  def stub_pages(page_texts, caixa: [0, 0, 595, 842], attributes: {})
+    objetos = instance_double(PDF::Reader::ObjectHash)
+    allow(objetos).to receive(:deref) { |valor| valor }
+    atributos = { MediaBox: caixa }.merge(attributes)
+    pages = page_texts.map { |text| instance_double(PDF::Reader::Page, text: text, attributes: atributos, objects: objetos) }
     allow(PDF::Reader).to receive(:new).and_return(reader)
     allow(reader).to receive(:pages).and_return(pages)
   end
@@ -33,12 +36,13 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   end
 
   # PDF de verdade, montado em memória com a tabela xref certa: `paginas` são os atributos de cada página, `pai` os do
-  # nó /Pages (herdados), `antes` o que vem antes do cabeçalho.
-  def pdf_em_memoria(paginas, pai: '', antes: '')
+  # nó /Pages (herdados), `antes` o que vem antes do cabeçalho, `extras` objetos depois das páginas (para referência
+  # indireta: com uma página, o primeiro extra é "4 0 R").
+  def pdf_em_memoria(paginas, pai: '', antes: '', extras: [])
     ids = paginas.each_index.map { |indice| indice + 3 }
     objetos = ['<< /Type /Catalog /Pages 2 0 R >>',
                "<< /Type /Pages /Kids [#{ids.map { |id| "#{id} 0 R" }.join(' ')}] /Count #{paginas.size} #{pai} >>",
-               *paginas.map { |atributos| "<< /Type /Page /Parent 2 0 R #{atributos} >>" }]
+               *paginas.map { |atributos| "<< /Type /Page /Parent 2 0 R #{atributos} >>" }, *extras]
     corpo = "#{antes}%PDF-1.7\n"
     posicoes = objetos.each_with_index.map do |objeto, indice|
       corpo.bytesize.tap { corpo << "#{indice + 1} 0 obj\n#{objeto}\nendobj\n" }
@@ -98,16 +102,16 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         result = processor.extract
 
         expect(result).to eq("TEXTO RECONHECIDO VIA OCR DO SCAN\nTEXTO RECONHECIDO VIA OCR DO SCAN")
-        expect(rasterizacao).to have_received(:pagina).with(a_string_ending_with('.pdf'), 0)
-        expect(rasterizacao).to have_received(:pagina).with(a_string_ending_with('.pdf'), 1)
-        expect(ocr).to have_received(:ler).with('/tmp/pagina-1.png')
+        expect(rasterizacao).to have_received(:pagina).with(a_string_ending_with('.pdf'), 0, tempo: 60)
+        expect(rasterizacao).to have_received(:pagina).with(a_string_ending_with('.pdf'), 1, tempo: 60)
+        expect(ocr).to have_received(:ler).with('/tmp/pagina-1.png', tempo: 60)
         expect(file).to have_received(:download).once
         expect(source).not_to have_received(:paginas_de_fora=)
       end
 
       # X2 — página que a 300 DPI passaria de 40 MP (A0) nem é rasterizada.
       it 'skips a page whose MediaBox at 300 DPI goes over the pixel ceiling' do
-        stub_pages([' '], tamanho: { width: 2384, height: 3370 })
+        stub_pages([' '], caixa: [0, 0, 2384, 3370])
         stub_ocr('nunca')
         allow(Rails.logger).to receive(:warn)
 
@@ -151,14 +155,24 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       it 'skips a page that fails and keeps the others' do
         stub_pages([' ', ' ', ' '])
         stub_ocr('TEXTO RECONHECIDO VIA OCR DO SCAN')
-        allow(rasterizacao).to receive(:pagina).with(anything, 1).and_raise(rasterizacao::Falhou, 'imagemagick_exit_1')
-        allow(ocr).to receive(:ler).with('/tmp/pagina-2.png').and_raise(ocr::Falhou, 'tesseract_exit_1')
+        allow(rasterizacao).to receive(:pagina).with(anything, 1, tempo: anything).and_raise(rasterizacao::Falhou, 'imagemagick_exit_1')
+        allow(ocr).to receive(:ler).with('/tmp/pagina-2.png', tempo: anything).and_raise(ocr::Falhou, 'tesseract_exit_1')
         allow(Rails.logger).to receive(:warn)
 
         expect(processor.extract).to eq('TEXTO RECONHECIDO VIA OCR DO SCAN')
         expect(source).to have_received(:paginas_de_fora=).with(hash_including('ocr_falhou' => [2, 3]))
         expect(Rails.logger).to have_received(:warn).with(/pdf_ocr_pagina_falhou pagina=2 /)
         expect(Rails.logger).not_to have_received(:warn).with(/pdf_ocr_unavailable/)
+      end
+
+      # Q4 — o tesseract que estoura o tempo numa página é falha DAQUELA página: ela é pulada, as outras seguem.
+      it 'skips a page whose tesseract timed out' do
+        stub_pages([' ', ' '])
+        stub_ocr('TEXTO RECONHECIDO VIA OCR DO SCAN')
+        allow(ocr).to receive(:ler).with('/tmp/pagina-0.png', tempo: anything).and_raise(ocr::Falhou, 'tesseract_timeout')
+
+        expect(processor.extract).to eq('TEXTO RECONHECIDO VIA OCR DO SCAN')
+        expect(source).to have_received(:paginas_de_fora=).with(hash_including('ocr_falhou' => [1]))
       end
 
       it 'keeps the behavior of today when every page fails: original text and the same warning' do
@@ -169,7 +183,8 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         expect(processor.extract).to eq(" \n \n")
         expect(rasterizacao).to have_received(:pagina).twice
         expect(Rails.logger).to have_received(:warn).with(/pdf_ocr_unavailable: .*imagemagick_exit_1/)
-        expect(source).not_to have_received(:paginas_de_fora=)
+        # P2 — e o dono fica sabendo quais páginas falharam.
+        expect(source).to have_received(:paginas_de_fora=).with(hash_including('ocr_falhou' => [1, 2]))
       end
 
       # Sem o tesseract nenhuma página vai funcionar: para na primeira.
@@ -244,7 +259,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         processor.extract
 
         expect(rasterizacao).to have_received(:pagina).twice
-        expect(rasterizacao).not_to have_received(:pagina).with(anything, 2)
+        expect(rasterizacao).not_to have_received(:pagina).with(anything, 2, any_args)
         expect(source).to have_received(:paginas_de_fora=)
           .with('ocr_teto' => 2, 'ocr_alem_do_teto' => 1, 'ocr_grandes' => [], 'ocr_prazo' => [], 'ocr_falhou' => [])
       end
@@ -253,11 +268,59 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       it 'stops at the total deadline and records the pages not read' do
         stub_pages([' ', ' ', ' '])
         stub_ocr('TEXTO RECONHECIDO VIA OCR DO SCAN')
-        allow(pdf_ocr).to receive(:agora).and_return(0, 0, described_class::PRAZO_OCR + 1)
+        relogio = 0
+        allow(pdf_ocr).to receive(:agora) { relogio }
+        allow(ocr).to receive(:ler) do
+          relogio += described_class::PRAZO_OCR + 1
+          'TEXTO RECONHECIDO VIA OCR DO SCAN'
+        end
 
         expect(processor.extract).to eq('TEXTO RECONHECIDO VIA OCR DO SCAN')
         expect(rasterizacao).to have_received(:pagina).once
         expect(source).to have_received(:paginas_de_fora=).with(hash_including('ocr_prazo' => [2, 3]))
+      end
+
+      # Q3 — cada página recebe o menor entre o seu tempo máximo e o que resta do prazo: a soma nunca passa dele.
+      it 'gives each page at most the time left in the deadline' do
+        stub_pages([' ', ' '])
+        stub_ocr('TEXTO RECONHECIDO VIA OCR DO SCAN')
+        relogio = 0
+        allow(pdf_ocr).to receive(:agora) { relogio }
+        allow(rasterizacao).to receive(:pagina) do |_pdf, indice, **, &bloco|
+          relogio = 250 if indice.zero?
+          bloco.call("/tmp/pagina-#{indice}.png")
+        end
+
+        processor.extract
+
+        expect(rasterizacao).to have_received(:pagina).with(anything, 0, tempo: 60)
+        expect(ocr).to have_received(:ler).with('/tmp/pagina-0.png', tempo: 50)
+        expect(rasterizacao).to have_received(:pagina).with(anything, 1, tempo: 50)
+      end
+
+      # Q6 — o PDF temporário some também quando a leitura quebra.
+      it 'removes the temporary PDF when the reading breaks' do
+        stub_pages([' '])
+        caminho = nil
+        allow(rasterizacao).to receive(:pagina) do |pdf, *|
+          caminho = pdf
+          raise NoMethodError, 'bug'
+        end
+        allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+
+        expect { processor.extract }.to raise_error(NoMethodError)
+        expect(caminho).to end_with('.pdf')
+        expect(File).not_to exist(caminho)
+      end
+
+      # P1 — a Lia, mesmo na Fase 2, lê todas as páginas de texto, como na main.
+      it 'lets the Lia read every page of text in the Fase 2' do
+        stub_const("#{described_class}::MAX_PAGINAS_TEXTO", 1)
+        stub_pages(['Primeira pagina com bastante texto', 'Segunda pagina com bastante texto'])
+        lia = material(agent: instance_double(Autonomia::Agents::Agent, instrucao_mantida?: true))
+
+        expect(described_class.new(lia).extract).to include('Segunda')
+        expect(lia).not_to have_received(:paginas_de_fora=)
       end
 
       it 'does not run the OCR when the caller turned it off (attendance)' do
@@ -282,6 +345,24 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
           token = fonte.begin_ingestion!
           described_class.new(fonte).extract
           fonte.mark_ready!(token, chunk_count: 1)
+        end
+
+        # Q1 — outra leitura venceu no meio do OCR: para antes da próxima página, sem gravar nada e sem ir ao Sentry.
+        it 'stops before the next page when another reading wins, writing nothing' do
+          stub_pages([' ', ' '])
+          allow(rasterizacao).to receive(:pagina) do |_pdf, indice, **, &bloco|
+            Autonomia::Agents::Source.find(source.id).begin_ingestion! if indice.zero?
+            bloco.call("/tmp/pagina-#{indice}.png")
+          end
+          allow(ocr).to receive(:ler).and_return('TEXTO RECONHECIDO VIA OCR DO SCAN')
+          allow(ChatwootExceptionTracker).to receive(:new)
+          token = source.begin_ingestion!
+
+          expect { described_class.new(source).extract }.to raise_error(Autonomia::Agents::Knowledge::Ingestor::Superseded)
+          expect(rasterizacao).to have_received(:pagina).once
+          expect(ChatwootExceptionTracker).not_to have_received(:new)
+          expect(source.mark_ready!(token, chunk_count: 1)).to be(false)
+          expect(source.reload.metadata).not_to have_key('paginas_de_fora')
         end
 
         it 'records the pages left out in the metadata, and clears it when none is left out' do
@@ -356,8 +437,36 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
           ler(pdf_em_memoria(['/MediaBox [0 0 980 1400]', '/MediaBox [0 0 1050 1500]']))
 
           expect(rasterizacao).to have_received(:pagina).once
-          expect(rasterizacao).to have_received(:pagina).with(anything, 0)
+          expect(rasterizacao).to have_received(:pagina).with(anything, 0, any_args)
           expect(source).to have_received(:paginas_de_fora=).with(hash_including('ocr_grandes' => [2]))
+        end
+
+        # Q2 — MediaBox e UserUnit por referência indireta, resolvidas pelo leitor; valor que não é número não vai.
+        it 'resolves an indirect MediaBox and an indirect number inside it' do
+          expect(ler(pdf_em_memoria(['/MediaBox 4 0 R'], extras: ['[0 0 595 842]']))).to eq('TEXTO RECONHECIDO VIA OCR DO SCAN')
+          expect(ler(pdf_em_memoria(['/MediaBox [0 0 4 0 R 842]'], extras: ['595']))).to eq('TEXTO RECONHECIDO VIA OCR DO SCAN')
+          expect(rasterizacao).to have_received(:pagina).twice
+        end
+
+        it 'resolves an indirect UserUnit and leaves out the page that grows past the ceiling' do
+          ler(pdf_em_memoria(["#{a4} /UserUnit 4 0 R"], extras: ['10']))
+
+          expect(rasterizacao).not_to have_received(:pagina)
+          expect(source).to have_received(:paginas_de_fora=).with(hash_including('ocr_grandes' => [1]))
+        end
+
+        it 'leaves out a page whose size is not a number, without going to the tracker' do
+          allow(ChatwootExceptionTracker).to receive(:new)
+          ['/MediaBox [0 0 (a) 842]', "#{a4} /UserUnit (x)", "#{a4} /UserUnit 4 0 R"].each do |pagina|
+            ler(pdf_em_memoria([pagina], extras: ['(x)']))
+          end
+          # A MediaBox indireta que não é lista o próprio leitor recusa: o material falha como PDF ruim.
+          expect { ler(pdf_em_memoria(['/MediaBox 4 0 R'], extras: ['(x)'])) }
+            .to raise_error(described_class::ExtractionError, /pdf_parse_failed/)
+
+          expect(rasterizacao).not_to have_received(:pagina)
+          expect(ChatwootExceptionTracker).not_to have_received(:new)
+          expect(source).to have_received(:paginas_de_fora=).with(hash_including('ocr_grandes' => [1])).thrice
         end
 
         it 'rasterizes a rotated A4 page, the rotation does not change the size' do
@@ -369,7 +478,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
           ler(pdf_em_memoria([a4] * 31))
 
           expect(rasterizacao).to have_received(:pagina).exactly(30).times
-          expect(rasterizacao).not_to have_received(:pagina).with(anything, 30)
+          expect(rasterizacao).not_to have_received(:pagina).with(anything, 30, any_args)
           expect(source).to have_received(:paginas_de_fora=).with(hash_including('ocr_alem_do_teto' => 1))
         end
       end

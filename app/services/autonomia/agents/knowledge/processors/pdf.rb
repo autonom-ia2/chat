@@ -15,7 +15,7 @@ module Autonomia
           # #1426 (revisão adversarial) — na Fase 2, teto de páginas da extração de TEXTO. Ler a camada de texto é barato
           # (milissegundos por página), mas sem teto um PDF de milhares de páginas vira uma base enorme de um material só.
           # 300 páginas cobrem manual, catálogo e tabela completos; o que passar fica de fora e o dono é avisado. Fora
-          # da Fase 2, sem teto, como antes.
+          # da Fase 2 e na Lia (agente protegido), sem teto, como antes.
           MAX_PAGINAS_TEXTO = 300
 
           # OCR é OPCIONAL porque o custo dele não tem teto: rasteriza página por página a 300 DPI e
@@ -55,8 +55,13 @@ module Autonomia
             @source.respond_to?(:account) && Autonomia::Agents::Fase2.ligada?(@source.account)
           end
 
+          # A Lia (instrução mantida pela Autonom.ia) fica como na main, também na Fase 2.
+          def agente_protegido?
+            @source.respond_to?(:agent) && @source.agent&.instrucao_mantida? == true
+          end
+
           def paginas_do_texto(pages)
-            return pages unless fase2_na_conta? && pages.size > MAX_PAGINAS_TEXTO
+            return pages unless fase2_na_conta? && !agente_protegido? && pages.size > MAX_PAGINAS_TEXTO
 
             alem = pages.size - MAX_PAGINAS_TEXTO
             @paginas_de_fora = @paginas_de_fora.merge('texto_teto' => MAX_PAGINAS_TEXTO, 'texto_alem_do_teto' => alem)

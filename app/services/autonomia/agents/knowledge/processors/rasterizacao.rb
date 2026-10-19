@@ -5,10 +5,14 @@
 # Limites (`-limit`, antes da entrada para valerem na leitura): memória e mapa em disco do cache de pixels, disco, área
 # (40 MP, o mesmo teto da foto) e tempo. Quem chama confere antes o tamanho da página (MediaBox × UserUnit × DPI).
 #
-# A entrada vai com o prefixo `pdf:`, que obriga o ImageMagick a usar o leitor de PDF em vez de adivinhar o formato pelo
-# conteúdo; e só vai se o arquivo começa com `%PDF-` no byte 0. Um PostScript (ou outro formato que o ghostscript
-# interpreta) com `%PDF-` mais adiante não é rasterizado. Sugestão de infra, fora deste PR: no policy.xml da imagem,
-# liberar só PDF e PNG (`<policy domain="coder" rights="none" pattern="*" />` + `rights="read|write" pattern="{PDF,PNG}"`).
+# A entrada vai com o prefixo `pdf:` (o ImageMagick usa o leitor de PDF) e só vai quando o cabeçalho `%PDF-` está nos
+# primeiros 1024 bytes, como os leitores de PDF aceitam, e não há `%!` (a marca do PostScript) antes dele. O `pdf:` NÃO
+# basta: medido em 19/10 (Alpine 3.21, ImageMagick 7.1.1-41, ghostscript 10.05.1), um arquivo que começa com `%!PS`
+# (mesmo depois de espaço, linha vazia ou Ctrl-D) e traz `%PDF-` adiante é executado pelo ghostscript como PostScript
+# com `pdf:`. Lixo ou comentário comum antes de `%PDF-` é lido como PDF, sem executar nada.
+#
+# Sugestão de infra, fora deste PR: no policy.xml da imagem, liberar só PDF e PNG
+# (`<policy domain="coder" rights="none" pattern="*" />` + `rights="read|write" pattern="{PDF,PNG}"`).
 module Autonomia::Agents::Knowledge::Processors::Rasterizacao
   DPI = 300
   TEMPO_MAXIMO = 60 # segundos por página; uma página A4 a 300 DPI leva 1 a 3 s.
@@ -17,6 +21,8 @@ module Autonomia::Agents::Knowledge::Processors::Rasterizacao
   PROGRAMAS = %w[magick convert].freeze
 
   CABECALHO_PDF = '%PDF-'.b.freeze
+  MARCA_POSTSCRIPT = '%!'.b.freeze
+  ONDE_PROCURAR_O_CABECALHO = 1024
 
   class Falhou < StandardError; end
 
@@ -36,7 +42,9 @@ module Autonomia::Agents::Knowledge::Processors::Rasterizacao
   end
 
   def pdf?(caminho)
-    File.binread(caminho, CABECALHO_PDF.bytesize) == CABECALHO_PDF
+    inicio = File.binread(caminho, ONDE_PROCURAR_O_CABECALHO).to_s
+    cabecalho = inicio.index(CABECALHO_PDF)
+    !cabecalho.nil? && inicio.byteslice(0, cabecalho).exclude?(MARCA_POSTSCRIPT)
   rescue SystemCallError
     false
   end

@@ -1334,6 +1334,7 @@ pt_BR:
       foto_tamanho: "A foto é grande demais. O tamanho máximo é 5 MB."
       foto_pixels: "A foto tem pixels demais. Mande uma foto menor (até 40 megapixels)."
       foto_animada: "Imagem animada não serve como material. Mande uma foto parada."
+      lendo_ainda: "Este material ainda está sendo lido. Espere terminar para ler de novo."
       file_invalid: "Mande o próprio arquivo."
     insurance:
       errors:

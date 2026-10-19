@@ -75,10 +75,16 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Foto do
     end
   end
 
-  it 'fails as OCR unavailable when tesseract is missing or times out' do
-    allow(ocr).to receive(:ler).and_raise(ocr::Indisponivel, 'tesseract_timeout')
+  it 'fails as OCR unavailable when tesseract is missing' do
+    allow(ocr).to receive(:ler).and_raise(ocr::Indisponivel, 'tesseract_missing')
 
     expect { processor.extract }.to raise_error(described_class::UnsupportedFormat, 'foto_ocr_unavailable')
+  end
+
+  it 'fails as not read when tesseract times out on the photo (Q4)' do
+    allow(ocr).to receive(:ler).and_raise(ocr::Falhou, 'tesseract_timeout')
+
+    expect { processor.extract }.to raise_error(described_class::ExtractionError, 'foto_ocr_failed')
   end
 
   it 'fails as not read when tesseract refuses the file' do

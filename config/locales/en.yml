@@ -585,6 +585,7 @@ en:
       foto_tamanho: 'The photo is too large. The maximum size is 5 MB.'
       foto_pixels: 'The photo has too many pixels. Send a smaller photo (up to 40 megapixels).'
       foto_animada: 'Animated images do not work as material. Send a still photo.'
+      lendo_ainda: 'This material is still being read. Wait for it to finish before reading it again.'
       file_invalid: 'Send the file itself.'
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'

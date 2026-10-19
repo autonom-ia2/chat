@@ -152,6 +152,30 @@ RSpec.describe Autonomia::Agents::Source do
 
       expect(source.reload.metadata).not_to have_key('paginas_de_fora')
     end
+
+    # P2 — a releitura que volta vazia ou falha também troca a marca: sai a da leitura anterior, entra a desta.
+    it 'replaces the mark of the previous reading when the reading fails or comes back empty' do
+      source.update_columns(metadata: { 'paginas_de_fora' => de_fora }) # rubocop:disable Rails/SkipsModelValidations
+      token = source.begin_ingestion!
+      source.mark_failed!(token, 'empty_extraction')
+      expect(source.reload.metadata).not_to have_key('paginas_de_fora')
+
+      token = source.begin_ingestion!
+      source.paginas_de_fora = { 'ocr_falhou' => [1, 2] }
+      source.restore_previous_generation!(token)
+      expect(source.reload.metadata['paginas_de_fora']).to eq('ocr_falhou' => [1, 2])
+    end
+  end
+
+  # Q1 — o OCR do PDF confere, antes de cada página, que esta leitura ainda é a vigente.
+  describe '#leitura_vigente?' do
+    it 'is true while this reading is the active one and false after another one wins' do
+      source.begin_ingestion!
+      expect(source.reload.leitura_vigente?).to be(true)
+
+      described_class.find(source.id).begin_ingestion!
+      expect(source.leitura_vigente?).to be(false)
+    end
   end
 
   # R6 — releitura que volta vazia: a geração anterior volta como estava.
@@ -191,6 +215,16 @@ RSpec.describe Autonomia::Agents::Source do
 
         expect(revisado.reload.review_status).to eq('needs_review')
       end
+    end
+
+    # Q5 — mídia de envio (sem parecer, pronta) nunca é legado.
+    it 'never marks a media to send as old, even in the Fase 2' do
+      Autonomia::Agents::Fase2.ligar!(account)
+      midia = described_class.create!(account: account, agent: agent, source_type: 'txt', status: :ready, kind: :media)
+
+      midia.begin_ingestion!
+
+      expect(midia.reload.metadata['prev_review']).not_to have_key('legado')
     end
 
     # Fora da Fase 2, idêntico à main: sem parecer anterior volta needs_review.

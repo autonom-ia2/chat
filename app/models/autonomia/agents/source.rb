@@ -120,6 +120,8 @@ module Autonomia
       ORIGEM_FOTO_DA_CRIACAO = 'foto_da_criacao'.freeze
       # #1426 — as páginas do PDF que ficaram de fora da leitura (teto, página grande, prazo), para o aviso ao dono.
       PAGINAS_DE_FORA = 'paginas_de_fora'.freeze
+      # #1426 — teto da releitura, o mesmo do painel (TETO_DA_RELEITURA_MS em autonomiaSources.js).
+      TETO_DA_RELEITURA = 10.minutes
       attr_accessor :paginas_de_fora
 
       before_destroy :soltar_foto_da_conversa, prepend: true # antes do has_one_attached apagar o anexo
@@ -172,9 +174,20 @@ module Autonomia
       def restore_previous_generation!(token)
         anterior = previous_review_attributes
         anterior = anterior.merge(review_status: nil) if legado_marcado?
-        guarded_update(token, anterior.merge(
-                                status: self.class.statuses[:ready], error: nil, sync_status: nil, synced_at: Time.current
-                              ))
+        anterior = anterior.merge(status: self.class.statuses[:ready], error: nil, sync_status: nil, synced_at: Time.current)
+        guarded_update(token, com_paginas_desta_leitura(anterior))
+      end
+
+      # #1426 (revisão adversarial) — a leitura que este job faz ainda é a vigente: mesmo token e ainda lendo. O OCR do PDF
+      # confere antes de cada página e para quando outra leitura venceu.
+      def leitura_vigente?
+        self.class.exists?(id: id, sync_token: sync_token, status: self.class.statuses[:processing])
+      end
+
+      # #1426 — lendo agora, e não parado: começou há menos que o teto da releitura (o mesmo TETO_DA_RELEITURA_MS do painel,
+      # depois do qual a tela libera "Ler de novo" num material parado).
+      def lendo_agora?
+        processing? && updated_at > TETO_DA_RELEITURA.ago
       end
 
       # GAP (A) — mídia de ENVIO: caminho NOVO, sem ingestão. NÃO embeda, NÃO chama a revisora; só
@@ -188,12 +201,11 @@ module Autonomia
       end
 
       # #1426 — as páginas do PDF que ficaram de fora nesta leitura (Processors::Pdf põe em `paginas_de_fora`, só em
-      # memória) vão junto, sob a mesma guarda de token: um job superado não escreve. Sem nada de fora, a marca some.
+      # memória) vão junto, sob a mesma guarda de token: um job superado não escreve. Sem nada de fora, a marca some. Vale
+      # também para restore_previous_generation! e mark_failed! (metadata_desta_leitura).
       def mark_ready!(token, chunk_count:)
-        new_metadata = (metadata || {}).except(PAGINAS_DE_FORA).merge('chunk_count' => chunk_count)
-        new_metadata = new_metadata.merge(PAGINAS_DE_FORA => paginas_de_fora) if paginas_de_fora.present?
         guarded_update(token, status: self.class.statuses[:ready], error: nil,
-                              metadata: new_metadata, synced_at: Time.current)
+                              metadata: metadata_desta_leitura.merge('chunk_count' => chunk_count), synced_at: Time.current)
       end
 
       # FALHA DE REPROCESSO: begin_ingestion! rebaixou o parecer para needs_review ANTES do reprocesso.
@@ -203,9 +215,8 @@ module Autonomia
       # BOA. Restaura o snapshot do parecer anterior junto com o `failed`: accepted volta a accepted
       # (entries antigos continuam servíveis); nunca-revisado permanece needs_review (sem promover).
       def mark_failed!(token, message)
-        guarded_update(token, previous_review_attributes.merge(
-                                status: self.class.statuses[:failed], error: message.to_s.truncate(500)
-                              ))
+        falha = previous_review_attributes.merge(status: self.class.statuses[:failed], error: message.to_s.truncate(500))
+        guarded_update(token, com_paginas_desta_leitura(falha))
       end
 
       # Grava o parecer da IA Revisora. Corre DEPOIS de mark_ready! (status já é `ready`), por isso
@@ -234,12 +245,24 @@ module Autonomia
       # #1426 — material de antes da Revisora: já pronto, sem parecer e sem data de revisão. Material novo (ainda não lido)
       # não é pronto e não entra. Só a Fase 2 usa a marca (restore_previous_generation!).
       def legado_sem_parecer?
-        ready? && review_status.nil? && reviewed_at.nil? && Autonomia::Agents::Fase2.ligada?(account)
+        kind_knowledge? && ready? && review_status.nil? && reviewed_at.nil? && Autonomia::Agents::Fase2.ligada?(account)
       end
 
       # A marca só nasce na Fase 2; conferida de novo aqui, para a conta que saiu do piloto no meio da leitura voltar à main.
       def legado_marcado?
         (metadata || {}).dig('prev_review', 'legado') == true && Autonomia::Agents::Fase2.ligada?(account)
+      end
+
+      # O metadata com o que ficou de fora NESTA leitura (Source#paginas_de_fora): a marca da leitura anterior sai sempre.
+      def metadata_desta_leitura
+        base = (metadata || {}).except(PAGINAS_DE_FORA)
+        paginas_de_fora.present? ? base.merge(PAGINAS_DE_FORA => paginas_de_fora) : base
+      end
+
+      # Só escreve o metadata quando a marca muda (sem marca antes nem agora, a escrita é a de sempre).
+      def com_paginas_desta_leitura(attrs)
+        novo = metadata_desta_leitura
+        novo == (metadata || {}) ? attrs : attrs.merge(metadata: novo)
       end
 
       def previous_review_attributes

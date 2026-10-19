@@ -25,13 +25,13 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Ocr do
     expect(saida.strip).to eq('/tmp/foto.png|stdout|-l|por')
   end
 
-  it 'stops tesseract after the time limit and leaves no process behind' do
+  it 'stops tesseract after the time limit, leaves no process behind and fails only this file (Q4)' do
     marca = File.join(pasta, 'pid')
     tesseract_falso("echo $$ > #{marca}; exec sleep 30")
 
     inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     expect { com_path("#{pasta}:/usr/bin:/bin") { described_class.ler('/tmp/foto.png', tempo: 1) } }
-      .to raise_error(described_class::Indisponivel, 'tesseract_timeout')
+      .to raise_error(described_class::Falhou, 'tesseract_timeout')
 
     expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 10
     pid = File.read(marca).to_i
@@ -69,7 +69,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Ocr do
     tesseract_falso("sleep 30 & echo $! > #{filho}; wait")
 
     expect { com_path("#{pasta}:/usr/bin:/bin") { described_class.ler('/tmp/foto.png', tempo: 1) } }
-      .to raise_error(described_class::Indisponivel, 'tesseract_timeout')
+      .to raise_error(described_class::Falhou, 'tesseract_timeout')
 
     expect { Process.kill(0, File.read(filho).to_i) }.to raise_error(Errno::ESRCH)
   end
