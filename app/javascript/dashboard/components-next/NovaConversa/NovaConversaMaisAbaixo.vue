@@ -2,7 +2,8 @@
 // Quando a gaveta tem mais conteúdo do que cabe na tela, a borda de baixo esmaece e um
 // chevron duplo, transparente, avisa que dá para descer. É o mesmo indicador do menu
 // lateral (#1781, useSetasDeRolagem): respira duas vezes ao aparecer (nada se mexe com
-// movimento reduzido), e o toque, um círculo invisível de 44 px, rola uma tela.
+// movimento reduzido), e o toque, um círculo invisível de 44 px, rola uma tela. Como a barra de
+// rolagem, o clique não tira o foco de onde está: a seta some no fim e levaria o foco junto.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSetasDeRolagem } from 'dashboard/components-next/sidebar/fork/useSetasDeRolagem';
@@ -42,6 +43,7 @@ const setas = useSetasDeRolagem(
       :aria-label="t('NOVA_CONVERSA.MAIS_ABAIXO')"
       :aria-controls="controla"
       class="group absolute inset-x-0 bottom-0 z-[2] mx-auto flex size-11 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
+      @mousedown.prevent
       @click="setas.rolarParaBaixo"
     >
       <span
