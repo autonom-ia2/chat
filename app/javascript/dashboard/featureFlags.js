@@ -64,6 +64,7 @@ export const FEATURE_FLAGS = {
   CONVERSA_CARA_DO_CANAL: 'conversa_cara_do_canal',
   ETIQUETAS_DO_WHATSAPP: 'etiquetas_do_whatsapp',
   TELA_INICIAL_RESUMO: 'tela_inicial_resumo',
+  EMAIL_AUTORIA: 'email_autoria',
   CONVERSA_EMAIL_NOVA: 'conversa_email_nova',
   EMAIL_LIDO_SINCRONIZADO: 'email_lido_sincronizado',
   CHANNEL_TIKTOK: 'channel_tiktok',

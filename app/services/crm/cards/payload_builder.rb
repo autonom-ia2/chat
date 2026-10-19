@@ -111,7 +111,7 @@ class Crm::Cards::PayloadBuilder
   # N+1 query per card. Shape mirrored in Crm::Kanban::CardPayloadBuilder — keep
   # both identical.
   def contact_labels_payload
-    return [] if @card.contact.blank?
+    return [] if @card.contact.blank? || !full_contact?
 
     @card.contact.label_taggings.reject(&:tagger_id).filter_map { |tagging| tagging.tag&.name }
   end
@@ -201,11 +201,12 @@ class Crm::Cards::PayloadBuilder
   def contact_payload
     return if @card.contact.blank?
 
+    basic = { id: @card.contact.id, name: @card.contact.name, phone_number: @card.contact.phone_number, email: @card.contact.email }
+    full_contact? ? basic.merge(full_contact_payload) : basic
+  end
+
+  def full_contact_payload
     {
-      id: @card.contact.id,
-      name: @card.contact.name,
-      phone_number: @card.contact.phone_number,
-      email: @card.contact.email,
       # Surfaced so the card drawer can show/edit richer contact data (company,
       # address, city/country, job title…). additional_attributes holds Chatwoot
       # standard keys; custom_attributes holds the non-native ones. Both are merged
@@ -220,7 +221,11 @@ class Crm::Cards::PayloadBuilder
   end
 
   def company_payload
-    Crm::Cards::CompanyResolver.payload(@company)
+    Crm::Cards::CompanyResolver.payload(@company) if full_contact?
+  end
+
+  def full_contact?
+    visibility.full_contact?
   end
 
   def owner_payload

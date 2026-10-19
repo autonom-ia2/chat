@@ -211,7 +211,8 @@
       "APAGADAS_EM_PARTE": "{apagadas} of {total} photos deleted. Try again for the rest."
     },
     "CONTATO": {
-      "CONVERSAR": "Message"
+      "CONVERSAR": "Message",
+      "SEM_CADASTRO": "This number is not in your contacts yet. Ask whoever manages contacts to add it."
     },
     "REACOES": {
       "ROTULO": "{nome} reacted with {emoji}",
