@@ -620,7 +620,7 @@
         "TEXTO": "Extra details about each contact, such as insurer, policy expiry date and license plate."
       },
       "RESPOSTAS": {
-        "TEXTO": "Texts you always use, like asking for the driver's license or sending a duplicate bill, one click away in the conversation."
+        "TEXTO": "Texts you always use, like asking for the driver's license or sending a bill copy, one click away in the conversation."
       },
       "CANAIS": {
         "TEXTO": "WhatsApp, email, Instagram and website: where people ask for quotes and talk to you."
@@ -655,7 +655,7 @@
       },
       "AUTO_RESOLVE": {
         "MESSAGE": {
-          "PLACEHOLDER": "We closed this chat because we didn't hear back. Need a quote, a duplicate bill or help with a claim? Just send us a message."
+          "PLACEHOLDER": "We closed this chat because we didn't hear back. Need a quote, a bill copy or help with a claim? Just send us a message."
         }
       }
     }
@@ -744,7 +744,7 @@
         "PLACEHOLDER": "E.g. Claims agent"
       },
       "DESCRIPTION": {
-        "PLACEHOLDER": "E.g. People who handle claims and duplicate bills, only in their own conversations"
+        "PLACEHOLDER": "E.g. People who handle claims and bill copies, only in their own conversations"
       }
     },
     "PROFILES": {
@@ -758,7 +758,7 @@
         "WHO": "For people who look after the pipelines and the brokerage's production target."
       },
       "AGENT": {
-        "WHO": "For people who serve customers day to day: questions, duplicate bills and endorsements."
+        "WHO": "For people who serve customers day to day: questions, bill copies and endorsements."
       },
       "PHRASES": {
         "MANAGE_DEALS": "Create and move cards in the CRM",
@@ -793,7 +793,7 @@
       },
       "WEBSITE_CHANNEL": {
         "CHANNEL_WELCOME_TAGLINE": {
-          "PLACEHOLDER": "Ask for a quote, a duplicate bill or report a claim here."
+          "PLACEHOLDER": "Ask for a quote, a bill copy or report a claim here."
         },
         "CHANNEL_GREETING_MESSAGE": {
           "PLACEHOLDER": "We reply during business hours. In case of a crash or breakdown, call your insurer's 24-hour assistance."
@@ -834,8 +834,8 @@
         "PREVIEW": {
           "FOLLOW_UP_WEB": "Carlos has not replied to the quote for 2 days. The CRM reminder goes out through WhatsApp API at 10:00.",
           "FOLLOW_UP_TEMPLATE": "Carlos has not replied to the quote for 2 days. The CRM reminder goes out as an approved template through the official number.",
-          "AGENT_WEB": "Ana, from the team, sends Maria the duplicate bill 3 days later. The reply goes out through WhatsApp API.",
-          "AGENT_TEMPLATE": "Ana, from the team, wants to send Maria the duplicate bill 3 days later. She can only send an approved template."
+          "AGENT_WEB": "Ana, from the team, sends Maria the bill copy 3 days later. The reply goes out through WhatsApp API.",
+          "AGENT_TEMPLATE": "Ana, from the team, wants to send Maria the bill copy 3 days later. She can only send an approved template."
         },
         "WHO": {
           "ORIGINS": {
@@ -1089,13 +1089,13 @@
         "SUPPORT": {
           "TEXTO": "Answers questions about the policy, installments, bill copies and anything else people ask.",
           "CLIENTE": "How do I get a copy of my bill?",
-          "AGENTE": "I can help. Send me your CPF and I'll ask the team to send it to you here."
+          "AGENTE": "I'll call someone from the team to help you with the bill copy."
         },
         "SDR": {
           "TITULO": "Serve people who want insurance",
-          "TEXTO": "Finds out which insurance the person wants, asks for the first details and hands over to the team to quote.",
-          "CLIENTE": "I want a quote for my car insurance",
-          "AGENTE": "Great! Tell me the car model and the ZIP code where it's parked at night, and I'll call someone from the team."
+          "TEXTO": "Finds out which insurance the person is looking for and hands over to the team.",
+          "CLIENTE": "I want to get insurance for my car",
+          "AGENTE": "Great! Tell me which car it is and I'll call someone from the team."
         },
         "RECEPTION": {
           "TEXTO": "Welcomes people, finds out if it's a quote, an installment or a claim, and hands over to the team.",
@@ -1111,11 +1111,12 @@
               "B": "Does my policy include a rental car?"
             },
             "SDR": {
-              "A": "I want a quote for my car insurance",
-              "B": "Can I pay in installments by card?"
+              "A": "I want to get insurance for my car",
+              "B": "Roughly how much would it be?"
             },
             "RECEPTION": {
-              "B": "I changed cars. How do I update my policy?"
+              "B": "I changed cars. How do I update my policy?",
+              "A": "Hi, I had a car accident"
             }
           }
         },
@@ -1139,24 +1140,25 @@
           "PERGUNTAS": {
             "QUANTO_CUSTA": "How much is insurance for my car?",
             "SABADO": "Does my policy include a rental car?",
-            "PEDIDO": "I want a quote for my car insurance",
-            "DESCONTO": "Can I pay in installments by card?",
+            "PEDIDO": "I want to get insurance for my car",
+            "DESCONTO": "Roughly how much would it be?",
             "TROCAR": "I changed cars. How do I update my policy?",
             "COMO_RESPONDO": "The person thought the quote was too expensive. How do I reply?",
             "PROXIMO_PASSO": "I sent the quote options and the person went quiet. What is the next step?",
-            "RASCUNHO": "Draft a message asking for the driver's license and the car document"
+            "RASCUNHO": "Write a message asking for the driver's license and the car document",
+            "AJUDA": "Hi, I had a car accident"
           }
         },
         "CONTE": {
           "IDEIAS": {
             "ROUPAS": "Auto insurance broker",
             "DOCES": "Multi-line insurance broker",
-            "ESTETICA": "Life and health insurance",
+            "ESTETICA": "Life and health insurance broker",
             "OFICINA": "Business and cargo insurance"
           },
-          "EXEMPLO_DO_MEU_JEITO": "E.g.: ask for the details to quote car insurance and hand over to the team",
+          "EXEMPLO_DO_MEU_JEITO": "E.g.: answer questions about car insurance and hand over to the team",
           "EXEMPLO_COPILOTO": "E.g.: summarize the conversation and say what is still missing to quote",
-          "EXEMPLO_AJUDANTE": "E.g.: answer the hardest questions about coverage for the other agents",
+          "EXEMPLO_AJUDANTE": "E.g.: answer questions about the policy terms for the other agents",
           "ANEXO_FRASE": "Do you have the policy terms, a list of common questions or your website? {acao} It is optional."
         },
         "BASE": {
@@ -1166,27 +1168,27 @@
       },
       "AJUDANTE": {
         "QUANDO": {
-          "EXEMPLO": "E.g.: when the question is about coverage and deductible"
+          "EXEMPLO": "E.g.: when the question is about the policy terms or the documents"
         }
       }
     },
     "OUTRO_SISTEMA": {
-      "NOME_EXEMPLO": "E.g.: Quote bot",
-      "DESCRICAO_EXEMPLO": "E.g.: Asks for the quote details and hands over to the team."
+      "NOME_EXEMPLO": "E.g.: Website bot",
+      "DESCRICAO_EXEMPLO": "E.g.: answers questions about insurance and hands over to the team"
     },
     "TUNE": {
-      "GREETING_PLACEHOLDER": "Hi! How are you? Want a quote or help with the policy you already have?"
+      "GREETING_PLACEHOLDER": "Hi! How are you? How can I help with your insurance?"
     }
   },
   "AUTOMATION": {
-    "DESCRIPTION": "Automation does the repeated work for you, like adding the insurance label (auto, home, claim) and handing the conversation to whoever handles it. This leaves the team more time to quote and serve people.",
+    "DESCRIPTION": "Automation does the repeated work for you, like adding the right label (auto, home, claim) and handing the conversation to whoever handles it. This leaves the team more time to quote and serve people.",
     "ADD": {
       "FORM": {
         "NAME": {
           "PLACEHOLDER": "E.g.: Claim label"
         },
         "DESC": {
-          "PLACEHOLDER": "E.g.: adds the claim label and hands over to the after-sales team"
+          "PLACEHOLDER": "E.g.: adds the claim label and hands over to the claims team"
         }
       }
     }
@@ -1194,7 +1196,7 @@
   "AGENT_BOTS": {
     "FORM": {
       "DESCRIPTION": {
-        "PLACEHOLDER": "E.g.: asks for the quote details and hands over to the team"
+        "PLACEHOLDER": "E.g.: answers questions about insurance and hands over to the team"
       }
     }
   },
@@ -1221,7 +1223,7 @@
     }
   },
   "LABEL_REPORTS": {
-    "DESCRIPTION": "See, by label, how many conversations came in and how long the team took to reply and solve them. E.g.: auto, home, claim, duplicate bill. Click a label to see more.",
+    "DESCRIPTION": "See, by label, how many conversations came in and how long the team took to reply and solve them. E.g.: Auto, Home, Claim, Bill copy. Click a label to see more.",
     "FILTERS": {
       "INPUT_PLACEHOLDER": {
         "LABELS": "Search labels. E.g.: claim"

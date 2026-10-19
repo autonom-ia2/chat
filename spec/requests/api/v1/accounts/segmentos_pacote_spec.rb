@@ -100,6 +100,10 @@ RSpec.describe 'Pacote de tradução da conta nas requisições', type: :request
       expect(titulo_da_pagina.call(conta_com_card_ganho('seguros', 'corretora'))).to eq('Conversa para cotar o seguro')
       expect(titulo_da_pagina.call(conta_com_card_ganho('geral'))).to eq('Conversa de vendas de 30 min')
     end
+
+    with_modified_env(AUTONOMIA_PACOTES_ENABLED: nil, CRM_CALENDAR_MEETINGS_ENABLED: 'true') do
+      expect(titulo_da_pagina.call(conta_com_card_ganho('seguros', 'corretora'))).to eq('Conversa de vendas de 30 min')
+    end
   end
 
   describe 'GET /api/v1/accounts/:id' do
