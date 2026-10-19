@@ -100,6 +100,17 @@ RSpec.describe Crm::Email::Destinatarios do
     expect(atributos['autonomia_passagem_id']).to eq(7)
   end
 
+  # Pega: a resposta da passagem levar cópia com a flag desligada.
+  it 'sem a flag, a resposta da passagem não leva cópia, como antes' do
+    account.disable_features!(Crm::Email::Autoria::FLAG)
+    recebido!(from: 'joao@empresa.com.br', cc: ['ana@familia.com.br'])
+    responder = Autonomia::Agents::Operate::ResponderAPassagem.new(conversation: conversation.reload, agent_inbox: agent_inbox,
+                                                                   passagem: instance_double(Crm::Passagem, id: 7))
+
+    responder.send(:post_reply!, 'Sigo daqui.')
+    expect(conversation.messages.outgoing.reorder(:id).last.content_attributes).to include(to_emails: [], cc_emails: [], bcc_emails: [])
+  end
+
   # Pega: a flag desligada mudar a resposta da IA.
   it 'sem a flag, a resposta da IA não leva cópia, como antes' do
     account.disable_features!(Crm::Email::Autoria::FLAG)
