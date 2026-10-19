@@ -36,15 +36,6 @@ class ConversaCanalAPI extends ApiClient {
     });
   }
 
-  // Reação pela caixa WAHA cujo motor declara 'react' (#1709): o conector leva ao
-  // WhatsApp. Fica fora do escopo `conversa_canal`: é a rota da própria mensagem.
-  reagirPelaCaixa(conversationId, messageId, emoji) {
-    return axios.post(
-      `${this.baseUrl()}/conversations/${conversationId}/messages/${messageId}/reaction`,
-      { emoji }
-    );
-  }
-
   // Encaminhar (#1702): conversas que o usuário vê, e o envio para até 5 delas.
   destinosParaEncaminhar(termo) {
     return axios.get(`${this.url}/encaminhamentos`, { params: { termo } });

@@ -10,7 +10,7 @@ import {
   textoParaQuemNaoTemFormato,
 } from '../mais/montarMensagem';
 import { ENQUETE, comoSaiAEnquete } from '../mais/enqueteNoMais';
-import { acoesDaConversa, estadoDaReacao } from '../reacaoDoAtendente';
+import { estadoDaReacao } from '../reacaoDoAtendente';
 
 const i18n = () =>
   createI18n({ legacy: false, locale: 'en', missingWarn: false });
@@ -194,14 +194,6 @@ describe('estadoDaReacao com as ações do motor (#1709)', () => {
     ...extras,
   });
 
-  it('lê as ações em snake ou camel', () => {
-    expect(acoesDaConversa(conversa)).toEqual(['react', 'edit']);
-    expect(acoesDaConversa({ whatsappApiMessageActions: ['react'] })).toEqual([
-      'react',
-    ]);
-    expect(acoesDaConversa({})).toEqual([]);
-  });
-
   it('com react: reage sem sourceId, recebida ou enviada, pela caixa', () => {
     expect(
       estadoDaReacao({ caixa: WAHA, conversa, mensagem: mensagem() })
@@ -220,7 +212,8 @@ describe('estadoDaReacao com as ações do motor (#1709)', () => {
       mensagem({ status: 'failed' }),
       mensagem({ contentAttributes: { externalError: 'x' } }),
       mensagem({ isPrivate: true }),
-      mensagem({ deleted: true }),
+      mensagem({ contentAttributes: { deleted: true } }),
+      mensagem({ status: 'progress' }),
       mensagem({ contentAttributes: { viewOnceUnavailable: true } }),
       mensagem({ messageType: 2 }),
     ];

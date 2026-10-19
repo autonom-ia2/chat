@@ -4,6 +4,7 @@
 // troca a da empresa). O servidor manda ao WhatsApp e grava em `reactions`.
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from '../message/constants';
+import { canReact } from '../message/actions/messageActions';
 
 export const REACOES_RAPIDAS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -30,34 +31,21 @@ const ehWaha = caixa =>
 const NAO_REAGE = { visivel: false, bloqueado: false };
 const PENDENTES = [MESSAGE_STATUS.FAILED, MESSAGE_STATUS.PROGRESS];
 
-// As ações que o motor da caixa WAHA comum declara (#1709): `whatsapp_api_message_actions`
-// da conversa, do store (snake_case) ou já convertida (camelCase).
-export const acoesDaConversa = conversa => {
-  const acoes =
-    conversa?.whatsapp_api_message_actions ??
-    conversa?.whatsappApiMessageActions;
-  return Array.isArray(acoes) ? acoes : [];
-};
+// Com 'react' nas ações do motor da caixa WAHA comum (#1709), a reação vai pelo
+// conector (wahaMessageActions.react), que acha a mensagem pelo próprio registro: não
+// precisa do sourceId. A regra é a do #1709 (canReact, igual ao servidor), mais a
+// mensagem ainda saindo, que não tem o que reagir.
+const reagePelaCaixa = conversa =>
+  Array.isArray(conversa?.whatsapp_api_message_actions) &&
+  conversa.whatsapp_api_message_actions.includes('react');
 
-// Com 'react' nas ações, a reação vai pelo conector da caixa (POST .../reaction), que
-// acha a mensagem pelo próprio registro: não precisa do sourceId. Mesmas regras do
-// servidor (Waha::RichNative::MessageActions.reactable?).
-const estadoPelasAcoes = mensagem => {
-  const atributos = mensagem.contentAttributes || {};
-  const lado = [MESSAGE_TYPES.INCOMING, MESSAGE_TYPES.OUTGOING].includes(
-    mensagem.messageType
-  );
-  const fora =
-    !lado ||
-    mensagem.isPrivate ||
-    mensagem.deleted ||
-    PENDENTES.includes(mensagem.status) ||
-    atributos.externalError ||
-    atributos.deletedByContactAt ||
-    atributos.viewOnceUnavailable;
-  return fora
-    ? NAO_REAGE
-    : { visivel: true, bloqueado: false, pelaCaixa: true };
+const estadoPelasAcoes = (conversa, mensagem) => {
+  const cabe =
+    canReact(conversa, { ...mensagem, private: mensagem.isPrivate }) &&
+    mensagem.status !== MESSAGE_STATUS.PROGRESS;
+  return cabe
+    ? { visivel: true, bloqueado: false, pelaCaixa: true }
+    : NAO_REAGE;
 };
 
 // WhatsApp oficial e híbrido: só mensagem do cliente (doc da Meta) e com a janela
@@ -65,9 +53,7 @@ const estadoPelasAcoes = mensagem => {
 // WAHA: recebida ou enviada, sem janela. Com 'react' nas ações da conversa, vale a
 // regra do conector (estadoPelasAcoes).
 export const estadoDaReacao = ({ caixa, conversa, mensagem }) => {
-  if (acoesDaConversa(conversa).includes('react')) {
-    return estadoPelasAcoes(mensagem);
-  }
+  if (reagePelaCaixa(conversa)) return estadoPelasAcoes(conversa, mensagem);
   const cloud = ehCloud(caixa);
   if (!cloud && !ehWaha(caixa)) return NAO_REAGE;
   if (mensagem.isPrivate || !mensagem.sourceId) return NAO_REAGE;

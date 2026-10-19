@@ -2,12 +2,14 @@
 // atualiza pelo `message.updated` que o servidor emite ao gravar a reação. Até o eco
 // chegar, vale a reação que acabou de sair (clicar de novo no mesmo emoji tira, em
 // vez de mandar o mesmo outra vez). Na caixa WAHA cujo motor reage (`react` nas ações
-// da conversa, #1709), o envio vai pela rota da mensagem; no resto, pela de sempre.
+// da conversa, #1709), o envio vai pelo mesmo cliente do #1709 (wahaMessageActions);
+// no resto, pela de sempre.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
 import ConversaCanalAPI from 'dashboard/api/conversaCanal';
+import WahaMessageActionsAPI from 'dashboard/api/wahaMessageActions';
 import { PELES, usePele } from './pele';
 import { reacoesDaMensagem } from './reacoes';
 import {
@@ -54,7 +56,7 @@ export const useReacaoDoAtendente = mensagem => {
     const emoji = emojiParaEnviar(atual.value, escolhido);
     try {
       if (estado.value.pelaCaixa) {
-        await ConversaCanalAPI.reagirPelaCaixa(conversationId, id, emoji);
+        await WahaMessageActionsAPI.react(conversationId, id, emoji);
       } else {
         await ConversaCanalAPI.reagir(conversationId, id, emoji);
       }
