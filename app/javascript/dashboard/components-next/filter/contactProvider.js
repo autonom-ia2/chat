@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useOperators } from './operators';
 import { useMapGetter } from 'dashboard/composables/store.js';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import {
   buildAttributesFilterTypes,
   CONTACT_ATTRIBUTES,
@@ -49,6 +50,7 @@ import countries from 'shared/constants/countries.js';
  */
 export function useContactFilterContext() {
   const { t } = useI18n();
+  const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 
   const contactAttributes = useMapGetter('attributes/getContactAttributes');
   const labels = useMapGetter('labels/getLabels');
@@ -194,7 +196,7 @@ export function useContactFilterContext() {
       inputType: 'multiSelect',
       options: labels.value?.map(label => ({
         id: label.title,
-        name: label.title,
+        name: nomeDaEtiqueta(label.title),
       })),
       dataType: 'text',
       filterOperators: equalityOperators.value,

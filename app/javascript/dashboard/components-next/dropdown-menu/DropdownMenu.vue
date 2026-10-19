@@ -63,6 +63,13 @@ const searchQuery = ref('');
 
 const hasSections = computed(() => props.menuSections.length > 0);
 
+// O item acha pelo `label` e, se tiver, pelo `searchText` (#1823: a etiqueta
+// mostra o nome livre e também é achada pelo título técnico).
+const itemMatches = (item, query) =>
+  [item.label, item.searchText].some(text =>
+    text?.toLowerCase().includes(query)
+  );
+
 const flattenedMenuItems = computed(() => {
   if (!hasSections.value) {
     return props.menuItems;
@@ -75,9 +82,8 @@ const filteredMenuItems = computed(() => {
   if (props.disableLocalFiltering) return props.menuItems;
   if (!searchQuery.value) return flattenedMenuItems.value;
 
-  return flattenedMenuItems.value.filter(item =>
-    item.label.toLowerCase().includes(searchQuery.value.toLowerCase())
-  );
+  const query = searchQuery.value.toLowerCase();
+  return flattenedMenuItems.value.filter(item => itemMatches(item, query));
 });
 
 const filteredMenuSections = computed(() => {
@@ -94,7 +100,7 @@ const filteredMenuSections = computed(() => {
   return props.menuSections
     .map(section => {
       const filteredItems = (section.items || []).filter(item =>
-        item.label.toLowerCase().includes(query)
+        itemMatches(item, query)
       );
 
       return {
