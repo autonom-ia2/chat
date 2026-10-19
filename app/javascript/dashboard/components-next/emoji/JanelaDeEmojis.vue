@@ -162,13 +162,17 @@ onMounted(async () => {
 
 <template>
   <TeleportWithDirection to="body">
+    <!-- #1895: abre também de dentro do popover da Nova conversa (z-[9999]). Fica por cima
+      dele, e data-popover-content diz ao popover que clique e Esc aqui são de uma
+      sobreposta: escolher um emoji não fecha a Nova conversa. -->
     <div
       ref="janela"
       role="dialog"
       :aria-label="t('CONVERSA_CANAL.EMAIL.EMOJIS.TITULO')"
-      class="fixed z-[60] flex flex-col overflow-hidden rounded-2xl border border-n-weak bg-n-solid-1 shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.08)]"
+      class="fixed z-[10000] flex flex-col overflow-hidden rounded-2xl border border-n-weak bg-n-solid-1 shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.08)]"
       :style="{ ...posicao, height: `${ALTURA}px` }"
       data-janela-de-emojis
+      data-popover-content
       @keydown.esc.prevent.stop="emit('fechar')"
     >
       <div class="px-3 pt-3 pb-2">
