@@ -90,4 +90,40 @@ RSpec.describe 'Autonomia journeys - knowledge sources', type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
     expect(agent.sources.count).to eq(0)
   end
+
+  # #1426 (revisão adversarial) — dois envios ao mesmo tempo não passam do teto: a contagem e a gravação correm sob a
+  # trava da linha do agente (SELECT ... FOR UPDATE antes do INSERT da fonte).
+  it 'checks the cap and writes the source under the lock of the agent' do
+    # Arrange
+    consultas = []
+    gravar = ->(*, payload) { consultas << payload[:sql] }
+
+    # Act
+    ActiveSupport::Notifications.subscribed(gravar, 'sql.active_record') do
+      post "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/sources",
+           params: { source: { source_type: 'txt', reference: 'faq.txt' } },
+           headers: administrator.create_new_auth_token, as: :json
+    end
+
+    # Assert
+    expect(response).to have_http_status(:created)
+    trava = consultas.index { |sql| sql.include?('FROM "autonomia_agents"') && sql.include?('FOR UPDATE') }
+    insercao = consultas.index { |sql| sql.start_with?('INSERT INTO "autonomia_agent_sources"') }
+    expect(trava).to be_present
+    expect(insercao).to be > trava
+  end
+
+  # #1426 (R4) — o 422 chega à tela como está: texto para quem mandou o arquivo, nunca código.
+  it 'refuses a file of a kind it cannot read with a plain message' do
+    imagem = Rack::Test::UploadedFile.new(Rails.root.join('spec/fixtures/files/autonomia/foto_da_criacao/cardapio-legivel.png'),
+                                          'image/png')
+
+    post "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}/sources",
+         params: { source: { source_type: 'txt', reference: 'cardapio.png' }, file: imagem },
+         headers: administrator.create_new_auth_token
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['message']).to eq(I18n.t('autonomia.source.arquivo_tipo'))
+    expect(agent.sources.count).to eq(0)
+  end
 end

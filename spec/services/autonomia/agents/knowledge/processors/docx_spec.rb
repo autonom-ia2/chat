@@ -6,7 +6,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Docx do
   # Fonte com anexo falso cujos bytes são um .docx real (zip com word/document.xml) montado a partir
   # do corpo XML dado — exercita o caminho real de leitura do zip + parsing Nokogiri.
   # ActiveStorage delega #download dinamicamente (method_missing -> blob); verified double não o vê.
-  let(:source) { double('source', reference: 'doc.docx', file: file) } # rubocop:disable RSpec/VerifiedDoubles
+  let(:source) { double('source', reference: 'doc.docx', source_type: 'docx', file: file) } # rubocop:disable RSpec/VerifiedDoubles
   let(:file) { double('attachment', attached?: true, download: docx_bytes) } # rubocop:disable RSpec/VerifiedDoubles
   let(:body_xml) { '' }
   let(:docx_bytes) { build_docx(body_xml) }
