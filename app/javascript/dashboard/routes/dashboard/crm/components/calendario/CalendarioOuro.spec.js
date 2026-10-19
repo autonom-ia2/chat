@@ -374,6 +374,42 @@ describe('CalendarioOuro', () => {
     expect(com.emitted('novo')[0][0].type).toBe('whatsapp');
   });
 
+  // #1883: "retornos atrasados da equipe" do Números, pelo link.
+  it('o filtro do link abre o Mostrar ligado e filtra a lista', async () => {
+    const agente = montar({
+      ehAdmin: false,
+      funil: 4,
+      filtroInicial: { quem: 'todos', tipos: ['lembrete'] },
+    });
+    await flushPromises();
+
+    expect(agente.find('[data-mostrar]').exists()).toBe(true);
+    expect(agente.find('[data-quem="todos"]').attributes('aria-pressed')).toBe(
+      'true'
+    );
+    expect(
+      agente.find('[data-mostrar-tipo="fechar"]').attributes('aria-checked')
+    ).toBe('false');
+    expect(
+      agente.find('[data-mostrar-tipo="lembrete"]').attributes('aria-checked')
+    ).toBe('true');
+    expect(agente.text()).toContain('Da Paula');
+    expect(agente.text()).not.toContain('Plano anual');
+    // Quem (equipe, fora do padrão do agente), o tipo desligado e o funil.
+    expect(agente.find('[data-mostrar-abrir]').text()).toContain('3');
+
+    // Desligar no próprio controle volta ao normal.
+    await agente.find('[data-mostrar-tipo="fechar"]').trigger('click');
+    expect(agente.text()).toContain('Plano anual');
+  });
+
+  it('sem filtro no link, o Mostrar fica fechado e nada muda', async () => {
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-mostrar]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Plano anual');
+  });
+
   it('sem WhatsApp conectado, "Mensagens marcadas" não aparece no Mostrar', async () => {
     const wrapper = montar();
     await flushPromises();
