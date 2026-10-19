@@ -138,9 +138,9 @@ export const cancelarReleituraDoFiltroDoLink = () => {
   releituraEmCurso = false;
   releituraPendente = false;
   descartesSeguidos = 0;
-  // A releitura em andamento, se houver, é da caixa que saiu: a resposta dela é descartada.
+  // A releitura em andamento, se houver, é da caixa que saiu: a resposta dela é descartada (só ela; a leitura comum em
+  // andamento segue).
   releituraDaVez += 1;
-  novaGeracaoDaLista();
 };
 const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
   if (!filtroDoLinkAtivo(state, rootState)) return;
@@ -202,6 +202,7 @@ const releerAsPaginasDoFiltroDoLink = async (
   paginas
 ) => {
   const geracao = novaGeracaoDaLista();
+  const vez = releituraDaVez;
   const params = state.conversationFilters;
   const request = await dispatch(
     'conversationStats/onListRequestStarted',
@@ -214,7 +215,7 @@ const releerAsPaginasDoFiltroDoLink = async (
       )
     )
   );
-  if (geracao !== geracaoDaLista) return false;
+  if (geracao !== geracaoDaLista || vez !== releituraDaVez) return false;
   // O filtro deixou de valer enquanto as páginas vinham (filtro avançado por cima, saiu da caixa): nada a gravar nem a
   // refazer.
   if (!filtroDoLinkAtivo(state, rootState)) return true;
@@ -244,16 +245,13 @@ const releerAsPaginasDoFiltroDoLink = async (
 };
 
 // Uma página só, ou mais de 5: volta à primeira página no lugar da lista, sem acender o carregando do rodapé. A rolagem
-// vai ao topo só se a lista foi trocada. Passado o tempo-limite, a leitura é cancelada. Devolve se trocou a lista (uma
-// rolagem que pede a próxima página no meio cancela esta leitura, e ela conta como descartada).
-const voltarAPrimeiraPaginaDoFiltroDoLink = async (
-  { dispatch, state },
-  paginas
-) => {
-  const antes = state.allConversations;
+// vai ao topo só se a lista foi trocada. Passado o tempo-limite, a leitura é cancelada. Devolve se gravou a lista (uma
+// rolagem que pede a próxima página no meio cancela esta leitura, ou outra leitura a descarta: conta como descartada).
+const voltarAPrimeiraPaginaDoFiltroDoLink = async ({ dispatch }, paginas) => {
   await dispatch('updateChatListFilters', { page: 1, updatedWithin: null });
+  let gravou;
   try {
-    await comTempoLimite(() =>
+    gravou = await comTempoLimite(() =>
       dispatch('fetchAllConversations', {
         replaceExisting: true,
         silenciosa: true,
@@ -263,7 +261,7 @@ const voltarAPrimeiraPaginaDoFiltroDoLink = async (
     if (isAbortError(error)) dispatch('invalidateConversationListRequests');
     throw error;
   }
-  const trocou = state.allConversations !== antes;
+  const trocou = gravou === true;
   if (paginas > PAGINAS_RELIDAS_NO_MAXIMO && trocou) {
     emitter.emit(BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO);
   }
@@ -303,6 +301,8 @@ const actions = {
         paginas > 1 && paginas <= PAGINAS_RELIDAS_NO_MAXIMO
           ? await releerAsPaginasDoFiltroDoLink(contexto, paginas)
           : await voltarAPrimeiraPaginaDoFiltroDoLink(contexto, paginas);
+      // Cancelada no meio (a caixa desmontou): não mexe na contagem nem pede outra.
+      if (estaReleitura !== releituraDaVez) return;
       // Descartada (a lista foi lida, esvaziada ou trocou de aba no meio): relê de novo depois; a 5ª seguida agenda a
       // última.
       descartesSeguidos = trocou ? 0 : descartesSeguidos + 1;
@@ -380,7 +380,7 @@ const actions = {
         'conversationStats/onListRequestStarted',
         params
       );
-      if (signal.aborted) return;
+      if (signal.aborted) return false;
       // #1883: a releitura do filtro do link troca a lista sem acender o carregando do rodapé.
       if (!silenciosa) commit(types.SET_LIST_LOADING_STATUS);
       try {
@@ -388,12 +388,12 @@ const actions = {
           data: { data },
         } = await ConversationApi.get(params, { signal });
 
-        if (signal.aborted) return;
+        if (signal.aborted) return false;
         // #1883: a lista foi trocada no meio (releitura do filtro do link, esvaziamento, outra aba): esta página é da
         // lista anterior. A página não avança, e a próxima rolagem pede de novo.
         if (geracao !== geracaoDaLista) {
           commit(types.CLEAR_LIST_LOADING_STATUS);
-          return;
+          return false;
         }
 
         // Filtros pelo link (#1883): quem decide o que entra é o servidor; guarda o que ele mandou.
@@ -410,10 +410,12 @@ const actions = {
           params.assigneeType,
           { replaceExisting, countRequest }
         );
+        return true;
       } catch (error) {
         if (!signal.aborted) {
           commit(types.CLEAR_LIST_LOADING_STATUS);
         }
+        return false;
       }
     });
   },

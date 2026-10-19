@@ -431,12 +431,10 @@ describe('filtros pelo link (#1883)', () => {
         const contexto = contextoCom({
           paginas: PAGINAS_RELIDAS_NO_MAXIMO + 1,
         });
-        // A leitura da página 1 troca a lista.
-        contexto.dispatch = vi.fn(async acao => {
-          if (acao === 'fetchAllConversations') {
-            contexto.state.allConversations = [conversa(1)];
-          }
-        });
+        // A leitura da página 1 grava a lista.
+        contexto.dispatch = vi.fn(
+          async acao => acao === 'fetchAllConversations'
+        );
 
         await actions.releerFiltroDoLink(contexto);
 
@@ -662,12 +660,51 @@ describe('filtros pelo link (#1883)', () => {
         ).toEqual([[3, 4]]);
       });
 
-      it('com 6 páginas, a volta à página 1 cancelada por uma rolagem conta como descartada e é relida depois', async () => {
+      it('caixa desmontada com a releitura em voo: a resposta dela não conta como descarte nem pede outra', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 2 });
+
+        const antiga = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(2));
+        cancelarReleituraDoFiltroDoLink();
+        const nova = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(4));
+        fila[0].responder([1]);
+        fila[1].responder([2]);
+        await antiga;
+        fila[2].responder([3]);
+        fila[3].responder([4]);
+        await nova;
+        await vi.advanceTimersByTimeAsync(PISO_ENTRE_RELEITURAS_MS * 2);
+
+        expect(releituras(contexto.dispatch)).toBe(0);
+        expect(fila).toHaveLength(4);
+      });
+
+      it('relógio do sistema que volta não estica a espera: a releitura vem no piso', async () => {
+        const contexto = contextoCom({ paginas: 1 });
+        contexto.dispatch = vi.fn(
+          async acao => acao === 'fetchAllConversations'
+        );
+
+        await actions.releerFiltroDoLink(contexto);
+        vi.setSystemTime(Date.now() - 60 * 60 * 1000);
+        actions.updateConversation(contexto, conversa(5));
+        vi.advanceTimersByTime(PISO_ENTRE_RELEITURAS_MS);
+
+        expect(releituras(contexto.dispatch)).toBe(1);
+      });
+
+      it('com 6 páginas, a volta à página 1 que não gravou (a rolagem cancelou a leitura) conta como descartada e é relida depois', async () => {
         const contexto = contextoCom({
           paginas: PAGINAS_RELIDAS_NO_MAXIMO + 1,
         });
-        // A leitura da página 1 foi cancelada: a lista não trocou.
-        contexto.dispatch = vi.fn(async () => {});
+        // A leitura da página 1 foi cancelada: não gravou (a store pode ter trocado a lista por outro motivo).
+        contexto.dispatch = vi.fn(async acao => {
+          if (acao === 'fetchAllConversations') {
+            contexto.state.allConversations = [conversa(1)];
+          }
+        });
 
         await actions.releerFiltroDoLink(contexto);
         expect(releituras(contexto.dispatch)).toBe(0);
