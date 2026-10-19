@@ -7,6 +7,10 @@ import EditLabel from '../EditLabel.vue';
 vi.mock('dashboard/api/nomesDeEtiquetas', () => ({
   default: { listar: vi.fn(), gravar: vi.fn() },
 }));
+// A store destes testes liga toda flag, inclusive `etiquetas_do_celular` (F1b).
+vi.mock('dashboard/api/etiquetasDoCelular', () => ({
+  default: { listar: vi.fn(() => Promise.resolve({ data: { payload: [] } })) },
+}));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
 let contaDoTeste = 200;

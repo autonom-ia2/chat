@@ -91,6 +91,14 @@
       "TECHNICAL_EMPTY": "Use at least 2 letters or numbers in the name.",
       "TOO_LONG": "Use up to {max} characters in the name.",
       "SAVE_ERROR": "The label was saved, but its name was not. Edit the label to try again."
+    },
+    "WHATSAPP": {
+      "NOTICE": "Labels you use in the WhatsApp Business app on the phone show up here on their own, on the contact and on the open conversation. Only for WhatsApp inboxes connected through the phone. Nothing changes on the phone.",
+      "RENAMED_OR_DELETED": "Renamed on the phone: the label here keeps its name and shows the new one as \"On the phone\". Deleted on the phone: the label here stays, with everything it is already on.",
+      "BADGE": "WhatsApp · {caixa}",
+      "NAME_ON_PHONE": "On the phone: {nome}",
+      "CREATED_BY_PHONE": "Created from the phone",
+      "CHIP_TOOLTIP": "From the WhatsApp on the phone · {caixa}"
     }
   }
 }

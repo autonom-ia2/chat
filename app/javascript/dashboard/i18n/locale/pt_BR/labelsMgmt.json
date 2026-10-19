@@ -91,6 +91,14 @@
       "TECHNICAL_EMPTY": "Use pelo menos 2 letras ou números no nome.",
       "TOO_LONG": "Use até {max} caracteres no nome.",
       "SAVE_ERROR": "A etiqueta foi salva, mas o nome não. Edite a etiqueta para tentar de novo."
+    },
+    "WHATSAPP": {
+      "NOTICE": "As etiquetas que você usa no app WhatsApp Business do celular aparecem aqui sozinhas, no contato e na conversa aberta. Só nas caixas de WhatsApp conectadas pelo celular. Nada muda no celular.",
+      "RENAMED_OR_DELETED": "Renomeada no celular: a etiqueta daqui mantém o nome e mostra o novo em \"No celular\". Apagada no celular: a etiqueta daqui fica, com tudo em que já está.",
+      "BADGE": "WhatsApp · {caixa}",
+      "NAME_ON_PHONE": "No celular: {nome}",
+      "CREATED_BY_PHONE": "Criada pelo celular",
+      "CHIP_TOOLTIP": "Veio do WhatsApp do celular · {caixa}"
     }
   }
 }

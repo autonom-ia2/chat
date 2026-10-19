@@ -63,6 +63,7 @@ export const FEATURE_FLAGS = {
   MEMORIA_IA: 'memoria_ia',
   CONVERSA_CARA_DO_CANAL: 'conversa_cara_do_canal',
   ETIQUETAS_DO_WHATSAPP: 'etiquetas_do_whatsapp',
+  ETIQUETAS_DO_CELULAR: 'etiquetas_do_celular',
   TELA_INICIAL_RESUMO: 'tela_inicial_resumo',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',

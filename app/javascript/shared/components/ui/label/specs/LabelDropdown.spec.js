@@ -6,6 +6,10 @@ import LabelDropdown from '../LabelDropdown.vue';
 vi.mock('dashboard/api/nomesDeEtiquetas', () => ({
   default: { listar: vi.fn() },
 }));
+// A store destes testes liga toda flag, inclusive `etiquetas_do_celular` (F1b).
+vi.mock('dashboard/api/etiquetasDoCelular', () => ({
+  default: { listar: vi.fn(() => Promise.resolve({ data: { payload: [] } })) },
+}));
 
 const ETIQUETAS = [
   { id: 1, title: 'aguardando_retorno', color: '#000' },

@@ -2,10 +2,15 @@ import { defineComponent, h, nextTick } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import NomesDeEtiquetasAPI from 'dashboard/api/nomesDeEtiquetas';
+import EtiquetasDoCelularAPI from 'dashboard/api/etiquetasDoCelular';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useNomeDaEtiqueta } from '../useNomeDaEtiqueta';
 
 vi.mock('dashboard/api/nomesDeEtiquetas', () => ({
   default: { listar: vi.fn(), gravar: vi.fn() },
+}));
+vi.mock('dashboard/api/etiquetasDoCelular', () => ({
+  default: { listar: vi.fn() },
 }));
 
 const ETIQUETAS = [
@@ -23,11 +28,21 @@ const Sonda = defineComponent({
 });
 
 // Cada teste usa uma conta própria: o cache é por conta e vive no módulo.
-const montar = ({ accountId, ligada = true, etiquetas = ETIQUETAS }) => {
+const montar = ({
+  accountId,
+  ligada = true,
+  celular = false,
+  etiquetas = ETIQUETAS,
+}) => {
+  const flags = {
+    [FEATURE_FLAGS.ETIQUETAS_DO_WHATSAPP]: ligada,
+    [FEATURE_FLAGS.ETIQUETAS_DO_CELULAR]: celular,
+  };
   const store = createStore({
     getters: {
       getCurrentAccountId: () => accountId,
-      'accounts/isFeatureEnabledonAccount': () => () => ligada,
+      'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
+        Boolean(flags[flag]),
       'labels/getLabels': () => etiquetas,
     },
   });
@@ -39,6 +54,28 @@ describe('useNomeDaEtiqueta', () => {
   beforeEach(() => {
     NomesDeEtiquetasAPI.listar.mockResolvedValue({
       data: { payload: [{ label_id: 2, nome: 'Cliente VIP' }] },
+    });
+    EtiquetasDoCelularAPI.listar.mockResolvedValue({
+      data: {
+        payload: [
+          {
+            label_id: 1,
+            inbox_id: 7,
+            caixa: 'Atendimento',
+            nome_no_celular: 'Esperando 🔥',
+            color_index: 3,
+            criada_pelo_celular: true,
+          },
+          {
+            label_id: 1,
+            inbox_id: 8,
+            caixa: 'Vendas',
+            nome_no_celular: 'Esperando',
+            color_index: 3,
+            criada_pelo_celular: false,
+          },
+        ],
+      },
     });
   });
 
@@ -156,6 +193,69 @@ describe('useNomeDaEtiqueta', () => {
 
     expect(nomeDe('vip')).toBe('VIP de verdade');
     expect(nomeDe('aguardando_retorno')).toBe('Esperando');
+  });
+
+  describe('etiquetas do celular (F1b)', () => {
+    it('does not load nor show phone links without the etiquetas_do_celular flag', async () => {
+      const { vinculosDe, nomeDe, celularLigado } = montar({ accountId: 30 });
+      await flushPromises();
+
+      expect(celularLigado.value).toBe(false);
+      expect(vinculosDe('aguardando_retorno')).toEqual([]);
+      expect(nomeDe('aguardando_retorno')).toBe('Aguardando retorno');
+      expect(EtiquetasDoCelularAPI.listar).not.toHaveBeenCalled();
+    });
+
+    it('lists one link per inbox and shows the phone name when there is no saved name', async () => {
+      const { vinculosDe, nomeDe } = montar({ accountId: 31, celular: true });
+      await flushPromises();
+
+      expect(vinculosDe('aguardando_retorno')).toEqual([
+        {
+          caixa: 'Atendimento',
+          inboxId: 7,
+          nomeNoCelular: 'Esperando 🔥',
+          criadaPeloCelular: true,
+        },
+        {
+          caixa: 'Vendas',
+          inboxId: 8,
+          nomeNoCelular: 'Esperando',
+          criadaPeloCelular: false,
+        },
+      ]);
+      expect(vinculosDe('vip')).toEqual([]);
+      expect(nomeDe('aguardando_retorno')).toBe('Esperando 🔥');
+      // O nome guardado aqui continua na frente do nome do celular.
+      expect(nomeDe('vip')).toBe('Cliente VIP');
+    });
+
+    it('keeps the technical title when only the phone flag is on', async () => {
+      const { nomeDe, vinculosDe } = montar({
+        accountId: 32,
+        ligada: false,
+        celular: true,
+      });
+      await flushPromises();
+
+      expect(vinculosDe('aguardando_retorno')).toHaveLength(2);
+      expect(nomeDe('aguardando_retorno')).toBe('aguardando_retorno');
+      expect(NomesDeEtiquetasAPI.listar).not.toHaveBeenCalled();
+    });
+
+    it('loads the links once per account and survives a failure', async () => {
+      montar({ accountId: 33, celular: true });
+      montar({ accountId: 33, celular: true });
+      await flushPromises();
+      expect(EtiquetasDoCelularAPI.listar).toHaveBeenCalledTimes(1);
+
+      EtiquetasDoCelularAPI.listar.mockRejectedValue(new Error('falhou'));
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { vinculosDe } = montar({ accountId: 34, celular: true });
+      await flushPromises();
+
+      expect(vinculosDe('aguardando_retorno')).toEqual([]);
+    });
   });
 
   it('counts the flag as off when mounted without the dashboard store', () => {

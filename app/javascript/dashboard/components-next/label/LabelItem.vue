@@ -1,6 +1,7 @@
 <script setup>
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
+import EtiquetaDoWhatsappIcone from './EtiquetaDoWhatsappIcone.vue';
 
 const props = defineProps({
   readOnly: { type: Boolean, default: false },
@@ -42,6 +43,7 @@ const handleMouseEnter = () => {
     <span class="text-sm text-n-slate-12 ltr:mr-px rtl:ml-px">
       {{ nomeDe(label.title) }}
     </span>
+    <EtiquetaDoWhatsappIcone :titulo="label.title" class="ltr:ml-1 rtl:mr-1" />
     <div
       v-if="!readOnly"
       class="w-0 flex relative ltr:left-1 rtl:right-1 flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-out"

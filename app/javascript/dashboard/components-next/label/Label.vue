@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
+import EtiquetaDoWhatsappIcone from './EtiquetaDoWhatsappIcone.vue';
 
 const props = defineProps({
   label: {
@@ -69,6 +70,7 @@ const { nomeDe } = useNomeDaEtiqueta();
     >
       {{ nomeDe(labelTitle) }}
     </span>
+    <EtiquetaDoWhatsappIcone :titulo="labelTitle" pequeno />
     <slot name="action" />
   </div>
 </template>

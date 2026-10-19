@@ -9,6 +9,7 @@ import AddLabel from './AddLabel.vue';
 import EditLabel from './EditLabel.vue';
 import NomeDaEtiquetaCelula from './NomeDaEtiquetaCelula.vue';
 import EtiquetasEmCartoes from './EtiquetasEmCartoes.vue';
+import EtiquetasDoCelularAviso from './EtiquetasDoCelularAviso.vue';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
@@ -148,6 +149,7 @@ onBeforeMount(() => {
       </BaseSettingsHeader>
     </template>
     <template #body>
+      <EtiquetasDoCelularAviso />
       <EtiquetasEmCartoes
         v-if="nomeLivreLigado"
         class="md:hidden"

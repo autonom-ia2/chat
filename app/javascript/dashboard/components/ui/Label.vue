@@ -1,8 +1,10 @@
 <script>
 import { getContrastingTextColor } from '@chatwoot/utils';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
+import EtiquetaDoWhatsappIcone from 'dashboard/components-next/label/EtiquetaDoWhatsappIcone.vue';
 
 export default {
+  components: { EtiquetaDoWhatsappIcone },
   props: {
     title: {
       type: String,
@@ -105,6 +107,7 @@ export default {
       {{ nomeDe(title) }}
     </span>
     <a v-else :href="href" :style="anchorStyle">{{ nomeDe(title) }}</a>
+    <EtiquetaDoWhatsappIcone :titulo="title" pequeno />
     <button
       v-if="showClose"
       class="label-close--button p-0"

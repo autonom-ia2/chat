@@ -2,6 +2,7 @@ import { computed, getCurrentInstance, ref, watch } from 'vue';
 import { picoSearch } from '@chatwoot/pico-search';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import NomesDeEtiquetasAPI from 'dashboard/api/nomesDeEtiquetas';
+import EtiquetasDoCelularAPI from 'dashboard/api/etiquetasDoCelular';
 import {
   mesmoNome,
   nomeDaEtiqueta,
@@ -52,6 +53,53 @@ const carregar = (accountId, { forcar = false } = {}) => {
   return pedido;
 };
 
+// Etiquetas do WhatsApp do celular (#1823, F1b), atrás da flag própria
+// `etiquetas_do_celular`: por conta, as correspondências de cada etiqueta daqui
+// (uma por caixa em que ela existe no celular). Mesma carga única por conta.
+const vinculosPorConta = ref({});
+const pedidosDeVinculos = new Map();
+
+const agruparPorEtiqueta = lista =>
+  lista.reduce((porEtiqueta, item) => {
+    const vinculo = {
+      caixa: item.caixa,
+      inboxId: item.inbox_id,
+      nomeNoCelular: item.nome_no_celular,
+      criadaPeloCelular: item.criada_pelo_celular,
+    };
+    const atuais = porEtiqueta[item.label_id] || [];
+    return { ...porEtiqueta, [item.label_id]: [...atuais, vinculo] };
+  }, {});
+
+const carregarVinculos = (accountId, { forcar = false } = {}) => {
+  if (!accountId) return Promise.resolve();
+  if (pedidosDeVinculos.has(accountId)) {
+    return pedidosDeVinculos.get(accountId);
+  }
+  if (!forcar && vinculosPorConta.value[accountId]) return Promise.resolve();
+
+  const pedido = EtiquetasDoCelularAPI.listar()
+    .then(({ data }) => {
+      vinculosPorConta.value = {
+        ...vinculosPorConta.value,
+        [accountId]: agruparPorEtiqueta(data?.payload || []),
+      };
+    })
+    .catch(error => {
+      // Falhou: sem selo do WhatsApp até a próxima carga; os nomes seguem.
+      if (!vinculosPorConta.value[accountId]) {
+        vinculosPorConta.value = { ...vinculosPorConta.value, [accountId]: {} };
+      }
+      // eslint-disable-next-line no-console
+      console.error('Etiquetas do celular: falha ao carregar', error);
+    })
+    .finally(() => pedidosDeVinculos.delete(accountId));
+  pedidosDeVinculos.set(accountId, pedido);
+  return pedido;
+};
+
+const SEM_VINCULOS = Object.freeze([]);
+
 // A store vem da instância, lida com cuidado (como no useHorarioUnicoCaixa):
 // montado sem a store do painel, a flag conta como desligada e nada muda.
 export function useNomeDaEtiqueta() {
@@ -59,14 +107,16 @@ export function useNomeDaEtiqueta() {
   const getter = nome => instancia?.proxy?.$store?.getters?.[nome];
 
   const accountId = computed(() => getter('getCurrentAccountId'));
-  const ligada = computed(() =>
+  const flagLigada = flag =>
     Boolean(
       accountId.value &&
-        getter('accounts/isFeatureEnabledonAccount')?.(
-          accountId.value,
-          FEATURE_FLAGS.ETIQUETAS_DO_WHATSAPP
-        )
-    )
+        getter('accounts/isFeatureEnabledonAccount')?.(accountId.value, flag)
+    );
+  const ligada = computed(() =>
+    flagLigada(FEATURE_FLAGS.ETIQUETAS_DO_WHATSAPP)
+  );
+  const celularLigado = computed(() =>
+    flagLigada(FEATURE_FLAGS.ETIQUETAS_DO_CELULAR)
   );
 
   if (instancia) {
@@ -74,6 +124,13 @@ export function useNomeDaEtiqueta() {
       [ligada, accountId],
       ([estaLigada, conta]) => {
         if (estaLigada) carregar(conta);
+      },
+      { immediate: true }
+    );
+    watch(
+      [celularLigado, accountId],
+      ([estaLigado, conta]) => {
+        if (estaLigado) carregarVinculos(conta);
       },
       { immediate: true }
     );
@@ -89,10 +146,21 @@ export function useNomeDaEtiqueta() {
     () => nomesPorConta.value[accountId.value] || {}
   );
 
+  // Onde a etiqueta existe no celular (uma entrada por caixa). Sem a flag
+  // `etiquetas_do_celular`, ou etiqueta só daqui: lista vazia.
+  const vinculosDe = titulo => {
+    if (!celularLigado.value || !idPorTitulo.value.has(titulo)) {
+      return SEM_VINCULOS;
+    }
+    const daConta = vinculosPorConta.value[accountId.value] || {};
+    return daConta[idPorTitulo.value.get(titulo)] || SEM_VINCULOS;
+  };
+
   const nomeDe = titulo => {
     if (!ligada.value || !idPorTitulo.value.has(titulo)) return titulo;
     const nomeGuardado = nomesDaConta.value[idPorTitulo.value.get(titulo)];
-    return nomeDaEtiqueta(titulo, { nomeGuardado });
+    const nomeNoCelular = vinculosDe(titulo)[0]?.nomeNoCelular;
+    return nomeDaEtiqueta(titulo, { nomeGuardado, nomeNoCelular });
   };
 
   // A conta é a do momento do pedido: trocar de conta durante a gravação não
@@ -108,7 +176,12 @@ export function useNomeDaEtiqueta() {
   };
 
   const recarregar = () =>
-    ligada.value ? carregar(accountId.value, { forcar: true }) : null;
+    Promise.all([
+      ligada.value ? carregar(accountId.value, { forcar: true }) : null,
+      celularLigado.value
+        ? carregarVinculos(accountId.value, { forcar: true })
+        : null,
+    ]);
 
   // Busca pelo título técnico e pelo nome exibido ("aguardando_retorno",
   // "aguardando retorno" ou "cliente vip"). Flag desligada: a busca de sempre.
@@ -145,6 +218,8 @@ export function useNomeDaEtiqueta() {
 
   return {
     ligada,
+    celularLigado,
+    vinculosDe,
     nomeDe,
     guardarNome,
     recarregar,
