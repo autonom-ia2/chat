@@ -600,5 +600,251 @@
     "ATTRIBUTES": {
       "HINT": "They become contact attributes, like insurer and plate"
     }
+  },
+  "SETTINGS_INICIO": {
+    "GRUPOS": {
+      "SUA_EMPRESA": "Your brokerage"
+    },
+    "CARTOES": {
+      "DADOS_EMPRESA": {
+        "TITULO": "Brokerage details",
+        "TEXTO": "Brokerage name, language and time zone."
+      },
+      "TIMES": {
+        "TEXTO": "Groups of people to share the work, such as Sales, Renewals and Claims."
+      },
+      "ETIQUETAS": {
+        "TEXTO": "Names and colors to sort conversations and contacts, such as auto, home and claims."
+      },
+      "CAMPOS": {
+        "TEXTO": "Extra details about each contact, such as insurer, policy expiry date and license plate."
+      },
+      "RESPOSTAS": {
+        "TEXTO": "Texts you always use, like asking for the driver's license or sending a duplicate bill, one click away in the conversation."
+      },
+      "CANAIS": {
+        "TEXTO": "WhatsApp, email, Instagram and website: where customers ask for quotes and talk to you."
+      },
+      "USUARIOS": {
+        "TEXTO": "Who at the brokerage signs in and what each person can do."
+      }
+    }
+  },
+  "ONBOARDING_TRAIL": {
+    "TITLE": "Let's get your brokerage ready to serve customers",
+    "DONE_TITLE": "Your brokerage is up and running",
+    "DONE_SUBTITLE": "The essentials are done: you receive, reply and organize quotes and renewals. What is left is fine tuning, at your own pace.",
+    "ETAPAS": {
+      "organizar": "Organize sales and renewals"
+    }
+  },
+  "ONBOARDING_NEXT": {
+    "PLACEHOLDERS": {
+      "ENTER_COMPANY_NAME": "Your brokerage name",
+      "ENTER_WEBSITE": "www.yourbrokerage.com"
+    },
+    "COMPANY_DETAILS": "Brokerage details"
+  },
+  "GENERAL_SETTINGS": {
+    "FORM": {
+      "NAME": {
+        "PLACEHOLDER": "Your brokerage name"
+      },
+      "SUPPORT_EMAIL": {
+        "PLACEHOLDER": "Your brokerage's service email"
+      },
+      "AUTO_RESOLVE": {
+        "MESSAGE": {
+          "PLACEHOLDER": "We closed this chat because we didn't hear back. Need a quote, a duplicate bill or help with a claim? Just send us a message."
+        }
+      }
+    }
+  },
+  "PROFILE_SETTINGS": {
+    "FORM": {
+      "MESSAGE_SIGNATURE": {
+        "PLACEHOLDER": "E.g. Ana Souza · Insurance broker"
+      }
+    }
+  },
+  "CONVERSATION_WORKFLOW": {
+    "INDEX": {
+      "HEADER": {
+        "DESCRIPTION": "Choose what must be filled in before closing a conversation, such as the line of insurance."
+      }
+    },
+    "REQUIRED_ATTRIBUTES": {
+      "DESCRIPTION": "Before closing a conversation, the team fills in these fields, such as the line of insurance or the insurer."
+    }
+  },
+  "AGENT_MGMT": {
+    "DESCRIPTION": "Here are the people at the brokerage who sign in: those who sell, those who serve customers and those who handle renewals and claims.",
+    "ADD": {
+      "DESC": "Invite who will serve customers: sales, renewals or claims."
+    }
+  },
+  "TEAMS_SETTINGS": {
+    "DESCRIPTION": "Teams group people by topic, such as Sales, Renewals and Claims. One person can be in several teams, and a conversation can go straight to the right team.",
+    "FORM": {
+      "NAME": {
+        "PLACEHOLDER": "E.g. Sales, Renewals, Claims"
+      },
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g. Handles claim notices and missing documents."
+      }
+    }
+  },
+  "LABEL_MGMT": {
+    "DESCRIPTION": "Labels sort conversations and contacts by topic, such as auto, home, pending inspection or claims. You add a label from the panel next to the conversation or contact.",
+    "LIST": {
+      "404": "No labels yet. To start, create auto, home and claims."
+    },
+    "ADD": {
+      "DESC": "Labels sort conversations by topic, such as renewals or claims."
+    },
+    "FORM": {
+      "NAME": {
+        "PLACEHOLDER": "E.g. pending-inspection",
+        "VALID_ERROR": "No spaces: use a hyphen. E.g. duplicate-bill"
+      },
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g. Customer who still needs the car inspection"
+      }
+    }
+  },
+  "ATTRIBUTES_MGMT": {
+    "DESCRIPTION": "Extra fields keep what the brokerage needs to know about each contact, such as current insurer, policy expiry date, line of insurance and license plate. They can be text, list, number or date.",
+    "ADD": {
+      "FORM": {
+        "NAME": {
+          "PLACEHOLDER": "E.g. Policy expiry date"
+        },
+        "DESC": {
+          "PLACEHOLDER": "E.g. Day the current policy expires"
+        },
+        "TYPE": {
+          "LIST": {
+            "PLACEHOLDER": "E.g. Auto, Home, Life. Type each one and press Enter"
+          }
+        },
+        "KEY": {
+          "PLACEHOLDER": "E.g. policy_expiry"
+        }
+      }
+    },
+    "LIST": {
+      "EMPTY_RESULT": {
+        "404": "No extra fields yet. To start: Insurer, Policy expiry date, Line of insurance and License plate."
+      }
+    }
+  },
+  "CUSTOM_ROLE": {
+    "FORM": {
+      "NAME": {
+        "PLACEHOLDER": "E.g. Claims agent"
+      },
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g. People who handle claims and duplicate bills, only in their own conversations"
+      }
+    },
+    "PROFILES": {
+      "SDR": {
+        "NAME": "Broker",
+        "SHORT": "Quotes and closes new insurance",
+        "WHO": "For people who quote, send the options and close new insurance."
+      },
+      "SALES_MANAGER": {
+        "SHORT": "Looks after the pipelines and the production target",
+        "WHO": "For people who look after the pipelines and the brokerage's production target."
+      },
+      "AGENT": {
+        "WHO": "For people who serve customers day to day: questions, duplicate bills and endorsements."
+      },
+      "PHRASES": {
+        "MANAGE_DEALS": "Create and move cards in the CRM",
+        "EDIT_DEALS": "Edit cards in the CRM"
+      }
+    },
+    "MATRIX": {
+      "MODULES": {
+        "CRM": {
+          "HINT": "Sales, renewal and claims pipelines, and the calendar",
+          "LEVEL_VIEW": "Sees the board and the cards. Does not change them.",
+          "LEVEL_MANAGE": "Creates, edits and moves cards: quotes, renewals and claims."
+        }
+      }
+    },
+    "EXTRAS": {
+      "CRM_MOVE_CARDS": "Drags cards between stages without editing anything else."
+    }
+  },
+  "INBOX_MGMT": {
+    "ADD": {
+      "WHATSAPP_API": {
+        "CHANNEL_NAME": {
+          "PLACEHOLDER": "E.g. Sales or Claims"
+        }
+      },
+      "CHANNEL_NAME": {
+        "PLACEHOLDER": "Enter the inbox name (e.g. Brokerage service)"
+      },
+      "WEBSITE_NAME": {
+        "PLACEHOLDER": "Enter your website name (e.g. your brokerage name)"
+      },
+      "WEBSITE_CHANNEL": {
+        "CHANNEL_WELCOME_TAGLINE": {
+          "PLACEHOLDER": "Ask for a quote, a duplicate bill or report a claim here."
+        },
+        "CHANNEL_GREETING_MESSAGE": {
+          "PLACEHOLDER": "We reply during business hours. In case of a crash or breakdown, call your insurer's 24-hour assistance."
+        }
+      },
+      "WHATSAPP": {
+        "EMBEDDED_SIGNUP": {
+          "ACCESS_REQUEST": {
+            "USE_CASE_PLACEHOLDER": "For example, we are an insurance brokerage and use WhatsApp to send quotes, answer policy questions and follow up on renewals."
+          }
+        }
+      },
+      "EMAIL_CHANNEL": {
+        "EMAIL": {
+          "SUBTITLE": "Email address where your customers send quote requests, policies and documents"
+        }
+      }
+    },
+    "EDIT": {
+      "SENDER_NAME_SECTION": {
+        "BUSINESS_NAME": {
+          "PLACEHOLDER": "Brokerage name"
+        }
+      }
+    },
+    "PRE_CHAT_FORM": {
+      "PRE_CHAT_MESSAGE": {
+        "PLACEHOLDER": "E.g. To speed up your quote, tell us your name and which insurance you need."
+      }
+    },
+    "CSAT": {
+      "MESSAGE": {
+        "PLACEHOLDER": "E.g. How was the brokerage's service today?"
+      }
+    },
+    "WHATSAPP_HYBRID": {
+      "ROUTING": {
+        "PREVIEW": {
+          "FOLLOW_UP_WEB": "Carlos has not replied to the quote for 2 days. The CRM reminder goes out through WhatsApp API at 10:00.",
+          "FOLLOW_UP_TEMPLATE": "Carlos has not replied to the quote for 2 days. The CRM reminder goes out as an approved template through the official number.",
+          "AGENT_WEB": "Ana, from the team, sends Maria the duplicate bill 3 days later. The reply goes out through WhatsApp API.",
+          "AGENT_TEMPLATE": "Ana, from the team, wants to send Maria the duplicate bill 3 days later. She can only send an approved template."
+        },
+        "WHO": {
+          "ORIGINS": {
+            "HUMAN": {
+              "EXAMPLE": "When someone on the team picks up a stalled quote."
+            }
+          }
+        }
+      }
+    }
   }
 }
