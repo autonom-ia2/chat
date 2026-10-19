@@ -28,7 +28,9 @@ RSpec.describe 'Etiquetas do celular', type: :request do
   context 'with the flag' do
     before { account.enable_features!('etiquetas_do_celular') }
 
-    it 'o agente lista etiqueta, caixa e nome no celular' do
+    it 'o agente membro da caixa lista etiqueta, caixa e nome no celular' do
+      create(:inbox_member, user: agente, inbox: inbox)
+
       listar
 
       expect(response).to have_http_status(:ok)
@@ -39,7 +41,25 @@ RSpec.describe 'Etiquetas do celular', type: :request do
                                                     }])
     end
 
+    it 'agente fora da caixa não vê o vínculo nem o nome da caixa; o administrador vê todas' do
+      outra_caixa = create(:inbox, account: account, name: 'Caixa do financeiro')
+      create(:inbox_member, user: agente, inbox: inbox)
+      Etiquetas::DoCelular.create!(account: account, inbox: outra_caixa, label: etiqueta, label_wa_id: '9', nome: 'Pago')
+
+      listar
+      expect(response.parsed_body['payload'].pluck('inbox_id')).to eq([inbox.id])
+      expect(response.body).not_to include('Caixa do financeiro')
+
+      listar(user: create(:user, account: account, role: :agent))
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']).to eq([])
+
+      listar(user: create(:user, account: account, role: :administrator))
+      expect(response.parsed_body['payload'].pluck('inbox_id')).to eq([inbox.id, outra_caixa.id])
+    end
+
     it 'não mostra correspondência de outra conta' do
+      create(:inbox_member, user: agente, inbox: inbox)
       outra = create(:account)
       Etiquetas::DoCelular.create!(account: outra, inbox: create(:inbox, account: outra),
                                    label: create(:label, account: outra, title: 'de_fora'), label_wa_id: '1', nome: 'De fora')

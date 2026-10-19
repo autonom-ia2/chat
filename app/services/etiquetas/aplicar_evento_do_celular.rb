@@ -7,7 +7,8 @@
 #   há nome livre.
 # - apagada: some a correspondência; o `Label` fica, com tudo em que já está.
 # - vinculada / desvinculada: põe ou tira a etiqueta do contato (pelo telefone; na falta, pelo chat id) e da conversa
-#   aberta mais recente dele nesta caixa.
+#   não resolvida mais recente dele nesta caixa (aberta ou pendente). Vinculada sem correspondência cria como em criada;
+#   desvinculada sem correspondência não cria nada (só log). Contato não encontrado: fica só a correspondência e o log.
 # Repetir o evento não duplica nada. Erro não é engolido: sobe para o job (e a fila tenta de novo).
 class Etiquetas::AplicarEventoDoCelular
   ACOES = %w[criada renomeada apagada vinculada desvinculada].freeze
@@ -17,6 +18,7 @@ class Etiquetas::AplicarEventoDoCelular
   ACEITOS_ALEM_DE_LETRA = (('0'..'9').to_a + [SEPARADOR, '-']).freeze
   TAMANHO_MINIMO_DO_TITULO = 2 # a validação do Label pede ao menos dois caracteres
   PREFIXO_SEM_TITULO = 'whatsapp'.freeze
+  CONVERSA_EM_ANDAMENTO = %i[open pending].freeze
   CHAVES_DO_CHAT_ID = [Waha::ContactChatId::CHAT_ID, Waha::ContactChatId::JID, Waha::ContactChatId::LID].freeze
 
   def initialize(evento)
@@ -56,7 +58,7 @@ class Etiquetas::AplicarEventoDoCelular
     when 'criada', 'renomeada' then correspondencia!
     when 'apagada' then apagar_correspondencia
     when 'vinculada' then trocar_no_contato(correspondencia!.label, :adicionar)
-    when 'desvinculada' then trocar_no_contato(correspondencia!.label, :remover)
+    when 'desvinculada' then desvincular
     end
   end
 
@@ -111,6 +113,13 @@ class Etiquetas::AplicarEventoDoCelular
     [PREFIXO_SEM_TITULO, self.class.titulo_tecnico(label_wa_id)].compact_blank.join(SEPARADOR)
   end
 
+  def desvincular
+    existente = Etiquetas::DoCelular.find_by(inbox: @inbox, label_wa_id: label_wa_id)
+    return descartar("#{self.class.name}: desvinculada sem correspondência label_wa_id=#{label_wa_id}") if existente.nil?
+
+    trocar_no_contato(existente.label, :remover)
+  end
+
   def apagar_correspondencia
     Etiquetas::DoCelular.where(inbox: @inbox, label_wa_id: label_wa_id).delete_all
   end
@@ -141,8 +150,10 @@ class Etiquetas::AplicarEventoDoCelular
     registro.update_labels(novas) unless novas.sort == atuais.sort
   end
 
+  # A mais recente não resolvida: aberta ou pendente (robô atendendo). Adiada e resolvida ficam fora.
   def conversa_aberta_de(contato)
-    @inbox.conversations.where(contact: contato, status: :open).order(last_activity_at: :desc, id: :desc).first
+    @inbox.conversations.where(contact: contato, status: CONVERSA_EM_ANDAMENTO)
+          .order(last_activity_at: :desc, id: :desc).first
   end
 
   def contato_do_evento

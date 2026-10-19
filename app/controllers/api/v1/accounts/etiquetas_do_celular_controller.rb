@@ -4,14 +4,17 @@
 #   GET /api/v1/accounts/:account_id/etiquetas_do_celular
 #     => { payload: [{ label_id, inbox_id, caixa, nome_no_celular, color_index, criada_pelo_celular }] }
 #
-# Só leitura (quem grava é o Etiquetas::AplicarEventoDoCelular). Ler: quem lista as etiquetas (LabelPolicy#index?).
+# Só leitura (quem grava é o Etiquetas::AplicarEventoDoCelular). Ler: quem lista as etiquetas (LabelPolicy#index?), e
+# só os vínculos das caixas que a pessoa enxerga (User#assigned_inboxes: administrador, todas; agente, as de que é membro),
+# para não expor o nome de caixa alheia.
 # Sem a flag `etiquetas_do_celular`, 404 para todos.
 class Api::V1::Accounts::EtiquetasDoCelularController < Api::V1::Accounts::BaseController
   before_action :exigir_flag
 
   def index
     authorize(Label, :index?)
-    registros = Etiquetas::DoCelular.where(account: Current.account).includes(:inbox).order(:id)
+    registros = Etiquetas::DoCelular.where(account: Current.account, inbox_id: Current.user.assigned_inboxes.select(:id))
+                                    .includes(:inbox).order(:id)
     render json: { payload: registros.map { |registro| item(registro) } }
   end
 

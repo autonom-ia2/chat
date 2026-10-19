@@ -127,6 +127,7 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         antiga = conversa(ultima: 2.days.ago)
         recente = conversa(ultima: 1.hour.ago)
         resolvida = conversa(status: :resolved, ultima: Time.current)
+        adiada = conversa(status: :snoozed, ultima: Time.current)
 
         aplicar('vinculada')
 
@@ -134,6 +135,17 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(recente.reload.label_list).to eq(['novo_cliente'])
         expect(antiga.reload.label_list).to be_empty
         expect(resolvida.reload.label_list).to be_empty
+        expect(adiada.reload.label_list).to be_empty
+      end
+
+      it 'conversa pendente (robô atendendo) mais recente também conta como em andamento' do
+        aberta = conversa(ultima: 2.hours.ago)
+        pendente = conversa(status: :pending, ultima: 1.hour.ago)
+
+        aplicar('vinculada')
+
+        expect(pendente.reload.label_list).to eq(['novo_cliente'])
+        expect(aberta.reload.label_list).to be_empty
       end
 
       it 'sem correspondência: cria a etiqueta antes de aplicar' do
@@ -211,6 +223,19 @@ RSpec.describe Etiquetas::AplicarEventoDoCelular do
         expect(contato.reload.label_list).to eq(['vip'])
         expect(recente.reload.label_list).to be_empty
         expect(Etiquetas::DoCelular.count).to eq(1)
+      end
+
+      it 'sem correspondência: não cria etiqueta nem correspondência e não mexe no contato; só registra no log' do
+        contato.update_labels(['novo_cliente'])
+        allow(Rails.logger).to receive(:info)
+
+        aplicar('desvinculada')
+
+        expect(account.labels.count).to eq(0)
+        expect(Etiquetas::DoCelular.count).to eq(0)
+        expect(contato.reload.label_list).to eq(['novo_cliente'])
+        expect(Rails.logger).to have_received(:info)
+          .with(a_string_including('Etiquetas::AplicarEventoDoCelular', "inbox=#{inbox.id}", 'label_wa_id=3'))
       end
     end
 
