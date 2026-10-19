@@ -43,6 +43,20 @@ RSpec.describe Crm::Ai::UsageBroadcaster do
     end
   end
 
+  # #1897 (Decisão 2): com `crm_numeros_lentes` o gasto da IA deixa de chegar ao agente comum; o administrador segue.
+  it 'with crm_numeros_lentes, stops sending the AI cost to the plain agent' do
+    account, admin = create_account_and_user
+    plain_agent, = create_crm_agent(account: account)
+    account.enable_features('crm_numeros_lentes')
+    account.save!
+
+    described_class.broadcast(build(:crm_ai_usage_event, account: account, feature: 'agente_resposta', model: 'gpt-5.4'))
+
+    streams = broadcast_calls.map(&:first)
+    expect(streams).to include(admin.pubsub_token)
+    expect(streams).not_to include(plain_agent.pubsub_token)
+  end
+
   def broadcast_calls
     @broadcast_calls ||= []
   end

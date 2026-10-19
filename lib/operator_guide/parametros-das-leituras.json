@@ -1376,6 +1376,12 @@
     "controller": "api/v1/accounts/crm/my_booking_hours#show",
     "parametros": []
   },
+  "crm/numeros": {
+    "controller": "api/v1/accounts/crm/numeros#show",
+    "parametros": [
+      "mes"
+    ]
+  },
   "crm/pipelines": {
     "controller": "api/v1/accounts/crm/pipelines#index",
     "parametros": []
