@@ -22,6 +22,19 @@ pt_BR:
         next_follow_up_at: 'Próximo retorno'
     follow_up_reminder:
       card: 'Card: %{card}'
+      due_at: 'Retorno marcado para: %{time}'
+    # Modelos da página de agendamento (Lote 5 da F2). O título fica gravado na página nova e vira o título do card.
+    booking_v2:
+      templates:
+        sales_30:
+          title: 'Conversa para cotar o seguro'
+          description: 'Escolha um horário e a gente faz a cotação do seu seguro por vídeo no WhatsApp.'
+        consult_45:
+          title: 'Atendimento no escritório'
+          description: 'Escolha um horário para falar do seu seguro aqui no escritório.'
+        visit_60:
+          title: 'Reunião sobre o seguro da empresa'
+          description: 'Escolha um horário para a reunião presencial sobre o seguro da sua empresa.'
   # Erro ao trazer a identidade visual do site (Lote 4 da F2).
   brand_kits:
     import_errors:

@@ -43,6 +43,19 @@ RSpec.describe 'Pacote de tradução da conta no e-mail', type: :mailer do
     end
   end
 
+  it 'marca o retorno do lembrete sem confundir com o vencimento do seguro (#1802, lote 5)' do
+    stub_const('PacoteRetornoMailer', Class.new(ApplicationMailer) do
+      def aviso
+        mail(to: 'pessoa@example.com', subject: I18n.t('crm.follow_up_reminder.due_at', time: '20/10'), body: 'x')
+      end
+    end)
+
+    with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') do
+      expect(PacoteRetornoMailer.with(account: conta('seguros', 'corretora')).aviso.subject).to eq('Retorno marcado para: 20/10')
+      expect(PacoteRetornoMailer.with(account: conta('geral')).aviso.subject).to eq('Vence em: 20/10')
+    end
+  end
+
   it 'escreve com o geral com o interruptor desligado' do
     with_modified_env(AUTONOMIA_PACOTES_ENABLED: nil) do
       expect(PacoteTesteMailer.with(account: conta('seguros', 'saude_beneficios')).aviso.subject).to eq('Ganho')
