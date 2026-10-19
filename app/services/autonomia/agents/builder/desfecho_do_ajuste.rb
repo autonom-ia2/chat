@@ -73,10 +73,10 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     resposta = dados.dig('correcao', 'resposta') || dados['resposta'].to_h
     return fechar_desfeito!(token, resposta, conferencia) if conferencia.dig('desfeito', 'ok') == true
 
-    mensagens, pendencia, aviso = conversa_do_fechamento(dados, conferencia, desfecho, resposta)
+    mensagens, pendencia, aviso, opcoes = conversa_do_fechamento(dados, conferencia, desfecho, resposta)
     estado = estado_do_ajuste(resposta.merge('needs_more_info' => precisa?(pendencia.first, aviso, conferencia),
                                              'next_question' => mensagens.last.to_s))
-             .merge(estado_aplicado(dados, conferencia, resposta, pendencia))
+             .merge(estado_aplicado(dados, conferencia, resposta, pendencia), 'opcoes_de_resposta' => opcoes)
     if @thread.mark_ready!(token, state: estado)
       mensagens.each { |mensagem| persist_assistant_turn!(mensagem) }
       # #1428 (parte 3, entrega B): o cartão sai agora; a prova chega segundos depois, pelo job.
@@ -85,15 +85,15 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     log_do_ajuste(conferencia, desfecho)
   end
 
-  # -> [mensagens ao dono, [pendência, origem], aviso]. A pergunta que o código abre sobre o turno (:codigo) zera a
-  # contagem da pendência; a do modelo (:modelo) conta como laço. O que o dono não pediu não vira bolha: o cartão do
-  # resultado na tela mostra (parte 3).
+  # -> [mensagens ao dono, [pendência, origem], aviso, opções]. A pergunta que o código abre sobre o turno (:codigo) zera
+  # a contagem da pendência; a do modelo (:modelo) conta como laço. O que o dono não pediu não vira bolha: o cartão do
+  # resultado na tela mostra (parte 3). As opções são as de quem fez a pergunta, que é sempre a última mensagem.
   def conversa_do_fechamento(dados, conferencia, desfecho, resposta)
     do_modelo = pergunta_do_modelo(resposta)
-    texto = do_modelo || pendencia_da_conferencia(conferencia, desfecho)
+    texto, opcoes = do_modelo ? [do_modelo, opcoes_do_modelo(resposta)] : pergunta_da_conferencia(conferencia, desfecho)
     origem = origem_da_pendencia(texto, do_modelo)
     aviso = aviso_do_desfecho(desfecho, dados, conferencia)
-    [[resposta['resposta_ao_dono'].to_s.strip, aviso, texto].compact_blank, [texto, origem], aviso]
+    [[resposta['resposta_ao_dono'].to_s.strip, aviso, texto].compact_blank, [texto, origem], aviso, opcoes]
   end
 
   # A referência (versão de antes e campos) do que o dono não pediu, para o turno seguinte: "tira isso" volta ao valor
@@ -153,14 +153,19 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     AVISOS_DO_DESFECHO[desfecho] && texto_do_ajuste(AVISOS_DO_DESFECHO[desfecho])
   end
 
-  def pendencia_da_conferencia(conferencia, desfecho)
-    return if SEM_PENDENCIA.include?(desfecho)
+  # -> [pergunta, opções] que o código abre sobre o turno. A do que faltou leva as opções da correção só quando a
+  # explicação dela está na pergunta; a do conflito, os dois botões fixos. O caminho diz qual é, nunca o texto.
+  def pergunta_da_conferencia(conferencia, desfecho)
+    return [nil, []] if SEM_PENDENCIA.include?(desfecho)
 
     textos = Autonomia::Agents::Builder::TextosDoAjuste
-    falta = conferencia['falta'] && textos.pergunta_do_que_faltou(conferencia, idioma_do_ajuste, explicacao: @explicacao_da_correcao)
-    return falta if falta
+    if conferencia['falta']
+      pergunta = textos.pergunta_do_que_faltou(conferencia, idioma_do_ajuste, explicacao: @explicacao_da_correcao)
+      return [pergunta, @explicacao_da_correcao ? @opcoes_da_correcao : []]
+    end
+    return [nil, []] unless conferencia['conflito']
 
-    textos.pergunta_do_conflito(Array(conferencia['itens']), idioma_do_ajuste) if conferencia['conflito']
+    [textos.pergunta_do_conflito(Array(conferencia['itens']), idioma_do_ajuste), textos.opcoes_do_conflito(idioma_do_ajuste)]
   end
 
   # A pergunta que o próprio Construtor fez sobre o que ficou vago.

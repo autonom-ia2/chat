@@ -224,6 +224,37 @@ RSpec.describe Autonomia::Agents::DesfazerAjuste do
       expect(estado).not_to have_key('nao_pedido_anterior')
     end
 
+    # Revisão crítica da entrega C (2): as respostas prontas da pergunta saem com o Desfazer, com o pedido em voo
+    # cancelado e com a volta por Versões.
+    it 'o Desfazer tira as respostas prontas da pergunta' do
+      aplicar_ajuste
+      thread.update_columns(state: thread.reload.state.merge('opcoes_de_resposta' => %w[Sim Não])) # rubocop:disable Rails/SkipsModelValidations
+
+      desfazer
+
+      expect(estado).not_to have_key('opcoes_de_resposta')
+    end
+
+    it 'o pedido em voo cancelado pelo Desfazer perde as respostas prontas' do
+      aplicar_ajuste
+      outra = Autonomia::Agents::BuildThread.create!(account: account, agent: agent, state: { 'opcoes_de_resposta' => %w[Sim Não] })
+      outra.begin_build!
+
+      desfazer
+
+      expect(outra.reload).to be_failed
+      expect(outra.state).not_to have_key('opcoes_de_resposta')
+    end
+
+    it 'a volta por Versões tira as respostas prontas das conversas do agente' do
+      aplicar_ajuste
+      thread.update_columns(state: thread.reload.state.merge('opcoes_de_resposta' => %w[Sim Não])) # rubocop:disable Rails/SkipsModelValidations
+
+      agent.reload.restore_instruction!(agent.instruction_versions.find_by!(reason: 'base'), created_by: user)
+
+      expect(estado).not_to have_key('opcoes_de_resposta')
+    end
+
     it 'recusa agente manual sem mexer em nada' do
       aplicar_ajuste
       agent.update_columns(mode: Autonomia::Agents::Agent.modes[:manual]) # rubocop:disable Rails/SkipsModelValidations

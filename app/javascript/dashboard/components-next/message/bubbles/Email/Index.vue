@@ -15,9 +15,13 @@ import TranslationToggle from 'dashboard/components-next/message/TranslationTogg
 import { useMessageContext } from '../../provider.js';
 import { MESSAGE_TYPES } from 'next/message/constants.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
+import CartaoDoEmail from 'dashboard/components-next/conversa-canal/email/CartaoDoEmail.vue';
+import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 
 const { content, contentAttributes, attachments, messageType } =
   useMessageContext();
+// #1786: com a conversa de e-mail nova ligada, o cartão com a cara do Gmail.
+const emailNovo = useEmailDaConversa().ligado;
 
 const isExpandable = ref(false);
 const isExpanded = ref(false);
@@ -103,7 +107,9 @@ const handleSeeOriginal = () => {
 </script>
 
 <template>
+  <CartaoDoEmail v-if="emailNovo" />
   <BaseBubble
+    v-else
     class="w-full"
     :class="{
       'bg-n-slate-4': isIncoming,

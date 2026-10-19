@@ -108,6 +108,9 @@ module Crm
       # Memória das IAs (#1601): o ContextBuilder com a memória traz os ids locais; sem ela, nada muda aqui.
       def memoria? = @context.to_h.key?(:memoria_refs)
 
+      # #1807: com a flag `email_autoria`, a legenda do aviso de e-mail vai no fim do prefixo.
+      def email_autoria? = Crm::Email::Autoria.ligada?(@card&.account)
+
       # Os ids locais (m1..mN) das mensagens e o agendamento desta avaliação, para o Escritor (nunca vão ao modelo).
       def memoria_interna = @context.slice(:memoria_refs, :memoria_token)
 
@@ -137,7 +140,7 @@ module Crm
 
       # Prefixo ESTÁVEL (call-invariant) p/ prompt caching — constante congelada em ClassifierPrompt::TEXT (ou a
       # variante com os agentes de IA, #1593). Estágios/critérios DINÂMICOS ficam no user_input. Ver ClassifierPrompt.
-      def instructions = ClassifierPrompt.para(@eligible_agents, memoria: memoria?)
+      def instructions = ClassifierPrompt.para(@eligible_agents, memoria: memoria?, email_autoria: email_autoria?)
 
       def user_input = entrada.merge(other_subjects_payload).to_json
 

@@ -40,6 +40,12 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(described_class::SEM_DESFAZER - para(admin).catalogo).to be_empty
     end
 
+    # #1809: "Excluir para sempre" da Lixeira do e-mail apaga a conversa num job; o Guia pede confirmação.
+    it 'excluir para sempre da Lixeira do e-mail pede confirmação, mover de pasta não' do
+      expect(para(admin).desfazivel?('DELETE conversa_canal/pastas_do_email/:conversation_id')).to be(false)
+      expect(para(admin).desfazivel?('PUT conversa_canal/pastas_do_email/:conversation_id')).to be(true)
+    end
+
     # Dinheiro da conta na plataforma nunca entra no catálogo do Guia.
     it 'deixa de fora plano, cobrança e créditos', :aggregate_failures do
       catalogo = para(admin).catalogo.join(' ')

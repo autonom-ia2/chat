@@ -427,6 +427,16 @@
     ],
     "sem_corpo": true
   },
+  "DELETE conversa_canal/pastas_do_email/:conversation_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#destroy",
+    "modelo": "ConversaCanal::PastaDoEmail",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:26",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
+    ],
+    "sem_corpo": true
+  },
   "DELETE conversations/:conversation_id/draft_messages": {
     "completo": true,
     "controller": "api/v1/accounts/conversations/draft_messages#destroy",
@@ -549,7 +559,7 @@
     "controller": "api/v1/accounts/crm/follow_ups#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:69",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -4659,6 +4669,19 @@
     ],
     "sem_corpo": false
   },
+  "PATCH conversa_canal/pastas_do_email/:conversation_id": {
+    "campos": {
+      "pasta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:37",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
+    ],
+    "sem_corpo": false
+  },
   "PATCH conversations/:conversation_id/draft_messages": {
     "campos": {
       "draft_message": {
@@ -5251,8 +5274,8 @@
     "modelo": "Crm::FollowUp",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:203",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:204",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": false
   },
@@ -13411,6 +13434,21 @@
     ],
     "sem_corpo": false
   },
+  "POST conversa_canal/ditados": {
+    "campos": {
+      "audio": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/conversa_canal/ditados#create",
+    "motivos": [
+      "leitura crua sem tipo: audio (repassada a ConversaCanal::Ditado.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/ditados_controller.rb:15",
+      "app/controllers/api/v1/accounts/conversa_canal/ditados_controller.rb:16"
+    ],
+    "sem_corpo": false
+  },
   "POST conversa_canal/encaminhamentos": {
     "campos": {
       "conversation_id": {},
@@ -13633,7 +13671,7 @@
     "controller": "api/v1/accounts/conversations/messages#translate",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:46",
+      "app/controllers/concerns/conversa_canal/traducao_em_segundo_plano.rb:8",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
@@ -14943,7 +14981,7 @@
     "modelo": "Crm::FollowUp",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:48",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:203"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:204"
     ],
     "sem_corpo": false
   },
@@ -14952,7 +14990,7 @@
     "controller": "api/v1/accounts/crm/follow_ups#cancel",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:77",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -14961,7 +14999,7 @@
     "controller": "api/v1/accounts/crm/follow_ups#complete",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:73",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -14970,7 +15008,7 @@
     "controller": "api/v1/accounts/crm/follow_ups#dismiss_reminder",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:81",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -14978,14 +15016,19 @@
     "campos": {
       "due_at": {
         "tipo": "data_hora"
+      },
+      "reminders_only": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#reschedule",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:89",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94",
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:93",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": false
   },
@@ -22976,6 +23019,19 @@
     ],
     "sem_corpo": false
   },
+  "PUT conversa_canal/pastas_do_email/:conversation_id": {
+    "campos": {
+      "pasta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:37",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
+    ],
+    "sem_corpo": false
+  },
   "PUT conversations/:conversation_id/draft_messages": {
     "campos": {
       "draft_message": {
@@ -23607,8 +23663,8 @@
     "modelo": "Crm::FollowUp",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:203",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:204",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": false
   },
