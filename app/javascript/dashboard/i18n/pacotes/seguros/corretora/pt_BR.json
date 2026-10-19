@@ -876,7 +876,6 @@
     "EMAIL_CAMPAIGN": {
       "DIALOG": {
         "NAME_PLACEHOLDER": "ex.: Renovação de novembro",
-        "SUBJECT_PLACEHOLDER": "ex.: {'{{ nome }}'}, o seu seguro vence em breve",
         "FROM_NAME_PLACEHOLDER": "ex.: Sua Corretora de Seguros",
         "REPLY_TO_PLACEHOLDER": "ex.: atendimento{'@'}suacorretora.com.br",
         "FROM_EMAIL_PLACEHOLDER": "ex.: seguros{'@'}suacorretora.com.br"
@@ -977,17 +976,17 @@
         "TEXTO": "Olá, [nome_cliente]! Aqui é da [nome_empresa]. Que bom ter você com a gente. Quando precisar de cotação, segunda via ou ajuda com o seu seguro, é só mandar mensagem por aqui."
       },
       "lembrete": {
-        "TEXTO": "Olá, [nome_cliente]! Lembrete do seu horário com a [nome_empresa]: dia [data], às [horario]. Você confirma? Toque em uma das opções abaixo."
+        "TEXTO": "Olá, [nome_cliente]! Lembrete do seu horário com [nome_empresa]: dia [data], às [horario]. Você confirma? Toque em uma das opções abaixo."
       },
       "promocao": {
         "TITULO": "Oferta de seguro",
         "PARA": "Para avisar de um desconto com prazo para fazer o seguro.",
-        "TEXTO": "Oi, [nome_cliente]! Até [data], você tem [desconto] de desconto para fazer o seu seguro com a [nome_empresa]. Quer uma cotação? Veja no botão abaixo."
+        "TEXTO": "Oi, [nome_cliente]! Até [data], você tem [desconto] de desconto para fazer o seu seguro com [nome_empresa]. Quer uma cotação? Veja no botão abaixo."
       },
       "cobranca": {
         "TITULO": "Parcela a vencer",
         "PARA": "Para lembrar o cliente da parcela do seguro que vai vencer.",
-        "TEXTO": "Olá, [nome_cliente]. Lembrete da [nome_empresa]: a parcela do seu seguro, de [valor], vence em [data]. Se já pagou, pode desconsiderar. Se for boleto, confira se está no nome da seguradora. Se precisar da segunda via, toque no botão abaixo."
+        "TEXTO": "Olá, [nome_cliente]. Lembrete de [nome_empresa]: a parcela do seu seguro, de [valor], vence em [data]. Se já pagou, pode desconsiderar. Se for boleto, confira se está no nome da seguradora. Se precisar da segunda via, toque no botão abaixo."
       },
       "retomar": {
         "TITULO": "Retomar a cotação",
@@ -1024,10 +1023,10 @@
         "TEXTO": "Oi, [nome_cliente]! Veja alguns seguros que a gente faz para você:",
         "BOTAO": "Quero cotar",
         "CARTAO_1": {
-          "TEXTO": "Seguro do carro, com guincho e carro reserva."
+          "TEXTO": "Seguro do carro: a gente cota em várias seguradoras."
         },
         "CARTAO_2": {
-          "TEXTO": "Seguro da casa, com assistência 24 horas."
+          "TEXTO": "Seguro da casa: cotação sem compromisso."
         }
       },
       "formulario": {

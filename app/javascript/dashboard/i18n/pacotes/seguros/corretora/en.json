@@ -876,7 +876,6 @@
     "EMAIL_CAMPAIGN": {
       "DIALOG": {
         "NAME_PLACEHOLDER": "e.g. November renewals",
-        "SUBJECT_PLACEHOLDER": "e.g. {'{{ nome }}'}, your insurance is due soon",
         "FROM_NAME_PLACEHOLDER": "e.g. Your Insurance Brokerage",
         "REPLY_TO_PLACEHOLDER": "e.g. service{'@'}yourbrokerage.com",
         "FROM_EMAIL_PLACEHOLDER": "e.g. insurance{'@'}yourbrokerage.com"
@@ -1024,10 +1023,10 @@
         "TEXTO": "Hi, [nome_cliente]! Here are some insurance options we can set up for you:",
         "BOTAO": "Get a quote",
         "CARTAO_1": {
-          "TEXTO": "Car insurance, with towing and a rental car."
+          "TEXTO": "Car insurance: we get quotes from several insurers."
         },
         "CARTAO_2": {
-          "TEXTO": "Home insurance, with 24-hour assistance."
+          "TEXTO": "Home insurance: a quote with no commitment."
         }
       },
       "formulario": {

@@ -1309,7 +1309,7 @@
                 },
                 {
                   "type": "BODY",
-                  "text": "Car insurance, with towing and a rental car."
+                  "text": "Car insurance: we get quotes from several insurers."
                 },
                 {
                   "type": "BUTTONS",
@@ -1336,7 +1336,7 @@
                 },
                 {
                   "type": "BODY",
-                  "text": "Home insurance, with 24-hour assistance."
+                  "text": "Home insurance: a quote with no commitment."
                 },
                 {
                   "type": "BUTTONS",
@@ -1545,7 +1545,7 @@
       "components": [
         {
           "type": "BODY",
-          "text": "Olá, {{1}}! Lembrete do seu horário com a {{2}}: dia {{3}}, às {{4}}. Você confirma? Toque em uma das opções abaixo.",
+          "text": "Olá, {{1}}! Lembrete do seu horário com {{2}}: dia {{3}}, às {{4}}. Você confirma? Toque em uma das opções abaixo.",
           "example": {
             "body_text": [
               [
@@ -1645,7 +1645,7 @@
       "components": [
         {
           "type": "BODY",
-          "text": "Oi, {{1}}! Até {{2}}, você tem {{3}} de desconto para fazer o seu seguro com a {{4}}. Quer uma cotação? Veja no botão abaixo.",
+          "text": "Oi, {{1}}! Até {{2}}, você tem {{3}} de desconto para fazer o seu seguro com {{4}}. Quer uma cotação? Veja no botão abaixo.",
           "example": {
             "body_text": [
               [
@@ -1691,7 +1691,7 @@
       "components": [
         {
           "type": "BODY",
-          "text": "Olá, {{1}}. Lembrete da {{2}}: a parcela do seu seguro, de {{3}}, vence em {{4}}. Se já pagou, pode desconsiderar. Se for boleto, confira se está no nome da seguradora. Se precisar da segunda via, toque no botão abaixo.",
+          "text": "Olá, {{1}}. Lembrete de {{2}}: a parcela do seu seguro, de {{3}}, vence em {{4}}. Se já pagou, pode desconsiderar. Se for boleto, confira se está no nome da seguradora. Se precisar da segunda via, toque no botão abaixo.",
           "example": {
             "body_text": [
               [
@@ -1806,7 +1806,7 @@
                 },
                 {
                   "type": "BODY",
-                  "text": "Seguro do carro, com guincho e carro reserva."
+                  "text": "Seguro do carro: a gente cota em várias seguradoras."
                 },
                 {
                   "type": "BUTTONS",
@@ -1833,7 +1833,7 @@
                 },
                 {
                   "type": "BODY",
-                  "text": "Seguro da casa, com assistência 24 horas."
+                  "text": "Seguro da casa: cotação sem compromisso."
                 },
                 {
                   "type": "BUTTONS",
