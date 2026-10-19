@@ -547,22 +547,24 @@
 # cliente (alguém em cópia, a equipe, resposta automática) vai às IAs com o aviso "escrito por outra pessoa"; vale para o
 # pedido, mas não vira dado pessoal do cliente na memória e não bloqueia o contato (opt-out). E toda IA lê só o que foi
 # escrito naquele e-mail, sem o histórico citado (Crm::Email::Autoria). Posição 37 na feature_flags_ext_1, bit 36
-# (68719476736), logo depois de `tela_inicial_resumo` (tabela da Orquestração, 19/10). Desligada (padrão): tudo como antes.
-# Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+# (68719476736), logo depois de `tela_inicial_resumo` (tabela da Orquestração, 19/10). Desligada: tudo como antes.
+# Padrão das contas novas: ligada desde o #1913 (migration 20261108180000), pedido do Rodrigo em 19/10/2026. Antes, só
+# nas contas 1, 16 e 18 da stack Hub2You.
 - name: email_autoria
   display_name: Quem escreveu cada e-mail, para as IAs
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Conversa de e-mail com a cara do Gmail (#1786, #1809, épico #1701): na caixa de e-mail a conversa vira uma sequência
 # de cartões (foto, remetente real, para/cc, data, corpo limpo, citação em "…", anexos), com o assunto no topo e
 # Responder / Responder a todos / Encaminhar no fim. Separada da `conversa_cara_do_canal` para não ligar sozinha onde
 # o WhatsApp já está ligado. Posição 38 na feature_flags_ext_1, bit 37 (137438953472), logo depois de `email_autoria`
-# (tabela da Orquestração, 19/10). Desligada (padrão): a conversa de e-mail de sempre. Nasce ligada nas contas 1, 16 e
-# 18 da stack Hub2You e na conta 1 da stack Autonom.ia (Orquestração, depois do deploy).
+# (tabela da Orquestração, 19/10). Desligada: a conversa de e-mail de sempre. Padrão das contas novas: ligada desde o
+# #1913 (migration 20261108180000), pedido do Rodrigo em 19/10/2026. Antes, só nas contas 1, 16 e 18 da stack Hub2You
+# e na conta 1 da stack Autonom.ia.
 - name: conversa_email_nova
   display_name: Conversa de e-mail com a cara do Gmail
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Contato salvo na agenda do aparelho antes de enviar pelo WhatsApp API e lida ao responder (#1865). Ligada: antes do
@@ -584,9 +586,10 @@
 # o lido do último lá, e a conversa vira lida aqui quando o cliente leu no servidor o último e-mail recebido (janela de
 # 2 dias). Caixa só com encaminhamento não sincroniza. Posição 40 na feature_flags_ext_1, bit 39 (549755813888), logo
 # depois de `whatsapp_agenda_do_contato` (tabela da Orquestração, 19/10). Tabela própria
-# conversa_canal_email_lidos (migration). Desligada (padrão): tudo como antes. Nasce ligada nas contas 1, 16 e 18 da
-# stack Hub2You e na conta 1 da stack Autonom.ia (Orquestração, depois do deploy).
+# conversa_canal_email_lidos (migration). Desligada: tudo como antes. Padrão das contas novas: ligada desde o #1913
+# (migration 20261108180000), pedido do Rodrigo em 19/10/2026. Antes, só nas contas 1, 16 e 18 da stack Hub2You e na
+# conta 1 da stack Autonom.ia.
 - name: email_lido_sincronizado
   display_name: Lido do e-mail sincronizado com o servidor
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
