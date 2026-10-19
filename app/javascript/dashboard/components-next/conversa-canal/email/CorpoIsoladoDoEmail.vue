@@ -27,6 +27,9 @@ const QUADROS_DE_ESPERA = 120;
 const ALTURA_MAXIMA = 60000;
 const MUDANCAS_POR_SEGUNDO = 20;
 const UM_SEGUNDO = 1000;
+// Pausada, tenta de novo depois de um tempo (poucas vezes): a altura final vale.
+const RETOMAR_EM = 1000;
+const RETOMADAS = 3;
 
 const moldura = useTemplateRef('moldura');
 const documento = computed(() =>
@@ -40,6 +43,8 @@ let espera = 0;
 let recentes = [];
 let pausada = false;
 let larguraMedida = 0;
+let retomada = 0;
+let retomadas = 0;
 
 const definirAltura = nova => {
   altura.value = nova;
@@ -79,6 +84,16 @@ const alturaDoConteudo = () => {
 };
 
 // `explicada`: a mudança veio de imagem carregando (não conta para o disjuntor).
+const pausar = () => {
+  pausada = true;
+  if (retomadas >= RETOMADAS) return;
+  retomadas += 1;
+  clearTimeout(retomada);
+  // Religa e mede (aoClicar, logo abaixo de medir).
+  // eslint-disable-next-line no-use-before-define
+  retomada = setTimeout(() => aoClicar(), RETOMAR_EM);
+};
+
 const medir = ({ explicada = false } = {}) => {
   if (!documentoLigado?.documentElement || !moldura.value) return;
   // Escondida (aba, recolhida): sem largura, a medida seria 0 e não vale.
@@ -87,7 +102,7 @@ const medir = ({ explicada = false } = {}) => {
   if (pausada) return;
   const nova = alturaDoConteudo();
   if (nova === altura.value) return;
-  if (!explicada && mudouDemais()) pausada = true;
+  if (!explicada && mudouDemais()) pausar();
   definirAltura(nova);
 };
 
@@ -108,6 +123,7 @@ const desligar = () => {
   documentoLigado?.removeEventListener('click', aoClicar);
   observador?.disconnect();
   observador = null;
+  clearTimeout(retomada);
   documentoLigado = null;
 };
 
@@ -116,6 +132,7 @@ const ligar = doc => {
   documentoLigado = doc;
   religar();
   larguraMedida = 0;
+  retomadas = 0;
   doc.addEventListener('click', abrirImagemDoCorpo);
   // Imagem que termina de carregar muda a altura (e explica a mudança). Clique da pessoa
   // (abrir um <details>, por exemplo) também.

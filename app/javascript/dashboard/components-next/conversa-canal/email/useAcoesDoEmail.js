@@ -23,6 +23,8 @@ const ESTILO_DA_IMPRESSAO = `
   dd { margin: 0; }
   img { max-width: 100%; }
   blockquote { margin: 0 0 0 .8ex; border-left: 1px solid #ccc; padding-left: 1ex; }
+  #email_impresso { line-height: normal; }
+  :where(img[data-proporcao]) { height: auto; }
 `;
 
 const TRADUZINDO_NO_SERVIDOR = 202;

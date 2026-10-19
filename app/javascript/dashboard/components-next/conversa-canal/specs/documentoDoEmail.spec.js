@@ -348,6 +348,41 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(doc.getElementById('p').getAttribute('style') || '').not.toContain(
       'aspect-ratio'
     );
+    // Só a imagem com proporção ganha height:auto; `width="100%" height="20"` fica 20.
+    expect(doc.getElementById('e').hasAttribute('data-proporcao')).toBe(true);
+    expect(doc.getElementById('p').hasAttribute('data-proporcao')).toBe(false);
+    expect(doc.querySelector('style').textContent).toContain(
+      ':where(img[data-proporcao]){height:auto}'
+    );
+  });
+
+  it('atributos antigos de tabela viram estilo: fundo, altura e nowrap', () => {
+    const doc = ler(
+      documentoIsolado(
+        '<table id="t" height="120" background="https://ok.test/f.png"><tr id="r" height="40">' +
+          '<td id="c" nowrap background="/relativo.png">a</td></tr></table>'
+      )
+    );
+    const tabela = doc.getElementById('t').getAttribute('style');
+    expect(tabela).toContain('height: 120px');
+    expect(tabela).toContain('https://ok.test/f.png');
+    expect(doc.getElementById('r').getAttribute('style')).toContain(
+      'height: 40px'
+    );
+    const celula = doc.getElementById('c').getAttribute('style');
+    expect(celula).toContain('white-space: nowrap');
+    expect(celula).not.toContain('relativo');
+  });
+
+  it('Imprimir guarda a proporção da imagem, como na tela', () => {
+    const impresso = corpoParaImprimir(
+      documentoIsolado(
+        '<img src="https://x.test/e.gif" width="1" height="20"><p>a</p>'
+      )
+    );
+    const imagem = ler(impresso).querySelector('img');
+    expect(imagem.getAttribute('style')).toContain('aspect-ratio:1 / 20');
+    expect(imagem.hasAttribute('data-proporcao')).toBe(true);
   });
 
   it('endereço relativo no CSS e na tabela não chega ao painel; o completo fica', () => {

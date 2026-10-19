@@ -22,6 +22,13 @@ export const CSS_PERMITIDO = [
   ...allowedCssProperties,
   'transform',
   'transform-origin',
+  // Comuns em e-mail de hoje e mantidos pelo Gmail.
+  'justify-content',
+  'align-items',
+  'gap',
+  'box-shadow',
+  'text-shadow',
+  'visibility',
 ];
 
 export const CSP_DO_EMAIL = [
@@ -43,14 +50,18 @@ const PROTOCOLOS_DE_LINK = ['http:', 'https:', 'mailto:', 'tel:'];
 const PROTOCOLOS_DE_IMAGEM = ['http:', 'https:'];
 const IMAGEM_EMBUTIDA = 'data:image/';
 
+export const MARCA_DA_PROPORCAO = 'data-proporcao';
+
 // O padrão de um leitor de e-mail para o que o remetente não definiu (como o Gmail):
 // sem a margem do navegador, letra sem serifa. Vem antes do CSS do remetente, que ganha.
 const PADRAO_DO_LEITOR = [
   ':root{color-scheme:light}',
-  'body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;color:#1f1f1f}',
+  'body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222}',
+  ':where(a){color:#15c}',
   'img{max-width:100%}',
-  // Imagem estreitada mantém a proporção dos atributos; peso zero: o remetente ganha.
-  ':where(img[width][height]){height:auto}',
+  // Imagem estreitada mantém a proporção dos atributos (manterProporcao); peso zero: o
+  // remetente ganha.
+  `:where(img[${MARCA_DA_PROPORCAO}]){height:auto}`,
   'img:not(a img){cursor:zoom-in}',
   'a:focus-visible{outline:2px solid #2563eb;outline-offset:2px;border-radius:2px}',
 ].join('\n');
@@ -159,6 +170,7 @@ const tamanho = valor => {
   const numero = Number(String(valor || '').trim());
   return Number.isFinite(numero) && numero > 0 ? numero : 0;
 };
+// Só com os dois atributos em número (`width="100%"` fica com a altura do atributo).
 const manterProporcao = imagem => {
   const largura = tamanho(imagem.getAttribute('width'));
   const alturaDaImagem = tamanho(imagem.getAttribute('height'));
@@ -169,6 +181,36 @@ const manterProporcao = imagem => {
     'style',
     `${antes}${PROPORCAO}:${largura} / ${alturaDaImagem}`
   );
+  imagem.setAttribute(MARCA_DA_PROPORCAO, '');
+};
+
+// Atributos antigos de tabela que o sanitizador descarta viram o estilo equivalente,
+// como o Gmail mostra: fundo de célula, altura de tabela e de linha, nowrap. O endereço
+// do fundo passa pela mesma limpeza de url() do CSS.
+const medida = valor => {
+  const texto = String(valor || '').trim();
+  return tamanho(texto) ? `${texto}px` : texto;
+};
+const ATRIBUTOS_DE_TABELA = [
+  [
+    'table[background], td[background], th[background]',
+    'background-image',
+    elemento => `url("${elemento.getAttribute('background')}")`,
+  ],
+  [
+    'table[height], tr[height]',
+    'height',
+    elemento => medida(elemento.getAttribute('height')),
+  ],
+  ['td[nowrap], th[nowrap]', 'white-space', () => 'nowrap'],
+];
+const atributosDeTabelaComoEstilo = doc => {
+  ATRIBUTOS_DE_TABELA.forEach(([seletor, propriedade, valor]) => {
+    doc.body.querySelectorAll(seletor).forEach(elemento => {
+      if (elemento.style.getPropertyValue(propriedade)) return;
+      elemento.style.setProperty(propriedade, valor(elemento));
+    });
+  });
 };
 
 // O srcdoc herda o endereço do painel: endereço relativo (no <img> ou no url() do CSS)
@@ -242,6 +284,7 @@ const montarDocumento = (html, semRastreio, tela) => {
   const direcao = raizOriginal.getAttribute('dir');
   const atributos = atributosDoCorpo(original, semRastreio);
   envolverOCorpo(original);
+  atributosDeTabelaComoEstilo(original);
   // Antes do sanitizador: svg e math relidos viram <style> sem folha, e ele lança.
   semMarcacaoPerigosa(original.documentElement);
   prepararEstilos(original, { conferirUrls: true, tela });
@@ -312,11 +355,15 @@ export const corpoParaImprimir = srcdoc => {
   div.append(...doc.body.childNodes);
   doc.body.replaceChildren(div);
   prepararEstilos(doc, { conferirUrls: true });
-  return sanitize(comoTexto(doc), '', {
+  const limpo = sanitize(comoTexto(doc), '', {
     id: ESCOPO_DA_IMPRESSAO,
     preserveCssPriority: true,
     allowedCssProperties: CSS_PERMITIDO,
     // Como na tela: imagem embutida (data:image) fica, endereço relativo sai.
     rewriteExternalResources: imagemSemRastreio(semMudar),
   });
+  // O sanitizador tira a proporção da imagem: volta, como na tela.
+  const impresso = lerDocumento(limpo);
+  impresso.querySelectorAll('img').forEach(manterProporcao);
+  return impresso.body.innerHTML;
 };
