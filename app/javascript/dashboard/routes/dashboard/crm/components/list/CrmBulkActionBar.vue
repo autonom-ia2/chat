@@ -36,6 +36,11 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  // O que a pessoa pode fazer em massa (#1874): cada botão só aparece com a permissão da ação.
+  permissions: {
+    type: Object,
+    default: () => ({ move: true, assign: true, status: true, archive: true }),
+  },
 });
 
 const emit = defineEmits(['move', 'assign', 'status', 'archive', 'clear']);
@@ -151,6 +156,7 @@ onBeforeUnmount(() => {
         <div class="w-px h-6 bg-n-weak" />
 
         <SelectMenu
+          v-if="permissions.move"
           v-model="stageValue"
           :options="stageOptions"
           :label="t('CRM_KANBAN.BULK.MOVE')"
@@ -159,6 +165,7 @@ onBeforeUnmount(() => {
         />
 
         <ComboBox
+          v-if="permissions.assign"
           v-model="ownerValue"
           :options="ownerOptions"
           :placeholder="t('CRM_KANBAN.BULK.ASSIGN')"
@@ -169,6 +176,7 @@ onBeforeUnmount(() => {
         />
 
         <SelectMenu
+          v-if="permissions.status"
           v-model="statusValue"
           :options="statusOptions"
           :label="t('CRM_KANBAN.BULK.STATUS')"
@@ -177,6 +185,7 @@ onBeforeUnmount(() => {
         />
 
         <Button
+          v-if="permissions.archive"
           variant="ghost"
           color="ruby"
           size="sm"

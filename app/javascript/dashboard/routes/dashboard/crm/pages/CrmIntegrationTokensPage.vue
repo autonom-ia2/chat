@@ -18,12 +18,13 @@ const { canAdminCrm } = useCrmPermissions();
 
 const goBack = () => router.back();
 
-// The 7 native CRM scope keys (CustomRole::PERMISSIONS crm_* whitelist, D9).
+// The native CRM scope keys (CustomRole::PERMISSIONS crm_* whitelist, D9; arquivar desde o #1874).
 // Order matters for display only; the backend filters to ASSIGNABLE_SCOPES.
 const SCOPE_KEYS = [
   'crm_view',
   'crm_manage_cards',
   'crm_move_cards',
+  'crm_delete_cards',
   'crm_manage_pipelines',
   'crm_manage_ai',
   'crm_view_reports',

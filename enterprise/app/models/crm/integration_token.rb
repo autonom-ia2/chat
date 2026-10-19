@@ -48,6 +48,7 @@ class Crm::IntegrationToken < ApplicationRecord
     crm_view
     crm_manage_cards
     crm_move_cards
+    crm_delete_cards
     crm_manage_pipelines
     crm_manage_ai
     crm_view_reports

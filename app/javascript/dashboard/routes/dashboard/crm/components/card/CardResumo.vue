@@ -28,6 +28,7 @@ const props = defineProps({
   formato: { type: Object, required: true },
   nome: { type: String, required: true },
   podeGerenciar: { type: Boolean, default: false },
+  podeArquivar: { type: Boolean, default: false },
   // Mexer na pessoa e na empresa (Trocar com o card; Editar com os registros).
   podeRegistros: { type: Boolean, default: false },
   // A conta usa empresas (feature companies).
@@ -560,7 +561,7 @@ const temConversa = computed(() =>
       :card="card"
       :conversao="conversao"
       :formato="formato"
-      :pode-gerenciar="podeGerenciar"
+      :pode-arquivar="podeArquivar"
       :arquivando="arquivando"
       :atender="atender"
       @abrir="$emit('abrir', $event)"

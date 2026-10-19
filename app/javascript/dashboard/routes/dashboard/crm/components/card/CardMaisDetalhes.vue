@@ -12,7 +12,8 @@ const props = defineProps({
   card: { type: Object, required: true },
   conversao: { type: Object, default: null },
   formato: { type: Object, required: true },
-  podeGerenciar: { type: Boolean, default: false },
+  // Arquivar tem chave própria (#1874).
+  podeArquivar: { type: Boolean, default: false },
   arquivando: { type: Boolean, default: false },
   // #1498 — Atender: a nota e o vencimento já estão no cartão Assunto.
   atender: { type: Boolean, default: false },
@@ -156,7 +157,7 @@ const linhas = computed(() =>
         </button>
       </li>
       <li
-        v-if="podeGerenciar"
+        v-if="podeArquivar"
         data-card-arquivar
         class="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
       >
