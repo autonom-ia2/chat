@@ -152,9 +152,10 @@ const semRepetidas = conversas => [
 ];
 
 // Com 2 a 5 páginas carregadas: relê as páginas 1..N e troca a lista de uma vez, só quando todas chegam. A paginação
-// fica onde está (a próxima rolagem pede a página N+1) e a conversa que saiu do filtro sai. Devolve se trocou a lista.
+// fica onde está (a próxima rolagem pede a página N+1) e a conversa que saiu do filtro sai. Devolve false quando a
+// resposta é de uma lista que já não existe e a releitura precisa ser refeita.
 const releerAsPaginasDoFiltroDoLink = async (
-  { commit, dispatch, state },
+  { commit, dispatch, state, rootState },
   paginas
 ) => {
   const geracao = novaGeracaoDaLista();
@@ -169,6 +170,9 @@ const releerAsPaginasDoFiltroDoLink = async (
     )
   );
   if (geracao !== geracaoDaLista) return false;
+  // O filtro deixou de valer enquanto as páginas vinham (filtro avançado por cima, saiu da caixa): nada a gravar nem a
+  // refazer.
+  if (!filtroDoLinkAtivo(state, rootState)) return true;
   const lidas = semRepetidas(
     respostas.flatMap(({ data: { data } }) => data.payload)
   );
@@ -186,7 +190,7 @@ const releerAsPaginasDoFiltroDoLink = async (
   commit(types.REPLACE_CONVERSATION_LIST, [...novas, ...atrasadas]);
   // O mesmo que a leitura comum faz com o que chega (buildConversationList): etiquetas e contatos das conversas.
   dispatch('conversationLabels/setBulkConversationLabels', novas);
-  setContacts(commit, novas);
+  setContacts(commit, [...novas, ...atrasadas]);
   dispatch('conversationStats/set', {
     meta: respostas[0].data.data.meta,
     request,
@@ -216,6 +220,11 @@ const actions = {
   releerFiltroDoLink: async contexto => {
     const { state, rootState, rootGetters } = contexto;
     if (!filtroDoLinkAtivo(state, rootState)) return;
+    // Pedida direto (releitura de um minuto, aba visível de novo) com outra em andamento: fica para depois dela.
+    if (releituraEmCurso) {
+      releituraPendente = true;
+      return;
+    }
     if (state.listLoadingStatus) {
       agendarReleituraDoFiltroDoLink(contexto);
       return;

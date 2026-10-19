@@ -482,26 +482,53 @@ describe('filtros pelo link (#1883)', () => {
         expect(releituras(contexto.dispatch)).toBe(1);
       });
 
-      it('duas releituras: a mais velha, que chega depois, é descartada', async () => {
+      it('releitura pedida direto (um minuto, aba visível) durante outra: não começa junto, fica para depois dela', async () => {
         const fila = leiturasPendentes();
-        const primeira = contextoCom({ paginas: 2 });
-        const segunda = contextoCom({ paginas: 2 });
+        const contexto = contextoCom({ paginas: 2 });
 
-        const velha = actions.releerFiltroDoLink(primeira);
+        const primeira = actions.releerFiltroDoLink(contexto);
         await vi.waitFor(() => expect(fila).toHaveLength(2));
-        const nova = actions.releerFiltroDoLink(segunda);
-        await vi.waitFor(() => expect(fila).toHaveLength(4));
-        fila[2].responder([9]);
-        fila[3].responder([10]);
-        await nova;
+        await actions.releerFiltroDoLink(contexto);
+        await esvaziarPromessas();
+        expect(fila).toHaveLength(2);
+
         fila[0].responder([1]);
         fila[1].responder([2]);
-        await velha;
+        await primeira;
 
-        expect(primeira.commit).not.toHaveBeenCalled();
         expect(
-          gravados(segunda.commit, types.SET_IDS_DO_FILTRO_DO_LINK)
-        ).toEqual([{ ids: [9, 10], substituir: true }]);
+          gravados(contexto.commit, types.SET_IDS_DO_FILTRO_DO_LINK)
+        ).toEqual([{ ids: [1, 2], substituir: true }]);
+        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        expect(releituras(contexto.dispatch)).toBe(1);
+      });
+
+      it('o filtro deixou de valer enquanto as páginas vinham: nada grava e não relê de novo', async () => {
+        const fila = leiturasPendentes();
+        const contexto = contextoCom({ paginas: 2 });
+
+        const releitura = actions.releerFiltroDoLink(contexto);
+        await vi.waitFor(() => expect(fila).toHaveLength(2));
+        contexto.state.appliedFilters = [{ attribute_key: 'status' }];
+        fila.forEach(({ responder }) => responder([1]));
+        await releitura;
+
+        expect(contexto.commit).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(RELEITURA_AO_VIVO_MS);
+        expect(releituras(contexto.dispatch)).toBe(0);
+      });
+
+      it('os contatos recebem a lista inteira, inclusive a conversa que o websocket já atualizou', async () => {
+        const lista = [conversa(4, { updated_at: 20 })];
+        const contexto = contextoCom({ paginas: 2, lista, ids: [4] });
+        api.get.mockImplementation(async ({ page }) =>
+          page === 1 ? resposta([4]) : resposta([9])
+        );
+
+        await actions.releerFiltroDoLink(contexto);
+
+        const [contatos] = gravados(contexto.commit, 'contacts/SET_CONTACTS');
+        expect(contatos).toHaveLength(2);
       });
 
       it('a conversa que o websocket atualizou depois do pedido fica na versão da lista, dentro ou fora do filtro como estava', async () => {
