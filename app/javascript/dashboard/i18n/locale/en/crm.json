@@ -5967,6 +5967,11 @@
     "EMPTY": "No conversation in this funnel."
   },
   "FORK_CONVERSATION_LIST": {
-    "PARTICIPATING": "Participating"
+    "PARTICIPATING": "Participating",
+    "FILTRO_DO_LINK": {
+      "DA_IA": "Handed over by AI",
+      "ESPERANDO": "Waiting over {n} min",
+      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min"
+    }
   }
 }

@@ -231,8 +231,10 @@ RSpec.describe Account do
         feature_whatsapp_agenda_do_contato: 1 << 38,
         # #1870: posição 40, logo depois de whatsapp_agenda_do_contato (tabela da Orquestração, 19/10).
         feature_email_lido_sincronizado: 1 << 39,
-        # #1910: posição PROVISÓRIA 41, no fim da lista; a definitiva vem da Orquestração quando o PR abrir.
-        feature_crm_assunto_na_etapa: 1 << 40
+        # #1897: posição 41, logo depois de email_lido_sincronizado (tabela da Orquestração, 19/10).
+        feature_crm_numeros_lentes: 1 << 40,
+        # #1910: posição 43 (definitiva da Orquestração, 19/10), depois de contato_pelo_email (42, #1917).
+        feature_crm_assunto_na_etapa: 1 << 42
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

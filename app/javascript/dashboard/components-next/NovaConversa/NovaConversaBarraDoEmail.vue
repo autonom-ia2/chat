@@ -10,7 +10,7 @@ import { ref, useTemplateRef } from 'vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import MaisDoEmail from 'dashboard/components-next/conversa-canal/email/MaisDoEmail.vue';
-import JanelaDeEmojis from 'dashboard/components-next/conversa-canal/email/JanelaDeEmojis.vue';
+import JanelaDeEmojis from 'dashboard/components-next/emoji/JanelaDeEmojis.vue';
 import BotaoDeAudio from 'dashboard/components-next/conversa-canal/email/BotaoDeAudio.vue';
 import BotaoDaRegua from 'dashboard/components-next/conversa-canal/email/BotaoDaRegua.vue';
 import { BOTOES_DA_BARRA } from 'dashboard/components-next/conversa-canal/email/visualEmail';
