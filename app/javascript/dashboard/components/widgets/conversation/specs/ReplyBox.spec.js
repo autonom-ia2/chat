@@ -4,6 +4,7 @@ import { nextTick } from 'vue';
 import { createStore } from 'vuex';
 import ReplyBox from '../ReplyBox.vue';
 import WhatsappTemplates from '../WhatsappTemplates/Modal.vue';
+import JanelaDeEmojis from 'dashboard/components-next/emoji/JanelaDeEmojis.vue';
 
 const CHANNELS = [
   { name: 'WhatsApp Cloud', inbox: { channel_type: 'Channel::Whatsapp' } },
@@ -181,6 +182,28 @@ describe('ReplyBox', () => {
   });
 
   describe.each(CHANNELS)('$name', ({ name, inbox }) => {
+    // #1895: a janela de emojis própria do fork em todos os canais, no lugar da do Chatwoot.
+    it('opens the fork emoji window and inserts the chosen emoji', async () => {
+      const { wrapper } = mountWith({ inbox });
+      expect(wrapper.findComponent(JanelaDeEmojis).exists()).toBe(false);
+
+      bottomPanel(wrapper).toggleEmojiPicker();
+      await nextTick();
+      const janela = wrapper.findComponent(JanelaDeEmojis);
+      expect(janela.exists()).toBe(true);
+      expect(wrapper.findComponent({ name: 'EmojiIconPicker' }).exists()).toBe(
+        false
+      );
+
+      janela.vm.$emit('escolher', '😀');
+      await nextTick();
+      expect(editor(wrapper).updateSelectionWith).toBe('😀');
+
+      janela.vm.$emit('fechar');
+      await nextTick();
+      expect(wrapper.findComponent(JanelaDeEmojis).exists()).toBe(false);
+    });
+
     it('locks the composer and hides template sends when a bot owns a pending conversation', () => {
       const { wrapper } = mountWith({
         inbox,

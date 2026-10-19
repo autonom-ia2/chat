@@ -2,7 +2,9 @@ import { mount } from '@vue/test-utils';
 import ActionButtons from '../ActionButtons.vue';
 
 // chat#1457: caixa WhatsApp só com modelo não tem botão Enviar; com o Híbrido pronto, tem os dois.
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({ t: key => key, locale: { value: 'en' } }),
+}));
 vi.mock('dashboard/composables/useUISettings', () => ({
   useUISettings: () => ({
     fetchSignatureFlagFromUISettings: () => false,
@@ -29,7 +31,8 @@ const mountButtons = props =>
           template: '<div data-test="twilio-picker" />',
         },
         FileUpload: true,
-        EmojiIconPicker: true,
+        Icon: true,
+        TeleportWithDirection: { template: '<slot />' },
         Button: {
           props: ['label'],
           template: '<button :data-label="label">{{ label }}</button>',
@@ -83,5 +86,32 @@ describe('ActionButtons', () => {
 
     expect(hasTemplatePicker(wrapper)).toBe(false);
     expect(hasSend(wrapper)).toBe(true);
+  });
+
+  // #1895: a Nova conversa usa a janela de emojis própria do fork, como a resposta.
+  it('opens the fork emoji window and emits the chosen emoji', async () => {
+    const wrapper = mountButtons();
+    expect(wrapper.find('[data-janela-de-emojis]').exists()).toBe(false);
+
+    await wrapper.find('[data-emoji-da-nova-conversa]').trigger('click');
+    expect(wrapper.find('[data-janela-de-emojis]').exists()).toBe(true);
+
+    const primeiro = wrapper.find('[data-janela-de-emojis] .grid button');
+    await primeiro.trigger('click');
+    expect(wrapper.emitted('insertEmoji')).toEqual([[primeiro.text()]]);
+  });
+
+  it('closes the emoji window on Esc', async () => {
+    const wrapper = mountButtons();
+    await wrapper.find('[data-emoji-da-nova-conversa]').trigger('click');
+
+    await wrapper.find('[data-janela-de-emojis]').trigger('keydown.esc');
+    expect(wrapper.find('[data-janela-de-emojis]').exists()).toBe(false);
+  });
+
+  it('hides the emoji button on template-only WhatsApp', () => {
+    const wrapper = mountButtons({ isWhatsappInbox: true });
+
+    expect(wrapper.find('[data-emoji-da-nova-conversa]').exists()).toBe(false);
   });
 });

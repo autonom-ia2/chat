@@ -1,6 +1,7 @@
 <script setup>
-// Janela de emojis da resposta de e-mail (#1786), no lugar da do Chatwoot, que a
-// caixa de resposta (agora com rolagem própria) cortava. Inspirada no Slack e no
+// Janela de emojis do painel: nasceu na resposta de e-mail (#1786) e hoje vale na
+// caixa de resposta de todos os canais e na Nova conversa (#1895), no lugar da do
+// Chatwoot, que a caixa de resposta (com rolagem própria) cortava. Inspirada no Slack e no
 // WhatsApp: flutua por cima da tela (nada a corta), busca no topo, barra de categorias
 // que leva à seção, grade larga com o emoji maior ao passar o mouse, os usados por
 // último primeiro e Esc fecha. Mesmos dados e mesmos "recentes" do painel
@@ -16,7 +17,7 @@ import {
   buildEmojiSections,
   getRecentEmojis,
 } from 'shared/components/emoji/pickerHelper';
-import { semAcento } from './semAcento';
+import { semAcento } from 'dashboard/helper/semAcento';
 
 const props = defineProps({
   // Elemento acima do qual a janela abre (a barra de baixo da caixa de resposta).

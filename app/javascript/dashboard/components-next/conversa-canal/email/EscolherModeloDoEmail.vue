@@ -7,7 +7,7 @@ import { useI18n } from 'vue-i18n';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Icon from 'next/icon/Icon.vue';
 import CartaoDoModelo from './CartaoDoModelo.vue';
-import { semAcento } from './semAcento';
+import { semAcento } from 'dashboard/helper/semAcento';
 
 const props = defineProps({
   modelos: { type: Array, default: () => [] },
