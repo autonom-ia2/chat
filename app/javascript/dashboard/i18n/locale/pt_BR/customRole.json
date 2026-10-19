@@ -72,7 +72,8 @@
       "ATTRIBUTE_MANAGE": "Editar atributos personalizados",
       "MACRO_MANAGE": "Editar macros da equipe",
       "SLA_MANAGE": "Editar políticas de SLA",
-      "CONVERSATION_VIEW": "Lê as outras conversas da caixa"
+      "CONVERSATION_VIEW": "Lê as outras conversas da caixa",
+      "CAMPAIGN_SEND": "Disparar campanhas"
     },
     "MATRIX": {
       "GROUPS": {
@@ -158,7 +159,7 @@
           "NAME": "Campanhas",
           "HINT": "E-mail, WhatsApp, SMS, links e QR codes",
           "LEVEL_VIEW": "Vê campanhas e resultados.",
-          "LEVEL_MANAGE": "Cria e dispara campanhas. Gera custo."
+          "LEVEL_MANAGE": "Monta campanhas. Disparar é o ajuste abaixo."
         },
         "WHATSAPP_TEMPLATES": {
           "NAME": "Modelos do WhatsApp",
@@ -279,7 +280,8 @@
       "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas.",
       "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder.",
       "CONTACT_EXPORT": "Baixa a base de contatos numa planilha.",
-      "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez."
+      "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez.",
+      "CAMPAIGN_SEND": "Envia e agenda campanhas e retoma as pausadas. Sem isto, monta e deixa pronta para quem dispara."
     },
     "EDITOR": {
       "NEW_TITLE": "Ajuste o que for diferente",

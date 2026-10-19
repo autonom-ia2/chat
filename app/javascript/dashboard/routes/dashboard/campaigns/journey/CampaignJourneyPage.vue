@@ -46,6 +46,8 @@ import {
   filterJourneyRows,
 } from 'dashboard/components-next/CampaignJourney/campaignRows';
 import { useAvailableCampaignChannels } from 'dashboard/components-next/CampaignJourney/useAvailableCampaignChannels';
+// #1898: campaigns left ready to send (server drafts of who only builds).
+import { listarProntas } from 'dashboard/components-next/CampaignJourney/prontasParaDisparar';
 
 const NS = 'CAMPAIGN_JOURNEY.LIST';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -86,7 +88,31 @@ const CREATION_DIALOGS = {
 
 // Fork (#1332): { [campaignId]: motivo } das pausas abertas.
 const pauses = ref({});
-const rows = computed(() =>
+const prontas = ref([]);
+// #1898: a pronta abre na revisão; o e-mail pronto toma o lugar do rascunho dele.
+const prontaRow = pronta => ({
+  key: `pronta-${pronta.id}`,
+  channel: pronta.channel,
+  name: pronta.title,
+  detail: t(`${NS}.MONTADA_POR`, { nome: pronta.autor }),
+  status: JOURNEY_STATUSES.READY,
+  when: new Date(pronta.updatedAt).getTime(),
+  whenKind: 'created',
+  total: null,
+  // O e-mail montado no editor (sem público da jornada) abre na revisão do editor.
+  route:
+    pronta.channel === CAMPAIGN_CHANNELS.EMAIL && !pronta.draft?.audienceId
+      ? {
+          name: 'campaigns_email_builder',
+          params: { campaignId: pronta.draft.emailCampaignId },
+          query: { step: 'review' },
+        }
+      : { name: 'campaigns_journey_new', query: { pronta: pronta.id } },
+});
+const emailsProntos = computed(
+  () => new Set(prontas.value.map(pronta => pronta.draft?.emailCampaignId))
+);
+const campaignRowsList = computed(() =>
   buildJourneyRows({
     campaigns: campaigns.value || [],
     pauses: pauses.value,
@@ -98,6 +124,16 @@ const rows = computed(() =>
       : [],
   })
 );
+const rows = computed(() => [
+  ...prontas.value.map(prontaRow),
+  ...campaignRowsList.value.filter(
+    row =>
+      !(
+        row.channel === CAMPAIGN_CHANNELS.EMAIL &&
+        emailsProntos.value.has(row.source?.id)
+      )
+  ),
+]);
 
 const visibleRows = computed(() =>
   filterJourneyRows(rows.value, {
@@ -121,6 +157,7 @@ const rowStatusLabel = row =>
 
 const STATUS_CLASSES = {
   [JOURNEY_STATUSES.DRAFT]: 'bg-n-alpha-2 text-n-slate-11',
+  [JOURNEY_STATUSES.READY]: 'bg-n-violet-3 text-n-violet-11',
   [JOURNEY_STATUSES.SCHEDULED]: 'bg-n-amber-3 text-n-amber-11',
   [JOURNEY_STATUSES.SENDING]: 'bg-n-blue-3 text-n-blue-11',
   [JOURNEY_STATUSES.PAUSED]: 'bg-n-amber-3 text-n-amber-11',
@@ -169,7 +206,11 @@ const nextScheduled = computed(
 const inPreparation = computed(
   () =>
     rows.value.filter(row =>
-      [JOURNEY_STATUSES.DRAFT, JOURNEY_STATUSES.SCHEDULED].includes(row.status)
+      [
+        JOURNEY_STATUSES.DRAFT,
+        JOURNEY_STATUSES.READY,
+        JOURNEY_STATUSES.SCHEDULED,
+      ].includes(row.status)
     ).length
 );
 const sentLast30Days = computed(() => {
@@ -199,7 +240,17 @@ const loadPauses = async () => {
   }
 };
 
+// A list that fails to load leaves the other campaigns on screen: the drafts are an extra row set.
+const loadProntas = async () => {
+  try {
+    prontas.value = await listarProntas();
+  } catch {
+    prontas.value = [];
+  }
+};
+
 const fetchAll = async () => {
+  loadProntas();
   isLoading.value = true;
   hasLoadError.value = false;
   loadPauses();

@@ -21,7 +21,8 @@
       "CANCELLED": "Cancelada",
       "FAILED": "Falhou",
       "ALWAYS_ON": "Sempre ativa",
-      "STOPPED": "Parada"
+      "STOPPED": "Parada",
+      "READY": "Pronta para disparar"
     },
     "CHOOSER": {
       "TITLE": "Por onde vai a campanha?",
@@ -67,7 +68,8 @@
       },
       "SENT_OF": "{sent} de {total} enviadas",
       "OPEN": "Abrir",
-      "OPEN_ARIA": "Abrir a campanha {name}"
+      "OPEN_ARIA": "Abrir a campanha {name}",
+      "MONTADA_POR": "montada por {nome}"
     },
     "AUDIENCES": {
       "TITLE": "Público",
@@ -444,7 +446,14 @@
         "CONTENT": "Conteúdo",
         "CONTENT_DETAIL": "Assunto: {subject}",
         "EMAIL_DETAIL": "De {sender}",
-        "API_DETAIL": "Caixa {inbox} · ritmo automático"
+        "API_DETAIL": "Caixa {inbox} · ritmo automático",
+        "PRONTA": {
+          "DEIXAR": "Deixar pronta para disparar",
+          "QUEM_MONTA": "Você monta e deixa pronta. Quem pode disparar confere e envia.",
+          "QUEM_DISPARA": "{nome} montou e deixou pronta. Confira e envie.",
+          "SALVA": "Pronta para disparar. Quem pode disparar envia pela lista.",
+          "ERRO": "Não deu para deixar pronta. Tente de novo."
+        }
       },
       "API": {
         "INBOX_LABEL": "Caixa de envio",

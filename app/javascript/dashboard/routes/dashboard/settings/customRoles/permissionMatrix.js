@@ -41,6 +41,7 @@ export const SENSITIVE_EXTRAS = [
   CRM_ADMIN,
   'contact_export',
   'contact_delete',
+  'campaign_send',
 ];
 
 export const MODULE_GROUPS = [
@@ -136,6 +137,9 @@ export const MODULE_GROUPS = [
         key: 'CAMPAIGNS',
         icon: 'i-lucide-megaphone',
         levels: { view: 'campaign_view', manage: 'campaign_manage' },
+        // #1898: disparar é chave própria; sem ela, quem edita monta e deixa pronta.
+        extras: ['campaign_send'],
+        manageOnlyExtras: ['campaign_send'],
       },
       {
         // Modelos de mensagem do WhatsApp oficial (#1330, #1332). Editar cria, altera e

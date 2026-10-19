@@ -91,6 +91,18 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
    - num cartão de contato recebido pelo WhatsApp, não aparecem **Salvar contato** nem **Conversar**.
 4. Volte a função para **Ver** em Contatos. Tudo volta: lista, ficha completa, busca, **Nova conversa** e filtro de empresa no Kanban.
 
+## Teste 10: montar sem disparar campanhas (#1898)
+
+1. Edite a função. Em **Marketing**, deixe **Campanhas** em **Editar**, sem ligar **Disparar campanhas** em **Ajustes finos**. Salve.
+2. Na janela anônima, abra **Campanhas > Campanha > Nova campanha** e monte uma campanha de SMS (ou WhatsApp) para um público de teste. Na revisão, o esperado:
+   - o botão é **Deixar pronta para disparar**, com o aviso de que quem pode disparar confere e envia;
+   - clicar não pede a confirmação de envio, não manda nada e volta para a lista, onde a campanha aparece com **Pronta para disparar · montada por** e o nome da pessoa.
+3. Ainda na janela anônima: numa campanha de e-mail, a revisão também mostra **Deixar pronta para disparar** e não mostra **Enviar agora** nem **Agendar**. Uma campanha pausada não tem **Retomar** (no resultado, em **Modelos > Campanhas paradas** e na lista do WhatsApp API). Nas telas antigas de SMS, WhatsApp e WhatsApp API, o botão **Nova campanha** não aparece.
+4. Na janela normal (administrador), abra a campanha pronta pela lista. A revisão mostra quem a montou e **Enviar agora**, com a confirmação. Envie para o público de teste: a linha **Pronta para disparar** some e a campanha aparece como enviada.
+5. Volte à função e ligue **Disparar campanhas** (pede confirmação, porque gera custo). Na janela anônima, recarregue: a revisão volta a mostrar **Enviar agora** e **Agendar**, e **Retomar** aparece nas pausadas.
+6. Troque Campanhas para **Ver**: o ajuste **Disparar campanhas** some.
+7. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `campaign_manage` antes do deploy tem `campaign_send` depois.
+
 ## No fim (limpeza)
 
 1. Remova a pessoa de teste em **Configurações → Usuários**, para não contar no plano.

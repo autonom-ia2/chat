@@ -248,8 +248,8 @@
     "controller": "api/v1/accounts/campaigns#destroy",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:19",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:20",
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:33"
     ],
     "sem_corpo": true
   },
@@ -4134,8 +4134,9 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:37",
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:33",
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:29"
     ],
     "sem_corpo": false
   },
@@ -6363,6 +6364,7 @@
           "autonomia_manage",
           "campaign_view",
           "campaign_manage",
+          "campaign_send",
           "inbox_view",
           "inbox_manage",
           "canned_response_manage",
@@ -12269,14 +12271,14 @@
     },
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:13",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:95",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:101",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:47",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:35",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:60",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:16",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:15"
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:15",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:98",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:104",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:49",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:37",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:62",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:18",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:17"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -12418,7 +12420,8 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:8",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:31"
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:37",
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:29"
     ],
     "sem_corpo": false
   },
@@ -16356,6 +16359,7 @@
           "autonomia_manage",
           "campaign_view",
           "campaign_manage",
+          "campaign_send",
           "inbox_view",
           "inbox_manage",
           "canned_response_manage",
@@ -22551,8 +22555,9 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:37",
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:33",
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:29"
     ],
     "sem_corpo": false
   },
@@ -24655,6 +24660,7 @@
           "autonomia_manage",
           "campaign_view",
           "campaign_manage",
+          "campaign_send",
           "inbox_view",
           "inbox_manage",
           "canned_response_manage",
