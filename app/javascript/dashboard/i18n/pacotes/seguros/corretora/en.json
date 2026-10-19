@@ -1133,6 +1133,20 @@
           "EXEMPLO": {
             "CLIENTE": "Hi! I'd like to talk about insurance for my business."
           }
+        },
+        "FERRAMENTAS": {
+          "RASCUNHO_EXEMPLO": {
+            "NOME": "Policy lookup",
+            "ENDERECO": "https://api.suacorretora.com.br/apolices/busca"
+          },
+          "PASSOS": {
+            "UM": {
+              "QUANDO_EXEMPLO": "Use when the client asks whether the policy has been issued, until when it is valid or whether the installment is up to date. Brings the insurer, the policy period and the installment status."
+            },
+            "TRES": {
+              "DESCRICAO_EXEMPLO": "The car plate or the client's CPF, the way they sent it."
+            }
+          }
         }
       },
       "CRIAR": {
@@ -1232,5 +1246,30 @@
   },
   "TEAM_REPORTS": {
     "DESCRIPTION": "See how each team is doing: conversations, time to reply and time to solve. E.g.: sales, renewals, claims. Click a team to see more."
+  },
+  "HELP_CENTER": {
+    "CENTRAL_DE_AJUDA": {
+      "BUSCA": {
+        "DICA": "Examples: connect WhatsApp, mark a policy as closed, see closed policies."
+      },
+      "POR_ASSUNTO": {
+        "FAMILIAS": {
+          "VENDER": "Sell policies and measure"
+        },
+        "NOMES": {
+          "CRM": "CRM: sales and renewals",
+          "FINANCEIRO": "Your plan and invoices"
+        }
+      }
+    }
+  },
+  "AUTONOMIA_GUIDE": {
+    "MEMORY": {
+      "ABOUT_COMPANY": "About the brokerage",
+      "EMPTY_COMPANY_TITLE": "I haven't noted anything about the brokerage yet",
+      "ONLY_ADMIN": "Only account admins can change what applies to the whole brokerage.",
+      "EXAMPLE_COMPANY_1": "Remember that production here is always for the current month",
+      "EXAMPLE_COMPANY_2": "Remember that the Commercial pipeline is the car insurance one"
+    }
   }
 }

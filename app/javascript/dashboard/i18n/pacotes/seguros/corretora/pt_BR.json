@@ -1133,6 +1133,20 @@
           "EXEMPLO": {
             "CLIENTE": "Oi! Queria conversar sobre o seguro da minha empresa."
           }
+        },
+        "FERRAMENTAS": {
+          "RASCUNHO_EXEMPLO": {
+            "NOME": "Consulta de apólice",
+            "ENDERECO": "https://api.suacorretora.com.br/apolices/busca"
+          },
+          "PASSOS": {
+            "UM": {
+              "QUANDO_EXEMPLO": "Use quando o cliente perguntar se a apólice já saiu, até quando ela vale ou se a parcela está em dia. Traz a seguradora, a vigência e a situação das parcelas."
+            },
+            "TRES": {
+              "DESCRICAO_EXEMPLO": "A placa do carro ou o CPF do cliente, do jeito que ele mandou."
+            }
+          }
         }
       },
       "CRIAR": {
@@ -1232,5 +1246,30 @@
   },
   "TEAM_REPORTS": {
     "DESCRIPTION": "Veja como cada time está: conversas, tempo para responder e tempo para resolver. Ex.: vendas, renovação, sinistro. Clique num time para ver mais."
+  },
+  "HELP_CENTER": {
+    "CENTRAL_DE_AJUDA": {
+      "BUSCA": {
+        "DICA": "Exemplos: conectar o WhatsApp, marcar que fechou o seguro, ver os seguros fechados."
+      },
+      "POR_ASSUNTO": {
+        "FAMILIAS": {
+          "VENDER": "Vender seguros e medir"
+        },
+        "NOMES": {
+          "CRM": "CRM: vendas e renovações",
+          "FINANCEIRO": "Seu plano e faturas"
+        }
+      }
+    }
+  },
+  "AUTONOMIA_GUIDE": {
+    "MEMORY": {
+      "ABOUT_COMPANY": "Sobre a corretora",
+      "EMPTY_COMPANY_TITLE": "Ainda não anotei nada sobre a corretora",
+      "ONLY_ADMIN": "Só quem administra a conta muda o que vale para a corretora.",
+      "EXAMPLE_COMPANY_1": "Lembra que a produção aqui é sempre do mês corrente",
+      "EXAMPLE_COMPANY_2": "Lembra que o funil Comercial é o do seguro auto"
+    }
   }
 }

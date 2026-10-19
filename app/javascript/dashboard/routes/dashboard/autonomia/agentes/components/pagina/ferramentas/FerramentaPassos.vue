@@ -130,7 +130,7 @@ const continuar = () => {
 const voltarPasso = () => irParaPasso(passo.value - 1);
 
 const aplicarExemplo = () => {
-  rascunho.value = rascunhoDeExemplo();
+  rascunho.value = rascunhoDeExemplo(t);
   exemploAplicado.value = true;
   erros.value = {};
   avisarQuando.value = false;
