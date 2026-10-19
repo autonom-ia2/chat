@@ -58,12 +58,15 @@ const doLink = destino =>
     )
   );
 
-// O "Limpar" troca o endereço por um sem o link; enquanto ele navega, a guarda não devolve o link.
-let limpando = false;
+// O "Limpar" troca o endereço por um sem o link; a guarda deixa passar esse destino exato, uma vez, sem devolver o link.
+let destinoDoLimpar = null;
 
 // Guarda do roteador: da lista filtrada (ou da conversa aberta nela) para uma conversa, o link vai junto.
 export const levarLinkParaConversa = (destino, origem) => {
-  if (limpando) return true;
+  if (destinoDoLimpar && destino.fullPath === destinoDoLimpar) {
+    destinoDoLimpar = null;
+    return true;
+  }
   if (!CONVERSAS.includes(destino.name) || !naCaixa(origem)) return true;
   const link = doLink(origem);
   if (!Object.keys(link).length || Object.keys(doLink(destino)).length) {
@@ -101,11 +104,17 @@ export const useFiltrosDoLinkNaCaixa = () => {
     if (!linkNoEndereco.value) return;
     const query = { ...route.query };
     PARAMETROS.forEach(chave => delete query[chave]);
-    limpando = true;
+    const destino = router.resolve({
+      name: route.name,
+      params: route.params,
+      query,
+      hash: route.hash,
+    });
+    destinoDoLimpar = destino.fullPath;
     try {
-      await router.replace({ name: route.name, params: route.params, query });
+      await router.replace(destino);
     } finally {
-      limpando = false;
+      destinoDoLimpar = null;
     }
   };
 

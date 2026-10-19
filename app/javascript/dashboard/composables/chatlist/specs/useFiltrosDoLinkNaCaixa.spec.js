@@ -128,6 +128,22 @@ describe('useFiltrosDoLinkNaCaixa', () => {
     expect(filtros.daIa.value).toBe(false);
   });
 
+  it('outra conversa aberta enquanto o Limpar navega não perde o link', async () => {
+    const { router, filtros } = await montar(
+      '/app/accounts/1/dashboard?da_ia=1'
+    );
+    await router.push('/app/accounts/1/conversations/7');
+
+    const limpando = filtros.limpar();
+    await router.push('/app/accounts/1/conversations/8');
+    await limpando;
+
+    expect(router.currentRoute.value.path).toBe(
+      '/app/accounts/1/conversations/8'
+    );
+    expect(router.currentRoute.value.query).toEqual({ da_ia: '1' });
+  });
+
   it('clicar de novo na conversa aberta, na lista filtrada, mantém o filtro', async () => {
     const { router, filtros } = await montar(
       '/app/accounts/1/dashboard?da_ia=1'

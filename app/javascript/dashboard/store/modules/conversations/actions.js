@@ -112,9 +112,27 @@ const agendarReleituraDoFiltroDoLink = ({ state, rootState, dispatch }) => {
 };
 
 // Com mais de uma página carregada, só a primeira é lida de novo e somada à lista: o que entrou aparece no topo e a
-// rolagem fica onde está. A que saiu do filtro, nesse caso, sai quando a lista for aberta de novo.
+// rolagem fica onde está. Se a primeira página já traz tudo o que a aba tem (o contador da aba diz), ela é a lista
+// inteira e o que saiu do filtro sai junto; senão, o que saiu fica até a lista ser aberta de novo (a página 1 sozinha
+// não diz se a conversa saiu do filtro ou só desceu para a página 2).
+const CONTADOR_DA_ABA = {
+  me: 'mine_count',
+  unassigned: 'unassigned_count',
+  all: 'all_count',
+};
 // eslint-disable-next-line no-unused-vars
 const semPagina = ({ page, ...lista }) => JSON.stringify(lista);
+const primeiraPaginaTrazTudo = (payload, meta, assigneeType) => {
+  const total = meta?.[CONTADOR_DA_ABA[assigneeType]];
+  return Number.isInteger(total) && payload.length >= total;
+};
+// Como no UPDATE_CONVERSATION: a conversa que o websocket já atualizou depois do pedido não volta ao estado antigo.
+const maisNovasQueAsDaLista = (payload, lista) => {
+  const naLista = new Map(lista.map(conversa => [conversa.id, conversa]));
+  return payload.filter(
+    conversa => !(naLista.get(conversa.id)?.updated_at > conversa.updated_at)
+  );
+};
 const somarPrimeiraPaginaDoFiltroDoLink = async ({
   commit,
   dispatch,
@@ -132,8 +150,16 @@ const somarPrimeiraPaginaDoFiltroDoLink = async ({
   if (semPagina(state.conversationFilters) !== semPagina(params)) return;
   commit(types.SET_IDS_DO_FILTRO_DO_LINK, {
     ids: data.payload.map(({ id }) => id),
+    substituir: primeiraPaginaTrazTudo(
+      data.payload,
+      data.meta,
+      params.assigneeType
+    ),
   });
-  commit(types.SET_ALL_CONVERSATION, data.payload);
+  commit(
+    types.SET_ALL_CONVERSATION,
+    maisNovasQueAsDaLista(data.payload, state.allConversations)
+  );
   dispatch('conversationStats/set', { meta: data.meta, request });
 };
 
