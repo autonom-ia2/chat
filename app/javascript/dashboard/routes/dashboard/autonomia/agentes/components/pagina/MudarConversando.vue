@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import * as Sentry from '@sentry/vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaBuilderImagesAPI from 'dashboard/api/autonomia/builderImages';
@@ -304,8 +305,10 @@ const relerConversa = async () => {
     await store.dispatch('autonomiaBuildThreads/fetch', {
       threadId: thread.value.id,
     });
-  } catch {
-    // A faixa já diz que desfez; as opções saem pela condição de `ultimaDesfeita`.
+  } catch (error) {
+    // A faixa já diz que desfez e as opções saem pela condição de `ultimaDesfeita`; a falha da releitura vai
+    // para o Sentry, sem tirar o dono da tela.
+    Sentry.captureException(error);
   }
 };
 

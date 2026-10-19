@@ -12,6 +12,12 @@ RSpec.describe Autonomia::Agents::Builder do
     estado['opcoes_de_resposta']
   end
 
+  # Revisão crítica da entrega C (BAIXO 2): toda vez que há opções, a última mensagem da conversa é a pergunta que as
+  # trouxe (o `next_question` do state, que a tela compara com ela).
+  def expect_pergunta_por_ultimo
+    expect(thread.reload.messages.last['content']).to eq(estado['next_question'])
+  end
+
   describe 'o schema do ajuste' do
     it 'pede até 4 opções, obrigatórias no schema estrito' do
       schema = described_class::AjustePorLista::SCHEMA[:schema]
@@ -64,6 +70,7 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(estado).to include('needs_more_info' => true, 'applied' => false, 'opcoes_de_resposta' => opcoes)
+      expect_pergunta_por_ultimo
       expect(thread.messages.last).to include('role' => 'assistant', 'content' => 'Que preço ele deve dizer?')
     end
   end
@@ -128,6 +135,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(estado).to include('applied' => true, 'parcial' => true, 'next_question' => 'E o preço, que valor?',
                                 'opcoes_de_resposta' => opcoes)
+      expect_pergunta_por_ultimo
     end
 
     it 'a escrita que não muda nada, com pergunta do modelo, também leva as opções dele' do
@@ -137,6 +145,7 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(estado).to include('applied' => false, 'next_question' => 'Mais curto quanto?', 'opcoes_de_resposta' => opcoes)
+      expect_pergunta_por_ultimo
     end
   end
 
@@ -156,6 +165,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(calls.size).to eq(1)
       expect(estado).to include('next_question' => 'E o preço?', 'opcoes_de_resposta' => opcoes)
+      expect_pergunta_por_ultimo
     end
   end
 
@@ -173,6 +183,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(estado.dig('conferencia', 'desfeito', 'ok')).to be(true)
       expect(estado).to include('next_question' => 'O que você quer mudar?', 'opcoes_de_resposta' => opcoes)
+      expect_pergunta_por_ultimo
     end
   end
 
@@ -193,6 +204,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(estado).to include('next_question' => "#{texto(:nao_consegui, pedidos: preco)} Qual equipe?",
                                 'opcoes_de_resposta' => opcoes)
+      expect_pergunta_por_ultimo
     end
 
     it 'a correção aplicada que ainda pergunta leva as opções dela, não as da primeira escrita' do
@@ -204,6 +216,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(estado['conferencia']).to include('correcao' => true)
       expect(estado).to include('next_question' => 'Qual equipe?', 'opcoes_de_resposta' => opcoes)
+      expect_pergunta_por_ultimo
     end
 
     it 'a pergunta genérica do código, sem explicação do modelo, não leva opções' do
@@ -228,6 +241,7 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(estado).to include('next_question' => texto(:conflito, pedidos: 'curto'),
                                 'opcoes_de_resposta' => [texto('opcoes_do_conflito.manter'),
                                                          texto('opcoes_do_conflito.mudar')])
+      expect_pergunta_por_ultimo
     end
   end
 

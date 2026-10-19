@@ -21,6 +21,8 @@ vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 const imagens = vi.hoisted(() => ({ upload: vi.fn() }));
 vi.mock('dashboard/api/autonomia/builderImages', () => ({ default: imagens }));
 const conversas = vi.hoisted(() => ({ desfazer: vi.fn() }));
+const sentry = vi.hoisted(() => ({ captureException: vi.fn() }));
+vi.mock('@sentry/vue', () => sentry);
 vi.mock('dashboard/api/autonomia/buildThreads', () => ({ default: conversas }));
 
 const no = seletor => document.querySelector(seletor);
@@ -719,6 +721,32 @@ describe('MudarConversando', () => {
       comPergunta({});
       await nextTick();
       expect(no('[data-opcoes]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('reports a failed re-read after the undo by the strip, and the answers still go away', async () => {
+      conversas.desfazer.mockResolvedValue({ data: {} });
+      const falha = new Error('rede');
+      store.dispatch.mockImplementation(async acao => {
+        if (acao === `${ESTADO}fetch`) throw falha;
+        return null;
+      });
+      sentry.captureException.mockClear();
+      comPergunta();
+      const wrapper = montar({
+        agente: {
+          ...AGENTE,
+          ultima_mudanca_desfazivel: { thread_id: 41, linhas: ['Curtas'] },
+        },
+      });
+      await nextTick();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(sentry.captureException).toHaveBeenCalledWith(falha);
+      expect(no('[data-opcoes]')).toBeNull();
+      expect(no('[data-ultima-desfeita]')).not.toBeNull();
       wrapper.unmount();
     });
   });
