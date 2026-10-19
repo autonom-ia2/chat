@@ -16,3 +16,9 @@ en:
         em_atendimento: 'The customer is sending the details to quote (line, plate or address, overnight ZIP code, driver, current insurer), or the team said it is quoting. It has not sent the options yet.'
         proposta: 'The team already sent the quote options and the customer is comparing or thinking. They have not said which one they will take.'
         fechamento: 'The customer picked an option and said they want to close: asked for the payment link, sent the card details or asked us to issue the policy.'
+    # CRM spreadsheet and reminder email (F2 lot 1).
+    export:
+      columns:
+        next_follow_up_at: 'Next follow-up'
+    follow_up_reminder:
+      card: 'Card: %{card}'
