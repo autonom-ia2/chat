@@ -20,6 +20,10 @@ const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
 const imagens = vi.hoisted(() => ({ upload: vi.fn() }));
 vi.mock('dashboard/api/autonomia/builderImages', () => ({ default: imagens }));
+const conversas = vi.hoisted(() => ({ desfazer: vi.fn() }));
+const sentry = vi.hoisted(() => ({ captureException: vi.fn() }));
+vi.mock('@sentry/vue', () => sentry);
+vi.mock('dashboard/api/autonomia/buildThreads', () => ({ default: conversas }));
 
 const no = seletor => document.querySelector(seletor);
 const todos = seletor => [...document.querySelectorAll(seletor)];
@@ -265,6 +269,244 @@ describe('MudarConversando', () => {
     wrapper.unmount();
   });
 
+  // #1428 (parte 3, piloto) — com o resultado do servidor, o cartão pedido por pedido no lugar do FEITO.
+  describe('with the result of the adjustment (pilot)', () => {
+    const RESULTADO = {
+      itens: [
+        { estado: 'aplicado', texto: 'Respostas curtas.' },
+        { estado: 'nao_aplicado', texto: 'preço com a equipe' },
+      ],
+      faltou_fora: false,
+      conferido: true,
+      desfeito: false,
+      desfeito_sozinho: false,
+      pode_desfazer: true,
+    };
+
+    const comResultado = async (resultado = RESULTADO, agente = AGENTE) => {
+      const wrapper = montar();
+      store.state[`${ESTADO}getThread`] = { id: 55 };
+      store.state[`${ESTADO}getMessages`] = [
+        { role: 'user', content: 'Curto e preço com a equipe' },
+        { role: 'assistant', content: 'Qual equipe?' },
+      ];
+      store.state[`${ESTADO}getStatus`] = 'open';
+      store.state[`${ESTADO}getPhase`] = 'interviewing';
+      store.state[`${ESTADO}getThreadState`] = { parcial: true, resultado };
+      store.state[`${ESTADO}getAgent`] = agente && { ...agente, tone: 'curto' };
+      await nextTick();
+      return wrapper;
+    };
+
+    it('shows the card before the open question, and Pronto stays plain while something is missing', async () => {
+      const wrapper = await comResultado();
+
+      expect(no('[data-feito]')).toBeNull();
+      expect(no('[data-parcial]')).toBeNull();
+      const cartao = no('[data-conferido]');
+      const pergunta = todos('[data-mensagem="assistant"]').pop();
+      const ordem = todos('[data-conferido], [data-mensagem="assistant"]');
+      expect(ordem.indexOf(cartao)).toBeLessThan(ordem.indexOf(pergunta));
+      expect(todos('[data-item]').map(item => item.dataset.item)).toEqual([
+        'aplicado',
+        'nao_aplicado',
+      ]);
+      expect(no('[data-pronto]').className).not.toContain('bg-n-blue-11');
+      wrapper.unmount();
+    });
+
+    // #1428 (entrega B) — a prova chega depois do cartão: a página pede à store que acompanhe só ela.
+    it('follows the proof while it is pending, and only then', async () => {
+      const wrapper = await comResultado({
+        ...RESULTADO,
+        prova: { status: 'pendente', total: 3 },
+      });
+      const acompanhar = () =>
+        store.dispatch.mock.calls.filter(
+          ([acao]) => acao === `${ESTADO}acompanharProva`
+        );
+
+      expect(acompanhar()).toEqual([
+        [`${ESTADO}acompanharProva`, { threadId: 55 }],
+      ]);
+      expect(no('[data-prova]').dataset.status).toBe('pendente');
+
+      store.state[`${ESTADO}getThreadState`] = {
+        resultado: {
+          ...RESULTADO,
+          prova: { status: 'pronta', ok: 3, total: 3, perguntas: [] },
+        },
+      };
+      await nextTick();
+      expect(acompanhar()).toHaveLength(1);
+      wrapper.unmount();
+    });
+
+    it('makes Pronto primary when everything asked went in', async () => {
+      const wrapper = await comResultado({
+        ...RESULTADO,
+        itens: [
+          { estado: 'aplicado', texto: 'Curto.' },
+          { estado: 'sem_pedido', texto: 'Saudação nova' },
+        ],
+      });
+
+      expect(no('[data-pronto]').className).toContain('bg-n-blue-11');
+      wrapper.unmount();
+    });
+
+    it('undoes through the store and starts the test phone over', async () => {
+      // Sem o agente relido (a leitura dele pode falhar), o celular recomeça pelo próprio Desfazer.
+      const wrapper = await comResultado(RESULTADO, null);
+      expect(no('[data-atualizado]')).toBeNull();
+
+      no('[data-desfazer]').click();
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}desfazerAjuste`, {
+        threadId: 55,
+      });
+      expect(no('[data-atualizado]')).not.toBeNull();
+      expect(no('[data-erro-desfazer]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('after a 409 says the agent changed and hides the undo', async () => {
+      const wrapper = await comResultado();
+      store.dispatch.mockImplementation(async acao => {
+        if (acao === `${ESTADO}desfazerAjuste`) {
+          throw Object.assign(new Error('conflito'), {
+            response: { status: 409 },
+          });
+        }
+        return null;
+      });
+
+      no('[data-desfazer]').click();
+      await flushPromises();
+
+      expect(no('[data-erro-desfazer]').textContent).toContain(
+        'CONFERIDO.MUDOU_DEPOIS'
+      );
+      expect(no('[data-desfazer]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  // #1428 (parte 3) — a faixa "Última mudança" na tela nova: o direito de desfazer vem do servidor, no
+  // agente, mesmo depois de recarregar a página.
+  describe('last change strip (pilot)', () => {
+    const ULTIMA = { thread_id: 41, linhas: ['Respostas curtas'] };
+    const comUltima = (
+      agente = { ...AGENTE, ultima_mudanca_desfazivel: ULTIMA }
+    ) => montar({ agente });
+
+    beforeEach(() => {
+      conversas.desfazer.mockReset();
+    });
+
+    it('shows the last change above the new conversation, and nothing without it', async () => {
+      const wrapper = comUltima();
+      await nextTick();
+      expect(no('[data-ultima-mudanca]').textContent).toContain(
+        'CONFERIDO.ULTIMA_MUDANCA'
+      );
+      wrapper.unmount();
+
+      const semUltima = montar();
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      semUltima.unmount();
+    });
+
+    it('goes away when the agent changes, while thinking and behind the result card', async () => {
+      const wrapper = comUltima();
+      await nextTick();
+      await wrapper.setProps({ agente: { ...AGENTE } });
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+
+      await wrapper.setProps({
+        agente: { ...AGENTE, ultima_mudanca_desfazivel: ULTIMA },
+      });
+      store.state[`${ESTADO}getStatus`] = 'processing';
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+
+      store.state[`${ESTADO}getStatus`] = 'ready';
+      store.state[`${ESTADO}getThreadState`] = {
+        resultado: { itens: [], conferido: true, pode_desfazer: true },
+      };
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('stays after a question in the same conversation (no result card)', async () => {
+      const wrapper = comUltima();
+      store.state[`${ESTADO}getMessages`] = [
+        { role: 'user', content: 'O que ele faz?' },
+        { role: 'assistant', content: 'Ele atende os clientes.' },
+      ];
+      store.state[`${ESTADO}getStatus`] = 'open';
+      await nextTick();
+      expect(no('[data-ultima-mudanca]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('undoes by the thread the server named, re-reads the agent and restarts the phone', async () => {
+      conversas.desfazer.mockResolvedValue({ data: {} });
+      const wrapper = comUltima();
+      await nextTick();
+      expect(no('[data-atualizado]')).toBeNull();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(conversas.desfazer).toHaveBeenCalledWith(41);
+      expect(store.dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 7);
+      expect(no('[data-ultima-desfeita]').textContent).toContain(
+        'CONFERIDO.DESFEITO'
+      );
+      expect(no('[data-ultima-mudanca]')).toBeNull();
+      expect(no('[data-atualizado]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('after a 409 says the agent changed and hides the undo', async () => {
+      conversas.desfazer.mockRejectedValue({ response: { status: 409 } });
+      const wrapper = comUltima();
+      await nextTick();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(no('[data-erro-desfazer]').textContent).toContain(
+        'CONFERIDO.MUDOU_DEPOIS'
+      );
+      expect(no('[data-desfazer-ultima]')).toBeNull();
+      expect(no('[data-ultima-desfeita]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
+  // #1428 (parte 3, F3): o Desfazer cancelou o pedido em voo desta conversa.
+  it('says the request was canceled by the undo, without a retry', async () => {
+    const wrapper = montar();
+    store.state[`${ESTADO}getThread`] = { id: 55 };
+    store.state[`${ESTADO}getStatus`] = 'failed';
+    store.state[`${ESTADO}getError`] = 'failed';
+    store.state[`${ESTADO}getThreadState`] = {
+      error: 'superada_pelo_desfazer',
+    };
+    await nextTick();
+
+    const erro = no('[data-erro]');
+    expect(erro.textContent).toContain('MUDAR_VISTA.CANCELADO_PELO_DESFAZER');
+    expect(erro.textContent).not.toContain('MUDAR_VISTA.ERRO_GARANTIA');
+    expect(erro.querySelector('button')).toBeNull();
+    wrapper.unmount();
+  });
+
   it('says nothing about the name when it did not change', async () => {
     const wrapper = montar();
     store.state[`${ESTADO}getAgent`] = { ...AGENTE };
@@ -315,5 +557,197 @@ describe('MudarConversando', () => {
     wrapper.unmount();
     expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}stopPolling`);
     expect(store.commit).toHaveBeenCalledWith(`${ESTADO}RESET`);
+  });
+
+  // #1428 (entrega C) — as respostas prontas da pergunta aberta: tocar é o mesmo que escrever e mandar.
+  describe('ready answers under the open question', () => {
+    const OPCOES = ['Passar para a equipe', 'Não falar de preço'];
+
+    const PERGUNTA = 'Que preço ele deve dizer?';
+    const comPergunta = (
+      estado = { next_question: PERGUNTA, opcoes_de_resposta: OPCOES }
+    ) => {
+      store.state[`${ESTADO}getThread`] = { id: 55 };
+      store.state[`${ESTADO}getPhase`] = 'interviewing';
+      store.state[`${ESTADO}getMessages`] = [
+        { role: 'user', content: 'Fale do preço' },
+        { role: 'assistant', content: PERGUNTA },
+      ];
+      store.state[`${ESTADO}getThreadState`] = estado;
+    };
+
+    it('shows them as real buttons in a labelled group, right after the question and out of the live region', async () => {
+      comPergunta();
+      const wrapper = montar();
+      await nextTick();
+
+      const grupo = no('[data-opcoes]');
+      expect(grupo.getAttribute('role')).toBe('group');
+      expect(grupo.getAttribute('aria-label')).toBe(
+        'AGENTS.JORNADA.PAGINA.MUDAR_VISTA.OPCOES_ROTULO'
+      );
+      const botoes = todos('[data-opcoes] button');
+      expect(botoes.map(botao => botao.textContent.trim())).toEqual(OPCOES);
+      expect(botoes.every(botao => botao.type === 'button')).toBe(true);
+      expect(botoes[0].className).toContain('min-h-11');
+      expect(grupo.closest('[aria-live]')).toBeNull();
+      expect(grupo.previousElementSibling.matches('[data-conversa]')).toBe(
+        true
+      );
+      expect(
+        todos('[data-conversa] [data-mensagem]').at(-1).dataset.mensagem
+      ).toBe('assistant');
+      wrapper.unmount();
+    });
+
+    it('sends the tapped answer as the owner message and keeps the draft', async () => {
+      comPergunta();
+      const wrapper = montar();
+      await escrever('rascunho meu');
+
+      todos('[data-opcoes] button')[1].click();
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}send`, {
+        threadId: 55,
+        content: 'Não falar de preço',
+        extra: { image_signed_ids: [] },
+      });
+      expect(no('form textarea').value).toBe('rascunho meu');
+      expect(document.activeElement).toBe(no('form textarea'));
+      wrapper.unmount();
+    });
+
+    it('does not show them when the turn is not an open question, nor after the undo', async () => {
+      comPergunta();
+      store.state[`${ESTADO}getPhase`] = 'reviewing';
+      const wrapper = montar();
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+
+      store.state[`${ESTADO}getPhase`] = 'interviewing';
+      store.state[`${ESTADO}getThreadState`] = {
+        next_question: PERGUNTA,
+        opcoes_de_resposta: OPCOES,
+        resultado: { itens: [], desfeito: true },
+      };
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('only shows them under the exact question the server sent them with', async () => {
+      comPergunta({
+        next_question: 'Outra pergunta',
+        opcoes_de_resposta: OPCOES,
+      });
+      const wrapper = montar();
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+
+      store.state[`${ESTADO}getThreadState`] = {
+        next_question: PERGUNTA,
+        opcoes_de_resposta: OPCOES,
+      };
+      await nextTick();
+      expect(no('[data-opcoes]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('lets a long answer without spaces wrap inside the button', async () => {
+      comPergunta();
+      const wrapper = montar();
+      await nextTick();
+
+      expect(todos('[data-opcoes] button')[0].className).toContain(
+        'break-words'
+      );
+      wrapper.unmount();
+    });
+
+    it('goes away after the undo by the last change strip, and the conversation is read again', async () => {
+      conversas.desfazer.mockResolvedValue({ data: {} });
+      comPergunta();
+      const wrapper = montar({
+        agente: {
+          ...AGENTE,
+          ultima_mudanca_desfazivel: { thread_id: 41, linhas: ['Curtas'] },
+        },
+      });
+      await nextTick();
+      expect(no('[data-opcoes]')).not.toBeNull();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(conversas.desfazer).toHaveBeenCalledWith(41);
+      expect(store.dispatch).toHaveBeenCalledWith(`${ESTADO}fetch`, {
+        threadId: 55,
+      });
+      expect(no('[data-opcoes]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('shows at most four', async () => {
+      comPergunta({
+        next_question: PERGUNTA,
+        opcoes_de_resposta: ['A', 'B', 'C', 'D', 'E'],
+      });
+      const wrapper = montar();
+      await nextTick();
+
+      expect(todos('[data-opcoes] button')).toHaveLength(4);
+      wrapper.unmount();
+    });
+
+    it('hides them once the owner answered, while thinking, and without options', async () => {
+      comPergunta();
+      const wrapper = montar();
+      await nextTick();
+      expect(no('[data-opcoes]')).not.toBeNull();
+
+      store.state[`${ESTADO}getUIFlags`] = { sending: true, creating: false };
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+
+      store.state[`${ESTADO}getUIFlags`] = { sending: false, creating: false };
+      store.state[`${ESTADO}getMessages`] = [
+        ...store.state[`${ESTADO}getMessages`],
+        { role: 'user', content: 'Não falar de preço' },
+      ];
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+
+      comPergunta({});
+      await nextTick();
+      expect(no('[data-opcoes]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('reports a failed re-read after the undo by the strip, and the answers still go away', async () => {
+      conversas.desfazer.mockResolvedValue({ data: {} });
+      const falha = new Error('rede');
+      store.dispatch.mockImplementation(async acao => {
+        if (acao === `${ESTADO}fetch`) throw falha;
+        return null;
+      });
+      sentry.captureException.mockClear();
+      comPergunta();
+      const wrapper = montar({
+        agente: {
+          ...AGENTE,
+          ultima_mudanca_desfazivel: { thread_id: 41, linhas: ['Curtas'] },
+        },
+      });
+      await nextTick();
+
+      no('[data-desfazer-ultima]').click();
+      await flushPromises();
+
+      expect(sentry.captureException).toHaveBeenCalledWith(falha);
+      expect(no('[data-opcoes]')).toBeNull();
+      expect(no('[data-ultima-desfeita]')).not.toBeNull();
+      wrapper.unmount();
+    });
   });
 });

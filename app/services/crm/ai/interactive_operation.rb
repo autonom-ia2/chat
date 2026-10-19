@@ -18,6 +18,7 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'meeting_times', 'meeting_invite', 'meeting_summary' then authorize_meeting!
     when 'card_summary', 'card_evaluate' then authorize_card!
     when 'copilot_run', 'copilot_chat' then authorize_copilot!
+    when 'copilot_text' then authorize_copilot_text!
     when 'agent_test', 'agent_suggest' then authorize_agent!
     when 'email_rewrite' then authorize_email!
     when 'stage_criteria', 'stage_criteria_draft' then authorize_pipeline!
@@ -37,6 +38,7 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
       result = Crm::Ai::Evaluator.new(card: card, trigger: 'manual').perform
       { payload: { status: result.status, suggestion: suggestion_payload(result.suggestion) } }
     when 'copilot_run', 'copilot_chat' then copilot_result
+    when 'copilot_text' then Autonomia::Copilot::ConversationCopilot.new(account: @account, **@inputs).perform.to_h
     when 'agent_test', 'agent_suggest' then playground_result
     when 'email_rewrite' then EmailCampaigns::Ai::Rewriter.new(account: @account, **@inputs).perform
     when 'stage_criteria', 'stage_criteria_draft'
@@ -72,11 +74,15 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
   end
 
   def authorize_copilot!
+    authorize_copilot_text!
+    authorize_conversation!(conversation)
+  end
+
+  # #1872: o texto do e-mail novo, sem conversa — o mesmo gate do copiloto; a conta já foi conferida.
+  def authorize_copilot_text!
     enabled = Crm::Config.enabled? && Autonomia::Agents::Config.enabled?(@account) &&
               ActiveModel::Type::Boolean.new.cast(ENV.fetch('CRM_COPILOT_ENABLED', false))
     raise Pundit::NotAuthorizedError unless enabled
-
-    authorize_conversation!(conversation)
   end
 
   # #1384: sem pipeline_id é o funil ainda não salvo — só nome e conta, nada gravado.
@@ -140,7 +146,8 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
   def meta_ads_daily_action
     run = ::Crm::MetaAdvisorRun.find_by!(id: @inputs.fetch(:run_id), account_id: @account.id)
     Crm::MetaAds::Advisor::Analysis.write!(run)
-    { daily_action: Crm::MetaAds::Advisor::Analysis.serialize(run.reload, @inputs.fetch(:language)) }
+    advice = Crm::MetaAds::Advisor::Analysis.serialize(run.reload, @inputs.fetch(:language))
+    { daily_action: Crm::MetaAds::VisibleConversations.new(account: @account, account_user: @account_user).advice(advice) }
   end
 
   def meta_ads_quote_message

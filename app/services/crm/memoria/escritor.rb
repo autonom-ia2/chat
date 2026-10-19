@@ -86,7 +86,7 @@ class Crm::Memoria::Escritor
     modelo, escopo = GRUPOS[grupo]
     chave = grupo == 'decisao' ? Crm::Memoria::Catalogo::DECISAO : dados['chave'].to_s
     Operacao.new(dados: dados, grupo: grupo, escopo: escopo, definicao: modelo && catalogo[[modelo, chave]],
-                 provas: provas_de(dados['provas']))
+                 provas: provas_de(dados['provas'], grupo))
   end
 
   def gravar!(operacao, fonte)
@@ -165,22 +165,27 @@ class Crm::Memoria::Escritor
     fato.chave == chave && fato.escopo == GRUPOS.dig(grupo, 1) && (fato.escopo != 'card' || fato.card_id == @card.id)
   end
 
-  def provas_de(refs)
+  def provas_de(refs, grupo)
     ids = Array(refs).filter_map { |ref| @pendente['refs'][ref.to_s] }.uniq
     return [] if ids.empty?
 
     Message.where(id: ids, account_id: @account.id, private: false).includes(:attachments).reorder(:id).to_a
-           .select { |message| vale_como_prova?(message) }
+           .select { |message| vale_como_prova?(message, grupo) }
   end
 
   # Descartável (duplicata, sem conteúdo, encaminhada) não prova.
   # A autoria de cada prova, calculada uma vez por mensagem nesta avaliação.
   def origem(message)
-    (@origens ||= {})[message.id] ||= Crm::Memoria::Origem.classificar(message)
+    (@origens ||= {})[message.id] ||= Crm::Memoria::Origem.classificar(message, autoria: email_autoria)
   end
 
-  def vale_como_prova?(message)
+  def email_autoria = (@email_autoria ||= Crm::Email::Autoria.new(@account))
+
+  # #1807: e-mail de outro endereço (alguém em cópia, a equipe, resposta automática) não prova dado pessoal do cliente
+  # (grupo "contato"); do pedido, da conversa e da decisão, prova como antes.
+  def vale_como_prova?(message, grupo)
     return false if origem(message).descartavel?
+    return false if grupo == 'contato' && !origem(message).prova_de_contato?
 
     voto_atual?(message)
   end
@@ -226,7 +231,7 @@ class Crm::Memoria::Escritor
     Crm::Card.where(id: ligados, created_at: ..momento).where('closed_at IS NULL OR closed_at > ?', momento).pluck(:id)
   end
 
-  def texto(message) = Crm::Memoria::Normal.texto_da_mensagem(message)
+  def texto(message) = Crm::Memoria::Normal.texto_da_mensagem(message, autoria: email_autoria)
 
   def chave_idempotente(operacao, item, valor)
     "aval:#{@pendente['avaliacao_id']}:card:#{@card.id}:#{operacao.dados['op']}:#{operacao.grupo}:#{operacao.definicao.chave}:" \

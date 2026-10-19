@@ -341,6 +341,47 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(wrapper.emitted('open')).toEqual([[3]]);
   });
 
+  // #1794: quem só tem meta_ads_view não vai para a conexão nem pelo consultor nem pelo "Quanto confiar".
+  it('read-only: no way to the connection step', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          confidence: { ...PANEL.confidence, unknown: 3 },
+          advice: {
+            ...PANEL.advice,
+            actions: [
+              {
+                ...STALLED_ACTION,
+                id: 43,
+                kind: 'fix_tracking',
+                facts: { conversations: 9, unknown: 6, identified_pct: 0.33 },
+                button: { target: 'connection_step', step: 3, url: null },
+                cards: [],
+              },
+            ],
+          },
+        },
+      },
+    });
+    const wrapper = await mountPanel({ props: { readOnly: true } });
+
+    expect(wrapper.find('[data-panel-action-button]').exists()).toBe(false);
+    expect(wrapper.find('[data-summary-confidence]').exists()).toBe(true);
+    expect(wrapper.find('[data-summary-confidence-fix]').exists()).toBe(false);
+  });
+
+  it('read-only: the open list says it shows only the conversations of the person inboxes', async () => {
+    const wrapper = await mountPanel({ props: { readOnly: true } });
+
+    expect(wrapper.find('[data-panel-list-scope]').exists()).toBe(false);
+    await wrapper.find('[data-panel-path-open]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-panel-list-scope]').exists()).toBe(true);
+    expect(wrapper.find('[data-panel-stalled-scope]').exists()).toBe(true);
+  });
+
   it('wait has no button and no stalled list', async () => {
     panelWith([
       {

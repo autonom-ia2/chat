@@ -6,6 +6,7 @@ vi.mock('../../../../api/autonomia/buildThreads', () => ({
     create: vi.fn(),
     show: vi.fn(),
     sendMessage: vi.fn(),
+    desfazer: vi.fn(),
   },
 }));
 
@@ -304,6 +305,37 @@ describe('#autonomiaBuildThreads store', () => {
       });
     });
 
+    // #1428 (pilot) — undo answers with the thread itself; the agent is read again.
+    it('desfazerAjuste posts the undo, applies the thread and re-reads the agent', async () => {
+      const commit = vi.fn();
+      const dispatch = vi.fn().mockResolvedValue({ id: 9, name: 'Bia' });
+      const state = { resultado: { desfeito: true } };
+      AutonomiaBuildThreadsAPI.desfazer.mockResolvedValue({
+        data: { payload: { id: 4, agent_id: 9, status: 'ready', state } },
+      });
+
+      await actions.desfazerAjuste({ commit, dispatch }, { threadId: 4 });
+
+      expect(AutonomiaBuildThreadsAPI.desfazer).toHaveBeenCalledWith(4);
+      expect(commit).toHaveBeenCalledWith('SET_THREAD_STATE', state);
+      expect(dispatch).toHaveBeenCalledWith('autonomiaAgents/show', 9, {
+        root: true,
+      });
+      expect(commit).toHaveBeenCalledWith('SET_AGENT', { id: 9, name: 'Bia' });
+    });
+
+    it('desfazerAjuste rethrows the raw error so the page can tell a 409', async () => {
+      const erro = { response: { status: 409 } };
+      AutonomiaBuildThreadsAPI.desfazer.mockRejectedValue(erro);
+
+      await expect(
+        actions.desfazerAjuste(
+          { commit: vi.fn(), dispatch: vi.fn() },
+          { threadId: 4 }
+        )
+      ).rejects.toBe(erro);
+    });
+
     it('onSettled surfaces a visible error when the build failed', async () => {
       const commit = vi.fn();
       const dispatch = vi.fn();
@@ -439,7 +471,126 @@ describe('#autonomiaBuildThreads store', () => {
     });
   });
 
+  // #1428 (parte 3, entrega B) — a prova chega depois do cartão: um laço curto só
+  // dela, que para quando ela assenta, quando outra conversa ou turno começou, ou
+  // no teto (aí a prova fica indisponível).
+  describe('acompanharProva', () => {
+    let ctx;
+    const respostaDaProva = prova => ({
+      data: { payload: { id: 3, state: { resultado: { prova } } } },
+    });
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      ctx = {
+        commit: vi.fn(),
+        state: { thread: { id: 3 }, status: 'ready' },
+      };
+      ctx.dispatch = vi.fn((name, args) =>
+        name === 'acompanharProva' ? actions.acompanharProva(ctx, args) : null
+      );
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('reads show every 2 s and stops once the proof settles', async () => {
+      AutonomiaBuildThreadsAPI.show
+        .mockResolvedValueOnce(
+          respostaDaProva({ status: 'pendente', total: 3 })
+        )
+        .mockResolvedValueOnce(
+          respostaDaProva({ status: 'pronta', ok: 3, total: 3, perguntas: [] })
+        );
+
+      actions.acompanharProva(ctx, { threadId: 3 });
+      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(10000);
+
+      expect(AutonomiaBuildThreadsAPI.show).toHaveBeenCalledTimes(2);
+      expect(ctx.commit).toHaveBeenLastCalledWith('SET_PROVA', {
+        threadId: 3,
+        prova: { status: 'pronta', ok: 3, total: 3, perguntas: [] },
+      });
+    });
+
+    it('stops when a new turn started or the page moved to another thread', async () => {
+      AutonomiaBuildThreadsAPI.show.mockResolvedValue(
+        respostaDaProva({ status: 'pendente', total: 3 })
+      );
+      actions.acompanharProva(ctx, { threadId: 3 });
+      ctx.state.status = 'processing';
+      await vi.advanceTimersByTimeAsync(10000);
+
+      expect(AutonomiaBuildThreadsAPI.show).toHaveBeenCalledTimes(1);
+      expect(ctx.commit).not.toHaveBeenCalled();
+    });
+
+    it('stops when the result no longer carries a proof (undone)', async () => {
+      AutonomiaBuildThreadsAPI.show.mockResolvedValue({
+        data: { payload: { id: 3, state: { resultado: { desfeito: true } } } },
+      });
+      actions.acompanharProva(ctx, { threadId: 3 });
+      await vi.advanceTimersByTimeAsync(10000);
+
+      expect(AutonomiaBuildThreadsAPI.show).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives up at the ceiling and shows the proof as unavailable', async () => {
+      AutonomiaBuildThreadsAPI.show.mockResolvedValue(
+        respostaDaProva({ status: 'pendente', total: 3 })
+      );
+      actions.acompanharProva(ctx, { threadId: 3 });
+      await vi.advanceTimersByTimeAsync(2000 * 61);
+
+      expect(AutonomiaBuildThreadsAPI.show).toHaveBeenCalledTimes(60);
+      expect(ctx.commit).toHaveBeenLastCalledWith('SET_PROVA', {
+        threadId: 3,
+        prova: { status: 'indisponivel' },
+      });
+    });
+
+    it('stopPolling also stops the proof loop', async () => {
+      actions.acompanharProva(ctx, { threadId: 3 });
+      actions.stopPolling();
+      await vi.advanceTimersByTimeAsync(10000);
+
+      expect(AutonomiaBuildThreadsAPI.show).not.toHaveBeenCalled();
+    });
+  });
+
   describe('mutations', () => {
+    it('SET_PROVA patches only the proof of the result on screen, for the same thread', () => {
+      const state = {
+        thread: { id: 3 },
+        threadState: {
+          applied: true,
+          resultado: { itens: [1], prova: { status: 'pendente', total: 2 } },
+        },
+      };
+
+      mutations.SET_PROVA(state, { threadId: 9, prova: { status: 'pronta' } });
+      expect(state.threadState.resultado.prova.status).toBe('pendente');
+
+      mutations.SET_PROVA(state, {
+        threadId: 3,
+        prova: { status: 'pronta', ok: 2 },
+      });
+      expect(state.threadState).toEqual({
+        applied: true,
+        resultado: { itens: [1], prova: { status: 'pronta', total: 2, ok: 2 } },
+      });
+
+      const semResultado = { thread: { id: 3 }, threadState: {} };
+      mutations.SET_PROVA(semResultado, {
+        threadId: 3,
+        prova: { status: 'pronta' },
+      });
+      expect(semResultado.threadState).toEqual({});
+    });
+
     it('RESET clears every tracked slice', () => {
       const state = {
         thread: { id: 3 },

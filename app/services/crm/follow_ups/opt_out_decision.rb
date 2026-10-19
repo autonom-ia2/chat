@@ -32,6 +32,8 @@ class Crm::FollowUps::OptOutDecision
     opted_out = result[:decision] == 'sim'
     return unless update_state(decision: result[:decision], motivo: result[:motivo], opted_out: opted_out)
 
+    sair_da_copia! if opted_out
+
     log_opt_out(result[:motivo]) if opted_out
     log(:info, "decisao=#{result[:decision]} motivo=#{result[:motivo]}")
   end
@@ -63,11 +65,36 @@ class Crm::FollowUps::OptOutDecision
     @card.with_lock do
       next false unless pending?
 
-      contact = opted_out ? Crm::FollowUps::CardOptOut.contact_for(@card) : nil
+      contact = opted_out && !de_outro_endereco? ? Crm::FollowUps::CardOptOut.contact_for(@card) : nil
       @card.update!(metadata: decided_metadata(decision, motivo, opted_out, contact))
       contact&.opt_out!(source: 'follow_up_reply')
       true
     end
+  end
+
+  # #1807 (flag `email_autoria`): o pedido para parar mandado de um e-mail que não é do cliente (alguém em cópia, a
+  # equipe, resposta automática) para a cadência DESTE card (o "sim" segura o planner), mas não marca o contato: quem
+  # pediu pode não ser ele. Se for o próprio cliente de outro endereço, mesclar os contatos resolve.
+  def de_outro_endereco?
+    autoria.present?
+  end
+
+  def autoria
+    return @autoria if defined?(@autoria)
+
+    @autoria = Crm::Email::Autoria.new(@card.account).de(@message)
+  end
+
+  # #1828: quem não é o cliente e pediu para parar sai da cópia desta conversa (a resposta da IA e o preenchimento do
+  # painel deixam de incluí-lo). Resposta automática não pede nada; o cliente nunca sai.
+  # Fora da trava do card (a ordem de travas daqui segue card -> contato) e sem desfazer a decisão gravada: se a escrita
+  # na conversa falha, só ela se perde, com o erro no rastreador.
+  def sair_da_copia!
+    return if autoria.nil? || autoria.tipo == Crm::Email::Autoria::AUTOMATICA
+
+    Crm::Email::Destinatarios.registrar_saida!(@message.conversation, autoria.remetente)
+  rescue ActiveRecord::ActiveRecordError => e
+    ChatwootExceptionTracker.new(e, account: @card.account).capture_exception
   end
 
   def decided_metadata(decision, motivo, opted_out, contact)

@@ -2,7 +2,7 @@ class CompanyPolicy < ApplicationPolicy
   include Relationships::RecordPermissions
 
   def index?
-    true
+    relationship_record_read?
   end
 
   def summary?
@@ -10,11 +10,11 @@ class CompanyPolicy < ApplicationPolicy
   end
 
   def search?
-    true
+    relationship_record_read?
   end
 
   def show?
-    true
+    relationship_record_read?
   end
 
   def create?
@@ -34,6 +34,6 @@ class CompanyPolicy < ApplicationPolicy
   end
 
   def destroy?
-    @account_user.administrator?
+    @account_user.permission_granted?('contact_delete')
   end
 end

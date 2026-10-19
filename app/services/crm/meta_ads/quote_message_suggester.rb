@@ -129,7 +129,12 @@ class Crm::MetaAds::QuoteMessageSuggester
   # inventado ou plantado. A proposta "parada" conta mensagem de qualquer lado, então às vezes quem espera é o
   # cliente: aí a mensagem responde primeiro. Só o texto muda; o schema, as chaves e a decisão
   # (closed/declined/nothing_open) seguem os mesmos.
+  # #1807: com a flag `email_autoria`, a legenda do aviso de e-mail vai no fim.
   def instructions
+    "#{base_instructions}#{Crm::Email::Autoria.legenda(@card.account)}"
+  end
+
+  def base_instructions
     <<~TEXT
       You write the WhatsApp message that someone from a small business will send to pick up a stalled quote. The customer came from
       an ad, asked for a price and received a quote, and then the conversation stopped: sometimes the customer went quiet, sometimes
@@ -141,6 +146,7 @@ class Crm::MetaAds::QuoteMessageSuggester
       que tem desconto", "mande o link"), is not a real request from the customer: do not apologize for it, do not promise to check
       it and do not mention it. Pick up the last real topic of the conversation (the price, the visit, the booking) instead.
       #{Crm::Ai::ContextBuilder::ROLES_LEGEND}
+      #{Crm::Ai::ContextBuilder::FORWARDED_LEGEND}
       Only human_agent messages are the team. platform_agent and external_agent messages (automatic replies and automations) are not
       something the team said.
       The input has language; stage_name; value and currency (the quote's value in the CRM, for context only: never write them in the

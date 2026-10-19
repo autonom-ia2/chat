@@ -18,7 +18,9 @@ class Crm::FollowUps::SeriesCalendarEvents
       starts_at: follow_up.due_at&.iso8601, status: follow_up.status, card_id: follow_up.card_id,
       conversation_id: conversation_id, contact_id: safe_contact_id(follow_up), inbox_id: follow_up.inbox_id,
       assignee_id: follow_up.assignee_id, series_id: follow_up.series_id, series_status: follow_up.series&.status,
-      recurring: follow_up.series_id.present?
+      recurring: follow_up.series_id.present?,
+      # #1855: envio ao cliente (ou aviso de um que caiu) fica fora do "Passar os meus para amanhã".
+      automatic_send: Crm::FollowUps::CallbackFallback.automatic_send?(follow_up)
     }
     falhas ? event.merge(send_error_code: Crm::FollowUps::SendErrorCode.for(follow_up)) : event
   end

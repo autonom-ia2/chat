@@ -88,6 +88,10 @@
     },
     "OUTRO_ITEM": "Outra configuração da plataforma.",
     "CARTOES": {
+      "PRIMEIROS_PASSOS": {
+        "TITULO": "Primeiros passos",
+        "TEXTO": "O que já está pronto na sua conta e os próximos passos para crescer."
+      },
       "DADOS_EMPRESA": {
         "TITULO": "Dados da empresa",
         "TEXTO": "Nome, idioma e fuso da sua conta."
@@ -177,6 +181,8 @@
         "TEXTO": "O endereço que aparece para quem recebe suas campanhas por e-mail."
       }
     },
-    "RECONECTAR": "Precisa reconectar: 1 canal | Precisa reconectar: {count} canais"
+    "RECONECTAR": "Precisa reconectar: 1 canal | Precisa reconectar: {count} canais",
+    "PASSOS_FALTAM": "Falta 1 passo | Faltam {count} passos",
+    "TUDO_PRONTO": "Tudo pronto"
   }
 }

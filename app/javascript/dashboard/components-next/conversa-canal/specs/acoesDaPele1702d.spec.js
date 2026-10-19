@@ -1,5 +1,5 @@
-// Ações da pele ligadas ao contrato do Híbrido (#1702 com o #1709): enquete no "+",
-// reação pela rota da mensagem e álbum anunciado pelo marcador do WAHA.
+// Ações da pele ligadas ao contrato do Híbrido (#1702 com o #1709): enquete no "+" e
+// reação pela rota da mensagem. O álbum do WAHA fica no #1831 (albumDoWaha.spec.js).
 import { mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
 import { createI18n } from 'vue-i18n';
@@ -11,11 +11,6 @@ import {
 } from '../mais/montarMensagem';
 import { ENQUETE, comoSaiAEnquete } from '../mais/enqueteNoMais';
 import { acoesDaConversa, estadoDaReacao } from '../reacaoDoAtendente';
-import {
-  agruparDaConversa,
-  eMarcadorDeAlbum,
-  itensAnunciados,
-} from '../album/agruparAlbuns';
 
 const i18n = () =>
   createI18n({ legacy: false, locale: 'en', missingWarn: false });
@@ -250,100 +245,5 @@ describe('estadoDaReacao com as ações do motor (#1709)', () => {
         mensagem: mensagem({ sourceId: 'true_x@c.us_1' }),
       }).pelaCaixa
     ).toBeUndefined();
-  });
-});
-
-describe('álbum anunciado pelo marcador do WAHA (#1709)', () => {
-  const FUSO = 'America/Sao_Paulo';
-  const BASE = Date.UTC(2026, 9, 16, 18, 0) / 1000;
-  let id = 0;
-  const foto = (extras = {}) => {
-    id += 1;
-    return {
-      id,
-      messageType: 0,
-      senderId: 7,
-      senderType: 'Contact',
-      createdAt: BASE + 2,
-      status: 'sent',
-      content: null,
-      contentAttributes: {},
-      attachments: [{ fileType: 'image', dataUrl: 'https://x.test/a.jpg' }],
-      ...extras,
-    };
-  };
-  const marcadorRecebido = (total = 2) =>
-    foto({
-      createdAt: BASE,
-      content: 'Mensagem de Álbum Recebida',
-      attachments: [],
-      contentAttributes: {
-        wahaAlbum: { expectedImages: total, expectedVideos: 0 },
-      },
-    });
-  const marcadorEscondido = (total = 2) =>
-    foto({
-      createdAt: BASE,
-      // Em produção o marcador fica com o contato da conversa (MessageBuilder#sender).
-      messageType: 2,
-      content: 'Mensagem de Álbum Recebida',
-      attachments: [],
-      contentAttributes: {
-        wahaAlbum: { expectedImages: total, expectedVideos: 0 },
-        c2yHidden: true,
-      },
-    });
-  const agrupar = lista => agruparDaConversa(lista, { fuso: FUSO });
-
-  it('reconhece o marcador recebido e o escondido (atividade)', () => {
-    expect(eMarcadorDeAlbum(marcadorRecebido())).toBe(true);
-    expect(eMarcadorDeAlbum(marcadorEscondido())).toBe(true);
-    expect(itensAnunciados(marcadorRecebido(3))).toBe(3);
-    expect(eMarcadorDeAlbum(foto())).toBe(false);
-  });
-
-  it('sem a flag: junta as fotos anunciadas e o marcador some', () => {
-    const marcador = marcadorRecebido(2);
-    const [a, b, c] = [foto(), foto(), foto()];
-    const { albuns, marcadores } = agrupar([marcador, a, b, c]);
-    expect([...albuns.values()].map(itens => itens.map(m => m.id))).toEqual([
-      [a.id, b.id],
-    ]);
-    expect([...marcadores]).toEqual([marcador.id]);
-  });
-
-  it('com a flag (atividade escondida): junta do mesmo cliente', () => {
-    const marcador = marcadorEscondido(3);
-    const [a, b] = [foto(), foto()];
-    const outro = foto({ senderId: 8 });
-    const { albuns, marcadores } = agrupar([marcador, a, b, outro]);
-    expect(albuns.get(a.id).map(m => m.id)).toEqual([a.id, b.id]);
-    expect(marcadores.has(marcador.id)).toBe(true);
-  });
-
-  it('o marcador some mesmo quando só chegou uma foto', () => {
-    const marcador = marcadorRecebido(2);
-    const sozinha = foto();
-    const { albuns, marcadores } = agrupar([marcador, sozinha]);
-    expect(albuns.size).toBe(0);
-    expect(marcadores.has(marcador.id)).toBe(true);
-  });
-
-  it('em grupo o marcador só some: não junta fotos de participantes', () => {
-    const marcador = marcadorEscondido(2);
-    const [a, b] = [foto(), foto()];
-    const { albuns, marcadores } = agruparDaConversa([marcador, a, b], {
-      fuso: FUSO,
-      grupo: true,
-    });
-    expect(albuns.size).toBe(0);
-    expect(marcadores.has(marcador.id)).toBe(true);
-  });
-
-  it('atividade escondida não junta mensagem nossa', () => {
-    const marcador = marcadorEscondido(2);
-    const nossa = foto({ messageType: 1, senderId: 1, senderType: 'User' });
-    const { albuns } = agrupar([marcador, nossa, foto()]);
-    expect(albuns.has(nossa.id)).toBe(false);
   });
 });

@@ -603,6 +603,56 @@ describe('AgentePage', () => {
       );
       wrapper.unmount();
     });
+
+    // #1426 — na Fase 2 o quadro avisa quantos materiais precisam do dono (reprovados ou não lidos), sem o cartão.
+    describe('material that needs the owner', () => {
+      const MATERIAL = [
+        {
+          id: 1,
+          status: 'ready',
+          review: { status: 'needs_resend', reviewed_at: '2026-10-19' },
+        },
+        { id: 2, status: 'failed' },
+        {
+          id: 3,
+          status: 'ready',
+          review: { status: 'needs_review', reviewed_at: null },
+        },
+        {
+          id: 4,
+          status: 'ready',
+          review: { status: 'accepted', reviewed_at: '2026-10-19' },
+        },
+      ];
+      const comMaterial = async ligada => {
+        store.state.getCurrentAccountId = 1;
+        store.state['accounts/getAccount'] = () => ({
+          autonomia_agents_fase2: ligada,
+        });
+        const wrapper = await montar();
+        store.state['autonomiaSources/getKnowledgeSources'] = MATERIAL;
+        await flushPromises();
+        return wrapper;
+      };
+
+      it('counts them with the Fase 2', async () => {
+        const wrapper = await comMaterial(true);
+        const aviso = no('[data-problemas-no-material]');
+        expect(aviso.textContent).toContain('BLOCO_SABE.N_PROBLEMAS');
+        expect(
+          wrapper
+            .findComponent({ name: 'PaginaBlocos' })
+            .props('problemasNoMaterial')
+        ).toBe(2);
+        wrapper.unmount();
+      });
+
+      it('says nothing without the Fase 2', async () => {
+        const wrapper = await comMaterial(false);
+        expect(no('[data-problemas-no-material]')).toBeNull();
+        wrapper.unmount();
+      });
+    });
   });
 
   describe('só ver', () => {

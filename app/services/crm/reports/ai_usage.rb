@@ -4,13 +4,13 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
   RESOURCE_FEATURES = {
     'Organizar cards' => %w[avaliacao_card],
     'Lembretes de retorno' => %w[follow_up follow_up_saida],
-    'Criação de e-mail' => %w[email],
-    'Resumos' => %w[resumo resumo_reuniao],
-    'Assistente de respostas' => %w[copilot agente_resposta agente_teste],
+    'Criação de e-mail' => %w[email], 'Resumos' => %w[resumo resumo_reuniao],
+    'Assistente de respostas' => %w[copilot agente_resposta agente_teste agente_prova_do_ajuste],
     'Agendamento' => %w[sugestao_horario convite aviso_modelo aviso_redacao],
     'Mídia' => %w[midia], 'Campanhas' => %w[campanha_opt_out],
     'Base de conhecimento' => %w[kb_revisao kb_instrucao],
-    'Construtor de agente' => %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste agente_builder_conferencia],
+    'Construtor de agente' => %w[agente_builder agente_builder_coleta agente_builder_fechamento agente_builder_ajuste agente_builder_conferencia
+                                 agente_prova_juiz],
     'SLA' => %w[sla], 'Assunto da conversa' => %w[assunto assunto_revisao], 'Anúncios da Meta' => %w[anuncios_meta],
     'Guia da Plataforma' => %w[guia guia_midia], 'Modelos do WhatsApp' => %w[modelo_redacao modelo_fora_da_janela modelo_compativel]
   }.freeze
@@ -43,9 +43,10 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
 
   # Marco de "reset do cronômetro" da Gestão de IA: piso de EXIBIÇÃO via ENV CRM_AI_USAGE_BASELINE_AT
   # (iso8601). Ausente → sem piso (idêntico ao anterior). Nada é apagado; ajustar/remover a ENV
-  # restaura a janela completa. Esconde a telemetria pré-fix de custo/cache que poluía as médias.
+  # restaura a janela completa. Esconde a telemetria pré-fix de custo/cache que poluía as médias. O marco é da
+  # instalação: lido no relógio do servidor, não no fuso da conta (#1876).
   def since
-    [super, parse_time(ENV['CRM_AI_USAGE_BASELINE_AT'].presence)].compact.max
+    [super, parse_time(ENV['CRM_AI_USAGE_BASELINE_AT'].presence, in_zone: Time.zone)].compact.max
   end
 
   def usage_scope

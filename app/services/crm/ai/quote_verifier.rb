@@ -17,10 +17,18 @@ class Crm::Ai::QuoteVerifier
   def verified?
     return false if @quote.length < MIN_QUOTE_LENGTH
 
-    Array(@messages).any? { |message| normalize_for_quote(message[:content]).include?(@quote) }
+    # Cópia encaminhada pela equipe (#1760) é texto de outra pessoa: não prova pendência desta conversa.
+    Array(@messages).reject { |message| message[:forwarded] }
+                    .any? { |message| normalize_for_quote(conteudo(message)).include?(@quote) }
   end
 
   private
+
+  # #1807: o aviso de autoria do e-mail é nosso, não da conversa: nunca serve de citação. A mensagem de outra pessoa
+  # em cópia continua valendo (o follow-up pode retomar a pergunta dela).
+  def conteudo(message)
+    message[:email_autoria] ? Crm::Email::Autoria.sem_aviso(message[:content]) : message[:content]
+  end
 
   # Acento, caixa e espaçamento variam entre o que o modelo devolve e o que está gravado.
   # Comparar cru reprovaria citação honesta.

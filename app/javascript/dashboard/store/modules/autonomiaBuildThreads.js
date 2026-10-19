@@ -36,6 +36,20 @@ let pollThreadId = null;
 let pollAttempt = 0;
 let pushedDuringFetch = false;
 
+// #1428 (pilot, part 3 B) — the proof questions arrive seconds after the result
+// card: a short, bounded loop of its own reads `show` until the proof settles.
+// It only patches `resultado.prova`, never the rest of the thread.
+const PROVA_INTERVAL = 2000;
+const PROVA_MAX_ATTEMPTS = 60; // ~2 minutes ceiling
+let provaTimer = null;
+
+const clearProva = () => {
+  if (provaTimer) {
+    clearTimeout(provaTimer);
+    provaTimer = null;
+  }
+};
+
 // T6 — idempotency id per TURN (not per request): minted when the user sends a
 // message and reused while that exact turn is unconfirmed (double-click,
 // network replay, resend after 409/failure), so the backend can dedupe the
@@ -270,6 +284,18 @@ export const actions = {
     }
   },
 
+  // #1428 (pilot) — undo the last adjustment. The answer is the thread itself
+  // (its `resultado` now says undone); the agent is read again so the page and
+  // the test phone see it as it was. Errors go back raw: the page tells a 409
+  // (the agent changed after) from a generic failure.
+  desfazerAjuste: async ({ commit, dispatch }, { threadId } = {}) => {
+    if (!threadId) return null;
+    const { data } = await AutonomiaBuildThreadsAPI.desfazer(threadId);
+    const payload = applyThreadResponse(commit, data);
+    await fetchGeneratedAgent(commit, dispatch, payload.agent_id);
+    return payload;
+  },
+
   // The user reached Materiais and has nothing to upload: send a short signal
   // turn with `no_materials: true` so the backend gate can close the
   // instruction without waiting on sources. Not echoed as a visible bubble.
@@ -339,6 +365,38 @@ export const actions = {
         delay: pushedDuringFetch ? 0 : POLL_INTERVAL,
       });
     }, delay);
+  },
+
+  // #1428 (pilot, part 3 B) — follows the proof of the last adjustment while it is
+  // `pendente`. Stops when it settles, when the page moved to another thread or a
+  // new turn started, or at the ceiling (then the proof shows as unavailable).
+  acompanharProva: (
+    { commit, dispatch, state: $state },
+    { threadId, attempt = 0 } = {}
+  ) => {
+    clearProva();
+    if (!threadId) return;
+    if (attempt >= PROVA_MAX_ATTEMPTS) {
+      commit('SET_PROVA', { threadId, prova: { status: 'indisponivel' } });
+      return;
+    }
+    provaTimer = setTimeout(async () => {
+      provaTimer = null;
+      let payload = null;
+      try {
+        const { data } = await AutonomiaBuildThreadsAPI.show(threadId);
+        payload = data.payload || data || {};
+      } catch (error) {
+        payload = null;
+      }
+      if ($state.thread?.id !== threadId || $state.status === 'processing')
+        return;
+      const prova = payload?.state?.resultado?.prova;
+      if (payload && !prova) return;
+      if (prova) commit('SET_PROVA', { threadId, prova });
+      if (prova && prova.status !== 'pendente') return;
+      dispatch('acompanharProva', { threadId, attempt: attempt + 1 });
+    }, PROVA_INTERVAL);
   },
 
   // #1367 — the server says this thread's turn just ended: fetch now instead of
@@ -412,6 +470,7 @@ export const actions = {
 
   stopPolling: () => {
     clearPoll();
+    clearProva();
     pollThreadId = null;
     pushedDuringFetch = false;
   },
@@ -463,6 +522,15 @@ export const mutations = {
   },
   SET_THREAD_STATE($state, threadState) {
     $state.threadState = threadState || {};
+  },
+  // Only the proof of the result card on screen, and only for the same thread.
+  SET_PROVA($state, { threadId, prova }) {
+    const resultado = $state.threadState?.resultado;
+    if (!resultado || $state.thread?.id !== threadId) return;
+    $state.threadState = {
+      ...$state.threadState,
+      resultado: { ...resultado, prova: { ...resultado.prova, ...prova } },
+    };
   },
   SET_AGENT($state, agent) {
     $state.agent = agent;

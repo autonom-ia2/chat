@@ -14,7 +14,7 @@ module Crm
         open_cards.find_each(batch_size: 500).with_index do |card, index|
           break if index >= MAX_CARDS
 
-          descriptor = responsible(card)
+          descriptor = card.current_responsible
           key = bucket_key(descriptor)
           entry = buckets[key]
           entry[:name] ||= descriptor&.dig(:name)
@@ -31,12 +31,6 @@ module Crm
                        .includes(:owner, primary_conversation: [:assignee, :ai_assignee, { inbox: { agent_bot_inbox: :agent_bot } }],
                                          inbox: { agent_bot_inbox: :agent_bot })
         pipeline.present? ? scope.where(pipeline_id: pipeline.id) : scope
-      end
-
-      def responsible(card)
-        return { type: 'agent', id: card.owner.id, name: card.owner.name } if card.owner.present?
-
-        card.responsible_descriptor
       end
 
       def bucket_key(descriptor)

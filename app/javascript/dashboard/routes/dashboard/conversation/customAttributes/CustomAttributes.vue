@@ -43,7 +43,7 @@ const getters = useStoreGetters();
 const route = useRoute();
 const { t } = useI18n();
 const { canManageRelationshipRecords } = useRelationshipPermissions();
-const readOnlyContact = computed(
+const readOnlyContactAttributes = computed(
   () =>
     props.attributeType === 'contact_attribute' &&
     !canManageRelationshipRecords.value
@@ -65,6 +65,13 @@ const dragging = ref(false);
 const [showAllAttributes, toggleShowAllAttributes] = useToggle(false);
 
 const currentChat = computed(() => getters.getSelectedChat.value);
+// Campos da conversa: quem só lê a conversa (#1800) não preenche, como o contato sem contact_manage.
+const readOnlyContact = computed(
+  () =>
+    readOnlyContactAttributes.value ||
+    (props.attributeType === 'conversation_attribute' &&
+      !getters.canOperateConversation.value(currentChat.value))
+);
 const attributes = computed(() => {
   if (relationshipSidebar.value) {
     return selectDefinitions(

@@ -151,7 +151,7 @@
         "CAMPAIGN_EMAIL": "Email campaign",
         "CAMPAIGN_LIVE_CHAT": "Live chat campaign",
         "CAMPAIGN_SMS": "SMS campaign",
-        "UNKNOWN": "Unknown"
+        "NONE": "No source"
       }
     }
   },
@@ -532,6 +532,7 @@
         "TITLE": "Follow-ups",
         "PENDING": "Pending",
         "OVERDUE": "Overdue",
+        "OVERDUE_BY": "AI {ai} · Team {human}",
         "DUE_SOON": "Due in 48h"
       },
       "WORKLOAD": {
@@ -1181,6 +1182,7 @@
       "CARD_LOST": "Deal marked as lost.",
       "CARD_RESOLVED": "Card marked as resolved.",
       "CARD_CANCELLED": "Card marked as cancelled.",
+      "CARD_MARKED_AS": "Marked: {label}.",
       "CARD_REOPENED": "Deal reopened.",
       "CARD_CLOSE_ERROR": "Could not update the deal status.",
       "CARD_MOVED": "Card moved.",
@@ -1577,7 +1579,7 @@
       "WHEN_TO_USE": "When to use",
       "WHEN_TO_USE_HELP": "The AI reads this to know when a conversation belongs to this pipeline. Name the products or cases that come here.",
       "WHEN_TO_USE_PLACEHOLDER": "E.g.: sales of our two products, AI Agents and Chat2You.",
-      "MONTHLY_TARGET": "Monthly sales target (R$)",
+      "MONTHLY_TARGET": "Monthly sales target",
       "MONTHLY_TARGET_PLACEHOLDER": "E.g. 50000",
       "MONTHLY_TARGET_HELP": "Drives the Goal box on the dashboard. Leave empty for no target.",
       "REQUIRED": "Required",
@@ -2251,7 +2253,9 @@
         "LOAD_ERROR": "Could not load the Meta connection.",
         "RETRY": "Try again",
         "GROUP": "Campaigns",
-        "BREADCRUMB": "You are here"
+        "BREADCRUMB": "You are here",
+        "NOT_CONNECTED_TITLE": "The ads are not connected yet",
+        "NOT_CONNECTED_TEXT": "Ask an administrator to connect the Meta ads. Then the results show up here."
       },
       "EMPTY": {
         "EYEBROW": "Campaigns",
@@ -2636,6 +2640,7 @@
           "EARLY": "Too early"
         },
         "STALLED_TITLE": "1 stalled quote | {count} stalled quotes",
+        "LIST_SCOPE": "Only the conversations you can see show up here.",
         "STALLED_SINCE": "No reply {time}",
         "OPEN_CONVERSATION": "Open conversation",
         "COUNT": {
@@ -3526,6 +3531,9 @@
       "ADD_TOGGLE": "Set service hours (SLA) right after creating"
     }
   },
+  "CRM_FILTRO_DO_LINK": {
+    "FECHADO_NO_MES": "Closed: this month"
+  },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Autonom.ia Copilot",
     "RESET": "New chat",
@@ -4270,6 +4278,35 @@
         "E3": "Promised to pay",
         "E4": "Paid",
         "SUCESSO": "Paid"
+      },
+      "RENOVACAO": {
+        "NOME": "Renewal",
+        "TEXTO": "From the expiry notice to the renewed policy.",
+        "E1": "Expiring soon",
+        "E2": "Quoting",
+        "E3": "Options sent",
+        "E4": "Negotiation",
+        "E5": "Renewed",
+        "SUCESSO": "Renewed",
+        "FALHA": "Not renewed"
+      },
+      "SINISTRO": {
+        "NOME": "Claim",
+        "TEXTO": "From the customer's notice to the insurer's answer.",
+        "E1": "Opened",
+        "E2": "Under review",
+        "E3": "Missing document",
+        "E4": "Closed",
+        "SUCESSO": "Closed"
+      },
+      "ENDOSSO": {
+        "NOME": "Endorsement",
+        "TEXTO": "From the endorsement request to the new policy.",
+        "E1": "Requested",
+        "E2": "With the insurer",
+        "E3": "Missing document",
+        "E4": "Done",
+        "SUCESSO": "Done"
       }
     },
     "ETAPAS": {
@@ -4376,7 +4413,16 @@
         "ENTREGA": "asks about the delivery",
         "PAGAR": "wants to pay",
         "SEGUNDA_VIA": "asks for a copy of the bill",
-        "ATRASADO": "is late on a payment"
+        "ATRASADO": "is late on a payment",
+        "VAI_VENCER": "has a policy about to expire",
+        "RENOVAR": "wants to renew the policy",
+        "AVISO_RENOVACAO": "got the renewal notice",
+        "BATEU": "had a car crash or some damage",
+        "ROUBO": "was robbed",
+        "ACIONAR": "wants to file a claim",
+        "TROCOU_CARRO": "changed cars",
+        "MUDOU_ENDERECO": "moved to a new address",
+        "INCLUIR_MOTORISTA": "wants to add a driver"
       },
       "NOTA": "Team note (optional)",
       "NOTA_AJUDA": "Only your team reads it. It changes nothing in the pipeline."
@@ -4387,7 +4433,6 @@
       "META": "Monthly sales goal",
       "META_AJUDA": "Shows on the dashboard. Leave it empty if you have no goal.",
       "META_EXEMPLO": "50000",
-      "MOEDA": "R$",
       "NOMES": "What to call the result (optional)",
       "NOMES_AJUDA": "If empty, we use “{sucesso}” and “{fracasso}”.",
       "SUCESSO": "When it works out",
@@ -4621,6 +4666,7 @@
         "TEXTO": "Solve something for an existing customer."
       },
       "MODELO": "What kind of service?",
+      "MODELO_VENDER": "What kind of sale?",
       "PREVIA_TITULO": "Your board shows up here",
       "PREVIA_TEXTO": "Choose what the pipeline is for and we show the ready-made stages.",
       "ROTULO": "What it is for"
@@ -4724,7 +4770,9 @@
         "SUMIU": "Stopped replying",
         "NAO_PRECISA": "No longer needed"
       },
-      "CANCELAR_EXEMPLO": "Why was it cancelled?"
+      "CANCELAR_EXEMPLO": "Why was it cancelled?",
+      "PERDEU_TITULO_ROTULO": "{rotulo}: what happened?",
+      "PERDEU_CONFIRMA_ROTULO": "Mark as: {rotulo}"
     },
     "ARQUIVAR": {
       "BOTAO": "Archive",
@@ -5201,7 +5249,8 @@
       "PESSOA": {
         "EXISTENTE": {
           "TITULO": "Already in contacts",
-          "TEXTO": "Search by name, phone or email."
+          "TEXTO": "Search by name, phone or email.",
+          "SEM_PERMISSAO": "Your role does not open the contact list. For a customer who already talks to you, create the card from their conversation."
         },
         "NOVA": {
           "TITULO": "New person",
@@ -5370,7 +5419,8 @@
     "CONTATO": {
       "TELA": "Contact",
       "TITULO": "Contact: {nome}",
-      "TEXTO": "The person: name, phone, email and fields. It counts for all their deals."
+      "TEXTO": "The person: name, phone, email and fields. It counts for all their deals.",
+      "TEXTO_BASICO": "The person: name, phone and email."
     },
     "EMPRESA": {
       "TELA": "Company",
@@ -5715,7 +5765,7 @@
       "AMANHA": "Tomorrow",
       "PARA_HOJE": "For today",
       "ATRASADOS": "Left behind",
-      "ADIAR_TODOS": "Move all to tomorrow",
+      "ADIAR_MEUS": "Move mine to tomorrow",
       "AGORA": "Now, {hora}",
       "PROXIMOS": "Next days",
       "PROXIMO": "Next: {dia} — {titulo}.",

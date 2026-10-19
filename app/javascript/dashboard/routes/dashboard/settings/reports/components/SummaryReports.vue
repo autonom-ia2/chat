@@ -1,5 +1,6 @@
 <script setup>
 import OverviewReportFilters from './OverviewReportFilters.vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { formatTime } from '@chatwoot/utils';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -61,6 +62,7 @@ const getMetrics = id =>
   reportMetrics.value.find(metrics => metrics.id === Number(id)) || {};
 const columnHelper = createColumnHelper();
 const { t } = useI18n();
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 
 const defaulSpanRender = cellProps =>
   h(
@@ -121,7 +123,7 @@ const tableData = computed(() =>
     return {
       id: row.id,
       // we fallback on title, label for instance does not have a name property
-      name: row.name ?? row.title,
+      name: row.name ?? nomeDaEtiqueta(row.title),
       type: props.type,
       conversationsCount: renderCount(conversationsCount),
       avgFirstResponseTime: renderAvgTime(avgFirstResponseTime),

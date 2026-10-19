@@ -7,12 +7,13 @@ module Autonomia
     # só no Copilot (/suggest); o Testar (/test) o ignora.
     class AnswerResult
       attr_reader :reply, :confidence, :handoff, :used_knowledge,
-                  :answered_from_knowledge, :raw_reply, :error
+                  :answered_from_knowledge, :raw_reply, :error, :interacao
 
       # handoff: { should: Boolean, reason: String|nil }
       # used_knowledge: Array<{ id:, content:, source: }>
+      # interacao: a interação conferida pelo `Interacao.do_modelo` (#1479), só no atendimento; nil sem ela. Fora do to_h.
       def initialize(reply:, confidence:, handoff:, used_knowledge: [],
-                     answered_from_knowledge: false, raw_reply: nil, error: nil)
+                     answered_from_knowledge: false, raw_reply: nil, error: nil, interacao: nil)
         @reply = reply
         @confidence = confidence
         @handoff = handoff
@@ -20,6 +21,7 @@ module Autonomia
         @answered_from_knowledge = answered_from_knowledge
         @raw_reply = raw_reply
         @error = error
+        @interacao = interacao
       end
 
       # Consumido pelo jbuilder do Testar. NÃO inclui raw_reply (esse é só do Copilot).

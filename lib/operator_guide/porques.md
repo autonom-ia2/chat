@@ -188,6 +188,16 @@
 - passos: 1. Abra Contatos; 2. Selecione um ou mais contatos; 3. Use a barra de acoes em massa; 4. Adicione ou remova etiquetas; 5. Abra Marcados com para ver a lista por etiqueta.
 - gotchas: a sidebar mostra etiquetas visiveis; etiquetas ocultas criadas por recursos custom podem nao aparecer como filtro visual.
 
+### exportar_contatos
+- titulo: Exportar a base de contatos
+- rota: contacts_dashboard_index
+- intent: Como exporto meus contatos?; Como baixo a lista de clientes em planilha?; Da para tirar os contatos em CSV?
+- onde_fica: Contatos > Todos os contatos > menu de três pontos no topo > Exportar contatos
+- pre_requisitos: administrador ou função com Exportar contatos
+- passos: 1. Abra Contatos; 2. Se quiser exportar só uma parte, aplique o filtro antes; 3. Abra o menu de três pontos no topo e clique em Exportar contatos; 4. Confirme; 5. O arquivo CSV chega por e-mail quando ficar pronto.
+- gotchas: editar contatos não dá direito a exportar; exportar é um ajuste próprio da função, marcado como sensível porque a planilha leva nome, telefone e e-mail; funções que editavam contatos antes desta mudança continuaram exportando; agente sem função personalizada não exporta.
+- highlight: `contacts-more-actions`
+
 ### importar_contatos_por_csv
 - titulo: Importar contatos por CSV
 - rota: contacts_dashboard_index
@@ -846,9 +856,9 @@
 - leitura: campanhas
 - intent: Quanto custou cada venda dos meus anúncios?; O que eu faço hoje com os meus anúncios?; Onde vejo as propostas que vieram de anúncio?; Qual anúncio está vendendo e qual não está?; Quanto tempo minha equipe demora para responder quem veio do anúncio?; Por que o número de conversas da Meta é diferente do da plataforma?; Como marco que já fiz a ação do dia?
 - onde_fica: Menu lateral > Campanhas > Anúncios da Meta > aba Resultado
-- pre_requisitos: ser administrador da conta; a conta de anúncios conectada em Anúncios da Meta.
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Anúncios da Meta em Só olha; a conta de anúncios conectada em Anúncios da Meta (quem só olha pede ao administrador para conectar).
 - passos: 1. Na aba Resultado, escolha o período: 7 ou 30 dias; 2. Leia O que fazer hoje: até 3 ações, da mais importante para a menos, cada uma com o porquê; 3. Clique no botão da ação para ir ao trabalho (as propostas paradas, as conversas mais demoradas, o passo 3 da conexão, o anúncio por dentro ou o anúncio no Gerenciador da Meta); 4. Depois de fazer, clique em Feito: a ação fica marcada Feita; se não for fazer, clique em Dispensar e ela sai até amanhã; 5. No caminho do dinheiro, clique em Conversas, Propostas ou Vendas para abrir a lista daquela etapa, com Abrir conversa e Abrir no CRM em cada linha; 6. Confira em Quanto confiar nos números o número da Meta ao lado do nosso.
-- gotchas: as ações são decididas pelos números, e a IA só escreve o texto (com o selo Escrito pela IA); sem IA ligada, o texto vem pela regra, com os mesmos números; abrir uma ação não conta como feita, só o Feito conta; na ação que pede para não mexer no anúncio por causa do preço da concorrência, o botão Entendi já é o Feito; dispensada não volta no mesmo dia, e a vaga vai para a próxima ação; a lista das conversas mais demoradas é sempre dos últimos 30 dias, mesmo com o painel em 7; aumentar orçamento é feito no Gerenciador da Meta, a plataforma só lê os anúncios; o Tempo de resposta é a mediana (metade foi respondida em até esse tempo) e conta resposta de pessoas e de agentes; a comparação com a Meta vai até ontem, porque o gasto de hoje ainda está mudando; a lista da etapa mostra até 50 linhas, e o Kanban filtrado por anúncio ainda não existe.
+- gotchas: as ações são decididas pelos números, e a IA só escreve o texto (com o selo Escrito pela IA); sem IA ligada, o texto vem pela regra, com os mesmos números; abrir uma ação não conta como feita, só o Feito conta; na ação que pede para não mexer no anúncio por causa do preço da concorrência, o botão Entendi já é o Feito; dispensada não volta no mesmo dia, e a vaga vai para a próxima ação; a lista das conversas mais demoradas é sempre dos últimos 30 dias, mesmo com o painel em 7; aumentar orçamento é feito no Gerenciador da Meta, a plataforma só lê os anúncios; o Tempo de resposta é a mediana (metade foi respondida em até esse tempo) e conta resposta de pessoas e de agentes; a comparação com a Meta vai até ontem, porque o gasto de hoje ainda está mudando; a lista da etapa mostra até 50 linhas, e o Kanban filtrado por anúncio ainda não existe; quem só olha (cargo com Anúncios da Meta em Só olha) vê o painel e as listas, sem Feito, Dispensar, Entendi nem a aba Conexão, e as listas mostram só as conversas que essa pessoa já vê na caixa de conversas (sem permissão de conversas, a lista vem vazia), enquanto os números do painel são da conta toda.
 
 ### ver_todas_as_origens_do_contato
 - titulo: Ver todas as origens de um contato no CRM
@@ -1143,7 +1153,7 @@
 - perfil: `administrator` e `agent` podem buscar conforme acesso; custom role com `conversation_manage`, `conversation_unassigned_manage` ou `conversation_participating_manage` ve conversas/mensagens; custom role com `contact_manage` ve contatos; custom role com `knowledge_base_manage` ve artigos. Se o perfil nao puder, explique que a busca so mostra tipos de resultado permitidos ao usuario.
 - pre_requisitos: existir dado acessivel ao usuario; para artigos, Central de Ajuda habilitada
 - passos: 1. Abra a busca global pela sidebar ou atalho; 2. Digite o termo e pressione enter; 3. Use as abas Tudo, Contatos, Conversas, Mensagens e Artigos conforme aparecerem; 4. Use Ver mais ou Carregar mais quando houver muitos resultados; 5. Abra o item encontrado para navegar ao detalhe.
-- gotchas: a aba Tudo mostra apenas alguns resultados por tipo; filtros avancados de data, remetente e caixa de entrada so entram no payload quando `advanced_search` esta ativo; resultados seguem permissao e acesso a caixa de entrada/contato/artigo.
+- gotchas: a aba Tudo mostra apenas alguns resultados por tipo; filtros avancados de data, remetente e caixa de entrada so entram no payload quando `advanced_search` esta ativo; resultados seguem permissao e acesso a caixa de entrada/contato/artigo; função sem Ver contatos não tem a aba Contatos e não acha contato pela busca, mas continua achando a conversa pelo nome ou telefone do cliente.
 - highlight: `global-search`
 
 ### configurar_seguranca_da_conta_e_do_usuario
@@ -1306,8 +1316,8 @@
 - intent: Como começo uma nova conversa?; Onde envio a primeira mensagem para um contato?; Como crio um atendimento do zero?; Como mando mensagem proativa por WhatsApp/e-mail?
 - onde_fica: Topo do menu lateral > botão de nova conversa (ícone de lápis); ou Contatos > abrir o contato > botão Enviar mensagem. Os dois abrem a mesma tela, que desliza pela direita.
 - pre_requisitos: existir ao menos uma caixa de entrada que permita criar conversa; contato existente ou criar um novo no fluxo
-- passos: 1. Clique no lápis no topo do menu lateral (ou em Enviar mensagem, na página do contato); 2. Pelo lápis, digite o nome, o telefone ou o e-mail em Para quem e clique na pessoa (pela página do contato ela já vem escolhida); 3. Em Por onde, confira o canal: o primeiro já vem marcado, e com mais de um você pode trocar; 4. Escreva em Sua mensagem ou, no WhatsApp, escolha uma mensagem pronta e complete os campos dela; à direita, a prévia mostra como a pessoa recebe; 5. Clique em Enviar mensagem; 6. Na confirmação, clique em Abrir a conversa.
-- gotchas: no WhatsApp oficial, a primeira mensagem para um cliente precisa ser uma mensagem pronta (modelo aprovado pelo WhatsApp); só dá para escrever livremente quando o mesmo número também está ligado na aba WhatsApp API da caixa; sem nenhuma mensagem pronta aprovada, a tela avisa e quem administra a conta pode criar uma; o contato precisa ter telefone ou e-mail, senão a tela mostra Completar o cadastro; fechar pelo X, pela tecla Esc ou clicando fora guarda o que você escreveu, e Cancelar apaga; o botão Enviar mensagem só acende quando não falta nada, e o texto ao lado dele diz o que falta; nas contas em que a tela nova está desligada, o mesmo botão abre a tela antiga, uma janelinha ao lado do botão.
+- passos: 1. Clique no lápis no topo do menu lateral (ou em Enviar mensagem, na página do contato); 2. Pelo lápis, digite o nome, o telefone ou o e-mail em Para quem e clique na pessoa (pela página do contato ela já vem escolhida); 3. Em Por onde, confira o canal: o primeiro já vem marcado, e com mais de um você pode trocar; 4. Escreva em Sua mensagem ou, no WhatsApp, escolha uma mensagem aprovada e complete os campos dela; à direita, a prévia mostra como a pessoa recebe; 5. Clique em Enviar mensagem; 6. Na confirmação, clique em Abrir a conversa.
+- gotchas: no WhatsApp oficial, a primeira mensagem para um cliente precisa ser uma mensagem aprovada (modelo aprovado pelo WhatsApp); só dá para escrever livremente quando o mesmo número também está ligado na aba WhatsApp API da caixa; sem nenhuma mensagem aprovada, a tela avisa e quem administra a conta pode criar uma; o contato precisa ter telefone ou e-mail, senão a tela mostra Completar o cadastro; fechar pelo X, pela tecla Esc ou clicando fora guarda o que você escreveu, e Cancelar apaga; o botão Enviar mensagem só acende quando não falta nada, e o texto ao lado dele diz o que falta; nas contas em que a tela nova está desligada, o mesmo botão abre a tela antiga, uma janelinha ao lado do botão; função sem Ver contatos não tem Nova conversa no menu, porque ela busca na base; essa pessoa começa conversa nova pelo botão Nova mensagem no painel do contato de uma conversa que ela já vê.
 - highlight: `conversations-compose-new`
 
 ### filtrar_contatos
@@ -1673,7 +1683,7 @@
 - rota: assignment_policy_index
 - intent: Onde eu configuro a distribuição automática de conversas?; Como escolher entre política de atribuição e capacidade do agente?; Onde fica a configuração de passagem da IA para uma pessoa?; Por que só aparece um card nessa tela?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes
-- pre_requisitos: ser administrador da conta
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes; 2. Leia os cards e decida o que quer ajustar; 3. Clique em Política de atribuição para a ordem do rodízio, em Capacidade do agente para limitar quantas conversas cada pessoa aguenta, ou em Transferir para humano (CRM) para a transferência da IA para uma pessoa.
 - gotchas: a tela mostra de um a três cards conforme o que a conta tem liberado; Política de atribuição aparece sempre, Capacidade do agente só com atribuição avançada, e Transferir para humano (CRM) só com o CRM e a IA do CRM ligados; card que sumiu é liberação de recurso, não erro.
 - nav_target: `assignment_policy_index`
@@ -1683,7 +1693,7 @@
 - rota: agent_assignment_policy_index
 - intent: Quais políticas de atribuição já existem?; Quais caixas de entrada estão em cada política?; Como apago uma política que não uso mais?; Onde crio uma política nova?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição
-- pre_requisitos: ser administrador da conta
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Política de atribuição; 2. Confira a ordem, a prioridade e as caixas de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: cada caixa de entrada fica em uma política só, então a mesma caixa nunca aparece em duas linhas; excluir pede confirmação e não tem volta, e as caixas daquela política ficam sem regra de distribuição; conta nova mostra a lista vazia, o que é normal.
 - nav_target: `agent_assignment_policy_index`
@@ -1693,7 +1703,7 @@
 - rota: agent_assignment_policy_create
 - intent: Como crio uma política de atribuição do zero?; Qual a diferença entre rodízio e equilibrado?; Como evito que um agente receba conversa demais?; Por que o modo Equilibrado está bloqueado?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Política de atribuição > Nova política
-- pre_requisitos: ser administrador da conta
+- pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Escolha a ordem de atribuição e a prioridade; 4. Ajuste a distribuição justa e o descarte de conversas inativas; 5. Clique em Criar política.
 - gotchas: nome e descrição são obrigatórios e o botão fica travado sem os dois; a política nasce com rodízio, 100 conversas por hora por agente e descarte de conversas paradas há mais de 7 dias; Equilibrado exige o plano com atribuição avançada; não dá para escolher as caixas de entrada aqui, só depois de salvar, na tela de edição, para onde o sistema leva sozinho.
 - nav_target: `agent_assignment_policy_create`
@@ -1713,7 +1723,7 @@
 - rota: agent_capacity_policy_index
 - intent: Onde defino o limite de conversas por agente?; Quais políticas de capacidade já existem?; Quem está em cada política de capacidade?; Como apago uma política de capacidade?
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente
-- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador
+- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Capacidade do agente; 2. Confira os agentes e os limites de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
 - gotchas: a capacidade só muda a distribuição de verdade quando a política de atribuição da caixa está no modo Equilibrado, que também depende do plano; cada agente pertence a uma única política de capacidade; excluir pede confirmação e não tem volta.
 - nav_target: `agent_capacity_policy_index`
@@ -2020,7 +2030,7 @@
 - onde_fica: Contatos > clicar no contato
 - pre_requisitos: contato já cadastrado
 - passos: 1. Abra Contatos e clique no contato; 2. Ajuste os dados à esquerda e salve; 3. Use as abas de atributos, histórico, notas, mídia e mesclar; 4. Em histórico, veja as conversas anteriores; 5. Em notas, registre o que a equipe precisa saber; 6. Para juntar cadastros repetidos, abra mesclar, escolha o contato principal e confirme.
-- gotchas: ao mesclar, o contato principal é o que sobrevive e o outro é excluído, com os dados do principal prevalecendo em caso de conflito, e não há desfazer; excluir contato é permanente; bloquear não apaga o contato, só impede novo contato; e-mail ou telefone repetido é recusado por já pertencer a outro cadastro; abrindo a ficha a partir de um segmento ou de uma etiqueta, a tela é a mesma e o voltar devolve para aquela lista; em Mensagens ativas, abaixo de Atualizar contato, Marcar que não quer receber tira o contato das campanhas e dos follow-ups automáticos, inclusive de campanha já em andamento, e responder a quem escreve segue normal, o que é diferente de bloquear; Desfazer recusa só aparece na recusa Marcado pela equipe; a recusa de origem Prospecção vem do botão Não quer ser contatado no painel do lead e só sai lá, pelo Desfazer: pode ser contatado; a do descadastro de e-mail não se desfaz pela ficha; ao mesclar dois contatos que recusaram, fica a recusa mais firme: a manual, depois a do descadastro de e-mail, depois a da Prospecção; contato novo ou que troca telefone ou e-mail herda sozinho a recusa de e-mail descadastrado ou de lead marcado com Não quer ser contatado.
+- gotchas: ao mesclar, o contato principal é o que sobrevive e o outro é excluído, com os dados do principal prevalecendo em caso de conflito, e não há desfazer; excluir contato é permanente, e o botão Excluir contato aparece só para o administrador ou para função com Excluir contatos e empresas; mesclar fica com quem edita contatos, porque junta os dados no principal; bloquear não apaga o contato, só impede novo contato; e-mail ou telefone repetido é recusado por já pertencer a outro cadastro; abrindo a ficha a partir de um segmento ou de uma etiqueta, a tela é a mesma e o voltar devolve para aquela lista; em Mensagens ativas, abaixo de Atualizar contato, Marcar que não quer receber tira o contato das campanhas e dos follow-ups automáticos, inclusive de campanha já em andamento, e responder a quem escreve segue normal, o que é diferente de bloquear; Desfazer recusa só aparece na recusa Marcado pela equipe; a recusa de origem Prospecção vem do botão Não quer ser contatado no painel do lead e só sai lá, pelo Desfazer: pode ser contatado; a do descadastro de e-mail não se desfaz pela ficha; ao mesclar dois contatos que recusaram, fica a recusa mais firme: a manual, depois a do descadastro de e-mail, depois a da Prospecção; contato novo ou que troca telefone ou e-mail herda sozinho a recusa de e-mail descadastrado ou de lead marcado com Não quer ser contatado; função sem Ver contatos não abre a lista nem a ficha: na conversa e no card ela vê só nome, telefone e e-mail do cliente, além de ligar, mandar nova mensagem e ver a origem.
 - nav_target: `contacts_edit`
 
 ### lista_de_empresas
@@ -2058,7 +2068,7 @@
 - onde_fica: Empresas > clicar na empresa
 - pre_requisitos: empresa cadastrada e contatos existentes para vincular
 - passos: 1. Abra Empresas e clique na empresa; 2. Ajuste nome, domínio, descrição e avatar e atualize; 3. Use as abas de histórico, notas e contatos; 4. Em contatos, adicione pesquisando e confirmando o vínculo; 5. Use remover para desvincular.
-- gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta.
+- gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta; excluir aparece só para o administrador ou para função com Excluir contatos e empresas.
 - nav_target: `companies_dashboard_show`
 
 ### conectar_o_slack_ao_atendimento
@@ -2242,6 +2252,33 @@
 - passos: 1. O cliente pede a cotação pelo WhatsApp e responde o que o agente perguntar; 2. A cotação fecha quando todas as seguradoras tiveram desfecho; 3. O comparativo chega como arquivo PDF na conversa, com o que respondeu; 4. Se o cliente pedir uma seguradora, ele recebe o documento daquela seguradora; 5. A equipe assume a conversa no horário configurado.
 - gotchas: os valores não saem conforme cada seguradora responde, o comparativo chega quando a cotação inteira termina, o que costuma levar de 1 a 2 minutos, e passando disso sai um aviso de espera escrito pelo agente, nunca uma lista de preços solta; o que vai ao cliente é o arquivo, nunca o link do portal, porque aquele endereço abre sem senha e traz o nome do segurado, e quando o arquivo falha nada é enviado no lugar; a proposta de uma seguradora é outro documento, gerado pela própria seguradora com o mesmo preço informado, e pedir duas seguradoras gera dois arquivos sem abrir cotação nova; seguradora que recusou não é anunciada ao cliente, e se ele perguntar o motivo sai por categoria, como veículo ou região, nunca o texto do portal; problema de credencial da corretora nunca chega ao cliente, ele aparece em Cotação > Conexões; na cotação de empresa o condutor deixa de ser opcional, precisa ser pessoa física com CPF e vínculo real, e a razão social não é perguntada, o sistema busca pelo CNPJ.
 - nav_target: `autonomia_insurance_agent`
+
+### marcar_email_como_spam
+- titulo: Marcar e-mail como spam
+- rota: inbox_conversation
+- intent: Como mando um e-mail para o spam?; Como paro de receber e-mail de um remetente?; Onde fica o Spam da caixa de e-mail?; Marquei como spam sem querer, como desfaço?
+- onde_fica: Conversas > abrir a conversa de uma caixa de e-mail > botão Spam no topo do e-mail; a pasta Spam fica no menu lateral, embaixo da caixa de e-mail
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
+- passos: 1. Abra a conversa de e-mail; 2. Toque em Spam no topo; 3. A conversa sai da Entrada, fica resolvida e vai para a pasta Spam; 4. Para desfazer, abra a pasta Spam no menu, abra a conversa e toque em Não é spam.
+- gotchas: o Spam vale só para aquele remetente naquela caixa de e-mail: e-mail novo dele nessa caixa cai direto no Spam, já resolvido; o contato não fica bloqueado, e o WhatsApp e as outras caixas dele seguem normais; Não é spam devolve a conversa à Entrada, reabre e o remetente volta a chegar; nada muda na conta de e-mail do cliente (Gmail, Outlook); voltar de uma conversa aberta pelo Spam volta para a lista do Spam.
+
+### mover_email_para_a_lixeira
+- titulo: Mover e-mail para a Lixeira e excluir para sempre
+- rota: inbox_conversation
+- intent: Como apago um e-mail?; Onde fica a Lixeira do e-mail?; Como restauro uma conversa da Lixeira?; Como excluo uma conversa de e-mail para sempre?
+- onde_fica: Conversas > abrir a conversa de uma caixa de e-mail > botão Lixeira no topo do e-mail; a pasta Lixeira fica no menu lateral, embaixo da caixa de e-mail
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
+- passos: 1. Abra a conversa de e-mail; 2. Toque em Lixeira no topo; 3. A conversa sai da Entrada e fica resolvida, sem apagar nada; 4. Para trazer de volta, abra a pasta Lixeira, abra a conversa e toque em Restaurar (ela volta aberta); 5. Para apagar de vez, dentro da Lixeira toque em Excluir para sempre e confirme.
+- gotchas: se o cliente responder no mesmo e-mail, a conversa sai sozinha da Lixeira e volta para a Entrada; Excluir para sempre só existe dentro da Lixeira, apaga os e-mails, as notas e os anexos para toda a equipe e não tem desfazer (o cliente continua com a cópia dele); pelo Guia, excluir para sempre sempre pede confirmação.
+
+### escrever_email_novo
+- titulo: Escrever um e-mail novo pela caixa de e-mail
+- rota: inbox_dashboard
+- intent: Como escrevo um e-mail novo?; Onde fica o Escrever do e-mail?; Como mando um e-mail para um cliente que ainda não escreveu?; Como uso um modelo de e-mail das Campanhas num e-mail novo?
+- onde_fica: Menu lateral > caixa de e-mail > Escrever (acima de Spam e Lixeira); abre a gaveta de nova conversa já nessa caixa
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova ligada na conta (chave conversa_email_nova)
+- passos: 1. Toque em Escrever, embaixo da caixa de e-mail no menu; 2. Em Para quem, procure o contato ou, se não achar, crie no cartão Criar contato com nome e e-mail; 3. Escreva o assunto e a mensagem; pelo + dá para pôr um modelo de e-mail das Campanhas, anexo, emoji ou ditar; 4. Clique em Enviar mensagem.
+- gotchas: o e-mail sai pela caixa de onde você tocou em Escrever, mesmo que um rascunho de outra caixa tenha ficado guardado; o contato novo pela caixa de e-mail precisa de e-mail; se o contato já tem conversa nessa caixa, a tela oferece continuar aquela conversa, com o histórico e o Re: do assunto.
 
 
 ### _fora_do_guia

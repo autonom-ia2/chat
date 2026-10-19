@@ -6,6 +6,10 @@ import { usePopoverState } from '../provider';
 import SidebarCollapsedPopover from '../SidebarCollapsedPopover.vue';
 import { folhasDe } from '../forkSidebarMenu';
 import ForkDica from './ForkDica.vue';
+// #1809: pastas da caixa de e-mail (Escrever, Entrada, Spam, Lixeira) também no balão.
+import { comPastasNoBalao } from 'dashboard/components-next/conversa-canal/email/pastasDoEmailNoMenu';
+import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
+import EscreverDoEmail from 'dashboard/components-next/conversa-canal/email/EscreverDoEmail.vue';
 
 // Menu novo recolhido (#1617): só o ícone. Item com filhos abre o mesmo balão do menu de sempre ao passar o
 // mouse ou focar pelo teclado; o clique leva à primeira tela dele.
@@ -26,6 +30,10 @@ const {
 } = usePopoverState();
 
 const { t } = useI18n();
+const ehEmailNova = useCaixaDeEmailNova();
+const filhosDoBalao = computed(
+  () => comPastasNoBalao(props.item, ehEmailNova).children
+);
 
 // O ponto do ícone é só visual: a contagem ou a pendência vão no nome do link para o leitor de tela.
 const nomeAcessivel = computed(() => {
@@ -146,7 +154,7 @@ const aoOrdenar = aberto => {
     <SidebarCollapsedPopover
       v-if="balaoAberto"
       :label="item.label"
-      :children="item.children"
+      :children="filhosDoBalao"
       :active-child="marcado ? ativa.folha || undefined : undefined"
       :trigger-rect="retangulo"
       @close="fechar"
@@ -154,5 +162,7 @@ const aoOrdenar = aberto => {
       @mouseleave="sair"
       @sort-toggle="aoOrdenar"
     />
+    <!-- Uma gaveta só, no ícone de Conversas (onde ficam as caixas). -->
+    <EscreverDoEmail v-if="item.name === 'Conversation'" />
   </li>
 </template>

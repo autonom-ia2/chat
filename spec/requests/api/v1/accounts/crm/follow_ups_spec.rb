@@ -390,4 +390,54 @@ RSpec.describe 'CRM follow-ups API', type: :request do
 
     expect(response.parsed_body['payload']).to be_empty
   end
+
+  # #1855: "Passar tudo para amanhã" do calendário manda reminders_only; o aviso de um envio ao cliente que falhou fica
+  # de fora (422) e não volta a ser envio automático. Lembrete comum passa.
+  describe 'POST reschedule com reminders_only' do
+    let(:account_and_admin) { create_account_and_user }
+    let(:account) { account_and_admin.first }
+    let(:admin) { account_and_admin.last }
+    let(:card) do
+      pipeline, stage = create_crm_pipeline(account: account, user: admin)
+      account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', owner: admin)
+    end
+    let(:amanha) { 1.day.from_now.change(usec: 0) }
+
+    def atrasado(metadata = {})
+      follow_up = account.crm_follow_ups.create!(card: card, title: 'Retornar', due_at: 10.minutes.ago, timezone: 'UTC',
+                                                 automation_mode: :reminder_only, status: :overdue, assignee: admin,
+                                                 created_by: admin)
+      follow_up.update!(metadata: follow_up.metadata.to_h.merge(metadata))
+      follow_up
+    end
+
+    def adiar(follow_up)
+      post "/api/v1/accounts/#{account.id}/crm/follow_ups/#{follow_up.id}/reschedule",
+           params: { due_at: amanha.iso8601, reminders_only: true }, headers: auth_headers(admin), as: :json
+    end
+
+    it 'recusa o aviso de envio que caiu por falha passageira e não devolve o envio automático' do
+      aviso = atrasado('source' => 'ai_callback', 'callback_fallback' => 'meta_fora',
+                       'callback_original' => { 'automation_mode' => 'auto_send_message', 'description' => nil })
+      expect(Crm::FollowUps::CallbackFallback.restorable?(aviso)).to be(true)
+
+      adiar(aviso)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('not_a_reminder')
+      expect(aviso.reload).to be_overdue
+      expect(aviso).to be_reminder_only
+      expect(aviso.metadata).to have_key('callback_original')
+    end
+
+    it 'move o lembrete comum' do
+      lembrete = atrasado
+
+      adiar(lembrete)
+
+      expect(response).to have_http_status(:ok)
+      expect(lembrete.reload).to be_pending
+      expect(lembrete.due_at.to_i).to eq(amanha.to_i)
+    end
+  end
 end

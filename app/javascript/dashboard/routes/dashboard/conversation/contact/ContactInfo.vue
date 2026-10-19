@@ -7,9 +7,10 @@ import {
 } from 'shared/helpers/CustomErrors';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
 import { useI18n } from 'vue-i18n';
+import { computed } from 'vue';
 import { format, fromUnixTime } from 'date-fns';
 import { dateFnsLocaleFor } from 'shared/helpers/dateFnsLocale';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
 import ContactInfoRow from './ContactInfoRow.vue';
@@ -51,10 +52,13 @@ export default {
   },
   emits: ['panelClose'],
   setup() {
-    const { isAdmin } = useAdmin();
+    const { checkPermissions } = usePolicy();
     const { locale } = useI18n();
     return {
-      isAdmin,
+      // Excluir contato tem chave própria (#1845).
+      canDeleteContact: computed(() =>
+        checkPermissions(['administrator', 'contact_delete'])
+      ),
       locale,
       ...useRelationshipPermissions(),
       exactTimestamp: useExactTimestamp(),
@@ -419,7 +423,7 @@ export default {
           </template>
         </ContactMergeModal>
         <ContactDeleteModal
-          v-if="isAdmin"
+          v-if="canDeleteContact"
           :contact="contact"
           @deleted="$emit('panelClose')"
         >

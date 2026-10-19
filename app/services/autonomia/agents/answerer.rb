@@ -69,11 +69,20 @@ module Autonomia
         /\bcusta\s+R?\$?\s?\d/i
       ].freeze
 
+      # A prova do ajuste: o teto de cada resposta (entrega B do #1428).
+      PROVA_TIMEOUT_S = 30
+      # Na prova o agente roda sem ferramenta: ele é avisado para não afirmar o que não fez.
+      AVISO_DA_PROVA = 'Isto é um teste sem ferramentas: não diga que agendou, enviou ou registrou algo; diga o que faria.'.freeze
+
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
-                     fixos: [], contexto_do_turno: nil, memoria: nil)
+                     fixos: [], contexto_do_turno: nil, memoria: nil, prova: false)
         @agent = agent
+        # #1428 (parte 3, entrega B): a PROVA DO AJUSTE. Nenhuma ferramenta vai ao modelo (nem a busca na web, nem
+        # especialista ou ajudante): sem `tools`, o ResponsesClient faz uma chamada só e nada pode ser executado. Teto
+        # curto e sem nova tentativa: roda num job, e a tela espera.
+        @prova = prova
         # Os blocos de memória do turno (#1601/#1755), repassados ao PromptBuilder. nil: nada muda.
         @memoria = memoria
         # Regra do sistema para ESTE turno, repassada ao PromptBuilder (#1669: a equipe escreveu na conversa). nil:
@@ -129,6 +138,8 @@ module Autonomia
 
       def answer_no_turno
         @conferencia_da_fala = conferencia_da_fala
+        # #1479: opções e botão de link na resposta ao cliente. Desligado, o pedido ao modelo fica o de antes.
+        @interacao = @trust_instruction && Interacao.disponivel?(agent: @agent, delivery: @delivery, audience: @audience)
         # Tema 14: o relógio do prazo da resposta começa aqui, e não na primeira consulta ao ajudante.
         @orcamento_dos_ajudantes = Ajudantes::Orcamento.new
         snippets = retrieve_snippets
@@ -159,11 +170,30 @@ module Autonomia
           handoff: { should: parsed['should_handoff'] == true, reason: parsed['handoff_reason'].presence },
           used_knowledge: used_knowledge(parsed['used_snippet_ids'], snippets, parsed),
           answered_from_knowledge: parsed['answered_from_knowledge'] == true,
-          raw_reply: parsed['reply']
+          raw_reply: parsed['reply'], interacao: interacao_do_turno(parsed, snippets)
         )
       end
 
       private
+
+      # #1479: a interação pedida pelo modelo; o endereço do link precisa ser um dos que o dono autorizou
+      # (`Interacao::Enderecos.do_dono`): a instrução e a base, e a saída de ferramenta dentro de um endereço delas. O
+      # link recusado vai à telemetria do turno (sem o endereço) e a resposta segue sem ele. Os endereços do dono só são
+      # lidos quando o modelo pediu um link.
+      def interacao_do_turno(parsed, snippets)
+        return unless @interacao
+
+        pedido = parsed['interacao']
+        return Interacao.do_modelo(pedido, enderecos: Set.new) unless pedido.is_a?(Hash) && pedido['tipo'] == 'link'
+
+        enderecos = Interacao::Enderecos.do_dono(dono: [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }],
+                                                 ferramentas: @saidas_do_turno.to_a)
+        Interacao.do_modelo(pedido, enderecos: enderecos).tap { |interacao| link_recusado if interacao.nil? }
+      end
+
+      def link_recusado
+        ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:link_recusado, conversation_id: @delivery.conversation.id, agent: @agent.id)
+      end
 
       # A FALA COM PREÇO SAI CONFERIDA (fatia 3 do #420). Quando `ver_resultado_da_cotacao` rodou neste turno, a
       # resposta passa por `ConferenciaDePrecos`, que pode pedir ao modelo uma reescrita (`reescrever`).
@@ -304,16 +334,17 @@ module Autonomia
 
         # O prompt e o cliente ficam na instância: a reescrita pedida pela conferência de preços os reusa.
         @prompt = montar_prompt(snippets)
-        @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @agent.account)
+        tentativas = @prova ? { max_retries: 0 } : {}
+        @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @agent.account, **tentativas)
         raw = @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
           instructions: @prompt.instructions,
-          input: @prompt.input,
+          input: entrada_do_modelo,
           schema: schema_da_resposta,
           reasoning_effort: Config::ANSWERER_REASONING_EFFORT,
           tools: answer_tools,
           max_rodadas: @max_rodadas,
-          **{ max_segundos: @max_segundos }.compact
+          **{ max_segundos: @max_segundos, timeout: (PROVA_TIMEOUT_S if @prova) }.compact
         ) { |calls| execute_tool_calls(calls) }
         parsed = JSON.parse(raw[:text])
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
@@ -321,10 +352,17 @@ module Autonomia
         ia_indisponivel(e)
       end
 
+      # A entrada do PromptBuilder e, só na prova, o aviso de que é um teste sem ferramentas.
+      def entrada_do_modelo
+        return @prompt.input unless @prova
+
+        @prompt.input + [PromptParts::Mensagem.montar('developer', AVISO_DA_PROVA)]
+      end
+
       def montar_prompt(snippets)
         PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets, images: @images,
                           documents: @documents, audience: @audience, contexto_do_turno: @contexto_do_turno,
-                          memoria: @memoria)
+                          memoria: @memoria, interacao: @interacao == true)
       end
 
       # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
@@ -337,10 +375,14 @@ module Autonomia
 
       # O agente de cotação declara, na própria resposta, o que a fala diz (`ConferenciaDaFala::SCHEMA_DA_RESPOSTA`).
       def schema_da_resposta
-        @conferencia_da_fala ? ConferenciaDaFala::SCHEMA_DA_RESPOSTA : PromptBuilder::ANSWER_SCHEMA
+        return ConferenciaDaFala::SCHEMA_DA_RESPOSTA if @conferencia_da_fala
+
+        @interacao ? PromptBuilder::ANSWER_SCHEMA_COM_INTERACAO : PromptBuilder::ANSWER_SCHEMA
       end
 
       def answer_tools
+        return if @prova
+
         tools = []
         tools.concat(Array(Crm::Ai::WebSearch.tools)) if web_search_permitida?
         tools.concat(enabled_agent_tools.map(&:openai_schema))
@@ -366,7 +408,9 @@ module Autonomia
       def enabled_agent_tools
         @enabled_agent_tools ||= begin
           reserved = enabled_specialists.flat_map(&:ferramentas_do_sistema).map(&:to_s).to_set
-          Tools::Bound.for_agent(@agent).reject { |tool| reserved.include?(tool.slug) }
+          # #1630: o turno da passagem não recebe as ferramentas que passam a conversa adiante.
+          sem_passar = @delivery.try(:turno_da_passagem?)
+          Tools::Bound.for_agent(@agent).reject { |tool| reserved.include?(tool.slug) || (sem_passar && tool.passa_a_conversa?) }
         end
       end
 
@@ -393,8 +437,18 @@ module Autonomia
           output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
           anotar_leitura(tools_by_slug[call['name'].to_s], output, recusou: Tools::Recusa.registradas > recusas_antes)
           registrar_chamada(call, output, inicio)
-          { type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(8_000) }
+          saida = output.to_s.truncate(8_000)
+          # #1479: só a saída de ferramenta (HTTP, sistema) pode trazer endereço para o botão; a de especialista ou
+          # ajudante não (pode repetir o que o cliente disse).
+          (@saidas_do_turno ||= []) << saida if @interacao && ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
+          { type: 'function_call_output', call_id: call['call_id'], output: saida }
         end
+      end
+
+      # A chamada foi a uma ferramenta do agente, e não a um especialista ou ajudante (que tem a precedência no despacho).
+      def ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
+        nome = call['name'].to_s
+        specialists_by_function[nome].nil? && tools_by_slug.key?(nome)
       end
 
       # DADO DE SISTEMA NO TURNO (#1361). Quem diz que a chamada recusou é o registro de recusas (`Tools::Recusa`),

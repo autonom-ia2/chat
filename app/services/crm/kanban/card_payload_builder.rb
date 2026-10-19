@@ -83,7 +83,7 @@ class Crm::Kanban::CardPayloadBuilder
   def link_payload
     {
       contact: compact_contact,
-      company: Crm::Cards::CompanyResolver.payload(@company),
+      company: (Crm::Cards::CompanyResolver.payload(@company) if full_contact?),
       owner: compact_user(@card.owner),
       responsible: @card.responsible_descriptor,
       inbox: compact_inbox,
@@ -113,7 +113,7 @@ class Crm::Kanban::CardPayloadBuilder
   # Shape mirrored in Crm::Cards::PayloadBuilder — keep both identical.
   def contact_labels_payload
     contact = @card.contact
-    return [] if contact.blank?
+    return [] if contact.blank? || !full_contact?
 
     contact.label_taggings.reject(&:tagger_id).filter_map { |tagging| tagging.tag&.name }
   end
@@ -129,14 +129,16 @@ class Crm::Kanban::CardPayloadBuilder
   def compact_contact
     return if @card.contact.blank?
 
-    {
-      id: @card.contact.id,
-      name: @card.contact.name,
-      phone_number: @card.contact.phone_number,
-      # Selo "Cliente" no card do quadro (#1258).
-      contact_type: @card.contact.contact_type,
-      customer_since: @card.contact.customer_since&.to_i
-    }
+    basic = { id: @card.contact.id, name: @card.contact.name, phone_number: @card.contact.phone_number }
+    return basic unless full_contact?
+
+    # Selo "Cliente" no card do quadro (#1258).
+    basic.merge(contact_type: @card.contact.contact_type, customer_since: @card.contact.customer_since&.to_i)
+  end
+
+  # #1849: sem ver contatos, o quadro leva só nome e telefone do contato, sem empresa, etiquetas do contato nem selo.
+  def full_contact?
+    @conversation_visibility.full_contact?
   end
 
   def compact_user(user)

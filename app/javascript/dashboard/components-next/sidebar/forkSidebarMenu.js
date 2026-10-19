@@ -28,7 +28,7 @@ const ITEM = chave => `FORK_SIDEBAR.ITENS.${chave}`;
 export const FORK_LAYOUT = {
   topo: [
     // Só administra quem vê (o Sidebar já filtra). Some do topo quando a trilha termina.
-    { pega: 'FirstSteps', someQuando: 'trilhaConcluida' },
+    { pega: 'FirstSteps', someQuando: 'basicoConcluido' },
   ],
   grupos: [
     {
@@ -363,7 +363,7 @@ const montarLista = (entradas, indice, usados, ctx) =>
 /**
  * Organiza a lista do Sidebar.vue no layout do fork.
  * @param {Array} upstreamItems o `menuItems` do Sidebar.vue
- * @param {{ t: Function, accountScopedRoute: Function, trilhaConcluida?: boolean }} ctx
+ * @param {{ t: Function, accountScopedRoute: Function, basicoConcluido?: boolean }} ctx
  * @returns {{ topo: Array, grupos: Array, rodape: Array, configuracoesExtras: Array }}
  */
 export const organizeForkMenu = (upstreamItems, ctx) => {

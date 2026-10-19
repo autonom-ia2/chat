@@ -1,6 +1,6 @@
 module Crm
   module Ai
-    class ContextBuilder
+    class ContextBuilder # rubocop:disable Metrics/ClassLength -- já passava do teto com a main + #1761 (177)
       MAX_RECENT_MESSAGES = 12
       MAX_MESSAGES_CAP = 40
       MAX_OTHER_SUBJECTS = 5
@@ -8,12 +8,22 @@ module Crm
       # toque da própria IA. Ver #last_human_agent_at.
       FOLLOW_UP_SCAN_LIMIT = 20
 
+      # Cópia que a EQUIPE encaminhou de outra conversa (#1702: forwarded = true + forwarded_from) traz texto de outra
+      # pessoa: sem a marca, a IA lia como fala deste cliente (#1760). O que o CLIENTE encaminha pelo WhatsApp (forwarded
+      # sem forwarded_from) é parte do pedido dele e fica sem marca.
+      FORWARDED_PREFIX = '[Encaminhada de outra conversa — não é fala deste cliente] '.freeze
+
       # A legenda dos papéis mora junto de quem os produz (#role_for). Todo prompt que lê
       # recent_messages descreve os papéis a partir daqui: foi a cópia divergente que fez o
       # follow-up receber "human_agent" e ler uma instrução que só falava de "customer" e "agent".
       ROLES_LEGEND = 'Cada mensagem tem um "role": "customer" (o cliente), "human_agent" (uma pessoa do time), ' \
                      '"platform_agent" (agente de IA da plataforma, incluindo os follow-ups automáticos anteriores) ' \
                      'ou "external_agent" (bot ou automação externa).'.freeze
+
+      # Separada da ROLES_LEGEND para entrar no FIM do prefixo do classificador (cache de prompt, ClassifierPrompt).
+      FORWARDED_LEGEND = 'Mensagem com "forwarded": true foi ENCAMINHADA pela equipe de outra conversa e começa com ' \
+                         "\"#{FORWARDED_PREFIX.strip}\": o texto é de outra pessoa. Não conte como fala, pedido " \
+                         'ou dado deste cliente, nem como sinal de etapa, valor ou campo dele.'.freeze
 
       # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
       # memoria (#1601): só a avaliação de card com a flag `memoria_ia` pede; cada mensagem ganha um id LOCAL ("ref": m1,
@@ -188,16 +198,29 @@ module Crm
         [MAX_RECENT_MESSAGES * conversation_count, MAX_MESSAGES_CAP].min
       end
 
+      # #1807 (flag `email_autoria`): e-mail de outro endereço que não o do cliente ganha o aviso na frente e
+      # "email_autoria" (outra_pessoa, equipe, automatica); o papel continua `customer` (é a resposta da conversa).
       def format_message(message)
+        forwarded = forwarded_by_team?(message)
+        content, marca_do_email = email_autoria.marcar(message, message_content(message).truncate(2000))
         payload = {
           **(@numeracao ? @numeracao.ref_de(message) : {}),
           role: role_for(message),
-          content: message_content(message).truncate(2000),
+          content: forwarded ? "#{FORWARDED_PREFIX}#{content}" : content,
           created_at: message.created_at.iso8601
         }
+        payload[:forwarded] = true if forwarded
+        payload.merge!(marca_do_email)
         # Só desambigua a origem quando há mais de uma conversa; senão é ruído no prompt.
         payload[:conversation_id] = message.conversation_id if conversation_ids.size > 1
         payload
+      end
+
+      def email_autoria = (@email_autoria ||= Crm::Email::Autoria.new(@card.account))
+
+      def forwarded_by_team?(message)
+        attributes = message.content_attributes.to_h
+        attributes['forwarded'] == true && attributes['forwarded_from'].present?
       end
 
       # Quatro papéis, não dois. "Cliente cobrou e só o bot respondeu" é urgente; "humano respondeu
@@ -249,7 +272,8 @@ module Crm
       # don't process (video, document).
       def message_content(message)
         parts = []
-        text = message.content.to_s.strip
+        # #1807: e-mail recebido sem o histórico citado (com a flag); o resto, o content de sempre.
+        text = email_autoria.texto(message).strip
         parts << text if text.present?
         message.attachments.each { |attachment| parts << media_fragment(attachment) }
         parts.compact_blank.join("\n").presence || '[mensagem sem texto]'

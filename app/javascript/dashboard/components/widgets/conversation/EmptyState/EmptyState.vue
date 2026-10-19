@@ -4,11 +4,14 @@ import { useAdmin } from 'dashboard/composables/useAdmin';
 import { useAccount } from 'dashboard/composables/useAccount';
 import FirstSteps from 'dashboard/components-next/onboarding/FirstSteps.vue';
 import EmptyStateMessage from './EmptyStateMessage.vue';
+import TelaInicial from 'dashboard/components-next/tela-inicial/TelaInicial.vue';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 export default {
   components: {
     FirstSteps,
     EmptyStateMessage,
+    TelaInicial,
   },
   props: {
     isOnExpandedLayout: {
@@ -19,11 +22,12 @@ export default {
   setup() {
     const { isAdmin } = useAdmin();
 
-    const { accountScopedUrl } = useAccount();
+    const { accountScopedUrl, isCloudFeatureEnabled } = useAccount();
 
     return {
       isAdmin,
       accountScopedUrl,
+      isCloudFeatureEnabled,
     };
   },
   computed: {
@@ -46,6 +50,15 @@ export default {
       }
       return this.$t('CONVERSATION.404');
     },
+    // #1801: com a flag ligada na conta e caixa conectada, o resumo do dia no lugar do aviso. Fica
+    // na tela enquanto a lista carrega (troca de aba, rolagem), sem piscar o spinner por cima.
+    temTelaInicial() {
+      return (
+        !this.isOnExpandedLayout &&
+        this.inboxesList.length > 0 &&
+        this.isCloudFeatureEnabled(FEATURE_FLAGS.TELA_INICIAL_RESUMO)
+      );
+    },
     newInboxURL() {
       return this.accountScopedUrl('settings/inboxes/new');
     },
@@ -65,7 +78,10 @@ export default {
 </script>
 
 <template>
-  <div :class="emptyClassName">
+  <div v-if="temTelaInicial" :class="emptyClassName">
+    <TelaInicial />
+  </div>
+  <div v-else :class="emptyClassName">
     <woot-loading-state
       v-if="uiFlags.isFetching || loadingChatList"
       :message="loadingIndicatorMessage"

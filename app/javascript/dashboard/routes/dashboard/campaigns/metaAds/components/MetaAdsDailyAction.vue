@@ -17,6 +17,9 @@ const props = defineProps({
   currency: { type: String, default: 'BRL' },
   // Os alvos cuja lista está aberta no painel ('stalled_list', 'slow_replies'), para o aria-expanded.
   expanded: { type: Array, default: () => [] },
+  // Quem só tem meta_ads_view (#1794): vê as ações e abre as listas, sem "Feito", "Dispensar", "Entendi" nem o
+  // passo da conexão (esses gestos seguem do administrador).
+  readOnly: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['act', 'changed']);
@@ -187,6 +190,13 @@ const targetOf = action => action.button?.target || 'none';
 
 const hasButton = action => {
   const target = targetOf(action);
+  if (props.readOnly && ['acknowledge', 'connection_step'].includes(target)) {
+    return false;
+  }
+  // As propostas paradas vêm só das caixas da pessoa: sem nenhuma, o botão não abriria nada.
+  if (props.readOnly && target === 'stalled_list' && !action.cards?.length) {
+    return false;
+  }
   if (target === 'acknowledge') return !!action.id && action.status === 'open';
   if (target === 'ads_manager') return !!action.button.url;
   if (target === 'ad_detail') return !!action.ad_id;
@@ -268,7 +278,7 @@ const dismiss = action => {
 
 // A abertura só registra; a falha não segura a pessoa, vai para o console.
 const markOpened = async action => {
-  if (!action.id || action.opened) return;
+  if (props.readOnly || !action.id || action.opened) return;
   opened.value = [...opened.value, action.id];
   try {
     await CrmMetaAdsConnectionAPI.openAdvice(action.id);
@@ -287,7 +297,8 @@ const go = action => {
   markOpened(action);
 };
 
-const canResolve = action => !!action.id && action.status === 'open';
+const canResolve = action =>
+  !props.readOnly && !!action.id && action.status === 'open';
 
 const MAIN_BUTTON =
   'inline-flex items-center justify-center gap-1.5 px-4 text-sm font-520 no-underline rounded-lg min-h-11 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';

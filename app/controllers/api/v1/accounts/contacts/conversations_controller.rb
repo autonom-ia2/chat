@@ -21,10 +21,12 @@ class Api::V1::Accounts::Contacts::ConversationsController < Api::V1::Accounts::
       ai_assignee: { avatar_attachment: [:blob] }
     ).where(contact_id: @contact.id)
 
+    # Só leitura (#1849): quem lê a caixa sem atender também vê as conversas anteriores.
     Conversations::PermissionFilterService.new(
       conversations,
       Current.user,
-      Current.account
+      Current.account,
+      for_reading: true
     ).perform
   end
 

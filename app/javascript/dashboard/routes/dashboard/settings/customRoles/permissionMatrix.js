@@ -3,8 +3,11 @@
 // A `<module>_manage` key implies `<module>_view` on the backend, so only the highest key is stored.
 
 export const LEVELS = { NONE: 'none', VIEW: 'view', MANAGE: 'manage' };
+// Conversas: só olha (conversation_view, #1800), ou atende as próprias (LIMITED) ou todas (ALL). Na tela, as duas
+// últimas dividem a posição "Atender" e a escolha entre elas aparece embaixo.
 export const CONVERSATION_LEVELS = {
   NONE: 'none',
+  VIEW: 'view',
   LIMITED: 'limited',
   ALL: 'all',
 };
@@ -12,6 +15,7 @@ export const CONVERSATION_LEVELS = {
 const CONVERSATION_ALL = 'conversation_manage';
 const CONVERSATION_UNASSIGNED = 'conversation_unassigned_manage';
 const CONVERSATION_PARTICIPATING = 'conversation_participating_manage';
+const CONVERSATION_VIEW = 'conversation_view';
 const CONVERSATION_KEYS = [
   CONVERSATION_ALL,
   CONVERSATION_UNASSIGNED,
@@ -31,7 +35,13 @@ export const CRM_EXTRAS_IMPLIED_BY_ADMIN = [
 
 // Extras that touch personal data, money or other people's access. The editor asks
 // for confirmation before turning them on.
-export const SENSITIVE_EXTRAS = ['crm_manage_ai', 'crm_export', CRM_ADMIN];
+export const SENSITIVE_EXTRAS = [
+  'crm_manage_ai',
+  'crm_export',
+  CRM_ADMIN,
+  'contact_export',
+  'contact_delete',
+];
 
 export const MODULE_GROUPS = [
   {
@@ -41,12 +51,19 @@ export const MODULE_GROUPS = [
         key: 'CONVERSATIONS',
         type: 'conversations',
         icon: 'i-lucide-message-circle',
-        extras: [CONVERSATION_UNASSIGNED, CONVERSATION_PARTICIPATING],
+        extras: [
+          CONVERSATION_UNASSIGNED,
+          CONVERSATION_PARTICIPATING,
+          CONVERSATION_VIEW,
+        ],
       },
       {
         key: 'CONTACTS',
         icon: 'i-lucide-contact',
         levels: { view: 'contact_view', manage: 'contact_manage' },
+        // Exportar e excluir são chaves próprias (#1845). Excluir só aparece para quem edita.
+        extras: ['contact_export', 'contact_delete'],
+        manageOnlyExtras: ['contact_delete'],
       },
       {
         key: 'KNOWLEDGE_BASE',
@@ -130,6 +147,13 @@ export const MODULE_GROUPS = [
           manage: 'whatsapp_templates_manage',
         },
       },
+      {
+        // Anúncios da Meta (#1794): só ver o painel. Conectar e configurar seguem do
+        // administrador até a chave protegida meta_ads_manage.
+        key: 'META_ADS',
+        icon: 'i-lucide-chart-no-axes-combined',
+        levels: { view: 'meta_ads_view' },
+      },
     ],
   },
   {
@@ -185,6 +209,19 @@ export const MODULE_GROUPS = [
         settings: true,
         levels: { manage: 'sla_manage' },
       },
+      {
+        // Regras de distribuição e capacidade das conversas (#1797).
+        key: 'ASSIGNMENT',
+        icon: 'i-lucide-user-cog',
+        settings: true,
+        levels: { manage: 'assignment_manage' },
+        // Sem ver as caixas, a função só lista as caixas de que é membro nos formulários.
+        suggests: {
+          level: LEVELS.MANAGE,
+          module: 'INBOXES',
+          targetLevel: LEVELS.VIEW,
+        },
+      },
     ],
   },
 ];
@@ -217,12 +254,21 @@ export const levelOptions = module => {
 const SLOT_BY_LEVEL = {
   [LEVELS.NONE]: 0,
   [LEVELS.VIEW]: 1,
-  [CONVERSATION_LEVELS.LIMITED]: 1,
   [LEVELS.MANAGE]: 2,
-  [CONVERSATION_LEVELS.ALL]: 2,
 };
 
+const isConversationManaging = level =>
+  level === CONVERSATION_LEVELS.LIMITED || level === CONVERSATION_LEVELS.ALL;
+
+// The position a level lights up. Conversas: as próprias e todas acendem "Atender".
+export const slotLevel = (module, level) =>
+  module.type === 'conversations' && isConversationManaging(level)
+    ? LEVELS.MANAGE
+    : level;
+
 export const levelSlots = module => {
+  if (module.type === 'conversations')
+    return [LEVELS.NONE, LEVELS.VIEW, LEVELS.MANAGE];
   const slots = [null, null, null];
   levelOptions(module).forEach(level => {
     slots[SLOT_BY_LEVEL[level]] = level;
@@ -233,8 +279,10 @@ export const levelSlots = module => {
 export const getLevel = (module, permissions) => {
   if (module.type === 'conversations') {
     if (permissions.includes(CONVERSATION_ALL)) return CONVERSATION_LEVELS.ALL;
-    return CONVERSATION_KEYS.some(key => permissions.includes(key))
-      ? CONVERSATION_LEVELS.LIMITED
+    if (CONVERSATION_KEYS.some(key => permissions.includes(key)))
+      return CONVERSATION_LEVELS.LIMITED;
+    return permissions.includes(CONVERSATION_VIEW)
+      ? CONVERSATION_LEVELS.VIEW
       : CONVERSATION_LEVELS.NONE;
   }
   const { view, manage } = module.levels;
@@ -252,15 +300,28 @@ export const getLevel = (module, permissions) => {
 export const hasAccess = (module, permissions) =>
   getLevel(module, permissions) !== LEVELS.NONE;
 
+// "Atender" sem dizer quais começa pelas próprias, a escolha mais estreita; quem já atende fica como está.
 const setConversationLevel = (level, permissions) => {
-  const rest = withoutKeys(permissions, CONVERSATION_KEYS);
+  const rest = withoutKeys(permissions, [
+    ...CONVERSATION_KEYS,
+    CONVERSATION_VIEW,
+  ]);
   if (level === CONVERSATION_LEVELS.ALL) return [...rest, ...CONVERSATION_KEYS];
-  if (level === CONVERSATION_LEVELS.LIMITED) {
-    const kept = permissions.filter(
-      key =>
-        key === CONVERSATION_UNASSIGNED || key === CONVERSATION_PARTICIPATING
-    );
-    return [...rest, ...(kept.length ? kept : [CONVERSATION_PARTICIPATING])];
+  if (level === CONVERSATION_LEVELS.VIEW) return [...rest, CONVERSATION_VIEW];
+  if (level === CONVERSATION_LEVELS.LIMITED || level === LEVELS.MANAGE) {
+    if (
+      isConversationManaging(getLevel({ type: 'conversations' }, permissions))
+    )
+      return level === LEVELS.MANAGE
+        ? permissions
+        : withoutKeys(permissions, [CONVERSATION_ALL]);
+    // Quem só olhava passa a atender as próprias e continua lendo as outras.
+    const keepsReading = permissions.includes(CONVERSATION_VIEW);
+    return [
+      ...rest,
+      CONVERSATION_PARTICIPATING,
+      ...(keepsReading ? [CONVERSATION_VIEW] : []),
+    ];
   }
   return rest;
 };
@@ -278,8 +339,12 @@ export const setLevel = (module, level, permissions) => {
     return setConversationLevel(level, permissions);
   if (module.type === 'crm') return setCrmLevel(module, level, permissions);
   // Trocar entre ver e editar mantém as chaves a mais; sem acesso, sai tudo.
+  // Voltar para ver tira as que só valem para quem edita.
+  const manageOnly = level === LEVELS.VIEW ? module.manageOnlyExtras || [] : [];
   const cleared =
-    level === LEVELS.NONE ? keysOf(module) : Object.values(module.levels);
+    level === LEVELS.NONE
+      ? keysOf(module)
+      : [...Object.values(module.levels), ...manageOnly];
   const rest = withoutKeys(permissions, cleared);
   const key = module.levels[level];
   return key ? [...rest, key] : rest;
@@ -292,9 +357,14 @@ export const visibleExtras = (module, permissions) => {
   if (module.type === 'conversations')
     return level === CONVERSATION_LEVELS.LIMITED ? module.extras : [];
   // Editing cards already includes moving them.
-  return level === LEVELS.MANAGE
-    ? module.extras.filter(key => key !== CRM_MOVE_CARDS)
-    : module.extras;
+  if (level === LEVELS.MANAGE)
+    return module.extras.filter(key => key !== CRM_MOVE_CARDS);
+  // Um ajuste só de quem edita fica visível enquanto estiver ligado, para dar para desligar.
+  return module.extras.filter(
+    key =>
+      !(module.manageOnlyExtras || []).includes(key) ||
+      permissions.includes(key)
+  );
 };
 
 // The backend grants these through crm_admin, so they cannot be switched off on their own.
@@ -318,13 +388,20 @@ export const toggleExtra = (module, key, permissions) => {
   return lostConversationScope ? permissions : next;
 };
 
-// A pairing the backend needs for one action (e.g. prospecting → campaigns).
+// A pairing the backend needs for one action (e.g. prospecting → campaigns). The target needs
+// `suggests.targetLevel` (edit by default) or more.
+const LEVEL_RANK = { [LEVELS.NONE]: 0, [LEVELS.VIEW]: 1, [LEVELS.MANAGE]: 2 };
+export const suggestedLevel = module =>
+  module.suggests?.targetLevel || LEVELS.MANAGE;
 export const unmetSuggestion = (module, permissions) => {
   const { suggests } = module;
   if (!suggests || getLevel(module, permissions) !== suggests.level)
     return null;
   const target = moduleByKey(suggests.module);
-  return getLevel(target, permissions) === LEVELS.MANAGE ? null : target;
+  const enough =
+    LEVEL_RANK[getLevel(target, permissions)] >=
+    LEVEL_RANK[suggestedLevel(module)];
+  return enough ? null : target;
 };
 
 export const sensitiveExtrasOn = permissions =>

@@ -97,7 +97,8 @@ const { t, te, locale } = useI18n();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
-const { canManageRelationshipRecords } = useRelationshipPermissions();
+const { canManageRelationshipRecords, canViewRelationshipRecords } =
+  useRelationshipPermissions();
 const formato = useFormato({ t, locale });
 const gavetaId = `crm-card-gaveta-${useId()}`;
 
@@ -132,8 +133,15 @@ const etapaDoCard = computed(
 const migalha = computed(() => [funil.value?.name].filter(Boolean));
 
 // ——— Desfecho (ST-01 a ST-07) ———
-const { status, venda, rotulosProprios, rotuloGanhar, rotuloPerder, desfecho } =
-  useCardDesfecho({ t, card, funil });
+const {
+  status,
+  venda,
+  rotulosProprios,
+  rotuloGanhar,
+  rotuloPerder,
+  perdaPadrao,
+  desfecho,
+} = useCardDesfecho({ t, card, funil });
 const { nome, titulo, subtitulo } = useCardNomes({ t, card, venda });
 
 // ——— Partes do card ———
@@ -457,7 +465,10 @@ const { heroi, rodape } = useCardMoldura({
   jeito,
   etapa: etapaDoCard,
   contatoInicial: computed(() => props.initialContact),
-  permissoes: { gerenciar: podeGerenciar },
+  permissoes: {
+    gerenciar: podeGerenciar,
+    verContatos: canViewRelationshipRecords,
+  },
   estado: {
     salvando: computed(() => props.isSaving),
     negocioValido: negocio.valido,
@@ -582,6 +593,7 @@ defineExpose({
     ref="dialogoPerdeu"
     :rotulo="rotuloPerder"
     :venda="venda"
+    :padrao="perdaPadrao"
     @confirmar="fecharNegocio"
   />
   <transition
@@ -644,6 +656,7 @@ defineExpose({
                 :inboxes="inboxes"
                 :can-manage="canManageCards"
                 :can-create-contact="canManageRelationshipRecords"
+                :can-pick-contact="canViewRelationshipRecords"
                 @passo="tela = 'criar-1'"
                 @save="(payload, failed) => emit('save', payload, failed)"
               />
@@ -686,6 +699,7 @@ defineExpose({
                 :nome="nome"
                 :pode-gerenciar="podeGerenciar"
                 :pode-registros="canManageRelationshipRecords"
+                :pode-ver-contatos="canViewRelationshipRecords"
                 :arquivando="isArchiving"
                 :empresas="empresasLigadas"
                 :jeito="jeito"
@@ -743,6 +757,7 @@ defineExpose({
               :card="card"
               :pode-gerenciar="podeGerenciar"
               :pode-registros="canManageRelationshipRecords"
+              :pode-ver-contatos="canViewRelationshipRecords"
               @guard="guardar"
               @mudou="emit('refreshCard')"
             />

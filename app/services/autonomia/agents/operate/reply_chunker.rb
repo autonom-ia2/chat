@@ -58,6 +58,15 @@ module Autonomia
           with_delays(chunks)
         end
 
+        # O ritmo de um pedaço que entra depois dos da resposta, inteiro (a pergunta das opções, #1479).
+        def self.delay_seguinte(text)
+          new(text).delay_seguinte
+        end
+
+        def delay_seguinte
+          chunk_delay({ text: @text, type: 'text' }, 1)
+        end
+
         private
 
         # ---- Normalização (espelha normalizeText do v3) -------------------------------------------
