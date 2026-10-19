@@ -21,6 +21,7 @@ import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
 import { campaignSourceIdsFromQuery } from 'dashboard/components-next/CampaignResult/resultMetrics';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CompanyAPI from 'dashboard/api/companies';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import MetaConversionsAPI from 'dashboard/api/metaConversions';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import Draggable from 'vuedraggable';
@@ -356,6 +357,8 @@ const companyOptions = ref([]);
 const companySearch = ref('');
 const companyLoading = ref(false);
 const companyFilterAvailable = ref(true);
+// O filtro de empresa busca na base: sem ver contatos, ele não aparece (#1849).
+const { canViewRelationshipRecords } = useRelationshipPermissions();
 const selectedCompanyOption = ref(null);
 let companySearchTimer = null;
 let companySearchRequestSeq = 0;
@@ -476,6 +479,15 @@ const onCompanySearch = query => {
   if (companySearchTimer) clearTimeout(companySearchTimer);
   companySearchTimer = setTimeout(() => loadCompanyOptions(query), 250);
 };
+
+// Sem ver contatos não há filtro de empresa (#1849): o que veio da URL ou de um filtro salvo sai.
+watch(
+  () => !canViewRelationshipRecords.value && Boolean(filters.value.companyId),
+  semPermissao => {
+    if (semPermissao) filters.value = { ...filters.value, companyId: '' };
+  },
+  { immediate: true }
+);
 
 watch(
   () => filters.value.companyId,
@@ -2554,7 +2566,9 @@ onUnmounted(() => {
       :company-choices="companyFilterOptions"
       :company-search="companySearch"
       :company-loading="companyLoading"
-      :company-filter-available="companyFilterAvailable"
+      :company-filter-available="
+        companyFilterAvailable && canViewRelationshipRecords
+      "
       :responsible-choices="responsibleChoices"
       :team-choices="teamChoices"
       :stage-options="stageOptions"

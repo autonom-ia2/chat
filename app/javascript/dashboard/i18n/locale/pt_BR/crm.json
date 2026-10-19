@@ -5247,7 +5247,8 @@
       "PESSOA": {
         "EXISTENTE": {
           "TITULO": "Já está nos contatos",
-          "TEXTO": "Procure pelo nome, telefone ou e-mail."
+          "TEXTO": "Procure pelo nome, telefone ou e-mail.",
+          "SEM_PERMISSAO": "Sua função não abre a lista de contatos. Para um cliente que já conversa com vocês, crie o card pela conversa dele."
         },
         "NOVA": {
           "TITULO": "Pessoa nova",
@@ -5416,7 +5417,8 @@
     "CONTATO": {
       "TELA": "Contato",
       "TITULO": "Contato: {nome}",
-      "TEXTO": "A pessoa: nome, telefone, e-mail e campos. Vale para todos os negócios dela."
+      "TEXTO": "A pessoa: nome, telefone, e-mail e campos. Vale para todos os negócios dela.",
+      "TEXTO_BASICO": "A pessoa: nome, telefone e e-mail."
     },
     "EMPRESA": {
       "TELA": "Empresa",

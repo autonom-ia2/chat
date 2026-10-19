@@ -15,6 +15,13 @@ import { EMOJI, temBico } from '../visualWhatsapp';
 import { ocultaNaPele } from '../marcasDaMensagem';
 
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
+// Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({
+    canViewRelationshipRecords: { value: true },
+    canManageRelationshipRecords: { value: true },
+  }),
+}));
 
 const i18n = () =>
   createI18n({

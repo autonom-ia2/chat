@@ -210,7 +210,8 @@
       "APAGADAS_EM_PARTE": "{apagadas} de {total} fotos apagadas. Tente de novo para as outras."
     },
     "CONTATO": {
-      "CONVERSAR": "Conversar"
+      "CONVERSAR": "Conversar",
+      "SEM_CADASTRO": "Este número ainda não está nos contatos. Peça a quem cuida dos contatos para cadastrar."
     },
     "REACOES": {
       "ROTULO": "{nome} reagiu com {emoji}",

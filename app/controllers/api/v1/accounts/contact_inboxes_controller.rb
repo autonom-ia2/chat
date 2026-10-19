@@ -6,6 +6,7 @@ class Api::V1::Accounts::ContactInboxesController < Api::V1::Accounts::BaseContr
     return head :not_found if contact_inbox.empty?
 
     @contact = contact_inbox.first.contact
+    authorize @contact, :show?
   end
 
   private

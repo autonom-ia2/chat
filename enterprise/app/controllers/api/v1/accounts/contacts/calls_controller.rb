@@ -3,7 +3,7 @@ class Api::V1::Accounts::Contacts::CallsController < Api::V1::Accounts::BaseCont
   before_action :voice_inbox
 
   def create
-    authorize contact, :show?
+    authorize contact, :call?
     authorize voice_inbox, :show?
 
     call = Voice::OutboundCallBuilder.perform!(

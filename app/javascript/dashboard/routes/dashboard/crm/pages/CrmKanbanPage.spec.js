@@ -47,6 +47,9 @@ vi.mock('../composables/useCrmPermissions', () => ({
 }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({ canViewRelationshipRecords: ref(true) }),
+}));
 vi.mock('dashboard/composables/emitter', () => ({ useEmitter: vi.fn() }));
 vi.mock('dashboard/api/crmMeetings', () => ({ default: {} }));
 vi.mock('dashboard/api/ctwaCampaigns', () => ({
