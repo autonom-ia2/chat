@@ -103,9 +103,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/sources#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:87",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:91"
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:32",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:167",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:171"
     ],
     "sem_corpo": true
   },
@@ -392,9 +392,9 @@
     "controller": "api/v1/accounts/contacts/notes#destroy",
     "modelo": "Note",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:19",
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:20",
       "app/controllers/api/v1/accounts/contacts/base_controller.rb:7",
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:31"
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:36"
     ],
     "sem_corpo": true
   },
@@ -424,6 +424,16 @@
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:116",
       "app/controllers/api/v1/accounts/contacts_controller.rb:218"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE conversa_canal/pastas_do_email/:conversation_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#destroy",
+    "modelo": "ConversaCanal::PastaDoEmail",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:26",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
     ],
     "sem_corpo": true
   },
@@ -540,7 +550,7 @@
     "controller": "api/v1/accounts/crm/cards#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:129",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": true
   },
@@ -549,7 +559,7 @@
     "controller": "api/v1/accounts/crm/follow_ups#destroy",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:69",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -915,7 +925,7 @@
     "completo": true,
     "controller": "api/v1/accounts/integrations/shopify#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:35"
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:37"
     ],
     "sem_corpo": true
   },
@@ -944,6 +954,16 @@
     "origem": [
       "app/controllers/api/v1/accounts/macros_controller.rb:45",
       "app/controllers/api/v1/accounts/macros_controller.rb:70"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE nomes_de_etiquetas/:label_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/nomes_de_etiquetas#destroy",
+    "modelo": "Etiquetas::Nome",
+    "origem": [
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:24",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:47"
     ],
     "sem_corpo": true
   },
@@ -4587,10 +4607,10 @@
     "envelope": "note",
     "modelo": "Note",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:15",
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:35",
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:16",
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:40",
       "app/controllers/api/v1/accounts/contacts/base_controller.rb:7",
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:31"
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:36"
     ],
     "sem_corpo": false
   },
@@ -4640,12 +4660,25 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:96",
       "app/controllers/api/v1/accounts/contacts_controller.rb:186",
       "app/controllers/api/v1/accounts/contacts_controller.rb:222",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:22",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:16",
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH conversa_canal/pastas_do_email/:conversation_id": {
+    "campos": {
+      "pasta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:37",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
     ],
     "sem_corpo": false
   },
@@ -4691,6 +4724,24 @@
     "origem": [
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:26",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH conversations/:conversation_id/messages/:id/content": {
+    "campos": {
+      "content": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/message_edits#update",
+    "modelo": "User",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:8",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:24",
+      "app/controllers/api/v1/accounts/conversations/message_edits_controller.rb:11",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -5069,8 +5120,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:582",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:588",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": false
   },
@@ -5223,8 +5274,8 @@
     "modelo": "Crm::FollowUp",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:203",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:204",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": false
   },
@@ -6305,6 +6356,8 @@
           "crm_admin",
           "crm_export",
           "contact_view",
+          "contact_export",
+          "contact_delete",
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
@@ -7524,6 +7577,24 @@
       "app/controllers/api/v1/accounts/macros_controller.rb:36",
       "app/controllers/api/v1/accounts/macros_controller.rb:30",
       "app/controllers/api/v1/accounts/macros_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH nomes_de_etiquetas/:label_id": {
+    "campos": {
+      "nome": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/nomes_de_etiquetas#update",
+    "modelo": "Etiquetas::Nome",
+    "origem": [
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:19",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:20",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:47"
     ],
     "sem_corpo": false
   },
@@ -10641,7 +10712,8 @@
           "docx",
           "json",
           "txt",
-          "md"
+          "md",
+          "foto"
         ]
       }
     },
@@ -10675,22 +10747,26 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:9",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:175",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:80",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:137",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:135",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:124",
       "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:95",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:58",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:73",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:71",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:87"
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:94",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:93",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:167"
     ],
     "sem_corpo": false
   },
   "POST autonomia/agents/:agent_id/sources/:id/resync": {
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/sources#resync",
+    "modelo": "Autonomia::Agents::Source",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:46",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:87",
-      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:91"
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:167",
+      "app/controllers/api/v1/accounts/autonomia/agents/sources_controller.rb:171"
     ],
     "sem_corpo": true
   },
@@ -10982,10 +11058,10 @@
       "leitura crua sem tipo: draft, instruction, task, tone"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:11",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:14",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:13",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:17",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:16",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -11010,10 +11086,42 @@
       "leitura crua sem tipo: message"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:34",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:36",
-      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:60"
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:39",
+      "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:63"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/copilot/text": {
+    "campos": {
+      "draft": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "instruction": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "task": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "tone": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/text_copilot#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:18",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:55",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/text_copilot_controller.rb:49"
     ],
     "sem_corpo": false
   },
@@ -13119,7 +13227,7 @@
     "modelo": "ContactInbox",
     "origem": [
       "app/controllers/api/v1/accounts/contact_inboxes_controller.rb:4",
-      "app/controllers/api/v1/accounts/contact_inboxes_controller.rb:19"
+      "app/controllers/api/v1/accounts/contact_inboxes_controller.rb:20"
     ],
     "sem_corpo": false
   },
@@ -13176,9 +13284,9 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:181",
       "app/controllers/api/v1/accounts/contacts_controller.rb:177",
       "app/controllers/api/v1/accounts/contacts_controller.rb:175",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:22",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:16"
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24"
     ],
     "sem_corpo": false
   },
@@ -13247,8 +13355,8 @@
     "envelope": "note",
     "modelo": "Note",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:11",
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:35",
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:12",
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:40",
       "app/controllers/api/v1/accounts/contacts/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -13360,6 +13468,21 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:34",
       "app/controllers/api/v1/accounts/contacts_controller.rb:39",
       "app/controllers/api/v1/accounts/contacts_controller.rb:35"
+    ],
+    "sem_corpo": false
+  },
+  "POST conversa_canal/ditados": {
+    "campos": {
+      "audio": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/conversa_canal/ditados#create",
+    "motivos": [
+      "leitura crua sem tipo: audio (repassada a ConversaCanal::Ditado.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/ditados_controller.rb:15",
+      "app/controllers/api/v1/accounts/conversa_canal/ditados_controller.rb:16"
     ],
     "sem_corpo": false
   },
@@ -13523,6 +13646,24 @@
     ],
     "sem_corpo": false
   },
+  "POST conversations/:conversation_id/messages/:id/reaction": {
+    "campos": {
+      "emoji": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/message_reactions#create",
+    "modelo": "User",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:7",
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:20",
+      "app/controllers/api/v1/accounts/conversations/message_reactions_controller.rb:10",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
   "POST conversations/:conversation_id/messages/:id/retry": {
     "campos": {
       "external_error": {},
@@ -13567,7 +13708,7 @@
     "controller": "api/v1/accounts/conversations/messages#translate",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:46",
+      "app/controllers/concerns/conversa_canal/traducao_em_segundo_plano.rb:8",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:125",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
@@ -13770,7 +13911,7 @@
     "controller": "api/v1/accounts/conversations#unread",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:135",
+      "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:20",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": true
@@ -13788,6 +13929,7 @@
     "origem": [
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:9",
       "app/controllers/concerns/conversa_canal/leitura_ao_abrir.rb:26",
+      "app/controllers/concerns/conversa_canal/lido_no_servidor_do_email.rb:14",
       "app/controllers/api/v1/accounts/conversations_controller.rb:198"
     ],
     "sem_corpo": false
@@ -14368,8 +14510,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:80",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:529",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:425",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:535",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:431",
       "app/controllers/concerns/crm/opportunity_registration.rb:7"
     ],
     "sem_corpo": false
@@ -14422,7 +14564,7 @@
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:153",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:152",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:151",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": false
   },
@@ -14431,7 +14573,7 @@
     "controller": "api/v1/accounts/crm/cards#evaluate_ai",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:206",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": true
   },
@@ -14447,7 +14589,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:188",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:189",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": false
   },
@@ -14468,7 +14610,7 @@
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:163",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:174",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:164",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": false
   },
@@ -14485,7 +14627,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:136",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:138",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": false
   },
@@ -14494,7 +14636,7 @@
     "controller": "api/v1/accounts/crm/cards#reset_auto_followup",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:230",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": true
   },
@@ -14503,7 +14645,7 @@
     "controller": "api/v1/accounts/crm/cards#summarize",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:210",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": true
   },
@@ -14512,7 +14654,7 @@
     "controller": "api/v1/accounts/crm/cards#unlink_contact",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:195",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": true
   },
@@ -14528,7 +14670,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:180",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:181",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": false
   },
@@ -14678,10 +14820,10 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:102",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:529",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:503",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:382",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:380"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:535",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:509",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:388",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:386"
     ],
     "sem_corpo": false
   },
@@ -14877,7 +15019,7 @@
     "modelo": "Crm::FollowUp",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:48",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:203"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:204"
     ],
     "sem_corpo": false
   },
@@ -14886,7 +15028,7 @@
     "controller": "api/v1/accounts/crm/follow_ups#cancel",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:77",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -14895,7 +15037,7 @@
     "controller": "api/v1/accounts/crm/follow_ups#complete",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:73",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -14904,7 +15046,7 @@
     "controller": "api/v1/accounts/crm/follow_ups#dismiss_reminder",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:81",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -14912,14 +15054,19 @@
     "campos": {
       "due_at": {
         "tipo": "data_hora"
+      },
+      "reminders_only": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#reschedule",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:89",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94",
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:93",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": false
   },
@@ -16202,6 +16349,8 @@
           "crm_admin",
           "crm_export",
           "contact_view",
+          "contact_export",
+          "contact_delete",
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
@@ -17799,8 +17948,8 @@
     "completo": true,
     "controller": "api/v1/accounts/integrations/shopify#auth",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:8",
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:9"
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:10",
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:11"
     ],
     "sem_corpo": false
   },
@@ -22846,10 +22995,10 @@
     "envelope": "note",
     "modelo": "Note",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:15",
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:35",
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:16",
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:40",
       "app/controllers/api/v1/accounts/contacts/base_controller.rb:7",
-      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:31"
+      "app/controllers/api/v1/accounts/contacts/notes_controller.rb:36"
     ],
     "sem_corpo": false
   },
@@ -22899,12 +23048,25 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:96",
       "app/controllers/api/v1/accounts/contacts_controller.rb:186",
       "app/controllers/api/v1/accounts/contacts_controller.rb:222",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:22",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:16",
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
+    ],
+    "sem_corpo": false
+  },
+  "PUT conversa_canal/pastas_do_email/:conversation_id": {
+    "campos": {
+      "pasta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/pastas_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:19",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:37",
+      "app/controllers/api/v1/accounts/conversa_canal/pastas_do_email_controller.rb:41"
     ],
     "sem_corpo": false
   },
@@ -23385,8 +23547,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:582",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:375"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:588",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": false
   },
@@ -23539,8 +23701,8 @@
     "modelo": "Crm::FollowUp",
     "origem": [
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:203",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:204",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
     ],
     "sem_corpo": false
   },
@@ -24486,6 +24648,8 @@
           "crm_admin",
           "crm_export",
           "contact_view",
+          "contact_export",
+          "contact_delete",
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
@@ -25700,6 +25864,24 @@
       "app/controllers/api/v1/accounts/macros_controller.rb:36",
       "app/controllers/api/v1/accounts/macros_controller.rb:30",
       "app/controllers/api/v1/accounts/macros_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
+  "PUT nomes_de_etiquetas/:label_id": {
+    "campos": {
+      "nome": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/nomes_de_etiquetas#update",
+    "modelo": "Etiquetas::Nome",
+    "origem": [
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:19",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:20",
+      "app/controllers/api/v1/accounts/nomes_de_etiquetas_controller.rb:47"
     ],
     "sem_corpo": false
   },

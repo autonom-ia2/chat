@@ -13,6 +13,10 @@ import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { mapGetters } from 'vuex';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import MaisDoWhatsapp from 'dashboard/components-next/conversa-canal/mais/MaisDoWhatsapp.vue';
+import BotoesDoEmail from 'dashboard/components-next/conversa-canal/email/BotoesDoEmail.vue';
+import BotaoDeAudio from 'dashboard/components-next/conversa-canal/email/BotaoDeAudio.vue';
+import MaisDoEmail from 'dashboard/components-next/conversa-canal/email/MaisDoEmail.vue';
+import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import {
   anexarArquivos,
   usePeleDaResposta,
@@ -22,6 +26,9 @@ export default {
   name: 'ReplyBottomPanel',
   components: {
     MaisDoWhatsapp,
+    BotoesDoEmail,
+    BotaoDeAudio,
+    MaisDoEmail,
     NextButton,
     FileUpload,
     VideoCallButton,
@@ -183,9 +190,12 @@ export default {
     useKeyboardEvents(keyboardEvents);
     // #1702: "+" e Enviar verde na conversa com a cara do WhatsApp.
     const { ehWhatsapp, soTexto, classesDaResposta } = usePeleDaResposta();
+    // #1786: Aa, Modelos e Descartar na resposta da conversa de e-mail nova.
+    const emailNovo = useEmailDaConversa().ligado;
 
     return {
       ehWhatsapp,
+      emailNovo,
       soTexto,
       classesDaResposta,
       anexarArquivos,
@@ -322,6 +332,11 @@ export default {
     :class="[wrapClass, ehWhatsapp ? classesDaResposta.painel : '']"
   >
     <div class="left-wrap">
+      <BotoesDoEmail v-if="emailNovo && !isNote" parte="esquerda" />
+      <MaisDoEmail
+        v-if="emailNovo && showAttachButton"
+        @arquivos="escolha => anexarArquivos(escolha, onFileUpload)"
+      />
       <MaisDoWhatsapp
         v-if="ehWhatsapp && !isOnPrivateNote && !isEditorDisabled"
         :caixa="inbox"
@@ -353,17 +368,20 @@ export default {
         }"
         @input-file="onFileUpload"
       >
+        <!-- #1786: no e-mail novo o "+" substitui o clipe; o campo fica para arrastar. -->
         <NextButton
           v-if="showAttachButton"
           v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_ATTACH_ICON')"
+          :class="{ '!hidden': emailNovo }"
           icon="i-ph-paperclip"
           slate
           faded
           sm
         />
       </FileUpload>
+      <BotaoDeAudio v-if="emailNovo && !isNote && !isEditorDisabled" />
       <NextButton
-        v-if="showAudioRecorderButton"
+        v-if="showAudioRecorderButton && !emailNovo"
         v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_AUDIORECORDER_ICON')"
         :icon="!isRecordingAudio ? 'i-ph-microphone' : 'i-ph-microphone-slash'"
         slate
@@ -383,6 +401,7 @@ export default {
       <NextButton
         v-if="showMessageSignatureButton"
         v-tooltip.top-end="signatureToggleTooltip"
+        :data-ligado="(emailNovo && sendWithSignature) || undefined"
         icon="i-ph-signature"
         slate
         faded
@@ -451,6 +470,7 @@ export default {
       />
     </div>
     <div class="right-wrap">
+      <BotoesDoEmail v-if="emailNovo" parte="direita" />
       <button
         v-if="microfoneNaDireita"
         type="button"
@@ -466,7 +486,14 @@ export default {
         v-else
         v-tooltip.top-end="ehWhatsapp ? sendButtonText : null"
         :label="ehWhatsapp ? '' : sendButtonText"
-        :icon="ehWhatsapp ? classesDaResposta.iconeEnviar : ''"
+        :icon="
+          ehWhatsapp
+            ? classesDaResposta.iconeEnviar
+            : emailNovo && !isNote
+              ? 'i-lucide-send-horizontal'
+              : ''
+        "
+        :trailing-icon="emailNovo && !isNote"
         :aria-label="sendButtonText"
         type="submit"
         sm

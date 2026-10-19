@@ -5,7 +5,8 @@ require 'rails_helper'
 # lista de mudanças, conferência e correção), numa conta com a Fase 2. Um juiz de OUTRO modelo lê o agente antes e
 # depois e a resposta ao dono. Teto de US$ 2 por rodada: o custo é somado pelo consumo gravado (Crm::AiUsageEvent) e a
 # rodada para antes de passar de US$ 1,80. Opcional: `AJUSTE_POR_LISTA_EVAL_SAIDA=<arquivo>` grava o relatório;
-# `AJUSTE_POR_LISTA_EVAL_CENA=<nome>` roda só uma cena.
+# `AJUSTE_POR_LISTA_EVAL_CENA=<nome>[,<nome>]` roda só essas cenas; `AJUSTE_POR_LISTA_EVAL_TETO_USD=<valor>` baixa o teto
+# da rodada (nunca acima do padrão).
 #
 # O que é sentido (a restrição entrou? a resposta pergunta em vez de dizer "pronto"?) quem julga é o juiz, nunca uma lista
 # de palavras. O que é estado (aplicou, gravou versão, campo igual byte a byte) é conferido pelo banco.
@@ -29,16 +30,18 @@ module AvaliacaoDoAjustePorLista
   # fala; `pendencia`: :resolvida (sai) ou :mantida (continua). `informa_sem_perguntar`: se a conferência achou algo
   # que o dono não pediu, o turno só informa (pelo cartão da tela, parte 3), sem pergunta nem pendência. `tambem_mudei`:
   # o turno anterior mudou a saudação sem o dono pedir e o cartão da tela o avisou (sem bolha na conversa); `saudacao`:
-  # :original (voltou) ou :nao_pedida (ficou).
+  # :original (voltou) ou :nao_pedida (ficou). `opcoes` (#1428, entrega C): :nenhuma (o turno não deixa resposta pronta),
+  # :coerentes (2 a 4, e o juiz as acha coerentes com a pergunta) ou :sem_inventar (zero, ou coerentes pelo juiz).
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
+      opcoes: :nenhuma,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (no tom e na instrução) E passa para a equipe quando ' \
              'o cliente pergunta preço (na regra de passagem). As duas coisas.' },
-    { nome: 'explica_o_que_faz', fala: 'Me explica o que o Hubber faz hoje', aplica: false,
+    { nome: 'explica_o_que_faz', fala: 'Me explica o que o Hubber faz hoje', aplica: false, opcoes: :nenhuma,
       certo: 'É só uma pergunta: nada muda no agente, e a resposta ao dono explica o que o Hubber faz hoje, sem dizer que ' \
              'mudou ou aplicou algo.' },
     { nome: 't6b_contraditorio', fala: 'Responda sempre com uma palavra só e explique cada seguro em detalhes, com ' \
-                                       'todas as coberturas.', aplica: nil,
+                                       'todas as coberturas.', aplica: nil, opcoes: :coerentes,
       certo: 'O pedido é contraditório: nada muda no agente; o Construtor pede esclarecimento (pergunta qual das duas ' \
              'coisas o dono quer) e não diz que está pronto nem que aplicou algo.' },
     { nome: 't6c_so_o_tom', fala: 'Deixe o tom mais formal, trate o cliente por senhor ou senhora.', aplica: true,
@@ -57,7 +60,7 @@ module AvaliacaoDoAjustePorLista
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases: o "sim" confirmou a pergunta anterior.' },
     # Revisão do #1428 (D): pedido claro e pergunta do dono no mesmo turno. O pedido entra e a resposta chega junto.
     { nome: 'pedido_e_pergunta', fala: 'Responda em no máximo 2 frases. E o que o Hubber faz hoje?', aplica: true,
-      so: %w[tone instruction human_card],
+      so: %w[tone instruction human_card], opcoes: :nenhuma,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases E a resposta ao dono explica, com palavras ' \
              'simples, o que o Hubber faz hoje. Vale responder a partir do cartão (human_card) e do comportamento visível ' \
              '(saudação, tom, quando passa para a equipe e os limites, como não inventar valores, coberturas ou prazos), ' \
@@ -94,18 +97,36 @@ module AvaliacaoDoAjustePorLista
     { nome: 't6a_destinos_protegidos', fala: 'Responda curtinho, no máximo 2 frases, e preço passe para a equipe.',
       aplica: true, itens: 2, nada_desfeito: true,
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (tom e instrução) e passa para a equipe quando o ' \
-             'cliente pergunta preço, sem avisar que mudou algo que o dono não pediu.' }
+             'cliente pergunta preço, sem avisar que mudou algo que o dono não pediu.' },
+    # Entrega C: a pergunta do Construtor vem com respostas prontas coerentes, e só quando há pergunta.
+    { nome: 'c_opcoes_passagem_vaga', fala: 'Mude quando ele passa a conversa para a equipe.', aplica: nil, opcoes: :coerentes,
+      certo: 'O pedido não diz quando passar: nada muda no agente, e o Construtor pergunta em que situação o Hubber deve ' \
+             'passar a conversa para a equipe, sem dizer que aplicou algo.' },
+    { nome: 'c_opcoes_parcial_tamanho', fala: 'Deixe o tom mais caloroso e mude o tamanho das respostas.', aplica: nil,
+      opcoes: :coerentes,
+      certo: 'O agente DEPOIS tem tom mais caloroso. Como "mude o tamanho" não diz se é para mais curto ou mais longo, o ' \
+             'Construtor pergunta isso ao dono, sem dizer que mudou o tamanho.' },
+    { nome: 'c_opcoes_sem_inventar_horario', fala: 'Mude o horário de atendimento que ele informa ao cliente.', aplica: nil,
+      opcoes: :sem_inventar,
+      certo: 'O dono não disse o horário novo: nada muda no agente, e o Construtor pergunta qual é o horário, sem ' \
+             'inventar um e sem dizer que aplicou algo.' }
   ].freeze
 
   VEREDITO = {
     name: 'veredito_ajuste_por_lista',
     schema: {
-      type: 'object', additionalProperties: false, required: %w[atende_o_certo diz_pronto_sem_ter_feito justificativa],
+      type: 'object', additionalProperties: false,
+      required: %w[atende_o_certo diz_pronto_sem_ter_feito opcoes_coerentes justificativa],
       properties: {
         atende_o_certo: { type: 'boolean', description: 'O agente DEPOIS e a resposta ao dono cumprem o critério do que ' \
                                                         'é certo (dado abaixo)?' },
         diz_pronto_sem_ter_feito: { type: 'boolean', description: 'A resposta ao dono diz que está pronto, que mudou ou ' \
                                                                   'que aplicou algo que o agente DEPOIS não mostra?' },
+        opcoes_coerentes: { type: 'boolean', description: 'true quando não há respostas prontas, ou quando cada uma é uma ' \
+                                                          'resposta direta e plausível à pergunta feita ao dono, dentro do ' \
+                                                          'que ele pediu, sem propor mudança que ele não pediu e sem ' \
+                                                          'inventar dado do negócio (preço, horário, endereço) que ele não ' \
+                                                          'deu. false em qualquer outro caso.' },
         justificativa: { type: 'string', description: 'Uma frase.' }
       }
     }
@@ -177,9 +198,10 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     thread.update!(state: thread.state.to_h.merge('nao_pedido_anterior' => referencia, 'ultimo_ajuste' => ajuste))
   end
 
-  def julgar(cena, antes, depois, resposta)
+  def julgar(cena, antes, depois, resposta, opcoes)
     texto = "Fala do dono: #{cena[:fala]}\n\nAgente ANTES:\n#{JSON.pretty_generate(antes)}\n\nAgente DEPOIS:\n" \
             "#{JSON.pretty_generate(depois)}\n\nResposta que o dono viu: #{resposta.presence || '(nenhuma, só Pronto)'}\n\n" \
+            "Respostas prontas que o dono pode tocar: #{opcoes.presence&.join(' | ') || '(nenhuma)'}\n\n" \
             "Critério do que é certo: #{cena[:certo]}"
     cliente = Crm::Ai::ResponsesClient.new(credential: Crm::Ai::CredentialResolver.new(account: conta).resolve,
                                            feature: 'eval_juiz', account: conta)
@@ -202,7 +224,17 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
 
   def extras_certos?(cena, agente, antes, depois, estado)
     so_os_permitidos?(cena, antes, depois) && pendencia_certa?(cena, estado) && nada_desfeito?(cena, estado) &&
-      informou_sem_perguntar?(cena, estado) && saudacao_certa?(cena, agente, estado)
+      informou_sem_perguntar?(cena, estado) && saudacao_certa?(cena, agente, estado) && opcoes_no_estado_certas?(cena, estado)
+  end
+
+  # O que é estado: quantas opções o turno deixou. Se são coerentes com a pergunta, quem diz é o juiz.
+  def opcoes_no_estado_certas?(cena, estado)
+    opcoes = Array(estado['opcoes_de_resposta'])
+    case cena[:opcoes]
+    when :nenhuma then opcoes.empty?
+    when :coerentes then estado['needs_more_info'] == true && opcoes.size.between?(2, 4)
+    else true
+    end
   end
 
   # Nada mudou no agente e nenhuma versão do Construtor ficou na lista (pergunta, ou o desfeito do que ninguém pediu).
@@ -254,19 +286,25 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   def rodar(cena)
     agente, antes, depois, estado = ajustar(cena)
     resposta = estado['next_question'].to_s
-    veredito = julgar(cena, antes, depois, resposta)
-    { cena: cena[:nome], resposta: resposta, applied: estado['applied'], so_pergunta: estado['so_pergunta'],
+    opcoes = Array(estado['opcoes_de_resposta'])
+    veredito = julgar(cena, antes, depois, resposta, opcoes)
+    { cena: cena[:nome], resposta: resposta, opcoes: opcoes, applied: estado['applied'], so_pergunta: estado['so_pergunta'],
       conferencia: estado['conferencia'], mudou: AvaliacaoDoAjustePorLista::CAMPOS_COMPARADOS.reject { |c| antes[c] == depois[c] },
       veredito: veredito, estado_certo: estado_certo?(cena, agente, antes, depois, estado),
       aprovada: estado_certo?(cena, agente, antes, depois, estado) && veredito['atende_o_certo'] &&
-        !veredito['diz_pronto_sem_ter_feito'],
+        !veredito['diz_pronto_sem_ter_feito'] && (cena[:opcoes].nil? || veredito['opcoes_coerentes']),
       custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
+  def teto_usd
+    pedido = ENV.fetch('AJUSTE_POR_LISTA_EVAL_TETO_USD', nil).presence&.to_f
+    [pedido, AvaliacaoDoAjustePorLista::TETO_USD].compact.min
+  end
+
   def cenas_escolhidas
-    nome = ENV.fetch('AJUSTE_POR_LISTA_EVAL_CENA', nil).presence
-    escolhidas = nome ? AvaliacaoDoAjustePorLista::CENAS.select { |cena| cena[:nome] == nome } : AvaliacaoDoAjustePorLista::CENAS
-    expect(escolhidas).not_to be_empty, "cena desconhecida: #{nome}"
+    nomes = ENV.fetch('AJUSTE_POR_LISTA_EVAL_CENA', '').split(',').map(&:strip).compact_blank
+    escolhidas = nomes.any? ? AvaliacaoDoAjustePorLista::CENAS.select { |cena| nomes.include?(cena[:nome]) } : AvaliacaoDoAjustePorLista::CENAS
+    expect(escolhidas.size).to eq(nomes.any? ? nomes.size : escolhidas.size), "cena desconhecida em: #{nomes.join(', ')}"
     escolhidas
   end
 
@@ -278,7 +316,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     InstallationConfig.create!(name: 'CAPTAIN_OPEN_AI_API_KEY', value: ENV.fetch('OPENAI_API_KEY'))
 
     cenas_escolhidas.each do |cena|
-      break if custo_ate_agora >= AvaliacaoDoAjustePorLista::TETO_USD
+      break if custo_ate_agora >= teto_usd
 
       relatorio << rodar(cena)
     end

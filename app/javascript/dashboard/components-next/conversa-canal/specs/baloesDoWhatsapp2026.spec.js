@@ -15,6 +15,13 @@ import { EMOJI, temBico } from '../visualWhatsapp';
 import { ocultaNaPele } from '../marcasDaMensagem';
 
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
+// Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({
+    canViewRelationshipRecords: { value: true },
+    canManageRelationshipRecords: { value: true },
+  }),
+}));
 
 const i18n = () =>
   createI18n({
@@ -617,8 +624,11 @@ describe('c2y_hidden (#1702)', () => {
     expect(wrapper.find('#message2').exists()).toBe(false);
   });
 
-  it('sem a pele, aparece como sempre', () => {
-    expect(montarLista(null).find('#message2').exists()).toBe(true);
+  // #1709: a recebida com c2y_hidden (voto, aviso trocado pela mídia) some com ou sem a pele (isHidden sempre ligado).
+  it('sem a pele, a recebida com c2y_hidden também some (isHidden sempre ligado)', () => {
+    const wrapper = montarLista(null);
+    expect(wrapper.find('#message1').exists()).toBe(true);
+    expect(wrapper.find('#message2').exists()).toBe(false);
   });
 });
 

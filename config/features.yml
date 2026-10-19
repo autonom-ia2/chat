@@ -378,41 +378,44 @@
   enabled: true
   column: feature_flags_ext_1
 
+# As flags marcadas "padrão até 19/10/2026" abaixo foram liberadas pelo Rodrigo para todas as contas nessa data: as
+# existentes foram ligadas pela Orquestração e as novas nascem ligadas (#1857, migration 20261108150000).
+
 # Follow-up de IA com dados reais (#1336, épico #1320). Bit 21 (2097152), LOGO ABAIXO de `nova_conversa_tela`
 # (#1459, bit 20). Fora das 24 h, a variável do modelo que o perfil (`WhatsappTemplateProfile#fields`) liga a uma chave
 # do catálogo (`negocio.valor`, `negocio.prazo`, `negocio.responsavel`, `cliente.*`…) vai com o dado do card, e o
-# modelo cujo campo ligado não tem dado no card não é oferecido à IA. Desligada (padrão): a IA preenche tudo, como antes.
+# modelo cujo campo ligado não tem dado no card não é oferecido à IA. Desligada (padrão até 19/10/2026): a IA preenche tudo, como antes.
 - name: followup_template_real_values
   display_name: Follow-up de IA com dados reais do card nos modelos
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Lembretes novos do CRM (#1460 repetir, #1461 sem card, #1462 quem recebe). Bit 22 (4194304), reservado pela
 # Orquestração: fica LOGO ABAIXO de `followup_template_real_values` (#1336, bit 21).
-# Desligada (padrão): o "Novo lembrete" do calendário abre a janela antiga e o card, o Relacionamento e o calendário
+# Desligada (padrão até 19/10/2026): o "Novo lembrete" do calendário abre a janela antiga e o card, o Relacionamento e o calendário
 # não mostram repetir nem quem recebe; a API (#1537) continua, sem uso. Ligar: #1527.
 - name: crm_lembretes_v2
   display_name: Lembretes que repetem, sem card e com quem recebe
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Calendário novo "Meu dia" (#1568). Bit 23 (8388608), reservado pela Orquestração: fica LOGO ABAIXO de
-# `crm_lembretes_v2` (#1542, bit 22) — este PR só entra depois do #1542. Desligada (padrão): CRM > Agendamento >
+# `crm_lembretes_v2` (#1542, bit 22) — este PR só entra depois do #1542. Desligada (padrão até 19/10/2026): CRM > Agendamento >
 # Calendário continua a tela de sempre. Ligada: abre no Meu dia, com semana e mês de apoio e filtros no "Mostrar".
 # Sem migration. Ligar: #1574.
 - name: crm_calendario_ouro
   display_name: Calendário Meu dia (o que fazer hoje)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Campanha com produtos do catálogo da WABA (#1418, épico #1320): um produto, vários e carrossel de produtos, na Nova
 # campanha e na criação de modelos. Bit 24 (16777216), confirmado pela Orquestração: fica DEPOIS de
 # `crm_lembretes_v2` (bit 22) e `crm_calendario_ouro` (bit 23, #1568) — este PR só entra depois dos dois (a posição na
-# lista é o bit). Desligada (padrão): nada de produtos na tela, o endpoint do catálogo responde 404 e a campanha recusa
+# lista é o bit). Desligada (padrão até 19/10/2026): nada de produtos na tela, o endpoint do catálogo responde 404 e a campanha recusa
 # modelo de produtos. Beta (validado com catálogo simulado). Liga: #1573.
 - name: whatsapp_campaign_products
   display_name: Campanha do WhatsApp com produtos do catálogo
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Menu lateral novo e página inicial de Configurações com cartões (#1617).
@@ -429,72 +432,161 @@
 # posição na main antes de ligar. Ligada: o fuso da caixa (`inbox.timezone`) é o fuso da conta (`reporting_timezone`)
 # e a IA (`EngagementGate`) e o SLA (`Sla::ScheduleResolver`) deixam de ler o calendário de caixa do CRM
 # (`Crm::ServiceSchedule` com dono Inbox): valem o horário do Chatwoot (`working_hours`) e o calendário da pessoa.
-# Desligada (padrão): tudo como antes, com a coluna `inboxes.timezone` e o calendário de caixa do CRM. Sem migration;
+# Desligada (padrão até 19/10/2026): tudo como antes, com a coluna `inboxes.timezone` e o calendário de caixa do CRM. Sem migration;
 # nasce ligada nas contas 1, 16 e 18 da Hub2You pela Orquestração. Voltar = desligar a flag.
 - name: horario_unico_caixa
   display_name: Horário único da caixa (horário do Chatwoot no fuso da conta)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Outro canal (#1150, R13; PR #1664): o cliente com card aberto que escreve por outra caixa tem a conversa nova ligada
 # ao card e entregue ao dono, sem passar pela triagem. Bit 27 (134217728), o próximo depois de `horario_unico_caixa`
 # (bit 26): se outra flag entrar antes na main, esta vai para o fim e o bit sobe (a posição na lista é o bit).
-# Desligada (padrão): nada muda, a conversa nova segue o caminho de sempre. Sem migration. Ligar: #1666.
+# Desligada (padrão até 19/10/2026): nada muda, a conversa nova segue o caminho de sempre. Sem migration. Ligar: #1666.
 - name: crm_outro_canal
   display_name: Conversa de outro canal vai para o card aberto e o dono
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Mensagem marcada nova (#1590): gaveta no padrão da casa — para quem, quando, o que dizer e confira, com o balão do
 # WhatsApp como o cliente vai ver. Abre pelo "+ Novo" do calendário e pelo "Mandar mensagem" do card (caixa oficial).
 # Bit 28 (268435456): a posição na lista é o bit e a flag vai no fim do que está na main — aqui, logo depois de
-# `crm_outro_canal` (bit 27). Desligada (padrão): tudo como antes — a janela antiga do calendário, o retorno do card,
+# `crm_outro_canal` (bit 27). Desligada (padrão até 19/10/2026): tudo como antes — a janela antiga do calendário, o retorno do card,
 # sem "Não saiu", sem `send_error_code` na API e sem recusar horário passado. Nasce ligada nas contas 1, 16 e 18 da
 # stack Hub2You (Orquestração, depois do deploy). Ligar nas demais: #1605.
 - name: crm_mensagem_marcada
   display_name: Mensagem marcada nova (para quem, quando, o que dizer)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Toda mensagem do cliente avalia o card em foco (#1675, épico #1140). Bit 29 (536870912): a posição na lista é o bit e
 # a flag vai no fim do que está na main, logo depois de `crm_mensagem_marcada` (bit 28); se outra flag entrar antes na
 # main, esta vai para o fim e o bit sobe. Ligada: cada mensagem do cliente conta como atividade do card em foco (o
 # assunto atual) e faz a IA do CRM relê-lo, também na caixa de 2+ funis (Crm::Conversations::CardEmFoco). Desligada
-# (padrão): como antes, só a troca de foco, o card novo e o card ao chegar avaliam. Sem migration. Nasce ligada nas
+# (padrão até 19/10/2026): como antes, só a troca de foco, o card novo e o card ao chegar avaliam. Sem migration. Nasce ligada nas
 # contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
 - name: crm_avaliar_toda_mensagem
   display_name: Toda mensagem do cliente avalia o card em foco
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Memória das IAs (#1601): os fatos do cliente e do pedido com procedência ("cliente informou" × "corrigido"), que a IA
 # lê pelo Crm::Memoria::Leitor e a equipe vê embaixo de cada campo do card. Bit 30 (1073741824):
 # a posição na lista é o bit, no fim do que está na main, logo depois de `crm_avaliar_toda_mensagem` (bit 29); outros
 # PRs abertos (#1724, #1726, #1741) também querem o 30, então o bit sobe conforme a ordem de merge (ajustar o
-# spec/models/account_spec.rb). Único ponto de leitura: Crm::Memoria.ligada?(account). Desligada (padrão): nada é
+# spec/models/account_spec.rb). Único ponto de leitura: Crm::Memoria.ligada?(account). Desligada (padrão até 19/10/2026): nada é
 # gravado nem lido, como antes. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
 - name: memoria_ia
   display_name: Memória das IAs (fatos do cliente e do pedido com procedência)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Conversa com a cara do canal (#1702, épico #1701): na caixa de WhatsApp (oficial, WAHA e híbrida) a conversa e a
 # caixa de resposta ganham o visual do app — fundo, balões, hora e tiques, separador de dia, barra de digitar — e o
 # botão "+" para o atendente mandar localização, contato, botão de link e opções. Bit 31 (2147483648): a
 # posição na lista é o bit, no fim do que está na main, logo depois de `memoria_ia` (bit 30).
-# Desligada (padrão): a conversa de sempre. Liga nas contas 1 e 16 da stack Hub2You (Rodrigo, 17/10); a 18 só quando ele pedir.
+# Desligada (padrão até 19/10/2026): a conversa de sempre. Piloto nas contas 1 e 16 da stack Hub2You (Rodrigo, 17/10).
 - name: conversa_cara_do_canal
   display_name: Conversa com a cara do canal (WhatsApp)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Recuperar pelo WhatsApp API as mensagens que a Cloud entrega como "não suportada" (#1489). Bit 32 (4294967296): a
 # posição na lista é o bit e a flag vai no fim do que está na main, logo depois de `conversa_cara_do_canal` (bit 31);
 # se outra flag entrar antes na main, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb).
-# Desligada (padrão): a bolha fica com o aviso, como antes, e nenhum job consulta o motor. Ligada: só nas caixas com
+# Desligada (padrão até 19/10/2026): a bolha fica com o aviso, como antes, e nenhum job consulta o motor. Ligada: só nas caixas com
 # WhatsApp API conectado, mesmo número e envio automático ligado. Sem migration. Piloto nas contas 47 (stack
 # Autonom.ia) e 1 (stack Hub2You), pelo Super Admin, depois do deploy; ver docs/whatsapp-hibrido-cloud-waha-prd.md (§ 62).
 - name: whatsapp_hybrid_recovery
   display_name: WhatsApp API recupera mensagens "não suportadas"
+  enabled: true
+  column: feature_flags_ext_1
+
+# Nome livre das etiquetas (#1823, F1a; depois as etiquetas do WhatsApp do celular, F1b). Posição 34 na
+# feature_flags_ext_1, bit 33 (8589934592), logo depois de `whatsapp_hybrid_recovery` (tabela v4 da Orquestração,
+# 18/10). Ligada: o painel mostra o nome livre da etiqueta
+# (tabela própria `etiquetas_nomes`) ou o derivado do título ("aguardando_retorno" vira "Aguardando retorno"), e o
+# formulário aceita espaço. Só exibição: `label.title` segue a chave de filtros, URL, automações e API. Desligada
+# (padrão até 19/10/2026): tudo como no Chatwoot e a rota `nomes_de_etiquetas` responde 404. Nasce ligada nas contas 1, 16 e 18 da
+# stack Hub2You (Orquestração, depois do deploy).
+- name: etiquetas_do_whatsapp
+  display_name: Nome livre das etiquetas (e etiquetas do WhatsApp do celular)
+  enabled: true
+  column: feature_flags_ext_1
+
+# Mensagem rica nativa pelo WhatsApp API (#1709): plano B do WhatsApp Híbrido (fase 1) e caixa WAHA comum pelo conector
+# do WAHA (fase 2). Ligada: opções saem como lista, localização e contato saem nativos, e a resposta do cliente à lista
+# é ligada à pergunta. Posição 35 na feature_flags_ext_1, bit 34 (17179869184), logo depois de
+# `etiquetas_do_whatsapp` (tabela v4 da Orquestração, 18/10): a posição na lista é o bit (a coluna é bigint, o 34
+# cabe); se outra flag entrar antes na main, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb).
+# Desligada (padrão até 19/10/2026): o envio é o de antes (tudo como texto, motor padrão; o "Reagir" e o "Editar" do #1709 só com ela).
+# A reação pela pele (`conversa_cara_do_canal`) existe sem ela, pelo PUT /api/reaction do motor padrão. Com as duas
+# desligadas, o webhook da caixa WAHA recebe todo `message_updated`; com a pele ligada e esta desligada, o
+# Waha::RichNative::SilentUpdate silencia as marcas da pele (reação, lida, prévia, áudio ouvido...). O que vale
+# mesmo sem ela: as chaves do contrato com o conector não são aceitas pela API pública (ContractGuard e
+# ForgeryGuard); do conector, o voto de enquete nativa, a resposta a evento nativo e o aviso de visualização única
+# viram atividade escondida, e o cabeçalho de álbum guarda `waha_album`; a conversa ganha `whatsapp_api_group` e a
+# mensagem, `c2y_revocable` (false sem ela). Sem migration; ligar é com a Orquestração.
+- name: whatsapp_rich_native
+  display_name: Mensagens ricas nativas pelo WhatsApp API (Híbrido e WAHA)
+  enabled: true
+  column: feature_flags_ext_1
+
+# Tela inicial da caixa de conversas (#1801): sem conversa aberta, o painel da direita mostra o resumo do dia —
+# esperam você, sem responsável, fora do prazo (só com SLA), a próxima conversa e, para quem tem report_manage, a
+# linha da equipe — contados no servidor (GET tela_inicial/resumo). Posição 36 na feature_flags_ext_1, bit 35
+# (34359738368), logo depois de `whatsapp_rich_native` (tabela da Orquestração, 19/10). Desligada (padrão até 19/10/2026): o aviso
+# "selecione uma conversa" de sempre. Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You
+# (Orquestração, depois do deploy).
+- name: tela_inicial_resumo
+  display_name: Tela inicial com o resumo do dia
+  enabled: true
+  column: feature_flags_ext_1
+
+# Quem escreveu cada e-mail, para as IAs (#1807, Refs #1601). Ligada: e-mail que chega de um endereço que não é do
+# cliente (alguém em cópia, a equipe, resposta automática) vai às IAs com o aviso "escrito por outra pessoa"; vale para o
+# pedido, mas não vira dado pessoal do cliente na memória e não bloqueia o contato (opt-out). E toda IA lê só o que foi
+# escrito naquele e-mail, sem o histórico citado (Crm::Email::Autoria). Posição 37 na feature_flags_ext_1, bit 36
+# (68719476736), logo depois de `tela_inicial_resumo` (tabela da Orquestração, 19/10). Desligada (padrão): tudo como antes.
+# Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: email_autoria
+  display_name: Quem escreveu cada e-mail, para as IAs
+  enabled: false
+  column: feature_flags_ext_1
+
+# Conversa de e-mail com a cara do Gmail (#1786, #1809, épico #1701): na caixa de e-mail a conversa vira uma sequência
+# de cartões (foto, remetente real, para/cc, data, corpo limpo, citação em "…", anexos), com o assunto no topo e
+# Responder / Responder a todos / Encaminhar no fim. Separada da `conversa_cara_do_canal` para não ligar sozinha onde
+# o WhatsApp já está ligado. Posição 38 na feature_flags_ext_1, bit 37 (137438953472), logo depois de `email_autoria`
+# (tabela da Orquestração, 19/10). Desligada (padrão): a conversa de e-mail de sempre. Nasce ligada nas contas 1, 16 e
+# 18 da stack Hub2You e na conta 1 da stack Autonom.ia (Orquestração, depois do deploy).
+- name: conversa_email_nova
+  display_name: Conversa de e-mail com a cara do Gmail
+  enabled: false
+  column: feature_flags_ext_1
+
+# Contato salvo na agenda do aparelho antes de enviar pelo WhatsApp API e lida ao responder (#1865). Ligada: antes do
+# envio pelo WAHA (Híbrido e caixa WAHA comum, inclusive campanha WhatsApp API), o contato é consultado e salvo na
+# agenda do celular, sem sobrescrever nome que o dono salvou (Waha::AgendaDoContato); e a resposta ao cliente (atendente,
+# robô, follow-up, automação; não campanha) marca a conversa como lida antes de sair (ConversaCanal::LeituraAoResponder,
+# que usa a lida do #1702 e depende também de `conversa_cara_do_canal`). Posição 39 na feature_flags_ext_1, bit 38
+# (274877906944), logo depois de `conversa_email_nova` (tabela da Orquestração, 19/10): a posição na lista é o bit; se
+# outra flag entrar antes na main, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb). Desligada
+# (padrão): tudo como antes.
+# Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: whatsapp_agenda_do_contato
+  display_name: Contato na agenda do aparelho e lida ao responder (WhatsApp API)
+  enabled: false
+  column: feature_flags_ext_1
+
+# "Lido" do e-mail sincronizado com o servidor do cliente (#1870): na caixa de e-mail com IMAP (Gmail e Microsoft por
+# OAuth, ou senha), abrir a conversa no painel marca os e-mails dela como lidos no servidor, "marcar como não lida" tira
+# o lido do último lá, e a conversa vira lida aqui quando o cliente leu no servidor o último e-mail recebido (janela de
+# 2 dias). Caixa só com encaminhamento não sincroniza. Posição 40 na feature_flags_ext_1, bit 39 (549755813888), logo
+# depois de `whatsapp_agenda_do_contato` (tabela da Orquestração, 19/10). Tabela própria
+# conversa_canal_email_lidos (migration). Desligada (padrão): tudo como antes. Nasce ligada nas contas 1, 16 e 18 da
+# stack Hub2You e na conta 1 da stack Autonom.ia (Orquestração, depois do deploy).
+- name: email_lido_sincronizado
+  display_name: Lido do e-mail sincronizado com o servidor
   enabled: false
   column: feature_flags_ext_1

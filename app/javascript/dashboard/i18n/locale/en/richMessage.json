@@ -31,8 +31,48 @@
       "CHOSEN": "The customer tapped \"{title}\"",
       "MIRROR": "Copy of what the customer received. Only the customer can tap these options."
     },
+    "POLL": {
+      "MIRROR": "Copy of the poll the customer received. Only the customer can vote.",
+      "SINGLE": "Poll: one answer",
+      "MULTIPLE": "Poll: one or more answers",
+      "VOTED": "Voted: {titles}",
+      "NO_VOTE": "No vote"
+    },
+    "EVENT": {
+      "MIRROR": "Copy of the event invitation the customer received. Only the customer can reply.",
+      "WHEN_RANGE": "{start} to {end}",
+      "RESPONSES": "Going: {going} · Not going: {notGoing} · Maybe: {maybe}",
+      "NO_RESPONSE": "No reply"
+    },
     "SENT_AS_TEXT": {
       "LABEL": "Sent as text"
     }
+  },
+  "MESSAGE_ACTIONS": {
+    "REACTIONS_LABEL": "Reactions",
+    "REACTION_BY_CONTACT": "from the customer",
+    "REACTION_BY_BUSINESS": "from the business",
+    "REACTION_BY_YOU": "from the business, made by you",
+    "REACTION_BY_BOTH": "from the customer and the business",
+    "REACT": "React",
+    "REACT_TITLE": "React to the message",
+    "REACT_WITH": "React with {emoji}",
+    "MORE_EMOJIS": "More emojis",
+    "REMOVE_REACTION": "Remove the business reaction",
+    "DELETE_FOR_EVERYONE": "Delete for everyone",
+    "DELETE_FOR_EVERYONE_CONFIRMATION": "The message will also disappear from the customer's WhatsApp. You cannot undo this action",
+    "EDIT": "Edit",
+    "EDIT_TITLE": "Edit message",
+    "EDIT_DESCRIPTION": "The customer sees the message marked as edited on WhatsApp. You can edit for up to {minutes} minutes after sending.",
+    "EDIT_LABEL": "New text",
+    "EDIT_SAVE": "Save",
+    "EDITED": "edited",
+    "EDIT_HISTORY": "Previous texts",
+    "EDIT_HISTORY_TOGGLE": "Show or hide the previous texts",
+    "EDITED_BY_CONTACT": "Customer wrote before:",
+    "EDITED_BY_PHONE": "Before the edit on the business phone:",
+    "EDITED_BY_YOU": "Before your edit:",
+    "EDITED_BY_AGENT": "Before an agent's edit:",
+    "ERROR": "Could not complete. Try again."
   }
 }

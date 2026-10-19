@@ -79,8 +79,8 @@ module Autonomia::Agents::DesfazerAjuste
     gravar_versao!('rollback', autor&.id, extra: { 'voltou_para' => antes.id, 'desfez_ajuste' => ultimo['versao_id'] }.compact)
     aplicada = instruction_versions.find_by(id: ultimo['versao_id'])
     aplicada&.update!(metadata: aplicada.metadata.to_h.merge('desfeita' => true))
-    # Só a marca (e o "tira isso", que não vale mais), sem regravar o state inteiro.
-    marca = "state = jsonb_set(state - 'nao_pedido_anterior', '{ultimo_ajuste,desfeito}', 'true'::jsonb)"
+    # Só a marca (e o "tira isso" e as respostas prontas da pergunta, que não valem mais), sem regravar o state inteiro.
+    marca = "state = jsonb_set(state - 'nao_pedido_anterior' - 'opcoes_de_resposta', '{ultimo_ajuste,desfeito}', 'true'::jsonb)"
     Autonomia::Agents::BuildThread.where(id: thread.id).update_all(marca) # rubocop:disable Rails/SkipsModelValidations
     true
   end
@@ -99,7 +99,7 @@ module Autonomia::Agents::DesfazerAjuste
 
     modelo = Autonomia::Agents::BuildThread
     falha = { 'error' => SUPERADA, 'error_fields' => [], 'applied' => false }.to_json
-    sql = "status = ?, updated_at = ?, state = (state - 'ajuste_em_curso' - 'nao_pedido_anterior') || ?::jsonb"
+    sql = "status = ?, updated_at = ?, state = (state - 'ajuste_em_curso' - 'nao_pedido_anterior' - 'opcoes_de_resposta') || ?::jsonb"
     em_voo = modelo.where(id: conversas.map(&:id), status: modelo.statuses[:processing])
     em_voo.update_all([sql, modelo.statuses[:failed], Time.current, falha]) # rubocop:disable Rails/SkipsModelValidations
   end
@@ -108,8 +108,8 @@ module Autonomia::Agents::DesfazerAjuste
   # (um Desfazer repetido depois dela é 409, nunca um "desfeito" com o agente em outro estado), e a versão desfeita
   # a que se voltou perde a marca `desfeita` (ela está de novo no agente).
   def depois_de_voltar_por_versoes!(version)
-    build_threads.where("state ?| array['ultimo_ajuste', 'nao_pedido_anterior']")
-                 .update_all("state = state - 'ultimo_ajuste' - 'nao_pedido_anterior'") # rubocop:disable Rails/SkipsModelValidations
+    build_threads.where("state ?| array['ultimo_ajuste', 'nao_pedido_anterior', 'opcoes_de_resposta']")
+                 .update_all("state = state - 'ultimo_ajuste' - 'nao_pedido_anterior' - 'opcoes_de_resposta'") # rubocop:disable Rails/SkipsModelValidations
     return unless version.metadata.to_h.key?('desfeita')
 
     version.update!(metadata: version.metadata.except('desfeita'))

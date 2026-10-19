@@ -1,5 +1,7 @@
 <script setup>
 import { ref, unref, provide, computed, watch, onMounted } from 'vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
+import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import {
@@ -39,6 +41,7 @@ import { useEmitter } from 'dashboard/composables/emitter';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
 
 import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 import wootConstants from 'dashboard/constants/globals';
 import advancedFilterOptions from './widgets/conversation/advancedFilterItems';
@@ -110,6 +113,7 @@ const teamsList = useMapGetter('teams/getTeams');
 const inboxesList = useMapGetter('inboxes/getInboxes');
 const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const currentAccountId = useMapGetter('getCurrentAccountId');
 
 // Filtro "Funil" (multifunil #1150): id do funil, "none" (Sem assunto) ou vazio (todos os meus). Lembrado por conta e
@@ -216,11 +220,15 @@ const assigneeTabItems = computed(() => {
 });
 
 // "Em que participo" abre na aba Todos (#1150): a conversa em que a pessoa participa costuma estar com outra pessoa.
+// Quem só lê (#1800) não tem "Minhas": abre na primeira aba que tem.
 function defaultAssigneeTab() {
   const { PARTICIPATING } = wootConstants.CONVERSATION_TYPE;
   const { ALL, ME } = wootConstants.ASSIGNEE_TYPE;
-  const canSeeAll = assigneeTabItems.value.some(item => item.key === ALL);
-  return props.conversationType === PARTICIPATING && canSeeAll ? ALL : ME;
+  const keys = assigneeTabItems.value.map(item => item.key);
+  if (!keys.includes(ME)) return keys[0] || ME;
+  return props.conversationType === PARTICIPATING && keys.includes(ALL)
+    ? ALL
+    : ME;
 }
 
 const showAssigneeInConversationCard = computed(() => {
@@ -255,12 +263,12 @@ const conversationCustomAttributes = useFunctionGetter(
   'conversation_attribute'
 );
 
-const activeAssigneeTabCount = computed(() => {
-  const count = assigneeTabItems.value.find(
-    item => item.key === activeAssigneeTab.value
-  ).count;
-  return count;
-});
+// Antes de montar, a aba ainda é "Minhas", que quem só lê não tem (#1800).
+const activeAssigneeTabCount = computed(
+  () =>
+    assigneeTabItems.value.find(item => item.key === activeAssigneeTab.value)
+      ?.count || 0
+);
 
 const conversationListPagination = computed(() => {
   const conversationsPerPage = 25;
@@ -282,17 +290,22 @@ const conversationListPagination = computed(() => {
   return currentPage.value + 1;
 });
 
+// #1809: Spam e Lixeira da caixa de e-mail (a pasta vem do endereço, ?pasta=).
+const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
+
 const conversationFilters = computed(() => {
   return {
     inboxId: props.conversationInbox ? props.conversationInbox : undefined,
     assigneeType: activeAssigneeTab.value,
-    status: activeStatus.value,
+    // #1809: Spam e Lixeira resolvem a conversa; dentro da pasta, todos os status.
+    status: pastaDoEmail.value ? 'all' : activeStatus.value,
     sortBy: activeSortBy.value,
     page: conversationListPagination.value,
     labels: props.label ? [props.label] : undefined,
     teamId: props.teamId || undefined,
     conversationType: props.conversationType || undefined,
     crmPipelineId: (isCrmEnabled && crmPipelineId.value) || undefined,
+    pasta: pastaDoEmail.value || undefined,
   };
 });
 
@@ -304,6 +317,9 @@ const activeTeam = computed(() => {
 });
 
 const pageTitle = computed(() => {
+  if (pastaDoEmail.value) {
+    return t(`CONVERSA_CANAL.EMAIL.PASTA.${pastaDoEmail.value.toUpperCase()}`);
+  }
   if (hasAppliedFilters.value) {
     return t('CHAT_LIST.TAB_HEADING');
   }
@@ -314,7 +330,7 @@ const pageTitle = computed(() => {
     return activeTeam.value.name;
   }
   if (props.label) {
-    return `#${props.label}`;
+    return `#${nomeDaEtiqueta(props.label)}`;
   }
   if (props.conversationType === wootConstants.CONVERSATION_TYPE.MENTION) {
     return t('CHAT_LIST.MENTION_HEADING');
@@ -835,6 +851,18 @@ function toggleSelectAll(check) {
   selectAllConversations(check, conversationList);
 }
 
+// #1801: a tela inicial pede uma aba. Aba que a pessoa não tem é ignorada; com filtro avançado
+// aplicado, o filtro sai junto (senão a lista seguiria filtrada e o clique pareceria não fazer nada).
+function abrirAbaDaTelaInicial(aba) {
+  if (!assigneeTabItems.value.some(item => item.key === aba)) return;
+  if (!hasAppliedFilters.value) {
+    updateAssigneeTab(aba);
+    return;
+  }
+  activeAssigneeTab.value = aba;
+  resetAndFetchData();
+}
+useEmitter(BUS_EVENTS.TELA_INICIAL_ABA, abrirAbaDaTelaInicial);
 useEmitter('fetch_conversation_stats', () => {
   if (hasAppliedFiltersOrActiveFolders.value) return;
   store.dispatch('conversationStats/get', conversationFilters.value);
@@ -899,6 +927,7 @@ watch(
   computed(() => props.label),
   () => resetAndFetchData()
 );
+watch([pastaDoEmail, versaoDasPastas], () => resetAndFetchData());
 watch(
   computed(() => props.conversationType),
   (type, previousType) => {

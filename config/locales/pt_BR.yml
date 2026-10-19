@@ -1046,6 +1046,8 @@ pt_BR:
     agents:
       modo_manual: 'Este agente está no modo manual: a instrução foi escrita à mão. Edite a instrução à mão ou volte o agente para o modo guiado para mudar conversando.'
       conflito_de_trava: 'O agente mudou ao mesmo tempo. Tente de novo.'
+      # #1479: texto do botão que abre a lista de opções que a IA manda, quando a IA não escolhe um.
+      botao_das_opcoes: 'Ver opções'
       instrucao_mantida: 'A instrução do Agente de Cotação é mantida pela Autonom.ia e não se edita por aqui. O nome, o horário e o comportamento foram escolhidos na aba Cotação, ao criar o agente.'
       # #1428 — "Mudar conversando" (piloto): as mensagens que o Construtor mostra ao dono depois de um ajuste.
       ajuste:
@@ -1064,6 +1066,9 @@ pt_BR:
         desfiz_nao_pedido: 'Desfiz o que você não tinha pedido: %{resumos}. O que você quer mudar?'
         nao_desfiz: 'O agente mudou por outro caminho enquanto eu conferia, então não desfiz o que você não tinha pedido: %{resumos}. Confira o agente e me diga o que quer.'
         nao_conferido: 'Tentei aplicar de novo o que faltou, mas não deu tempo de conferir. Confira o agente: %{pedidos}.'
+        opcoes_do_conflito:
+          manter: 'Manter assim'
+          mudar: 'Quero mudar'
       sem_onde_trabalhar: 'Este agente ainda não está em nenhum canal. Escolha um canal para começar a atender.'
       caixa_externo:
         caixa_com_agente_da_plataforma: 'Este canal é atendido por agentes de IA. Para trocar quem atende primeiro, use a aba Agente de IA do canal.'
@@ -1317,8 +1322,20 @@ pt_BR:
     image_invalid_type: "Tipo de imagem não aceito. Use PNG, JPEG, GIF ou WebP."
     image_too_large: "A imagem é grande demais. O tamanho máximo é 5 MB."
     source:
-      invalid_kind: "Tipo de material inválido. Use \"knowledge\" ou \"media\"."
+      invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."
+      arquivo_grande: "O arquivo é grande demais. O tamanho máximo é 25 MB."
+      arquivo_tipo: "Este tipo de arquivo não dá para ler. Mande um PDF, uma planilha, um documento do Word ou um arquivo de texto."
       limit_reached: "Este agente já tem o máximo de %{limit} materiais de conhecimento. Remova um antes de adicionar outro."
+      foto_fora_da_fase2: "Foto como material ainda não está disponível nesta conta. Mande um PDF, uma planilha ou um arquivo de texto."
+      foto_so_no_que_sabe: "Foto só entra no que o agente sabe."
+      foto_agente_de_cotacao: "O agente de cotação não recebe foto como material."
+      foto_sem_arquivo: "Mande o arquivo da foto."
+      foto_tipo: "Este arquivo não é uma foto. Mande uma imagem PNG, JPEG, GIF ou WebP."
+      foto_tamanho: "A foto é grande demais. O tamanho máximo é 5 MB."
+      foto_pixels: "A foto tem pixels demais. Mande uma foto menor (até 40 megapixels)."
+      foto_animada: "Imagem animada não serve como material. Mande uma foto parada."
+      lendo_ainda: "Este material ainda está sendo lido. Espere terminar para ler de novo."
+      file_invalid: "Mande o próprio arquivo."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

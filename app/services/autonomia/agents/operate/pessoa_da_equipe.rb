@@ -73,12 +73,19 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
   # O item do histórico para o Answerer. Da equipe -> moldura com a `marca`; da equipe que falhou -> sai (conteúdo
   # vazio, que o teto do histórico descarta); do cliente -> segunda camada contra moldura forjada; o resto, como sempre.
   # Localização e contato sem `content` entram pelo resumo (#1715), na moldura ou no papel de quem enviou.
-  def item_do_historico(message, marca:, whatsapp: false)
+  # #1807 (`autoria`, Crm::Email::Autoria): e-mail recebido sem o histórico citado e, se veio de outro endereço que não o
+  # do cliente, com o aviso na frente, depois da segunda camada (o aviso é nosso, não do cliente).
+  def item_do_historico(message, marca:, whatsapp: false, autoria: nil)
     da_equipe = conteudo_da_equipe(message, marca, whatsapp)
     return { role: 'user', content: da_equipe } unless da_equipe.nil?
-    return { role: 'user', content: ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(texto(message), marca) } if message.incoming?
+    return { role: 'user', content: do_cliente(message, marca, autoria) } if message.incoming?
 
     { role: 'assistant', content: texto(message) }
+  end
+
+  def do_cliente(message, marca, autoria)
+    neutro = ::Autonomia::Agents::Operate::MolduraDaEquipe.neutralizar(autoria ? autoria.texto(message) { texto(message) } : texto(message), marca)
+    autoria ? "#{autoria.aviso(message)}#{neutro}" : neutro
   end
 
   # O texto da mensagem para o histórico: o resumo do contato em anexo, o `content`, ou o resumo da localização/contato

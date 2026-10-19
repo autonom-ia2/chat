@@ -18,10 +18,10 @@
       "APAGAR": "Delete"
     },
     "VAZIO": {
-      "TITULO": "Create your first ready message to talk to customers on WhatsApp."
+      "TITULO": "Create your first message for WhatsApp to approve and reach customers even after 24 hours."
     },
     "SEM_NUMERO": {
-      "TITULO": "Connect an official WhatsApp number to create ready messages.",
+      "TITULO": "Connect an official WhatsApp number to create messages and send them for approval.",
       "CONECTAR": "Connect WhatsApp"
     },
     "LISTA": {

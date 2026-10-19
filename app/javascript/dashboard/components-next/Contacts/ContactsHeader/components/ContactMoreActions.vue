@@ -34,7 +34,7 @@ const contactMenuItems = computed(() => [
         },
       ]
     : []),
-  ...(checkPermissions(['administrator', 'contact_manage'])
+  ...(checkPermissions(['administrator', 'contact_export'])
     ? [
         {
           label: t(

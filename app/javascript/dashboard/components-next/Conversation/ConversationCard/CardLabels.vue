@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 
 const props = defineProps({
   conversationLabels: {
@@ -22,6 +23,8 @@ const WIDTH_CONFIG = Object.freeze({
   THRESHOLD: 5, // character length threshold
 });
 
+const { nomeDe } = useNomeDaEtiqueta();
+
 const containerRef = ref(null);
 const maxLabels = ref(1);
 
@@ -30,7 +33,8 @@ const activeLabels = computed(() => {
   return props.accountLabels?.filter(({ title }) => labelSet.has(title));
 });
 
-const calculateLabelWidth = ({ title = '' }) => {
+const calculateLabelWidth = label => {
+  const title = nomeDe(label.title) || '';
   const charWidth =
     title.length > WIDTH_CONFIG.THRESHOLD
       ? WIDTH_CONFIG.CHAR_WIDTH.LONG
@@ -87,7 +91,7 @@ const updateVisibleLabels = () => {
           class="text-sm text-n-slate-10 whitespace-nowrap"
           :class="{ truncate: index === visibleLabels.length - 1 }"
         >
-          {{ label.title }}
+          {{ nomeDe(label.title) }}
         </span>
       </div>
     </template>

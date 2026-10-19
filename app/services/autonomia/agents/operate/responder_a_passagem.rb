@@ -124,14 +124,16 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
                  .any? { |message| message.content_attributes.to_h[CHAVE].to_s == @passagem.id.to_s }
   end
 
-  # `_interacao`: o segundo argumento que o post_reply! do Responder ganha no #1479; aqui ainda não é usado.
-  def post_reply!(text, _interacao = nil)
+  # #1479: as mesmas opções e o mesmo link do turno normal (Responder#com_interacao), com a chave da passagem.
+  def post_reply!(text, interacao = nil)
+    content, formato = com_interacao(text, interacao)
     Messages::MessageBuilder.new(
       nil, @conversation,
       ActionController::Parameters.new(
-        content: text, message_type: 'outgoing', sender_type: 'AgentBot',
+        content: content, message_type: 'outgoing', sender_type: 'AgentBot',
         sender_id: @agent_inbox.agent_bot_id, private: false,
-        content_attributes: { 'autonomia_agent_id' => @agent.id, CHAVE => @passagem.id }
+        content_attributes: { 'autonomia_agent_id' => @agent.id, CHAVE => @passagem.id }.merge(formato),
+        **destinatarios_do_email # #1828: no e-mail, a resposta da passagem também mantém a cópia.
       )
     ).perform
   end

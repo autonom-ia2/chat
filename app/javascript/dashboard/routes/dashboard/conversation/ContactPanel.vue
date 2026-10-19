@@ -7,13 +7,18 @@ import {
 } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import ContactConversations from './ContactConversations.vue';
 import ConversationAction from './ConversationAction.vue';
 import ConversationParticipant from './ConversationParticipant.vue';
+import AcoesSoLeitura from './AcoesSoLeitura.vue';
+import ParticipantesSoLeitura from './ParticipantesSoLeitura.vue';
 import ContactInfo from './contact/ContactInfo.vue';
+import ContatoBasico from './contact/ContatoBasico.vue';
 import ContactNotes from './contact/ContactNotes.vue';
 import ConversationInfo from './ConversationInfo.vue';
 import CustomAttributes from './customAttributes/CustomAttributes.vue';
@@ -78,6 +83,8 @@ const isLinearConnected = computed(
 
 const store = useStore();
 const currentChat = useMapGetter('getSelectedChat');
+// Quem só lê (#1800) não atribui, não mexe em participantes nem roda macro.
+const canOperate = useCanOperateConversation(currentChat);
 const conversationId = computed(() => props.conversationId);
 const conversationMetadataGetter = useMapGetter(
   'conversationMetadata/getConversationMetadata'
@@ -91,11 +98,18 @@ const conversationAdditionalAttributes = computed(
 
 const channelType = computed(() => currentChat.value.meta?.channel);
 
+// Sem ver contatos (#1849), o painel mostra o contato que veio com a conversa: nome, telefone e e-mail.
+const { canViewRelationshipRecords: podeVerContatos } =
+  useRelationshipPermissions();
 const contactGetter = useMapGetter('contacts/getContact');
 const contactId = computed(() => currentChat.value.meta?.sender?.id);
-const contact = computed(() => contactGetter.value(contactId.value));
-const contactAdditionalAttributes = computed(
-  () => contact.value.additional_attributes || {}
+const contact = computed(() =>
+  podeVerContatos.value
+    ? contactGetter.value(contactId.value)
+    : currentChat.value.meta?.sender || {}
+);
+const contactAdditionalAttributes = computed(() =>
+  podeVerContatos.value ? contact.value.additional_attributes || {} : {}
 );
 
 const appliedContactFilter = useMapGetter('getAppliedContactFilter');
@@ -107,7 +121,7 @@ const isListScopedToContact = computed(
 );
 
 const getContactDetails = () => {
-  if (contactId.value) {
+  if (contactId.value && podeVerContatos.value) {
     store.dispatch('contacts/show', { id: contactId.value });
   }
 };
@@ -147,7 +161,16 @@ onMounted(() => {
       :title="$t('CONVERSATION.SIDEBAR.CONTACT')"
       @close="closeContactPanel"
     />
-    <ContactInfo :contact="contact" :channel-type="channelType" />
+    <ContactInfo
+      v-if="podeVerContatos"
+      :contact="contact"
+      :channel-type="channelType"
+    />
+    <ContatoBasico
+      v-else
+      :contact="contact"
+      :conversation-id="conversationId"
+    />
     <ContactOriginsPanel
       :contact-id="contactId"
       :conversation-attributes="conversationAdditionalAttributes"
@@ -169,16 +192,22 @@ onMounted(() => {
             class="conversation--actions"
           >
             <AccordionItem
-              :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_ACTIONS')"
+              :title="
+                canOperate
+                  ? $t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_ACTIONS')
+                  : $t('CONVERSATION.SO_LEITURA.RESUMO')
+              "
               :is-open="isContactSidebarItemOpen('is_conv_actions_open')"
               @toggle="
                 value => toggleSidebarUIState('is_conv_actions_open', value)
               "
             >
               <ConversationAction
+                v-if="canOperate"
                 :conversation-id="conversationId"
                 :inbox-id="inboxId"
               />
+              <AcoesSoLeitura v-else />
             </AccordionItem>
           </div>
           <div
@@ -194,8 +223,13 @@ onMounted(() => {
               "
             >
               <ConversationParticipant
+                v-if="canOperate"
                 :conversation-id="conversationId"
                 :inbox-id="inboxId"
+              />
+              <ParticipantesSoLeitura
+                v-else
+                :conversation-id="conversationId"
               />
             </AccordionItem>
           </div>
@@ -214,7 +248,9 @@ onMounted(() => {
               />
             </AccordionItem>
           </div>
-          <div v-else-if="element.name === 'contact_attributes'">
+          <div
+            v-else-if="element.name === 'contact_attributes' && podeVerContatos"
+          >
             <AccordionItem
               :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONTACT_ATTRIBUTES')"
               :is-open="isContactSidebarItemOpen('is_contact_attributes_open')"
@@ -257,7 +293,7 @@ onMounted(() => {
             </AccordionItem>
           </div>
           <woot-feature-toggle
-            v-else-if="element.name === 'macros'"
+            v-else-if="element.name === 'macros' && canOperate"
             feature-key="macros"
           >
             <AccordionItem
@@ -290,7 +326,9 @@ onMounted(() => {
           </div>
           <div
             v-else-if="
-              element.name === 'shopify_orders' && isShopifyFeatureEnabled
+              element.name === 'shopify_orders' &&
+              isShopifyFeatureEnabled &&
+              podeVerContatos
             "
           >
             <AccordionItem
@@ -304,7 +342,7 @@ onMounted(() => {
               <ShopifyOrdersList :contact-id="contactId" />
             </AccordionItem>
           </div>
-          <div v-else-if="element.name === 'contact_notes'">
+          <div v-else-if="element.name === 'contact_notes' && podeVerContatos">
             <AccordionItem
               :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONTACT_NOTES')"
               :is-open="isContactSidebarItemOpen('is_contact_notes_open')"

@@ -13,7 +13,7 @@ São 82 textos do painel e 1 do servidor.
   - os exemplos de nome e de mensagem são de renovação do seguro do carro;
   - a planilha do público lembra que vencimento, seguradora e placa podem entrar na mensagem;
   - o chat ao vivo dá boas-vindas na página do seguro do carro;
-  - o resultado conta "Viraram card no CRM".
+  - o resultado conta "Viraram cards no CRM".
 - **Identidade visual:** o e-mail de exemplo é de uma corretora (cotação em várias seguradoras, ajuda no sinistro, aviso antes do vencimento). O erro de endereço do site mostra `suacorretora.com.br` (servidor).
 - **Modelos WhatsApp:**
   - Aviso de serviço explica com parcela, vistoria, apólice emitida e sinistro; Divulgação, com renovação e seguro novo (pela Meta, renovação é Divulgação);
@@ -75,7 +75,7 @@ O `prontos.spec.js` passa a montar cada pronto também com o texto composto da c
 | 24 | `CAMPAIGN_JOURNEY.LIVE_CHAT.NAME_PLACEHOLDER` | Ex.: Boas-vindas na página de planos | Ex.: Boas-vindas na página do seguro do carro |
 | 25 | `CAMPAIGN_JOURNEY.LIVE_CHAT.TEXT_PLACEHOLDER` | Oi! Posso ajudar a escolher um plano? | Oi! Quer cotar o seguro do seu carro? |
 | 26 | `CAMPAIGN_IMPORT.FIELDS.CAMPAIGN_NAME_PLACEHOLDER` | Ex.: campanha_junho_whatsapp | Ex.: renovacao_auto_novembro |
-| 27 | `RESULT_JOURNEY.OVERVIEW.TOTALS.DEALS` | Viraram negócio no CRM | Viraram card no CRM |
+| 27 | `RESULT_JOURNEY.OVERVIEW.TOTALS.DEALS` | Viraram negócio no CRM | Viraram cards no CRM |
 
 ### Campanhas: identidade visual (11)
 

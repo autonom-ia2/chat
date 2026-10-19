@@ -28,7 +28,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Ingestor do
   end
 
   before do
-    # Processors.for delega a Processors::Dispatcher.for (método de classe verificável); stubamos o
+    # O Ingestor chama Processors::Dispatcher.for (método de classe verificável); stubamos o
     # dispatcher p/ não tocar o extrator real de PDF.
     allow(Autonomia::Agents::Knowledge::Processors::Dispatcher).to receive(:for).with(source).and_return(processor)
     allow(processor).to receive(:extract).and_return(text)

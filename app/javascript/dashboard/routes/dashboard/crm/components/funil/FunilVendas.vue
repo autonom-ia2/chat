@@ -9,6 +9,8 @@ import { TIPOS, tipoDaVenda } from './funil';
 defineProps({
   padraoSucesso: { type: String, required: true },
   padraoFracasso: { type: String, required: true },
+  // #1876 — símbolo da moeda do funil (R$, US$, €…).
+  moeda: { type: String, required: true },
 });
 
 const venda = defineModel('venda', { type: Boolean, default: true });
@@ -39,7 +41,7 @@ const fracasso = defineModel('fracasso', { type: String, default: '' });
         class="mt-2 flex min-h-12 max-w-xs items-center rounded-xl border border-n-weak bg-n-solid-1 focus-within:outline focus-within:outline-2 focus-within:outline-n-brand"
       >
         <span class="pe-2 ps-4 text-base text-n-slate-11">
-          {{ $t('CRM_FUNIL.VENDAS.MOEDA') }}
+          {{ moeda }}
         </span>
         <input
           v-model="meta"

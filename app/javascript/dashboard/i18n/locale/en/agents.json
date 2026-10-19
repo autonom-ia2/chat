@@ -490,6 +490,14 @@
           "other": "Other / unspecified"
         }
       },
+      "SILENCES": {
+        "TITLE": "When the AI stayed quiet",
+        "CODES": {
+          "mensagem_sem_suporte": "Message WhatsApp only shows on the phone",
+          "mensagem_apagada": "Message deleted by the customer",
+          "escolha_retirada": "Vote or reply taken back by the customer"
+        }
+      },
       "INSIGHT": {
         "HIGH_HANDOFF_TITLE": "Many conversations are being handed off",
         "LOW_KNOWLEDGE_TITLE": "Few answers came from your knowledge base",
@@ -1101,7 +1109,8 @@
           "VER_ARIA": "View what it knows",
           "N_FONTES": "1 file or website | {n} files and websites",
           "SO_CONVERSA": "Only what you told in the conversation",
-          "N_PERGUNTAS": "There is 1 customer question to check. | There are {n} customer questions to check."
+          "N_PERGUNTAS": "There is 1 customer question to check. | There are {n} customer questions to check.",
+          "N_PROBLEMAS": "1 thing in the material needs you. | {n} things in the material need you."
         },
         "BLOCO_ONDE": {
           "TITULO": "Where and when it answers",
@@ -1164,6 +1173,17 @@
           "PASSADAS": "handed to the team | handed to the team",
           "NOTA_RESPONDIDAS": "This week, {nome} answered {n} conversation and handed {m} to the team. | This week, {nome} answered {n} conversations and handed {m} to the team.",
           "NOTA_PASSADAS": "When it did not know how to answer."
+        },
+        "SILENCIOS": {
+          "TITULO": "When {nome} did not answer",
+          "TEXTO": "This week, {nome} did not answer in these cases because there was nothing to answer. It did this on purpose.",
+          "VAZIO": "{nome} did not skip an answer even once this week.",
+          "VEZES": "{n} time | {n} times",
+          "MOTIVOS": {
+            "mensagem_sem_suporte": "The customer sent something the system cannot open",
+            "mensagem_apagada": "The customer deleted the message",
+            "escolha_retirada": "The customer undid their choice"
+          }
         },
         "CONVERSAS": {
           "TITULO": "Conversations this week",
@@ -1229,6 +1249,7 @@
           "SITE_MANDAR": "Send",
           "SITE_ERRO": "Check the website address. E.g.: www.yourstore.com",
           "GRANDE": "This file is larger than 25 MB. Try a smaller one.",
+          "FOTO_GRANDE": "This photo is larger than 5 MB. Send a smaller one.",
           "LIMITE": "There are already {n} files and websites. Remove one to send another.",
           "LENDO": "Reading…",
           "PRONTO": "Ready",
@@ -1253,7 +1274,11 @@
           "PERGUNTA": "Question",
           "RESPOSTA_ROTULO": "Answer",
           "ENSINAR": "Teach",
-          "ENSINOU": "Done. {nome} now knows how to answer this."
+          "ENSINOU": "Done. {nome} now knows how to answer this.",
+          "REVISANDO": "Reviewing…",
+          "ATENCAO": "Needs you",
+          "ATENCAO_TEXTO": "{nome} does not use this material until you send another one.",
+          "LENDO_FOTO": "Reading the text in the photo…"
         },
         "ONDE": {
           "TITULO": "Where and when {nome} answers",
@@ -1309,6 +1334,7 @@
           "TESTE_TITULO": "Test as if you were your customer",
           "TESTAR_NOME": "Test {nome}",
           "PENSANDO": "Thinking…",
+          "OPCOES_ROTULO": "Ready answers. Tap one or write your own.",
           "ASSISTENTE": "Creation assistant:",
           "VOCE": "You:",
           "CONVERSA": "Conversation",

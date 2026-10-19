@@ -7,6 +7,7 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useKbd } from 'dashboard/composables/utils/useKbd';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { useBrandedSidebar } from 'dashboard/composables/useBrandedSidebar';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
@@ -17,6 +18,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { ROTAS_DA_JORNADA as MODELOS_WHATSAPP_ROTAS } from 'dashboard/routes/dashboard/campaigns/modelos/constants';
 import { useWindowSize, useEventListener } from '@vueuse/core';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
+import { readsOnlyConversations } from 'dashboard/store/modules/conversations/helpers';
 import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
@@ -29,6 +31,7 @@ import {
   SLA_MANAGE_PERMISSION,
   META_ADS_VIEW_PERMISSION,
 } from 'dashboard/constants/permissions.js';
+import { canViewRelationshipRecordsFrom } from 'dashboard/composables/useRelationshipPermissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import SidebarGroup from './SidebarGroup.vue';
@@ -185,6 +188,20 @@ const currentRole = useMapGetter('getCurrentRole');
 const currentCustomRoleId = useMapGetter('getCurrentCustomRoleId');
 
 const isAdministrator = computed(() => currentRole.value === 'administrator');
+// Quem só lê conversas (#1800) não começa conversa nova.
+// Nova conversa busca o contato na base: pede ver contatos (#1849). Sem isso, a pessoa começa pelo painel do contato.
+const canStartConversation = computed(
+  () =>
+    !readsOnlyConversations(
+      getUserPermissions(currentUser.value, accountId.value)
+    ) &&
+    canViewRelationshipRecordsFrom({
+      getCurrentRole: currentRole.value,
+      getCurrentCustomRoleId: currentCustomRoleId.value,
+      getCurrentUser: currentUser.value,
+      getCurrentAccountId: accountId.value,
+    })
+);
 const hasAnyPermission = keys => {
   const permissions = getUserPermissions(currentUser.value, accountId.value);
   return keys.some(key => permissions.includes(key));
@@ -441,6 +458,7 @@ useEventListener(document, 'touchend', onResizeEnd);
 
 const inboxes = useMapGetter('inboxes/getInboxes');
 const labels = useMapGetter('labels/getLabelsOnSidebar');
+const { nomeDe: nomeDaEtiqueta } = useNomeDaEtiqueta();
 const allUnreadCount = useMapGetter(
   'conversationUnreadCounts/getAllUnreadCount'
 );
@@ -729,7 +747,7 @@ const menuItems = computed(() => {
           showTreeLine: true,
           children: sortedLabels.value.map(label => ({
             name: `${label.title}-${label.id}`,
-            label: label.title,
+            label: nomeDaEtiqueta(label.title),
             badgeCount: getLabelUnreadCount.value(label.id),
             icon: h('span', {
               class: `size-[8px] rounded-sm`,
@@ -940,7 +958,7 @@ const menuItems = computed(() => {
           showTreeLine: true,
           children: labels.value.map(label => ({
             name: `${label.title}-${label.id}`,
-            label: label.title,
+            label: nomeDaEtiqueta(label.title),
             icon: h('span', {
               class: `size-[8px] rounded-sm`,
               style: { backgroundColor: label.color },
@@ -1496,7 +1514,7 @@ const menuItems = computed(() => {
         >
           <span class="i-lucide-search size-4 text-n-slate-11" />
         </RouterLink>
-        <ComposeConversation align="start">
+        <ComposeConversation v-if="canStartConversation" align="start">
           <template #trigger="{ isOpen }">
             <Button
               icon="i-lucide-pen-line"

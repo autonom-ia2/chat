@@ -48,7 +48,7 @@ class Crm::Ai::OptOutClassifier
   def perform
     return { decision: 'nao_se_aplica', motivo: 'sem_texto_interpretavel' } if @message.content.blank?
 
-    response = client.create(model: MODEL, instructions: INSTRUCTIONS, input: input.to_json, schema: SCHEMA,
+    response = client.create(model: MODEL, instructions: instructions, input: input.to_json, schema: SCHEMA,
                              reasoning_effort: EFFORT, timeout: TIMEOUT)
     parse(response[:text])
   end
@@ -64,8 +64,16 @@ class Crm::Ai::OptOutClassifier
     Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @account, max_retries: 0)
   end
 
+  # #1807 (flag `email_autoria`): e-mail de outro endereço chega com o aviso de quem escreveu, sem o histórico citado, e a
+  # legenda vai no fim das instruções. Sem a flag, igual a antes.
+  def instructions
+    "#{INSTRUCTIONS}#{Crm::Email::Autoria.legenda(@account)}"
+  end
+
+  def email_autoria = (@email_autoria ||= Crm::Email::Autoria.new(@account))
+
   def input
-    { reply: @message.content.to_s.first(MAX_TEXT), previous_message: (@previous_message || previous_outgoing).to_s.first(MAX_TEXT) }
+    { reply: email_autoria.para_ia(@message).first(MAX_TEXT), previous_message: (@previous_message || previous_outgoing).to_s.first(MAX_TEXT) }
   end
 
   def previous_outgoing

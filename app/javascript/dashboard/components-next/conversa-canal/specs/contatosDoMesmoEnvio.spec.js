@@ -22,6 +22,13 @@ import {
 } from '../midia/contatos';
 
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
+// Quem vê e edita contatos (#1849): os cartões mostram Conversar e Salvar.
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({
+    canViewRelationshipRecords: { value: true },
+    canManageRelationshipRecords: { value: true },
+  }),
+}));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
 const contato = (id, extras = {}) => ({

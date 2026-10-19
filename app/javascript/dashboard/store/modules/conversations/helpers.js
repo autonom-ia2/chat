@@ -95,20 +95,33 @@ export const applyPageFilters = (conversation, filters) => {
   return shouldFilter;
 };
 
+// Espera pessoa: sem responsável humano e sem robô, ou o robô passou e espera (o mesmo awaiting_person? do servidor).
+const isAwaitingPerson = conversation => {
+  const { assignee, assignee_type: assigneeType } = conversation.meta;
+  if (assignee && assigneeType !== 'AgentBot') return false;
+  return (
+    !assignee ||
+    Boolean(conversation.additional_attributes?.bot_handoff_waiting_since)
+  );
+};
+
 /**
- * Filters conversations based on user role and permissions
+ * Whether the user can operate the conversation (reply, assign, change status), the same rule as
+ * ConversationPolicy#show? on the server. Reading is wider: see applyRoleFilter (#1800).
  *
  * @param {Object} conversation - The conversation object to check permissions for
  * @param {string} role - The user's role (administrator, agent, etc.)
  * @param {Array<string>} permissions - List of permission strings the user has
  * @param {number|string} currentUserId - The ID of the current user
- * @returns {boolean} - Whether the user has permissions to access this conversation
+ * @param {boolean} isParticipant - Whether the user participates in the conversation
+ * @returns {boolean} - Whether the user can operate this conversation
  */
-export const applyRoleFilter = (
+export const canOperateConversation = (
   conversation,
   role,
   permissions,
-  currentUserId
+  currentUserId,
+  isParticipant = false
 ) => {
   // the role === "agent" check is typically not correct on it's own
   // the backend handles this by checking the custom_role_id at the user model
@@ -124,21 +137,43 @@ export const applyRoleFilter = (
   }
 
   const conversationAssignee = conversation.meta.assignee;
-  const isUnassigned = !conversationAssignee;
-  const isAssignedToUser = conversationAssignee?.id === currentUserId;
+  const isAssignedToUser =
+    conversation.meta.assignee_type !== 'AgentBot' &&
+    conversationAssignee?.id === currentUserId;
 
   // Check unassigned management permission
   if (permissions.includes('conversation_unassigned_manage')) {
-    return isUnassigned || isAssignedToUser;
+    return isAwaitingPerson(conversation) || isAssignedToUser;
   }
 
   // Check participating conversation management permission
   if (permissions.includes('conversation_participating_manage')) {
-    return isAssignedToUser;
+    return isAssignedToUser || isParticipant;
   }
 
   return false;
 };
+
+const CONVERSATION_OPERATE_KEYS = [
+  'conversation_manage',
+  'conversation_unassigned_manage',
+  'conversation_participating_manage',
+];
+
+// Só lê conversas: tem conversation_view e nenhuma chave de operar. Não começa conversa (create? no servidor, #1800).
+export const readsOnlyConversations = permissions =>
+  permissions.includes('conversation_view') &&
+  !CONVERSATION_OPERATE_KEYS.some(key => permissions.includes(key));
+
+// Ver na lista: quem opera, e quem só lê (conversation_view lê toda conversa da caixa, #1800).
+export const applyRoleFilter = (
+  conversation,
+  role,
+  permissions,
+  currentUserId
+) =>
+  permissions.includes('conversation_view') ||
+  canOperateConversation(conversation, role, permissions, currentUserId);
 
 const SORT_OPTIONS = {
   last_activity_at_asc: ['sortOnLastActivityAt', 'asc'],

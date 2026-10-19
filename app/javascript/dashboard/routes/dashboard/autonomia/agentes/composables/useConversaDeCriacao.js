@@ -9,6 +9,8 @@ import {
   PAPEL_AJUDANTE_NA_QUERY,
 } from '../constants/criacao';
 import { MAX_FONTES, ehSite, nomeDaFonte } from '../utils/pagina';
+import { estadoDoMaterial as estadoReal } from '../utils/estadoDoMaterial';
+import { useFase2 } from './useFase2';
 
 // #1181 PR2 — a conversa da etapa Conte com o Construtor, pela store autonomiaBuildThreads (sem
 // editá-la): start/send/retry/completeMaterials, e stopPolling ao sair (a store tem um poll único).
@@ -68,6 +70,18 @@ const estadoDaFonte = fonte => {
   return 'lendo';
 };
 
+// #1426 — na Fase 2, o estado real (utils/estadoDoMaterial) nas palavras da caixa da criação: só é "pronto" depois de
+// a revisão aprovar; revisando ainda é "lendo"; reprovado ou não lido é "atenção".
+const NA_CAIXA_DA_CRIACAO = {
+  lendo: 'lendo',
+  revisando: 'lendo',
+  pronto: 'pronto',
+  atencao: 'atencao',
+  falha: 'atencao',
+};
+const estadoNaFase2 = fonte =>
+  fonte ? NA_CAIXA_DA_CRIACAO[estadoReal(fonte)] : 'lendo';
+
 export function useConversaDeCriacao({
   modelo,
   atuacao = ATUACAO.EXTERNA,
@@ -75,6 +89,7 @@ export function useConversaDeCriacao({
 }) {
   const store = useStore();
   const { t } = useI18n();
+  const fase2 = useFase2();
 
   const mensagensDaStore = useMapGetter('autonomiaBuildThreads/getMessages');
   const status = useMapGetter('autonomiaBuildThreads/getStatus');
@@ -163,7 +178,10 @@ export function useConversaDeCriacao({
     fontes,
     lista => {
       const vistos = Object.fromEntries(
-        (lista || []).map(fonte => [fonte.id, estadoDaFonte(fonte)])
+        (lista || []).map(fonte => [
+          fonte.id,
+          fase2.value ? estadoNaFase2(fonte) : estadoDaFonte(fonte),
+        ])
       );
       estadosDasFontes.value = { ...estadosDasFontes.value, ...vistos };
     },

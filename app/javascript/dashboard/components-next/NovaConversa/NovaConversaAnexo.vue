@@ -1,34 +1,17 @@
 <script setup>
 import FileUpload from 'vue-upload-component';
 import { ALLOWED_FILE_TYPES } from 'shared/constants/messages';
-import { useFileUpload } from 'dashboard/composables/useFileUpload';
 import AttachmentPreviews from 'dashboard/components-next/NewConversation/components/AttachmentPreviews.vue';
+import { useAnexarNaNovaConversa } from './useAnexarNaNovaConversa';
 
 // #1459 — "Anexar arquivo", onde já existia (e-mail e site): um botão neutro
 // abaixo do campo e a lista do que foi anexado. O envio do arquivo é o mesmo
-// da tela antiga (useFileUpload).
+// da tela antiga (useFileUpload). No e-mail novo (#1809) o "+" da barra o substitui.
 const TAMANHO_MAXIMO = 4096 * 4096;
 
 const anexos = defineModel({ type: Array, default: () => [] });
 
-const { onFileUpload } = useFileUpload({
-  attachFile: ({ blob, file }) => {
-    if (!file) return;
-    const leitor = new FileReader();
-    leitor.readAsDataURL(file.file);
-    leitor.onloadend = () => {
-      anexos.value = [
-        ...anexos.value,
-        {
-          resource: blob || file,
-          isPrivate: false,
-          thumb: leitor.result,
-          blobSignedId: blob?.signed_id,
-        },
-      ];
-    };
-  },
-});
+const { onFileUpload } = useAnexarNaNovaConversa(anexos);
 </script>
 
 <template>
