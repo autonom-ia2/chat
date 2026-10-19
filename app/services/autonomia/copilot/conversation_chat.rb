@@ -103,8 +103,11 @@ module Autonomia
       end
 
       def transcript
-        chat_messages.map { |m| "#{m.incoming? ? 'Cliente' : 'Atendente'}: #{m.content.to_s.strip}" }
-                     .join("\n").first(MAX_TRANSCRIPT)
+        chat_messages.map { |m| email_autoria.linha(m) }.join("\n").first(MAX_TRANSCRIPT)
+      end
+
+      def email_autoria
+        @email_autoria ||= Crm::Email::Autoria.new(conversation.account)
       end
 
       # Marker prefixed to every widget-history entry: the whole thread round-trips through the

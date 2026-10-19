@@ -539,3 +539,14 @@
   display_name: Tela inicial com o resumo do dia
   enabled: false
   column: feature_flags_ext_1
+
+# Quem escreveu cada e-mail, para as IAs (#1807, Refs #1601). Ligada: e-mail que chega de um endereço que não é do
+# cliente (alguém em cópia, a equipe, resposta automática) vai às IAs com o aviso "escrito por outra pessoa"; vale para o
+# pedido, mas não vira dado pessoal do cliente na memória e não bloqueia o contato (opt-out). E toda IA lê só o que foi
+# escrito naquele e-mail, sem o histórico citado (Crm::Email::Autoria). Posição 37 na feature_flags_ext_1, bit 36
+# (68719476736), logo depois de `tela_inicial_resumo` (tabela da Orquestração, 19/10). Desligada (padrão): tudo como antes.
+# Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: email_autoria
+  display_name: Quem escreveu cada e-mail, para as IAs
+  enabled: false
+  column: feature_flags_ext_1

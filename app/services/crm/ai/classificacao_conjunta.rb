@@ -49,7 +49,7 @@ class Crm::Ai::ClassificacaoConjunta
 
   def instructions
     Crm::Ai::ClassifierPrompt.para_varios(@classificadores.flat_map { |classificador| classificador.pacote[:eligible_agents] },
-                                          memoria: memoria?)
+                                          memoria: memoria?, email_autoria: @classificadores.first.email_autoria?)
   end
 
   # A conversa e os ids locais (m1..mN) saem do primeiro classificador: são os dele que vão ao modelo. O agendamento é

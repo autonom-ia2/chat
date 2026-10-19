@@ -109,16 +109,22 @@ module Autonomia
       end
 
       def transcript
-        chat_messages.map { |m| "#{m.incoming? ? 'Cliente' : 'Atendente'}: #{m.content.to_s.strip}" }
-                     .join("\n").first(MAX_TRANSCRIPT)
+        chat_messages.map { |m| email_autoria.linha(m) }.join("\n").first(MAX_TRANSCRIPT)
       end
 
       def history
-        chat_messages.map { |m| { role: m.incoming? ? 'user' : 'assistant', content: m.content.to_s.strip } }
+        chat_messages.map do |m|
+          { role: m.incoming? ? 'user' : 'assistant', content: (m.incoming? ? email_autoria.para_ia(m) : m.content.to_s).strip }
+        end
       end
 
       def last_customer_message
-        chat_messages.reverse.find(&:incoming?)&.content.to_s
+        message = chat_messages.reverse.find(&:incoming?)
+        message ? email_autoria.para_ia(message) : ''
+      end
+
+      def email_autoria
+        @email_autoria ||= Crm::Email::Autoria.new(conversation.account)
       end
 
       # LLM output is shown to the agent before they send it — strip tags + control chars.
