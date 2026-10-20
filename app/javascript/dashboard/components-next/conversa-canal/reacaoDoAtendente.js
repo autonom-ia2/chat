@@ -4,6 +4,7 @@
 // troca a da empresa). O servidor manda ao WhatsApp e grava em `reactions`.
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from '../message/constants';
+import { canReact } from '../message/actions/messageActions';
 
 export const REACOES_RAPIDAS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -30,10 +31,36 @@ const ehWaha = caixa =>
 const NAO_REAGE = { visivel: false, bloqueado: false };
 const PENDENTES = [MESSAGE_STATUS.FAILED, MESSAGE_STATUS.PROGRESS];
 
+// Com 'react' nas ações do motor da caixa WAHA comum (#1709), a reação vai pelo
+// conector (wahaMessageActions.react), que acha a mensagem pelo próprio registro: não
+// precisa do sourceId. A regra é a do #1709 (canReact, igual ao servidor), mais a
+// mensagem ainda saindo, que não tem o que reagir.
+const reagePelaCaixa = conversa =>
+  Array.isArray(conversa?.whatsapp_api_message_actions) &&
+  conversa.whatsapp_api_message_actions.includes('react');
+
+const estadoPelasAcoes = (conversa, mensagem) => {
+  const cabe =
+    canReact(conversa, { ...mensagem, private: mensagem.isPrivate }) &&
+    mensagem.status !== MESSAGE_STATUS.PROGRESS;
+  return cabe
+    ? { visivel: true, bloqueado: false, pelaCaixa: true }
+    : NAO_REAGE;
+};
+
+// Na caixa híbrida, a mensagem cujo id provisório do WAHA não virou o id do WhatsApp
+// (`waha-native-pending-…`) não reage por nenhum caminho: o WhatsApp não a acharia.
+const ID_PROVISORIO_DO_WAHA = 'waha-native-pending-';
+const comIdProvisorio = mensagem =>
+  String(mensagem.sourceId ?? '').startsWith(ID_PROVISORIO_DO_WAHA);
+
 // WhatsApp oficial e híbrido: só mensagem do cliente (doc da Meta) e com a janela
 // de 24 h aberta; o híbrido fora da janela (whatsapp_api_reply) também não reage.
-// WAHA: recebida ou enviada, sem janela.
+// WAHA: recebida ou enviada, sem janela. Com 'react' nas ações da conversa, vale a
+// regra do conector (estadoPelasAcoes).
 export const estadoDaReacao = ({ caixa, conversa, mensagem }) => {
+  if (comIdProvisorio(mensagem)) return NAO_REAGE;
+  if (reagePelaCaixa(conversa)) return estadoPelasAcoes(conversa, mensagem);
   const cloud = ehCloud(caixa);
   if (!cloud && !ehWaha(caixa)) return NAO_REAGE;
   if (mensagem.isPrivate || !mensagem.sourceId) return NAO_REAGE;

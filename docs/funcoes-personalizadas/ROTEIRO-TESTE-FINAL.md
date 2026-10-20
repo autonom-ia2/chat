@@ -91,10 +91,20 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
    - num cartão de contato recebido pelo WhatsApp, não aparecem **Salvar contato** nem **Conversar**.
 4. Volte a função para **Ver** em Contatos. Tudo volta: lista, ficha completa, busca, **Nova conversa** e filtro de empresa no Kanban.
 
+## Teste 8: arquivar cards e ação em massa do CRM (#1874)
+
+1. Edite a função. Em **CRM**, escolha **Só olha** e salve.
+2. Na janela anônima (recarregue a página), abra o CRM em **Lista**: as linhas não têm caixa de seleção e não aparece barra de ações em massa. Abra um card: a gaveta não tem **Arquivar**.
+3. Volte à função, troque o CRM para **Pode mexer** e salve. Em **Ajustes finos** aparece **Arquivar cards do CRM**, desligado.
+4. Na janela anônima, recarregue a Lista e marque dois cards de teste: a barra mostra **Mover**, **Quem cuida** e **Situação**, sem **Arquivar**. A gaveta do card também fica sem **Arquivar**.
+5. Ligue **Arquivar cards do CRM** e salve. Na janela anônima, a barra e a gaveta mostram **Arquivar**. Arquive um card de teste pela gaveta e outro pela barra.
+6. Troque o CRM para **Só olha**. O ajuste **Arquivar cards do CRM** some (só vale para quem mexe).
+7. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `crm_manage_cards` antes do deploy tem `crm_delete_cards` depois, inclusive os cargos gerenciados de token de integração do CRM.
+
 ## No fim (limpeza)
 
 1. Remova a pessoa de teste em **Configurações → Usuários**, para não contar no plano.
 2. Apague a função "Teste – só lê" em **Funções personalizadas**.
-3. Confira que o contato e a empresa de teste do teste 6 foram excluídos.
+3. Confira que o contato e a empresa de teste do teste 6 foram excluídos e que os cards de teste do teste 8 ficaram arquivados.
 
 Se algo não bater com o esperado, me mande o print e o número do teste e do passo, que eu investigo.

@@ -13,6 +13,8 @@ const props = defineProps({
   contactFilter: { type: Object, default: null },
   hasAppliedFilters: { type: Boolean, required: true },
   hasActiveFolders: { type: Boolean, required: true },
+  // #1883: a lista abriu filtrada por um link do Números; a seta do topo limpa o filtro, como no filtro avançado.
+  hasLinkFilter: { type: Boolean, default: false },
   activeStatus: { type: String, required: true },
   isOnExpandedLayout: { type: Boolean, required: true },
   conversationStats: { type: Object, required: true },
@@ -42,7 +44,8 @@ const formattedAllCount = computed(() => formatNumber(allCount.value));
 
 // While filters narrow the list, the header names it and the back button exits.
 const showFilterScope = computed(
-  () => props.hasAppliedFilters && !props.hasActiveFolders
+  () =>
+    (props.hasAppliedFilters && !props.hasActiveFolders) || props.hasLinkFilter
 );
 
 // The contact scope is set from the contact panel; it is exited, not edited.

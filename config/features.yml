@@ -593,3 +593,28 @@
   display_name: Lido do e-mail sincronizado com o servidor
   enabled: true
   column: feature_flags_ext_1
+
+# CRM › Números por papel, visão "Só eu" (#1897, F3 do épico #1871). Ligada: CRM › Números abre a visão de quem abre
+# (quem vende, quem atende, quem vende e atende; o papel vem do tipo do funil), com o seletor "Só eu · Equipe" para quem
+# vê a equipe (administrador e função com `crm_view_reports`), e o agente comum (e a função só com `crm_view`) deixa de
+# ver os números da equipe, o valor dos colegas e o gasto da IA (Crm::ReportPolicy, Decisão 2). Desligada (padrão): a
+# tela de hoje. Posição 41 na feature_flags_ext_1 (1099511627776 = 1 << 40), logo depois de `email_lido_sincronizado`
+# (tabela da Orquestração, 19/10).
+# Sem migration: nasce desligada e nenhuma migration liga conta.
+- name: crm_numeros_lentes
+  display_name: CRM › Números por papel (visão "Só eu")
+  enabled: false
+  column: feature_flags_ext_1
+
+# Contato pelo e-mail recebido (#1813, parte do #1701): quando chega um e-mail escrito pelo próprio contato (From é
+# endereço dele, pela Crm::Email::Autoria do #1807), o modelo do resumo (MODEL_SUMMARY) lê só o texto novo, com a
+# assinatura, classifica (pessoa, formulário de site ou automático) e completa o contato com nome, e-mail e telefone —
+# só o que falta, pela regra do Decisores::Aplicador. Paga a chave de IA da conta ou da instalação; sem chave, nada
+# acontece. Posição 42 na feature_flags_ext_1, bit 41 (2199023255552), logo depois de `crm_numeros_lentes` (41) (tabela
+# da Orquestração, 19/10): a posição na lista é o bit.
+# Desligada (padrão): nada é lido. Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração,
+# depois do deploy).
+- name: contato_pelo_email
+  display_name: Contato completado pela leitura do e-mail recebido
+  enabled: false
+  column: feature_flags_ext_1

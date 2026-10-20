@@ -28,6 +28,7 @@
       "CONTATO": "Contato",
       "BOTAO_DE_LINK": "Botão de link",
       "OPCOES": "Opções de resposta",
+      "ENQUETE": "Enquete",
       "FORMULARIO": "Formulário",
       "DOCUMENTO": "Documento",
       "FOTOS_E_VIDEOS": "Fotos e vídeos",
@@ -61,7 +62,11 @@
         "nomeDoContatoLongo": "O nome pode ter até 100 letras.",
         "textoDoBotaoLongo": "O texto do botão pode ter até 30 letras.",
         "cabecalho": "Escreva o cabeçalho.",
-        "cabecalhoLongo": "O cabeçalho pode ter até 60 letras."
+        "cabecalhoLongo": "O cabeçalho pode ter até 60 letras.",
+        "pergunta": "Escreva a pergunta.",
+        "perguntaLonga": "A pergunta pode ter até 255 letras.",
+        "opcoesDaEnqueteDemais": "Use no máximo 12 opções.",
+        "opcaoDaEnqueteLonga": "Cada opção pode ter até 100 letras."
       },
       "BOTAO_DE_LINK": {
         "TITULO": "Mandar um botão de link",
@@ -83,6 +88,15 @@
         "NOME_DA_LISTA": "Nome do botão da lista",
         "NOME_DA_LISTA_AJUDA": "Com mais de 3 opções, o cliente toca neste botão para ver a lista.",
         "LISTA_PADRAO": "Ver opções"
+      },
+      "ENQUETE": {
+        "TITULO": "Enviar enquete",
+        "AJUDA": "O cliente vota com um toque, dentro do WhatsApp. Os votos aparecem aqui.",
+        "AJUDA_TEXTO": "Esta conversa não tem enquete do WhatsApp: o cliente recebe a pergunta e as opções numeradas, em texto, e responde digitando.",
+        "PERGUNTA": "Pergunta",
+        "OPCOES": "Opções",
+        "MAIS_UMA": "Mais uma opção",
+        "VARIAS_RESPOSTAS": "Permitir mais de uma resposta"
       },
       "LOCALIZACAO": {
         "TITULO": "Mandar uma localização",
@@ -133,7 +147,13 @@
       "BOTAO": "Botão",
       "ENVIAR_LOCALIZACAO": "Enviar localização",
       "LISTA": "Ver opções",
-      "VIRA_TEXTO": "Neste número o cliente recebe em texto, assim:"
+      "VIRA_TEXTO": "Neste número o cliente recebe em texto, assim:",
+      "SUA_PERGUNTA": "Sua pergunta aparece aqui",
+      "ENQUETE_UMA": "Selecione uma opção",
+      "ENQUETE_VARIAS": "Selecione uma ou mais opções",
+      "ENQUETE_VIRA_TEXTO": "Esta conversa não tem enquete do WhatsApp. O cliente recebe em texto, assim:",
+      "ENQUETE_INCOMPLETA": "Escreva a pergunta e pelo menos 2 opções para ver como fica.",
+      "ENQUETE_AVISO_VARIAS": "Pode escolher mais de uma"
     },
     "JANELA_FECHADA": {
       "TEXTO": "Já passaram 24 horas desde a última mensagem do cliente. Para voltar a falar com ele, mande um modelo.",
@@ -206,6 +226,9 @@
       "MAIS": "Mais {n} fotos e vídeos. Toque para abrir",
       "MAIS_CURTO": "+{n}",
       "ROTULO_CHEGANDO": "Álbum chegando, {n} recebidas até agora",
+      "VAGA": "Foto ou vídeo {n} de {total} ainda chegando",
+      "VAGA_NAO_CHEGOU": "Foto ou vídeo {n} de {total}: não chegou",
+      "NAO_CHEGOU": "Não chegou",
       "VAGA_SEM_TOTAL": "Próxima foto ainda chegando",
       "RECEBENDO": "Recebendo fotos…",
       "APAGADAS_EM_PARTE": "{apagadas} de {total} fotos apagadas. Tente de novo para as outras."

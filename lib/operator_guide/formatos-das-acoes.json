@@ -578,8 +578,8 @@
     "controller": "api/v1/accounts/crm/meetings#destroy",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:80",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:82",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:180"
     ],
     "sem_corpo": true
   },
@@ -5347,9 +5347,9 @@
     "envelope": "meeting",
     "modelo": "Crm::Meeting",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:147",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:65",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:149",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:180"
     ],
     "sem_corpo": false
   },
@@ -6355,6 +6355,7 @@
           "crm_view_reports",
           "crm_admin",
           "crm_export",
+          "crm_delete_cards",
           "contact_view",
           "contact_export",
           "contact_delete",
@@ -14702,10 +14703,10 @@
       "leitura crua sem tipo: action_name, bulk_action"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards/bulk_controller.rb:6",
-      "app/controllers/api/v1/accounts/crm/cards/bulk_controller.rb:28",
-      "app/controllers/api/v1/accounts/crm/cards/bulk_controller.rb:14",
-      "app/controllers/api/v1/accounts/crm/cards/bulk_controller.rb:13"
+      "app/controllers/api/v1/accounts/crm/cards/bulk_controller.rb:7",
+      "app/controllers/api/v1/accounts/crm/cards/bulk_controller.rb:29",
+      "app/controllers/api/v1/accounts/crm/cards/bulk_controller.rb:15",
+      "app/controllers/api/v1/accounts/crm/cards/bulk_controller.rb:14"
     ],
     "sem_corpo": false
   },
@@ -15135,10 +15136,10 @@
     },
     "modelo": "IdempotencyKey",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:37",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:208",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:200",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:204"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:39",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:210",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:202",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:206"
     ],
     "sem_corpo": false
   },
@@ -15169,9 +15170,9 @@
     "envelope": "meeting",
     "modelo": "Crm::Meeting",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:143",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:97",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:145",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:180"
     ],
     "sem_corpo": false
   },
@@ -15188,8 +15189,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meetings#summarize",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:134",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:136",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:180"
     ],
     "sem_corpo": true
   },
@@ -15205,8 +15206,8 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/meetings_controller.rb:27",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:29",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:31",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:180"
     ],
     "sem_corpo": false
   },
@@ -15225,9 +15226,9 @@
     "controller": "api/v1/accounts/crm/meetings#draft_invite",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:126",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:129",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:200"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:128",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:131",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:202"
     ],
     "sem_corpo": false
   },
@@ -15256,11 +15257,11 @@
       "leitura crua sem tipo: date, duration_minutes"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:115",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:120",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:119",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:204",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:200"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:117",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:122",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:121",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:206",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:202"
     ],
     "sem_corpo": false
   },
@@ -16348,6 +16349,7 @@
           "crm_view_reports",
           "crm_admin",
           "crm_export",
+          "crm_delete_cards",
           "contact_view",
           "contact_export",
           "contact_delete",
@@ -23728,9 +23730,9 @@
     "envelope": "meeting",
     "modelo": "Crm::Meeting",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:147",
-      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:178"
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:65",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:149",
+      "app/controllers/api/v1/accounts/crm/meetings_controller.rb:180"
     ],
     "sem_corpo": false
   },
@@ -24647,6 +24649,7 @@
           "crm_view_reports",
           "crm_admin",
           "crm_export",
+          "crm_delete_cards",
           "contact_view",
           "contact_export",
           "contact_delete",
