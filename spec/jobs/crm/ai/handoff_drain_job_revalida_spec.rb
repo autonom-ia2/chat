@@ -83,20 +83,15 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     expect(conversation.reload.assignee_id).to be_nil
   end
 
-  it 'releitura sem resposta em 10 min: entrega como hoje e não relê de novo sem mensagem nova', :aggregate_failures do
-    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+  it 'releitura sem resposta em 10 min: entrega como hoje, sem reler', :aggregate_failures do
     segurar!
     described_class.perform_now
 
     travel(11.minutes) { described_class.perform_now }
 
-    expect(marca).to include('revalidado_ate' => 0)
-    expect(marca).not_to have_key('revalidando_desde')
-
-    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online' })
-    travel(13.minutes) { described_class.perform_now }
     expect(conversation.reload.assignee_id).to eq(ana.id)
     expect(releituras.size).to eq(1)
+    expect(revalida).not_to have_received(:call)
   end
 
   it 'releitura com o problema aberto: a rodada seguinte entrega, com o motivo novo', :aggregate_failures do
@@ -111,8 +106,7 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
       .to eq('cliente pediu explicação de DMH e o robô não soube')
   end
 
-  it 'depois de relida, nota privada e atividade não pedem outra releitura' do
-    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+  it 'depois de relida, nota privada e atividade não pedem outra releitura', :aggregate_failures do
     segurar!
     described_class.perform_now
     responde!(true, 'dúvida sem resposta')
@@ -124,10 +118,10 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     end
 
     expect(releituras.size).to eq(1)
+    expect(conversation.reload.assignee_id).to eq(ana.id)
   end
 
   it 'mensagem nova do cliente depois da releitura pede outra' do
-    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
     segurar!
     described_class.perform_now
     responde!(true, 'dúvida sem resposta')
@@ -214,15 +208,16 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     expect(conversation.reload.assignee_id).to eq(ana.id)
   end
 
-  it 'a nova tentativa de entrega sem ninguém disponível não zera o prazo total' do
-    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+  it 'a nova tentativa de entrega sem ninguém disponível não zera o prazo total', :aggregate_failures do
     segurar!
     described_class.perform_now
     prazo = marca['revalidacao_comecou_em']
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
 
     Crm::Entrega.new(conversation: conversation.reload, motivo: Crm::Ai::HandoffExecutor::MOTIVO_DA_ENTREGA, origem: 'message',
                      pedido: { razao: 'cliente pediu a cotação e o robô falhou' }).call
 
+    expect(prazo).to be_present
     expect(marca['revalidacao_comecou_em']).to eq(prazo)
   end
 
@@ -254,10 +249,11 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     expect(conversation.reload.assignee_id).to eq(ana.id)
   end
 
-  # 4ª revisão do Codex (ALTO 1): só a entrega confirmada (a marca sai) ou o pedido retirado encerram o prazo total. Uma
-  # tentativa que não entregou mantém o prazo, e vencido ele entrega na rodada seguinte, sem reler.
+  # 4ª revisão do Codex (ALTO 1): só a entrega confirmada (a marca sai) ou o pedido retirado encerram o prazo total. A
+  # pessoa sai antes da entrega: a tentativa não entrega, o prazo segue, e vencido a conversa sai na rodada seguinte com
+  # alguém online, sem reler, com o log do vencimento uma vez.
   it 'entrega que falha no meio do prazo não o zera: com mensagens chegando, sai na rodada depois dos 10 min', :aggregate_failures do
-    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+    allow(Rails.logger).to receive(:info).and_call_original
     allow(revalida).to receive(:call).and_return({ passa: true, motivo: 'segue aberto', decisao: 'problema_em_aberto' })
     segurar!
     inicio = Time.current
@@ -271,16 +267,16 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     end
     prazo = marca['revalidacao_comecou_em']
 
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
     travel_to(inicio + 8.minutes) { described_class.perform_now }
-    expect(releituras).to be_empty
     expect(conversation.reload.assignee_id).to be_nil
     expect(marca['revalidacao_comecou_em']).to eq(prazo)
 
     travel_to(inicio + 10.minutes) do
       fala!('ainda estou aqui', tipo: :incoming)
       described_class.perform_now
-      roda_releituras!
     end
+    expect(releituras).to be_empty
     expect(marca['revalidacao_comecou_em']).to eq(prazo)
 
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online' })
@@ -290,7 +286,69 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     end
     expect(conversation.reload.assignee_id).to eq(ana.id)
     expect(releituras).to be_empty
-    expect(revalida).to have_received(:call).exactly(5).times
+    expect(revalida).to have_received(:call).exactly(4).times
+    expect(Rails.logger).to have_received(:info).with(a_string_including('desfecho=revalidacao_vencida')).once
+  end
+
+  # O caso da Issue (conversa 327): o pedido da meia-noite, ninguém online, o cliente resolve às 3h, alguém entra às 9h.
+  # O prazo só conta com alguém para receber: antes das 9h nada é relido; às 9h a releitura lê tudo até ali.
+  def madrugada!(resolucao:)
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+    meia_noite = Time.current.beginning_of_day + 1.day
+    travel_to(meia_noite) { segurar! }
+    rodadas_da_madrugada!(meia_noite, resolucao)
+    nada_relido_nem_prazo!
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online' })
+    meia_noite
+  end
+
+  # Rodadas da fila da meia-noite às 8h, com a mensagem do cliente às 3h.
+  def rodadas_da_madrugada!(meia_noite, resolucao)
+    [0, 10, 60, 120, 180, 240, 360, 480].each do |minuto|
+      travel_to(meia_noite + minuto.minutes) do
+        fala!(resolucao, tipo: :incoming) if minuto == 180
+        described_class.perform_now
+      end
+    end
+  end
+
+  def nada_relido_nem_prazo!
+    expect(releituras).to be_empty
+    expect(Crm::Ai::RevalidaPassagem).not_to have_received(:new)
+    expect(marca).not_to have_key('revalidacao_comecou_em')
+  end
+
+  it 'madrugada: o cliente resolve às 3h e, às 9h, a releitura retira o pedido sem entregar', :aggregate_failures do
+    allow(revalida).to receive(:call).and_return({ passa: false, motivo: 'cliente resolveu', decisao: 'resolvido' })
+    meia_noite = madrugada!(resolucao: 'já resolvi, obrigado')
+
+    travel_to(meia_noite + 9.hours) do
+      described_class.perform_now
+      expect(conversation.reload.assignee_id).to be_nil
+      roda_releituras!
+    end
+    travel_to(meia_noite + 9.hours + 2.minutes) { described_class.perform_now }
+
+    expect(revalida).to have_received(:call).once
+    expect(Crm::Entrega::Marca.presente?(conversation.reload)).to be(false)
+    expect(conversation.assignee_id).to be_nil
+  end
+
+  it 'madrugada sem resolução: às 9h relê tudo até ali e entrega na rodada seguinte', :aggregate_failures do
+    allow(revalida).to receive(:call).and_return({ passa: true, motivo: 'segue aberto', decisao: 'problema_em_aberto' })
+    meia_noite = madrugada!(resolucao: 'alguém pode me ajudar?')
+    ultima = conversation.messages.where(message_type: :incoming).maximum(:id)
+
+    travel_to(meia_noite + 9.hours) do
+      described_class.perform_now
+      roda_releituras!
+    end
+    expect(conversation.reload.assignee_id).to be_nil
+    expect(marca['revalidado_ate']).to eq(ultima)
+
+    travel_to(meia_noite + 9.hours + 2.minutes) { described_class.perform_now }
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+    expect(revalida).to have_received(:call).once
   end
 
   def leva_o_card_para_outro_funil!(com_ia:)

@@ -6,11 +6,13 @@
 # próprio agente pediu (bot_handoff!), a da caixa sem regra, o convite e o convite vencido. O cliente que pede gente
 # depois continua sendo atendido: a reavaliação (Crm::Ai::RevalidaPassagem) conta o pedido explícito como "passa".
 #
-# Quando: toda espera é relida uma vez antes da entrega, mesmo sem mensagem nova, porque a decisão foi tomada no meio
-# da conversa e a espera dura horas (a avaliação da meia-noite errou e nada chegou depois). Depois, só se chegar
-# mensagem do cliente ou do atendimento (incoming ou outgoing): nota privada, atividade e os avisos automáticos da caixa
-# (saudação, fora do horário, pesquisa, que o Chatwoot grava como `template`) não contam. A última mensagem lida fica
-# na marca (`revalidado_ate`, 0 se não havia nenhuma): uma chamada por espera e por mensagem nova.
+# Quando: só quando a entrega sairia agora (há quem receba, pela mesma regra e presença da Crm::Entrega). Sem ninguém
+# para receber, nada é relido nem enfileirado e o prazo não começa: a espera da madrugada é relida quando alguém entra,
+# com tudo o que chegou até ali. Toda espera é relida uma vez antes da entrega, mesmo sem mensagem nova, porque a
+# decisão foi tomada no meio da conversa e a espera dura horas (a avaliação da meia-noite errou e nada chegou depois).
+# Depois, só se chegar mensagem do cliente ou do atendimento (incoming ou outgoing): nota privada, atividade e os avisos
+# automáticos da caixa (saudação, fora do horário, pesquisa, que o Chatwoot grava como `template`) não contam. A última
+# mensagem lida fica na marca (`revalidado_ate`, 0 se não havia nenhuma): uma chamada por espera e por mensagem nova.
 #
 # Onde (backteste do PR #1980: p50 20 s, máximo 74 s): a chamada não cabe na rodada da fila, então roda num job
 # (Crm::Ai::RevalidaPassagemJob). A fila (#segurar?) só grava a releitura em curso na marca e enfileira, um job por
@@ -20,12 +22,12 @@
 # aplicar), a marca guarda a última mensagem lida e `revalidacao_falhou`, e a rodada seguinte entrega como hoje.
 # Resposta velha (a espera, o motivo, o card, o funil do card ou as mensagens mudaram durante a chamada) é descartada,
 # e a rodada seguinte decide de novo (pelo funil novo, se ele mudou). Prazo total (`revalidacao_comecou_em`): começa
-# na primeira releitura e vale enquanto a espera é a mesma, passando por descarte, reenfileiramento, confirmação e
-# tentativa de entrega que não entregou; só some com a marca (pessoa atribuída, pedido retirado, conversa resolvida)
-# ou com uma espera nova. Passando de 10 min, toda rodada entrega como hoje, sem reler, mesmo com mensagens chegando;
-# o job vencido não chama a IA nem aplica. Funil desligado (ou card apagado ou levado a um funil sem IA) com o job na
-# fila ou durante a chamada: o job não chama, ou não aplica, e a rodada seguinte entrega como hoje. Job que parece
-# perdido (5 min sem resposta) é enfileirado de novo uma vez.
+# na primeira releitura (com alguém para receber) e vale enquanto a espera é a mesma, passando por descarte,
+# reenfileiramento, confirmação e tentativa de entrega que não entregou (a pessoa saiu); só some com a marca (pessoa
+# atribuída, pedido retirado, conversa resolvida) ou com uma espera nova. Passando de 10 min, toda rodada entrega como
+# hoje, sem reler, mesmo com mensagens chegando; o job vencido não chama a IA nem aplica. Funil desligado (ou card
+# apagado ou levado a um funil sem IA) com o job na fila ou durante a chamada: o job não chama, ou não aplica, e a rodada
+# seguinte entrega como hoje. Job que parece perdido (5 min sem resposta) é enfileirado de novo uma vez.
 class Crm::Ai::RevalidacaoNaFila
   REENFILEIRAR_DEPOIS = 5.minutes
   VENCE_DEPOIS = 10.minutes
@@ -37,12 +39,15 @@ class Crm::Ai::RevalidacaoNaFila
   end
 
   # Para a fila: true segura a conversa nesta rodada (a releitura foi enfileirada ou segue em curso); false segue para
-  # a entrega (não é espera da IA do CRM, não há o que reler, ou a releitura venceu).
-  def segurar?
+  # a entrega (não é espera da IA do CRM, ninguém pode receber agora, não há o que reler, ou a releitura venceu).
+  # `pode_entregar`: diz se a entrega sairia agora (Crm::Entrega#pode_entregar_agora?, com a presença da rodada); só é
+  # chamado na espera da IA do CRM.
+  def segurar?(pode_entregar:)
     marca = Crm::Entrega::Marca.dados(@conversation)
     return false unless releitura_cabe?(marca)
-    return vencida!(marca) if vencida?(marca)
+    return vencida!(pode_entregar) if vencida?(marca)
     return em_curso!(marca) if marca['revalidando_desde'].present?
+    return false unless pode_entregar.call
     return false if ate_onde_reler(marca).nil?
 
     enfileirar!(marca)
@@ -146,18 +151,10 @@ class Crm::Ai::RevalidacaoNaFila
   end
 
   # Prazo total vencido: entrega como hoje, com o pedido e o motivo atuais, nesta rodada e em todas as seguintes da
-  # mesma espera, sem reler. Na primeira vez (ou com um job ainda em curso), a marca guarda a última mensagem e
-  # `revalidacao_falhou`, o job em curso sai e o log registra; depois, nada é gravado.
-  def vencida!(marca)
-    ultima = ate_onde_reler(marca) || marca['revalidado_ate'].to_i
-    gravou = sob_a_trava do |atual|
-      next false unless atual['revalidacao_comecou_em'] == marca['revalidacao_comecou_em']
-      next false if atual['revalidacao_falhou'] && atual['revalidando_desde'].blank?
-
-      Crm::Entrega::Marca.revalidada!(@conversation, ate: ultima, razao: nil, falhou: true)
-      true
-    end
-    registrar('revalidacao_vencida', 'prazo_total_10_min') if gravou
+  # mesma espera, sem reler (o job ainda em curso já não chama nem aplica). O log sai na rodada que entrega, com alguém
+  # para receber: a entrega tira a marca, então ele sai uma vez.
+  def vencida!(pode_entregar)
+    registrar('revalidacao_vencida', 'prazo_total_10_min') if pode_entregar.call
     false
   end
 

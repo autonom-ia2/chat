@@ -16,7 +16,7 @@ RSpec.describe Crm::Ai::RevalidaPassagemJob do
   end
   let(:revalida) { instance_double(Crm::Ai::RevalidaPassagem) }
   let(:token) do
-    Crm::Ai::RevalidacaoNaFila.new(conversation).segurar?
+    Crm::Ai::RevalidacaoNaFila.new(conversation).segurar?(pode_entregar: -> { true })
     marca['revalidando_desde']
   end
 
@@ -98,7 +98,7 @@ RSpec.describe Crm::Ai::RevalidaPassagemJob do
     expect(marca).to include('razao' => 'cliente pediu a cotação e o robô falhou')
     expect(marca.keys).not_to include('revalidado_ate', 'revalidando_desde')
     expect(retiradas).to be_empty
-    expect(Crm::Ai::RevalidacaoNaFila.new(conversation).segurar?).to be(true)
+    expect(Crm::Ai::RevalidacaoNaFila.new(conversation).segurar?(pode_entregar: -> { true })).to be(true)
   end
 
   it 'o motivo da espera muda durante a releitura: a resposta velha é descartada', :aggregate_failures do

@@ -24,7 +24,7 @@
 # da trava: em `call`, logo em seguida; na passagem do robô, o resultado sai `:para_ia` e o
 # ConversationBotHandoff chama `concluir_para_ia!` depois do commit. Recusada (o agente parou entre a leitura e a
 # passagem, por exemplo), a entrega roda de novo sem IA: alguém da equipe.
-class Crm::Entrega
+class Crm::Entrega # rubocop:disable Metrics/ClassLength -- #pode_entregar_agora? (#1975) usa o mesmo #planejar; fora daqui duplicaria a regra
   Resultado = Struct.new(:status, :pessoa, :motivo, :card, :agente, keyword_init: true)
   Plano = Struct.new(:acao, :pessoa, :card, :settings, :motivo, :agente, keyword_init: true)
   # Motivos em que quem pediu a passagem foi o robô que atendia.
@@ -73,6 +73,11 @@ class Crm::Entrega
     registrar
     @resultado
   end
+
+  # Para a fila (#1975, Crm::Ai::RevalidacaoNaFila): a entrega sairia agora (para uma pessoa, um convite ou um agente de
+  # IA)? Só lê, sem trava e sem gravar, com a mesma regra e a presença da rodada (Crm::Entrega::Presenca) que o #call
+  # usa logo depois.
+  def pode_entregar_agora? = %i[pessoa convite ia].include?(planejar.acao)
 
   # Fora de qualquer trava: o serviço dos Agentes trava a conversa e relê. A origem é o robô que estava com a conversa
   # (o que passou). Só 'passou' é a IA assumindo. 'pessoa_atribuida': uma pessoa entrou no nome antes; ela fica com a
