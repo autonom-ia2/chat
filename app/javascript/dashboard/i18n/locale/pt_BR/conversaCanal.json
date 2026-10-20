@@ -614,6 +614,9 @@
         "MANTER": "Manter a resposta",
         "SEM_ORGANIZADOR": "Este convite não diz quem organizou, por isso não dá para responder daqui."
       }
+    },
+    "NOTA_DO_CONECTOR": {
+      "AVISO": "⚠️ Uma mensagem do WhatsApp não chegou aqui. Confira no celular da caixa."
     }
   }
 }

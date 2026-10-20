@@ -614,6 +614,9 @@
         "MANTER": "Keep my answer",
         "SEM_ORGANIZADOR": "This invitation does not say who organized it, so it cannot be answered from here."
       }
+    },
+    "NOTA_DO_CONECTOR": {
+      "AVISO": "⚠️ A WhatsApp message did not reach this conversation. Check the inbox phone."
     }
   }
 }
