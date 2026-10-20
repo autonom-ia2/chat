@@ -571,7 +571,7 @@ const payloadForContextMenu = computed(() => {
 });
 
 const allContextMenuOptions = computed(() => {
-  const hasText = !!props.content;
+  const hasText = !!conteudo.value;
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
 
   const isOutgoing = props.messageType === MESSAGE_TYPES.OUTGOING;
@@ -641,7 +641,7 @@ const shouldRenderMessage = computed(() => {
 
   return (
     hasAttachments ||
-    props.content ||
+    conteudo.value ||
     isEmailContentType ||
     isUnsupported ||
     isAnIntegrationMessage ||
@@ -903,7 +903,7 @@ provideMessageContext({
         ref="messageActionDialogs"
         :conversation-id="conversationId"
         :message-id="id"
-        :content="content || ''"
+        :content="conteudo || ''"
         :reactions="messageReactions"
       />
     </div>

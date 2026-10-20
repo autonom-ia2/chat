@@ -12,6 +12,6 @@ module ConversaCanal::AutorDoEco
     attrs = super
     return attrs unless outgoing_echo
 
-    attrs.merge(CHAVE => @conversation&.assignee_id)
+    attrs.merge(CHAVE => @conversation.assignee_id)
   end
 end

@@ -6,6 +6,7 @@ import { createI18n } from 'vue-i18n';
 import en from 'dashboard/i18n/locale/en/conversaCanal.json';
 import ptBR from 'dashboard/i18n/locale/pt_BR/conversaCanal.json';
 import Message from '../../message/Message.vue';
+import MessageContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../message/constants';
 import {
   gettersDaMontagem,
@@ -127,6 +128,26 @@ describe('eco do celular no balão com a pele (#1941)', () => {
     expect(balao.text()).not.toContain('Enviado do WhatsApp');
     expect(balao.text()).not.toContain('Chat2You Admin');
     expect(celular(balao).exists()).toBe(true);
+  });
+
+  it('copiar (menu) leva o texto sem o prefixo', () => {
+    const balao = montar({
+      content: COM_PREFIXO,
+      contentAttributes: { externalEcho: true },
+    });
+
+    const menu = balao.findComponent(MessageContextMenu);
+    expect(menu.props('message').content).toBe('Bom dia, segue a cotação');
+    expect(menu.props('enabledOptions').copy).toBe(true);
+  });
+
+  it('eco que era só o prefixo, sem anexo, não vira balão vazio', () => {
+    const balao = montar({
+      content: `${PREFIXO_DO_CELULAR}\n\n`,
+      contentAttributes: { externalEcho: true },
+    });
+
+    expect(balao.find('[data-bubble-name]').exists()).toBe(false);
   });
 
   it('autor que saiu da conta: nenhum nome', () => {
