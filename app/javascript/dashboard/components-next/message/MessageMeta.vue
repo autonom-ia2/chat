@@ -15,6 +15,7 @@ import {
 import { usePele } from '../conversa-canal/pele';
 import { foiEditada } from '../conversa-canal/marcasDaMensagem';
 import RotuloEditada from '../conversa-canal/RotuloEditada.vue';
+import { ehEcoDoCelular } from '../conversa-canal/ecoDoCelular';
 
 import { MESSAGE_STATUS, MESSAGE_TYPES } from './constants';
 
@@ -69,6 +70,10 @@ const falhou = computed(
     !isPrivate.value &&
     status.value === MESSAGE_STATUS.FAILED
 );
+
+// #1941: enviada pelo app do celular (eco): um 📱 pequeno ao lado da hora, nos três WhatsApp.
+const peloCelular = computed(() => ehEcoDoCelular(contentAttributes.value));
+const CELULAR = '📱';
 
 // WhatsApp Híbrido (chat#1067): mensagem que saiu pelo WhatsApp API em vez da conexão oficial.
 const transportLabel = computed(() => {
@@ -176,6 +181,16 @@ const statusToShow = computed(() => {
 <template>
   <div class="text-xs flex items-center gap-1.5">
     <RotuloEditada v-if="editada" :atributos="contentAttributes" />
+    <span
+      v-if="peloCelular"
+      v-tooltip.top="t('CONVERSA_CANAL.ECO_DO_CELULAR.ENVIADA_PELO_CELULAR')"
+      role="img"
+      :aria-label="t('CONVERSA_CANAL.ECO_DO_CELULAR.ENVIADA_PELO_CELULAR')"
+      class="text-[11px] leading-none select-none"
+      data-eco-do-celular
+    >
+      {{ CELULAR }}
+    </span>
     <div class="inline">
       <time
         v-tooltip.top="{

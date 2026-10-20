@@ -1,5 +1,6 @@
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import { frontendURL } from '../../../../helper/URLHelper';
+import { PEOPLE_MANAGE_PERMISSION } from 'dashboard/constants/permissions.js';
 
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const AgentHome = () => import('./Index.vue');
@@ -22,7 +23,7 @@ export default {
           component: AgentHome,
           meta: {
             featureFlag: FEATURE_FLAGS.AGENT_MANAGEMENT,
-            permissions: ['administrator'],
+            permissions: ['administrator', PEOPLE_MANAGE_PERMISSION],
           },
         },
       ],

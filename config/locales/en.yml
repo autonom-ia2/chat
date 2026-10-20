@@ -77,11 +77,11 @@ en:
     custom_role:
       unknown_permissions: 'has unknown keys: %{unknown}. Valid keys: %{valid}'
     crm:
-      contact_already_linked: 'is already linked to this opportunity. Use the existing contact or change the link explicitly.'
-      contact_idempotency_required: 'An Idempotency-Key is required to create a contact for this opportunity.'
+      contact_already_linked: 'is already linked to this card. Use the existing contact or change the link explicitly.'
+      contact_idempotency_required: 'An Idempotency-Key is required to create a contact for this card.'
       contact_identity_taken: 'A contact with these details already exists. Use the existing contact instead.'
       invalid_contact_input: 'Provide a contact object with a non-empty name, optional email and phone strings, and valid attribute objects.'
-      contact_conversation_conflict: 'cannot be changed while this opportunity has conversations belonging to another contact. Review the conversation links first.'
+      contact_conversation_conflict: 'cannot be changed while this card has conversations belonging to another contact. Review the conversation links first.'
     account:
       not_authorized: You are not authorized to access this account
       email_limit_exceeded: The daily email limit for this account has been reached
@@ -572,6 +572,11 @@ en:
       not_pending: 'This suggestion was already reviewed.'
       embedding_failed: 'Could not add this FAQ to the knowledge base: the AI credential is missing or failed. Try again.'
       resync_not_allowed: 'Approved FAQs are added one by one from the suggestions list; there is nothing to resync.'
+    material:
+      problema_invalido: 'This item was already resolved or changed. The page was updated.'
+      autoteste_indisponivel: 'There is no approved material to test yet.'
+      autoteste_espere: 'Wait a little to test again.'
+      autoteste_amanha: 'This agent was already tested many times today. You can test again tomorrow.'
     source:
       invalid_kind: 'This kind of material is not available. Reload the page and try again.'
       arquivo_grande: 'The file is too large. The maximum size is 25 MB.'
@@ -1114,7 +1119,7 @@ en:
       subject: 'Reminder: %{title}'
       push_title: 'Reminder: %{title}'
       greeting: 'Hi %{name},'
-      card: 'Deal: %{card}'
+      card: 'Card: %{card}'
       due_at: 'Due: %{time}'
       cta: 'Open CRM'
     meetings:

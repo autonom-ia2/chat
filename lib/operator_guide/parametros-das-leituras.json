@@ -131,6 +131,10 @@
     "controller": "api/v1/accounts/autonomia/agents/instruction_versions#index",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/material": {
+    "controller": "api/v1/accounts/autonomia/agents/material#show",
+    "parametros": []
+  },
   "autonomia/agents/:agent_id/sources": {
     "controller": "api/v1/accounts/autonomia/agents/sources#index",
     "parametros": []
@@ -2103,6 +2107,10 @@
   },
   "waha_inboxes/:inbox_id/connection": {
     "controller": "api/v1/accounts/waha_inboxes#connection",
+    "parametros": []
+  },
+  "waha_inboxes/:inbox_id/status": {
+    "controller": "api/v1/accounts/waha_inboxes#status",
     "parametros": []
   },
   "webhooks": {
