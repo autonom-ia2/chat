@@ -101,21 +101,75 @@ RSpec.describe Crm::Ai::PedidoAnterior do
     expect(contexto(novo)).not_to have_key(:previous_card)
   end
 
+  # Pega: card irmão (outro assunto vivo quando este nasceu) e encerrado depois ser tomado como pedido anterior (#1925
+  # revisão): o prompt afirmaria um fato falso e a etapa/valor de outro assunto contaria como evidência deste.
+  it 'ignora card que estava aberto quando este nasceu e foi encerrado depois' do
+    irmao = travel_to(2.days.ago) { card!('Seguro da moto', conversa_antiga) }
+    novo = card!('Seguro do carro', conversa_nova)
+    travel_to(1.minute.from_now) { irmao.update!(status: :lost) }
+
+    expect(contexto(novo)).not_to have_key(:previous_card)
+  end
+
   # Pega: entre dois pedidos encerrados, ir o mais velho.
   it 'pega o encerrado mais recente' do
     travel_to(10.days.ago) { card!('Velho', conversa_antiga).update!(status: :lost) }
-    travel_to(2.days.ago) { card!('Recente', conversa_antiga).update!(status: :won) }
+    travel_to(2.days.ago) { card!('Recente', conversa_antiga).update!(status: :lost) }
 
-    expect(contexto(card!('Novo', conversa_nova))[:previous_card]).to include(title: 'Recente', status: 'won')
+    expect(contexto(card!('Novo', conversa_nova))[:previous_card]).to include(title: 'Recente', status: 'lost')
+  end
+
+  # Pega: a venda ganha voltar como "mesmo pedido" e o card novo herdar etapa e valor (a venda contaria duas vezes); e,
+  # com o último encerrado ganho, cair num perdido mais velho que já não é o pedido de antes.
+  it 'sem pedido anterior quando o último encerrado deu certo' do
+    travel_to(10.days.ago) { card!('Velho', conversa_antiga).update!(status: :lost) }
+    travel_to(2.days.ago) { card!('Ganho', conversa_antiga, value_cents: 50_000).update!(status: :won) }
+
+    expect(contexto(card!('Novo', conversa_nova))).not_to have_key(:previous_card)
+  end
+
+  describe 'as mensagens são da vida do card anterior' do
+    let(:conversa_email) { create_crm_conversation(account: account, inbox: inbox, contact: contact) }
+
+    # Pega: o assunto de antes na mesma conversa, ou a volta depois do encerramento, irem como mensagens do anterior; e a
+    # mensagem que abriu o card (chega antes do nascimento dele) ficar de fora.
+    it 'do fim do pedido de antes até o encerramento dele, sem cortar a mensagem que o abriu', :aggregate_failures do
+      travel_to(6.days.ago) do
+        mensagem!(conversa_antiga, 'assunto velho', quando: 1.minute.ago)
+        card!('Antes', conversa_antiga).update!(status: :lost)
+      end
+      anterior = travel_to(3.days.ago) do
+        mensagem!(conversa_antiga, 'quero cotar o carro', quando: 1.minute.ago)
+        card!('Carro', conversa_antiga).tap { mensagem!(conversa_antiga, 'R$ 1.200 por ano', tipo: :outgoing) }
+      end
+      travel_to(2.days.ago) { anterior.update!(status: :lost) }
+      mensagem!(conversa_antiga, 'oi, voltei', quando: 1.day.ago)
+
+      expect(described_class.do_card(card!('Novo', conversa_nova))).to eq(anterior)
+      expect(described_class.mensagens(anterior.reload, fora: []).map(&:content)).to eq(['quero cotar o carro', 'R$ 1.200 por ano'])
+    end
+
+    # Pega: a proposta enviada numa conversa VINCULADA ao card anterior (outro canal) não chegar ao modelo.
+    it 'lê também as conversas vinculadas ao card anterior' do
+      anterior = travel_to(3.days.ago) do
+        card!('Carro', conversa_antiga).tap do |card|
+          account.crm_card_conversations.create!(card: card, conversation: conversa_email, linked_by: admin)
+          mensagem!(conversa_antiga, 'quero cotar o carro')
+          mensagem!(conversa_email, 'proposta em anexo: R$ 1.200', tipo: :outgoing)
+          card.update!(status: :lost)
+        end
+      end
+
+      expect(described_class.mensagens(anterior, fora: []).map(&:content)).to contain_exactly('quero cotar o carro', 'proposta em anexo: R$ 1.200')
+    end
   end
 
   describe 'card novo na MESMA conversa do card encerrado' do
-    # Pega: repetir no bloco o que já está em recent_messages, ou trazer o que veio depois do nascimento do card.
-    it 'leva só o que veio antes deste card e ainda não está nas mensagens recentes', :aggregate_failures do
-      antigas = travel_to(2.days.ago) do
-        card!('Cotação', conversa_antiga).update!(status: :lost)
-        Array.new(14) { |i| mensagem!(conversa_antiga, "antiga #{i}", quando: (14 - i).minutes.ago) }
-      end
+    # Pega: repetir no bloco o que já está em recent_messages, ou trazer o que veio depois do encerramento.
+    it 'leva só o que veio na vida do anterior e ainda não está nas mensagens recentes', :aggregate_failures do
+      anterior = travel_to(2.days.ago) { card!('Cotação', conversa_antiga) }
+      antigas = Array.new(14) { |i| mensagem!(conversa_antiga, "antiga #{i}", quando: 2.days.ago + (i + 1).minutes) }
+      travel_to(2.days.ago + 15.minutes) { anterior.update!(status: :lost) }
       novo = card!('Novo', conversa_antiga)
       mensagem!(conversa_antiga, 'depois do card')
 
@@ -133,13 +187,23 @@ RSpec.describe Crm::Ai::PedidoAnterior do
   # Pega: conversa antiga longa inflar o prompt.
   it 'leva no máximo MAX_MENSAGENS mensagens, as mais recentes' do
     travel_to(2.days.ago) do
-      card!('Cotação', conversa_antiga).update!(status: :lost)
+      anterior = card!('Cotação', conversa_antiga)
       Array.new(12) { |i| mensagem!(conversa_antiga, "m#{i}", quando: (12 - i).minutes.ago) }
+      anterior.update!(status: :lost)
     end
 
     anteriores = contexto(card!('Novo', conversa_nova))[:previous_card][:messages].pluck(:content)
 
     expect(anteriores).to eq(((12 - described_class::MAX_MENSAGENS)...12).map { |i| "m#{i}" })
+  end
+
+  # Pega: tirar `pedido_anterior: true` do Evaluator e o eval (desligado por padrão) ser o único a perceber.
+  it 'a avaliação de card (Evaluator) manda o pedido anterior ao classificador' do
+    travel_to(3.days.ago) { card!('Cotação', conversa_antiga).update!(status: :lost) }
+
+    pacote = Crm::Ai::Evaluator.new(card: card!('Novo', conversa_nova), trigger: 'manual').stage_classifier(client: nil).pacote
+
+    expect(pacote[:previous_card]).to include(title: 'Cotação', status: 'lost')
   end
 
   describe Crm::Ai::StageClassifier do

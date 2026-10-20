@@ -295,10 +295,10 @@ module Crm::Ai::ClassifierPrompt
   # saída "é outro pedido / não dá para saber".
   PEDIDO_ANTERIOR = <<~ANTERIOR.strip
     PEDIDO ANTERIOR ENCERRADO ("previous_card"):
-    Quando "previous_card" vier preenchido, este contato já teve, neste mesmo funil, um pedido que foi encerrado antes de
-    este card nascer: "title", "status" (won ou resolved: deu certo; lost ou cancelled: não deu), "stage" (a etapa em que
-    ele estava), "closed_at", "value" (o valor registrado nele, quando houver) e "messages": as últimas mensagens dele até
-    o nascimento deste card, no formato de "recent_messages" e ANTERIORES a elas.
+    Quando "previous_card" vier preenchido, este contato já teve, neste mesmo funil, um pedido que foi encerrado SEM
+    sucesso antes de este card nascer: "title", "status" (lost ou cancelled), "stage" (a etapa em que ele estava),
+    "closed_at", "value" (o valor registrado nele, quando houver) e "messages": as últimas mensagens dele, do começo ao
+    encerramento, no formato de "recent_messages" e ANTERIORES a elas.
     Primeiro decida, pela conversa, se este card é o MESMO pedido retomado (o cliente voltou à mesma negociação ou ao
     mesmo atendimento: a mesma proposta, cotação, produto ou problema) ou outro pedido. Na dúvida, é outro pedido.
     - Mesmo pedido: o que já aconteceu no anterior vale como evidência deste card para a etapa e para "value" (proposta

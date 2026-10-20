@@ -1,20 +1,27 @@
 require 'rails_helper'
 
 # AVALIAÇÃO PAGA, DESLIGADA POR PADRÃO (CLAUDE.md do repo: eval com provedor pago só com execução explícita).
-# Roda com `CRM_EVAL_PAGO=1` e `OPENAI_API_KEY`. Teto de US$ 0,30 (#1925): a rodada para ao passar de US$ 0,27, somado
-# pelo evento de custo da IA do CRM (Crm::Ai::UsageRecorder::EVENT_NAME).
+# Roda com `CRM_EVAL_PAGO=1` e `OPENAI_API_KEY`. Teto de US$ 0,30 para a Issue inteira (#1925), somando todas as rodadas:
+# esta rodada para ao passar de TETO_USD, somado pelo evento de custo da IA do CRM (Crm::Ai::UsageRecorder::EVENT_NAME).
+# `EVAL_REPETICOES` (padrão 1) repete tudo para medir a variação: o que vale é a taxa, não um acerto.
 #
 # #1925, card que renasce: o cliente volta depois de um card encerrado e um card novo nasce. Cada caso roda a IA de etapa
 # real (Evaluator#stage_classifier, o mesmo caminho da avaliação) duas vezes: "antes" sem o pedido anterior (como a main)
-# e "depois" com ele. Três ramos de negócio, conversas inventadas, quatro casos por ramo:
+# e "depois" com ele. Três ramos de negócio, conversas inventadas, o card anterior sempre PERDIDO (ganho não volta como
+# pedido anterior), seis casos por ramo:
 # - outra_conversa: a proposta foi enviada na conversa do card perdido; o cliente volta por outra conversa e cita o pedido;
 # - outra_conversa_vaga: o mesmo, mas o cliente volta sem dizer qual era o pedido ("aquilo que você me mandou");
 # - mesma_conversa: a proposta ficou fora da janela de mensagens recentes da mesma conversa (volta vaga);
-# - outro_pedido (controle): o card anterior foi ganho e o cliente pede OUTRA coisa; o card novo não pode herdar etapa
-#   nem valor do anterior.
-# As decisões (etapa, valor, custo) vão para EVAL_SAIDA (JSON). Nenhum prompt é gravado.
+# Controles (o card novo não pode herdar etapa nem valor do anterior):
+# - outro_pedido: o cliente pede OUTRA coisa, com todas as letras;
+# - outro_vago: o cliente diz que quer outra coisa, sem dizer qual;
+# - so_oi: o cliente só diz "Oi" (não dá para saber: na dúvida, outro pedido).
+# As decisões (etapa, valor, custo) vão para EVAL_SAIDA (JSON), com as taxas no "resumo". Nenhum prompt é gravado.
 module PedidoAnteriorEval
-  TETO_USD = 0.27
+  # O que sobra do teto da Issue depois das rodadas anteriores (US$ 0,05), com folga.
+  TETO_USD = 0.20
+  # No "depois": os controles não podem errar; os casos de retomada, ao menos esta taxa.
+  TAXA_MINIMA_RETOMADA = 0.8
   ETAPAS = [
     ['Novo', 'Primeiro contato: ainda não sabemos o que o cliente quer.'],
     ['Em atendimento', 'Entendemos o pedido e estamos levantando dados para montar a proposta.'],
@@ -25,7 +32,9 @@ module PedidoAnteriorEval
   INICIAIS = ['Novo', 'Em atendimento'].freeze
   MODOS = %i[antes depois].freeze
   # O que o cliente diz ao voltar, por caso. "vaga": só quem leu o pedido anterior sabe que há proposta.
-  FALA_DA_VOLTA = { outra_conversa: :volta, outra_conversa_vaga: :vaga, mesma_conversa: :vaga, outro_pedido: :outro }.freeze
+  FALA_DA_VOLTA = { outra_conversa: :volta, outra_conversa_vaga: :vaga, mesma_conversa: :vaga, outro_pedido: :outro,
+                    outro_vago: :outro_vago, so_oi: nil }.freeze
+  CONTROLES = %i[outro_pedido outro_vago so_oi].freeze
 
   RAMOS = {
     'seguro' => {
@@ -37,8 +46,8 @@ module PedidoAnteriorEval
       volta: 'Oi, voltei. Aquela cotação do seguro do carro ainda está valendo? Queria fechar.',
       vaga: 'Oi, tudo bem? Pensei melhor e decidi: pode seguir com aquilo que você me mandou.',
       valor: 238_000,
-      ganho: 'Fechado, pode emitir a apólice do carro.',
-      outro: 'Oi! Agora quero cotar um seguro para o meu apartamento, é alugado.'
+      outro: 'Oi! Agora quero cotar um seguro para o meu apartamento, é alugado.',
+      outro_vago: 'Oi, tudo bem? Queria ver uma outra coisa com vocês, pode me ajudar?'
     },
     'escola de idiomas' => {
       pedido: 'Curso de inglês',
@@ -49,8 +58,8 @@ module PedidoAnteriorEval
       volta: 'Oi, consegui liberar a noite no trabalho. Aquela turma de inglês de R$ 390 ainda tem vaga? Quero fechar.',
       vaga: 'Oi! Consegui ajeitar o horário. Vamos seguir com aquilo que você me passou?',
       valor: 468_000,
-      ganho: 'Fechado, pode fazer a matrícula no inglês.',
-      outro: 'Oi! Minha filha de 9 anos quer aprender espanhol, vocês têm turma infantil?'
+      outro: 'Oi! Minha filha de 9 anos quer aprender espanhol, vocês têm turma infantil?',
+      outro_vago: 'Oi! Agora é outra coisa, queria tirar uma dúvida diferente com vocês.'
     },
     'reforma' => {
       pedido: 'Reforma do banheiro',
@@ -61,8 +70,8 @@ module PedidoAnteriorEval
       volta: 'Bom dia, pesquisei e o de vocês ainda é o melhor. O orçamento do banheiro ainda vale? Dá para começar mês que vem?',
       vaga: 'Bom dia, conversei aqui em casa e vamos fazer. Mantém aquilo que vocês me mandaram?',
       valor: 890_000,
-      ganho: 'Fechado, podem começar o banheiro na segunda.',
-      outro: 'Bom dia! Agora quero pintar a fachada da casa, vocês fazem pintura externa?'
+      outro: 'Bom dia! Agora quero pintar a fachada da casa, vocês fazem pintura externa?',
+      outro_vago: 'Bom dia, tenho um outro serviço em casa para ver com vocês, podem me atender?'
     }
   }.freeze
 end
@@ -143,17 +152,15 @@ RSpec.describe 'Eval pago #1925: card que renasce no mesmo pedido' do
     nova = tipo == :mesma_conversa ? antiga : conversa(contato)
     novo = card!(pipeline, contato, nova, 'Novo contato', 'Novo')
     fala(nova, 'Oi', cliente: true, quando: 1.minute.from_now)
-    fala(nova, dados.fetch(PedidoAnteriorEval::FALA_DA_VOLTA.fetch(tipo)), cliente: true, quando: 2.minutes.from_now)
+    volta = PedidoAnteriorEval::FALA_DA_VOLTA.fetch(tipo)
+    fala(nova, dados.fetch(volta), cliente: true, quando: 2.minutes.from_now) if volta
     [novo, pipeline]
   end
 
   def pedido_encerrado!(pipeline, antiga, dados, tipo)
     anterior = travel_to(5.days.ago) { card!(pipeline, antiga.contact, antiga, dados[:pedido], 'Proposta enviada') }
     historia(antiga, dados, inicio: 5.days.ago, extras: tipo == :mesma_conversa ? 14 : 0)
-    travel_to(4.days.ago) do
-      fala(antiga, dados[:ganho], cliente: true, quando: Time.current) if tipo == :outro_pedido
-      anterior.update!(status: tipo == :outro_pedido ? :won : :lost)
-    end
+    travel_to(4.days.ago) { anterior.update!(status: :lost) }
   end
 
   # "antes" = como a main, sem o pedido anterior; "depois" = com ele.
@@ -167,29 +174,49 @@ RSpec.describe 'Eval pago #1925: card que renasce no mesmo pedido' do
     com_custo { avaliador.stage_classifier(client: avaliador.classify_client).perform }
   end
 
+  def controle?(tipo) = PedidoAnteriorEval::CONTROLES.include?(tipo)
+
   def certo?(tipo, etapa_nome, valor)
-    return PedidoAnteriorEval::INICIAIS.include?(etapa_nome) && valor.nil? if tipo == :outro_pedido
+    return PedidoAnteriorEval::INICIAIS.include?(etapa_nome) && valor.nil? if controle?(tipo)
 
     PedidoAnteriorEval::AVANCADAS.include?(etapa_nome)
   end
 
-  it 'antes x depois, 3 ramos x 4 casos' do # rubocop:disable RSpec/NoExpectationExample
-    PedidoAnteriorEval::RAMOS.each_key do |ramo|
-      PedidoAnteriorEval::FALA_DA_VOLTA.each_key do |tipo|
-        card, pipeline = montar(ramo, tipo)
-        travel_to(3.minutes.from_now) do
-          PedidoAnteriorEval::MODOS.each do |modo|
-            resultado = classificar(card, com_anterior: modo == :depois)
-            nome = pipeline.stages.find_by(id: resultado[:suggested_stage_id])&.name
-            valor = resultado.dig(:value, :amount_cents)
-            saida[:casos] << { ramo: ramo, tipo: tipo, modo: modo, etapa: nome, confianca: resultado[:confidence],
-                               valor_centavos: valor, certo: certo?(tipo, nome, valor),
-                               valor_certo: valor == (tipo == :outro_pedido ? nil : PedidoAnteriorEval::RAMOS.dig(ramo, :valor)) }
-          end
-        end
+  def rodar_caso(ramo, tipo, repeticao)
+    card, pipeline = montar(ramo, tipo)
+    travel_to(3.minutes.from_now) do
+      PedidoAnteriorEval::MODOS.each do |modo|
+        resultado = classificar(card, com_anterior: modo == :depois)
+        nome = pipeline.stages.find_by(id: resultado[:suggested_stage_id])&.name
+        valor = resultado.dig(:value, :amount_cents)
+        saida[:casos] << { repeticao: repeticao, ramo: ramo, tipo: tipo, modo: modo, etapa: nome, confianca: resultado[:confidence],
+                           valor_centavos: valor, certo: certo?(tipo, nome, valor),
+                           valor_certo: valor == (controle?(tipo) ? nil : PedidoAnteriorEval::RAMOS.dig(ramo, :valor)) }
       end
     end
+  end
+
+  def taxa(casos) = casos.empty? ? 0.0 : (casos.count { |caso| caso[:certo] }.to_f / casos.size).round(3)
+
+  def resumo!
+    controles, retomadas = saida[:casos].partition { |caso| controle?(caso[:tipo]) }
+    saida[:resumo] = PedidoAnteriorEval::MODOS.each_with_object({}) do |modo, resumo|
+      resumo[:"retomada_#{modo}"] = taxa(retomadas.select { |caso| caso[:modo] == modo })
+      resumo[:"controles_#{modo}"] = taxa(controles.select { |caso| caso[:modo] == modo })
+    end
+  end
+
+  it 'antes x depois, 3 ramos x 6 casos' do
+    ENV.fetch('EVAL_REPETICOES', '1').to_i.times do |repeticao|
+      PedidoAnteriorEval::RAMOS.each_key do |ramo|
+        PedidoAnteriorEval::FALA_DA_VOLTA.each_key { |tipo| rodar_caso(ramo, tipo, repeticao + 1) }
+      end
+    end
+    resumo!
     gravar_saida!
+
+    expect(saida[:resumo]).to include(controles_depois: 1.0)
+    expect(saida[:resumo][:retomada_depois]).to be >= PedidoAnteriorEval::TAXA_MINIMA_RETOMADA
   ensure
     gravar_saida!
   end

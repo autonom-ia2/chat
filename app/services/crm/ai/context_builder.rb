@@ -53,13 +53,13 @@ module Crm
 
       private
 
-      # Card que renasce (#1925): o pedido encerrado que vem antes deste, com as últimas mensagens dele até o nascimento
-      # deste card (Crm::Ai::PedidoAnterior). Sem ids locais da memória: nada dali é prova de fato deste card.
+      # Card que renasce (#1925): o pedido encerrado sem sucesso antes deste, com as últimas mensagens da vida dele
+      # (Crm::Ai::PedidoAnterior). Sem ids locais da memória: nada dali é prova de fato deste card.
       def pedido_anterior_payload
         anterior = @pedido_anterior && Crm::Ai::PedidoAnterior.do_card(@card)
         return {} unless anterior
 
-        mensagens = Crm::Ai::PedidoAnterior.mensagens(anterior, @card, fora: recent_records.map(&:id))
+        mensagens = Crm::Ai::PedidoAnterior.mensagens(anterior, fora: recent_records.map(&:id))
         { previous_card: Crm::Ai::PedidoAnterior.payload(anterior).merge(messages: mensagens.map { |m| format_message(m, numerar: false) }) }
       end
 
