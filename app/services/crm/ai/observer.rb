@@ -21,11 +21,11 @@ module Crm
         token.present? && token.to_f > momento.to_f
       end
 
-      # Há uma avaliação deste card esperando a vez (#1923): quando rodar, ela lê o que chegou agora. Lê o card como ele
-      # veio do banco; `evaluate_after` que já passou é de uma avaliação que rodou (ou caiu).
-      def pendente?
+      # Há uma avaliação deste card esperando a vez que roda depois de `apos` (#1923): quando rodar, ela lê o que chegou
+      # agora. Lê o card como ele veio do banco; `evaluate_after` que já passou é de uma avaliação que rodou (ou caiu).
+      def pendente?(apos: Time.current)
         depois = @card.metadata.to_h.dig('ai', 'evaluate_after')
-        depois.present? && Time.zone.parse(depois.to_s) > Time.current
+        depois.present? && Time.zone.parse(depois.to_s) > apos
       rescue ArgumentError
         false
       end

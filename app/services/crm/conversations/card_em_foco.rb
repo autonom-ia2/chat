@@ -72,10 +72,16 @@ class Crm::Conversations::CardEmFoco
   def agendar_avaliacao(card)
     observer = Crm::Ai::Observer.new(card: card)
     if @message.incoming?
-      observer.schedule_evaluation unless observer.agendada_desde?(chegada)
+      observer.schedule_evaluation unless avaliacao_do_cliente_agendada?(observer)
     else
       observer.schedule_evaluation(espera: ESPERA_DA_EQUIPE) unless observer.pendente?
     end
+  end
+
+  # A avaliação agendada depois da chegada vale pela mensagem do cliente, desde que não demore mais que o debounce dele:
+  # a da equipe (ESPERA_DA_EQUIPE), processada antes do job desta mensagem, não pode atrasar a resposta ao cliente.
+  def avaliacao_do_cliente_agendada?(observer)
+    observer.agendada_desde?(chegada) && !observer.pendente?(apos: Crm::Ai::Config::DEBOUNCE_SECONDS.seconds.from_now)
   end
 
   # O mesmo critério do CardSyncer: caixa sem configuração do CRM conta como ligada.

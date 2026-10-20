@@ -214,6 +214,16 @@ RSpec.describe Crm::Conversations::CardEmFoco do
       expect(avaliados_depois(Crm::Ai::Config::DEBOUNCE_SECONDS.seconds + 1.second)).to eq([auto.id])
     end
 
+    it 'job da equipe roda antes do job do cliente que chegou primeiro: o cliente não espera a espera da equipe' do
+      cliente = incoming('Fechado, pode emitir')
+      equipe = travel(3.seconds) { da_equipe('Perfeito') }
+      travel(4.seconds) { sincronizar(equipe) }
+      travel(5.seconds) { sincronizar(cliente) }
+
+      depois = Time.zone.parse(auto.reload.metadata.dig('ai', 'evaluate_after'))
+      expect(depois - cliente.created_at).to be <= Crm::Ai::Config::DEBOUNCE_SECONDS + 6
+    end
+
     it 'eco do app do celular (WhatsApp) também é a equipe' do
       message = da_equipe(sender: nil, content_attributes: { external_echo: true })
       message.update_columns(sender_type: nil, sender_id: nil) # rubocop:disable Rails/SkipsModelValidations
