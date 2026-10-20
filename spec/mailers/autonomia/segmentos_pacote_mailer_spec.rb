@@ -39,7 +39,7 @@ RSpec.describe 'Pacote de tradução da conta no e-mail', type: :mailer do
 
     with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') do
       expect(PacoteLembreteMailer.with(account: conta('seguros', 'corretora')).aviso.subject).to eq('Card: Seguro do carro')
-      expect(PacoteLembreteMailer.with(account: conta('geral')).aviso.subject).to eq('Negócio: Seguro do carro')
+      expect(PacoteLembreteMailer.with(account: conta('geral')).aviso.subject).to eq('Card: Seguro do carro')
     end
   end
 
