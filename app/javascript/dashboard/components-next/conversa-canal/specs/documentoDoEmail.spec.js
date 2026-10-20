@@ -515,6 +515,27 @@ describe('fidelidade do e-mail (#1916)', () => {
     ).toContain('https://ok.test/a.png');
   });
 
+  it('Imprimir também leva o <hr> com estilo', () => {
+    const impresso = ler(
+      corpoParaImprimir(
+        documentoIsolado('<p>a</p><hr style="border-top:2px solid #123456">')
+      )
+    );
+    expect(impresso.querySelector('hr').getAttribute('style')).toContain(
+      'rgb(18, 52, 86)'
+    );
+  });
+
+  it('marca de imagem adiada vinda do remetente não sobrevive', () => {
+    const doc = ler(
+      documentoIsolado(
+        '<img id="x" data-src-adiado="/rails/active_storage/x.png"><a data-ancora="y">y</a>'
+      )
+    );
+    expect(doc.querySelector('#x').getAttribute(IMAGEM_ADIADA)).toBeNull();
+    expect(doc.querySelector(`[${ANCORA_INTERNA}]`)).toBeNull();
+  });
+
   it('citação só pela marca do leitor: frase do dia, depoimento e voo não somem', () => {
     const achou = corpo =>
       citacaoDoDocumento(`<html><body>${corpo}</body></html>`).achou;

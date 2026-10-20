@@ -373,6 +373,7 @@ export const documentoIsolado = (
 // com escopo de novo.
 export const corpoParaImprimir = srcdoc => {
   const doc = lerDocumento(srcdoc);
+  const devolverOQueOSanitizadorTira = antesDaLimpeza(doc);
   // Na impressão a imagem vai inteira, sem esperar a tela.
   doc.querySelectorAll(`img[${IMAGEM_ADIADA}]`).forEach(imagem => {
     imagem.setAttribute('src', imagem.getAttribute(IMAGEM_ADIADA));
@@ -396,6 +397,7 @@ export const corpoParaImprimir = srcdoc => {
   });
   // O sanitizador tira a proporção da imagem: volta, como na tela.
   const impresso = lerDocumento(limpo);
+  devolverOQueOSanitizadorTira(impresso);
   impresso.querySelectorAll('img').forEach(manterProporcao);
   return impresso.body.innerHTML;
 };

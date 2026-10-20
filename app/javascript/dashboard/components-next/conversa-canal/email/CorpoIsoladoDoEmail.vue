@@ -9,6 +9,7 @@ import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue';
 import { semRastreio } from './dadosDoEmail';
 import { telaDoPainel } from './cssDaMoldura';
 import { abrirImagemDoCorpo } from './imagemDoCorpo';
+import { imagemSegura } from './enderecoDoEmail';
 import {
   ANCORA_INTERNA,
   IMAGEM_ADIADA,
@@ -44,10 +45,11 @@ const EVENTOS_DO_PAINEL = {
   click: 'MouseEvent',
   keydown: 'KeyboardEvent',
 };
-// O Safari não roda ouvinte do painel dentro da moldura sem allow-scripts: lá o clique
-// só aparece como o foco saindo do painel para a moldura. Um clique de verdade, repassado
-// há pouco, já fez o serviço.
-const CLIQUE_RECENTE = 500;
+// O Safari (WebKit) não roda nenhum ouvinte do painel dentro da moldura sem
+// allow-scripts ("Blocked script execution… allow-scripts"; o clique na foto também não
+// abre lá). Nele o clique só aparece como o foco saindo do painel para a moldura. Nos
+// outros, o primeiro evento repassado prova que os ouvintes funcionam, e o foco não
+// dispara nada (nem com Tab até o e-mail).
 const COPIAR_DO_EVENTO = [
   'key',
   'code',
@@ -70,7 +72,7 @@ const altura = ref(0);
 let documentoLigado = null;
 let observador = null;
 let vigiaDeImagens = null;
-let ultimoRepasse = -Infinity;
+let ouvintesFuncionam = false;
 let espera = 0;
 let recentes = [];
 let pausada = false;
@@ -152,9 +154,11 @@ const aoCarregar = () => {
   medir({ explicada: true });
 };
 
+// O endereço já foi conferido ao montar o documento; confere de novo antes do src.
 const carregarImagem = imagem => {
-  imagem.setAttribute('src', imagem.getAttribute(IMAGEM_ADIADA));
+  const endereco = imagemSegura(imagem.getAttribute(IMAGEM_ADIADA));
   imagem.removeAttribute(IMAGEM_ADIADA);
+  if (endereco) imagem.setAttribute('src', endereco);
 };
 
 // O observador é do painel: a interseção é com a tela de verdade (a da conversa), que a
@@ -190,8 +194,8 @@ const irParaAncora = evento => {
 // Uma cópia do evento no documento do painel (não na moldura: assim nenhum @click dos
 // pais dela dispara). O que a âncora já tratou não vai.
 const repassarAoPainel = evento => {
+  ouvintesFuncionam = true;
   if (evento.defaultPrevented) return;
-  if (evento.type === 'pointerdown') ultimoRepasse = performance.now();
   const Evento = window[EVENTOS_DO_PAINEL[evento.type]] || MouseEvent;
   const copia = Object.fromEntries(
     COPIAR_DO_EVENTO.filter(nome => nome in evento).map(nome => [
@@ -205,8 +209,7 @@ const repassarAoPainel = evento => {
 };
 
 const focoEntrouNoEmail = () => {
-  if (document.activeElement !== moldura.value) return;
-  if (performance.now() - ultimoRepasse < CLIQUE_RECENTE) return;
+  if (ouvintesFuncionam || document.activeElement !== moldura.value) return;
   ['pointerdown', 'click'].forEach(tipo =>
     document.dispatchEvent(
       new (window[EVENTOS_DO_PAINEL[tipo]] || MouseEvent)(tipo, {
@@ -247,6 +250,7 @@ const ligar = doc => {
   // (abrir um <details>, por exemplo) também.
   doc.addEventListener('load', aoCarregar, true);
   doc.addEventListener('click', aoClicar);
+  // A âncora antes do repasse: o que ela tratou (preventDefault) não vai ao painel.
   ['click', 'keydown'].forEach(tipo =>
     doc.addEventListener(tipo, irParaAncora)
   );

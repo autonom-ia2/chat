@@ -47,9 +47,10 @@ const hrComoDiv = (doc, marca) =>
     return guardados;
   });
 
+// Pelo fim do id: na impressão o sanitizador põe um prefixo de escopo em cada id.
 const divComoHr = (doc, marca, guardados) => {
   guardados.forEach((atributos, indice) => {
-    const div = doc.getElementById(`${marca}-${indice}`);
+    const div = doc.querySelector(`[id$="${marca}-${indice}"]`);
     if (!div) return;
     const hr = doc.createElement('hr');
     ['style', 'class'].forEach(nome => {
