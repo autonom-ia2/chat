@@ -127,19 +127,19 @@ terminate_green_without_image() {
   exit "$status"
 }
 
-# #1979: o rollback congela a produção (DEPLOY_FREEZE_PARAMETER = on:<run>:<tentativa> do rollback) e só um deploy manual com
-# descongelar=true a solta. O run no valor deixa o descongelar saber se outro rollback congelou depois dele. Parâmetro
-# que não existe conta como descongelada; qualquer outro erro falha, para nenhum deploy seguir sem saber.
-read_deploy_freeze() {
-  local error_file value status=0
+# #1979: congelamento em duas chaves, cada uma com um único dono, porque o SSM não lê e grava de forma atômica.
+# O rollback grava o pedido (DEPLOY_FREEZE_PARAMETER = on:<run>:<tentativa>); o deploy manual com descongelar=true
+# grava a liberação (DEPLOY_FREEZE_RELEASED_PARAMETER) com o pedido que viu na largada. Congelada = há pedido e ele não
+# é o liberado. Liberação velha, mesmo gravada atrasada, nunca solta um rollback mais novo, que tem outro valor.
+# Chave que não existe conta como vazia; qualquer outro erro falha, para nenhum deploy seguir sem saber.
+read_ssm_value() {
+  local error_file status=0
   error_file=$(mktemp)
-  value=$(aws ssm get-parameter --name "$DEPLOY_FREEZE_PARAMETER" \
-    --query Parameter.Value --output text 2>"$error_file") || status=$?
+  SSM_VALUE=$(aws ssm get-parameter --name "$1" --query Parameter.Value --output text 2>"$error_file") || status=$?
   if [ "$status" -ne 0 ]; then
+    SSM_VALUE=""
     if grep -qF ParameterNotFound "$error_file"; then
       rm -f "$error_file"
-      DEPLOY_FREEZE=off
-      DEPLOY_FREEZE_VALUE=""
       return 0
     fi
     cat "$error_file" >&2
@@ -147,19 +147,38 @@ read_deploy_freeze() {
     return 1
   fi
   rm -f "$error_file"
-  DEPLOY_FREEZE_VALUE="$value"
-  case "$value" in
-    off) DEPLOY_FREEZE=off ;;
-    on|on:*) DEPLOY_FREEZE=on ;;
+}
+
+read_deploy_freeze() {
+  local released
+  read_ssm_value "$DEPLOY_FREEZE_RELEASED_PARAMETER" || return 1
+  released="$SSM_VALUE"
+  read_ssm_value "$DEPLOY_FREEZE_PARAMETER" || return 1
+  DEPLOY_FREEZE_VALUE="$SSM_VALUE"
+  case "$DEPLOY_FREEZE_VALUE" in
+    ''|off) DEPLOY_FREEZE=off ;;
+    on|on:*)
+      if [ "$DEPLOY_FREEZE_VALUE" = "$released" ]; then
+        DEPLOY_FREEZE=off
+      else
+        DEPLOY_FREEZE=on
+      fi
+      ;;
     *)
-      echo "deploy_freeze_invalid:$value" >&2
+      echo "deploy_freeze_invalid:$DEPLOY_FREEZE_VALUE" >&2
       return 1
       ;;
   esac
 }
 
+# Só o rollback chama.
 write_deploy_freeze() {
   aws ssm put-parameter --name "$DEPLOY_FREEZE_PARAMETER" --type String --value "$1" --overwrite >/dev/null
+}
+
+# Só o deploy manual com descongelar=true chama, com o pedido que viu na largada.
+release_deploy_freeze() {
+  aws ssm put-parameter --name "$DEPLOY_FREEZE_RELEASED_PARAMETER" --type String --value "$1" --overwrite >/dev/null
 }
 
 abort_if_frozen() {

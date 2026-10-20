@@ -85,7 +85,9 @@ env:
   CURRENT_TG_PARAMETER: /chatwoot/prod/blue-green/current-target-group-arn
   CURRENT_INSTANCE_PARAMETER: /chatwoot/prod/blue-green/current-instance-id
   PREVIOUS_INSTANCE_PARAMETER: /chatwoot/prod/blue-green/previous-instance-id
+  # #1979: pedido de congelamento (só o rollback grava) e liberação (só o deploy com descongelar=true grava).
   DEPLOY_FREEZE_PARAMETER: /chatwoot/prod/blue-green/deploy-freeze
+  DEPLOY_FREEZE_RELEASED_PARAMETER: /chatwoot/prod/blue-green/deploy-freeze-released
   ROOT_VOLUME_SIZE_GB: '30'
 
 jobs:
@@ -191,9 +193,11 @@ jobs:
         run: |
           source scripts/deploy/blue-green-recovery.sh
           if [ "$DESCONGELAR" = true ]; then
-            # O descongelar no fim só solta este congelamento, nunca um que um rollback faça depois.
+            # O descongelar no fim libera só este pedido, nunca um que um rollback faça depois.
             read_deploy_freeze
-            echo "FREEZE_AT_START=$DEPLOY_FREEZE_VALUE" >> "$GITHUB_ENV"
+            if [ "$DEPLOY_FREEZE" = on ]; then
+              echo "FREEZE_AT_START=$DEPLOY_FREEZE_VALUE" >> "$GITHUB_ENV"
+            fi
           else
             abort_if_frozen
           fi
@@ -1105,8 +1109,8 @@ jobs:
           echo "SSO redirect smoke test failed"
           exit 1
 
-      # #1979: o deploy de descongelar só solta a produção depois de subir de verdade (tráfego e SSO conferidos), e só
-      # se o congelamento ainda for o que ele viu na largada: um rollback disparado enquanto ele subia vale.
+      # #1979: o deploy de descongelar só solta a produção depois de subir de verdade (tráfego e SSO conferidos), e só o
+      # pedido que ele viu na largada: um rollback disparado enquanto ele subia tem outro valor e continua valendo.
       # Falhar aqui (SSM) não pode pular a entrega da blue ao desligar-blue: o tráfego já está na green. O pior caso é a
       # produção seguir congelada, com o aviso no run; outro deploy manual com descongelar=true solta.
       - name: Unfreeze production
@@ -1115,13 +1119,17 @@ jobs:
         continue-on-error: true
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          read_deploy_freeze
-          if [ "$DEPLOY_FREEZE_VALUE" != "${FREEZE_AT_START:-}" ]; then
-            echo "::warning::Um rollback congelou a produção depois que este deploy começou ($DEPLOY_FREEZE_VALUE): ela segue congelada."
+          if [ -z "${FREEZE_AT_START:-}" ]; then
+            echo "A produção não estava congelada na largada: nada a liberar."
             exit 0
           fi
-          write_deploy_freeze off
-          echo "::notice::Produção descongelada por este deploy manual."
+          release_deploy_freeze "$FREEZE_AT_START"
+          read_deploy_freeze
+          if [ "$DEPLOY_FREEZE" = on ]; then
+            echo "::warning::Liberado $FREEZE_AT_START, mas um rollback congelou depois ($DEPLOY_FREEZE_VALUE): a produção segue congelada."
+          else
+            echo "::notice::Produção descongelada por este deploy manual."
+          fi
 
       # Tráfego e workers já estão na green. Parar a blue e terminar o rollback mais antigo agora é do job desligar-blue,
       # fora da trava do deploy: os ~5,5 min dessa etapa deixam de segurar o próximo deploy.
@@ -1601,26 +1609,7 @@ jobs:
                 if (volta < 3) await new Promise((ok) => setTimeout(ok, 20000));
               }
             };
-            // O SSM não lê e grava de forma atômica: um deploy de descongelar que releu o valor antigo um instante antes
-            // pode ter gravado off por cima deste congelamento. Ele grava uma vez só, então: reler, congelar de novo se
-            // caiu e varrer outra vez (quem passou pela conferência nessa janela ainda não chegou ao tráfego).
-            const lerCongelamento = async () => {
-              const r = await exec.getExecOutput('aws', ['ssm', 'get-parameter', '--name', process.env.DEPLOY_FREEZE_PARAMETER,
-                '--query', 'Parameter.Value', '--output', 'text'], { ignoreReturnCode: true, silent: true });
-              if (r.exitCode === 0) return r.stdout.trim();
-              if (r.stderr.includes('ParameterNotFound')) return '';
-              throw new Error(`Não deu para ler o congelamento: ${r.stderr.trim()}`);
-            };
-            const meu = `on:${process.env.GITHUB_RUN_ID}:${process.env.GITHUB_RUN_ATTEMPT}`;
-            for (let rodada = 1; rodada <= 3; rodada += 1) {
-              await varrer();
-              const agora = await lerCongelamento();
-              if (agora === 'on' || agora.startsWith('on:')) return;
-              core.warning(`O congelamento caiu durante a varredura (valor "${agora}"): congelando de novo e varrendo outra vez.`);
-              await exec.exec('aws', ['ssm', 'put-parameter', '--name', process.env.DEPLOY_FREEZE_PARAMETER, '--type', 'String',
-                '--value', meu, '--overwrite'], { silent: true });
-            }
-            core.setFailed('O congelamento caiu três vezes durante a varredura: confira quem está descongelando. O rollback não segue.');
+            await varrer();
 
   rollback:
     name: Rollback To Previous Target Group
