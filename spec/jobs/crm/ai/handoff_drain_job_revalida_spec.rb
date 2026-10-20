@@ -253,4 +253,83 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     described_class.perform_now
     expect(conversation.reload.assignee_id).to eq(ana.id)
   end
+
+  # 4ª revisão do Codex (ALTO 1): só a entrega confirmada (a marca sai) ou o pedido retirado encerram o prazo total. Uma
+  # tentativa que não entregou mantém o prazo, e vencido ele entrega na rodada seguinte, sem reler.
+  it 'entrega que falha no meio do prazo não o zera: com mensagens chegando, sai na rodada depois dos 10 min', :aggregate_failures do
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+    allow(revalida).to receive(:call).and_return({ passa: true, motivo: 'segue aberto', decisao: 'problema_em_aberto' })
+    segurar!
+    inicio = Time.current
+
+    [0, 2, 4, 6].each do |minuto|
+      travel_to(inicio + minuto.minutes) do
+        fala!('e mais isto', tipo: :incoming) if minuto.positive?
+        described_class.perform_now
+        roda_releituras!
+      end
+    end
+    prazo = marca['revalidacao_comecou_em']
+
+    travel_to(inicio + 8.minutes) { described_class.perform_now }
+    expect(releituras).to be_empty
+    expect(conversation.reload.assignee_id).to be_nil
+    expect(marca['revalidacao_comecou_em']).to eq(prazo)
+
+    travel_to(inicio + 10.minutes) do
+      fala!('ainda estou aqui', tipo: :incoming)
+      described_class.perform_now
+      roda_releituras!
+    end
+    expect(marca['revalidacao_comecou_em']).to eq(prazo)
+
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online' })
+    travel_to(inicio + 12.minutes) do
+      fala!('alô?', tipo: :incoming)
+      described_class.perform_now
+    end
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+    expect(releituras).to be_empty
+    expect(revalida).to have_received(:call).exactly(5).times
+  end
+
+  def leva_o_card_para_outro_funil!(com_ia:)
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    stage.update!(metadata: card.stage.metadata)
+    pipeline.update!(metadata: (pipeline.metadata || {}).merge('ai' => { 'enabled' => com_ia }))
+    Crm::Card.find(card.id).update!(pipeline: pipeline, stage: stage)
+  end
+
+  # 4ª revisão do Codex (ALTO 2): o card muda de funil durante a chamada; a resposta é do funil antigo.
+  it 'card levado a um funil sem IA durante a chamada: o "resolvido" não é aplicado e a conversa é entregue', :aggregate_failures do
+    segurar!
+    described_class.perform_now
+    allow(revalida).to receive(:call) do
+      leva_o_card_para_outro_funil!(com_ia: false)
+      { passa: false, motivo: 'resolvido', decisao: 'resolvido' }
+    end
+
+    roda_releituras!
+    expect(Crm::Entrega::Marca.presente?(conversation.reload)).to be(true)
+
+    described_class.perform_now
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+    expect(releituras).to be_empty
+  end
+
+  it 'card levado a outro funil com IA durante a chamada: a resposta é descartada e a rodada seguinte relê', :aggregate_failures do
+    segurar!
+    described_class.perform_now
+    allow(revalida).to receive(:call) do
+      leva_o_card_para_outro_funil!(com_ia: true)
+      { passa: false, motivo: 'resolvido', decisao: 'resolvido' }
+    end
+
+    roda_releituras!
+    expect(Crm::Entrega::Marca.presente?(conversation.reload)).to be(true)
+
+    described_class.perform_now
+    expect(conversation.reload.assignee_id).to be_nil
+    expect(releituras.size).to eq(1)
+  end
 end

@@ -15,10 +15,9 @@ module Crm::Entrega::Marca
   PRESENTE_SQL = "(conversations.additional_attributes ->> '#{CHAVE}') IS NOT NULL".freeze
   # O motivo da IA do CRM guardado na marca, no mesmo tamanho do "reason" do classificador.
   RAZAO_MAX = 300
-  # A releitura da IA do CRM (#1975): o job em curso (sai quando ele termina ou a resposta é descartada) e o prazo total
-  # dela (`revalidacao_comecou_em`, que só sai quando a fila vai tentar a entrega, ou com a espera).
+  # A releitura da IA do CRM (#1975): o job em curso (sai quando ele termina ou a resposta é descartada). O prazo total
+  # dela (`revalidacao_comecou_em`) só sai com a marca (pessoa atribuída, pedido retirado) ou com uma espera nova.
   RELEITURA_EM_CURSO = %w[revalidando_desde reenfileirado_em revalidacao_iniciada_em].freeze
-  RELEITURA = (RELEITURA_EM_CURSO + %w[revalidacao_comecou_em]).freeze
 
   module_function
 
@@ -93,8 +92,8 @@ module Crm::Entrega::Marca
   end
 
   # A releitura da fila (#1975, Crm::Ai::RevalidacaoNaFila) terminou com o pedido de pé, ou falhou: guarda a última
-  # mensagem lida, o motivo novo (qual problema ficou aberto) e se falhou, e o job em curso sai. O prazo total fica:
-  # só a tentativa de entrega o encerra (sem_prazo!). Só na memória: quem chama grava, sob a trava.
+  # mensagem lida, o motivo novo (qual problema ficou aberto) e se falhou, e o job em curso sai. O prazo total fica.
+  # Só na memória: quem chama grava, sob a trava.
   def revalidada!(conversation, ate:, razao:, falhou: false)
     valor = (dados(conversation) || {}).except(*RELEITURA_EM_CURSO).merge('revalidado_ate' => ate)
     valor['razao'] = razao.to_s.first(RAZAO_MAX) if razao.present?
@@ -112,13 +111,6 @@ module Crm::Entrega::Marca
 
   def sem_releitura!(conversation)
     valor = (dados(conversation) || {}).except(*RELEITURA_EM_CURSO)
-    conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
-  end
-
-  # A fila vai tentar entregar (#1975): a releitura desta espera acabou, e uma mensagem nova depois pede outra, com
-  # prazo novo.
-  def sem_prazo!(conversation)
-    valor = (dados(conversation) || {}).except(*RELEITURA)
     conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
   end
 
