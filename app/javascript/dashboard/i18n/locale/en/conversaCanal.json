@@ -583,6 +583,9 @@
         "INSTRUCAO_LONGA": "The request to the AI is too long (up to {limite} characters). Make it shorter.",
         "MUITOS_PEDIDOS": "Too many AI requests in a minute. Wait a moment and try again."
       }
+    },
+    "NOTA_DO_CONECTOR": {
+      "AVISO": "⚠️ A WhatsApp message did not reach this conversation. Check the inbox phone."
     }
   }
 }
