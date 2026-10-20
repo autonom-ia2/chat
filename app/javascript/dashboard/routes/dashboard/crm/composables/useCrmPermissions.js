@@ -10,6 +10,7 @@ import {
   CRM_VIEW_REPORTS_PERMISSION,
   CRM_ADMIN_PERMISSION,
   CRM_EXPORT_PERMISSION,
+  CRM_DELETE_CARDS_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 
 /**
@@ -56,6 +57,10 @@ export function useCrmPermissions() {
       hasCrmPermission(CRM_MOVE_CARDS_PERMISSION) ||
       hasCrmPermission(CRM_MANAGE_CARDS_PERMISSION)
   );
+  // #1874 — arquivar tem chave própria; o agente sem função continua arquivando.
+  const canDeleteCards = computed(() =>
+    hasCrmPermission(CRM_DELETE_CARDS_PERMISSION)
+  );
   const canManagePipelines = computed(() =>
     hasCrmPermission(CRM_MANAGE_PIPELINES_PERMISSION)
   );
@@ -81,6 +86,7 @@ export function useCrmPermissions() {
     canViewCrm,
     canManageCards,
     canMoveCards,
+    canDeleteCards,
     canManagePipelines,
     canManageAi,
     canViewReports,

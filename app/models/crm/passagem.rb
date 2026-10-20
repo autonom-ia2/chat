@@ -7,6 +7,9 @@ class Crm::Passagem < ApplicationRecord
   self.table_name = 'crm_passagens'
 
   CLASSES = ['User', 'Autonomia::Agents::Agent', 'AgentBot'].freeze
+  # Passagens em que o robô passou a conversa mesmo sem `de` gravado (o robô que pede ou é desligado, o n8n, a IA do
+  # CRM, a recuperação de mensagem). Com `de` gravado, a origem é a própria classe dele.
+  MOTIVOS_DA_IA = %w[robo_pediu robo_desligado n8n ia_crm recuperacao_falhou recuperacao_tarde].freeze
 
   # Uma ponta já resolvida: tipo (:pessoa | :ia), classe ('User' | 'Autonomia::Agents::Agent' | 'AgentBot'), id (na
   # tabela da classe) e o nome gravado na hora.
@@ -35,6 +38,11 @@ class Crm::Passagem < ApplicationRecord
   validates :pedida_por_type, :devolvida_por_type, inclusion: { in: CLASSES }, allow_nil: true
 
   scope :abertas, -> { where(devolvida_em: nil) }
+  # A IA passou a conversa para uma pessoa da equipe (filtro "Recebidas da IA" da caixa, #1883). `de_type` vazio não é
+  # IA por si (a atribuição sem ninguém antes): só entra pelo motivo. Pessoa → IA (passar_para_ia) fica de fora.
+  scope :da_ia_para_equipe, lambda {
+    where(para_type: 'User').merge(where.not(de_type: 'User').or(where(motivo: MOTIVOS_DA_IA)))
+  }
   # A trava da conversa serializa as gravações: o id é a ordem real (o relógio de dois servidores pode divergir).
   scope :em_ordem, -> { order(id: :desc) }
 

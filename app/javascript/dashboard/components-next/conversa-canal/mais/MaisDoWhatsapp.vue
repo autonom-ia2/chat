@@ -1,7 +1,8 @@
 <script setup>
 // O "+" da barra de digitar (#1702), como o clipe do WhatsApp: documento e fotos
 // e vídeos entram no anexo de sempre, cada um pelo seu seletor; localização, contato, botão de link, opções e pedir localização
-// abrem uma janela curta com a prévia do que o cliente vai ver.
+// abrem uma janela curta com a prévia do que o cliente vai ver. A enquete só aparece
+// onde o servidor a aceita (enqueteNoMais.js).
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
@@ -9,6 +10,7 @@ import Icon from 'next/icon/Icon.vue';
 import JanelaDoMais from './JanelaDoMais.vue';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { useMapGetter } from 'dashboard/composables/store';
+import { ENQUETE, FLAG_DA_ENQUETE, comoSaiAEnquete } from './enqueteNoMais';
 
 const props = defineProps({
   caixa: { type: Object, required: true },
@@ -35,6 +37,15 @@ const conversa = useMapGetter('getSelectedChat');
 const soTexto = computed(() => Boolean(conversa.value?.whatsapp_api_reply));
 // Em texto: WAHA, 360dialog (o envio do #1473 só é nativo na Cloud API) e número reserva.
 const viraTexto = computed(() => !ehOficial.value || soTexto.value);
+
+const contaAtual = useMapGetter('getCurrentAccountId');
+const flagDaConta = useMapGetter('accounts/isFeatureEnabledonAccount');
+const enquete = computed(() =>
+  comoSaiAEnquete({
+    flagLigada: Boolean(flagDaConta.value(contaAtual.value, FLAG_DA_ENQUETE)),
+    conversa: conversa.value,
+  })
+);
 
 // Como o menu de anexar do app: só o desenho colorido (sem bolinha atrás), nas
 // cores do WhatsApp; ícones da biblioteca do painel. `separado`: linha antes,
@@ -85,6 +96,13 @@ const ITENS = [
     cor: 'text-[#FFBC38]',
   },
   {
+    tipo: 'enquete',
+    chave: 'ENQUETE',
+    icone: 'i-ph-chart-bar-fill',
+    cor: 'text-[#FFBC38]',
+    soComEnquete: true,
+  },
+  {
     tipo: 'botaoDeLink',
     chave: 'BOTAO_DE_LINK',
     icone: 'i-ph-link-bold',
@@ -104,6 +122,7 @@ const itens = computed(() =>
   ITENS.filter(
     item =>
       (!item.soOficial || !viraTexto.value) &&
+      (!item.soComEnquete || Boolean(enquete.value)) &&
       (!SELETORES[item.tipo] || !soTexto.value)
   )
 );
@@ -237,6 +256,7 @@ const aoTeclar = evento => {
       ref="janela"
       :inbox-id="caixa.id"
       :vira-texto="viraTexto"
+      :enquete-em-texto="enquete === ENQUETE.TEXTO"
       :enviar="enviar"
       @fechou="botaoRef?.focus()"
     />

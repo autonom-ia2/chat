@@ -134,6 +134,8 @@ export const buildCrmCardColumns = ({
   includeMeta = false,
   // #1498 — funil de Atender sem a coluna Valor (a Cobrança mantém).
   includeValue = true,
+  // #1874 — sem nenhuma ação em massa possível, a lista não tem seleção.
+  includeSelect = true,
 } = {}) => {
   const L = key => t(`CRM_KANBAN.LIST.COLUMNS.${key}`);
 
@@ -289,9 +291,11 @@ export const buildCrmCardColumns = ({
         ]
       : []),
   ];
-  return includeValue
-    ? colunas
-    : colunas.filter(coluna => coluna.id !== 'value');
+  const fora = [
+    ...(includeValue ? [] : ['value']),
+    ...(includeSelect ? [] : ['select']),
+  ];
+  return colunas.filter(coluna => !fora.includes(coluna.id));
 };
 
 /**

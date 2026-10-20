@@ -33,4 +33,6 @@ export const BUS_EVENTS = {
   MFA_STATE_CHANGED: 'MFA_STATE_CHANGED',
   // Tela inicial da caixa (#1801): um número clicado troca a aba da lista (Minhas, Sem responsável, Todas).
   TELA_INICIAL_ABA: 'TELA_INICIAL_ABA',
+  // Filtros pelo link (#1883): a releitura voltou a lista longa para a primeira página; a rolagem vai ao topo.
+  LISTA_DO_FILTRO_DO_LINK_NO_TOPO: 'LISTA_DO_FILTRO_DO_LINK_NO_TOPO',
 };

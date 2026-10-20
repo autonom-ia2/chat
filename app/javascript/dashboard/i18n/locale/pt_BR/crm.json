@@ -3315,6 +3315,7 @@
       "CRM_VIEW": "Visualizar CRM",
       "CRM_MANAGE_CARDS": "Gerenciar cards",
       "CRM_MOVE_CARDS": "Mover cards",
+      "CRM_DELETE_CARDS": "Arquivar cards",
       "CRM_MANAGE_PIPELINES": "Gerenciar funis",
       "CRM_MANAGE_AI": "Gerenciar IA",
       "CRM_VIEW_REPORTS": "Visualizar relatórios",
@@ -3324,6 +3325,7 @@
       "CRM_VIEW": "Ler funis, etapas e cards.",
       "CRM_MANAGE_CARDS": "Criar e atualizar cards.",
       "CRM_MOVE_CARDS": "Mover cards entre etapas.",
+      "CRM_DELETE_CARDS": "Arquivar cards, um a um ou vários de uma vez.",
       "CRM_MANAGE_PIPELINES": "Criar e editar funis e etapas.",
       "CRM_MANAGE_AI": "Gerenciar as configurações de IA do CRM.",
       "CRM_VIEW_REPORTS": "Ler relatórios do CRM.",
@@ -5968,6 +5970,11 @@
     "EMPTY": "Nenhuma conversa neste funil."
   },
   "FORK_CONVERSATION_LIST": {
-    "PARTICIPATING": "Em que participo"
+    "PARTICIPATING": "Em que participo",
+    "FILTRO_DO_LINK": {
+      "DA_IA": "Recebidas da IA",
+      "ESPERANDO": "Esperando há mais de {n} min",
+      "DA_IA_ESPERANDO": "Da IA, esperando +{n} min"
+    }
   }
 }
