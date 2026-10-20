@@ -8,13 +8,14 @@ class Crm::Numeros::CreditoDaEquipe < Crm::Numeros::Credito
     @pipeline_ids = pipeline_ids
   end
 
-  # { responsavel_id (ou nil) => { vendas:, valores: { moeda => cents }, resolvidos: } }, `estimado` e os ids ganhos.
+  # { responsavel_id (ou nil) => { vendas:, valores: { moeda => cents }, resolvidos: } }, `estimado` e os ids ganhos e resolvidos.
   def perform
     por_pessoa = fechados.group_by { |fechado| responsavel_de(fechado) }.transform_values { |lista| somar(lista) }
     {
       por_pessoa: por_pessoa,
       estimado: fechados.any? { |fechado| fechamentos[fechado[:id]].nil? },
-      ganhos: fechados.select { |fechado| fechado[:status] == 'won' }.pluck(:id)
+      ganhos: fechados.select { |fechado| fechado[:status] == 'won' }.pluck(:id),
+      resolvidos: fechados.select { |fechado| fechado[:status] == 'resolved' }.pluck(:id)
     }
   end
 

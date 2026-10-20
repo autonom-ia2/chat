@@ -102,7 +102,7 @@ class Crm::Numeros::Equipe
   end
 
   def frase_de_vendas
-    { tipo: 'equipe_vendas', feito: reais(somado(:valor)), meta: meta_de_venda, ajuda: @mes.fechado? ? 0 : pessoas.ajuda.size }
+    { tipo: 'equipe_vendas', feito: reais(somado(:valor)), meta: meta_de_venda, ajuda: @mes.fechado? ? 0 : pessoas.precisam_de_ajuda.size }
   end
 
   def topo_de_atendimento
@@ -138,10 +138,10 @@ class Crm::Numeros::Equipe
   end
 
   def atendendo
-    resolvidos = @cards.fechados_na_lista(:atende, @mes.inicio)
+    lista = !@mes.fechado? && @cards.fechados_na_lista(:atende, @mes.inicio).sort == credito[:resolvidos].sort
     abertos = @cards.abertos(:atende)
     { escopo: 'equipe', itens: [
-      { tipo: 'resolvidos', n: somado(:resolvidos), lista: !@mes.fechado? && resolvidos.size == somado(:resolvidos) },
+      { tipo: 'resolvidos', n: somado(:resolvidos), lista: lista },
       { tipo: 'lembretes', n: lembretes },
       { tipo: 'parados_atende', n: @cards.parados(abertos).count }
     ] }

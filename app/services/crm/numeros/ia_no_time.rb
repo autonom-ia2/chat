@@ -76,19 +76,21 @@ class Crm::Numeros::IaNoTime
                                       conversation_id: conversas(:atende)).select(:conversation_id)
     Conversation.where(account_id: @account.id, id: resolvidas)
                 .where(com_robo_sql('conversations.id'))
-                .where.not(id: passadas_para_pessoa).where.not(id: com_resposta_de_pessoa)
+                .where.not(id: passadas_para_pessoa(resolvidas)).where.not(id: com_resposta_de_pessoa(resolvidas))
   end
 
   # Alguma vez uma pessoa entrou: a passagem gravada ou o "humano assumiu" do core.
-  def passadas_para_pessoa
-    passagens = Crm::Passagem.da_ia_para_equipe.where(account_id: @account.id).select(:conversation_id)
-    assumidas = ReportingEvent.where(account_id: @account.id, name: 'conversation_bot_handoff').select(:conversation_id)
+  # Só entre as candidatas (as resolvidas do mês): nada de varrer o histórico da conta.
+  def passadas_para_pessoa(candidatas)
+    passagens = Crm::Passagem.da_ia_para_equipe.where(account_id: @account.id, conversation_id: candidatas).select(:conversation_id)
+    assumidas = ReportingEvent.where(account_id: @account.id, name: 'conversation_bot_handoff', conversation_id: candidatas)
+                              .select(:conversation_id)
     Conversation.where(id: passagens).or(Conversation.where(id: assumidas)).select(:id)
   end
 
-  def com_resposta_de_pessoa
-    Message.unscope(:order).where(account_id: @account.id, message_type: Message.message_types[:outgoing], sender_type: 'User',
-                                  private: false).select(:conversation_id)
+  def com_resposta_de_pessoa(candidatas)
+    Message.unscope(:order).where(account_id: @account.id, conversation_id: candidatas, message_type: Message.message_types[:outgoing],
+                                  sender_type: 'User', private: false).select(:conversation_id)
   end
 
   def com_robo_sql(coluna)

@@ -160,6 +160,15 @@ RSpec.describe Crm::Numeros::Equipe do
     expect(equipe(chave: '2026-09')[:ajuda]).to eq([])
   end
 
+  it 'a lista de ajuda mostra até 3 pessoas, e a frase do topo conta todas' do
+    [ana, bruno, carla, admin].each { |pessoa| 5.times { card(sale, owner: pessoa, next_follow_up_at: 1.day.ago) } }
+
+    result = equipe(pipelines: [sale])
+
+    expect(result[:ajuda].map { |item| item[:pessoa][:nome] }).to eq(%w[Ana Bruno Carla])
+    expect(result[:topo][:frase]).to include(tipo: 'equipe_vendas', ajuda: 4)
+  end
+
   it 'próximo passo: venda do mês sem responsável vira a faixa amarela; em modo leitura, nada de próximo nem botão' do
     won = card(sale, owner: nil, value_cents: 10_000)
     close(won)

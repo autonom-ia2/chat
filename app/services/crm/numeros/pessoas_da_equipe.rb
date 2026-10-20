@@ -34,8 +34,13 @@ class Crm::Numeros::PessoasDaEquipe
     no_ritmo.sort_by { |linha| linha[:voce] ? 1 : 0 }.map { |linha| linha[:voce] ? { voce: true } : { nome: linha[:nome] } }
   end
 
+  # A lista mostra até MAX_AJUDA; a frase do topo conta todos (precisam_de_ajuda).
   def ajuda
-    (ajuda_de_venda + ajuda_de_atendimento).sort_by { |item| item[:pessoa][:nome].to_s.downcase }.first(MAX_AJUDA)
+    precisam_de_ajuda.first(MAX_AJUDA)
+  end
+
+  def precisam_de_ajuda
+    @precisam_de_ajuda ||= (ajuda_de_venda + ajuda_de_atendimento).sort_by { |item| item[:pessoa][:nome].to_s.downcase }
   end
 
   private
