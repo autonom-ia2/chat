@@ -216,7 +216,7 @@ module Autonomia
 
       # #1426 — as páginas do PDF que ficaram de fora nesta leitura (Processors::Pdf põe em `paginas_de_fora`, só em
       # memória) vão junto, sob a mesma guarda de token: um job superado não escreve. Sem nada de fora, a marca some. Vale
-      # também para restore_previous_generation! e mark_failed! (metadata_desta_leitura).
+      # também para restore_previous_generation! e mark_failed!, que trocam só as chaves desta leitura (com_paginas_desta_leitura).
       def mark_ready!(token, chunk_count:)
         guarded_update(token, status: self.class.statuses[:ready], error: nil,
                               metadata: metadata_desta_leitura.merge('chunk_count' => chunk_count), synced_at: Time.current)
@@ -273,10 +273,15 @@ module Autonomia
         paginas_de_fora.present? ? base.merge(PAGINAS_DE_FORA => paginas_de_fora) : base
       end
 
-      # #1427 — escreve sempre o metadata desta leitura: o progresso do OCR está só no banco (anotado por update_all, às
-      # vezes por outra instância), e comparar com este objeto deixaria a chave sobrando num material `failed`.
+      # #1427 — a falha e a volta à geração anterior mexem só nas chaves desta leitura, no próprio banco: tiram o progresso
+      # (anotado por update_all, às vezes por outra instância, então este objeto pode nem conhecê-lo) e trocam as páginas
+      # de fora pelas desta leitura. O resto do metadata fica como está no banco, mesmo o que foi gravado no meio-tempo.
       def com_paginas_desta_leitura(attrs)
-        attrs.merge(metadata: metadata_desta_leitura)
+        desta_leitura = paginas_de_fora.present? ? { PAGINAS_DE_FORA => paginas_de_fora } : {}
+        sql = self.class.sanitize_sql_array(
+          ["(COALESCE(metadata, '{}'::jsonb) - ? - ?) || ?::jsonb", PROGRESSO, PAGINAS_DE_FORA, desta_leitura.to_json]
+        )
+        attrs.merge(metadata: Arel.sql(sql))
       end
 
       def previous_review_attributes

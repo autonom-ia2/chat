@@ -53,6 +53,7 @@ const restoreMessages = () => {
 const messages = ref(restoreMessages());
 const isSending = ref(false);
 const scrollRef = ref(null);
+const composerRef = ref(null);
 let requestSequence = 0;
 
 const persistMessages = () => {
@@ -198,11 +199,17 @@ const onSend = async ({ content, images = [] }) => {
     if (requestId !== requestSequence) return;
     await pushAssistantTurn(data, requestId);
   } catch (error) {
-    // #1427 — na Fase 2 o servidor confere a foto e diz o motivo da recusa (422 `foto_recusada`): ele vai para o aviso.
+    // #1427 — na Fase 2 o servidor confere a foto e diz o motivo da recusa (422 `foto_recusada`): ele vai para o aviso, a
+    // pergunta sai da conversa (o agente não a recebeu) e o texto volta ao campo, para mandar com outra foto.
     const recusa =
       error?.response?.data?.code === 'foto_recusada' &&
       error.response.data.error;
     if (requestId === requestSequence) {
+      if (recusa) {
+        messages.value = messages.value.slice(0, -1);
+        persistMessages();
+        composerRef.value?.restoreDraft(content);
+      }
       useAlert(recusa || t('AGENTS.TEST.ERROR'));
     }
   } finally {
@@ -336,6 +343,7 @@ onBeforeUnmount(() => {
 
       <div class="shrink-0">
         <ChatComposer
+          ref="composerRef"
           :placeholder="t('AGENTS.TEST.PLACEHOLDER')"
           :is-sending="isSending"
           can-attach

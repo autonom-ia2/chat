@@ -79,6 +79,20 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
 
       expect(progresso_no_banco).to be_nil
     end
+
+    it "keeps a key written by someone else in the meantime when the reading #{caso}" do
+      token = source.begin_ingestion!
+      carregada_antes = Autonomia::Agents::Source.find(source.id)
+      Autonomia::Agents::Source.find(source.id).anotar_progresso!(pagina: 3, total: 30)
+      outra = Autonomia::Agents::Source.find(source.id)
+      outra.update!(metadata: outra.metadata.merge('mime' => 'application/pdf'))
+
+      expect(fechar.call(carregada_antes, token)).to be(true)
+
+      metadata = Autonomia::Agents::Source.find(source.id).metadata
+      expect(metadata).to include('mime' => 'application/pdf', 'prev_review' => be_a(Hash))
+      expect(metadata).not_to have_key('progresso')
+    end
   end
 
   it 'writes nothing from a reading that another one superseded' do
@@ -105,6 +119,9 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     json = ->(fonte) { JSON.parse(ApplicationController.render(partial: parcial, locals: { source: fonte }, formats: [:json])) }
 
     expect(json.call(source.reload).dig('metadata', 'progresso')).to eq('pagina' => 1, 'total' => 2)
+    travel(Autonomia::Agents::Source::TETO_DA_RELEITURA + 1.minute) do # parado: ainda processing, mas sem avançar
+      expect(json.call(source.reload)['metadata']).not_to have_key('progresso')
+    end
     source.update!(status: :ready)
     expect(json.call(source.reload)['metadata']).not_to have_key('progresso')
   end

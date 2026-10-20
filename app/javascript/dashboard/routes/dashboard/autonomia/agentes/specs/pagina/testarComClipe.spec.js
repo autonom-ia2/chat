@@ -411,6 +411,34 @@ describe('MaterialLinha reading progress (#1427)', () => {
     );
   });
 
+  // Quem só vê não tem "Ler de novo" (a gaveta manda relerParado só a quem gerencia): quem tira a página do material
+  // parado é o servidor, que só manda o progresso enquanto lê de verdade (Source#lendo_agora?).
+  it('shows the page to who only views while the server says it is reading', () => {
+    const wrapper = linha(
+      {
+        status: 'processing',
+        metadata: { progresso: { pagina: 8, total: 30 } },
+      },
+      { estado: 'lendo', podeGerenciar: false, relerParado: false }
+    );
+
+    expect(wrapper.get('[data-estado-texto]').text()).toBe(
+      'AGENTS.JORNADA.PAGINA.SABE.LENDO_PAGINA'
+    );
+  });
+
+  it('shows "Reading…" to who only views when the server drops the progress of a stalled reading', () => {
+    const wrapper = linha(
+      { status: 'processing', metadata: {} },
+      { estado: 'lendo', podeGerenciar: false, relerParado: false }
+    );
+
+    expect(wrapper.get('[data-estado-texto]').text()).toBe(
+      'AGENTS.JORNADA.PAGINA.SABE.LENDO'
+    );
+    expect(wrapper.text()).not.toContain('LER_DE_NOVO');
+  });
+
   it('drops the progress once the reading is over', () => {
     const wrapper = linha(
       {

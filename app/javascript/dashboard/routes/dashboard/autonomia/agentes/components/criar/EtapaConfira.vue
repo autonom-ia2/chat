@@ -6,6 +6,7 @@ import AgenteErro from '../AgenteErro.vue';
 import CelularConversa from '../CelularConversa.vue';
 import CompositorAA from '../CompositorAA.vue';
 import RespostasRapidas from '../RespostasRapidas.vue';
+import { AVISO_TESTE } from '../../composables/useTesteDoAgente';
 
 // #1181 PR2 (protótipo T04) — o celular vira teste de verdade: perguntas prontas do modelo ou
 // escritas, resposta em partes, "usou: <arquivo>" e a faixa de quando passaria para a equipe.
@@ -20,10 +21,10 @@ const props = defineProps({
   mensagens: { type: Array, default: () => [] },
   digitando: { type: Boolean, default: false },
   problema: { type: String, default: null },
-  // #1427 — foto recusada pela conferência (`problema` foto_recusada): o motivo do servidor (vazio = passou de 5 MB no
-  // navegador) e o que a pessoa escreveu junto, que volta ao campo.
-  problemaTexto: { type: String, default: '' },
-  textoDevolvido: { type: String, default: '' },
+  // #1427 — o aviso do teste (useTesteDoAgente). Na foto recusada: `mensagem` é o motivo do servidor (vazio = passou de
+  // 5 MB no navegador) e `texto` o que a pessoa escreveu junto, que volta ao campo. Cada aviso é um objeto novo, então a
+  // mesma frase recusada duas vezes seguidas volta duas vezes.
+  aviso: { type: Object, default: null },
   atualizado: { type: Boolean, default: false },
   respondidas: { type: Number, default: 0 },
   // A conversa ao lado ainda está gerando: "Respondeu errado?" espera.
@@ -60,9 +61,15 @@ const pergunta = ref('');
 const pediuCorrecao = ref(false);
 
 watch(
-  () => props.textoDevolvido,
-  texto => {
-    if (texto && !pergunta.value) pergunta.value = texto;
+  () => props.aviso,
+  novo => {
+    if (
+      novo?.tipo === AVISO_TESTE.FOTO_RECUSADA &&
+      novo.texto &&
+      !pergunta.value
+    ) {
+      pergunta.value = novo.texto;
+    }
   }
 );
 
@@ -181,7 +188,7 @@ const erro = computed(() => {
     // #1427 — sem "Tentar de novo": mandar a mesma foto não adianta.
     foto_recusada: {
       titulo:
-        props.problemaTexto || t('AGENTS.JORNADA.PAGINA.SABE.FOTO_GRANDE'),
+        props.aviso?.mensagem || t('AGENTS.JORNADA.PAGINA.SABE.FOTO_GRANDE'),
       tom: 'ambar',
     },
   };

@@ -145,6 +145,15 @@ const send = () => {
   emit('send', { content, images });
 };
 
+// #1427 — the parent hands back what was typed when the server refused the
+// photo sent with it, so it can go again with another photo. Never overwrites a
+// new draft.
+const restoreDraft = text => {
+  if (text && !draft.value) draft.value = text;
+};
+
+defineExpose({ restoreDraft });
+
 const onEnter = event => {
   // Shift+Enter (newline) and IME composition must never send.
   if (event.shiftKey || event.isComposing) return;

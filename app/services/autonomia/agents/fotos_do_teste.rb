@@ -2,7 +2,8 @@
 # 5 MB, até 40 MP, sem animada). Chegam como data-url (data:image/<tipo>;base64,<conteúdo>); o tipo declarado não vale:
 # a data-url que segue ao modelo leva o tipo lido dos bytes. Uma foto recusada recusa o pedido inteiro, com o motivo em
 # texto para a tela (`recusa`): nada some calado. Não grava nada; a data-url conferida segue no pedido temporário do Testar
-# (Crm::Ai::InteractiveRequest, no Redis, até 30 min), e o log e o Sentry não a veem (`images` em filter_parameter_logging).
+# (Crm::Ai::InteractiveRequest, no Redis, até 30 min). Não vai ao log do Rails (`images` no filter_parameters) nem ao
+# Sentry (`images` no SentryHttpAuthScrubber, que lê o corpo JSON cru).
 class Autonomia::Agents::FotosDoTeste
   PREFIXO = 'data:'.freeze
   MARCA_BASE64 = ';base64'.freeze

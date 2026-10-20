@@ -1,6 +1,6 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import PanelTest from './PanelTest.vue';
-import ChatComposer from '../builder/ChatComposer.vue';
+import ChatBubble from '../builder/ChatBubble.vue';
 
 // #1427 — o Testar do painel antigo também manda foto pelo POST /test. Na Fase 2 o servidor confere a foto e responde 422
 // `foto_recusada` com o motivo: o aviso mostra esse motivo, não a falha genérica.
@@ -19,9 +19,8 @@ const montar = () =>
   });
 
 const enviar = async wrapper => {
-  wrapper
-    .findComponent(ChatComposer)
-    .vm.$emit('send', { content: 'Oi', images: [] });
+  await wrapper.get('textarea').setValue('Quanto custa este?');
+  await wrapper.get('textarea').trigger('keydown.enter');
   await flushPromises();
 };
 
@@ -32,7 +31,7 @@ beforeEach(() => {
 });
 
 describe('PanelTest', () => {
-  it('shows the reason the server refused the photo', async () => {
+  it('shows the reason the server refused the photo, drops the question and gives the text back', async () => {
     store.dispatch.mockRejectedValueOnce(
       Object.assign(new Error('422'), {
         response: {
@@ -51,6 +50,8 @@ describe('PanelTest', () => {
     expect(alerta).toHaveBeenCalledWith(
       'A foto é grande demais. O tamanho máximo é 5 MB.'
     );
+    expect(wrapper.findAllComponents(ChatBubble)).toHaveLength(0);
+    expect(wrapper.get('textarea').element.value).toBe('Quanto custa este?');
     wrapper.unmount();
   });
 
@@ -63,6 +64,8 @@ describe('PanelTest', () => {
     await enviar(wrapper);
 
     expect(alerta).toHaveBeenCalledWith('AGENTS.TEST.ERROR');
+    expect(wrapper.findAllComponents(ChatBubble)).toHaveLength(1);
+    expect(wrapper.get('textarea').element.value).toBe('');
     wrapper.unmount();
   });
 });
