@@ -2474,6 +2474,7 @@ onUnmounted(() => {
             )
           "
           icon="i-lucide-plus"
+          data-crm-new-card
           :disabled="!hasPipelines || isLoading"
           class="order-2 !rounded-lg min-h-11 !font-bold"
           @click="openCreateDrawer"

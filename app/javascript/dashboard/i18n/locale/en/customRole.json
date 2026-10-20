@@ -33,6 +33,10 @@
         "DESCRIPTION": "Description",
         "PERMISSIONS": "Permissions",
         "ACTIONS": "Actions"
+      },
+      "LOCK": {
+        "MINE": "This is your role",
+        "ABOVE": "Above your access"
       }
     },
     "PERMISSIONS": {
@@ -73,7 +77,10 @@
       "ATTRIBUTE_MANAGE": "Edit custom attributes",
       "MACRO_MANAGE": "Edit team macros",
       "SLA_MANAGE": "Edit SLA policies",
-      "CONVERSATION_VIEW": "Reads the other conversations of the inbox"
+      "CONVERSATION_VIEW": "Reads the other conversations of the inbox",
+      "PEOPLE_MANAGE": "Manage people and teams",
+      "CUSTOM_ROLE_MANAGE": "Build roles",
+      "GRANT_ABOVE_OWN": "Can grant access above their own"
     },
     "MATRIX": {
       "GROUPS": {
@@ -132,9 +139,9 @@
         },
         "CRM": {
           "NAME": "CRM",
-          "HINT": "Pipelines, deals and calendar",
-          "LEVEL_VIEW": "Sees the board and deals. Does not change them.",
-          "LEVEL_MANAGE": "Creates, edits and moves deals."
+          "HINT": "Pipelines, cards and calendar",
+          "LEVEL_VIEW": "Sees the board and cards. Does not change them.",
+          "LEVEL_MANAGE": "Creates, edits and moves cards."
         },
         "AUTONOMIA": {
           "NAME": "Autonom.ia agents",
@@ -215,6 +222,11 @@
           "HINT": "Who receives each conversation and how many at a time",
           "LEVEL_MANAGE": "Creates and changes the assignment and capacity rules.",
           "SUGGESTION": "To list every inbox in the forms, Inboxes needs at least View."
+        },
+        "PEOPLE": {
+          "NAME": "People",
+          "HINT": "Agents, teams and roles",
+          "LEVEL_MANAGE": "Invites, edits and removes agents and manages teams. Never touches administrators."
         }
       }
     },
@@ -271,7 +283,7 @@
     "EXTRAS": {
       "CONVERSATION_UNASSIGNED_MANAGE": "Sees the queue of unassigned conversations and can take them.",
       "CONVERSATION_PARTICIPATING_MANAGE": "Sees conversations they take part in, even if assigned to someone else.",
-      "CRM_MOVE_CARDS": "Drags deals between stages without editing anything else.",
+      "CRM_MOVE_CARDS": "Drags cards between stages without editing anything else.",
       "CRM_VIEW_REPORTS": "Pipeline dashboard and AI usage cost.",
       "CRM_MANAGE_PIPELINES": "Stages, automations and pipeline inboxes.",
       "CRM_MANAGE_AI": "Sets up and accepts AI suggestions. This has a cost.",
@@ -281,7 +293,9 @@
       "PROSPECTING_VIEW_ALL_SEARCHES": "Without this, they only see their own searches.",
       "CONVERSATION_VIEW": "Also reads the inbox conversations they do not handle, without replying.",
       "CONTACT_EXPORT": "Downloads the contact base as a spreadsheet.",
-      "CONTACT_DELETE": "Deletes contacts and companies, one by one or in bulk."
+      "CONTACT_DELETE": "Deletes contacts and companies, one by one or in bulk.",
+      "CUSTOM_ROLE_MANAGE": "Creates and edits roles, within their own keys.",
+      "GRANT_ABOVE_OWN": "Hands out any role in the account, except administrator. Everything goes to the audit log."
     },
     "EDITOR": {
       "NEW_TITLE": "Adjust what is different",
@@ -303,12 +317,12 @@
       "FOOTER_COUNT": "No area granted | 1 area granted | {n} areas granted",
       "ADMIN_ONLY": {
         "TITLE": "Always administrator only",
-        "ITEMS": "Agents, teams, bots, integrations, account settings, security, billing, audit logs and custom roles.",
+        "ITEMS": "Bots, integrations, account settings, security, billing and audit logs.",
         "GUIDE": "The Platform Guide follows this role: it only shows and does what the person can do."
       },
       "SENSITIVE_CONFIRM": {
         "TITLE": "Turn on “{name}”?",
-        "DESCRIPTION": "This permission touches personal data or has a cost. Only turn it on for people who need it.",
+        "DESCRIPTION": "This permission touches personal data, has a cost or hands out access. Only turn it on for people who need it.",
         "CONFIRM": "Turn on"
       },
       "APPLY_CONFIRM": {
@@ -317,7 +331,11 @@
         "CONFIRM": "Apply profile",
         "DONE": "{name} profile applied."
       },
-      "INCLUDED_IN_ADMIN": "Included in full CRM access."
+      "INCLUDED_IN_ADMIN": "Included in full CRM access.",
+      "LOCK": {
+        "MISSING": "You do not have this key",
+        "DELEGATION": "Only someone who can grant access above their own"
+      }
     },
     "SUMMARY": {
       "CAN_TITLE": "This person will be able to",
@@ -396,7 +414,7 @@
       "PHRASES": {
         "OWN_CONVERSATIONS": "Answer their own conversations and take from the queue",
         "READ_CONTACTS_KB": "Read contacts and the knowledge base",
-        "MANAGE_DEALS": "Create and move deals in the CRM",
+        "MANAGE_DEALS": "Create and move cards in the CRM",
         "OTHERS_CONVERSATIONS": "See other agents' conversations",
         "REPORTS": "See reports",
         "SETTINGS": "Change settings",
@@ -411,7 +429,7 @@
         "EXPORT_CRM": "Export the CRM list",
         "ALL_SEARCHES": "See everyone's prospecting searches",
         "ANSWER_CONVERSATIONS": "Answer conversations",
-        "EDIT_DEALS": "Edit deals in the CRM",
+        "EDIT_DEALS": "Edit cards in the CRM",
         "CRM_DASHBOARD": "See the CRM dashboard and AI cost",
         "CHANGE_ANYTHING": "Change anything",
         "SETUP_INBOXES": "Set up inboxes and reconnect WhatsApp",
