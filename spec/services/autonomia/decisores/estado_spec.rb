@@ -93,14 +93,15 @@ RSpec.describe Autonomia::Decisores::Estado do
     expect(estado(%w[mensagens_recentes], max_mensagens: 7).para_o_jev(decisor)[:messages].first).to eq('Mensagem 0')
   end
 
-  # MOTIVO (revisão #1924): a janela maior não pode multiplicar e-mails longos; as anteriores vão mais curtas, a última inteira.
-  it 'corta as mensagens anteriores à última no teto pedido e a última nos 5.000 de sempre' do
-    2.times { mensagem('a' * 6_000) }
+  # MOTIVO (revisão #1924): a janela maior não pode multiplicar e-mails longos, nem ler menos que a de 5: só as mensagens
+  # além das 5 mais recentes vão mais curtas (um pedido no fim de um texto longo, 2 mensagens antes, não pode sumir).
+  it 'corta no teto pedido só as mensagens além das 5 mais recentes; as 5 seguem nos 5.000 de sempre' do
+    7.times { mensagem('a' * 6_000) }
 
-    lido = estado(%w[mensagens_recentes], max_caracteres_anteriores: 2_000).para_o_jev(decisor)[:messages]
+    lido = estado(%w[mensagens_recentes], max_mensagens: 7, max_caracteres_anteriores: 2_000).para_o_jev(decisor)[:messages]
 
-    expect(lido.map(&:length)).to eq([2_000, described_class::MAX_CARACTERES])
-    expect(estado(%w[mensagens_recentes]).para_o_jev(decisor)[:messages].map(&:length)).to eq([described_class::MAX_CARACTERES] * 2)
+    expect(lido.map(&:length)).to eq(([2_000] * 2) + ([described_class::MAX_CARACTERES] * 5))
+    expect(estado(%w[mensagens_recentes]).para_o_jev(decisor)[:messages].map(&:length)).to eq([described_class::MAX_CARACTERES] * 5)
   end
 
   # MOTIVO: o texto solto da ferramenta do Guia é dado, e a tarefa diz isso ao Jev.

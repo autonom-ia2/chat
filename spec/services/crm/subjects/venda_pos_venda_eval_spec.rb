@@ -4,22 +4,26 @@ require 'rails_helper'
 # Roda com `CRM_EVAL_PAGO=1` e `OPENAI_API_KEY`. O Jev é simulado com certeza zero ("não sei"): quem decide é sempre o
 # modelo maior (Crm::Subjects::Reviewer), que é o real; o tamanho do que iria ao Jev é medido pelo corpo da chamada
 # simulada. Teto do #1924: US$ 0,30 no total; esta rodada para ao passar de TETO_USD, somado pelo evento de custo da IA
-# (Crm::Ai::UsageRecorder::EVENT_NAME).
+# (Crm::Ai::UsageRecorder::EVENT_NAME). O caminho em que o Jev responde sozinho, seguro, NÃO é avaliado aqui (revisão).
 #
 # #1924: a IA de assunto separa venda de pós-venda. Cinco ramos de negócio inventados. Os textos de "quando usar" são
 # curtos e genéricos, e a etapa depois da venda tem nome diferente em cada ramo. Além dos casos da Issue, há os da
 # revisão: funil de atendimento marcado como venda (o interruptor nasce ligado), conta só com funis de venda, renovação
-# que o "quando usar" manda para o funil de venda, desistir da cotação antes de comprar, e card de chegada sem nome com
-# outro assunto nomeado aberto. Categorias (o que conta como certo):
-#   - fica: a resposta é o assunto atual, nenhum card nasce, nada muda de nome, o foco segue nele;
-#   - volta: a resposta é o outro assunto aberto, que vira o foco, sem card novo;
+# que o "quando usar" manda para o funil de venda, desistir da cotação antes de comprar, card de chegada sem nome com
+# outro assunto nomeado aberto, e pós-venda sem nenhum card aberto numa conta só com funis de venda (abre no funil mais
+# próximo, como antes: a equipe não perde o pedido). Categorias (o que conta como certo):
+#   - fica: o modelo maior respondeu o assunto atual e a decisão ficou "kept"; nenhum card nasce, nada muda de nome, o
+#     foco segue nele;
+#   - volta: o modelo maior respondeu o outro assunto aberto e a decisão foi aplicada; ele vira o foco, sem card novo;
 #   - novo: UM card novo num dos funis aceitos, que vira o foco (ou o card atual sem nome ganha nome, se for desse funil);
 #     nada mais é criado, e a decisão foi aplicada;
-#   - nao_cria: sem funil que sirva (só há de venda): nenhum card nasce e nada muda de nome.
+#   - nao_cria: sem funil que sirva (só há de venda) e com assunto aberto: o modelo maior respondeu o assunto atual,
+#     "kept", nenhum card nasce e nada muda de nome.
+# Falha, sem cota, sem conteúdo ou dúvida nunca contam como acerto.
 # Dados fictícios; nenhum prompt é gravado. A saída (resposta do modelo maior, ação, decisão, custo) vai para
 # EVAL_SAIDA (JSON).
 module VendaPosVendaEval
-  TETO_USD = 0.08
+  TETO_USD = 0.07
 
   # ramo => { letra => [nome, quando usar, etapas, conta como venda] }
   RAMOS = {
@@ -49,6 +53,15 @@ module VendaPosVendaEval
     corretora: {
       a: ['Vendas e renovações', 'Contratação de seguro novo e renovação de apólice.', ['Novo lead', 'Cotação', 'Fechado', 'Perdido'], true],
       b: ['Sinistros', 'Clientes com apólice que tiveram sinistro.', ['Aviso', 'Em regulação', 'Encerrado'], false]
+    },
+    # Conta pequena com um funil só, de venda.
+    petshop: {
+      a: ['Banho e tosa', 'Clientes que querem agendar banho e tosa.', %w[Novo Agendado Atendido Perdido], true]
+    },
+    # Dois funis de venda, nenhum de atendimento.
+    moveis: {
+      a: ['Vendas', 'Quem quer comprar móveis planejados.', %w[Contato Projeto Fechado Perdido], true],
+      b: ['Corporativo', 'Empresas que querem mobiliar escritórios.', %w[Contato Proposta Fechado], true]
     }
   }.freeze
 
@@ -108,7 +121,15 @@ module VendaPosVendaEval
       [:c, 'Preciso cancelar a minha matrícula, perdi o emprego e não vou conseguir pagar']]],
     [:corretora, :novo, [[:b, 'Sinistro do Gol', 'Em regulação']],
      [[:e, 'O perito vai à sua casa amanhã às 10h.'],
-      [:c, 'Ok, obrigado. Aproveitando: a apólice do Gol vence mês que vem e quero renovar']], [:a]]
+      [:c, 'Ok, obrigado. Aproveitando: a apólice do Gol vence mês que vem e quero renovar']], [:a]],
+
+    # Revisão: sem card aberto e só funis de venda, o pós-venda abre no funil mais próximo em vez de sumir.
+    [:idiomas, :novo, [],
+     [[:c, 'Oi, sou aluna de vocês e preciso cancelar a minha matrícula no curso de espanhol, como faço?']], %i[a b]],
+    [:petshop, :novo, [],
+     [[:c, 'Levei meu cachorro no banho ontem e ele voltou com uma ferida na orelha. Quero uma explicação']], %i[a]],
+    [:moveis, :novo, [],
+     [[:c, 'Comprei o armário planejado com vocês mês passado e a porta já está empenada. Preciso de assistência']], %i[a b]]
   ].freeze
 end
 
@@ -232,9 +253,10 @@ RSpec.describe 'Eval pago #1924: a IA de assunto separa venda de pós-venda' do
     conversa, mensagem, abertos = montar(indice, chave, cards, mensagens)
     titulos = abertos.to_h { |card| [card.id, card.title] }
     decisao, novos = decidir(conversa, mensagem)
-    caso = { indice: indice, ramo: chave, categoria: categoria, card_sem_nome: cards.first[1].nil?, mensagens: mensagens.size,
-             cards_novos: novos.size, **resultado(decisao) }
-    saida[:casos] << caso.merge(certo: certo?(caso, abertos, novos, renomeados(abertos, titulos), funis_aceitos(chave, aceitos)))
+    caso = { indice: indice, ramo: chave, categoria: categoria, card_sem_nome: cards.any? && cards.first[1].nil?,
+             mensagens: mensagens.size, cards_novos: novos.size, **resultado(decisao) }
+    cena = { conversa: conversa, abertos: abertos, novos: novos, mudou: renomeados(abertos, titulos), aceitos: funis_aceitos(chave, aceitos) }
+    saida[:casos] << caso.merge(certo: certo?(caso, cena))
   end
 
   # A decisão e os cards que nasceram com ela.
@@ -254,29 +276,40 @@ RSpec.describe 'Eval pago #1924: a IA de assunto separa venda de pós-venda' do
       titulo: decisao&.title, motivo: decisao&.reason }
   end
 
-  def em_foco(abertos)
-    Crm::Cards::ConversationCardFinder.new(account: account).all(abertos.first.primary_conversation).first
+  def em_foco(conversa)
+    Crm::Cards::ConversationCardFinder.new(account: account).all(conversa).first
   end
 
   def renomeados(abertos, titulos)
     abertos.map(&:reload).reject { |card| card.title == titulos[card.id] }
   end
 
-  # fica / volta: nada nasce nem muda de nome, e o foco é o esperado; nao_cria: nada nasce nem muda de nome.
-  def certo?(caso, abertos, novos, mudou, aceitos)
-    return novo_certo?(abertos, novos, mudou, aceitos, caso) if caso[:categoria] == :novo
-    return false unless novos.empty? && mudou.empty?
+  # fica / nao_cria / volta: a resposta e o estado esperados, nada nasce nem muda de nome, e o foco é o esperado.
+  # cena: conversa, abertos (o 1º é o atual), novos (cards que nasceram), mudou (abertos renomeados), aceitos (ids de funil).
+  def certo?(caso, cena)
+    return novo_certo?(caso, cena) if caso[:categoria] == :novo
+    return false unless cena[:novos].empty? && cena[:mudou].empty? && resposta_esperada?(caso, cena[:abertos])
 
-    foco = { fica: abertos.first, volta: abertos.second }[caso[:categoria]]
-    foco.nil? || em_foco(abertos)&.id == foco.id
+    foco = caso[:categoria] == :volta ? cena[:abertos].second : cena[:abertos].first
+    em_foco(cena[:conversa])&.id == foco.id
+  end
+
+  # Falha, sem cota, sem conteúdo ou dúvida não contam: só a resposta certa, com a decisão concluída.
+  def resposta_esperada?(caso, abertos)
+    esperado = if caso[:categoria] == :volta
+                 ['applied', "card_#{abertos.second.id}"]
+               else
+                 ['kept', Crm::Subjects::Question::MESMO_ASSUNTO]
+               end
+    esperado == [caso[:estado], caso[:resposta]]
   end
 
   # Um card novo num funil aceito, em foco; ou o card atual sem nome ganhou nome e está num funil aceito.
-  def novo_certo?(abertos, novos, mudou, aceitos, caso)
+  def novo_certo?(caso, cena)
     return false unless caso[:estado] == 'applied'
 
-    alvo = alvo_do_novo(abertos, novos, mudou, caso[:card_sem_nome])
-    alvo.present? && aceitos.include?(alvo.reload.pipeline_id) && em_foco(abertos)&.id == alvo.id
+    alvo = alvo_do_novo(cena[:abertos], cena[:novos], cena[:mudou], caso[:card_sem_nome])
+    alvo.present? && cena[:aceitos].include?(alvo.reload.pipeline_id) && em_foco(cena[:conversa])&.id == alvo.id
   end
 
   def alvo_do_novo(abertos, novos, mudou, sem_nome)
@@ -289,7 +322,7 @@ RSpec.describe 'Eval pago #1924: a IA de assunto separa venda de pós-venda' do
     saida[:casos].group_by { |caso| caso[por] }.transform_values { |casos| "#{casos.count { |caso| caso[:certo] }}/#{casos.size}" }
   end
 
-  it '18 conversas fictícias em 6 ramos: venda e pós-venda no funil certo' do
+  it '21 conversas fictícias em 8 ramos: venda e pós-venda no funil certo' do
     VendaPosVendaEval::CASOS.each_with_index { |caso, indice| rodar(indice, caso) }
     saida[:placar] = placar(:ramo)
     saida[:placar_categoria] = placar(:categoria)

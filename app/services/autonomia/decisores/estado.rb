@@ -8,8 +8,9 @@
 # personalizado (um valor com forma de e-mail ou de telefone fica de fora). As mensagens são as 5
 # últimas até a mensagem da pergunta, cada uma cortada em 5.000 caracteres (#1000: formulário de
 # site por e-mail tem cabeçalho e rodapé). Quem chama pode pedir outra janela (#1924: a IA de assunto
-# lê mais, porque o pedido costuma ficar algumas idas e vindas antes da última mensagem) e cortar as
-# mensagens anteriores à última mais curtas, para a janela maior não multiplicar o texto de e-mails longos.
+# lê mais, porque o pedido costuma ficar algumas idas e vindas antes da última mensagem) e cortar mais curtas
+# as mensagens além das 5 mais recentes, para a janela maior não multiplicar o texto de e-mails longos. As 5
+# mais recentes com texto seguem nos 5.000 de sempre: a janela maior nunca lê menos do que a de 5 lia.
 #
 # Sem `leituras`, lê o que a etapa 1 lia: canal, assunto e as mensagens do cliente.
 class Autonomia::Decisores::Estado
@@ -209,12 +210,13 @@ class Autonomia::Decisores::Estado
   end
 
   # #1807 (flag `email_autoria`): e-mail recebido sem o histórico citado; o de outro endereço sempre diz quem escreveu.
+  # #1924: as MAX_MENSAGENS mais recentes com texto vão até MAX_CARACTERES; as mais antigas da janela, até
+  # @max_caracteres_anteriores. A posição conta depois de tirar as vazias (e-mail só com citação).
   def textos(lista, com_autor: false)
-    lista.filter_map do |mensagem|
-      texto = email_autoria.texto(mensagem).strip.first(mensagem.equal?(lista.last) ? MAX_CARACTERES : @max_caracteres_anteriores).presence
-      next texto unless texto && (com_autor || email_autoria.de(mensagem))
-
-      "#{autor(mensagem)}: #{texto}"
+    com_texto = lista.map { |mensagem| [mensagem, email_autoria.texto(mensagem).strip] }.reject { |(_, texto)| texto.empty? }
+    com_texto.each_with_index.map do |(mensagem, inteiro), posicao|
+      texto = inteiro.first(posicao < com_texto.size - MAX_MENSAGENS ? @max_caracteres_anteriores : MAX_CARACTERES)
+      com_autor || email_autoria.de(mensagem) ? "#{autor(mensagem)}: #{texto}" : texto
     end
   end
 

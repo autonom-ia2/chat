@@ -23,8 +23,8 @@ module Crm::Subjects
   # Mensagens dos dois lados que o Jev e o modelo maior leem (#1924). Com 5, o pedido do cliente saía da janela depois
   # de algumas idas e vindas com a equipe. 12 é a janela recente da IA do card (Crm::Ai::ContextBuilder).
   MAX_MENSAGENS = 12
-  # Cada mensagem antes da última vai cortada como na IA do card (2.000); a última, inteira até 5.000. O pior caso (e-mails
-  # longos) fica em ~27 mil caracteres, perto dos 25 mil da janela de 5 (#1924, revisão).
+  # As 5 mais recentes seguem até 5.000 caracteres, como na janela de 5; as 7 mais antigas vão cortadas como na IA do card
+  # (2.000). O pior caso (só e-mails longos) fica em ~39 mil caracteres, contra 25 mil da janela de 5 (#1924, revisão).
   MAX_CARACTERES_ANTERIORES = 2_000
   JANELA = { max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES_ANTERIORES }.freeze
   FEATURE = 'assunto'.freeze

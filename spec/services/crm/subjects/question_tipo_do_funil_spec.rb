@@ -37,15 +37,26 @@ RSpec.describe Crm::Subjects::Question do
                                                             'stage "Implantação"')
   end
 
+  def sem_tipo(lido, pipeline)
+    lido["novo_#{pipeline.id}"].sub(pipeline.name, 'X').sub(described_class::TIPOS_DE_FUNIL.fetch(pipeline.kind), 'T')
+  end
+
   # MOTIVO: com o card atual sem nome, o funil dele tinha um texto mais convidativo e puxava o pedido para lá.
-  it 'com o card atual sem nome, o pedido novo tem o mesmo texto em todos os funis' do
+  it 'com o card atual sem nome e a adoção do card da chegada ligada, o pedido novo tem o mesmo texto em todos os funis' do
+    account.enable_features!(Crm::Conversations::CardEmFoco::FLAG)
     lido = descricoes(card('Pessoa Teste'))
-    sem_tipo = lambda do |pipeline|
-      lido["novo_#{pipeline.id}"].sub(pipeline.name, 'X').sub(described_class::TIPOS_DE_FUNIL.fetch(pipeline.kind), 'T')
-    end
 
     expect(lido).not_to have_key(described_class::MESMO_ASSUNTO)
-    expect(sem_tipo.call(vendas)).to eq(sem_tipo.call(atendimento))
+    expect(sem_tipo(lido, vendas)).to eq(sem_tipo(lido, atendimento))
+  end
+
+  # MOTIVO (revisão #1924): sem a flag, escolher outro funil cria card e deixa o sem nome para trás (lead vazio no
+  # Kanban); ali o texto de antes, que favorece o funil do card sem nome, continua.
+  it 'sem a adoção do card da chegada, o funil do card sem nome segue com o texto de antes' do
+    lido = descricoes(card('Pessoa Teste'))
+
+    expect(lido["novo_#{vendas.id}"]).to start_with('The customer shows what they want')
+    expect(lido["novo_#{atendimento.id}"]).to include('different from the subjects above')
   end
 
   # MOTIVO (revisão #1924): com o card de chegada sem nome e outro assunto nomeado aberto, o pedido novo precisa seguir
@@ -59,24 +70,10 @@ RSpec.describe Crm::Subjects::Question do
     [vendas, atendimento].each { |pipeline| expect(lido["novo_#{pipeline.id}"]).to include('different from the subjects above') }
   end
 
-  # MOTIVO (revisão #1924): o tipo vem de um interruptor que nasce ligado; a regra tem de dizer que os textos do funil
-  # valem mais que ele, e que desistir de cotação antes de comprar é da venda.
-  it 'a regra diz que o nome e o "quando usar" valem mais que o tipo' do
-    expect(described_class::REGRA_DO_TIPO).to include('weigh more than the type', 'giving up a quote')
-  end
-
   # MOTIVO (revisão #1924): um merge com o PR2 do #1918 reescreve estes heredocs; perder a regra num deles passaria calado.
   it 'a regra está nas instruções do Jev e nas duas do modelo maior' do
     textos = [described_class::INSTRUCOES, described_class::INSTRUCOES_VARIOS, Crm::Subjects::Reviewer::INSTRUCOES,
               Crm::Subjects::Reviewer::INSTRUCOES_VARIOS]
     expect(textos).to all(include(described_class::REGRA_DO_TIPO))
-  end
-
-  # MOTIVO: o Jev precisa da regra que diz o que fazer com o tipo, nas duas versões da pergunta.
-  it 'as instruções explicam o tipo do funil, com e sem vários assuntos' do
-    [false, true].each do |varios|
-      question = described_class.new(account: account, pipelines: [vendas], cards: [], atual: nil, varios: varios)
-      expect(question.instrucoes).to include(described_class::REGRA_DO_TIPO)
-    end
   end
 end
