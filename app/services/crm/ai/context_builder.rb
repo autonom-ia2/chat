@@ -28,10 +28,12 @@ module Crm
       # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
       # memoria (#1601): só a avaliação de card com a flag `memoria_ia` pede; cada mensagem ganha um id LOCAL ("ref": m1,
       # m2...) e o contexto traz os fatos já registrados (Crm::Memoria::ParaAvaliacao). Os outros leitores não mudam.
-      def initialize(card:, fora: [], memoria: false)
+      # pedido_anterior (#1925): só a avaliação de card pede; traz o card encerrado que este pode estar retomando.
+      def initialize(card:, fora: [], memoria: false, pedido_anterior: false)
         @card = card
         @fora = fora
         @numeracao = Crm::Memoria::ParaAvaliacao::Numeracao.new if memoria
+        @pedido_anterior = pedido_anterior
       end
 
       def perform
@@ -46,10 +48,20 @@ module Crm
           conversation_state: conversation_state,
           temporal: temporal_context,
           other_subjects: other_subjects
-        }.merge(memoria_payload)
+        }.merge(memoria_payload).merge(pedido_anterior_payload)
       end
 
       private
+
+      # Card que renasce (#1925): o pedido encerrado que vem antes deste, com as últimas mensagens dele até o nascimento
+      # deste card (Crm::Ai::PedidoAnterior). Sem ids locais da memória: nada dali é prova de fato deste card.
+      def pedido_anterior_payload
+        anterior = @pedido_anterior && Crm::Ai::PedidoAnterior.do_card(@card)
+        return {} unless anterior
+
+        mensagens = Crm::Ai::PedidoAnterior.mensagens(anterior, @card, fora: recent_records.map(&:id))
+        { previous_card: Crm::Ai::PedidoAnterior.payload(anterior).merge(messages: mensagens.map { |m| format_message(m, numerar: false) }) }
+      end
 
       def memoria_payload
         @numeracao ? Crm::Memoria::ParaAvaliacao.contexto(@card, conversation_ids, @numeracao) : {}
@@ -168,13 +180,13 @@ module Crm
       # Janela POR CONVERSA, não global: com um único LIMIT, uma conversa movimentada consumia a cota
       # inteira e a vinculada — que pode conter a promessa não cumprida — não chegava ao modelo.
       def recent_messages
-        ids = conversation_ids
-        return [] if ids.empty?
+        recent_records.map { |message| format_message(message) }
+      end
 
-        ids.flat_map { |conversation_id| latest_for(conversation_id) }
-           .sort_by(&:id)
-           .last(MAX_MESSAGES_CAP)
-           .map { |message| format_message(message) }
+      def recent_records
+        @recent_records ||= conversation_ids.flat_map { |conversation_id| latest_for(conversation_id) }
+                                            .sort_by(&:id)
+                                            .last(MAX_MESSAGES_CAP)
       end
 
       # reorder (not order) to override Message's default_scope(created_at: :asc), and by id (arrival
@@ -200,11 +212,11 @@ module Crm
 
       # #1807 (flag `email_autoria`): e-mail de outro endereço que não o do cliente ganha o aviso na frente e
       # "email_autoria" (outra_pessoa, equipe, automatica); o papel continua `customer` (é a resposta da conversa).
-      def format_message(message)
+      def format_message(message, numerar: true)
         forwarded = forwarded_by_team?(message)
         content, marca_do_email = email_autoria.marcar(message, message_content(message).truncate(2000))
         payload = {
-          **(@numeracao ? @numeracao.ref_de(message) : {}),
+          **(@numeracao && numerar ? @numeracao.ref_de(message) : {}),
           role: role_for(message),
           content: forwarded ? "#{FORWARDED_PREFIX}#{content}" : content,
           created_at: message.created_at.iso8601
