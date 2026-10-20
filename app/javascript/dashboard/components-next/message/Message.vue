@@ -77,6 +77,8 @@ import BotaoDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminh
 import MarcaDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminhar/MarcaDeEncaminhar.vue';
 import { useEncaminharDaMensagem } from 'dashboard/components-next/conversa-canal/encaminhar/useEncaminharDaMensagem';
 import { useBranding } from 'shared/composables/useBranding';
+import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
+import { useEcoDoCelular } from 'dashboard/components-next/conversa-canal/useEcoDoCelular';
 
 /**
  * @typedef {Object} Attachment
@@ -183,6 +185,13 @@ const inboxGetter = useMapGetter('inboxes/getInbox');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
 const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
+
+// #1941: mandada pelo app do celular (eco). O texto sai sem o prefixo do conector WAHA
+// (inclusive no histórico) e o nome é o de quem estava atribuído quando chegou.
+const eco = useEcoDoCelular(computed(() => props.contentAttributes));
+const conteudo = computed(() =>
+  textoDaMensagem(props.content, props.contentAttributes)
+);
 
 // fork chat#1709 (fase 3): reagir e editar pelo painel, só com a ação no campo da conversa.
 // Também serve ao "só leitura" do #1800, mais abaixo.
@@ -461,7 +470,8 @@ const componentToRender = computed(() => {
     )
       return LocationBubble;
 
-    if (!props.content) {
+    // #1941: foto mandada pelo celular cujo texto era só o prefixo do conector.
+    if (!conteudo.value) {
       if (fileType === ATTACHMENT_TYPES.IMAGE) return ImageBubble;
       if (fileType === ATTACHMENT_TYPES.FILE) return FileBubble;
       if (fileType === ATTACHMENT_TYPES.AUDIO) return AudioBubble;
@@ -535,7 +545,7 @@ const mensagemParaEncaminhar = computed(() => ({
   contentType: props.contentType,
   status: props.status,
   private: props.private,
-  content: props.content,
+  content: conteudo.value,
   contentAttributes: props.contentAttributes,
   additionalAttributes: props.additionalAttributes,
   attachments: props.attachments,
@@ -554,7 +564,7 @@ const payloadForContextMenu = computed(() => {
       (album.value || contatosJuntos.value)?.map(item => item.id) || null,
     id: props.id,
     content_attributes: props.contentAttributes,
-    content: props.content,
+    content: conteudo.value,
     conversation_id: props.conversationId,
     c2y_revocable: props.c2yRevocable,
   };
@@ -678,6 +688,13 @@ function handleReplyTo() {
 }
 
 const avatarInfo = computed(() => {
+  // #1941: eco com quem estava atribuído = avatar dessa pessoa; nunca o remetente.
+  if (eco.autor.value) {
+    return {
+      name: eco.nomeDoAutor.value,
+      src: eco.autor.value.thumbnail || '',
+    };
+  }
   if (props.contentAttributes?.externalEcho) {
     const { name, avatar_url, channel_type, medium, voice_enabled } =
       inbox.value;
@@ -719,6 +736,11 @@ const avatarInfo = computed(() => {
 });
 
 const avatarTooltip = computed(() => {
+  if (eco.autor.value) {
+    return t('CONVERSA_CANAL.ECO_DO_CELULAR.ENVIADA_POR', {
+      nome: eco.nomeDoAutor.value,
+    });
+  }
   if (props.contentAttributes?.externalEcho) {
     return replaceInstallationName(t('CONVERSATION.NATIVE_APP_ADVISORY'));
   }
@@ -742,6 +764,7 @@ onMounted(setupHighlightTimer);
 
 provideMessageContext({
   ...toRefs(props),
+  content: conteudo,
   isPrivate: computed(() => props.private),
   variant,
   orientation,
