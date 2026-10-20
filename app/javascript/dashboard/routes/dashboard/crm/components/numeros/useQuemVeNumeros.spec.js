@@ -87,13 +87,24 @@ describe('useQuemVeNumeros', () => {
 describe('useQuemVeNumeros antes da conta carregar', () => {
   // Na carga direta da página as flags da conta ainda não chegaram: sem esperar,
   // o agente sem função parece "sem a flag", monta o painel da equipe e leva 401.
-  it('não está pronto e não abre nenhuma das visões', () => {
+  it('agente sem função: não escolhe visão, mas o item de Números não some do menu', () => {
     Object.assign(estado, { papel: 'agent', funcao: null, chaves: [] });
     Object.assign(estado, { porPapel: false, contaCarregada: false });
     const api = montar();
     expect(api.pronto.value).toBe(false);
     expect([api.veSoEu.value, api.veEquipe.value]).toEqual([false, false]);
-    expect(api.abreNumeros.value).toBe(false);
+    expect(api.abreNumeros.value).toBe(true);
+  });
+
+  it('quem vê a equipe sem depender da flag já a vê; a função só com crm_view espera', () => {
+    Object.assign(estado, { porPapel: false, contaCarregada: false });
+    Object.assign(estado, { papel: 'administrator', funcao: null, chaves: [] });
+    expect(montar().veEquipe.value).toBe(true);
+    Object.assign(estado, { papel: 'agent', funcao: 3 });
+    estado.chaves = ['crm_view_reports'];
+    expect(montar().veEquipe.value).toBe(true);
+    estado.chaves = ['crm_view'];
+    expect(montar().abreNumeros.value).toBe(false);
   });
 
   it('fica pronto quando a conta chega', () => {

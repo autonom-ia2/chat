@@ -44,10 +44,10 @@ export function useQuemVeNumeros() {
   const temChave = chave =>
     getUserPermissions(currentUser.value, accountId.value).includes(chave);
 
+  // Só o agente sem função depende da flag para ver a equipe: para ele, espera a conta.
   const veEquipe = computed(() => {
-    if (!pronto.value) return false;
     if (administrador.value) return true;
-    if (semFuncao.value) return !ligado.value;
+    if (semFuncao.value) return pronto.value && !ligado.value;
     return temChave(CRM_VIEW_REPORTS_PERMISSION);
   });
   const veSoEu = computed(
@@ -56,7 +56,11 @@ export function useQuemVeNumeros() {
       ligado.value &&
       (administrador.value || semFuncao.value || temChave(CRM_VIEW_PERMISSION))
   );
-  const abreNumeros = computed(() => veEquipe.value || veSoEu.value);
+  // O agente sem função abre Números com ou sem a flag (equipe ou "Só eu"): o item
+  // do menu não some enquanto a conta carrega. Só a função com crm_view espera a flag.
+  const abreNumeros = computed(
+    () => semFuncao.value || veEquipe.value || veSoEu.value
+  );
 
   return { pronto, ligado, administrador, veEquipe, veSoEu, abreNumeros };
 }

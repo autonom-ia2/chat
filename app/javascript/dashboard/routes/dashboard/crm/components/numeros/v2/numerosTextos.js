@@ -78,12 +78,20 @@ const chaveDaFrase = (frase, semMeta) => {
 // (a conta ainda não grava o prazo por pessoa), a frase não fala de prazo.
 export const fraseDoTopo = (topo, mes) => {
   const { frase } = topo;
-  if (!mes.fechado && mes.dia <= DIAS_CEDO)
+  if (!mes.fechado && mes.dia <= DIAS_CEDO) {
+    // Quem atende conta casos, não dinheiro: a frase leva a contagem em `n`.
+    if (topo.medida !== 'valor')
+      return {
+        key: `${P}.TOPO.FRASE.CEDO_RESOLVEU`,
+        params: { dias: mes.dia, n: topo.feito },
+        plural: mes.dia,
+      };
     return {
       key: `${P}.TOPO.FRASE.CEDO`,
       params: { dias: mes.dia, valor: topo.feito },
       plural: mes.dia,
     };
+  }
   const [chave, plural] = chaveDaFrase(frase, !topo.meta);
   return { key: `${P}.TOPO.FRASE.${chave}`, params: frase, plural };
 };

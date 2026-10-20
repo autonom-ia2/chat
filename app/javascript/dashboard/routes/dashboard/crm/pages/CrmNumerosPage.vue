@@ -14,13 +14,12 @@ import { P } from '../components/numeros/v2/numerosTextos';
 // CRM › Números (#1897, F3 do #1871). Sem a flag `crm_numeros_lentes`: o painel de
 // hoje. Com ela: "Só eu" para quem trabalha no CRM e "Equipe" (até a F5, o painel
 // de hoje) para quem vê a equipe; quem vê as duas troca no seletor, e abre em
-// "Equipe" (?visao=eu|equipe). Os administradores recebem o aviso da Decisão 2.
+// "Equipe" (?visao=eu|equipe). Quem vê a equipe recebe o aviso da Decisão 2.
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const accountId = useMapGetter('getCurrentAccountId');
-const { pronto, ligado, administrador, veEquipe, veSoEu, abreNumeros } =
-  useQuemVeNumeros();
+const { pronto, ligado, veEquipe, veSoEu, abreNumeros } = useQuemVeNumeros();
 
 const visoes = computed(() =>
   [veSoEu.value && 'eu', veEquipe.value && 'equipe'].filter(Boolean)
@@ -60,8 +59,10 @@ const fecharAviso = () => {
     // Sem armazenamento no navegador: o aviso volta na próxima visita.
   }
 };
+// O aviso é para quem vê a equipe (administrador e função com "Visualizar
+// relatórios do CRM"), como o próprio texto diz.
 const mostrarAviso = computed(
-  () => ligado.value && administrador.value && !avisoFechado.value
+  () => ligado.value && veEquipe.value && !avisoFechado.value
 );
 
 // Sem a conta (flags e permissões), nenhuma visão abre: busca de novo e, se não vier,

@@ -35,7 +35,7 @@ const titulo = computed(() => {
 const frase = computed(() =>
   traduzir(
     fraseDoTopo(props.topo, props.mes),
-    venda.value ? ['feito', 'meta', 'valor'] : ['valor']
+    venda.value ? ['feito', 'meta', 'valor'] : []
   )
 );
 const pct = computed(() => pctDe(props.topo.feito, props.topo.meta));
@@ -50,7 +50,7 @@ const botao = computed(() =>
 <template>
   <section
     data-numeros-topo
-    class="relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-n-heroi px-5 py-5 text-white ring-1 ring-inset ring-white/10 dark:bg-[#12305E] sm:px-7 sm:py-6"
+    class="relative flex flex-col gap-3 overflow-hidden rounded-2xl bg-n-heroi px-5 py-5 text-white ring-1 ring-inset ring-white/10 dark:bg-n-heroi-escuro sm:px-7 sm:py-6"
   >
     <span
       aria-hidden="true"

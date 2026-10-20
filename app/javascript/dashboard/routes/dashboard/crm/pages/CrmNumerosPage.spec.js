@@ -90,7 +90,7 @@ const montar = () => {
         CrmVistasNumeros: true,
         NumerosComoContamos: true,
         RouterLink: true,
-        Banner: true,
+        Banner: { template: '<div data-numeros-aviso-admin><slot /></div>' },
         ResultsToggle: true,
       },
     },
@@ -159,5 +159,39 @@ describe('CrmNumerosPage', () => {
     expect(wrapper.find('[data-numeros-erro]').exists()).toBe(false);
     expect(CrmNumerosAPI.show).toHaveBeenCalledTimes(1);
     expect(CrmKanbanAPI.getReportPipelines).not.toHaveBeenCalled();
+  });
+
+  it('quem não abre Números (função sem chave do CRM) vai para o Kanban', async () => {
+    Object.assign(estado, { funcao: 7, chaves: ['conversation_manage'] });
+    montar();
+    await flushPromises();
+    expect(replace).toHaveBeenCalledWith({
+      name: 'crm_kanban_index',
+      params: { accountId: 1 },
+    });
+    expect(CrmNumerosAPI.show).not.toHaveBeenCalled();
+    expect(CrmKanbanAPI.getReportPipelines).not.toHaveBeenCalled();
+  });
+
+  it('administrador com a flag: abre na Equipe, com o aviso', async () => {
+    estado.papel = 'administrator';
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-painel-equipe]').exists()).toBe(true);
+    expect(wrapper.find('[data-numeros-aviso-admin]').exists()).toBe(true);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('função com "Visualizar relatórios do CRM" também vê o aviso; o agente sem função, não', async () => {
+    Object.assign(estado, { funcao: 7, chaves: ['crm_view_reports'] });
+    const gestor = montar();
+    await flushPromises();
+    expect(gestor.find('[data-painel-equipe]').exists()).toBe(true);
+    expect(gestor.find('[data-numeros-aviso-admin]').exists()).toBe(true);
+
+    Object.assign(estado, { funcao: null, chaves: [] });
+    const agente = montar();
+    await flushPromises();
+    expect(agente.find('[data-numeros-aviso-admin]').exists()).toBe(false);
   });
 });

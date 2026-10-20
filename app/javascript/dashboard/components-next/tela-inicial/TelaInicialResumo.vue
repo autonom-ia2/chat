@@ -63,7 +63,7 @@ const linhaDaEquipe = computed(() => {
     class="flex items-center justify-center w-full h-full p-4 overflow-auto bg-n-surface-1 md:p-10"
   >
     <div
-      class="relative w-full max-w-3xl px-6 py-8 overflow-hidden text-white shadow-xl rounded-3xl bg-n-heroi dark:bg-[#12305E] ring-1 ring-inset ring-white/10 md:px-10 md:py-10"
+      class="relative w-full max-w-3xl px-6 py-8 overflow-hidden text-white shadow-xl rounded-3xl bg-n-heroi dark:bg-n-heroi-escuro ring-1 ring-inset ring-white/10 md:px-10 md:py-10"
     >
       <span
         aria-hidden="true"

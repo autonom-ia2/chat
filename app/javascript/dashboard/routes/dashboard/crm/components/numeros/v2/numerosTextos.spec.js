@@ -54,6 +54,21 @@ describe('numerosTextos', () => {
     ).toBe('CRM_NUMEROS_V2.TOPO.SEM_META_EU');
   });
 
+  it('on days 1 to 3, the support phrase counts cases, not money', () => {
+    const atende = { medida: 'resolvidos', feito: 2, meta: null, frase: {} };
+    expect(fraseDoTopo(atende, { ...OUTUBRO, dia: 2 })).toEqual({
+      key: 'CRM_NUMEROS_V2.TOPO.FRASE.CEDO_RESOLVEU',
+      params: { dias: 2, n: 2 },
+      plural: 2,
+    });
+    const vende = { medida: 'valor', feito: 600, meta: null, frase: {} };
+    expect(fraseDoTopo(vende, { ...OUTUBRO, dia: 2 })).toEqual({
+      key: 'CRM_NUMEROS_V2.TOPO.FRASE.CEDO',
+      params: { dias: 2, valor: 600 },
+      plural: 2,
+    });
+  });
+
   it('keeps the goal titles ready for F4', () => {
     expect(
       tituloDoTopo({ medida: 'valor', feito: 6200, meta: 8000 }, OUTUBRO)

@@ -6013,7 +6013,8 @@
         "EU_ATENDE": "{noPrazo} on time. {falta} to go for your goal.",
         "EU_ATENDE_SEM_FALTA": "{noPrazo} on time.",
         "EU_ATENDE_SEM_PRAZO": "{dias} day left in the month. | {dias} days left in the month.",
-        "CEDO": "The month started {dias} day ago. So far: {valor}. | The month started {dias} days ago. So far: {valor}."
+        "CEDO": "The month started {dias} day ago. So far: {valor}. | The month started {dias} days ago. So far: {valor}.",
+        "CEDO_RESOLVEU": "The month started {dias} day ago. Cases solved so far: {n}. | The month started {dias} days ago. Cases solved so far: {n}."
       },
       "BOTAO": {
         "MEUS_ATRASADOS": "Open my overdue follow-up | Open my {n} overdue follow-ups",

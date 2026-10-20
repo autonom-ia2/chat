@@ -6014,7 +6014,8 @@
         "EU_ATENDE": "{noPrazo} dentro do prazo. Faltam {falta} para a sua meta.",
         "EU_ATENDE_SEM_FALTA": "{noPrazo} dentro do prazo.",
         "EU_ATENDE_SEM_PRAZO": "Falta {dias} dia para o mês acabar. | Faltam {dias} dias para o mês acabar.",
-        "CEDO": "O mês começou há {dias} dia. Até agora: {valor}. | O mês começou há {dias} dias. Até agora: {valor}."
+        "CEDO": "O mês começou há {dias} dia. Até agora: {valor}. | O mês começou há {dias} dias. Até agora: {valor}.",
+        "CEDO_RESOLVEU": "O mês começou há {dias} dia. Casos resolvidos até agora: {n}. | O mês começou há {dias} dias. Casos resolvidos até agora: {n}."
       },
       "BOTAO": {
         "MEUS_ATRASADOS": "Abrir meu retorno atrasado | Abrir meus {n} retornos atrasados",
