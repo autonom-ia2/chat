@@ -37,8 +37,8 @@ module Crm::Entrega::Marca
   # tentativas, como `desde`). `decidido_em`: com `venceram`, quando a regra decidiu por último (a fila espaça a espera sem ninguém); sem
   # ele, a marca não muda a cada tentativa. `card`: o card cuja regra vale, quando o pedido foi ligado a um assunto que
   # não é o foco (#1693). `razao`: o motivo que a IA do CRM deu ao pedir a pessoa (#1975), que vai junto na entrega pela
-  # fila. `revalidado_ate`: a última mensagem que a reavaliação da fila leu (Crm::Ai::RevalidacaoNaFila); sobrevive às
-  # novas tentativas, para a fila não pagar outra reavaliação sem mensagem nova.
+  # fila. `revalidado_ate`: a última mensagem que a reavaliação da fila leu (Crm::Ai::RevalidacaoNaFila; 0 se não havia
+  # nenhuma); sobrevive às novas tentativas, para a fila não pagar outra reavaliação sem mensagem nova.
   def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
     valor = {

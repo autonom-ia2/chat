@@ -182,8 +182,8 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
                      dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?, excluir: marca['venceram']).call
   end
 
-  # #1975: antes de entregar a espera da IA do CRM que recebeu mensagem nova, a IA relê se o problema do cliente segue
-  # aberto (Crm::Ai::RevalidacaoNaFila). Fora da trava e da transação: a chamada leva segundos. true: não entrega nesta
+  # #1975: antes de entregar a espera da IA do CRM (uma vez, e de novo só com mensagem nova), a IA relê se o problema do
+  # cliente segue aberto (Crm::Ai::RevalidacaoNaFila). Fora da trava e da transação: a chamada leva segundos. true: não entrega nesta
   # rodada (o pedido foi superado e a marca saiu, ou acabou a cota de reavaliações).
   def pedido_por_reler?(conversation)
     revalidacao = Crm::Ai::RevalidacaoNaFila.new(conversation)

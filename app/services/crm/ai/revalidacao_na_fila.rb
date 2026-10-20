@@ -6,10 +6,11 @@
 # (bot_handoff!), a da caixa sem regra, o convite e o convite vencido. O cliente que pede gente depois continua sendo
 # atendido: a reavaliação (Crm::Ai::RevalidaPassagem) conta o pedido explícito como "passa", sempre.
 #
-# Custo: só há o que reler quando chegou mensagem real (do cliente ou do atendimento; nem nota privada, nem atividade,
-# nem os avisos automáticos da caixa) depois do começo da espera, ou
-# depois da última reavaliação. A última mensagem considerada fica na marca (`revalidado_ate`): uma chamada por marca e
-# por mensagem nova, e nunca uma a cada rodada de 2 minutos. Sem mensagem nova, entrega como antes.
+# Quando: toda espera é relida uma vez antes da entrega, mesmo sem mensagem nova, porque a decisão foi tomada no meio
+# da conversa e a espera dura horas (a avaliação da meia-noite errou e nada chegou depois). Depois, só se chegar
+# mensagem real (do cliente ou do atendimento; nem nota privada, nem atividade, nem os avisos automáticos da caixa).
+# A última mensagem lida fica na marca (`revalidado_ate`, 0 se não havia nenhuma): uma chamada por espera e por
+# mensagem nova, e nunca uma a cada rodada de 2 minutos.
 class Crm::Ai::RevalidacaoNaFila
   # O que a reavaliação devolveu e foi feito com ele (para o log e o spec).
   Resultado = Struct.new(:superado, :decisao, keyword_init: true)
@@ -26,7 +27,7 @@ class Crm::Ai::RevalidacaoNaFila
     return false if Crm::Entrega::ConviteVencido.espacar?(marca)
     return false if ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation).present?
 
-    ultima_mensagem_nova(marca).present?
+    !ate_onde_reler(marca).nil?
   end
 
   # Reavalia (uma chamada) e aplica: superado, a marca sai, com atividade no card e log; de pé, a marca guarda a última
@@ -34,8 +35,8 @@ class Crm::Ai::RevalidacaoNaFila
   # porque perder o pedido de uma pessoa é pior do que entregar uma conversa à toa.
   def call
     marca = Crm::Entrega::Marca.dados(@conversation)
-    ultima = ultima_mensagem_nova(marca) if da_ia_do_crm?(marca)
-    return Resultado.new(superado: false, decisao: 'sem_mensagem_nova') if ultima.blank?
+    ultima = ate_onde_reler(marca) if da_ia_do_crm?(marca)
+    return Resultado.new(superado: false, decisao: 'ja_relida') if ultima.nil?
 
     resposta = Crm::Ai::RevalidaPassagem.new(@conversation, card: card, motivo_do_pedido: marca['razao']).call
     aplicar(resposta, marca, ultima)
@@ -51,18 +52,13 @@ class Crm::Ai::RevalidacaoNaFila
       marca['motivo'] == Crm::Ai::HandoffExecutor::MOTIVO_DA_ENTREGA
   end
 
-  # A mensagem real mais nova depois do começo da espera (ou da última reavaliação), ou nil.
-  def ultima_mensagem_nova(marca)
+  # Até qual mensagem a reavaliação vai ler, ou nil quando não há o que reler. Espera ainda não relida: a mensagem real
+  # mais nova (0 se não há nenhuma). Já relida: a mais nova depois da última leitura, se houver.
+  def ate_onde_reler(marca)
     mensagens = @conversation.messages.where(private: false, message_type: %i[incoming outgoing])
-    mensagens = if marca['revalidado_ate'].present?
-                  mensagens.where('messages.id > ?', marca['revalidado_ate'].to_i)
-                else
-                  desde = Crm::Entrega::Marca.desde(@conversation)
-                  return if desde.blank?
+    return mensagens.maximum(:id) || 0 if marca['revalidado_ate'].nil?
 
-                  mensagens.where('messages.created_at > ?', desde)
-                end
-    mensagens.maximum(:id)
+    mensagens.where('messages.id > ?', marca['revalidado_ate'].to_i).maximum(:id)
   end
 
   # Sob a trava da conversa, relendo a marca: se ela mudou no meio (outra entrega, uma pessoa assumiu, um pedido novo

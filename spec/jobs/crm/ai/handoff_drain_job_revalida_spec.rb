@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #1975: antes de entregar a espera da IA do CRM, a fila confere com a IA se o problema do cliente segue aberto, mas só
-# quando chegou mensagem nova depois da espera (ou da última conferência). As outras esperas seguem como antes.
+# uma vez, e de novo só quando chega mensagem nova depois da última conferência. As outras esperas seguem como antes.
 RSpec.describe Crm::Ai::HandoffDrainJob do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -67,27 +67,48 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     expect(atividades('ai_handoff').sole.payload['reason']).to eq('cliente pediu explicação de DMH e o robô não soube')
   end
 
-  it 'sem mensagem nova depois da espera: entrega como antes, sem chamar a IA, e com o motivo do pedido', :aggregate_failures do
-    fala!('mensagem de antes da espera', tipo: :incoming, created_at: 1.minute.ago)
+  # Conversa 327: a avaliação da meia-noite já tinha visto a cotação enviada e pediu a pessoa assim mesmo; nada chegou
+  # depois. A releitura antes da entrega, mesmo sem mensagem nova, é o que evita entregá-la horas depois.
+  it 'sem mensagem nova depois da espera: relê uma vez e, resolvido, não entrega', :aggregate_failures do
+    fala!('Aqui estão as 3 opções da sua cotação.', created_at: 1.minute.ago)
     segurar!
+    allow(revalida).to receive(:call).and_return(resposta(false, 'o robô enviou a cotação e o cliente não voltou'))
 
     described_class.perform_now
 
-    expect(Crm::Ai::RevalidaPassagem).not_to have_received(:new)
-    expect(conversation.reload.assignee_id).to eq(ana.id)
-    expect(atividades('ai_handoff').sole.payload['reason']).to eq('cliente pediu a cotação e o robô falhou')
+    expect(revalida).to have_received(:call).once
+    expect(conversation.reload.assignee_id).to be_nil
+    expect(Crm::Entrega::Marca.presente?(conversation)).to be(false)
+    expect(Crm::Ai::RevalidaPassagem).to have_received(:new)
+      .with(conversation, card: card, motivo_do_pedido: 'cliente pediu a cotação e o robô falhou')
   end
 
-  it 'nota privada e atividade não contam como mensagem nova' do
+  it 'sem mensagem nova e o problema segue aberto: entrega com o motivo novo', :aggregate_failures do
+    fala!('mensagem de antes da espera', tipo: :incoming, created_at: 1.minute.ago)
     segurar!
+    allow(revalida).to receive(:call).and_return(resposta(true, 'cliente quer falar do sinistro e ninguém respondeu'))
+
+    described_class.perform_now
+
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+    expect(atividades('ai_handoff').sole.payload['reason']).to eq('cliente quer falar do sinistro e ninguém respondeu')
+  end
+
+  it 'depois de relida, nota privada e atividade não pedem outra releitura', :aggregate_failures do
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+    segurar!
+    allow(revalida).to receive(:call).and_return(resposta(true, 'dúvida sem resposta'))
+
+    described_class.perform_now
+    expect(Crm::Entrega::Marca.dados(conversation.reload)['revalidado_ate']).to eq(0)
+
     travel(1.minute) do
       fala!('nota interna', private: true)
       fala!('Conversa atribuída', tipo: :activity)
     end
-
     described_class.perform_now
 
-    expect(Crm::Ai::RevalidaPassagem).not_to have_received(:new)
+    expect(revalida).to have_received(:call).once
   end
 
   it 'a espera que o próprio agente pediu não é relida' do
