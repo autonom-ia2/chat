@@ -220,9 +220,10 @@ module Crm::Ai::ClassifierPrompt
     #{Crm::Ai::ContextBuilder::FORWARDED_LEGEND}
   DADOS
 
-  # #1922: o card que não é negócio sai do funil sem contar como perda (Crm::Ai::NaoENegocio). Fica no FIM do prefixo,
-  # depois do aviso de dados: o texto antes daqui não muda. O schema também ganhou o campo, e a troca do schema faz cada
-  # variante perder o cache uma vez, na primeira chamada; depois o prefixo volta a ser estável.
+  # #1922: o card que não é negócio sai do funil sem contar como perda (Crm::Ai::NaoENegocio). Só com a flag
+  # `crm_ia_arquiva_lixo` (ClassifierPrompt.para), logo depois do aviso de dados e antes do VARIOS e da memória: o texto
+  # antes daqui não muda, e as contas sem a flag seguem com o prefixo e o cache de antes. Com a flag, o schema também
+  # ganha o campo, e cada variante perde o cache uma vez, na primeira chamada; depois o prefixo volta a ser estável.
   NAO_E_NEGOCIO = <<~NEGOCIO.strip
     NÃO É NEGÓCIO ("nao_e_negocio"):
     Preencha só quando ESTE card não é um pedido de cliente e não deveria estar no funil:
@@ -255,8 +256,7 @@ module Crm::Ai::ClassifierPrompt
     OTHER_SUBJECTS,
     OUTPUT_DISCIPLINE,
     EXAMPLES,
-    DADOS_NAO_INSTRUCOES,
-    NAO_E_NEGOCIO
+    DADOS_NAO_INSTRUCOES
   ].freeze
   TEXT = PARTES.join("\n\n").freeze
   # O mesmo prefixo, com o parágrafo dos agentes de IA logo depois do HANDOFF. Também congelado: estável por variante.
@@ -317,14 +317,17 @@ module Crm::Ai::ClassifierPrompt
   # O prefixo desta chamada: com algum agente de IA entre os elegíveis, a variante que explica o rótulo. Com a memória, o
   # parágrafo dela no fim. Com a flag `email_autoria` (#1807), a legenda do aviso de e-mail depois de tudo (o cache das
   # contas sem a flag não muda).
-  def self.para(eligible_agents, memoria: false, email_autoria: false)
+  # Com a flag `crm_ia_arquiva_lixo` (#1922), a regra "não é negócio" logo depois do prefixo de sempre.
+  def self.para(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false)
     base = Array(eligible_agents).any? { |nome| Crm::AgentesIa.rotulo_de_agente?(nome) } ? TEXT_COM_AGENTES_IA : TEXT
+    base = "#{base}\n\n#{NAO_E_NEGOCIO}" if nao_e_negocio
     com_email(memoria ? "#{base}\n\n#{MEMORIA}" : base, email_autoria)
   end
 
   # O prefixo da avaliação conjunta (#1693), com a mesma escolha da variante dos agentes de IA.
-  def self.para_varios(eligible_agents, memoria: false, email_autoria: false)
+  def self.para_varios(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false)
     base = para(eligible_agents).equal?(TEXT) ? TEXT_VARIOS : TEXT_VARIOS_COM_AGENTES_IA
+    base = "#{para(eligible_agents, nao_e_negocio: true)}\n\n#{VARIOS}" if nao_e_negocio
     com_email(memoria ? "#{base}\n\n#{MEMORIA}" : base, email_autoria)
   end
 

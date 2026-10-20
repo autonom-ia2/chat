@@ -163,6 +163,7 @@ RSpec.describe 'Eval pago #1922: o card que não é negócio sai do funil sem co
     skip 'eval pago: rode com CRM_EVAL_PAGO=1 e OPENAI_API_KEY' unless ENV['CRM_EVAL_PAGO'] == '1' && ENV['OPENAI_API_KEY'].present?
 
     allow(Crm::Config).to receive(:enabled?).and_return(true)
+    account.enable_features!(Crm::Ai::NaoENegocio::FLAG)
     InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_API_KEY').update!(value: ENV.fetch('OPENAI_API_KEY'))
     allow(Crm::Cards::CurrentSubject).to receive(:card?).and_return(true)
     # O nosso robô aparece como agente da plataforma (platform_agent), como um agente da Autonom.ia ligado à caixa.

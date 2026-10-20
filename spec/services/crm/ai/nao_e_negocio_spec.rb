@@ -24,17 +24,19 @@ RSpec.describe Crm::Ai::NaoENegocio do
   end
   let(:conversa) { create(:conversation, account: account) }
 
+  before { account.enable_features!(described_class::FLAG) }
+
   def novo_card(**atributos)
     account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL', primary_conversation: conversa, **atributos)
   end
 
   # durante: o que acontece enquanto o modelo pensa (depois de a conversa ser lida para a avaliação).
-  def ia_responde(nao_e_negocio, suggested_stage_id: stage.id, durante: nil)
+  def ia_responde(nao_e_negocio, suggested_stage_id: stage.id, durante: nil, handoff: nil)
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(
       instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'test' })
     )
     resposta = { suggested_stage_id: suggested_stage_id, confidence: 0.9, reasoning: 'x', model_used: 'm',
-                 nao_e_negocio: nao_e_negocio }.with_indifferent_access
+                 nao_e_negocio: nao_e_negocio, handoff: handoff }.with_indifferent_access
     classificador = instance_double(Crm::Ai::StageClassifier)
     allow(classificador).to receive(:perform) do
       durante&.call
@@ -64,6 +66,28 @@ RSpec.describe Crm::Ai::NaoENegocio do
     expect(atividade).to have_attributes(actor_type: 'system', actor_id: nil)
     expect(atividade.payload).to include('by' => 'ai', 'motivo' => 'fora_do_negocio', 'confidence' => 0.9)
     expect(Crm::Activity.where(card: card, event_type: %w[lost ai_auto_moved])).to be_empty
+  end
+
+  # Pega: o arquivamento valer numa conta sem a flag `crm_ia_arquiva_lixo` (o comportamento de antes tem de voltar inteiro).
+  it 'conta sem a flag: o card fica onde está, aberto, e nada vai à linha do tempo', :aggregate_failures do
+    account.disable_features!(described_class::FLAG)
+    card = novo_card
+    ia_responde(lixo)
+
+    expect(avaliar(card)).to have_attributes(status: :skipped, error: 'same_stage')
+    expect(card.reload).to have_attributes(status: 'open', stage_id: stage.id)
+    expect(Crm::Activity.where(card: card, event_type: 'archive')).to be_empty
+  end
+
+  # Pega: o pedido de atendente sumir em silêncio porque o card foi arquivado antes da passagem (revisão do #1922).
+  it 'pedido de atendente no mesmo card: não arquiva' do
+    card = novo_card
+    ia_responde(lixo, handoff: { intent: 'transferir', should_handoff: true, reason: 'Pediu uma pessoa', suggested_agent: nil })
+    allow(Crm::Ai::HandoffExecutor).to receive(:new).and_return(instance_double(Crm::Ai::HandoffExecutor, perform: nil))
+
+    avaliar(card)
+
+    expect(card.reload).to be_open
   end
 
   # Pega: a sugestão de etapa que esperava uma pessoa continuar pendurada num card que saiu do funil.

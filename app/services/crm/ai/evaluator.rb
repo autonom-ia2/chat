@@ -242,10 +242,13 @@ module Crm
         Result.new(status: :skipped, error: 'pessoa_mexeu_na_etapa')
       end
 
-      # #1922: o modelo disse que o card não é negócio. Só no automático do funil, como mover sozinho; "Avaliar agora" é a
-      # pessoa olhando o card, e ela mesma arquiva se quiser. As guardas do card são do Crm::Ai::NaoENegocio.
+      # #1922: o modelo disse que o card não é negócio. Só com a flag da conta (`crm_ia_arquiva_lixo`) e no automático do
+      # funil, como mover sozinho; "Avaliar agora" é a pessoa olhando o card, e ela mesma arquiva se quiser. As guardas do
+      # card são do Crm::Ai::NaoENegocio. Com pedido de atendente neste card, ele fica: arquivar pularia a passagem.
       def nao_e_negocio!(classification)
         return false if @trigger == 'manual' || classification[:nao_e_negocio].blank?
+        return false unless NaoENegocio.ligada?(@card.account)
+        return false if HandoffIntent.requested?(classification[:handoff])
         return false unless auto_move_allowed?
 
         NaoENegocio.new(card: @card, decisao: classification[:nao_e_negocio], lido_em: @lido_em).aplicar!

@@ -418,8 +418,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(entrada['cards'].map { |pacote| [pacote['card']['id'], pacote['stages'].map { |stage| stage['name'] }] })
         .to eq([[vida.id, ['Novo Lead', 'Renovando', 'Renovado']], [auto.id, ['Novo Lead', 'Proposta', 'Fechamento']],
                 [sinistro.id, ['Novo Lead', 'Análise', 'Resolvido']]])
-      expect(entrada['other_subjects'])
-        .to match([{ 'id' => kind_of(Integer), 'title' => 'Seguro viagem', 'pipeline' => 'Vendas', 'stage' => 'Novo Lead' }])
+      expect(entrada['other_subjects']).to eq([{ 'title' => 'Seguro viagem', 'pipeline' => 'Vendas', 'stage' => 'Novo Lead' }])
       expect(entrada['recent_messages'].pluck('content')).to include(a_string_including('quero renovar o vida'))
     end
 

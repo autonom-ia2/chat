@@ -15,8 +15,8 @@ RSpec.describe Crm::Ai::ClassifierPrompt do
     [[], ['Ana Souza', 'Bruno Lima'], nil].each do |elegiveis|
       expect(described_class.para(elegiveis)).to equal(described_class::TEXT)
     end
-    # #1140: o aviso de dados entra no fim, depois de todas as partes de antes; #1922: a regra "não é negócio" depois dele.
-    expect(described_class::TEXT).to eq([*partes_de_antes, described_class::DADOS_NAO_INSTRUCOES, described_class::NAO_E_NEGOCIO].join("\n\n"))
+    # #1140: o aviso de dados entra no fim, depois de todas as partes de antes.
+    expect(described_class::TEXT).to eq([*partes_de_antes, described_class::DADOS_NAO_INSTRUCOES].join("\n\n"))
     expect(described_class::TEXT).not_to include('(agente de IA)')
     expect(described_class::HANDOFF).to end_with('Não invente nomes fora da lista.')
   end

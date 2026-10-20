@@ -16,8 +16,38 @@
 #   funil e estar nas conversas deste. Sem isso, nada sai.
 # O resto (movimento automático ligado no funil, etapa mexida por uma pessoa há pouco, "Avaliar agora") é do
 # Crm::Ai::Evaluator.
+#
+# Flag da conta `crm_ia_arquiva_lixo`: sem ela, a regra não vai ao prompt, o campo não vai ao schema, o `id` não vai em
+# other_subjects e nada é arquivado (tudo como antes do #1922).
 class Crm::Ai::NaoENegocio
+  FLAG = 'crm_ia_arquiva_lixo'.freeze
   MOTIVOS = %w[fora_do_negocio duplicado].freeze
+
+  # O campo da avaliação de etapa (a regra está em ClassifierPrompt::NAO_E_NEGOCIO).
+  CAMPO = {
+    type: %w[object null],
+    description: 'Preencha SOMENTE quando este card não é pedido de cliente (NÃO É NEGÓCIO). null caso contrário.',
+    properties: {
+      motivo: { type: 'string', enum: MOTIVOS },
+      confidence: { type: 'number', minimum: 0, maximum: 1 },
+      reasoning: { type: 'string', maxLength: 300, description: 'O fato da conversa que mostra que não é negócio.' },
+      duplicado_de: { type: %w[integer null], description: 'Só no "duplicado": o id do card aberto que fica. null caso contrário.' }
+    },
+    required: %w[motivo confidence reasoning duplicado_de],
+    additionalProperties: false
+  }.freeze
+
+  def self.ligada?(account)
+    account.present? && account.feature_enabled?(FLAG)
+  end
+
+  # O schema de um card (StageClassifier::CLASSIFICATION_SCHEMA) com o campo `nao_e_negocio` no fim, obrigatório.
+  def self.com_campo(schema)
+    corpo = schema[:schema]
+    schema.merge(
+      schema: corpo.merge(properties: corpo[:properties].merge(nao_e_negocio: CAMPO), required: [*corpo[:required], 'nao_e_negocio'])
+    ).freeze
+  end
 
   # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier).
   def initialize(card:, decisao:, lido_em:)
