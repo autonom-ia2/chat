@@ -6,11 +6,15 @@ require 'rails_helper'
 #
 # #1926, precisão da IA de etapa. Conversas inventadas, em três ramos, com o classificador real (o mesmo prefixo, a
 # mesma janela de mensagens e o mesmo pacote da avaliação de um card; nada é aplicado ao card):
-# - fechou sem dizer com quem: o fim é incerto. Nunca uma etapa do meio (Negociação) nem Ganho; Perdido ou manter.
+# - fechou sem dizer com quem: o fim é incerto. Nunca uma etapa do meio (Negociação) nem Ganho; manter, ou Perdido
+#   como SUGESTÃO (confiança abaixo de Crm::Ai::Config::AUTO_MOVE_THRESHOLD: não move sozinho).
 # - "já resolvi" num card duplicado: idem.
+# - o mesmo "já conseguimos fechar" num funil sem etapa de perda: manter (ou confiança sem efeito).
 # - preço enviado no meio de uma conversa longa (30 mensagens; o preço é a 6ª): Proposta enviada ou Negociação.
-# - controles, para "não errar" não virar "não mover": perdeu para outro vai para Perdido com confiança de mover;
-#   aceitou a nossa proposta vai para Ganho.
+# - controles, para "não errar" não virar "não mover": perdeu para outro vai para Perdido e aceitou a nossa proposta
+#   vai para Ganho, os dois com confiança de mover sozinho.
+# Uma vez por rodada, fora dos ramos: funil de atendimento ("serve"), "já resolvi" num card duplicado de uma conversa
+# com dois problemas: manter (não está claro que foi o problema DESTE card).
 # As saídas (etapa, confiança, motivo, custo) vão para EVAL_SAIDA (JSON). Nenhum prompt é gravado.
 module PrecisaoEtapaEval
   TETO_USD = 0.30
@@ -24,6 +28,7 @@ module PrecisaoEtapaEval
     ['Ganho', 'O cliente aceitou a nossa proposta e fechou conosco: aceite, pagamento ou contrato.'],
     ['Perdido', 'O cliente desistiu, fechou com outro fornecedor ou não precisa mais.']
   ].freeze
+  ETAPAS_SEM_PERDA = ETAPAS.reject { |etapa| etapa.first == 'Perdido' }.freeze
 
   RAMOS = {
     seguros: {
@@ -161,6 +166,23 @@ module PrecisaoEtapaEval
   }.freeze
 end
 
+# O funil de atendimento ("serve") do caso fora dos ramos.
+module PrecisaoEtapaEvalAtendimento
+  ETAPAS = [
+    ['Aberto', 'O cliente relatou um problema e ainda não foi atendido.'],
+    ['Em análise', 'A equipe está verificando o problema do cliente.'],
+    ['Aguardando cliente', 'Pedimos uma informação ao cliente e esperamos a resposta.'],
+    ['Resolvido', 'O problema deste chamado foi resolvido e o cliente confirmou.']
+  ].freeze
+  POS_VENDA = [
+    [:c, 'Oi, o aplicativo de monitoramento parou de mostrar a geração desde ontem.'],
+    [:h, 'Oi! Vou verificar com a equipe técnica.'],
+    [:c, 'E aproveitando: preciso da segunda via da nota fiscal da instalação.'],
+    [:h, 'Certo, vou pedir ao financeiro também.'],
+    [:c, 'Já resolvi, obrigado.']
+  ].freeze
+end
+
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe 'Eval pago #1926: precisão da IA de etapa' do
   let(:account) { create(:account, name: 'Empresa Eval') }
@@ -198,16 +220,32 @@ RSpec.describe 'Eval pago #1926: precisão da IA de etapa' do
     end
   end
 
+  # O teto depende do evento de custo (UsageRecorder é best-effort): chamada sem evento, ou com tokens e custo zero
+  # (modelo sem preço no Pricing), para o eval em vez de rodar sem teto.
   def com_custo(&)
-    callback = ->(*, payload) { saida[:custo_usd] += payload[:cost].to_f }
-    ActiveSupport::Notifications.subscribed(callback, Crm::Ai::UsageRecorder::EVENT_NAME, &)
+    raise "teto do eval atingido antes da chamada: US$ #{saida[:custo_usd].round(4)}" if saida[:custo_usd] >= PrecisaoEtapaEval::TETO_USD
+
+    eventos = []
+    ActiveSupport::Notifications.subscribed(->(*, payload) { eventos << payload }, Crm::Ai::UsageRecorder::EVENT_NAME, &)
+    conferir_custo!(eventos)
+  end
+
+  def conferir_custo!(eventos)
+    raise 'chamada sem evento de custo: o teto não pode ser somado' if eventos.empty?
+
+    eventos.each do |evento|
+      raise "custo zero com tokens (modelo #{evento[:model]} sem preço?)" if evento[:cost].to_f.zero? && evento.dig(:tokens, :in).to_i.positive?
+
+      saida[:custo_usd] += evento[:cost].to_f
+    end
     raise "teto do eval estourado: US$ #{saida[:custo_usd].round(4)}" if saida[:custo_usd] > PrecisaoEtapaEval::TETO_USD
   end
 
-  def funil(ramo)
-    pipeline = account.crm_pipelines.create!(name: ramo[:funil], created_by: admin, status: :active)
-    PrecisaoEtapaEval::ETAPAS.each_with_index do |(nome, criterio), posicao|
-      account.crm_pipeline_stages.create!(pipeline: pipeline, name: nome, position: posicao, metadata: { 'ai_criteria' => criterio })
+  def funil(nome, etapas = PrecisaoEtapaEval::ETAPAS, venda: true)
+    pipeline = account.crm_pipelines.create!(name: nome, created_by: admin, status: :active, counts_as_sale: venda)
+    etapas.each_with_index do |(nome_da_etapa, criterio), posicao|
+      account.crm_pipeline_stages.create!(pipeline: pipeline, name: nome_da_etapa, position: posicao,
+                                          metadata: { 'ai_criteria' => criterio })
     end
     pipeline
   end
@@ -217,14 +255,15 @@ RSpec.describe 'Eval pago #1926: precisão da IA de etapa' do
                               title: titulo, primary_conversation: conversa, inbox: inbox, currency: 'BRL')
   end
 
-  # roteiro: [[:c | :h, texto], ...]; dias_antes_da_ultima afasta a última fala, como o cliente voltando dias depois.
-  def conversa(roteiro, dias_antes_da_ultima: 0)
+  # roteiro: [[:c | :h, texto], ...]; volta_depois: a conversa é de 4 dias atrás e a última fala é de agora, como o
+  # cliente voltando dias depois.
+  def conversa(roteiro, volta_depois: false)
     contato = create(:contact, account: account, name: 'Cliente Eval')
     conversa = create_crm_conversation(account: account, inbox: inbox, contact: contato)
     inicio = 4.days.ago
     roteiro.each_with_index do |(quem, texto), indice|
       hora = inicio + (indice * 3).minutes
-      hora = Time.current if indice == roteiro.size - 1 && dias_antes_da_ultima.positive?
+      hora = Time.current if volta_depois && indice == roteiro.size - 1
       create(:message, account: account, inbox: inbox, conversation: conversa, content: texto, created_at: hora,
                        message_type: quem == :c ? :incoming : :outgoing, sender: quem == :c ? contato : ana)
     end
@@ -248,29 +287,58 @@ RSpec.describe 'Eval pago #1926: precisão da IA de etapa' do
      [:c, 'Vou analisar e te retorno.'], [:h, 'Fico no aguardo!']]
   end
 
-  def fim_incerto?(resultado, atual) = [atual, 'Perdido'].include?(resultado[:etapa])
+  def mover = Crm::Ai::Config::AUTO_MOVE_THRESHOLD
+
+  # Manter, ou Perdido só como sugestão: uma pessoa confirma, nada se move sozinho.
+  def fim_incerto?(resultado, atual)
+    resultado[:etapa] == atual || (resultado[:etapa] == 'Perdido' && resultado[:confianca] < mover)
+  end
+
+  # Manter, ou uma resposta que não faz nada (abaixo do limiar de sugestão).
+  def manteve?(resultado, atual)
+    resultado[:etapa] == atual || resultado[:confianca] < Crm::Ai::Config::SUGGESTION_THRESHOLD
+  end
 
   def rodar_ramo(nome, ramo)
-    pipeline = funil(ramo)
+    pipeline = funil(ramo[:funil])
     %i[fechou_sem_dizer_com_quem ja_resolvi_duplicado preco_no_meio_da_conversa_longa controle_perdeu_para_outro
        controle_aceitou_a_proposta].each { |caso| send(caso, nome, ramo, pipeline) }
+    fechou_num_funil_sem_perda(nome, ramo)
   end
 
   def fechou_sem_dizer_com_quem(nome, ramo, pipeline)
     conversa_1, contato_1 = conversa(proposta_e_espera(ramo) + [[:c, 'Oi! Já conseguimos fechar, obrigado pela atenção.']],
-                                     dias_antes_da_ultima: 3)
+                                     volta_depois: true)
     resultado = classificar(card(pipeline, 'Proposta enviada', conversa_1, contato_1, ramo[:titulo]))
-    registrar(nome, 'fechou_sem_dizer_com_quem', 'Proposta enviada ou Perdido', resultado, fim_incerto?(resultado, 'Proposta enviada'))
+    registrar(nome, 'fechou_sem_dizer_com_quem', 'Proposta enviada, ou Perdido como sugestão', resultado,
+              fim_incerto?(resultado, 'Proposta enviada'))
+  end
+
+  def fechou_num_funil_sem_perda(nome, ramo)
+    pipeline = funil("#{ramo[:funil]} sem perda", PrecisaoEtapaEval::ETAPAS_SEM_PERDA)
+    roteiro = proposta_e_espera(ramo) + [[:c, 'Oi! Já conseguimos fechar, obrigado pela atenção.']]
+    conversa_6, contato_6 = conversa(roteiro, volta_depois: true)
+    resultado = classificar(card(pipeline, 'Proposta enviada', conversa_6, contato_6, ramo[:titulo]))
+    registrar(nome, 'fechou_num_funil_sem_perda', 'Proposta enviada', resultado, manteve?(resultado, 'Proposta enviada'))
+  end
+
+  def pos_venda_ja_resolvi_duplicado
+    pipeline = funil('Pós-venda', PrecisaoEtapaEvalAtendimento::ETAPAS, venda: false)
+    conversa_7, contato_7 = conversa(PrecisaoEtapaEvalAtendimento::POS_VENDA, volta_depois: true)
+    card(pipeline, 'Em análise', conversa_7, contato_7, 'Segunda via da nota fiscal')
+    resultado = classificar(card(pipeline, 'Em análise', conversa_7, contato_7, 'Monitoramento sem dados'))
+    registrar(:pos_venda, 'serve_ja_resolvi_duplicado', 'Em análise', resultado, manteve?(resultado, 'Em análise'))
   end
 
   def ja_resolvi_duplicado(nome, ramo, pipeline)
     roteiro = [[:c, ramo[:pedido]], [:h, ramo[:pergunta]], [:c, ramo[:dados]], [:h, 'Obrigado! Vou preparar e já te mando.'],
                [:c, 'Já resolvi, obrigado.']]
-    conversa_2, contato_2 = conversa(roteiro, dias_antes_da_ultima: 1)
+    conversa_2, contato_2 = conversa(roteiro, volta_depois: true)
     # O card duplicado: outro card do mesmo assunto na mesma conversa; avalia-se o segundo.
     card(pipeline, 'Em atendimento', conversa_2, contato_2, ramo[:titulo])
     resultado = classificar(card(pipeline, 'Em atendimento', conversa_2, contato_2, ramo[:titulo]))
-    registrar(nome, 'ja_resolvi_duplicado', 'Em atendimento ou Perdido', resultado, fim_incerto?(resultado, 'Em atendimento'))
+    registrar(nome, 'ja_resolvi_duplicado', 'Em atendimento, ou Perdido como sugestão', resultado,
+              fim_incerto?(resultado, 'Em atendimento'))
   end
 
   def preco_no_meio_da_conversa_longa(nome, ramo, pipeline)
@@ -281,21 +349,25 @@ RSpec.describe 'Eval pago #1926: precisão da IA de etapa' do
   end
 
   def controle_perdeu_para_outro(nome, ramo, pipeline)
-    conversa_4, contato_4 = conversa(proposta_e_espera(ramo) + [[:c, ramo[:perdeu]]], dias_antes_da_ultima: 2)
+    conversa_4, contato_4 = conversa(proposta_e_espera(ramo) + [[:c, ramo[:perdeu]]], volta_depois: true)
     resultado = classificar(card(pipeline, 'Proposta enviada', conversa_4, contato_4, ramo[:titulo]))
-    perdeu = resultado[:etapa] == 'Perdido' && resultado[:confianca] >= Crm::Ai::Config::AUTO_MOVE_THRESHOLD
+    perdeu = resultado[:etapa] == 'Perdido' && resultado[:confianca] >= mover
     registrar(nome, 'controle_perdeu_para_outro', 'Perdido (confiança de mover)', resultado, perdeu)
   end
 
   def controle_aceitou_a_proposta(nome, ramo, pipeline)
-    conversa_5, contato_5 = conversa(proposta_e_espera(ramo) + [[:c, ramo[:ganhou]]], dias_antes_da_ultima: 1)
+    conversa_5, contato_5 = conversa(proposta_e_espera(ramo) + [[:c, ramo[:ganhou]]], volta_depois: true)
     resultado = classificar(card(pipeline, 'Proposta enviada', conversa_5, contato_5, ramo[:titulo]))
-    registrar(nome, 'controle_aceitou_a_proposta', 'Ganho', resultado, resultado[:etapa] == 'Ganho')
+    ganhou = resultado[:etapa] == 'Ganho' && resultado[:confianca] >= mover
+    registrar(nome, 'controle_aceitou_a_proposta', 'Ganho (confiança de mover)', resultado, ganhou)
   end
 
   it 'três ramos: fim incerto não vira etapa do meio, o preço do meio da conversa é visto, os controles seguem' do
     repeticoes = ENV.fetch('EVAL_REPETICOES', '1').to_i
-    repeticoes.times { PrecisaoEtapaEval::RAMOS.each { |nome, ramo| rodar_ramo(nome, ramo) } }
+    repeticoes.times do
+      PrecisaoEtapaEval::RAMOS.each { |nome, ramo| rodar_ramo(nome, ramo) }
+      pos_venda_ja_resolvi_duplicado
+    end
     gravar_saida!
 
     expect(saida[:casos].reject { |caso| caso[:passou] }).to eq([])
