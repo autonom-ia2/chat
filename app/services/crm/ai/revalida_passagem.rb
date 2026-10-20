@@ -35,13 +35,18 @@ class Crm::Ai::RevalidaPassagem
   # "resolvido" a uma recotação que falhou porque, depois, o robô fez a renovação de outro carro.
   SITUACOES = %w[resolvido falhou_sem_solucao aguardando_cliente em_andamento].freeze
   MAX_PEDIDOS = 8
+  # As situações que mantêm o problema aberto: com uma delas na lista, "resolvido" não vale.
+  ABERTAS = %w[falhou_sem_solucao em_andamento].freeze
   INSTRUCTIONS = <<~TEXT.freeze
     Você confere se uma conversa de atendimento ainda precisa de uma PESSOA da equipe. Mais cedo, uma avaliação
     automática pediu que uma pessoa assumisse; ninguém estava disponível e a conversa ficou esperando. Antes de
     entregá-la, leia a conversa inteira até agora, do começo ao fim, e não só o último assunto.
     PRIMEIRO, "pedidos": liste TODOS os pedidos que o cliente fez na conversa, um por item (até #{MAX_PEDIDOS}; se
-    houver mais, junte os parecidos), inclusive os antigos, os que o cliente abandonou e os que ele trocou por outro
-    assunto. Para cada um:
+    houver mais, junte os parecidos, nunca uma parte que falhou com uma atendida), inclusive os antigos, os que o cliente abandonou e os que ele trocou por outro
+    assunto. Pedido atendido só em parte vira DOIS itens: a parte atendida como "resolvido" e a parte que ficou de
+    fora pela falha como "falhou_sem_solucao" (ex.: a cotação para 3 pessoas falhou e o cliente seguiu só com 2: um
+    item "cotação de 2 pessoas", resolvido, e outro "cotação da pessoa que ficou de fora", falhou_sem_solucao). Vale
+    para pessoa, item, cobertura, veículo ou qualquer outra parte do pedido. Para cada item:
     - "pedido": o que o cliente pediu, em poucas palavras (ex.: "recotação do carro", "incluir passageiro na cotação");
     - "situacao":
       - "resolvido": o atendimento (humano ou automático) entregou o que foi pedido;
@@ -139,19 +144,28 @@ class Crm::Ai::RevalidaPassagem
     decisao = resposta['decisao'] if resposta.is_a?(Hash)
     raise RespostaInvalida, 'fora_do_schema' unless DECISOES.include?(decisao) && resposta['pedidos'].is_a?(Array)
 
-    registrar(decisao, resposta['pedidos'])
-    { passa: decisao != NAO_PASSA, motivo: resposta['motivo'].to_s.first(300), decisao: decisao }
+    decidir(decisao, resposta['pedidos'].grep(Hash), resposta['motivo'].to_s.first(300))
   rescue JSON::ParserError
     raise RespostaInvalida, 'json_invalido'
   end
 
+  # Coerência entre campos do próprio schema, sem ler o texto: "resolvido" com um pedido que falhou ou segue em
+  # andamento na lista do próprio modelo passa, como problema em aberto, com o motivo daquele item.
+  def decidir(decisao, pedidos, motivo)
+    aberto = pedidos.find { |item| ABERTAS.include?(item['situacao']) } if decisao == NAO_PASSA
+    registrar(decisao, pedidos, incoerente: aberto.present?)
+    return { passa: decisao != NAO_PASSA, motivo: motivo, decisao: decisao } if aberto.blank?
+
+    { passa: true, motivo: [aberto['pedido'], aberto['como']].compact_blank.join(': ').first(300), decisao: 'problema_em_aberto' }
+  end
+
   # O inventário só vai ao log, e só em contagens por situação (o texto dos pedidos pode trazer dado do cliente).
-  # incoerente=1: o modelo disse "resolvido" com um pedido que falhou ou segue em andamento na própria lista.
-  def registrar(decisao, pedidos)
-    contagem = pedidos.filter_map { |item| item['situacao'] if item.is_a?(Hash) }.tally
-    abertos = contagem.slice('falhou_sem_solucao', 'em_andamento').values.sum
+  # incoerente=1: o modelo disse "resolvido" com um pedido que falhou ou segue em andamento na própria lista (e o
+  # código corrigiu para problema em aberto).
+  def registrar(decisao, pedidos, incoerente:)
+    contagem = pedidos.filter_map { |item| item['situacao'] }.tally
     Rails.logger.info("[crm][revalida] conversa=#{@conversation.id} card=#{@card.id} decisao=#{decisao} " \
                       "pedidos=#{SITUACOES.map { |situacao| "#{situacao}:#{contagem[situacao].to_i}" }.join(',')} " \
-                      "incoerente=#{decisao == NAO_PASSA && abertos.positive? ? 1 : 0}")
+                      "incoerente=#{incoerente ? 1 : 0}")
   end
 end

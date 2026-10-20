@@ -72,21 +72,34 @@ RSpec.describe Crm::Ai::RevalidaPassagem do
     expect(described_class::INSTRUCTIONS).to include('leia a conversa inteira', 'liste TODOS os pedidos',
                                                      'abandonado não é pedido resolvido',
                                                      'Aviso de espera não resolve o problema',
-                                                     'SÓ quando todos os pedidos da lista estão')
+                                                     'SÓ quando todos os pedidos da lista estão',
+                                                     'Pedido atendido só em parte vira DOIS itens')
   end
 
-  it 'o inventário vai ao log só em contagens, e marca o "resolvido" que a própria lista contradiz', :aggregate_failures do
-    pedidos = [{ pedido: 'recotação do carro', situacao: 'falhou_sem_solucao', como: 'o sistema não cotou' },
-               { pedido: 'renovação do outro carro', situacao: 'resolvido', como: 'o robô renovou' }]
-    responde(pedidos: pedidos, decisao: 'resolvido', motivo: 'o robô renovou o seguro')
+  # Coerência entre campos do próprio schema (decisão do Rodrigo, 20/10): o "resolvido" que a própria lista contradiz
+  # passa, como problema em aberto, com o motivo do item. O log leva só contagens, sem o texto dos pedidos.
+  it 'resolvido com um pedido que falhou na própria lista: passa, com o motivo do item, e o log marca', :aggregate_failures do
+    pedidos = [{ pedido: 'cotação de 2 passageiros', situacao: 'resolvido', como: 'o robô cotou' },
+               { pedido: 'cotação do 3º passageiro', situacao: 'falhou_sem_solucao', como: 'o sistema não cotou' }]
+    responde(pedidos: pedidos, decisao: 'resolvido', motivo: 'o robô cotou')
     linhas = []
     allow(Rails.logger).to receive(:info) { |linha| linhas << linha }
 
-    described_class.new(conversation).call
-
+    expect(described_class.new(conversation).call)
+      .to eq(passa: true, motivo: 'cotação do 3º passageiro: o sistema não cotou', decisao: 'problema_em_aberto')
     linha = linhas.find { |l| l.include?('[crm][revalida]') }
     expect(linha).to include('decisao=resolvido', 'falhou_sem_solucao:1', 'resolvido:1', 'incoerente=1')
-    expect(linha).not_to include('recotação', 'renovação')
+    expect(linha).not_to include('passageiro', 'cotou')
+  end
+
+  it 'em andamento na lista também desfaz o resolvido; aguardando o cliente, não', :aggregate_failures do
+    responde(pedidos: [{ pedido: 'vistoria', situacao: 'em_andamento', como: 'a equipe ainda verifica' }],
+             decisao: 'resolvido', motivo: '')
+    expect(described_class.new(conversation).call).to include(passa: true, decisao: 'problema_em_aberto')
+
+    responde(pedidos: [{ pedido: 'carro reserva', situacao: 'aguardando_cliente', como: 'perguntou 15 ou 30 dias' }],
+             decisao: 'resolvido', motivo: 'só falta o cliente responder')
+    expect(described_class.new(conversation).call).to include(passa: false, decisao: 'resolvido')
   end
 
   it 'resposta fora do schema levanta, para quem chama decidir', :aggregate_failures do
