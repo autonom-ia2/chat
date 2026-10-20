@@ -13,7 +13,15 @@ instance_sha() {
   case "$run_id" in
     *[!0-9]*|'') return 1 ;;
   esac
-  gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha
+  # Uma falha isolada da API não pode passar por "a anterior não diz de onde veio".
+  for tentativa in 1 2 3; do
+    if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha; then
+      return 0
+    fi
+    sleep $((tentativa * 5))
+  done
+  echo "::error::A API do GitHub não respondeu sobre o run $run_id (instância $1)." >&2
+  return 1
 }
 
 # Para o caso de a anterior não ser a esperada: quem ainda existe, e de que commit veio.

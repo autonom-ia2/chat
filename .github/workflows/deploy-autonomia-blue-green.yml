@@ -188,7 +188,11 @@ jobs:
           DESCONGELAR: ${{ github.event_name == 'workflow_dispatch' && inputs.descongelar == true }}
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          if [ "$DESCONGELAR" != true ]; then
+          if [ "$DESCONGELAR" = true ]; then
+            # O descongelar no fim só solta este congelamento, nunca um que um rollback faça depois.
+            read_deploy_freeze
+            echo "FREEZE_AT_START=$DEPLOY_FREEZE_VALUE" >> "$GITHUB_ENV"
+          else
             abort_if_frozen
           fi
           abort_if_older_than_published "$GITHUB_SHA"
@@ -1099,11 +1103,17 @@ jobs:
           echo "SSO redirect smoke test failed"
           exit 1
 
-      # #1979: o deploy de descongelar só solta a produção depois de subir de verdade (tráfego e SSO conferidos).
+      # #1979: o deploy de descongelar só solta a produção depois de subir de verdade (tráfego e SSO conferidos), e só
+      # se o congelamento ainda for o que ele viu na largada: um rollback disparado enquanto ele subia vale.
       - name: Unfreeze production
         if: github.event_name == 'workflow_dispatch' && inputs.descongelar == true
         run: |
           source scripts/deploy/blue-green-recovery.sh
+          read_deploy_freeze
+          if [ "$DEPLOY_FREEZE_VALUE" != "${FREEZE_AT_START:-}" ]; then
+            echo "::warning::Um rollback congelou a produção depois que este deploy começou ($DEPLOY_FREEZE_VALUE): ela segue congelada."
+            exit 0
+          fi
           write_deploy_freeze off
           echo "::notice::Produção descongelada por este deploy manual."
 
@@ -1126,6 +1136,8 @@ jobs:
       # #1979: a trava do GitHub não garante que sobre o pedido do push mais novo. Se ele perdeu a vez (saiu cancelado) e
       # traz commit que este deploy não tem, pede um deploy novo da main atual. Falhar aqui não derruba o deploy.
       - name: Deploy the newest main if its push lost the turn
+        # Também quando este deploy falhou (rerun velho recusado, build quebrado): o push mais novo não pode ficar sem vez.
+        if: always()
         continue-on-error: true
         uses: actions/github-script@v7
         with:
@@ -1524,7 +1536,7 @@ jobs:
       - name: Freeze production
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          write_deploy_freeze on
+          write_deploy_freeze "on:$GITHUB_RUN_ID"
           echo "::notice::Produção congelada: nenhum deploy sobe até um deploy manual com descongelar=true."
 
       - name: Cancel deploys before traffic
@@ -1556,15 +1568,19 @@ jobs:
             // No tráfego = o passo Register já começou. Qualquer outro estado (pending, queued, sem passos) conta como antes.
             const noTrafego = (job) => (job.steps || []).some((s) => s.name === 'Register green target group' &&
               ['in_progress', 'completed'].includes(s.status));
-            // Três varreduras, 20 s entre elas: pega também o deploy cuja conferência leu "descongelada" pouco antes.
+            // Cancela todo run vivo que ainda pode trocar o tráfego antes do rollback: o gate rodando, o gate já concluído
+            // com o Deploy Green ainda por nascer (job que espera um needs não aparece na API) e o deploy que não chegou ao
+            // tráfego. Fica o run de outro rollback, o deploy que já terminou (resta o desligar-blue) e o que está no
+            // tráfego, que o rollback espera na mesma trava. Três varreduras, 20 s entre elas.
             const cancelados = new Set();
             for (let volta = 1; volta <= 3; volta += 1) {
               for (const run of await vivos()) {
                 if (cancelados.has(run.id)) continue;
                 const { jobs } = (await tentar(() => github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: run.id }))).data;
-                const deploy = jobs.find((j) => j.name === 'Deploy Green' && j.status !== 'completed');
-                if (!deploy) continue;
-                if (noTrafego(deploy)) {
+                if (jobs.some((j) => j.name === 'Congelar a produção')) continue;
+                const deploy = jobs.find((j) => j.name === 'Deploy Green');
+                if (deploy && deploy.status === 'completed') continue;
+                if (deploy && noTrafego(deploy)) {
                   core.info(`Deploy ${run.head_sha.slice(0, 10)} (run ${run.id}) já está no tráfego: o rollback espera ele terminar, na mesma trava.`);
                   continue;
                 }
@@ -1585,6 +1601,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: production
+    permissions:
+      contents: read
+      id-token: write
+      # check-rollback-target.sh lê o run que criou a instância anterior.
+      actions: read
 
     steps:
       - name: Checkout
@@ -1602,7 +1623,7 @@ jobs:
       - name: Freeze production
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          write_deploy_freeze on
+          write_deploy_freeze "on:$GITHUB_RUN_ID"
           echo "::notice::Produção congelada: nenhum deploy sobe até um deploy manual com descongelar=true."
 
       # De novo, agora com o deploy que estava no tráfego já terminado: ele pode ter mudado a anterior.

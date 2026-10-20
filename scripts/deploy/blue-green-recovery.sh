@@ -127,9 +127,9 @@ terminate_green_without_image() {
   exit "$status"
 }
 
-# #1979: o rollback congela a produção (DEPLOY_FREEZE_PARAMETER = on) e só um deploy manual com descongelar=true a
-# solta. Parâmetro que não existe conta como descongelada; qualquer outro erro falha, para nenhum deploy seguir sem
-# saber se a produção está congelada.
+# #1979: o rollback congela a produção (DEPLOY_FREEZE_PARAMETER = on:<run do rollback>) e só um deploy manual com
+# descongelar=true a solta. O run no valor deixa o descongelar saber se outro rollback congelou depois dele. Parâmetro
+# que não existe conta como descongelada; qualquer outro erro falha, para nenhum deploy seguir sem saber.
 read_deploy_freeze() {
   local error_file value status=0
   error_file=$(mktemp)
@@ -139,6 +139,7 @@ read_deploy_freeze() {
     if grep -qF ParameterNotFound "$error_file"; then
       rm -f "$error_file"
       DEPLOY_FREEZE=off
+      DEPLOY_FREEZE_VALUE=""
       return 0
     fi
     cat "$error_file" >&2
@@ -146,8 +147,10 @@ read_deploy_freeze() {
     return 1
   fi
   rm -f "$error_file"
+  DEPLOY_FREEZE_VALUE="$value"
   case "$value" in
-    on|off) DEPLOY_FREEZE="$value" ;;
+    off) DEPLOY_FREEZE=off ;;
+    on|on:*) DEPLOY_FREEZE=on ;;
     *)
       echo "deploy_freeze_invalid:$value" >&2
       return 1
