@@ -24,7 +24,10 @@ class Crm::Ai::ScoreCalculator
   # (Crm::Conversations::LastTurns) E o modelo diz que ela pede resposta nossa (awaiting_our_reply). O banco
   # sozinho transformava "obrigado", "vou pensar" e newsletter em dívida nossa; o modelo sozinho (o antigo
   # last_turn_owner, +8) não existia no ScoreDecayJob. Nota gravada antes do #1962 não tem awaiting_our_reply:
-  # não conta espera — o job, que recalcula sem IA, não sobe nota antiga com sinal que ela não tem.
+  # vale "pede resposta" sempre que o banco diz que o cliente falou por último. Ignorar a espera nessas notas
+  # derrubava a 1ª rodada do job (replay de 20/10: "agora" em urgente/quente caía de 20 para 9 de 29) até cada
+  # card ser reavaliado pela IA, e reavaliar a base inteira em produção com IA paga não compensa. Quando o campo
+  # existe, ele vale — inclusive o false.
   # A dívida cresce com a espera — começa em BASE e soma PER_DAY por dia até MAX — para que, entre dois
   # clientes esperando, quem espera há mais tempo suba.
   CUSTOMER_WAITING_BONUS_BASE = 10
@@ -132,7 +135,13 @@ class Crm::Ai::ScoreCalculator
   end
 
   def waiting_signal?
-    @waiting_since.present? && flag(:awaiting_our_reply) && !refused?
+    @waiting_since.present? && asks_for_reply? && !refused?
+  end
+
+  # Chave ausente = nota antiga (ver CUSTOMER_WAITING_BONUS_BASE): conta como "pede resposta". Chave presente vale
+  # como veio: null ou valor malformado de gateway não é "pede" (achado do review).
+  def asks_for_reply?
+    @signals.key?(:awaiting_our_reply) ? flag(:awaiting_our_reply) : true
   end
 
   # O valor de ready_to_close, ou nil. Nota antiga, gravada antes do #1962, não tem o campo: pesa como

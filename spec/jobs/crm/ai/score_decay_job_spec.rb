@@ -223,10 +223,18 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
       expect(card.reload.score).to be < 40
     end
 
-    # Nota gravada antes do #1962: não tem a leitura de "pede resposta". Sem IA, o job não pode subi-la ao piso
-    # (newsletter e e-mail automático chegam como `incoming`): só decai, como antes.
-    it 'não sobe nota antiga, sem a leitura do modelo, mesmo com o cliente por último' do
+    # Nota gravada antes do #1962: não tem a leitura de "pede resposta". Com o cliente por último no banco, conta
+    # como "pede" até a IA reavaliar o card — sem isso a 1ª rodada do job deixava esfriar quem espera resposta.
+    it 'sobe nota antiga, sem a leitura do modelo, quando o cliente falou por último' do
       card = card_with_conversation(:incoming, 3, card_signals: signals, score: 44)
+
+      described_class.perform_now
+
+      expect(card.reload.score).to be >= Crm::Ai::ScoreCalculator::CUSTOMER_WAITING_FLOOR
+    end
+
+    it 'não sobe nota nova que diz "não pede resposta", mesmo com o cliente por último' do
+      card = card_with_conversation(:incoming, 3, card_signals: signals.merge('awaiting_our_reply' => false), score: 44)
 
       described_class.perform_now
 

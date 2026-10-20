@@ -2,8 +2,8 @@ require 'rails_helper'
 
 # #1962 (fase 1 do #1961): a nota mede a DÍVIDA nossa com dado do sistema.
 # Quem falou por último vem do banco (waiting_since); se a fala pede resposta nossa, o modelo diz
-# (awaiting_our_reply). A dívida não esfria por 14 dias e expira depois deles; "pronto para fechar" é sinal
-# forte; sinal negativo explícito zera na hora.
+# (awaiting_our_reply; nota antiga, sem o campo, conta como "pede"). A dívida não esfria por 14 dias e expira
+# depois deles; "pronto para fechar" é sinal forte; sinal negativo explícito zera na hora.
 RSpec.describe Crm::Ai::ScoreCalculator do
   let(:now) { Time.zone.parse('2026-10-20 12:00:00') }
 
@@ -53,12 +53,44 @@ RSpec.describe Crm::Ai::ScoreCalculator do
       expect(score(sem_pedido, idle_days: 6, customer_waiting: true).breakdown[:customer_waiting]).to eq(0)
     end
 
-    # Nota gravada antes do #1962 não tem o campo. O ScoreDecayJob recalcula sem IA e não pode subir uma nota
-    # antiga com uma leitura que ela não tem (newsletter e e-mail automático chegam como `incoming`).
-    it 'nota antiga, sem awaiting_our_reply, não conta espera' do
+    # Nota gravada antes do #1962 não tem o campo. O ScoreDecayJob recalcula sem IA: com o cliente por último no
+    # banco, a nota antiga conta como "pede resposta" até a IA reavaliar o card.
+    it 'nota antiga, sem awaiting_our_reply, sobe quando o cliente falou por último' do
+      antiga = morno.except(:awaiting_our_reply)
+      result = score(antiga, idle_days: 5, customer_waiting: true)
+
+      expect(result.value).to be >= described_class::CUSTOMER_WAITING_FLOOR
+      expect(result.value).to be > score(antiga, idle_days: 5).value
+      expect(result.breakdown[:customer_waiting]).to be > 0
+    end
+
+    it 'nota nova com "não pede resposta" não sobe, mesmo com o cliente por último' do
+      nova = morno.merge(awaiting_our_reply: false)
+
+      expect(score(nova, idle_days: 5, customer_waiting: true).value).to eq(score(nova, idle_days: 5).value)
+      expect(score(nova, idle_days: 5, customer_waiting: true).breakdown[:customer_waiting]).to eq(0)
+    end
+
+    # Mesma regra da variante "sempre" do replay: nota antiga com pedido de compra e sem objeção vai ao piso de urgente.
+    it 'nota antiga com pedido de compra e o cliente por último vai ao piso de urgente' do
       antiga = morno.except(:awaiting_our_reply).merge(buying_signal: true)
 
-      expect(score(antiga, idle_days: 5, customer_waiting: true).value).to eq(score(antiga, idle_days: 5).value)
+      expect(score(antiga, idle_days: 5, customer_waiting: true).value).to eq(described_class::UNFULFILLED_PROMISE_FLOOR)
+    end
+
+    # Chave presente vale como veio: só a ausência é nota antiga.
+    it 'null ou "false" de gateway não contam como "pede resposta"' do
+      [nil, 'false'].each do |valor|
+        nova = morno.merge(awaiting_our_reply: valor, buying_signal: true)
+
+        expect(score(nova, idle_days: 5, customer_waiting: true).breakdown[:customer_waiting]).to eq(0)
+      end
+    end
+
+    it 'nota antiga sem o cliente por último não ganha espera' do
+      antiga = morno.except(:awaiting_our_reply)
+
+      expect(score(antiga, idle_days: 5).breakdown[:customer_waiting]).to eq(0)
     end
 
     it 'depois de 14 dias de espera cai a dívida inteira e esfria a partir do fim da validade' do
