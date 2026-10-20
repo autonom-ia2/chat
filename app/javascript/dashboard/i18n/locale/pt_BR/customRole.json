@@ -89,7 +89,8 @@
         "AUTONOMIA": "Autonom.ia",
         "MARKETING": "Marketing",
         "CONNECTIONS": "Conexões",
-        "SETTINGS": "Configurações da conta"
+        "SETTINGS": "Configurações da conta",
+        "FINANCE": "Financeiro"
       },
       "LEVELS": {
         "NONE": "Sem acesso",
@@ -227,6 +228,12 @@
           "NAME": "Pessoas",
           "HINT": "Agentes, times e funções",
           "LEVEL_MANAGE": "Convida, edita e remove agentes e cuida dos times. Nunca mexe em administradores."
+        },
+        "FINANCE": {
+          "NAME": "Financeiro",
+          "HINT": "Custos da conta e a autorização de cobranças da Meta",
+          "LEVEL_VIEW": "Vê quanto a IA custa em reais e a autorização de cobranças da Meta. Plano e faturas ficam com o administrador.",
+          "LEVEL_MANAGE": "Também liga e desliga a autorização de cobranças da Meta."
         }
       }
     },

@@ -84,6 +84,11 @@ const requestParams = computed(() => ({
 }));
 
 const totals = computed(() => payload.value?.totals || {});
+// #1969: os valores em dinheiro são os custos da conta (administrador ou Financeiro em Ver). Sem eles o servidor manda
+// só uso e tokens, e a página mede tudo pelo número de usos.
+const comValores = computed(() => payload.value?.com_valores !== false);
+const metricOf = row =>
+  Number((comValores.value ? row?.cost_usd : row?.usage_count) || 0);
 const exchangeRate = computed(() => payload.value?.exchange_rate || {});
 const rateUnavailable = computed(
   () => exchangeRate.value.rate_unavailable === true
@@ -155,7 +160,7 @@ const addMoney = (left = {}, right = {}) => ({
 });
 
 const maxResourceSpend = computed(() =>
-  Math.max(0, ...spendByResource.value.map(row => Number(row.cost_usd || 0)))
+  Math.max(0, ...spendByResource.value.map(metricOf))
 );
 
 const widthClass = percentage => {
@@ -167,15 +172,22 @@ const widthClass = percentage => {
 const resourceRows = computed(() =>
   spendByResource.value.map(row => ({
     ...row,
-    widthClass: widthClass(
-      (Number(row.cost_usd || 0) / maxResourceSpend.value) * 100
-    ),
+    widthClass: widthClass((metricOf(row) / maxResourceSpend.value) * 100),
   }))
 );
 
 const hasResourceSpend = computed(() =>
-  spendByResource.value.some(row => Number(row.cost_usd || 0) > 0)
+  spendByResource.value.some(row => metricOf(row) > 0)
 );
+
+const resourceValue = row =>
+  comValores.value
+    ? formatMoneyPayload(row)
+    : t(
+        'CRM_AI_USAGE.SEM_VALORES.USOS',
+        { n: formatNumber(row.usage_count) },
+        Number(row.usage_count || 0)
+      );
 
 const chartMoneyKey = computed(() =>
   rateUnavailable.value ? 'cost_usd' : 'cost_brl'
@@ -185,9 +197,16 @@ const periodSpendLabel = computed(() => {
   return t(PERIOD_SPEND_LABEL_KEYS[selectedPeriod.value.key]);
 });
 const periodSeriesLabel = computed(() => {
+  if (!comValores.value)
+    return t(`CRM_AI_USAGE.SEM_VALORES.SERIE.${selectedPeriod.value.key}`);
   // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
   return t(PERIOD_SERIES_LABEL_KEYS[selectedPeriod.value.key]);
 });
+const resourceSectionLabel = computed(() =>
+  comValores.value
+    ? t('CRM_AI_USAGE.SECTIONS.SPEND_BY_RESOURCE')
+    : t('CRM_AI_USAGE.SEM_VALORES.POR_RECURSO')
+);
 
 // #1876: formato do @chatwoot/viz (categories/series); o antigo labels/datasets deixava o gráfico vazio desde o #15458.
 const weeklySpendChart = computed(() => ({
@@ -198,17 +217,19 @@ const weeklySpendChart = computed(() => ({
       label: periodSeriesLabel.value,
       color: '#2563eb',
       data: timeSeries.value.map(point =>
-        Number(point[chartMoneyKey.value] || point.cost_usd || 0)
+        comValores.value
+          ? Number(point[chartMoneyKey.value] || point.cost_usd || 0)
+          : Number(point.usage_count || 0)
       ),
     },
   ],
 }));
 
 const hasTimeSeries = computed(() =>
-  timeSeries.value.some(point => Number(point.cost_usd || 0) > 0)
+  timeSeries.value.some(point => metricOf(point) > 0)
 );
 
-const topCards = computed(() => [
+const allTopCards = computed(() => [
   {
     key: 'SPEND',
     label: periodSpendLabel.value,
@@ -236,6 +257,11 @@ const topCards = computed(() => [
     infoText: t('CRM_AI_USAGE.KPI.AVERAGE_INFO'),
   },
 ]);
+const topCards = computed(() =>
+  comValores.value
+    ? allTopCards.value
+    : allTopCards.value.filter(card => card.key === 'USAGE')
+);
 
 const fetchUsage = async () => {
   isLoading.value = true;
@@ -271,6 +297,10 @@ const exportCsv = async () => {
 const applyDeltaToTotals = delta => {
   const currentTotals = totals.value;
   const usageCount = Number(currentTotals.usage_count || 0) + 1;
+  if (!comValores.value) {
+    payload.value.totals = { ...currentTotals, usage_count: usageCount };
+    return;
+  }
   const periodSpend = addMoney(
     currentTotals.period_spend,
     moneyForDelta(delta)
@@ -289,7 +319,9 @@ const applyDeltaToTotals = delta => {
 };
 
 const applyDeltaToResource = delta => {
-  const money = moneyForDelta(delta);
+  const money = comValores.value
+    ? moneyForDelta(delta)
+    : { cost_usd: 0, cost_brl: null };
   const resource = delta.resource || t('CRM_AI_USAGE.RESOURCE_FALLBACK');
   const rows = [...spendByResource.value];
   const index = rows.findIndex(row => row.resource === resource);
@@ -328,7 +360,7 @@ const applyDeltaToResource = delta => {
     rows.push(updated);
   }
   payload.value.spend_by_resource = rows.sort(
-    (left, right) => Number(right.cost_usd || 0) - Number(left.cost_usd || 0)
+    (left, right) => metricOf(right) - metricOf(left)
   );
 };
 
@@ -344,7 +376,6 @@ const seriesBucketTimestamp = value => {
 };
 
 const applyDeltaToSeries = delta => {
-  const money = moneyForDelta(delta);
   const timestamp = seriesBucketTimestamp(delta.created_at);
   const series = [...timeSeries.value];
   const index = series.findIndex(point => point.timestamp === timestamp);
@@ -353,10 +384,16 @@ const applyDeltaToSeries = delta => {
       ? series[index]
       : {
           timestamp,
-          cost_usd: 0,
-          cost_brl: rateUnavailable.value ? null : 0,
+          usage_count: 0,
+          ...(comValores.value && {
+            cost_usd: 0,
+            cost_brl: rateUnavailable.value ? null : 0,
+          }),
         };
-  const updated = addMoney(base, money);
+  const usageCount = Number(base.usage_count || 0) + 1;
+  const updated = comValores.value
+    ? { ...addMoney(base, moneyForDelta(delta)), usage_count: usageCount }
+    : { usage_count: usageCount };
 
   if (index >= 0) {
     series.splice(index, 1, { ...base, ...updated });
@@ -379,7 +416,7 @@ const applyDeltaToHistory = delta => {
     cached_tokens: delta.cached_tokens,
     output_tokens: delta.output_tokens,
     total_tokens: delta.total_tokens,
-    ...moneyForDelta(delta),
+    ...(comValores.value ? moneyForDelta(delta) : {}),
   });
 
   payload.value.history = {
@@ -481,10 +518,18 @@ onMounted(fetchUsage);
 
     <div v-else class="flex flex-col gap-6 p-6">
       <p
-        v-if="rateUnavailable"
+        v-if="comValores && rateUnavailable"
         class="px-3 py-2 m-0 text-sm border rounded-lg border-n-amber-5 bg-n-amber-2 text-n-amber-11"
       >
         {{ t('CRM_AI_USAGE.RATE_UNAVAILABLE') }}
+      </p>
+      <p
+        v-if="!comValores"
+        data-sem-valores
+        class="flex items-start gap-2 px-3 py-2 m-0 text-sm rounded-lg bg-n-slate-2 text-n-slate-11"
+      >
+        <span class="i-lucide-lock size-4 mt-0.5 shrink-0" aria-hidden="true" />
+        {{ t('CRM_AI_USAGE.SEM_VALORES.AVISO') }}
       </p>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -504,7 +549,7 @@ onMounted(fetchUsage);
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section class="p-5 border rounded-xl border-n-weak bg-n-solid-1">
           <h2 class="mb-4 text-sm font-medium text-n-slate-12">
-            {{ t('CRM_AI_USAGE.SECTIONS.SPEND_BY_RESOURCE') }}
+            {{ resourceSectionLabel }}
           </h2>
           <p v-if="!hasResourceSpend" class="m-0 text-sm text-n-slate-11">
             {{ t('CRM_AI_USAGE.EMPTY.RESOURCE') }}
@@ -528,7 +573,7 @@ onMounted(fetchUsage);
                 />
               </div>
               <span class="text-sm font-medium text-right text-n-slate-12">
-                {{ formatMoneyPayload(resource) }}
+                {{ resourceValue(resource) }}
               </span>
             </div>
           </div>
@@ -578,14 +623,17 @@ onMounted(fetchUsage);
                 <th class="px-5 py-3 font-medium text-right">
                   {{ t('CRM_AI_USAGE.TABLE.TOKENS') }}
                 </th>
-                <th class="px-5 py-3 font-medium text-right">
+                <th v-if="comValores" class="px-5 py-3 font-medium text-right">
                   {{ t('CRM_AI_USAGE.TABLE.COST') }}
                 </th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!historyRows.length">
-                <td colspan="5" class="px-5 py-8 text-center text-n-slate-11">
+                <td
+                  :colspan="comValores ? 5 : 4"
+                  class="px-5 py-8 text-center text-n-slate-11"
+                >
                   {{ t('CRM_AI_USAGE.EMPTY.HISTORY') }}
                 </td>
               </tr>
@@ -606,7 +654,10 @@ onMounted(fetchUsage);
                 <td class="px-5 py-3 text-right text-n-slate-11">
                   {{ formatTokens(row) }}
                 </td>
-                <td class="px-5 py-3 font-medium text-right text-n-slate-12">
+                <td
+                  v-if="comValores"
+                  class="px-5 py-3 font-medium text-right text-n-slate-12"
+                >
                   {{ formatMoneyPayload(row) }}
                 </td>
               </tr>

@@ -89,7 +89,8 @@
         "AUTONOMIA": "Autonom.ia",
         "MARKETING": "Marketing",
         "CONNECTIONS": "Connections",
-        "SETTINGS": "Account settings"
+        "SETTINGS": "Account settings",
+        "FINANCE": "Finance"
       },
       "LEVELS": {
         "NONE": "No access",
@@ -227,6 +228,12 @@
           "NAME": "People",
           "HINT": "Agents, teams and roles",
           "LEVEL_MANAGE": "Invites, edits and removes agents and manages teams. Never touches administrators."
+        },
+        "FINANCE": {
+          "NAME": "Finance",
+          "HINT": "Account costs and the Meta charge authorization",
+          "LEVEL_VIEW": "Sees what AI costs in money and the Meta charge authorization. Plan and invoices stay with the administrator.",
+          "LEVEL_MANAGE": "Also turns the Meta charge authorization on and off."
         }
       }
     },

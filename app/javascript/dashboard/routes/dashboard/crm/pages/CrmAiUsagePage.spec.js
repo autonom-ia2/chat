@@ -174,6 +174,53 @@ describe('CrmAiUsagePage', () => {
     expect(wrapper.text()).toContain('90');
   });
 
+  // #1969: sem financial_view o servidor manda só contagens; a tela mostra uso, nunca dinheiro.
+  it('shows usage without money when the payload has no values', async () => {
+    const wrapper = await mountPage({
+      account: { id: 85, name: 'Autonom.ia' },
+      period: makePayload().period,
+      com_valores: false,
+      totals: { usage_count: 2 },
+      spend_by_resource: [
+        { resource: 'Assistente de respostas', usage_count: 2 },
+      ],
+      time_series: [{ timestamp: '2026-06-28T00:00:00Z', usage_count: 2 }],
+      history: {
+        page: 1,
+        per_page: 25,
+        total_count: 1,
+        rows: [
+          {
+            id: 2,
+            created_at: '2026-06-28T11:00:00Z',
+            resource: 'Assistente de respostas',
+            account: { id: 85, name: 'Autonom.ia' },
+            total_tokens: 130,
+          },
+        ],
+      },
+    });
+
+    expect(wrapper.find('[data-sem-valores]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('AI uses');
+    expect(wrapper.text()).toContain('Usage by feature');
+    expect(wrapper.text()).toContain('2 uses');
+    expect(wrapper.text()).not.toContain('R$');
+    expect(wrapper.text()).not.toContain('Weekly spend');
+
+    emitterHandlers[BUS_EVENTS.CRM_AI_USAGE_CREATED]({
+      id: 3,
+      account_id: 85,
+      resource: 'Assistente de respostas',
+      created_at: '2026-06-28T12:01:00Z',
+      total_tokens: 90,
+    });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain('3 uses');
+    expect(wrapper.text()).not.toContain('R$');
+  });
+
   it('refetches on period change with the selected group_by', async () => {
     const wrapper = await mountPage();
     CrmAiUsageAPI.get.mockResolvedValueOnce({
