@@ -12,5 +12,7 @@ RSpec.describe Crm::Ai::ClassifierPrompt do
     expect(prefixos).to all(include('pedido abandonado não é pedido resolvido').and(include('só avisou que aguarda o')))
     expect(prefixos).to all(include('uma pergunta não pede pessoa por si só').and(include('repasse TODOS os pedidos')))
     expect(prefixos).to all(be_frozen)
+    # Decisão do Rodrigo (20/10): o "reason" pode usar os dados da conversa (a frase deste PR saiu).
+    expect(prefixos).to all(satisfy { |prefixo| prefixo.exclude?('sem copiar dados pessoais') })
   end
 end

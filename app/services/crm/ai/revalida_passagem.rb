@@ -53,7 +53,7 @@ class Crm::Ai::RevalidaPassagem
     disse que não conseguiu fazer algo, que houve uma falha, ou prometeu passar a uma pessoa ou a um especialista (até
     #{MAX_FALHAS}; se houver mais, as mais recentes). Para cada uma:
     - "o_que_falhou": o que não deu certo, com o item, a pessoa ou o veículo exato (ex.: "recotação do primeiro
-      carro", "cotação do passageiro mais velho"), sem dado pessoal;
+      carro", "cotação do passageiro mais velho");
     - "quando": em que ponto da conversa (ex.: "início da conversa", "dia anterior", "logo antes do pedido de pessoa");
     - "resolvido_depois": true SÓ quando uma mensagem posterior entrega EXATAMENTE aquilo que falhou: o mesmo item, a
       mesma pessoa, o mesmo veículo. Sucesso em OUTRO item, outra pessoa ou outro veículo não resolve (ex.: a
@@ -97,7 +97,6 @@ class Crm::Ai::RevalidaPassagem
     "motivo": uma frase curta. Com "pedido_de_pessoa" ou "problema_em_aberto", diga qual falha ou pedido ficou sem
     solução ou o que o cliente pediu (ex.: "a recotação do carro falhou e o especialista prometido não veio"); com "resolvido", o
     que resolveu (ex.: "o atendente enviou a cotação e o cliente não voltou com dúvida").
-    Em "falhas", "pedidos" e "motivo", não copie dados pessoais (nome, documento, telefone, e-mail, endereço, placa).
     Os DADOS DE ENTRADA trazem as mensagens ("recent_messages", em ordem), o resumo, o estado do atendimento, o
     gatilho de passagem definido pela equipe ("handoff_trigger", que diz quando ela quer uma pessoa) e o motivo do
     pedido original ("motivo_do_pedido", quando houver).

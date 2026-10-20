@@ -78,6 +78,8 @@ RSpec.describe Crm::Ai::RevalidaPassagem do
                                                      'Aviso de espera não resolve o problema',
                                                      'SÓ quando toda falha tem', 'Sucesso em OUTRO item',
                                                      'Pedido atendido só em parte vira DOIS itens')
+    # Decisão do Rodrigo (20/10): a IA lê e usa os dados da conversa; o motivo fica no CRM da conta.
+    expect(described_class::INSTRUCTIONS).not_to include('dados pessoais', 'dado pessoal')
   end
 
   # Coerência entre campos do próprio schema (decisão do Rodrigo, 20/10): o "resolvido" que a própria lista contradiz

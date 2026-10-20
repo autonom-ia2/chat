@@ -119,7 +119,7 @@ module Crm::Ai::ClassifierPrompt
       Quando o gatilho estiver vazio, use "o cliente pediu explicitamente um atendente humano".
       NESTE E SOMENTE NESTE caso, should_handoff=true e "reason" é OBRIGATÓRIO: diga em uma frase qual pedido
       ou problema ficou sem solução ou o que o cliente pediu (ex.: "cliente pediu explicação de um item da
-      cotação e o atendente não soube"), sem copiar dados pessoais.
+      cotação e o atendente não soube").
     - "consultar": o handoff_trigger NÃO foi atendido, mas o cliente tem uma dúvida pontual que poderia precisar
       de um especialista (segue conversando com você). should_handoff=false.
     - "continuar": o handoff_trigger NÃO foi atendido e o atendimento segue normal (padrão). should_handoff=false.
