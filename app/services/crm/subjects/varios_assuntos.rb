@@ -4,9 +4,10 @@ module Crm::Subjects::VariosAssuntos
   # Vários assuntos numa mensagem (#1693). Os outros primeiro e o principal por último, que é quem a decisão registra:
   # o foco termina nele. Assunto aberto só entra na lista (a IA do CRM avalia); pedido novo cria o card só na
   # Automática e sem pessoa a respeitar (Sugerir e o respeito à pessoa valem para cada um). Devolve os atributos da
-  # decisão e `tocados`: os cards que a mensagem tocou, o principal primeiro. "Nenhum assunto" não toca nada; vencida
-  # por uma mais nova no meio, só os cards que ela já criou. Principal em dúvida (nil): os outros seguem, e o resultado
-  # é `duvida` (os atributos da decisão em dúvida).
+  # decisão e `tocados`: os cards que a mensagem tocou, o principal primeiro. "Nenhum assunto" toca o card em foco
+  # (#1918): a mensagem sem pedido novo ("já fechei com outra", "obrigado") é sobre ele, e quem decide se ele fica ou
+  # muda é a IA de etapa. Vencida por uma mais nova no meio, só os cards que ela já criou. Principal em dúvida (nil): os
+  # outros seguem, e o resultado é `duvida` (os atributos da decisão em dúvida).
   #
   # Erro depois de um card já gravado (um pedido novo criado, ou o principal aplicado): a decisão fica como falha, com
   # esses cards, e não é desfeita (o retry do job criaria o card de novo). O foco fica no principal aplicado, ou volta
@@ -105,10 +106,20 @@ module Crm::Subjects::VariosAssuntos
     criar(pipeline, titulo, etapa)
   end
 
+  # Sem assunto (#1918, revoga o critério 5 do #1693): o card em foco, que o Applier devolve; sem card em foco, nada.
+  # Pedido novo que virou sugestão não tem card; a sugestão repetida nem chega aqui (Identifier#tocados_da_repetida).
   def card_do_principal(opcao, resultado)
-    return if opcao.nil? || opcao.tipo == :sem_assunto || %w[applied kept suggested].exclude?(resultado[:state])
+    return if opcao.nil? || %w[applied kept suggested].exclude?(resultado[:state])
+    return if opcao.tipo == :sem_assunto && chegada_intacta?(resultado[:card])
 
     resultado[:card]
+  end
+
+  # O card vazio que a caixa criou na chegada, ainda intacto, fica de fora no sem assunto (C36, #1711): movido pela IA
+  # num "oi", ele deixaria de ser adotado pelo primeiro pedido de outro funil, e um card vazio sobraria para trás. Só na
+  # Automática, o único modo em que ele é adotado.
+  def chegada_intacta?(card)
+    @mode == 'auto' && card.present? && Crm::Subjects::CardDaChegada.new(card, @conversation).intocado?
   end
 
   # Um card novo que não é o principal nasce em foco (Crm::Cards::Creator). Se o foco ainda está num deles, volta para

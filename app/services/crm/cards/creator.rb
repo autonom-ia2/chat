@@ -6,11 +6,16 @@ module Crm
         value_cents currency status lost_reason source priority score expected_close_at metadata external_id custom_attributes
       ].freeze
 
-      def initialize(account:, user:, params:, conversation: nil)
+      # etapa_escolhida (#1918): a etapa em que o card nasce veio da pessoa (o formulário do quadro, que mostra a etapa, ou
+      # a etapa no pedido da API, ou a da prospecção). Fica na linha do tempo, e a IA não mexe na etapa dele por um tempo
+      # (Crm::Ai::Evaluator::RESPEITO_AO_MOVIMENTO). A etapa que o sistema põe sozinho (a padrão da caixa, a primeira do
+      # funil ao aceitar a sugestão de assunto) não é escolha.
+      def initialize(account:, user:, params:, conversation: nil, etapa_escolhida: false)
         @account = account
         @user = user
         @params = params.to_h.with_indifferent_access
         @conversation = conversation
+        @etapa_escolhida = etapa_escolhida && user.present?
       end
 
       def perform
@@ -104,7 +109,8 @@ module Crm
           contact_id: card.contact_id,
           conversation_id: card.conversation_id,
           inbox_id: card.inbox_id,
-          owner_id: card.owner_id
+          owner_id: card.owner_id,
+          etapa_escolhida: (true if @etapa_escolhida)
         }.compact
       end
     end

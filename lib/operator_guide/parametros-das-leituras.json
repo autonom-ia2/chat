@@ -131,6 +131,10 @@
     "controller": "api/v1/accounts/autonomia/agents/instruction_versions#index",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/material": {
+    "controller": "api/v1/accounts/autonomia/agents/material#show",
+    "parametros": []
+  },
   "autonomia/agents/:agent_id/sources": {
     "controller": "api/v1/accounts/autonomia/agents/sources#index",
     "parametros": []

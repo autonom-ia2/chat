@@ -216,7 +216,7 @@ module Autonomia
         def review_source!
           parsed = request_review
           attrs = parsed ? mapped_review(parsed) : fallback_review
-          @source.mark_reviewed!(@token, attrs)
+          @source.mark_reviewed!(@token, com_conferencia(attrs))
         rescue StandardError => e
           Rails.logger.warn("[autonomia][reviewer] degraded source=#{@source.id} #{e.class}")
           @source.mark_reviewed!(@token, fallback_review)
@@ -265,6 +265,8 @@ module Autonomia
           # (rescue interno + kill-switch). Cobre add (ProcessJob) e remove (RecomputeOverallJob) — ambos
           # passam por aqui.
           RefreshInstructionJob.enqueue(agent, reason: :kb_changed)
+          # #1426 (tema 4b) — a base mudou: contradições e autoteste, agrupados numa espera (só Fase 2, fora da Lia).
+          Autonomia::Agents::Material::BaseMudouJob.agendar(agent)
         rescue StandardError => e
           Rails.logger.warn("[autonomia][reviewer] recompute_overall degraded agent=#{agent&.id} #{e.class}")
           nil
@@ -483,6 +485,37 @@ module Autonomia
             review_label: nil,
             review_reason: nil
           }
+        end
+
+        # #1426 (tema 4b) — na Fase 2 (fora da Lia), a conferência do material entra ANTES de o parecer ser gravado: o
+        # material nunca aparece "Pronto" para depois virar "Precisa de você". Leitura ruim ou tabela sem cabeçalho
+        # reprovam (needs_resend). O resumo exato do texto (`hash_do_texto`) serve para achar duplicado. Falha da IA na
+        # conferência não reprova nada. Só confere o que o parecer aprovou (o reprovado ou sem parecer já pede a pessoa: a
+        # chamada seria gasto sem efeito). Fora da Fase 2, o parecer de sempre.
+        def com_conferencia(attrs)
+          return attrs unless @source.kind_knowledge? && Autonomia::Agents::Material.conferir?(@agent)
+
+          conferencia = conferir_material if attrs[:review_status] == 'accepted'
+          conferido = attrs.merge(metadata: metadata_conferida(conferencia))
+          return conferido if conferencia.nil? || conferencia['problema'].nil?
+
+          conferido.merge(review_status: 'needs_resend', review_summary: nil)
+        end
+
+        def metadata_conferida(conferencia)
+          metadata = (@source.metadata || {}).except('conferencia').merge('hash_do_texto' => hash_do_texto)
+          conferencia ? metadata.merge('conferencia' => conferencia) : metadata
+        end
+
+        def conferir_material
+          Autonomia::Agents::Material::ConferenciaDoMaterial.new(source: @source, amostra: sample_chunks_text).conferir
+        end
+
+        # Medida objetiva (código): o texto inteiro lido deste material, na ordem.
+        def hash_do_texto
+          textos = @source.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready])
+                          .order(:chunk_index).pluck(:content)
+          Digest::SHA256.hexdigest(textos.join("\n"))
         end
 
         def confidence_for(value)
