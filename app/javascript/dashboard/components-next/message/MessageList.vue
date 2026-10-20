@@ -10,6 +10,10 @@ import BotoesDoModelo from '../conversa-canal/BotoesDoModelo.vue';
 import BotaoDeDescer from '../conversa-canal/BotaoDeDescer.vue';
 import { useSequenciaDaConversa } from '../conversa-canal/useSequenciaDaConversa';
 import { useAlbunsDaConversa } from '../conversa-canal/album/useAlbuns';
+import {
+  paraOBalao,
+  temMarcaDoWaha,
+} from '../conversa-canal/album/albumDoWaha';
 import { usePele } from '../conversa-canal/pele';
 import TopoDoEmail from '../conversa-canal/email/TopoDoEmail.vue';
 import AcoesDoEmail from '../conversa-canal/email/AcoesDoEmail.vue';
@@ -69,8 +73,11 @@ const isHidden = message =>
 // sequência, dia nem álbum. O isHidden (#1709) vale sempre; o ocultaNaPele soma por cima.
 // Exceção, só com a pele: o marcador de álbum do WAHA (`waha_album`, escondido) passa,
 // porque é ele que junta as fotos no álbum (useAlbunsDaConversa); a pele o esconde ao
-// desenhar. Sem a pele, ele some como as outras escondidas.
+// desenhar. Sem a pele, ele some como as outras escondidas. #1831: o marcador entra como
+// balão do contato (sequência, álbum e tela), pelo paraOBalao.
 const peleDaLista = usePele();
+const currentChat = useMapGetter('getSelectedChat');
+const contatoDaConversa = computed(() => currentChat.value?.meta?.sender);
 const temAlbumDoWaha = atributos => {
   const album = atributos?.waha_album ?? atributos?.wahaAlbum;
   return Boolean(album) && typeof album === 'object';
@@ -89,12 +96,10 @@ const allMessages = computed(() => {
       'content_attributes.whatsapp_flow_response.response_json',
     ],
   });
-  return comPele
-    ? mensagens.filter(
-        mensagem =>
-          !ocultaNaPele(mensagem) || temAlbumDoWaha(mensagem.contentAttributes)
-      )
-    : mensagens;
+  if (!comPele) return mensagens;
+  return mensagens
+    .filter(mensagem => !ocultaNaPele(mensagem) || temMarcaDoWaha(mensagem))
+    .map(mensagem => paraOBalao(mensagem, contatoDaConversa.value));
 });
 
 // #1786: na conversa de e-mail nova o mais recente fica no topo (Rodrigo, 18/10).
@@ -107,8 +112,6 @@ const mensagensNaOrdem = computed(() =>
 const naoLidaDaLista = computed(() =>
   primeiraNaoLidaVisivel(props.messages, allMessages.value, props.firstUnreadId)
 );
-
-const currentChat = useMapGetter('getSelectedChat');
 
 // Cache for fetched reply messages to avoid duplicate API calls
 const fetchedReplyMessages = reactive(new Map());

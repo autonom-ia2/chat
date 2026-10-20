@@ -394,8 +394,11 @@ const componentToRender = computed(() => {
 
   if (contatosJuntos.value) return ContatosDoWhatsapp;
 
-  // #1831: o álbum chegando ainda sem foto fica no balão do marcador (não suportada).
-  if (album.value?.length === 0) return AlbumDoWhatsapp;
+  // #1831: o álbum desenhado no balão do marcador (não suportada): o da Cloud chegando
+  // ainda sem foto e o do WAHA, do começo ao fim.
+  if (album.value && props.contentAttributes?.isUnsupported) {
+    return AlbumDoWhatsapp;
+  }
 
   if (balaoDoWhatsapp.value) return balaoDoWhatsapp.value;
 

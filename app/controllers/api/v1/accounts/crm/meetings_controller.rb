@@ -25,6 +25,8 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
   end
 
   def sync
+    # Sincronizar grava na reunião (#1874): pede o mesmo que mexer no card, não só vê-lo.
+    authorize @meeting.card, :update?
     # 2-way sync (S7): reconcile time + cancellation + RSVP from the provider calendar.
     Crm::Meetings::SyncService.new(meeting: @meeting, force: params[:force].present?).perform
     # Re-fetch through visible_meetings so the serializer keeps the eager-loads

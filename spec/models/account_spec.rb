@@ -233,6 +233,8 @@ RSpec.describe Account do
         feature_email_lido_sincronizado: 1 << 39,
         # #1897: posição 41, logo depois de email_lido_sincronizado (tabela da Orquestração, 19/10).
         feature_crm_numeros_lentes: 1 << 40,
+        # #1813: posição 42, logo depois de crm_numeros_lentes (tabela da Orquestração, 19/10).
+        feature_contato_pelo_email: 1 << 41,
         # #1910: posição 43 (definitiva da Orquestração, 19/10), depois de contato_pelo_email (42, #1917).
         feature_crm_assunto_na_etapa: 1 << 42
       )

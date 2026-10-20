@@ -141,11 +141,23 @@ const {
   canManageCards,
   canViewCrm,
   canMoveCards,
+  canDeleteCards,
   canManagePipelines,
   canManageAi,
   canExportCrm,
   canAdminCrm,
 } = useCrmPermissions();
+
+// Ação em massa (#1874): cada botão só para quem pode a ação; sem nenhuma, a lista não tem seleção.
+const bulkPermissions = computed(() => ({
+  move: canMoveCards.value,
+  assign: canManageCards.value,
+  status: canManageCards.value,
+  archive: canDeleteCards.value,
+}));
+const canBulkAct = computed(() =>
+  Object.values(bulkPermissions.value).some(Boolean)
+);
 
 const CRM_CALENDAR_MEETINGS_FEATURE = 'CRM_CALENDAR_MEETINGS_ENABLED';
 const isCrmAiEnabled = computed(
@@ -2898,6 +2910,7 @@ onUnmounted(() => {
         :group-by="listGroupBy"
         :column-state="listColumnState"
         :selected-ids="listSelection"
+        :selectable="canBulkAct"
         :collapsed-groups="collapsedGroups"
         :total-count="cardsListMeta.count || 0"
         :has-more="hasMoreCards"
@@ -2914,6 +2927,7 @@ onUnmounted(() => {
       />
       <CrmBulkActionBar
         :count="listSelection.length"
+        :permissions="bulkPermissions"
         :stages="stages"
         :owners="agents"
         :blocked-owner-ids="donosBarradosNaSelecao"
@@ -3065,6 +3079,7 @@ onUnmounted(() => {
       :follow-ups="followUps"
       :can-manage-cards="canManageCards && podeMexerNoCard"
       :can-move-cards="canMoveCards && podeMexerNoCard"
+      :can-delete-cards="canDeleteCards && podeMexerNoCard"
       :is-moving-card="uiFlags.isMovingCard"
       :can-manage-ai="canManageAi"
       :is-saving="uiFlags.isCreatingCard || uiFlags.isUpdatingCard"
