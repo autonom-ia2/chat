@@ -54,18 +54,16 @@ module Autonomia::Agents::PromptParts
     end
   end
 
-  # O SEGMENTO (tema 8, #1429): o bloco de `Autonomia::Segmentos::Bloco` do segmento dado, com a moldura de dado, para
-  # o Construtor e para o agente que atende (Answerer, Testar e Copiloto). Só com a Fase 2 ligada na conta, com segmento
-  # e com bloco; fora disso, nil, e quem monta o pedido não acrescenta nada: o pedido fica byte a byte o de antes.
-  # Quem chama escolhe o segmento (a marca do agente, ou o da conta quando o agente está nascendo) e põe o bloco depois
-  # da instrução fixa e antes da conversa. Ele não muda de um turno para outro (cache).
+  # O SEGMENTO (tema 8, #1429): o texto do bloco de segmento, com a moldura de dado, para o Construtor e para o agente
+  # que atende (Answerer, Testar e Copiloto). Só com a Fase 2 ligada na conta e com texto; fora disso, nil, e quem monta
+  # o pedido não acrescenta nada: o pedido fica byte a byte o de antes. Quem chama escolhe o texto (o gravado na marca do
+  # agente, ou o atual da conta quando o agente está nascendo) e põe o bloco depois da instrução fixa e antes da
+  # conversa. Ele não muda de um turno para outro (cache).
   module SegmentoDaConta
     module_function
 
-    def texto(account, segmento)
-      return nil unless ::Autonomia::Agents::Fase2.ligada?(account) && segmento.present?
-
-      bloco = ::Autonomia::Segmentos::Bloco.for_segmento(segmento)
+    def texto(account, bloco)
+      return nil unless ::Autonomia::Agents::Fase2.ligada?(account)
       return nil if bloco.blank?
 
       <<~TXT.strip
@@ -77,23 +75,25 @@ module Autonomia::Agents::PromptParts
       TXT
     end
 
-    def mensagem(account, segmento)
-      conteudo = texto(account, segmento)
+    def mensagem(account, bloco)
+      conteudo = texto(account, bloco)
       conteudo && Mensagem.montar('user', conteudo)
+    end
+
+    # O texto atual do segmento da conta: o que um agente nascendo agora recebe e grava na marca.
+    def bloco_atual(account)
+      segmento = ::Autonomia::Segmentos::Bloco.segmento(account)
+      segmento && ::Autonomia::Segmentos::Bloco.for_segmento(segmento)
     end
   end
 
-  # A MARCA DE BASE do agente (#1429): `config['base'] = { 'segmento', 'versao' }`, gravada quando ele nasce com a Fase 2
-  # ligada. O agente lê o bloco pela marca, nunca pela conta: trocar o tipo da conta não muda agente existente (só o
-  # "Atualizar com a nova base", depois). Agente sem marca não recebe bloco.
+  # A MARCA DE BASE do agente (#1429): `config['base'] = { 'segmento', 'versao', 'texto' }`, gravada quando ele nasce com
+  # a Fase 2 ligada, com o texto e a versão vigentes do segmento da conta.
   #
-  # A marca só vale com `versao` presente:
-  #   - `versao` nil: o agente nasceu antes de existir conteúdo para o segmento e fica sem bloco;
-  #   - `versao` presente: recebe o texto ATUAL do segmento gravado na marca. Uma edição de texto nossa vale na hora,
-  #     como as regras da plataforma;
-  #   - o que nunca muda sozinho é o SEGMENTO (troca de tipo no super admin): o agente segue o segmento da marca.
-  # O botão "Atualizar com a nova base" (F3) aparece quando o segmento da conta difere do da marca, ou quando a versão é
-  # nil e já existe conteúdo. A criação grava a versão vigente, `Bloco.versao(seg)`.
+  # A REGRA (decisão do Rodrigo, "só pelo botão"): o agente recebe o `texto` GRAVADO na marca, nunca o texto atual do
+  # segmento. Nada muda agente existente sozinho: nem a troca de tipo da conta no super admin, nem uma edição nossa do
+  # texto do tipo. Só o botão "Atualizar com a nova base" (F3) troca a marca. Sem texto gravado (sem marca, texto nil ou
+  # vazio), não há bloco. O texto é dado nosso e fica oculto: não sai em jbuilder nenhum, como a instrução.
   module SegmentoDoAgente
     module_function
 
@@ -103,17 +103,18 @@ module Autonomia::Agents::PromptParts
       return nil unless ::Autonomia::Agents::Fase2.ligada?(account)
 
       segmento = ::Autonomia::Segmentos::Bloco.segmento(account)
-      { 'segmento' => segmento, 'versao' => ::Autonomia::Segmentos::Bloco.versao(segmento) }
+      { 'segmento' => segmento, 'versao' => ::Autonomia::Segmentos::Bloco.versao(segmento),
+        'texto' => SegmentoDaConta.bloco_atual(account) }
     end
 
-    # O segmento da marca, só quando ela tem versão: sem versão, o agente nasceu antes do conteúdo e não recebe bloco.
-    def segmento(agent)
+    # O texto gravado na marca; nil sem marca.
+    def texto(agent)
       base = agent.config.to_h['base']
-      base['segmento'] if base.is_a?(Hash) && base['versao'].present?
+      base['texto'] if base.is_a?(Hash)
     end
 
     def mensagem(agent)
-      SegmentoDaConta.mensagem(agent.account, segmento(agent))
+      SegmentoDaConta.mensagem(agent.account, texto(agent))
     end
   end
 

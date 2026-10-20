@@ -988,12 +988,12 @@ module Autonomia
       end
 
       # SEGMENTO (tema 8, #1429): orientação e vocabulário do ramo, como DADO. Moldura em PromptParts. Na criação, o
-      # segmento da conta, o mesmo que vai na marca do rascunho; no AJUSTE, a marca do agente, nunca a conta: um ajuste
-      # não troca a base sem ninguém pedir.
+      # texto atual do segmento da conta, o mesmo que vai na marca do rascunho; no AJUSTE, o texto gravado na marca do
+      # agente, nunca o da conta: um ajuste não troca a base sem ninguém pedir.
       def segmento_context
         partes = Autonomia::Agents::PromptParts
-        segmento = adjust_mode? ? partes::SegmentoDoAgente.segmento(@thread.agent) : Autonomia::Segmentos::Bloco.segmento(@account)
-        partes::SegmentoDaConta.texto(@account, segmento)
+        bloco = adjust_mode? ? partes::SegmentoDoAgente.texto(@thread.agent) : partes::SegmentoDaConta.bloco_atual(@account)
+        partes::SegmentoDaConta.texto(@account, bloco)
       end
 
       # PEDIDOS ACUMULAM (§4). Duas pendências morriam em silêncio:

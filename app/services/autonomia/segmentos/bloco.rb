@@ -15,10 +15,10 @@
 # Por enquanto devolve nil sempre. A Segmentação preenche o conteúdo e acrescenta a checagem do interruptor
 # AUTONOMIA_PACOTES_ENABLED.
 #
-# MARCA DE BASE (#1429): o agente guarda o segmento com que nasceu (`config['base']`) e lê o bloco por ele, nunca pela
-# conta: trocar o tipo da conta não muda agente existente. Quem nasce lê `segmento` e `versao` (versão nil = nasceu
-# antes de existir conteúdo, sem bloco); quem atende lê `for_segmento` com o segmento gravado e recebe o texto atual dele.
-# `for(account)` fica pelo contrato antigo; nada novo depende dele.
+# MARCA DE BASE (#1429): o agente nasce com `config['base'] = { segmento, versao, texto }` (o `segmento`, a `versao` e o
+# `for_segmento` vigentes) e recebe sempre o texto GRAVADO, nunca o daqui: nem a troca de tipo da conta nem uma edição
+# deste texto muda agente existente; só o botão "Atualizar com a nova base". `for(account)` fica pelo contrato antigo;
+# nada novo depende dele.
 module Autonomia::Segmentos::Bloco
   module_function
 

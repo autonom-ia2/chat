@@ -2,7 +2,7 @@ require 'rails_helper'
 
 # O bloco de segmento no Construtor (tema 8, #1429). Entra como o PRIMEIRO bloco de contexto do input, depois da
 # instrução-mãe e antes da conversa: não muda entre os turnos nem entre as duas chamadas da coleta enxuta (#1367/#1502).
-# Na criação, o segmento da conta; no ajuste, a marca de base do agente. Sem a Fase 2 ou sem bloco, o pedido fica igual.
+# Na criação, o texto atual da conta; no ajuste, o texto gravado na marca do agente. Sem a Fase 2 ou sem texto, igual.
 RSpec.describe Autonomia::Agents::Builder do
   let(:account) { create(:account) }
   let(:thread) { Autonomia::Agents::BuildThread.create!(account: account) }
@@ -55,7 +55,7 @@ RSpec.describe Autonomia::Agents::Builder do
   end
 
   def segmento
-    { role: 'user', content: [{ type: 'input_text', text: Autonomia::Agents::PromptParts::SegmentoDaConta.texto(account, 'seguros/corretora') }] }
+    { role: 'user', content: [{ type: 'input_text', text: Autonomia::Agents::PromptParts::SegmentoDaConta.texto(account, bloco) }] }
   end
 
   it 'keeps the input byte for byte with the Fase 2 off and a bloco' do
@@ -99,14 +99,15 @@ RSpec.describe Autonomia::Agents::Builder do
     expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(cache_key: "agente_builder:#{account.id}")).twice
   end
 
-  # MARCA DE BASE (#1429): o agente guarda o segmento com que nasceu; o ajuste lê a marca, nunca a conta.
+  # MARCA DE BASE (#1429): o agente grava o segmento, a versão e o texto com que nasceu; o ajuste usa o texto gravado.
   describe 'marca de base' do
     def trocar_perfil(perfil)
       account.update!(internal_attributes: account.internal_attributes.to_h.merge(Autonomia::Agents::Nicho::PERFIL_KEY => perfil))
     end
 
-    def stub_bloco_por_segmento
-      allow(Autonomia::Segmentos::Bloco).to receive(:for_segmento) { |seg| seg && "BLOCO #{seg}" }
+    def stub_bloco_por_segmento(prefixo = 'BLOCO')
+      allow(Autonomia::Segmentos::Bloco).to receive(:for_segmento) { |seg| seg && "#{prefixo} #{seg}" }
+      allow(Autonomia::Segmentos::Bloco).to receive(:versao) { |seg| seg && "v-#{prefixo}" }
     end
 
     def textos(input)
@@ -125,21 +126,37 @@ RSpec.describe Autonomia::Agents::Builder do
                                        instruction: 'Instrução da Ana.', config: config)
     end
 
-    it 'grava base.segmento da conta e versao nil no agente que nasce pelo Construtor com a Fase 2' do
+    def input_do_ajuste(agente)
+      described_class.new(account: account, build_thread: thread_de_ajuste(agente)).send(:build_input)
+    end
+
+    it 'grava segmento, versão e texto vigentes no agente que nasce pelo Construtor com a Fase 2' do
+      Autonomia::Agents::Fase2.ligar!(account)
+      stub_bloco_por_segmento
+
+      run_turn
+
+      expect(thread.reload.agent.config['base']).to eq(
+        'segmento' => 'seguros/corretora', 'versao' => 'v-BLOCO', 'texto' => 'BLOCO seguros/corretora'
+      )
+    end
+
+    it 'hoje (stubs reais) grava o segmento com versão e texto nil' do
       Autonomia::Agents::Fase2.ligar!(account)
 
       run_turn
 
-      expect(thread.reload.agent.config['base']).to eq('segmento' => 'seguros/corretora', 'versao' => nil)
+      expect(thread.reload.agent.config['base']).to eq('segmento' => 'seguros/corretora', 'versao' => nil, 'texto' => nil)
     end
 
     it 'grava segmento nil na conta geral (nasceu sem base)' do
       Autonomia::Agents::Fase2.ligar!(account)
       account.update!(internal_attributes: account.internal_attributes.to_h.merge(Autonomia::Agents::Nicho::NICHO_KEY => 'geral'))
+      stub_bloco_por_segmento
 
       run_turn
 
-      expect(thread.reload.agent.config['base']).to eq('segmento' => nil, 'versao' => nil)
+      expect(thread.reload.agent.config['base']).to eq('segmento' => nil, 'versao' => nil, 'texto' => nil)
     end
 
     it 'não grava marca sem a Fase 2' do
@@ -148,43 +165,39 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.reload.agent.config).not_to have_key('base')
     end
 
-    it 'na criação usa o segmento da conta' do
+    it 'na criação usa o texto atual do segmento da conta' do
       Autonomia::Agents::Fase2.ligar!(account)
       stub_bloco_por_segmento
 
       expect(input_do_turno.first[:content].first[:text]).to end_with('BLOCO seguros/corretora')
     end
 
-    it 'no ajuste usa a marca do agente, não a conta trocada' do
+    it 'no ajuste usa o texto gravado, não o atual nem o da conta trocada' do
       Autonomia::Agents::Fase2.ligar!(account)
-      agente = agente_existente('with_knowledge' => false, 'base' => { 'segmento' => 'seguros/corretora', 'versao' => 'aaaabbbbcccc' })
+      agente = agente_existente('with_knowledge' => false,
+                                'base' => { 'segmento' => 'seguros/corretora', 'versao' => 'v1', 'texto' => 'TEXTO GRAVADO' })
       trocar_perfil('seguradora')
-      stub_bloco_por_segmento
+      stub_bloco_por_segmento('NOVO')
 
-      input = described_class.new(account: account, build_thread: thread_de_ajuste(agente)).send(:build_input)
+      input = input_do_ajuste(agente)
 
-      expect(input.first[:content].first[:text]).to end_with('BLOCO seguros/corretora')
-      expect(textos(input)).not_to include('BLOCO seguros/seguradora')
+      expect(input.first[:content].first[:text]).to end_with('TEXTO GRAVADO')
+      expect(textos(input)).not_to include('NOVO')
     end
 
-    it 'no ajuste de agente com marca sem versão (nasceu antes do conteúdo) não manda bloco' do
+    it 'no ajuste de agente com marca sem texto não manda bloco' do
       Autonomia::Agents::Fase2.ligar!(account)
-      agente = agente_existente('with_knowledge' => false, 'base' => { 'segmento' => 'seguros/corretora', 'versao' => nil })
+      agente = agente_existente('with_knowledge' => false, 'base' => { 'segmento' => 'seguros/corretora', 'versao' => nil, 'texto' => nil })
       stub_bloco_por_segmento
 
-      input = described_class.new(account: account, build_thread: thread_de_ajuste(agente)).send(:build_input)
-
-      expect(textos(input)).not_to include('BLOCO')
+      expect(textos(input_do_ajuste(agente))).not_to include('BLOCO')
     end
 
     it 'no ajuste de agente sem marca não manda bloco, mesmo com a conta em seguros' do
       Autonomia::Agents::Fase2.ligar!(account)
-      agente = agente_existente('with_knowledge' => false)
       stub_bloco_por_segmento
 
-      input = described_class.new(account: account, build_thread: thread_de_ajuste(agente)).send(:build_input)
-
-      expect(textos(input)).not_to include('BLOCO')
+      expect(textos(input_do_ajuste(agente_existente('with_knowledge' => false)))).not_to include('BLOCO')
     end
   end
 end
