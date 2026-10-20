@@ -147,6 +147,12 @@
           "INPUT": "Pesquisar por agentes"
         }
       }
+    },
+    "LOCK": {
+      "SELF": "É você",
+      "ADMIN": "Só um administrador mexe em administradores",
+      "ABOVE": "Acima do seu acesso",
+      "ONLY_ADMIN_MAKES_ADMIN": "Só um administrador torna alguém administrador"
     }
   }
 }
