@@ -106,6 +106,76 @@ describe('PermissionRow', () => {
   });
 });
 
+describe('PermissionRow com chaves fora do alcance (#1931)', () => {
+  const keyLock = key => {
+    if (
+      ['people_manage', 'custom_role_manage', 'grant_above_own'].includes(key)
+    )
+      return 'DELEGATION';
+    return key === 'inbox_manage' ? 'MISSING' : null;
+  };
+  const mountRow = (moduleKey, permissions, props = {}) =>
+    mount(PermissionRow, {
+      props: { module: moduleByKey(moduleKey), permissions, keyLock, ...props },
+      global,
+    });
+
+  it('locks a level that would add a missing key, with the reason written', async () => {
+    const wrapper = mountRow('INBOXES', ['inbox_view']);
+    const manage = radios(wrapper)[2];
+
+    expect(manage.attributes('aria-disabled')).toBe('true');
+    expect(wrapper.find('[data-row-lock]').text()).toBe(
+      'CUSTOM_ROLE.EDITOR.LOCK.MISSING'
+    );
+    await manage.trigger('click');
+    await checked(wrapper).trigger('keydown', { key: 'ArrowRight' });
+
+    expect(wrapper.emitted('selectLevel')[0]).toEqual(['none']);
+  });
+
+  it('locks People for whoever cannot grant above their own access', () => {
+    const wrapper = mountRow('PEOPLE', []);
+
+    expect(radios(wrapper)[1].attributes('aria-disabled')).toBe('true');
+    expect(wrapper.find('[data-row-lock]').text()).toBe(
+      'CUSTOM_ROLE.EDITOR.LOCK.DELEGATION'
+    );
+  });
+
+  it('keeps removing always possible', async () => {
+    const wrapper = mountRow('INBOXES', ['inbox_view']);
+
+    await radios(wrapper)[0].trigger('click');
+
+    expect(wrapper.emitted('selectLevel')[0]).toEqual(['none']);
+  });
+
+  it('disables a fine-tuning switch whose key is out of reach', () => {
+    const wrapper = mountRow('PEOPLE', ['people_manage'], {
+      isOpen: true,
+      keyLock: key => (key === 'people_manage' ? null : keyLock(key)),
+    });
+    const switches = wrapper.findAll('[role="switch"]');
+
+    expect(switches).toHaveLength(2);
+    switches.forEach(item =>
+      expect(item.attributes()).toHaveProperty('disabled')
+    );
+    expect(wrapper.text()).toContain('CUSTOM_ROLE.EDITOR.LOCK.DELEGATION');
+  });
+
+  it('shows nothing locked to an administrator', () => {
+    const wrapper = mount(PermissionRow, {
+      props: { module: moduleByKey('PEOPLE'), permissions: [] },
+      global,
+    });
+
+    expect(wrapper.find('[data-row-lock]').exists()).toBe(false);
+    expect(radios(wrapper)[1].attributes('aria-disabled')).toBeUndefined();
+  });
+});
+
 describe('PermissionGroup', () => {
   const group = MODULE_GROUPS.find(item => item.key === 'SERVICE');
 

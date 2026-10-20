@@ -186,6 +186,15 @@ RSpec.describe 'People permissions (#1931)', :aggregate_failures, type: :request
       expect(membership(director).custom_role_id).to eq(big_role.id)
     end
 
+    it 'does not edit even the name of someone whose role is above the giver' do
+      director = member_with([], role: big_role)
+
+      edit_agent(director, as: hr, name: 'Outro nome')
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(director.reload.name).not_to eq('Outro nome')
+    end
+
     it 'lets grant_above_own change the role of someone above' do
       director = member_with([], role: big_role)
 

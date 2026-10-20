@@ -1222,8 +1222,8 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
       "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
       "app/controllers/api/v1/accounts/agents_controller.rb:60",
       "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
@@ -8353,8 +8353,8 @@
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:68",
       "app/controllers/api/v1/accounts/agents_controller.rb:95",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
       "app/controllers/api/v1/accounts/agents_controller.rb:70"
     ],
     "sem_corpo": false
@@ -19703,8 +19703,8 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
       "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
       "app/controllers/api/v1/accounts/agents_controller.rb:60",
       "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
