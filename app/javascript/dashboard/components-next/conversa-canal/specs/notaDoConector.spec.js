@@ -1,8 +1,11 @@
 // Nota técnica antiga do conector WAHA (#1941, item 2): na caixa WAHA comum, a nota
 // privada que começa pelo título do conector aparece como a linha de aviso, com o texto
 // curto, na conversa e na prévia da lista. Nota comum e mensagem do cliente ficam iguais.
+import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
+import { withFullI18n } from 'test-i18n';
+import en from 'dashboard/i18n/locale/en/conversaCanal.json';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import Message from '../../message/Message.vue';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../message/constants';
@@ -18,7 +21,10 @@ import {
   ehNotaDoConector,
 } from '../notaDoConector';
 
-const AVISO_DA_NOTA_DO_CONECTOR = 'CONVERSA_CANAL.NOTA_DO_CONECTOR.AVISO';
+// Com o catálogo de verdade: a chave errada ou faltando não passa.
+withFullI18n('pt_BR');
+const AVISO_DA_NOTA_DO_CONECTOR =
+  '⚠️ Uma mensagem do WhatsApp não chegou aqui. Confira no celular da caixa.';
 
 vi.mock('vue-router', () => ({ useRoute: () => ({ query: {}, params: {} }) }));
 
@@ -45,6 +51,22 @@ const caixaPorId = () => id => CAIXAS.find(caixa => caixa.id === id) || {};
 const loja = createStore({
   getters: { ...gettersDaMontagem, 'inboxes/getInbox': caixaPorId },
 });
+
+// A lista de caixas chega depois da conversa (painel abrindo direto numa conversa).
+const lojaQueCarrega = () =>
+  createStore({
+    state: { caixas: [] },
+    getters: {
+      ...gettersDaMontagem,
+      'inboxes/getInbox': estado => id =>
+        estado.caixas.find(caixa => caixa.id === id) || {},
+    },
+    mutations: {
+      carregar(estado, caixas) {
+        estado.caixas = caixas;
+      },
+    },
+  });
 
 const montarMensagem = (props = {}) =>
   mount(Message, {
@@ -108,8 +130,16 @@ describe('ehNotaDoConector (#1941)', () => {
   });
 });
 
+describe('texto do aviso (#1941)', () => {
+  it('em inglês, o texto combinado', () => {
+    expect(en.CONVERSA_CANAL.NOTA_DO_CONECTOR.AVISO).toBe(
+      '⚠️ A WhatsApp message did not reach this conversation. Check the inbox phone.'
+    );
+  });
+});
+
 describe('na conversa (#1941)', () => {
-  it('a nota técnica vira a linha de aviso, sem o corpo técnico', () => {
+  it('a nota técnica vira a linha de aviso, sem o corpo técnico e sem menu', () => {
     const wrapper = montarMensagem();
 
     expect(nomesDasBolhas(wrapper)).toEqual(['activity']);
@@ -119,6 +149,34 @@ describe('na conversa (#1941)', () => {
     expect(wrapper.get('.message-bubble-container').classes()).toContain(
       'justify-center'
     );
+    expect(wrapper.find('context-menu-stub').exists()).toBe(false);
+  });
+
+  it('a caixa que carrega depois troca a nota pelo aviso', async () => {
+    const lojaDaVez = lojaQueCarrega();
+    const wrapper = mount(Message, {
+      props: {
+        id: 1,
+        messageType: MESSAGE_TYPES.OUTGOING,
+        status: MESSAGE_STATUS.SENT,
+        content: NOTA_TECNICA,
+        conversationId: 7,
+        createdAt: AGORA,
+        currentUserId: 1,
+        inboxId: CAIXA_WAHA.id,
+        private: true,
+        sender: { id: 1, name: 'Marina', type: 'User' },
+      },
+      global: { ...montagem, plugins: [lojaDaVez] },
+    });
+    expect(nomesDasBolhas(wrapper)).toEqual(['text']);
+
+    lojaDaVez.commit('carregar', CAIXAS);
+    await nextTick();
+
+    expect(nomesDasBolhas(wrapper)).toEqual(['activity']);
+    expect(wrapper.text()).toContain(AVISO_DA_NOTA_DO_CONECTOR);
+    expect(wrapper.html()).not.toContain('HTTP 500');
   });
 
   it('nota comum na caixa WAHA continua nota privada', () => {
