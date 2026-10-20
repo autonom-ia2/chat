@@ -10,18 +10,21 @@
 # Cada linha leva à conversa e ao card no CRM. No máximo LIST_LIMIT linhas; `total` é a lista inteira. Título do
 # card ou, sem card, o nome do contato. Com `visible` (Crm::MetaAds::VisibleConversations, #1794), só as conversas
 # que a pessoa já veria na lista de conversas; o total conta essas.
+#
+# Sem conexão (Anúncios sem login, #1960), `scope[:account]` diz a conta; `scope[:ad_id]` limita as conversas às de
+# um anúncio (as pessoas do anúncio por dentro); `scope[:report]` reaproveita o Report já montado (mesma coorte).
 class Crm::MetaAds::Panel::PathList
   STEPS = %w[conversations quotes sales slow_replies].freeze
   LIST_LIMIT = 50
   SLOW_SECONDS = 300
 
-  def initialize(connection, step:, days:, visible: nil)
+  def initialize(connection, step:, days:, visible: nil, **scope)
     raise ArgumentError, "unknown step #{step}" unless STEPS.include?(step)
 
-    @connection = connection
     @step = step
     @visible = visible
-    @report = Crm::MetaAds::Panel::Report.new(connection, days: days)
+    @ad_id = scope[:ad_id]&.to_s
+    @report = scope[:report] || Crm::MetaAds::Panel::Report.new(connection, days: days, account: scope[:account])
   end
 
   def payload
@@ -35,7 +38,8 @@ class Crm::MetaAds::Panel::PathList
 
   # Cada *_rows devolve [[conversation_id, card ou nil], ...] na ordem da lista.
   def conversations_rows
-    cohort.touches.sort_by { |_id, (_ad, at)| at }.reverse.map { |id, _touch| [id, main_card(id)] }
+    touches = @ad_id ? cohort.touches.select { |_id, (ad, _at)| ad == @ad_id } : cohort.touches
+    touches.sort_by { |_id, (_ad, at)| at }.reverse.map { |id, _touch| [id, main_card(id)] }
   end
 
   def quotes_rows
@@ -91,7 +95,7 @@ class Crm::MetaAds::Panel::PathList
   end
 
   def primary_ids
-    @primary_ids ||= Crm::Card.where(account_id: @connection.account_id, conversation_id: cohort.touches.keys).pluck(:id).to_set
+    @primary_ids ||= Crm::Card.where(account_id: @report.account_id, conversation_id: cohort.touches.keys).pluck(:id).to_set
   end
 
   def stalled_ids
@@ -106,7 +110,7 @@ class Crm::MetaAds::Panel::PathList
   def contact_names(conversation_ids)
     return {} if conversation_ids.empty?
 
-    Conversation.where(account_id: @connection.account_id, id: conversation_ids).joins(:contact).pluck(:id, 'contacts.name').to_h
+    Conversation.where(account_id: @report.account_id, id: conversation_ids).joins(:contact).pluck(:id, 'contacts.name').to_h
   end
 
   # O tempo de resposta só entra nas listas de conversa; proposta e venda mostram a espera do card.
@@ -116,6 +120,15 @@ class Crm::MetaAds::Panel::PathList
 
   # { conversation_id => { seconds:, answered: } }
   def responses
-    @responses ||= Crm::MetaAds::Panel::ResponseTime.new(account_id: @connection.account_id, range: @report.range).by_conversation
+    @responses ||= Crm::MetaAds::Panel::ResponseTime.new(account_id: @report.account_id, range: @report.range, starts: response_starts)
+                                                    .by_conversation
+  end
+
+  # Dentro de um anúncio, o tempo de resposta só das conversas dele (a coorte é da conta toda).
+  def response_starts
+    starts = cohort.starts
+    return starts if starts.nil? || @ad_id.nil?
+
+    starts.slice(*cohort.touches.select { |_id, (ad, _at)| ad == @ad_id }.keys)
   end
 end

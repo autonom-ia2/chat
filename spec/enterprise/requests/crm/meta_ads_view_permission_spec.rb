@@ -189,4 +189,34 @@ RSpec.describe 'Anúncios da Meta com meta_ads_view', type: :request do
       end
     end
   end
+
+  # Anúncios sem login (#1960): o painel do WhatsApp segue as mesmas regras de quem só olha.
+  describe 'sem login' do
+    def de_anuncio(caixa)
+      conversation = create(:conversation, account: account, inbox: caixa)
+      click = { 'source' => 'meta_ctwa', 'source_id' => '120254710362980416', 'touched_at' => 1.day.ago.utc.iso8601 }
+      conversation.update_columns(additional_attributes: { 'campaign_touches' => [click] }) # rubocop:disable Rails/SkipsModelValidations
+      conversation
+    end
+
+    before do
+      account.enable_features!('anuncios_sem_login')
+      create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)
+    end
+
+    it 'vê o resultado e, nas listas, só as conversas da caixa dela' do
+      atende = pessoa_com(%w[meta_ads_view conversation_manage])
+      minha = de_anuncio(dela)
+      de_anuncio(alheia)
+
+      get "#{path}/panel", headers: auth_headers(atende)
+      expect(response.parsed_body.dig('panel', 'source')).to eq('whatsapp')
+
+      get "#{path}/panel_list", params: { step: 'conversations' }, headers: auth_headers(atende)
+      expect(response.parsed_body['list']['items'].pluck('conversation_id')).to eq([minha.id])
+
+      get "#{path}/panel_ad", params: { ad_id: '120254710362980416' }, headers: auth_headers(atende)
+      expect(response.parsed_body.dig('ad', 'people').pluck('conversation_id')).to eq([minha.id])
+    end
+  end
 end

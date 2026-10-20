@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (230 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (231 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -913,7 +913,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar os anúncios da Meta em Anúncios da Meta
 - intent: Como conecto meus anúncios da Meta ao Chat2You?; Como entro com o Facebook para conectar os anúncios?; Como compartilho a conta de anúncios com a Hub2You?; Qual conta de anúncios e qual Pixel escolher?; Como faço a Meta receber as minhas vendas?; Como a Meta entende as etapas do meu funil?; Meus anúncios levam para o WhatsApp e para o site, o que marco?; O que quer dizer A Meta ainda está liberando?
-- onde_fica: Menu lateral > Campanhas > Anúncios da Meta
+- onde_fica: Menu lateral > Campanhas > Anúncios
 - rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
 - gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
 - pre_requisitos: ser administrador da conta; a página aparece quando Anúncios da Meta está ligado para a conta; para compartilhar sem token, a conta precisa de um WhatsApp oficial conectado à Meta.
@@ -922,9 +922,20 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - leitura: campanhas
 - nav_target: `campaigns_meta_ads_index`
 
+### Ver de qual anúncio veio cada cliente, sem entrar no Facebook
+- intent: De qual anúncio veio cada cliente?; Quantas pessoas chamaram no WhatsApp vindo de anúncio?; Quem veio deste anúncio?; Quantos clientes de anúncio compraram?; Por que a página de anúncios não pede para conectar o Facebook?; Por que a página de anúncios não mostra quanto eu gastei?
+- onde_fica: Menu lateral > Campanhas > Anúncios
+- rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
+- gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
+- pre_requisitos: a conta com Anúncios sem login ligado, um WhatsApp oficial conectado e nenhuma conta de anúncios conectada; ser administrador, ou ter um cargo com Anúncios da Meta em Só olha.
+- passos: 1. Abra Anúncios: a página já mostra quantas conversas vieram de anúncio no período, quantas viraram proposta e quantas viraram venda, com o valor e o tempo de resposta; 2. Escolha 7 ou 30 dias; 3. Clique em Conversas, Propostas ou Vendas para abrir a lista daquela etapa, com Abrir conversa em cada linha; 4. Em Anúncios, clique num anúncio para ver a foto, as conversas por dia e quem veio dele, com a situação de cada pessoa e Abrir conversa.
+- gotchas: é o mesmo painel de quem conectou a conta de anúncios, sem o gasto, o custo por venda, o veredito de cada anúncio e O que fazer hoje, que dependem da conexão com o Facebook; não precisa entrar no Facebook nem configurar nada: a informação vem do próprio WhatsApp oficial quando a pessoa clica no anúncio; conta sem WhatsApp oficial (só QR Code) continua com a página de conectar a conta de anúncios; com WhatsApp oficial e nenhum anúncio nos últimos 90 dias, a página diz que está pronta e oferece Ver um exemplo, com números de exemplo marcados; o nome do anúncio é o título que aparece no clique; a foto do anúncio fica guardada a partir do primeiro clique novo (o link da Meta vence em poucos dias), e anúncio sem foto mostra um quadro colorido; venda é o card marcado como ganho no CRM, então só aparece quando alguém marca o card como ganho; quem só olha vê nas listas e no anúncio só as conversas que já vê na caixa de conversas, enquanto os números do painel são da conta toda.
+- leitura: campanhas
+- nav_target: `campaigns_meta_ads_index`
+
 ### Usar o painel de Anúncios da Meta e o que fazer hoje
 - intent: Quanto custou cada venda dos meus anúncios?; O que eu faço hoje com os meus anúncios?; Onde vejo as propostas que vieram de anúncio?; Qual anúncio está vendendo e qual não está?; Quanto tempo minha equipe demora para responder quem veio do anúncio?; Por que o número de conversas da Meta é diferente do da plataforma?; Como marco que já fiz a ação do dia?
-- onde_fica: Menu lateral > Campanhas > Anúncios da Meta > aba Resultado
+- onde_fica: Menu lateral > Campanhas > Anúncios > aba Resultado
 - rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
 - gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
 - pre_requisitos: ser administrador da conta, ou ter um cargo com Anúncios da Meta em Só olha; a conta de anúncios conectada em Anúncios da Meta (quem só olha pede ao administrador para conectar).

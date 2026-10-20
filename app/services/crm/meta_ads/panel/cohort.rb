@@ -19,6 +19,14 @@ class Crm::MetaAds::Panel::Cohort
     def sale?
       status == 'won'
     end
+
+    def open?
+      status == 'open'
+    end
+
+    def lost?
+      status == 'lost'
+    end
   end
 
   def initialize(account_id, range)
@@ -41,6 +49,11 @@ class Crm::MetaAds::Panel::Cohort
 
   def cards
     @cards ||= load_cards
+  end
+
+  # Início de cada conversa para o tempo de resposta; nil: o Panel::ResponseTime lê das ligações Crm::MetaAdLink.
+  def starts
+    nil
   end
 
   private

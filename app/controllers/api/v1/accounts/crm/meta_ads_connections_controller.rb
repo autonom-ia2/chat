@@ -30,10 +30,16 @@
 # GET   panel_list?step=conversations|quotes|sales|slow_replies&days=7|30 → a lista por trás de cada etapa do
 #       caminho do dinheiro (Crm::MetaAds::Panel::PathList, F5). Só banco. Etapa fora da lista: 422 invalid_step.
 #
+# Anúncios sem login (#1960): com a flag `anuncios_sem_login` e sem conexão ativa com conta de anúncios, panel,
+# panel_ad e panel_list respondem com o que o WhatsApp contou (Report sem conexão, `source: 'whatsapp'`), e o GET
+# traz `whatsapp_result` para a tela vazia. Só leitura: a coorte sai dos toques gravados na conversa
+# (Panel::WhatsappCohort).
+#
 # Sem a permissão, 403 (não 401: a sessão é válida, só falta a permissão). As listas que levam a uma conversa
 # mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
+  include Crm::MetaAdsPanelSource
 
   # Tokens da Meta têm algumas centenas de caracteres; o teto barra corpos absurdos antes da Graph.
   MAX_TOKEN_LENGTH = 2048
@@ -95,30 +101,26 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   end
 
   def panel
-    connection = current_connection
-    return render json: { panel: nil } if connection.blank? || connection.ad_account_id.blank?
+    return render json: { panel: whatsapp_panel_payload } if whatsapp_panel?
+    return render json: { panel: nil } unless panel_ready?
 
+    connection = current_connection
     refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
     report = ::Crm::MetaAds::Panel::Report.new(connection, days: params[:days])
     render json: { panel: panel_payload(connection, report).merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
   end
 
   def panel_ad
-    connection = current_connection
-    return render json: { ad: nil } if connection.blank? || connection.ad_account_id.blank?
+    return render json: { ad: nil } unless panel_ready?
 
-    visible = ::Crm::MetaAds::VisibleConversations.current
-    render json: { ad: ::Crm::MetaAds::Panel::AdDetail.new(connection, ad_id: params[:ad_id], days: params[:days], visible: visible).payload }
+    render json: { ad: ::Crm::MetaAds::Panel::AdDetail.new(panel_source, ad_id: params[:ad_id], **panel_scope).payload }
   end
 
   def panel_list
     return render_unprocessable('invalid_step') unless ::Crm::MetaAds::Panel::PathList::STEPS.include?(params[:step])
+    return render json: { list: nil } unless panel_ready?
 
-    connection = current_connection
-    return render json: { list: nil } if connection.blank? || connection.ad_account_id.blank?
-
-    visible = ::Crm::MetaAds::VisibleConversations.current
-    render json: { list: ::Crm::MetaAds::Panel::PathList.new(connection, step: params[:step], days: params[:days], visible: visible).payload }
+    render json: { list: ::Crm::MetaAds::Panel::PathList.new(panel_source, step: params[:step], **panel_scope).payload }
   end
 
   def ad_accounts
@@ -248,7 +250,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
       whatsapp_portfolio: setup.portfolio_ids.any?,
       # Portfólio do cliente na Meta: o "Abrir a Meta" do passo 1 cai direto em Parceiros dele (#1068).
       client_portfolio_id: setup.portfolio_ids.first,
-      sales_signal: { enabled: ::Crm::MetaAds::Funnels.new(Current.account, connection).sales_enabled? }
+      sales_signal: { enabled: ::Crm::MetaAds::Funnels.new(Current.account, connection).sales_enabled? },
+      whatsapp_result: ::Crm::MetaAds::SemLogin.payload(Current.account)
     )
   end
 

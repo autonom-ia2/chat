@@ -4,9 +4,17 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
+import { useMapGetter } from 'dashboard/composables/store';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import {
+  SITUATION_CLASSES,
+  dayMonth,
+  situation,
+} from '../semLogin/anunciosSemLogin';
+import {
   VERDICT_CLASSES,
+  adImage,
   amount,
   intlLocale,
   relativeTime,
@@ -18,6 +26,9 @@ import { useMetaAdsLive } from '../useMetaAdsLive';
 // imagem no formato dela, o veredito com o porquê em números, o custo por venda ao lado da média da conta, o
 // gasto e as conversas de cada dia e as propostas que vieram dele. Os números e o veredito vêm prontos do
 // servidor (GET panel_ad, só banco); a tela só formata. Fica viva como o painel (useMetaAdsLive).
+//
+// Sem conexão (Anúncios sem login, #1960, `spend` nil): sem gasto, veredito e porquê; o gráfico é só de conversas
+// e, no lugar das propostas, a lista de quem veio do anúncio (`people`), com a situação de cada um.
 const props = defineProps({
   adId: { type: String, required: true },
   days: { type: Number, required: true },
@@ -77,6 +88,8 @@ watch(() => [props.adId, props.days], retry);
 
 const fmt = value => amount(value, ad.value?.currency, locale.value);
 
+const withoutSpend = computed(() => ad.value?.spend == null);
+
 // Sem venda ainda, o custo por venda não existe; um traço é mais honesto que R$ 0.
 const money = value =>
   value == null ? t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.NO_VALUE') : fmt(value);
@@ -111,7 +124,7 @@ const tiles = computed(() => {
   const conversations = makeTile('CONVERSATIONS', data.conversations || 0);
   if (data.cost_per_sale == null) {
     return [
-      makeTile('SPEND', fmt(data.spend)),
+      ...(withoutSpend.value ? [] : [makeTile('SPEND', fmt(data.spend))]),
       conversations,
       makeTile('QUOTES', data.quotes || 0),
       makeTile('SALES', data.sales || 0),
@@ -165,12 +178,29 @@ const showQuotes = () => {
   quotesHeading.value?.focus({ preventScroll: true });
 };
 
+const people = computed(() => ad.value?.people || []);
+const currentAccountId = useMapGetter('getCurrentAccountId');
+const getAccount = useMapGetter('accounts/getAccount');
+const timeZone = computed(() =>
+  fusoDaConta(getAccount.value?.(currentAccountId.value))
+);
+const personDay = person =>
+  dayMonth(person.touched_at, timeZone.value, locale.value);
+const SEM_LOGIN_AD = 'CRM_KANBAN.META_ADS_HUB.SEM_LOGIN.AD';
+const situationText = person => {
+  const key = situation(person);
+  if (key !== 'BOUGHT') return t(`${SEM_LOGIN_AD}.STATUS.${key}`);
+  return person.value != null
+    ? t(`${SEM_LOGIN_AD}.STATUS.BOUGHT`, { value: fmt(person.value) })
+    : t(`${SEM_LOGIN_AD}.STATUS.BOUGHT_NO_VALUE`);
+};
+
 const conversationLink = id =>
   frontendURL(conversationUrl({ accountId: route.params.accountId, id }));
 
 const waitingFor = value => relativeTime(value, locale.value);
 
-// Gráfico do período: uma barra de gasto por dia e um ponto por dia com conversa. Cada série tem a própria
+// Gráfico do período: uma barra de gasto por dia e um ponto por dia com conversa (sem gasto, a barra é a conversa). Cada série tem a própria
 // escala (dinheiro e pessoas não se comparam na mesma régua); o que importa é ver os dias juntos. O desenho
 // estica para a altura fixa da caixa (no celular ele não encolhe até sumir) e o ponto é um traço de largura
 // zero com ponta redonda e espessura fixa na tela, que continua redondo quando o desenho estica.
@@ -192,8 +222,11 @@ const chart = computed(() => {
 
   const days = daily.map((day, index) => {
     const spend = Number(day.spend) || 0;
-    const height = maxSpend ? (spend / maxSpend) * room : 0;
     const talks = day.conversations || 0;
+    const bar = withoutSpend.value
+      ? { value: talks, max: maxTalks }
+      : { value: spend, max: maxSpend };
+    const height = bar.max ? (bar.value / bar.max) * room : 0;
     return {
       date: day.date,
       label: dayLabel(day.date),
@@ -204,9 +237,14 @@ const chart = computed(() => {
       y: CHART.height - height,
       height,
       center: index * slot + slot / 2,
-      dot: talks ? CHART.height - (talks / maxTalks) * room : null,
+      dot:
+        talks && !withoutSpend.value
+          ? CHART.height - (talks / maxTalks) * room
+          : null,
       title: t(
-        'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_DAY',
+        withoutSpend.value
+          ? 'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_DAY_TALKS'
+          : 'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_DAY',
         { date: dayLabel(day.date), spend: fmt(spend), count: talks },
         talks
       ),
@@ -227,7 +265,8 @@ onMounted(() => live.start());
 
 // Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
 // a tentar).
-const brokenImage = ref(null);
+const brokenImages = ref([]);
+const image = computed(() => adImage(ad.value, brokenImages.value));
 </script>
 
 <template>
@@ -314,12 +353,12 @@ const brokenImage = ref(null);
         >
           <div class="flex justify-center bg-n-alpha-1">
             <img
-              v-if="ad.thumbnail_url && brokenImage !== ad.thumbnail_url"
-              :src="ad.thumbnail_url"
+              v-if="image"
+              :src="image"
               :alt="ad.name || ''"
               data-ad-detail-image
               class="block object-contain w-full h-auto max-h-[40rem]"
-              @error="brokenImage = ad.thumbnail_url"
+              @error="brokenImages = [...brokenImages, image]"
             />
             <div
               v-else
@@ -352,6 +391,7 @@ const brokenImage = ref(null);
 
         <div class="flex flex-col gap-5">
           <span
+            v-if="ad.verdict"
             :data-verdict="ad.verdict"
             class="self-start px-2.5 py-1 text-xs font-520 uppercase tracking-[0.06em] rounded"
             :class="VERDICT_CLASSES[ad.verdict]"
@@ -389,6 +429,7 @@ const brokenImage = ref(null);
           </dl>
 
           <div
+            v-if="!withoutSpend"
             data-ad-detail-why
             :data-reason="reason.kind"
             class="flex flex-col gap-2 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1"
@@ -443,19 +484,30 @@ const brokenImage = ref(null);
           <h4
             class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
           >
-            {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_TITLE') }}
+            {{
+              withoutSpend
+                ? $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_TITLE_TALKS')
+                : $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_TITLE')
+            }}
           </h4>
           <ul
             class="flex gap-4 p-0 m-0 text-xs list-none font-440 text-n-slate-11"
           >
-            <li class="flex items-center gap-1.5">
+            <li v-if="!withoutSpend" class="flex items-center gap-1.5">
               <span
                 class="rounded-sm size-2.5 bg-n-blue-8"
                 aria-hidden="true"
               />
               {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_SPEND') }}
             </li>
-            <li class="flex items-center gap-1.5">
+            <li v-else class="flex items-center gap-1.5">
+              <span
+                class="rounded-sm size-2.5 bg-n-blue-8"
+                aria-hidden="true"
+              />
+              {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_CONVERSATIONS') }}
+            </li>
+            <li v-if="!withoutSpend" class="flex items-center gap-1.5">
               <span
                 class="rounded-full size-2.5 bg-n-teal-10"
                 aria-hidden="true"
@@ -465,6 +517,7 @@ const brokenImage = ref(null);
           </ul>
         </div>
         <p
+          v-if="!withoutSpend"
           data-ad-detail-chart-scale
           class="m-0 text-xs font-420 tabular-nums text-n-slate-11"
         >
@@ -555,7 +608,11 @@ const brokenImage = ref(null);
                 <th scope="col" class="py-2 font-520 text-start">
                   {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.DAYS_DATE') }}
                 </th>
-                <th scope="col" class="py-2 font-520 text-end">
+                <th
+                  v-if="!withoutSpend"
+                  scope="col"
+                  class="py-2 font-520 text-end"
+                >
                   {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_SPEND') }}
                 </th>
                 <th scope="col" class="py-2 font-520 text-end">
@@ -575,7 +632,9 @@ const brokenImage = ref(null);
                 <th scope="row" class="py-2 font-420 text-start">
                   {{ day.label }}
                 </th>
-                <td class="py-2 text-end">{{ day.spend }}</td>
+                <td v-if="!withoutSpend" class="py-2 text-end">
+                  {{ day.spend }}
+                </td>
                 <td class="py-2 text-end">{{ day.talks }}</td>
               </tr>
             </tbody>
@@ -584,6 +643,60 @@ const brokenImage = ref(null);
       </div>
 
       <div
+        v-if="withoutSpend"
+        data-ad-detail-people
+        class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
+      >
+        <h4
+          class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
+        >
+          {{ $t(`${SEM_LOGIN_AD}.PEOPLE`) }}
+        </h4>
+        <p v-if="!people.length" class="m-0 text-sm font-420 text-n-slate-11">
+          {{ $t(`${SEM_LOGIN_AD}.EMPTY`) }}
+        </p>
+        <ul v-else class="flex flex-col gap-2 p-0 m-0 list-none">
+          <li
+            v-for="person in people"
+            :key="person.conversation_id"
+            data-ad-detail-person
+            :data-situation="situation(person)"
+            class="flex flex-wrap items-center gap-4 px-4 py-3 border border-solid rounded-lg border-n-weak"
+          >
+            <span class="min-w-0 basis-full sm:basis-0 sm:flex-1">
+              <span class="block text-sm font-520 truncate text-n-slate-12">
+                {{
+                  person.title ||
+                  $t('CRM_KANBAN.META_ADS_HUB.SEM_LOGIN.NO_NAME')
+                }}
+              </span>
+              <span
+                class="flex flex-wrap items-center text-xs font-420 gap-x-2 text-n-slate-10"
+              >
+                <span v-if="personDay(person)">{{ personDay(person) }}</span>
+                <span v-if="person.stage_name">{{ person.stage_name }}</span>
+                <span
+                  data-ad-detail-situation
+                  class="px-1.5 rounded font-520"
+                  :class="SITUATION_CLASSES[situation(person)]"
+                >
+                  {{ situationText(person) }}
+                </span>
+              </span>
+            </span>
+            <router-link
+              v-if="person.conversation_id"
+              :to="conversationLink(person.conversation_id)"
+              class="inline-flex items-center px-3 text-[13px] font-440 no-underline border border-solid rounded-lg min-h-11 border-n-weak text-n-slate-12 hover:bg-n-alpha-1"
+            >
+              {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_CONVERSATION') }}
+            </router-link>
+          </li>
+        </ul>
+      </div>
+
+      <div
+        v-else
         data-ad-detail-quotes
         class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
       >

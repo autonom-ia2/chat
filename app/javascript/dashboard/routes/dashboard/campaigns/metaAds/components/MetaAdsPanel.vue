@@ -7,6 +7,7 @@ import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import {
   VERDICT_CLASSES,
+  adImage,
   amount,
   duration,
   relativeTime,
@@ -27,9 +28,14 @@ import MetaAdsQuoteMessage from './MetaAdsQuoteMessage.vue';
 // F5 (#1110): "O que fazer hoje" vira a lista de até 3 ações do consultor (panel.advice); Conversas, Propostas e
 // Vendas abrem a lista da etapa ali mesmo (MetaAdsPathList, uma por vez, fora do endereço); a etapa Conversas
 // mostra o tempo de resposta; "Quanto confiar" ganha o número da Meta ao lado do nosso.
-defineProps({
+//
+// Sem conexão (Anúncios sem login, #1960, panel.source 'whatsapp'): o mesmo painel com o que o WhatsApp contou,
+// sem gasto, custo, veredito, consultor nem "quanto confiar". `sample` (período → painel) mostra números de
+// exemplo, sem servidor e sem abrir anúncio ou lista.
+const props = defineProps({
   // Quem só tem meta_ads_view (#1794): o painel sem os gestos do consultor nem os atalhos para a conexão.
   readOnly: { type: Boolean, default: false },
+  sample: { type: Function, default: null },
 });
 const emit = defineEmits(['open']);
 
@@ -86,9 +92,17 @@ const live = useMetaAdsLive({
 const choosePeriod = value => {
   if (value === days.value) return;
   days.value = value;
+  if (props.sample) {
+    panel.value = props.sample(value);
+    return;
+  }
   loading.value = true;
   live.reload();
 };
+
+const withoutSpend = computed(() =>
+  ['whatsapp', 'example'].includes(panel.value?.source)
+);
 
 const fmt = value => amount(value, panel.value?.currency, locale.value);
 
@@ -102,11 +116,16 @@ const counted = (key, n) =>
   t(`CRM_KANBAN.META_ADS_HUB.PANEL.COUNT.${key}`, { n }, n);
 
 const headline = computed(() =>
-  t('CRM_KANBAN.META_ADS_HUB.PANEL.HEADLINE', {
-    spend: fmt(totals.value.spend),
-    conversations: counted('CONVERSATIONS', totals.value.conversations || 0),
-    sales: counted('SALES', totals.value.sales || 0),
-  })
+  t(
+    withoutSpend.value
+      ? 'CRM_KANBAN.META_ADS_HUB.PANEL.HEADLINE_WHATSAPP'
+      : 'CRM_KANBAN.META_ADS_HUB.PANEL.HEADLINE',
+    {
+      spend: fmt(totals.value.spend),
+      conversations: counted('CONVERSATIONS', totals.value.conversations || 0),
+      sales: counted('SALES', totals.value.sales || 0),
+    }
+  )
 );
 
 // As ações do dia vêm prontas do servidor (Advisor::Analysis); o texto de cada uma é feito na própria lista.
@@ -141,7 +160,9 @@ const toggleList = step => {
 };
 
 const path = computed(() => [
-  { key: 'SPEND', value: fmt(totals.value.spend), plural: 2 },
+  ...(withoutSpend.value
+    ? []
+    : [{ key: 'SPEND', value: fmt(totals.value.spend), plural: 2 }]),
   {
     key: 'CONVERSATIONS',
     response: responseTime.value,
@@ -185,10 +206,19 @@ const ads = computed(() => panel.value?.ads || []);
 // O link de imagem da Meta vence (o "oe=" da URL); imagem que não abre vira o quadro de reserva. Guarda o link
 // que falhou por anúncio: quando a renovação diária traz um link novo, a imagem volta sem recarregar a página.
 const brokenImages = ref({});
+const imageOf = ad => adImage(ad, brokenImages.value[ad.ad_id] || []);
+const imageFailed = ad => {
+  brokenImages.value = {
+    ...brokenImages.value,
+    [ad.ad_id]: [...(brokenImages.value[ad.ad_id] || []), imageOf(ad)],
+  };
+};
 // Os três números de cada anúncio: o investido numa linha, conversas e vendas lado a lado embaixo (em três
 // colunas o rótulo "Conversas" não cabe no cartão estreito).
+// Propostas abertas do anúncio: as propostas incluem as que viraram venda.
+const openQuotesOf = ad => Math.max((ad.quotes || 0) - (ad.sales || 0), 0);
 const adStats = ad => [
-  { key: 'SPEND', value: fmt(ad.spend) },
+  ...(withoutSpend.value ? [] : [{ key: 'SPEND', value: fmt(ad.spend) }]),
   { key: 'CONVERSATIONS', value: ad.conversations },
   { key: 'SALES', value: ad.sales },
 ];
@@ -236,7 +266,14 @@ const expandedTargets = computed(() => [
   ...(openList.value === 'slow_replies' ? ['slow_replies'] : []),
 ]);
 
-onMounted(() => live.start());
+onMounted(() => {
+  if (!props.sample) {
+    live.start();
+    return;
+  }
+  panel.value = props.sample(days.value);
+  loading.value = false;
+});
 </script>
 
 <template>
@@ -415,7 +452,8 @@ onMounted(() => live.start());
           {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_TITLE') }}
         </h4>
         <ol
-          class="grid grid-cols-2 p-0 m-0 list-none gap-y-6 gap-x-4 xl:grid-cols-4 xl:gap-x-0"
+          class="grid grid-cols-2 p-0 m-0 list-none gap-y-6 gap-x-4 xl:gap-x-0"
+          :class="withoutSpend ? 'xl:grid-cols-3' : 'xl:grid-cols-4'"
         >
           <li
             v-for="step in path"
@@ -485,7 +523,7 @@ onMounted(() => live.start());
             </span>
             <!-- O botão cobre a etapa inteira (after:inset-0), como no cartão de anúncio. -->
             <button
-              v-if="PATH_LISTS[step.key]"
+              v-if="PATH_LISTS[step.key] && !sample"
               type="button"
               :data-panel-path-open="PATH_LISTS[step.key]"
               :aria-expanded="String(openList === PATH_LISTS[step.key])"
@@ -578,16 +616,13 @@ onMounted(() => live.start());
           >
             <div class="flex justify-center bg-n-alpha-1">
               <img
-                v-if="
-                  ad.thumbnail_url &&
-                  brokenImages[ad.ad_id] !== ad.thumbnail_url
-                "
-                :src="ad.thumbnail_url"
+                v-if="imageOf(ad)"
+                :src="imageOf(ad)"
                 :alt="ad.name || ''"
                 loading="lazy"
                 data-panel-ad-image
                 class="block object-contain w-full h-auto max-h-[32rem]"
-                @error="brokenImages[ad.ad_id] = ad.thumbnail_url"
+                @error="imageFailed(ad)"
               />
               <div
                 v-else
@@ -613,6 +648,7 @@ onMounted(() => live.start());
                   }}
                 </span>
                 <span
+                  v-if="ad.verdict"
                   :data-verdict="ad.verdict"
                   class="flex-none px-2 py-0.5 text-[11px] font-520 uppercase tracking-[0.06em] rounded whitespace-nowrap"
                   :class="VERDICT_CLASSES[ad.verdict]"
@@ -651,14 +687,15 @@ onMounted(() => live.start());
                       })
                     : $t(
                         'CRM_KANBAN.META_ADS_HUB.PANEL.AD_QUOTES',
-                        { count: ad.quotes },
-                        ad.quotes
+                        { count: openQuotesOf(ad) },
+                        openQuotesOf(ad)
                       )
                 }}
               </p>
               <!-- O botão cobre o cartão inteiro (after:inset-0): tocar em qualquer parte abre o anúncio, e o
                    leitor de tela ouve um só botão com o nome dele. -->
               <button
+                v-if="!sample"
                 type="button"
                 :data-panel-ad-open="ad.ad_id"
                 :aria-label="
