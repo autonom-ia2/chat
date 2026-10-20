@@ -48,20 +48,10 @@ class Crm::Numeros::SoEu
   end
 
   def papeis
-    @papeis ||= begin
-      proprios = []
-      proprios << :venda if credito[:vendas].positive? || @cards.algum?(:venda)
-      proprios << :atende if credito[:resolvidos].positive? || @cards.algum?(:atende)
-      proprios.presence || pelos_funis_visiveis
-    end
-  end
-
-  def pelos_funis_visiveis
-    tipos = @visiveis.distinct.pluck(:counts_as_sale)
-    papeis = []
-    papeis << :venda if tipos.include?(true)
-    papeis << :atende if tipos.include?(false)
-    papeis.presence || [:venda]
+    @papeis ||= Crm::Numeros::Papel.de(
+      vendeu: credito[:vendas].positive? || @cards.algum?(:venda),
+      atendeu: credito[:resolvidos].positive? || @cards.algum?(:atende)
+    ) { @visiveis.distinct.pluck(:counts_as_sale) }
   end
 
   def moeda

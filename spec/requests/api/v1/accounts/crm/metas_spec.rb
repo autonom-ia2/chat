@@ -98,6 +98,26 @@ RSpec.describe 'Api::V1::Accounts::Crm::Metas', type: :request do
       expect(pessoa(body, bruno)).to include('meta' => nil, 'anterior' => nil, 'sugestao' => { 'valor' => nil, 'historico' => [0, 0, 0] })
     end
 
+    it 'lista quem vende, pela régua do "Só eu"; quem só atende sai, a não ser que já tenha meta' do
+      sale
+      funil_suporte, etapa_suporte = suporte
+      carla = create(:user, account: account, role: :agent, name: 'Carla')
+      dora = create(:user, account: account, role: :agent, name: 'Dora')
+      [carla, dora].each do |atendente|
+        account.crm_cards.create!(pipeline: funil_suporte, stage: etapa_suporte, owner: atendente, title: 'Caso')
+      end
+      goal(dora, 1000, month: Date.new(2026, 9, 1))
+
+      call(:get, admin, "#{base}/metas")
+
+      nomes = response.parsed_body['funis'].first['pessoas'].pluck('nome')
+      expect(nomes).to include('Ana', 'Bruno', 'Marcos', 'Dora')
+      expect(nomes).not_to include('Carla')
+
+      call(:put, admin, "#{base}/metas", funis: [{ id: sale.first.id, pessoas: [{ id: carla.id, meta: 100 }] }])
+      expect(response).to have_http_status(:not_found)
+    end
+
     it 'credita a venda a quem era o responsável no fechamento, não a quem clicou (Decisão 3)' do
       sale
       won(owner: ana, value_cents: 300_000, closed_by: bruno, closed_at: Time.utc(2026, 9, 10, 15, 0))
