@@ -3,7 +3,6 @@
 
 export const lerMetaSync = (metaSync = {}) => ({
   enabled: Boolean(metaSync.enabled),
-  datasetId: metaSync.dataset_id || '',
   pixelId: metaSync.pixel_id || '',
   events: {
     won: metaSync.events?.won ?? true,
@@ -128,7 +127,6 @@ export const payloadDoFunil = ({ form, pipeline, editando, ia, modelo }) => ({
     meta_sync: {
       enabled: form.metaSync.enabled,
       events: { ...form.metaSync.events },
-      dataset_id: form.metaSync.datasetId.trim() || null,
       pixel_id: form.metaSync.pixelId || null,
     },
     // Always emitted so toggling Google sync off persists enabled:false.

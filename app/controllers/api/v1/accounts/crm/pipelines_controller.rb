@@ -131,8 +131,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
         'won' => bool.cast(meta_sync.dig(:events, :won)) || false,
         'lost' => bool.cast(meta_sync.dig(:events, :lost)) || false,
         'moved' => bool.cast(meta_sync.dig(:events, :moved)) || false
-      },
-      'dataset_id' => meta_sync[:dataset_id].presence
+      }
     }.merge({ 'pixel_id' => sanitized_pixel_id(meta_sync[:pixel_id]) }.compact)
     @pipeline.update!(metadata: metadata)
   end

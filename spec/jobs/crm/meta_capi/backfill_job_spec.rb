@@ -5,7 +5,7 @@ RSpec.describe Crm::MetaCapi::BackfillJob do
   let(:user) { create(:user, account: account, role: :administrator) }
 
   let(:campaign_attributes) { { 'campaign' => { 'ctwa_clid' => 'CLID123' } } }
-  let(:meta_sync) { { 'enabled' => true, 'events' => { 'won' => true, 'moved' => true }, 'dataset_id' => 'DS123' } }
+  let(:meta_sync) { { 'enabled' => true, 'events' => { 'won' => true, 'moved' => true } } }
 
   let(:channel) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
@@ -43,6 +43,18 @@ RSpec.describe Crm::MetaCapi::BackfillJob do
       expect(report[:by_event_type]).to eq('won' => 1, 'moved' => 1)
       expect(report[:enqueued]).to eq(0)
       expect(Crm::MetaCapi::DispatchJob).not_to have_received(:perform_later)
+    end
+
+    context 'when the click lives only in a linked conversation (#1940)' do
+      let(:card) do
+        created = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Card', currency: 'BRL', value_cents: 50_000, status: :won)
+        Crm::CardConversation.create!(account: account, card: created, conversation: conversation)
+        created
+      end
+
+      it 'still counts the card' do
+        expect(described_class.perform_now(account.id)[:would_send]).to eq(2)
+      end
     end
 
     context 'when the card has no ctwa_clid' do

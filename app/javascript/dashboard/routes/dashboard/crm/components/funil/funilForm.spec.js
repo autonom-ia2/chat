@@ -52,7 +52,7 @@ describe('payloadDoFunil', () => {
     countsAsSale: false,
     outcomeLabels: { success: '', failure: '' },
     monthlyTarget: '',
-    metaSync: { enabled: false, events: {}, datasetId: '', pixelId: '' },
+    metaSync: { enabled: false, events: {}, pixelId: '' },
     googleSync: { enabled: false, events: {}, conversionNames: { won: '' } },
     stages: [
       { name: 'Boleto atrasado', color: '#2563eb', modeloPosicao: 2 },
@@ -106,7 +106,7 @@ describe('moeda da meta', () => {
       countsAsSale: true,
       outcomeLabels: { success: '', failure: '' },
       monthlyTarget: '500',
-      metaSync: { enabled: false, events: {}, datasetId: '', pixelId: '' },
+      metaSync: { enabled: false, events: {}, pixelId: '' },
       googleSync: { enabled: false, events: {}, conversionNames: { won: '' } },
       stages: [],
     };

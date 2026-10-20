@@ -17,11 +17,22 @@ RSpec.describe 'Crm::MetaCapi resolvers' do # rubocop:disable RSpec/DescribeClas
   end
 
   describe Crm::MetaCapi::CtwaClidResolver do
-    it 'prefers the campaign origin clid' do
-      card = card_with_conversation('campaign' => { 'ctwa_clid' => 'ORIGIN' },
-                                    'campaign_touches' => [{ 'ctwa_clid' => 'TOUCH' }])
+    it 'prefers the newest click of the conversation over its first one (the origin)' do
+      card = card_with_conversation('campaign' => { 'ctwa_clid' => 'ORIGIN', 'touched_at' => 30.days.ago.iso8601 },
+                                    'campaign_touches' => [{ 'ctwa_clid' => 'ORIGIN', 'touched_at' => 30.days.ago.iso8601 },
+                                                           { 'ctwa_clid' => 'TOUCH', 'touched_at' => 1.hour.ago.iso8601 }])
 
-      expect(described_class.resolve(card)).to eq('ORIGIN')
+      expect(described_class.resolve(card)).to eq('TOUCH')
+    end
+
+    it 'compares conversations by their newest click, not by their first one' do
+      card = card_with_conversation('campaign' => { 'ctwa_clid' => 'OLD_ORIGIN', 'touched_at' => 30.days.ago.iso8601 },
+                                    'campaign_touches' => [{ 'ctwa_clid' => 'NEWEST', 'touched_at' => 1.hour.ago.iso8601 }])
+      middle = create(:conversation, account: account, inbox: card.primary_conversation.inbox,
+                                     additional_attributes: { 'campaign' => { 'ctwa_clid' => 'MIDDLE', 'touched_at' => 10.days.ago.iso8601 } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: middle)
+
+      expect(described_class.sources(card).map(&:ctwa_clid)).to eq(%w[NEWEST MIDDLE])
     end
 
     it 'falls back to the most recent touch carrying a clid' do
@@ -36,10 +47,58 @@ RSpec.describe 'Crm::MetaCapi resolvers' do # rubocop:disable RSpec/DescribeClas
       expect(described_class.resolve(card)).to be_nil
     end
 
+    it 'finds the click in a linked conversation of another inbox and returns that conversation (#1940)' do
+      card = card_with_conversation({})
+      linked = create(:conversation, account: account, inbox: card.primary_conversation.inbox,
+                                     additional_attributes: { 'campaign' => { 'ctwa_clid' => 'LINKED' } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: linked)
+
+      source = described_class.sources(card).first
+
+      expect(source.ctwa_clid).to eq('LINKED')
+      expect(source.conversation).to eq(linked)
+    end
+
+    it 'prefers the most recent conversation carrying a clid' do
+      card = card_with_conversation('campaign' => { 'ctwa_clid' => 'OLD' })
+      card.primary_conversation.update!(created_at: 2.days.ago)
+      newer = create(:conversation, account: account, inbox: card.primary_conversation.inbox,
+                                    additional_attributes: { 'campaign_touches' => [{ 'ctwa_clid' => 'NEW' }] })
+      Crm::CardConversation.create!(account: account, card: card, conversation: newer)
+
+      expect(described_class.resolve(card)).to eq('NEW')
+    end
+
+    it 'orders by the click time, not by when the conversation started' do
+      card = card_with_conversation('campaign_touches' => [{ 'ctwa_clid' => 'FRESH', 'touched_at' => 1.hour.ago.iso8601 }])
+      card.primary_conversation.update!(created_at: 3.days.ago)
+      older_click = create(:conversation, account: account, inbox: card.primary_conversation.inbox,
+                                          additional_attributes: { 'campaign' => { 'ctwa_clid' => 'STALE', 'touched_at' => 2.days.ago.iso8601 } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: older_click)
+
+      expect(described_class.resolve(card)).to eq('FRESH')
+    end
+
     it 'returns nil for a standalone card without a conversation' do
       card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Standalone', currency: 'BRL')
 
       expect(described_class.resolve(card)).to be_nil
+    end
+  end
+
+  describe Crm::MetaCapi::InboxCredentials do
+    it 'reads the token and the WABA of an official WhatsApp inbox' do
+      inbox = card_with_conversation({}).primary_conversation.inbox
+
+      expect(described_class.for(inbox)).to include(access_token: 'test_key', waba_id: '123456789', channel: inbox.channel)
+      expect(described_class.reportable?(inbox)).to be(true)
+    end
+
+    it 'yields nothing for an inbox without a Meta token' do
+      inbox = create_crm_inbox(account: account)
+
+      expect(described_class.for(inbox)).to eq(channel: nil, access_token: nil, waba_id: nil)
+      expect(described_class.reportable?(inbox)).to be(false)
     end
   end
 

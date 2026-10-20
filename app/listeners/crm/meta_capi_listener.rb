@@ -31,7 +31,7 @@ class Crm::MetaCapiListener < BaseListener
   end
 
   # Reads crm_pipelines.metadata['meta_sync'] (jsonb): { enabled: bool,
-  # events: { 'won' => bool, 'lost' => bool, 'moved' => bool }, dataset_id: '...' }.
+  # events: { 'won' => bool, 'lost' => bool, 'moved' => bool } }. The dataset comes from the inbox WABA (#1940).
   # Returns false unless the sync is on AND this specific event is subscribed.
   def meta_sync_enabled?(account_id, card_id, capi_event)
     card = Crm::Card.find_by(id: card_id, account_id: account_id)
