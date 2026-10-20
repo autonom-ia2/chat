@@ -84,6 +84,15 @@ RSpec.describe 'CRM subject suggestions API', type: :request do
     expect(Crm::Subjects::Notifier).to have_received(:notify).with(conversation)
   end
 
+  it 'Criar: a primeira etapa veio da IA, e a linha do tempo não a registra como escolha da pessoa (#1918)' do
+    decision = suggestion(action: 'create', title: 'Chat2You')
+    allow(Crm::Subjects::Notifier).to receive(:notify)
+
+    accept(decision)
+
+    expect(Crm::Activity.where(card: decision.reload.card, event_type: 'create').sole.payload).not_to have_key('etapa_escolhida')
+  end
+
   it 'dar nome: o assunto atual ganha o nome sugerido' do
     atual = card('Joana Lima')
     decision = suggestion(action: 'rename', title: 'Agentes de IA', target: atual)

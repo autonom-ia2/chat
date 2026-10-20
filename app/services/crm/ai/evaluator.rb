@@ -2,6 +2,12 @@ module Crm
   module Ai
     class Evaluator # rubocop:disable Metrics/ClassLength -- no teto (175) antes do #1828; a saída da cópia é uma linha
       Result = Struct.new(:status, :suggestion, :error, keyword_init: true)
+      # #1918 (decisão do Rodrigo, 20/10): card em que uma pessoa escolheu a etapa há menos que isto (moveu, reabriu ou
+      # criou numa etapa) não tem a etapa mexida pela IA em nenhum gatilho automático: nem move, nem sugere. O resto da
+      # avaliação (campos, pedido de atendente, retorno) segue. O mesmo tempo do respeito à escolha de assunto feita por
+      # uma pessoa (Crm::Subjects::RESPEITO_AO_FOCO, #1260). "Avaliar agora" é a pessoa pedindo e não tem essa trava.
+      RESPEITO_AO_MOVIMENTO = Crm::Subjects::RESPEITO_AO_FOCO
+      ESCOLHAS_DE_ETAPA = %w[move reopen].freeze
 
       # tocado (#1693): a IA de assunto disse que a mensagem é sobre este card; ele é avaliado mesmo fora do foco.
       def initialize(card:, trigger: 'message', tocado: false)
@@ -173,6 +179,8 @@ module Crm
         touch_evaluation_metadata(classification)
         return Result.new(status: :skipped, error: 'pipeline_changed') if @pipeline_mudou
 
+        return pessoa_mexeu_na_etapa! if pessoa_mexeu_na_etapa?
+
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
         return Result.new(status: :skipped, error: 'unknown_stage') if target_stage.blank?
         return Result.new(status: :skipped, error: 'same_stage') if target_stage.id == @card.stage_id
@@ -209,6 +217,25 @@ module Crm
         true
       rescue ArgumentError
         false
+      end
+
+      # A linha do tempo do card: a etapa escolhida por uma pessoa (mover no quadro, em lote ou aceitando uma sugestão;
+      # reabrir; criar o card escolhendo a etapa, Crm::Cards::Creator `etapa_escolhida`).
+      def pessoa_mexeu_na_etapa?
+        return false if @trigger == 'manual'
+
+        da_pessoa = Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user',
+                                        created_at: RESPEITO_AO_MOVIMENTO.ago..)
+        criou_na_etapa = da_pessoa.where(event_type: 'create').where('payload @> ?', { etapa_escolhida: true }.to_json)
+        da_pessoa.where(event_type: ESCOLHAS_DE_ETAPA).or(criou_na_etapa).exists?
+      end
+
+      # Nem sugere: a sugestão de etapa que esperava uma pessoa, de antes da escolha dela, também sai.
+      def pessoa_mexeu_na_etapa!
+        pendentes = @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).to_a
+        pendentes.each { |sugestao| sugestao.update!(status: :expired) }
+        Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_UPDATED) if pendentes.any?
+        Result.new(status: :skipped, error: 'pessoa_mexeu_na_etapa')
       end
 
       def stage_criteria_present?(stage)

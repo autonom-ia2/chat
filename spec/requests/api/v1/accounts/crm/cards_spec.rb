@@ -106,7 +106,7 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(payload['contact_id']).to be_nil
     expect(payload['conversation_id']).to be_nil
     expect(payload['inbox_id']).to be_nil
-    expect(account.crm_activities.where(event_type: 'create').count).to eq(1)
+    expect(account.crm_activities.where(event_type: 'create').sole.payload).to include('etapa_escolhida' => true)
   end
 
   it 'creates a manual card linked to an existing account contact' do
@@ -147,6 +147,20 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(payload['owner_id']).to eq(agent.id)
     expect(payload['title']).to eq('Maria Silva')
     expect(account.crm_card_conversations.where(conversation_id: conversation.id).count).to eq(1)
+  end
+
+  it 'card criado pela conversa sem etapa no pedido: a etapa padrão da caixa não é escolha da pessoa (#1918)' do
+    account, user = create_account_and_user
+    inbox = create_crm_inbox(account: account)
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: account.contacts.create!(name: 'Ana'))
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, created_by: user)
+
+    post "/api/v1/accounts/#{account.id}/crm/cards/from_conversation",
+         params: { conversation_id: conversation.id, pipeline_id: pipeline.id }, headers: auth_headers(user)
+
+    expect(response).to have_http_status(:created)
+    expect(account.crm_activities.where(event_type: 'create').sole.payload).not_to have_key('etapa_escolhida')
   end
 
   it 'reuses an existing card when creating from the same conversation display id' do

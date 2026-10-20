@@ -21,6 +21,10 @@
       "AGENTE": "AI agent",
       "AUTOMATICO": "{nome} · automatic"
     },
+    "ECO_DO_CELULAR": {
+      "ENVIADA_PELO_CELULAR": "Sent from the phone",
+      "ENVIADA_POR": "Sent by {nome} from the phone"
+    },
     "MAIS": {
       "ABRIR": "More ways to send",
       "LOCALIZACAO": "Location",
