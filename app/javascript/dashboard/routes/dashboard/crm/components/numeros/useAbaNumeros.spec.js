@@ -66,13 +66,13 @@ describe('useAbaNumeros', () => {
     expect(mostrar()).toBe(false);
   });
 
-  it('função personalizada precisa de crm_view_reports ou crm_admin', () => {
+  it('função personalizada precisa de crm_view_reports, como a rota (crm_admin sozinho não abre)', () => {
     Object.assign(estado, { papel: 'agent', funcao: 7, chaves: ['crm_view'] });
     expect(mostrar()).toBe(false);
     estado.chaves = ['crm_view_reports'];
     expect(mostrar()).toBe(true);
     estado.chaves = ['crm_admin'];
-    expect(mostrar()).toBe(true);
+    expect(mostrar()).toBe(false);
   });
 
   it('com Números por papel (#1897), quem só trabalha no CRM também vê a aba', () => {

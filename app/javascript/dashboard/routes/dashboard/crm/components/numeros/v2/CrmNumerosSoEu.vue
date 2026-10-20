@@ -1,10 +1,7 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useAccount } from 'dashboard/composables/useAccount';
-import { fusoDaConta, rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
+import { computed, ref } from 'vue';
+import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 import { usePodeAbrir } from 'dashboard/components-next/sidebar/fork/usePodeAbrir';
-import CrmNumerosAPI from 'dashboard/api/crmNumeros';
 import ResultsToggle from 'dashboard/routes/dashboard/settings/booking/results/ResultsToggle.vue';
 import CrmVistasNumeros from '../CrmVistasNumeros.vue';
 import NumerosMes from './NumerosMes.vue';
@@ -13,69 +10,35 @@ import NumerosProximoPasso from './NumerosProximoPasso.vue';
 import NumerosBloco from './NumerosBloco.vue';
 import NumerosIaAjudou from './NumerosIaAjudou.vue';
 import NumerosComoContamos from './NumerosComoContamos.vue';
+import NumerosEspera from './NumerosEspera.vue';
 import { destino } from './destinos';
-import { P, comMaiuscula, nomeDoMes } from './numerosTextos';
+import { larguraDe } from './barras';
+import { P } from './numerosTextos';
 import { useNumerosFormato } from './useNumerosFormato';
+import { useNumerosDoMes } from './useNumerosDoMes';
 
 // CRM › Números, visão "Só eu" (#1897, F3 do #1871), como no protótipo
 // aprovado: topo, próximo passo, Vendendo e/ou Atendendo (o papel vem do tipo
-// do funil), "A IA te ajudou" e a barra da equipe, sem nomes. O mês vem do
-// endereço (?mes=AAAA-MM).
+// do funil), "A IA te ajudou" e a barra da equipe, sem nomes.
 const props = defineProps({
   visoes: { type: Array, required: true },
 });
 const emit = defineEmits(['visao']);
 
-const route = useRoute();
-const router = useRouter();
-const { currentAccount } = useAccount();
 const { podeAbrir } = usePodeAbrir();
 const { t, locale } = useNumerosFormato();
-
-const dados = ref(null);
-const carregando = ref(true);
-const falhou = ref(false);
+const {
+  dados,
+  carregando,
+  falhou,
+  carregar,
+  irParaMes,
+  fuso,
+  nomeMes,
+  mesNome,
+  rotuloDoMes,
+} = useNumerosDoMes({ t, locale });
 const comoContamos = ref(null);
-
-const mes = computed(() => route.query.mes || undefined);
-
-// Só a última resposta vale: trocar de mês depressa não deixa a resposta antiga por cima.
-let pedido = 0;
-const carregar = async () => {
-  pedido += 1;
-  const este = pedido;
-  carregando.value = true;
-  falhou.value = false;
-  try {
-    const { data } = await CrmNumerosAPI.show({ mes: mes.value });
-    if (este === pedido) dados.value = data;
-  } catch {
-    if (este === pedido) falhou.value = true;
-  } finally {
-    if (este === pedido) carregando.value = false;
-  }
-};
-watch(mes, carregar, { immediate: true });
-
-const irParaMes = chave =>
-  router.replace({ query: { ...route.query, mes: chave } });
-
-const fuso = computed(() => fusoDaConta(currentAccount.value));
-const nomeMes = chave =>
-  chave ? nomeDoMes(chave, { locale: locale(), fuso: fuso.value }) : '';
-const mesNome = computed(() => nomeMes(dados.value?.mes?.chave));
-const rotuloDoMes = computed(() => {
-  const info = dados.value?.mes;
-  if (!info) return '';
-  const nome = comMaiuscula(mesNome.value);
-  return info.fechado
-    ? t(`${P}.MES.FECHADO`, { mes: nome })
-    : t(
-        `${P}.MES.ATUAL`,
-        { mes: nome, n: info.diasRestantes },
-        info.diasRestantes
-      );
-});
 
 const opcoesDeVisao = computed(() =>
   props.visoes.map(v => ({
@@ -141,32 +104,11 @@ const destinoDoTopo = computed(() => {
         />
       </div>
 
-      <div
-        v-if="carregando && !dados"
-        aria-busy="true"
-        data-numeros-carregando
-        class="flex flex-col gap-3"
-      >
-        <span class="sr-only">{{ t(`${P}.CARREGANDO`) }}</span>
-        <div class="h-48 animate-pulse rounded-2xl bg-n-alpha-2" />
-        <div class="h-24 animate-pulse rounded-2xl bg-n-alpha-2" />
-      </div>
-
-      <div
-        v-else-if="falhou"
-        role="alert"
-        data-numeros-erro
-        class="flex flex-col items-start gap-4 rounded-2xl bg-n-ruby-2 p-6 ring-1 ring-inset ring-n-ruby-6"
-      >
-        <p class="m-0 text-base text-n-ruby-12">{{ t(`${P}.ERRO.TEXTO`) }}</p>
-        <button
-          type="button"
-          class="inline-flex min-h-11 items-center rounded-xl bg-n-ruby-9 px-5 text-base font-semibold text-white hover:bg-n-ruby-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-          @click="carregar"
-        >
-          {{ t(`${P}.ERRO.ACAO`) }}
-        </button>
-      </div>
+      <NumerosEspera
+        v-if="(carregando && !dados) || falhou"
+        :falhou="falhou"
+        @tentar="carregar"
+      />
 
       <div
         v-else-if="dados?.vazio"
@@ -244,7 +186,7 @@ const destinoDoTopo = computed(() => {
           >
             <span
               class="block h-full rounded-full bg-n-slate-9"
-              :style="{ width: `${Math.min(100, dados.equipePct)}%` }"
+              :class="larguraDe(dados.equipePct)"
             />
           </span>
         </section>

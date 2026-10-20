@@ -3,14 +3,14 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import {
-  CRM_ADMIN_PERMISSION,
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
 } from 'dashboard/constants/permissions';
 
-// Quem vê o quê em CRM › Números (#1897), a mesma régua da Crm::NumerosPolicy e da
-// Crm::ReportPolicy no servidor:
-// - equipe: administrador e função com crm_view_reports (ou crm_admin); sem a flag
+// Quem vê o quê em CRM › Números (#1897), a régua da Crm::NumerosPolicy e da
+// Crm::ReportPolicy no servidor limitada às chaves que a rota aceita (o servidor
+// também aceita crm_admin, a rota não):
+// - equipe: administrador e função com crm_view_reports; sem a flag
 //   `crm_numeros_lentes`, também o agente sem função (como antes);
 // - "Só eu" (só com a flag): administrador, agente sem função e função com crm_view.
 export function useQuemVeNumeros() {
@@ -39,10 +39,10 @@ export function useQuemVeNumeros() {
   );
   const administrador = computed(() => currentRole.value === 'administrator');
   const semFuncao = computed(() => !currentCustomRoleId.value);
-  const temChave = chave => {
-    const chaves = getUserPermissions(currentUser.value, accountId.value);
-    return chaves.includes(CRM_ADMIN_PERMISSION) || chaves.includes(chave);
-  };
+  // Só a chave que a rota de Números aceita (crm.routes.js numerosMeta): crm_admin
+  // sozinho não abre a rota, então também não mostra o caminho para ela.
+  const temChave = chave =>
+    getUserPermissions(currentUser.value, accountId.value).includes(chave);
 
   const veEquipe = computed(() => {
     if (!pronto.value) return false;

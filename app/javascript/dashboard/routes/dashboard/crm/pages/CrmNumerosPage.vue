@@ -2,11 +2,12 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useMapGetter, useStore } from 'dashboard/composables/store';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import ResultsToggle from 'dashboard/routes/dashboard/settings/booking/results/ResultsToggle.vue';
 import CrmDashboardPage from './CrmDashboardPage.vue';
 import CrmNumerosSoEu from '../components/numeros/v2/CrmNumerosSoEu.vue';
+import NumerosEspera from '../components/numeros/v2/NumerosEspera.vue';
 import { useQuemVeNumeros } from '../components/numeros/useQuemVeNumeros';
 import { P } from '../components/numeros/v2/numerosTextos';
 
@@ -63,7 +64,23 @@ const mostrarAviso = computed(
   () => ligado.value && administrador.value && !avisoFechado.value
 );
 
-onMounted(lerAviso);
+// Sem a conta (flags e permissões), nenhuma visão abre: busca de novo e, se não vier,
+// mostra o erro com "Tentar de novo" em vez de deixar a página em branco.
+const store = useStore();
+const contaFalhou = ref(false);
+const buscarConta = async () => {
+  contaFalhou.value = false;
+  await store.dispatch('accounts/get', {
+    accountId: accountId.value,
+    silent: true,
+  });
+  contaFalhou.value = !pronto.value;
+};
+
+onMounted(() => {
+  lerAviso();
+  if (!pronto.value) buscarConta();
+});
 
 // Quem não abre Números vai para o Kanban, mas só depois que as flags da conta chegam.
 watch(
@@ -77,8 +94,18 @@ watch(
 </script>
 
 <template>
+  <div
+    v-if="!pronto"
+    class="flex h-full w-full flex-col overflow-auto bg-n-background"
+  >
+    <main
+      class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6"
+    >
+      <NumerosEspera :falhou="contaFalhou" @tentar="buscarConta" />
+    </main>
+  </div>
   <CrmNumerosSoEu
-    v-if="ligado && visao === 'eu'"
+    v-else-if="ligado && visao === 'eu'"
     :visoes="visoes"
     @visao="trocarVisao"
   >

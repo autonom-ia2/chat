@@ -56,6 +56,8 @@ describe('useQuemVeNumeros', () => {
     crm: { papel: 'agent', funcao: 3, chaves: ['crm_view'] },
     socio: { papel: 'agent', funcao: 3, chaves: ['crm_view_reports'] },
     semCrm: { papel: 'agent', funcao: 3, chaves: ['conversation_manage'] },
+    // A rota de Números não aceita crm_admin: sem a chave da rota, nada abre.
+    crmAdmin: { papel: 'agent', funcao: 3, chaves: ['crm_admin'] },
   };
 
   it('com a flag: "Só eu" para quem trabalha no CRM e a equipe só com a chave', () => {
@@ -66,6 +68,7 @@ describe('useQuemVeNumeros', () => {
       crm: [true, false],
       socio: [false, true],
       semCrm: [false, false],
+      crmAdmin: [false, false],
     };
     Object.entries(pessoas).forEach(([quem, pessoa]) => {
       Object.assign(estado, pessoa, { porPapel: true });

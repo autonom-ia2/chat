@@ -217,7 +217,10 @@ const linhaDaEquipe = computed(() => {
           </component>
         </div>
 
-        <div v-if="comoVaiOMes" class="pt-5 border-t border-white/10">
+        <div
+          v-if="comoVaiOMes"
+          class="hidden pt-5 border-t border-white/10 md:block"
+        >
           <RouterLink
             :to="comoVaiOMes"
             data-como-vai-o-mes

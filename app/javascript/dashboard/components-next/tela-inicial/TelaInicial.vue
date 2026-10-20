@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive } from 'vue';
 import { isCrmKanbanEnabled } from 'dashboard/helper/routeHelpers';
+import { usePodeAbrir } from 'dashboard/components-next/sidebar/fork/usePodeAbrir';
 import { useQuemVeNumeros } from 'dashboard/routes/dashboard/crm/components/numeros/useQuemVeNumeros';
 import TelaInicialResumo from './TelaInicialResumo.vue';
 import { useTelaInicial } from './useTelaInicial';
@@ -11,13 +12,18 @@ const dados = reactive(useTelaInicial());
 
 // #1897: com CRM › Números por papel, o rodapé "Como vai o seu mês →" para quem abre
 // Números, já na visão "Só eu" quando ela existe. Sem número: o mês fica em Números.
+// A mesma régua da rota: permissão da rota (usePodeAbrir), CRM ligado e quem vê Números.
 const { ligado, veSoEu, abreNumeros } = useQuemVeNumeros();
+const { podeAbrir } = usePodeAbrir();
+const ROTA = { name: 'crm_dashboard_index' };
 const comoVaiOMes = computed(() => {
-  if (!ligado.value || !abreNumeros.value || !isCrmKanbanEnabled()) return null;
-  return {
-    name: 'crm_dashboard_index',
-    query: veSoEu.value ? { visao: 'eu' } : {},
-  };
+  const abre =
+    ligado.value &&
+    isCrmKanbanEnabled() &&
+    podeAbrir(ROTA) &&
+    abreNumeros.value;
+  if (!abre) return null;
+  return { ...ROTA, query: veSoEu.value ? { visao: 'eu' } : {} };
 });
 </script>
 

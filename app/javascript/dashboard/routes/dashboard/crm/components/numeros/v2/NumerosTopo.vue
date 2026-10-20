@@ -8,6 +8,7 @@ import {
   tituloDoTopo,
 } from './numerosTextos';
 import { useNumerosFormato } from './useNumerosFormato';
+import { inicioDe, larguraDe } from './barras';
 
 // Topo de CRM › Números (#1871): rótulo do mês, título com um número, uma
 // frase, uma barra com a marca de "onde deveria estar hoje" (só com meta, F4)
@@ -77,14 +78,14 @@ const botao = computed(() =>
       >
         <div
           class="h-full rounded-full bg-n-amber-9 transition-[width] motion-reduce:transition-none"
-          :style="{ width: `${pct}%` }"
+          :class="larguraDe(pct)"
         />
         <span
           v-if="!mes.fechado"
           aria-hidden="true"
           data-marca-hoje
           class="absolute -top-[3px] h-4 w-0.5 rounded bg-white/90"
-          :style="{ insetInlineStart: `${esperado}%` }"
+          :class="inicioDe(esperado)"
         />
       </div>
     </div>
