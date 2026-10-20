@@ -8,10 +8,14 @@
 # modelo maior devolve a lista (um principal e os outros). Continua UMA decisão por mensagem: ela guarda o principal
 # (card_id, action, title) e a lista dos cards tocados (touched_card_ids), que a IA do CRM avalia numa chamada só
 # (Crm::Conversations::CardsTocados). Com a flag, um assunto só também grava a lista.
+#
+# Coluna do card novo (#1910, flag `crm_assunto_na_etapa`): o modelo maior devolve também a etapa de cada pedido novo
+# (Crm::Subjects::Etapa), que vai na Escolha até o Applier.
 class Crm::Subjects::Identifier
   # outros (#1693): os outros assuntos da mensagem, cada um uma Escolha sem decided_by. duvida: os atributos da decisão
-  # quando o principal ficou em dúvida e os outros, claros, seguem (sem opcao).
-  Escolha = Struct.new(:opcao, :titulo, :decided_by, :outros, :duvida, keyword_init: true)
+  # quando o principal ficou em dúvida e os outros, claros, seguem (sem opcao). etapa (#1910): a chave da etapa do pedido
+  # novo, ou nil (1ª etapa).
+  Escolha = Struct.new(:opcao, :titulo, :decided_by, :outros, :duvida, :etapa, keyword_init: true)
   LEITURAS = %w[mensagens_com_respostas].freeze
   SEM_MUDANCA = (Crm::Subjects::Applier::SEM_EFEITO + %w[kept doubt superseded]).freeze
 
@@ -110,7 +114,7 @@ class Crm::Subjects::Identifier
   def aplicar(escolha)
     applier = Crm::Subjects::Applier.new(conversation: @conversation, question: question, mode: @mode, decisao: @decisao,
                                          anterior: @retrato)
-    return applier.aplicar(escolha.opcao, escolha.titulo) unless question.varios?
+    return applier.aplicar(escolha.opcao, escolha.titulo, escolha.etapa) unless question.varios?
 
     applier.aplicar_varios((escolha if escolha.opcao), Array(escolha.outros), duvida: escolha.duvida)
   end
@@ -186,7 +190,7 @@ class Crm::Subjects::Identifier
     opcao = question.opcao(veredito.resposta)
     duvida = !veredito.seguro || (opcao.tipo == :novo && veredito.titulo.blank?)
     outros = outros(veredito)
-    return Escolha.new(opcao: opcao, titulo: veredito.titulo, decided_by: 'review', outros: outros) unless duvida
+    return Escolha.new(opcao: opcao, titulo: veredito.titulo, decided_by: 'review', outros: outros, etapa: veredito.etapa) unless duvida
 
     em_duvida = { state: 'doubt', action: 'none', title: veredito.titulo.presence, pipeline: opcao.pipeline, reason: veredito.motivo }
     # O principal em dúvida não segura os outros assuntos, claros, da mesma mensagem (#1693, C27).
@@ -208,7 +212,7 @@ class Crm::Subjects::Identifier
       next if !assunto.seguro || vistos.include?(identidade) || (identidade.is_a?(Array) && assunto.titulo.blank?)
 
       vistos << identidade
-      Escolha.new(opcao: question.opcao(assunto.resposta), titulo: assunto.titulo)
+      Escolha.new(opcao: question.opcao(assunto.resposta), titulo: assunto.titulo, etapa: assunto.etapa)
     end
     escolhas.first(Crm::Subjects::MAX_ASSUNTOS - 1)
   end
@@ -225,13 +229,20 @@ class Crm::Subjects::Identifier
       # Voltar a um assunto só entre os funis com a IA ligada (#1260); o atual segue sendo o atual, de qualquer funil.
       ids = pipelines.map(&:id)
       cards = abertos.select { |card| ids.include?(card.pipeline_id) }
-      Crm::Subjects::Question.new(account: @account, pipelines: pipelines, cards: cards, atual: abertos.first, varios: varios?)
+      Crm::Subjects::Question.new(account: @account, pipelines: pipelines, cards: cards, atual: abertos.first, varios: varios?,
+                                  etapas: etapas?)
     end
   end
 
   # Vários assuntos só com a flag e numa decisão nova: a reaberta pelo Híbrido (#1638) segue de um assunto só.
   def varios?
     @retrato.nil? && Crm::Conversations::CardEmFoco.ligada?(@account)
+  end
+
+  # A coluna do card novo (#1910) só na Automática: no Sugerir o card aceito nasce na 1ª etapa, e a pergunta fica a de
+  # sempre. A decisão reaberta pelo Híbrido (#1638) segue sem coluna, como segue de um assunto só.
+  def etapas?
+    @retrato.nil? && @mode == 'auto' && Crm::Subjects::Etapa.ligada?(@account)
   end
 
   def estado
