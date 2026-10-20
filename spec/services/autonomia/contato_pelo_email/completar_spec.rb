@@ -60,6 +60,18 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
     expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(feature: 'contato_pelo_email', account: account))
   end
 
+  # Pega (#1929): a assinatura sem palavra de fecho ("Ana Lima / Diretora de RH / telefone", depois de um texto que fala
+  # de outras pessoas) ser lida como de outra pessoa. Na simulação com a IA de verdade, a regra com o esforço 'medium'
+  # levou o caso a 20/20.
+  it 'a instrução diz que o bloco do fim é a assinatura com ou sem fecho, e a leitura usa o esforço medium' do
+    responde(nome: 'Maria Souza')
+
+    described_class.new(message).perform
+
+    expect(cliente).to have_received(:create)
+      .with(hash_including(instructions: include('whether or not a closing word comes before it'), reasoning_effort: 'medium'))
+  end
+
   # Pega: a flag desligada entre o enfileirar e o rodar ainda pagar a IA.
   it 'conta sem a flag: o próprio Completar não chama a IA' do
     account.disable_features!(Autonomia::ContatoPeloEmail::FLAG)
