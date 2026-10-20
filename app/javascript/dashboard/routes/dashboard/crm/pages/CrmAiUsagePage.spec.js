@@ -39,6 +39,7 @@ vi.mock('shared/components/charts/BarChart.vue', () => ({
 
 const makePayload = (overrides = {}) => ({
   account: { id: 85, name: 'Autonom.ia' },
+  com_valores: true,
   period: {
     since: '2026-06-21T12:00:00Z',
     until: '2026-06-28T12:00:00Z',

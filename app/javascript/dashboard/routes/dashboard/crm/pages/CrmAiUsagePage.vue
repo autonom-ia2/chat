@@ -86,7 +86,7 @@ const requestParams = computed(() => ({
 const totals = computed(() => payload.value?.totals || {});
 // #1969: os valores em dinheiro são os custos da conta (administrador ou Financeiro em Ver). Sem eles o servidor manda
 // só uso e tokens, e a página mede tudo pelo número de usos.
-const comValores = computed(() => payload.value?.com_valores !== false);
+const comValores = computed(() => payload.value?.com_valores === true);
 const metricOf = row =>
   Number((comValores.value ? row?.cost_usd : row?.usage_count) || 0);
 const exchangeRate = computed(() => payload.value?.exchange_rate || {});
@@ -198,6 +198,7 @@ const periodSpendLabel = computed(() => {
 });
 const periodSeriesLabel = computed(() => {
   if (!comValores.value)
+    // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
     return t(`CRM_AI_USAGE.SEM_VALORES.SERIE.${selectedPeriod.value.key}`);
   // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
   return t(PERIOD_SERIES_LABEL_KEYS[selectedPeriod.value.key]);

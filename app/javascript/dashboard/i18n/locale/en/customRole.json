@@ -80,7 +80,9 @@
       "CONVERSATION_VIEW": "Reads the other conversations of the inbox",
       "PEOPLE_MANAGE": "Manage people and teams",
       "CUSTOM_ROLE_MANAGE": "Build roles",
-      "GRANT_ABOVE_OWN": "Can grant access above their own"
+      "GRANT_ABOVE_OWN": "Can grant access above their own",
+      "FINANCIAL_VIEW": "See account costs",
+      "FINANCIAL_MANAGE": "Turn the Meta charge authorization on and off"
     },
     "MATRIX": {
       "GROUPS": {
@@ -232,7 +234,7 @@
         "FINANCE": {
           "NAME": "Finance",
           "HINT": "Account costs and the Meta charge authorization",
-          "LEVEL_VIEW": "Sees what AI costs in money and the Meta charge authorization. Plan and invoices stay with the administrator.",
+          "LEVEL_VIEW": "Sees the Meta charge authorization and, for whoever also has CRM reports, what AI costs in money. Plan and invoices stay with the administrator.",
           "LEVEL_MANAGE": "Also turns the Meta charge authorization on and off."
         }
       }

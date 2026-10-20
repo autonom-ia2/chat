@@ -31,7 +31,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
 
   # `com_valores: false` (#1969): who sees AI usage but not the account's costs (no financial_view) gets counts and
   # tokens only, without money, exchange rate or cache savings.
-  def initialize(com_valores: true, **)
+  def initialize(com_valores: false, **)
     super(**)
     @com_valores = com_valores
   end
