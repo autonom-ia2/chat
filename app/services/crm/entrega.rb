@@ -29,6 +29,8 @@ class Crm::Entrega # rubocop:disable Metrics/ClassLength -- #pode_entregar_agora
   Plano = Struct.new(:acao, :pessoa, :card, :settings, :motivo, :agente, keyword_init: true)
   # Motivos em que quem pediu a passagem foi o robô que atendia.
   PEDIDO_DO_ROBO = %w[robo_pediu n8n].freeze
+  # A fila segura a espera da IA do CRM até a releitura (#1975).
+  AGUARDANDO_RELEITURA = 'aguardando_releitura'.freeze
 
   # `pedido`: o que a IA do CRM pediu, quando é ela que chama (`sugestao`: o nome que ela sugeriu, para a regra
   # "direto"; `razao`: o motivo dela, para a linha do tempo do card). `quem_passou`: o robô que está passando, na
@@ -40,11 +42,15 @@ class Crm::Entrega # rubocop:disable Metrics/ClassLength -- #pode_entregar_agora
   # `pelo_card` (#1693, decisão 1a do Rodrigo, 16/10): a regra é a do `card` (o assunto a que o cliente ligou o pedido),
   # e não a do assunto em foco, enquanto ele seguir aberto nesta conversa. Segurada ou convidada, a marca guarda o card
   # para a fila e para o convite vencido.
+  # `exigir_releitura` (#1975, só a fila): a espera da IA do CRM que ainda não foi relida não sai sem a releitura
+  # (#sem_entregar_antes_de_reler).
   # `excluir`: ids de quem deixou um convite desta espera vencer (#1694, decisão do Rodrigo de 16/10): com regra, ficam
   # fora da fila. Se eram todos, sem convite novo: a conversa vai ao primeiro de quem cuida que ficar online (#pela_regra).
   # rubocop:disable Metrics/ParameterLists
-  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil, pelo_card: false, excluir: [])
+  def initialize(conversation:, motivo:, origem:, card: nil, pedido: {}, quem_passou: nil, dono: nil, pelo_card: false, excluir: [],
+                 exigir_releitura: false)
     @conversation = conversation
+    @exigir_releitura = exigir_releitura
     @pelo_card = pelo_card
     @motivo = motivo.to_s
     @origem = origem.to_s
@@ -59,7 +65,7 @@ class Crm::Entrega # rubocop:disable Metrics/ClassLength -- #pode_entregar_agora
   # Por conta própria: trava a conversa, relê e grava.
   def call
     Crm::Passagens.com_motivo(@motivo) do
-      @conversation.with_lock { @resultado = executar(planejar, gravar: true) }
+      @conversation.with_lock { @resultado = executar(sem_entregar_antes_de_reler(planejar), gravar: true) }
     end
     registrar
     @resultado.status == :para_ia ? concluir_para_ia! : @resultado
@@ -74,10 +80,16 @@ class Crm::Entrega # rubocop:disable Metrics/ClassLength -- #pode_entregar_agora
     @resultado
   end
 
-  # Para a fila (#1975, Crm::Ai::RevalidacaoNaFila): a entrega sairia agora (para uma pessoa, um convite ou um agente de
-  # IA)? Só lê, sem trava e sem gravar, com a mesma regra e a presença da rodada (Crm::Entrega::Presenca) que o #call
-  # usa logo depois.
-  def pode_entregar_agora? = %i[pessoa convite ia].include?(planejar.acao)
+  # Para a fila (#1975, Crm::Ai::RevalidacaoNaFila): a entrega sairia agora (para uma pessoa, um convite fora do
+  # intervalo ou um agente de IA)? Só lê, sem trava e sem gravar, com a mesma regra, os mesmos impedimentos e a presença
+  # da rodada (Crm::Entrega::Presenca) que o #call usa logo depois.
+  def pode_entregar_agora? = entregaria?(planejar)
+
+  # O card cuja regra vale (#1606, #1693): o do pedido (`pelo_card`), enquanto seguir aberto nesta conversa, em foco ou
+  # não; senão o assunto em foco (`atual`). A fila (Crm::Ai::RevalidacaoNaFila) usa o mesmo caminho.
+  def self.card_da_regra(conversation, card:, pelo_card:, atual: Crm::Assunto.funil_atual(conversation))
+    pelo_card && Crm::Assunto.da_conversa?(card, conversation) ? card : atual
+  end
 
   # Fora de qualquer trava: o serviço dos Agentes trava a conversa e relê. A origem é o robô que estava com a conversa
   # (o que passou). Só 'passou' é a IA assumindo. 'pessoa_atribuida': uma pessoa entrou no nome antes; ela fica com a
@@ -99,6 +111,25 @@ class Crm::Entrega # rubocop:disable Metrics/ClassLength -- #pode_entregar_agora
   end
 
   private
+
+  # O plano entregaria agora? Pessoa e agente de IA, sim; o convite, se o intervalo entre passagens não o barra (a mesma
+  # checagem do #convite_no_card).
+  def entregaria?(plano)
+    case plano.acao
+    when :pessoa, :ia then true
+    when :convite then !convite_no_intervalo?(plano)
+    else false
+    end
+  end
+
+  # Pela fila (#1975, `exigir_releitura`): a espera da IA do CRM que ainda não foi relida desde a última mensagem
+  # (Crm::Ai::RevalidacaoNaFila#falta_reler?) não sai, mesmo que alguém tenha entrado entre a consulta da fila e aqui:
+  # segura, e a rodada seguinte relê.
+  def sem_entregar_antes_de_reler(plano)
+    return plano unless @exigir_releitura && entregaria?(plano) && Crm::Ai::RevalidacaoNaFila.new(@conversation).falta_reler?
+
+    Plano.new(acao: :segurar, card: plano.card, settings: plano.settings, motivo: AGUARDANDO_RELEITURA)
+  end
 
   def planejar
     @quem_atendia ||= robo_que_atendia
@@ -181,7 +212,7 @@ class Crm::Entrega # rubocop:disable Metrics/ClassLength -- #pode_entregar_agora
   def card_em_atendimento
     atual = Crm::Assunto.funil_atual(@conversation)
     @assunto_mudou = @card.present? && atual&.id != @card.id
-    @pelo_card && Crm::Assunto.da_conversa?(@card, @conversation) ? @card : atual
+    self.class.card_da_regra(@conversation, card: @card, pelo_card: @pelo_card, atual: atual)
   end
 
   # O robô que estava com a conversa antes desta entrega: o valor do banco, porque na passagem do robô
@@ -259,14 +290,13 @@ class Crm::Entrega # rubocop:disable Metrics/ClassLength -- #pode_entregar_agora
   def convite_no_card(plano)
     falha = 'convite_falhou'
     plano.card.with_lock(requires_new: true) do
-      registro = registro(plano)
-      if registro.intervalo_ativo?
+      if convite_no_intervalo?(plano)
         falha = 'intervalo'
         next
       end
       raise ActiveRecord::Rollback unless Crm::Ai::HandoffInviter.new(conversation: @conversation, agent: plano.pessoa, idempotente: true).perform
 
-      registro.convidado!(plano.pessoa, razao: @razao)
+      registro(plano).convidado!(plano.pessoa, razao: @razao)
       falha = nil
     end
     falha
@@ -289,6 +319,9 @@ class Crm::Entrega # rubocop:disable Metrics/ClassLength -- #pode_entregar_agora
   rescue ActiveRecord::ActiveRecordError, ArgumentError => e
     Rails.logger.error("[crm][passagem] nao_registrada evento=convite conversa=#{@conversation.id} erro=#{e.class}")
   end
+
+  # Passagem recente demais para convidar de novo (Crm::Entrega::RegistroNoCard#intervalo_ativo?).
+  def convite_no_intervalo?(plano) = registro(plano).intervalo_ativo?
 
   def registro(plano)
     return if plano.card.blank? || plano.settings.blank?

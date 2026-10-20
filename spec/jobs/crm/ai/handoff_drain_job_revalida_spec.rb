@@ -390,4 +390,90 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     expect(conversation.reload.assignee_id).to be_nil
     expect(releituras.size).to eq(1)
   end
+
+  # 5ª revisão do Codex (ALTO 1): sem card na marca, vale o foco. O foco passa de A para B durante a chamada: a resposta
+  # sobre A não vale para B.
+  it 'o foco troca de card durante a chamada: o "resolvido" não é aplicado', :aggregate_failures do
+    segurar!
+    described_class.perform_now
+    allow(revalida).to receive(:call) do
+      pipeline, stage = create_crm_pipeline(account: account, user: admin)
+      stage.update!(metadata: card.stage.metadata)
+      outro = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Outro assunto', inbox: inbox)
+      Crm::Cards::Focus.new(account: account, card: outro, conversation: conversation, avaliar: false).perform
+      { passa: false, motivo: 'resolvido', decisao: 'resolvido' }
+    end
+
+    roda_releituras!
+
+    expect(Crm::Entrega::Marca.presente?(conversation.reload)).to be(true)
+    expect(Crm::Activity.where(event_type: 'ai_handoff_withdrawn')).to be_empty
+    described_class.perform_now
+    expect(releituras.size).to eq(1)
+  end
+
+  # 5ª revisão do Codex (MÉDIO 3): a consulta da fila não vê ninguém, e alguém entra antes da entrega. A espera que falta
+  # reler não sai: segura com `aguardando_releitura`, e a rodada seguinte relê.
+  it 'alguém entra entre a consulta e a entrega: a conversa não sai sem reler', :aggregate_failures do
+    allow(Crm::Entrega::Presenca).to receive(:online_ids!).and_return([], [ana.id])
+    segurar!
+
+    described_class.perform_now
+
+    expect(conversation.reload.assignee_id).to be_nil
+    expect(marca['falha']).to eq(Crm::Entrega::AGUARDANDO_RELEITURA)
+    expect(releituras).to be_empty
+
+    travel(2.minutes) { described_class.perform_now }
+    expect(releituras.size).to eq(1)
+    expect(conversation.reload.assignee_id).to be_nil
+  end
+
+  it 'os outros chamadores da entrega não exigem a releitura' do
+    segurar!
+
+    Crm::Entrega.new(conversation: conversation.reload, motivo: Crm::Ai::HandoffExecutor::MOTIVO_DA_ENTREGA, origem: 'message').call
+
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+  end
+
+  # 5ª revisão do Codex (ALTO 2): o convite barrado pelo intervalo entre passagens não é entrega possível: nada é relido
+  # e o prazo não começa. Passado o intervalo, relê e depois convida.
+  context 'with regra de convite (r3_invite)' do
+    let(:bruno) { create(:user, account: account, role: :agent) }
+
+    def convidada
+      card.reload.metadata.dig('ai', 'handoff', 'invited_agent_id')
+    end
+
+    before do
+      card.stage.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r3_invite', 'invite_ttl_seconds' => 3600 } })
+      Crm::Entrega.new(conversation: conversation, motivo: Crm::Ai::HandoffExecutor::MOTIVO_DA_ENTREGA, origem: 'message',
+                       pedido: { razao: 'cliente pediu a cotação e o robô falhou' }).call
+      create(:inbox_member, inbox: inbox, user: bruno)
+      allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online', bruno.id.to_s => 'online' })
+    end
+
+    it 'convite vencido com outra pessoa dentro do intervalo: não relê nem conta prazo; depois do intervalo, relê e convida',
+       :aggregate_failures do
+      allow(revalida).to receive(:call).and_return({ passa: true, motivo: 'segue aberto', decisao: 'problema_em_aberto' })
+      expect(convidada).to eq(ana.id)
+      inicio = Time.current
+
+      [2, 3, 5].each { |hora| travel_to(inicio + hora.hours) { described_class.perform_now } }
+      expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'falha' => 'intervalo')
+      expect(releituras).to be_empty
+      expect(marca).not_to have_key('revalidacao_comecou_em')
+
+      travel_to(inicio + 7.hours) do
+        described_class.perform_now
+        expect(convidada).to eq(ana.id)
+        roda_releituras!
+      end
+      travel_to(inicio + 7.hours + 2.minutes) { described_class.perform_now }
+
+      expect(revalida).to have_received(:call).once
+      expect(convidada).to eq(bruno.id)
+    end
+  end
 end

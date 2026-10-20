@@ -89,6 +89,9 @@ RSpec.describe Crm::Entrega do
     described_class.new(conversation: conversa, card: sinistro, motivo: 'ia_crm', origem: 'message', pelo_card: true).call
     expect(Crm::Entrega::Marca.dados(conversa.reload)).to include('modo' => 'segurando', 'card_id' => sinistro.id)
 
+    # A espera já relida (#1975): a fila entrega sem esperar outra releitura.
+    Crm::Entrega::Marca.revalidada!(conversa, ate: 0, razao: nil)
+    conversa.save!
     online(ana, bruno)
     Crm::Ai::HandoffDrainJob.new.send(:drain_conversation, conversa.reload)
 

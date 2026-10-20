@@ -183,11 +183,13 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     entrega_da_fila(conversation, marca).call
   end
 
-  # A entrega da espera, com o que a marca guardou (a mesma para conferir, na releitura do #1975, e para entregar).
+  # A entrega da espera, com o que a marca guardou (a mesma para conferir, na releitura do #1975, e para entregar). Sob
+  # a trava, a espera da IA do CRM que falta reler não sai (`exigir_releitura`).
   def entrega_da_fila(conversation, marca)
     card = Crm::Entrega::Marca.card(conversation)
     Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: marca.slice('sugestao', 'razao').symbolize_keys,
-                     dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?, excluir: marca['venceram'])
+                     dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?, excluir: marca['venceram'],
+                     exigir_releitura: true)
   end
 
   # #1673: a IA do CRM segurou a conversa sem robô e, na espera, um agente nosso passou a atender (claim da resposta).
