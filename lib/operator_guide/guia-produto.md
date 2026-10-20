@@ -2418,7 +2418,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: caixa de e-mail com a conversa de e-mail nova (chave conversa_email_nova) e a pasta Enviados (chave email_enviados) ligadas na conta
 - passos: 1. No menu lateral, abra a caixa de e-mail; 2. Toque em Enviados; 3. A lista mostra as conversas em que alguém da equipe ou o robô mandou mensagem ao cliente, abertas ou resolvidas; 4. Toque numa conversa para abrir.
-- gotchas: Enviados é só uma forma de ver: a conversa continua na Entrada, como no Gmail, e nada se move para lá; nota interna não conta como enviado; conversa no Spam ou na Lixeira não aparece em Enviados; e-mail mandado por fora do painel (pelo Gmail ou Outlook da própria pessoa) não aparece aqui.
+- gotchas: Enviados é só uma forma de ver: a conversa continua na Entrada, como no Gmail, e nada se move para lá; nota interna não conta como enviado; conversa no Spam ou na Lixeira não aparece em Enviados; e-mail mandado por fora do painel (pelo Gmail ou Outlook da própria pessoa) não aparece aqui; o que sai pelo painel também aparece no Enviados da conta de e-mail (Gmail, Outlook ou o Webmail do provedor), alguns minutos depois, quando a caixa tem a leitura por IMAP ligada e o servidor marca a pasta de enviados.
 - nav_target: `inbox_dashboard`
 
 ### Escrever um e-mail novo pela caixa de e-mail
