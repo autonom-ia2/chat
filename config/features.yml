@@ -612,9 +612,9 @@
 # só o que falta, pela regra do Decisores::Aplicador. Paga a chave de IA da conta ou da instalação; sem chave, nada
 # acontece. Posição 42 na feature_flags_ext_1, bit 41 (2199023255552), logo depois de `crm_numeros_lentes` (41) (tabela
 # da Orquestração, 19/10): a posição na lista é o bit.
-# Desligada (padrão): nada é lido. Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração,
-# depois do deploy).
+# Desligada: nada é lido. Ligada em todas as contas em 20/10/2026 (Rodrigo, pela Orquestração). Padrão das contas
+# novas: ligada desde o #1927 (migration 20261108190000).
 - name: contato_pelo_email
   display_name: Contato completado pela leitura do e-mail recebido
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
