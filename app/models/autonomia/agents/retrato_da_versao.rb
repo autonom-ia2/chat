@@ -8,8 +8,6 @@ module Autonomia::Agents::RetratoDaVersao
   OBRIGATORIAS = (VERSIONING::CAMPOS + %w[config]).freeze
   WITH_KNOWLEDGE = [nil, true, false, 'true', 'false'].freeze
   BASE = %w[segmento versao texto].freeze
-  # Teto do texto do bloco guardado na marca (bytes). O bloco é orientação curta do ramo; 8 KB sobra.
-  TEXTO_DA_BASE_MAX = 8.kilobytes
 
   module_function
 
@@ -40,12 +38,12 @@ module Autonomia::Agents::RetratoDaVersao
   end
 
   # A marca de base (#1429): ausente (versões de antes dela) ou { segmento, versao, texto }, cada um texto ou nil; o texto
-  # até TEXTO_DA_BASE_MAX.
+  # até Bloco::TEXTO_DA_BASE_MAX (a gravação da marca já respeita o teto).
   def base_valida?(base)
     return true if base.nil?
 
     base.is_a?(Hash) && (base.keys - BASE).empty? && BASE.all? { |chave| texto_ou_nada?(base[chave]) } &&
-      base['texto'].to_s.bytesize <= TEXTO_DA_BASE_MAX
+      base['texto'].to_s.bytesize <= Autonomia::Segmentos::Bloco::TEXTO_DA_BASE_MAX
   end
 
   def lista_de_textos?(valor)

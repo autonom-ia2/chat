@@ -987,12 +987,14 @@ module Autonomia
          pending_request_context].compact_blank
       end
 
-      # SEGMENTO (tema 8, #1429): orientação e vocabulário do ramo, como DADO. Moldura em PromptParts. Na criação, o
-      # texto atual do segmento da conta, o mesmo que vai na marca do rascunho; no AJUSTE, o texto gravado na marca do
-      # agente, nunca o da conta: um ajuste não troca a base sem ninguém pedir.
+      # SEGMENTO (tema 8, #1429): orientação e vocabulário do ramo, como DADO. Moldura em PromptParts. Com agente na
+      # conversa (rascunho já criado ou AJUSTE), o texto gravado na marca dele (nil sem marca), nunca o da conta: o
+      # Construtor vê o mesmo bloco que o agente vai receber, e um ajuste não troca a base sem ninguém pedir. Antes do
+      # rascunho existir, o texto atual da conta, o mesmo que a marca vai gravar.
       def segmento_context
         partes = Autonomia::Agents::PromptParts
-        bloco = adjust_mode? ? partes::SegmentoDoAgente.texto(@thread.agent) : partes::SegmentoDaConta.bloco_atual(@account)
+        agente = @thread.agent
+        bloco = agente ? partes::SegmentoDoAgente.texto(agente) : partes::SegmentoDaConta.bloco_atual(@account)
         partes::SegmentoDaConta.texto(@account, bloco)
       end
 

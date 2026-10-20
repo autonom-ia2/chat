@@ -66,6 +66,38 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
       expect(described_class.marca(account)).to eq(sem_texto)
     end
 
+    it 'texto acima do teto não é gravado: texto e versão nil, erro no log com segmento e tamanho, sem o texto' do
+      grande = 'x' * (Autonomia::Segmentos::Bloco::TEXTO_DA_BASE_MAX + 1)
+      allow(Autonomia::Segmentos::Bloco).to receive_messages(for_segmento: grande, versao: 'v-grande')
+      allow(Rails.logger).to receive(:error)
+
+      expect(described_class.marca(account)).to eq(sem_texto)
+      expect(Rails.logger).to have_received(:error).with(include('segmento=seguros/corretora', "#{grande.bytesize} bytes"))
+      expect(Rails.logger).not_to have_received(:error).with(include('xxxx'))
+    end
+
+    it 'texto no teto exato é gravado' do
+      no_teto = 'x' * Autonomia::Segmentos::Bloco::TEXTO_DA_BASE_MAX
+      allow(Autonomia::Segmentos::Bloco).to receive_messages(for_segmento: no_teto, versao: 'v1')
+
+      expect(described_class.marca(account)).to include('texto' => no_teto, 'versao' => 'v1')
+    end
+
+    it 'falha ao ler o segmento: sem marca (nil), não conta geral' do
+      allow(Autonomia::Agents::Nicho).to receive(:for).and_raise(ArgumentError, 'segredo da conta')
+      allow(Rails.logger).to receive(:error)
+
+      expect(described_class.marca(account)).to be_nil
+      expect(Rails.logger).to have_received(:error).with(include('ArgumentError'))
+      expect(Rails.logger).not_to have_received(:error).with(include('segredo da conta'))
+    end
+
+    it 'conta geral (camadas vazias, sem falha) grava segmento nil' do
+      account.update!(internal_attributes: account.internal_attributes.to_h.merge(Autonomia::Agents::Nicho::NICHO_KEY => 'geral'))
+
+      expect(described_class.marca(account)).to eq('segmento' => nil, 'versao' => nil, 'texto' => nil)
+    end
+
     it 'é nil sem a Fase 2' do
       Autonomia::Agents::Fase2.desligar!(account)
 

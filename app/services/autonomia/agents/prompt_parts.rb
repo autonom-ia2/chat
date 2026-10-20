@@ -82,8 +82,7 @@ module Autonomia::Agents::PromptParts
 
     # O texto atual do segmento da conta: o que um agente nascendo agora recebe e grava na marca.
     def bloco_atual(account)
-      segmento = ::Autonomia::Segmentos::Bloco.segmento(account)
-      segmento && ::Autonomia::Segmentos::Bloco.for_segmento(segmento)
+      SegmentoDoAgente.texto_que_cabe(::Autonomia::Segmentos::Bloco.segmento(account))
     end
   end
 
@@ -97,14 +96,41 @@ module Autonomia::Agents::PromptParts
   module SegmentoDoAgente
     module_function
 
+    LOG_TAG = '[Autonomia::Agents::PromptParts::SegmentoDoAgente]'.freeze
+
     # A marca com que um agente nasce nesta conta. nil sem a Fase 2: o bloco só entra com ela, e quem nasce fora dela
-    # fica como os agentes de antes (sem marca, sem bloco). Conta geral grava segmento nil: "nasceu sem base".
+    # fica como os agentes de antes (sem marca, sem bloco). Conta geral grava segmento nil: "nasceu sem base". Falha ao
+    # ler o segmento também é nil (sem marca, não "conta geral"): o botão da F3 trata depois. Texto acima do teto não é
+    # gravado: texto e versão nil.
     def marca(account)
-      return nil unless ::Autonomia::Agents::Fase2.ligada?(account)
+      return nil unless ::Autonomia::Agents::Fase2.ligada?(account) && segmento_legivel?(account)
 
       segmento = ::Autonomia::Segmentos::Bloco.segmento(account)
-      { 'segmento' => segmento, 'versao' => ::Autonomia::Segmentos::Bloco.versao(segmento),
-        'texto' => SegmentoDaConta.bloco_atual(account) }
+      texto = texto_que_cabe(segmento)
+      { 'segmento' => segmento, 'versao' => (::Autonomia::Segmentos::Bloco.versao(segmento) if texto), 'texto' => texto }
+    end
+
+    # `Pacotes.camadas` engole a falha e devolve [] (a conta geral). Para não gravar "geral" por engano, a marca relê a
+    # escolha da conta (a mesma leitura das camadas) e, se ela falha, o agente nasce sem marca.
+    def segmento_legivel?(account)
+      ::Autonomia::Agents::Nicho.for(account) if ::Autonomia::Segmentos::Pacotes.enabled?
+      true
+    rescue StandardError => e
+      # Só a classe: a mensagem pode carregar dado da conta.
+      Rails.logger.error("#{LOG_TAG} account=#{account&.id} #{e.class}; agente nasce sem marca de base")
+      false
+    end
+
+    # O texto do segmento, se couber no teto; acima dele, nil e erro no log (segmento e tamanho, nunca o texto).
+    def texto_que_cabe(segmento)
+      return nil if segmento.blank?
+
+      texto = ::Autonomia::Segmentos::Bloco.for_segmento(segmento)
+      tamanho = texto.to_s.bytesize
+      return texto if tamanho <= ::Autonomia::Segmentos::Bloco::TEXTO_DA_BASE_MAX
+
+      Rails.logger.error("#{LOG_TAG} texto do segmento=#{segmento} com #{tamanho} bytes passa do teto; não gravado")
+      nil
     end
 
     # O texto gravado na marca; nil sem marca.

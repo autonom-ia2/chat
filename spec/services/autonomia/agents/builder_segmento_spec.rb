@@ -159,6 +159,29 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.reload.agent.config['base']).to eq('segmento' => nil, 'versao' => nil, 'texto' => nil)
     end
 
+    it 'não grava marca quando a leitura do segmento falha (o agente nasce sem base, não como conta geral)' do
+      Autonomia::Agents::Fase2.ligar!(account)
+      allow(Autonomia::Agents::Nicho).to receive(:for).and_raise(ArgumentError)
+
+      run_turn
+
+      expect(thread.reload.agent.config).not_to have_key('base')
+    end
+
+    it 'com rascunho já marcado, usa o texto gravado nele, não o atual' do
+      Autonomia::Agents::Fase2.ligar!(account)
+      rascunho = Autonomia::Agents::Agent.create!(account: account, name: 'Novo agente', agent_type: 'sdr', status: :draft,
+                                                  config: { 'base' => { 'segmento' => 'seguros/corretora', 'versao' => 'v1',
+                                                                        'texto' => 'TEXTO GRAVADO' } })
+      thread.update!(agent: rascunho)
+      stub_bloco_por_segmento('NOVO')
+
+      input = input_do_turno
+
+      expect(input.first[:content].first[:text]).to end_with('TEXTO GRAVADO')
+      expect(textos(input)).not_to include('NOVO')
+    end
+
     it 'não grava marca sem a Fase 2' do
       run_turn
 
