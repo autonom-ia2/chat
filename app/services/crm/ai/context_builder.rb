@@ -140,6 +140,7 @@ module Crm
                .where(sender_type: 'User').or(Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
                                                             private: false, sender_type: nil))
                .outgoing
+               .where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed])
                .reorder(id: :desc)
                .limit(FOLLOW_UP_SCAN_LIMIT)
                .find { |message| role_for(message) == 'human_agent' }
@@ -180,9 +181,13 @@ module Crm
       # reorder (not order) to override Message's default_scope(created_at: :asc), and by id (arrival
       # order) so just-arrived messages/media are always in the recent window even if provider
       # timestamps are skewed/out-of-order. includes(:attachments) evita N+1 no message_content.
+      # Envio que falhou (#1923) não chegou ao cliente: sai do histórico, como no dos Agentes (PessoaDaEquipe). A falha
+      # chega depois da criação (message_updated), quando a avaliação já foi agendada; é aqui que ela deixa de contar.
+      # IS DISTINCT FROM: a coluna aceita nulo, e `status != 3` descartaria a mensagem sem status.
       def latest_for(conversation_id)
         Message.where(conversation_id: conversation_id, private: false)
                .where.not(message_type: :activity)
+               .where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed])
                .includes(:attachments)
                .reorder(id: :desc)
                .limit(MAX_RECENT_MESSAGES)

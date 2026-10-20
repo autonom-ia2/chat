@@ -42,6 +42,10 @@ RSpec.describe Crm::Conversations::CardEmFoco do
     create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: content)
   end
 
+  def da_equipe_ao_cliente(content = 'Segue a cotação')
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: content)
+  end
+
   def sincronizar(message)
     Crm::Conversations::CardSyncer.new(conversation: conversation.reload, message: message).perform
   end
@@ -224,6 +228,82 @@ RSpec.describe Crm::Conversations::CardEmFoco do
       expect(depois - cliente.created_at).to be <= Crm::Ai::Config::DEBOUNCE_SECONDS + 6
     end
 
+    it 'a avaliação da equipe leva o gatilho próprio (sugestão e log), para medir à parte' do
+      gatilhos = []
+      allow(Crm::Ai::Evaluator).to receive(:new) do |trigger:, **|
+        gatilhos << trigger
+        instance_double(Crm::Ai::Evaluator, perform: nil)
+      end
+      sincronizar(da_equipe)
+
+      jobs = enqueued_jobs.select { |job| job['job_class'] == Crm::Ai::EvaluateCardJob.name }
+      travel(espera + 1.second) { jobs.each { |job| Crm::Ai::EvaluateCardJob.perform_now(*job['arguments']) } }
+
+      expect(gatilhos).to eq([Crm::Ai::Observer::TRIGGER_DA_EQUIPE])
+    end
+
+    it 'teto ao longo do tempo: a avaliação roda, e a mensagem seguinte da equipe agenda outra, uma só' do
+      sincronizar(da_equipe('parte 1'))
+      expect(avaliados_depois(espera + 1.second)).to eq([auto.id])
+      clear_enqueued_jobs
+
+      travel(espera + 30.seconds) do
+        sincronizar(da_equipe('parte 2'))
+        sincronizar(da_equipe('parte 3'))
+      end
+
+      expect(avaliacoes_agendadas).to eq([auto.id])
+    end
+
+    # O card que cada job leu ANTES de o outro gravar: a decisão é tomada de novo, sob a trava, com o card do banco.
+    describe 'jobs do cliente e da equipe ao mesmo tempo' do
+      def avaliacoes_rodadas(tempo)
+        rodadas = 0
+        allow(Crm::Ai::Evaluator).to receive(:new) { instance_double(Crm::Ai::Evaluator, perform: (rodadas += 1)) }
+        travel(tempo) do
+          enqueued_jobs.select { |job| job['job_class'] == Crm::Ai::EvaluateCardJob.name }
+                       .each { |job| Crm::Ai::EvaluateCardJob.perform_now(*job['arguments']) }
+        end
+        rodadas
+      end
+
+      it 'o do cliente grava primeiro: o da equipe, com o card de antes, não agenda nem atrasa o cliente' do
+        cliente = incoming('Fechado, pode emitir')
+        card_da_equipe = Crm::Card.find(auto.id)
+        Crm::Ai::Observer.new(card: Crm::Card.find(auto.id)).schedule_evaluation_do_cliente(cliente.created_at)
+        Crm::Ai::Observer.new(card: card_da_equipe).schedule_evaluation_da_equipe(espera)
+
+        expect(avaliacoes_agendadas).to eq([auto.id])
+        expect(avaliacoes_rodadas(Crm::Ai::Config::DEBOUNCE_SECONDS.seconds + 1.second)).to eq(1)
+      end
+
+      it 'o da equipe grava primeiro: o do cliente, com o card de antes, vale e roda no debounce dele, uma vez' do
+        cliente = incoming('Fechado, pode emitir')
+        card_do_cliente = Crm::Card.find(auto.id)
+        Crm::Ai::Observer.new(card: Crm::Card.find(auto.id)).schedule_evaluation_da_equipe(espera)
+        Crm::Ai::Observer.new(card: card_do_cliente).schedule_evaluation_do_cliente(cliente.created_at)
+
+        expect(avaliacoes_rodadas(Crm::Ai::Config::DEBOUNCE_SECONDS.seconds + 1.second)).to eq(1)
+      end
+    end
+
+    it 'envio da equipe que falha depois de agendar: a avaliação roda, mas o que ela lê não traz o envio falho' do
+      message = da_equipe('Segue a cotação: R$ 1.200 por ano')
+      sincronizar(message)
+      message.update!(status: :failed)
+
+      lido = []
+      allow(Crm::Ai::Evaluator).to receive(:new) do |card:, **|
+        lido.concat(Crm::Ai::ContextBuilder.new(card: card).perform[:recent_messages].pluck(:content))
+        instance_double(Crm::Ai::Evaluator, perform: nil)
+      end
+      jobs = enqueued_jobs.select { |job| job['job_class'] == Crm::Ai::EvaluateCardJob.name }
+      travel(espera + 1.second) { jobs.each { |job| Crm::Ai::EvaluateCardJob.perform_now(*job['arguments']) } }
+
+      expect(Crm::Ai::Evaluator).to have_received(:new).once
+      expect(lido).not_to include('Segue a cotação: R$ 1.200 por ano')
+    end
+
     it 'eco do app do celular (WhatsApp) também é a equipe' do
       message = da_equipe(sender: nil, content_attributes: { external_echo: true })
       message.update_columns(sender_type: nil, sender_id: nil) # rubocop:disable Rails/SkipsModelValidations
@@ -247,7 +327,6 @@ RSpec.describe Crm::Conversations::CardEmFoco do
       'regra de automação em nome de alguém' => -> { { content_attributes: { automation_rule_id: 1 } } },
       'follow-up do CRM' => -> { { content_attributes: { crm_follow_up_id: 1 } } },
       'campanha' => -> { { additional_attributes: { campaign_id: 1 } } },
-      'envio que falhou' => -> { { status: :failed } },
       'nota privada' => -> { { private: true } }
     }.each do |origem, atributos|
       it "#{origem}: não é uma pessoa respondendo agora, não agenda nem mexe na atividade" do
@@ -311,6 +390,22 @@ RSpec.describe Crm::Conversations::CardEmFoco do
 
       expect(avaliacoes_agendadas).to eq([residencial.id])
       expect(avaliados).to eq([residencial.id])
+    end
+
+    # #1923: a avaliação da equipe, gravada depois da chegada do cliente, não pode valer pela conjunta dele (a espera da
+    # equipe é maior que o debounce do cliente).
+    it 'equipe agendou depois da chegada do cliente: a avaliação conjunta da decisão agenda mesmo assim' do
+      cliente = incoming('Fechado, pode emitir')
+      travel(3.seconds) { sincronizar(da_equipe_ao_cliente) }
+      clear_enqueued_jobs
+      Crm::SubjectDecision.create!(account: account, conversation: conversation, message: cliente, mode: 'auto', action: 'none',
+                                   state: 'kept', card: auto, touched_card_ids: [auto.id])
+
+      travel(5.seconds) { Crm::Conversations::CardsTocados.new(conversation: conversation.reload, message: cliente).perform }
+
+      expect(enqueued_jobs.map { |job| job['job_class'] }).to include(Crm::Ai::EvaluateCardsJob.name)
+      depois = Time.iso8601(auto.reload.metadata.dig('ai', 'evaluate_after'))
+      expect(depois - cliente.created_at).to be <= Crm::Ai::Config::DEBOUNCE_SECONDS + 6
     end
 
     it 'rajada: a mensagem que não é a última fica para o job da seguinte, que avalia uma vez' do
