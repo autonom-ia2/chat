@@ -8,7 +8,7 @@
 #   reports; WhatsApp Oficial and SMS: delivered or read). WhatsApp API has no delivery receipt, so
 #   its accepted sends count.
 # - "Responderam" = contacts whose conversation got the campaign mark (CampaignJourney::ResultReplies).
-# - "Viraram negócio no CRM" = CRM cards linked to a conversation marked by these campaigns
+# - "Viraram cards no CRM" = CRM cards linked to a conversation marked by these campaigns
 #   (null when the CRM is off).
 # - "Saúde do e-mail" = permanent bounce and complaint rates of these e-mail campaigns, over the SES
 #   accepted sends, the same denominators the e-mail protection uses (limits 5% and 0.1%).

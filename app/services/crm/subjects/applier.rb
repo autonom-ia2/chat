@@ -5,6 +5,10 @@
 # pensava: uma mensagem mais nova já decidida passa na frente; card que ganhou nome ou fechou não é mexido. O aviso em
 # tempo real sai depois (Identifier).
 # Sugerir: só grava a sugestão, com as mesmas checagens; a anterior que ninguém respondeu expira.
+# Coluna do card novo (#1910, Crm::Subjects::Etapa): o card criado, o da chegada levado a outro funil (C36) e o da
+# chegada sem nome do mesmo funil vão para a etapa escolhida. As automações de entrada dela rodam depois da trava.
+# Automática que vira sugestão por respeito à pessoa (#1260) deixa a etapa de lado: o card aceito nasce na 1ª etapa,
+# como no Sugerir (decisão do Rodrigo, 19/10: o Sugerir fica fora).
 class Crm::Subjects::Applier
   include Crm::Subjects::VariosAssuntos
 
@@ -21,26 +25,27 @@ class Crm::Subjects::Applier
     @anterior = anterior
   end
 
-  def aplicar(opcao, titulo)
+  # etapa: a chave da etapa escolhida para o pedido novo (#1910), ou nil.
+  def aplicar(opcao, titulo, etapa = nil)
     case opcao.tipo
     when :sem_assunto, :mesmo then { action: 'none', state: 'kept', card: @question.atual }
     when :card then decidir('focus', card: opcao.card)
-    when :novo then novo(opcao.pipeline, titulo)
+    when :novo then novo(opcao.pipeline, titulo, @question.etapa(opcao.pipeline, etapa))
     end
   end
 
   private
 
-  def novo(pipeline, titulo)
+  def novo(pipeline, titulo, etapa)
     return no_card_do_aviso(pipeline, titulo) if card_do_aviso
 
     atual = @question.atual
     mesmo_funil = @question.atual_sem_nome? && atual.pipeline_id == pipeline.id
     @chegada = card_da_chegada(pipeline) unless mesmo_funil
     if mesmo_funil || @chegada
-      decidir('rename', card: atual, pipeline: pipeline, title: titulo)
+      decidir('rename', card: atual, pipeline: pipeline, title: titulo, etapa: etapa)
     else
-      decidir('create', pipeline: pipeline, title: titulo)
+      decidir('create', pipeline: pipeline, title: titulo, etapa: etapa)
     end
   end
 
@@ -58,6 +63,7 @@ class Crm::Subjects::Applier
 
   def decidir(action, **atributos)
     resultado = nil
+    @entradas = []
     Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
       resultado = if mensagem_mais_nova?
                     { state: 'superseded' }
@@ -67,7 +73,19 @@ class Crm::Subjects::Applier
                     executar(action, atributos)
                   end
     end
-    atributos.merge(action: action).merge(resultado)
+    entrar_nas_etapas
+    atributos.except(:etapa).merge(action: action).merge(resultado)
+  end
+
+  # #1910: as automações de entrada das etapas escolhidas, fora da trava da conversa.
+  def entrar_nas_etapas
+    entradas = @entradas.to_a
+    @entradas = []
+    entradas.each { |card, etapa| Crm::Subjects::Etapa.entrar(card, etapa) }
+  end
+
+  def entrar_depois(card, etapa)
+    (@entradas ||= []) << [card, etapa] if etapa
   end
 
   # Automática respeita a pessoa (#1260): trocar o assunto ou abrir card vira sugestão quando uma pessoa escolheu o
@@ -95,9 +113,9 @@ class Crm::Subjects::Applier
 
   def executar(action, atributos)
     case action
-    when 'rename' then renomear(atributos[:card].reload, atributos[:title], atributos[:pipeline])
+    when 'rename' then renomear(atributos[:card].reload, atributos[:title], atributos[:pipeline], atributos[:etapa])
     when 'focus' then focar(atributos[:card].reload)
-    when 'create' then criar(atributos[:pipeline], atributos[:title])
+    when 'create' then criar(atributos[:pipeline], atributos[:title], atributos[:etapa])
     end
   end
 
@@ -136,30 +154,48 @@ class Crm::Subjects::Applier
     decidir('rename', card: aviso.card, pipeline: pipeline, title: titulo)
   end
 
-  def renomear(card, titulo, pipeline)
+  def renomear(card, titulo, pipeline, etapa = nil)
     return renomear_o_do_aviso(card, titulo, pipeline) if card_do_aviso&.card&.id == card.id
-    return adotar_a_chegada(card, titulo, pipeline) if @chegada&.card&.id == card.id
+    return adotar_a_chegada(card, titulo, pipeline, etapa) if @chegada&.card&.id == card.id
 
-    dar_nome(card, titulo)
+    dar_nome_e_levar(card, titulo, etapa)
+  end
+
+  # #1910: o card da chegada sem nome, no mesmo funil do pedido, ganha o nome e vai para a etapa escolhida. As guardas
+  # do C36 (criado na chegada, nunca mudou de etapa, sem mexida de pessoa) são lidas antes do nome, que muda o card.
+  # Respeita a pessoa como a criação (#1260): quando criar viraria sugestão, o card só ganha o nome e fica onde está.
+  def dar_nome_e_levar(card, titulo, etapa)
+    chegada = Crm::Subjects::CardDaChegada.no_funil(conversation: @conversation, card: card) if levar_a_etapa?(card, etapa)
+    resultado = dar_nome(card, titulo)
+    return resultado unless chegada && resultado[:state] == 'applied'
+
+    chegada.mover_para(card.pipeline, etapa)
+    entrar_depois(card, etapa)
+    resultado
+  end
+
+  def levar_a_etapa?(card, etapa)
+    etapa.present? && modo_efetivo('create', { pipeline: card.pipeline }) == 'auto'
   end
 
   # C36: confere de novo dentro do lock (a pessoa pode ter mexido enquanto a IA pensava), leva o card ao funil do
   # assunto, dá o nome e agenda a IA do CRM nele, já no funil novo. Ele já é o assunto atual: o foco não muda. Se ele
   # mudou no meio-tempo, o pedido não se perde: segue o caminho da criação, com a mesma regra de respeito à pessoa
   # (#1260), relida aqui dentro da trava.
-  def adotar_a_chegada(card, titulo, pipeline)
+  def adotar_a_chegada(card, titulo, pipeline, etapa = nil)
     unless @chegada.recarregar.adotavel?(pipeline) && modo_efetivo('create', { pipeline: pipeline }) == 'auto'
-      return criar_no_lugar_da_chegada(pipeline, titulo)
+      return criar_no_lugar_da_chegada(pipeline, titulo, etapa)
     end
 
-    @chegada.mover_para(pipeline)
+    @chegada.mover_para(pipeline, etapa)
+    entrar_depois(card, etapa)
     resultado = dar_nome_da_ia(card.reload, titulo)
     Crm::Ai::Observer.new(card: card).schedule_evaluation
     resultado
   end
 
-  def criar_no_lugar_da_chegada(pipeline, titulo)
-    resultado = modo_efetivo('create', { pipeline: pipeline }) == 'auto' ? criar(pipeline, titulo) : sugerir
+  def criar_no_lugar_da_chegada(pipeline, titulo, etapa)
+    resultado = modo_efetivo('create', { pipeline: pipeline }) == 'auto' ? criar(pipeline, titulo, etapa) : sugerir
     { action: 'create', card: nil }.merge(resultado)
   end
 
@@ -196,8 +232,9 @@ class Crm::Subjects::Applier
     { state: 'applied', card: card, evento: Events::Types::CRM_CARD_UPDATED }
   end
 
-  def criar(pipeline, titulo)
-    card = Crm::Subjects::Acoes.criar(conversation: @conversation, pipeline: pipeline, titulo: titulo, source: 'ai')
+  def criar(pipeline, titulo, etapa = nil)
+    card = Crm::Subjects::Acoes.criar(conversation: @conversation, pipeline: pipeline, titulo: titulo, source: 'ai', etapa: etapa)
+    entrar_depois(card, etapa)
     { state: 'applied', card: card, evento: Events::Types::CRM_CARD_CREATED }
   end
 end

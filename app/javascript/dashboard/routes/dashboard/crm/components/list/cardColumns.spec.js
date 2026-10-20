@@ -14,4 +14,12 @@ describe('buildCrmCardColumns', () => {
     expect(semValor).not.toContain('value');
     expect(semValor.length).toBe(ids().length - 1);
   });
+
+  // #1874 — sem nenhuma ação em massa possível, a lista não tem seleção.
+  it('drops the select column when nothing can be done in bulk', () => {
+    const semSelecao = ids({ includeSelect: false });
+    expect(ids()[0]).toBe('select');
+    expect(semSelecao).not.toContain('select');
+    expect(semSelecao.length).toBe(ids().length - 1);
+  });
 });

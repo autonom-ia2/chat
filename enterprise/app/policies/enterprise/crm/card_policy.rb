@@ -22,8 +22,9 @@ module Enterprise::Crm::CardPolicy
     crm_permission?('crm_manage_cards') && show? && funnel_member?
   end
 
+  # Arquivar tem chave própria (#1874, decisão 7.4-2): `crm_delete_cards`, um card ou vários.
   def destroy?
-    update?
+    crm_permission?('crm_delete_cards') && show? && funnel_member?
   end
 
   def move?

@@ -141,11 +141,23 @@ const {
   canManageCards,
   canViewCrm,
   canMoveCards,
+  canDeleteCards,
   canManagePipelines,
   canManageAi,
   canExportCrm,
   canAdminCrm,
 } = useCrmPermissions();
+
+// Ação em massa (#1874): cada botão só para quem pode a ação; sem nenhuma, a lista não tem seleção.
+const bulkPermissions = computed(() => ({
+  move: canMoveCards.value,
+  assign: canManageCards.value,
+  status: canManageCards.value,
+  archive: canDeleteCards.value,
+}));
+const canBulkAct = computed(() =>
+  Object.values(bulkPermissions.value).some(Boolean)
+);
 
 const CRM_CALENDAR_MEETINGS_FEATURE = 'CRM_CALENDAR_MEETINGS_ENABLED';
 const isCrmAiEnabled = computed(
@@ -161,12 +173,14 @@ const router = useRouter();
 const isCalendarOnly = computed(() => route.meta?.calendarOnly === true);
 // Calendário "Meu dia" (#1568): com a flag da conta, a página do calendário
 // abre a tela nova; desligada, a de sempre, sem mudança nenhuma.
-const calendarioOuro = computed(
+const meuDiaLigado = computed(
   () =>
-    isCalendarOnly.value &&
     getAccount.value(currentAccountId.value)?.features?.[
       FEATURE_FLAGS.CRM_CALENDARIO_OURO
     ] === true
+);
+const calendarioOuro = computed(
+  () => isCalendarOnly.value && meuDiaLigado.value
 );
 // No "Meu dia", o funil é opcional: vazio = todos os funis (decisão 2 do #1568).
 // #1883: o link do Números pode abrir o Meu dia já filtrado (quem, tipos e funil).
@@ -196,6 +210,34 @@ watch(menuNovo, ligado => {
 watch(isCalendarOnly, only => {
   viewMode.value = only ? 'calendar' : 'kanban';
 });
+// #1894: com o Meu dia ligado, o calendário mora no endereço dele (crm_calendar_index), não numa vista do quadro;
+// a aba e o `?view=calendar` levam até lá, e o calendário antigo nunca abre.
+const meuDiaNoLugarDoCalendario = mode =>
+  mode === 'calendar' && meuDiaLigado.value && !isCalendarOnly.value;
+// Leva o resto do endereço (ex.: new_contact_id), menos o `view`. Navegação recusada volta ao quadro, para a área
+// não ficar vazia.
+const irParaOMeuDia = navegar => {
+  const query = Object.fromEntries(
+    Object.entries(route.query).filter(([chave]) => chave !== 'view')
+  );
+  return Promise.resolve(
+    navegar({
+      name: 'crm_calendar_index',
+      params: { accountId: route.params.accountId },
+      query,
+    })
+  ).then(falha => {
+    if (falha) viewMode.value = 'kanban';
+  });
+};
+// #1894: `?view=calendar` (ou a flag que chega depois da tela) com o Meu dia ligado troca o endereço pelo do Meu dia.
+watch(
+  [viewMode, meuDiaLigado],
+  ([vista]) => {
+    if (meuDiaNoLugarDoCalendario(vista)) irParaOMeuDia(router.replace);
+  },
+  { immediate: true }
+);
 const filters = ref({ ...storedFilters.value });
 const drawerMode = ref('create');
 const selectedCard = ref(null);
@@ -820,6 +862,8 @@ const loadMoreList = async () => {
 };
 
 const loadCurrentCalendar = async () => {
+  // #1894: a caminho do Meu dia, o calendário antigo não busca nada (a resposta dele cairia no Meu dia).
+  if (meuDiaNoLugarDoCalendario(viewMode.value)) return;
   if (!calendarioOuro.value && !currentPipelineId.value) return;
   loadError.value = '';
   // The calendar emits range-change with the visible window; use that when
@@ -2311,6 +2355,10 @@ watch(
 );
 
 const setViewMode = mode => {
+  if (meuDiaNoLugarDoCalendario(mode)) {
+    irParaOMeuDia(router.push);
+    return;
+  }
   viewMode.value = mode;
   if (!menuNovo.value || isCalendarOnly.value) return;
   const resto = Object.fromEntries(
@@ -2426,6 +2474,7 @@ onUnmounted(() => {
             )
           "
           icon="i-lucide-plus"
+          data-crm-new-card
           :disabled="!hasPipelines || isLoading"
           class="order-2 !rounded-lg min-h-11 !font-bold"
           @click="openCreateDrawer"
@@ -2862,6 +2911,7 @@ onUnmounted(() => {
         :group-by="listGroupBy"
         :column-state="listColumnState"
         :selected-ids="listSelection"
+        :selectable="canBulkAct"
         :collapsed-groups="collapsedGroups"
         :total-count="cardsListMeta.count || 0"
         :has-more="hasMoreCards"
@@ -2878,6 +2928,7 @@ onUnmounted(() => {
       />
       <CrmBulkActionBar
         :count="listSelection.length"
+        :permissions="bulkPermissions"
         :stages="stages"
         :owners="agents"
         :blocked-owner-ids="donosBarradosNaSelecao"
@@ -2921,7 +2972,7 @@ onUnmounted(() => {
       @retry="loadCurrentCalendar"
     />
     <section
-      v-else-if="viewMode === 'calendar'"
+      v-else-if="viewMode === 'calendar' && !meuDiaLigado"
       class="flex min-h-0 flex-1 flex-col px-8 pb-4 pt-1"
     >
       <CrmCalendar
@@ -3029,6 +3080,7 @@ onUnmounted(() => {
       :follow-ups="followUps"
       :can-manage-cards="canManageCards && podeMexerNoCard"
       :can-move-cards="canMoveCards && podeMexerNoCard"
+      :can-delete-cards="canDeleteCards && podeMexerNoCard"
       :is-moving-card="uiFlags.isMovingCard"
       :can-manage-ai="canManageAi"
       :is-saving="uiFlags.isCreatingCard || uiFlags.isUpdatingCard"

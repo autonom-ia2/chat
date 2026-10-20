@@ -1,0 +1,4 @@
+pt_BR:
+  rich_messages:
+    poll:
+      multiple_hint: "Pode escolher mais de uma"

@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify';
 
 // Quote detection strategies
-const QUOTE_INDICATORS = [
+export const QUOTE_INDICATORS = [
   '.gmail_quote_container',
   '.gmail_quote',
   '.OutlookQuote',

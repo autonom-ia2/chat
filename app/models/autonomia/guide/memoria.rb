@@ -45,7 +45,7 @@ class Autonomia::Guide::Memoria < ApplicationRecord
     def bloco(account, user)
       return '' if account.nil? || user.nil?
 
-      secoes = [secao('Sobre a pessoa:', pessoais(account, user)), secao('Sobre a corretora:', da_corretora(account))].compact
+      secoes = [secao('Sobre a pessoa:', pessoais(account, user)), secao('Sobre a empresa:', da_corretora(account))].compact
       secoes.empty? ? '' : "[#{[CABECALHO, *secoes].join("\n")}]"
     end
 

@@ -23,8 +23,10 @@ class Api::V1::Accounts::Crm::MetaConversionsController < Api::V1::Accounts::Crm
     render json: { payload: latest_per_card.values.map { |event| serialize(event) } }
   end
 
+  # A receita aceita é número da equipe (painel de Números): a mesma régua dos relatórios (Crm::ReportPolicy). Com
+  # `crm_numeros_lentes` (#1897, Decisão 2), o agente sem função deixa de ler.
   def summary
-    authorize ::Crm::Card, :index?
+    authorize %i[crm report], :view?, policy_class: ::Crm::ReportPolicy
 
     scope = filtered_scope
     render json: { payload: {

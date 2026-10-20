@@ -104,6 +104,7 @@ const setPermissions = overrides => {
     canManageCards: ref(true),
     canViewCrm: ref(true),
     canMoveCards: ref(true),
+    canDeleteCards: ref(true),
     canManagePipelines: ref(true),
     canManageAi: ref(true),
     canExportCrm: ref(false),
@@ -274,6 +275,89 @@ describe('CrmKanbanPage', () => {
       route.query = { view: 'calendar' };
       await botaoDaVista(wrapper, 'CRM_KANBAN.VIEWS.KANBAN').trigger('click');
       expect(replace).toHaveBeenLastCalledWith({ query: {} });
+    });
+  });
+
+  // #1894 — com o Meu dia ligado, a aba Calendário leva ao endereço do Meu dia, nunca ao calendário antigo.
+  describe('aba Calendário com o Meu dia ligado', () => {
+    const botaoCalendario = pagina =>
+      pagina
+        .findAll('[role="group"] button')
+        .find(botao => botao.text() === 'CRM_KANBAN.VIEWS.CALENDAR');
+
+    afterEach(() => {
+      route.query = {};
+      route.params = {};
+      push.mockClear();
+      replace.mockClear();
+      wrapper?.unmount();
+    });
+
+    it('leva ao Meu dia em vez de abrir o calendário antigo', async () => {
+      route.params = { accountId: '18' };
+      wrapper = await mountPage({ account: { calendarioOuro: true } });
+      await botaoCalendario(wrapper).trigger('click');
+      expect(push).toHaveBeenCalledWith({
+        name: 'crm_calendar_index',
+        params: { accountId: '18' },
+        query: {},
+      });
+      expect(wrapper.findComponent({ name: 'CrmCalendar' }).exists()).toBe(
+        false
+      );
+    });
+
+    it('?view=calendar com o menu novo também vai para o Meu dia', async () => {
+      route.params = { accountId: '18' };
+      route.query = { view: 'calendar' };
+      wrapper = await mountPage({
+        account: { calendarioOuro: true, menuNovo: true },
+      });
+      expect(replace).toHaveBeenCalledWith({
+        name: 'crm_calendar_index',
+        params: { accountId: '18' },
+        query: {},
+      });
+    });
+
+    it('flag do Meu dia que chega depois da tela: vai para o Meu dia sem buscar o calendário antigo', async () => {
+      route.params = { accountId: '18' };
+      route.query = { view: 'calendar', new_contact_id: '7' };
+      wrapper = await mountPage({ account: { menuNovo: true } });
+      dispatch.mockClear();
+      storeGetters['accounts/getAccount'].value = () => ({
+        id: 1,
+        features: { crm_calendario_ouro: true },
+      });
+      await flushPromises();
+      expect(replace).toHaveBeenLastCalledWith({
+        name: 'crm_calendar_index',
+        params: { accountId: '18' },
+        query: { new_contact_id: '7' },
+      });
+      expect(
+        dispatch.mock.calls.filter(
+          ([tipo]) => tipo === 'crmKanban/fetchCalendarEvents'
+        )
+      ).toHaveLength(0);
+    });
+
+    it('navegação recusada volta ao quadro', async () => {
+      route.params = { accountId: '18' };
+      push.mockResolvedValueOnce({ type: 4 });
+      wrapper = await mountPage({ account: { calendarioOuro: true } });
+      await botaoCalendario(wrapper).trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[role="group"] [aria-pressed="true"]').text()).toBe(
+        'CRM_KANBAN.VIEWS.KANBAN'
+      );
+    });
+
+    it('sem o Meu dia, a aba abre o calendário de sempre', async () => {
+      route.params = { accountId: '18' };
+      wrapper = await mountPage();
+      await botaoCalendario(wrapper).trigger('click');
+      expect(push).not.toHaveBeenCalled();
     });
   });
 
@@ -1053,6 +1137,34 @@ describe('Kanban zoom integration', () => {
       expect(wrapper.findComponent(CrmKanbanZoom).props('modelValue')).toBe(87);
     }
   );
+
+  // #1874 — ação em massa por permissão: cada botão só para quem pode; sem nenhuma, a lista não tem seleção.
+  it('quem só vê o CRM não tem seleção na lista', async () => {
+    wrapper = await mountPage({
+      perms: {
+        canManageCards: false,
+        canMoveCards: false,
+        canDeleteCards: false,
+      },
+    });
+    wrapper.vm.setViewMode('list');
+    await flushPromises();
+    expect(
+      wrapper.findComponent({ name: 'CrmCardsTable' }).props('selectable')
+    ).toBe(false);
+  });
+
+  it('quem mexe sem arquivar não vê o Arquivar em massa', async () => {
+    wrapper = await mountPage({ perms: { canDeleteCards: false } });
+    wrapper.vm.setViewMode('list');
+    await flushPromises();
+    expect(
+      wrapper.findComponent({ name: 'CrmCardsTable' }).props('selectable')
+    ).toBe(true);
+    expect(
+      wrapper.findComponent({ name: 'CrmBulkActionBar' }).props('permissions')
+    ).toEqual({ move: true, assign: true, status: true, archive: false });
+  });
 
   it('restores the exact percentage after leaving and mounting the CRM again', async () => {
     wrapper = await mountPage();
