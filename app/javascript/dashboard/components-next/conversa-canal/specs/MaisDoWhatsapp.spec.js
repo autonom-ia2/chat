@@ -11,7 +11,11 @@ const CLOUD = {
 
 const montar = ({ conversa = {} } = {}) => {
   const store = createStore({
-    getters: { getSelectedChat: () => conversa },
+    getters: {
+      getSelectedChat: () => conversa,
+      getCurrentAccountId: () => 1,
+      'accounts/isFeatureEnabledonAccount': () => () => false,
+    },
   });
   const i18n = createI18n({ legacy: false, locale: 'en', missingWarn: false });
   return mount(MaisDoWhatsapp, {

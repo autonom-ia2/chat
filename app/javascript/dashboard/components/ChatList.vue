@@ -1,7 +1,21 @@
 <script setup>
-import { ref, unref, provide, computed, watch, onMounted } from 'vue';
+import {
+  ref,
+  unref,
+  provide,
+  computed,
+  watch,
+  onMounted,
+  onBeforeUnmount,
+} from 'vue';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
+import {
+  filtroDoLinkDaLista,
+  useFiltrosDoLinkNaCaixa,
+  useReleituraPeriodica,
+} from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
+import { cancelarReleituraDoFiltroDoLink } from 'dashboard/store/modules/conversations/actions';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import {
@@ -55,7 +69,10 @@ import {
   filterItemsByPermission,
 } from 'dashboard/helper/permissionsHelper.js';
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
-import { sortComparator } from '../store/modules/conversations/helpers';
+import {
+  sortComparator,
+  filterPeloFiltroDoLink,
+} from '../store/modules/conversations/helpers';
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
@@ -293,6 +310,39 @@ const conversationListPagination = computed(() => {
 // #1809: Spam e Lixeira da caixa de e-mail (a pasta vem do endereço, ?pasta=).
 const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
 
+// #1883: filtros pelo link do Números (?da_ia=1, ?esperando_min=30). No Spam e na Lixeira a pasta manda; com filtro
+// avançado ou pasta salva, a lista vem de outro pedido e eles não valem.
+const {
+  daIa: daIaDoLink,
+  esperandoMin: esperandoDoLink,
+  limparTudo: limparTudoDoLink,
+  irParaALista,
+} = useFiltrosDoLinkNaCaixa();
+const idsDoFiltroDoLink = useMapGetter('getIdsDoFiltroDoLink');
+const filtroDoLink = computed(() =>
+  filtroDoLinkDaLista({
+    daIa: daIaDoLink.value,
+    esperandoMin: esperandoDoLink.value,
+    pasta: pastaDoEmail.value,
+    filtroAvancado: hasAppliedFiltersOrActiveFolders.value,
+  })
+);
+// A conversa aberta fica na lista filtrada enquanto estiver aberta.
+const conversaAberta = useMapGetter('getSelectedChat');
+// Saindo da caixa, nenhuma releitura agendada roda por baixo.
+onBeforeUnmount(cancelarReleituraDoFiltroDoLink);
+const temFiltroDoLink = computed(() =>
+  Boolean(filtroDoLink.value.daIa || filtroDoLink.value.esperandoMin)
+);
+const tituloDoFiltroDoLink = computed(() => {
+  const { daIa, esperandoMin: n } = filtroDoLink.value;
+  if (daIa && n) {
+    return t('FORK_CONVERSATION_LIST.FILTRO_DO_LINK.DA_IA_ESPERANDO', { n });
+  }
+  if (daIa) return t('FORK_CONVERSATION_LIST.FILTRO_DO_LINK.DA_IA');
+  return t('FORK_CONVERSATION_LIST.FILTRO_DO_LINK.ESPERANDO', { n });
+});
+
 const conversationFilters = computed(() => {
   return {
     inboxId: props.conversationInbox ? props.conversationInbox : undefined,
@@ -306,6 +356,7 @@ const conversationFilters = computed(() => {
     conversationType: props.conversationType || undefined,
     crmPipelineId: (isCrmEnabled && crmPipelineId.value) || undefined,
     pasta: pastaDoEmail.value || undefined,
+    ...filtroDoLink.value,
   };
 });
 
@@ -319,6 +370,9 @@ const activeTeam = computed(() => {
 const pageTitle = computed(() => {
   if (pastaDoEmail.value) {
     return t(`CONVERSA_CANAL.EMAIL.PASTA.${pastaDoEmail.value.toUpperCase()}`);
+  }
+  if (temFiltroDoLink.value) {
+    return tituloDoFiltroDoLink.value;
   }
   if (hasAppliedFilters.value) {
     return t('CHAT_LIST.TAB_HEADING');
@@ -385,6 +439,12 @@ const conversationList = computed(() => {
     } else {
       localConversationList = [...allChatList.value(filters)];
     }
+    localConversationList = filterPeloFiltroDoLink(
+      localConversationList,
+      Boolean(filters.daIa || filters.esperandoMin),
+      idsDoFiltroDoLink.value,
+      conversaAberta.value?.id
+    );
   } else {
     localConversationList = [...chatLists.value];
   }
@@ -715,7 +775,8 @@ function openLastItemAfterDeleteInFolder() {
 }
 
 function redirectToConversationList() {
-  router.push(buildConversationListPath());
+  // #1883: com o filtro do link ligado, a lista volta filtrada.
+  irParaALista(buildConversationListPath(), temFiltroDoLink.value);
 }
 
 async function assignPriority(priority, conversationId = null) {
@@ -863,6 +924,12 @@ function abrirAbaDaTelaInicial(aba) {
   resetAndFetchData();
 }
 useEmitter(BUS_EVENTS.TELA_INICIAL_ABA, abrirAbaDaTelaInicial);
+// #1883: a releitura voltou a lista longa (mais de 5 páginas) para a primeira página.
+const conversationListComponentRef = ref(null);
+useEmitter(BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO, () => {
+  const lista = conversationListComponentRef.value?.conversationListRef;
+  if (lista) lista.scrollTop = 0;
+});
 useEmitter('fetch_conversation_stats', () => {
   if (hasAppliedFiltersOrActiveFolders.value) return;
   store.dispatch('conversationStats/get', conversationFilters.value);
@@ -928,6 +995,20 @@ watch(
   () => resetAndFetchData()
 );
 watch([pastaDoEmail, versaoDasPastas], () => resetAndFetchData());
+// Os valores do link, não o filtro já combinado: aplicar um filtro avançado não pode disparar uma releitura que o apaga.
+watch([daIaDoLink, esperandoDoLink], () => resetAndFetchData());
+
+// A seta "Limpar filtros" do topo: um clique limpa tudo. Com o link no endereço (mesmo com o filtro avançado por cima),
+// tira o link e o watch acima relê a lista, o que também tira o avançado.
+function onResetFilters() {
+  limparTudoDoLink(resetAndFetchData);
+}
+
+// "Esperando há mais de N min": a conversa que cruza o limite entra numa releitura por minuto.
+useReleituraPeriodica(
+  computed(() => Boolean(filtroDoLink.value.esperandoMin)),
+  () => store.dispatch('releerFiltroDoLink')
+);
 watch(
   computed(() => props.conversationType),
   (type, previousType) => {
@@ -969,6 +1050,7 @@ watch(appliedFilters, () => resetBulkActions());
       :contact-filter="appliedContactFilter"
       :has-applied-filters="hasAppliedFilters"
       :has-active-folders="hasActiveFolders"
+      :has-link-filter="temFiltroDoLink"
       :active-status="activeStatus"
       :is-on-expanded-layout="isOnExpandedLayout"
       :conversation-stats="conversationStats"
@@ -976,7 +1058,7 @@ watch(appliedFilters, () => resetBulkActions());
       @add-folders="onClickOpenAddFoldersModal"
       @delete-folders="onClickOpenDeleteFoldersModal"
       @filters-modal="onToggleAdvanceFiltersModal"
-      @reset-filters="resetAndFetchData"
+      @reset-filters="onResetFilters"
       @basic-filter-change="onBasicFilterChange"
     />
 
@@ -1031,6 +1113,7 @@ watch(appliedFilters, () => resetBulkActions());
       @select-all-conversations="toggleSelectAll"
     />
     <ConversationList
+      ref="conversationListComponentRef"
       :conversation-list="conversationList"
       :is-loading="chatListLoading"
       :show-end-of-list-message="showEndOfListMessage"

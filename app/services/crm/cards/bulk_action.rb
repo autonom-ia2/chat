@@ -19,6 +19,9 @@ module Crm
     class BulkAction
       # Soft-delete = status archived (reversible), matching CardsController#destroy.
       ACTIONS = %w[move assign status delete].freeze
+      # Brecha A3 (#1874): cada card passa pela mesma regra da ação de um card só (chave do cargo, card visível e funil).
+      # Sem a chave, todo card volta `forbidden` e nada muda; com ela, a recusa por funil continua card a card.
+      POLICY_BY_ACTION = { 'move' => :move?, 'assign' => :update?, 'status' => :close?, 'delete' => :destroy? }.freeze
       MAX_IDS = 100
 
       class InvalidAction < StandardError; end
@@ -45,7 +48,7 @@ module Crm
         @ids.each do |id|
           card = visible_cards_by_id[id]
           next failed << { id: id, error: 'forbidden' } if card.blank?
-          # Acesso por funil (#1148): mexer no card exige o funil dele, e mover exige também o de destino.
+          # Acesso por funil (#1148) e chave da ação (#1874); mover exige também o funil de destino.
           next failed << { id: id, error: 'forbidden' } if forbidden?(card, target_stage)
 
           # Each card is its own transaction so a single failure (e.g. a card
@@ -122,12 +125,14 @@ module Crm
         @account.crm_pipeline_stages.find(stage_id)
       end
 
-      # The same visible scope the CardPolicy::Scope resolves, so a bulk request
-      # can only ever touch cards the caller can see one-by-one.
       def forbidden?(card, target_stage)
-        return true unless card_guard.edit_allowed?(card)
+        return true unless Pundit.policy!(user_context, card).public_send(POLICY_BY_ACTION.fetch(@action))
 
         target_stage.present? && !card_guard.move_allowed?(card, target_stage.pipeline_id)
+      end
+
+      def user_context
+        { user: @user, account: @account, account_user: @account_user }
       end
 
       def card_guard

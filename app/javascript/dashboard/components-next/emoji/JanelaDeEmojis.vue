@@ -1,13 +1,26 @@
 <script setup>
-// Janela de emojis da resposta de e-mail (#1786), no lugar da do Chatwoot, que a
-// caixa de resposta (agora com rolagem própria) cortava. Inspirada no Slack e no
+// Janela de emojis do painel: nasceu na resposta de e-mail (#1786) e hoje vale na
+// caixa de resposta de todos os canais e na Nova conversa (#1895), no lugar da do
+// Chatwoot, que a caixa de resposta (com rolagem própria) cortava. Inspirada no Slack e no
 // WhatsApp: flutua por cima da tela (nada a corta), busca no topo, barra de categorias
 // que leva à seção, grade larga com o emoji maior ao passar o mouse, os usados por
 // último primeiro e Esc fecha. Mesmos dados e mesmos "recentes" do painel
 // (shared/components/emoji).
-import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  useTemplateRef,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
-import { onClickOutside, useWindowSize } from '@vueuse/core';
+import {
+  onClickOutside,
+  useElementBounding,
+  useEventListener,
+  useWindowSize,
+} from '@vueuse/core';
 import Icon from 'next/icon/Icon.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 import emojiGroups from 'shared/components/emoji/emojisGroup.json';
@@ -16,7 +29,7 @@ import {
   buildEmojiSections,
   getRecentEmojis,
 } from 'shared/components/emoji/pickerHelper';
-import { semAcento } from './semAcento';
+import { semAcento } from 'dashboard/helper/semAcento';
 
 const props = defineProps({
   // Elemento acima do qual a janela abre (a barra de baixo da caixa de resposta).
@@ -96,10 +109,18 @@ const categorias = computed(() => [
 const ativa = ref(categorias.value[0]?.slug);
 
 // Posição: em cima da barra de baixo da caixa, alinhada à esquerda dela; sem espaço
-// em cima, abre embaixo. Nunca sai da tela.
+// em cima, abre embaixo. Nunca sai da tela. Acompanha a âncora quando ela muda de
+// tamanho ou a página rola (#1895).
 const { width: larguraDaTela, height: alturaDaTela } = useWindowSize();
+const ancora = useElementBounding(() => props.ancora);
 const posicao = computed(() => {
-  const caixa = props.ancora?.getBoundingClientRect?.();
+  const caixa = props.ancora
+    ? {
+        left: ancora.left.value,
+        top: ancora.top.value,
+        bottom: ancora.bottom.value,
+      }
+    : null;
   const largura = Math.min(LARGURA, larguraDaTela.value - MARGEM * 2);
   const esquerda = Math.min(
     Math.max(MARGEM, caixa?.left ?? MARGEM),
@@ -151,7 +172,33 @@ const primeiroDaBusca = () => {
 onClickOutside(janela, () => emit('fechar'), {
   ignore: [() => props.ancora],
 });
+
+// Esc fecha mesmo com o foco fora da janela. Na captura do document, antes dos
+// atalhos da tela: só a janela fecha, não a Nova conversa nem a resposta por baixo.
+useEventListener(
+  document,
+  'keydown',
+  evento => {
+    if (evento.key !== 'Escape') return;
+    evento.preventDefault();
+    evento.stopPropagation();
+    emit('fechar');
+  },
+  { capture: true }
+);
+
+// Ao fechar, o foco volta para onde estava ao abrir, se ficaria perdido (na janela
+// que some ou no body). Se a pessoa já clicou em outro campo, fica lá.
+let focoAoAbrir = null;
+onBeforeUnmount(() => {
+  const ativo = document.activeElement;
+  const perdido =
+    !ativo || ativo === document.body || janela.value?.contains(ativo);
+  if (perdido && focoAoAbrir?.isConnected) focoAoAbrir.focus();
+});
+
 onMounted(async () => {
+  focoAoAbrir = document.activeElement;
   campo.value?.focus();
   if (!String(locale.value).startsWith('pt')) return;
   const { default: nomes } = await import('./emojisEmPortugues.json');
@@ -161,14 +208,17 @@ onMounted(async () => {
 
 <template>
   <TeleportWithDirection to="body">
+    <!-- #1895: abre também de dentro do popover da Nova conversa (z-[9999]). Fica por cima
+      dele, e data-popover-content diz ao popover que clique e Esc aqui são de uma
+      sobreposta: escolher um emoji não fecha a Nova conversa. -->
     <div
       ref="janela"
       role="dialog"
       :aria-label="t('CONVERSA_CANAL.EMAIL.EMOJIS.TITULO')"
-      class="fixed z-[60] flex flex-col overflow-hidden rounded-2xl border border-n-weak bg-n-solid-1 shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.08)]"
+      class="fixed z-[10000] flex flex-col overflow-hidden rounded-2xl border border-n-weak bg-n-solid-1 shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.08)]"
       :style="{ ...posicao, height: `${ALTURA}px` }"
       data-janela-de-emojis
-      @keydown.esc.prevent.stop="emit('fechar')"
+      data-popover-content
     >
       <div class="px-3 pt-3 pb-2">
         <label class="relative block">

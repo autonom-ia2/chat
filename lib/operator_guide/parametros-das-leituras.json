@@ -429,6 +429,14 @@
       "inbox_id"
     ]
   },
+  "campaign_journey/drafts": {
+    "controller": "api/v1/accounts/campaign_journey/drafts#index",
+    "parametros": []
+  },
+  "campaign_journey/drafts/:id": {
+    "controller": "api/v1/accounts/campaign_journey/drafts#show",
+    "parametros": []
+  },
   "campaign_journey/overview": {
     "controller": "api/v1/accounts/campaign_journey/overviews#show",
     "parametros": [
@@ -969,6 +977,8 @@
       "assignee_type",
       "conversation_type",
       "crm_pipeline_id",
+      "da_ia",
+      "esperando_min",
       "inbox_id",
       "labels",
       "page",
@@ -1029,6 +1039,8 @@
       "assignee_type",
       "conversation_type",
       "crm_pipeline_id",
+      "da_ia",
+      "esperando_min",
       "inbox_id",
       "labels",
       "page",
@@ -1047,6 +1059,8 @@
       "assignee_type",
       "conversation_type",
       "crm_pipeline_id",
+      "da_ia",
+      "esperando_min",
       "inbox_id",
       "labels",
       "page",
@@ -1369,6 +1383,12 @@
   "crm/my_booking_hours": {
     "controller": "api/v1/accounts/crm/my_booking_hours#show",
     "parametros": []
+  },
+  "crm/numeros": {
+    "controller": "api/v1/accounts/crm/numeros#show",
+    "parametros": [
+      "mes"
+    ]
   },
   "crm/pipelines": {
     "controller": "api/v1/accounts/crm/pipelines#index",

@@ -33,6 +33,8 @@
 # - 'crm_view_reports': Can view CRM reports (forward-looking).
 # - 'crm_admin': Umbrella that implies every crm_* permission.
 # - 'crm_export': Can download the CRM list as a spreadsheet (personal data in bulk).
+# - 'crm_delete_cards': Can archive CRM cards, one by one or in bulk (split from crm_manage_cards in #1874; roles that
+#   had crm_manage_cards kept it).
 #
 # Module keys: '<module>_manage' implies '<module>_view' (see Enterprise::AccountUser#permission_granted?).
 # - 'contact_view' / 'knowledge_base_view': read-only access to contacts / help center.
@@ -80,6 +82,7 @@ class CustomRole < ApplicationRecord
     crm_view_reports
     crm_admin
     crm_export
+    crm_delete_cards
     contact_view
     contact_export
     contact_delete

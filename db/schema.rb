@@ -1263,6 +1263,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_181000) do
     t.index ["user_id"], name: "index_campaign_imports_on_user_id"
   end
 
+  create_table "campaign_journey_drafts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.bigint "email_campaign_id"
+    t.string "title", default: "", null: false
+    t.string "channel", default: "", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "updated_at"], name: "index_campaign_journey_drafts_on_account_id_and_updated_at"
+    t.index ["email_campaign_id"], name: "index_campaign_journey_drafts_on_email_campaign_id"
+    t.index ["user_id"], name: "index_campaign_journey_drafts_on_user_id"
+  end
+
   create_table "campaign_pauses", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "pausable_type", null: false
@@ -4304,6 +4318,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_181000) do
   add_foreign_key "campaign_free_text_deliveries", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_free_texts", "accounts", on_delete: :cascade
   add_foreign_key "campaign_free_texts", "campaigns", on_delete: :cascade
+  add_foreign_key "campaign_journey_drafts", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_journey_drafts", "email_campaigns", on_delete: :cascade
+  add_foreign_key "campaign_journey_drafts", "users", on_delete: :nullify
   add_foreign_key "campaign_pauses", "accounts", on_delete: :cascade
   add_foreign_key "campaign_pauses", "users", column: "paused_by_id", on_delete: :nullify
   add_foreign_key "campaign_pauses", "users", column: "resumed_by_id", on_delete: :nullify

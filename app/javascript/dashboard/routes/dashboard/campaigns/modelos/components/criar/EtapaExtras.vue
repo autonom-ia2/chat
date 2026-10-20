@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
+import CampoDeTelefone from 'dashboard/components-next/conversa-canal/mais/CampoDeTelefone.vue';
 import EscolherArquivo from './EscolherArquivo.vue';
 import {
   LIMITE_DO_RODAPE,
@@ -260,8 +261,18 @@ const iconeDoBotao = tipo =>
               "
               @update:model-value="valor => mudarBotao(indice, 'texto', valor)"
             />
+            <!-- O número do "Ligar" no campo de telefone padrão (#1900): país e
+                 DDI à vista; o valor só chega em E.164 quando é válido. -->
+            <CampoDeTelefone
+              v-if="botao.tipo === 'ligar'"
+              :model-value="botao.valor"
+              :label="$t('MODELOS_WHATSAPP.TIPOS_DE_BOTAO.ligar.VALOR')"
+              :rotulo-do-pais="$t('MODELOS_WHATSAPP.TIPOS_DE_BOTAO.ligar.PAIS')"
+              :erro="mensagem(botao, PROBLEMAS_DO_VALOR)"
+              @update:model-value="valor => mudarBotao(indice, 'valor', valor)"
+            />
             <Input
-              v-if="['site', 'ligar', 'copiar_codigo'].includes(botao.tipo)"
+              v-else-if="['site', 'copiar_codigo'].includes(botao.tipo)"
               wrap-message
               :model-value="botao.valor"
               :label="$t(`MODELOS_WHATSAPP.TIPOS_DE_BOTAO.${botao.tipo}.VALOR`)"
