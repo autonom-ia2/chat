@@ -53,20 +53,29 @@ class Crm::Numeros::PessoasDaEquipe
   def linhas_de(tipo)
     return [] unless @cards.tem?(tipo)
 
-    ids = tipo == :venda ? ids_de_venda : ids_de_atendimento
+    ids = candidatos.select { |id| papeis_de(id).include?(tipo) }
     pessoas.slice(*ids).sort_by { |_id, nome| nome.to_s.downcase }.map do |id, nome|
       { id: id, nome: nome, voce: id == @user.id }.merge(tipo => tipo == :venda ? venda_de(id) : atende_de(id))
     end
   end
 
-  def ids_de_venda
-    com_venda = @credito.filter_map { |id, total| id if total[:vendas].positive? }
-    (com_venda + @cards.responsaveis_com_abertos(:venda) + recebidos.keys).compact.uniq
+  # Quem teve movimento no mês nos funis visíveis: crédito, card aberto ou card recebido.
+  def candidatos
+    @candidatos ||= (@credito.keys + abertos_de(:venda).to_a + abertos_de(:atende).to_a + recebidos.keys).compact.uniq
   end
 
-  def ids_de_atendimento
-    com_caso = @credito.filter_map { |id, total| id if total[:resolvidos].positive? }
-    (com_caso + @cards.responsaveis_com_abertos(:atende)).compact.uniq
+  # O papel de cada pessoa (vende / atende) é a mesma régua do "Só eu". Encaixe com a F4 (#1997): depois do merge dela,
+  # este método vira `Crm::Numeros::Papel.de(vendeu:, atendeu:) { tipos dos funis que a pessoa enxerga }`, sem regra
+  # própria aqui. Até lá só a parte "pelo que a pessoa fez" vale; quem não fez nada no mês não tem linha.
+  def papeis_de(id)
+    vendeu = total(id)[:vendas].positive? || abertos_de(:venda).include?(id) || recebidos.key?(id)
+    atendeu = total(id)[:resolvidos].positive? || abertos_de(:atende).include?(id)
+    [(:venda if vendeu), (:atende if atendeu)].compact
+  end
+
+  def abertos_de(tipo)
+    @abertos_de ||= {}
+    @abertos_de[tipo] ||= @cards.responsaveis_com_abertos(tipo).to_set
   end
 
   # Só quem é da conta (o responsável que saiu da conta não vira linha).
