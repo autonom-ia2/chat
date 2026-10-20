@@ -24,6 +24,13 @@ class Crm::Subjects::CardDaChegada
     chegada if chegada.intocado?
   end
 
+  # O card da chegada ainda intocado, na Automática (o único modo em que ele é adotado): nem "nenhum assunto" (#1918 PR1)
+  # nem "o mesmo assunto" (#1918 PR2) o tocam. Movido pela IA de etapa num "oi", ele deixaria de ser adotado pelo
+  # primeiro pedido de outro funil, e um card vazio sobraria para trás.
+  def self.intacta?(conversation:, card:, mode:)
+    mode == 'auto' && card.present? && new(card, conversation).intocado?
+  end
+
   attr_reader :card
 
   def initialize(card, conversation)

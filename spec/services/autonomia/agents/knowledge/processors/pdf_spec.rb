@@ -81,7 +81,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         result = processor.extract
 
         expect(result).not_to include('Terceira')
-        expect(source).to have_received(:paginas_de_fora=).with('texto_teto' => 2, 'texto_alem_do_teto' => 1)
+        expect(source).to have_received(:paginas_de_fora=).with('texto_teto' => 2, 'texto_alem_do_teto' => 1, 'paginas_total' => 3)
       end
 
       it 'reads every page outside the Fase 2' do
@@ -261,7 +261,8 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         expect(rasterizacao).to have_received(:pagina).twice
         expect(rasterizacao).not_to have_received(:pagina).with(anything, 2, any_args)
         expect(source).to have_received(:paginas_de_fora=)
-          .with('ocr_teto' => 2, 'ocr_alem_do_teto' => 1, 'ocr_grandes' => [], 'ocr_prazo' => [], 'ocr_falhou' => [])
+          .with('ocr_teto' => 2, 'ocr_alem_do_teto' => 1, 'ocr_grandes' => [], 'ocr_prazo' => [], 'ocr_falhou' => [],
+                'paginas_total' => 3)
       end
 
       # K4 — o OCR do PDF tem prazo total; as páginas que não couberam vão para o aviso com o motivo `prazo`.

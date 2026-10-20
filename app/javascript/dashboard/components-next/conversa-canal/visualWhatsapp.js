@@ -113,6 +113,9 @@ const RECHEIO = [
   // linha da hora; sem o espaço a mais, ele cobria o fim do texto.
   '[&[data-bubble-name=text]:has([data-transporte])_.prose-bubble>p:last-child]:after:!w-[210px]',
   '[&[data-bubble-name=text]:has([data-transporte]):has([data-rotulo-editada])_.prose-bubble>p:last-child]:after:!w-[262px]',
+  // Mandada pelo celular (#1941): o 📱 entra antes da hora; sem o espaço a mais, cobria o fim do texto.
+  '[&[data-bubble-name=text]:has([data-eco-do-celular])_.prose-bubble>p:last-child]:after:!w-[84px]',
+  '[&[data-bubble-name=text]:has([data-eco-do-celular]):has([data-rotulo-editada])_.prose-bubble>p:last-child]:after:!w-[136px]',
 ].join(' ');
 
 // Citação (resposta a uma mensagem): faixa verde à esquerda e fundo levemente

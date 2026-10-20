@@ -9,6 +9,7 @@
 # - com_voce: as abertas no nome dela (o mesmo da aba "Minhas" da lista da conta, sem filtro).
 # - proxima: a dela que espera há mais tempo.
 # Da equipe, os totais da conta: só para quem tem report_manage (a chave dos relatórios; no OSS, o administrador).
+# Sem a conversa "Integração WhatsApp" do conector WAHA (Waha::IntegracaoDoConector, #1941), como a lista.
 class TelaInicial::Resumo
   NAO_ATENDIDA_SQL = '(conversations.first_reply_created_at IS NULL OR conversations.waiting_since IS NOT NULL)'.freeze
   SEM_RESPONSAVEL_SQL = "COUNT(*) FILTER (WHERE #{Conversation::AWAITING_PERSON_SQL})".freeze
@@ -36,7 +37,7 @@ class TelaInicial::Resumo
   attr_reader :account, :user, :account_user
 
   def visiveis
-    @visiveis ||= Conversations::PermissionFilterService.new(account.conversations, user, account).perform.open
+    @visiveis ||= Conversations::PermissionFilterService.new(account.conversations, user, account).perform.open.fora_da_integracao_whatsapp
   end
 
   def minhas_sql(condicao)
@@ -51,7 +52,7 @@ class TelaInicial::Resumo
   end
 
   def equipe
-    da_conta = account.conversations.open
+    da_conta = account.conversations.open.fora_da_integracao_whatsapp
     fora = da_conta.joins(:applied_sla).merge(AppliedSla.missed).count if usa_prazo?
     { esperam: da_conta.unattended.count, fora_do_prazo: fora }
   end

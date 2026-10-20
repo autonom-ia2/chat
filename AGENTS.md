@@ -166,9 +166,9 @@ Practical checklist for any change impacting core logic or public APIs
   - **Só o administrador**, nunca vira chave de função: excluir ou transferir a conta; plano, forma de pagamento e cancelamento do contrato com a Hub2You; promover alguém a administrador.
   - **Delegável só com chave própria e as quatro proteções (hoje: só o administrador)**: usuários, equipes e funções; financeiro e faturamento (ver faturas, custos e o módulo Financeiro); integrações, webhooks e tokens; login único (SAML) e leitura do histórico de auditoria; configurações gerais da conta (nome, idioma, fuso, horário). As quatro proteções, no servidor:
     1. só o administrador entrega essas chaves;
-    2. quem entrega uma função só entrega função cujas chaves ele também tem;
+    2. quem entrega uma função só entrega função cujas chaves ele também tem. Exceção: o ajuste fino "Pode entregar acesso acima do próprio", que só o administrador liga numa função. Com ele, quem tem a função entrega qualquer função da conta, inclusive com áreas desta lista (o RH que contrata o diretor comercial cria o acesso dele). Nem com o ajuste alguém promove a administrador (regra do Rodrigo, 20/10/2026, #1931);
     3. ninguém edita a própria função nem o próprio acesso;
-    4. concessão, alteração e revogação de função ou chave ficam no histórico de auditoria da conta (audit log do Enterprise).
+    4. concessão, alteração e revogação de função ou chave ficam no histórico de auditoria da conta (audit log do Enterprise). O histórico é a proteção do ajuste da regra 2: não há aviso extra aos administradores.
   - Enquanto a chave de uma dessas áreas não existir com as quatro proteções, a área continua só do administrador. O que não está listado acima, em segurança e conta, também continua só do administrador.
   - Por quê: em empresa estruturada, pessoas, financeiro e tecnologia têm dono que não é o CEO (CHRO, CFO, CTO). Sem delegar, a única saída era dar administrador, e com ele acesso a tudo.
 
