@@ -227,6 +227,14 @@ def create_rollback_ami(args, current_instance_id):
     return image_id
 
 
+def current_freeze(args):
+    try:
+        return deploy_freeze_state(args)
+    except RuntimeError as error:
+        print(f"::error::Não deu para ler o congelamento ({error}).", file=sys.stderr)
+        return "unknown"
+
+
 def cleanup(args, inventory):
     has_cleanup_candidates = bool(
         inventory["candidate_instances"] or inventory["candidate_available_volumes"]
@@ -238,9 +246,15 @@ def cleanup(args, inventory):
         )
     terminated_instances = []
     deleted_volumes = []
+    stopped_by_freeze = None
 
     for candidate in inventory["candidate_instances"]:
         instance_id = candidate["instance_id"]
+        # A limpeza pode levar quase uma hora: um rollback que congelou no meio dela para a próxima terminação.
+        freeze = current_freeze(args)
+        if freeze != "off":
+            stopped_by_freeze = freeze
+            break
         volume_ids = [
             item["volume_id"]
             for item in candidate.get("block_devices", [])
@@ -267,6 +281,8 @@ def cleanup(args, inventory):
                 deleted_volumes.append(volume_id)
 
     for volume in inventory["candidate_available_volumes"]:
+        if stopped_by_freeze:
+            break
         volume_id = volume["volume_id"]
         aws_run(["ec2", "delete-volume", "--volume-id", volume_id])
         deleted_volumes.append(volume_id)
@@ -275,6 +291,7 @@ def cleanup(args, inventory):
         "rollback_ami_id": rollback_ami_id,
         "terminated_instances": terminated_instances,
         "deleted_volumes": sorted(set(deleted_volumes)),
+        "stopped_by_freeze": stopped_by_freeze,
     }
 
 
@@ -297,14 +314,17 @@ def main():
     inventory = build_inventory(args)
     result = {"inventory": inventory, "cleanup": None}
 
-    freeze_error = None
+    freeze = "off"
     if args.mode == "cleanup":
-        try:
-            freeze = deploy_freeze_state(args)
-        except RuntimeError as error:
-            freeze, freeze_error = "unknown", str(error)
+        freeze = current_freeze(args)
         if freeze == "off":
             result["cleanup"] = cleanup(args, inventory)
+            freeze = result["cleanup"]["stopped_by_freeze"] or "off"
+            if freeze != "off":
+                print(
+                    f"::warning::Limpeza parou no meio: congelamento {freeze}. O que já foi terminado está no artefato.",
+                    file=sys.stderr,
+                )
         else:
             result["cleanup"] = {"skipped": f"deploy_freeze_{freeze}"}
             print(
@@ -330,8 +350,7 @@ def main():
     }
     json.dump(summary, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
-    if freeze_error:
-        print(f"::error::Não deu para ler o congelamento ({freeze_error}).", file=sys.stderr)
+    if freeze == "unknown":
         sys.exit(1)
 
 
