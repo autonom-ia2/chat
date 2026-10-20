@@ -7,6 +7,8 @@ import {
   AUTOMATION_PERMISSIONS,
   CRM_MANAGE_AI_PERMISSION,
   CRM_ADMIN_PERMISSION,
+  PEOPLE_MANAGE_PERMISSION,
+  CUSTOM_ROLE_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
@@ -39,6 +41,8 @@ export const routes = [
         'macro_manage',
         ...AUTOMATION_PERMISSIONS,
         'sla_manage',
+        PEOPLE_MANAGE_PERMISSION,
+        CUSTOM_ROLE_MANAGE_PERMISSION,
         // Quem cuida da IA do CRM chega na passagem pelo cartão "Passar para uma pessoa".
         ...CHAVES_EXTRAS_DO_INICIO,
       ],
