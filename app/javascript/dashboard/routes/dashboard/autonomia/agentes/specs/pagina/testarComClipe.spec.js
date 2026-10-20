@@ -158,12 +158,17 @@ describe('Testar with the clip (Fase 2)', () => {
     await flushPromises();
 
     await anexar([foto('grande.png', 5 * MB + 1)]);
+    await escrever('Quanto custa este?');
     await enviar();
 
     expect(store.dispatch).not.toHaveBeenCalled();
     const aviso = corpo().get('[data-aviso="foto-recusada"]');
     expect(aviso.text()).toContain('AGENTS.JORNADA.PAGINA.SABE.FOTO_GRANDE');
     expect(aviso.find('button').exists()).toBe(false);
+    await flushPromises();
+    expect(corpo().get('form textarea').element.value).toBe(
+      'Quanto custa este?'
+    );
     wrapper.unmount();
   });
 
@@ -183,6 +188,7 @@ describe('Testar with the clip (Fase 2)', () => {
     await flushPromises();
 
     await anexar([foto('animada.png')]);
+    await escrever('Quanto custa este?');
     await enviar();
     await vi.waitFor(() =>
       expect(corpo().find('[data-aviso="foto-recusada"]').exists()).toBe(true)
@@ -195,6 +201,24 @@ describe('Testar with the clip (Fase 2)', () => {
     expect(aviso.find('button').exists()).toBe(false);
     expect(corpo().find('[data-aviso="incompleto"]').exists()).toBe(false);
     expect(corpo().findAll('[data-balao]')).toHaveLength(0);
+    await flushPromises();
+    expect(corpo().get('form textarea').element.value).toBe(
+      'Quanto custa este?'
+    );
+    wrapper.unmount();
+  });
+
+  it('turns the clip on when the Fase 2 of the account arrives after the drawer opened', async () => {
+    const wrapper = montar({ fase2: false, podeGerenciar: false });
+    await flushPromises();
+    expect(corpo().find('[data-anexar]').exists()).toBe(false);
+
+    await wrapper.setProps({ fase2: true });
+    await anexar([foto('grande.png', 5 * MB + 1)]);
+    await enviar();
+
+    expect(store.dispatch).not.toHaveBeenCalled();
+    expect(corpo().find('[data-aviso="foto-recusada"]').exists()).toBe(true);
     wrapper.unmount();
   });
 
@@ -366,6 +390,20 @@ describe('MaterialLinha reading progress (#1427)', () => {
     const wrapper = linha(
       { status: 'processing', metadata: {} },
       { estado: 'lendo' }
+    );
+
+    expect(wrapper.get('[data-estado-texto]').text()).toBe(
+      'AGENTS.JORNADA.PAGINA.SABE.LENDO'
+    );
+  });
+
+  it('shows "Reading…" with "Read again", not the page, when the reading stalled', () => {
+    const wrapper = linha(
+      {
+        status: 'processing',
+        metadata: { progresso: { pagina: 8, total: 30 } },
+      },
+      { estado: 'lendo', relerParado: true, podeGerenciar: true }
     );
 
     expect(wrapper.get('[data-estado-texto]').text()).toBe(

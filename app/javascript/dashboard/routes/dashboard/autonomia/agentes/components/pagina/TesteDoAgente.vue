@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, useId } from 'vue';
+import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import CelularConversa from '../CelularConversa.vue';
@@ -69,6 +69,13 @@ const mensagens = computed(() => props.teste.mensagens.value);
 const digitando = computed(() => props.teste.digitando.value);
 const aviso = computed(() => props.teste.aviso.value);
 const ultima = computed(() => props.teste.ultima.value);
+
+// #1427 — foto recusada (no navegador ou no servidor): o que a pessoa escreveu volta ao campo, para mandar com outra foto.
+watch(aviso, novo => {
+  if (novo?.tipo === AVISO_TESTE.FOTO_RECUSADA && novo.texto && !texto.value) {
+    texto.value = novo.texto;
+  }
+});
 
 const focar = () =>
   props.clipe ? compositor.value?.focar() : campo.value?.focus();

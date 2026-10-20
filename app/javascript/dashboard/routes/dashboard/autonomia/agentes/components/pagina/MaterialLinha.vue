@@ -47,12 +47,13 @@ const icone = computed(() => {
   return foto.value ? 'i-lucide-image' : 'i-lucide-file-text';
 });
 // #1427 — PDF escaneado sendo lido por OCR: "Lendo a página X de N…" (N = as páginas que vão ser lidas). O servidor só
-// manda o progresso enquanto lê, e só na Fase 2; o PDF com texto selecionável fica com "Lendo…".
+// manda o progresso enquanto lê, e só na Fase 2; o PDF com texto selecionável fica com "Lendo…". Parado além do teto da
+// releitura (o worker caiu), vale "Lendo…" com "Ler de novo": a página anotada já não diz nada.
 const progresso = computed(() => {
   const { pagina, total } = props.fonte.metadata?.progresso || {};
-  return estado.value === 'lendo' && !props.relendo && pagina && total
-    ? { pagina, total }
-    : null;
+  const lendo =
+    estado.value === 'lendo' && !props.relendo && !props.relerParado;
+  return lendo && pagina && total ? { pagina, total } : null;
 });
 const girando = computed(() => ['lendo', 'revisando'].includes(estado.value));
 const amarelo = computed(() => ['falha', 'atencao'].includes(estado.value));

@@ -1,7 +1,8 @@
 # #1427 — as fotos mandadas no Testar da Fase 2, conferidas como a foto do material (FotoConferida: tipo pelos bytes, até
 # 5 MB, até 40 MP, sem animada). Chegam como data-url (data:image/<tipo>;base64,<conteúdo>); o tipo declarado não vale:
 # a data-url que segue ao modelo leva o tipo lido dos bytes. Uma foto recusada recusa o pedido inteiro, com o motivo em
-# texto para a tela (`recusa`): nada some calado. Nunca guarda nem loga o conteúdo.
+# texto para a tela (`recusa`): nada some calado. Não grava nada; a data-url conferida segue no pedido temporário do Testar
+# (Crm::Ai::InteractiveRequest, no Redis, até 30 min), e o log e o Sentry não a veem (`images` em filter_parameter_logging).
 class Autonomia::Agents::FotosDoTeste
   PREFIXO = 'data:'.freeze
   MARCA_BASE64 = ';base64'.freeze

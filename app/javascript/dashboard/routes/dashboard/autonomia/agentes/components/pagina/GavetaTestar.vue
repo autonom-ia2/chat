@@ -28,15 +28,12 @@ const clipe = computed(() => {
   if (!props.fase2 || ehCotacao(props.agente)) return '';
   return props.podeGerenciar ? 'tudo' : 'fotos';
 });
-const teste = useTesteDoAgente(
-  toRef(props, 'agente'),
-  clipe.value
-    ? {
-        textoSoFoto: t('AGENTS.JORNADA.CRIAR.CONFIRA.FOTO'),
-        tetoDaFoto: MAX_FOTO,
-      }
-    : {}
-);
+// Lidos a cada envio: a Fase 2 da conta pode chegar à store depois de a gaveta abrir.
+const teste = useTesteDoAgente(toRef(props, 'agente'), {
+  textoSoFoto: () =>
+    clipe.value ? t('AGENTS.JORNADA.CRIAR.CONFIRA.FOTO') : '',
+  tetoDaFoto: () => (clipe.value ? MAX_FOTO : 0),
+});
 const celular = ref(null);
 
 onMounted(() => {

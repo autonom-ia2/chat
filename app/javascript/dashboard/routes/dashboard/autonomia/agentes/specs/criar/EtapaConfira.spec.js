@@ -151,6 +151,35 @@ describe('EtapaConfira', () => {
     }
   });
 
+  // #1427 — a foto que a conferência recusou: o motivo do servidor, âmbar, sem "Tentar de novo".
+  it('shows the reason a photo was refused, with no "Try again"', () => {
+    const wrapper = montar({
+      problema: 'foto_recusada',
+      problemaTexto: 'Mande uma foto parada. Foto animada não dá para ler.',
+    });
+    const erro = wrapper.get('[data-erro-teste]');
+    expect(erro.text()).toContain(
+      'Mande uma foto parada. Foto animada não dá para ler.'
+    );
+    expect(erro.find('button').exists()).toBe(false);
+  });
+
+  it('says the photo is too big when it never left the browser', () => {
+    const wrapper = montar({ problema: 'foto_recusada' });
+    expect(wrapper.get('[data-erro-teste]').text()).toContain(
+      'AGENTS.JORNADA.PAGINA.SABE.FOTO_GRANDE'
+    );
+  });
+
+  it('puts back in the field what was written with the refused photo', async () => {
+    const wrapper = montar();
+    await wrapper.setProps({
+      problema: 'foto_recusada',
+      textoDevolvido: 'Quanto custa este?',
+    });
+    expect(wrapper.get('textarea').element.value).toBe('Quanto custa este?');
+  });
+
   it('on the phone, the "not enough" text does not point to the side', () => {
     const wrapper = montar({ problema: 'incompleto', celular: true });
     expect(wrapper.get('[data-erro-teste]').text()).toContain(

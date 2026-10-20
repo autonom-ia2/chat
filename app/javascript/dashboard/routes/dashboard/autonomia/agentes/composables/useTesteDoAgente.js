@@ -1,4 +1,10 @@
-import { computed, getCurrentInstance, onBeforeUnmount, ref } from 'vue';
+import {
+  computed,
+  getCurrentInstance,
+  onBeforeUnmount,
+  ref,
+  toValue,
+} from 'vue';
 import { useStore } from 'dashboard/composables/store';
 
 // #1181 — o celular de teste do agente, o mesmo na criação (Confira, T04) e na página do agente
@@ -63,10 +69,16 @@ const tipoDoErro = erro => {
   return AVISO_TESTE.FALHA;
 };
 
-const avisoDoErro = (erro, pergunta) => {
+// `texto`: o que a pessoa escreveu junto da foto recusada, para voltar ao campo (vazio quando mandou só a foto).
+const avisoDoErro = (erro, pergunta, texto) => {
   const dados = erro?.response?.data;
   if (erro?.response?.status === 422 && dados?.code === FOTO_RECUSADA) {
-    return { tipo: AVISO_TESTE.FOTO_RECUSADA, mensagem: dados.error, pergunta };
+    return {
+      tipo: AVISO_TESTE.FOTO_RECUSADA,
+      mensagem: dados.error,
+      pergunta,
+      texto,
+    };
   }
   return { tipo: tipoDoErro(erro), pergunta };
 };
@@ -94,7 +106,8 @@ const partesDaResposta = dados => {
 };
 
 // `tetoDaFoto` (bytes, #1427): foto acima dele nem sai do navegador; o aviso `foto_recusada` com `grande`. 0 = sem teto
-// (como na main: o servidor descarta).
+// (como na main: o servidor descarta). `textoSoFoto` e `tetoDaFoto` aceitam valor, ref ou função (lidos a cada envio:
+// a Fase 2 da conta pode chegar à store depois do setup).
 export function useTesteDoAgente(
   agente,
   { textoSoFoto = '', tetoDaFoto = 0 } = {}
@@ -154,7 +167,7 @@ export function useTesteDoAgente(
     };
   };
 
-  const executar = async ({ pergunta, fotos, anterior }) => {
+  const executar = async ({ pergunta, fotos, anterior, digitado }) => {
     sequencia += 1;
     const minha = sequencia;
     aviso.value = null;
@@ -180,7 +193,7 @@ export function useTesteDoAgente(
       await tocar(dados, minha, pergunta);
     } catch (erro) {
       if (minha === sequencia) {
-        aviso.value = avisoDoErro(erro, pergunta);
+        aviso.value = avisoDoErro(erro, pergunta, digitado);
         // #1427 — a foto recusada não foi a lugar nenhum: o balão dela sai do celular e não há o que tentar de novo.
         if (aviso.value.tipo === AVISO_TESTE.FOTO_RECUSADA) {
           mensagens.value = mensagens.value.slice(0, -1);
@@ -215,18 +228,24 @@ export function useTesteDoAgente(
   };
 
   const enviar = async (texto, imagens = []) => {
-    const pergunta =
-      (texto || '').trim() || (imagens.length ? textoSoFoto : '');
+    const digitado = (texto || '').trim();
+    const pergunta = digitado || (imagens.length ? toValue(textoSoFoto) : '');
+    const teto = toValue(tetoDaFoto);
     if (!pergunta || digitando.value || !agente.value?.id) return;
-    if (tetoDaFoto && imagens.some(imagem => imagem.size > tetoDaFoto)) {
+    if (teto && imagens.some(imagem => imagem.size > teto)) {
       ultima.value = null;
-      aviso.value = { tipo: AVISO_TESTE.FOTO_RECUSADA, grande: true, pergunta };
+      aviso.value = {
+        tipo: AVISO_TESTE.FOTO_RECUSADA,
+        grande: true,
+        pergunta,
+        texto: digitado,
+      };
       return;
     }
     atualizado.value = false;
     const fotos = imagens.length ? await lerFotos(pergunta, imagens) : [];
     if (!fotos) return;
-    pendente = { pergunta, fotos, anterior: historico() };
+    pendente = { pergunta, fotos, anterior: historico(), digitado };
     acrescentar({
       de: 'cliente',
       texto: pergunta,

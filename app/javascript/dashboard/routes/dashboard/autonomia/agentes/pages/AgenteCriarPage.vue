@@ -39,7 +39,7 @@ import {
   estadoDeAtendimento,
 } from '../utils/estadoDoAgente';
 import { caixasDaEquipe } from '../utils/ondeTrabalha';
-import { fecharFrase } from '../utils/pagina';
+import { fecharFrase, MAX_FOTO } from '../utils/pagina';
 import {
   canalSugerido,
   horariosDasCaixas,
@@ -98,6 +98,37 @@ const route = useRoute();
 const router = useRouter();
 const store = useStore();
 const { t } = useI18n();
+
+// Chaves estáticas: o gate do e-mail não aceita chave de tradução montada em tempo de execução.
+const NOME_DO_CANAL = {
+  WHATSAPP: () => t('AGENTS.JORNADA.CRIAR.CANAL.WHATSAPP'),
+  INSTAGRAM: () => t('AGENTS.JORNADA.CRIAR.CANAL.INSTAGRAM'),
+  SITE: () => t('AGENTS.JORNADA.CRIAR.CANAL.SITE'),
+  EMAIL: () => t('AGENTS.JORNADA.CRIAR.CANAL.EMAIL'),
+  FACEBOOK: () => t('AGENTS.JORNADA.CRIAR.CANAL.FACEBOOK'),
+  TELEGRAM: () => t('AGENTS.JORNADA.CRIAR.CANAL.TELEGRAM'),
+};
+const CONVERSA_DO_MODELO = {
+  SUPPORT: () => ({
+    cliente: t('AGENTS.JORNADA.MODELOS.SUPPORT.CLIENTE'),
+    agente: t('AGENTS.JORNADA.MODELOS.SUPPORT.AGENTE'),
+  }),
+  SDR: () => ({
+    cliente: t('AGENTS.JORNADA.MODELOS.SDR.CLIENTE'),
+    agente: t('AGENTS.JORNADA.MODELOS.SDR.AGENTE'),
+  }),
+  RECEPTION: () => ({
+    cliente: t('AGENTS.JORNADA.MODELOS.RECEPTION.CLIENTE'),
+    agente: t('AGENTS.JORNADA.MODELOS.RECEPTION.AGENTE'),
+  }),
+};
+const IDEIA = {
+  ROUPAS: () => t('AGENTS.JORNADA.CRIAR.CONTE.IDEIAS.ROUPAS'),
+  DOCES: () => t('AGENTS.JORNADA.CRIAR.CONTE.IDEIAS.DOCES'),
+  ESTETICA: () => t('AGENTS.JORNADA.CRIAR.CONTE.IDEIAS.ESTETICA'),
+  OFICINA: () => t('AGENTS.JORNADA.CRIAR.CONTE.IDEIAS.OFICINA'),
+};
+
 const celular = useMediaQuery('(max-width: 767px)');
 
 const modeloPedido = modeloDaQuery(route.query);
@@ -112,10 +143,16 @@ const conversa = useConversaDeCriacao({
   papel: () =>
     ajudanteNaCriacao?.ajudante.value ? PAPEL_AJUDANTE_NA_QUERY : null,
 });
+const fase2 = useFase2();
 // O rascunho ainda está sendo escrito pelo Construtor: só o id; quem diz "incompleto" é o 422.
+// #1427 — na Fase 2 o servidor confere a foto (FotoConferida); a de mais de 5 MB nem sai do navegador. Fora dela, como
+// na main. Lido a cada envio: a Fase 2 da conta pode chegar à store depois do setup.
 const teste = useTesteDoAgente(
   computed(() => ({ id: conversa.agenteId.value })),
-  { textoSoFoto: t('AGENTS.JORNADA.CRIAR.CONFIRA.FOTO') }
+  {
+    textoSoFoto: t('AGENTS.JORNADA.CRIAR.CONFIRA.FOTO'),
+    tetoDaFoto: () => (fase2.value ? MAX_FOTO : 0),
+  }
 );
 // O copiloto não tem canal: as caixas só são lidas para quem atende clientes (#1494).
 const ocupacao = useCanaisOcupados({ aoMontar: false });
@@ -172,7 +209,6 @@ const modelo = computed(() =>
   modeloDoTipo(agente.value?.agent_type, modeloPedido)
 );
 const empresa = computed(() => contaDaStore.value?.(contaId.value)?.name || '');
-const fase2 = useFase2();
 const irPara = (proxima, { empilhar = false } = {}) => {
   const query = { ...route.query, etapa: proxima };
   return empilhar ? router.push({ query }) : router.replace({ query });
@@ -287,9 +323,7 @@ const rotuloComecar = computed(() => {
   }
   if (!sugerido.value) return '';
   const tipo = tipoDoCanalParaTexto(sugerido.value);
-  const canal = tipo.chave
-    ? t(`AGENTS.JORNADA.CRIAR.CANAL.${tipo.chave}`)
-    : tipo.nome;
+  const canal = tipo.chave ? NOME_DO_CANAL[tipo.chave]() : tipo.nome;
   return t('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_NO', { canal });
 });
 
@@ -313,11 +347,9 @@ const carregandoComecar = computed(() => {
 });
 const tituloDaConfiraNoCelular = computed(() => {
   if (ajudante.value) return t('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_AJUDANTE');
-  return t(
-    interno.value
-      ? 'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO'
-      : 'AGENTS.JORNADA.CRIAR.CONFIRA.TITULO'
-  );
+  return interno.value
+    ? t('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO')
+    : t('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO');
 });
 
 const etapaPedida = computed(() => etapaDaQuery(route.query));
@@ -392,41 +424,33 @@ watch(etapa, async nova => {
 });
 
 const exemplo = computed(() => {
-  const base = `AGENTS.JORNADA.MODELOS.${exemploDoModelo(modelo.value)}`;
-  const hora = (
-    MODELOS.find(item => item.i18n === exemploDoModelo(modelo.value)) || {}
-  ).horario;
+  const chave = exemploDoModelo(modelo.value);
+  const hora = (MODELOS.find(item => item.i18n === chave) || {}).horario;
+  const falas = CONVERSA_DO_MODELO[chave]();
   return [
-    { de: 'cliente', texto: t(`${base}.CLIENTE`), hora },
-    { de: 'agente', texto: t(`${base}.AGENTE`), hora },
+    { de: 'cliente', texto: falas.cliente, hora },
+    { de: 'agente', texto: falas.agente, hora },
   ];
 });
 const tituloDoExemplo = computed(() => {
   if (ajudante.value) return t('AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO_AJUDANTE');
-  return t(
-    interno.value
-      ? 'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO_COPILOTO'
-      : 'AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO'
-  );
+  return interno.value
+    ? t('AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO_COPILOTO')
+    : t('AGENTS.JORNADA.CRIAR.EXEMPLO.TITULO');
 });
 // O exemplo do agente que não fala com cliente é uma frase, não um celular.
 const exemploInterno = computed(() => {
   if (ajudante.value && semNome.value) {
     return t('AGENTS.JORNADA.CRIAR.EXEMPLO.AJUDANTE_SEM_NOME');
   }
-  return t(
-    ajudante.value
-      ? 'AGENTS.JORNADA.CRIAR.EXEMPLO.AJUDANTE'
-      : 'AGENTS.JORNADA.CRIAR.EXEMPLO.COPILOTO',
-    { nome: nome.value }
-  );
+  return ajudante.value
+    ? t('AGENTS.JORNADA.CRIAR.EXEMPLO.AJUDANTE', { nome: nome.value })
+    : t('AGENTS.JORNADA.CRIAR.EXEMPLO.COPILOTO', { nome: nome.value });
 });
 const ideias = computed(() =>
   interno.value || modelo.value === MODELO_DO_MEU_JEITO || idInicial
     ? []
-    : IDEIAS_PARA_COMECAR.map(chave =>
-        t(`AGENTS.JORNADA.CRIAR.CONTE.IDEIAS.${chave}`)
-      )
+    : IDEIAS_PARA_COMECAR.map(chave => IDEIA[chave]())
 );
 const exemploDoCampo = computed(() => {
   if (idInicial) return '';
@@ -1008,6 +1032,8 @@ onMounted(() => {
           :mensagens="teste.mensagens.value"
           :digitando="teste.digitando.value"
           :problema="teste.aviso.value?.tipo ?? null"
+          :problema-texto="teste.aviso.value?.mensagem || ''"
+          :texto-devolvido="teste.aviso.value?.texto || ''"
           :atualizado="teste.atualizado.value"
           :respondidas="teste.respondidas.value"
           :conversa-pensando="conversa.pensando.value"

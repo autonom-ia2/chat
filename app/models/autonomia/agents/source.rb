@@ -195,7 +195,6 @@ module Autonomia
         progresso = { 'pagina' => pagina, 'total' => total }.to_json
         rows = self.class.where(id: id, sync_token: sync_token, status: self.class.statuses[:processing])
                    .update_all(["metadata = jsonb_set(metadata, '{#{PROGRESSO}}', ?::jsonb), updated_at = ?", progresso, Time.current])
-        @progresso_anotado = true if rows.positive?
         rows.positive?
       end
 
@@ -274,11 +273,10 @@ module Autonomia
         paginas_de_fora.present? ? base.merge(PAGINAS_DE_FORA => paginas_de_fora) : base
       end
 
-      # Só escreve o metadata quando a marca muda (sem marca antes nem agora, a escrita é a de sempre). #1427: com
-      # progresso anotado nesta leitura também (ele está só no banco, não neste objeto), para a chave sair.
+      # #1427 — escreve sempre o metadata desta leitura: o progresso do OCR está só no banco (anotado por update_all, às
+      # vezes por outra instância), e comparar com este objeto deixaria a chave sobrando num material `failed`.
       def com_paginas_desta_leitura(attrs)
-        novo = metadata_desta_leitura
-        novo == (metadata || {}) && !@progresso_anotado ? attrs : attrs.merge(metadata: novo)
+        attrs.merge(metadata: metadata_desta_leitura)
       end
 
       def previous_review_attributes

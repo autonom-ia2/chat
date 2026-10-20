@@ -20,6 +20,10 @@ const props = defineProps({
   mensagens: { type: Array, default: () => [] },
   digitando: { type: Boolean, default: false },
   problema: { type: String, default: null },
+  // #1427 — foto recusada pela conferência (`problema` foto_recusada): o motivo do servidor (vazio = passou de 5 MB no
+  // navegador) e o que a pessoa escreveu junto, que volta ao campo.
+  problemaTexto: { type: String, default: '' },
+  textoDevolvido: { type: String, default: '' },
   atualizado: { type: Boolean, default: false },
   respondidas: { type: Number, default: 0 },
   // A conversa ao lado ainda está gerando: "Respondeu errado?" espera.
@@ -51,10 +55,16 @@ const emit = defineEmits([
 ]);
 
 const { t } = useI18n();
-const NS = 'AGENTS.JORNADA.CRIAR.CONFIRA';
 
 const pergunta = ref('');
 const pediuCorrecao = ref(false);
+
+watch(
+  () => props.textoDevolvido,
+  texto => {
+    if (texto && !pergunta.value) pergunta.value = texto;
+  }
+);
 
 watch(
   () => props.respondidas,
@@ -75,15 +85,42 @@ const celularMensagens = computed(() =>
     return mensagem.passaria
       ? [
           mensagem,
-          { de: 'aviso', texto: t(`${NS}.PASSARIA`, { nome: props.nome }) },
+          {
+            de: 'aviso',
+            texto: t('AGENTS.JORNADA.CRIAR.CONFIRA.PASSARIA', {
+              nome: props.nome,
+            }),
+          },
         ]
       : [mensagem];
   })
 );
 
-const textosDasPerguntas = computed(() =>
-  props.perguntas.map(chave => t(`${NS}.PERGUNTAS.${chave}`))
-);
+// As chaves escritas por inteiro (o gate do i18n não aceita chave montada); `perguntasDeTeste` só usa estas.
+const textosDasPerguntas = computed(() => {
+  const textos = {
+    QUANTO_CUSTA: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.QUANTO_CUSTA'),
+    SABADO: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.SABADO'),
+    PESSOA: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.PESSOA'),
+    PEDIDO: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.PEDIDO'),
+    DESCONTO: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.DESCONTO'),
+    AJUDA: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.AJUDA'),
+    TROCAR: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.TROCAR'),
+    COMO_RESPONDO: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.COMO_RESPONDO'),
+    PROXIMO_PASSO: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.PROXIMO_PASSO'),
+    RASCUNHO: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.RASCUNHO'),
+    AJUDANTE_O_QUE_SABE: t(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.AJUDANTE_O_QUE_SABE'
+    ),
+    AJUDANTE_CLIENTE: t(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.AJUDANTE_CLIENTE'
+    ),
+    AJUDANTE_NAO_SABE: t(
+      'AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.AJUDANTE_NAO_SABE'
+    ),
+  };
+  return props.perguntas.map(chave => textos[chave]);
+});
 
 const ultima = computed(() => props.mensagens[props.mensagens.length - 1]);
 const podeDizerErrado = computed(
@@ -96,17 +133,21 @@ const podeDizerErrado = computed(
 );
 
 const tituloDoTeste = computed(() => {
-  if (props.ajudante) return t(`${NS}.TITULO_AJUDANTE`);
-  return props.interno ? t(`${NS}.TITULO_COPILOTO`) : t(`${NS}.TITULO`);
+  if (props.ajudante) return t('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_AJUDANTE');
+  return props.interno
+    ? t('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO_COPILOTO')
+    : t('AGENTS.JORNADA.CRIAR.CONFIRA.TITULO');
 });
 
 const estadoDoCabecalho = computed(() => {
   const nome = { nome: props.nome };
-  if (props.digitando) return t(`${NS}.ESCREVENDO`, nome);
-  if (props.ajudante) return t(`${NS}.AJUDA_AOS_AGENTES`, nome);
+  if (props.digitando)
+    return t('AGENTS.JORNADA.CRIAR.CONFIRA.ESCREVENDO', nome);
+  if (props.ajudante)
+    return t('AGENTS.JORNADA.CRIAR.CONFIRA.AJUDA_AOS_AGENTES', nome);
   return props.interno
-    ? t(`${NS}.AJUDA_DA_EQUIPE`, nome)
-    : t(`${NS}.ATENDIDO_POR`, nome);
+    ? t('AGENTS.JORNADA.CRIAR.CONFIRA.AJUDA_DA_EQUIPE', nome)
+    : t('AGENTS.JORNADA.CRIAR.CONFIRA.ATENDIDO_POR', nome);
 });
 
 const erro = computed(() => {
@@ -114,13 +155,17 @@ const erro = computed(() => {
   const tentar = t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO');
   const MAPA = {
     falha: {
-      titulo: t(`${NS}.FALHA`, nome),
+      titulo: t('AGENTS.JORNADA.CRIAR.CONFIRA.FALHA', nome),
       garantia: props.interno
-        ? t(`${NS}.FALHA_GARANTIA_COPILOTO`)
-        : t(`${NS}.FALHA_GARANTIA`),
+        ? t('AGENTS.JORNADA.CRIAR.CONFIRA.FALHA_GARANTIA_COPILOTO')
+        : t('AGENTS.JORNADA.CRIAR.CONFIRA.FALHA_GARANTIA'),
       acao: tentar,
     },
-    demora: { titulo: t(`${NS}.DEMORA`), tom: 'ambar', acao: tentar },
+    demora: {
+      titulo: t('AGENTS.JORNADA.CRIAR.CONFIRA.DEMORA'),
+      tom: 'ambar',
+      acao: tentar,
+    },
     offline: {
       titulo: t('AGENTS.JORNADA.ERRO.OFFLINE'),
       garantia: t('AGENTS.JORNADA.ERRO.OFFLINE_GARANTIA'),
@@ -129,8 +174,14 @@ const erro = computed(() => {
     },
     incompleto: {
       titulo: props.celular
-        ? t(`${NS}.INCOMPLETO_CELULAR`, nome)
-        : t(`${NS}.INCOMPLETO`, nome),
+        ? t('AGENTS.JORNADA.CRIAR.CONFIRA.INCOMPLETO_CELULAR', nome)
+        : t('AGENTS.JORNADA.CRIAR.CONFIRA.INCOMPLETO', nome),
+      tom: 'ambar',
+    },
+    // #1427 — sem "Tentar de novo": mandar a mesma foto não adianta.
+    foto_recusada: {
+      titulo:
+        props.problemaTexto || t('AGENTS.JORNADA.PAGINA.SABE.FOTO_GRANDE'),
       tom: 'ambar',
     },
   };
@@ -169,7 +220,9 @@ const respondeuErrado = () => {
       >
         {{ tituloDoTeste }}
       </h2>
-      <p class="m-0 text-sm text-n-slate-11">{{ t(`${NS}.TEXTO`) }}</p>
+      <p class="m-0 text-sm text-n-slate-11">
+        {{ t('AGENTS.JORNADA.CRIAR.CONFIRA.TEXTO') }}
+      </p>
       <!-- No celular a dica fica aqui em cima: a barra fixa embaixo já leva perguntas, campo e Começar. -->
       <p
         v-if="celular && !respondidas"
@@ -180,7 +233,7 @@ const respondeuErrado = () => {
           class="i-lucide-lightbulb size-4 mt-0.5 shrink-0"
           aria-hidden="true"
         />
-        {{ t(`${NS}.TESTE_OPCIONAL`, { nome }) }}
+        {{ t('AGENTS.JORNADA.CRIAR.CONFIRA.TESTE_OPCIONAL', { nome }) }}
       </p>
     </div>
 
@@ -198,7 +251,7 @@ const respondeuErrado = () => {
           class="px-2 text-xs font-semibold text-white underline rounded-lg min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:opacity-50 disabled:cursor-not-allowed"
           @click="emit('limpar')"
         >
-          {{ t(`${NS}.LIMPAR`) }}
+          {{ t('AGENTS.JORNADA.CRIAR.CONFIRA.LIMPAR') }}
         </button>
       </template>
       <template #depois>
@@ -209,14 +262,18 @@ const respondeuErrado = () => {
           class="flex items-center self-center gap-1.5 px-3 py-1 m-0 text-xs rounded-full bg-n-teal-3 text-n-slate-12"
         >
           <span class="i-lucide-refresh-cw size-3.5" aria-hidden="true" />
-          {{ t(`${NS}.ATUALIZADO`) }}
+          {{ t('AGENTS.JORNADA.CRIAR.CONFIRA.ATUALIZADO') }}
         </p>
         <p
           v-if="!mensagens.length && !digitando"
           data-vazio
           class="self-center px-4 m-0 text-sm text-center text-n-slate-11"
         >
-          {{ celular ? t(`${NS}.VAZIO_CELULAR`) : t(`${NS}.VAZIO`) }}
+          {{
+            celular
+              ? t('AGENTS.JORNADA.CRIAR.CONFIRA.VAZIO_CELULAR')
+              : t('AGENTS.JORNADA.CRIAR.CONFIRA.VAZIO')
+          }}
         </p>
         <AgenteErro
           v-if="erro"
@@ -234,7 +291,7 @@ const respondeuErrado = () => {
           class="self-start px-1 text-sm font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
           @click="respondeuErrado"
         >
-          {{ t(`${NS}.RESPONDEU_ERRADO`) }}
+          {{ t('AGENTS.JORNADA.CRIAR.CONFIRA.RESPONDEU_ERRADO') }}
         </button>
       </template>
       <template v-if="!celular" #rodape>
@@ -243,7 +300,7 @@ const respondeuErrado = () => {
         >
           <RespostasRapidas
             data-perguntas
-            :rotulo="t(`${NS}.PERGUNTAS_ROTULO`)"
+            :rotulo="t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS_ROTULO')"
             :opcoes="textosDasPerguntas"
             :desabilitado="digitando"
             @escolher="perguntar"
@@ -252,7 +309,7 @@ const respondeuErrado = () => {
             v-model="pergunta"
             anexar
             so-imagens
-            :placeholder="t(`${NS}.ESCREVA`)"
+            :placeholder="t('AGENTS.JORNADA.CRIAR.CONFIRA.ESCREVA')"
             :enviando="digitando"
             @enviar="enviar"
           />
@@ -271,7 +328,7 @@ const respondeuErrado = () => {
       <template v-if="celular">
         <RespostasRapidas
           data-perguntas
-          :rotulo="t(`${NS}.PERGUNTAS_ROTULO`)"
+          :rotulo="t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS_ROTULO')"
           :opcoes="textosDasPerguntas"
           :desabilitado="digitando"
           @escolher="perguntar"
@@ -280,7 +337,7 @@ const respondeuErrado = () => {
           v-model="pergunta"
           anexar
           so-imagens
-          :placeholder="t(`${NS}.ESCREVA`)"
+          :placeholder="t('AGENTS.JORNADA.CRIAR.CONFIRA.ESCREVA')"
           :enviando="digitando"
           @enviar="enviar"
         />
@@ -294,7 +351,7 @@ const respondeuErrado = () => {
           class="i-lucide-lightbulb size-4 mt-0.5 shrink-0"
           aria-hidden="true"
         />
-        {{ t(`${NS}.TESTE_OPCIONAL`, { nome }) }}
+        {{ t('AGENTS.JORNADA.CRIAR.CONFIRA.TESTE_OPCIONAL', { nome }) }}
       </p>
       <div v-if="rotuloComecar" data-comecar class="flex flex-col gap-1">
         <AgenteBotao
@@ -310,8 +367,10 @@ const respondeuErrado = () => {
           {{
             textoComecar ||
             (interno
-              ? t(`${NS}.COMECAR_TEXTO_COPILOTO`, { nome })
-              : t(`${NS}.COMECAR_TEXTO`, { nome }))
+              ? t('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_TEXTO_COPILOTO', {
+                  nome,
+                })
+              : t('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_TEXTO', { nome }))
           }}
         </p>
       </div>
@@ -351,10 +410,10 @@ const respondeuErrado = () => {
           class="i-lucide-sliders-horizontal size-4 shrink-0"
           aria-hidden="true"
         />
-        {{ t(`${NS}.AJUSTES`) }}
+        {{ t('AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES') }}
       </button>
       <p id="confira-ajustes-texto" class="px-1 m-0 text-xs text-n-slate-11">
-        {{ t(`${NS}.AJUSTES_TEXTO`, { nome }) }}
+        {{ t('AGENTS.JORNADA.CRIAR.CONFIRA.AJUSTES_TEXTO', { nome }) }}
       </p>
     </div>
   </section>

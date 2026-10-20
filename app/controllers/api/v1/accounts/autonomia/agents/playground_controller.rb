@@ -9,8 +9,9 @@ class Api::V1::Accounts::Autonomia::Agents::PlaygroundController < Api::V1::Acco
   # MULTIMODAL: aceita `images` (array de data-urls) anexadas à mensagem atual. Temporário — as
   # imagens chegam inline em base64 (sem ActiveStorage); o modelo as lê como input_image neste turno.
   # #1427 — na Fase 2 (fora da cotação) a foto do teste passa pelas conferências do material (FotoConferida): a recusada
-  # responde 422 com o motivo, em vez de sumir calada. A foto vale só neste turno: vai ao modelo e fica no pedido
-  # temporário (Crm::Ai::InteractiveRequest, Redis, TTL de 30 min); não vira conversa, mensagem, anexo nem material.
+  # responde 422 com o motivo, em vez de sumir calada. A foto vale só neste turno: não vira conversa, mensagem, anexo nem
+  # material. Ela não é apagada na hora: fica no pedido temporário (Crm::Ai::InteractiveRequest, no Redis, até 30 min) e
+  # o log e o Sentry não a veem (`images` em filter_parameter_logging).
   def test
     return render_unprocessable('message_required') if message_param.blank?
 

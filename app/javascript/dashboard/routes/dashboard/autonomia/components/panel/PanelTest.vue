@@ -67,16 +67,16 @@ useAutoScroll(scrollRef, () => [messages.value.length, isSending.value]);
 
 // handoff.reason is an allowlisted code — map it to a friendly label so raw
 // codes never leak to the user. Reuses the PERFORMANCE reason labels.
-const REASON_LABEL_KEYS = {
-  low_confidence: 'AGENTS.PERFORMANCE.REASONS.CODES.low_confidence',
-  ai_unavailable: 'AGENTS.PERFORMANCE.REASONS.CODES.ai_unavailable',
-  human_requested: 'AGENTS.PERFORMANCE.REASONS.CODES.human_requested',
-  missing_knowledge: 'AGENTS.PERFORMANCE.REASONS.CODES.missing_knowledge',
-  policy: 'AGENTS.PERFORMANCE.REASONS.CODES.policy',
-  other: 'AGENTS.PERFORMANCE.REASONS.OTHER',
+const REASON_LABELS = {
+  low_confidence: () => t('AGENTS.PERFORMANCE.REASONS.CODES.low_confidence'),
+  ai_unavailable: () => t('AGENTS.PERFORMANCE.REASONS.CODES.ai_unavailable'),
+  human_requested: () => t('AGENTS.PERFORMANCE.REASONS.CODES.human_requested'),
+  missing_knowledge: () =>
+    t('AGENTS.PERFORMANCE.REASONS.CODES.missing_knowledge'),
+  policy: () => t('AGENTS.PERFORMANCE.REASONS.CODES.policy'),
 };
 const reasonLabel = reason =>
-  t(REASON_LABEL_KEYS[reason] ?? 'AGENTS.PERFORMANCE.REASONS.OTHER');
+  REASON_LABELS[reason]?.() ?? t('AGENTS.PERFORMANCE.REASONS.OTHER');
 
 // The backend test endpoint takes the prior turns as { role, content }.
 const history = computed(() =>
@@ -198,7 +198,13 @@ const onSend = async ({ content, images = [] }) => {
     if (requestId !== requestSequence) return;
     await pushAssistantTurn(data, requestId);
   } catch (error) {
-    if (requestId === requestSequence) useAlert(t('AGENTS.TEST.ERROR'));
+    // #1427 — na Fase 2 o servidor confere a foto e diz o motivo da recusa (422 `foto_recusada`): ele vai para o aviso.
+    const recusa =
+      error?.response?.data?.code === 'foto_recusada' &&
+      error.response.data.error;
+    if (requestId === requestSequence) {
+      useAlert(recusa || t('AGENTS.TEST.ERROR'));
+    }
   } finally {
     if (requestId === requestSequence) isSending.value = false;
   }

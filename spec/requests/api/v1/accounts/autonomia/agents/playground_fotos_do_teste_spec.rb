@@ -131,10 +131,32 @@ RSpec.describe 'Autonomia agent playground - foto do teste', type: :request do
     end
   end
 
+  describe 'the Lia (instruction kept) in the Fase 2' do
+    let(:lia) do
+      Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Sena').call
+    end
+
+    it 'keeps the rule of the main: no 422, the declared type only' do
+      post "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}/test",
+           params: { message: 'Quanto custa este?', images: [data_url("Pastel R$ 8,00\n"), data_url(png)] },
+           headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:accepted)
+      expect(pedido.dig('inputs', 'images')).to eq([data_url("Pastel R$ 8,00\n"), data_url(png)])
+    end
+  end
+
+  # O log do Rails não leva as fotos (o Sentry tem o filtro próprio, no SentryHttpAuthScrubber).
+  it 'keeps the photos out of the Rails log' do
+    filtro = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+
+    expect(filtro.filter('message' => 'Oi', 'images' => [data_url(png)])).to eq('message' => 'Oi', 'images' => '[FILTERED]')
+  end
+
   describe 'outside the Fase 2' do
     before { Autonomia::Agents::Fase2.desligar!(account) }
 
-    it 'keeps the check of the main: the declared type and the photo that fails is dropped' do
+    it 'keeps the check of the main: only the declared type, so text declared as a photo still goes to the model' do
       testar([data_url("Pastel R$ 8,00\n"), data_url(png)])
 
       expect(response).to have_http_status(:accepted)

@@ -66,6 +66,21 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     expect(source.reload.metadata).not_to have_key('progresso')
   end
 
+  # A instância que fecha a leitura foi carregada antes da anotação (o progresso está só no banco): mesmo assim a chave sai.
+  { 'fails' => ->(fonte, token) { fonte.mark_failed!(token, 'ingestion_error') },
+    'restores the previous generation' => ->(fonte, token) { fonte.restore_previous_generation!(token) } }.each do |caso, fechar|
+    it "clears the progress written by another instance when the reading #{caso}" do
+      token = source.begin_ingestion!
+      carregada_antes = Autonomia::Agents::Source.find(source.id)
+      Autonomia::Agents::Source.find(source.id).anotar_progresso!(pagina: 3, total: 30)
+      expect(progresso_no_banco).to eq('pagina' => 3, 'total' => 30)
+
+      expect(fechar.call(carregada_antes, token)).to be(true)
+
+      expect(progresso_no_banco).to be_nil
+    end
+  end
+
   it 'writes nothing from a reading that another one superseded' do
     source.begin_ingestion!
     Autonomia::Agents::Source.find(source.id).begin_ingestion!
