@@ -120,6 +120,9 @@ module Autonomia
       ORIGEM_FOTO_DA_CRIACAO = 'foto_da_criacao'.freeze
       # #1426 — as páginas do PDF que ficaram de fora da leitura (teto, página grande, prazo), para o aviso ao dono.
       PAGINAS_DE_FORA = 'paginas_de_fora'.freeze
+      # #1427 — "Lendo a página X de N…": a página que o OCR do PDF está lendo agora e quantas ele vai ler, só durante a
+      # leitura (sai quando ela termina, falha ou é superada).
+      PROGRESSO = 'progresso'.freeze
       # #1426 — teto da releitura, o mesmo do painel (TETO_DA_RELEITURA_MS em autonomiaSources.js).
       TETO_DA_RELEITURA = 10.minutes
       attr_accessor :paginas_de_fora
@@ -141,7 +144,7 @@ module Autonomia
         # needs_review+failed (e mesmo restaurando só o status, sem review_summary o Retriever perderia
         # a exclusão "fora do negócio" e o Construtor leria contexto em branco). Restaura tudo.
         # #1426 — as páginas de fora da leitura anterior saem já aqui: a leitura nova escreve as dela no fim.
-        base = (metadata || {}).except(PAGINAS_DE_FORA)
+        base = (metadata || {}).except(PAGINAS_DE_FORA, PROGRESSO)
         # CORRIDA: se a fonte JÁ estava `processing` (um re-sync anterior em curso), os campos de
         # review já estão rebaixados/em branco — NÃO os capture (preservaria lixo). Mantém o
         # prev_review verdadeiro do re-sync anterior. Só captura snapshot fresco quando não-processing.
@@ -183,6 +186,17 @@ module Autonomia
       # confere antes de cada página e para quando outra leitura venceu.
       def leitura_vigente?
         self.class.exists?(id: id, sync_token: sync_token, status: self.class.statuses[:processing])
+      end
+
+      # #1427 — o OCR anota a página que começa a ler, sob a mesma guarda das outras escritas da leitura (mesmo token e ainda
+      # lendo): um job superado não escreve. Escreve só a chave do progresso (o resto do metadata fica) e renova o
+      # updated_at: material avançando não é material parado. A escrita de fim de leitura tira a chave.
+      def anotar_progresso!(pagina:, total:)
+        progresso = { 'pagina' => pagina, 'total' => total }.to_json
+        rows = self.class.where(id: id, sync_token: sync_token, status: self.class.statuses[:processing])
+                   .update_all(["metadata = jsonb_set(metadata, '{#{PROGRESSO}}', ?::jsonb), updated_at = ?", progresso, Time.current])
+        @progresso_anotado = true if rows.positive?
+        rows.positive?
       end
 
       # #1426 — lendo agora, e não parado: começou há menos que o teto da releitura (o mesmo TETO_DA_RELEITURA_MS do painel,
@@ -256,14 +270,15 @@ module Autonomia
 
       # O metadata com o que ficou de fora NESTA leitura (Source#paginas_de_fora): a marca da leitura anterior sai sempre.
       def metadata_desta_leitura
-        base = (metadata || {}).except(PAGINAS_DE_FORA)
+        base = (metadata || {}).except(PAGINAS_DE_FORA, PROGRESSO)
         paginas_de_fora.present? ? base.merge(PAGINAS_DE_FORA => paginas_de_fora) : base
       end
 
-      # Só escreve o metadata quando a marca muda (sem marca antes nem agora, a escrita é a de sempre).
+      # Só escreve o metadata quando a marca muda (sem marca antes nem agora, a escrita é a de sempre). #1427: com
+      # progresso anotado nesta leitura também (ele está só no banco, não neste objeto), para a chave sair.
       def com_paginas_desta_leitura(attrs)
         novo = metadata_desta_leitura
-        novo == (metadata || {}) ? attrs : attrs.merge(metadata: novo)
+        novo == (metadata || {}) && !@progresso_anotado ? attrs : attrs.merge(metadata: novo)
       end
 
       def previous_review_attributes

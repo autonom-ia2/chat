@@ -13,6 +13,9 @@ json.metadata do
   json.chunk_count source.metadata['chunk_count']
   json.byte_size source.metadata['byte_size']
   json.mime source.metadata['mime']
+  # #1427 — "Lendo a página X de N…" ({ pagina, total }), só enquanto lê. Só o OCR da Fase 2 grava.
+  progresso = source.metadata[Autonomia::Agents::Source::PROGRESSO]
+  json.progresso progresso if progresso.present? && source.processing?
 end
 # Revisor v2: parecer da IA Revisora por fonte (nota/confiança/recomendação/resumo). NUNCA expõe a
 # REVIEWER_INSTRUCTION. nil em fontes antigas / ainda não revisadas.

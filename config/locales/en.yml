@@ -592,6 +592,10 @@ en:
       foto_animada: 'Animated images do not work as material. Send a still photo.'
       lendo_ainda: 'This material is still being read. Wait for it to finish before reading it again.'
       file_invalid: 'Send the file itself.'
+    # #1427 — the photo sent in the agent Test (valid only in the test; never becomes material).
+    teste:
+      foto_animada: 'Send a still photo. An animated photo cannot be read.'
+      foto_muitas: 'Send up to %{max} photos per question.'
     agents:
       modo_manual: 'This agent is in manual mode: its instruction was written by hand. Edit the instruction by hand or switch the agent back to guided mode to change it by chatting.'
       conflito_de_trava: 'The agent changed at the same time. Try again.'
