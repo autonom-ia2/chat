@@ -10,13 +10,14 @@ require 'rails_helper'
 #   - antes: a avaliação que já existia, a da última mensagem do cliente ("ok, fico no aguardo"). Sem o #1923, o card
 #     ficava onde ela o deixou até o cliente voltar;
 #   - depois: a avaliação agendada pela mensagem da equipe.
-# Casos por ramo: valores numa mensagem, valores numa rajada de duas (uma avaliação só) e o controle, em que a equipe
-# ainda não mandou valor nenhum ("amanhã te mando"): o card tem de ficar.
+# Casos por ramo: valores numa mensagem, valores numa rajada de duas (uma avaliação só), o controle, em que a equipe
+# ainda não mandou valor nenhum ("amanhã te mando"), e o cruzado: o cliente tem dois pedidos na conversa, o card em foco
+# é o primeiro e a equipe manda os valores do OUTRO. Nos dois últimos o card em foco tem de ficar.
 # As saídas vão para EVAL_SAIDA (JSON). Nenhum prompt é gravado.
 module MensagemDaEquipeEval
   TETO_USD = 0.27
   ATENDIMENTO = 'Em atendimento'.freeze
-  TIPOS = %i[valores rajada controle].freeze
+  TIPOS = %i[valores rajada controle cruzado].freeze
   RAMOS = {
     'seguro' => {
       funil: 'Comercial', enviada: 'Cotação enviada', fechado: 'Fechado',
@@ -30,7 +31,10 @@ module MensagemDaEquipeEval
       ok: 'Ok, fico no aguardo.',
       valores: ['Pronto! Na seguradora A ficou R$ 2.380 por ano, em até 10x sem juros. Na B, R$ 2.610 com carro reserva.'],
       rajada: ['Segue a cotação do seu seguro auto.', 'Opção 1: R$ 2.380/ano em 10x. Opção 2: R$ 2.610/ano com carro reserva.'],
-      controle: 'Ainda estou aguardando o retorno de duas seguradoras, amanhã cedo te mando tudo.'
+      controle: 'Ainda estou aguardando o retorno de duas seguradoras, amanhã cedo te mando tudo.',
+      cruzado: { foco: 'Seguro auto', outro: 'Seguro residencial',
+                 pedido: 'E aproveitando, queria cotar também o seguro do meu apartamento.',
+                 valores: ['O seguro do seu apartamento ficou R$ 480 por ano, com cobertura de incêndio e danos elétricos.'] }
     },
     'clinica' => {
       funil: 'Pacientes', enviada: 'Orçamento enviado', fechado: 'Consulta agendada',
@@ -44,7 +48,9 @@ module MensagemDaEquipeEval
       ok: 'Tá bom, obrigada.',
       valores: ['A doutora indicou o clareamento de consultório, em 2 sessões: R$ 1.200 à vista ou 4x de R$ 320.'],
       rajada: ['Falei com a doutora sobre o seu caso.', 'O clareamento fica R$ 1.200 à vista ou 4x de R$ 320, em 2 sessões.'],
-      controle: 'A doutora está em atendimento agora, assim que ela sair eu confirmo com ela e te falo.'
+      controle: 'A doutora está em atendimento agora, assim que ela sair eu confirmo com ela e te falo.',
+      cruzado: { foco: 'Clareamento dental', outro: 'Limpeza', pedido: 'Ah, e a limpeza, quanto fica?',
+                 valores: ['A limpeza com a higienista fica R$ 250, e dá para marcar ainda esta semana.'] }
     },
     'moveis' => {
       funil: 'Vendas', enviada: 'Proposta enviada', fechado: 'Fechado',
@@ -58,7 +64,10 @@ module MensagemDaEquipeEval
       ok: 'Combinado.',
       valores: ['Sua proposta ficou pronta: cozinha em MDF branco, 3,20 m, R$ 18.400 em até 12x, entrega em 35 dias.'],
       rajada: ['O projeto da sua cozinha ficou pronto!', 'Valor total R$ 18.400, em até 12x, com entrega em 35 dias.'],
-      controle: 'O projetista ainda está ajustando o desenho, devo te mandar até sexta.'
+      controle: 'O projetista ainda está ajustando o desenho, devo te mandar até sexta.',
+      cruzado: { foco: 'Cozinha planejada', outro: 'Guarda-roupa do casal',
+                 pedido: 'Queria também um guarda-roupa para o quarto do casal, a parede tem 2,50 m.',
+                 valores: ['O guarda-roupa do casal ficou R$ 7.900, em MDF amadeirado, em até 10x.'] }
     }
   }.freeze
 end
@@ -119,13 +128,14 @@ RSpec.describe 'Eval pago #1923: a mensagem da equipe com os valores move o card
     stages
   end
 
-  def card_em_atendimento(stages, nome)
-    contact = create(:contact, account: account, name: nome)
-    conversa = create(:conversation, account: account, inbox: inbox, contact: contact, assignee: ana)
+  def card_em_atendimento(stages, nome, titulo: "Pedido de #{nome}", focused_at: Time.current, conversa: nil)
+    conversa ||= create(:conversation, account: account, inbox: inbox, contact: create(:contact, account: account, name: nome),
+                                       assignee: ana)
+    contact = conversa.contact
     card = account.crm_cards.create!(pipeline: stages.values.first.pipeline, stage: stages[MensagemDaEquipeEval::ATENDIMENTO],
-                                     contact: contact, primary_conversation: conversa, inbox: inbox, title: "Pedido de #{nome}")
+                                     contact: contact, primary_conversation: conversa, inbox: inbox, title: titulo)
     Crm::CardConversation.find_or_create_by!(account: account, card: card, conversation: conversa)
-                         .update!(is_primary: true, focused_at: Time.current)
+                         .update!(is_primary: true, focused_at: focused_at)
     [conversa, card]
   end
 
@@ -153,8 +163,9 @@ RSpec.describe 'Eval pago #1923: a mensagem da equipe com os valores move o card
   def etapa(card) = card.reload.stage.name
 
   # A conversa até o "ok" do cliente e a avaliação dela: a etapa em que o card ficava antes do #1923.
-  def ate_o_ok(ramo, conversa, card, inicio)
+  def ate_o_ok(ramo, conversa, card, inicio, cruzado: false)
     fala(conversa, ramo[:pedido], :cliente)
+    travel_to(inicio + 30.seconds) { fala(conversa, ramo[:cruzado][:pedido], :cliente) } if cruzado
     travel_to(inicio + 1.minute) { fala(conversa, ramo[:espera], :equipe) }
     travel_to(inicio + 2.minutes) { fala(conversa, ramo[:ok], :cliente) }
     rodar_agendadas(inicio + 3.minutes)
@@ -171,16 +182,26 @@ RSpec.describe 'Eval pago #1923: a mensagem da equipe com os valores move o card
 
   def caso(nome_do_ramo, ramo, tipo)
     inicio = Time.current
-    conversa, card = card_em_atendimento(funil(ramo), "Cliente #{nome_do_ramo} #{tipo}")
-    antes = ate_o_ok(ramo, conversa, card, inicio)
-    textos = { valores: ramo[:valores], rajada: ramo[:rajada], controle: [ramo[:controle]] }.fetch(tipo)
+    conversa, card = cards_do_caso(nome_do_ramo, ramo, tipo)
+    antes = ate_o_ok(ramo, conversa, card, inicio, cruzado: tipo == :cruzado)
+    textos = { valores: ramo[:valores], rajada: ramo[:rajada], controle: [ramo[:controle]], cruzado: ramo[:cruzado][:valores] }.fetch(tipo)
     contagem = equipe_escreve(textos, conversa, inicio)
     travel_back
-    esperado = tipo == :controle ? MensagemDaEquipeEval::ATENDIMENTO : ramo[:enviada]
+    esperado = %i[controle cruzado].include?(tipo) ? MensagemDaEquipeEval::ATENDIMENTO : ramo[:enviada]
     registro = { ramo: nome_do_ramo, tipo: tipo, esperado: esperado, antes: antes, depois: etapa(card), **contagem,
                  ultima_sugestao: ultima_sugestao(card) }
     saida[:casos] << registro
     registro
+  end
+
+  # No cruzado, o outro pedido é um card aberto da mesma conversa, fora do foco; o card avaliado é o do foco.
+  def cards_do_caso(nome_do_ramo, ramo, tipo)
+    stages = funil(ramo)
+    nome = "Cliente #{nome_do_ramo} #{tipo}"
+    return card_em_atendimento(stages, nome) unless tipo == :cruzado
+
+    conversa, = card_em_atendimento(stages, nome, titulo: ramo[:cruzado][:outro], focused_at: 1.minute.ago)
+    card_em_atendimento(stages, nome, titulo: ramo[:cruzado][:foco], conversa: conversa)
   end
 
   def ultima_sugestao(card)
@@ -188,7 +209,7 @@ RSpec.describe 'Eval pago #1923: a mensagem da equipe com os valores move o card
     sugestao && { para: sugestao.to_stage&.name, confianca: sugestao.confidence.to_f, status: sugestao.status }
   end
 
-  it 'três ramos: valores, rajada e controle' do
+  it 'três ramos: valores, rajada, controle e assunto cruzado' do
     registros = MensagemDaEquipeEval::RAMOS.flat_map do |nome, ramo|
       MensagemDaEquipeEval::TIPOS.map { |tipo| caso(nome, ramo, tipo) }
     end
