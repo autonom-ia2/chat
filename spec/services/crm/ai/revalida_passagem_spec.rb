@@ -130,6 +130,42 @@ RSpec.describe Crm::Ai::RevalidaPassagem do
     expect(described_class.new(conversation).call).to eq(passa: false, motivo: 'a cotação foi enviada', decisao: 'resolvido')
   end
 
+  # Revisão do PR #1980 (HIGH 3): a janela da avaliação do card (12 mensagens por conversa) deixava de fora a falha
+  # antiga. A releitura lê esta conversa desde o card (até 120, as mais recentes), mais as 12 logo antes dele (o card
+  # nasce depois da mensagem que o criou), sem atividade e sem nota privada, no formato de recent_messages.
+  it 'lê a conversa desde o card, com as mensagens logo antes dele, sem atividade nem nota', :aggregate_failures do
+    criado = conversation.crm_cards.sole.created_at
+    fala = lambda do |texto, quando, **extra|
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: texto,
+                       created_at: quando, **extra)
+    end
+    fala.call('muito antiga', criado - 2.days)
+    12.times { |i| fala.call("antes #{i}", criado - (12 - i).minutes) }
+    20.times { |i| fala.call("depois #{i}", criado + (i + 1).minutes) }
+    fala.call('nota', criado + 30.minutes, private: true)
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :activity, content: 'atribuída',
+                     created_at: criado + 31.minutes)
+    responde(decisao: 'resolvido', motivo: 'ok')
+
+    described_class.new(conversation).call
+
+    conteudos = JSON.parse(enviado[:input])['recent_messages'].map { |m| m['content'] }
+    expect(conteudos).to include('antes 0', 'antes 11', 'depois 0', 'depois 19', 'Quero uma cotação')
+    expect(conteudos).not_to include('muito antiga', 'nota', 'atribuída')
+    expect(JSON.parse(enviado[:input])['recent_messages'].first).to include('role' => 'customer')
+  end
+
+  it 'passando de 120, fica com as mais recentes' do
+    stub_const("#{described_class}::MAX_MENSAGENS", 5)
+    stub_const("#{described_class}::ANTES_DO_CARD", 0)
+    8.times { |i| create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: "m#{i}") }
+    responde(decisao: 'resolvido', motivo: 'ok')
+
+    described_class.new(conversation).call
+
+    expect(JSON.parse(enviado[:input])['recent_messages'].map { |m| m['content'] }).to eq(%w[m3 m4 m5 m6 m7])
+  end
+
   it 'resposta fora do schema levanta, para quem chama decidir', :aggregate_failures do
     responde(decisao: 'talvez', motivo: '')
     expect { described_class.new(conversation).call }.to raise_error(Crm::Ai::RevalidaPassagem::RespostaInvalida)

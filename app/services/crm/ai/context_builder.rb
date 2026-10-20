@@ -49,6 +49,17 @@ module Crm
         }.merge(memoria_payload)
       end
 
+      # #1975: o histórico de UMA conversa para a releitura da passagem (Crm::Ai::RevalidaPassagem), no mesmo formato e
+      # com os mesmos papéis de recent_messages: as `limite` mais recentes desde `desde`, mais as `antes` logo anteriores
+      # a ele, sem atividade e sem nota privada. A janela de recent_messages (12 por conversa) não alcança a falha antiga.
+      def historico_da_conversa(conversation, desde:, limite:, antes:)
+        base = Message.where(conversation_id: conversation.id, private: false).where.not(message_type: :activity)
+                      .includes(:attachments)
+        depois = base.where(created_at: desde..).reorder(id: :desc).limit(limite).to_a
+        anteriores = base.where(created_at: ...desde).reorder(id: :desc).limit(antes).to_a
+        (anteriores + depois).sort_by(&:id).last(limite).map { |message| format_message(message) }
+      end
+
       private
 
       def memoria_payload

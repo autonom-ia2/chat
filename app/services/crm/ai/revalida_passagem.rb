@@ -15,8 +15,9 @@
 # porque a conversa seguiu para outro assunto. A decisão "resolvido" que as próprias listas contradizem vira
 # "problema_em_aberto" no código (coerência entre campos, sem ler o texto).
 #
-# Quem decide é o modelo, lendo a conversa até agora (as mesmas mensagens, papéis e estado que a avaliação do card vê,
-# Crm::Ai::ContextBuilder). Nada de regra por horário, por quem falou por último ou por lista de palavras.
+# Quem decide é o modelo, lendo a conversa desde o card (no mesmo formato e com os mesmos papéis que a avaliação do
+# card vê, Crm::Ai::ContextBuilder, mas com uma janela maior). Nada de regra por horário, por quem falou por último ou
+# por lista de palavras.
 #
 #   Crm::Ai::RevalidaPassagem.new(conversation).call  # => { passa: true|false, motivo: '...', decisao: '...' }
 #
@@ -30,6 +31,10 @@ class Crm::Ai::RevalidaPassagem
   MODEL = Crm::Ai::Config::MODEL_CLASSIFY
   EFFORT = Crm::Ai::Config::CLASSIFY_REASONING_EFFORT
   TIMEOUT = 40
+  # A conversa desde a criação do card, até MAX_MENSAGENS (as mais recentes, se passar). O card nasce DEPOIS da
+  # mensagem que o criou: as ANTES_DO_CARD logo anteriores também entram, para o pedido inicial não ficar de fora.
+  MAX_MENSAGENS = 120
+  ANTES_DO_CARD = 12
   # As duas primeiras passam; só "resolvido" tira o pedido.
   DECISOES = %w[pedido_de_pessoa problema_em_aberto resolvido].freeze
   NAO_PASSA = 'resolvido'.freeze
@@ -153,10 +158,14 @@ class Crm::Ai::RevalidaPassagem
                                  pipeline: @card.pipeline, max_retries: 0)
   end
 
+  # O histórico desta conversa desde o card (revisão do PR #1980): a janela da avaliação do card (12 mensagens por
+  # conversa) deixava de fora a falha antiga. O resumo, o estado e o gatilho vêm como na avaliação do card.
   def entrada
-    contexto = Crm::Ai::ContextBuilder.new(card: @card).perform
+    builder = Crm::Ai::ContextBuilder.new(card: @card)
+    contexto = builder.perform
     {
-      recent_messages: contexto[:recent_messages],
+      recent_messages: builder.historico_da_conversa(@conversation, desde: @card.created_at, limite: MAX_MENSAGENS,
+                                                                    antes: ANTES_DO_CARD),
       conversation_summary: contexto[:summary],
       conversation_state: contexto[:conversation_state],
       handoff_trigger: Crm::Ai::Config.handoff_settings(@card.stage, @card.pipeline)[:trigger],

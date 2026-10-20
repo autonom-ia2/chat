@@ -8,15 +8,24 @@
 #
 # Quando: toda espera é relida uma vez antes da entrega, mesmo sem mensagem nova, porque a decisão foi tomada no meio
 # da conversa e a espera dura horas (a avaliação da meia-noite errou e nada chegou depois). Depois, só se chegar
-# mensagem real (do cliente ou do atendimento; nem nota privada, nem atividade, nem os avisos automáticos da caixa).
-# A última mensagem lida fica na marca (`revalidado_ate`, 0 se não havia nenhuma): uma chamada por espera e por
-# mensagem nova, e nunca uma a cada rodada de 2 minutos.
+# mensagem do cliente ou do atendimento (incoming ou outgoing): nota privada, atividade e os avisos automáticos da caixa
+# (saudação, fora do horário, pesquisa, que o Chatwoot grava como `template`) não contam. A última mensagem lida fica
+# na marca (`revalidado_ate`, 0 se não havia nenhuma): uma chamada por espera e por mensagem nova, e nunca uma a cada
+# rodada de 2 minutos.
+#
+# Contrato com a fila (revisão do PR #1980): qualquer falha da releitura (IA fora, resposta inválida, erro inesperado)
+# entrega como hoje, já nesta rodada, e grava `revalidado_ate` para não pagar outra chamada na rodada seguinte sem
+# mensagem nova. Uma resposta que chega velha (a espera, o motivo, o card ou as mensagens mudaram durante a chamada) é
+# descartada sem gravar nada, e a conversa espera a rodada seguinte para ser relida.
 class Crm::Ai::RevalidacaoNaFila
-  # O que a reavaliação devolveu e foi feito com ele (para o log e o spec).
-  Resultado = Struct.new(:superado, :decisao, keyword_init: true)
+  # superado: a marca saiu e ninguém recebe. adiar: não entrega nesta rodada (a resposta ficou velha). falhou: a
+  # releitura não aconteceu (não conta na cota da rodada) e a entrega segue como antes.
+  Resultado = Struct.new(:superado, :adiar, :falhou, :decisao, keyword_init: true)
 
-  def initialize(conversation)
+  # com_trava: a trava de linha de quem chama (HandoffDrainJob#com_lock_timeout); sem ela, a trava sem limite.
+  def initialize(conversation, com_trava: ->(&bloco) { bloco.call })
     @conversation = conversation
+    @com_trava = com_trava
   end
 
   # Há o que reler? Barato: só a marca e uma consulta de mensagens. A espera que vai ser largada para um agente nosso
@@ -31,62 +40,92 @@ class Crm::Ai::RevalidacaoNaFila
   end
 
   # Reavalia (uma chamada) e aplica: superado, a marca sai, com atividade no card e log; de pé, a marca guarda a última
-  # mensagem lida e o motivo novo (que vai junto na entrega). Falhou a reavaliação: segue para a entrega, como antes,
-  # porque perder o pedido de uma pessoa é pior do que entregar uma conversa à toa.
+  # mensagem lida e o motivo novo (que vai junto na entrega).
   def call
     marca = Crm::Entrega::Marca.dados(@conversation)
     ultima = ate_onde_reler(marca) if da_ia_do_crm?(marca)
-    return Resultado.new(superado: false, decisao: 'ja_relida') if ultima.nil?
+    return Resultado.new(decisao: 'ja_relida') if ultima.nil?
 
-    resposta = Crm::Ai::RevalidaPassagem.new(@conversation, card: card, motivo_do_pedido: marca['razao']).call
+    resposta = reler(marca)
+    return falhou!(marca, ultima, resposta) if resposta.is_a?(Exception)
+
     aplicar(resposta, marca, ultima)
-  rescue Crm::Ai::RevalidaPassagem::Indisponivel, Crm::Ai::RevalidaPassagem::RespostaInvalida, Crm::Ai::ResponsesClient::Error => e
-    registrar('revalidacao_falhou', e.class.name.demodulize.underscore)
-    Resultado.new(superado: false, decisao: 'falhou')
   end
 
   private
+
+  # Perder o pedido de uma pessoa é pior do que entregar uma conversa à toa: qualquer erro aqui vira entrega.
+  def reler(marca)
+    Crm::Ai::RevalidaPassagem.new(@conversation, card: card, motivo_do_pedido: marca['razao']).call
+  rescue StandardError => e
+    e
+  end
 
   def da_ia_do_crm?(marca)
     marca.present? && marca['modo'] == Crm::Entrega::Marca::SEGURANDO &&
       marca['motivo'] == Crm::Ai::HandoffExecutor::MOTIVO_DA_ENTREGA
   end
 
+  def mensagens_reais
+    @conversation.messages.where(private: false, message_type: %i[incoming outgoing])
+  end
+
   # Até qual mensagem a reavaliação vai ler, ou nil quando não há o que reler. Espera ainda não relida: a mensagem real
   # mais nova (0 se não há nenhuma). Já relida: a mais nova depois da última leitura, se houver.
   def ate_onde_reler(marca)
-    mensagens = @conversation.messages.where(private: false, message_type: %i[incoming outgoing])
-    return mensagens.maximum(:id) || 0 if marca['revalidado_ate'].nil?
+    return mensagens_reais.maximum(:id) || 0 if marca['revalidado_ate'].nil?
 
-    mensagens.where('messages.id > ?', marca['revalidado_ate'].to_i).maximum(:id)
+    mensagens_reais.where('messages.id > ?', marca['revalidado_ate'].to_i).maximum(:id)
   end
 
-  # Sob a trava da conversa, relendo a marca: se ela mudou no meio (outra entrega, uma pessoa assumiu, um pedido novo
-  # do agente), a resposta é sobre uma espera que já não existe e nada é gravado.
+  # A resposta vale para a espera que foi lida: a mesma espera, o mesmo motivo, o mesmo card e nenhuma mensagem nova
+  # desde a leitura (um pedido explícito que chegou durante a chamada não pode sumir com uma resposta velha).
+  def mesma_espera?(atual, marca, ultima)
+    da_ia_do_crm?(atual) && atual.values_at('desde', 'razao', 'card_id') == marca.values_at('desde', 'razao', 'card_id') &&
+      !mensagens_reais.exists?(['messages.id > ?', ultima])
+  end
+
+  # Sob a trava da conversa, relendo a marca. Resposta velha: nada é gravado e a conversa fica para a rodada seguinte.
   def aplicar(resposta, marca, ultima)
-    superado = nil
-    @conversation.with_lock do
-      atual = Crm::Entrega::Marca.dados(@conversation)
-      next unless da_ia_do_crm?(atual) && atual['desde'] == marca['desde']
-
-      superado = !resposta[:passa]
-      if superado
-        Crm::Entrega::Marca.tirar(@conversation)
-      else
+    gravou = sob_a_trava(marca, ultima) do
+      if resposta[:passa]
         Crm::Entrega::Marca.revalidada!(@conversation, ate: ultima, razao: resposta[:motivo])
+      else
+        Crm::Entrega::Marca.tirar(@conversation)
       end
-      @conversation.save! if @conversation.changed?
+      true
     end
-    depois_de_aplicar(resposta, superado)
+    depois_de_aplicar(resposta, gravou ? !resposta[:passa] : nil)
   end
 
-  # superado nil: a marca mudou durante a reavaliação, e nada foi gravado.
+  # A falha não se repete a cada rodada: a marca guarda a última mensagem lida (o motivo segue o do pedido) e só uma
+  # mensagem nova pede outra releitura.
+  def falhou!(marca, ultima, erro)
+    sob_a_trava(marca, ultima) { Crm::Entrega::Marca.revalidada!(@conversation, ate: ultima, razao: nil) }
+    registrar('revalidacao_falhou', erro.class.name)
+    Resultado.new(falhou: true, decisao: 'falhou')
+  end
+
+  # nil quando a espera mudou (nada gravado); senão, o valor do bloco.
+  def sob_a_trava(marca, ultima)
+    valor = nil
+    @com_trava.call do
+      @conversation.with_lock do
+        next unless mesma_espera?(Crm::Entrega::Marca.dados(@conversation), marca, ultima)
+
+        valor = yield
+        @conversation.save! if @conversation.changed?
+      end
+    end
+    valor
+  end
+
   def depois_de_aplicar(resposta, superado)
     atividade!(resposta) if superado
     desfecho, motivo = { true => %w[skipped pedido_superado], false => ['revalidado', resposta[:decisao]],
-                         nil => %w[revalidado marca_mudou] }.fetch(superado)
+                         nil => %w[revalidado resposta_velha] }.fetch(superado)
     registrar(desfecho, motivo)
-    Resultado.new(superado: superado == true, decisao: resposta[:decisao])
+    Resultado.new(superado: superado == true, adiar: superado.nil?, decisao: resposta[:decisao])
   end
 
   def card
