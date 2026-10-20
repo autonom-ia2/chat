@@ -1,0 +1,228 @@
+require 'rails_helper'
+
+# #1975: a reavaliação isolada ("o problema do cliente foi resolvido?"). Uma chamada, sem efeito colateral.
+RSpec.describe Crm::Ai::RevalidaPassagem do
+  let(:account) { create(:account) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:inbox) { create(:inbox, account: account) }
+  let(:contact) { create(:contact, account: account) }
+  let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact, status: :open) }
+  let(:client) { instance_double(Crm::Ai::ResponsesClient) }
+  let(:enviado) { {} }
+  let(:resolvido) { [{ pedido: 'cotação do seguro', situacao: 'resolvido', como: 'o atendente enviou a cotação' }] }
+
+  before do
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    stage.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'trigger' => 'quando o atendente informar que vai encaminhar' } })
+    account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Cotação', primary_conversation: conversation,
+                              inbox: inbox)
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'Quero uma cotação')
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+    allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: 'chave'))
+    allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+  end
+
+  def responde(json)
+    allow(client).to receive(:create) do |**args|
+      enviado.merge!(args)
+      { text: { falhas: [], pedidos: resolvido }.merge(json).to_json }
+    end
+  end
+
+  it 'resolvido: não passa, com o motivo do modelo', :aggregate_failures do
+    responde(decisao: 'resolvido', motivo: 'o atendente enviou a cotação')
+
+    expect(described_class.new(conversation).call).to eq(passa: false, motivo: 'o atendente enviou a cotação', decisao: 'resolvido')
+    entrada = JSON.parse(enviado[:input])
+    expect(entrada['recent_messages'].map { |m| m['content'] }).to include('Quero uma cotação')
+    expect(entrada['handoff_trigger']).to eq('quando o atendente informar que vai encaminhar')
+    expect(enviado[:schema][:name]).to eq('passagem_revalidada')
+  end
+
+  it 'pedido de pessoa e problema em aberto passam', :aggregate_failures do
+    responde(decisao: 'pedido_de_pessoa', motivo: 'cliente pediu um atendente')
+    expect(described_class.new(conversation).call[:passa]).to be(true)
+
+    responde(decisao: 'problema_em_aberto', motivo: 'cliente pediu explicação de DMH e o robô não soube')
+    expect(described_class.new(conversation, motivo_do_pedido: 'anúncio de encaminhamento').call)
+      .to include(passa: true, motivo: 'cliente pediu explicação de DMH e o robô não soube')
+    expect(JSON.parse(enviado[:input])['motivo_do_pedido']).to eq('anúncio de encaminhamento')
+  end
+
+  # Backteste v2: o modelo julgava só o último assunto. Backteste v4: fundia a falha antiga com um sucesso em outro
+  # item. As falhas e depois os pedidos vêm ANTES da decisão no schema (o modelo escreve na ordem), obrigatórios.
+  it 'o schema pede as falhas e o inventário de pedidos antes da decisão', :aggregate_failures do
+    schema = described_class::SCHEMA[:schema]
+
+    expect(schema[:properties].keys).to eq(%i[falhas pedidos decisao motivo])
+    expect(schema[:required]).to eq(%w[falhas pedidos decisao motivo])
+    expect(schema[:properties][:falhas]).to include(type: 'array', maxItems: 6)
+    expect(schema.dig(:properties, :falhas, :items, :required))
+      .to eq(%w[o_que_falhou quando resolvido_depois evidencia_da_solucao])
+    expect(schema.dig(:properties, :falhas, :items, :properties, :resolvido_depois)).to eq(type: 'boolean')
+    expect(schema[:properties][:pedidos]).to include(type: 'array', maxItems: 8)
+    expect(schema.dig(:properties, :pedidos, :items, :properties, :situacao, :enum))
+      .to eq(%w[resolvido falhou_sem_solucao aguardando_cliente em_andamento])
+  end
+
+  # Decisão do Rodrigo (20/10): o modelo lê a conversa inteira; pedido que falhou com pessoa prometida e aviso de espera
+  # seguem abertos; esperar a resposta do cliente não pede pessoa, mas não anula um pedido antigo sem solução.
+  it 'as instruções levam o inventário e as regras do que fica aberto', :aggregate_failures do
+    responde(decisao: 'problema_em_aberto', motivo: 'recotação falhou e ninguém da equipe resolveu')
+
+    described_class.new(conversation).call
+
+    expect(enviado[:instructions]).to equal(described_class::INSTRUCTIONS)
+    expect(described_class::INSTRUCTIONS).to include('leia a conversa inteira', 'liste TODOS os pedidos',
+                                                     'abandonado não é pedido resolvido',
+                                                     'Aviso de espera não resolve o problema',
+                                                     'SÓ quando toda falha tem', 'Sucesso em OUTRO item',
+                                                     'Pedido atendido só em parte vira DOIS itens')
+    # Decisão do Rodrigo (20/10): a IA lê e usa os dados da conversa; o motivo fica no CRM da conta.
+    expect(described_class::INSTRUCTIONS).not_to include('dados pessoais', 'dado pessoal')
+  end
+
+  # Coerência entre campos do próprio schema (decisão do Rodrigo, 20/10): o "resolvido" que a própria lista contradiz
+  # passa, como problema em aberto, com o motivo do item. O log leva só contagens, sem o texto dos pedidos.
+  it 'resolvido com um pedido que falhou na própria lista: passa, com o motivo do item, e o log marca', :aggregate_failures do
+    pedidos = [{ pedido: 'cotação de 2 passageiros', situacao: 'resolvido', como: 'o robô cotou' },
+               { pedido: 'cotação do 3º passageiro', situacao: 'falhou_sem_solucao', como: 'o sistema não cotou' }]
+    responde(pedidos: pedidos, decisao: 'resolvido', motivo: 'o robô cotou')
+    linhas = []
+    allow(Rails.logger).to receive(:info) { |linha| linhas << linha }
+
+    expect(described_class.new(conversation).call)
+      .to eq(passa: true, motivo: 'cotação do 3º passageiro: o sistema não cotou', decisao: 'problema_em_aberto')
+    linha = linhas.find { |l| l.include?('[crm][revalida]') }
+    expect(linha).to include('decisao=resolvido', 'falhou_sem_solucao:1', 'resolvido:1', 'falhas=0', 'incoerente=1')
+    expect(linha).not_to include('passageiro', 'cotou')
+  end
+
+  it 'em andamento na lista também desfaz o resolvido; aguardando o cliente, não', :aggregate_failures do
+    responde(pedidos: [{ pedido: 'vistoria', situacao: 'em_andamento', como: 'a equipe ainda verifica' }],
+             decisao: 'resolvido', motivo: '')
+    expect(described_class.new(conversation).call).to include(passa: true, decisao: 'problema_em_aberto')
+
+    responde(pedidos: [{ pedido: 'carro reserva', situacao: 'aguardando_cliente', como: 'perguntou 15 ou 30 dias' }],
+             decisao: 'resolvido', motivo: 'só falta o cliente responder')
+    expect(described_class.new(conversation).call).to include(passa: false, decisao: 'resolvido')
+  end
+
+  # Caso do Vectra: a recotação falhou, e depois a renovação de OUTRO carro deu certo. O modelo marcou os pedidos
+  # como resolvidos, mas a própria lista de falhas diz que aquela não foi resolvida: passa, com o motivo da falha.
+  it 'resolvido com uma falha não resolvida depois: passa, com o motivo da falha, e o log conta', :aggregate_failures do
+    falhas = [{ o_que_falhou: 'recotação do primeiro carro', quando: 'início da conversa', resolvido_depois: false,
+                evidencia_da_solucao: '' }]
+    responde(falhas: falhas, decisao: 'resolvido', motivo: 'recotação e proposta foram entregues')
+    linhas = []
+    allow(Rails.logger).to receive(:info) { |linha| linhas << linha }
+
+    expect(described_class.new(conversation).call)
+      .to eq(passa: true, motivo: 'recotação do primeiro carro: sem solução depois', decisao: 'problema_em_aberto')
+    linha = linhas.find { |l| l.include?('[crm][revalida]') }
+    expect(linha).to include('falhas=1', 'sem_solucao=1', 'incoerente=1')
+    expect(linha).not_to include('recotação')
+  end
+
+  it 'falha entregue depois não segura a passagem', :aggregate_failures do
+    falhas = [{ o_que_falhou: 'cotação do carro', quando: 'início', resolvido_depois: true,
+                evidencia_da_solucao: 'o robô enviou a cotação do mesmo carro' }]
+    responde(falhas: falhas, decisao: 'resolvido', motivo: 'a cotação foi enviada')
+
+    expect(described_class.new(conversation).call).to eq(passa: false, motivo: 'a cotação foi enviada', decisao: 'resolvido')
+  end
+
+  # Revisão do PR #1980: a janela da avaliação do card (12 mensagens por conversa) deixava de fora a falha antiga. A
+  # releitura começa 12 mensagens antes do mais antigo entre o card (ele nasce depois da mensagem que o criou) e o
+  # começo da espera, e vai até agora, sem atividade e sem nota privada, no formato de recent_messages.
+  it 'lê a conversa desde o card, com as 12 mensagens logo antes dele, sem atividade nem nota', :aggregate_failures do
+    criado = conversation.crm_cards.sole.created_at
+    fala = lambda do |texto, quando, **extra|
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: texto,
+                       created_at: quando, **extra)
+    end
+    fala.call('muito antiga', criado - 2.days)
+    12.times { |i| fala.call("antes #{i}", criado - (12 - i).minutes) }
+    20.times { |i| fala.call("depois #{i}", criado + (i + 1).minutes) }
+    fala.call('nota', criado + 30.minutes, private: true)
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :activity, content: 'atribuída',
+                     created_at: criado + 31.minutes)
+    responde(decisao: 'resolvido', motivo: 'ok')
+
+    described_class.new(conversation).call
+
+    conteudos = JSON.parse(enviado[:input])['recent_messages'].map { |m| m['content'] }
+    expect(conteudos).to include('antes 0', 'antes 11', 'depois 0', 'depois 19', 'Quero uma cotação')
+    expect(conteudos).not_to include('muito antiga', 'nota', 'atribuída')
+    expect(JSON.parse(enviado[:input])['recent_messages'].first).to include('role' => 'customer')
+  end
+
+  it 'a espera mais antiga que o card puxa o começo do histórico para perto dela' do
+    criado = conversation.crm_cards.sole.created_at
+    desde = criado - 1.day
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
+                     content: 'perto da espera', created_at: desde + 1.minute)
+    15.times do |i|
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: "meio #{i}",
+                       created_at: desde + (i + 2).hours)
+    end
+    responde(decisao: 'problema_em_aberto', motivo: 'ok')
+
+    described_class.new(conversation, desde_do_pedido: desde.iso8601).call
+
+    expect(JSON.parse(enviado[:input])['recent_messages'].map { |m| m['content'] }).to include('perto da espera')
+  end
+
+  # Passando de 120, ficam as primeiras 20 (o trecho que originou o pedido) e as últimas 100, e a releitura nunca
+  # retira o pedido: um "resolvido" passa como hoje, com o motivo do pedido.
+  it 'histórico cortado no meio: fica com as primeiras e as últimas, e "resolvido" não retira o pedido', :aggregate_failures do
+    stub_const("#{described_class}::ANTES", 0)
+    stub_const("#{described_class}::PRIMEIRAS", 2)
+    stub_const("#{described_class}::ULTIMAS", 3)
+    conversation.messages.where(message_type: :template).delete_all
+    8.times { |i| create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: "m#{i}") }
+    responde(decisao: 'resolvido', motivo: 'o robô resolveu')
+    linhas = []
+    allow(Rails.logger).to receive(:info) { |linha| linhas << linha }
+
+    resultado = described_class.new(conversation, motivo_do_pedido: 'a recotação falhou').call
+
+    expect(JSON.parse(enviado[:input])['recent_messages'].map { |m| m['content'] }).to eq(['Quero uma cotação', 'm0', 'm5', 'm6', 'm7'])
+    expect(resultado).to eq(passa: true, motivo: 'a recotação falhou', decisao: 'truncado')
+    expect(linhas).to include(a_string_including('desfecho=revalidacao_truncada'))
+  end
+
+  it 'histórico cortado não muda um "passa"' do
+    stub_const("#{described_class}::PRIMEIRAS", 1)
+    stub_const("#{described_class}::ULTIMAS", 1)
+    3.times { |i| create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: "m#{i}") }
+    responde(decisao: 'problema_em_aberto', motivo: 'segue aberto')
+
+    expect(described_class.new(conversation).call).to include(passa: true, decisao: 'problema_em_aberto', motivo: 'segue aberto')
+  end
+
+  it 'resposta fora do schema levanta, para quem chama decidir', :aggregate_failures do
+    responde(decisao: 'talvez', motivo: '')
+    expect { described_class.new(conversation).call }.to raise_error(Crm::Ai::RevalidaPassagem::RespostaInvalida)
+
+    responde(pedidos: nil, decisao: 'resolvido', motivo: '')
+    expect { described_class.new(conversation).call }.to raise_error(Crm::Ai::RevalidaPassagem::RespostaInvalida)
+
+    responde(falhas: nil, decisao: 'resolvido', motivo: '')
+    expect { described_class.new(conversation).call }.to raise_error(Crm::Ai::RevalidaPassagem::RespostaInvalida)
+  end
+
+  it 'sem a IA ligada levanta Indisponivel, sem chamar o modelo' do
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
+
+    expect { described_class.new(conversation).call }.to raise_error(Crm::Ai::RevalidaPassagem::Indisponivel)
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+  end
+
+  it 'sem card: passa, como antes, sem chamar o modelo' do
+    sem_card = create(:conversation, account: account, inbox: inbox, contact: create(:contact, account: account))
+
+    expect(described_class.new(sem_card).call).to include(passa: true, decisao: 'sem_card')
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+  end
+end

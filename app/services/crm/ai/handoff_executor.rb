@@ -27,8 +27,10 @@ module Crm
 
       # pelo_card (#1693, decisão 1a do Rodrigo, 16/10): numa mensagem de vários assuntos, o pedido vai pela regra do card
       # a que o cliente o ligou, mesmo fora do foco, enquanto ele seguir aberto nesta conversa; senão, pela regra do foco.
-      def initialize(card:, handoff:, trigger: 'message', pelo_card: false)
+      # avaliacao (#1975): o id da resposta do modelo que pediu a pessoa, para o rastro (log e atividade no card).
+      def initialize(card:, handoff:, trigger: 'message', pelo_card: false, avaliacao: nil)
         @card = card
+        @avaliacao = avaliacao
         @handoff = normalize(handoff)
         @trigger = trigger
         @pelo_card = pelo_card
@@ -44,6 +46,7 @@ module Crm
         # Decisão do Rodrigo (16/10, opção a): o card do pedido saiu da conversa (fechou) e o cliente pediu gente;
         # alguém recebe, pela regra do foco. A linha deixa contar quantas vezes isso acontece.
         registrar('desvio', motivo: 'pedido_card_fechado_foco') if @pelo_card && !Crm::Assunto.da_conversa?(@card, @conversation)
+        pedido_registrado!
         entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: MOTIVO_DA_ENTREGA, origem: @trigger, pelo_card: @pelo_card,
                                    pedido: { sugestao: @handoff[:suggested_agent], razao: @handoff[:reason] }).call
         depois_da_entrega(entrega)
@@ -74,6 +77,21 @@ module Crm
         return 'cooldown' if registro.intervalo_ativo?
 
         nil
+      end
+
+      # #1975: o rastro do pedido NA HORA da decisão, e não só na entrega (que pode vir horas depois, ou nunca): a atividade
+      # no card com o motivo que o modelo deu (qual problema ficou aberto) e a linha com o id da avaliação. A fila
+      # (trigger drain) não decide nada novo, e a conversa que já espera pelo pedido da IA do CRM não repete a atividade a
+      # cada mensagem.
+      def pedido_registrado!
+        return if @trigger == 'drain'
+        return if Crm::Entrega::Marca.dados(@conversation)&.dig('motivo') == MOTIVO_DA_ENTREGA
+
+        Crm::ActivityLogger.new(
+          card: @card, actor: nil, event_type: 'ai_handoff_requested', conversation: @conversation,
+          payload: { reason: @handoff[:reason].to_s[0, 300], trigger: @trigger, evaluation_id: @avaliacao }.compact
+        ).perform
+        registrar('pedido', motivo: "avaliacao_#{@avaliacao || '-'}")
       end
 
       def depois_da_entrega(entrega)

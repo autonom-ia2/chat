@@ -48,7 +48,9 @@ module Crm
                                'pedido; só "transferir" se, depois da devolução, o cliente fizer um pedido novo ou o gatilho for atendido de novo.'
                 },
                 should_handoff: { type: 'boolean', description: 'true SOMENTE quando intent="transferir"; senão false.' },
-                reason: { type: 'string', maxLength: 300, description: 'Motivo curto do handoff.' },
+                reason: { type: 'string', maxLength: 300,
+                          description: 'Obrigatório quando intent="transferir": em uma frase, qual problema do cliente ficou ' \
+                                       'aberto ou o que ele pediu. Vazio nos outros casos.' },
                 suggested_agent: { type: %w[string null], description: 'Nome do agente citado/pedido na conversa, se houver; senão null.' }
               },
               required: %w[intent should_handoff reason suggested_agent],

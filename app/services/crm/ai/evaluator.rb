@@ -100,8 +100,7 @@ module Crm
       end
 
       def pipeline_ai_enabled?
-        settings = Config.pipeline_ai_settings(@card.pipeline)
-        settings[:enabled] != false
+        Config.pipeline_ai_enabled?(@card.pipeline)
       end
 
       def debounced?
@@ -158,7 +157,8 @@ module Crm
       def run_handoff(classification)
         return unless @passar && handoff_config[:enabled]
 
-        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger, pelo_card: @pelo_card).perform
+        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger, pelo_card: @pelo_card,
+                            avaliacao: classification[:response_id]).perform
       rescue StandardError => e
         Rails.logger.error("[CRM AI handoff] #{e.class}: #{e.message}")
       end

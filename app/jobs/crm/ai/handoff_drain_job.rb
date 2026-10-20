@@ -3,12 +3,18 @@
 # 1. Conversas que o motor de entrega segura (Crm::Entrega::Marca, #1454): tenta de novo, com a mesma regra, e entrega
 #    para quem tiver ficado online. Vale com ou sem CRM e sem a IA do CRM ligada: é o "segura e entrega quando alguém
 #    entrar" da caixa sem regra também. O convite que venceu (TTL da etapa) perde a marca, os administradores da
-#    caixa são avisados, e a conversa volta a poder ser pega pelo rodízio nativo.
-# 2. Cards com a espera gravada no card, de antes do #1454 (só com a IA do CRM ligada), pelo HandoffExecutor.
+#    caixa são avisados, e a conversa volta a poder ser pega pelo rodízio nativo. A espera da IA do CRM é relida
+#    antes de entregar (#1975, uma vez e de novo só com mensagem nova, e só quando a entrega sairia agora), num job à
+#    parte (Crm::Ai::RevalidaPassagemJob): enquanto a releitura não termina, a conversa fica na espera; resolvido o
+#    problema do cliente, a marca sai.
+# 2. Cards com a espera gravada no card, de antes do #1454 (só com a IA do CRM ligada), pelo HandoffExecutor. Sem
+#    releitura (#1975): com alguém online, entrega pela decisão antiga; sem ninguém, a espera passa para a conversa
+#    (passo 1) e, dali em diante, é relida antes de entregar.
 #
 # Uma rodada por vez (trava de sessão do Postgres; quem não pega, sai), 45 s por passo, ordem alternada, e a presença
 # de cada conta lida uma vez (Crm::Entrega::Presenca). O teto é checado entre itens: cada item pode somar até ~10 s
-# de trava (LOCK_TIMEOUT na linha e no carimbo), então uma rodada fica perto de 90 s, no pior caso ~110 s.
+# de trava (LOCK_TIMEOUT na linha e no carimbo), então uma rodada fica perto de 90 s, no pior caso ~110 s. A
+# releitura da IA (#1975) não roda aqui: a rodada só grava a marca e enfileira o job.
 # A presença fica congelada durante a rodada:
 # quem entrar no meio dela recebe na rodada seguinte, 2 minutos depois.
 class Crm::Ai::HandoffDrainJob < ApplicationJob
@@ -108,6 +114,11 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
 
   def drain_one(conversation)
     inicio = relogio
+    # #1975: a espera da IA do CRM é relida antes de entregar, quando a entrega sairia agora; enquanto o job da
+    # releitura não termina, ela fica.
+    pode_entregar = -> { entrega_da_fila(conversation, Crm::Entrega::Marca.dados(conversation)).pode_entregar_agora? }
+    return if Crm::Ai::RevalidacaoNaFila.new(conversation, com_trava: method(:com_lock_timeout)).segurar?(pode_entregar: pode_entregar)
+
     com_lock_timeout { drain_conversation(conversation) }
   rescue ActiveRecord::LockWaitTimeout
     Rails.logger.warn("[crm][entrega] fila conversa=#{conversation.id} pulada: trava ocupada")
@@ -169,9 +180,16 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
     return largar_para_o_agente(conversation) if da_ia_do_crm_com_agente_nosso?(conversation, marca)
     return if Crm::Entrega::ConviteVencido.espacar?(marca)
 
+    entrega_da_fila(conversation, marca).call
+  end
+
+  # A entrega da espera, com o que a marca guardou (a mesma para conferir, na releitura do #1975, e para entregar). Sob
+  # a trava, a espera da IA do CRM que falta reler não sai (`exigir_releitura`).
+  def entrega_da_fila(conversation, marca)
     card = Crm::Entrega::Marca.card(conversation)
-    Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
-                     dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?, excluir: marca['venceram']).call
+    Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: marca.slice('sugestao', 'razao').symbolize_keys,
+                     dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?, excluir: marca['venceram'],
+                     exigir_releitura: true)
   end
 
   # #1673: a IA do CRM segurou a conversa sem robô e, na espera, um agente nosso passou a atender (claim da resposta).

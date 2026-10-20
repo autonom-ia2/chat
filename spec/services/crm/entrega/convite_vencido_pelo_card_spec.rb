@@ -60,8 +60,18 @@ RSpec.describe 'Convite vencido pela regra do card do pedido' do # rubocop:disab
     Crm::Ai::HandoffExecutor.new(card: sinistro, handoff: pedido, pelo_card: true).perform
   end
 
-  def deixa_vencer(horas)
-    travel_to(horas.hours.from_now) { Crm::Ai::HandoffDrainJob.perform_now }
+  # A continuação da espera da IA do CRM passa pela releitura (#1975): a fila segura, relê (aqui, com o problema
+  # aberto) e só então segue a regra.
+  def deixa_vencer_e_rele(horas)
+    releitura = instance_double(Crm::Ai::RevalidaPassagem, call: { passa: true, motivo: 'segue aberto', decisao: 'problema_em_aberto' })
+    allow(Crm::Ai::RevalidaPassagem).to receive(:new).and_return(releitura)
+    inicio = horas.hours.from_now
+    travel_to(inicio) { Crm::Ai::HandoffDrainJob.perform_now }
+    travel_to(inicio + 2.minutes) do
+      Crm::Ai::HandoffDrainJob.perform_now
+      Crm::Ai::RevalidaPassagemJob.perform_now(conversa.id, marca['revalidando_desde'])
+    end
+    travel_to(inicio + 4.minutes) { Crm::Ai::HandoffDrainJob.perform_now }
   end
 
   # Só a Ana cuida de Sinistros: sem convite novo, a conversa vai a quem cuida de Sinistros e está online (#1694), a Ana.
@@ -71,7 +81,7 @@ RSpec.describe 'Convite vencido pela regra do card do pedido' do # rubocop:disab
     pedir_pelo_sinistro
     expect(marca).to include('modo' => Crm::Entrega::Marca::CONVITE, 'convidado_id' => ana.id, 'card_id' => sinistro.id)
 
-    deixa_vencer(7)
+    deixa_vencer_e_rele(7)
 
     expect(conversa.reload.assignee_id).to eq(ana.id)
   end
@@ -82,7 +92,7 @@ RSpec.describe 'Convite vencido pela regra do card do pedido' do # rubocop:disab
     primeira = marca['convidado_id']
     expect([ana.id, carla.id]).to include(primeira)
 
-    deixa_vencer(7)
+    deixa_vencer_e_rele(7)
 
     expect(marca).to include('modo' => Crm::Entrega::Marca::CONVITE, 'venceram' => [primeira], 'card_id' => sinistro.id)
     expect(marca['convidado_id']).to eq(([ana.id, carla.id] - [primeira]).first)

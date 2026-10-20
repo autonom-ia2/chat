@@ -150,6 +150,11 @@ module Crm
         (pipeline.metadata || {}).fetch('ai', {}).to_h.with_indifferent_access
       end
 
+      # O funil com a IA do CRM ligada (o padrão): a avaliação do card (Evaluator) e a releitura da passagem (#1975).
+      def self.pipeline_ai_enabled?(pipeline)
+        pipeline_ai_settings(pipeline)[:enabled] != false
+      end
+
       # Agentes de área (#1447) só valem com a Fase 2 dos Agentes ligada na conta (e os Agentes ligados): sem ela, quem
       # responde é sempre a porta (Autonomia::Agents::QuemResponde), e entregar a conversa a uma área não teria efeito.
       def self.areas_ligadas?(account)
