@@ -1222,8 +1222,8 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
       "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
       "app/controllers/api/v1/accounts/agents_controller.rb:60",
       "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
@@ -5153,7 +5153,7 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:588",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:590",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": false
@@ -8353,8 +8353,8 @@
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:68",
       "app/controllers/api/v1/accounts/agents_controller.rb:95",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
       "app/controllers/api/v1/accounts/agents_controller.rb:70"
     ],
     "sem_corpo": false
@@ -14617,8 +14617,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:80",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:535",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:431",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:537",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:433",
       "app/controllers/concerns/crm/opportunity_registration.rb:7"
     ],
     "sem_corpo": false
@@ -14927,8 +14927,8 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:102",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:535",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:509",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:537",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:511",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:388",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:386"
     ],
@@ -19728,8 +19728,8 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
       "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
       "app/controllers/api/v1/accounts/agents_controller.rb:60",
       "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
@@ -23683,7 +23683,7 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:588",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:590",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:381"
     ],
     "sem_corpo": false

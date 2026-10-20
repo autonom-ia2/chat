@@ -21,6 +21,10 @@
       "AGENTE": "Agente de IA",
       "AUTOMATICO": "{nome} · automático"
     },
+    "ECO_DO_CELULAR": {
+      "ENVIADA_PELO_CELULAR": "Enviada pelo celular",
+      "ENVIADA_POR": "Enviada por {nome} pelo celular"
+    },
     "MAIS": {
       "ABRIR": "Mais jeitos de enviar",
       "LOCALIZACAO": "Localização",
