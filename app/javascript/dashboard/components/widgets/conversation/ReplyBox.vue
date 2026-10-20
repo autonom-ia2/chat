@@ -1,5 +1,5 @@
 <script>
-import { defineAsyncComponent, getCurrentInstance, useTemplateRef } from 'vue';
+import { getCurrentInstance, useTemplateRef, watch } from 'vue';
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -78,7 +78,7 @@ import CabecaDaResposta from 'dashboard/components-next/conversa-canal/email/Cab
 import TopoDaResposta from 'dashboard/components-next/conversa-canal/email/TopoDaResposta.vue';
 import CitacaoDaResposta from 'dashboard/components-next/conversa-canal/email/CitacaoDaResposta.vue';
 import ModeloDaResposta from 'dashboard/components-next/conversa-canal/email/ModeloDaResposta.vue';
-import JanelaDeEmojis from 'dashboard/components-next/conversa-canal/email/JanelaDeEmojis.vue';
+import JanelaDeEmojis from 'dashboard/components-next/emoji/JanelaDeEmojis.vue';
 import ModelosDeEmailAPI from 'dashboard/api/modelosDeEmail';
 import {
   montarModelo,
@@ -105,10 +105,6 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { emitter } from 'shared/helpers/mitt';
-const EmojiIconPicker = defineAsyncComponent(
-  () =>
-    import('dashboard/components-next/emoji-icon-picker/EmojiIconPicker.vue')
-);
 
 export default {
   components: {
@@ -123,7 +119,6 @@ export default {
     JanelaDeEmojis,
     ReplyBoxBanner,
     WhatsappApiReplyHint,
-    EmojiIconPicker,
     MessageSignatureMissingAlert,
     AvisoDeAssinatura,
     ReplyBottomPanel,
@@ -147,7 +142,6 @@ export default {
   emits: ['toggleEditorSize'],
   setup() {
     const {
-      uiSettings,
       isEditorHotKeyEnabled,
       fetchSignatureFlagFromUISettings,
       setQuotedReplyFlagForInbox,
@@ -180,6 +174,10 @@ export default {
         }),
     });
     const copilot = respostaComIa(emailNovo, useCopilotReply(), iaDoEmail);
+    // #1895: com o copiloto ativo a barra de baixo (âncora da janela de emojis) some.
+    watch(copilot.isActive, ativo => {
+      if (ativo) proxy.hideEmojiPicker();
+    });
     useKeyboardEvents({
       Escape: {
         action: () => proxy.hideEmojiPicker(),
@@ -215,7 +213,6 @@ export default {
     });
 
     return {
-      uiSettings,
       isEditorHotKeyEnabled,
       fetchSignatureFlagFromUISettings,
       setQuotedReplyFlagForInbox,
@@ -585,14 +582,6 @@ export default {
     },
     showAudioRecorderEditor() {
       return this.showAudioRecorder && this.isRecordingAudio;
-    },
-    isOnExpandedLayout() {
-      const {
-        LAYOUT_TYPES: { CONDENSED },
-      } = wootConstants;
-      const { conversation_display_type: conversationDisplayType = CONDENSED } =
-        this.uiSettings;
-      return conversationDisplayType !== CONDENSED;
     },
     isMessageEmpty() {
       if (!this.message) {
@@ -1652,10 +1641,9 @@ export default {
           useAlert(this.$t('CONVERSA_CANAL.EMAIL.MODELO_FALHOU'));
       }
     },
-    // #1786: a janela de emojis do e-mail abre em cima da barra de baixo da caixa.
+    // #1786/#1895: a janela de emojis abre em cima da barra de baixo da caixa.
     ancoraDosEmojis() {
-      // O ReplyBox tem mais de uma raiz ($el não é a caixa): procura a barra na página.
-      return document.querySelector('.reply-box .left-wrap');
+      return this.$refs.painelDeBaixo?.barraDosEmojis?.() || null;
     },
     atualizarCampoDoModelo(chave, valor) {
       this.valoresDoModelo = { ...this.valoresDoModelo, [chave]: valor };
@@ -1870,22 +1858,12 @@ export default {
           :message="inReplyTo"
           @dismiss="resetReplyToMessage"
         />
-        <!-- #1786: no e-mail novo, a janela própria (flutua; a caixa com rolagem cortava a do Chatwoot). -->
+        <!-- #1786/#1895: a janela própria em todos os canais (flutua; a caixa com rolagem cortava a do Chatwoot). -->
         <JanelaDeEmojis
-          v-if="showEmojiPicker && emailNovo"
+          v-if="showEmojiPicker"
           :ancora="ancoraDosEmojis()"
           @escolher="addIntoEditor"
           @fechar="hideEmojiPicker"
-        />
-        <EmojiIconPicker
-          v-else-if="showEmojiPicker"
-          v-on-clickaway="hideEmojiPicker"
-          mode="emoji"
-          class="emoji-dialog"
-          :class="{
-            'emoji-dialog--expanded': isOnExpandedLayout,
-          }"
-          @select="addIntoEditor($event.value)"
         />
         <CabecaDaResposta
           v-if="showReplyHead && isDefaultEditorMode && emailNovo"
@@ -2066,6 +2044,7 @@ export default {
       />
       <ReplyBottomPanel
         v-else
+        ref="painelDeBaixo"
         key="reply-bottom-panel"
         :conversation-id="conversationId"
         :enable-multiple-file-upload="enableMultipleFileUpload"
@@ -2155,23 +2134,5 @@ export default {
 
 .reply-box__top {
   @apply relative py-0 px-3 -mt-px;
-}
-
-.emoji-dialog {
-  @apply top-[unset] -bottom-10 ltr:-left-80 ltr:right-[unset] rtl:left-[unset] rtl:-right-80;
-
-  &::before {
-    filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.08));
-    @apply ltr:-right-4 bottom-2 rtl:-left-4 ltr:rotate-[270deg] rtl:rotate-[90deg];
-  }
-}
-
-.emoji-dialog--expanded {
-  @apply left-[unset] bottom-0 absolute z-[100];
-
-  &::before {
-    transform: rotate(0deg);
-    @apply ltr:left-1 rtl:right-1 -bottom-2;
-  }
 }
 </style>

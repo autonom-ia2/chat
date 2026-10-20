@@ -429,6 +429,14 @@
       "inbox_id"
     ]
   },
+  "campaign_journey/drafts": {
+    "controller": "api/v1/accounts/campaign_journey/drafts#index",
+    "parametros": []
+  },
+  "campaign_journey/drafts/:id": {
+    "controller": "api/v1/accounts/campaign_journey/drafts#show",
+    "parametros": []
+  },
   "campaign_journey/overview": {
     "controller": "api/v1/accounts/campaign_journey/overviews#show",
     "parametros": [
@@ -969,6 +977,8 @@
       "assignee_type",
       "conversation_type",
       "crm_pipeline_id",
+      "da_ia",
+      "esperando_min",
       "inbox_id",
       "labels",
       "page",
@@ -1029,6 +1039,8 @@
       "assignee_type",
       "conversation_type",
       "crm_pipeline_id",
+      "da_ia",
+      "esperando_min",
       "inbox_id",
       "labels",
       "page",
@@ -1047,6 +1059,8 @@
       "assignee_type",
       "conversation_type",
       "crm_pipeline_id",
+      "da_ia",
+      "esperando_min",
       "inbox_id",
       "labels",
       "page",

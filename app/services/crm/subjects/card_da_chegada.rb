@@ -16,6 +16,14 @@ class Crm::Subjects::CardDaChegada
     chegada if chegada.adotavel?(pipeline)
   end
 
+  # #1910: o card da chegada no mesmo funil do pedido, que a IA de assunto pode levar à etapa escolhida. Só as guardas do
+  # card intocado: sem troca de funil (o acesso e o dono já são daquele funil) e sem depender de `crm_avaliar_toda_mensagem`,
+  # que é a flag da troca de funil; quem liga isto é `crm_assunto_na_etapa`. O modo da caixa quem confere é o Applier.
+  def self.no_funil(conversation:, card:)
+    chegada = new(card, conversation)
+    chegada if chegada.intocado?
+  end
+
   attr_reader :card
 
   def initialize(card, conversation)
@@ -29,12 +37,19 @@ class Crm::Subjects::CardDaChegada
   end
 
   def adotavel?(pipeline)
-    @card.open? && @card.conversation_id == @conversation.id && criado_na_chegada? &&
-      !Crm::Subjects::Naming.named?(@card) && !mexido? && pode_ir_para?(pipeline) && dono_pode?(pipeline)
+    intocado? && pode_ir_para?(pipeline) && dono_pode?(pipeline)
   end
 
-  def mover_para(pipeline)
-    etapa = pipeline.stages.order(:position, :id).first
+  # Aberto, desta conversa, criado pelo sistema na chegada, sem nome, nunca mudou de etapa e sem mexida de pessoa.
+  def intocado?
+    @card.open? && @card.conversation_id == @conversation.id && criado_na_chegada? &&
+      !Crm::Subjects::Naming.named?(@card) && !mexido?
+  end
+
+  # etapa: a coluna escolhida pela IA de assunto (#1910); sem ela, a 1ª etapa. Sem as automações: quem chama roda as de
+  # entrada da etapa escolhida (Crm::Subjects::Etapa.entrar).
+  def mover_para(pipeline, etapa = nil)
+    etapa ||= Crm::Subjects::Etapa.primeira(pipeline)
     Crm::Cards::Mover.new(card: @card, actor: nil, target_stage: etapa,
                           automation_context: { source: 'crm_subjects', skip_automations: true }).perform
   end

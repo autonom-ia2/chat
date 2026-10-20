@@ -26,6 +26,10 @@ export const LIMITES = {
   nomeDoFormulario: 60,
   digitosMinimos: 8,
   digitosMaximos: 15,
+  // Enquete: os limites do motor (RichMessages::Types::Poll, #1709).
+  perguntaDaEnquete: 255,
+  opcoesDaEnquete: 12,
+  opcaoDaEnquete: 100,
 };
 
 const limpo = texto => String(texto ?? '').trim();
@@ -216,6 +220,43 @@ export const montarOpcoes = campos => {
   }));
 };
 
+// Enquete (#1702 com o #1709): a pergunta vai no texto e as opções, no rich_message.
+// O voto volta pelo título, por isso títulos repetidos não passam.
+export const montarEnquete = campos => {
+  const opcoes = opcoesPreenchidas(campos.opcoes || []);
+  const erros = conferir([
+    ['pergunta', 'pergunta', vazio(campos.pergunta)],
+    [
+      'pergunta',
+      'perguntaLonga',
+      passa(campos.pergunta, LIMITES.perguntaDaEnquete),
+    ],
+    ['opcoes', 'opcoes', opcoes.length < 2],
+    [
+      'opcoes',
+      'opcoesDaEnqueteDemais',
+      opcoes.length > LIMITES.opcoesDaEnquete,
+    ],
+    [
+      'opcoes',
+      'opcaoDaEnqueteLonga',
+      opcoes.some(opcao => opcao.length > LIMITES.opcaoDaEnquete),
+    ],
+    ['opcoes', 'opcoesRepetidas', new Set(opcoes).size !== opcoes.length],
+  ]);
+  return resultado(erros, () => ({
+    content: limpo(campos.pergunta),
+    richMessage: {
+      type: 'poll',
+      multiple: Boolean(campos.variasRespostas),
+      options: opcoes.map((title, indice) => ({
+        id: `opcao_${indice + 1}`,
+        title,
+      })),
+    },
+  }));
+};
+
 export const montarLocalizacao = campos => {
   const coordenadas = lerCoordenadas(campos.coordenadas);
   const erros = conferir([
@@ -308,10 +349,22 @@ export const montarFormulario = (campos, { tela, token }) => {
 // O texto que o cliente recebe quando o formato não sai nativo (WAHA): o mesmo que o
 // servidor monta (`fallback_text` de cada tipo em app/services/rich_messages/types):
 // o corpo, uma linha em branco e o complemento.
+const numeradas = rico =>
+  rico.options.map((opcao, i) => `${i + 1}. ${opcao.title}`).join('\n');
+
+// Enquete com mais de uma resposta: a linha que o servidor acrescenta
+// (rich_messages.poll.multiple_hint). Quem chama passa o texto traduzido
+// (CONVERSA_CANAL.PREVIA.ENQUETE_AVISO_VARIAS).
+const daEnquete = (rico, { avisoDeVarias = '' } = {}) =>
+  [numeradas(rico), rico.multiple === true ? avisoDeVarias : '']
+    .filter(Boolean)
+    .join('\n');
+
 const COMPLEMENTO = {
   link_button: rico => `${rico.label}: ${rico.url}`,
-  options: rico =>
-    rico.options.map((opcao, i) => `${i + 1}. ${opcao.title}`).join('\n'),
+  options: numeradas,
+  // A Cloud oficial não tem enquete: a pergunta e as opções numeradas (Poll#fallback_text).
+  poll: daEnquete,
   location: rico =>
     [rico.name, rico.address, mapHrefOf(rico.latitude, rico.longitude)]
       .filter(Boolean)
@@ -320,9 +373,10 @@ const COMPLEMENTO = {
   location_request: () => '',
 };
 
-export const textoParaQuemNaoTemFormato = pedido => {
+export const textoParaQuemNaoTemFormato = (pedido, textos = {}) => {
   const complemento = COMPLEMENTO[pedido.richMessage.type]?.(
-    pedido.richMessage
+    pedido.richMessage,
+    textos
   );
   return [pedido.content, complemento].filter(Boolean).join('\n\n');
 };

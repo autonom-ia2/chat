@@ -66,6 +66,11 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  // Sem nenhuma ação em massa possível (#1874), a lista não mostra seleção.
+  selectable: {
+    type: Boolean,
+    default: true,
+  },
   // selected card ids (current page)
   selectedIds: {
     type: Array,
@@ -132,6 +137,7 @@ const columns = computed(() =>
     agents: props.owners,
     includeMeta: props.showMetaColumn,
     includeValue: comValor.value,
+    includeSelect: props.selectable,
   })
 );
 
@@ -981,6 +987,7 @@ const onRowKeydown = (event, card) => {
           class="flex items-start gap-3 px-4 py-3"
         >
           <Checkbox
+            v-if="selectable"
             :model-value="isRowSelected(card.id)"
             :aria-label="
               t('CRM_KANBAN.LIST.SELECT_ROW', { name: cardAriaName(card) })

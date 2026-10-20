@@ -57,6 +57,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.claim_for_sending!
 
     EmailCampaigns::DeliveryJob.perform_later(@campaign.id)
+    ::CampaignJourney::DraftCleanup.after_dispatch(Current.account, email_campaign: @campaign)
     render_campaign
   end
 
@@ -65,6 +66,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
 
     return render_unprocessable('email_campaign.not_sendable') unless @campaign.schedule!(scheduled_at: params[:scheduled_at])
 
+    ::CampaignJourney::DraftCleanup.after_dispatch(Current.account, email_campaign: @campaign)
     render_campaign
   end
 

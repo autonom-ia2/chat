@@ -104,6 +104,7 @@ const setPermissions = overrides => {
     canManageCards: ref(true),
     canViewCrm: ref(true),
     canMoveCards: ref(true),
+    canDeleteCards: ref(true),
     canManagePipelines: ref(true),
     canManageAi: ref(true),
     canExportCrm: ref(false),
@@ -1136,6 +1137,34 @@ describe('Kanban zoom integration', () => {
       expect(wrapper.findComponent(CrmKanbanZoom).props('modelValue')).toBe(87);
     }
   );
+
+  // #1874 — ação em massa por permissão: cada botão só para quem pode; sem nenhuma, a lista não tem seleção.
+  it('quem só vê o CRM não tem seleção na lista', async () => {
+    wrapper = await mountPage({
+      perms: {
+        canManageCards: false,
+        canMoveCards: false,
+        canDeleteCards: false,
+      },
+    });
+    wrapper.vm.setViewMode('list');
+    await flushPromises();
+    expect(
+      wrapper.findComponent({ name: 'CrmCardsTable' }).props('selectable')
+    ).toBe(false);
+  });
+
+  it('quem mexe sem arquivar não vê o Arquivar em massa', async () => {
+    wrapper = await mountPage({ perms: { canDeleteCards: false } });
+    wrapper.vm.setViewMode('list');
+    await flushPromises();
+    expect(
+      wrapper.findComponent({ name: 'CrmCardsTable' }).props('selectable')
+    ).toBe(true);
+    expect(
+      wrapper.findComponent({ name: 'CrmBulkActionBar' }).props('permissions')
+    ).toEqual({ move: true, assign: true, status: true, archive: false });
+  });
 
   it('restores the exact percentage after leaving and mounting the CRM again', async () => {
     wrapper = await mountPage();
