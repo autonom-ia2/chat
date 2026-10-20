@@ -86,6 +86,14 @@ module Autonomia::Agents::PromptParts
   # A MARCA DE BASE do agente (#1429): `config['base'] = { 'segmento', 'versao' }`, gravada quando ele nasce com a Fase 2
   # ligada. O agente lê o bloco pela marca, nunca pela conta: trocar o tipo da conta não muda agente existente (só o
   # "Atualizar com a nova base", depois). Agente sem marca não recebe bloco.
+  #
+  # A marca só vale com `versao` presente:
+  #   - `versao` nil: o agente nasceu antes de existir conteúdo para o segmento e fica sem bloco;
+  #   - `versao` presente: recebe o texto ATUAL do segmento gravado na marca. Uma edição de texto nossa vale na hora,
+  #     como as regras da plataforma;
+  #   - o que nunca muda sozinho é o SEGMENTO (troca de tipo no super admin): o agente segue o segmento da marca.
+  # O botão "Atualizar com a nova base" (F3) aparece quando o segmento da conta difere do da marca, ou quando a versão é
+  # nil e já existe conteúdo. A criação grava a versão vigente, `Bloco.versao(seg)`.
   module SegmentoDoAgente
     module_function
 
@@ -98,9 +106,10 @@ module Autonomia::Agents::PromptParts
       { 'segmento' => segmento, 'versao' => ::Autonomia::Segmentos::Bloco.versao(segmento) }
     end
 
+    # O segmento da marca, só quando ela tem versão: sem versão, o agente nasceu antes do conteúdo e não recebe bloco.
     def segmento(agent)
       base = agent.config.to_h['base']
-      base['segmento'] if base.is_a?(Hash)
+      base['segmento'] if base.is_a?(Hash) && base['versao'].present?
     end
 
     def mensagem(agent)

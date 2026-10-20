@@ -157,7 +157,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
     it 'no ajuste usa a marca do agente, não a conta trocada' do
       Autonomia::Agents::Fase2.ligar!(account)
-      agente = agente_existente('with_knowledge' => false, 'base' => { 'segmento' => 'seguros/corretora', 'versao' => nil })
+      agente = agente_existente('with_knowledge' => false, 'base' => { 'segmento' => 'seguros/corretora', 'versao' => 'aaaabbbbcccc' })
       trocar_perfil('seguradora')
       stub_bloco_por_segmento
 
@@ -165,6 +165,16 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(input.first[:content].first[:text]).to end_with('BLOCO seguros/corretora')
       expect(textos(input)).not_to include('BLOCO seguros/seguradora')
+    end
+
+    it 'no ajuste de agente com marca sem versão (nasceu antes do conteúdo) não manda bloco' do
+      Autonomia::Agents::Fase2.ligar!(account)
+      agente = agente_existente('with_knowledge' => false, 'base' => { 'segmento' => 'seguros/corretora', 'versao' => nil })
+      stub_bloco_por_segmento
+
+      input = described_class.new(account: account, build_thread: thread_de_ajuste(agente)).send(:build_input)
+
+      expect(textos(input)).not_to include('BLOCO')
     end
 
     it 'no ajuste de agente sem marca não manda bloco, mesmo com a conta em seguros' do

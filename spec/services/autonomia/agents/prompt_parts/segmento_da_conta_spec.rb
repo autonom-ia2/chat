@@ -8,7 +8,7 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
   let(:bloco) { "Ramo: seguros.\nVocabulário: apólice, sinistro, corretora." }
   let(:history) { [{ role: 'user', content: 'Oi' }, { role: 'assistant', content: 'Olá! Em que posso ajudar?' }] }
   let(:segmento) { 'seguros/corretora' }
-  let(:marca) { { 'segmento' => segmento, 'versao' => nil } }
+  let(:marca) { { 'segmento' => segmento, 'versao' => 'aaaabbbbcccc' } }
 
   def create_agent(**attrs)
     Autonomia::Agents::Agent.create!(

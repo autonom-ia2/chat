@@ -5,6 +5,7 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
   let(:account) { conta_da_fase2 }
   let(:corretora) { { 'segmento' => 'seguros/corretora', 'versao' => nil } }
+  let(:corretora_v1) { { 'segmento' => 'seguros/corretora', 'versao' => 'aaaabbbbcccc' } }
   let(:history) { [{ role: 'user', content: 'Oi' }] }
 
   around do |example|
@@ -53,7 +54,7 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
 
   describe 'PromptBuilder' do
     it 'hoje não muda nada: com marca e Fase 2, o bloco real é nil e o input é o de um agente sem marca' do
-      com_marca = criar_agente('with_knowledge' => false, 'base' => corretora)
+      com_marca = criar_agente('with_knowledge' => false, 'base' => corretora_v1)
       sem_marca = criar_agente('with_knowledge' => false)
 
       expect(input_de(com_marca)).to eq(input_de(sem_marca))
@@ -69,12 +70,12 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
     it 'com a sonda ligada, o agente marcado recebe o bloco da marca como primeira mensagem' do
       stub_bloco_por_segmento
 
-      primeira = input_de(criar_agente('with_knowledge' => false, 'base' => corretora)).first
+      primeira = input_de(criar_agente('with_knowledge' => false, 'base' => corretora_v1)).first
       expect(primeira[:content].first[:text]).to start_with('CONTEXTO DA CONTA').and end_with('BLOCO seguros/corretora')
     end
 
     it 'usa a marca (corretora), não a conta trocada para seguradora' do
-      agente = criar_agente('with_knowledge' => false, 'base' => corretora)
+      agente = criar_agente('with_knowledge' => false, 'base' => corretora_v1)
       account.update!(internal_attributes: account.internal_attributes.to_h.merge(Autonomia::Agents::Nicho::PERFIL_KEY => 'seguradora'))
       stub_bloco_por_segmento
 
@@ -83,8 +84,26 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
       expect(texto).not_to include('seguradora')
     end
 
+    it 'marca com versao nil não recebe bloco, mesmo se for_segmento devolver texto' do
+      stub_bloco_por_segmento
+
+      expect(textos(input_de(criar_agente('with_knowledge' => false, 'base' => corretora)))).not_to include('BLOCO')
+    end
+
+    it 'o agente nascido com versao nil não ganha bloco depois que o conteúdo passa a existir' do
+      marca = described_class.marca(account)
+      expect(marca).to eq(corretora)
+      agente = criar_agente('with_knowledge' => false, 'base' => marca)
+
+      stub_bloco_por_segmento
+      allow(Autonomia::Segmentos::Bloco).to receive(:versao).and_return('aaaabbbbcccc')
+
+      expect(textos(input_de(agente.reload))).not_to include('BLOCO')
+      expect(described_class.marca(account)).to eq(corretora_v1)
+    end
+
     it 'sem a Fase 2, o agente marcado não recebe bloco' do
-      agente = criar_agente('with_knowledge' => false, 'base' => corretora)
+      agente = criar_agente('with_knowledge' => false, 'base' => corretora_v1)
       Autonomia::Agents::Fase2.desligar!(account)
       stub_bloco_por_segmento
 
@@ -108,7 +127,7 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
 
     it 'a Lia, mesmo com uma marca forjada no banco, não recebe bloco' do
       lia = Autonomia::Insurance::QuoteAgent::Builder.new(account: account, nome_agente: 'Lia', nome_corretora: 'Sena').call
-      lia.update_columns(config: lia.config.merge('base' => corretora)) # rubocop:disable Rails/SkipsModelValidations
+      lia.update_columns(config: lia.config.merge('base' => corretora_v1)) # rubocop:disable Rails/SkipsModelValidations
 
       expect(textos(input_de(lia.reload))).not_to include('BLOCO')
     end
@@ -118,7 +137,7 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
       guia = Autonomia::Agents::Agent.unscoped.where(account: account).find { |agente| agente.config.to_h['system_key'].present? }
 
       expect(guia.config).not_to have_key('base')
-      guia.update_columns(config: guia.config.merge('base' => corretora)) # rubocop:disable Rails/SkipsModelValidations
+      guia.update_columns(config: guia.config.merge('base' => corretora_v1)) # rubocop:disable Rails/SkipsModelValidations
       expect(textos(input_de(guia.reload))).not_to include('BLOCO')
     end
   end
