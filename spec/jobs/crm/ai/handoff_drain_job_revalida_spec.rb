@@ -46,6 +46,12 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     ActiveJob::Base.queue_adapter.enqueued_jobs.select { |job| job[:job] == Crm::Ai::RevalidaPassagemJob }
   end
 
+  def roda_releituras!
+    jobs = releituras
+    ActiveJob::Base.queue_adapter.enqueued_jobs.reject! { |job| jobs.include?(job) }
+    jobs.each { |job| Crm::Ai::RevalidaPassagemJob.perform_now(*job[:args]) }
+  end
+
   def responde!(passa, motivo)
     allow(revalida).to receive(:call).and_return({ passa: passa, motivo: motivo, decisao: passa ? 'problema_em_aberto' : 'resolvido' })
     Crm::Ai::RevalidaPassagemJob.perform_now(conversation.id, marca['revalidando_desde'])
@@ -146,6 +152,41 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
 
   it 'a espera que o próprio agente pediu não é relida' do
     segurar!(motivo: 'robo_pediu')
+
+    described_class.perform_now
+
+    expect(releituras).to be_empty
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+  end
+
+  # Revisão do PR #1980 (ALTO 1): com uma mensagem chegando durante cada releitura, toda resposta é velha e seria
+  # descartada para sempre. O prazo total (10 min desde a primeira releitura da espera) não recomeça: a conversa é
+  # entregue na primeira rodada depois dele.
+  it 'mensagem chegando durante cada releitura: a conversa é entregue em até 10 min', :aggregate_failures do
+    segurar!
+    allow(revalida).to receive(:call) do
+      fala!('mais uma coisa', tipo: :incoming)
+      { passa: false, motivo: 'resolvido', decisao: 'resolvido' }
+    end
+    inicio = Time.current
+
+    [0, 2, 4, 6, 8, 10].each do |minuto|
+      travel_to(inicio + minuto.minutes) do
+        described_class.perform_now
+        roda_releituras!
+      end
+    end
+    expect(conversation.reload.assignee_id).to be_nil
+
+    travel_to(inicio + 12.minutes) { described_class.perform_now }
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+    expect(revalida).to have_received(:call).at_least(5).times
+  end
+
+  # MÉDIO 4: a mesma regra de funil da avaliação do card (Crm::Ai::Config.pipeline_ai_enabled?).
+  it 'funil com a IA desligada: entrega como hoje, sem enfileirar', :aggregate_failures do
+    card.pipeline.update!(metadata: (card.pipeline.metadata || {}).merge('ai' => { 'enabled' => false }))
+    segurar!
 
     described_class.perform_now
 

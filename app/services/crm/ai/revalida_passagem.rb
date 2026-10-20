@@ -32,10 +32,12 @@ class Crm::Ai::RevalidaPassagem
   EFFORT = Crm::Ai::Config::CLASSIFY_REASONING_EFFORT
   # Roda num job (Crm::Ai::RevalidaPassagemJob), fora da rodada da fila: no backteste, p50 20 s e máximo 74 s.
   TIMEOUT = 90
-  # A conversa desde a criação do card, até MAX_MENSAGENS (as mais recentes, se passar). O card nasce DEPOIS da
-  # mensagem que o criou: as ANTES_DO_CARD logo anteriores também entram, para o pedido inicial não ficar de fora.
-  MAX_MENSAGENS = 120
-  ANTES_DO_CARD = 12
+  # O histórico (ContextBuilder#historico_da_conversa): começa ANTES mensagens antes do mais antigo entre a criação
+  # do card (ele nasce depois da mensagem que o criou) e o começo da espera, e vai até agora. Passando de
+  # PRIMEIRAS + ULTIMAS, fica com as primeiras e as últimas, e a releitura nunca retira o pedido (`truncado`).
+  ANTES = 12
+  PRIMEIRAS = 20
+  ULTIMAS = 100
   # As duas primeiras passam; só "resolvido" tira o pedido.
   DECISOES = %w[pedido_de_pessoa problema_em_aberto resolvido].freeze
   NAO_PASSA = 'resolvido'.freeze
@@ -130,20 +132,27 @@ class Crm::Ai::RevalidaPassagem
 
   # card: o card do pedido; sem ele, o da marca de espera ou o assunto em foco da conversa.
   # motivo_do_pedido: o "reason" que a IA do CRM deu quando pediu a pessoa (gravado na marca).
-  def initialize(conversation, card: nil, motivo_do_pedido: nil)
+  # desde_do_pedido: quando a espera começou (o `desde` da marca); sem ele, o da marca.
+  def initialize(conversation, card: nil, motivo_do_pedido: nil, desde_do_pedido: nil)
     @conversation = conversation
     @card = card || Crm::Entrega::Marca.card(conversation) || Crm::Assunto.funil_atual(conversation)
     @motivo_do_pedido = motivo_do_pedido
+    @desde_do_pedido = desde_do_pedido || Crm::Entrega::Marca.desde(conversation)
   end
 
   # -> { passa:, motivo:, decisao: }. Sem card não há o que reler (a IA do CRM só pede pessoa por um card): passa,
-  # como antes deste serviço.
+  # como antes deste serviço. Com o histórico cortado no meio, nunca retira o pedido: um "resolvido" passa, com o
+  # motivo do pedido, como hoje (decisao "truncado").
   def call
     return { passa: true, motivo: '', decisao: 'sem_card' } if @card.blank?
 
     response = client.create(model: MODEL, instructions: INSTRUCTIONS, input: entrada.to_json, schema: SCHEMA,
                              reasoning_effort: EFFORT, timeout: TIMEOUT)
-    interpretar(response[:text])
+    resultado = interpretar(response[:text])
+    return resultado if resultado[:passa] || !@historico[:truncado]
+
+    Rails.logger.info("[crm][revalida] conversa=#{@conversation.id} card=#{@card.id} desfecho=revalidacao_truncada")
+    { passa: true, motivo: @motivo_do_pedido.to_s.first(300), decisao: 'truncado' }
   end
 
   private
@@ -158,20 +167,25 @@ class Crm::Ai::RevalidaPassagem
                                  pipeline: @card.pipeline, max_retries: 0)
   end
 
-  # O histórico desta conversa desde o card (revisão do PR #1980): a janela da avaliação do card (12 mensagens por
-  # conversa) deixava de fora a falha antiga. O resumo, o estado e o gatilho vêm como na avaliação do card.
+  # O histórico desta conversa desde o card e o pedido (revisão do PR #1980): a janela da avaliação do card (12
+  # mensagens por conversa) deixava de fora a falha antiga. O resumo, o estado e o gatilho vêm como na avaliação.
   def entrada
     builder = Crm::Ai::ContextBuilder.new(card: @card)
     contexto = builder.perform
+    @historico = builder.historico_da_conversa(@conversation, desde: inicio_do_historico, antes: ANTES, primeiras: PRIMEIRAS,
+                                                              ultimas: ULTIMAS)
     {
-      recent_messages: builder.historico_da_conversa(@conversation, desde: @card.created_at, limite: MAX_MENSAGENS,
-                                                                    antes: ANTES_DO_CARD),
+      recent_messages: @historico[:mensagens],
       conversation_summary: contexto[:summary],
       conversation_state: contexto[:conversation_state],
       handoff_trigger: Crm::Ai::Config.handoff_settings(@card.stage, @card.pipeline)[:trigger],
       motivo_do_pedido: @motivo_do_pedido.to_s.first(300),
       now: Time.current.iso8601
     }
+  end
+
+  def inicio_do_historico
+    [@card.created_at, @desde_do_pedido.presence && Time.zone.parse(@desde_do_pedido.to_s)].compact.min
   end
 
   def interpretar(texto)

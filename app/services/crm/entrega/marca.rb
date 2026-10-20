@@ -15,8 +15,10 @@ module Crm::Entrega::Marca
   PRESENTE_SQL = "(conversations.additional_attributes ->> '#{CHAVE}') IS NOT NULL".freeze
   # O motivo da IA do CRM guardado na marca, no mesmo tamanho do "reason" do classificador.
   RAZAO_MAX = 300
-  # A releitura da IA do CRM em curso (#1975): saem juntas quando ela termina.
-  RELEITURA_EM_CURSO = %w[revalidando_desde reenfileirado_em].freeze
+  # A releitura da IA do CRM (#1975): o job em curso (sai quando ele termina ou a resposta é descartada) e o prazo total
+  # dela (`revalidacao_comecou_em`, que sobrevive ao descarte e ao reenfileiramento e sai quando ela conclui).
+  RELEITURA_EM_CURSO = %w[revalidando_desde reenfileirado_em revalidacao_iniciada_em].freeze
+  RELEITURA = (RELEITURA_EM_CURSO + %w[revalidacao_comecou_em]).freeze
 
   module_function
 
@@ -90,16 +92,17 @@ module Crm::Entrega::Marca
   # mensagem lida, o motivo novo (qual problema ficou aberto) e se falhou, e a releitura em curso sai. Só na memória:
   # quem chama grava, sob a trava.
   def revalidada!(conversation, ate:, razao:, falhou: false)
-    valor = (dados(conversation) || {}).except(*RELEITURA_EM_CURSO).merge('revalidado_ate' => ate)
+    valor = (dados(conversation) || {}).except(*RELEITURA).merge('revalidado_ate' => ate)
     valor['razao'] = razao.to_s.first(RAZAO_MAX) if razao.present?
     valor['revalidacao_falhou'] = true if falhou
     conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
   end
 
-  # A releitura em curso (#1975): quando o job foi enfileirado (`revalidando_desde`, também a chave que o job confere)
-  # e, se a fila voltou a enfileirar um job que parecia perdido, quando (`reenfileirado_em`).
-  def revalidando!(conversation, campo, quando)
-    valor = (dados(conversation) || {}).merge(campo => quando)
+  # A releitura em curso (#1975): quando o job foi enfileirado (`revalidando_desde`, também a chave que o job confere),
+  # quando a fila voltou a enfileirar um job que parecia perdido (`reenfileirado_em`), quando um job tomou a execução
+  # para si (`revalidacao_iniciada_em`) e o prazo total (`revalidacao_comecou_em`).
+  def revalidando!(conversation, campos)
+    valor = (dados(conversation) || {}).merge(campos)
     conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
   end
 

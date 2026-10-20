@@ -50,17 +50,27 @@ module Crm
       end
 
       # #1975: o histórico de UMA conversa para a releitura da passagem (Crm::Ai::RevalidaPassagem), no mesmo formato e
-      # com os mesmos papéis de recent_messages: as `limite` mais recentes desde `desde`, mais as `antes` logo anteriores
-      # a ele, sem atividade e sem nota privada. A janela de recent_messages (12 por conversa) não alcança a falha antiga.
-      def historico_da_conversa(conversation, desde:, limite:, antes:)
+      # com os mesmos papéis de recent_messages, sem atividade e sem nota privada: começa `antes` mensagens antes de
+      # `desde` e vai até agora, na ordem da conversa. Passando de `primeiras` + `ultimas`, fica com as primeiras (o
+      # trecho que originou o pedido) e as últimas, e `truncado` diz que o meio ficou de fora.
+      def historico_da_conversa(conversation, desde:, antes:, primeiras:, ultimas:)
         base = Message.where(conversation_id: conversation.id, private: false).where.not(message_type: :activity)
                       .includes(:attachments)
-        depois = base.where(created_at: desde..).reorder(id: :desc).limit(limite).to_a
-        anteriores = base.where(created_at: ...desde).reorder(id: :desc).limit(antes).to_a
-        (anteriores + depois).sort_by(&:id).last(limite).map { |message| format_message(message) }
+        anteriores = base.where(created_at: ...desde).reorder(created_at: :desc, id: :desc).limit(antes).to_a.reverse
+        depois = base.where(created_at: desde..)
+        truncado = anteriores.size + depois.count > primeiras + ultimas
+        mensagens = truncado ? pontas(anteriores, depois, primeiras, ultimas) : anteriores + depois.reorder(:created_at, :id).to_a
+        { mensagens: mensagens.map { |message| format_message(message) }, truncado: truncado }
       end
 
       private
+
+      # As primeiras do histórico (as anteriores a `desde` e o começo do que veio depois) e as últimas.
+      def pontas(anteriores, depois, primeiras, ultimas)
+        inicio = (anteriores + depois.reorder(:created_at, :id).limit(primeiras).to_a).first(primeiras)
+        fim = depois.reorder(created_at: :desc, id: :desc).limit(ultimas).to_a.reverse
+        (inicio + fim).uniq(&:id)
+      end
 
       def memoria_payload
         @numeracao ? Crm::Memoria::ParaAvaliacao.contexto(@card, conversation_ids, @numeracao) : {}

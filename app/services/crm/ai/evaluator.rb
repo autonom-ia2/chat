@@ -100,8 +100,7 @@ module Crm
       end
 
       def pipeline_ai_enabled?
-        settings = Config.pipeline_ai_settings(@card.pipeline)
-        settings[:enabled] != false
+        Config.pipeline_ai_enabled?(@card.pipeline)
       end
 
       def debounced?

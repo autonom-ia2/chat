@@ -132,10 +132,10 @@ RSpec.describe Crm::Ai::RevalidaPassagem do
     expect(described_class.new(conversation).call).to eq(passa: false, motivo: 'a cotação foi enviada', decisao: 'resolvido')
   end
 
-  # Revisão do PR #1980 (HIGH 3): a janela da avaliação do card (12 mensagens por conversa) deixava de fora a falha
-  # antiga. A releitura lê esta conversa desde o card (até 120, as mais recentes), mais as 12 logo antes dele (o card
-  # nasce depois da mensagem que o criou), sem atividade e sem nota privada, no formato de recent_messages.
-  it 'lê a conversa desde o card, com as mensagens logo antes dele, sem atividade nem nota', :aggregate_failures do
+  # Revisão do PR #1980: a janela da avaliação do card (12 mensagens por conversa) deixava de fora a falha antiga. A
+  # releitura começa 12 mensagens antes do mais antigo entre o card (ele nasce depois da mensagem que o criou) e o
+  # começo da espera, e vai até agora, sem atividade e sem nota privada, no formato de recent_messages.
+  it 'lê a conversa desde o card, com as 12 mensagens logo antes dele, sem atividade nem nota', :aggregate_failures do
     criado = conversation.crm_cards.sole.created_at
     fala = lambda do |texto, quando, **extra|
       create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: texto,
@@ -157,15 +157,48 @@ RSpec.describe Crm::Ai::RevalidaPassagem do
     expect(JSON.parse(enviado[:input])['recent_messages'].first).to include('role' => 'customer')
   end
 
-  it 'passando de 120, fica com as mais recentes' do
-    stub_const("#{described_class}::MAX_MENSAGENS", 5)
-    stub_const("#{described_class}::ANTES_DO_CARD", 0)
+  it 'a espera mais antiga que o card puxa o começo do histórico para perto dela' do
+    criado = conversation.crm_cards.sole.created_at
+    desde = criado - 1.day
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
+                     content: 'perto da espera', created_at: desde + 1.minute)
+    15.times do |i|
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: "meio #{i}",
+                       created_at: desde + (i + 2).hours)
+    end
+    responde(decisao: 'problema_em_aberto', motivo: 'ok')
+
+    described_class.new(conversation, desde_do_pedido: desde.iso8601).call
+
+    expect(JSON.parse(enviado[:input])['recent_messages'].map { |m| m['content'] }).to include('perto da espera')
+  end
+
+  # Passando de 120, ficam as primeiras 20 (o trecho que originou o pedido) e as últimas 100, e a releitura nunca
+  # retira o pedido: um "resolvido" passa como hoje, com o motivo do pedido.
+  it 'histórico cortado no meio: fica com as primeiras e as últimas, e "resolvido" não retira o pedido', :aggregate_failures do
+    stub_const("#{described_class}::ANTES", 0)
+    stub_const("#{described_class}::PRIMEIRAS", 2)
+    stub_const("#{described_class}::ULTIMAS", 3)
+    conversation.messages.where(message_type: :template).delete_all
     8.times { |i| create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: "m#{i}") }
-    responde(decisao: 'resolvido', motivo: 'ok')
+    responde(decisao: 'resolvido', motivo: 'o robô resolveu')
+    linhas = []
+    allow(Rails.logger).to receive(:info) { |linha| linhas << linha }
 
-    described_class.new(conversation).call
+    resultado = described_class.new(conversation, motivo_do_pedido: 'a recotação falhou').call
 
-    expect(JSON.parse(enviado[:input])['recent_messages'].map { |m| m['content'] }).to eq(%w[m3 m4 m5 m6 m7])
+    expect(JSON.parse(enviado[:input])['recent_messages'].map { |m| m['content'] }).to eq(['Quero uma cotação', 'm0', 'm5', 'm6', 'm7'])
+    expect(resultado).to eq(passa: true, motivo: 'a recotação falhou', decisao: 'truncado')
+    expect(linhas).to include(a_string_including('desfecho=revalidacao_truncada'))
+  end
+
+  it 'histórico cortado não muda um "passa"' do
+    stub_const("#{described_class}::PRIMEIRAS", 1)
+    stub_const("#{described_class}::ULTIMAS", 1)
+    3.times { |i| create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: "m#{i}") }
+    responde(decisao: 'problema_em_aberto', motivo: 'segue aberto')
+
+    expect(described_class.new(conversation).call).to include(passa: true, decisao: 'problema_em_aberto', motivo: 'segue aberto')
   end
 
   it 'resposta fora do schema levanta, para quem chama decidir', :aggregate_failures do

@@ -58,7 +58,7 @@ RSpec.describe Crm::Ai::RevalidaPassagemJob do
 
     expect(marca).to include('revalidado_ate' => conversation.messages.maximum(:id),
                              'razao' => 'cliente pediu explicação de DMH e o robô não soube')
-    expect(marca.keys).not_to include('revalidando_desde', 'reenfileirado_em', 'revalidacao_falhou')
+    expect(marca.keys).not_to include(*Crm::Entrega::Marca::RELEITURA, 'revalidacao_falhou')
     expect(retiradas).to be_empty
   end
 
@@ -110,6 +110,51 @@ RSpec.describe Crm::Ai::RevalidaPassagemJob do
     described_class.perform_now(conversation.id, token)
 
     expect(marca).to include('razao' => 'pedido novo')
+    expect(retiradas).to be_empty
+  end
+
+  # Revisão do PR #1980 (MÉDIO 3): o job toma a execução sob a trava antes de chamar; um segundo job do mesmo token
+  # (o reenfileirado, ou o mesmo entregue duas vezes) sai sem chamar.
+  it 'dois jobs com o mesmo token: uma chamada só', :aggregate_failures do
+    chamadas = 0
+    allow(revalida).to receive(:call) do
+      chamadas += 1
+      described_class.perform_now(conversation.id, token)
+      resposta(true, 'segue aberto')
+    end
+
+    described_class.perform_now(conversation.id, token)
+
+    expect(chamadas).to eq(1)
+    expect(marca).to include('razao' => 'segue aberto')
+  end
+
+  it 'falhou ao aplicar, depois da resposta: a marca guarda a falha e a rodada seguinte entrega como hoje' do
+    allow(revalida).to receive(:call).and_return(resposta(false, 'resolvido'))
+    allow(Crm::Entrega::Marca).to receive(:tirar).and_raise(ActiveRecord::StatementInvalid, 'caiu')
+
+    described_class.perform_now(conversation.id, token)
+
+    expect(marca).to include('revalidacao_falhou' => true, 'razao' => 'cliente pediu a cotação e o robô falhou')
+  end
+
+  # ALTO 1: o prazo total (10 min desde a primeira releitura desta espera) vence também para o job: não chama a IA.
+  it 'prazo total vencido: o job não chama a IA' do
+    token
+    travel(11.minutes) { described_class.perform_now(conversation.id, token) }
+
+    expect(Crm::Ai::RevalidaPassagem).not_to have_received(:new)
+  end
+
+  it 'o prazo vence durante a chamada: a resposta não é aplicada', :aggregate_failures do
+    allow(revalida).to receive(:call) do
+      travel(11.minutes)
+      resposta(false, 'resolvido')
+    end
+
+    described_class.perform_now(conversation.id, token)
+
+    expect(Crm::Entrega::Marca.presente?(conversation.reload)).to be(true)
     expect(retiradas).to be_empty
   end
 
