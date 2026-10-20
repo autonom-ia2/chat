@@ -49,6 +49,7 @@ import CorpoIsoladoDoEmail from './CorpoIsoladoDoEmail.vue';
 import { abrirImagemDoCorpo } from './imagemDoCorpo';
 import { htmlComCssSeguro } from './estiloSeguroDoEmail';
 import OriginalDoEmail from './OriginalDoEmail.vue';
+import ConviteDaReuniao from './ConviteDaReuniao.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import { useAcoesDoEmail } from './useAcoesDoEmail';
 import { useRecursosDoEmail } from './recursosDoEmail';
@@ -532,6 +533,12 @@ const excluir = async () => {
       </header>
 
       <section class="mt-3 ps-[60px] sm:ps-[68px] pe-2 sm:pe-4">
+        <ConviteDaReuniao
+          v-if="contentAttributes?.email?.convite"
+          :convite="contentAttributes.email.convite"
+          :mensagem-id="id"
+          :fuso="fuso"
+        />
         <div
           ref="corpo"
           class="relative text-sm text-n-slate-12 [&_img:not(a_img)]:cursor-zoom-in"
