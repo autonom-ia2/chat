@@ -23,9 +23,9 @@ import { formatMinutes } from '../../bookingFormat';
 import { useNoticeTemplateSuggestions } from '../../useNoticeTemplateSuggestions';
 
 // Passo 6: avisos no WhatsApp (#1192, J5-A8). Por qual número sai, qual jogo
-// de avisos (cartões prontos, sem digitar horário), a mensagem pronta de cada
-// aviso quando o número pede (WhatsApp oficial: aprovada na Meta; canal API de
-// campanhas: as mensagens do canal), e até quando o cliente pode mudar.
+// de avisos (cartões prontos, sem digitar horário), a mensagem de cada aviso
+// quando o número pede (WhatsApp oficial: mensagem aprovada pela Meta; canal API
+// de campanhas: modelo de texto do canal), e até quando o cliente pode mudar.
 const props = defineProps({
   form: { type: Object, required: true },
   // notice_inbox_options do GET da página: [{ id, name, provider, needs_templates }]
@@ -182,7 +182,18 @@ const templateOptionsFor = kind => {
       label: t('BOOKING.NOTICES.TEMPLATE_SAVED'),
     });
   }
-  return [{ value: '', label: t('BOOKING.NOTICES.TEMPLATE_NONE') }, ...options];
+  // Canal API: "modelo de texto" (salvo pela conta); oficial: "mensagem aprovada".
+  const none = isApiChannel.value
+    ? t('BOOKING.NOTICES.API_TEMPLATE_NONE')
+    : t('BOOKING.NOTICES.TEMPLATE_NONE');
+  return [{ value: '', label: none }, ...options];
+};
+
+const templateLabelFor = kind => {
+  const notice = t(`BOOKING.NOTICES.KINDS.${kind.toUpperCase()}`);
+  return isApiChannel.value
+    ? t('BOOKING.NOTICES.API_TEMPLATE_FOR', { notice })
+    : t('BOOKING.NOTICES.TEMPLATE_FOR', { notice });
 };
 
 const templateValue = kind => templateChoice(props.form.noticeTemplates[kind]);
@@ -231,12 +242,17 @@ const isCloud = computed(
   () => chosenInbox.value?.provider === 'whatsapp_cloud'
 );
 
-// Avisos sem mensagem pronta: a pessoa sabe antes de salvar que esses só saem
+// Avisos sem mensagem escolhida: a pessoa sabe antes de salvar que esses só saem
 // para quem falou com a empresa nas últimas 24 horas.
 const missingKinds = computed(() =>
   kindsWithoutTemplate(props.form, chosenInbox.value)
     .map(kind => t(`BOOKING.NOTICES.KINDS.${kind.toUpperCase()}`))
     .join(', ')
+);
+const missingText = computed(() =>
+  isApiChannel.value
+    ? t('BOOKING.NOTICES.API_MISSING_TEMPLATES', { kinds: missingKinds.value })
+    : t('BOOKING.NOTICES.MISSING_TEMPLATES', { kinds: missingKinds.value })
 );
 const emptyText = computed(() => {
   if (isApiChannel.value) {
@@ -359,11 +375,7 @@ const emptyText = computed(() => {
           <ChoiceSelect
             :model-value="templateValue(kind)"
             :options="templateOptionsFor(kind)"
-            :aria-label="
-              t('BOOKING.NOTICES.TEMPLATE_FOR', {
-                notice: t(`BOOKING.NOTICES.KINDS.${kind.toUpperCase()}`),
-              })
-            "
+            :aria-label="templateLabelFor(kind)"
             @update:model-value="chooseByHand(kind, $event)"
           />
           <p
@@ -387,7 +399,7 @@ const emptyText = computed(() => {
           data-missing-templates
           class="m-0 text-base text-n-amber-12"
         >
-          {{ t('BOOKING.NOTICES.MISSING_TEMPLATES', { kinds: missingKinds }) }}
+          {{ missingText }}
         </p>
         <BookingNoticeAutorizacao v-if="isCloud" />
       </div>
