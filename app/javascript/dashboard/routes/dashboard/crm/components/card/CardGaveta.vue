@@ -71,6 +71,7 @@ const props = defineProps({
   followUps: { type: Array, default: () => [] },
   canManageCards: { type: Boolean, default: false },
   canMoveCards: { type: Boolean, default: false },
+  canDeleteCards: { type: Boolean, default: false },
   isMovingCard: { type: Boolean, default: false },
   canManageAi: { type: Boolean, default: false },
   isSaving: { type: Boolean, default: false },
@@ -117,6 +118,7 @@ const podeIa = computed(
 );
 const podeGerenciar = computed(() => props.canManageCards);
 const podeMover = computed(() => props.canMoveCards);
+const podeArquivar = computed(() => props.canDeleteCards);
 const funil = computed(() => {
   const id = Number(card.value.pipeline_id || props.pipelineId);
   return props.pipelines.find(item => item.id === id);
@@ -378,10 +380,10 @@ const reabrir = () =>
   guardar(() => podeGerenciar.value && emit('closeDeal', { result: 'reopen' }));
 const fecharNegocio = dados => podeGerenciar.value && emit('closeDeal', dados);
 const arquivar = () =>
-  guardar(() => podeGerenciar.value && dialogoArquivar.value?.open());
+  guardar(() => podeArquivar.value && dialogoArquivar.value?.open());
 const confirmarArquivar = () => {
   dialogoArquivar.value?.close();
-  if (podeGerenciar.value) emit('archive');
+  if (podeArquivar.value) emit('archive');
 };
 const {
   dialogo: dialogoMover,
@@ -698,6 +700,7 @@ defineExpose({
                 :formato="formato"
                 :nome="nome"
                 :pode-gerenciar="podeGerenciar"
+                :pode-arquivar="podeArquivar"
                 :pode-registros="canManageRelationshipRecords"
                 :pode-ver-contatos="canViewRelationshipRecords"
                 :arquivando="isArchiving"

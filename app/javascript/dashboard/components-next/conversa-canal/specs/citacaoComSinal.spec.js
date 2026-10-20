@@ -1,6 +1,7 @@
 import { sanitizeTextForRender } from '@chatwoot/utils';
 import { EmailQuoteExtractor } from 'dashboard/helper/emailQuoteExtractor.js';
 import { semCitacaoDosLeitores } from '../email/citacaoDosLeitores';
+import { cortarCitacaoComSinal } from '../email/citacaoComSinal';
 
 // O que o cartão do e-mail mostra: o nosso corte e, depois, o extrator do Chatwoot.
 const corpoVisivel = html => {
@@ -138,5 +139,13 @@ describe('citação com ">" no fim do e-mail (#1869)', () => {
     );
     expect(achou).toBe(false);
     expect(html).toContain('<img');
+  });
+
+  it('o CSS de um <style> no corpo não vira linha citada (#1884)', () => {
+    const raiz = document.createElement('div');
+    raiz.innerHTML =
+      '<p>Oi</p><style>\n> .a{color:red}\n</style><p>Assinatura</p>';
+    expect(cortarCitacaoComSinal(raiz)).toBe(false);
+    expect(raiz.textContent).toContain('Assinatura');
   });
 });

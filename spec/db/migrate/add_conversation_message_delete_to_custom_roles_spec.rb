@@ -1,5 +1,5 @@
 require 'rails_helper'
-require Rails.root.join('db/migrate/20261108171000_add_conversation_message_delete_to_custom_roles.rb')
+require Rails.root.join('db/migrate/20261108230000_add_conversation_message_delete_to_custom_roles.rb')
 
 # #1893 — quem já apagava mensagens por atender conversas continua apagando depois da divisão.
 RSpec.describe AddConversationMessageDeleteToCustomRoles do

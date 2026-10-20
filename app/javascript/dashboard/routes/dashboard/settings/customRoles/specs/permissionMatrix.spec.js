@@ -482,6 +482,30 @@ describe('permissionMatrix', () => {
     });
   });
 
+  describe('crm: arquivar cards (#1874)', () => {
+    const crm = moduleByKey('CRM');
+
+    it('"Pode mexer" não liga arquivar sozinho, e o ajuste aparece só para quem mexe', () => {
+      const permissions = setLevel(crm, LEVELS.MANAGE, ['crm_view']);
+      expect(permissions).not.toContain('crm_delete_cards');
+      expect(visibleExtras(crm, permissions)).toContain('crm_delete_cards');
+      expect(visibleExtras(crm, ['crm_view'])).not.toContain(
+        'crm_delete_cards'
+      );
+    });
+
+    it('voltar para ver tira arquivar', () => {
+      const permissions = ['crm_view', 'crm_manage_cards', 'crm_delete_cards'];
+      expect(setLevel(crm, LEVELS.VIEW, permissions)).toEqual(['crm_view']);
+    });
+
+    it('Administrador do CRM inclui arquivar e o mantém ligado', () => {
+      const on = toggleExtra(crm, 'crm_admin', ['crm_view']);
+      expect(on).toContain('crm_delete_cards');
+      expect(isExtraLocked('crm_delete_cards', on)).toBe(true);
+    });
+  });
+
   // A linha do ajuste fino mostra nome e descrição pela chave; sem a tradução, a tela mostra a chave crua (#1845).
   it('todo ajuste fino tem nome e descrição em en e pt_BR', () => {
     const extras = MODULES.flatMap(module => module.extras || []);

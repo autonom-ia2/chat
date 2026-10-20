@@ -1,8 +1,9 @@
 class Api::V1::Accounts::Crm::Cards::BulkController < Api::V1::Accounts::Crm::BaseController
   # Bulk mutation over a set of card ids (move / assign / status / delete).
   # Authorization is two-layered: a coarse `index?` check that the caller may
-  # touch cards at all, then a per-card visible-scope filter inside the service
-  # (cards outside the scope are reported as `forbidden`, never mutated).
+  # touch cards at all, then, inside the service, the CardPolicy of the action for
+  # each card (move?, update?, close?, destroy?; #1874). Refused cards are
+  # reported as `forbidden`, never mutated.
   def create
     authorize ::Crm::Card, :index?
 
