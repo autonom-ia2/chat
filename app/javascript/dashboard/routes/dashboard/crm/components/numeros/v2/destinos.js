@@ -42,11 +42,15 @@ export const DESTINOS = {
       item,
       lista(funis.suporte, { result: 'resolved', closed_in: 'this_month' })
     ),
-  com_voce: () => ({ name: 'home' }),
+  // Sem link até a caixa ter filtro de responsável pelo endereço: "com você agora" conta as
+  // conversas abertas atribuídas a mim, e a caixa abre com o status e a aba salvos da pessoa.
+  com_voce: () => null,
   deu_certo: () => ({ name: 'csat_reports' }),
   campanha_com_voce: ({ funis, item }) =>
     kanban(funis.vendas, { campaign_source_ids: item.origem }),
-  ia_passou: () => ({ name: 'home', query: { da_ia: '1' } }),
+  // Mesmo limite: "a IA te passou" conta as passagens para mim no mês, e `?da_ia=1` mostra
+  // todas as recebidas da IA que a pessoa vê, sem mês e sem responsável.
+  ia_passou: () => null,
   criar_funil: () => ({ name: 'crm_kanban_index' }),
 };
 

@@ -177,16 +177,15 @@ describe('destinos', () => {
     });
   });
 
-  it('opens the inbox received from the AI', () => {
-    expect(destino('ia_passou', { funis })).toEqual({
-      to: { name: 'home', query: { da_ia: '1' } },
-    });
+  it('gives no link to "with you now" nor "the AI handed you": the inbox has no owner filter by URL yet', () => {
+    expect(destino('com_voce', { funis })).toBeNull();
+    expect(destino('ia_passou', { funis })).toBeNull();
   });
 
   it('gives no link to a list the person cannot open', () => {
     const podeAbrir = to => to.name !== 'csat_reports';
     expect(destino('deu_certo', { funis, podeAbrir })).toBeNull();
-    expect(destino('com_voce', { funis, podeAbrir })).not.toBeNull();
+    expect(destino('meus_casos', { funis, podeAbrir })).not.toBeNull();
   });
 
   it('opens the Kanban without a funnel when the person has none of that kind', () => {

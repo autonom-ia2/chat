@@ -90,7 +90,11 @@ const montar = () => {
         CrmVistasNumeros: true,
         NumerosComoContamos: true,
         RouterLink: true,
-        Banner: { template: '<div data-numeros-aviso-admin><slot /></div>' },
+        Banner: {
+          emits: ['action'],
+          template:
+            '<div data-numeros-aviso-admin><button data-entendi @click="$emit(\'action\')" /><slot /></div>',
+        },
         ResultsToggle: true,
       },
     },
@@ -193,5 +197,20 @@ describe('CrmNumerosPage', () => {
     const agente = montar();
     await flushPromises();
     expect(agente.find('[data-numeros-aviso-admin]').exists()).toBe(false);
+  });
+
+  it('"Entendi" fecha o aviso e grava no navegador', async () => {
+    window.localStorage.removeItem('crm-numeros-aviso-equipe-1');
+    estado.papel = 'administrator';
+    const wrapper = montar();
+    await flushPromises();
+    await wrapper.find('[data-entendi]').trigger('click');
+    expect(wrapper.find('[data-numeros-aviso-admin]').exists()).toBe(false);
+    expect(window.localStorage.getItem('crm-numeros-aviso-equipe-1')).toBe('1');
+
+    const deNovo = montar();
+    await flushPromises();
+    expect(deNovo.find('[data-numeros-aviso-admin]').exists()).toBe(false);
+    window.localStorage.removeItem('crm-numeros-aviso-equipe-1');
   });
 });

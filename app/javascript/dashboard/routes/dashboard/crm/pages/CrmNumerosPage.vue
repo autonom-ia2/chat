@@ -78,8 +78,10 @@ const buscarConta = async () => {
   contaFalhou.value = !pronto.value;
 };
 
+// A chave é por conta: troca de conta relê o aviso.
+watch(chaveDoAviso, lerAviso, { immediate: true });
+
 onMounted(() => {
-  lerAviso();
   if (!pronto.value) buscarConta();
 });
 
