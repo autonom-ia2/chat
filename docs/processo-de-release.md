@@ -224,7 +224,8 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
      deploy que falha ali: suspende o Instagram assistido na atual e reinicia o web dela por alguns segundos. A migration
      desse deploy pode já ter rodado (ela vem antes do tráfego): por isso migration é sempre aditiva;
    - o deploy confere o congelamento de novo logo antes de registrar a green no balanceador: um rollback que congelou
-     durante o build ou o boot o para ali, sem tráfego;
+     durante o build ou o boot o para ali, sem tráfego. Parado assim, a limpeza não toca na blue (nem Instagram, nem
+     web, nem listener; só confere, lendo, que o listener está nela) e termina a green;
    - o rollback pede a **mesma trava** do deploy: espera o deploy que já estava no tráfego terminar, congela de novo com
      outro pedido (`...:trava`, para um descongelar que tenha liberado o primeiro não valer para este), confere o SHA
      de novo e só então troca. Se esse deploy mudou a anterior, o rollback para sem trocar e lista as instâncias com o

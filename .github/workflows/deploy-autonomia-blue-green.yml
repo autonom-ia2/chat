@@ -855,8 +855,10 @@ jobs:
           DESCONGELAR: ${{ github.event_name == 'workflow_dispatch' && inputs.descongelar == true }}
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          if [ "$DESCONGELAR" != true ]; then
-            abort_if_frozen
+          if [ "$DESCONGELAR" != true ] && ! abort_if_frozen; then
+            # A limpeza lê isto: até aqui o deploy não tocou em tráfego, worker nem Instagram da blue.
+            echo "FREEZE_ABORTED=true" >> "$GITHUB_ENV"
+            exit 1
           fi
 
       - name: Set up Docker Buildx
@@ -988,8 +990,10 @@ jobs:
           DESCONGELAR: ${{ github.event_name == 'workflow_dispatch' && inputs.descongelar == true }}
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          if [ "$DESCONGELAR" != true ]; then
-            abort_if_frozen
+          if [ "$DESCONGELAR" != true ] && ! abort_if_frozen; then
+            # A limpeza lê isto: até aqui o deploy não tocou em tráfego, worker nem Instagram da blue.
+            echo "FREEZE_ABORTED=true" >> "$GITHUB_ENV"
+            exit 1
           fi
 
       - name: Register green target group
@@ -1227,11 +1231,12 @@ jobs:
               validate_target_pair "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
             fi
           fi
-          # #1979: green que nunca recebeu a imagem não rodou o app, e tráfego e worker seguem na blue. Suspender o Instagram e
-          # reiniciar o web da blue aí só derrubaria a produção à toa (deploy parado pelo congelamento antes do build, ou
-          # cancelado por um rollback durante o boot ou o build).
+          # #1979: tráfego, worker e Instagram seguem na blue quando a green nunca recebeu a imagem (não rodou o app) ou
+          # quando o deploy parou de propósito pelo congelamento antes do balanceador (a green rodou o boot, como em todo
+          # deploy, sem tocar na blue). Suspender o Instagram, reiniciar o web da blue ou regravar listener e CURRENT aí
+          # só mexeria na produção à toa; basta conferir, só lendo, que o listener está na blue.
           blue_untouched=false
-          if { [ -z "${GREEN_INSTANCE_ID:-}" ] || [ "$green_without_image" = "true" ]; } \
+          if { [ -z "${GREEN_INSTANCE_ID:-}" ] || [ "$green_without_image" = "true" ] || [ "${FREEZE_ABORTED:-false}" = "true" ]; } \
             && [ -z "${GREEN_TG_ARN:-}" ] && [ "${BLUE_WORKER_STOPPED:-false}" != "true" ] \
             && [ "${GREEN_WORKER_START_ATTEMPTED:-false}" != "true" ]; then
             blue_untouched=true
@@ -1259,7 +1264,13 @@ jobs:
 
           # Even a failed switch may have reached AWS. Confirm blue before writing
           # pointers or removing green; failed recovery retains green for inspection.
-          if [ -n "${LISTENER_ARN:-}" ] && [ -n "${BLUE_TG_ARN:-}" ] && [ -n "${BLUE_INSTANCE_ID:-}" ]; then
+          if [ "$blue_untouched" = "true" ] && [ -n "${LISTENER_ARN:-}" ] && [ -n "${BLUE_TG_ARN:-}" ]; then
+            read_listener_destination "$LISTENER_ARN"
+            if [ "$ACTIVE_TG_ARN" != "$BLUE_TG_ARN" ] || [ "$ACTIVE_INSTANCE_ID" != "$BLUE_INSTANCE_ID" ]; then
+              echo "blue_green_destination_mismatch" >&2
+              exit 1
+            fi
+          elif [ -n "${LISTENER_ARN:-}" ] && [ -n "${BLUE_TG_ARN:-}" ] && [ -n "${BLUE_INSTANCE_ID:-}" ]; then
             switch_listener_destination "$LISTENER_ARN" "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
             recovery_switch_status="$LISTENER_SWITCH_STATUS"
           fi

@@ -277,11 +277,22 @@ def cleanup(args, inventory):
                 allow_failure=True,
             )
             if state == "available":
+                freeze = current_freeze(args)
+                if freeze != "off":
+                    stopped_by_freeze = freeze
+                    break
                 aws_run(["ec2", "delete-volume", "--volume-id", volume_id])
                 deleted_volumes.append(volume_id)
+        if stopped_by_freeze:
+            break
 
     for volume in inventory["candidate_available_volumes"]:
         if stopped_by_freeze:
+            break
+        # Também sem instância candidata: a AMI pode levar minutos, e um rollback pode congelar nesse meio.
+        freeze = current_freeze(args)
+        if freeze != "off":
+            stopped_by_freeze = freeze
             break
         volume_id = volume["volume_id"]
         aws_run(["ec2", "delete-volume", "--volume-id", volume_id])
