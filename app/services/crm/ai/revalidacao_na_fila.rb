@@ -71,10 +71,11 @@ class Crm::Ai::RevalidacaoNaFila
   end
 
   # Para a Crm::Entrega (`exigir_releitura`, sob a trava da conversa): a espera da IA do CRM ainda precisa de releitura
-  # antes de sair (em curso, ou não relida desde a última mensagem real), dentro do prazo total.
+  # antes de sair (em curso, ou não relida desde a última mensagem real), dentro do prazo total. Vale também para a
+  # espera que a fila espaça (convite vencido, Crm::Entrega::ConviteVencido): ela não sai antes de ser relida.
   def falta_reler?
     marca = Crm::Entrega::Marca.dados(@conversation)
-    releitura_cabe?(marca) && !vencida?(marca) && (marca['revalidando_desde'].present? || !ate_onde_reler(marca).nil?)
+    releitura_aplica?(marca) && !vencida?(marca) && (marca['revalidando_desde'].present? || !ate_onde_reler(marca).nil?)
   end
 
   private
@@ -83,8 +84,12 @@ class Crm::Ai::RevalidacaoNaFila
   # rodada não gasta chamada. Com a IA do CRM desligada, na instalação ou no funil do card (a mesma regra da avaliação
   # do card), a releitura não acontece: entrega como hoje, sem esperar o job.
   def releitura_cabe?(marca)
-    da_ia_do_crm?(marca) && ia_ligada? && !Crm::Entrega::ConviteVencido.espacar?(marca) &&
-      ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation).blank?
+    releitura_aplica?(marca) && !Crm::Entrega::ConviteVencido.espacar?(marca)
+  end
+
+  # A espera da IA do CRM, num funil com a IA ligada, sem um agente nosso no comando.
+  def releitura_aplica?(marca)
+    da_ia_do_crm?(marca) && ia_ligada? && ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation).blank?
   end
 
   # Relido do banco a cada vez: o funil pode ser desligado, o card apagado ou levado a outro funil com o job na fila ou

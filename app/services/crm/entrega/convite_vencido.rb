@@ -52,9 +52,12 @@ class Crm::Entrega::ConviteVencido
     # Ainda dentro da transação da rodada: a trava da conversa só sai no commit, e ninguém assume entre a marca e a regra.
     return if venceram.nil?
 
+    # A continuação da espera da IA do CRM passa pela releitura (#1975): sem ela, o convite seguinte, ou a atribuição
+    # direta quando todos deixaram vencer, sairia pela decisão antiga. As outras esperas não mudam
+    # (Crm::Ai::RevalidacaoNaFila#falta_reler? só vale para a da IA do CRM).
     marca = Crm::Entrega::Marca.dados(@conversation)
     Crm::Entrega.new(conversation: @conversation, motivo: marca['motivo'], origem: 'fila', excluir: venceram, card: @card,
-                     pelo_card: @card.present?).call
+                     pelo_card: @card.present?, exigir_releitura: true).call
   end
 
   private

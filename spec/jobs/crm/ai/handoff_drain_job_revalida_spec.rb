@@ -476,4 +476,35 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
       expect(convidada).to eq(bruno.id)
     end
   end
+
+  # 6ª revisão do Codex (MÉDIO 2): o convite vencido roda a regra de novo pela fila (Crm::Entrega::ConviteVencido). Com
+  # todos os convidados tendo deixado vencer, vira atribuição direta; na espera da IA do CRM, só depois da releitura.
+  context 'with convite que todos deixam vencer (r3_invite)' do
+    before do
+      card.stage.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r3_invite', 'invite_ttl_seconds' => 3600 } })
+      Crm::Entrega.new(conversation: conversation, motivo: Crm::Ai::HandoffExecutor::MOTIVO_DA_ENTREGA, origem: 'message',
+                       pedido: { razao: 'cliente pediu a cotação e o robô falhou' }).call
+    end
+
+    it 'a atribuição direta depois do convite vencido espera a releitura', :aggregate_failures do
+      allow(revalida).to receive(:call).and_return({ passa: true, motivo: 'segue aberto', decisao: 'problema_em_aberto' })
+      expect(Crm::Entrega::Marca.dados(conversation.reload)).to include('modo' => Crm::Entrega::Marca::CONVITE)
+      inicio = Time.current
+
+      travel_to(inicio + 2.hours) { described_class.perform_now }
+      expect(conversation.reload.assignee_id).to be_nil
+      expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'falha' => Crm::Entrega::AGUARDANDO_RELEITURA,
+                               'venceram' => [ana.id])
+
+      travel_to(inicio + 2.hours + 2.minutes) do
+        described_class.perform_now
+        expect(conversation.reload.assignee_id).to be_nil
+        roda_releituras!
+      end
+      travel_to(inicio + 2.hours + 4.minutes) { described_class.perform_now }
+
+      expect(revalida).to have_received(:call).once
+      expect(conversation.reload.assignee_id).to eq(ana.id)
+    end
+  end
 end
