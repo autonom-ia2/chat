@@ -35,6 +35,8 @@
 # - 'crm_export': Can download the CRM list as a spreadsheet (personal data in bulk).
 # - 'crm_delete_cards': Can archive CRM cards, one by one or in bulk (split from crm_manage_cards in #1874; roles that
 #   had crm_manage_cards kept it).
+# - 'crm_metas_manage': Can see and set every person's monthly goal in CRM › Números (Metas do mês, #1991). crm_admin
+#   implies it; agents without a custom role never get it.
 #
 # Module keys: '<module>_manage' implies '<module>_view' (see Enterprise::AccountUser#permission_granted?).
 # - 'contact_view' / 'knowledge_base_view': read-only access to contacts / help center.
@@ -93,6 +95,7 @@ class CustomRole < ApplicationRecord
     crm_admin
     crm_export
     crm_delete_cards
+    crm_metas_manage
     contact_view
     contact_export
     contact_delete

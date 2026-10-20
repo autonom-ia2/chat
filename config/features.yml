@@ -631,3 +631,14 @@
   display_name: IA de assunto cria o card na coluna certa
   enabled: false
   column: feature_flags_ext_1
+
+# Metas do mês por pessoa em CRM › Números (#1991, F4 do épico #1871). Ligada: a gaveta "Metas do mês" (funis de Vender,
+# meta do funil e de cada pessoa, em R$ na moeda do funil) para o administrador e a função com `crm_metas_manage` (ou
+# `crm_admin`), e quem vende vê a própria meta no topo de "Só eu" (Decisão 4: nunca a dos colegas). Desligada (padrão):
+# tudo como antes. Posição 51 na feature_flags_ext_1 (1125899906842624 = 1 << 50), provisória da Orquestração (20/10):
+# entra depois das reservas 44 a 50; até elas entrarem na main, a posição nesta lista é a 44 (1 << 43, account_spec).
+# Sem migration: a Orquestração liga depois do deploy, na stack Hub2You, contas 1, 16 e 18.
+- name: crm_metas
+  display_name: CRM › Metas do mês por pessoa
+  enabled: false
+  column: feature_flags_ext_1

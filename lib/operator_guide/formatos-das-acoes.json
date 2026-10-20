@@ -6389,6 +6389,7 @@
           "crm_admin",
           "crm_export",
           "crm_delete_cards",
+          "crm_metas_manage",
           "contact_view",
           "contact_export",
           "contact_delete",
@@ -16456,6 +16457,7 @@
           "crm_admin",
           "crm_export",
           "crm_delete_cards",
+          "crm_metas_manage",
           "contact_view",
           "contact_export",
           "contact_delete",
@@ -23888,6 +23890,32 @@
     ],
     "sem_corpo": false
   },
+  "PUT crm/metas": {
+    "campos": {
+      "funis": {
+        "campos": {
+          "id": {},
+          "metaFunil": {},
+          "pessoas": {
+            "campos": {
+              "id": {},
+              "meta": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "mes": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/metas#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/metas_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/metas_controller.rb:48"
+    ],
+    "sem_corpo": false
+  },
   "PUT crm/my_booking_hours": {
     "campos": {
       "paused": {},
@@ -24784,6 +24812,7 @@
           "crm_admin",
           "crm_export",
           "crm_delete_cards",
+          "crm_metas_manage",
           "contact_view",
           "contact_export",
           "contact_delete",

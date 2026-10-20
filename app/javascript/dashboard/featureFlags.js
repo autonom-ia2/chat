@@ -68,6 +68,7 @@ export const FEATURE_FLAGS = {
   CONVERSA_EMAIL_NOVA: 'conversa_email_nova',
   EMAIL_LIDO_SINCRONIZADO: 'email_lido_sincronizado',
   CRM_NUMEROS_LENTES: 'crm_numeros_lentes',
+  CRM_METAS: 'crm_metas',
   CONTATO_PELO_EMAIL: 'contato_pelo_email',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',

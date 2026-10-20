@@ -6023,7 +6023,8 @@
         "MEUS_CARDS": "Abrir meus cards",
         "MEUS_LEMBRETES": "Abrir meu lembrete para trás | Abrir meus {n} lembretes para trás",
         "MEUS_CASOS": "Abrir meus casos"
-      }
+      },
+      "METAS_LINK": "Metas de {mes}"
     },
     "PROXIMO": {
       "TITULO": "Próximo passo",
@@ -6075,6 +6076,32 @@
       "EXEMPLO_2": "Dia 8: o Bruno sai de folga e passa para a Ana.",
       "EXEMPLO_3": "Dia 15: a Ana fecha. Quem marcou o fechamento foi o Marcos.",
       "EXEMPLO_RESULTADO": "Os R$ 3.000 contam para a Ana. Bruno e Sofia participaram."
+    },
+    "METAS": {
+      "TITULO": "Metas de {mes}",
+      "DESCRICAO": "Defina a meta de cada pessoa. A tela de cada um mostra só a própria meta.",
+      "FUNIS": "Funil",
+      "META_FUNIL": "Meta do funil {funil}",
+      "META_FUNIL_DICA": "A meta do funil não precisa ser a soma das pessoas.",
+      "META_PESSOA": "Meta de {nome}",
+      "UNIDADE_VALOR": "em {moeda}",
+      "VAZIO": "Sem meta",
+      "SUGESTAO_VALOR": "Sugestão: {valor}. Nos últimos 3 meses, {nome} fechou {h1}, {h2} e {h3}.",
+      "SEM_SUGESTAO": "{nome} não fechou venda nos últimos 3 meses.",
+      "USAR_SUGESTAO": "Usar a sugestão",
+      "ATALHOS": "Atalhos",
+      "REPETIR": "Repetir {mes}",
+      "DIVIDIR": "Dividir igualmente",
+      "ATALHOS_DICA": "Os atalhos só preenchem os campos. Nada muda antes de salvar.",
+      "SOMA_DIFERENTE": "As metas das pessoas somam {soma}; a do funil é {meta}.",
+      "SEM_FUNIL": "Não há funil de venda para definir metas.",
+      "SEM_PESSOAS": "Ninguém trabalha neste funil ainda.",
+      "SALVAR": "Salvar as metas",
+      "CANCELAR": "Cancelar",
+      "SALVO": "Metas de {mes} salvas.",
+      "ERRO_SALVAR": "Não deu para salvar as metas. Tente de novo.",
+      "MES_MUDOU": "O mês virou. Confira as metas de {mes} e salve de novo.",
+      "INVALIDO": "Use só números, sem pontos."
     }
   }
 }
