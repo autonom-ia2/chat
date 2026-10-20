@@ -5,8 +5,8 @@
 # A card has a primary conversation and linked ones, possibly in different inboxes
 # (#1940): a client who comes back through another number lands in a linked
 # conversation while the primary stays the old one. So the clid is searched in all of
-# them, and the most recent click wins (its `touched_at`, else the conversation start).
-# Within a conversation the origin clid is preferred over the latest touch.
+# them, and the most recent click wins (its `touched_at`, else the conversation start),
+# inside a conversation too: the origin is the FIRST click, so a later touch beats it.
 #
 # `sources` also returns each click's conversation, newest first: the event must go out
 # through THAT inbox (token, WABA and dataset), or Meta cannot tie the clid to the WABA.
@@ -27,21 +27,15 @@ module Crm::MetaCapi::CtwaClidResolver
                                                            .sort_by { |source| [-source.clicked_at.to_f, -source.conversation.id] }
   end
 
+  # The newest click of the conversation, among the origin and the later touches. Touches
+  # are appended in order, so a tie (missing touched_at) goes to the later one.
   def source_for(conversation)
     attrs = conversation.additional_attributes || {}
-    touch = from_campaign(attrs) || from_touches(attrs)
-    return if touch.nil?
+    clicks = [attrs['campaign'], *Array(attrs['campaign_touches'])].select { |touch| touch.is_a?(Hash) && touch['ctwa_clid'].present? }
+    return if clicks.empty?
 
-    Source.new(conversation: conversation, ctwa_clid: touch['ctwa_clid'], clicked_at: clicked_at(touch, conversation))
-  end
-
-  def from_campaign(attrs)
-    origin = attrs['campaign']
-    origin if origin.is_a?(Hash) && origin['ctwa_clid'].present?
-  end
-
-  def from_touches(attrs)
-    Array(attrs['campaign_touches']).reverse.find { |touch| touch.is_a?(Hash) && touch['ctwa_clid'].present? }
+    newest = clicks.each_with_index.max_by { |touch, index| [clicked_at(touch, conversation).to_f, index] }.first
+    Source.new(conversation: conversation, ctwa_clid: newest['ctwa_clid'], clicked_at: clicked_at(newest, conversation))
   end
 
   def clicked_at(touch, conversation)

@@ -342,6 +342,19 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
     expect(client).to have_received(:post_events).once
   end
 
+  context 'when the only click is in a linked conversation of a non-official inbox (#1940)' do
+    it 'still sends the website event to the funnel Pixel' do
+      api_conversation = create(:conversation, account: account, inbox: create_crm_inbox(account: account),
+                                               additional_attributes: { 'campaign' => { 'ctwa_clid' => 'API1' } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: api_conversation)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: anything, dataset_id: '2164882667623689')
+      expect(row).to have_attributes(status: 'accepted', attribution_mode: 'website')
+    end
+  end
+
   context 'when the card also carries a ctwa_clid' do
     let(:conversation) do
       create(:conversation, account: account, inbox: channel.inbox, additional_attributes: { 'campaign' => { 'ctwa_clid' => 'CLID1' } })

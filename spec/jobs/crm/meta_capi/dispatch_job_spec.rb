@@ -57,8 +57,8 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
       let(:provider_config) { { 'api_key' => 'test_key', 'business_account_id' => '111' } }
 
       before do
-        allow(Meta::WabaDatasetClient).to receive(:new)
-          .and_return(instance_double(Meta::WabaDatasetClient, find_or_create: Meta::WabaDatasetClient::Result.new(error: 'rate limited')))
+        result = Meta::WabaDatasetClient::Result.new(error: 'rate limited', transient: true)
+        allow(Meta::WabaDatasetClient).to receive(:new).and_return(instance_double(Meta::WabaDatasetClient, find_or_create: result))
       end
 
       it 'records an error row and re-raises so the retry can claim it again' do
@@ -69,6 +69,36 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
 
         expect(row.status).to eq('error')
         expect(row.error_message).to eq('dataset_lookup: rate limited')
+      end
+    end
+
+    context 'when Meta refuses the token or the permission (#1940)' do
+      let(:provider_config) { { 'api_key' => 'test_key', 'business_account_id' => '111' } }
+
+      before do
+        result = Meta::WabaDatasetClient::Result.new(error: 'meta_error_190: expired', transient: false, access_denied: true)
+        allow(Meta::WabaDatasetClient).to receive(:new).and_return(instance_double(Meta::WabaDatasetClient, find_or_create: result))
+      end
+
+      it 'skips as missing_credentials, without retrying' do
+        expect { perform }.not_to raise_error
+
+        expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'skipped', error_message: 'missing_credentials')
+      end
+    end
+
+    context 'when Meta fails the lookup for good for another reason (#1940)' do
+      let(:provider_config) { { 'api_key' => 'test_key', 'business_account_id' => '111' } }
+
+      before do
+        result = Meta::WabaDatasetClient::Result.new(error: 'meta_error_100: unsupported', transient: false)
+        allow(Meta::WabaDatasetClient).to receive(:new).and_return(instance_double(Meta::WabaDatasetClient, find_or_create: result))
+      end
+
+      it 'skips with missing_dataset instead of retrying for weeks' do
+        expect { perform }.not_to raise_error
+
+        expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'skipped', error_message: 'missing_dataset')
       end
     end
 
@@ -118,7 +148,7 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
     end
 
     context 'when the linked channel exposes no access token' do
-      # An API-channel inbox does not respond to #provider_config, so the token resolves to nil.
+      # Only an official WhatsApp inbox carries a Meta token; a click seen in an API inbox cannot be reported.
       let(:conversation) do
         inbox = create_crm_inbox(account: account)
         create(:conversation, account: account, inbox: inbox, additional_attributes: campaign_attributes)
@@ -278,6 +308,28 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
       expect(Meta::WabaDatasetClient).to have_received(:new).with(access_token: 'test_key', waba_id: '111').once
       expect(channel.reload.provider_config).to include('meta_dataset' => { 'waba_id' => '111', 'id' => 'NEW1' }, 'other' => 'kept')
       expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: 'test_key', dataset_id: 'NEW1').twice
+    end
+  end
+
+  describe 'retry after a failed dataset lookup (#1940)' do
+    let(:provider_config) { { 'api_key' => 'test_key', 'business_account_id' => '111' } }
+
+    it 're-claims the error row and posts the event once' do
+      client = instance_double(Meta::ConversionsApiClient)
+      allow(Meta::ConversionsApiClient).to receive(:new).and_return(client)
+      allow(client).to receive(:post_events).and_return(Meta::ConversionsApiClient::Result.new(ok: true, http_code: 200, body: 'ok'))
+      dataset_client = instance_double(Meta::WabaDatasetClient)
+      allow(Meta::WabaDatasetClient).to receive(:new).and_return(dataset_client)
+      allow(dataset_client).to receive(:find_or_create).and_return(
+        Meta::WabaDatasetClient::Result.new(error: 'timeout', transient: true),
+        Meta::WabaDatasetClient::Result.new(dataset_id: 'DS1')
+      )
+
+      expect { perform }.to raise_error(Crm::MetaCapi::DispatchJob::DispatchError)
+      perform
+
+      expect(client).to have_received(:post_events).once
+      expect(Crm::MetaConversionEvent.find_by(event_id: event_id)).to have_attributes(status: 'accepted', dataset_id: 'DS1')
     end
   end
 
