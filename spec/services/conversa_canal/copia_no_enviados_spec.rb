@@ -63,6 +63,7 @@ RSpec.describe ConversaCanal::CopiaNoEnviados do
       expect(data).to eq(mensagem.created_at)
       email = Mail.new(cru)
       expect(email.message_id).to eq(mensagem.source_id)
+      expect(email.date.to_i).to eq(mensagem.created_at.to_i)
       expect(email.to).to eq(['cliente@cliente.test'])
       expect(cru).to include('Segue a proposta.')
     end

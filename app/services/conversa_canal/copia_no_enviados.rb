@@ -5,7 +5,7 @@
 #   nome da pasta muda por provedor e idioma, e chutar grava no lugar errado.
 # - Provedor que já guarda o que sai pelo SMTP dele (Gmail, Outlook): a mensagem já está lá, achada pelo Message-ID, e
 #   nada é gravado. Só falta a cópia: APPEND, já lida.
-# - A cópia é o mesmo e-mail montado de novo pelo ConversationReplyMailer, com o Message-ID do envio.
+# - A cópia é o mesmo e-mail montado de novo pelo ConversationReplyMailer, com o Message-ID e a data do envio.
 class ConversaCanal::CopiaNoEnviados
   # O que o servidor responde: :gravada, :ja_estava ou :sem_pasta.
   def initialize(message)
@@ -43,6 +43,7 @@ class ConversaCanal::CopiaNoEnviados
     return nil if email.to.blank?
 
     email.message_id = @message.source_id
+    email.date = @message.created_at
     email
   end
 

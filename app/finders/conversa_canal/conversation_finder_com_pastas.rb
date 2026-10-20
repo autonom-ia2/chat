@@ -40,10 +40,10 @@ module ConversaCanal::ConversationFinderComPastas
     params[:pasta] == ENVIADOS && current_account.feature_enabled?('email_enviados')
   end
 
-  # Mensagem nossa ao cliente: saída e pública (nota interna e aviso do sistema não contam).
+  # Mensagem nossa ao cliente: saída, pública e que não falhou (nota interna, aviso do sistema e envio com erro não contam).
   def com_mensagem_nossa
     Message.where(Message.arel_table[:conversation_id].eq(Conversation.arel_table[:id]))
-           .where(message_type: :outgoing, private: false).arel.exists
+           .where(message_type: :outgoing, private: false).where.not(status: :failed).arel.exists
   end
 
   def pastas_do_email_ligadas?

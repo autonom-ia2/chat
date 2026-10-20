@@ -12,6 +12,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import Icon from 'next/icon/Icon.vue';
 import { useMapGetter } from 'dashboard/composables/store';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import NovaConversaEntrada from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 import { usePodeComecarConversa } from 'dashboard/components-next/NovaConversa/usePodeComecarConversa';
 import { usePopoverState } from 'dashboard/components-next/sidebar/provider';
@@ -48,7 +49,7 @@ const visivel = computed(
 // Enviados (#1938) só com a chave `email_enviados`, logo depois da Entrada, como no Gmail.
 const ITENS = computed(() => [
   { pasta: null, chave: 'ENTRADA', icone: 'i-lucide-inbox' },
-  ...(temChave.value(contaAtual.value, 'email_enviados')
+  ...(temChave.value(contaAtual.value, FEATURE_FLAGS.EMAIL_ENVIADOS)
     ? [{ pasta: ENVIADOS, chave: 'ENVIADOS', icone: 'i-lucide-send' }]
     : []),
   { pasta: PASTAS.SPAM, chave: 'SPAM', icone: 'i-lucide-octagon-alert' },

@@ -61,5 +61,15 @@ RSpec.describe ConversaCanal::CopiaNoEnviadosJob do
 
       expect(described_class).to have_received(:agendar).with(have_attributes(id: mensagem.id, source_id: entrega.message_id))
     end
+
+    it 'erro ao agendar a cópia não marca como falha o e-mail que já saiu', :aggregate_failures do
+      mensagem.update!(source_id: nil)
+      allow(described_class).to receive(:agendar).and_raise(Redis::CannotConnectError)
+
+      Email::SendOnEmailService.new(message: mensagem).perform
+
+      expect(mensagem.reload.status).not_to eq('failed')
+      expect(mensagem.source_id).to eq(entrega.message_id)
+    end
   end
 end
