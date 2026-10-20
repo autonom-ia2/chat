@@ -8,7 +8,8 @@
 # personalizado (um valor com forma de e-mail ou de telefone fica de fora). As mensagens são as 5
 # últimas até a mensagem da pergunta, cada uma cortada em 5.000 caracteres (#1000: formulário de
 # site por e-mail tem cabeçalho e rodapé). Quem chama pode pedir outra janela (#1924: a IA de assunto
-# lê mais, porque o pedido costuma ficar algumas idas e vindas antes da última mensagem).
+# lê mais, porque o pedido costuma ficar algumas idas e vindas antes da última mensagem) e cortar as
+# mensagens anteriores à última mais curtas, para a janela maior não multiplicar o texto de e-mails longos.
 #
 # Sem `leituras`, lê o que a etapa 1 lia: canal, assunto e as mensagens do cliente.
 class Autonomia::Decisores::Estado
@@ -41,7 +42,7 @@ class Autonomia::Decisores::Estado
   end
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
-                 leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS)
+                 leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES)
     @conversation = conversation
     @message = message
     @card = card
@@ -49,6 +50,7 @@ class Autonomia::Decisores::Estado
     @texto = texto.to_s.strip.first(MAX_CARACTERES).presence
     @leituras = leituras
     @max_mensagens = max_mensagens
+    @max_caracteres_anteriores = max_caracteres_anteriores
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -209,7 +211,7 @@ class Autonomia::Decisores::Estado
   # #1807 (flag `email_autoria`): e-mail recebido sem o histórico citado; o de outro endereço sempre diz quem escreveu.
   def textos(lista, com_autor: false)
     lista.filter_map do |mensagem|
-      texto = email_autoria.texto(mensagem).strip.first(MAX_CARACTERES).presence
+      texto = email_autoria.texto(mensagem).strip.first(mensagem.equal?(lista.last) ? MAX_CARACTERES : @max_caracteres_anteriores).presence
       next texto unless texto && (com_autor || email_autoria.de(mensagem))
 
       "#{autor(mensagem)}: #{texto}"

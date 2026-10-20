@@ -248,7 +248,7 @@ class Crm::Subjects::Identifier
 
   def estado
     @estado ||= Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message, leituras: LEITURAS,
-                                                 max_mensagens: Crm::Subjects::MAX_MENSAGENS)
+                                                 **Crm::Subjects::JANELA)
   end
 
   # Os funis ativos ligados à caixa da conversa, com etapa para o card nascer e a IA do funil ligada, na ordem do CRM.
