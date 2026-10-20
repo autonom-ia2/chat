@@ -147,6 +147,12 @@
           "INPUT": "Search for agents"
         }
       }
+    },
+    "LOCK": {
+      "SELF": "This is you",
+      "ADMIN": "Only an administrator can change administrators",
+      "ABOVE": "Above your access",
+      "ONLY_ADMIN_MAKES_ADMIN": "Only an administrator can make someone an administrator"
     }
   }
 }

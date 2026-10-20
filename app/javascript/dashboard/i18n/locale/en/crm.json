@@ -5975,5 +5975,105 @@
       "ESPERANDO": "Waiting over {n} min",
       "DA_IA_ESPERANDO": "From AI, waiting {n}+ min"
     }
+  },
+  "CRM_NUMEROS_V2": {
+    "TITULO": "Numbers",
+    "CARREGANDO": "Loading the numbers",
+    "TELA_INICIAL": "How your month is going",
+    "VISAO": {
+      "ROTULO": "Whose numbers",
+      "EU": "Just me",
+      "EQUIPE": "Team"
+    },
+    "AVISO_ADMIN": {
+      "TEXTO": "Agents now see only their own numbers. The whole team shows for administrators and for roles with \"View CRM reports\".",
+      "ENTENDI": "Got it"
+    },
+    "MES": {
+      "ATUAL": "{mes} · {n} day left | {mes} · {n} days left",
+      "FECHADO": "{mes} · closed month",
+      "ANTERIOR": "See {mes}",
+      "SEGUINTE": "See {mes}",
+      "SEM_SEGUINTE": "This is the current month",
+      "NAV": "Change month"
+    },
+    "TOPO": {
+      "FALTAM_EU": "{valor} to go for your goal",
+      "RESOLVEU_EU": "You solved {feito} of {meta}",
+      "BATIDA_EU": "You hit your {mes} goal",
+      "CEDO": "It is still early to tell",
+      "SEM_META_EU": "Your month so far: {n} sale, {valor} | Your month so far: {n} sales, {valor}",
+      "SEM_META_RESOLVEU": "{n} case solved in {mes} | {n} cases solved in {mes}",
+      "BARRA": "{pct}% of the goal. Today it should be at {esperado}%.",
+      "FRASE": {
+        "EU_VENDE": "You closed {feito} of {meta}. {dias} day left. | You closed {feito} of {meta}. {dias} days left.",
+        "EU_VENDE_SEM_META": "Nobody has set your goal for this month yet.",
+        "EU_VENDE_ATENDE": "And you solved {resolvidos} cases, {noPrazo} on time.",
+        "EU_VENDE_ATENDE_SEM_PRAZO": "And you solved {resolvidos} case. | And you solved {resolvidos} cases.",
+        "EU_ATENDE": "{noPrazo} on time. {falta} to go for your goal.",
+        "EU_ATENDE_SEM_FALTA": "{noPrazo} on time.",
+        "EU_ATENDE_SEM_PRAZO": "{dias} day left in the month. | {dias} days left in the month.",
+        "CEDO": "The month started {dias} day ago. So far: {valor}. | The month started {dias} days ago. So far: {valor}.",
+        "CEDO_RESOLVEU": "The month started {dias} day ago. Cases solved so far: {n}. | The month started {dias} days ago. Cases solved so far: {n}."
+      },
+      "BOTAO": {
+        "MEUS_ATRASADOS": "Open my overdue follow-up | Open my {n} overdue follow-ups",
+        "MEUS_PARADOS": "Open my stalled deal | Open my {n} stalled deals",
+        "MEUS_CARDS": "Open my cards",
+        "MEUS_LEMBRETES": "Open my overdue reminder | Open my {n} overdue reminders",
+        "MEUS_CASOS": "Open my cases"
+      }
+    },
+    "PROXIMO": {
+      "TITULO": "Next step",
+      "CAMPANHA_COM_VOCE": "{n} person who replied to the {campanha} campaign is with you | {n} people who replied to the {campanha} campaign are with you",
+      "VER": "See"
+    },
+    "BLOCO": {
+      "VENDENDO": "Selling",
+      "ATENDENDO": "Serving",
+      "FECHADAS": "{n} closed | {n} closed",
+      "ANDAMENTO": "in progress",
+      "ATRASADOS": "overdue follow-up | overdue follow-ups",
+      "RESOLVIDOS": "solved | solved",
+      "COM_VOCE": "with you now",
+      "DEU_CERTO": "got the \"did it work out?\""
+    },
+    "ESTIMADO": "Some older sales were counted for the card's current responsible person.",
+    "IA_AJUDOU": {
+      "TITULO": "The AI helped you",
+      "IA": "The AI",
+      "VENDA": "{ia} handed you {passou} customer this month. | {ia} handed you {passou} customers this month.",
+      "VIRARAM": "None became a sale yet. | 1 became a sale. | {n} became sales.",
+      "ATENDE": "{ia} handed you {passou} customer this month, with the subject already sorted. | {ia} handed you {passou} customers this month, with the subject already sorted.",
+      "VER": "See the conversations"
+    },
+    "EQUIPE_BARRA": "The team is at {pct}% of the month goal.",
+    "VAZIO": {
+      "TITULO": "Create your first funnel",
+      "TEXTO": "The numbers show up once there is a funnel with cards.",
+      "ACAO": "Create funnel",
+      "SEM_PODER": "Ask whoever manages the account to create a funnel."
+    },
+    "ERRO": {
+      "TEXTO": "We could not load it right now.",
+      "ACAO": "Try again"
+    },
+    "COMO_CONTAMOS": {
+      "LINK": "How we count",
+      "TITULO": "How we count",
+      "DESCRICAO": "The rules for every number on this screen.",
+      "REGRA_MES": "One clock: this month, in the account time zone ({fuso}).",
+      "REGRA_CREDITO": "A sale counts 100% for whoever was responsible when it was closed. Whoever marked it closed does not decide.",
+      "REGRA_PARTICIPOU": "Whoever handled it before, person or AI, only took part. They do not get the credit.",
+      "REGRA_FUNIL": "A sale moved to another funnel is still a sale of the month it closed.",
+      "REGRA_SEM_RESPONSAVEL": "A sale closed without a responsible person counts for nobody, only for the funnel goal.",
+      "REGRA_ANTIGAS": "Older sales, from before this record, count for the card's current responsible person.",
+      "EXEMPLO_TITULO": "Example: João, a R$ 3,000 quote",
+      "EXEMPLO_1": "Day 2: João arrives from the ad. Sofia (AI) answers and hands him to Bruno on day 3.",
+      "EXEMPLO_2": "Day 8: Bruno takes a day off and hands him to Ana.",
+      "EXEMPLO_3": "Day 15: Ana closes. Marcos is the one who marked it closed.",
+      "EXEMPLO_RESULTADO": "The R$ 3,000 count for Ana. Bruno and Sofia took part."
+    }
   }
 }
