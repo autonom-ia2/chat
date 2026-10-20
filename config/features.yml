@@ -637,9 +637,10 @@
 # (WhatsappHybrid::FotoDoContato). No máximo 1 tentativa a cada 7 dias por contato (30 dias quando a foto está escondida),
 # 1 consulta a cada 15 s e 300 por dia por sessão; erro do motor pausa a sessão por 1 hora. A Cloud pura segue sem foto
 # (decisão do Rodrigo, 20/10). Posição 44 na feature_flags_ext_1, bit 43 (8796093022208), PROVISÓRIA: o fim da main
-# hoje; se outra flag entrar antes, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb). Sem
-# migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+# hoje; se outra flag entrar antes, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb). Ligada em
+# TODAS as contas (Rodrigo, 20/10: o Híbrido já está liberado e o gate é a caixa híbrida): as existentes pela
+# Orquestração depois do deploy; conta nova nasce ligada (migration 20261108220000).
 - name: hibrido_foto_do_contato
   display_name: Foto de perfil do contato no WhatsApp Híbrido
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
