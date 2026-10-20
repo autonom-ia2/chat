@@ -572,7 +572,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
         account.crm_ai_stage_suggestions.where(card: card)
       end
 
-      it '"ok" não move sozinho o card que a pessoa acabou de mover: no máximo sugere' do
+      it '"ok" não mexe no card que a pessoa acabou de mover: nem move, nem sugere' do
         mover_pela_pessoa(auto, 'Fechamento', tempo: 1.hour)
         stub_jev('sem_assunto')
         movimentos['Seguro auto'] = { etapa: 'Proposta' }
@@ -582,8 +582,22 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
         expect(decisao.touched_card_ids).to eq([auto.id])
         expect(avaliacoes.size).to eq(1)
         expect(auto.reload.stage.name).to eq('Fechamento')
-        expect(sugestoes(auto).where(status: :auto_applied)).to be_empty
-        expect(sugestoes(auto).where(status: :pending).sole.to_stage.name).to eq('Proposta')
+        expect(sugestoes(auto)).to be_empty
+      end
+
+      it '"ok" não mexe no card que a pessoa acabou de reabrir' do
+        auto.update!(status: :lost)
+        travel_to(1.hour.ago) { Crm::Cards::Closer.new(card: auto, actor: admin, result: 'reopen').perform }
+        stub_jev('sem_assunto')
+        movimentos['Seguro auto'] = { etapa: 'Fechamento' }
+
+        decisao = receber('ok')
+
+        expect(decisao.touched_card_ids).to eq([auto.id])
+        expect(avaliacoes.size).to eq(1)
+        expect(auto.reload).to have_attributes(status: 'open')
+        expect(auto.stage.name).to eq('Proposta')
+        expect(sugestoes(auto)).to be_empty
       end
 
       it 'passada a janela de respeito, a IA volta a mover sozinha' do
@@ -714,7 +728,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(auto.reload.stage.name).to eq('Proposta')
     end
 
-    it 'dois cards tocados e só o Sinistro movido por uma pessoa há pouco: ele vira sugestão, o Auto anda' do
+    it 'dois cards tocados e só o Sinistro movido por uma pessoa há pouco: ele fica como está, o Auto anda' do
       travel_to(1.hour.ago) { Crm::Cards::Mover.new(card: sinistro, actor: admin, target_stage: etapa(pos_venda, 'Novo Lead')).perform }
       stub_jev(Crm::Subjects::Question::VARIOS)
       revisao.merge!(assuntos: [{ resposta: "card_#{sinistro.id}", titulo: '' }, { resposta: 'mesmo_assunto', titulo: '' }],
@@ -725,7 +739,7 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(avaliacoes.map { |args| args.dig(:schema, :name) }).to eq(['stage_classification_cards'])
       expect(auto.reload.stage.name).to eq('Fechamento')
       expect(sinistro.reload.stage.name).to eq('Novo Lead')
-      expect(account.crm_ai_stage_suggestions.where(card: sinistro, status: :pending).sole.to_stage.name).to eq('Resolvido')
+      expect(account.crm_ai_stage_suggestions.where(card: sinistro)).to be_empty
     end
 
     it 'sem assunto: só o card em foco é relido, e o Sinistro fora do foco não anda' do
