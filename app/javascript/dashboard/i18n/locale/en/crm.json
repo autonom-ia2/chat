@@ -1362,6 +1362,8 @@
       "ACTIVITY_GENERIC": "Activity recorded",
       "ACTIVITY_DETAIL_STAGE_CHANGE": "From {from} to {to}",
       "ACTIVITY_DETAIL_STAGE_TO": "To {to}",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Not a deal: nobody asked for what we sell. To undo, reopen the card.",
+      "ACTIVITY_DETAIL_DUPLICADO": "Repeated card: the same request already has an open card. To undo, reopen the card.",
       "ACTIVITY_DETAIL_OWNER": "Assigned to {owner}",
       "ACTIVITY_DETAIL_HANDOFF": "Assigned to {agent}",
       "ACTIVITY_DETAIL_HANDOFF_REASON": "Assigned to {agent}: {reason}",
