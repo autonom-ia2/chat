@@ -16,7 +16,9 @@ class Autonomia::ContatoPeloEmail::Leitor
 
   FEATURE = 'contato_pelo_email'.freeze
   MODELO = Crm::Ai::Config::MODEL_SUMMARY
-  ESFORCO = 'low'.freeze
+  # 'medium' e não 'low': no e-mail que fala de outras pessoas e termina só com a assinatura, sem fecho, o 'low' ainda
+  # perdia 2 em 20; o 'medium' acertou 20 em 20, com o mesmo custo e a mesma demora (simulação do #1929, 20/10).
+  ESFORCO = 'medium'.freeze
   # Um e-mail curto, com resposta curta: bem menos que os 180 s do cliente, que são para o laço com ferramentas.
   TIMEOUT = 45
   # O bastante para o corpo e a assinatura de um e-mail; o histórico citado já saiu.
@@ -43,7 +45,7 @@ class Autonomia::ContatoPeloEmail::Leitor
     telefone: prefer the phone in the sender's signature. When the signature has no phone, use a phone the sender wrote
     in the body as their own. Never use a phone the sender says belongs to someone else.
     The block of lines at the end of the email with a name, a role or company and a phone is the sender's signature,
-    even without a closing word like "Regards" or "Atenciosamente": those are the sender's own name and phone.
+    whether or not a closing word comes before it: those are the sender's own name and phone.
   TEXT
 
   Leitura = Data.define(:tipo, :valores)

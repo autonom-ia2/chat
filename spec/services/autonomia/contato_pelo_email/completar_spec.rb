@@ -61,13 +61,15 @@ RSpec.describe Autonomia::ContatoPeloEmail::Completar do
   end
 
   # Pega (#1929): a assinatura sem palavra de fecho ("Ana Lima / Diretora de RH / telefone", depois de um texto que fala
-  # de outras pessoas) ser lida como de outra pessoa. Na simulação com a IA de verdade, a regra levou o caso a 10/10.
-  it 'a instrução diz que o bloco do fim é a assinatura mesmo sem palavra de fecho' do
+  # de outras pessoas) ser lida como de outra pessoa. Na simulação com a IA de verdade, a regra com o esforço 'medium'
+  # levou o caso a 20/20.
+  it 'a instrução diz que o bloco do fim é a assinatura com ou sem fecho, e a leitura usa o esforço medium' do
     responde(nome: 'Maria Souza')
 
     described_class.new(message).perform
 
-    expect(cliente).to have_received(:create).with(hash_including(instructions: include('even without a closing word')))
+    expect(cliente).to have_received(:create)
+      .with(hash_including(instructions: include('whether or not a closing word comes before it'), reasoning_effort: 'medium'))
   end
 
   # Pega: a flag desligada entre o enfileirar e o rodar ainda pagar a IA.
