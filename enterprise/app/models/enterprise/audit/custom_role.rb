@@ -17,7 +17,8 @@ module Enterprise::Audit::CustomRole
         auditable: account_user,
         action: 'update',
         associated: account,
-        audited_changes: { 'custom_role_id' => [id, nil] }
+        audited_changes: { 'custom_role_id' => [id, nil] },
+        user: Current.user
       )
     end
   end

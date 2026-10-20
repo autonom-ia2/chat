@@ -49,4 +49,17 @@ RSpec.describe Autonomia::Sso::Provisioner do
 
     expect(accept({ 'invited_by_user_id' => hr.id, 'custom_role_id' => role.id }).custom_role_id).to be_nil
   end
+
+  describe 'inboxes of the invitation' do
+    it 'are applied while the inviter can manage inboxes' do
+      expect(Autonomia::Sso::InvitationAccess.new(account, { 'invited_by_user_id' => admin.id })).to be_inboxes_allowed
+    end
+
+    it 'are dropped when the inviter cannot manage inboxes' do
+      hr = create(:user, account: account, role: :agent)
+      hr.account_users.find_by(account: account).update!(custom_role: create(:custom_role, account: account, permissions: %w[people_manage]))
+
+      expect(Autonomia::Sso::InvitationAccess.new(account, { 'invited_by_user_id' => hr.id })).not_to be_inboxes_allowed
+    end
+  end
 end

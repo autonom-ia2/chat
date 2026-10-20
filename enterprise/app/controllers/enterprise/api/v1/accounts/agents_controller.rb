@@ -6,9 +6,12 @@ module Enterprise::Api::V1::Accounts::AgentsController
     associate_agent_with_custom_role
   end
 
+  # Name, role and custom role change together or not at all (#1931).
   def update
-    super
-    associate_agent_with_custom_role
+    ActiveRecord::Base.transaction do
+      super
+      associate_agent_with_custom_role
+    end
   end
 
   private

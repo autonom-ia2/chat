@@ -52,8 +52,8 @@
     "completo": true,
     "controller": "api/v1/accounts/agents#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/agents_controller.rb:33",
-      "app/controllers/api/v1/accounts/agents_controller.rb:58"
+      "app/controllers/api/v1/accounts/agents_controller.rb:35",
+      "app/controllers/api/v1/accounts/agents_controller.rb:60"
     ],
     "sem_corpo": true
   },
@@ -812,9 +812,9 @@
     "controller": "api/v1/accounts/inbox_members#destroy",
     "modelo": "InboxMember",
     "origem": [
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:26",
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:29",
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:72"
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:28",
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:31",
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:74"
     ],
     "sem_corpo": false
   },
@@ -1219,13 +1219,13 @@
       }
     },
     "origem": [
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:9",
-      "app/controllers/api/v1/accounts/agents_controller.rb:89",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
+      "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:63",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:57",
-      "app/controllers/api/v1/accounts/agents_controller.rb:58",
-      "app/controllers/api/v1/accounts/agents_controller.rb:73"
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "app/controllers/api/v1/accounts/agents_controller.rb:60",
+      "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
     "sem_corpo": false
   },
@@ -6529,11 +6529,11 @@
     "controller": "api/v1/accounts/inbox_members#update",
     "modelo": "InboxMember",
     "origem": [
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:19",
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:56",
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:52",
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:66",
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:72"
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:20",
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:58",
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:54",
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:68",
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:74"
     ],
     "sem_corpo": false
   },
@@ -8351,11 +8351,11 @@
     "origem": [
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:4",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:68",
-      "app/controllers/api/v1/accounts/agents_controller.rb:93",
+      "app/controllers/api/v1/accounts/agents_controller.rb:95",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:63",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:57",
-      "app/controllers/api/v1/accounts/agents_controller.rb:68"
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "app/controllers/api/v1/accounts/agents_controller.rb:70"
     ],
     "sem_corpo": false
   },
@@ -8370,8 +8370,8 @@
       "leitura crua sem tipo: emails"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/agents_controller.rb:39",
-      "app/controllers/api/v1/accounts/agents_controller.rb:40"
+      "app/controllers/api/v1/accounts/agents_controller.rb:41",
+      "app/controllers/api/v1/accounts/agents_controller.rb:42"
     ],
     "sem_corpo": false
   },
@@ -17155,9 +17155,9 @@
     "modelo": "InboxMember",
     "origem": [
       "app/controllers/api/v1/accounts/inbox_members_controller.rb:10",
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:52",
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:66",
-      "app/controllers/api/v1/accounts/inbox_members_controller.rb:72"
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:54",
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:68",
+      "app/controllers/api/v1/accounts/inbox_members_controller.rb:74"
     ],
     "sem_corpo": false
   },
@@ -19700,13 +19700,13 @@
       }
     },
     "origem": [
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:9",
-      "app/controllers/api/v1/accounts/agents_controller.rb:89",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
+      "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:63",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:57",
-      "app/controllers/api/v1/accounts/agents_controller.rb:58",
-      "app/controllers/api/v1/accounts/agents_controller.rb:73"
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "app/controllers/api/v1/accounts/agents_controller.rb:60",
+      "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
     "sem_corpo": false
   },

@@ -71,8 +71,10 @@ class Autonomia::Sso::Provisioner
   end
 
   def apply_pending_agent_invitation!(user, account, pending_invitation)
-    assign_existing_inboxes!(user, account, pending_invitation)
-    create_whatsapp_api_inbox!(user, account, pending_invitation)
+    if Autonomia::Sso::InvitationAccess.new(account, pending_invitation).inboxes_allowed?
+      assign_existing_inboxes!(user, account, pending_invitation)
+      create_whatsapp_api_inbox!(user, account, pending_invitation)
+    end
     consume_pending_agent_invitation(account)
   end
 

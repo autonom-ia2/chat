@@ -1,6 +1,7 @@
 # The access a pending invitation gives, checked again when it is accepted, against what the inviter can do now
 # (#1931). Without a role, or when the inviter is no longer an administrator, it makes an agent. The custom role must be
-# of this account, with the feature on, and still within the inviter's reach; anything else is dropped.
+# of this account, with the feature on, and still within the inviter's reach; anything else is dropped. Inboxes and the
+# WhatsApp inbox of the invitation need the inviter to still have inbox_manage.
 class Autonomia::Sso::InvitationAccess
   def initialize(account, pending_invitation)
     @account = account
@@ -12,6 +13,10 @@ class Autonomia::Sso::InvitationAccess
     account_user.role = administrator_asked? && @inviter&.administrator? ? 'administrator' : 'agent'
     account_user.custom_role_id = custom_role.id if custom_role
     account_user.inviter_id ||= @invitation['invited_by_user_id']
+  end
+
+  def inboxes_allowed?
+    @inviter.present? && @inviter.permission_granted?('inbox_manage')
   end
 
   private
@@ -28,7 +33,8 @@ class Autonomia::Sso::InvitationAccess
 
   def find_custom_role
     custom_role_id = @invitation['custom_role_id']
-    return if @inviter.blank? || custom_role_id.blank? || !@account.feature_enabled?('custom_roles')
+    return if @inviter.blank? || custom_role_id.blank? || !@account.respond_to?(:custom_roles)
+    return unless @account.feature_enabled?('custom_roles')
 
     role = @account.custom_roles.for_people.find_by(id: custom_role_id)
     role if role && CustomRoles::GrantGuard.new(actor: @inviter).reach?(role.permissions)
