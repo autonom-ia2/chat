@@ -227,6 +227,13 @@ const canViewCrmReports = computed(() => {
   );
 });
 
+// AI usage is account spend (#1157): administrators or the AI key (crm_admin implies it).
+const canViewCrmAiUsage = computed(
+  () =>
+    currentRole.value === 'administrator' ||
+    hasAnyPermission([CRM_MANAGE_AI_PERMISSION, CRM_ADMIN_PERMISSION])
+);
+
 // CRM SLA management is admin-grade (administrators or crm_admin custom-role seats)
 // AND requires the enterprise `sla` feature (the backend gate 404s without it).
 const canManageCrmSla = computed(() => {
@@ -957,7 +964,7 @@ const menuItems = computed(() => {
                     },
                   ]
                 : []),
-              ...(canViewCrmReports.value && crmAiEnabled.value
+              ...(canViewCrmAiUsage.value && crmAiEnabled.value
                 ? [
                     {
                       name: 'CRM AI Usage',

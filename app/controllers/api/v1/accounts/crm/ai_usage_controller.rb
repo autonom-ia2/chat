@@ -22,7 +22,7 @@ class Api::V1::Accounts::Crm::AiUsageController < Api::V1::Accounts::Crm::BaseCo
   private
 
   def authorize_reports
-    authorize %i[crm report], :view?
+    authorize %i[crm report], :view_ai_usage?
   end
 
   def builder

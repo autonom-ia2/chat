@@ -10,4 +10,14 @@ module Relationships::RecordPermissions
 
     account_user.permission_granted?('contact_manage')
   end
+
+  # Listing the Contacts module (lists, segments, filters) needs contact_view on a custom
+  # role (#1157). Reading one record from a conversation or card, and the search used to
+  # start a conversation or link a contact, stay open: they belong to the operation.
+  def relationship_list_read?
+    return false unless account_user
+    return true if account_user.administrator? || account_user.custom_role_id.blank?
+
+    account_user.permission_granted?('contact_view')
+  end
 end

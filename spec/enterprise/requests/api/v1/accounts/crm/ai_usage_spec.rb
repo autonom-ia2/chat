@@ -1,8 +1,8 @@
 require 'rails_helper'
 
-# Enterprise overlay of Crm::ReportPolicy gates custom-role agents by the
-# `crm_view_reports` permission (OSS allows any account_user). Stripped from the
-# FOSS CI run; validated in EE mode.
+# AI usage is account spend (#1157): the Enterprise overlay of Crm::ReportPolicy gates it by
+# `crm_manage_ai` (crm_admin implies it), not by `crm_view_reports`. Plain agents do not get
+# the AI key. Stripped from the FOSS CI run; validated in EE mode.
 RSpec.describe 'CRM AI usage API (Enterprise report policy)', type: :request do
   around do |example|
     previous_crm = ENV.fetch('CRM_KANBAN_ENABLED', nil)
@@ -24,21 +24,30 @@ RSpec.describe 'CRM AI usage API (Enterprise report policy)', type: :request do
     agent
   end
 
-  it 'denies custom-role agents without crm_view_reports' do
+  it 'denies custom-role agents with crm_view_reports but without crm_manage_ai' do
     account, = create_account_and_user
-    agent = custom_role_agent(account: account, permissions: ['crm_view'])
+    agent = custom_role_agent(account: account, permissions: %w[crm_view crm_view_reports])
 
     get "/api/v1/accounts/#{account.id}/crm/ai_usage", headers: auth_headers(agent)
 
     expect(response).to have_http_status(:unauthorized)
   end
 
-  it 'allows custom-role agents with crm_view_reports' do
+  it 'allows custom-role agents with crm_manage_ai' do
     account, = create_account_and_user
-    agent = custom_role_agent(account: account, permissions: ['crm_view_reports'])
+    agent = custom_role_agent(account: account, permissions: ['crm_manage_ai'])
 
     get "/api/v1/accounts/#{account.id}/crm/ai_usage", headers: auth_headers(agent)
 
     expect(response).to have_http_status(:ok)
+  end
+
+  it 'denies plain agents' do
+    account, = create_account_and_user
+    agent, = create_crm_agent(account: account)
+
+    get "/api/v1/accounts/#{account.id}/crm/ai_usage", headers: auth_headers(agent)
+
+    expect(response).to have_http_status(:unauthorized)
   end
 end

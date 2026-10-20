@@ -169,8 +169,9 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
       end
     end
 
-    context 'when user has both participating and unassigned permissions (hierarchical test)' do
-      it 'gives higher priority to unassigned_manage over participating_manage' do
+    # #1157: the two limited keys add up, as in ConversationPolicy#show?.
+    context 'when user has both participating and unassigned permissions' do
+      it 'shows unassigned, own and participating conversations' do
         # Create a new isolated test environment
         test_account = create(:account)
         test_inbox = create(:inbox, account: test_account)
@@ -192,6 +193,9 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
         unassigned_conversation = create(:conversation, account: test_account, inbox: test_inbox, assignee: nil)
         other_assigned_conversation = create(:conversation, account: test_account, inbox: test_inbox, assignee: create(:user, account: test_account))
         other_inbox_conversation = create(:conversation, account: test_account, inbox: test_inbox2, assignee: nil)
+        participating_conversation = create(:conversation, account: test_account, inbox: test_inbox,
+                                                           assignee: create(:user, account: test_account))
+        create(:conversation_participant, conversation: participating_conversation, user: test_agent)
 
         # Run the test
         result = Conversations::PermissionFilterService.new(
@@ -200,12 +204,12 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
           test_account
         ).perform
 
-        # Should behave the same as conversation_unassigned_manage test
-        # - Show both unassigned and assigned to this agent
-        # - Do not show conversations assigned to others
-        expect(result.count).to eq(2)
+        # Unassigned + own (unassigned key) and participating (participating key);
+        # not someone else's conversation the agent does not take part in.
+        expect(result.count).to eq(3)
         expect(result).to include(unassigned_conversation)
         expect(result).to include(assigned_to_agent)
+        expect(result).to include(participating_conversation)
         expect(result).not_to include(other_assigned_conversation)
         expect(result).not_to include(other_inbox_conversation)
       end

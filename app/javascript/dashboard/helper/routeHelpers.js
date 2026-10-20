@@ -38,7 +38,13 @@ export const defaultRedirectPage = (to, permissions) => {
     hasPermissions(routePermissions, permissions)
   );
 
-  return `accounts/${accountId}/${route ? route.path : 'dashboard'}`;
+  if (route) return `accounts/${accountId}/${route.path}`;
+  // A custom role without any of the areas above (e.g. only CRM and campaigns) used to be
+  // sent to the dashboard, refused there and sent back again (#1157). The profile opens for
+  // every seat; the menu then shows the areas the role does have.
+  if (permissions.includes('custom_role'))
+    return `accounts/${accountId}/profile/settings`;
+  return `accounts/${accountId}/dashboard`;
 };
 
 const validateActiveAccountRoutes = (to, user) => {

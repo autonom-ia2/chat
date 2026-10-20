@@ -1,6 +1,22 @@
 module Enterprise::ContactPolicy
   include Relationships::RecordPermissions
 
+  def index?
+    relationship_list_read?
+  end
+
+  def active?
+    index?
+  end
+
+  def summary?
+    index?
+  end
+
+  def filter?
+    index?
+  end
+
   def create?
     relationship_record_write?
   end

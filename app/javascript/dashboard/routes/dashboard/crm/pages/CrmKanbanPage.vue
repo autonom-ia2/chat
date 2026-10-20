@@ -1597,12 +1597,16 @@ const onSavedViewDelete = async ({ id }) => {
 
 const runBulkAction = async (action, payload = {}) => {
   try {
-    await store.dispatch('crmKanban/bulkAction', {
-      ids: listSelection.value,
-      action,
-      payload,
-    });
-    useAlert(t('CRM_KANBAN.BULK.DONE', { count: listSelection.value.length }));
+    const { updated = [], failed = [] } = await store.dispatch(
+      'crmKanban/bulkAction',
+      { ids: listSelection.value, action, payload }
+    );
+    // The server skips cards the role cannot change (#1157); say so instead of "done".
+    useAlert(
+      failed.length
+        ? t('CRM_KANBAN.BULK.SKIPPED', { count: failed.length })
+        : t('CRM_KANBAN.BULK.DONE', { count: updated.length })
+    );
   } catch {
     useAlert(t('CRM_KANBAN.EDIT.ERROR'));
   }
@@ -2463,6 +2467,8 @@ onUnmounted(() => {
         :stages="stages"
         :owners="agents"
         :is-busy="uiFlags.isBulkActing"
+        :can-move="canMoveCards"
+        :can-manage="canManageCards"
         @move="onBulkMove"
         @assign="onBulkAssign"
         @status="onBulkStatus"

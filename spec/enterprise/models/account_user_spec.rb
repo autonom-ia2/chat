@@ -12,10 +12,24 @@ RSpec.describe AccountUser, type: :model do
     context 'when custom role is assigned' do
       it 'returns permissions of the custom role along with `custom_role` permission' do
         account = create(:account)
-        custom_role = create(:custom_role, account: account)
+        # Keys that imply nothing else (see the next example for implications).
+        custom_role = create(:custom_role, account: account, permissions: %w[conversation_manage contact_view])
         account_user = create(:account_user, account: account, custom_role: custom_role)
 
         expect(account_user.permissions).to eq(custom_role.permissions + ['custom_role'])
+      end
+
+      # #1157: the payload carries the same implications as permission_granted?.
+      it 'adds the view key implied by a manage key, and every crm key implied by crm_admin' do
+        account = create(:account)
+        custom_role = create(:custom_role, account: account, permissions: %w[contact_manage report_manage crm_admin])
+        account_user = create(:account_user, account: account, custom_role: custom_role)
+
+        expect(account_user.permissions).to include('contact_manage', 'contact_view', 'crm_view', 'crm_view_reports', 'custom_role')
+        expect(account_user.permissions).not_to include('report_view')
+        expect(account_user.permissions).to match_array(
+          (%w[contact_manage report_manage contact_view custom_role] + Enterprise::AccountUser::CRM_KEYS).uniq
+        )
       end
     end
 

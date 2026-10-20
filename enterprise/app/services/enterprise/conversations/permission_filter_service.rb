@@ -15,18 +15,16 @@ module Enterprise::Conversations::PermissionFilterService
     account_user&.permissions || []
   end
 
+  # conversation_manage sees every conversation of the user's inboxes. The two limited keys add
+  # up, as in ConversationPolicy#show? (#1157): before, holding both applied only the first, and
+  # the list hid conversations the person could open by link.
   def filter_by_permissions(permissions)
-    # Permission-based filtering with hierarchy
-    # conversation_manage > conversation_unassigned_manage > conversation_participating_manage
-    if permissions.include?('conversation_manage')
-      accessible_conversations
-    elsif permissions.include?('conversation_unassigned_manage')
-      filter_unassigned_and_mine
-    elsif permissions.include?('conversation_participating_manage')
-      filter_participating_and_mine
-    else
-      Conversation.none
-    end
+    return accessible_conversations if permissions.include?('conversation_manage')
+
+    scopes = []
+    scopes << filter_unassigned_and_mine if permissions.include?('conversation_unassigned_manage')
+    scopes << filter_participating_and_mine if permissions.include?('conversation_participating_manage')
+    scopes.reduce(:or) || Conversation.none
   end
 
   def filter_participating_and_mine

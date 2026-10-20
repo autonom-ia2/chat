@@ -4,6 +4,8 @@ RSpec.describe 'Linear Integration API', type: :request do
   let(:account) { create(:account) }
   let(:user) { create(:user) }
   let(:api_key) { 'valid_api_key' }
+  # #1157: conversations below make the agent an inbox member, because touching a Linear
+  # issue now requires seeing the conversation.
   let(:agent) { create(:user, account: account, role: :agent) }
   let(:processor_service) { instance_double(Integrations::Linear::ProcessorService) }
 
@@ -110,7 +112,7 @@ RSpec.describe 'Linear Integration API', type: :request do
 
   describe 'POST /api/v1/accounts/:account_id/integrations/linear/create_issue' do
     let(:inbox) { create(:inbox, account: account) }
-    let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox).tap { |conv| create(:inbox_member, user: agent, inbox: conv.inbox) } }
     let(:issue_params) do
       {
         team_id: 'team1',
@@ -122,6 +124,20 @@ RSpec.describe 'Linear Integration API', type: :request do
         label_ids: ['label1'],
         conversation_id: conversation.display_id
       }
+    end
+
+    context 'when the agent cannot see the conversation' do
+      it 'returns unauthorized and does not create the issue' do
+        conversation # created (with the membership) before the membership is taken away
+        InboxMember.where(user: agent).delete_all
+        allow(processor_service).to receive(:create_issue)
+
+        post "/api/v1/accounts/#{account.id}/integrations/linear/create_issue",
+             params: issue_params, headers: agent.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(processor_service).not_to have_received(:create_issue)
+      end
     end
 
     context 'when it is an authenticated user' do
@@ -178,7 +194,7 @@ RSpec.describe 'Linear Integration API', type: :request do
 
   describe 'POST /api/v1/accounts/:account_id/integrations/linear/link_issue' do
     let(:issue_id) { 'ENG-456' }
-    let(:conversation) { create(:conversation, account: account) }
+    let(:conversation) { create(:conversation, account: account).tap { |conv| create(:inbox_member, user: agent, inbox: conv.inbox) } }
     let(:link) { "#{ENV.fetch('FRONTEND_URL', nil)}/app/accounts/#{account.id}/conversations/#{conversation.display_id}" }
     let(:title) { 'Sample Issue' }
 
@@ -228,7 +244,7 @@ RSpec.describe 'Linear Integration API', type: :request do
   describe 'POST /api/v1/accounts/:account_id/integrations/linear/unlink_issue' do
     let(:link_id) { 'attachment1' }
     let(:issue_id) { 'ENG-789' }
-    let(:conversation) { create(:conversation, account: account) }
+    let(:conversation) { create(:conversation, account: account).tap { |conv| create(:inbox_member, user: agent, inbox: conv.inbox) } }
 
     context 'when it is an authenticated user' do
       context 'when the issue is unlinked successfully' do
@@ -306,7 +322,7 @@ RSpec.describe 'Linear Integration API', type: :request do
   end
 
   describe 'GET /api/v1/accounts/:account_id/integrations/linear/linked_issues' do
-    let(:conversation) { create(:conversation, account: account) }
+    let(:conversation) { create(:conversation, account: account).tap { |conv| create(:inbox_member, user: agent, inbox: conv.inbox) } }
     let(:link) { "#{ENV.fetch('FRONTEND_URL', nil)}/app/accounts/#{account.id}/conversations/#{conversation.display_id}" }
 
     context 'when it is an authenticated user' do

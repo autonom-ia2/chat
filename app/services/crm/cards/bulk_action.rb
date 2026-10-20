@@ -6,9 +6,10 @@ module Crm
     # entry and fires the realtime/webhook broadcast — bulk is purely a fan-out
     # over the audited primitives, never a shortcut around them.
     #
-    # Policy safety: cards outside the caller's visible scope are silently
-    # skipped (reported as failed with a `forbidden` error) — the bulk endpoint
-    # can never touch a card the user could not touch one-by-one.
+    # Policy safety: a card is skipped (reported as failed with a `forbidden`
+    # error) when it is outside the caller's visible scope or when the caller's
+    # CardPolicy denies the single-card action behind the verb — the bulk
+    # endpoint can never touch a card the user could not touch one-by-one (#1157).
     #
     # Idempotency: each action is naturally idempotent. Moving to the current
     # stage is a no-op (Mover), re-archiving an archived card is a no-op, and
@@ -19,6 +20,8 @@ module Crm
     class BulkAction
       # Soft-delete = status archived (reversible), matching CardsController#destroy.
       ACTIONS = %w[move assign status delete].freeze
+      # The CardPolicy method that guards the same change on a single card.
+      POLICY_BY_ACTION = { 'move' => :move?, 'assign' => :update?, 'status' => :close?, 'delete' => :destroy? }.freeze
       MAX_IDS = 100
 
       class InvalidAction < StandardError; end
@@ -44,7 +47,7 @@ module Crm
 
         @ids.each do |id|
           card = visible_cards_by_id[id]
-          next failed << { id: id, error: 'forbidden' } if card.blank?
+          next failed << { id: id, error: 'forbidden' } if card.blank? || !permitted?(card)
 
           # Each card is its own transaction so a single failure (e.g. a card
           # that vanished mid-request) reports as `failed` without rolling back
@@ -109,6 +112,11 @@ module Crm
 
       def broadcast(card, event_name)
         Crm::Cards::Broadcaster.broadcast(card, event_name)
+      end
+
+      def permitted?(card)
+        Pundit.policy!({ user: @user, account: @account, account_user: @account_user }, card)
+              .public_send(POLICY_BY_ACTION.fetch(@action))
       end
 
       def resolve_target_stage

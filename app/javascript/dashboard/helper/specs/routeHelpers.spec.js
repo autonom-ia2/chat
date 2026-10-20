@@ -85,9 +85,14 @@ describe('#defaultRedirectPage', () => {
     expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/portals');
   });
 
-  it('should return dashboard route as default for users with custom roles', () => {
-    const permissions = ['custom_role'];
-    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/dashboard');
+  // #1157: the dashboard would refuse them again and loop.
+  it('sends a custom role without any landing area to the profile', () => {
+    expect(defaultRedirectPage(to, ['custom_role'])).toBe(
+      'accounts/2/profile/settings'
+    );
+    expect(
+      defaultRedirectPage(to, ['crm_view', 'campaign_view', 'custom_role'])
+    ).toBe('accounts/2/profile/settings');
   });
 
   it('should return dashboard route for users with administrator role', () => {

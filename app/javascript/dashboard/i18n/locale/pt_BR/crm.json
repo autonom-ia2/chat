@@ -1019,6 +1019,7 @@
       "UNDO": "Desfazer",
       "CLEAR": "Limpar",
       "DONE": "{count} card atualizado | {count} cards atualizados",
+      "SKIPPED": "{count} card não foi alterado | {count} cards não foram alterados",
       "DELETE_CONFIRM": "Arquivar {count} card? | Arquivar {count} cards?"
     },
     "EDIT": {

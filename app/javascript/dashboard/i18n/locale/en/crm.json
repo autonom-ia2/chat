@@ -1019,6 +1019,7 @@
       "UNDO": "Undo",
       "CLEAR": "Clear",
       "DONE": "{count} card updated | {count} cards updated",
+      "SKIPPED": "{count} card was not changed | {count} cards were not changed",
       "DELETE_CONFIRM": "Archive {count} card? | Archive {count} cards?"
     },
     "EDIT": {

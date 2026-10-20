@@ -106,8 +106,11 @@ class Api::V1::Accounts::Integrations::LinearController < Api::V1::Accounts::Int
     "#{ENV.fetch('FRONTEND_URL', nil)}/app/accounts/#{Current.account.id}/conversations/#{@conversation.display_id}"
   end
 
+  # A Linear issue carries the conversation link and posts an activity on it (#1157): only
+  # someone who can see the conversation may create or link one.
   def fetch_conversation
     @conversation = Current.account.conversations.find_by!(display_id: permitted_params[:conversation_id])
+    authorize @conversation, :show?
   end
 
   def linear_processor_service

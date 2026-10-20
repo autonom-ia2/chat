@@ -223,6 +223,9 @@ export const getLevel = (module, permissions) => {
   }
   const { view, manage } = module.levels;
   if (manage && permissions.includes(manage)) return LEVELS.MANAGE;
+  // crm_admin grants every CRM key on the backend, card editing included (#1157).
+  if (module.type === 'crm' && permissions.includes(CRM_ADMIN))
+    return LEVELS.MANAGE;
   if (view && permissions.includes(view)) return LEVELS.VIEW;
   // Legacy CRM roles may hold only extras (e.g. crm_admin) without crm_view.
   if (

@@ -1555,7 +1555,7 @@
 - rota: crm_ai_usage_index
 - intent: Quanto gastei de IA esse mês?; Qual recurso de IA consome mais?; Como exporto o relatório de uso da IA?; Por que os valores apareceram em dólar?; Dá para ver o que foi conversado com a IA?
 - onde_fica: CRM > Gestão de IA
-- pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM
+- pre_requisitos: CRM e IA do CRM ligados; ser administrador ou ter função com a IA do CRM (o gasto é da conta, então agente sem função não vê)
 - passos: 1. Abra CRM > Gestão de IA; 2. Escolha o período entre hoje, semana e mês; 3. Leia os indicadores de gasto, usos, economia e custo médio; 4. Confira o gasto por recurso e o histórico; 5. Use baixar relatório para exportar o período.
 - gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo.
 - nav_target: `crm_ai_usage_index`

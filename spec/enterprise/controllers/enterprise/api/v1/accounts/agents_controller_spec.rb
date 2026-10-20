@@ -70,6 +70,30 @@ RSpec.describe 'Enterprise Agents API', type: :request do
       end
     end
 
+    # #1157: an update that does not mention the role keeps it; a role of another account is refused.
+    context 'when the agent already has a role' do
+      before { other_agent.account_users.first.update!(custom_role_id: custom_role.id) }
+
+      it 'keeps the role when the update does not send custom_role_id' do
+        put "/api/v1/accounts/#{account.id}/agents/#{other_agent.id}",
+            headers: admin.create_new_auth_token, params: { availability: 'busy' }, as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(other_agent.account_users.first.reload.custom_role_id).to eq(custom_role.id)
+      end
+
+      it 'refuses a role of another account and changes nothing' do
+        foreign_role = create(:custom_role, account: create(:account))
+
+        put "/api/v1/accounts/#{account.id}/agents/#{other_agent.id}",
+            headers: admin.create_new_auth_token, params: { name: 'Outro Nome', custom_role_id: foreign_role.id }, as: :json
+
+        expect(response).to have_http_status(:not_found)
+        expect(other_agent.reload.name).not_to eq('Outro Nome')
+        expect(other_agent.account_users.first.reload.custom_role_id).to eq(custom_role.id)
+      end
+    end
+
     context 'when the custom_roles feature is disabled' do
       before do
         other_agent.account_users.first.update!(custom_role_id: custom_role.id)

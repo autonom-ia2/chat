@@ -74,8 +74,9 @@ module RestrictIntegrationTokenToCrm
       'ai_vs_human' => 'crm_view_reports', 'throughput' => 'crm_view_reports',
       'follow_ups' => 'crm_view_reports', 'workload' => 'crm_view_reports'
     },
+    # AI usage is account spend (#1157): it follows the AI scope, like the policy.
     'api/v1/accounts/crm/ai_usage' => {
-      'index' => 'crm_view_reports', 'export' => 'crm_view_reports'
+      'index' => 'crm_manage_ai', 'export' => 'crm_manage_ai'
     }
   }.freeze
 

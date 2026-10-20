@@ -24,6 +24,15 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Only the actions the role allows (#1157); the server refuses the others too.
+  canMove: {
+    type: Boolean,
+    default: true,
+  },
+  canManage: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['move', 'assign', 'status', 'archive', 'clear']);
@@ -135,6 +144,7 @@ onBeforeUnmount(() => {
         <div class="w-px h-6 bg-n-weak" />
 
         <SelectMenu
+          v-if="canMove"
           v-model="stageValue"
           :options="stageOptions"
           :label="t('CRM_KANBAN.BULK.MOVE')"
@@ -142,34 +152,36 @@ onBeforeUnmount(() => {
           @update:model-value="handleMove"
         />
 
-        <ComboBox
-          v-model="ownerValue"
-          :options="ownerOptions"
-          :placeholder="t('CRM_KANBAN.BULK.ASSIGN')"
-          :search-placeholder="t('CRM_KANBAN.LIST.OWNER')"
-          :empty-state="t('CRM_KANBAN.LIST.EMPTY_NO_RESULTS')"
-          class="!w-40"
-          @update:model-value="handleAssign"
-        />
+        <template v-if="canManage">
+          <ComboBox
+            v-model="ownerValue"
+            :options="ownerOptions"
+            :placeholder="t('CRM_KANBAN.BULK.ASSIGN')"
+            :search-placeholder="t('CRM_KANBAN.LIST.OWNER')"
+            :empty-state="t('CRM_KANBAN.LIST.EMPTY_NO_RESULTS')"
+            class="!w-40"
+            @update:model-value="handleAssign"
+          />
 
-        <SelectMenu
-          v-model="statusValue"
-          :options="statusOptions"
-          :label="t('CRM_KANBAN.BULK.STATUS')"
-          sub-menu-position="bottom"
-          @update:model-value="handleStatus"
-        />
+          <SelectMenu
+            v-model="statusValue"
+            :options="statusOptions"
+            :label="t('CRM_KANBAN.BULK.STATUS')"
+            sub-menu-position="bottom"
+            @update:model-value="handleStatus"
+          />
 
-        <Button
-          variant="ghost"
-          color="ruby"
-          size="sm"
-          icon="i-lucide-archive"
-          :label="t('CRM_KANBAN.BULK.DELETE')"
-          :is-loading="isBusy"
-          :disabled="isBusy"
-          @click="requestArchive"
-        />
+          <Button
+            variant="ghost"
+            color="ruby"
+            size="sm"
+            icon="i-lucide-archive"
+            :label="t('CRM_KANBAN.BULK.DELETE')"
+            :is-loading="isBusy"
+            :disabled="isBusy"
+            @click="requestArchive"
+          />
+        </template>
 
         <div class="w-px h-6 bg-n-weak" />
 

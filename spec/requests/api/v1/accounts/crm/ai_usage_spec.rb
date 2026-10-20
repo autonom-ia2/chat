@@ -32,13 +32,14 @@ RSpec.describe 'CRM AI usage API', type: :request do
     expect(response.body).not_to include('model')
   end
 
-  it 'allows plain agents to view the report' do
+  # #1157: the report is what the account spends on AI. Plain agents no longer see it.
+  it 'denies plain agents' do
     account, = create_account_and_user
     agent, = create_crm_agent(account: account)
 
     get "/api/v1/accounts/#{account.id}/crm/ai_usage", headers: auth_headers(agent)
 
-    expect(response).to have_http_status(:ok)
+    expect(response).to have_http_status(:unauthorized)
   end
 
   it 'returns 404 when CRM AI is disabled' do
@@ -103,11 +104,11 @@ RSpec.describe 'CRM AI usage API', type: :request do
     expect(response.body).not_to include('response')
   end
 
-  it 'allows CRM integration tokens with crm_view_reports to access ai usage when available' do
+  it 'allows CRM integration tokens with crm_manage_ai to access ai usage when available' do
     skip 'Crm::IntegrationToken is EE-only in this fork' unless defined?(Crm::IntegrationToken)
 
     account, admin = create_account_and_user
-    token = Crm::IntegrationToken.create!(account: account, created_by: admin, name: 'n8n', scopes: ['crm_view_reports'])
+    token = Crm::IntegrationToken.create!(account: account, created_by: admin, name: 'n8n', scopes: ['crm_manage_ai'])
 
     get "/api/v1/accounts/#{account.id}/crm/ai_usage", headers: { api_access_token: token.access_token.token }
 

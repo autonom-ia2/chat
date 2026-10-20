@@ -1,4 +1,7 @@
 class Api::V1::Accounts::CallbacksController < Api::V1::Accounts::BaseController
+  # Creating a Facebook inbox or replacing its page token is inbox setup (#1157): the screen
+  # already asks for inbox_manage, and the API did not check anything.
+  before_action -> { check_permission_granted!('inbox_manage') }
   before_action :inbox, only: [:reauthorize_page]
 
   def register_facebook_page

@@ -79,8 +79,9 @@ describe('permissionMatrix', () => {
       expect(visibleExtras(crm, permissions)).not.toContain('crm_move_cards');
     });
 
-    it('reads a legacy crm_admin-only role as having CRM access', () => {
-      expect(getLevel(crm, ['crm_admin'])).toBe(LEVELS.VIEW);
+    // #1157: crm_admin grants card editing on the backend, so the editor says so.
+    it('reads a legacy crm_admin-only role as editing CRM', () => {
+      expect(getLevel(crm, ['crm_admin'])).toBe(LEVELS.MANAGE);
     });
 
     it('clears every crm key on no access', () => {

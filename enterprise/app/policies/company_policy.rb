@@ -2,7 +2,7 @@ class CompanyPolicy < ApplicationPolicy
   include Relationships::RecordPermissions
 
   def index?
-    true
+    relationship_list_read?
   end
 
   def summary?

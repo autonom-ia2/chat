@@ -37,6 +37,20 @@ RSpec.describe 'Callbacks API', type: :request do
       end
     end
 
+    # #1157: creating an inbox is inbox setup; a plain agent used to get through.
+    context 'when it is an agent without inbox_manage' do
+      let(:agent) { create(:user, account: account, role: :agent) }
+
+      it 'returns unauthorized and creates nothing' do
+        expect do
+          post "/api/v1/accounts/#{account.id}/callbacks/register_facebook_page",
+               headers: agent.create_new_auth_token, params: valid_params, as: :json
+        end.not_to change(Channel::FacebookPage, :count)
+
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
     context 'when it is an authenticated user' do
       let(:admin) { create(:user, account: account, role: :administrator) }
 

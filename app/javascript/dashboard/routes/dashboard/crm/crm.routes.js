@@ -4,6 +4,7 @@ import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
   CRM_ADMIN_PERMISSION,
+  CRM_MANAGE_AI_PERMISSION,
   CAMPAIGN_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 const CrmKanbanPage = () => import('./pages/CrmKanbanPage.vue');
@@ -24,6 +25,15 @@ const meta = {
 
 const reportsMeta = {
   permissions: ['administrator', 'agent', CRM_VIEW_REPORTS_PERMISSION],
+};
+
+// AI usage is account spend (#1157): it follows the AI key, which plain agents do not get.
+const aiUsageMeta = {
+  permissions: [
+    'administrator',
+    CRM_MANAGE_AI_PERMISSION,
+    CRM_ADMIN_PERMISSION,
+  ],
 };
 
 // Minting integration tokens is an admin-equivalent action: only the account
@@ -102,7 +112,7 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/crm/ai-usage'),
     name: 'crm_ai_usage_index',
-    meta: reportsMeta,
+    meta: aiUsageMeta,
     beforeEnter: ensureCrmAiEnabled,
     component: CrmAiUsagePage,
   },

@@ -49,7 +49,7 @@ jobs:
           mexe=false
           while IFS= read -r arquivo; do
             case "$arquivo" in
-              app/javascript/dashboard/routes/*|lib/operator_guide/*|app/javascript/dashboard/helper/guideRouteRegistry.js)
+              app/javascript/dashboard/routes/*|lib/operator_guide/*|app/javascript/dashboard/helper/guideRouteRegistry.js|enterprise/app/models/custom_role.rb|scripts/guide-map/*)
                 mexe=true ;;
             esac
           done < <(git diff --name-only "$BASE"...HEAD)
@@ -69,6 +69,13 @@ jobs:
       - name: O mapa do Guia está em dia com o roteador?
         if: steps.escopo.outputs.mexe == 'true'
         run: node scripts/guide-map/check.mjs
+
+      # #1157: tela nova aceita uma chave de função personalizada ou entra na lista
+      # "só administrador" com o motivo. Antes, cada tela decidia sozinha e várias
+      # nasceram fechadas para toda função.
+      - name: Toda tela tem decisão de função personalizada?
+        if: steps.escopo.outputs.mexe == 'true'
+        run: node scripts/guide-map/funcoes.mjs
 
       - id: trava
         name: Toda tela nova tem explicação?
