@@ -27,6 +27,11 @@ module Crm
       account.present? && account.feature_enabled?('crm_numeros_lentes')
     end
 
+    # A visão "Equipe" nova (#1992, F5 do #1871) só existe junto da "Só eu": as duas flags.
+    def self.numeros_equipe_enabled?(account)
+      numeros_lentes_enabled?(account) && account.feature_enabled?('crm_numeros_equipe')
+    end
+
     def self.calendar_ms_simulate?
       return BOOLEAN.cast(ENV['CRM_CALENDAR_MS_SIMULATE']) == true if ENV.key?('CRM_CALENDAR_MS_SIMULATE')
 

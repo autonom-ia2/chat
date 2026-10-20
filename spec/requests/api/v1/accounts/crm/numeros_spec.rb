@@ -142,4 +142,59 @@ RSpec.describe 'Api::V1::Accounts::Crm::Numeros', type: :request do
       expect(response.parsed_body).to include('vazio' => true, 'podeCriarFunil' => false)
     end
   end
+
+  describe 'a visão "Equipe" nova (#1992)' do
+    let(:gestor) { role_user('crm_view', 'crm_view_reports') }
+    let(:socio) { role_user('crm_view_reports') }
+
+    before do
+      won(card(owner: ana, value_cents: 620_000))
+      won(card(owner: bruno, value_cents: 290_000))
+    end
+
+    def ligar_equipe
+      account.enable_features('crm_numeros_equipe')
+      account.save!
+    end
+
+    it 'sem a flag, quem pede a equipe recebe o de antes: o administrador fica no "Só eu" e o sócio só nas visões' do
+      call(admin, "#{base}/numeros", visao: 'equipe')
+      expect(response.parsed_body['visao']).to eq('eu')
+
+      call(socio, "#{base}/numeros")
+      expect(response.parsed_body.keys).to contain_exactly('visoes', 'visao', 'mes')
+    end
+
+    it 'com a flag, o administrador vê o R$ de cada um e o custo da IA; o gestor vê o R$, sem o custo' do
+      ligar_equipe
+
+      call(admin, "#{base}/numeros", visao: 'equipe')
+      body = response.parsed_body
+      expect(body).to include('visao' => 'equipe', 'papel' => 'dono', 'visoes' => %w[eu equipe], 'leitura' => false)
+      expect(body['quemCuidou']['linhas'].map { |linha| linha['venda']['valor'] }).to contain_exactly(6200.0, 2900.0)
+
+      call(gestor, "#{base}/numeros", visao: 'equipe')
+      expect(response.parsed_body).to include('visao' => 'equipe', 'papel' => 'gestor_vendas')
+      expect(response.parsed_body['quemCuidou']['linhas'].size).to eq(2)
+      expect(response.parsed_body.dig('quemCuidou', 'ia', 'custo')).to be_nil
+    end
+
+    it 'com a flag, o agente comum que pede a equipe continua no "Só eu", sem nome de colega' do
+      ligar_equipe
+
+      call(ana, "#{base}/numeros", visao: 'equipe')
+
+      expect(response.parsed_body).to include('visao' => 'eu', 'visoes' => %w[eu])
+      expect(response.body).not_to include('Bruno')
+    end
+
+    it 'com a flag, quem só vê a equipe recebe a equipe em modo leitura, sem botões' do
+      ligar_equipe
+
+      call(socio, "#{base}/numeros")
+
+      expect(response.parsed_body).to include('visao' => 'equipe', 'papel' => 'leitura', 'leitura' => true, 'proximo' => [])
+      expect(response.parsed_body['topo']['botao']).to be_nil
+    end
+  end
 end

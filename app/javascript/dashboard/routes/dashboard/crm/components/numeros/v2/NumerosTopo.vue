@@ -1,12 +1,11 @@
 <script setup>
 import { computed } from 'vue';
+import { P, pctDe } from './numerosTextos';
 import {
-  P,
-  botaoDoTopo,
-  fraseDoTopo,
-  pctDe,
-  tituloDoTopo,
-} from './numerosTextos';
+  botaoDoTopoDe,
+  fraseDoTopoDe,
+  tituloDoTopoDe,
+} from './numerosTextosEquipe';
 import { useNumerosFormato } from './useNumerosFormato';
 import { inicioDe, larguraDe } from './barras';
 
@@ -26,7 +25,7 @@ const { t, traduzir } = useNumerosFormato(props.moeda);
 
 const venda = computed(() => props.topo.medida === 'valor');
 const titulo = computed(() => {
-  const texto = tituloDoTopo(props.topo, props.mes);
+  const texto = tituloDoTopoDe(props.topo, props.mes);
   return traduzir(
     { ...texto, params: { ...texto.params, mes: props.mesNome } },
     ['valor']
@@ -34,7 +33,7 @@ const titulo = computed(() => {
 });
 const frase = computed(() =>
   traduzir(
-    fraseDoTopo(props.topo, props.mes),
+    fraseDoTopoDe(props.topo, props.mes),
     venda.value ? ['feito', 'meta', 'valor'] : []
   )
 );
@@ -43,7 +42,7 @@ const esperado = computed(() =>
   props.mes.fechado ? 100 : props.topo.esperadoPct
 );
 const botao = computed(() =>
-  props.topo.botao ? traduzir(botaoDoTopo(props.topo.botao), ['valor']) : ''
+  props.topo.botao ? traduzir(botaoDoTopoDe(props.topo.botao), ['valor']) : ''
 );
 </script>
 

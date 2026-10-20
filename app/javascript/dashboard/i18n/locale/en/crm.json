@@ -6014,20 +6014,42 @@
         "EU_ATENDE_SEM_FALTA": "{noPrazo} on time.",
         "EU_ATENDE_SEM_PRAZO": "{dias} day left in the month. | {dias} days left in the month.",
         "CEDO": "The month started {dias} day ago. So far: {valor}. | The month started {dias} days ago. So far: {valor}.",
-        "CEDO_RESOLVEU": "The month started {dias} day ago. Cases solved so far: {n}. | The month started {dias} days ago. Cases solved so far: {n}."
+        "CEDO_RESOLVEU": "The month started {dias} day ago. Cases solved so far: {n}. | The month started {dias} days ago. Cases solved so far: {n}.",
+        "EMPRESA": "You closed {feito} of {meta}. Support resolved {resolvidos} of {metaResolvidos}.",
+        "EMPRESA_RESOLVEU": "You closed {feito} of {meta}. Support resolved {resolvidos}.",
+        "EMPRESA_SEM_META": "There is no goal for this month yet. Support resolved {resolvidos}.",
+        "EQUIPE_VENDAS": "The team closed {feito} of {meta}. Nobody needs help. | The team closed {feito} of {meta}. {ajuda} person needs help. | The team closed {feito} of {meta}. {ajuda} people need help.",
+        "EQUIPE_VENDAS_SEM_META": "There is no goal for this month yet.",
+        "EQUIPE_ATENDE_SEM_PRAZO": "No reminder fell behind. | {lembretes} reminder fell behind. | {lembretes} reminders fell behind."
       },
       "BOTAO": {
         "MEUS_ATRASADOS": "Open my overdue follow-up | Open my {n} overdue follow-ups",
         "MEUS_PARADOS": "Open my stalled deal | Open my {n} stalled deals",
         "MEUS_CARDS": "Open my cards",
         "MEUS_LEMBRETES": "Open my overdue reminder | Open my {n} overdue reminders",
-        "MEUS_CASOS": "Open my cases"
-      }
+        "MEUS_CASOS": "Open my cases",
+        "PARADOS": "Open {n} stalled deal ({valor}) | Open {n} stalled deals ({valor})",
+        "ATRASADOS_EQUIPE": "Open the team's overdue follow-up | Open the team's {n} overdue follow-ups",
+        "CARDS_EQUIPE": "Open the team's cards",
+        "LEMBRETES_EQUIPE": "Open the overdue reminder | Open the {n} overdue reminders",
+        "CASOS_EQUIPE": "Open the team's cases"
+      },
+      "SEM_META_EMPRESA": "You closed {valor} in {mes}",
+      "SEM_META_EQUIPE": "The team closed {valor} in {mes}",
+      "SEM_META_RESOLVEU_EQUIPE": "The team resolved {n} case in {mes} | The team resolved {n} cases in {mes}",
+      "FALTAM_EMPRESA": "{valor} to go for the {mes} goal",
+      "FALTAM_EQUIPE": "{valor} to go for the team goal",
+      "RESOLVEU_EQUIPE": "The team resolved {feito} of {meta}",
+      "BATIDA_EMPRESA": "You hit the {mes} goal",
+      "BATIDA_EQUIPE": "The team hit the {mes} goal",
+      "LEITURA": "You are viewing in read-only mode."
     },
     "PROXIMO": {
       "TITULO": "Next step",
       "CAMPANHA_COM_VOCE": "{n} person who replied to the {campanha} campaign is with you | {n} people who replied to the {campanha} campaign are with you",
-      "VER": "See"
+      "VER": "See",
+      "SEM_RESPONSAVEL": "{n} sale this month has no owner | {n} sales this month have no owner",
+      "IA_ESPERANDO": "{n} conversation {ia} handed over has been waiting for someone for more than 30 min | {n} conversations {ia} handed over have been waiting for someone for more than 30 min"
     },
     "BLOCO": {
       "VENDENDO": "Selling",
@@ -6037,7 +6059,11 @@
       "ATRASADOS": "overdue follow-up | overdue follow-ups",
       "RESOLVIDOS": "solved | solved",
       "COM_VOCE": "with you now",
-      "DEU_CERTO": "got the \"did it work out?\""
+      "DEU_CERTO": "got the \"did it work out?\"",
+      "VENDENDO_EQUIPE": "Selling (team)",
+      "ATENDENDO_EQUIPE": "Support (team)",
+      "LEMBRETES": "overdue reminder | overdue reminders",
+      "PARADOS_ATENDE": "stalled for 7+ days | stalled for 7+ days"
     },
     "ESTIMADO": "Some older sales were counted for the card's current responsible person.",
     "IA_AJUDOU": {
@@ -6074,6 +6100,37 @@
       "EXEMPLO_2": "Day 8: Bruno takes a day off and hands him to Ana.",
       "EXEMPLO_3": "Day 15: Ana closes. Marcos is the one who marked it closed.",
       "EXEMPLO_RESULTADO": "The R$ 3,000 count for Ana. Bruno and Sofia took part."
+    },
+    "AJUDA": {
+      "TITULO": "Who needs help",
+      "RETORNOS": "{nome} · received {recebeu} · closed {fechou}. {n} follow-ups fell behind.",
+      "RETORNOS_ACAO": "Open {nome}'s follow-ups",
+      "CASOS_PARADOS": "{nome} · resolved {resolveu} · {n} cases stalled for more than 7 days.",
+      "CASOS_PARADOS_ACAO": "Open {nome}'s cases"
+    },
+    "CUIDOU": {
+      "TITULO": "Who took care · {n} person and 1 AI | Who took care · {n} people and 1 AI",
+      "TITULO_SEM_IA": "Who took care · {n} person | Who took care · {n} people",
+      "PLATAFORMA": "This month {ia} served {atendeu} customers and took part in {participou} sale ({valor}). | This month {ia} served {atendeu} customers and took part in {participou} sales ({valor}).",
+      "CAMINHO": "On track: {nomes}.",
+      "VOCE": "you",
+      "E": "and",
+      "VENDA": "received {recebeu} · closed {fechou}",
+      "ATENDE_SEM_PRAZO": "resolved {resolveu}",
+      "DETALHE_VENDA": "{valor} of {meta}, {pct}% of the goal.",
+      "DETALHE_VENDA_SEM_META": "{valor} closed.",
+      "DETALHE_ATENDE_SEM_META": "{resolveu} resolved. | {resolveu} resolved.",
+      "VOCE_NOME": "{nome} (you)",
+      "VER_CONVERSAS": "See {nome}'s conversations",
+      "IA_SELO": "AI",
+      "IA_VENDA": "served {atendeu} · handed over {passou} · took part in {participou} sale ({valor}) | served {atendeu} · handed over {passou} · took part in {participou} sales ({valor})",
+      "IA_ATENDE": "resolved {resolveu} on its own · handed {passou} to the team",
+      "IA_VER": "See the agent",
+      "IA_VER_TODOS": "See the agents",
+      "IA_CUSTO": "It cost {valor} this month, about {porConversa} per conversation.",
+      "IA_CUSTO_SEM_CONVERSA": "It cost {valor} this month.",
+      "IA_CUSTO_FALTA": "Estimate: AI usage is not split by agent.",
+      "RODAPE": "We only count customers who entered the pipeline."
     }
   }
 }

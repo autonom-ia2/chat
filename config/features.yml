@@ -631,3 +631,16 @@
   display_name: IA de assunto cria o card na coluna certa
   enabled: false
   column: feature_flags_ext_1
+
+# CRM › Números por papel, visão "Equipe" nova e a IA no time (#1992, F5 do épico #1871). Ligada (com a
+# `crm_numeros_lentes`): a aba Equipe de CRM › Números mostra o topo, o próximo passo, Vendendo, Atendendo, "Quem
+# precisa de ajuda" e o resto recolhido ("Quem cuidou", com a IA numa linha própria, sem meta). Quem vê continua o mesmo
+# (administrador e função com `crm_view_reports`); o custo da IA fica só com o administrador. Desligada (padrão): a aba
+# Equipe é o painel de sempre. Posição 52 na feature_flags_ext_1 (2251799813685248 = 1 << 51), reservada pela
+# Orquestração (20/10): as posições 44 a 51 estão reservadas para outros PRs (a 51 é `crm_metas`, F4), e a posição na
+# lista é o bit, então este PR só entra depois deles. Sem migration: a Orquestração liga na stack Hub2You, contas 1, 16
+# e 18, depois do deploy.
+- name: crm_numeros_equipe
+  display_name: CRM › Números por papel (visão "Equipe" e a IA no time)
+  enabled: false
+  column: feature_flags_ext_1

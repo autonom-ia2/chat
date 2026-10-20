@@ -6015,20 +6015,42 @@
         "EU_ATENDE_SEM_FALTA": "{noPrazo} dentro do prazo.",
         "EU_ATENDE_SEM_PRAZO": "Falta {dias} dia para o mês acabar. | Faltam {dias} dias para o mês acabar.",
         "CEDO": "O mês começou há {dias} dia. Até agora: {valor}. | O mês começou há {dias} dias. Até agora: {valor}.",
-        "CEDO_RESOLVEU": "O mês começou há {dias} dia. Casos resolvidos até agora: {n}. | O mês começou há {dias} dias. Casos resolvidos até agora: {n}."
+        "CEDO_RESOLVEU": "O mês começou há {dias} dia. Casos resolvidos até agora: {n}. | O mês começou há {dias} dias. Casos resolvidos até agora: {n}.",
+        "EMPRESA": "Vocês fecharam {feito} de {meta}. O suporte resolveu {resolvidos} de {metaResolvidos}.",
+        "EMPRESA_RESOLVEU": "Vocês fecharam {feito} de {meta}. O suporte resolveu {resolvidos}.",
+        "EMPRESA_SEM_META": "Ainda não há meta para este mês. O suporte resolveu {resolvidos}.",
+        "EQUIPE_VENDAS": "A equipe fechou {feito} de {meta}. Ninguém precisa de ajuda. | A equipe fechou {feito} de {meta}. {ajuda} pessoa precisa de ajuda. | A equipe fechou {feito} de {meta}. {ajuda} pessoas precisam de ajuda.",
+        "EQUIPE_VENDAS_SEM_META": "Ainda não há meta para este mês.",
+        "EQUIPE_ATENDE_SEM_PRAZO": "Nenhum lembrete ficou para trás. | {lembretes} lembrete ficou para trás. | {lembretes} lembretes ficaram para trás."
       },
       "BOTAO": {
         "MEUS_ATRASADOS": "Abrir meu retorno atrasado | Abrir meus {n} retornos atrasados",
         "MEUS_PARADOS": "Abrir minha negociação parada | Abrir minhas {n} negociações paradas",
         "MEUS_CARDS": "Abrir meus cards",
         "MEUS_LEMBRETES": "Abrir meu lembrete para trás | Abrir meus {n} lembretes para trás",
-        "MEUS_CASOS": "Abrir meus casos"
-      }
+        "MEUS_CASOS": "Abrir meus casos",
+        "PARADOS": "Abrir {n} negociação parada ({valor}) | Abrir {n} negociações paradas ({valor})",
+        "ATRASADOS_EQUIPE": "Abrir o retorno atrasado da equipe | Abrir os {n} retornos atrasados da equipe",
+        "CARDS_EQUIPE": "Abrir os cards da equipe",
+        "LEMBRETES_EQUIPE": "Abrir o lembrete para trás | Abrir os {n} lembretes para trás",
+        "CASOS_EQUIPE": "Abrir os casos da equipe"
+      },
+      "SEM_META_EMPRESA": "Vocês fecharam {valor} em {mes}",
+      "SEM_META_EQUIPE": "A equipe fechou {valor} em {mes}",
+      "SEM_META_RESOLVEU_EQUIPE": "A equipe resolveu {n} caso em {mes} | A equipe resolveu {n} casos em {mes}",
+      "FALTAM_EMPRESA": "Faltam {valor} para a meta de {mes}",
+      "FALTAM_EQUIPE": "Faltam {valor} para a meta da equipe",
+      "RESOLVEU_EQUIPE": "A equipe resolveu {feito} de {meta}",
+      "BATIDA_EMPRESA": "Vocês bateram a meta de {mes}",
+      "BATIDA_EQUIPE": "A equipe bateu a meta de {mes}",
+      "LEITURA": "Você está vendo em modo leitura."
     },
     "PROXIMO": {
       "TITULO": "Próximo passo",
       "CAMPANHA_COM_VOCE": "{n} pessoa que respondeu à campanha {campanha} está com você | {n} pessoas que responderam à campanha {campanha} estão com você",
-      "VER": "Ver"
+      "VER": "Ver",
+      "SEM_RESPONSAVEL": "{n} venda do mês está sem responsável | {n} vendas do mês estão sem responsável",
+      "IA_ESPERANDO": "{n} conversa que {ia} passou espera alguém há mais de 30 min | {n} conversas que {ia} passou esperam alguém há mais de 30 min"
     },
     "BLOCO": {
       "VENDENDO": "Vendendo",
@@ -6038,7 +6060,11 @@
       "ATRASADOS": "retorno atrasado | retornos atrasados",
       "RESOLVIDOS": "resolvido | resolvidos",
       "COM_VOCE": "com você agora",
-      "DEU_CERTO": "receberam o \"deu tudo certo?\""
+      "DEU_CERTO": "receberam o \"deu tudo certo?\"",
+      "VENDENDO_EQUIPE": "Vendendo (equipe)",
+      "ATENDENDO_EQUIPE": "Atendendo (equipe)",
+      "LEMBRETES": "lembrete para trás | lembretes para trás",
+      "PARADOS_ATENDE": "parado há 7+ dias | parados há 7+ dias"
     },
     "ESTIMADO": "Algumas vendas antigas foram contadas pelo responsável atual do card.",
     "IA_AJUDOU": {
@@ -6075,6 +6101,37 @@
       "EXEMPLO_2": "Dia 8: o Bruno sai de folga e passa para a Ana.",
       "EXEMPLO_3": "Dia 15: a Ana fecha. Quem marcou o fechamento foi o Marcos.",
       "EXEMPLO_RESULTADO": "Os R$ 3.000 contam para a Ana. Bruno e Sofia participaram."
+    },
+    "AJUDA": {
+      "TITULO": "Quem precisa de ajuda",
+      "RETORNOS": "{nome} · recebeu {recebeu} · fechou {fechou}. {n} retornos ficaram para trás.",
+      "RETORNOS_ACAO": "Abrir os retornos de {nome}",
+      "CASOS_PARADOS": "{nome} · resolveu {resolveu} · {n} casos parados há mais de 7 dias.",
+      "CASOS_PARADOS_ACAO": "Abrir os casos de {nome}"
+    },
+    "CUIDOU": {
+      "TITULO": "Quem cuidou · {n} pessoa e 1 IA | Quem cuidou · {n} pessoas e 1 IA",
+      "TITULO_SEM_IA": "Quem cuidou · {n} pessoa | Quem cuidou · {n} pessoas",
+      "PLATAFORMA": "Este mês {ia} atendeu {atendeu} clientes e participou de {participou} venda ({valor}). | Este mês {ia} atendeu {atendeu} clientes e participou de {participou} vendas ({valor}).",
+      "CAMINHO": "No caminho certo: {nomes}.",
+      "VOCE": "você",
+      "E": "e",
+      "VENDA": "recebeu {recebeu} · fechou {fechou}",
+      "ATENDE_SEM_PRAZO": "resolveu {resolveu}",
+      "DETALHE_VENDA": "{valor} de {meta}, {pct}% da meta.",
+      "DETALHE_VENDA_SEM_META": "{valor} fechados.",
+      "DETALHE_ATENDE_SEM_META": "{resolveu} resolvido. | {resolveu} resolvidos.",
+      "VOCE_NOME": "{nome} (você)",
+      "VER_CONVERSAS": "Ver as conversas de {nome}",
+      "IA_SELO": "IA",
+      "IA_VENDA": "atendeu {atendeu} · passou {passou} · participou de {participou} venda ({valor}) | atendeu {atendeu} · passou {passou} · participou de {participou} vendas ({valor})",
+      "IA_ATENDE": "resolveu {resolveu} sozinha · passou {passou} para a equipe",
+      "IA_VER": "Ver o agente",
+      "IA_VER_TODOS": "Ver os agentes",
+      "IA_CUSTO": "Custou {valor} este mês, cerca de {porConversa} por conversa.",
+      "IA_CUSTO_SEM_CONVERSA": "Custou {valor} este mês.",
+      "IA_CUSTO_FALTA": "Estimado: o consumo da IA não separa os agentes.",
+      "RODAPE": "Contamos só os clientes que entraram no funil."
     }
   }
 }
