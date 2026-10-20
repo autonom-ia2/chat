@@ -180,3 +180,27 @@ describe('carregando e erro', () => {
     expect(wrapper.find('[data-abrir-proxima]').exists()).toBe(false);
   });
 });
+
+describe('rodapé "Como vai o seu mês" (#1897)', () => {
+  const comRodape = comoVaiOMes =>
+    mount(TelaInicialResumo, {
+      props: { dados: dadosCom(), comoVaiOMes },
+      global: {
+        mocks: { $t: key => key },
+        stubs: { RouterLink: { template: '<a><slot /></a>' } },
+      },
+    });
+
+  it('só no computador: escondido no celular, visível a partir do md', () => {
+    const link = comRodape({ name: 'crm_dashboard_index', query: {} }).find(
+      '[data-como-vai-o-mes]'
+    );
+    const caixa = link.element.parentElement.classList;
+    expect(caixa.contains('hidden')).toBe(true);
+    expect(caixa.contains('md:block')).toBe(true);
+  });
+
+  it('sem destino, não há rodapé', () => {
+    expect(comRodape(null).find('[data-como-vai-o-mes]').exists()).toBe(false);
+  });
+});

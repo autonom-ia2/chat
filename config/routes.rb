@@ -528,6 +528,10 @@ Rails.application.routes.draw do
               resources :sources, only: [:index, :create, :destroy], controller: 'agents/sources' do
                 member { post :resync }
               end
+              # #1426 (tema 4b) — conferências e autoteste do material (gaveta "O que sabe", Fase 2).
+              get 'material', to: 'agents/material#show'
+              post 'material/problemas/:problema_id/resolver', to: 'agents/material#resolver'
+              post 'material/autoteste', to: 'agents/material#autoteste'
               # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
               put 'onde_atende', to: 'agents/onde_atende#update'
               resources :channels, only: [:index, :create, :destroy],
@@ -939,6 +943,7 @@ Rails.application.routes.draw do
           resources :waha_inboxes, only: [:create], param: :inbox_id do
             member do
               get :connection
+              get :status
               post :reconnect
             end
           end
