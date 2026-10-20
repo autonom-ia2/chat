@@ -5,6 +5,8 @@ import { ATTACHMENT_ICONS } from 'shared/constants/messages';
 import { ultimaEFigurinha } from 'dashboard/components-next/conversa-canal/figurinha';
 import { ultimaEVisualizacaoUnica } from 'dashboard/components-next/conversa-canal/visualizacaoUnica';
 import { usePeleDaMensagem } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import { useNotaDoConector } from 'dashboard/components-next/conversa-canal/useNotaDoConector';
+import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
 
 export default {
   name: 'MessagePreview',
@@ -26,28 +28,38 @@ export default {
     const { getPlainText } = useMessageFormatter();
     // #1702: os rótulos do WhatsApp só com a pele; sem ela, a prévia de sempre.
     const pele = usePeleDaMensagem(() => props.message);
+    // #1941: a nota técnica antiga do conector WAHA aparece como aviso, com o texto curto.
+    const notaDoConector = useNotaDoConector(() => props.message);
     return {
       getPlainText,
       pele,
+      notaDoConector,
     };
   },
   computed: {
     messageByAgent() {
       const { message_type: messageType } = this.message;
-      return messageType === MESSAGE_TYPE.OUTGOING;
+      return !this.notaDoConector && messageType === MESSAGE_TYPE.OUTGOING;
     },
     isMessageAnActivity() {
       const { message_type: messageType } = this.message;
-      return messageType === MESSAGE_TYPE.ACTIVITY;
+      return this.notaDoConector || messageType === MESSAGE_TYPE.ACTIVITY;
     },
     isMessagePrivate() {
       const { private: isPrivate } = this.message;
-      return isPrivate;
+      return !this.notaDoConector && isPrivate;
+    },
+    // #1941: mandada pelo celular, sem o prefixo do conector WAHA. Sem a marca, o texto de sempre.
+    textoDaPrevia() {
+      return textoDaMensagem(
+        this.message.content,
+        this.message.content_attributes
+      );
     },
     parsedLastMessage() {
       const { content_attributes: contentAttributes } = this.message;
       const { email: { subject } = {} } = contentAttributes || {};
-      return this.getPlainText(subject || this.message.content);
+      return this.getPlainText(subject || this.textoDaPrevia);
     },
     lastMessageFileType() {
       const [{ file_type: fileType } = {}] = this.message.attachments;
@@ -104,7 +116,10 @@ export default {
       />
       {{ $t('CHAT_LIST.ATTACHMENTS.image.CONTENT') }}
     </span>
-    <span v-else-if="message.content">
+    <span v-else-if="notaDoConector">
+      {{ $t('CONVERSA_CANAL.NOTA_DO_CONECTOR.AVISO') }}
+    </span>
+    <span v-else-if="textoDaPrevia">
       {{ parsedLastMessage }}
     </span>
     <span v-else-if="message.attachments">

@@ -10,6 +10,7 @@ const props = defineProps({
   permissions: { type: Array, required: true },
   isOpen: { type: Boolean, default: false },
   openRows: { type: Array, default: () => [] },
+  keyLock: { type: Function, default: () => null },
 });
 
 const emit = defineEmits([
@@ -104,6 +105,7 @@ const levelLabel = module => {
         :module="module"
         :permissions="permissions"
         :is-open="openRows.includes(module.key)"
+        :key-lock="keyLock"
         @select-level="level => emit('selectLevel', module, level)"
         @toggle-extra="key => emit('toggleExtra', module, key)"
         @toggle-open="emit('toggleRow', module.key)"

@@ -429,6 +429,51 @@ describe('permissionMatrix', () => {
     });
   });
 
+  describe('pessoas (#1931)', () => {
+    const people = moduleByKey('PEOPLE');
+
+    it('fica nas configurações da conta, só com não vê e pode mexer', () => {
+      const group = MODULE_GROUPS.find(g => g.key === 'SETTINGS');
+      expect(group.modules).toContain(people);
+      expect(levelSlots(people)).toEqual([LEVELS.NONE, null, LEVELS.MANAGE]);
+      expect(setLevel(people, LEVELS.MANAGE, [])).toEqual(['people_manage']);
+    });
+
+    it('mostra montar funções e entregar acima só para quem pode mexer', () => {
+      expect(visibleExtras(people, [])).toEqual([]);
+      expect(visibleExtras(people, ['people_manage'])).toEqual([
+        'custom_role_manage',
+        'grant_above_own',
+      ]);
+    });
+
+    it('voltar para não vê tira os ajustes finos junto', () => {
+      const permissions = toggleExtra(
+        people,
+        'grant_above_own',
+        toggleExtra(people, 'custom_role_manage', ['people_manage'])
+      );
+      expect(permissions).toEqual([
+        'people_manage',
+        'custom_role_manage',
+        'grant_above_own',
+      ]);
+      expect(
+        setLevel(people, LEVELS.NONE, [...permissions, 'crm_view'])
+      ).toEqual(['crm_view']);
+    });
+
+    it('trata os dois ajustes como sensíveis', () => {
+      expect(
+        sensitiveExtrasOn([
+          'people_manage',
+          'custom_role_manage',
+          'grant_above_own',
+        ])
+      ).toEqual(['custom_role_manage', 'grant_above_own']);
+    });
+  });
+
   // A linha do ajuste fino mostra nome e descrição pela chave; sem a tradução, a tela mostra a chave crua (#1845).
   it('todo ajuste fino tem nome e descrição em en e pt_BR', () => {
     const extras = MODULES.flatMap(module => module.extras || []);

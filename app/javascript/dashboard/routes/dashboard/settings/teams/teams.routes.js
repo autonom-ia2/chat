@@ -1,5 +1,6 @@
 import { frontendURL } from '../../../../helper/URLHelper';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
+import { PEOPLE_MANAGE_PERMISSION } from 'dashboard/constants/permissions.js';
 
 const TeamsIndex = () => import('./Index.vue');
 const CreateStepWrap = () => import('./Create/Index.vue');
@@ -30,7 +31,7 @@ export default {
           component: TeamsIndex,
           meta: {
             featureFlag: FEATURE_FLAGS.TEAM_MANAGEMENT,
-            permissions: ['administrator'],
+            permissions: ['administrator', PEOPLE_MANAGE_PERMISSION],
           },
         },
       ],
@@ -56,7 +57,7 @@ export default {
               component: CreateTeam,
               meta: {
                 featureFlag: FEATURE_FLAGS.TEAM_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', PEOPLE_MANAGE_PERMISSION],
               },
             },
             {
@@ -65,7 +66,7 @@ export default {
               component: FinishSetup,
               meta: {
                 featureFlag: FEATURE_FLAGS.TEAM_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', PEOPLE_MANAGE_PERMISSION],
               },
             },
             {
@@ -73,7 +74,7 @@ export default {
               name: 'settings_teams_add_agents',
               meta: {
                 featureFlag: FEATURE_FLAGS.TEAM_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', PEOPLE_MANAGE_PERMISSION],
               },
               component: AddAgents,
             },
@@ -89,7 +90,7 @@ export default {
               component: EditTeam,
               meta: {
                 featureFlag: FEATURE_FLAGS.TEAM_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', PEOPLE_MANAGE_PERMISSION],
               },
             },
             {
@@ -98,7 +99,7 @@ export default {
               component: EditAgents,
               meta: {
                 featureFlag: FEATURE_FLAGS.TEAM_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', PEOPLE_MANAGE_PERMISSION],
               },
             },
             {
@@ -106,7 +107,7 @@ export default {
               name: 'settings_teams_edit_finish',
               meta: {
                 featureFlag: FEATURE_FLAGS.TEAM_MANAGEMENT,
-                permissions: ['administrator'],
+                permissions: ['administrator', PEOPLE_MANAGE_PERMISSION],
               },
               component: FinishSetup,
             },

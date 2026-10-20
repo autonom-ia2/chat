@@ -101,10 +101,27 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
 6. Troque o CRM para **Só olha**. O ajuste **Arquivar cards do CRM** some (só vale para quem mexe).
 7. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `crm_manage_cards` antes do deploy tem `crm_delete_cards` depois, inclusive os cargos gerenciados de token de integração do CRM.
 
+## Teste 11: Pessoas, quem cuida do cadastro sem ser administrador (#1931)
+
+Precisa de uma segunda pessoa de teste, "Teste Atendente" (perfil Agente, sem função), criada pelo administrador.
+
+1. Edite a função da pessoa de teste em **Configurações → Funções personalizadas**. No grupo **Configurações da conta**, na linha **Pessoas**, escolha **Editar** e salve, sem ligar os ajustes finos. Deixe também **Conversas: Ver**.
+2. Na janela anônima (recarregue), abra **Configurações**: aparecem **Usuários** e **Times** (no menu novo, no grupo **Pessoas e acesso**). **Funções personalizadas** não aparece.
+3. Em **Usuários**, o esperado:
+   - os administradores e a própria pessoa de teste têm um cadeado no lugar de editar e excluir, com o motivo;
+   - "Teste Atendente" tem editar e excluir;
+   - em **Adicionar agente**, a opção **Administrador** aparece desabilitada com "Só um administrador torna alguém administrador", e as funções com chaves que ela não tem também aparecem desabilitadas.
+4. Edite "Teste Atendente" e dê a ele uma função que só tenha **Conversas: Ver**: salva. Tente uma função com CRM: a opção aparece desabilitada.
+5. Em **Times**, crie o time "teste-funcoes", ponha "Teste Atendente" nele e depois apague o time.
+6. Na janela normal, ligue em Pessoas o ajuste **Montar funções** (pede confirmação). Na anônima, recarregue: **Funções personalizadas** aparece. A função da própria pessoa tem cadeado "É a sua função". Crie a função "Teste – montada" só com **Conversas: Ver**: salva. Abra uma função com mais chaves: as linhas que ela não tem ficam travadas, com o motivo.
+7. Na janela normal, ligue **Pode entregar acesso acima do próprio** (pede confirmação). Na anônima, recarregue: ela consegue dar a "Teste Atendente" uma função com CRM. **Administrador** continua desabilitado.
+8. Na janela normal, abra **Configurações → Auditoria** e confira as linhas: a troca de função de "Teste Atendente", a criação de "Teste – montada" e o time criado e apagado, com o nome da pessoa de teste como autora.
+
 ## No fim (limpeza)
 
 1. Remova a pessoa de teste em **Configurações → Usuários**, para não contar no plano.
 2. Apague a função "Teste – só lê" em **Funções personalizadas**.
 3. Confira que o contato e a empresa de teste do teste 6 foram excluídos e que os cards de teste do teste 8 ficaram arquivados.
+4. Remova "Teste Atendente" e apague a função "Teste – montada" do teste 11.
 
 Se algo não bater com o esperado, me mande o print e o número do teste e do passo, que eu investigo.

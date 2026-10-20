@@ -90,7 +90,9 @@ class SamlUserBuilder
     if matching_mapping['role']
       account_user.update(role: matching_mapping['role'])
     elsif matching_mapping['custom_role_id'] && account.feature_enabled?('custom_roles')
-      account_user.update(custom_role_id: matching_mapping['custom_role_id'])
+      # Only a person's role of this same account (#1931).
+      role = account.custom_roles.for_people.find_by(id: matching_mapping['custom_role_id'])
+      account_user.update(custom_role_id: role.id) if role
     end
   end
 
