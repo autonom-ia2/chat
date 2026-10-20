@@ -386,6 +386,7 @@
           "WHATSAPP_CLOUD_REQUIRED": "Esta caixa não envia modelos aprovados. Escolha uma caixa do WhatsApp Cloud.",
           "CHANNEL_NOT_IN_AUDIENCE": "Este público não tem celular ligado para WhatsApp.",
           "AUDIENCE_NOT_READY": "Este público ainda não foi salvo. Aguarde um pouco e tente de novo.",
+          "DRAFT_GONE": "Esta campanha pronta já foi enviada por outra pessoa ou em outra aba. Confira a lista de campanhas.",
           "INVALID_VARIABLE_BINDINGS": "Alguma parte da mensagem está sem origem válida. Confira de onde vem cada parte.",
           "INVALID_CAMPAIGN": "Não foi possível salvar a campanha. Confira o nome e o modelo.",
           "JOURNEY_DISABLED": "A nova jornada de campanhas está desligada nesta instalação.",

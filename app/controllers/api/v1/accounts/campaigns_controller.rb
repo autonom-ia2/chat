@@ -25,15 +25,21 @@ class Api::V1::Accounts::CampaignsController < Api::V1::Accounts::BaseController
   private
 
   # A one-off campaign (SMS, WhatsApp) goes out by itself at scheduled_at, which the model fills with now when it is
-  # blank: creating one, or changing when it goes, needs campaign_send (#1898). Ongoing ones (site) stay with manage.
+  # blank, and TriggerScheduledItemsJob sends it without asking again: creating one, or changing any field of one that
+  # has not gone out yet (message, audience, inbox, date), needs campaign_send (#1898). So does an update that turns a
+  # campaign into one-off (inbox changed to SMS/WhatsApp). Ongoing ones (site) stay with manage.
   def authorize_send
     authorize(Campaign, :send_campaign?) if sends_campaign?
   end
 
   def sends_campaign?
-    return params[:campaign]&.key?(:scheduled_at) if action_name == 'update'
+    return (@campaign.one_off? && @campaign.active?) || becomes_one_off? if action_name == 'update'
 
     Current.account.campaigns.new(campaign_params).tap(&:valid?).one_off?
+  end
+
+  def becomes_one_off?
+    @campaign.dup.tap { |copy| copy.assign_attributes(campaign_params) }.tap(&:valid?).one_off?
   end
 
   def campaign

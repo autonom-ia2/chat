@@ -160,6 +160,29 @@ RSpec.describe 'Campaign send permission (#1898)', :aggregate_failures, type: :r
       expect(campaign.reload.scheduled_at).to eq(scheduled_at)
     end
 
+    it 'refuses editing the message of a one-off campaign that has not gone out, for who only builds' do
+      campaign = create(:campaign, account: account, inbox: inbox, message: 'Oi', scheduled_at: 1.day.from_now)
+
+      patch "/api/v1/accounts/#{account.id}/campaigns/#{campaign.display_id}",
+            params: { campaign: { message: 'Outra coisa' } }, headers: headers(builder), as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(campaign.reload.message).to eq('Oi')
+    end
+
+    it 'lets who only builds edit a site campaign, but not turn it into SMS' do
+      site = create(:campaign, account: account, inbox: create(:inbox, account: account), message: 'Oi')
+
+      patch "/api/v1/accounts/#{account.id}/campaigns/#{site.display_id}",
+            params: { campaign: { message: 'Olá' } }, headers: headers(builder), as: :json
+      expect(response).to have_http_status(:ok)
+
+      patch "/api/v1/accounts/#{account.id}/campaigns/#{site.display_id}",
+            params: { campaign: { inbox_id: inbox.id } }, headers: headers(builder), as: :json
+      expect(response).to have_http_status(:unauthorized)
+      expect(site.reload).to be_ongoing
+    end
+
     it 'refuses an SMS campaign without a date for who only builds (the model sends it now)' do
       create_classic(as: builder)
 

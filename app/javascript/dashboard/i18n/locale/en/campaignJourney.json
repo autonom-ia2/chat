@@ -386,6 +386,7 @@
           "WHATSAPP_CLOUD_REQUIRED": "This inbox cannot send approved templates. Choose a WhatsApp Cloud inbox.",
           "CHANNEL_NOT_IN_AUDIENCE": "This audience has no mobile on for WhatsApp.",
           "AUDIENCE_NOT_READY": "This audience is not saved yet. Wait a moment and try again.",
+          "DRAFT_GONE": "This ready campaign was already sent by someone else or in another tab. Check the campaign list.",
           "INVALID_VARIABLE_BINDINGS": "Some part of the message has no valid source. Check where each part comes from.",
           "INVALID_CAMPAIGN": "The campaign could not be saved. Check the name and the template.",
           "JOURNEY_DISABLED": "The new campaign journey is off in this installation.",

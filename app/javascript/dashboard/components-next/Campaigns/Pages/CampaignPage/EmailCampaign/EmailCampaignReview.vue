@@ -29,14 +29,16 @@ const canSend = useCanManage('campaign_send');
 const PRONTA = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW.PRONTA';
 // The server draft that left this e-mail ready, if any. Sending it removes the draft on the server.
 const pronta = ref(null);
+// "Deixar pronta" waits for the list: without it, a click would create a second draft of the same e-mail.
+const prontaCarregada = ref(false);
 const loadPronta = async () => {
   try {
     const prontas = await listarProntas();
     pronta.value =
       prontas.find(item => item.draft?.emailCampaignId === props.campaign.id) ||
       null;
+    prontaCarregada.value = true;
   } catch {
-    // Without the list, "Deixar pronta" would create a second draft: say so instead of guessing.
     pronta.value = null;
     useAlert(t(`${PRONTA}.ERRO_LISTA`));
   }
@@ -543,7 +545,7 @@ onMounted(() => {
               :label="t(`${PRONTA}.DEIXAR`)"
               icon="i-lucide-send"
               class="mt-4 !min-h-12 w-full !rounded-xl"
-              :disabled="!canConfirm || isSavingPronta"
+              :disabled="!canConfirm || isSavingPronta || !prontaCarregada"
               :is-loading="isSavingPronta"
               @click="deixarPronta"
             />

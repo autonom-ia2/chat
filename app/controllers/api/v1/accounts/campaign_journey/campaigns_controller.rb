@@ -6,8 +6,10 @@
 # CAMPAIGN_JOURNEY_ENABLED off → 404; campaign_manage required (CampaignPolicy#create?), otherwise 401. Every channel but
 # e-mail sends or schedules right away, so it also needs campaign_send (CampaignPolicy#send_campaign?, #1898). The e-mail
 # one is a draft: sending it goes through the e-mail campaign screen (EmailCampaignPolicy#send_now?).
-# `draft_id` (#1898): the server draft this campaign came from. Removed once the campaign is created; for e-mail it is
-# linked to the new e-mail draft and goes when that e-mail is sent or scheduled (CampaignJourney::DraftCleanup).
+# `draft_id` (#1898): the server draft this campaign came from. Except for e-mail, it is claimed (deleted) in the same
+# transaction that creates the campaign: two tabs or two people sending the same draft create one campaign, and the
+# other gets 422 draft_gone; a refused campaign rolls the claim back and the draft stays. For e-mail it is linked to the
+# new e-mail draft and goes when that e-mail is sent or scheduled (CampaignJourney::DraftCleanup).
 class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Accounts::BaseController
   CHANNELS = %w[whatsapp_cloud whatsapp_api email sms].freeze
 
@@ -17,14 +19,27 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
   def create
     # Contact imports (#1006) are never audiences: campaign_flows keeps them out.
     campaign_import = Current.account.campaign_imports.campaign_flows.find(params.require(:campaign_import_id))
-    payload = create_for(params[:channel].to_s, campaign_import)
-    ::CampaignJourney::DraftCleanup.after_dispatch(Current.account, draft_id: params[:draft_id]) unless email_channel?
+    payload = with_claimed_draft { create_for(params[:channel].to_s, campaign_import) }
     render json: payload
   rescue ::CampaignJourney::WhatsappCampaignCreator::Error, ::CampaignJourney::CreatorError => e
     render json: { error: e.message, code: e.code, details: e.details }.compact, status: :unprocessable_entity
   end
 
   private
+
+  # Creators enqueue nothing on create (their jobs run from after_commit or from the scheduler), so the campaign is
+  # only seen after the claim commits.
+  def with_claimed_draft(&)
+    draft_id = ::CampaignJourney::DraftCleanup.single_id(params[:draft_id]) unless email_channel?
+    return yield if draft_id.nil?
+
+    ActiveRecord::Base.transaction do
+      claimed = CampaignJourneyDraft.where(account_id: Current.account.id, id: draft_id).delete_all == 1
+      raise ::CampaignJourney::CreatorError.new('draft_gone', 'This draft was already sent') unless claimed
+
+      yield
+    end
+  end
 
   def create_for(channel, campaign_import)
     case channel
