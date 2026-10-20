@@ -129,7 +129,7 @@ const linkDaPrevia = linkSemRastreio(semRastreio);
       </p>
       <div
         v-if="htmlCitado"
-        class="max-h-48 overflow-hidden break-words border-s-2 border-n-slate-6 ps-3 text-n-slate-11 [&_img]:max-w-full"
+        class="max-h-48 overflow-hidden whitespace-pre-wrap break-words border-s-2 border-n-slate-6 ps-3 text-n-slate-11 [&_img]:max-h-32 [&_img]:max-w-full [&_img]:object-contain"
         data-previa-do-historico-com-imagem
       >
         <Letter

@@ -69,8 +69,7 @@ describe('CitacaoDaResposta', () => {
   });
 
   it('texto puro com imagem embutida pelo Chatwoot: a imagem vai como HTML (#1942)', async () => {
-    const src =
-      'https://painel.test/rails/active_storage/blobs/redirect/abc/image0.jpeg';
+    const src = `${window.location.origin}/rails/active_storage/blobs/redirect/abc/image0.jpeg`;
     const wrapper = montar('historico', {
       text_content: {
         full: `Esse é um teste\n\n<img src="${src}" alt="image0.jpeg">`,

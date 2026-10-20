@@ -161,7 +161,7 @@ const LINK =
       data-original-citado
     >
       <Letter
-        class-name="prose prose-bubble !max-w-none letter-render"
+        class-name="prose prose-bubble !max-w-none letter-render [&_img]:max-w-full"
         :html="html"
         :text="texto"
         :allowed-css-properties="CSS_PERMITIDO"

@@ -2,8 +2,7 @@ import { htmlDoTextoComImagens } from '../email/imagemNoTextoDoEmail';
 
 // #1942 — imagem que o Chatwoot põe dentro do texto puro do e-mail vira imagem; o resto
 // continua texto.
-const URL_DA_IMAGEM =
-  'https://painel.test/rails/active_storage/blobs/redirect/abc/image0.jpeg';
+const URL_DA_IMAGEM = `${window.location.origin}/rails/active_storage/blobs/redirect/abc/image0.jpeg`;
 const COM_IMAGEM = `Esse é um teste\n\n<img src="${URL_DA_IMAGEM}" alt="image0.jpeg">`;
 const ler = html => {
   const div = document.createElement('div');
@@ -36,9 +35,24 @@ describe('htmlDoTextoComImagens', () => {
   });
 
   it('formato incompleto ou endereço com aspas: fica texto', () => {
-    expect(htmlDoTextoComImagens('<img src="https://x.test/a.png">')).toBe('');
+    expect(htmlDoTextoComImagens(`<img src="${URL_DA_IMAGEM}">`)).toBe('');
     expect(
-      htmlDoTextoComImagens('<img src="x" onerror="alert(1)" alt="y">')
+      htmlDoTextoComImagens(
+        `<img src="${URL_DA_IMAGEM}" onerror="alert(1)" alt="y">`
+      )
     ).toBe('');
+    expect(
+      htmlDoTextoComImagens(`<img src="${URL_DA_IMAGEM}" alt="a" b="c">`)
+    ).toBe('');
+  });
+
+  it('tag escrita pelo remetente fora dos arquivos do painel fica texto (sem pixel)', () => {
+    const pixel = '<img src="https://rastreio.test/p.gif" alt="x">';
+    const outraRota = `<img src="${window.location.origin}/api/v1/profile" alt="x">`;
+    expect(htmlDoTextoComImagens(pixel)).toBe('');
+    expect(htmlDoTextoComImagens(outraRota)).toBe('');
+    const div = ler(htmlDoTextoComImagens(`${pixel}\n${COM_IMAGEM}`));
+    expect(div.querySelectorAll('img')).toHaveLength(1);
+    expect(div.textContent).toContain(pixel);
   });
 });

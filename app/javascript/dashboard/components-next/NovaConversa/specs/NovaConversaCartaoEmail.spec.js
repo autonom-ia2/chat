@@ -8,8 +8,7 @@ const LetterFalso = {
   props: ['html'],
   template: '<div data-letter :data-html="html" />',
 };
-const URL_DA_IMAGEM =
-  'https://painel.test/rails/active_storage/blobs/redirect/abc/image0.jpeg';
+const URL_DA_IMAGEM = `${window.location.origin}/rails/active_storage/blobs/redirect/abc/image0.jpeg`;
 const montar = (textoFull, stubs = { Letter: LetterFalso }) =>
   mount(NovaConversaCartaoEmail, {
     props: {
