@@ -13,6 +13,8 @@ module Crm::Entrega::Marca
   # Conversas que o rodízio nativo pode pegar.
   AUSENTE_SQL = "(conversations.additional_attributes ->> '#{CHAVE}') IS NULL".freeze
   PRESENTE_SQL = "(conversations.additional_attributes ->> '#{CHAVE}') IS NOT NULL".freeze
+  # O motivo da IA do CRM guardado na marca, no mesmo tamanho do "reason" do classificador.
+  RAZAO_MAX = 300
 
   module_function
 
@@ -34,7 +36,9 @@ module Crm::Entrega::Marca
   # foi convidado) e `venceram` (ids de quem deixou um convite desta espera vencer, #1694; sobrevive às novas
   # tentativas, como `desde`). `decidido_em`: com `venceram`, quando a regra decidiu por último (a fila espaça a espera sem ninguém); sem
   # ele, a marca não muda a cada tentativa. `card`: o card cuja regra vale, quando o pedido foi ligado a um assunto que
-  # não é o foco (#1693).
+  # não é o foco (#1693). `razao`: o motivo que a IA do CRM deu ao pedir a pessoa (#1975), que vai junto na entrega pela
+  # fila. `revalidado_ate`: a última mensagem que a reavaliação da fila leu (Crm::Ai::RevalidacaoNaFila); sobrevive às
+  # novas tentativas, para a fila não pagar outra reavaliação sem mensagem nova.
   def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
     valor = {
@@ -44,12 +48,11 @@ module Crm::Entrega::Marca
       'desde' => desde_para(anterior, modo),
       'avisado_em' => anterior['avisado_em'].presence,
       'tentado_em' => anterior['tentado_em'].presence,
-      'sugestao' => detalhes[:sugestao].presence,
       'dono_id' => detalhes[:dono]&.id,
       'ate' => detalhes[:ate]&.iso8601,
       'convidado_id' => detalhes[:convidado]&.id,
       'card_id' => detalhes[:card]&.id
-    }.merge(vencimentos(anterior, detalhes[:venceram])).compact
+    }.merge(vencimentos(anterior, detalhes[:venceram]), pedido(anterior, detalhes)).compact
     conversation.additional_attributes = (conversation.additional_attributes || {}).merge(CHAVE => valor)
   end
 
@@ -57,6 +60,13 @@ module Crm::Entrega::Marca
   def vencimentos(anterior, venceram)
     venceram = (venceram || anterior['venceram']).presence
     { 'venceram' => venceram, 'decidido_em' => venceram && Time.current.iso8601 }
+  end
+
+  # O que a IA do CRM pediu: o nome sugerido, o motivo e a última mensagem que a fila releu (#1975); esta sobrevive às
+  # tentativas.
+  def pedido(anterior, detalhes)
+    { 'sugestao' => detalhes[:sugestao].presence, 'razao' => detalhes[:razao].to_s.first(RAZAO_MAX).presence,
+      'revalidado_ate' => anterior['revalidado_ate'].presence }
   end
 
   # O prazo do convite conta do CONVITE: virar convite recomeça a contagem; o resto (inclusive convite → segurando)
@@ -71,6 +81,14 @@ module Crm::Entrega::Marca
   def card(conversation)
     id = dados(conversation)&.dig('card_id')
     conversation.account.crm_cards.find_by(id: id) if id.present?
+  end
+
+  # A reavaliação da fila (#1975) confirmou que o pedido segue de pé: guarda a última mensagem lida e o motivo novo
+  # (qual problema ficou aberto). Só na memória: quem chama grava, sob a trava.
+  def revalidada!(conversation, ate:, razao:)
+    valor = (dados(conversation) || {}).merge('revalidado_ate' => ate)
+    valor['razao'] = razao.to_s.first(RAZAO_MAX) if razao.present?
+    conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
   end
 
   def tirar(conversation)

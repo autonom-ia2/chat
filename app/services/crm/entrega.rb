@@ -222,13 +222,14 @@ class Crm::Entrega
     true
   end
 
-  # A marca guarda a origem (@motivo) e a falha (por que ainda não entregou). Convite que nunca sai, passado o prazo do
+  # A marca guarda a origem (@motivo), a falha (por que ainda não entregou) e o motivo da IA do CRM (@razao, #1975: a
+  # entrega pela fila leva o porquê ao card). Convite que nunca sai, passado o prazo do
   # convite: segue segura, com a falha "nao_conseguimos_chamar" e um aviso (Crm::Entrega::AvisoSemNinguem).
   def segurar(plano, gravar)
     vencido = Crm::Entrega::AvisoSemNinguem.vencido?(@conversation, plano)
     falha = vencido ? Crm::Entrega::AvisoSemNinguem::FALHA : plano.motivo
     Marca.marcar(@conversation, modo: Marca::SEGURANDO, motivo: @motivo, falha: falha, sugestao: @sugestao, dono: @dono.dirigido,
-                                card: (plano.card if @pelo_card))
+                                card: (plano.card if @pelo_card), razao: @razao)
     Crm::Entrega::AvisoSemNinguem.new(conversation: @conversation, card: plano.card).avisar! if vencido
     @conversation.save! if gravar && @conversation.changed?
     Resultado.new(status: :segurando, motivo: falha, card: plano.card)

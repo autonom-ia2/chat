@@ -2,7 +2,7 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
   HISTORY_PER_PAGE = 25
   GROUP_BY_OPTIONS = %w[hour day].freeze
   RESOURCE_FEATURES = {
-    'Organizar cards' => %w[avaliacao_card],
+    'Organizar cards' => %w[avaliacao_card passagem_revalidada],
     'Lembretes de retorno' => %w[follow_up follow_up_saida],
     'Criação de e-mail' => %w[email], 'Resumos' => %w[resumo resumo_reuniao],
     'Assistente de respostas' => %w[copilot agente_resposta agente_teste agente_prova_do_ajuste],

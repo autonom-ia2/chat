@@ -208,6 +208,17 @@ const ACTIVITY_META = {
     icon: 'i-lucide-user-check',
     tone: 'info',
   },
+  // #1975: a IA pediu uma pessoa (na hora da decisão) e a fila tirou um pedido já resolvido.
+  ai_handoff_requested: {
+    key: 'ACTIVITY_AI_HANDOFF_REQUESTED',
+    icon: 'i-lucide-hand',
+    tone: 'info',
+  },
+  ai_handoff_withdrawn: {
+    key: 'ACTIVITY_AI_HANDOFF_WITHDRAWN',
+    icon: 'i-lucide-undo-2',
+    tone: 'muted',
+  },
   // Fase D: handoff do agente nativo Autonom.ia. Reusa o mesmo visual do handoff
   // do Kanban; o detalhe nunca expõe motivo bruto do LLM (payload só ids/strategy).
   autonomia_handoff: {
@@ -408,6 +419,10 @@ export const useCardHistorico = ({
         if (agent) return detalhe('ACTIVITY_DETAIL_HANDOFF', { agent });
         return reason || '';
       }
+      // #1975: o motivo que a IA deu (qual problema ficou aberto, ou o que resolveu).
+      case 'ai_handoff_requested':
+      case 'ai_handoff_withdrawn':
+        return activity.payload?.reason || '';
       // Fase D: handoff do agente nativo. Mostra só o destino (membro do inbox ou
       // time); nunca há `reason` no payload (IP oculto).
       case 'autonomia_handoff': {
