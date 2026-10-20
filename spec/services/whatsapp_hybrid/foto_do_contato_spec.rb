@@ -14,6 +14,8 @@ describe WhatsappHybrid::FotoDoContato do
   let(:client) { instance_double(Waha::Client) }
   let(:foto) { described_class.new(contact: contact, connection: connection, client: client) }
 
+  around { |example| with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: account.id.to_s) { example.run } }
+
   before do
     Redis::Alfred.delete(described_class.chave_do_contato(contact.id))
     Redis::Alfred.delete(described_class.chave_da_sessao(connection.session_name))
@@ -58,8 +60,21 @@ describe WhatsappHybrid::FotoDoContato do
       expect(Redis::Alfred.exists?(described_class.chave_do_contato(contact.id))).to be(false)
     end
 
-    [Waha::Client::NotFound.new('session not found', status: 404), Errno::ECONNRESET.new, 'texto em vez de objeto'].each do |falha|
-      it "#{falha.class} também pausa a sessão (não vira \"sem foto\")" do
+    [Waha::Client::Error.new('limite', status: 429), Waha::Client::Error.new('motor', status: 502),
+     Waha::Client::Timeout.new('sem resposta'), Errno::ECONNRESET.new].each do |falha|
+      it "#{falha.class} #{falha.try(:status)}: erro do motor pausa a sessão e devolve o contato" do
+        allow(client).to receive(:profile_picture).and_raise(falha)
+
+        foto.perform
+
+        expect(Redis::Alfred.exists?(described_class.chave_da_sessao(connection.session_name))).to be(true)
+        expect(Redis::Alfred.exists?(described_class.chave_do_contato(contact.id))).to be(false)
+      end
+    end
+
+    [Waha::Client::NotFound.new('contato', status: 404), Waha::Client::Error.new('pedido', status: 400), 'texto em vez de objeto']
+      .each do |falha|
+      it "#{falha.class} #{falha.try(:status)}: erro do contato só adia aquele contato 1 dia, a sessão segue" do
         if falha.is_a?(String)
           allow(client).to receive(:profile_picture).and_return(falha)
         else
@@ -68,8 +83,8 @@ describe WhatsappHybrid::FotoDoContato do
 
         foto.perform
 
-        expect(Redis::Alfred.exists?(described_class.chave_da_sessao(connection.session_name))).to be(true)
-        expect(Redis::Alfred.exists?(described_class.chave_do_contato(contact.id))).to be(false)
+        expect(Redis::Alfred.exists?(described_class.chave_da_sessao(connection.session_name))).to be(false)
+        expect(Redis::Alfred.ttl(described_class.chave_do_contato(contact.id))).to be_within(60).of(described_class::ADIADO.to_i)
       end
     end
 
@@ -95,10 +110,11 @@ describe WhatsappHybrid::FotoDoContato do
       expect(Redis::Alfred.exists?(described_class.chave_do_contato(contact.id))).to be(false)
     end
 
-    it 'não consulta com a sessão fora do ar, pausada ou em outro número' do
+    it 'não consulta com a sessão fora do ar, pausada, em outro número ou com o WhatsApp API desligado na caixa' do
       allow(client).to receive(:profile_picture)
-      [{ status: 'disconnected' }, { paused_at: Time.current }, { connected_phone: '5511000000000' }].each do |mudanca|
-        connection.update!(status: 'connected', paused_at: nil, connected_phone: numero_da_caixa)
+      [{ status: 'disconnected' }, { paused_at: Time.current }, { connected_phone: '5511000000000' },
+       { routing_enabled: false }].each do |mudanca|
+        connection.update!(status: 'connected', paused_at: nil, connected_phone: numero_da_caixa, routing_enabled: true)
         connection.update!(mudanca)
         described_class.new(contact: contact, connection: connection, client: client).perform
       end
@@ -106,13 +122,32 @@ describe WhatsappHybrid::FotoDoContato do
       expect(client).not_to have_received(:profile_picture)
     end
 
-    it 'contato sem telefone não consulta' do
+    it 'não consulta com o Híbrido desligado na plataforma ou fora da lista de contas' do
+      allow(client).to receive(:profile_picture)
+
+      with_modified_env(WHATSAPP_HYBRID_ROUTING_ENABLED: 'false') { foto.perform }
+      with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: '') { foto.perform }
+
+      expect(client).not_to have_received(:profile_picture)
+    end
+
+    it 'contato que já tem foto não consulta' do
+      contact.avatar.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
+      allow(client).to receive(:profile_picture)
+
+      foto.perform
+
+      expect(client).not_to have_received(:profile_picture)
+    end
+
+    it 'contato sem telefone não consulta e fica 30 dias sem tentar' do
       contact.update!(phone_number: nil, email: 'sem@telefone.com')
       allow(client).to receive(:profile_picture)
 
       foto.perform
 
       expect(client).not_to have_received(:profile_picture)
+      expect(Redis::Alfred.ttl(described_class.chave_do_contato(contact.id))).to be_within(60).of(described_class::SEM_FOTO.to_i)
     end
   end
 
@@ -144,6 +179,15 @@ describe WhatsappHybrid::FotoDoContato do
       account.enable_features!(described_class::FLAG)
 
       expect { recebida }.to have_enqueued_job(WhatsappHybrid::FotoDoContatoJob).with(contact.id, inbox.id)
+    end
+
+    it 'histórico importado pela coexistência não dispara' do
+      account.enable_features!(described_class::FLAG)
+
+      expect do
+        create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, sender: contact,
+                         content_attributes: { history_import: true })
+      end.not_to have_enqueued_job(WhatsappHybrid::FotoDoContatoJob)
     end
 
     it 'sem a flag, nada' do
