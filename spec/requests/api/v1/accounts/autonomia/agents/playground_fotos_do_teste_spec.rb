@@ -60,6 +60,7 @@ RSpec.describe 'Autonomia agent playground - foto do teste', type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['error']).to eq(I18n.t(chave, max: Autonomia::Agents::Config::MAX_IMAGES_PER_MESSAGE))
     expect(response.parsed_body['error']).not_to include('Translation missing')
+    expect(response.parsed_body['code']).to eq('foto_recusada')
   end
 
   describe 'in the Fase 2' do

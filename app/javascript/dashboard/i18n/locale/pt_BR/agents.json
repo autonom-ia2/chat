@@ -1230,6 +1230,17 @@
               "B": "Quero trocar um produto",
               "C": "Quero falar com uma pessoa"
             }
+          },
+          "ANEXAR": "Mandar foto ou arquivo",
+          "APRENDER": {
+            "PERGUNTA": "Quer que {nome} aprenda com {arquivo}?",
+            "TEXTO": "Se sim, {nome} lê, revisa e passa a usar com seus clientes. Se não, o arquivo não fica guardado.",
+            "SIM": "Sim, aprender",
+            "NAO": "Não, obrigado",
+            "ENTROU": "{arquivo} entrou no que {nome} sabe. Está sendo lido e revisado.",
+            "VER_SABE": "Ver o que {nome} sabe",
+            "FALHOU": "Não deu para mandar o arquivo agora.",
+            "FALHOU_GARANTIA": "Nada foi guardado."
           }
         },
         "SABE": {
@@ -1274,7 +1285,8 @@
           "REVISANDO": "Revisando…",
           "ATENCAO": "Precisa de você",
           "ATENCAO_TEXTO": "{nome} não usa este material até você mandar outro.",
-          "LENDO_FOTO": "Lendo o texto da foto…"
+          "LENDO_FOTO": "Lendo o texto da foto…",
+          "LENDO_PAGINA": "Lendo a página {pagina} de {total}…"
         },
         "ONDE": {
           "TITULO": "Onde e quando {nome} responde",

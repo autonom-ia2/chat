@@ -15,7 +15,7 @@ class Api::V1::Accounts::Autonomia::Agents::PlaygroundController < Api::V1::Acco
     return render_unprocessable('message_required') if message_param.blank?
 
     fotos = Autonomia::Agents::FotosDoTeste.new(params[:images]) if conferir_fotos?
-    return render_unprocessable(fotos.recusa) if fotos&.recusa
+    return render json: { error: fotos.recusa, code: 'foto_recusada' }, status: :unprocessable_entity if fotos&.recusa
 
     defer_interactive_ai('agent_test', {
                            agent_id: @agent.id, message: message_param, history: history_param,
