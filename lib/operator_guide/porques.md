@@ -233,7 +233,7 @@
 - onde_fica: No menu novo: Configurações > Usuários. No menu antigo: Configuracoes > Agentes > editar agente
 - pre_requisitos: agente existente; papel customizado criado quando for usar custom role
 - passos: 1. Abra Configuracoes > Agentes; 2. Edite o agente; 3. Escolha `administrator`, `agent` ou papel customizado; 4. Salve; 5. Revise acesso a caixas/times se necessario.
-- gotchas: papel da conta nao substitui associacao a caixa de entrada; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`; so um administrador torna alguem administrador; quem tem Pessoas (people_manage) troca a funcao de agentes, menos a propria, e so entrega funcao cujas chaves ele mesmo tem e sem Pessoas, Montar funcoes ou Pode entregar acesso acima do proprio, a nao ser que tenha Pode entregar acesso acima do proprio (grant_above_own), que entrega qualquer funcao menos administrador; quem esta numa funcao acima do alcance aparece com cadeado.
+- gotchas: papel da conta nao substitui associacao a caixa de entrada; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`; so um administrador torna alguem administrador; quem tem Pessoas (people_manage) troca a funcao de agentes, menos a propria, e so entrega funcao cujas chaves ele mesmo tem e sem Pessoas, Montar funcoes, Financeiro ou Pode entregar acesso acima do proprio, a nao ser que tenha Pode entregar acesso acima do proprio (grant_above_own), que entrega qualquer funcao menos administrador; quem esta numa funcao acima do alcance aparece com cadeado.
 
 ### criar_papeis_customizados
 - titulo: Criar funcoes personalizadas
@@ -243,7 +243,7 @@
 - onde_fica: Configuracoes > Funcoes Personalizadas
 - pre_requisitos: Enterprise/Cloud habilitado; saber o que o grupo deve ver e fazer
 - passos: 1. Abra Configuracoes > Funcoes Personalizadas; 2. Clique em Nova funcao; 3. Escolha o perfil mais parecido (ou Comecar do zero) e clique em Continuar; 4. De um nome e abra so os grupos que quer mudar, escolhendo Sem acesso, Ver ou Editar em cada area; 5. Confira o painel Esta pessoa podera e clique em Criar funcao; 6. Atribua aos agentes na janela seguinte ou depois em Configuracoes > Agentes.
-- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; alem do administrador, quem tem Montar funcoes (custom_role_manage) cria e edita funcoes, so com as chaves que ele mesmo tem (Pessoas, Montar funcoes e Pode entregar acesso acima do proprio so para quem ja tem esse ultimo), e nao edita a propria funcao nem uma acima do proprio acesso, que aparecem com cadeado; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
+- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; alem do administrador, quem tem Montar funcoes (custom_role_manage) cria e edita funcoes, so com as chaves que ele mesmo tem (Pessoas, Montar funcoes, Financeiro e Pode entregar acesso acima do proprio so para quem ja tem esse ultimo), e nao edita a propria funcao nem uma acima do proprio acesso, que aparecem com cadeado; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
 - highlight: `settings-add-role`
 
 ### montar_permissoes_de_funcao
@@ -1792,9 +1792,9 @@
 - rota: crm_ai_usage_index
 - intent: Quanto gastei de IA esse mês?; Qual recurso de IA consome mais?; Como exporto o relatório de uso da IA?; Por que os valores apareceram em dólar?; Dá para ver o que foi conversado com a IA?
 - onde_fica: No menu novo: Resultados > Relatórios > Gasto com IA. No menu antigo: CRM > Gestão de IA
-- pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM
+- pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM; para ver os valores em dinheiro, ser administrador ou ter Financeiro na função
 - passos: 1. Abra CRM > Gestão de IA; 2. Escolha o período entre hoje, semana e mês; 3. Leia os indicadores de gasto, usos, economia e custo médio; 4. Confira o gasto por recurso e o histórico; 5. Use baixar relatório para exportar o período.
-- gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo.
+- gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo; quem vê relatórios do CRM mas não tem Financeiro (Ver ou Editar) na função vê só quantos usos houve, por recurso e no tempo, sem gasto, economia, custo médio nem as colunas de custo no relatório baixado, e a tela avisa isso.
 - nav_target: `crm_ai_usage_index`
 
 ### assinatura_e_cobranca
@@ -1804,7 +1804,7 @@
 - onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Assinatura
 - pre_requisitos: ser administrador da conta e ter um checkout já concluído
 - passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira o plano, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
-- gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador; sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
+- gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador, e ter Financeiro na função personalizada não abre plano nem faturas (só os custos do uso de IA e a autorização de cobranças da Meta); sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
 - nav_target: `autonomia_financial_subscription`
 
 ### faturas_e_pagamentos
@@ -1812,7 +1812,7 @@
 - rota: autonomia_financial_invoices
 - intent: Tenho alguma fatura em aberto?; Onde baixo o documento da fatura?; Quando essa fatura venceu?; Meu pagamento foi registrado?; Quanto eu já paguei até agora?
 - onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Faturas
-- pre_requisitos: ser administrador da conta
+- pre_requisitos: ser administrador da conta (Financeiro na função personalizada não dá acesso às faturas)
 - passos: 1. Abra Financeiro > Faturas; 2. Veja no topo o total em aberto, quantas estão pagas e quantos pagamentos existem; 3. Na tabela, olhe valor, status, vencimento e data de pagamento; 4. Use abrir fatura para ver o documento da cobrança; 5. Desça até pagamentos para conferir origem e data de cada um.
 - gotchas: a tela não cobra, não paga e não emite fatura, só mostra o que o sistema de cobrança registrou; o link de abrir fatura só existe quando a cobrança tem documento; o total em aberto soma pendentes e vencidas juntas, sem separar; a origem mostra o meio de pagamento e cai para manual quando o pagamento foi lançado à mão.
 - nav_target: `autonomia_financial_invoices`
@@ -2197,9 +2197,9 @@
 - rota: modelos_whatsapp_autorizacao
 - intent: Como deixo o sistema criar os modelos do WhatsApp sozinho?; Por que o lembrete de cobrança não saiu pelo WhatsApp?; Por que a equipe recebeu o aviso de que o dono não autorizou criar modelos?; Quanto custa cada mensagem que o sistema manda fora da conversa?; Como ligo ou desligo a Divulgação automática?; Quem ligou a autorização e quando?
 - onde_fica: No menu novo: Configurações > Custos do WhatsApp (ou Crescer > Campanhas > Modelos WhatsApp). No menu antigo: Campanhas > Modelos WhatsApp > cartão Autorização para o Chat2You criar modelos, no topo da lista
-- pre_requisitos: nova tela de Modelos liberada na conta; ser administrador da conta para ligar ou desligar (quem tem a função com Modelos do WhatsApp em editar só vê)
+- pre_requisitos: nova tela de Modelos liberada na conta; ser administrador da conta, ou ter Financeiro em Editar na função, para ligar ou desligar (quem tem Modelos do WhatsApp em editar ou Financeiro em Ver só vê)
 - passos: 1. Abra Campanhas > Modelos WhatsApp e clique em Ver autorização; 2. Marque Aviso de serviço e, se quiser, Divulgação; 3. Clique em Ligar autorização; 4. Leia o custo na confirmação e clique em Sim, ligar; 5. Com a autorização ligada, use Ligar Divulgação ou Desligar Divulgação para mudar só a Divulgação, ou Desligar autorização para parar tudo.
-- gotchas: os modelos que a conta já tem continuam valendo, com ou sem a autorização; sem ela, o sistema não cria modelo novo e o lembrete que precisaria dele vira aviso para a equipe; a Meta cobra cada mensagem entregue, mesmo com a conversa aberta, e a Divulgação custa bem mais que o Aviso de serviço; a Divulgação só liga com o Aviso de serviço ligado, e desligar o Aviso de serviço desliga as duas; cada mudança fica guardada com quem fez, quando e o texto e os preços mostrados; se a Meta mudar o preço, quem já autorizou não precisa autorizar de novo, e a tela passa a mostrar o preço novo; só o administrador da conta liga ou desliga, e só pela tela, onde lê o aviso com o custo: o Guia não faz isso pela pessoa, só explica o caminho; quem tem a função com Modelos do WhatsApp em editar vê a autorização sem poder mudar; quem só vê os modelos não vê este cartão.
+- gotchas: os modelos que a conta já tem continuam valendo, com ou sem a autorização; sem ela, o sistema não cria modelo novo e o lembrete que precisaria dele vira aviso para a equipe; a Meta cobra cada mensagem entregue, mesmo com a conversa aberta, e a Divulgação custa bem mais que o Aviso de serviço; a Divulgação só liga com o Aviso de serviço ligado, e desligar o Aviso de serviço desliga as duas; cada mudança fica guardada com quem fez, quando e o texto e os preços mostrados; se a Meta mudar o preço, quem já autorizou não precisa autorizar de novo, e a tela passa a mostrar o preço novo; só o administrador da conta ou quem tem Financeiro em Editar liga ou desliga, e só pela tela, onde lê o aviso com o custo: o Guia não faz isso pela pessoa, só explica o caminho; quem tem a função com Modelos do WhatsApp em editar ou com Financeiro em Ver vê a autorização sem poder mudar; quem só vê os modelos não vê este cartão.
 - nav_target: `modelos_whatsapp_autorizacao`
 
 ### importar_dados_de_outra_ferramenta

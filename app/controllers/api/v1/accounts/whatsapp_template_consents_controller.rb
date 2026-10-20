@@ -8,14 +8,15 @@
 #   Recusado: 422 { error: acao_invalida | marca_invalida | utility_desligada, message }, 409 aviso_mudou ou
 #   403 somente_administrador.
 #
-# Ver: administrador e `whatsapp_templates_manage` (o gate de criar modelos na tela de Modelos). Mudar: SÓ
-# administrador, nunca por função (regra do projeto: financeiro não se delega; o aceite libera gasto com a Meta). Mudar
-# também pede a flag `whatsapp_templates_journey` da conta (sem ela, 404), como escrever modelos.
+# Ver: administrador, `whatsapp_templates_manage` (o gate de criar modelos na tela de Modelos) ou `financial_view`.
+# Mudar: administrador ou `financial_manage` (#1969): o aceite libera gasto com a Meta, então é chave do financeiro,
+# delegável só pelas quatro proteções do CLAUDE.md. O histórico é a própria tabela, que só aceita linha nova e guarda
+# quem mudou. Mudar também pede a flag `whatsapp_templates_journey` da conta (sem ela, 404), como escrever modelos.
 class Api::V1::Accounts::WhatsappTemplateConsentsController < Api::V1::Accounts::BaseController
-  before_action :check_authorization
-  # Sem a flag, 404 para todos (como escrever modelos); com ela, só o administrador muda.
+  before_action :check_authorization, only: :show
+  # Sem a flag, 404 para todos (como escrever modelos); com ela, só quem tem o financeiro muda.
   before_action :ensure_journey_enabled, only: :create
-  before_action :ensure_administrator, only: :create
+  before_action :ensure_financial_manager, only: :create
 
   def show
     render json: { payload: consentimento.estado }
@@ -35,8 +36,9 @@ class Api::V1::Accounts::WhatsappTemplateConsentsController < Api::V1::Accounts:
     Whatsapp::Templates::Consentimento.new(account: Current.account, user: Current.user)
   end
 
-  def ensure_administrator
-    return if Current.account_user&.administrator?
+  # O código de erro continua `somente_administrador`: a tela e o Guia já o tratam. O texto diz quem pode.
+  def ensure_financial_manager
+    return if Current.account_user&.permission_granted?('financial_manage')
 
     render json: { error: 'somente_administrador', message: I18n.t('whatsapp_templates.consent.errors.somente_administrador') },
            status: :forbidden
@@ -49,6 +51,8 @@ class Api::V1::Accounts::WhatsappTemplateConsentsController < Api::V1::Accounts:
   end
 
   def check_authorization
+    return if Current.account_user&.permission_granted?('financial_view')
+
     authorize(WhatsappTemplateProfile, :create?, policy_class: WhatsappTemplatePolicy)
   end
 end
