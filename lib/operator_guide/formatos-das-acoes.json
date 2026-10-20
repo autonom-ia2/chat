@@ -19205,8 +19205,8 @@
     "controller": "api/v1/accounts/waha_inboxes#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:14",
-      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:99"
+      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:15",
+      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:121"
     ],
     "sem_corpo": false
   },
@@ -19214,8 +19214,8 @@
     "completo": true,
     "controller": "api/v1/accounts/waha_inboxes#reconnect",
     "origem": [
-      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:46",
-      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:68"
+      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:63",
+      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:85"
     ],
     "sem_corpo": true
   },

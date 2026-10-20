@@ -2105,6 +2105,10 @@
     "controller": "api/v1/accounts/waha_inboxes#connection",
     "parametros": []
   },
+  "waha_inboxes/:inbox_id/status": {
+    "controller": "api/v1/accounts/waha_inboxes#status",
+    "parametros": []
+  },
   "webhooks": {
     "controller": "api/v1/accounts/webhooks#index",
     "parametros": []
