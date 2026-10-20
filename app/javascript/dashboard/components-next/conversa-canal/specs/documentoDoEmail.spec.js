@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils';
 import {
+  ANCORA_INTERNA,
+  IMAGEM_ADIADA,
   SANDBOX_DO_EMAIL,
   citacaoDoDocumento,
   corpoParaImprimir,
@@ -11,6 +13,9 @@ import CorpoIsoladoDoEmail from '../email/CorpoIsoladoDoEmail.vue';
 
 // #1884: o e-mail HTML do remetente vai inteiro, isolado, para uma moldura sem script.
 const ler = html => new DOMParser().parseFromString(html, 'text/html');
+// #1916: a imagem web vai adiada (o CorpoIsolado põe no src perto da tela).
+const enderecoDa = imagem =>
+  imagem.getAttribute('src') ?? imagem.getAttribute(IMAGEM_ADIADA);
 
 // O jsdom não monta a folha de estilo de <style> em documento do DOMParser (o Chrome,
 // o Safari e o Firefox montam, e é nela que o lettersanitizer limpa o CSS). Aqui a
@@ -120,9 +125,7 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(srcdoc).not.toContain('onclick');
     expect(srcdoc).not.toContain('window.x');
     expect(srcdoc).not.toContain('position');
-    expect(doc.querySelector('img').getAttribute('src')).toBe(
-      'https://ok.test/a.png'
-    );
+    expect(enderecoDa(doc.querySelector('img'))).toBe('https://ok.test/a.png');
   });
 
   it('link só web, e-mail e telefone, sempre em aba nova sem referência', () => {
@@ -147,7 +150,10 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(href('#e')).toBe('https://site.test/x');
     expect(href('#f')).toBe('mailto:a@b.test');
     expect(href('#g')).toBe('tel:+5511999999999');
-    doc.querySelectorAll('a').forEach(link => {
+    // #1916: a âncora interna rola o e-mail (sem href, que levaria o painel à moldura).
+    expect(doc.querySelector('#h').getAttribute(ANCORA_INTERNA)).toBe('ancora');
+    expect(doc.querySelector('#h').getAttribute('target')).toBeNull();
+    doc.querySelectorAll('a:not(#h)').forEach(link => {
       expect(link.getAttribute('target')).toBe('_blank');
       expect(link.getAttribute('rel')).toBe('noopener noreferrer');
     });
@@ -167,7 +173,7 @@ describe('documento isolado do e-mail (#1884)', () => {
       )
     );
     expect(doc.querySelector('#p').getAttribute('src')).toBeNull();
-    expect(doc.querySelector('#l').getAttribute('src')).toBe(
+    expect(enderecoDa(doc.querySelector('#l'))).toBe(
       'https://site.com/logo.png'
     );
     expect(doc.querySelector('#c').getAttribute('href')).toBeNull();
@@ -207,10 +213,8 @@ describe('documento isolado do e-mail (#1884)', () => {
       documentoIsolado(`<body bgcolor="#fff" background="/rails/fundo.png">
         <img id="r" src="/rails/active_storage/x.png"><img id="w" src="https://ok.test/a.png"></body>`)
     );
-    expect(doc.querySelector('#r').getAttribute('src')).toBeNull();
-    expect(doc.querySelector('#w').getAttribute('src')).toBe(
-      'https://ok.test/a.png'
-    );
+    expect(enderecoDa(doc.querySelector('#r'))).toBeNull();
+    expect(enderecoDa(doc.querySelector('#w'))).toBe('https://ok.test/a.png');
     expect(doc.body.getAttribute('background')).toBeNull();
   });
 
@@ -468,6 +472,64 @@ describe('documento isolado do e-mail (#1884)', () => {
     expect(regras).toContain('#email_impresso dl');
     expect(regras).not.toContain('body');
     expect(regras.startsWith('dl')).toBe(false);
+  });
+});
+
+describe('fidelidade do e-mail (#1916)', () => {
+  it('<hr> com estilo, valign no <tbody> e <a name> chegam como o remetente desenhou', () => {
+    const doc = ler(
+      documentoIsolado(`<body>
+        <hr style="border:0;border-top:1px solid #e5e5e5" width="80%">
+        <table><tbody valign="bottom"><tr><td>a</td></tr><tr valign="top"><td>b</td></tr></tbody></table>
+        <a name="fim"></a></body>`)
+    );
+    const hr = doc.querySelector('hr');
+    expect(hr.getAttribute('style')).toContain('rgb(229, 229, 229)');
+    expect(hr.getAttribute('width')).toBe('80%');
+    const linhas = [...doc.querySelectorAll('tr')];
+    expect(linhas.map(linha => linha.getAttribute('valign'))).toEqual([
+      'bottom',
+      'top',
+    ]);
+    expect(doc.getElementById('fim')).not.toBeNull();
+  });
+
+  it('a imagem web vai adiada; a embutida carrega na hora; Imprimir põe todas no src', () => {
+    const srcdoc = documentoIsolado(`<body>
+      <img id="w" src="https://ok.test/a.png"><img id="d" src="data:image/png;base64,AAAA"></body>`);
+    const doc = ler(srcdoc);
+    expect(doc.querySelector('#w').getAttribute('src')).toBeNull();
+    expect(doc.querySelector('#w').getAttribute(IMAGEM_ADIADA)).toBe(
+      'https://ok.test/a.png'
+    );
+    expect(doc.querySelector('#d').getAttribute('src')).toBe(
+      'data:image/png;base64,AAAA'
+    );
+    const impresso = new DOMParser().parseFromString(
+      corpoParaImprimir(srcdoc),
+      'text/html'
+    );
+    expect(impresso.querySelector(`[${IMAGEM_ADIADA}]`)).toBeNull();
+    expect(
+      [...impresso.querySelectorAll('img')].map(img => img.getAttribute('src'))
+    ).toContain('https://ok.test/a.png');
+  });
+
+  it('citação só pela marca do leitor: frase do dia, depoimento e voo não somem', () => {
+    const achou = corpo =>
+      citacaoDoDocumento(`<html><body>${corpo}</body></html>`).achou;
+    expect(achou('<p>Oi</p><div class="quote-of-the-day">Frase</div>')).toBe(
+      false
+    );
+    expect(achou('<h1>News</h1><blockquote>Depoimento</blockquote>')).toBe(
+      false
+    );
+    expect(achou('<p>Seu voo:</p><p>From: GRU To: JFK</p>')).toBe(false);
+    expect(
+      achou(
+        '<p>Ok</p><div class="gmail_quote"><blockquote>antigo</blockquote></div>'
+      )
+    ).toBe(true);
   });
 });
 
