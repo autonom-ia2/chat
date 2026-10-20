@@ -11,6 +11,8 @@ import ProfilePicker from './component/ProfilePicker.vue';
 import PermissionGroup from './component/PermissionGroup.vue';
 import RoleSummary from './component/RoleSummary.vue';
 import AssignAgentsDialog from './component/AssignAgentsDialog.vue';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
+import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
 import {
   BLANK_PROFILE,
   LEVELS,
@@ -31,6 +33,11 @@ const { t } = useI18n();
 
 const roles = useMapGetter('customRole/getCustomRoles');
 const uiFlags = useMapGetter('customRole/getUIFlags');
+
+// Fora do administrador (#1931): só monta com as próprias chaves, sem chave de delegação (a menos que
+// possa entregar acima do próprio acesso), e não abre a própria função nem uma acima do alcance.
+const { canManagePeople, keyLockReason, roleLockReason } = usePeopleAccess();
+const withinReach = keys => keys.filter(key => !keyLockReason(key));
 
 const roleId = computed(() => Number(route.params.roleId) || null);
 const isNewRole = computed(() => !roleId.value);
@@ -87,12 +94,17 @@ onMounted(async () => {
   store.dispatch('agents/get');
   if (roleId.value) {
     const role = findRole(roleId.value);
-    if (!role) return router.replace({ name: 'custom_roles_list' });
+    if (!role || roleLockReason(role))
+      return router.replace({ name: 'custom_roles_list' });
     return load(role);
   }
   const source = findRole(Number(route.query.duplicate));
+  // Same rule as the list, which hides Duplicate on roles above the giver.
+  if (source && roleLockReason(source) === LOCK_REASONS.ABOVE)
+    return router.replace({ name: 'custom_roles_list' });
   if (source) {
     load(source);
+    permissions.value = withinReach(permissions.value);
     name.value = t('CUSTOM_ROLE.EDITOR.COPY_NAME', { name: source.name });
     return null;
   }
@@ -104,7 +116,7 @@ const backToList = () => router.push({ name: 'custom_roles_list' });
 
 // Step 1 -----------------------------------------------------------------
 const applyProfile = key => {
-  permissions.value = profilePermissions(key);
+  permissions.value = withinReach(profilePermissions(key));
   baseProfile.value = key === BLANK_PROFILE ? null : key;
   openRows.value = [];
   openGroups.value = key === BLANK_PROFILE ? [MODULE_GROUPS[0].key] : [];
@@ -249,7 +261,12 @@ const save = async () => {
   try {
     if (isNewRole.value) {
       const role = await store.dispatch('customRole/createCustomRole', payload);
-      assignRef.value?.open(role);
+      if (canManagePeople.value) {
+        assignRef.value?.open(role);
+      } else {
+        useAlert(t('CUSTOM_ROLE.ADD.API.SUCCESS_MESSAGE'));
+        backToList();
+      }
       return;
     }
     await store.dispatch('customRole/updateCustomRole', {
@@ -391,6 +408,7 @@ const save = async () => {
             :permissions="permissions"
             :is-open="isGroupOpen(item.group.key)"
             :open-rows="openRows"
+            :key-lock="keyLockReason"
             @toggle="toggleGroup(item.group.key)"
             @clear="clearGroup(item.group)"
             @select-level="selectLevel"

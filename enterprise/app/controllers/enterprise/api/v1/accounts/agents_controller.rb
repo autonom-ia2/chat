@@ -21,16 +21,17 @@ module Enterprise::Api::V1::Accounts::AgentsController
     custom_role_guard.role_to_grant!(custom_role_id_param)
   end
 
-  # Clearing or switching the custom role changes access: one's own stays out of reach, and both the current and the
-  # new role must be within the giver's reach (#1931). Runs before any write.
+  # Someone whose current role is out of the giver's reach is not edited at all, as the screen shows (#1931).
+  # Clearing or switching the custom role changes access: one's own stays out of reach, and the new role must be within
+  # the giver's reach too. Runs before any write.
   def guard_agent_update!
     super
     account_user = @agent.current_account_user
+    custom_role_guard.reach_current!(account_user)
     return unless custom_role_id_given?
     return if custom_role_id_param.to_s == account_user.custom_role_id.to_s
 
     access_guard.touch_access!(account_user)
-    custom_role_guard.reach_current!(account_user)
     custom_role_guard.role_to_grant!(custom_role_id_param)
   end
 
