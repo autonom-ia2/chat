@@ -4,7 +4,7 @@
 # atribuição). A tela mostra esse nome em cima do balão; reatribuir depois não muda as antigas.
 # Contrato com o WhatsApp Híbrido: a mesma chave vale no WAHA comum, gravada pelo conector de lá.
 module ConversaCanal::AutorDoEco
-  CHAVE = :c2y_phone_author_id
+  CHAVE = 'c2y_phone_author_id'.freeze
 
   private
 

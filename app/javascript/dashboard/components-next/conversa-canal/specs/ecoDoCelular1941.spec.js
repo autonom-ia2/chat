@@ -150,6 +150,34 @@ describe('eco do celular no balão com a pele (#1941)', () => {
     expect(balao.find('[data-bubble-name]').exists()).toBe(false);
   });
 
+  it('eco só de mídia (content nil, como o #1949 grava): foto com 📱, sem quebrar', () => {
+    const balao = montar({
+      content: null,
+      contentAttributes: { externalEcho: true, c2yPhoneAuthorId: JOAO.id },
+      attachments: [
+        {
+          id: 3,
+          fileType: 'image',
+          dataUrl: 'https://x/foto.jpg',
+          thumbUrl: '',
+        },
+      ],
+    });
+
+    expect(balao.find('[data-bubble-name]').exists()).toBe(true);
+    expect(balao.text()).not.toContain('Enviado do WhatsApp');
+    expect(celular(balao).exists()).toBe(true);
+  });
+
+  it('eco de texto vazio e sem anexo não desenha balão', () => {
+    const balao = montar({
+      content: '',
+      contentAttributes: { externalEcho: true },
+    });
+
+    expect(balao.find('[data-bubble-name]').exists()).toBe(false);
+  });
+
   it('autor que saiu da conta: nenhum nome', () => {
     const balao = montar({
       contentAttributes: { externalEcho: true, c2yPhoneAuthorId: 404 },
