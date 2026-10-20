@@ -6419,7 +6419,9 @@
           "assignment_manage",
           "people_manage",
           "custom_role_manage",
-          "grant_above_own"
+          "grant_above_own",
+          "financial_view",
+          "financial_manage"
         ]
       }
     },
@@ -16486,7 +16488,9 @@
           "assignment_manage",
           "people_manage",
           "custom_role_manage",
-          "grant_above_own"
+          "grant_above_own",
+          "financial_view",
+          "financial_manage"
         ]
       }
     },
@@ -24814,7 +24818,9 @@
           "assignment_manage",
           "people_manage",
           "custom_role_manage",
-          "grant_above_own"
+          "grant_above_own",
+          "financial_view",
+          "financial_manage"
         ]
       }
     },

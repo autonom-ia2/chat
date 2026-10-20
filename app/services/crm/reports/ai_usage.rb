@@ -1,4 +1,6 @@
 class Crm::Reports::AiUsage < Crm::Reports::BaseReport
+  include Crm::Reports::AiUsage::Valores
+
   HISTORY_PER_PAGE = 25
   GROUP_BY_OPTIONS = %w[hour day].freeze
   RESOURCE_FEATURES = {
@@ -27,16 +29,24 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     'Outros'
   end
 
+  # `com_valores: false` (#1969): who sees AI usage but not the account's costs (no financial_view) gets counts and
+  # tokens only, without money, exchange rate or cache savings.
+  def initialize(com_valores: true, **)
+    super(**)
+    @com_valores = com_valores
+  end
+
   def perform
     {
       account: { id: account.id, name: account.name },
       period: { since: since.iso8601, until: until_time.iso8601, group_by: group_by },
-      exchange_rate: exchange_rate_payload,
+      com_valores: @com_valores,
+      exchange_rate: (exchange_rate_payload if @com_valores),
       totals: totals_payload,
       spend_by_resource: spend_by_resource,
       time_series: time_series,
       history: history_payload
-    }
+    }.compact
   end
 
   private
@@ -62,6 +72,8 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
 
   def totals_payload
     count = usage_scope.count
+    return { usage_count: count } unless @com_valores
+
     spend_usd = usage_scope.sum(:cost_estimate)
     savings_usd = cache_savings_usd
     full_cost = spend_usd.to_d + savings_usd
@@ -77,8 +89,8 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
 
   def spend_by_resource
     grouped = accumulate_resource_totals
-    rows = grouped.map { |resource, data| serialize_resource(resource, data) }
-    rows.sort_by { |row| -row[:cost_usd] }
+    order = @com_valores ? :cost_usd : :usage_count
+    grouped.sort_by { |_resource, data| -data[order] }.map { |resource, data| serialize_resource(resource, data) }
   end
 
   def accumulate_resource_totals
@@ -103,8 +115,9 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
   end
 
   def time_series
-    usage_scope.group(bucket_expression).sum(:cost_estimate).sort_by { |bucket, _cost_usd| bucket.to_s }.map do |bucket, cost_usd|
-      { timestamp: bucket_timestamp(bucket) }.merge(money_payload(cost_usd))
+    costs = @com_valores ? usage_scope.group(bucket_expression).sum(:cost_estimate) : {}
+    usage_scope.group(bucket_expression).count.sort_by { |bucket, _count| bucket.to_s }.map do |bucket, count|
+      { timestamp: bucket_timestamp(bucket), usage_count: count }.merge(money_payload(costs[bucket]))
     end
   end
 
@@ -154,53 +167,6 @@ class Crm::Reports::AiUsage < Crm::Reports::BaseReport
     else
       Time.zone.parse(bucket.to_s).utc.iso8601
     end
-  end
-
-  # Economia LÍQUIDA do cache: desconto das LEITURAS menos a sobretaxa das ESCRITAS. Contar só a
-  # leitura inflava o número na família 5.6, que cobra 1,25x o input para gravar no cache — parte do
-  # que se economiza relendo já foi paga na gravação. Modelo sem `cache_write` na tabela cai no
-  # próprio input (sobretaxa zero), preservando o histórico 5.4. Pode ficar NEGATIVO (muita escrita,
-  # pouca releitura): é informação real, não erro, e sinaliza cache mal aproveitado.
-  def cache_savings_usd
-    cache_delta_usd(:cached_tokens) { |r| r[:input].to_d - r[:cached].to_d } -
-      cache_delta_usd(:cache_write_tokens) { |r| (r[:cache_write] || r[:input]).to_d - r[:input].to_d }
-  end
-
-  # Soma tokens de +column+ por modelo e aplica o delta de tarifa que o bloco calcula (nunca negativo).
-  def cache_delta_usd(column)
-    usage_scope.group(:model).sum(column).sum do |model, tokens|
-      delta = [yield(Crm::Ai::Pricing.rate(model)), 0.to_d].max
-      (tokens.to_i * delta) / 1_000_000.to_d
-    end
-  end
-
-  def exchange_rate
-    @exchange_rate ||= Crm::Ai::ExchangeRate.current
-  end
-
-  def exchange_rate_payload
-    {
-      pair: 'USD-BRL',
-      rate: exchange_rate[:rate]&.to_d&.round(6)&.to_f,
-      fetched_at: exchange_rate[:fetched_at],
-      rate_unavailable: exchange_rate[:rate_unavailable] == true
-    }
-  end
-
-  def money_payload(cost_usd)
-    usd = cost_usd.to_d
-    payload = { cost_usd: decimal(usd) }
-    payload[:cost_brl] = exchange_rate[:rate].present? ? decimal(usd * exchange_rate[:rate].to_d) : nil
-    payload[:rate_unavailable] = true if exchange_rate[:rate_unavailable] == true
-    payload
-  end
-
-  def decimal(value)
-    value.to_d.round(6).to_f
-  end
-
-  def percentage(value)
-    (value.to_d * 100).round(2).to_f
   end
 
   def empty_resource_totals

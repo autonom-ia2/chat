@@ -61,6 +61,9 @@
 # - 'custom_role_manage': create, edit and delete custom roles, within one's own keys (#1931).
 # - 'grant_above_own': with people_manage or custom_role_manage, hand out any custom role of the account, even above
 #   one's own; never administrator. The audit log is the safeguard (#1931).
+# - 'financial_view': the account's costs in money: AI usage values (R$/US$, CSV, live push) and the Meta charge
+#   authorization screen (#1969). 'financial_manage': turn the Meta charge authorization on and off. Plan, invoices and
+#   payments (Financeiro module) stay with administrators.
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -124,10 +127,12 @@ class CustomRole < ApplicationRecord
     people_manage
     custom_role_manage
     grant_above_own
+    financial_view
+    financial_manage
   ].freeze
 
   # Delegable keys only an administrator hands out, unless the giver has grant_above_own (CLAUDE.md, #1931).
-  DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own].freeze
+  DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage].freeze
 
   validates :name, presence: true
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message
