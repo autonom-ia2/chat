@@ -631,3 +631,15 @@
   display_name: IA de assunto cria o card na coluna certa
   enabled: false
   column: feature_flags_ext_1
+
+# Foto de perfil do contato na caixa híbrida (#1934). Ligada: mensagem recebida numa caixa híbrida, de contato sem foto,
+# busca a foto pela sessão WAHA da própria caixa (mesmo número) e grava com Avatar::AvatarFromUrlJob
+# (WhatsappHybrid::FotoDoContato). No máximo 1 tentativa a cada 7 dias por contato (30 dias quando a foto está escondida),
+# 1 consulta a cada 15 s e 300 por dia por sessão; erro do motor pausa a sessão por 1 hora. A Cloud pura segue sem foto
+# (decisão do Rodrigo, 20/10). Posição 44 na feature_flags_ext_1, bit 43 (8796093022208), PROVISÓRIA: o fim da main
+# hoje; se outra flag entrar antes, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb). Sem
+# migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: hibrido_foto_do_contato
+  display_name: Foto de perfil do contato no WhatsApp Híbrido
+  enabled: false
+  column: feature_flags_ext_1
