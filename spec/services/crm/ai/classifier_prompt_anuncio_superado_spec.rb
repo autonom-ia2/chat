@@ -10,7 +10,7 @@ RSpec.describe Crm::Ai::ClassifierPrompt do
 
     expect(prefixos).to all(include('o problema do cliente foi resolvido?').and(include('"reason" é OBRIGATÓRIO')))
     expect(prefixos).to all(include('pedido abandonado não é pedido resolvido').and(include('só avisou que aguarda o')))
-    expect(prefixos).to all(include('uma pergunta não pede pessoa por si só'))
+    expect(prefixos).to all(include('uma pergunta não pede pessoa por si só').and(include('repasse TODOS os pedidos')))
     expect(prefixos).to all(be_frozen)
   end
 end

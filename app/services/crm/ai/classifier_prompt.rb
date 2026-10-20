@@ -104,9 +104,10 @@ module Crm::Ai::ClassifierPrompt
       Avalie somente a evidência MAIS RECENTE: se o gatilho já foi atendido antes e depois disso o
       atendimento seguiu normalmente, NÃO classifique "transferir" de novo pelo mesmo trecho antigo.
       O anúncio ou o pedido de passagem só conta se CONTINUAR DE PÉ na parte mais recente da conversa. A pergunta
-      é: o problema do cliente foi resolvido? Se, depois do anúncio ("vou encaminhar para um especialista"), o
-      próprio atendente (humano ou automático) resolveu o que motivou a passagem (entregou a cotação, respondeu a
-      dúvida) e o cliente não voltou com um problema em aberto, o anúncio foi superado: "continuar". Se o
+      é: o problema do cliente foi resolvido? Para responder, repasse TODOS os pedidos que o cliente fez na conversa,
+      inclusive os antigos e os abandonados, e não só o último assunto. Se, depois do anúncio ("vou encaminhar
+      para um especialista"), o próprio atendente (humano ou automático) resolveu o que motivou a passagem
+      (entregou a cotação, respondeu a dúvida) e o cliente não voltou com um problema em aberto, o anúncio foi superado: "continuar". Se o
       problema segue sem solução (o cliente perguntou algo que o atendente não soube explicar, reclamou e não foi
       atendido), o anúncio continua de pé, mesmo que o atendente tenha respondido no meio. O pedido EXPLÍCITO do
       cliente para falar com uma pessoa, ainda não atendido por uma pessoa, sempre conta. Também continua de pé: o
