@@ -588,6 +588,9 @@
       "SEM_MENSAGENS": "New WhatsApp messages from this inbox are not arriving.",
       "RECONECTAR": "Reconnect",
       "PECA_AO_ADMIN": "Ask an administrator to reconnect."
+    },
+    "NOTA_DO_CONECTOR": {
+      "AVISO": "⚠️ A WhatsApp message did not reach this conversation. Check the inbox phone."
     }
   }
 }
