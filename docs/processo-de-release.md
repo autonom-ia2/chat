@@ -215,7 +215,7 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
    - o job **Congelar a produção** confere primeiro se a instância anterior veio do commit `esperado_sha` (a tag Name
      dela diz de que run veio). Sem `esperado_sha`, ou com SHA errado, ele para ali, **sem congelar nada**, e o erro
      diz qual SHA a anterior roda e quais instâncias ainda existem;
-   - depois **congela** a produção (`/chatwoot/prod/blue-green/deploy-freeze` = `on:<run do rollback>` no SSM): deploy
+   - depois **congela** a produção (`/chatwoot/prod/blue-green/deploy-freeze` = `on:<run>:<tentativa>` do rollback, no SSM): deploy
      novo nem pede a vez, e o **Desligar a blue** não para nem termina nada;
    - cancela todo run que ainda pode trocar o tráfego antes dele: o que está na conferência do congelamento, o que
      espera a vez e o deploy que ainda não chegou a registrar a green. Cancelado antes de a imagem dele chegar ao ECR, ele

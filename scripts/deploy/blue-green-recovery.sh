@@ -127,7 +127,7 @@ terminate_green_without_image() {
   exit "$status"
 }
 
-# #1979: o rollback congela a produção (DEPLOY_FREEZE_PARAMETER = on:<run do rollback>) e só um deploy manual com
+# #1979: o rollback congela a produção (DEPLOY_FREEZE_PARAMETER = on:<run>:<tentativa> do rollback) e só um deploy manual com
 # descongelar=true a solta. O run no valor deixa o descongelar saber se outro rollback congelou depois dele. Parâmetro
 # que não existe conta como descongelada; qualquer outro erro falha, para nenhum deploy seguir sem saber.
 read_deploy_freeze() {

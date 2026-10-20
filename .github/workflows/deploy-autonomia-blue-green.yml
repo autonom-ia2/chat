@@ -1105,8 +1105,11 @@ jobs:
 
       # #1979: o deploy de descongelar só solta a produção depois de subir de verdade (tráfego e SSO conferidos), e só
       # se o congelamento ainda for o que ele viu na largada: um rollback disparado enquanto ele subia vale.
+      # Falhar aqui (SSM) não pode pular a entrega da blue ao desligar-blue: o tráfego já está na green. O pior caso é a
+      # produção seguir congelada, com o aviso no run; outro deploy manual com descongelar=true solta.
       - name: Unfreeze production
         if: github.event_name == 'workflow_dispatch' && inputs.descongelar == true
+        continue-on-error: true
         run: |
           source scripts/deploy/blue-green-recovery.sh
           read_deploy_freeze
@@ -1139,6 +1142,8 @@ jobs:
         # Também quando este deploy falhou (rerun velho recusado, build quebrado): o push mais novo não pode ficar sem vez.
         if: always()
         continue-on-error: true
+        # API lenta nunca atrasa a limpeza que vem depois, no caminho de falha.
+        timeout-minutes: 2
         uses: actions/github-script@v7
         with:
           script: |
@@ -1536,7 +1541,7 @@ jobs:
       - name: Freeze production
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          write_deploy_freeze "on:$GITHUB_RUN_ID"
+          write_deploy_freeze "on:$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT"
           echo "::notice::Produção congelada: nenhum deploy sobe até um deploy manual com descongelar=true."
 
       - name: Cancel deploys before traffic
@@ -1577,7 +1582,8 @@ jobs:
               for (const run of await vivos()) {
                 if (cancelados.has(run.id)) continue;
                 const { jobs } = (await tentar(() => github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: run.id }))).data;
-                if (jobs.some((j) => j.name === 'Congelar a produção')) continue;
+                // Job pulado pelo if: também aparece na lista (completed/skipped), em todo run de push: só conta o de verdade.
+                if (jobs.some((j) => j.name === 'Congelar a produção' && j.conclusion !== 'skipped')) continue;
                 const deploy = jobs.find((j) => j.name === 'Deploy Green');
                 if (deploy && deploy.status === 'completed') continue;
                 if (deploy && noTrafego(deploy)) {
@@ -1623,7 +1629,7 @@ jobs:
       - name: Freeze production
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          write_deploy_freeze "on:$GITHUB_RUN_ID"
+          write_deploy_freeze "on:$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT"
           echo "::notice::Produção congelada: nenhum deploy sobe até um deploy manual com descongelar=true."
 
       # De novo, agora com o deploy que estava no tráfego já terminado: ele pode ter mudado a anterior.
