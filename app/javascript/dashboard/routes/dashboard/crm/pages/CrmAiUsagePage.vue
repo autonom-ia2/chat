@@ -464,7 +464,11 @@ onMounted(fetchUsage);
           </span>
         </div>
         <p class="m-0 text-sm text-n-slate-11">
-          {{ t('CRM_AI_USAGE.HEADER.DESCRIPTION') }}
+          {{
+            comValores
+              ? t('CRM_AI_USAGE.HEADER.DESCRIPTION')
+              : t('CRM_AI_USAGE.SEM_VALORES.DESCRICAO')
+          }}
         </p>
       </div>
 

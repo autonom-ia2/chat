@@ -205,6 +205,7 @@ describe('CrmAiUsagePage', () => {
     expect(wrapper.find('[data-sem-valores]').exists()).toBe(true);
     expect(wrapper.text()).toContain('AI uses');
     expect(wrapper.text()).toContain('Usage by feature');
+    expect(wrapper.text()).toContain('Follow how much AI is used');
     expect(wrapper.text()).toContain('2 uses');
     expect(wrapper.text()).not.toContain('R$');
     expect(wrapper.text()).not.toContain('Weekly spend');

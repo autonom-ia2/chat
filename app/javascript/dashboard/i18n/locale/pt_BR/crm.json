@@ -133,6 +133,7 @@
     "LOADING": "Carregando uso de IA…",
     "ERROR": "Não foi possível carregar o uso de IA. Tente novamente.",
     "SEM_VALORES": {
+      "DESCRICAO": "Acompanhe quanto a IA é usada por recurso, período e usos recentes.",
       "AVISO": "Você vê quanto a IA foi usada. Os valores em reais aparecem para quem tem Financeiro na função.",
       "POR_RECURSO": "Uso por recurso",
       "USOS": "{n} uso | {n} usos",
