@@ -157,11 +157,16 @@ RSpec.describe 'Eval pago #1918 PR2: o porteiro separa cortesia, mudança de sit
 
     allow(Crm::Config).to receive(:enabled?).and_return(true)
     allow(Crm::Ai::Config).to receive(:media_enabled?).and_return(false)
-    allow(TypesafeAi::Config).to receive_messages(configured?: true, api_key: 'ts_eval_not_real', model: 'jev-1.13.0')
+    allow(TypesafeAi::Config).to receive_messages(configured?: true, api_key: jev_real? ? ENV.fetch('TYPESAFE_API_KEY') : 'ts_eval_not_real',
+                                                  model: 'jev-1.13.0')
     InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_API_KEY').update!(value: ENV.fetch('OPENAI_API_KEY'))
     account.enable_features!(Crm::Conversations::CardEmFoco::FLAG)
-    stub_jev
-    guardar_resposta
+    if jev_real?
+      so_o_jev
+    else
+      stub_jev
+      guardar_resposta
+    end
   end
 
   # Um ramo, uma caixa, dois funis ligados a ela.
@@ -193,6 +198,25 @@ RSpec.describe 'Eval pago #1918 PR2: o porteiro separa cortesia, mudança de sit
         end
       end
     end
+  end
+
+  # EVAL_JEV_REAL=1 com TYPESAFE_API_KEY: o Jev REAL responde, e o modelo maior não é pago (o dublê só conta a chamada).
+  def jev_real? = ENV['EVAL_JEV_REAL'] == '1' && ENV['TYPESAFE_API_KEY'].present?
+
+  def so_o_jev
+    allow(TypesafeAi::Decisor).to receive(:new).and_wrap_original do |original, *args, **opcoes|
+      original.call(*args, **opcoes).tap do |decisor|
+        allow(decisor).to receive(:decidir).and_wrap_original do |decidir, **dados|
+          decidir.call(**dados).tap { |resultado| @do_jev = [resultado.resposta, resultado.certeza] }
+        end
+      end
+    end
+    revisor = instance_double(Crm::Subjects::Reviewer)
+    allow(revisor).to receive(:revisar) do
+      @modelo_maior = true
+      raise Crm::Subjects::Reviewer::Error, 'eval_jev_real'
+    end
+    allow(Crm::Subjects::Reviewer).to receive(:new).and_return(revisor)
   end
 
   # O Jev "não sabe" (certeza zero) e o modelo maior decide; no caso com `jev: :mesmo`, o Jev escolhe "o mesmo assunto"
@@ -294,6 +318,8 @@ RSpec.describe 'Eval pago #1918 PR2: o porteiro separa cortesia, mudança de sit
   end
 
   it 'conversas fictícias em 3 ramos: cada mensagem vai para o assunto certo' do
+    skip 'rodada só do Jev real' if jev_real?
+
     AssuntoSemNomeEval::TODOS.each_with_index { |caso, indice| rodar(indice, caso) }
     saida[:casos].each { |caso| caso[:certo] = certo?(caso) }
     saida[:placar] = saida[:casos].group_by { |caso| [caso[:ramo], caso[:categoria], caso[:jev]] }
@@ -307,6 +333,28 @@ RSpec.describe 'Eval pago #1918 PR2: o porteiro separa cortesia, mudança de sit
     expect(errados.size).to be <= 3
   ensure
     gravar_saida!
+  end
+
+  # Quantas mensagens o Jev real decide sozinho e quantas vão ao modelo maior, por categoria (custo).
+  it 'Jev real: o que ele escolhe e quando o modelo maior entra' do
+    skip 'rode com EVAL_JEV_REAL=1 e TYPESAFE_API_KEY' unless jev_real?
+
+    AssuntoSemNomeEval::CASOS.each_with_index { |caso, indice| rodar_so_o_jev(indice, caso) }
+    saida[:modelo_maior_por_categoria] = saida[:casos].group_by { |caso| caso[:categoria] }
+                                                      .transform_values { |casos| "#{casos.count { |caso| caso[:modelo_maior] }}/#{casos.size}" }
+    gravar_saida!
+    expect(saida[:casos].size).to eq(AssuntoSemNomeEval::CASOS.size)
+  ensure
+    gravar_saida!
+  end
+
+  def rodar_so_o_jev(indice, (chave, categoria, card, mensagens))
+    conversa, mensagem = montar(indice, chave, card, mensagens)
+    @do_jev = nil
+    @modelo_maior = false
+    decisao = com_custo { Crm::Subjects::Identifier.new(conversation: conversa, message: mensagem).perform }
+    saida[:casos] << { indice: indice, ramo: chave, categoria: categoria, card_sem_nome: card[1].nil?, chegada: card[3] == :chegada,
+                       jev: @do_jev&.first, certeza: @do_jev&.last, modelo_maior: @modelo_maior, estado: decisao&.state }
   end
 end
 # rubocop:enable RSpec/DescribeClass, RSpec/InstanceVariable, Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity

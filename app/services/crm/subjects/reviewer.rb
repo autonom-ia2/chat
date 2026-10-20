@@ -36,9 +36,9 @@ class Crm::Subjects::Reviewer
     them. resposta is one answer key from the options: an open subject, or a new request in a pipeline (keys starting
     with "novo_"). Two different new requests in the same pipeline are two items with the same key and different
     titulo. Never repeat the same open subject. Leave the list empty when the customer only greets, thanks, acknowledges
-    or chats without saying anything about a request. A message that changes the situation of an open request (the
-    customer accepts or declines it, gives up, solved it elsewhere, paid or sent what was asked, or wants to continue,
-    renew or cancel it) is about that open request: put it in the list, not a new request.
+    or chats without saying anything about a request. A message that changes the situation of an open request (for
+    example, the customer accepts or declines it, gives up, solved it elsewhere, paid or sent what was asked, or wants
+    to continue, renew or cancel it) is about that open request: put it in the list, not a new request.
     titulo: for a new request, a short name in Brazilian Portuguese, 2 to 6 words, naming the product, service or case
     (for example "Seguro do Onix", "Agentes de IA"), without personal data. For an open subject, leave titulo empty.
     principal: the position (starting at 0) in assuntos of the request the customer is focused on now. Usually the last

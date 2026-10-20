@@ -730,6 +730,54 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(account.crm_cards.count).to eq(1)
     end
 
+    it 'no Sugerir, com o nome dele dispensado há pouco: o "mesmo assunto" do Jev vale e o modelo maior não é chamado (#1260)' do
+      account.crm_inbox_settings.find_by!(inbox: inbox).update!(subject_ai_mode: :suggest)
+      anterior = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'oi')
+      Crm::SubjectDecision.create!(account: account, conversation: conversation, message: anterior, mode: 'suggest',
+                                   action: 'rename', state: 'dismissed', pipeline_id: vendas.id, card: sem_nome)
+      stub_jev('mesmo_assunto')
+
+      decisao = receber('mandei o comprovante')
+
+      expect(decisao).to have_attributes(state: 'kept', action: 'none', decided_by: 'jev', card_id: sem_nome.id)
+      expect(chamadas.map { |args| args.dig(:schema, :name) }).not_to include('assuntos_revisao')
+      expect(Crm::SubjectDecision.where(state: 'suggested')).to be_empty
+    end
+
+    it 'flag desligada: sem "o mesmo assunto" e com a descrição de sempre do pedido novo' do
+      account.disable_features!(Crm::Conversations::CardEmFoco::FLAG)
+      requisicoes = []
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do |request|
+        requisicoes << JSON.parse(request.body)
+        { status: 200, body: { model: 'jev-1.13.0', usage: {},
+                               answers: { decisao: { type: 'choice', choice: 'sem_assunto', confidence: 0.95 } } }.to_json }
+      end
+
+      receber('desisti, fechei com outra')
+
+      criterios = requisicoes.first['questions']['decisao']['criteria']
+      expect(criterios.keys).to contain_exactly('sem_assunto', "novo_#{vendas.id}")
+      expect(criterios["novo_#{vendas.id}"]).to eq('The customer shows what they want, and it belongs to the pipeline "Vendas".')
+      expect(requisicoes.first['state']['instructions']).to eq(Crm::Subjects::Question::INSTRUCOES)
+    end
+
+    it 'decisão reaberta pelo WhatsApp Híbrido: de um assunto só, sem "o mesmo assunto" para o card sem nome (#1638)' do
+      stub_jev('sem_assunto')
+      decisao = receber('oi')
+
+      requisicoes = []
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do |request|
+        requisicoes << JSON.parse(request.body)
+        { status: 200, body: { model: 'jev-1.13.0', usage: {},
+                               answers: { decisao: { type: 'choice', choice: 'sem_assunto', confidence: 0.95 } } }.to_json }
+      end
+      decisao.message.update!(content_attributes: { 'hybrid_recovered_at' => 5.seconds.from_now.iso8601 })
+      Crm::Subjects::Identifier.new(conversation: conversation, message: decisao.message.reload).perform
+
+      expect(requisicoes.first['questions']['decisao']['criteria'].keys).to contain_exactly('sem_assunto', "novo_#{vendas.id}")
+      expect(requisicoes.first['state']['instructions']).to eq(Crm::Subjects::Question::INSTRUCOES)
+    end
+
     describe 'quando ele é o card da chegada intocado (C36)' do
       before do
         sem_nome.update!(metadata: { Crm::Conversations::CardSyncer::AUTO_SYNC_METADATA =>

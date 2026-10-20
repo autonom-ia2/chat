@@ -155,13 +155,15 @@ class Crm::Subjects::Identifier
   end
 
   # Jev inseguro, pedido novo (precisa de nome) ou vários assuntos (precisa da lista): o modelo maior decide. Inseguro
-  # também, nada muda. "O mesmo assunto" num card ainda sem nome (#1918) também vai ao modelo maior: o Jev sozinho não
-  # deixa o primeiro pedido sem nome; quem escolhe entre continuar o card e dar nome a ele é o modelo maior.
+  # também, nada muda. "O mesmo assunto" num card ainda sem nome (#1918) também, quando dar nome a ele é possível.
   def revisar?(opcao)
-    return true if opcao.tipo == :mesmo && question.atual_sem_nome?
-
-    @jev.certeza < Crm::Subjects::CERTEZA_MINIMA || %i[novo varios].include?(opcao.tipo)
+    @jev.certeza < Crm::Subjects::CERTEZA_MINIMA || %i[novo varios].include?(opcao.tipo) || nome_do_atual?(opcao)
   end
+
+  # O Jev sozinho não deixa o primeiro pedido sem nome (#1918): quem escolhe entre continuar o card sem nome e dar nome
+  # a ele (o pedido novo no funil dele) é o modelo maior. Só quando essa opção existe e não é a sugestão que já espera
+  # uma pessoa ou que ela dispensou (#1260); senão vale a certeza do Jev.
+  def nome_do_atual?(opcao) = opcao.tipo == :mesmo && question.nome_do_atual.present? && sugestao_repetida(question.nome_do_atual).nil?
 
   # A mesma sugestão já espera uma pessoa, ou ela acabou de dispensá-la (#1260): nada a fazer, sem pagar o modelo maior.
   # Vale por RESPEITO_AO_FECHAMENTO: depois disso a IA pode sugerir de novo, e uma sugestão esquecida não prende a
