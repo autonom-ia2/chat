@@ -631,3 +631,15 @@
   display_name: IA de assunto cria o card na coluna certa
   enabled: false
   column: feature_flags_ext_1
+
+# Mensagem da equipe ao cliente relê o card em foco (#1923). Ligada (junto com `crm_avaliar_toda_mensagem`): a mensagem
+# que uma pessoa da equipe manda ao cliente (pelo painel, ou o eco do que mandou pelo app) agenda a avaliação do card em
+# foco, com a espera da equipe e o gatilho `mensagem_da_equipe` (Crm::Conversations::CardEmFoco). Posição PROVISÓRIA 49
+# na feature_flags_ext_1 (1 << 48), dada pela Orquestração; nesta branch ela fica na próxima posição livre (44) até a
+# main ter as 44 a 47 e a 48 (`crm_ia_arquiva_lixo`, #1922), e a definitiva é reemitida na fila. Sem migration.
+# Desligada (padrão): só a mensagem do cliente dispara a avaliação, como antes. Nasce ligada só nas contas 1, 16 e 18 da
+# stack Hub2You (Orquestração, depois do deploy).
+- name: crm_ia_avalia_mensagem_equipe
+  display_name: Mensagem da equipe ao cliente relê o card em foco
+  enabled: false
+  column: feature_flags_ext_1

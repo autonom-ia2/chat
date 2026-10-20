@@ -24,7 +24,7 @@ RSpec.describe Crm::Conversations::CardEmFoco do
                                            created_by: admin)
     end
     account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, auto_create_card: false, subject_ai_mode: :off)
-    account.enable_features!(described_class::FLAG)
+    account.enable_features!(described_class::FLAG, described_class::FLAG_DA_EQUIPE)
     allow(Crm::Subjects::Identifier).to receive(:new).and_return(identifier)
     clear_enqueued_jobs
   end
@@ -345,6 +345,19 @@ RSpec.describe Crm::Conversations::CardEmFoco do
       expect(avaliacoes_agendadas).to be_empty
       expect(auto.reload.last_activity_at).to be < 1.day.ago
     end
+
+    # Pega: o gatilho da equipe valer numa conta sem a flag `crm_ia_avalia_mensagem_equipe` (só o piloto a tem).
+    it 'sem a flag da equipe: a mensagem da equipe não agenda nem mexe no card; a do cliente segue agendando', :aggregate_failures do
+      account.disable_features!(described_class::FLAG_DA_EQUIPE)
+
+      expect(sincronizar(da_equipe)).to be_nil
+      expect(avaliacoes_agendadas).to be_empty
+      expect(auto.reload.last_activity_at).to be < 1.day.ago
+      expect(auto.last_message_at).to be_nil.or(be < 1.day.ago)
+
+      sincronizar(incoming)
+      expect(avaliacoes_agendadas).to eq([auto.id])
+    end
   end
 
   describe 'com a IA de assunto ligada na caixa de 2 funis' do
@@ -565,12 +578,18 @@ RSpec.describe Crm::Conversations::CardEmFoco do
       expect(avaliados).to eq([auto.id])
     end
 
-    it 'mensagem da equipe: o card da chegada segue como hoje (a decisão do assunto é só da mensagem do cliente)' do
-      message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: 'Já te mando')
+    # O caminho da caixa com card ao chegar (CardSyncer#sync_card) já agendava em toda mensagem antes do #1923; a flag da
+    # equipe não muda isso, nem para mais nem para menos.
+    it 'mensagem da equipe: o card da chegada segue como hoje, com ou sem a flag da equipe' do
+      [true, false].each do |ligada|
+        ligada ? account.enable_features!(described_class::FLAG_DA_EQUIPE) : account.disable_features!(described_class::FLAG_DA_EQUIPE)
+        clear_enqueued_jobs
+        message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: 'Já te mando')
 
-      sincronizar(message)
+        sincronizar(message)
 
-      expect(avaliacoes_agendadas).to eq([auto.id])
+        expect(avaliacoes_agendadas).to eq([auto.id])
+      end
     end
 
     it 'decisão que roda antes de o card da chegada existir: o card novo é avaliado uma vez' do

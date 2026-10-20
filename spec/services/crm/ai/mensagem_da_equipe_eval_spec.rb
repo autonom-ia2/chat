@@ -94,7 +94,7 @@ RSpec.describe 'Eval pago #1923: a mensagem da equipe com os valores move o card
     allow(Crm::Config).to receive(:enabled?).and_return(true)
     allow(Crm::Cards::Broadcaster).to receive(:broadcast)
     InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_API_KEY').update!(value: ENV.fetch('OPENAI_API_KEY'))
-    account.enable_features!(Crm::Conversations::CardEmFoco::FLAG)
+    account.enable_features!(Crm::Conversations::CardEmFoco::FLAG, Crm::Conversations::CardEmFoco::FLAG_DA_EQUIPE)
     account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, auto_create_card: false, subject_ai_mode: :off)
   end
 
