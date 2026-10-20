@@ -243,6 +243,15 @@
     ],
     "sem_corpo": true
   },
+  "DELETE campaign_journey/drafts/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/drafts#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:43",
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:71"
+    ],
+    "sem_corpo": true
+  },
   "DELETE campaigns/:id": {
     "completo": true,
     "controller": "api/v1/accounts/campaigns#destroy",
@@ -755,7 +764,7 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:37",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -4082,6 +4091,27 @@
     ],
     "sem_corpo": false
   },
+  "PATCH campaign_journey/drafts/:id": {
+    "campos": {
+      "channel": {},
+      "email_campaign_id": {},
+      "payload": {
+        "tipo": "objeto_livre"
+      },
+      "title": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/drafts#update",
+    "corpo_plano": true,
+    "envelope": "draft",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:36",
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:80",
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:59",
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:71"
+    ],
+    "sem_corpo": false
+  },
   "PATCH campaigns/:id": {
     "campos": {
       "audience": {
@@ -6446,8 +6476,8 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:28",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:151",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:153",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -12266,18 +12296,25 @@
       "channel": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
+      },
+      "draft_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
       }
     },
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:13",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:95",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:101",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:47",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:35",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:60",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:16",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:15"
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:15",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:104",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:110",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:19",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:88",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:51",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:39",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:78",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:64",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:18",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:17"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -12340,6 +12377,40 @@
       "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:70",
       "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:58",
       "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:57"
+    ],
+    "sem_corpo": false
+  },
+  "POST campaign_journey/drafts": {
+    "campos": {
+      "channel": {
+        "tipo": "string",
+        "um_de": [
+          "email",
+          "whatsapp_official",
+          "whatsapp_api",
+          "sms"
+        ]
+      },
+      "email_campaign_id": {
+        "tipo": "inteiro"
+      },
+      "payload": {
+        "tipo": "objeto_livre"
+      },
+      "title": {
+        "max_caracteres": 255,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/drafts#create",
+    "corpo_plano": true,
+    "envelope": "draft",
+    "modelo": "CampaignJourneyDraft",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:28",
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:80",
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -16658,7 +16729,7 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:20",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:151"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:153"
     ],
     "sem_corpo": false
   },
@@ -16700,8 +16771,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#cancel",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:104",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:106",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -16710,8 +16781,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#duplicate",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:110",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:112",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -16720,8 +16791,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#pause",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:71",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:73",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -16730,8 +16801,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#recheck",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:91",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:93",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -16740,8 +16811,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#reevaluate",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:86",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:88",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -16782,8 +16853,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#resume",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:76",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:78",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -16797,10 +16868,10 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#schedule",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:63",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:66",
       "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:64",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:67",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:65",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": false
   },
@@ -16810,7 +16881,7 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:49",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -22501,6 +22572,27 @@
     ],
     "sem_corpo": false
   },
+  "PUT campaign_journey/drafts/:id": {
+    "campos": {
+      "channel": {},
+      "email_campaign_id": {},
+      "payload": {
+        "tipo": "objeto_livre"
+      },
+      "title": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/drafts#update",
+    "corpo_plano": true,
+    "envelope": "draft",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:36",
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:80",
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:59",
+      "app/controllers/api/v1/accounts/campaign_journey/drafts_controller.rb:71"
+    ],
+    "sem_corpo": false
+  },
   "PUT campaigns/:id": {
     "campos": {
       "audience": {
@@ -24740,8 +24832,8 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:28",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:151",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:146"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:153",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
     ],
     "sem_corpo": false
   },
