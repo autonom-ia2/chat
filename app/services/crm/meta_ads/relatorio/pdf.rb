@@ -4,7 +4,8 @@
 # 2. Uma página por anúncio (até PAGINAS_DE_ANUNCIO, os que mais venderam): a foto, os números, as conversas por dia
 #    e quem veio dele, cada pessoa com um selo da situação.
 # 3. "Comece por aqui": quem chegou por anúncio e ainda espera resposta, a espera mais longa primeiro.
-# O que não cabe (mais anúncios, mais pessoas) a página diz que está na planilha.
+# O que não cabe (mais anúncios, mais pessoas) a página diz que está na planilha. Quem não pode exportar o CRM
+# (Dados#com_pessoas?) recebe só os números: sem as pessoas por anúncio e sem a página de quem espera.
 class Crm::MetaAds::Relatorio::Pdf
   include Crm::MetaAds::Relatorio::Formato
 
@@ -30,7 +31,7 @@ class Crm::MetaAds::Relatorio::Pdf
     @pdf = Relatorios::Pdf.new(titulo: titulo, rodape: t('generated', date: momento(@gerado_em, @dados.zona)), pagina: t('page'))
     capa
     paginas_de_anuncio
-    esperando
+    esperando if @dados.com_pessoas?
     @pdf.gerar
   end
 
@@ -68,7 +69,8 @@ class Crm::MetaAds::Relatorio::Pdf
     total = @dados.sem_resposta(ESPERANDO)[:total]
     return if total.zero?
 
-    @pdf.chamada(t('waiting_callout', count: total), topo: Relatorios::Pdf::ALTURA_DA_CHAMADA + 4)
+    texto = @dados.com_pessoas? ? t('waiting_callout', count: total) : t('waiting_callout_no_list', count: total)
+    @pdf.chamada(texto, topo: Relatorios::Pdf::ALTURA_DA_CHAMADA + 4)
   end
 
   def frase
@@ -151,7 +153,7 @@ class Crm::MetaAds::Relatorio::Pdf
     topo = @pdf.cabecalho(titulo: titulo, periodo: periodo)
     @pdf.foto({ foto: @dados.foto(anuncio[:ad_id]), nome: nome_do_anuncio(anuncio) }, esquerda: 0, topo: topo, lado: LADO_DA_FOTO)
     fim = lado_da_foto(anuncio, t('ad_counter', index: posicao, total: total), topo)
-    pessoas_do_anuncio(anuncio, [fim, topo - LADO_DA_FOTO].min - 24)
+    pessoas_do_anuncio(anuncio, [fim, topo - LADO_DA_FOTO].min - 24) if @dados.com_pessoas?
   end
 
   # Ao lado da foto: qual anúncio é, o nome, os números e as conversas por dia. Devolve o topo abaixo do gráfico.

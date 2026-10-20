@@ -50,6 +50,9 @@ en:
     waiting_callout:
       one: '1 person came from an ad and is still waiting for a reply. They are on the last page.'
       other: '%{count} people came from ads and are still waiting for a reply. The list is on the last page.'
+    waiting_callout_no_list:
+      one: '1 person came from an ad and is still waiting for a reply.'
+      other: '%{count} people came from ads and are still waiting for a reply.'
     waiting_hint: 'People who came from an ad and have not been answered yet. Reply first to who has waited longest.'
     waiting_more: 'And %{count} more in the spreadsheet.'
     no_name: 'No name'

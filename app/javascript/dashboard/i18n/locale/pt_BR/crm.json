@@ -2732,7 +2732,8 @@
           "SHEET_TITLE": "Planilha para trabalhar os números",
           "SHEET_HINT": "Abre no Excel ou no Google Planilhas, com cada conversa.",
           "CONFIRM": "Baixar",
-          "ERROR": "Não deu para baixar agora. Tente de novo."
+          "ERROR": "Não deu para baixar agora. Tente de novo.",
+          "NO_PEOPLE": "Sem a permissão \"Exportar a lista do CRM para Excel\", o arquivo leva só os números, sem a lista de pessoas."
         }
       },
       "AD_DETAIL": {

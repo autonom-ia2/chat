@@ -2731,7 +2731,8 @@
           "SHEET_TITLE": "Spreadsheet to work the numbers",
           "SHEET_HINT": "Opens in Excel or Google Sheets, with every conversation.",
           "CONFIRM": "Download",
-          "ERROR": "Could not download right now. Try again."
+          "ERROR": "Could not download right now. Try again.",
+          "NO_PEOPLE": "Without the \"Export the CRM list to Excel\" permission, the file has only the numbers, without the list of people."
         }
       },
       "AD_DETAIL": {

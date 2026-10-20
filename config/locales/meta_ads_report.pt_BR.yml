@@ -50,6 +50,9 @@ pt_BR:
     waiting_callout:
       one: '1 pessoa veio de anúncio e ainda espera resposta. Ela está na última página.'
       other: '%{count} pessoas vieram de anúncio e ainda esperam resposta. A lista está na última página.'
+    waiting_callout_no_list:
+      one: '1 pessoa veio de anúncio e ainda espera resposta.'
+      other: '%{count} pessoas vieram de anúncio e ainda esperam resposta.'
     waiting_hint: 'Pessoas que vieram de anúncio e ainda não foram respondidas. Responda primeiro quem espera há mais tempo.'
     waiting_more: 'E mais %{count} na planilha.'
     no_name: 'Sem nome'

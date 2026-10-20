@@ -70,6 +70,8 @@ const PANEL = {
 
 const stubs = {
   Spinner: true,
+  // O botão do relatório tem spec próprio (MetaAdsReportButton.spec.js).
+  MetaAdsReportButton: true,
   RouterLink: {
     props: ['to'],
     template: '<a :data-to="JSON.stringify(to)"><slot /></a>',

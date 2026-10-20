@@ -2,6 +2,8 @@
 # o tempo de resposta, a lista de quem chegou e as pessoas de cada anúncio (Panel::PathList) e as conversas por dia.
 # Com `visible` (Crm::MetaAds::VisibleConversations, #1794) as listas trazem só as conversas que a pessoa já vê; os
 # totais são da conta toda, como na tela. Serve à conta conectada (com gasto) e à sem login (só WhatsApp).
+# Sem `com_pessoas` (quem não pode exportar o CRM, crm_export: dado pessoal em lote) o arquivo leva só os números,
+# sem as listas de pessoas.
 class Crm::MetaAds::Relatorio::Dados
   # Linhas da lista de conversas na planilha; o resto fica de fora e a planilha diz quantas.
   LIMITE = 5_000
@@ -10,10 +12,15 @@ class Crm::MetaAds::Relatorio::Dados
 
   attr_reader :account, :report
 
-  def initialize(connection, days:, account:, visible: nil)
+  def initialize(connection, days:, account:, visible: nil, com_pessoas: true)
     @account = account
     @visible = visible
+    @com_pessoas = com_pessoas
     @report = Crm::MetaAds::Panel::Report.new(connection, days: days, account: account)
+  end
+
+  def com_pessoas?
+    @com_pessoas
   end
 
   def painel

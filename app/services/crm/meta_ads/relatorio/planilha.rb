@@ -2,6 +2,7 @@
 # - Resumo: os números do período;
 # - Anúncios: um por linha, com conversas, propostas abertas, vendas e valor (e, com conexão, investido e custo);
 # - Conversas: cada pessoa que chegou por anúncio (só as que a pessoa vê), com etapa, situação, valor e resposta;
+#   só para quem pode exportar o CRM (Dados#com_pessoas?);
 # - Por dia: conversas de cada dia, no total e por anúncio.
 class Crm::MetaAds::Relatorio::Planilha
   include Crm::MetaAds::Relatorio::Formato
@@ -26,7 +27,9 @@ class Crm::MetaAds::Relatorio::Planilha
     Relatorios::Planilha.new.tap do |planilha|
       planilha.resumo(t('sheets.summary'), titulo: "#{@dados.account.name} · #{t('title')}", contexto: contexto, itens: resumo)
       aba(planilha, 'ads', colunas: colunas_de_anuncio, linhas: linhas_de_anuncio)
-      aba(planilha, 'conversations', colunas: colunas_de_conversa, linhas: linhas_de_conversa, contexto: contexto_das_conversas)
+      if @dados.com_pessoas?
+        aba(planilha, 'conversations', colunas: colunas_de_conversa, linhas: linhas_de_conversa, contexto: contexto_das_conversas)
+      end
       aba(planilha, 'daily', colunas: colunas_por_dia, linhas: linhas_por_dia)
     end
   end

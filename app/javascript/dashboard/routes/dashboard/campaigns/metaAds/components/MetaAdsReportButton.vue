@@ -5,15 +5,18 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 
 // Relatório baixado de Anúncios (#1960): o painel do período em PDF (A4 deitado, para mostrar ou mandar) ou em
 // planilha (para trabalhar os números). Um botão abre a escolha; "Baixar" pede o arquivo ao servidor, que monta com
-// os mesmos números da tela.
+// os mesmos números da tela. As listas de pessoas só vão no arquivo de quem pode exportar o CRM (crm_export, dado
+// pessoal em lote); sem isso o servidor manda só os números, e o diálogo avisa.
 const props = defineProps({
   days: { type: Number, required: true },
 });
 
 const { t } = useI18n();
+const { canExportCrm } = useCrmPermissions();
 const dialog = ref(null);
 const formato = ref('pdf');
 const baixando = ref(false);
@@ -120,5 +123,12 @@ const baixar = async () => {
         </span>
       </button>
     </div>
+    <p
+      v-if="!canExportCrm"
+      data-report-no-people
+      class="mt-3 text-sm text-n-slate-11"
+    >
+      {{ t('CRM_KANBAN.META_ADS_HUB.PANEL.REPORT.NO_PEOPLE') }}
+    </p>
   </Dialog>
 </template>

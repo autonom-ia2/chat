@@ -2,10 +2,15 @@ import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsReportButton from '../components/MetaAdsReportButton.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { useAlert } from 'dashboard/composables';
+import { ref } from 'vue';
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: { report: vi.fn() },
+}));
+const canExportCrm = ref(true);
+vi.mock('dashboard/routes/dashboard/crm/composables/useCrmPermissions', () => ({
+  useCrmPermissions: () => ({ canExportCrm }),
 }));
 
 const open = vi.fn();
@@ -29,6 +34,7 @@ describe('Anúncios · baixar relatório (#1960)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    canExportCrm.value = true;
     clicked = [];
     global.URL.createObjectURL = vi.fn(() => 'blob:relatorio');
     global.URL.revokeObjectURL = vi.fn();
@@ -57,6 +63,16 @@ describe('Anúncios · baixar relatório (#1960)', () => {
     ).toBe('true');
     expect(wrapper.find('[data-report-format="pdf"]').classes()).toContain(
       'min-h-11'
+    );
+  });
+
+  it('tells who cannot export the CRM that the file has only the numbers', async () => {
+    expect(mountButton().find('[data-report-no-people]').exists()).toBe(false);
+
+    canExportCrm.value = false;
+
+    expect(mountButton().find('[data-report-no-people]').text()).toBe(
+      'CRM_KANBAN.META_ADS_HUB.PANEL.REPORT.NO_PEOPLE'
     );
   });
 

@@ -55,6 +55,17 @@ RSpec.describe Crm::MetaAds::Relatorio::Pdf do
     expect(paginas).to all(include('Página'))
   end
 
+  it 'sem as pessoas (quem não pode exportar o CRM), sai só com os números' do
+    from_ad('Paulo Lima', 2.days.ago, status: :won, value: 950)
+    esperando('Joana Dias', 1.day.ago)
+
+    paginas = texto(described_class.new(Crm::MetaAds::Relatorio::Dados.new(nil, days: 30, account: account, com_pessoas: false)).gerar)
+
+    expect(paginas.size).to eq(2)
+    expect(paginas.join).to include('vieram 2 conversas', 'Seguro auto sem complicação', '1 pessoa veio de anúncio')
+    expect(paginas.join).not_to include('Paulo Lima', 'Joana Dias', 'Comece por aqui')
+  end
+
   it 'sem ninguém de anúncio no período, a capa avisa e não há outras páginas' do
     paginas = texto(described_class.new(dados).gerar)
 

@@ -219,8 +219,8 @@ RSpec.describe 'Anúncios da Meta com meta_ads_view', type: :request do
       expect(response.parsed_body.dig('ad', 'people').pluck('conversation_id')).to eq([minha.id])
     end
 
-    it 'baixa o relatório com os totais da conta e, na lista de conversas, só as da caixa dela' do
-      atende = pessoa_com(%w[meta_ads_view conversation_manage])
+    it 'com crm_export, baixa o relatório com os totais da conta e, na lista de conversas, só as da caixa dela' do
+      atende = pessoa_com(%w[meta_ads_view conversation_manage crm_view crm_export])
       de_anuncio(dela).contact.update!(name: 'Pessoa da caixa dela')
       de_anuncio(alheia).contact.update!(name: 'Pessoa da outra caixa')
 
@@ -232,6 +232,26 @@ RSpec.describe 'Anúncios da Meta com meta_ads_view', type: :request do
       expect(celulas.call(0)).to include(I18n.t('meta_ads_report.summary.conversations'), 2)
       expect(celulas.call(2)).to include('Pessoa da caixa dela')
       expect(celulas.call(2)).not_to include('Pessoa da outra caixa')
+    end
+
+    # Lista de pessoas no arquivo é dado pessoal em lote: pede crm_export, como a planilha da Lista do CRM.
+    it 'sem crm_export, baixa só os números: nenhuma aba nem nome de contato' do
+      atende = pessoa_com(%w[meta_ads_view conversation_manage])
+      de_anuncio(dela).contact.update!(name: 'Pessoa da caixa dela')
+
+      get "#{path}/report", params: { formato: 'planilha' }, headers: auth_headers(atende)
+      planilha = Roo::Excelx.new(StringIO.new(response.body))
+      celulas = planilha.sheets.flat_map do |aba|
+        (1..planilha.sheet(aba).last_row.to_i).flat_map { |linha| planilha.sheet(aba).row(linha) }
+      end
+      expect(planilha.sheets.size).to eq(3)
+      expect(celulas).to include(I18n.t('meta_ads_report.summary.conversations'), 1)
+      expect(celulas).not_to include('Pessoa da caixa dela')
+
+      get "#{path}/report", params: { formato: 'pdf' }, headers: auth_headers(atende)
+      texto = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
+      expect(response).to have_http_status(:ok)
+      expect(texto).not_to include('Pessoa da caixa dela')
     end
   end
 end
