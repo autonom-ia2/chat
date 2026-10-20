@@ -168,10 +168,14 @@ abort_if_frozen() {
 }
 
 # #1979: rerun de um deploy velho não volta a produção para trás. Falha quando $1 é ancestral estrito do commit da
-# imagem publicada por último (RUNTIME_IMAGE_PARAMETER). Precisa de GH_TOKEN com contents: read.
+# última imagem construída (RUNTIME_IMAGE_PARAMETER, gravado antes do tráfego). Erro ao ler ou comparar não trava o
+# deploy: rerun é raro, e travar todo deploy por uma falha de API repetiria a produção parada. Precisa de GH_TOKEN.
 abort_if_older_than_published() {
   local published published_sha relation
-  published=$(aws ssm get-parameter --name "$RUNTIME_IMAGE_PARAMETER" --query Parameter.Value --output text) || return 1
+  if ! published=$(aws ssm get-parameter --name "$RUNTIME_IMAGE_PARAMETER" --query Parameter.Value --output text); then
+    echo "::warning::Não deu para ler a última imagem construída: a conferência de rerun foi pulada."
+    return 0
+  fi
   published_sha="${published##*:}"
   if [ "$published_sha" = "$1" ]; then
     return 0
@@ -186,9 +190,12 @@ abort_if_older_than_published() {
     echo "::warning::A imagem publicada ($published_sha) não tem SHA de commit: a conferência de rerun foi pulada."
     return 0
   fi
-  relation=$(gh api "repos/$GITHUB_REPOSITORY/compare/$1...$published_sha" --jq .status) || return 1
+  if ! relation=$(gh api "repos/$GITHUB_REPOSITORY/compare/$1...$published_sha" --jq .status); then
+    echo "::warning::Não deu para comparar $1 com a última imagem construída ($published_sha): a conferência de rerun foi pulada."
+    return 0
+  fi
   if [ "$relation" = ahead ]; then
-    echo "::error::$1 é mais velho que a imagem já publicada ($published_sha): rerun de deploy antigo não sobe. Para subir a main, deploy manual (workflow_dispatch)."
+    echo "::error::$1 é mais velho que a última imagem construída ($published_sha): rerun de deploy antigo não sobe. Para subir a main atual, dispare um deploy novo pelo workflow_dispatch."
     return 1
   fi
 }

@@ -90,9 +90,12 @@ o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
   máximo dois deploys. Até 20/10 o job "Esperar a fila de merge" segurava cada deploy até a fila esvaziar e pulava
   quando havia um mais novo; com a fila sempre alimentada, seis deploys seguidos pularam e a produção ficou duas
   horas para trás. **Na main não é no ar:** só conta como no ar o SHA que o "Deploy Green" subiu. O painel (#1237)
-  marca ⏰ **ATRASADA** e comenta uma vez quando o push mais novo passa de 40 min sem subir.
+  marca ⏰ **ATRASADA** quando o primeiro pedido de deploy não atendido passa de 60 min, e comenta uma vez por versão
+  presa no ar. Se a trava descartar o pedido do push mais novo (o GitHub não garante a ordem), o deploy que terminou
+  pede sozinho um deploy novo da `main`. Cancelar um deploy à mão não impede que ele suba depois: para segurar a
+  produção, o caminho é o rollback (que congela).
 - **Rerun de deploy velho não volta a produção para trás.** O deploy falha na largada quando o commit dele é mais
-  velho que a imagem já publicada. Para subir a `main`, deploy manual (`workflow_dispatch`).
+  velho que a última imagem construída. Para subir a `main` atual, disparar um deploy novo pelo `workflow_dispatch`.
 
 ### Depois do deploy
 
@@ -209,14 +212,22 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
    issue depois do merge do lote na `main` e atualiza o Project Autonom.ia Dev.
 9. **Rollback** de um lote: `workflow_dispatch` com `action=rollback` e `esperado_sha` nos dois workflows de deploy
    (volta para a instância anterior). Como funciona desde o #1979:
-   - o rollback tem trava própria, e um push novo não o cancela mais (na trava do deploy, cancelava o que esperava);
-   - primeiro ele **congela** a produção (`/chatwoot/prod/blue-green/deploy-freeze` = `on` no SSM). Congelada, todo
-     deploy falha na largada e de novo antes de registrar a green, e o **Desligar a blue** não para nem termina nada;
-   - cancela o deploy que ainda não chegou a registrar a green e espera o que já passou disso (até 40 min);
-   - só troca o tráfego se a instância anterior veio do commit `esperado_sha`; a tag Name dela diz de que run veio.
-     Sem `esperado_sha`, ou com outro SHA, nada muda e o erro diz qual SHA a anterior roda;
+   - o job **Congelar a produção** confere primeiro se a instância anterior veio do commit `esperado_sha` (a tag Name
+     dela diz de que run veio). Sem `esperado_sha`, ou com SHA errado, ele para ali, **sem congelar nada**, e o erro
+     diz qual SHA a anterior roda e quais instâncias ainda existem;
+   - depois **congela** a produção (`/chatwoot/prod/blue-green/deploy-freeze` = `on` no SSM): deploy novo nem pede a
+     vez, e o **Desligar a blue** não para nem termina nada;
+   - cancela o deploy que ainda não chegou a registrar a green. Cancelado no boot ou no build, ele não toca na
+     produção; cancelado depois do build, a limpeza dele reinicia o web da atual por alguns segundos, como em
+     qualquer deploy que falha nesse ponto;
+   - o rollback pede a **mesma trava** do deploy: espera o deploy que já estava no tráfego terminar, confere o SHA de
+     novo e só então troca. Se esse deploy mudou a anterior, o rollback para sem trocar e lista as instâncias com o
+     commit de cada uma, para a volta manual;
+   - se outro pedido tomar a vez do rollback na trava (só um deploy manual consegue, com a produção congelada), o job
+     **Avisar rollback cancelado** falha o run: disparar de novo;
    - a produção **segue congelada** depois do rollback, para o merge seguinte não subir de novo o que foi desfeito.
-     Solta com deploy manual (`action=deploy`) e `descongelar=true`, depois do conserto na `main`.
+     Solta com deploy manual (`action=deploy`) e `descongelar=true` depois do conserto na `main`; ele só descongela
+     depois de subir. Esse deploy manual também pode perder a vez para outro pedido: conferir que ele chegou ao fim.
 
    Só volta **um degrau**: a instância de dois deploys atrás é terminada cerca de 5 minutos depois
    de cada deploy. Para desfazer um lote que já tem outro por cima, o caminho é um lote novo com `git revert`. Um lote

@@ -116,7 +116,7 @@ jobs:
             };
 
             const agora = new Date().toISOString().slice(0, 16).replace('T', ' ');
-            const ATRASO_MS = 40 * 60 * 1000;
+            const ATRASO_MS = 60 * 60 * 1000;
             const main = (await github.rest.repos.getBranch({ owner, repo, branch: 'main' })).data.commit.sha;
             let fila = [];
             try {
@@ -127,10 +127,10 @@ jobs:
               fila = null;
             }
             // Deploy ok = job "Deploy Green" com sucesso. Um rollback manual também conclui o run com success.
-            // 50 runs: desde o #1979 o push novo cancela o deploy que esperava a vez, e os cancelados enchem a lista.
+            // 100 runs: desde o #1979 o push novo cancela o deploy que esperava a vez, e os cancelados enchem a lista.
             const deploys = [];
             for (const wf of ['deploy-hub2you-blue-green.yml', 'deploy-autonomia-blue-green.yml']) {
-              const runs = (await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id: wf, branch: 'main', per_page: 50 })).data.workflow_runs;
+              const runs = (await github.rest.actions.listWorkflowRuns({ owner, repo, workflow_id: wf, branch: 'main', per_page: 100 })).data.workflow_runs;
               const ultimo = runs[0];
               // A main deployável é a do push mais novo: merge só de docs move a main sem pedir deploy.
               const pedido = runs.find((run) => run.event === 'push');
@@ -142,11 +142,14 @@ jobs:
                   break;
                 }
               }
-              // #1979: produção atrasada = o push mais novo tem mais de 40 min e o último deploy ok é mais velho que ele.
-              const atrasada = Boolean(pedido && ok && pedido.head_sha !== ok.head_sha &&
-                Date.parse(ok.created_at) < Date.parse(pedido.created_at) &&
-                Date.now() - Date.parse(pedido.created_at) > ATRASO_MS);
-              deploys.push({ wf, ultimo, ok, pedido, atrasada });
+              // #1979: produção atrasada = o primeiro push depois do último deploy ok espera há mais de 60 min e a main
+              // deployável ainda não subiu. Conta do primeiro pedido não atendido: com merges seguidos, o mais novo nunca
+              // envelhece. Sem deploy ok nos 100 runs, conta do push mais antigo da lista.
+              const naoAtendidos = runs.filter((run) => run.event === 'push' && (!ok || Date.parse(run.created_at) > Date.parse(ok.created_at)));
+              const primeiro = naoAtendidos[naoAtendidos.length - 1];
+              const atrasada = Boolean(pedido && primeiro && (!ok || pedido.head_sha !== ok.head_sha) &&
+                Date.now() - Date.parse(primeiro.created_at) > ATRASO_MS);
+              deploys.push({ wf, ultimo, ok, pedido, primeiro, atrasada });
             }
             const abertos = await github.paginate(github.rest.pulls.list, { owner, repo, state: 'open', per_page: 100 });
             const comRotulo = (rotulo) => abertos.filter((pr) => nomes(pr.labels).includes(rotulo));
@@ -155,19 +158,24 @@ jobs:
             const linha = (pr) => `- #${pr.number} ${titulo(pr.title)}${pr.draft ? ' _(rascunho)_' : ''}`;
             const lista = (prs) => (prs.length ? prs.map(linha).join('\n') : '_nenhum_');
             const nomeDa = (wf) => (wf.includes('hub2you') ? 'Hub2You' : 'Autonom.ia');
-            const producao = ({ wf, ultimo, ok, pedido, atrasada }) => {
+            const producao = ({ wf, ultimo, ok, pedido, primeiro, atrasada }) => {
               const nome = nomeDa(wf);
               const andamento = ultimo && ultimo.status !== 'completed' ? ` · **em andamento:** \`${ultimo.head_sha.slice(0, 10)}\`` : '';
               const falhou = ultimo && ultimo.conclusion === 'failure' ? ` · ⚠️ último deploy FALHOU em \`${ultimo.head_sha.slice(0, 10)}\`` : '';
-              const atraso = atrasada ? ` · ⏰ **ATRASADA**: a main deployável \`${pedido.head_sha.slice(0, 10)}\` ainda não subiu (push de ${pedido.created_at.slice(11, 16)} UTC)` : '';
+              const atraso = atrasada ? ` · ⏰ **ATRASADA**: a main deployável \`${pedido.head_sha.slice(0, 10)}\` ainda não subiu (primeiro pedido às ${primeiro.created_at.slice(11, 16)} UTC)` : '';
               return `- ${nome}: último deploy ok em \`${ok ? ok.head_sha.slice(0, 10) : '?'}\`${andamento}${falhou}${atraso}`;
             };
-            // Marca escondida no corpo: o alerta sai uma vez por SHA atrasado, não a cada 30 min.
-            const marca = ({ wf, pedido }) => `<!-- atraso:${nomeDa(wf)}:${pedido.head_sha} -->`;
+            // Marca escondida no corpo: o alerta sai uma vez por versão presa no ar, não a cada 30 min nem a cada merge.
+            const marca = ({ wf, ok }) => `<!-- atraso:${nomeDa(wf)}:${ok ? ok.head_sha : 'nenhum'} -->`;
             const corpoAnterior = (await github.rest.issues.get({ owner, repo, issue_number: painel })).data.body || '';
             for (const d of deploys.filter((x) => x.atrasada && !corpoAnterior.includes(marca(x)))) {
-              await github.rest.issues.createComment({ owner, repo, issue_number: painel,
-                body: `⏰ Produção ${nomeDa(d.wf)} atrasada: a main deployável \`${d.pedido.head_sha.slice(0, 10)}\` foi para a main há mais de 40 min e o último deploy ok segue em \`${d.ok.head_sha.slice(0, 10)}\`. Ver o run ${d.ultimo.html_url}; se a produção estiver congelada por rollback, soltar com deploy manual e descongelar=true (#1979).` });
+              const preso = d.ok ? d.ok.head_sha.slice(0, 10) : '?';
+              try {
+                await github.rest.issues.createComment({ owner, repo, issue_number: painel,
+                  body: `⏰ Produção ${nomeDa(d.wf)} atrasada: há pedido de deploy desde ${d.primeiro.created_at.slice(11, 16)} UTC e o último deploy ok segue em \`${preso}\` (main deployável \`${d.pedido.head_sha.slice(0, 10)}\`). Ver o run ${d.ultimo.html_url}. Se a produção estiver congelada por rollback, soltar com deploy manual e descongelar=true (#1979).` });
+              } catch (e) {
+                core.warning(`Alerta de atraso não saiu: ${e.message}`);
+              }
             }
             const filaTexto = () => {
               if (fila === null) return '_não foi possível ler_';
