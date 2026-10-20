@@ -6,6 +6,7 @@ import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { ultimaEFigurinha } from 'dashboard/components-next/conversa-canal/figurinha';
 import { ultimaEVisualizacaoUnica } from 'dashboard/components-next/conversa-canal/visualizacaoUnica';
 import { usePeleDaMensagem } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import { useNotaDoConector } from 'dashboard/components-next/conversa-canal/useNotaDoConector';
 
 const props = defineProps({
   message: {
@@ -27,6 +28,8 @@ const props = defineProps({
 });
 
 const { getPlainText } = useMessageFormatter();
+// #1941: a nota técnica antiga do conector WAHA aparece como aviso, com o texto curto.
+const notaDoConector = useNotaDoConector(() => props.message);
 
 const attachmentIcons = {
   image: 'i-lucide-image',
@@ -39,17 +42,17 @@ const attachmentIcons = {
 
 const messageByAgent = computed(() => {
   const { message_type: messageType } = props.message;
-  return messageType === MESSAGE_TYPE.OUTGOING;
+  return !notaDoConector.value && messageType === MESSAGE_TYPE.OUTGOING;
 });
 
 const isMessageAnActivity = computed(() => {
   const { message_type: messageType } = props.message;
-  return messageType === MESSAGE_TYPE.ACTIVITY;
+  return notaDoConector.value || messageType === MESSAGE_TYPE.ACTIVITY;
 });
 
 const isMessagePrivate = computed(() => {
   const { private: isPrivate } = props.message;
-  return isPrivate;
+  return !notaDoConector.value && isPrivate;
 });
 
 const parsedLastMessage = computed(() => {
@@ -145,6 +148,10 @@ const isMessageSticker = computed(() => {
         <Icon icon="i-lucide-image" class="size-3.5" />
         {{ $t('CHAT_LIST.ATTACHMENTS.image.CONTENT') }}
       </span>
+
+      <template v-else-if="notaDoConector">
+        {{ $t('CONVERSA_CANAL.NOTA_DO_CONECTOR.AVISO') }}
+      </template>
 
       <template v-else-if="message.content">
         {{ parsedLastMessage }}

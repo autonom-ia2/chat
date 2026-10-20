@@ -77,6 +77,7 @@ import BotaoDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminh
 import MarcaDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminhar/MarcaDeEncaminhar.vue';
 import { useEncaminharDaMensagem } from 'dashboard/components-next/conversa-canal/encaminhar/useEncaminharDaMensagem';
 import { useBranding } from 'shared/composables/useBranding';
+import { ehNotaDoConector } from 'dashboard/components-next/conversa-canal/notaDoConector';
 
 /**
  * @typedef {Object} Attachment
@@ -181,6 +182,14 @@ const { t } = useI18n();
 const route = useRoute();
 const inboxGetter = useMapGetter('inboxes/getInbox');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
+// #1941: a nota técnica antiga do conector WAHA aparece como a linha de aviso.
+const notaDoConector = computed(() =>
+  ehNotaDoConector({
+    caixa: inbox.value,
+    privada: props.private,
+    conteudo: props.content,
+  })
+);
 const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
 
@@ -227,6 +236,7 @@ const isAutonomiaAgentMessage = computed(
  * @type {import('vue').ComputedRef<'user'|'agent'|'activity'|'private'|'bot'|'template'>}
  */
 const variant = computed(() => {
+  if (notaDoConector.value) return MESSAGE_VARIANTS.ACTIVITY;
   if (props.private) return MESSAGE_VARIANTS.PRIVATE;
 
   if (props.isEmailInbox) {
@@ -301,6 +311,7 @@ const isBotOrAgentMessage = computed(() => {
  * @returns {import('vue').ComputedRef<'left'|'right'|'center'>} The computed orientation
  */
 const orientation = computed(() => {
+  if (notaDoConector.value) return ORIENTATION.CENTER;
   if (isBotOrAgentMessage.value) {
     return ORIENTATION.RIGHT;
   }
@@ -482,7 +493,7 @@ const shouldShowContextMenu = computed(() => {
 });
 
 const isBubble = computed(() => {
-  return props.messageType !== MESSAGE_TYPES.ACTIVITY;
+  return props.messageType !== MESSAGE_TYPES.ACTIVITY && !notaDoConector.value;
 });
 
 const isMessageDeleted = computed(() => {
@@ -742,6 +753,11 @@ onMounted(setupHighlightTimer);
 
 provideMessageContext({
   ...toRefs(props),
+  content: computed(() =>
+    notaDoConector.value
+      ? t('CONVERSA_CANAL.NOTA_DO_CONECTOR.AVISO')
+      : props.content
+  ),
   isPrivate: computed(() => props.private),
   variant,
   orientation,
@@ -780,7 +796,8 @@ provideMessageContext({
     >
       <LigacaoDoWhatsapp v-if="ligacao" />
       <AvisoDeTemporarias v-else-if="temporarias" />
-      <ActivityBubble v-else :content="content" />
+      <!-- O texto vem do contexto da mensagem (o da nota do conector é o aviso curto, #1941). -->
+      <ActivityBubble v-else />
     </div>
     <div
       v-else
