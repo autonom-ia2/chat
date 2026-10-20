@@ -943,6 +943,7 @@ Rails.application.routes.draw do
           resources :waha_inboxes, only: [:create], param: :inbox_id do
             member do
               get :connection
+              get :status
               post :reconnect
             end
           end
