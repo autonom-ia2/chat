@@ -37,6 +37,7 @@ import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
 import { useFase2 } from '../composables/useFase2';
 import { precisaDeVoce } from '../utils/estadoDoMaterial';
+import { useConferenciasDoMaterial } from '../composables/useConferenciasDoMaterial';
 import {
   ehAjudante,
   falaComCliente,
@@ -85,7 +86,6 @@ const store = useStore();
 const route = useRoute();
 const router = useRouter();
 const podeGerenciar = useCanManage('autonomia_manage');
-const NS = 'AGENTS.JORNADA.PAGINA';
 
 const idRef = toRef(props, 'agentId');
 const { agente, estado, carregar } = useAgenteDaPagina(idRef);
@@ -151,10 +151,8 @@ const ajudante = computed(() => ehAjudante(agente.value));
 const ajudaDoAgente = useAjudaDoAgente();
 // Tema 14: ligar e parar o ajudante falam de ajudar outros agentes, nunca de atender nem de passar conversas
 // para a equipe. Os demais agentes seguem com os textos de sempre.
-const doInterruptor = (deSempre, doAjudante, valores = {}) =>
-  ajudante.value
-    ? t(`AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.${doAjudante}`, valores)
-    : t(deSempre, valores);
+const doInterruptor = (deSempre, doAjudante) =>
+  ajudante.value ? doAjudante : deSempre;
 const registros = useMapGetter('autonomiaAgents/getRecords');
 const leituraDosAgentes = ref('pronto');
 const passoDaAjuda = ref('quem');
@@ -186,8 +184,14 @@ const permitidas = computed(() =>
 );
 
 // Onde responde: nome da caixa pela L2 (ou pelos canais do agente); sem a leitura, só a contagem.
+const TEXTO_DO_QUANDO = {
+  ALWAYS: () => t('AGENTS.JORNADA.PAGINA.QUANDO.ALWAYS'),
+  BUSINESS_HOURS: () => t('AGENTS.JORNADA.PAGINA.QUANDO.BUSINESS_HOURS'),
+  OUTSIDE_BUSINESS_HOURS: () =>
+    t('AGENTS.JORNADA.PAGINA.QUANDO.OUTSIDE_BUSINESS_HOURS'),
+};
 const quando = computed(() =>
-  t(`${NS}.QUANDO.${chaveDoQuando(quandoDoAgente(agente.value))}`)
+  TEXTO_DO_QUANDO[chaveDoQuando(quandoDoAgente(agente.value))]()
 );
 const atuais = computed(() => canais.atuais.value);
 // Antes da leitura das caixas, a contagem do servidor (porta e área juntas). #1720, com a Fase 2: o agente só da
@@ -246,32 +250,35 @@ const ondeNoHeroi = computed(() => {
         })
       : t('AGENTS.JORNADA.ONDE.RECEBE');
   }
-  if (!temCanal.value) return t(`${NS}.NENHUM_CANAL`);
+  if (!temCanal.value) return t('AGENTS.JORNADA.PAGINA.NENHUM_CANAL');
   const ligado = atendendo.value;
   if (umCanal.value) {
-    return t(ligado ? `${NS}.RESPONDE_NO` : `${NS}.PARADO_NO`, {
+    const valores = { canal: umCanal.value, quando: quando.value };
+    return ligado
+      ? t('AGENTS.JORNADA.PAGINA.RESPONDE_NO', valores)
+      : t('AGENTS.JORNADA.PAGINA.PARADO_NO', valores);
+  }
+  const n = quantosCanais.value;
+  const valores = { n, quando: quando.value };
+  return ligado
+    ? t('AGENTS.JORNADA.PAGINA.RESPONDE_EM_N', valores, n)
+    : t('AGENTS.JORNADA.PAGINA.PARADO_EM_N', valores, n);
+});
+
+const textoOnde = computed(() => {
+  if (fase2.value) return resumoDaFase2.value;
+  if (umCanal.value) {
+    return t('AGENTS.JORNADA.PAGINA.BLOCO_ONDE.TEXTO', {
       canal: umCanal.value,
       quando: quando.value,
     });
   }
   const n = quantosCanais.value;
   return t(
-    ligado ? `${NS}.RESPONDE_EM_N` : `${NS}.PARADO_EM_N`,
+    'AGENTS.JORNADA.PAGINA.BLOCO_ONDE.TEXTO_N',
     { n, quando: quando.value },
     n
   );
-});
-
-const textoOnde = computed(() => {
-  if (fase2.value) return resumoDaFase2.value;
-  if (umCanal.value) {
-    return t(`${NS}.BLOCO_ONDE.TEXTO`, {
-      canal: umCanal.value,
-      quando: quando.value,
-    });
-  }
-  const n = quantosCanais.value;
-  return t(`${NS}.BLOCO_ONDE.TEXTO_N`, { n, quando: quando.value }, n);
 });
 
 const horarios = computed(() => horariosDasCaixas(caixas.value, t));
@@ -284,14 +291,16 @@ const acaoPrincipal = computed(() => {
 const itensMais = computed(() => {
   const versoes = {
     chave: GAVETA.VERSOES,
-    texto: t(`${NS}.VERSOES.TITULO`),
+    texto: t('AGENTS.JORNADA.PAGINA.VERSOES.TITULO'),
     icone: 'i-lucide-history',
   };
   if (!podeGerenciar.value) return cotacao.value ? [] : [versoes];
   const soNome = usaFotoDoCanal(agente.value);
   const fotoENome = {
     chave: GAVETA.FOTO,
-    texto: soNome ? t(`${NS}.FOTO.TITULO_NOME`) : t(`${NS}.FOTO.TITULO`),
+    texto: soNome
+      ? t('AGENTS.JORNADA.PAGINA.FOTO.TITULO_NOME')
+      : t('AGENTS.JORNADA.PAGINA.FOTO.TITULO'),
     icone: soNome ? 'i-lucide-user-pen' : 'i-lucide-image',
   };
   // Ferramentas: só o SuperAdmin que gerencia (gavetasPermitidas), como a aba do painel antigo.
@@ -299,7 +308,7 @@ const itensMais = computed(() => {
     ? [
         {
           chave: GAVETA.FERRAMENTAS,
-          texto: t(`${NS}.FERRAMENTAS.MENU`),
+          texto: t('AGENTS.JORNADA.PAGINA.FERRAMENTAS.MENU'),
           icone: 'i-lucide-wrench',
         },
       ]
@@ -311,14 +320,14 @@ const itensMais = computed(() => {
     {
       chave: GAVETA.INSTRUCOES,
       texto: manual.value
-        ? t(`${NS}.EDITAR_INSTRUCOES`)
-        : t(`${NS}.INSTRUCOES.MENU`),
+        ? t('AGENTS.JORNADA.PAGINA.EDITAR_INSTRUCOES')
+        : t('AGENTS.JORNADA.PAGINA.INSTRUCOES.MENU'),
       icone: 'i-lucide-pencil',
     },
     ...ferramentas,
     {
       chave: 'excluir',
-      texto: t(`${NS}.EXCLUIR.MENU`),
+      texto: t('AGENTS.JORNADA.PAGINA.EXCLUIR.MENU'),
       icone: 'i-lucide-trash-2',
       perigo: true,
       separar: true,
@@ -401,10 +410,38 @@ watch([fontes, lendoFontes], ([lista, lendo]) => {
   fontesLidas.value = lista || [];
 });
 const listaDeFontes = computed(() => fontesLidas.value || []);
-// #1426 — "N coisas no material precisam de você" no quadro: só na Fase 2, que mostra o estado real de cada material.
-const problemasNoMaterial = computed(() =>
-  fase2.value ? listaDeFontes.value.filter(precisaDeVoce).length : 0
+// #1426 (4b) — conferências e autoteste do material: só na Fase 2 e fora da Lia (o servidor também recusa).
+const conferencias = useConferenciasDoMaterial({
+  agentId: () => Number(props.agentId),
+});
+const comConferencias = computed(() => fase2.value && !cotacao.value);
+const lerConferencias = () => {
+  if (comConferencias.value) conferencias.ler();
+};
+// A lista de materiais mudou de verdade (entrou, saiu, terminou a leitura ou a revisão): os problemas podem ter mudado.
+const marcaDasFontes = computed(() =>
+  listaDeFontes.value
+    .map(
+      fonte => `${fonte.id}:${fonte.status}:${fonte.review?.reviewed_at || ''}`
+    )
+    .join('|')
 );
+watch(marcaDasFontes, () => {
+  if (comConferencias.value) conferencias.lerDepoisDaMudanca();
+});
+
+// #1426 — "N coisas no material precisam de você" no quadro: só na Fase 2, que mostra o estado real de cada material.
+// Conta os cartões do "um problema por vez" e os materiais que precisam da pessoa sem cartão (ex.: reprovado na revisão
+// por outro motivo).
+const problemasNoMaterial = computed(() => {
+  if (!fase2.value) return 0;
+  const cartoes = comConferencias.value ? conferencias.problemas.value : [];
+  const comCartao = new Set(cartoes.flatMap(problema => problema.fontes || []));
+  const semCartao = listaDeFontes.value.filter(
+    fonte => !comCartao.has(fonte.id) && precisaDeVoce(fonte)
+  );
+  return cartoes.length + semCartao.length;
+});
 
 const lerFontes = async () => {
   fontesFalharam.value = false;
@@ -438,6 +475,7 @@ const carregarTudo = async () => {
   if (estado.value !== ESTADO_PAGINA.PRONTO) return;
   if (ajudante.value) ajudaDoAgente.carregar(Number(props.agentId));
   lerFontes();
+  lerConferencias();
   lerPerguntas();
 };
 
@@ -462,6 +500,11 @@ const mudar = (origem, inicial = null) => {
   testeInicial.value = inicial;
   vista.value = 'mudar';
 };
+
+// #1426 (4b) — "Corrigir conversando" do cartão do autoteste abre como o "Respondeu errado?" do Testar (pergunta e
+// resposta); "Escrever o que está nela" e "Explicar conversando" abrem o Mudar conversando geral.
+const corrigirDoMaterial = inicial =>
+  inicial ? mudar('teste', inicial) : mudar('geral');
 
 // "Mudar conversando" da nota da gaveta Nome / Foto e nome: mesmo efeito do botão do herói.
 const mudarDaGaveta = () => {
@@ -514,12 +557,18 @@ const voltarInterno = async () => {
       status: 'active',
     });
     useAlert(
-      doInterruptor(`${NS}.VOLTAR_INTERNO.FEITO`, 'VOLTOU', {
-        nome: nome.value,
-      })
+      doInterruptor(
+        t('AGENTS.JORNADA.PAGINA.VOLTAR_INTERNO.FEITO', { nome: nome.value }),
+        t('AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.VOLTOU', { nome: nome.value })
+      )
     );
   } catch {
-    useAlert(doInterruptor(`${NS}.VOLTAR_INTERNO.ERRO`, 'VOLTAR_ERRO'));
+    useAlert(
+      doInterruptor(
+        t('AGENTS.JORNADA.PAGINA.VOLTAR_INTERNO.ERRO'),
+        t('AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.VOLTAR_ERRO')
+      )
+    );
   } finally {
     alternando.value = false;
   }
@@ -619,7 +668,10 @@ const parar = async () => {
     status: 'paused',
   });
   useAlert(
-    doInterruptor(`${NS}.PARAR.FEITO`, 'PARAR_FEITO', { nome: nome.value })
+    doInterruptor(
+      t('AGENTS.JORNADA.PAGINA.PARAR.FEITO', { nome: nome.value }),
+      t('AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_FEITO', { nome: nome.value })
+    )
   );
 };
 
@@ -634,7 +686,7 @@ const excluir = async () => {
     excluindo.value = false;
     throw erro;
   }
-  useAlert(t(`${NS}.EXCLUIR.FEITO`, { nome: quem }));
+  useAlert(t('AGENTS.JORNADA.PAGINA.EXCLUIR.FEITO', { nome: quem }));
   irParaLista();
 };
 
@@ -658,8 +710,10 @@ const tirarPergunta = id => {
     >
       <!-- t07-carregando -->
       <template v-if="estado === ESTADO_PAGINA.CARREGANDO || excluindo">
-        <h1 class="sr-only">{{ t(`${NS}.TITULO_SR`) }}</h1>
-        <p role="status" class="sr-only">{{ t(`${NS}.CARREGANDO`) }}</p>
+        <h1 class="sr-only">{{ t('AGENTS.JORNADA.PAGINA.TITULO_SR') }}</h1>
+        <p role="status" class="sr-only">
+          {{ t('AGENTS.JORNADA.PAGINA.CARREGANDO') }}
+        </p>
         <div
           data-esqueleto
           aria-hidden="true"
@@ -701,8 +755,8 @@ const tirarPergunta = id => {
         <AgenteErro
           data-nao-existe
           tom="ambar"
-          :titulo="t(`${NS}.NAO_EXISTE`)"
-          :acao="t(`${NS}.VOLTAR_LISTA`)"
+          :titulo="t('AGENTS.JORNADA.PAGINA.NAO_EXISTE')"
+          :acao="t('AGENTS.JORNADA.PAGINA.VOLTAR_LISTA')"
           icone-acao="i-lucide-arrow-left"
           @acao="irParaLista"
         />
@@ -719,19 +773,19 @@ const tirarPergunta = id => {
             class="i-lucide-arrow-left size-4 rtl:rotate-180"
             aria-hidden="true"
           />
-          {{ t(`${NS}.VOLTAR_LISTA`) }}
+          {{ t('AGENTS.JORNADA.PAGINA.VOLTAR_LISTA') }}
         </a>
         <h1 class="m-0 text-3xl font-bold text-n-slate-12">
-          {{ agente?.name || t(`${NS}.TITULO_SR`) }}
+          {{ agente?.name || t('AGENTS.JORNADA.PAGINA.TITULO_SR') }}
         </h1>
         <AgenteErro
           data-erro-abrir
           :titulo="
             agente?.name
-              ? t(`${NS}.ERRO_ABRIR`, { nome: agente.name })
-              : t(`${NS}.ERRO_ABRIR_SEM_NOME`)
+              ? t('AGENTS.JORNADA.PAGINA.ERRO_ABRIR', { nome: agente.name })
+              : t('AGENTS.JORNADA.PAGINA.ERRO_ABRIR_SEM_NOME')
           "
-          :garantia="t(`${NS}.ERRO_ABRIR_GARANTIA`)"
+          :garantia="t('AGENTS.JORNADA.PAGINA.ERRO_ABRIR_GARANTIA')"
           :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
           @acao="tentarDeNovo"
         />
@@ -774,7 +828,7 @@ const tirarPergunta = id => {
             class="i-lucide-triangle-alert size-5 shrink-0 text-n-amber-11"
             aria-hidden="true"
           />
-          {{ t(`${NS}.PARADO_FAIXA`, { nome }) }}
+          {{ t('AGENTS.JORNADA.PAGINA.PARADO_FAIXA', { nome }) }}
         </p>
         <p
           v-if="!podeGerenciar"
@@ -785,7 +839,7 @@ const tirarPergunta = id => {
             class="i-lucide-lock size-5 shrink-0 text-n-blue-11"
             aria-hidden="true"
           />
-          {{ t(`${NS}.SO_VER`) }}
+          {{ t('AGENTS.JORNADA.PAGINA.SO_VER') }}
         </p>
         <AgenteSemana
           :numeros="semana.numerosDe(agente.id)"
@@ -848,7 +902,9 @@ const tirarPergunta = id => {
         :carregando-fontes="fontesLidas === null"
         :erro-ler="fontesFalharam"
         :fase2="fase2"
+        :conferencias="comConferencias ? conferencias : null"
         @fechar="fechar"
+        @corrigir="corrigirDoMaterial"
         @reler="lerFontes"
         @pergunta-resolvida="tirarPergunta"
       />
@@ -993,46 +1049,69 @@ const tirarPergunta = id => {
     <template v-if="(pronto || excluindo) && podeGerenciar">
       <DialogoAcao
         ref="dialogoParar"
-        :titulo="doInterruptor(`${NS}.PARAR.TITULO`, 'PARAR_TITULO', { nome })"
-        :texto="doInterruptor(`${NS}.PARAR.TEXTO`, 'PARAR_TEXTO', { nome })"
-        :confirmar="doInterruptor(`${NS}.PARAR.CONFIRMAR`, 'PARAR_CONFIRMAR')"
-        :rotulo-carregando="t(`${NS}.PARAR.PARANDO`)"
-        :erro-titulo="doInterruptor(`${NS}.PARAR.ERRO`, 'PARAR_ERRO')"
+        :titulo="
+          doInterruptor(
+            t('AGENTS.JORNADA.PAGINA.PARAR.TITULO', { nome }),
+            t('AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_TITULO', { nome })
+          )
+        "
+        :texto="
+          doInterruptor(
+            t('AGENTS.JORNADA.PAGINA.PARAR.TEXTO', { nome }),
+            t('AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_TEXTO', { nome })
+          )
+        "
+        :confirmar="
+          doInterruptor(
+            t('AGENTS.JORNADA.PAGINA.PARAR.CONFIRMAR'),
+            t('AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_CONFIRMAR')
+          )
+        "
+        :rotulo-carregando="t('AGENTS.JORNADA.PAGINA.PARAR.PARANDO')"
+        :erro-titulo="
+          doInterruptor(
+            t('AGENTS.JORNADA.PAGINA.PARAR.ERRO'),
+            t('AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_ERRO')
+          )
+        "
         :erro-garantia="
-          doInterruptor(`${NS}.PARAR.ERRO_GARANTIA`, 'PARAR_ERRO_GARANTIA', {
-            nome,
-          })
+          doInterruptor(
+            t('AGENTS.JORNADA.PAGINA.PARAR.ERRO_GARANTIA', { nome }),
+            t('AGENTS.JORNADA.AJUDANTE.INTERRUPTOR.PARAR_ERRO_GARANTIA', {
+              nome,
+            })
+          )
         "
         :executar="parar"
       />
       <DialogoAcao
         ref="dialogoExcluir"
-        :titulo="t(`${NS}.EXCLUIR.TITULO`, { nome })"
-        :texto="t(`${NS}.EXCLUIR.TEXTO`, { nome })"
-        :confirmar="t(`${NS}.EXCLUIR.CONFIRMAR`)"
-        :rotulo-carregando="t(`${NS}.EXCLUIR.EXCLUINDO`)"
+        :titulo="t('AGENTS.JORNADA.PAGINA.EXCLUIR.TITULO', { nome })"
+        :texto="t('AGENTS.JORNADA.PAGINA.EXCLUIR.TEXTO', { nome })"
+        :confirmar="t('AGENTS.JORNADA.PAGINA.EXCLUIR.CONFIRMAR')"
+        :rotulo-carregando="t('AGENTS.JORNADA.PAGINA.EXCLUIR.EXCLUINDO')"
         variante="perigo"
-        :erro-titulo="t(`${NS}.EXCLUIR.ERRO`)"
-        :erro-garantia="t(`${NS}.EXCLUIR.ERRO_GARANTIA`)"
+        :erro-titulo="t('AGENTS.JORNADA.PAGINA.EXCLUIR.ERRO')"
+        :erro-garantia="t('AGENTS.JORNADA.PAGINA.EXCLUIR.ERRO_GARANTIA')"
         :executar="excluir"
       >
         <p v-if="trabalhando" data-extra class="m-0 text-sm text-n-slate-11">
-          {{ t(`${NS}.EXCLUIR.EXTRA`) }}
+          {{ t('AGENTS.JORNADA.PAGINA.EXCLUIR.EXTRA') }}
           <button
             data-atalho-parar
             type="button"
             class="inline-flex items-center font-semibold underline min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
             @click="pararEmVezDeExcluir"
           >
-            {{ t(`${NS}.EXCLUIR.EXTRA_ACAO`) }}
+            {{ t('AGENTS.JORNADA.PAGINA.EXCLUIR.EXTRA_ACAO') }}
           </button>
         </p>
       </DialogoAcao>
       <DialogoAcao
         ref="dialogoEscrever"
-        :titulo="t(`${NS}.INSTRUCOES.AVISO_TITULO`)"
-        :texto="t(`${NS}.INSTRUCOES.AVISO_TEXTO`, { nome })"
-        :confirmar="t(`${NS}.INSTRUCOES.AVISO_CONFIRMAR`)"
+        :titulo="t('AGENTS.JORNADA.PAGINA.INSTRUCOES.AVISO_TITULO')"
+        :texto="t('AGENTS.JORNADA.PAGINA.INSTRUCOES.AVISO_TEXTO', { nome })"
+        :confirmar="t('AGENTS.JORNADA.PAGINA.INSTRUCOES.AVISO_CONFIRMAR')"
         variante="aviso"
         @confirmado="abrir(GAVETA.INSTRUCOES)"
       />
