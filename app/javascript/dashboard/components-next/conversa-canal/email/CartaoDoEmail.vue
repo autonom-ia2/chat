@@ -17,6 +17,7 @@ import { EmailQuoteExtractor } from 'dashboard/helper/emailQuoteExtractor.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
 import { useMapGetter } from 'dashboard/composables/store';
 import { emitter } from 'shared/helpers/mitt';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useMessageContext } from '../../message/provider.js';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../message/constants.js';
 import { useAgora } from '../useAgora';
@@ -270,8 +271,14 @@ const emProcesso = computed(
   () => falhou.value || status.value === MESSAGE_STATUS.PROGRESS
 );
 const temTexto = computed(() => Boolean(content.value || temEmail.value));
-const { recursos } = useRecursosDoEmail(
-  useMapGetter('getCurrentAccountId').value
+const contaAtual = useMapGetter('getCurrentAccountId');
+const { recursos } = useRecursosDoEmail(contaAtual.value);
+// Convite de reunião (#1984): o cartão só com a chave da conta ligada.
+const flagLigada = useMapGetter('accounts/isFeatureEnabledonAccount');
+const mostraConvite = computed(
+  () =>
+    Boolean(contentAttributes.value?.email?.convite) &&
+    flagLigada.value(contaAtual.value, FEATURE_FLAGS.CONVITE_DA_REUNIAO)
 );
 const podeTraduzir = computed(
   () =>
@@ -534,9 +541,12 @@ const excluir = async () => {
 
       <section class="mt-3 ps-[60px] sm:ps-[68px] pe-2 sm:pe-4">
         <ConviteDaReuniao
-          v-if="contentAttributes?.email?.convite"
+          v-if="mostraConvite"
           :convite="contentAttributes.email.convite"
           :mensagem-id="id"
+          :conversation-id="conversationId"
+          :caixa="caixa"
+          :pode-operar="email.podeOperar.value"
           :fuso="fuso"
         />
         <div

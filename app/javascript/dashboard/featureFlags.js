@@ -69,6 +69,7 @@ export const FEATURE_FLAGS = {
   EMAIL_LIDO_SINCRONIZADO: 'email_lido_sincronizado',
   CRM_NUMEROS_LENTES: 'crm_numeros_lentes',
   CONTATO_PELO_EMAIL: 'contato_pelo_email',
+  CONVITE_DA_REUNIAO: 'convite_da_reuniao',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

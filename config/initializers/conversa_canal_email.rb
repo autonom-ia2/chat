@@ -11,6 +11,8 @@
 #   (app/controllers/concerns/conversa_canal/recusa_do_email_na_api.rb);
 # - conversa no Spam sem pesquisa de satisfação, sem o robô da caixa e sem automações (app/listeners/conversa_canal/
 #   *_fora_do_spam.rb; opção (b) do Rodrigo, 18/10). Relatórios, CRM, webhooks da conta e LeadSquared seguem normais.
+# - convite de reunião (parte text/calendar) guardado em content_attributes.email.convite (#1984;
+#   app/services/conversa_canal/convite_no_email_recebido.rb).
 Rails.application.config.to_prepare do
   Messages::MessageBuilder.prepend(ConversaCanal::MessageBuilderComCitacao) unless Messages::MessageBuilder <= ConversaCanal::MessageBuilderComCitacao
   ConversationReplyMailer.prepend(ConversaCanal::EncaminhadoNoMailer) unless ConversationReplyMailer <= ConversaCanal::EncaminhadoNoMailer
@@ -24,4 +26,5 @@ Rails.application.config.to_prepare do
   CsatSurveyListener.prepend(ConversaCanal::PesquisaForaDoSpam) unless CsatSurveyListener <= ConversaCanal::PesquisaForaDoSpam
   AgentBotListener.prepend(ConversaCanal::RoboForaDoSpam) unless AgentBotListener <= ConversaCanal::RoboForaDoSpam
   AutomationRuleListener.prepend(ConversaCanal::AutomacaoForaDoSpam) unless AutomationRuleListener <= ConversaCanal::AutomacaoForaDoSpam
+  MailPresenter.prepend(ConversaCanal::ConviteNoEmailRecebido) unless MailPresenter <= ConversaCanal::ConviteNoEmailRecebido
 end

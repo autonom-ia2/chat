@@ -4702,6 +4702,20 @@
     ],
     "sem_corpo": false
   },
+  "PATCH conversa_canal/convites_do_email/:id": {
+    "campos": {
+      "conversation_id": {},
+      "resposta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/convites_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:11",
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:29",
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:25"
+    ],
+    "sem_corpo": false
+  },
   "PATCH conversa_canal/pastas_do_email/:conversation_id": {
     "campos": {
       "pasta": {}
@@ -23190,6 +23204,20 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
+    ],
+    "sem_corpo": false
+  },
+  "PUT conversa_canal/convites_do_email/:id": {
+    "campos": {
+      "conversation_id": {},
+      "resposta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/convites_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:11",
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:29",
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:25"
     ],
     "sem_corpo": false
   },

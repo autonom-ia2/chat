@@ -600,12 +600,19 @@
         "SIM": "Yes",
         "TALVEZ": "Maybe",
         "NAO": "No",
-        "RESPONDE_COMO": "Replies as {caixa}. The organizer gets your answer.",
+        "RESPONDE_COMO": "Replies as {caixa}. The answer goes to {organizador}.",
         "ERRO": "Couldn't send your answer. Try again.",
         "CONFIRMOU_SIM": "Attendance confirmed",
         "CONFIRMOU_TALVEZ": "You replied maybe",
         "CONFIRMOU_NAO": "You declined",
-        "MUDAR": "Change answer"
+        "MUDAR": "Change answer",
+        "DIA_INTEIRO": "All day",
+        "SEM_FUSO": "(time zone not stated; time may be off)",
+        "RECORRENTE": "Recurring",
+        "OCORRENCIA": "One date of a recurring meeting",
+        "PASSOU": "This meeting has already ended.",
+        "MANTER": "Keep my answer",
+        "SEM_ORGANIZADOR": "This invitation does not say who organized it, so it cannot be answered from here."
       }
     }
   }

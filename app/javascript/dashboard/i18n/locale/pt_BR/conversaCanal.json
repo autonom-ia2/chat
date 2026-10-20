@@ -600,12 +600,19 @@
         "SIM": "Sim",
         "TALVEZ": "Talvez",
         "NAO": "Não",
-        "RESPONDE_COMO": "Responde como {caixa}. O organizador recebe a sua resposta.",
+        "RESPONDE_COMO": "Responde como {caixa}. A resposta vai para {organizador}.",
         "ERRO": "Não deu para enviar a resposta. Tente de novo.",
         "CONFIRMOU_SIM": "Presença confirmada",
         "CONFIRMOU_TALVEZ": "Você respondeu talvez",
         "CONFIRMOU_NAO": "Você recusou",
-        "MUDAR": "Mudar resposta"
+        "MUDAR": "Mudar resposta",
+        "DIA_INTEIRO": "Dia inteiro",
+        "SEM_FUSO": "(convite sem fuso; o horário pode estar diferente)",
+        "RECORRENTE": "Recorrente",
+        "OCORRENCIA": "Uma data de reunião recorrente",
+        "PASSOU": "Esta reunião já terminou.",
+        "MANTER": "Manter a resposta",
+        "SEM_ORGANIZADOR": "Este convite não diz quem organizou, por isso não dá para responder daqui."
       }
     }
   }

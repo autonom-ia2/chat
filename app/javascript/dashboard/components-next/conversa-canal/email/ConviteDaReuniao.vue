@@ -1,14 +1,16 @@
 <script setup>
 // Convite de reunião no e-mail (#1984): bloco de data como na folhinha, horário e duração,
 // botão de entrar na chamada, quem vai (avatares) e a resposta da própria caixa num
-// controle segmentado (Sim / Talvez / Não). Só responde quem foi convidado: convite
-// recebido em cópia mostra as informações e diz por que não dá para responder daqui.
-import { computed, ref } from 'vue';
+// controle segmentado (Sim / Talvez / Não). Só responde a caixa que está entre os
+// convidados (pelo e-mail dela ou pelo da agenda ligada): convite recebido em cópia
+// mostra as informações e diz por que não dá para responder daqui. A resposta fica
+// gravada na mensagem e chega aos outros atendentes pela atualização da conversa.
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import Spinner from 'next/spinner/Spinner.vue';
-import ConviteAPI from 'dashboard/api/conviteDaReuniao';
+import ConversaCanalAPI from 'dashboard/api/conversaCanal';
 import { useAgora } from '../useAgora';
 import { idiomaDoPainel } from '../dataDaConversa';
 import {
@@ -24,6 +26,11 @@ import {
 const props = defineProps({
   convite: { type: Object, required: true },
   mensagemId: { type: Number, required: true },
+  conversationId: { type: Number, required: true },
+  // A caixa da conversa (getter inboxes/getInbox): email e calendar_identity.
+  caixa: { type: Object, default: () => ({}) },
+  // Quem só lê a conversa (conversation_view) vê o convite, sem responder.
+  podeOperar: { type: Boolean, default: true },
   fuso: { type: String, default: undefined },
 });
 
@@ -65,14 +72,30 @@ const agora = useAgora();
 const resposta = ref(props.convite.minhaResposta || null);
 const mudando = ref(false);
 const enviando = ref(null);
-const erro = ref(false);
+const erro = ref('');
+
+// Outro atendente respondeu: a mensagem atualizada traz a resposta nova.
+watch(
+  () => props.convite.minhaResposta,
+  nova => {
+    if (nova && !enviando.value) resposta.value = nova;
+  }
+);
 
 const cancelado = computed(() => props.convite.metodo === 'CANCEL');
 const idioma = computed(() => idiomaDoPainel(locale.value));
+const diaInteiro = computed(() => Boolean(props.convite.diaInteiro));
+// Dia inteiro vem guardado ao meio-dia UTC: a data se lê em UTC, sem fuso trocar o dia.
+const fusoDaData = computed(() => (diaInteiro.value ? 'UTC' : props.fuso));
+const passou = computed(() => {
+  if (props.convite.recorrente) return false;
+  const termino = props.convite.fim || props.convite.inicio;
+  return Boolean(termino) && termino < agora.value;
+});
 const bloco = computed(() =>
   blocoDaData({
     inicio: props.convite.inicio,
-    fuso: props.fuso,
+    fuso: fusoDaData.value,
     idioma: idioma.value,
   })
 );
@@ -81,19 +104,23 @@ const dia = computed(() =>
     inicio: props.convite.inicio,
     agora: agora.value,
     fuso: props.fuso,
+    fusoDoInicio: fusoDaData.value,
     t,
     idioma: idioma.value,
   })
 );
 const horario = computed(() =>
-  horarioDoConvite({
-    inicio: props.convite.inicio,
-    fim: props.convite.fim,
-    fuso: props.fuso,
-    idioma: idioma.value,
-  })
+  diaInteiro.value
+    ? t('CONVERSA_CANAL.EMAIL.CONVITE.DIA_INTEIRO')
+    : horarioDoConvite({
+        inicio: props.convite.inicio,
+        fim: props.convite.fim,
+        fuso: props.fuso,
+        idioma: idioma.value,
+      })
 );
 const duracao = computed(() => {
+  if (diaInteiro.value) return '';
   const minutos = minutosDoConvite(props.convite);
   if (!minutos) return '';
   if (minutos < 60)
@@ -110,32 +137,59 @@ const rotuloDeEntrar = computed(() =>
     ? t('CONVERSA_CANAL.EMAIL.CONVITE.ENTRAR_NO', { app: aplicativo.value })
     : t('CONVERSA_CANAL.EMAIL.CONVITE.ENTRAR')
 );
-const pessoas = computed(() => [
-  props.convite.organizador,
-  ...(props.convite.convidados || []),
-]);
+// O Google repete o organizador entre os convidados: cada pessoa aparece uma vez.
+const pessoas = computed(() =>
+  [props.convite.organizador, ...(props.convite.convidados || [])].filter(
+    (pessoa, indice, todas) =>
+      pessoa?.email &&
+      todas.findIndex(outra => outra?.email === pessoa.email) === indice
+  )
+);
 const avatares = computed(() => pessoas.value.slice(0, AVATARES_VISIVEIS));
 const aMais = computed(() => pessoas.value.length - avatares.value.length);
 const convidados = computed(() =>
   (props.convite.convidados || []).map(nomeDaPessoa).join(', ')
 );
+// O endereço da caixa na lista de convidados; sem ele, o convite é só informativo.
+const enderecoConvidado = computed(() => {
+  const meus = [props.caixa.email, props.caixa.calendar_identity]
+    .filter(Boolean)
+    .map(endereco => endereco.toLowerCase());
+  return (props.convite.convidados || [])
+    .map(pessoa => (pessoa.email || '').toLowerCase())
+    .find(endereco => meus.includes(endereco));
+});
+const podeResponder = computed(
+  () =>
+    Boolean(enderecoConvidado.value) && Boolean(props.convite.organizador?.email)
+);
+const nomeDaCaixa = computed(
+  () => enderecoConvidado.value || props.caixa.email || props.caixa.name || ''
+);
 const perguntando = computed(
   () =>
     !cancelado.value &&
-    props.convite.podeResponder &&
+    !passou.value &&
+    podeResponder.value &&
+    props.podeOperar &&
     (!resposta.value || mudando.value)
 );
 
 const responder = async escolha => {
   if (enviando.value) return;
   enviando.value = escolha;
-  erro.value = false;
+  erro.value = '';
   try {
-    const { data } = await ConviteAPI.responder(props.mensagemId, escolha);
-    resposta.value = data.resposta;
+    const { data } = await ConversaCanalAPI.responderConvite(
+      props.conversationId,
+      props.mensagemId,
+      escolha
+    );
+    resposta.value = data.convite.minha_resposta;
     mudando.value = false;
-  } catch {
-    erro.value = true;
+  } catch (falha) {
+    erro.value =
+      falha?.response?.data?.error || t('CONVERSA_CANAL.EMAIL.CONVITE.ERRO');
   } finally {
     enviando.value = null;
   }
@@ -171,9 +225,7 @@ const responder = async escolha => {
         >
           {{ bloco.dia }}
         </span>
-        <span
-          class="bg-n-solid-2 pb-1.5 pt-1 text-[0.6875rem] text-n-slate-11"
-        >
+        <span class="bg-n-solid-2 pb-1.5 pt-1 text-[0.6875rem] text-n-slate-11">
           {{ bloco.semana }}
         </span>
       </div>
@@ -189,6 +241,18 @@ const responder = async escolha => {
           >
             <Icon icon="i-lucide-calendar-x" class="size-3" />
             {{ t('CONVERSA_CANAL.EMAIL.CONVITE.CANCELADA') }}
+          </span>
+          <span
+            v-if="convite.recorrente || convite.ocorrencia"
+            class="inline-flex items-center gap-1 rounded-full bg-n-alpha-2 px-2 py-0.5"
+            data-convite-recorrente
+          >
+            <Icon icon="i-lucide-repeat" class="size-3" />
+            {{
+              convite.ocorrencia
+                ? t('CONVERSA_CANAL.EMAIL.CONVITE.OCORRENCIA')
+                : t('CONVERSA_CANAL.EMAIL.CONVITE.RECORRENTE')
+            }}
           </span>
         </div>
         <h3
@@ -208,6 +272,13 @@ const responder = async escolha => {
           </span>
           <span v-if="duracao" class="whitespace-nowrap text-n-slate-11">
             ({{ duracao }})
+          </span>
+          <span
+            v-if="convite.fusoIncerto && !diaInteiro"
+            class="text-xs text-n-amber-11"
+            data-convite-sem-fuso
+          >
+            {{ t('CONVERSA_CANAL.EMAIL.CONVITE.SEM_FUSO') }}
           </span>
         </p>
 
@@ -277,15 +348,27 @@ const responder = async escolha => {
       </p>
 
       <p
-        v-else-if="!convite.podeResponder"
+        v-else-if="passou"
+        class="flex items-center gap-2 text-sm text-n-slate-11"
+        data-convite-passou
+      >
+        <Icon icon="i-lucide-calendar-check" class="size-4" />
+        {{ t('CONVERSA_CANAL.EMAIL.CONVITE.PASSOU') }}
+      </p>
+
+      <p
+        v-else-if="!podeResponder"
         class="flex items-start gap-2 text-sm text-n-slate-11"
         data-convite-so-informativo
       >
         <Icon icon="i-lucide-info" class="mt-0.5 size-4 flex-shrink-0" />
-        <span>
+        <span v-if="!convite.organizador?.email">
+          {{ t('CONVERSA_CANAL.EMAIL.CONVITE.SEM_ORGANIZADOR') }}
+        </span>
+        <span v-else>
           {{
             t('CONVERSA_CANAL.EMAIL.CONVITE.NAO_CONVIDADA', {
-              caixa: convite.caixa,
+              caixa: nomeDaCaixa,
             })
           }}
         </span>
@@ -302,7 +385,8 @@ const responder = async escolha => {
           <p class="text-xs text-n-slate-11">
             {{
               t('CONVERSA_CANAL.EMAIL.CONVITE.RESPONDE_COMO', {
-                caixa: convite.caixa,
+                caixa: nomeDaCaixa,
+                organizador: convite.organizador?.email,
               })
             }}
           </p>
@@ -331,13 +415,26 @@ const responder = async escolha => {
             {{ t(ROTULO[opcao]) }}
           </button>
         </div>
-        <p v-if="erro" class="text-sm text-n-ruby-11 sm:basis-full" role="alert">
-          {{ t('CONVERSA_CANAL.EMAIL.CONVITE.ERRO') }}
+        <p
+          v-if="erro"
+          class="text-sm text-n-ruby-11 sm:basis-full"
+          role="alert"
+        >
+          {{ erro }}
         </p>
+        <button
+          v-if="mudando && resposta"
+          type="button"
+          class="text-sm font-medium text-n-slate-11 hover:underline sm:basis-full sm:text-end"
+          data-manter-resposta
+          @click="mudando = false"
+        >
+          {{ t('CONVERSA_CANAL.EMAIL.CONVITE.MANTER') }}
+        </button>
       </div>
 
       <div
-        v-else
+        v-else-if="resposta"
         class="flex flex-wrap items-center justify-between gap-2"
         data-convite-respondido
       >
@@ -350,6 +447,7 @@ const responder = async escolha => {
           {{ t(CONFIRMACAO[resposta]) }}
         </span>
         <button
+          v-if="podeOperar"
           type="button"
           class="relative text-sm font-medium text-n-blue-11 after:absolute after:-inset-3 after:content-[''] hover:underline"
           @click="mudando = true"

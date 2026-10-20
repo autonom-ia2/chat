@@ -236,7 +236,9 @@ RSpec.describe Account do
         # #1813: posição 42, logo depois de crm_numeros_lentes (tabela da Orquestração, 19/10).
         feature_contato_pelo_email: 1 << 41,
         # #1910: posição 43 (definitiva da Orquestração, 19/10), depois de contato_pelo_email (42, #1917).
-        feature_crm_assunto_na_etapa: 1 << 42
+        feature_crm_assunto_na_etapa: 1 << 42,
+        # #1984: posição provisória 50 (tabela da Orquestração, 20/10); nesta base é a 44. Conferir na vaga.
+        feature_convite_da_reuniao: 1 << 43
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

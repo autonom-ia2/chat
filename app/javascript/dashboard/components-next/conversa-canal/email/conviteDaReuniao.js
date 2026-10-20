@@ -21,14 +21,25 @@ const diaNoFuso = (segundos, fuso) =>
 const diasEntre = (diaA, diaB) =>
   Math.round((Date.parse(diaA) - Date.parse(diaB)) / 86400000);
 
-// "Hoje", "Amanhã" ou "qua., 22 de out." — sempre no fuso da conta.
-export const diaDoConvite = ({ inicio, agora, fuso, t, idioma = 'pt-BR' }) => {
-  const diferenca = diasEntre(diaNoFuso(inicio, fuso), diaNoFuso(agora, fuso));
+// "Hoje", "Amanhã" ou "qua., 22 de out." — agora sempre no fuso da conta; o início no
+// fuso dele (UTC no dia inteiro, que vem guardado ao meio-dia UTC).
+export const diaDoConvite = ({
+  inicio,
+  agora,
+  fuso,
+  fusoDoInicio = fuso,
+  t,
+  idioma = 'pt-BR',
+}) => {
+  const diferenca = diasEntre(
+    diaNoFuso(inicio, fusoDoInicio),
+    diaNoFuso(agora, fuso)
+  );
   if (diferenca === 0) return t('CONVERSA_CANAL.EMAIL.CONVITE.HOJE');
   if (diferenca === 1) return t('CONVERSA_CANAL.EMAIL.CONVITE.AMANHA');
   return formatar(
     idioma,
-    fuso,
+    fusoDoInicio,
     { weekday: 'short', day: 'numeric', month: 'short' },
     inicio
   );
