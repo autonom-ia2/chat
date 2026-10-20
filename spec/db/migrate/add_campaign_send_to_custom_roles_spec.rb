@@ -1,5 +1,5 @@
 require 'rails_helper'
-require Rails.root.join('db/migrate/20261108181000_add_campaign_send_to_custom_roles.rb')
+require Rails.root.join('db/migrate/20261108210000_add_campaign_send_to_custom_roles.rb')
 
 # #1898 — quem já disparava campanhas pelo `campaign_manage` continua disparando depois da divisão.
 RSpec.describe AddCampaignSendToCustomRoles do

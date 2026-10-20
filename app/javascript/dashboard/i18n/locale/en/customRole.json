@@ -133,9 +133,9 @@
         },
         "CRM": {
           "NAME": "CRM",
-          "HINT": "Pipelines, deals and calendar",
-          "LEVEL_VIEW": "Sees the board and deals. Does not change them.",
-          "LEVEL_MANAGE": "Creates, edits and moves deals."
+          "HINT": "Pipelines, cards and calendar",
+          "LEVEL_VIEW": "Sees the board and cards. Does not change them.",
+          "LEVEL_MANAGE": "Creates, edits and moves cards."
         },
         "AUTONOMIA": {
           "NAME": "Autonom.ia agents",
@@ -272,7 +272,7 @@
     "EXTRAS": {
       "CONVERSATION_UNASSIGNED_MANAGE": "Sees the queue of unassigned conversations and can take them.",
       "CONVERSATION_PARTICIPATING_MANAGE": "Sees conversations they take part in, even if assigned to someone else.",
-      "CRM_MOVE_CARDS": "Drags deals between stages without editing anything else.",
+      "CRM_MOVE_CARDS": "Drags cards between stages without editing anything else.",
       "CRM_VIEW_REPORTS": "Pipeline dashboard and AI usage cost.",
       "CRM_MANAGE_PIPELINES": "Stages, automations and pipeline inboxes.",
       "CRM_MANAGE_AI": "Sets up and accepts AI suggestions. This has a cost.",
@@ -398,7 +398,7 @@
       "PHRASES": {
         "OWN_CONVERSATIONS": "Answer their own conversations and take from the queue",
         "READ_CONTACTS_KB": "Read contacts and the knowledge base",
-        "MANAGE_DEALS": "Create and move deals in the CRM",
+        "MANAGE_DEALS": "Create and move cards in the CRM",
         "OTHERS_CONVERSATIONS": "See other agents' conversations",
         "REPORTS": "See reports",
         "SETTINGS": "Change settings",
@@ -413,7 +413,7 @@
         "EXPORT_CRM": "Export the CRM list",
         "ALL_SEARCHES": "See everyone's prospecting searches",
         "ANSWER_CONVERSATIONS": "Answer conversations",
-        "EDIT_DEALS": "Edit deals in the CRM",
+        "EDIT_DEALS": "Edit cards in the CRM",
         "CRM_DASHBOARD": "See the CRM dashboard and AI cost",
         "CHANGE_ANYTHING": "Change anything",
         "SETUP_INBOXES": "Set up inboxes and reconnect WhatsApp",

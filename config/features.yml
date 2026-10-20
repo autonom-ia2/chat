@@ -612,9 +612,22 @@
 # só o que falta, pela regra do Decisores::Aplicador. Paga a chave de IA da conta ou da instalação; sem chave, nada
 # acontece. Posição 42 na feature_flags_ext_1, bit 41 (2199023255552), logo depois de `crm_numeros_lentes` (41) (tabela
 # da Orquestração, 19/10): a posição na lista é o bit.
-# Desligada (padrão): nada é lido. Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração,
-# depois do deploy).
+# Desligada: nada é lido. Ligada em todas as contas em 20/10/2026 (Rodrigo, pela Orquestração). Padrão das contas
+# novas: ligada desde o #1927 (migration 20261108190000).
 - name: contato_pelo_email
   display_name: Contato completado pela leitura do e-mail recebido
+  enabled: true
+  column: feature_flags_ext_1
+
+# A IA de assunto cria o card direto na coluna certa do funil (#1910). Ligada: o modelo maior, que já dá o nome ao
+# pedido novo, escolhe também a etapa pela frase de cada uma (ai_criteria), ou "nenhuma etapa clara" (1ª etapa, como
+# antes). Vale para o card criado, para o card da chegada levado a outro funil (C36) e para o card da chegada sem nome
+# do mesmo funil, só na caixa em Automática (Crm::Subjects::Etapa). Posição 43 na feature_flags_ext_1
+# (4398046511104 = 1 << 42), definitiva da Orquestração (19/10): depois de `crm_numeros_lentes` (41) e de
+# `contato_pelo_email` (42, #1917). Sem migration.
+# Desligada (padrão): tudo como antes. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do
+# deploy); conta nova nasce sem ela até o Rodrigo decidir.
+- name: crm_assunto_na_etapa
+  display_name: IA de assunto cria o card na coluna certa
   enabled: false
   column: feature_flags_ext_1
