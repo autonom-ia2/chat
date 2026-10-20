@@ -6,6 +6,8 @@ module Crm
     #   image → meta['ai_caption']
     # Idempotent (skips already-done attachments) and capped per run to bound
     # cost/latency. Failures are marked done so they are not retried forever.
+    # #1926: a janela é a da avaliação de etapa (ContextBuilder.janela_da_avaliacao), não as 12 últimas: áudio ou imagem
+    # que a avaliação lê também chega transcrito/descrito. O teto por rodada (limit) segue, das mais novas às mais antigas.
     class MediaEnricher
       def initialize(card:, limit: Config::MAX_MEDIA_ENRICH_PER_EVAL)
         @card = card
@@ -39,7 +41,7 @@ module Crm
                     .where(private: false)
                     .where.not(message_type: :activity)
                     .reorder(id: :desc)
-                    .limit(ContextBuilder::MAX_RECENT_MESSAGES)
+                    .limit(ContextBuilder.janela_da_avaliacao(1))
                     .flat_map(&:attachments)
                     .select { |attachment| needs_enrich?(attachment) }
       end

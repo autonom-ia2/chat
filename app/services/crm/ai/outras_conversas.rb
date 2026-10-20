@@ -15,7 +15,9 @@
 # avaliação de um card só) e as vinculadas que chegam por uma caixa que alimenta o funil dele; uma conversa vinculada
 # de um canal que o funil não atende não vai para a chamada.
 class Crm::Ai::OutrasConversas
-  MAX_POR_CARD = Crm::Ai::ContextBuilder::MAX_RECENT_MESSAGES
+  # #1926: o recorte que a avaliação do card lê de uma conversa quando ele tem duas (a comum e a do outro canal, o caso
+  # da conjunta). Com 12, a proposta antiga do outro canal, que a avaliação do card sozinho já via, sumia aqui.
+  MAX_POR_CARD = Crm::Ai::ContextBuilder.janela_da_avaliacao(2)
   MAX_TOTAL = Crm::Ai::ContextBuilder::MAX_MESSAGES_CAP
 
   # classificadores: um StageClassifier por card, o principal primeiro.
