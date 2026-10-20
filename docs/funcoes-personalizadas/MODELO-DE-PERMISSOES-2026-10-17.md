@@ -8,6 +8,13 @@ As brechas aparecem aqui só como fato. Por decisão do Rodrigo, elas não são 
 
 **Convenção:** **[NOVO]** = não existe no código, é proposta. **[HIPÓTESE]** = deduzido, ainda não conferido. O resto foi visto no código.
 
+## Decisões de 20/10/2026 (versão 5)
+
+- **Não existe "dono da conta".** O administrador é o topo da conta e é quem monta a estrutura com funções. Onde este documento diz "dono da conta" ou "só o dono", leia "administrador". A dúvida Z2 e a seção 5.5 ficam resolvidas assim (Issue #1915, fechada sem código).
+- **Regra 2 com ajuste fino.** Por padrão, ninguém entrega mais do que tem. O administrador pode ligar numa função o ajuste "Pode entregar acesso acima do próprio": quem tem essa função entrega qualquer função da conta, inclusive com áreas delegáveis (financeiro, tokens, segurança, pessoas). Exemplo: o RH contrata o diretor comercial e cria o acesso dele, maior que o do RH. Nem com o ajuste alguém promove a administrador, e a regra 3 continua valendo.
+- **A proteção do ajuste é o histórico.** Toda entrega fica no histórico de auditoria (quem, para quem, qual função, quando). Sem aviso extra aos administradores.
+- Primeiro lote a usar: Pessoas (#1931).
+
 ## O que mudou na versão 4 (revisão dos chats donos de módulo)
 
 Os 8 chats donos de módulo leram a versão 3 em 17/10. Nenhum contrariou o modelo. As respostas trouxeram correções, que entraram assim:
