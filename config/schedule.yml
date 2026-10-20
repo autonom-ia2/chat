@@ -372,3 +372,9 @@ conversa_canal_limpar_email_lidos_job:
   cron: '15 7 * * *'
   class: 'ConversaCanal::LimparEmailLidosJob'
   queue: low
+
+# #1934 — foto dos contatos antigos das caixas híbridas, uma vez por caixa (WhatsappHybrid::FotoDoContatoBackfillJob).
+whatsapp_hybrid_foto_do_contato_backfill_job:
+  cron: '*/15 * * * *'
+  class: 'WhatsappHybrid::FotoDoContatoBackfillJob'
+  queue: scheduled_jobs

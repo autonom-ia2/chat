@@ -50,6 +50,20 @@ class WhatsappHybrid::FotoDoContato
     "whatsapp_hybrid:foto_do_contato:pausa:#{session_name}"
   end
 
+  def self.chave_do_dia(session_name)
+    "whatsapp_hybrid:foto_do_contato:dia:#{session_name}:#{Time.current.utc.to_date}"
+  end
+
+  # A sessão em uso pelo Híbrido, com as chaves gerais ligadas e sem pausa da busca de foto.
+  def self.sessao_pronta?(connection)
+    WhatsappHybrid::Config.routing_enabled? && WhatsappHybrid::Config.account_allowed?(connection.account_id) &&
+      connection.routable? && !::Redis::Alfred.exists?(chave_da_sessao(connection.session_name))
+  end
+
+  def self.consultas_hoje(session_name)
+    ::Redis::Alfred.get(chave_do_dia(session_name)).to_i
+  end
+
   def initialize(contact:, connection:, client: Waha::Client.new)
     @contact = contact
     @connection = connection
@@ -77,8 +91,7 @@ class WhatsappHybrid::FotoDoContato
   end
 
   def sessao_pronta?
-    WhatsappHybrid::Config.routing_enabled? && WhatsappHybrid::Config.account_allowed?(@connection.account_id) &&
-      @connection.routable? && !::Redis::Alfred.exists?(self.class.chave_da_sessao(@connection.session_name))
+    self.class.sessao_pronta?(@connection)
   end
 
   # 1 consulta a cada RITMO por sessão (SET NX) e no máximo TETO_DIARIO por dia. O contador do dia nasce com prazo
@@ -87,7 +100,7 @@ class WhatsappHybrid::FotoDoContato
     sessao = @connection.session_name
     return false unless ::Redis::Alfred.set("whatsapp_hybrid:foto_do_contato:ritmo:#{sessao}", 1, nx: true, ex: RITMO.to_i)
 
-    chave_do_dia = "whatsapp_hybrid:foto_do_contato:dia:#{sessao}:#{Time.current.utc.to_date}"
+    chave_do_dia = self.class.chave_do_dia(sessao)
     ::Redis::Alfred.set(chave_do_dia, 0, nx: true, ex: 1.day.to_i)
     ::Redis::Alfred.incr(chave_do_dia) <= TETO_DIARIO
   end
