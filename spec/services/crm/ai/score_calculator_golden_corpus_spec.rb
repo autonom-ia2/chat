@@ -8,7 +8,11 @@ require 'rails_helper'
 # Complementa o score_calculator_golden_set_spec (casos curados à mão, com invariantes de ordem).
 RSpec.describe Crm::Ai::ScoreCalculator do
   fixture = Rails.root.join('spec/fixtures/crm_score_golden_cases.yml')
-  corpus = YAML.safe_load_file(fixture)
+  # #1962: caso cuja faixa mudou por regra nova traz `revisado_1962` com a faixa nova e o motivo. O julgamento
+  # original fica no arquivo, para a próxima calibragem saber de onde partiu.
+  corpus = YAML.safe_load_file(fixture).map do |c|
+    c.merge('expected_tier' => c.dig('revisado_1962', 'expected_tier') || c['expected_tier'])
+  end
   now = Time.zone.parse('2026-07-30 12:00:00')
 
   corpus.group_by { |c| c['expected_tier'] }.each do |tier, cases|
@@ -17,6 +21,8 @@ RSpec.describe Crm::Ai::ScoreCalculator do
         got = described_class.new(
           signals: c['signals'],
           last_message_at: now - c['idle_days'].to_i.days,
+          # #1962: quem espera vem do banco; o last_turn_owner gravado no caso é esse mesmo fato.
+          customer_waiting: c.dig('signals', 'last_turn_owner') == 'cliente',
           now: now
         ).perform
         "#{c['ref']} (#{c['resumo']}): esperado #{tier}, saiu #{got.tier} (#{got.value})" if got.tier != tier

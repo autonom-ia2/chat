@@ -3,6 +3,9 @@
   resumo: Link de pagamento prometido 8x e nunca enviado; emissao travada ha 20 dias
   idle_days: 20
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: morno
+    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
   signals:
     next_stage_readiness: pronta
     intent: alta
@@ -118,6 +121,9 @@
   resumo: Cliente aceitou o preço mas 20 dias sem retorno após instabilidade no sistema
   idle_days: 20
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
   signals:
     next_stage_readiness: pronta
     intent: alta
@@ -287,6 +293,9 @@
   resumo: Achou a proposta cara e esta orcando em outros lugares, sem fechar com concorrente
   idle_days: 2
   expected_tier: morno
+  revisado_1962:
+    expected_tier: urgente
+    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   signals:
     next_stage_readiness: parcial
     intent: media
@@ -590,6 +599,9 @@
     dias
   idle_days: 6
   expected_tier: morno
+  revisado_1962:
+    expected_tier: urgente
+    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   nota: so agradeceu; sem pergunta pendente
   signals:
     next_stage_readiness: inicial
@@ -837,6 +849,9 @@
   resumo: Lead novo mandou só 'Oi' e segue sem nenhuma resposta do atendimento
   idle_days: 1
   expected_tier: morno
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
   signals:
     next_stage_readiness: nenhuma
     intent: baixa
@@ -939,6 +954,9 @@
   resumo: Prometemos retorno de outra seguradora em 03/07 e nunca voltamos
   idle_days: 21
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: frio
+    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -953,6 +971,9 @@
   resumo: Negócio fechado, mas cliente está lendo e vai trazer dúvidas hoje
   idle_days: 0
   expected_tier: quente
+  revisado_1962:
+    expected_tier: urgente
+    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   signals:
     next_stage_readiness: pronta
     intent: media
@@ -1068,6 +1089,9 @@
   resumo: Cotação enviada há semanas; cliente volta com link de reunião Teams
   idle_days: 0
   expected_tier: quente
+  revisado_1962:
+    expected_tier: urgente
+    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   signals:
     next_stage_readiness: pronta
     intent: alta
@@ -1153,6 +1177,9 @@
   resumo: Cotação apresentada, cliente achou caro e vai decidir
   idle_days: 0
   expected_tier: morno
+  revisado_1962:
+    expected_tier: urgente
+    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   signals:
     next_stage_readiness: parcial
     intent: media
@@ -1352,6 +1379,9 @@
   resumo: Prometemos a cotacao em 08/07 e nunca enviamos; lead de alto valor
   idle_days: 21
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: morno
+    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
   nota: 'regra de produto: promessa nossa em aberto e sempre urgente'
   signals:
     next_stage_readiness: pronta
@@ -1367,6 +1397,9 @@
   resumo: Cliente lendo o material hoje e prometeu voltar com duvidas
   idle_days: 0
   expected_tier: morno
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1424,6 +1457,9 @@
   resumo: Lead inbound do site (Seguro ANTT) nunca contatado, 14 dias parado
   idle_days: 14
   expected_tier: frio
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1467,6 +1503,9 @@
   resumo: Lead inbound do site (Seguro ANTT) nunca contatado, 9 dias parado
   idle_days: 9
   expected_tier: frio
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1509,6 +1548,9 @@
   resumo: Lead inbound do site (Seguro ANTT) nunca contatado, 14 dias parado
   idle_days: 14
   expected_tier: frio
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1551,6 +1593,9 @@
   resumo: Candidatura de CEO de corretora (MLIFE), 8 dias sem qualquer triagem
   idle_days: 8
   expected_tier: frio
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
   signals:
     next_stage_readiness: nenhuma
     intent: baixa
@@ -1594,6 +1639,9 @@
   resumo: Bot prometeu encaminhar ao time comercial; cliente aguarda há 15 dias
   idle_days: 15
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: frio
+    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
   signals:
     next_stage_readiness: parcial
     intent: alta
@@ -1724,6 +1772,9 @@
   resumo: Cliente perguntou forma de pagamento e parcelas; link ainda não enviado
   idle_days: 0
   expected_tier: quente
+  revisado_1962:
+    expected_tier: urgente
+    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   nota: 'borderline: pediu parcelas hoje, quente alto'
   signals:
     next_stage_readiness: pronta

@@ -231,8 +231,7 @@ module Crm
         # created_by/assignee), então sem esta checagem a própria IA reaparece no transcript como
         # "pessoa do time" e o cérebro conclui que houve pergunta humana sem resposta — foi o que
         # fez a IA cobrar o mesmo cliente duas vezes pelo mesmo questionário.
-        # Continua sendo platform_agent, e não um quinto papel, porque o enum last_turn_owner do
-        # ScoreCalculator conhece só quatro.
+        # Continua sendo platform_agent, e não um quinto papel: o modelo conhece só quatro.
         # #1601: o convite e o aviso do Agendamento também saem em nome de uma pessoa, mas é a plataforma que manda; e o
         # que a equipe manda pelo app do celular volta como eco sem remetente (`external_echo`), e é uma pessoa do time.
         # Efeito conhecido (o mesmo do PessoaDaEquipe): o eco da PRÓPRIA bolha da IA que o reconciliador do Híbrido não
@@ -243,8 +242,8 @@ module Crm
         case message.sender_type
         when 'User' then 'human_agent'
         when 'AgentBot' then platform_bot_ids.include?(message.sender_id) ? 'platform_agent' : 'external_agent'
-        # Saída sem sender (automação, API) cai em external_agent e não num quinto papel: o enum de
-        # last_turn_owner só conhece quatro, e um valor fora dele fazia o modelo adivinhar.
+        # Saída sem sender (automação, API) cai em external_agent e não num quinto papel: o modelo só
+        # conhece quatro, e um valor fora deles o fazia adivinhar.
         else 'external_agent'
         end
       end

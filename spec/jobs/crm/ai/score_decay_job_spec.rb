@@ -163,6 +163,62 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     expect(card.reload.score).to be < after_first
   end
 
+  # #1962: o job sabe quem falou por último sem chamar IA (consulta agregada) e não deixa a dívida esfriar.
+  describe 'cliente esperando resposta nossa' do
+    let(:inbox) { create_crm_inbox(account: account, members: [admin]) }
+
+    def card_with_conversation(last_type, days_ago)
+      contact = account.contacts.create!(name: 'Lead', phone_number: "+55119#{rand(10_000_000..99_999_999)}")
+      conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
+      other = last_type == :incoming ? :outgoing : :incoming
+      [[other, days_ago + 1], [last_type, days_ago]].each do |type, days|
+        conversation.messages.create!(account: account, inbox: inbox, content: 'x', message_type: type, created_at: days.days.ago,
+                                      sender: type == :incoming ? contact : admin)
+      end
+      account.crm_cards.create!(
+        pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL', score: 40, conversation_id: conversation.id,
+        metadata: { 'ai' => { 'score' => { 'value' => 40, 'source' => 'ai', 'signals' => signals,
+                                           'calculated_at' => Time.current.iso8601 } } }
+      )
+    end
+
+    it 'mantém no piso de quente até 14 dias de espera, sem decair' do
+      card = card_with_conversation(:incoming, 10)
+
+      described_class.perform_now
+
+      expect(card.reload.score).to be >= Crm::Ai::ScoreCalculator::CUSTOMER_WAITING_FLOOR
+      expect(card.metadata.dig('ai', 'score', 'tier')).to eq('quente')
+    end
+
+    it 'não deixa mensagem automática depois do cliente fechar a espera' do
+      card = card_with_conversation(:incoming, 10)
+      card.primary_conversation.messages.create!(account: account, inbox: inbox, content: 'Estamos fora do horário',
+                                                 message_type: :template, created_at: 9.days.ago)
+      card.update!(last_message_at: 9.days.ago)
+
+      described_class.perform_now
+
+      expect(card.reload.score).to be >= Crm::Ai::ScoreCalculator::CUSTOMER_WAITING_FLOOR
+    end
+
+    it 'deixa esfriar depois de 14 dias de espera' do
+      card = card_with_conversation(:incoming, 20)
+
+      described_class.perform_now
+
+      expect(card.reload.score).to be < Crm::Ai::ScoreCalculator::CUSTOMER_WAITING_FLOOR
+    end
+
+    it 'esfria normalmente quando nós falamos por último' do
+      card = card_with_conversation(:outgoing, 10)
+
+      described_class.perform_now
+
+      expect(card.reload.score).to be < 40
+    end
+  end
+
   it 'skips funnels with the score turned off' do
     metadata = pipeline.metadata.deep_dup
     metadata['ai']['score_enabled'] = false

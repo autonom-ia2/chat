@@ -41,8 +41,8 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
       break if budget_over?
 
       cards = batch.first(remaining_budget)
-      last_messages = last_message_map(cards)
-      cards.each { |card| safely_apply(card, last_messages[card.id]) }
+      turns = last_turns(cards)
+      cards.each { |card| safely_apply(card, turns[card.id]) }
       @processed += cards.size
     end
   end
@@ -64,20 +64,19 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
              .where(Crm::Card.arel_table[:score].gt(0))
   end
 
-  # Uma consulta agregada para o lote inteiro, em vez de uma por conversa por card (era N+1: até
-  # duas queries por card a cada 3 horas).
-  def last_message_map(cards)
-    fallback_by_card = cards.index_with(&:last_message_at).compact
-    by_card = conversation_ids_by_card(cards)
-    all_ids = by_card.values.flatten.compact.uniq
-    return fallback_by_card if all_ids.empty?
+  # Consultas agregadas para o lote inteiro, em vez de uma por conversa por card (era N+1: até
+  # duas queries por card a cada 3 horas). #1962: devolve também se o cliente está esperando
+  # resposta nossa — sem isso o job deixava esfriar a dívida que a avaliação com IA tinha segurado.
+  # Card sem mensagem nas conversas vinculadas usa o last_message_at guardado no card e não sabe quem
+  # espera. Com mensagem, vale só a conversa: o valor guardado conta mensagem automática (template), que
+  # não é turno de ninguém (Crm::Conversations::LastTurns).
+  def last_turns(cards)
+    by_conversation = Crm::Conversations::LastTurns.for(conversation_ids_by_card(cards))
+    cards.index_by(&:id).transform_values do |card|
+      turn = by_conversation[card.id]
+      next turn if turn&.last_message_at.present?
 
-    # `reorder(nil)` derruba o `default_scope { order(created_at: :asc) }` do Message: sem isso o
-    # ORDER BY sobra na consulta agregada e o Postgres recusa o GROUP BY (PG::GroupingError).
-    per_conversation = Message.chat.where(conversation_id: all_ids)
-                              .reorder(nil).group(:conversation_id).maximum(:created_at)
-    by_card.each_with_object(fallback_by_card) do |(card_id, ids), result|
-      result[card_id] = [result[card_id], ids.filter_map { |id| per_conversation[id] }.max].compact.max
+      Crm::Conversations::LastTurns::Turn.new(last_message_at: card.last_message_at, customer_waiting: false)
     end
   end
 
@@ -90,8 +89,8 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
     by_card
   end
 
-  def safely_apply(card, last_message_at)
-    apply(card, last_message_at)
+  def safely_apply(card, turn)
+    apply(card, turn)
   rescue ActiveRecord::ActiveRecordError, ArgumentError, TypeError => e
     Rails.logger.warn(
       "[Crm::Ai::ScoreDecayJob] skipped card_id=#{card.id} account_id=#{card.account_id} " \
@@ -99,16 +98,16 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
     )
   end
 
-  def apply(card, last_message_at)
+  def apply(card, turn)
     card.with_lock do
       # Releitura dentro do lock: o ScoreApplier ou uma edição humana podem ter gravado entre a
       # leitura do lote e agora. Sem isso, o job sobrescreveria a versão mais nova.
       score_meta = card.metadata.to_h.dig('ai', 'score').to_h
       unless score_meta['source'] == 'manual' || card.score.to_i <= 0
-        anchor = decay_anchor(score_meta, last_message_at)
+        anchor = decay_anchor(score_meta, turn.last_message_at)
 
         if anchor.present?
-          result = recalculate(score_meta, anchor)
+          result = recalculate(score_meta, anchor, customer_waiting: turn.customer_waiting)
           persist!(card, score_meta, result, anchor) unless result[:value] == card.score
         end
       end
@@ -127,12 +126,13 @@ class Crm::Ai::ScoreDecayJob < ApplicationJob
   # Card pontuado pela versão anterior não tem `signals` gravados. Em vez de ignorá-lo para sempre
   # (justamente o card antigo e parado, que mais precisa esfriar), aplicamos decaimento puro sobre a
   # nota-base guardada.
-  def recalculate(score_meta, anchor)
+  def recalculate(score_meta, anchor, customer_waiting:)
     signals = score_meta['signals']
     base = (score_meta['base_value'] || score_meta['value']).to_i
 
     if signals.present?
-      computed = Crm::Ai::ScoreCalculator.new(signals: signals, last_message_at: anchor).perform
+      computed = Crm::Ai::ScoreCalculator.new(signals: signals, last_message_at: anchor,
+                                              customer_waiting: customer_waiting).perform
       { value: computed.value, tier: computed.tier, base: base }
     else
       value = [base + decay_points(anchor), 0].max

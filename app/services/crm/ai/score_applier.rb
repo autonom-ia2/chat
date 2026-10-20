@@ -36,9 +36,11 @@ class Crm::Ai::ScoreApplier
     @card.with_lock do
       next if manual_locked?
 
+      turn = last_turn
       result = ::Crm::Ai::ScoreCalculator.new(
         signals: @signals,
-        last_message_at: last_message_at,
+        last_message_at: turn.last_message_at,
+        customer_waiting: turn.customer_waiting,
         terminal: !@card.open?
       ).perform
       persist!(result)
@@ -54,10 +56,9 @@ class Crm::Ai::ScoreApplier
   # Da última mensagem REAL (Message.chat), nunca de last_activity_at: aquele campo é empurrado por
   # nota privada e atividade de sistema, então uma nota interna hoje zeraria o decaimento de um card
   # calado há 20 dias. Mesma armadilha documentada em Crm::Conversations::LastRealMessageAt.
-  def last_message_at
-    Conversation.where(id: conversation_ids)
-                .filter_map { |conversation| ::Crm::Conversations::LastRealMessageAt.for(conversation) }
-                .max
+  # #1962: e de que lado ela veio — quem espera resposta é dado do banco, não leitura do modelo.
+  def last_turn
+    ::Crm::Conversations::LastTurns.for(@card.id => conversation_ids).fetch(@card.id)
   end
 
   def conversation_ids
