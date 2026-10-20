@@ -50,7 +50,6 @@ const emit = defineEmits(['fechar', 'perguntaResolvida', 'reler', 'corrigir']);
 const { t } = useI18n();
 const store = useStore();
 const flagsDasFontes = useMapGetter('autonomiaSources/getUIFlags');
-const NS = 'AGENTS.JORNADA.PAGINA.SABE';
 const base = `sabe-${useId()}`;
 
 const adicionando = ref(false);
@@ -90,7 +89,9 @@ const paradoAlemDoTeto = fonte =>
 // vazio já diz que sabe só o que foi contado.
 const resumo = computed(() => {
   if (props.agente.knowledge_summary) return props.agente.knowledge_summary;
-  return lista.value.length ? t(`${NS}.TEXTO`, { nome: props.nome }) : '';
+  return lista.value.length
+    ? t('AGENTS.JORNADA.PAGINA.SABE.TEXTO', { nome: props.nome })
+    : '';
 });
 
 const salvar = async acao => {
@@ -147,15 +148,17 @@ const aoEscolherArquivo = evento => {
   erroArquivo.value = '';
   const trocando = substituir.value;
   if (arquivo.size > MAX_ARQUIVO) {
-    erroArquivo.value = t(`${NS}.GRANDE`);
+    erroArquivo.value = t('AGENTS.JORNADA.PAGINA.SABE.GRANDE');
     return;
   }
   if (props.fase2 && ehImagem(arquivo) && arquivo.size > MAX_FOTO) {
-    erroArquivo.value = t(`${NS}.FOTO_GRANDE`);
+    erroArquivo.value = t('AGENTS.JORNADA.PAGINA.SABE.FOTO_GRANDE');
     return;
   }
   if (!trocando && lista.value.length >= MAX_FONTES) {
-    erroArquivo.value = t(`${NS}.LIMITE`, { n: MAX_FONTES });
+    erroArquivo.value = t('AGENTS.JORNADA.PAGINA.SABE.LIMITE', {
+      n: MAX_FONTES,
+    });
     return;
   }
   // Ao substituir, se o novo entrou e o antigo não saiu, "Tentar de novo" só tira o antigo (criar de
@@ -173,13 +176,15 @@ const aoEscolherArquivo = evento => {
 const mandarSite = () => {
   const url = enderecoDoSite(site.value);
   if (!url) {
-    erroSite.value = t(`${NS}.SITE_ERRO`);
+    erroSite.value = t('AGENTS.JORNADA.PAGINA.SABE.SITE_ERRO');
     return;
   }
   erroSite.value = '';
   erroArquivo.value = '';
   if (lista.value.length >= MAX_FONTES) {
-    erroArquivo.value = t(`${NS}.LIMITE`, { n: MAX_FONTES });
+    erroArquivo.value = t('AGENTS.JORNADA.PAGINA.SABE.LIMITE', {
+      n: MAX_FONTES,
+    });
     return;
   }
   salvar(async () => {
@@ -282,7 +287,8 @@ const resolver = async (problemaId, escolha) => {
   try {
     await props.conferencias.resolver(problemaId, escolha);
   } catch (erro) {
-    erroConferencia.value = erro?.response?.data?.error || t(`${NS}.ERRO`);
+    erroConferencia.value =
+      erro?.response?.data?.error || t('AGENTS.JORNADA.PAGINA.SABE.ERRO');
     props.conferencias.ler();
   } finally {
     resolvendo.value = '';
@@ -298,7 +304,8 @@ const testarDeNovo = async () => {
   try {
     await props.conferencias.pedirAutoteste();
   } catch (erro) {
-    erroConferencia.value = erro?.response?.data?.error || t(`${NS}.ERRO`);
+    erroConferencia.value =
+      erro?.response?.data?.error || t('AGENTS.JORNADA.PAGINA.SABE.ERRO');
   } finally {
     pedindoAutoteste.value = false;
   }
@@ -316,7 +323,10 @@ const tudoCerto = computed(
 </script>
 
 <template>
-  <AgenteGaveta :titulo="t(`${NS}.TITULO`, { nome })" @fechar="emit('fechar')">
+  <AgenteGaveta
+    :titulo="t('AGENTS.JORNADA.PAGINA.SABE.TITULO', { nome })"
+    @fechar="emit('fechar')"
+  >
     <p v-if="resumo" data-resumo class="m-0 text-sm text-n-slate-11">
       {{ resumo }}
     </p>
@@ -377,9 +387,9 @@ const tudoCerto = computed(
         @click="escolherArquivo()"
       >
         <span class="flex flex-col text-start">
-          <span>{{ t(`${NS}.ENVIAR_ARQUIVO`) }}</span>
+          <span>{{ t('AGENTS.JORNADA.PAGINA.SABE.ENVIAR_ARQUIVO') }}</span>
           <span class="text-xs font-normal text-n-slate-11">
-            {{ t(`${NS}.ENVIAR_ARQUIVO_TEXTO`) }}
+            {{ t('AGENTS.JORNADA.PAGINA.SABE.ENVIAR_ARQUIVO_TEXTO') }}
           </span>
         </span>
       </AgenteBotao>
@@ -388,10 +398,10 @@ const tudoCerto = computed(
           class="flex items-center gap-2 text-sm font-semibold text-n-slate-12"
         >
           <span class="i-lucide-globe size-4" aria-hidden="true" />
-          {{ t(`${NS}.SITE`) }}
+          {{ t('AGENTS.JORNADA.PAGINA.SABE.SITE') }}
         </span>
         <label :for="`${base}-site`" class="text-sm text-n-slate-11">
-          {{ t(`${NS}.SITE_ROTULO`) }}
+          {{ t('AGENTS.JORNADA.PAGINA.SABE.SITE_ROTULO') }}
         </label>
         <div class="flex gap-2">
           <input
@@ -405,7 +415,7 @@ const tudoCerto = computed(
             class="flex-1 min-w-0 px-3 text-base rounded-xl min-h-11 bg-n-solid-1 ring-1 ring-inset ring-n-slate-7 border-0 !mb-0 text-n-slate-12"
           />
           <AgenteBotao type="submit" data-mandar-site :carregando="salvando">
-            {{ t(`${NS}.SITE_MANDAR`) }}
+            {{ t('AGENTS.JORNADA.PAGINA.SABE.SITE_MANDAR') }}
           </AgenteBotao>
         </div>
         <p
@@ -429,8 +439,8 @@ const tudoCerto = computed(
     <AgenteErro
       v-if="falhaSalvar"
       data-erro-salvar
-      :titulo="t(`${NS}.ERRO`)"
-      :garantia="t(`${NS}.ERRO_GARANTIA`)"
+      :titulo="t('AGENTS.JORNADA.PAGINA.SABE.ERRO')"
+      :garantia="t('AGENTS.JORNADA.PAGINA.SABE.ERRO_GARANTIA')"
       :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
       :carregando="salvando"
       @acao="salvar(falhaSalvar)"
@@ -445,14 +455,14 @@ const tudoCerto = computed(
     <AgenteErro
       v-if="erroLer"
       data-erro-ler
-      :titulo="t(`${NS}.LER_ERRO`)"
-      :garantia="t(`${NS}.ERRO_GARANTIA`)"
+      :titulo="t('AGENTS.JORNADA.PAGINA.SABE.LER_ERRO')"
+      :garantia="t('AGENTS.JORNADA.PAGINA.SABE.ERRO_GARANTIA')"
       :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
       @acao="emit('reler')"
     />
     <ul
       v-else-if="lista.length"
-      :aria-label="t(`${NS}.LISTA`)"
+      :aria-label="t('AGENTS.JORNADA.PAGINA.SABE.LISTA')"
       class="flex flex-col gap-2 p-0 m-0 list-none"
     >
       <MaterialLinha
@@ -475,7 +485,7 @@ const tudoCerto = computed(
       class="flex flex-col items-center gap-2 p-6 text-sm text-center rounded-2xl bg-n-slate-2 text-n-slate-11"
     >
       <span class="i-lucide-book-open size-8" aria-hidden="true" />
-      <p class="m-0">{{ t(`${NS}.VAZIO`, { nome }) }}</p>
+      <p class="m-0">{{ t('AGENTS.JORNADA.PAGINA.SABE.VAZIO', { nome }) }}</p>
     </div>
 
     <PerguntasParaConferir
@@ -494,18 +504,22 @@ const tudoCerto = computed(
         :aria-expanded="adicionando ? 'true' : 'false'"
         @click="alternarAdicionar"
       >
-        {{ t(`${NS}.MANDAR`) }}
+        {{ t('AGENTS.JORNADA.PAGINA.SABE.MANDAR') }}
       </AgenteBotao>
     </template>
 
     <DialogoAcao
       ref="dialogoTirar"
-      :titulo="t(`${NS}.TIRAR_TITULO`, { nome: nomeDaFonte(tirando) })"
-      :texto="t(`${NS}.TIRAR_TEXTO`, { agente: nome })"
-      :confirmar="t(`${NS}.TIRAR`)"
+      :titulo="
+        t('AGENTS.JORNADA.PAGINA.SABE.TIRAR_TITULO', {
+          nome: nomeDaFonte(tirando),
+        })
+      "
+      :texto="t('AGENTS.JORNADA.PAGINA.SABE.TIRAR_TEXTO', { agente: nome })"
+      :confirmar="t('AGENTS.JORNADA.PAGINA.SABE.TIRAR')"
       variante="perigo"
-      :erro-titulo="t(`${NS}.ERRO`)"
-      :erro-garantia="t(`${NS}.ERRO_GARANTIA`)"
+      :erro-titulo="t('AGENTS.JORNADA.PAGINA.SABE.ERRO')"
+      :erro-garantia="t('AGENTS.JORNADA.PAGINA.SABE.ERRO_GARANTIA')"
       :executar="tirar"
       @fechada="tirando = null"
     />

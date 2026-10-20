@@ -18,7 +18,6 @@ const props = defineProps({
 const emit = defineEmits(['testarDeNovo']);
 
 const { t } = useI18n();
-const NS = 'AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE';
 const TOTAL_MAXIMO = 10;
 
 const rodando = computed(() => props.autoteste.estado === 'rodando');
@@ -29,9 +28,10 @@ const foraOk = computed(
   () => props.autoteste.certasDeFora === props.autoteste.deFora
 );
 const botao = computed(() => {
-  if (nunca.value) return t(`${NS}.TESTAR`);
-  if (parado.value) return t(`${NS}.TENTAR_DE_NOVO`);
-  return t(`${NS}.DE_NOVO`);
+  if (nunca.value) return t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.TESTAR');
+  if (parado.value)
+    return t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.TENTAR_DE_NOVO');
+  return t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.DE_NOVO');
 });
 </script>
 
@@ -42,7 +42,7 @@ const botao = computed(() => {
     class="flex flex-col gap-2 p-4 rounded-2xl bg-n-slate-2 ring-1 ring-inset ring-n-weak"
   >
     <h3 class="m-0 text-sm font-semibold text-n-slate-12">
-      {{ t(`${NS}.TITULO`) }}
+      {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.TITULO') }}
     </h3>
     <p
       role="status"
@@ -56,7 +56,7 @@ const botao = computed(() => {
       />
       <span v-if="rodando" data-rodando>
         {{
-          t(`${NS}.RODANDO`, {
+          t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.RODANDO', {
             nome,
             feitas: autoteste.feitas,
             total: autoteste.total || TOTAL_MAXIMO,
@@ -64,14 +64,14 @@ const botao = computed(() => {
         }}
       </span>
       <span v-else-if="nunca" data-nunca>
-        {{ t(`${NS}.NUNCA`, { nome }) }}
+        {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.NUNCA', { nome }) }}
       </span>
       <span v-else-if="parado" data-parado class="text-n-amber-11">
-        {{ t(`${NS}.PARADO`) }}
+        {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.PARADO') }}
       </span>
       <span v-else data-resultado>
         {{
-          t(`${NS}.ACERTOU`, {
+          t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.ACERTOU', {
             nome,
             certas: autoteste.certasDoMaterial,
             total: autoteste.doMaterial,
@@ -83,7 +83,7 @@ const botao = computed(() => {
       v-if="rodando && autoteste.quando === 'base_mudou'"
       class="m-0 text-xs text-n-slate-11"
     >
-      {{ t(`${NS}.BASE_MUDOU`, { nome }) }}
+      {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.BASE_MUDOU', { nome }) }}
     </p>
     <p
       v-if="!rodando && !parado && temResultado && autoteste.deFora"
@@ -93,8 +93,12 @@ const botao = computed(() => {
     >
       {{
         foraOk
-          ? t(`${NS}.FORA_OK`, { nome, n: autoteste.deFora }, autoteste.deFora)
-          : t(`${NS}.FORA_ERRO`, { nome })
+          ? t(
+              'AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.FORA_OK',
+              { nome, n: autoteste.deFora },
+              autoteste.deFora
+            )
+          : t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.FORA_ERRO', { nome })
       }}
     </p>
     <details v-if="!rodando && temResultado" data-perguntas>
@@ -103,7 +107,7 @@ const botao = computed(() => {
       >
         {{
           t(
-            `${NS}.VER`,
+            'AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.VER',
             { n: autoteste.resultados.length },
             autoteste.resultados.length
           )
@@ -131,12 +135,16 @@ const botao = computed(() => {
             >
               {{
                 item.origem === 'fora'
-                  ? t(`${NS}.DE_FORA`)
-                  : t(`${NS}.DO_MATERIAL`)
+                  ? t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.DE_FORA')
+                  : t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.DO_MATERIAL')
               }}
             </span>
             <span class="sr-only">
-              {{ item.ok ? t(`${NS}.CERTA`) : t(`${NS}.ERRADA`) }}
+              {{
+                item.ok
+                  ? t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.CERTA')
+                  : t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.ERRADA')
+              }}
             </span>
           </span>
         </li>
@@ -147,7 +155,7 @@ const botao = computed(() => {
       data-aviso-amostra
       class="m-0 text-xs text-n-slate-11"
     >
-      {{ t(`${NS}.AMOSTRA`) }}
+      {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.AUTOTESTE.AMOSTRA') }}
     </p>
     <AgenteBotao
       v-if="podeGerenciar && !rodando"
