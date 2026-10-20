@@ -31,9 +31,15 @@ export const useFunilSugestao = ({
     improving.value = true;
     suggestion.value = null;
     improvementError.value = false;
+    // #1920: o tipo e o "quando usar" do formulário (mesmo sem salvar) dão a
+    // fronteira certa à IA que escreve a frase.
     const request = {
       stages: snapshot,
       stage_index: form.stages.indexOf(target),
+      funil: {
+        counts_as_sale: form.countsAsSale,
+        when_to_use: form.whenToUse.trim(),
+      },
     };
     try {
       // #1384: funil ainda não salvo também pede a sugestão, pela rota da conta.

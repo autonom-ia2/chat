@@ -28,9 +28,11 @@ module Crm
       # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
       # memoria (#1601): só a avaliação de card com a flag `memoria_ia` pede; cada mensagem ganha um id LOCAL ("ref": m1,
       # m2...) e o contexto traz os fatos já registrados (Crm::Memoria::ParaAvaliacao). Os outros leitores não mudam.
-      def initialize(card:, fora: [], memoria: false)
+      # ate (#1920): só as mensagens até o instante em que uma pessoa decidiu a etapa (evidência e raio-x das frases).
+      def initialize(card:, fora: [], memoria: false, ate: nil)
         @card = card
         @fora = fora
+        @ate = ate
         @numeracao = Crm::Memoria::ParaAvaliacao::Numeracao.new if memoria
       end
 
@@ -181,11 +183,9 @@ module Crm
       # order) so just-arrived messages/media are always in the recent window even if provider
       # timestamps are skewed/out-of-order. includes(:attachments) evita N+1 no message_content.
       def latest_for(conversation_id)
-        Message.where(conversation_id: conversation_id, private: false)
-               .where.not(message_type: :activity)
-               .includes(:attachments)
-               .reorder(id: :desc)
-               .limit(MAX_RECENT_MESSAGES)
+        escopo = Message.where(conversation_id: conversation_id, private: false)
+        escopo = escopo.where(created_at: ..@ate) if @ate
+        escopo.where.not(message_type: :activity).includes(:attachments).reorder(id: :desc).limit(MAX_RECENT_MESSAGES)
       end
 
       def conversation_ids

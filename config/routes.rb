@@ -274,6 +274,9 @@ Rails.application.routes.draw do
               resources :inboxes, controller: 'pipeline_inboxes', only: [:index, :create, :destroy], param: :inbox_id
               resource :ai_settings, only: [:show, :update], controller: 'ai_settings' do
                 post :improve_criteria
+                # #1920: raio-x das frases antes de salvar e "Melhorar com IA" do "quando usar".
+                post :criteria_xray
+                post :improve_when_to_use
               end
             end
             # Funil ainda não salvo (#1384): critério padrão e IA das etapas.

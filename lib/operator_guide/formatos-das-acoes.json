@@ -5633,14 +5633,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:83)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:67",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:87",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:83"
     ],
     "sem_corpo": false
   },
@@ -15596,8 +15596,34 @@
     ],
     "sem_corpo": false
   },
+  "POST crm/pipelines/:pipeline_id/ai_settings/criteria_xray": {
+    "campos": {
+      "stages": {
+        "campos": {
+          "description": {},
+          "name": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/ai_settings#criteria_xray",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:42",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/pipelines/:pipeline_id/ai_settings/improve_criteria": {
     "campos": {
+      "funil": {
+        "campos": {
+          "counts_as_sale": {},
+          "when_to_use": {}
+        },
+        "tipo": "objeto"
+      },
       "stage_index": {},
       "stages": {
         "campos": {
@@ -15611,8 +15637,28 @@
     "controller": "api/v1/accounts/crm/ai_settings#improve_criteria",
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:24",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:26",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/pipelines/:pipeline_id/ai_settings/improve_when_to_use": {
+    "campos": {
+      "funil": {
+        "campos": {
+          "counts_as_sale": {},
+          "when_to_use": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/ai_settings#improve_when_to_use",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -16006,6 +16052,13 @@
   },
   "POST crm/stage_criteria/improve": {
     "campos": {
+      "funil": {
+        "campos": {
+          "counts_as_sale": {},
+          "when_to_use": {}
+        },
+        "tipo": "objeto"
+      },
       "pipeline_name": {},
       "stage_index": {},
       "stages": {
@@ -16020,6 +16073,7 @@
     "controller": "api/v1/accounts/crm/stage_criteria#improve",
     "origem": [
       "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:24",
+      "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:40",
       "app/controllers/api/v1/accounts/crm/stage_criteria_controller.rb:28"
     ],
     "sem_corpo": false
@@ -24005,14 +24059,14 @@
       }
     },
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)"
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:83)"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:12",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:43",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:39",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:67",
       "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59"
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:87",
+      "app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:83"
     ],
     "sem_corpo": false
   },

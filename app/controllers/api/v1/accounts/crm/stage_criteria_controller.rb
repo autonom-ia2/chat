@@ -28,11 +28,17 @@ class Api::V1::Accounts::Crm::StageCriteriaController < Api::V1::Accounts::Crm::
     input = params.permit(:stage_index, :pipeline_name, stages: [:name, :description]).to_h
     defer_interactive_ai('stage_criteria_draft', {
                            pipeline_name: input['pipeline_name'].to_s.strip.first(Crm::Ai::StageCriteriaImprover::MAX_NAME_LENGTH),
-                           stages: input.fetch('stages'), stage_index: input.fetch('stage_index'), language: I18n.locale.to_s
+                           stages: input.fetch('stages'), stage_index: input.fetch('stage_index'), language: I18n.locale.to_s,
+                           funil: funil_do_formulario
                          })
   end
 
   private
+
+  # #1920: o tipo e o "quando usar" que estão no formulário, para a IA que escreve a frase.
+  def funil_do_formulario
+    Crm::Ai::ContextoDoFunil.do_formulario(params.permit(funil: %i[counts_as_sale when_to_use])[:funil])
+  end
 
   # Quem pode criar funil e usar IA de funil — o mesmo par que o funil salvo exige.
   def authorize_draft_pipeline

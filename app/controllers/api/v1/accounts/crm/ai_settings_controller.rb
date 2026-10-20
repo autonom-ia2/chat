@@ -28,12 +28,36 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
     return render_unprocessable('invalid_stage_criteria') unless Crm::Ai::StageCriteriaImprover.valid_input?(raw_input)
 
     defer_interactive_ai('stage_criteria', {
-                           pipeline_id: @pipeline.id, stages: input.fetch('stages'),
-                           stage_index: input.fetch('stage_index'), language: I18n.locale.to_s
+                           pipeline_id: @pipeline.id, stages: input.fetch('stages'), stage_index: input.fetch('stage_index'),
+                           language: I18n.locale.to_s, funil: funil_do_formulario
+                         })
+  end
+
+  # #1920: raio-x das frases da tela antes de salvar (Crm::Ai::RaioXDasFrases). Mesma validação das etapas do improve.
+  def criteria_xray
+    authorize @pipeline, :manage_ai?
+    raw_input = { 'stages' => params.to_unsafe_h['stages'], 'stage_index' => 0 }
+    return render_unprocessable('invalid_stage_criteria') unless Crm::Ai::StageCriteriaImprover.valid_input?(raw_input)
+
+    stages = params.permit(stages: [:name, :description]).to_h.fetch('stages')
+    defer_interactive_ai('stage_criteria_xray', { pipeline_id: @pipeline.id, stages: stages })
+  end
+
+  # #1920: "Melhorar com IA" do "quando usar" do funil (Crm::Ai::WhenToUseImprover).
+  def improve_when_to_use
+    authorize @pipeline, :manage_ai?
+    defer_interactive_ai('pipeline_when_to_use', {
+                           pipeline_id: @pipeline.id, language: I18n.locale.to_s,
+                           funil: funil_do_formulario
                          })
   end
 
   private
+
+  # #1920: o tipo e o "quando usar" que estão no formulário, para a IA que escreve a frase.
+  def funil_do_formulario
+    Crm::Ai::ContextoDoFunil.do_formulario(params.permit(funil: %i[counts_as_sale when_to_use])[:funil])
+  end
 
   def fetch_pipeline
     @pipeline = policy_scope(::Crm::Pipeline).find(params[:pipeline_id])
