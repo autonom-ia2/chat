@@ -515,6 +515,7 @@
         "ENTRADA": "Inbox",
         "SPAM": "Spam",
         "LIXEIRA": "Trash",
+        "ENVIADOS": "Sent",
         "MARCAR_SPAM": "Spam",
         "MARCAR_SPAM_DICA": "Move to Spam and resolve. Email from this sender in this inbox goes straight to Spam",
         "MOVER_LIXEIRA": "Trash",
