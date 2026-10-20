@@ -48,7 +48,21 @@ RSpec.describe Crm::Ai::RevalidaPassagem do
     expect(JSON.parse(enviado[:input])['motivo_do_pedido']).to eq('anúncio de encaminhamento')
   end
 
-  it 'resposta fora do schema levanta, para quem chama decidir' do
+  # Decisão do Rodrigo (20/10): o modelo lê a conversa inteira; pedido que falhou com pessoa prometida e aviso de espera
+  # seguem abertos; esperar a resposta do cliente não pede pessoa, mas não anula um pedido antigo sem solução.
+  it 'as instruções levam as regras do que fica aberto', :aggregate_failures do
+    responde(decisao: 'problema_em_aberto', motivo: 'recotação falhou e ninguém da equipe resolveu')
+
+    described_class.new(conversation).call
+
+    expect(enviado[:instructions]).to equal(described_class::INSTRUCTIONS)
+    expect(described_class::INSTRUCTIONS).to include('lendo a conversa inteira', 'abandonado não é pedido resolvido',
+                                                     'Aviso de espera não resolve o problema',
+                                                     'esperar o cliente não é problema em aberto')
+  end
+
+  it 'resposta fora do schema
+ levanta, para quem chama decidir' do
     responde(decisao: 'talvez', motivo: '')
 
     expect { described_class.new(conversation).call }.to raise_error(Crm::Ai::RevalidaPassagem::RespostaInvalida)

@@ -5,9 +5,10 @@ require 'rails_helper'
 RSpec.describe Crm::Ai::ClassifierPrompt do
   # SHA-256 dos prefixos da main antes do aviso (16/10/2026). Mudou de propósito um texto do prompt? Atualize aqui:
   # cada mudança antes do fim faz todas as contas perderem o cache de prompt uma vez.
-  # #1975 (20/10): mudou de propósito, com o parágrafo do anúncio superado e o "reason" obrigatório no HANDOFF.
-  let(:sha_do_text_de_antes) { 'a6329d954c36fa4a997018a112b59e446de281794a6e474c0eb09f7d3db9e679' }
-  let(:sha_do_text_com_agentes_ia_de_antes) { '43402e4615ecbefbbb9056dc0b420f610d73ada06b64f51d37204831e31beebe' }
+  # #1975 (20/10): mudou de propósito, com o parágrafo do anúncio superado e o "reason" obrigatório no HANDOFF; de novo
+  # com o pedido que falhou, o aviso de espera e a pergunta ao cliente (decisão do Rodrigo).
+  let(:sha_do_text_de_antes) { '35572422d37d4953be32995dcd80dae7a3cdf9fb646b6d6d47be082b20acc60d' }
+  let(:sha_do_text_com_agentes_ia_de_antes) { '31f64d4faa88a6e020fdfe46e69d77fbe51d7a2e9b61fa06d59b3ad239501dd2' }
   let(:sufixo) { "\n\n#{described_class::DADOS_NAO_INSTRUCOES}" }
 
   # Pega: o prompt de um card voltar a não avisar que mensagens e textos do funil são dados.

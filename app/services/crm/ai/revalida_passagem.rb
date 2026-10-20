@@ -39,14 +39,24 @@ class Crm::Ai::RevalidaPassagem
     - "problema_em_aberto": o cliente tem um problema, dúvida ou reclamação que não foi resolvido e que pede uma
       pessoa: perguntou algo que o atendente não soube explicar, reclamou e não foi atendido, ficou sem a resposta
       prometida, ou o atendente encaminhou de fato e parou de atender. Vale mesmo que o atendente tenha respondido no
-      meio, se a resposta não resolveu.
-    - "resolvido": o que motivou o pedido de pessoa foi resolvido pelo próprio atendimento (humano ou automático) e o
-      cliente não voltou com um problema em aberto. Um anúncio antigo de encaminhamento ("vou encaminhar para um
-      especialista") seguido da solução não conta.
-    "motivo": uma frase curta. Com "pedido_de_pessoa" ou "problema_em_aberto", diga qual problema ficou aberto ou o
-    que o cliente pediu (ex.: "cliente pediu explicação de um item da cotação e o atendente não soube"); com
-    "resolvido", o que resolveu (ex.: "o atendente enviou a cotação e o cliente não voltou com dúvida"). Não copie
-    dados pessoais (nome, documento, telefone, e-mail, endereço).
+      meio, se a resposta não resolveu. Dois casos contam sempre:
+      (1) o atendimento falhou ou não conseguiu fazer algo que o cliente pediu e prometeu uma pessoa ou um
+      especialista, e ninguém da equipe resolveu depois. Vale mesmo que o cliente tenha mudado de assunto, não tenha
+      repetido o pedido, ou que o atendimento tenha resolvido OUTRA parte (ex.: a cotação de um dos passageiros
+      falhou e o cliente seguiu só com os outros; uma recotação falhou e o cliente depois pediu outra coisa). Pedido
+      abandonado não é pedido resolvido.
+      (2) alguém da equipe só avisou que está aguardando o especialista ou ainda verificando, sem trazer a solução.
+      Aviso de espera não resolve o problema.
+    - "resolvido": tudo o que motivou o pedido de pessoa foi resolvido pelo próprio atendimento (humano ou
+      automático), e não há outro pedido do cliente que tenha falhado e ficado sem solução. Um anúncio antigo de
+      encaminhamento ("vou encaminhar para um especialista") seguido da solução não conta. O atendimento ter feito
+      uma pergunta ao cliente e estar esperando a resposta dele (ex.: "15 ou 30 dias de carro reserva?") não pede
+      pessoa por si só: esperar o cliente não é problema em aberto, mas também não anula um pedido anterior que
+      ficou sem solução.
+    "motivo": uma frase curta. Com "pedido_de_pessoa" ou "problema_em_aberto", diga qual pedido ou problema ficou
+    sem solução ou o que o cliente pediu (ex.: "cliente pediu explicação de um item da cotação e o atendente não
+    soube"); com "resolvido", o que resolveu (ex.: "o atendente enviou a cotação e o cliente não voltou com
+    dúvida"). Não copie dados pessoais (nome, documento, telefone, e-mail, endereço).
     Os DADOS DE ENTRADA trazem as mensagens ("recent_messages", em ordem), o resumo, o estado do atendimento, o
     gatilho de passagem definido pela equipe ("handoff_trigger", que diz quando ela quer uma pessoa) e o motivo do
     pedido original ("motivo_do_pedido", quando houver).

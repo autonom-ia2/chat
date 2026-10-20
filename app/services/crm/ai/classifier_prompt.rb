@@ -109,11 +109,16 @@ module Crm::Ai::ClassifierPrompt
       dúvida) e o cliente não voltou com um problema em aberto, o anúncio foi superado: "continuar". Se o
       problema segue sem solução (o cliente perguntou algo que o atendente não soube explicar, reclamou e não foi
       atendido), o anúncio continua de pé, mesmo que o atendente tenha respondido no meio. O pedido EXPLÍCITO do
-      cliente para falar com uma pessoa, ainda não atendido por uma pessoa, sempre conta.
+      cliente para falar com uma pessoa, ainda não atendido por uma pessoa, sempre conta. Também continua de pé: o
+      atendimento falhou em algo que o cliente pediu e prometeu uma pessoa ou um especialista, e ninguém da equipe
+      resolveu depois, mesmo que o cliente tenha mudado de assunto, não tenha repetido o pedido, ou que outra parte
+      tenha sido resolvida (pedido abandonado não é pedido resolvido); e alguém da equipe só avisou que aguarda o
+      especialista ou ainda está verificando, sem trazer a solução. O atendimento esperar a resposta do cliente a
+      uma pergunta não pede pessoa por si só, mas não anula um pedido anterior que ficou sem solução.
       Quando o gatilho estiver vazio, use "o cliente pediu explicitamente um atendente humano".
-      NESTE E SOMENTE NESTE caso, should_handoff=true e "reason" é OBRIGATÓRIO: diga em uma frase qual problema
-      ficou aberto ou o que o cliente pediu (ex.: "cliente pediu explicação de um item da cotação e o atendente
-      não soube"), sem copiar dados pessoais.
+      NESTE E SOMENTE NESTE caso, should_handoff=true e "reason" é OBRIGATÓRIO: diga em uma frase qual pedido
+      ou problema ficou sem solução ou o que o cliente pediu (ex.: "cliente pediu explicação de um item da
+      cotação e o atendente não soube"), sem copiar dados pessoais.
     - "consultar": o handoff_trigger NÃO foi atendido, mas o cliente tem uma dúvida pontual que poderia precisar
       de um especialista (segue conversando com você). should_handoff=false.
     - "continuar": o handoff_trigger NÃO foi atendido e o atendimento segue normal (padrão). should_handoff=false.
