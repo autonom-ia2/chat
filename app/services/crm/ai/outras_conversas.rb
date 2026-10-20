@@ -1,7 +1,7 @@
 # As mensagens de outras conversas dos cards da avaliação conjunta (#1693; outro canal, #1664: e-mail + WhatsApp).
 #
 # A avaliação de um card lê as mensagens recentes de TODAS as conversas dele (Crm::Ai::ContextBuilder#recent_messages,
-# até MAX_RECENT_MESSAGES por conversa e MAX_MESSAGES_CAP no total). Na conjunta, a conversa comum é o recorte do
+# na janela da avaliação: até MAX_MESSAGES_CAP no total, divididas entre as conversas, #1926). Na conjunta, a conversa comum é o recorte do
 # principal; de cada outro card vai, no pacote dele, o que o recorte dele traz e a conversa comum não tem. O limite é
 # por card (MAX_POR_CARD, as mais recentes dele) e por chamada (MAX_TOTAL, as mais recentes entre todos os cards).
 #

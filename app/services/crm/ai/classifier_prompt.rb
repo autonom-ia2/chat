@@ -197,11 +197,31 @@ module Crm::Ai::ClassifierPrompt
       quando a proposta de fato existir.
     - Sem nenhuma evidência nova relevante desde a última interação: mantenha o estágio atual com
       confiança baixa; não invente progresso.
-    - Cliente diz explicitamente que fechou negócio e há um estágio de conclusão/ganho: mover para ele
-      com confiança alta e preencher "value" apenas se o preço da NOSSA oferta foi citado.
+    - Cliente diz explicitamente que fechou negócio CONOSCO e há um estágio de conclusão/ganho: mover para
+      ele com confiança alta e preencher "value" apenas se o preço da NOSSA oferta foi citado. Se ele não diz
+      com quem fechou, veja "QUANDO O CLIENTE DIZ QUE O ASSUNTO TERMINOU".
     - Cliente diz que desistiu/escolheu concorrente e há um estágio de perda: mover para ele com
       confiança alta. Sem declaração explícita, NÃO trate atraso ou silêncio como perda.
   EX
+
+  # #1926: "já conseguimos fechar", sem dizer com quem, ia para a etapa do meio que fala em "fechar" (Negociação) e até
+  # para Ganho; "já resolvi", para a etapa do meio. Um fim ambíguo não é progresso: é um dos fins ou manter, e o
+  # incerto vira sugestão (confiança abaixo da de mover sozinho) para uma pessoa confirmar.
+  FIM_DO_ASSUNTO = <<~FIM.strip
+    QUANDO O CLIENTE DIZ QUE O ASSUNTO TERMINOU:
+    - Uma fala de que o assunto acabou (fechou, resolveu, já conseguiu, não precisa mais) não é progresso: o card não
+      vai para uma etapa do meio do funil, nem para uma cujo critério fale em "fechar" ou "decidir". Ele vai para a
+      etapa de fim cujos critérios descrevem COMO terminou, ou fica onde está.
+    - Em "sell", o fim depende de com quem terminou. Ganho só quando a conversa mostra que foi CONOSCO: aceitou a
+      nossa proposta, pediu contrato, boleto ou dados para pagar, pagou ou confirmou com a nossa equipe. Fechou com
+      outro, resolveu sozinho ou desistiu: o fim de perda.
+    - Se a fala não diz com quem nem como, e a conversa não mostra que foi conosco, a leitura é INCERTA: um
+      agradecimento ou a proposta já enviada não provam que foi conosco. Escolha a etapa de fim que os critérios
+      indicam para quem não precisa mais da nossa oferta, com confiança média (0.6 a 0.7), para uma pessoa confirmar.
+      Sem etapa assim, mantenha o estágio atual com confiança baixa.
+    - Em "serve", o fim é o de resolvido ou concluído quando os critérios o descrevem; se não está claro que foi o
+      problema DESTE card que se resolveu, mantenha.
+  FIM
 
   # Vale para todas as contas (#1140): a avaliação conjunta já avisava (VARIOS), a de um card não. Fica no FIM do prefixo
   # de propósito: o cache de prompt é por prefixo, então tudo antes daqui segue byte a byte igual ao de antes e só o
@@ -232,6 +252,7 @@ module Crm::Ai::ClassifierPrompt
     OTHER_SUBJECTS,
     OUTPUT_DISCIPLINE,
     EXAMPLES,
+    FIM_DO_ASSUNTO,
     DADOS_NAO_INSTRUCOES
   ].freeze
   TEXT = PARTES.join("\n\n").freeze
