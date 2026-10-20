@@ -9,7 +9,7 @@ import {
   getUserPermissions,
   hasPermissions,
 } from 'dashboard/helper/permissionsHelper';
-import { INBOX_PERMISSIONS } from 'dashboard/constants/permissions';
+import { usePodeAbrir } from 'dashboard/components-next/sidebar/fork/usePodeAbrir';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import { useEstadoDaConexao } from './useEstadoDaConexao';
 
@@ -21,14 +21,27 @@ const { t } = useI18n();
 const router = useRouter();
 const { estado, mostrar } = useEstadoDaConexao(() => props.caixa);
 
-// O botão só para quem abre as configurações da caixa (a mesma regra da rota).
 const usuario = useMapGetter('getCurrentUser');
 const idDaConta = useMapGetter('getCurrentAccountId');
-const podeReconectar = computed(() =>
-  hasPermissions(
-    ['administrator', ...INBOX_PERMISSIONS],
-    getUserPermissions(usuario.value, idDaConta.value)
-  )
+const { podeAbrir } = usePodeAbrir();
+
+const conexaoDaCaixa = computed(() => ({
+  name: 'settings_inbox_show',
+  params: {
+    accountId: idDaConta.value,
+    inboxId: props.caixa.id,
+    tab: 'connection',
+  },
+}));
+
+// O botão só para quem reconecta: a aba de conexão pede gerenciar a caixa (o servidor
+// confere `update?`), e a rota das configurações precisa abrir (flag e permissão dela).
+const podeReconectar = computed(
+  () =>
+    hasPermissions(
+      ['administrator', 'inbox_manage'],
+      getUserPermissions(usuario.value, idDaConta.value)
+    ) && podeAbrir(conexaoDaCaixa.value)
 );
 
 // Os mesmos nomes de estado da aba de conexão.
@@ -41,11 +54,7 @@ const rotulo = computed(
     })[estado.value]
 );
 
-const irParaConexao = () =>
-  router.push({
-    name: 'settings_inbox_show',
-    params: { inboxId: props.caixa.id, tab: 'connection' },
-  });
+const irParaConexao = () => router.push(conexaoDaCaixa.value);
 </script>
 
 <!-- eslint-disable-next-line vue/no-root-v-if -->

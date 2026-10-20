@@ -7,14 +7,20 @@ import { nextTick } from 'vue';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import WahaInboxAPI from 'dashboard/api/wahaInbox';
 import FaixaDoWhatsapp from '../faixa-whatsapp/FaixaDoWhatsapp.vue';
-import {
-  ESTADOS_COM_FAIXA,
-  INTERVALO_DA_CONSULTA,
-} from '../faixa-whatsapp/useEstadoDaConexao';
+import enCanal from 'dashboard/i18n/locale/en/conversaCanal.json';
+import ptCanal from 'dashboard/i18n/locale/pt_BR/conversaCanal.json';
+import enCaixas from 'dashboard/i18n/locale/en/inboxMgmt.json';
+import ptCaixas from 'dashboard/i18n/locale/pt_BR/inboxMgmt.json';
+import { INTERVALO_DA_CONSULTA } from '../faixa-whatsapp/useEstadoDaConexao';
 
 const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
 vi.mock('dashboard/api/wahaInbox', () => ({ default: { status: vi.fn() } }));
+// A rota das configurações abre? (flag e permissão da rota, usePodeAbrir)
+const podeAbrir = vi.fn(() => true);
+vi.mock('dashboard/components-next/sidebar/fork/usePodeAbrir', () => ({
+  usePodeAbrir: () => ({ podeAbrir }),
+}));
 
 const CAIXA_WAHA = {
   id: 3,
@@ -35,7 +41,10 @@ const CAIXA_OFICIAL = { id: 5, channel_type: INBOX_TYPES.WHATSAPP };
 
 const ADMIN = { accounts: [{ id: 1, permissions: ['administrator'] }] };
 const AGENTE = { accounts: [{ id: 1, permissions: ['agent'] }] };
-const FUNCAO_DE_CAIXAS = {
+const GERENTE_DE_CAIXAS = {
+  accounts: [{ id: 1, custom_role_id: 9, permissions: ['inbox_manage'] }],
+};
+const SO_VE_CAIXAS = {
   accounts: [{ id: 1, custom_role_id: 9, permissions: ['inbox_view'] }],
 };
 
@@ -69,6 +78,8 @@ beforeEach(() => {
   vi.useFakeTimers();
   WahaInboxAPI.status.mockReset();
   push.mockReset();
+  podeAbrir.mockReset();
+  podeAbrir.mockReturnValue(true);
 });
 
 afterEach(() => {
@@ -76,12 +87,18 @@ afterEach(() => {
 });
 
 describe('FaixaDoWhatsapp (#1941)', () => {
-  it('pede a ação só em aguardando QR, falha e desconectado', () => {
-    expect(ESTADOS_COM_FAIXA).toEqual([
-      'awaiting_scan',
-      'failed',
-      'disconnected',
-    ]);
+  it.each([
+    ['en', enCanal, enCaixas],
+    ['pt_BR', ptCanal, ptCaixas],
+  ])('os textos existem em %s', (_, canal, caixas) => {
+    const faixaTextos = canal.CONVERSA_CANAL.FAIXA_WHATSAPP;
+    ['SEM_MENSAGENS', 'RECONECTAR', 'PECA_AO_ADMIN'].forEach(chave =>
+      expect(faixaTextos[chave]).toBeTruthy()
+    );
+    const estados = caixas.INBOX_MGMT.WAHA_CONNECTION.STATUS;
+    ['AWAITING', 'FAILED', 'DISCONNECTED'].forEach(chave =>
+      expect(estados[chave]).toBeTruthy()
+    );
   });
 
   it.each([
@@ -123,18 +140,36 @@ describe('FaixaDoWhatsapp (#1941)', () => {
 
     await wrapper.get('button').trigger('click');
 
-    expect(push).toHaveBeenCalledWith({
+    const destino = {
       name: 'settings_inbox_show',
-      params: { inboxId: CAIXA_WAHA.id, tab: 'connection' },
-    });
+      params: { accountId: 1, inboxId: CAIXA_WAHA.id, tab: 'connection' },
+    };
+    expect(podeAbrir).toHaveBeenCalledWith(destino);
+    expect(push).toHaveBeenCalledWith(destino);
   });
 
-  it('função personalizada com acesso às caixas vê o botão', async () => {
+  it('função personalizada que gerencia caixas vê o botão', async () => {
     responde('failed');
-    const wrapper = montar({ usuario: FUNCAO_DE_CAIXAS });
+    const wrapper = montar({ usuario: GERENTE_DE_CAIXAS });
     await flushPromises();
 
     expect(wrapper.find('button').exists()).toBe(true);
+  });
+
+  it.each([
+    ['função que só vê caixas', SO_VE_CAIXAS, true],
+    ['administrador com a rota fechada (flag desligada)', ADMIN, false],
+  ])('%s: faixa sem botão', async (_, usuario, rotaAbre) => {
+    podeAbrir.mockReturnValue(rotaAbre);
+    responde('disconnected');
+    const wrapper = montar({ usuario });
+    await flushPromises();
+
+    expect(faixa(wrapper).exists()).toBe(true);
+    expect(wrapper.find('button').exists()).toBe(false);
+    expect(wrapper.text()).toContain(
+      'CONVERSA_CANAL.FAIXA_WHATSAPP.PECA_AO_ADMIN'
+    );
   });
 
   it('agente sem acesso às configurações vê a faixa sem botão', async () => {
@@ -163,6 +198,19 @@ describe('FaixaDoWhatsapp (#1941)', () => {
 
     expect(WahaInboxAPI.status).not.toHaveBeenCalled();
     expect(faixa(wrapper).exists()).toBe(false);
+  });
+
+  it('caixa que carrega depois da lista: consulta quando chega', async () => {
+    responde('awaiting_scan');
+    const wrapper = montar({ caixa: {} });
+    await flushPromises();
+    expect(WahaInboxAPI.status).not.toHaveBeenCalled();
+
+    await wrapper.setProps({ caixa: CAIXA_WAHA });
+    await flushPromises();
+
+    expect(WahaInboxAPI.status).toHaveBeenCalledWith(CAIXA_WAHA.id);
+    expect(faixa(wrapper).exists()).toBe(true);
   });
 
   it('consulta de novo a cada 60 s e acompanha o estado', async () => {
@@ -267,6 +315,18 @@ describe('FaixaDoWhatsapp (#1941)', () => {
     vi.advanceTimersByTime(INTERVALO_DA_CONSULTA);
     await flushPromises();
     expect(WahaInboxAPI.status).toHaveBeenCalledTimes(3);
+    expect(faixa(wrapper).exists()).toBe(true);
+  });
+
+  it('erro do servidor (500): sem faixa, e continua consultando', async () => {
+    recusa(500);
+    const wrapper = montar();
+    await flushPromises();
+    expect(faixa(wrapper).exists()).toBe(false);
+
+    responde('failed');
+    vi.advanceTimersByTime(INTERVALO_DA_CONSULTA);
+    await flushPromises();
     expect(faixa(wrapper).exists()).toBe(true);
   });
 
