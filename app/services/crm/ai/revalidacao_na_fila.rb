@@ -19,9 +19,12 @@
 # aberto, a marca guarda a última mensagem lida e o motivo novo, e a rodada seguinte entrega; falhou (na chamada ou ao
 # aplicar), a marca guarda a última mensagem lida e `revalidacao_falhou`, e a rodada seguinte entrega como hoje.
 # Resposta velha (a espera, o motivo, o card ou as mensagens mudaram durante a chamada) é descartada, e a rodada
-# seguinte enfileira outra. Prazo total (`revalidacao_comecou_em`, que sobrevive ao descarte e ao reenfileiramento):
-# passando de 10 min, a fila entrega como hoje, mesmo com mensagens chegando a cada releitura; o job vencido não chama
-# a IA nem aplica. Job que parece perdido (5 min sem resposta) é enfileirado de novo uma vez.
+# seguinte enfileira outra. Prazo total (`revalidacao_comecou_em`): começa na primeira releitura e vale enquanto a
+# espera é a mesma, passando por descarte, reenfileiramento, confirmação e nova tentativa sem ninguém; só acaba quando
+# a fila vai tentar a entrega. Passando de 10 min, a fila entrega como hoje, mesmo com mensagens chegando a cada
+# releitura; o job vencido não chama a IA nem aplica. Funil desligado (ou card apagado) com o job na fila ou durante a
+# chamada: o job não chama, ou não aplica, e a rodada seguinte entrega como hoje. Job que parece perdido (5 min sem
+# resposta) é enfileirado de novo uma vez.
 class Crm::Ai::RevalidacaoNaFila
   REENFILEIRAR_DEPOIS = 5.minutes
   VENCE_DEPOIS = 10.minutes
@@ -39,14 +42,14 @@ class Crm::Ai::RevalidacaoNaFila
     return false unless releitura_cabe?(marca)
     return vencida!(marca) if vencida?(marca)
     return em_curso!(marca) if marca['revalidando_desde'].present?
-    return false if ate_onde_reler(marca).nil?
+    return entregar!(marca) if ate_onde_reler(marca).nil?
 
     enfileirar!(marca)
     true
   end
 
   # Para o job: relê a espera enfileirada com `token` (o `revalidando_desde` da marca) e aplica. Job de uma releitura
-  # que já não existe, que outro job já tomou, ou cujo prazo total venceu não chama a IA.
+  # que já não existe, que outro job já tomou, cujo prazo total venceu ou cujo funil teve a IA desligada não chama a IA.
   def reler!(token)
     marca = tomar!(token)
     return if marca.nil?
@@ -67,8 +70,24 @@ class Crm::Ai::RevalidacaoNaFila
   # rodada não gasta chamada. Com a IA do CRM desligada, na instalação ou no funil do card (a mesma regra da avaliação
   # do card), a releitura não acontece: entrega como hoje, sem esperar o job.
   def releitura_cabe?(marca)
-    Crm::Ai::Config.enabled? && da_ia_do_crm?(marca) && card.present? && Crm::Ai::Config.pipeline_ai_enabled?(card.pipeline) &&
-      !Crm::Entrega::ConviteVencido.espacar?(marca) && ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation).blank?
+    da_ia_do_crm?(marca) && ia_ligada? && !Crm::Entrega::ConviteVencido.espacar?(marca) &&
+      ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation).blank?
+  end
+
+  # Relido do banco a cada vez: o funil pode ser desligado (ou o card apagado) com o job na fila ou durante a chamada.
+  def ia_ligada?
+    return false unless Crm::Ai::Config.enabled? && card.present?
+
+    pipeline = Crm::Pipeline.find_by(id: card.pipeline_id)
+    Crm::Card.exists?(id: card.id) && pipeline.present? && Crm::Ai::Config.pipeline_ai_enabled?(pipeline)
+  end
+
+  # A fila vai tentar entregar: o prazo total desta releitura acaba aqui (uma mensagem nova depois abre outro).
+  def entregar!(marca)
+    if marca['revalidacao_comecou_em'].present?
+      sob_a_trava { |atual| Crm::Entrega::Marca.sem_prazo!(@conversation) if atual['desde'] == marca['desde'] }
+    end
+    false
   end
 
   def da_ia_do_crm?(marca)
@@ -135,16 +154,18 @@ class Crm::Ai::RevalidacaoNaFila
       next unless atual['revalidacao_comecou_em'] == marca['revalidacao_comecou_em']
 
       Crm::Entrega::Marca.revalidada!(@conversation, ate: ultima, razao: nil, falhou: true)
+      Crm::Entrega::Marca.sem_prazo!(@conversation)
     end
     registrar('revalidacao_vencida', 'prazo_total_10_min')
     false
   end
 
-  # Sob a trava: a releitura é deste token, ninguém a tomou ainda e o prazo total não venceu. Devolve a marca (agora
+  # Sob a trava: a releitura é deste token, ninguém a tomou ainda, o prazo total não venceu e a IA segue ligada no
+  # funil. Devolve a marca (agora
   # com `revalidacao_iniciada_em`) ou nil, e aí o job sai sem chamar a IA.
   def tomar!(token)
     sob_a_trava do |atual|
-      next if atual['revalidando_desde'] != token || atual['revalidacao_iniciada_em'].present? || vencida?(atual)
+      next if atual['revalidando_desde'] != token || atual['revalidacao_iniciada_em'].present? || vencida?(atual) || !ia_ligada?
 
       Crm::Entrega::Marca.revalidando!(@conversation, 'revalidacao_iniciada_em' => agora)
       Crm::Entrega::Marca.dados(@conversation)
@@ -162,7 +183,7 @@ class Crm::Ai::RevalidacaoNaFila
   # motivo, o mesmo card e nenhuma mensagem nova desde a leitura (um pedido explícito que chegou durante a chamada não
   # pode sumir com uma resposta velha).
   def mesma_espera?(atual, marca, ultima, token)
-    atual['revalidando_desde'] == token && !vencida?(atual) &&
+    atual['revalidando_desde'] == token && !vencida?(atual) && ia_ligada? &&
       atual.values_at('desde', 'razao', 'card_id') == marca.values_at('desde', 'razao', 'card_id') &&
       !mensagens_reais.exists?(['messages.id > ?', ultima])
   end

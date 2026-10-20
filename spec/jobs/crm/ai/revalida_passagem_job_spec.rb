@@ -58,7 +58,8 @@ RSpec.describe Crm::Ai::RevalidaPassagemJob do
 
     expect(marca).to include('revalidado_ate' => conversation.messages.maximum(:id),
                              'razao' => 'cliente pediu explicação de DMH e o robô não soube')
-    expect(marca.keys).not_to include(*Crm::Entrega::Marca::RELEITURA, 'revalidacao_falhou')
+    expect(marca.keys).not_to include(*Crm::Entrega::Marca::RELEITURA_EM_CURSO, 'revalidacao_falhou')
+    expect(marca['revalidacao_comecou_em']).to be_present
     expect(retiradas).to be_empty
   end
 

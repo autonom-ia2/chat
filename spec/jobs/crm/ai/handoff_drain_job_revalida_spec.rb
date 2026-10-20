@@ -193,4 +193,64 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     expect(releituras).to be_empty
     expect(conversation.reload.assignee_id).to eq(ana.id)
   end
+
+  # 3ª revisão do Codex (ALTO 1): o prazo total vale enquanto a espera é a mesma. Uma confirmação ("passa") seguida de
+  # mensagem nova antes da rodada seguinte, várias vezes, não o zera: a conversa sai na primeira rodada depois dele.
+  it 'confirmação seguida de mensagem nova, várias vezes: entrega na rodada depois dos 10 min', :aggregate_failures do
+    segurar!
+    allow(revalida).to receive(:call).and_return({ passa: true, motivo: 'segue aberto', decisao: 'problema_em_aberto' })
+    inicio = Time.current
+
+    [0, 2, 4, 6, 8, 10].each do |minuto|
+      travel_to(inicio + minuto.minutes) do
+        described_class.perform_now
+        roda_releituras!
+        fala!('e mais isto', tipo: :incoming)
+      end
+    end
+    expect(conversation.reload.assignee_id).to be_nil
+
+    travel_to(inicio + 12.minutes) { described_class.perform_now }
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+  end
+
+  it 'a nova tentativa de entrega sem ninguém disponível não zera o prazo total' do
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+    segurar!
+    described_class.perform_now
+    prazo = marca['revalidacao_comecou_em']
+
+    Crm::Entrega.new(conversation: conversation.reload, motivo: Crm::Ai::HandoffExecutor::MOTIVO_DA_ENTREGA, origem: 'message',
+                     pedido: { razao: 'cliente pediu a cotação e o robô falhou' }).call
+
+    expect(marca['revalidacao_comecou_em']).to eq(prazo)
+  end
+
+  # 3ª revisão do Codex (ALTO 2): o funil pode ter a IA desligada com o job na fila ou durante a chamada.
+  it 'funil desligado depois de enfileirar: o job não chama a IA e a rodada seguinte entrega', :aggregate_failures do
+    segurar!
+    described_class.perform_now
+    card.pipeline.update!(metadata: (card.pipeline.metadata || {}).merge('ai' => { 'enabled' => false }))
+
+    roda_releituras!
+    described_class.perform_now
+
+    expect(revalida).not_to have_received(:call)
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+  end
+
+  it 'funil desligado durante a chamada: o "resolvido" não é aplicado e a rodada seguinte entrega', :aggregate_failures do
+    segurar!
+    described_class.perform_now
+    allow(revalida).to receive(:call) do
+      card.pipeline.update!(metadata: (card.pipeline.metadata || {}).merge('ai' => { 'enabled' => false }))
+      { passa: false, motivo: 'resolvido', decisao: 'resolvido' }
+    end
+
+    roda_releituras!
+    expect(Crm::Entrega::Marca.presente?(conversation.reload)).to be(true)
+
+    described_class.perform_now
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+  end
 end

@@ -16,7 +16,7 @@ module Crm::Entrega::Marca
   # O motivo da IA do CRM guardado na marca, no mesmo tamanho do "reason" do classificador.
   RAZAO_MAX = 300
   # A releitura da IA do CRM (#1975): o job em curso (sai quando ele termina ou a resposta é descartada) e o prazo total
-  # dela (`revalidacao_comecou_em`, que sobrevive ao descarte e ao reenfileiramento e sai quando ela conclui).
+  # dela (`revalidacao_comecou_em`, que só sai quando a fila vai tentar a entrega, ou com a espera).
   RELEITURA_EM_CURSO = %w[revalidando_desde reenfileirado_em revalidacao_iniciada_em].freeze
   RELEITURA = (RELEITURA_EM_CURSO + %w[revalidacao_comecou_em]).freeze
 
@@ -42,22 +42,24 @@ module Crm::Entrega::Marca
   # ele, a marca não muda a cada tentativa. `card`: o card cuja regra vale, quando o pedido foi ligado a um assunto que
   # não é o foco (#1693). `razao`: o motivo que a IA do CRM deu ao pedir a pessoa (#1975), que vai junto na entrega pela
   # fila. `revalidado_ate`: a última mensagem que a reavaliação da fila leu (Crm::Ai::RevalidacaoNaFila; 0 se não havia
-  # nenhuma); sobrevive às novas tentativas, para a fila não pagar outra reavaliação sem mensagem nova. A releitura em
-  # curso (RELEITURA_EM_CURSO) não sobrevive: uma marca regravada pede outra releitura, e o job antigo vira nada.
+  # nenhuma); sobrevive às novas tentativas, para a fila não pagar outra reavaliação sem mensagem nova. O prazo total da
+  # releitura (`revalidacao_comecou_em`) sobrevive enquanto a espera é a mesma (mesmo `desde`). O job em curso
+  # (RELEITURA_EM_CURSO) não sobrevive: uma marca regravada pede outra releitura, e o job antigo vira nada.
   def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
+    desde = desde_para(anterior, modo)
     valor = {
       'modo' => modo,
       'motivo' => motivo.to_s,
       'falha' => falha.presence,
-      'desde' => desde_para(anterior, modo),
+      'desde' => desde,
       'avisado_em' => anterior['avisado_em'].presence,
       'tentado_em' => anterior['tentado_em'].presence,
       'dono_id' => detalhes[:dono]&.id,
       'ate' => detalhes[:ate]&.iso8601,
       'convidado_id' => detalhes[:convidado]&.id,
       'card_id' => detalhes[:card]&.id
-    }.merge(vencimentos(anterior, detalhes[:venceram]), pedido(anterior, detalhes)).compact
+    }.merge(vencimentos(anterior, detalhes[:venceram]), pedido(anterior, detalhes, desde)).compact
     conversation.additional_attributes = (conversation.additional_attributes || {}).merge(CHAVE => valor)
   end
 
@@ -67,11 +69,13 @@ module Crm::Entrega::Marca
     { 'venceram' => venceram, 'decidido_em' => venceram && Time.current.iso8601 }
   end
 
-  # O que a IA do CRM pediu: o nome sugerido, o motivo e a última mensagem que a fila releu (#1975); esta sobrevive às
-  # tentativas.
-  def pedido(anterior, detalhes)
+  # O que a IA do CRM pediu: o nome sugerido, o motivo e a última mensagem que a fila releu (#1975), que sobrevive às
+  # tentativas; e o prazo total da releitura, que sobrevive enquanto a espera é a mesma (uma nova tentativa sem
+  # ninguém disponível não o zera).
+  def pedido(anterior, detalhes, desde)
     { 'sugestao' => detalhes[:sugestao].presence, 'razao' => detalhes[:razao].to_s.first(RAZAO_MAX).presence,
-      'revalidado_ate' => anterior['revalidado_ate'].presence }
+      'revalidado_ate' => anterior['revalidado_ate'].presence,
+      'revalidacao_comecou_em' => (anterior['revalidacao_comecou_em'].presence if anterior['desde'] == desde) }
   end
 
   # O prazo do convite conta do CONVITE: virar convite recomeça a contagem; o resto (inclusive convite → segurando)
@@ -89,10 +93,10 @@ module Crm::Entrega::Marca
   end
 
   # A releitura da fila (#1975, Crm::Ai::RevalidacaoNaFila) terminou com o pedido de pé, ou falhou: guarda a última
-  # mensagem lida, o motivo novo (qual problema ficou aberto) e se falhou, e a releitura em curso sai. Só na memória:
-  # quem chama grava, sob a trava.
+  # mensagem lida, o motivo novo (qual problema ficou aberto) e se falhou, e o job em curso sai. O prazo total fica:
+  # só a tentativa de entrega o encerra (sem_prazo!). Só na memória: quem chama grava, sob a trava.
   def revalidada!(conversation, ate:, razao:, falhou: false)
-    valor = (dados(conversation) || {}).except(*RELEITURA).merge('revalidado_ate' => ate)
+    valor = (dados(conversation) || {}).except(*RELEITURA_EM_CURSO).merge('revalidado_ate' => ate)
     valor['razao'] = razao.to_s.first(RAZAO_MAX) if razao.present?
     valor['revalidacao_falhou'] = true if falhou
     conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
@@ -108,6 +112,13 @@ module Crm::Entrega::Marca
 
   def sem_releitura!(conversation)
     valor = (dados(conversation) || {}).except(*RELEITURA_EM_CURSO)
+    conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
+  end
+
+  # A fila vai tentar entregar (#1975): a releitura desta espera acabou, e uma mensagem nova depois pede outra, com
+  # prazo novo.
+  def sem_prazo!(conversation)
+    valor = (dados(conversation) || {}).except(*RELEITURA)
     conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
   end
 
