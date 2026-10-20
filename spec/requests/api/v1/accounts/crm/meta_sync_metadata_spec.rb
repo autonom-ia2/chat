@@ -37,8 +37,7 @@ RSpec.describe 'CRM meta_sync metadata API', type: :request do
       expect(metadata['goals']).to eq('monthly_target_cents' => 1000)
       expect(metadata['meta_sync']).to eq(
         'enabled' => true,
-        'events' => { 'won' => true, 'lost' => false, 'moved' => true },
-        'dataset_id' => 'DS9'
+        'events' => { 'won' => true, 'lost' => false, 'moved' => true }
       )
     end
 
@@ -70,8 +69,10 @@ RSpec.describe 'CRM meta_sync metadata API', type: :request do
         pipeline.reload.metadata['meta_sync']
       end
 
-      it 'stores a digits-only pixel id next to the dataset' do
-        expect(patch_pixel(' 2164882667623689 ')).to include('dataset_id' => 'DS9', 'pixel_id' => '2164882667623689')
+      it 'stores a digits-only pixel id and no longer keeps a funnel dataset (#1940)' do
+        meta_sync = patch_pixel(' 2164882667623689 ')
+        expect(meta_sync).to include('pixel_id' => '2164882667623689')
+        expect(meta_sync).not_to have_key('dataset_id')
       end
 
       it 'clears the pixel id when it is blank' do

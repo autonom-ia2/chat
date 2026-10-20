@@ -1,7 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 // #1384 — o que o Facebook e o Instagram recebem, numa tela própria. A venda
@@ -21,7 +20,7 @@ const meta = defineModel('meta', { type: Object, required: true });
 const { t } = useI18n();
 const A = 'CRM_FUNIL.ANUNCIOS';
 
-const siteAberto = ref(Boolean(meta.value.pixelId || meta.value.datasetId));
+const siteAberto = ref(Boolean(meta.value.pixelId));
 
 const PIXEL_MAX = 20;
 const soNumeros = valor =>
@@ -153,13 +152,6 @@ const EVENTOS = ['won', 'lost'];
             {{ $t(`${A}.PIXEL_AJUDA`) }}
           </span>
         </label>
-        <Input
-          :model-value="meta.datasetId"
-          :label="$t(`${A}.DATASET`)"
-          :placeholder="$t(`${A}.DATASET_EXEMPLO`)"
-          custom-input-class="!h-11 !rounded-xl !bg-n-solid-1 !px-3"
-          @update:model-value="mudar({ datasetId: $event })"
-        />
       </div>
     </section>
   </div>

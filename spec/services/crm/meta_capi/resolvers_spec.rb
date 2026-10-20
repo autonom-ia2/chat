@@ -36,6 +36,38 @@ RSpec.describe 'Crm::MetaCapi resolvers' do # rubocop:disable RSpec/DescribeClas
       expect(described_class.resolve(card)).to be_nil
     end
 
+    it 'finds the click in a linked conversation of another inbox and returns that conversation (#1940)' do
+      card = card_with_conversation({})
+      linked = create(:conversation, account: account, inbox: card.primary_conversation.inbox,
+                                     additional_attributes: { 'campaign' => { 'ctwa_clid' => 'LINKED' } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: linked)
+
+      source = described_class.sources(card).first
+
+      expect(source.ctwa_clid).to eq('LINKED')
+      expect(source.conversation).to eq(linked)
+    end
+
+    it 'prefers the most recent conversation carrying a clid' do
+      card = card_with_conversation('campaign' => { 'ctwa_clid' => 'OLD' })
+      card.primary_conversation.update!(created_at: 2.days.ago)
+      newer = create(:conversation, account: account, inbox: card.primary_conversation.inbox,
+                                    additional_attributes: { 'campaign_touches' => [{ 'ctwa_clid' => 'NEW' }] })
+      Crm::CardConversation.create!(account: account, card: card, conversation: newer)
+
+      expect(described_class.resolve(card)).to eq('NEW')
+    end
+
+    it 'orders by the click time, not by when the conversation started' do
+      card = card_with_conversation('campaign_touches' => [{ 'ctwa_clid' => 'FRESH', 'touched_at' => 1.hour.ago.iso8601 }])
+      card.primary_conversation.update!(created_at: 3.days.ago)
+      older_click = create(:conversation, account: account, inbox: card.primary_conversation.inbox,
+                                          additional_attributes: { 'campaign' => { 'ctwa_clid' => 'STALE', 'touched_at' => 2.days.ago.iso8601 } })
+      Crm::CardConversation.create!(account: account, card: card, conversation: older_click)
+
+      expect(described_class.resolve(card)).to eq('FRESH')
+    end
+
     it 'returns nil for a standalone card without a conversation' do
       card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Standalone', currency: 'BRL')
 

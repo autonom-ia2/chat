@@ -2,8 +2,10 @@
 # attribution. Enqueued by Crm::MetaCapiListener with IDS ONLY.
 #
 # Flow: reload card -> claim a ledger row atomically by event_id (the unique index is the
-# lock) -> require ctwa_clid + credentials (skip + record when absent) -> resolve the
-# canonical Meta event_name (nil => nothing to send) -> POST -> record the outcome.
+# lock) -> find the conversation carrying the ctwa_clid (primary or linked, #1940) and take
+# token + WABA from ITS inbox (skip + record when absent) -> resolve the canonical Meta
+# event_name (nil => nothing to send) -> the dataset of that WABA (Crm::MetaCapi::WabaDataset)
+# -> POST -> record the outcome.
 # Without ctwa_clid, a card that came from a website button (#1011) goes to the funnel's
 # Pixel with the browser signals the page captured (see #deliver_website); the CTWA path
 # itself is unchanged.
@@ -64,23 +66,46 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   end
 
   def deliver(row, card, event_id, event_type, activity)
-    ctwa_clid = Crm::MetaCapi::CtwaClidResolver.resolve(card)
-    return deliver_website(row, card, event_id, event_type, activity) if ctwa_clid.blank?
+    source = ctwa_source(card)
+    return deliver_website(row, card, event_id, event_type, activity) if source.nil?
 
-    credentials = resolve_credentials(card)
-    return skip(row, 'missing_credentials') if credentials[:access_token].blank? || credentials[:dataset_id].blank?
+    channel = whatsapp_channel(source.conversation.inbox)
+    credentials = channel_credentials(channel)
+    return skip(row, 'missing_credentials') if credentials[:access_token].blank? || credentials[:waba_id].blank?
 
     event_name = Crm::MetaCapi::PayloadBuilder.canonical_event_name(event_type: event_type, stage_type: row.funnel_stage_type)
     return skip(row, 'no_meta_event') if event_name.blank?
 
-    row.update!(ctwa_clid: ctwa_clid, dataset_id: credentials[:dataset_id], attribution_mode: 'ctwa')
+    dataset_id = waba_dataset(row, channel, credentials)
+    return skip(row, 'missing_dataset') if dataset_id.blank?
+
+    row.update!(ctwa_clid: source.ctwa_clid, dataset_id: dataset_id, attribution_mode: 'ctwa')
+    post_ctwa_event(row, card, event_name, credentials, activity)
+  end
+
+  # The newest click that came through an official WhatsApp inbox; a click seen only in
+  # another kind of inbox has no Meta token to report it with.
+  def ctwa_source(card)
+    sources = Crm::MetaCapi::CtwaClidResolver.sources(card)
+    sources.find { |candidate| whatsapp_channel(candidate.conversation.inbox) } || sources.first
+  end
+
+  # A failed lookup (outage, rate limit, refused token) is not the event's fault: the row
+  # becomes an error, so the Sidekiq retry can claim it again, and the job re-raises.
+  def waba_dataset(row, channel, credentials)
+    Crm::MetaCapi::WabaDataset.for(channel, **credentials)
+  rescue Crm::MetaCapi::WabaDataset::LookupError => e
+    row.update!(status: :error, error_message: "dataset_lookup: #{sanitize(e.message)}")
+    raise DispatchError.new("Meta dataset lookup failed event=#{row.event_id}"), cause: nil
+  end
+
+  def post_ctwa_event(row, card, event_name, credentials, activity)
     payload = Crm::MetaCapi::PayloadBuilder.build(
-      card: card, event_name: event_name, event_type: event_type, event_id: event_id,
-      attribution: { ctwa_clid: ctwa_clid, waba_id: credentials[:waba_id] }
+      card: card, event_name: event_name, event_type: row.event_type, event_id: row.event_id,
+      attribution: { ctwa_clid: row.ctwa_clid, waba_id: credentials[:waba_id] }
     )
-    apply_transition_time!(payload, event_type, activity)
-    response = Meta::ConversionsApiClient.new(access_token: credentials[:access_token], dataset_id: credentials[:dataset_id]).post_events([payload])
-    record_result(row, response)
+    apply_transition_time!(payload, row.event_type, activity)
+    record_result(row, post_events(credentials[:access_token], row, payload))
   end
 
   # Website mode (#1011, docs/crm/ponte-lp-atribuicao.md section 6): no ctwa_clid, so we
@@ -135,7 +160,8 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   end
 
   def website_credentials(card)
-    [::Crm::MetaAdsConnection.active_for(card.account_id), resolve_credentials(card)[:access_token]]
+    inbox = card.primary_conversation&.inbox || card.inbox
+    [::Crm::MetaAdsConnection.active_for(card.account_id), channel_credentials(whatsapp_channel(inbox))[:access_token]]
   end
 
   def post_events(token, row, payload)
@@ -226,18 +252,18 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     "crm-#{card_id}-#{event_type}-#{activity_id}"
   end
 
-  # Reuses the WhatsApp channel credential (no new secret storage): the card's inbox is the
-  # CTWA entry point, so its channel holds both the token and the WABA id. dataset_id is the
-  # per-pipeline destination configured in the funnel editor (metadata['meta_sync']).
-  def resolve_credentials(card)
-    inbox = card.primary_conversation&.inbox || card.inbox
+  # The official WhatsApp channel behind an inbox, or nil (API/WAHA inboxes have no Meta token).
+  def whatsapp_channel(inbox)
     channel = inbox&.channel
-    config = channel.respond_to?(:provider_config) ? channel.provider_config.to_h : {}
-    {
-      access_token: config['api_key'].presence,
-      waba_id: config['business_account_id'].presence,
-      dataset_id: card.pipeline&.metadata&.dig('meta_sync', 'dataset_id').presence
-    }
+    channel if channel.is_a?(Channel::Whatsapp)
+  end
+
+  # Reuses the WhatsApp channel credential (no new secret storage): the inbox of the
+  # conversation that carries the click holds both the token and the WABA id. The dataset
+  # comes from that WABA too (Crm::MetaCapi::WabaDataset, #1940), never from the funnel.
+  def channel_credentials(channel)
+    config = channel ? channel.provider_config.to_h : {}
+    { access_token: config['api_key'].presence, waba_id: config['business_account_id'].presence }
   end
 
   def sanitize(text)

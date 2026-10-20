@@ -4,9 +4,14 @@ require 'rails_helper'
 # O caminho CTWA continua coberto por dispatch_job_spec.rb, sem alteração.
 RSpec.describe Crm::MetaCapi::DispatchJob do
   let(:account) { create(:account) }
-  let(:pipeline_metadata) { { 'meta_sync' => { 'dataset_id' => 'DS123', 'pixel_id' => '2164882667623689' } } }
+  let(:pipeline_metadata) { { 'meta_sync' => { 'pixel_id' => '2164882667623689' } } }
+  # The WhatsApp (CTWA) path reads the dataset of the inbox WABA (#1940), kept on the channel.
   let(:channel) do
     create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', validate_provider_config: false, sync_templates: false)
+      .tap do |created|
+        dataset = { 'waba_id' => created.provider_config['business_account_id'], 'id' => 'DS123' }
+        created.update_columns(provider_config: created.provider_config.merge('meta_dataset' => dataset)) # rubocop:disable Rails/SkipsModelValidations
+      end
   end
   let(:conversation) { create(:conversation, account: account, inbox: channel.inbox) }
   let(:pipeline) do

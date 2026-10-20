@@ -127,7 +127,7 @@ class Crm::MetaCapi::BackfillJob < ApplicationJob
   end
 
   def cards_scope(pipeline)
-    pipeline.cards.where.not(conversation_id: nil)
+    pipeline.cards.where.not(conversation_id: nil).includes(:primary_conversation, :linked_conversations)
   end
 
   def build_report(account_id, dry_run)
