@@ -10,8 +10,10 @@
 #   que o robô tenha respondido no meio;
 # - resolvido: não passa.
 #
-# O modelo primeiro lista todos os pedidos do cliente na conversa ("pedidos", com a situação de cada um) e só depois
-# decide: um pedido que falhou lá atrás não some porque a conversa seguiu para outro assunto.
+# O modelo primeiro lista as falhas do atendimento ("falhas": a mesma coisa foi entregue depois?), depois todos os
+# pedidos do cliente ("pedidos", com a situação de cada um), e só então decide: um pedido que falhou lá atrás não some
+# porque a conversa seguiu para outro assunto. A decisão "resolvido" que as próprias listas contradizem vira
+# "problema_em_aberto" no código (coerência entre campos, sem ler o texto).
 #
 # Quem decide é o modelo, lendo a conversa até agora (as mesmas mensagens, papéis e estado que a avaliação do card vê,
 # Crm::Ai::ContextBuilder). Nada de regra por horário, por quem falou por último ou por lista de palavras.
@@ -35,18 +37,32 @@ class Crm::Ai::RevalidaPassagem
   # "resolvido" a uma recotação que falhou porque, depois, o robô fez a renovação de outro carro.
   SITUACOES = %w[resolvido falhou_sem_solucao aguardando_cliente em_andamento].freeze
   MAX_PEDIDOS = 8
+  MAX_FALHAS = 6
   # As situações que mantêm o problema aberto: com uma delas na lista, "resolvido" não vale.
   ABERTAS = %w[falhou_sem_solucao em_andamento].freeze
   INSTRUCTIONS = <<~TEXT.freeze
     Você confere se uma conversa de atendimento ainda precisa de uma PESSOA da equipe. Mais cedo, uma avaliação
     automática pediu que uma pessoa assumisse; ninguém estava disponível e a conversa ficou esperando. Antes de
     entregá-la, leia a conversa inteira até agora, do começo ao fim, e não só o último assunto.
-    PRIMEIRO, "pedidos": liste TODOS os pedidos que o cliente fez na conversa, um por item (até #{MAX_PEDIDOS}; se
-    houver mais, junte os parecidos, nunca uma parte que falhou com uma atendida), inclusive os antigos, os que o cliente abandonou e os que ele trocou por outro
-    assunto. Pedido atendido só em parte vira DOIS itens: a parte atendida como "resolvido" e a parte que ficou de
-    fora pela falha como "falhou_sem_solucao" (ex.: a cotação para 3 pessoas falhou e o cliente seguiu só com 2: um
-    item "cotação de 2 pessoas", resolvido, e outro "cotação da pessoa que ficou de fora", falhou_sem_solucao). Vale
-    para pessoa, item, cobertura, veículo ou qualquer outra parte do pedido. Para cada item:
+    PRIMEIRO, "falhas": liste TODA vez, na conversa inteira, que o atendimento (automático ou uma pessoa da equipe)
+    disse que não conseguiu fazer algo, que houve uma falha, ou prometeu passar a uma pessoa ou a um especialista (até
+    #{MAX_FALHAS}; se houver mais, as mais recentes). Para cada uma:
+    - "o_que_falhou": o que não deu certo, com o item, a pessoa ou o veículo exato (ex.: "recotação do primeiro
+      carro", "cotação do passageiro mais velho"), sem dado pessoal;
+    - "quando": em que ponto da conversa (ex.: "início da conversa", "dia anterior", "logo antes do pedido de pessoa");
+    - "resolvido_depois": true SÓ quando uma mensagem posterior entrega EXATAMENTE aquilo que falhou: o mesmo item, a
+      mesma pessoa, o mesmo veículo. Sucesso em OUTRO item, outra pessoa ou outro veículo não resolve (ex.: a
+      renovação de outro carro deu certo não resolve a recotação que falhou; a venda para os outros passageiros não
+      resolve o passageiro que ficou de fora; uma explicação sobre outro assunto não resolve). O cliente mudar de
+      assunto ou desistir também não resolve. Na dúvida, false;
+    - "evidencia_da_solucao": com true, em poucas palavras, a mensagem que entregou aquilo que falhou; com false, "".
+    DEPOIS, "pedidos": liste TODOS os pedidos que o cliente fez na conversa, um por item (até #{MAX_PEDIDOS}; se
+    houver mais, junte os parecidos, nunca uma parte que falhou com uma atendida), inclusive os antigos, os que o
+    cliente abandonou e os que ele trocou por outro assunto. Pedido atendido só em parte vira DOIS itens: a parte
+    atendida como "resolvido" e a parte que ficou de fora pela falha como "falhou_sem_solucao" (ex.: a cotação para
+    3 pessoas falhou e o cliente seguiu só com 2: um item "cotação de 2 pessoas", resolvido, e outro "cotação da
+    pessoa que ficou de fora", falhou_sem_solucao). Vale para pessoa, item, cobertura, veículo ou qualquer outra
+    parte do pedido. Para cada item:
     - "pedido": o que o cliente pediu, em poucas palavras (ex.: "recotação do carro", "incluir passageiro na cotação");
     - "situacao":
       - "resolvido": o atendimento (humano ou automático) entregou o que foi pedido;
@@ -61,21 +77,22 @@ class Crm::Ai::RevalidaPassagem
         só avisou que está aguardando o especialista ou ainda verificando. Aviso de espera não resolve o problema;
     - "como": em poucas palavras, o que aconteceu com ele (ex.: "o sistema não cotou e o robô prometeu um
       especialista").
-    DEPOIS, "decisao", a partir da lista:
+    POR FIM, "decisao", a partir das duas listas:
     - "pedido_de_pessoa": o cliente pediu explicitamente para falar com uma pessoa (atendente, humano, alguém da
       equipe) e esse pedido ainda não foi atendido por uma pessoa. Vale sempre, mesmo que o atendente automático tenha
       respondido depois.
-    - "problema_em_aberto": há pelo menos um pedido "falhou_sem_solucao" ou "em_andamento", ou o cliente tem um
-      problema, dúvida ou reclamação que não foi resolvido e que pede uma pessoa (perguntou algo que o atendente não
-      soube explicar, reclamou e não foi atendido, ficou sem a resposta prometida). Vale mesmo que o atendente tenha
-      respondido no meio ou resolvido outros pedidos.
-    - "resolvido": SÓ quando todos os pedidos da lista estão "resolvido" ou "aguardando_cliente". Esperar a resposta
-      do cliente não pede pessoa por si só, mas não anula um pedido anterior que ficou sem solução. Um anúncio antigo
-      de encaminhamento ("vou encaminhar para um especialista") seguido da solução não conta.
-    "motivo": uma frase curta. Com "pedido_de_pessoa" ou "problema_em_aberto", diga qual pedido ficou sem solução ou o
-    que o cliente pediu (ex.: "a recotação do carro falhou e o especialista prometido não veio"); com "resolvido", o
+    - "problema_em_aberto": há pelo menos uma falha com "resolvido_depois" false, ou um pedido "falhou_sem_solucao"
+      ou "em_andamento", ou o cliente tem um problema, dúvida ou reclamação que não foi resolvido e que pede uma
+      pessoa (perguntou algo que o atendente não soube explicar, reclamou e não foi atendido, ficou sem a resposta
+      prometida). Vale mesmo que o atendente tenha respondido no meio ou resolvido outros pedidos.
+    - "resolvido": SÓ quando toda falha tem "resolvido_depois" true e todos os pedidos da lista estão "resolvido"
+      ou "aguardando_cliente". Esperar a resposta do cliente não pede pessoa por si só, mas não anula um pedido
+      anterior que ficou sem solução. Um anúncio antigo de encaminhamento ("vou encaminhar para um especialista")
+      seguido da solução não conta.
+    "motivo": uma frase curta. Com "pedido_de_pessoa" ou "problema_em_aberto", diga qual falha ou pedido ficou sem
+    solução ou o que o cliente pediu (ex.: "a recotação do carro falhou e o especialista prometido não veio"); com "resolvido", o
     que resolveu (ex.: "o atendente enviou a cotação e o cliente não voltou com dúvida").
-    Em "pedidos" e "motivo", não copie dados pessoais (nome, documento, telefone, e-mail, endereço, placa).
+    Em "falhas", "pedidos" e "motivo", não copie dados pessoais (nome, documento, telefone, e-mail, endereço, placa).
     Os DADOS DE ENTRADA trazem as mensagens ("recent_messages", em ordem), o resumo, o estado do atendimento, o
     gatilho de passagem definido pela equipe ("handoff_trigger", que diz quando ela quer uma pessoa) e o motivo do
     pedido original ("motivo_do_pedido", quando houver).
@@ -89,11 +106,20 @@ class Crm::Ai::RevalidaPassagem
     properties: { pedido: { type: 'string', maxLength: 120 }, situacao: { type: 'string', enum: SITUACOES },
                   como: { type: 'string', maxLength: 200 } }
   }.freeze
-  # "pedidos" antes de "decisao": o modelo escreve na ordem do schema, e o inventário pronto é o que a decisão lê.
+  # Backteste v4: o modelo fundia o pedido que falhou com um sucesso posterior em outro item. As falhas vêm primeiro,
+  # cada uma com a pergunta fechada "a mesma coisa foi entregue depois?".
+  FALHA_SCHEMA = {
+    type: 'object', additionalProperties: false, required: %w[o_que_falhou quando resolvido_depois evidencia_da_solucao],
+    properties: { o_que_falhou: { type: 'string', maxLength: 120 }, quando: { type: 'string', maxLength: 80 },
+                  resolvido_depois: { type: 'boolean' }, evidencia_da_solucao: { type: 'string', maxLength: 160 } }
+  }.freeze
+  # "falhas" e "pedidos" antes de "decisao": o modelo escreve na ordem do schema, e o inventário pronto é o que a
+  # decisão lê.
   SCHEMA = {
     name: 'passagem_revalidada',
-    schema: { type: 'object', additionalProperties: false, required: %w[pedidos decisao motivo],
-              properties: { pedidos: { type: 'array', maxItems: MAX_PEDIDOS, items: PEDIDO_SCHEMA },
+    schema: { type: 'object', additionalProperties: false, required: %w[falhas pedidos decisao motivo],
+              properties: { falhas: { type: 'array', maxItems: MAX_FALHAS, items: FALHA_SCHEMA },
+                            pedidos: { type: 'array', maxItems: MAX_PEDIDOS, items: PEDIDO_SCHEMA },
                             decisao: { type: 'string', enum: DECISOES }, motivo: { type: 'string', maxLength: 300 } } }
   }.freeze
 
@@ -142,29 +168,45 @@ class Crm::Ai::RevalidaPassagem
   def interpretar(texto)
     resposta = JSON.parse(texto.to_s)
     decisao = resposta['decisao'] if resposta.is_a?(Hash)
-    raise RespostaInvalida, 'fora_do_schema' unless DECISOES.include?(decisao) && resposta['pedidos'].is_a?(Array)
+    raise RespostaInvalida, 'fora_do_schema' unless DECISOES.include?(decisao) && listas?(resposta)
 
-    decidir(decisao, resposta['pedidos'].grep(Hash), resposta['motivo'].to_s.first(300))
+    decidir(decisao, resposta['falhas'].grep(Hash), resposta['pedidos'].grep(Hash), resposta['motivo'].to_s.first(300))
   rescue JSON::ParserError
     raise RespostaInvalida, 'json_invalido'
   end
 
-  # Coerência entre campos do próprio schema, sem ler o texto: "resolvido" com um pedido que falhou ou segue em
-  # andamento na lista do próprio modelo passa, como problema em aberto, com o motivo daquele item.
-  def decidir(decisao, pedidos, motivo)
-    aberto = pedidos.find { |item| ABERTAS.include?(item['situacao']) } if decisao == NAO_PASSA
-    registrar(decisao, pedidos, incoerente: aberto.present?)
-    return { passa: decisao != NAO_PASSA, motivo: motivo, decisao: decisao } if aberto.blank?
-
-    { passa: true, motivo: [aberto['pedido'], aberto['como']].compact_blank.join(': ').first(300), decisao: 'problema_em_aberto' }
+  def listas?(resposta)
+    resposta['falhas'].is_a?(Array) && resposta['pedidos'].is_a?(Array)
   end
 
-  # O inventário só vai ao log, e só em contagens por situação (o texto dos pedidos pode trazer dado do cliente).
-  # incoerente=1: o modelo disse "resolvido" com um pedido que falhou ou segue em andamento na própria lista (e o
+  # Coerência entre campos do próprio schema, sem ler o texto: "resolvido" com uma falha que não foi resolvida depois,
+  # ou com um pedido que falhou ou segue em andamento, nas listas do próprio modelo, passa como problema em aberto,
+  # com o motivo daquela falha (ou daquele pedido).
+  def decidir(decisao, falhas, pedidos, motivo)
+    aberto = em_aberto(falhas, pedidos) if decisao == NAO_PASSA
+    registrar(decisao, falhas, pedidos, incoerente: aberto.present?)
+    return { passa: decisao != NAO_PASSA, motivo: motivo, decisao: decisao } if aberto.blank?
+
+    { passa: true, motivo: aberto.compact_blank.join(': ').first(300), decisao: 'problema_em_aberto' }
+  end
+
+  # [o que, como] da primeira falha sem solução, ou do primeiro pedido aberto; nil quando nada ficou aberto.
+  def em_aberto(falhas, pedidos)
+    falha = falhas.find { |item| item['resolvido_depois'] != true }
+    return [falha['o_que_falhou'], 'sem solução depois'] if falha
+
+    pedido = pedidos.find { |item| ABERTAS.include?(item['situacao']) }
+    [pedido['pedido'], pedido['como']] if pedido
+  end
+
+  # O inventário só vai ao log, e só em contagens (o texto das falhas e dos pedidos pode trazer dado do cliente).
+  # incoerente=1: o modelo disse "resolvido" com uma falha sem solução ou um pedido aberto nas próprias listas (e o
   # código corrigiu para problema em aberto).
-  def registrar(decisao, pedidos, incoerente:)
+  def registrar(decisao, falhas, pedidos, incoerente:)
     contagem = pedidos.filter_map { |item| item['situacao'] }.tally
+    sem_solucao = falhas.count { |item| item['resolvido_depois'] != true }
     Rails.logger.info("[crm][revalida] conversa=#{@conversation.id} card=#{@card.id} decisao=#{decisao} " \
+                      "falhas=#{falhas.size} sem_solucao=#{sem_solucao} " \
                       "pedidos=#{SITUACOES.map { |situacao| "#{situacao}:#{contagem[situacao].to_i}" }.join(',')} " \
                       "incoerente=#{incoerente ? 1 : 0}")
   end
