@@ -20,6 +20,9 @@ module Crm::Subjects
   LIMITE_MENSAL = 10_000
   # Assuntos abertos que o Jev vê como opção; os mais recentes primeiro.
   MAX_ASSUNTOS = 8
+  # Mensagens dos dois lados que o Jev e o modelo maior leem (#1924). Com 5, o pedido do cliente saía da janela depois
+  # de algumas idas e vindas com a equipe. 12 é a janela recente da IA do card (Crm::Ai::ContextBuilder).
+  MAX_MENSAGENS = 12
   FEATURE = 'assunto'.freeze
   FEATURE_REVISAO = 'assunto_revisao'.freeze
   # A IA não troca sozinha o assunto que uma pessoa escolheu por este tempo: vira sugestão (#1260).

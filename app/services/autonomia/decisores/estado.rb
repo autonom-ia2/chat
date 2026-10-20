@@ -7,7 +7,8 @@
 # e-mail ou telefone, que é o que a plataforma põe quando não sabe o nome, nem como atributo
 # personalizado (um valor com forma de e-mail ou de telefone fica de fora). As mensagens são as 5
 # últimas até a mensagem da pergunta, cada uma cortada em 5.000 caracteres (#1000: formulário de
-# site por e-mail tem cabeçalho e rodapé).
+# site por e-mail tem cabeçalho e rodapé). Quem chama pode pedir outra janela (#1924: a IA de assunto
+# lê mais, porque o pedido costuma ficar algumas idas e vindas antes da última mensagem).
 #
 # Sem `leituras`, lê o que a etapa 1 lia: canal, assunto e as mensagens do cliente.
 class Autonomia::Decisores::Estado
@@ -40,13 +41,14 @@ class Autonomia::Decisores::Estado
   end
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
-                 leituras: Autonomia::Decisor::LEITURAS_PADRAO)
+                 leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS)
     @conversation = conversation
     @message = message
     @card = card
     @contact = contact
     @texto = texto.to_s.strip.first(MAX_CARACTERES).presence
     @leituras = leituras
+    @max_mensagens = max_mensagens
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -236,7 +238,7 @@ class Autonomia::Decisores::Estado
 
     escopo = escopo.where.not(content: [nil, ''])
     escopo = escopo.where(id: ..message.id) if message
-    escopo.reorder(id: :desc).limit(MAX_MENSAGENS).to_a.reverse
+    escopo.reorder(id: :desc).limit(@max_mensagens).to_a.reverse
   end
 
   def card_da_conversa
