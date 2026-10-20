@@ -90,8 +90,9 @@ describe('pipeline description AI actions', () => {
 
     expect(CrmKanbanAPI.improveStageCriteria).toHaveBeenCalledWith(1, {
       stages: [
-        { name: 'Novo', description: '  ' },
-        { name: 'Proposta', description: 'Oferta apresentada.' },
+        // #1920: a etapa salva vai com o id; o servidor casa por ele.
+        { id: 10, name: 'Novo', description: '  ' },
+        { id: 11, name: 'Proposta', description: 'Oferta apresentada.' },
       ],
       stage_index: 0,
       funil: { counts_as_sale: true, when_to_use: '' },

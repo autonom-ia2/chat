@@ -21,6 +21,9 @@ export const useFunilSugestao = ({
 
   const frasesAtuais = () =>
     form.stages.map(stage => ({
+      // #1920: o servidor acha a etapa salva pelo id (nunca pela posição);
+      // etapa nova ainda não tem.
+      ...(stage.id ? { id: stage.id } : {}),
       name: stage.name,
       description: criteriaFor(stage),
     }));

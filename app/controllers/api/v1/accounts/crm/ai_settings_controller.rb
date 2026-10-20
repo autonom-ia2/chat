@@ -23,9 +23,10 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
 
   def improve_criteria
     authorize @pipeline, :manage_ai?
-    input = params.permit(:stage_index, stages: [:name, :description]).to_h
+    input = params.permit(:stage_index, stages: [:id, :name, :description]).to_h
     raw_input = params.slice(:stages, :stage_index).to_unsafe_h
     return render_unprocessable('invalid_stage_criteria') unless Crm::Ai::StageCriteriaImprover.valid_input?(raw_input)
+    return render_unprocessable('invalid_funil') if funil_do_formulario.nil?
 
     defer_interactive_ai('stage_criteria', {
                            pipeline_id: @pipeline.id, stages: input.fetch('stages'), stage_index: input.fetch('stage_index'),
@@ -39,13 +40,17 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
     raw_input = { 'stages' => params.to_unsafe_h['stages'], 'stage_index' => 0 }
     return render_unprocessable('invalid_stage_criteria') unless Crm::Ai::StageCriteriaImprover.valid_input?(raw_input)
 
-    stages = params.permit(stages: [:name, :description]).to_h.fetch('stages')
+    return render json: { error: 'xray_busy' }, status: :too_many_requests unless Crm::Ai::RaioXDasFrases.vaga?(@pipeline)
+
+    stages = params.permit(stages: [:id, :name, :description]).to_h.fetch('stages')
     defer_interactive_ai('stage_criteria_xray', { pipeline_id: @pipeline.id, stages: stages })
   end
 
   # #1920: "Melhorar com IA" do "quando usar" do funil (Crm::Ai::WhenToUseImprover).
   def improve_when_to_use
     authorize @pipeline, :manage_ai?
+    return render_unprocessable('invalid_funil') if funil_do_formulario.nil?
+
     defer_interactive_ai('pipeline_when_to_use', {
                            pipeline_id: @pipeline.id, language: I18n.locale.to_s,
                            funil: funil_do_formulario
@@ -54,9 +59,11 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
 
   private
 
-  # #1920: o tipo e o "quando usar" que estão no formulário, para a IA que escreve a frase.
+  # #1920: o tipo e o "quando usar" que estão no formulário, para a IA que escreve a frase. nil quando o formato é inválido.
   def funil_do_formulario
-    Crm::Ai::ContextoDoFunil.do_formulario(params.permit(funil: %i[counts_as_sale when_to_use])[:funil])
+    return @funil_do_formulario if defined?(@funil_do_formulario)
+
+    @funil_do_formulario = Crm::Ai::ContextoDoFunil.do_formulario(params.permit(funil: %i[counts_as_sale when_to_use])[:funil])
   end
 
   def fetch_pipeline

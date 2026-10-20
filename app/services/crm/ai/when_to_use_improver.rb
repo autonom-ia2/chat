@@ -14,8 +14,10 @@ class Crm::Ai::WhenToUseImprover
   }.freeze
 
   # funil: o tipo e o "quando usar" que estão no formulário, por cima do salvo (Crm::Ai::ContextoDoFunil).
-  def initialize(pipeline:, language:, funil: {})
+  # cards: os cards que quem pediu pode ver (Crm::CardPolicy::Scope), de onde sai a evidência.
+  def initialize(pipeline:, language:, funil: {}, cards: nil)
     @pipeline = pipeline
+    @cards = cards
     @language = language
     @funil = funil
   end
@@ -25,15 +27,24 @@ class Crm::Ai::WhenToUseImprover
     client = Crm::Ai::ResponsesClient.new(credential: credential, feature: 'classify', account: @pipeline.account, pipeline: @pipeline)
     response = client.create(model: MODEL, instructions: INSTRUCTIONS, input: entrada.to_json, schema: SCHEMA, reasoning_effort: 'high')
     resultado = JSON.parse(response.fetch(:text))
-    resultado.merge('when_to_use' => resultado['when_to_use'].to_s.strip.first(Crm::Pipeline::MAX_WHEN_TO_USE))
+    resultado.merge('when_to_use' => no_tamanho(resultado['when_to_use'].to_s.strip))
   end
 
   private
 
+  # Mais longo que o campo: corta no fim da última frase que cabe, para a pessoa não aplicar um texto partido no meio.
+  def no_tamanho(texto)
+    return texto if texto.length <= Crm::Pipeline::MAX_WHEN_TO_USE
+
+    corte = texto.first(Crm::Pipeline::MAX_WHEN_TO_USE)
+    fim = ['.', '!', '?'].filter_map { |ponto| corte.rindex(ponto) }.max
+    fim ? corte.first(fim + 1) : corte
+  end
+
   def entrada
     alvo = Crm::Ai::ContextoDoFunil.funil(@pipeline, @funil).merge(stages: @pipeline.stages.order(:position, :id).pluck(:name))
     { target: alvo, other_pipelines: outros_funis, business: Crm::Ai::ContextoDoFunil.negocio(@pipeline.account),
-      evidence: Crm::Ai::EvidenciaDoFunil.new(pipeline: @pipeline).casos.presence, language: @language }.compact
+      evidence: Crm::Ai::EvidenciaDoFunil.new(pipeline: @pipeline, cards: @cards).casos.presence, language: @language }.compact
   end
 
   def outros_funis

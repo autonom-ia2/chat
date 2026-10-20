@@ -20,6 +20,8 @@ class Crm::Ai::StageCriteriaImprover
         'items' => {
           'type' => 'object', 'required' => %w[name description], 'additionalProperties' => false,
           'properties' => {
+            # #1920: a etapa salva (nova não tem); é por ele que a evidência acha a etapa-alvo, nunca pela posição.
+            'id' => { 'type' => 'integer', 'minimum' => 1 },
             'name' => { 'type' => 'string', 'minLength' => 1, 'maxLength' => MAX_NAME_LENGTH },
             'description' => { 'type' => 'string', 'maxLength' => MAX_CRITERIA_LENGTH }
           }
@@ -36,9 +38,11 @@ class Crm::Ai::StageCriteriaImprover
   end
 
   # funil (#1920): o tipo e o "quando usar" que estão no formulário, por cima do salvo (Crm::Ai::ContextoDoFunil).
-  def initialize(pipeline:, stages:, stage_index:, language:, funil: {})
+  # cards (#1920): os cards que quem pediu pode ver (Crm::CardPolicy::Scope), de onde sai a evidência.
+  def initialize(pipeline:, stages:, stage_index:, language:, funil: {}, cards: nil) # rubocop:disable Metrics/ParameterLists
     @pipeline = pipeline
     @stages = stages
+    @cards = cards
     @stage_index = stage_index
     @language = language
     @funil = funil
@@ -62,22 +66,18 @@ class Crm::Ai::StageCriteriaImprover
   # ou ficou em dúvida sobre a etapa-alvo. A ordem das etapas dá as vizinhas, para a frase escrever a fronteira.
   def entrada
     { pipeline: Crm::Ai::ContextoDoFunil.funil(@pipeline, @funil), business: Crm::Ai::ContextoDoFunil.negocio(@pipeline.account),
-      stages: @stages, target_index: @stage_index, evidence: evidencia, language: @language }.compact
+      stages: @stages.map { |stage| stage.to_h.except('id', :id) }, target_index: @stage_index, evidence: evidencia, language: @language }.compact
   end
 
   def evidencia
     etapa = etapa_salva
-    etapa ? Crm::Ai::EvidenciaDaEtapa.new(stage: etapa).casos.presence : nil
+    etapa ? Crm::Ai::EvidenciaDaEtapa.new(stage: etapa, cards: @cards).casos.presence : nil
   end
 
-  # A etapa-alvo gravada: a da mesma posição quando a tela não acrescentou nem tirou etapas; senão, a de mesmo nome.
+  # A etapa-alvo gravada, pelo id que a tela manda. Etapa nova (sem id) não tem evidência.
   def etapa_salva
-    return unless @pipeline.persisted?
-
-    salvas = @pipeline.stages.order(:position, :id).to_a
-    alvo = @stages[@stage_index]
-    nome = (alvo[:name] || alvo['name']).to_s.strip
-    salvas.size == @stages.size ? salvas[@stage_index] : salvas.find { |etapa| etapa.name.strip == nome }
+    id = @stages[@stage_index].to_h.stringify_keys['id']
+    @pipeline.stages.find_by(id: id) if @pipeline.persisted? && id.present?
   end
 
   def instructions

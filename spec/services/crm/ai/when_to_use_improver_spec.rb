@@ -62,4 +62,13 @@ RSpec.describe Crm::Ai::WhenToUseImprover do
     expect(JSON.parse(enviado[:input])).not_to have_key('evidence')
     expect(resultado['when_to_use'].length).to eq(Crm::Pipeline::MAX_WHEN_TO_USE)
   end
+
+  it 'corta a resposta longa no fim da última frase que cabe' do
+    resposta['when_to_use'] = 'Pedido de quem já é cliente. ' * Crm::Pipeline::MAX_WHEN_TO_USE
+
+    resultado, = pedido
+
+    expect(resultado['when_to_use'].length).to be <= Crm::Pipeline::MAX_WHEN_TO_USE
+    expect(resultado['when_to_use']).to end_with('cliente.')
+  end
 end

@@ -60,15 +60,35 @@ RSpec.describe Crm::Ai::StageCriteriaImprover do
     expect(JSON.parse(pedido_enviado[:input])['pipeline']).to eq('name' => 'Funil de teste', 'kind' => 'serve', 'when_to_use' => 'Suporte.')
   end
 
-  it 'adds the real cases of the saved target stage as evidence' do
+  it 'adds the real cases of the saved target stage, found by id, as evidence' do
     novo = account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'Novo', position: 0)
     proposta = account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'Proposta', position: 1)
     caso = { signal: 'ficou_em_duvida', ai_chose: 'Proposta', messages: [{ role: 'customer', content: 'Vou pensar' }] }
     evidencia = instance_double(Crm::Ai::EvidenciaDaEtapa, casos: [caso])
-    allow(Crm::Ai::EvidenciaDaEtapa).to receive(:new).with(stage: proposta).and_return(evidencia)
+    cards = account.crm_cards.none
+    allow(Crm::Ai::EvidenciaDaEtapa).to receive(:new).with(stage: proposta, cards: cards).and_return(evidencia)
+    stages.first['id'] = novo.id
+    stages.last['id'] = proposta.id
 
-    expect(JSON.parse(pedido_enviado[:input])['evidence']).to eq([caso.deep_stringify_keys])
-    expect(novo).to be_persisted
+    entrada = JSON.parse(pedido_enviado(cards: cards)[:input])
+
+    expect(entrada['evidence']).to eq([caso.deep_stringify_keys])
+    expect(entrada['stages'].map(&:keys)).to all(eq(%w[name description]))
+  end
+
+  # #1920: reordenar as etapas na tela não troca a etapa-alvo; etapa nova (sem id) não tem evidência.
+  it 'finds the target by id after a reorder and has no evidence for a new stage' do
+    novo = account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'Novo', position: 0)
+    proposta = account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'Proposta', position: 1)
+    allow(Crm::Ai::EvidenciaDaEtapa).to receive(:new).and_return(instance_double(Crm::Ai::EvidenciaDaEtapa, casos: []))
+    stages.replace([{ 'id' => proposta.id, 'name' => 'Proposta', 'description' => '' }, { 'id' => novo.id, 'name' => 'Novo', 'description' => '' }])
+
+    pedido_enviado
+    expect(Crm::Ai::EvidenciaDaEtapa).to have_received(:new).with(stage: novo, cards: nil)
+
+    stages.last.delete('id')
+    pedido_enviado
+    expect(Crm::Ai::EvidenciaDaEtapa).to have_received(:new).once
   end
 
   it 'has no evidence for a draft pipeline' do

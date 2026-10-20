@@ -28,7 +28,7 @@ module Crm
       # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
       # memoria (#1601): só a avaliação de card com a flag `memoria_ia` pede; cada mensagem ganha um id LOCAL ("ref": m1,
       # m2...) e o contexto traz os fatos já registrados (Crm::Memoria::ParaAvaliacao). Os outros leitores não mudam.
-      # ate (#1920): só as mensagens até o instante em que uma pessoa decidiu a etapa (evidência e raio-x das frases).
+      # ate (#1920): o card como estava no instante em que uma pessoa decidiu a etapa (evidência e raio-x das frases).
       def initialize(card:, fora: [], memoria: false, ate: nil)
         @card = card
         @fora = fora
@@ -37,6 +37,8 @@ module Crm
       end
 
       def perform
+        return historico if @ate
+
         {
           summary: ai_metadata['summary'].to_s,
           recent_messages: recent_messages,
@@ -51,7 +53,19 @@ module Crm
         }.merge(memoria_payload)
       end
 
+      # #1920: só as mensagens públicas (até `ate`, quando há), no formato do recent_messages (o trecho da evidência).
+      def mensagens = recent_messages
+
       private
+
+      # #1920: o que dá para ver de como o card estava em `ate`: as mensagens até ali e a hora daquele instante. O resumo,
+      # os campos, o estado do atendimento, as passagens e os outros pedidos são de AGORA (podem já dizer como terminou)
+      # e ficam vazios, para não vazar o desfecho na avaliação de uma decisão passada.
+      def historico
+        { summary: '', recent_messages: recent_messages, current_stage: { id: @card.stage_id, name: @card.stage&.name },
+          known_attributes: { contact: {}, conversation: {}, card: {} }, conversation_state: {},
+          temporal: temporal_context(@ate), other_subjects: [] }
+      end
 
       def memoria_payload
         @numeracao ? Crm::Memoria::ParaAvaliacao.contexto(@card, conversation_ids, @numeracao) : {}
@@ -150,9 +164,9 @@ module Crm
 
       # Âncora temporal para a IA resolver datas relativas ("amanhã", "terça que vem") em data real.
       # Fuso resolvido como nos follow-ups (contato → account.reporting_timezone → UTC).
-      def temporal_context
+      def temporal_context(agora = Time.current)
         tz = Config.resolved_timezone(account: @card.account, contact: @card.try(:contact))
-        now_local = Time.current.in_time_zone(tz)
+        now_local = agora.in_time_zone(tz)
         {
           timezone: tz,
           now_local: now_local.strftime('%Y-%m-%dT%H:%M'),

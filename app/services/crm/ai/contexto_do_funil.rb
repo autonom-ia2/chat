@@ -7,8 +7,9 @@ module Crm::Ai::ContextoDoFunil
   def self.funil(pipeline, formulario = {})
     formulario = formulario.to_h.stringify_keys
     vende = formulario.key?('counts_as_sale') ? BOOLEANO.cast(formulario['counts_as_sale']) != false : pipeline.counts_as_sale?
+    tipo = Crm::Pipeline.new(counts_as_sale: vende).kind
     quando = formulario.key?('when_to_use') ? formulario['when_to_use'] : pipeline.when_to_use
-    { name: pipeline.name, kind: vende ? 'sell' : 'serve', when_to_use: quando.to_s.strip.first(Crm::Pipeline::MAX_WHEN_TO_USE).presence }.compact
+    { name: pipeline.name, kind: tipo, when_to_use: quando.to_s.strip.first(Crm::Pipeline::MAX_WHEN_TO_USE).presence }.compact
   end
 
   # O ramo que a conta informou no cadastro e o nicho que o super admin escolheu para ela (nunca o padrão da
@@ -20,8 +21,10 @@ module Crm::Ai::ContextoDoFunil
   end
 
   # O `funil` que o controller permitiu (o tipo e o "quando usar" do formulário), em texto e no tamanho do campo.
+  # nil quando não é um objeto (uma lista, por exemplo): o controller responde 422.
   def self.do_formulario(funil)
-    return {} if funil.blank?
+    return {} if funil.nil?
+    return unless funil.is_a?(ActionController::Parameters) || funil.is_a?(Hash)
 
     funil.to_h.stringify_keys.slice('counts_as_sale', 'when_to_use').transform_values { |valor| valor.to_s.first(Crm::Pipeline::MAX_WHEN_TO_USE) }
   end

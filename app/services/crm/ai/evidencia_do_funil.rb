@@ -1,12 +1,15 @@
 # #1920: casos recentes em que uma pessoa mudou um card de funil, entrando ou saindo deste. É o sinal de que a escolha
 # de funil (a IA de assunto lê o "quando usar") não bateu com o que a pessoa decidiu. Um caso por card, o trecho da
-# conversa até a decisão (Crm::Ai::TrechoDaConversa) e o nome do outro funil.
+# conversa até a decisão (Crm::Ai::TrechoDaConversa) e o nome do outro funil. Só escolha direta de pessoa
+# (Crm::Ai::EscolhaDePessoa) e só cards que quem pediu pode ver.
 class Crm::Ai::EvidenciaDoFunil
   JANELA = 60.days
   MAX_CASOS = 6
 
-  def initialize(pipeline:)
+  # cards: os cards que quem pediu pode ver (Crm::CardPolicy::Scope); sem ele, os da conta.
+  def initialize(pipeline:, cards: nil)
     @pipeline = pipeline
+    @cards = cards || Crm::Card.where(account_id: pipeline.account_id)
   end
 
   def casos
@@ -23,10 +26,10 @@ class Crm::Ai::EvidenciaDoFunil
   private
 
   def movimentos
-    Crm::Activity.where(account_id: @pipeline.account_id, event_type: 'move', actor_type: 'user', created_at: JANELA.ago..)
-                 .where('payload @> ? OR payload @> ?', { from_pipeline_id: @pipeline.id }.to_json, { to_pipeline_id: @pipeline.id }.to_json)
-                 .where("payload->>'from_pipeline_id' IS DISTINCT FROM payload->>'to_pipeline_id'")
-                 .includes(:card).order(created_at: :desc).limit(MAX_CASOS * 3)
+    escopo = Crm::Ai::EscolhaDePessoa.movimentos(@pipeline.account_id, desde: JANELA.ago).where(card_id: @cards.select(:id))
+    escopo.where('payload @> ? OR payload @> ?', { from_pipeline_id: @pipeline.id }.to_json, { to_pipeline_id: @pipeline.id }.to_json)
+          .where("payload->>'from_pipeline_id' IS DISTINCT FROM payload->>'to_pipeline_id'")
+          .includes(:card).order(created_at: :desc).limit(MAX_CASOS * 3)
   end
 
   def caso(movimento)

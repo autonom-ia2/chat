@@ -24,6 +24,7 @@ class Api::V1::Accounts::Crm::StageCriteriaController < Api::V1::Accounts::Crm::
   def improve
     raw_input = params.slice(:stages, :stage_index).to_unsafe_h
     return render_unprocessable('invalid_stage_criteria') unless Crm::Ai::StageCriteriaImprover.valid_input?(raw_input)
+    return render_unprocessable('invalid_funil') if funil_do_formulario.nil?
 
     input = params.permit(:stage_index, :pipeline_name, stages: [:name, :description]).to_h
     defer_interactive_ai('stage_criteria_draft', {
@@ -35,9 +36,11 @@ class Api::V1::Accounts::Crm::StageCriteriaController < Api::V1::Accounts::Crm::
 
   private
 
-  # #1920: o tipo e o "quando usar" que estão no formulário, para a IA que escreve a frase.
+  # #1920: o tipo e o "quando usar" que estão no formulário, para a IA que escreve a frase. nil quando o formato é inválido.
   def funil_do_formulario
-    Crm::Ai::ContextoDoFunil.do_formulario(params.permit(funil: %i[counts_as_sale when_to_use])[:funil])
+    return @funil_do_formulario if defined?(@funil_do_formulario)
+
+    @funil_do_formulario = Crm::Ai::ContextoDoFunil.do_formulario(params.permit(funil: %i[counts_as_sale when_to_use])[:funil])
   end
 
   # Quem pode criar funil e usar IA de funil — o mesmo par que o funil salvo exige.
