@@ -167,7 +167,7 @@ describe('Testar with the clip (Fase 2)', () => {
     wrapper.unmount();
   });
 
-  it('shows the reason the server refused the photo, without "Try again"', async () => {
+  it('shows the reason the server refused the photo, drops its bubble and offers no "Try again"', async () => {
     store.dispatch.mockRejectedValueOnce(
       Object.assign(new Error('422'), {
         response: {
@@ -194,6 +194,7 @@ describe('Testar with the clip (Fase 2)', () => {
     );
     expect(aviso.find('button').exists()).toBe(false);
     expect(corpo().find('[data-aviso="incompleto"]').exists()).toBe(false);
+    expect(corpo().findAll('[data-balao]')).toHaveLength(0);
     wrapper.unmount();
   });
 

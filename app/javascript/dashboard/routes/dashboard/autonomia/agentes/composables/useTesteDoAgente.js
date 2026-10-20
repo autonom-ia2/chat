@@ -181,6 +181,11 @@ export function useTesteDoAgente(
     } catch (erro) {
       if (minha === sequencia) {
         aviso.value = avisoDoErro(erro, pergunta);
+        // #1427 — a foto recusada não foi a lugar nenhum: o balão dela sai do celular e não há o que tentar de novo.
+        if (aviso.value.tipo === AVISO_TESTE.FOTO_RECUSADA) {
+          mensagens.value = mensagens.value.slice(0, -1);
+          pendente = null;
+        }
       }
     } finally {
       if (minha === sequencia) {
