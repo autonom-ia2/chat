@@ -160,6 +160,8 @@ jobs:
       green_tg_arn: ${{ steps.hand-off.outputs.green_tg_arn }}
       old_previous_instance_id: ${{ steps.hand-off.outputs.old_previous_instance_id }}
       old_previous_tg_arn: ${{ steps.hand-off.outputs.old_previous_tg_arn }}
+      # Lido pelo job avisar-descongelar: o passo tem continue-on-error para não pular a entrega da blue.
+      unfreeze_outcome: ${{ steps.unfreeze.outcome }}
 
     steps:
       - name: Checkout
@@ -1116,6 +1118,7 @@ jobs:
       # Falhar aqui (SSM) não pode pular a entrega da blue ao desligar-blue: o tráfego já está na green. O pior caso é a
       # produção seguir congelada, com o aviso no run; outro deploy manual com descongelar=true solta.
       - name: Unfreeze production
+        id: unfreeze
         if: github.event_name == 'workflow_dispatch' && inputs.descongelar == true
         continue-on-error: true
         run: |
@@ -1586,24 +1589,46 @@ jobs:
             // tráfego. Fica o run de outro rollback, o deploy que já terminou (resta o desligar-blue) e o que está no
             // tráfego, que o rollback espera na mesma trava. Três varreduras, 20 s entre elas.
             const cancelados = new Set();
-            for (let volta = 1; volta <= 3; volta += 1) {
-              for (const run of await vivos()) {
-                if (cancelados.has(run.id)) continue;
-                const { jobs } = (await tentar(() => github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: run.id }))).data;
-                // Job pulado pelo if: também aparece na lista (completed/skipped), em todo run de push: só conta o de verdade.
-                if (jobs.some((j) => j.name === 'Congelar a produção' && j.conclusion !== 'skipped')) continue;
-                const deploy = jobs.find((j) => j.name === 'Deploy Green');
-                if (deploy && deploy.status === 'completed') continue;
-                if (deploy && noTrafego(deploy)) {
-                  core.info(`Deploy ${run.head_sha.slice(0, 10)} (run ${run.id}) já está no tráfego: o rollback espera ele terminar, na mesma trava.`);
-                  continue;
+            const varrer = async () => {
+              for (let volta = 1; volta <= 3; volta += 1) {
+                for (const run of await vivos()) {
+                  if (cancelados.has(run.id)) continue;
+                  const { jobs } = (await tentar(() => github.rest.actions.listJobsForWorkflowRun({ owner, repo, run_id: run.id }))).data;
+                  // Job pulado pelo if: também aparece na lista (completed/skipped), em todo run de push: só conta o de verdade.
+                  if (jobs.some((j) => j.name === 'Congelar a produção' && j.conclusion !== 'skipped')) continue;
+                  const deploy = jobs.find((j) => j.name === 'Deploy Green');
+                  if (deploy && deploy.status === 'completed') continue;
+                  if (deploy && noTrafego(deploy)) {
+                    core.info(`Deploy ${run.head_sha.slice(0, 10)} (run ${run.id}) já está no tráfego: o rollback espera ele terminar, na mesma trava.`);
+                    continue;
+                  }
+                  await tentar(() => github.rest.actions.cancelWorkflowRun({ owner, repo, run_id: run.id }));
+                  cancelados.add(run.id);
+                  core.notice(`Deploy ${run.head_sha.slice(0, 10)} (run ${run.id}) cancelado antes do tráfego.`);
                 }
-                await tentar(() => github.rest.actions.cancelWorkflowRun({ owner, repo, run_id: run.id }));
-                cancelados.add(run.id);
-                core.notice(`Deploy ${run.head_sha.slice(0, 10)} (run ${run.id}) cancelado antes do tráfego.`);
+                if (volta < 3) await new Promise((ok) => setTimeout(ok, 20000));
               }
-              if (volta < 3) await new Promise((ok) => setTimeout(ok, 20000));
+            };
+            // O SSM não lê e grava de forma atômica: um deploy de descongelar que releu o valor antigo um instante antes
+            // pode ter gravado off por cima deste congelamento. Ele grava uma vez só, então: reler, congelar de novo se
+            // caiu e varrer outra vez (quem passou pela conferência nessa janela ainda não chegou ao tráfego).
+            const lerCongelamento = async () => {
+              const r = await exec.getExecOutput('aws', ['ssm', 'get-parameter', '--name', process.env.DEPLOY_FREEZE_PARAMETER,
+                '--query', 'Parameter.Value', '--output', 'text'], { ignoreReturnCode: true, silent: true });
+              if (r.exitCode === 0) return r.stdout.trim();
+              if (r.stderr.includes('ParameterNotFound')) return '';
+              throw new Error(`Não deu para ler o congelamento: ${r.stderr.trim()}`);
+            };
+            const meu = `on:${process.env.GITHUB_RUN_ID}:${process.env.GITHUB_RUN_ATTEMPT}`;
+            for (let rodada = 1; rodada <= 3; rodada += 1) {
+              await varrer();
+              const agora = await lerCongelamento();
+              if (agora === 'on' || agora.startsWith('on:')) return;
+              core.warning(`O congelamento caiu durante a varredura (valor "${agora}"): congelando de novo e varrendo outra vez.`);
+              await exec.exec('aws', ['ssm', 'put-parameter', '--name', process.env.DEPLOY_FREEZE_PARAMETER, '--type', 'String',
+                '--value', meu, '--overwrite'], { silent: true });
             }
+            core.setFailed('O congelamento caiu três vezes durante a varredura: confira quem está descongelando. O rollback não segue.');
 
   rollback:
     name: Rollback To Previous Target Group
@@ -1770,6 +1795,18 @@ jobs:
           done
 
           echo "Rollback smoke test failed"
+          exit 1
+
+  avisar-descongelar:
+    name: Avisar descongelar que falhou
+    needs: deploy
+    if: always() && needs.deploy.outputs.unfreeze_outcome == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Unfreeze failed
+        run: |
+          echo "::error::O deploy subiu, mas não conseguiu descongelar a produção (SSM). Ela segue congelada: dispare de novo o deploy manual com descongelar=true."
           exit 1
 
   avisar-rollback-cancelado:

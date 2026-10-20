@@ -218,7 +218,9 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
    - depois **congela** a produção (`/chatwoot/prod/blue-green/deploy-freeze` = `on:<run>:<tentativa>` do rollback, no SSM): deploy
      novo nem pede a vez, e o **Desligar a blue** não para nem termina nada;
    - cancela todo run que ainda pode trocar o tráfego antes dele: o que está na conferência do congelamento, o que
-     espera a vez e o deploy que ainda não chegou a registrar a green. Cancelado antes de a imagem dele chegar ao ECR, ele
+     espera a vez e o deploy que ainda não chegou a registrar a green. Depois relê o congelamento: se um deploy de
+     descongelar gravou `off` por cima no mesmo instante (o SSM não lê e grava de forma atômica), congela de novo e
+     varre outra vez. Cancelado antes de a imagem dele chegar ao ECR, ele
      não toca na produção. Depois disso a green pode ter subido o app, então a limpeza faz o que já fazia em qualquer
      deploy que falha ali: suspende o Instagram assistido na atual e reinicia o web dela por alguns segundos. A migration
      desse deploy pode já ter rodado (ela vem antes do tráfego): por isso migration é sempre aditiva;
@@ -231,7 +233,9 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
    - a produção **segue congelada** depois do rollback, para o merge seguinte não subir de novo o que foi desfeito.
      Solta com deploy manual (`action=deploy`) e `descongelar=true` depois do conserto na `main`. Ele só descongela
      depois de subir, e só se o congelamento ainda for o mesmo da largada: um rollback disparado enquanto ele subia
-     continua valendo. Esse deploy manual também pode perder a vez para outro pedido: conferir que ele chegou ao fim.
+     continua valendo. Se o SSM falhar nessa hora, o job **Avisar descongelar que falhou** deixa o run vermelho e a
+     produção segue congelada. Esse deploy manual também pode perder a vez para outro pedido: conferir que ele chegou
+     ao fim.
 
    Só volta **um degrau**: a instância de dois deploys atrás é terminada cerca de 5 minutos depois
    de cada deploy. Para desfazer um lote que já tem outro por cima, o caminho é um lote novo com `git revert`. Um lote
