@@ -4,8 +4,8 @@
   idle_days: 20
   expected_tier: urgente
   revisado_1962:
-    expected_tier: morno
-    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
+    expected_tier: quente
+    motivo: '#1962: promessa de 20 dias venceu aos 14: sai o bônus e o piso, e o card esfria a partir do fim da validade (6 dias, -8). Fica a nota da conversa, pronta e com pedido de compra: quente, não mais urgente; o urgente antigo era um dos 21 zumbis de 20/10.'
   signals:
     next_stage_readiness: pronta
     intent: alta
@@ -123,7 +123,7 @@
   expected_tier: urgente
   revisado_1962:
     expected_tier: quente
-    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
+    motivo: '#1962: aceitou o preço e espera há 20 dias. A dívida (promessa e espera) venceu aos 14; esfria do fim da validade e fica quente pela conversa forte, sem o piso de urgente.'
   signals:
     next_stage_readiness: pronta
     intent: alta
@@ -293,9 +293,6 @@
   resumo: Achou a proposta cara e esta orcando em outros lugares, sem fechar com concorrente
   idle_days: 2
   expected_tier: morno
-  revisado_1962:
-    expected_tier: urgente
-    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   signals:
     next_stage_readiness: parcial
     intent: media
@@ -304,6 +301,7 @@
     blocker: leve
     last_turn_owner: cliente
     buying_signal: true
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a18_c977
@@ -599,9 +597,6 @@
     dias
   idle_days: 6
   expected_tier: morno
-  revisado_1962:
-    expected_tier: urgente
-    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   nota: so agradeceu; sem pergunta pendente
   signals:
     next_stage_readiness: inicial
@@ -611,6 +606,7 @@
     blocker: nenhum
     last_turn_owner: cliente
     buying_signal: true
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a18_c947
@@ -851,7 +847,7 @@
   expected_tier: morno
   revisado_1962:
     expected_tier: quente
-    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
+    motivo: '#1962: lead novo mandou "Oi" e ninguém respondeu: há resposta nossa pendente e o banco sabe disso. Piso de quente enquanto a espera for de até 14 dias; o morno antigo não via a espera.'
   signals:
     next_stage_readiness: nenhuma
     intent: baixa
@@ -956,7 +952,7 @@
   expected_tier: urgente
   revisado_1962:
     expected_tier: frio
-    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
+    motivo: '#1962: promessa de 21 dias venceu aos 14; sem ela sobra conversa fraca com objeção leve (13) e 5 dias de decaimento contados do fim da validade.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -972,8 +968,8 @@
   idle_days: 0
   expected_tier: quente
   revisado_1962:
-    expected_tier: urgente
-    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
+    expected_tier: morno
+    motivo: '#1962: a bola está com o cliente (vai ler e trazer dúvidas): não há resposta nossa pendente (awaiting_our_reply false). Fica em 53, topo de morno; o quente original vinha do +8 do antigo last_turn_owner, que saiu.'
   signals:
     next_stage_readiness: pronta
     intent: media
@@ -982,6 +978,7 @@
     blocker: leve
     last_turn_owner: cliente
     buying_signal: true
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a6_c1094
@@ -1089,9 +1086,6 @@
   resumo: Cotação enviada há semanas; cliente volta com link de reunião Teams
   idle_days: 0
   expected_tier: quente
-  revisado_1962:
-    expected_tier: urgente
-    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   signals:
     next_stage_readiness: pronta
     intent: alta
@@ -1177,9 +1171,6 @@
   resumo: Cotação apresentada, cliente achou caro e vai decidir
   idle_days: 0
   expected_tier: morno
-  revisado_1962:
-    expected_tier: urgente
-    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
   signals:
     next_stage_readiness: parcial
     intent: media
@@ -1188,6 +1179,7 @@
     blocker: leve
     last_turn_owner: cliente
     buying_signal: true
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a6_c1156
@@ -1381,7 +1373,7 @@
   expected_tier: urgente
   revisado_1962:
     expected_tier: morno
-    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
+    motivo: '#1962: promessa de 21 dias venceu aos 14; sem bônus nem piso, a conversa pronta com pedido de compra (55) perde 10 de decaimento contado do fim da validade: morno.'
   nota: 'regra de produto: promessa nossa em aberto e sempre urgente'
   signals:
     next_stage_readiness: pronta
@@ -1397,9 +1389,6 @@
   resumo: Cliente lendo o material hoje e prometeu voltar com duvidas
   idle_days: 0
   expected_tier: morno
-  revisado_1962:
-    expected_tier: quente
-    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1408,6 +1397,7 @@
     blocker: nenhum
     last_turn_owner: cliente
     buying_signal: false
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a6_c925
@@ -1459,7 +1449,7 @@
   expected_tier: frio
   revisado_1962:
     expected_tier: quente
-    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
+    motivo: '#1962: lead do site nunca contatado, 14 dias: a resposta nossa está pendente e ainda dentro da validade da dívida (até 14 dias), então piso de quente. O frio antigo deixava esse lead sumir da fila.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1505,7 +1495,7 @@
   expected_tier: frio
   revisado_1962:
     expected_tier: quente
-    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
+    motivo: '#1962: lead do site nunca contatado, 9 dias: resposta nossa pendente dentro da validade, piso de quente. O frio antigo deixava esse lead sumir da fila.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1550,7 +1540,7 @@
   expected_tier: frio
   revisado_1962:
     expected_tier: quente
-    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
+    motivo: '#1962: lead do site nunca contatado, 14 dias: resposta nossa pendente no último dia da validade, piso de quente. O frio antigo deixava esse lead sumir da fila.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1593,9 +1583,6 @@
   resumo: Candidatura de CEO de corretora (MLIFE), 8 dias sem qualquer triagem
   idle_days: 8
   expected_tier: frio
-  revisado_1962:
-    expected_tier: quente
-    motivo: '#1962: cliente esperando resposta nossa (dado do banco) fica no mínimo quente até 14 dias de espera.'
   signals:
     next_stage_readiness: nenhuma
     intent: baixa
@@ -1604,6 +1591,7 @@
     blocker: nenhum
     last_turn_owner: cliente
     buying_signal: false
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a16_c707
@@ -1640,8 +1628,8 @@
   idle_days: 15
   expected_tier: urgente
   revisado_1962:
-    expected_tier: frio
-    motivo: '#1962: promessa vale até 14 dias de silêncio; aqui venceu e o card esfria como o resto (eram 21 urgentes zumbis em 20/10).'
+    expected_tier: morno
+    motivo: '#1962: a promessa do robô venceu ontem (15 dias). Sai o piso de urgente, mas o card esfria a partir do fim da validade: cai para a nota da conversa (44), não para frio de uma vez.'
   signals:
     next_stage_readiness: parcial
     intent: alta
@@ -1774,7 +1762,7 @@
   expected_tier: quente
   revisado_1962:
     expected_tier: urgente
-    motivo: '#1962: cliente esperando com pedido de compra na mesa é dívida nossa, urgente até 14 dias (leitura cega 20/10: "agora" em urgente 6 → 13 de 29).'
+    motivo: '#1962: perguntou forma de pagamento e parcelas hoje, sem objeção, e a resposta é nossa: dinheiro parado do nosso lado, piso de urgente. O "borderline quente alto" original não tinha a espera do banco.'
   nota: 'borderline: pediu parcelas hoje, quente alto'
   signals:
     next_stage_readiness: pronta

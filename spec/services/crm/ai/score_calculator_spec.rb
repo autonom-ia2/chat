@@ -5,7 +5,7 @@ RSpec.describe Crm::Ai::ScoreCalculator do
 
   def score(signals, last_message_at: now, terminal: false, customer_waiting: false)
     described_class.new(signals: signals, last_message_at: last_message_at, terminal: terminal,
-                        customer_waiting: customer_waiting, now: now).perform
+                        waiting_since: (last_message_at if customer_waiting), now: now).perform
   end
 
   # Espelha o card 366 do teste sombra (conta 18): cliente quis pagar, o bot prometeu o link 8x e
@@ -94,10 +94,10 @@ RSpec.describe Crm::Ai::ScoreCalculator do
     expect(result.reason).to eq('Card encerrado.')
   end
 
-  # #1962: quem espera vem do banco (customer_waiting), não do last_turn_owner do modelo, e vale piso de quente.
+  # #1962: quem falou por último vem do banco (waiting_since); o modelo diz se a fala pede resposta nossa.
   it 'rewards the client speaking last, because we owe the reply' do
     base = { next_stage_readiness: 'parcial', intent: 'media', urgency: 'nenhuma',
-             decision_maker: 'desconhecido', blocker: 'nenhum' }
+             decision_maker: 'desconhecido', blocker: 'nenhum', awaiting_our_reply: true }
 
     client_waiting = score(base, customer_waiting: true)
     we_replied = score(base)

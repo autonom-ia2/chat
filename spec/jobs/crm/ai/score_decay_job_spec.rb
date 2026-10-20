@@ -25,7 +25,10 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     )
   end
 
-  before { enable_score! }
+  before do
+    enable_score!
+    Redis::Alfred.delete(described_class::CURSOR_KEY)
+  end
 
   # O bug que motivou o job: o decaimento só era aplicado quando havia nova avaliação, e o
   # StaleCardsJob não reavalia card sem atividade nova. Card pontuado alto ficava alto para sempre.
@@ -144,8 +147,8 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     job = described_class.new
     allow(Rails.logger).to receive(:warn)
     allow(job).to receive(:apply).and_call_original
-    allow(job).to receive(:apply).with(broken_card, anything)
-                               .and_raise(ActiveRecord::StatementInvalid.new('database error'))
+    allow(job).to receive(:apply).with(broken_card, anything, anything)
+                                 .and_raise(ActiveRecord::StatementInvalid.new('database error'))
 
     expect { job.perform }.not_to raise_error
 
@@ -163,11 +166,13 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
     expect(card.reload.score).to be < after_first
   end
 
-  # #1962: o job sabe quem falou por último sem chamar IA (consulta agregada) e não deixa a dívida esfriar.
+  # #1962: o job sabe quem falou por último sem chamar IA e não deixa a dívida esfriar. Se a fala pede resposta nossa
+  # é leitura do modelo, gravada com a nota (awaiting_our_reply).
   describe 'cliente esperando resposta nossa' do
     let(:inbox) { create_crm_inbox(account: account, members: [admin]) }
+    let(:read_signals) { signals.merge('awaiting_our_reply' => true) }
 
-    def card_with_conversation(last_type, days_ago)
+    def card_with_conversation(last_type, days_ago, card_signals: read_signals, score: 40)
       contact = account.contacts.create!(name: 'Lead', phone_number: "+55119#{rand(10_000_000..99_999_999)}")
       conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
       other = last_type == :incoming ? :outgoing : :incoming
@@ -176,8 +181,8 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
                                       sender: type == :incoming ? contact : admin)
       end
       account.crm_cards.create!(
-        pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL', score: 40, conversation_id: conversation.id,
-        metadata: { 'ai' => { 'score' => { 'value' => 40, 'source' => 'ai', 'signals' => signals,
+        pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL', score: score, conversation_id: conversation.id,
+        metadata: { 'ai' => { 'score' => { 'value' => score, 'source' => 'ai', 'signals' => card_signals,
                                            'calculated_at' => Time.current.iso8601 } } }
       )
     end
@@ -216,6 +221,49 @@ RSpec.describe Crm::Ai::ScoreDecayJob do
       described_class.perform_now
 
       expect(card.reload.score).to be < 40
+    end
+
+    # Nota gravada antes do #1962: não tem a leitura de "pede resposta". Sem IA, o job não pode subi-la ao piso
+    # (newsletter e e-mail automático chegam como `incoming`): só decai, como antes.
+    it 'não sobe nota antiga, sem a leitura do modelo, mesmo com o cliente por último' do
+      card = card_with_conversation(:incoming, 3, card_signals: signals, score: 44)
+
+      described_class.perform_now
+
+      expect(card.reload.score).to be < Crm::Ai::ScoreCalculator::CUSTOMER_WAITING_FLOOR
+      expect(card.score).to be <= 44
+    end
+
+    # Achado do review: os turnos são lidos antes das travas. Se o ScoreApplier grava uma avaliação nova nesse meio
+    # (mensagem do cliente chegando), o job não a derruba com o turno velho.
+    it 'não sobrescreve avaliação gravada depois da leitura dos turnos' do
+      card = card_with_conversation(:outgoing, 10)
+      allow(Crm::Conversations::LastTurns).to receive(:for).and_wrap_original do |original, *args|
+        turns = original.call(*args)
+        fresh = card.metadata.deep_dup
+        fresh['ai']['score'].merge!('value' => 85, 'calculated_at' => Time.current.iso8601(6))
+        card.update_columns(score: 85, metadata: fresh)
+        turns
+      end
+
+      described_class.perform_now
+
+      expect(card.reload.score).to eq(85)
+    end
+  end
+
+  # Achado do review: sem cursor, toda rodada recomeçava do primeiro card e o que passava do teto nunca era visto.
+  it 'continua de onde parou quando o teto da rodada acaba antes da fila' do
+    stub_const("#{described_class}::MAX_CARDS_PER_RUN", 1)
+    first = create_card(score: 45)
+    second = create_card(score: 45)
+
+    travel_to(30.days.from_now) do
+      described_class.perform_now
+      expect([first.reload.score, second.reload.score]).to match([be < 45, eq(45)])
+
+      described_class.perform_now
+      expect(second.reload.score).to be < 45
     end
   end
 

@@ -11,11 +11,14 @@ require 'rails_helper'
 RSpec.describe Crm::Ai::ScoreCalculator do
   def now = Time.zone.parse('2026-07-30 12:00:00')
 
-  # #1962: quem espera passou a vir do banco. Nestes casos reais o last_turn_owner gravado é a leitura
-  # de quem mandou a última mensagem — o mesmo fato que o sistema agora mede —, então vira customer_waiting.
+  # #1962: quem falou por último passou a vir do banco. Nestes casos reais o last_turn_owner gravado é a leitura
+  # de quem mandou a última mensagem — o mesmo fato que o sistema agora mede —, então vira waiting_since. Se a fala
+  # pede resposta nossa (awaiting_our_reply) é do modelo: vale "pede", salvo o caso que diz o contrário.
   def score(signals, idle_days: 0)
-    described_class.new(signals: signals, last_message_at: now - idle_days.days,
-                        customer_waiting: signals[:last_turn_owner] == 'cliente', now: now).perform
+    cliente_por_ultimo = signals[:last_turn_owner] == 'cliente'
+    last = now - idle_days.days
+    described_class.new(signals: signals.reverse_merge(awaiting_our_reply: cliente_por_ultimo), last_message_at: last,
+                        waiting_since: (last if cliente_por_ultimo), now: now).perform
   end
 
   # ── Vendas · conta 18 (seguro viagem) ────────────────────────────────────────
@@ -243,12 +246,13 @@ RSpec.describe Crm::Ai::ScoreCalculator do
 
   # #1962: a promessa vale até 14 dias de silêncio. Antes não vencia nunca, e 21 urgentes da amostra de
   # 20/10 estavam parados há mais de 14 dias (alguns há 50–102, com a viagem já passada). Lilian (21 dias)
-  # e o encaminhamento esquecido (16 dias) saíram de urgente por essa regra, de propósito.
+  # e o encaminhamento esquecido (16 dias) saíram de urgente por essa regra, de propósito. Vencida, a nota
+  # esfria a partir do fim da validade, não da última mensagem: cai para a nota da conversa, não para frio.
   it 'promessa nossa em aberto vence o silencio por 14 dias, em qualquer conta' do
     expect(cliente_pediu_reemissao_e_ficou_no_vacuo.tier).to eq('urgente')
     # Lilian segue quente: a promessa venceu, mas ela ainda é quem espera (dado do banco) e pediu para comprar.
     expect(lilian_aceitou_e_ficou_no_vacuo.tier).to eq('quente')
-    expect(encaminhado_ao_comercial_e_esquecido.tier).to eq('frio')
+    expect(encaminhado_ao_comercial_e_esquecido.tier).to eq('morno')
   end
 
   it 'proposta na mesa hoje e pedido de cotacao ativo sao quentes' do
@@ -292,16 +296,19 @@ RSpec.describe Crm::Ai::ScoreCalculator do
     expect(engajado_que_esfriou.tier).to eq('frio')
   end
 
-  # #1962: com quem espera vindo do banco, a newsletter "esperaria resposta" e subiria ao piso de quente.
-  # Quem tira é o modelo, pela saída nova do blocker (negativo_explicito = não há negócio com esta pessoa).
-  # Sem essa leitura, o mesmo caso fica quente — é a regra nova, e o eval sintético confere a leitura.
+  # #1962: no banco, a newsletter é a última fala "do cliente". Quem diz que não há o que responder é o modelo,
+  # por duas saídas: blocker negativo_explicito (não há negócio com quem mandou) ou awaiting_our_reply false.
+  # Se o modelo ler errado e disser que pede resposta, o mesmo caso fica quente: o eval sintético confere a leitura.
   it 'mensagem automatica sem pessoa do outro lado so esfria pela leitura do modelo' do
     expect(email_de_marketing_irrelevante(blocker: 'nenhum').tier).to eq('quente')
+    expect(score({ next_stage_readiness: 'nenhuma', intent: 'baixa', urgency: 'nenhuma', decision_maker: 'desconhecido',
+                   blocker: 'nenhum', last_turn_owner: 'cliente', awaiting_our_reply: false }, idle_days: 8).tier).to eq('frio')
   end
 
   it 'coloca os casos que merecem atenção nas faixas altas' do
-    # #1962: card 366 está há 20 dias calado; a promessa venceu aos 14 e ele esfriou para morno, de propósito.
-    expect(promessa_quebrada.tier).to eq('morno')
+    # #1962: card 366 está há 20 dias calado; a promessa venceu aos 14 e ele saiu de urgente, de propósito. Esfria
+    # do fim da validade (6 dias): fica quente pela conversa, pronta e com pedido de compra.
+    expect(promessa_quebrada.tier).to eq('quente')
     expect(mandou_documentos.tier).to eq('urgente')
     expect(pediu_parcelamento.tier).to eq('quente')
     expect(suporte_cliente_travado.tier).to eq('quente')
@@ -320,8 +327,8 @@ RSpec.describe Crm::Ai::ScoreCalculator do
   it 'ordena a fila como um operador ordenaria' do
     # #1962: a promessa quebrada de 20 dias saiu do topo (venceu aos 14) e entrou no lugar da sua nota;
     # a reemissão prometida há 9 dias, ainda dívida nossa, abre a fila.
-    fila = [cliente_pediu_reemissao_e_ficou_no_vacuo, mandou_documentos, suporte_cliente_travado, pediu_parcelamento,
-            consulta_amanha_sem_confirmacao, reclamou_do_preco, promessa_quebrada, comparando_concorrentes,
+    fila = [cliente_pediu_reemissao_e_ficou_no_vacuo, mandou_documentos, suporte_cliente_travado, promessa_quebrada,
+            pediu_parcelamento, consulta_amanha_sem_confirmacao, reclamou_do_preco, comparando_concorrentes,
             fora_de_escopo, ghosting_com_followup]
 
     expect(fila.map(&:value)).to eq(fila.map(&:value).sort.reverse)

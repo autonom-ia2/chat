@@ -40,7 +40,7 @@ class Crm::Ai::ScoreApplier
       result = ::Crm::Ai::ScoreCalculator.new(
         signals: @signals,
         last_message_at: turn.last_message_at,
-        customer_waiting: turn.customer_waiting,
+        waiting_since: turn.waiting_since,
         terminal: !@card.open?
       ).perform
       persist!(result)
@@ -77,7 +77,8 @@ class Crm::Ai::ScoreApplier
         'signals' => @signals.as_json,
         'source' => 'ai',
         'stage_id' => @card.stage_id,
-        'calculated_at' => Time.current.iso8601
+        # Com fração de segundo: o ScoreDecayJob compara com a hora em que leu os turnos do lote.
+        'calculated_at' => Time.current.iso8601(6)
       }
     )
     @card.update!(score: result.value, metadata: metadata)

@@ -18,13 +18,14 @@ RSpec.describe Crm::Ai::ScoreCalculator do
   corpus.group_by { |c| c['expected_tier'] }.each do |tier, cases|
     it "reproduz o julgamento do operador nos #{cases.size} casos '#{tier}'" do
       erros = cases.filter_map do |c|
-        got = described_class.new(
-          signals: c['signals'],
-          last_message_at: now - c['idle_days'].to_i.days,
-          # #1962: quem espera vem do banco; o last_turn_owner gravado no caso é esse mesmo fato.
-          customer_waiting: c.dig('signals', 'last_turn_owner') == 'cliente',
-          now: now
-        ).perform
+        # #1962: quem falou por último vem do banco; nos casos, é o last_turn_owner gravado. Se a fala pede resposta
+        # nossa é leitura do modelo (awaiting_our_reply), que o corpus não tinha: vale "pede" quando o cliente falou
+        # por último, salvo o caso que traz a leitura explícita (revisada um a um no #1962).
+        cliente_por_ultimo = c.dig('signals', 'last_turn_owner') == 'cliente'
+        signals = c['signals'].reverse_merge('awaiting_our_reply' => cliente_por_ultimo)
+        last = now - c['idle_days'].to_i.days
+        got = described_class.new(signals: signals, last_message_at: last, waiting_since: (last if cliente_por_ultimo),
+                                  now: now).perform
         "#{c['ref']} (#{c['resumo']}): esperado #{tier}, saiu #{got.tier} (#{got.value})" if got.tier != tier
       end
       expect(erros).to be_empty, erros.join("\n")

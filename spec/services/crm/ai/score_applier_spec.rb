@@ -55,8 +55,8 @@ RSpec.describe Crm::Ai::ScoreApplier do
     end
     let(:weak_signals) do
       { next_stage_readiness: 'inicial', intent: 'baixa', urgency: 'nenhuma', decision_maker: 'desconhecido',
-        blocker: 'nenhum', ready_to_close: 'nao_se_aplica', buying_signal: false, unfulfilled_promise: false,
-        unreadable: false, reason: 'Cliente perguntou e ninguém respondeu' }
+        blocker: 'nenhum', ready_to_close: 'nao_se_aplica', buying_signal: false, awaiting_our_reply: true,
+        unfulfilled_promise: false, unreadable: false, reason: 'Cliente perguntou e ninguém respondeu' }
     end
 
     def message(type, at)
@@ -77,6 +77,16 @@ RSpec.describe Crm::Ai::ScoreApplier do
 
       expect(card.reload.metadata.dig('ai', 'score', 'tier')).to eq('quente')
       expect(card.metadata.dig('ai', 'score', 'breakdown', 'customer_waiting')).to be > 0
+    end
+
+    # "Obrigado, vou pensar": a última fala é do cliente, mas o modelo diz que não há o que responder.
+    it 'não segura o piso quando a fala do cliente não pede resposta nossa' do
+      message(:outgoing, 6.days.ago)
+      message(:incoming, 5.days.ago)
+
+      described_class.new(card: card, signals: weak_signals.merge(awaiting_our_reply: false)).perform
+
+      expect(card.reload.metadata.dig('ai', 'score', 'tier')).to eq('frio')
     end
 
     it 'deixa esfriar quando nós respondemos por último' do

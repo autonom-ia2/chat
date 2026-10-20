@@ -6,9 +6,12 @@ require 'rails_helper'
 #
 # #1962, item 3: "pronto para fechar, falta só um dado" é decisão do modelo, com saída "não se aplica". Três ramos
 # (seguro viagem, clínica odontológica, software B2B), cada um com os três desfechos: falta dado NOSSO, falta dado
-# DO CLIENTE e não se aplica (ainda escolhendo). Dois controles do item 4 (número errado e newsletter) conferem a
-# saída negativo_explicito do blocker. Avaliação real do card (Evaluator → StageClassifier → ScoreApplier); o
-# que o modelo leu sai dos sinais gravados. Dados fictícios; nenhum prompt é gravado.
+# DO CLIENTE e não se aplica (ainda escolhendo). Mais um caso por ramo com pergunta do cliente sem resposta, para a
+# leitura de "pede resposta nossa" (awaiting_our_reply): o banco diz quem falou por último; se a fala pede resposta,
+# é o modelo. Dois controles do item 4 (número errado e newsletter) conferem a saída negativo_explicito do blocker.
+# Além da leitura, confere a nota final: a faixa certa é o que importa para quem atende. Avaliação real do card
+# (Evaluator → StageClassifier → ScoreApplier); o que o modelo leu sai dos sinais gravados. Dados fictícios; nenhum
+# prompt é gravado.
 module ProntoParaFecharEval
   TETO_USD = 0.27
 
@@ -30,6 +33,11 @@ module ProntoParaFecharEval
         [:cliente, 'Oi, quanto custa um seguro viagem para a Europa em novembro?'],
         [:equipe, 'Temos três opções: Básico R$ 290, Europa 60 mil R$ 412 e Premium R$ 590, para duas pessoas.'],
         [:cliente, 'Obrigado. Vou comparar com outra corretora e depois te falo.']
+      ],
+      'pergunta_pendente' => [
+        [:cliente, 'Oi, quanto custa um seguro viagem para a Europa em novembro, para duas pessoas?'],
+        [:equipe, 'Temos três opções: Básico R$ 290, Europa 60 mil R$ 412 e Premium R$ 590, para duas pessoas.'],
+        [:cliente, 'Qual a diferença de cobertura médica entre o Básico e o Europa 60 mil?']
       ]
     },
     'clinica_odontologica' => {
@@ -47,6 +55,9 @@ module ProntoParaFecharEval
         [:cliente, 'Vocês atendem pelo convênio OdontoMais?'],
         [:equipe, 'No momento não atendemos esse convênio, só particular. A avaliação inicial é R$ 120.'],
         [:cliente, 'Ah, entendi. Vou ver o que faço.']
+      ],
+      'pergunta_pendente' => [
+        [:cliente, 'Boa tarde! Vocês fazem clareamento a laser? Quanto custa e em quantas sessões?']
       ]
     },
     'software_b2b' => {
@@ -63,8 +74,25 @@ module ProntoParaFecharEval
         [:cliente, 'Oi, vi a demonstração do sistema de gestão. Gostei.'],
         [:equipe, 'Que bom! Ficou alguma dúvida sobre os planos?'],
         [:cliente, 'Estamos avaliando três ferramentas e vamos decidir só no mês que vem.']
+      ],
+      'pergunta_pendente' => [
+        [:cliente, 'Oi, vi a demonstração do sistema de gestão. Gostei.'],
+        [:equipe, 'Que bom! Ficou alguma dúvida sobre os planos?'],
+        [:cliente, 'Sim: o plano Pro integra com o nosso ERP? E qual o prazo de implantação para 3 unidades?']
       ]
     }
+  }.freeze
+
+  # O que cada desfecho deve produzir: a leitura de pronto para fechar, se a última fala do cliente pede resposta
+  # nossa e as faixas aceitas para a nota final. Onde nós falamos por último a leitura de awaiting_our_reply não muda
+  # a nota (o banco já diz que ninguém espera) e não é conferida (nil).
+  ESPERADO = {
+    'falta_dado_nosso' => { ready_to_close: 'falta_dado_nosso', awaiting: nil, faixas: %w[urgente] },
+    'falta_dado_do_cliente' => { ready_to_close: 'falta_dado_do_cliente', awaiting: nil, faixas: %w[quente urgente] },
+    # Sem dívida nossa não há piso: nunca urgente. Entre frio e quente decidem os sinais-base (intenção, sinal de
+    # compra), que este eval não calibra — "vou comparar" com preço na mesa já saiu 38 e 58 em rodadas diferentes.
+    'nao_se_aplica' => { ready_to_close: 'nao_se_aplica', awaiting: false, faixas: %w[frio morno quente] },
+    'pergunta_pendente' => { ready_to_close: 'nao_se_aplica', awaiting: true, faixas: %w[quente urgente] }
   }.freeze
 
   CONTROLES = {
@@ -145,25 +173,41 @@ RSpec.describe 'Eval pago #1962: pronto para fechar e sinal negativo explícito'
     card.reload.metadata.to_h.dig('ai', 'score').to_h
   end
 
-  it 'lê pronto para fechar nos três ramos e o negativo explícito nos controles' do
+  # Confere leitura e nota final de um caso de cliente de verdade; devolve os erros.
+  def conferir_caso(caso, desfecho, score)
+    esperado = ProntoParaFecharEval::ESPERADO.fetch(desfecho)
+    sinais = score['signals'].to_h
+    saida[:casos] << { caso: caso, ready_to_close: sinais['ready_to_close'], awaiting_our_reply: sinais['awaiting_our_reply'],
+                       blocker: sinais['blocker'], nota: score['value'], faixa: score['tier'] }
+    erros = erros_de_leitura(caso, esperado, sinais)
+    return erros if esperado[:faixas].include?(score['tier'])
+
+    erros << "#{caso}: nota #{score['value']} (#{score['tier']}), esperado #{esperado[:faixas].join('/')}"
+  end
+
+  def erros_de_leitura(caso, esperado, sinais)
+    [
+      ("#{caso}: leu ready_to_close #{sinais['ready_to_close'].inspect}" unless sinais['ready_to_close'] == esperado[:ready_to_close]),
+      (unless [nil, sinais['awaiting_our_reply']].include?(esperado[:awaiting])
+         "#{caso}: leu awaiting_our_reply #{sinais['awaiting_our_reply'].inspect}"
+       end),
+      # O modo de falha caro do item 4: zerar na hora um cliente de verdade.
+      ("#{caso}: negativo explícito num cliente de verdade" if sinais['blocker'] == 'negativo_explicito'),
+      ("#{caso}: conversa legível lida como ilegível" if sinais['unreadable'] == true)
+    ].compact
+  end
+
+  it 'lê pronto para fechar e pede resposta nos três ramos, e o negativo explícito nos controles' do
     erros = []
     ProntoParaFecharEval::RAMOS.each do |ramo, casos|
-      casos.each do |esperado, falas|
-        score = avaliar("#{ramo}/#{esperado}", falas)
-        lido = score.dig('signals', 'ready_to_close')
-        blocker = score.dig('signals', 'blocker')
-        saida[:casos] << { caso: "#{ramo}/#{esperado}", esperado: esperado, lido: lido, blocker: blocker,
-                           nota: score['value'], faixa: score['tier'] }
-        erros << "#{ramo}/#{esperado}: leu #{lido.inspect}" unless lido == esperado
-        # O modo de falha caro do item 4: zerar na hora um cliente de verdade.
-        erros << "#{ramo}/#{esperado}: negativo explícito num cliente de verdade" if blocker == 'negativo_explicito'
-      end
+      casos.each { |desfecho, falas| erros.concat(conferir_caso("#{ramo}/#{desfecho}", desfecho, avaliar("#{ramo}/#{desfecho}", falas))) }
     end
     ProntoParaFecharEval::CONTROLES.each do |nome, falas|
       score = avaliar("controle/#{nome}", falas)
       lido = score.dig('signals', 'blocker')
       saida[:casos] << { caso: "controle/#{nome}", esperado: 'negativo_explicito', lido: lido, nota: score['value'] }
       erros << "controle/#{nome}: leu blocker #{lido.inspect}" unless lido == 'negativo_explicito'
+      erros << "controle/#{nome}: nota #{score['value']}, esperado 0" unless score['value'].to_i.zero?
     end
     gravar_saida!
 
