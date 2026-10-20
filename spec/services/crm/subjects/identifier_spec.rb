@@ -475,6 +475,19 @@ RSpec.describe Crm::Subjects::Identifier do
       expect(Crm::SubjectDecision.last).to have_attributes(action: 'create', state: 'suggested')
     end
 
+    # Pega (#1922): o arquivamento da IA ("não é negócio") contar como fechamento de uma pessoa, e o cliente que volta
+    # ganhar só uma sugestão: um falso positivo da IA viraria pedido perdido em silêncio.
+    it 'card arquivado pela IA como "não é negócio": o pedido novo vira card' do
+      arquivado = create_card(title: 'Agentes de IA', focused_at: 1.hour.ago)
+      arquivado.update!(status: :archived)
+      Crm::ActivityLogger.new(card: arquivado, actor: nil, event_type: 'archive', payload: { by: 'ai', motivo: 'fora_do_negocio' }).perform
+      create_card(title: 'Chat2You', focused_at: 2.hours.ago)
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Agentes de IA')
+
+      expect { identify(incoming('Quero os agentes de novo')) }.to change(Crm::Card, :count).by(1)
+    end
+
     it 'sugestão de nome dispensada também não volta' do
       create_card(title: 'Joana Lima', focused_at: 1.hour.ago)
       Crm::SubjectDecision.create!(account: account, conversation: conversation, mode: 'auto', action: 'rename',

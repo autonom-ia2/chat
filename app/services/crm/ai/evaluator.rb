@@ -74,6 +74,8 @@ module Crm
       def stage_classifier(client:, fora: [])
         # O funil do card no começo: a resposta do modelo é sobre as etapas DELE (#1711).
         @pipeline_inicial ||= @card.pipeline_id
+        # Quando a conversa foi lida: mensagem do cliente depois disto deixa velha a decisão de arquivar (#1922).
+        @lido_em ||= Time.current
         StageClassifier.new(
           card: @card, client: client, stages: stages, context: contexto(fora),
           model: modelo, reasoning_effort: Config::CLASSIFY_REASONING_EFFORT,
@@ -246,7 +248,7 @@ module Crm
         return false if @trigger == 'manual' || classification[:nao_e_negocio].blank?
         return false unless auto_move_allowed?
 
-        NaoENegocio.new(card: @card, decisao: classification[:nao_e_negocio]).aplicar!
+        NaoENegocio.new(card: @card, decisao: classification[:nao_e_negocio], lido_em: @lido_em).aplicar!
       end
 
       def stage_criteria_present?(stage)

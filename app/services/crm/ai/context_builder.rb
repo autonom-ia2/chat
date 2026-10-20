@@ -57,12 +57,17 @@ module Crm
 
       # Os outros pedidos abertos nas conversas deste card (multifunil, #1147). A IA decide a etapa, os campos e o
       # follow-up só DESTE card: uma mensagem sobre outro pedido não o move. Vazio quando a conversa tem um pedido só.
+      # O id é o que a IA aponta quando este card repete outro (`nao_e_negocio.duplicado_de`, #1922).
       def other_subjects
         account = @card.account
         linked = Crm::CardConversation.where(account_id: account.id, conversation_id: conversation_ids).select(:card_id)
         account.crm_cards.open.where(conversation_id: conversation_ids).or(account.crm_cards.open.where(id: linked))
                .where.not(id: [@card.id, *@fora]).includes(:pipeline, :stage).order(id: :desc).limit(MAX_OTHER_SUBJECTS)
-               .map { |card| { title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name } }
+               .map { |card| outro_pedido(card) }
+      end
+
+      def outro_pedido(card)
+        { id: card.id, title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name }
       end
 
       # Valores JÁ salvos dos atributos customizados (contato, conversa e o próprio card, #1146). O classificador recebe o

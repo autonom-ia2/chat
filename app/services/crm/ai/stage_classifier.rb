@@ -85,9 +85,10 @@ module Crm
               properties: {
                 motivo: { type: 'string', enum: Crm::Ai::NaoENegocio::MOTIVOS },
                 confidence: { type: 'number', minimum: 0, maximum: 1 },
-                reasoning: { type: 'string', maxLength: 300, description: 'O fato da conversa que mostra que não é negócio.' }
+                reasoning: { type: 'string', maxLength: 300, description: 'O fato da conversa que mostra que não é negócio.' },
+                duplicado_de: { type: %w[integer null], description: 'Só no "duplicado": o id do card aberto que fica. null caso contrário.' }
               },
-              required: %w[motivo confidence reasoning],
+              required: %w[motivo confidence reasoning duplicado_de],
               additionalProperties: false
             }
           },

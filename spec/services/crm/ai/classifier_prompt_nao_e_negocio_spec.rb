@@ -23,6 +23,13 @@ RSpec.describe Crm::Ai::ClassifierPrompt do
       expect(schema[:required]).to include('nao_e_negocio')
       expect(schema[:properties][:nao_e_negocio][:type]).to eq(%w[object null])
       expect(schema[:properties][:nao_e_negocio][:properties][:motivo][:enum]).to eq(Crm::Ai::NaoENegocio::MOTIVOS)
+      expect(schema[:properties][:nao_e_negocio][:required]).to include('duplicado_de')
     end
+  end
+
+  # Pega: o lead que chega por anúncio (link, texto do anúncio) ou mostrando o que quer (foto, áudio) e some sem responder
+  # ser tratado como lixo; e o repetido sem dizer qual card fica.
+  it 'mídia ou link sozinho nunca é lixo, e o repetido aponta o card que fica' do
+    expect(described_class::NAO_E_NEGOCIO).to include('chegou por um anúncio', '"duplicado_de"', 'funis diferentes')
   end
 end

@@ -28,18 +28,24 @@ RSpec.describe Crm::Ai::NaoENegocio do
     account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL', primary_conversation: conversa, **atributos)
   end
 
-  def ia_responde(nao_e_negocio, suggested_stage_id: stage.id)
+  # durante: o que acontece enquanto o modelo pensa (depois de a conversa ser lida para a avaliação).
+  def ia_responde(nao_e_negocio, suggested_stage_id: stage.id, durante: nil)
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(
       instance_double(Crm::Ai::CredentialResolver, configured?: true, resolve: { api_key: 'test' })
     )
     resposta = { suggested_stage_id: suggested_stage_id, confidence: 0.9, reasoning: 'x', model_used: 'm',
                  nao_e_negocio: nao_e_negocio }.with_indifferent_access
-    allow(Crm::Ai::StageClassifier).to receive(:new).and_return(instance_double(Crm::Ai::StageClassifier, perform: resposta))
+    classificador = instance_double(Crm::Ai::StageClassifier)
+    allow(classificador).to receive(:perform) do
+      durante&.call
+      resposta
+    end
+    allow(Crm::Ai::StageClassifier).to receive(:new).and_return(classificador)
     allow(Crm::Cards::CurrentSubject).to receive(:card?).and_return(true)
   end
 
-  def lixo(confidence: 0.9, motivo: 'fora_do_negocio')
-    { motivo: motivo, confidence: confidence, reasoning: 'Fornecedor oferecendo serviço para a empresa.' }
+  def lixo(confidence: 0.9, motivo: 'fora_do_negocio', duplicado_de: nil)
+    { motivo: motivo, confidence: confidence, reasoning: 'Fornecedor oferecendo serviço para a empresa.', duplicado_de: duplicado_de }
   end
 
   def avaliar(card, trigger: 'message')
@@ -155,16 +161,50 @@ RSpec.describe Crm::Ai::NaoENegocio do
       expect(avaliar(card.reload)).to have_attributes(status: :skipped, error: 'pessoa_mexeu_na_etapa')
       expect(card.reload).to be_open
     end
+
+    # Pega: o card movido por uma pessoa só ficar protegido nas horas do respeito ao movimento (#1918).
+    it 'movido por uma pessoa há dias: não arquiva' do
+      card = novo_card
+      negociacao = create_crm_stage(account: account, pipeline: pipeline, name: 'Negociação', position: 1)
+      travel_to(2.days.ago) { Crm::Cards::Mover.new(card: card, actor: admin, target_stage: negociacao).perform }
+      ia_responde(lixo, suggested_stage_id: negociacao.id)
+
+      avaliar(card.reload)
+
+      expect(card.reload).to be_open
+    end
+
+    # Pega: o card em que uma pessoa trabalhou (editou, anotou) sair do funil por decisão da IA.
+    it 'qualquer atividade de uma pessoa no card, há dias: não arquiva' do
+      card = novo_card
+      travel_to(3.days.ago) { Crm::ActivityLogger.new(card: card, actor: admin, event_type: 'update', payload: { title: 'Lead' }).perform }
+      ia_responde(lixo)
+
+      avaliar(card)
+
+      expect(card.reload).to be_open
+    end
   end
 
-  # Pega: os dois cards do mesmo pedido saírem do funil, ou sair o mais antigo.
+  # Pega: uma decisão velha arquivar o pedido que o cliente acabou de esclarecer, enquanto o modelo pensava.
+  it 'mensagem do cliente chega enquanto a IA pensa: não arquiva' do
+    card = novo_card
+    ia_responde(lixo, durante: -> { create(:message, account: account, conversation: conversa, message_type: :incoming) })
+
+    avaliar(card)
+
+    expect(card.reload).to be_open
+  end
+
+  # Pega: os dois cards do mesmo pedido saírem do funil, sair o mais antigo, ou sair um pedido diferente.
   describe 'card repetido' do
-    it 'arquiva só o mais novo; o mais antigo aberto da conversa fica', :aggregate_failures do
+    it 'arquiva só o mais novo, apontando o mais antigo; apontar o mais novo não arquiva', :aggregate_failures do
       antigo = novo_card
       novo = novo_card
-      ia_responde(lixo(motivo: 'duplicado'))
-
+      ia_responde(lixo(motivo: 'duplicado', duplicado_de: novo.id))
       expect(avaliar(antigo).status).not_to eq(:archived)
+
+      ia_responde(lixo(motivo: 'duplicado', duplicado_de: antigo.id))
       expect(avaliar(novo).status).to eq(:archived)
       expect([antigo.reload.status, novo.reload.status]).to eq(%w[open archived])
     end
@@ -174,15 +214,40 @@ RSpec.describe Crm::Ai::NaoENegocio do
       antigo = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', primary_conversation: outra)
       novo = novo_card
       Crm::CardConversation.create!(account: account, card: novo, conversation: outra)
-      ia_responde(lixo(motivo: 'duplicado'))
+      ia_responde(lixo(motivo: 'duplicado', duplicado_de: antigo.id))
 
       expect(avaliar(novo).status).to eq(:archived)
       expect(antigo.reload).to be_open
     end
 
-    it 'sem outro card aberto: não arquiva' do
+    it 'sem apontar qual card fica: não arquiva' do
+      novo_card
       card = novo_card
       ia_responde(lixo(motivo: 'duplicado'))
+
+      avaliar(card)
+
+      expect(card.reload).to be_open
+    end
+
+    # Pega: no multifunil, a mesma conversa com pedidos de funis diferentes (o modelo erra e diz "repetido").
+    it 'o card apontado é de outro funil: não arquiva' do
+      outro_funil, outra_etapa = create_crm_pipeline(account: account, user: admin, name: 'Pós-venda')
+      antigo = account.crm_cards.create!(pipeline: outro_funil, stage: outra_etapa, title: 'Lead', primary_conversation: conversa)
+      card = novo_card
+      ia_responde(lixo(motivo: 'duplicado', duplicado_de: antigo.id))
+
+      avaliar(card)
+
+      expect(card.reload).to be_open
+    end
+
+    # Pega: o card apontado já saiu do funil (o repetido de um repetido): os dois sumiriam.
+    it 'o card apontado não está aberto: não arquiva' do
+      antigo = novo_card
+      antigo.update!(status: :archived)
+      card = novo_card
+      ia_responde(lixo(motivo: 'duplicado', duplicado_de: antigo.id))
 
       avaliar(card)
 

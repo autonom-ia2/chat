@@ -61,7 +61,7 @@ RSpec.describe 'Crm AI por pedido (multifunil)' do # rubocop:disable RSpec/Descr
 
       other = described_class.new(card: auto).perform[:other_subjects]
 
-      expect(other).to eq([{ title: 'Cotação residencial', pipeline: pipeline.name, stage: stage.name }])
+      expect(other).to eq([{ id: casa.id, title: 'Cotação residencial', pipeline: pipeline.name, stage: stage.name }])
     end
 
     it 'fica vazio quando a conversa tem um pedido só' do
