@@ -42,6 +42,8 @@ class Autonomia::ContatoPeloEmail::Leitor
     written. Keep the original language of the values.
     telefone: prefer the phone in the sender's signature. When the signature has no phone, use a phone the sender wrote
     in the body as their own. Never use a phone the sender says belongs to someone else.
+    The block of lines at the end of the email with a name, a role or company and a phone is the sender's signature,
+    even without a closing word like "Regards" or "Atenciosamente": those are the sender's own name and phone.
   TEXT
 
   Leitura = Data.define(:tipo, :valores)
