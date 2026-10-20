@@ -10,6 +10,7 @@ import {
   lerCoordenadas,
   montarBotaoDeLink,
   montarContato,
+  montarEnquete,
   montarLocalizacao,
   montarOpcoes,
   montarPedidoDeLocalizacao,
@@ -31,14 +32,27 @@ const MONTADORES = {
   localizacao: montarLocalizacao,
   pedidoDeLocalizacao: montarPedidoDeLocalizacao,
   contato: montarContato,
+  enquete: montarEnquete,
 };
+const montado = computed(() =>
+  props.viraTexto ? MONTADORES[props.tipo]?.({ ...props.campos }) || {} : {}
+);
+// A enquete que ainda não passa (montarEnquete recusa) não tem versão em texto: a
+// prévia diz o que falta, em vez de mostrar um texto que não é o que vai sair.
+const enqueteIncompleta = computed(
+  () => props.viraTexto && props.tipo === 'enquete' && !montado.value.pedido
+);
+const { t } = useI18n();
+
 const emTexto = computed(() => {
   if (!props.viraTexto) return '';
-  const { pedido } = MONTADORES[props.tipo]?.({ ...props.campos }) || {};
-  return pedido ? textoParaQuemNaoTemFormato(pedido) : props.campos.mensagem;
+  const { pedido } = montado.value;
+  if (pedido)
+    return textoParaQuemNaoTemFormato(pedido, {
+      avisoDeVarias: t('CONVERSA_CANAL.PREVIA.ENQUETE_AVISO_VARIAS'),
+    });
+  return props.tipo === 'enquete' ? '' : props.campos.mensagem;
 });
-
-const { t } = useI18n();
 
 const BALAO =
   'relative max-w-full rounded-lg ltr:rounded-tr-none rtl:rounded-tl-none bg-[#D9FDD3] dark:bg-[#144D37] text-[#0A0A0A] dark:text-[#FAFAFA] text-sm shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
@@ -66,7 +80,11 @@ const vazio = texto => !String(texto || '').trim();
       v-if="viraTexto"
       class="self-stretch mb-1 px-2 py-1 rounded-md text-xs bg-white/80 dark:bg-[#000]/30 text-[#3B3B3B] dark:text-[#FAFAFA]"
     >
-      {{ t('CONVERSA_CANAL.PREVIA.VIRA_TEXTO') }}
+      {{
+        tipo === 'enquete'
+          ? t('CONVERSA_CANAL.PREVIA.ENQUETE_VIRA_TEXTO')
+          : t('CONVERSA_CANAL.PREVIA.VIRA_TEXTO')
+      }}
     </p>
     <div
       v-if="viraTexto"
@@ -74,7 +92,14 @@ const vazio = texto => !String(texto || '').trim();
       :class="BALAO"
     >
       <BicoDoBalao lado="right" class="text-[#D9FDD3] dark:text-[#144D37]" />
-      <p class="whitespace-pre-wrap break-words">
+      <p
+        v-if="enqueteIncompleta"
+        class="italic text-[#666666] dark:text-[#A7A8A8] break-words"
+        data-previa-vazia
+      >
+        {{ t('CONVERSA_CANAL.PREVIA.ENQUETE_INCOMPLETA') }}
+      </p>
+      <p v-else class="whitespace-pre-wrap break-words">
         {{ emTexto || t('CONVERSA_CANAL.PREVIA.SUA_MENSAGEM') }}
       </p>
       <div class="text-end text-[11px] text-[#666666] dark:text-[#FFFFFF]/60">
@@ -105,6 +130,51 @@ const vazio = texto => !String(texto || '').trim();
             >
               {{ campos.endereco }}
             </div>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="tipo === 'enquete'">
+        <div class="px-2.5 pt-1.5 pb-1" data-previa-enquete>
+          <p
+            class="font-semibold whitespace-pre-wrap break-words"
+            :class="{
+              'text-[#666666] dark:text-[#A7A8A8] italic font-normal': vazio(
+                campos.pergunta
+              ),
+            }"
+          >
+            {{
+              vazio(campos.pergunta)
+                ? t('CONVERSA_CANAL.PREVIA.SUA_PERGUNTA')
+                : campos.pergunta
+            }}
+          </p>
+          <p class="text-xs text-[#666666] dark:text-[#A7A8A8]">
+            {{
+              campos.variasRespostas
+                ? t('CONVERSA_CANAL.PREVIA.ENQUETE_VARIAS')
+                : t('CONVERSA_CANAL.PREVIA.ENQUETE_UMA')
+            }}
+          </p>
+          <ul class="flex flex-col gap-2 mt-2 m-0 list-none">
+            <li
+              v-for="(opcao, indice) in opcoes"
+              :key="indice"
+              class="flex items-center gap-2 break-words"
+            >
+              <span
+                class="size-4 shrink-0 border-2 border-[#8C8C8C] dark:border-[#A7A8A8]"
+                :class="campos.variasRespostas ? 'rounded-sm' : 'rounded-full'"
+                aria-hidden="true"
+              />
+              <span class="min-w-0">{{ opcao }}</span>
+            </li>
+          </ul>
+          <div
+            class="text-end text-[11px] text-[#666666] dark:text-[#FFFFFF]/60"
+          >
+            {{ hora }}
           </div>
         </div>
       </template>

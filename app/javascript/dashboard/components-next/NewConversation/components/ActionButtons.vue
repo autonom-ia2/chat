@@ -1,14 +1,14 @@
 <script setup>
-import { defineAsyncComponent, ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useFileUpload } from 'dashboard/composables/useFileUpload';
-import { vOnClickOutside } from '@vueuse/components';
 import { useEventListener } from '@vueuse/core';
 import { ALLOWED_FILE_TYPES } from 'shared/constants/messages';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import FileUpload from 'vue-upload-component';
 import Button from 'dashboard/components-next/button/Button.vue';
+import JanelaDeEmojis from 'dashboard/components-next/emoji/JanelaDeEmojis.vue';
 import WhatsAppOptions from './WhatsAppOptions.vue';
 import ContentTemplateSelector from './ContentTemplateSelector.vue';
 
@@ -54,11 +54,8 @@ const generateUid = () => {
 
 const uploadAttachment = ref(null);
 const isEmojiPickerOpen = ref(false);
-
-const EmojiIconPicker = defineAsyncComponent(
-  () =>
-    import('dashboard/components-next/emoji-icon-picker/EmojiIconPicker.vue')
-);
+// #1895: a janela de emojis do painel abre em cima da barra que tem o botão do rosto.
+const barraDosBotoes = useTemplateRef('barraDosBotoes');
 
 const {
   fetchSignatureFlagFromUISettings,
@@ -201,7 +198,7 @@ useEventListener(document, 'paste', onPaste);
   <div
     class="flex flex-wrap items-center justify-between w-full min-h-[3.25rem] gap-2 px-4 py-3"
   >
-    <div class="flex gap-2 items-center">
+    <div ref="barraDosBotoes" class="flex gap-2 items-center">
       <WhatsAppOptions
         v-if="isWhatsappInbox"
         :inbox-id="inboxId"
@@ -212,25 +209,21 @@ useEventListener(document, 'paste', onPaste);
         :inbox-id="inboxId"
         @send-message="emit('sendTwilioMessage', $event)"
       />
-      <div
+      <Button
         v-if="shouldShowEmojiButton"
-        v-on-click-outside="() => (isEmojiPickerOpen = false)"
-        class="relative"
-      >
-        <Button
-          icon="i-lucide-smile-plus"
-          color="slate"
-          size="sm"
-          class="!w-10"
-          @click="isEmojiPickerOpen = !isEmojiPickerOpen"
-        />
-        <EmojiIconPicker
-          v-if="isEmojiPickerOpen"
-          mode="emoji"
-          class="!top-auto !bottom-full mb-1.5 ltr:left-0 rtl:right-0"
-          @select="onClickInsertEmoji($event.value)"
-        />
-      </div>
+        icon="i-lucide-smile-plus"
+        color="slate"
+        size="sm"
+        class="!w-10"
+        data-emoji-da-nova-conversa
+        @click="isEmojiPickerOpen = !isEmojiPickerOpen"
+      />
+      <JanelaDeEmojis
+        v-if="shouldShowEmojiButton && isEmojiPickerOpen"
+        :ancora="barraDosBotoes"
+        @escolher="onClickInsertEmoji"
+        @fechar="isEmojiPickerOpen = false"
+      />
       <FileUpload
         v-if="isEmailOrWebWidgetInbox"
         ref="uploadAttachment"
@@ -286,10 +279,6 @@ useEventListener(document, 'paste', onPaste);
 </template>
 
 <style scoped lang="scss">
-.emoji-dialog::before {
-  @apply hidden;
-}
-
 // The <label> tag inside the file-upload component overlaps the button due to its position.
 // This causes the button's hover state to not work, as it's positioned below the label (z-index).
 // Increasing the button's z-index would break the file upload functionality.

@@ -17,13 +17,17 @@ const router = useRouter();
 const { canAdminCrm } = useCrmPermissions();
 
 const goBack = () => router.back();
+// The snippet keeps its line breaks; in one constant the <pre> fits a line and the formatter leaves its text alone.
+const SNIPPET_CLASS =
+  'overflow-x-auto whitespace-pre-wrap rounded-lg bg-n-alpha-black2 px-3 py-2 font-mono text-xs text-n-slate-11';
 
-// The 7 native CRM scope keys (CustomRole::PERMISSIONS crm_* whitelist, D9).
+// The native CRM scope keys (CustomRole::PERMISSIONS crm_* whitelist, D9; arquivar desde o #1874).
 // Order matters for display only; the backend filters to ASSIGNABLE_SCOPES.
 const SCOPE_KEYS = [
   'crm_view',
   'crm_manage_cards',
   'crm_move_cards',
+  'crm_delete_cards',
   'crm_manage_pipelines',
   'crm_manage_ai',
   'crm_view_reports',
@@ -245,10 +249,7 @@ onMounted(fetchTokens);
           <span class="text-xs font-medium uppercase text-n-slate-10">
             {{ t('CRM_INTEGRATION_TOKENS.REVEAL.SNIPPET_LABEL') }}
           </span>
-          <pre
-            class="overflow-x-auto whitespace-pre-wrap rounded-lg bg-n-alpha-black2 px-3 py-2 font-mono text-xs text-n-slate-11"
-            >{{ n8nSnippet }}</pre
-          >
+          <pre :class="SNIPPET_CLASS">{{ n8nSnippet }}</pre>
           <div class="flex flex-row gap-2">
             <Button
               :label="t('CRM_INTEGRATION_TOKENS.REVEAL.SNIPPET_COPY')"

@@ -58,7 +58,11 @@ describe('álbum chegando: o marcador já abre o álbum (#1831)', () => {
     );
     expect(albuns.get(pai.id)).toEqual([]);
     expect(marcadores.size).toBe(0);
-    expect(chegadas.get(pai.id)).toEqual({ noMarcador: true, ate: FIM });
+    expect(chegadas.get(pai.id)).toEqual({
+      esperados: null,
+      noMarcador: true,
+      ate: FIM,
+    });
     expect(emQuadrados.has(pai.id)).toBe(true);
   });
 

@@ -420,7 +420,7 @@ describe('CardGaveta (#1423)', () => {
   });
 
   it('Arquivar pede confirmação antes de arquivar (OB-03)', async () => {
-    const wrapper = montar();
+    const wrapper = montar({ canDeleteCards: true });
     await flushPromises();
     await botaoComTexto(
       wrapper.find('[data-card-arquivar]'),
@@ -434,6 +434,13 @@ describe('CardGaveta (#1423)', () => {
       .find(dialogo => dialogo.props('title') === 'CRM_CARD.ARQUIVAR.TITULO')
       .vm.$emit('confirm');
     expect(wrapper.emitted('archive')).toHaveLength(1);
+  });
+
+  // #1874 — arquivar tem chave própria: quem mexe no card sem ela não vê o Arquivar.
+  it('sem Arquivar cards, a gaveta não oferece arquivar', async () => {
+    const wrapper = montar({ canManageCards: true, canDeleteCards: false });
+    await flushPromises();
+    expect(wrapper.find('[data-card-arquivar]').exists()).toBe(false);
   });
 
   it('retorno atrasado vira o próximo passo com "Marcar como feito"', async () => {

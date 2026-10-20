@@ -4,6 +4,8 @@
 #   email          — e-mail draft for the existing builder flow (#999, api-999.md);
 #   sms            — SMS, Twilio SMS or Bandwidth (#1004, docs/campaigns/publicos/api-1004.md).
 # CAMPAIGN_JOURNEY_ENABLED off → 404; campaign_manage required (CampaignPolicy#create?), otherwise 401.
+# `draft_id` (#1898): the server draft this campaign came from. Removed once the campaign is created; for e-mail it is
+# linked to the new e-mail draft and goes when that e-mail is sent or scheduled (CampaignJourney::DraftCleanup).
 class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Accounts::BaseController
   CHANNELS = %w[whatsapp_cloud whatsapp_api email sms].freeze
 
@@ -13,7 +15,9 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
   def create
     # Contact imports (#1006) are never audiences: campaign_flows keeps them out.
     campaign_import = Current.account.campaign_imports.campaign_flows.find(params.require(:campaign_import_id))
-    render json: create_for(params[:channel].to_s, campaign_import)
+    payload = create_for(params[:channel].to_s, campaign_import)
+    ::CampaignJourney::DraftCleanup.after_dispatch(Current.account, draft_id: params[:draft_id]) unless email_channel?
+    render json: payload
   rescue ::CampaignJourney::WhatsappCampaignCreator::Error, ::CampaignJourney::CreatorError => e
     render json: { error: e.message, code: e.code, details: e.details }.compact, status: :unprocessable_entity
   end
@@ -71,12 +75,17 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     campaign = ::CampaignJourney::EmailCampaignCreator.new(
       account: Current.account, campaign_import: campaign_import, attributes: email_params
     ).perform.reload
+    ::CampaignJourney::DraftCleanup.link_email(Current.account, draft_id: params[:draft_id], email_campaign: campaign)
     {
       id: campaign.id, title: campaign.name, channel: ::CampaignJourney::EmailCampaignCreator::CHANNEL, status: campaign.status,
       delivery_mode: campaign.delivery_mode, reply_to_inbox_id: campaign.reply_to_inbox_id,
       recipients_count: campaign.email_campaign_recipients.pending.count,
       suppressed_count: campaign.email_campaign_recipients.suppressed.count
     }
+  end
+
+  def email_channel?
+    params[:channel].to_s == ::CampaignJourney::EmailCampaignCreator::CHANNEL
   end
 
   def check_authorization
