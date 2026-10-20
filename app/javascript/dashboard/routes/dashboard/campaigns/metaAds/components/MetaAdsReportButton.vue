@@ -18,6 +18,8 @@ const dialog = ref(null);
 const formato = ref('pdf');
 const baixando = ref(false);
 
+const REVOGAR_EM_MS = 60_000;
+
 const OPCOES = [
   { key: 'pdf', icon: 'i-lucide-file-text', label: 'PDF' },
   { key: 'planilha', icon: 'i-lucide-file-spreadsheet', label: 'SHEET' },
@@ -38,7 +40,8 @@ const salvar = (blob, nome) => {
   link.setAttribute('href', url);
   link.setAttribute('download', nome);
   link.click();
-  URL.revokeObjectURL(url);
+  // Revogar na hora cancela o download no Safari: espera o navegador pegar o arquivo.
+  setTimeout(() => URL.revokeObjectURL(url), REVOGAR_EM_MS);
 };
 
 const abrir = () => dialog.value?.open();

@@ -21,15 +21,18 @@ module Crm::MetaAds::SemLogin
       account.inboxes.exists?(channel_type: 'Channel::Whatsapp')
   end
 
-  # O que a tela vazia precisa saber: quais WhatsApp oficiais estão prontos e se já chegou alguém de anúncio.
-  def payload(account)
+  # O que a tela vazia precisa saber: quais WhatsApp oficiais estão prontos e se já chegou alguém de anúncio. As
+  # caixas (nome e número) são só as que a pessoa acessa; o administrador vê todas.
+  def payload(account, account_user)
     return { enabled: false } unless whatsapp_panel?(account)
 
-    { enabled: true, official_inboxes: official_inboxes(account), recent_ad_touch: recent_ad_touch?(account) }
+    { enabled: true, official_inboxes: official_inboxes(account, account_user), recent_ad_touch: recent_ad_touch?(account) }
   end
 
-  def official_inboxes(account)
-    account.inboxes.where(channel_type: 'Channel::Whatsapp').includes(:channel).order(:id).map do |inbox|
+  def official_inboxes(account, account_user)
+    caixas = account.inboxes.where(channel_type: 'Channel::Whatsapp')
+    caixas = caixas.where(id: account_user&.user&.inboxes&.select(:id) || Inbox.none) unless account_user&.administrator?
+    caixas.includes(:channel).order(:id).map do |inbox|
       { id: inbox.id, name: inbox.name, phone: inbox.channel.phone_number }
     end
   end

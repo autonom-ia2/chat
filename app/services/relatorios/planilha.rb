@@ -7,6 +7,7 @@
 # motivo de Crm::Cards::XlsxExport: o caxlsx grava o filtro duas vezes e o Excel pede para reparar o arquivo.
 class Relatorios::Planilha
   HEADER_ROW = 4 # 1 título, 2 contexto, 3 respiro, 4 cabeçalho
+  COLUNA_SEM_NOME = 'Coluna'.freeze
   CELL_TYPES = { texto: :string, inteiro: :integer, dinheiro: :float, data: :time, dia: :date }.freeze
 
   def initialize
@@ -47,7 +48,21 @@ class Relatorios::Planilha
 
   def cabecalho(sheet, titulo, contexto, colunas)
     titulo_e_contexto(sheet, titulo, contexto)
-    sheet.add_row(colunas.pluck(:titulo), style: @estilos.cabecalho, types: colunas.map { :string }, height: 28)
+    sheet.add_row(cabecalhos_unicos(colunas.pluck(:titulo)), style: @estilos.cabecalho, types: colunas.map { :string }, height: 28)
+  end
+
+  # A tabela do Excel exige cabeçalhos diferentes (sem diferenciar maiúscula) e não vazios; repetido ganha " (2)",
+  # " (3)"... Sem isso o Excel repara o arquivo e apaga a tabela (dois anúncios com o mesmo nome, por exemplo).
+  def cabecalhos_unicos(titulos)
+    usados = Set.new
+    titulos.each_with_index.map do |titulo, index|
+      base = titulo.to_s.strip.presence || "#{COLUNA_SEM_NOME} #{index + 1}"
+      candidato = base
+      numero = 1
+      candidato = "#{base} (#{numero += 1})" while usados.include?(candidato.downcase)
+      usados << candidato.downcase
+      candidato
+    end
   end
 
   def titulo_e_contexto(sheet, titulo, contexto)

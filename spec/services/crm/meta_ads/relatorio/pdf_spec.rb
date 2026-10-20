@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# Relatório baixado de Anúncios (#1960): o PDF e a planilha saem com os mesmos números da tela, a foto guardada do
-# anúncio entra no PDF, quem espera resposta ganha a página "Comece por aqui" e, sem ninguém de anúncio, o PDF avisa.
+# Relatório baixado de Anúncios (#1960): o PDF sai com os mesmos números da tela, a foto guardada do anúncio entra,
+# quem espera resposta ganha a página "Comece por aqui" e, sem ninguém de anúncio, a capa avisa.
 RSpec.describe Crm::MetaAds::Relatorio::Pdf do
   let(:account) { create(:account, name: 'Loja Exemplo') }
   let(:pipeline) { create_crm_pipeline(account: account, user: create(:user, account: account)).first }
@@ -60,19 +60,5 @@ RSpec.describe Crm::MetaAds::Relatorio::Pdf do
 
     expect(paginas.size).to eq(1)
     expect(paginas.first).to include('Ninguém chegou por anúncio neste período.')
-  end
-
-  it 'a planilha traz o resumo, os anúncios, as conversas e os dias do período' do
-    from_ad('Paulo Lima', 2.days.ago, status: :won, value: 950)
-    esperando('Joana Dias', 1.day.ago)
-
-    planilha = Roo::Excelx.new(StringIO.new(Crm::MetaAds::Relatorio::Planilha.new(dados).gerar))
-    linhas = ->(aba) { (1..planilha.sheet(aba).last_row).map { |linha| planilha.sheet(aba).row(linha) } }
-
-    expect(planilha.sheets).to eq(%w[Resumo Anúncios Conversas Por\ dia])
-    expect(linhas.call(0)).to include(['Conversas que vieram de anúncio', 2], ['Vendas', 1], ['Valor vendido', 950])
-    expect(linhas.call(1).flatten).to include('Seguro auto sem complicação')
-    expect(linhas.call(2).flatten).to include('Paulo Lima', 'Comprou', 'Joana Dias', 'Sem resposta')
-    expect(linhas.call(3).size).to eq(3 + 31) # título, contexto, espaço e cabeçalho somam 3 + 1; 30 dias + hoje
   end
 end

@@ -251,7 +251,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
       # Portfólio do cliente na Meta: o "Abrir a Meta" do passo 1 cai direto em Parceiros dele (#1068).
       client_portfolio_id: setup.portfolio_ids.first,
       sales_signal: { enabled: ::Crm::MetaAds::Funnels.new(Current.account, connection).sales_enabled? },
-      whatsapp_result: ::Crm::MetaAds::SemLogin.payload(Current.account)
+      whatsapp_result: ::Crm::MetaAds::SemLogin.payload(Current.account, Current.account_user)
     )
   end
 
