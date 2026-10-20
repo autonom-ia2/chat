@@ -118,6 +118,8 @@ tom:
 | Caixas de entrada (em Configurações) | os canais: WhatsApp, e-mail, site | "a caixa de entrada do canal" |
 | Robôs | robôs por webhook, antigos | "Robôs (integração por webhook)" |
 | Guia da Plataforma | o assistente que responde dúvidas no painel | "o Guia" |
+| Card (no CRM) | o item do quadro do CRM, em funil de Vender, Atender ou Cobrança | "card". É exceção à regra do português: "cartão" já nomeia os blocos da gaveta (cartão **Negócio**), os cartões de Integrações e o cartão de contato do WhatsApp. Decisão do Rodrigo, 19/10 (#1882) |
+| Oportunidade | chance de negócio (Prospecção, Relacionamentos) | "oportunidade" só nesse sentido; nunca para o item do quadro |
 
 ## 6. Regra de verdade (o revisor reprova se quebrar)
 

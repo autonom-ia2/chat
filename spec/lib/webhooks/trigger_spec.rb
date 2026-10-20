@@ -8,7 +8,7 @@ describe Webhooks::Trigger do
   let!(:account) { create(:account) }
   let!(:inbox) { create(:inbox, account: account) }
   let!(:conversation) { create(:conversation, inbox: inbox) }
-  let!(:message) { create(:message, account: account, inbox: inbox, conversation: conversation) }
+  let!(:message) { create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing) }
 
   let(:webhook_type) { :api_inbox_webhook }
   let(:url) { 'https://test.com' }

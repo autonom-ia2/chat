@@ -11,6 +11,7 @@ import {
   EmailQuoteExtractor,
   QUOTE_INDICATORS,
 } from 'dashboard/helper/emailQuoteExtractor.js';
+import { antesDaLimpeza } from './atributosQueOSanitizadorTira';
 import { cortarCitacaoDosLeitores } from './citacaoDosLeitores';
 import { prepararEstilos, semMarcacaoPerigosa } from './estiloSeguroDoEmail';
 import { imagemSegura, linkSeguro } from './enderecoDoEmail';
@@ -53,13 +54,21 @@ export const CSP_DO_EMAIL = [
 ].join('; ');
 
 export const MARCA_DA_PROPORCAO = 'data-proporcao';
+// #1916: o endereço da imagem web espera aqui até a imagem chegar perto da tela (o
+// CorpoIsoladoDoEmail põe no src). O loading="lazy" do navegador não adia nada numa
+// moldura da altura do e-mail inteiro: todas as imagens estão "na tela" dela.
+export const IMAGEM_ADIADA = 'data-src-adiado';
+// #1916: o destino de uma âncora interna ("#secao"). Sem href: no srcdoc, "#secao" é
+// resolvido contra o endereço do painel e carregaria o painel dentro da moldura.
+export const ANCORA_INTERNA = 'data-ancora';
 
 // O padrão de um leitor de e-mail para o que o remetente não definiu (como o Gmail):
 // sem a margem do navegador, letra sem serifa. Vem antes do CSS do remetente, que ganha.
 const PADRAO_DO_LEITOR = [
   ':root{color-scheme:light}',
   'body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222}',
-  ':where(a[href]){color:#15c}',
+  ':where(a[href]),:where(a[data-ancora]){color:#15c}',
+  ':where(a[data-ancora]){text-decoration:underline;cursor:pointer}',
   'img{max-width:100%}',
   // Imagem estreitada mantém a proporção dos atributos (manterProporcao); peso zero: o
   // remetente ganha.
@@ -105,18 +114,17 @@ const cortarCitacaoDoChatwoot = raiz => {
   return achou;
 };
 
-// O documento inteiro sem a citação, e se havia. `leitores: false` usa só o extrator do
-// Chatwoot (o balão antigo), para não mudar o que ele considera citação.
+// O documento inteiro sem a citação, e se havia. Na moldura fiel (#1916), só a marca que
+// o leitor de e-mail põe no histórico (citacaoDosLeitores.js): as heurísticas genéricas
+// do Chatwoot escondiam conteúdo do remetente atrás do "…" (classe com "quote" no nome,
+// <blockquote> no fim de uma newsletter, "From: GRU" num cartão de embarque).
+// `leitores: false` (o balão antigo) segue só com o extrator do Chatwoot, como antes.
 export const citacaoDoDocumento = (html, { leitores = true } = {}) => {
   const doc = lerDocumento(html);
-  const achouDosLeitores = leitores
+  const achou = leitores
     ? cortarCitacaoDosLeitores(doc.body)
-    : false;
-  const achouDoChatwoot = cortarCitacaoDoChatwoot(doc.body);
-  return {
-    html: comoTexto(doc),
-    achou: achouDosLeitores || achouDoChatwoot,
-  };
+    : cortarCitacaoDoChatwoot(doc.body);
+  return { html: comoTexto(doc), achou };
 };
 
 // O estilo e a direção do <body> vão para uma div por cima de tudo, que o sanitizador
@@ -205,8 +213,40 @@ export const imagemSemRastreio = semRastreio => endereco =>
 export const linkSemRastreio = semRastreio => endereco =>
   linkSeguro(semRastreio(endereco));
 
+// Âncora interna (#1916): "#destino" leva a um ponto do próprio e-mail (índice de
+// newsletter, "voltar ao topo"). O destino vai para ANCORA_INTERNA e o clique (ou Enter)
+// é tratado pelo CorpoIsoladoDoEmail, que rola a conversa até ele.
+const ANCORA = '#';
+export const ancoraInterna = endereco => {
+  const texto = String(endereco || '').trim();
+  return texto.startsWith(ANCORA) ? texto.slice(ANCORA.length) : '';
+};
+
+const virarAncoraInterna = (link, destino) => {
+  link.removeAttribute('href');
+  link.removeAttribute('target');
+  link.setAttribute(ANCORA_INTERNA, destino);
+  link.setAttribute('role', 'link');
+  link.setAttribute('tabindex', '0');
+};
+
+// Imagem embutida (data:) já está no documento; só a da web espera.
+const adiarImagem = (imagem, endereco) => {
+  if (endereco.toLowerCase().startsWith('data:')) {
+    imagem.setAttribute('src', endereco);
+    return;
+  }
+  imagem.removeAttribute('src');
+  imagem.setAttribute(IMAGEM_ADIADA, endereco);
+};
+
 const limparLinksEImagens = doc => {
   doc.querySelectorAll('a').forEach(link => {
+    const destino = ancoraInterna(link.getAttribute('href'));
+    if (destino) {
+      virarAncoraInterna(link, destino);
+      return;
+    }
     const endereco = linkSeguro(link.getAttribute('href') || '');
     if (endereco) link.setAttribute('href', endereco);
     else link.removeAttribute('href');
@@ -215,7 +255,7 @@ const limparLinksEImagens = doc => {
   });
   doc.querySelectorAll('img').forEach(imagem => {
     const endereco = imagemSegura(imagem.getAttribute('src'));
-    if (endereco) imagem.setAttribute('src', endereco);
+    if (endereco) adiarImagem(imagem, endereco);
     else imagem.removeAttribute('src');
     manterProporcao(imagem);
   });
@@ -269,6 +309,7 @@ const montarDocumento = (html, semRastreio, tela) => {
   const atributos = atributosDoCorpo(original, semRastreio);
   envolverOCorpo(original);
   atributosDeTabelaComoEstilo(original);
+  const devolverOQueOSanitizadorTira = antesDaLimpeza(original);
   // Antes do sanitizador: svg e math relidos viram <style> sem folha, e ele lança.
   semMarcacaoPerigosa(original.documentElement);
   prepararEstilos(original, { conferirUrls: true, tela });
@@ -280,6 +321,7 @@ const montarDocumento = (html, semRastreio, tela) => {
     rewriteExternalResources: imagemSemRastreio(semRastreio),
   });
   const doc = lerDocumento(`<!doctype html><html><body>${limpo}</body></html>`);
+  devolverOQueOSanitizadorTira(doc);
   devolverAoCorpo(doc, atributos);
   semMarcacaoPerigosa(doc.body);
   limparLinksEImagens(doc);
@@ -331,6 +373,12 @@ export const documentoIsolado = (
 // com escopo de novo.
 export const corpoParaImprimir = srcdoc => {
   const doc = lerDocumento(srcdoc);
+  const devolverOQueOSanitizadorTira = antesDaLimpeza(doc);
+  // Na impressão a imagem vai inteira, sem esperar a tela.
+  doc.querySelectorAll(`img[${IMAGEM_ADIADA}]`).forEach(imagem => {
+    imagem.setAttribute('src', imagem.getAttribute(IMAGEM_ADIADA));
+    imagem.removeAttribute(IMAGEM_ADIADA);
+  });
   const div = doc.createElement('div');
   const estilo = doc.body.getAttribute('style');
   if (estilo) div.setAttribute('style', estilo);
@@ -349,6 +397,7 @@ export const corpoParaImprimir = srcdoc => {
   });
   // O sanitizador tira a proporção da imagem: volta, como na tela.
   const impresso = lerDocumento(limpo);
+  devolverOQueOSanitizadorTira(impresso);
   impresso.querySelectorAll('img').forEach(manterProporcao);
   return impresso.body.innerHTML;
 };

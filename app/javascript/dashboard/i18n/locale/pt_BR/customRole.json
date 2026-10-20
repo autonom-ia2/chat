@@ -132,9 +132,9 @@
         },
         "CRM": {
           "NAME": "CRM",
-          "HINT": "Funis, oportunidades e agenda",
-          "LEVEL_VIEW": "Vê o quadro e as oportunidades. Não altera.",
-          "LEVEL_MANAGE": "Cria, edita e move oportunidades."
+          "HINT": "Funis, cards e agenda",
+          "LEVEL_VIEW": "Vê o quadro e os cards. Não altera.",
+          "LEVEL_MANAGE": "Cria, edita e move cards."
         },
         "AUTONOMIA": {
           "NAME": "Agentes Autonom.ia",
@@ -271,7 +271,7 @@
     "EXTRAS": {
       "CONVERSATION_UNASSIGNED_MANAGE": "Vê a fila de conversas sem responsável e pode assumir.",
       "CONVERSATION_PARTICIPATING_MANAGE": "Vê as conversas em que participa, mesmo atribuídas a outra pessoa.",
-      "CRM_MOVE_CARDS": "Arrasta oportunidades entre etapas sem editar o resto.",
+      "CRM_MOVE_CARDS": "Arrasta cards entre etapas sem editar o resto.",
       "CRM_VIEW_REPORTS": "Painel do funil e custo de IA.",
       "CRM_MANAGE_PIPELINES": "Etapas, automações e caixas do funil.",
       "CRM_MANAGE_AI": "Configura e aceita sugestões da IA. Gera custo.",
@@ -396,7 +396,7 @@
       "PHRASES": {
         "OWN_CONVERSATIONS": "Atender as próprias conversas e pegar da fila",
         "READ_CONTACTS_KB": "Consultar contatos e a base de conhecimento",
-        "MANAGE_DEALS": "Criar e mover oportunidades no CRM",
+        "MANAGE_DEALS": "Criar e mover cards no CRM",
         "OTHERS_CONVERSATIONS": "Ver conversas de outros atendentes",
         "REPORTS": "Ver relatórios",
         "SETTINGS": "Mexer em configurações",
@@ -411,7 +411,7 @@
         "EXPORT_CRM": "Exportar a lista do CRM",
         "ALL_SEARCHES": "Ver as buscas de prospecção de todos",
         "ANSWER_CONVERSATIONS": "Atender conversas",
-        "EDIT_DEALS": "Editar oportunidades no CRM",
+        "EDIT_DEALS": "Editar cards no CRM",
         "CRM_DASHBOARD": "Ver o painel do CRM e o custo de IA",
         "CHANGE_ANYTHING": "Alterar qualquer coisa",
         "SETUP_INBOXES": "Configurar caixas e reconectar o WhatsApp",
