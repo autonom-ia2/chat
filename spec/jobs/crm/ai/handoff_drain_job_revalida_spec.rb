@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# #1975: antes de entregar a espera da IA do CRM, a fila confere com a IA se o problema do cliente segue aberto, mas só
-# uma vez, e de novo só quando chega mensagem nova depois da última conferência. As outras esperas seguem como antes.
+# #1975: antes de entregar a espera da IA do CRM, a fila pede uma releitura (uma vez, e de novo só com mensagem nova).
+# A releitura roda num job (Crm::Ai::RevalidaPassagemJob): a fila só enfileira e segura a conversa enquanto ela não
+# termina. As outras esperas seguem como antes.
 RSpec.describe Crm::Ai::HandoffDrainJob do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -21,7 +22,9 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     create(:inbox_member, inbox: inbox, user: ana)
     card
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online' })
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
     allow(Crm::Ai::RevalidaPassagem).to receive(:new).and_return(revalida)
+    allow(revalida).to receive(:call)
   end
 
   after { ActiveRecord::Base.connection.execute('SELECT pg_advisory_unlock_all()') }
@@ -35,222 +38,118 @@ RSpec.describe Crm::Ai::HandoffDrainJob do
     create(:message, account: account, inbox: inbox, conversation: conversation, message_type: tipo, content: texto, **extra)
   end
 
-  def resposta(passa, motivo)
-    { passa: passa, motivo: motivo, decisao: passa ? 'problema_em_aberto' : 'resolvido' }
+  def marca
+    Crm::Entrega::Marca.dados(conversation.reload)
   end
 
-  def atividades(tipo)
-    Crm::Activity.where(card_id: card.id, event_type: tipo)
+  def releituras
+    ActiveJob::Base.queue_adapter.enqueued_jobs.select { |job| job[:job] == Crm::Ai::RevalidaPassagemJob }
   end
 
-  it 'resolvido depois da espera: a marca sai, ninguém recebe e o porquê fica no card', :aggregate_failures do
+  def responde!(passa, motivo)
+    allow(revalida).to receive(:call).and_return({ passa: passa, motivo: motivo, decisao: passa ? 'problema_em_aberto' : 'resolvido' })
+    Crm::Ai::RevalidaPassagemJob.perform_now(conversation.id, marca['revalidando_desde'])
+  end
+
+  # Revisão do PR #1980: a chamada leva até 74 s, e a rodada tem 45 s por passo. A fila não chama o modelo.
+  it 'a fila não chama o modelo: grava a releitura em curso, enfileira o job e segura a conversa', :aggregate_failures do
     segurar!
-    travel(1.minute) { fala!('Aqui estão as 3 opções da sua cotação.') }
-    allow(revalida).to receive(:call).and_return(resposta(false, 'o robô enviou a cotação e o cliente não voltou'))
 
     described_class.perform_now
 
+    expect(Crm::Ai::RevalidaPassagem).not_to have_received(:new)
     expect(conversation.reload.assignee_id).to be_nil
-    expect(Crm::Entrega::Marca.presente?(conversation)).to be(false)
-    expect(atividades('ai_handoff_withdrawn').sole.payload).to include('reason' => 'o robô enviou a cotação e o cliente não voltou',
-                                                                       'decision' => 'resolvido')
+    expect(marca['revalidando_desde']).to be_present
+    expect(releituras.sole[:args]).to eq([conversation.id, marca['revalidando_desde']])
   end
 
-  it 'problema ainda aberto: entrega, com o motivo novo na atividade da entrega', :aggregate_failures do
+  it 'enfileira uma vez por espera: de novo só uma vez, se o job parece perdido (5 min)', :aggregate_failures do
     segurar!
-    travel(1.minute) { fala!('O que é DMH?', tipo: :incoming) }
-    allow(revalida).to receive(:call).and_return(resposta(true, 'cliente pediu explicação de DMH e o robô não soube'))
 
     described_class.perform_now
+    travel(2.minutes) { described_class.perform_now }
+    expect(releituras.size).to eq(1)
 
-    expect(conversation.reload.assignee_id).to eq(ana.id)
-    expect(atividades('ai_handoff').sole.payload['reason']).to eq('cliente pediu explicação de DMH e o robô não soube')
-  end
-
-  # Conversa 327: a avaliação da meia-noite já tinha visto a cotação enviada e pediu a pessoa assim mesmo; nada chegou
-  # depois. A releitura antes da entrega, mesmo sem mensagem nova, é o que evita entregá-la horas depois.
-  it 'sem mensagem nova depois da espera: relê uma vez e, resolvido, não entrega', :aggregate_failures do
-    fala!('Aqui estão as 3 opções da sua cotação.', created_at: 1.minute.ago)
-    segurar!
-    allow(revalida).to receive(:call).and_return(resposta(false, 'o robô enviou a cotação e o cliente não voltou'))
-
-    described_class.perform_now
-
-    expect(revalida).to have_received(:call).once
+    travel(6.minutes) { described_class.perform_now }
+    travel(8.minutes) { described_class.perform_now }
+    expect(releituras.size).to eq(2)
+    expect(releituras.map { |job| job[:args].last }.uniq).to eq([marca['revalidando_desde']])
     expect(conversation.reload.assignee_id).to be_nil
-    expect(Crm::Entrega::Marca.presente?(conversation)).to be(false)
-    expect(Crm::Ai::RevalidaPassagem).to have_received(:new)
-      .with(conversation, card: card, motivo_do_pedido: 'cliente pediu a cotação e o robô falhou')
   end
 
-  it 'sem mensagem nova e o problema segue aberto: entrega com o motivo novo', :aggregate_failures do
-    fala!('mensagem de antes da espera', tipo: :incoming, created_at: 1.minute.ago)
-    segurar!
-    allow(revalida).to receive(:call).and_return(resposta(true, 'cliente quer falar do sinistro e ninguém respondeu'))
-
-    described_class.perform_now
-
-    expect(conversation.reload.assignee_id).to eq(ana.id)
-    expect(atividades('ai_handoff').sole.payload['reason']).to eq('cliente quer falar do sinistro e ninguém respondeu')
-  end
-
-  it 'depois de relida, nota privada e atividade não pedem outra releitura', :aggregate_failures do
+  it 'releitura sem resposta em 10 min: entrega como hoje e não relê de novo sem mensagem nova', :aggregate_failures do
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
     segurar!
-    allow(revalida).to receive(:call).and_return(resposta(true, 'dúvida sem resposta'))
+    described_class.perform_now
+
+    travel(11.minutes) { described_class.perform_now }
+
+    expect(marca).to include('revalidado_ate' => 0)
+    expect(marca).not_to have_key('revalidando_desde')
+
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({ ana.id.to_s => 'online' })
+    travel(13.minutes) { described_class.perform_now }
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+    expect(releituras.size).to eq(1)
+  end
+
+  it 'releitura com o problema aberto: a rodada seguinte entrega, com o motivo novo', :aggregate_failures do
+    segurar!
+    described_class.perform_now
+    responde!(true, 'cliente pediu explicação de DMH e o robô não soube')
 
     described_class.perform_now
-    expect(Crm::Entrega::Marca.dados(conversation.reload)['revalidado_ate']).to eq(0)
+
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+    expect(Crm::Activity.where(card_id: card.id, event_type: 'ai_handoff').sole.payload['reason'])
+      .to eq('cliente pediu explicação de DMH e o robô não soube')
+  end
+
+  it 'depois de relida, nota privada e atividade não pedem outra releitura' do
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+    segurar!
+    described_class.perform_now
+    responde!(true, 'dúvida sem resposta')
 
     travel(1.minute) do
       fala!('nota interna', private: true)
       fala!('Conversa atribuída', tipo: :activity)
+      described_class.perform_now
     end
+
+    expect(releituras.size).to eq(1)
+  end
+
+  it 'mensagem nova do cliente depois da releitura pede outra' do
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+    segurar!
+    described_class.perform_now
+    responde!(true, 'dúvida sem resposta')
+
+    travel(1.minute) do
+      fala!('Alguém pode me ajudar?', tipo: :incoming)
+      described_class.perform_now
+    end
+
+    expect(releituras.size).to eq(2)
+  end
+
+  it 'com a IA do CRM desligada, entrega como hoje, sem enfileirar', :aggregate_failures do
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
+    segurar!
+
     described_class.perform_now
 
-    expect(revalida).to have_received(:call).once
+    expect(releituras).to be_empty
+    expect(conversation.reload.assignee_id).to eq(ana.id)
   end
 
   it 'a espera que o próprio agente pediu não é relida' do
     segurar!(motivo: 'robo_pediu')
-    travel(1.minute) { fala!('Já resolvi por aqui.') }
 
     described_class.perform_now
 
-    expect(Crm::Ai::RevalidaPassagem).not_to have_received(:new)
+    expect(releituras).to be_empty
     expect(conversation.reload.assignee_id).to eq(ana.id)
-  end
-
-  it 'de pé e ainda sem ninguém online: relê uma vez só por mensagem nova', :aggregate_failures do
-    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
-    segurar!
-    duvida = travel(1.minute) { fala!('O que é DMH?', tipo: :incoming) }
-    allow(revalida).to receive(:call).and_return(resposta(true, 'dúvida de DMH sem resposta'))
-
-    described_class.perform_now
-    described_class.perform_now
-
-    expect(revalida).to have_received(:call).once
-    marca = Crm::Entrega::Marca.dados(conversation.reload)
-    expect(marca).to include('razao' => 'dúvida de DMH sem resposta', 'revalidado_ate' => duvida.id)
-
-    travel(2.minutes) { fala!('Alguém pode me ajudar?', tipo: :incoming) }
-    described_class.perform_now
-    expect(revalida).to have_received(:call).twice
-  end
-
-  it 'a IA fora do ar: entrega como antes (perder o pedido é pior)' do
-    segurar!
-    travel(1.minute) { fala!('O que é DMH?', tipo: :incoming) }
-    allow(revalida).to receive(:call).and_raise(Crm::Ai::RevalidaPassagem::Indisponivel, 'sem_credencial')
-
-    described_class.perform_now
-
-    expect(conversation.reload.assignee_id).to eq(ana.id)
-  end
-
-  it 'passando da cota da rodada, a conversa espera a rodada seguinte sem entregar sem reler', :aggregate_failures do
-    stub_const("#{described_class}::REVALIDACOES_POR_RODADA", 0)
-    segurar!
-    travel(1.minute) { fala!('O que é DMH?', tipo: :incoming) }
-
-    described_class.perform_now
-
-    expect(conversation.reload.assignee_id).to be_nil
-    expect(Crm::Entrega::Marca.presente?(conversation)).to be(true)
-  end
-
-  # Revisão do PR #1980 (HIGH 1): a resposta é sobre a conversa que foi lida. Um pedido explícito que chega durante
-  # a chamada não some com um "resolvido" velho: nada é gravado, ninguém recebe agora e a rodada seguinte relê.
-  it 'pedido do cliente chega durante a releitura: a resposta velha é descartada e a espera fica', :aggregate_failures do
-    segurar!
-    allow(revalida).to receive(:call) do
-      fala!('Quero falar com uma pessoa, por favor', tipo: :incoming)
-      resposta(false, 'o robô enviou a cotação')
-    end
-
-    described_class.perform_now
-
-    expect(conversation.reload.assignee_id).to be_nil
-    marca = Crm::Entrega::Marca.dados(conversation)
-    expect(marca).to include('razao' => 'cliente pediu a cotação e o robô falhou')
-    expect(marca).not_to have_key('revalidado_ate')
-    expect(atividades('ai_handoff_withdrawn')).to be_empty
-  end
-
-  it 'o motivo da espera muda durante a releitura: a resposta velha é descartada', :aggregate_failures do
-    segurar!
-    allow(revalida).to receive(:call) do
-      Crm::Entrega::Marca.marcar(conversation, modo: Crm::Entrega::Marca::SEGURANDO, motivo: 'ia_crm', razao: 'pedido novo')
-      conversation.save!
-      resposta(false, 'resolvido antes')
-    end
-
-    described_class.perform_now
-
-    expect(Crm::Entrega::Marca.dados(conversation.reload)).to include('razao' => 'pedido novo')
-    expect(atividades('ai_handoff_withdrawn')).to be_empty
-  end
-
-  # HIGH 2: qualquer falha entrega como hoje, já nesta rodada, e não paga outra chamada sem mensagem nova.
-  it 'falha repetida não chama o modelo duas vezes', :aggregate_failures do
-    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
-    segurar!
-    allow(revalida).to receive(:call).and_raise(Crm::Ai::ResponsesClient::Error, 'timeout')
-
-    described_class.perform_now
-    described_class.perform_now
-
-    expect(revalida).to have_received(:call).once
-    expect(Crm::Entrega::Marca.dados(conversation.reload)).to include('revalidado_ate' => 0,
-                                                                      'razao' => 'cliente pediu a cotação e o robô falhou')
-  end
-
-  it 'erro inesperado ao montar o contexto entrega a conversa como hoje' do
-    allow(Crm::Ai::RevalidaPassagem).to receive(:new).and_call_original
-    allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
-    allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: 'chave'))
-    allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(instance_double(Crm::Ai::ResponsesClient))
-    allow(Crm::Ai::ContextBuilder).to receive(:new).and_raise(NoMethodError, 'quebrou')
-    segurar!
-
-    described_class.perform_now
-
-    expect(conversation.reload.assignee_id).to eq(ana.id)
-  end
-
-  it 'a releitura que falha não gasta a cota: com cota 1, a terceira conversa ainda é relida e entregue', :aggregate_failures do
-    stub_const("#{described_class}::REVALIDACOES_POR_RODADA", 1)
-    conversas = [conversation] + Array.new(2) do
-      create(:conversation, account: account, inbox: inbox, contact: create(:contact, account: account), status: :open).reload
-    end
-    conversas.each do |conversa|
-      Crm::Entrega::Marca.marcar(conversa, modo: Crm::Entrega::Marca::SEGURANDO, motivo: 'ia_crm', razao: 'pedido')
-      conversa.save!
-    end
-    chamadas = 0
-    allow(revalida).to receive(:call) do
-      chamadas += 1
-      raise Crm::Ai::ResponsesClient::Error, 'timeout' if chamadas <= 2
-
-      resposta(true, 'segue aberto')
-    end
-
-    described_class.perform_now
-
-    expect(chamadas).to eq(3)
-    expect(conversas.map { |conversa| conversa.reload.assignee_id }).to all(eq(ana.id))
-  end
-
-  # MEDIUM: a releitura só começa se cabe inteira no que sobra da rodada; senão, fica para a seguinte, sem entregar.
-  it 'sem tempo na rodada para uma releitura inteira, a conversa espera a rodada seguinte', :aggregate_failures do
-    stub_const("#{described_class}::RODADA_MAXIMA", Crm::Ai::RevalidaPassagem::TIMEOUT)
-    segurar!
-
-    described_class.perform_now
-
-    expect(Crm::Ai::RevalidaPassagem).not_to have_received(:new)
-    expect(conversation.reload.assignee_id).to be_nil
-    expect(Crm::Entrega::Marca.presente?(conversation)).to be(true)
   end
 end

@@ -4,16 +4,16 @@
 #    para quem tiver ficado online. Vale com ou sem CRM e sem a IA do CRM ligada: é o "segura e entrega quando alguém
 #    entrar" da caixa sem regra também. O convite que venceu (TTL da etapa) perde a marca, os administradores da
 #    caixa são avisados, e a conversa volta a poder ser pega pelo rodízio nativo. A espera da IA do CRM é relida
-#    antes de entregar (#1975, uma vez e de novo só com mensagem nova): se o problema do cliente foi resolvido, a marca sai.
+#    antes de entregar (#1975, uma vez e de novo só com mensagem nova), num job à parte (Crm::Ai::RevalidaPassagemJob):
+#    enquanto a releitura não termina, a conversa fica na espera; resolvido o problema do cliente, a marca sai.
 # 2. Cards com a espera gravada no card, de antes do #1454 (só com a IA do CRM ligada), pelo HandoffExecutor. Sem
 #    releitura (#1975): com alguém online, entrega pela decisão antiga; sem ninguém, a espera passa para a conversa
 #    (passo 1) e, dali em diante, é relida antes de entregar.
 #
 # Uma rodada por vez (trava de sessão do Postgres; quem não pega, sai), 45 s por passo, ordem alternada, e a presença
 # de cada conta lida uma vez (Crm::Entrega::Presenca). O teto é checado entre itens: cada item pode somar até ~10 s
-# de trava (LOCK_TIMEOUT na linha e no carimbo). Os dois passos ficam dentro de RODADA_MAXIMA (110 s), e uma
-# releitura pela IA (#1975, até RevalidaPassagem::TIMEOUT) só começa se ela cabe inteira no que sobra da rodada:
-# no pior caso, 110 s mais a trava de um item, perto dos 2 minutos do cron, que de todo modo não sobrepõe rodadas.
+# de trava (LOCK_TIMEOUT na linha e no carimbo), então uma rodada fica perto de 90 s, no pior caso ~110 s. A
+# releitura da IA (#1975) não roda aqui: a rodada só grava a marca e enfileira o job.
 # A presença fica congelada durante a rodada:
 # quem entrar no meio dela recebe na rodada seguinte, 2 minutos depois.
 class Crm::Ai::HandoffDrainJob < ApplicationJob
@@ -31,22 +31,11 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   LOCK_TIMEOUT = '5s'.freeze
   # Chave da trava de sessão (pg_try_advisory_lock) que impede duas rodadas ao mesmo tempo.
   TRAVA_DA_RODADA = 1_454_000_001
-  # Releituras pela IA por rodada (#1975, Crm::Ai::RevalidacaoNaFila): cada uma é uma chamada de 3 a 40 s (mediana
-  # ~15 s no backteste), fora de qualquer trava. São cerca de 50 passagens por mês, então a cota quase nunca enche; o
-  # que segura a rodada é o tempo (RODADA_MAXIMA e FOLGA_DA_RELEITURA). Só a releitura que deu resposta conta: a que
-  # falhou entrega como antes e não tira a vez das outras. Passando da cota ou do tempo, a conversa fica para a rodada
-  # seguinte (sem entregar sem reler) e volta entre as primeiras pelo `tentado_em`.
-  REVALIDACOES_POR_RODADA = 4
-  # Teto da rodada inteira (os dois passos e as releituras), abaixo dos 2 minutos do cron.
-  RODADA_MAXIMA = 110
-  # Uma releitura só começa se sobra, na rodada, o tempo máximo dela mais esta folga.
-  FOLGA_DA_RELEITURA = 5
   TENTADO_EM_SQL = "(conversations.additional_attributes -> 'crm_entrega' ->> 'tentado_em')".freeze
 
   def perform
     return unless pegar_trava
 
-    @fim_da_rodada = relogio + RODADA_MAXIMA
     begin
       Crm::Entrega::Presenca.na_rodada { passos.each { |passo| send(passo) } }
     ensure
@@ -73,7 +62,7 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
   end
 
   def comecar_passo(orcamento)
-    @prazo = [relogio + orcamento, @fim_da_rodada].min
+    @prazo = relogio + orcamento
   end
 
   # A trava (SET LOCAL) vale só para a transação desta tentativa.
@@ -115,9 +104,6 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
 
   def drain_held_conversations
     comecar_passo(ORCAMENTO_CONVERSAS)
-    @releituras = Crm::Ai::RevalidacaoNaFila::Rodada.new(
-      cota: REVALIDACOES_POR_RODADA, fim: @fim_da_rodada, folga: FOLGA_DA_RELEITURA, com_trava: method(:com_lock_timeout)
-    )
     held_conversations.each do |conversation|
       break if tempo_acabou?
 
@@ -127,8 +113,8 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
 
   def drain_one(conversation)
     inicio = relogio
-    # #1975: a espera da IA do CRM é relida antes de entregar (Crm::Ai::RevalidacaoNaFila::Rodada).
-    return if @releituras.segurar?(conversation)
+    # #1975: a espera da IA do CRM é relida antes de entregar; enquanto o job da releitura não termina, ela fica.
+    return if Crm::Ai::RevalidacaoNaFila.new(conversation, com_trava: method(:com_lock_timeout)).segurar?
 
     com_lock_timeout { drain_conversation(conversation) }
   rescue ActiveRecord::LockWaitTimeout

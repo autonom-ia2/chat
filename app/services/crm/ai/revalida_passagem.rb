@@ -30,7 +30,8 @@ class Crm::Ai::RevalidaPassagem
   FEATURE = 'passagem_revalidada'.freeze
   MODEL = Crm::Ai::Config::MODEL_CLASSIFY
   EFFORT = Crm::Ai::Config::CLASSIFY_REASONING_EFFORT
-  TIMEOUT = 40
+  # Roda num job (Crm::Ai::RevalidaPassagemJob), fora da rodada da fila: no backteste, p50 20 s e máximo 74 s.
+  TIMEOUT = 90
   # A conversa desde a criação do card, até MAX_MENSAGENS (as mais recentes, se passar). O card nasce DEPOIS da
   # mensagem que o criou: as ANTES_DO_CARD logo anteriores também entram, para o pedido inicial não ficar de fora.
   MAX_MENSAGENS = 120

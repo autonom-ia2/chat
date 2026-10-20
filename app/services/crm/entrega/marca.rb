@@ -15,6 +15,8 @@ module Crm::Entrega::Marca
   PRESENTE_SQL = "(conversations.additional_attributes ->> '#{CHAVE}') IS NOT NULL".freeze
   # O motivo da IA do CRM guardado na marca, no mesmo tamanho do "reason" do classificador.
   RAZAO_MAX = 300
+  # A releitura da IA do CRM em curso (#1975): saem juntas quando ela termina.
+  RELEITURA_EM_CURSO = %w[revalidando_desde reenfileirado_em].freeze
 
   module_function
 
@@ -38,7 +40,8 @@ module Crm::Entrega::Marca
   # ele, a marca não muda a cada tentativa. `card`: o card cuja regra vale, quando o pedido foi ligado a um assunto que
   # não é o foco (#1693). `razao`: o motivo que a IA do CRM deu ao pedir a pessoa (#1975), que vai junto na entrega pela
   # fila. `revalidado_ate`: a última mensagem que a reavaliação da fila leu (Crm::Ai::RevalidacaoNaFila; 0 se não havia
-  # nenhuma); sobrevive às novas tentativas, para a fila não pagar outra reavaliação sem mensagem nova.
+  # nenhuma); sobrevive às novas tentativas, para a fila não pagar outra reavaliação sem mensagem nova. A releitura em
+  # curso (RELEITURA_EM_CURSO) não sobrevive: uma marca regravada pede outra releitura, e o job antigo vira nada.
   def marcar(conversation, modo:, motivo:, falha: nil, **detalhes)
     anterior = dados(conversation) || {}
     valor = {
@@ -83,11 +86,25 @@ module Crm::Entrega::Marca
     conversation.account.crm_cards.find_by(id: id) if id.present?
   end
 
-  # A reavaliação da fila (#1975) confirmou que o pedido segue de pé: guarda a última mensagem lida e o motivo novo
-  # (qual problema ficou aberto). Só na memória: quem chama grava, sob a trava.
-  def revalidada!(conversation, ate:, razao:)
-    valor = (dados(conversation) || {}).merge('revalidado_ate' => ate)
+  # A releitura da fila (#1975, Crm::Ai::RevalidacaoNaFila) terminou com o pedido de pé, ou falhou: guarda a última
+  # mensagem lida, o motivo novo (qual problema ficou aberto) e se falhou, e a releitura em curso sai. Só na memória:
+  # quem chama grava, sob a trava.
+  def revalidada!(conversation, ate:, razao:, falhou: false)
+    valor = (dados(conversation) || {}).except(*RELEITURA_EM_CURSO).merge('revalidado_ate' => ate)
     valor['razao'] = razao.to_s.first(RAZAO_MAX) if razao.present?
+    valor['revalidacao_falhou'] = true if falhou
+    conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
+  end
+
+  # A releitura em curso (#1975): quando o job foi enfileirado (`revalidando_desde`, também a chave que o job confere)
+  # e, se a fila voltou a enfileirar um job que parecia perdido, quando (`reenfileirado_em`).
+  def revalidando!(conversation, campo, quando)
+    valor = (dados(conversation) || {}).merge(campo => quando)
+    conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
+  end
+
+  def sem_releitura!(conversation)
+    valor = (dados(conversation) || {}).except(*RELEITURA_EM_CURSO)
     conversation.additional_attributes = conversation.additional_attributes.merge(CHAVE => valor)
   end
 
