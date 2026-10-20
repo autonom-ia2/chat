@@ -155,8 +155,11 @@ class Crm::Subjects::Identifier
   end
 
   # Jev inseguro, pedido novo (precisa de nome) ou vários assuntos (precisa da lista): o modelo maior decide. Inseguro
-  # também, nada muda.
+  # também, nada muda. "O mesmo assunto" num card ainda sem nome (#1918) também vai ao modelo maior: o Jev sozinho não
+  # deixa o primeiro pedido sem nome; quem escolhe entre continuar o card e dar nome a ele é o modelo maior.
   def revisar?(opcao)
+    return true if opcao.tipo == :mesmo && question.atual_sem_nome?
+
     @jev.certeza < Crm::Subjects::CERTEZA_MINIMA || %i[novo varios].include?(opcao.tipo)
   end
 
@@ -229,8 +232,10 @@ class Crm::Subjects::Identifier
       # Voltar a um assunto só entre os funis com a IA ligada (#1260); o atual segue sendo o atual, de qualquer funil.
       ids = pipelines.map(&:id)
       cards = abertos.select { |card| ids.include?(card.pipeline_id) }
+      # O card da chegada intocado não é "o mesmo assunto" (#1918, só com vários assuntos).
+      chegada = varios? && Crm::Subjects::CardDaChegada.intacta?(conversation: @conversation, card: abertos.first, mode: @mode)
       Crm::Subjects::Question.new(account: @account, pipelines: pipelines, cards: cards, atual: abertos.first, varios: varios?,
-                                  etapas: etapas?)
+                                  etapas: etapas?, chegada: chegada)
     end
   end
 
