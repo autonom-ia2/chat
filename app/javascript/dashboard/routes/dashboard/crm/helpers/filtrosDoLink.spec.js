@@ -41,6 +41,15 @@ describe('filtrosDoLink (Kanban e Lista, #1883)', () => {
     });
   });
 
+  it('reads "retornos atrasados de uma pessoa" (#1883, opção 2)', () => {
+    expect(
+      filtrosDoLink(
+        { follow_up_status: 'overdue', owner_id: '12' },
+        { currentUserId: EU }
+      )
+    ).toEqual({ followUpStatus: 'overdue', ownerId: 12 });
+  });
+
   it('keeps the campaign mark of the link, with the owner', () => {
     expect(
       filtrosDoLink(
@@ -59,6 +68,7 @@ describe('filtrosDoLink (Kanban e Lista, #1883)', () => {
           result: 'qualquer',
           closed_in: 'last_year',
           responsible_kind: 'alguem',
+          follow_up_status: 'ontem',
         },
         { currentUserId: EU }
       )
