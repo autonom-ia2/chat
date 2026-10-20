@@ -85,8 +85,8 @@ RSpec.describe Crm::Conversations::CardEmFoco do
       expect(avaliados).to eq([auto.id])
     end
 
-    it 'mensagem da equipe não agenda nem mexe na atividade' do
-      message = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: 'Já te mando')
+    it 'mensagem automática (sem pessoa) não agenda nem mexe na atividade' do
+      message = create(:message, :bot_message, account: account, inbox: inbox, conversation: conversation, content: 'Recebemos sua mensagem')
 
       sincronizar(message)
 
@@ -143,6 +143,118 @@ RSpec.describe Crm::Conversations::CardEmFoco do
       expect(avaliacoes_agendadas).to be_empty
       expect(auto.reload.last_activity_at).to be < 1.day.ago
       expect(Crm::Conversations::SyncLock).not_to have_received(:new)
+    end
+  end
+
+  # #1923: a equipe manda os valores depois da última mensagem do cliente; sem isto o card esperava o cliente voltar.
+  describe 'mensagem da equipe na caixa de 2 funis' do
+    let(:espera) { described_class::ESPERA_DA_EQUIPE }
+
+    def da_equipe(content = 'Segue a cotação: R$ 1.200 por ano', **atributos)
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: content, **atributos)
+    end
+
+    def avaliados_depois(tempo)
+      lidos = []
+      allow(Crm::Ai::Evaluator).to receive(:new) do |card:, **|
+        lidos << card.id
+        instance_double(Crm::Ai::Evaluator, perform: nil)
+      end
+      jobs = enqueued_jobs.select { |job| job['job_class'] == Crm::Ai::EvaluateCardJob.name }
+      travel(tempo) { jobs.each { |job| Crm::Ai::EvaluateCardJob.perform_now(*job['arguments']) } }
+      lidos
+    end
+
+    it 'a pessoa da equipe escreve ao cliente: a IA relê o card em foco depois da espera da equipe', :aggregate_failures do
+      message = da_equipe
+
+      expect(sincronizar(message)).to eq(auto)
+
+      expect(avaliacoes_agendadas).to eq([auto.id])
+      expect(auto.reload.last_activity_at).to be_within(1.second).of(message.created_at)
+      expect(auto.last_message_at).to be_within(1.second).of(message.created_at)
+      expect(residencial.reload.last_activity_at).to be < 1.day.ago
+      expect(avaliados_depois(espera + 1.second)).to eq([auto.id])
+    end
+
+    it 'no debounce do cliente a avaliação da equipe ainda não roda: volta para a fila até o fim da espera' do
+      sincronizar(da_equipe)
+
+      expect(avaliados_depois(Crm::Ai::Config::DEBOUNCE_SECONDS.seconds + 1.second)).to be_empty
+      expect(enqueued_jobs.count { |job| job['job_class'] == Crm::Ai::EvaluateCardJob.name }).to eq(2)
+    end
+
+    it 'rajada da equipe (texto, PDF, despedida): uma avaliação só' do
+      da_equipe('Segue a cotação').tap { |message| sincronizar(message) }
+      travel(30.seconds) { sincronizar(da_equipe('Qualquer dúvida estou à disposição')) }
+
+      expect(avaliados_depois(espera + 1.second)).to eq([auto.id])
+    end
+
+    it 'a equipe escreve sem parar: uma avaliação por espera, não adiada para sempre' do
+      sincronizar(da_equipe('parte 1'))
+      travel(espera - 10.seconds) { sincronizar(da_equipe('parte 2')) }
+
+      expect(avaliados_depois(espera + 1.second)).to eq([auto.id])
+    end
+
+    it 'o cliente responde dentro da espera: a avaliação da mensagem dele vale pelas duas' do
+      sincronizar(da_equipe)
+      travel(30.seconds) { sincronizar(incoming('Fechado, pode emitir')) }
+
+      expect(avaliados_depois(espera + 1.second)).to eq([auto.id])
+      expect(Crm::Ai::Evaluator).to have_received(:new).once
+    end
+
+    it 'avaliação do cliente já agendada: a da equipe não agenda outra nem a adia' do
+      sincronizar(incoming('Quanto fica?'))
+      travel(5.seconds) { sincronizar(da_equipe) }
+
+      expect(avaliacoes_agendadas).to eq([auto.id])
+      expect(avaliados_depois(Crm::Ai::Config::DEBOUNCE_SECONDS.seconds + 1.second)).to eq([auto.id])
+    end
+
+    it 'eco do app do celular (WhatsApp) também é a equipe' do
+      message = da_equipe(sender: nil, content_attributes: { external_echo: true })
+      message.update_columns(sender_type: nil, sender_id: nil) # rubocop:disable Rails/SkipsModelValidations
+
+      sincronizar(message.reload)
+
+      expect(avaliacoes_agendadas).to eq([auto.id])
+    end
+
+    it 'com a IA de assunto ligada, a mensagem da equipe relê o card em foco sem esperar decisão de assunto' do
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(subject_ai_mode: :auto)
+
+      sincronizar(da_equipe)
+
+      expect(avaliacoes_agendadas).to eq([auto.id])
+      expect(enqueued_jobs.map { |job| job['job_class'] }).not_to include(Crm::Subjects::IdentifyJob.name)
+    end
+
+    {
+      'robô (AgentBot)' => -> { { sender: create(:agent_bot, account: account) } },
+      'regra de automação em nome de alguém' => -> { { content_attributes: { automation_rule_id: 1 } } },
+      'follow-up do CRM' => -> { { content_attributes: { crm_follow_up_id: 1 } } },
+      'campanha' => -> { { additional_attributes: { campaign_id: 1 } } },
+      'envio que falhou' => -> { { status: :failed } },
+      'nota privada' => -> { { private: true } }
+    }.each do |origem, atributos|
+      it "#{origem}: não é uma pessoa respondendo agora, não agenda nem mexe na atividade" do
+        sincronizar(da_equipe(**instance_exec(&atributos)))
+
+        expect(avaliacoes_agendadas).to be_empty
+        expect(auto.reload.last_activity_at).to be < 1.day.ago
+      end
+    end
+
+    it 'sem a flag, como hoje: nada' do
+      account.disable_features!(described_class::FLAG)
+
+      sincronizar(da_equipe)
+
+      expect(avaliacoes_agendadas).to be_empty
+      expect(auto.reload.last_activity_at).to be < 1.day.ago
     end
   end
 

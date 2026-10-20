@@ -15,8 +15,21 @@
 #
 # A atividade avança junto com a avaliação de propósito: o StaleCardsJob só reavalia card cuja última avaliação é anterior
 # à última atividade, então a mensagem avaliada não volta a ser avaliada por estar parada.
+#
+# MENSAGEM DA EQUIPE (#1923): a pessoa da equipe que escreve ao cliente (pelo painel, ou pelo app do celular no WhatsApp)
+# também relê o card em foco: a cotação enviada depois da última mensagem do cliente deixava o card parado até ele voltar.
+# Sem decisão de assunto (ela é só da mensagem do cliente): o card é o que está em foco. Não conta: robô, nota privada,
+# mensagem de sistema, envio automático em nome de alguém (regra de automação, follow-up, Agendamento, campanha) e envio
+# que falhou (Autonomia::Agents::Operate::PessoaDaEquipe, a mesma régua da IA que responde).
+# A espera é maior que a do cliente (ESPERA_DA_EQUIPE) e não é adiada pela mensagem seguinte: a equipe manda a cotação em
+# várias mensagens, e o cliente que responde nesse meio-tempo agenda a avaliação dele, que lê as duas e deixa esta velha
+# (conversa ao vivo não paga avaliação a mais). Com uma avaliação já esperando a vez (a do cliente ou a da equipe), a
+# mensagem não agenda outra: aquela vai lê-la. O respeito à etapa escolhida por uma pessoa (#1918) vale como em todo
+# gatilho automático (Crm::Ai::Evaluator#pessoa_mexeu_na_etapa?).
 class Crm::Conversations::CardEmFoco
   FLAG = 'crm_avaliar_toda_mensagem'.freeze
+  # Teto de uma avaliação por este tempo enquanto só a equipe escreve.
+  ESPERA_DA_EQUIPE = 2.minutes
 
   def self.ligada?(account)
     account.present? && account.feature_enabled?(FLAG)
@@ -29,13 +42,12 @@ class Crm::Conversations::CardEmFoco
   end
 
   def perform
-    return unless mensagem_do_cliente?
+    return unless mensagem_do_cliente? || mensagem_da_equipe?
 
     card = Crm::Assunto.funil_atual(@conversation)
     return if card.nil?
 
-    observer = Crm::Ai::Observer.new(card: card)
-    observer.schedule_evaluation unless observer.agendada_desde?(chegada)
+    agendar_avaliacao(card)
     Crm::Cards::Broadcaster.broadcast(card.reload, Events::Types::CRM_CARD_UPDATED) if registrar_atividade(card)
     card
   end
@@ -43,7 +55,27 @@ class Crm::Conversations::CardEmFoco
   private
 
   def mensagem_do_cliente?
-    self.class.ligada?(@account) && Crm::Ai::Config.enabled? && @message&.incoming? && crm_da_caixa?
+    @message&.incoming? && avaliar_toda_mensagem?
+  end
+
+  def mensagem_da_equipe?
+    return false if @message.blank? || @message.failed?
+
+    equipe = Autonomia::Agents::Operate::PessoaDaEquipe
+    (equipe.da_pessoa?(@message) || equipe.eco_do_celular?(@message)) && avaliar_toda_mensagem?
+  end
+
+  def avaliar_toda_mensagem?
+    self.class.ligada?(@account) && Crm::Ai::Config.enabled? && crm_da_caixa?
+  end
+
+  def agendar_avaliacao(card)
+    observer = Crm::Ai::Observer.new(card: card)
+    if @message.incoming?
+      observer.schedule_evaluation unless observer.agendada_desde?(chegada)
+    else
+      observer.schedule_evaluation(espera: ESPERA_DA_EQUIPE) unless observer.pendente?
+    end
   end
 
   # O mesmo critério do CardSyncer: caixa sem configuração do CRM conta como ligada.
