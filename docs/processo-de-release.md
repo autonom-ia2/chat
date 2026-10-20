@@ -84,12 +84,15 @@ o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
   em rótulo. A sessão dona não enfileira nem dá push depois do pedido.
 - Refazer CI = fechar e reabrir o PR. `gh run rerun --failed` só quando a `main` não andou desde aquela CI (o merge
   ref antigo ainda é o atual). Não mesclar a `main` "para atualizar" (só se o GitHub disser `CONFLICTING`).
-- **Um lote, um deploy.** A fila de merge entra na `main` grupo a grupo, e cada push disparava o seu deploy (em
-  10/10 três lotes saíram em dois deploys cada). O job "Esperar a fila de merge" dos dois deploys espera a fila
-  esvaziar (teto de 25 min) e, se houver execução de push mais nova viva ou já concluída com sucesso, sai sem
-  deployar: a mais nova sobe a `main` inteira. A trava de concorrência fica nos jobs `deploy` e `rollback`, então a
-  espera não segura o rollback. Cancelar à mão o deploy mais novo cancela também os commits que ele cobria:
-  disparar de novo pelo `workflow_dispatch`.
+- **Deploy contínuo (#1979).** Cada push na `main` pede a trava do deploy na hora, sem esperar a fila de merge. A
+  trava do GitHub guarda um deploy rodando e um esperando, e o push mais novo toma o lugar do que esperava (que sai
+  como *cancelado*, sem problema nenhum). Quem sobe depois leva a `main` inteira, então merges seguidos viram no
+  máximo dois deploys. Até 20/10 o job "Esperar a fila de merge" segurava cada deploy até a fila esvaziar e pulava
+  quando havia um mais novo; com a fila sempre alimentada, seis deploys seguidos pularam e a produção ficou duas
+  horas para trás. **Na main não é no ar:** só conta como no ar o SHA que o "Deploy Green" subiu. O painel (#1237)
+  marca ⏰ **ATRASADA** e comenta uma vez quando o push mais novo passa de 40 min sem subir.
+- **Rerun de deploy velho não volta a produção para trás.** O deploy falha na largada quando o commit dele é mais
+  velho que a imagem já publicada. Para subir a `main`, deploy manual (`workflow_dispatch`).
 
 ### Depois do deploy
 
@@ -110,7 +113,9 @@ passos do job "Deploy Green"). A via expressa pula a segunda bateria. É o caso 
 seção "Fila de merge" vale.
 
 1. **Regressão do último deploy? Primeiro o rollback**, com OK do Rodrigo: `workflow_dispatch` com
-   `action=rollback` nos dois deploys só troca o tráfego de volta para a instância anterior. O hotfix vem depois.
+   `action=rollback` e `esperado_sha` (o SHA que estava no ar antes do deploy ruim) nos dois deploys. Ele só troca o
+   tráfego de volta para a instância anterior, e a produção fica **congelada** até o deploy manual do conserto com
+   `descongelar=true`. O hotfix vem depois.
 2. **Critérios, todos obrigatórios** (a conta do GitHub é compartilhada e tem bypass: quem confere é a
    Orquestração, não o GitHub):
    - diff pequeno, até ~50 linhas;
@@ -136,7 +141,8 @@ A Orquestração acompanha os disparos manuais e cobra quem furou a fila.
 ## Por que existe
 
 Todo merge na `main` dispara o deploy blue-green completo nas duas stacks (hub2you e autonomia). Os workflows usam
-`concurrency` com `cancel-in-progress: false`, então merges seguidos não se cancelam: viram deploys em fila. Medido em
+`concurrency` com `cancel-in-progress: false`: o deploy que está rodando nunca é cancelado, e o que espera a vez é
+trocado pelo push mais novo (#1979). Medido em
 25/09: cerca de 24 minutos são o build da imagem (feito uma vez por stack, sem cache), 3 minutos a subida e a saúde
 da instância nova e 5,5 minutos o desligamento da antiga. Em 04/10, com o cache do build no ECR, foram 3 min 38 s de
 build e 3 min 04 s de boot, que vinha depois do build (8 min 22 s do disparo à troca do tráfego). Desde o #974 a
@@ -201,8 +207,18 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
    trem, pelo `workflow_dispatch` dele, depois da validação do chat.
 8. **Issues.** PR mergeado num branch que não é o padrão não fecha issue pelo `Closes #N`. Quem fez cada PR fecha a
    issue depois do merge do lote na `main` e atualiza o Project Autonom.ia Dev.
-9. **Rollback** de um lote: `workflow_dispatch` com `action=rollback` nos dois workflows de deploy (volta para a
-   instância anterior). Só volta **um degrau**: a instância de dois deploys atrás é terminada cerca de 5 minutos depois
+9. **Rollback** de um lote: `workflow_dispatch` com `action=rollback` e `esperado_sha` nos dois workflows de deploy
+   (volta para a instância anterior). Como funciona desde o #1979:
+   - o rollback tem trava própria, e um push novo não o cancela mais (na trava do deploy, cancelava o que esperava);
+   - primeiro ele **congela** a produção (`/chatwoot/prod/blue-green/deploy-freeze` = `on` no SSM). Congelada, todo
+     deploy falha na largada e de novo antes de registrar a green, e o **Desligar a blue** não para nem termina nada;
+   - cancela o deploy que ainda não chegou a registrar a green e espera o que já passou disso (até 40 min);
+   - só troca o tráfego se a instância anterior veio do commit `esperado_sha`; a tag Name dela diz de que run veio.
+     Sem `esperado_sha`, ou com outro SHA, nada muda e o erro diz qual SHA a anterior roda;
+   - a produção **segue congelada** depois do rollback, para o merge seguinte não subir de novo o que foi desfeito.
+     Solta com deploy manual (`action=deploy`) e `descongelar=true`, depois do conserto na `main`.
+
+   Só volta **um degrau**: a instância de dois deploys atrás é terminada cerca de 5 minutos depois
    de cada deploy. Para desfazer um lote que já tem outro por cima, o caminho é um lote novo com `git revert`. Um lote
    com migration tem o rollback do banco escrito antes, no próprio PR do lote.
 10. **Urgência (hotfix).** Um lote de um PR só, com OK do Rodrigo. Respeita a regra 4 (espera os "ok" do lote

@@ -127,6 +127,72 @@ terminate_green_without_image() {
   exit "$status"
 }
 
+# #1979: o rollback congela a produção (DEPLOY_FREEZE_PARAMETER = on) e só um deploy manual com descongelar=true a
+# solta. Parâmetro que não existe conta como descongelada; qualquer outro erro falha, para nenhum deploy seguir sem
+# saber se a produção está congelada.
+read_deploy_freeze() {
+  local error_file value status=0
+  error_file=$(mktemp)
+  value=$(aws ssm get-parameter --name "$DEPLOY_FREEZE_PARAMETER" \
+    --query Parameter.Value --output text 2>"$error_file") || status=$?
+  if [ "$status" -ne 0 ]; then
+    if grep -qF ParameterNotFound "$error_file"; then
+      rm -f "$error_file"
+      DEPLOY_FREEZE=off
+      return 0
+    fi
+    cat "$error_file" >&2
+    rm -f "$error_file"
+    return 1
+  fi
+  rm -f "$error_file"
+  case "$value" in
+    on|off) DEPLOY_FREEZE="$value" ;;
+    *)
+      echo "deploy_freeze_invalid:$value" >&2
+      return 1
+      ;;
+  esac
+}
+
+write_deploy_freeze() {
+  aws ssm put-parameter --name "$DEPLOY_FREEZE_PARAMETER" --type String --value "$1" --overwrite >/dev/null
+}
+
+abort_if_frozen() {
+  read_deploy_freeze || return 1
+  if [ "$DEPLOY_FREEZE" = on ]; then
+    echo "::error::Produção congelada por um rollback (#1979): este deploy não sobe. Para soltar, deploy manual (workflow_dispatch, action=deploy) com descongelar=true."
+    return 1
+  fi
+}
+
+# #1979: rerun de um deploy velho não volta a produção para trás. Falha quando $1 é ancestral estrito do commit da
+# imagem publicada por último (RUNTIME_IMAGE_PARAMETER). Precisa de GH_TOKEN com contents: read.
+abort_if_older_than_published() {
+  local published published_sha relation
+  published=$(aws ssm get-parameter --name "$RUNTIME_IMAGE_PARAMETER" --query Parameter.Value --output text) || return 1
+  published_sha="${published##*:}"
+  if [ "$published_sha" = "$1" ]; then
+    return 0
+  fi
+  case "$published_sha" in
+    *[!0-9a-f]*|'')
+      echo "::warning::A imagem publicada ($published_sha) não tem SHA de commit: a conferência de rerun foi pulada."
+      return 0
+      ;;
+  esac
+  if [ "${#published_sha}" -ne 40 ]; then
+    echo "::warning::A imagem publicada ($published_sha) não tem SHA de commit: a conferência de rerun foi pulada."
+    return 0
+  fi
+  relation=$(gh api "repos/$GITHUB_REPOSITORY/compare/$1...$published_sha" --jq .status) || return 1
+  if [ "$relation" = ahead ]; then
+    echo "::error::$1 é mais velho que a imagem já publicada ($published_sha): rerun de deploy antigo não sobe. Para subir a main, deploy manual (workflow_dispatch)."
+    return 1
+  fi
+}
+
 # The helper is shipped by the workflow, never required on an older target.
 # Failure propagates before stopping the remaining worker whenever target is online.
 # Optional $2: marker line written in the same command, so later steps know the suspension (#1540).
