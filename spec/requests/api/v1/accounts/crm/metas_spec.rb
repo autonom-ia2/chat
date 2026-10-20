@@ -77,6 +77,46 @@ RSpec.describe 'Api::V1::Accounts::Crm::Metas', type: :request do
     end
   end
 
+  describe 'função personalizada (EE, parecer de acesso)' do
+    it 'crm_metas_manage sem crm_view não lê nem grava as metas dos colegas' do
+      goal(ana, 8000)
+      so_metas = role_user('crm_metas_manage')
+
+      call(:get, so_metas, "#{base}/metas")
+      expect(response).to have_http_status(:unauthorized)
+      call(:put, so_metas, "#{base}/metas", funis: [{ id: sale.first.id, metaFunil: 999, pessoas: [{ id: ana.id, meta: 1 }] }])
+      expect(response).to have_http_status(:unauthorized)
+
+      expect(Crm::PersonGoal.find_by(user: ana).target_cents).to eq(800_000)
+      expect(sale.first.reload.metadata['goals']).to be_nil
+    end
+
+    it 'com crm_view, o funil de Vender fora do alcance dela não aparece na gaveta e não grava' do
+      liberado = sale.first
+      restrito, = create_crm_pipeline(account: account, user: admin, name: 'Restrito')
+      restrito.update!(counts_as_sale: true)
+      gestora = role_user('crm_view', 'crm_metas_manage')
+      inbox = create_crm_inbox(account: account, members: [gestora])
+      [liberado, restrito].each { |funil| account.crm_pipeline_inboxes.create!(pipeline: funil, inbox: inbox, created_by: admin) }
+      acesso = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: gestora, all_pipelines: false, triage: false)
+      acesso.agent_pipelines.create!(account: account, pipeline: liberado)
+
+      call(:get, admin, "#{base}/metas")
+      expect(response.parsed_body['funis'].pluck('nome')).to eq(%w[Vendas Restrito])
+
+      call(:get, gestora, "#{base}/metas")
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['funis'].pluck('nome')).to eq(['Vendas'])
+
+      expect do
+        call(:put, gestora, "#{base}/metas", funis: [{ id: restrito.id, metaFunil: 999, pessoas: [{ id: ana.id, meta: 100 }] }])
+      end.not_to change(Crm::PersonGoal, :count)
+      expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body['error']).to eq('crm.metas.fora_do_alcance')
+      expect(restrito.reload.metadata['goals']).to be_nil
+    end
+  end
+
   describe 'a gaveta' do
     it 'traz só funis de Vender, a meta do funil, a de cada pessoa, a do mês anterior e a sugestão com o motivo' do
       sale.first.update!(metadata: { 'goals' => { 'monthly_target_cents' => 2_000_000, 'currency' => 'BRL' } })
