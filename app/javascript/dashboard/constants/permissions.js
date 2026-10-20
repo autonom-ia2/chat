@@ -32,6 +32,17 @@ export const SCHEDULING_PERMISSIONS = [
 // Anúncios da Meta (#1794): ver o painel. Conectar e configurar seguem só do administrador.
 export const META_ADS_VIEW_PERMISSION = 'meta_ads_view';
 
+// Pessoas (#1931): agentes e times, montar funções, entregar acesso acima do próprio.
+export const PEOPLE_MANAGE_PERMISSION = 'people_manage';
+export const CUSTOM_ROLE_MANAGE_PERMISSION = 'custom_role_manage';
+export const GRANT_ABOVE_OWN_PERMISSION = 'grant_above_own';
+// Espelho de CustomRole::DELEGATION_KEYS: só o administrador entrega, ou quem tem grant_above_own.
+export const DELEGATION_KEYS = [
+  PEOPLE_MANAGE_PERMISSION,
+  CUSTOM_ROLE_MANAGE_PERMISSION,
+  GRANT_ABOVE_OWN_PERMISSION,
+];
+
 export const ROLES = ['agent', 'administrator'];
 
 export const CONVERSATION_PERMISSIONS = [

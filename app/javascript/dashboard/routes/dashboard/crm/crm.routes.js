@@ -9,7 +9,8 @@ import {
   SLA_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 const CrmKanbanPage = () => import('./pages/CrmKanbanPage.vue');
-const CrmDashboardPage = () => import('./pages/CrmDashboardPage.vue');
+// CRM › Números (#1897): o painel de hoje sem a flag `crm_numeros_lentes`; com ela, "Só eu · Equipe".
+const CrmNumerosPage = () => import('./pages/CrmNumerosPage.vue');
 const CrmAiUsagePage = () => import('./pages/CrmAiUsagePage.vue');
 const CrmSlaPage = () => import('./pages/CrmSlaPage.vue');
 const CaixasPage = () => import('./caixas/pages/CaixasPage.vue');
@@ -28,6 +29,12 @@ const meta = {
 
 const reportsMeta = {
   permissions: ['administrator', 'agent', CRM_VIEW_REPORTS_PERMISSION],
+};
+
+// Números: quem vê a equipe (reportsMeta) e, com a flag, quem só trabalha no CRM (crm_view vê "Só eu"). Sem a flag,
+// a página manda de volta para o Kanban quem não vê a equipe (useQuemVeNumeros).
+const numerosMeta = {
+  permissions: [...reportsMeta.permissions, CRM_VIEW_PERMISSION],
 };
 
 // Minting integration tokens is an admin-equivalent action: only the account
@@ -123,9 +130,9 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/crm/dashboard'),
     name: 'crm_dashboard_index',
-    meta: reportsMeta,
+    meta: numerosMeta,
     beforeEnter: ensureCrmEnabled,
-    component: CrmDashboardPage,
+    component: CrmNumerosPage,
   },
   {
     path: frontendURL('accounts/:accountId/crm/ai-usage'),

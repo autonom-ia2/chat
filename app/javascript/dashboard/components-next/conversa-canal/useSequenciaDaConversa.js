@@ -6,6 +6,7 @@ import { computed } from 'vue';
 import { fornecerPrimeiras, useFuso, usePele } from './pele';
 import { diaDaMensagem } from './dataDaConversa';
 import { MESSAGE_TYPES } from '../message/constants';
+import { ehEcoDoCelular, idDoAutorDoEco } from './ecoDoCelular';
 
 // De que lado o balão fica: cliente, empresa, nota da equipe ou aviso do sistema.
 const ladoDoBalao = mensagem => {
@@ -21,9 +22,14 @@ const ladoDoBalao = mensagem => {
   return 'aviso';
 };
 
-// Tipo e id: atendente 1 e robô 1 são pessoas diferentes.
-const quemMandou = mensagem =>
-  `${mensagem.sender?.type ?? mensagem.senderType ?? ''}:${mensagem.senderId ?? mensagem.sender?.id}`;
+// Tipo e id: atendente 1 e robô 1 são pessoas diferentes. O eco do celular (#1941) é de
+// quem estava atribuído quando chegou, não do remetente (no WAHA, o dono da chave).
+const quemMandou = mensagem => {
+  if (ehEcoDoCelular(mensagem.contentAttributes)) {
+    return `eco:${idDoAutorDoEco(mensagem.contentAttributes) ?? ''}`;
+  }
+  return `${mensagem.sender?.type ?? mensagem.senderType ?? ''}:${mensagem.senderId ?? mensagem.sender?.id}`;
+};
 
 // Como no app: a sequência segue enquanto a mesma pessoa fala no mesmo dia, sem
 // quebrar a cada minuto. Do lado da empresa, troca de atendente abre sequência nova
