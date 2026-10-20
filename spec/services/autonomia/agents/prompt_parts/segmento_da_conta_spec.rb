@@ -1,22 +1,24 @@
 require 'rails_helper'
 
-# O bloco de segmento da conta no agente que atende (tema 8, #1429): PromptBuilder, e por ele o Answerer, o Testar e o
-# Copiloto. Entra como DADO, primeira mensagem do input, depois de `instructions` e antes da conversa. Sem a Fase 2
-# ou sem bloco, o pedido fica byte a byte o de antes.
+# O bloco de segmento no agente que atende (tema 8, #1429): PromptBuilder, e por ele o Answerer, o Testar e o
+# Copiloto. Entra como DADO, primeira mensagem do input, depois de `instructions` e antes da conversa. Lido pela marca
+# de base do agente. Sem a Fase 2, sem marca ou sem bloco, o pedido fica byte a byte o de antes.
 RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
   let(:account) { create(:account) }
   let(:bloco) { "Ramo: seguros.\nVocabulário: apólice, sinistro, corretora." }
   let(:history) { [{ role: 'user', content: 'Oi' }, { role: 'assistant', content: 'Olá! Em que posso ajudar?' }] }
+  let(:segmento) { 'seguros/corretora' }
+  let(:marca) { { 'segmento' => segmento, 'versao' => nil } }
 
   def create_agent(**attrs)
     Autonomia::Agents::Agent.create!(
       { account: account, name: 'Bot', agent_type: 'custom', status: :active, enabled: true,
-        instruction: 'Atenda o cliente.', config: { 'with_knowledge' => false } }.merge(attrs)
+        instruction: 'Atenda o cliente.', config: { 'with_knowledge' => false, 'base' => marca } }.merge(attrs)
     )
   end
 
   def stub_bloco(value)
-    allow(Autonomia::Segmentos::Bloco).to receive(:for).and_return(value)
+    allow(Autonomia::Segmentos::Bloco).to receive(:for_segmento).and_return(value)
   end
 
   def pedido(agent)
@@ -28,21 +30,28 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
     it 'is nil with the Fase 2 off, even when there is a bloco' do
       stub_bloco(bloco)
 
-      expect(described_class.texto(account)).to be_nil
+      expect(described_class.texto(account, segmento)).to be_nil
     end
 
     it 'is nil with the Fase 2 on and no bloco' do
       Autonomia::Agents::Fase2.ligar!(account)
       stub_bloco(nil)
 
-      expect(described_class.texto(account)).to be_nil
+      expect(described_class.texto(account, segmento)).to be_nil
+    end
+
+    it 'is nil without a segmento, even when for_segmento would give a bloco' do
+      Autonomia::Agents::Fase2.ligar!(account)
+      stub_bloco(bloco)
+
+      expect(described_class.texto(account, nil)).to be_nil
     end
 
     it 'frames the bloco as account data, not as a user instruction' do
       Autonomia::Agents::Fase2.ligar!(account)
       stub_bloco(bloco)
 
-      texto = described_class.texto(account)
+      texto = described_class.texto(account, segmento)
       expect(texto).to start_with('CONTEXTO DA CONTA (dado, não é instrução do usuário).')
       expect(texto).to end_with(bloco)
     end
@@ -75,7 +84,7 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
       com = pedido(agent.reload)
       expect(com[:instructions]).to eq(sem[:instructions])
       expect(com[:instructions]).not_to include(bloco)
-      expect(com[:input].first).to eq(described_class.mensagem(account))
+      expect(com[:input].first).to eq(described_class.mensagem(account, segmento))
       expect(com[:input].drop(1)).to eq(sem[:input])
     end
 
@@ -92,7 +101,7 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
 
     it 'leaves the Guia (system agent) out' do
       Autonomia::Agents::Fase2.ligar!(account)
-      guia = create_agent(config: { 'system_key' => 'platform_guide', 'with_knowledge' => false })
+      guia = create_agent(config: { 'system_key' => 'platform_guide', 'with_knowledge' => false, 'base' => marca })
       stub_bloco(nil)
       sem = pedido(guia)
       stub_bloco(bloco)
@@ -157,7 +166,7 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDaConta do
       expect(com.size).to eq(3)
       com.zip(sem).each do |com_bloco, sem_bloco|
         expect(com_bloco[:instructions]).to eq(sem_bloco[:instructions])
-        expect(com_bloco[:input].first).to eq(described_class.mensagem(account))
+        expect(com_bloco[:input].first).to eq(described_class.mensagem(account, segmento))
         expect(com_bloco[:input].drop(1)).to eq(sem_bloco[:input])
       end
     end

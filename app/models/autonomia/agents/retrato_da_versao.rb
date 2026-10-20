@@ -7,6 +7,7 @@ module Autonomia::Agents::RetratoDaVersao
   CONHECIDAS = (VERSIONING::CAMPOS + VERSIONING::SO_PARA_COMPARAR + %w[config]).freeze
   OBRIGATORIAS = (VERSIONING::CAMPOS + %w[config]).freeze
   WITH_KNOWLEDGE = [nil, true, false, 'true', 'false'].freeze
+  BASE = %w[segmento versao].freeze
 
   module_function
 
@@ -33,7 +34,12 @@ module Autonomia::Agents::RetratoDaVersao
   def config_valida?(config)
     config.is_a?(Hash) && (config.keys - VERSIONING::CHAVES_DA_CONFIG).empty? &&
       (config['guardrails'].nil? || lista_de_textos?(config['guardrails'])) &&
-      texto_ou_nada?(config['voice']) && WITH_KNOWLEDGE.include?(config['with_knowledge'])
+      texto_ou_nada?(config['voice']) && WITH_KNOWLEDGE.include?(config['with_knowledge']) && base_valida?(config['base'])
+  end
+
+  # A marca de base (#1429): ausente (versões de antes dela) ou { segmento, versao }, cada um texto ou nil.
+  def base_valida?(base)
+    base.nil? || (base.is_a?(Hash) && (base.keys - BASE).empty? && BASE.all? { |chave| texto_ou_nada?(base[chave]) })
   end
 
   def lista_de_textos?(valor)

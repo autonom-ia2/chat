@@ -987,9 +987,13 @@ module Autonomia
          pending_request_context].compact_blank
       end
 
-      # SEGMENTO DA CONTA (tema 8, #1429): orientação e vocabulário do ramo, como DADO. Moldura em PromptParts.
+      # SEGMENTO (tema 8, #1429): orientação e vocabulário do ramo, como DADO. Moldura em PromptParts. Na criação, o
+      # segmento da conta, o mesmo que vai na marca do rascunho; no AJUSTE, a marca do agente, nunca a conta: um ajuste
+      # não troca a base sem ninguém pedir.
       def segmento_context
-        Autonomia::Agents::PromptParts::SegmentoDaConta.texto(@account)
+        partes = Autonomia::Agents::PromptParts
+        segmento = adjust_mode? ? partes::SegmentoDoAgente.segmento(@thread.agent) : Autonomia::Segmentos::Bloco.segmento(@account)
+        partes::SegmentoDaConta.texto(@account, segmento)
       end
 
       # PEDIDOS ACUMULAM (§4). Duas pendências morriam em silêncio:
@@ -1633,11 +1637,12 @@ module Autonomia
         with_knowledge?
       end
 
-      # O config com que o rascunho nasce: a base declarada e, quando a abertura foi "Ajuda outros agentes" (tema 14), a
-      # marca de origem do ajudante. A marca só nasce aqui.
+      # O config com que o rascunho nasce: a base declarada, quando a abertura foi "Ajuda outros agentes" (tema 14), a
+      # marca de origem do ajudante, e com a Fase 2 a marca de base do segmento (#1429). As marcas só nascem aqui.
       def config_do_rascunho
         papel = @thread.state.to_h['papel']
-        { 'with_knowledge' => with_knowledge?, 'papel' => (papel if papel == Autonomia::Agents::BuildThread::PAPEL_AJUDANTE) }.compact
+        { 'with_knowledge' => with_knowledge?, 'papel' => (papel if papel == Autonomia::Agents::BuildThread::PAPEL_AJUDANTE),
+          'base' => Autonomia::Agents::PromptParts::SegmentoDoAgente.marca(@thread.account) }.compact
       end
 
       # Garante o Agent vinculado à thread (modo guided). Cria um rascunho mínimo na PRIMEIRA geração
