@@ -6,6 +6,7 @@ import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { ultimaEFigurinha } from 'dashboard/components-next/conversa-canal/figurinha';
 import { ultimaEVisualizacaoUnica } from 'dashboard/components-next/conversa-canal/visualizacaoUnica';
 import { usePeleDaMensagem } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
 
 const props = defineProps({
   message: {
@@ -52,10 +53,15 @@ const isMessagePrivate = computed(() => {
   return isPrivate;
 });
 
+// #1941: mandada pelo celular, sem o prefixo do conector WAHA. Sem a marca, o texto de sempre.
+const textoDaPrevia = computed(() =>
+  textoDaMensagem(props.message.content, props.message.content_attributes)
+);
+
 const parsedLastMessage = computed(() => {
   const { content_attributes: contentAttributes } = props.message;
   const { email: { subject } = {} } = contentAttributes || {};
-  return getPlainText(subject || props.message.content);
+  return getPlainText(subject || textoDaPrevia.value);
 });
 
 const lastMessageFileType = computed(() => {
@@ -146,7 +152,7 @@ const isMessageSticker = computed(() => {
         {{ $t('CHAT_LIST.ATTACHMENTS.image.CONTENT') }}
       </span>
 
-      <template v-else-if="message.content">
+      <template v-else-if="textoDaPrevia">
         {{ parsedLastMessage }}
       </template>
 

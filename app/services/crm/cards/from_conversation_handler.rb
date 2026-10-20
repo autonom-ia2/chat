@@ -52,7 +52,8 @@ class Crm::Cards::FromConversationHandler
       account: @account,
       user: @user,
       params: merged_params,
-      conversation: @conversation
+      conversation: @conversation,
+      etapa_escolhida: @requested_params[:stage_id].present?
     ).perform
   end
 

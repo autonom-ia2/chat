@@ -21,7 +21,19 @@ en:
       columns:
         next_follow_up_at: 'Next follow-up'
     follow_up_reminder:
-      card: 'Card: %{card}'
+      due_at: 'Scheduled for: %{time}'
+    # Booking page templates (F2, lote 5). The title is stored on the new page and becomes the card title.
+    booking_v2:
+      templates:
+        sales_30:
+          title: 'Insurance quote call'
+          description: 'Pick a time and we will quote your insurance on a WhatsApp video call.'
+        consult_45:
+          title: 'Office appointment'
+          description: 'Pick a time to talk about your insurance at our office.'
+        visit_60:
+          title: 'Business insurance meeting'
+          description: 'Pick a time for an in-person meeting about your business insurance.'
   # Error when importing the brand kit from the website (F2, lote 4).
   brand_kits:
     import_errors:

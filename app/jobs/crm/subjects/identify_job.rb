@@ -27,7 +27,9 @@
 # Com a flag `crm_avaliar_toda_mensagem` (#1675), o último passo faz a IA do CRM reler o card em foco, já o do assunto
 # decidido (Crm::Conversations::CardEmFoco). Não repete o que a troca de foco ou o card novo já agendaram. Quando a
 # decisão traz a lista de cards que a mensagem tocou (#1693), a IA avalia esses cards numa chamada só
-# (Crm::Conversations::CardsTocados), e lista vazia ("obrigado!") não avalia nada.
+# (Crm::Conversations::CardsTocados). Sem assunto ("obrigado!", "já fechei com outra") a lista traz o card em foco
+# (#1918), e a IA de etapa decide se ele fica ou muda; lista vazia (sem card aberto, pedido novo que virou sugestão)
+# não avalia nada.
 class Crm::Subjects::IdentifyJob < ApplicationJob
   EVENTO = 'crm.subject.decided'.freeze
 
