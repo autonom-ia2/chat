@@ -220,6 +220,27 @@ module Crm::Ai::ClassifierPrompt
     #{Crm::Ai::ContextBuilder::FORWARDED_LEGEND}
   DADOS
 
+  # #1922: o card que não é negócio sai do funil sem contar como perda (Crm::Ai::NaoENegocio). Fica no FIM do prefixo,
+  # depois do aviso de dados, pelo mesmo motivo dele: tudo antes daqui segue byte a byte igual e o cache só perde o fim.
+  NAO_E_NEGOCIO = <<~NEGOCIO.strip
+    NÃO É NEGÓCIO ("nao_e_negocio"):
+    Preencha só quando ESTE card não é um pedido de cliente e não deveria estar no funil:
+    - "fora_do_negocio": ninguém pede nada do que vendemos ou atendemos. Exemplos: alguém oferecendo produto,
+      serviço ou parceria PARA a empresa; mensagem enviada por engano ou para a pessoa errada; só robôs dos dois lados
+      (o nosso e uma resposta automática do outro lado), sem nenhuma pessoa pedindo nada; só um link, figurinha ou
+      caractere solto, sem nenhum pedido, e a pessoa não escreveu mais nada há mais de um dia (compare o "created_at"
+      da última mensagem dela com now_local; a nossa resposta perguntando como ajudar não muda isso; se a mensagem
+      dela é recente, ainda pode virar pedido).
+    - "duplicado": "other_subjects" (ou outro item de "cards") traz um card aberto que é o MESMO pedido deste, do mesmo
+      cliente, e nada separa os dois.
+    NUNCA preencha quando: o cliente pediu, perguntou ou mostrou interesse em algo que vendemos ou atendemos, mesmo pouco,
+    vago ou fora do nosso perfil; ele desistiu, recusou ou fechou com outro (isso é perda: use a etapa de perda, nunca
+    este campo); a conversa está começando (um "oi" é começo de conversa); só nós escrevemos e o cliente ainda não
+    respondeu (prospecção, retorno ou follow-up sem resposta é silêncio, não lixo); houver dúvida.
+    Com "nao_e_negocio" preenchido, mantenha o estágio atual (suggested_stage_id = current_stage_id). "confidence" segue
+    a escala de CONFIANÇA; "reasoning" cita o fato da conversa. Em todos os outros casos, "nao_e_negocio": null.
+  NEGOCIO
+
   PARTES = [
     ROLE_AND_TASK,
     METHODOLOGY,
@@ -232,7 +253,8 @@ module Crm::Ai::ClassifierPrompt
     OTHER_SUBJECTS,
     OUTPUT_DISCIPLINE,
     EXAMPLES,
-    DADOS_NAO_INSTRUCOES
+    DADOS_NAO_INSTRUCOES,
+    NAO_E_NEGOCIO
   ].freeze
   TEXT = PARTES.join("\n\n").freeze
   # O mesmo prefixo, com o parágrafo dos agentes de IA logo depois do HANDOFF. Também congelado: estável por variante.

@@ -56,7 +56,8 @@ module Crm
         # #1828: quem não é o cliente e pediu para sair da cópia (de carona nesta avaliação, flag `email_autoria`).
         Crm::Email::SaidaDaCopia.aplicar!(@card, classification[:saida_da_copia])
         result = apply_classification(classification)
-        return result.tap { Crm::Memoria::Pendente.descartar!(@card) } if @pipeline_mudou
+        # Card arquivado como "não é negócio" (#1922): o resto (pedido de atendente, retorno, campos) era do card aberto.
+        return result.tap { Crm::Memoria::Pendente.descartar!(@card) } if @pipeline_mudou || result.status == :archived
 
         refresh_post_classification_context!
         classification = refresh_handoff_classification_if_needed(classification, result, regra)
@@ -180,6 +181,7 @@ module Crm
         return Result.new(status: :skipped, error: 'pipeline_changed') if @pipeline_mudou
 
         return pessoa_mexeu_na_etapa! if pessoa_mexeu_na_etapa?
+        return Result.new(status: :archived) if nao_e_negocio!(classification)
 
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
         return Result.new(status: :skipped, error: 'unknown_stage') if target_stage.blank?
@@ -236,6 +238,15 @@ module Crm
         pendentes.each { |sugestao| sugestao.update!(status: :expired) }
         Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_UPDATED) if pendentes.any?
         Result.new(status: :skipped, error: 'pessoa_mexeu_na_etapa')
+      end
+
+      # #1922: o modelo disse que o card não é negócio. Só no automático do funil, como mover sozinho; "Avaliar agora" é a
+      # pessoa olhando o card, e ela mesma arquiva se quiser. As guardas do card são do Crm::Ai::NaoENegocio.
+      def nao_e_negocio!(classification)
+        return false if @trigger == 'manual' || classification[:nao_e_negocio].blank?
+        return false unless auto_move_allowed?
+
+        NaoENegocio.new(card: @card, decisao: classification[:nao_e_negocio]).aplicar!
       end
 
       def stage_criteria_present?(stage)

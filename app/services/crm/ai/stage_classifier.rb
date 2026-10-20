@@ -77,9 +77,22 @@ module Crm
               required: %w[contact conversation card],
               additionalProperties: false
             },
-            score_signals: ScoreCalculator::SIGNALS_SCHEMA
+            score_signals: ScoreCalculator::SIGNALS_SCHEMA,
+            # #1922: o card não é pedido de cliente (Crm::Ai::NaoENegocio; a regra está em ClassifierPrompt::NAO_E_NEGOCIO).
+            nao_e_negocio: {
+              type: %w[object null],
+              description: 'Preencha SOMENTE quando este card não é pedido de cliente (NÃO É NEGÓCIO). null caso contrário.',
+              properties: {
+                motivo: { type: 'string', enum: Crm::Ai::NaoENegocio::MOTIVOS },
+                confidence: { type: 'number', minimum: 0, maximum: 1 },
+                reasoning: { type: 'string', maxLength: 300, description: 'O fato da conversa que mostra que não é negócio.' }
+              },
+              required: %w[motivo confidence reasoning],
+              additionalProperties: false
+            }
           },
-          required: %w[suggested_stage_id confidence reasoning value handoff callback_request extracted_attributes score_signals],
+          required: %w[suggested_stage_id confidence reasoning value handoff callback_request extracted_attributes score_signals
+                       nao_e_negocio],
           additionalProperties: false
         }
       }.freeze
