@@ -13,9 +13,39 @@ module Enterprise::Api::V1::Accounts::AgentsController
 
   private
 
+  def guard_new_agent!
+    super
+    custom_role_guard.role_to_grant!(custom_role_id_param)
+  end
+
+  # Clearing or switching the custom role changes access: one's own stays out of reach, and both the current and the
+  # new role must be within the giver's reach (#1931). Runs before any write.
+  def guard_agent_update!
+    super
+    account_user = @agent.current_account_user
+    return unless custom_role_id_given?
+    return if custom_role_id_param.to_s == account_user.custom_role_id.to_s
+
+    access_guard.touch_access!(account_user)
+    custom_role_guard.reach_current!(account_user)
+    custom_role_guard.role_to_grant!(custom_role_id_param)
+  end
+
+  def guard_agent_removal!
+    super
+    custom_role_guard.reach_current!(@agent.current_account_user)
+  end
+
+  def custom_role_guard
+    @custom_role_guard ||= CustomRoles::GrantGuard.new(actor: Current.account_user)
+  end
+
   def associate_agent_with_custom_role
     # Fork: create may answer with a pending Autonomia invitation and no local agent record.
     return if @agent.blank?
+    # An update that does not mention the custom role (e.g. only the name) keeps it. It used to clear it, which turned
+    # the person into a plain agent, who often sees more (#1931).
+    return unless custom_role_id_given?
     # Custom roles are a premium feature; block assigning one when the feature is disabled,
     # but still allow clearing a stale custom_role_id left over from before a downgrade.
     return if custom_role_id_param.present? && !Current.account.feature_enabled?('custom_roles')
@@ -23,8 +53,16 @@ module Enterprise::Api::V1::Accounts::AgentsController
     @agent.current_account_user.update!(custom_role_id: custom_role_id_param)
   end
 
-  # Fork: accept the nested `agent[custom_role_id]` shape as well as the top-level param.
+  def custom_role_id_given?
+    params[:agent]&.key?(:custom_role_id) || params.key?(:custom_role_id)
+  end
+
+  # Fork: accept the nested `agent[custom_role_id]` shape as well as the top-level param. Only a single id: a list or a
+  # hash is refused instead of reaching `find` (#1931).
   def custom_role_id_param
-    params.dig(:agent, :custom_role_id).presence || params[:custom_role_id]
+    value = params.dig(:agent, :custom_role_id).presence || params[:custom_role_id]
+    raise Pundit::NotAuthorizedError unless value.nil? || value.is_a?(String) || value.is_a?(Integer)
+
+    value
   end
 end

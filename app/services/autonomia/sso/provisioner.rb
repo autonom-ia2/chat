@@ -62,11 +62,7 @@ class Autonomia::Sso::Provisioner
   def ensure_account_user(user, account, pending_invitation)
     AccountUser.find_or_initialize_by(user: user, account: account).tap do |account_user|
       if pending_invitation.present?
-        account_user.role = pending_invitation.fetch('role', nil).presence || 'administrator'
-        if pending_invitation.fetch('custom_role_id', nil).present?
-          account_user.custom_role_id = pending_invitation['custom_role_id']
-        end
-        account_user.inviter_id ||= pending_invitation['invited_by_user_id']
+        Autonomia::Sso::InvitationAccess.new(account, pending_invitation).apply(account_user)
       elsif account_user.new_record?
         account_user.role = 'administrator'
       end
