@@ -981,6 +981,17 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # #1979: último ponto antes do tráfego. Um rollback que congelou durante o build ou o boot para aqui; a green
+      # nunca entra no balanceador.
+      - name: Abort if production was frozen before traffic
+        env:
+          DESCONGELAR: ${{ github.event_name == 'workflow_dispatch' && inputs.descongelar == true }}
+        run: |
+          source scripts/deploy/blue-green-recovery.sh
+          if [ "$DESCONGELAR" != true ]; then
+            abort_if_frozen
+          fi
+
       - name: Register green target group
         run: |
           green_tg_name="cw-auto-green-${GITHUB_RUN_NUMBER}"
@@ -1552,7 +1563,7 @@ jobs:
       - name: Freeze production
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          write_deploy_freeze "on:$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT"
+          write_deploy_freeze "on:$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT:pedido"
           echo "::notice::Produção congelada: nenhum deploy sobe até um deploy manual com descongelar=true."
 
       - name: Cancel deploys before traffic
@@ -1639,11 +1650,12 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Já dentro da trava: um deploy de descongelar que subiu enquanto este esperava a vez não solta o rollback.
+      # Já dentro da trava: um deploy de descongelar que subiu enquanto este esperava a vez não solta o rollback. O
+      # sufixo difere do pedido acima: se aquele valor já foi liberado, repeti-lo deixaria a produção descongelada.
       - name: Freeze production
         run: |
           source scripts/deploy/blue-green-recovery.sh
-          write_deploy_freeze "on:$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT"
+          write_deploy_freeze "on:$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT:trava"
           echo "::notice::Produção congelada: nenhum deploy sobe até um deploy manual com descongelar=true."
 
       # De novo, agora com o deploy que estava no tráfego já terminado: ele pode ter mudado a anterior.

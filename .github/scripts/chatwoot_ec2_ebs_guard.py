@@ -52,6 +52,34 @@ def get_parameter(name):
     )
 
 
+# #1979: com a produção congelada por um rollback, a instância que o Desligar a blue deixou de terminar pode ser a
+# volta manual. Mesma regra de duas chaves do scripts/deploy/blue-green-recovery.sh: congelada = há pedido e ele não é
+# o liberado. Chave que não existe conta como vazia; qualquer outro erro sobe, para a limpeza não seguir sem saber.
+def read_ssm_strict(name):
+    completed = subprocess.run(
+        ["aws", "ssm", "get-parameter", "--name", name, "--query", "Parameter.Value", "--output", "text"],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if completed.returncode != 0:
+        if "ParameterNotFound" in completed.stderr:
+            return ""
+        raise RuntimeError(f"ssm_read_failed:{name}")
+    return completed.stdout.strip()
+
+
+def deploy_freeze_state(args):
+    released = read_ssm_strict(args.deploy_freeze_released_parameter)
+    request = read_ssm_strict(args.deploy_freeze_parameter)
+    if request in ("", "off"):
+        return "off"
+    if request == "on" or request.startswith("on:"):
+        return "off" if request == released else "on"
+    raise RuntimeError(f"deploy_freeze_invalid:{request}")
+
+
 def tag_value(tags, key):
     for tag in tags or []:
         if tag.get("Key") == key:
@@ -259,6 +287,8 @@ def main():
     parser.add_argument("--name-prefix", action="append", required=True)
     parser.add_argument("--current-instance-parameter", required=True)
     parser.add_argument("--previous-instance-parameter", required=True)
+    parser.add_argument("--deploy-freeze-parameter", required=True)
+    parser.add_argument("--deploy-freeze-released-parameter", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     os.environ["AWS_REGION"] = args.region
@@ -267,8 +297,20 @@ def main():
     inventory = build_inventory(args)
     result = {"inventory": inventory, "cleanup": None}
 
+    freeze_error = None
     if args.mode == "cleanup":
-        result["cleanup"] = cleanup(args, inventory)
+        try:
+            freeze = deploy_freeze_state(args)
+        except RuntimeError as error:
+            freeze, freeze_error = "unknown", str(error)
+        if freeze == "off":
+            result["cleanup"] = cleanup(args, inventory)
+        else:
+            result["cleanup"] = {"skipped": f"deploy_freeze_{freeze}"}
+            print(
+                f"::warning::Limpeza não rodou: congelamento {freeze}. Nada foi terminado; o inventário segue no artefato.",
+                file=sys.stderr,
+            )
 
     with open(args.output, "w", encoding="utf-8") as output:
         json.dump(result, output, indent=2, sort_keys=True)
@@ -288,6 +330,9 @@ def main():
     }
     json.dump(summary, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
+    if freeze_error:
+        print(f"::error::Não deu para ler o congelamento ({freeze_error}).", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

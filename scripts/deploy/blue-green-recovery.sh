@@ -128,7 +128,7 @@ terminate_green_without_image() {
 }
 
 # #1979: congelamento em duas chaves, cada uma com um único dono, porque o SSM não lê e grava de forma atômica.
-# O rollback grava o pedido (DEPLOY_FREEZE_PARAMETER = on:<run>:<tentativa>); o deploy manual com descongelar=true
+# O rollback grava o pedido (DEPLOY_FREEZE_PARAMETER = on:<run>:<tentativa>:pedido|trava); o deploy manual com descongelar=true
 # grava a liberação (DEPLOY_FREEZE_RELEASED_PARAMETER) com o pedido que viu na largada. Congelada = há pedido e ele não
 # é o liberado. Liberação velha, mesmo gravada atrasada, nunca solta um rollback mais novo, que tem outro valor.
 # Chave que não existe conta como vazia; qualquer outro erro falha, para nenhum deploy seguir sem saber.

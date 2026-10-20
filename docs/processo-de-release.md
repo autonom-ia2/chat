@@ -215,7 +215,7 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
    - o job **Congelar a produção** confere primeiro se a instância anterior veio do commit `esperado_sha` (a tag Name
      dela diz de que run veio). Sem `esperado_sha`, ou com SHA errado, ele para ali, **sem congelar nada**, e o erro
      diz qual SHA a anterior roda e quais instâncias ainda existem;
-   - depois **congela** a produção: grava o pedido `on:<run>:<tentativa>` em `/chatwoot/prod/blue-green/deploy-freeze`
+   - depois **congela** a produção: grava o pedido `on:<run>:<tentativa>:pedido` em `/chatwoot/prod/blue-green/deploy-freeze`
      (SSM): deploy
      novo nem pede a vez, e o **Desligar a blue** não para nem termina nada;
    - cancela todo run que ainda pode trocar o tráfego antes dele: o que está na conferência do congelamento, o que
@@ -223,8 +223,11 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
      não toca na produção. Depois disso a green pode ter subido o app, então a limpeza faz o que já fazia em qualquer
      deploy que falha ali: suspende o Instagram assistido na atual e reinicia o web dela por alguns segundos. A migration
      desse deploy pode já ter rodado (ela vem antes do tráfego): por isso migration é sempre aditiva;
-   - o rollback pede a **mesma trava** do deploy: espera o deploy que já estava no tráfego terminar, confere o SHA de
-     novo e só então troca. Se esse deploy mudou a anterior, o rollback para sem trocar e lista as instâncias com o
+   - o deploy confere o congelamento de novo logo antes de registrar a green no balanceador: um rollback que congelou
+     durante o build ou o boot o para ali, sem tráfego;
+   - o rollback pede a **mesma trava** do deploy: espera o deploy que já estava no tráfego terminar, congela de novo com
+     outro pedido (`...:trava`, para um descongelar que tenha liberado o primeiro não valer para este), confere o SHA
+     de novo e só então troca. Se esse deploy mudou a anterior, o rollback para sem trocar e lista as instâncias com o
      commit de cada uma, para a volta manual;
    - se outro pedido tomar a vez do rollback na trava (um deploy manual, ou um push cuja conferência leu a produção
      descongelada e só pediu a vez depois das três varreduras), o job **Avisar rollback cancelado** falha o run:
@@ -240,6 +243,9 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
    Só volta **um degrau**: a instância de dois deploys atrás é terminada cerca de 5 minutos depois
    de cada deploy. Para desfazer um lote que já tem outro por cima, o caminho é um lote novo com `git revert`. Um lote
    com migration tem o rollback do banco escrito antes, no próprio PR do lote.
+   Com a produção congelada, nem o Desligar a blue nem a limpeza agendada do **Chatwoot EC2 EBS Cost Guard** terminam
+   instância (o guard faz só o inventário e avisa); se não conseguir ler o congelamento, ele também não termina nada e
+   fica vermelho.
 10. **Urgência (hotfix).** Um lote de um PR só, com OK do Rodrigo. Respeita a regra 4 (espera os "ok" do lote
     anterior), mas não espera a janela de 2 horas.
 11. **Limpeza.** Depois do merge do lote na `main`, cada sessão remove as próprias worktrees. Apagar branch remota (a do
