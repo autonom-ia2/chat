@@ -12,6 +12,8 @@ import { Letter } from 'vue-letter';
 import { allowedCssProperties } from 'lettersanitizer';
 import Icon from 'next/icon/Icon.vue';
 import { remetenteDoEmail, semRastreio } from './dadosDoEmail';
+import { imagemSemRastreio, linkSemRastreio } from './documentoDoEmail';
+import { htmlComCssSeguro } from './estiloSeguroDoEmail';
 
 const props = defineProps({
   // A mensagem citada, como vem do store (snake_case).
@@ -39,7 +41,16 @@ const quem = computed(
 );
 // O servidor só preenche html_content quando o e-mail tem parte HTML (MailPresenter).
 // Sem ela, o corpo vai como texto, linha a linha: usado como HTML, virava uma linha só.
-const html = computed(() => dados.value.html_content?.full || '');
+// O CSS do remetente não pode escapar do <style> ao passar pelo vue-letter (estiloSeguroDoEmail).
+// Imagem e url() do CSS só com endereço completo (relativo pediria ao painel); link só
+// web, e-mail e telefone.
+const recursoSemRastreio = imagemSemRastreio(semRastreio);
+const linkDoLetter = linkSemRastreio(semRastreio);
+const html = computed(() =>
+  htmlComCssSeguro(dados.value.html_content?.full || '', {
+    conferirUrls: true,
+  })
+);
 const texto = computed(
   () => dados.value.text_content?.full || props.mensagem?.content || ''
 );
@@ -151,8 +162,8 @@ const LINK =
         :html="html"
         :text="texto"
         :allowed-css-properties="CSS_PERMITIDO"
-        :rewrite-external-resources="semRastreio"
-        :rewrite-external-links="semRastreio"
+        :rewrite-external-resources="recursoSemRastreio"
+        :rewrite-external-links="linkDoLetter"
       />
     </div>
   </section>

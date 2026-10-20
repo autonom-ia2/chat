@@ -19,7 +19,15 @@ const DIAS_PARA_TRAS = 365;
 const DIAS_A_FRENTE = 8;
 const UM_MINUTO = 60 * 1000;
 
-export const useCalendarioOuro = ({ props, fuso, ehAdmin }) => {
+// #1883: `inicial` é o filtro que veio pelo link (quem e tipos); a tela abre com ele ligado.
+const tiposLigados = lista =>
+  lista?.length
+    ? Object.fromEntries(
+        ORDEM_DOS_TIPOS.map(tipo => [tipo, lista.includes(tipo)])
+      )
+    : {};
+
+export const useCalendarioOuro = ({ props, fuso, ehAdmin, inicial = null }) => {
   const agora = ref(new Date());
   let relogio = null;
   onMounted(() => {
@@ -45,7 +53,7 @@ export const useCalendarioOuro = ({ props, fuso, ehAdmin }) => {
 
   // Decisão 4 do #1568: administrador vê toda a equipe; agente, só os seus.
   // Segue o papel até a pessoa escolher no "Mostrar" (o papel pode chegar depois).
-  const quemEscolhido = ref(null);
+  const quemEscolhido = ref(inicial?.quem || null);
   const quemPadrao = computed(() => (ehAdmin.value ? 'todos' : 'meus'));
   const quem = computed({
     get: () => quemEscolhido.value || quemPadrao.value,
@@ -53,7 +61,7 @@ export const useCalendarioOuro = ({ props, fuso, ehAdmin }) => {
       quemEscolhido.value = valor;
     },
   });
-  const tipos = ref({});
+  const tipos = ref(tiposLigados(inicial?.tipos));
   const feitos = ref(false);
 
   const tiposDisponiveis = computed(() =>

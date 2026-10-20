@@ -249,4 +249,31 @@ RSpec.describe Crm::Cards::FilterQuery do
       expect(perform_with(score_min: '0')).to include(low, middle, high)
     end
   end
+
+  # #1883: "ganhos do mês" e "resolvidos no mês" do Números abrem a Lista pelo link. O mês é o do fuso da conta.
+  describe 'closed_in=this_month' do
+    def perform_with(params)
+      described_class.new(scope: account.crm_cards, params: params, conversation_visibility: visibility, account: account).perform
+    end
+
+    it 'keeps only cards closed since the start of the month in the account time zone' do
+      account.update!(reporting_timezone: 'America/Sao_Paulo')
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      # 1º/11 00:30 em São Paulo = 03:30 UTC; 31/10 23:30 em São Paulo = 1º/11 02:30 UTC.
+      won_at = ->(time, title) { travel_to(time) { account.crm_cards.create!(pipeline: pipeline, stage: stage, title: title, status: :won) } }
+      this_month = won_at.call(Time.utc(2026, 11, 1, 3, 30), 'Novembro')
+      won_at.call(Time.utc(2026, 11, 1, 2, 30), 'Outubro no fuso')
+
+      travel_to Time.utc(2026, 11, 10, 12) do
+        expect(perform_with(result: 'won', closed_in: 'this_month')).to contain_exactly(this_month)
+      end
+    end
+
+    it 'ignores any other value' do
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      old = travel_to(1.year.ago) { account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Antigo', status: :won) }
+
+      expect(perform_with(result: 'won', closed_in: 'last_year')).to contain_exactly(old)
+    end
+  end
 end

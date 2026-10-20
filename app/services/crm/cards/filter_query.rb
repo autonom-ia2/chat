@@ -23,17 +23,21 @@ class Crm::Cards::FilterQuery
     'updated_at' => :updated_at
   }.freeze
 
-  def initialize(scope:, params:, conversation_visibility:)
+  # #1883: "fechado neste mês" (`closed_in=this_month`), para os links do Números. List-only, como o `result`.
+  CLOSED_IN_THIS_MONTH = 'this_month'.freeze
+
+  def initialize(scope:, params:, conversation_visibility:, account: Current.account)
     @scope = scope
     @params = params
     @conversation_visibility = conversation_visibility
+    @account = account
   end
 
   def perform
     cards = apply_filters(base_scope)
     cards = apply_shared_filters(cards)
     cards = apply_standalone_filter(cards)
-    cards = apply_search(apply_follow_up_filter(apply_result_filter(cards)))
+    cards = apply_search(apply_follow_up_filter(apply_closed_in_filter(apply_result_filter(cards))))
     apply_sort(cards)
   end
 
@@ -100,6 +104,14 @@ class Crm::Cards::FilterQuery
     # Aba de desfecho (#1197): card fechado antes de o funil trocar "conta como venda" continua na aba equivalente.
     result = @params[:result].to_s
     cards.where(status: [result, Crm::Cards::Outcome::NOT_SALE[result], Crm::Cards::Outcome::SALE[result]].compact)
+  end
+
+  # O mês é o do fuso da conta (o mesmo dos relatórios do CRM), nunca o do servidor.
+  def apply_closed_in_filter(cards)
+    return cards unless @params[:closed_in].to_s == CLOSED_IN_THIS_MONTH
+
+    month_start = Crm::Timezone::Resolver.new(account: @account).zone_or_default.now.beginning_of_month
+    cards.where(closed_at: month_start..)
   end
 
   def apply_search(cards)

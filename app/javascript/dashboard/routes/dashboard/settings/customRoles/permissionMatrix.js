@@ -31,6 +31,7 @@ export const CRM_EXTRAS_IMPLIED_BY_ADMIN = [
   'crm_manage_pipelines',
   'crm_manage_ai',
   'crm_export',
+  'crm_delete_cards',
 ];
 
 // Extras that touch personal data, money or other people's access. The editor asks
@@ -94,14 +95,17 @@ export const MODULE_GROUPS = [
         type: 'crm',
         icon: 'i-lucide-kanban-square',
         levels: { view: CRM_VIEW, manage: CRM_MANAGE_CARDS },
+        // Arquivar é chave própria (#1874), só para quem mexe nos cards; "Pode mexer" não a liga sozinho.
         extras: [
           CRM_MOVE_CARDS,
+          'crm_delete_cards',
           'crm_view_reports',
           'crm_manage_pipelines',
           'crm_manage_ai',
           'crm_export',
           CRM_ADMIN,
         ],
+        manageOnlyExtras: ['crm_delete_cards'],
       },
     ],
   },
@@ -329,8 +333,12 @@ const setConversationLevel = (level, permissions) => {
 const setCrmLevel = (module, level, permissions) => {
   if (level === LEVELS.NONE) return withoutKeys(permissions, keysOf(module));
   const base = withoutKeys(permissions, [CRM_VIEW, CRM_MANAGE_CARDS]);
-  // The CRM backend checks each key on its own, so crm_view is always stored.
-  if (level === LEVELS.VIEW) return unique([...base, CRM_VIEW]);
+  // The CRM backend checks each key on its own, so crm_view is always stored. Voltar para ver tira o que é só de quem mexe.
+  if (level === LEVELS.VIEW)
+    return unique([
+      ...withoutKeys(base, module.manageOnlyExtras || []),
+      CRM_VIEW,
+    ]);
   return unique([...base, CRM_VIEW, CRM_MANAGE_CARDS, CRM_MOVE_CARDS]);
 };
 

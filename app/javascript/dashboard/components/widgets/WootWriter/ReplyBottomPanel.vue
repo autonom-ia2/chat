@@ -316,6 +316,10 @@ export default {
     ActiveStorage.start();
   },
   methods: {
+    // #1895: o ReplyBox ancora a janela de emojis na barra que tem o botão do rosto.
+    barraDosEmojis() {
+      return this.$refs.barraDaEsquerda;
+    },
     toggleMessageSignature() {
       this.setSignatureFlagForInbox(this.channelType, !this.sendWithSignature);
     },
@@ -331,7 +335,7 @@ export default {
     class="flex justify-between p-3"
     :class="[wrapClass, ehWhatsapp ? classesDaResposta.painel : '']"
   >
-    <div class="left-wrap">
+    <div ref="barraDaEsquerda" class="left-wrap">
       <BotoesDoEmail v-if="emailNovo && !isNote" parte="esquerda" />
       <MaisDoEmail
         v-if="emailNovo && showAttachButton"
@@ -350,6 +354,7 @@ export default {
         slate
         faded
         sm
+        data-emoji-da-resposta
         @click="toggleEmojiPicker"
       />
       <FileUpload

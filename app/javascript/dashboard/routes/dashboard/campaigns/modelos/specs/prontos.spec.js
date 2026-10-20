@@ -12,13 +12,33 @@ import { rascunhoDoFormato } from '../helpers/formatos';
 import { exemploDoCampo } from '../helpers/campos';
 import { corpoParaCriar, podeIrEmCampanha } from '../helpers/paraMeta';
 import { BOTOES_SO_DE_DIVULGACAO } from '../helpers/regraEstrutural';
+import { composeMessages } from 'dashboard/i18n/pacotesDoPainel';
+import segurosEn from 'dashboard/i18n/pacotes/seguros/en.json';
+import segurosPtBR from 'dashboard/i18n/pacotes/seguros/pt_BR.json';
+import corretoraEn from 'dashboard/i18n/pacotes/seguros/corretora/en.json';
+import corretoraPtBR from 'dashboard/i18n/pacotes/seguros/corretora/pt_BR.json';
 
 // Todo modelo pronto da galeria (#1380): o rascunho que a tela monta passa na
 // conferência, o aviso de serviço não leva nada que só existe em divulgação, e
 // o corpo que vai para a Meta fica gravado em spec/fixtures para o lado Ruby
 // conferir com a mesma régua do servidor (SubmitFormat) e com o SendableFormat
 // da campanha. Atualizar o arquivo: `pnpm test prontos -- -u`.
-const IDIOMAS = { en, pt_BR: ptBR };
+// O pacote de tradução da conta (#1802) troca o texto dos prontos; a mesma
+// régua vale para o texto composto de cada pacote.
+const CATALOGOS = [
+  { idioma: 'en', pacote: null, mensagens: en },
+  { idioma: 'pt_BR', pacote: null, mensagens: ptBR },
+  {
+    idioma: 'en',
+    pacote: 'seguros.corretora',
+    mensagens: composeMessages(en, [segurosEn, corretoraEn]),
+  },
+  {
+    idioma: 'pt_BR',
+    pacote: 'seguros.corretora',
+    mensagens: composeMessages(ptBR, [segurosPtBR, corretoraPtBR]),
+  },
+];
 const FIXTURE = path.resolve(
   process.cwd(),
   'spec/fixtures/whatsapp_templates/prontos.json'
@@ -84,7 +104,7 @@ const midiasDe = ({ conteudo }) => ({
 });
 
 const prontos = () =>
-  Object.entries(IDIOMAS).flatMap(([idioma, mensagens]) => {
+  CATALOGOS.flatMap(({ idioma, pacote, mensagens }) => {
     const t = tradutor(mensagens);
     const objetivos = OBJETIVOS.map(objetivo => ({
       origem: 'objetivo',
@@ -112,6 +132,7 @@ const prontos = () =>
       const rascunho = preencher({ ...pronto.rascunho, idioma });
       return {
         ...pronto,
+        pacote,
         deFabrica: pronto.rascunho,
         rascunho,
         corpo: corpoParaCriar(rascunho, {
@@ -127,9 +148,16 @@ const prontos = () =>
 describe('modelos prontos (#1380)', () => {
   const lista = prontos();
 
-  it.each(lista.map(pronto => [pronto.idioma, pronto.chave, pronto]))(
-    '%s/%s passa na conferência antes de enviar',
-    (_idioma, _chave, { rascunho }) => {
+  it.each(
+    lista.map(pronto => [
+      pronto.idioma,
+      pronto.pacote || 'geral',
+      pronto.chave,
+      pronto,
+    ])
+  )(
+    '%s/%s/%s passa na conferência antes de enviar',
+    (_idioma, _pacote, _chave, { rascunho }) => {
       expect(falhasDe(rascunho)).toEqual([]);
     }
   );
@@ -189,13 +217,16 @@ describe('modelos prontos (#1380)', () => {
   });
 
   it('grava os corpos para o lado Ruby conferir', async () => {
-    const corpos = lista.map(({ origem, chave, idioma, rascunho, corpo }) => ({
-      origem,
-      chave,
-      idioma,
-      pode_ir_em_campanha: podeIrEmCampanha(rascunho),
-      corpo,
-    }));
+    const corpos = lista.map(
+      ({ origem, chave, idioma, pacote, rascunho, corpo }) => ({
+        origem,
+        chave,
+        idioma,
+        pacote,
+        pode_ir_em_campanha: podeIrEmCampanha(rascunho),
+        corpo,
+      })
+    );
     await expect(`${JSON.stringify(corpos, null, 2)}\n`).toMatchFileSnapshot(
       FIXTURE
     );

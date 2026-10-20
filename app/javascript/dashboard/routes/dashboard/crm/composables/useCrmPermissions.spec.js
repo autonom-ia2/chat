@@ -55,3 +55,28 @@ describe('useCrmPermissions — canExportCrm', () => {
     );
   });
 });
+
+// #1874 — arquivar tem chave própria; o agente sem função continua arquivando.
+describe('useCrmPermissions — canDeleteCards', () => {
+  it('libera o administrador e o agente sem função', () => {
+    expect(seat({ papel: 'administrator' }).canDeleteCards.value).toBe(true);
+    expect(seat().canDeleteCards.value).toBe(true);
+  });
+
+  it('não libera a função que só mexe nos cards', () => {
+    expect(
+      seat({ funcao: 3, chaves: ['crm_view', 'crm_manage_cards'] })
+        .canDeleteCards.value
+    ).toBe(false);
+  });
+
+  it('libera a função com crm_delete_cards ou crm_admin', () => {
+    expect(
+      seat({ funcao: 3, chaves: ['crm_view', 'crm_delete_cards'] })
+        .canDeleteCards.value
+    ).toBe(true);
+    expect(
+      seat({ funcao: 3, chaves: ['crm_admin'] }).canDeleteCards.value
+    ).toBe(true);
+  });
+});

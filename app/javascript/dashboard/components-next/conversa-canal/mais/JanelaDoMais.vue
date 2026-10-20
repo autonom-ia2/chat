@@ -14,11 +14,13 @@ import CampoDeTelefone from './CampoDeTelefone.vue';
 import Input from 'next/input/Input.vue';
 import TextArea from 'next/textarea/TextArea.vue';
 import Button from 'next/button/Button.vue';
+import Checkbox from 'next/checkbox/Checkbox.vue';
 import PreviaDoMais from './PreviaDoMais.vue';
 import {
   LIMITES,
   montarBotaoDeLink,
   montarContato,
+  montarEnquete,
   montarFormulario,
   montarLocalizacao,
   montarOpcoes,
@@ -31,6 +33,8 @@ const props = defineProps({
   inboxId: { type: Number, default: null },
   // WAHA e número reserva: o cliente recebe a versão em texto; a prévia mostra isso.
   viraTexto: { type: Boolean, default: false },
+  // A enquete tem regra própria (enqueteNoMais.js): nativa só onde a conversa diz.
+  enqueteEmTexto: { type: Boolean, default: false },
   // pedido → Promise; rejeita com a resposta do servidor quando ele recusa.
   enviar: { type: Function, required: true },
 });
@@ -50,6 +54,7 @@ const MONTADORES = {
   localizacao: montarLocalizacao,
   pedidoDeLocalizacao: montarPedidoDeLocalizacao,
   contato: montarContato,
+  enquete: montarEnquete,
 };
 
 const camposVazios = () => ({
@@ -64,6 +69,8 @@ const camposVazios = () => ({
   telefone: '',
   formulario: '',
   textoDoBotao: '',
+  pergunta: '',
+  variasRespostas: false,
 });
 const campos = reactive(camposVazios());
 
@@ -84,13 +91,19 @@ const chave = computed(
       pedidoDeLocalizacao: 'PEDIDO_DE_LOCALIZACAO',
       contato: 'CONTATO',
       formulario: 'FORMULARIO',
+      enquete: 'ENQUETE',
     })[tipo.value]
 );
 const rotulo = campo => t(`CONVERSA_CANAL.JANELA.${chave.value}.${campo}`);
+// Se o cliente recebe em texto, a prévia mostra esse texto.
+const emTexto = computed(() =>
+  tipo.value === 'enquete' ? props.enqueteEmTexto : props.viraTexto
+);
 // No WAHA o cliente recebe em texto: a ajuda não promete botão nem lista.
 const ajuda = computed(() => {
   if (!tipo.value) return '';
-  if (props.viraTexto) return t('CONVERSA_CANAL.JANELA.AJUDA_TEXTO');
+  if (tipo.value === 'enquete' && emTexto.value) return rotulo('AJUDA_TEXTO');
+  if (emTexto.value) return t('CONVERSA_CANAL.JANELA.AJUDA_TEXTO');
   return rotulo('AJUDA');
 });
 const titulo = computed(() =>
@@ -102,7 +115,11 @@ const erroDe = campo =>
     : '';
 
 const ehLista = computed(() => viraLista(campos.opcoes));
-const podeMaisOpcao = computed(() => campos.opcoes.length < LIMITES.opcoes);
+const podeMaisOpcao = computed(
+  () =>
+    campos.opcoes.length <
+    (tipo.value === 'enquete' ? LIMITES.opcoesDaEnquete : LIMITES.opcoes)
+);
 
 const falha = ref('');
 const enviando = ref(false);
@@ -338,6 +355,50 @@ defineExpose({ abrir });
           />
         </template>
 
+        <template v-else-if="tipo === 'enquete'">
+          <TextArea
+            v-model="campos.pergunta"
+            :label="rotulo('PERGUNTA')"
+            :max-length="LIMITES.perguntaDaEnquete"
+            :message="erroDe('pergunta')"
+            :message-type="erroDe('pergunta') ? 'error' : 'info'"
+            auto-height
+          />
+          <fieldset class="flex flex-col gap-2 min-w-0">
+            <legend class="mb-1 text-sm font-medium text-n-slate-12">
+              {{ rotulo('OPCOES') }}
+            </legend>
+            <Input
+              v-for="(_, indice) in campos.opcoes"
+              :key="indice"
+              v-model="campos.opcoes[indice]"
+              :placeholder="
+                t('CONVERSA_CANAL.JANELA.OPCOES.OPCAO_N', { n: indice + 1 })
+              "
+            />
+            <p v-if="erroDe('opcoes')" class="text-xs text-n-ruby-11">
+              {{ erroDe('opcoes') }}
+            </p>
+            <Button
+              v-if="podeMaisOpcao"
+              type="button"
+              variant="link"
+              color="teal"
+              sm
+              icon="i-lucide-plus"
+              class="self-start"
+              :label="rotulo('MAIS_UMA')"
+              @click="campos.opcoes.push('')"
+            />
+          </fieldset>
+          <label
+            class="flex items-center gap-3 min-h-11 text-sm text-n-slate-12 cursor-pointer"
+          >
+            <Checkbox v-model="campos.variasRespostas" />
+            {{ rotulo('VARIAS_RESPOSTAS') }}
+          </label>
+        </template>
+
         <template v-else-if="tipo === 'localizacao'">
           <CampoDeBusca
             :label="rotulo('BUSCAR')"
@@ -456,7 +517,7 @@ defineExpose({ abrir });
         <span class="text-sm font-medium text-n-slate-12">
           {{ t('CONVERSA_CANAL.JANELA.PREVIA') }}
         </span>
-        <PreviaDoMais :tipo="tipo" :campos="campos" :vira-texto="viraTexto" />
+        <PreviaDoMais :tipo="tipo" :campos="campos" :vira-texto="emTexto" />
       </div>
     </div>
 

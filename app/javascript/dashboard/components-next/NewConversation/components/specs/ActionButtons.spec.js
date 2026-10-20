@@ -2,7 +2,9 @@ import { mount } from '@vue/test-utils';
 import ActionButtons from '../ActionButtons.vue';
 
 // chat#1457: caixa WhatsApp só com modelo não tem botão Enviar; com o Híbrido pronto, tem os dois.
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({ t: key => key, locale: { value: 'en' } }),
+}));
 vi.mock('dashboard/composables/useUISettings', () => ({
   useUISettings: () => ({
     fetchSignatureFlagFromUISettings: () => false,
@@ -19,8 +21,9 @@ vi.mock('dashboard/composables/useKeyboardEvents', () => ({
 
 const SEND = 'COMPOSE_NEW_CONVERSATION.FORM.ACTION_BUTTONS.SEND';
 
-const mountButtons = props =>
+const mountButtons = (props, attachTo) =>
   mount(ActionButtons, {
+    attachTo,
     props: { hasSelectedInbox: true, inboxId: 7, ...props },
     global: {
       stubs: {
@@ -29,7 +32,8 @@ const mountButtons = props =>
           template: '<div data-test="twilio-picker" />',
         },
         FileUpload: true,
-        EmojiIconPicker: true,
+        Icon: true,
+        TeleportWithDirection: { template: '<slot />' },
         Button: {
           props: ['label'],
           template: '<button :data-label="label">{{ label }}</button>',
@@ -83,5 +87,38 @@ describe('ActionButtons', () => {
 
     expect(hasTemplatePicker(wrapper)).toBe(false);
     expect(hasSend(wrapper)).toBe(true);
+  });
+
+  // #1895: a Nova conversa usa a janela de emojis própria do fork, como a resposta.
+  it('opens the fork emoji window and emits the chosen emoji', async () => {
+    const wrapper = mountButtons();
+    expect(wrapper.find('[data-janela-de-emojis]').exists()).toBe(false);
+
+    await wrapper.find('[data-emoji-da-nova-conversa]').trigger('click');
+    expect(wrapper.find('[data-janela-de-emojis]').exists()).toBe(true);
+
+    const primeiro = wrapper.find('[data-janela-de-emojis] .grid button');
+    await primeiro.trigger('click');
+    expect(wrapper.emitted('insertEmoji')).toEqual([[primeiro.text()]]);
+  });
+
+  it('closes the emoji window on Esc', async () => {
+    const wrapper = mountButtons({}, document.body);
+    await wrapper.find('[data-emoji-da-nova-conversa]').trigger('click');
+
+    wrapper
+      .find('[data-buscar-emoji]')
+      .element.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+      );
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-janela-de-emojis]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('hides the emoji button on template-only WhatsApp', () => {
+    const wrapper = mountButtons({ isWhatsappInbox: true });
+
+    expect(wrapper.find('[data-emoji-da-nova-conversa]').exists()).toBe(false);
   });
 });

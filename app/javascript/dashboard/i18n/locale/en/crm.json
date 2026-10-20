@@ -3314,6 +3314,7 @@
       "CRM_VIEW": "View CRM",
       "CRM_MANAGE_CARDS": "Manage cards",
       "CRM_MOVE_CARDS": "Move cards",
+      "CRM_DELETE_CARDS": "Archive cards",
       "CRM_MANAGE_PIPELINES": "Manage pipelines",
       "CRM_MANAGE_AI": "Manage AI",
       "CRM_VIEW_REPORTS": "View reports",
@@ -3323,6 +3324,7 @@
       "CRM_VIEW": "Read pipelines, stages, and cards.",
       "CRM_MANAGE_CARDS": "Create and update cards.",
       "CRM_MOVE_CARDS": "Move cards between stages.",
+      "CRM_DELETE_CARDS": "Archive cards, one by one or in bulk.",
       "CRM_MANAGE_PIPELINES": "Create and edit pipelines and stages.",
       "CRM_MANAGE_AI": "Manage CRM AI settings.",
       "CRM_VIEW_REPORTS": "Read CRM reports.",
@@ -3530,6 +3532,9 @@
       "EDIT_BUTTON": "Set service hours",
       "ADD_TOGGLE": "Set service hours (SLA) right after creating"
     }
+  },
+  "CRM_FILTRO_DO_LINK": {
+    "FECHADO_NO_MES": "Closed: this month"
   },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Autonom.ia Copilot",
@@ -5964,6 +5969,11 @@
     "EMPTY": "No conversation in this funnel."
   },
   "FORK_CONVERSATION_LIST": {
-    "PARTICIPATING": "Participating"
+    "PARTICIPATING": "Participating",
+    "FILTRO_DO_LINK": {
+      "DA_IA": "Handed over by AI",
+      "ESPERANDO": "Waiting over {n} min",
+      "DA_IA_ESPERANDO": "From AI, waiting {n}+ min"
+    }
   }
 }
