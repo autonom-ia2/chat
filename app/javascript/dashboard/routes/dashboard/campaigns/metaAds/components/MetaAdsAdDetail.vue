@@ -274,7 +274,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
     <button
       type="button"
       data-ad-detail-back
-      class="inline-flex items-center self-start gap-2 px-3 text-sm font-440 bg-transparent border border-solid rounded-lg min-h-11 border-n-weak text-n-slate-12 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+      class="inline-flex min-h-11 items-center gap-2 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 no-underline ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand self-start"
       @click="emit('back')"
     >
       <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
@@ -289,15 +289,15 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       v-else-if="failed && !ad"
       data-ad-detail-error
       role="alert"
-      class="flex flex-wrap items-center justify-between gap-3 p-6 border border-solid rounded-xl border-n-weak bg-n-solid-1"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-n-solid-1 p-6 ring-1 ring-inset ring-n-weak"
     >
-      <p class="m-0 text-sm font-420 text-n-slate-11">
+      <p class="m-0 text-sm text-n-slate-11">
         {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.ERROR') }}
       </p>
       <button
         type="button"
         data-ad-detail-retry
-        class="inline-flex items-center px-3 text-[13px] font-440 bg-transparent border border-solid rounded-lg min-h-11 border-n-weak text-n-slate-12 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        class="inline-flex min-h-11 items-center gap-2 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 no-underline ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
         @click="retry"
       >
         {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.RETRY') }}
@@ -307,37 +307,42 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
     <p
       v-else-if="!ad"
       data-ad-detail-empty
-      class="p-6 m-0 text-sm font-420 border border-solid rounded-xl border-n-weak bg-n-solid-1 text-n-slate-11"
+      class="m-0 rounded-2xl bg-n-solid-1 p-6 text-sm text-n-slate-11 ring-1 ring-inset ring-n-weak"
     >
       {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.EMPTY') }}
     </p>
 
     <template v-else>
-      <header class="flex flex-col gap-1.5">
-        <p class="m-0 text-[13px] font-420 text-n-slate-11">
+      <header
+        data-ad-detail-hero
+        class="relative flex flex-col gap-2 overflow-hidden rounded-2xl bg-n-heroi px-5 py-5 text-white ring-1 ring-inset ring-white/10 dark:bg-n-heroi-escuro sm:px-7 sm:py-6"
+      >
+        <span
+          aria-hidden="true"
+          class="pointer-events-none absolute -end-16 -top-24 size-72 rounded-full border-[3rem] border-n-blue-9 opacity-15"
+        />
+        <p class="relative m-0 text-sm font-medium text-white/70">
           {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_CTX', { days }) }}
         </p>
         <h3
           ref="heading"
           tabindex="-1"
           data-ad-detail-name
-          class="m-0 font-interDisplay text-[28px] font-520 leading-[1.15] tracking-[-0.02em] text-n-slate-12 text-balance focus:outline-none"
+          class="relative m-0 text-balance text-2xl font-bold leading-tight tracking-tight text-white focus:outline-none sm:text-3xl"
         >
           {{ ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME') }}
         </h3>
         <p
           v-if="context.length"
           data-ad-detail-context
-          class="flex flex-wrap items-baseline m-0 text-sm font-420 gap-x-5 gap-y-1 text-n-slate-11"
+          class="relative m-0 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-base text-white/80"
         >
           <span
             v-for="part in context"
             :key="part.key"
             class="inline-flex items-baseline min-w-0 gap-1.5"
           >
-            <span
-              class="text-[11px] font-520 uppercase tracking-[0.06em] text-n-slate-10"
-            >
+            <span class="text-sm font-medium text-white/70">
               {{ $t(`CRM_KANBAN.META_ADS_HUB.AD_DETAIL.${part.key}`) }}
             </span>
             <span class="min-w-0">{{ part.name }}</span>
@@ -349,7 +354,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         class="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
       >
         <figure
-          class="flex flex-col gap-2 m-0 overflow-hidden border border-solid rounded-xl border-n-weak bg-n-solid-1"
+          class="m-0 flex flex-col gap-2 overflow-hidden rounded-2xl bg-n-solid-1 ring-1 ring-n-weak"
         >
           <div class="flex justify-center bg-n-alpha-1">
             <img
@@ -378,7 +383,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
               target="_blank"
               rel="noopener noreferrer"
               data-ad-detail-preview
-              class="inline-flex items-center gap-1.5 text-[13px] font-440 no-underline min-h-11 text-n-blue-11 hover:underline"
+              class="inline-flex min-h-11 items-center gap-1.5 rounded-xl text-sm font-medium text-n-blue-11 no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
             >
               {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PREVIEW') }}
               <span
@@ -393,7 +398,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           <span
             v-if="ad.verdict"
             :data-verdict="ad.verdict"
-            class="self-start px-2.5 py-1 text-xs font-520 uppercase tracking-[0.06em] rounded"
+            class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 self-start"
             :class="VERDICT_CLASSES[ad.verdict]"
           >
             {{
@@ -411,16 +416,14 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
               v-for="tile in tiles"
               :key="tile.key"
               :data-ad-detail-tile="tile.key"
-              class="flex flex-col gap-1.5 p-4 border border-solid rounded-xl border-n-weak bg-n-solid-1 min-w-0"
+              class="flex min-w-0 flex-col gap-1 rounded-xl bg-n-solid-1 px-4 py-3 ring-1 ring-inset ring-n-weak"
             >
-              <dt
-                class="text-[11px] font-520 uppercase tracking-[0.06em] text-n-slate-10"
-              >
+              <dt class="text-sm text-n-slate-11">
                 {{ $t(`CRM_KANBAN.META_ADS_HUB.AD_DETAIL.TILES.${tile.key}`) }}
               </dt>
               <!-- mt-auto: rótulo que quebra em duas linhas não tira o número da linha dos outros. -->
               <dd
-                class="m-0 mt-auto text-xl truncate font-interDisplay font-520 tracking-[-0.02em] tabular-nums"
+                class="m-0 mt-auto truncate text-xl font-semibold tabular-nums sm:text-2xl"
                 :class="tile.tone"
               >
                 {{ tile.value }}
@@ -432,15 +435,13 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             v-if="!withoutSpend"
             data-ad-detail-why
             :data-reason="reason.kind"
-            class="flex flex-col gap-2 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1"
+            class="flex flex-col gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
           >
-            <h4
-              class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
-            >
+            <h4 class="m-0 text-sm font-semibold text-n-slate-11">
               {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.WHY_TITLE') }}
             </h4>
             <p
-              class="m-0 text-[15px] font-420 leading-relaxed text-n-slate-12 text-pretty"
+              class="m-0 text-pretty text-base leading-relaxed text-n-slate-12"
             >
               {{ reasonText }}
             </p>
@@ -449,12 +450,10 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
               data-ad-detail-meanwhile
               class="flex flex-col gap-1 pt-3 mt-1 border-0 border-t border-solid border-n-weak"
             >
-              <span
-                class="text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
-              >
+              <span class="text-sm font-semibold text-n-slate-11">
                 {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.MEANWHILE_TITLE') }}
               </span>
-              <span class="text-sm font-420 leading-relaxed text-n-slate-12">
+              <span class="text-sm leading-relaxed text-n-slate-12">
                 {{
                   $t(
                     'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.MEANWHILE',
@@ -466,7 +465,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
               <button
                 type="button"
                 data-ad-detail-meanwhile-see
-                class="inline-flex items-center self-start gap-1 p-0 text-[13px] font-440 bg-transparent border-0 min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+                class="inline-flex min-h-11 items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
                 @click="showQuotes"
               >
                 {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.MEANWHILE_SEE') }}
@@ -478,12 +477,10 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       </div>
 
       <div
-        class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
+        class="flex flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <h4
-            class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
-          >
+          <h4 class="m-0 text-sm font-semibold text-n-slate-11">
             {{
               withoutSpend
                 ? $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.CHART_TITLE_TALKS')
@@ -491,7 +488,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             }}
           </h4>
           <ul
-            class="flex gap-4 p-0 m-0 text-xs list-none font-440 text-n-slate-11"
+            class="m-0 flex list-none gap-4 p-0 text-xs font-medium text-n-slate-11"
           >
             <li v-if="!withoutSpend" class="flex items-center gap-1.5">
               <span
@@ -519,7 +516,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         <p
           v-if="!withoutSpend"
           data-ad-detail-chart-scale
-          class="m-0 text-xs font-420 tabular-nums text-n-slate-11"
+          class="m-0 text-xs tabular-nums text-n-slate-11"
         >
           {{
             $t(
@@ -585,14 +582,14 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           </g>
         </svg>
         <p
-          class="flex justify-between m-0 text-xs font-420 tabular-nums text-n-slate-10"
+          class="m-0 flex justify-between text-xs tabular-nums text-n-slate-10"
           aria-hidden="true"
         >
           <span v-for="label in axis" :key="label">{{ label }}</span>
         </p>
         <details data-ad-detail-days class="group">
           <summary
-            class="inline-flex items-center gap-1.5 text-[13px] font-440 cursor-pointer list-none min-h-11 text-n-blue-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand [&::-webkit-details-marker]:hidden"
+            class="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-xl text-sm font-medium text-n-blue-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand [&::-webkit-details-marker]:hidden"
           >
             {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.DAYS_TOGGLE') }}
             <span
@@ -600,22 +597,22 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
               aria-hidden="true"
             />
           </summary>
-          <table class="w-full text-sm border-collapse font-420 tabular-nums">
+          <table
+            class="w-full border-collapse text-sm font-normal tabular-nums"
+          >
             <thead>
-              <tr
-                class="text-[11px] font-520 uppercase tracking-[0.06em] text-n-slate-10"
-              >
-                <th scope="col" class="py-2 font-520 text-start">
+              <tr class="text-xs text-n-slate-11">
+                <th scope="col" class="py-2 font-medium text-start">
                   {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.DAYS_DATE') }}
                 </th>
                 <th
                   v-if="!withoutSpend"
                   scope="col"
-                  class="py-2 font-520 text-end"
+                  class="py-2 font-medium text-end"
                 >
                   {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_SPEND') }}
                 </th>
-                <th scope="col" class="py-2 font-520 text-end">
+                <th scope="col" class="py-2 font-medium text-end">
                   {{
                     $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.LEGEND_CONVERSATIONS')
                   }}
@@ -629,7 +626,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
                 data-ad-detail-day
                 class="border-0 border-t border-solid border-n-weak text-n-slate-12"
               >
-                <th scope="row" class="py-2 font-420 text-start">
+                <th scope="row" class="py-2 font-normal text-start">
                   {{ day.label }}
                 </th>
                 <td v-if="!withoutSpend" class="py-2 text-end">
@@ -645,14 +642,12 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       <div
         v-if="withoutSpend"
         data-ad-detail-people
-        class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
+        class="flex flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
       >
-        <h4
-          class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
-        >
+        <h4 class="m-0 text-sm font-semibold text-n-slate-11">
           {{ $t(`${SEM_LOGIN_AD}.PEOPLE`) }}
         </h4>
-        <p v-if="!people.length" class="m-0 text-sm font-420 text-n-slate-11">
+        <p v-if="!people.length" class="m-0 text-sm text-n-slate-11">
           {{ $t(`${SEM_LOGIN_AD}.EMPTY`) }}
         </p>
         <ul v-else class="flex flex-col gap-2 p-0 m-0 list-none">
@@ -661,23 +656,25 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             :key="person.conversation_id"
             data-ad-detail-person
             :data-situation="situation(person)"
-            class="flex flex-wrap items-center gap-4 px-4 py-3 border border-solid rounded-lg border-n-weak"
+            class="flex flex-wrap items-center gap-4 rounded-xl px-4 py-3 ring-1 ring-inset ring-n-weak"
           >
             <span class="min-w-0 basis-full sm:basis-0 sm:flex-1">
-              <span class="block text-sm font-520 truncate text-n-slate-12">
+              <span
+                class="block text-sm font-semibold truncate text-n-slate-12"
+              >
                 {{
                   person.title ||
                   $t('CRM_KANBAN.META_ADS_HUB.SEM_LOGIN.NO_NAME')
                 }}
               </span>
               <span
-                class="flex flex-wrap items-center text-xs font-420 gap-x-2 text-n-slate-10"
+                class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-n-slate-10"
               >
                 <span v-if="personDay(person)">{{ personDay(person) }}</span>
                 <span v-if="person.stage_name">{{ person.stage_name }}</span>
                 <span
                   data-ad-detail-situation
-                  class="px-1.5 rounded font-520"
+                  class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4"
                   :class="SITUATION_CLASSES[situation(person)]"
                 >
                   {{ situationText(person) }}
@@ -687,7 +684,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             <router-link
               v-if="person.conversation_id"
               :to="conversationLink(person.conversation_id)"
-              class="inline-flex items-center px-3 text-[13px] font-440 no-underline border border-solid rounded-lg min-h-11 border-n-weak text-n-slate-12 hover:bg-n-alpha-1"
+              class="inline-flex min-h-11 items-center gap-2 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 no-underline ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
             >
               {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_CONVERSATION') }}
             </router-link>
@@ -698,16 +695,16 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       <div
         v-else
         data-ad-detail-quotes
-        class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
+        class="flex flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
       >
         <h4
           ref="quotesHeading"
           tabindex="-1"
-          class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11 scroll-mt-4 focus:outline-none"
+          class="m-0 text-sm font-semibold text-n-slate-11 scroll-mt-4 focus:outline-none"
         >
           {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.QUOTES_TITLE') }}
         </h4>
-        <p v-if="!quotes.length" class="m-0 text-sm font-420 text-n-slate-11">
+        <p v-if="!quotes.length" class="m-0 text-sm text-n-slate-11">
           {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.QUOTES_EMPTY') }}
         </p>
         <ul v-else class="flex flex-col gap-2 p-0 m-0 list-none">
@@ -715,21 +712,23 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             v-for="card in quotes"
             :key="card.card_id"
             :data-ad-detail-quote="card.card_id"
-            class="flex flex-wrap items-center gap-4 px-4 py-3 border border-solid rounded-lg border-n-weak"
+            class="flex flex-wrap items-center gap-4 rounded-xl px-4 py-3 ring-1 ring-inset ring-n-weak"
           >
             <!-- No celular o título ocupa a linha toda e o valor e o botão descem; a partir de sm, dividem a linha. -->
             <span class="min-w-0 basis-full sm:basis-0 sm:flex-1">
-              <span class="block text-sm font-520 truncate text-n-slate-12">
+              <span
+                class="block text-sm font-semibold truncate text-n-slate-12"
+              >
                 {{ card.title }}
               </span>
               <span
-                class="flex flex-wrap items-center text-xs font-420 gap-x-2 text-n-slate-10"
+                class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-n-slate-10"
               >
                 <span v-if="card.stage_name">{{ card.stage_name }}</span>
                 <span
                   v-if="card.status === 'won'"
                   data-ad-detail-quote-won
-                  class="px-1.5 rounded font-520 bg-n-teal-3 text-n-teal-11"
+                  class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 bg-n-teal-3 text-n-teal-11"
                 >
                   {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.WON') }}
                 </span>
@@ -742,15 +741,13 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
                 </span>
               </span>
             </span>
-            <span
-              class="text-base font-interDisplay font-520 tabular-nums text-n-slate-12"
-            >
+            <span class="text-base font-semibold tabular-nums text-n-slate-12">
               {{ fmt(card.value) }}
             </span>
             <router-link
               v-if="card.conversation_id"
               :to="conversationLink(card.conversation_id)"
-              class="inline-flex items-center px-3 text-[13px] font-440 no-underline border border-solid rounded-lg min-h-11 border-n-weak text-n-slate-12 hover:bg-n-alpha-1"
+              class="inline-flex min-h-11 items-center gap-2 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 no-underline ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
             >
               {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_CONVERSATION') }}
             </router-link>

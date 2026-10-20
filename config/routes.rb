@@ -369,6 +369,8 @@ Rails.application.routes.draw do
             end
             # Anúncios da Meta F4 (#1100): ação do dia e mensagem sugerida pela IA; resumo e alerta no WhatsApp.
             scope 'meta_ads_connection' do
+              # Relatório baixado (#1960): PDF ou planilha do painel no período.
+              get :report, to: 'meta_ads_reports#show'
               post :daily_action, to: 'meta_ads_ai#daily_action'
               post :quote_message, to: 'meta_ads_ai#quote_message'
               get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'

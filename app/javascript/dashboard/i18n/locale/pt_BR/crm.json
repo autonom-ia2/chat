@@ -2722,6 +2722,17 @@
           "NO_ANSWER": "Sem resposta",
           "WON": "Ganha",
           "LOST": "Perdida"
+        },
+        "REPORT": {
+          "BUTTON": "Baixar relatório",
+          "TITLE": "Baixar o relatório",
+          "DESCRIPTION": "Últimos {days} dias, com os mesmos números da tela.",
+          "PDF_TITLE": "PDF para apresentar",
+          "PDF_HINT": "Páginas prontas para mostrar ou mandar para alguém.",
+          "SHEET_TITLE": "Planilha para trabalhar os números",
+          "SHEET_HINT": "Abre no Excel ou no Google Planilhas, com cada conversa.",
+          "CONFIRM": "Baixar",
+          "ERROR": "Não deu para baixar agora. Tente de novo."
         }
       },
       "AD_DETAIL": {

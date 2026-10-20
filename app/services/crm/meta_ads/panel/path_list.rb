@@ -12,7 +12,8 @@
 # que a pessoa já veria na lista de conversas; o total conta essas.
 #
 # Sem conexão (Anúncios sem login, #1960), `scope[:account]` diz a conta; `scope[:ad_id]` limita as conversas às de
-# um anúncio (as pessoas do anúncio por dentro); `scope[:report]` reaproveita o Report já montado (mesma coorte).
+# um anúncio (as pessoas do anúncio por dentro); `scope[:report]` reaproveita o Report já montado (mesma coorte);
+# `scope[:limit]` troca o LIST_LIMIT (o relatório baixado leva a lista inteira).
 class Crm::MetaAds::Panel::PathList
   STEPS = %w[conversations quotes sales slow_replies].freeze
   LIST_LIMIT = 50
@@ -24,12 +25,13 @@ class Crm::MetaAds::Panel::PathList
     @step = step
     @visible = visible
     @ad_id = scope[:ad_id]&.to_s
+    @limit = scope[:limit] || LIST_LIMIT
     @report = scope[:report] || Crm::MetaAds::Panel::Report.new(connection, days: days, account: scope[:account])
   end
 
   def payload
     rows = only_visible(send(:"#{@step}_rows"))
-    shown = rows.first(LIST_LIMIT)
+    shown = rows.first(@limit)
     names = contact_names(shown.reject { |_id, card| card&.title.present? }.map(&:first))
     { step: @step, days: @report.days, total: rows.size, items: shown.map { |id, card| item(id, card, names) } }
   end

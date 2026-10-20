@@ -218,5 +218,20 @@ RSpec.describe 'Anúncios da Meta com meta_ads_view', type: :request do
       get "#{path}/panel_ad", params: { ad_id: '120254710362980416' }, headers: auth_headers(atende)
       expect(response.parsed_body.dig('ad', 'people').pluck('conversation_id')).to eq([minha.id])
     end
+
+    it 'baixa o relatório com os totais da conta e, na lista de conversas, só as da caixa dela' do
+      atende = pessoa_com(%w[meta_ads_view conversation_manage])
+      de_anuncio(dela).contact.update!(name: 'Pessoa da caixa dela')
+      de_anuncio(alheia).contact.update!(name: 'Pessoa da outra caixa')
+
+      get "#{path}/report", params: { formato: 'planilha' }, headers: auth_headers(atende)
+
+      expect(response).to have_http_status(:ok)
+      planilha = Roo::Excelx.new(StringIO.new(response.body))
+      celulas = ->(aba) { (1..planilha.sheet(aba).last_row).flat_map { |linha| planilha.sheet(aba).row(linha) } }
+      expect(celulas.call(0)).to include(I18n.t('meta_ads_report.summary.conversations'), 2)
+      expect(celulas.call(2)).to include('Pessoa da caixa dela')
+      expect(celulas.call(2)).not_to include('Pessoa da outra caixa')
+    end
   end
 end

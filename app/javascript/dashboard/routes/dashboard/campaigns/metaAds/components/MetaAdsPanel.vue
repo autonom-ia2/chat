@@ -19,6 +19,7 @@ import MetaAdsAdDetail from './MetaAdsAdDetail.vue';
 import MetaAdsDailyAction from './MetaAdsDailyAction.vue';
 import MetaAdsPathList from './MetaAdsPathList.vue';
 import MetaAdsQuoteMessage from './MetaAdsQuoteMessage.vue';
+import MetaAdsReportButton from './MetaAdsReportButton.vue';
 
 // Anúncios da Meta (#1088, F3a): o painel do dia a dia do mockup aprovado. Uma frase com o dinheiro, a ação do
 // dia com o porquê, o caminho investido → conversas → propostas → vendas, cada anúncio por venda com o veredito
@@ -279,30 +280,33 @@ onMounted(() => {
 <template>
   <section data-meta-ads-panel class="flex flex-col gap-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="m-0 text-sm font-420 text-n-slate-11">
+      <p class="m-0 text-sm font-normal text-n-slate-11">
         {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_HINT', { days: days }) }}
       </p>
-      <div
-        role="group"
-        :aria-label="$t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_LABEL')"
-        class="flex gap-1 p-1 rounded-lg bg-n-alpha-1"
-      >
-        <button
-          v-for="period in PERIODS"
-          :key="period"
-          type="button"
-          :data-panel-period="period"
-          :aria-pressed="period === days"
-          class="px-4 text-[13px] font-520 border-0 rounded-md min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-          :class="
-            period === days
-              ? 'bg-n-solid-1 text-n-slate-12 shadow-[0_1px_2px_rgba(0,0,0,0.06)]'
-              : 'bg-transparent text-n-slate-11 hover:text-n-slate-12'
-          "
-          @click="choosePeriod(period)"
+      <div class="flex flex-wrap items-center gap-2">
+        <MetaAdsReportButton v-if="!sample && panel" :days="days" />
+        <div
+          role="group"
+          :aria-label="$t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_LABEL')"
+          class="flex gap-1 rounded-2xl bg-n-alpha-1 p-1"
         >
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD', { days: period }) }}
-        </button>
+          <button
+            v-for="period in PERIODS"
+            :key="period"
+            type="button"
+            :data-panel-period="period"
+            :aria-pressed="period === days"
+            class="min-h-11 rounded-xl border-0 px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+            :class="
+              period === days
+                ? 'bg-n-solid-1 text-n-slate-12 shadow-sm'
+                : 'bg-transparent text-n-slate-11 hover:text-n-slate-12'
+            "
+            @click="choosePeriod(period)"
+          >
+            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD', { days: period }) }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -321,14 +325,14 @@ onMounted(() => {
     <template v-else-if="panel">
       <div
         data-panel-hero
-        class="relative flex flex-col gap-5 p-6 overflow-hidden text-white rounded-xl sm:p-8 bg-[#0D2344]"
+        class="relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-n-heroi px-5 py-5 text-white ring-1 ring-inset ring-white/10 dark:bg-n-heroi-escuro sm:px-7 sm:py-6"
       >
         <span
           aria-hidden="true"
-          class="absolute rounded-full pointer-events-none -end-16 -top-24 size-72 border-[2.5rem] border-n-blue-9 opacity-10"
+          class="pointer-events-none absolute -end-16 -top-24 size-72 rounded-full border-[3rem] border-n-blue-9 opacity-15"
         />
         <p
-          class="relative flex flex-wrap m-0 text-[13px] font-420 text-white/65 gap-x-3 gap-y-1"
+          class="relative m-0 flex flex-wrap gap-x-3 gap-y-1 text-sm font-medium text-white/70"
           aria-live="polite"
         >
           <span>
@@ -355,7 +359,7 @@ onMounted(() => {
         </p>
         <h3
           data-panel-headline
-          class="relative max-w-3xl m-0 font-interDisplay text-[28px] sm:text-[36px] font-520 leading-[1.12] tracking-[-0.02em] text-white text-balance tabular-nums"
+          class="relative m-0 max-w-3xl text-balance text-2xl font-bold leading-tight tracking-tight text-white tabular-nums sm:text-3xl"
         >
           {{ headline }}
         </h3>
@@ -376,11 +380,9 @@ onMounted(() => {
         v-if="stalled.length"
         v-show="showStalled"
         data-panel-stalled
-        class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
+        class="flex flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
       >
-        <h4
-          class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
-        >
+        <h4 class="m-0 text-sm font-semibold text-n-slate-11">
           {{
             $t(
               'CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_TITLE',
@@ -401,13 +403,15 @@ onMounted(() => {
             v-for="card in stalled"
             :key="card.id"
             data-panel-stalled-card
-            class="flex flex-wrap items-center gap-4 px-4 py-3 border border-solid rounded-lg border-n-weak"
+            class="flex flex-wrap items-center gap-4 rounded-xl px-4 py-3 ring-1 ring-inset ring-n-weak"
           >
             <span class="flex-1 min-w-0">
-              <span class="block text-sm font-520 truncate text-n-slate-12">
+              <span
+                class="block text-sm font-semibold truncate text-n-slate-12"
+              >
                 {{ card.title }}
               </span>
-              <span class="block text-xs font-420 text-n-slate-10">
+              <span class="block text-xs font-normal text-n-slate-10">
                 {{
                   $t('CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_SINCE', {
                     time: waitingFor(card.waiting_since),
@@ -415,15 +419,13 @@ onMounted(() => {
                 }}
               </span>
             </span>
-            <span
-              class="font-interDisplay text-base font-520 tabular-nums text-n-slate-12"
-            >
+            <span class="text-base font-semibold tabular-nums text-n-slate-12">
               {{ fmt(card.value) }}
             </span>
             <router-link
               v-if="card.conversation_id"
               :to="conversationLink(card.conversation_id)"
-              class="inline-flex items-center px-3 text-[13px] font-460 no-underline border border-solid rounded-lg min-h-11 border-n-weak text-n-slate-12 hover:bg-n-alpha-1"
+              class="inline-flex min-h-11 items-center gap-2 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 no-underline ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
             >
               {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_CONVERSATION') }}
             </router-link>
@@ -433,7 +435,7 @@ onMounted(() => {
         <p
           v-if="stalledMore > 0"
           data-panel-stalled-more
-          class="m-0 text-[13px] font-420 text-n-slate-11"
+          class="m-0 text-sm font-normal text-n-slate-11"
         >
           {{
             $t('CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_MORE', {
@@ -444,30 +446,33 @@ onMounted(() => {
       </div>
 
       <div
-        class="flex flex-col gap-5 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
+        class="flex flex-col gap-5 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
       >
-        <h4
-          class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
-        >
+        <h4 class="m-0 text-sm font-semibold text-n-slate-11">
           {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_TITLE') }}
         </h4>
         <ol
-          class="grid grid-cols-2 p-0 m-0 list-none gap-y-6 gap-x-4 xl:gap-x-0"
+          class="m-0 grid list-none grid-cols-2 gap-2 p-0"
           :class="withoutSpend ? 'xl:grid-cols-3' : 'xl:grid-cols-4'"
         >
           <li
             v-for="step in path"
             :key="step.key"
             :data-panel-path="step.key"
-            class="relative flex flex-col gap-1.5 rounded-lg xl:px-6 xl:first:ps-0 xl:[&:not(:first-child)]:border-0 xl:[&:not(:first-child)]:border-s xl:[&:not(:first-child)]:border-solid xl:[&:not(:first-child)]:border-n-weak has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
+            class="relative flex min-w-0 flex-col gap-1 rounded-xl bg-n-solid-1 px-4 py-3 ring-1 ring-inset ring-n-weak has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
+            :class="
+              PATH_LISTS[step.key] && !sample
+                ? 'transition hover:bg-n-alpha-1 hover:ring-n-slate-6'
+                : ''
+            "
           >
             <span
-              class="font-interDisplay text-[30px] font-520 leading-none tracking-[-0.02em] tabular-nums"
+              class="text-xl font-semibold tabular-nums sm:text-2xl"
               :class="step.win ? 'text-n-teal-11' : 'text-n-slate-12'"
             >
               {{ step.value }}
             </span>
-            <span class="text-[13px] font-440 text-n-slate-11">
+            <span class="text-sm text-n-slate-11">
               {{
                 $t(
                   `CRM_KANBAN.META_ADS_HUB.PANEL.PATH.${step.key}`,
@@ -482,19 +487,19 @@ onMounted(() => {
                 }}
               </template>
             </span>
-            <span v-if="step.note" class="text-xs font-420 text-n-slate-10">
+            <span v-if="step.note" class="text-xs text-n-slate-10">
               {{ step.note }}
             </span>
             <span
               v-if="step.response"
               data-panel-response-time
-              class="flex flex-col text-xs font-420 text-n-slate-10"
+              class="flex flex-col text-xs text-n-slate-10"
             >
               <span>
                 {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.LABEL') }}
                 <span
                   data-panel-response-time-value
-                  class="font-520 tabular-nums"
+                  class="font-semibold tabular-nums"
                   :class="
                     step.response.slow ? 'text-n-amber-11' : 'text-n-slate-12'
                   "
@@ -533,7 +538,7 @@ onMounted(() => {
                   step: $t(`CRM_KANBAN.META_ADS_HUB.PANEL.PATH.${step.key}`, 2),
                 })
               "
-              class="inline-flex items-center self-start gap-1 p-0 text-[13px] font-440 bg-transparent border-0 min-h-11 text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:content-['']"
+              class="inline-flex min-h-11 items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
               @click="toggleList(PATH_LISTS[step.key])"
             >
               {{
@@ -556,7 +561,7 @@ onMounted(() => {
         <ul class="flex flex-wrap gap-2 p-0 m-0 list-none tabular-nums">
           <li
             v-if="totals.return_per_real != null"
-            class="px-2.5 py-1 text-[13px] font-440 rounded-md bg-n-alpha-1 text-n-slate-12"
+            class="rounded-lg bg-n-alpha-1 px-2.5 py-1 text-sm font-medium text-n-slate-12"
           >
             {{
               $t('CRM_KANBAN.META_ADS_HUB.PANEL.RETURN', {
@@ -565,7 +570,7 @@ onMounted(() => {
             }}
           </li>
           <li
-            class="px-2.5 py-1 text-[13px] font-440 rounded-md bg-n-alpha-1 text-n-slate-12"
+            class="rounded-lg bg-n-alpha-1 px-2.5 py-1 text-sm font-medium text-n-slate-12"
           >
             {{
               $t(
@@ -594,11 +599,9 @@ onMounted(() => {
       </div>
 
       <div
-        class="flex flex-col gap-5 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
+        class="flex flex-col gap-5 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
       >
-        <h4
-          class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
-        >
+        <h4 class="m-0 text-sm font-semibold text-n-slate-11">
           {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_TITLE') }}
         </h4>
         <p v-if="!ads.length" class="m-0 text-sm text-n-slate-11">
@@ -612,7 +615,7 @@ onMounted(() => {
             v-for="ad in ads"
             :key="ad.ad_id"
             :data-panel-ad="ad.ad_id"
-            class="relative flex flex-col overflow-hidden border border-solid rounded-lg border-n-weak bg-n-solid-1 hover:border-n-strong has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
+            class="relative flex flex-col overflow-hidden rounded-xl bg-n-solid-1 ring-1 ring-n-weak transition hover:ring-n-slate-6 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
           >
             <div class="flex justify-center bg-n-alpha-1">
               <img
@@ -641,7 +644,7 @@ onMounted(() => {
                 class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2"
               >
                 <span
-                  class="text-sm font-520 leading-snug break-words text-n-slate-12 line-clamp-2"
+                  class="text-sm font-semibold leading-snug break-words text-n-slate-12 line-clamp-2"
                 >
                   {{
                     ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME')
@@ -650,7 +653,7 @@ onMounted(() => {
                 <span
                   v-if="ad.verdict"
                   :data-verdict="ad.verdict"
-                  class="flex-none px-2 py-0.5 text-[11px] font-520 uppercase tracking-[0.06em] rounded whitespace-nowrap"
+                  class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 flex-none whitespace-nowrap"
                   :class="VERDICT_CLASSES[ad.verdict]"
                 >
                   {{
@@ -667,19 +670,19 @@ onMounted(() => {
                   class="flex flex-col gap-1 min-w-0"
                   :class="{ 'col-span-2': stat.key === 'SPEND' }"
                 >
-                  <dt class="text-xs font-440 text-n-slate-10">
+                  <dt class="text-xs text-n-slate-11">
                     {{
                       $t(`CRM_KANBAN.META_ADS_HUB.PANEL.AD_STATS.${stat.key}`)
                     }}
                   </dt>
                   <dd
-                    class="m-0 text-base whitespace-nowrap font-interDisplay font-520 tabular-nums text-n-slate-12"
+                    class="m-0 whitespace-nowrap text-base font-semibold tabular-nums text-n-slate-12"
                   >
                     {{ stat.value }}
                   </dd>
                 </div>
               </dl>
-              <p class="m-0 text-xs font-420 tabular-nums text-n-slate-10">
+              <p class="m-0 text-xs font-normal tabular-nums text-n-slate-10">
                 {{
                   ad.cost_per_sale != null
                     ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.PER_SALE', {
@@ -704,7 +707,7 @@ onMounted(() => {
                       ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME'),
                   })
                 "
-                class="inline-flex items-center self-start gap-1 p-0 text-[13px] font-440 bg-transparent border-0 min-h-11 text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:content-['']"
+                class="inline-flex min-h-11 items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
                 @click="rememberAd(String(ad.ad_id))"
               >
                 {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD') }}

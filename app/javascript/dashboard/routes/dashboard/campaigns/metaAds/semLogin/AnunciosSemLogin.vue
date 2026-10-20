@@ -42,12 +42,12 @@ const sample = days => examplePanel(days, t);
     <template v-else-if="screen === 'example'">
       <div
         data-anuncios-exemplo
-        class="flex flex-wrap items-center justify-between gap-3 p-4 border border-solid rounded-2xl border-n-amber-7 bg-n-amber-2"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-n-amber-2 p-4 ring-1 ring-inset ring-n-amber-6"
       >
         <span class="flex flex-wrap items-center gap-3">
           <span
             data-anuncios-exemplo-selo
-            class="px-3 py-1 text-sm font-semibold rounded-full bg-n-amber-5 text-n-amber-12"
+            class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 bg-n-amber-4 text-n-amber-12"
           >
             {{ $t(`${SEM_LOGIN}.EXAMPLE.BADGE`) }}
           </span>
@@ -58,7 +58,7 @@ const sample = days => examplePanel(days, t);
         <button
           type="button"
           data-anuncios-exemplo-voltar
-          class="inline-flex items-center gap-2 px-4 text-sm border border-solid rounded-xl min-h-11 font-520 border-n-amber-7 bg-n-solid-1 text-n-slate-12 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          class="inline-flex min-h-11 items-center gap-2 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 no-underline ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
           @click="example = false"
         >
           <span class="i-lucide-arrow-left size-4" aria-hidden="true" />

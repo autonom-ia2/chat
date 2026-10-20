@@ -2721,6 +2721,17 @@
           "NO_ANSWER": "No answer",
           "WON": "Won",
           "LOST": "Lost"
+        },
+        "REPORT": {
+          "BUTTON": "Download report",
+          "TITLE": "Download the report",
+          "DESCRIPTION": "Last {days} days, with the same numbers as the screen.",
+          "PDF_TITLE": "PDF to present",
+          "PDF_HINT": "Ready pages to show or send to someone.",
+          "SHEET_TITLE": "Spreadsheet to work the numbers",
+          "SHEET_HINT": "Opens in Excel or Google Sheets, with every conversation.",
+          "CONFIRM": "Download",
+          "ERROR": "Could not download right now. Try again."
         }
       },
       "AD_DETAIL": {
