@@ -236,6 +236,7 @@ Rails.application.routes.draw do
           end
           namespace :campaign_journey do
             resources :campaigns, only: [:create]
+            resources :drafts, only: %i[index show create update destroy] # #1898
             resources :contact_origins, only: [:show]
             resources :campaign_names, only: [:index]
             resources :recipient_previews, only: [:create]

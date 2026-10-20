@@ -5,6 +5,9 @@
 #
 # Com vários assuntos por mensagem (#1693, flag `crm_avaliar_toda_mensagem`) há mais uma opção, "varios_assuntos": a
 # mensagem toca dois ou mais pedidos de uma vez. Quem lista quais é o modelo maior (Crm::Subjects::Reviewer).
+#
+# Com a coluna do card novo (#1910, flag `crm_assunto_na_etapa`), a pergunta leva também as etapas que podem receber
+# card novo em cada funil (Crm::Subjects::Etapa). Elas vão só ao modelo maior: a pergunta ao Jev fica igual.
 class Crm::Subjects::Question
   SEM_ASSUNTO = 'sem_assunto'.freeze
   MESMO_ASSUNTO = 'mesmo_assunto'.freeze
@@ -26,13 +29,14 @@ class Crm::Subjects::Question
   attr_reader :account, :atual
 
   # cards: os cards abertos da conversa, assunto atual primeiro. atual: o assunto atual (aberto) ou nil.
-  # varios: a mensagem pode tocar mais de um assunto (#1693).
-  def initialize(account:, pipelines:, cards:, atual:, varios: false)
+  # varios: a mensagem pode tocar mais de um assunto (#1693). etapas: o card novo nasce na coluna escolhida (#1910).
+  def initialize(account:, pipelines:, cards:, atual:, varios: false, etapas: false) # rubocop:disable Metrics/ParameterLists
     @account = account
     @pipelines = pipelines
     @cards = cards
     @atual = atual
     @varios = varios
+    @etapas = etapas
   end
 
   def pergunta = PERGUNTA
@@ -61,12 +65,48 @@ class Crm::Subjects::Question
     opcoes.find { |opcao| opcao.chave == chave }
   end
 
+  # Há coluna a escolher (#1910): a flag e ao menos um funil com etapa candidata.
+  def etapas?
+    @etapas && candidatas.values.any?(&:present?)
+  end
+
+  # As etapas candidatas de cada funil, pela chave do pedido novo nele, para o modelo maior.
+  def etapas
+    candidatas.filter_map do |pipeline, stages|
+      next if stages.empty?
+
+      { pipeline: "novo_#{pipeline.id}", name: pipeline.name, kind: pipeline.kind, stages: stages.map { |stage| etapa_para_o_modelo(stage) } }
+    end
+  end
+
+  def chaves_de_etapa
+    [Crm::Subjects::Etapa::NENHUMA, *candidatas.values.flatten.map { |stage| Crm::Subjects::Etapa.chave(stage) }]
+  end
+
+  # A etapa escolhida para o pedido novo no funil, ou nil (1ª etapa). Etapa de outro funil vale como "nenhuma", e fica no
+  # log: o modelo escolheu a coluna de um funil e o pedido de outro.
+  def etapa(pipeline, chave)
+    return unless etapas? && pipeline && chave.present? && chave != Crm::Subjects::Etapa::NENHUMA
+
+    escolhida = candidatas.fetch(pipeline, []).find { |stage| Crm::Subjects::Etapa.chave(stage) == chave }
+    Rails.logger.info("[crm][assunto] etapa de outro funil funil=#{pipeline.id} etapa=#{chave}") if escolhida.nil?
+    escolhida
+  end
+
   # O assunto atual ainda não tem nome: um pedido novo no funil dele dá nome a ele, em vez de criar outro card.
   def atual_sem_nome?
     @atual.present? && !Crm::Subjects::Naming.named?(@atual)
   end
 
   private
+
+  def etapa_para_o_modelo(stage)
+    { key: Crm::Subjects::Etapa.chave(stage), name: stage.name, criteria: Crm::Ai::Config.stage_ai_criteria(stage) }
+  end
+
+  def candidatas
+    @candidatas ||= @pipelines.index_with { |pipeline| Crm::Subjects::Etapa.candidatas(pipeline) }
+  end
 
   def opcoes
     @opcoes ||= [
