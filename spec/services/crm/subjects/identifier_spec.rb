@@ -284,6 +284,23 @@ RSpec.describe Crm::Subjects::Identifier do
     expect(requests.first['state'].to_json).to include('Onix')
   end
 
+  # #1924: o pedido ficava fora das 5 últimas mensagens depois de algumas idas e vindas com a equipe.
+  it 'o Jev e o modelo maior leem o pedido feito antes das 5 últimas mensagens da conversa' do
+    create_card(title: 'Joana Lima')
+    requests = stub_jev("novo_#{comercial.id}", confidence: 0.5)
+    stub_review(resposta: "novo_#{comercial.id}", titulo: 'Cancelamento do plano')
+    incoming('Quero cancelar o meu plano')
+    4.times do |indice|
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: "Equipe #{indice}")
+    end
+
+    identify(incoming('Pode ser hoje?'))
+
+    expect(requests.first['state']['messages'].first).to eq('Customer: Quero cancelar o meu plano')
+    expect(cliente).to have_received(:create).with(hash_including(input: include('Quero cancelar o meu plano'),
+                                                                  instructions: include(Crm::Subjects::Question::REGRA_DO_TIPO)))
+  end
+
   it 'retry do job com a decisão já reservada não pergunta nem aplica de novo' do
     create_card(title: 'Joana Lima')
     requests = stub_jev('sem_assunto')
