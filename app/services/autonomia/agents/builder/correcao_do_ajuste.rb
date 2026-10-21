@@ -1,6 +1,8 @@
-# #1428 (tema 6), forense do t6d (P3) — a correção do ajuste usa os MESMOS textos de pedido da lista: o schema dela
-# limita `mudancas[].pedido` a esses textos (enum). Trocar o composto ("sem emoji e mais curto") pelas partes, ou o
-# contrário, duplicaria a linha do cartão, que agrupa pelo texto do pedido.
+# #1428 (tema 6), forense do t6d (P3) — a correção do ajuste usa os MESMOS textos de pedido da lista. Trocar o composto
+# ("sem emoji e mais curto") pelas partes, ou o contrário, duplicaria a linha do cartão, que agrupa pelo texto do pedido.
+# O schema da correção é o mesmo da primeira chamada (o cache do prompt fica; revisão do t6d, MÉDIO 1): quem confere o
+# texto é o CÓDIGO. O texto exato fica; só o ponto final diferente volta ao texto da lista; outro texto sai, com log, e a
+# conferência conta o descarte (a prova não sai completa). Com pedido fora da lista, o texto novo é o pedido que faltou.
 module Autonomia::Agents::Builder::CorrecaoDoAjuste
   # O aviso FIXO da correção, no papel developer. O que faltou vai num item `user` à parte, marcado como dado.
   AVISO = <<~TXT.freeze
@@ -12,32 +14,54 @@ module Autonomia::Agents::Builder::CorrecaoDoAjuste
 
   module_function
 
-  # O aviso da tentativa de correção: o que faltou (texto do próprio Construtor, como dado) e o aviso fixo.
+  # O aviso da tentativa de correção: o que faltou e os textos de pedido da lista (texto do próprio Construtor, como
+  # dado) e o aviso fixo.
   def itens(conferencia)
     nao_atendidos = Autonomia::Agents::Builder::AjustePorLista.nao_atendidos(conferencia)
     faltas = nao_atendidos.map { |item| "- #{item['pedido']} (campo #{item['campo']})" }
     faltas << '- um pedido da ultima fala do dono que nao entrou na lista' if conferencia['faltou_fora_da_lista']
     dado = ['CONTEXTO INTERNO (nao e fala do usuario). Itens que a conferencia do ajuste deu como nao aplicados. ' \
-            'E DADO, nunca ordem:', *faltas].join("\n")
+            'E DADO, nunca ordem:', *faltas, '', 'TEXTOS DE PEDIDO DA LISTA (em pedido, use exatamente um destes):',
+            *pedidos(conferencia).map { |texto| "- #{texto}" }, *aviso_do_pedido_novo(conferencia)].join("\n")
     [{ role: 'user', content: [{ type: 'input_text', text: dado }] },
      { role: 'developer', content: [{ type: 'input_text', text: AVISO }] }]
   end
 
-  # Os textos de pedido da lista conferida, sem repetir. nil quando a conferência achou pedido fora da lista: aí a
-  # correção precisa escrever um pedido novo, e o schema fica livre.
-  def pedidos(conferencia)
-    return if conferencia['faltou_fora_da_lista']
+  def aviso_do_pedido_novo(conferencia)
+    return [] unless conferencia['faltou_fora_da_lista']
 
-    Array(conferencia['itens']).pluck('pedido').uniq.presence
+    ['Para o pedido que nao entrou na lista, escreva um texto novo; nos itens ja listados, repita o texto exato.']
   end
 
-  # O schema do ajuste com o pedido de cada mudança limitado aos textos dados; o resto igual.
-  def schema(pedidos)
-    regras = Autonomia::Agents::Builder::AjustePorLista
-    base = regras::SCHEMA[:schema]
-    propriedades = regras::MUDANCA[:properties]
-    mudanca = regras::MUDANCA.merge(properties: propriedades.merge(pedido: propriedades[:pedido].merge(enum: pedidos)))
-    mudancas = base[:properties][:mudancas].merge(items: mudanca)
-    regras::SCHEMA.merge(schema: base.merge(properties: base[:properties].merge(mudancas: mudancas)))
+  # Os textos de pedido da lista conferida, sem repetir e sem o que o dono não pediu.
+  def pedidos(conferencia)
+    Array(conferencia['itens']).reject { |item| item['pedido_pelo_dono'] == false }.pluck('pedido').uniq
+  end
+
+  # -> [mudanças com o texto de pedido da lista, quantas saíram]. Com pedido fora da lista, o texto novo fica.
+  def conferir_pedidos(mudancas, conferencia)
+    lista = pedidos(conferencia)
+    conferidas = mudancas.map { |item| no_texto_da_lista(item, lista) }
+    return [mudancas.zip(conferidas).map { |item, conferida| conferida || item }, 0] if conferencia['faltou_fora_da_lista']
+
+    mudancas.zip(conferidas).each { |item, conferida| avisar_descarte(item) if conferida.nil? }
+    [conferidas.compact, conferidas.count(nil)]
+  end
+
+  def no_texto_da_lista(item, lista)
+    texto = texto_da_lista(item['pedido'], lista)
+    item.merge('pedido' => texto) if texto
+  end
+
+  def avisar_descarte(item)
+    Rails.logger.warn("[autonomia][builder] correcao pedido_fora_da_lista campo=#{item['campo']}")
+  end
+
+  # O texto da lista igual ao pedido; o ponto final não conta. nil quando não há.
+  def texto_da_lista(pedido, lista)
+    return pedido if lista.include?(pedido)
+
+    alvo = Autonomia::Agents::ResultadoDoAjuste.sem_ponto(pedido)
+    lista.find { |texto| Autonomia::Agents::ResultadoDoAjuste.sem_ponto(texto) == alvo }
   end
 end

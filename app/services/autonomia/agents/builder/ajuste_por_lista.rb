@@ -104,8 +104,9 @@ module Autonomia::Agents::Builder::AjustePorLista
     uma com o pedido que ela testa (veja a descricao do campo).
     ONDE CADA PEDIDO ENTRA:
     - tamanho, formato ou estilo da resposta (ex.: "responda em no maximo 2 frases", "sem emoji"): tone E instruction,
-      um item para cada, e tambem greeting e fallback_message quando o texto atual deles contradiz o pedido (ex.: "sem
-      emoji" e a saudacao tem emoji).
+      um item para cada, e tambem greeting e fallback_message so quando o texto atual deles contradiz o pedido de forma
+      literal e verificavel: emoji quando o pedido e sem emoji; tamanho quando o pedido limita o tamanho. Tom e
+      tratamento NUNCA mudam greeting nem fallback_message.
     - quando passar para uma pessoa da equipe, ou o que passar (ex.: "preco passa para a equipe"): handoff_rule, e
       tambem instruction quando muda o que o agente faz na conversa.
     - assunto que o agente nao pode tratar ou limite (ex.: "nao fale de preco"): guardrails E instruction.

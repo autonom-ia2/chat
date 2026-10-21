@@ -28,11 +28,8 @@ module Autonomia::Agents::Builder::AjusteConferido
     @ajuste_da_fase2 = adjust_mode? && Autonomia::Agents::Fase2.ligada?(@account)
   end
 
-  # Na correção, o schema dela (os pedidos limitados aos textos da lista: FechamentoDoAjuste#schema_da_correcao).
   def builder_schema
-    return self.class::BUILDER_SCHEMA unless ajuste_da_fase2?
-
-    @schema_da_correcao || regras_do_ajuste::SCHEMA
+    ajuste_da_fase2? ? regras_do_ajuste::SCHEMA : self.class::BUILDER_SCHEMA
   end
 
   def regras_do_ajuste
@@ -63,6 +60,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     @campos_truncados = []
     @explicacao_da_correcao = nil
     @opcoes_da_correcao = []
+    @itens_descartados = 0
     @pendencia_anterior = pending_question
     @turnos_da_pendencia = @thread.state.to_h['pendencia_turnos'].to_i
     # O "tira isso" só vai enquanto o Desfazer do último ajuste ainda vale, decidido no começo do turno, antes da escrita

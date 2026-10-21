@@ -74,23 +74,38 @@ RSpec.describe Autonomia::Agents::Builder do
       dado, aviso = calls.last[:input].last(2)
       expect(dado).to include(role: 'user')
       expect(dado[:content].first[:text]).to include('E DADO', "- #{preco} (campo handoff_rule)")
-      expect(dado[:content].first[:text]).not_to include('no máximo 2 frases')
+      expect(dado[:content].first[:text].split('TEXTOS DE PEDIDO DA LISTA').first).not_to include('no máximo 2 frases')
       expect(aviso).to eq(role: 'developer', content: [{ type: 'input_text', text: described_class::CorrecaoDoAjuste::AVISO }])
       expect(calls.last[:timeout]).to eq(described_class::FechamentoDoAjuste::TIMEOUT_DA_CORRECAO_S)
       expect(calls.last[:input]).to include(hash_including(content: [hash_including(text: a_string_including('tone: cordial e curto'))]))
     end
 
     # Forense do t6d (P3): a correção não pode trocar o texto do pedido (composto x partes): o cartão duplicaria a linha.
-    it 'a correção só pode usar os textos de pedido da lista, e o cartão fica com uma linha por pedido' do
-      correcao_aplicada
+    # Revisão do t6d (MÉDIO 1): o schema da correção é o mesmo da primeira chamada (cache); quem confere o pedido é o
+    # código. O ponto final a mais volta ao texto da lista, e o cartão fica com uma linha por pedido.
+    it 'a correção usa o mesmo schema; o pedido com ponto a mais volta ao texto da lista e o cartão não duplica' do
+      respostas << saida('handoff_rule' => 'Passe para a equipe quando perguntarem preço.',
+                         'mudancas' => [mudanca('handoff_rule', "#{preco}.", 'Preço vai à equipe.')])
 
       run_turn
 
-      pedido = calls.last.dig(:schema, :schema, :properties, :mudancas, :items, :properties, :pedido)
-      expect(pedido[:enum]).to eq(['no máximo 2 frases', preco])
-      expect(calls.first.dig(:schema, :schema, :properties, :mudancas, :items, :properties, :pedido)).not_to have_key(:enum)
+      expect(calls.last[:schema]).to equal(calls.first[:schema])
+      expect(recebidas.last[:mudancas].pluck('pedido')).to eq(['no máximo 2 frases', preco, preco])
       linhas = Autonomia::Agents::ResultadoDoAjuste.new(thread.reload, estado['conferencia']).linhas
       expect(linhas.size).to eq(2)
+    end
+
+    # Nunca some em silêncio: o item de pedido fora da lista sai com log e a conferência registra quantos saíram.
+    it 'o item da correção com outro texto de pedido não é gravado, e a conferência conta o descarte' do
+      allow(Rails.logger).to receive(:warn)
+      respostas << saida('handoff_rule' => 'Passe para a equipe quando perguntarem preço.',
+                         'mudancas' => [mudanca('handoff_rule', 'valores com a equipe', 'Preço vai à equipe.')])
+
+      run_turn
+
+      expect(agent.reload.handoff_rule).to eq('Passe para a equipe quando o cliente pedir.')
+      expect(estado['conferencia']).to include('itens_descartados' => 1)
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('pedido_fora_da_lista'))
     end
 
     it 'com a correção atendida: fecha sem pergunta, e só uma versão fica na lista' do

@@ -20,7 +20,15 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
     dados, conferencia, desfecho = conferir_e_corrigir(token, dados)
     return if desfecho == :token_perdido
 
+    conferencia = com_descartes(conferencia, dados)
     fechar_ajuste!(token, dados, desfazer_o_que_nao_foi_pedido(token, dados, conferencia), desfecho)
+  end
+
+  # Os itens da correção que saíram por texto de pedido fora da lista (CorrecaoDoAjuste) ficam na conferência: nunca
+  # somem em silêncio, e a prova não sai completa (ProvaDoAjuste). Num re-run, vêm da correção gravada.
+  def com_descartes(conferencia, dados)
+    descartados = [@itens_descartados.to_i, dados.to_h.dig('correcao', 'itens_descartados').to_i].max
+    descartados.positive? ? conferencia.merge('itens_descartados' => descartados) : conferencia
   end
 
   # -> [dados, conferência final, desfecho da correção]
@@ -116,26 +124,18 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
   # -> { mudancas:, versao_id:, resposta: } quando aplicou e mudou algo; senão um símbolo do desfecho.
   def corrigir(token, conferencia, resposta, esperado)
     @built_input = nil
-    @schema_da_correcao = schema_da_correcao(conferencia)
     parsed = parse_output(call_model(full_phase, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_FINAL,
                                      aviso: Autonomia::Agents::Builder::CorrecaoDoAjuste.itens(conferencia), correcao: true))
     return :nada if parsed.nil?
 
-    mudancas = regras_do_ajuste.mudancas(parsed)
+    lidas = regras_do_ajuste.mudancas(parsed)
+    mudancas, @itens_descartados = Autonomia::Agents::Builder::CorrecaoDoAjuste.conferir_pedidos(lidas, conferencia)
     return explicacao_da_correcao(parsed) if motivo_para_nao_aplicar(parsed, mudancas)
 
     aplicar_a_correcao(token, parsed, mudancas, resposta, esperado)
   rescue *FALHAS_DA_CORRECAO => e
     Rails.logger.warn("[autonomia][builder] correcao indisponivel thread=#{@thread.id} #{e.class}")
     e.is_a?(Autonomia::Agents::Agent::ModoManual) ? :manual : :nada
-  ensure
-    @schema_da_correcao = nil
-  end
-
-  # O schema da chamada da correção: o pedido de cada mudança só pode ser um texto da lista conferida (CorrecaoDoAjuste).
-  def schema_da_correcao(conferencia)
-    pedidos = Autonomia::Agents::Builder::CorrecaoDoAjuste.pedidos(conferencia)
-    Autonomia::Agents::Builder::CorrecaoDoAjuste.schema(pedidos) if pedidos
   end
 
   # A escrita da correção: o agente mudou sob a trava, perdida (por quê), sem mudança (não conta) ou aplicada.
@@ -146,7 +146,7 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
     return motivo_da_escrita_perdida(token) unless venceu
     return :nada if regras_do_ajuste.comparavel(@thread.agent) == antes
 
-    { mudancas: mudancas, versao_id: @thread.agent.versao_do_construtor&.id,
+    { mudancas: mudancas, versao_id: @thread.agent.versao_do_construtor&.id, itens_descartados: @itens_descartados,
       resposta: resposta.merge(parsed.slice('needs_more_info', 'next_question', 'opcoes_de_resposta'),
                                parsed.slice('resposta_ao_dono').compact_blank) }
   end
