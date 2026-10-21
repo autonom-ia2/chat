@@ -60,10 +60,24 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
                                'testes' => [{ 'pedido' => 0, 'veredito' => 'ok' }, { 'pedido' => 1, 'veredito' => 'ok' }])
   end
 
-  # Número fora de 1 até o total, ou que não é inteiro: descartado. Pedido repetido vale uma vez só, e nao prevalece.
-  it 'número fora da faixa é descartado; repetido vira um teste só, e o nao prevalece' do
-    juiz_responde([{ indice: 0, testes: [teste(7, 'ok'), teste(0, 'ok'), teste(-1, 'ok'), teste('1', 'ok')] },
-                   { indice: 1, testes: [teste(2, 'ok'), teste(2, 'nao'), teste(2, 'ok')] }])
+  # Revisão do t6d (MÉDIO 1): número fora de 1 até o total, ou que não é inteiro, é saída malformada: a prova fica
+  # indisponível, como no veredito inválido. Descartar o teste do nao deixaria a pergunta ok (✓ falso).
+  it 'número fora da faixa num teste nao: nil, e não um ok com o teste que sobrou' do
+    juiz_responde([{ indice: 0, testes: [teste(0, 'nao'), teste(1, 'ok')] }, { indice: 1, testes: [] }])
+
+    expect(julgar).to be_nil
+  end
+
+  it 'número acima do total, negativo ou que não é inteiro: nil' do
+    [7, -1, '1', 1.5].each do |numero|
+      juiz_responde([{ indice: 0, testes: [teste(numero, 'ok')] }, { indice: 1, testes: [] }])
+
+      expect(julgar).to be_nil, "numero #{numero.inspect}"
+    end
+  end
+
+  it 'pedido repetido vira um teste só, e o nao prevalece' do
+    juiz_responde([{ indice: 0, testes: [] }, { indice: 1, testes: [teste(2, 'ok'), teste(2, 'nao'), teste(2, 'ok')] }])
 
     expect(julgar).to eq([{ 'veredito' => 'nao_testa', 'testes' => [] },
                           { 'veredito' => 'nao', 'testes' => [{ 'pedido' => 1, 'veredito' => 'nao' }] }])
@@ -86,7 +100,9 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     expect(described_class::INSTRUCAO.squish).to include(
       'Um pedido de assunto ou de gatilho (ex.: "preco passa para a equipe") so entra em testes quando a mensagem do ' \
       'cliente traz esse assunto: uma resposta curta sobre horario nao testa o pedido do preco.',
-      'Uma resposta pode testar mais de um pedido ao mesmo tempo, cada um com o seu veredito'
+      'Uma resposta pode testar mais de um pedido ao mesmo tempo, cada um com o seu veredito',
+      'Um pedido de gatilho por situacao (ex.: "quando nao souber, passe para a equipe") entra em testes quando a ' \
+      'mensagem cria essa situacao: o cliente pergunta algo que o agente nao tem como saber.'
     )
   end
 
@@ -122,6 +138,8 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
 
     expect { expect_schema_estrito(sem_tipo) }.to raise_error(RSpec::Expectations::ExpectationNotMetError)
     expect { expect_schema_estrito(lista_sem_item) }.to raise_error(RSpec::Expectations::ExpectationNotMetError)
+    lista_que_aceita_nulo = { type: 'object', additionalProperties: false, required: %w[a], properties: { a: { type: %w[array null] } } }
+    expect { expect_schema_estrito(lista_que_aceita_nulo) }.to raise_error(RSpec::Expectations::ExpectationNotMetError)
   end
 
   it 'faltando um índice: nil' do
