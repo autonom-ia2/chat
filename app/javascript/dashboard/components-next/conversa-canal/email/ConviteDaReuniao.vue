@@ -291,11 +291,13 @@ const responder = async escolha => {
           <Icon icon="i-lucide-clock-3" class="size-4 text-n-slate-11" />
           <span class="font-medium">{{ dia }}</span>
           <span class="whitespace-nowrap">
-            <span class="text-n-slate-9">·</span>
+            <span class="text-n-slate-9" aria-hidden="true">
+              {{ t('CONVERSA_CANAL.EMAIL.CONVITE.SEPARADOR') }}
+            </span>
             {{ horario }}
           </span>
           <span v-if="duracao" class="whitespace-nowrap text-n-slate-11">
-            ({{ duracao }})
+            {{ t('CONVERSA_CANAL.EMAIL.CONVITE.DURACAO', { duracao }) }}
           </span>
           <span
             v-if="convite.fusoIncerto && !diaInteiro"
@@ -350,7 +352,7 @@ const responder = async escolha => {
           v-if="aMais > 0"
           class="flex size-7 items-center justify-center rounded-full bg-n-alpha-2 text-[0.6875rem] font-medium text-n-slate-11 ring-2 ring-n-solid-1"
         >
-          +{{ aMais }}
+          {{ t('CONVERSA_CANAL.EMAIL.CONVITE.A_MAIS', { n: aMais }) }}
         </span>
       </div>
       <p class="min-w-0 text-xs leading-snug text-n-slate-11">
