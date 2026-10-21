@@ -19,7 +19,7 @@ class EmailCampaignTemplatePolicy < ApplicationPolicy
 
   class Scope < ApplicationPolicy::Scope
     def resolve
-      scope.where(account_id: [account.id, nil])
+      scope.for_account(account)
     end
   end
 
