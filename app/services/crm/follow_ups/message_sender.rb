@@ -125,10 +125,10 @@ class Crm::FollowUps::MessageSender
   end
 
   def session_content_attributes
-    attributes = { crm_follow_up_id: @follow_up.id }
-    # Só marca quando o texto realmente depende do Híbrido (a janela oficial pode ter reaberto até o envio).
-    attributes[:crm_follow_up_transport] = WHATSAPP_API_TRANSPORT if whatsapp_api_requested? && !whatsapp_window.can_send_session_message?
-    attributes
+    # Só marca o transporte quando o texto realmente depende do Híbrido (a janela oficial pode ter reaberto até o envio).
+    return follow_up_marks unless whatsapp_api_requested? && !whatsapp_window.can_send_session_message?
+
+    follow_up_marks.merge(crm_follow_up_transport: WHATSAPP_API_TRANSPORT)
   end
 
   def create_template_message(conversation, sender)
@@ -156,11 +156,10 @@ class Crm::FollowUps::MessageSender
       ActionController::Parameters.new(
         content: rendered_body,
         private: false,
-        content_attributes: {
-          crm_follow_up_id: @follow_up.id,
+        content_attributes: follow_up_marks.merge(
           crm_follow_up_template_id: template.id,
           crm_follow_up_send_mode: 'template'
-        }
+        )
       ),
       literal_content: true
     ).perform
@@ -182,13 +181,16 @@ class Crm::FollowUps::MessageSender
         content: metadata['message_body'].to_s.strip.presence,
         private: false,
         template_params: native_template_params,
-        content_attributes: {
-          crm_follow_up_id: @follow_up.id,
-          crm_follow_up_send_mode: 'template'
-        }
+        content_attributes: follow_up_marks.merge(crm_follow_up_send_mode: 'template')
       ),
       literal_template_params: true
     ).perform
+  end
+
+  # A marca do follow-up em toda mensagem que ele manda. `crm_follow_up_kind` (#2048) é o tipo do follow-up ('message',
+  # 'call', ...): o painel mostra "Retorno automático" para 'call' e "Follow-up automático" para o resto.
+  def follow_up_marks
+    { crm_follow_up_id: @follow_up.id, crm_follow_up_kind: @follow_up.follow_up_type }
   end
 
   def load_api_template!(conversation)
