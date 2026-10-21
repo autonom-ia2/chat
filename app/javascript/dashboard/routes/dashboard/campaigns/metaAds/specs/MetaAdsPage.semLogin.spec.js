@@ -145,4 +145,40 @@ describe('MetaAdsPage · Anúncios sem login (#1960)', () => {
       true
     );
   });
+
+  // #2054: o passo aberto por "Alterar" tem "Voltar", que fecha o passo e volta à aba.
+  it('a step opened from Change has Back, which goes back to the Connection tab', async () => {
+    routing.query = { aba: 'conexao' };
+    reply(CONNECTED);
+    const wrapper = await mountPage();
+
+    wrapper.findComponent({ name: 'MetaAdsSummary' }).vm.$emit('open', 3);
+    await flushPromises();
+    expect(
+      wrapper.findComponent({ name: 'MetaAdsDestinationsStep' }).exists()
+    ).toBe(true);
+
+    await wrapper.find('[data-meta-ads-step-back]').trigger('click');
+
+    expect(
+      wrapper.findComponent({ name: 'MetaAdsDestinationsStep' }).exists()
+    ).toBe(false);
+    expect(wrapper.findComponent({ name: 'MetaAdsSummary' }).exists()).toBe(
+      true
+    );
+    expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(false);
+  });
+
+  it('the first setup has no Back on the steps', async () => {
+    reply({ configured: false, whatsapp_result: { enabled: false } });
+    flags.value = {};
+    const wrapper = await mountPage();
+    wrapper.findComponent({ name: 'MetaAdsHero' }).vm.$emit('start');
+    await flushPromises();
+
+    expect(wrapper.findComponent({ name: 'MetaAdsConnectStep' }).exists()).toBe(
+      true
+    );
+    expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(false);
+  });
 });

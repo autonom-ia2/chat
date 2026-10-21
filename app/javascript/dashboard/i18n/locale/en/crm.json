@@ -2260,6 +2260,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
+        "BACK": "Back",
         "TITLE": "Ads",
         "SUBTITLE": "See which ads bring conversations and sales.",
         "LOADING": "Loading…",
