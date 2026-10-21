@@ -19,7 +19,8 @@
         "WON_VALUE_INFO": "Valor total dos planos fechados no período, por moeda."
       },
       "META_SYNC": {
-        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o plano, os dados aparecem aqui."
+        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o plano, os dados aparecem aqui.",
+        "SUBTITLE": "Conversões enviadas de volta à Meta para otimizar seus anúncios: clique para WhatsApp pela conexão do WhatsApp, planos fechados pela landing page pelo Pixel do site."
       }
     },
     "PIPELINE_DRAWER": {
@@ -140,6 +141,13 @@
     },
     "TOPO": {
       "SEM_META_EU": "Seu mês até agora: {n} plano fechado, {valor} | Seu mês até agora: {n} planos fechados, {valor}"
+    },
+    "BLOCO": {
+      "VENDENDO": "Fechando planos"
+    },
+    "ESTIMADO": "Alguns planos fechados antes deste registro foram contados para o responsável atual do card.",
+    "COMO_CONTAMOS": {
+      "REGRA_ANTIGAS": "Planos fechados antes deste registro contam para o responsável atual do card."
     }
   },
   "MODELOS_WHATSAPP": {

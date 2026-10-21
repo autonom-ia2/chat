@@ -19,7 +19,8 @@
         "WON_VALUE_INFO": "Total value of plans closed in the period, by currency."
       },
       "META_SYNC": {
-        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a plan, the data shows up here."
+        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a plan, the data shows up here.",
+        "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, plans closed on the landing page through the website Pixel."
       }
     },
     "PIPELINE_DRAWER": {
@@ -140,6 +141,13 @@
     },
     "TOPO": {
       "SEM_META_EU": "Your month so far: {n} plan closed, {valor} | Your month so far: {n} plans closed, {valor}"
+    },
+    "BLOCO": {
+      "VENDENDO": "Closing plans"
+    },
+    "ESTIMADO": "Some plans closed before this record were counted for the card's current responsible person.",
+    "COMO_CONTAMOS": {
+      "REGRA_ANTIGAS": "Plans closed before this record count for the card's current responsible person."
     }
   },
   "MODELOS_WHATSAPP": {

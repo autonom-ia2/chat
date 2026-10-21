@@ -44,7 +44,8 @@
       },
       "SUBTITLE": "How the funnel is doing, stage by stage. See what closed, what did not, and who served: AI or a person.",
       "META_SYNC": {
-        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a policy, the data shows up here."
+        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a policy, the data shows up here.",
+        "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, policies closed on the landing page through the website Pixel."
       }
     },
     "CONFIRM": {
@@ -212,6 +213,13 @@
     },
     "TOPO": {
       "SEM_META_EU": "Your month so far: {n} policy closed, {valor} | Your month so far: {n} policies closed, {valor}"
+    },
+    "BLOCO": {
+      "VENDENDO": "Closing policies"
+    },
+    "ESTIMADO": "Some policies closed before this record were counted for the card's current responsible person.",
+    "COMO_CONTAMOS": {
+      "REGRA_ANTIGAS": "Policies closed before this record count for the card's current responsible person."
     }
   },
   "MODELOS_WHATSAPP": {
