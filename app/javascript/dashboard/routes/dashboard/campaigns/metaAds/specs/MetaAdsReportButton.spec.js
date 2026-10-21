@@ -25,7 +25,7 @@ const DialogStub = {
 
 const mountButton = () =>
   mount(MetaAdsReportButton, {
-    props: { days: 30 },
+    props: { period: '30d' },
     global: { stubs: { Dialog: DialogStub } },
   });
 
@@ -82,7 +82,7 @@ describe('Anúncios · baixar relatório (#1960)', () => {
     await wrapper.find('[data-dialog-confirm]').trigger('click');
     await flushPromises();
 
-    expect(CrmMetaAdsConnectionAPI.report).toHaveBeenCalledWith('pdf', 30);
+    expect(CrmMetaAdsConnectionAPI.report).toHaveBeenCalledWith('pdf', '30d');
     expect(clicked).toEqual(['anuncios-2026-10-20.pdf']);
     expect(close).toHaveBeenCalled();
   });
@@ -101,7 +101,10 @@ describe('Anúncios · baixar relatório (#1960)', () => {
     expect(
       wrapper.find('[data-report-format="planilha"]').attributes('aria-pressed')
     ).toBe('true');
-    expect(CrmMetaAdsConnectionAPI.report).toHaveBeenCalledWith('planilha', 30);
+    expect(CrmMetaAdsConnectionAPI.report).toHaveBeenCalledWith(
+      'planilha',
+      '30d'
+    );
     expect(clicked).toEqual(['anuncios.xlsx']);
   });
 

@@ -12,7 +12,8 @@ import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/us
 // os mesmos números da tela. As listas de pessoas só vão no arquivo de quem pode exportar o CRM (crm_export, dado
 // pessoal em lote); sem isso o servidor manda só os números, e o diálogo avisa.
 const props = defineProps({
-  days: { type: Number, required: true },
+  // Período da tela (#2011): o arquivo sai com os mesmos números.
+  period: { type: String, required: true },
 });
 
 const { t } = useI18n();
@@ -55,7 +56,7 @@ const baixar = async () => {
   try {
     const { data, headers } = await CrmMetaAdsConnectionAPI.report(
       formato.value,
-      props.days
+      props.period
     );
     const reserva = formato.value === 'pdf' ? 'anuncios.pdf' : 'anuncios.xlsx';
     salvar(data, nomeDoArquivo(headers, reserva));
@@ -82,7 +83,9 @@ const baixar = async () => {
     ref="dialog"
     :title="t('CRM_KANBAN.META_ADS_HUB.PANEL.REPORT.TITLE')"
     :description="
-      t('CRM_KANBAN.META_ADS_HUB.PANEL.REPORT.DESCRIPTION', { days })
+      t('CRM_KANBAN.META_ADS_HUB.PANEL.REPORT.DESCRIPTION', {
+        name: t(`CRM_KANBAN.META_ADS_HUB.PANEL.PERIODS.${period}.NAME`),
+      })
     "
     :confirm-button-label="t('CRM_KANBAN.META_ADS_HUB.PANEL.REPORT.CONFIRM')"
     :is-loading="baixando"

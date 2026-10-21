@@ -2591,10 +2591,45 @@
         },
         "HEADLINE": "Você investiu {spend}. Vieram {conversations} e {sales}.",
         "HEADLINE_WHATSAPP": "Pelo WhatsApp, vieram {conversations} de anúncio e {sales}.",
-        "PERIOD": "{days} dias",
         "PERIOD_LABEL": "Período",
-        "PERIOD_CTX": "Últimos {days} dias",
-        "PERIOD_HINT": "O que aconteceu com as pessoas que chegaram por anúncio nos últimos {days} dias.",
+        "PERIODS": {
+          "7d": {
+            "BUTTON": "7 dias",
+            "NAME": "Últimos 7 dias",
+            "IN": "nos últimos 7 dias"
+          },
+          "30d": {
+            "BUTTON": "30 dias",
+            "NAME": "Últimos 30 dias",
+            "IN": "nos últimos 30 dias"
+          },
+          "90d": {
+            "BUTTON": "90 dias",
+            "NAME": "Últimos 90 dias",
+            "IN": "nos últimos 90 dias"
+          },
+          "this_month": {
+            "NAME": "Este mês",
+            "IN": "neste mês"
+          },
+          "last_month": {
+            "NAME": "Mês passado",
+            "IN": "no mês passado"
+          },
+          "all": {
+            "NAME": "Desde o início",
+            "IN": "desde o primeiro anúncio"
+          }
+        },
+        "MORE_PERIODS": "Mais períodos",
+        "PERIOD_LOADING": "Carregando o período…",
+        "PERIOD_ERROR": "Não deu para trazer este período agora. Tente de novo.",
+        "PERIOD_EMPTY": {
+          "TITLE": "Ninguém chegou por anúncio {when}.",
+          "SEE_ALL": "Ver desde o primeiro anúncio"
+        },
+        "PERIOD_CTX": "{name} · {range}",
+        "PERIOD_HINT": "O que aconteceu com as pessoas que chegaram por anúncio {when}.",
         "TODAY": "O que fazer hoje",
         "SEVERAL_ADS": "vários anúncios",
         "ACTION": {
@@ -2739,7 +2774,7 @@
         "REPORT": {
           "BUTTON": "Baixar relatório",
           "TITLE": "Baixar o relatório",
-          "DESCRIPTION": "Últimos {days} dias, com os mesmos números da tela.",
+          "DESCRIPTION": "{name}, com os mesmos números da tela.",
           "PDF_TITLE": "PDF para apresentar",
           "PDF_HINT": "Páginas prontas para mostrar ou mandar para alguém.",
           "SHEET_TITLE": "Planilha para trabalhar os números",
