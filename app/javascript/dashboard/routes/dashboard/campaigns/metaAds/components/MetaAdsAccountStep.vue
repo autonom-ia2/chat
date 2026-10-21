@@ -16,10 +16,11 @@ const props = defineProps({
   mode: { type: String, required: true },
   partnerName: { type: String, default: 'Hub2You' },
   current: { type: Object, default: null },
+  // Aberto por "Alterar", quem abriu já mostra "Voltar" no topo (#2054): o do rodapé sai para não haver dois.
+  showBack: { type: Boolean, default: true },
 });
 
-// `switch`: trocar o jeito de conectar (passo 1). `back`: sair deste passo (quem abriu decide para onde).
-const emit = defineEmits(['saved', 'back', 'switch']);
+const emit = defineEmits(['saved', 'back']);
 
 const { t, locale } = useI18n();
 
@@ -200,7 +201,7 @@ onMounted(load);
         type="button"
         data-account-switch
         class="inline-flex items-center px-2 text-sm font-semibold bg-transparent border-0 rounded-lg min-h-11 text-n-blue-11 hover:bg-n-alpha-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-        @click="emit('switch')"
+        @click="emit('back')"
       >
         {{ $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.SWITCH') }}
       </button>
@@ -231,6 +232,7 @@ onMounted(load);
           @click="load"
         />
         <Button
+          v-if="showBack"
           class="!min-h-11 !rounded-xl"
           size="sm"
           variant="ghost"
@@ -403,6 +405,7 @@ onMounted(load);
           @click="save"
         />
         <Button
+          v-if="showBack"
           class="!min-h-11 !rounded-xl"
           variant="ghost"
           color="slate"

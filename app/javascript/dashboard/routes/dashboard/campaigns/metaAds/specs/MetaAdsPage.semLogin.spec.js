@@ -169,22 +169,37 @@ describe('MetaAdsPage · Anúncios sem login (#1960)', () => {
     expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(false);
   });
 
-  it('on the account step opened from Change, its Back leaves and Switch goes to step 1', async () => {
+  it('on the account step opened from Change, only the top Back shows', async () => {
     routing.query = { aba: 'conexao' };
     reply(CONNECTED);
     const wrapper = await mountPage();
-    const summary = () => wrapper.findComponent({ name: 'MetaAdsSummary' });
-    const account = () => wrapper.findComponent({ name: 'MetaAdsAccountStep' });
 
-    summary().vm.$emit('open', 2);
+    wrapper.findComponent({ name: 'MetaAdsSummary' }).vm.$emit('open', 2);
     await flushPromises();
-    account().vm.$emit('back');
-    await flushPromises();
-    expect(summary().exists()).toBe(true);
 
-    summary().vm.$emit('open', 2);
-    await flushPromises();
-    account().vm.$emit('switch');
+    expect(
+      wrapper.findComponent({ name: 'MetaAdsAccountStep' }).props('showBack')
+    ).toBe(false);
+    expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(true);
+  });
+
+  it('mid first setup (connection saved, no account yet): no top Back, and the step Back goes to step 1', async () => {
+    reply({
+      configured: true,
+      status: 'active',
+      mode: 'facebook_login',
+      ad_account: null,
+      whatsapp_result: { enabled: false },
+    });
+    flags.value = {};
+    const wrapper = await mountPage();
+    const account = wrapper.findComponent({ name: 'MetaAdsAccountStep' });
+
+    expect(account.exists()).toBe(true);
+    expect(account.props('showBack')).toBe(true);
+    expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(false);
+
+    account.vm.$emit('back');
     await flushPromises();
     expect(wrapper.findComponent({ name: 'MetaAdsConnectStep' }).exists()).toBe(
       true

@@ -194,9 +194,13 @@ const connectedFromWhatsapp = async () => {
 };
 
 // "Alterar" abre um passo com a conexão já feita: "Voltar" fecha o passo sem gravar e desfaz o caminho escolhido
-// pela metade, de volta à aba em que a pessoa estava.
+// pela metade, de volta à aba em que a pessoa estava. Só quando o passo aberto não é o da vez: no meio do primeiro
+// cadastro (conexão gravada, conta ainda não escolhida) fechar o passo voltaria a ele mesmo.
 const canGoBack = computed(
-  () => Boolean(openStep.value) && Boolean(connection.value?.configured)
+  () =>
+    Boolean(openStep.value) &&
+    openStep.value !== step.value &&
+    Boolean(connection.value?.configured)
 );
 const goBack = () => {
   rememberMode(null);
@@ -362,9 +366,9 @@ onMounted(load);
               :mode="mode"
               :partner-name="partnerName"
               :current="connection"
+              :show-back="!canGoBack"
               @saved="accountSaved"
-              @switch="openStep = 1"
-              @back="canGoBack ? goBack() : (openStep = 1)"
+              @back="openStep = 1"
             />
             <MetaAdsDestinationsStep
               v-else-if="activeStep === 3"
