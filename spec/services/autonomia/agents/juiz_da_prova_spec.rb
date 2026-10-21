@@ -11,6 +11,7 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     [{ 'numero' => 1, 'pedido' => 'no máximo 2 frases', 'o_que_mudou' => ['Respostas curtas.'] },
      { 'numero' => 2, 'pedido' => 'preço passa para a equipe', 'o_que_mudou' => ['Preço vai à equipe.'] }]
   end
+  let(:agente) { { 'instruction' => 'Atenda a corretora.', 'fallback_message' => 'Vou confirmar com a equipe.' } }
   let(:itens) do
     [{ 'pergunta' => 'Quais seguros?', 'resposta' => 'Auto e vida.', 'equipe' => false },
      { 'pergunta' => 'Quanto custa?', 'resposta' => nil, 'equipe' => true }]
@@ -27,7 +28,7 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
   end
 
   def julgar
-    described_class.new(account: account).julgar(pedidos: pedidos, itens: itens)
+    described_class.new(account: account).julgar(pedidos: pedidos, itens: itens, agente: agente)
   end
 
   def teste(pedido, veredito)
@@ -104,6 +105,26 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
       'Um pedido de gatilho por situacao (ex.: "quando nao souber, passe para a equipe") entra em testes quando a ' \
       'mensagem cria essa situacao: o cliente pergunta algo que o agente nao tem como saber.'
     )
+  end
+
+  # Forense do t6d (P2): "pergunte o nome se a cliente não disse" não é testado quando ela já disse o nome.
+  it 'a instrução tira de testes o pedido com condição quando a condição não está na mensagem, e usa os campos do agente' do
+    expect(described_class::INSTRUCAO.squish).to include(
+      'Um pedido com condicao (ex.: "pergunte o nome se a cliente nao disse") so entra em testes quando a condicao esta ' \
+      'na mensagem: se a cliente ja disse o nome, o pedido de perguntar o nome nao entra.',
+      'Use O AGENTE para saber o que ele tem escrito'
+    )
+  end
+
+  it 'a entrada leva os campos do agente, rotulados como dado' do
+    juiz_responde([{ indice: 0, testes: [] }, { indice: 1, testes: [] }])
+
+    julgar
+
+    expect(cliente).to have_received(:create) do |**kwargs|
+      texto = kwargs[:input].first[:content].first[:text]
+      expect(texto).to include("O AGENTE:\n", 'Atenda a corretora.', 'Vou confirmar com a equipe.')
+    end
   end
 
   it 'outro modelo, a feature da prova, schema só de índices e testes e sem nova tentativa', :aggregate_failures do
