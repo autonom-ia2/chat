@@ -1,23 +1,40 @@
 # Changing how a live inbox connects (logins, passwords, tokens, mail servers, the API inbox webhook) swaps a
-# credential of the account: admin or integration_manage (#2027). Every other setting stays with inbox_manage.
+# credential of the account: admin or integration_manage (#2027). Every other setting stays with inbox_manage, so
+# integration_manage alone saves only how the inbox connects.
 # Only values that actually change count, because the settings forms send the whole channel back.
-# Passwords and tokens pasted from other systems only go back to administrators, so a blank one keeps what is stored.
+# Passwords and tokens pasted from other systems only go back to administrators, so a blank one keeps what is stored,
+# but only while the mail server stays the same: pointing it elsewhere asks for the password again, or the stored one
+# would be sent to a server nobody checked.
 module Api::V1::Accounts::Concerns::InboxCredentialGuard
   extend ActiveSupport::Concern
 
   CREDENTIAL_ATTRS = %w[
-    imap_login imap_password imap_address imap_port
-    smtp_login smtp_password smtp_address smtp_port smtp_domain
+    imap_enabled imap_login imap_password imap_address imap_port imap_enable_ssl imap_authentication
+    smtp_enabled smtp_login smtp_password smtp_address smtp_port smtp_domain smtp_authentication
+    smtp_enable_ssl_tls smtp_enable_starttls_auto smtp_openssl_verify_mode
     line_channel_id line_channel_secret line_channel_token
     bot_token account_sid auth_token api_key_sid api_key_secret
     provider provider_config webhook_url
   ].freeze
   SECRET_ATTRS = %w[imap_password smtp_password line_channel_secret line_channel_token bot_token auth_token api_key_secret].freeze
+  # Where each mail password is sent: changing any of these needs the password typed again.
+  SECRET_DESTINATIONS = {
+    'imap_password' => %w[imap_address imap_port imap_login imap_enable_ssl imap_authentication],
+    'smtp_password' => %w[smtp_address smtp_port smtp_login smtp_domain smtp_authentication smtp_enable_ssl_tls
+                          smtp_enable_starttls_auto smtp_openssl_verify_mode]
+  }.freeze
+
+  # Inbox settings that are not about connecting it; with them, integration_manage alone is not enough.
+  INBOX_SETTINGS_PARAMS = %i[working_hours branded_email_layout].freeze
 
   private
 
   def check_credential_change
-    check_permission_granted!('integration_manage') if credential_change_requested?
+    check_permission_granted!('inbox_manage') if inbox_settings_change_requested?
+    return unless credential_change_requested?
+
+    check_permission_granted!('integration_manage')
+    render_password_needed if stored_secret_would_move?
   end
 
   # The channel attributes this update will save, typed by the same permit the update uses, minus blank secrets.
@@ -39,6 +56,31 @@ module Api::V1::Accounts::Concerns::InboxCredentialGuard
     CREDENTIAL_ATTRS.any? do |attr|
       submitted.key?(attr) && @inbox.channel.respond_to?(attr) && changed_value?(submitted[attr], @inbox.channel.public_send(attr))
     end
+  end
+
+  def inbox_settings_change_requested?
+    INBOX_SETTINGS_PARAMS.any? { |key| params.key?(key) } || channel_setting_changed? ||
+      permitted_params.except(:channel).to_h.any? { |attr, value| changed_value?(value, @inbox.try(attr)) }
+  end
+
+  def channel_setting_changed?
+    submitted = channel_update_params
+    (submitted.keys.map(&:to_s) - CREDENTIAL_ATTRS).any? do |attr|
+      @inbox.channel.respond_to?(attr) && changed_value?(submitted[attr], @inbox.channel.public_send(attr))
+    end
+  end
+
+  # A blank mail password on a save that points the mailbox elsewhere.
+  def stored_secret_would_move?
+    submitted = permitted_params(get_channel_attributes(@inbox.channel_type))[:channel] || {}
+    SECRET_DESTINATIONS.any? do |secret, destination|
+      submitted[secret].blank? && @inbox.channel.try(secret).present? &&
+        destination.any? { |attr| submitted.key?(attr) && changed_value?(submitted[attr], @inbox.channel.try(attr)) }
+    end
+  end
+
+  def render_password_needed
+    render json: { message: I18n.t('errors.inboxes.password_needed') }, status: :unprocessable_entity
   end
 
   def changed_value?(submitted, current)

@@ -61,6 +61,12 @@ class InboxPolicy < ApplicationPolicy
     inbox_manage?
   end
 
+  # The inbox settings save (PATCH /inboxes/:id) also takes integration_manage, only to change how the inbox connects;
+  # anything else in it still needs inbox_manage (Api::V1::Accounts::Concerns::InboxCredentialGuard, #2027).
+  def update_connection?
+    inbox_manage? || @account_user.permission_granted?('integration_manage')
+  end
+
   def destroy?
     inbox_manage?
   end

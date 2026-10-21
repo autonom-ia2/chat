@@ -823,8 +823,8 @@
     "controller": "api/v1/accounts/inboxes#destroy",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:101",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:102",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -833,8 +833,8 @@
     "controller": "api/v1/accounts/inboxes#avatar",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:30",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:31",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -843,8 +843,8 @@
     "controller": "api/v1/accounts/inboxes#disable_whatsapp_api_campaigns",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:91",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:92",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -6948,12 +6948,12 @@
     "controller": "api/v1/accounts/inboxes#update",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:50",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:236",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:140",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:222",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:197",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:51",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:239",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:141",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:225",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:200",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -17605,8 +17605,8 @@
     "controller": "api/v1/accounts/inboxes#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:35",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:236",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:36",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:239",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:113"
     ],
     "sem_corpo": false
@@ -17617,7 +17617,7 @@
     "modelo": "Inbox",
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:17",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17626,8 +17626,8 @@
     "controller": "api/v1/accounts/inboxes#enable_whatsapp_api_campaigns",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:82",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:83",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17637,7 +17637,7 @@
     "modelo": "Inbox",
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:8",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17647,7 +17647,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:51",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17657,7 +17657,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_secret_management.rb:4",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17667,7 +17667,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_secret_management.rb:10",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17682,8 +17682,8 @@
       "leitura crua sem tipo: agent_bot (repassada a AgentBot.accessible_to(Current.account).find)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:122"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:123"
     ],
     "sem_corpo": false
   },
@@ -17705,7 +17705,7 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:45",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:51",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:50",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -17722,7 +17722,7 @@
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:30",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:35",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -17732,7 +17732,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:10",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -25408,12 +25408,12 @@
     "controller": "api/v1/accounts/inboxes#update",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:50",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:236",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:140",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:222",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:197",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:51",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:239",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:141",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:225",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:200",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -25430,7 +25430,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:60",
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:61",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:117"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },

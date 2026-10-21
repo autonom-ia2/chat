@@ -141,6 +141,62 @@ RSpec.describe 'Integration and token permissions (#2027)', :aggregate_failures,
       expect(response.body).not_to include('guardada')
     end
 
+    it 'asks for the password again before pointing the mailbox to another server' do
+      email_inbox = create(:inbox, account: account, channel: create(:channel_email, account: account, imap_enabled: true,
+                                                                                     imap_address: 'imap.loja.test', imap_password: 'guardada'))
+      path = "/api/v1/accounts/#{account.id}/inboxes/#{email_inbox.id}"
+      headers = headers_for(member_with(%w[inbox_view integration_manage]))
+      allow(Net::IMAP).to receive(:new)
+
+      patch path, params: { channel: { imap_enabled: true, imap_address: 'imap.outro.test', imap_password: '' } }, headers: headers, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(email_inbox.channel.reload.imap_address).to eq('imap.loja.test')
+      expect(Net::IMAP).not_to have_received(:new)
+
+      patch path, params: { channel: { imap_enabled: true, imap_address: 'imap.loja.test', imap_enable_ssl: false } }, headers: headers, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(email_inbox.channel.reload.imap_enable_ssl).to be(true)
+    end
+
+    it 'lets integration_manage alone change how the mailbox connects, and nothing else' do
+      email_inbox = create(:inbox, account: account, name: 'Contato',
+                                   channel: create(:channel_email, account: account, imap_address: 'imap.loja.test', imap_password: 'guardada'))
+      path = "/api/v1/accounts/#{account.id}/inboxes/#{email_inbox.id}"
+      headers = headers_for(member_with(%w[inbox_view integration_manage]))
+
+      patch path, params: { name: 'Contato', channel: { imap_address: 'imap.outro.test', imap_password: 'nova' } }, headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(email_inbox.channel.reload.imap_address).to eq('imap.outro.test')
+
+      patch path, params: { name: 'Outro nome' }, headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+      expect(email_inbox.reload.name).to eq('Contato')
+    end
+
+    it 'keeps inbox_manage from turning off the mail encryption' do
+      email_inbox = create(:inbox, account: account, channel: create(:channel_email, account: account, smtp_enable_ssl_tls: true))
+
+      patch "/api/v1/accounts/#{account.id}/inboxes/#{email_inbox.id}",
+            params: { channel: { smtp_enable_ssl_tls: false } }, headers: headers_for(member_with(%w[inbox_manage])), as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(email_inbox.channel.reload.smtp_enable_ssl_tls).to be(true)
+    end
+
+    it 'does not save a mail server that fails the check' do
+      email_inbox = create(:inbox, account: account, channel: create(:channel_email, account: account, imap_enabled: true,
+                                                                                     imap_address: 'imap.loja.test', imap_password: 'guardada'))
+      allow(Net::IMAP).to receive(:new).and_raise(SocketError)
+
+      patch "/api/v1/accounts/#{account.id}/inboxes/#{email_inbox.id}",
+            params: { name: 'Novo nome', channel: { imap_enabled: true, imap_address: 'imap.outro.test', imap_password: 'nova' } },
+            headers: headers_for(admin), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(email_inbox.channel.reload.imap_address).to eq('imap.loja.test')
+      expect(email_inbox.reload.name).not_to eq('Novo nome')
+    end
+
     it 'shows how the mailbox connects to integration_manage, without the password, and the disconnection to everyone' do
       email_inbox = create(:inbox, account: account, channel: create(:channel_email, account: account, imap_address: 'imap.loja.test',
                                                                                      imap_password: 'guardada', imap_enabled: true))
@@ -180,6 +236,16 @@ RSpec.describe 'Integration and token permissions (#2027)', :aggregate_failures,
 
       get path, headers: headers_for(member_with(%w[token_manage])), as: :json
       expect(response).to have_http_status(:ok)
+    end
+
+    it 'leaves the Google conversions link to token_manage' do
+      path = "/api/v1/accounts/#{account.id}/crm/google_conversion_feed"
+
+      post path, headers: headers_for(member_with(%w[integration_manage crm_admin])), as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      post path, headers: headers_for(member_with(%w[token_manage crm_view])), as: :json
+      expect(response).to have_http_status(:created)
     end
 
     it 'never mints a token above what the person holds' do
