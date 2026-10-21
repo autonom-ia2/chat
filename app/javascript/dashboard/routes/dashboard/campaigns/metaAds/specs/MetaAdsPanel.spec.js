@@ -133,12 +133,19 @@ const mountPanel = async (options = {}) => {
       stubs: {
         Spinner: true,
         MetaAdsReportButton: {
-          props: ['days'],
-          template: '<span data-report-stub :data-days="days" />',
+          props: ['period'],
+          template: '<span data-report-stub :data-period="period" />',
         },
         RouterLink: {
           props: ['to'],
           template: '<a :href="to"><slot /></a>',
+        },
+        // "Mais períodos" é a escolha padrão do produto; aqui só o valor e a troca.
+        ChoiceSelect: {
+          props: ['modelValue', 'options'],
+          emits: ['update:modelValue'],
+          template:
+            '<div :data-value="modelValue"><button v-for="option in options" :key="option.value" :data-more-option="option.value" @click="$emit(\'update:modelValue\', option.value)" /></div>',
         },
       },
     },
@@ -178,15 +185,15 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
   it('offers the report of the period next to the period choice (#1960)', async () => {
     const wrapper = await mountPanel();
 
-    expect(wrapper.find('[data-report-stub]').attributes('data-days')).toBe(
-      '30'
+    expect(wrapper.find('[data-report-stub]').attributes('data-period')).toBe(
+      '30d'
     );
   });
 
   it('tells the money story in one sentence and shows the path', async () => {
     const wrapper = await mountPanel();
 
-    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledWith(30);
+    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledWith('30d');
     expect(wrapper.find('[data-panel-headline]').text()).toContain(
       'PANEL.HEADLINE'
     );
@@ -251,7 +258,7 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
       },
     ]);
     const wrapper = await mountPanel();
-    await wrapper.find('[data-panel-period="7"]').trigger('click');
+    await wrapper.find('[data-panel-period="7d"]').trigger('click');
     await flushPromises();
 
     const button = wrapper.find('[data-panel-action-button]');
@@ -260,7 +267,7 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
 
     expect(CrmMetaAdsConnectionAPI.panelList).toHaveBeenCalledWith(
       'slow_replies',
-      30
+      '30d'
     );
     expect(
       wrapper.find('[data-panel-path-list]').attributes('data-path-list-step')
@@ -426,7 +433,7 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     await flushPromises();
     expect(CrmMetaAdsConnectionAPI.panelList).toHaveBeenLastCalledWith(
       'quotes',
-      30
+      '30d'
     );
     expect(open('quotes').attributes('aria-expanded')).toBe('true');
     expect(wrapper.findAll('[data-panel-path-list]')).toHaveLength(1);
@@ -435,7 +442,7 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     await flushPromises();
     expect(CrmMetaAdsConnectionAPI.panelList).toHaveBeenLastCalledWith(
       'sales',
-      30
+      '30d'
     );
     expect(open('quotes').attributes('aria-expanded')).toBe('false');
     expect(wrapper.findAll('[data-panel-path-list]')).toHaveLength(1);
@@ -626,13 +633,66 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
   it('changes the period and asks again', async () => {
     const wrapper = await mountPanel();
 
-    await wrapper.find('[data-panel-period="7"]').trigger('click');
+    await wrapper.find('[data-panel-period="7d"]').trigger('click');
     await flushPromises();
 
-    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenLastCalledWith(7);
+    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenLastCalledWith('7d');
     expect(
-      wrapper.find('[data-panel-period="7"]').attributes('aria-pressed')
+      wrapper.find('[data-panel-period="7d"]').attributes('aria-pressed')
     ).toBe('true');
+  });
+
+  it('offers this month, last month and all time under "Mais períodos" (#2011)', async () => {
+    const wrapper = await mountPanel();
+    const more = wrapper.find('[data-panel-more-periods]');
+
+    expect(
+      more
+        .findAll('[data-more-option]')
+        .map(o => o.attributes('data-more-option'))
+    ).toEqual(['this_month', 'last_month', 'all']);
+    expect(more.attributes('data-value')).toBe('');
+
+    await more.find('[data-more-option="last_month"]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenLastCalledWith(
+      'last_month'
+    );
+    expect(
+      wrapper.find('[data-panel-more-periods]').attributes('data-value')
+    ).toBe('last_month');
+    expect(
+      wrapper.find('[data-panel-period="30d"]').attributes('aria-pressed')
+    ).toBe('false');
+    expect(wrapper.find('[data-report-stub]').attributes('data-period')).toBe(
+      'last_month'
+    );
+  });
+
+  it('shows one sentence and the way to all time when nobody came from ads in the period (#2011)', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          source: 'whatsapp',
+          period: '30d',
+          from: '2026-09-22',
+          to: '2026-10-21',
+          totals: { ...PANEL.totals, spend: null, conversations: 0 },
+          ads: [],
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-period-empty]').exists()).toBe(true);
+    expect(wrapper.find('[data-panel-path]').exists()).toBe(false);
+
+    await wrapper.find('[data-panel-period-empty-all]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenLastCalledWith('all');
   });
 
   it('drops the answer of a period that is no longer chosen', async () => {
@@ -650,8 +710,8 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
         },
       });
 
-    await wrapper.find('[data-panel-period="7"]').trigger('click');
-    await wrapper.find('[data-panel-period="30"]').trigger('click');
+    await wrapper.find('[data-panel-period="7d"]').trigger('click');
+    await wrapper.find('[data-panel-period="30d"]').trigger('click');
     await flushPromises();
     slow({
       data: {
@@ -690,7 +750,7 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     await flushPromises();
 
     expect(routing.replace).toHaveBeenCalledWith({ query: { anuncio: '1' } });
-    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', 30);
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', '30d');
     expect(wrapper.find('[data-ad-detail]').exists()).toBe(true);
     expect(wrapper.find('[data-panel-hero]').exists()).toBe(false);
     expect(wrapper.find('[data-panel-ad="1"]').exists()).toBe(false);
@@ -701,7 +761,7 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     const wrapper = await mountPanel();
 
     expect(wrapper.find('[data-ad-detail]').exists()).toBe(true);
-    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', 30);
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', '30d');
 
     await wrapper.find('[data-ad-detail-back]').trigger('click');
 
@@ -716,10 +776,10 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     routing.route.query = { anuncio: '1' };
     const wrapper = await mountPanel();
 
-    await wrapper.find('[data-panel-period="7"]').trigger('click');
+    await wrapper.find('[data-panel-period="7d"]').trigger('click');
     await flushPromises();
 
-    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenLastCalledWith('1', 7);
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenLastCalledWith('1', '7d');
   });
 
   it('closes the ad when the address loses ?anuncio, like the side menu to the same page', async () => {

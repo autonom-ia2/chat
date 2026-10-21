@@ -3,10 +3,18 @@ pt_BR:
   meta_ads_report:
     file_prefix: 'anuncios'
     title: 'Relatório de anúncios'
-    period: 'Últimos %{days} dias · %{from} a %{to}'
+    period: '%{name} · %{from} a %{to}'
+    # Nome de cada período da tela (Panel::Period, #2011).
+    period_names:
+      7d: 'Últimos 7 dias'
+      30d: 'Últimos 30 dias'
+      90d: 'Últimos 90 dias'
+      this_month: 'Este mês'
+      last_month: 'Mês passado'
+      all: 'Desde o primeiro anúncio'
     generated: 'Gerado em %{date}'
     page: 'Página <page> de <total>'
-    hero_label: 'Anúncios · últimos %{days} dias'
+    hero_label: 'Anúncios · %{name}'
     headline_whatsapp: 'Pelo WhatsApp, vieram %{conversations} de anúncio e %{sales}.'
     headline_spend: 'Você investiu %{spend}. Vieram %{conversations} e %{sales}.'
     count:
@@ -82,7 +90,7 @@ pt_BR:
       ads: 'Anúncios'
       conversations: 'Conversas'
       daily: 'Por dia'
-    sheet_context: 'Últimos %{days} dias (%{from} a %{to}) · gerado em %{date}'
+    sheet_context: '%{name} (%{from} a %{to}) · gerado em %{date}'
     sheet_truncated: 'Mostrando as %{shown} conversas mais recentes de %{total}.'
     summary:
       conversations: 'Conversas que vieram de anúncio'

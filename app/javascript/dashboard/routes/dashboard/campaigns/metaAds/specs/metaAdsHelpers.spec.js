@@ -5,6 +5,7 @@ import {
   errorMessageKey,
   formatFact,
   money,
+  periodRange,
   thumbClass,
 } from '../metaAdsHelpers';
 
@@ -94,5 +95,19 @@ describe('Anúncios da Meta · helpers (#1047)', () => {
     expect(formatFact('ad_name', 'Promo 10/10', options)).toBe('Promo 10/10');
     expect(formatFact('median_seconds', null, options)).toBeNull();
     expect(formatFact('no_such_fact', 3, options)).toBeNull();
+  });
+
+  it('writes the period dates short, with the year only when it is not this year (#2011)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-21T12:00:00Z'));
+
+    // Intl separa as datas com espaço fino (U+2009).
+    expect(periodRange('2026-09-01', '2026-09-30', 'pt_BR')).toBe(
+      '1\u2009–\u200930 de set.'
+    );
+    expect(periodRange('2025-12-20', '2026-01-10', 'pt_BR')).toContain('2025');
+    expect(periodRange(null, '2026-09-30', 'pt_BR')).toBe('');
+
+    vi.useRealTimers();
   });
 });

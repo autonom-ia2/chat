@@ -26,7 +26,7 @@ vi.mock('dashboard/composables/useAdmin', () => ({
 const WHATSAPP_RESULT = {
   enabled: true,
   official_inboxes: [{ id: 7, name: 'Vendas', phone: '+5511988887777' }],
-  recent_ad_touch: true,
+  ad_touch: true,
 };
 
 const reply = connection =>

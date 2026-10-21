@@ -66,8 +66,9 @@ class Crm::MetaAds::Panel::MetaComparison
     difference.negative? ? 'meta_higher' : 'ours_higher'
   end
 
+  # Até ontem (o número da Meta de hoje ainda não fechou), ou até o fim do período que já acabou (mês passado).
   def until_day
-    @report.today - 1
+    [@report.today - 1, @report.last_day].min
   end
 
   def insights
@@ -91,6 +92,6 @@ class Crm::MetaAds::Panel::MetaComparison
   end
 
   def touch_range
-    @report.first_day.in_time_zone(@report.zone)...@report.today.in_time_zone(@report.zone)
+    @report.first_day.in_time_zone(@report.zone)...(until_day + 1).in_time_zone(@report.zone)
   end
 end

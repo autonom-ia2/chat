@@ -12,11 +12,11 @@ class Crm::MetaAds::Relatorio::Dados
 
   attr_reader :account, :report
 
-  def initialize(connection, days:, account:, visible: nil, com_pessoas: true)
+  def initialize(connection, account:, period: nil, visible: nil, com_pessoas: true)
     @account = account
     @visible = visible
     @com_pessoas = com_pessoas
-    @report = Crm::MetaAds::Panel::Report.new(connection, days: days, account: account)
+    @report = Crm::MetaAds::Panel::Report.new(connection, period: period, account: account)
   end
 
   def com_pessoas?
@@ -48,7 +48,7 @@ class Crm::MetaAds::Relatorio::Dados
   end
 
   def dias
-    (@report.first_day..@report.today).to_a
+    (@report.first_day..@report.last_day).to_a
   end
 
   def tempo_de_resposta
@@ -70,8 +70,8 @@ class Crm::MetaAds::Relatorio::Dados
 
   # Quem chegou e ainda não teve resposta, a espera mais longa primeiro: { total:, items: (até `limite`) }.
   def sem_resposta(limite)
-    @sem_resposta ||= Crm::MetaAds::Panel::PathList.new(nil, step: 'slow_replies', days: @report.days, visible: @visible,
-                                                             report: @report, limit: LIMITE).payload[:items]
+    @sem_resposta ||= Crm::MetaAds::Panel::PathList.new(nil, step: 'slow_replies', visible: @visible, report: @report,
+                                                             limit: LIMITE).payload[:items]
                                                    .select { |item| item[:answered] == false }
     { total: @sem_resposta.size, items: @sem_resposta.first(limite) }
   end
@@ -116,8 +116,7 @@ class Crm::MetaAds::Relatorio::Dados
   end
 
   def lista(**scope)
-    Crm::MetaAds::Panel::PathList.new(nil, step: 'conversations', days: @report.days, visible: @visible, report: @report,
-                                           **scope).payload
+    Crm::MetaAds::Panel::PathList.new(nil, step: 'conversations', visible: @visible, report: @report, **scope).payload
   end
 
   def objetos

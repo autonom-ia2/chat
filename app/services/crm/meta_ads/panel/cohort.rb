@@ -51,6 +51,11 @@ class Crm::MetaAds::Panel::Cohort
     @cards ||= load_cards
   end
 
+  # Horário do primeiro toque de anúncio no período (#2011, "desde o primeiro anúncio").
+  def first_touch_at
+    Crm::MetaAdLink.where(account_id: @account_id, touched_at: @range).minimum(:touched_at)
+  end
+
   # Início de cada conversa para o tempo de resposta; nil: o Panel::ResponseTime lê das ligações Crm::MetaAdLink.
   def starts
     nil
