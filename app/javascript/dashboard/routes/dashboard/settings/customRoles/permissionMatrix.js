@@ -1,6 +1,13 @@
 // Maps the flat custom-role permission keys to one access level per module (#452).
 // Keys are never renamed, so roles saved before the matrix existed load unchanged.
 // A `<module>_manage` key implies `<module>_view` on the backend, so only the highest key is stored.
+import {
+  CUSTOM_ROLE_MANAGE_PERMISSION,
+  FINANCIAL_MANAGE_PERMISSION,
+  FINANCIAL_VIEW_PERMISSION,
+  GRANT_ABOVE_OWN_PERMISSION,
+  PEOPLE_MANAGE_PERMISSION,
+} from 'dashboard/constants/permissions';
 
 export const LEVELS = { NONE: 'none', VIEW: 'view', MANAGE: 'manage' };
 // Conversas: só olha (conversation_view, #1800), ou atende as próprias (LIMITED) ou todas (ALL). Na tela, as duas
@@ -16,6 +23,8 @@ const CONVERSATION_ALL = 'conversation_manage';
 const CONVERSATION_UNASSIGNED = 'conversation_unassigned_manage';
 const CONVERSATION_PARTICIPATING = 'conversation_participating_manage';
 const CONVERSATION_VIEW = 'conversation_view';
+// Apagar mensagem é chave própria (#1893): só para quem atende, nas próprias ou em todas.
+const CONVERSATION_MESSAGE_DELETE = 'conversation_message_delete';
 const CONVERSATION_KEYS = [
   CONVERSATION_ALL,
   CONVERSATION_UNASSIGNED,
@@ -42,6 +51,10 @@ export const SENSITIVE_EXTRAS = [
   CRM_ADMIN,
   'contact_export',
   'contact_delete',
+  CONVERSATION_MESSAGE_DELETE,
+  'campaign_send',
+  CUSTOM_ROLE_MANAGE_PERMISSION,
+  GRANT_ABOVE_OWN_PERMISSION,
 ];
 
 export const MODULE_GROUPS = [
@@ -56,6 +69,7 @@ export const MODULE_GROUPS = [
           CONVERSATION_UNASSIGNED,
           CONVERSATION_PARTICIPATING,
           CONVERSATION_VIEW,
+          CONVERSATION_MESSAGE_DELETE,
         ],
       },
       {
@@ -140,6 +154,9 @@ export const MODULE_GROUPS = [
         key: 'CAMPAIGNS',
         icon: 'i-lucide-megaphone',
         levels: { view: 'campaign_view', manage: 'campaign_manage' },
+        // #1898: disparar é chave própria; sem ela, quem edita monta e deixa pronta.
+        extras: ['campaign_send'],
+        manageOnlyExtras: ['campaign_send'],
       },
       {
         // Modelos de mensagem do WhatsApp oficial (#1330, #1332). Editar cria, altera e
@@ -224,6 +241,31 @@ export const MODULE_GROUPS = [
           level: LEVELS.MANAGE,
           module: 'INBOXES',
           targetLevel: LEVELS.VIEW,
+        },
+      },
+      {
+        // Pessoas (#1931): agentes e times. Montar funções e entregar acima do próprio acesso
+        // são ajustes finos de quem já cuida das pessoas; nenhum faz alguém virar administrador.
+        key: 'PEOPLE',
+        icon: 'i-lucide-users',
+        settings: true,
+        levels: { manage: PEOPLE_MANAGE_PERMISSION },
+        extras: [CUSTOM_ROLE_MANAGE_PERMISSION, GRANT_ABOVE_OWN_PERMISSION],
+      },
+    ],
+  },
+  {
+    key: 'FINANCE',
+    modules: [
+      {
+        // Financeiro (#1969): ver os custos da conta em dinheiro (uso de IA) e a autorização de
+        // cobranças da Meta; editar liga e desliga essa autorização. Plano e faturas ficam com o
+        // administrador. As duas chaves só o administrador entrega (DELEGATION_KEYS).
+        key: 'FINANCE',
+        icon: 'i-lucide-wallet',
+        levels: {
+          view: FINANCIAL_VIEW_PERMISSION,
+          manage: FINANCIAL_MANAGE_PERMISSION,
         },
       },
     ],
@@ -311,14 +353,22 @@ const setConversationLevel = (level, permissions) => {
     CONVERSATION_VIEW,
   ]);
   if (level === CONVERSATION_LEVELS.ALL) return [...rest, ...CONVERSATION_KEYS];
-  if (level === CONVERSATION_LEVELS.VIEW) return [...rest, CONVERSATION_VIEW];
+  // Quem deixa de atender deixa de apagar mensagens.
+  const notOperating = withoutKeys(rest, [CONVERSATION_MESSAGE_DELETE]);
+  if (level === CONVERSATION_LEVELS.VIEW)
+    return [...notOperating, CONVERSATION_VIEW];
   if (level === CONVERSATION_LEVELS.LIMITED || level === LEVELS.MANAGE) {
     if (
       isConversationManaging(getLevel({ type: 'conversations' }, permissions))
-    )
-      return level === LEVELS.MANAGE
-        ? permissions
-        : withoutKeys(permissions, [CONVERSATION_ALL]);
+    ) {
+      if (level === LEVELS.MANAGE) return permissions;
+      // Sair de todas para as próprias sem alcance guardado começa pelas próprias.
+      const limited = withoutKeys(permissions, [CONVERSATION_ALL]);
+      const hasScope = limited.some(
+        k => k === CONVERSATION_UNASSIGNED || k === CONVERSATION_PARTICIPATING
+      );
+      return hasScope ? limited : [...limited, CONVERSATION_PARTICIPATING];
+    }
     // Quem só olhava passa a atender as próprias e continua lendo as outras.
     const keepsReading = permissions.includes(CONVERSATION_VIEW);
     return [
@@ -327,7 +377,7 @@ const setConversationLevel = (level, permissions) => {
       ...(keepsReading ? [CONVERSATION_VIEW] : []),
     ];
   }
-  return rest;
+  return notOperating;
 };
 
 const setCrmLevel = (module, level, permissions) => {
@@ -361,9 +411,16 @@ export const setLevel = (module, level, permissions) => {
 // Extras are the fine-grained toggles shown under a module once it has access.
 export const visibleExtras = (module, permissions) => {
   const level = getLevel(module, permissions);
-  if (!module.extras || level === LEVELS.NONE) return [];
-  if (module.type === 'conversations')
-    return level === CONVERSATION_LEVELS.LIMITED ? module.extras : [];
+  if (!module.extras) return [];
+  // Sem acesso à área, só aparece o ajuste que ficou ligado (por exemplo, salvo pela API), para dar para desligar.
+  if (level === LEVELS.NONE)
+    return module.extras.filter(key => permissions.includes(key));
+  if (module.type === 'conversations') {
+    if (level === CONVERSATION_LEVELS.LIMITED) return module.extras;
+    return level === CONVERSATION_LEVELS.ALL
+      ? [CONVERSATION_MESSAGE_DELETE]
+      : [];
+  }
   // Editing cards already includes moving them.
   if (level === LEVELS.MANAGE)
     return module.extras.filter(key => key !== CRM_MOVE_CARDS);
@@ -387,9 +444,13 @@ export const toggleExtra = (module, key, permissions) => {
     return unique([...permissions, key, ...implied]);
   }
   const next = withoutKeys(permissions, [key]);
-  // A limited conversation level needs at least one scope.
+  // A limited conversation level needs at least one scope. Só os dois alcances contam: desligar outro ajuste
+  // (ler as outras, apagar mensagens) nunca é barrado por isso.
+  const isScopeKey =
+    key === CONVERSATION_UNASSIGNED || key === CONVERSATION_PARTICIPATING;
   const lostConversationScope =
     module.type === 'conversations' &&
+    isScopeKey &&
     !next.some(
       k => k === CONVERSATION_UNASSIGNED || k === CONVERSATION_PARTICIPATING
     );
@@ -483,7 +544,7 @@ export const PRESETS = {
     'crm_view_reports',
   ],
   FINANCE: () => [
-    ...build({ REPORTS: LEVELS.VIEW, CRM: LEVELS.VIEW }),
+    ...build({ REPORTS: LEVELS.VIEW, CRM: LEVELS.VIEW, FINANCE: LEVELS.VIEW }),
     'crm_view_reports',
   ],
   OPERATIONS: () =>

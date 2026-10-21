@@ -132,6 +132,10 @@ const mountPanel = async (options = {}) => {
       mocks: { $t: (key, values) => `${key} ${JSON.stringify(values || {})}` },
       stubs: {
         Spinner: true,
+        MetaAdsReportButton: {
+          props: ['days'],
+          template: '<span data-report-stub :data-days="days" />',
+        },
         RouterLink: {
           props: ['to'],
           template: '<a :href="to"><slot /></a>',
@@ -169,6 +173,14 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     mounted?.unmount();
     mounted = null;
     vi.useRealTimers();
+  });
+
+  it('offers the report of the period next to the period choice (#1960)', async () => {
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-report-stub]').attributes('data-days')).toBe(
+      '30'
+    );
   });
 
   it('tells the money story in one sentence and shows the path', async () => {
@@ -525,7 +537,7 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(ad.find('[data-verdict]').text()).toContain('VERDICT.EARLY');
   });
 
-  it('shows the ad image in its own format, or a placeholder without one', async () => {
+  it('shows the whole ad image in the same 4:5 frame for every card, or a placeholder without one', async () => {
     CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
       data: {
         panel: {
@@ -541,10 +553,19 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
 
     const image = wrapper.find('[data-panel-ad="1"] [data-panel-ad-image]');
     expect(image.attributes('src')).toBe('https://scontent/capa.jpg');
-    expect(image.classes()).toContain('h-auto');
+    expect(image.classes()).toContain('object-contain');
     expect(
-      wrapper.find('[data-panel-ad="2"] [data-panel-ad-placeholder]').exists()
-    ).toBe(true);
+      wrapper
+        .find('[data-panel-ad="1"] [data-panel-ad-image-backdrop]')
+        .attributes('aria-hidden')
+    ).toBe('true');
+    expect(image.element.parentElement.classList).toContain('aspect-[4/5]');
+    const placeholder = wrapper.find(
+      '[data-panel-ad="2"] [data-panel-ad-placeholder]'
+    );
+    expect(placeholder.element.parentElement.classList).toContain(
+      'aspect-[4/5]'
+    );
   });
 
   it('swaps an image that does not load (expired Meta link) for the placeholder', async () => {

@@ -301,14 +301,14 @@ module Autonomia
         PromptParts::Historico.mensagens(@history)
       end
 
-      # SEGMENTO DA CONTA (tema 8, #1429): primeira mensagem do input, logo depois de `instructions` e antes da
-      # conversa. Só depende da conta, então o começo do pedido fica o mesmo em todo turno dela (cache). nil sem a
-      # Fase 2 ou sem bloco: o input fica igual ao de antes. Fora do Guia (agente de sistema, com explicação
-      # própria) e do Agente de Cotação (a troca da Lia vem depois, na F3 do #1545).
+      # SEGMENTO (tema 8, #1429): primeira mensagem do input, logo depois de `instructions` e antes da conversa. Lido
+      # pela marca de base do agente (o segmento com que ele nasceu), nunca pela conta; não muda entre turnos (cache).
+      # nil sem a Fase 2, sem marca ou sem bloco: o input fica igual ao de antes. Fora do Guia (agente de sistema, com
+      # explicação própria) e do Agente de Cotação (a troca da Lia vem depois, na F3 do #1545).
       def segmento_message
         return if @agent.config.to_h['system_key'].present? || @agent.agent_type == 'insurance_quote'
 
-        PromptParts::SegmentoDaConta.mensagem(@agent.account)
+        PromptParts::SegmentoDoAgente.mensagem(@agent)
       end
 
       def context_message

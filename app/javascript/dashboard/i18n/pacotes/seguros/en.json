@@ -91,6 +91,13 @@
             "CLOSED": "The customer already closed the policy. Nothing to resume here."
           }
         }
+      },
+      "SEM_LOGIN": {
+        "AD": {
+          "STATUS": {
+            "LOST": "Not closed"
+          }
+        }
       }
     },
     "TRACKED_LINKS": {

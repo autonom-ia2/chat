@@ -163,8 +163,10 @@ describe('campo de endereços (CampoDeEnderecos)', () => {
 });
 
 describe('pasta da lista no endereço (#1809)', () => {
-  it('lê só Spam e Lixeira da query; o resto é a Entrada', async () => {
+  it('lê Spam, Lixeira e Enviados (#1938) da query; o resto é a Entrada', async () => {
     const { pastaDoEndereco } = await import('../email/pastaDoEmail');
+
+    expect(pastaDoEndereco({ query: { pasta: 'enviados' } })).toBe('enviados');
 
     expect(pastaDoEndereco({ query: { pasta: 'lixeira' } })).toBe('lixeira');
     expect(pastaDoEndereco({ query: { pasta: 'spam' } })).toBe('spam');

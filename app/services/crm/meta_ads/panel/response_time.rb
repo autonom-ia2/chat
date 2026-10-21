@@ -42,9 +42,12 @@ class Crm::MetaAds::Panel::ResponseTime
       ) reply ON true
   SQL
 
-  def initialize(account_id:, range:)
+  # `starts:` ({ conversation_id => início }) troca as ligações Crm::MetaAdLink pelo início que a coorte já leu dos
+  # toques da conversa (painel sem conexão, Panel::WhatsappCohort, #1960).
+  def initialize(account_id:, range:, starts: nil)
     @account_id = account_id
     @range = range
+    @starts = starts
   end
 
   def payload
@@ -72,15 +75,23 @@ class Crm::MetaAds::Panel::ResponseTime
   # O início de cada conversa é o menor toque dela no período, com ou sem anúncio (não o Cohort#touches, que
   # guarda o primeiro toque com anúncio).
   def starts
+    return given_starts unless @starts.nil?
+
     Crm::MetaAdLink.where(account_id: @account_id, touched_at: @range).group(:conversation_id)
                    .select('conversation_id, MIN(touched_at) AS started_at')
   end
 
-  def rows
-    sql = ActiveRecord::Base.sanitize_sql(
-      [format(QUERY, starts: starts.to_sql), { account_id: @account_id, due: Time.current - TARGET_SECONDS,
-                                               incoming: Message.message_types[:incoming], outgoing: Message.message_types[:outgoing] }]
+  def given_starts
+    ActiveRecord::Base.sanitize_sql(
+      ['SELECT * FROM unnest(?::bigint[], ?::timestamp[]) AS given(conversation_id, started_at)',
+       "{#{@starts.keys.map(&:to_i).join(',')}}", "{#{@starts.values.map { |at| %("#{at.utc.iso8601(6)}") }.join(',')}}"]
     )
+  end
+
+  def rows
+    binds = { account_id: @account_id, due: Time.current - TARGET_SECONDS, incoming: Message.message_types[:incoming],
+              outgoing: Message.message_types[:outgoing] }
+    sql = ActiveRecord::Base.sanitize_sql([format(QUERY, starts: @starts.nil? ? starts.to_sql : starts), binds])
     ActiveRecord::Base.connection.select_all(sql).cast_values
   end
 

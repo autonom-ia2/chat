@@ -33,6 +33,10 @@
         "DESCRIPTION": "Description",
         "PERMISSIONS": "Permissions",
         "ACTIONS": "Actions"
+      },
+      "LOCK": {
+        "MINE": "This is your role",
+        "ABOVE": "Above your access"
       }
     },
     "PERMISSIONS": {
@@ -73,7 +77,14 @@
       "ATTRIBUTE_MANAGE": "Edit custom attributes",
       "MACRO_MANAGE": "Edit team macros",
       "SLA_MANAGE": "Edit SLA policies",
-      "CONVERSATION_VIEW": "Reads the other conversations of the inbox"
+      "CONVERSATION_VIEW": "Reads the other conversations of the inbox",
+      "CAMPAIGN_SEND": "Send campaigns",
+      "PEOPLE_MANAGE": "Manage people and teams",
+      "CUSTOM_ROLE_MANAGE": "Build roles",
+      "GRANT_ABOVE_OWN": "Can grant access above their own",
+      "FINANCIAL_VIEW": "See account costs",
+      "FINANCIAL_MANAGE": "Turn the Meta charge authorization on and off",
+      "CONVERSATION_MESSAGE_DELETE": "Delete messages"
     },
     "MATRIX": {
       "GROUPS": {
@@ -82,7 +93,8 @@
         "AUTONOMIA": "Autonom.ia",
         "MARKETING": "Marketing",
         "CONNECTIONS": "Connections",
-        "SETTINGS": "Account settings"
+        "SETTINGS": "Account settings",
+        "FINANCE": "Finance"
       },
       "LEVELS": {
         "NONE": "No access",
@@ -159,7 +171,7 @@
           "NAME": "Campaigns",
           "HINT": "Email, WhatsApp, SMS, links and QR codes",
           "LEVEL_VIEW": "Sees campaigns and their results.",
-          "LEVEL_MANAGE": "Creates and sends campaigns. This has a cost."
+          "LEVEL_MANAGE": "Builds campaigns. Sending is the option below."
         },
         "WHATSAPP_TEMPLATES": {
           "NAME": "WhatsApp templates",
@@ -215,6 +227,17 @@
           "HINT": "Who receives each conversation and how many at a time",
           "LEVEL_MANAGE": "Creates and changes the assignment and capacity rules.",
           "SUGGESTION": "To list every inbox in the forms, Inboxes needs at least View."
+        },
+        "PEOPLE": {
+          "NAME": "People",
+          "HINT": "Agents, teams and roles",
+          "LEVEL_MANAGE": "Invites, edits and removes agents and manages teams. Never touches administrators."
+        },
+        "FINANCE": {
+          "NAME": "Finance",
+          "HINT": "Account costs and the Meta charge authorization",
+          "LEVEL_VIEW": "Sees the Meta charge authorization and, for whoever also has CRM reports, what AI costs in money. Plan and invoices stay with the administrator.",
+          "LEVEL_MANAGE": "Also turns the Meta charge authorization on and off."
         }
       }
     },
@@ -280,8 +303,12 @@
       "CRM_ADMIN": "Turns on everything above, plus CRM SLA and integration tokens.",
       "PROSPECTING_VIEW_ALL_SEARCHES": "Without this, they only see their own searches.",
       "CONVERSATION_VIEW": "Also reads the inbox conversations they do not handle, without replying.",
+      "CONVERSATION_MESSAGE_DELETE": "Deletes messages in the conversations they handle. The attachment is removed and the message shows as deleted.",
       "CONTACT_EXPORT": "Downloads the contact base as a spreadsheet.",
-      "CONTACT_DELETE": "Deletes contacts and companies, one by one or in bulk."
+      "CONTACT_DELETE": "Deletes contacts and companies, one by one or in bulk.",
+      "CAMPAIGN_SEND": "Sends and schedules campaigns and resumes paused ones. Without this, they build and mark campaigns ready for someone who sends.",
+      "CUSTOM_ROLE_MANAGE": "Creates and edits roles, within their own keys.",
+      "GRANT_ABOVE_OWN": "Hands out any role in the account, except administrator. Everything goes to the audit log."
     },
     "EDITOR": {
       "NEW_TITLE": "Adjust what is different",
@@ -303,12 +330,12 @@
       "FOOTER_COUNT": "No area granted | 1 area granted | {n} areas granted",
       "ADMIN_ONLY": {
         "TITLE": "Always administrator only",
-        "ITEMS": "Agents, teams, bots, integrations, account settings, security, billing, audit logs and custom roles.",
+        "ITEMS": "Bots, integrations, account settings, security, billing and audit logs.",
         "GUIDE": "The Platform Guide follows this role: it only shows and does what the person can do."
       },
       "SENSITIVE_CONFIRM": {
         "TITLE": "Turn on “{name}”?",
-        "DESCRIPTION": "This permission touches personal data or has a cost. Only turn it on for people who need it.",
+        "DESCRIPTION": "This permission touches personal data, has a cost or hands out access. Only turn it on for people who need it.",
         "CONFIRM": "Turn on"
       },
       "APPLY_CONFIRM": {
@@ -317,7 +344,11 @@
         "CONFIRM": "Apply profile",
         "DONE": "{name} profile applied."
       },
-      "INCLUDED_IN_ADMIN": "Included in full CRM access."
+      "INCLUDED_IN_ADMIN": "Included in full CRM access.",
+      "LOCK": {
+        "MISSING": "You do not have this key",
+        "DELEGATION": "Only someone who can grant access above their own"
+      }
     },
     "SUMMARY": {
       "CAN_TITLE": "This person will be able to",

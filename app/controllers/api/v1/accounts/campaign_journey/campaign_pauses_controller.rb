@@ -8,7 +8,7 @@
 # and matches what the campaign recorded, read from the freshest cached list of the same WhatsApp account —
 # CampaignPauses::ResumeReadiness) — the Modelos screen and the campaign list show
 # them with "Retomar". details never carry personal data (CampaignPause).
-# resume: campaign_manage (CampaignPolicy#update?). The pause must belong to the account. A Chatwoot
+# resume: campaign_send (CampaignPolicy#send_campaign?, #1898). The pause must belong to the account. A Chatwoot
 # one-off campaign still `active` is fired again right away and its template is checked again
 # (CampaignPauses::Resumer). 422 with `code`: pause_not_open | campaign_already_sent.
 # CAMPAIGN_JOURNEY_ENABLED off → 404.
@@ -52,7 +52,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignPausesController < Api::V1::Ac
   end
 
   def authorize_resume
-    authorize(Campaign, :update?)
+    authorize(Campaign, :send_campaign?)
   end
 
   def fetch_pause

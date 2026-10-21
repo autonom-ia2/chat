@@ -8,7 +8,9 @@ import {
   getLevel,
   isExtraLocked,
   levelSlots,
+  setLevel,
   slotLevel,
+  toggleExtra,
   visibleExtras,
   unmetSuggestion,
   suggestedLevel,
@@ -18,6 +20,8 @@ const props = defineProps({
   module: { type: Object, required: true },
   permissions: { type: Array, required: true },
   isOpen: { type: Boolean, default: false },
+  // key => null | 'MISSING' | 'DELEGATION': por que quem edita não pode pôr esta chave na função (#1931).
+  keyLock: { type: Function, default: () => null },
 });
 
 const emit = defineEmits([
@@ -45,6 +49,47 @@ const suggestion = computed(() =>
   unmetSuggestion(props.module, props.permissions)
 );
 
+// Uma escolha que acrescentaria chave fora do alcance de quem edita fica travada, com o motivo.
+// Tirar chave nunca trava. A chave de delegação tem o motivo mais específico.
+const lockOf = next => {
+  const reasons = next
+    .filter(key => !props.permissions.includes(key))
+    .map(props.keyLock)
+    .filter(Boolean);
+  return reasons.includes('DELEGATION') ? 'DELEGATION' : reasons[0] || null;
+};
+const levelLock = option =>
+  option === activeSlot.value || option === level.value
+    ? null
+    : lockOf(setLevel(props.module, option, props.permissions));
+const extraLock = key =>
+  props.permissions.includes(key)
+    ? null
+    : lockOf(toggleExtra(props.module, key, props.permissions));
+const suggestionLock = computed(
+  () =>
+    suggestion.value &&
+    lockOf(
+      setLevel(
+        suggestion.value,
+        suggestedLevel(props.module),
+        props.permissions
+      )
+    )
+);
+const lockHint = reason => (reason ? `CUSTOM_ROLE.EDITOR.LOCK.${reason}` : '');
+// O motivo aparece também por escrito embaixo da linha, não só no passar do mouse.
+const rowLock = computed(
+  () =>
+    [...slots.value, ...(isConversations ? reachOptions : [])]
+      .filter(Boolean)
+      .map(levelLock)
+      .find(Boolean) || null
+);
+const pickLevel = option => {
+  if (!levelLock(option)) emit('selectLevel', option);
+};
+
 const moduleKey = props.module.key;
 const levelLabelKey = option => {
   if (option === LEVELS.NONE && props.module.baseline)
@@ -59,9 +104,12 @@ const descriptionKey = computed(() =>
     : `CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.HINT`
 );
 
-const options = computed(() => slots.value.filter(Boolean));
+const options = computed(() =>
+  slots.value.filter(option => option && !levelLock(option))
+);
 const onArrow = (event, option) => {
   const index = options.value.indexOf(option);
+  if (index < 0) return;
   const step = event.key === 'ArrowRight' ? 1 : -1;
   const next =
     options.value[(index + step + options.value.length) % options.value.length];
@@ -108,15 +156,21 @@ const onArrow = (event, option) => {
             :data-level="option"
             :aria-checked="option === activeSlot"
             :tabindex="option === activeSlot ? 0 : -1"
+            :aria-disabled="!!levelLock(option) || undefined"
+            :title="
+              levelLock(option) ? $t(lockHint(levelLock(option))) : undefined
+            "
             class="h-8 px-2 truncate rounded-md text-[13px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand/60"
             :class="
-              option !== activeSlot
-                ? 'font-460 text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2'
-                : option === LEVELS.NONE
-                  ? 'font-semibold shadow-sm ring-1 ring-inset ring-n-strong bg-n-solid-active dark:bg-n-solid-3 text-n-slate-12 motion-safe:animate-segment-select'
-                  : 'font-semibold shadow-sm ring-1 ring-inset ring-n-brand/40 bg-n-brand/15 text-n-blue-11 motion-safe:animate-segment-select'
+              levelLock(option)
+                ? 'font-460 text-n-slate-9 cursor-not-allowed'
+                : option !== activeSlot
+                  ? 'font-460 text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2'
+                  : option === LEVELS.NONE
+                    ? 'font-semibold shadow-sm ring-1 ring-inset ring-n-strong bg-n-solid-active dark:bg-n-solid-3 text-n-slate-12 motion-safe:animate-segment-select'
+                    : 'font-semibold shadow-sm ring-1 ring-inset ring-n-brand/40 bg-n-brand/15 text-n-blue-11 motion-safe:animate-segment-select'
             "
-            @click="emit('selectLevel', option)"
+            @click="pickLevel(option)"
             @keydown.left.prevent="onArrow($event, option)"
             @keydown.right.prevent="onArrow($event, option)"
           >
@@ -149,16 +203,29 @@ const onArrow = (event, option) => {
         role="radio"
         :data-reach="option"
         :aria-checked="option === level"
+        :aria-disabled="!!levelLock(option) || undefined"
+        :title="levelLock(option) ? $t(lockHint(levelLock(option))) : undefined"
         class="h-8 px-3 rounded-md text-[13px] ring-1 ring-inset transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand/60"
         :class="
           option === level
             ? 'font-semibold ring-n-brand/40 bg-n-brand/15 text-n-blue-11'
-            : 'font-460 ring-n-weak text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2'
+            : levelLock(option)
+              ? 'font-460 ring-n-weak text-n-slate-9 cursor-not-allowed'
+              : 'font-460 ring-n-weak text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-2'
         "
-        @click="emit('selectLevel', option)"
+        @click="pickLevel(option)"
       >
         {{ $t(`CUSTOM_ROLE.MATRIX.LEVELS.${option.toUpperCase()}`) }}
       </button>
+    </div>
+
+    <div
+      v-if="rowLock"
+      data-row-lock
+      class="flex items-center gap-1.5 mt-2 ps-11 text-label-small text-n-amber-11"
+    >
+      <span class="i-lucide-lock size-3.5 shrink-0" />
+      {{ $t(lockHint(rowLock)) }}
     </div>
 
     <div
@@ -168,6 +235,7 @@ const onArrow = (event, option) => {
       <span class="i-lucide-info size-3.5 shrink-0" />
       {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${moduleKey}.SUGGESTION`) }}
       <button
+        v-if="!suggestionLock"
         type="button"
         class="font-medium underline"
         @click="emit('grantSuggested', suggestion, suggestedLevel(module))"
@@ -228,15 +296,20 @@ const onArrow = (event, option) => {
                   : $t(`CUSTOM_ROLE.EXTRAS.${extra.toUpperCase()}`)
               }}
             </div>
+            <div
+              v-if="extraLock(extra)"
+              class="flex items-center gap-1 text-label-small text-n-amber-11"
+            >
+              <span class="i-lucide-lock size-3" />
+              {{ $t(lockHint(extraLock(extra))) }}
+            </div>
           </div>
           <Switch
             :model-value="permissions.includes(extra)"
-            :disabled="isExtraLocked(extra, permissions)"
+            :disabled="isExtraLocked(extra, permissions) || !!extraLock(extra)"
             :class="{
-              'opacity-60 cursor-not-allowed': isExtraLocked(
-                extra,
-                permissions
-              ),
+              'opacity-60 cursor-not-allowed':
+                isExtraLocked(extra, permissions) || extraLock(extra),
             }"
             :aria-label="$t(`CUSTOM_ROLE.PERMISSIONS.${extra.toUpperCase()}`)"
             @update:model-value="emit('toggleExtra', extra)"
