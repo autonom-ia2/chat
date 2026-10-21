@@ -73,6 +73,19 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
       expect(estado_do_assunto(mensagem).vazio?).to be(true)
     end
 
+    it 'mensagem só com anexo sem leitura não ocupa a vaga de uma mensagem com texto na janela', :aggregate_failures do
+      pedido = chegada('preciso de ajuda com o meu pedido')
+      ouvido = chegada
+      anexar_audio(ouvido, meta: { 'transcribed_text' => 'é urgente' })
+      video = chegada
+      video.attachments.create!(account: account, file_type: :video, external_url: 'https://exemplo.invalid/video.mp4')
+      estado = Autonomia::Decisores::Estado.new(conversation: conversation, message: video, leituras: Crm::Subjects::Identifier::LEITURAS,
+                                                **Crm::Subjects.janela(account), max_mensagens: 2)
+
+      expect(estado.conversa[:messages]).to eq(['Customer: preciso de ajuda com o meu pedido', 'Customer: [áudio transcrito]: é urgente'])
+      expect(pedido).to be_persisted
+    end
+
     it 'o job do assunto lê em linha o que a chegada ainda não leu, antes de perguntar; o marco sai', :aggregate_failures do
       mensagem = chegada
       foto = anexar_imagem(mensagem)

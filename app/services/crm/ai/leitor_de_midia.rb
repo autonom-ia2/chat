@@ -56,6 +56,13 @@ class Crm::Ai::LeitorDeMidia
 
   def self.com_anexo = Attachment.where('attachments.message_id = messages.id').arel.exists
 
+  # A mensagem tem anexo com texto lido (transcrição, descrição ou texto do PDF): só essa entra na janela da IA de
+  # assunto. Anexo sem leitura (vídeo, PDF escaneado, leitura que falhou) não ocupa a vaga de uma mensagem com texto.
+  def self.com_anexo_lido
+    lidos = CHAVE.values.map { |chave| Attachment.where("NULLIF(BTRIM(attachments.meta ->> ?), '') IS NOT NULL", chave) }.reduce(:or)
+    lidos.where('attachments.message_id = messages.id').arel.exists
+  end
+
   def self.tipo(attachment)
     case attachment.file_type.to_s
     when 'audio' then :audio

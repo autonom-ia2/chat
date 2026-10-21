@@ -268,7 +268,8 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength -- no t
   end
 
   def com_texto_ou_anexo(escopo)
-    escopo.where.not(content: [nil, '']).or(escopo.where(Crm::Ai::LeitorDeMidia.com_anexo)).includes(:attachments)
+    escopo.where.not(content: [nil, '']).or(escopo.where(Crm::Ai::LeitorDeMidia.com_anexo_lido))
+          .includes(attachments: { file_attachment: :blob })
   end
 
   def card_da_conversa
