@@ -2893,11 +2893,11 @@
           "NOTE": "Connect your ad account to see it",
           "CTA": "See how much I spent"
         },
-        "ADS_WHATSAPP_TITLE": "Ads that lead to WhatsApp",
+        "ADS_WHATSAPP_TITLE": "Ads that bring conversations",
         "OTHER_ADS": {
           "TITLE": "Other ads",
           "TOTAL": "{value} invested",
-          "HINT": "They lead to your website, a video or your profile. They bring no conversation, so they stay out of the cost per conversation and per sale.",
+          "HINT": "They brought no conversation: they lead to your website, a video or your profile. They stay out of the cost per conversation and per sale.",
           "SPEND": "Invested",
           "CLICKS": "Clicks",
           "SHOWN": "Shown"

@@ -114,6 +114,11 @@ const panelAvailable = computed(
 const showPanel = computed(
   () => view.value === 'resultado' && panelAvailable.value
 );
+// Painel conectado (#2054): a lista dos 4 passos sai da lateral do Resultado e o painel usa a largura toda. Ela
+// aparece na aba Conexão e enquanto um passo está aberto ou falta configurar.
+const showChecklist = computed(
+  () => !(step.value === DONE && !openStep.value && showPanel.value)
+);
 // Anúncios sem login (#1960, degrau 0): com a flag e sem conexão de anúncios nenhuma (o servidor diz em
 // whatsapp_result.enabled), a página abre pronta com o resultado que chega pelo WhatsApp. Quem já tem
 // conexão (ativa, caída ou no meio da escolha) segue no caminho de sempre, com "Conectar de novo".
@@ -279,7 +284,8 @@ onMounted(load);
 
       <div
         v-else
-        class="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]"
+        class="grid items-start gap-5"
+        :class="{ 'lg:grid-cols-[minmax(0,1fr)_20rem]': showChecklist }"
       >
         <div class="flex flex-col min-w-0 gap-5">
           <template v-if="step === 5 && !openStep">
@@ -353,7 +359,10 @@ onMounted(load);
           </section>
         </div>
 
-        <aside class="order-first lg:order-none lg:sticky lg:top-5">
+        <aside
+          v-if="showChecklist"
+          class="order-first lg:order-none lg:sticky lg:top-5"
+        >
           <MetaAdsChecklist
             :current="checklistCurrent"
             :open="activeStep <= 4 ? activeStep : null"

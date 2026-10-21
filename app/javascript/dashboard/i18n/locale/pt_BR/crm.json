@@ -2894,11 +2894,11 @@
           "NOTE": "Conecte sua conta de anúncios para ver",
           "CTA": "Ver quanto gastei"
         },
-        "ADS_WHATSAPP_TITLE": "Anúncios que levam para o WhatsApp",
+        "ADS_WHATSAPP_TITLE": "Anúncios que trazem conversa",
         "OTHER_ADS": {
           "TITLE": "Outros anúncios",
           "TOTAL": "{value} investidos",
-          "HINT": "Levam para o site, um vídeo ou o seu perfil. Não trazem conversa, então ficam fora do custo por conversa e por venda.",
+          "HINT": "Não trouxeram nenhuma conversa: levam para o site, um vídeo ou o seu perfil. Ficam fora do custo por conversa e por venda.",
           "SPEND": "Investido",
           "CLICKS": "Cliques",
           "SHOWN": "Apareceu"

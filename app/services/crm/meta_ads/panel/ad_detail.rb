@@ -35,7 +35,7 @@ class Crm::MetaAds::Panel::AdDetail
   def row
     return @row if defined?(@row)
 
-    @row = @ad_id.present? ? @report.ads.find { |ad| ad[:ad_id] == @ad_id } : nil
+    @row = @ad_id.present? ? @report.ad(@ad_id) : nil
   end
 
   def object

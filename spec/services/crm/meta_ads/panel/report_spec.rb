@@ -16,9 +16,9 @@ RSpec.describe Crm::MetaAds::Panel::Report do
     account.crm_pipeline_stages.create!(pipeline: pipeline, name: name, position: position, metadata: { 'funnel_stage_type' => type })
   end
 
-  def spend(ad_id, date, value)
+  def spend(ad_id, date, value, **metrics)
     Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: ad_id, date: date, currency: 'BRL',
-                                    spend: value, attribution_window: '7d_click', fetched_at: now)
+                                    spend: value, attribution_window: '7d_click', fetched_at: now, **metrics)
   end
 
   def name(ad_id, text)
@@ -98,5 +98,35 @@ RSpec.describe Crm::MetaAds::Panel::Report do
 
   it 'período fora da lista vira 30 dias' do
     expect(described_class.new(connection, days: '365').payload[:days]).to eq(30)
+  end
+
+  # #2054: o gasto de anúncio que nunca trouxe conversa não entra no custo por conversa nem por venda.
+  it 'separa os anúncios que trazem conversa dos outros, com gasto, cliques e impressões' do
+    travel_to(now) do
+      site = '120254932730050416'
+      name(site, 'EUA')
+      spend(capa, Date.new(2026, 10, 6), 100)
+      spend(familia, Date.new(2026, 10, 5), 50, conversations_started: 2)
+      spend(familia, Date.new(2026, 7, 1), 1, conversations_started: 3) # a Meta já contou conversa nele, noutra época
+      spend(site, Date.new(2026, 10, 5), 101.71, link_clicks: 540, impressions: 9000)
+      from_ad(capa, at: 1.day.ago, card: card(stage: quote_stage, status: :won, value: 500))
+
+      report = described_class.new(connection, period: '30d').payload
+
+      expect(report[:ads].pluck(:ad_id)).to eq([capa, familia])
+      expect(report[:other_ads]).to eq([{ ad_id: site, spend: 101.71, impressions: 9000, link_clicks: 540, name: 'EUA',
+                                          thumbnail_url: nil, image_url: nil }])
+      expect(report[:totals]).to include(spend: 150.0, other_spend: 101.71, cost_per_conversation: 150.0, cost_per_sale: 150.0)
+    end
+  end
+
+  it 'logo depois de conectar, o anúncio sem nome da Meta usa o título do clique' do
+    travel_to(now) do
+      conversation = from_ad(capa, at: 1.day.ago)
+      touch = { 'source' => 'meta_ctwa', 'source_id' => capa, 'headline' => 'Fale com a gente' }
+      conversation.update_columns(additional_attributes: { 'campaign_touches' => [touch] }) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.new(connection, period: '30d').payload[:ads].first[:name]).to eq('Fale com a gente')
+    end
   end
 end

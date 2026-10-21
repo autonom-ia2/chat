@@ -12,10 +12,12 @@
 # e veredito ficam nil: sem gasto não há o que dividir, e "R$ 0 por venda" leria como anúncio de graça.
 # Cada anúncio e o total também dizem quantos estão em negociação (card aberto) e quantos se perderam.
 #
-# Com conexão (#2054), os anúncios se separam em dois blocos. `ads` são os que levam para o WhatsApp: os que trouxeram
-# conversa (nosso clique ou a contagem da Meta, em qualquer época); o gasto, o custo por conversa e o custo por venda
-# saem só deles. `other_ads` são os demais (site, alcance, vídeo…): gasto e o resultado que a Meta mede (cliques e
-# impressões), sem conversa nem venda, para o gasto deles não inflar o custo de quem leva ao WhatsApp.
+# Com conexão (#2054), os anúncios se separam em dois blocos. `ads` são os que trazem conversa: já trouxeram alguma
+# (ligação conversa → anúncio, do WhatsApp ou do site, ou a contagem da Meta, em qualquer época) ou levam a uma
+# conversa pelo destino do conjunto; o gasto, o custo por conversa e o custo por venda saem só deles. `other_ads` são
+# os que nunca trouxeram conversa e cujo conjunto, segundo a Meta, leva a outro lugar (site, alcance, vídeo…): gasto e
+# o resultado que a Meta mede (cliques e impressões), para o gasto deles não inflar o custo de quem traz conversa. Sem
+# o destino ainda (Panel::AdDestinations), o anúncio fica entre os que trazem conversa.
 #
 # O anúncio por dentro (F3b, Panel::AdDetail) lê daqui o período, a coorte, a linha do anúncio e a média da conta,
 # para que o número da lista e o da tela do anúncio nunca divirjam.
@@ -81,12 +83,17 @@ class Crm::MetaAds::Panel::Report
   end
 
   def ads
-    @ads ||= whatsapp_ad_ids.map { |ad_id| ad_row(ad_id) }
-                            .map { |row| row.merge(verdict: whatsapp_only? ? nil : verdict(row)) }
+    @ads ||= whatsapp_ad_ids.map { |ad_id| with_verdict(ad_row(ad_id)) }
                             .sort_by { |row| [-row[:sales], -row[:conversations], -row[:spend]] }
   end
 
-  # Anúncios com gasto que não levam para o WhatsApp, do maior gasto ao menor.
+  # Um anúncio do período na forma da lista, esteja entre os que trazem conversa ou entre os outros: a tela do
+  # anúncio (Panel::AdDetail) abre os dois, e o aviso de gasto sem conversa aponta justamente para um dos outros.
+  def ad(ad_id)
+    ads.find { |row| row[:ad_id] == ad_id } || (with_verdict(ad_row(ad_id)) if spend_by_ad.key?(ad_id))
+  end
+
+  # Anúncios com gasto que não levam a conversa (ver outside_conversation?), do maior gasto ao menor.
   def other_ads
     @other_ads ||= (spend_by_ad.keys - whatsapp_ad_ids).map { |ad_id| other_ad_row(ad_id) }.sort_by { |row| -row[:spend] }
   end
@@ -146,17 +153,26 @@ class Crm::MetaAds::Panel::Report
       return_per_real: sales.any? ? ratio(value, total_spend) : nil }
   end
 
-  # Gasto dos anúncios que levam para o WhatsApp: é dele que saem o custo por conversa e por venda.
+  # Gasto dos anúncios que trazem conversa: é dele que saem o custo por conversa e por venda.
   def total_spend
     whatsapp_ad_ids.sum { |ad_id| spend_by_ad.fetch(ad_id, 0.0) }
   end
 
   def whatsapp_ad_ids
-    @whatsapp_ad_ids ||= (spend_by_ad.keys.select { |ad_id| messaging_ad_ids.include?(ad_id) } +
-                          cohort.conversation_ads.values.compact).uniq
+    @whatsapp_ad_ids ||= (spend_by_ad.keys.reject { |ad_id| outside_conversation?(ad_id) } + cohort.conversation_ads.values.compact).uniq
   end
 
-  # Anúncio de conversa: já trouxe conversa pelo clique (qualquer época) ou a Meta já contou conversa iniciada nele.
+  # Fora dos que trazem conversa: nunca trouxe conversa e a Meta diz que o conjunto leva a outro lugar (site, vídeo,
+  # perfil). Anúncio novo de WhatsApp, ainda sem a primeira mensagem, continua entre os que trazem conversa.
+  def outside_conversation?(ad_id)
+    messaging_ad_ids.exclude?(ad_id) && destinations.outside_conversation?(ad_id)
+  end
+
+  def destinations
+    @destinations ||= Crm::MetaAds::Panel::AdDestinations.new(@account_id, insights)
+  end
+
+  # Já trouxe conversa: pelo clique (qualquer época) ou a Meta já contou conversa iniciada nele.
   def messaging_ad_ids
     @messaging_ad_ids ||= if whatsapp_only?
                             Set.new
@@ -216,6 +232,10 @@ class Crm::MetaAds::Panel::Report
     return unless touch.is_a?(Hash) && touch['source_id'].present? && touch['headline'].present?
 
     all[touch['source_id'].to_s] ||= touch['headline'].to_s.first(Crm::MetaAdObject::NAME_LIMIT)
+  end
+
+  def with_verdict(row)
+    row.merge(verdict: whatsapp_only? ? nil : verdict(row))
   end
 
   def verdict(row)
