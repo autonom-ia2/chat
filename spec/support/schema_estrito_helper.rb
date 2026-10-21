@@ -15,7 +15,7 @@ module SchemaEstritoHelper
 
   def expect_campo_tipado(nome, campo)
     expect(campo[:type]).to be_present, "campo #{nome} sem type"
-    expect(campo.dig(:items, :type)).to be_present, "lista #{nome} sem o type do item" if campo[:type] == 'array'
+    expect(campo.dig(:items, :type)).to be_present, "lista #{nome} sem o type do item" if Array(campo[:type]).include?('array')
   end
 
   def objetos_do_schema(parte)
