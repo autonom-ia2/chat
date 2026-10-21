@@ -2260,7 +2260,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
-        "TITLE": "Meta ads",
+        "TITLE": "Ads",
         "SUBTITLE": "See which ads bring conversations and sales.",
         "LOADING": "Loading…",
         "LOAD_ERROR": "Could not load the Meta connection.",
@@ -2269,6 +2269,36 @@
         "BREADCRUMB": "You are here",
         "NOT_CONNECTED_TITLE": "The ads are not connected yet",
         "NOT_CONNECTED_TEXT": "Ask an administrator to connect the Meta ads. Then the results show up here."
+      },
+      "SEM_LOGIN": {
+        "NO_NAME": "No name",
+        "READY": {
+          "TEXT_PHONE": "Your WhatsApp {phone} is ready: people who come from an ad show up here.",
+          "TEXT": "Your WhatsApp is ready: people who come from an ad show up here.",
+          "TEXT_MANY": "Your WhatsApp numbers are ready: people who come from an ad show up here.",
+          "EXAMPLE": "See an example"
+        },
+        "EXAMPLE": {
+          "BADGE": "Example",
+          "TEXT": "Sample numbers, just to show how it looks.",
+          "BACK": "Back",
+          "ADS": {
+            "WINTER": "Winter sale",
+            "TALK": "Talk to us",
+            "SHIPPING": "Free shipping this week"
+          }
+        },
+        "AD": {
+          "PEOPLE": "Who came from this ad",
+          "EMPTY": "Nobody came from this ad in this period.",
+          "STATUS": {
+            "BOUGHT": "Bought {value}",
+            "BOUGHT_NO_VALUE": "Bought",
+            "TALKING": "Talking",
+            "LOST": "Lost",
+            "NO_ANSWER": "No reply"
+          }
+        }
       },
       "EMPTY": {
         "EYEBROW": "Campaigns",
@@ -2559,6 +2589,7 @@
           "LABEL": "What to see"
         },
         "HEADLINE": "You invested {spend}. {conversations} and {sales} came in.",
+        "HEADLINE_WHATSAPP": "{conversations} came in from your ads on WhatsApp, and {sales}.",
         "PERIOD": "{days} days",
         "PERIOD_LABEL": "Period",
         "PERIOD_CTX": "Last {days} days",
@@ -2703,6 +2734,18 @@
           "NO_ANSWER": "No answer",
           "WON": "Won",
           "LOST": "Lost"
+        },
+        "REPORT": {
+          "BUTTON": "Download report",
+          "TITLE": "Download the report",
+          "DESCRIPTION": "Last {days} days, with the same numbers as the screen.",
+          "PDF_TITLE": "PDF to present",
+          "PDF_HINT": "Ready pages to show or send to someone.",
+          "SHEET_TITLE": "Spreadsheet to work the numbers",
+          "SHEET_HINT": "Opens in Excel or Google Sheets, with every conversation.",
+          "CONFIRM": "Download",
+          "ERROR": "Could not download right now. Try again.",
+          "NO_PEOPLE": "Without the \"Export the CRM list to Excel\" permission, the file has only the numbers, without the list of people."
         }
       },
       "AD_DETAIL": {
@@ -2735,9 +2778,11 @@
         "MEANWHILE": "1 open quote from this ad is waiting for an answer. Picking it up is what you can do now. | {count} open quotes from this ad are waiting for an answer. Picking them up is what you can do now.",
         "MEANWHILE_SEE": "See the quotes",
         "CHART_TITLE": "Spend and conversations per day",
+        "CHART_TITLE_TALKS": "Conversations per day",
         "LEGEND_SPEND": "Spend",
         "LEGEND_CONVERSATIONS": "Conversations",
         "CHART_DAY": "{date}: {spend} · 1 conversation | {date}: {spend} · {count} conversations",
+        "CHART_DAY_TALKS": "{date}: 1 conversation | {date}: {count} conversations",
         "CHART_SCALE": "Highest spend in a day: {spend} · most conversations in a day: 1 | Highest spend in a day: {spend} · most conversations in a day: {count}",
         "DAYS_TOGGLE": "See day by day",
         "DAYS_DATE": "Day",

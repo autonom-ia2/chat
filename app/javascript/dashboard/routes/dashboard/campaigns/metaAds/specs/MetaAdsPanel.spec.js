@@ -132,6 +132,10 @@ const mountPanel = async (options = {}) => {
       mocks: { $t: (key, values) => `${key} ${JSON.stringify(values || {})}` },
       stubs: {
         Spinner: true,
+        MetaAdsReportButton: {
+          props: ['days'],
+          template: '<span data-report-stub :data-days="days" />',
+        },
         RouterLink: {
           props: ['to'],
           template: '<a :href="to"><slot /></a>',
@@ -169,6 +173,14 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     mounted?.unmount();
     mounted = null;
     vi.useRealTimers();
+  });
+
+  it('offers the report of the period next to the period choice (#1960)', async () => {
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-report-stub]').attributes('data-days')).toBe(
+      '30'
+    );
   });
 
   it('tells the money story in one sentence and shows the path', async () => {

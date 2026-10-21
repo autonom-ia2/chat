@@ -197,15 +197,40 @@ module Crm::Ai::ClassifierPrompt
       quando a proposta de fato existir.
     - Sem nenhuma evidência nova relevante desde a última interação: mantenha o estágio atual com
       confiança baixa; não invente progresso.
-    - Cliente diz explicitamente que fechou negócio e há um estágio de conclusão/ganho: mover para ele
-      com confiança alta e preencher "value" apenas se o preço da NOSSA oferta foi citado.
+    - Cliente diz explicitamente que fechou negócio CONOSCO e há um estágio de conclusão/ganho: mover para
+      ele com confiança alta e preencher "value" apenas se o preço da NOSSA oferta foi citado. Se ele não diz
+      com quem fechou, veja "QUANDO O CLIENTE DIZ QUE O ASSUNTO TERMINOU".
     - Cliente diz que desistiu/escolheu concorrente e há um estágio de perda: mover para ele com
       confiança alta. Sem declaração explícita, NÃO trate atraso ou silêncio como perda.
   EX
 
-  # Vale para todas as contas (#1140): a avaliação conjunta já avisava (VARIOS), a de um card não. Fica no FIM do prefixo
-  # de propósito: o cache de prompt é por prefixo, então tudo antes daqui segue byte a byte igual ao de antes e só o
-  # trecho final (e a entrada, que já muda a cada chamada) é processado de novo na primeira chamada depois do deploy.
+  # #1926: "já conseguimos fechar", sem dizer com quem, ia para a etapa do meio que fala em "fechar" (Negociação) e até
+  # para Ganho; "já resolvi", para a etapa do meio. Um fim ambíguo não é progresso: é um dos fins ou manter, e o
+  # incerto vira sugestão para uma pessoa confirmar. A faixa da sugestão sai dos limiares do Evaluator (Config): se um
+  # deles mudar, o texto acompanha e o caso incerto continua sem mover sozinho.
+  # Cache: o EXAMPLES (antes daqui) também mudou neste PR, então o prefixo se perde a partir dele, uma vez, na primeira
+  # chamada depois do deploy; daí em diante volta a ser estável.
+  FIM_DO_ASSUNTO = <<~FIM.strip
+    QUANDO O CLIENTE DIZ QUE O ASSUNTO TERMINOU:
+    - Uma fala de que o assunto acabou (fechou, resolveu, já conseguiu, não precisa mais) não é progresso: o card não
+      vai para uma etapa do meio do funil, mesmo que o critério dela fale em fechamento ou decisão. As saídas são uma
+      etapa de fim (ganho, perda, resolvido, concluído), escolhida pelo COMO terminou, ou ficar onde está.
+    - Em "sell", o fim depende de com quem terminou. Ganho só quando a conversa mostra que foi CONOSCO: aceitou a
+      nossa proposta, pediu contrato, boleto ou dados para pagar, pagou ou confirmou com a nossa equipe. Fechou com
+      outro, resolveu sozinho ou desistiu: o fim de perda.
+    - Se a fala não diz com quem nem como, e a conversa não mostra que foi conosco, a leitura é INCERTA: um
+      agradecimento ou a proposta já enviada não provam que foi conosco. Escolha a etapa de fim que os critérios
+      indicam para quem não precisa mais da nossa oferta, com confiança de pelo menos
+      #{Crm::Ai::Config::SUGGESTION_THRESHOLD} e abaixo de #{Crm::Ai::Config::AUTO_MOVE_THRESHOLD} (a partir de
+      #{Crm::Ai::Config::AUTO_MOVE_THRESHOLD}, o card se move sem ninguém confirmar). Sem etapa assim, mantenha o
+      estágio atual com confiança baixa.
+    - Em "serve", o fim é o de resolvido ou concluído quando os critérios o descrevem; se não está claro que foi o
+      problema DESTE card que se resolveu, mantenha.
+  FIM
+
+  # Vale para todas as contas (#1140): a avaliação conjunta já avisava (VARIOS), a de um card não. Ficou no FIM do
+  # prefixo de propósito: o cache de prompt é por prefixo, e o que vem antes não mudou com ele (o #1926 mudou depois:
+  # ver o FIM_DO_ASSUNTO).
   # Na avaliação conjunta, o VARIOS vem depois deste bloco: o prefixo dela muda a partir daqui (uma perda de cache só).
   # Os critérios das etapas e o handoff_trigger seguem valendo como regra (o gatilho MANDA, no HANDOFF): o aviso só
   # impede que outra ordem escrita neles, ou nas mensagens, seja seguida.
@@ -256,6 +281,7 @@ module Crm::Ai::ClassifierPrompt
     OTHER_SUBJECTS,
     OUTPUT_DISCIPLINE,
     EXAMPLES,
+    FIM_DO_ASSUNTO,
     DADOS_NAO_INSTRUCOES
   ].freeze
   TEXT = PARTES.join("\n\n").freeze

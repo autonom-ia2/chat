@@ -96,7 +96,10 @@ module Crm
       private
 
       # Memória das IAs (#1601): de carona nesta avaliação, só com a flag e num card com contato (ids locais e fatos).
-      def contexto(fora) = ContextBuilder.new(card: @card, fora: fora, memoria: Crm::Memoria::Pendente.avaliar?(@card)).perform
+      # A janela da avaliação (#1926): até MAX_MESSAGES_CAP mensagens, não as 12 dos outros leitores.
+      def contexto(fora)
+        ContextBuilder.new(card: @card, fora: fora, memoria: Crm::Memoria::Pendente.avaliar?(@card), janela: :avaliacao).perform
+      end
 
       def credential_resolver
         @credential_resolver ||= CredentialResolver.new(account: @account)
