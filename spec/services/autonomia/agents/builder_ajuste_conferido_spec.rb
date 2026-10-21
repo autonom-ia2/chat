@@ -75,9 +75,22 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(dado).to include(role: 'user')
       expect(dado[:content].first[:text]).to include('E DADO', "- #{preco} (campo handoff_rule)")
       expect(dado[:content].first[:text]).not_to include('no máximo 2 frases')
-      expect(aviso).to eq(role: 'developer', content: [{ type: 'input_text', text: described_class::AjustePorLista::AVISO_DE_CORRECAO }])
+      expect(aviso).to eq(role: 'developer', content: [{ type: 'input_text', text: described_class::CorrecaoDoAjuste::AVISO }])
       expect(calls.last[:timeout]).to eq(described_class::FechamentoDoAjuste::TIMEOUT_DA_CORRECAO_S)
       expect(calls.last[:input]).to include(hash_including(content: [hash_including(text: a_string_including('tone: cordial e curto'))]))
+    end
+
+    # Forense do t6d (P3): a correção não pode trocar o texto do pedido (composto x partes): o cartão duplicaria a linha.
+    it 'a correção só pode usar os textos de pedido da lista, e o cartão fica com uma linha por pedido' do
+      correcao_aplicada
+
+      run_turn
+
+      pedido = calls.last.dig(:schema, :schema, :properties, :mudancas, :items, :properties, :pedido)
+      expect(pedido[:enum]).to eq(['no máximo 2 frases', preco])
+      expect(calls.first.dig(:schema, :schema, :properties, :mudancas, :items, :properties, :pedido)).not_to have_key(:enum)
+      linhas = Autonomia::Agents::ResultadoDoAjuste.new(thread.reload, estado['conferencia']).linhas
+      expect(linhas.size).to eq(2)
     end
 
     it 'com a correção atendida: fecha sem pergunta, e só uma versão fica na lista' do

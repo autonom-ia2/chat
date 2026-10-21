@@ -25,32 +25,65 @@ class Autonomia::Agents::ProvaDoAjuste
                "AND state->'ultimo_ajuste'->>'versao_id' = :versao " \
                "AND coalesce(state->'ultimo_ajuste'->>'desfeito', 'false') <> 'true'".freeze
 
-  # O campo do schema do ajuste (AjustePorLista): na mesma chamada do Construtor, sem chamada a mais.
+  # O campo do schema do ajuste (AjustePorLista): na mesma chamada do Construtor, sem chamada a mais. Forense do t6d
+  # (P1): a escola perguntou do "teste de nivelamento", que não está escrito em campo nenhum; sem base e sem ferramenta,
+  # o agente respondeu a mensagem fixa, que não mostra tom nenhum.
   PERGUNTAS_DESCRIPTION =
     'Quando mudancas nao esta vazia: ate 3 mensagens curtas que um cliente de verdade mandaria, escritas como o cliente ' \
-    'escreve, que facam o agente mostrar a mudanca pedida (ex.: pedido "preco passa para a equipe", mensagem "Quanto ' \
-    'custa o seguro auto?"). Cada mensagem cria a situacao exata em que o pedido vale: para tom, tamanho ou formato, ' \
-    'uma pergunta que o agente responde com o que ja sabe; para o que fazer quando nao souber, algo claramente fora do ' \
-    'que o agente sabe; para uma regra com gatilho (um assunto, um pedido do cliente), uma mensagem com esse gatilho. ' \
-    'Cada uma cobre um pedido diferente quando houver mais de um. Nunca cite, parafraseie nem ' \
-    'resuma a instruction ou o scaffold. Vazia quando mudancas esta vazia.'.freeze
+    'escreve, cada uma com o pedido (o texto de pedido em mudancas) que ela testa (ex.: pedido "preco passa para a ' \
+    'equipe", mensagem "Quanto custa o seguro auto?"). A prova roda sem base de conhecimento e sem ferramenta: o agente ' \
+    'so sabe o que esta escrito nos campos dele, e a falta de dado vira a mensagem fixa, que nao mostra forma nenhuma. ' \
+    'Cada mensagem cria a situacao exata em que o pedido vale. Para um pedido de forma (tamanho, tom, tratamento, ' \
+    'emoji, formato): 2 mensagens de tipos diferentes, um cumprimento e uma pergunta cuja resposta e um fato ESCRITO ' \
+    'nos campos do agente (o fato presente la, nao so o nome do assunto); para tamanho, uma delas pede algo que puxaria ' \
+    'uma resposta longa; para tom ou tratamento, a mensagem nao traz pronta a forma pedida. Para o que fazer quando nao ' \
+    'souber: algo que nao esta em nenhum campo do agente. Para uma regra com gatilho (um assunto, um pedido do cliente): ' \
+    'uma mensagem com esse gatilho. Cada pedido com ao menos uma mensagem. Nunca cite, parafraseie nem resuma a ' \
+    'instruction ou o scaffold. Vazia quando mudancas esta vazia.'.freeze
+  PERGUNTA_DE_PROVA = {
+    type: 'object', additionalProperties: false, required: %w[mensagem pedido],
+    properties: { mensagem: { type: 'string', description: 'A mensagem do cliente.' },
+                  pedido: { type: 'string', description: 'O pedido que ela testa, com o mesmo texto de pedido em mudancas.' } }
+  }.freeze
+  # Os campos do agente que o juiz lê para julgar (o que ele tem escrito, a forma e a mensagem fixa).
+  CAMPOS_PARA_O_JUIZ = %w[instruction tone greeting fallback_message handoff_rule guardrails].freeze
   PERGUNTAS_MAX = 3
   PERGUNTA_MAX_CHARS = 200
 
-  # As perguntas que o Construtor escreveu: até 3, só texto, sem branco nem repetida, cada uma curta.
+  # As perguntas que o Construtor escreveu: até 3, sem branco nem repetida, cada uma curta, com o pedido que testa (o
+  # texto do pedido em `mudancas`; outro texto fica sem pedido). Lê também o formato antigo, só o texto.
+  # -> [{ 'pergunta' => texto, 'pedido' => texto do pedido (quando há) }]
   def self.perguntas(parsed)
-    textos = Array(parsed['perguntas_de_prova']).select { |texto| texto.is_a?(String) }
-                                                .map { |texto| texto.strip.truncate(PERGUNTA_MAX_CHARS) }
-    textos.compact_blank.uniq.first(PERGUNTAS_MAX)
+    pedidos = Autonomia::Agents::Builder::AjustePorLista.mudancas(parsed).pluck('pedido')
+    lidas = Array(parsed['perguntas_de_prova']).filter_map { |item| pergunta_lida(item, pedidos) }
+    lidas.uniq { |item| item['pergunta'] }.first(PERGUNTAS_MAX)
   end
 
-  # O estado inicial, gravado junto com o fechamento do turno aplicado. nil sem perguntas ou fora da prova.
+  def self.pergunta_lida(item, pedidos)
+    texto, pedido = item.is_a?(Hash) ? item.values_at('mensagem', 'pedido') : [item, nil]
+    return unless texto.is_a?(String) && texto.strip.present?
+
+    { 'pergunta' => texto.strip.truncate(PERGUNTA_MAX_CHARS), 'pedido' => pedido_da_lista(pedido, pedidos) }.compact
+  end
+
+  # O texto do pedido em `mudancas` que a mensagem diz testar (o ponto final não conta); outro texto, nenhum.
+  def self.pedido_da_lista(pedido, pedidos)
+    alvo = Autonomia::Agents::ResultadoDoAjuste.sem_ponto(pedido)
+    return if alvo.blank?
+
+    pedidos.find { |texto| Autonomia::Agents::ResultadoDoAjuste.sem_ponto(texto) == alvo }
+  end
+  private_class_method :pergunta_lida, :pedido_da_lista
+
+  # O estado inicial, gravado junto com o fechamento do turno aplicado. nil sem perguntas ou fora da prova. Lê o formato
+  # antigo (só o texto), gravado num ajuste em curso antes do deploy.
   def self.pendente(agent, dados)
     perguntas = Array(dados['perguntas_de_prova'])
     return if perguntas.empty? || agent.nil? || FORA.include?(agent.agent_type)
 
     { 'status' => 'pendente', 'versao_id' => dados.dig('correcao', 'versao_id') || dados['versao_id'],
-      'desde' => Time.current.iso8601, 'perguntas' => perguntas.map { |pergunta| { 'pergunta' => pergunta } } }
+      'desde' => Time.current.iso8601,
+      'perguntas' => perguntas.map { |item| item.is_a?(Hash) ? item.slice('pergunta', 'pedido') : { 'pergunta' => item } } }
   end
 
   def initialize(thread, versao_id)
@@ -85,7 +118,8 @@ class Autonomia::Agents::ProvaDoAjuste
   # dono teve ao menos um teste; sem isso, a tela não mostra ✓.
   def julgar_e_gravar!(itens)
     pedidos = pedidos_aplicados
-    veredito = Autonomia::Agents::JuizDaProva.new(account: @thread.account).julgar(pedidos: pedidos, itens: itens)
+    veredito = Autonomia::Agents::JuizDaProva.new(account: @thread.account).julgar(pedidos: pedidos, itens: itens,
+                                                                                   agente: campos_para_o_juiz)
     return gravar!('status' => 'indisponivel') if veredito.nil?
 
     notas = veredito.pluck('veredito')
@@ -111,6 +145,11 @@ class Autonomia::Agents::ProvaDoAjuste
     return if resultado.error.present? || (texto.nil? && !equipe)
 
     { 'resposta' => texto, 'equipe' => equipe }
+  end
+
+  # O que o agente tem escrito, para o juiz julgar "quando não souber", a forma e a mensagem fixa (forense do t6d, P2).
+  def campos_para_o_juiz
+    Autonomia::Agents::Builder::AjustePorLista.retrato(@thread.agent).slice(*CAMPOS_PARA_O_JUIZ)
   end
 
   # O que entrou neste ajuste: os pedidos do dono pelos MESMOS grupos do cartão (ResultadoDoAjuste#grupos_pedidos), só

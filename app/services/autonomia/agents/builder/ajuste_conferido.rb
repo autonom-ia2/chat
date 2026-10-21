@@ -28,8 +28,11 @@ module Autonomia::Agents::Builder::AjusteConferido
     @ajuste_da_fase2 = adjust_mode? && Autonomia::Agents::Fase2.ligada?(@account)
   end
 
+  # Na correção, o schema dela (os pedidos limitados aos textos da lista: FechamentoDoAjuste#schema_da_correcao).
   def builder_schema
-    ajuste_da_fase2? ? regras_do_ajuste::SCHEMA : self.class::BUILDER_SCHEMA
+    return self.class::BUILDER_SCHEMA unless ajuste_da_fase2?
+
+    @schema_da_correcao || regras_do_ajuste::SCHEMA
   end
 
   def regras_do_ajuste

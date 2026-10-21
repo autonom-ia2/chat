@@ -116,8 +116,9 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
   # -> { mudancas:, versao_id:, resposta: } quando aplicou e mudou algo; senão um símbolo do desfecho.
   def corrigir(token, conferencia, resposta, esperado)
     @built_input = nil
+    @schema_da_correcao = schema_da_correcao(conferencia)
     parsed = parse_output(call_model(full_phase, Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_FINAL,
-                                     aviso: regras_do_ajuste.itens_de_correcao(conferencia), correcao: true))
+                                     aviso: Autonomia::Agents::Builder::CorrecaoDoAjuste.itens(conferencia), correcao: true))
     return :nada if parsed.nil?
 
     mudancas = regras_do_ajuste.mudancas(parsed)
@@ -127,6 +128,14 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
   rescue *FALHAS_DA_CORRECAO => e
     Rails.logger.warn("[autonomia][builder] correcao indisponivel thread=#{@thread.id} #{e.class}")
     e.is_a?(Autonomia::Agents::Agent::ModoManual) ? :manual : :nada
+  ensure
+    @schema_da_correcao = nil
+  end
+
+  # O schema da chamada da correção: o pedido de cada mudança só pode ser um texto da lista conferida (CorrecaoDoAjuste).
+  def schema_da_correcao(conferencia)
+    pedidos = Autonomia::Agents::Builder::CorrecaoDoAjuste.pedidos(conferencia)
+    Autonomia::Agents::Builder::CorrecaoDoAjuste.schema(pedidos) if pedidos
   end
 
   # A escrita da correção: o agente mudou sob a trava, perdida (por quê), sem mudança (não conta) ou aplicada.

@@ -556,8 +556,51 @@ RSpec.describe Autonomia::Agents::Builder do
         'perguntas_de_prova' => [' Quanto custa? ', 'Quanto custa?', '', 7, 'b' * 500, 'Tem vida?', 'Quarta']
       )
 
-      expect(lido).to eq(['Quanto custa?', "#{'b' * 197}...", 'Tem vida?'])
+      expect(lido).to eq([{ 'pergunta' => 'Quanto custa?' }, { 'pergunta' => "#{'b' * 197}..." }, { 'pergunta' => 'Tem vida?' }])
       expect(Autonomia::Agents::ProvaDoAjuste.perguntas({})).to eq([])
+    end
+
+    it 'perguntas_de_prova no schema do ajuste é uma lista de {mensagem, pedido}' do
+      campo = described_class::AjustePorLista::SCHEMA.dig(:schema, :properties, :perguntas_de_prova)
+      expect(campo).to include(type: 'array', items: Autonomia::Agents::ProvaDoAjuste::PERGUNTA_DE_PROVA)
+    end
+
+    # Forense do t6d (P3): "sem emoji e mais curto" virou um pedido só, e o cartão não separa o que entrou.
+    it 'a descrição do pedido separa os pedidos independentes e não repete o composto com as partes' do
+      descricao = described_class::AjustePorLista::MUDANCA.dig(:properties, :pedido, :description)
+      expect(descricao).to include('Um pedido independente e um item proprio: "sem emoji e mais curto" sao dois pedidos',
+                                   'Nunca liste o pedido composto junto com as partes')
+    end
+
+    # Forense do t6d (P4): "sem emoji" com 💕 na saudação. O pedido de forma corrige também o texto fixo que o contradiz.
+    it 'a tabela manda o pedido de forma também para a saudação e a mensagem fixa quando o texto atual o contradiz' do
+      expect(described_class::AjustePorLista::TABELA_DE_DESTINO.squish).to include(
+        'e tambem greeting e fallback_message quando o texto atual deles contradiz o pedido (ex.: "sem emoji" e a ' \
+        'saudacao tem emoji)'
+      )
+    end
+
+    # Forense do t6d (P3): a correção usa o mesmo texto de pedido da lista, pelo schema; o cartão não duplica a linha.
+    it 'o schema da correção limita o pedido aos textos da lista, e só ele' do
+      schema = described_class::CorrecaoDoAjuste.schema(['sem emoji', 'mais curto'])
+      do_ajuste = described_class::AjustePorLista::SCHEMA[:schema][:properties]
+
+      expect(schema.dig(:schema, :properties, :mudancas, :items, :properties, :pedido, :enum)).to eq(['sem emoji', 'mais curto'])
+      expect(schema.dig(:schema, :properties).except(:mudancas)).to eq(do_ajuste.except(:mudancas))
+      expect(do_ajuste.dig(:mudancas, :items, :properties, :pedido)).not_to have_key(:enum)
+      expect_schema_estrito(schema[:schema])
+    end
+
+    it 'o aviso da correção pede o mesmo texto de pedido da lista' do
+      expect(described_class::CorrecaoDoAjuste::AVISO.squish).to include('com o mesmo texto de pedido dos itens da lista')
+    end
+
+    it 'os pedidos da correção são os da lista, sem repetir; com pedido fora da lista, a correção fica livre' do
+      itens = [mudanca('tone', 'sem emoji'), mudanca('instruction', 'sem emoji'), mudanca('tone', 'mais curto')]
+      correcao = described_class::CorrecaoDoAjuste
+
+      expect(correcao.pedidos('itens' => itens, 'faltou_fora_da_lista' => false)).to eq(['sem emoji', 'mais curto'])
+      expect(correcao.pedidos('itens' => itens, 'faltou_fora_da_lista' => true)).to be_nil
     end
 
     it 'o turno do ajuste faz uma chamada só ao Construtor mesmo com as perguntas de prova' do

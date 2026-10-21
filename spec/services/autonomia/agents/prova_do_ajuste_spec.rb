@@ -100,6 +100,67 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
 
       expect(described_class.pendente(agent, dados)['versao_id']).to eq(2)
     end
+
+    # Forense do t6d (P1): cada mensagem de prova diz qual pedido testa, com o texto de `mudancas`.
+    it 'a mensagem de prova vem com o pedido que ela testa e a prova pendente guarda os dois' do
+      aplicar_ajuste('perguntas_de_prova' => [{ 'mensagem' => 'Oi, tudo bem?', 'pedido' => fala },
+                                              { 'mensagem' => 'Quais seguros vocês têm?', 'pedido' => "#{fala}." }])
+
+      expect(estado.dig('prova', 'perguntas')).to eq([{ 'pergunta' => 'Oi, tudo bem?', 'pedido' => fala },
+                                                      { 'pergunta' => 'Quais seguros vocês têm?', 'pedido' => fala }])
+      expect(Autonomia::Agents::ProvaDoAjusteJob).to have_been_enqueued.with(thread.id, versao_aplicada)
+    end
+
+    # Compatibilidade: o formato antigo (só o texto) gravado num ajuste em curso antes do deploy continua valendo.
+    it 'perguntas gravadas no formato antigo (só texto) viram a prova pendente igual a antes' do
+      expect(described_class.pendente(agent, 'perguntas_de_prova' => perguntas, 'versao_id' => 1)['perguntas'])
+        .to eq(perguntas.map { |pergunta| { 'pergunta' => pergunta } })
+      expect(described_class.pendente(agent, 'perguntas_de_prova' => [{ 'pergunta' => 'Oi?', 'pedido' => fala }],
+                                             'versao_id' => 1)['perguntas']).to eq([{ 'pergunta' => 'Oi?', 'pedido' => fala }])
+    end
+  end
+
+  # Forense do t6d (P1): a escola perguntou do "teste de nivelamento", que não está escrito em campo nenhum, e o agente
+  # respondeu a mensagem fixa (sem base e sem ferramenta). A descrição diz como escolher a mensagem para cada pedido.
+  describe '.perguntas e a descrição do campo' do
+    let(:lista) { [mudanca('tone', 'sem emoji'), mudanca('instruction', 'mais curto')] }
+
+    it 'lê {mensagem, pedido}: o pedido vira o texto de mudancas, e pedido que não está na lista fica sem pedido' do
+      lido = described_class.perguntas(
+        'mudancas' => lista,
+        'perguntas_de_prova' => [{ 'mensagem' => ' Oi! ', 'pedido' => 'sem emoji' },
+                                 { 'mensagem' => 'Quais formas de pagamento?', 'pedido' => 'mais curto.' },
+                                 { 'mensagem' => 'Tem loja física?', 'pedido' => 'outro pedido' },
+                                 { 'mensagem' => 'Quarta?', 'pedido' => 'sem emoji' }]
+      )
+
+      expect(lido).to eq([{ 'pergunta' => 'Oi!', 'pedido' => 'sem emoji' },
+                          { 'pergunta' => 'Quais formas de pagamento?', 'pedido' => 'mais curto' },
+                          { 'pergunta' => 'Tem loja física?' }])
+    end
+
+    it 'mensagem em branco, repetida ou que não é texto fica fora; o formato antigo (só texto) ainda é lido' do
+      lido = described_class.perguntas(
+        'mudancas' => lista,
+        'perguntas_de_prova' => [{ 'mensagem' => '', 'pedido' => 'sem emoji' }, { 'mensagem' => 7, 'pedido' => 'sem emoji' },
+                                 'Oi!', { 'mensagem' => 'Oi!', 'pedido' => 'sem emoji' }, nil]
+      )
+
+      expect(lido).to eq([{ 'pergunta' => 'Oi!' }])
+    end
+
+    it 'a descrição: prova sem base e sem ferramenta, fato escrito nos campos, 2 mensagens de tipos diferentes para forma' do
+      descricao = described_class::PERGUNTAS_DESCRIPTION
+      expect(descricao).to include('A prova roda sem base de conhecimento e sem ferramenta',
+                                   'a falta de dado vira a mensagem fixa', 'um fato ESCRITO nos campos do agente',
+                                   'nao so o nome do assunto', '2 mensagens de tipos diferentes', 'um cumprimento')
+    end
+
+    it 'o item do schema é {mensagem, pedido}, estrito' do
+      item = described_class::PERGUNTA_DE_PROVA
+      expect(item).to include(type: 'object', additionalProperties: false, required: %w[mensagem pedido])
+      expect(item[:properties].keys).to eq(%i[mensagem pedido])
+    end
   end
 
   describe '#rodar!' do
@@ -130,8 +191,22 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
 
       expect(juiz).to have_received(:julgar).with(
         pedidos: [{ 'numero' => 1, 'pedido' => fala, 'o_que_mudou' => ['Respostas curtas.'] }],
-        itens: perguntas.map { |pergunta| { 'pergunta' => pergunta, 'resposta' => 'Em até 2 frases.', 'equipe' => false } }
+        itens: perguntas.map { |pergunta| { 'pergunta' => pergunta, 'resposta' => 'Em até 2 frases.', 'equipe' => false } },
+        agente: anything
       )
+    end
+
+    # Forense do t6d (P2): o juiz precisa saber o que o agente tem escrito para julgar "quando não souber" e a forma.
+    it 'o juiz recebe os campos do agente que importam para julgar, sem o nome, o cartão nem a voz' do
+      agente_responde
+
+      provar!
+
+      expect(juiz).to have_received(:julgar) do |agente:, **|
+        expect(agente).to eq('instruction' => agent.instruction, 'tone' => agent.reload.tone, 'greeting' => agent.greeting,
+                             'fallback_message' => agent.fallback_message, 'handoff_rule' => agent.handoff_rule,
+                             'guardrails' => ['Não invente valores.'])
+      end
     end
 
     it 'mexe só na chave da prova: o resto do state fica como estava' do
@@ -339,7 +414,7 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(juiz).to have_received(:julgar).with(
         pedidos: [{ 'numero' => 1, 'pedido' => fala, 'o_que_mudou' => ['Respostas curtas.', 'No máximo 2 frases.'] },
                   { 'numero' => 2, 'pedido' => preco, 'o_que_mudou' => ['Preço vai à equipe.'] }],
-        itens: anything
+        itens: anything, agente: anything
       )
     end
 
@@ -400,7 +475,7 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
 
       expect(juiz).to have_received(:julgar).with(
         pedidos: [{ 'numero' => 1, 'pedido' => fala, 'o_que_mudou' => ['Respostas curtas.', 'No máximo 2 frases.'] }],
-        itens: anything
+        itens: anything, agente: anything
       )
       expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => true)
     end
