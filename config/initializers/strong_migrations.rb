@@ -9,7 +9,7 @@
 # abaixo vale para todas (a gem o aplica antes de olhar a versão). Migration nova com versão menor que esta (gerada com a data do dia,
 # por exemplo) também escaparia aqui, por isso o job "Migrations do lote" zera o start_after e checa toda migration
 # nova do lote, qualquer que seja a versão.
-StrongMigrations.start_after = 20_261_108_250_000
+StrongMigrations.start_after = 20_261_108_260_000
 
 # ALTER TABLE pede trava exclusiva. Atrás de uma transação longa ele espera, e toda leitura e escrita da tabela espera
 # atrás dele. Com 5 s a migration desiste e é tentada de novo; esgotadas as tentativas, o deploy falha antes do
