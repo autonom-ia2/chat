@@ -1,7 +1,8 @@
 class Crm::Ai::EvaluateCardJob < ApplicationJob
   queue_as :low
 
-  def perform(card_id, debounce_token = nil)
+  # trigger: 'message', ou 'mensagem_da_equipe' quando a mensagem da pessoa da equipe agendou (#1923, Crm::Ai::Observer).
+  def perform(card_id, debounce_token = nil, trigger = 'message')
     return unless Crm::Ai::Config.enabled?
 
     card = Crm::Card.find_by(id: card_id)
@@ -15,11 +16,11 @@ class Crm::Ai::EvaluateCardJob < ApplicationJob
 
     wait_seconds = evaluate_wait_seconds(card)
     if wait_seconds.positive?
-      self.class.set(wait: wait_seconds.seconds).perform_later(card.id, debounce_token)
+      self.class.set(wait: wait_seconds.seconds).perform_later(card.id, debounce_token, trigger)
       return
     end
 
-    Crm::Ai::Evaluator.new(card: card, trigger: 'message').perform
+    Crm::Ai::Evaluator.new(card: card, trigger: trigger).perform
   end
 
   private

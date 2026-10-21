@@ -16,6 +16,8 @@ const CREATE_ERRORS = {
   whatsapp_cloud_required: 'WHATSAPP_CLOUD_REQUIRED',
   channel_not_in_audience: 'CHANNEL_NOT_IN_AUDIENCE',
   audience_not_ready: 'AUDIENCE_NOT_READY',
+  // #1898: someone else already sent this ready campaign.
+  draft_gone: 'DRAFT_GONE',
   invalid_variable_bindings: 'INVALID_VARIABLE_BINDINGS',
   invalid_campaign: 'INVALID_CAMPAIGN',
   campaign_journey_disabled: 'JOURNEY_DISABLED',

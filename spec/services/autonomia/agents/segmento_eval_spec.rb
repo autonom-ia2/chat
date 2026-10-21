@@ -3,8 +3,9 @@ require 'rails_helper'
 # AVALIAÇÃO PAGA DO BLOCO DE SEGMENTO (#1802, lote 6; tema 8, #1429), DESLIGADA POR PADRÃO. Roda só com
 # `AUTONOMIA_EVAL_PAGO=1`, `SEGMENTO_EVAL=1` e `OPENAI_API_KEY`. Pelo Responder de verdade, com a montagem de verdade
 # (PromptParts::SegmentoDaConta, Fase 2 ligada). Duas variantes, intercaladas:
-#   - `sem_bloco`: Bloco.for devolve nil (como hoje em produção);
-#   - `com_bloco`: o texto do tipo da conta, de config/agentes_por_pacote/seguros/<tipo>/agentes.md.
+#   - `sem_bloco`: a marca de base do agente sem texto (como o agente que nasceu antes do lote 6);
+#   - `com_bloco`: a marca com o texto do tipo da conta, de config/agentes_por_pacote/seguros/<tipo>/agentes.md.
+# O agente recebe o texto gravado na marca (#1429), então a variante troca a marca, não o Bloco.
 # A conta tem nome neutro e o agente, instrução genérica: o que muda entre as variantes é só o bloco. O juiz, de outro
 # modelo, não sabe a variante. Teto somado pelo consumo gravado (juiz incluído). `SEGMENTO_EVAL_SAIDA=<arquivo>` grava
 # o relatório; `SEGMENTO_EVAL_TIPO=<tipo>` roda só um tipo.
@@ -131,12 +132,11 @@ RSpec.describe 'Avaliação paga do bloco de segmento (#1802, lote 6)', :eval_pa
     Crm::AiUsageEvent.where(account_id: contas.values.map(&:id)).sum(:cost_estimate).to_f
   end
 
-  def ligar_bloco(variante)
-    if variante == :sem_bloco
-      allow(Autonomia::Segmentos::Bloco).to receive(:for).and_return(nil)
-    else
-      allow(Autonomia::Segmentos::Bloco).to receive(:for).and_call_original
-    end
+  def ligar_bloco(cenario, variante)
+    agente = vinculo(contas.fetch(cenario[:tipo])).agent
+    marca = Autonomia::Agents::PromptParts::SegmentoDoAgente.marca(agente.account) || raise('Fase 2 desligada na conta')
+    marca = marca.merge('versao' => nil, 'texto' => nil) if variante == :sem_bloco
+    agente.update!(config: agente.config.merge('base' => marca))
   end
 
   def responder(cenario)
@@ -170,7 +170,7 @@ RSpec.describe 'Avaliação paga do bloco de segmento (#1802, lote 6)', :eval_pa
   end
 
   def rodar(cenario, variante, vez)
-    ligar_bloco(variante)
+    ligar_bloco(cenario, variante)
     resposta = responder(cenario)
     veredito = julgar(cenario, resposta)
     { tipo: cenario[:tipo], cenario: cenario[:letra], variante: variante, execucao: vez, resposta: resposta,
