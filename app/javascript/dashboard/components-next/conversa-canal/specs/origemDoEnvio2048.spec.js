@@ -85,10 +85,10 @@ const remetente = balao => balao.find('.font-medium.text-\\[12\\.8px\\]');
 describe('origemDoEnvio (#2048)', () => {
   it.each([
     [{ crmFollowUpId: 3 }, ORIGENS.FOLLOW_UP],
-    [{ crmFollowUpId: 3, crmFollowUpKind: 'message' }, ORIGENS.FOLLOW_UP],
-    [{ crmFollowUpId: 3, crmFollowUpKind: 'task' }, ORIGENS.FOLLOW_UP],
-    [{ crmFollowUpId: 3, crmFollowUpKind: 'call' }, ORIGENS.RETORNO],
-    [{ crm_follow_up_id: 3, crm_follow_up_kind: 'call' }, ORIGENS.RETORNO],
+    [{ crmFollowUpId: 3, crmFollowUpOrigem: 'follow_up' }, ORIGENS.FOLLOW_UP],
+    [{ crmFollowUpId: 3, crmFollowUpOrigem: 'outra' }, ORIGENS.FOLLOW_UP],
+    [{ crmFollowUpId: 3, crmFollowUpOrigem: 'retorno' }, ORIGENS.RETORNO],
+    [{ crm_follow_up_id: 3, crm_follow_up_origem: 'retorno' }, ORIGENS.RETORNO],
     [{ crmBookingNotice: true }, ORIGENS.AGENDAMENTO],
     [{ crm_booking_notice: true }, ORIGENS.AGENDAMENTO],
     [{ crmBookingInviteId: 9 }, null],
@@ -104,8 +104,11 @@ describe('origemDoEnvio (#2048)', () => {
 describe('nome da origem no balão com a pele (#2048)', () => {
   it.each([
     [{ crmFollowUpId: 3 }, 'Follow-up automático'],
-    [{ crmFollowUpId: 3, crmFollowUpKind: 'message' }, 'Follow-up automático'],
-    [{ crmFollowUpId: 3, crmFollowUpKind: 'call' }, 'Retorno automático'],
+    [
+      { crmFollowUpId: 3, crmFollowUpOrigem: 'follow_up' },
+      'Follow-up automático',
+    ],
+    [{ crmFollowUpId: 3, crmFollowUpOrigem: 'retorno' }, 'Retorno automático'],
     [{ crmBookingNotice: true }, 'Agendamento automático'],
   ])('%o mostra "%s", sem o nome da pessoa', (contentAttributes, nome) => {
     const balao = montar({ contentAttributes });
@@ -128,7 +131,7 @@ describe('nome da origem no balão com a pele (#2048)', () => {
 
   it('em inglês, o catálogo en', () => {
     const balao = montar(
-      { contentAttributes: { crmFollowUpId: 3, crmFollowUpKind: 'call' } },
+      { contentAttributes: { crmFollowUpId: 3, crmFollowUpOrigem: 'retorno' } },
       { locale: 'en' }
     );
 
@@ -227,7 +230,7 @@ describe('sequência da conversa com origem (#2048)', () => {
     expect(
       continuaASequencia(
         daMarina({ crmFollowUpId: 3 }),
-        daMarina({ crmFollowUpId: 4, crmFollowUpKind: 'call' }),
+        daMarina({ crmFollowUpId: 4, crmFollowUpOrigem: 'retorno' }),
         'UTC'
       )
     ).toBe(false);

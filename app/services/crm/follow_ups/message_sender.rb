@@ -19,6 +19,8 @@ class Crm::FollowUps::MessageSender
   end
 
   OPTED_OUT_REASON = 'opt_out'.freeze
+  # Follow-ups que a plataforma agenda sozinha em sequência; o resto é retorno combinado (#2048).
+  CADENCE_SOURCES = %w[ai_followup service_reminder stage_automation].freeze
   # Gravado no metadata pelos runners de IA (nunca por follow-up manual): o texto livre sai pelo WhatsApp API
   # do Híbrido, fora das 24h (chat#1349). O envio só obedece se o Híbrido continuar pronto neste momento.
   AI_SOURCES = %w[ai_followup ai_callback service_reminder].freeze
@@ -187,10 +189,12 @@ class Crm::FollowUps::MessageSender
     ).perform
   end
 
-  # A marca do follow-up em toda mensagem que ele manda. `crm_follow_up_kind` (#2048) é o tipo do follow-up ('message',
-  # 'call', ...): o painel mostra "Retorno automático" para 'call' e "Follow-up automático" para o resto.
+  # A marca do follow-up em toda mensagem que ele manda. `crm_follow_up_origem` (#2048) diz ao painel o nome do balão:
+  # 'follow_up' ("Follow-up automático") para a cadência que a plataforma monta sozinha (IA, lembrete de serviço,
+  # automação de etapa); 'retorno' ("Retorno automático") para o retorno combinado, pela IA ou marcado por uma pessoa.
   def follow_up_marks
-    { crm_follow_up_id: @follow_up.id, crm_follow_up_kind: @follow_up.follow_up_type }
+    origem = CADENCE_SOURCES.include?(metadata['source']) ? 'follow_up' : 'retorno'
+    { crm_follow_up_id: @follow_up.id, crm_follow_up_origem: origem }
   end
 
   def load_api_template!(conversation)

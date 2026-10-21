@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# #2048: toda mensagem do follow-up leva o tipo dele (`crm_follow_up_kind`) ao lado da marca `crm_follow_up_id`, nos três
-# caminhos de envio. O painel lê o tipo para dizer "Retorno automático" ('call') ou "Follow-up automático" (o resto).
+# #2048: toda mensagem do follow-up leva a origem (`crm_follow_up_origem`) ao lado da marca `crm_follow_up_id`, nos três
+# caminhos de envio. O painel lê a origem para dizer "Retorno automático" ('retorno': combinado pela IA ou marcado por uma
+# pessoa) ou "Follow-up automático" ('follow_up': cadência da IA, lembrete de serviço, automação de etapa).
 RSpec.describe Crm::FollowUps::MessageSender do
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
@@ -26,21 +27,33 @@ RSpec.describe Crm::FollowUps::MessageSender do
   def marks_of(result)
     expect(result.error).to be_nil
     expect(result.status).to eq(:sent)
-    result.message.reload.content_attributes.slice('crm_follow_up_id', 'crm_follow_up_kind')
+    result.message.reload.content_attributes.slice('crm_follow_up_id', 'crm_follow_up_origem')
   end
 
-  it 'marca o tipo no texto de sessão' do
+  it 'retorno marcado por uma pessoa no card vira retorno, mesmo sendo tarefa' do
     inbox = create_crm_whatsapp_api_inbox(account: account, members: [user])
     conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: user)
     create_incoming_message(conversation: conversation)
-    follow_up = follow_up_for(conversation, inbox, follow_up_type: :call, metadata: { message_body: 'Olá, retorno combinado' })
+    follow_up = follow_up_for(conversation, inbox, follow_up_type: :task, metadata: { message_body: 'Oi, como combinamos' })
 
     result = described_class.new(follow_up: follow_up).perform
 
-    expect(marks_of(result)).to eq('crm_follow_up_id' => follow_up.id, 'crm_follow_up_kind' => 'call')
+    expect(marks_of(result)).to eq('crm_follow_up_id' => follow_up.id, 'crm_follow_up_origem' => 'retorno')
   end
 
-  it 'marca o tipo no modelo pela API' do
+  it 'retorno combinado pela IA vira retorno (texto de sessão)' do
+    inbox = create_crm_whatsapp_api_inbox(account: account, members: [user])
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: user)
+    create_incoming_message(conversation: conversation)
+    follow_up = follow_up_for(conversation, inbox, follow_up_type: :call,
+                                                   metadata: { message_body: 'Olá, retorno combinado', source: 'ai_callback' })
+
+    result = described_class.new(follow_up: follow_up).perform
+
+    expect(marks_of(result)).to eq('crm_follow_up_id' => follow_up.id, 'crm_follow_up_origem' => 'retorno')
+  end
+
+  it 'cadência da IA vira follow-up (modelo pela API)' do
     inbox = create_crm_whatsapp_api_inbox(account: account, members: [user])
     # Provedor que não é WAHA, para valer a janela de 24 h da Meta (WAHA sempre manda sessão).
     inbox.channel.enable_whatsapp_api_campaigns!(provider: 'cloud')
@@ -48,15 +61,16 @@ RSpec.describe Crm::FollowUps::MessageSender do
     window_expired!(conversation)
     template = create_whatsapp_api_template(account: account, inbox: inbox, user: user, body: 'Olá {{contact.first_name}}')
     follow_up = follow_up_for(conversation, inbox, follow_up_type: :message,
-                                                   metadata: { message_body: 'Olá', whatsapp_api_message_template_id: template.id })
+                                                   metadata: { message_body: 'Olá', whatsapp_api_message_template_id: template.id,
+                                                               source: 'ai_followup' })
 
     result = described_class.new(follow_up: follow_up).perform
 
-    expect(marks_of(result)).to eq('crm_follow_up_id' => follow_up.id, 'crm_follow_up_kind' => 'message')
+    expect(marks_of(result)).to eq('crm_follow_up_id' => follow_up.id, 'crm_follow_up_origem' => 'follow_up')
     expect(result.message.content_attributes['crm_follow_up_send_mode']).to eq('template')
   end
 
-  it 'marca o tipo no modelo nativo' do
+  it 'automação de etapa vira follow-up (modelo nativo)' do
     channel = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)
     inbox = channel.inbox
     inbox.add_members([user.id])
@@ -67,11 +81,11 @@ RSpec.describe Crm::FollowUps::MessageSender do
     window_expired!(conversation)
     follow_up = follow_up_for(conversation, inbox, follow_up_type: :call,
                                                    metadata: { message_body: 'Olá', template_name: 'continuidade_atendimento',
-                                                               template_language: 'pt_BR' })
+                                                               template_language: 'pt_BR', source: 'stage_automation' })
 
     result = described_class.new(follow_up: follow_up).perform
 
-    expect(marks_of(result)).to eq('crm_follow_up_id' => follow_up.id, 'crm_follow_up_kind' => 'call')
+    expect(marks_of(result)).to eq('crm_follow_up_id' => follow_up.id, 'crm_follow_up_origem' => 'follow_up')
     expect(result.message.content_attributes['crm_follow_up_send_mode']).to eq('template')
   end
 end
