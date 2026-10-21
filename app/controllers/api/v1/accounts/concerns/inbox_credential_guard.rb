@@ -17,11 +17,10 @@ module Api::V1::Accounts::Concerns::InboxCredentialGuard
     provider provider_config webhook_url
   ].freeze
   SECRET_ATTRS = %w[imap_password smtp_password line_channel_secret line_channel_token bot_token auth_token api_key_secret].freeze
-  # Where each mail password is sent: changing any of these needs the password typed again.
+  # Where each mail password is sent: pointing it to another server needs the password typed again.
   SECRET_DESTINATIONS = {
-    'imap_password' => %w[imap_address imap_port imap_login imap_enable_ssl imap_authentication],
-    'smtp_password' => %w[smtp_address smtp_port smtp_login smtp_domain smtp_authentication smtp_enable_ssl_tls
-                          smtp_enable_starttls_auto smtp_openssl_verify_mode]
+    'imap_password' => %w[imap_address imap_port],
+    'smtp_password' => %w[smtp_address smtp_port]
   }.freeze
 
   # Inbox settings that are not about connecting it; with them, integration_manage alone is not enough.
@@ -83,10 +82,16 @@ module Api::V1::Accounts::Concerns::InboxCredentialGuard
     render json: { message: I18n.t('errors.inboxes.password_needed') }, status: :unprocessable_entity
   end
 
+  # The forms send unset switches as false and unset fields as blank where the database keeps nil: none of them is a change.
   def changed_value?(submitted, current)
     return comparable_hash(submitted) != comparable_hash(current) if submitted.respond_to?(:to_unsafe_h) || submitted.is_a?(Hash)
+    return false if unset?(submitted) && unset?(current)
 
     submitted.to_s != current.to_s
+  end
+
+  def unset?(value)
+    value.nil? || value.to_s.empty? || value.to_s == 'false'
   end
 
   def comparable_hash(value)

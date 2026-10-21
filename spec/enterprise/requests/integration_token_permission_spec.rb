@@ -152,10 +152,6 @@ RSpec.describe 'Integration and token permissions (#2027)', :aggregate_failures,
       expect(response).to have_http_status(:unprocessable_entity)
       expect(email_inbox.channel.reload.imap_address).to eq('imap.loja.test')
       expect(Net::IMAP).not_to have_received(:new)
-
-      patch path, params: { channel: { imap_enabled: true, imap_address: 'imap.loja.test', imap_enable_ssl: false } }, headers: headers, as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(email_inbox.channel.reload.imap_enable_ssl).to be(true)
     end
 
     it 'lets integration_manage alone change how the mailbox connects, and nothing else' do
@@ -171,6 +167,39 @@ RSpec.describe 'Integration and token permissions (#2027)', :aggregate_failures,
       patch path, params: { name: 'Outro nome' }, headers: headers, as: :json
       expect(response).to have_http_status(:unauthorized)
       expect(email_inbox.reload.name).to eq('Contato')
+    end
+
+    it 'does not ask for the password when the mail form only sends back unset switches' do
+      email_inbox = create(:inbox, account: account, channel: create(:channel_email, account: account, imap_address: 'imap.loja.test',
+                                                                                     imap_password: 'guardada', imap_enable_ssl: nil))
+
+      patch "/api/v1/accounts/#{account.id}/inboxes/#{email_inbox.id}",
+            params: { channel: { imap_address: 'imap.loja.test', imap_enable_ssl: false, imap_password: '' } },
+            headers: headers_for(member_with(%w[inbox_view integration_manage])), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(email_inbox.channel.reload.imap_password).to eq('guardada')
+    end
+
+    it 'keeps integration_manage alone out of the other inbox settings' do
+      headers = headers_for(member_with(%w[inbox_view integration_manage]))
+      path = "/api/v1/accounts/#{account.id}/inboxes/#{api_inbox.id}"
+
+      patch path, params: { working_hours: [{ day_of_week: 1, closed_all_day: true }] }, headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      patch path, params: { csat_survey_enabled: !api_inbox.csat_survey_enabled }, headers: headers, as: :json
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'keeps inbox_manage from switching the mail server off' do
+      email_inbox = create(:inbox, account: account, channel: create(:channel_email, account: account, imap_enabled: true))
+
+      patch "/api/v1/accounts/#{account.id}/inboxes/#{email_inbox.id}",
+            params: { channel: { imap_enabled: false } }, headers: headers_for(member_with(%w[inbox_manage])), as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(email_inbox.channel.reload.imap_enabled).to be(true)
     end
 
     it 'keeps inbox_manage from turning off the mail encryption' do
