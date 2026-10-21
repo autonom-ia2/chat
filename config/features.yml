@@ -631,3 +631,15 @@
   display_name: IA de assunto cria o card na coluna certa
   enabled: false
   column: feature_flags_ext_1
+
+# Pasta Enviados da caixa de e-mail (#1938, opção A + B do Rodrigo, 20/10). Ligada: o menu da caixa de e-mail ganha
+# Enviados, uma vista das conversas em que nós mandamos mensagem ao cliente (ConversaCanal::ConversationFinderComPastas,
+# `pasta=enviados`); nada é gravado e a conversa continua na Entrada. Posição provisória na feature_flags_ext_1: a
+# posição na lista é o bit: 44 (1 << 43), da Orquestração (20/10), se o PR abrir antes do etiquetas_do_celular do Max.
+# Desligada: só Entrada, Spam e Lixeira, como antes. Liberada pelo Rodrigo para todas as contas (20/10): conta nova
+# nasce ligada (migration 20261108200000, ACCOUNT_LEVEL_FEATURE_DEFAULTS) e a Orquestração liga as existentes depois do
+# deploy.
+- name: email_enviados
+  display_name: Pasta Enviados na caixa de e-mail
+  enabled: true
+  column: feature_flags_ext_1
