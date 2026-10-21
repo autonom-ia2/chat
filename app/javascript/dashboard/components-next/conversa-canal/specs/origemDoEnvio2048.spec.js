@@ -144,6 +144,26 @@ describe('nome da origem no balão com a pele (#2048)', () => {
     expect(remetente(balao).text()).toBe('Agendamento automático');
   });
 
+  it('aviso pelo Híbrido, que sai sem remetente, também leva a origem', () => {
+    const balao = montar({
+      contentAttributes: { crmBookingNotice: true },
+      sender: null,
+      senderType: null,
+    });
+
+    expect(remetente(balao).text()).toBe('Agendamento automático');
+  });
+
+  it('robô só com o sender_type cru (sem objeto sender) não ganha origem', () => {
+    const balao = montar({
+      sender: null,
+      senderType: 'AgentBot',
+      contentAttributes: { crmFollowUpId: 3 },
+    });
+
+    expect(remetente(balao).text()).toBe('Agente de IA');
+  });
+
   it('mesma linha e cor do "Agente de IA · Gabriela"', () => {
     const origem = remetente(
       montar({ contentAttributes: { crmFollowUpId: 3 } })
@@ -232,6 +252,17 @@ describe('sequência da conversa com origem (#2048)', () => {
     expect(
       continuaASequencia(doRobo({}), doRobo({ crmFollowUpId: 3 }), 'UTC')
     ).toBe(true);
+  });
+
+  it('aviso sem remetente não se junta à resposta da pessoa', () => {
+    const semRemetente = {
+      ...daMarina({ crmBookingNotice: true }),
+      sender: null,
+      senderType: null,
+      senderId: null,
+    };
+    expect(continuaASequencia(daMarina({}), semRemetente, 'UTC')).toBe(false);
+    expect(continuaASequencia(semRemetente, daMarina({}), 'UTC')).toBe(false);
   });
 
   it('convite do Agendamento segue com a resposta da pessoa', () => {

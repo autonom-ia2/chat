@@ -11,8 +11,14 @@
 // muda; o texto que o cliente recebe é o mesmo.
 import { SENDER_TYPES } from '../message/constants';
 
-// Remetente robô como vem no objeto `sender` do balão.
-const ROBOS = [SENDER_TYPES.AGENT_BOT, SENDER_TYPES.CAPTAIN_ASSISTANT];
+// Remetente robô como vem no objeto `sender` (agent_bot) ou no `sender_type` cru (AgentBot).
+// Lista única: o formato do texto (useFormatoDoWhatsapp) usa a mesma.
+const ROBOS = [
+  SENDER_TYPES.AGENT_BOT,
+  SENDER_TYPES.CAPTAIN_ASSISTANT,
+  'AgentBot',
+  'Captain::Assistant',
+];
 export const ehRobo = tipoDoRemetente => ROBOS.includes(tipoDoRemetente);
 
 // Cada origem é a chave do nome dela no catálogo (conversaCanal.json).
