@@ -86,7 +86,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
     leitura[:lidas].join("\n")
   end
 
-  # Lê as páginas em ordem enquanto houver prazo; as que sobrarem vão para `prazo`.
+  # Lê as páginas em ordem enquanto houver prazo; as que sobrarem vão para `prazo`. #1427: antes de cada uma, anota no material
+  # "página X de N" (N = as que vão ser lidas, até MAX_PAGINAS_OCR), que a linha do material mostra enquanto lê.
   def ler_no_prazo(pdf_path, paginas)
     limite = Autonomia::Agents::Knowledge::Processors::PdfOcr.agora + PRAZO_OCR
     leitura = { lidas: [], prazo: [], falhou: [], erro: nil }
@@ -94,6 +95,7 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
       return leitura.merge(prazo: numeros(paginas.drop(posicao))) unless restante(limite).positive?
 
       conferir_leitura_vigente!
+      anotar_progresso(posicao + 1, paginas.size)
       leitura = ler_pagina(pdf_path, index, limite, leitura)
     end
     leitura
@@ -121,6 +123,10 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
   def conferir_leitura_vigente!
     return unless @source.respond_to?(:leitura_vigente?)
     raise Autonomia::Agents::Knowledge::Ingestor::Superseded, 'leitura_superada' unless @source.leitura_vigente?
+  end
+
+  def anotar_progresso(pagina, total)
+    @source.anotar_progresso!(pagina: pagina, total: total) if @source.respond_to?(:anotar_progresso!)
   end
 
   def numeros(paginas)

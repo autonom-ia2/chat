@@ -35,7 +35,6 @@ const props = defineProps({
 const emit = defineEmits(['lerDeNovo', 'tirar', 'mandarOutro']);
 
 const { t } = useI18n();
-const NS = 'AGENTS.JORNADA.PAGINA.SABE';
 
 const estado = computed(() => {
   if (props.relendo) return 'lendo';
@@ -46,6 +45,15 @@ const foto = computed(() => ehFotoDaBase(props.fonte));
 const icone = computed(() => {
   if (site.value) return 'i-lucide-globe';
   return foto.value ? 'i-lucide-image' : 'i-lucide-file-text';
+});
+// #1427 — PDF escaneado sendo lido por OCR: "Lendo a página X de N…" (N = as páginas que vão ser lidas). O servidor só
+// manda o progresso enquanto lê, e só na Fase 2; o PDF com texto selecionável fica com "Lendo…". Parado além do teto da
+// releitura (o worker caiu), vale "Lendo…" com "Ler de novo": a página anotada já não diz nada.
+const progresso = computed(() => {
+  const { pagina, total } = props.fonte.metadata?.progresso || {};
+  const lendo =
+    estado.value === 'lendo' && !props.relendo && !props.relerParado;
+  return lendo && pagina && total ? { pagina, total } : null;
 });
 const girando = computed(() => ['lendo', 'revisando'].includes(estado.value));
 const amarelo = computed(() => ['falha', 'atencao'].includes(estado.value));
@@ -61,17 +69,24 @@ const textoDoProblema = computed(() => {
   if (estado.value === 'atencao') {
     return (
       props.fonte.review?.reason ||
-      t(`${NS}.ATENCAO_TEXTO`, { nome: props.nomeAgente })
+      t('AGENTS.JORNADA.PAGINA.SABE.ATENCAO_TEXTO', { nome: props.nomeAgente })
     );
   }
-  return props.problema || t(`${NS}.FALHA_TEXTO`, { nome: props.nomeAgente });
+  return (
+    props.problema ||
+    t('AGENTS.JORNADA.PAGINA.SABE.FALHA_TEXTO', { nome: props.nomeAgente })
+  );
 });
 
 const itens = computed(() => [
   ...((site.value && props.podeReler) || props.relerParado
-    ? [{ chave: 'ler', texto: t(`${NS}.LER_DE_NOVO`) }]
+    ? [{ chave: 'ler', texto: t('AGENTS.JORNADA.PAGINA.SABE.LER_DE_NOVO') }]
     : []),
-  { chave: 'tirar', texto: t(`${NS}.TIRAR`), perigo: true },
+  {
+    chave: 'tirar',
+    texto: t('AGENTS.JORNADA.PAGINA.SABE.TIRAR'),
+    perigo: true,
+  },
 ]);
 
 const escolher = chave => {
@@ -132,26 +147,37 @@ const escolher = chave => {
             class="size-3.5"
             :class="ICONE_DO_ESTADO[estado]"
           />
-          <template v-if="estado === 'lendo'">
-            {{ foto ? t(`${NS}.LENDO_FOTO`) : t(`${NS}.LENDO`) }}
+          <template v-if="progresso">
+            {{ t('AGENTS.JORNADA.PAGINA.SABE.LENDO_PAGINA', progresso) }}
+          </template>
+          <template v-else-if="estado === 'lendo'">
+            {{
+              foto
+                ? t('AGENTS.JORNADA.PAGINA.SABE.LENDO_FOTO')
+                : t('AGENTS.JORNADA.PAGINA.SABE.LENDO')
+            }}
           </template>
           <template v-else-if="estado === 'revisando'">
-            {{ t(`${NS}.REVISANDO`) }}
+            {{ t('AGENTS.JORNADA.PAGINA.SABE.REVISANDO') }}
           </template>
           <template v-else-if="estado === 'atencao'">
-            {{ t(`${NS}.ATENCAO`) }}
+            {{ t('AGENTS.JORNADA.PAGINA.SABE.ATENCAO') }}
           </template>
           <template v-else-if="estado === 'pronto'">
-            {{ t(`${NS}.PRONTO`) }}
+            {{ t('AGENTS.JORNADA.PAGINA.SABE.PRONTO') }}
           </template>
           <template v-else>
-            {{ site ? t(`${NS}.FALHA_SITE`) : t(`${NS}.FALHA_ARQUIVO`) }}
+            {{
+              site
+                ? t('AGENTS.JORNADA.PAGINA.SABE.FALHA_SITE')
+                : t('AGENTS.JORNADA.PAGINA.SABE.FALHA_ARQUIVO')
+            }}
           </template>
         </span>
       </span>
       <AgenteMenuMais
         v-if="podeGerenciar"
-        :rotulo="t(`${NS}.MAIS_DE`, { nome })"
+        :rotulo="t('AGENTS.JORNADA.PAGINA.SABE.MAIS_DE', { nome })"
         :itens="itens"
         :aria-busy="relendo ? 'true' : undefined"
         @escolher="escolher"
@@ -167,7 +193,7 @@ const escolher = chave => {
         variante="contorno"
         @click="emit('mandarOutro', fonte)"
       >
-        {{ t(`${NS}.MANDAR_OUTRO`) }}
+        {{ t('AGENTS.JORNADA.PAGINA.SABE.MANDAR_OUTRO') }}
       </AgenteBotao>
     </div>
     <slot />

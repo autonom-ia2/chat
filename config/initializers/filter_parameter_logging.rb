@@ -11,7 +11,11 @@ Rails.application.config.filter_parameters += [
   # Aviso de clique das páginas (#1011): formulário do cliente (lead, lead_form, lead_data) e
   # sinais da Meta. O Middleware::TrackedLinkSignalGuard já impede o corpo de virar params;
   # isto cobre qualquer outro caminho que traga essas chaves.
-  :lead, :fbc, :fbp, :page_url
+  :lead, :fbc, :fbp, :page_url,
+  # #1427 — as fotos do Testar do agente (data-url em base64, `images` do POST /agents/:id/test) não vão para o log do
+  # Rails. O filtro casa qualquer chave que contenha "images"; hoje só esse endpoint recebe uma. O Sentry lê o corpo
+  # JSON cru e não passa por aqui: lá quem tira as fotos é o SentryHttpAuthScrubber.
+  :images
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'
