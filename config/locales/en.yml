@@ -191,6 +191,7 @@ en:
     openai:
       invalid_api_key: 'OpenAI API key was rejected. Check that it is correct, not revoked, and that the account has credit at platform.openai.com.'
     inboxes:
+      password_needed: Type the mail server password again to point the inbox to another server.
       imap:
         socket_error: Please check the network connection, IMAP address and try again.
         no_response_error: Please check the IMAP credentials and try again.

@@ -85,7 +85,9 @@
       "GRANT_ABOVE_OWN": "Can grant access above their own",
       "FINANCIAL_VIEW": "See account costs",
       "FINANCIAL_MANAGE": "Turn the Meta charge authorization on and off",
-      "CONVERSATION_MESSAGE_DELETE": "Delete messages"
+      "CONVERSATION_MESSAGE_DELETE": "Delete messages",
+      "INTEGRATION_MANAGE": "Manage integrations",
+      "TOKEN_MANAGE": "See and rotate tokens and keys"
     },
     "MATRIX": {
       "GROUPS": {
@@ -190,6 +192,12 @@
           "HINT": "Channels, WhatsApp QR and members",
           "LEVEL_VIEW": "Sees every inbox in settings.",
           "LEVEL_MANAGE": "Creates inboxes, reconnects WhatsApp and manages members."
+        },
+        "INTEGRATIONS": {
+          "NAME": "Integrations",
+          "HINT": "Integrations, webhooks, bots, channel reconnection and tokens",
+          "LEVEL_MANAGE": "Connects and disconnects integrations, creates webhooks and bots and reconnects channels. Creating a new inbox stays in Inboxes.",
+          "SUGGESTION": "To reconnect a channel, Inboxes needs at least View."
         },
         "AUTOMATIONS": {
           "NAME": "Automations",
@@ -302,7 +310,7 @@
       "CRM_EXPORT": "Downloads the list with customer data.",
       "CRM_DELETE_CARDS": "Archives cards, one by one or in bulk.",
       "CRM_METAS_MANAGE": "Sees and sets each person's monthly goal, in money.",
-      "CRM_ADMIN": "Turns on everything above, plus CRM SLA and integration tokens.",
+      "CRM_ADMIN": "Turns on everything above and the CRM SLA. Integration tokens live in Integrations.",
       "PROSPECTING_VIEW_ALL_SEARCHES": "Without this, they only see their own searches.",
       "CONVERSATION_VIEW": "Also reads the inbox conversations they do not handle, without replying.",
       "CONVERSATION_MESSAGE_DELETE": "Deletes messages in the conversations they handle. The attachment is removed and the message shows as deleted.",
@@ -310,7 +318,8 @@
       "CONTACT_DELETE": "Deletes contacts and companies, one by one or in bulk.",
       "CAMPAIGN_SEND": "Sends and schedules campaigns and resumes paused ones. Without this, they build and mark campaigns ready for someone who sends.",
       "CUSTOM_ROLE_MANAGE": "Creates and edits roles, within their own keys.",
-      "GRANT_ABOVE_OWN": "Hands out any role in the account, except administrator. Everything goes to the audit log."
+      "GRANT_ABOVE_OWN": "Hands out any role in the account, except administrator. Everything goes to the audit log.",
+      "TOKEN_MANAGE": "Sees and rotates platform tokens: API and website inboxes, webhooks, bots, CRM tokens and the Google link. Never mints a token stronger than its own role."
     },
     "EDITOR": {
       "NEW_TITLE": "Adjust what is different",
@@ -332,7 +341,7 @@
       "FOOTER_COUNT": "No area granted | 1 area granted | {n} areas granted",
       "ADMIN_ONLY": {
         "TITLE": "Always administrator only",
-        "ITEMS": "Bots, integrations, account settings, security, billing and audit logs.",
+        "ITEMS": "Account settings, security, billing and audit logs.",
         "GUIDE": "The Platform Guide follows this role: it only shows and does what the person can do."
       },
       "SENSITIVE_CONFIRM": {

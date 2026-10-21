@@ -155,11 +155,24 @@ Precisa de uma conta com a IA do CRM e a nova tela de Modelos do WhatsApp ligada
 7. Se a conta tiver alguém só com **Pessoas** (sem **Pode entregar acesso acima do próprio**), na tela de Usuários a função com Financeiro aparece desabilitada para ele, e na montagem de funções a linha Financeiro fica travada.
 8. Ao final, volte **Financeiro** para **Sem acesso**.
 
+## Teste 13: Integrações e tokens sem ser administrador (#2027)
+
+Use a mesma pessoa de teste, com uma função própria ("Teste – integrações").
+
+1. Monte a função com **Integrações** em **Editar** (aceite a sugestão de **Caixas** em **Ver**) e **sem** o ajuste **Ver e trocar tokens e chaves**. Salve e recarregue a janela anônima.
+2. Abra **Configurações → Integrações**: ela conecta e desconecta. Em **Webhooks**, cria e edita, mas não vê a chave de assinatura (aparece a frase de que a chave fica com quem cuida dos tokens). Em **Robôs**, cria e edita, sem os botões de trocar token e segredo.
+3. Abra uma caixa de e-mail com servidor próprio → **Configuração**: os dados do IMAP e do SMTP aparecem, sem a senha. Para salvar uma mudança no servidor, ela precisa digitar a senha de novo.
+4. Ligue **Ver e trocar tokens e chaves** e salve. Recarregue: numa caixa de site ou de API, a chave HMAC aparece com **Trocar chave**; a chave de assinatura do webhook e os botões dos robôs também aparecem.
+5. Abra os tokens do CRM (link em Integrações → n8n): a tela só oferece escopos que ela tem. Sem nenhuma chave do CRM, aparece a frase explicando isso.
+6. Troque a função para **Caixas** em **Editar**, sem **Integrações**. Numa caixa que precisa reconectar, aparece "peça a quem cuida das integrações", sem botão. O endereço do webhook da caixa de API fica só leitura.
+7. Ao final, apague a função "Teste – integrações".
+
 ## No fim (limpeza)
 
 1. Remova a pessoa de teste em **Configurações → Usuários**, para não contar no plano.
 2. Apague a função "Teste – só lê" em **Funções personalizadas**.
 3. Confira que o contato e a empresa de teste do teste 6 foram excluídos e que os cards de teste do teste 8 ficaram arquivados.
 4. Remova "Teste Atendente" e apague a função "Teste – montada" do teste 11.
+5. Confira que a função "Teste – integrações" do teste 13 foi apagada.
 
 Se algo não bater com o esperado, me mande o print e o número do teste e do passo, que eu investigo.

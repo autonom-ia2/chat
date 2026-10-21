@@ -83,6 +83,7 @@ export function useCrmPermissions() {
   );
 
   return {
+    hasCrmPermission,
     canViewCrm,
     canManageCards,
     canMoveCards,

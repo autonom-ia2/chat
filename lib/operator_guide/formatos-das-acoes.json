@@ -577,8 +577,8 @@
     "controller": "api/v1/accounts/crm/integration_tokens#destroy",
     "modelo": "AccessToken",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:75"
+      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:81"
     ],
     "sem_corpo": true
   },
@@ -823,8 +823,8 @@
     "controller": "api/v1/accounts/inboxes#destroy",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:99",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:102",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -833,8 +833,8 @@
     "controller": "api/v1/accounts/inboxes#avatar",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:28",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:31",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -843,8 +843,8 @@
     "controller": "api/v1/accounts/inboxes#disable_whatsapp_api_campaigns",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:89",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:92",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -6438,7 +6438,9 @@
           "custom_role_manage",
           "grant_above_own",
           "financial_view",
-          "financial_manage"
+          "financial_manage",
+          "integration_manage",
+          "token_manage"
         ]
       }
     },
@@ -6946,12 +6948,12 @@
     "controller": "api/v1/accounts/inboxes#update",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:48",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:233",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:138",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:219",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:194",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:51",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:239",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:141",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:225",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:200",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -12213,8 +12215,8 @@
       "leitura crua sem tipo: omniauth_token"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:29",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:85"
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:31",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:93"
     ],
     "sem_corpo": false
   },
@@ -12233,9 +12235,9 @@
       "leitura crua sem tipo: omniauth_token"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:48",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:85",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:65"
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:50",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:93",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:67"
     ],
     "sem_corpo": false
   },
@@ -12259,11 +12261,11 @@
       "leitura crua sem tipo: inbox_name"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:7",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:11",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:10",
       "app/controllers/api/v1/accounts/callbacks_controller.rb:9",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:8"
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:13",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:12",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:11",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:10"
     ],
     "sem_corpo": false
   },
@@ -15255,7 +15257,7 @@
     "modelo": "Crm::IntegrationToken",
     "origem": [
       "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:19",
-      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:79"
+      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:85"
     ],
     "sem_corpo": false
   },
@@ -15264,8 +15266,8 @@
     "controller": "api/v1/accounts/crm/integration_tokens#rotate",
     "modelo": "AccessToken",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:75"
+      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:45",
+      "app/controllers/api/v1/accounts/crm/integration_tokens_controller.rb:81"
     ],
     "sem_corpo": true
   },
@@ -16544,7 +16546,9 @@
           "custom_role_manage",
           "grant_above_own",
           "financial_view",
-          "financial_manage"
+          "financial_manage",
+          "integration_manage",
+          "token_manage"
         ]
       }
     },
@@ -17601,8 +17605,8 @@
     "controller": "api/v1/accounts/inboxes#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:33",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:233",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:36",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:239",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:113"
     ],
     "sem_corpo": false
@@ -17613,7 +17617,7 @@
     "modelo": "Inbox",
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:17",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17622,8 +17626,8 @@
     "controller": "api/v1/accounts/inboxes#enable_whatsapp_api_campaigns",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:80",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:83",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17633,7 +17637,7 @@
     "modelo": "Inbox",
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:8",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17643,7 +17647,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:51",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17653,7 +17657,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_secret_management.rb:4",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17663,7 +17667,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_secret_management.rb:10",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17678,8 +17682,8 @@
       "leitura crua sem tipo: agent_bot (repassada a AgentBot.accessible_to(Current.account).find)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:120"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:123"
     ],
     "sem_corpo": false
   },
@@ -17701,7 +17705,7 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:45",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:51",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:50",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -17718,7 +17722,7 @@
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:30",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:35",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -17728,7 +17732,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:10",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": true
   },
@@ -17922,15 +17926,15 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:48",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:66",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:54",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:72",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:15",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:14",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:13",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:54",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:53",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:46",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:37"
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:60",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:59",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:52",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:43"
     ],
     "sem_corpo": false
   },
@@ -18815,7 +18819,7 @@
     "completo": true,
     "controller": "api/v1/accounts/notion/authorizations#create",
     "origem": [
-      "app/controllers/api/v1/accounts/notion/authorizations_controller.rb:4",
+      "app/controllers/api/v1/accounts/notion/authorizations_controller.rb:8",
       "app/controllers/api/v1/accounts/oauth_authorization_controller.rb:19"
     ],
     "sem_corpo": false
@@ -24917,7 +24921,9 @@
           "custom_role_manage",
           "grant_above_own",
           "financial_view",
-          "financial_manage"
+          "financial_manage",
+          "integration_manage",
+          "token_manage"
         ]
       }
     },
@@ -25402,12 +25408,12 @@
     "controller": "api/v1/accounts/inboxes#update",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:48",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:233",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:138",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:219",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:194",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:51",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:239",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:141",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:225",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:200",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },
@@ -25424,7 +25430,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:60",
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:61",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:118"
     ],
     "sem_corpo": false
   },

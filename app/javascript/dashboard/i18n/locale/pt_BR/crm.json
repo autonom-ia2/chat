@@ -3520,7 +3520,7 @@
     "TITLE": "Tokens de integração do CRM",
     "SUBTITLE": "Tokens por conta, com escopo e revogáveis, para que sistemas externos como o n8n acessem a API do CRM sem usar uma credencial de usuário com acesso total.",
     "BACK": "Voltar",
-    "NO_PERMISSION": "Você precisa da permissão de administrador do CRM para gerenciar os tokens de integração.",
+    "NO_PERMISSION": "Só o administrador ou quem cuida dos tokens cria e troca os tokens de integração.",
     "STATUS": {
       "ACTIVE": "Ativo",
       "REVOKED": "Revogado"
@@ -3550,6 +3550,7 @@
       "NAME_LABEL": "Nome",
       "NAME_PLACEHOLDER": "ex.: n8n produção",
       "SCOPES_LABEL": "Escopos",
+      "NO_SCOPES": "O token só leva o que a sua função já tem no CRM, e a sua não tem nada do CRM. Peça ao administrador.",
       "SUBMIT": "Criar token",
       "CANCEL": "Cancelar",
       "SUCCESS": "Token criado. Copie o segredo agora — ele é exibido apenas uma vez.",
@@ -4759,6 +4760,7 @@
         "PASSOS": "Passos para ligar o Google",
         "COPIE_TITULO": "Copie este endereço",
         "COPIE_TEXTO": "É por ele que o Google fica sabendo das suas vendas. Ele é só seu.",
+        "SEM_TOKEN": "O link do Google é criado por quem cuida dos tokens.",
         "COLE_TITULO": "Cole o endereço no Google Ads",
         "COLE_1": "Entre no Google Ads, na conta dos seus anúncios.",
         "COLE_2": "Na busca do Google Ads, escreva “importações” e abra Importações programadas.",
