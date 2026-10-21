@@ -1,0 +1,199 @@
+require 'rails_helper'
+
+# F3 do tema 8 (#1429): a API da linha "Base de seguros". GET para quem vê (autonomia_view), POST para quem gerencia
+# (autonomia_manage). Sem a Fase 2, na Lia e no Guia, 404. O texto da base nunca sai.
+RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
+  let(:conta) { conta_da_fase2 }
+  let(:admin) { create(:user, account: conta, role: :administrator) }
+  let(:so_ve) { usuario_com_funcao(%w[autonomia_view]) }
+  let(:gerencia) { usuario_com_funcao(%w[autonomia_manage]) }
+  let(:bloco) { Autonomia::Segmentos::Bloco }
+  let(:seguradora) do
+    { 'segmento' => 'seguros/seguradora', 'versao' => bloco.versao('seguros/seguradora'), 'texto' => bloco.for_segmento('seguros/seguradora') }
+  end
+  let(:agente) { criar_principal(conta, config: { 'with_knowledge' => false, 'base' => seguradora }) }
+
+  around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true', AUTONOMIA_PACOTES_ENABLED: 'true') { example.run } }
+
+  before do
+    nicho = Autonomia::Agents::Nicho
+    conta.update!(internal_attributes: conta.internal_attributes.to_h.merge(nicho::NICHO_KEY => 'seguros', nicho::PERFIL_KEY => 'corretora'))
+    Autonomia::Agents::BaseDeSeguros::Limite.liberar!(agente)
+    Redis::Alfred.delete(Autonomia::Agents::BaseDeSeguros::Limite.chave_da_conta(conta))
+  end
+
+  def usuario_com_funcao(permissoes)
+    usuario = create(:user, account: conta, role: :agent)
+    funcao = create(:custom_role, account: conta, permissions: permissoes)
+    usuario.account_users.find_by(account: conta).update!(custom_role: funcao)
+    usuario
+  end
+
+  def caminho(acao = nil, agent: agente)
+    ["/api/v1/accounts/#{conta.id}/autonomia/agents/#{agent.id}/base", acao].compact.join('/')
+  end
+
+  def pedir(metodo, acao = nil, usuario: admin, params: {}, agent: agente)
+    send(metodo, caminho(acao, agent: agent), headers: usuario.create_new_auth_token, params: params, as: :json)
+  end
+
+  describe 'GET base' do
+    it 'mostra a situação para quem só vê, sem o texto da base' do
+      pedir(:get, usuario: so_ve)
+
+      expect(response).to have_http_status(:ok)
+      corpo = response.parsed_body
+      expect(corpo['situacao']).to eq('conta_mudou')
+      expect(corpo.dig('atual', 'segmento')).to eq('seguros/seguradora')
+      expect(corpo.dig('nova', 'segmento')).to eq('seguros/corretora')
+      expect(corpo.dig('nova', 'data')).to eq(bloco.data_da_versao('seguros/corretora', bloco.versao('seguros/corretora')).iso8601)
+      expect(response.body).not_to include(bloco.for_segmento('seguros/seguradora'))
+      expect(response.body).not_to include(bloco.for_segmento('seguros/corretora'))
+    end
+
+    it 'conta geral e agente sem base: situação nula (a linha não aparece)' do
+      nicho = Autonomia::Agents::Nicho
+      conta.update!(internal_attributes: conta.internal_attributes.to_h.except(nicho::NICHO_KEY, nicho::PERFIL_KEY))
+      sem_base = criar_principal(conta, nome: 'Sem base')
+
+      pedir(:get, agent: sem_base)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['situacao']).to be_nil
+    end
+  end
+
+  describe 'portas fechadas' do
+    it 'sem a Fase 2, 404 em tudo' do
+      Autonomia::Agents::Fase2.desligar!(conta)
+
+      [[:get, nil], [:post, 'comparar'], [:post, 'atualizar'], [:post, 'desfazer']].each do |metodo, acao|
+        pedir(metodo, acao)
+        expect(response).to have_http_status(:not_found), "#{metodo} #{acao}"
+      end
+    end
+
+    it 'a Lia não tem base: 404' do
+      lia = Autonomia::Agents::Agent.create!(account: conta, name: 'Lia', agent_type: 'insurance_quote', instruction: 'Cotação.',
+                                             config: { 'with_knowledge' => false })
+
+      [[:get, nil], [:post, 'atualizar']].each do |metodo, acao|
+        pedir(metodo, acao, agent: lia)
+        expect(response).to have_http_status(:not_found), "#{metodo} #{acao}"
+      end
+    end
+
+    it 'o Guia (system_key) não existe para esta API: 404' do
+      guia = criar_principal(conta, nome: 'Guia', config: { 'with_knowledge' => false, 'system_key' => 'guia' })
+
+      pedir(:get, agent: guia)
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'agente de outra conta: 404' do
+      de_fora = criar_principal(conta_da_fase2, nome: 'De fora')
+
+      pedir(:get, agent: de_fora)
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'quem só vê não compara, não atualiza nem desfaz' do
+      %w[comparar atualizar desfazer].each do |acao|
+        pedir(:post, acao, usuario: so_ve)
+        expect(response).to have_http_status(:unauthorized), acao
+      end
+      expect(agente.reload.config['base']).to eq(seguradora)
+    end
+  end
+
+  describe 'POST base/atualizar e base/desfazer' do
+    it 'quem gerencia atualiza: só a base muda, e o Desfazer aparece' do
+      pedir(:post, 'atualizar', usuario: gerencia, params: { versao: bloco.versao('seguros/corretora') })
+
+      expect(response).to have_http_status(:ok)
+      expect(agente.reload.config.dig('base', 'segmento')).to eq('seguros/corretora')
+      expect(agente.config.dig('base', 'texto')).to eq(bloco.for_segmento('seguros/corretora'))
+      corpo = response.parsed_body
+      expect(corpo['situacao']).to eq('em_dia')
+      expect(corpo.dig('desfazer', 'anterior', 'segmento')).to eq('seguros/seguradora')
+      expect(response.body).not_to include(bloco.for_segmento('seguros/corretora'))
+    end
+
+    it 'desfaz e volta à base de antes; pedir de novo é 409' do
+      pedir(:post, 'atualizar')
+      pedir(:post, 'desfazer')
+
+      expect(response).to have_http_status(:ok)
+      expect(agente.reload.config['base']).to eq(seguradora)
+      expect(response.parsed_body['desfazer']).to be_nil
+
+      pedir(:post, 'desfazer')
+      expect(response).to have_http_status(:conflict)
+    end
+
+    it 'a base nova mudou desde que a pessoa viu: 409 e nada muda' do
+      pedir(:post, 'atualizar', params: { versao: 'outra0000000' })
+
+      expect(response).to have_http_status(:conflict)
+      expect(agente.reload.config['base']).to eq(seguradora)
+    end
+
+    it 'sem base nova (em dia): 422 e nada muda' do
+      em_dia = { 'segmento' => 'seguros/corretora', 'versao' => bloco.versao('seguros/corretora'),
+                 'texto' => bloco.for_segmento('seguros/corretora') }
+      agente.update!(config: agente.config.merge('base' => em_dia))
+
+      expect { pedir(:post, 'atualizar') }.not_to change(Autonomia::Agents::InstructionVersion, :count)
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'a API genérica do agente continua sem gravar a base' do
+      forjada = seguradora.merge('texto' => 'FORJADO')
+      patch "/api/v1/accounts/#{conta.id}/autonomia/agents/#{agente.id}", headers: admin.create_new_auth_token, as: :json,
+                                                                          params: { agent: { config: { 'base' => forjada } } }
+
+      expect(agente.reload.config['base']).to eq(seguradora)
+    end
+  end
+
+  describe 'POST base/comparar' do
+    it 'enfileira a comparação para quem gerencia e devolve onde buscar a resposta' do
+      expect { pedir(:post, 'comparar', usuario: gerencia) }.to have_enqueued_job(Crm::Ai::InteractiveJob)
+
+      expect(response).to have_http_status(:accepted)
+      dados = Crm::Ai::InteractiveRequest.read(response.parsed_body['id'])
+      expect(dados).to include('operation' => 'agent_base_compare', 'inputs' => { 'agent_id' => agente.id })
+    end
+
+    it 'uma comparação a cada 2 minutos por agente: a segunda é 429' do
+      pedir(:post, 'comparar')
+      pedir(:post, 'comparar')
+
+      expect(response).to have_http_status(:too_many_requests)
+      expect(response.parsed_body['code']).to eq('comparar_espere')
+    end
+
+    it 'no máximo 10 por dia na conta: a 11ª é 429' do
+      limite = Autonomia::Agents::BaseDeSeguros::Limite
+      limite::POR_DIA.times { Redis::Alfred.incr(limite.chave_da_conta(conta)) }
+
+      pedir(:post, 'comparar')
+
+      expect(response).to have_http_status(:too_many_requests)
+      expect(response.parsed_body['code']).to eq('comparar_amanha')
+    end
+
+    it 'sem base nova: 422, sem gastar o limite' do
+      em_dia = { 'segmento' => 'seguros/corretora', 'versao' => bloco.versao('seguros/corretora'),
+                 'texto' => bloco.for_segmento('seguros/corretora') }
+      agente.update!(config: agente.config.merge('base' => em_dia))
+
+      pedir(:post, 'comparar')
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(Redis::Alfred.get(Autonomia::Agents::BaseDeSeguros::Limite.chave_da_conta(conta))).to be_nil
+    end
+  end
+end

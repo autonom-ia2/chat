@@ -116,6 +116,10 @@
     "controller": "api/v1/accounts/autonomia/agents/ajuda#show",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/base": {
+    "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#show",
+    "parametros": []
+  },
   "autonomia/agents/:agent_id/channels": {
     "controller": "api/v1/accounts/autonomia/agents/channels#index",
     "parametros": []

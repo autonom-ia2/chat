@@ -20,6 +20,7 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'copilot_run', 'copilot_chat' then authorize_copilot!
     when 'copilot_text' then authorize_copilot_text!
     when 'agent_test', 'agent_suggest' then authorize_agent!
+    when 'agent_base_compare' then authorize_agent_base!
     when 'email_rewrite' then authorize_email!
     when 'stage_criteria', 'stage_criteria_draft' then authorize_pipeline!
     when 'meta_funnel_stages' then authorize_meta_funnel!
@@ -40,6 +41,7 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'copilot_run', 'copilot_chat' then copilot_result
     when 'copilot_text' then Autonomia::Copilot::ConversationCopilot.new(account: @account, **@inputs).perform.to_h
     when 'agent_test', 'agent_suggest' then playground_result
+    when 'agent_base_compare' then Autonomia::Agents::BaseDeSeguros::Comparacao.new(agent, idioma: I18n.locale.to_s).rodar
     when 'email_rewrite' then EmailCampaigns::Ai::Rewriter.new(account: @account, **@inputs).perform
     when 'stage_criteria', 'stage_criteria_draft'
       Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **@inputs.except(:pipeline_id, :pipeline_name)).perform
@@ -176,6 +178,13 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     raise Pundit::NotAuthorizedError unless Autonomia::Agents::Config.enabled?(@account) && @account_user.permission_granted?('autonomia_view')
 
     agent
+  end
+
+  # #1429 (F3): o antes e depois da base de seguros é a porta do "atualizar": Fase 2, autonomia_manage e agente com linha.
+  def authorize_agent_base!
+    permitido = Autonomia::Agents::Config.enabled?(@account) && Autonomia::Agents::Fase2.ligada?(@account) &&
+                @account_user.permission_granted?('autonomia_manage')
+    raise Pundit::NotAuthorizedError unless permitido && Autonomia::Agents::BaseDeSeguros.elegivel?(agent)
   end
 
   def copilot_result

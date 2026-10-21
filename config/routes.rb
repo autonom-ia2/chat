@@ -534,6 +534,11 @@ Rails.application.routes.draw do
               get 'material', to: 'agents/material#show'
               post 'material/problemas/:problema_id/resolver', to: 'agents/material#resolver'
               post 'material/autoteste', to: 'agents/material#autoteste'
+              # #1429 (tema 8, F3) — a base de seguros do agente: ler, comparar (antes e depois), atualizar e desfazer.
+              get 'base', to: 'agents/base_de_seguros#show'
+              post 'base/comparar', to: 'agents/base_de_seguros#comparar'
+              post 'base/atualizar', to: 'agents/base_de_seguros#atualizar'
+              post 'base/desfazer', to: 'agents/base_de_seguros#desfazer'
               # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
               put 'onde_atende', to: 'agents/onde_atende#update'
               resources :channels, only: [:index, :create, :destroy],

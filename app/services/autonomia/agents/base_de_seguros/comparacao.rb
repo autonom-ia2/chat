@@ -1,0 +1,59 @@
+# F3 do tema 8 (#1429): o antes e depois de "Atualizar com a nova base". As perguntas do tipo da base NOVA
+# (Bloco.perguntas, no idioma de quem pediu), respondidas pelo agente como ele está hoje e com a base nova.
+#
+# É o motor do Testar (Answerer, com a etiqueta de custo do Testar), sem ferramenta nenhuma (modo `prova`, como a prova do
+# ajuste e o autoteste): nada é executado nem chega a cliente. A base nova vai numa cópia do agente só na memória, só
+# leitura: nada é gravado, nem no agente nem no histórico. Roda num job (Crm::Ai::InteractiveJob); a tela busca o
+# resultado. Se a IA falha em qualquer resposta, a comparação inteira falha e o agente fica livre para tentar de novo.
+class Autonomia::Agents::BaseDeSeguros::Comparacao
+  class SemBaseNova < StandardError; end
+  class Falhou < StandardError; end
+
+  def initialize(agent, idioma:)
+    @agent = agent
+    @idioma = idioma
+  end
+
+  # -> { perguntas: [{ pergunta, hoje, hoje_equipe, nova, nova_equipe }] }
+  def rodar
+    marca = Autonomia::Agents::BaseDeSeguros.new(@agent).marca_nova
+    raise SemBaseNova if marca.nil?
+
+    com_a_nova = agente_com_a_base(marca)
+    perguntas = Autonomia::Segmentos::Bloco.perguntas(marca['segmento'], @idioma)
+    { perguntas: perguntas.map { |pergunta| comparar(pergunta, com_a_nova) } }
+  rescue Falhou
+    Autonomia::Agents::BaseDeSeguros::Limite.liberar!(@agent)
+    raise
+  end
+
+  private
+
+  def comparar(pergunta, com_a_nova)
+    hoje = responder(@agent, pergunta)
+    nova = responder(com_a_nova, pergunta)
+    { pergunta: pergunta, hoje: hoje[:texto], hoje_equipe: hoje[:equipe], nova: nova[:texto], nova_equipe: nova[:equipe] }
+  end
+
+  # O mesmo agente, relido, com a base nova só na memória. readonly!: se algo no caminho tentar salvá-lo, falha.
+  def agente_com_a_base(marca)
+    copia = Autonomia::Agents::Agent.find(@agent.id)
+    copia.config = copia.config.to_h.merge('base' => marca)
+    copia.readonly!
+    copia
+  end
+
+  # A resposta pelo caminho do Testar, sem ferramenta. `equipe`: o agente passaria a conversa para a equipe.
+  def responder(agent, pergunta)
+    resultado = Autonomia::Agents::Answerer.new(agent: agent, query: pergunta, feature: Autonomia::Agents::Playground::USAGE_FEATURE,
+                                                prova: true).answer
+    texto = resultado.reply.to_s.strip.presence
+    equipe = resultado.handoff[:should] == true
+    raise Falhou if resultado.error.present? || (texto.nil? && !equipe)
+
+    { texto: texto, equipe: equipe }
+  rescue *Autonomia::Agents::ProvaDoAjuste::FALHAS_DA_IA => e
+    Rails.logger.warn("[autonomia][base_de_seguros] comparação falhou agente=#{@agent.id} #{e.class}")
+    raise Falhou
+  end
+end

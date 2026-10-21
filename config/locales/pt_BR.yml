@@ -1326,6 +1326,11 @@ pt_BR:
       autoteste_indisponivel: 'Ainda não há material aprovado para testar.'
       autoteste_espere: 'Espere um pouco para testar de novo.'
       autoteste_amanha: 'Este agente já foi testado muitas vezes hoje. Amanhã dá para testar de novo.'
+    base_de_seguros:
+      sem_base_nova: 'Não há base de seguros nova para este agente. A página foi atualizada.'
+      base_mudou: 'O agente mudou enquanto isso. Nada mudou agora. A página foi atualizada.'
+      comparar_espere: 'Espere uns 2 minutos para comparar de novo.'
+      comparar_amanha: 'Esta conta já comparou muitas vezes hoje. Amanhã dá para comparar de novo.'
     source:
       invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."
       arquivo_grande: "O arquivo é grande demais. O tamanho máximo é 25 MB."

@@ -10666,6 +10666,40 @@
     ],
     "sem_corpo": false
   },
+  "POST autonomia/agents/:agent_id/base/atualizar": {
+    "campos": {
+      "versao": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#atualizar",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:37",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:38",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:54"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/agents/:agent_id/base/comparar": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#comparar",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:54"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/agents/:agent_id/base/desfazer": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#desfazer",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:42",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:54"
+    ],
+    "sem_corpo": true
+  },
   "POST autonomia/agents/:agent_id/channels": {
     "campos": {
       "ativar": {
