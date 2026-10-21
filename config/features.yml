@@ -701,3 +701,14 @@
   display_name: Convite de reunião no e-mail (cartão e resposta)
   enabled: true
   column: feature_flags_ext_1
+
+# Metas do mês por pessoa em CRM › Números (#1991, F4 do épico #1871). Ligada: a gaveta "Metas do mês" (funis de Vender,
+# meta do funil e de cada pessoa, em R$ na moeda do funil) para o administrador e a função com `crm_metas_manage` (ou
+# `crm_admin`), e quem vende vê a própria meta no topo de "Só eu" (Decisão 4: nunca a dos colegas). Desligada (padrão):
+# tudo como antes. Posição 50 (1 << 49 = 562949953421312), definitiva da Orquestração (21/10), na feature_flags_ext_1,
+# logo depois de convite_da_reuniao.
+# Sem migration: a Orquestração liga depois do deploy, na stack Hub2You, contas 1, 16 e 18.
+- name: crm_metas
+  display_name: CRM › Metas do mês por pessoa
+  enabled: false
+  column: feature_flags_ext_1

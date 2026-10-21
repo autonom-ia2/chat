@@ -421,6 +421,7 @@ describe('permissionMatrix', () => {
       expect(sensitiveExtrasOn(permissions)).toEqual([
         'crm_manage_ai',
         'crm_export',
+        'crm_metas_manage',
         'crm_admin',
       ]);
     });
@@ -570,6 +571,37 @@ describe('permissionMatrix', () => {
       const on = toggleExtra(crm, 'crm_admin', ['crm_view']);
       expect(on).toContain('crm_delete_cards');
       expect(isExtraLocked('crm_delete_cards', on)).toBe(true);
+    });
+  });
+
+  describe('crm: metas do mês (#1991)', () => {
+    const crm = moduleByKey('CRM');
+    const METAS = 'crm_metas_manage';
+
+    it('aparece para quem vê o CRM, não liga sozinho e tem texto em en e pt_BR', () => {
+      expect(visibleExtras(crm, ['crm_view'])).toContain(METAS);
+      expect(setLevel(crm, LEVELS.MANAGE, ['crm_view'])).not.toContain(METAS);
+      expect(en.CUSTOM_ROLE.PERMISSIONS.CRM_METAS_MANAGE).toBeTruthy();
+      expect(ptBR.CUSTOM_ROLE.PERMISSIONS.CRM_METAS_MANAGE).toBeTruthy();
+      expect(en.CUSTOM_ROLE.EXTRAS.CRM_METAS_MANAGE).toBeTruthy();
+      expect(ptBR.CUSTOM_ROLE.EXTRAS.CRM_METAS_MANAGE).toBeTruthy();
+    });
+
+    it('liga e desliga sozinha, e sem acesso ao CRM sai junto', () => {
+      const on = toggleExtra(crm, METAS, ['crm_view']);
+      expect(on).toEqual(['crm_view', METAS]);
+      expect(toggleExtra(crm, METAS, on)).toEqual(['crm_view']);
+      expect(setLevel(crm, LEVELS.NONE, on)).toEqual([]);
+    });
+
+    it('é sensível: ligar pede confirmação', () => {
+      expect(sensitiveExtrasOn(['crm_view', METAS])).toEqual([METAS]);
+    });
+
+    it('Administrador do CRM inclui as metas e as mantém ligadas', () => {
+      const on = toggleExtra(crm, 'crm_admin', ['crm_view']);
+      expect(on).toContain(METAS);
+      expect(isExtraLocked(METAS, on)).toBe(true);
     });
   });
 
