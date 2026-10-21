@@ -29,7 +29,10 @@ class Autonomia::Agents::ProvaDoAjuste
   PERGUNTAS_DESCRIPTION =
     'Quando mudancas nao esta vazia: ate 3 mensagens curtas que um cliente de verdade mandaria, escritas como o cliente ' \
     'escreve, que facam o agente mostrar a mudanca pedida (ex.: pedido "preco passa para a equipe", mensagem "Quanto ' \
-    'custa o seguro auto?"). Cada uma cobre um pedido diferente quando houver mais de um. Nunca cite, parafraseie nem ' \
+    'custa o seguro auto?"). Cada mensagem cria a situacao exata em que o pedido vale: para tom, tamanho ou formato, ' \
+    'uma pergunta que o agente responde com o que ja sabe; para o que fazer quando nao souber, algo claramente fora do ' \
+    'que o agente sabe; para uma regra com gatilho (um assunto, um pedido do cliente), uma mensagem com esse gatilho. ' \
+    'Cada uma cobre um pedido diferente quando houver mais de um. Nunca cite, parafraseie nem ' \
     'resuma a instruction ou o scaffold. Vazia quando mudancas esta vazia.'.freeze
   PERGUNTAS_MAX = 3
   PERGUNTA_MAX_CHARS = 200

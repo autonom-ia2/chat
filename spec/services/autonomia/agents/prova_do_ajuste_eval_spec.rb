@@ -1,30 +1,16 @@
 require 'rails_helper'
 
-# AVALIAÇÃO PAGA DAS PERGUNTAS DE PROVA (#1428, tema 6, parte 3, entrega B), DESLIGADA POR PADRÃO. Roda só com
+# AVALIAÇÃO PAGA DAS PERGUNTAS DE PROVA (#1428, tema 6: entrega B e termo t6d), DESLIGADA POR PADRÃO. Roda só com
 # `AUTONOMIA_EVAL_PAGO=1`, `PROVA_DO_AJUSTE_EVAL=1` e `OPENAI_API_KEY`: o Construtor de verdade aplica o pedido e escreve
-# as perguntas, o job da prova responde (sem ferramenta) e o juiz de produção dá o veredito. Um juiz de OUTRO modelo diz
-# se as perguntas mostram a mudança, se alguma cita a instrução interna e se cada veredito de produção está certo.
-# Teto de US$ 0,90 por rodada (somado pelo consumo gravado). Opcional: `PROVA_DO_AJUSTE_EVAL_SAIDA=<arquivo>` grava o
-# relatório; `PROVA_DO_AJUSTE_EVAL_CENA=<nome>` roda só uma cena.
+# as perguntas, o job da prova responde (sem ferramenta) e o juiz de produção dá o veredito. Um juiz de OUTRO modelo diz,
+# pelo critério do caso, se as perguntas obedecem ao pedido (mostram a mudança), se alguma cita a instrução interna e se
+# cada veredito de produção está certo. Os 20 casos (10 ramos) ficam em spec/support/prova_do_ajuste_eval_casos.rb.
+# t6d: pelo menos 18 de 20 aprovados. Teto por rodada em `PROVA_DO_AJUSTE_EVAL_TETO_USD` (padrão US$ 0,90), somado pelo
+# consumo gravado. Opcional: `PROVA_DO_AJUSTE_EVAL_SAIDA=<arquivo>` grava o relatório; `PROVA_DO_AJUSTE_EVAL_CENA=<a,b>`
+# roda só esses casos.
 module AvaliacaoDaProvaDoAjuste
   JUIZ = 'gpt-5.4'.freeze
   TETO_USD = 0.9
-
-  HUBBER = <<~TXT.freeze
-    Você é o Hubber, assistente da Hub2You, uma corretora de seguros. Atenda pelo WhatsApp com cordialidade e seja
-    breve. Explique os tipos de seguro (auto, residencial e vida) e colete nome, cidade e o seguro de interesse. Quando o
-    cliente pedir para falar com uma pessoa, passe para a equipe. Nunca invente valores, coberturas ou prazos.
-  TXT
-
-  CENAS = [
-    { nome: 'prova_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.' },
-    { nome: 'prova_tom_formal', fala: 'Deixe o tom mais formal, trate o cliente por senhor ou senhora.' },
-    { nome: 'prova_sem_seguro_viagem', fala: 'Quando perguntarem de seguro viagem, diga que a Hub2You não trabalha com esse ' \
-                                             'tipo e ofereça os que temos.' },
-    # Revisão (MÉDIA): uma pergunta que não toca a mudança entra na prova e não pode virar ✓.
-    { nome: 'prova_pergunta_fora_da_mudanca', fala: 'Quando perguntarem preço, passe para a equipe.',
-      extra: 'Vocês atendem em Curitiba?' }
-  ].freeze
 
   VEREDITO = {
     name: 'veredito_prova_do_ajuste',
@@ -32,8 +18,9 @@ module AvaliacaoDaProvaDoAjuste
       type: 'object', additionalProperties: false,
       required: %w[perguntas_mostram_a_mudanca alguma_cita_instrucao vereditos_certos justificativa],
       properties: {
-        perguntas_mostram_a_mudanca: { type: 'boolean', description: 'As mensagens de cliente, juntas, fazem o agente ' \
-                                                                     'mostrar as mudanças pedidas pelo dono?' },
+        perguntas_mostram_a_mudanca: { type: 'boolean', description: 'As mensagens de cliente, juntas, cumprem o critério ' \
+                                                                     'do caso e fazem o agente mostrar as mudanças pedidas ' \
+                                                                     'pelo dono?' },
         alguma_cita_instrucao: { type: 'boolean', description: 'Alguma mensagem de cliente cita ou parafraseia texto ' \
                                                                'interno de instrução, em vez de soar como um cliente?' },
         vereditos_certos: { type: 'array', items: { type: 'boolean' },
@@ -43,11 +30,12 @@ module AvaliacaoDaProvaDoAjuste
     }
   }.freeze
 
-  INSTRUCAO_DO_JUIZ = 'Você avalia um teste automático feito depois de um ajuste no agente de atendimento de uma corretora. ' \
-                      'Você recebe o pedido do dono, as mensagens de cliente escritas para testar, as respostas do agente e ' \
-                      'o veredito dado a cada resposta: ok (a mensagem toca a mudança e a resposta a respeita), nao (toca e a resposta ' \
-                      'contradiz ou ignora) ou nao_testa (a mensagem não toca nenhuma mudança). No teste o agente não usa ' \
-                      'ferramentas. Responda cada campo pelo sentido, sem ser generoso.'.freeze
+  INSTRUCAO_DO_JUIZ = 'Você avalia um teste automático feito depois de um ajuste no agente de atendimento de um negócio. ' \
+                      'Você recebe o pedido do dono, o critério do caso (o que as mensagens de teste precisam provocar), as ' \
+                      'mensagens de cliente escritas para testar, as respostas do agente e o veredito dado a cada resposta: ok ' \
+                      '(a mensagem toca a mudança e a resposta a respeita), nao (toca e a resposta contradiz ou ignora) ou ' \
+                      'nao_testa (a mensagem não toca nenhuma mudança). No teste o agente não usa ferramentas. Responda cada ' \
+                      'campo pelo sentido, sem ser generoso.'.freeze
 end
 
 RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do # rubocop:disable RSpec/DescribeClass
@@ -66,22 +54,26 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     Crm::AiUsageEvent.where(account_id: conta.id).sum(:cost_estimate).to_f
   end
 
-  def criar_hubber
+  def teto
+    ENV.fetch('PROVA_DO_AJUSTE_EVAL_TETO_USD', AvaliacaoDaProvaDoAjuste::TETO_USD).to_f
+  end
+
+  def criar_agente(ramo)
+    dados = AvaliacaoDaProvaDoAjuste::AGENTES.fetch(ramo)
     Autonomia::Agents::Agent.create!(
-      account: conta, name: 'Hubber', agent_type: 'support', mode: :guided, status: :active, enabled: true,
-      instruction: AvaliacaoDaProvaDoAjuste::HUBBER, tone: 'cordial e breve', greeting: 'Oi! Aqui é o Hubber, da Hub2You.',
+      account: conta, name: dados[:name], agent_type: 'support', mode: :guided, status: :active, enabled: true,
+      instruction: dados[:instruction], tone: 'cordial e breve', greeting: dados[:greeting],
       fallback_message: 'Vou confirmar com a equipe e te retorno.', handoff_rule: 'Passe para a equipe quando o cliente pedir.',
-      starter_questions: ['Quais seguros vocês têm?'], human_card: 'O Hubber atende os clientes da Hub2You.',
-      config: { 'guardrails' => ['Nunca invente valores, coberturas ou prazos.'], 'voice' => 'masculina',
-                'with_knowledge' => false }
+      starter_questions: ['Como funciona?'], human_card: "#{dados[:name]} atende os clientes pelo WhatsApp.",
+      config: { 'guardrails' => dados[:guardrails], 'voice' => 'feminina', 'with_knowledge' => false }
     )
   end
 
-  def ajustar_e_provar(cena)
-    thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: criar_hubber)
-    thread.append_message!('user', cena[:fala])
+  def ajustar_e_provar(caso)
+    thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: criar_agente(caso[:agente]))
+    thread.append_message!('user', caso[:fala])
     Autonomia::Agents::Builder.new(account: conta, build_thread: thread).run!(thread.begin_build!)
-    acrescentar_pergunta(thread, cena[:extra]) if cena[:extra]
+    acrescentar_pergunta(thread, caso[:extra]) if caso[:extra]
     vereditos.clear
     perform_enqueued_jobs(only: Autonomia::Agents::ProvaDoAjusteJob)
     thread.reload.state.to_h
@@ -90,16 +82,18 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
   # A pergunta fora da mudança entra na prova pendente, como se o Construtor a tivesse escrito.
   def acrescentar_pergunta(thread, pergunta)
     estado = thread.reload.state
+    return if estado['prova'].nil?
+
     prova = estado['prova'].merge('perguntas' => estado.dig('prova', 'perguntas') + [{ 'pergunta' => pergunta }])
     thread.update!(state: estado.merge('prova' => prova))
   end
 
-  def julgar(cena, prova)
+  def julgar(caso, prova)
     itens = Array(prova['perguntas']).each_with_index.map do |item, indice|
       { 'cliente' => item['pergunta'], 'agente' => item['resposta'], 'passa_para_equipe' => item['equipe'],
         'veredito' => vereditos.last.to_a[indice] }
     end
-    texto = "Pedido do dono: #{cena[:fala]}\n\nTeste:\n#{JSON.pretty_generate(itens)}"
+    texto = "Pedido do dono: #{caso[:fala]}\nCritério do caso: #{caso[:obedece]}\n\nTeste:\n#{JSON.pretty_generate(itens)}"
     cliente = Crm::Ai::ResponsesClient.new(credential: Crm::Ai::CredentialResolver.new(account: conta).resolve,
                                            feature: 'eval_juiz', account: conta)
     raw = cliente.create(model: AvaliacaoDaProvaDoAjuste::JUIZ, instructions: AvaliacaoDaProvaDoAjuste::INSTRUCAO_DO_JUIZ,
@@ -108,32 +102,53 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     JSON.parse(raw[:text])
   end
 
-  def rodar(cena)
-    estado = ajustar_e_provar(cena)
+  # Estrutura (do código): o ajuste entrou, a prova ficou pronta com 1 a 3 perguntas do Construtor e pelo menos uma
+  # tocou a mudança pelo juiz de produção. Julgamento (do juiz do eval): as perguntas obedecem ao critério, nenhuma cita a
+  # instrução e cada veredito de produção está certo.
+  def rodar(caso)
+    estado = ajustar_e_provar(caso)
     prova = estado['prova'].to_h
-    veredito = prova['status'] == 'pronta' ? julgar(cena, prova) : {}
-    pronta = prova['status'] == 'pronta' && Array(prova['perguntas']).size.between?(1, 3)
-    { cena: cena[:nome], applied: estado['applied'], prova: prova, vereditos_de_producao: vereditos.last, veredito: veredito,
-      aprovada: pronta && veredito['perguntas_mostram_a_mudanca'] == true && veredito['alguma_cita_instrucao'] == false &&
-        Array(veredito['vereditos_certos']).all? && fora_certa?(cena, prova),
+    veredito = prova['status'] == 'pronta' ? julgar(caso, prova) : {}
+    { caso: caso[:nome], agente: caso[:agente], applied: estado['applied'], estrutura: estrutura_ok?(estado, prova, caso),
+      prova: prova, vereditos_de_producao: vereditos.last, veredito: veredito,
+      aprovada: estrutura_ok?(estado, prova, caso) && julgamento_ok?(veredito) && fora_certa?(caso, prova),
       custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
+  def estrutura_ok?(estado, prova, caso)
+    escritas = Array(prova['perguntas']).size - (caso[:extra] ? 1 : 0)
+    estado['applied'] == true && prova['status'] == 'pronta' && escritas.between?(1, 3) && prova['total'].to_i >= 1
+  end
+
+  def julgamento_ok?(veredito)
+    veredito['perguntas_mostram_a_mudanca'] == true && veredito['alguma_cita_instrucao'] == false &&
+      Array(veredito['vereditos_certos']).any? && Array(veredito['vereditos_certos']).all?
+  end
+
   # A pergunta fora da mudança (a última) ficou fora do placar.
-  def fora_certa?(cena, prova)
-    return true unless cena[:extra]
+  def fora_certa?(caso, prova)
+    return true unless caso[:extra]
 
-    vereditos.last.to_a.last == 'nao_testa' && prova['total'] < Array(prova['perguntas']).size
+    vereditos.last.to_a.last == 'nao_testa' && prova['total'].to_i < Array(prova['perguntas']).size
   end
 
-  def cenas_escolhidas
-    nome = ENV.fetch('PROVA_DO_AJUSTE_EVAL_CENA', nil).presence
-    escolhidas = nome ? AvaliacaoDaProvaDoAjuste::CENAS.select { |cena| cena[:nome] == nome } : AvaliacaoDaProvaDoAjuste::CENAS
-    expect(escolhidas).not_to be_empty, "cena desconhecida: #{nome}"
-    escolhidas
+  def casos_escolhidos
+    nomes = ENV.fetch('PROVA_DO_AJUSTE_EVAL_CENA', '').split(',').map(&:strip).compact_blank
+    escolhidos = AvaliacaoDaProvaDoAjuste::CASOS
+    escolhidos = escolhidos.select { |caso| nomes.include?(caso[:nome]) } if nomes.any?
+    expect(escolhidos.size).to eq(nomes.any? ? nomes.size : AvaliacaoDaProvaDoAjuste::CASOS.size), "caso desconhecido: #{nomes}"
+    escolhidos
   end
 
-  it 'escreve perguntas que mostram a mudança, responde sem ferramenta e julga certo' do
+  def gravar_relatorio
+    destino = ENV.fetch('PROVA_DO_AJUSTE_EVAL_SAIDA', nil)
+    return if destino.blank?
+
+    File.write(destino, JSON.pretty_generate(custo_usd: custo_ate_agora.round(4), aprovados: relatorio.count { |linha| linha[:aprovada] },
+                                             rodados: relatorio.size, execucoes: relatorio))
+  end
+
+  it 'escreve perguntas que obedecem ao pedido, responde sem ferramenta e julga certo' do
     ligada = ENV['AUTONOMIA_EVAL_PAGO'] == '1' && ENV['PROVA_DO_AJUSTE_EVAL'] == '1' && ENV['OPENAI_API_KEY'].present?
     skip 'avaliação paga: rode com AUTONOMIA_EVAL_PAGO=1, PROVA_DO_AJUSTE_EVAL=1 e OPENAI_API_KEY' unless ligada
 
@@ -143,15 +158,15 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
       original.call(**kwargs).tap { |saida| vereditos << saida }
     end
 
-    cenas_escolhidas.each do |cena|
-      break if custo_ate_agora >= AvaliacaoDaProvaDoAjuste::TETO_USD
+    casos = casos_escolhidos
+    casos.each do |caso|
+      break if custo_ate_agora >= teto
 
-      relatorio << rodar(cena)
+      relatorio << rodar(caso)
     end
 
-    destino = ENV.fetch('PROVA_DO_AJUSTE_EVAL_SAIDA', nil)
-    File.write(destino, JSON.pretty_generate(custo_usd: custo_ate_agora.round(4), execucoes: relatorio)) if destino.present?
-    expect(relatorio.size).to eq(cenas_escolhidas.size), "teto de custo atingido: #{relatorio.size} de #{cenas_escolhidas.size}"
-    expect(relatorio.reject { |linha| linha[:aprovada] }.pluck(:cena)).to eq([])
+    gravar_relatorio
+    expect(relatorio.size).to eq(casos.size), "teto de custo atingido: #{relatorio.size} de #{casos.size}"
+    expect(relatorio.reject { |linha| linha[:aprovada] }.pluck(:caso)).to eq([])
   end
 end
