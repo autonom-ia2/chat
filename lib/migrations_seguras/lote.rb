@@ -14,8 +14,9 @@
 class MigrationsSeguras::Lote
   Etapa = Struct.new(:nome, :ok, :detalhe, keyword_init: true)
 
-  # descidas: as que tiveram o down testado; irreversiveis: as que pararam o teste do down.
-  Resultado = Struct.new(:migrations, :compatibilidade, :etapas, :descidas, :irreversiveis, keyword_init: true) do
+  # descidas: as que tiveram o down testado; irreversiveis: as que pararam o teste do down; dados: versão => o que a
+  # migration faz com linhas (MigrationsSeguras::Dados), para a revisão humana.
+  Resultado = Struct.new(:migrations, :compatibilidade, :etapas, :descidas, :irreversiveis, :dados, keyword_init: true) do
     def ok?
       etapas.all?(&:ok) && (compatibilidade.nil? || compatibilidade.compativel?)
     end
@@ -55,7 +56,7 @@ class MigrationsSeguras::Lote
 
   # schema.rb mudou sem migration nova: ele tem de continuar descrevendo a estrutura da base.
   def sem_migration_nova
-    resultado = Resultado.new(migrations: [], etapas: [], descidas: [], irreversiveis: [])
+    resultado = Resultado.new(migrations: [], etapas: [], descidas: [], irreversiveis: [], dados: {})
     base = retrato
     etapa(resultado, 'schema.rb do PR igual ao da base (não há migration nova)') do
       recriar_com(@schema_do_pr)
@@ -74,7 +75,7 @@ class MigrationsSeguras::Lote
   end
 
   def testar(novas)
-    resultado = Resultado.new(migrations: novas, etapas: [], descidas: [], irreversiveis: [])
+    resultado = Resultado.new(migrations: novas, etapas: [], descidas: [], irreversiveis: [], dados: mexe_em_dados(novas))
     antes = retrato
     estados = []
     subiu = etapa(resultado, 'up do lote sobre a base, uma por vez na ordem das versões') do
@@ -152,6 +153,10 @@ class MigrationsSeguras::Lote
   rescue StandardError => e
     resultado.etapas << Etapa.new(nome: nome, ok: false, detalhe: e.message.strip)
     false
+  end
+
+  def mexe_em_dados(novas)
+    novas.to_h { |migration| [migration.version, MigrationsSeguras::Dados.motivos(migration.filename)] }.reject { |_, motivos| motivos.empty? }
   end
 
   def retrato

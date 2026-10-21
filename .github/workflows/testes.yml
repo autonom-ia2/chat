@@ -367,7 +367,9 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        # Mesma major da produção (18.3 nas duas stacks). O RSpec acima segue no 16. A imagem 18 guarda os dados em
+        # /var/lib/postgresql/18/docker e recusa montagem em /var/lib/postgresql/data: o tmpfs vai na pasta de cima.
+        image: pgvector/pgvector:pg18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: ''
@@ -376,7 +378,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --mount type=tmpfs,destination=/var/lib/postgresql/data
+          --mount type=tmpfs,destination=/var/lib/postgresql
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s

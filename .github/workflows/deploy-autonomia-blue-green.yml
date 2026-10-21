@@ -354,12 +354,23 @@ jobs:
             echo "GREEN_IMAGE_PUBLISHED=false"
           } >> "$GITHUB_ENV"
 
-      # #2024: snapshot do RDS pedido aqui, quando o deploy traz migration que a blue não tem, e esperado antes de lançar
-      # a green (é ela quem roda o db:migrate). Desligado enquanto a variável estiver vazia.
-      - name: Request RDS snapshot before migrations
+      # #2024: a CI compara as migrations com a main, mas a blue pode estar vários PRs atrás. Antes de existir green,
+      # o schema.rb deste commit é comparado com o da blue (e o db/retiradas.yml dela): remoção que a blue não
+      # anunciou para o deploy aqui. Ruby puro (Prism), sem bundle.
+      - name: Set up Ruby for the schema check
+        uses: ruby/setup-ruby@v1
+
+      - name: Check the schema against the blue
         env:
           GH_TOKEN: ${{ github.token }}
-          RDS_SNAPSHOT_DB_INSTANCE: ${{ vars.RDS_SNAPSHOT_DB_INSTANCE_AUTONOMIA }}
+        run: bash scripts/deploy/schema-contra-a-blue.sh
+
+      # #2024: snapshot do RDS pedido aqui, quando o deploy traz migration que a blue não tem, e esperado antes de lançar
+      # a green (é ela quem roda o db:migrate). Desligado enquanto o secret estiver vazio. Secret, não variável: o
+      # valor de uma variável sai no log público.
+      - name: Request RDS snapshot before migrations
+        env:
+          RDS_SNAPSHOT_DB_INSTANCE: ${{ secrets.RDS_SNAPSHOT_DB_INSTANCE_AUTONOMIA }}
         run: bash scripts/deploy/rds-snapshot-antes-da-migration.sh criar
 
       - name: Create green user data
@@ -847,6 +858,13 @@ jobs:
       # a imagem já está lá.
       - name: Wait for RDS snapshot before the green
         run: bash scripts/deploy/rds-snapshot-antes-da-migration.sh esperar
+
+      # A espera do snapshot pode passar do login de 1 h.
+      - name: Refresh AWS credentials after the RDS snapshot
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Launch green EC2 instance
         run: |

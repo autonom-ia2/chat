@@ -63,10 +63,41 @@ class MigrationsSeguras::Compatibilidade
       novo = depois[coluna]
       next coluna_removida(onde) unless novo
 
-      bloquear(onde, "tipo mudou de #{retrato['tipo']} para #{novo['tipo']}") if novo['tipo'] != retrato['tipo']
+      comparar_tipo(onde, retrato, novo)
       bloquear(onde, 'passou a ser NOT NULL; o código anterior grava nulo nela') if retrato['nulo'] && !novo['nulo']
     end
     (depois.keys - antes.keys).each { |coluna| coluna_nova(tabela, coluna, depois[coluna]) }
+  end
+
+  def comparar_tipo(onde, antes, depois)
+    return if antes['tipo'] == depois['tipo']
+
+    mudanca = "tipo mudou de #{antes['tipo']} para #{depois['tipo']}"
+    return avisar(onde, "#{mudanca}: só aumentou o limite, o que o código anterior grava continua cabendo") if alargou?(antes, depois)
+
+    bloquear(onde, mudanca)
+  end
+
+  # Mesmo tipo, com mais espaço: varchar(50) -> varchar(100) ou sem limite, integer -> bigint (limite 4 -> 8),
+  # numeric(10,2) -> numeric(12,2). Tudo que cabia continua cabendo. Escala menor arredondaria o que já existe.
+  def alargou?(antes, depois)
+    return false unless antes['tipo_base'] && antes['tipo_base'] == depois['tipo_base']
+
+    maior_ou_sem_limite?(antes['limite'], depois['limite']) && cabe_a_precisao?(antes, depois)
+  end
+
+  # numeric(p, e): a escala não pode diminuir, nem os dígitos antes da vírgula (p - e).
+  def cabe_a_precisao?(antes, depois)
+    return true if antes['precisao'].nil? && depois['precisao'].nil?
+    return false if [antes['precisao'], depois['precisao']].any?(nil)
+
+    escala_antes = antes['escala'].to_i
+    escala_depois = depois['escala'].to_i
+    escala_depois >= escala_antes && depois['precisao'] - escala_depois >= antes['precisao'] - escala_antes
+  end
+
+  def maior_ou_sem_limite?(antes, depois)
+    depois.nil? || (!antes.nil? && depois >= antes)
   end
 
   def coluna_removida(onde)
@@ -102,6 +133,7 @@ class MigrationsSeguras::Compatibilidade
     end
     { 'funcoes' => 'função', 'gatilhos' => 'gatilho' }.each do |chave, rotulo|
       (lista(@antes[chave]) - lista(@depois[chave])).each { |nome| avisar(nome, "#{rotulo} removida") }
+      corpos_mudados(@antes[chave], @depois[chave]).each { |nome| avisar(nome, "#{rotulo} com o corpo mudado") }
     end
     comparar_valores_de_enum
   end
@@ -112,6 +144,13 @@ class MigrationsSeguras::Compatibilidade
       removidos = valores - @depois.fetch('tipos_enum', {}).fetch(nome, valores)
       removidos.each { |valor| bloquear("#{nome}.#{valor}", 'valor removido do tipo enum') }
     end
+  end
+
+  # Funções e gatilhos vêm com o hash da definição: mesmo nome com hash diferente é corpo mudado.
+  def corpos_mudados(antes, depois)
+    return [] unless antes.is_a?(Hash) && depois.is_a?(Hash)
+
+    antes.keys.select { |nome| depois.key?(nome) && depois[nome] != antes[nome] }
   end
 
   def lista(valor)

@@ -77,7 +77,8 @@ o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
 - Até **7 PRs** sem migration destrutiva por rodada da fila (ruleset `main - fila de merge`, `max_entries_to_merge: 7`).
   **Migration aditiva vai no lote, quantas houver** (#2024): o job **Migrations do lote** (parte do check RSpec) testa
   na fila as migrations de todos os PRs da rodada juntas, sobre a `main`, e barra o que o código anterior não aguenta.
-  Snapshot RDS nas duas contas antes do merge: pela Orquestração, até o snapshot automático do deploy ser ligado
+  O deploy confere de novo contra o commit da blue, antes de lançar a green. Migration que mexe em dados sai marcada no
+  relatório e depende da revisão humana: o job confere estrutura, não dados. Snapshot RDS nas duas contas antes do merge: pela Orquestração, até o snapshot automático do deploy ser ligado
   ([`migrations-em-lote.md`](migrations-em-lote.md)). Remoção ou renomeação (o passo 2 do expand/contract) sobe
   sozinha, com OK do Rodrigo e o rollback do banco escrito antes.
 - Antes de fechar, a Orquestração confere: versão de migration repetida entre os PRs; arquivos gerados do Guia e da

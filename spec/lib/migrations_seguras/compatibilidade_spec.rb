@@ -61,6 +61,56 @@ RSpec.describe MigrationsSeguras::Compatibilidade do
     expect(onde(verificar(estrutura('contacts' => tabela(colunas))).bloqueios)).to contain_exactly('contacts.email', 'contacts.nome')
   end
 
+  describe 'tipo que só ganhou espaço' do
+    def medida(tipo, base, limite: nil, precisao: nil, escala: nil)
+      coluna(tipo: tipo).merge('tipo_base' => base, 'limite' => limite, 'precisao' => precisao, 'escala' => escala)
+    end
+
+    def troca(antigo, novo)
+      antes['tabelas']['contacts'] = tabela(contatos['colunas'].merge('valor' => antigo))
+      verificar(estrutura('contacts' => tabela(contatos['colunas'].merge('valor' => novo))))
+    end
+
+    it 'só avisa varchar maior ou sem limite, integer para bigint e numeric com mais precisão' do
+      casos = [
+        [medida('character varying(50)', 'string', limite: 50), medida('character varying(100)', 'string', limite: 100)],
+        [medida('character varying(50)', 'string', limite: 50), medida('character varying', 'string')],
+        [medida('integer', 'integer', limite: 4), medida('bigint', 'integer', limite: 8)],
+        [medida('numeric(10,2)', 'decimal', precisao: 10, escala: 2), medida('numeric(12,2)', 'decimal', precisao: 12, escala: 2)]
+      ]
+
+      casos.each do |de, para|
+        verificacao = troca(de, para)
+        expect(verificacao).to be_compativel, "#{de['tipo']} -> #{para['tipo']}"
+        expect(onde(verificacao.avisos)).to eq(['contacts.valor'])
+      end
+    end
+
+    it 'bloqueia o que encolhe, perde escala ou muda de tipo' do
+      casos = [
+        [medida('character varying(100)', 'string', limite: 100), medida('character varying(50)', 'string', limite: 50)],
+        [medida('character varying', 'string'), medida('character varying(50)', 'string', limite: 50)],
+        [medida('numeric(10,2)', 'decimal', precisao: 10, escala: 2), medida('numeric(12,0)', 'decimal', precisao: 12, escala: 0)],
+        [medida('character varying', 'string'), medida('text', 'text')]
+      ]
+
+      casos.each do |de, para|
+        expect(onde(troca(de, para).bloqueios)).to eq(['contacts.valor']), "#{de['tipo']} -> #{para['tipo']}"
+      end
+    end
+  end
+
+  it 'avisa função e gatilho com o corpo mudado' do
+    antes['funcoes'] = { 'trava()' => 'abc' }
+    antes['gatilhos'] = { 'contacts.trava' => 'def' }
+    depois = estrutura({ 'contacts' => contatos }, 'funcoes' => { 'trava()' => 'xyz' }, 'gatilhos' => { 'contacts.trava' => 'def' })
+
+    resultado = verificar(depois)
+
+    expect(resultado).to be_compativel
+    expect(onde(resultado.avisos)).to eq(['trava()'])
+  end
+
   it 'bloqueia coluna nova NOT NULL sem default numa tabela que já existe' do
     colunas = contatos['colunas'].merge('documento' => coluna(nulo: false))
 

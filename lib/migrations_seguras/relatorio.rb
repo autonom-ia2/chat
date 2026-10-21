@@ -8,7 +8,7 @@ class MigrationsSeguras::Relatorio
   def markdown
     return [cabecalho, "Nenhuma migration nova em relação à base.\n", etapas].join("\n") if @resultado.migrations.empty?
 
-    [cabecalho, migrations, etapas, achados('Bloqueios', bloqueios), achados('Avisos (não bloqueiam)', avisos)].join("\n")
+    [cabecalho, migrations, etapas, achados('Bloqueios', bloqueios), achados('Avisos (não bloqueiam)', avisos), dados].join("\n")
   end
 
   private
@@ -20,9 +20,9 @@ class MigrationsSeguras::Relatorio
 
   def migrations
     linhas = @resultado.migrations.map do |migration|
-      "| #{migration.version} | #{migration.name} | #{volta(migration)} |"
+      "| #{migration.version} | #{migration.name} | #{volta(migration)} | #{mexe_em_dados(migration)} |"
     end
-    "#{(['| Versão | Migration | Volta |', '|---|---|---|'] + linhas).join("\n")}\n"
+    "#{(['| Versão | Migration | Volta | Mexe em dados |', '|---|---|---|---|'] + linhas).join("\n")}\n"
   end
 
   def volta(migration)
@@ -30,6 +30,10 @@ class MigrationsSeguras::Relatorio
     return 'down testado' if @resultado.descidas.include?(migration)
 
     'down não testado'
+  end
+
+  def mexe_em_dados(migration)
+    @resultado.dados.key?(migration.version) ? 'sim: revisão humana' : 'não'
   end
 
   def etapas
@@ -44,6 +48,14 @@ class MigrationsSeguras::Relatorio
     return '' if lista.empty?
 
     "### #{titulo}\n\n#{lista.map { |achado| "- #{achado}" }.join("\n")}\n"
+  end
+
+  # O job confere estrutura, não o que um UPDATE faz com as linhas: isso fica com a revisão humana.
+  def dados
+    return '' if @resultado.dados.empty?
+
+    linhas = @resultado.dados.map { |versao, motivos| "- #{versao}: #{motivos.join(', ')}" }
+    "### Mexem em dados: revisão humana (o job não confere dados)\n\n#{linhas.join("\n")}\n"
   end
 
   def bloqueios

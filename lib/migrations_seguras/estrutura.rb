@@ -50,6 +50,10 @@ class MigrationsSeguras::Estrutura
   def coluna_retrato(coluna)
     {
       'tipo' => coluna.sql_type,
+      'tipo_base' => coluna.type.to_s,
+      'limite' => coluna.limit,
+      'precisao' => coluna.precision,
+      'escala' => coluna.scale,
       'nulo' => coluna.null,
       'default' => coluna.default,
       'default_funcao' => coluna.default_function
@@ -79,22 +83,26 @@ class MigrationsSeguras::Estrutura
     }
   end
 
-  # Funções da aplicação no schema public, sem as que vêm de extensão (pg_trgm, vector).
+  # Funções da aplicação no schema public (sem as de extensão, como pg_trgm e vector), com o md5 da definição: corpo
+  # mudado aparece como diferença. A chave leva os argumentos, por causa de sobrecarga. Agregado fica de fora porque
+  # pg_get_functiondef não o aceita.
   def funcoes
-    @connection.select_values(<<~SQL.squish).sort
-      SELECT p.proname FROM pg_proc p
+    @connection.select_rows(<<~SQL.squish).to_h
+      SELECT p.oid::regprocedure::text, md5(pg_get_functiondef(p.oid)) FROM pg_proc p
       JOIN pg_namespace n ON n.oid = p.pronamespace
-      WHERE n.nspname = 'public'
+      WHERE n.nspname = 'public' AND p.prokind IN ('f', 'p')
         AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')
+      ORDER BY 1
     SQL
   end
 
   def gatilhos
-    @connection.select_rows(<<~SQL.squish).map { |tabela, nome| "#{tabela}.#{nome}" }.sort
-      SELECT c.relname, t.tgname FROM pg_trigger t
+    @connection.select_rows(<<~SQL.squish).to_h
+      SELECT c.relname || '.' || t.tgname, md5(pg_get_triggerdef(t.oid)) FROM pg_trigger t
       JOIN pg_class c ON c.oid = t.tgrelid
       JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE NOT t.tgisinternal AND n.nspname = 'public'
+      ORDER BY 1
     SQL
   end
 end

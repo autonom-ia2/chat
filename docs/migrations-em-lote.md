@@ -1,7 +1,12 @@
 # Migrations em lote
 
 Desde o #2024, várias migrations sobem no mesmo deploy. O que tornava perigoso subir mais de uma nunca foi a
-quantidade. Era a classe de cada migration, e agora a CI confere essa classe antes do merge.
+quantidade. Era a classe de cada migration, e agora a CI confere essa classe antes do merge e o deploy confere de
+novo contra o commit que está no ar.
+
+O que a CI e o deploy conferem é a **estrutura** do banco. Nenhum dos dois é barreira contra perda de dados: um
+UPDATE ou um backfill errado passa por todos os testes daqui. Migration que mexe em dados sai marcada no relatório e
+depende da revisão humana.
 
 ## Por que o risco é a classe, não a quantidade
 
@@ -18,6 +23,8 @@ quantidade. Era a classe de cada migration, e agora a CI confere essa classe ant
 | Risco | Onde é barrado |
 |---|---|
 | Remover ou renomear coluna ou tabela, trocar tipo, tornar NOT NULL uma coluna existente, criar coluna NOT NULL sem default em tabela existente, remover view, extensão ou valor de enum | Job **Migrations do lote** (`MigrationsSeguras::Compatibilidade`), comparando a estrutura do banco antes e depois |
+| A blue estar vários PRs atrás da `main` (a fila não espera o deploy, e o deploy pula SHA superado) | Deploy, passo **Check the schema against the blue**, antes de existir green: a mesma `Compatibilidade` compara o `schema.rb` da blue com o deste commit, com o `db/retiradas.yml` **da blue** (`scripts/deploy/schema-contra-a-blue.sh`, leitura do `schema.rb` pela árvore do Ruby em `MigrationsSeguras::SchemaRb`) |
+| Migration que mexe em dados (model, `update_all` e afins, `connection.execute`/`exec_query`, SQL bruto) | **Revisão humana.** O job só marca no relatório (coluna "Mexe em dados", lida pela árvore do Ruby em `MigrationsSeguras::Dados`) |
 | Trava longa: índice sem `CONCURRENTLY`, chave estrangeira validada na hora, `change_column`, NOT NULL direto, `execute` sem revisão | `strong_migrations`, na CI e na própria green |
 | Fila de leitura e escrita atrás de um ALTER | `lock_timeout` de 5 s em toda migration, com 3 tentativas (`config/initializers/strong_migrations.rb`) |
 | `down` quebrado | Job: `down` de cada migration nova, da última para a primeira, tem de devolver a estrutura da base; `up` de novo tem de chegar ao mesmo lugar |
@@ -28,6 +35,12 @@ quantidade. Era a classe de cada migration, e agora a CI confere essa classe ant
 
 Índice único, chave estrangeira e restrição CHECK novos numa tabela que já existe, e índice removido, **não bloqueiam**:
 saem como aviso no relatório, para a revisão conferir se o código anterior não grava algo que a regra nova recusa.
+Também é aviso o tipo que só ganhou espaço (`varchar(50)` para `varchar(100)` ou sem limite, `integer` para `bigint`,
+`numeric` com mais precisão e a mesma escala), e a função ou gatilho com o corpo mudado (o retrato guarda o md5 de
+`pg_get_functiondef` e `pg_get_triggerdef`).
+
+O job roda no PostgreSQL 18, a mesma major da produção (18.3 nas duas stacks), e o strong_migrations decide pela 18
+(`target_postgresql_version`). O RSpec comum segue no 16.
 
 O strong_migrations ignora as migrations até `StrongMigrations.start_after` (a última da `main` quando a gem entrou).
 No job ele checa **toda** migration nova do lote, mesmo com versão menor que essa.
@@ -61,6 +74,17 @@ remover a antiga por este caminho.
 
 O PR 2 é a migration que não é só aditiva. Ele sobe sozinho e com OK do Rodrigo (`processo-de-release.md`).
 
+O deploy confere o mesmo de novo contra a **blue**: se o PR 1 entrou na `main` mas não chegou a subir, e o PR 2 vem no
+mesmo deploy, o passo **Check the schema against the blue** para o deploy antes de lançar a green, e nada é mexido.
+A saída é subir o PR 1 sozinho (reverter o PR 2 na `main`, deploy, e voltar o PR 2 depois do "ok, SHA").
+
+## Quando um lote para no meio
+
+Cada migration roda na sua transação. Se uma esgota o `lock_timeout` (5 s, 3 tentativas) ou falha por outro motivo, as
+anteriores do lote **ficam aplicadas**, a green não sobe e a blue segue no ar, no schema dessas anteriores. Como o job
+conferiu a compatibilidade depois de cada migration, a blue aguenta esse estado. O próximo deploy roda só as que
+faltam. Não é preciso desfazer nada; se a falha foi trava, basta disparar o deploy de novo fora do pico.
+
 ## Rollback
 
 - **App:** o rollback blue-green de sempre (`action=rollback`, `esperado_sha`). Funciona com as migrations do lote
@@ -86,17 +110,19 @@ Fica **desligado** até o Rodrigo ligar. Para ligar, por stack:
    - `rds:CreateDBSnapshot`, na instância e no snapshot;
    - `rds:AddTagsToResource`, no snapshot (o pedido sai com as tags `CriadoPor` e `Commit`);
    - `rds:DescribeDBSnapshots`, que o `aws rds wait db-snapshot-available` usa.
-2. Criar a variável do repositório com o identificador da instância: `RDS_SNAPSHOT_DB_INSTANCE_HUB2YOU` ou
-   `RDS_SNAPSHOT_DB_INSTANCE_AUTONOMIA`.
+2. Criar o **secret** do repositório com o identificador da instância: `RDS_SNAPSHOT_DB_INSTANCE_HUB2YOU` ou
+   `RDS_SNAPSHOT_DB_INSTANCE_AUTONOMIA`. Secret, não variável: o valor de uma variável aparece no log público.
 
 Erro da AWS sai no log só com o código (`AccessDenied` e afins), porque a mensagem completa traz a conta e o ARN, e o
 repositório é público.
 
-Pontos de atenção:
+Pré-requisitos para ligar (decisão do Rodrigo):
 
-- snapshot manual não expira, e cada um custa armazenamento. A limpeza (`rds:DeleteDBSnapshot`) ficou de fora de
-  propósito: apagar backup é decisão do Rodrigo;
-- numa instância Single-AZ o snapshot suspende o I/O por alguns segundos ou minutos (documentação da AWS). Multi-AZ
-  tira da standby e não suspende;
+- **Cota.** Snapshot manual não expira, e a conta tem cota de snapshots manuais por região (100 no padrão da AWS).
+  Cada deploy com migration cria um. O deploy **não apaga** nenhum: apagar backup é decisão do Rodrigo. Sem uma rotina
+  de limpeza, a cota acaba e o `create-db-snapshot` passa a falhar, o que para o deploy com migration. Também custa
+  armazenamento;
+- **Single-AZ.** Numa instância Single-AZ o snapshot suspende o I/O por alguns segundos a minutos (documentação da
+  AWS), com a blue servindo. Multi-AZ tira da standby e não suspende. Conferir o modo de cada RDS antes de ligar;
 - se o RDS tem backup automático com retenção maior que zero, a restauração para um ponto no tempo já cobre o
   minuto antes do deploy. O snapshot é a cópia nomeada e fácil de achar;

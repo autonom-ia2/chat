@@ -15,6 +15,10 @@ StrongMigrations.start_after = 20_261_108_230_000
 # atrás dele. Com 5 s a migration desiste e é tentada de novo; esgotadas as tentativas, o deploy falha antes do
 # tráfego e a blue segue no ar. O statement_timeout fica o do database.yml (14 s): migration longa falha em vez de
 # segurar a green.
+# Produção roda PostgreSQL 18.3 nas duas stacks (conferido em 21/10/2026); o job "Migrations do lote" também roda no 18.
+# Com a versão fixa, a gem decide o que é seguro pela versão da produção, não pela do banco local.
+StrongMigrations.target_postgresql_version = '18'
+
 StrongMigrations.lock_timeout = 5.seconds
 StrongMigrations.lock_timeout_retries = 3
 StrongMigrations.lock_timeout_retry_delay = 10
