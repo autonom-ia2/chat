@@ -202,7 +202,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       run_turn
 
-      expect(estado).to include('next_question' => "#{texto(:nao_consegui, pedidos: preco)} Qual equipe?",
+      expect(estado).to include('next_question' => 'Qual equipe?',
                                 'opcoes_de_resposta' => opcoes)
       expect_pergunta_por_ultimo
     end
@@ -226,7 +226,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       run_turn
 
-      expect(estado['next_question']).to eq("#{texto(:nao_consegui, pedidos: preco)} #{texto(:de_outro_jeito)}")
+      expect(estado['next_question']).to eq(texto(:de_outro_jeito))
       expect(opcoes_no_estado).to eq([])
     end
   end

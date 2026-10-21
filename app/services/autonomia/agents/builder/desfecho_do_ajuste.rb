@@ -160,7 +160,8 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
 
     textos = Autonomia::Agents::Builder::TextosDoAjuste
     if conferencia['falta']
-      pergunta = textos.pergunta_do_que_faltou(conferencia, idioma_do_ajuste, explicacao: @explicacao_da_correcao)
+      no_cartao = Autonomia::Agents::ResultadoDoAjuste.no_cartao(conferencia)
+      pergunta = textos.pergunta_do_que_faltou(conferencia, idioma_do_ajuste, explicacao: @explicacao_da_correcao, no_cartao: no_cartao)
       return [pergunta, @explicacao_da_correcao ? @opcoes_da_correcao : []]
     end
     return [nil, []] unless conferencia['conflito']

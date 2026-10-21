@@ -19,12 +19,26 @@ module Autonomia::Agents::Builder::TextosDoAjuste
     locale.present? && I18n.available_locales.map(&:to_s).include?(locale)
   end
 
-  # A pergunta ao dono quando ficou item sem aplicar, com os pedidos que o Construtor listou. A explicação da correção
-  # (texto do Construtor) vem no lugar da pergunta genérica.
-  def pergunta_do_que_faltou(conferencia, locale, explicacao: nil)
-    pedidos = lista(Autonomia::Agents::Builder::AjustePorLista.nao_atendidos(conferencia), 'pedido')
-    inicio = pedidos.present? ? texto(:nao_consegui, locale, pedidos: pedidos) : texto(:nao_consegui_tudo, locale)
-    [inicio, explicacao.to_s.strip.presence || texto(:de_outro_jeito, locale)].join(' ')
+  NADA_NO_CARTAO = { pedidos: [], faltou_fora: false }.freeze
+
+  # A pergunta ao dono quando ficou item sem aplicar. A explicação da correção (texto do Construtor) vem no lugar da
+  # pergunta genérica. #1850: o que o cartão ⚠ da tela já mostra (`no_cartao`, de ResultadoDoAjuste.no_cartao) não se
+  # repete aqui; quando o cartão mostra tudo o que faltou, a pergunta só pergunta.
+  def pergunta_do_que_faltou(conferencia, locale, explicacao: nil, no_cartao: NADA_NO_CARTAO)
+    pergunta = explicacao.to_s.strip.presence || texto(:de_outro_jeito, locale)
+    [o_que_faltou(conferencia, locale, no_cartao), pergunta].compact.join(' ')
+  end
+
+  # O "Não consegui aplicar" só com os pedidos (do Construtor, na lista) que o cartão não mostra com ⚠. nil quando o
+  # cartão já mostra tudo o que faltou (os pedidos ou a linha "uma parte não entrou"). A comparação é do texto do campo
+  # `pedido`, como o cartão agrupa: nada de ler linguagem.
+  def o_que_faltou(conferencia, locale, no_cartao)
+    nao_atendidos = Autonomia::Agents::Builder::AjustePorLista.nao_atendidos(conferencia)
+    pedidos = nao_atendidos.map { |item| item['pedido'].to_s.strip.chomp('.') }.compact_blank.uniq
+    fora_do_cartao = pedidos - no_cartao[:pedidos]
+    return texto(:nao_consegui, locale, pedidos: fora_do_cartao.join('; ')) if fora_do_cartao.any?
+
+    texto(:nao_consegui_tudo, locale) unless pedidos.any? || no_cartao[:faltou_fora]
   end
 
   # Tudo entrou, mas a conferência viu conflito com o resto do agente: o dono decide.

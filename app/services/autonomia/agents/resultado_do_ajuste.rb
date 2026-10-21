@@ -31,6 +31,17 @@ class Autonomia::Agents::ResultadoDoAjuste
     { thread_id: thread.id, linhas: textos(linhas, 'aplicado'), sem_pedido: textos(linhas, 'sem_pedido') }
   end
 
+  # #1850 — o que o cartão deste ajuste mostra ao dono sobre o que faltou: o texto de cada linha ⚠ e se há a linha "uma
+  # parte não entrou". A pergunta do que faltou (TextosDoAjuste) não repete nada disso. Sem cartão (o desfazer automático
+  # foi recusado, como em mostrar?), nada; com o cartão neutro (sem a marca de todos os itens), nenhuma linha ⚠.
+  def self.no_cartao(conferencia)
+    return Autonomia::Agents::Builder::TextosDoAjuste::NADA_NO_CARTAO if conferencia.dig('desfeito', 'ok') == false
+
+    resultado = new(nil, conferencia)
+    pedidos = resultado.conferido? ? resultado.linhas.select { |linha| linha[:estado] == 'nao_aplicado' }.pluck(:texto) : []
+    { pedidos: pedidos, faltou_fora: conferencia['faltou_fora_da_lista'] == true }
+  end
+
   def self.textos(linhas, estado)
     linhas.select { |linha| linha[:estado] == estado }.first(LINHAS_DA_ULTIMA_MUDANCA).map { |linha| sem_ponto(linha[:texto]) }
   end
@@ -75,6 +86,11 @@ class Autonomia::Agents::ResultadoDoAjuste
       { estado: 'sem_pedido', texto: sem_ponto(grupo.first['resumo']) }
     end
     agrupar(@itens - sem_pedido).map { |grupo| linha_pedida(grupo) } + nao_pedidos
+  end
+
+  # Sem a conferência (o provedor falhou) ou sem a marca dos itens (a 2ª conferência passou do teto): mudou, sem conferir.
+  def conferido?
+    @conferencia['erro'].nil? && @itens.all? { |item| item.key?('atendido') }
   end
 
   private
@@ -138,10 +154,5 @@ class Autonomia::Agents::ResultadoDoAjuste
 
   def desfeito_sozinho?
     @conferencia.dig('desfeito', 'ok') == true
-  end
-
-  # Sem a conferência (o provedor falhou) ou sem a marca dos itens (a 2ª conferência passou do teto): mudou, sem conferir.
-  def conferido?
-    @conferencia['erro'].nil? && @itens.all? { |item| item.key?('atendido') }
   end
 end

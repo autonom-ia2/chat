@@ -95,17 +95,20 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust')).to eq([correcao])
     end
 
-    it 'se ainda faltar, vira pergunta montada pelo código com o pedido do Construtor' do
+    # #1850: o cartão ⚠ já mostra "Não consegui aplicar: preço passa para a equipe"; a pergunta logo abaixo não repete.
+    it 'se ainda faltar, o cartão ⚠ mostra o pedido e a pergunta do código só pergunta' do
       correcao_aplicada
       conferencias << { nao: [2] }
 
       run_turn
 
-      pergunta = "#{texto(:nao_consegui, pedidos: preco)} #{texto(:de_outro_jeito)}"
+      pergunta = texto(:de_outro_jeito)
       expect(agent.reload.tone).to eq('cordial e curto')
       expect(estado).to include('needs_more_info' => true, 'applied' => true, 'next_question' => pergunta,
                                 'pergunta_pendente' => pergunta)
       expect(thread.messages.last).to include('role' => 'assistant', 'content' => pergunta)
+      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h[:itens])
+        .to include({ estado: 'nao_aplicado', texto: preco })
     end
 
     it 'se a correção não aplicar e explicar, a explicação dela vai na pergunta' do
@@ -115,7 +118,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(conferente).to have_received(:conferir).once
       expect(estado).to include('needs_more_info' => true, 'applied' => true,
-                                'next_question' => "#{texto(:nao_consegui, pedidos: preco)} Qual equipe?")
+                                'next_question' => 'Qual equipe?')
       expect(estado['conferencia']).to include('correcao' => false)
     end
 
@@ -125,7 +128,7 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(conferente).to have_received(:conferir).once
-      expect(estado['next_question']).to start_with(texto(:nao_consegui, pedidos: preco))
+      expect(estado['next_question']).to eq(texto(:de_outro_jeito))
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust').count).to eq(1)
     end
 
@@ -206,7 +209,7 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(calls.size).to eq(1)
-      expect(estado['next_question']).to start_with(texto(:nao_consegui, pedidos: preco))
+      expect(estado['next_question']).to eq(texto(:de_outro_jeito))
     end
   end
 
@@ -239,7 +242,8 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(calls.last[:input].last(2).first[:content].first[:text]).to include('nao entrou na lista')
-      expect(estado['next_question']).to eq("#{texto(:nao_consegui_tudo)} #{texto(:de_outro_jeito)}")
+      expect(estado['next_question']).to eq(texto(:de_outro_jeito))
+      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h[:faltou_fora]).to be(true)
     end
   end
 
