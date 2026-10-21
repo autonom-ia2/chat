@@ -49,14 +49,17 @@ class Autonomia::Agents::ProvaDoAjuste
   # Os campos do agente que o juiz lê para julgar (o que ele tem escrito, a forma e a mensagem fixa).
   CAMPOS_PARA_O_JUIZ = %w[instruction tone greeting fallback_message handoff_rule guardrails].freeze
   PERGUNTAS_MAX = 3
-  # Os trechos da base que a resposta usou vão ao juiz (revisão do t6d, ALTO 1), com teto de quantidade e de tamanho.
+  # Os trechos da base que a resposta usou vão ao juiz (revisão do t6d, ALTO 1), com teto de quantidade e de tamanho. O
+  # teto do tamanho é o maior pedaço que a base grava (Config::CHUNK_PROFILES): um trecho inteiro nunca é cortado.
   TRECHOS_MAX = 3
-  TRECHO_MAX_CHARS = 400
+  TRECHO_MAX_CHARS = [*Autonomia::Agents::Config::CHUNK_PROFILES.values, Autonomia::Agents::Config::DEFAULT_CHUNK_PROFILE]
+                     .pluck(:max).max
   PERGUNTA_MAX_CHARS = 200
 
   # As perguntas que o Construtor escreveu: até 3, sem branco nem repetida, cada uma curta, com o pedido que testa (o
-  # texto do pedido em `mudancas`; outro texto fica sem pedido). Lê também o formato antigo, só o texto.
-  # -> [{ 'pergunta' => texto, 'pedido' => texto do pedido (quando há) }]
+  # texto do pedido em `mudancas`; outro texto vira `pedido` nil, que conta como não declarado). Lê também o formato
+  # antigo, só o texto, que fica sem a chave `pedido`.
+  # -> [{ 'pergunta' => texto, 'pedido' => texto do pedido ou nil (só no formato de agora) }]
   def self.perguntas(parsed)
     pedidos = Autonomia::Agents::Builder::AjustePorLista.mudancas(parsed).pluck('pedido')
     lidas = Array(parsed['perguntas_de_prova']).filter_map { |item| pergunta_lida(item, pedidos) }
@@ -67,7 +70,8 @@ class Autonomia::Agents::ProvaDoAjuste
     texto, pedido = item.is_a?(Hash) ? item.values_at('mensagem', 'pedido') : [item, nil]
     return unless texto.is_a?(String) && texto.strip.present?
 
-    { 'pergunta' => texto.strip.truncate(PERGUNTA_MAX_CHARS), 'pedido' => pedido_da_lista(pedido, pedidos) }.compact
+    lida = { 'pergunta' => texto.strip.truncate(PERGUNTA_MAX_CHARS) }
+    item.is_a?(Hash) ? lida.merge('pedido' => pedido_da_lista(pedido, pedidos)) : lida
   end
 
   # O texto do pedido em `mudancas` que a mensagem diz testar (o ponto final não conta); outro texto, nenhum.
@@ -89,13 +93,14 @@ class Autonomia::Agents::ProvaDoAjuste
       'desde' => Time.current.iso8601, 'perguntas' => perguntas }
   end
 
-  # Um item gravado: o formato de agora ({pergunta, pedido}), o do modelo ({mensagem, pedido}) ou o antigo (só o texto).
-  # Sem texto, fica fora.
+  # Um item gravado: o formato de agora ({pergunta, pedido}), o do modelo ({mensagem, pedido}) ou o antigo (só o texto,
+  # ou {pergunta} sem a chave `pedido`, que continua sem ela). Sem texto, fica fora.
   def self.pergunta_pendente(item)
-    texto, pedido = item.is_a?(Hash) ? [item['pergunta'] || item['mensagem'], item['pedido']] : [item, nil]
+    texto = item.is_a?(Hash) ? item['pergunta'] || item['mensagem'] : item
     return unless texto.is_a?(String) && texto.strip.present?
 
-    { 'pergunta' => texto, 'pedido' => pedido.presence }.compact
+    lida = { 'pergunta' => texto }
+    item.is_a?(Hash) && item.key?('pedido') ? lida.merge('pedido' => item['pedido'].presence) : lida
   end
   private_class_method :pergunta_pendente
 
@@ -151,10 +156,15 @@ class Autonomia::Agents::ProvaDoAjuste
       pedidos.each_index.all? { |posicao| testados.include?(posicao) }
   end
 
-  # Sem pedido declarado em nenhuma mensagem (o formato antigo), não há o que conferir aqui.
+  # Só quando TODAS as mensagens vieram no formato antigo (só o texto, sem a chave `pedido`) não há o que conferir.
+  # Uma mensagem cujo pedido não bateu com a lista (`pedido` nil) conta como não declarada (revisão 2, MÉDIO 1).
   def declarados?(pedidos, itens)
-    declarados = itens.filter_map { |item| item['pedido'] }.map { |texto| Autonomia::Agents::ResultadoDoAjuste.sem_ponto(texto) }
-    declarados.empty? || pedidos.all? { |pedido| declarados.include?(pedido['pedido']) }
+    declaradas = itens.select { |item| item.key?('pedido') }
+    return true if declaradas.empty?
+    return false if declaradas.any? { |item| item['pedido'].nil? }
+
+    textos = declaradas.map { |item| Autonomia::Agents::ResultadoDoAjuste.sem_ponto(item['pedido']) }
+    pedidos.all? { |pedido| textos.include?(pedido['pedido']) }
   end
 
   def sem_descarte?

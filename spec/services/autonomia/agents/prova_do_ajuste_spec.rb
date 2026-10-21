@@ -124,10 +124,11 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     # Revisão do t6d (BAIXO): a prova pendente aguenta Hash cru do modelo ({mensagem, pedido}), Hash sem texto e lixo.
     it 'pendente lê {mensagem, pedido}, descarta Hash sem texto e o que não é texto; sem nenhuma, sem prova' do
       dados = { 'versao_id' => 1, 'perguntas_de_prova' => [{ 'mensagem' => 'Tem loja?', 'pedido' => fala }, { 'pedido' => fala },
-                                                           { 'pergunta' => '' }, 7, nil, 'Oi?'] }
+                                                           { 'pergunta' => '' }, 7, nil, 'Oi?', { 'pergunta' => 'Abre?' }] }
 
       expect(described_class.pendente(agent, dados)['perguntas']).to eq([{ 'pergunta' => 'Tem loja?', 'pedido' => fala },
-                                                                         { 'pergunta' => 'Oi?' }])
+                                                                         { 'pergunta' => 'Oi?' },
+                                                                         { 'pergunta' => 'Abre?' }])
       expect(described_class.pendente(agent, 'versao_id' => 1, 'perguntas_de_prova' => [{ 'pedido' => fala }])).to be_nil
     end
   end
@@ -152,6 +153,29 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
 
       expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => false)
       expect(estado.dig('prova', 'perguntas').pluck('pedido')).to eq([fala, fala])
+    end
+
+    # Revisão 2 do t6d (MÉDIO 1): a dispensa vale só quando TODAS as mensagens vieram no formato antigo (só texto).
+    it 'uma mensagem cujo pedido não bateu com a lista conta como não declarada: sem prova completa' do
+      ajustar_com(fala, preco, 'outro pedido')
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', pedidos: [0, 1]) * 3)
+
+      provar!
+
+      expect(estado['prova']).to include('completa' => false)
+      expect(estado.dig('prova', 'perguntas').pluck('pedido')).to eq([fala, preco, nil])
+    end
+
+    it 'mensagens misturadas (texto puro e com pedido): o pedido sem mensagem deixa a prova incompleta' do
+      aplicar_ajuste('handoff_rule' => 'Preço vai à equipe.',
+                     'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('handoff_rule', preco, 'Preço vai à equipe.')],
+                     'perguntas_de_prova' => ['Oi?', { 'mensagem' => 'Tudo bem?', 'pedido' => fala }])
+      agente_responde
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', pedidos: [0, 1]) * 2)
+
+      provar!
+
+      expect(estado['prova']).to include('completa' => false)
     end
 
     it 'cada pedido com a sua mensagem: completa, e o juiz recebe o pedido de cada item' do
@@ -180,7 +204,7 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
 
       expect(lido).to eq([{ 'pergunta' => 'Oi!', 'pedido' => 'sem emoji' },
                           { 'pergunta' => 'Quais formas de pagamento?', 'pedido' => 'mais curto' },
-                          { 'pergunta' => 'Tem loja física?' }])
+                          { 'pergunta' => 'Tem loja física?', 'pedido' => nil }])
     end
 
     it 'mensagem em branco, repetida ou que não é texto fica fora; o formato antigo (só texto) ainda é lido' do
@@ -234,6 +258,9 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
 
     # Revisão do t6d (ALTO 1): a prova roda com a base; o juiz recebe os trechos que a resposta usou, com teto.
     it 'os trechos da base que a resposta usou vão ao juiz e ficam na prova, com teto de tamanho e de quantidade' do
+      maior_pedaco = [*Autonomia::Agents::Config::CHUNK_PROFILES.values, Autonomia::Agents::Config::DEFAULT_CHUNK_PROFILE]
+                     .pluck(:max).max
+      expect(described_class::TRECHO_MAX_CHARS).to eq(maior_pedaco)
       longo = 'x' * (described_class::TRECHO_MAX_CHARS + 50)
       agente_responde(resposta('A aula é às 19h.', base: ['Aulas às 19h.', longo, 'c', 'd']), resposta('Oi.'))
 
