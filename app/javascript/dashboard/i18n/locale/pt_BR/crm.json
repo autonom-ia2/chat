@@ -2259,7 +2259,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
-        "TITLE": "Anúncios da Meta",
+        "TITLE": "Anúncios",
         "SUBTITLE": "Veja quais anúncios trazem conversas e vendas.",
         "LOADING": "Carregando…",
         "LOAD_ERROR": "Não deu para carregar a conexão com a Meta.",
@@ -2268,6 +2268,36 @@
         "BREADCRUMB": "Você está aqui",
         "NOT_CONNECTED_TITLE": "Os anúncios ainda não estão conectados",
         "NOT_CONNECTED_TEXT": "Peça a um administrador para conectar os anúncios da Meta. Depois, os resultados aparecem aqui."
+      },
+      "SEM_LOGIN": {
+        "NO_NAME": "Sem nome",
+        "READY": {
+          "TEXT_PHONE": "Seu WhatsApp {phone} está pronto: quem vier de anúncio aparece aqui.",
+          "TEXT": "Seu WhatsApp está pronto: quem vier de anúncio aparece aqui.",
+          "TEXT_MANY": "Seus WhatsApp estão prontos: quem vier de anúncio aparece aqui.",
+          "EXAMPLE": "Ver um exemplo"
+        },
+        "EXAMPLE": {
+          "BADGE": "Exemplo",
+          "TEXT": "Números de exemplo, só para você ver como fica.",
+          "BACK": "Voltar",
+          "ADS": {
+            "WINTER": "Promoção de inverno",
+            "TALK": "Fale com a gente",
+            "SHIPPING": "Frete grátis esta semana"
+          }
+        },
+        "AD": {
+          "PEOPLE": "Quem veio deste anúncio",
+          "EMPTY": "Ninguém veio deste anúncio neste período.",
+          "STATUS": {
+            "BOUGHT": "Comprou {value}",
+            "BOUGHT_NO_VALUE": "Comprou",
+            "TALKING": "Conversando",
+            "LOST": "Perdido",
+            "NO_ANSWER": "Sem resposta"
+          }
+        }
       },
       "EMPTY": {
         "EYEBROW": "Campanhas",
@@ -2558,6 +2588,7 @@
           "LABEL": "O que ver"
         },
         "HEADLINE": "Você investiu {spend}. Vieram {conversations} e {sales}.",
+        "HEADLINE_WHATSAPP": "Pelo WhatsApp, vieram {conversations} de anúncio e {sales}.",
         "PERIOD": "{days} dias",
         "PERIOD_LABEL": "Período",
         "PERIOD_CTX": "Últimos {days} dias",
@@ -2702,6 +2733,18 @@
           "NO_ANSWER": "Sem resposta",
           "WON": "Ganha",
           "LOST": "Perdida"
+        },
+        "REPORT": {
+          "BUTTON": "Baixar relatório",
+          "TITLE": "Baixar o relatório",
+          "DESCRIPTION": "Últimos {days} dias, com os mesmos números da tela.",
+          "PDF_TITLE": "PDF para apresentar",
+          "PDF_HINT": "Páginas prontas para mostrar ou mandar para alguém.",
+          "SHEET_TITLE": "Planilha para trabalhar os números",
+          "SHEET_HINT": "Abre no Excel ou no Google Planilhas, com cada conversa.",
+          "CONFIRM": "Baixar",
+          "ERROR": "Não deu para baixar agora. Tente de novo.",
+          "NO_PEOPLE": "Sem a permissão \"Exportar a lista do CRM para Excel\", o arquivo leva só os números, sem a lista de pessoas."
         }
       },
       "AD_DETAIL": {
@@ -2734,9 +2777,11 @@
         "MEANWHILE": "1 proposta aberta deste anúncio espera resposta. Retomar essa conversa é o que dá para fazer agora. | {count} propostas abertas deste anúncio esperam resposta. Retomar essas conversas é o que dá para fazer agora.",
         "MEANWHILE_SEE": "Ver as propostas",
         "CHART_TITLE": "Gasto e conversas por dia",
+        "CHART_TITLE_TALKS": "Conversas por dia",
         "LEGEND_SPEND": "Gasto",
         "LEGEND_CONVERSATIONS": "Conversas",
         "CHART_DAY": "{date}: {spend} · 1 conversa | {date}: {spend} · {count} conversas",
+        "CHART_DAY_TALKS": "{date}: 1 conversa | {date}: {count} conversas",
         "CHART_SCALE": "Maior gasto num dia: {spend} · mais conversas num dia: 1 | Maior gasto num dia: {spend} · mais conversas num dia: {count}",
         "DAYS_TOGGLE": "Ver dia a dia",
         "DAYS_DATE": "Dia",

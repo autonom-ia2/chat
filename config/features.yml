@@ -643,3 +643,13 @@
   display_name: Pasta Enviados na caixa de e-mail
   enabled: true
   column: feature_flags_ext_1
+# Anúncios abre pronta com o resultado do WhatsApp, sem login no Facebook (#1960, degrau 0). Ligada e sem conexão
+# de anúncios nenhuma: a página mostra de qual anúncio (clique para o WhatsApp) veio cada conversa e o que virou no
+# CRM, lido dos toques já gravados na conversa (Crm::MetaAds::Panel::WhatsappCohort, só leitura), e a foto do anúncio
+# passa a ser guardada no clique (Crm::MetaAds::ReferralImageJob). Posição 45 (1 << 44), definitiva da Orquestração
+# (21/10), logo depois de email_enviados. Sem migration.
+# Desligada (padrão): tudo como antes. Liga depois do deploy nas contas 1, 16, 18 e 6 da stack Hub2You.
+- name: anuncios_sem_login
+  display_name: Anúncios sem login (resultado do WhatsApp)
+  enabled: false
+  column: feature_flags_ext_1
