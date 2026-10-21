@@ -75,8 +75,11 @@ o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
 ### Lote
 
 - Até **7 PRs** sem migration destrutiva por rodada da fila (ruleset `main - fila de merge`, `max_entries_to_merge: 7`).
-  Migration aditiva vai no lote, com snapshot RDS nas duas contas tirado pela Orquestração antes. Outra migration sobe
-  sozinha, com snapshot e rollback do banco escritos antes.
+  **Migration aditiva vai no lote, quantas houver** (#2024): o job **Migrations do lote** (parte do check RSpec) testa
+  na fila as migrations de todos os PRs da rodada juntas, sobre a `main`, e barra o que o código anterior não aguenta.
+  Snapshot RDS nas duas contas antes do merge: pela Orquestração, até o snapshot automático do deploy ser ligado
+  ([`migrations-em-lote.md`](migrations-em-lote.md)). Remoção ou renomeação (o passo 2 do expand/contract) sobe
+  sozinha, com OK do Rodrigo e o rollback do banco escrito antes.
 - Antes de fechar, a Orquestração confere: versão de migration repetida entre os PRs; arquivos gerados do Guia e da
   Central em dia (`pnpm guia:check`, `pnpm central:check`, `rails autonomia:guia:formatos:check`); PR empilhado só
   depois que o de baixo virar `MERGED`; e a linha "Liberação" de cada PR.
@@ -205,7 +208,9 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
    `app/services/autonomia/insurance/quote_agent/instrucoes/`). Esses vão no lote junto com código. Um lote só com
    manual precisa de `workflow_dispatch`. Conteúdo da Central e do Guia (`lib/central_de_ajuda`, `lib/operator_guide`,
    `public/central-de-ajuda`) dispara deploy e também vai no lote.
-6. **Migration** só com aviso às outras sessões e snapshot RDS nas duas stacks antes do merge do lote.
+6. **Migration** só com aviso às outras sessões e snapshot RDS nas duas stacks antes do merge do lote (feito pelo
+   próprio deploy quando o snapshot automático estiver ligado). Várias migrations aditivas sobem no mesmo lote; as
+   regras e o rollback de cada versão estão em [`migrations-em-lote.md`](migrations-em-lote.md).
 7. **Par no autonomia-adapters (Lambda).** O lote declara a ordem (chat antes ou adapter antes). O adapter sobe fora do
    trem, pelo `workflow_dispatch` dele, depois da validação do chat.
 8. **Issues.** PR mergeado num branch que não é o padrão não fecha issue pelo `Closes #N`. Quem fez cada PR fecha a
@@ -222,7 +227,7 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
      espera a vez e o deploy que ainda não chegou a registrar a green. Cancelado antes de a imagem dele chegar ao ECR, ele
      não toca na produção. Depois disso a green pode ter subido o app, então a limpeza faz o que já fazia em qualquer
      deploy que falha ali: suspende o Instagram assistido na atual e reinicia o web dela por alguns segundos. A migration
-     desse deploy pode já ter rodado (ela vem antes do tráfego): por isso migration é sempre aditiva;
+     desse deploy pode já ter rodado (ela vem antes do tráfego): por isso migration é sempre aditiva (o job **Migrations do lote** confere);
    - o deploy confere o congelamento de novo logo antes de registrar a green no balanceador: um rollback que congelou
      durante o build ou o boot o para ali, sem tráfego. Parado assim, a limpeza não toca na blue (nem Instagram, nem
      web, nem listener; só confere, lendo, que o listener está nela) e termina a green;

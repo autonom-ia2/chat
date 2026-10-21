@@ -356,12 +356,124 @@ jobs:
           name: rails-log-${{ matrix.ci_node_index }}
           path: log
 
+  # #2024: o RSpec carrega o schema.rb e nunca roda migration. Este job parte do schema.rb da base (a main de antes do
+  # PR, ou a base da rodada da fila, que junta as migrations de todos os PRs do lote), roda as migrations novas pelo
+  # caminho do db:migrate da green (com o strong_migrations) e confere: o código anterior aguenta o schema novo, o
+  # down de cada uma volta à base, o up de novo chega ao mesmo lugar e o schema.rb é o que as migrations produzem.
+  # Versão repetida entre PRs do lote também para aqui. Regras: docs/migrations-em-lote.md.
+  migrations:
+    name: Migrations do lote
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ''
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --mount type=tmpfs,destination=/var/lib/postgresql/data
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --entrypoint redis-server
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: ''
+      # Banco só deste job: o teste apaga e recria o banco várias vezes.
+      POSTGRES_DATABASE: chatwoot_migrations_lote
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # No PR o checkout é o merge com a main: o primeiro pai é a base.
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Descobrir a base e se o lote mexe no banco
+        id: base
+        env:
+          EVENTO: ${{ github.event_name }}
+          BASE_DA_FILA: ${{ github.event.merge_group.base_sha }}
+        run: |
+          set -euo pipefail
+          case "$EVENTO" in
+            pull_request) base=$(git rev-parse HEAD^1) ;;
+            merge_group)
+              base="$BASE_DA_FILA"
+              git fetch --no-tags --depth=1 origin "$base"
+              ;;
+            *)
+              echo "Sem base para comparar ($EVENTO): nada a testar."
+              echo "tem=false" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+          mudou=$(git diff --name-only "$base" HEAD -- db/migrate db/schema.rb)
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          if [ -z "$mudou" ]; then
+            echo "O lote não mexe em db/migrate nem no schema.rb."
+            echo "tem=false" >> "$GITHUB_OUTPUT"
+          else
+            printf 'Arquivos do banco no lote:\n%s\n' "$mudou"
+            echo "tem=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ruby/setup-ruby@v1
+        if: steps.base.outputs.tem == 'true'
+        with:
+          bundler-cache: true
+
+      - name: Testar as migrations do lote
+        if: steps.base.outputs.tem == 'true'
+        env:
+          BASE: ${{ steps.base.outputs.base }}
+          MIGRATIONS_SEGURAS_BANCO: chatwoot_migrations_lote
+          MIGRATIONS_SEGURAS_BASE_SCHEMA: tmp/migrations-lote/base_schema.rb
+          MIGRATIONS_SEGURAS_BASE_MIGRATIONS: tmp/migrations-lote/base_migrations.txt
+          MIGRATIONS_SEGURAS_BASE_RETIRADAS: tmp/migrations-lote/base_retiradas.yml
+          MIGRATIONS_SEGURAS_RELATORIO: tmp/migrations-lote/relatorio.md
+        run: |
+          set -euo pipefail
+          mkdir -p tmp/migrations-lote
+          git show "$BASE:db/schema.rb" > "$MIGRATIONS_SEGURAS_BASE_SCHEMA"
+          git ls-tree --name-only "$BASE" db/migrate/ > "$MIGRATIONS_SEGURAS_BASE_MIGRATIONS"
+          # O anúncio de remoção vale como estava na base: nunca no mesmo lote que a remoção.
+          if [ -n "$(git ls-tree --name-only "$BASE" -- db/retiradas.yml)" ]; then
+            git show "$BASE:db/retiradas.yml" > "$MIGRATIONS_SEGURAS_BASE_RETIRADAS"
+          fi
+          bundle exec rake db:create
+          bundle exec rake migrations_seguras:verificar
+
+      - name: Relatório no resumo do job
+        if: always() && steps.base.outputs.tem == 'true'
+        run: |
+          if [ -f tmp/migrations-lote/relatorio.md ]; then
+            cat tmp/migrations-lote/relatorio.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   # Check obrigatorio da fila de merge. `if: always()` e indispensavel: um check
   # obrigatorio pulado conta como verde, e sem ele uma parte que falhou faria este job
-  # ser pulado.
+  # ser pulado. O job de migrations entra aqui para virar obrigatorio sem mexer no ruleset (#2024).
   rspec:
     name: RSpec
-    needs: [rspec-plan, backend-tests]
+    needs: [rspec-plan, backend-tests, migrations]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -370,6 +482,7 @@ jobs:
         env:
           PLANO: ${{ needs.rspec-plan.result }}
           PARTES: ${{ needs.backend-tests.result }}
+          MIGRATIONS: ${{ needs.migrations.result }}
         run: |
-          echo "plano=$PLANO partes=$PARTES"
-          [ "$PLANO" = success ] && [ "$PARTES" = success ]
+          echo "plano=$PLANO partes=$PARTES migrations=$MIGRATIONS"
+          [ "$PLANO" = success ] && [ "$PARTES" = success ] && [ "$MIGRATIONS" = success ]
