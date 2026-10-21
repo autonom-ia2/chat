@@ -101,6 +101,18 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
 6. Troque o CRM para **Só olha**. O ajuste **Arquivar cards do CRM** some (só vale para quem mexe).
 7. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `crm_manage_cards` antes do deploy tem `crm_delete_cards` depois, inclusive os cargos gerenciados de token de integração do CRM.
 
+## Teste 10: montar sem disparar campanhas (#1898)
+
+1. Edite a função. Em **Marketing**, deixe **Campanhas** em **Editar**, sem ligar **Disparar campanhas** em **Ajustes finos**. Salve.
+2. Na janela anônima, abra **Campanhas > Campanha > Nova campanha** e monte uma campanha de SMS (ou WhatsApp) para um público de teste. Na revisão, o esperado:
+   - o botão é **Deixar pronta para disparar**, com o aviso de que quem pode disparar confere e envia;
+   - clicar não pede a confirmação de envio, não manda nada e volta para a lista, onde a campanha aparece com **Pronta para disparar · montada por** e o nome da pessoa.
+3. Ainda na janela anônima: numa campanha de e-mail, a revisão também mostra **Deixar pronta para disparar** e não mostra **Enviar agora** nem **Agendar**. Uma campanha pausada não tem **Retomar** (no resultado, em **Modelos > Campanhas paradas** e na lista do WhatsApp API). Nas telas antigas de SMS, WhatsApp e WhatsApp API, o botão **Nova campanha** não aparece.
+4. Na janela normal (administrador), abra a campanha pronta pela lista. A revisão mostra quem a montou e **Enviar agora**, com a confirmação. Envie para o público de teste: a linha **Pronta para disparar** some e a campanha aparece como enviada.
+5. Volte à função e ligue **Disparar campanhas** (pede confirmação, porque gera custo). Na janela anônima, recarregue: a revisão volta a mostrar **Enviar agora** e **Agendar**, e **Retomar** aparece nas pausadas.
+6. Troque Campanhas para **Ver**: o ajuste **Disparar campanhas** some.
+7. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `campaign_manage` antes do deploy tem `campaign_send` depois.
+
 ## Teste 11: Pessoas, quem cuida do cadastro sem ser administrador (#1931)
 
 Precisa de uma segunda pessoa de teste, "Teste Atendente" (perfil Agente, sem função), criada pelo administrador.

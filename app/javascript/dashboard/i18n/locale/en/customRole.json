@@ -78,6 +78,7 @@
       "MACRO_MANAGE": "Edit team macros",
       "SLA_MANAGE": "Edit SLA policies",
       "CONVERSATION_VIEW": "Reads the other conversations of the inbox",
+      "CAMPAIGN_SEND": "Send campaigns",
       "PEOPLE_MANAGE": "Manage people and teams",
       "CUSTOM_ROLE_MANAGE": "Build roles",
       "GRANT_ABOVE_OWN": "Can grant access above their own",
@@ -169,7 +170,7 @@
           "NAME": "Campaigns",
           "HINT": "Email, WhatsApp, SMS, links and QR codes",
           "LEVEL_VIEW": "Sees campaigns and their results.",
-          "LEVEL_MANAGE": "Creates and sends campaigns. This has a cost."
+          "LEVEL_MANAGE": "Builds campaigns. Sending is the option below."
         },
         "WHATSAPP_TEMPLATES": {
           "NAME": "WhatsApp templates",
@@ -303,6 +304,7 @@
       "CONVERSATION_VIEW": "Also reads the inbox conversations they do not handle, without replying.",
       "CONTACT_EXPORT": "Downloads the contact base as a spreadsheet.",
       "CONTACT_DELETE": "Deletes contacts and companies, one by one or in bulk.",
+      "CAMPAIGN_SEND": "Sends and schedules campaigns and resumes paused ones. Without this, they build and mark campaigns ready for someone who sends.",
       "CUSTOM_ROLE_MANAGE": "Creates and edits roles, within their own keys.",
       "GRANT_ABOVE_OWN": "Hands out any role in the account, except administrator. Everything goes to the audit log."
     },

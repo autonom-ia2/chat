@@ -1373,6 +1373,8 @@
       "ACTIVITY_GENERIC": "Atividade registrada",
       "ACTIVITY_DETAIL_STAGE_CHANGE": "De {from} para {to}",
       "ACTIVITY_DETAIL_STAGE_TO": "Para {to}",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Não é negócio: ninguém pediu o que a gente vende. Para desfazer, reabra o card.",
+      "ACTIVITY_DETAIL_DUPLICADO": "Card repetido: o mesmo pedido já tem um card aberto. Para desfazer, reabra o card.",
       "ACTIVITY_DETAIL_OWNER": "Atribuído a {owner}",
       "ACTIVITY_DETAIL_HANDOFF": "Atribuído a {agent}",
       "ACTIVITY_DETAIL_HANDOFF_REASON": "Atribuído a {agent}: {reason}",

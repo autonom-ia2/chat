@@ -3,7 +3,7 @@ import { vOnClickOutside } from '@vueuse/components';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 
-defineProps({
+const props = defineProps({
   headerTitle: {
     type: String,
     default: '',
@@ -12,10 +12,15 @@ defineProps({
     type: String,
     default: '',
   },
+  // #1898: a campaign that goes out by itself once created (one-off, WhatsApp API) needs campaign_send.
+  createPermission: {
+    type: String,
+    default: 'campaign_manage',
+  },
 });
 
 const emit = defineEmits(['click', 'close']);
-const canManage = useCanManage('campaign_manage');
+const canManage = useCanManage(props.createPermission);
 
 const handleButtonClick = () => {
   emit('click');

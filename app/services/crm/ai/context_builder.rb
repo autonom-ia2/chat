@@ -69,12 +69,20 @@ module Crm
 
       # Os outros pedidos abertos nas conversas deste card (multifunil, #1147). A IA decide a etapa, os campos e o
       # follow-up só DESTE card: uma mensagem sobre outro pedido não o move. Vazio quando a conversa tem um pedido só.
+      # Com a flag `crm_ia_arquiva_lixo` (#1922), cada um leva o id: é o que a IA aponta quando este card repete outro
+      # (`nao_e_negocio.duplicado_de`). Sem ela, a entrada fica igual à de antes.
       def other_subjects
         account = @card.account
+        com_id = Crm::Ai::NaoENegocio.ligada?(account)
         linked = Crm::CardConversation.where(account_id: account.id, conversation_id: conversation_ids).select(:card_id)
         account.crm_cards.open.where(conversation_id: conversation_ids).or(account.crm_cards.open.where(id: linked))
                .where.not(id: [@card.id, *@fora]).includes(:pipeline, :stage).order(id: :desc).limit(MAX_OTHER_SUBJECTS)
-               .map { |card| { title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name } }
+               .map { |card| outro_pedido(card, com_id) }
+      end
+
+      def outro_pedido(card, com_id)
+        pedido = { title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name }
+        com_id ? { id: card.id, **pedido } : pedido
       end
 
       # Valores JÁ salvos dos atributos customizados (contato, conversa e o próprio card, #1146). O classificador recebe o
@@ -152,6 +160,7 @@ module Crm
                .where(sender_type: 'User').or(Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
                                                             private: false, sender_type: nil))
                .outgoing
+               .where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed])
                .reorder(id: :desc)
                .limit(FOLLOW_UP_SCAN_LIMIT)
                .find { |message| role_for(message) == 'human_agent' }
@@ -192,9 +201,13 @@ module Crm
       # reorder (not order) to override Message's default_scope(created_at: :asc), and by id (arrival
       # order) so just-arrived messages/media are always in the recent window even if provider
       # timestamps are skewed/out-of-order. includes(:attachments) evita N+1 no message_content.
+      # Envio que falhou (#1923) não chegou ao cliente: sai do histórico, como no dos Agentes (PessoaDaEquipe). A falha
+      # chega depois da criação (message_updated), quando a avaliação já foi agendada; é aqui que ela deixa de contar.
+      # IS DISTINCT FROM: a coluna aceita nulo, e `status != 3` descartaria a mensagem sem status.
       def latest_for(conversation_id)
         Message.where(conversation_id: conversation_id, private: false)
                .where.not(message_type: :activity)
+               .where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed])
                .includes(:attachments)
                .reorder(id: :desc)
                .limit(janela_por_conversa)
