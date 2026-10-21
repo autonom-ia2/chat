@@ -25,7 +25,11 @@ RSpec.describe ConversaCanal::RespostaDoConvite do
 
   before do
     account.enable_features!('convite_da_reuniao')
-    allow(Mail::SMTP).to receive(:new).and_return(smtp)
+    # Só o SMTP da caixa do teste vira dublê: o envio padrão global do Mail (criado no primeiro Mail.new do processo)
+    # segue real, senão o dublê fica guardado nele e vaza para os specs seguintes.
+    allow(Mail::SMTP).to receive(:new).and_call_original
+    allow(Mail::SMTP).to receive(:new).with(hash_including(address: 'smtp.empresa.example')).and_return(smtp)
+    allow(Mail::SMTP).to receive(:new).with(hash_including(address: 'smtp.gmail.com')).and_return(smtp)
   end
 
   def responder(resposta = 'aceito')

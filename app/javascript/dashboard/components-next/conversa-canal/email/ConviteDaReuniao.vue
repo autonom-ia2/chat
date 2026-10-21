@@ -161,7 +161,8 @@ const enderecoConvidado = computed(() => {
 });
 const podeResponder = computed(
   () =>
-    Boolean(enderecoConvidado.value) && Boolean(props.convite.organizador?.email)
+    Boolean(enderecoConvidado.value) &&
+    Boolean(props.convite.organizador?.email)
 );
 const nomeDaCaixa = computed(
   () => enderecoConvidado.value || props.caixa.email || props.caixa.name || ''

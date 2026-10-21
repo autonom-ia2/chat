@@ -24,7 +24,10 @@ RSpec.describe 'Resposta ao convite de reunião', type: :request do
     account.enable_features!('conversa_cara_do_canal', 'convite_da_reuniao')
     account.save!
     create(:inbox_member, user: agente, inbox: caixa)
-    allow(Mail::SMTP).to receive(:new).and_return(smtp)
+    # Só o SMTP da caixa do teste vira dublê: o envio padrão global do Mail (criado no primeiro Mail.new do processo)
+    # segue real, senão o dublê fica guardado nele e vaza para os specs seguintes.
+    allow(Mail::SMTP).to receive(:new).and_call_original
+    allow(Mail::SMTP).to receive(:new).with(hash_including(address: 'smtp.empresa.example')).and_return(smtp)
   end
 
   def responder(resposta, usuario: agente, conversation_id: conversa.display_id)
