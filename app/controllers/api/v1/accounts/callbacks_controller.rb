@@ -1,4 +1,7 @@
 class Api::V1::Accounts::CallbacksController < Api::V1::Accounts::BaseController
+  # Listing the pages and registering one create a Facebook inbox; reauthorizing swaps the page token of a live inbox.
+  # All three are admin or inbox_manage only, like any other inbox creation (#2027).
+  before_action -> { check_permission_granted!('inbox_manage') }
   before_action :inbox, only: [:reauthorize_page]
 
   def register_facebook_page

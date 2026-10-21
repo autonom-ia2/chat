@@ -27,6 +27,11 @@ module Crm
       account.present? && account.feature_enabled?('crm_numeros_lentes')
     end
 
+    # Metas do mês por pessoa (#1991, F4 do #1871): a gaveta "Metas do mês" e a meta no topo de "Só eu".
+    def self.metas_enabled?(account)
+      account.present? && account.feature_enabled?('crm_metas')
+    end
+
     def self.calendar_ms_simulate?
       return BOOLEAN.cast(ENV['CRM_CALENDAR_MS_SIMULATE']) == true if ENV.key?('CRM_CALENDAR_MS_SIMULATE')
 

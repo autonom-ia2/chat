@@ -3,7 +3,7 @@
 # nunca o valor dos colegas nem o custo da IA (Decisões 2 e 4).
 #
 # O papel vem do tipo do funil: quem tem cards em funil de Vender vende, em funil de Atender atende; sem card nenhum,
-# os funis que a pessoa enxerga decidem. Sem meta por pessoa até a F4.
+# os funis que a pessoa enxerga decidem. A meta é a da própria pessoa (F4, #1991, flag `crm_metas`); nunca a dos colegas.
 class Crm::Numeros::SoEu
   MAX_PROXIMO = 2
 
@@ -48,20 +48,10 @@ class Crm::Numeros::SoEu
   end
 
   def papeis
-    @papeis ||= begin
-      proprios = []
-      proprios << :venda if credito[:vendas].positive? || @cards.algum?(:venda)
-      proprios << :atende if credito[:resolvidos].positive? || @cards.algum?(:atende)
-      proprios.presence || pelos_funis_visiveis
-    end
-  end
-
-  def pelos_funis_visiveis
-    tipos = @visiveis.distinct.pluck(:counts_as_sale)
-    papeis = []
-    papeis << :venda if tipos.include?(true)
-    papeis << :atende if tipos.include?(false)
-    papeis.presence || [:venda]
+    @papeis ||= Crm::Numeros::Papel.de(
+      vendeu: credito[:vendas].positive? || @cards.algum?(:venda),
+      atendeu: credito[:resolvidos].positive? || @cards.algum?(:atende)
+    ) { @visiveis.distinct.pluck(:counts_as_sale) }
   end
 
   def moeda
@@ -86,13 +76,19 @@ class Crm::Numeros::SoEu
     ((info[:dia].to_f / info[:diasNoMes]) * 100).round
   end
 
+  def minha_meta
+    return @minha_meta if defined?(@minha_meta)
+
+    @minha_meta = Crm::Metas::DaPessoa.new(account: @account, user: @user, mes: @mes, moeda: moeda).reais
+  end
+
   def topo_de_venda
     frase = if atende?
               { tipo: 'eu_vende_atende', resolvidos: credito[:resolvidos], noPrazo: nil }
             else
-              { tipo: 'eu_vende', feito: valor_vendido, meta: nil, dias: @mes.info[:diasRestantes] }
+              { tipo: 'eu_vende', feito: valor_vendido, meta: minha_meta, dias: @mes.info[:diasRestantes] }
             end
-    { escopo: 'eu', medida: 'valor', feito: valor_vendido, meta: nil, fechadas: credito[:vendas],
+    { escopo: 'eu', medida: 'valor', feito: valor_vendido, meta: minha_meta, fechadas: credito[:vendas],
       esperadoPct: esperado_pct, frase: frase, botao: botao_de_venda }
   end
 
