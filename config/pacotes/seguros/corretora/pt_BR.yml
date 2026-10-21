@@ -38,3 +38,7 @@ pt_BR:
   brand_kits:
     import_errors:
       invalid_url: 'Digite o endereço completo do site, por exemplo https://suacorretora.com.br.'
+  # Ramo da conta para a IA de e-mail (#2037).
+  email_campaigns:
+    ai:
+      vocabulario: 'Ramo da conta: corretora de seguros. Diga corretor e cotação; apólice é o documento do seguro; segurado só para quem já tem apólice; cliente só para quem já comprou. Não prometa preço, cobertura nem aprovação da seguradora.'

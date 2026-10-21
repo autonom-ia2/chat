@@ -38,3 +38,7 @@ en:
   brand_kits:
     import_errors:
       invalid_url: 'Enter the full website address, for example https://yourbrokerage.com.'
+  # Line of business for the e-mail AI (#2037).
+  email_campaigns:
+    ai:
+      vocabulario: 'Line of business: insurance brokerage. Say broker and quote; the policy is the insurance document; policyholder only for someone who already has a policy; customer only for someone who already bought. Do not promise price, coverage or insurer approval.'

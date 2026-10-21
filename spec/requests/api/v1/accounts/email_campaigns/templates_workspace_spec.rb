@@ -99,4 +99,55 @@ RSpec.describe 'Email campaign template workspace', :aggregate_failures, type: :
 
     expect(response).to have_http_status(:not_found)
   end
+
+  # #2037: the insurance designs show only to a brokerage account, with the packages switched on.
+  describe 'designs of a line of business' do
+    let(:nicho) { Autonomia::Agents::Nicho }
+    let(:insurance_entry) { EmailCampaigns::TemplateCatalog.entries.find { |entry| entry['segmento'] == 'seguros/corretora' } }
+    let!(:insurance_template) do
+      EmailCampaignTemplate.create!(account: nil, name: insurance_entry.fetch('name'), category: insurance_entry.fetch('category'),
+                                    body_mjml: EmailCampaigns::TemplateCatalog.body(insurance_entry), body_html: '<html>Seguro</html>')
+    end
+
+    around do |example|
+      GlobalConfig.clear_cache(nicho::PADRAO_KEY)
+      with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true', AUTONOMIA_NICHO_PADRAO: nil) { example.run }
+    ensure
+      GlobalConfig.clear_cache(nicho::PADRAO_KEY)
+    end
+
+    def listed_ids
+      get path, headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+      response.parsed_body.pluck('id')
+    end
+
+    it 'shows them to a brokerage account, next to the shared designs' do
+      account.update!(internal_attributes: { nicho::NICHO_KEY => 'seguros', nicho::PERFIL_KEY => 'corretora' })
+
+      expect(listed_ids).to include(insurance_template.id, global_template.id, account_template.id)
+
+      get "#{path}/#{insurance_template.id}", headers: headers, as: :json
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'hides them from a general account and from another kind of insurance account' do
+      expect(listed_ids).to include(global_template.id, account_template.id)
+      expect(listed_ids).not_to include(insurance_template.id)
+
+      account.update!(internal_attributes: { nicho::NICHO_KEY => 'seguros', nicho::PERFIL_KEY => 'saude_beneficios' })
+      expect(listed_ids).not_to include(insurance_template.id)
+
+      get "#{path}/#{insurance_template.id}", headers: headers, as: :json
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'keeps an account template with the same name as an insurance design' do
+      own = EmailCampaignTemplate.create!(account: account, name: insurance_entry.fetch('name'), category: 'meus-modelos',
+                                          body_mjml: '<mjml />', body_html: '<html>Minha</html>')
+
+      expect(listed_ids).to include(own.id)
+      expect(listed_ids).not_to include(insurance_template.id)
+    end
+  end
 end

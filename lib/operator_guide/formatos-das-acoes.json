@@ -17169,7 +17169,7 @@
     "modelo": "EmailCampaignTemplate",
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:18",
-      "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:46"
+      "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:47"
     ],
     "sem_corpo": false
   },

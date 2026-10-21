@@ -1047,7 +1047,10 @@
           "pos-atendimento": "Pós-atendimento e avaliação",
           "aniversario": "Aniversário do cliente",
           "comunicado-importante": "Comunicado importante",
-          "conteudo-educativo": "Conteúdo educativo"
+          "conteudo-educativo": "Conteúdo educativo",
+          "seguros-renovacao": "Renovação do seguro chegando",
+          "seguros-boas-vindas": "Boas-vindas ao segurado",
+          "seguros-parcela-em-aberto": "Parcela do seguro em aberto"
         },
         "IMPORT_FAILED": "A importação precisa de correção · abra os detalhes para corrigir ou substituir o arquivo"
       }
