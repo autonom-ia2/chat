@@ -925,15 +925,15 @@
           "SWITCH_HINT": "Pelo celular conectado a esta caixa.",
           "INSIDE": "Cliente escreveu nas últimas 24 h → sai pelo número oficial.",
           "OUTSIDE_ON": "Passou de 24 h → sai pelo WhatsApp API.",
-          "OUTSIDE_OFF": "Passou de 24 h → só mensagem pronta.",
-          "TEMPLATES": "Mensagem pronta aprovada → sai sempre pelo número oficial."
+          "OUTSIDE_OFF": "Passou de 24 h → só mensagem aprovada.",
+          "TEMPLATES": "Mensagem aprovada → sai sempre pelo número oficial."
         },
         "WHO": {
           "TITLE": "Quem pode usar o WhatsApp API depois de 24 h",
           "DRAWER_TITLE": "Quem pode usar depois de 24 h",
           "DRAWER_TEXT": "Marque quem pode mandar mensagem pelo WhatsApp API quando passar de 24 horas.",
           "SUMMARY": "{list} usa o WhatsApp API depois de 24 h. | {list} usam o WhatsApp API depois de 24 h.",
-          "NONE": "Ninguém usa o WhatsApp API depois de 24 h: tudo sai como mensagem pronta.",
+          "NONE": "Ninguém usa o WhatsApp API depois de 24 h: tudo sai como mensagem aprovada.",
           "RECOMMENDED": "Recomendado",
           "RISK": "Risco maior de bloqueio do número",
           "ORIGINS": {
@@ -981,9 +981,9 @@
           "BADGE": "Prévia",
           "TITLE": "Como fica",
           "FOLLOW_UP_WEB": "O Carlos não responde há 2 dias. O lembrete do CRM sai pelo WhatsApp API às 10:00.",
-          "FOLLOW_UP_TEMPLATE": "O Carlos não responde há 2 dias. O lembrete do CRM sai como mensagem pronta pelo número oficial.",
+          "FOLLOW_UP_TEMPLATE": "O Carlos não responde há 2 dias. O lembrete do CRM sai como mensagem aprovada pelo número oficial.",
           "AGENT_WEB": "A Ana, da equipe, responde a Maria 3 dias depois. A resposta sai pelo WhatsApp API.",
-          "AGENT_TEMPLATE": "A Ana, da equipe, responde a Maria 3 dias depois. Ela só consegue mandar uma mensagem pronta.",
+          "AGENT_TEMPLATE": "A Ana, da equipe, responde a Maria 3 dias depois. Ela só consegue mandar uma mensagem aprovada.",
           "PACE": "Até {n} por minuto: o que passar espera a vez."
         }
       },
@@ -1006,11 +1006,11 @@
       "PAUSE": {
         "BUTTON": "Pausar WhatsApp API",
         "CONFIRM_TITLE": "Pausar o WhatsApp API?",
-        "CONFIRM_TEXT": "Enquanto pausado, tudo sai pela API oficial; fora de 24 h, só mensagem pronta (modelo aprovado). O celular continua conectado e você pode retomar quando quiser.",
+        "CONFIRM_TEXT": "Enquanto pausado, tudo sai pela API oficial; fora de 24 h, só mensagem aprovada. O celular continua conectado e você pode retomar quando quiser.",
         "CONFIRM": "Pausar",
         "CANCEL": "Cancelar",
         "PAUSED_TITLE": "WhatsApp API pausado",
-        "PAUSED_HELP": "Tudo está saindo pela API oficial. Fora de 24 h, só mensagem pronta (modelo aprovado). O celular continua conectado.",
+        "PAUSED_HELP": "Tudo está saindo pela API oficial. Fora de 24 h, só mensagem aprovada. O celular continua conectado.",
         "RESUME": "Retomar"
       },
       "CONNECT_ORDER": {
