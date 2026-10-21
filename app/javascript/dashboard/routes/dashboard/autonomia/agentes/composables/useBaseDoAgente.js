@@ -1,0 +1,84 @@
+import { computed, ref, toValue } from 'vue';
+import BaseDoAgenteAPI from 'dashboard/api/autonomia/baseDoAgente';
+
+// #1429 F3 — a base de seguros do agente na página dele: a leitura (com que base trabalha e se há uma nova),
+// atualizar e desfazer. Só a base muda: instrução, jeito de falar, material e ferramentas ficam como estão (o servidor
+// garante). Sem a leitura, a linha some: ela informa, não é um dado de que a página dependa.
+export const ESTADO_BASE = {
+  CARREGANDO: 'carregando',
+  PRONTO: 'pronto',
+  ERRO: 'erro',
+};
+
+export function useBaseDoAgente(agentId) {
+  const estado = ref(ESTADO_BASE.CARREGANDO);
+  const base = ref(null);
+  const desfazendo = ref(false);
+  const erroDesfazer = ref(false);
+
+  const id = () => Number(toValue(agentId));
+
+  const carregar = async () => {
+    estado.value = ESTADO_BASE.CARREGANDO;
+    try {
+      const { data } = await BaseDoAgenteAPI.ler(id());
+      base.value = data;
+      estado.value = ESTADO_BASE.PRONTO;
+    } catch {
+      estado.value = ESTADO_BASE.ERRO;
+    }
+  };
+
+  // A linha aparece quando o servidor manda uma situação (nula: conta geral com agente sem base).
+  const temOQueMostrar = computed(
+    () => estado.value === ESTADO_BASE.PRONTO && Boolean(base.value?.situacao)
+  );
+
+  const comparar = async () => {
+    const { data } = await BaseDoAgenteAPI.comparar(id());
+    return data?.perguntas || [];
+  };
+
+  // Quem chama trata o erro (a gaveta mostra "Não deu para atualizar" no lugar). A linha é relida: se a base nova
+  // mudou (409) ou não existe mais (422), ela passa a mostrar o que vale agora.
+  const atualizar = async () => {
+    try {
+      const { data } = await BaseDoAgenteAPI.atualizar(
+        id(),
+        base.value?.nova?.versao
+      );
+      base.value = data;
+      erroDesfazer.value = false;
+    } catch (erro) {
+      carregar();
+      throw erro;
+    }
+  };
+
+  const desfazer = async () => {
+    desfazendo.value = true;
+    erroDesfazer.value = false;
+    try {
+      const { data } = await BaseDoAgenteAPI.desfazer(id());
+      base.value = data;
+      return true;
+    } catch {
+      erroDesfazer.value = true;
+      return false;
+    } finally {
+      desfazendo.value = false;
+    }
+  };
+
+  return {
+    estado,
+    base,
+    temOQueMostrar,
+    desfazendo,
+    erroDesfazer,
+    carregar,
+    comparar,
+    atualizar,
+    desfazer,
+  };
+}
