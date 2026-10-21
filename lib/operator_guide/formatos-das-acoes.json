@@ -934,7 +934,7 @@
     "completo": true,
     "controller": "api/v1/accounts/integrations/shopify#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:37"
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:39"
     ],
     "sem_corpo": true
   },
@@ -12164,8 +12164,8 @@
       "leitura crua sem tipo: omniauth_token"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:26",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:82"
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:29",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:85"
     ],
     "sem_corpo": false
   },
@@ -12184,9 +12184,9 @@
       "leitura crua sem tipo: omniauth_token"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:45",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:82",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:62"
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:48",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:85",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:65"
     ],
     "sem_corpo": false
   },
@@ -12210,11 +12210,11 @@
       "leitura crua sem tipo: inbox_name"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:4",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:8",
       "app/controllers/api/v1/accounts/callbacks_controller.rb:7",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:6",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:5"
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:11",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:10",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:9",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -18006,7 +18006,7 @@
     "controller": "api/v1/accounts/integrations/linear#create_issue",
     "origem": [
       "app/controllers/api/v1/accounts/integrations/linear_controller.rb:31",
-      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:118"
+      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:120"
     ],
     "sem_corpo": false
   },
@@ -18030,7 +18030,7 @@
     "controller": "api/v1/accounts/integrations/linear#link_issue",
     "origem": [
       "app/controllers/api/v1/accounts/integrations/linear_controller.rb:46",
-      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:118"
+      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:120"
     ],
     "sem_corpo": false
   },
@@ -18054,7 +18054,7 @@
     "controller": "api/v1/accounts/integrations/linear#unlink_issue",
     "origem": [
       "app/controllers/api/v1/accounts/integrations/linear_controller.rb:63",
-      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:118"
+      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:120"
     ],
     "sem_corpo": false
   },
@@ -18068,8 +18068,8 @@
     "completo": true,
     "controller": "api/v1/accounts/integrations/shopify#auth",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:10",
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:11"
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:12",
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:13"
     ],
     "sem_corpo": false
   },
@@ -19327,13 +19327,13 @@
     "completo": true,
     "controller": "api/v1/accounts/whatsapp/authorizations#create",
     "origem": [
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:10",
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:33",
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:11",
       "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:34",
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:35",
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:82",
       "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:81",
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:80",
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:23",
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:40"
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:24",
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:41"
     ],
     "sem_corpo": false
   },
