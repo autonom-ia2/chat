@@ -727,3 +727,17 @@
   display_name: CRM › IA lê quem falou e em que ordem
   enabled: false
   column: feature_flags_ext_1
+
+# IA entende a conversa, F2 — assunto encerrado e "o que entra aqui" (sem Issue própria ainda; épico "IA entende a
+# conversa" do CRM). Ligada: (a) os cards da conversa fechados nos últimos 90 dias (até 3, arquivado fora) viram opção
+# da IA de assunto; mensagem só sobre um deles (agradecer, comentar, dar notícia) não cria, não foca e não reabre card,
+# e a IA de etapa não relê card por causa dela (assunto de card fechado não continua); pedido novo sobre o mesmo
+# assunto segue sendo pedido novo; (b) a IA de etapa lê o "quando usar" do funil e, sem ele, a descrição que a conta já
+# escreveu. Desligada (padrão): pergunta, instruções e entrada iguais às de antes. Sem migration, sem tela.
+# Posição PROVISÓRIA 53 na feature_flags_ext_1 (1 << 52), contando a 51 reservada ao crm_numeros_equipe (#1999), que
+# ainda não está na main: enquanto ela não entrar, esta linha cai na 52. O plano previa 54 com a F3 antes desta; a F3
+# ainda não entrou e vem depois. A Orquestração dá a definitiva.
+- name: crm_ia_assunto_encerrado
+  display_name: CRM › IA reconhece assunto encerrado
+  enabled: false
+  column: feature_flags_ext_1

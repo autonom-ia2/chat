@@ -11,6 +11,10 @@
 # Fatos da conversa (IA entende a conversa F1): com a flag, a mesma frase que vai ao Jev no fim das instruções
 # (Crm::Subjects::Question#com_fatos).
 #
+# Assunto encerrado (IA entende a conversa F2): com encerrado entre as opções, a mesma frase que vai ao Jev e, na lista de
+# vários assuntos, a de que o encerrado também pode ser item dela (Crm::Subjects::Question#com_encerrados). O enum já
+# traz as chaves "encerrado_<id>" pelas opções.
+#
 # Venda × pós-venda (#1924): as instruções levam a regra do tipo do funil (Crm::Subjects::Question::REGRA_DO_TIPO), a
 # mesma que vai ao Jev, para todas as contas; as opções já dizem o tipo de cada funil.
 class Crm::Subjects::Reviewer
@@ -74,7 +78,7 @@ class Crm::Subjects::Reviewer
   def revisar(estado, jev)
     instrucoes = @question.varios? ? INSTRUCOES_VARIOS : INSTRUCOES
     instrucoes += INSTRUCOES_ETAPA if @question.etapas?
-    instrucoes = @question.com_fatos(instrucoes)
+    instrucoes = @question.com_encerrados(@question.com_fatos(instrucoes), lista: @question.varios?)
     texto = cliente.create(model: MODELO, instructions: instrucoes, input: entrada(estado, jev).to_json, schema: schema,
                            reasoning_effort: ESFORCO)[:text]
     resposta = JSON.parse(texto)

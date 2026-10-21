@@ -18,6 +18,10 @@
 # quem falou (Autonomia::Decisores::Estado com `papeis: true`), e as instruções ganham, no fim, a frase que explica isso
 # (Crm::Ai::FatosDaConversa::INSTRUCAO_DO_ASSUNTO). Sem a flag, a pergunta é a de sempre.
 #
+# Assunto encerrado (IA entende a conversa F2, flag `crm_ia_assunto_encerrado`): os cards fechados há pouco também são
+# opção ("encerrado_<id>", Crm::Subjects::Encerrado), e as instruções ganham, no fim, a frase que explica que assunto
+# fechado não continua. Sem a flag (nenhum encerrado), a pergunta é a de sempre.
+#
 # Com a flag do #1693, o assunto atual sem nome também é "mesmo assunto" (#1918): a mensagem que muda a situação do
 # pedido ("desisti", "paguei") fica nele e chega à IA de etapa, em vez de virar "dar nome" ou "nenhum assunto".
 class Crm::Subjects::Question
@@ -74,8 +78,9 @@ class Crm::Subjects::Question
   # cards: os cards abertos da conversa, assunto atual primeiro. atual: o assunto atual (aberto) ou nil.
   # varios: a mensagem pode tocar mais de um assunto (#1693). etapas: o card novo nasce na coluna escolhida (#1910).
   # chegada: o atual é o card da chegada ainda intocado (C36, Crm::Subjects::CardDaChegada.intacta?), que não é "o mesmo
-  # assunto" (#1918): ele não tem pedido ainda, e quem o adota é o primeiro pedido.
-  def initialize(account:, pipelines:, cards:, atual:, varios: false, etapas: false, chegada: false) # rubocop:disable Metrics/ParameterLists
+  # assunto" (#1918): ele não tem pedido ainda, e quem o adota é o primeiro pedido. encerrados (F2): os cards fechados
+  # que viram opção (Crm::Subjects::Encerrado.da_conversa), ou nenhum.
+  def initialize(account:, pipelines:, cards:, atual:, varios: false, etapas: false, chegada: false, encerrados: []) # rubocop:disable Metrics/ParameterLists
     @account = account
     @pipelines = pipelines
     @cards = cards
@@ -83,10 +88,11 @@ class Crm::Subjects::Question
     @varios = varios
     @etapas = etapas
     @chegada = chegada
+    @encerrados = encerrados
   end
 
   def pergunta = PERGUNTA
-  def instrucoes = com_fatos(@varios ? INSTRUCOES_VARIOS : INSTRUCOES)
+  def instrucoes = com_encerrados(com_fatos(@varios ? INSTRUCOES_VARIOS : INSTRUCOES))
   def exemplos = []
   def varios? = @varios
   # A conversa vem com a hora e o papel de quem falou (F1, flag da conta).
@@ -94,6 +100,15 @@ class Crm::Subjects::Question
 
   # A frase dos fatos da conversa no fim do texto, só com a flag (F1).
   def com_fatos(texto) = fatos? ? "#{texto} #{Crm::Ai::FatosDaConversa::INSTRUCAO_DO_ASSUNTO}" : texto
+
+  # A frase do assunto encerrado no fim do texto, só quando há encerrado entre as opções (F2). lista: a frase de que o
+  # encerrado também pode ser item da lista de vários assuntos (modelo maior).
+  def com_encerrados(texto, lista: false)
+    return texto if @encerrados.empty?
+
+    frases = [Crm::Subjects::Encerrado::INSTRUCAO, (Crm::Subjects::Encerrado::INSTRUCAO_DA_LISTA if lista)].compact
+    "#{texto} #{frases.join(' ')}"
+  end
 
   def respostas
     opcoes.map { |opcao| { 'chave' => opcao.chave, 'descricao' => descricao(opcao) } }
@@ -107,9 +122,10 @@ class Crm::Subjects::Question
     chaves.include?(chave)
   end
 
-  # O que pode entrar na lista de assuntos de uma mensagem (#1693): um assunto aberto ou um pedido novo num funil.
+  # O que pode entrar na lista de assuntos de uma mensagem (#1693): um assunto aberto ou um pedido novo num funil. Com a
+  # F2, também um assunto encerrado (que não muda nada).
   def chaves_de_assunto
-    opcoes.select { |opcao| %i[mesmo card novo].include?(opcao.tipo) }.map(&:chave)
+    opcoes.select { |opcao| %i[mesmo card novo encerrado].include?(opcao.tipo) }.map(&:chave)
   end
 
   def opcao(chave)
@@ -179,6 +195,7 @@ class Crm::Subjects::Question
       Opcao.new(chave: SEM_ASSUNTO, tipo: :sem_assunto),
       (Opcao.new(chave: MESMO_ASSUNTO, tipo: :mesmo, card: @atual) if mesmo_assunto?),
       *outros_assuntos.map { |card| Opcao.new(chave: "card_#{card.id}", tipo: :card, card: card) },
+      *@encerrados.map { |card| Opcao.new(chave: Crm::Subjects::Encerrado.chave(card), tipo: Crm::Subjects::Encerrado::TIPO, card: card) },
       *@pipelines.map { |pipeline| Opcao.new(chave: "novo_#{pipeline.id}", tipo: :novo, pipeline: pipeline) },
       (Opcao.new(chave: VARIOS, tipo: :varios) if @varios)
     ].compact
@@ -190,12 +207,32 @@ class Crm::Subjects::Question
 
   def descricao(opcao)
     case opcao.tipo
-    when :sem_assunto then @varios ? SEM_ASSUNTO_VARIOS : 'Not yet: the customer has not shown what they want.'
+    when :sem_assunto then sem_assunto
     when :mesmo then mesmo(opcao.card)
     when :card then "The customer goes back to an earlier open subject #{assunto(opcao.card)}."
     when :novo then novo(opcao.pipeline)
     when :varios then 'Several requests: the newest customer messages talk about two or more requests at once.'
+    when :encerrado then encerrado(opcao.card)
     end
+  end
+
+  def sem_assunto = @varios ? SEM_ASSUNTO_VARIOS : 'Not yet: the customer has not shown what they want.'
+
+  # F2: o assunto fechado, com o resultado e há quantos dias. O card sem nome vai sem o título (o nome do contato) e com
+  # a última etapa, que diz o que era o pedido.
+  def encerrado(card)
+    nome = Crm::Subjects::Naming.named?(card) ? "\"#{card.title}\"" : "with no name, last stage \"#{card.stage&.name}\""
+    "The customer talks about the closed subject #{nome} (#{funil(card.pipeline)}, closed as #{card.status} " \
+      "#{fechado_ha(card)}): a thank-you, a comment or news about what was done in it. A closed subject does not " \
+      'continue: nothing is created or reopened. If the customer asks for something new about it (a new problem, a ' \
+      'change, buying again), that is a new request: choose the pipeline instead.'
+  end
+
+  def fechado_ha(card)
+    dias = (Time.current.to_date - card.closed_at.to_date).to_i
+    return 'today' if dias <= 0
+
+    dias == 1 ? '1 day ago' : "#{dias} days ago"
   end
 
   # #1918, com a flag: o card sem nome vai sem o título, que é o nome do contato, e com a etapa, que diz em que pé está o

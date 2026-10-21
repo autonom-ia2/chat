@@ -43,9 +43,7 @@ class Crm::Subjects::Identifier
 
   private
 
-  def existente
-    Crm::SubjectDecision.find_by(conversation_id: @conversation.id, message_id: @message.id)
-  end
+  def existente = Crm::SubjectDecision.find_by(conversation_id: @conversation.id, message_id: @message.id)
 
   # Mensagem já decidida só volta a ser perguntada quando o Híbrido recuperou o texto real (#1638). O retrato é a
   # decisão de antes: volta se der erro, e diz ao Applier qual card a IA já tinha nomeado.
@@ -228,16 +226,19 @@ class Crm::Subjects::Identifier
     opcao.tipo == :novo ? [opcao.chave, assunto.titulo] : opcao.card.id
   end
 
+  # Assunto encerrado (IA entende a conversa F2): com a flag, os cards fechados há pouco da mesma leitura viram opção
+  # (Crm::Subjects::Encerrado.da_conversa), de qualquer funil: escolhê-los não mexe em card nenhum.
   def question
     @question ||= begin
-      abertos = Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).includes(:pipeline, :stage, :contact).select(&:open?)
+      todos = Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).includes(:pipeline, :stage, :contact).to_a
+      abertos = todos.select(&:open?)
       # Voltar a um assunto só entre os funis com a IA ligada (#1260); o atual segue sendo o atual, de qualquer funil.
       ids = pipelines.map(&:id)
       cards = abertos.select { |card| ids.include?(card.pipeline_id) }
       # O card da chegada intocado não é "o mesmo assunto" (#1918, só com vários assuntos).
       chegada = varios? && Crm::Subjects::CardDaChegada.intacta?(conversation: @conversation, card: abertos.first, mode: @mode)
       Crm::Subjects::Question.new(account: @account, pipelines: pipelines, cards: cards, atual: abertos.first, varios: varios?,
-                                  etapas: etapas?, chegada: chegada)
+                                  etapas: etapas?, chegada: chegada, encerrados: Crm::Subjects::Encerrado.da_conversa(@account, todos))
     end
   end
 

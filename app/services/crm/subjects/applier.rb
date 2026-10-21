@@ -25,10 +25,12 @@ class Crm::Subjects::Applier
     @anterior = anterior
   end
 
-  # etapa: a chave da etapa escolhida para o pedido novo (#1910), ou nil.
+  # etapa: a chave da etapa escolhida para o pedido novo (#1910), ou nil. Assunto encerrado (F2): nada muda, nem dentro
+  # da trava (Crm::Subjects::Encerrado.decisao).
   def aplicar(opcao, titulo, etapa = nil)
     case opcao.tipo
     when :sem_assunto, :mesmo then { action: 'none', state: 'kept', card: @question.atual }
+    when Crm::Subjects::Encerrado::TIPO then Crm::Subjects::Encerrado.decisao(opcao.card)
     when :card then decidir('focus', card: opcao.card)
     when :novo then novo(opcao.pipeline, titulo, @question.etapa(opcao.pipeline, etapa))
     end

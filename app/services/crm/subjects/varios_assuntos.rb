@@ -63,6 +63,7 @@ module Crm::Subjects::VariosAssuntos
     end
   end
 
+  # O assunto encerrado (F2) não toca card nenhum: cai fora do case (nil).
   def tocar(escolha, criados)
     opcao = escolha.opcao
     case opcao.tipo
@@ -108,8 +109,9 @@ module Crm::Subjects::VariosAssuntos
 
   # Sem assunto (#1918, revoga o critério 5 do #1693): o card em foco, que o Applier devolve; sem card em foco, nada.
   # Pedido novo que virou sugestão não tem card; a sugestão repetida nem chega aqui (Identifier#tocados_da_repetida).
+  # Assunto encerrado (F2): nenhum card a reler; o encerrado não continua.
   def card_do_principal(opcao, resultado)
-    return if opcao.nil? || %w[applied kept suggested].exclude?(resultado[:state])
+    return if opcao.nil? || opcao.tipo == Crm::Subjects::Encerrado::TIPO || %w[applied kept suggested].exclude?(resultado[:state])
     return if opcao.tipo == :sem_assunto && chegada_intacta?(resultado[:card])
 
     resultado[:card]

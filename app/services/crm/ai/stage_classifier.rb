@@ -224,10 +224,11 @@ module Crm
         values.to_h.select { |key, _value| allowed.include?(key.to_s) }
       end
 
-      # #1498: o tipo do funil (Vender/Atender) e o "Quando usar" entram pelos dados, nunca pelo prefixo em cache.
+      # #1498: o tipo do funil (Vender/Atender) e o "Quando usar" entram pelos dados, nunca pelo prefixo em cache. IA entende
+      # a conversa F2 (flag `crm_ia_assunto_encerrado`): sem "Quando usar", a descrição do funil, como na IA de assunto.
       def pipeline_payload
         pipeline = @card.pipeline
-        { kind: pipeline&.kind || 'sell', when_to_use: pipeline&.when_to_use.presence }.compact
+        { kind: pipeline&.kind || 'sell', when_to_use: Crm::Subjects::Encerrado.quando_usar(pipeline) }.compact
       end
 
       def card_payload
