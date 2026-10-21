@@ -446,7 +446,8 @@ jobs:
             echo "tem=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: ruby/setup-ruby@v1
+      # Fixado no SHA (v1.331.0), como no passo do deploy que confere o schema contra a blue.
+      - uses: ruby/setup-ruby@824c0e29fdfc7d689c191c27acc969d2d04b7dd8
         if: steps.base.outputs.tem == 'true'
         with:
           bundler-cache: true

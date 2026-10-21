@@ -24,19 +24,28 @@ aws_quieto() {
 # Commit que a blue ($BLUE_INSTANCE_ID) roda. Mesma leitura do check-rollback-target.sh: a tag Name da instância
 # termina no id do run que a criou, e o run traz o commit. Precisa de GITHUB_REPOSITORY e GH_TOKEN.
 commit_da_blue() {
-  local nome run_id tentativa
+  local nome run_id tentativa sha
   nome=$(aws_quieto aws ec2 describe-instances --instance-ids "$BLUE_INSTANCE_ID" \
     --query "Reservations[0].Instances[0].Tags[?Key=='Name'].Value | [0]" --output text) || return 1
   run_id="${nome##*-}"
   case "$run_id" in
     *[!0-9]*|'') return 1 ;;
   esac
-  # Uma falha isolada da API não pode parar o deploy.
+  # Uma falha isolada da API não pode parar o deploy. Com erro o gh api põe o corpo JSON no stdout: só sai daqui um SHA.
   for tentativa in 1 2 3; do
-    if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha; then
+    if sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha 2>/dev/null) && sha_completo "$sha"; then
+      echo "$sha"
       return 0
     fi
     sleep $((tentativa * 5))
   done
   return 1
+}
+
+# SHA completo, só hexadecimal minúsculo: é o que a API do GitHub devolve e o que o git fetch aceita por commit.
+sha_completo() {
+  case "$1" in
+    *[!0-9a-f]*) return 1 ;;
+  esac
+  [ "${#1}" -eq 40 ]
 }

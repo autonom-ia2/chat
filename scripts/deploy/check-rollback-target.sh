@@ -6,16 +6,18 @@
 set -euo pipefail
 
 instance_sha() {
-  local name run_id
+  local name run_id sha
   name=$(aws ec2 describe-instances --instance-ids "$1" \
     --query "Reservations[0].Instances[0].Tags[?Key=='Name'].Value | [0]" --output text)
   run_id="${name##*-}"
   case "$run_id" in
     *[!0-9]*|'') return 1 ;;
   esac
-  # Uma falha isolada da API não pode passar por "a anterior não diz de onde veio".
+  # Uma falha isolada da API não pode passar por "a anterior não diz de onde veio". Com erro o gh api põe o corpo
+  # JSON no stdout: só sai daqui um SHA de 40 caracteres.
   for tentativa in 1 2 3; do
-    if gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha; then
+    if sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" --jq .head_sha 2>/dev/null) && [ "${#sha}" -eq 40 ]; then
+      echo "$sha"
       return 0
     fi
     sleep $((tentativa * 5))

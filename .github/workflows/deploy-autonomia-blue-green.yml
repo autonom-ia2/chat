@@ -61,7 +61,7 @@ on:
         default: false
         type: boolean
       blue_sha:
-        description: Deploy - SHA completo do commit da blue, só quando a tag Name não diz. Não pula a conferência do schema (#2024).
+        description: Deploy - SHA completo do commit da blue, só quando a tag Name não diz (anterior ao que sobe). Não pula a conferência do schema (#2024).
         required: false
         default: ''
         type: string

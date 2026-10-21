@@ -6,7 +6,10 @@
 # dentro do ClimateControl, e os specs que fazem stub de Process.clock_gettime falhavam
 # (spec/services/crm/ai/responses_client_rodadas_spec.rb).
 RSpec.configure do |config|
+  # Spec que testa o bloqueio da própria gem marca `strong_migrations: true` e roda sem a liberação.
   config.around do |example|
+    next example.run if example.metadata[:strong_migrations]
+
     StrongMigrations::Checker.safety_assured { example.run }
   end
 end
