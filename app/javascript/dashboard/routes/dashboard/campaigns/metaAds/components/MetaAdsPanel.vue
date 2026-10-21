@@ -3,13 +3,22 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
+import { useAlert } from 'dashboard/composables';
 import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import {
+  DEFAULT_PERIOD,
+  MORE_PERIODS,
+  ROLLING_PERIODS,
   VERDICT_CLASSES,
+  adImage,
   amount,
   duration,
+  periodRange,
   relativeTime,
+  rollingDays,
   thumbClass,
 } from '../metaAdsHelpers';
 import { useMetaAdsLive } from '../useMetaAdsLive';
@@ -18,6 +27,7 @@ import MetaAdsAdDetail from './MetaAdsAdDetail.vue';
 import MetaAdsDailyAction from './MetaAdsDailyAction.vue';
 import MetaAdsPathList from './MetaAdsPathList.vue';
 import MetaAdsQuoteMessage from './MetaAdsQuoteMessage.vue';
+import MetaAdsReportButton from './MetaAdsReportButton.vue';
 
 // Anúncios da Meta (#1088, F3a): o painel do dia a dia do mockup aprovado. Uma frase com o dinheiro, a ação do
 // dia com o porquê, o caminho investido → conversas → propostas → vendas, cada anúncio por venda com o veredito
@@ -27,17 +37,34 @@ import MetaAdsQuoteMessage from './MetaAdsQuoteMessage.vue';
 // F5 (#1110): "O que fazer hoje" vira a lista de até 3 ações do consultor (panel.advice); Conversas, Propostas e
 // Vendas abrem a lista da etapa ali mesmo (MetaAdsPathList, uma por vez, fora do endereço); a etapa Conversas
 // mostra o tempo de resposta; "Quanto confiar" ganha o número da Meta ao lado do nosso.
-defineProps({
+//
+// Sem conexão (Anúncios sem login, #1960, panel.source 'whatsapp'): o mesmo painel com o que o WhatsApp contou,
+// sem gasto, custo, veredito, consultor nem "quanto confiar". `sample` (período → painel) mostra números de
+// exemplo, sem servidor e sem abrir anúncio ou lista.
+//
+// Conectar a conta de anúncios (#2054): sem conexão, o caminho começa num "Investimento" sem valor, com "Ver quanto
+// gastei" (emite 'connect'). Com conexão, os anúncios que não levam ao WhatsApp ficam num bloco à parte ("Outros
+// anúncios", panel.other_ads), com gasto, cliques e vezes que apareceram, fora do custo por conversa e por venda.
+const props = defineProps({
   // Quem só tem meta_ads_view (#1794): o painel sem os gestos do consultor nem os atalhos para a conexão.
   readOnly: { type: Boolean, default: false },
+  sample: { type: Function, default: null },
 });
-const emit = defineEmits(['open']);
+const emit = defineEmits(['open', 'connect']);
 
 const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const PERIODS = [7, 30];
-const days = ref(30);
+// Período (#2011): 7, 30 ou 90 dias nos botões; este mês, mês passado e desde o primeiro anúncio no "Mais
+// períodos". O nome vai ao servidor, que devolve as datas (from/to) já no fuso da conta.
+const period = ref(DEFAULT_PERIOD);
+const PERIOD_KEYS = 'CRM_KANBAN.META_ADS_HUB.PANEL.PERIODS';
+const periodName = key => t(`${PERIOD_KEYS}.${key}.NAME`);
+const moreOptions = computed(() =>
+  MORE_PERIODS.map(key => ({ value: key, label: periodName(key) }))
+);
+// Exemplo (sem servidor): os números de exemplo só existem por número de dias.
+const samplePanel = key => props.sample(rollingDays(key) || 30);
 const panel = ref(null);
 const loading = ref(true);
 const showStalled = ref(false);
@@ -69,13 +96,23 @@ watch(anuncioFromRoute, value => {
 });
 
 const live = useMetaAdsLive({
-  // Troca de período no meio de uma leitura: a resposta do período antigo é descartada.
+  // Troca de período no meio de uma leitura: a resposta do período antigo é descartada. Se a troca falha, a tela
+  // volta ao período dos números que ela mostra e avisa; a próxima rodada segue tentando o período da tela.
   load: async () => {
-    const asked = days.value;
-    const { data } = await CrmMetaAdsConnectionAPI.panel(asked);
-    if (asked !== days.value) return;
-    panel.value = data.panel;
-    loading.value = false;
+    const asked = period.value;
+    try {
+      const { data } = await CrmMetaAdsConnectionAPI.panel(asked);
+      if (asked !== period.value) return;
+      panel.value = data.panel;
+      loading.value = false;
+    } catch (error) {
+      if (asked === period.value && panel.value?.period) {
+        period.value = panel.value.period;
+        loading.value = false;
+        useAlert(t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_ERROR'));
+      }
+      throw error;
+    }
   },
   // A IA escrevendo em outra aba também é espera: o texto chega em segundos, não em 2 minutos.
   waiting: () =>
@@ -84,13 +121,51 @@ const live = useMetaAdsLive({
 });
 
 const choosePeriod = value => {
-  if (value === days.value) return;
-  days.value = value;
+  if (!value || value === period.value) return;
+  period.value = value;
+  if (props.sample) {
+    panel.value = samplePanel(value);
+    return;
+  }
   loading.value = true;
   live.reload();
 };
 
+// O "Mais períodos" mostra o período da tela quando ele é um dos seus; escolher nele troca o período.
+const morePeriod = computed({
+  get: () => (MORE_PERIODS.includes(period.value) ? period.value : ''),
+  set: value => choosePeriod(value),
+});
+
+// Trocando de período com números na tela: eles ficam, apagados, até chegar o novo (período longo demora mais).
+const switchingPeriod = computed(() => loading.value && Boolean(panel.value));
+const periodHint = computed(() =>
+  t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_HINT', {
+    when: t(`${PERIOD_KEYS}.${period.value}.IN`),
+  })
+);
+// "Este mês · 1 – 21 de out.": o nome e as datas do período que a tela mostra (as do servidor).
+const periodContext = computed(() => {
+  const shown = panel.value?.period || period.value;
+  const range = periodRange(panel.value?.from, panel.value?.to, locale.value);
+  const name = periodName(shown);
+  return range
+    ? t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_CTX', { name, range })
+    : name;
+});
+
+const withoutSpend = computed(() =>
+  ['whatsapp', 'example'].includes(panel.value?.source)
+);
+
+// Ninguém de anúncio no período, no painel sem gasto: a tela mostra o aviso em vez dos zeros.
+const periodEmpty = computed(
+  () => withoutSpend.value && !panel.value?.totals?.conversations
+);
+
 const fmt = value => amount(value, panel.value?.currency, locale.value);
+const number = value =>
+  new Intl.NumberFormat(locale.value.replace('_', '-')).format(value || 0);
 
 const totals = computed(() => panel.value?.totals || {});
 const updated = computed(() =>
@@ -102,11 +177,16 @@ const counted = (key, n) =>
   t(`CRM_KANBAN.META_ADS_HUB.PANEL.COUNT.${key}`, { n }, n);
 
 const headline = computed(() =>
-  t('CRM_KANBAN.META_ADS_HUB.PANEL.HEADLINE', {
-    spend: fmt(totals.value.spend),
-    conversations: counted('CONVERSATIONS', totals.value.conversations || 0),
-    sales: counted('SALES', totals.value.sales || 0),
-  })
+  t(
+    withoutSpend.value
+      ? 'CRM_KANBAN.META_ADS_HUB.PANEL.HEADLINE_WHATSAPP'
+      : 'CRM_KANBAN.META_ADS_HUB.PANEL.HEADLINE',
+    {
+      spend: fmt(totals.value.spend),
+      conversations: counted('CONVERSATIONS', totals.value.conversations || 0),
+      sales: counted('SALES', totals.value.sales || 0),
+    }
+  )
 );
 
 // As ações do dia vêm prontas do servidor (Advisor::Analysis); o texto de cada uma é feito na própria lista.
@@ -131,17 +211,38 @@ const PATH_LISTS = {
   QUOTES: 'quotes',
   SALES: 'sales',
 };
-const SLOW_REPLIES_DAYS = 30;
+const SLOW_REPLIES_PERIOD = '30d';
 const openList = ref(null);
-const listDays = computed(() =>
-  openList.value === 'slow_replies' ? SLOW_REPLIES_DAYS : days.value
+const listPeriod = computed(() =>
+  openList.value === 'slow_replies' ? SLOW_REPLIES_PERIOD : period.value
 );
 const toggleList = step => {
   openList.value = openList.value === step ? null : step;
 };
 
+// Sem conexão, quem pode conectar vê o investimento como o primeiro passo do caminho, ainda sem valor.
+const canConnect = computed(
+  () => panel.value?.source === 'whatsapp' && !props.readOnly && !props.sample
+);
+const spendStep = computed(() => {
+  if (!withoutSpend.value) {
+    return [{ key: 'SPEND', value: fmt(totals.value.spend), plural: 2 }];
+  }
+  return canConnect.value
+    ? [
+        {
+          key: 'SPEND',
+          value: '—',
+          plural: 2,
+          connect: true,
+          note: t('CRM_KANBAN.META_ADS_HUB.PANEL.CONNECT_SPEND.NOTE'),
+        },
+      ]
+    : [];
+});
+
 const path = computed(() => [
-  { key: 'SPEND', value: fmt(totals.value.spend), plural: 2 },
+  ...spendStep.value,
   {
     key: 'CONVERSATIONS',
     response: responseTime.value,
@@ -182,13 +283,23 @@ const path = computed(() => [
 ]);
 
 const ads = computed(() => panel.value?.ads || []);
+const otherAds = computed(() => panel.value?.other_ads || []);
 // O link de imagem da Meta vence (o "oe=" da URL); imagem que não abre vira o quadro de reserva. Guarda o link
 // que falhou por anúncio: quando a renovação diária traz um link novo, a imagem volta sem recarregar a página.
 const brokenImages = ref({});
+const imageOf = ad => adImage(ad, brokenImages.value[ad.ad_id] || []);
+const imageFailed = ad => {
+  brokenImages.value = {
+    ...brokenImages.value,
+    [ad.ad_id]: [...(brokenImages.value[ad.ad_id] || []), imageOf(ad)],
+  };
+};
 // Os três números de cada anúncio: o investido numa linha, conversas e vendas lado a lado embaixo (em três
 // colunas o rótulo "Conversas" não cabe no cartão estreito).
+// Propostas abertas do anúncio: as propostas incluem as que viraram venda.
+const openQuotesOf = ad => Math.max((ad.quotes || 0) - (ad.sales || 0), 0);
 const adStats = ad => [
-  { key: 'SPEND', value: fmt(ad.spend) },
+  ...(withoutSpend.value ? [] : [{ key: 'SPEND', value: fmt(ad.spend) }]),
   { key: 'CONVERSATIONS', value: ad.conversations },
   { key: 'SALES', value: ad.sales },
 ];
@@ -236,44 +347,91 @@ const expandedTargets = computed(() => [
   ...(openList.value === 'slow_replies' ? ['slow_replies'] : []),
 ]);
 
-onMounted(() => live.start());
+onMounted(() => {
+  if (!props.sample) {
+    live.start();
+    return;
+  }
+  panel.value = samplePanel(period.value);
+  loading.value = false;
+});
 </script>
 
 <template>
   <section data-meta-ads-panel class="flex flex-col gap-5">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="m-0 text-sm font-420 text-n-slate-11">
-        {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_HINT', { days: days }) }}
-      </p>
-      <div
-        role="group"
-        :aria-label="$t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_LABEL')"
-        class="flex gap-1 p-1 rounded-lg bg-n-alpha-1"
-      >
-        <button
-          v-for="period in PERIODS"
-          :key="period"
-          type="button"
-          :data-panel-period="period"
-          :aria-pressed="period === days"
-          class="px-4 text-[13px] font-520 border-0 rounded-md min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-          :class="
-            period === days
-              ? 'bg-n-solid-1 text-n-slate-12 shadow-[0_1px_2px_rgba(0,0,0,0.06)]'
-              : 'bg-transparent text-n-slate-11 hover:text-n-slate-12'
-          "
-          @click="choosePeriod(period)"
-        >
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD', { days: period }) }}
-        </button>
+    <!-- Período (#2011): a escolha numa linha fixa e, embaixo, o que os números contam. O texto muda de tamanho com o
+         período; numa linha só, ele empurraria os botões de lugar a cada troca. -->
+    <div class="flex flex-col gap-2">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <div
+            role="group"
+            :aria-label="$t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_LABEL')"
+            class="flex gap-1 rounded-2xl bg-n-alpha-1 p-1"
+          >
+            <button
+              v-for="key in ROLLING_PERIODS"
+              :key="key"
+              type="button"
+              :data-panel-period="key"
+              :aria-pressed="key === period"
+              class="min-h-11 whitespace-nowrap rounded-xl border-0 px-2 text-sm font-medium sm:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+              :class="
+                key === period
+                  ? 'bg-n-solid-1 text-n-slate-12 shadow-sm'
+                  : 'bg-transparent text-n-slate-11 hover:text-n-slate-12'
+              "
+              @click="choosePeriod(key)"
+            >
+              {{ $t(`${PERIOD_KEYS}.${key}.BUTTON`) }}
+            </button>
+            <!-- "Mais períodos" é o quarto botão do grupo: a escolha padrão do produto (sem <select> nativo), com a
+                 cara dos outros três e marcado como eles quando um dos períodos dele é o da tela. -->
+            <ChoiceSelect
+              v-model="morePeriod"
+              data-panel-more-periods
+              :options="moreOptions"
+              :aria-label="$t('CRM_KANBAN.META_ADS_HUB.PANEL.MORE_PERIODS')"
+              :placeholder="$t('CRM_KANBAN.META_ADS_HUB.PANEL.MORE_PERIODS')"
+              class="[&_[role=combobox]:focus-visible]:ring-2 [&_[role=combobox]:focus-visible]:ring-n-brand [&_[role=combobox]>span:first-child]:text-current [&_[role=combobox]]:h-11 [&_[role=combobox]]:whitespace-nowrap [&_[role=combobox]]:rounded-xl [&_[role=combobox]]:px-2 sm:[&_[role=combobox]]:px-4 [&_[role=combobox]]:font-medium [&_[role=combobox]]:outline-transparent"
+              :class="
+                morePeriod
+                  ? '[&_[role=combobox]]:bg-n-solid-1 [&_[role=combobox]]:text-n-slate-12 [&_[role=combobox]]:shadow-sm'
+                  : '[&_[role=combobox]]:bg-transparent [&_[role=combobox]]:text-n-slate-11 [&_[role=combobox]:hover]:text-n-slate-12'
+              "
+            />
+          </div>
+        </div>
+        <MetaAdsReportButton
+          v-if="!sample && panel"
+          :period="panel.period || period"
+        />
       </div>
+      <p
+        data-panel-period-hint
+        class="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-normal text-n-slate-11"
+        aria-live="polite"
+      >
+        <span>{{ periodHint }}</span>
+        <span
+          v-if="switchingPeriod"
+          data-panel-period-loading
+          class="inline-flex items-center gap-1.5 text-n-slate-10"
+        >
+          <span
+            class="i-lucide-loader-circle size-3.5 animate-spin"
+            aria-hidden="true"
+          />
+          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_LOADING') }}
+        </span>
+      </p>
     </div>
 
     <MetaAdsAdDetail
       v-if="openAd"
       :key="openAd"
       :ad-id="openAd"
-      :days="days"
+      :period="period"
       @back="rememberAd(null)"
     />
 
@@ -281,413 +439,571 @@ onMounted(() => live.start());
       <Spinner />
     </div>
 
-    <template v-else-if="panel">
+    <div
+      v-else-if="panel"
+      data-panel-body
+      class="flex flex-col gap-5 transition-opacity duration-200"
+      :class="{ 'pointer-events-none opacity-50': switchingPeriod }"
+      :aria-busy="switchingPeriod"
+    >
+      <!-- Período sem ninguém de anúncio (painel sem gasto, #2011): uma frase e o caminho para o histórico, em vez de
+           zeros que parecem defeito. Com gasto, o painel segue: o dinheiro investido sem conversa é o recado. -->
       <div
-        data-panel-hero
-        class="relative flex flex-col gap-5 p-6 overflow-hidden text-white rounded-xl sm:p-8 bg-[#0D2344]"
+        v-if="periodEmpty"
+        data-panel-period-empty
+        class="flex flex-col items-start gap-4 rounded-2xl bg-n-solid-1 px-6 py-8 ring-1 ring-n-weak"
       >
         <span
+          class="i-lucide-calendar-search size-8 text-n-slate-10"
           aria-hidden="true"
-          class="absolute rounded-full pointer-events-none -end-16 -top-24 size-72 border-[2.5rem] border-n-blue-9 opacity-10"
         />
-        <p
-          class="relative flex flex-wrap m-0 text-[13px] font-420 text-white/65 gap-x-3 gap-y-1"
-          aria-live="polite"
-        >
-          <span>
-            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_CTX', { days }) }}
-          </span>
-          <span v-if="updated">
+        <div class="flex flex-col gap-1">
+          <p class="m-0 text-lg font-semibold text-n-slate-12">
             {{
-              $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_UPDATED', {
-                time: updated,
+              $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_EMPTY.TITLE', {
+                when: $t(`${PERIOD_KEYS}.${period}.IN`),
               })
             }}
-          </span>
-          <span
-            v-if="panel.refreshing"
-            data-panel-refreshing
-            class="inline-flex items-center gap-1"
-          >
-            <span
-              class="i-lucide-refresh-cw size-3 animate-spin"
-              aria-hidden="true"
-            />
-            {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_REFRESHING') }}
-          </span>
-        </p>
-        <h3
-          data-panel-headline
-          class="relative max-w-3xl m-0 font-interDisplay text-[28px] sm:text-[36px] font-520 leading-[1.12] tracking-[-0.02em] text-white text-balance tabular-nums"
-        >
-          {{ headline }}
-        </h3>
-        <MetaAdsDailyAction
-          v-if="advice"
-          :advice="advice"
-          :days="days"
-          :currency="panel.currency"
-          :expanded="expandedTargets"
-          :read-only="readOnly"
-          @act="onAdvice"
-          @changed="live.reload()"
+          </p>
+          <p class="m-0 text-sm text-n-slate-11">
+            {{ periodContext }}
+          </p>
+        </div>
+        <Button
+          v-if="period !== 'all'"
+          data-panel-period-empty-all
+          :label="$t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_EMPTY.SEE_ALL')"
+          icon="i-lucide-history"
+          class="!min-h-11 !rounded-xl"
+          @click="choosePeriod('all')"
         />
       </div>
-
-      <!-- v-show: fechar a lista não apaga o que cada mensagem sugerida já fez (rascunho, "Enviada"). -->
-      <div
-        v-if="stalled.length"
-        v-show="showStalled"
-        data-panel-stalled
-        class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
-      >
-        <h4
-          class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
+      <template v-else>
+        <div
+          data-panel-hero
+          class="relative flex flex-col gap-4 overflow-hidden rounded-2xl bg-n-heroi px-5 py-5 text-white ring-1 ring-inset ring-white/10 dark:bg-n-heroi-escuro sm:px-7 sm:py-6"
         >
-          {{
-            $t(
-              'CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_TITLE',
-              { count: stalledCount },
-              stalledCount
-            )
-          }}
-        </h4>
-        <p
-          v-if="readOnly"
-          data-panel-stalled-scope
-          class="m-0 text-xs text-n-slate-11"
-        >
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.LIST_SCOPE') }}
-        </p>
-        <ul class="flex flex-col gap-2 p-0 m-0 list-none">
-          <li
-            v-for="card in stalled"
-            :key="card.id"
-            data-panel-stalled-card
-            class="flex flex-wrap items-center gap-4 px-4 py-3 border border-solid rounded-lg border-n-weak"
+          <span
+            aria-hidden="true"
+            class="pointer-events-none absolute -end-16 -top-24 size-72 rounded-full border-[3rem] border-n-blue-9 opacity-15"
+          />
+          <p
+            class="relative m-0 flex flex-wrap gap-x-3 gap-y-1 text-sm font-medium text-white/70"
+            aria-live="polite"
           >
-            <span class="flex-1 min-w-0">
-              <span class="block text-sm font-520 truncate text-n-slate-12">
-                {{ card.title }}
-              </span>
-              <span class="block text-xs font-420 text-n-slate-10">
-                {{
-                  $t('CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_SINCE', {
-                    time: waitingFor(card.waiting_since),
-                  })
-                }}
-              </span>
+            <span>
+              {{ periodContext }}
             </span>
-            <span
-              class="font-interDisplay text-base font-520 tabular-nums text-n-slate-12"
-            >
-              {{ fmt(card.value) }}
-            </span>
-            <router-link
-              v-if="card.conversation_id"
-              :to="conversationLink(card.conversation_id)"
-              class="inline-flex items-center px-3 text-[13px] font-460 no-underline border border-solid rounded-lg min-h-11 border-n-weak text-n-slate-12 hover:bg-n-alpha-1"
-            >
-              {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_CONVERSATION') }}
-            </router-link>
-            <MetaAdsQuoteMessage v-if="card.conversation_id" :card="card" />
-          </li>
-        </ul>
-        <p
-          v-if="stalledMore > 0"
-          data-panel-stalled-more
-          class="m-0 text-[13px] font-420 text-n-slate-11"
-        >
-          {{
-            $t('CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_MORE', {
-              count: stalledMore,
-            })
-          }}
-        </p>
-      </div>
-
-      <div
-        class="flex flex-col gap-5 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
-      >
-        <h4
-          class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
-        >
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_TITLE') }}
-        </h4>
-        <ol
-          class="grid grid-cols-2 p-0 m-0 list-none gap-y-6 gap-x-4 xl:grid-cols-4 xl:gap-x-0"
-        >
-          <li
-            v-for="step in path"
-            :key="step.key"
-            :data-panel-path="step.key"
-            class="relative flex flex-col gap-1.5 rounded-lg xl:px-6 xl:first:ps-0 xl:[&:not(:first-child)]:border-0 xl:[&:not(:first-child)]:border-s xl:[&:not(:first-child)]:border-solid xl:[&:not(:first-child)]:border-n-weak has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
-          >
-            <span
-              class="font-interDisplay text-[30px] font-520 leading-none tracking-[-0.02em] tabular-nums"
-              :class="step.win ? 'text-n-teal-11' : 'text-n-slate-12'"
-            >
-              {{ step.value }}
-            </span>
-            <span class="text-[13px] font-440 text-n-slate-11">
+            <span v-if="updated">
               {{
-                $t(
-                  `CRM_KANBAN.META_ADS_HUB.PANEL.PATH.${step.key}`,
-                  step.plural
-                )
-              }}
-              <template v-if="step.extra">
-                {{
-                  $t('CRM_KANBAN.META_ADS_HUB.PANEL.SALES_VALUE', {
-                    value: step.extra,
-                  })
-                }}
-              </template>
-            </span>
-            <span v-if="step.note" class="text-xs font-420 text-n-slate-10">
-              {{ step.note }}
-            </span>
-            <span
-              v-if="step.response"
-              data-panel-response-time
-              class="flex flex-col text-xs font-420 text-n-slate-10"
-            >
-              <span>
-                {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.LABEL') }}
-                <span
-                  data-panel-response-time-value
-                  class="font-520 tabular-nums"
-                  :class="
-                    step.response.slow ? 'text-n-amber-11' : 'text-n-slate-12'
-                  "
-                >
-                  {{ step.response.value }}
-                </span>
-              </span>
-              <span class="flex flex-wrap gap-x-1.5">
-                <span>
-                  {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.NOTE') }}
-                </span>
-                <span
-                  v-if="step.response.unanswered"
-                  data-panel-response-time-unanswered
-                  class="before:content-['·'] before:me-1.5"
-                >
-                  {{
-                    $t(
-                      'CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.UNANSWERED',
-                      { count: step.response.unanswered },
-                      step.response.unanswered
-                    )
-                  }}
-                </span>
-              </span>
-            </span>
-            <!-- O botão cobre a etapa inteira (after:inset-0), como no cartão de anúncio. -->
-            <button
-              v-if="PATH_LISTS[step.key]"
-              type="button"
-              :data-panel-path-open="PATH_LISTS[step.key]"
-              :aria-expanded="String(openList === PATH_LISTS[step.key])"
-              aria-controls="meta-ads-path-list"
-              :aria-label="
-                $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.OPEN_LABEL', {
-                  step: $t(`CRM_KANBAN.META_ADS_HUB.PANEL.PATH.${step.key}`, 2),
+                $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_UPDATED', {
+                  time: updated,
                 })
-              "
-              class="inline-flex items-center self-start gap-1 p-0 text-[13px] font-440 bg-transparent border-0 min-h-11 text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:content-['']"
-              @click="toggleList(PATH_LISTS[step.key])"
-            >
-              {{
-                openList === PATH_LISTS[step.key]
-                  ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.CLOSE')
-                  : $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.OPEN')
               }}
+            </span>
+            <span
+              v-if="panel.refreshing"
+              data-panel-refreshing
+              class="inline-flex items-center gap-1"
+            >
               <span
-                class="size-3.5"
-                :class="
-                  openList === PATH_LISTS[step.key]
-                    ? 'i-lucide-chevron-up'
-                    : 'i-lucide-chevron-down'
-                "
+                class="i-lucide-refresh-cw size-3 animate-spin"
                 aria-hidden="true"
               />
-            </button>
-          </li>
-        </ol>
-        <ul class="flex flex-wrap gap-2 p-0 m-0 list-none tabular-nums">
-          <li
-            v-if="totals.return_per_real != null"
-            class="px-2.5 py-1 text-[13px] font-440 rounded-md bg-n-alpha-1 text-n-slate-12"
+              {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_REFRESHING') }}
+            </span>
+          </p>
+          <h3
+            data-panel-headline
+            class="relative m-0 max-w-3xl text-balance text-2xl font-bold leading-tight tracking-tight text-white tabular-nums sm:text-3xl"
           >
-            {{
-              $t('CRM_KANBAN.META_ADS_HUB.PANEL.RETURN', {
-                value: fmt(totals.return_per_real),
-              })
-            }}
-          </li>
-          <li
-            class="px-2.5 py-1 text-[13px] font-440 rounded-md bg-n-alpha-1 text-n-slate-12"
-          >
+            {{ headline }}
+          </h3>
+          <MetaAdsDailyAction
+            v-if="advice"
+            :advice="advice"
+            :days="panel.days || 30"
+            :currency="panel.currency"
+            :expanded="expandedTargets"
+            :read-only="readOnly"
+            @act="onAdvice"
+            @changed="live.reload()"
+          />
+        </div>
+
+        <!-- v-show: fechar a lista não apaga o que cada mensagem sugerida já fez (rascunho, "Enviada"). -->
+        <div
+          v-if="stalled.length"
+          v-show="showStalled"
+          data-panel-stalled
+          class="flex flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
+        >
+          <h4 class="m-0 text-sm font-semibold text-n-slate-11">
             {{
               $t(
-                'CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_QUOTES',
-                { count: totals.open_quotes || 0 },
-                totals.open_quotes || 0
+                'CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_TITLE',
+                { count: stalledCount },
+                stalledCount
               )
             }}
-          </li>
-        </ul>
-        <MetaAdsPathList
-          v-if="openList"
-          id="meta-ads-path-list"
-          :key="`${openList}-${listDays}`"
-          :step="openList"
-          :days="listDays"
-          :currency="panel.currency"
-        />
-        <p
-          v-if="openList && readOnly"
-          data-panel-list-scope
-          class="m-0 text-xs text-n-slate-11"
-        >
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.LIST_SCOPE') }}
-        </p>
-      </div>
-
-      <div
-        class="flex flex-col gap-5 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
-      >
-        <h4
-          class="m-0 text-xs font-520 uppercase tracking-[0.08em] text-n-slate-11"
-        >
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_TITLE') }}
-        </h4>
-        <p v-if="!ads.length" class="m-0 text-sm text-n-slate-11">
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_EMPTY') }}
-        </p>
-        <ul
-          v-else
-          class="grid items-start gap-5 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
-        >
-          <li
-            v-for="ad in ads"
-            :key="ad.ad_id"
-            :data-panel-ad="ad.ad_id"
-            class="relative flex flex-col overflow-hidden border border-solid rounded-lg border-n-weak bg-n-solid-1 hover:border-n-strong has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
+          </h4>
+          <p
+            v-if="readOnly"
+            data-panel-stalled-scope
+            class="m-0 text-xs text-n-slate-11"
           >
-            <div class="flex justify-center bg-n-alpha-1">
-              <img
-                v-if="
-                  ad.thumbnail_url &&
-                  brokenImages[ad.ad_id] !== ad.thumbnail_url
-                "
-                :src="ad.thumbnail_url"
-                :alt="ad.name || ''"
-                loading="lazy"
-                data-panel-ad-image
-                class="block object-contain w-full h-auto max-h-[32rem]"
-                @error="brokenImages[ad.ad_id] = ad.thumbnail_url"
-              />
-              <div
-                v-else
-                data-panel-ad-placeholder
-                class="grid w-full aspect-square place-items-center bg-gradient-to-br"
-                :class="thumbClass(ad.ad_id)"
-              >
+            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.LIST_SCOPE') }}
+          </p>
+          <ul class="flex flex-col gap-2 p-0 m-0 list-none">
+            <li
+              v-for="card in stalled"
+              :key="card.id"
+              data-panel-stalled-card
+              class="flex flex-wrap items-center gap-4 rounded-xl px-4 py-3 ring-1 ring-inset ring-n-weak"
+            >
+              <span class="flex-1 min-w-0">
                 <span
-                  class="i-lucide-image size-8 text-white/50"
-                  aria-hidden="true"
-                />
-              </div>
-            </div>
-            <div class="flex flex-col gap-4 p-4">
-              <div
-                class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2"
-              >
-                <span
-                  class="text-sm font-520 leading-snug break-words text-n-slate-12 line-clamp-2"
+                  class="block text-sm font-semibold truncate text-n-slate-12"
                 >
+                  {{ card.title }}
+                </span>
+                <span class="block text-xs font-normal text-n-slate-10">
                   {{
-                    ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME')
+                    $t('CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_SINCE', {
+                      time: waitingFor(card.waiting_since),
+                    })
                   }}
                 </span>
-                <span
-                  :data-verdict="ad.verdict"
-                  class="flex-none px-2 py-0.5 text-[11px] font-520 uppercase tracking-[0.06em] rounded whitespace-nowrap"
-                  :class="VERDICT_CLASSES[ad.verdict]"
-                >
-                  {{
-                    $t(
-                      `CRM_KANBAN.META_ADS_HUB.PANEL.VERDICT.${ad.verdict.toUpperCase()}`
-                    )
-                  }}
-                </span>
-              </div>
-              <dl class="grid grid-cols-2 m-0 gap-x-3 gap-y-3">
-                <div
-                  v-for="stat in adStats(ad)"
-                  :key="stat.key"
-                  class="flex flex-col gap-1 min-w-0"
-                  :class="{ 'col-span-2': stat.key === 'SPEND' }"
-                >
-                  <dt class="text-xs font-440 text-n-slate-10">
-                    {{
-                      $t(`CRM_KANBAN.META_ADS_HUB.PANEL.AD_STATS.${stat.key}`)
-                    }}
-                  </dt>
-                  <dd
-                    class="m-0 text-base whitespace-nowrap font-interDisplay font-520 tabular-nums text-n-slate-12"
-                  >
-                    {{ stat.value }}
-                  </dd>
-                </div>
-              </dl>
-              <p class="m-0 text-xs font-420 tabular-nums text-n-slate-10">
+              </span>
+              <span
+                class="text-base font-semibold tabular-nums text-n-slate-12"
+              >
+                {{ fmt(card.value) }}
+              </span>
+              <router-link
+                v-if="card.conversation_id"
+                :to="conversationLink(card.conversation_id)"
+                class="inline-flex min-h-11 items-center gap-2 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 no-underline ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+              >
+                {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_CONVERSATION') }}
+              </router-link>
+              <MetaAdsQuoteMessage v-if="card.conversation_id" :card="card" />
+            </li>
+          </ul>
+          <p
+            v-if="stalledMore > 0"
+            data-panel-stalled-more
+            class="m-0 text-sm font-normal text-n-slate-11"
+          >
+            {{
+              $t('CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_MORE', {
+                count: stalledMore,
+              })
+            }}
+          </p>
+        </div>
+
+        <div
+          class="flex flex-col gap-5 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
+        >
+          <h4 class="m-0 text-sm font-semibold text-n-slate-11">
+            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_TITLE') }}
+          </h4>
+          <ol
+            class="m-0 grid list-none grid-cols-2 gap-2 p-0"
+            :class="path.length === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'"
+          >
+            <li
+              v-for="step in path"
+              :key="step.key"
+              :data-panel-path="step.key"
+              class="relative flex min-w-0 flex-col gap-1 rounded-xl bg-n-solid-1 px-4 py-3 ring-1 ring-inset ring-n-weak has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
+              :class="[
+                (PATH_LISTS[step.key] && !sample) || step.connect
+                  ? 'transition hover:bg-n-alpha-1 hover:ring-n-slate-6'
+                  : '',
+                step.connect ? '!bg-n-blue-2 !ring-n-blue-6' : '',
+              ]"
+            >
+              <span
+                class="text-xl font-semibold tabular-nums sm:text-2xl"
+                :class="step.win ? 'text-n-teal-11' : 'text-n-slate-12'"
+              >
+                {{ step.value }}
+              </span>
+              <span class="text-sm text-n-slate-11">
                 {{
-                  ad.cost_per_sale != null
-                    ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.PER_SALE', {
-                        value: fmt(ad.cost_per_sale),
-                      })
-                    : $t(
-                        'CRM_KANBAN.META_ADS_HUB.PANEL.AD_QUOTES',
-                        { count: ad.quotes },
-                        ad.quotes
-                      )
+                  $t(
+                    `CRM_KANBAN.META_ADS_HUB.PANEL.PATH.${step.key}`,
+                    step.plural
+                  )
                 }}
-              </p>
-              <!-- O botão cobre o cartão inteiro (after:inset-0): tocar em qualquer parte abre o anúncio, e o
-                   leitor de tela ouve um só botão com o nome dele. -->
+                <template v-if="step.extra">
+                  {{
+                    $t('CRM_KANBAN.META_ADS_HUB.PANEL.SALES_VALUE', {
+                      value: step.extra,
+                    })
+                  }}
+                </template>
+              </span>
+              <span v-if="step.note" class="text-xs text-n-slate-10">
+                {{ step.note }}
+              </span>
               <button
+                v-if="step.connect"
                 type="button"
-                :data-panel-ad-open="ad.ad_id"
-                :aria-label="
-                  $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD_LABEL', {
-                    name:
-                      ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME'),
-                  })
-                "
-                class="inline-flex items-center self-start gap-1 p-0 text-[13px] font-440 bg-transparent border-0 min-h-11 text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:content-['']"
-                @click="rememberAd(String(ad.ad_id))"
+                data-panel-connect
+                class="mt-1 inline-flex min-h-11 items-center gap-1.5 self-start whitespace-nowrap rounded-xl border-0 bg-n-blue-9 px-3 text-sm sm:px-4 font-semibold text-white transition hover:bg-n-blue-10 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+                @click="emit('connect')"
               >
-                {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD') }}
+                {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.CONNECT_SPEND.CTA') }}
                 <span
-                  class="i-lucide-arrow-right size-3.5"
+                  class="i-lucide-arrow-right hidden size-3.5 sm:inline-block"
                   aria-hidden="true"
                 />
               </button>
-            </div>
-          </li>
-        </ul>
-      </div>
+              <span
+                v-if="step.response"
+                data-panel-response-time
+                class="flex flex-col text-xs text-n-slate-10"
+              >
+                <span>
+                  {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.LABEL') }}
+                  <span
+                    data-panel-response-time-value
+                    class="font-semibold tabular-nums"
+                    :class="
+                      step.response.slow ? 'text-n-amber-11' : 'text-n-slate-12'
+                    "
+                  >
+                    {{ step.response.value }}
+                  </span>
+                </span>
+                <span class="flex flex-wrap gap-x-1.5">
+                  <span>
+                    {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.NOTE') }}
+                  </span>
+                  <span
+                    v-if="step.response.unanswered"
+                    data-panel-response-time-unanswered
+                    class="before:content-['·'] before:me-1.5"
+                  >
+                    {{
+                      $t(
+                        'CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.UNANSWERED',
+                        { count: step.response.unanswered },
+                        step.response.unanswered
+                      )
+                    }}
+                  </span>
+                </span>
+              </span>
+              <!-- O botão cobre a etapa inteira (after:inset-0), como no cartão de anúncio. -->
+              <button
+                v-if="PATH_LISTS[step.key] && !sample"
+                type="button"
+                :data-panel-path-open="PATH_LISTS[step.key]"
+                :aria-expanded="String(openList === PATH_LISTS[step.key])"
+                aria-controls="meta-ads-path-list"
+                :aria-label="
+                  $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.OPEN_LABEL', {
+                    step: $t(
+                      `CRM_KANBAN.META_ADS_HUB.PANEL.PATH.${step.key}`,
+                      2
+                    ),
+                  })
+                "
+                class="inline-flex min-h-11 items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+                @click="toggleList(PATH_LISTS[step.key])"
+              >
+                {{
+                  openList === PATH_LISTS[step.key]
+                    ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.CLOSE')
+                    : $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.OPEN')
+                }}
+                <span
+                  class="size-3.5"
+                  :class="
+                    openList === PATH_LISTS[step.key]
+                      ? 'i-lucide-chevron-up'
+                      : 'i-lucide-chevron-down'
+                  "
+                  aria-hidden="true"
+                />
+              </button>
+            </li>
+          </ol>
+          <ul class="flex flex-wrap gap-2 p-0 m-0 list-none tabular-nums">
+            <li
+              v-if="totals.return_per_real != null"
+              class="rounded-lg bg-n-alpha-1 px-2.5 py-1 text-sm font-medium text-n-slate-12"
+            >
+              {{
+                $t('CRM_KANBAN.META_ADS_HUB.PANEL.RETURN', {
+                  value: fmt(totals.return_per_real),
+                })
+              }}
+            </li>
+            <li
+              class="rounded-lg bg-n-alpha-1 px-2.5 py-1 text-sm font-medium text-n-slate-12"
+            >
+              {{
+                $t(
+                  'CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_QUOTES',
+                  { count: totals.open_quotes || 0 },
+                  totals.open_quotes || 0
+                )
+              }}
+            </li>
+          </ul>
+          <MetaAdsPathList
+            v-if="openList"
+            id="meta-ads-path-list"
+            :key="`${openList}-${listPeriod}`"
+            :step="openList"
+            :period="listPeriod"
+            :currency="panel.currency"
+          />
+          <p
+            v-if="openList && readOnly"
+            data-panel-list-scope
+            class="m-0 text-xs text-n-slate-11"
+          >
+            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.LIST_SCOPE') }}
+          </p>
+        </div>
 
-      <MetaAdsConfidence
-        v-if="panel.confidence"
-        :confidence="panel.confidence"
-        :comparison="panel.meta_comparison || null"
-        :can-fix="!readOnly"
-        @fix="emit('open', 3)"
-      />
-    </template>
+        <div
+          class="flex flex-col gap-5 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
+        >
+          <h4 class="m-0 text-sm font-semibold text-n-slate-11">
+            {{
+              otherAds.length
+                ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_WHATSAPP_TITLE')
+                : $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_TITLE')
+            }}
+          </h4>
+          <p v-if="!ads.length" class="m-0 text-sm text-n-slate-11">
+            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_EMPTY') }}
+          </p>
+          <ul
+            v-else
+            class="grid items-stretch gap-5 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
+          >
+            <li
+              v-for="ad in ads"
+              :key="ad.ad_id"
+              :data-panel-ad="ad.ad_id"
+              class="relative flex flex-col overflow-hidden rounded-xl bg-n-solid-1 ring-1 ring-n-weak transition hover:ring-n-slate-6 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
+            >
+              <!-- Moldura 4:5 em todos os cartões (#2010): o criativo aparece inteiro (vertical, feed ou quadrado) e a
+                 sobra é a própria foto desfocada, para a linha de cartões ficar alinhada sem cortar o texto do anúncio. -->
+              <div class="relative overflow-hidden aspect-[4/5] bg-n-alpha-1">
+                <template v-if="imageOf(ad)">
+                  <img
+                    :src="imageOf(ad)"
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    data-panel-ad-image-backdrop
+                    class="absolute inset-0 object-cover scale-110 size-full blur-2xl brightness-90"
+                  />
+                  <img
+                    :src="imageOf(ad)"
+                    :alt="ad.name || ''"
+                    loading="lazy"
+                    data-panel-ad-image
+                    class="relative block object-contain size-full"
+                    @error="imageFailed(ad)"
+                  />
+                </template>
+                <div
+                  v-else
+                  data-panel-ad-placeholder
+                  class="grid size-full place-items-center bg-gradient-to-br"
+                  :class="thumbClass(ad.ad_id)"
+                >
+                  <span
+                    class="i-lucide-image size-8 text-white/50"
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+              <div class="flex flex-col flex-1 gap-4 p-4">
+                <div
+                  class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2"
+                >
+                  <span
+                    class="text-sm font-semibold leading-snug break-words text-n-slate-12 line-clamp-2"
+                  >
+                    {{
+                      ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME')
+                    }}
+                  </span>
+                  <span
+                    v-if="ad.verdict"
+                    :data-verdict="ad.verdict"
+                    class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 flex-none whitespace-nowrap"
+                    :class="VERDICT_CLASSES[ad.verdict]"
+                  >
+                    {{
+                      $t(
+                        `CRM_KANBAN.META_ADS_HUB.PANEL.VERDICT.${ad.verdict.toUpperCase()}`
+                      )
+                    }}
+                  </span>
+                </div>
+                <dl class="grid grid-cols-2 m-0 gap-x-3 gap-y-3">
+                  <div
+                    v-for="stat in adStats(ad)"
+                    :key="stat.key"
+                    class="flex flex-col gap-1 min-w-0"
+                    :class="{ 'col-span-2': stat.key === 'SPEND' }"
+                  >
+                    <dt class="text-xs text-n-slate-11">
+                      {{
+                        $t(`CRM_KANBAN.META_ADS_HUB.PANEL.AD_STATS.${stat.key}`)
+                      }}
+                    </dt>
+                    <dd
+                      class="m-0 whitespace-nowrap text-base font-semibold tabular-nums text-n-slate-12"
+                    >
+                      {{ stat.value }}
+                    </dd>
+                  </div>
+                </dl>
+                <p class="m-0 text-xs font-normal tabular-nums text-n-slate-10">
+                  {{
+                    ad.cost_per_sale != null
+                      ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.PER_SALE', {
+                          value: fmt(ad.cost_per_sale),
+                        })
+                      : $t(
+                          'CRM_KANBAN.META_ADS_HUB.PANEL.AD_QUOTES',
+                          { count: openQuotesOf(ad) },
+                          openQuotesOf(ad)
+                        )
+                  }}
+                </p>
+                <!-- O botão cobre o cartão inteiro (after:inset-0): tocar em qualquer parte abre o anúncio, e o
+                   leitor de tela ouve um só botão com o nome dele. -->
+                <button
+                  v-if="!sample"
+                  type="button"
+                  :data-panel-ad-open="ad.ad_id"
+                  :aria-label="
+                    $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD_LABEL', {
+                      name:
+                        ad.name ||
+                        $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME'),
+                    })
+                  "
+                  class="inline-flex min-h-11 mt-auto items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+                  @click="rememberAd(String(ad.ad_id))"
+                >
+                  {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD') }}
+                  <span
+                    class="i-lucide-arrow-right size-3.5"
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div
+          v-if="otherAds.length"
+          data-panel-other-ads
+          class="flex flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
+        >
+          <div
+            class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+          >
+            <h4 class="m-0 text-sm font-semibold text-n-slate-11">
+              {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.TITLE') }}
+            </h4>
+            <span class="text-sm font-semibold tabular-nums text-n-slate-12">
+              {{
+                $t('CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.TOTAL', {
+                  value: fmt(totals.other_spend),
+                })
+              }}
+            </span>
+          </div>
+          <p class="m-0 max-w-3xl text-sm text-n-slate-11">
+            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.HINT') }}
+          </p>
+          <ul class="m-0 flex list-none flex-col gap-2 p-0">
+            <li
+              v-for="ad in otherAds"
+              :key="ad.ad_id"
+              :data-panel-other-ad="ad.ad_id"
+              class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-3 py-3 ring-1 ring-inset ring-n-weak"
+            >
+              <span
+                class="relative size-12 flex-none overflow-hidden rounded-lg bg-n-alpha-1"
+              >
+                <img
+                  v-if="imageOf(ad)"
+                  :src="imageOf(ad)"
+                  alt=""
+                  loading="lazy"
+                  class="size-full object-cover"
+                  @error="imageFailed(ad)"
+                />
+                <span
+                  v-else
+                  class="grid size-full place-items-center bg-gradient-to-br"
+                  :class="thumbClass(ad.ad_id)"
+                >
+                  <span
+                    class="i-lucide-image size-5 text-white/50"
+                    aria-hidden="true"
+                  />
+                </span>
+              </span>
+              <span
+                class="min-w-0 flex-1 basis-40 text-sm font-semibold text-n-slate-12 line-clamp-2"
+              >
+                {{ ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME') }}
+              </span>
+              <dl
+                class="m-0 grid grid-cols-3 gap-x-5 text-end tabular-nums sm:w-auto"
+              >
+                <div
+                  v-for="stat in ['SPEND', 'CLICKS', 'SHOWN']"
+                  :key="stat"
+                  class="flex flex-col gap-0.5"
+                >
+                  <dt class="text-xs text-n-slate-11">
+                    {{ $t(`CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.${stat}`) }}
+                  </dt>
+                  <dd
+                    class="m-0 whitespace-nowrap text-sm font-semibold text-n-slate-12"
+                  >
+                    {{
+                      stat === 'SPEND'
+                        ? fmt(ad.spend)
+                        : number(
+                            stat === 'CLICKS' ? ad.link_clicks : ad.impressions
+                          )
+                    }}
+                  </dd>
+                </div>
+              </dl>
+            </li>
+          </ul>
+        </div>
+
+        <MetaAdsConfidence
+          v-if="panel.confidence"
+          :confidence="panel.confidence"
+          :comparison="panel.meta_comparison || null"
+          :can-fix="!readOnly"
+          @fix="emit('open', 3)"
+        />
+      </template>
+    </div>
   </section>
 </template>

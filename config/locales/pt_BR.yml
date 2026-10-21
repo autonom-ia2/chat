@@ -172,6 +172,7 @@ pt_BR:
     openai:
       invalid_api_key: 'Chave da OpenAI recusada. Confira se ela está correta, se não foi revogada e se a conta tem crédito em platform.openai.com.'
     inboxes:
+      password_needed: Digite de novo a senha do servidor de e-mail para apontar a caixa para outro servidor.
       imap:
         socket_error: Por favor, verifique a conexão de rede, endereço IMAP e tente novamente.
         no_response_error: Por favor, verifique as credenciais de IMAP e tente novamente.
@@ -1326,6 +1327,14 @@ pt_BR:
       autoteste_indisponivel: 'Ainda não há material aprovado para testar.'
       autoteste_espere: 'Espere um pouco para testar de novo.'
       autoteste_amanha: 'Este agente já foi testado muitas vezes hoje. Amanhã dá para testar de novo.'
+    base_de_seguros:
+      sem_base_nova: 'Não há base de seguros nova para este agente. A página foi atualizada.'
+      base_mudou: 'O agente mudou enquanto isso. A página foi atualizada.'
+      comparar_espere: 'Espere uns 2 minutos para comparar de novo.'
+      comparar_amanha: 'Hoje esta conta já comparou muitas vezes. Amanhã dá para comparar de novo.'
+      comparar_antes: 'Compare as respostas antes de atualizar a base.'
+      sem_instrucao: 'Este agente ainda não tem instruções, então a base dele não pode ser atualizada.'
+      desfazer_fechado: 'O agente mudou depois da atualização, e o Desfazer não vale mais. Para voltar, use o histórico de versões.'
     source:
       invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."
       arquivo_grande: "O arquivo é grande demais. O tamanho máximo é 25 MB."
@@ -1341,6 +1350,10 @@ pt_BR:
       foto_animada: "Imagem animada não serve como material. Mande uma foto parada."
       lendo_ainda: "Este material ainda está sendo lido. Espere terminar para ler de novo."
       file_invalid: "Mande o próprio arquivo."
+    # #1427 — a foto mandada no Testar do agente (vale só no teste; nunca vira material).
+    teste:
+      foto_animada: "Mande uma foto parada. Foto animada não dá para ler."
+      foto_muitas: "Mande até %{max} fotos por pergunta."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

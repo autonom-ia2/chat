@@ -1,7 +1,8 @@
 name: Instagram tester onboarding
 
 # Roda só quando muda o que estes testes exercitam (#990): sem filtro, os 4 jobs (~8-10 min) rodavam em todo PR e em
-# todo push na main, disputando os 20 jobs simultâneos do plano com a fila de merge e com o deploy. A rodada diária
+# todo push na main sem testar nada que tivesse mudado. Com os 60 jobs do GitHub Team (#2025) o filtro continua: são
+# ~35 job-minutos por PR que não pegam regressão nova e que a fila de merge e o deploy usam melhor. A rodada diária
 # na main pega a regressão rara vinda de um componente compartilhado fora desta lista.
 on:
   pull_request:

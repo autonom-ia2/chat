@@ -83,8 +83,9 @@ class Crm::Conversations::CardSyncer
     refresh_card_without_message
   end
 
+  # A mensagem da pessoa da equipe também (#1923); quem decide o que conta é o CardEmFoco.
   def mensagem_no_card_em_foco
-    return unless Crm::Conversations::CardEmFoco.ligada?(@account) && @message.incoming?
+    return unless Crm::Conversations::CardEmFoco.ligada?(@account)
     return if foco_depois_do_assunto?
 
     Crm::Conversations::CardEmFoco.new(conversation: @conversation, message: @message).perform

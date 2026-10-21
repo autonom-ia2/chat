@@ -90,26 +90,36 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.post(`${this.url}/insights`);
   }
 
-  // Daily panel (#1088, #1110): { panel: { days, from, to, currency, totals, ads,
-  // confidence, meta_comparison, response_time, advice, synced_at, refreshing } }.
-  // Also asks Meta for today's numbers.
-  panel(days) {
-    return axios.get(`${this.url}/panel`, { params: { days } });
+  // Daily panel (#1088, #1110): { panel: { period, days, from, to, open, currency,
+  // totals, ads, confidence, meta_comparison, response_time, advice, synced_at,
+  // refreshing } }. Also asks Meta for today's numbers.
+  // period (#2011): '7d' | '30d' | '90d' | 'this_month' | 'last_month' | 'all'.
+  panel(period) {
+    return axios.get(`${this.url}/panel`, { params: { period } });
   }
 
   // One step of the money path opened inside the panel (#1110, F5) →
-  // { list: null | { step, days, total, items: [PathItem] } }, at most 50 items.
-  // step: 'conversations' | 'quotes' | 'sales' | 'slow_replies'.
-  panelList(step, days) {
-    return axios.get(`${this.url}/panel_list`, { params: { step, days } });
+  // { list: null | { step, period, days, total, items: [PathItem] } }, at most 50
+  // items. step: 'conversations' | 'quotes' | 'sales' | 'slow_replies'.
+  panelList(step, period) {
+    return axios.get(`${this.url}/panel_list`, { params: { step, period } });
   }
 
   // One ad from the inside (#1088, F3b): { ad: null } without data, or
   // { ad: { ...numbers, verdict, account_average_cost_per_sale, reason, daily,
   // quotes_list } }. Only reads the database; never calls Meta.
-  panelAd(adId, days) {
+  panelAd(adId, period) {
     return axios.get(`${this.url}/panel_ad`, {
-      params: { ad_id: adId, days },
+      params: { ad_id: adId, period },
+    });
+  }
+
+  // Downloaded report (#1960): the panel of the period as a landscape PDF or a
+  // spreadsheet. formato: 'pdf' | 'planilha'. Answers the file (blob).
+  report(formato, period) {
+    return axios.get(`${this.url}/report`, {
+      params: { formato, period },
+      responseType: 'blob',
     });
   }
 

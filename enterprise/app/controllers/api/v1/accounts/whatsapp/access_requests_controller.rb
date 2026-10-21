@@ -1,7 +1,7 @@
 class Api::V1::Accounts::Whatsapp::AccessRequestsController < Api::V1::Accounts::BaseController
   FEATURE_NAME = 'whatsapp_embedded_signup_inbox_creation'.freeze
 
-  before_action :check_admin_authorization?
+  before_action -> { check_permission_granted!('integration_manage') }
 
   def create
     raise Pundit::NotAuthorizedError unless ChatwootApp.chatwoot_cloud?

@@ -1,0 +1,16 @@
+BEGIN:VCALENDAR
+PRODID:-//Google Inc//Google Calendar 70.9054//EN
+VERSION:2.0
+METHOD:CANCEL
+BEGIN:VEVENT
+DTSTART:20261022T130000Z
+DTEND:20261022T140000Z
+DTSTAMP:20261020T120000Z
+ORGANIZER;CN=Diana Dona:mailto:diana@agencia.example
+UID:7kq2abc123def456@google.com
+ATTENDEE;CN=vendas@empresa.example:mailto:vendas@empresa.example
+SEQUENCE:1
+STATUS:CANCELLED
+SUMMARY:Alinhamento da proposta
+END:VEVENT
+END:VCALENDAR

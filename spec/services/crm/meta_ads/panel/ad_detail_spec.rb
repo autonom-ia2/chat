@@ -13,7 +13,7 @@ RSpec.describe Crm::MetaAds::Panel::AdDetail do
   let(:now) { Time.zone.parse('2026-10-06T15:00:00-03:00') }
 
   def detail(ad_id, days: 7)
-    described_class.new(connection, ad_id: ad_id, days: days).payload
+    described_class.new(connection, ad_id: ad_id, period: "#{days}d").payload
   end
 
   def spend(ad_id, date, value, target: account, ad_account_id: connection.ad_account_id)
@@ -81,6 +81,16 @@ RSpec.describe Crm::MetaAds::Panel::AdDetail do
       spend(capa, Date.new(2026, 10, 6), 10)
 
       expect(detail(capa)).to include(name: nil, campaign_name: 'Viagem EUA', adset_name: nil, preview_url: nil)
+    end
+  end
+
+  it 'anúncio que leva ao site (#2054) abre com os números, sem veredito nem porquê' do
+    travel_to(now) do
+      Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-site', object_type: 'adset', destination_type: 'WEBSITE', fetched_at: now)
+      Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: capa, date: Date.new(2026, 10, 6),
+                                      currency: 'BRL', spend: 40, adset_id: 'set-site', attribution_window: '7d_click', fetched_at: now)
+
+      expect(detail(capa)).to include(spend: 40.0, conversations: 0, verdict: nil, reason: nil)
     end
   end
 

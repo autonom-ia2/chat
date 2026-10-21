@@ -7,6 +7,7 @@ import { fornecerPrimeiras, useFuso, usePele } from './pele';
 import { diaDaMensagem } from './dataDaConversa';
 import { MESSAGE_TYPES } from '../message/constants';
 import { ehEcoDoCelular, idDoAutorDoEco } from './ecoDoCelular';
+import { origemDaMensagem } from './origemDoEnvio';
 
 // De que lado o balão fica: cliente, empresa, nota da equipe ou aviso do sistema.
 const ladoDoBalao = mensagem => {
@@ -28,7 +29,12 @@ const quemMandou = mensagem => {
   if (ehEcoDoCelular(mensagem.contentAttributes)) {
     return `eco:${idDoAutorDoEco(mensagem.contentAttributes) ?? ''}`;
   }
-  return `${mensagem.sender?.type ?? mensagem.senderType ?? ''}:${mensagem.senderId ?? mensagem.sender?.id}`;
+  // #2048: envio automático em nome da pessoa leva o nome da origem, então a origem abre
+  // sequência própria; senão o follow-up logo depois da resposta dela ficaria sem nome.
+  const tipo = mensagem.sender?.type ?? mensagem.senderType ?? '';
+  const origem = origemDaMensagem(tipo, mensagem.contentAttributes);
+  if (origem) return `origem:${origem}`;
+  return `${tipo}:${mensagem.senderId ?? mensagem.sender?.id}`;
 };
 
 // Como no app: a sequência segue enquanto a mesma pessoa fala no mesmo dia, sem

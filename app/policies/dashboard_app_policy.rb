@@ -7,15 +7,22 @@ class DashboardAppPolicy < ApplicationPolicy
     true
   end
 
+  # Agents keep using the apps in the conversation; adding or changing one is admin or integration_manage (#2027).
   def create?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def update?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def destroy?
-    @account_user.administrator?
+    integration_manage?
+  end
+
+  private
+
+  def integration_manage?
+    @account_user.permission_granted?('integration_manage')
   end
 end

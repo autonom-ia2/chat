@@ -27,6 +27,11 @@ module Crm
       account.present? && account.feature_enabled?('crm_numeros_lentes')
     end
 
+    # Metas do mês por pessoa (#1991, F4 do #1871): a gaveta "Metas do mês" e a meta no topo de "Só eu".
+    def self.metas_enabled?(account)
+      account.present? && account.feature_enabled?('crm_metas')
+    end
+
     # A visão "Equipe" nova (#1992, F5 do #1871) só existe junto da "Só eu": as duas flags.
     def self.numeros_equipe_enabled?(account)
       numeros_lentes_enabled?(account) && account.feature_enabled?('crm_numeros_equipe')

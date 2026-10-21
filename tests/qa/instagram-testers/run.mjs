@@ -4,7 +4,14 @@ import assert from 'node:assert/strict';
 import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { startServer, root, output, origin, pathname } from './server.mjs';
+import {
+  startServer,
+  warmUp,
+  root,
+  output,
+  origin,
+  pathname,
+} from './server.mjs';
 import {
   sourceFingerprints,
   styleFingerprints,
@@ -182,9 +189,11 @@ async function openScreen(id, options) {
     restricted: String(options.restricted || false),
     ...options.query,
   });
+  const gotoStarted = performance.now();
   await page.goto(`${origin}${pathname}?${query}`, {
     waitUntil: 'domcontentloaded',
   });
+  record.gotoMs = Math.round(performance.now() - gotoStarted);
   await page.waitForFunction(() => window.instagramQa?.ready === true, null, {
     timeout: 60000,
   });
@@ -1441,6 +1450,8 @@ try {
     version: browser.version(),
     isolated: true,
   };
+  results.warmup = await warmUp(browser);
+  process.stdout.write(`WARMUP ${JSON.stringify(results.warmup)}\n`);
   for (const [index, definition] of definitions.entries()) {
     const result = results.cases[index];
     delete result.reason;

@@ -26,6 +26,9 @@ import MudarConversando from '../components/pagina/MudarConversando.vue';
 import AgenteGaveta from '../components/AgenteGaveta.vue';
 import EquipeCanais from '../components/onde/EquipeCanais.vue';
 import AjudantePassos from '../components/onde/AjudantePassos.vue';
+import BaseDoAgenteLinha from '../components/pagina/BaseDoAgenteLinha.vue';
+import GavetaNovaBase from '../components/pagina/GavetaNovaBase.vue';
+import { useBaseDoAgente } from '../composables/useBaseDoAgente';
 import {
   ESTADO_PAGINA,
   useAgenteDaPagina,
@@ -166,6 +169,14 @@ const ajuda = computed(() =>
     : null
 );
 const cotacao = computed(() => ehCotacao(agente.value));
+// #1429 F3 — a base de seguros: a linha no resumo e a gaveta do antes e depois. Só com a Fase 2 (sem ela o servidor
+// responde 404); a Lia (cotação) não recebe nada disso.
+const BASE = 'base';
+const baseDoAgente = useBaseDoAgente(idRef);
+const temBase = computed(() => fase2.value && !cotacao.value);
+const mostraBase = computed(
+  () => temBase.value && baseDoAgente.temOQueMostrar.value
+);
 const manual = computed(() => ehManual(agente.value));
 const interno = computed(() => ehInterno(agente.value));
 // #1709: "Quando {nome} não respondeu" só no agente que fala com o cliente (sem ajudante, interno nem cotação).
@@ -361,6 +372,8 @@ const fechar = () => {
   aberta.value = null;
   nomeSugerido.value = '';
   limparAbaDaUrl();
+  // #1429 F3 — outra gaveta (Versões, comportamento) pode ter mudado o agente: a linha da base é relida.
+  if (temBase.value) baseDoAgente.recarregar();
 };
 
 // #1370 — `?gaveta=` (a volta do assistente de páginas de agendamento) vale uma vez: sai da URL
@@ -477,6 +490,7 @@ const carregarTudo = async () => {
   lerFontes();
   lerConferencias();
   lerPerguntas();
+  if (temBase.value) baseDoAgente.carregar();
 };
 
 const tentarDeNovo = () => {
@@ -515,6 +529,7 @@ const mudarDaGaveta = () => {
 const sairDoMudar = () => {
   vista.value = 'pagina';
   testeInicial.value = null;
+  if (temBase.value) baseDoAgente.recarregar();
 };
 
 const voltarNome = antigo => {
@@ -694,6 +709,22 @@ const excluir = async () => {
 const pararEmVezDeExcluir = () => {
   dialogoExcluir.value?.fechar();
   dialogoParar.value?.abrir();
+};
+
+// #1429 F3 — "Atualizar com a nova base" abre o antes e depois; só quem gerencia.
+const abrirNovaBase = () => {
+  if (podeGerenciar.value && temBase.value) aberta.value = BASE;
+};
+
+const baseAtualizada = () => {
+  fechar();
+  useAlert(t('AGENTS.JORNADA.PAGINA.BASE.FEITO', { nome: nome.value }));
+};
+
+const desfazerBase = async () => {
+  if (await baseDoAgente.desfazer()) {
+    useAlert(t('AGENTS.JORNADA.PAGINA.BASE.DESFEITO', { nome: nome.value }));
+  }
 };
 
 const tirarPergunta = id => {
@@ -877,7 +908,21 @@ const tirarPergunta = id => {
           @escolher-canal="escolherCanal"
           @mudar-equipe="mudarEquipe"
           @mudar-ajuda="mudarAjuda"
-        />
+        >
+          <template #base>
+            <BaseDoAgenteLinha
+              v-if="mostraBase"
+              :base="baseDoAgente.base.value"
+              :nome="nome"
+              :pode-gerenciar="podeGerenciar"
+              :desfazendo="baseDoAgente.desfazendo.value"
+              :erro-desfazer="baseDoAgente.erroDesfazer.value"
+              :texto-erro-desfazer="baseDoAgente.textoErroDesfazer.value"
+              @atualizar="abrirNovaBase"
+              @desfazer="desfazerBase"
+            />
+          </template>
+        </PaginaBlocos>
       </template>
     </div>
 
@@ -889,8 +934,11 @@ const tirarPergunta = id => {
         :atendendo="trabalhando"
         :pode-mudar="podeMudar"
         :pergunta="perguntaDoTeste"
+        :fase2="fase2"
+        :pode-gerenciar="podeGerenciar"
         @fechar="fechar"
         @errado="mudar('teste', $event)"
+        @ver-sabe="abrir(GAVETA.SABE)"
       />
       <GavetaOQueSabe
         v-else-if="aberta === GAVETA.SABE"
@@ -1001,6 +1049,15 @@ const tirarPergunta = id => {
           @pronto="salvarMudancaDaAjuda"
         />
       </AgenteGaveta>
+      <GavetaNovaBase
+        v-else-if="aberta === BASE && baseDoAgente.base.value"
+        :base="baseDoAgente.base.value"
+        :nome="nome"
+        :comparar="baseDoAgente.comparar"
+        :atualizar="baseDoAgente.atualizar"
+        @fechar="fechar"
+        @atualizado="baseAtualizada"
+      />
       <GavetaConversas
         v-else-if="aberta === GAVETA.CONVERSAS"
         :agent-id="agente.id"

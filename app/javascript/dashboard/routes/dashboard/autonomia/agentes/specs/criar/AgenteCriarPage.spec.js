@@ -724,6 +724,49 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
+  // #1427 — na Fase 2 o servidor confere a foto do teste: a recusada mostra o motivo, sai do celular e devolve o texto.
+  it('shows why the server refused the photo of the test and gives the written text back', async () => {
+    const recusa = Object.assign(new Error('422'), {
+      response: {
+        status: 422,
+        data: {
+          code: 'foto_recusada',
+          error: 'Mande uma foto parada. Foto animada não dá para ler.',
+        },
+      },
+    });
+    prepararStore({ teste: recusa });
+    const { createObjectURL, revokeObjectURL } = URL;
+    URL.createObjectURL = () => 'blob:x';
+    URL.revokeObjectURL = () => {};
+    const wrapper = await montar({ query: { agente: '90' } });
+    const confira = wrapper.get('[data-confira]');
+    const seletor = confira.get('input[type="file"]');
+    Object.defineProperty(seletor.element, 'files', {
+      value: [new File(['x'], 'animada.gif', { type: 'image/gif' })],
+    });
+    await seletor.trigger('change');
+    await confira.get('textarea').setValue('Quanto custa este?');
+    await confira.get('form').trigger('submit');
+
+    await vi.waitFor(() =>
+      expect(wrapper.find('[data-erro-teste]').exists()).toBe(true)
+    );
+    await flushPromises();
+    const erro = wrapper.get('[data-erro-teste]');
+    expect(erro.text()).toContain(
+      'Mande uma foto parada. Foto animada não dá para ler.'
+    );
+    expect(erro.find('button').exists()).toBe(false);
+    expect(wrapper.find('[data-balao="cliente"]').exists()).toBe(false);
+    expect(wrapper.get('[data-confira] textarea').element.value).toBe(
+      'Quanto custa este?'
+    );
+    wrapper.unmount();
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL;
+  });
+
   it('a photo without text in the test goes with a default text and shows in the customer bubble', async () => {
     // O jsdom não tem prévia de arquivo; o campo pede uma para mostrar a foto antes de mandar.
     const { createObjectURL, revokeObjectURL } = URL;

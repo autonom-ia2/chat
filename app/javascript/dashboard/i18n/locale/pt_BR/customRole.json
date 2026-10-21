@@ -55,6 +55,7 @@
       "CRM_ADMIN": "Administrador do CRM (acesso total)",
       "CRM_EXPORT": "Exportar a lista do CRM para Excel",
       "CRM_DELETE_CARDS": "Arquivar cards do CRM",
+      "CRM_METAS_MANAGE": "Ver e definir as metas do mês",
       "CONTACT_VIEW": "Ver contatos",
       "CONTACT_EXPORT": "Exportar contatos",
       "CONTACT_DELETE": "Excluir contatos e empresas",
@@ -78,9 +79,15 @@
       "MACRO_MANAGE": "Editar macros da equipe",
       "SLA_MANAGE": "Editar políticas de SLA",
       "CONVERSATION_VIEW": "Lê as outras conversas da caixa",
+      "CAMPAIGN_SEND": "Disparar campanhas",
       "PEOPLE_MANAGE": "Cuidar das pessoas e dos times",
       "CUSTOM_ROLE_MANAGE": "Montar funções",
-      "GRANT_ABOVE_OWN": "Pode entregar acesso acima do próprio"
+      "GRANT_ABOVE_OWN": "Pode entregar acesso acima do próprio",
+      "FINANCIAL_VIEW": "Ver os custos da conta",
+      "FINANCIAL_MANAGE": "Ligar e desligar a autorização de cobranças da Meta",
+      "CONVERSATION_MESSAGE_DELETE": "Apagar mensagens",
+      "INTEGRATION_MANAGE": "Cuidar das integrações",
+      "TOKEN_MANAGE": "Ver e trocar tokens e chaves"
     },
     "MATRIX": {
       "GROUPS": {
@@ -89,7 +96,8 @@
         "AUTONOMIA": "Autonom.ia",
         "MARKETING": "Marketing",
         "CONNECTIONS": "Conexões",
-        "SETTINGS": "Configurações da conta"
+        "SETTINGS": "Configurações da conta",
+        "FINANCE": "Financeiro"
       },
       "LEVELS": {
         "NONE": "Sem acesso",
@@ -166,7 +174,7 @@
           "NAME": "Campanhas",
           "HINT": "E-mail, WhatsApp, SMS, links e QR codes",
           "LEVEL_VIEW": "Vê campanhas e resultados.",
-          "LEVEL_MANAGE": "Cria e dispara campanhas. Gera custo."
+          "LEVEL_MANAGE": "Monta campanhas. Disparar é o ajuste abaixo."
         },
         "WHATSAPP_TEMPLATES": {
           "NAME": "Modelos do WhatsApp",
@@ -184,6 +192,12 @@
           "HINT": "Canais, QR do WhatsApp e membros",
           "LEVEL_VIEW": "Vê todas as caixas nas configurações.",
           "LEVEL_MANAGE": "Cria caixas, reconecta o WhatsApp e cuida dos membros."
+        },
+        "INTEGRATIONS": {
+          "NAME": "Integrações",
+          "HINT": "Integrações, webhooks, robôs, reconectar canais e os tokens",
+          "LEVEL_MANAGE": "Conecta e desconecta integrações, cria webhooks e robôs e reconecta os canais. Criar caixa nova fica em Caixas de entrada.",
+          "SUGGESTION": "Para reconectar um canal, Caixas de entrada precisa estar ao menos em Ver."
         },
         "AUTOMATIONS": {
           "NAME": "Automações",
@@ -227,6 +241,12 @@
           "NAME": "Pessoas",
           "HINT": "Agentes, times e funções",
           "LEVEL_MANAGE": "Convida, edita e remove agentes e cuida dos times. Nunca mexe em administradores."
+        },
+        "FINANCE": {
+          "NAME": "Financeiro",
+          "HINT": "Custos da conta e a autorização de cobranças da Meta",
+          "LEVEL_VIEW": "Vê a autorização de cobranças da Meta e, para quem também tem os relatórios do CRM, quanto a IA custa em reais. Plano e faturas ficam com o administrador.",
+          "LEVEL_MANAGE": "Também liga e desliga a autorização de cobranças da Meta."
         }
       }
     },
@@ -289,13 +309,17 @@
       "CRM_MANAGE_AI": "Configura e aceita sugestões da IA. Gera custo.",
       "CRM_EXPORT": "Baixa a lista com dados de clientes.",
       "CRM_DELETE_CARDS": "Arquiva cards, um a um ou vários de uma vez.",
-      "CRM_ADMIN": "Liga tudo acima, o SLA do CRM e os tokens de integração.",
+      "CRM_METAS_MANAGE": "Vê e define a meta do mês de cada pessoa, em dinheiro.",
+      "CRM_ADMIN": "Liga tudo acima e o SLA do CRM. Os tokens de integração ficam em Integrações.",
       "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas.",
       "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder.",
+      "CONVERSATION_MESSAGE_DELETE": "Apaga mensagens das conversas que atende. O anexo some e a mensagem fica como apagada.",
       "CONTACT_EXPORT": "Baixa a base de contatos numa planilha.",
       "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez.",
+      "CAMPAIGN_SEND": "Envia e agenda campanhas e retoma as pausadas. Sem isto, monta e deixa pronta para quem dispara.",
       "CUSTOM_ROLE_MANAGE": "Cria e edita funções, dentro das próprias chaves.",
-      "GRANT_ABOVE_OWN": "Entrega qualquer função da conta, menos administrador. Tudo fica no histórico."
+      "GRANT_ABOVE_OWN": "Entrega qualquer função da conta, menos administrador. Tudo fica no histórico.",
+      "TOKEN_MANAGE": "Vê e troca os tokens da plataforma: caixas da API e do site, webhooks, robôs, tokens do CRM e o link do Google. Nunca cria token com mais poder do que a própria função."
     },
     "EDITOR": {
       "NEW_TITLE": "Ajuste o que for diferente",
@@ -317,7 +341,7 @@
       "FOOTER_COUNT": "Nenhuma área liberada | 1 área liberada | {n} áreas liberadas",
       "ADMIN_ONLY": {
         "TITLE": "Sempre do administrador",
-        "ITEMS": "Robôs, integrações, conta, segurança, cobrança e auditoria.",
+        "ITEMS": "Conta, segurança, cobrança e auditoria.",
         "GUIDE": "O Guia da Plataforma segue esta função: só mostra e só faz o que a pessoa pode fazer."
       },
       "SENSITIVE_CONFIRM": {

@@ -153,6 +153,11 @@ class Meta::AdsGraphClient
     paged("act_#{ad_account_id}/adspixels", fields: PIXEL_FIELDS)
   end
 
+  # Para onde leva cada conjunto da conta (#2054): WHATSAPP, WEBSITE, ON_VIDEO…
+  def ad_set_destinations(ad_account_id)
+    paged("act_#{ad_account_id}/adsets", fields: 'id,destination_type')
+  end
+
   private
 
   def get(path, query = {})
@@ -160,13 +165,14 @@ class Meta::AdsGraphClient
   end
 
   # Listas da Graph vêm em páginas: segue o cursor `after` até MAX_PAGES (1.000 itens) e devolve
-  # { "data" => [...] } como uma página só. Erro em qualquer página devolve esse erro.
+  # { "data" => [...], "truncated" => bool } como uma página só; `truncated` diz que parou no teto com mais páginas
+  # na Meta. Erro em qualquer página devolve esse erro.
   def paged(path, query)
     rows = []
     result = each_page(path, query.merge(limit: LIST_LIMIT), max_pages: MAX_PAGES) { |page| rows.concat(page) }
     return result unless result.ok
 
-    Result.new(ok: true, http_code: 200, data: { 'data' => rows })
+    Result.new(ok: true, http_code: 200, data: { 'data' => rows, 'truncated' => result.data.to_h.dig('paging', 'next').present? })
   end
 
   # Segue o cursor `after` página a página, até max_pages.

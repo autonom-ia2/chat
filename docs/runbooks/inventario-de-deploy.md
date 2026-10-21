@@ -14,5 +14,5 @@ arquivo, preencha a coluna do projeto e mande o PR. Campo sem resposta conhecida
 | Segredos e env | onde ficam (nome, nunca valor) | parâmetro SSM `/chatwoot/prod/env` de cada stack |
 | Compartilha com | o que outro projeto também usa (VPS, banco, rede, imagem base) | a confirmar |
 | Fila | painel e rótulos | Issue #1237, rótulos `fila:*` e `hotfix` |
-| Testes que travam | o que precisa estar verde antes do merge | `testes.yml` (8 shards RSpec + Vitest), lint, Guia/Central |
+| Testes que travam | o que precisa estar verde antes do merge | `testes.yml` (12 nós de RSpec + 2 de Vitest, checks `RSpec` e `Vitest`), lint, Guia/Central |
 | Quem aprova o quê | o que fica com o Rodrigo | tabela "Quem decide o quê" em `docs/processo-de-release.md` |

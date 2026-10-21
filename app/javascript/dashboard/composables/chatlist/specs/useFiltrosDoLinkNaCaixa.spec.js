@@ -18,6 +18,15 @@ import {
 } from '../useFiltrosDoLinkNaCaixa';
 
 const Vazio = { render: () => null };
+
+// Um componente só para chamar o composable dentro de um setup de verdade.
+const componenteQueUsa = usar =>
+  defineComponent({
+    setup() {
+      usar();
+      return () => h('div');
+    },
+  });
 const rotas = [
   { path: '/app/accounts/:accountId/dashboard', name: 'home' },
   { path: '/app/accounts/:accountId/inbox/:inbox_id', name: 'inbox_dashboard' },
@@ -35,11 +44,8 @@ const montar = async inicio => {
     routes: rotas,
   });
   let filtros;
-  const Teste = defineComponent({
-    setup() {
-      filtros = useFiltrosDoLinkNaCaixa();
-      return () => h('div');
-    },
+  const Teste = componenteQueUsa(() => {
+    filtros = useFiltrosDoLinkNaCaixa();
   });
   await router.push(inicio);
   await router.isReady();
@@ -289,12 +295,7 @@ describe('useReleituraPeriodica', () => {
   const montarReleitura = ligado => {
     const reler = vi.fn();
     const wrapper = mount(
-      defineComponent({
-        setup() {
-          useReleituraPeriodica(ligado, reler);
-          return () => h('div');
-        },
-      })
+      componenteQueUsa(() => useReleituraPeriodica(ligado, reler))
     );
     return { reler, wrapper };
   };

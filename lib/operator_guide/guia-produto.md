@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (232 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (235 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -20,7 +20,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde ficam as configurações?; Onde mudo os dados da empresa?; Onde vejo meu plano e as faturas?; Onde cadastro usuários?; O que falta configurar?; Onde fica o horário de atendimento?; Cadê a Atribuição?
 - onde_fica: Menu lateral > Configurações (no rodapé do menu, com o menu novo ligado na conta; no menu antigo esta página não existe). O endereço antigo de Configurações também abre esta página quando o menu novo está ligado.
 - rota: `settings_inicio` - `/app/accounts/:accountId/settings/inicio`
-- gate: feature flag `menu_lateral_novo`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `canned_response_manage` ou `inbox_view` ou `inbox_manage` ou `label_manage` ou `attribute_manage` ou `macro_manage` ou `automation_view` ou `automation_manage` ou `sla_manage` ou `people_manage` ou `custom_role_manage` ou `crm_manage_ai` ou `crm_admin`
+- gate: feature flag `menu_lateral_novo`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `canned_response_manage` ou `inbox_view` ou `inbox_manage` ou `label_manage` ou `attribute_manage` ou `macro_manage` ou `automation_view` ou `automation_manage` ou `sla_manage` ou `people_manage` ou `custom_role_manage` ou `crm_manage_ai` ou `crm_admin` ou `financial_view` ou `financial_manage`
 - pre_requisitos: menu novo ligado na conta (flag menu_lateral_novo); cada cartão só aparece para quem pode abrir a tela dele
 - passos: 1. Clique em Configurações no rodapé do menu; 2. Leia o Comece por aqui, que mostra a primeira coisa que ainda falta; 3. Ou procure um assunto na busca (por exemplo horário, usuário ou WhatsApp); 4. Clique no cartão para abrir a tela daquele assunto.
 - gotchas: os cartões ficam em grupos (Sua empresa, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Plano e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua empresa, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
@@ -254,7 +254,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `agent_management`; papel `administrator` ou `people_manage`
 - pre_requisitos: agente existente; papel customizado criado quando for usar custom role
 - passos: 1. Abra Configuracoes > Agentes; 2. Edite o agente; 3. Escolha `administrator`, `agent` ou papel customizado; 4. Salve; 5. Revise acesso a caixas/times se necessario.
-- gotchas: papel da conta nao substitui associacao a caixa de entrada; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`; so um administrador torna alguem administrador; quem tem Pessoas (people_manage) troca a funcao de agentes, menos a propria, e so entrega funcao cujas chaves ele mesmo tem e sem Pessoas, Montar funcoes ou Pode entregar acesso acima do proprio, a nao ser que tenha Pode entregar acesso acima do proprio (grant_above_own), que entrega qualquer funcao menos administrador; quem esta numa funcao acima do alcance aparece com cadeado.
+- gotchas: papel da conta nao substitui associacao a caixa de entrada; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`; so um administrador torna alguem administrador; quem tem Pessoas (people_manage) troca a funcao de agentes, menos a propria, e so entrega funcao cujas chaves ele mesmo tem e sem Pessoas, Montar funcoes, Financeiro ou Pode entregar acesso acima do proprio, a nao ser que tenha Pode entregar acesso acima do proprio (grant_above_own), que entrega qualquer funcao menos administrador; quem esta numa funcao acima do alcance aparece com cadeado.
 - nav_target: `agent_list`
 
 ### Criar funcoes personalizadas
@@ -265,7 +265,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - cobre: custom_roles_new, custom_roles_edit
 - pre_requisitos: Enterprise/Cloud habilitado; saber o que o grupo deve ver e fazer
 - passos: 1. Abra Configuracoes > Funcoes Personalizadas; 2. Clique em Nova funcao; 3. Escolha o perfil mais parecido (ou Comecar do zero) e clique em Continuar; 4. De um nome e abra so os grupos que quer mudar, escolhendo Sem acesso, Ver ou Editar em cada area; 5. Confira o painel Esta pessoa podera e clique em Criar funcao; 6. Atribua aos agentes na janela seguinte ou depois em Configuracoes > Agentes.
-- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; alem do administrador, quem tem Montar funcoes (custom_role_manage) cria e edita funcoes, so com as chaves que ele mesmo tem (Pessoas, Montar funcoes e Pode entregar acesso acima do proprio so para quem ja tem esse ultimo), e nao edita a propria funcao nem uma acima do proprio acesso, que aparecem com cadeado; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
+- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; alem do administrador, quem tem Montar funcoes (custom_role_manage) cria e edita funcoes, so com as chaves que ele mesmo tem (Pessoas, Montar funcoes, Financeiro e Pode entregar acesso acima do proprio so para quem ja tem esse ultimo), e nao edita a propria funcao nem uma acima do proprio acesso, que aparecem com cadeado; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; em Campanhas, Editar monta e o ajuste Disparar campanhas envia, agenda e retoma (cargos que ja editavam ganharam o ajuste; cargo novo nasce sem ele); administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
 - nav_target: `custom_roles_list`
 - highlight: `settings-add-role`
 
@@ -276,7 +276,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `custom_roles`; papel `administrator` ou `custom_role_manage`
 - pre_requisitos: administrador ou funcao com Montar funcoes (custom_role_manage), que so monta com as proprias chaves; saber o que o grupo deve ver e fazer; as pessoas ja cadastradas como agentes
 - passos: 0. Antes de perguntar qualquer coisa, leia o time e as pessoas citadas e a caixa do pedido, e proponha com nomes reais o que vai fazer, por exemplo "crio a funcao Marketing com conversas, contatos e relatorios e deixo a Carla so na caixa Marketing; ela vai poder responder. Sigo?" — diga o que fica diferente do pedido (ela vai poder responder; a caixa sai da participacao, nao da funcao) e espere o sim antes de fazer; 1. Consulte formato_da_acao da criacao de funcao e traduza o pedido em areas e niveis usando so os valores de `permissions` que ele trouxer; 2. Mande nome, descricao e a lista `permissions` ja no POST, num passo so (nao crie a funcao vazia para preencher depois); 3. Mande so a chave mais alta de cada area (_manage ja inclui _view); 4. Se o pedido cita uma caixa, a funcao nao resolve isso: inclua a pessoa como agente daquela caixa em Configuracoes > Caixas de entrada > (caixa) > Agentes, e tire das caixas que ela nao deve ver; 5. Atribua a funcao a pessoa em Configuracoes > Agentes; 6. Diga ao usuario, em uma frase, o que ficou diferente do pedido e por que.
-- gotchas: PRIMEIRO, o que mais confunde: Nenhuma chave escolhe caixa: a pessoa so ve conversas das caixas em que e agente, e conversation_manage quer dizer todas as conversas dessas caixas. Nao existe conversa so leitura: quem ve as conversas de uma caixa tambem responde nelas. Para "so leitura" de uma caixa, o mais proximo e conversation_manage com a pessoa agente so daquela caixa, mais contact_view, report_manage e o que mais for de leitura; avise que ela ainda consegue responder. Inbox_view NAO e o mais proximo de "ver tudo da caixa": ela so mostra a tela de configuracao, nenhuma conversa. Se a pessoa proibiu mexer nos membros, diga que sem isso a funcao nao restringe a caixa nem mostra as conversas dela, e mesmo assim proponha o mais proximo com os nomes reais (por a pessoa so na caixa pedida) perguntando se ela abre essa excecao — so dizer que nao da deixa a pessoa sem caminho. A lista de chaves validas vem de formato_da_acao, que le o codigo; nao use lista de memoria. O que o nome da chave nao diz: _view e ver e _manage e editar (ja inclui ver); conversas tem tres niveis: nenhuma chave, so as proprias (conversation_participating_manage e/ou conversation_unassigned_manage, a fila de nao atribuidas) ou todas (conversation_manage); report_manage e so leitura de relatorios; sem canned_response_manage a pessoa so usa respostas prontas; crm_admin liga todas as de CRM; prospecting_view_all_searches mostra as buscas de todos; inbox_view e inbox_manage sao so a tela de configuracao das caixas. Time (Configuracoes > Times) agrupa pessoas para atribuicao e filtro; nao e funcao e nao da permissao. Administrador ignora funcao personalizada.
+- gotchas: PRIMEIRO, o que mais confunde: Nenhuma chave escolhe caixa: a pessoa so ve conversas das caixas em que e agente, e conversation_manage quer dizer todas as conversas dessas caixas. Nao existe conversa so leitura: quem ve as conversas de uma caixa tambem responde nelas. Para "so leitura" de uma caixa, o mais proximo e conversation_manage com a pessoa agente so daquela caixa, mais contact_view, report_manage e o que mais for de leitura; avise que ela ainda consegue responder. Inbox_view NAO e o mais proximo de "ver tudo da caixa": ela so mostra a tela de configuracao, nenhuma conversa. Se a pessoa proibiu mexer nos membros, diga que sem isso a funcao nao restringe a caixa nem mostra as conversas dela, e mesmo assim proponha o mais proximo com os nomes reais (por a pessoa so na caixa pedida) perguntando se ela abre essa excecao — so dizer que nao da deixa a pessoa sem caminho. A lista de chaves validas vem de formato_da_acao, que le o codigo; nao use lista de memoria. O que o nome da chave nao diz: _view e ver e _manage e editar (ja inclui ver); conversas tem tres niveis: nenhuma chave, so as proprias (conversation_participating_manage e/ou conversation_unassigned_manage, a fila de nao atribuidas) ou todas (conversation_manage); apagar uma mensagem dentro da conversa (inclusive o e-mail) e a chave conversation_message_delete, que so vale junto com um desses niveis: sem ela, quem tem funcao responde mas nao apaga a mensagem, diferente do agente comum, que apaga; excluir o contato inteiro, que leva as conversas dele, segue contact_delete; report_manage e so leitura de relatorios; sem canned_response_manage a pessoa so usa respostas prontas; crm_admin liga todas as de CRM; prospecting_view_all_searches mostra as buscas de todos; inbox_view e inbox_manage sao so a tela de configuracao das caixas. Time (Configuracoes > Times) agrupa pessoas para atribuicao e filtro; nao e funcao e nao da permissao. Administrador ignora funcao personalizada.
 - diagnostic: se a plataforma recusar com "chaves desconhecidas" (em ingles, "unknown keys"), a mensagem lista as chaves invalidas e as validas; troque pela chave valida mais proxima e mande de novo, sem oferecer suporte. Uma funcao que ficou com permissions vazio deixa a pessoa sem menu; corrija com PATCH na mesma funcao em vez de criar outra.
 - nav_target: `custom_roles_new`
 
@@ -407,10 +407,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como crio um webhook?; Onde configuro callback HTTP?; Como assino eventos da conta?
 - onde_fica: Configuracoes > Integracoes > Webhook
 - rota: `settings_integrations_webhook` - `/app/accounts/:accountId/settings/integrations/webhook`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: endpoint publico HTTPS; saber quais eventos assinar
-- passos: 1. Abra Configuracoes > Integracoes; 2. Entre em Webhook; 3. Clique em adicionar novo webhook; 4. Informe nome, endpoint e eventos; 5. Crie e copie o segredo quando exibido.
-- gotchas: endpoints privados, locais ou sem HTTPS podem falhar; copie/guarde o segredo para validar assinaturas.
+- passos: 1. Abra Configuracoes > Integracoes; 2. Entre em Webhook; 3. Clique em adicionar novo webhook; 4. Informe nome, endpoint e eventos; 5. Crie e copie o segredo quando exibido (ele so aparece para administrator ou quem tem `token_manage`; sem ela, peca o segredo a quem cuida dos tokens).
+- gotchas: endpoints privados, locais ou sem HTTPS podem falhar; copie/guarde o segredo para validar assinaturas; a chave de assinatura so aparece para administrator ou quem tem `token_manage`.
 - nav_target: `settings_integrations_webhook`
 - highlight: `settings-add-webhook`
 
@@ -418,7 +418,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde conecto Slack, Linear, Notion ou Shopify?; Como vejo integracoes disponiveis?; Onde configuro aplicativos do dashboard?
 - onde_fica: Configuracoes > Integracoes
 - rota: `settings_applications` - `/app/accounts/:accountId/settings/integrations`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: credenciais/conta externa quando a integracao exigir OAuth ou token
 - passos: 1. Abra Configuracoes > Integracoes; 2. Escolha a integracao; 3. Conecte ou configure hooks; 4. Autorize no provedor externo quando solicitado; 5. Salve e teste.
 - gotchas: `linear_integration`, `notion_integration`, `shopify_integration` e apps custom podem ter disponibilidade separada; webhook e dashboard apps ficam dentro da mesma area.
@@ -536,7 +536,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: permissão de gerenciar funis.
 - passos: Ao criar o funil, responda **Para que serve este funil?**. **Vender** é para conquistar um cliente novo: o card termina em Ganhou ou Perdeu, tem valor, entra na meta do mês e pode avisar os Anúncios. **Atender** é para resolver algo para quem já é cliente: o card termina em Resolvido ou Cancelado, sem valor, sem meta e sem Anúncios. Em Atender, escolha um modelo pronto: **Suporte**, **Pós-venda**, **Cobrança** ou **Agendamento**. Num funil que já existe, abra **Editar funil**; o primeiro cartão do resumo é **Para que serve**; clique em **Alterar**, escolha Vender ou Atender e salve.
-- gotchas: no modelo Cobrança o card termina em Pago ou Cancelado e mostra o valor a receber, o vencimento e "Prometeu pagar em"; num funil de Atender o Kanban mostra **Novo atendimento** em vez de Novo card e não mostra valor (só a Cobrança mostra o valor a receber); card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Ganho e não faz o contato virar cliente); funis que já existiam: os que contavam como venda viraram Vender e os outros, Atender; nada muda sozinho.
+- gotchas: no modelo Cobrança o card termina em Pago ou Cancelado e mostra o valor a receber, o vencimento e "Prometeu pagar em"; num funil de Atender o Kanban mostra **Novo atendimento** em vez de Novo card e não mostra valor (só a Cobrança mostra o valor a receber); card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Ganho e não faz o contato virar cliente); funis que já existiam: os que contavam como venda viraram Vender e os outros, Atender; nada muda sozinho; a IA de assunto usa o tipo para separar a venda do pedido de quem já é cliente (cancelamento, problema, troca), mas o nome e o **Quando usar** do funil valem mais que o tipo: um funil de suporte marcado como Vender recebe pós-venda se o nome ou o Quando usar disserem isso; sem funil de Atender que sirva, o pedido de pós-venda fica no card que a conversa já tem e, sem card aberto, abre no funil de Vender mais próximo.
 - nav_target: `crm_kanban_index`
 
 ### Criar follow-ups e lembretes no CRM
@@ -545,8 +545,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente; para retorno com mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
-- passos: Abra o card; no cartão **Agenda**, clique em **Alterar** (ou **Marcar**, quando não há nada marcado); em **Marcar algo novo**, escolha **Lembrete** ou **Mensagem no dia** (o azul **Novo lembrete** do rodapé também abre um lembrete); escreva **O que é**, confira **O que fazer?** (**Me lembrar**, **Esconder a conversa até lá** ou **Mandar uma mensagem**), escolha **Quando?** e, se for mensagem, **Sua mensagem** ou a mensagem pronta; clique em **Salvar**. Em **Já marcado**, use **Feito**, **Adiar** ou **Cancelar**; o retorno atrasado também aparece em **Próximo passo** com **Marcar como feito**. Para ver o que aconteceu, **Mais detalhes > O que já aconteceu**, filtro **Retornos**.
-- gotchas: o card não tem mais abas: tudo de retorno fica no cartão Agenda; sem conversa ligada, **Mensagem no dia** e **Esconder a conversa até lá** ficam travados (aparece "Precisa de uma conversa ligada a este cliente."); WhatsApp fora da janela de 24 horas exige mensagem pronta, e o rodapé diz o que falta; lembretes vencidos aparecem por popup e no filtro de retorno; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e o Histórico mostra Retorno cancelado com o motivo.
+- passos: Abra o card; no cartão **Agenda**, clique em **Alterar** (ou **Marcar**, quando não há nada marcado); em **Marcar algo novo**, escolha **Lembrete** ou **Mensagem no dia** (o azul **Novo lembrete** do rodapé também abre um lembrete); escreva **O que é**, confira **O que fazer?** (**Me lembrar**, **Esconder a conversa até lá** ou **Mandar uma mensagem**), escolha **Quando?** e, se for mensagem, **Sua mensagem** ou a mensagem aprovada; clique em **Salvar**. Em **Já marcado**, use **Feito**, **Adiar** ou **Cancelar**; o retorno atrasado também aparece em **Próximo passo** com **Marcar como feito**. Para ver o que aconteceu, **Mais detalhes > O que já aconteceu**, filtro **Retornos**.
+- gotchas: o card não tem mais abas: tudo de retorno fica no cartão Agenda; sem conversa ligada, **Mensagem no dia** e **Esconder a conversa até lá** ficam travados (aparece "Precisa de uma conversa ligada a este cliente."); WhatsApp fora da janela de 24 horas exige mensagem aprovada, e o rodapé diz o que falta; lembretes vencidos aparecem por popup e no filtro de retorno; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e o Histórico mostra Retorno cancelado com o motivo.
 - nav_target: `crm_kanban_index`
 
 ### Lembrete que repete, lembrete sem card e quem recebe o aviso
@@ -597,7 +597,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
 - pre_requisitos: Números por papel ligado na conta (flag crm_numeros_lentes); ao menos um funil.
 - passos: Abra Números; leia o topo (o seu mês até agora: vendas e valor, ou casos resolvidos); use o botão do topo para abrir a sua lista (retornos atrasados, senão negociações paradas, senão os seus cards); veja o próximo passo, os blocos Vendendo e Atendendo, **A IA te ajudou** e a barra da equipe; troque de mês pelas setas; **Como contamos** explica as regras.
-- gotchas: o papel vem do tipo do funil (Vender ou Atender) dos seus cards; a venda conta para quem era o Responsável quando ela foi fechada, não para quem marcou o fechamento; vendas antigas, de antes desse registro, contam pelo Responsável atual e a tela avisa; a barra da equipe mostra só a porcentagem da meta, sem nomes nem valores; a meta por pessoa ainda não existe, por isso o topo mostra só o mês até agora; em Números, o atendente sem função não vê mais o painel da equipe (valor e carga dos colegas) nem o gasto da IA; no Kanban e na Lista ele ainda vê os cards dos colegas com o valor, o que será resolvido no #1939; o mês é o do fuso da conta.
+- gotchas: o papel vem do tipo do funil (Vender ou Atender) dos seus cards; a venda conta para quem era o Responsável quando ela foi fechada, não para quem marcou o fechamento; vendas antigas, de antes desse registro, contam pelo Responsável atual e a tela avisa; a barra da equipe mostra só a porcentagem da meta, sem nomes nem valores; com as metas por pessoa ligadas na conta (flag crm_metas), o topo mostra quanto falta para a **sua** meta (nunca a dos colegas); sem meta definida, mostra só o mês até agora; em Números, o atendente sem função não vê mais o painel da equipe (valor e carga dos colegas) nem o gasto da IA; no Kanban e na Lista ele ainda vê os cards dos colegas com o valor, o que será resolvido no #1939; o mês é o do fuso da conta.
+- nav_target: `crm_dashboard_index`
+
+### Definir as metas do mês de cada pessoa
+- intent: "Como defino a meta de cada vendedor?"; "Onde coloco a meta do mês?"; "Como repito as metas do mês passado?"; "Por que o vendedor não vê a meta dos colegas?"; "Quem pode mudar as metas?"
+- onde_fica: Acompanhar > CRM > aba Números. Em **Só eu**, no topo, **Metas de <mês>**; em **Equipe**, o botão **Metas de <mês>** ao lado do seletor. Abre a gaveta **Metas do mês**.
+- rota: `crm_dashboard_index` - `/app/accounts/:accountId/crm/dashboard`
+- gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
+- pre_requisitos: Números por papel (flag crm_numeros_lentes) e Metas do mês por pessoa (flag crm_metas) ligados na conta; ao menos um funil de Vender; ser administrador ou ter uma função com **Ver e definir as metas do mês** (ou Administrador do CRM).
+- passos: Abra Números; clique em **Metas de <mês>**; com mais de um funil de Vender, escolha o funil no alto; ajuste a meta do funil, se quiser; em cada pessoa, digite a meta em dinheiro ou clique em **Usar a sugestão** (a média do que ela fechou nos 3 meses anteriores); ou use **Repetir <mês anterior>** ou **Dividir igualmente**, que só preenchem os campos; clique em **Salvar as metas**.
+- gotchas: a lista de cada funil mostra quem vende (a mesma régua do Só eu: vendeu no mês, tem card aberto em funil de Vender ou, sem card, enxerga funil de Vender) e quem já tem meta nele; quem só atende não aparece; as metas valem para o mês de hoje, no fuso da conta; meses fechados não mudam; campo vazio (ou zero) é sem meta; use só números, sem pontos; a meta fica na moeda do funil; a meta do funil não precisa ser a soma das pessoas, e a gaveta avisa quando é diferente; a venda conta 100% para quem era o Responsável no fechamento; quem vende vê só a própria meta e a barra da equipe em porcentagem, sem nomes; o atendente sem função nunca define metas; funis de Atender não têm meta.
 - nav_target: `crm_dashboard_index`
 
 ### Ver os números da equipe e a IA no time (Equipe)
@@ -752,9 +762,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Menu lateral > Campanhas > Campanha > Nova campanha
 - rota: `campaigns_journey_index` - `/app/accounts/:accountId/campaigns/all`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
-- pre_requisitos: permissão para gerenciar campanhas (administrador ou função com campaign_manage); canal conectado.
+- pre_requisitos: permissão para gerenciar campanhas (administrador ou função com campaign_manage); para enviar ou agendar, também campaign_send (ajuste Disparar campanhas); canal conectado.
 - passos: 1. Abra Campanhas > Campanha; 2. Clique em Nova campanha; 3. Escolha o canal na lista (só aparecem os conectados); 4. Preencha o formulário do canal, o mesmo de antes; 5. Salve; a campanha entra na lista.
-- gotchas: canal que não aparece não está conectado: conecte a caixa em Configurações > Caixas de entrada (para WhatsApp API, marque a caixa para campanhas; para WhatsApp Oficial, a conta precisa do recurso de campanhas de WhatsApp e da caixa pela Cloud API; para e-mail, é preciso domínio de envio verificado ou caixa de webmail como Gmail ou Outlook, uma caixa de domínio próprio sem domínio verificado não basta); sem nenhum canal conectado, o botão mostra o atalho Conectar um canal; quem só tem campaign_view vê a lista mas não o botão; com a importação de base ligada, Nova campanha abre os três passos (Público, Mensagem, Revisar); sem ela, cada canal abre o formulário que já existia.
+- gotchas: canal que não aparece não está conectado: conecte a caixa em Configurações > Caixas de entrada (para WhatsApp API, marque a caixa para campanhas; para WhatsApp Oficial, a conta precisa do recurso de campanhas de WhatsApp e da caixa pela Cloud API; para e-mail, é preciso domínio de envio verificado ou caixa de webmail como Gmail ou Outlook, uma caixa de domínio próprio sem domínio verificado não basta); sem nenhum canal conectado, o botão mostra o atalho Conectar um canal; quem só tem campaign_view vê a lista mas não o botão; com a importação de base ligada, Nova campanha abre os três passos (Público, Mensagem, Revisar); sem ela, cada canal abre o formulário que já existia; quem monta sem Disparar campanhas (campaign_send) termina a revisão em Deixar pronta para disparar: nada sai, a campanha aparece na lista como Pronta para disparar, montada por quem montou, e quem pode disparar abre, confere e envia — enviar apaga o pronto; o anexo do WhatsApp API não fica guardado na pronta, e quem dispara escolhe o arquivo de novo antes de enviar; retomar campanha pausada também pede Disparar campanhas.
 - nav_target: `campaigns_journey_index`
 
 ### Ver os públicos de campanha
@@ -933,7 +943,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar os anúncios da Meta em Anúncios da Meta
 - intent: Como conecto meus anúncios da Meta ao Chat2You?; Como entro com o Facebook para conectar os anúncios?; Como compartilho a conta de anúncios com a Hub2You?; Qual conta de anúncios e qual Pixel escolher?; Como faço a Meta receber as minhas vendas?; Como a Meta entende as etapas do meu funil?; Meus anúncios levam para o WhatsApp e para o site, o que marco?; O que quer dizer A Meta ainda está liberando?
-- onde_fica: Menu lateral > Campanhas > Anúncios da Meta
+- onde_fica: Menu lateral > Campanhas > Anúncios
 - rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
 - gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
 - pre_requisitos: ser administrador da conta; a página aparece quando Anúncios da Meta está ligado para a conta; para compartilhar sem token, a conta precisa de um WhatsApp oficial conectado à Meta.
@@ -942,9 +952,20 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - leitura: campanhas
 - nav_target: `campaigns_meta_ads_index`
 
+### Ver de qual anúncio veio cada cliente, sem entrar no Facebook
+- intent: De qual anúncio veio cada cliente?; Quantas pessoas chamaram no WhatsApp vindo de anúncio?; Quem veio deste anúncio?; Quantos clientes de anúncio compraram?; Por que a página de anúncios não pede para conectar o Facebook?; Por que a página de anúncios não mostra quanto eu gastei?
+- onde_fica: Menu lateral > Campanhas > Anúncios
+- rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
+- gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
+- pre_requisitos: a conta com Anúncios sem login ligado, um WhatsApp oficial conectado e nenhuma conta de anúncios conectada; ser administrador, ou ter um cargo com Anúncios da Meta em Só olha.
+- passos: 1. Abra Anúncios: a página já mostra quantas conversas vieram de anúncio no período, quantas viraram proposta e quantas viraram venda, com o valor e o tempo de resposta; 2. Escolha 7 ou 30 dias; 3. Clique em Conversas, Propostas ou Vendas para abrir a lista daquela etapa, com Abrir conversa em cada linha; 4. Em Anúncios, clique num anúncio para ver a foto, as conversas por dia e quem veio dele, com a situação de cada pessoa e Abrir conversa.
+- gotchas: é o mesmo painel de quem conectou a conta de anúncios, sem o gasto, o custo por venda, o veredito de cada anúncio e O que fazer hoje, que dependem da conexão com o Facebook; não precisa entrar no Facebook nem configurar nada: a informação vem do próprio WhatsApp oficial quando a pessoa clica no anúncio; conta sem WhatsApp oficial (só QR Code) continua com a página de conectar a conta de anúncios; com WhatsApp oficial e nenhum anúncio nos últimos 90 dias, a página diz que está pronta e oferece Ver um exemplo, com números de exemplo marcados; o nome do anúncio é o título que aparece no clique; a foto do anúncio fica guardada a partir do primeiro clique novo (o link da Meta vence em poucos dias), e anúncio sem foto mostra um quadro colorido; venda é o card marcado como ganho no CRM, então só aparece quando alguém marca o card como ganho; quem só olha vê nas listas e no anúncio só as conversas que já vê na caixa de conversas, enquanto os números do painel são da conta toda.
+- leitura: campanhas
+- nav_target: `campaigns_meta_ads_index`
+
 ### Usar o painel de Anúncios da Meta e o que fazer hoje
 - intent: Quanto custou cada venda dos meus anúncios?; O que eu faço hoje com os meus anúncios?; Onde vejo as propostas que vieram de anúncio?; Qual anúncio está vendendo e qual não está?; Quanto tempo minha equipe demora para responder quem veio do anúncio?; Por que o número de conversas da Meta é diferente do da plataforma?; Como marco que já fiz a ação do dia?
-- onde_fica: Menu lateral > Campanhas > Anúncios da Meta > aba Resultado
+- onde_fica: Menu lateral > Campanhas > Anúncios > aba Resultado
 - rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
 - gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
 - pre_requisitos: ser administrador da conta, ou ter um cargo com Anúncios da Meta em Só olha; a conta de anúncios conectada em Anúncios da Meta (quem só olha pede ao administrador para conectar).
@@ -1109,9 +1130,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde coloco a chave da OpenAI?; Como habilito a IA do CRM Kanban?; Por que a IA nao funciona nesta conta?; Onde configuro a IA da plataforma?
 - onde_fica: Configuracoes > Integracoes > CRM Kanban AI; depois CRM > CRM Kanban > editar funil > IA
 - rota: `settings_applications_integration` - `/app/accounts/:accountId/settings/integrations/:integration_id`
-- gate: feature flag `integrations`; papel `administrator`
-- perfil: `administrator` cadastra ou troca a chave da conta. `agent` nao cadastra chave; diga para pedir a um administrator. Custom role `crm_manage_ai` ou `crm_admin` pode ajustar a IA do funil no CRM quando a rota do CRM estiver liberada, mas nao acessa a tela de Integracoes; se nao puder, diga que a credencial precisa ser configurada por um administrator.
-- pre_requisitos: chave OpenAI valida; acesso de administrator; opcionalmente API Base URL quando nao usar `https://api.openai.com`.
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
+- perfil: `administrator` ou custom role com `integration_manage` cadastra ou troca a chave da conta. `agent` nao cadastra chave; diga para pedir a um administrator ou a quem cuida das integracoes. Custom role `crm_manage_ai` ou `crm_admin` pode ajustar a IA do funil no CRM quando a rota do CRM estiver liberada, mas nao acessa a tela de Integracoes; se nao puder, diga que a credencial precisa ser configurada por um administrator.
+- pre_requisitos: chave OpenAI valida; acesso de administrator ou `integration_manage`; opcionalmente API Base URL quando nao usar `https://api.openai.com`.
 - passos: 1. Abra Configuracoes > Integracoes; 2. Entre em CRM Kanban AI; 3. Clique para configurar ou adicionar a integracao; 4. Preencha API Key e, se precisar, API Base URL: conectar ja liga a IA, nao existe mais caixa Enable CRM Kanban AI no formulario; 5. Salve e depois abra CRM Kanban para configurar a IA por funil.
 - gotchas: depois de conectar, a tela da integracao mostra "Conectado e funcionando"; se mostrar "Conectado, mas desligado", a conta ficou com a IA desligada e e preciso desconectar e conectar de novo; chave recusada costuma ser chave errada, revogada ou conta OpenAI sem credito; a integracao generica `openai` nao e a mesma coisa que `crm_kanban_ai`; se ja existir um hook `crm_kanban_ai` vazio ou desativado, ele impede o fallback para a chave global de sistema; a chave global de fallback e configuracao de super-admin, nao da conta; a tela de IA do funil ajusta criterios/auto-move/follow-up, mas nao cria a credencial.
 - nav_target: `settings_applications_integration` com `integration_id=crm_kanban_ai`
@@ -1217,10 +1238,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde crio um bot nativo?; Como conecto um bot webhook/API?; Como ligo um bot a uma caixa?; Onde configuro Dialogflow?; Como conecto um agente montado em outro sistema?
 - onde_fica: com a nova jornada de Agentes e a aba Agente de IA por caixa ligada na conta (piloto): Agentes > Conectar agente de outro sistema (e a pagina do agente pela lista de Agentes); sem ela: Sidebar > Configuracoes > Robos. Para escolher quem atende primeiro na caixa: Configuracoes > Caixas de entrada > selecionar caixa > aba Agente de IA (no piloto) ou aba Robo (nas outras contas)
 - rota: `agent_bots` - `/app/accounts/:accountId/settings/agent-bots`
-- gate: feature flag `agent_bots`; papel `administrator`
-- perfil: somente `administrator`. Se o perfil nao puder, diga que bots e conexao de bots por caixa sao configuracoes administrativas.
+- gate: feature flag `agent_bots`; papel `administrator` ou `integration_manage`
+- perfil: `administrator` ou custom role com `integration_manage` cria, edita e apaga robos; trocar o token e o segredo do robo pede `token_manage` (sem ela, o token nem aparece). Se o perfil nao puder, diga para pedir a um administrator ou a quem cuida das integracoes.
 - pre_requisitos: endpoint HTTPS do bot webhook/API; caixa criada para conectar o bot; credenciais JSON e Project ID se for Dialogflow
-- passos: 1. Com a nova jornada, abra Agentes e clique em Conectar agente de outro sistema (sem ela, Configuracoes > Robos); 2. Preencha nome, foto e o que o agente faz, depois o endereco do webhook, e clique em Conectar; 3. Copie a chave de acesso e cole no outro sistema; 4. Abra a caixa desejada, entre na aba Agente de IA e escolha o agente em Quem atende primeiro; 5. Confira o aviso de troca e clique em Trocar (ou Confirmar); 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
+- passos: 1. Com a nova jornada, abra Agentes e clique em Conectar agente de outro sistema (sem ela, Configuracoes > Robos); 2. Preencha nome, foto e o que o agente faz, depois o endereco do webhook, e clique em Conectar; 3. Copie a chave de acesso (ela so aparece para administrator ou quem tem `token_manage`; sem ela, peca a chave a quem cuida dos tokens) e cole no outro sistema; 4. Abra a caixa desejada, entre na aba Agente de IA e escolha o agente em Quem atende primeiro; 5. Confira o aviso de troca e clique em Trocar (ou Confirmar); 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
 - gotchas: para quem usa, agente da plataforma e agente de outro sistema sao todos agentes de IA, na mesma lista e na mesma escolha da caixa; nesta fork, `agent_bots` cria bot do tipo webhook; Dialogflow nao e criado nessa tela, e sim em Integracoes; bots `system_bot` nao aparecem na lista de Agentes; tirar o agente da caixa nao apaga o agente; os espelhos dos agentes da plataforma nao aparecem na lista de Robos nem se editam por ela; a troca pela aba Agente de IA e completa: quem atendia primeiro sai pelo caminho certo e as conversas dele vao para as pessoas; no canal em que um agente da plataforma atende primeiro, por o agente de outro sistema e pela aba Agente de IA do canal, que tira o agente da plataforma e poe o outro de uma vez; no canal so com agentes da equipe, o agente de outro sistema entra e os agentes da equipe continuam recebendo quando alguem passa.
 - nav_target: `agent_bots`
 - highlight: `settings-add-bot`
@@ -1296,8 +1317,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde configuro integracoes?; Como crio app no painel da conversa?; Como conecto Dialogflow, Slack ou webhook?; O que sao dashboard apps?
 - onde_fica: Sidebar > Configuracoes > Integracoes; para apps embutidos: Integracoes > Dashboard Apps
 - rota: `settings_applications` - `/app/accounts/:accountId/settings/integrations`
-- gate: feature flag `integrations`; papel `administrator`
-- perfil: somente `administrator`. Se o perfil nao puder, diga que integrar aplicativos, webhooks e dashboard apps exige administrador.
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
+- perfil: `administrator` ou custom role com `integration_manage`. Se o perfil nao puder, diga que integrar aplicativos, webhooks e dashboard apps e de quem cuida das integracoes ou do administrador.
 - pre_requisitos: credenciais da integracao ou URL do app; para dashboard app, titulo e URL valida; para Dialogflow, Project ID, JSON de credenciais e caixa de entrada
 - passos: 1. Abra Configuracoes > Integracoes; 2. Pesquise a aplicacao desejada; 3. Clique em configurar; 4. Para hooks, preencha credenciais e selecione a caixa de entrada quando a integracao for por caixa de entrada; 5. Para Dashboard Apps, abra a area propria e cadastre titulo e URL; 6. Salve e teste no contexto da conversa/caixa.
 - gotchas: Dashboard App usa conteudo do tipo `frame` com URL valida; Dialogflow e uma integracao por caixa de entrada, nao um `agent_bot`; algumas integracoes so aparecem como ativas se houver credencial global ou feature habilitada; remover hook desconecta a integracao.
@@ -1361,10 +1382,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Gerenciar tokens de integracao do CRM
 - intent: "Onde crio token para integrar o CRM?"; "Como gero token para n8n?"; "Como revogo ou rotaciono um token do CRM?"
-- onde_fica: URL direta de CRM Settings > Integration tokens; tambem acessivel pelo guia de n8n em Configuracoes > Integracoes > n8n (Conexoes do CRM)
+- onde_fica: Configuracoes > Integracoes > n8n (Conexoes do CRM) > token de API; tambem pela URL direta de CRM Settings > Integration tokens
 - rota: `crm_integration_tokens_index` - `/app/accounts/:accountId/crm/settings/integration-tokens`
-- gate: papel `administrator` ou `crm_admin`
-- perfil: `administrator` ou custom role com `crm_admin`; agentes comuns, agentes sem custom role e custom roles sem `crm_admin` nao podem gerenciar tokens. Diga que tokens sao credenciais administrativas e devem ser criados por admin/CRM admin.
+- gate: papel `administrator` ou `token_manage`
+- perfil: `administrator` ou custom role com `token_manage` (desde #2027; `crm_admin` sozinho nao abre mais a tela). Quem tem `token_manage` so cria ou rotaciona token com escopos que a propria funcao tem. Agentes comuns nao gerenciam tokens: diga para pedir a um administrator ou a quem cuida dos tokens.
 - pre_requisitos: saber o nome da integracao e os escopos minimos necessarios (`crm_view`, `crm_manage_cards`, `crm_move_cards`, `crm_delete_cards`, `crm_manage_pipelines`, `crm_manage_ai`, `crm_view_reports`, `crm_admin`).
 - passos: 1. Abra a pagina de tokens; 2. Informe um nome identificavel; 3. Marque somente os escopos necessarios; 4. Crie o token; 5. Copie o segredo exibido uma unica vez; 6. Use Rotacionar ou Revogar quando precisar trocar ou encerrar o acesso.
 - gotchas: o segredo nao e mostrado de novo depois de dispensado; rotacionar revoga o token anterior imediatamente; revogar remove o acesso na hora; para n8n, a tela mostra o header `api_access_token`.
@@ -1375,8 +1396,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: "Como conecto o CRM ao n8n?"; "Quais eventos do CRM posso enviar por webhook?"; "Onde configuro automacao externa para cards?"
 - onde_fica: Configuracoes > Integracoes > n8n (Conexoes do CRM)
 - rota: `settings_integrations_crm_n8n` - `/app/accounts/:accountId/settings/integrations/crm_n8n`
-- gate: feature flag `integrations`; papel `administrator`
-- perfil: `administrator`; se o perfil nao puder, diga que a tela de integracoes e webhooks e administrativa. Custom role `crm_admin` pode acessar tokens pela rota do CRM, mas nao substitui o acesso administrativo a Configuracoes > Integracoes.
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
+- perfil: `administrator` ou custom role com `integration_manage` abre a tela e cria o webhook; o link do token aparece para quem tambem tem `token_manage`. Se o perfil nao puder, diga para pedir a um administrator ou a quem cuida das integracoes.
 - pre_requisitos: endpoint HTTPS publico do n8n; token de CRM com escopos adequados; decidir quais eventos assinar.
 - passos: 1. Abra n8n (Conexoes do CRM); 2. Clique para criar token de API do CRM; 3. Copie o token no n8n usando o header `api_access_token`; 4. Volte e crie um webhook; 5. Marque eventos como `crm.card.created`, `crm.card.moved`, `crm.card.won`, `crm.card.lost`, `crm.card.resolved`, `crm.card.cancelled`, `crm.card.reopened` ou `crm.card.archived`.
 - gotchas: n8n local ou URL privada pode ser bloqueado por protecao SSRF; eventos de CRM so aparecem no webhook quando `CRM_KANBAN_ENABLED=true`; token e webhook sao duas partes separadas da integracao.
@@ -1939,9 +1960,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Resultados > Relatórios > Gasto com IA. No menu antigo: CRM > Gestão de IA
 - rota: `crm_ai_usage_index` - `/app/accounts/:accountId/crm/ai-usage`
 - gate: papel `administrator` ou `agent` ou `crm_view_reports`
-- pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM
+- pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM; para ver os valores em dinheiro, ser administrador ou ter Financeiro na função
 - passos: 1. Abra CRM > Gestão de IA; 2. Escolha o período entre hoje, semana e mês; 3. Leia os indicadores de gasto, usos, economia e custo médio; 4. Confira o gasto por recurso e o histórico; 5. Use baixar relatório para exportar o período.
-- gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo.
+- gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo; quem vê relatórios do CRM mas não tem Financeiro (Ver ou Editar) na função vê só quantos usos houve, por recurso e no tempo, sem gasto, economia, custo médio nem as colunas de custo no relatório baixado, e a tela avisa isso.
 - nav_target: `crm_ai_usage_index`
 
 ### Ver o plano contratado e quanto está sendo cobrado
@@ -1951,7 +1972,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator`
 - pre_requisitos: ser administrador da conta e ter um checkout já concluído
 - passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira o plano, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
-- gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador; sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
+- gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador, e ter Financeiro na função personalizada não abre plano nem faturas (só os custos do uso de IA e a autorização de cobranças da Meta); sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
 - nav_target: `autonomia_financial_subscription`
 
 ### Conferir faturas emitidas e o que já foi pago
@@ -1959,7 +1980,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Faturas
 - rota: `autonomia_financial_invoices` - `/app/accounts/:accountId/financial/invoices`
 - gate: papel `administrator`
-- pre_requisitos: ser administrador da conta
+- pre_requisitos: ser administrador da conta (Financeiro na função personalizada não dá acesso às faturas)
 - passos: 1. Abra Financeiro > Faturas; 2. Veja no topo o total em aberto, quantas estão pagas e quantos pagamentos existem; 3. Na tabela, olhe valor, status, vencimento e data de pagamento; 4. Use abrir fatura para ver o documento da cobrança; 5. Desça até pagamentos para conferir origem e data de cada um.
 - gotchas: a tela não cobra, não paga e não emite fatura, só mostra o que o sistema de cobrança registrou; o link de abrir fatura só existe quando a cobrança tem documento; o total em aberto soma pendentes e vencidas juntas, sem separar; a origem mostra o meio de pagamento e cai para manual quando o pagamento foi lançado à mão.
 - nav_target: `autonomia_financial_invoices`
@@ -2233,7 +2254,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como coloco as conversas no Slack?; Dá para responder o cliente de dentro do Slack?; Por que não acho o Slack nas integrações?; Conectei o Slack e nada chega, o que falta?
 - onde_fica: Configurações > Integrações > Slack
 - rota: `settings_integrations_slack` - `/app/accounts/:accountId/settings/integrations/slack`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, e a credencial do Slack configurada pelo time da plataforma, senão o cartão nem aparece
 - passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Slack e conecte; 3. Autorize no seu espaço do Slack; 4. Escolha o canal; 5. Escolha entre sincronização nos dois sentidos e somente alertas.
 - gotchas: autorizar não basta, a integração fica inativa até você escolher um canal; para canal privado, adicione o aplicativo ao canal no Slack antes; na sincronização nos dois sentidos tudo que a equipe escrever na conversa do Slack vai para o cliente, e só vira nota interna com o prefixo note:; a resposta só sai com o nome do agente se o e-mail dele no Slack for o mesmo da plataforma; quando a conexão expira, a saída é excluir e conectar de novo.
@@ -2243,7 +2264,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde conecto o Linear?; Como abro uma tarefa a partir de uma conversa?; O Linear não aparece nas integrações, por quê?; Como desconecto o Linear?
 - onde_fica: Configurações > Integrações > Linear
 - rota: `settings_integrations_linear` - `/app/accounts/:accountId/settings/integrations/linear`
-- gate: papel `administrator`
+- gate: papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, recurso liberado na conta e credencial configurada pelo time da plataforma
 - passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Linear; 3. Conecte; 4. Autorize dentro do Linear; 5. Confirme que a tela mostra conectado.
 - gotchas: são duas condições somadas para o cartão existir, recurso na conta e credencial da plataforma, e faltando uma não há nada a fazer pelo painel; a conta aceita uma conexão só; depois de conectado, o uso acontece dentro da conversa, não nesta tela; desconectar derruba os vínculos existentes.
@@ -2253,7 +2274,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como conecto o Notion?; Onde autorizo meu espaço do Notion?; Não encontro o Notion nas integrações; Como removo o acesso?
 - onde_fica: Configurações > Integrações > Notion
 - rota: `settings_integrations_notion` - `/app/accounts/:accountId/settings/integrations/notion`
-- gate: papel `administrator`
+- gate: papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, recurso liberado na conta e credencial configurada pelo time da plataforma
 - passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Notion; 3. Conecte; 4. Escolha o espaço de trabalho e autorize; 5. Confirme que aparece conectado.
 - gotchas: mesmo padrão do Linear, e se faltar recurso ou credencial o cartão some da lista; a conexão é da conta inteira, não por caixa de entrada; excluir remove o acesso ao espaço e derruba o que dependia dele.
@@ -2263,7 +2284,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como conecto minha loja Shopify?; Qual endereço eu coloco para conectar a loja?; Deu erro ao voltar da Shopify, e agora?; Por que a Shopify não aparece nas integrações?
 - onde_fica: Configurações > Integrações > Shopify
 - rota: `settings_integrations_shopify` - `/app/accounts/:accountId/settings/integrations/shopify`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, a integração ligada na instalação e liberada na conta, e o endereço da loja no formato sualoja.myshopify.com
 - passos: 1. Abra Configurações > Integrações; 2. Clique no cartão da Shopify; 3. Conecte; 4. Digite o endereço da loja; 5. Conclua a autorização e volte.
 - gotchas: o campo só aceita endereço terminado em myshopify.com, e o domínio próprio da loja é recusado, mesmo sendo o que seus clientes usam; são três condições para o cartão aparecer, e sem elas o endereço direto dá página não encontrada; se a volta trouxer erro, a tela avisa e basta repetir.
@@ -2273,7 +2294,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como mostro os dados do meu sistema dentro da conversa?; Onde cadastro um aplicativo no painel?; Dá para ver a apólice do cliente sem sair do atendimento?; Cadastrei o aplicativo e ele abre em branco, por quê?
 - onde_fica: Configurações > Integrações > Painel de Aplicativos
 - rota: `settings_integrations_dashboard_apps` - `/app/accounts/:accountId/settings/integrations/dashboard_apps`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador e ter uma página publicada que possa ser aberta dentro de outra
 - passos: 1. Abra Configurações > Integrações; 2. Entre em Painel de Aplicativos; 3. Adicione um aplicativo; 4. Preencha o nome e o endereço da sua página; 5. Salve e confira numa conversa.
 - gotchas: nome e endereço válido são obrigatórios; a plataforma entrega o contexto da conversa à sua página por um aviso de janela, e se a sua página não escutar esse aviso ela abre em branco, parecendo quebrada, embora o cadastro esteja certo; excluir tira o aplicativo de todas as conversas na hora.
@@ -2345,17 +2366,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como deixo o sistema criar os modelos do WhatsApp sozinho?; Por que o lembrete de cobrança não saiu pelo WhatsApp?; Por que a equipe recebeu o aviso de que o dono não autorizou criar modelos?; Quanto custa cada mensagem que o sistema manda fora da conversa?; Como ligo ou desligo a Divulgação automática?; Quem ligou a autorização e quando?
 - onde_fica: No menu novo: Configurações > Custos do WhatsApp (ou Crescer > Campanhas > Modelos WhatsApp). No menu antigo: Campanhas > Modelos WhatsApp > cartão Autorização para o Chat2You criar modelos, no topo da lista
 - rota: `modelos_whatsapp_autorizacao` - `/app/accounts/:accountId/campaigns/modelos-whatsapp/autorizacao`
-- gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_manage`
-- pre_requisitos: nova tela de Modelos liberada na conta; ser administrador da conta para ligar ou desligar (quem tem a função com Modelos do WhatsApp em editar só vê)
+- gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_manage` ou `financial_view` ou `financial_manage`
+- pre_requisitos: nova tela de Modelos liberada na conta; ser administrador da conta, ou ter Financeiro em Editar na função, para ligar ou desligar (quem tem Modelos do WhatsApp em editar ou Financeiro em Ver só vê)
 - passos: 1. Abra Campanhas > Modelos WhatsApp e clique em Ver autorização; 2. Marque Aviso de serviço e, se quiser, Divulgação; 3. Clique em Ligar autorização; 4. Leia o custo na confirmação e clique em Sim, ligar; 5. Com a autorização ligada, use Ligar Divulgação ou Desligar Divulgação para mudar só a Divulgação, ou Desligar autorização para parar tudo.
-- gotchas: os modelos que a conta já tem continuam valendo, com ou sem a autorização; sem ela, o sistema não cria modelo novo e o lembrete que precisaria dele vira aviso para a equipe; a Meta cobra cada mensagem entregue, mesmo com a conversa aberta, e a Divulgação custa bem mais que o Aviso de serviço; a Divulgação só liga com o Aviso de serviço ligado, e desligar o Aviso de serviço desliga as duas; cada mudança fica guardada com quem fez, quando e o texto e os preços mostrados; se a Meta mudar o preço, quem já autorizou não precisa autorizar de novo, e a tela passa a mostrar o preço novo; só o administrador da conta liga ou desliga, e só pela tela, onde lê o aviso com o custo: o Guia não faz isso pela pessoa, só explica o caminho; quem tem a função com Modelos do WhatsApp em editar vê a autorização sem poder mudar; quem só vê os modelos não vê este cartão.
+- gotchas: os modelos que a conta já tem continuam valendo, com ou sem a autorização; sem ela, o sistema não cria modelo novo e o lembrete que precisaria dele vira aviso para a equipe; a Meta cobra cada mensagem entregue, mesmo com a conversa aberta, e a Divulgação custa bem mais que o Aviso de serviço; a Divulgação só liga com o Aviso de serviço ligado, e desligar o Aviso de serviço desliga as duas; cada mudança fica guardada com quem fez, quando e o texto e os preços mostrados; se a Meta mudar o preço, quem já autorizou não precisa autorizar de novo, e a tela passa a mostrar o preço novo; só o administrador da conta ou quem tem Financeiro em Editar liga ou desliga, e só pela tela, onde lê o aviso com o custo: o Guia não faz isso pela pessoa, só explica o caminho; quem tem a função com Modelos do WhatsApp em editar ou com Financeiro em Ver vê a autorização sem poder mudar; quem só vê os modelos não vê este cartão.
 - nav_target: `modelos_whatsapp_autorizacao`
 
 ### Trazer contatos e conversas de outra ferramenta
 - intent: Como trago meus contatos da ferramenta antiga?; Dá para importar o histórico de conversas?; De quais sistemas eu consigo importar?; Posso rodar duas importações ao mesmo tempo?
 - onde_fica: Configurações > Dados > Importar
 - rota: `settings_data_imports` - `/app/accounts/:accountId/settings/data`
-- gate: feature flag `data_import`; papel `administrator`
+- gate: feature flag `data_import`; papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, recurso liberado na conta, e a chave de acesso do sistema de origem
 - passos: 1. Abra Configurações > Dados; 2. Clique em importar; 3. Escolha a fonte; 4. Dê um nome que você reconheça depois; 5. Cole a chave e, quando for o caso, o domínio; 6. Marque contatos, conversas ou os dois e importe.
 - gotchas: as fontes são apenas as duas listadas, e não existe envio de planilha nesta tela, porque o CSV de contatos fica em Contatos; a chave é testada antes e o botão só libera quando ela é aceita, então chave errada trava aqui e não no meio da carga; só uma importação roda por vez; a aba de exportar existe mas ainda não está disponível.
@@ -2365,7 +2386,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como sei se a importação terminou?; Quantos contatos entraram de verdade?; O que deu erro na importação?; Por que alguns registros foram ignorados?
 - onde_fica: Configurações > Dados > clicar na importação
 - rota: `settings_data_import_show` - `/app/accounts/:accountId/settings/data/:dataImportId`
-- gate: feature flag `data_import`; papel `administrator`
+- gate: feature flag `data_import`; papel `administrator` ou `integration_manage`
 - pre_requisitos: uma importação já iniciada
 - passos: 1. Abra Configurações > Dados; 2. Clique na importação; 3. Leia os totais e o progresso; 4. Abra as seções de erros e de ignorados; 5. Baixe o arquivo de cada uma para conferir linha a linha; 6. Se precisar, tente novamente ou cancele.
 - gotchas: registro ignorado não é erro, é linha que a plataforma decidiu não trazer, e o motivo está no arquivo; as seções abrem sozinhas quando há algo dentro; a tela se atualiza enquanto a importação roda e para quando termina; cancelar encerra e não volta sozinha.
@@ -2430,6 +2451,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra a conversa de e-mail; 2. Toque em Lixeira no topo; 3. A conversa sai da Entrada e fica resolvida, sem apagar nada; 4. Para trazer de volta, abra a pasta Lixeira, abra a conversa e toque em Restaurar (ela volta aberta); 5. Para apagar de vez, dentro da Lixeira toque em Excluir para sempre e confirme.
 - gotchas: se o cliente responder no mesmo e-mail, a conversa sai sozinha da Lixeira e volta para a Entrada; Excluir para sempre só existe dentro da Lixeira, apaga os e-mails, as notas e os anexos para toda a equipe e não tem desfazer (o cliente continua com a cópia dele); pelo Guia, excluir para sempre sempre pede confirmação.
 - nav_target: `inbox_conversation`
+
+### Ver os e-mails enviados da caixa de e-mail
+- intent: Onde vejo os e-mails que eu mandei?; Onde fica a pasta Enviados?; O e-mail que eu respondi sumiu da Entrada?; Como acho uma conversa que eu já respondi?
+- onde_fica: Conversas > menu lateral > caixa de e-mail > Enviados (logo abaixo de Entrada)
+- rota: `inbox_dashboard` - `/app/accounts/:accountId/inbox/:inbox_id`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova (chave conversa_email_nova) e a pasta Enviados (chave email_enviados) ligadas na conta
+- passos: 1. No menu lateral, abra a caixa de e-mail; 2. Toque em Enviados; 3. A lista mostra as conversas em que alguém da equipe ou o robô mandou mensagem ao cliente, abertas ou resolvidas; 4. Toque numa conversa para abrir.
+- gotchas: Enviados é só uma forma de ver: a conversa continua na Entrada, como no Gmail, e nada se move para lá; nota interna não conta como enviado; conversa no Spam ou na Lixeira não aparece em Enviados; e-mail mandado por fora do painel (pelo Gmail ou Outlook da própria pessoa) não aparece aqui; o que sai pelo painel também aparece no Enviados da conta de e-mail (Gmail, Outlook ou o Webmail do provedor), alguns minutos depois, quando a caixa tem a leitura por IMAP ligada e o servidor marca a pasta de enviados.
+- nav_target: `inbox_dashboard`
 
 ### Escrever um e-mail novo pela caixa de e-mail
 - intent: Como escrevo um e-mail novo?; Onde fica o Escrever do e-mail?; Como mando um e-mail para um cliente que ainda não escreveu?; Como uso um modelo de e-mail das Campanhas num e-mail novo?

@@ -79,7 +79,8 @@
         "COPY_SUCCESS": "Secret copied to clipboard",
         "TOGGLE": "Toggle secret visibility",
         "CREATED_DESC": "Your webhook has been created. Use the secret below to verify webhook signatures. Please copy it now — you can also find it later in the webhook edit form.",
-        "DONE": "Done"
+        "DONE": "Done",
+        "HELD_BY_TOKENS": "The signing key stays with whoever looks after tokens."
       },
       "COUNT": "{n} webhook | {n} webhooks",
       "SEARCH_PLACEHOLDER": "Search webhooks...",

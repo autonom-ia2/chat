@@ -138,7 +138,18 @@
       "VAZIA": "In this period, the AI did not move anyone to another stage, nor suggest changes."
     },
     "LOADING": "Loading AI usage…",
-    "ERROR": "Could not load AI usage. Try again."
+    "ERROR": "Could not load AI usage. Try again.",
+    "SEM_VALORES": {
+      "DESCRICAO": "Follow how much AI is used by feature, period and recent uses.",
+      "AVISO": "You see how much AI was used. Money values show for roles with Finance.",
+      "POR_RECURSO": "Usage by feature",
+      "USOS": "{n} use | {n} uses",
+      "SERIE": {
+        "TODAY": "Uses per hour today",
+        "WEEK": "Uses per day this week",
+        "MONTH": "Uses per day this month"
+      }
+    }
   },
   "CRM_DASHBOARD": {
     "ORIGIN": {
@@ -1191,7 +1202,7 @@
       "FOLLOW_UP_CANCELED": "Follow-up canceled.",
       "FOLLOW_UP_SAVE_ERROR": "Could not save the follow-up.",
       "FOLLOW_UP_MESSAGE_BODY_REQUIRED": "Enter the free-form message for auto-send.",
-      "FOLLOW_UP_TEMPLATE_REQUIRED": "Outside the 24-hour window, select the official template.",
+      "FOLLOW_UP_TEMPLATE_REQUIRED": "Outside the 24-hour window, pick the approved message.",
       "FOLLOW_UP_DUE_AT_PAST": "This time has already passed. Pick a time from now on.",
       "CARD_REOPENED_ATENDER": "Request reopened.",
       "CARD_CLOSE_ERROR_ATENDER": "Could not update the request status."
@@ -1361,6 +1372,8 @@
       "ACTIVITY_GENERIC": "Activity recorded",
       "ACTIVITY_DETAIL_STAGE_CHANGE": "From {from} to {to}",
       "ACTIVITY_DETAIL_STAGE_TO": "To {to}",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Not a deal: nobody asked for what we sell. To undo, reopen the card.",
+      "ACTIVITY_DETAIL_DUPLICADO": "Repeated card: the same request already has an open card. To undo, reopen the card.",
       "ACTIVITY_DETAIL_OWNER": "Assigned to {owner}",
       "ACTIVITY_DETAIL_HANDOFF": "Assigned to {agent}",
       "ACTIVITY_DETAIL_HANDOFF_REASON": "Assigned to {agent}: {reason}",
@@ -1455,11 +1468,11 @@
         "STATUS_REPLIED": "Stopped: the customer replied",
         "STATUS_CLOSED": "Not sent: conversation closed",
         "STATUS_NO_LOOP": "Nothing to send",
-        "STATUS_NO_TEMPLATE": "No suitable template",
+        "STATUS_NO_TEMPLATE": "No approved message that fits",
         "STATUS_FAILED": "Send failed",
         "STATUS_NOT_STARTED": "Not started",
         "TIMELINE_TOUCH_FREE": "Touch {n} - free-form AI",
-        "TIMELINE_TOUCH_TEMPLATE": "Touch {n} - template {name}",
+        "TIMELINE_TOUCH_TEMPLATE": "Touch {n} - approved message {name}",
         "TIMELINE_TOUCH_SKIPPED": "Touch {n} - not sent",
         "OPT_OUT_HINT": "The customer asked to stop receiving automated messages. No new touches will be created until someone reactivates.",
         "RESET": "Refresh - restart cycle",
@@ -2246,7 +2259,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
-        "TITLE": "Meta ads",
+        "TITLE": "Ads",
         "SUBTITLE": "See which ads bring conversations and sales.",
         "LOADING": "Loading…",
         "LOAD_ERROR": "Could not load the Meta connection.",
@@ -2255,6 +2268,144 @@
         "BREADCRUMB": "You are here",
         "NOT_CONNECTED_TITLE": "The ads are not connected yet",
         "NOT_CONNECTED_TEXT": "Ask an administrator to connect the Meta ads. Then the results show up here."
+      },
+      "SEM_LOGIN": {
+        "NO_NAME": "No name",
+        "READY": {
+          "TEXT_PHONE": "Your WhatsApp {phone} is ready: people who come from an ad show up here.",
+          "TEXT": "Your WhatsApp is ready: people who come from an ad show up here.",
+          "TEXT_MANY": "Your WhatsApp numbers are ready: people who come from an ad show up here.",
+          "EXAMPLE": "See an example"
+        },
+        "EXAMPLE": {
+          "BADGE": "Example",
+          "TEXT": "Sample numbers, just to show how it looks.",
+          "BACK": "Back",
+          "ADS": {
+            "WINTER": "Winter sale",
+            "TALK": "Talk to us",
+            "SHIPPING": "Free shipping this week"
+          }
+        },
+        "AD": {
+          "PEOPLE": "Who came from this ad",
+          "EMPTY": "Nobody came from this ad in this period.",
+          "STATUS": {
+            "BOUGHT": "Bought {value}",
+            "BOUGHT_NO_VALUE": "Bought",
+            "TALKING": "Talking",
+            "LOST": "Lost",
+            "NO_ANSWER": "No reply"
+          }
+        },
+        "CONNECT": {
+          "BACK": "Back to the panel",
+          "STEP_OF": "Step {step} of {total}",
+          "COPIED": "Copied",
+          "COPY_AGAIN": "Copy the code again",
+          "TRUST": {
+            "SAFE": "We only see the numbers. Nothing changes in your ads",
+            "TIME": "No password, no key",
+            "OFF": "Turn it off anytime"
+          },
+          "COPY": {
+            "TITLE": "Copy the {partner} code",
+            "TEXT": "This is how Meta knows who to share with.",
+            "CTA": "Copy and continue"
+          },
+          "META": {
+            "TITLE": "Paste the code on Meta",
+            "TEXT": "On the Partners screen, tap Add, choose to give access to your assets and paste the code.",
+            "CTA": "Open Meta",
+            "AGAIN": "Open Meta again"
+          },
+          "MARK": {
+            "TITLE": "Check the ad account",
+            "TEXT": "Turn on only \"View performance\" and save. Nothing else is needed.",
+            "CTA": "Done, I shared it"
+          },
+          "SEND": {
+            "TITLE": "Send this message to who creates your ads",
+            "TEXT": "It explains what to do, step by step.",
+            "MESSAGE": "Hi! Please share our ad account with {partner}, just to see the numbers.\n\n1. Open: {link}\n2. Tap Add and choose to give access to your assets\n3. Paste the code {id}\n4. Check the ad account, turn on only \"View performance\" and save\n\nThanks!",
+            "WHATSAPP": "Send on WhatsApp",
+            "COPY": "Copy message",
+            "AFTER": "When they say it is shared, tap here:",
+            "CHECK": "Check now"
+          },
+          "CHECKING": "Looking for your account on Meta…",
+          "CONNECTING": "Connecting {name}…",
+          "SPEND_30D": "{value} in the last 30 days",
+          "FOUND": {
+            "TITLE": "We found your ad account",
+            "CTA": "Connect this account"
+          },
+          "CHOOSE": {
+            "TITLE": "Which account runs your WhatsApp ads?",
+            "TEXT": "We found more than one. Tap the one you use.",
+            "RECOMMENDED": "Most used"
+          },
+          "NOT_YET": {
+            "TITLE": "Not there yet",
+            "TITLE_ERROR": "Could not connect",
+            "TEXT": "Meta does not show the account shared with {partner} yet. Sometimes it takes a few minutes.",
+            "AUTO": "Checking again by itself…",
+            "CHECK": "Check again",
+            "STEPS": "See the steps again",
+            "ASK_SOMEONE": "Rather ask someone else?",
+            "TEXT_FACEBOOK": "We found no ad account on this Facebook. Sign in with the Facebook you use to create your ads."
+          },
+          "DONE": {
+            "TITLE": "Done, you are connected!",
+            "TEXT": "We are bringing the spend of {name}. In a few minutes it shows on your panel, next to conversations and sales.",
+            "CTA": "See my panel",
+            "DESTINATION_FAILED": "We could not mark WhatsApp as where your ads lead. Open the Connection tab, in \"Ad destination\", and choose WhatsApp."
+          },
+          "GUIDE": {
+            "LABEL": "Where to tap on Meta",
+            "SETTINGS": "Business settings",
+            "PARTNERS": "Partners",
+            "ADD": "Add",
+            "GIVE_ACCESS": "Give a partner access to your assets",
+            "PARTNER_ID": "Partner ID",
+            "PASTE": "paste the code here",
+            "AD_ACCOUNTS": "Ad accounts",
+            "YOUR_ACCOUNT": "Your ad account",
+            "VIEW": "View performance",
+            "MANAGE": "Manage campaigns",
+            "SAVE": "Save changes",
+            "CAPTION": "A drawing to guide you. The Meta screen may look a little different."
+          },
+          "START": {
+            "TITLE": "See how much you spent on each ad",
+            "TEXT": "Sign in with the same Facebook you use to create your ads. We find the account for you.",
+            "HOW": "How it works",
+            "STEPS": {
+              "ENTER": "Sign in with Facebook",
+              "CHOOSE": "Confirm your account",
+              "SEE": "See your spend"
+            },
+            "CTA": "Sign in with Facebook",
+            "RETRY": "Sign in again",
+            "WAITING": "The Facebook window is open. Keep everything checked and tap \"Continue\" until the end.",
+            "POPUP_TITLE": "The Facebook window did not open",
+            "POPUP_TEXT": "The browser may have blocked it. Tap the blocked window icon in the address bar, choose \"Always allow\" and sign in again.",
+            "REFUSED_TITLE": "Facebook did not share your ads",
+            "BROKEN": "The connection with Meta dropped. Sign in again to see your spend.",
+            "SOMEONE": "Someone else takes care of my ads",
+            "PARTNER": "Share through Business Manager"
+          }
+        },
+        "PENDING": {
+          "CHOOSING": {
+            "TEXT": "You only need to pick your ad account.",
+            "CTA": "Continue"
+          },
+          "BROKEN": {
+            "TEXT": "Meta stopped sending your spend. Meanwhile, the panel shows what WhatsApp counted.",
+            "CTA": "Connect again"
+          }
+        }
       },
       "EMPTY": {
         "EYEBROW": "Campaigns",
@@ -2545,10 +2696,46 @@
           "LABEL": "What to see"
         },
         "HEADLINE": "You invested {spend}. {conversations} and {sales} came in.",
-        "PERIOD": "{days} days",
+        "HEADLINE_WHATSAPP": "{conversations} came in from your ads on WhatsApp, and {sales}.",
         "PERIOD_LABEL": "Period",
-        "PERIOD_CTX": "Last {days} days",
-        "PERIOD_HINT": "What happened to the people who came from ads in the last {days} days.",
+        "PERIODS": {
+          "7d": {
+            "BUTTON": "7 days",
+            "NAME": "Last 7 days",
+            "IN": "in the last 7 days"
+          },
+          "30d": {
+            "BUTTON": "30 days",
+            "NAME": "Last 30 days",
+            "IN": "in the last 30 days"
+          },
+          "90d": {
+            "BUTTON": "90 days",
+            "NAME": "Last 90 days",
+            "IN": "in the last 90 days"
+          },
+          "this_month": {
+            "NAME": "This month",
+            "IN": "this month"
+          },
+          "last_month": {
+            "NAME": "Last month",
+            "IN": "last month"
+          },
+          "all": {
+            "NAME": "All time",
+            "IN": "since the first ad"
+          }
+        },
+        "MORE_PERIODS": "More periods",
+        "PERIOD_LOADING": "Loading the period…",
+        "PERIOD_ERROR": "Could not load this period right now. Try again.",
+        "PERIOD_EMPTY": {
+          "TITLE": "Nobody came from an ad {when}.",
+          "SEE_ALL": "See since the first ad"
+        },
+        "PERIOD_CTX": "{name} · {range}",
+        "PERIOD_HINT": "What happened to the people who came from an ad {when}.",
         "TODAY": "What to do today",
         "SEVERAL_ADS": "several ads",
         "ACTION": {
@@ -2689,6 +2876,31 @@
           "NO_ANSWER": "No answer",
           "WON": "Won",
           "LOST": "Lost"
+        },
+        "REPORT": {
+          "BUTTON": "Download report",
+          "TITLE": "Download the report",
+          "DESCRIPTION": "{name}, with the same numbers as the screen.",
+          "PDF_TITLE": "PDF to present",
+          "PDF_HINT": "Ready pages to show or send to someone.",
+          "SHEET_TITLE": "Spreadsheet to work the numbers",
+          "SHEET_HINT": "Opens in Excel or Google Sheets, with every conversation.",
+          "CONFIRM": "Download",
+          "ERROR": "Could not download right now. Try again.",
+          "NO_PEOPLE": "Without the \"Export the CRM list to Excel\" permission, the file has only the numbers, without the list of people."
+        },
+        "CONNECT_SPEND": {
+          "NOTE": "Connect your ad account to see it",
+          "CTA": "See how much I spent"
+        },
+        "ADS_WHATSAPP_TITLE": "Ads that bring conversations",
+        "OTHER_ADS": {
+          "TITLE": "Other ads",
+          "TOTAL": "{value} invested",
+          "HINT": "They brought no conversation: they lead to your website, a video or your profile. They stay out of the cost per conversation and per sale.",
+          "SPEND": "Invested",
+          "CLICKS": "Clicks",
+          "SHOWN": "Shown"
         }
       },
       "AD_DETAIL": {
@@ -2721,9 +2933,11 @@
         "MEANWHILE": "1 open quote from this ad is waiting for an answer. Picking it up is what you can do now. | {count} open quotes from this ad are waiting for an answer. Picking them up is what you can do now.",
         "MEANWHILE_SEE": "See the quotes",
         "CHART_TITLE": "Spend and conversations per day",
+        "CHART_TITLE_TALKS": "Conversations per day",
         "LEGEND_SPEND": "Spend",
         "LEGEND_CONVERSATIONS": "Conversations",
         "CHART_DAY": "{date}: {spend} · 1 conversation | {date}: {spend} · {count} conversations",
+        "CHART_DAY_TALKS": "{date}: 1 conversation | {date}: {count} conversations",
         "CHART_SCALE": "Highest spend in a day: {spend} · most conversations in a day: 1 | Highest spend in a day: {spend} · most conversations in a day: {count}",
         "DAYS_TOGGLE": "See day by day",
         "DAYS_DATE": "Day",
@@ -3304,7 +3518,7 @@
     "TITLE": "CRM integration tokens",
     "SUBTITLE": "Per-account, scoped, revocable tokens so external systems like n8n can call the CRM API without a full-access user credential.",
     "BACK": "Back",
-    "NO_PERMISSION": "You need the CRM admin permission to manage integration tokens.",
+    "NO_PERMISSION": "Only administrators or whoever looks after tokens create and rotate integration tokens.",
     "STATUS": {
       "ACTIVE": "Active",
       "REVOKED": "Revoked"
@@ -3334,6 +3548,7 @@
       "NAME_LABEL": "Name",
       "NAME_PLACEHOLDER": "e.g. n8n production",
       "SCOPES_LABEL": "Scopes",
+      "NO_SCOPES": "A token only carries what your role already has in the CRM, and yours has nothing in the CRM. Ask an administrator.",
       "SUBMIT": "Create token",
       "CANCEL": "Cancel",
       "SUCCESS": "Token created. Copy the secret now — it is shown only once.",
@@ -4543,6 +4758,7 @@
         "PASSOS": "Steps to turn on Google",
         "COPIE_TITULO": "Copy this address",
         "COPIE_TEXTO": "This is how Google learns about your sales. It is only yours.",
+        "SEM_TOKEN": "The Google address is created by whoever looks after tokens.",
         "COLE_TITULO": "Paste the address in Google Ads",
         "COLE_1": "Sign in to Google Ads, in your ads account.",
         "COLE_2": "In the Google Ads search, type “uploads” and open Scheduled uploads.",
@@ -5008,21 +5224,21 @@
         "ESCOLHA_DIA": "Choose the day to see whether the message can be free text.",
         "CONFERINDO": "Checking the chosen day…",
         "DENTRO": "On the chosen day the customer will have talked to you less than 24 hours before. You can send anything.",
-        "LIVRE_OFICIAL": "On the chosen day more than 24 hours will have passed, but this inbox still sends your text. The ready message is optional.",
-        "SO_PRONTA": "On the chosen day more than 24 hours will have passed since the customer's last message. WhatsApp then only allows ready (approved) messages. Pick one below.",
-        "SO_PRONTA_DIGITAR": "On the chosen day more than 24 hours will have passed since the customer's last message. WhatsApp then only allows ready (approved) messages. Type its name and choose its language below."
+        "LIVRE_OFICIAL": "On the chosen day more than 24 hours will have passed, but this inbox still sends your text. The approved message is optional.",
+        "SO_PRONTA": "On the chosen day more than 24 hours will have passed since the customer's last message. WhatsApp then only allows approved messages. Pick one below.",
+        "SO_PRONTA_DIGITAR": "On the chosen day more than 24 hours will have passed since the customer's last message. WhatsApp then only allows approved messages. Type its name and choose its language below."
       },
       "SEU_TEXTO": "Your message",
       "SEU_TEXTO_SE_RESPONDER": "Your message (sent if the customer talks to you before the day)",
       "SEU_TEXTO_EXEMPLO": "Hi! Just checking if you have any questions.",
       "SEU_TEXTO_FALTA": "Write the message.",
-      "PRONTA": "Ready message that will be sent",
-      "PRONTA_OPCIONAL": "Ready message (optional)",
+      "PRONTA": "Approved message that will be sent",
+      "PRONTA_OPCIONAL": "Approved message (optional)",
       "SEM_PRONTA": "None, send my message",
-      "NENHUMA_PRONTA": "This inbox has no approved ready message yet.",
-      "PRONTA_NOME": "Ready message name",
+      "NENHUMA_PRONTA": "This inbox has no approved message yet.",
+      "PRONTA_NOME": "Approved message name",
       "PRONTA_NOME_EXEMPLO": "E.g. follow_up",
-      "PRONTA_IDIOMA": "Ready message language",
+      "PRONTA_IDIOMA": "Approved message language",
       "NOME": "What it is",
       "TITULO_EXEMPLO": "E.g.: Call on the 30th at 10am · Customer birthday",
       "TITULO_FALTA": "Write a name for the follow-up.",
@@ -5032,11 +5248,11 @@
       "ESCOLHA_QUANDO": "Choose when",
       "VAI_PARA": "Goes to {nome} on WhatsApp",
       "SEM_MENSAGEM": "The message shows up here.",
-      "SAI_PRONTA": "Ready message chosen: “{nome}”. If the customer talks to you first, yours goes out.",
+      "SAI_PRONTA": "Approved message chosen: “{nome}”. If the customer talks to you first, yours goes out.",
       "SEM_TITULO": "No name yet",
       "PREVIA_LEMBRETE": "Shows up for the team at the set time.",
       "PREVIA_ESCONDE": "The conversation leaves the inbox and comes back at that time.",
-      "SAI_TEXTO_APROVADO": "The ready message text goes out, exactly as WhatsApp approved it.",
+      "SAI_TEXTO_APROVADO": "The approved message goes out word for word.",
       "PRONTA_NOME_DICA": "Type the name exactly as it is on WhatsApp.",
       "IDIOMA": {
         "MAIS_USADOS": "Most used",
@@ -5048,15 +5264,15 @@
         "CODIGO_DICA": "Type it the way WhatsApp shows it, for example pt_BR.",
         "CODIGO_NOME": "Language: {nome}."
       },
-      "PRONTA_FALTA_DIGITAR": "After 24 hours only a ready message goes out. Type its name in the form.",
-      "PRONTA_FALTA_ESCOLHER": "After 24 hours only a ready message goes out. Pick one in the form.",
+      "PRONTA_FALTA_DIGITAR": "After 24 hours only an approved message goes out. Type its name in the form.",
+      "PRONTA_FALTA_ESCOLHER": "After 24 hours only an approved message goes out. Pick one in the form.",
       "FALTA": {
         "FRASE": "To set it, you still need to {itens}.",
         "QUANDO": "choose when",
         "MENSAGEM": "write the message",
-        "PRONTA_NOME": "type the name of the ready message",
-        "PRONTA_IDIOMA": "choose the language of the ready message",
-        "PRONTA_ESCOLHER": "pick the ready message",
+        "PRONTA_NOME": "type the name of the approved message",
+        "PRONTA_IDIOMA": "choose the language of the approved message",
+        "PRONTA_ESCOLHER": "pick the approved message",
         "NOME": "give the follow-up a name",
         "QUEM": "choose who gets the reminder",
         "ULTIMO_DIA": "choose the last day"
@@ -5396,11 +5612,11 @@
       "STATUS_REPLIED": "Stopped: the customer replied",
       "STATUS_CLOSED": "Not sent: the conversation was closed",
       "STATUS_NO_LOOP": "Nothing to send now",
-      "STATUS_NO_TEMPLATE": "Stopped: an approved ready message is missing",
+      "STATUS_NO_TEMPLATE": "Stopped: an approved message is missing",
       "STATUS_FAILED": "The message did not go out",
       "STATUS_NOT_STARTED": "Not started yet",
       "TIMELINE_TOUCH_FREE": "Message {n}: written by the assistant",
-      "TIMELINE_TOUCH_TEMPLATE": "Message {n}: ready message {name}",
+      "TIMELINE_TOUCH_TEMPLATE": "Message {n}: approved message {name}",
       "TIMELINE_TOUCH_SKIPPED": "Message {n}: did not go out",
       "TIMELINE_TOUCH_REMINDER": "Message {n}: became a reminder for the team",
       "OPT_OUT_HINT": "The customer asked not to get automatic messages anymore. Nothing goes out until someone turns it back on.",
@@ -5859,8 +6075,8 @@
       "QUANDO": "Choose the day and time.",
       "PASSADO": "That time has passed.",
       "CONFERINDO": "Checking WhatsApp…",
-      "PRONTA": "Choose a ready-made message.",
-      "CAMPOS": "Fill in the ready-made message.",
+      "PRONTA": "Choose an approved message.",
+      "CAMPOS": "Fill in the approved message.",
       "TEXTO": "Write the message.",
       "JANELA": "Check WhatsApp again."
     },
@@ -5907,11 +6123,11 @@
       "ERRO_JANELA": "Could not check WhatsApp right now.",
       "TENTAR": "Try again",
       "LIVRE": "At that time, {nome} can get whatever you write.",
-      "SO_PRONTA": "By then, more than 1 day will have passed since the last message from {nome}. WhatsApp then only allows an approved ready-made message.",
+      "SO_PRONTA": "By then, more than 1 day will have passed since the last message from {nome}. WhatsApp then only allows an approved message.",
       "PELO_CELULAR": "More than 1 day will have passed since the last message from {nome}, but the phone WhatsApp is connected: the message goes out through it, as you write it.",
-      "ESCOLHA_PRONTA": "Choose the ready-made message",
+      "ESCOLHA_PRONTA": "Choose the approved message",
       "RESUMO": "What to say",
-      "RESUMO_PRONTA": "Ready-made message",
+      "RESUMO_PRONTA": "Approved message",
       "RESUMO_TEXTO": "“{inicio}”"
     },
     "CONFIRMAR": {
@@ -5927,7 +6143,7 @@
       "ANOTACAO_EXEMPLO": "The customer does not see this note",
       "ERRO": {
         "PASSADO": "That time has passed. Go back and choose another one.",
-        "PRONTA": "At that time only a ready-made message can go out. Go back and choose one.",
+        "PRONTA": "At that time only an approved message can go out. Go back and choose one.",
         "GERAL": "Could not schedule right now. Try again."
       }
     },
@@ -5953,8 +6169,8 @@
       "canal": "the conversation is not on WhatsApp.",
       "sem_remetente": "no one on the team was set as owner.",
       "celular_desconectado": "the phone WhatsApp was disconnected.",
-      "sem_modelo": "more than 1 day had passed and the ready-made message was missing.",
-      "modelo_invalido": "the ready-made message is not from this inbox.",
+      "sem_modelo": "more than 1 day had passed and the approved message was missing.",
+      "modelo_invalido": "the approved message is not from this inbox.",
       "recusou": "the customer asked not to get messages.",
       "outro": "WhatsApp refused to send it."
     }
@@ -6041,7 +6257,8 @@
       "RESOLVEU_EQUIPE": "The team resolved {feito} of {meta}",
       "BATIDA_EMPRESA": "You hit the {mes} goal",
       "BATIDA_EQUIPE": "The team hit the {mes} goal",
-      "LEITURA": "You are viewing in read-only mode."
+      "LEITURA": "You are viewing in read-only mode.",
+      "METAS_LINK": "{mes} goals"
     },
     "PROXIMO": {
       "TITULO": "Next step",
@@ -6134,6 +6351,32 @@
       "IA_CUSTO_AGENTES_SEM_CONVERSA": "AI agents cost: {valor} this month.",
       "IA_CUSTO_FALTA": "Estimate: AI usage is not split by agent.",
       "RODAPE": "We only count customers who entered the pipeline."
+    },
+    "METAS": {
+      "TITULO": "{mes} goals",
+      "DESCRICAO": "Set each person's goal. Each person's screen shows only their own goal.",
+      "FUNIS": "Pipeline",
+      "META_FUNIL": "{funil} pipeline goal",
+      "META_FUNIL_DICA": "The pipeline goal does not need to be the sum of the people.",
+      "META_PESSOA": "{nome}'s goal",
+      "UNIDADE_VALOR": "in {moeda}",
+      "VAZIO": "No goal",
+      "SUGESTAO_VALOR": "Suggestion: {valor}. In the last 3 months, {nome} closed {h1}, {h2} and {h3}.",
+      "SEM_SUGESTAO": "{nome} closed no sales in the last 3 months.",
+      "USAR_SUGESTAO": "Use the suggestion",
+      "ATALHOS": "Shortcuts",
+      "REPETIR": "Repeat {mes}",
+      "DIVIDIR": "Split evenly",
+      "ATALHOS_DICA": "Shortcuts only fill in the fields. Nothing changes until you save.",
+      "SOMA_DIFERENTE": "The people's goals add up to {soma}; the pipeline goal is {meta}.",
+      "SEM_FUNIL": "There is no sales pipeline to set goals for.",
+      "SEM_PESSOAS": "Nobody works in this pipeline yet.",
+      "SALVAR": "Save the goals",
+      "CANCELAR": "Cancel",
+      "SALVO": "{mes} goals saved.",
+      "ERRO_SALVAR": "Could not save the goals. Try again.",
+      "MES_MUDOU": "The month changed. Check the {mes} goals and save again.",
+      "INVALIDO": "Use numbers only, without dots."
     }
   }
 }

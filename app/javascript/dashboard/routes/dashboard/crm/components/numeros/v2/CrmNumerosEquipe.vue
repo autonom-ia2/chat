@@ -184,7 +184,11 @@ const proximo = computed(() =>
         >
           {{ t(`${P}.ESTIMADO`) }}
         </p>
-        <NumerosAjuda :itens="dados.ajuda" :destino-de="destinoDe" />
+        <NumerosAjuda
+          v-if="dados.ajuda.length"
+          :itens="dados.ajuda"
+          :destino-de="destinoDe"
+        />
         <NumerosQuemCuidou
           :key="`cuidou-${dados.moeda}-${dados.mes.chave}`"
           :cuidou="dados.quemCuidou"

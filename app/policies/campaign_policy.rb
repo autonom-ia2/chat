@@ -18,4 +18,9 @@ class CampaignPolicy < ApplicationPolicy
   def destroy?
     @account_user.permission_granted?('campaign_manage')
   end
+
+  # Sending, scheduling and resuming (#1898). Building the campaign stays with create?/update?.
+  def send_campaign?
+    create? && @account_user.permission_granted?('campaign_send')
+  end
 end

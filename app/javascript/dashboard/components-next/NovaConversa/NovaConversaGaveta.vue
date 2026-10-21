@@ -131,6 +131,8 @@ const {
   destino: conversaDaMensagem,
   comAssinatura,
   assinatura,
+  caixaDoWhatsapp,
+  soTexto,
   falta,
   previa,
   enviando,
@@ -470,6 +472,8 @@ useFixedPanelPresence(aberta);
                     :com-assinatura="comAssinatura"
                     :pode-criar-pronta="podeCriarPronta"
                     :continuando="continuando"
+                    :so-texto="soTexto"
+                    @enviar="mandar"
                     @update:campos-prontos="form.camposProntos = $event"
                     @update:texto-do-modelo="form.textoDoModelo = $event"
                     @enviar-pronta="enviarPronta"
@@ -492,6 +496,7 @@ useFixedPanelPresence(aberta);
                     "
                     :assunto="assuntoNaPrevia"
                     :historico="comHistorico ? historico : null"
+                    :anexos="caixaDoWhatsapp ? form.anexos : []"
                     :remetente="canal?.name || ''"
                     :endereco-do-remetente="linhaDoCanal(canal)"
                   />

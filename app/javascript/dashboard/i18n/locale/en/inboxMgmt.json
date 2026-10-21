@@ -8,6 +8,7 @@
     "NO_RESULTS": "No inboxes found matching your search",
     "RECONNECTION_REQUIRED": "Your inbox is disconnected. You won't receive new messages until you reauthorize it.",
     "CLICK_TO_RECONNECT": "Click here to reconnect.",
+    "RECONNECTION_ASK_INTEGRATIONS": "Ask whoever looks after integrations to reconnect it.",
     "WHATSAPP_REGISTRATION_INCOMPLETE": "Your WhatsApp Business registration isn’t complete. Please check your display name status in Meta Business Manager before reconnecting.",
     "COMPLETE_REGISTRATION": "Complete Registration",
     "LIST": {
@@ -141,7 +142,8 @@
         "CHANNEL_WEBHOOK_URL": {
           "LABEL": "Webhook URL",
           "PLACEHOLDER": "Please enter your Webhook URL",
-          "ERROR": "Please enter a valid URL"
+          "ERROR": "Please enter a valid URL",
+          "ONLY_INTEGRATIONS": "Only whoever looks after integrations changes this address."
         },
         "CHANNEL_WEBHOOK_SECRET": {
           "LABEL": "Webhook Secret",
@@ -875,19 +877,19 @@
       "CODE_HELP": "On the phone, tap Link with phone number instead and type this code.",
       "NEW_QR": "New QR code",
       "EXPIRED_HELP": "WhatsApp ends pairing when no code is read for about two and a half minutes. Create a new one with the phone in hand. The official inbox keeps working normally.",
-      "DISCONNECTED_HELP": "The WhatsApp API connection of this number was closed. Until you reconnect, replies after 24 hours need an approved template, as before. The official inbox keeps working normally.",
+      "DISCONNECTED_HELP": "The WhatsApp API connection of this number was closed. Until you reconnect, replies after 24 hours need an approved message, as before. The official inbox keeps working normally.",
       "REMOVED_TITLE": "WhatsApp disconnected this device",
-      "REMOVED_HELP": "WhatsApp closed the WhatsApp API connection of this number. Generate a new QR code and scan it with the phone of this number. Until you reconnect, replies after 24 hours need an approved template, as before. The official inbox keeps working normally.",
+      "REMOVED_HELP": "WhatsApp closed the WhatsApp API connection of this number. Generate a new QR code and scan it with the phone of this number. Until you reconnect, replies after 24 hours need an approved message, as before. The official inbox keeps working normally.",
       "CONNECTED_HELP": "Connected to {phone}. Same number as the official inbox.",
       "WRONG_NUMBER": "The connected phone ({phone}) is not this inbox's number. Disconnect and connect the right phone.",
       "DISCONNECT": "Disconnect WhatsApp API",
       "CAPPING": {
         "NEAR": "WhatsApp warned that this number is close to the limit of new conversations ({used} of {total}). Sending through WhatsApp API slowed down by itself. The cycle ends on {end}.",
-        "BLOCKED": "WhatsApp blocked new conversations through WhatsApp API until {end}. Replies to people you already talk to keep going; for new contacts use an approved template."
+        "BLOCKED": "WhatsApp blocked new conversations through WhatsApp API until {end}. Replies to people you already talk to keep going; for new contacts use an approved message."
       },
       "TIMELOCK": {
-        "UNTIL": "WhatsApp limited new conversations through WhatsApp API on this number until {end}. Replying to people who already talk to you keeps working; for new contacts, use an approved template. Do not reconnect or generate a new QR code meanwhile: the limit lifts on its own.",
-        "NO_END": "WhatsApp limited new conversations through WhatsApp API on this number for now. Replying to people who already talk to you keeps working; for new contacts, use an approved template. Do not reconnect or generate a new QR code meanwhile: the limit lifts on its own."
+        "UNTIL": "WhatsApp limited new conversations through WhatsApp API on this number until {end}. Replying to people who already talk to you keeps working; for new contacts, use an approved message. Do not reconnect or generate a new QR code meanwhile: the limit lifts on its own.",
+        "NO_END": "WhatsApp limited new conversations through WhatsApp API on this number for now. Replying to people who already talk to you keeps working; for new contacts, use an approved message. Do not reconnect or generate a new QR code meanwhile: the limit lifts on its own."
       },
       "STATS": {
         "TITLE": "Last {days} days through WhatsApp API",
@@ -924,15 +926,15 @@
           "SWITCH_HINT": "Through the phone connected to this inbox.",
           "INSIDE": "Customer wrote in the last 24 h → goes out through the official number.",
           "OUTSIDE_ON": "More than 24 h → goes out through WhatsApp API.",
-          "OUTSIDE_OFF": "More than 24 h → only approved templates.",
-          "TEMPLATES": "Approved template → always goes out through the official number."
+          "OUTSIDE_OFF": "More than 24 h → only approved messages.",
+          "TEMPLATES": "Approved message → always goes out through the official number."
         },
         "WHO": {
           "TITLE": "Who can use WhatsApp API after 24 h",
           "DRAWER_TITLE": "Who can use it after 24 h",
           "DRAWER_TEXT": "Check who can send through WhatsApp API when more than 24 hours have passed.",
           "SUMMARY": "{list} uses WhatsApp API after 24 h. | {list} use WhatsApp API after 24 h.",
-          "NONE": "Nobody uses WhatsApp API after 24 h: everything goes out as an approved template.",
+          "NONE": "Nobody uses WhatsApp API after 24 h: everything goes out as an approved message.",
           "RECOMMENDED": "Recommended",
           "RISK": "Higher risk of the number being blocked",
           "ORIGINS": {
@@ -980,9 +982,9 @@
           "BADGE": "Preview",
           "TITLE": "How it works",
           "FOLLOW_UP_WEB": "Carlos has not replied for 2 days. The CRM reminder goes out through WhatsApp API at 10:00.",
-          "FOLLOW_UP_TEMPLATE": "Carlos has not replied for 2 days. The CRM reminder goes out as an approved template through the official number.",
+          "FOLLOW_UP_TEMPLATE": "Carlos has not replied for 2 days. The CRM reminder goes out as an approved message through the official number.",
           "AGENT_WEB": "Ana, from the team, replies to Maria 3 days later. The reply goes out through WhatsApp API.",
-          "AGENT_TEMPLATE": "Ana, from the team, replies to Maria 3 days later. She can only send an approved template.",
+          "AGENT_TEMPLATE": "Ana, from the team, replies to Maria 3 days later. She can only send an approved message.",
           "PACE": "Up to {n} per minute: anything above waits its turn."
         }
       },
@@ -1005,11 +1007,11 @@
       "PAUSE": {
         "BUTTON": "Pause WhatsApp API",
         "CONFIRM_TITLE": "Pause WhatsApp API?",
-        "CONFIRM_TEXT": "While paused, everything goes through the official API; after 24 hours, only approved templates. The phone stays linked and you can resume at any time.",
+        "CONFIRM_TEXT": "While paused, everything goes through the official API; after 24 hours, only approved messages. The phone stays linked and you can resume at any time.",
         "CONFIRM": "Pause",
         "CANCEL": "Cancel",
         "PAUSED_TITLE": "WhatsApp API paused",
-        "PAUSED_HELP": "Everything is going through the official API. After 24 hours, only approved templates. The phone stays linked.",
+        "PAUSED_HELP": "Everything is going through the official API. After 24 hours, only approved messages. The phone stays linked.",
         "RESUME": "Resume"
       },
       "CONNECT_ORDER": {
@@ -1065,7 +1067,8 @@
         "DESCRIPTION": "Enable voice calling on this inbox. Agents will be able to make and receive phone calls."
       },
       "CREDENTIALS": {
-        "DESCRIPTION": "Voice calling requires Twilio API Key credentials. These are used to generate tokens for agent voice connections."
+        "DESCRIPTION": "Voice calling requires Twilio API Key credentials. These are used to generate tokens for agent voice connections.",
+        "ONLY_INTEGRATIONS": "Only whoever looks after integrations enters these keys."
       },
       "INBOUND": {
         "LABEL": "Allow incoming calls",
