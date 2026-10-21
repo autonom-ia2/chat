@@ -113,6 +113,16 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       end
       expect(agente.reload.config['base']).to eq(seguradora)
     end
+
+    it 'agente comum, sem função personalizada e sem ser admin: 401 no GET e nos 3 POST' do
+      comum = create(:user, account: conta, role: :agent)
+
+      [[:get, nil], [:post, 'comparar'], [:post, 'atualizar'], [:post, 'desfazer']].each do |metodo, acao|
+        pedir(metodo, acao, usuario: comum, params: { versao: bloco.versao('seguros/corretora') })
+        expect(response).to have_http_status(:unauthorized), "#{metodo} #{acao}"
+      end
+      expect(agente.reload.config['base']).to eq(seguradora)
+    end
   end
 
   describe 'POST base/atualizar e base/desfazer' do
