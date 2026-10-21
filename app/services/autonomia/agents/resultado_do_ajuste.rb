@@ -13,9 +13,14 @@ class Autonomia::Agents::ResultadoDoAjuste
   # Sem cartão quando não sobrou nenhum pedido do dono (tudo sem pedido e o desfazer automático recusado): fica só o
   # aviso da conversa, nunca "Pronto. Mudei 0 coisas".
   def self.mostrar?(thread)
-    conferencia = thread.state.to_h['conferencia']
-    thread.ready? && thread.agent.present? && conferencia.present? && conferencia.dig('desfeito', 'ok') != false &&
+    thread.ready? && thread.agent.present? && cartao?(thread.state.to_h['conferencia']) &&
       Autonomia::Agents::Fase2.ligada?(thread.account)
+  end
+
+  # O cartão existe para esta conferência (a mesma regra da tela e da pergunta do que faltou): sem conferência, ou com o
+  # desfazer automático recusado, não.
+  def self.cartao?(conferencia)
+    conferencia.present? && conferencia.dig('desfeito', 'ok') != false
   end
 
   LINHAS_DA_ULTIMA_MUDANCA = 3
@@ -31,15 +36,17 @@ class Autonomia::Agents::ResultadoDoAjuste
     { thread_id: thread.id, linhas: textos(linhas, 'aplicado'), sem_pedido: textos(linhas, 'sem_pedido') }
   end
 
-  # #1850 — o que o cartão deste ajuste mostra ao dono sobre o que faltou: o texto de cada linha ⚠ e se há a linha "uma
-  # parte não entrou". A pergunta do que faltou (TextosDoAjuste) não repete nada disso. Sem cartão (o desfazer automático
-  # foi recusado, como em mostrar?), nada; com o cartão neutro (sem a marca de todos os itens), nenhuma linha ⚠.
-  def self.no_cartao(conferencia)
-    return Autonomia::Agents::Builder::TextosDoAjuste::NADA_NO_CARTAO if conferencia.dig('desfeito', 'ok') == false
-
+  # #1850 — o que faltou, pelos GRUPOS do cartão (os mesmos de #linhas): `fora_do_cartao`, o texto dos pedidos não
+  # atendidos que o cartão não mostra com ⚠; `mostrado`, se o cartão mostra alguma falta (linha ⚠ ou "uma parte não
+  # entrou"). A pergunta que a tela mostra (TextosDoAjuste.pergunta_na_tela) não repete o que o cartão mostra. Sem cartão,
+  # nada é mostrado; com o cartão neutro (sem a marca de todos os itens), nenhuma linha ⚠.
+  def self.o_que_faltou(conferencia)
     resultado = new(nil, conferencia)
-    pedidos = resultado.conferido? ? resultado.linhas.select { |linha| linha[:estado] == 'nao_aplicado' }.pluck(:texto) : []
-    { pedidos: pedidos, faltou_fora: conferencia['faltou_fora_da_lista'] == true }
+    faltando = resultado.pedidos_nao_atendidos
+    return { fora_do_cartao: faltando, mostrado: false } unless cartao?(conferencia)
+
+    no_cartao = resultado.conferido? ? resultado.linhas.select { |linha| linha[:estado] == 'nao_aplicado' }.pluck(:texto) : []
+    { fora_do_cartao: faltando - no_cartao, mostrado: no_cartao.any? || conferencia['faltou_fora_da_lista'] == true }
   end
 
   def self.textos(linhas, estado)
@@ -61,7 +68,25 @@ class Autonomia::Agents::ResultadoDoAjuste
   def to_h
     { itens: linhas, faltou_fora: @conferencia['faltou_fora_da_lista'] == true, conferido: conferido?,
       desfeito_sozinho: desfeito_sozinho?, desfeito: @thread.state.to_h.dig('ultimo_ajuste', 'desfeito') == true,
-      pode_desfazer: @thread.agent.conversa_desfazivel&.id == @thread.id, prova: prova }
+      pode_desfazer: @thread.agent.conversa_desfazivel&.id == @thread.id, prova: prova }.merge(pergunta_curta)
+  end
+
+  # #1850 — a pergunta que a tela mostra no lugar da última bolha enquanto este cartão está lá: só enquanto a pergunta
+  # aberta é a deste ajuste (o `next_question` é a inteira guardada) e ele não foi desfeito. No turno seguinte ou depois
+  # do Desfazer, a tela mostra a pergunta inteira, que está na conversa.
+  def pergunta_curta
+    estado = @thread.state.to_h
+    pergunta = estado['pergunta_na_tela'].to_h
+    aberta = pergunta['curta'].present? && pergunta['inteira'] == estado['next_question']
+    return {} unless aberta && estado.dig('ultimo_ajuste', 'desfeito') != true && !desfeito_sozinho?
+
+    { pergunta_curta: pergunta['curta'] }
+  end
+
+  # Os pedidos de cada grupo com algum item não atendido, no texto da linha do cartão.
+  def pedidos_nao_atendidos
+    agrupar(@itens).select { |grupo| grupo.any? { |item| item['atendido'] != true } }
+                   .map { |grupo| sem_ponto(grupo.first['pedido']) }.compact_blank.uniq
   end
 
   # #1428 (entrega B) — as perguntas de prova do último ajuste: só a do ajuste que está no cartão e que não foi desfeito.

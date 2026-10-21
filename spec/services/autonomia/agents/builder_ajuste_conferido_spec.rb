@@ -95,20 +95,49 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust')).to eq([correcao])
     end
 
-    # #1850: o cartão ⚠ já mostra "Não consegui aplicar: preço passa para a equipe"; a pergunta logo abaixo não repete.
-    it 'se ainda faltar, o cartão ⚠ mostra o pedido e a pergunta do código só pergunta' do
+    # #1850: o cartão ⚠ já mostra "Não consegui aplicar: preço passa para a equipe". Na tela, enquanto o cartão está lá,
+    # a bolha só pergunta (`pergunta_curta` do cartão); a conversa e a pendência guardam a pergunta inteira, com o pedido.
+    it 'se ainda faltar, guarda a pergunta inteira e o cartão ⚠ leva a versão que só pergunta' do
       correcao_aplicada
       conferencias << { nao: [2] }
 
       run_turn
 
-      pergunta = texto(:de_outro_jeito)
+      pergunta = "#{texto(:nao_consegui, pedidos: preco)} #{texto(:de_outro_jeito)}"
       expect(agent.reload.tone).to eq('cordial e curto')
       expect(estado).to include('needs_more_info' => true, 'applied' => true, 'next_question' => pergunta,
                                 'pergunta_pendente' => pergunta)
       expect(thread.messages.last).to include('role' => 'assistant', 'content' => pergunta)
-      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h[:itens])
-        .to include({ estado: 'nao_aplicado', texto: preco })
+      cartao = Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h
+      expect(cartao[:itens]).to include({ estado: 'nao_aplicado', texto: preco })
+      expect(cartao[:pergunta_curta]).to eq(texto(:de_outro_jeito))
+    end
+
+    # Revisão do #1850 (ALTO): o turno seguinte recebe a pendência com o pedido, e a versão curta sai da tela.
+    it 'no turno seguinte, o Construtor recebe a pendência com o pedido e o cartão não leva mais a versão curta' do
+      correcao_aplicada
+      conferencias << { nao: [2] }
+      run_turn
+      thread.append_message!('user', 'A equipe comercial')
+      respostas << saida('needs_more_info' => true, 'next_question' => 'Qual o telefone da equipe?')
+
+      run_turn
+
+      contexto = calls.last[:input].map { |item| item[:content].to_a.pluck(:text).join }.join("\n")
+      expect(contexto).to include('PERGUNTA PENDENTE', texto(:nao_consegui, pedidos: preco))
+      expect(thread.messages.pluck('content')).to include("#{texto(:nao_consegui, pedidos: preco)} #{texto(:de_outro_jeito)}")
+      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h).not_to have_key(:pergunta_curta)
+    end
+
+    it 'depois do Desfazer, o cartão não leva a versão curta (a conversa mostra a pergunta inteira)' do
+      correcao_aplicada
+      conferencias << { nao: [2] }
+      run_turn
+
+      thread.reload.update!(state: thread.state.deep_merge('ultimo_ajuste' => { 'desfeito' => true }))
+
+      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h).not_to have_key(:pergunta_curta)
+      expect(thread.messages.last['content']).to start_with(texto(:nao_consegui, pedidos: preco))
     end
 
     it 'se a correção não aplicar e explicar, a explicação dela vai na pergunta' do
@@ -118,8 +147,9 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(conferente).to have_received(:conferir).once
       expect(estado).to include('needs_more_info' => true, 'applied' => true,
-                                'next_question' => 'Qual equipe?')
+                                'next_question' => "#{texto(:nao_consegui, pedidos: preco)} Qual equipe?")
       expect(estado['conferencia']).to include('correcao' => false)
+      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h[:pergunta_curta]).to eq('Qual equipe?')
     end
 
     it 'se a correção mudar nada, não conta como aplicada nem esconde a primeira versão' do
@@ -128,7 +158,7 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(conferente).to have_received(:conferir).once
-      expect(estado['next_question']).to eq(texto(:de_outro_jeito))
+      expect(estado['next_question']).to start_with(texto(:nao_consegui, pedidos: preco))
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust').count).to eq(1)
     end
 
@@ -209,7 +239,7 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(calls.size).to eq(1)
-      expect(estado['next_question']).to eq(texto(:de_outro_jeito))
+      expect(estado['next_question']).to start_with(texto(:nao_consegui, pedidos: preco))
     end
   end
 
@@ -242,8 +272,9 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(calls.last[:input].last(2).first[:content].first[:text]).to include('nao entrou na lista')
-      expect(estado['next_question']).to eq(texto(:de_outro_jeito))
-      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h[:faltou_fora]).to be(true)
+      expect(estado['next_question']).to eq("#{texto(:nao_consegui_tudo)} #{texto(:de_outro_jeito)}")
+      cartao = Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h
+      expect(cartao).to include(faltou_fora: true, pergunta_curta: texto(:de_outro_jeito))
     end
   end
 

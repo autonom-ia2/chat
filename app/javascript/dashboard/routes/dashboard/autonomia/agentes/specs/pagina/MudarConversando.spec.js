@@ -559,6 +559,71 @@ describe('MudarConversando', () => {
     expect(store.commit).toHaveBeenCalledWith(`${ESTADO}RESET`);
   });
 
+  // #1850 — enquanto o cartão ⚠ do turno está na tela, a última bolha só pergunta (`pergunta_curta` do cartão). A conversa
+  // guarda a pergunta inteira, que volta a aparecer quando o cartão sai (turno seguinte) ou depois do Desfazer.
+  describe('open question under the ⚠ card', () => {
+    const INTEIRA =
+      'Não consegui aplicar: preço passa para a equipe. Pode me dizer de outro jeito o que você quer?';
+    const CURTA = 'Pode me dizer de outro jeito o que você quer?';
+    const CARTAO = {
+      itens: [{ estado: 'nao_aplicado', texto: 'preço passa para a equipe' }],
+      conferido: true,
+      pode_desfazer: true,
+      pergunta_curta: CURTA,
+    };
+    const comCartao = resultado => {
+      store.state[`${ESTADO}getThread`] = { id: 55 };
+      store.state[`${ESTADO}getPhase`] = 'interviewing';
+      store.state[`${ESTADO}getMessages`] = [
+        { role: 'user', content: 'Responda curto e preço passa para a equipe' },
+        { role: 'assistant', content: INTEIRA },
+      ];
+      store.state[`${ESTADO}getThreadState`] = {
+        next_question: INTEIRA,
+        ...(resultado ? { resultado } : {}),
+      };
+    };
+    const ultimaBolha = () =>
+      todos('[data-conversa] [data-mensagem="assistant"]').at(-1).textContent;
+
+    it('shows only the question while the card shows what was not applied', async () => {
+      comCartao(CARTAO);
+      const wrapper = montar();
+      await nextTick();
+
+      expect(ultimaBolha()).toContain(CURTA);
+      expect(ultimaBolha()).not.toContain('Não consegui aplicar');
+      wrapper.unmount();
+    });
+
+    it('shows the whole question once the card is gone or undone', async () => {
+      comCartao(null);
+      const wrapper = montar();
+      await nextTick();
+      expect(ultimaBolha()).toContain(INTEIRA);
+
+      store.state[`${ESTADO}getThreadState`] = {
+        next_question: INTEIRA,
+        resultado: { ...CARTAO, desfeito: true },
+      };
+      await nextTick();
+      expect(ultimaBolha()).toContain(INTEIRA);
+      wrapper.unmount();
+    });
+
+    it('keeps the whole text when the last bubble is not the open question', async () => {
+      comCartao(CARTAO);
+      store.state[`${ESTADO}getThreadState`] = {
+        next_question: 'Outra pergunta',
+        resultado: CARTAO,
+      };
+      const wrapper = montar();
+      await nextTick();
+      expect(ultimaBolha()).toContain(INTEIRA);
+      wrapper.unmount();
+    });
+  });
+
   // #1428 (entrega C) — as respostas prontas da pergunta aberta: tocar é o mesmo que escrever e mandar.
   describe('ready answers under the open question', () => {
     const OPCOES = ['Passar para a equipe', 'Não falar de preço'];

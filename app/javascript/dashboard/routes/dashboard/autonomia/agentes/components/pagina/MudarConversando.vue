@@ -337,15 +337,27 @@ const desfazerUltima = async () => {
 // `next_question` do state (comparação do texto inteiro, sem ler linguagem). Tocar é o mesmo que escrever
 // e mandar; o foco vai para o campo, que segue ali, em vez de sumir com o botão.
 const MAX_OPCOES = 4;
-const opcoesDaPergunta = computed(() => {
+const perguntaAberta = computed(() => {
   const ultima = visiveis.value[visiveis.value.length - 1];
-  const aberta =
+  return (
     fase.value === 'interviewing' &&
     ultima?.role === 'assistant' &&
     ultima.content === estadoDaConversa.value?.next_question &&
     !resultado.value?.desfeito &&
-    !ultimaDesfeita.value;
-  if (pensando.value || !aberta) return [];
+    !ultimaDesfeita.value
+  );
+});
+// #1850 — enquanto o cartão ⚠ deste turno está na tela, a pergunta aberta aparece sem o que o cartão já mostra
+// (`pergunta_curta`, do servidor). A conversa guarda a inteira: no turno seguinte e depois do Desfazer, é ela que aparece.
+const textoDaBolha = mensagem => {
+  const curta = resultado.value?.pergunta_curta;
+  const ultima = visiveis.value[visiveis.value.length - 1];
+  return curta && mensagem === ultima && perguntaAberta.value
+    ? curta
+    : mensagem.content;
+};
+const opcoesDaPergunta = computed(() => {
+  if (pensando.value || !perguntaAberta.value) return [];
   return (estadoDaConversa.value?.opcoes_de_resposta || []).slice(
     0,
     MAX_OPCOES
@@ -573,7 +585,7 @@ onBeforeUnmount(() => {
                     ? t(`${NS}.VOCE`)
                     : t(`${NS}.ASSISTENTE`)
                 }}</span>
-                {{ item.mensagem.content }}
+                {{ textoDaBolha(item.mensagem) }}
               </p>
             </div>
           </template>
