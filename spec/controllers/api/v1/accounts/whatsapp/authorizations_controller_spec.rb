@@ -285,6 +285,8 @@ RSpec.describe 'WhatsApp Authorization API', type: :request do
       # #2027: connecting a new number creates an inbox, so it needs admin or inbox_manage like any other inbox.
       context 'when user is an agent without inbox_manage' do
         it 'returns unauthorized and does not create the channel' do
+          # Off-cloud the feature-flag check passes, so the 401 can only come from the permission gate.
+          allow(ChatwootApp).to receive(:chatwoot_cloud?).and_return(false)
           expect(Whatsapp::EmbeddedSignupService).not_to receive(:new)
 
           post "/api/v1/accounts/#{account.id}/whatsapp/authorization",

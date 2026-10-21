@@ -1,7 +1,7 @@
 class Api::V1::Accounts::Whatsapp::AuthorizationsController < Api::V1::Accounts::BaseController
   before_action :ensure_embedded_signup_enabled
   # Connecting a new number creates an inbox, and reauthorizing a live one swaps its credentials: both are admin or
-  # inbox_manage only (#452; the new-inbox path was open to any member until #2027).
+  # inbox_manage only (#452, #2027).
   before_action -> { check_permission_granted!('inbox_manage') }
   before_action :fetch_and_validate_inbox, if: -> { params[:inbox_id].present? }
 
