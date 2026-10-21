@@ -676,3 +676,16 @@
   display_name: Mensagem da equipe ao cliente relê o card em foco
   enabled: false
   column: feature_flags_ext_1
+
+# Foto de perfil do contato na caixa híbrida (#1934). Ligada: mensagem recebida numa caixa híbrida, de contato sem foto,
+# busca a foto pela sessão WAHA da própria caixa (mesmo número) e grava com Avatar::AvatarFromUrlJob
+# (WhatsappHybrid::FotoDoContato). No máximo 1 tentativa a cada 7 dias por contato (30 dias quando a foto está escondida),
+# 1 consulta a cada 15 s e 300 por dia por sessão; erro do motor pausa a sessão por 1 hora. A Cloud pura segue sem foto
+# (decisão do Rodrigo, 20/10). Posição 48 na feature_flags_ext_1 (1 << 47), definitiva da Orquestração (21/10), logo
+# depois de crm_ia_avalia_mensagem_equipe. Ligada em
+# TODAS as contas (Rodrigo, 20/10: o Híbrido já está liberado e o gate é a caixa híbrida): as existentes pela
+# Orquestração depois do deploy; conta nova nasce ligada (migration 20261108220000).
+- name: hibrido_foto_do_contato
+  display_name: Foto de perfil do contato no WhatsApp Híbrido
+  enabled: true
+  column: feature_flags_ext_1
