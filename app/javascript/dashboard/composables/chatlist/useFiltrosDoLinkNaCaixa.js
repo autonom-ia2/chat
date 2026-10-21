@@ -71,6 +71,13 @@ export const filtroDoLinkDaLista = ({
   };
 };
 
+// A lista com o filtro do link de quem não tem a aba "Todas" (#1999, ex.: função com conversation_unassigned_manage): o
+// número conta tudo o que a pessoa vê, então a lista pede "todas" e o servidor (ConversationFinder, com as permissões de
+// quem pede) corta o que ela não pode ver: as Minhas mais as Não atribuídas, o mesmo das abas dela somadas. Com "Todas"
+// ou sem o filtro, vale a aba escolhida.
+export const abaDaListaComLink = ({ daIa, esperandoMin }, abas, aba, todas) =>
+  (daIa || esperandoMin) && !abas.includes(todas) ? todas : aba;
+
 // O funil da lista com o filtro do link (#1999): o escopo vem do link, e o funil escolhido na caixa fica de lado (sem
 // gravar nada: a escolha salva volta quando o link sai). Sem o filtro, o funil escolhido.
 export const funilDoFiltroDoLink = ({ daIa, esperandoMin }, funil, todos) =>
@@ -137,6 +144,10 @@ export const useFiltrosDoLinkNaCaixa = () => {
   const daIa = computed(() => filtros.value.daIa);
   const esperandoMin = computed(() => filtros.value.esperandoMin);
   const noFunil = computed(() => filtros.value.noFunil);
+  // Muda quando qualquer valor do link muda (#1999): a lista relê, e a releitura periódica usa os valores novos.
+  const assinatura = computed(() =>
+    [daIa.value, esperandoMin.value, noFunil.value].join('|')
+  );
   const linkNoEndereco = computed(() => Object.keys(doLink(route)).length > 0);
 
   // Tira só o link do endereço; o filtro desliga junto, porque ele é o endereço.
@@ -189,6 +200,7 @@ export const useFiltrosDoLinkNaCaixa = () => {
     daIa,
     esperandoMin,
     noFunil,
+    assinatura,
     limpar,
     limparTudo,
     linkDoFiltro,

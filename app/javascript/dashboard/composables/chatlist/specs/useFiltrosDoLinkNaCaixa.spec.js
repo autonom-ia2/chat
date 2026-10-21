@@ -5,6 +5,7 @@ import {
   abaDoFiltroDoLink,
   statusDoFiltroDoLink,
   funilDoFiltroDoLink,
+  abaDaListaComLink,
   filtroDoLinkDaLista,
   filtrosDoEndereco,
   useFiltrosDoLinkNaCaixa,
@@ -408,5 +409,58 @@ describe('funil da lista com o filtro do link', () => {
     expect(
       filtrosDoEndereco({ query: { da_ia: '1', no_funil: '1' } }).noFunil
     ).toBe(true);
+  });
+});
+
+// #1999, revisão 2: quem não tem "Todas" (função com conversation_unassigned_manage) vê a lista do link inteira, as
+// Minhas mais as Não atribuídas, o mesmo que o número conta; o servidor corta pelas permissões.
+describe('abaDaListaComLink', () => {
+  const SEM_TODAS = ['me', 'unassigned'];
+
+  it('sem a aba Todas, a lista do link pede todas', () => {
+    expect(
+      abaDaListaComLink(
+        { daIa: true, esperandoMin: 30 },
+        SEM_TODAS,
+        'me',
+        'all'
+      )
+    ).toBe('all');
+  });
+
+  it('com a aba Todas, ou sem o filtro do link, vale a aba escolhida', () => {
+    expect(
+      abaDaListaComLink(
+        { daIa: true, esperandoMin: 30 },
+        [...SEM_TODAS, 'all'],
+        'me',
+        'all'
+      )
+    ).toBe('me');
+    expect(
+      abaDaListaComLink(
+        { daIa: false, esperandoMin: null },
+        SEM_TODAS,
+        'me',
+        'all'
+      )
+    ).toBe('me');
+  });
+});
+
+// #1999, revisão 2: trocar só o no_funil também relê a lista (a assinatura do link muda).
+describe('assinatura do link', () => {
+  it('muda quando só o no_funil muda', async () => {
+    const { router, filtros } = await montar(
+      '/app/accounts/1/dashboard?da_ia=1&esperando_min=30'
+    );
+    const antes = filtros.assinatura.value;
+
+    await router.push(
+      '/app/accounts/1/dashboard?da_ia=1&esperando_min=30&no_funil=1'
+    );
+    await nextTick();
+
+    expect(filtros.assinatura.value).not.toBe(antes);
   });
 });

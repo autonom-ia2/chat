@@ -15,6 +15,7 @@ import {
   abaDoFiltroDoLink,
   statusDoFiltroDoLink,
   funilDoFiltroDoLink,
+  abaDaListaComLink,
   useFiltrosDoLinkNaCaixa,
   useReleituraPeriodica,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
@@ -319,6 +320,7 @@ const {
   daIa: daIaDoLink,
   esperandoMin: esperandoDoLink,
   noFunil: noFunilDoLink,
+  assinatura: assinaturaDoLink,
   limparTudo: limparTudoDoLink,
   irParaALista,
 } = useFiltrosDoLinkNaCaixa();
@@ -331,6 +333,19 @@ const filtroDoLink = computed(() =>
     pasta: pastaDoEmail.value,
     filtroAvancado: hasAppliedFiltersOrActiveFolders.value,
   })
+);
+// #1999: sem a aba "Todas", a lista do link junta as abas da pessoa (o servidor corta pelas permissões dela), e as abas
+// somem enquanto o link está ligado, porque a lista é a do link.
+const abaDaLista = computed(() =>
+  abaDaListaComLink(
+    filtroDoLink.value,
+    assigneeTabItems.value.map(item => item.key),
+    activeAssigneeTab.value,
+    wootConstants.ASSIGNEE_TYPE.ALL
+  )
+);
+const listaJuntaDoLink = computed(
+  () => abaDaLista.value !== activeAssigneeTab.value
 );
 // #1999: com o filtro do link, o funil da lista vem do link; o escolhido na caixa não é tocado.
 const funilDaLista = computed(() =>
@@ -364,7 +379,7 @@ const tituloDoFiltroDoLink = computed(() => {
 const conversationFilters = computed(() => {
   return {
     inboxId: props.conversationInbox ? props.conversationInbox : undefined,
-    assigneeType: activeAssigneeTab.value,
+    assigneeType: abaDaLista.value,
     // #1809: Spam e Lixeira resolvem a conversa; dentro da pasta, todos os status.
     status: pastaDoEmail.value ? 'all' : activeStatus.value,
     sortBy: activeSortBy.value,
@@ -450,9 +465,9 @@ const conversationList = computed(() => {
       localConversationList = filterByAssigneeTab(
         participatingChatsList.value(filters)
       );
-    } else if (activeAssigneeTab.value === 'me') {
+    } else if (abaDaLista.value === 'me') {
       localConversationList = [...mineChatsList.value(filters)];
-    } else if (activeAssigneeTab.value === 'unassigned') {
+    } else if (abaDaLista.value === 'unassigned') {
       localConversationList = [...unAssignedChatsList.value(filters)];
     } else {
       localConversationList = [...allChatList.value(filters)];
@@ -1019,7 +1034,7 @@ watch(
 );
 watch([pastaDoEmail, versaoDasPastas], () => resetAndFetchData());
 // Os valores do link, não o filtro já combinado: aplicar um filtro avançado não pode disparar uma releitura que o apaga.
-watch([daIaDoLink, esperandoDoLink], () => resetAndFetchData());
+watch(assinaturaDoLink, () => resetAndFetchData());
 
 // A seta "Limpar filtros" do topo: um clique limpa tudo. Com o link no endereço (mesmo com o filtro avançado por cima),
 // tira o link e o watch acima relê a lista, o que também tira o avançado.
@@ -1114,7 +1129,7 @@ watch(appliedFilters, () => resetBulkActions());
     />
 
     <ChatTypeTabs
-      v-if="!hasAppliedFiltersOrActiveFolders"
+      v-if="!hasAppliedFiltersOrActiveFolders && !listaJuntaDoLink"
       :items="assigneeTabItems"
       :active-tab="activeAssigneeTab"
       is-compact

@@ -189,6 +189,29 @@ RSpec.describe Crm::Numeros::Equipe do
     expect(equipe[:proximo].find { |item| item[:tipo] == 'ia_esperando' }).to include(n: 1)
   end
 
+  # Revisão 2 do #1999: a função sem a aba "Todas" (só Minhas e Não atribuídas) conta o que a caixa do link mostra:
+  # a lista pede "todas" e o ConversationFinder corta pelas permissões de quem pede.
+  it 'a IA esperando de quem só vê Minhas e Não atribuídas é o tamanho da lista que o link abre' do
+    helena = create(:user, account: account, role: :agent, name: 'Helena', display_name: 'Helena')
+    papel = create(:custom_role, account: account, permissions: %w[crm_view crm_view_reports conversation_unassigned_manage])
+    helena.account_users.find_by(account: account).update!(custom_role: papel)
+    create(:inbox_member, user: helena, inbox: inbox)
+    [ana, nil, helena].each do |quem|
+      chat = conversation(assignee: quem)
+      card(sale, owner: ana, conversation: chat)
+      passagem(chat, ana)
+      chat.update!(waiting_since: 1.hour.ago)
+    end
+
+    numero = equipe(user: helena, dono: false)[:proximo].find { |item| item[:tipo] == 'ia_esperando' }[:n]
+    lista = ConversationFinder.new(helena, ActionController::Parameters.new(
+                                             Crm::Numeros::Equipe::LINK_IA_ESPERANDO.merge(assignee_type: 'all')
+                                           )).perform[:conversations]
+
+    expect(numero).to eq(2)
+    expect(lista.size).to eq(numero)
+  end
+
   # Achado 2: no teto do crédito a conta pode ter sido cortada; o número não abre a Lista, que mostraria outro conjunto.
   it 'fechadas abre a Lista quando ela bate, e não abre no teto do crédito' do
     2.times { close(card(sale, owner: ana, value_cents: 1000)) }
