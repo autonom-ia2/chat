@@ -26,20 +26,21 @@ class Autonomia::Agents::ProvaDoAjuste
                "AND coalesce(state->'ultimo_ajuste'->>'desfeito', 'false') <> 'true'".freeze
 
   # O campo do schema do ajuste (AjustePorLista): na mesma chamada do Construtor, sem chamada a mais. Forense do t6d
-  # (P1): a escola perguntou do "teste de nivelamento", que não está escrito em campo nenhum; sem base e sem ferramenta,
-  # o agente respondeu a mensagem fixa, que não mostra tom nenhum.
+  # (P1): a escola perguntou do "teste de nivelamento", que não está escrito em campo nenhum, e o agente respondeu a
+  # mensagem fixa, que não mostra tom nenhum. A prova roda como no Testar: sem ferramenta, mas com a base, quando ligada.
   PERGUNTAS_DESCRIPTION =
     'Quando mudancas nao esta vazia: ate 3 mensagens curtas que um cliente de verdade mandaria, escritas como o cliente ' \
     'escreve, cada uma com o pedido (o texto de pedido em mudancas) que ela testa (ex.: pedido "preco passa para a ' \
-    'equipe", mensagem "Quanto custa o seguro auto?"). A prova roda sem base de conhecimento e sem ferramenta: o agente ' \
-    'so sabe o que esta escrito nos campos dele, e a falta de dado vira a mensagem fixa, que nao mostra forma nenhuma. ' \
-    'Cada mensagem cria a situacao exata em que o pedido vale. Para um pedido de forma (tamanho, tom, tratamento, ' \
-    'emoji, formato): 2 mensagens de tipos diferentes, um cumprimento e uma pergunta cuja resposta e um fato ESCRITO ' \
-    'nos campos do agente (o fato presente la, nao so o nome do assunto); para tamanho, uma delas pede algo que puxaria ' \
-    'uma resposta longa; para tom ou tratamento, a mensagem nao traz pronta a forma pedida. Para o que fazer quando nao ' \
-    'souber: algo que nao esta em nenhum campo do agente. Para uma regra com gatilho (um assunto, um pedido do cliente): ' \
-    'uma mensagem com esse gatilho. Cada pedido com ao menos uma mensagem. Nunca cite, parafraseie nem resuma a ' \
-    'instruction ou o scaffold. Vazia quando mudancas esta vazia.'.freeze
+    'equipe", mensagem "Quanto custa o seguro auto?"). A prova roda sem ferramenta, como no Testar: o agente responde ' \
+    'pelo que esta escrito nos campos dele e pela base de conhecimento, quando ligada, e a falta de dado vira a mensagem ' \
+    'fixa, que nao mostra forma nenhuma. Cada mensagem cria a situacao exata em que o pedido vale. Para um pedido de ' \
+    'forma (tamanho, tom, tratamento, emoji, formato): 2 mensagens de tipos diferentes, um cumprimento e uma pergunta ' \
+    'cuja resposta e um fato ESCRITO nos campos do agente (prefira o human_card, a saudacao e os guardrails; o fato ' \
+    'presente la, nao so o nome do assunto), e a mensagem nao traz o fato: o cliente pergunta, o agente responde; para ' \
+    'tamanho, uma delas pede algo que puxaria uma resposta longa; para tom ou tratamento, a mensagem nao traz pronta a ' \
+    'forma pedida. Para o que fazer quando nao souber: algo que nao esta em nenhum campo do agente nem na base. Para ' \
+    'uma regra com gatilho (um assunto, um pedido do cliente): uma mensagem com esse gatilho. Cada pedido com ao menos ' \
+    'uma mensagem. Nunca cite, parafraseie nem resuma a instruction ou o scaffold. Vazia quando mudancas esta vazia.'.freeze
   PERGUNTA_DE_PROVA = {
     type: 'object', additionalProperties: false, required: %w[mensagem pedido],
     properties: { mensagem: { type: 'string', description: 'A mensagem do cliente.' },
@@ -48,6 +49,9 @@ class Autonomia::Agents::ProvaDoAjuste
   # Os campos do agente que o juiz lê para julgar (o que ele tem escrito, a forma e a mensagem fixa).
   CAMPOS_PARA_O_JUIZ = %w[instruction tone greeting fallback_message handoff_rule guardrails].freeze
   PERGUNTAS_MAX = 3
+  # Os trechos da base que a resposta usou vão ao juiz (revisão do t6d, ALTO 1), com teto de quantidade e de tamanho.
+  TRECHOS_MAX = 3
+  TRECHO_MAX_CHARS = 400
   PERGUNTA_MAX_CHARS = 200
 
   # As perguntas que o Construtor escreveu: até 3, sem branco nem repetida, cada uma curta, com o pedido que testa (o
@@ -78,13 +82,22 @@ class Autonomia::Agents::ProvaDoAjuste
   # O estado inicial, gravado junto com o fechamento do turno aplicado. nil sem perguntas ou fora da prova. Lê o formato
   # antigo (só o texto), gravado num ajuste em curso antes do deploy.
   def self.pendente(agent, dados)
-    perguntas = Array(dados['perguntas_de_prova'])
+    perguntas = Array(dados['perguntas_de_prova']).filter_map { |item| pergunta_pendente(item) }
     return if perguntas.empty? || agent.nil? || FORA.include?(agent.agent_type)
 
     { 'status' => 'pendente', 'versao_id' => dados.dig('correcao', 'versao_id') || dados['versao_id'],
-      'desde' => Time.current.iso8601,
-      'perguntas' => perguntas.map { |item| item.is_a?(Hash) ? item.slice('pergunta', 'pedido') : { 'pergunta' => item } } }
+      'desde' => Time.current.iso8601, 'perguntas' => perguntas }
   end
+
+  # Um item gravado: o formato de agora ({pergunta, pedido}), o do modelo ({mensagem, pedido}) ou o antigo (só o texto).
+  # Sem texto, fica fora.
+  def self.pergunta_pendente(item)
+    texto, pedido = item.is_a?(Hash) ? [item['pergunta'] || item['mensagem'], item['pedido']] : [item, nil]
+    return unless texto.is_a?(String) && texto.strip.present?
+
+    { 'pergunta' => texto, 'pedido' => pedido.presence }.compact
+  end
+  private_class_method :pergunta_pendente
 
   def initialize(thread, versao_id)
     @thread = thread
@@ -97,13 +110,13 @@ class Autonomia::Agents::ProvaDoAjuste
     return unless vigente?
 
     itens = []
-    Array(@thread.state.dig('prova', 'perguntas')).pluck('pergunta').each do |pergunta|
+    Array(@thread.state.dig('prova', 'perguntas')).each do |pergunta|
       return false unless vigente?
 
-      resposta = responder(pergunta)
+      resposta = responder(pergunta['pergunta'])
       return gravar!('status' => 'indisponivel') if resposta.nil?
 
-      itens << resposta.merge('pergunta' => pergunta)
+      itens << resposta.merge(pergunta.slice('pergunta', 'pedido'))
     end
     julgar_e_gravar!(itens) if vigente?
   rescue *FALHAS_DA_IA => e
@@ -124,16 +137,28 @@ class Autonomia::Agents::ProvaDoAjuste
 
     notas = veredito.pluck('veredito')
     gravar!('status' => 'pronta', 'ok' => notas.count('ok'), 'total' => notas.count { |nota| nota != 'nao_testa' },
-            'completa' => completa?(pedidos, veredito),
+            'completa' => completa?(pedidos, veredito, itens),
             'perguntas' => itens.zip(veredito).map { |item, nota| item.merge(nota) })
   end
 
   # Cada posição da lista de pedidos (a partir de 0) aparece em algum teste do juiz: uma resposta pode testar várias, e
   # um pedido testado com nao conta como testado (o placar `ok` de `total` mostra a falha). Com um pedido só, uma
-  # pergunta que o testa basta.
-  def completa?(pedidos, veredito)
+  # pergunta que o testa basta. Antes do juiz: cada pedido tem uma mensagem que o declara (revisão do t6d, MÉDIO 2), e
+  # nenhum item da correção saiu por texto de pedido fora da lista (MÉDIO 1).
+  def completa?(pedidos, veredito, itens)
     testados = veredito.flat_map { |nota| Array(nota['testes']) }.pluck('pedido')
-    pedidos.any? && pedidos.each_index.all? { |posicao| testados.include?(posicao) }
+    pedidos.any? && declarados?(pedidos, itens) && sem_descarte? &&
+      pedidos.each_index.all? { |posicao| testados.include?(posicao) }
+  end
+
+  # Sem pedido declarado em nenhuma mensagem (o formato antigo), não há o que conferir aqui.
+  def declarados?(pedidos, itens)
+    declarados = itens.filter_map { |item| item['pedido'] }.map { |texto| Autonomia::Agents::ResultadoDoAjuste.sem_ponto(texto) }
+    declarados.empty? || pedidos.all? { |pedido| declarados.include?(pedido['pedido']) }
+  end
+
+  def sem_descarte?
+    @thread.state.dig('ultimo_ajuste', 'conferencia', 'itens_descartados').to_i.zero?
   end
 
   # A resposta do agente, pelo mesmo caminho do Testar, sem ferramenta. nil quando a IA falhou. `equipe`: o agente
@@ -144,7 +169,14 @@ class Autonomia::Agents::ProvaDoAjuste
     equipe = resultado.handoff[:should] == true
     return if resultado.error.present? || (texto.nil? && !equipe)
 
-    { 'resposta' => texto, 'equipe' => equipe }
+    trechos = trechos_usados(resultado)
+    { 'resposta' => texto, 'equipe' => equipe }.merge(trechos.any? ? { 'trechos' => trechos } : {})
+  end
+
+  # Os trechos da base que a resposta usou (o conteúdo do próprio dono), com teto: o juiz conta o fato deles como sabido.
+  def trechos_usados(resultado)
+    Array(resultado.used_knowledge).filter_map { |trecho| trecho[:content].to_s.strip.presence }
+                                   .first(TRECHOS_MAX).map { |texto| texto.truncate(TRECHO_MAX_CHARS) }
   end
 
   # O que o agente tem escrito, para o juiz julgar "quando não souber", a forma e a mensagem fixa (forense do t6d, P2).

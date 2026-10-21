@@ -23,12 +23,18 @@ class Autonomia::Agents::JuizDaProva
 
   class Malformada < StandardError; end
 
+  # O agente vai ao juiz com teto (revisão do t6d, MÉDIO 3): a instrução pode chegar a Agent::MAX_INSTRUCTION_LENGTH.
+  INSTRUCAO_DO_AGENTE_MAX_CHARS = 8_000
+  CAMPO_DO_AGENTE_MAX_CHARS = 1_000
+
   # Texto lido pelo modelo: sem travessão e sem crase.
   INSTRUCAO = <<~TXT.freeze
     Voce confere um teste de um agente de atendimento. O dono pediu mudancas no agente, e elas entraram. Depois, o
     agente respondeu a mensagens de cliente escritas para mostrar essas mudancas. Voce recebe O AGENTE (os campos que ele
     tem escritos), a lista do que mudou, um item numerado por pedido do dono, e, numerados, a mensagem do cliente e a
-    resposta do agente. No teste o agente nao tem base de conhecimento: ele so sabe o que esta escrito nos campos.
+    resposta do agente. Em cada item, trechos_da_base_usados sao os trechos da base de conhecimento que a resposta
+    usou: um fato presente neles conta como sabido pelo agente. O agente sabe o que esta escrito nos campos e nesses
+    trechos.
     Para cada indice, liste em testes os pedidos do dono que essa mensagem testa, um teste por pedido, com o numero do
     pedido (o campo numero da lista, que comeca em 1) e o veredito daquele pedido:
     - ok: a resposta respeita esse pedido.
@@ -45,7 +51,7 @@ class Autonomia::Agents::JuizDaProva
     cliente traz esse assunto: uma resposta curta sobre horario nao testa o pedido do preco. Um pedido de gatilho por
     situacao (ex.: "quando nao souber, passe para a equipe") entra em testes quando a mensagem cria essa situacao: o
     cliente pergunta algo que o agente nao tem como saber. Use O AGENTE para saber o que ele tem escrito: um dado que
-    nao esta em nenhum campo cria a situacao de nao saber. Um pedido com condicao (ex.: "pergunte o nome se a cliente
+    nao esta em nenhum campo nem nos trechos usados cria a situacao de nao saber. Um pedido com condicao (ex.: "pergunte o nome se a cliente
     nao disse") so entra em testes quando a condicao esta na mensagem: se a cliente ja disse o nome, o pedido de
     perguntar o nome nao entra.
     "passa_para_equipe" true quer dizer que o agente passaria a conversa para uma pessoa da equipe. No teste o agente
@@ -99,11 +105,19 @@ class Autonomia::Agents::JuizDaProva
   def entrada(pedidos, itens, agente)
     teste = itens.each_with_index.map do |item, indice|
       { 'indice' => indice, 'mensagem_do_cliente' => item['pergunta'], 'resposta_do_agente' => item['resposta'].to_s,
-        'passa_para_equipe' => item['equipe'] == true }
+        'passa_para_equipe' => item['equipe'] == true, 'trechos_da_base_usados' => Array(item['trechos']) }
     end
-    texto = "O AGENTE:\n#{JSON.pretty_generate(agente)}\n\nO QUE MUDOU:\n#{JSON.pretty_generate(pedidos)}\n\n" \
+    texto = "O AGENTE:\n#{JSON.pretty_generate(agente_com_teto(agente))}\n\nO QUE MUDOU:\n#{JSON.pretty_generate(pedidos)}\n\n" \
             "TESTE:\n#{JSON.pretty_generate(teste)}"
     [Autonomia::Agents::PromptParts::Mensagem.montar('user', texto)]
+  end
+
+  # Cada campo do agente cortado no teto; a instrução, no teto dela.
+  def agente_com_teto(agente)
+    agente.to_h.to_h do |campo, valor|
+      teto = campo.to_s == 'instruction' ? INSTRUCAO_DO_AGENTE_MAX_CHARS : CAMPO_DO_AGENTE_MAX_CHARS
+      [campo, valor.is_a?(Array) ? valor.map { |parte| parte.to_s.truncate(teto) } : valor.to_s.truncate(teto)]
+    end
   end
 
   # Um veredito por item, na ordem; índice repetido vale o primeiro; faltando algum, a prova não vale.

@@ -116,6 +116,39 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     )
   end
 
+  # Revisão do t6d (ALTO 1): agente com base responde pela base; o fato dos trechos usados conta como sabido.
+  it 'a instrução conta como sabido o fato dos trechos da base usados, e a entrada leva os trechos de cada item' do
+    expect(described_class::INSTRUCAO.squish).to include(
+      'Em cada item, trechos_da_base_usados sao os trechos da base de conhecimento que a resposta usou: um fato presente ' \
+      'neles conta como sabido pelo agente.'
+    )
+    itens.first['trechos'] = ['Aulas às 19h.']
+    juiz_responde([{ indice: 0, testes: [] }, { indice: 1, testes: [] }])
+
+    julgar
+
+    expect(cliente).to have_received(:create) do |**kwargs|
+      expect(kwargs[:input].first[:content].first[:text]).to include('"trechos_da_base_usados": [', 'Aulas às 19h.')
+    end
+  end
+
+  # Revisão do t6d (MÉDIO 3): o agente vai ao juiz com teto de caracteres, mesmo com a instrução no limite do modelo.
+  it 'a instrução do agente no limite (MAX_INSTRUCTION_LENGTH) vai cortada no teto, e os outros campos também' do
+    agente.merge!('instruction' => 'i' * Autonomia::Agents::Agent::MAX_INSTRUCTION_LENGTH,
+                  'guardrails' => ['g' * (described_class::CAMPO_DO_AGENTE_MAX_CHARS + 10)])
+    juiz_responde([{ indice: 0, testes: [] }, { indice: 1, testes: [] }])
+
+    julgar
+
+    expect(cliente).to have_received(:create) do |**kwargs|
+      texto = kwargs[:input].first[:content].first[:text]
+      expect(texto).to include("#{'i' * (described_class::INSTRUCAO_DO_AGENTE_MAX_CHARS - 3)}...")
+      expect(texto).not_to include('i' * described_class::INSTRUCAO_DO_AGENTE_MAX_CHARS)
+      expect(texto).to include("#{'g' * (described_class::CAMPO_DO_AGENTE_MAX_CHARS - 3)}...")
+      expect(texto.size).to be < described_class::INSTRUCAO_DO_AGENTE_MAX_CHARS + 2_000
+    end
+  end
+
   it 'a entrada leva os campos do agente, rotulados como dado' do
     juiz_responde([{ indice: 0, testes: [] }, { indice: 1, testes: [] }])
 

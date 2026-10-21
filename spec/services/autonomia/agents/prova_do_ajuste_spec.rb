@@ -29,8 +29,10 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     end
   end
 
-  def resposta(texto, handoff: false, error: nil)
-    Autonomia::Agents::AnswerResult.new(reply: texto, confidence: 0.9, handoff: { should: handoff, reason: nil }, error: error)
+  def resposta(texto, handoff: false, error: nil, base: [])
+    usados = base.each_with_index.map { |conteudo, indice| { id: indice + 1, content: conteudo, source: 'manual' } }
+    Autonomia::Agents::AnswerResult.new(reply: texto, confidence: 0.9, handoff: { should: handoff, reason: nil }, error: error,
+                                        used_knowledge: usados)
   end
 
   def provar!
@@ -118,6 +120,48 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(described_class.pendente(agent, 'perguntas_de_prova' => [{ 'pergunta' => 'Oi?', 'pedido' => fala }],
                                              'versao_id' => 1)['perguntas']).to eq([{ 'pergunta' => 'Oi?', 'pedido' => fala }])
     end
+
+    # Revisão do t6d (BAIXO): a prova pendente aguenta Hash cru do modelo ({mensagem, pedido}), Hash sem texto e lixo.
+    it 'pendente lê {mensagem, pedido}, descarta Hash sem texto e o que não é texto; sem nenhuma, sem prova' do
+      dados = { 'versao_id' => 1, 'perguntas_de_prova' => [{ 'mensagem' => 'Tem loja?', 'pedido' => fala }, { 'pedido' => fala },
+                                                           { 'pergunta' => '' }, 7, nil, 'Oi?'] }
+
+      expect(described_class.pendente(agent, dados)['perguntas']).to eq([{ 'pergunta' => 'Tem loja?', 'pedido' => fala },
+                                                                         { 'pergunta' => 'Oi?' }])
+      expect(described_class.pendente(agent, 'versao_id' => 1, 'perguntas_de_prova' => [{ 'pedido' => fala }])).to be_nil
+    end
+  end
+
+  # Revisão do t6d (MÉDIO 2): o pedido declarado em cada mensagem é usado. Pedido sem nenhuma mensagem: sem prova
+  # completa, antes de olhar o juiz. O pedido fica gravado em cada item.
+  describe '#rodar! com o pedido declarado em cada mensagem' do
+    let(:preco) { 'preço passa para a equipe' }
+
+    def ajustar_com(*declarados)
+      aplicar_ajuste('handoff_rule' => 'Preço vai à equipe.',
+                     'mudancas' => [mudanca('tone', fala, 'Respostas curtas.'), mudanca('handoff_rule', preco, 'Preço vai à equipe.')],
+                     'perguntas_de_prova' => declarados.each_with_index.map { |pedido, i| { 'mensagem' => "Pergunta #{i}?", 'pedido' => pedido } })
+      agente_responde
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', pedidos: [0, 1]) + vereditos('ok', pedidos: [0, 1]))
+    end
+
+    it 'um pedido sem nenhuma mensagem: sem prova completa, mesmo com o juiz dando os dois testados' do
+      ajustar_com(fala, fala)
+
+      provar!
+
+      expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => false)
+      expect(estado.dig('prova', 'perguntas').pluck('pedido')).to eq([fala, fala])
+    end
+
+    it 'cada pedido com a sua mensagem: completa, e o juiz recebe o pedido de cada item' do
+      ajustar_com(fala, preco)
+
+      provar!
+
+      expect(estado['prova']).to include('completa' => true)
+      expect(juiz).to have_received(:julgar) { |itens:, **| expect(itens.pluck('pedido')).to eq([fala, preco]) }
+    end
   end
 
   # Forense do t6d (P1): a escola perguntou do "teste de nivelamento", que não está escrito em campo nenhum, e o agente
@@ -149,11 +193,15 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(lido).to eq([{ 'pergunta' => 'Oi!' }])
     end
 
-    it 'a descrição: prova sem base e sem ferramenta, fato escrito nos campos, 2 mensagens de tipos diferentes para forma' do
+    # Revisão do t6d (ALTO 1): a prova roda como no Testar, COM a base quando ligada; só sem ferramenta.
+    it 'a descrição: prova sem ferramenta e com a base, fato escrito nos campos sem vir na mensagem, 2 tipos para forma' do
       descricao = described_class::PERGUNTAS_DESCRIPTION
-      expect(descricao).to include('A prova roda sem base de conhecimento e sem ferramenta',
+      expect(descricao).to include('A prova roda sem ferramenta, como no Testar', 'e pela base de conhecimento, quando ligada',
                                    'a falta de dado vira a mensagem fixa', 'um fato ESCRITO nos campos do agente',
-                                   'nao so o nome do assunto', '2 mensagens de tipos diferentes', 'um cumprimento')
+                                   'prefira o human_card, a saudacao e os guardrails', 'a mensagem nao traz o fato',
+                                   'nao so o nome do assunto', '2 mensagens de tipos diferentes', 'um cumprimento',
+                                   'algo que nao esta em nenhum campo do agente nem na base')
+      expect(descricao).not_to include('sem base de conhecimento')
     end
 
     it 'o item do schema é {mensagem, pedido}, estrito' do
@@ -182,6 +230,21 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
          { 'pergunta' => perguntas[1], 'resposta' => nil, 'equipe' => true, 'veredito' => 'nao',
            'testes' => [{ 'pedido' => 0, 'veredito' => 'nao' }] }]
       )
+    end
+
+    # Revisão do t6d (ALTO 1): a prova roda com a base; o juiz recebe os trechos que a resposta usou, com teto.
+    it 'os trechos da base que a resposta usou vão ao juiz e ficam na prova, com teto de tamanho e de quantidade' do
+      longo = 'x' * (described_class::TRECHO_MAX_CHARS + 50)
+      agente_responde(resposta('A aula é às 19h.', base: ['Aulas às 19h.', longo, 'c', 'd']), resposta('Oi.'))
+
+      provar!
+
+      trechos = ['Aulas às 19h.', "#{'x' * (described_class::TRECHO_MAX_CHARS - 3)}...", 'c']
+      expect(juiz).to have_received(:julgar) do |itens:, **|
+        expect(itens.first['trechos']).to eq(trechos)
+        expect(itens.last).not_to have_key('trechos')
+      end
+      expect(estado.dig('prova', 'perguntas', 0, 'trechos')).to eq(trechos)
     end
 
     it 'o juiz recebe só o que entrou (pedido e resumo do Construtor) e cada pergunta com a resposta' do
@@ -432,6 +495,16 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       provar!
 
       expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => true)
+    end
+
+    # Revisão do t6d (MÉDIO 1): um item da correção que saiu por texto de pedido fora da lista nunca some em silêncio.
+    it 'com item descartado na correção, a prova não sai completa' do
+      thread.update!(state: thread.state.deep_merge('ultimo_ajuste' => { 'conferencia' => { 'itens_descartados' => 1 } }))
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', pedidos: [0, 1]) + vereditos('ok', pedidos: [0, 1]))
+
+      provar!
+
+      expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => false)
     end
 
     # t6d R4/R5: a resposta curta e sem emoji testa os dois pedidos de uma vez.
