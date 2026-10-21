@@ -78,6 +78,9 @@ import BotaoDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminh
 import MarcaDeEncaminhar from 'dashboard/components-next/conversa-canal/encaminhar/MarcaDeEncaminhar.vue';
 import { useEncaminharDaMensagem } from 'dashboard/components-next/conversa-canal/encaminhar/useEncaminharDaMensagem';
 import { useBranding } from 'shared/composables/useBranding';
+import { ehNotaDoConector } from 'dashboard/components-next/conversa-canal/notaDoConector';
+import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
+import { useEcoDoCelular } from 'dashboard/components-next/conversa-canal/useEcoDoCelular';
 
 /**
  * @typedef {Object} Attachment
@@ -182,8 +185,23 @@ const { t } = useI18n();
 const route = useRoute();
 const inboxGetter = useMapGetter('inboxes/getInbox');
 const inbox = computed(() => inboxGetter.value(props.inboxId) || {});
+// #1941: a nota técnica antiga do conector WAHA aparece como a linha de aviso.
+const notaDoConector = computed(() =>
+  ehNotaDoConector({
+    caixa: inbox.value,
+    privada: props.private,
+    conteudo: props.content,
+  })
+);
 const isOnChatwootCloud = useMapGetter('globalConfig/isOnChatwootCloud');
 const { replaceInstallationName } = useBranding();
+
+// #1941: mandada pelo app do celular (eco). O texto sai sem o prefixo do conector WAHA
+// (inclusive no histórico) e o nome é o de quem estava atribuído quando chegou.
+const eco = useEcoDoCelular(computed(() => props.contentAttributes));
+const conteudo = computed(() =>
+  textoDaMensagem(props.content, props.contentAttributes)
+);
 
 // fork chat#1709 (fase 3): reagir e editar pelo painel, só com a ação no campo da conversa.
 // Também serve ao "só leitura" do #1800, mais abaixo.
@@ -228,6 +246,7 @@ const isAutonomiaAgentMessage = computed(
  * @type {import('vue').ComputedRef<'user'|'agent'|'activity'|'private'|'bot'|'template'>}
  */
 const variant = computed(() => {
+  if (notaDoConector.value) return MESSAGE_VARIANTS.ACTIVITY;
   if (props.private) return MESSAGE_VARIANTS.PRIVATE;
 
   if (props.isEmailInbox) {
@@ -302,6 +321,7 @@ const isBotOrAgentMessage = computed(() => {
  * @returns {import('vue').ComputedRef<'left'|'right'|'center'>} The computed orientation
  */
 const orientation = computed(() => {
+  if (notaDoConector.value) return ORIENTATION.CENTER;
   if (isBotOrAgentMessage.value) {
     return ORIENTATION.RIGHT;
   }
@@ -462,7 +482,8 @@ const componentToRender = computed(() => {
     )
       return LocationBubble;
 
-    if (!props.content) {
+    // #1941: foto mandada pelo celular cujo texto era só o prefixo do conector.
+    if (!conteudo.value) {
       if (fileType === ATTACHMENT_TYPES.IMAGE) return ImageBubble;
       if (fileType === ATTACHMENT_TYPES.FILE) return FileBubble;
       if (fileType === ATTACHMENT_TYPES.AUDIO) return AudioBubble;
@@ -483,7 +504,7 @@ const shouldShowContextMenu = computed(() => {
 });
 
 const isBubble = computed(() => {
-  return props.messageType !== MESSAGE_TYPES.ACTIVITY;
+  return props.messageType !== MESSAGE_TYPES.ACTIVITY && !notaDoConector.value;
 });
 
 const isMessageDeleted = computed(() => {
@@ -536,7 +557,7 @@ const mensagemParaEncaminhar = computed(() => ({
   contentType: props.contentType,
   status: props.status,
   private: props.private,
-  content: props.content,
+  content: conteudo.value,
   contentAttributes: props.contentAttributes,
   additionalAttributes: props.additionalAttributes,
   attachments: props.attachments,
@@ -555,7 +576,7 @@ const payloadForContextMenu = computed(() => {
       (album.value || contatosJuntos.value)?.map(item => item.id) || null,
     id: props.id,
     content_attributes: props.contentAttributes,
-    content: props.content,
+    content: conteudo.value,
     conversation_id: props.conversationId,
     c2y_revocable: props.c2yRevocable,
   };
@@ -565,7 +586,7 @@ const payloadForContextMenu = computed(() => {
 const canDeleteMessage = useCanManage('conversation_message_delete');
 
 const allContextMenuOptions = computed(() => {
-  const hasText = !!props.content;
+  const hasText = !!conteudo.value;
   const hasAttachments = !!(props.attachments && props.attachments.length > 0);
 
   const isOutgoing = props.messageType === MESSAGE_TYPES.OUTGOING;
@@ -636,7 +657,7 @@ const shouldRenderMessage = computed(() => {
 
   return (
     hasAttachments ||
-    props.content ||
+    conteudo.value ||
     isEmailContentType ||
     isUnsupported ||
     isAnIntegrationMessage ||
@@ -683,6 +704,13 @@ function handleReplyTo() {
 }
 
 const avatarInfo = computed(() => {
+  // #1941: eco com quem estava atribuído = avatar dessa pessoa; nunca o remetente.
+  if (eco.autor.value) {
+    return {
+      name: eco.nomeDoAutor.value,
+      src: eco.autor.value.thumbnail || '',
+    };
+  }
   if (props.contentAttributes?.externalEcho) {
     const { name, avatar_url, channel_type, medium, voice_enabled } =
       inbox.value;
@@ -724,6 +752,11 @@ const avatarInfo = computed(() => {
 });
 
 const avatarTooltip = computed(() => {
+  if (eco.autor.value) {
+    return t('CONVERSA_CANAL.ECO_DO_CELULAR.ENVIADA_POR', {
+      nome: eco.nomeDoAutor.value,
+    });
+  }
   if (props.contentAttributes?.externalEcho) {
     return replaceInstallationName(t('CONVERSATION.NATIVE_APP_ADVISORY'));
   }
@@ -747,6 +780,11 @@ onMounted(setupHighlightTimer);
 
 provideMessageContext({
   ...toRefs(props),
+  content: computed(() =>
+    notaDoConector.value
+      ? t('CONVERSA_CANAL.NOTA_DO_CONECTOR.AVISO')
+      : conteudo.value
+  ),
   isPrivate: computed(() => props.private),
   variant,
   orientation,
@@ -785,7 +823,8 @@ provideMessageContext({
     >
       <LigacaoDoWhatsapp v-if="ligacao" />
       <AvisoDeTemporarias v-else-if="temporarias" />
-      <ActivityBubble v-else :content="content" />
+      <!-- O texto vem do contexto da mensagem (o da nota do conector é o aviso curto, #1941). -->
+      <ActivityBubble v-else />
     </div>
     <div
       v-else
@@ -885,7 +924,7 @@ provideMessageContext({
         ref="messageActionDialogs"
         :conversation-id="conversationId"
         :message-id="id"
-        :content="content || ''"
+        :content="conteudo || ''"
         :reactions="messageReactions"
       />
     </div>

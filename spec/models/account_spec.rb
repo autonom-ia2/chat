@@ -236,7 +236,13 @@ RSpec.describe Account do
         # #1813: posição 42, logo depois de crm_numeros_lentes (tabela da Orquestração, 19/10).
         feature_contato_pelo_email: 1 << 41,
         # #1910: posição 43 (definitiva da Orquestração, 19/10), depois de contato_pelo_email (42, #1917).
-        feature_crm_assunto_na_etapa: 1 << 42
+        feature_crm_assunto_na_etapa: 1 << 42,
+        # #1938: posição 44 (Orquestração, 20/10: fica com a 44 se o PR abrir antes do etiquetas_do_celular do Max).
+        feature_email_enviados: 1 << 43,
+        # #1960: posição 45 (definitiva da Orquestração, 21/10), logo depois de email_enviados.
+        feature_anuncios_sem_login: 1 << 44,
+        # #1922: posição 46 (1 << 45), definitiva da Orquestração (21/10), logo depois de anuncios_sem_login.
+        feature_crm_ia_arquiva_lixo: 1 << 45
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

@@ -18,6 +18,11 @@ const admin = vi.hoisted(() => ({ eh: true }));
 vi.mock('dashboard/composables/useAdmin', () => ({
   useAdmin: () => ({ isAdmin: ref(admin.eh) }),
 }));
+// #1969: função com Financeiro em Editar (financial_manage) também muda.
+const financeiro = vi.hoisted(() => ({ tem: false }));
+vi.mock('dashboard/composables/useCanManage', () => ({
+  useHasCustomRolePermission: () => ref(financeiro.tem),
+}));
 vi.mock('shared/composables/useBranding', () => ({
   useBranding: () => ({ installationName: ref('Chat2You') }),
 }));
@@ -87,6 +92,7 @@ beforeEach(() => {
   api.updateConsent.mockReset();
   conta.atual = ref({ timezone: 'America/Sao_Paulo' });
   admin.eh = true;
+  financeiro.tem = false;
 });
 
 describe('autorizacaoDaApi', () => {
@@ -234,7 +240,7 @@ describe('AutorizacaoPage', () => {
     expect(wrapper.find('[data-falha]').text()).toBe('Meta prices changed.');
   });
 
-  // Mudar é só do administrador da conta; quem gerencia modelos vê só leitura.
+  // Mudar é do administrador da conta ou de quem tem Financeiro em Editar; quem só gerencia modelos vê só leitura.
   it('shows read-only to non-admins: everything disabled, with the reason', async () => {
     admin.eh = false;
     api.getConsent.mockReturnValue(resposta(payload()));
@@ -246,7 +252,9 @@ describe('AutorizacaoPage', () => {
     expect(caixas.every(caixa => caixa.element.disabled)).toBe(true);
     expect(wrapper.find('[data-ligar]').attributes('disabled')).toBeDefined();
     const frase = wrapper.find('[data-so-admin]');
-    expect(frase.text()).toBe('Only account administrators can change this.');
+    expect(frase.text()).toBe(
+      'Only account administrators, or roles with Finance in Edit, can change this.'
+    );
     // A frase descreve os controles travados (leitor de tela).
     const id = frase.attributes('id');
     expect(wrapper.find('[data-marcas]').attributes('aria-describedby')).toBe(
@@ -280,6 +288,18 @@ describe('AutorizacaoPage', () => {
 
     expect(wrapper.find('[data-dialogo]').exists()).toBe(false);
     expect(api.updateConsent).not.toHaveBeenCalled();
+  });
+
+  it('lets a role with Finance in Edit change it, without the read-only notice', async () => {
+    admin.eh = false;
+    financeiro.tem = true;
+    api.getConsent.mockReturnValue(resposta(payload()));
+    const wrapper = montar(AutorizacaoPage);
+    await flushPromises();
+
+    const caixas = wrapper.findAll('input[type="checkbox"]');
+    expect(caixas.some(caixa => !caixa.element.disabled)).toBe(true);
+    expect(wrapper.find('[data-so-admin]').exists()).toBe(false);
   });
 
   it('without a time zone on the account, says only "your account time zone"', async () => {

@@ -37,7 +37,9 @@ module Autonomia
             ensure_gem!
             @paginas_de_fora = {}
             texto = with_tempfile do |path|
-              paginas = paginas_do_texto(PDF::Reader.new(path).pages)
+              todas = PDF::Reader.new(path).pages
+              @paginas_total = todas.size
+              paginas = paginas_do_texto(todas)
               text = paginas.map { |page| "#{page.text}\n" }.join.force_encoding('UTF-8').scrub('')
               next text unless @ocr && text.strip.length < OCR_MIN_CHARS
 
@@ -73,8 +75,15 @@ module Autonomia
           def registrar_paginas_de_fora
             return if @paginas_de_fora.empty?
 
+            # #1426 (4b) — o total de páginas do arquivo, para o aviso dizer "li X das N". Só na Fase 2, fora da Lia: fora
+            # dela, o registro é o da main.
+            @paginas_de_fora = @paginas_de_fora.merge('paginas_total' => @paginas_total) if paginas_total?
             Rails.logger.warn("[autonomia] pdf_paginas_de_fora #{@paginas_de_fora.to_json}")
             @source.paginas_de_fora = @paginas_de_fora if @source.respond_to?(:paginas_de_fora=)
+          end
+
+          def paginas_total?
+            @paginas_total.present? && fase2_na_conta? && !agente_protegido?
           end
 
           def ensure_gem!

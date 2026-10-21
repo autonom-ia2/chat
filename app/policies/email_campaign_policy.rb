@@ -20,11 +20,11 @@ class EmailCampaignPolicy < ApplicationPolicy
   end
 
   def send_now?
-    manage_own?
+    send_own?
   end
 
   def schedule?
-    manage_own?
+    send_own?
   end
 
   def pause?
@@ -32,7 +32,7 @@ class EmailCampaignPolicy < ApplicationPolicy
   end
 
   def resume?
-    manage_own?
+    send_own?
   end
 
   def reevaluate?
@@ -61,6 +61,11 @@ class EmailCampaignPolicy < ApplicationPolicy
 
   def manage_own?
     permission_granted?('campaign_manage') && own_account?
+  end
+
+  # Sending is its own key (#1898): who only builds leaves the campaign ready for someone else.
+  def send_own?
+    manage_own? && permission_granted?('campaign_send')
   end
 
   def own_account?

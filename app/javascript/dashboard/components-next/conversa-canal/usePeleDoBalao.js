@@ -9,6 +9,7 @@ import {
 } from '../message/constants';
 import { PELES, usePele, usePrimeiras } from './pele';
 import { useModeloDaMensagem } from './useModeloDaMensagem';
+import { useEcoDoCelular } from './useEcoDoCelular';
 import {
   CLASSES_DO_REMETENTE,
   classesDaHora,
@@ -42,6 +43,9 @@ export const usePeleDoBalao = nomeDoBalao => {
     }))
   );
 
+  // #1941: eco do celular leva o nome de quem estava atribuído quando chegou.
+  const eco = useEcoDoCelular(contentAttributes);
+
   const ativa = computed(() => pele.value === PELES.WHATSAPP);
   const estado = computed(() => ({
     variante: variant.value,
@@ -58,6 +62,8 @@ export const usePeleDoBalao = nomeDoBalao => {
   const remetente = computed(() => {
     if (!ativa.value || !estado.value.primeira) return '';
     if (orientation.value !== ORIENTATION.RIGHT) return '';
+    // Nunca o remetente do eco: no WAHA é o dono da chave de conexão.
+    if (eco.ehEco.value) return eco.nomeDoAutor.value;
     const tipo = sender.value?.type ?? senderType.value;
     const nome = sender.value?.available_name || sender.value?.name || '';
     if (ROBOS.includes(tipo)) {
