@@ -2785,6 +2785,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_290000) do
     t.index ["pipeline_id"], name: "index_crm_passagens_on_pipeline_id"
   end
 
+  create_table "crm_person_goals", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "pipeline_id", null: false
+    t.bigint "user_id", null: false
+    t.date "month", null: false
+    t.bigint "target_cents", null: false
+    t.string "currency", default: "BRL", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "month"], name: "idx_crm_person_goals_account_month"
+    t.index ["pipeline_id", "user_id", "month"], name: "idx_crm_person_goals_unique", unique: true
+    t.index ["user_id"], name: "index_crm_person_goals_on_user_id"
+  end
+
   create_table "crm_pipeline_inboxes", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "pipeline_id", null: false
@@ -4447,6 +4461,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_290000) do
   add_foreign_key "crm_passagens", "conversations", on_delete: :cascade
   add_foreign_key "crm_passagens", "crm_cards", column: "card_id", on_delete: :nullify
   add_foreign_key "crm_passagens", "crm_pipelines", column: "pipeline_id", on_delete: :nullify
+  add_foreign_key "crm_person_goals", "accounts", on_delete: :cascade
+  add_foreign_key "crm_person_goals", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
+  add_foreign_key "crm_person_goals", "users", on_delete: :cascade
   add_foreign_key "crm_pipeline_inboxes", "accounts"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipelines", column: "pipeline_id"

@@ -43,10 +43,11 @@ module EmailCampaigns::Ai::EditPromptBuilder
     unknown_block: 'id de bloco que não existe — use só os ids da lista (b1, b2...) ou escreva o MJML do bloco'
   }.freeze
 
-  def instructions(identity:)
+  # vocabulary: the line of business of the account (#2037), or nil — see PromptBuilder.vocabulary_line.
+  def instructions(identity:, vocabulary: nil)
     <<~PROMPT
       Você AJUSTA um e-mail marketing pronto, como um(a) designer cuidadoso(a) que muda só o que o cliente pediu.
-      #{identity_line(identity)}
+      #{identity_line(identity)}#{EmailCampaigns::Ai::PromptBuilder.vocabulary_line(vocabulary)}
       Responda APENAS com o JSON do schema.
 
       COMO RESPONDER:

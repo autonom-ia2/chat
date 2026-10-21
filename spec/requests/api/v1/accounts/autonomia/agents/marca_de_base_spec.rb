@@ -7,7 +7,11 @@ RSpec.describe 'Autonomia agent base mark', type: :request do
   let(:administrator) { create(:user, account: account, role: :administrator) }
   let(:headers) { administrator.create_new_auth_token }
   let(:forjada) { { 'segmento' => 'seguros/seguradora', 'versao' => 'forjada', 'texto' => 'TEXTO FORJADO' } }
-  let(:corretora) { { 'segmento' => 'seguros/corretora', 'versao' => nil, 'texto' => nil } }
+  let(:corretora) do
+    bloco = Autonomia::Segmentos::Bloco
+    { 'segmento' => 'seguros/corretora', 'versao' => bloco.versao('seguros/corretora'),
+      'texto' => bloco.for_segmento('seguros/corretora') }
+  end
   let(:gravada) { { 'segmento' => 'seguros/corretora', 'versao' => 'v1', 'texto' => 'TEXTO SECRETO DO RAMO' } }
 
   around do |example|

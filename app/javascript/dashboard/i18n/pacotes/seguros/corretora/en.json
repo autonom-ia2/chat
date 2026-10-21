@@ -4,11 +4,8 @@
       "VENDAS": {
         "NOME": "Insurance sale",
         "TEXTO": "From the quote until the insurance is closed.",
-        "E1": "New contact",
         "E2": "Quoting",
-        "E3": "Options sent",
-        "E4": "Negotiation",
-        "E5": "Closed"
+        "E3": "Options sent"
       }
     },
     "SOBRE": {
@@ -71,8 +68,6 @@
   "CRM_CARD": {
     "DESFECHO": {
       "MOTIVO": {
-        "PRECO": "Too expensive",
-        "SUMIU": "Stopped replying",
         "OUTRO_LUGAR": "Went with another broker",
         "NAO_ERA_HORA": "The insurer declined"
       },
@@ -135,12 +130,7 @@
     },
     "PESSOA": {
       "LINKED_CONTACT": "Person on this card",
-      "EMPTY_TITLE": "This card has no person yet",
       "EDIT_HELP": "What you change here applies to this person everywhere. The card does not change."
-    },
-    "CHAMAR": {
-      "REACTIVATE_CONFIRM_BODY": "This customer asked not to get automatic messages. If you turn it back on, they go out again. If another card of theirs is still stopped by the same request, or the request came from somewhere else (team, prospecting or email), it stays stopped until that is undone there. Your name is recorded.",
-      "RESET_KEPT_OTHER_CARDS": "Turned back on. The customer request still holds because of another card of theirs."
     },
     "CONTATO": {
       "TEXTO": "The person: name, phone, email and fields. Applies to all of their cards."
@@ -187,24 +177,11 @@
     "CALENDAR": {
       "QUICK_ADD": {
         "TITLE_PLACEHOLDER": "E.g.: Send the quote options",
-        "CONTACT_LABEL": "Contact / card",
-        "DEAL_LABEL": "Card",
-        "DEAL_PLACEHOLDER": "Search a card…",
-        "ADVANCED_HINT": "Pick the card and click Continue. We open the card so you can set the details.",
-        "MEETING_HINT": "Pick the card and click Continue to set up the meeting (mailbox, guests, time).",
-        "MEETING_HINT_AGENDA": "Pick the card and tap Continue to see the free days and times."
-      },
-      "EVENT": {
-        "OPEN_DEAL": "Open card"
+        "ADVANCED_HINT": "Pick the card and click Continue. We open the card so you can set the details."
       },
       "MEETING_SCHEDULER": {
         "SUBTITLE": "Schedule a meeting about this insurance and send calendar invites to guests.",
-        "DEAL": "Card: {deal}",
-        "DEAL_FALLBACK": "Card #{id}",
         "TITLE_PLACEHOLDER": "E.g.: Go over the quote options"
-      },
-      "MEETING_DETAIL": {
-        "DEAL_LABEL": "Card"
       }
     },
     "CONVERSATION": {
@@ -297,11 +274,6 @@
         "STAGE": "Customer stage"
       }
     },
-    "BOOKING_AGENDA": {
-      "ERRORS": {
-        "NO_CONTACT": "This card has no client. Link a contact first."
-      }
-    },
     "PASSAGEM": {
       "QUANDO": {
         "IDEIA_2": "When the customer picks an option and wants to close the insurance",
@@ -324,25 +296,18 @@
     },
     "OPPORTUNITY": {
       "CONTEXT": {
-        "LABEL": "New card",
-        "OPEN_NEW_TAB": "New card: opens the CRM in another tab",
-        "UNAVAILABLE": "You do not have permission to create cards here.",
-        "LOADING": "Loading the contact for the new card…",
-        "READY": "The contact is ready. Open the card to continue.",
-        "OPEN": "Open card"
+        "OPEN_NEW_TAB": "New card: opens the CRM in another tab"
       }
     },
     "RELATIONSHIP": {
       "SAME_OPPORTUNITY": "The contact will be linked to this card. The card details stay as they are.",
       "DEAL_COMPANY_LABEL": "Company for this card",
       "SAVE_CONFLICT": "Unable to link the contact. Check whether it already exists or this card has another person's conversations.",
-      "OPPORTUNITY_DETAILS": "Card details",
       "FIELDS_SHARED": "The same fields and values as the Relationships profile. Each change is saved separately from the card.",
       "COMPANY_FORM": {
         "UNLINK_CONTEXT": "The company link will be removed from {name} and the cards for this contact. The card details stay.",
         "EDIT_HELP": "This is the shared company record. Changes also appear in Relationships without changing the card details.",
-        "LINK_HELP": "The company will be linked to {name} and used on all cards for this contact.",
-        "UNLINK_HELP": "The contact will have no company. No contacts, companies, cards, conversations or files will be deleted. Company media follows the current link."
+        "LINK_HELP": "The company will be linked to {name} and used on all cards for this contact."
       }
     }
   },
@@ -380,14 +345,10 @@
     }
   },
   "CRM_LEMBRETE": {
-    "SERIE": {
-      "LIGADO_CARD": "Card: {nome}"
-    },
     "LIGAR": {
       "NADA_TEXTO": "Stays only on the calendar. E.g.: check this week's renewals.",
       "CONTATO_TEXTO": "Even with no open card. E.g.: birthday.",
-      "CARD": "A pipeline card",
-      "QUAL_CARD": "Which card?"
+      "CARD": "A pipeline card"
     }
   },
   "CRM_CALENDARIO": {
@@ -395,32 +356,14 @@
       "LEMBRETE": "E.g.: call the customer about the renewal on Friday",
       "FECHAR": "The day the insurance should close"
     },
-    "ITEM": {
-      "ACAO": {
-        "VER_NEGOCIO": "See card"
-      }
-    },
     "NOVO": {
-      "COM_QUEM_TEXTO": "Search by the customer's or the card's name.",
-      "BUSCA_ROTULO": "Customer or card name",
-      "SEM_NEGOCIO": "No card yet",
-      "SEM_NEGOCIO_TEXTO": "{nome} has no card yet. The meeting is booked on the customer's card. For now, set a reminder.",
-      "SEM_NEGOCIO_CURTO": "No card"
+      "SEM_NEGOCIO_TEXTO": "{nome} has no card yet. The meeting is booked on the customer's card. For now, set a reminder."
     }
   },
   "CRM_MENSAGEM_MARCADA": {
-    "PARA_QUEM": {
-      "ROTULO": "Search for the customer or the card",
-      "PELO_NEGOCIO": "Another WhatsApp: schedule from the card"
-    },
     "CONFIRMAR": {
       "SE_FALHAR": "If it can't be sent, {nome} sees a notice on screen and the reason stays on the card.",
-      "SE_FALHAR_SEM_DONO": "If it can't be sent, whoever handles the conversation sees a notice and the reason stays on the card.",
-      "ONDE_APARECE": "Shows on the calendar and on the card until it goes out."
-    },
-    "PRONTO": {
-      "ONDE": "It is already on the calendar and on the card. You can change or cancel it until it goes out.",
-      "ABRIR_NEGOCIO": "Open the card"
+      "SE_FALHAR_SEM_DONO": "If it can't be sent, whoever handles the conversation sees a notice and the reason stays on the card."
     }
   },
   "CONVERSA_CANAL": {
@@ -759,10 +702,6 @@
       },
       "AGENT": {
         "WHO": "For people who serve customers day to day: questions, bill copies and endorsements."
-      },
-      "PHRASES": {
-        "MANAGE_DEALS": "Create and move cards in the CRM",
-        "EDIT_DEALS": "Edit cards in the CRM"
       }
     },
     "MATRIX": {
@@ -773,9 +712,6 @@
           "LEVEL_MANAGE": "Creates, edits and moves cards: quotes, renewals and claims."
         }
       }
-    },
-    "EXTRAS": {
-      "CRM_MOVE_CARDS": "Drags cards between stages without editing anything else."
     }
   },
   "INBOX_MGMT": {
@@ -985,6 +921,9 @@
         "TITULO": "Resume the quote",
         "PARA": "To talk again to someone who asked for a quote and went quiet.",
         "TEXTO": "Hi, [nome_cliente]! This is [nome_empresa]. Any questions left about your insurance quote? Just reply here and we will pick it up."
+      },
+      "renovacao": {
+        "TEXTO": "Hello, [nome_cliente]. A notice from [nome_empresa]: your insurance expires on [data]. We can prepare the renewal for you before that date. Tap one of the options below."
       }
     },
     "CAMPOS": {
@@ -1126,6 +1065,25 @@
           "EXEMPLO": {
             "CLIENTE": "Hi! I'd like to talk about insurance for my business."
           }
+        },
+        "FERRAMENTAS": {
+          "RASCUNHO_EXEMPLO": {
+            "NOME": "Policy lookup",
+            "ENDERECO": "https://api.suacorretora.com.br/apolices/busca"
+          },
+          "PASSOS": {
+            "UM": {
+              "QUANDO_EXEMPLO": "Use when the client asks whether the policy has been issued, until when it is valid or whether the installment is up to date. Brings the insurer, the policy period and the installment status.",
+              "NOME_AJUDA_VAZIO": "So you can find it on the list. E.g.: Policy lookup"
+            },
+            "TRES": {
+              "DESCRICAO_EXEMPLO": "The car plate or the client's CPF, the way they sent it."
+            }
+          },
+          "LISTA": {
+            "VAZIO": "This agent does not look anything up in other systems yet. Add a tool when it needs data from outside, like a client policy.",
+            "CONTEXTO": "Tools let {nome} look things up in other systems during the conversation, like policies, calendar or customer records. The agent decides on its own when to use each one, based on what is written in \"When to use\"."
+          }
         }
       },
       "CRIAR": {
@@ -1147,7 +1105,7 @@
             "ROUPAS": "Auto insurance broker",
             "DOCES": "Multi-line insurance broker",
             "ESTETICA": "Life and health insurance broker",
-            "OFICINA": "Business and cargo insurance"
+            "OFICINA": "Business and cargo insurance broker"
           },
           "EXEMPLO_DO_MEU_JEITO": "E.g.: answer questions about car insurance and hand over to the team",
           "EXEMPLO_COPILOTO": "E.g.: summarize the conversation and say what is still missing to quote",
@@ -1225,5 +1183,37 @@
   },
   "TEAM_REPORTS": {
     "DESCRIPTION": "See how each team is doing: conversations, time to reply and time to solve. E.g.: sales, renewals, claims. Click a team to see more."
+  },
+  "HELP_CENTER": {
+    "CENTRAL_DE_AJUDA": {
+      "BUSCA": {
+        "DICA": "Examples: connect WhatsApp, mark a policy as closed, see closed policies."
+      },
+      "POR_ASSUNTO": {
+        "FAMILIAS": {
+          "VENDER": "Sell policies and measure"
+        },
+        "NOMES": {
+          "CRM": "CRM: sales and renewals",
+          "FINANCEIRO": "Your plan and invoices"
+        }
+      }
+    }
+  },
+  "AUTONOMIA_GUIDE": {
+    "MEMORY": {
+      "ABOUT_COMPANY": "About the brokerage",
+      "EMPTY_COMPANY_TITLE": "I haven't noted anything about the brokerage yet",
+      "ONLY_ADMIN": "Only account admins can change what applies to the whole brokerage.",
+      "EXAMPLE_COMPANY_1": "Remember that production here is always for the current month",
+      "EXAMPLE_COMPANY_2": "Remember that the Commercial pipeline is the car insurance one"
+    }
+  },
+  "CRM_NUMEROS_V2": {
+    "TOPO": {
+      "BOTAO": {
+        "MEUS_PARADOS": "Open my stalled quote | Open my {n} stalled quotes"
+      }
+    }
   }
 }

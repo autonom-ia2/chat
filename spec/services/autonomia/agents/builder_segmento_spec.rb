@@ -141,12 +141,17 @@ RSpec.describe Autonomia::Agents::Builder do
       )
     end
 
-    it 'hoje (stubs reais) grava o segmento com versão e texto nil' do
+    it 'grava o texto e a versão do arquivo do tipo da conta (#1802, lote 6)' do
       Autonomia::Agents::Fase2.ligar!(account)
 
       run_turn
 
-      expect(thread.reload.agent.config['base']).to eq('segmento' => 'seguros/corretora', 'versao' => nil, 'texto' => nil)
+      bloco = Autonomia::Segmentos::Bloco
+      expect(thread.reload.agent.config['base']).to eq(
+        'segmento' => 'seguros/corretora', 'versao' => bloco.versao('seguros/corretora'),
+        'texto' => bloco.for_segmento('seguros/corretora')
+      )
+      expect(thread.agent.config['base']['texto']).to be_present
     end
 
     it 'grava segmento nil na conta geral (nasceu sem base)' do

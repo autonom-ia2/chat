@@ -1,4 +1,4 @@
-# Shared gallery library (#1082): 13 pt-BR designs in db/seeds/email_templates (catalog.json). Sources keep their
+# Shared gallery library (#1082): pt-BR designs in db/seeds/email_templates (catalog.json). Sources keep their
 # images root-relative (/email-templates/... under public/), so the repository never names a domain; publishing
 # points them at the installation that seeds them (FRONTEND_URL), because e-mail clients need absolute URLs.
 class EmailCampaigns::TemplateCatalog
@@ -11,6 +11,13 @@ class EmailCampaigns::TemplateCatalog
   # Global templates of earlier libraries, removed by the seed (account templates are never touched).
   def self.retired_names
     @retired_names ||= JSON.parse(ROOT.join('retired.json').read).fetch('names').freeze
+  end
+
+  # Names of the shared designs written for a line of business the account is not in (#2037). An entry with
+  # "segmento" (a package layer, as in Autonomia::Segmentos::Pacotes.camadas) shows only to accounts with that layer;
+  # entries without it show to everyone.
+  def self.names_outside(camadas)
+    entries.select { |entry| entry['segmento'] && camadas.exclude?(entry['segmento']) }.map { |entry| entry.fetch('name') }
   end
 
   def self.key_for(template)

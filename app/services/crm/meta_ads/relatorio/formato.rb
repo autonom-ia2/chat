@@ -21,6 +21,10 @@ module Crm::MetaAds::Relatorio::Formato
     Crm::MetaAds::Advisor::Format.value(:duration, segundos, locale: I18n.locale)
   end
 
+  def nome_do_periodo(report)
+    t("period_names.#{report.period.key}")
+  end
+
   def dia(data)
     I18n.l(data.to_date, format: '%d/%m/%Y')
   end

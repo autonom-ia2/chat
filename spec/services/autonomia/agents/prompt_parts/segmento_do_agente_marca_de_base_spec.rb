@@ -47,9 +47,9 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
       expect(described_class.segmento(account)).to be_nil
     end
 
-    it 'for_segmento e versao ainda são nil (o lote 6 preenche)' do
-      expect(described_class.for_segmento('seguros/corretora')).to be_nil
-      expect(described_class.versao('seguros/corretora')).to be_nil
+    it 'for_segmento e versao trazem o texto do tipo e a versão dele (#1802, lote 6)' do
+      expect(described_class.for_segmento('seguros/corretora')).to be_a(String).and(be_present)
+      expect(described_class.versao('seguros/corretora').size).to eq(12)
     end
   end
 
@@ -62,8 +62,13 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
       )
     end
 
-    it 'hoje grava versão e texto nil (stubs reais)' do
-      expect(described_class.marca(account)).to eq(sem_texto)
+    it 'grava o texto e a versão reais do tipo da conta (#1802, lote 6)' do
+      bloco = Autonomia::Segmentos::Bloco
+
+      expect(described_class.marca(account)).to eq(
+        'segmento' => 'seguros/corretora', 'versao' => bloco.versao('seguros/corretora'),
+        'texto' => bloco.for_segmento('seguros/corretora')
+      )
     end
 
     it 'texto acima do teto não é gravado: texto e versão nil, erro no log com segmento e tamanho, sem o texto' do
@@ -106,12 +111,12 @@ RSpec.describe Autonomia::Agents::PromptParts::SegmentoDoAgente do
   end
 
   describe 'PromptBuilder' do
-    it 'hoje não muda nada: o agente que nasce agora tem texto nil e o input é o de um agente sem marca' do
+    it 'o agente que nasce agora recebe o texto do tipo; o que não tem marca continua sem bloco (#1802, lote 6)' do
       com_marca = criar_agente('with_knowledge' => false, 'base' => described_class.marca(account))
       sem_marca = criar_agente('with_knowledge' => false)
 
-      expect(input_de(com_marca)).to eq(input_de(sem_marca))
-      expect(textos(input_de(com_marca))).not_to include('CONTEXTO DA CONTA')
+      expect(textos(input_de(com_marca))).to include('CONTEXTO DA CONTA', Autonomia::Segmentos::Bloco.for_segmento('seguros/corretora'))
+      expect(textos(input_de(sem_marca))).not_to include('CONTEXTO DA CONTA')
     end
 
     it 'recebe o texto gravado como primeira mensagem' do

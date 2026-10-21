@@ -7,7 +7,8 @@
       "CLOSE_AS_TITLE": "End as {label}",
       "ACTIVITY_WON": "Policy closed",
       "ACTIVITY_LOST": "Not closed",
-      "ACTIVITY_REOPEN": "Card reopened"
+      "ACTIVITY_REOPEN": "Card reopened",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Not a sale: nobody asked for insurance. To undo, reopen the card."
     },
     "META_SYNC_STATUS": {
       "EVENT_WON": "Policy closed",
@@ -95,7 +96,15 @@
       "SEM_LOGIN": {
         "AD": {
           "STATUS": {
-            "LOST": "Not closed"
+            "LOST": "Not closed",
+            "BOUGHT": "Policy closed: {value}",
+            "BOUGHT_NO_VALUE": "Policy closed"
+          }
+        },
+        "EXAMPLE": {
+          "ADS": {
+            "WINTER": "Car insurance discount",
+            "SHIPPING": "Protect your family"
           }
         }
       }
@@ -193,6 +202,29 @@
           "CRM_CARD_LOST": "A card did not close.",
           "CRM_CARD_REOPENED": "A card that had ended was reopened."
         }
+      }
+    }
+  },
+  "CRM_NUMEROS_V2": {
+    "IA_AJUDOU": {
+      "VENDA": "{ia} handed you {passou} interested person this month. | {ia} handed you {passou} interested people this month.",
+      "VIRARAM": "None closed a policy yet. | 1 closed a policy. | {n} closed a policy."
+    },
+    "TOPO": {
+      "SEM_META_EU": "Your month so far: {n} policy closed, {valor} | Your month so far: {n} policies closed, {valor}"
+    }
+  },
+  "MODELOS_WHATSAPP": {
+    "OBJETIVOS": {
+      "renovacao": {
+        "TITULO": "Insurance renewal",
+        "PARA": "To let them know the insurance is about to expire.",
+        "TEXTO": "Hello, [nome_cliente]. A notice from [nome_empresa]: your insurance expires on [data]. To stay protected, renew before that date. Tap one of the options below."
+      },
+      "andamento": {
+        "TITULO": "Claim update",
+        "PARA": "To tell the policyholder their claim has moved forward.",
+        "TEXTO": "Hello, [nome_cliente]. An update from [nome_empresa]: your claim has moved forward. Want to know the details? Tap the button below."
       }
     }
   }
