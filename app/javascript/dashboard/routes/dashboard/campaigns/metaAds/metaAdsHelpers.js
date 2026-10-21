@@ -11,6 +11,32 @@ const RELATIVE_UNITS = [
 
 export const intlLocale = locale => (locale || 'en').replace('_', '-');
 
+// Períodos do painel (#2011), com os nomes que o servidor entende (Crm::MetaAds::Panel::Period): os botões e os do
+// "Mais períodos".
+export const ROLLING_PERIODS = ['7d', '30d', '90d'];
+export const MORE_PERIODS = ['this_month', 'last_month', 'all'];
+export const DEFAULT_PERIOD = '30d';
+// Dias do período móvel ("30d" → 30); os outros não têm número fixo.
+export const rollingDays = period => Number.parseInt(period, 10) || null;
+
+// "22 de set. – 21 de out.", no idioma da tela, a partir das datas do servidor (AAAA-MM-DD, dias do fuso da conta);
+// com o ano quando o período passa deste ano. Vazio sem as duas datas.
+export const periodRange = (from, to, locale) => {
+  if (!from || !to) return '';
+  const start = new Date(`${from}T00:00:00Z`);
+  const end = new Date(`${to}T00:00:00Z`);
+  const thisYear = new Date().getUTCFullYear();
+  const withYear = [start, end].some(
+    date => date.getUTCFullYear() !== thisYear
+  );
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear ? { year: 'numeric' } : {}),
+    timeZone: 'UTC',
+  }).formatRange(start, end);
+};
+
 // "há 2 horas", do próprio timestamp; null quando não há data válida.
 export const relativeTime = (value, locale) => {
   const date = new Date(value || '');
@@ -207,3 +233,10 @@ export const thumbClass = adId => {
   );
   return THUMBS[sum % THUMBS.length];
 };
+
+// Foto do anúncio (#1960): primeiro a guardada do clique no WhatsApp, que não vence; depois a da Meta, que vence
+// em poucos dias. `failed` são os endereços que já não abriram: sem nenhum que abra, o quadro de reserva.
+export const adImage = (ad, failed = []) =>
+  [ad?.image_url, ad?.thumbnail_url].find(
+    url => url && !failed.includes(url)
+  ) || null;

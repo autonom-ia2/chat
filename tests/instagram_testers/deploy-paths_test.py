@@ -136,5 +136,65 @@ class DeployRoutingTest(unittest.TestCase):
             self.assertIn("inputs.action == 'rollback'", source)
 
 
+def build_step(workflow):
+    lines = (ROOT / '.github/workflows' / workflow).read_text().splitlines()
+    start = lines.index('      - name: Build and push image')
+    step = [lines[start]]
+    for line in lines[start + 1:]:
+        if line.startswith(('      - ', '      #')) or (line and not line.startswith('        ')):
+            break
+        step.append(line)
+    return step
+
+
+def locked_grpc_versions():
+    # Só a gem do código-fonte (force_ruby_platform): linhas com plataforma, como 1.72.0-x86_64-linux, ficam de fora.
+    versions = [line.strip()[len('grpc ('):-1] for line in (ROOT / 'Gemfile.lock').read_text().splitlines()
+                if line.startswith('    grpc (') and line.endswith(')')]
+    return [version for version in versions if '-' not in version]
+
+
+class DeployImageBuildTest(unittest.TestCase):
+    """#2012: o build da imagem reaproveita o cache sem abrir mão da segurança."""
+
+    def dockerfile(self):
+        return (ROOT / 'docker/Dockerfile').read_text().splitlines()
+
+    def test_grpc_layer_matches_gemfile_lock(self):
+        # Versão divergente não quebra a imagem (o bundle instala a do lock), mas volta a recompilar o grpc a cada
+        # troca de gem e deixa uma cópia sobrando na imagem.
+        args = [line.split('=', 1)[1] for line in self.dockerfile() if line.startswith('ARG GRPC_VERSION=')]
+        self.assertEqual(len(args), 1)
+        self.assertEqual(locked_grpc_versions(), args)
+
+    def test_grpc_layer_comes_after_build_deps_and_before_the_gemfile(self):
+        lines = self.dockerfile()
+        deps = next(i for i, line in enumerate(lines) if line.startswith('RUN apk') and 'linux-headers' in line)
+        grpc = next(i for i, line in enumerate(lines) if line.startswith('RUN gem install grpc '))
+        gemfile = lines.index('COPY Gemfile Gemfile.lock ./')
+        bundle = next(i for i, line in enumerate(lines) if 'bundle install -j' in line)
+        self.assertLess(deps, grpc)
+        self.assertLess(grpc, gemfile)
+        self.assertLess(gemfile, bundle)
+        command = ' '.join(lines[grpc:grpc + 2])
+        for flag in ('-v "$GRPC_VERSION"', '--platform ruby', '--ignore-dependencies',
+                     '--install-dir "$BUNDLE_PATH/ruby/3.4.0"'):
+            self.assertIn(flag, command)
+
+    def test_both_stacks_build_the_image_the_same_way(self):
+        self.assertEqual(build_step(WORKFLOWS[0]), build_step(WORKFLOWS[1]))
+
+    def test_layer_cache_stays_in_the_private_ecr(self):
+        # O cache do Actions (type=gha) de um repositório público é restaurável por PR de fork; o do ECR privado, não.
+        for workflow in WORKFLOWS:
+            step = '\n'.join(build_step(workflow))
+            with self.subTest(workflow=workflow):
+                self.assertIn('cache-from: type=registry,ref=${{ steps.ecr.outputs.registry }}/', step)
+                self.assertIn('cache-to: type=registry,ref=${{ steps.ecr.outputs.registry }}/', step)
+                self.assertIn('mode=max', step)
+                for leak in ('type=gha', 'type=local', 'type=inline', 'build-args', 'secrets', 'secret-files'):
+                    self.assertNotIn(leak, step)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -27,7 +27,7 @@ class Crm::MetaAds::Advisor::Facts
   def initialize(connection, now: Time.current, report: nil)
     @connection = connection
     @now = now
-    @report = report if report&.days == COHORT_DAYS
+    @report = report if report&.period&.rolling?(COHORT_DAYS)
   end
 
   # Símbolos nas chaves e valores de JSON, iguais com ou sem cache.

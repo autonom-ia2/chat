@@ -8,11 +8,19 @@ class Api::V1::Accounts::Autonomia::Agents::PlaygroundController < Api::V1::Acco
   # POST .../agents/:id/test -> Playground (Testar)
   # MULTIMODAL: aceita `images` (array de data-urls) anexadas à mensagem atual. Temporário — as
   # imagens chegam inline em base64 (sem ActiveStorage); o modelo as lê como input_image neste turno.
+  # #1427 — na Fase 2 (fora da cotação) a foto do teste passa pelas conferências do material (FotoConferida): a recusada
+  # responde 422 com o motivo, em vez de sumir calada. A foto vale só neste turno: não vira conversa, mensagem, anexo nem
+  # material. Ela não é apagada na hora: fica no pedido temporário (Crm::Ai::InteractiveRequest, no Redis, até 30 min) e
+  # não vai ao log do Rails (`images` no filter_parameters) nem ao Sentry (`images` no SentryHttpAuthScrubber).
   def test
     return render_unprocessable('message_required') if message_param.blank?
 
+    fotos = Autonomia::Agents::FotosDoTeste.new(params[:images]) if conferir_fotos?
+    return render json: { error: fotos.recusa, code: 'foto_recusada' }, status: :unprocessable_entity if fotos&.recusa
+
     defer_interactive_ai('agent_test', {
-                           agent_id: @agent.id, message: message_param, history: history_param, images: images_param
+                           agent_id: @agent.id, message: message_param, history: history_param,
+                           images: fotos ? fotos.data_urls : images_param
                          })
   end
 
@@ -33,6 +41,11 @@ class Api::V1::Accounts::Autonomia::Agents::PlaygroundController < Api::V1::Acco
   def fetch_agent
     @agent = agents_scope.find(params[:id])
     @agent.instrucao_do_sistema # Preserva o 422 de configuração incompleta antes de enfileirar.
+  end
+
+  # A Lia (instrução mantida) e as contas fora da Fase 2 ficam como na main (#1944 leva a conferência a elas).
+  def conferir_fotos?
+    Autonomia::Agents::Fase2.ligada?(Current.account) && !@agent.instrucao_mantida?
   end
 
   def message_param

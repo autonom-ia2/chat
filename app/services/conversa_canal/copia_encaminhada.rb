@@ -77,14 +77,21 @@ class ConversaCanal::CopiaEncaminhada
 
   def comum
     arquivos = arquivos_guardados
-    return [] if @mensagem.content.blank? && arquivos.empty?
+    return [] if texto.blank? && arquivos.empty?
 
     [{
-      content: @mensagem.content, private: false, message_type: 'outgoing',
+      content: texto, private: false, message_type: 'outgoing',
       attachments: arquivos.map { |anexo| anexo.file.blob.signed_id },
       document_indexes: arquivos.each_index.select { |posicao| arquivos[posicao].file_type == 'file' },
       is_voice_message: arquivos.any? { |anexo| anexo.meta.to_h['is_voice_message'] == true }
     }]
+  end
+
+  # Mandada pelo celular (#1941): o eco antigo do WAHA comum foi gravado com o prefixo do conector; ele não vai junto.
+  def texto
+    return @mensagem.content unless atributos['external_echo'].present? && @mensagem.content.to_s.start_with?(Waha::EcoDoCelular::PREFIXO)
+
+    Waha::EcoDoCelular.sem_prefixo(@mensagem.content).presence
   end
 
   def arquivos_guardados

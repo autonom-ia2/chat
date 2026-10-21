@@ -13,7 +13,7 @@ RSpec.describe Crm::MetaAds::Panel::AdDetail do
   let(:now) { Time.zone.parse('2026-10-06T15:00:00-03:00') }
 
   def detail(ad_id, days: 7)
-    described_class.new(connection, ad_id: ad_id, days: days).payload
+    described_class.new(connection, ad_id: ad_id, period: "#{days}d").payload
   end
 
   def spend(ad_id, date, value, target: account, ad_account_id: connection.ad_account_id)

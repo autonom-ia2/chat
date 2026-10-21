@@ -24,6 +24,8 @@ module Waha
 
     DEFAULT_TIMEOUT = 20
 
+    include Waha::Client::FotoDePerfil
+
     def initialize(config: Waha::Config)
       @base = config.api_url
       @key = config.api_key

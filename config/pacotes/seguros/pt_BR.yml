@@ -12,3 +12,12 @@ pt_BR:
       statuses:
         won: 'Seguro ativo'
         lost: 'Não fechou'
+  # Relatório baixado de Anúncios (#1960): a situação de quem veio do anúncio e o que cada palavra quer dizer.
+  meta_ads_report:
+    glossary: 'Conversa: alguém chamou no WhatsApp depois de tocar num anúncio. Proposta: o card chegou a uma etapa de oportunidade ou negociação. Venda: o card foi marcado como seguro fechado.'
+    situation:
+      lost: 'Não fechou'
+  # Ramo da conta para a IA de e-mail (#2037). Seguradora e insurtech herdam esta linha.
+  email_campaigns:
+    ai:
+      vocabulario: 'Ramo da conta: seguros. Fale de seguro, apólice, cobertura e renovação em linguagem simples; segurado só para quem já tem apólice; cliente só para quem já comprou.'

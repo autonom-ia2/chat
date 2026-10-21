@@ -116,6 +116,10 @@
     "controller": "api/v1/accounts/autonomia/agents/ajuda#show",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/base": {
+    "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#show",
+    "parametros": []
+  },
   "autonomia/agents/:agent_id/channels": {
     "controller": "api/v1/accounts/autonomia/agents/channels#index",
     "parametros": []
@@ -1340,20 +1344,23 @@
   "crm/meta_ads_connection/panel": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#panel",
     "parametros": [
-      "days"
+      "days",
+      "period"
     ]
   },
   "crm/meta_ads_connection/panel_ad": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#panel_ad",
     "parametros": [
       "ad_id",
-      "days"
+      "days",
+      "period"
     ]
   },
   "crm/meta_ads_connection/panel_list": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#panel_list",
     "parametros": [
       "days",
+      "period",
       "step"
     ]
   },
@@ -1362,6 +1369,14 @@
     "parametros": [
       "ad_account_id",
       "mode"
+    ]
+  },
+  "crm/meta_ads_connection/report": {
+    "controller": "api/v1/accounts/crm/meta_ads_reports#show",
+    "parametros": [
+      "days",
+      "formato",
+      "period"
     ]
   },
   "crm/meta_ads_connection/whatsapp_report": {
@@ -1382,6 +1397,10 @@
       "since",
       "until"
     ]
+  },
+  "crm/metas": {
+    "controller": "api/v1/accounts/crm/metas#show",
+    "parametros": []
   },
   "crm/meu_acesso": {
     "controller": "api/v1/accounts/crm/meu_acesso#show",
@@ -2111,6 +2130,10 @@
   },
   "waha_inboxes/:inbox_id/connection": {
     "controller": "api/v1/accounts/waha_inboxes#connection",
+    "parametros": []
+  },
+  "waha_inboxes/:inbox_id/status": {
+    "controller": "api/v1/accounts/waha_inboxes#status",
     "parametros": []
   },
   "webhooks": {

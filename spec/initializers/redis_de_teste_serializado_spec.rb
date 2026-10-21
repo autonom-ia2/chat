@@ -73,6 +73,20 @@ RSpec.describe RedisDeTesteSerializado do
     expect(Redis::Alfred.get(chave)).to eq("thread-#{resultados.index(true)}")
   end
 
+  it 'apaga dentro do scan_each sem pular chaves, como o Redis real (#2062)' do
+    prefixo = "spec_2062:#{SecureRandom.hex(4)}"
+    enchimento = Array.new(150) { |indice| "#{prefixo}:outra:#{indice}" }
+    alvos = Array.new(205) { |indice| "#{prefixo}:alvo:#{indice}" }
+    (enchimento + alvos).each { |nome| Redis::Alfred.set(nome, 1) }
+
+    Redis::Alfred.scan_each(match: "#{prefixo}:alvo:*") { |nome| Redis::Alfred.delete(nome) }
+
+    expect(Redis::Alfred.keys_count("#{prefixo}:alvo:*")).to eq(0)
+    expect(Redis::Alfred.keys_count("#{prefixo}:outra:*")).to eq(150)
+  ensure
+    enchimento.to_a.each { |nome| Redis::Alfred.delete(nome) }
+  end
+
   it 'faz o delete_if_equals (watch/multi) valer entre threads' do
     segurando_uma_conexao($alfred) do |conexao_da_dona|
       conexao_da_dona.set(chave, 'dona')

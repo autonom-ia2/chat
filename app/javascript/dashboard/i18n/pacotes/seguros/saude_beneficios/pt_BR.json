@@ -2,7 +2,8 @@
   "CRM_KANBAN": {
     "DRAWER": {
       "STATUS_WON": "Plano ativo",
-      "ACTIVITY_WON": "Fechou o plano"
+      "ACTIVITY_WON": "Fechou o plano",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Não é venda: ninguém pediu um plano. Para desfazer, reabra o card."
     },
     "META_SYNC_STATUS": {
       "EVENT_WON": "Fechou o plano"
@@ -18,7 +19,8 @@
         "WON_VALUE_INFO": "Valor total dos planos fechados no período, por moeda."
       },
       "META_SYNC": {
-        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o plano, os dados aparecem aqui."
+        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o plano, os dados aparecem aqui.",
+        "SUBTITLE": "Conversões enviadas de volta à Meta para otimizar seus anúncios: clique para WhatsApp pela conexão do WhatsApp, planos fechados pela landing page pelo Pixel do site."
       }
     },
     "PIPELINE_DRAWER": {
@@ -57,6 +59,19 @@
         "QUOTE": {
           "REASONS": {
             "CLOSED": "O cliente já fechou o plano. Não há o que retomar aqui."
+          }
+        }
+      },
+      "SEM_LOGIN": {
+        "AD": {
+          "STATUS": {
+            "BOUGHT": "Fechou o plano: {value}",
+            "BOUGHT_NO_VALUE": "Fechou o plano"
+          }
+        },
+        "EXAMPLE": {
+          "ADS": {
+            "WINTER": "Plano de saúde para sua empresa"
           }
         }
       }
@@ -118,6 +133,40 @@
           "CRM_CARD_WON": "Um card fechou o plano."
         }
       }
+    }
+  },
+  "CRM_NUMEROS_V2": {
+    "IA_AJUDOU": {
+      "VIRARAM": "Nenhuma fechou o plano ainda. | 1 fechou o plano. | {n} fecharam o plano."
+    },
+    "TOPO": {
+      "SEM_META_EU": "Seu mês até agora: {n} plano fechado, {valor} | Seu mês até agora: {n} planos fechados, {valor}"
+    },
+    "BLOCO": {
+      "VENDENDO": "Fechando planos"
+    },
+    "ESTIMADO": "Alguns planos fechados antes deste registro foram contados para o responsável atual do card.",
+    "COMO_CONTAMOS": {
+      "REGRA_ANTIGAS": "Planos fechados antes deste registro contam para o responsável atual do card."
+    }
+  },
+  "MODELOS_WHATSAPP": {
+    "OBJETIVOS": {
+      "renovacao": {
+        "TITULO": "Renovação do plano",
+        "PARA": "Para avisar que o plano faz aniversário e vai renovar.",
+        "TEXTO": "Olá, [nome_cliente]. Aviso de [nome_empresa]: o seu plano renova em [data]. Quer revisar a renovação com a gente? Toque em uma das opções abaixo."
+      },
+      "andamento": {
+        "TITULO": "Andamento do reembolso",
+        "PARA": "Para contar ao beneficiário que o pedido de reembolso andou.",
+        "TEXTO": "Olá, [nome_cliente]. Atualização de [nome_empresa]: o seu pedido de reembolso teve andamento. Quer saber os detalhes? Toque no botão abaixo."
+      }
+    }
+  },
+  "AUTONOMIA_GUIDE": {
+    "SUGGESTIONS": {
+      "REPORTS": "Quantos planos fechei este mês?"
     }
   }
 }

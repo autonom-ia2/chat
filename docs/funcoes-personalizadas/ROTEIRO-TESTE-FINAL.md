@@ -101,6 +101,27 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
 6. Troque o CRM para **Só olha**. O ajuste **Arquivar cards do CRM** some (só vale para quem mexe).
 7. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `crm_manage_cards` antes do deploy tem `crm_delete_cards` depois, inclusive os cargos gerenciados de token de integração do CRM.
 
+## Teste 9: apagar mensagem (#1893)
+
+1. Edite a função. Em **Conversas**, deixe **Atender** e **Só as próprias**, sem ligar **Apagar mensagens**. Salve.
+2. Na janela anônima, abra uma conversa de teste atribuída à pessoa. No menu da mensagem (botão direito ou os três pontos), **Apagar** não aparece. Responder, copiar e os outros itens seguem lá. Numa conversa de e-mail, o ⋮ do e-mail também não tem **Excluir**.
+3. Volte à função. Em **Ajustes finos** de Conversas, ligue **Apagar mensagens** (pede confirmação) e salve. Na janela anônima, recarregue: **Apagar** aparece e apaga. Use uma mensagem enviada só para o teste.
+4. Troque Conversas para **Todas**: o ajuste **Apagar mensagens** continua visível e ligado. Troque para **Só olha**: o ajuste some e, ao voltar para **Atender**, vem desligado.
+5. Com uma pessoa sem função (agente comum), **Apagar** segue aparecendo como antes.
+6. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha alguma das três chaves de atender conversa antes do deploy tem `conversation_message_delete` depois; quem tinha só `conversation_view` não ganhou.
+
+## Teste 10: montar sem disparar campanhas (#1898)
+
+1. Edite a função. Em **Marketing**, deixe **Campanhas** em **Editar**, sem ligar **Disparar campanhas** em **Ajustes finos**. Salve.
+2. Na janela anônima, abra **Campanhas > Campanha > Nova campanha** e monte uma campanha de SMS (ou WhatsApp) para um público de teste. Na revisão, o esperado:
+   - o botão é **Deixar pronta para disparar**, com o aviso de que quem pode disparar confere e envia;
+   - clicar não pede a confirmação de envio, não manda nada e volta para a lista, onde a campanha aparece com **Pronta para disparar · montada por** e o nome da pessoa.
+3. Ainda na janela anônima: numa campanha de e-mail, a revisão também mostra **Deixar pronta para disparar** e não mostra **Enviar agora** nem **Agendar**. Uma campanha pausada não tem **Retomar** (no resultado, em **Modelos > Campanhas paradas** e na lista do WhatsApp API). Nas telas antigas de SMS, WhatsApp e WhatsApp API, o botão **Nova campanha** não aparece.
+4. Na janela normal (administrador), abra a campanha pronta pela lista. A revisão mostra quem a montou e **Enviar agora**, com a confirmação. Envie para o público de teste: a linha **Pronta para disparar** some e a campanha aparece como enviada.
+5. Volte à função e ligue **Disparar campanhas** (pede confirmação, porque gera custo). Na janela anônima, recarregue: a revisão volta a mostrar **Enviar agora** e **Agendar**, e **Retomar** aparece nas pausadas.
+6. Troque Campanhas para **Ver**: o ajuste **Disparar campanhas** some.
+7. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `campaign_manage` antes do deploy tem `campaign_send` depois.
+
 ## Teste 11: Pessoas, quem cuida do cadastro sem ser administrador (#1931)
 
 Precisa de uma segunda pessoa de teste, "Teste Atendente" (perfil Agente, sem função), criada pelo administrador.
@@ -116,6 +137,23 @@ Precisa de uma segunda pessoa de teste, "Teste Atendente" (perfil Agente, sem fu
 6. Na janela normal, ligue em Pessoas o ajuste **Montar funções** (pede confirmação). Na anônima, recarregue: **Funções personalizadas** aparece. A função da própria pessoa tem cadeado "É a sua função". Crie a função "Teste – montada" só com **Conversas: Ver**: salva. Abra uma função com mais chaves: as linhas que ela não tem ficam travadas, com o motivo.
 7. Na janela normal, ligue **Pode entregar acesso acima do próprio** (pede confirmação). Na anônima, recarregue: ela consegue dar a "Teste Atendente" uma função com CRM. **Administrador** continua desabilitado.
 8. Na janela normal, abra **Configurações → Auditoria** e confira as linhas: a troca de função de "Teste Atendente", a criação de "Teste – montada" e o time criado e apagado, com o nome da pessoa de teste como autora.
+
+## Teste 12: Financeiro, custos sem plano nem faturas (#1969)
+
+Precisa de uma conta com a IA do CRM e a nova tela de Modelos do WhatsApp ligadas.
+
+1. Edite a função da pessoa de teste. Deixe **CRM** com **Relatórios** ligado e o novo grupo **Financeiro** em **Sem acesso**. Salve.
+2. Na janela anônima (recarregue), abra **Gasto com IA** (menu antigo: CRM → Gestão de IA). O esperado:
+   - um aviso diz que ela vê quanto a IA foi usada e que os valores aparecem para quem tem Financeiro;
+   - só o cartão de **Usos** aparece; não há gasto, economia nem custo médio;
+   - o gráfico e a lista por recurso contam usos, sem R$ nem US$;
+   - o histórico não tem a coluna de custo, e o relatório baixado também não.
+3. Volte à função, ponha **Financeiro** em **Ver** e salve. Recarregue a anônima: os valores voltam (cartões, gráfico em reais, coluna de custo e as colunas de custo no relatório).
+4. Na anônima, abra **Configurações → Custos do WhatsApp** (ou Campanhas → Modelos WhatsApp → Ver autorização). Tudo aparece travado, com a frase de que só o administrador ou quem tem Financeiro em Editar muda.
+5. Ponha **Financeiro** em **Editar** e salve. Recarregue: as caixas e o botão de ligar ficam liberados e a frase some. Clique em **Ligar autorização** só até ver a confirmação com o custo e **cancele**: ligar de verdade autoriza cobranças da Meta na conta. Ligue apenas se o dono da conta quiser; nesse caso, o histórico mostra o nome da pessoa de teste como quem ligou.
+6. Em qualquer nível de Financeiro, o menu **Financeiro** antigo (Assinatura e Faturas) e o cartão **Plano e faturas** não aparecem para ela.
+7. Se a conta tiver alguém só com **Pessoas** (sem **Pode entregar acesso acima do próprio**), na tela de Usuários a função com Financeiro aparece desabilitada para ele, e na montagem de funções a linha Financeiro fica travada.
+8. Ao final, volte **Financeiro** para **Sem acesso**.
 
 ## No fim (limpeza)
 

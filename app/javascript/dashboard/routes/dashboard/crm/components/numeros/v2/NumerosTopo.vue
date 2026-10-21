@@ -19,7 +19,10 @@ const props = defineProps({
   rotuloDoMes: { type: String, required: true },
   moeda: { type: String, default: 'BRL' },
   destino: { type: Object, default: null },
+  // #1991: quem define as metas ganha o atalho para a gaveta (só no mês de hoje).
+  podeDefinirMetas: { type: Boolean, default: false },
 });
+const emit = defineEmits(['metas']);
 
 const { t, traduzir } = useNumerosFormato(props.moeda);
 
@@ -90,10 +93,11 @@ const botao = computed(() =>
     </div>
 
     <div
-      v-if="botao && destino"
+      v-if="(botao && destino) || podeDefinirMetas"
       class="relative flex flex-wrap items-center gap-x-4 gap-y-2 pt-1"
     >
       <RouterLink
+        v-if="botao && destino"
         :to="destino.to"
         data-topo-botao
         class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-n-slate-12 transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
@@ -104,6 +108,16 @@ const botao = computed(() =>
           aria-hidden="true"
         />
       </RouterLink>
+      <button
+        v-if="podeDefinirMetas"
+        type="button"
+        data-topo-metas
+        class="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-medium text-white/80 underline-offset-4 hover:text-white hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+        @click="emit('metas')"
+      >
+        <span class="i-lucide-target size-4" aria-hidden="true" />
+        {{ t(`${P}.TOPO.METAS_LINK`, { mes: mesNome }) }}
+      </button>
     </div>
   </section>
 </template>

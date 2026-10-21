@@ -75,8 +75,12 @@ o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
 ### Lote
 
 - Até **7 PRs** sem migration destrutiva por rodada da fila (ruleset `main - fila de merge`, `max_entries_to_merge: 7`).
-  Migration aditiva vai no lote, com snapshot RDS nas duas contas tirado pela Orquestração antes. Outra migration sobe
-  sozinha, com snapshot e rollback do banco escritos antes.
+  **Migration aditiva vai no lote, quantas houver** (#2024): o job **Migrations do lote** (parte do check RSpec) testa
+  na fila as migrations de todos os PRs da rodada juntas, sobre a `main`, e barra o que o código anterior não aguenta.
+  O deploy confere de novo contra o commit da blue, antes de lançar a green. Migration que mexe em dados sai marcada no
+  relatório e depende da revisão humana: o job confere estrutura, não dados. Snapshot RDS nas duas contas antes do merge: pela Orquestração, até o snapshot automático do deploy ser ligado
+  ([`migrations-em-lote.md`](migrations-em-lote.md)). Remoção ou renomeação (o passo 2 do expand/contract) sobe
+  sozinha, com OK do Rodrigo e o rollback do banco escrito antes.
 - Antes de fechar, a Orquestração confere: versão de migration repetida entre os PRs; arquivos gerados do Guia e da
   Central em dia (`pnpm guia:check`, `pnpm central:check`, `rails autonomia:guia:formatos:check`); PR empilhado só
   depois que o de baixo virar `MERGED`; e a linha "Liberação" de cada PR.
@@ -84,12 +88,18 @@ o estado ficam em [`liberacoes-por-conta.md`](liberacoes-por-conta.md).
   em rótulo. A sessão dona não enfileira nem dá push depois do pedido.
 - Refazer CI = fechar e reabrir o PR. `gh run rerun --failed` só quando a `main` não andou desde aquela CI (o merge
   ref antigo ainda é o atual). Não mesclar a `main` "para atualizar" (só se o GitHub disser `CONFLICTING`).
-- **Um lote, um deploy.** A fila de merge entra na `main` grupo a grupo, e cada push disparava o seu deploy (em
-  10/10 três lotes saíram em dois deploys cada). O job "Esperar a fila de merge" dos dois deploys espera a fila
-  esvaziar (teto de 25 min) e, se houver execução de push mais nova viva ou já concluída com sucesso, sai sem
-  deployar: a mais nova sobe a `main` inteira. A trava de concorrência fica nos jobs `deploy` e `rollback`, então a
-  espera não segura o rollback. Cancelar à mão o deploy mais novo cancela também os commits que ele cobria:
-  disparar de novo pelo `workflow_dispatch`.
+- **Deploy contínuo (#1979).** Cada push na `main` pede a trava do deploy na hora, sem esperar a fila de merge. A
+  trava do GitHub guarda um deploy rodando e um esperando, e o push mais novo toma o lugar do que esperava (que sai
+  como *cancelado*, sem problema nenhum). Quem sobe depois leva a `main` inteira, então merges seguidos viram no
+  máximo dois deploys. Até 20/10 o job "Esperar a fila de merge" segurava cada deploy até a fila esvaziar e pulava
+  quando havia um mais novo; com a fila sempre alimentada, seis deploys seguidos pularam e a produção ficou duas
+  horas para trás. **Na main não é no ar:** só conta como no ar o SHA que o "Deploy Green" subiu. O painel (#1237)
+  marca ⏰ **ATRASADA** quando o primeiro pedido de deploy não atendido passa de 60 min, e comenta uma vez por versão
+  presa no ar. Se a trava descartar o pedido do push mais novo (o GitHub não garante a ordem), o deploy que terminou
+  pede sozinho um deploy novo da `main`. Cancelar um deploy à mão não impede que ele suba depois: para segurar a
+  produção, o caminho é o rollback (que congela).
+- **Rerun de deploy velho não volta a produção para trás.** O deploy falha na largada quando o commit dele é mais
+  velho que a última imagem construída. Para subir a `main` atual, disparar um deploy novo pelo `workflow_dispatch`.
 
 ### Depois do deploy
 
@@ -110,7 +120,9 @@ passos do job "Deploy Green"). A via expressa pula a segunda bateria. É o caso 
 seção "Fila de merge" vale.
 
 1. **Regressão do último deploy? Primeiro o rollback**, com OK do Rodrigo: `workflow_dispatch` com
-   `action=rollback` nos dois deploys só troca o tráfego de volta para a instância anterior. O hotfix vem depois.
+   `action=rollback` e `esperado_sha` (o SHA que estava no ar antes do deploy ruim) nos dois deploys. Ele só troca o
+   tráfego de volta para a instância anterior, e a produção fica **congelada** até o deploy manual do conserto com
+   `descongelar=true`. O hotfix vem depois.
 2. **Critérios, todos obrigatórios** (a conta do GitHub é compartilhada e tem bypass: quem confere é a
    Orquestração, não o GitHub):
    - diff pequeno, até ~50 linhas;
@@ -136,7 +148,8 @@ A Orquestração acompanha os disparos manuais e cobra quem furou a fila.
 ## Por que existe
 
 Todo merge na `main` dispara o deploy blue-green completo nas duas stacks (hub2you e autonomia). Os workflows usam
-`concurrency` com `cancel-in-progress: false`, então merges seguidos não se cancelam: viram deploys em fila. Medido em
+`concurrency` com `cancel-in-progress: false`: o deploy que está rodando nunca é cancelado, e o que espera a vez é
+trocado pelo push mais novo (#1979). Medido em
 25/09: cerca de 24 minutos são o build da imagem (feito uma vez por stack, sem cache), 3 minutos a subida e a saúde
 da instância nova e 5,5 minutos o desligamento da antiga. Em 04/10, com o cache do build no ECR, foram 3 min 38 s de
 build e 3 min 04 s de boot, que vinha depois do build (8 min 22 s do disparo à troca do tráfego). Desde o #974 a
@@ -196,15 +209,50 @@ item 2, o que dispara deploy (item 5), migration (6), par com o adapter (7), iss
    `app/services/autonomia/insurance/quote_agent/instrucoes/`). Esses vão no lote junto com código. Um lote só com
    manual precisa de `workflow_dispatch`. Conteúdo da Central e do Guia (`lib/central_de_ajuda`, `lib/operator_guide`,
    `public/central-de-ajuda`) dispara deploy e também vai no lote.
-6. **Migration** só com aviso às outras sessões e snapshot RDS nas duas stacks antes do merge do lote.
+6. **Migration** só com aviso às outras sessões e snapshot RDS nas duas stacks antes do merge do lote (feito pelo
+   próprio deploy quando o snapshot automático estiver ligado). Várias migrations aditivas sobem no mesmo lote; as
+   regras e o rollback de cada versão estão em [`migrations-em-lote.md`](migrations-em-lote.md).
 7. **Par no autonomia-adapters (Lambda).** O lote declara a ordem (chat antes ou adapter antes). O adapter sobe fora do
    trem, pelo `workflow_dispatch` dele, depois da validação do chat.
 8. **Issues.** PR mergeado num branch que não é o padrão não fecha issue pelo `Closes #N`. Quem fez cada PR fecha a
    issue depois do merge do lote na `main` e atualiza o Project Autonom.ia Dev.
-9. **Rollback** de um lote: `workflow_dispatch` com `action=rollback` nos dois workflows de deploy (volta para a
-   instância anterior). Só volta **um degrau**: a instância de dois deploys atrás é terminada cerca de 5 minutos depois
+9. **Rollback** de um lote: `workflow_dispatch` com `action=rollback` e `esperado_sha` nos dois workflows de deploy
+   (volta para a instância anterior). Como funciona desde o #1979:
+   - o job **Congelar a produção** confere primeiro se a instância anterior veio do commit `esperado_sha` (a tag Name
+     dela diz de que run veio). Sem `esperado_sha`, ou com SHA errado, ele para ali, **sem congelar nada**, e o erro
+     diz qual SHA a anterior roda e quais instâncias ainda existem;
+   - depois **congela** a produção: grava o pedido `on:<run>:<tentativa>:pedido` em `/chatwoot/prod/blue-green/deploy-freeze`
+     (SSM): deploy
+     novo nem pede a vez, e o **Desligar a blue** não para nem termina nada;
+   - cancela todo run que ainda pode trocar o tráfego antes dele: o que está na conferência do congelamento, o que
+     espera a vez e o deploy que ainda não chegou a registrar a green. Cancelado antes de a imagem dele chegar ao ECR, ele
+     não toca na produção. Depois disso a green pode ter subido o app, então a limpeza faz o que já fazia em qualquer
+     deploy que falha ali: suspende o Instagram assistido na atual e reinicia o web dela por alguns segundos. A migration
+     desse deploy pode já ter rodado (ela vem antes do tráfego): por isso migration é sempre aditiva (o job **Migrations do lote** confere);
+   - o deploy confere o congelamento de novo logo antes de registrar a green no balanceador: um rollback que congelou
+     durante o build ou o boot o para ali, sem tráfego. Parado assim, a limpeza não toca na blue (nem Instagram, nem
+     web, nem listener; só confere, lendo, que o listener está nela) e termina a green;
+   - o rollback pede a **mesma trava** do deploy: espera o deploy que já estava no tráfego terminar, congela de novo com
+     outro pedido (`...:trava`, para um descongelar que tenha liberado o primeiro não valer para este), confere o SHA
+     de novo e só então troca. Se esse deploy mudou a anterior, o rollback para sem trocar e lista as instâncias com o
+     commit de cada uma, para a volta manual;
+   - se outro pedido tomar a vez do rollback na trava (um deploy manual, ou um push cuja conferência leu a produção
+     descongelada e só pediu a vez depois das três varreduras), o job **Avisar rollback cancelado** falha o run:
+     disparar de novo;
+   - a produção **segue congelada** depois do rollback, para o merge seguinte não subir de novo o que foi desfeito.
+     Solta com deploy manual (`action=deploy`) e `descongelar=true` depois do conserto na `main`. Ele só descongela
+     depois de subir, gravando em `/chatwoot/prod/blue-green/deploy-freeze-released` o pedido que viu na largada; a
+     produção está congelada quando o pedido não é o liberado. Cada chave tem um dono só (o SSM não lê e grava de
+     forma atômica), então um rollback disparado enquanto ele subia tem outro pedido e continua valendo. Se o SSM falhar nessa hora, o job **Avisar descongelar que falhou** deixa o run vermelho e a
+     produção segue congelada. Esse deploy manual também pode perder a vez para outro pedido: conferir que ele chegou
+     ao fim.
+
+   Só volta **um degrau**: a instância de dois deploys atrás é terminada cerca de 5 minutos depois
    de cada deploy. Para desfazer um lote que já tem outro por cima, o caminho é um lote novo com `git revert`. Um lote
    com migration tem o rollback do banco escrito antes, no próprio PR do lote.
+   Com a produção congelada, nem o Desligar a blue nem a limpeza agendada do **Chatwoot EC2 EBS Cost Guard** terminam
+   instância (o guard faz só o inventário e avisa); se não conseguir ler o congelamento, ele também não termina nada e
+   fica vermelho.
 10. **Urgência (hotfix).** Um lote de um PR só, com OK do Rodrigo. Respeita a regra 4 (espera os "ok" do lote
     anterior), mas não espera a janela de 2 horas.
 11. **Limpeza.** Depois do merge do lote na `main`, cada sessão remove as próprias worktrees. Apagar branch remota (a do

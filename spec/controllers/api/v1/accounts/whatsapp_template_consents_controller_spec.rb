@@ -59,7 +59,8 @@ RSpec.describe 'Api::V1::Accounts::WhatsappTemplateConsents', type: :request do
     expect(response).to have_http_status(:unauthorized)
 
     mudar(user: agent, operacao: 'ligar', marcas: %w[utility])
-    expect(response).to have_http_status(:unauthorized)
+    expect(response).to have_http_status(:forbidden)
+    expect(response.parsed_body['error']).to eq('somente_administrador')
     expect(WhatsappTemplateConsent.count).to eq(0)
   end
 

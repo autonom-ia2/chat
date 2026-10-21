@@ -22,7 +22,9 @@ RSpec.describe Crm::FollowUps::MessageSender do
 
     expect(result.status).to eq(:sent)
     expect(result.message.content).to eq('Oi! Conseguiu ver o orçamento?')
-    expect(result.message.content_attributes).to include('crm_follow_up_id' => follow_up.id, 'crm_follow_up_transport' => 'whatsapp_api')
+    # #2048: a origem do follow-up vai junto com o transporte, para o painel dar nome ao balão.
+    expect(result.message.content_attributes).to include('crm_follow_up_id' => follow_up.id, 'crm_follow_up_transport' => 'whatsapp_api',
+                                                         'crm_follow_up_origem' => 'follow_up')
     expect(result.message.content_attributes).not_to have_key('template_params')
     expect(follow_up.reload.metadata).to include('sent_message_id' => result.message.id, 'send_mode' => 'session')
     expect(WhatsappHybrid::Router.new(scenario[:conversation]).origin_of(result.message)).to eq('crm_follow_up')

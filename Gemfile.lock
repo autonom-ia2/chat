@@ -450,6 +450,12 @@ GEM
     httpclient (2.8.3)
     i18n (1.15.2)
       concurrent-ruby (~> 1.0)
+    icalendar (2.12.5)
+      base64
+      ice_cube (~> 0.16)
+      logger
+      ostruct
+    ice_cube (0.17.0)
     image_processing (1.12.2)
       mini_magick (>= 4.9.5, < 5)
       ruby-vips (>= 2.0.17, < 3)
@@ -553,6 +559,7 @@ GEM
       net-pop
       net-smtp
     marcel (1.1.0)
+    matrix (0.4.3)
     maxminddb (0.1.22)
     meta_request (0.8.5)
       rack-contrib (>= 1.1, < 3)
@@ -674,6 +681,7 @@ GEM
     parser (3.3.8.0)
       ast (~> 2.4.1)
       racc
+    pdf-core (0.9.0)
     pdf-reader (2.16.0)
       Ascii85 (>= 1.0, < 3.0, != 2.0.0)
       afm (>= 0.2.1, < 2)
@@ -686,6 +694,11 @@ GEM
     pgvector (0.1.1)
     pp (0.6.4)
       prettyprint
+    prawn (2.4.0)
+      pdf-core (~> 0.9.0)
+      ttfunk (~> 1.7)
+    prawn-table (0.2.2)
+      prawn (>= 1.3.0, < 3.0.0)
     prettyprint (0.2.0)
     prism (1.9.0)
     procore-sift (1.0.0)
@@ -987,6 +1000,8 @@ GEM
     stackprof (0.2.25)
     statsd-ruby (1.5.0)
     stripe (18.0.1)
+    strong_migrations (2.8.0)
+      activerecord (>= 7.2)
     telephone_number (1.4.20)
     test-prof (1.6.3)
       logger
@@ -1135,6 +1150,7 @@ DEPENDENCIES
   hairtrigger
   hashie
   html2text
+  icalendar (~> 2.12.5)
   image_processing
   iso-639
   jbuilder
@@ -1150,6 +1166,7 @@ DEPENDENCIES
   liquid
   listen
   lograge (~> 0.14.0)
+  matrix (~> 0.4)
   maxminddb
   meta_request (>= 0.8.3)
   mini_magick (~> 4.12)
@@ -1170,6 +1187,8 @@ DEPENDENCIES
   pg
   pg_search
   pgvector
+  prawn (~> 2.4.0)
+  prawn-table (~> 0.2)
   procore-sift
   pry-rails
   puma (~> 7.2, >= 7.2.1)
@@ -1220,6 +1239,7 @@ DEPENDENCIES
   ssrf_filter (~> 1.5)
   stackprof
   stripe (~> 18.0)
+  strong_migrations (~> 2.8)
   telephone_number
   test-prof
   tidewave

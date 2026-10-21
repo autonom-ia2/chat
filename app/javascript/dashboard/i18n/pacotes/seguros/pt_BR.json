@@ -7,7 +7,8 @@
       "CLOSE_AS_TITLE": "Terminar como {label}",
       "ACTIVITY_WON": "Fechou o seguro",
       "ACTIVITY_LOST": "Não fechou",
-      "ACTIVITY_REOPEN": "Card reaberto"
+      "ACTIVITY_REOPEN": "Card reaberto",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Não é venda: ninguém pediu um seguro. Para desfazer, reabra o card."
     },
     "META_SYNC_STATUS": {
       "EVENT_WON": "Fechou o seguro",
@@ -43,7 +44,8 @@
       },
       "SUBTITLE": "Como o funil está indo, etapa por etapa. Veja o que fechou, o que não fechou e quem atendeu: IA ou pessoa.",
       "META_SYNC": {
-        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o seguro, os dados aparecem aqui."
+        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o seguro, os dados aparecem aqui.",
+        "SUBTITLE": "Conversões enviadas de volta à Meta para otimizar seus anúncios: clique para WhatsApp pela conexão do WhatsApp, seguros fechados pela landing page pelo Pixel do site."
       }
     },
     "CONFIRM": {
@@ -89,6 +91,21 @@
         "QUOTE": {
           "REASONS": {
             "CLOSED": "O cliente já fechou o seguro. Não há o que retomar aqui."
+          }
+        }
+      },
+      "SEM_LOGIN": {
+        "AD": {
+          "STATUS": {
+            "LOST": "Não fechou",
+            "BOUGHT": "Fechou o seguro: {value}",
+            "BOUGHT_NO_VALUE": "Fechou o seguro"
+          }
+        },
+        "EXAMPLE": {
+          "ADS": {
+            "WINTER": "Seguro auto com desconto",
+            "SHIPPING": "Proteja sua família"
           }
         }
       }
@@ -187,6 +204,41 @@
           "CRM_CARD_REOPENED": "Um card que tinha terminado foi reaberto."
         }
       }
+    }
+  },
+  "CRM_NUMEROS_V2": {
+    "IA_AJUDOU": {
+      "VENDA": "{ia} te passou {passou} pessoa interessada este mês. | {ia} te passou {passou} pessoas interessadas este mês.",
+      "VIRARAM": "Nenhuma fechou o seguro ainda. | 1 fechou o seguro. | {n} fecharam o seguro."
+    },
+    "TOPO": {
+      "SEM_META_EU": "Seu mês até agora: {n} seguro fechado, {valor} | Seu mês até agora: {n} seguros fechados, {valor}"
+    },
+    "BLOCO": {
+      "VENDENDO": "Fechando seguros"
+    },
+    "ESTIMADO": "Alguns seguros fechados antes deste registro foram contados para o responsável atual do card.",
+    "COMO_CONTAMOS": {
+      "REGRA_ANTIGAS": "Seguros fechados antes deste registro contam para o responsável atual do card."
+    }
+  },
+  "MODELOS_WHATSAPP": {
+    "OBJETIVOS": {
+      "renovacao": {
+        "TITULO": "Renovação do seguro",
+        "PARA": "Para avisar que o seguro vai vencer.",
+        "TEXTO": "Olá, [nome_cliente]. Aviso de [nome_empresa]: o seu seguro vence em [data]. Para não ficar sem proteção, renove antes dessa data. Toque em uma das opções abaixo."
+      },
+      "andamento": {
+        "TITULO": "Andamento do sinistro",
+        "PARA": "Para contar ao segurado que o sinistro dele andou.",
+        "TEXTO": "Olá, [nome_cliente]. Atualização de [nome_empresa]: o seu sinistro teve andamento. Quer saber os detalhes? Toque no botão abaixo."
+      }
+    }
+  },
+  "AUTONOMIA_GUIDE": {
+    "SUGGESTIONS": {
+      "REPORTS": "Quantos seguros fechei este mês?"
     }
   }
 }

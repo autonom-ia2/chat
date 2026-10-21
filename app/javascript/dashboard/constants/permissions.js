@@ -7,6 +7,8 @@ export const CRM_VIEW_REPORTS_PERMISSION = 'crm_view_reports';
 export const CRM_ADMIN_PERMISSION = 'crm_admin';
 export const CRM_EXPORT_PERMISSION = 'crm_export';
 export const CRM_DELETE_CARDS_PERMISSION = 'crm_delete_cards';
+// #1991 — metas do mês por pessoa (gaveta "Metas do mês" em CRM › Números).
+export const CRM_METAS_MANAGE_PERMISSION = 'crm_metas_manage';
 
 // Module keys (#452): `<module>_manage` implies `<module>_view` on the backend, so routes list both.
 export const CONTACT_VIEW_PERMISSION = 'contact_view';
@@ -36,11 +38,17 @@ export const META_ADS_VIEW_PERMISSION = 'meta_ads_view';
 export const PEOPLE_MANAGE_PERMISSION = 'people_manage';
 export const CUSTOM_ROLE_MANAGE_PERMISSION = 'custom_role_manage';
 export const GRANT_ABOVE_OWN_PERMISSION = 'grant_above_own';
+// Financeiro (#1969): os custos da conta em dinheiro (uso de IA) e a autorização de cobranças da Meta. Plano e faturas
+// seguem só do administrador.
+export const FINANCIAL_VIEW_PERMISSION = 'financial_view';
+export const FINANCIAL_MANAGE_PERMISSION = 'financial_manage';
 // Espelho de CustomRole::DELEGATION_KEYS: só o administrador entrega, ou quem tem grant_above_own.
 export const DELEGATION_KEYS = [
   PEOPLE_MANAGE_PERMISSION,
   CUSTOM_ROLE_MANAGE_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
+  FINANCIAL_VIEW_PERMISSION,
+  FINANCIAL_MANAGE_PERMISSION,
 ];
 
 export const ROLES = ['agent', 'administrator'];

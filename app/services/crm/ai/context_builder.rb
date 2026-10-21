@@ -28,10 +28,24 @@ module Crm
       # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
       # memoria (#1601): só a avaliação de card com a flag `memoria_ia` pede; cada mensagem ganha um id LOCAL ("ref": m1,
       # m2...) e o contexto traz os fatos já registrados (Crm::Memoria::ParaAvaliacao). Os outros leitores não mudam.
-      def initialize(card:, fora: [], memoria: false)
+      # pedido_anterior (#1925): só a avaliação de card pede; traz o card encerrado que este pode estar retomando.
+      # #1926 (MITIGAÇÃO; o fix definitivo, o fato persistido, é o #1966): a avaliação de etapa decide pela conversa, e o
+      # resumo (metadata.ai.summary) só existe quando alguém abre o card. Com 12 mensagens, o preço enviado no meio de uma
+      # conversa longa ficava de fora e o card não saía de "Em atendimento". Ela lê o teto inteiro, dividido em partes
+      # iguais entre as conversas: a movimentada não toma a vez da vinculada, e a soma nunca passa do teto (com 4 ou
+      # mais conversas, cada uma fica com menos de MAX_RECENT_MESSAGES, mas nenhuma some).
+      def self.janela_da_avaliacao(conversas)
+        [MAX_MESSAGES_CAP / [conversas, 1].max, 1].max
+      end
+
+      # janela (#1926): :avaliacao é a avaliação de etapa (Crm::Ai::Evaluator), que lê até MAX_MESSAGES_CAP mensagens
+      # (#janela_por_conversa). Os outros leitores seguem com MAX_RECENT_MESSAGES por conversa.
+      def initialize(card:, fora: [], memoria: false, janela: :curta, pedido_anterior: false)
         @card = card
         @fora = fora
         @numeracao = Crm::Memoria::ParaAvaliacao::Numeracao.new if memoria
+        @janela = janela
+        @pedido_anterior = pedido_anterior
       end
 
       def perform
@@ -46,10 +60,20 @@ module Crm
           conversation_state: conversation_state,
           temporal: temporal_context,
           other_subjects: other_subjects
-        }.merge(memoria_payload)
+        }.merge(memoria_payload).merge(pedido_anterior_payload)
       end
 
       private
+
+      # Card que renasce (#1925): o pedido encerrado sem sucesso antes deste, com as últimas mensagens da vida dele
+      # (Crm::Ai::PedidoAnterior). Sem ids locais da memória: nada dali é prova de fato deste card.
+      def pedido_anterior_payload
+        anterior = @pedido_anterior && Crm::Ai::PedidoAnterior.do_card(@card)
+        return {} unless anterior
+
+        mensagens = Crm::Ai::PedidoAnterior.mensagens(anterior, fora: recent_records.map(&:id))
+        { previous_card: Crm::Ai::PedidoAnterior.payload(anterior).merge(messages: mensagens.map { |m| format_message(m, numerar: false) }) }
+      end
 
       def memoria_payload
         @numeracao ? Crm::Memoria::ParaAvaliacao.contexto(@card, conversation_ids, @numeracao) : {}
@@ -57,12 +81,20 @@ module Crm
 
       # Os outros pedidos abertos nas conversas deste card (multifunil, #1147). A IA decide a etapa, os campos e o
       # follow-up só DESTE card: uma mensagem sobre outro pedido não o move. Vazio quando a conversa tem um pedido só.
+      # Com a flag `crm_ia_arquiva_lixo` (#1922), cada um leva o id: é o que a IA aponta quando este card repete outro
+      # (`nao_e_negocio.duplicado_de`). Sem ela, a entrada fica igual à de antes.
       def other_subjects
         account = @card.account
+        com_id = Crm::Ai::NaoENegocio.ligada?(account)
         linked = Crm::CardConversation.where(account_id: account.id, conversation_id: conversation_ids).select(:card_id)
         account.crm_cards.open.where(conversation_id: conversation_ids).or(account.crm_cards.open.where(id: linked))
                .where.not(id: [@card.id, *@fora]).includes(:pipeline, :stage).order(id: :desc).limit(MAX_OTHER_SUBJECTS)
-               .map { |card| { title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name } }
+               .map { |card| outro_pedido(card, com_id) }
+      end
+
+      def outro_pedido(card, com_id)
+        pedido = { title: card.title, pipeline: card.pipeline&.name, stage: card.stage&.name }
+        com_id ? { id: card.id, **pedido } : pedido
       end
 
       # Valores JÁ salvos dos atributos customizados (contato, conversa e o próprio card, #1146). O classificador recebe o
@@ -140,6 +172,7 @@ module Crm
                .where(sender_type: 'User').or(Message.where(conversation_id: conversation_ids, account_id: @card.account_id,
                                                             private: false, sender_type: nil))
                .outgoing
+               .where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed])
                .reorder(id: :desc)
                .limit(FOLLOW_UP_SCAN_LIMIT)
                .find { |message| role_for(message) == 'human_agent' }
@@ -168,43 +201,45 @@ module Crm
       # Janela POR CONVERSA, não global: com um único LIMIT, uma conversa movimentada consumia a cota
       # inteira e a vinculada — que pode conter a promessa não cumprida — não chegava ao modelo.
       def recent_messages
-        ids = conversation_ids
-        return [] if ids.empty?
+        recent_records.map { |message| format_message(message) }
+      end
 
-        ids.flat_map { |conversation_id| latest_for(conversation_id) }
-           .sort_by(&:id)
-           .last(MAX_MESSAGES_CAP)
-           .map { |message| format_message(message) }
+      def recent_records
+        @recent_records ||= conversation_ids.flat_map { |conversation_id| latest_for(conversation_id) }
+                                            .sort_by(&:id)
+                                            .last(MAX_MESSAGES_CAP)
       end
 
       # reorder (not order) to override Message's default_scope(created_at: :asc), and by id (arrival
       # order) so just-arrived messages/media are always in the recent window even if provider
       # timestamps are skewed/out-of-order. includes(:attachments) evita N+1 no message_content.
+      # Envio que falhou (#1923) não chegou ao cliente: sai do histórico, como no dos Agentes (PessoaDaEquipe). A falha
+      # chega depois da criação (message_updated), quando a avaliação já foi agendada; é aqui que ela deixa de contar.
+      # IS DISTINCT FROM: a coluna aceita nulo, e `status != 3` descartaria a mensagem sem status.
       def latest_for(conversation_id)
         Message.where(conversation_id: conversation_id, private: false)
                .where.not(message_type: :activity)
+               .where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed])
                .includes(:attachments)
                .reorder(id: :desc)
-               .limit(MAX_RECENT_MESSAGES)
+               .limit(janela_por_conversa)
       end
 
       def conversation_ids
         @conversation_ids ||= ([@card.conversation_id] + @card.card_conversations.pluck(:conversation_id)).compact.uniq
       end
 
-      # Janela cresce com o número de conversas para um card com várias não perder o começo de cada
-      # uma, mas com teto para não estourar o prompt.
-      def window_size(conversation_count)
-        [MAX_RECENT_MESSAGES * conversation_count, MAX_MESSAGES_CAP].min
+      def janela_por_conversa
+        @janela == :avaliacao ? self.class.janela_da_avaliacao(conversation_ids.size) : MAX_RECENT_MESSAGES
       end
 
       # #1807 (flag `email_autoria`): e-mail de outro endereço que não o do cliente ganha o aviso na frente e
       # "email_autoria" (outra_pessoa, equipe, automatica); o papel continua `customer` (é a resposta da conversa).
-      def format_message(message)
+      def format_message(message, numerar: true)
         forwarded = forwarded_by_team?(message)
         content, marca_do_email = email_autoria.marcar(message, message_content(message).truncate(2000))
         payload = {
-          **(@numeracao ? @numeracao.ref_de(message) : {}),
+          **(@numeracao && numerar ? @numeracao.ref_de(message) : {}),
           role: role_for(message),
           content: forwarded ? "#{FORWARDED_PREFIX}#{content}" : content,
           created_at: message.created_at.iso8601
@@ -231,8 +266,7 @@ module Crm
         # created_by/assignee), então sem esta checagem a própria IA reaparece no transcript como
         # "pessoa do time" e o cérebro conclui que houve pergunta humana sem resposta — foi o que
         # fez a IA cobrar o mesmo cliente duas vezes pelo mesmo questionário.
-        # Continua sendo platform_agent, e não um quinto papel, porque o enum last_turn_owner do
-        # ScoreCalculator conhece só quatro.
+        # Continua sendo platform_agent, e não um quinto papel: o modelo conhece só quatro.
         # #1601: o convite e o aviso do Agendamento também saem em nome de uma pessoa, mas é a plataforma que manda; e o
         # que a equipe manda pelo app do celular volta como eco sem remetente (`external_echo`), e é uma pessoa do time.
         # Efeito conhecido (o mesmo do PessoaDaEquipe): o eco da PRÓPRIA bolha da IA que o reconciliador do Híbrido não
@@ -243,8 +277,8 @@ module Crm
         case message.sender_type
         when 'User' then 'human_agent'
         when 'AgentBot' then platform_bot_ids.include?(message.sender_id) ? 'platform_agent' : 'external_agent'
-        # Saída sem sender (automação, API) cai em external_agent e não num quinto papel: o enum de
-        # last_turn_owner só conhece quatro, e um valor fora dele fazia o modelo adivinhar.
+        # Saída sem sender (automação, API) cai em external_agent e não num quinto papel: o modelo só
+        # conhece quatro, e um valor fora deles o fazia adivinhar.
         else 'external_agent'
         end
       end

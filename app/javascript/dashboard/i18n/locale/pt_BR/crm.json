@@ -131,7 +131,18 @@
     "RATE_UNAVAILABLE": "A cotação em BRL está indisponível agora; mostrando valores em USD.",
     "RESOURCE_FALLBACK": "Outros",
     "LOADING": "Carregando uso de IA…",
-    "ERROR": "Não foi possível carregar o uso de IA. Tente novamente."
+    "ERROR": "Não foi possível carregar o uso de IA. Tente novamente.",
+    "SEM_VALORES": {
+      "DESCRICAO": "Acompanhe quanto a IA é usada por recurso, período e usos recentes.",
+      "AVISO": "Você vê quanto a IA foi usada. Os valores em reais aparecem para quem tem Financeiro na função.",
+      "POR_RECURSO": "Uso por recurso",
+      "USOS": "{n} uso | {n} usos",
+      "SERIE": {
+        "TODAY": "Usos por hora hoje",
+        "WEEK": "Usos por dia na semana",
+        "MONTH": "Usos por dia no mês"
+      }
+    }
   },
   "CRM_DASHBOARD": {
     "ORIGIN": {
@@ -1192,7 +1203,7 @@
       "FOLLOW_UP_CANCELED": "Retorno cancelado.",
       "FOLLOW_UP_SAVE_ERROR": "Não foi possível salvar o retorno.",
       "FOLLOW_UP_MESSAGE_BODY_REQUIRED": "Informe a mensagem livre para o envio automático.",
-      "FOLLOW_UP_TEMPLATE_REQUIRED": "Fora da janela de 24h, informe o template oficial.",
+      "FOLLOW_UP_TEMPLATE_REQUIRED": "Fora da janela de 24h, escolha a mensagem aprovada.",
       "FOLLOW_UP_DUE_AT_PAST": "Esse horário já passou. Escolha um horário daqui para frente.",
       "CARD_REOPENED_ATENDER": "Atendimento reaberto.",
       "CARD_CLOSE_ERROR_ATENDER": "Não foi possível atualizar o status do atendimento."
@@ -1362,6 +1373,8 @@
       "ACTIVITY_GENERIC": "Atividade registrada",
       "ACTIVITY_DETAIL_STAGE_CHANGE": "De {from} para {to}",
       "ACTIVITY_DETAIL_STAGE_TO": "Para {to}",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Não é negócio: ninguém pediu o que a gente vende. Para desfazer, reabra o card.",
+      "ACTIVITY_DETAIL_DUPLICADO": "Card repetido: o mesmo pedido já tem um card aberto. Para desfazer, reabra o card.",
       "ACTIVITY_DETAIL_OWNER": "Atribuído a {owner}",
       "ACTIVITY_DETAIL_HANDOFF": "Atribuído a {agent}",
       "ACTIVITY_DETAIL_HANDOFF_REASON": "Atribuído a {agent}: {reason}",
@@ -1456,11 +1469,11 @@
         "STATUS_REPLIED": "Parado: cliente respondeu",
         "STATUS_CLOSED": "Não enviado: conversa encerrada",
         "STATUS_NO_LOOP": "Nada a enviar",
-        "STATUS_NO_TEMPLATE": "Sem template adequado",
+        "STATUS_NO_TEMPLATE": "Sem mensagem aprovada que sirva",
         "STATUS_FAILED": "Falha no envio",
         "STATUS_NOT_STARTED": "Não iniciado",
         "TIMELINE_TOUCH_FREE": "Toque {n} - IA livre",
-        "TIMELINE_TOUCH_TEMPLATE": "Toque {n} - template {name}",
+        "TIMELINE_TOUCH_TEMPLATE": "Toque {n} - mensagem aprovada {name}",
         "TIMELINE_TOUCH_SKIPPED": "Toque {n} - não enviado",
         "OPT_OUT_HINT": "O cliente pediu para não receber mais mensagens automáticas. Novos toques não serão criados até alguém reativar.",
         "RESET": "Atualizar - reiniciar ciclo",
@@ -2248,7 +2261,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
-        "TITLE": "Anúncios da Meta",
+        "TITLE": "Anúncios",
         "SUBTITLE": "Veja quais anúncios trazem conversas e vendas.",
         "LOADING": "Carregando…",
         "LOAD_ERROR": "Não deu para carregar a conexão com a Meta.",
@@ -2257,6 +2270,36 @@
         "BREADCRUMB": "Você está aqui",
         "NOT_CONNECTED_TITLE": "Os anúncios ainda não estão conectados",
         "NOT_CONNECTED_TEXT": "Peça a um administrador para conectar os anúncios da Meta. Depois, os resultados aparecem aqui."
+      },
+      "SEM_LOGIN": {
+        "NO_NAME": "Sem nome",
+        "READY": {
+          "TEXT_PHONE": "Seu WhatsApp {phone} está pronto: quem vier de anúncio aparece aqui.",
+          "TEXT": "Seu WhatsApp está pronto: quem vier de anúncio aparece aqui.",
+          "TEXT_MANY": "Seus WhatsApp estão prontos: quem vier de anúncio aparece aqui.",
+          "EXAMPLE": "Ver um exemplo"
+        },
+        "EXAMPLE": {
+          "BADGE": "Exemplo",
+          "TEXT": "Números de exemplo, só para você ver como fica.",
+          "BACK": "Voltar",
+          "ADS": {
+            "WINTER": "Promoção de inverno",
+            "TALK": "Fale com a gente",
+            "SHIPPING": "Frete grátis esta semana"
+          }
+        },
+        "AD": {
+          "PEOPLE": "Quem veio deste anúncio",
+          "EMPTY": "Ninguém veio deste anúncio neste período.",
+          "STATUS": {
+            "BOUGHT": "Comprou {value}",
+            "BOUGHT_NO_VALUE": "Comprou",
+            "TALKING": "Conversando",
+            "LOST": "Perdido",
+            "NO_ANSWER": "Sem resposta"
+          }
+        }
       },
       "EMPTY": {
         "EYEBROW": "Campanhas",
@@ -2547,10 +2590,46 @@
           "LABEL": "O que ver"
         },
         "HEADLINE": "Você investiu {spend}. Vieram {conversations} e {sales}.",
-        "PERIOD": "{days} dias",
+        "HEADLINE_WHATSAPP": "Pelo WhatsApp, vieram {conversations} de anúncio e {sales}.",
         "PERIOD_LABEL": "Período",
-        "PERIOD_CTX": "Últimos {days} dias",
-        "PERIOD_HINT": "O que aconteceu com as pessoas que chegaram por anúncio nos últimos {days} dias.",
+        "PERIODS": {
+          "7d": {
+            "BUTTON": "7 dias",
+            "NAME": "Últimos 7 dias",
+            "IN": "nos últimos 7 dias"
+          },
+          "30d": {
+            "BUTTON": "30 dias",
+            "NAME": "Últimos 30 dias",
+            "IN": "nos últimos 30 dias"
+          },
+          "90d": {
+            "BUTTON": "90 dias",
+            "NAME": "Últimos 90 dias",
+            "IN": "nos últimos 90 dias"
+          },
+          "this_month": {
+            "NAME": "Este mês",
+            "IN": "neste mês"
+          },
+          "last_month": {
+            "NAME": "Mês passado",
+            "IN": "no mês passado"
+          },
+          "all": {
+            "NAME": "Desde o início",
+            "IN": "desde o primeiro anúncio"
+          }
+        },
+        "MORE_PERIODS": "Mais períodos",
+        "PERIOD_LOADING": "Carregando o período…",
+        "PERIOD_ERROR": "Não deu para trazer este período agora. Tente de novo.",
+        "PERIOD_EMPTY": {
+          "TITLE": "Ninguém chegou por anúncio {when}.",
+          "SEE_ALL": "Ver desde o primeiro anúncio"
+        },
+        "PERIOD_CTX": "{name} · {range}",
+        "PERIOD_HINT": "O que aconteceu com as pessoas que chegaram por anúncio {when}.",
         "TODAY": "O que fazer hoje",
         "SEVERAL_ADS": "vários anúncios",
         "ACTION": {
@@ -2691,6 +2770,18 @@
           "NO_ANSWER": "Sem resposta",
           "WON": "Ganha",
           "LOST": "Perdida"
+        },
+        "REPORT": {
+          "BUTTON": "Baixar relatório",
+          "TITLE": "Baixar o relatório",
+          "DESCRIPTION": "{name}, com os mesmos números da tela.",
+          "PDF_TITLE": "PDF para apresentar",
+          "PDF_HINT": "Páginas prontas para mostrar ou mandar para alguém.",
+          "SHEET_TITLE": "Planilha para trabalhar os números",
+          "SHEET_HINT": "Abre no Excel ou no Google Planilhas, com cada conversa.",
+          "CONFIRM": "Baixar",
+          "ERROR": "Não deu para baixar agora. Tente de novo.",
+          "NO_PEOPLE": "Sem a permissão \"Exportar a lista do CRM para Excel\", o arquivo leva só os números, sem a lista de pessoas."
         }
       },
       "AD_DETAIL": {
@@ -2723,9 +2814,11 @@
         "MEANWHILE": "1 proposta aberta deste anúncio espera resposta. Retomar essa conversa é o que dá para fazer agora. | {count} propostas abertas deste anúncio esperam resposta. Retomar essas conversas é o que dá para fazer agora.",
         "MEANWHILE_SEE": "Ver as propostas",
         "CHART_TITLE": "Gasto e conversas por dia",
+        "CHART_TITLE_TALKS": "Conversas por dia",
         "LEGEND_SPEND": "Gasto",
         "LEGEND_CONVERSATIONS": "Conversas",
         "CHART_DAY": "{date}: {spend} · 1 conversa | {date}: {spend} · {count} conversas",
+        "CHART_DAY_TALKS": "{date}: 1 conversa | {date}: {count} conversas",
         "CHART_SCALE": "Maior gasto num dia: {spend} · mais conversas num dia: 1 | Maior gasto num dia: {spend} · mais conversas num dia: {count}",
         "DAYS_TOGGLE": "Ver dia a dia",
         "DAYS_DATE": "Dia",
@@ -5010,21 +5103,21 @@
         "ESCOLHA_DIA": "Escolha o dia para ver se a mensagem pode ser livre.",
         "CONFERINDO": "Conferindo o dia escolhido…",
         "DENTRO": "No dia escolhido o cliente terá falado com você há menos de 24 horas. Pode mandar o que quiser.",
-        "LIVRE_OFICIAL": "No dia escolhido terá passado mais de 24 horas, mas esta caixa manda o seu texto mesmo assim. A mensagem pronta é opcional.",
-        "SO_PRONTA": "No dia escolhido terá passado mais de 24 horas da última mensagem do cliente. Aí o WhatsApp só deixa mandar mensagem pronta (aprovada). Escolha uma abaixo.",
-        "SO_PRONTA_DIGITAR": "No dia escolhido terá passado mais de 24 horas da última mensagem do cliente. Aí o WhatsApp só deixa mandar mensagem pronta (aprovada). Escreva abaixo o nome dela e escolha o idioma."
+        "LIVRE_OFICIAL": "No dia escolhido terá passado mais de 24 horas, mas esta caixa manda o seu texto mesmo assim. A mensagem aprovada é opcional.",
+        "SO_PRONTA": "No dia escolhido terá passado mais de 24 horas da última mensagem do cliente. Aí o WhatsApp só deixa mandar mensagem aprovada. Escolha uma abaixo.",
+        "SO_PRONTA_DIGITAR": "No dia escolhido terá passado mais de 24 horas da última mensagem do cliente. Aí o WhatsApp só deixa mandar mensagem aprovada. Escreva abaixo o nome dela e escolha o idioma."
       },
       "SEU_TEXTO": "Sua mensagem",
       "SEU_TEXTO_SE_RESPONDER": "Sua mensagem (sai se o cliente falar com você antes do dia)",
       "SEU_TEXTO_EXEMPLO": "Oi! Passando para saber se ficou alguma dúvida.",
       "SEU_TEXTO_FALTA": "Escreva a mensagem.",
-      "PRONTA": "Mensagem pronta que sai",
-      "PRONTA_OPCIONAL": "Mensagem pronta (opcional)",
+      "PRONTA": "Mensagem aprovada que sai",
+      "PRONTA_OPCIONAL": "Mensagem aprovada (opcional)",
       "SEM_PRONTA": "Nenhuma, mandar a minha mensagem",
-      "NENHUMA_PRONTA": "Esta caixa ainda não tem mensagem pronta aprovada.",
-      "PRONTA_NOME": "Nome da mensagem pronta",
+      "NENHUMA_PRONTA": "Esta caixa ainda não tem mensagem aprovada.",
+      "PRONTA_NOME": "Nome da mensagem aprovada",
       "PRONTA_NOME_EXEMPLO": "Ex.: retomar_conversa",
-      "PRONTA_IDIOMA": "Idioma da mensagem pronta",
+      "PRONTA_IDIOMA": "Idioma da mensagem aprovada",
       "NOME": "O que é",
       "TITULO_EXEMPLO": "Ex.: Ligar dia 30 às 10h · Aniversário do cliente",
       "TITULO_FALTA": "Escreva um nome para o retorno.",
@@ -5034,11 +5127,11 @@
       "ESCOLHA_QUANDO": "Escolha quando",
       "VAI_PARA": "Vai para {nome} no WhatsApp",
       "SEM_MENSAGEM": "A mensagem aparece aqui.",
-      "SAI_PRONTA": "Mensagem pronta escolhida: “{nome}”. Se o cliente falar com você antes, sai a sua.",
+      "SAI_PRONTA": "Mensagem aprovada escolhida: “{nome}”. Se o cliente falar com você antes, sai a sua.",
       "SEM_TITULO": "Ainda sem nome",
       "PREVIA_LEMBRETE": "Aparece para a equipe na hora marcada.",
       "PREVIA_ESCONDE": "A conversa sai da caixa e volta sozinha nessa hora.",
-      "SAI_TEXTO_APROVADO": "Sai o texto da mensagem pronta, do jeito que o WhatsApp aprovou.",
+      "SAI_TEXTO_APROVADO": "Sai o texto da mensagem aprovada, sem mudar nada.",
       "PRONTA_NOME_DICA": "Escreva o nome igual está no WhatsApp.",
       "IDIOMA": {
         "MAIS_USADOS": "Mais usados",
@@ -5050,15 +5143,15 @@
         "CODIGO_DICA": "Escreva do jeito que aparece no WhatsApp, por exemplo pt_BR.",
         "CODIGO_NOME": "Idioma: {nome}."
       },
-      "PRONTA_FALTA_DIGITAR": "Depois de 24 horas só sai mensagem pronta. Escreva o nome dela no formulário.",
-      "PRONTA_FALTA_ESCOLHER": "Depois de 24 horas só sai mensagem pronta. Escolha uma no formulário.",
+      "PRONTA_FALTA_DIGITAR": "Depois de 24 horas só sai mensagem aprovada. Escreva o nome dela no formulário.",
+      "PRONTA_FALTA_ESCOLHER": "Depois de 24 horas só sai mensagem aprovada. Escolha uma no formulário.",
       "FALTA": {
         "FRASE": "Para marcar, ainda falta {itens}.",
         "QUANDO": "escolher quando",
         "MENSAGEM": "escrever a mensagem",
-        "PRONTA_NOME": "escrever o nome da mensagem pronta",
-        "PRONTA_IDIOMA": "escolher o idioma da mensagem pronta",
-        "PRONTA_ESCOLHER": "escolher a mensagem pronta",
+        "PRONTA_NOME": "escrever o nome da mensagem aprovada",
+        "PRONTA_IDIOMA": "escolher o idioma da mensagem aprovada",
+        "PRONTA_ESCOLHER": "escolher a mensagem aprovada",
         "NOME": "dar um nome ao retorno",
         "QUEM": "escolher quem recebe o aviso",
         "ULTIMO_DIA": "escolher o último dia"
@@ -5398,11 +5491,11 @@
       "STATUS_REPLIED": "Parado: o cliente respondeu",
       "STATUS_CLOSED": "Não saiu: a conversa foi encerrada",
       "STATUS_NO_LOOP": "Nada para mandar agora",
-      "STATUS_NO_TEMPLATE": "Parado: falta uma mensagem pronta aprovada",
+      "STATUS_NO_TEMPLATE": "Parado: falta uma mensagem aprovada",
       "STATUS_FAILED": "A mensagem não saiu",
       "STATUS_NOT_STARTED": "Ainda não começou",
       "TIMELINE_TOUCH_FREE": "Mensagem {n}: escrita pelo assistente",
-      "TIMELINE_TOUCH_TEMPLATE": "Mensagem {n}: mensagem pronta {name}",
+      "TIMELINE_TOUCH_TEMPLATE": "Mensagem {n}: mensagem aprovada {name}",
       "TIMELINE_TOUCH_SKIPPED": "Mensagem {n}: não saiu",
       "TIMELINE_TOUCH_REMINDER": "Mensagem {n}: virou um lembrete para a equipe",
       "OPT_OUT_HINT": "O cliente pediu para não receber mais mensagens automáticas. Nada sai até alguém religar.",
@@ -5861,8 +5954,8 @@
       "QUANDO": "Escolha o dia e a hora.",
       "PASSADO": "Esse horário já passou.",
       "CONFERINDO": "Conferindo o WhatsApp…",
-      "PRONTA": "Escolha uma mensagem pronta.",
-      "CAMPOS": "Complete a mensagem pronta.",
+      "PRONTA": "Escolha uma mensagem aprovada.",
+      "CAMPOS": "Complete a mensagem aprovada.",
       "TEXTO": "Escreva a mensagem.",
       "JANELA": "Confira o WhatsApp de novo."
     },
@@ -5909,11 +6002,11 @@
       "ERRO_JANELA": "Não deu para conferir o WhatsApp agora.",
       "TENTAR": "Tentar de novo",
       "LIVRE": "Nesse horário, {nome} pode receber o texto que você escrever.",
-      "SO_PRONTA": "Nesse horário, já terá passado mais de 1 dia desde a última mensagem de {nome}. Aí o WhatsApp só deixa mandar uma mensagem pronta aprovada.",
+      "SO_PRONTA": "Nesse horário, já terá passado mais de 1 dia desde a última mensagem de {nome}. Aí o WhatsApp só deixa mandar uma mensagem aprovada.",
       "PELO_CELULAR": "Já terá passado mais de 1 dia desde a última mensagem de {nome}, mas o WhatsApp do celular está conectado: a mensagem sai por ele, do jeito que você escrever.",
-      "ESCOLHA_PRONTA": "Escolha a mensagem pronta",
+      "ESCOLHA_PRONTA": "Escolha a mensagem aprovada",
       "RESUMO": "O que dizer",
-      "RESUMO_PRONTA": "Mensagem pronta",
+      "RESUMO_PRONTA": "Mensagem aprovada",
       "RESUMO_TEXTO": "“{inicio}”"
     },
     "CONFIRMAR": {
@@ -5929,7 +6022,7 @@
       "ANOTACAO_EXEMPLO": "O cliente não vê esta anotação",
       "ERRO": {
         "PASSADO": "Esse horário já passou. Volte e escolha outro.",
-        "PRONTA": "Nesse horário só dá para mandar mensagem pronta. Volte e escolha uma.",
+        "PRONTA": "Nesse horário só dá para mandar mensagem aprovada. Volte e escolha uma.",
         "GERAL": "Não deu para marcar agora. Tente de novo."
       }
     },
@@ -5955,8 +6048,8 @@
       "canal": "a conversa não é de WhatsApp.",
       "sem_remetente": "ninguém da equipe ficou como responsável.",
       "celular_desconectado": "o WhatsApp do celular estava desconectado.",
-      "sem_modelo": "já tinha passado 1 dia e faltou a mensagem pronta.",
-      "modelo_invalido": "a mensagem pronta não é desta caixa.",
+      "sem_modelo": "já tinha passado 1 dia e faltou a mensagem aprovada.",
+      "modelo_invalido": "a mensagem aprovada não é desta caixa.",
       "recusou": "o cliente pediu para não receber mensagens.",
       "outro": "o WhatsApp recusou o envio."
     }
@@ -6043,7 +6136,8 @@
       "RESOLVEU_EQUIPE": "A equipe resolveu {feito} de {meta}",
       "BATIDA_EMPRESA": "Vocês bateram a meta de {mes}",
       "BATIDA_EQUIPE": "A equipe bateu a meta de {mes}",
-      "LEITURA": "Você está vendo em modo leitura."
+      "LEITURA": "Você está vendo em modo leitura.",
+      "METAS_LINK": "Metas de {mes}"
     },
     "PROXIMO": {
       "TITULO": "Próximo passo",
@@ -6135,6 +6229,32 @@
       "IA_CUSTO_AGENTES_SEM_CONVERSA": "Custo dos agentes de IA: {valor} este mês.",
       "IA_CUSTO_FALTA": "Estimado: o consumo da IA não separa os agentes.",
       "RODAPE": "Contamos só os clientes que entraram no funil."
+    },
+    "METAS": {
+      "TITULO": "Metas de {mes}",
+      "DESCRICAO": "Defina a meta de cada pessoa. A tela de cada um mostra só a própria meta.",
+      "FUNIS": "Funil",
+      "META_FUNIL": "Meta do funil {funil}",
+      "META_FUNIL_DICA": "A meta do funil não precisa ser a soma das pessoas.",
+      "META_PESSOA": "Meta de {nome}",
+      "UNIDADE_VALOR": "em {moeda}",
+      "VAZIO": "Sem meta",
+      "SUGESTAO_VALOR": "Sugestão: {valor}. Nos últimos 3 meses, {nome} fechou {h1}, {h2} e {h3}.",
+      "SEM_SUGESTAO": "{nome} não fechou venda nos últimos 3 meses.",
+      "USAR_SUGESTAO": "Usar a sugestão",
+      "ATALHOS": "Atalhos",
+      "REPETIR": "Repetir {mes}",
+      "DIVIDIR": "Dividir igualmente",
+      "ATALHOS_DICA": "Os atalhos só preenchem os campos. Nada muda antes de salvar.",
+      "SOMA_DIFERENTE": "As metas das pessoas somam {soma}; a do funil é {meta}.",
+      "SEM_FUNIL": "Não há funil de venda para definir metas.",
+      "SEM_PESSOAS": "Ninguém trabalha neste funil ainda.",
+      "SALVAR": "Salvar as metas",
+      "CANCELAR": "Cancelar",
+      "SALVO": "Metas de {mes} salvas.",
+      "ERRO_SALVAR": "Não deu para salvar as metas. Tente de novo.",
+      "MES_MUDOU": "O mês virou. Confira as metas de {mes} e salve de novo.",
+      "INVALIDO": "Use só números, sem pontos."
     }
   }
 }

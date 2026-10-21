@@ -1,0 +1,11 @@
+# As 3 perguntas do antes e depois de "Atualizar com a nova base" (#1429, F3): o agente responde cada uma com a base de
+# hoje e com a nova. Curtas, como quem escreve no WhatsApp, sem dado pessoal: um termo do ramo, um caso de sinistro ou
+# evento, e um limite de quem decide. pt_BR e en com o mesmo número de perguntas, na mesma ordem.
+pt_BR:
+  - "O que é franquia?"
+  - "Bati o carro ontem. Como aciono o seguro?"
+  - "Vocês mesmos aprovam o meu sinistro?"
+en:
+  - "What is a deductible?"
+  - "I crashed my car yesterday. How do I file a claim?"
+  - "Do you approve my claim yourselves?"

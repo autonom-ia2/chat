@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_190000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_320000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2785,6 +2785,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_190000) do
     t.index ["pipeline_id"], name: "index_crm_passagens_on_pipeline_id"
   end
 
+  create_table "crm_person_goals", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "pipeline_id", null: false
+    t.bigint "user_id", null: false
+    t.date "month", null: false
+    t.bigint "target_cents", null: false
+    t.string "currency", default: "BRL", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "month"], name: "idx_crm_person_goals_account_month"
+    t.index ["pipeline_id", "user_id", "month"], name: "idx_crm_person_goals_unique", unique: true
+    t.index ["user_id"], name: "index_crm_person_goals_on_user_id"
+  end
+
   create_table "crm_pipeline_inboxes", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "pipeline_id", null: false
@@ -2944,6 +2958,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_190000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "touched_card_ids", array: true
+    t.string "review_reason"
+    t.string "jev_answer"
     t.index ["account_id", "created_at"], name: "idx_crm_subject_decisions_account_month"
     t.index ["card_id"], name: "index_crm_subject_decisions_on_card_id"
     t.index ["conversation_id", "message_id"], name: "idx_crm_subject_decisions_message", unique: true
@@ -3681,6 +3697,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_190000) do
     t.text "processed_message_content"
     t.jsonb "sentiment", default: {}
     t.index "((additional_attributes -> 'campaign_id'::text))", name: "index_messages_on_additional_attributes_campaign_id", using: :gin
+    t.index "((additional_attributes ->> 'convite_uid_sha256'::text))", name: "index_messages_on_convite_uid_sha256", where: "((additional_attributes ->> 'convite_uid_sha256'::text) IS NOT NULL)"
     t.index ["account_id", "content_type", "created_at"], name: "idx_messages_account_content_created"
     t.index ["account_id", "created_at", "message_type"], name: "index_messages_on_account_created_type"
     t.index ["account_id", "inbox_id"], name: "index_messages_on_account_id_and_inbox_id"
@@ -4445,6 +4462,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_190000) do
   add_foreign_key "crm_passagens", "conversations", on_delete: :cascade
   add_foreign_key "crm_passagens", "crm_cards", column: "card_id", on_delete: :nullify
   add_foreign_key "crm_passagens", "crm_pipelines", column: "pipeline_id", on_delete: :nullify
+  add_foreign_key "crm_person_goals", "accounts", on_delete: :cascade
+  add_foreign_key "crm_person_goals", "crm_pipelines", column: "pipeline_id", on_delete: :cascade
+  add_foreign_key "crm_person_goals", "users", on_delete: :cascade
   add_foreign_key "crm_pipeline_inboxes", "accounts"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipelines", column: "pipeline_id"

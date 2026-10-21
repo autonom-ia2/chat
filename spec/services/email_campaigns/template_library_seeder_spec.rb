@@ -31,19 +31,19 @@ RSpec.describe EmailCampaigns::TemplateLibrarySeeder, :aggregate_failures do
 
     report = described_class.new(base_url: base_url).plan
 
-    expect(report.created.size).to eq(13)
+    expect(report.created.size).to eq(catalog.entries.size)
     expect(report.retired.map(&:name)).to eq([retired_name])
     expect(report.unknown.map(&:name)).to eq([unknown_global.name])
     expect(fingerprint(EmailCampaignTemplate.order(:id).to_a)).to eq(before)
   end
 
-  it 'publishes the thirteen designs, retires only the old globals and never touches account templates' do
+  it 'publishes every catalog design, retires only the old globals and never touches account templates' do
     own_before = fingerprint(own_templates)
 
     described_class.new(base_url: base_url).apply!
 
     globals = EmailCampaignTemplate.global
-    expect(globals.where(name: catalog.entries.map { |entry| entry.fetch('name') }).count).to eq(13)
+    expect(globals.where(name: catalog.entries.map { |entry| entry.fetch('name') }).count).to eq(catalog.entries.size)
     expect(EmailCampaignTemplate.exists?(old_global.id)).to be(false)
     expect(EmailCampaignTemplate.exists?(unknown_global.id)).to be(true)
     expect(fingerprint(own_templates)).to eq(own_before)
@@ -60,7 +60,7 @@ RSpec.describe EmailCampaigns::TemplateLibrarySeeder, :aggregate_failures do
 
     report = described_class.new(base_url: base_url).apply!
 
-    expect(report.unchanged.size).to eq(13)
+    expect(report.unchanged.size).to eq(catalog.entries.size)
     expect(report.created + report.updated + report.retired).to be_empty
     expect(EmailCampaignTemplate.global.order(:id).pluck(:id, :updated_at)).to eq(ids)
   end

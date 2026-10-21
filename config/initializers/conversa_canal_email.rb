@@ -11,6 +11,11 @@
 #   (app/controllers/concerns/conversa_canal/recusa_do_email_na_api.rb);
 # - conversa no Spam sem pesquisa de satisfação, sem o robô da caixa e sem automações (app/listeners/conversa_canal/
 #   *_fora_do_spam.rb; opção (b) do Rodrigo, 18/10). Relatórios, CRM, webhooks da conta e LeadSquared seguem normais.
+# - cópia do e-mail enviado pelo painel na pasta de enviados da conta do cliente, com a chave `email_enviados` (#1938,
+#   app/services/conversa_canal/copia_no_enviados_no_envio.rb).
+# - convite de reunião (parte text/calendar) guardado em content_attributes.email.convite (#1984;
+#   app/services/conversa_canal/convite_no_email_recebido.rb); o convite antigo da mesma reunião, mudada ou cancelada
+#   num e-mail mais novo, deixa de perguntar (#1995; app/services/conversa_canal/convite_substituido_na_mensagem.rb).
 Rails.application.config.to_prepare do
   Messages::MessageBuilder.prepend(ConversaCanal::MessageBuilderComCitacao) unless Messages::MessageBuilder <= ConversaCanal::MessageBuilderComCitacao
   ConversationReplyMailer.prepend(ConversaCanal::EncaminhadoNoMailer) unless ConversationReplyMailer <= ConversaCanal::EncaminhadoNoMailer
@@ -24,4 +29,8 @@ Rails.application.config.to_prepare do
   CsatSurveyListener.prepend(ConversaCanal::PesquisaForaDoSpam) unless CsatSurveyListener <= ConversaCanal::PesquisaForaDoSpam
   AgentBotListener.prepend(ConversaCanal::RoboForaDoSpam) unless AgentBotListener <= ConversaCanal::RoboForaDoSpam
   AutomationRuleListener.prepend(ConversaCanal::AutomacaoForaDoSpam) unless AutomationRuleListener <= ConversaCanal::AutomacaoForaDoSpam
+  envio = Email::SendOnEmailService
+  envio.prepend(ConversaCanal::CopiaNoEnviadosNoEnvio) unless envio <= ConversaCanal::CopiaNoEnviadosNoEnvio
+  MailPresenter.prepend(ConversaCanal::ConviteNoEmailRecebido) unless MailPresenter <= ConversaCanal::ConviteNoEmailRecebido
+  Message.prepend(ConversaCanal::ConviteSubstituidoNaMensagem) unless Message <= ConversaCanal::ConviteSubstituidoNaMensagem
 end

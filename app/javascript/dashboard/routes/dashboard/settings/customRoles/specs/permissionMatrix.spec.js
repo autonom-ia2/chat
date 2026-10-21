@@ -47,6 +47,42 @@ describe('permissionMatrix', () => {
     });
   });
 
+  // #1969: Financeiro. Ver = valores de custo; Editar = ligar e desligar a autorização de cobranças da Meta.
+  describe('finance', () => {
+    const finance = moduleByKey('FINANCE');
+
+    it('has its own group and the financial keys', () => {
+      const group = MODULE_GROUPS.find(g => g.key === 'FINANCE');
+
+      expect(group.modules.map(module => module.key)).toEqual(['FINANCE']);
+      expect(finance.levels).toEqual({
+        view: 'financial_view',
+        manage: 'financial_manage',
+      });
+    });
+
+    it('stores only the highest key and clears both on no access', () => {
+      const permissions = setLevel(finance, LEVELS.MANAGE, ['financial_view']);
+
+      expect(permissions).toEqual(['financial_manage']);
+      expect(getLevel(finance, permissions)).toBe(LEVELS.MANAGE);
+      expect(setLevel(finance, LEVELS.NONE, permissions)).toEqual([]);
+    });
+
+    it('gives the Finance profile the costs in view', () => {
+      expect(getLevel(finance, profilePermissions('FINANCE'))).toBe(
+        LEVELS.VIEW
+      );
+    });
+
+    it('has the module texts in en and pt_BR', () => {
+      [en, ptBR].forEach(locale => {
+        expect(locale.CUSTOM_ROLE.MATRIX.GROUPS.FINANCE).toBeTruthy();
+        expect(locale.CUSTOM_ROLE.MATRIX.MODULES.FINANCE.NAME).toBeTruthy();
+      });
+    });
+  });
+
   // #1188: módulo de função "Agendamento"; agendamento_manage implica _view no backend.
   describe('scheduling', () => {
     const scheduling = moduleByKey('SCHEDULING');
@@ -200,6 +236,83 @@ describe('permissionMatrix', () => {
     });
   });
 
+  describe('conversas: apagar mensagens (#1893)', () => {
+    const conversations = moduleByKey('CONVERSATIONS');
+    const DELETE = 'conversation_message_delete';
+
+    it('aparece para quem atende as próprias ou todas, e não para quem só lê', () => {
+      expect(
+        visibleExtras(conversations, ['conversation_participating_manage'])
+      ).toContain(DELETE);
+      expect(
+        visibleExtras(
+          conversations,
+          setLevel(conversations, CONVERSATION_LEVELS.ALL, [])
+        )
+      ).toEqual([DELETE]);
+      expect(visibleExtras(conversations, ['conversation_view'])).toEqual([]);
+    });
+
+    it('atender não liga a chave sozinho', () => {
+      expect(setLevel(conversations, LEVELS.MANAGE, [])).not.toContain(DELETE);
+      expect(
+        setLevel(conversations, CONVERSATION_LEVELS.ALL, [])
+      ).not.toContain(DELETE);
+    });
+
+    it('trocar entre as próprias e todas mantém a chave', () => {
+      const all = [
+        ...setLevel(conversations, CONVERSATION_LEVELS.ALL, []),
+        DELETE,
+      ];
+      const limited = setLevel(conversations, CONVERSATION_LEVELS.LIMITED, all);
+
+      expect(limited).toContain(DELETE);
+      expect(
+        setLevel(conversations, CONVERSATION_LEVELS.ALL, limited)
+      ).toContain(DELETE);
+    });
+
+    it('só ler ou sem acesso tira a chave', () => {
+      const permissions = ['conversation_participating_manage', DELETE];
+
+      expect(
+        setLevel(conversations, CONVERSATION_LEVELS.VIEW, permissions)
+      ).toEqual(['conversation_view']);
+      expect(
+        setLevel(conversations, CONVERSATION_LEVELS.NONE, permissions)
+      ).toEqual([]);
+    });
+
+    it('desligar a chave mantém o alcance e ela é sensível', () => {
+      const permissions = ['conversation_participating_manage', DELETE];
+
+      expect(toggleExtra(conversations, DELETE, permissions)).toEqual([
+        'conversation_participating_manage',
+      ]);
+      expect(sensitiveExtrasOn(permissions)).toEqual([DELETE]);
+    });
+
+    // O formato que a migration gera: só conversation_manage, sem os alcances guardados.
+    it('desliga a chave num cargo antigo de todas as conversas', () => {
+      expect(
+        toggleExtra(conversations, DELETE, ['conversation_manage', DELETE])
+      ).toEqual(['conversation_manage']);
+    });
+
+    it('de todas para as próprias num cargo antigo começa pelas próprias e mantém a chave', () => {
+      const limited = setLevel(conversations, CONVERSATION_LEVELS.LIMITED, [
+        'conversation_manage',
+        DELETE,
+      ]);
+
+      expect(limited).toEqual([DELETE, 'conversation_participating_manage']);
+      expect(getLevel(conversations, limited)).toBe(
+        CONVERSATION_LEVELS.LIMITED
+      );
+    });
+  });
+
   describe('crm', () => {
     const crm = moduleByKey('CRM');
 
@@ -308,6 +421,7 @@ describe('permissionMatrix', () => {
       expect(sensitiveExtrasOn(permissions)).toEqual([
         'crm_manage_ai',
         'crm_export',
+        'crm_metas_manage',
         'crm_admin',
       ]);
     });
@@ -405,6 +519,37 @@ describe('permissionMatrix', () => {
     });
   });
 
+  describe('campanhas: disparar (#1898)', () => {
+    const campaigns = MODULES.find(module => module.key === 'CAMPAIGNS');
+
+    it('mostra disparar só para quem edita', () => {
+      expect(visibleExtras(campaigns, ['campaign_view'])).toEqual([]);
+      expect(visibleExtras(campaigns, ['campaign_manage'])).toEqual([
+        'campaign_send',
+      ]);
+    });
+
+    it('voltar para ver ou tirar o acesso tira disparar', () => {
+      const permissions = ['campaign_manage', 'campaign_send'];
+      expect(setLevel(campaigns, LEVELS.VIEW, permissions)).toEqual([
+        'campaign_view',
+      ]);
+      expect(setLevel(campaigns, LEVELS.NONE, permissions)).toEqual([]);
+    });
+
+    it('editar sozinho não liga disparar', () => {
+      expect(setLevel(campaigns, LEVELS.MANAGE, [])).toEqual([
+        'campaign_manage',
+      ]);
+    });
+
+    it('trata disparar como sensível', () => {
+      expect(sensitiveExtrasOn(['campaign_manage', 'campaign_send'])).toEqual([
+        'campaign_send',
+      ]);
+    });
+  });
+
   describe('crm: arquivar cards (#1874)', () => {
     const crm = moduleByKey('CRM');
 
@@ -426,6 +571,37 @@ describe('permissionMatrix', () => {
       const on = toggleExtra(crm, 'crm_admin', ['crm_view']);
       expect(on).toContain('crm_delete_cards');
       expect(isExtraLocked('crm_delete_cards', on)).toBe(true);
+    });
+  });
+
+  describe('crm: metas do mês (#1991)', () => {
+    const crm = moduleByKey('CRM');
+    const METAS = 'crm_metas_manage';
+
+    it('aparece para quem vê o CRM, não liga sozinho e tem texto em en e pt_BR', () => {
+      expect(visibleExtras(crm, ['crm_view'])).toContain(METAS);
+      expect(setLevel(crm, LEVELS.MANAGE, ['crm_view'])).not.toContain(METAS);
+      expect(en.CUSTOM_ROLE.PERMISSIONS.CRM_METAS_MANAGE).toBeTruthy();
+      expect(ptBR.CUSTOM_ROLE.PERMISSIONS.CRM_METAS_MANAGE).toBeTruthy();
+      expect(en.CUSTOM_ROLE.EXTRAS.CRM_METAS_MANAGE).toBeTruthy();
+      expect(ptBR.CUSTOM_ROLE.EXTRAS.CRM_METAS_MANAGE).toBeTruthy();
+    });
+
+    it('liga e desliga sozinha, e sem acesso ao CRM sai junto', () => {
+      const on = toggleExtra(crm, METAS, ['crm_view']);
+      expect(on).toEqual(['crm_view', METAS]);
+      expect(toggleExtra(crm, METAS, on)).toEqual(['crm_view']);
+      expect(setLevel(crm, LEVELS.NONE, on)).toEqual([]);
+    });
+
+    it('é sensível: ligar pede confirmação', () => {
+      expect(sensitiveExtrasOn(['crm_view', METAS])).toEqual([METAS]);
+    });
+
+    it('Administrador do CRM inclui as metas e as mantém ligadas', () => {
+      const on = toggleExtra(crm, 'crm_admin', ['crm_view']);
+      expect(on).toContain(METAS);
+      expect(isExtraLocked(METAS, on)).toBe(true);
     });
   });
 

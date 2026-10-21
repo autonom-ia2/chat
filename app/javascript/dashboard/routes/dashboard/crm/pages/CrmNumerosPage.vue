@@ -9,6 +9,7 @@ import CrmDashboardPage from './CrmDashboardPage.vue';
 import CrmNumerosSoEu from '../components/numeros/v2/CrmNumerosSoEu.vue';
 import CrmNumerosEquipe from '../components/numeros/v2/CrmNumerosEquipe.vue';
 import NumerosEspera from '../components/numeros/v2/NumerosEspera.vue';
+import NumerosMetasAtalho from '../components/numeros/v2/NumerosMetasAtalho.vue';
 import { useQuemVeNumeros } from '../components/numeros/useQuemVeNumeros';
 import { P } from '../components/numeros/v2/numerosTextos';
 
@@ -156,6 +157,7 @@ watch(
           data-numeros-visao
           @update:model-value="trocarVisao"
         />
+        <NumerosMetasAtalho />
         <Banner
           v-if="mostrarAviso"
           color="slate"
