@@ -93,13 +93,13 @@ class Autonomia::Agents::ProvaDoAjuste
             'perguntas' => itens.zip(veredito).map { |item, nota| item.merge(nota) })
   end
 
-  # Com um pedido só, qualquer pergunta que testa o cobre. Com mais, cada posição da lista de pedidos (a que o juiz
-  # devolve, a partir de 0) precisa de ao menos uma pergunta que a testou.
+  # Com um pedido só, qualquer pergunta que testa o cobre. Com mais, cada posição da lista de pedidos (as que o juiz
+  # devolve, a partir de 0; uma resposta pode cobrir várias) precisa de ao menos uma pergunta que a testou.
   def completa?(pedidos, veredito)
     testam = veredito.reject { |nota| nota['veredito'] == 'nao_testa' }
     return testam.any? if pedidos.one?
 
-    cobertos = testam.pluck('pedido').compact
+    cobertos = testam.flat_map { |nota| Array(nota['pedidos']) }
     pedidos.any? && pedidos.each_index.all? { |posicao| cobertos.include?(posicao) }
   end
 

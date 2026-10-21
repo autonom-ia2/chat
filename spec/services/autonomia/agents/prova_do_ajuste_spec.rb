@@ -37,9 +37,9 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     described_class.new(thread.reload, versao_aplicada).rodar!
   end
 
-  # O que o juiz devolve: o veredito e o pedido testado (o primeiro, salvo quando a pergunta não testa nada).
-  def vereditos(*notas, pedido: 0)
-    notas.map { |nota| { 'veredito' => nota, 'pedido' => nota == 'nao_testa' ? nil : pedido } }
+  # O que o juiz devolve: o veredito e as posições dos pedidos testados (o primeiro, salvo quando a pergunta não testa).
+  def vereditos(*notas, pedidos: [0])
+    notas.map { |nota| { 'veredito' => nota, 'pedidos' => nota == 'nao_testa' ? [] : pedidos } }
   end
 
   before do
@@ -112,8 +112,8 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(estado['prova']).to include('status' => 'pronta', 'ok' => 1, 'total' => 2, 'versao_id' => versao_aplicada,
                                          'completa' => true)
       expect(estado['prova']['perguntas']).to eq(
-        [{ 'pergunta' => perguntas[0], 'resposta' => 'Passo para a equipe.', 'equipe' => false, 'veredito' => 'ok', 'pedido' => 0 },
-         { 'pergunta' => perguntas[1], 'resposta' => nil, 'equipe' => true, 'veredito' => 'nao', 'pedido' => 0 }]
+        [{ 'pergunta' => perguntas[0], 'resposta' => 'Passo para a equipe.', 'equipe' => false, 'veredito' => 'ok', 'pedidos' => [0] },
+         { 'pergunta' => perguntas[1], 'resposta' => nil, 'equipe' => true, 'veredito' => 'nao', 'pedidos' => [0] }]
       )
     end
 
@@ -338,7 +338,7 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     end
 
     it 'sem nenhuma pergunta de preço: tudo ok, mas sem prova completa' do
-      allow(juiz).to receive(:julgar).and_return(vereditos('ok', 'ok', pedido: 0))
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', 'ok', pedidos: [0]))
 
       provar!
 
@@ -346,11 +346,29 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     end
 
     it 'com uma pergunta para cada pedido: completa' do
-      allow(juiz).to receive(:julgar).and_return(vereditos('ok', pedido: 0) + vereditos('ok', pedido: 1))
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', pedidos: [0]) + vereditos('ok', pedidos: [1]))
 
       provar!
 
       expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => true)
+    end
+
+    # t6d R4/R5: a resposta curta e sem emoji testa os dois pedidos de uma vez.
+    it 'uma resposta que testa os dois pedidos de uma vez: completa' do
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', pedidos: [0, 1]) + vereditos('nao_testa'))
+
+      provar!
+
+      expect(estado['prova']).to include('ok' => 1, 'total' => 1, 'completa' => true)
+      expect(estado['prova']['perguntas'].first).to include('pedidos' => [0, 1])
+    end
+
+    it 'veredito ok com a lista vazia não cobre pedido nenhum' do
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', 'ok', pedidos: []))
+
+      provar!
+
+      expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => false)
     end
   end
 
@@ -360,7 +378,7 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       aplicar_ajuste('mudancas' => [mudanca('tone', fala, 'Respostas curtas.'),
                                     mudanca('instruction', "#{fala}.", 'No máximo 2 frases.')])
       agente_responde
-      allow(juiz).to receive(:julgar).and_return(vereditos('ok', 'ok', pedido: 0))
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', 'ok', pedidos: [0]))
 
       provar!
 
@@ -374,8 +392,8 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     it 'com um pedido só, a pergunta que testa cobre o pedido mesmo sem o juiz dizer qual' do
       aplicar_ajuste
       agente_responde
-      allow(juiz).to receive(:julgar).and_return([{ 'veredito' => 'ok', 'pedido' => nil },
-                                                  { 'veredito' => 'nao_testa', 'pedido' => nil }])
+      allow(juiz).to receive(:julgar).and_return([{ 'veredito' => 'ok', 'pedidos' => [] },
+                                                  { 'veredito' => 'nao_testa', 'pedidos' => [] }])
 
       provar!
 
