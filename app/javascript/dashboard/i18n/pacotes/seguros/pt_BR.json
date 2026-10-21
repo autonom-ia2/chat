@@ -91,6 +91,13 @@
             "CLOSED": "O cliente já fechou o seguro. Não há o que retomar aqui."
           }
         }
+      },
+      "SEM_LOGIN": {
+        "AD": {
+          "STATUS": {
+            "LOST": "Não fechou"
+          }
+        }
       }
     },
     "TRACKED_LINKS": {

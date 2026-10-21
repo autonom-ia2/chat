@@ -77,7 +77,7 @@ module Crm
               required: %w[contact conversation card],
               additionalProperties: false
             },
-            score_signals: ScoreCalculator::SIGNALS_SCHEMA
+            score_signals: ScoreSignalsSchema::SCHEMA
           },
           required: %w[suggested_stage_id confidence reasoning value handoff callback_request extracted_attributes score_signals],
           additionalProperties: false
@@ -135,9 +135,19 @@ module Crm
 
       # #1828: com a flag `email_autoria`, o campo `saida_da_copia` no fim; sem ela, o schema de sempre.
       def esquema
-        base = memoria? ? CLASSIFICATION_SCHEMA_MEMORIA : CLASSIFICATION_SCHEMA
-        email_autoria? ? Crm::Email::SaidaDaCopia.com_saida(base) : base
+        email_autoria? ? Crm::Email::SaidaDaCopia.com_saida(esquema_do_card) : esquema_do_card
       end
+
+      # #1922: com a flag `crm_ia_arquiva_lixo`, o campo `nao_e_negocio` antes da memória; sem ela, o schema de sempre.
+      def esquema_do_card
+        return (memoria? ? CLASSIFICATION_SCHEMA_MEMORIA : CLASSIFICATION_SCHEMA) unless nao_e_negocio?
+
+        base = NaoENegocio.com_campo(CLASSIFICATION_SCHEMA)
+        memoria? ? Crm::Memoria::Esquema.com_memoria(base) : base
+      end
+
+      # #1922: a regra e o campo "não é negócio" só vão ao modelo com a flag da conta.
+      def nao_e_negocio? = NaoENegocio.ligada?(@card&.account)
 
       # A parte deste card na avaliação conjunta (Crm::Ai::ClassificacaoConjunta), com os mesmos campos de sempre.
       def pacote = entrada.slice(*PACOTE)
@@ -150,7 +160,8 @@ module Crm
       # Prefixo ESTÁVEL (call-invariant) p/ prompt caching — constante congelada em ClassifierPrompt::TEXT (ou a
       # variante com os agentes de IA, #1593). Estágios/critérios DINÂMICOS ficam no user_input. Ver ClassifierPrompt.
       def instructions
-        ClassifierPrompt.para(@eligible_agents, memoria: memoria?, email_autoria: email_autoria?, pedido_anterior: pedido_anterior?)
+        ClassifierPrompt.para(@eligible_agents, memoria: memoria?, email_autoria: email_autoria?, nao_e_negocio: nao_e_negocio?,
+                                                pedido_anterior: pedido_anterior?)
       end
 
       def user_input = entrada.merge(other_subjects_payload).to_json

@@ -47,6 +47,42 @@ describe('permissionMatrix', () => {
     });
   });
 
+  // #1969: Financeiro. Ver = valores de custo; Editar = ligar e desligar a autorização de cobranças da Meta.
+  describe('finance', () => {
+    const finance = moduleByKey('FINANCE');
+
+    it('has its own group and the financial keys', () => {
+      const group = MODULE_GROUPS.find(g => g.key === 'FINANCE');
+
+      expect(group.modules.map(module => module.key)).toEqual(['FINANCE']);
+      expect(finance.levels).toEqual({
+        view: 'financial_view',
+        manage: 'financial_manage',
+      });
+    });
+
+    it('stores only the highest key and clears both on no access', () => {
+      const permissions = setLevel(finance, LEVELS.MANAGE, ['financial_view']);
+
+      expect(permissions).toEqual(['financial_manage']);
+      expect(getLevel(finance, permissions)).toBe(LEVELS.MANAGE);
+      expect(setLevel(finance, LEVELS.NONE, permissions)).toEqual([]);
+    });
+
+    it('gives the Finance profile the costs in view', () => {
+      expect(getLevel(finance, profilePermissions('FINANCE'))).toBe(
+        LEVELS.VIEW
+      );
+    });
+
+    it('has the module texts in en and pt_BR', () => {
+      [en, ptBR].forEach(locale => {
+        expect(locale.CUSTOM_ROLE.MATRIX.GROUPS.FINANCE).toBeTruthy();
+        expect(locale.CUSTOM_ROLE.MATRIX.MODULES.FINANCE.NAME).toBeTruthy();
+      });
+    });
+  });
+
   // #1188: módulo de função "Agendamento"; agendamento_manage implica _view no backend.
   describe('scheduling', () => {
     const scheduling = moduleByKey('SCHEDULING');

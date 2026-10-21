@@ -1,4 +1,7 @@
-import { computed, ref, watch } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
+import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { MESSAGE_TYPE } from 'shared/constants/messages';
 import ConversationAPI from 'dashboard/api/inbox/conversation';
 import MessageAPI from 'dashboard/api/inbox/message';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
@@ -20,9 +23,15 @@ import {
 // escolha ("Continuar" ou "Começar conversa nova") e pergunta ao servidor se
 // a conversa aceita texto livre (`can_reply`). Trocar de contato ou de canal
 // zera a escolha: o padrão volta a "Continuar".
+// #1988 — o `can_reply` muda com a conversa viva (o cliente escreve e a janela de
+// 24 h abre). Sem trocar de contato, canal ou conversa, a gaveta pergunta de novo,
+// sem mexer na escolha nem no texto: quando os canais chegam de novo (a gaveta
+// reaberta) e quando chega mensagem do cliente nessa conversa (websocket).
 export function useContinuarConversa({ contato, canal }) {
   const destino = ref(DESTINOS.CONTINUAR);
   const podeResponder = ref(false);
+  // #1988: caixa híbrida fora das 24 h responde pelo número reserva, só em texto.
+  const soTexto = ref(false);
   // #1809 — conversa de e-mail: o assunto dela (a resposta sai com "Re: ...") e o
   // último e-mail, que vai como histórico no fim, como na resposta.
   const assunto = ref('');
@@ -52,12 +61,38 @@ export function useContinuarConversa({ contato, canal }) {
 
   // Só o último pedido mexe no estado (mesmo cuidado da lista de canais).
   let ultimoPedido = 0;
+  // #1988: novidade chegou enquanto a pergunta completa estava no ar.
+  let pendente = false;
+
+  // Pergunta de novo só o que a conversa aceita, sem "carregando": a mensagem fica
+  // à vista e o que já foi escrito continua. Se esta falhar, vale a última resposta do
+  // servidor (o erro com "Tentar de novo" é só da pergunta completa, que esconde a mensagem).
+  const atualizar = async () => {
+    const alvo = existente.value?.visible ? existente.value : null;
+    if (!alvo) return;
+    // A pergunta completa no ar pode ter saído antes da novidade: pergunta de novo depois.
+    if (carregando.value) {
+      pendente = true;
+      return;
+    }
+    ultimoPedido += 1;
+    const pedido = ultimoPedido;
+    try {
+      const { data } = await ConversationAPI.show(alvo.displayId);
+      if (pedido !== ultimoPedido) return;
+      podeResponder.value = data?.can_reply === true;
+      soTexto.value = data?.whatsapp_api_reply === true;
+    } catch (error) {
+      // A resposta anterior continua valendo (ver acima).
+    }
+  };
 
   const carregar = async () => {
     ultimoPedido += 1;
     const pedido = ultimoPedido;
     const alvo = existente.value?.visible ? existente.value : null;
     podeResponder.value = false;
+    soTexto.value = false;
     assunto.value = '';
     ultimoEmail.value = null;
     erro.value = false;
@@ -78,6 +113,7 @@ export function useContinuarConversa({ contato, canal }) {
       ]);
       if (pedido !== ultimoPedido) return;
       podeResponder.value = data?.can_reply === true;
+      soTexto.value = data?.whatsapp_api_reply === true;
       const emails = (mensagens?.data?.payload || []).filter(ehEmail);
       assunto.value = email
         ? assuntoDaConversa({ conversa: data, emails })
@@ -88,15 +124,42 @@ export function useContinuarConversa({ contato, canal }) {
     } finally {
       if (pedido === ultimoPedido) carregando.value = false;
     }
+    if (pedido === ultimoPedido && !erro.value && pendente) {
+      pendente = false;
+      atualizar();
+    }
   };
 
+  // Trocar de contato, de canal ou de conversa encontrada zera a escolha e pergunta
+  // tudo. Os mesmos canais lidos de novo (a gaveta reaberta, #1988) só perguntam
+  // outra vez o que a conversa aceita: a janela pode ter aberto ou fechado.
+  const chave = computed(() =>
+    chaveDaEscolha({ contato: contato.value, canal: canal.value })
+  );
   watch(
-    () => chaveDaEscolha({ contato: contato.value, canal: canal.value }),
-    () => {
-      destino.value = DESTINOS.CONTINUAR;
-      carregar();
+    [chave, existente],
+    ([chaveAgora], [chaveAntes]) => {
+      if (chaveAgora !== chaveAntes) {
+        destino.value = DESTINOS.CONTINUAR;
+        carregar();
+        return;
+      }
+      atualizar();
     },
     { immediate: true }
+  );
+
+  // Mensagem do cliente nesta conversa, ao vivo: a janela de 24 h pode ter aberto.
+  const aoChegarMensagem = mensagem => {
+    const alvo = existente.value;
+    if (!alvo || podeResponder.value) return;
+    if (mensagem?.message_type !== MESSAGE_TYPE.INCOMING) return;
+    if (String(mensagem.conversation_id) !== String(alvo.displayId)) return;
+    atualizar();
+  };
+  emitter.on(BUS_EVENTS.MENSAGEM_AO_VIVO, aoChegarMensagem);
+  onScopeDispose(() =>
+    emitter.off(BUS_EVENTS.MENSAGEM_AO_VIVO, aoChegarMensagem)
   );
 
   return {
@@ -109,6 +172,8 @@ export function useContinuarConversa({ contato, canal }) {
     erro,
     esperando,
     carregar,
+    atualizar,
+    soTexto,
     assunto,
     ultimoEmail,
   };

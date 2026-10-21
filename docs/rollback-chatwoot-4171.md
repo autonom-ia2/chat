@@ -157,7 +157,7 @@ aws ec2 start-instances --profile hub2you --region us-east-1 --instance-ids i-0c
 aws elbv2 describe-target-health --profile hub2you --region us-east-1 --target-group-arn arn:aws:elasticloadbalancing:us-east-1:354307071110:targetgroup/cw-hub2-green-242/9cc0825ce286f833
 ```
 
-2. Trocar o listener (o workflow `rollback` faz exatamente isto: `Actions → Deploy Hub2You Chatwoot Blue Green → Run workflow → action=rollback, confirm_production=true`, na `main`). Manual:
+2. Trocar o listener (o workflow `rollback` faz exatamente isto: `Actions → Deploy Hub2You Chatwoot Blue Green → Run workflow → action=rollback, confirm_production=true, esperado_sha=<SHA de antes do deploy>`, na `main`; ver #1979 em docs/processo-de-release.md). Manual:
 
 ```bash
 aws elbv2 modify-listener --profile hub2you --region us-east-1 --listener-arn arn:aws:elasticloadbalancing:us-east-1:354307071110:listener/app/chatwoot-autonomia-prod-ec2/464e18b9554cab60/6a4364c69884a430 --default-actions Type=forward,TargetGroupArn=arn:aws:elasticloadbalancing:us-east-1:354307071110:targetgroup/cw-hub2-green-242/9cc0825ce286f833

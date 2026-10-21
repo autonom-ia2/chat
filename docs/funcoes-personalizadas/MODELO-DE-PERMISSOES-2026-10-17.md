@@ -14,6 +14,7 @@ As brechas aparecem aqui só como fato. Por decisão do Rodrigo, elas não são 
 - **Regra 2 com ajuste fino.** Por padrão, ninguém entrega mais do que tem. O administrador pode ligar numa função o ajuste "Pode entregar acesso acima do próprio": quem tem essa função entrega qualquer função da conta, inclusive com áreas delegáveis (financeiro, tokens, segurança, pessoas). Exemplo: o RH contrata o diretor comercial e cria o acesso dele, maior que o do RH. Nem com o ajuste alguém promove a administrador, e a regra 3 continua valendo.
 - **A proteção do ajuste é o histórico.** Toda entrega fica no histórico de auditoria (quem, para quem, qual função, quando). Sem aviso extra aos administradores.
 - Primeiro lote a usar: Pessoas (#1931).
+- **Financeiro (lote 10, #1969).** Plano, faturas, pagamentos e assinatura (o módulo Financeiro) ficam **só com o administrador**: a API financeira só lê a cobrança de quem comprou, sem leitura por empresa. Viram chave os custos da conta: `financial_view` vê os valores em R$/US$ do uso de IA (tela, CSV e aviso em tempo real) e a tela da autorização de cobranças da Meta; `financial_manage` liga e desliga essa autorização. Quem vê os relatórios do CRM sem `financial_view` vê o uso (quantidade e tokens), sem valor. As linhas 393 e 869–880 do inventário ficam assim: autorização da Meta = `financial_manage`; cobrança e faturas = só administrador.
 
 ## O que mudou na versão 4 (revisão dos chats donos de módulo)
 

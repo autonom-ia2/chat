@@ -5,14 +5,17 @@
 # tela do anúncio nunca pode mostrar um número diferente do cartão em que a pessoa clicou. Anúncio sem gasto nem
 # conversa no período — ou de outra conta — devolve nil. Só banco, nunca a Meta. Com `visible`
 # (Crm::MetaAds::VisibleConversations, #1794), a lista de propostas traz só as conversas que a pessoa já veria.
+#
+# Sem conexão (Anúncios sem login, #1960), `account:` diz a conta e o anúncio traz `people`: cada conversa que
+# ele trouxe no período, com a situação do card e se já teve resposta (Panel::PathList do anúncio).
 class Crm::MetaAds::Panel::AdDetail
   QUOTES_LIMIT = 20
 
-  def initialize(connection, ad_id:, days:, visible: nil)
+  def initialize(connection, ad_id:, days:, visible: nil, account: nil)
     @connection = connection
     @visible = visible
     @ad_id = ad_id.to_s
-    @report = Crm::MetaAds::Panel::Report.new(connection, days: days)
+    @report = Crm::MetaAds::Panel::Report.new(connection, days: days, account: account)
   end
 
   def payload
@@ -22,9 +25,9 @@ class Crm::MetaAds::Panel::AdDetail
       days: @report.days, from: @report.first_day, to: @report.today, currency: @report.currency,
       preview_url: object&.preview_url, campaign_name: parent_name(:campaign_id), adset_name: parent_name(:adset_id),
       account_average_cost_per_sale: @report.average_cost_per_sale,
-      reason: Crm::MetaAds::Panel::Verdict.reason(row, average_cost_per_sale: @report.average_cost_per_sale),
+      reason: @report.whatsapp_only? ? nil : Crm::MetaAds::Panel::Verdict.reason(row, average_cost_per_sale: @report.average_cost_per_sale),
       daily: daily, quotes_list: quotes_list
-    )
+    ).merge(@report.whatsapp_only? ? { people: people, spend: nil } : {})
   end
 
   private
@@ -38,14 +41,14 @@ class Crm::MetaAds::Panel::AdDetail
   def object
     return @object if defined?(@object)
 
-    @object = Crm::MetaAdObject.find_by(account_id: @connection.account_id, meta_object_id: @ad_id)
+    @object = Crm::MetaAdObject.find_by(account_id: @report.account_id, meta_object_id: @ad_id)
   end
 
   # Nome da campanha e do conjunto pelo cache de nomes. O id vem do anúncio no cache; se ele ainda não foi
   # resolvido, do gasto do período, que a Meta manda com campanha e conjunto.
   def parent_name(column)
     id = object&.public_send(column).presence || @report.insights.where(ad_id: @ad_id).where.not(column => nil).pick(column)
-    Crm::MetaAdObject.where(account_id: @connection.account_id, meta_object_id: id).pick(:name) if id
+    Crm::MetaAdObject.where(account_id: @report.account_id, meta_object_id: id).pick(:name) if id
   end
 
   # Todos os dias do período, zeros incluídos: um dia sem gasto é informação ("o anúncio parou"), não buraco.
@@ -66,6 +69,11 @@ class Crm::MetaAds::Panel::AdDetail
       { card_id: card.id, title: card.title, value: card.value, status: card.status, stage_name: card.stage_name,
         conversation_id: card.conversation_id, waiting_since: card.waiting_since }
     end
+  end
+
+  def people
+    Crm::MetaAds::Panel::PathList.new(@connection, step: 'conversations', days: @report.days, visible: @visible,
+                                                   report: @report, ad_id: @ad_id).payload[:items]
   end
 
   def only_visible(cards)
