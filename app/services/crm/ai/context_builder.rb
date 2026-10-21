@@ -28,10 +28,22 @@ module Crm
       # fora (#1693): outros cards que também vão na mesma avaliação (Crm::Ai::AvaliacaoConjunta); saem de other_subjects.
       # memoria (#1601): só a avaliação de card com a flag `memoria_ia` pede; cada mensagem ganha um id LOCAL ("ref": m1,
       # m2...) e o contexto traz os fatos já registrados (Crm::Memoria::ParaAvaliacao). Os outros leitores não mudam.
-      def initialize(card:, fora: [], memoria: false)
+      # #1926 (MITIGAÇÃO; o fix definitivo, o fato persistido, é o #1966): a avaliação de etapa decide pela conversa, e o
+      # resumo (metadata.ai.summary) só existe quando alguém abre o card. Com 12 mensagens, o preço enviado no meio de uma
+      # conversa longa ficava de fora e o card não saía de "Em atendimento". Ela lê o teto inteiro, dividido em partes
+      # iguais entre as conversas: a movimentada não toma a vez da vinculada, e a soma nunca passa do teto (com 4 ou
+      # mais conversas, cada uma fica com menos de MAX_RECENT_MESSAGES, mas nenhuma some).
+      def self.janela_da_avaliacao(conversas)
+        [MAX_MESSAGES_CAP / [conversas, 1].max, 1].max
+      end
+
+      # janela (#1926): :avaliacao é a avaliação de etapa (Crm::Ai::Evaluator), que lê até MAX_MESSAGES_CAP mensagens
+      # (#janela_por_conversa). Os outros leitores seguem com MAX_RECENT_MESSAGES por conversa.
+      def initialize(card:, fora: [], memoria: false, janela: :curta)
         @card = card
         @fora = fora
         @numeracao = Crm::Memoria::ParaAvaliacao::Numeracao.new if memoria
+        @janela = janela
       end
 
       def perform
@@ -185,17 +197,15 @@ module Crm
                .where.not(message_type: :activity)
                .includes(:attachments)
                .reorder(id: :desc)
-               .limit(MAX_RECENT_MESSAGES)
+               .limit(janela_por_conversa)
       end
 
       def conversation_ids
         @conversation_ids ||= ([@card.conversation_id] + @card.card_conversations.pluck(:conversation_id)).compact.uniq
       end
 
-      # Janela cresce com o número de conversas para um card com várias não perder o começo de cada
-      # uma, mas com teto para não estourar o prompt.
-      def window_size(conversation_count)
-        [MAX_RECENT_MESSAGES * conversation_count, MAX_MESSAGES_CAP].min
+      def janela_por_conversa
+        @janela == :avaliacao ? self.class.janela_da_avaliacao(conversation_ids.size) : MAX_RECENT_MESSAGES
       end
 
       # #1807 (flag `email_autoria`): e-mail de outro endereço que não o do cliente ganha o aviso na frente e
@@ -231,8 +241,7 @@ module Crm
         # created_by/assignee), então sem esta checagem a própria IA reaparece no transcript como
         # "pessoa do time" e o cérebro conclui que houve pergunta humana sem resposta — foi o que
         # fez a IA cobrar o mesmo cliente duas vezes pelo mesmo questionário.
-        # Continua sendo platform_agent, e não um quinto papel, porque o enum last_turn_owner do
-        # ScoreCalculator conhece só quatro.
+        # Continua sendo platform_agent, e não um quinto papel: o modelo conhece só quatro.
         # #1601: o convite e o aviso do Agendamento também saem em nome de uma pessoa, mas é a plataforma que manda; e o
         # que a equipe manda pelo app do celular volta como eco sem remetente (`external_echo`), e é uma pessoa do time.
         # Efeito conhecido (o mesmo do PessoaDaEquipe): o eco da PRÓPRIA bolha da IA que o reconciliador do Híbrido não
@@ -243,8 +252,8 @@ module Crm
         case message.sender_type
         when 'User' then 'human_agent'
         when 'AgentBot' then platform_bot_ids.include?(message.sender_id) ? 'platform_agent' : 'external_agent'
-        # Saída sem sender (automação, API) cai em external_agent e não num quinto papel: o enum de
-        # last_turn_owner só conhece quatro, e um valor fora dele fazia o modelo adivinhar.
+        # Saída sem sender (automação, API) cai em external_agent e não num quinto papel: o modelo só
+        # conhece quatro, e um valor fora deles o fazia adivinhar.
         else 'external_agent'
         end
       end

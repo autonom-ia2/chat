@@ -101,10 +101,44 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
 6. Troque o CRM para **Só olha**. O ajuste **Arquivar cards do CRM** some (só vale para quem mexe).
 7. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `crm_manage_cards` antes do deploy tem `crm_delete_cards` depois, inclusive os cargos gerenciados de token de integração do CRM.
 
+## Teste 11: Pessoas, quem cuida do cadastro sem ser administrador (#1931)
+
+Precisa de uma segunda pessoa de teste, "Teste Atendente" (perfil Agente, sem função), criada pelo administrador.
+
+1. Edite a função da pessoa de teste em **Configurações → Funções personalizadas**. No grupo **Configurações da conta**, na linha **Pessoas**, escolha **Editar** e salve, sem ligar os ajustes finos. Deixe também **Conversas: Ver**.
+2. Na janela anônima (recarregue), abra **Configurações**: aparecem **Usuários** e **Times** (no menu novo, no grupo **Pessoas e acesso**). **Funções personalizadas** não aparece.
+3. Em **Usuários**, o esperado:
+   - os administradores e a própria pessoa de teste têm um cadeado no lugar de editar e excluir, com o motivo;
+   - "Teste Atendente" tem editar e excluir;
+   - em **Adicionar agente**, a opção **Administrador** aparece desabilitada com "Só um administrador torna alguém administrador", e as funções com chaves que ela não tem também aparecem desabilitadas.
+4. Edite "Teste Atendente" e dê a ele uma função que só tenha **Conversas: Ver**: salva. Tente uma função com CRM: a opção aparece desabilitada.
+5. Em **Times**, crie o time "teste-funcoes", ponha "Teste Atendente" nele e depois apague o time.
+6. Na janela normal, ligue em Pessoas o ajuste **Montar funções** (pede confirmação). Na anônima, recarregue: **Funções personalizadas** aparece. A função da própria pessoa tem cadeado "É a sua função". Crie a função "Teste – montada" só com **Conversas: Ver**: salva. Abra uma função com mais chaves: as linhas que ela não tem ficam travadas, com o motivo.
+7. Na janela normal, ligue **Pode entregar acesso acima do próprio** (pede confirmação). Na anônima, recarregue: ela consegue dar a "Teste Atendente" uma função com CRM. **Administrador** continua desabilitado.
+8. Na janela normal, abra **Configurações → Auditoria** e confira as linhas: a troca de função de "Teste Atendente", a criação de "Teste – montada" e o time criado e apagado, com o nome da pessoa de teste como autora.
+
+## Teste 12: Financeiro, custos sem plano nem faturas (#1969)
+
+Precisa de uma conta com a IA do CRM e a nova tela de Modelos do WhatsApp ligadas.
+
+1. Edite a função da pessoa de teste. Deixe **CRM** com **Relatórios** ligado e o novo grupo **Financeiro** em **Sem acesso**. Salve.
+2. Na janela anônima (recarregue), abra **Gasto com IA** (menu antigo: CRM → Gestão de IA). O esperado:
+   - um aviso diz que ela vê quanto a IA foi usada e que os valores aparecem para quem tem Financeiro;
+   - só o cartão de **Usos** aparece; não há gasto, economia nem custo médio;
+   - o gráfico e a lista por recurso contam usos, sem R$ nem US$;
+   - o histórico não tem a coluna de custo, e o relatório baixado também não.
+3. Volte à função, ponha **Financeiro** em **Ver** e salve. Recarregue a anônima: os valores voltam (cartões, gráfico em reais, coluna de custo e as colunas de custo no relatório).
+4. Na anônima, abra **Configurações → Custos do WhatsApp** (ou Campanhas → Modelos WhatsApp → Ver autorização). Tudo aparece travado, com a frase de que só o administrador ou quem tem Financeiro em Editar muda.
+5. Ponha **Financeiro** em **Editar** e salve. Recarregue: as caixas e o botão de ligar ficam liberados e a frase some. Clique em **Ligar autorização** só até ver a confirmação com o custo e **cancele**: ligar de verdade autoriza cobranças da Meta na conta. Ligue apenas se o dono da conta quiser; nesse caso, o histórico mostra o nome da pessoa de teste como quem ligou.
+6. Em qualquer nível de Financeiro, o menu **Financeiro** antigo (Assinatura e Faturas) e o cartão **Plano e faturas** não aparecem para ela.
+7. Se a conta tiver alguém só com **Pessoas** (sem **Pode entregar acesso acima do próprio**), na tela de Usuários a função com Financeiro aparece desabilitada para ele, e na montagem de funções a linha Financeiro fica travada.
+8. Ao final, volte **Financeiro** para **Sem acesso**.
+
 ## No fim (limpeza)
 
 1. Remova a pessoa de teste em **Configurações → Usuários**, para não contar no plano.
 2. Apague a função "Teste – só lê" em **Funções personalizadas**.
 3. Confira que o contato e a empresa de teste do teste 6 foram excluídos e que os cards de teste do teste 8 ficaram arquivados.
+4. Remova "Teste Atendente" e apague a função "Teste – montada" do teste 11.
 
 Se algo não bater com o esperado, me mande o print e o número do teste e do passo, que eu investigo.

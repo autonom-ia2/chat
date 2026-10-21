@@ -1,5 +1,6 @@
 import parsePhoneNumber from 'libphonenumber-js';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { AUDIO_FORMATS } from 'shared/constants/messages';
 import { canStartWithWhatsappApi } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper';
 
 // #1459 — as regras da tela "Nova conversa", em funções puras: que tipo de
@@ -97,6 +98,32 @@ export const aceitaAnexo = canal =>
   canal?.channelType === INBOX_TYPES.EMAIL ||
   canal?.channelType === INBOX_TYPES.WEB;
 
+// #1988 — WhatsApp oficial (Cloud API) e WhatsApp comum (caixa API ligada ao WAHA),
+// os mesmos que ganham a pele do WhatsApp na conversa (pele.js). O Twilio fica de fora.
+export const ehCanalWhatsapp = canal =>
+  canal?.channelType === INBOX_TYPES.WHATSAPP ||
+  (canal?.channelType === INBOX_TYPES.API && Boolean(canal?.wahaProvider));
+
+// #1988 — a caixa de escrever do WhatsApp (texto, "+", emoji, microfone e assinatura)
+// vale onde o texto é livre: o WhatsApp oficial que pode responder e o WhatsApp comum.
+export const usaCaixaDoWhatsapp = ({ canal, tipo }) =>
+  ehCanalWhatsapp(canal) &&
+  (tipo === TIPOS.WHATSAPP_LIVRE || tipo === TIPOS.TEXTO);
+
+// O formato da gravação, o mesmo da caixa de resposta (ReplyBox.audioRecordFormat):
+// a Cloud API só toca como voz o OGG; o 360dialog e o WAHA recebem MP3.
+export const formatoDoAudio = canal =>
+  canal?.channelType === INBOX_TYPES.WHATSAPP &&
+  canal?.provider === 'whatsapp_cloud'
+    ? AUDIO_FORMATS.OGG
+    : AUDIO_FORMATS.MP3;
+
+// A Cloud API manda um anexo por mensagem (o texto vai como legenda do primeiro),
+// como a caixa de resposta faz (ReplyBox.sendMessageAsMultipleMessages). O WAHA
+// recebe tudo numa mensagem só.
+export const umAnexoPorMensagem = canal =>
+  canal?.channelType === INBOX_TYPES.WHATSAPP;
+
 // A mensagem sai como modelo aprovado (e não como texto escrito na hora)?
 export const usaModelo = ({ tipo, modo }) =>
   tipo === TIPOS.WHATSAPP_PRONTA ||
@@ -117,6 +144,7 @@ export const oQueFalta = ({
   modelo = null,
   camposProntos = false,
   modeloDoEmail = null,
+  anexos = [],
 }) => {
   if (!contato?.id) return 'CONTATO';
   if (!canal) return 'CANAL';
@@ -131,7 +159,8 @@ export const oQueFalta = ({
   if (tipo === TIPOS.EMAIL && comAssunto && !assunto.trim()) return 'ASSUNTO';
   // #1809: com modelo de e-mail, dá para enviar só o modelo (como na resposta).
   if (tipo === TIPOS.EMAIL && modeloDoEmail) return '';
-  return mensagem.trim() ? '' : 'MENSAGEM';
+  // #1988: só o anexo (a gravação, a foto) já é mensagem, como na caixa de resposta.
+  return mensagem.trim() || anexos.length ? '' : 'MENSAGEM';
 };
 
 // "boas_vindas_cliente" → "Boas vindas cliente": o nome do modelo como a

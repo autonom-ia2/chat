@@ -10,6 +10,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { picoSearch } from '@chatwoot/pico-search';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 
 const store = useStore();
 const router = useRouter();
@@ -29,6 +30,9 @@ const filteredRecords = computed(() => {
   return picoSearch(records.value, query, ['name', 'description']);
 });
 const uiFlags = useMapGetter('customRole/getUIFlags');
+// Fora do administrador (#1931): ninguém edita a própria função nem uma acima do seu alcance, e só
+// duplica o que poderia criar.
+const { roleLockReason, reachesRole } = usePeopleAccess();
 
 const agentsOf = role =>
   agents.value.filter(agent => agent.custom_role_id === role.id);
@@ -166,6 +170,8 @@ const confirmDeletion = () => {
             :role="role"
             :agents="agentsOf(role)"
             :is-deleting="!!loading[role.id]"
+            :lock-reason="roleLockReason(role) || ''"
+            :can-duplicate="reachesRole(role)"
             @edit="openEditRole"
             @duplicate="duplicateRole"
             @delete="openDeletePopup"

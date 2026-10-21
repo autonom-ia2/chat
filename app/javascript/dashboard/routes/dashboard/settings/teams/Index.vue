@@ -1,6 +1,6 @@
 <script setup>
 import { useAlert } from 'dashboard/composables';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import { computed, ref } from 'vue';
@@ -16,7 +16,8 @@ import EmojiIcon from 'dashboard/components-next/emoji-icon-picker/EmojiIcon.vue
 const store = useStore();
 const { t } = useI18n();
 const getters = useStoreGetters();
-const { isAdmin } = useAdmin();
+// Times são de quem cuida das pessoas: administrador ou people_manage (#1931).
+const { canManagePeople } = usePeopleAccess();
 
 const loading = ref({});
 const searchQuery = ref('');
@@ -102,7 +103,10 @@ const confirmPlaceHolderText = computed(() =>
           </span>
         </template>
         <template #actions>
-          <router-link v-if="isAdmin" :to="{ name: 'settings_teams_new' }">
+          <router-link
+            v-if="canManagePeople"
+            :to="{ name: 'settings_teams_new' }"
+          >
             <Button :label="$t('TEAMS_SETTINGS.NEW_TEAM')" size="sm" />
           </router-link>
         </template>
@@ -155,7 +159,7 @@ const confirmPlaceHolderText = computed(() =>
               }"
             >
               <Button
-                v-if="isAdmin"
+                v-if="canManagePeople"
                 v-tooltip.top="$t('TEAMS_SETTINGS.LIST.EDIT_TEAM')"
                 icon="i-woot-settings"
                 slate
@@ -164,7 +168,7 @@ const confirmPlaceHolderText = computed(() =>
             </router-link>
 
             <Button
-              v-if="isAdmin"
+              v-if="canManagePeople"
               v-tooltip.top="$t('TEAMS_SETTINGS.DELETE.BUTTON_TEXT')"
               icon="i-woot-bin"
               slate

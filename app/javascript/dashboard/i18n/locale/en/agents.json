@@ -1523,7 +1523,98 @@
         "RESPONDE_NO": "Answers on {canal} · {quando}",
         "PARADO_NO": "On {canal} · {quando}",
         "RESPONDE_EM_N": "Answers on 1 channel · {quando} | Answers on {n} channels · {quando}",
-        "PARADO_EM_N": "On 1 channel · {quando} | On {n} channels · {quando}"
+        "PARADO_EM_N": "On 1 channel · {quando} | On {n} channels · {quando}",
+        "MATERIAL": {
+          "PROBLEMA": {
+            "ROTULO": "What needs you in the material",
+            "CONTAGEM": "Needs you · {atual} of {total}",
+            "CONTINUA": "{agente} keeps answering with the rest of the material.",
+            "PULAR": "Skip for now",
+            "VAZIO": {
+              "TITULO": "{nome} is empty",
+              "TEXTO": "I found nothing written in it. It may be a blank form or just an image.",
+              "MANDAR": "Send another one",
+              "TIRAR": "Remove this file"
+            },
+            "OCR": {
+              "TITULO": "The photo {nome} could not be read",
+              "TEXTO": "It looks blurry or dark. {agente} does not use what is in it.",
+              "MANDAR": "Send another photo",
+              "TITULO_ARQUIVO": "{nome} could not be read",
+              "TEXTO_ARQUIVO": "The reading came out with many errors, like a blurry scanned page. {agente} does not use what is in it.",
+              "MANDAR_ARQUIVO": "Send another one",
+              "ESCREVER": "Write what is in it"
+            },
+            "DUPLICADO": {
+              "TITULO": "{nome} and {outro} are the same",
+              "TEXTO": "With both, when one changes, {agente} may answer with the old one.",
+              "UM_SO": "Keep only {nome}",
+              "OS_DOIS": "Keep both"
+            },
+            "SEM_CABECALHO": {
+              "TITULO": "The table in {nome} does not say what each column is",
+              "TEXTO": "Without the titles, {agente} cannot tell whether a number is a price, a quantity or a code. The first row looks like this:",
+              "AMOSTRA": "First row of the table",
+              "MANDAR": "Send it with the titles",
+              "EXPLICAR": "Explain it in a conversation"
+            },
+            "CONTRADICAO": {
+              "TITULO": "Two materials say different things about the {assunto}",
+              "TEXTO": "Choose which one counts. The other one stays here, but {agente} starts using the one you choose.",
+              "QUAL": "Which one counts?",
+              "ONDE": "It is in {onde}",
+              "USAR": "Use this one"
+            },
+            "PAGINAS": {
+              "TITULO": "I read {lidas} of the {total} pages of {nome}",
+              "TEXTO": "{agente} uses what was read. The rest was left out because {motivos}.",
+              "TITULO_SEM_TOTAL": "Part of {nome} was left out",
+              "TEXTO_SEM_TOTAL": "{agente} uses what was read. The rest was left out because {motivos}.",
+              "MANDAR": "Send the rest in another file",
+              "MOTIVO": {
+                "LIMITE": "the file has more pages than can be read at once",
+                "GRANDE": "some pages are too large to read",
+                "TEMPO": "the reading took longer than allowed",
+                "FALHA": "some pages could not be read"
+              }
+            },
+            "AUTOTESTE": {
+              "TITULO": "In the automatic test, {agente} got an answer wrong",
+              "TEXTO": "Your material says something else.",
+              "PERGUNTA": "Question",
+              "RESPONDEU": "{agente} answered",
+              "PASSOU": "Handed the conversation to the team.",
+              "MATERIAL": "The material",
+              "MATERIAL_DIZ": "{onde} says: \"{texto}\"",
+              "CORRIGIR": "Fix it in a conversation",
+              "CERTA": "The answer is right"
+            },
+            "AUTOTESTE_FORA": {
+              "TITULO": "In the automatic test, {agente} made up an answer",
+              "TEXTO": "The question is not in your material. The right thing was to say it does not know and hand it to the team."
+            }
+          },
+          "AUTOTESTE": {
+            "TITULO": "Automatic test",
+            "RODANDO": "Testing {nome} with {total} questions… {feitas} of {total}",
+            "BASE_MUDOU": "The material changed, so {nome} is being tested again.",
+            "ACERTOU": "{nome} got {certas} of {total} questions about your material right.",
+            "FORA_OK": "In the question that is not in the material, {nome} said it did not know and handed it to the team. | In the {n} questions that are not in the material, {nome} said it did not know and handed them to the team.",
+            "FORA_ERRO": "In questions that are not in the material, {nome} made up an answer.",
+            "NUNCA": "{nome} has not been tested with your material yet.",
+            "PARADO": "I could not finish the test right now.",
+            "VER": "See the question | See the {n} questions",
+            "DO_MATERIAL": "from the material",
+            "DE_FORA": "outside the material",
+            "CERTA": "Right",
+            "ERRADA": "Wrong",
+            "TESTAR": "Test now",
+            "TENTAR_DE_NOVO": "Try again",
+            "DE_NOVO": "Test again",
+            "AMOSTRA": "The test is a sample; check the answers."
+          },
+          "TUDO_CERTO": "All good. {nome} uses all the material with your customers."
+        }
       },
       "CRIAR": {
         "TITULO": "Create agent",

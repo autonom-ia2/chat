@@ -6,8 +6,10 @@
 # A lista vem da decisão (Crm::SubjectDecision#touched_card_ids, o principal primeiro):
 #   - nula: a IA de assunto não chegou a uma lista (dúvida, falha, sem cota, decisão reaberta). Fica como no #1675: a IA
 #     relê o card em foco;
-#   - vazia: a mensagem não toca nenhum assunto ("obrigado!"). Nada é avaliado; o card em foco só guarda a hora da
-#     última mensagem (a atividade não anda, senão o StaleCardsJob o reavaliaria por isso);
+#   - vazia: não há card a reler. Sem assunto com card em foco já vem com ele na lista (#1918); vazia fica para a
+#     conversa sem card aberto e para o pedido novo que virou sugestão (pendente, dispensada ou repetida, #1147). Nada
+#     é avaliado; o card em foco, se houver, só guarda a hora da última mensagem (a atividade não anda, senão o
+#     StaleCardsJob o reavaliaria por isso);
 #   - com cards: cada card aberto da lista conta a mensagem como atividade e recebe o mesmo token de agendamento, que
 #     deixa velha qualquer avaliação dele agendada antes (a troca de foco e o card novo da mesma mensagem): uma
 #     mensagem, uma chamada. Se todos já têm avaliação agendada depois da mensagem (retry do IdentifyJob, ou a troca de

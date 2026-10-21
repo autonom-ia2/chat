@@ -305,7 +305,7 @@ const MAIN_BUTTON =
 const mainClass = index =>
   index
     ? `${MAIN_BUTTON} bg-transparent border border-solid border-white/40 text-white hover:bg-white/10`
-    : `${MAIN_BUTTON} bg-white border-0 text-[#0D2344] hover:bg-n-blue-2`;
+    : `${MAIN_BUTTON} bg-white border-0 text-n-heroi hover:bg-n-blue-2`;
 const LINK_BUTTON =
   'inline-flex items-center justify-center px-2 min-w-11 min-h-11 text-[13px] font-460 bg-transparent border-0 rounded text-white/70 hover:text-white hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';
 </script>

@@ -131,7 +131,18 @@
     "RATE_UNAVAILABLE": "A cotação em BRL está indisponível agora; mostrando valores em USD.",
     "RESOURCE_FALLBACK": "Outros",
     "LOADING": "Carregando uso de IA…",
-    "ERROR": "Não foi possível carregar o uso de IA. Tente novamente."
+    "ERROR": "Não foi possível carregar o uso de IA. Tente novamente.",
+    "SEM_VALORES": {
+      "DESCRICAO": "Acompanhe quanto a IA é usada por recurso, período e usos recentes.",
+      "AVISO": "Você vê quanto a IA foi usada. Os valores em reais aparecem para quem tem Financeiro na função.",
+      "POR_RECURSO": "Uso por recurso",
+      "USOS": "{n} uso | {n} usos",
+      "SERIE": {
+        "TODAY": "Usos por hora hoje",
+        "WEEK": "Usos por dia na semana",
+        "MONTH": "Usos por dia no mês"
+      }
+    }
   },
   "CRM_DASHBOARD": {
     "ORIGIN": {
@@ -2248,7 +2259,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
-        "TITLE": "Anúncios da Meta",
+        "TITLE": "Anúncios",
         "SUBTITLE": "Veja quais anúncios trazem conversas e vendas.",
         "LOADING": "Carregando…",
         "LOAD_ERROR": "Não deu para carregar a conexão com a Meta.",
@@ -2257,6 +2268,36 @@
         "BREADCRUMB": "Você está aqui",
         "NOT_CONNECTED_TITLE": "Os anúncios ainda não estão conectados",
         "NOT_CONNECTED_TEXT": "Peça a um administrador para conectar os anúncios da Meta. Depois, os resultados aparecem aqui."
+      },
+      "SEM_LOGIN": {
+        "NO_NAME": "Sem nome",
+        "READY": {
+          "TEXT_PHONE": "Seu WhatsApp {phone} está pronto: quem vier de anúncio aparece aqui.",
+          "TEXT": "Seu WhatsApp está pronto: quem vier de anúncio aparece aqui.",
+          "TEXT_MANY": "Seus WhatsApp estão prontos: quem vier de anúncio aparece aqui.",
+          "EXAMPLE": "Ver um exemplo"
+        },
+        "EXAMPLE": {
+          "BADGE": "Exemplo",
+          "TEXT": "Números de exemplo, só para você ver como fica.",
+          "BACK": "Voltar",
+          "ADS": {
+            "WINTER": "Promoção de inverno",
+            "TALK": "Fale com a gente",
+            "SHIPPING": "Frete grátis esta semana"
+          }
+        },
+        "AD": {
+          "PEOPLE": "Quem veio deste anúncio",
+          "EMPTY": "Ninguém veio deste anúncio neste período.",
+          "STATUS": {
+            "BOUGHT": "Comprou {value}",
+            "BOUGHT_NO_VALUE": "Comprou",
+            "TALKING": "Conversando",
+            "LOST": "Perdido",
+            "NO_ANSWER": "Sem resposta"
+          }
+        }
       },
       "EMPTY": {
         "EYEBROW": "Campanhas",
@@ -2547,6 +2588,7 @@
           "LABEL": "O que ver"
         },
         "HEADLINE": "Você investiu {spend}. Vieram {conversations} e {sales}.",
+        "HEADLINE_WHATSAPP": "Pelo WhatsApp, vieram {conversations} de anúncio e {sales}.",
         "PERIOD": "{days} dias",
         "PERIOD_LABEL": "Período",
         "PERIOD_CTX": "Últimos {days} dias",
@@ -2691,6 +2733,18 @@
           "NO_ANSWER": "Sem resposta",
           "WON": "Ganha",
           "LOST": "Perdida"
+        },
+        "REPORT": {
+          "BUTTON": "Baixar relatório",
+          "TITLE": "Baixar o relatório",
+          "DESCRIPTION": "Últimos {days} dias, com os mesmos números da tela.",
+          "PDF_TITLE": "PDF para apresentar",
+          "PDF_HINT": "Páginas prontas para mostrar ou mandar para alguém.",
+          "SHEET_TITLE": "Planilha para trabalhar os números",
+          "SHEET_HINT": "Abre no Excel ou no Google Planilhas, com cada conversa.",
+          "CONFIRM": "Baixar",
+          "ERROR": "Não deu para baixar agora. Tente de novo.",
+          "NO_PEOPLE": "Sem a permissão \"Exportar a lista do CRM para Excel\", o arquivo leva só os números, sem a lista de pessoas."
         }
       },
       "AD_DETAIL": {
@@ -2723,9 +2777,11 @@
         "MEANWHILE": "1 proposta aberta deste anúncio espera resposta. Retomar essa conversa é o que dá para fazer agora. | {count} propostas abertas deste anúncio esperam resposta. Retomar essas conversas é o que dá para fazer agora.",
         "MEANWHILE_SEE": "Ver as propostas",
         "CHART_TITLE": "Gasto e conversas por dia",
+        "CHART_TITLE_TALKS": "Conversas por dia",
         "LEGEND_SPEND": "Gasto",
         "LEGEND_CONVERSATIONS": "Conversas",
         "CHART_DAY": "{date}: {spend} · 1 conversa | {date}: {spend} · {count} conversas",
+        "CHART_DAY_TALKS": "{date}: 1 conversa | {date}: {count} conversas",
         "CHART_SCALE": "Maior gasto num dia: {spend} · mais conversas num dia: 1 | Maior gasto num dia: {spend} · mais conversas num dia: {count}",
         "DAYS_TOGGLE": "Ver dia a dia",
         "DAYS_DATE": "Dia",
@@ -5975,6 +6031,106 @@
       "DA_IA": "Recebidas da IA",
       "ESPERANDO": "Esperando há mais de {n} min",
       "DA_IA_ESPERANDO": "Da IA, esperando +{n} min"
+    }
+  },
+  "CRM_NUMEROS_V2": {
+    "TITULO": "Números",
+    "CARREGANDO": "Carregando os números",
+    "TELA_INICIAL": "Como vai o seu mês",
+    "VISAO": {
+      "ROTULO": "De quem são os números",
+      "EU": "Só eu",
+      "EQUIPE": "Equipe"
+    },
+    "AVISO_ADMIN": {
+      "TEXTO": "Os atendentes agora veem só os próprios números. A equipe toda aparece para administradores e para funções com \"Visualizar relatórios do CRM\".",
+      "ENTENDI": "Entendi"
+    },
+    "MES": {
+      "ATUAL": "{mes} · falta {n} dia | {mes} · faltam {n} dias",
+      "FECHADO": "{mes} · mês fechado",
+      "ANTERIOR": "Ver {mes}",
+      "SEGUINTE": "Ver {mes}",
+      "SEM_SEGUINTE": "Este é o mês atual",
+      "NAV": "Trocar de mês"
+    },
+    "TOPO": {
+      "FALTAM_EU": "Faltam {valor} para a sua meta",
+      "RESOLVEU_EU": "Você resolveu {feito} de {meta}",
+      "BATIDA_EU": "Você bateu a meta de {mes}",
+      "CEDO": "Ainda é cedo para dizer",
+      "SEM_META_EU": "Seu mês até agora: {n} venda, {valor} | Seu mês até agora: {n} vendas, {valor}",
+      "SEM_META_RESOLVEU": "{n} caso resolvido em {mes} | {n} casos resolvidos em {mes}",
+      "BARRA": "{pct}% da meta. Hoje deveria estar em {esperado}%.",
+      "FRASE": {
+        "EU_VENDE": "Você fechou {feito} de {meta}. Falta {dias} dia. | Você fechou {feito} de {meta}. Faltam {dias} dias.",
+        "EU_VENDE_SEM_META": "Ninguém definiu a sua meta deste mês ainda.",
+        "EU_VENDE_ATENDE": "E você resolveu {resolvidos} casos, {noPrazo} no prazo.",
+        "EU_VENDE_ATENDE_SEM_PRAZO": "E você resolveu {resolvidos} caso. | E você resolveu {resolvidos} casos.",
+        "EU_ATENDE": "{noPrazo} dentro do prazo. Faltam {falta} para a sua meta.",
+        "EU_ATENDE_SEM_FALTA": "{noPrazo} dentro do prazo.",
+        "EU_ATENDE_SEM_PRAZO": "Falta {dias} dia para o mês acabar. | Faltam {dias} dias para o mês acabar.",
+        "CEDO": "O mês começou há {dias} dia. Até agora: {valor}. | O mês começou há {dias} dias. Até agora: {valor}.",
+        "CEDO_RESOLVEU": "O mês começou há {dias} dia. Casos resolvidos até agora: {n}. | O mês começou há {dias} dias. Casos resolvidos até agora: {n}."
+      },
+      "BOTAO": {
+        "MEUS_ATRASADOS": "Abrir meu retorno atrasado | Abrir meus {n} retornos atrasados",
+        "MEUS_PARADOS": "Abrir minha negociação parada | Abrir minhas {n} negociações paradas",
+        "MEUS_CARDS": "Abrir meus cards",
+        "MEUS_LEMBRETES": "Abrir meu lembrete para trás | Abrir meus {n} lembretes para trás",
+        "MEUS_CASOS": "Abrir meus casos"
+      }
+    },
+    "PROXIMO": {
+      "TITULO": "Próximo passo",
+      "CAMPANHA_COM_VOCE": "{n} pessoa que respondeu à campanha {campanha} está com você | {n} pessoas que responderam à campanha {campanha} estão com você",
+      "VER": "Ver"
+    },
+    "BLOCO": {
+      "VENDENDO": "Vendendo",
+      "ATENDENDO": "Atendendo",
+      "FECHADAS": "{n} fechada | {n} fechadas",
+      "ANDAMENTO": "em andamento",
+      "ATRASADOS": "retorno atrasado | retornos atrasados",
+      "RESOLVIDOS": "resolvido | resolvidos",
+      "COM_VOCE": "com você agora",
+      "DEU_CERTO": "receberam o \"deu tudo certo?\""
+    },
+    "ESTIMADO": "Algumas vendas antigas foram contadas pelo responsável atual do card.",
+    "IA_AJUDOU": {
+      "TITULO": "A IA te ajudou",
+      "IA": "A IA",
+      "VENDA": "{ia} te passou {passou} cliente este mês. | {ia} te passou {passou} clientes este mês.",
+      "VIRARAM": "Nenhum virou venda ainda. | 1 virou venda. | {n} viraram venda.",
+      "ATENDE": "{ia} te passou {passou} cliente este mês, já com o assunto organizado. | {ia} te passou {passou} clientes este mês, já com o assunto organizado.",
+      "VER": "Ver as conversas"
+    },
+    "EQUIPE_BARRA": "A equipe está em {pct}% da meta do mês.",
+    "VAZIO": {
+      "TITULO": "Crie o seu primeiro funil",
+      "TEXTO": "Os números aparecem quando houver um funil com cards.",
+      "ACAO": "Criar funil",
+      "SEM_PODER": "Peça a quem administra a conta para criar um funil."
+    },
+    "ERRO": {
+      "TEXTO": "Não conseguimos carregar agora.",
+      "ACAO": "Tentar de novo"
+    },
+    "COMO_CONTAMOS": {
+      "LINK": "Como contamos",
+      "TITULO": "Como contamos",
+      "DESCRICAO": "As regras que valem para todos os números desta tela.",
+      "REGRA_MES": "Um relógio só: este mês, no fuso da conta ({fuso}).",
+      "REGRA_CREDITO": "A venda conta 100% para quem era o responsável quando ela foi fechada. Quem marcou o fechamento não decide.",
+      "REGRA_PARTICIPOU": "Quem cuidou antes, pessoa ou IA, só participou. Não leva o crédito.",
+      "REGRA_FUNIL": "Venda movida para outro funil continua sendo venda do mês em que fechou.",
+      "REGRA_SEM_RESPONSAVEL": "Venda fechada sem responsável não conta para ninguém, só para a meta do funil.",
+      "REGRA_ANTIGAS": "Vendas antigas, de antes deste registro, contam para o responsável atual do card.",
+      "EXEMPLO_TITULO": "Exemplo: João, orçamento de R$ 3.000",
+      "EXEMPLO_1": "Dia 2: João chega pelo anúncio. Sofia (IA) atende e passa para o Bruno no dia 3.",
+      "EXEMPLO_2": "Dia 8: o Bruno sai de folga e passa para a Ana.",
+      "EXEMPLO_3": "Dia 15: a Ana fecha. Quem marcou o fechamento foi o Marcos.",
+      "EXEMPLO_RESULTADO": "Os R$ 3.000 contam para a Ana. Bruno e Sofia participaram."
     }
   }
 }

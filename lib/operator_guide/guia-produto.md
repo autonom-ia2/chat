@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (230 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (233 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -20,7 +20,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde ficam as configurações?; Onde mudo os dados da empresa?; Onde vejo meu plano e as faturas?; Onde cadastro usuários?; O que falta configurar?; Onde fica o horário de atendimento?; Cadê a Atribuição?
 - onde_fica: Menu lateral > Configurações (no rodapé do menu, com o menu novo ligado na conta; no menu antigo esta página não existe). O endereço antigo de Configurações também abre esta página quando o menu novo está ligado.
 - rota: `settings_inicio` - `/app/accounts/:accountId/settings/inicio`
-- gate: feature flag `menu_lateral_novo`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `canned_response_manage` ou `inbox_view` ou `inbox_manage` ou `label_manage` ou `attribute_manage` ou `macro_manage` ou `automation_view` ou `automation_manage` ou `sla_manage` ou `crm_manage_ai` ou `crm_admin`
+- gate: feature flag `menu_lateral_novo`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `canned_response_manage` ou `inbox_view` ou `inbox_manage` ou `label_manage` ou `attribute_manage` ou `macro_manage` ou `automation_view` ou `automation_manage` ou `sla_manage` ou `people_manage` ou `custom_role_manage` ou `crm_manage_ai` ou `crm_admin` ou `financial_view` ou `financial_manage`
 - pre_requisitos: menu novo ligado na conta (flag menu_lateral_novo); cada cartão só aparece para quem pode abrir a tela dele
 - passos: 1. Clique em Configurações no rodapé do menu; 2. Leia o Comece por aqui, que mostra a primeira coisa que ainda falta; 3. Ou procure um assunto na busca (por exemplo horário, usuário ou WhatsApp); 4. Clique no cartão para abrir a tela daquele assunto.
 - gotchas: os cartões ficam em grupos (Sua empresa, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Plano e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua empresa, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
@@ -240,10 +240,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como convido um agente?; Onde vejo usuarios da conta?; Como desativo ou edito um agente?
 - onde_fica: No menu novo: Configurações > Usuários. No menu antigo: Configuracoes > Agentes
 - rota: `agent_list` - `/app/accounts/:accountId/settings/agents/list`
-- gate: feature flag `agent_management`; papel `administrator`
+- gate: feature flag `agent_management`; papel `administrator` ou `people_manage`
 - pre_requisitos: email do agente; limite/plano permitir novo usuario quando aplicavel
 - passos: 1. Abra Configuracoes; 2. Entre em Agentes; 3. Clique para adicionar/editar agente; 4. Informe dados e papel; 5. Salve e acompanhe convite/status.
-- gotchas: agente convidado pode precisar aceitar convite antes de operar; o acesso a uma caixa de entrada tambem depende de estar associado a ela.
+- gotchas: agente convidado pode precisar aceitar convite antes de operar; o acesso a uma caixa de entrada tambem depende de estar associado a ela; alem do administrador, quem tem a funcao com Pessoas (people_manage) convida, edita e remove agentes, mas nunca mexe em administradores nem em si mesmo; escolher caixas no convite pede tambem Caixas de entrada em Editar (inbox_manage), e sem isso essa parte nao aparece.
 - nav_target: `agent_list`
 - highlight: `settings-add-agent`
 
@@ -251,21 +251,21 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como faco alguem virar administrador?; Onde mudo papel de agente?; Como aplico um papel customizado a um usuario?
 - onde_fica: No menu novo: Configurações > Usuários. No menu antigo: Configuracoes > Agentes > editar agente
 - rota: `agent_list` - `/app/accounts/:accountId/settings/agents/list`
-- gate: feature flag `agent_management`; papel `administrator`
+- gate: feature flag `agent_management`; papel `administrator` ou `people_manage`
 - pre_requisitos: agente existente; papel customizado criado quando for usar custom role
 - passos: 1. Abra Configuracoes > Agentes; 2. Edite o agente; 3. Escolha `administrator`, `agent` ou papel customizado; 4. Salve; 5. Revise acesso a caixas/times se necessario.
-- gotchas: papel da conta nao substitui associacao a caixa de entrada; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`.
+- gotchas: papel da conta nao substitui associacao a caixa de entrada; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`; so um administrador torna alguem administrador; quem tem Pessoas (people_manage) troca a funcao de agentes, menos a propria, e so entrega funcao cujas chaves ele mesmo tem e sem Pessoas, Montar funcoes, Financeiro ou Pode entregar acesso acima do proprio, a nao ser que tenha Pode entregar acesso acima do proprio (grant_above_own), que entrega qualquer funcao menos administrador; quem esta numa funcao acima do alcance aparece com cadeado.
 - nav_target: `agent_list`
 
 ### Criar funcoes personalizadas
 - intent: Como crio um papel customizado?; Como crio uma funcao personalizada?; Onde configuro permissoes granulares?; Como limito acesso de um usuario?; Como duplico uma funcao?; Como aplico um modelo de perfil a uma funcao?
 - onde_fica: Configuracoes > Funcoes Personalizadas
 - rota: `custom_roles_list` - `/app/accounts/:accountId/settings/custom-roles/list`
-- gate: feature flag `custom_roles`; papel `administrator`
+- gate: feature flag `custom_roles`; papel `administrator` ou `custom_role_manage`
 - cobre: custom_roles_new, custom_roles_edit
 - pre_requisitos: Enterprise/Cloud habilitado; saber o que o grupo deve ver e fazer
 - passos: 1. Abra Configuracoes > Funcoes Personalizadas; 2. Clique em Nova funcao; 3. Escolha o perfil mais parecido (ou Comecar do zero) e clique em Continuar; 4. De um nome e abra so os grupos que quer mudar, escolhendo Sem acesso, Ver ou Editar em cada area; 5. Confira o painel Esta pessoa podera e clique em Criar funcao; 6. Atribua aos agentes na janela seguinte ou depois em Configuracoes > Agentes.
-- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
+- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; alem do administrador, quem tem Montar funcoes (custom_role_manage) cria e edita funcoes, so com as chaves que ele mesmo tem (Pessoas, Montar funcoes, Financeiro e Pode entregar acesso acima do proprio so para quem ja tem esse ultimo), e nao edita a propria funcao nem uma acima do proprio acesso, que aparecem com cadeado; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
 - nav_target: `custom_roles_list`
 - highlight: `settings-add-role`
 
@@ -273,8 +273,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Crie uma funcao so leitura; Quero que o time de marketing veja tudo da caixa X; Crie uma funcao para quem so ve relatorios; Que permissoes uso para uma funcao?; Como dou acesso a uma caixa especifica?
 - onde_fica: Configuracoes > Funcoes Personalizadas > Nova funcao (pela API: POST /api/v1/accounts/:account_id/custom_roles)
 - rota: `custom_roles_new` - `/app/accounts/:accountId/settings/custom-roles/new`
-- gate: feature flag `custom_roles`; papel `administrator`
-- pre_requisitos: administrador; saber o que o grupo deve ver e fazer; as pessoas ja cadastradas como agentes
+- gate: feature flag `custom_roles`; papel `administrator` ou `custom_role_manage`
+- pre_requisitos: administrador ou funcao com Montar funcoes (custom_role_manage), que so monta com as proprias chaves; saber o que o grupo deve ver e fazer; as pessoas ja cadastradas como agentes
 - passos: 0. Antes de perguntar qualquer coisa, leia o time e as pessoas citadas e a caixa do pedido, e proponha com nomes reais o que vai fazer, por exemplo "crio a funcao Marketing com conversas, contatos e relatorios e deixo a Carla so na caixa Marketing; ela vai poder responder. Sigo?" — diga o que fica diferente do pedido (ela vai poder responder; a caixa sai da participacao, nao da funcao) e espere o sim antes de fazer; 1. Consulte formato_da_acao da criacao de funcao e traduza o pedido em areas e niveis usando so os valores de `permissions` que ele trouxer; 2. Mande nome, descricao e a lista `permissions` ja no POST, num passo so (nao crie a funcao vazia para preencher depois); 3. Mande so a chave mais alta de cada area (_manage ja inclui _view); 4. Se o pedido cita uma caixa, a funcao nao resolve isso: inclua a pessoa como agente daquela caixa em Configuracoes > Caixas de entrada > (caixa) > Agentes, e tire das caixas que ela nao deve ver; 5. Atribua a funcao a pessoa em Configuracoes > Agentes; 6. Diga ao usuario, em uma frase, o que ficou diferente do pedido e por que.
 - gotchas: PRIMEIRO, o que mais confunde: Nenhuma chave escolhe caixa: a pessoa so ve conversas das caixas em que e agente, e conversation_manage quer dizer todas as conversas dessas caixas. Nao existe conversa so leitura: quem ve as conversas de uma caixa tambem responde nelas. Para "so leitura" de uma caixa, o mais proximo e conversation_manage com a pessoa agente so daquela caixa, mais contact_view, report_manage e o que mais for de leitura; avise que ela ainda consegue responder. Inbox_view NAO e o mais proximo de "ver tudo da caixa": ela so mostra a tela de configuracao, nenhuma conversa. Se a pessoa proibiu mexer nos membros, diga que sem isso a funcao nao restringe a caixa nem mostra as conversas dela, e mesmo assim proponha o mais proximo com os nomes reais (por a pessoa so na caixa pedida) perguntando se ela abre essa excecao — so dizer que nao da deixa a pessoa sem caminho. A lista de chaves validas vem de formato_da_acao, que le o codigo; nao use lista de memoria. O que o nome da chave nao diz: _view e ver e _manage e editar (ja inclui ver); conversas tem tres niveis: nenhuma chave, so as proprias (conversation_participating_manage e/ou conversation_unassigned_manage, a fila de nao atribuidas) ou todas (conversation_manage); report_manage e so leitura de relatorios; sem canned_response_manage a pessoa so usa respostas prontas; crm_admin liga todas as de CRM; prospecting_view_all_searches mostra as buscas de todos; inbox_view e inbox_manage sao so a tela de configuracao das caixas. Time (Configuracoes > Times) agrupa pessoas para atribuicao e filtro; nao e funcao e nao da permissao. Administrador ignora funcao personalizada.
 - diagnostic: se a plataforma recusar com "chaves desconhecidas" (em ingles, "unknown keys"), a mensagem lista as chaves invalidas e as validas; troque pela chave valida mais proxima e mande de novo, sem oferecer suporte. Uma funcao que ficou com permissions vazio deixa a pessoa sem menu; corrija com PATCH na mesma funcao em vez de criar outra.
@@ -284,11 +284,11 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como crio um time?; Onde adiciono agentes a uma equipe?; Como edito membros de um time?
 - onde_fica: Configuracoes > Times
 - rota: `settings_teams_new` - `/app/accounts/:accountId/settings/teams/new`
-- gate: feature flag `team_management`; papel `administrator`
+- gate: feature flag `team_management`; papel `administrator` ou `people_manage`
 - cobre: settings_teams_list, settings_teams_finish, settings_teams_add_agents, settings_teams_edit, settings_teams_edit_members, settings_teams_edit_finish
 - pre_requisitos: agentes ativos para adicionar ao time
 - passos: 1. Abra Configuracoes > Times; 2. Clique em criar time; 3. Defina nome/descricao; 4. Adicione agentes; 5. Finalize e use o time em atribuicoes/filtros.
-- gotchas: times ajudam em atribuicao e filtro, mas agentes ainda precisam ter acesso as caixas de entrada usadas.
+- gotchas: times ajudam em atribuicao e filtro, mas agentes ainda precisam ter acesso as caixas de entrada usadas; alem do administrador, quem tem a funcao com Pessoas (people_manage) cria e edita times.
 - leitura: times
 - nav_target: `settings_teams_new`
 - highlight: `settings-new-team`
@@ -536,7 +536,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: permissão de gerenciar funis.
 - passos: Ao criar o funil, responda **Para que serve este funil?**. **Vender** é para conquistar um cliente novo: o card termina em Ganhou ou Perdeu, tem valor, entra na meta do mês e pode avisar os Anúncios. **Atender** é para resolver algo para quem já é cliente: o card termina em Resolvido ou Cancelado, sem valor, sem meta e sem Anúncios. Em Atender, escolha um modelo pronto: **Suporte**, **Pós-venda**, **Cobrança** ou **Agendamento**. Num funil que já existe, abra **Editar funil**; o primeiro cartão do resumo é **Para que serve**; clique em **Alterar**, escolha Vender ou Atender e salve.
-- gotchas: no modelo Cobrança o card termina em Pago ou Cancelado e mostra o valor a receber, o vencimento e "Prometeu pagar em"; num funil de Atender o Kanban mostra **Novo atendimento** em vez de Novo card e não mostra valor (só a Cobrança mostra o valor a receber); card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Ganho e não faz o contato virar cliente); funis que já existiam: os que contavam como venda viraram Vender e os outros, Atender; nada muda sozinho.
+- gotchas: no modelo Cobrança o card termina em Pago ou Cancelado e mostra o valor a receber, o vencimento e "Prometeu pagar em"; num funil de Atender o Kanban mostra **Novo atendimento** em vez de Novo card e não mostra valor (só a Cobrança mostra o valor a receber); card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Ganho e não faz o contato virar cliente); funis que já existiam: os que contavam como venda viraram Vender e os outros, Atender; nada muda sozinho; a IA de assunto usa o tipo para separar a venda do pedido de quem já é cliente (cancelamento, problema, troca), mas o nome e o **Quando usar** do funil valem mais que o tipo: um funil de suporte marcado como Vender recebe pós-venda se o nome ou o Quando usar disserem isso; sem funil de Atender que sirva, o pedido de pós-venda fica no card que a conversa já tem e, sem card aberto, abre no funil de Vender mais próximo.
 - nav_target: `crm_kanban_index`
 
 ### Criar follow-ups e lembretes no CRM
@@ -584,10 +584,20 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: "Onde vejo relatório do CRM?"; "Como acompanho conversão do funil?"; "Como comparo IA e humano?"; "Quantos atendimentos resolvemos?"
 - onde_fica: No menu novo: Acompanhar > CRM > aba Números. No menu antigo: Sidebar > CRM > CRM Dashboard
 - rota: `crm_dashboard_index` - `/app/accounts/:accountId/crm/dashboard`
-- gate: papel `administrator` ou `agent` ou `crm_view_reports`
+- gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
 - pre_requisitos: ao menos um funil com cards; metas e dados de reuniões aparecem quando houver configuração/dados.
 - passos: Abra CRM Dashboard; selecione funil; escolha período; revise os números do topo, funil, fechados, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram. Os números do topo seguem o tipo do funil: num funil de Vender, ganhos, perdidos, valores e meta do mês; num funil de Atender, **Resolvidos** e **Cancelados**.
-- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados.
+- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados. Com Números por papel ligado na conta, esta é a visão **Equipe**: só administrador e função com "Visualizar relatórios do CRM" a veem, com o seletor **Só eu · Equipe** no topo; o atendente sem função passa a ver só os próprios números (fluxo ver_meus_numeros_do_mes).
+- nav_target: `crm_dashboard_index`
+
+### Ver os meus números do mês (Só eu)
+- intent: "Quanto eu vendi este mês?"; "Quantos casos eu resolvi?"; "Como vai o meu mês?"; "Por que não vejo mais os números da equipe?"; "Quantos clientes a IA me passou?"
+- onde_fica: No menu novo: Acompanhar > CRM > aba Números (quem vê a equipe escolhe **Só eu** no seletor). No menu antigo: Sidebar > CRM > CRM Dashboard. Na tela inicial da caixa, no computador: **Como vai o seu mês**.
+- rota: `crm_dashboard_index` - `/app/accounts/:accountId/crm/dashboard`
+- gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
+- pre_requisitos: Números por papel ligado na conta (flag crm_numeros_lentes); ao menos um funil.
+- passos: Abra Números; leia o topo (o seu mês até agora: vendas e valor, ou casos resolvidos); use o botão do topo para abrir a sua lista (retornos atrasados, senão negociações paradas, senão os seus cards); veja o próximo passo, os blocos Vendendo e Atendendo, **A IA te ajudou** e a barra da equipe; troque de mês pelas setas; **Como contamos** explica as regras.
+- gotchas: o papel vem do tipo do funil (Vender ou Atender) dos seus cards; a venda conta para quem era o Responsável quando ela foi fechada, não para quem marcou o fechamento; vendas antigas, de antes desse registro, contam pelo Responsável atual e a tela avisa; a barra da equipe mostra só a porcentagem da meta, sem nomes nem valores; a meta por pessoa ainda não existe, por isso o topo mostra só o mês até agora; em Números, o atendente sem função não vê mais o painel da equipe (valor e carga dos colegas) nem o gasto da IA; no Kanban e na Lista ele ainda vê os cards dos colegas com o valor, o que será resolvido no #1939; o mês é o do fuso da conta.
 - nav_target: `crm_dashboard_index`
 
 ### Usar calendário CRM e agendar reunião
@@ -627,7 +637,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - perfil: escolher os avisos e testar exige administrador ou função com Agendamento em Editar; com Agendamento em Ver a pessoa só lê a frase dos avisos na prévia. Para testar, a pessoa também precisa enxergar o WhatsApp de avisos. Conectar WhatsApp e criar mensagem aprovada na Meta continuam do administrador.
 - pre_requisitos: um WhatsApp conectado na conta (oficial da Meta, WAHA ou API de WhatsApp); no WhatsApp oficial, mensagens aprovadas pela Meta com o link do horário no lugar de {{3}} para avisar quem não falou com a empresa nas últimas 24 horas.
 - passos: 1. Abra CRM > Agendamento > Páginas e links e clique em Editar na página; 2. Clique em Continuar até o passo Avisos; 3. Em Por qual WhatsApp sai o aviso, escolha o número; 4. Escolha quando avisar: Ao marcar, 1 dia antes e 1 hora antes; Ao marcar e 1 hora antes; ou Só ao marcar; 5. Em O texto de cada aviso, deixe o texto padrão ou escreva o seu: Escrever com IA (no jeito escolhido em Como a IA escreve: Curto, Simpático ou Formal) mostra até 2 textos e Usar este texto põe no campo; os botões com o nome dos campos põem o nome do cliente, o dia e a hora, o link ou o nome da empresa; confira em Assim chega para o cliente; Voltar ao texto padrão desfaz; 6. No WhatsApp oficial, escolha uma mensagem aprovada para cada aviso; 7. Escolha até quando o cliente pode mudar ou cancelar (1 hora, 2 horas ou 1 dia antes); 8. Clique em Ver como fica e confira a frase dos avisos; 9. Com a página no ar, clique em Testar no meu WhatsApp, digite o seu número e clique em Enviar teste.
-- gotchas: toda mensagem leva o link para confirmar, mudar, cancelar e parar os avisos; o texto próprio de cada aviso vale só quando o aviso sai como mensagem comum (WAHA, ou cliente que falou com a empresa nas últimas 24 horas) — fora disso, no WhatsApp oficial vai a mensagem aprovada pela Meta, e no canal API a mensagem pronta do canal; o texto próprio precisa ter o link e o dia e a hora, cabe em 500 letras, e a frase para parar os avisos o sistema sempre põe no fim (não escreva); Escrever com IA não salva nada: o texto só vale depois de salvar a página, e a IA não recebe dado de cliente, só o nome da página, a duração, o local e o nome da empresa; quando alguém da equipe marca pelo painel, o aviso ao marcar usa o texto padrão, que diz quem marcou; se o texto salvo deixar de servir, vai o texto padrão; no WhatsApp oficial, quem não falou com a empresa nas últimas 24 horas só recebe com mensagem aprovada pela Meta, e só aparecem na lista as aprovadas que têm o link no lugar de {{3}} ({{1}} é o nome e {{2}} o dia e a hora); pelo WAHA (número não oficial) o aviso sai mesmo sem o cliente ter falado com a empresa, e muitos avisos assim podem fazer o WhatsApp bloquear o número; pelo WAHA, número sem WhatsApp ou WAHA desconectado não recebe o aviso, e quem atende recebe a tarefa com o motivo; o teste é só texto, então no WhatsApp oficial mande antes um oi do seu celular para o número da empresa; o teste é um link de verdade, e marcar por ele marca de verdade; cada número recebe no máximo 4 mensagens automáticas em 24 horas, somando testes; quem pede para parar não recebe mais nenhum aviso, mas o horário continua marcado; aviso que não sai nunca cancela nem muda o horário, e quem atende recebe uma tarefa para falar com o cliente; trocar o WhatsApp de avisos apaga as mensagens aprovadas escolhidas; no detalhe da reunião aparecem Confirmou, Pediu para mudar ou Ainda não respondeu, a lista dos avisos com Enviado, Não saiu e o motivo, ou Falhou, e Pediu para não receber avisos.
+- gotchas: toda mensagem leva o link para confirmar, mudar, cancelar e parar os avisos; o texto próprio de cada aviso vale só quando o aviso sai como mensagem comum (WAHA, ou cliente que falou com a empresa nas últimas 24 horas) — fora disso, no WhatsApp oficial vai a mensagem aprovada pela Meta, e no canal API o modelo de texto do canal; o texto próprio precisa ter o link e o dia e a hora, cabe em 500 letras, e a frase para parar os avisos o sistema sempre põe no fim (não escreva); Escrever com IA não salva nada: o texto só vale depois de salvar a página, e a IA não recebe dado de cliente, só o nome da página, a duração, o local e o nome da empresa; quando alguém da equipe marca pelo painel, o aviso ao marcar usa o texto padrão, que diz quem marcou; se o texto salvo deixar de servir, vai o texto padrão; no WhatsApp oficial, quem não falou com a empresa nas últimas 24 horas só recebe com mensagem aprovada pela Meta, e só aparecem na lista as aprovadas que têm o link no lugar de {{3}} ({{1}} é o nome e {{2}} o dia e a hora); pelo WAHA (número não oficial) o aviso sai mesmo sem o cliente ter falado com a empresa, e muitos avisos assim podem fazer o WhatsApp bloquear o número; pelo WAHA, número sem WhatsApp ou WAHA desconectado não recebe o aviso, e quem atende recebe a tarefa com o motivo; o teste é só texto, então no WhatsApp oficial mande antes um oi do seu celular para o número da empresa; o teste é um link de verdade, e marcar por ele marca de verdade; cada número recebe no máximo 4 mensagens automáticas em 24 horas, somando testes; quem pede para parar não recebe mais nenhum aviso, mas o horário continua marcado; aviso que não sai nunca cancela nem muda o horário, e quem atende recebe uma tarefa para falar com o cliente; trocar o WhatsApp de avisos apaga as mensagens aprovadas escolhidas; no detalhe da reunião aparecem Confirmou, Pediu para mudar ou Ainda não respondeu, a lista dos avisos com Enviado, Não saiu e o motivo, ou Falhou, e Pediu para não receber avisos.
 - nav_target: `settings_booking`
 
 ### Atender no dia da reunião marcada pela página de agendamento
@@ -658,9 +668,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `settings_booking` - `/app/accounts/:accountId/crm/booking`
 - gate: papel `administrator` ou `agendamento_view` ou `agendamento_manage`
 - perfil: administrador faz tudo; função com Agendamento em Editar cria, edita, publica, pausa e exclui páginas e escolhe modelo, marca, locais, horários, funil e quem atende; função com Agendamento em Ver vê as páginas, a prévia e o link, sem botão de mudar; agente sem função e função sem o módulo não veem a tela e a API responde 401.
-- pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; só o administrador cria e muda funções.
+- pre_requisitos: opção Agendamento WhatsApp-first ligada na conta; funções se criam e mudam com o administrador ou com quem tem Montar funções (custom_role_manage).
 - passos: 1. Abra Configurações > Funções personalizadas; 2. Crie ou edite a função; 3. Na linha Agendamento, escolha Ver ou Editar; 4. Salve a função e atribua à pessoa em Configurações > Agentes.
-- gotchas: Editar já inclui Ver; para publicar, a página precisa de quem atende, de um lugar, de pelo menos um dia de atendimento e de um funil para onde vai quem marcar, e o que faltar aparece com Resolver (o do funil abre o Alterar na própria prévia); página desligada com algo faltando aparece como Rascunho no cartão; Agendamento não dá acesso a conectar caixas de e-mail ou WhatsApp, usuários, funções, integrações nem faturamento, que continuam do administrador; escolher uma caixa já conectada para Meet ou Teams não é conectar caixa; quem atende precisa ser pessoa da conta e, se tiver função, com acesso ao CRM; a gaveta antiga de página de agendamento no Kanban continua só do administrador.
+- gotchas: Editar já inclui Ver; para publicar, a página precisa de quem atende, de um lugar, de pelo menos um dia de atendimento e de um funil para onde vai quem marcar, e o que faltar aparece com Resolver (o do funil abre o Alterar na própria prévia); página desligada com algo faltando aparece como Rascunho no cartão; Agendamento não dá acesso a conectar caixas de e-mail ou WhatsApp, usuários, funções, integrações nem faturamento: integrações e faturamento continuam do administrador, usuários são do administrador ou de quem tem Pessoas (people_manage) e funções, do administrador ou de quem tem Montar funções (custom_role_manage); escolher uma caixa já conectada para Meet ou Teams não é conectar caixa; quem atende precisa ser pessoa da conta e, se tiver função, com acesso ao CRM; a gaveta antiga de página de agendamento no Kanban continua só do administrador.
 - nav_target: `settings_booking`
 
 ### Passar as reuniões de uma pessoa para outra
@@ -913,7 +923,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar os anúncios da Meta em Anúncios da Meta
 - intent: Como conecto meus anúncios da Meta ao Chat2You?; Como entro com o Facebook para conectar os anúncios?; Como compartilho a conta de anúncios com a Hub2You?; Qual conta de anúncios e qual Pixel escolher?; Como faço a Meta receber as minhas vendas?; Como a Meta entende as etapas do meu funil?; Meus anúncios levam para o WhatsApp e para o site, o que marco?; O que quer dizer A Meta ainda está liberando?
-- onde_fica: Menu lateral > Campanhas > Anúncios da Meta
+- onde_fica: Menu lateral > Campanhas > Anúncios
 - rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
 - gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
 - pre_requisitos: ser administrador da conta; a página aparece quando Anúncios da Meta está ligado para a conta; para compartilhar sem token, a conta precisa de um WhatsApp oficial conectado à Meta.
@@ -922,9 +932,20 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - leitura: campanhas
 - nav_target: `campaigns_meta_ads_index`
 
+### Ver de qual anúncio veio cada cliente, sem entrar no Facebook
+- intent: De qual anúncio veio cada cliente?; Quantas pessoas chamaram no WhatsApp vindo de anúncio?; Quem veio deste anúncio?; Quantos clientes de anúncio compraram?; Por que a página de anúncios não pede para conectar o Facebook?; Por que a página de anúncios não mostra quanto eu gastei?
+- onde_fica: Menu lateral > Campanhas > Anúncios
+- rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
+- gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
+- pre_requisitos: a conta com Anúncios sem login ligado, um WhatsApp oficial conectado e nenhuma conta de anúncios conectada; ser administrador, ou ter um cargo com Anúncios da Meta em Só olha.
+- passos: 1. Abra Anúncios: a página já mostra quantas conversas vieram de anúncio no período, quantas viraram proposta e quantas viraram venda, com o valor e o tempo de resposta; 2. Escolha 7 ou 30 dias; 3. Clique em Conversas, Propostas ou Vendas para abrir a lista daquela etapa, com Abrir conversa em cada linha; 4. Em Anúncios, clique num anúncio para ver a foto, as conversas por dia e quem veio dele, com a situação de cada pessoa e Abrir conversa.
+- gotchas: é o mesmo painel de quem conectou a conta de anúncios, sem o gasto, o custo por venda, o veredito de cada anúncio e O que fazer hoje, que dependem da conexão com o Facebook; não precisa entrar no Facebook nem configurar nada: a informação vem do próprio WhatsApp oficial quando a pessoa clica no anúncio; conta sem WhatsApp oficial (só QR Code) continua com a página de conectar a conta de anúncios; com WhatsApp oficial e nenhum anúncio nos últimos 90 dias, a página diz que está pronta e oferece Ver um exemplo, com números de exemplo marcados; o nome do anúncio é o título que aparece no clique; a foto do anúncio fica guardada a partir do primeiro clique novo (o link da Meta vence em poucos dias), e anúncio sem foto mostra um quadro colorido; venda é o card marcado como ganho no CRM, então só aparece quando alguém marca o card como ganho; quem só olha vê nas listas e no anúncio só as conversas que já vê na caixa de conversas, enquanto os números do painel são da conta toda.
+- leitura: campanhas
+- nav_target: `campaigns_meta_ads_index`
+
 ### Usar o painel de Anúncios da Meta e o que fazer hoje
 - intent: Quanto custou cada venda dos meus anúncios?; O que eu faço hoje com os meus anúncios?; Onde vejo as propostas que vieram de anúncio?; Qual anúncio está vendendo e qual não está?; Quanto tempo minha equipe demora para responder quem veio do anúncio?; Por que o número de conversas da Meta é diferente do da plataforma?; Como marco que já fiz a ação do dia?
-- onde_fica: Menu lateral > Campanhas > Anúncios da Meta > aba Resultado
+- onde_fica: Menu lateral > Campanhas > Anúncios > aba Resultado
 - rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
 - gate: feature flag `meta_ads_hub`; papel `administrator` ou `meta_ads_view`
 - pre_requisitos: ser administrador da conta, ou ter um cargo com Anúncios da Meta em Só olha; a conta de anúncios conectada em Anúncios da Meta (quem só olha pede ao administrador para conectar).
@@ -1919,9 +1940,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Resultados > Relatórios > Gasto com IA. No menu antigo: CRM > Gestão de IA
 - rota: `crm_ai_usage_index` - `/app/accounts/:accountId/crm/ai-usage`
 - gate: papel `administrator` ou `agent` ou `crm_view_reports`
-- pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM
+- pre_requisitos: CRM e IA do CRM ligados, e permissão de ver relatórios do CRM; para ver os valores em dinheiro, ser administrador ou ter Financeiro na função
 - passos: 1. Abra CRM > Gestão de IA; 2. Escolha o período entre hoje, semana e mês; 3. Leia os indicadores de gasto, usos, economia e custo médio; 4. Confira o gasto por recurso e o histórico; 5. Use baixar relatório para exportar o período.
-- gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo.
+- gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo; quem vê relatórios do CRM mas não tem Financeiro (Ver ou Editar) na função vê só quantos usos houve, por recurso e no tempo, sem gasto, economia, custo médio nem as colunas de custo no relatório baixado, e a tela avisa isso.
 - nav_target: `crm_ai_usage_index`
 
 ### Ver o plano contratado e quanto está sendo cobrado
@@ -1931,7 +1952,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator`
 - pre_requisitos: ser administrador da conta e ter um checkout já concluído
 - passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira o plano, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
-- gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador; sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
+- gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador, e ter Financeiro na função personalizada não abre plano nem faturas (só os custos do uso de IA e a autorização de cobranças da Meta); sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
 - nav_target: `autonomia_financial_subscription`
 
 ### Conferir faturas emitidas e o que já foi pago
@@ -1939,7 +1960,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Faturas
 - rota: `autonomia_financial_invoices` - `/app/accounts/:accountId/financial/invoices`
 - gate: papel `administrator`
-- pre_requisitos: ser administrador da conta
+- pre_requisitos: ser administrador da conta (Financeiro na função personalizada não dá acesso às faturas)
 - passos: 1. Abra Financeiro > Faturas; 2. Veja no topo o total em aberto, quantas estão pagas e quantos pagamentos existem; 3. Na tabela, olhe valor, status, vencimento e data de pagamento; 4. Use abrir fatura para ver o documento da cobrança; 5. Desça até pagamentos para conferir origem e data de cada um.
 - gotchas: a tela não cobra, não paga e não emite fatura, só mostra o que o sistema de cobrança registrou; o link de abrir fatura só existe quando a cobrança tem documento; o total em aberto soma pendentes e vencidas juntas, sem separar; a origem mostra o meio de pagamento e cai para manual quando o pagamento foi lançado à mão.
 - nav_target: `autonomia_financial_invoices`
@@ -2325,10 +2346,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como deixo o sistema criar os modelos do WhatsApp sozinho?; Por que o lembrete de cobrança não saiu pelo WhatsApp?; Por que a equipe recebeu o aviso de que o dono não autorizou criar modelos?; Quanto custa cada mensagem que o sistema manda fora da conversa?; Como ligo ou desligo a Divulgação automática?; Quem ligou a autorização e quando?
 - onde_fica: No menu novo: Configurações > Custos do WhatsApp (ou Crescer > Campanhas > Modelos WhatsApp). No menu antigo: Campanhas > Modelos WhatsApp > cartão Autorização para o Chat2You criar modelos, no topo da lista
 - rota: `modelos_whatsapp_autorizacao` - `/app/accounts/:accountId/campaigns/modelos-whatsapp/autorizacao`
-- gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_manage`
-- pre_requisitos: nova tela de Modelos liberada na conta; ser administrador da conta para ligar ou desligar (quem tem a função com Modelos do WhatsApp em editar só vê)
+- gate: feature flag `whatsapp_templates_journey`; papel `administrator` ou `whatsapp_templates_manage` ou `financial_view` ou `financial_manage`
+- pre_requisitos: nova tela de Modelos liberada na conta; ser administrador da conta, ou ter Financeiro em Editar na função, para ligar ou desligar (quem tem Modelos do WhatsApp em editar ou Financeiro em Ver só vê)
 - passos: 1. Abra Campanhas > Modelos WhatsApp e clique em Ver autorização; 2. Marque Aviso de serviço e, se quiser, Divulgação; 3. Clique em Ligar autorização; 4. Leia o custo na confirmação e clique em Sim, ligar; 5. Com a autorização ligada, use Ligar Divulgação ou Desligar Divulgação para mudar só a Divulgação, ou Desligar autorização para parar tudo.
-- gotchas: os modelos que a conta já tem continuam valendo, com ou sem a autorização; sem ela, o sistema não cria modelo novo e o lembrete que precisaria dele vira aviso para a equipe; a Meta cobra cada mensagem entregue, mesmo com a conversa aberta, e a Divulgação custa bem mais que o Aviso de serviço; a Divulgação só liga com o Aviso de serviço ligado, e desligar o Aviso de serviço desliga as duas; cada mudança fica guardada com quem fez, quando e o texto e os preços mostrados; se a Meta mudar o preço, quem já autorizou não precisa autorizar de novo, e a tela passa a mostrar o preço novo; só o administrador da conta liga ou desliga, e só pela tela, onde lê o aviso com o custo: o Guia não faz isso pela pessoa, só explica o caminho; quem tem a função com Modelos do WhatsApp em editar vê a autorização sem poder mudar; quem só vê os modelos não vê este cartão.
+- gotchas: os modelos que a conta já tem continuam valendo, com ou sem a autorização; sem ela, o sistema não cria modelo novo e o lembrete que precisaria dele vira aviso para a equipe; a Meta cobra cada mensagem entregue, mesmo com a conversa aberta, e a Divulgação custa bem mais que o Aviso de serviço; a Divulgação só liga com o Aviso de serviço ligado, e desligar o Aviso de serviço desliga as duas; cada mudança fica guardada com quem fez, quando e o texto e os preços mostrados; se a Meta mudar o preço, quem já autorizou não precisa autorizar de novo, e a tela passa a mostrar o preço novo; só o administrador da conta ou quem tem Financeiro em Editar liga ou desliga, e só pela tela, onde lê o aviso com o custo: o Guia não faz isso pela pessoa, só explica o caminho; quem tem a função com Modelos do WhatsApp em editar ou com Financeiro em Ver vê a autorização sem poder mudar; quem só vê os modelos não vê este cartão.
 - nav_target: `modelos_whatsapp_autorizacao`
 
 ### Trazer contatos e conversas de outra ferramenta
@@ -2410,6 +2431,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra a conversa de e-mail; 2. Toque em Lixeira no topo; 3. A conversa sai da Entrada e fica resolvida, sem apagar nada; 4. Para trazer de volta, abra a pasta Lixeira, abra a conversa e toque em Restaurar (ela volta aberta); 5. Para apagar de vez, dentro da Lixeira toque em Excluir para sempre e confirme.
 - gotchas: se o cliente responder no mesmo e-mail, a conversa sai sozinha da Lixeira e volta para a Entrada; Excluir para sempre só existe dentro da Lixeira, apaga os e-mails, as notas e os anexos para toda a equipe e não tem desfazer (o cliente continua com a cópia dele); pelo Guia, excluir para sempre sempre pede confirmação.
 - nav_target: `inbox_conversation`
+
+### Ver os e-mails enviados da caixa de e-mail
+- intent: Onde vejo os e-mails que eu mandei?; Onde fica a pasta Enviados?; O e-mail que eu respondi sumiu da Entrada?; Como acho uma conversa que eu já respondi?
+- onde_fica: Conversas > menu lateral > caixa de e-mail > Enviados (logo abaixo de Entrada)
+- rota: `inbox_dashboard` - `/app/accounts/:accountId/inbox/:inbox_id`
+- gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
+- pre_requisitos: caixa de e-mail com a conversa de e-mail nova (chave conversa_email_nova) e a pasta Enviados (chave email_enviados) ligadas na conta
+- passos: 1. No menu lateral, abra a caixa de e-mail; 2. Toque em Enviados; 3. A lista mostra as conversas em que alguém da equipe ou o robô mandou mensagem ao cliente, abertas ou resolvidas; 4. Toque numa conversa para abrir.
+- gotchas: Enviados é só uma forma de ver: a conversa continua na Entrada, como no Gmail, e nada se move para lá; nota interna não conta como enviado; conversa no Spam ou na Lixeira não aparece em Enviados; e-mail mandado por fora do painel (pelo Gmail ou Outlook da própria pessoa) não aparece aqui; o que sai pelo painel também aparece no Enviados da conta de e-mail (Gmail, Outlook ou o Webmail do provedor), alguns minutos depois, quando a caixa tem a leitura por IMAP ligada e o servidor marca a pasta de enviados.
+- nav_target: `inbox_dashboard`
 
 ### Escrever um e-mail novo pela caixa de e-mail
 - intent: Como escrevo um e-mail novo?; Onde fica o Escrever do e-mail?; Como mando um e-mail para um cliente que ainda não escreveu?; Como uso um modelo de e-mail das Campanhas num e-mail novo?
