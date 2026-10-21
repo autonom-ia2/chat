@@ -44,7 +44,8 @@
       },
       "SUBTITLE": "Como o funil está indo, etapa por etapa. Veja o que fechou, o que não fechou e quem atendeu: IA ou pessoa.",
       "META_SYNC": {
-        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o seguro, os dados aparecem aqui."
+        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o seguro, os dados aparecem aqui.",
+        "SUBTITLE": "Conversões enviadas de volta à Meta para otimizar seus anúncios: clique para WhatsApp pela conexão do WhatsApp, seguros fechados pela landing page pelo Pixel do site."
       }
     },
     "CONFIRM": {
@@ -212,6 +213,13 @@
     },
     "TOPO": {
       "SEM_META_EU": "Seu mês até agora: {n} seguro fechado, {valor} | Seu mês até agora: {n} seguros fechados, {valor}"
+    },
+    "BLOCO": {
+      "VENDENDO": "Fechando seguros"
+    },
+    "ESTIMADO": "Alguns seguros fechados antes deste registro foram contados para o responsável atual do card.",
+    "COMO_CONTAMOS": {
+      "REGRA_ANTIGAS": "Seguros fechados antes deste registro contam para o responsável atual do card."
     }
   },
   "MODELOS_WHATSAPP": {

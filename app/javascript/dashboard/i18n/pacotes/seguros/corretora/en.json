@@ -1214,6 +1214,9 @@
       "BOTAO": {
         "MEUS_PARADOS": "Open my stalled quote | Open my {n} stalled quotes"
       }
+    },
+    "BLOCO": {
+      "VENDENDO": "Quoting"
     }
   }
 }

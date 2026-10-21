@@ -1214,6 +1214,9 @@
       "BOTAO": {
         "MEUS_PARADOS": "Abrir minha cotação parada | Abrir minhas {n} cotações paradas"
       }
+    },
+    "BLOCO": {
+      "VENDENDO": "Cotando"
     }
   }
 }
