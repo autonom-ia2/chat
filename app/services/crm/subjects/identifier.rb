@@ -11,7 +11,7 @@
 #
 # Coluna do card novo (#1910, flag `crm_assunto_na_etapa`): o modelo maior devolve também a etapa de cada pedido novo
 # (Crm::Subjects::Etapa), que vai na Escolha até o Applier.
-class Crm::Subjects::Identifier
+class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou do teto (175) com o motivo da revisão (#2018), que mora junto dos gatilhos
   # outros (#1693): os outros assuntos da mensagem, cada um uma Escolha sem decided_by. duvida: os atributos da decisão
   # quando o principal ficou em dúvida e os outros, claros, seguem (sem opcao). etapa (#1910): a chave da etapa do pedido
   # novo, ou nil (1ª etapa).
@@ -79,7 +79,8 @@ class Crm::Subjects::Identifier
   # card. Decisão reaberta (#1638) nunca é apagada: volta ao que era antes.
   def desfazer_reserva(erro)
     Rails.logger.error("[crm][assunto] decisão #{@decisao.id} falhou: #{erro.class}")
-    return @decisao.update_columns(state: 'failed', reason: erro.class.name.first(120)) if @aplicado # rubocop:disable Rails/SkipsModelValidations
+    falha = { state: 'failed', reason: erro.class.name.first(120), **medicao }
+    return @decisao.update_columns(falha) if @aplicado # rubocop:disable Rails/SkipsModelValidations
 
     @retrato ? @decisao.update_columns(@retrato) : @decisao.destroy # rubocop:disable Rails/SkipsModelValidations
   end
@@ -87,10 +88,12 @@ class Crm::Subjects::Identifier
   def perguntar
     @jev = TypesafeAi::Decisor.new(feature: Crm::Subjects::FEATURE).decidir(decisor: question, estado: estado)
     opcao = question.opcao(@jev.resposta)
+    @jev_answer = opcao.tipo.to_s
     repetida = sugestao_repetida(opcao)
     return concluir(state: 'kept', **alvo(opcao), reason: repetida, **tocados_da_repetida(opcao)) if repetida
 
-    escolha = revisar?(opcao) ? revisar : Escolha.new(opcao: opcao, decided_by: 'jev')
+    @review_reason = motivo_da_revisao(opcao)
+    escolha = @review_reason ? revisar : Escolha.new(opcao: opcao, decided_by: 'jev')
     return if escolha.nil?
 
     resultado = aplicar(escolha)
@@ -154,8 +157,14 @@ class Crm::Subjects::Identifier
 
   # Jev inseguro, pedido novo (precisa de nome) ou vários assuntos (precisa da lista): o modelo maior decide. Inseguro
   # também, nada muda. "O mesmo assunto" num card ainda sem nome (#1918) também, quando dar nome a ele é possível.
-  def revisar?(opcao)
-    @jev.certeza < Crm::Subjects::CERTEZA_MINIMA || %i[novo varios].include?(opcao.tipo) || nome_do_atual?(opcao)
+  # Devolve o motivo, gravado na decisão para medir o revisor (#2018), ou nil (o Jev decide sozinho). Com mais de um
+  # valendo, fica o primeiro desta ordem; só a certeza baixa soma com outro.
+  def motivo_da_revisao(opcao)
+    return 'certeza_baixa' if @jev.certeza < Crm::Subjects::CERTEZA_MINIMA
+    return 'pedido_novo' if opcao.tipo == :novo
+    return 'varios' if opcao.tipo == :varios
+
+    'nome_do_atual' if nome_do_atual?(opcao)
   end
 
   # O Jev sozinho não deixa o primeiro pedido sem nome (#1918): quem escolhe entre continuar o card sem nome e dar nome
@@ -279,7 +288,13 @@ class Crm::Subjects::Identifier
       return @decisao.update_columns(@retrato.merge('updated_at' => Time.current)) # rubocop:disable Rails/SkipsModelValidations
     end
 
-    padrao = { confidence: @jev&.certeza, decided_by: ('jev' if @jev) }
+    padrao = { confidence: @jev&.certeza, decided_by: ('jev' if @jev), **medicao }
     @decisao.update!(padrao.merge(atributos))
+  end
+
+  # O que o Jev respondeu e por que o modelo maior foi chamado (#2018): só registro, para medir o revisor. Nulos antes de
+  # o Jev responder; review_reason também quando ele decide sozinho.
+  def medicao
+    { jev_answer: @jev_answer, review_reason: @review_reason }
   end
 end
