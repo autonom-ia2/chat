@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_260000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_990100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3817,6 +3817,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_260000) do
     t.index ["user_id"], name: "index_portals_members_on_user_id"
   end
 
+  create_table "prova_lote_2029", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "nome"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_prova_lote_2029_on_account_id"
+    t.index ["nome"], name: "index_prova_lote_2029_on_nome"
+  end
+
   create_table "related_categories", force: :cascade do |t|
     t.bigint "category_id"
     t.bigint "related_category_id"
@@ -4520,6 +4529,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_260000) do
   add_foreign_key "mcp_integration_tokens", "accounts"
   add_foreign_key "mcp_integration_tokens", "custom_roles", on_delete: :nullify
   add_foreign_key "mcp_integration_tokens", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "prova_lote_2029", "accounts"
   add_foreign_key "user_sessions", "users"
   add_foreign_key "whatsapp_api_campaign_recipients", "accounts"
   add_foreign_key "whatsapp_api_campaign_recipients", "contacts", on_delete: :cascade
