@@ -167,6 +167,27 @@
       "TEXTO": "Já passaram 24 horas desde a última mensagem do cliente. Para voltar a falar com ele, mande um modelo.",
       "ESCOLHER_MODELO": "Escolher modelo"
     },
+    "FICAR": {
+      "FICA_COM_VOCE": "Ao enviar, a conversa fica com você",
+      "FICA_COM_VOCE_SAI_DE": "Ao enviar, a conversa sai de {nome} e fica com você",
+      "CONTINUA_SEM_NINGUEM": "Ao enviar, a conversa continua sem ninguém",
+      "CONTINUA_COM": "Ao enviar, a conversa continua com {nome}",
+      "NAO_FICAR": "Não ficar",
+      "FICAR_COM_ELA": "Ficar com ela",
+      "DICA_LIGADA": "Clique para não ficar com a conversa",
+      "DICA_DESLIGADA": "Clique para ficar com a conversa",
+      "ENVIAR_E_FICAR": "Enviar e ficar com a conversa",
+      "SO_ENVIAR": "Só enviar, sem ficar com a conversa",
+      "MAIS_OPCOES_DE_ENVIO": "Mais opções de envio",
+      "FALHOU": "A mensagem foi enviada, mas não deu para a conversa ficar com você. Tente de novo."
+    },
+    "DEVOLVER": {
+      "PARA": "Devolver para {nome}",
+      "DICA": "{nome} volta a atender esta conversa",
+      "DEVOLVIDA": "Conversa devolvida para {nome}",
+      "FALHOU": "Não deu para devolver a conversa. Tente de novo.",
+      "VEIO_DE": "Esta conversa veio de {nome}"
+    },
     "CAIXA": {
       "DIGITE": "Digite uma mensagem",
       "SO_MODELO": "Escolha um modelo para responder"

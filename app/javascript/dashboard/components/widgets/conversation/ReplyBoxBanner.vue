@@ -8,17 +8,8 @@ import wootConstants from 'dashboard/constants/globals';
 
 import Banner from 'dashboard/components/ui/Banner.vue';
 
-const props = defineProps({
-  message: {
-    type: String,
-    default: '',
-  },
-  isOnPrivateNote: {
-    type: Boolean,
-    default: false,
-  },
-});
-
+// #2067: a faixa "Esta conversa não está atribuída a você… Atribuir a mim" saiu. Quem
+// escreve fica com a conversa ao enviar (FicarComAConversa, na caixa de resposta).
 const store = useStore();
 const { t } = useI18n();
 
@@ -43,18 +34,10 @@ const assignedAgent = computed({
   },
 });
 
-const hasMessage = computed(() => props.message !== '');
-const isUserTyping = computed(() => hasMessage.value && !props.isOnPrivateNote);
 const isUnassigned = computed(() => !assignedAgent.value);
 const isAssignedToOtherAgent = computed(
   () => assignedAgent.value?.id !== currentUser.value?.id
 );
-
-const showSelfAssignBanner = computed(() => {
-  return (
-    isUserTyping.value && (isUnassigned.value || isAssignedToOtherAgent.value)
-  );
-});
 
 const isPendingConversation = computed(
   () => currentChat.value?.status === wootConstants.STATUS_TYPE.PENDING
@@ -85,15 +68,6 @@ const needsAssignmentToCurrentUser = computed(() => {
   return isUnassigned.value || isAssignedToOtherAgent.value;
 });
 
-const onClickSelfAssign = async () => {
-  try {
-    await selfAssignConversation();
-    useAlert(t('CONVERSATION.CHANGE_AGENT'));
-  } catch (error) {
-    useAlert(t('CONVERSATION.CHANGE_AGENT_FAILED'));
-  }
-};
-
 const reopenConversation = async () => {
   await store.dispatch('toggleStatus', {
     conversationId: currentChat.value?.id,
@@ -120,16 +94,6 @@ const onClickBotHandoff = async () => {
 </script>
 
 <template>
-  <Banner
-    v-if="showSelfAssignBanner && !showBotHandoffBanner"
-    action-button-variant="ghost"
-    color-scheme="secondary"
-    class="mx-2 mb-2 rounded-lg !py-2"
-    :banner-message="$t('CONVERSATION.NOT_ASSIGNED_TO_YOU')"
-    has-action-button
-    :action-button-label="$t('CONVERSATION.ASSIGN_TO_ME')"
-    @primary-action="onClickSelfAssign"
-  />
   <Banner
     v-if="showBotHandoffBanner"
     action-button-variant="ghost"
