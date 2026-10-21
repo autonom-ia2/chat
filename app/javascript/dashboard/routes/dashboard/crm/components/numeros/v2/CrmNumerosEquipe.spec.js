@@ -2,6 +2,8 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { ref } from 'vue';
 import CrmNumerosAPI from 'dashboard/api/crmNumeros';
 import CrmNumerosEquipe from './CrmNumerosEquipe.vue';
+import ptBR from 'dashboard/i18n/locale/pt_BR/crm.json';
+import en from 'dashboard/i18n/locale/en/crm.json';
 
 // A visão "Equipe" (#1992, F5 do #1871) na ordem do protótipo: topo, próximo
 // passo, Vendendo, Atendendo, "Quem precisa de ajuda" e "Quem cuidou"
@@ -201,7 +203,19 @@ describe('CrmNumerosEquipe', () => {
     });
     const wrapper = await montar(resposta);
 
-    expect(wrapper.find('[data-custo-ia]').text()).toContain('R$');
+    const custo = wrapper.find('[data-custo-ia]').text();
+    expect(custo).toContain('R$');
+    expect(custo).toContain('CUIDOU.IA_CUSTO_AGENTES ');
+  });
+
+  it('o rótulo do custo diz "custo dos agentes de IA" (en e pt_BR)', () => {
+    const cuidou = idioma => idioma.CRM_NUMEROS_V2.CUIDOU;
+    const comeca = (idioma, inicio) =>
+      ['IA_CUSTO_AGENTES', 'IA_CUSTO_AGENTES_SEM_CONVERSA'].every(chave =>
+        cuidou(idioma)[chave].startsWith(inicio)
+      );
+    expect(comeca(ptBR, 'Custo dos agentes de IA:')).toBe(true);
+    expect(comeca(en, 'AI agents cost:')).toBe(true);
   });
 
   it('modo leitura: avisa e não mostra o próximo passo', async () => {

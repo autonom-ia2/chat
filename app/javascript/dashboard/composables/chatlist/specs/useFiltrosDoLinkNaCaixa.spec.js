@@ -2,6 +2,7 @@ import { defineComponent, h, ref, nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import {
+  abaDoFiltroDoLink,
   filtroDoLinkDaLista,
   filtrosDoEndereco,
   useFiltrosDoLinkNaCaixa,
@@ -338,5 +339,28 @@ describe('useReleituraPeriodica', () => {
     expect(reler).toHaveBeenCalledTimes(1);
     wrapper.unmount();
     visibilidade.mockRestore();
+  });
+});
+
+// #1999: o número do Números conta todas as conversas que a pessoa enxerga; a caixa abre em "Todas" para bater.
+describe('abaDoFiltroDoLink', () => {
+  const ABAS = ['me', 'unassigned', 'all'];
+
+  it('com o filtro do link, abre em Todas', () => {
+    expect(
+      abaDoFiltroDoLink({ daIa: true, esperandoMin: 30 }, ABAS, 'all')
+    ).toBe('all');
+    expect(
+      abaDoFiltroDoLink({ daIa: false, esperandoMin: 30 }, ABAS, 'all')
+    ).toBe('all');
+  });
+
+  it('sem o filtro do link, ou sem a aba Todas, vale a aba de sempre', () => {
+    expect(
+      abaDoFiltroDoLink({ daIa: false, esperandoMin: null }, ABAS, 'all')
+    ).toBeNull();
+    expect(
+      abaDoFiltroDoLink({ daIa: true, esperandoMin: 30 }, ['me'], 'all')
+    ).toBeNull();
   });
 });

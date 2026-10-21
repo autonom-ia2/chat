@@ -96,8 +96,10 @@ const custoDaIa = custo => {
   const emDinheiro = valor =>
     formatarDinheiro(valor, { locale: locale(), moeda: custo.moeda });
   return custo.porConversa === null
-    ? t(`${P}.CUIDOU.IA_CUSTO_SEM_CONVERSA`, { valor: emDinheiro(custo.valor) })
-    : t(`${P}.CUIDOU.IA_CUSTO`, {
+    ? t(`${P}.CUIDOU.IA_CUSTO_AGENTES_SEM_CONVERSA`, {
+        valor: emDinheiro(custo.valor),
+      })
+    : t(`${P}.CUIDOU.IA_CUSTO_AGENTES`, {
         valor: emDinheiro(custo.valor),
         porConversa: emDinheiro(custo.porConversa),
       });

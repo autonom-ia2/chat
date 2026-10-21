@@ -6128,8 +6128,8 @@
       "IA_ATENDE": "resolveu {resolveu} sozinha · passou {passou} para a equipe",
       "IA_VER": "Ver o agente",
       "IA_VER_TODOS": "Ver os agentes",
-      "IA_CUSTO": "Custou {valor} este mês, cerca de {porConversa} por conversa.",
-      "IA_CUSTO_SEM_CONVERSA": "Custou {valor} este mês.",
+      "IA_CUSTO_AGENTES": "Custo dos agentes de IA: {valor} este mês, cerca de {porConversa} por conversa.",
+      "IA_CUSTO_AGENTES_SEM_CONVERSA": "Custo dos agentes de IA: {valor} este mês.",
       "IA_CUSTO_FALTA": "Estimado: o consumo da IA não separa os agentes.",
       "RODAPE": "Contamos só os clientes que entraram no funil."
     }

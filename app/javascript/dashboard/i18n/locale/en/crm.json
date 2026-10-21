@@ -6127,8 +6127,8 @@
       "IA_ATENDE": "resolved {resolveu} on its own · handed {passou} to the team",
       "IA_VER": "See the agent",
       "IA_VER_TODOS": "See the agents",
-      "IA_CUSTO": "It cost {valor} this month, about {porConversa} per conversation.",
-      "IA_CUSTO_SEM_CONVERSA": "It cost {valor} this month.",
+      "IA_CUSTO_AGENTES": "AI agents cost: {valor} this month, about {porConversa} per conversation.",
+      "IA_CUSTO_AGENTES_SEM_CONVERSA": "AI agents cost: {valor} this month.",
       "IA_CUSTO_FALTA": "Estimate: AI usage is not split by agent.",
       "RODAPE": "We only count customers who entered the pipeline."
     }

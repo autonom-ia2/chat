@@ -63,6 +63,12 @@ export const filtroDoLinkDaLista = ({
   return { daIa: daIa || undefined, esperandoMin: esperandoMin ?? undefined };
 };
 
+// A aba em que a caixa abre com o filtro do link (#1999): o Números conta todas as conversas que a pessoa enxerga, então
+// a caixa abre em "Todas", quando a pessoa tem essa aba, para o número da lista bater com o do Números. Sem o filtro do
+// link (ou sem "Todas"), null: vale a aba de sempre.
+export const abaDoFiltroDoLink = ({ daIa, esperandoMin }, abas, todas) =>
+  (daIa || esperandoMin) && abas.includes(todas) ? todas : null;
+
 export const naCaixa = destino =>
   LISTAS.includes(destino?.name) || CONVERSAS.includes(destino?.name);
 

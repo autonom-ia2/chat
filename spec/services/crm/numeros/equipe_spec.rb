@@ -160,13 +160,34 @@ RSpec.describe Crm::Numeros::Equipe do
     expect(equipe(chave: '2026-09')[:ajuda]).to eq([])
   end
 
-  it 'a lista de ajuda mostra até 3 pessoas, e a frase do topo conta todas' do
-    [ana, bruno, carla, admin].each { |pessoa| 5.times { card(sale, owner: pessoa, next_follow_up_at: 1.day.ago) } }
+  it 'a lista de ajuda mostra até 3 pessoas, de quem tem mais atraso para quem tem menos, e a frase conta todas' do
+    { ana => 5, bruno => 7, carla => 7, admin => 8 }.each do |pessoa, n|
+      n.times { card(sale, owner: pessoa, next_follow_up_at: 1.day.ago) }
+    end
 
     result = equipe(pipelines: [sale])
 
-    expect(result[:ajuda].map { |item| item[:pessoa][:nome] }).to eq(%w[Ana Bruno Carla])
+    expect(result[:ajuda].map { |item| [item[:pessoa][:nome], item[:n]] }).to eq([['Marcos', 8], ['Bruno', 7], ['Carla', 7]])
     expect(result[:topo][:frase]).to include(tipo: 'equipe_vendas', ajuda: 4)
+  end
+
+  it 'a ajuda junta retornos e casos parados numa ordem só, pelo tamanho do atraso' do
+    5.times { card(sale, owner: ana, next_follow_up_at: 1.day.ago) }
+    6.times { card(service, owner: carla, last_message_at: 10.days.ago, entered_stage_at: 10.days.ago) }
+
+    expect(equipe[:ajuda].map { |item| [item[:tipo], item[:pessoa][:nome]] }).to eq([%w[casos_parados Carla], %w[retornos Ana]])
+  end
+
+  # A régua da linha (#1999): dono de card aberto ou movimento no mês. Guarda o encaixe com o Crm::Numeros::Papel (#1997),
+  # que sem movimento daria "vende" a quem só enxerga o funil.
+  it 'quem só enxerga o funil, sem card aberto nem movimento no mês, não tem linha' do
+    inbox
+    service
+    close(card(sale, owner: ana, value_cents: 10_000))
+    card(service, owner: bruno)
+
+    expect(equipe[:quemCuidou][:linhas].map { |linha| [linha[:nome], linha.key?(:venda) ? :venda : :atende] })
+      .to eq([['Ana', :venda], ['Bruno', :atende]])
   end
 
   it 'próximo passo: venda do mês sem responsável vira a faixa amarela; em modo leitura, nada de próximo nem botão' do

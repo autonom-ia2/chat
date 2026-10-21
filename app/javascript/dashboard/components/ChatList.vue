@@ -12,6 +12,7 @@ import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
 import {
   filtroDoLinkDaLista,
+  abaDoFiltroDoLink,
   useFiltrosDoLinkNaCaixa,
   useReleituraPeriodica,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
@@ -327,6 +328,14 @@ const filtroDoLink = computed(() =>
     filtroAvancado: hasAppliedFiltersOrActiveFolders.value,
   })
 );
+// #1999: com o filtro do link, a caixa abre em "Todas" (se a pessoa tem), para bater com o número do Números.
+function abaAoAbrir() {
+  const abas = assigneeTabItems.value.map(item => item.key);
+  const todas = wootConstants.ASSIGNEE_TYPE.ALL;
+  return (
+    abaDoFiltroDoLink(filtroDoLink.value, abas, todas) || defaultAssigneeTab()
+  );
+}
 // A conversa aberta fica na lista filtrada enquanto estiver aberta.
 const conversaAberta = useMapGetter('getSelectedChat');
 // Saindo da caixa, nenhuma releitura agendada roda por baixo.
@@ -936,7 +945,7 @@ useEmitter('fetch_conversation_stats', () => {
 });
 
 onMounted(() => {
-  activeAssigneeTab.value = defaultAssigneeTab();
+  activeAssigneeTab.value = abaAoAbrir();
   store.dispatch('setChatListFilters', conversationFilters.value);
   setFiltersFromUISettings();
   store.dispatch('setChatStatusFilter', activeStatus.value);

@@ -4,6 +4,8 @@
 #
 # "Precisa de ajuda" é quem acumulou retornos atrasados (Vender) ou casos parados há 7 dias (Atender) no funil principal,
 # a partir de LIMITE_AJUDA, porque é isso que o "Abrir os retornos de Ana" abre. Mostra o motivo e a ação, nunca a posição.
+# A ordem é de quem tem mais atraso (retornos atrasados ou casos parados) para quem tem menos, com desempate pelo nome:
+# os MAX_AJUDA que a lista mostra são os que mais precisam.
 class Crm::Numeros::PessoasDaEquipe
   LIMITE_AJUDA = 5
   MAX_AJUDA = 3
@@ -34,13 +36,13 @@ class Crm::Numeros::PessoasDaEquipe
     no_ritmo.sort_by { |linha| linha[:voce] ? 1 : 0 }.map { |linha| linha[:voce] ? { voce: true } : { nome: linha[:nome] } }
   end
 
-  # A lista mostra até MAX_AJUDA; a frase do topo conta todos (precisam_de_ajuda).
+  # A lista mostra até MAX_AJUDA, de quem tem mais atraso para quem tem menos; a frase do topo conta todos.
   def ajuda
     precisam_de_ajuda.first(MAX_AJUDA)
   end
 
   def precisam_de_ajuda
-    @precisam_de_ajuda ||= (ajuda_de_venda + ajuda_de_atendimento).sort_by { |item| item[:pessoa][:nome].to_s.downcase }
+    @precisam_de_ajuda ||= (ajuda_de_venda + ajuda_de_atendimento).sort_by { |item| [-item[:n], item[:pessoa][:nome].to_s.downcase] }
   end
 
   private
@@ -64,13 +66,24 @@ class Crm::Numeros::PessoasDaEquipe
     @candidatos ||= (@credito.keys + abertos_de(:venda).to_a + abertos_de(:atende).to_a + recebidos.keys).compact.uniq
   end
 
-  # O papel de cada pessoa (vende / atende) é a mesma régua do "Só eu". Encaixe com a F4 (#1997): depois do merge dela,
-  # este método vira `Crm::Numeros::Papel.de(vendeu:, atendeu:) { tipos dos funis que a pessoa enxerga }`, sem regra
-  # própria aqui. Até lá só a parte "pelo que a pessoa fez" vale; quem não fez nada no mês não tem linha.
+  # O papel de cada pessoa (vende / atende) é a mesma régua do "Só eu", só que a Equipe mostra apenas quem é dono de
+  # algum card aberto ou teve movimento no mês: quem só enxerga o funil não tem linha (decisão do Rodrigo no #1999).
+  # Encaixe com a F4 (#1997): depois do merge dela, a última linha vira `Crm::Numeros::Papel.de(vendeu:, atendeu:)`.
+  # O retorno antecipado fica, porque sem movimento o Papel cairia nos funis visíveis.
   def papeis_de(id)
-    vendeu = total(id)[:vendas].positive? || abertos_de(:venda).include?(id) || recebidos.key?(id)
-    atendeu = total(id)[:resolvidos].positive? || abertos_de(:atende).include?(id)
+    vendeu = vendeu?(id)
+    atendeu = atendeu?(id)
+    return [] unless vendeu || atendeu
+
     [(:venda if vendeu), (:atende if atendeu)].compact
+  end
+
+  def vendeu?(id)
+    total(id)[:vendas].positive? || abertos_de(:venda).include?(id) || recebidos.key?(id)
+  end
+
+  def atendeu?(id)
+    total(id)[:resolvidos].positive? || abertos_de(:atende).include?(id)
   end
 
   def abertos_de(tipo)
