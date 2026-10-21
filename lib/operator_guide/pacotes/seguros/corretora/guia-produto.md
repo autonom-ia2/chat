@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (233 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (234 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -597,7 +597,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
 - pre_requisitos: Números por papel ligado na conta (flag crm_numeros_lentes); ao menos um funil.
 - passos: Abra Números; leia o topo (o seu mês até agora: seguros fechados e valor, ou casos resolvidos); use o botão do topo para abrir a sua lista (retornos atrasados, senão cotações paradas, senão os seus cards); veja o próximo passo, os blocos Vendendo e Atendendo, **A IA te ajudou** e a barra da equipe; troque de mês pelas setas; **Como contamos** explica as regras.
-- gotchas: o papel vem do tipo do funil (Vender ou Atender) dos seus cards; a venda conta para quem era o Responsável quando ela foi fechada, não para quem marcou o fechamento; vendas antigas, de antes desse registro, contam pelo Responsável atual e a tela avisa; a barra da equipe mostra só a porcentagem da meta, sem nomes nem valores; a meta por pessoa ainda não existe, por isso o topo mostra só o mês até agora; em Números, o atendente sem função não vê mais o painel da equipe (valor e carga dos colegas) nem o gasto da IA; no Kanban e na Lista ele ainda vê os cards dos colegas com o valor, o que será resolvido no #1939; o mês é o do fuso da conta.
+- gotchas: o papel vem do tipo do funil (Vender ou Atender) dos seus cards; a venda conta para quem era o Responsável quando ela foi fechada, não para quem marcou o fechamento; vendas antigas, de antes desse registro, contam pelo Responsável atual e a tela avisa; a barra da equipe mostra só a porcentagem da meta, sem nomes nem valores; com as metas por pessoa ligadas na conta (flag crm_metas), o topo mostra quanto falta para a **sua** meta (nunca a dos colegas); sem meta definida, mostra só o mês até agora; em Números, o atendente sem função não vê mais o painel da equipe (valor e carga dos colegas) nem o gasto da IA; no Kanban e na Lista ele ainda vê os cards dos colegas com o valor, o que será resolvido no #1939; o mês é o do fuso da conta.
+- nav_target: `crm_dashboard_index`
+
+### Definir as metas do mês de cada pessoa
+- intent: "Como defino a meta de cada vendedor?"; "Onde coloco a meta do mês?"; "Como repito as metas do mês passado?"; "Por que o vendedor não vê a meta dos colegas?"; "Quem pode mudar as metas?"
+- onde_fica: Acompanhar > CRM > aba Números. Em **Só eu**, no topo, **Metas de <mês>**; em **Equipe**, o botão **Metas de <mês>** ao lado do seletor. Abre a gaveta **Metas do mês**.
+- rota: `crm_dashboard_index` - `/app/accounts/:accountId/crm/dashboard`
+- gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
+- pre_requisitos: Números por papel (flag crm_numeros_lentes) e Metas do mês por pessoa (flag crm_metas) ligados na conta; ao menos um funil de Vender; ser administrador ou ter uma função com **Ver e definir as metas do mês** (ou Administrador do CRM).
+- passos: Abra Números; clique em **Metas de <mês>**; com mais de um funil de Vender, escolha o funil no alto; ajuste a meta do funil, se quiser; em cada pessoa, digite a meta em dinheiro ou clique em **Usar a sugestão** (a média do que ela fechou nos 3 meses anteriores); ou use **Repetir <mês anterior>** ou **Dividir igualmente**, que só preenchem os campos; clique em **Salvar as metas**.
+- gotchas: a lista de cada funil mostra quem vende (a mesma régua do Só eu: vendeu no mês, tem card aberto em funil de Vender ou, sem card, enxerga funil de Vender) e quem já tem meta nele; quem só atende não aparece; as metas valem para o mês de hoje, no fuso da conta; meses fechados não mudam; campo vazio (ou zero) é sem meta; use só números, sem pontos; a meta fica na moeda do funil; a meta do funil não precisa ser a soma das pessoas, e a gaveta avisa quando é diferente; a venda conta 100% para quem era o Responsável no fechamento; quem vende vê só a própria meta e a barra da equipe em porcentagem, sem nomes; o atendente sem função nunca define metas; funis de Atender não têm meta.
 - nav_target: `crm_dashboard_index`
 
 ### Usar calendário CRM e agendar reunião

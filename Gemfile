@@ -72,6 +72,8 @@ gem 'aws-actionmailbox-ses', '~> 0'
 ##-- gems for database --#
 gem 'groupdate'
 gem 'pg'
+# Barra migration perigosa (trava longa, remoção sem ignored_columns) e põe lock_timeout em toda migration (#2024).
+gem 'strong_migrations', '~> 2.8'
 gem 'redis'
 gem 'redis-namespace'
 # super fast record imports in bulk

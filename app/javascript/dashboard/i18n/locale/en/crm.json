@@ -6115,7 +6115,8 @@
         "MEUS_CARDS": "Open my cards",
         "MEUS_LEMBRETES": "Open my overdue reminder | Open my {n} overdue reminders",
         "MEUS_CASOS": "Open my cases"
-      }
+      },
+      "METAS_LINK": "{mes} goals"
     },
     "PROXIMO": {
       "TITULO": "Next step",
@@ -6167,6 +6168,32 @@
       "EXEMPLO_2": "Day 8: Bruno takes a day off and hands him to Ana.",
       "EXEMPLO_3": "Day 15: Ana closes. Marcos is the one who marked it closed.",
       "EXEMPLO_RESULTADO": "The R$ 3,000 count for Ana. Bruno and Sofia took part."
+    },
+    "METAS": {
+      "TITULO": "{mes} goals",
+      "DESCRICAO": "Set each person's goal. Each person's screen shows only their own goal.",
+      "FUNIS": "Pipeline",
+      "META_FUNIL": "{funil} pipeline goal",
+      "META_FUNIL_DICA": "The pipeline goal does not need to be the sum of the people.",
+      "META_PESSOA": "{nome}'s goal",
+      "UNIDADE_VALOR": "in {moeda}",
+      "VAZIO": "No goal",
+      "SUGESTAO_VALOR": "Suggestion: {valor}. In the last 3 months, {nome} closed {h1}, {h2} and {h3}.",
+      "SEM_SUGESTAO": "{nome} closed no sales in the last 3 months.",
+      "USAR_SUGESTAO": "Use the suggestion",
+      "ATALHOS": "Shortcuts",
+      "REPETIR": "Repeat {mes}",
+      "DIVIDIR": "Split evenly",
+      "ATALHOS_DICA": "Shortcuts only fill in the fields. Nothing changes until you save.",
+      "SOMA_DIFERENTE": "The people's goals add up to {soma}; the pipeline goal is {meta}.",
+      "SEM_FUNIL": "There is no sales pipeline to set goals for.",
+      "SEM_PESSOAS": "Nobody works in this pipeline yet.",
+      "SALVAR": "Save the goals",
+      "CANCELAR": "Cancel",
+      "SALVO": "{mes} goals saved.",
+      "ERRO_SALVAR": "Could not save the goals. Try again.",
+      "MES_MUDOU": "The month changed. Check the {mes} goals and save again.",
+      "INVALIDO": "Use numbers only, without dots."
     }
   }
 }

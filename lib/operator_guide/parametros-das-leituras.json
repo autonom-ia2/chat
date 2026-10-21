@@ -1395,6 +1395,10 @@
       "until"
     ]
   },
+  "crm/metas": {
+    "controller": "api/v1/accounts/crm/metas#show",
+    "parametros": []
+  },
   "crm/meu_acesso": {
     "controller": "api/v1/accounts/crm/meu_acesso#show",
     "parametros": []
