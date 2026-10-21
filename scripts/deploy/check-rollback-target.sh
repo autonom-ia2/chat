@@ -6,7 +6,7 @@
 set -euo pipefail
 
 instance_sha() {
-  local name run_id sha
+  local name run_id sha tentativa
   name=$(aws ec2 describe-instances --instance-ids "$1" \
     --query "Reservations[0].Instances[0].Tags[?Key=='Name'].Value | [0]" --output text)
   run_id="${name##*-}"

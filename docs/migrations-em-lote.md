@@ -90,10 +90,13 @@ passo não reverte nada sozinho, só avisa no `::error` qual coluna ou tabela a 
 Esse passo roda em todo deploy e é fechado por padrão: se não der para saber o commit da blue (tag `Name` da
 instância ou API do GitHub, com três tentativas), o deploy para ali, antes de existir green, e é só disparar de novo.
 É o mesmo pré-requisito do rollback (`check-rollback-target.sh`). Se a tag continuar sem dizer, o deploy manual
-aceita `blue_sha` (o SHA completo do commit que a blue roda). Ele só vale quando a tag não diz o commit: com a tag
-respondendo, um `blue_sha` diferente para o deploy. E precisa ser um commit anterior ao que sobe, na história dele
-(a API de compare responde `ahead`); o próprio commit que sobe, um de fork ou de outra branch param o deploy. A
-comparação roda igual, e não existe jeito de pular o passo. O Ruby do passo vem de `ruby/setup-ruby` fixado no SHA e sem bundle, porque o
+aceita `blue_sha` (o SHA completo do commit que a blue roda). Ele só vale quando não dá para ler o commit pela tag
+(tag sem o run, ou AWS ou GitHub sem responder). Com a tag respondendo, um `blue_sha` diferente dela faz o deploy
+parar. Sem a tag, ele precisa ser um commit anterior ao que sobe, na história dele (a API de compare responde
+`ahead`): o próprio commit que sobe, um de fork ou de outra branch param o deploy. A comparação roda igual, e não
+existe jeito de pular o passo. **O que a checagem não pega:** um commit da história mais antigo que o da blue. A
+conferência olharia um schema velho e poderia deixar passar uma remoção que a blue ainda usa. Copie o SHA do run de
+deploy que criou a blue (Actions), nunca de memória. O Ruby do passo vem de `ruby/setup-ruby` fixado no SHA e sem bundle, porque o
 job tem credencial de produção. Lido sem banco, o `schema.rb` mostra tabelas,
 colunas, índices, restrições e chaves; funções e gatilhos (os `execute` do hairtrigger) entram pelo texto do SQL e,
 como no job, só geram aviso.
