@@ -62,7 +62,12 @@ Fora do i18n, com as mesmas camadas (#1802, lote 6; detalhes em
 - Central de Ajuda: `lib/central_de_ajuda_pacotes/<camada>/<cap>/<id>-<slug>.md`,
   só as seções que mudam; a troca é feita na leitura da conta.
 - Agentes: `config/agentes_por_pacote/seguros/<tipo>/agentes.md`, o bloco de
-  segmento (`Autonomia::Segmentos::Bloco`).
+  segmento (`Autonomia::Segmentos::Bloco`). Ao lado dele, `versoes.yml` (a data em
+  que cada versão do texto entrou no ar: quem edita o `agentes.md` registra a
+  versão nova com a data prevista do deploy) e `perguntas.yml` (as 3 perguntas,
+  em `pt_BR` e `en`, do antes e depois de "Atualizar com a nova base", #1429 F3).
+  Mudar o `agentes.md` muda a versão, e o spec do bloco falha até a versão nova
+  ter data.
 
 Essas camadas trocam o campo ou a seção inteira: mudança no texto geral de um
 trecho que a camada sobrepõe precisa ser repetida nela.

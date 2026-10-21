@@ -1433,7 +1433,8 @@
             "KB_REFRESH": "Updated from the files and websites",
             "MANUAL_EDIT": "Written by you",
             "ROLLBACK": "Went back to a previous way",
-            "ROLLBACK_DE": "Went back to the way from {quando}"
+            "ROLLBACK_DE": "Went back to the way from {quando}",
+            "BASE_DE_SEGUROS": "Insurance base updated"
           },
           "VOLTAR_ESTA": "Go back to this one",
           "VOLTANDO": "Going back…",
@@ -1445,6 +1446,47 @@
           "ERRO_GARANTIA": "Nothing changed.",
           "LER_ERRO": "Could not show the previous ways right now.",
           "LER_ERRO_GARANTIA": "Nothing changed."
+        },
+        "BASE": {
+          "TITULO": "Insurance base",
+          "ROTULO": "{tipo} · from {data}",
+          "SEM_BASE": "{nome} still works without an insurance base.",
+          "EXPLICA": "It is what {nome} knows about the insurance business. It only changes when someone updates it.",
+          "NOVA": "New base available: {base}",
+          "NOVA_CONTA_MUDOU": "The account is now {tipo}. New base available: {base}",
+          "TIPOS": {
+            "CORRETORA": "Broker",
+            "SEGURADORA": "Insurer",
+            "INSURTECH": "Insurtech",
+            "SAUDE_BENEFICIOS": "Health and benefits",
+            "OUTRO": "Insurance"
+          },
+          "ATUALIZAR": "Update with the new base",
+          "ATUALIZADA": "Base updated. If you do not like the answers, you can undo it.",
+          "DESFAZER": "Undo",
+          "DESFAZENDO": "Undoing…",
+          "DESFAZER_ERRO": "Could not undo right now. Nothing changed.",
+          "FEITO": "Done. {nome} uses the new base in the next conversations.",
+          "DESFEITO": "Done. {nome} is back to the previous base.",
+          "GAVETA": {
+            "TITULO": "Update with the new base",
+            "INTRO": "See how {nome} answers today and how it will answer with the new base. Same questions, answered right now.",
+            "SO_A_BASE": "Only the insurance base changes. The instructions, the way of talking, the material and the tools of {nome} stay the same.",
+            "COMPARANDO": "Asking {nome} the same questions with each base…",
+            "ERRO_COMPARAR": "Could not show the answers right now.",
+            "NADA_MUDOU": "Nothing changed.",
+            "LISTA": "Questions answered with today’s base and with the new one",
+            "CLIENTE_PERGUNTA": "Customer question:",
+            "HOJE": "Today ({base})",
+            "NOVA": "With the new base ({base})",
+            "SEM_BASE": "no base",
+            "PASSA_EQUIPE": "Would hand the conversation over to the team.",
+            "PRONTAS": "The answers are ready. Compare them before updating {nome}.",
+            "NOTA": "After updating, if you do not like it, use Undo on the page of {nome}.",
+            "AGORA_NAO": "Not now",
+            "ATUALIZANDO": "Updating…",
+            "ERRO_ATUALIZAR": "Could not update right now. Nothing changed."
+          }
         },
         "INSTRUCOES": {
           "MENU": "Write the instructions in your own words",

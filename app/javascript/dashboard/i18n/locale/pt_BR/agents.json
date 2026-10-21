@@ -1433,7 +1433,8 @@
             "KB_REFRESH": "Atualizado pelos arquivos e sites",
             "MANUAL_EDIT": "Escrito por você",
             "ROLLBACK": "Voltou a um jeito anterior",
-            "ROLLBACK_DE": "Voltou ao jeito de {quando}"
+            "ROLLBACK_DE": "Voltou ao jeito de {quando}",
+            "BASE_DE_SEGUROS": "Base de seguros atualizada"
           },
           "VOLTAR_ESTA": "Voltar para esta",
           "VOLTANDO": "Voltando…",
@@ -1445,6 +1446,47 @@
           "ERRO_GARANTIA": "Nada mudou.",
           "LER_ERRO": "Não deu para mostrar os jeitos anteriores agora.",
           "LER_ERRO_GARANTIA": "Nada mudou."
+        },
+        "BASE": {
+          "TITULO": "Base de seguros",
+          "ROTULO": "{tipo} · de {data}",
+          "SEM_BASE": "{nome} ainda trabalha sem base de seguros.",
+          "EXPLICA": "É o que {nome} sabe sobre o ramo de seguros. Só muda quando alguém atualiza.",
+          "NOVA": "Base nova disponível: {base}",
+          "NOVA_CONTA_MUDOU": "A conta agora é {tipo}. Base nova disponível: {base}",
+          "TIPOS": {
+            "CORRETORA": "Corretora",
+            "SEGURADORA": "Seguradora",
+            "INSURTECH": "Insurtech",
+            "SAUDE_BENEFICIOS": "Saúde e benefícios",
+            "OUTRO": "Seguros"
+          },
+          "ATUALIZAR": "Atualizar com a nova base",
+          "ATUALIZADA": "Base atualizada. Se não gostar das respostas, dá para desfazer.",
+          "DESFAZER": "Desfazer",
+          "DESFAZENDO": "Desfazendo…",
+          "DESFAZER_ERRO": "Não deu para desfazer agora. Nada mudou.",
+          "FEITO": "Pronto. {nome} já usa a nova base nas próximas conversas.",
+          "DESFEITO": "Pronto. {nome} voltou para a base de antes.",
+          "GAVETA": {
+            "TITULO": "Atualizar com a nova base",
+            "INTRO": "Veja como {nome} responde hoje e como vai responder com a base nova. São as mesmas perguntas, respondidas agora.",
+            "SO_A_BASE": "Só a base de seguros muda. As instruções, o jeito de falar, o material e as ferramentas de {nome} continuam iguais.",
+            "COMPARANDO": "Fazendo as mesmas perguntas para {nome}, com cada base…",
+            "ERRO_COMPARAR": "Não deu para mostrar as respostas agora.",
+            "NADA_MUDOU": "Nada mudou.",
+            "LISTA": "Perguntas respondidas com a base de hoje e com a nova",
+            "CLIENTE_PERGUNTA": "Pergunta do cliente:",
+            "HOJE": "Hoje ({base})",
+            "NOVA": "Com a base nova ({base})",
+            "SEM_BASE": "sem base",
+            "PASSA_EQUIPE": "Passaria a conversa para a equipe.",
+            "PRONTAS": "As respostas chegaram. Compare antes de atualizar {nome}.",
+            "NOTA": "Depois de atualizar, se não gostar, use Desfazer na página de {nome}.",
+            "AGORA_NAO": "Agora não",
+            "ATUALIZANDO": "Atualizando…",
+            "ERRO_ATUALIZAR": "Não deu para atualizar agora. Nada mudou."
+          }
         },
         "INSTRUCOES": {
           "MENU": "Escrever as instruções com suas palavras",
