@@ -1720,10 +1720,19 @@ def query():
 if op == ('ec2', 'describe-instances'):
     print('2026-10-21T10:00:00+00:00')
 elif op == ('elbv2', 'describe-target-health'):
-    print(json.dumps({{'TargetHealthDescriptions': [{{'Target': {{'Id': 'i-green', 'Port': 3000}},
-        'TargetHealth': {{'State': 'unhealthy', 'Reason': 'Target.Timeout', 'Description': 'Request timed out'}}}}]}}))
+    arn = 'arn:aws:elasticloadbalancing:us-east-1:354307071110:targetgroup/cw-hub2-green-12/abc123def'
+    full = {{'TargetHealthDescriptions': [{{'Target': {{'Id': 'i-green', 'Port': 3000}}, 'TargetGroupArn': arn,
+        'TargetHealth': {{'State': 'unhealthy', 'Reason': 'Target.Timeout', 'Description': 'Request timed out'}}}}]}}
+    if query():
+        assert query() == ('TargetHealthDescriptions[].{{Id:Target.Id,Port:Target.Port,State:TargetHealth.State,'
+                           'Reason:TargetHealth.Reason,Description:TargetHealth.Description}}'), query()
+        print(json.dumps([{{'Id': 'i-green', 'Port': 3000, 'State': 'unhealthy', 'Reason': 'Target.Timeout',
+                            'Description': 'Request timed out'}}]))
+    else:
+        print(json.dumps(full))
 elif op == ('ec2', 'describe-instance-status'):
-    print('An error occurred (UnauthorizedOperation) when calling the DescribeInstanceStatus operation', file=sys.stderr)
+    print('An error occurred (UnauthorizedOperation) when calling the DescribeInstanceStatus operation: User: '
+          'arn:aws:sts::354307071110:assumed-role/chatwoot-x-prod-deploy/GitHubActions is not authorized', file=sys.stderr)
     sys.exit(254)
 elif op == ('ssm', 'describe-instance-information'):
     print('Online' if {ssm_online!r} else 'None')
@@ -1741,7 +1750,7 @@ elif op == ('ssm', 'get-command-invocation'):
         print('cloud_init_fim_epoch 1792578600')
         print('== saude local')
         print('HTTP 502 em 0.01s')
-        print('chatwoot-web   repo:abc1234   MARCA-ESTRUTURAL-7 Up 3 minutes')
+        print('chatwoot-web   354307071110.dkr.ecr.us-east-1.amazonaws.com/repo:abc1234   MARCA-ESTRUTURAL-7 Up 3 minutes')
         print('SECRET_KEY_BASE=' + secret)
         print('+ 10:00:01 IMAGE_URI=354307071110.dkr.ecr.us-east-1.amazonaws.com/repo:' + secret)
         print('E, ERROR -- : Redis auth failed for redis://default:pw@cache:6379 key ' + secret)
@@ -1842,7 +1851,7 @@ else:
             'Authorization: Bearer <REDACTED>',
             'aws_secret\t<REDACTED> fim',
             'conexao postgres://<REDACTED>@db:5432/prod',
-            'docker pull 354307071110.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod:abc1234 /var/log/cloud-init-output.log',
+            'docker pull chatwoot-autonomia-prod:abc1234 /var/log/cloud-init-output.log',
         ])
 
     def test_failed_critical_step_builds_sanitized_diagnostic_package(self):
@@ -1854,6 +1863,7 @@ else:
         for workflow in WORKFLOWS:
             with self.subTest(stack=workflow.name):
                 env = self.telemetry_env(jobs)
+                env['BLUE_WORKER_STOPPED'] = 'false'  # Register falha antes do "Mark blue worker stop"
                 result, calls = self.run_telemetry_step(workflow, env)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assert_read_only(calls)
@@ -1913,6 +1923,65 @@ else:
                 for line in job_log.splitlines():
                     self.assertTrue(line.startswith(('::warning::Coletando diagnóstico da green i-green: falhou: ',
                                                      'Passos críticos', 'Job falhou')), line)
+
+    @staticmethod
+    def has_account_id(text):
+        digits = ''
+        for char in text + ' ':
+            if char.isdigit():
+                digits += char
+                continue
+            if len(digits) == 12:
+                return True
+            digits = ''
+        return False
+
+    def test_no_account_id_or_arn_reaches_summary_or_artifact(self):
+        # Repositório público: ARN e ID de conta (12 dígitos) não saem, nem do target health, nem do erro de permissão
+        # (assumed-role), nem do registry ECR da imagem no docker ps.
+        jobs = self.deploy_job([
+            ('Register green target group', 'failure', '2026-10-21T10:26:00Z', '2026-10-21T10:36:00Z')])
+        self.assertTrue(self.has_account_id('x 354307071110.dkr'))
+        self.assertFalse(self.has_account_id('epoch 1792578600 i-0123456789abcdef0'))
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                env = self.telemetry_env(jobs)
+                env['BLUE_WORKER_STOPPED'] = 'false'
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                texts, summary, output = self.collected_text(env)
+                public = '\n'.join(texts) + summary + output + result.stdout + result.stderr
+                self.assertNotIn('arn:aws', public)
+                self.assertFalse(self.has_account_id(public), public)
+                self.assertNotIn('TargetGroupArn', public)
+                self.assertIn('repo:abc1234', summary)
+                self.assertIn('Target.Timeout', summary)
+                self.assertIn('UnauthorizedOperation', summary)
+        result = subprocess.run([sys.executable, str(self.TELEMETRY), 'sanitize'], text=True, capture_output=True,
+                                input='"arn:aws:elasticloadbalancing:us-east-1:354307071110:targetgroup/cw-1/abc", conta 140023375763',
+                                timeout=5)
+        self.assertEqual(result.stdout, '"cw-1", conta <CONTA>')
+
+    def test_shift_failure_with_sidekiq_on_green_does_not_wait_for_ssm(self):
+        # Shift falhou: o worker da blue está parado e o Sidekiq roda na green. O comando de logs vai (sem espera); o
+        # estrutural, que espera o SSM, fica de fora para não atrasar a limpeza que religa a blue.
+        jobs = self.deploy_job([
+            ('Shift HTTPS listener to green', 'failure', '2026-10-21T10:28:00Z', '2026-10-21T10:29:00Z')])
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                env = self.telemetry_env(jobs)
+                env['BLUE_WORKER_STOPPED'] = 'true'
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_read_only(calls)
+                self.assertFalse(any(tool == 'aws' and args[:2] == ['ssm', 'get-command-invocation'] for tool, args in calls))
+                sent = [args for tool, args in calls if tool == 'aws' and args[:2] == ['ssm', 'send-command']]
+                self.assertEqual(len(sent), 1)
+                self.assertIn('journalctl', sent[0][sent[0].index('--parameters') + 1])
+                texts, summary, output = self.collected_text(env)
+                self.assertIn('falhou: Shift HTTPS listener to green', texts[0])
+                self.assertIn(f'--command-id {self.LOGS_ID}', summary)
+                self.assertIn('green_boot_done=\n', output)
 
     def test_diagnostics_degrade_without_ssm_or_github_api(self):
         for workflow in WORKFLOWS:
@@ -2054,8 +2123,9 @@ else:
                 self.assertNotIn('configure-aws-credentials', tempos)
                 self.assertNotIn('aws ', tempos)
                 self.assertIn('    permissions:\n      contents: read\n      actions: read\n    steps:\n', tempos)
-                self.assertIn("    if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'failure')\n",
-                              tempos)
+                self.assertIn("    if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'failure')\n"
+                              "    # Falha aqui (checkout, API) nunca pinta de vermelho um deploy que deu certo.\n"
+                              "    continue-on-error: true\n", tempos)
         script = (ROOT / 'scripts/deploy/green-diagnostics.sh').read_text()
         self.assertNotIn('GITHUB_ENV', script)
         self.assertEqual(sorted({line.split('=', 1)[0].split('"')[-1] for line in script.splitlines()

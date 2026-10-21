@@ -25,6 +25,11 @@ TOKEN_CHARS = frozenset(string.ascii_letters + string.digits + '_-')
 BASE64_CHARS = frozenset(string.ascii_letters + string.digits + '+/=')
 # Palavra seguinte a um destes é credencial (cabeçalho Authorization).
 AUTH_SCHEMES = ('bearer', 'basic')
+# Onde um ARN termina dentro de uma palavra (JSON, aspas, vírgula).
+ARN_END_CHARS = frozenset('"\',)]}')
+# ID de conta AWS: 12 dígitos soltos. Repositório público: some do resumo e do artifact.
+ACCOUNT_ID_LEN = 12
+ACCOUNT_CHARS = frozenset(string.ascii_letters + string.digits)
 
 DEPLOY_JOB = 'Deploy Green'
 BLUE_JOB = 'Desligar a blue'
@@ -51,7 +56,32 @@ def is_assignment_name(name):
     return name.isidentifier() and any(char.isalpha() for char in name)
 
 
+def arn_resource_name(arn):
+    """arn:aws:<serviço>:<região>:<conta>:<tipo>/<nome>/... -> <nome>. A conta nunca sai (repositório público)."""
+    resource = arn.split(':', 5)[5] if arn.count(':') >= 5 else ''
+    parts = resource.split('/')
+    return (parts[1] if len(parts) > 1 else parts[0].rpartition(':')[2]) or REDACTED
+
+
+def strip_aws_identifiers(word):
+    """Corta ARN para o nome do recurso e tira o registry ECR (<conta>.dkr.ecr...) da imagem."""
+    start = word.find('arn:aws')
+    if start >= 0:
+        end = start
+        while end < len(word) and word[end] not in ARN_END_CHARS:
+            end += 1
+        return word[:start] + arn_resource_name(word[start:end]) + strip_aws_identifiers(word[end:])
+    registry = word.find('.dkr.ecr.')
+    if registry >= 0 and '/' in word[registry:]:
+        host_start = registry
+        while host_start > 0 and word[host_start - 1] not in ARN_END_CHARS:
+            host_start -= 1
+        return word[:host_start] + word[word.index('/', registry) + 1:]
+    return word
+
+
 def redact_word(word):
+    word = strip_aws_identifiers(word)
     body = word.lstrip(OPENING_QUOTES)
     prefix = word[:len(word) - len(body)]
     name, separator, _ = body.partition('=')
@@ -65,13 +95,13 @@ def redact_word(word):
     return word
 
 
-def redact_runs(text, alphabet, is_secret):
-    """Troca por <REDACTED> cada trecho contínuo de `alphabet` com 32+ caracteres que `is_secret` aprova."""
+def redact_runs(text, alphabet, is_secret, replacement=REDACTED):
+    """Troca por `replacement` cada trecho contínuo de `alphabet` que `is_secret` aprova."""
     out, run = [], []
 
     def flush():
         chunk = ''.join(run)
-        out.append(REDACTED if len(chunk) >= MIN_SECRET_LEN and is_secret(chunk) else chunk)
+        out.append(replacement if chunk and is_secret(chunk) else chunk)
         run.clear()
 
     for char in text:
@@ -84,8 +114,17 @@ def redact_runs(text, alphabet, is_secret):
     return ''.join(out)
 
 
-def mixed_case_with_digit(chunk):
-    return any(c.isupper() for c in chunk) and any(c.islower() for c in chunk) and any(c.isdigit() for c in chunk)
+def long_token(chunk):
+    return len(chunk) >= MIN_SECRET_LEN
+
+
+def long_mixed_case_with_digit(chunk):
+    return long_token(chunk) and any(c.isupper() for c in chunk) and any(c.islower() for c in chunk) and \
+        any(c.isdigit() for c in chunk)
+
+
+def account_id(chunk):
+    return len(chunk) == ACCOUNT_ID_LEN and chunk.isdigit()
 
 
 def redact_words(line):
@@ -115,8 +154,9 @@ def sanitize_line(line):
         line = f'{indent}{stripped[:len(stripped) - len(body)]}{name}={REDACTED}'
     else:
         line = redact_words(line)
-    line = redact_runs(line, TOKEN_CHARS, lambda chunk: True)
-    return redact_runs(line, BASE64_CHARS, mixed_case_with_digit)
+    line = redact_runs(line, TOKEN_CHARS, long_token)
+    line = redact_runs(line, BASE64_CHARS, long_mixed_case_with_digit)
+    return redact_runs(line, ACCOUNT_CHARS, account_id, '<CONTA>')
 
 
 def sanitize(text):

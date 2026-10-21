@@ -19,6 +19,9 @@ DIAG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Quanto o diagnóstico pode segurar a limpeza (ou, no deploy saudável, a trava) esperando o SSM: 2 s por tentativa.
 DIAG_SSM_ATTEMPTS=30
 BOOT_SSM_ATTEMPTS=6
+# Repositório público: só os campos de estado, nunca ARN (que traz o ID da conta). O sanitizador corta o que sobrar.
+DIAG_TARGET_HEALTH_QUERY='TargetHealthDescriptions[].{Id:Target.Id,Port:Target.Port,State:TargetHealth.State,Reason:TargetHealth.Reason,Description:TargetHealth.Description}'
+DIAG_INSTANCE_STATUS_QUERY='InstanceStatuses[].{Id:InstanceId,State:InstanceState.Name,System:SystemStatus.Status,Instance:InstanceStatus.Status,Ebs:AttachedEbsStatus.Status}'
 # Teto por arquivo no Step Summary (o limite do GitHub é 1 MiB por passo).
 DIAG_SUMMARY_BYTES=20000
 
@@ -180,13 +183,15 @@ collect_green_diagnostics() {
   echo "::warning::Coletando diagnóstico da green $GREEN_INSTANCE_ID: $(printf '%s' "$reasons" | tr '\n' ';')"
   printf '%s\n' "$reasons" > "$DIAG_DIR/00-motivo.txt"
   if [ -n "${GREEN_TG_ARN:-}" ]; then
-    diag_capture 10-target-health-green.txt aws elbv2 describe-target-health --target-group-arn "$GREEN_TG_ARN" --output json
+    diag_capture 10-target-health-green.txt aws elbv2 describe-target-health --target-group-arn "$GREEN_TG_ARN" \
+      --query "$DIAG_TARGET_HEALTH_QUERY" --output json
   fi
   if [ -n "${BLUE_TG_ARN:-}" ]; then
-    diag_capture 11-target-health-blue.txt aws elbv2 describe-target-health --target-group-arn "$BLUE_TG_ARN" --output json
+    diag_capture 11-target-health-blue.txt aws elbv2 describe-target-health --target-group-arn "$BLUE_TG_ARN" \
+      --query "$DIAG_TARGET_HEALTH_QUERY" --output json
   fi
   diag_capture 20-ec2-status-checks.txt aws ec2 describe-instance-status --instance-ids "$GREEN_INSTANCE_ID" \
-    --include-all-instances --output json
+    --include-all-instances --query "$DIAG_INSTANCE_STATUS_QUERY" --output json
 
   # Logs primeiro, para rodarem enquanto o comando estrutural espera; a saída deles não é lida.
   if diag_ssm_send_logs; then
@@ -201,11 +206,19 @@ collect_green_diagnostics() {
     echo "Comando de logs não foi enviado (SSM fora do ar ou recusado)." > "$DIAG_DIR/50-logs-no-ssm.txt"
   fi
 
-  diag_ssm_read "$(diag_structural_params)" "$DIAG_SSM_ATTEMPTS" || true
-  boot_done=$(diag_boot_done "$DIAG_SSM_OUTPUT")
-  echo "green_boot_done=$boot_done" >> "$GITHUB_OUTPUT"
-  printf '%s\n' "$DIAG_SSM_OUTPUT" | diag_sanitize > "$DIAG_DIR/40-ssm-green.txt"
-  DIAG_SSM_OUTPUT=""
+  if [ "${JOB_STATUS:-}" != "success" ] && [ "${BLUE_WORKER_STOPPED:-false}" = "true" ]; then
+    # Worker da blue parado e o Sidekiq na green: a limpeza que o religa vem logo depois e não espera o SSM. O
+    # comando de logs acima já foi (sem espera); o estrutural fica de fora.
+    echo "green_boot_done=" >> "$GITHUB_OUTPUT"
+    echo "Worker da blue parado: o comando estrutural não foi esperado, para não atrasar a limpeza." \
+      > "$DIAG_DIR/40-ssm-green.txt"
+  else
+    diag_ssm_read "$(diag_structural_params)" "$DIAG_SSM_ATTEMPTS" || true
+    boot_done=$(diag_boot_done "$DIAG_SSM_OUTPUT")
+    echo "green_boot_done=$boot_done" >> "$GITHUB_OUTPUT"
+    printf '%s\n' "$DIAG_SSM_OUTPUT" | diag_sanitize > "$DIAG_DIR/40-ssm-green.txt"
+    DIAG_SSM_OUTPUT=""
+  fi
 
   diag_summary "$reasons"
 }
