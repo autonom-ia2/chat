@@ -8,6 +8,11 @@
 // Saídas, ambas geradas e nunca editadas à mão:
 //   lib/operator_guide/guia-produto.md                    — a base que o Guia ingere
 //   app/javascript/dashboard/helper/guideRouteRegistry.js — para onde ele pode levar
+//
+// Pacote de tradução da conta (#1802): `lib/operator_guide/pacotes/<camada>/porques.md`
+// traz só os campos de texto que mudam num fluxo do base, pelo mesmo cabeçalho. Para cada
+// camada com arquivo sai `pacotes/<camada>/guia-produto.md`, com o base mesclado camada a
+// camada (seguros ← seguros/corretora). Sem a pasta, a saída é a de antes.
 import fs from 'fs';
 import path from 'path';
 import { createServer } from 'vite';
@@ -21,6 +26,11 @@ const ENTRADA_ROTAS =
 const PORQUES = 'lib/operator_guide/porques.md';
 const SAIDA_KB = 'lib/operator_guide/guia-produto.md';
 const SAIDA_REGISTRY = 'app/javascript/dashboard/helper/guideRouteRegistry.js';
+export const PASTA_PACOTES = 'lib/operator_guide/pacotes';
+const ARQUIVO_DO_PACOTE = 'porques.md';
+export const SAIDA_DO_PACOTE = 'guia-produto.md';
+// O pacote troca só o texto. Rota, gate, cobre e destino saem do roteador e do base.
+const CAMPOS_DO_PACOTE = ['titulo', 'intent', 'onde_fica', 'passos', 'gotchas'];
 
 // Campos que o código sabe e o arquivo humano não repete.
 const CAMPOS_GERADOS = ['rota', 'gate'];
@@ -281,6 +291,63 @@ export const telasSemContexto = (pasta = r('app/javascript/dashboard')) =>
     })
     .sort();
 
+// Camadas com arquivo de pacote, da mais geral para a mais específica.
+export const camadasComPacote = () => {
+  if (!fs.existsSync(r(PASTA_PACOTES))) return [];
+  return fs
+    .readdirSync(r(PASTA_PACOTES), { recursive: true })
+    .filter(arquivo => path.basename(arquivo) === ARQUIVO_DO_PACOTE)
+    .map(arquivo => path.dirname(arquivo).split(path.sep).join('/'))
+    .sort(
+      (a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b)
+    );
+};
+
+const lerPacote = (camada, humanos) => {
+  const arquivo = `${PASTA_PACOTES}/${camada}/${ARQUIVO_DO_PACOTE}`;
+  const pacote = lerPorques(fs.readFileSync(r(arquivo), 'utf8'));
+  Object.entries(pacote).forEach(([chave, campos]) => {
+    if (!humanos[chave] || chave === FORA_DO_GUIA) {
+      throw new Error(
+        `${arquivo}: o fluxo "${chave}" não existe em ${PORQUES}.`
+      );
+    }
+    const proibidos = Object.keys(campos).filter(
+      campo => !CAMPOS_DO_PACOTE.includes(campo)
+    );
+    if (proibidos.length) {
+      throw new Error(
+        `${arquivo}: o fluxo "${chave}" traz ${proibidos.join(', ')}. O pacote só troca ${CAMPOS_DO_PACOTE.join(', ')}.`
+      );
+    }
+  });
+  return pacote;
+};
+
+// seguros/corretora herda o que seguros trocou e troca por cima.
+const humanosDoPacote = (camada, humanos, pacotes) =>
+  camada
+    .split('/')
+    .map((_parte, indice, partes) => partes.slice(0, indice + 1).join('/'))
+    .filter(nivel => pacotes[nivel])
+    .reduce(
+      (acumulado, nivel) =>
+        Object.fromEntries(
+          Object.entries(acumulado).map(([chave, campos]) => [
+            chave,
+            { ...campos, ...(pacotes[nivel][chave] || {}) },
+          ])
+        ),
+      humanos
+    );
+
+const montarFluxos = (humanos, porNome) =>
+  Object.entries(humanos)
+    .filter(([chave]) => chave !== FORA_DO_GUIA)
+    .map(([chave, humano]) =>
+      montarFluxo(chave, humano, porNome.get(humano.rota))
+    );
+
 export const construir = async ({ escrever = true } = {}) => {
   const rotas = await lerRotas();
   const porNome = new Map(rotas.map(rota => [rota.nome, rota]));
@@ -324,14 +391,33 @@ export const construir = async ({ escrever = true } = {}) => {
 
   const kb = montarKb(fluxos);
   const registry = montarRegistry(rotas, featuresEscritas);
+
+  const camadas = camadasComPacote();
+  const lidos = Object.fromEntries(
+    camadas.map(camada => [camada, lerPacote(camada, humanos)])
+  );
+  const pacotes = Object.fromEntries(
+    camadas.map(camada => [
+      camada,
+      montarKb(montarFluxos(humanosDoPacote(camada, humanos, lidos), porNome)),
+    ])
+  );
+
   if (escrever) {
     fs.writeFileSync(r(SAIDA_KB), kb);
     fs.writeFileSync(r(SAIDA_REGISTRY), registry);
+    Object.entries(pacotes).forEach(([camada, texto]) =>
+      fs.writeFileSync(
+        r(`${PASTA_PACOTES}/${camada}/${SAIDA_DO_PACOTE}`),
+        texto
+      )
+    );
   }
 
   return {
     kb,
     registry,
+    pacotes,
     fluxos: fluxos.length,
     rotas: rotas.length,
     // As telas em si, e não só a contagem: o modo aprendiz (#537) compara o

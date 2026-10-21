@@ -4,7 +4,7 @@
 # negócio. Quem monta o pedido (Builder e PromptBuilder, via PromptParts) põe a moldura de dado e decide onde ele entra;
 # aqui mora só o conteúdo.
 #
-# CONTRATO (vale também quando o conteúdo entrar, no lote 6 da Segmentação):
+# CONTRATO:
 #   - `segmento(account)`: a camada mais específica do pacote da conta ('seguros/corretora'), ou nil para conta geral ou
 #     com o interruptor AUTONOMIA_PACOTES_ENABLED desligado. Fonte única do segmento.
 #   - `for_segmento(segmento)`: String ou nil. nil = o segmento não tem bloco, e o pedido ao modelo fica igual ao de
@@ -15,14 +15,24 @@
 #   - Só orientação e vocabulário do ramo. Nenhuma frase pronta de cliente: o modelo copia frase (a tabela 3B do
 #     #1545 é referência e caso de eval, nunca conteúdo daqui).
 #
-# Hoje `for_segmento` e `versao` devolvem nil; o lote 6 preenche.
+# O conteúdo (#1802, lote 6) mora em config/agentes_por_pacote/seguros/<tipo>/agentes.md, um texto por tipo de conta de
+# seguros, lido uma vez no boot. Segmento sem arquivo devolve nil.
 #
 # MARCA DE BASE (#1429): o agente nasce com `config['base'] = { segmento, versao, texto }` (os valores vigentes) e recebe
 # sempre o texto GRAVADO, nunca o daqui: nem a troca de tipo da conta nem uma edição deste texto muda agente existente;
 # só o botão "Atualizar com a nova base".
 module Autonomia::Segmentos::Bloco
-  # Teto do texto de um segmento, em bytes. O lote 6 garante por spec que cada texto cabe.
+  # Teto do texto de um segmento, em bytes. O spec do bloco garante que cada texto cabe.
   TEXTO_DA_BASE_MAX = 8 * 1024
+
+  PASTA = Rails.root.join('config/agentes_por_pacote')
+  ARQUIVO = 'agentes.md'
+
+  TEXTOS = Dir.glob(PASTA.join('*', '*', ARQUIVO).to_s).to_h do |arquivo|
+    [Pathname(arquivo).dirname.relative_path_from(PASTA).to_s.freeze, File.read(arquivo).strip.freeze]
+  end.freeze
+
+  VERSOES = TEXTOS.transform_values { |texto| Digest::SHA256.hexdigest(texto)[0, 12].freeze }.freeze
 
   module_function
 
@@ -30,11 +40,11 @@ module Autonomia::Segmentos::Bloco
     Autonomia::Segmentos::Pacotes.camadas(account).last
   end
 
-  def for_segmento(_segmento)
-    nil
+  def for_segmento(segmento)
+    TEXTOS[segmento]
   end
 
-  def versao(_segmento)
-    nil
+  def versao(segmento)
+    VERSOES[segmento]
   end
 end

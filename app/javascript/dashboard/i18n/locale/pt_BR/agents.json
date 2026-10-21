@@ -1066,6 +1066,10 @@
             "ERRO": "Não consegui excluir.",
             "ERRO_GARANTIA": "Nada mudou.",
             "PRONTO": "{ferramenta} foi excluída."
+          },
+          "RASCUNHO_EXEMPLO": {
+            "NOME": "Busca no estoque",
+            "ENDERECO": "https://api.sualoja.com.br/estoque/busca"
           }
         },
         "VOLTAR_LISTA": "Voltar para Agentes",
