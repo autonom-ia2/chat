@@ -24,6 +24,10 @@ vi.mock('../composables/useCrmPermissions', () => ({
 vi.mock('dashboard/composables/useKeyboardEvents', () => ({
   useKeyboardEvents: () => {},
 }));
+// #2027: o link do Google pede token_manage; aqui a função tem a chave.
+vi.mock('dashboard/composables/useCanManage', () => ({
+  usePermissionGranted: () => ref(true),
+}));
 vi.mock('dashboard/api/crmGoogleConversionFeed', () => ({
   default: {
     create: vi.fn().mockResolvedValue({ data: { url: 'https://feed/x' } }),

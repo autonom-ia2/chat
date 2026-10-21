@@ -2299,6 +2299,114 @@
             "LOST": "Perdido",
             "NO_ANSWER": "Sem resposta"
           }
+        },
+        "CONNECT": {
+          "BACK": "Voltar ao painel",
+          "STEP_OF": "Passo {step} de {total}",
+          "COPIED": "Copiado",
+          "COPY_AGAIN": "Copiar o código de novo",
+          "TRUST": {
+            "SAFE": "Só vemos os números. Nada muda nos seus anúncios",
+            "TIME": "Sem senha e sem chave",
+            "OFF": "Você desliga quando quiser"
+          },
+          "COPY": {
+            "TITLE": "Copie o código da {partner}",
+            "TEXT": "É com ele que a Meta sabe para quem liberar.",
+            "CTA": "Copiar e continuar"
+          },
+          "META": {
+            "TITLE": "Cole o código na Meta",
+            "TEXT": "Na tela de Parceiros, toque em Adicionar, escolha dar acesso aos seus ativos e cole o código.",
+            "CTA": "Abrir a Meta",
+            "AGAIN": "Abrir a Meta de novo"
+          },
+          "MARK": {
+            "TITLE": "Marque a conta de anúncios",
+            "TEXT": "Ligue só \"Ver desempenho\" e salve. Não precisa liberar mais nada.",
+            "CTA": "Pronto, já liberei"
+          },
+          "SEND": {
+            "TITLE": "Mande esta mensagem para quem cria seus anúncios",
+            "TEXT": "Ela explica o que fazer, passo a passo.",
+            "MESSAGE": "Oi! Preciso que você libere a nossa conta de anúncios para a {partner}, só para ver os números.\n\n1. Abra: {link}\n2. Toque em Adicionar e escolha dar acesso aos seus ativos\n3. Cole o código {id}\n4. Marque a conta de anúncios, ligue só \"Ver desempenho\" e salve\n\nObrigado!",
+            "WHATSAPP": "Mandar pelo WhatsApp",
+            "COPY": "Copiar mensagem",
+            "AFTER": "Quando a pessoa disser que liberou, toque aqui:",
+            "CHECK": "Conferir agora"
+          },
+          "CHECKING": "Procurando sua conta na Meta…",
+          "CONNECTING": "Conectando {name}…",
+          "SPEND_30D": "{value} nos últimos 30 dias",
+          "FOUND": {
+            "TITLE": "Achamos sua conta de anúncios",
+            "CTA": "Conectar esta conta"
+          },
+          "CHOOSE": {
+            "TITLE": "Qual é a conta dos anúncios do WhatsApp?",
+            "TEXT": "Achamos mais de uma. Toque na que você usa.",
+            "RECOMMENDED": "Mais usada"
+          },
+          "NOT_YET": {
+            "TITLE": "Ainda não chegou",
+            "TITLE_ERROR": "Não deu para conectar",
+            "TEXT": "A Meta ainda não mostrou a conta liberada para a {partner}. Às vezes leva alguns minutos.",
+            "AUTO": "Conferindo de novo sozinho…",
+            "CHECK": "Conferir de novo",
+            "STEPS": "Ver os passos de novo",
+            "ASK_SOMEONE": "Prefere pedir para outra pessoa?",
+            "TEXT_FACEBOOK": "Não achamos nenhuma conta de anúncios nesse Facebook. Entre com o Facebook em que você cria os anúncios."
+          },
+          "DONE": {
+            "TITLE": "Pronto, está conectado!",
+            "TEXT": "Estamos trazendo os gastos de {name}. Em alguns minutos eles aparecem no seu painel, ao lado das conversas e vendas.",
+            "CTA": "Ver meu painel",
+            "DESTINATION_FAILED": "Não conseguimos marcar o WhatsApp como destino dos anúncios. Abra a aba Conexão, em \"Destino do anúncio\", e escolha WhatsApp."
+          },
+          "GUIDE": {
+            "LABEL": "Onde tocar na Meta",
+            "SETTINGS": "Configurações do negócio",
+            "PARTNERS": "Parceiros",
+            "ADD": "Adicionar",
+            "GIVE_ACCESS": "Conceder a um parceiro acesso aos seus ativos",
+            "PARTNER_ID": "ID do parceiro",
+            "PASTE": "cole o código aqui",
+            "AD_ACCOUNTS": "Contas de anúncios",
+            "YOUR_ACCOUNT": "Sua conta de anúncios",
+            "VIEW": "Ver desempenho",
+            "MANAGE": "Gerenciar campanhas",
+            "SAVE": "Salvar alterações",
+            "CAPTION": "Desenho para orientar. A tela da Meta pode estar um pouco diferente."
+          },
+          "START": {
+            "TITLE": "Veja quanto você gastou em cada anúncio",
+            "TEXT": "Entre com o mesmo Facebook em que você cria os anúncios. A gente acha a conta sozinho.",
+            "HOW": "Como funciona",
+            "STEPS": {
+              "ENTER": "Entre com o Facebook",
+              "CHOOSE": "Confirme a sua conta",
+              "SEE": "Veja seus gastos"
+            },
+            "CTA": "Entrar com o Facebook",
+            "RETRY": "Entrar de novo",
+            "WAITING": "A janela do Facebook está aberta. Deixe tudo marcado e toque em \"Continuar\" até o fim.",
+            "POPUP_TITLE": "A janela do Facebook não abriu",
+            "POPUP_TEXT": "O navegador pode ter bloqueado. Toque no ícone de janela bloqueada na barra de endereço, escolha \"Sempre permitir\" e entre de novo.",
+            "REFUSED_TITLE": "O Facebook não liberou os seus anúncios",
+            "BROKEN": "A conexão com a Meta caiu. Entre de novo para voltar a ver os gastos.",
+            "SOMEONE": "Outra pessoa cuida dos meus anúncios",
+            "PARTNER": "Liberar pelo Gerenciador de Negócios"
+          }
+        },
+        "PENDING": {
+          "CHOOSING": {
+            "TEXT": "Falta só escolher a sua conta de anúncios.",
+            "CTA": "Continuar"
+          },
+          "BROKEN": {
+            "TEXT": "A Meta parou de mandar os seus gastos. Enquanto isso, o painel mostra o que o WhatsApp contou.",
+            "CTA": "Conectar de novo"
+          }
         }
       },
       "EMPTY": {
@@ -2782,6 +2890,19 @@
           "CONFIRM": "Baixar",
           "ERROR": "Não deu para baixar agora. Tente de novo.",
           "NO_PEOPLE": "Sem a permissão \"Exportar a lista do CRM para Excel\", o arquivo leva só os números, sem a lista de pessoas."
+        },
+        "CONNECT_SPEND": {
+          "NOTE": "Conecte sua conta de anúncios para ver",
+          "CTA": "Ver quanto gastei"
+        },
+        "ADS_WHATSAPP_TITLE": "Anúncios que trazem conversa",
+        "OTHER_ADS": {
+          "TITLE": "Outros anúncios",
+          "TOTAL": "{value} investidos",
+          "HINT": "Não trouxeram nenhuma conversa: levam para o site, um vídeo ou o seu perfil. Ficam fora do custo por conversa e por venda.",
+          "SPEND": "Investido",
+          "CLICKS": "Cliques",
+          "SHOWN": "Apareceu"
         }
       },
       "AD_DETAIL": {
@@ -3399,7 +3520,7 @@
     "TITLE": "Tokens de integração do CRM",
     "SUBTITLE": "Tokens por conta, com escopo e revogáveis, para que sistemas externos como o n8n acessem a API do CRM sem usar uma credencial de usuário com acesso total.",
     "BACK": "Voltar",
-    "NO_PERMISSION": "Você precisa da permissão de administrador do CRM para gerenciar os tokens de integração.",
+    "NO_PERMISSION": "Só o administrador ou quem cuida dos tokens cria e troca os tokens de integração.",
     "STATUS": {
       "ACTIVE": "Ativo",
       "REVOKED": "Revogado"
@@ -3429,6 +3550,7 @@
       "NAME_LABEL": "Nome",
       "NAME_PLACEHOLDER": "ex.: n8n produção",
       "SCOPES_LABEL": "Escopos",
+      "NO_SCOPES": "O token só leva o que a sua função já tem no CRM, e a sua não tem nada do CRM. Peça ao administrador.",
       "SUBMIT": "Criar token",
       "CANCEL": "Cancelar",
       "SUCCESS": "Token criado. Copie o segredo agora — ele é exibido apenas uma vez.",
@@ -4638,6 +4760,7 @@
         "PASSOS": "Passos para ligar o Google",
         "COPIE_TITULO": "Copie este endereço",
         "COPIE_TEXTO": "É por ele que o Google fica sabendo das suas vendas. Ele é só seu.",
+        "SEM_TOKEN": "O link do Google é criado por quem cuida dos tokens.",
         "COLE_TITULO": "Cole o endereço no Google Ads",
         "COLE_1": "Entre no Google Ads, na conta dos seus anúncios.",
         "COLE_2": "Na busca do Google Ads, escreva “importações” e abra Importações programadas.",

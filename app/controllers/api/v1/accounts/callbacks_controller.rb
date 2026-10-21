@@ -1,7 +1,9 @@
 class Api::V1::Accounts::CallbacksController < Api::V1::Accounts::BaseController
-  # Listing the pages and registering one create a Facebook inbox; reauthorizing swaps the page token of a live inbox.
-  # All three are admin or inbox_manage only, like any other inbox creation (#2027).
-  before_action -> { check_permission_granted!('inbox_manage') }
+  # Registering a page creates a Facebook inbox (inbox_manage); reauthorizing swaps the page token of a live inbox
+  # (integration_manage); listing the pages serves both. Admin always (#2027).
+  before_action -> { check_permission_granted!('inbox_manage') }, only: [:register_facebook_page]
+  before_action -> { check_permission_granted!('integration_manage') }, only: [:reauthorize_page]
+  before_action :check_can_connect_pages, only: [:facebook_pages]
   before_action :inbox, only: [:reauthorize_page]
 
   def register_facebook_page
@@ -79,6 +81,12 @@ class Api::V1::Accounts::CallbacksController < Api::V1::Accounts::BaseController
 
   def get_fb_page(fb_page_id)
     Current.account.facebook_pages.find_by(page_id: fb_page_id)
+  end
+
+  def check_can_connect_pages
+    return if %w[inbox_manage integration_manage].any? { |key| Current.account_user&.permission_granted?(key) }
+
+    raise Pundit::NotAuthorizedError
   end
 
   def fb_object

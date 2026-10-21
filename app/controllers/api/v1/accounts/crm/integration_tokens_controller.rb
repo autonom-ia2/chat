@@ -18,6 +18,7 @@ class Api::V1::Accounts::Crm::IntegrationTokensController < Api::V1::Accounts::C
   # Reveal-once: the response body is the only place the plaintext token is exposed.
   def create
     authorize ::Crm::IntegrationToken
+    authorize_scopes!(create_params[:scopes])
     @integration_token = Current.account.crm_integration_tokens.new(create_params)
     @integration_token.created_by = Current.user
     @integration_token.save!
@@ -43,6 +44,7 @@ class Api::V1::Accounts::Crm::IntegrationTokensController < Api::V1::Accounts::C
   # scopes/name. Reveal-once on the new secret.
   def rotate
     authorize @integration_token
+    authorize_scopes!(@integration_token.granted_scopes)
     rotated = nil
     ActiveRecord::Base.transaction do
       rotated = Current.account.crm_integration_tokens.new(
@@ -59,6 +61,10 @@ class Api::V1::Accounts::Crm::IntegrationTokensController < Api::V1::Accounts::C
   end
 
   private
+
+  def authorize_scopes!(scopes)
+    raise Pundit::NotAuthorizedError unless policy(::Crm::IntegrationToken).grant_scopes?(scopes)
+  end
 
   def revoke_token!(token)
     ActiveRecord::Base.transaction do

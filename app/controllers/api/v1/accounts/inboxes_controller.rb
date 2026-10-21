@@ -3,10 +3,13 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   before_action :fetch_inbox, except: [:index, :create]
   before_action :fetch_agent_bot, only: [:set_agent_bot]
   # we are already handling the authorization in fetch inbox
-  before_action :check_authorization, except: [:show]
+  before_action :check_authorization, except: [:show, :update]
+  before_action -> { authorize(Inbox, :update_connection?) }, only: [:update]
 
   include Api::V1::Accounts::Concerns::InboxHealthManagement
   include Api::V1::Accounts::Concerns::InboxSecretManagement
+  include Api::V1::Accounts::Concerns::InboxCredentialGuard
+  before_action :check_credential_change, only: [:update]
 
   def index
     @inboxes = inboxes_scope
@@ -143,6 +146,8 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
     return if permitted_params(channel_attributes)[:channel].blank?
 
     validate_and_update_email_channel(channel_attributes) if @inbox.inbox_type == 'Email'
+    # A mail server that failed the check is not saved (#2027).
+    raise ActiveRecord::Rollback if performed?
 
     reauthorize_and_update_channel(channel_attributes)
     update_channel_feature_flags
@@ -153,13 +158,14 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   end
 
   def validate_and_update_email_channel(channel_attributes)
-    validate_email_channel(channel_attributes)
+    validate_email_channel(channel_attributes, channel_params_with_stored_secrets)
   rescue StandardError => e
     render json: { message: e }, status: :unprocessable_entity and return
   end
 
-  def reauthorize_and_update_channel(channel_attributes)
-    @inbox.channel.update!(permitted_params(channel_attributes)[:channel])
+  def reauthorize_and_update_channel(_channel_attributes)
+    # A blank password or token keeps the stored one: it only goes back to administrators (#2027).
+    @inbox.channel.update!(channel_update_params)
     @inbox.channel.reauthorized! if @inbox.channel.respond_to?(:reauthorized!)
   end
 

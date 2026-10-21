@@ -7,12 +7,13 @@ import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 // que vale e sem conta de anúncios conectada. Fora disso, tudo como antes.
 const flags = ref({ anuncios_sem_login: true });
 const admin = ref(true);
+const routing = vi.hoisted(() => ({ query: {} }));
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: { get: vi.fn() },
 }));
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: { accountId: '18' }, query: {} }),
+  useRoute: () => ({ params: { accountId: '18' }, query: routing.query }),
   useRouter: () => ({ replace: vi.fn() }),
 }));
 vi.mock('dashboard/composables/store', () => ({
@@ -45,6 +46,7 @@ describe('MetaAdsPage · Anúncios sem login (#1960)', () => {
     vi.clearAllMocks();
     flags.value = { anuncios_sem_login: true };
     admin.value = true;
+    routing.query = {};
   });
 
   it('opens ready, without login, when the flag is on and nothing is connected', async () => {
@@ -108,5 +110,39 @@ describe('MetaAdsPage · Anúncios sem login (#1960)', () => {
       false
     );
     expect(wrapper.findComponent({ name: 'MetaAdsPanel' }).exists()).toBe(true);
+  });
+
+  // Conectado (#2054): o painel usa a largura toda; a lista dos passos fica na aba Conexão.
+  const CONNECTED = {
+    configured: true,
+    status: 'active',
+    verified_at: '2026-10-01T00:00:00Z',
+    ad_account: { id: 'act_1' },
+    destinations: { whatsapp: true },
+    sales_signal: { enabled: false },
+    whatsapp_result: { enabled: false },
+  };
+
+  it('connected, the Result tab has no side list of steps', async () => {
+    reply(CONNECTED);
+    const wrapper = await mountPage();
+
+    expect(wrapper.findComponent({ name: 'MetaAdsPanel' }).exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'MetaAdsChecklist' }).exists()).toBe(
+      false
+    );
+  });
+
+  it('connected, the Connection tab keeps the side list of steps', async () => {
+    routing.query = { aba: 'conexao' };
+    reply(CONNECTED);
+    const wrapper = await mountPage();
+
+    expect(wrapper.findComponent({ name: 'MetaAdsSummary' }).exists()).toBe(
+      true
+    );
+    expect(wrapper.findComponent({ name: 'MetaAdsChecklist' }).exists()).toBe(
+      true
+    );
   });
 });

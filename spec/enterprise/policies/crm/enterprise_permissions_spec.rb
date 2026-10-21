@@ -71,11 +71,12 @@ RSpec.describe 'Crm Enterprise permission overlay', type: :policy do # rubocop:d
       expect(policy.update?).to be(true)
     end
 
-    it 'treats crm_admin as full CRM access (incl. integration tokens)' do
+    # Integration tokens moved to token_manage (#2027): crm_admin alone no longer mints them.
+    it 'treats crm_admin as full CRM access, without integration tokens' do
       user, account_user = custom_role_user(account: account, permissions: ['crm_admin'])
 
       expect(Crm::PipelinePolicy.new(ctx(account, user, account_user), pipeline).create?).to be(true)
-      expect(Crm::IntegrationTokenPolicy.new(ctx(account, user, account_user), Crm::IntegrationToken).create?).to be(true)
+      expect(Crm::IntegrationTokenPolicy.new(ctx(account, user, account_user), Crm::IntegrationToken).create?).to be(false)
     end
 
     it 'gates manage_ai? by crm_manage_ai' do

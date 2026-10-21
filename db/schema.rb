@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_320000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_330000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2630,6 +2630,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_320000) do
     t.datetime "updated_at", null: false
     t.text "preview_url"
     t.text "thumbnail_url"
+    t.string "destination_type"
     t.index ["account_id", "meta_object_id"], name: "idx_crm_meta_ad_objects_account_object", unique: true
   end
 
