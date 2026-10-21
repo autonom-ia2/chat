@@ -1401,6 +1401,7 @@
             "VER_PROVA": "Ver as perguntas",
             "ESCONDER_PROVA": "Esconder as perguntas",
             "CLIENTE": "Cliente:",
+            "AGENTE": "{nome}:",
             "PROVA_EQUIPE": "Passaria a conversa para a equipe."
           }
         },

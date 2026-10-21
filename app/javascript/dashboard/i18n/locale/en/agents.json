@@ -1401,6 +1401,7 @@
             "VER_PROVA": "See the questions",
             "ESCONDER_PROVA": "Hide the questions",
             "CLIENTE": "Customer:",
+            "AGENTE": "{nome}:",
             "PROVA_EQUIPE": "Would hand the conversation to the team."
           }
         },

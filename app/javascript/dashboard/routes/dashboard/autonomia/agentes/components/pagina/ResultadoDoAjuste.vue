@@ -252,7 +252,7 @@ const podeDesfazer = computed(
                 {{ t(`${NS}.CLIENTE`) }} {{ item.pergunta }}
               </span>
               <span class="text-n-slate-12">
-                <b class="font-semibold">{{ nome }}:</b>
+                <b class="font-semibold">{{ t(`${NS}.AGENTE`, { nome }) }}</b>
                 {{ item.resposta || t(`${NS}.PROVA_EQUIPE`) }}
               </span>
             </span>
