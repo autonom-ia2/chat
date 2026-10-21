@@ -500,6 +500,8 @@ Rails.application.routes.draw do
             end
             resources :pastas_do_email, only: [:show, :update, :destroy], param: :conversation_id
             resources :reacoes, only: [:create]
+            # #1984 — Sim / Talvez / Não ao convite de reunião que chegou no e-mail (:id é o da mensagem).
+            resources :convites_do_email, only: [:update]
             resources :encaminhamentos, only: [:index, :create]
             resources :formularios, only: [:index] do
               get :primeira_tela, on: :member

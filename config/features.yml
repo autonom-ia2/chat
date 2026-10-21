@@ -690,3 +690,14 @@
   display_name: Foto de perfil do contato no WhatsApp Híbrido
   enabled: true
   column: feature_flags_ext_1
+
+# Convite de reunião no e-mail (#1984): o convite que chega como parte text/calendar vira um cartão na conversa, com
+# Sim / Talvez / Não ao organizador (pela agenda Google ou Microsoft ligada na caixa, ou por e-mail iMIP nas demais).
+# Posição 49 na feature_flags_ext_1 (281474976710656 = 1 << 48), definitiva da Orquestração (21/10), logo depois de
+# hibrido_foto_do_contato. O cartão lê o convite guardado em todo e-mail; a flag só mostra o cartão e libera a resposta.
+# Ligada nas contas 1, 16 e 18 da stack Hub2You (piloto, pela Orquestração depois do deploy); conta nova nasce ligada
+# (migration 20261108250000).
+- name: convite_da_reuniao
+  display_name: Convite de reunião no e-mail (cartão e resposta)
+  enabled: true
+  column: feature_flags_ext_1

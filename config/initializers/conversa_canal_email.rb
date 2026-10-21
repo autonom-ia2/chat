@@ -13,6 +13,8 @@
 #   *_fora_do_spam.rb; opção (b) do Rodrigo, 18/10). Relatórios, CRM, webhooks da conta e LeadSquared seguem normais.
 # - cópia do e-mail enviado pelo painel na pasta de enviados da conta do cliente, com a chave `email_enviados` (#1938,
 #   app/services/conversa_canal/copia_no_enviados_no_envio.rb).
+# - convite de reunião (parte text/calendar) guardado em content_attributes.email.convite (#1984;
+#   app/services/conversa_canal/convite_no_email_recebido.rb).
 Rails.application.config.to_prepare do
   Messages::MessageBuilder.prepend(ConversaCanal::MessageBuilderComCitacao) unless Messages::MessageBuilder <= ConversaCanal::MessageBuilderComCitacao
   ConversationReplyMailer.prepend(ConversaCanal::EncaminhadoNoMailer) unless ConversationReplyMailer <= ConversaCanal::EncaminhadoNoMailer
@@ -28,4 +30,5 @@ Rails.application.config.to_prepare do
   AutomationRuleListener.prepend(ConversaCanal::AutomacaoForaDoSpam) unless AutomationRuleListener <= ConversaCanal::AutomacaoForaDoSpam
   envio = Email::SendOnEmailService
   envio.prepend(ConversaCanal::CopiaNoEnviadosNoEnvio) unless envio <= ConversaCanal::CopiaNoEnviadosNoEnvio
+  MailPresenter.prepend(ConversaCanal::ConviteNoEmailRecebido) unless MailPresenter <= ConversaCanal::ConviteNoEmailRecebido
 end
