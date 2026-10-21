@@ -13,6 +13,9 @@ const props = defineProps({
   role: { type: Object, required: true },
   agents: { type: Array, default: () => [] },
   isDeleting: { type: Boolean, default: false },
+  // Por que esta função não pode ser editada nem excluída por quem vê (#1931): MINE ou ABOVE.
+  lockReason: { type: String, default: '' },
+  canDuplicate: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['edit', 'duplicate', 'delete']);
@@ -51,7 +54,15 @@ const hasSensitive = computed(
         </p>
       </div>
       <div class="flex items-center shrink-0 -me-1.5">
+        <span
+          v-if="lockReason"
+          v-tooltip.top="$t(`CUSTOM_ROLE.LIST.LOCK.${lockReason}`)"
+          role="img"
+          :aria-label="$t(`CUSTOM_ROLE.LIST.LOCK.${lockReason}`)"
+          class="i-lucide-lock size-4 mx-2 text-n-slate-10"
+        />
         <Button
+          v-if="canDuplicate"
           v-tooltip.top="$t('CUSTOM_ROLE.LIST.DUPLICATE')"
           icon="i-lucide-copy"
           slate
@@ -61,6 +72,7 @@ const hasSensitive = computed(
           @click="emit('duplicate', role)"
         />
         <Button
+          v-if="!lockReason"
           v-tooltip.top="$t('CUSTOM_ROLE.EDIT.BUTTON_TEXT')"
           icon="i-lucide-pencil"
           slate
@@ -70,6 +82,7 @@ const hasSensitive = computed(
           @click="emit('edit', role)"
         />
         <Button
+          v-if="!lockReason"
           v-tooltip.top="$t('CUSTOM_ROLE.DELETE.BUTTON_TEXT')"
           icon="i-lucide-trash-2"
           ruby

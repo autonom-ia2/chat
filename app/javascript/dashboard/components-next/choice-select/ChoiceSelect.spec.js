@@ -139,6 +139,26 @@ describe('ChoiceSelect', () => {
     expect(trigger.attributes('aria-activedescendant')).toMatch(/option-2$/);
   });
 
+  it('mostra o motivo de uma opção desabilitada, ligado à opção', async () => {
+    wrapper = mountSelect('a', {
+      options: [
+        { value: 'a', label: 'Alfa' },
+        {
+          value: 'b',
+          label: 'Beta',
+          disabled: true,
+          hint: 'Acima do seu acesso',
+        },
+      ],
+    });
+    await wrapper.get('[role="combobox"]').trigger('click');
+    const [plain, locked] = wrapper.findAll('[role="option"]');
+    expect(plain.attributes('aria-describedby')).toBeUndefined();
+    const hintId = locked.attributes('aria-describedby');
+    expect(wrapper.get(`[id="${hintId}"]`).text()).toBe('Acima do seu acesso');
+    expect(locked.attributes('aria-disabled')).toBe('true');
+  });
+
   it('aceita valor numérico, null e booleano como o select nativo', async () => {
     wrapper = mountSelect(null, {
       options: [

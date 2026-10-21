@@ -1222,8 +1222,8 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
       "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
       "app/controllers/api/v1/accounts/agents_controller.rb:60",
       "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
@@ -6419,7 +6419,9 @@
           "assignment_manage",
           "people_manage",
           "custom_role_manage",
-          "grant_above_own"
+          "grant_above_own",
+          "financial_view",
+          "financial_manage"
         ]
       }
     },
@@ -8353,8 +8355,8 @@
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:68",
       "app/controllers/api/v1/accounts/agents_controller.rb:95",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
       "app/controllers/api/v1/accounts/agents_controller.rb:70"
     ],
     "sem_corpo": false
@@ -16486,7 +16488,9 @@
           "assignment_manage",
           "people_manage",
           "custom_role_manage",
-          "grant_above_own"
+          "grant_above_own",
+          "financial_view",
+          "financial_manage"
         ]
       }
     },
@@ -19244,8 +19248,8 @@
     "controller": "api/v1/accounts/waha_inboxes#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:14",
-      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:99"
+      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:15",
+      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:121"
     ],
     "sem_corpo": false
   },
@@ -19253,8 +19257,8 @@
     "completo": true,
     "controller": "api/v1/accounts/waha_inboxes#reconnect",
     "origem": [
-      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:46",
-      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:68"
+      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:63",
+      "app/controllers/api/v1/accounts/waha_inboxes_controller.rb:85"
     ],
     "sem_corpo": true
   },
@@ -19728,8 +19732,8 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
       "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:66",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:60",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
       "app/controllers/api/v1/accounts/agents_controller.rb:60",
       "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
@@ -24814,7 +24818,9 @@
           "assignment_manage",
           "people_manage",
           "custom_role_manage",
-          "grant_above_own"
+          "grant_above_own",
+          "financial_view",
+          "financial_manage"
         ]
       }
     },

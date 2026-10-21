@@ -115,11 +115,9 @@ module Crm::Subjects::VariosAssuntos
     resultado[:card]
   end
 
-  # O card vazio que a caixa criou na chegada, ainda intacto, fica de fora no sem assunto (C36, #1711): movido pela IA
-  # num "oi", ele deixaria de ser adotado pelo primeiro pedido de outro funil, e um card vazio sobraria para trás. Só na
-  # Automática, o único modo em que ele é adotado.
+  # O card vazio que a caixa criou na chegada, ainda intacto, fica de fora no sem assunto (C36, #1711).
   def chegada_intacta?(card)
-    @mode == 'auto' && card.present? && Crm::Subjects::CardDaChegada.new(card, @conversation).intocado?
+    Crm::Subjects::CardDaChegada.intacta?(conversation: @conversation, card: card, mode: @mode)
   end
 
   # Um card novo que não é o principal nasce em foco (Crm::Cards::Creator). Se o foco ainda está num deles, volta para

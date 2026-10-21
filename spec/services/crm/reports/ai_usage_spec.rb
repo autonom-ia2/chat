@@ -12,7 +12,8 @@ RSpec.describe Crm::Reports::AiUsage do
   end
 
   def payload(account:, params: {})
-    described_class.new(account: account, params: params.reverse_merge(since: 1.week.ago.iso8601, until: Time.current.iso8601)).perform
+    described_class.new(account: account, com_valores: true,
+                        params: params.reverse_merge(since: 1.week.ago.iso8601, until: Time.current.iso8601)).perform
   end
 
   it 'returns top aggregates, decimal BRL conversion and cache savings percentage' do

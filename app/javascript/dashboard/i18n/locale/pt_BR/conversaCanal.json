@@ -519,6 +519,7 @@
         "ENTRADA": "Entrada",
         "SPAM": "Spam",
         "LIXEIRA": "Lixeira",
+        "ENVIADOS": "Enviados",
         "MARCAR_SPAM": "Spam",
         "MARCAR_SPAM_DICA": "Mover para o Spam e resolver. E-mail deste remetente nesta caixa cai direto no Spam",
         "MOVER_LIXEIRA": "Lixeira",
@@ -583,6 +584,9 @@
         "INSTRUCAO_LONGA": "O pedido à IA passou do tamanho aceito (até {limite} caracteres). Encurte o pedido.",
         "MUITOS_PEDIDOS": "Muitos pedidos à IA em um minuto. Espere um pouco e peça de novo."
       }
+    },
+    "NOTA_DO_CONECTOR": {
+      "AVISO": "⚠️ Uma mensagem do WhatsApp não chegou aqui. Confira no celular da caixa."
     }
   }
 }
