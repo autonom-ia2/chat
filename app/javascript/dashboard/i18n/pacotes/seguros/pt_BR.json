@@ -7,7 +7,8 @@
       "CLOSE_AS_TITLE": "Terminar como {label}",
       "ACTIVITY_WON": "Fechou o seguro",
       "ACTIVITY_LOST": "Não fechou",
-      "ACTIVITY_REOPEN": "Card reaberto"
+      "ACTIVITY_REOPEN": "Card reaberto",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Não é venda: ninguém pediu um seguro. Para desfazer, reabra o card."
     },
     "META_SYNC_STATUS": {
       "EVENT_WON": "Fechou o seguro",
@@ -95,7 +96,15 @@
       "SEM_LOGIN": {
         "AD": {
           "STATUS": {
-            "LOST": "Não fechou"
+            "LOST": "Não fechou",
+            "BOUGHT": "Fechou o seguro: {value}",
+            "BOUGHT_NO_VALUE": "Fechou o seguro"
+          }
+        },
+        "EXAMPLE": {
+          "ADS": {
+            "WINTER": "Seguro auto com desconto",
+            "SHIPPING": "Cotação grátis esta semana"
           }
         }
       }
@@ -194,6 +203,15 @@
           "CRM_CARD_REOPENED": "Um card que tinha terminado foi reaberto."
         }
       }
+    }
+  },
+  "CRM_NUMEROS_V2": {
+    "IA_AJUDOU": {
+      "VENDA": "{ia} te passou {passou} pessoa interessada este mês. | {ia} te passou {passou} pessoas interessadas este mês.",
+      "VIRARAM": "Nenhuma fechou o seguro ainda. | 1 fechou o seguro. | {n} fecharam o seguro."
+    },
+    "TOPO": {
+      "SEM_META_EU": "Seu mês até agora: {n} seguro fechado, {valor} | Seu mês até agora: {n} seguros fechados, {valor}"
     }
   }
 }
