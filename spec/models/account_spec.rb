@@ -249,8 +249,8 @@ RSpec.describe Account do
         feature_hibrido_foto_do_contato: 1 << 47,
         # #1984: posição 49 (1 << 48), definitiva da Orquestração (21/10), logo depois de hibrido_foto_do_contato.
         feature_convite_da_reuniao: 1 << 48,
-        # #1991: posição 51 reservada pela Orquestração (20/10, provisória); nesta branch é a 44 até as 44 a 50 entrarem.
-        feature_crm_metas: 1 << 43
+        # #1991: posição 50 (1 << 49), definitiva da Orquestração (21/10), logo depois de convite_da_reuniao.
+        feature_crm_metas: 1 << 49
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
