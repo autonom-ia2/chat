@@ -1,9 +1,13 @@
 # F3 do tema 8 (#1429): o limite do antes e depois, como o do autoteste: no máximo 1 comparação a cada 2 minutos por
 # agente e 10 por dia por conta. Cada comparação são 6 respostas do agente (3 perguntas, com cada base), pagas como no
 # Testar. Contado no Redis, atômico (SET NX e INCR): dois pedidos juntos não passam os dois.
+#
+# O DIA é o da conta: o fuso dos relatórios e do painel (Crm::Timezone::Resolver: `reporting_timezone`, sem ele o padrão
+# do produto). A chave leva a data local e expira na meia-noite local (com folga), que é quando o aviso diz que libera.
 module Autonomia::Agents::BaseDeSeguros::Limite
   ENTRE_PEDIDOS = 2.minutes
   POR_DIA = 10
+  FOLGA = 1.minute
   PREFIXO = 'autonomia:base_de_seguros:comparar'.freeze
 
   # Passou do limite. `motivo`: espere (2 min no agente) | amanha (10 no dia na conta).
@@ -24,7 +28,7 @@ module Autonomia::Agents::BaseDeSeguros::Limite
 
     chave = chave_da_conta(agent.account)
     total = Redis::Alfred.incr(chave)
-    Redis::Alfred.expire(chave, 2.days.to_i) if total == 1
+    Redis::Alfred.expire(chave, segundos_ate_virar_o_dia(agent.account)) if total == 1
     return if total <= POR_DIA
 
     liberar!(agent)
@@ -41,6 +45,16 @@ module Autonomia::Agents::BaseDeSeguros::Limite
   end
 
   def chave_da_conta(account)
-    "#{PREFIXO}:conta:#{account.id}:#{Time.zone.today.iso8601}"
+    "#{PREFIXO}:conta:#{account.id}:#{agora_na_conta(account).to_date.iso8601}"
+  end
+
+  def agora_na_conta(account)
+    Time.current.in_time_zone(Crm::Timezone::Resolver.new(account: account).zone_or_default)
+  end
+
+  # Até a meia-noite local, com uma folga para a chave nunca sumir antes do dia virar.
+  def segundos_ate_virar_o_dia(account)
+    agora = agora_na_conta(account)
+    (agora.end_of_day - agora).ceil + FOLGA.to_i
   end
 end
