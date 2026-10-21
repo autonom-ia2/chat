@@ -7,6 +7,7 @@ import {
   CRM_ADMIN_PERMISSION,
   CAMPAIGN_PERMISSIONS,
   SLA_MANAGE_PERMISSION,
+  TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 const CrmKanbanPage = () => import('./pages/CrmKanbanPage.vue');
 // CRM › Números (#1897): o painel de hoje sem a flag `crm_numeros_lentes`; com ela, "Só eu · Equipe".
@@ -37,8 +38,7 @@ const numerosMeta = {
   permissions: [...reportsMeta.permissions, CRM_VIEW_PERMISSION],
 };
 
-// Minting integration tokens is an admin-equivalent action: only the account
-// administrator or an explicit crm_admin seat may reach the settings page.
+// Admin-equivalent CRM settings: only the account administrator or an explicit crm_admin seat.
 const adminMeta = {
   permissions: ['administrator', CRM_ADMIN_PERMISSION],
 };
@@ -169,7 +169,8 @@ export const routes = [
   {
     path: frontendURL('accounts/:accountId/crm/settings/integration-tokens'),
     name: 'crm_integration_tokens_index',
-    meta: adminMeta,
+    // Tokens do CRM são segredos que a plataforma gera (#2027): administrador ou token_manage.
+    meta: { permissions: ['administrator', TOKEN_MANAGE_PERMISSION] },
     beforeEnter: ensureCrmEnabled,
     component: CrmIntegrationTokensPage,
   },

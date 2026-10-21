@@ -83,6 +83,58 @@ describe('permissionMatrix', () => {
     });
   });
 
+  // #2027: Integrações ao lado das caixas, só "pode mexer"; ver e trocar tokens é um ajuste fino dela, porque as
+  // telas dos tokens (robôs, webhooks, CRM/n8n) ficam em Integrações. As duas chaves só o administrador entrega.
+  describe('integrations and tokens', () => {
+    const integrations = moduleByKey('INTEGRATIONS');
+
+    it('lives in connections, right after inboxes, with tokens as its extra', () => {
+      const group = MODULE_GROUPS.find(g => g.key === 'CONNECTIONS');
+
+      expect(group.modules.map(module => module.key)).toEqual([
+        'INBOXES',
+        'INTEGRATIONS',
+      ]);
+      expect(levelSlots(integrations)).toEqual([
+        LEVELS.NONE,
+        null,
+        LEVELS.MANAGE,
+      ]);
+      expect(setLevel(integrations, LEVELS.MANAGE, [])).toEqual([
+        'integration_manage',
+      ]);
+      expect(integrations.extras).toEqual(['token_manage']);
+    });
+
+    it('asks inboxes at view to reconnect a channel', () => {
+      expect(unmetSuggestion(integrations, ['integration_manage']).key).toBe(
+        'INBOXES'
+      );
+      expect(
+        unmetSuggestion(integrations, ['integration_manage', 'inbox_view'])
+      ).toBeNull();
+    });
+
+    it('is not handed out by any profile', () => {
+      PROFILES.forEach(profile => {
+        const permissions = profilePermissions(profile.key);
+        expect(permissions).not.toContain('integration_manage');
+        expect(permissions).not.toContain('token_manage');
+      });
+    });
+
+    it('has the texts in en and pt_BR', () => {
+      [en, ptBR].forEach(({ CUSTOM_ROLE }) => {
+        const module = CUSTOM_ROLE.MATRIX.MODULES.INTEGRATIONS;
+        expect(module.NAME).toBeTruthy();
+        expect(module.LEVEL_MANAGE).toBeTruthy();
+        expect(module.SUGGESTION).toBeTruthy();
+        expect(CUSTOM_ROLE.EXTRAS.TOKEN_MANAGE).toBeTruthy();
+        expect(CUSTOM_ROLE.PERMISSIONS.TOKEN_MANAGE).toBeTruthy();
+      });
+    });
+  });
+
   // #1188: módulo de função "Agendamento"; agendamento_manage implica _view no backend.
   describe('scheduling', () => {
     const scheduling = moduleByKey('SCHEDULING');

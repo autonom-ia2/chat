@@ -40,6 +40,12 @@ export const GRANT_ABOVE_OWN_PERMISSION = 'grant_above_own';
 // seguem só do administrador.
 export const FINANCIAL_VIEW_PERMISSION = 'financial_view';
 export const FINANCIAL_MANAGE_PERMISSION = 'financial_manage';
+// Integrações (#2027): conectar, configurar e desconectar integrações, robôs, importações e trocar a credencial de
+// uma caixa que já existe. Criar caixa nova segue com inbox_manage.
+export const INTEGRATION_MANAGE_PERMISSION = 'integration_manage';
+// Tokens e chaves (#2027): ver e trocar os segredos que a plataforma gera (HMAC, segredo da caixa da API, assinatura de
+// webhook, token do robô, tokens do CRM, link do Google).
+export const TOKEN_MANAGE_PERMISSION = 'token_manage';
 // Espelho de CustomRole::DELEGATION_KEYS: só o administrador entrega, ou quem tem grant_above_own.
 export const DELEGATION_KEYS = [
   PEOPLE_MANAGE_PERMISSION,
@@ -47,6 +53,8 @@ export const DELEGATION_KEYS = [
   GRANT_ABOVE_OWN_PERMISSION,
   FINANCIAL_VIEW_PERMISSION,
   FINANCIAL_MANAGE_PERMISSION,
+  INTEGRATION_MANAGE_PERMISSION,
+  TOKEN_MANAGE_PERMISSION,
 ];
 
 export const ROLES = ['agent', 'administrator'];

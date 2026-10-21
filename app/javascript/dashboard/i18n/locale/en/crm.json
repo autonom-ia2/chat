@@ -3398,7 +3398,7 @@
     "TITLE": "CRM integration tokens",
     "SUBTITLE": "Per-account, scoped, revocable tokens so external systems like n8n can call the CRM API without a full-access user credential.",
     "BACK": "Back",
-    "NO_PERMISSION": "You need the CRM admin permission to manage integration tokens.",
+    "NO_PERMISSION": "Only administrators or whoever looks after tokens create and rotate integration tokens.",
     "STATUS": {
       "ACTIVE": "Active",
       "REVOKED": "Revoked"
@@ -3428,6 +3428,7 @@
       "NAME_LABEL": "Name",
       "NAME_PLACEHOLDER": "e.g. n8n production",
       "SCOPES_LABEL": "Scopes",
+      "NO_SCOPES": "A token only carries what your role already has in the CRM, and yours has nothing in the CRM. Ask an administrator.",
       "SUBMIT": "Create token",
       "CANCEL": "Cancel",
       "SUCCESS": "Token created. Copy the secret now — it is shown only once.",
@@ -4637,6 +4638,7 @@
         "PASSOS": "Steps to turn on Google",
         "COPIE_TITULO": "Copy this address",
         "COPIE_TEXTO": "This is how Google learns about your sales. It is only yours.",
+        "SEM_TOKEN": "The Google address is created by whoever looks after tokens.",
         "COLE_TITULO": "Paste the address in Google Ads",
         "COLE_1": "Sign in to Google Ads, in your ads account.",
         "COLE_2": "In the Google Ads search, type “uploads” and open Scheduled uploads.",
