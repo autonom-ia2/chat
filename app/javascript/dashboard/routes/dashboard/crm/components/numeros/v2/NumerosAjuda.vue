@@ -6,7 +6,8 @@ import { useNumerosFormato } from './useNumerosFormato';
 // "Quem precisa de ajuda" (#1992, F5 do #1871): uma linha por pessoa, com o
 // motivo e uma ação de ajuda, nunca um ranking. Os retornos atrasados e os
 // casos parados ficam na mesma linha, e cada número abre a fila daquela
-// pessoa. A IA nunca aparece aqui.
+// pessoa. A IA nunca aparece aqui. Sem ninguém na lista, quem chama não monta
+// o bloco.
 const props = defineProps({
   itens: { type: Array, required: true },
   destinoDe: { type: Function, required: true },
@@ -41,7 +42,7 @@ const linhas = computed(() =>
 </script>
 
 <template>
-  <section v-if="linhas.length" data-numeros-ajuda class="flex flex-col gap-2">
+  <section data-numeros-ajuda class="flex flex-col gap-2">
     <h3 class="mb-0 text-sm font-semibold text-n-slate-11">
       {{ t(`${P}.AJUDA.TITULO`) }}
     </h3>
