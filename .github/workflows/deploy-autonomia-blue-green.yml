@@ -1204,10 +1204,11 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # #2004: só leitura. Horários da green sempre; pacote de diagnóstico (target health, status checks, console e,
-      # via SSM, docker ps, logs do web e do worker, cloud-init, df, free e o curl local) quando um passo crítico
-      # falhou ou demorou. Fica antes da limpeza, que termina a green. Não roda no cancelamento, para não tomar o
-      # tempo da limpeza, e falhar aqui não muda nada no deploy.
+      # #2004: só leitura. Horários da green sempre; quando um passo crítico falhou ou demorou, pacote só estrutural
+      # (target health, status checks, docker ps, código HTTP do health local, df, free). O repositório é público:
+      # logs do web, do worker e do cloud-init vão num send-command cuja saída o workflow não lê (fica no SSM da
+      # conta; o resumo dá o CommandId). Fica antes da limpeza, que termina a green. Não roda no cancelamento, para
+      # não tomar o tempo da limpeza, e falhar aqui não muda nada no deploy.
       - name: Collect green diagnostics
         id: diagnostico
         if: ${{ !cancelled() && env.GREEN_INSTANCE_ID != '' }}

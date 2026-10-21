@@ -191,20 +191,28 @@ def critical(jobs_path, job_status):
     return reasons
 
 
+# Conclusões que a API do GitHub dá a um passo. Repositório público: a tabela leva só passo, duração, horário e uma
+# destas; qualquer outro valor vira "outro".
+KNOWN_CONCLUSIONS = ('success', 'failure', 'cancelled', 'skipped', 'in_progress', 'queued')
+
+
 def phase_rows(jobs, boot):
     rows = []
     for label, job_name, step_name in PHASES:
         if job_name is None:
             start = parse_time(boot.get('launch_time'))
             end = parse_time(boot.get('boot_done'))
-            status = 'ok' if start and end else 'sem dado'
+            conclusion = 'ok' if start and end else 'sem dado'
         else:
             step = find_step(jobs, job_name, step_name)
             start = parse_time(step.get('started_at')) if step else None
             end = parse_time(step.get('completed_at')) if step else None
-            status = (step.get('conclusion') or step.get('status')) if step else 'não rodou'
-        rows.append({'fase': label, 'inicio': start.isoformat() if start else None,
-                     'fim': end.isoformat() if end else None, 'segundos': duration(start, end), 'status': status})
+            conclusion = (step.get('conclusion') or step.get('status')) if step else 'não rodou'
+            if step and conclusion not in KNOWN_CONCLUSIONS:
+                conclusion = 'outro'
+        rows.append({'fase': label, 'passo': step_name or 'lançamento da EC2 → fim do cloud-init',
+                     'inicio': start.isoformat() if start else None, 'fim': end.isoformat() if end else None,
+                     'segundos': duration(start, end), 'conclusao': conclusion})
     return rows
 
 
@@ -218,7 +226,6 @@ def phases(jobs_path, out_path):
         'run_id': os.environ.get('GITHUB_RUN_ID', ''),
         'run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT', ''),
         'sha': os.environ.get('GITHUB_SHA', ''),
-        'gerado_em': datetime.now(timezone.utc).isoformat(),
         'api_disponivel': jobs is not None,
         'deploy_total_segundos': duration(parse_time(deploy_job.get('started_at')),
                                           parse_time(deploy_job.get('completed_at'))),
@@ -229,8 +236,9 @@ def phases(jobs_path, out_path):
     lines = [f"### Tempos do deploy ({report['stack']})", '']
     if jobs is None:
         lines += ['API do GitHub indisponível: sem os tempos dos passos.', '']
-    lines += ['| Fase | Duração | Status |', '| --- | --- | --- |']
-    lines += [f"| {row['fase']} | {human(row['segundos'])} | {row['status']} |" for row in rows]
+    lines += ['| Fase | Passo | Duração | Início (UTC) | Conclusão |', '| --- | --- | --- | --- | --- |']
+    lines += [f"| {row['fase']} | {row['passo']} | {human(row['segundos'])} | {row['inicio'] or '—'} | {row['conclusao']} |"
+              for row in rows]
     lines += ['', f"Job Deploy Green: {human(report['deploy_total_segundos'])}. "
               'Boot da green = lançamento da EC2 até o fim do cloud-init (inclui a espera da imagem do build).']
     return '\n'.join(lines)

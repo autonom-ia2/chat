@@ -1,10 +1,15 @@
 #!/bin/bash
 # Diagnóstico da green no deploy blue-green (#2004). Roda no fim do job Deploy Green, antes da limpeza que termina a
-# green, e só lê: describe-*, get-console-output e um comando SSM de leitura na green. Nada aqui muda tráfego, worker,
-# instância ou parâmetro; qualquer falha (permissão, SSM fora do ar, API) vira uma linha no pacote e o script segue.
+# green, e só lê: describe-* e comandos SSM de leitura na green. Nada aqui muda tráfego, worker, instância ou
+# parâmetro; qualquer falha (permissão, SSM fora do ar, API) vira uma linha no pacote e o script segue.
+#
+# O repositório é público: Step Summary, log do job e artifact são abertos. Por isso só sai daqui dado estrutural
+# (target health, estado e status checks da EC2, docker ps, código HTTP do health local, df, free). Log da aplicação
+# e do sistema (web, worker, cloud-init) pode ter dado de cliente: vai num send-command à parte cuja saída o workflow
+# nunca lê; fica no histórico do SSM, na conta AWS, e o resumo só diz o CommandId e como ler.
 #
 # Sempre: horário de lançamento da green e fim do cloud-init (vão para a tabela de tempos do job seguinte).
-# Só quando um passo crítico falhou ou demorou: o pacote completo, sanitizado, no Step Summary e em
+# Só quando um passo crítico falhou ou demorou: o pacote, sanitizado, no Step Summary e em
 # $RUNNER_TEMP/deploy-diagnostico (o passo seguinte do workflow sobe como artifact).
 #
 # Entradas (env): GREEN_INSTANCE_ID, GREEN_TG_ARN e BLUE_TG_ARN (quando existirem), JOB_STATUS, GH_TOKEN,
@@ -69,21 +74,42 @@ diag_boot_done() {
   done <<< "$1"
 }
 
-# Comandos de leitura, os curtos primeiro: o SSM devolve só os primeiros 24.000 caracteres da saída.
-diag_full_params() {
+# Comandos cuja saída o workflow lê: só estrutura. O curl guarda só o código HTTP e o tempo, nunca o corpo; o
+# cloud-init status sem --long dá só o estado (done/error/running).
+diag_structural_params() {
   jq -nc '{commands: [
     "exec 2>&1",
     "stat -c \"cloud_init_fim_epoch %Y\" /run/cloud-init/result.json",
-    "echo \"== saude local\"; curl -sS -o /dev/null -w \"HTTP %{http_code} em %{time_total}s\\n\" --max-time 10 http://127.0.0.1:3000/",
+    "echo \"== saude local\"; curl -s -o /dev/null -w \"HTTP %{http_code} em %{time_total}s\\n\" --max-time 10 http://127.0.0.1:3000/",
     "echo \"== docker ps\"; docker ps -a --format \"table {{.Names}}\\t{{.Image}}\\t{{.Status}}\"",
     "echo \"== df\"; df -h",
     "echo \"== free\"; free -m",
-    "echo \"== cloud-init status\"; cloud-init status --long",
-    "echo \"== cloud-init-output.log (fim)\"; tail -n 80 /var/log/cloud-init-output.log",
-    "echo \"== web (fim)\"; journalctl -u chatwoot-web.service --no-pager -n 80",
-    "echo \"== worker (fim)\"; journalctl -u chatwoot-worker.service --no-pager -n 60",
+    "echo \"== cloud-init\"; cloud-init status",
     "true"
   ]}'
+}
+
+# Logs que podem ter dado de cliente. A saída deste comando NUNCA é lida pelo workflow: fica só no SSM.
+DIAG_LOGS_COMMANDS=(
+  "echo \"== cloud-init-output.log (fim)\"; tail -n 200 /var/log/cloud-init-output.log"
+  "echo \"== web (fim)\"; journalctl -u chatwoot-web.service --no-pager -n 200"
+  "echo \"== worker (fim)\"; journalctl -u chatwoot-worker.service --no-pager -n 200"
+  "true"
+)
+
+# Manda o comando de logs e devolve só o CommandId (validado: hex e hífen) em DIAG_LOGS_COMMAND_ID.
+diag_ssm_send_logs() {
+  local params command_id ping
+  DIAG_LOGS_COMMAND_ID=""
+  ping=$(aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$GREEN_INSTANCE_ID" \
+    --query 'InstanceInformationList[0].PingStatus' --output text 2>/dev/null) || return 1
+  [ "$ping" = "Online" ] || return 1
+  params=$(jq -nc '{commands: $ARGS.positional}' --args "exec 2>&1" "${DIAG_LOGS_COMMANDS[@]}") || return 1
+  command_id=$(aws ssm send-command --instance-ids "$GREEN_INSTANCE_ID" --document-name AWS-RunShellScript \
+    --comment "deploy #2004: logs da green, leitura so pela conta AWS" \
+    --parameters "$params" --query 'Command.CommandId' --output text 2>/dev/null) || return 1
+  case "$command_id" in ''|*[!0-9a-f-]*) return 1 ;; esac
+  DIAG_LOGS_COMMAND_ID="$command_id"
 }
 
 diag_summary() {
@@ -94,7 +120,7 @@ diag_summary() {
     echo "Motivo:"
     printf '%s\n' "$reasons" | sed 's/^/- /'
     echo
-    echo "Tudo abaixo passou pela sanitização (sequências longas e valores de env viram <REDACTED>). O pacote completo está no artifact deste run."
+    echo "Só dado estrutural, sanitizado (o repositório é público). Os logs do web, do worker e do cloud-init ficam no SSM da conta AWS: veja 50-logs-no-ssm.txt."
     for file in "$DIAG_DIR"/*.txt; do
       [ -e "$file" ] || continue
       echo
@@ -161,10 +187,21 @@ collect_green_diagnostics() {
   fi
   diag_capture 20-ec2-status-checks.txt aws ec2 describe-instance-status --instance-ids "$GREEN_INSTANCE_ID" \
     --include-all-instances --output json
-  diag_capture 30-console-output.txt aws ec2 get-console-output --instance-id "$GREEN_INSTANCE_ID" --latest \
-    --query Output --output text
 
-  diag_ssm_read "$(diag_full_params)" "$DIAG_SSM_ATTEMPTS" || true
+  # Logs primeiro, para rodarem enquanto o comando estrutural espera; a saída deles não é lida.
+  if diag_ssm_send_logs; then
+    {
+      echo "Logs do web, do worker e do cloud-init da green (podem ter dado de cliente; não saem do SSM)."
+      echo "Instância: $GREEN_INSTANCE_ID"
+      echo "CommandId: $DIAG_LOGS_COMMAND_ID"
+      echo "Para ler, com acesso à conta AWS desta stack:"
+      echo "aws ssm get-command-invocation --command-id $DIAG_LOGS_COMMAND_ID --instance-id $GREEN_INSTANCE_ID"
+    } > "$DIAG_DIR/50-logs-no-ssm.txt"
+  else
+    echo "Comando de logs não foi enviado (SSM fora do ar ou recusado)." > "$DIAG_DIR/50-logs-no-ssm.txt"
+  fi
+
+  diag_ssm_read "$(diag_structural_params)" "$DIAG_SSM_ATTEMPTS" || true
   boot_done=$(diag_boot_done "$DIAG_SSM_OUTPUT")
   echo "green_boot_done=$boot_done" >> "$GITHUB_OUTPUT"
   printf '%s\n' "$DIAG_SSM_OUTPUT" | diag_sanitize > "$DIAG_DIR/40-ssm-green.txt"

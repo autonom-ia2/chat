@@ -1687,6 +1687,9 @@ print(int(moment.timestamp()))
     TELEMETRY = ROOT / 'scripts/deploy/deploy-telemetry.py'
     SECRET = 'Ab3' * 13 + 'x'  # 40 caracteres, como uma chave real
     NEW_DEPLOY_STEPS = ('Collect green diagnostics', 'Upload green diagnostics')
+    LOGS_ID = '0b1c2d3e-aaaa-4bbb-8ccc-1234567890ab'
+    PII = ('+5511999999999', 'joao@x.com', 'Performing SendReplyJob', 'oi quero cotar')
+    LOG_SOURCES = ('journalctl', 'cloud-init-output', 'docker logs', 'get-console-output', 'tail ')
     NEW_TEMPOS_STEPS = ('Summarize deploy phase durations', 'Upload deploy phase durations')
 
     def telemetry_env(self, jobs, gh_fails=False, ssm_online=True):
@@ -1711,6 +1714,7 @@ with open(os.environ['TELEMETRY_LOG'], 'a') as stream:
     stream.write(json.dumps(['aws', args]) + '\\n')
 secret = {self.SECRET!r}
 op = tuple(args[:2])
+LOGS_ID = {self.LOGS_ID!r}
 def query():
     return args[args.index('--query') + 1] if '--query' in args else ''
 if op == ('ec2', 'describe-instances'):
@@ -1721,20 +1725,23 @@ elif op == ('elbv2', 'describe-target-health'):
 elif op == ('ec2', 'describe-instance-status'):
     print('An error occurred (UnauthorizedOperation) when calling the DescribeInstanceStatus operation', file=sys.stderr)
     sys.exit(254)
-elif op == ('ec2', 'get-console-output'):
-    print('cloud-init: token=' + secret)
-    print('[   12.0] DATABASE_URL=postgres://chatwoot:curta@db.internal:5432/prod')
 elif op == ('ssm', 'describe-instance-information'):
     print('Online' if {ssm_online!r} else 'None')
 elif op == ('ssm', 'send-command'):
-    print('cmd-diag')
+    print(LOGS_ID if 'journalctl' in args[args.index('--parameters') + 1] else 'cmd-diag')
 elif op == ('ssm', 'get-command-invocation'):
+    if args[args.index('--command-id') + 1] == LOGS_ID:
+        # Log de aplicação com dado de cliente: se alguém ler isto, o teste pega.
+        print('I, [2026-10-21] Performing SendReplyJob with arguments: +5511999999999 joao@x.com')
+        print('cloud-init: + /opt/chatwoot/deploy.sh oi quero cotar')
+        sys.exit(0)
     if query() == 'Status':
         print('Success')
     else:
         print('cloud_init_fim_epoch 1792578600')
         print('== saude local')
         print('HTTP 502 em 0.01s')
+        print('chatwoot-web   repo:abc1234   MARCA-ESTRUTURAL-7 Up 3 minutes')
         print('SECRET_KEY_BASE=' + secret)
         print('+ 10:00:01 IMAGE_URI=354307071110.dkr.ecr.us-east-1.amazonaws.com/repo:' + secret)
         print('E, ERROR -- : Redis auth failed for redis://default:pw@cache:6379 key ' + secret)
@@ -1773,7 +1780,7 @@ else:
         return texts, Path(env['GITHUB_STEP_SUMMARY']).read_text(), Path(env['GITHUB_OUTPUT']).read_text()
 
     def assert_read_only(self, calls):
-        read_only = {('ec2', 'describe-instances'), ('ec2', 'describe-instance-status'), ('ec2', 'get-console-output'),
+        read_only = {('ec2', 'describe-instances'), ('ec2', 'describe-instance-status'),
                      ('elbv2', 'describe-target-health'), ('ssm', 'describe-instance-information'),
                      ('ssm', 'send-command'), ('ssm', 'get-command-invocation')}
         for tool, args in calls:
@@ -1790,6 +1797,15 @@ else:
                     for forbidden in ('systemctl stop', 'systemctl start', 'systemctl restart', 'docker inspect',
                                       'docker exec', '/opt/chatwoot/.env', 'printenv', 'sudo', ' rm ', 'tee ', '>'):
                         self.assertNotIn(forbidden, command.replace('2>&1', '').replace('-o /dev/null', ''))
+        # Repositório público: o workflow nunca lê a saída do comando de logs, e o comando que ele lê não tem log.
+        for tool, args in calls:
+            if tool == 'aws' and args[:2] == ['ssm', 'get-command-invocation']:
+                self.assertNotEqual(args[args.index('--command-id') + 1], self.LOGS_ID)
+            if tool == 'aws' and args[:2] == ['ssm', 'send-command']:
+                commands = ' '.join(json.loads(args[args.index('--parameters') + 1])['commands'])
+                if 'journalctl' not in commands:
+                    for source in self.LOG_SOURCES:
+                        self.assertNotIn(source, commands)
 
     def test_sanitize_removes_long_tokens_env_values_and_url_credentials(self):
         raw = '\n'.join([
@@ -1843,7 +1859,7 @@ else:
                 self.assert_read_only(calls)
                 files = sorted(path.name for path in (Path(env['RUNNER_TEMP']) / 'deploy-diagnostico').glob('*'))
                 self.assertEqual(files, ['00-motivo.txt', '10-target-health-green.txt', '11-target-health-blue.txt',
-                                         '20-ec2-status-checks.txt', '30-console-output.txt', '40-ssm-green.txt'])
+                                         '20-ec2-status-checks.txt', '40-ssm-green.txt', '50-logs-no-ssm.txt'])
                 texts, summary, output = self.collected_text(env)
                 everything = '\n'.join(texts) + summary + output + result.stdout + result.stderr
                 for leaked in (self.SECRET, 'curta', 'default:pw'):
@@ -1857,11 +1873,46 @@ else:
                 self.assertIn('SECRET_KEY_BASE=<REDACTED>', package)
                 self.assertIn('HTTP 502 em 0.01s', package)
                 self.assertIn('status da invocação: Success', package)
+                self.assertIn(f'aws ssm get-command-invocation --command-id {self.LOGS_ID} --instance-id i-green',
+                              package)
+                self.assertIn(f'aws ssm get-command-invocation --command-id {self.LOGS_ID}', summary)
                 self.assertIn('### Diagnóstico da green i-green', summary)
                 self.assertEqual(output.splitlines(), ['green_launch_time=2026-10-21T10:00:00+00:00',
                                                        'green_boot_done=1792578600'])
                 # Nada do que os passos existentes leem muda: GITHUB_ENV intocado.
                 self.assertEqual(Path(env['GITHUB_ENV']).read_text(), '')
+
+
+    def test_application_logs_never_reach_summary_artifact_or_job_log(self):
+        # O repositório é público: Step Summary, log do job e artifact são abertos. Log do web/worker/cloud-init (que
+        # pode ter telefone, e-mail, trecho de mensagem) fica no SSM; nada dele, nem do que a green respondeu, vai ao
+        # log do job (nenhum echo ou ::warning:: repete saída coletada).
+        jobs = self.deploy_job([
+            ('Wait for green SSM and local health', 'failure', '2026-10-21T10:20:00Z', '2026-10-21T10:35:00Z')])
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                env = self.telemetry_env(jobs)
+                env['BLUE_WORKER_STOPPED'] = 'false'
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_read_only(calls)
+                logs_sent = [args for tool, args in calls if tool == 'aws' and args[:2] == ['ssm', 'send-command']
+                             and 'journalctl' in args[args.index('--parameters') + 1]]
+                self.assertEqual(len(logs_sent), 1)
+                texts, summary, output = self.collected_text(env)
+                artifact = '\n'.join(texts)
+                job_log = result.stdout + result.stderr
+                for private in self.PII:
+                    for where, text in (('artifact', artifact), ('summary', summary), ('job log', job_log),
+                                        ('output', output)):
+                        self.assertNotIn(private, text, where)
+                # O que a green respondeu (estrutura) vai ao summary, nunca ao log do job.
+                for collected in ('MARCA-ESTRUTURAL-7', 'Target.Timeout', 'HTTP 502', 'UnauthorizedOperation'):
+                    self.assertIn(collected, summary)
+                    self.assertNotIn(collected, job_log)
+                for line in job_log.splitlines():
+                    self.assertTrue(line.startswith(('::warning::Coletando diagnóstico da green i-green: falhou: ',
+                                                     'Passos críticos', 'Job falhou')), line)
 
     def test_diagnostics_degrade_without_ssm_or_github_api(self):
         for workflow in WORKFLOWS:
@@ -1951,15 +2002,22 @@ else:
                     self.assertEqual(report['stack'], stack)
                     self.assertEqual(report['fases'][1]['segundos'], 1770)  # 10:00:30 -> 10:30:00 (epoch)
                     self.assertIn(f'### Tempos do deploy ({stack})', summary)
-                    self.assertIn('| Fase | Duração | Status |', summary)
+                    self.assertIn('| Fase | Passo | Duração | Início (UTC) | Conclusão |', summary)
+                    self.assertEqual(set(report), {'stack', 'run_id', 'run_attempt', 'sha', 'api_disponivel',
+                                                   'deploy_total_segundos', 'fases'})
+                    for row in report['fases']:
+                        self.assertEqual(set(row), {'fase', 'passo', 'inicio', 'fim', 'segundos', 'conclusao'})
+                    # O log do job (público) só leva o aviso fixo de API fora, nunca dado coletado.
+                    self.assertIn(result.stdout, ('', '::warning::API do GitHub indisponível: a tabela de tempos sai sem os passos.\n'))
                     if gh_fails:
                         self.assertFalse(report['api_disponivel'])
-                        self.assertEqual(report['fases'][0]['status'], 'não rodou')
+                        self.assertEqual(report['fases'][0]['conclusao'], 'não rodou')
                     else:
                         self.assertEqual(report['fases'][0]['segundos'], 18 * 60)
-                        self.assertEqual(report['fases'][3]['status'], 'failure')
-                        self.assertEqual(report['fases'][6]['status'], 'não rodou')
-                        self.assertIn('| Registro no target group | 10m00s | failure |', summary)
+                        self.assertEqual(report['fases'][3]['conclusao'], 'failure')
+                        self.assertEqual(report['fases'][6]['conclusao'], 'não rodou')
+                        self.assertIn('| Registro no target group | Register green target group | 10m00s | '
+                                      '2026-10-21T10:25:00+00:00 | failure |', summary)
 
     def test_telemetry_steps_are_read_only_continue_on_error_and_keep_existing_outputs(self):
         for workflow in WORKFLOWS:
