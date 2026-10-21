@@ -3,9 +3,6 @@
 # Crm::SubjectDecision.
 class AddReviewReasonAndJevAnswerToCrmSubjectDecisions < ActiveRecord::Migration[7.2]
   def up
-    # ADD COLUMN pede trava exclusiva rápida numa tabela escrita a cada mensagem: atrás de uma transação longa, desiste
-    # em 5 s em vez de enfileirar leitura e escrita atrás dela (rodar de novo depois). LOCAL: vale só nesta transação.
-    execute "SET LOCAL lock_timeout = '5s'"
     add_column :crm_subject_decisions, :review_reason, :string
     add_column :crm_subject_decisions, :jev_answer, :string
   end
