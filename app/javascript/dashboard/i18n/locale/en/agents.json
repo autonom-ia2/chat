@@ -1066,6 +1066,10 @@
             "ERRO": "Could not delete.",
             "ERRO_GARANTIA": "Nothing changed.",
             "PRONTO": "{ferramenta} was deleted."
+          },
+          "RASCUNHO_EXEMPLO": {
+            "NOME": "Stock search",
+            "ENDERECO": "https://api.sualoja.com.br/estoque/busca"
           }
         },
         "VOLTAR_LISTA": "Back to Agents",
@@ -1230,6 +1234,17 @@
               "B": "I want to exchange a product",
               "C": "I want to talk to a person"
             }
+          },
+          "ANEXAR": "Send a photo or file",
+          "APRENDER": {
+            "PERGUNTA": "Do you want {nome} to learn from {arquivo}?",
+            "TEXTO": "If yes, {nome} reads it, reviews it and starts using it with your customers. If not, the file is not kept.",
+            "SIM": "Yes, learn",
+            "NAO": "No, thanks",
+            "ENTROU": "{arquivo} is now part of what {nome} knows. It is being read and reviewed.",
+            "VER_SABE": "See what {nome} knows",
+            "FALHOU": "Could not send the file right now.",
+            "FALHOU_GARANTIA": "Nothing was kept."
           }
         },
         "SABE": {
@@ -1274,7 +1289,8 @@
           "REVISANDO": "Reviewing…",
           "ATENCAO": "Needs you",
           "ATENCAO_TEXTO": "{nome} does not use this material until you send another one.",
-          "LENDO_FOTO": "Reading the text in the photo…"
+          "LENDO_FOTO": "Reading the text in the photo…",
+          "LENDO_PAGINA": "Reading page {pagina} of {total}…"
         },
         "ONDE": {
           "TITULO": "Where and when {nome} answers",

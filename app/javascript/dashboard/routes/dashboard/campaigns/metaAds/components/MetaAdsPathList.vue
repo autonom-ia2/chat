@@ -16,7 +16,7 @@ import MetaAdsQuoteMessage from './MetaAdsQuoteMessage.vue';
 const props = defineProps({
   // 'conversations' | 'quotes' | 'sales' | 'slow_replies'
   step: { type: String, required: true },
-  days: { type: Number, required: true },
+  period: { type: String, required: true },
   currency: { type: String, default: 'BRL' },
 });
 
@@ -35,7 +35,7 @@ const load = async () => {
   try {
     const { data } = await CrmMetaAdsConnectionAPI.panelList(
       props.step,
-      props.days
+      props.period
     );
     list.value = data.list;
   } catch {

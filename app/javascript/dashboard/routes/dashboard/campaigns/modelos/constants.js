@@ -64,6 +64,25 @@ export const OBJETIVOS = [
     tipo: 'divulgacao',
     botoes: [{ tipo: 'resposta', chaveTexto: 'QUERO_CONTINUAR' }],
   },
+  // #2035: avisos de serviço genéricos; o pacote da conta troca o texto
+  // (seguro, plano, sinistro, reembolso). Sem oferta: só respostas rápidas.
+  {
+    chave: 'renovacao',
+    icone: 'i-lucide-refresh-cw',
+    tom: 'bg-n-teal-3 text-n-teal-11',
+    tipo: 'aviso',
+    botoes: [
+      { tipo: 'resposta', chaveTexto: 'QUERO_RENOVAR' },
+      { tipo: 'resposta', chaveTexto: 'FALAR_COM_ALGUEM' },
+    ],
+  },
+  {
+    chave: 'andamento',
+    icone: 'i-lucide-route',
+    tom: 'bg-n-blue-3 text-n-blue-11',
+    tipo: 'aviso',
+    botoes: [{ tipo: 'resposta', chaveTexto: 'VER_DETALHES' }],
+  },
 ];
 
 // Sem tipo: a pessoa escolhe aviso ou divulgação na etapa do texto.

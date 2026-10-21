@@ -1,4 +1,4 @@
-# Relatório baixado de Anúncios (#1960): GET meta_ads_connection/report?formato=pdf|planilha&days=7|30. Quem vê o painel
+# Relatório baixado de Anúncios (#1960): GET meta_ads_connection/report?formato=pdf|planilha&period= (Panel::Period, #2011). Quem vê o painel
 # baixa (administrador ou `meta_ads_view`, policy Crm::MetaAdsConnection :show?); os números são os da tela no mesmo
 # período, da conexão ou, sem ela, do WhatsApp (Crm::MetaAdsPanelSource). As listas trazem só as conversas que a pessoa
 # já vê, e só para quem pode exportar o CRM (Crm::CardPolicy#export?, crm_export: dado pessoal em lote); sem isso o
@@ -19,8 +19,7 @@ class Api::V1::Accounts::Crm::MetaAdsReportsController < Api::V1::Accounts::Crm:
     return render json: { error: 'not_found' }, status: :not_found unless panel_ready?
 
     scope = panel_scope
-    dados = ::Crm::MetaAds::Relatorio::Dados.new(panel_source, days: scope[:days], account: scope[:account], visible: scope[:visible],
-                                                               com_pessoas: Pundit.policy!(pundit_user, ::Crm::Card).export?)
+    dados = ::Crm::MetaAds::Relatorio::Dados.new(panel_source, **scope, com_pessoas: Pundit.policy!(pundit_user, ::Crm::Card).export?)
     arquivo = klass.new(dados)
     send_data arquivo.gerar, filename: arquivo.nome, type: content_type, disposition: :attachment
   end

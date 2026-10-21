@@ -4,3 +4,7 @@ pt_BR:
     export:
       statuses:
         won: 'Plano ativo'
+  # Ramo da conta para a IA de e-mail (#2037).
+  email_campaigns:
+    ai:
+      vocabulario: 'Ramo da conta: planos de saúde e benefícios. Diga plano e beneficiário. Não fale em apólice, segurado nem sinistro.'

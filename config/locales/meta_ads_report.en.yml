@@ -3,10 +3,18 @@ en:
   meta_ads_report:
     file_prefix: 'ads'
     title: 'Ads report'
-    period: 'Last %{days} days · %{from} to %{to}'
+    period: '%{name} · %{from} to %{to}'
+    # Name of each screen period (Panel::Period, #2011).
+    period_names:
+      7d: 'Last 7 days'
+      30d: 'Last 30 days'
+      90d: 'Last 90 days'
+      this_month: 'This month'
+      last_month: 'Last month'
+      all: 'All time'
     generated: 'Generated on %{date}'
     page: 'Page <page> of <total>'
-    hero_label: 'Ads · last %{days} days'
+    hero_label: 'Ads · %{name}'
     headline_whatsapp: 'On WhatsApp, %{conversations} came from ads and %{sales}.'
     headline_spend: 'You invested %{spend}. %{conversations} and %{sales} came in.'
     count:
@@ -82,7 +90,7 @@ en:
       ads: 'Ads'
       conversations: 'Conversations'
       daily: 'Per day'
-    sheet_context: 'Last %{days} days (%{from} to %{to}) · generated on %{date}'
+    sheet_context: '%{name} (%{from} to %{to}) · generated on %{date}'
     sheet_truncated: 'Showing the %{shown} most recent conversations of %{total}.'
     summary:
       conversations: 'Conversations from ads'

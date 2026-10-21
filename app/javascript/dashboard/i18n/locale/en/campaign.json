@@ -1047,7 +1047,10 @@
           "pos-atendimento": "After-service feedback",
           "aniversario": "Customer birthday",
           "comunicado-importante": "Important announcement",
-          "conteudo-educativo": "Educational content"
+          "conteudo-educativo": "Educational content",
+          "seguros-renovacao": "Insurance renewal coming up",
+          "seguros-boas-vindas": "Welcome, policyholder",
+          "seguros-parcela-em-aberto": "Insurance installment overdue"
         },
         "IMPORT_FAILED": "Import needs correction · open details to fix or replace the file"
       }

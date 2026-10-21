@@ -4,3 +4,7 @@ en:
     export:
       statuses:
         won: 'Active plan'
+  # Line of business for the e-mail AI (#2037).
+  email_campaigns:
+    ai:
+      vocabulario: 'Line of business: health plans and benefits. Say plan and beneficiary. Do not talk about policy, policyholder or claim.'

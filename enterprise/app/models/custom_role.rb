@@ -22,6 +22,8 @@
 # - 'conversation_participating_manage': Can manage conversations they are participating in (assigned to or a participant).
 # - 'conversation_view': Can read every conversation of their inboxes (messages and notes) without operating on them.
 #   Writes keep requiring the trio above (#1800).
+# - 'conversation_message_delete': Can delete messages in the conversations they operate (#1893). Agents without a
+#   custom role keep deleting as before.
 # - 'contact_manage': Can manage contacts.
 # - 'report_manage': Can manage reports.
 # - 'knowledge_base_manage': Can manage knowledge base portals.
@@ -35,13 +37,16 @@
 # - 'crm_export': Can download the CRM list as a spreadsheet (personal data in bulk).
 # - 'crm_delete_cards': Can archive CRM cards, one by one or in bulk (split from crm_manage_cards in #1874; roles that
 #   had crm_manage_cards kept it).
+# - 'crm_metas_manage': Can see and set every person's monthly goal in CRM › Números (Metas do mês, #1991). crm_admin
+#   implies it; agents without a custom role never get it.
 #
 # Module keys: '<module>_manage' implies '<module>_view' (see Enterprise::AccountUser#permission_granted?).
 # - 'contact_view' / 'knowledge_base_view': read-only access to contacts / help center.
 # - 'contact_export': export the contact base (split from contact_manage in #1845; roles that had contact_manage kept it).
 # - 'contact_delete': delete contacts and companies, one by one or in bulk (#1845).
 # - 'autonomia_view': view and test Autonom.ia agents. 'autonomia_manage': create, train and publish them.
-# - 'campaign_view': view campaigns and their reports. 'campaign_manage': create, send and import lists.
+# - 'campaign_view': view campaigns and their reports. 'campaign_manage': build campaigns and import lists.
+#   'campaign_send': send, schedule and resume them (#1898; roles that had campaign_manage kept sending).
 # - 'inbox_view': view every inbox configuration. 'inbox_manage': create, connect and configure inboxes.
 # - 'canned_response_manage': create, edit and delete canned responses.
 # - 'prospecting_view' / 'prospecting_manage': prospecting searches, leads and lists.
@@ -84,6 +89,7 @@ class CustomRole < ApplicationRecord
     conversation_unassigned_manage
     conversation_participating_manage
     conversation_view
+    conversation_message_delete
     contact_manage
     report_manage
     knowledge_base_manage
@@ -96,6 +102,7 @@ class CustomRole < ApplicationRecord
     crm_admin
     crm_export
     crm_delete_cards
+    crm_metas_manage
     contact_view
     contact_export
     contact_delete
@@ -104,6 +111,7 @@ class CustomRole < ApplicationRecord
     autonomia_manage
     campaign_view
     campaign_manage
+    campaign_send
     inbox_view
     inbox_manage
     canned_response_manage
