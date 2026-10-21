@@ -93,5 +93,12 @@ RSpec.describe Crm::Subjects::Encerrado do
       pipeline.update!(when_to_use: 'Quando usar escrito.')
       expect(described_class.quando_usar(pipeline)).to eq('Quando usar escrito.')
     end
+
+    it 'com a flag, a descrição longa entra com o teto do "quando usar"' do
+      account.enable_features!(described_class::FLAG)
+      pipeline.update!(description: 'a' * (Crm::Pipeline::MAX_WHEN_TO_USE + 500))
+
+      expect(described_class.quando_usar(pipeline).size).to eq(Crm::Pipeline::MAX_WHEN_TO_USE)
+    end
   end
 end

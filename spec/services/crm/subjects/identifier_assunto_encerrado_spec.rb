@@ -97,12 +97,12 @@ RSpec.describe Crm::Subjects::Identifier do
       end
     end
 
-    it 'sem vários assuntos: a decisão fica mantida no encerrado, sem lista de cards', :aggregate_failures do
+    it 'sem vários assuntos: a decisão fica mantida no encerrado, com a lista de cards vazia', :aggregate_failures do
       stub_jev("encerrado_#{fechado.id}")
 
       decisao = identify(incoming('Deu tudo certo, obrigada'))
 
-      expect(decisao).to have_attributes(state: 'kept', reason: Crm::Subjects::Encerrado::MOTIVO, card_id: fechado.id, touched_card_ids: nil)
+      expect(decisao).to have_attributes(state: 'kept', reason: Crm::Subjects::Encerrado::MOTIVO, card_id: fechado.id, touched_card_ids: [])
       expect(fechado.reload).to be_lost
       expect(foco).to eq(aberto)
     end

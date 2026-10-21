@@ -51,17 +51,20 @@ module Crm::Subjects::Encerrado
 
   def chave(card) = "#{PREFIXO}#{card.id}"
 
-  # O que a decisão grava quando o modelo escolheu um assunto encerrado: nada muda.
+  # O que a decisão grava quando o modelo escolheu um assunto encerrado: nada muda. A lista de cards tocados vai vazia
+  # também fora da lista de vários assuntos (a decisão reaberta pelo Híbrido, #1638): nula, a avaliação conjunta
+  # (Crm::Conversations::CardsTocados) releria o card em foco por causa dessa mensagem.
   def decisao(card)
-    { action: 'none', state: 'kept', reason: MOTIVO, card: card }
+    { action: 'none', state: 'kept', reason: MOTIVO, card: card, tocados: [] }
   end
 
   # "O que entra aqui" da IA de etapa: com a flag, o "quando usar" e, sem ele, a descrição do funil. Sem a flag, só o
-  # "quando usar", como antes.
+  # "quando usar", como antes. A descrição não tem limite de tamanho e a IA de etapa roda a cada avaliação: entra com o
+  # mesmo teto do "quando usar" (Crm::Pipeline::MAX_WHEN_TO_USE).
   def quando_usar(pipeline)
     return if pipeline.nil?
     return pipeline.when_to_use.presence unless ligada?(pipeline.account)
 
-    pipeline.when_to_use.presence || pipeline.description.presence
+    pipeline.when_to_use.presence || pipeline.description.to_s.squish.first(Crm::Pipeline::MAX_WHEN_TO_USE).presence
   end
 end
