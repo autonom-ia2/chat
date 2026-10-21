@@ -1683,6 +1683,455 @@ print(int(moment.timestamp()))
                 header = workflow.read_text().split('      - name: Warn about forgotten green instances\n', 1)[1]
                 self.assertTrue(header.startswith('        continue-on-error: true\n'))
 
+    # #2004: telemetria e diagnóstico do blue-green. Tudo aqui é leitura; nenhum passo novo pode decidir o deploy.
+    TELEMETRY = ROOT / 'scripts/deploy/deploy-telemetry.py'
+    SECRET = 'Ab3' * 13 + 'x'  # 40 caracteres, como uma chave real
+    NEW_DEPLOY_STEPS = ('Collect green diagnostics', 'Upload green diagnostics')
+    LOGS_ID = '0b1c2d3e-aaaa-4bbb-8ccc-1234567890ab'
+    PII = ('+5511999999999', 'joao@x.com', 'Performing SendReplyJob', 'oi quero cotar')
+    LOG_SOURCES = ('journalctl', 'cloud-init-output', 'docker logs', 'get-console-output', 'tail ')
+    NEW_TEMPOS_STEPS = ('Summarize deploy phase durations', 'Upload deploy phase durations')
+
+    def telemetry_env(self, jobs, gh_fails=False, ssm_online=True):
+        """Fakes de aws/gh só para o diagnóstico: registram toda chamada e recusam qualquer escrita."""
+        log = self.directory / 'telemetry-calls.jsonl'
+        log.write_text('')
+        (self.bin / 'python3').write_text(f'#!/bin/sh\nexec {sys.executable} "$@"\n')
+        (self.bin / 'sleep').write_text('#!/bin/sh\nexit 0\n')
+        (self.bin / 'gh').write_text(f'''#!{sys.executable}
+import json, os, sys
+with open(os.environ['TELEMETRY_LOG'], 'a') as stream:
+    stream.write(json.dumps(['gh', sys.argv[1:]]) + '\\n')
+if {gh_fails!r}:
+    print('HTTP 502', file=sys.stderr)
+    sys.exit(1)
+print(json.dumps({{'jobs': {jobs!r}}}))
+''')
+        (self.bin / 'aws').write_text(f'''#!{sys.executable}
+import json, os, sys
+args = sys.argv[1:]
+with open(os.environ['TELEMETRY_LOG'], 'a') as stream:
+    stream.write(json.dumps(['aws', args]) + '\\n')
+secret = {self.SECRET!r}
+op = tuple(args[:2])
+LOGS_ID = {self.LOGS_ID!r}
+def query():
+    return args[args.index('--query') + 1] if '--query' in args else ''
+if op == ('ec2', 'describe-instances'):
+    print('2026-10-21T10:00:00+00:00')
+elif op == ('elbv2', 'describe-target-health'):
+    arn = 'arn:aws:elasticloadbalancing:us-east-1:354307071110:targetgroup/cw-hub2-green-12/abc123def'
+    full = {{'TargetHealthDescriptions': [{{'Target': {{'Id': 'i-green', 'Port': 3000}}, 'TargetGroupArn': arn,
+        'TargetHealth': {{'State': 'unhealthy', 'Reason': 'Target.Timeout', 'Description': 'Request timed out'}}}}]}}
+    if query():
+        assert query() == ('TargetHealthDescriptions[].{{Id:Target.Id,Port:Target.Port,State:TargetHealth.State,'
+                           'Reason:TargetHealth.Reason,Description:TargetHealth.Description}}'), query()
+        print(json.dumps([{{'Id': 'i-green', 'Port': 3000, 'State': 'unhealthy', 'Reason': 'Target.Timeout',
+                            'Description': 'Request timed out'}}]))
+    else:
+        print(json.dumps(full))
+elif op == ('ec2', 'describe-instance-status'):
+    print('An error occurred (UnauthorizedOperation) when calling the DescribeInstanceStatus operation: User: '
+          'arn:aws:sts::354307071110:assumed-role/chatwoot-x-prod-deploy/GitHubActions is not authorized', file=sys.stderr)
+    sys.exit(254)
+elif op == ('ssm', 'describe-instance-information'):
+    print('Online' if {ssm_online!r} else 'None')
+elif op == ('ssm', 'send-command'):
+    print(LOGS_ID if 'journalctl' in args[args.index('--parameters') + 1] else 'cmd-diag')
+elif op == ('ssm', 'get-command-invocation'):
+    if args[args.index('--command-id') + 1] == LOGS_ID:
+        # Log de aplicação com dado de cliente: se alguém ler isto, o teste pega.
+        print('I, [2026-10-21] Performing SendReplyJob with arguments: +5511999999999 joao@x.com')
+        print('cloud-init: + /opt/chatwoot/deploy.sh oi quero cotar')
+        sys.exit(0)
+    if query() == 'Status':
+        print('Success')
+    else:
+        print('cloud_init_fim_epoch 1792578600')
+        print('== saude local')
+        print('HTTP 502 em 0.01s')
+        print('chatwoot-web   354307071110.dkr.ecr.us-east-1.amazonaws.com/repo:abc1234   MARCA-ESTRUTURAL-7 Up 3 minutes')
+        print('SECRET_KEY_BASE=' + secret)
+        print('+ 10:00:01 IMAGE_URI=354307071110.dkr.ecr.us-east-1.amazonaws.com/repo:' + secret)
+        print('E, ERROR -- : Redis auth failed for redis://default:pw@cache:6379 key ' + secret)
+else:
+    print('unexpected_aws_call ' + ' '.join(args), file=sys.stderr)
+    sys.exit(99)
+''')
+        for name in ('python3', 'sleep', 'gh', 'aws'):
+            (self.bin / name).chmod(0o700)
+        temp = Path(tempfile.mkdtemp(prefix='runner-temp-', dir=self.directory))
+        for name in ('github-output', 'github-summary', 'github-env'):
+            (self.directory / name).write_text('')
+        return {**self.env, 'TELEMETRY_LOG': str(log), 'RUNNER_TEMP': str(temp),
+                'GITHUB_OUTPUT': str(self.directory / 'github-output'),
+                'GITHUB_STEP_SUMMARY': str(self.directory / 'github-summary'),
+                'GITHUB_ENV': str(self.directory / 'github-env'),
+                'GITHUB_REPOSITORY': 'autonom-ia2/chat', 'GITHUB_RUN_ID': '777', 'GITHUB_RUN_ATTEMPT': '1',
+                'GH_TOKEN': 'synthetic', 'GREEN_INSTANCE_ID': 'i-green', 'GREEN_TG_ARN': 'tg-green',
+                'BLUE_TG_ARN': 'tg-blue', 'JOB_STATUS': 'failure'}
+
+    @staticmethod
+    def deploy_job(steps):
+        return [{'name': 'Deploy Green', 'started_at': '2026-10-21T10:00:00Z', 'completed_at': '2026-10-21T10:40:00Z',
+                 'steps': [{'name': name, 'status': 'completed', 'conclusion': conclusion,
+                            'started_at': start, 'completed_at': end} for name, conclusion, start, end in steps]}]
+
+    def run_telemetry_step(self, workflow, env, step='Collect green diagnostics'):
+        script = run_block(workflow.read_text(), step)
+        result = subprocess.run(['/bin/bash', '-e', '-c', script], cwd=ROOT, env=env, text=True,
+                                capture_output=True, timeout=30)
+        calls = [json.loads(line) for line in Path(env['TELEMETRY_LOG']).read_text().splitlines()]
+        return result, calls
+
+    def collected_text(self, env):
+        texts = [path.read_text() for path in sorted((Path(env['RUNNER_TEMP']) / 'deploy-diagnostico').glob('*'))]
+        return texts, Path(env['GITHUB_STEP_SUMMARY']).read_text(), Path(env['GITHUB_OUTPUT']).read_text()
+
+    def assert_read_only(self, calls):
+        read_only = {('ec2', 'describe-instances'), ('ec2', 'describe-instance-status'),
+                     ('elbv2', 'describe-target-health'), ('ssm', 'describe-instance-information'),
+                     ('ssm', 'send-command'), ('ssm', 'get-command-invocation')}
+        for tool, args in calls:
+            if tool == 'aws':
+                self.assertIn(tuple(args[:2]), read_only, args)
+            else:
+                self.assertEqual(args[0], 'api', args)
+                self.assertNotIn('--method', args)
+        for tool, args in calls:
+            if tool == 'aws' and args[:2] == ['ssm', 'send-command']:
+                self.assertEqual(args[args.index('--instance-ids') + 1], 'i-green')
+                commands = json.loads(args[args.index('--parameters') + 1])['commands']
+                for command in commands:
+                    for forbidden in ('systemctl stop', 'systemctl start', 'systemctl restart', 'docker inspect',
+                                      'docker exec', '/opt/chatwoot/.env', 'printenv', 'sudo', ' rm ', 'tee ', '>'):
+                        self.assertNotIn(forbidden, command.replace('2>&1', '').replace('-o /dev/null', ''))
+        # Repositório público: o workflow nunca lê a saída do comando de logs, e o comando que ele lê não tem log.
+        for tool, args in calls:
+            if tool == 'aws' and args[:2] == ['ssm', 'get-command-invocation']:
+                self.assertNotEqual(args[args.index('--command-id') + 1], self.LOGS_ID)
+            if tool == 'aws' and args[:2] == ['ssm', 'send-command']:
+                commands = ' '.join(json.loads(args[args.index('--parameters') + 1])['commands'])
+                if 'journalctl' not in commands:
+                    for source in self.LOG_SOURCES:
+                        self.assertNotIn(source, commands)
+
+    def test_sanitize_removes_long_tokens_env_values_and_url_credentials(self):
+        raw = '\n'.join([
+            f'token: {self.SECRET}',
+            f'SECRET_KEY_BASE={self.SECRET}',
+            'export SMTP_PASSWORD=curta123',
+            '  POSTGRES_PASSWORD=curta',
+            '+ 10:00:01 IMAGE_URI=repo:abc OUTRO=1',
+            'Redis auth failed for redis://default:pw@cache:6379/0',
+            'HTTP 200 em 0.01s',
+            'chatwoot-web   Up 3 minutes',
+            '[   12.0] secret_key_base=curtinha status=500',
+            'Authorization: Bearer abc.def',
+            'aws_secret\twJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY fim',
+            'conexao postgres://chatwoot:pa/ss@db:5432/prod',
+            'docker pull 354307071110.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod:abc1234 /var/log/cloud-init-output.log',
+        ])
+        result = subprocess.run([sys.executable, str(self.TELEMETRY), 'sanitize'], input=raw, text=True,
+                                capture_output=True, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn(self.SECRET, result.stdout)
+        for leaked in ('curta123', 'curta', 'repo:abc', 'OUTRO=1', 'default:pw', 'abc.def', 'EXAMPLEKEY', 'pa/ss'):
+            self.assertNotIn(leaked, result.stdout)
+        self.assertEqual(result.stdout.splitlines(), [
+            'token: <REDACTED>',
+            'SECRET_KEY_BASE=<REDACTED>',
+            'export SMTP_PASSWORD=<REDACTED>',
+            '  POSTGRES_PASSWORD=<REDACTED>',
+            '+ 10:00:01 IMAGE_URI=<REDACTED> OUTRO=<REDACTED>',
+            'Redis auth failed for redis://<REDACTED>@cache:6379/0',
+            'HTTP 200 em 0.01s',
+            'chatwoot-web   Up 3 minutes',
+            '[   12.0] secret_key_base=<REDACTED> status=<REDACTED>',
+            'Authorization: Bearer <REDACTED>',
+            'aws_secret\t<REDACTED> fim',
+            'conexao postgres://<REDACTED>@db:5432/prod',
+            'docker pull chatwoot-autonomia-prod:abc1234 /var/log/cloud-init-output.log',
+        ])
+
+    def test_failed_critical_step_builds_sanitized_diagnostic_package(self):
+        # Simula o 21/10: o waiter do Register estourou. O pacote sai completo, sanitizado e sem nenhuma escrita na AWS.
+        jobs = self.deploy_job([
+            ('Wait for green SSM and local health', 'success', '2026-10-21T10:20:00Z', '2026-10-21T10:25:00Z'),
+            ('Register green target group', 'failure', '2026-10-21T10:26:00Z', '2026-10-21T10:36:00Z'),
+        ])
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                env = self.telemetry_env(jobs)
+                env['BLUE_WORKER_STOPPED'] = 'false'  # Register falha antes do "Mark blue worker stop"
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_read_only(calls)
+                files = sorted(path.name for path in (Path(env['RUNNER_TEMP']) / 'deploy-diagnostico').glob('*'))
+                self.assertEqual(files, ['00-motivo.txt', '10-target-health-green.txt', '11-target-health-blue.txt',
+                                         '20-ec2-status-checks.txt', '40-ssm-green.txt', '50-logs-no-ssm.txt'])
+                texts, summary, output = self.collected_text(env)
+                everything = '\n'.join(texts) + summary + output + result.stdout + result.stderr
+                for leaked in (self.SECRET, 'curta', 'default:pw'):
+                    self.assertNotIn(leaked, everything)
+                package = '\n'.join(texts)
+                self.assertIn('falhou: Register green target group', package)
+                self.assertIn('Target.Timeout', package)
+                # Permissão que falta (DescribeInstanceStatus) vira uma linha no pacote, não derruba o passo.
+                self.assertIn('UnauthorizedOperation', package)
+                self.assertIn('(falhou com status 254)', package)
+                self.assertIn('SECRET_KEY_BASE=<REDACTED>', package)
+                self.assertIn('HTTP 502 em 0.01s', package)
+                self.assertIn('status da invocação: Success', package)
+                self.assertIn(f'aws ssm get-command-invocation --command-id {self.LOGS_ID} --instance-id i-green',
+                              package)
+                self.assertIn(f'aws ssm get-command-invocation --command-id {self.LOGS_ID}', summary)
+                self.assertIn('### Diagnóstico da green i-green', summary)
+                self.assertEqual(output.splitlines(), ['green_launch_time=2026-10-21T10:00:00+00:00',
+                                                       'green_boot_done=1792578600'])
+                # Nada do que os passos existentes leem muda: GITHUB_ENV intocado.
+                self.assertEqual(Path(env['GITHUB_ENV']).read_text(), '')
+
+
+    def test_application_logs_never_reach_summary_artifact_or_job_log(self):
+        # O repositório é público: Step Summary, log do job e artifact são abertos. Log do web/worker/cloud-init (que
+        # pode ter telefone, e-mail, trecho de mensagem) fica no SSM; nada dele, nem do que a green respondeu, vai ao
+        # log do job (nenhum echo ou ::warning:: repete saída coletada).
+        jobs = self.deploy_job([
+            ('Wait for green SSM and local health', 'failure', '2026-10-21T10:20:00Z', '2026-10-21T10:35:00Z')])
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                env = self.telemetry_env(jobs)
+                env['BLUE_WORKER_STOPPED'] = 'false'
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_read_only(calls)
+                logs_sent = [args for tool, args in calls if tool == 'aws' and args[:2] == ['ssm', 'send-command']
+                             and 'journalctl' in args[args.index('--parameters') + 1]]
+                self.assertEqual(len(logs_sent), 1)
+                texts, summary, output = self.collected_text(env)
+                artifact = '\n'.join(texts)
+                job_log = result.stdout + result.stderr
+                for private in self.PII:
+                    for where, text in (('artifact', artifact), ('summary', summary), ('job log', job_log),
+                                        ('output', output)):
+                        self.assertNotIn(private, text, where)
+                # O que a green respondeu (estrutura) vai ao summary, nunca ao log do job.
+                for collected in ('MARCA-ESTRUTURAL-7', 'Target.Timeout', 'HTTP 502', 'UnauthorizedOperation'):
+                    self.assertIn(collected, summary)
+                    self.assertNotIn(collected, job_log)
+                for line in job_log.splitlines():
+                    self.assertTrue(line.startswith(('::warning::Coletando diagnóstico da green i-green: falhou: ',
+                                                     'Passos críticos', 'Job falhou')), line)
+
+    @staticmethod
+    def has_account_id(text):
+        digits = ''
+        for char in text + ' ':
+            if char.isdigit():
+                digits += char
+                continue
+            if len(digits) == 12:
+                return True
+            digits = ''
+        return False
+
+    def test_no_account_id_or_arn_reaches_summary_or_artifact(self):
+        # Repositório público: ARN e ID de conta (12 dígitos) não saem, nem do target health, nem do erro de permissão
+        # (assumed-role), nem do registry ECR da imagem no docker ps.
+        jobs = self.deploy_job([
+            ('Register green target group', 'failure', '2026-10-21T10:26:00Z', '2026-10-21T10:36:00Z')])
+        self.assertTrue(self.has_account_id('x 354307071110.dkr'))
+        self.assertFalse(self.has_account_id('epoch 1792578600 i-0123456789abcdef0'))
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                env = self.telemetry_env(jobs)
+                env['BLUE_WORKER_STOPPED'] = 'false'
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                texts, summary, output = self.collected_text(env)
+                public = '\n'.join(texts) + summary + output + result.stdout + result.stderr
+                self.assertNotIn('arn:aws', public)
+                self.assertFalse(self.has_account_id(public), public)
+                self.assertNotIn('TargetGroupArn', public)
+                self.assertIn('repo:abc1234', summary)
+                self.assertIn('Target.Timeout', summary)
+                self.assertIn('UnauthorizedOperation', summary)
+        result = subprocess.run([sys.executable, str(self.TELEMETRY), 'sanitize'], text=True, capture_output=True,
+                                input='"arn:aws:elasticloadbalancing:us-east-1:354307071110:targetgroup/cw-1/abc", conta 140023375763',
+                                timeout=5)
+        self.assertEqual(result.stdout, '"cw-1", conta <CONTA>')
+
+    def test_shift_failure_with_sidekiq_on_green_does_not_wait_for_ssm(self):
+        # Shift falhou: o worker da blue está parado e o Sidekiq roda na green. O comando de logs vai (sem espera); o
+        # estrutural, que espera o SSM, fica de fora para não atrasar a limpeza que religa a blue.
+        jobs = self.deploy_job([
+            ('Shift HTTPS listener to green', 'failure', '2026-10-21T10:28:00Z', '2026-10-21T10:29:00Z')])
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                env = self.telemetry_env(jobs)
+                env['BLUE_WORKER_STOPPED'] = 'true'
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_read_only(calls)
+                self.assertFalse(any(tool == 'aws' and args[:2] == ['ssm', 'get-command-invocation'] for tool, args in calls))
+                sent = [args for tool, args in calls if tool == 'aws' and args[:2] == ['ssm', 'send-command']]
+                self.assertEqual(len(sent), 1)
+                self.assertIn('journalctl', sent[0][sent[0].index('--parameters') + 1])
+                texts, summary, output = self.collected_text(env)
+                self.assertIn('falhou: Shift HTTPS listener to green', texts[0])
+                self.assertIn(f'--command-id {self.LOGS_ID}', summary)
+                self.assertIn('green_boot_done=\n', output)
+
+    def test_diagnostics_degrade_without_ssm_or_github_api(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                env = self.telemetry_env([], gh_fails=True, ssm_online=False)
+                env['BLUE_WORKER_STOPPED'] = 'false'  # falha antes da troca de workers (ex.: green que não subiu)
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_read_only(calls)
+                self.assertFalse(any(args[:2] == ['ssm', 'send-command'] for tool, args in calls if tool == 'aws'))
+                texts, summary, output = self.collected_text(env)
+                self.assertIn('falhou: passo não identificado (API do GitHub indisponível)', texts[0])
+                self.assertIn('SSM da green fora do ar', '\n'.join(texts))
+                self.assertIn('green_boot_done=\n', output)
+                self.assertEqual(Path(env['GITHUB_ENV']).read_text(), '')
+
+    def test_slow_critical_step_collects_and_healthy_deploy_reads_only_boot_time(self):
+        slow = self.deploy_job([
+            ('Register green target group', 'success', '2026-10-21T10:26:00Z', '2026-10-21T10:33:30Z'),
+            ('Shift HTTPS listener to green', 'success', '2026-10-21T10:34:00Z', '2026-10-21T10:34:40Z'),
+        ])
+        healthy = self.deploy_job([
+            ('Wait for green SSM and local health', 'success', '2026-10-21T10:20:00Z', '2026-10-21T10:25:00Z'),
+            ('Register green target group', 'success', '2026-10-21T10:26:00Z', '2026-10-21T10:27:30Z'),
+            ('Shift HTTPS listener to green', 'success', '2026-10-21T10:28:00Z', '2026-10-21T10:28:40Z'),
+        ])
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name, case='slow'):
+                env = self.telemetry_env(slow)
+                env['JOB_STATUS'] = 'success'
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                texts, summary, output = self.collected_text(env)
+                self.assertIn('demorou: Register green target group (7m30s, limite 5m00s)', texts[0])
+            with self.subTest(stack=workflow.name, case='healthy'):
+                env = self.telemetry_env(healthy)
+                env['JOB_STATUS'] = 'success'
+                result, calls = self.run_telemetry_step(workflow, env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_read_only(calls)
+                texts, summary, output = self.collected_text(env)
+                self.assertEqual((texts, summary), ([], ''))
+                sent = [json.loads(args[args.index('--parameters') + 1])['commands']
+                        for tool, args in calls if tool == 'aws' and args[:2] == ['ssm', 'send-command']]
+                self.assertEqual(sent, [['stat -c "cloud_init_fim_epoch %Y" /run/cloud-init/result.json']])
+                self.assertIn('green_boot_done=1792578600', output)
+            # Falha na troca de workers, com o worker da blue parado: a limpeza que o religa vem logo depois, então nada de
+            # SSM antes dela, nem quando o Register demorou e nem quando a API do GitHub está fora.
+            for register_end, gh_fails in (('10:27:30', False), ('10:33:30', False), ('10:27:30', True)):
+                with self.subTest(stack=workflow.name, case='worker-switch-failed', register_end=register_end,
+                                  gh_fails=gh_fails):
+                    env = self.telemetry_env(self.deploy_job(
+                        [('Register green target group', 'success', '2026-10-21T10:26:00Z', f'2026-10-21T{register_end}Z'),
+                         ('Switch Sidekiq workers to green', 'failure', f'2026-10-21T{register_end}Z',
+                          '2026-10-21T10:35:00Z')]), gh_fails=gh_fails)
+                    env['BLUE_WORKER_STOPPED'] = 'true'
+                    result, calls = self.run_telemetry_step(workflow, env)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertFalse(any(tool == 'aws' and args[0] == 'ssm' for tool, args in calls))
+                    texts, summary, output = self.collected_text(env)
+                    self.assertEqual((texts, summary), ([], ''))
+                    self.assertIn('green_boot_done=\n', output)
+
+    def test_phase_table_and_json_for_every_deploy(self):
+        jobs = self.deploy_job([
+            ('Build and push image', 'success', '2026-10-21T10:01:00Z', '2026-10-21T10:19:00Z'),
+            ('Wait for green SSM and local health', 'success', '2026-10-21T10:19:10Z', '2026-10-21T10:24:10Z'),
+            ('Register green target group', 'failure', '2026-10-21T10:25:00Z', '2026-10-21T10:35:00Z'),
+        ])
+        for workflow in WORKFLOWS:
+            stack = workflow.name.split('-')[1]
+            for gh_fails in (False, True):
+                with self.subTest(stack=stack, gh_fails=gh_fails):
+                    env = self.telemetry_env(jobs, gh_fails=gh_fails)
+                    env.update({'GREEN_LAUNCH_TIME': '2026-10-21T10:00:30+00:00', 'GREEN_BOOT_DONE': '1792578600'})
+                    workflow_env = workflow.read_text().split('      - name: Summarize deploy phase durations\n', 1)[1]
+                    self.assertIn(f'          DEPLOY_STACK: {stack}\n', workflow_env.split('        run: |', 1)[0])
+                    env['DEPLOY_STACK'] = stack
+                    result, calls = self.run_telemetry_step(workflow, env, 'Summarize deploy phase durations')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertFalse(any(tool == 'aws' for tool, _ in calls))
+                    report = json.loads((Path(env['RUNNER_TEMP']) / 'deploy-tempos/tempos.json').read_text())
+                    summary = Path(env['GITHUB_STEP_SUMMARY']).read_text()
+                    self.assertEqual([row['fase'] for row in report['fases']], [
+                        'Build da imagem', 'Boot da green', 'Saúde local da green', 'Registro no target group',
+                        'Troca dos workers', 'Troca do listener', 'Desligamento da blue'])
+                    self.assertEqual(report['stack'], stack)
+                    self.assertEqual(report['fases'][1]['segundos'], 1770)  # 10:00:30 -> 10:30:00 (epoch)
+                    self.assertIn(f'### Tempos do deploy ({stack})', summary)
+                    self.assertIn('| Fase | Passo | Duração | Início (UTC) | Conclusão |', summary)
+                    self.assertEqual(set(report), {'stack', 'run_id', 'run_attempt', 'sha', 'api_disponivel',
+                                                   'deploy_total_segundos', 'fases'})
+                    for row in report['fases']:
+                        self.assertEqual(set(row), {'fase', 'passo', 'inicio', 'fim', 'segundos', 'conclusao'})
+                    # O log do job (público) só leva o aviso fixo de API fora, nunca dado coletado.
+                    self.assertIn(result.stdout, ('', '::warning::API do GitHub indisponível: a tabela de tempos sai sem os passos.\n'))
+                    if gh_fails:
+                        self.assertFalse(report['api_disponivel'])
+                        self.assertEqual(report['fases'][0]['conclusao'], 'não rodou')
+                    else:
+                        self.assertEqual(report['fases'][0]['segundos'], 18 * 60)
+                        self.assertEqual(report['fases'][3]['conclusao'], 'failure')
+                        self.assertEqual(report['fases'][6]['conclusao'], 'não rodou')
+                        self.assertIn('| Registro no target group | Register green target group | 10m00s | '
+                                      '2026-10-21T10:25:00+00:00 | failure |', summary)
+
+    def test_telemetry_steps_are_read_only_continue_on_error_and_keep_existing_outputs(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                source = workflow.read_text()
+                deploy = source.split('\n  deploy:\n', 1)[1].split('\n  desligar-blue:\n', 1)[0]
+                tempos = source.split('\n  tempos:\n', 1)[1].split('\n  congelar:\n', 1)[0]
+                for job, steps in ((deploy, self.NEW_DEPLOY_STEPS), (tempos, self.NEW_TEMPOS_STEPS)):
+                    for name in steps:
+                        header = job.split(f'      - name: {name}\n', 1)[1].split('\n      - name: ', 1)[0]
+                        self.assertIn('        continue-on-error: true\n', header, name)
+                        self.assertNotIn('GITHUB_ENV', header, name)
+                diagnostics = deploy.split('      - name: Collect green diagnostics\n', 1)[1].split('\n      - name: ', 1)[0]
+                # Nunca no cancelamento (a limpeza precisa do tempo) e sempre antes da limpeza que termina a green.
+                self.assertIn("        if: ${{ !cancelled() && env.GREEN_INSTANCE_ID != '' }}\n", diagnostics)
+                self.assertIn('        timeout-minutes: 4\n', diagnostics)
+                order = [deploy.index(f'      - name: {name}\n') for name in (
+                    'Refresh AWS credentials for cleanup', 'Collect green diagnostics',
+                    'Cleanup failed green resources before traffic shift', 'Upload green diagnostics')]
+                self.assertEqual(order, sorted(order))
+                self.assertIn('        if: always()\n', deploy.split('      - name: Upload green diagnostics\n', 1)[1])
+                # Saídas do job: as existentes seguem vindo do hand-off/unfreeze; as novas, só do diagnóstico.
+                outputs = deploy.split('    outputs:\n', 1)[1].split('\n    steps:\n', 1)[0]
+                mapping = {line.split(':', 1)[0].strip(): line.split(':', 1)[1].strip()
+                           for line in outputs.splitlines() if line.strip() and not line.strip().startswith('#')}
+                for key in ('traffic_shift_done', 'listener_arn', 'blue_instance_id', 'blue_tg_arn', 'green_instance_id',
+                            'green_tg_arn', 'old_previous_instance_id', 'old_previous_tg_arn'):
+                    self.assertEqual(mapping[key], f'${{{{ steps.hand-off.outputs.{key} }}}}')
+                self.assertEqual(mapping['unfreeze_outcome'], '${{ steps.unfreeze.outcome }}')
+                self.assertEqual(mapping['green_launch_time'], '${{ steps.diagnostico.outputs.green_launch_time }}')
+                self.assertEqual(mapping['green_boot_done'], '${{ steps.diagnostico.outputs.green_boot_done }}')
+                self.assertEqual(len(mapping), 11)
+                # O job de tempos não fala com a AWS nem pede mais que leitura.
+                self.assertNotIn('configure-aws-credentials', tempos)
+                self.assertNotIn('aws ', tempos)
+                self.assertIn('    permissions:\n      contents: read\n      actions: read\n    steps:\n', tempos)
+                self.assertIn("    if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'failure')\n"
+                              "    # Falha aqui (checkout, API) nunca pinta de vermelho um deploy que deu certo.\n"
+                              "    continue-on-error: true\n", tempos)
+        script = (ROOT / 'scripts/deploy/green-diagnostics.sh').read_text()
+        self.assertNotIn('GITHUB_ENV', script)
+        self.assertEqual(sorted({line.split('=', 1)[0].split('"')[-1] for line in script.splitlines()
+                                 if 'GITHUB_OUTPUT' in line and line.strip().startswith('echo')}),
+                         ['green_boot_done', 'green_launch_time'])
+
 
 BOOT_FAKE = r'''
 import json, os, sys

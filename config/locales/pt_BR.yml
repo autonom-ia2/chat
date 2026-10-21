@@ -1349,6 +1349,10 @@ pt_BR:
       foto_animada: "Imagem animada não serve como material. Mande uma foto parada."
       lendo_ainda: "Este material ainda está sendo lido. Espere terminar para ler de novo."
       file_invalid: "Mande o próprio arquivo."
+    # #1427 — a foto mandada no Testar do agente (vale só no teste; nunca vira material).
+    teste:
+      foto_animada: "Mande uma foto parada. Foto animada não dá para ler."
+      foto_muitas: "Mande até %{max} fotos por pergunta."
     insurance:
       errors:
         encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

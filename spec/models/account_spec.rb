@@ -244,7 +244,9 @@ RSpec.describe Account do
         # #1922: posição 46 (1 << 45), definitiva da Orquestração (21/10), logo depois de anuncios_sem_login.
         feature_crm_ia_arquiva_lixo: 1 << 45,
         # #1923: posição 47 (1 << 46), definitiva da Orquestração (21/10), logo depois de crm_ia_arquiva_lixo.
-        feature_crm_ia_avalia_mensagem_equipe: 1 << 46
+        feature_crm_ia_avalia_mensagem_equipe: 1 << 46,
+        # #1934: posição 48 (1 << 47), definitiva da Orquestração (21/10), logo depois de crm_ia_avalia_mensagem_equipe.
+        feature_hibrido_foto_do_contato: 1 << 47
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

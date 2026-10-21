@@ -29,7 +29,7 @@ RSpec.describe Crm::MetaAds::Relatorio::Pdf do
   end
 
   def dados
-    Crm::MetaAds::Relatorio::Dados.new(nil, days: 30, account: account)
+    Crm::MetaAds::Relatorio::Dados.new(nil, period: '30d', account: account)
   end
 
   def texto(pdf)
@@ -59,7 +59,7 @@ RSpec.describe Crm::MetaAds::Relatorio::Pdf do
     from_ad('Paulo Lima', 2.days.ago, status: :won, value: 950)
     esperando('Joana Dias', 1.day.ago)
 
-    paginas = texto(described_class.new(Crm::MetaAds::Relatorio::Dados.new(nil, days: 30, account: account, com_pessoas: false)).gerar)
+    paginas = texto(described_class.new(Crm::MetaAds::Relatorio::Dados.new(nil, period: '30d', account: account, com_pessoas: false)).gerar)
 
     expect(paginas.size).to eq(2)
     expect(paginas.join).to include('vieram 2 conversas', 'Seguro auto sem complicação', '1 pessoa veio de anúncio')

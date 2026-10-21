@@ -40,7 +40,7 @@ RSpec.describe Crm::MetaAds::SemLogin do
     create(:inbox, account: account)
 
     expect(described_class.payload(account, admin)).to include(
-      enabled: true, recent_ad_touch: false, official_inboxes: [{ id: mine.inbox.id, name: mine.inbox.name, phone: '+5511988887777' }]
+      enabled: true, ad_touch: false, official_inboxes: [{ id: mine.inbox.id, name: mine.inbox.name, phone: '+5511988887777' }]
     )
 
     agente = create(:user, account: account, role: :agent)
@@ -49,8 +49,10 @@ RSpec.describe Crm::MetaAds::SemLogin do
     mine.inbox.add_members([agente.id])
     expect(described_class.payload(account, sem_caixa)[:official_inboxes].pluck(:id)).to eq([mine.inbox.id])
 
-    click = { 'source' => 'meta_ctwa', 'source_id' => '120254710362980416', 'touched_at' => 10.days.ago.utc.iso8601 }
-    create(:conversation, account: account).update_columns(additional_attributes: { 'campaign_touches' => [click] }) # rubocop:disable Rails/SkipsModelValidations
-    expect(described_class.recent_ad_touch?(account)).to be(true)
+    # Anúncio antigo também conta (#2011): quem anunciou há meses vê o painel com o histórico, não a tela "pronto".
+    click = { 'source' => 'meta_ctwa', 'source_id' => '120254710362980416', 'touched_at' => 200.days.ago.utc.iso8601 }
+    conversation = create(:conversation, account: account)
+    conversation.update_columns(additional_attributes: { 'campaign_touches' => [click] }, updated_at: 200.days.ago) # rubocop:disable Rails/SkipsModelValidations
+    expect(described_class.ad_touch?(account)).to be(true)
   end
 end

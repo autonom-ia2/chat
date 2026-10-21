@@ -45,7 +45,7 @@ class Crm::MetaAds::Relatorio::Planilha
   end
 
   def contexto
-    t('sheet_context', days: @dados.report.days, from: dia(@dados.report.first_day), to: dia(@dados.report.today),
+    t('sheet_context', name: nome_do_periodo(@dados.report), from: dia(@dados.report.first_day), to: dia(@dados.report.last_day),
                        date: momento(@gerado_em, @dados.zona))
   end
 

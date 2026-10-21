@@ -8,9 +8,6 @@ module Crm::MetaAds::SemLogin
   module_function
 
   FLAG = 'anuncios_sem_login'.freeze
-  # Janela do "teve clique de anúncio recente" da tela vazia.
-  RECENT_WINDOW = 90.days
-
   def enabled?(account_or_id)
     account = account_or_id.is_a?(Account) ? account_or_id : Account.find_by(id: account_or_id)
     account.present? && account.feature_enabled?(FLAG)
@@ -26,7 +23,7 @@ module Crm::MetaAds::SemLogin
   def payload(account, account_user)
     return { enabled: false } unless whatsapp_panel?(account)
 
-    { enabled: true, official_inboxes: official_inboxes(account, account_user), recent_ad_touch: recent_ad_touch?(account) }
+    { enabled: true, official_inboxes: official_inboxes(account, account_user), ad_touch: ad_touch?(account) }
   end
 
   def official_inboxes(account, account_user)
@@ -37,8 +34,10 @@ module Crm::MetaAds::SemLogin
     end
   end
 
-  # A mesma regra da coorte do painel (clique para o WhatsApp ou site com sinal da Meta), nos últimos RECENT_WINDOW.
-  def recent_ad_touch?(account)
-    Crm::MetaAds::Panel::WhatsappCohort.new(account.id, RECENT_WINDOW.ago..Time.current).any?
+  # Já chegou alguém de anúncio, em qualquer época (#2011)? A mesma regra da coorte do painel (clique para o WhatsApp
+  # ou site com sinal da Meta), no mesmo alcance do "Desde o início": quem já anunciou vê o painel, com o histórico,
+  # mesmo depois de meses parado.
+  def ad_touch?(account)
+    Crm::MetaAds::Panel::WhatsappCohort.new(account.id, Crm::MetaAds::Panel::Period::MAX_MONTHS.months.ago..Time.current).any?
   end
 end

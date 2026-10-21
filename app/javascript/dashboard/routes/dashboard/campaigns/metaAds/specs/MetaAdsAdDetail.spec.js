@@ -64,7 +64,7 @@ const AD = {
 let mounted = null;
 const mountDetail = async (props = {}, options = {}) => {
   mounted = mount(MetaAdsAdDetail, {
-    props: { adId: '1', days: 7, ...props },
+    props: { adId: '1', period: '7d', ...props },
     ...options,
     global: {
       mocks: { $t: (key, values) => `${key} ${JSON.stringify(values || {})}` },
@@ -98,7 +98,7 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
   it('asks for the ad and period and shows name, campaign and ad set', async () => {
     const wrapper = await mountDetail();
 
-    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', 7);
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', '7d');
     expect(wrapper.find('[data-ad-detail-name]').text()).toBe(
       'Capa (1080x1350)'
     );
@@ -181,7 +181,7 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
       answer({ ...AD, daily: daily(30) })
     );
-    const wrapper = await mountDetail({ days: 30 });
+    const wrapper = await mountDetail({ period: '30d' });
 
     expect(wrapper.findAll('[data-ad-detail-bar]')).toHaveLength(30);
     expect(wrapper.findAll('[data-ad-detail-dot]')).toHaveLength(10);
@@ -214,8 +214,8 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
       )
       .mockResolvedValueOnce(answer({ ...AD, days: 7, conversations: 5 }));
 
-    await wrapper.setProps({ days: 30 });
-    await wrapper.setProps({ days: 7 });
+    await wrapper.setProps({ period: '30d' });
+    await wrapper.setProps({ period: '7d' });
     await flushPromises();
     slow(answer({ ...AD, days: 30, conversations: 999 }));
     await flushPromises();

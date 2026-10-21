@@ -934,8 +934,11 @@ const tirarPergunta = id => {
         :atendendo="trabalhando"
         :pode-mudar="podeMudar"
         :pergunta="perguntaDoTeste"
+        :fase2="fase2"
+        :pode-gerenciar="podeGerenciar"
         @fechar="fechar"
         @errado="mudar('teste', $event)"
+        @ver-sabe="abrir(GAVETA.SABE)"
       />
       <GavetaOQueSabe
         v-else-if="aberta === GAVETA.SABE"

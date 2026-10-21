@@ -511,7 +511,7 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
 
       get path, headers: auth_headers(admin), as: :json
       result = response.parsed_body['whatsapp_result']
-      expect(result).to include('enabled' => true, 'recent_ad_touch' => true)
+      expect(result).to include('enabled' => true, 'ad_touch' => true)
       expect(result['official_inboxes']).to eq([{ 'id' => channel.inbox.id, 'name' => channel.inbox.name, 'phone' => '+5511988887777' }])
 
       get "#{path}/panel", headers: auth_headers(admin), as: :json
