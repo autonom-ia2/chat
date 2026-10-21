@@ -1,7 +1,7 @@
 module Autonomia
   module Guide
     # Cria/garante o agente "Guia da Plataforma" de uma conta e ingere a base de conhecimento
-    # (os ~81 fluxos) com chunking POR FLUXO (1 fluxo = 1 KnowledgeEntry) para retrieval exato.
+    # (os fluxos de guia-produto.md) com chunking POR FLUXO (1 fluxo = 1 KnowledgeEntry) para retrieval exato.
     #
     # GLOBAL / AUTO-ON: o Guia nasce sozinho em QUALQUER conta elegível (Autonomia habilitada =
     # ENV master + chave de IA do Kanban resolvível). Idempotente: chamado no boot do chat (lazy)
@@ -114,9 +114,15 @@ module Autonomia
       # arquivo e o mesmo hash de antes, e o Guia dela não é re-semeado.
       def self.kb_version(account = nil)
         caminho = account ? kb_path_for(account) : KB_PATH
-        Digest::SHA256.hexdigest(File.read(caminho) + File.read(INSTRUCTION_PATH))[0, 16]
+        Digest::SHA256.hexdigest(File.read(caminho) + instrucao_para(account))[0, 16]
       rescue StandardError
         'unknown'
+      end
+
+      # A instrução da conta (#1802, 6.B): a geral e, depois dela, o vocabulário da camada mais específica que tiver
+      # guia-instrucao.md. Conta geral, ou interruptor desligado, recebe a geral sozinha, byte a byte.
+      def self.instrucao_para(account = nil)
+        ::Autonomia::Guide::BaseDoPacote.instrucao_com(File.read(INSTRUCTION_PATH), account)
       end
 
       def self.kb_path_for(account)
@@ -180,7 +186,7 @@ module Autonomia
           account: @account, created_by: nil,
           name: 'Guia da Plataforma', agent_type: 'custom',
           mode: :manual, status: :active, enabled: false, actuation: :internal,
-          instruction: File.read(INSTRUCTION_PATH), scaffold: GUIDE_SCAFFOLD,
+          instruction: self.class.instrucao_para(@account), scaffold: GUIDE_SCAFFOLD,
           config: { 'system_key' => SYSTEM_KEY, 'hidden_from_hub' => true,
                     'native_tool_slugs' => FERRAMENTAS, 'guide_kb_version' => nil }
         )
@@ -194,7 +200,7 @@ module Autonomia
         agent.update!(
           name: 'Guia da Plataforma', agent_type: 'custom',
           mode: :manual, status: :active, enabled: false, actuation: :internal,
-          instruction: File.read(INSTRUCTION_PATH), scaffold: GUIDE_SCAFFOLD,
+          instruction: self.class.instrucao_para(@account), scaffold: GUIDE_SCAFFOLD,
           tone: nil, handoff_rule: nil, fallback_message: nil, greeting: nil,
           human_card: nil, starter_questions: [],
           config: { 'system_key' => SYSTEM_KEY, 'hidden_from_hub' => true,

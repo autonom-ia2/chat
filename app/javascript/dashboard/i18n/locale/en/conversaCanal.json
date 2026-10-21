@@ -19,7 +19,11 @@
     "REMETENTE": {
       "AGENTE_COM_NOME": "AI agent · {nome}",
       "AGENTE": "AI agent",
-      "AUTOMATICO": "{nome} · automatic"
+      "ORIGEM": {
+        "FOLLOW_UP": "Automatic follow-up",
+        "RETORNO": "Automatic callback",
+        "AGENDAMENTO": "Automatic scheduling"
+      }
     },
     "ECO_DO_CELULAR": {
       "ENVIADA_PELO_CELULAR": "Sent from the phone",

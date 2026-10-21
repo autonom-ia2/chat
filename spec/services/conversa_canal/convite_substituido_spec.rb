@@ -151,6 +151,35 @@ RSpec.describe ConversaCanal::ConviteSubstituido do
     expect(convite_de(antiga)).to include('substituido_por' => nova.id, 'substituido_na_conversa' => outra.display_id)
   end
 
+  describe 'a chave do UID (#2042)' do
+    it 'o e-mail recebido com convite guarda a chave; o sem convite, não', :aggregate_failures do
+      expect(convite_em.reload.additional_attributes['convite_uid_sha256']).to eq(Digest::SHA256.hexdigest('uid-1@google.com'))
+      sem_convite = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'Oi')
+      expect(sem_convite.reload.additional_attributes).not_to have_key('convite_uid_sha256')
+    end
+
+    it 'UID enorme ou com aspas: a mensagem é gravada e a versão anterior é achada', :aggregate_failures do
+      uid = "#{'x' * 20_000}\"aspas\"\\barra"
+      antiga = convite_em(uid: uid, sequencia: 0)
+      nova = convite_em(uid: uid, sequencia: 1)
+
+      described_class.marcar(nova)
+
+      expect(convite_de(antiga)['substituido_por']).to eq(nova.id)
+    end
+
+    it 'a condição da busca casa com o índice parcial' do
+      chave = described_class.chave('uid-1@google.com')
+      plano = Message.transaction do
+        Message.connection.execute('SET LOCAL enable_seqscan = off')
+        consulta = Message.where("messages.additional_attributes ->> 'convite_uid_sha256' = ?", chave)
+        Message.connection.select_values("EXPLAIN #{consulta.to_sql}").join("\n")
+      end
+
+      expect(plano).to include('index_messages_on_convite_uid_sha256')
+    end
+  end
+
   it 'o e-mail recebido com convite agenda a conferência', :aggregate_failures do
     expect { convite_em }.to have_enqueued_job(ConversaCanal::ConviteSubstituidoJob)
     expect do

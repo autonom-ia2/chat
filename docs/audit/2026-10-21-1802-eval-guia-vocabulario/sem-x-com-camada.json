@@ -1,0 +1,530 @@
+{
+  "placar": [
+    {
+      "tipo": "corretora",
+      "variante": "sem_camada",
+      "aprovadas": "0/4",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "0/4",
+      "correta_e_util": "2/4",
+      "chama_de_segurado_sem_apolice": "0/4",
+      "diz_vendedor_ou_ganho": "0/4",
+      "diz_corretora_ou_cotacao": "0/4"
+    },
+    {
+      "tipo": "corretora",
+      "variante": "com_camada",
+      "aprovadas": "3/4",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "3/4",
+      "correta_e_util": "3/4",
+      "chama_de_segurado_sem_apolice": "0/4",
+      "diz_vendedor_ou_ganho": "0/4",
+      "diz_corretora_ou_cotacao": "0/4"
+    },
+    {
+      "tipo": "saude_beneficios",
+      "variante": "sem_camada",
+      "aprovadas": "1/4",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "3/4",
+      "correta_e_util": "2/4",
+      "chama_de_segurado_sem_apolice": "0/4",
+      "diz_vendedor_ou_ganho": "0/4",
+      "diz_corretora_ou_cotacao": "0/4"
+    },
+    {
+      "tipo": "saude_beneficios",
+      "variante": "com_camada",
+      "aprovadas": "3/4",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "4/4",
+      "correta_e_util": "3/4",
+      "chama_de_segurado_sem_apolice": "0/4",
+      "diz_vendedor_ou_ganho": "0/4",
+      "diz_corretora_ou_cotacao": "0/4"
+    },
+    {
+      "tipo": "seguradora",
+      "variante": "sem_camada",
+      "aprovadas": "1/4",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "3/4",
+      "correta_e_util": "2/4",
+      "chama_de_segurado_sem_apolice": "0/4",
+      "diz_vendedor_ou_ganho": "0/4",
+      "diz_corretora_ou_cotacao": "0/4"
+    },
+    {
+      "tipo": "seguradora",
+      "variante": "com_camada",
+      "aprovadas": "2/4",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "4/4",
+      "correta_e_util": "2/4",
+      "chama_de_segurado_sem_apolice": "0/4",
+      "diz_vendedor_ou_ganho": "0/4",
+      "diz_corretora_ou_cotacao": "0/4"
+    }
+  ],
+  "custo_usd": 1.1117,
+  "pulados": [],
+  "execucoes": [
+    {
+      "tipo": "corretora",
+      "pergunta": "p1",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "Há **1 venda registrada em outubro**, de **R$ 1.200,00**, no funil **Comercial**.\nEla está sem responsável definido, então não consigo confirmar que foi você quem fechou.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Acerta ao informar que há 1 negócio fechado no mês no funil Comercial, mas não usa o vocabulário da corretora ao chamar isso de \"venda\" em vez de algo como \"seguro fechado\"."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0884,
+      "custo_acumulado_usd": 0.0884
+    },
+    {
+      "tipo": "corretora",
+      "pergunta": "p1",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "Em outubro, o funil **Comercial** tem **1 seguro fechado**, no valor de **R$ 1.200,00**. Não consegui confirmar se esse fechamento foi seu.\nEm **Números**, selecione **Só eu**, se essa opção aparecer, para conferir seu resultado individual.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa o vocabulário adequado da corretora ao dizer que há 1 seguro fechado, não chama ninguém de vendedor, segurado indevidamente nem fala em ganho, e responde de forma coerente com os dados ao apontar 1 fechamento no mês e orientar como verificar se foi da pessoa operadora."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0847,
+      "custo_acumulado_usd": 0.1731
+    },
+    {
+      "tipo": "saude_beneficios",
+      "pergunta": "p1",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "Há **1 venda registrada em outubro**, de **R$ 1.200,00**, para **Pedro Lima**, no funil **Comercial**.\nNão consigo confirmar que ela conta para você: o negócio está sem responsável e não há histórico de quem era responsável no fechamento.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Acerta ao informar 1 negócio fechado no mês e explicar que não dá para atribuir o fechamento à pessoa por falta de responsável no histórico, mas foge do vocabulário da conta ao falar em \"venda\" em vez de \"fechou o plano\"."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0879,
+      "custo_acumulado_usd": 0.261
+    },
+    {
+      "tipo": "saude_beneficios",
+      "pergunta": "p1",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "Em outubro, há **1 plano fechado**, no valor de **R$ 1.200,00**, no funil **Comercial**.\nEsse é o total da conta. Não consegui confirmar se esse fechamento está atribuído a você.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa o vocabulário esperado da corretora de planos de saúde ('plano fechado'), responde com o total fechado no mês de forma coerente com os dados e não usa termos inadequados como 'segurado', 'ganho' ou 'corretora/cotação'."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0895,
+      "custo_acumulado_usd": 0.3505
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p1",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "Neste mês de outubro, há **1 venda de R$ 1.200,00** no funil **Comercial**, do cliente Pedro Lima.\nEla está sem responsável definido, então não consigo confirmar que conta como uma venda sua.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Acerta ao informar que há 1 fechamento no mês e ressalvar que não dá para confirmar como seu por falta de responsável, mas foge do vocabulário da seguradora ao chamar de “venda” em vez de falar em seguro fechado."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0943,
+      "custo_acumulado_usd": 0.4448
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p1",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "Em outubro, há **1 seguro fechado**, no valor de **R$ 1.200,00**, no funil **Comercial**.\nNão consigo atribuir esse fechamento a você: o card **Pedro Lima** está sem responsável.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa termos do contexto de seguradora ('seguro fechado'), responde que houve 1 fechamento no mês com valor e ainda sinaliza corretamente que não dá para atribuir o fechamento à pessoa porque o card está sem responsável."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0897,
+      "custo_acumulado_usd": 0.5345
+    },
+    {
+      "tipo": "corretora",
+      "pergunta": "p2",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "1. Abra **Contatos > Todos os contatos**.\n2. Clique em **Adicionar contato**.\n3. Preencha o nome, o e-mail e o telefone do cliente.\n4. Clique em **Salvar**.\n\nO cadastro não inicia uma conversa automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "É útil ao indicar o caminho de cadastro, mas usa “cliente” para um novo contato/lead em uma corretora de seguros, o que foge do vocabulário da conta."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0317,
+      "custo_acumulado_usd": 0.5662
+    },
+    {
+      "tipo": "corretora",
+      "pergunta": "p2",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "1. Abra **Contatos → Todos os contatos**.\n2. Clique em **Adicionar contato**.\n3. Preencha o nome, e-mail e telefone e clique em **Salvar**.\n\nSe a pessoa já comprou, abra a ficha dela e, na seção **Cliente**, clique em **Marcar como cliente → Sim, marcar**.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa contato para cadastro inicial e cliente só após a compra, dá o caminho na tela e não usa termos inadequados como segurado, vendedor, ganho, corretora ou cotação."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0303,
+      "custo_acumulado_usd": 0.5964
+    },
+    {
+      "tipo": "saude_beneficios",
+      "pergunta": "p2",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "1. Abra **Contatos > Todos os contatos**.\n2. Clique em **Adicionar contato**.\n3. Preencha o nome, o e-mail e o telefone do cliente.\n4. Clique em **Salvar**.\n\nO cadastro não inicia uma conversa automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "A resposta traz um caminho de tela útil para cadastrar um novo contato/cliente e não usa termos inadequados como \"segurado\", \"ganho\" ou \"corretora\"."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0311,
+      "custo_acumulado_usd": 0.6275
+    },
+    {
+      "tipo": "saude_beneficios",
+      "pergunta": "p2",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "1. Abra **Contatos → Todos os contatos**.\n2. Clique em **Adicionar contato**.\n3. Preencha o nome, e-mail e telefone e salve.\n\nSe ele já comprou um plano, abra a ficha e, na seção **Cliente**, clique em **Marcar como cliente → Sim, marcar**.\nCadastrar o contato não inicia uma conversa automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "A resposta passa um caminho de tela útil e coerente com a conta, usando termos aceitáveis como contato, cliente e plano, sem usar palavras inadequadas para esse tipo de operação."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0311,
+      "custo_acumulado_usd": 0.6586
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p2",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "Para cadastrar um cliente novo:\n1. Abra **Contatos → Todos os contatos**.\n2. Clique em **Adicionar contato**.\n3. Preencha o nome, o e-mail e o telefone.\n4. Clique em **Salvar**.\n\nO cadastro não inicia uma conversa automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "A resposta é útil e coerente com a conta, usa o caminho de tela esperado e não usa termos proibidos como corretora, cotação, ganho ou segurado sem apólice."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0305,
+      "custo_acumulado_usd": 0.6891
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p2",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "1. Abra **Contatos → Todos os contatos**.\n2. Clique em **Adicionar contato**.\n3. Preencha o nome, e-mail e telefone.\n4. Clique em **Salvar**.\n\nO cadastro não inicia uma conversa automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "A resposta indica um caminho de tela útil para cadastrar um novo contato e não usa termos inadequados para uma seguradora."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0287,
+      "custo_acumulado_usd": 0.7178
+    },
+    {
+      "tipo": "corretora",
+      "pergunta": "p3",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "Em **Campanhas → Anúncios → Resultado**, veja **O que fazer hoje**. Quando aparecer a ação de propostas paradas, clique no botão dela para abrir a lista.\n\nVocê também pode clicar em **Propostas** no caminho do dinheiro para ver as propostas que vieram dos anúncios.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "A resposta foge do vocabulário da corretora ao falar em propostas em vez de cotações e ainda indica caminhos de anúncios/resultado que não respondem de forma útil onde ver os negócios parados do funil informado."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0337,
+      "custo_acumulado_usd": 0.7515
+    },
+    {
+      "tipo": "corretora",
+      "pergunta": "p3",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "Em **Campanhas → Anúncios → Resultado**, veja **O que fazer hoje**. Quando aparecer uma ação de propostas paradas, clique no botão dela para abrir a lista.\n\nVocê também pode clicar em **Propostas** no caminho do dinheiro para ver as propostas que vieram dos anúncios.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "A resposta foge do vocabulário da corretora ao falar em “propostas” de forma geral em vez de “cotações” e ainda indica caminhos de anúncios/caminho do dinheiro, que não respondem de forma útil onde ver negócios parados no funil Comercial."
+      },
+      "aprovada": false,
+      "custo_usd": 0.034,
+      "custo_acumulado_usd": 0.7855
+    },
+    {
+      "tipo": "saude_beneficios",
+      "pergunta": "p3",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "Para propostas vindas de anúncios, vá em **Campanhas > Anúncios > Resultado**.\nEm **O que fazer hoje**, se aparecer a ação de propostas paradas, clique nela para abrir a lista. Você também pode clicar em **Propostas** no caminho do dinheiro.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa um vocabulário compatível, mas a resposta não é confiável nem focada no caso, porque mistura anúncios e caminhos pouco coerentes com a pergunta sobre propostas paradas no funil."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0317,
+      "custo_acumulado_usd": 0.8172
+    },
+    {
+      "tipo": "saude_beneficios",
+      "pergunta": "p3",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "Em **Campanhas > Anúncios**, na aba **Resultado**. Em **O que fazer hoje**, quando aparecer a ação de propostas paradas, clique no botão dela para abrir a lista.\nVocê também pode clicar em **Propostas** no caminho do dinheiro.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Não usa termos proibidos para esse tipo de conta, mas a orientação principal é incoerente com a pergunta sobre propostas paradas e mistura caminhos que não ajudam de forma confiável."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0298,
+      "custo_acumulado_usd": 0.847
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p3",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "Para ver as propostas que vieram de anúncios, abra **Campanhas → Anúncios → Resultado**. Em **O que fazer hoje**, clique na ação de propostas paradas, quando ela aparecer.\nVocê também pode clicar em **Propostas** no caminho do dinheiro para abrir a lista.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa “propostas”, mas não responde de forma útil e coerente, porque desvia para anúncios e caminhos genéricos em vez de indicar claramente onde ver a etapa com proposta parada na conta."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0293,
+      "custo_acumulado_usd": 0.8763
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p3",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "Se são propostas que vieram de anúncios, vá em **Campanhas > Anúncios > Resultado**.\nEm **O que fazer hoje**, quando aparecer a ação de propostas paradas, clique no botão dela para abrir a lista.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa “propostas” sem termos proibidos, mas não responde de forma confiável onde ver as propostas paradas na conta descrita, trazendo um caminho de anúncios sem base nos dados e uma orientação vaga de “O que fazer hoje”."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0369,
+      "custo_acumulado_usd": 0.9132
+    },
+    {
+      "tipo": "corretora",
+      "pergunta": "p4",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "No **CRM → CRM Kanban**, abra o card do cliente em um funil de **Vender**:\n1. Clique em **Fechou o seguro**, no topo do card.\n2. Confira quanto ficou e clique em **Marcar: fechou o seguro**.\n\nO contato passa a ser marcado como cliente automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa “cliente” antes do fechamento e ainda fala em funil de “Vender”, além de indicar um funil diferente do que existe na conta (“Comercial”)."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0334,
+      "custo_acumulado_usd": 0.9465
+    },
+    {
+      "tipo": "corretora",
+      "pergunta": "p4",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "1. No **CRM → CRM Kanban**, abra o card da cotação.\n2. No topo, clique em **Fechou o seguro**.\n3. Confira quanto ficou e confirme em **Marcar: fechou o seguro**.\n\nO contato vira cliente automaticamente quando o seguro fecha num funil de Vender.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa os termos esperados para corretora, orienta um caminho plausível na tela e só chama de cliente depois que o seguro fecha, sem usar segurado, vendedor, ganho ou tratar a conta como seguradora."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0323,
+      "custo_acumulado_usd": 0.9788
+    },
+    {
+      "tipo": "saude_beneficios",
+      "pergunta": "p4",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "No **CRM Kanban**, abra o card do cliente em um funil de Vender:\n1. No topo, clique em **Fechou o plano**.\n2. Confira quanto ficou e confirme em **Marcar: fechou o plano**.\n\nO contato passa a ser marcado como cliente automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa \"fechou o plano\" e não usa termos proibidos, mas erra ao orientar abrir um funil de \"Vender\" em vez do funil Comercial informado na conta."
+      },
+      "aprovada": false,
+      "custo_usd": 0.033,
+      "custo_acumulado_usd": 1.0118
+    },
+    {
+      "tipo": "saude_beneficios",
+      "pergunta": "p4",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "No **CRM → CRM Kanban**, abra o card do cliente:\n1. No topo, clique em **Fechou o plano**.\n2. Confira quanto ficou no campo **Valor**.\n3. Confirme em **Marcar: fechou o plano**.\n\nIsso vale para funis de Vender e também marca o contato como cliente automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa “Fechou o plano”, não chama ninguém de segurado nem fala em ganho, e responde de forma útil com caminho de tela e ação coerentes com a conta."
+      },
+      "aprovada": true,
+      "custo_usd": 0.033,
+      "custo_acumulado_usd": 1.0448
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p4",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "1. No **CRM → CRM Kanban**, abra o card do cliente em um funil de **Vender**.\n2. No topo do card, clique em **Fechou o seguro**.\n3. Confira quanto ficou e clique em **Marcar: fechou o seguro**.\n\nO contato passa a ser marcado como cliente automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa termos compatíveis como “fechou o seguro”, mas erra ao orientar pelo funil “Vender”, que não bate com os dados da conta, então a resposta não fica coerente nem plenamente útil."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0333,
+      "custo_acumulado_usd": 1.0781
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p4",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "No **CRM Kanban**, abra o card em um funil de Vender:\n1. Clique em **Fechou o seguro**, no topo do card.\n2. Confira o valor e clique em **Marcar: fechou o seguro**.\n\nO contato passa a ser cliente automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa termos adequados como “fechou o seguro” e não chama ninguém de segurado, mas erra o caminho ao citar um “funil de Vender” que não bate com os dados da conta, onde o funil é “Comercial”."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0336,
+      "custo_acumulado_usd": 1.1117
+    }
+  ]
+}
