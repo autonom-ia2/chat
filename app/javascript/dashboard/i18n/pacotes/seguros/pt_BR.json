@@ -213,5 +213,19 @@
     "TOPO": {
       "SEM_META_EU": "Seu mês até agora: {n} seguro fechado, {valor} | Seu mês até agora: {n} seguros fechados, {valor}"
     }
+  },
+  "MODELOS_WHATSAPP": {
+    "OBJETIVOS": {
+      "renovacao": {
+        "TITULO": "Renovação do seguro",
+        "PARA": "Para avisar que o seguro vai vencer.",
+        "TEXTO": "Olá, [nome_cliente]. Aviso de [nome_empresa]: o seu seguro vence em [data]. Para não ficar sem proteção, renove antes dessa data. Toque em uma das opções abaixo."
+      },
+      "andamento": {
+        "TITULO": "Andamento do sinistro",
+        "PARA": "Para contar ao segurado que o sinistro dele andou.",
+        "TEXTO": "Olá, [nome_cliente]. Atualização de [nome_empresa]: o seu sinistro teve andamento. Quer saber os detalhes? Toque no botão abaixo."
+      }
+    }
   }
 }

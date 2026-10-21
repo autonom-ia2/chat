@@ -64,3 +64,20 @@ pt_BR:
       fora_da_janela: 'Fora da janela de 24 h: use um modelo.'
       falhou: 'Não deu para encaminhar para esta conversa. Tente de novo.'
       so_pessoa: 'Encaminhar é só para pessoa, pelo painel. O WhatsApp trata encaminhamento automático como spam.'
+    convite:
+      sem_chave: 'O convite de reunião ainda não está ligado nesta conta.'
+      resposta_invalida: 'Escolha Sim, Talvez ou Não.'
+      sem_convite: 'Esta mensagem não tem convite de reunião para responder.'
+      nao_e_email: 'Só dá para responder convite que chegou numa caixa de e-mail.'
+      nao_convidada: 'Esta caixa não está na lista de convidados desta reunião.'
+      ja_passou: 'Esta reunião já terminou.'
+      sem_envio: 'Esta caixa não envia e-mail (só recebe por encaminhamento). Conecte por IMAP/SMTP, Google ou Microsoft para responder.'
+      falhou: 'Não deu para mandar a resposta ao organizador. Tente de novo em instantes.'
+      assunto:
+        aceito: 'Aceito: %{titulo}'
+        talvez: 'Talvez: %{titulo}'
+        recusado: 'Recusado: %{titulo}'
+      corpo:
+        aceito: 'Aceitei este convite.'
+        talvez: 'Talvez eu participe desta reunião.'
+        recusado: 'Recusei este convite.'

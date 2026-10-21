@@ -76,5 +76,26 @@
     "name": "Conteúdo educativo",
     "path": "conteudo/13-conteudo-educativo.mjml",
     "category": "conteudo"
+  },
+  {
+    "key": "seguros-renovacao",
+    "name": "Renovação do seguro chegando",
+    "path": "relacionamento/14-renovacao-seguro.mjml",
+    "category": "relacionamento",
+    "segmento": "seguros/corretora"
+  },
+  {
+    "key": "seguros-boas-vindas",
+    "name": "Boas-vindas ao segurado",
+    "path": "relacionamento/15-boas-vindas-segurado.mjml",
+    "category": "relacionamento",
+    "segmento": "seguros/corretora"
+  },
+  {
+    "key": "seguros-parcela-em-aberto",
+    "name": "Parcela do seguro em aberto",
+    "path": "cobranca/16-parcela-em-aberto.mjml",
+    "category": "cobranca",
+    "segmento": "seguros/corretora"
   }
 ]

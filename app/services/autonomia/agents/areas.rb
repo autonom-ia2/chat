@@ -56,7 +56,8 @@ module Autonomia::Agents::Areas
   # O LEITOR ÚNICO de "esta caixa pode receber um agente da equipe agora?" (#1433), para a tela dos Agentes, o CRM e o
   # vincular!. Puro: não trava nada (o vincular! chama com a caixa já travada). -> Resultado com o código:
   # - :fase2_desligada — a conta DA CAIXA não tem a Fase 2 (sem ela a área nunca responde);
-  # - :principal_parado — a caixa tem principal (porta ativa) e ele não está atendendo;
+  # - :principal_parado — a caixa tem principal (porta ativa) e ele não está atendendo. Guia a tela; não é garantia
+  #   contra uma pausa em curso (ver o vincular!, #1600);
   # - :robo_externo — sem principal e com agente de outro sistema, na conta sem a aba "Agente de IA" por caixa;
   # - :ok — principal atendendo, ou caixa sem principal (só de pessoas ou, com a aba por caixa, com agente de outro
   #   sistema, #1648).
@@ -93,10 +94,19 @@ module Autonomia::Agents::Areas
   # só oferece caixas que aceitam, mas o principal pode parar entre a leitura e o clique.
   #
   # TRAVA O AGENTE E DEPOIS A CAIXA (#1366), a ordem dos caminhos da Autonom.ia (InboxConnector, SoftDelete): entre eles,
-  # a conferência da caixa e a entrada ou saída de um principal não se cruzam, e a parada automática do agente não espera
-  # por uma caixa que outro segura. O agente de outro sistema plugado pela caixa (set_agent_bot ou a troca da aba
-  # Agente de IA, #1648) também trava a caixa; com área ele entra e a área fica. Registro em
-  # spec/services/autonomia/agents/areas_agente_externo_depois_spec.rb.
+  # a conferência da caixa e a ENTRADA OU SAÍDA de um principal (conectar ou desconectar a porta) não se cruzam, e a
+  # parada automática do agente não espera por uma caixa que outro segura.
+  #
+  # A PAUSA do principal não entra nessa ordem (#1600): ela trava só o próprio agente, e a leitura de `operating?` aqui
+  # não o trava. Uma pausa ainda sem commit pode cruzar com esta conferência, e a área entra numa caixa cujo principal
+  # acaba de parar. É de propósito: o resultado é o mesmo da área que entra e do principal que pausa logo depois, estado
+  # que já vale (sendo porta, ao parar, as áreas da caixa ficam; ver Agent#sync_mirror_bots →
+  # AgentInbox#release_bot_conversations!). Travar a caixa na
+  # pausa só escolheria qual das duas ordens vence; ler o principal com trava aqui inverteria a ordem para caixa → agente
+  # e criaria deadlock com o InboxConnector#disconnect!.
+  #
+  # O agente de outro sistema plugado pela caixa (set_agent_bot ou a troca da aba Agente de IA, #1648) também trava a
+  # caixa; com área ele entra e a área fica. Registro em spec/services/autonomia/agents/areas_agente_externo_depois_spec.rb.
   def vincular!(agent:, inbox:, ativar: false, de_rascunho: false)
     agent.with_lock do
       # Confere com o agente já travado (e relido): uma pausa paralela não passa entre a conferência e o vínculo.

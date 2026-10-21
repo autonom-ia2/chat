@@ -106,8 +106,10 @@ class Api::V1::Accounts::Integrations::LinearController < Api::V1::Accounts::Int
     "#{ENV.fetch('FRONTEND_URL', nil)}/app/accounts/#{Current.account.id}/conversations/#{@conversation.display_id}"
   end
 
+  # The issue carries the conversation link and content: only for who can see it (read) or work it (write) (#2027).
   def fetch_conversation
     @conversation = Current.account.conversations.find_by!(display_id: permitted_params[:conversation_id])
+    authorize @conversation, request.get? ? :view? : :show?
   end
 
   def linear_processor_service
