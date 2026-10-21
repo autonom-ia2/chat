@@ -612,6 +612,9 @@
         "RECORRENTE": "Recorrente",
         "OCORRENCIA": "Uma data de reunião recorrente",
         "PASSOU": "Esta reunião já terminou.",
+        "SUBSTITUIDO": "O organizador mudou esta reunião num e-mail mais novo. Responda pelo convite novo.",
+        "CANCELADA_DEPOIS": "O organizador cancelou esta reunião num e-mail mais novo.",
+        "VER_O_NOVO": "Abrir o e-mail mais novo",
         "MANTER": "Manter a resposta",
         "SEM_ORGANIZADOR": "Este convite não diz quem organizou, por isso não dá para responder daqui."
       }

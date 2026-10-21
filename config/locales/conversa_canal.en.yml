@@ -71,6 +71,8 @@ en:
       nao_e_email: 'Only invitations received in an email inbox can be answered.'
       nao_convidada: 'This inbox is not on the guest list of this meeting.'
       ja_passou: 'This meeting has already ended.'
+      substituido: 'The organizer changed or canceled this meeting in a newer email.'
+      em_andamento: 'Someone is answering this invitation right now. Wait a moment and reload the conversation.'
       sem_envio: 'This inbox cannot send email (forwarding only). Connect it by IMAP/SMTP, Google or Microsoft to answer.'
       falhou: 'Could not send your answer to the organizer. Try again in a moment.'
       assunto:
