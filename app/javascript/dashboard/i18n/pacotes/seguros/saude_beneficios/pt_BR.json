@@ -141,5 +141,19 @@
     "TOPO": {
       "SEM_META_EU": "Seu mês até agora: {n} plano fechado, {valor} | Seu mês até agora: {n} planos fechados, {valor}"
     }
+  },
+  "MODELOS_WHATSAPP": {
+    "OBJETIVOS": {
+      "renovacao": {
+        "TITULO": "Renovação do plano",
+        "PARA": "Para avisar que o plano faz aniversário e vai renovar.",
+        "TEXTO": "Olá, [nome_cliente]. Aviso de [nome_empresa]: o seu plano renova em [data]. Quer revisar a renovação com a gente? Toque em uma das opções abaixo."
+      },
+      "andamento": {
+        "TITULO": "Andamento do reembolso",
+        "PARA": "Para contar ao beneficiário que o pedido de reembolso andou.",
+        "TEXTO": "Olá, [nome_cliente]. Atualização de [nome_empresa]: o seu pedido de reembolso teve andamento. Quer saber os detalhes? Toque no botão abaixo."
+      }
+    }
   }
 }

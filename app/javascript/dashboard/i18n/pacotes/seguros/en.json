@@ -213,5 +213,19 @@
     "TOPO": {
       "SEM_META_EU": "Your month so far: {n} policy closed, {valor} | Your month so far: {n} policies closed, {valor}"
     }
+  },
+  "MODELOS_WHATSAPP": {
+    "OBJETIVOS": {
+      "renovacao": {
+        "TITULO": "Insurance renewal",
+        "PARA": "To let them know the insurance is about to expire.",
+        "TEXTO": "Hello, [nome_cliente]. A notice from [nome_empresa]: your insurance expires on [data]. To stay protected, renew before that date. Tap one of the options below."
+      },
+      "andamento": {
+        "TITULO": "Claim update",
+        "PARA": "To tell the policyholder their claim has moved forward.",
+        "TEXTO": "Hello, [nome_cliente]. An update from [nome_empresa]: your claim has moved forward. Want to know the details? Tap the button below."
+      }
+    }
   }
 }

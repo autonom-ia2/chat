@@ -278,6 +278,16 @@
         "PARA": "Para voltar a falar com quem sumiu.",
         "TEXTO": "Oi, [nome_cliente]! Aqui é da [nome_empresa]. Ficou alguma dúvida da nossa última conversa? É só responder aqui que a gente continua."
       },
+      "renovacao": {
+        "TITULO": "Renovação chegando",
+        "PARA": "Para avisar que o contrato vai vencer e precisa renovar.",
+        "TEXTO": "Olá, [nome_cliente]. Aviso de [nome_empresa]: o seu contrato vence em [data]. Quer renovar? Toque em uma das opções abaixo."
+      },
+      "andamento": {
+        "TITULO": "Andamento do pedido",
+        "PARA": "Para contar ao cliente que o pedido dele andou.",
+        "TEXTO": "Olá, [nome_cliente]. Atualização de [nome_empresa]: o seu pedido teve andamento. Quer saber os detalhes? Toque no botão abaixo."
+      },
       "em_branco": {
         "TITULO": "Começar do zero",
         "PARA": "Escreva tudo do seu jeito."
@@ -294,7 +304,10 @@
       "COPIAR_CODIGO": "Copiar código",
       "QUERO_CONTINUAR": "Quero continuar",
       "SEGUNDA_VIA": "Quero a segunda via",
-      "JA_PAGUEI": "Já paguei"
+      "JA_PAGUEI": "Já paguei",
+      "QUERO_RENOVAR": "Quero renovar",
+      "FALAR_COM_ALGUEM": "Falar com alguém",
+      "VER_DETALHES": "Ver detalhes"
     },
     "CAMPOS": {
       "nome_cliente": {

@@ -12,11 +12,10 @@ import { rascunhoDoFormato } from '../helpers/formatos';
 import { exemploDoCampo } from '../helpers/campos';
 import { corpoParaCriar, podeIrEmCampanha } from '../helpers/paraMeta';
 import { BOTOES_SO_DE_DIVULGACAO } from '../helpers/regraEstrutural';
-import { composeMessages } from 'dashboard/i18n/pacotesDoPainel';
-import segurosEn from 'dashboard/i18n/pacotes/seguros/en.json';
-import segurosPtBR from 'dashboard/i18n/pacotes/seguros/pt_BR.json';
-import corretoraEn from 'dashboard/i18n/pacotes/seguros/corretora/en.json';
-import corretoraPtBR from 'dashboard/i18n/pacotes/seguros/corretora/pt_BR.json';
+import {
+  camadasDoPacote,
+  composeMessages,
+} from 'dashboard/i18n/pacotesDoPainel';
 
 // Todo modelo pronto da galeria (#1380): o rascunho que a tela monta passa na
 // conferência, o aviso de serviço não leva nada que só existe em divulgação, e
@@ -24,21 +23,40 @@ import corretoraPtBR from 'dashboard/i18n/pacotes/seguros/corretora/pt_BR.json';
 // conferir com a mesma régua do servidor (SubmitFormat) e com o SendableFormat
 // da campanha. Atualizar o arquivo: `pnpm test prontos -- -u`.
 // O pacote de tradução da conta (#1802) troca o texto dos prontos; a mesma
-// régua vale para o texto composto de cada pacote.
-const CATALOGOS = [
-  { idioma: 'en', pacote: null, mensagens: en },
-  { idioma: 'pt_BR', pacote: null, mensagens: ptBR },
+// régua vale para o texto composto de cada pacote: todos os que existem em
+// i18n/pacotes, cada um com as suas camadas (#2035).
+const ARQUIVOS_DOS_PACOTES = import.meta.glob(
+  'dashboard/i18n/pacotes/**/*.json',
   {
-    idioma: 'en',
-    pacote: 'seguros.corretora',
-    mensagens: composeMessages(en, [segurosEn, corretoraEn]),
-  },
-  {
-    idioma: 'pt_BR',
-    pacote: 'seguros.corretora',
-    mensagens: composeMessages(ptBR, [segurosPtBR, corretoraPtBR]),
-  },
-];
+    eager: true,
+    import: 'default',
+  }
+);
+const BASES = { en, pt_BR: ptBR };
+const PACOTES = [
+  ...new Set(
+    Object.keys(ARQUIVOS_DOS_PACOTES).map(arquivo =>
+      arquivo.split('/pacotes/')[1].split('/').slice(0, -1).join('.')
+    )
+  ),
+].sort();
+const camadaDoIdioma = (camada, idioma) =>
+  Object.entries(ARQUIVOS_DOS_PACOTES).find(([arquivo]) =>
+    arquivo.endsWith(`/pacotes/${camada}/${idioma}.json`)
+  )?.[1];
+const CATALOGOS = Object.entries(BASES).flatMap(([idioma, base]) => [
+  { idioma, pacote: null, mensagens: base },
+  ...PACOTES.map(pacote => ({
+    idioma,
+    pacote,
+    mensagens: composeMessages(
+      base,
+      camadasDoPacote(pacote)
+        .map(camada => camadaDoIdioma(camada, idioma))
+        .filter(Boolean)
+    ),
+  })),
+]);
 const FIXTURE = path.resolve(
   process.cwd(),
   'spec/fixtures/whatsapp_templates/prontos.json'
@@ -214,6 +232,36 @@ describe('modelos prontos (#1380)', () => {
         ]);
         expect(Object.keys(corpo.fields)).toEqual(['1', '2', '3', '4']);
       });
+  });
+
+  it('renovação e andamento (#2035): avisos com respostas rápidas, em todo pacote', () => {
+    const botoes = { renovacao: 2, andamento: 1 };
+    Object.entries(botoes).forEach(([chave, quantos]) => {
+      const doObjetivo = lista.filter(pronto => pronto.chave === chave);
+      expect(doObjetivo).toHaveLength(CATALOGOS.length);
+      doObjetivo.forEach(({ corpo, rascunho, idioma, pacote }) => {
+        const rotulo = `${idioma}/${pacote || 'geral'}/${chave}`;
+        expect(rascunho.tipo, rotulo).toBe('aviso');
+        expect(corpo.category, rotulo).toBe('UTILITY');
+        const [, botoesDoCorpo] = corpo.components;
+        expect(
+          botoesDoCorpo.buttons.map(botao => botao.type),
+          rotulo
+        ).toEqual(Array(quantos).fill('QUICK_REPLY'));
+      });
+    });
+  });
+
+  it('o pacote de corretora herda o andamento de seguros (sinistro)', () => {
+    const corpoDe = pacote =>
+      lista.find(
+        pronto =>
+          pronto.chave === 'andamento' &&
+          pronto.idioma === 'pt_BR' &&
+          pronto.pacote === pacote
+      ).corpo.components[0].text;
+    expect(corpoDe('seguros.corretora')).toBe(corpoDe('seguros'));
+    expect(corpoDe('seguros')).not.toBe(corpoDe(null));
   });
 
   it('grava os corpos para o lado Ruby conferir', async () => {
