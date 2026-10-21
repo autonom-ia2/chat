@@ -1,5 +1,5 @@
-# #1428 (tema 6, t6d) — os 20 casos da avaliação paga das perguntas de prova (spec/services/autonomia/agents/
-# prova_do_ajuste_eval_spec.rb): 10 ramos de negócio, cada um com um agente fictício (sem dado de cliente), e em cada
+# #1428 (tema 6, t6d) — os 20 casos da avaliação paga das perguntas de prova, carregados só pelo
+# prova_do_ajuste_eval_spec.rb (require_relative): 10 ramos de negócio, cada um com um agente fictício (sem dado de cliente), e em cada
 # caso o pedido de mudança do dono e o CRITÉRIO de "a prova obedece": o que as mensagens de cliente escritas pelo
 # Construtor precisam provocar para mostrar a mudança. Quem lê o critério é o juiz do eval (um modelo), nunca uma lista
 # de palavras.
@@ -70,7 +70,8 @@ module AvaliacaoDaProvaDoAjuste
   }.freeze
 
   # `obedece`: o critério da cena para as mensagens de cliente. `extra`: uma pergunta fora da mudança acrescentada à prova
-  # (não pode virar ✓ no placar).
+  # (não pode virar ✓ no placar). `controle`: caso de controle, fora dos 20 do t6d (as perguntas são trocadas por
+  # `perguntas_fixas` antes da prova).
   CASOS = [
     { nome: 'prova_duas_frases_e_preco', agente: :corretora,
       fala: 'Responda em no máximo 2 frases e preço passa para a equipe.',
@@ -129,6 +130,11 @@ module AvaliacaoDaProvaDoAjuste
     { nome: 'salao_tres_frases_e_nome', agente: :salao,
       fala: 'Responda em no máximo 3 frases e sempre pergunte o nome da cliente se ela ainda não disse.',
       obedece: 'Ao menos uma mensagem vem de cliente que ainda não disse o nome; as mensagens, juntas, deixam ver se o ' \
-               'agente responde em no máximo 3 frases.' }
+               'agente responde em no máximo 3 frases.' },
+    # Revisão do t6d (MÉDIO): ajuste misto sem nenhuma pergunta de preço. A prova não pode sair completa (sem ✓).
+    { nome: 'controle_misto_sem_preco', agente: :corretora, controle: true,
+      fala: 'Responda em no máximo 2 frases e preço passa para a equipe.',
+      perguntas_fixas: ['Quais seguros vocês têm?', 'Vocês atendem em Curitiba?'],
+      obedece: 'Nenhuma mensagem pede preço: a prova não cobre o pedido do preço e não pode sair completa.' }
   ].freeze
 end

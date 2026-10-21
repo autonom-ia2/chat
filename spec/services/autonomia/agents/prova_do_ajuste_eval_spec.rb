@@ -1,11 +1,13 @@
 require 'rails_helper'
+require_relative 'prova_do_ajuste_eval_casos'
 
 # AVALIAÇÃO PAGA DAS PERGUNTAS DE PROVA (#1428, tema 6: entrega B e termo t6d), DESLIGADA POR PADRÃO. Roda só com
 # `AUTONOMIA_EVAL_PAGO=1`, `PROVA_DO_AJUSTE_EVAL=1` e `OPENAI_API_KEY`: o Construtor de verdade aplica o pedido e escreve
 # as perguntas, o job da prova responde (sem ferramenta) e o juiz de produção dá o veredito. Um juiz de OUTRO modelo diz,
 # pelo critério do caso, se as perguntas obedecem ao pedido (mostram a mudança), se alguma cita a instrução interna e se
-# cada veredito de produção está certo. Os 20 casos (10 ramos) ficam em spec/support/prova_do_ajuste_eval_casos.rb.
-# t6d: pelo menos 18 de 20 aprovados. Teto por rodada em `PROVA_DO_AJUSTE_EVAL_TETO_USD` (padrão US$ 0,90), somado pelo
+# cada veredito de produção está certo. Os 20 casos (10 ramos) e o caso de controle ficam em prova_do_ajuste_eval_casos.rb,
+# ao lado. t6d: pelo menos 18 de 20 aprovados (o controle conta à parte). Teto por rodada em
+# `PROVA_DO_AJUSTE_EVAL_TETO_USD` (padrão US$ 0,90), somado pelo
 # consumo gravado. Opcional: `PROVA_DO_AJUSTE_EVAL_SAIDA=<arquivo>` grava o relatório; `PROVA_DO_AJUSTE_EVAL_CENA=<a,b>`
 # roda só esses casos.
 module AvaliacaoDaProvaDoAjuste
@@ -74,6 +76,7 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     thread.append_message!('user', caso[:fala])
     Autonomia::Agents::Builder.new(account: conta, build_thread: thread).run!(thread.begin_build!)
     acrescentar_pergunta(thread, caso[:extra]) if caso[:extra]
+    trocar_perguntas(thread, caso[:perguntas_fixas]) if caso[:perguntas_fixas]
     vereditos.clear
     perform_enqueued_jobs(only: Autonomia::Agents::ProvaDoAjusteJob)
     thread.reload.state.to_h
@@ -88,10 +91,23 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     thread.update!(state: estado.merge('prova' => prova))
   end
 
+  # O controle: as perguntas do Construtor são trocadas pelas do caso antes da prova.
+  def trocar_perguntas(thread, perguntas)
+    estado = thread.reload.state
+    return if estado['prova'].nil?
+
+    prova = estado['prova'].merge('perguntas' => perguntas.map { |pergunta| { 'pergunta' => pergunta } })
+    thread.update!(state: estado.merge('prova' => prova))
+  end
+
+  def notas
+    vereditos.last.to_a.pluck('veredito')
+  end
+
   def julgar(caso, prova)
     itens = Array(prova['perguntas']).each_with_index.map do |item, indice|
       { 'cliente' => item['pergunta'], 'agente' => item['resposta'], 'passa_para_equipe' => item['equipe'],
-        'veredito' => vereditos.last.to_a[indice] }
+        'veredito' => notas[indice] }
     end
     texto = "Pedido do dono: #{caso[:fala]}\nCritério do caso: #{caso[:obedece]}\n\nTeste:\n#{JSON.pretty_generate(itens)}"
     cliente = Crm::Ai::ResponsesClient.new(credential: Crm::Ai::CredentialResolver.new(account: conta).resolve,
@@ -108,28 +124,42 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
   def rodar(caso)
     estado = ajustar_e_provar(caso)
     prova = estado['prova'].to_h
+    return rodar_controle(caso, estado, prova) if caso[:controle]
+
     veredito = prova['status'] == 'pronta' ? julgar(caso, prova) : {}
     { caso: caso[:nome], agente: caso[:agente], applied: estado['applied'], estrutura: estrutura_ok?(estado, prova, caso),
       prova: prova, vereditos_de_producao: vereditos.last, veredito: veredito,
-      aprovada: estrutura_ok?(estado, prova, caso) && julgamento_ok?(veredito) && fora_certa?(caso, prova),
+      aprovada: estrutura_ok?(estado, prova, caso) && julgamento_ok?(veredito, prova) && fora_certa?(caso, prova),
       custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
-  def estrutura_ok?(estado, prova, caso)
-    escritas = Array(prova['perguntas']).size - (caso[:extra] ? 1 : 0)
-    estado['applied'] == true && prova['status'] == 'pronta' && escritas.between?(1, 3) && prova['total'].to_i >= 1
+  # O controle não chama o juiz do eval: a estrutura basta (pronta e sem prova completa).
+  def rodar_controle(caso, estado, prova)
+    { caso: caso[:nome], agente: caso[:agente], controle: true, applied: estado['applied'], prova: prova,
+      vereditos_de_producao: vereditos.last, aprovada: prova['status'] == 'pronta' && prova['completa'] == false,
+      custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
-  def julgamento_ok?(veredito)
+  # Estrutura (do código): o ajuste entrou, a prova ficou pronta com 1 a 3 perguntas do Construtor, pelo menos uma tocou a
+  # mudança e cada pedido teve uma pergunta que o testou (`completa`, pelo juiz de produção).
+  def estrutura_ok?(estado, prova, caso)
+    escritas = Array(prova['perguntas']).size - (caso[:extra] ? 1 : 0)
+    estado['applied'] == true && prova['status'] == 'pronta' && escritas.between?(1, 3) && prova['total'].to_i >= 1 &&
+      prova['completa'] == true
+  end
+
+  # Um veredito certo por pergunta, nem mais nem menos.
+  def julgamento_ok?(veredito, prova)
+    certos = Array(veredito['vereditos_certos'])
     veredito['perguntas_mostram_a_mudanca'] == true && veredito['alguma_cita_instrucao'] == false &&
-      Array(veredito['vereditos_certos']).any? && Array(veredito['vereditos_certos']).all?
+      certos.size == Array(prova['perguntas']).size && certos.all?(true)
   end
 
   # A pergunta fora da mudança (a última) ficou fora do placar.
   def fora_certa?(caso, prova)
     return true unless caso[:extra]
 
-    vereditos.last.to_a.last == 'nao_testa' && prova['total'].to_i < Array(prova['perguntas']).size
+    notas.last == 'nao_testa' && prova['total'].to_i < Array(prova['perguntas']).size
   end
 
   def casos_escolhidos
@@ -144,8 +174,10 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     destino = ENV.fetch('PROVA_DO_AJUSTE_EVAL_SAIDA', nil)
     return if destino.blank?
 
-    File.write(destino, JSON.pretty_generate(custo_usd: custo_ate_agora.round(4), aprovados: relatorio.count { |linha| linha[:aprovada] },
-                                             rodados: relatorio.size, execucoes: relatorio))
+    casos, controles = relatorio.partition { |linha| linha[:controle].nil? }
+    File.write(destino, JSON.pretty_generate(custo_usd: custo_ate_agora.round(4), aprovados: casos.count { |linha| linha[:aprovada] },
+                                             rodados: casos.size, controles_ok: controles.count { |linha| linha[:aprovada] },
+                                             controles: controles.size, execucoes: relatorio))
   end
 
   it 'escreve perguntas que obedecem ao pedido, responde sem ferramenta e julga certo' do

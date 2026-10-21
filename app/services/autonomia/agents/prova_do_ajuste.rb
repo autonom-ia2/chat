@@ -80,13 +80,22 @@ class Autonomia::Agents::ProvaDoAjuste
 
   private
 
-  # O placar conta só as perguntas que tocam a mudança (`total` 0: nenhuma testou, a tela não mostra ✓).
+  # O placar conta só as perguntas que tocam a mudança (`total` 0: nenhuma testou, a tela não mostra ✓). `completa`: cada
+  # pedido do dono teve ao menos uma pergunta que o testou (o juiz diz qual); sem isso, a tela não mostra ✓.
   def julgar_e_gravar!(itens)
-    veredito = Autonomia::Agents::JuizDaProva.new(account: @thread.account).julgar(pedidos: pedidos_aplicados, itens: itens)
+    pedidos = pedidos_aplicados
+    veredito = Autonomia::Agents::JuizDaProva.new(account: @thread.account).julgar(pedidos: pedidos, itens: itens)
     return gravar!('status' => 'indisponivel') if veredito.nil?
 
-    gravar!('status' => 'pronta', 'ok' => veredito.count('ok'), 'total' => veredito.count { |item| item != 'nao_testa' },
-            'perguntas' => itens.zip(veredito).map { |item, nota| item.merge('veredito' => nota) })
+    notas = veredito.pluck('veredito')
+    gravar!('status' => 'pronta', 'ok' => notas.count('ok'), 'total' => notas.count { |nota| nota != 'nao_testa' },
+            'completa' => completa?(pedidos, veredito),
+            'perguntas' => itens.zip(veredito).map { |item, nota| item.merge(nota) })
+  end
+
+  def completa?(pedidos, veredito)
+    testados = veredito.pluck('pedido').compact
+    testados.any? && pedidos.pluck('numero').all? { |numero| testados.include?(numero) }
   end
 
   # A resposta do agente, pelo mesmo caminho do Testar, sem ferramenta. nil quando a IA falhou. `equipe`: o agente
@@ -100,11 +109,13 @@ class Autonomia::Agents::ProvaDoAjuste
     { 'resposta' => texto, 'equipe' => equipe }
   end
 
-  # O que entrou neste ajuste, nas palavras que o Construtor escreveu para o dono (`pedido` e `resumo`).
+  # O que entrou neste ajuste, um item numerado por pedido do dono, nas palavras que o Construtor escreveu para ele
+  # (`pedido` e os `resumo` dos campos desse pedido).
   def pedidos_aplicados
     itens = Array(@thread.state.dig('ultimo_ajuste', 'conferencia', 'itens'))
     itens.reject { |item| item['atendido'] == false || item['pedido_pelo_dono'] == false }
-         .map { |item| item.slice('pedido', 'resumo') }.uniq
+         .group_by { |item| item['pedido'] }.each_with_index
+         .map { |(pedido, grupo), numero| { 'numero' => numero, 'pedido' => pedido, 'o_que_mudou' => grupo.pluck('resumo').uniq } }
   end
 
   # A prova ainda está pendente, e o ajuste dela ainda é o último da conversa e vale (não desfeito, o agente com os campos

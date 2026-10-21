@@ -1397,6 +1397,7 @@
             "PROVA": "{ok} de {total} pergunta de prova ok | {ok} de {total} perguntas de prova ok",
             "PROVA_INDISPONIVEL": "Não consegui testar agora. Use o teste ao lado para ver como ficou.",
             "PROVA_SEM_TESTE": "As perguntas não testaram a mudança.",
+            "PROVA_INCOMPLETA": "Sem prova completa: nem tudo o que mudou foi testado.",
             "VER_PROVA": "Ver as perguntas",
             "ESCONDER_PROVA": "Esconder as perguntas",
             "CLIENTE": "Cliente:",

@@ -100,7 +100,7 @@ class Autonomia::Agents::ResultadoDoAjuste
     status = status_da_prova(dados)
     return { status: status, total: perguntas.size } unless status == 'pronta'
 
-    { status: status, total: dados['total'], ok: dados['ok'],
+    { status: status, total: dados['total'], ok: dados['ok'], completa: dados['completa'] != false,
       perguntas: perguntas.map { |item| pergunta_da_prova(item) } }
   end
 

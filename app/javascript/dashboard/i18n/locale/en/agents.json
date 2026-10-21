@@ -1397,6 +1397,7 @@
             "PROVA": "{ok} of {total} proof question ok | {ok} of {total} proof questions ok",
             "PROVA_INDISPONIVEL": "I couldn't test it now. Use the test on the side to see how it turned out.",
             "PROVA_SEM_TESTE": "The questions did not test the change.",
+            "PROVA_INCOMPLETA": "No complete proof: not everything that changed was tested.",
             "VER_PROVA": "See the questions",
             "ESCONDER_PROVA": "Hide the questions",
             "CLIENTE": "Customer:",

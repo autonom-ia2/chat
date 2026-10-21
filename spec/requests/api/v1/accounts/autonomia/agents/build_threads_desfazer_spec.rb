@@ -93,7 +93,7 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
                           'perguntas' => [{ 'pergunta' => 'Quanto custa?', 'resposta' => 'Passo para a equipe.', 'equipe' => false,
                                             'veredito' => 'ok' }])
 
-        expect(prova).to eq('status' => 'pronta', 'ok' => 1, 'total' => 1,
+        expect(prova).to eq('status' => 'pronta', 'ok' => 1, 'total' => 1, 'completa' => true,
                             'perguntas' => [{ 'pergunta' => 'Quanto custa?', 'resposta' => 'Passo para a equipe.', 'equipe' => false,
                                               'ok' => true }])
         expect(response.body).not_to include('versao_id', 'desde', 'veredito', 'campo', 'Instrução', 'andaime')

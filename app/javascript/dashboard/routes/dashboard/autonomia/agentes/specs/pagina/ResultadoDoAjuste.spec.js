@@ -233,6 +233,19 @@ describe('ResultadoDoAjuste', () => {
       expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
     });
 
+    // Revisão do t6d (MÉDIO): ajuste misto em que um dos pedidos ficou sem pergunta.
+    it('no check when some request had no question testing it', () => {
+      const prova = montar({ prova: { ...PRONTA, completa: false } }).find(
+        '[data-prova]'
+      );
+
+      expect(prova.find('[data-prova-incompleta]').text()).toBe(
+        'Sem prova completa: nem tudo o que mudou foi testado.'
+      );
+      expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
+      expect(prova.find('.i-lucide-triangle-alert').exists()).toBe(true);
+    });
+
     it('no check when no question touched the change (only those count)', async () => {
       const wrapper = montar({ prova: { ...PRONTA, ok: 0, total: 0 } });
       const prova = wrapper.find('[data-prova]');

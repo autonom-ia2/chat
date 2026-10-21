@@ -190,5 +190,14 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
     it 'sem a chave: nil' do
       expect(resultado(conferencia)[:prova]).to be_nil
     end
+
+    # Revisão do t6d (MÉDIO): o ✓ só sai quando cada pedido teve uma pergunta que o testou.
+    it 'pronta: diz se a prova cobriu cada pedido (a prova gravada antes da regra conta como completa)' do
+      perguntas = [{ 'pergunta' => 'Oi?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'ok', 'pedido' => 0 }]
+
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'completa' => false, 'perguntas' => perguntas))
+        .to include(completa: false)
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => perguntas)).to include(completa: true)
+    end
   end
 end

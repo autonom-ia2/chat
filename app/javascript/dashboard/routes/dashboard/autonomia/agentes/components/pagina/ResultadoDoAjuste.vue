@@ -60,7 +60,11 @@ const cor = computed(() => {
 // (pergunta do cliente e resposta do agente; nunca trecho da instrução). Indisponível, ou nenhuma pergunta
 // que toque a mudança (`total` 0: o placar só conta essas): linha neutra, sem ✓.
 const prova = computed(() => props.resultado.prova || null);
-const provaOk = computed(() => prova.value?.ok === prova.value?.total);
+// Revisão do t6d: o ✓ só sai quando cada pedido teve uma pergunta que o testou (`completa`).
+const provaCompleta = computed(() => prova.value?.completa !== false);
+const provaOk = computed(
+  () => prova.value?.ok === prova.value?.total && provaCompleta.value
+);
 const verProva = ref(false);
 const listaDaProva = useId();
 
@@ -198,6 +202,13 @@ const podeDesfazer = computed(
           {{
             t(`${NS}.PROVA`, { ok: prova.ok, total: prova.total }, prova.total)
           }}
+        </p>
+        <p
+          v-if="prova.total && !provaCompleta"
+          data-prova-incompleta
+          class="m-0 text-sm text-n-slate-12 ps-8"
+        >
+          {{ t(`${NS}.PROVA_INCOMPLETA`) }}
         </p>
         <button
           data-ver-prova
