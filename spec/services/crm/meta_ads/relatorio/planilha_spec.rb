@@ -48,4 +48,22 @@ RSpec.describe Crm::MetaAds::Relatorio::Planilha do
     expect(linhas.call(2).flatten).to include('Paulo Lima', 'Comprou', 'Joana Dias', 'Sem resposta')
     expect(linhas.call(3).size).to eq(Relatorios::Planilha::HEADER_ROW + 30) # um dia por linha, 30 dias contando hoje
   end
+
+  it 'com conexão, o gasto dos anúncios que levam ao site sai numa linha própria, fora do investido (#2054)' do
+    connection = create_meta_ads_insights_connection(account)
+    Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-site', object_type: 'adset', destination_type: 'WEBSITE', fetched_at: now)
+    [[auto, 100, nil], ['120254932730050416', 40, 'set-site']].each do |ad_id, value, adset_id|
+      Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: ad_id, date: Date.new(2026, 10, 19),
+                                      adset_id: adset_id, currency: 'BRL', spend: value, attribution_window: '7d_click', fetched_at: now)
+    end
+    conversation = from_ad('Paulo Lima', 1.day.ago)
+    Crm::MetaAdLink.create!(account: account, conversation: conversation, touch_key: 'k1', origin: 'whatsapp', certainty: 'ad', ad_id: auto,
+                            touched_at: 1.day.ago)
+
+    dados = Crm::MetaAds::Relatorio::Dados.new(connection, account: account, period: '30d')
+    planilha = Roo::Excelx.new(StringIO.new(described_class.new(dados).gerar))
+    resumo = (1..planilha.sheet(0).last_row).map { |linha| planilha.sheet(0).row(linha) }
+
+    expect(resumo).to include(['Investido', 100], ['Outros anúncios (sem conversa)', 40])
+  end
 end

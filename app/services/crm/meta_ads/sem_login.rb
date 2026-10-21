@@ -1,9 +1,13 @@
 # Anúncios sem login (#1960, degrau 0): a página de anúncios abre pronta com o que o WhatsApp já conta — de qual
 # anúncio (clique para o WhatsApp) veio cada conversa e o que virou no CRM —, sem a conexão com o Facebook, que só
 # lê dados de clientes depois da aprovação da Meta. Vale para conta com a flag `anuncios_sem_login`, com WhatsApp
-# oficial (só ele recebe de qual anúncio veio a pessoa) e sem conexão de anúncios nenhuma. Quem já tem conexão
-# (ativa, caída ou no meio da escolha da conta) segue no caminho antigo, que leva ao painel com gasto e a "Conectar
-# de novo"; quem não tem WhatsApp oficial também segue nele, sem mudança.
+# oficial (só ele recebe de qual anúncio veio a pessoa) e sem conexão de anúncios que dê painel com gasto. Quem não
+# tem WhatsApp oficial segue no caminho antigo, sem mudança.
+#
+# Conectar a partir daqui (#2054): conexão no meio do caminho (entrou com o Facebook e ainda não escolheu a conta) ou
+# caída (a Meta parou de responder) não tira a pessoa desta página: o painel do WhatsApp continua, com
+# `connection_state` ('choosing' ou 'broken') para a tela oferecer "Continuar" ou "Conectar de novo". Só a conexão
+# ativa com conta de anúncios leva ao painel com gasto.
 module Crm::MetaAds::SemLogin
   module_function
 
@@ -14,8 +18,19 @@ module Crm::MetaAds::SemLogin
   end
 
   def whatsapp_panel?(account)
-    enabled?(account) && !Crm::MetaAdsConnection.exists?(account_id: account.id) &&
-      account.inboxes.exists?(channel_type: 'Channel::Whatsapp')
+    enabled?(account) && !spend_panel?(account) && account.inboxes.exists?(channel_type: 'Channel::Whatsapp')
+  end
+
+  def spend_panel?(account)
+    Crm::MetaAdsConnection.where(account_id: account.id, status: 'active').where.not(ad_account_id: nil).exists?
+  end
+
+  # nil sem conexão; 'choosing' sem conta de anúncios escolhida; 'broken' com a conexão caída.
+  def connection_state(account)
+    connection = Crm::MetaAdsConnection.find_by(account_id: account.id)
+    return if connection.blank?
+
+    connection.ad_account_id.blank? ? 'choosing' : 'broken'
   end
 
   # O que a tela vazia precisa saber: quais WhatsApp oficiais estão prontos e se já chegou alguém de anúncio. As
@@ -23,7 +38,8 @@ module Crm::MetaAds::SemLogin
   def payload(account, account_user)
     return { enabled: false } unless whatsapp_panel?(account)
 
-    { enabled: true, official_inboxes: official_inboxes(account, account_user), ad_touch: ad_touch?(account) }
+    { enabled: true, official_inboxes: official_inboxes(account, account_user), ad_touch: ad_touch?(account),
+      connection_state: connection_state(account), connection_mode: Crm::MetaAdsConnection.where(account_id: account.id).pick(:mode) }
   end
 
   def official_inboxes(account, account_user)

@@ -2298,6 +2298,114 @@
             "LOST": "Lost",
             "NO_ANSWER": "No reply"
           }
+        },
+        "CONNECT": {
+          "BACK": "Back to the panel",
+          "STEP_OF": "Step {step} of {total}",
+          "COPIED": "Copied",
+          "COPY_AGAIN": "Copy the code again",
+          "TRUST": {
+            "SAFE": "We only see the numbers. Nothing changes in your ads",
+            "TIME": "No password, no key",
+            "OFF": "Turn it off anytime"
+          },
+          "COPY": {
+            "TITLE": "Copy the {partner} code",
+            "TEXT": "This is how Meta knows who to share with.",
+            "CTA": "Copy and continue"
+          },
+          "META": {
+            "TITLE": "Paste the code on Meta",
+            "TEXT": "On the Partners screen, tap Add, choose to give access to your assets and paste the code.",
+            "CTA": "Open Meta",
+            "AGAIN": "Open Meta again"
+          },
+          "MARK": {
+            "TITLE": "Check the ad account",
+            "TEXT": "Turn on only \"View performance\" and save. Nothing else is needed.",
+            "CTA": "Done, I shared it"
+          },
+          "SEND": {
+            "TITLE": "Send this message to who creates your ads",
+            "TEXT": "It explains what to do, step by step.",
+            "MESSAGE": "Hi! Please share our ad account with {partner}, just to see the numbers.\n\n1. Open: {link}\n2. Tap Add and choose to give access to your assets\n3. Paste the code {id}\n4. Check the ad account, turn on only \"View performance\" and save\n\nThanks!",
+            "WHATSAPP": "Send on WhatsApp",
+            "COPY": "Copy message",
+            "AFTER": "When they say it is shared, tap here:",
+            "CHECK": "Check now"
+          },
+          "CHECKING": "Looking for your account on Meta…",
+          "CONNECTING": "Connecting {name}…",
+          "SPEND_30D": "{value} in the last 30 days",
+          "FOUND": {
+            "TITLE": "We found your ad account",
+            "CTA": "Connect this account"
+          },
+          "CHOOSE": {
+            "TITLE": "Which account runs your WhatsApp ads?",
+            "TEXT": "We found more than one. Tap the one you use.",
+            "RECOMMENDED": "Most used"
+          },
+          "NOT_YET": {
+            "TITLE": "Not there yet",
+            "TITLE_ERROR": "Could not connect",
+            "TEXT": "Meta does not show the account shared with {partner} yet. Sometimes it takes a few minutes.",
+            "AUTO": "Checking again by itself…",
+            "CHECK": "Check again",
+            "STEPS": "See the steps again",
+            "ASK_SOMEONE": "Rather ask someone else?",
+            "TEXT_FACEBOOK": "We found no ad account on this Facebook. Sign in with the Facebook you use to create your ads."
+          },
+          "DONE": {
+            "TITLE": "Done, you are connected!",
+            "TEXT": "We are bringing the spend of {name}. In a few minutes it shows on your panel, next to conversations and sales.",
+            "CTA": "See my panel",
+            "DESTINATION_FAILED": "We could not mark WhatsApp as where your ads lead. Open the Connection tab, in \"Ad destination\", and choose WhatsApp."
+          },
+          "GUIDE": {
+            "LABEL": "Where to tap on Meta",
+            "SETTINGS": "Business settings",
+            "PARTNERS": "Partners",
+            "ADD": "Add",
+            "GIVE_ACCESS": "Give a partner access to your assets",
+            "PARTNER_ID": "Partner ID",
+            "PASTE": "paste the code here",
+            "AD_ACCOUNTS": "Ad accounts",
+            "YOUR_ACCOUNT": "Your ad account",
+            "VIEW": "View performance",
+            "MANAGE": "Manage campaigns",
+            "SAVE": "Save changes",
+            "CAPTION": "A drawing to guide you. The Meta screen may look a little different."
+          },
+          "START": {
+            "TITLE": "See how much you spent on each ad",
+            "TEXT": "Sign in with the same Facebook you use to create your ads. We find the account for you.",
+            "HOW": "How it works",
+            "STEPS": {
+              "ENTER": "Sign in with Facebook",
+              "CHOOSE": "Confirm your account",
+              "SEE": "See your spend"
+            },
+            "CTA": "Sign in with Facebook",
+            "RETRY": "Sign in again",
+            "WAITING": "The Facebook window is open. Keep everything checked and tap \"Continue\" until the end.",
+            "POPUP_TITLE": "The Facebook window did not open",
+            "POPUP_TEXT": "The browser may have blocked it. Tap the blocked window icon in the address bar, choose \"Always allow\" and sign in again.",
+            "REFUSED_TITLE": "Facebook did not share your ads",
+            "BROKEN": "The connection with Meta dropped. Sign in again to see your spend.",
+            "SOMEONE": "Someone else takes care of my ads",
+            "PARTNER": "Share through Business Manager"
+          }
+        },
+        "PENDING": {
+          "CHOOSING": {
+            "TEXT": "You only need to pick your ad account.",
+            "CTA": "Continue"
+          },
+          "BROKEN": {
+            "TEXT": "Meta stopped sending your spend. Meanwhile, the panel shows what WhatsApp counted.",
+            "CTA": "Connect again"
+          }
         }
       },
       "EMPTY": {
@@ -2781,6 +2889,19 @@
           "CONFIRM": "Download",
           "ERROR": "Could not download right now. Try again.",
           "NO_PEOPLE": "Without the \"Export the CRM list to Excel\" permission, the file has only the numbers, without the list of people."
+        },
+        "CONNECT_SPEND": {
+          "NOTE": "Connect your ad account to see it",
+          "CTA": "See how much I spent"
+        },
+        "ADS_WHATSAPP_TITLE": "Ads that bring conversations",
+        "OTHER_ADS": {
+          "TITLE": "Other ads",
+          "TOTAL": "{value} invested",
+          "HINT": "They brought no conversation: they lead to your website, a video or your profile. They stay out of the cost per conversation and per sale.",
+          "SPEND": "Invested",
+          "CLICKS": "Clicks",
+          "SHOWN": "Shown"
         }
       },
       "AD_DETAIL": {

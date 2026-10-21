@@ -194,9 +194,15 @@ class Crm::MetaAds::Setup
     connection.access_token = nil if mode == 'partner'
     reset_insights_on_new_ad_account
     connection.save!
+    start_loads(connection)
+    connection
+  end
+
+  # Nomes, gasto (90 dias) e, na primeira conexão, as ligações conversa → anúncio de todo o histórico (#2054).
+  def start_loads(connection)
     Crm::MetaAds::BackfillJob.perform_later(@account.id)
     Crm::MetaAds::InsightsBackfillJob.start(connection) if connection.insights_backfilled_at.nil?
-    connection
+    Crm::MetaAds::LinksBackfillJob.start(connection) if connection.links_backfilled_at.nil?
   end
 
   def ad_account_attributes(details)

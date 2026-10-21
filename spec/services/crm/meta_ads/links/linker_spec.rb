@@ -105,4 +105,13 @@ RSpec.describe Crm::MetaAds::Links::Linker do
     expect(Crm::MetaAdLink.where(conversation: conversation).order(:touched_at).pluck(:touch_key, :first_touch, :campaign_id))
       .to eq([['clid-1', true, campaign_id], ['clid-2', false, campaign_id]])
   end
+
+  # #2054: conversa de antes da lista de toques guarda só `campaign`; o painel sem login já a contava.
+  it 'conversa antiga com o toque só em campaign vira a ligação do primeiro toque' do
+    cache_ad
+    conversation.update!(additional_attributes: { 'campaign' => ctwa_touch })
+
+    expect(described_class.new(conversation).perform).to eq(1)
+    expect(link_for('clid-1')).to have_attributes(ad_id: ad_id, origin: 'whatsapp', first_touch: true)
+  end
 end
