@@ -89,9 +89,12 @@ class Autonomia::ContaDaIa
     Conversation.where(account_id: @account.id, id: ids)
   end
 
-  # As respostas de robô da conta (sem período): a Equipe também lê para a venda, o nome e o custo.
+  # As respostas de robô da conta (sem período): a Equipe também lê para a venda, o nome e o custo. Só as que o cliente vê:
+  # a nota interna do espelho (a do encaminhamento, em toda passagem; o aviso ao atendente; a nota da ferramenta) não é
+  # resposta (#2000, revisão dos Agentes).
   def respostas_da_ia
-    Message.unscope(:order).where(account_id: @account.id, message_type: Message.message_types[:outgoing], sender_type: 'AgentBot')
+    Message.unscope(:order).where(account_id: @account.id, message_type: Message.message_types[:outgoing], sender_type: 'AgentBot',
+                                  private: false)
   end
 
   private

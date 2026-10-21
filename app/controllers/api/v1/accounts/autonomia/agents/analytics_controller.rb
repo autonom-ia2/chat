@@ -51,7 +51,7 @@ class Api::V1::Accounts::Autonomia::Agents::AnalyticsController < Api::V1::Accou
   # #1788: a lista abre conversas, então segue a regra da lista de conversas (caixa, funil e função). Os totais do
   # painel (index) continuam da conta.
   def visiveis(conversas)
-    ::Conversations::PermissionFilterService.new(conversas, Current.user, Current.account).perform
+    ::Conversations::PermissionFilterService.new(conversas, Current.user, Current.account, for_reading: true).perform
   end
 
   def fetch_agent

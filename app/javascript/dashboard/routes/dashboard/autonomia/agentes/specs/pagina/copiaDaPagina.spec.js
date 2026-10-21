@@ -67,7 +67,7 @@ describe('cópia da página do agente em pt_BR', () => {
       'Esta semana (os últimos 7 dias, contando hoje)'
     );
     expect(wrapper.get('[data-no-mes]').text()).toBe(
-      'Em Números › Equipe, a mesma conta aparece por mês.'
+      'Em Números › Equipe você vê esses números do mês.'
     );
     const resolvidas = wrapper.get('[data-numero="resolvidas"]');
     expect(resolvidas.text()).toContain('resolvidas sem a equipe');

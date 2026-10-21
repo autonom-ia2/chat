@@ -135,6 +135,17 @@ RSpec.describe 'Autonomia numeros da semana', type: :request do
       expect(row_for(bia)).to include('answered' => 3, 'resolved' => 0)
     end
 
+    it 'does not count the private handoff note as an answer: answered 0, handed 1' do
+      chat = conversation_in
+      create(:message, account: account, inbox: chat.inbox, conversation: chat, message_type: :outgoing, sender: espelho(bia),
+                       private: true)
+      passagem(bia, chat)
+
+      get_numeros
+
+      expect(row_for(bia)).to eq('agent_id' => bia.id, 'answered' => 0, 'handed' => 1, 'resolved' => 0)
+    end
+
     it 'counts each agent by its own mirror and its own handoffs' do
       outro = create_agent('Outro')
       conversa = conversation_in

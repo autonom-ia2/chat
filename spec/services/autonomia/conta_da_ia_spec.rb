@@ -110,6 +110,20 @@ RSpec.describe Autonomia::ContaDaIa do
     expect(numeros).to eq(atendeu: 2, passou: 1, resolveuSozinha: 1)
   end
 
+  it 'só a nota do encaminhamento e a passagem: atendeu 0, passou 1 (nota interna não é resposta)' do
+    chat = conversa_no(atende)
+    create(:message, account: account, inbox: chat.inbox, conversation: chat, message_type: :outgoing, sender: espelho,
+                     private: true, created_at: 1.day.ago)
+    passagem(chat)
+    resolvida(chat)
+
+    conta = described_class.new(account: account, range: semana)
+
+    expect(conta.da_ia).to eq(atendeu: 0, passou: 1, resolveuSozinha: 0)
+    expect(conta.por_agente([bia.id])[bia.id]).to eq(atendeu: 0, passou: 1, resolveuSozinha: 0)
+    expect(equipe).to include(atendeu: 0, passou: 1)
+  end
+
   it 'toda a IA soma qualquer robô; o agente conta só os espelhos dele' do
     n8n = create(:agent_bot, account: account, name: 'n8n')
     so_do_n8n = conversa_no(venda)
