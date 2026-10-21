@@ -206,6 +206,24 @@ describe('MetaAdsPage · Anúncios sem login (#1960)', () => {
     );
   });
 
+  it('reloaded in the middle of switching the way to connect (?modo=), Back leaves and clears it', async () => {
+    routing.query = { aba: 'conexao', modo: 'partner' };
+    reply({ ...CONNECTED, mode: 'token' });
+    const wrapper = await mountPage();
+
+    expect(wrapper.findComponent({ name: 'MetaAdsAccountStep' }).exists()).toBe(
+      true
+    );
+    await wrapper.find('[data-meta-ads-step-back]').trigger('click');
+
+    expect(wrapper.findComponent({ name: 'MetaAdsAccountStep' }).exists()).toBe(
+      false
+    );
+    expect(wrapper.findComponent({ name: 'MetaAdsSummary' }).exists()).toBe(
+      true
+    );
+  });
+
   it('the first setup has no Back on the steps', async () => {
     reply({ configured: false, whatsapp_result: { enabled: false } });
     flags.value = {};

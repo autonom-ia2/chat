@@ -193,13 +193,14 @@ const connectedFromWhatsapp = async () => {
   await load();
 };
 
-// "Alterar" abre um passo com a conexão já feita: "Voltar" fecha o passo sem gravar e desfaz o caminho escolhido
-// pela metade, de volta à aba em que a pessoa estava. Só quando o passo aberto não é o da vez: no meio do primeiro
-// cadastro (conexão gravada, conta ainda não escolhida) fechar o passo voltaria a ele mesmo.
+// Com a conexão já gravada, o passo na tela que não é o da vez (aberto por "Alterar", ou a troca de caminho que
+// voltou do endereço ?modo= depois de recarregar) ganha "Voltar": fecha o passo, desfaz o caminho escolhido pela
+// metade e volta ao passo da vez — com tudo feito, à aba em que a pessoa estava. O passo da vez não tem "Voltar":
+// fechá-lo voltaria a ele mesmo.
 const canGoBack = computed(
   () =>
-    Boolean(openStep.value) &&
-    openStep.value !== step.value &&
+    activeStep.value <= SALES_STEP &&
+    activeStep.value !== step.value &&
     Boolean(connection.value?.configured)
 );
 const goBack = () => {
