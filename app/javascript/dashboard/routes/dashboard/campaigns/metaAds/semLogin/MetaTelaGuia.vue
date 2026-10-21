@@ -14,6 +14,9 @@ defineProps({
 });
 
 const G = `${SEM_LOGIN}.CONNECT.GUIDE`;
+// Endereço e números do desenho: não são texto a traduzir.
+const META_HOST = 'business.facebook.com';
+const STEP = [1, 2, 3];
 </script>
 
 <template>
@@ -30,19 +33,19 @@ const G = `${SEM_LOGIN}.CONNECT.GUIDE`;
       <span class="size-2.5 rounded-full bg-n-slate-6" />
       <span class="size-2.5 rounded-full bg-n-slate-6" />
       <span class="ms-2 truncate text-xs text-n-slate-10">
-        business.facebook.com
+        {{ META_HOST }}
       </span>
     </div>
 
     <div v-if="kind === 'partner'" class="flex flex-col gap-3 p-4 sm:p-5">
       <span class="text-xs font-medium text-n-slate-11">
-        {{ $t(`${G}.SETTINGS`) }} › {{ $t(`${G}.PARTNERS`) }}
+        {{ [$t(`${G}.SETTINGS`), $t(`${G}.PARTNERS`)].join(' › ') }}
       </span>
       <ol class="m-0 flex list-none flex-col gap-3 p-0">
         <li class="flex items-center gap-3">
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >1</span
+            >{{ STEP[0] }}</span
           >
           <span
             class="inline-flex items-center gap-1.5 rounded-lg bg-n-blue-9 px-3 py-1.5 text-sm font-semibold text-white"
@@ -54,7 +57,7 @@ const G = `${SEM_LOGIN}.CONNECT.GUIDE`;
         <li class="flex items-center gap-3">
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >2</span
+            >{{ STEP[1] }}</span
           >
           <span
             class="rounded-lg bg-n-solid-1 px-3 py-1.5 text-sm text-n-slate-12 shadow-sm ring-2 ring-n-blue-7"
@@ -65,7 +68,7 @@ const G = `${SEM_LOGIN}.CONNECT.GUIDE`;
         <li class="flex flex-wrap items-center gap-3">
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >3</span
+            >{{ STEP[2] }}</span
           >
           <span class="flex min-w-0 flex-col gap-1">
             <span class="text-xs text-n-slate-11">{{
@@ -90,7 +93,7 @@ const G = `${SEM_LOGIN}.CONNECT.GUIDE`;
         <span class="flex items-center gap-3">
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >1</span
+            >{{ STEP[0] }}</span
           >
           <span
             class="grid size-5 place-items-center rounded bg-n-blue-9 text-white"
@@ -110,7 +113,7 @@ const G = `${SEM_LOGIN}.CONNECT.GUIDE`;
           </span>
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >2</span
+            >{{ STEP[1] }}</span
           >
         </span>
         <span class="flex items-center gap-3 ps-10 opacity-60">
@@ -125,7 +128,7 @@ const G = `${SEM_LOGIN}.CONNECT.GUIDE`;
       <span class="flex items-center gap-3">
         <span
           class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-          >3</span
+          >{{ STEP[2] }}</span
         >
         <span
           class="rounded-lg bg-n-blue-9 px-3 py-1.5 text-sm font-semibold text-white"
