@@ -21,7 +21,8 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'copilot_text' then authorize_copilot_text!
     when 'agent_test', 'agent_suggest' then authorize_agent!
     when 'email_rewrite' then authorize_email!
-    when 'stage_criteria', 'stage_criteria_draft' then authorize_pipeline!
+    when 'stage_criteria', 'stage_criteria_draft', 'pipeline_when_to_use' then authorize_pipeline!
+    when 'stage_criteria_xray' then authorize_saved_pipeline!
     when 'meta_funnel_stages' then authorize_meta_funnel!
     when 'meta_ads_daily_action' then authorize_meta_ads_panel!
     when 'meta_ads_quote_message' then authorize_meta_ads_quote!
@@ -41,8 +42,10 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'copilot_text' then Autonomia::Copilot::ConversationCopilot.new(account: @account, **@inputs).perform.to_h
     when 'agent_test', 'agent_suggest' then playground_result
     when 'email_rewrite' then EmailCampaigns::Ai::Rewriter.new(account: @account, **@inputs).perform
-    when 'stage_criteria', 'stage_criteria_draft'
-      Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **@inputs.except(:pipeline_id, :pipeline_name)).perform
+    when 'stage_criteria', 'stage_criteria_draft' then stage_criteria_result
+    when 'stage_criteria_xray' then Crm::Ai::RaioXDasFrases.new(pipeline: pipeline, stages: @inputs.fetch(:stages), cards: cards_visiveis).perform
+    when 'pipeline_when_to_use'
+      Crm::Ai::WhenToUseImprover.new(pipeline: pipeline, cards: cards_visiveis, **@inputs.slice(:language, :funil)).perform
     when 'meta_funnel_stages' then Crm::MetaAds::StageTypeSuggester.new(pipeline: meta_funnel, language: @inputs.fetch(:language)).perform
     when 'meta_ads_daily_action' then meta_ads_daily_action
     when 'meta_ads_quote_message' then meta_ads_quote_message
@@ -96,6 +99,21 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
 
     Pundit.authorize(@context, pipeline, :create?) if pipeline.new_record?
     Pundit.authorize(@context, pipeline, :manage_ai?)
+  end
+
+  # Funil salvo tem evidência (#1920): os cards que quem pediu pode ver; o rascunho não tem card.
+  def stage_criteria_result
+    evidencia = pipeline.persisted? ? { cards: cards_visiveis } : {}
+    Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **evidencia, **@inputs.except(:pipeline_id, :pipeline_name)).perform
+  end
+
+  # #1920: a evidência e o raio-x leem conversas de cards; só dos que quem pediu pode ver no CRM.
+  def cards_visiveis = Crm::CardPolicy::Scope.new(@context, Crm::Card).resolve
+
+  # O raio-x (#1920) roda nos cards do funil: só funil salvo.
+  def authorize_saved_pipeline!
+    authorize_pipeline!
+    raise Pundit::NotAuthorizedError if pipeline.new_record?
   end
 
   # Anúncios da Meta (#1047): só administrador, e só funil ligado ao WhatsApp oficial da conta.

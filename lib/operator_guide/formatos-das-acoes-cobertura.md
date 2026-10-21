@@ -5,17 +5,17 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 637 |
+| No catálogo | 639 |
 | Sem corpo | 189 |
-| Com corpo | 448 |
-| Com corpo e formato completo | 368 (82,1%) |
+| Com corpo | 450 |
+| Com corpo e formato completo | 370 (82,2%) |
 | Com corpo e formato incompleto | 80 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 204 |
+| Campos aninhados com vocabulário | 17 de 208 |
 | Leituras cruas tipadas | 164 de 252 |
 
 ## Incompletas por motivo
@@ -36,7 +36,7 @@ Uma ação pode ter mais de um motivo.
 - `DELETE assignment_policies/:assignment_policy_id/inboxes/:id` — a rota não tem a action no controller: a chamada dá erro
 - `DELETE inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
 - `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
-- `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
+- `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:90)
 - `PATCH crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
 - `PATCH ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PATCH portals/:id` — leitura crua sem tipo: portal.config.analytics
@@ -108,7 +108,7 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
-- `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
+- `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:90)
 - `PUT crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PUT portals/:id` — leitura crua sem tipo: portal.config.analytics

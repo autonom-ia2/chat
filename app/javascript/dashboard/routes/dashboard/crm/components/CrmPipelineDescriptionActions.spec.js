@@ -90,10 +90,12 @@ describe('pipeline description AI actions', () => {
 
     expect(CrmKanbanAPI.improveStageCriteria).toHaveBeenCalledWith(1, {
       stages: [
-        { name: 'Novo', description: '  ' },
-        { name: 'Proposta', description: 'Oferta apresentada.' },
+        // #1920: a etapa salva vai com o id; o servidor casa por ele.
+        { id: 10, name: 'Novo', description: '  ' },
+        { id: 11, name: 'Proposta', description: 'Oferta apresentada.' },
       ],
       stage_index: 0,
+      funil: { counts_as_sale: true, when_to_use: '' },
     });
     expect(wrapper.vm.selectedCriteria).toBe('  ');
     // Um estado por vez: com a sugestão na tela, o botão da IA sai.
@@ -222,6 +224,8 @@ describe('pipeline description AI actions', () => {
       const created = await mountCreate();
       await flushPromises();
       created.vm.form.name = ' Funil novo ';
+      created.vm.form.countsAsSale = false;
+      created.vm.form.whenToUse = ' Cancelamento ';
       created.vm.openStage(created.vm.form.stages[0]);
       await created.vm.$nextTick();
 
@@ -234,7 +238,12 @@ describe('pipeline description AI actions', () => {
 
       expect(CrmKanbanAPI.improveStageCriteria).not.toHaveBeenCalled();
       expect(CrmKanbanAPI.improveDraftStageCriteria).toHaveBeenCalledWith(
-        expect.objectContaining({ pipeline_name: 'Funil novo', stage_index: 0 })
+        expect.objectContaining({
+          pipeline_name: 'Funil novo',
+          stage_index: 0,
+          // #1920: o tipo e o "quando usar" do formulário, mesmo sem salvar.
+          funil: { counts_as_sale: false, when_to_use: 'Cancelamento' },
+        })
       );
       expect(created.text()).toContain('Primeiro contato.');
       expect(created.text()).not.toContain('SAVE_FIRST');

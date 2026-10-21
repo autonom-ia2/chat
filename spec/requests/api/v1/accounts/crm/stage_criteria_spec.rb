@@ -73,8 +73,10 @@ RSpec.describe 'CRM stage criteria for an unsaved pipeline', type: :request do
     improver = instance_double(Crm::Ai::StageCriteriaImprover, perform: suggestion)
     allow(Crm::Ai::StageCriteriaImprover).to receive(:new).and_return(improver)
 
+    # #1920: o tipo e o "quando usar" do formulário vão junto.
+    pedido = { pipeline_name: ' Funil Novo ', stages: stages, stage_index: 0, funil: { counts_as_sale: false, when_to_use: 'Suporte' } }
     expect do
-      post "#{base}/improve", params: { pipeline_name: ' Funil Novo ', stages: stages, stage_index: 0 },
+      post "#{base}/improve", params: pedido,
                               headers: auth_headers(admin), as: :json
     end.not_to change(Crm::Pipeline, :count)
     expect(response).to have_http_status(:accepted)
@@ -86,7 +88,7 @@ RSpec.describe 'CRM stage criteria for an unsaved pipeline', type: :request do
     expect(response.parsed_body['result']).to eq(suggestion)
     expect(Crm::Ai::StageCriteriaImprover).to have_received(:new).with(
       pipeline: an_object_having_attributes(new_record?: true, account_id: account.id, name: 'Funil Novo'),
-      stage_index: 0, language: 'en',
+      stage_index: 0, language: 'en', funil: { counts_as_sale: 'false', when_to_use: 'Suporte' },
       stages: [{ name: 'Novo', description: '' }, { name: 'Proposta', description: 'Oferta enviada.' }]
     )
   end
