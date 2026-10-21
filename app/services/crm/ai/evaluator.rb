@@ -197,7 +197,8 @@ module Crm
         return Result.new(status: :skipped, error: 'same_stage') if target_stage.id == @card.stage_id
 
         confidence = classification[:confidence].to_f
-        if auto_move_allowed? && confidence >= Config::AUTO_MOVE_THRESHOLD && stage_criteria_present?(target_stage)
+        if auto_move_allowed? && confidence >= Config::AUTO_MOVE_THRESHOLD && stage_criteria_present?(target_stage) &&
+           !fim_sem_fechar?(classification, target_stage)
           suggestion = record_suggestion(target_stage, confidence, classification, :auto_applied)
           SuggestionApplier.new(card: @card, suggestion: suggestion, actor: nil, auto: true).perform
           Result.new(status: :auto_moved, suggestion: suggestion)
@@ -282,6 +283,15 @@ module Crm
         attribute_extraction.apply(classification[:extracted_attributes])
         Crm::Memoria::Pendente.aplicar!(@card)
         result
+      end
+
+      # IA entende a conversa F3 (revisão adversarial): o modelo pediu para fechar o card e o fechamento não aconteceu (card
+      # parado, "Avaliar agora", mensagem nova, pessoa no card, pedido de pessoa). A etapa de fim que veio junto não move
+      # sozinha: o card ficaria aberto na coluna de perda (ou de ganho), sem motivo nem retorno. Vira sugestão.
+      def fim_sem_fechar?(classification, target_stage)
+        return false unless target_stage.is_lost_stage || target_stage.is_won_stage
+
+        classification[:fechar_card].present? && FecharCard.ligada?(@account)
       end
 
       # IA entende a conversa F3, regra h (D1): uma pessoa escolheu a etapa há pouco e a IA quer VOLTAR o card a uma

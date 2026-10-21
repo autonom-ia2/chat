@@ -184,6 +184,42 @@ RSpec.describe Crm::Ai::FecharCard do
     expect(card.reload).to be_open
   end
 
+  # Pega (revisão adversarial F3): o fechamento barrado deixar o card ABERTO na coluna de perda, sem motivo nem retorno,
+  # porque a etapa de fim que veio junto moveu sozinha (o achado H4, agora causado pela própria regra de fechar).
+  describe 'fechamento barrado com a etapa de fim junto' do
+    let(:perda) do
+      create_crm_stage(account: account, pipeline: pipeline, name: 'Perdido', position: 9)
+        .tap { |etapa| etapa.update!(is_lost_stage: true, metadata: { 'ai_criteria' => 'O cliente desistiu.' }) }
+    end
+
+    it 'card parado: não move sozinho para a perda; vira sugestão', :aggregate_failures do
+      card = novo_card
+      ia_responde(fim(motivo: 'adiou'), suggested_stage_id: perda.id)
+
+      resultado = avaliar(card, trigger: described_class::TRIGGER_CARD_PARADO)
+
+      expect(resultado.status).to eq(:suggested)
+      expect(card.reload).to have_attributes(status: 'open', stage_id: stage.id)
+    end
+
+    it 'mensagem nova do cliente: não move sozinho para a perda', :aggregate_failures do
+      card = novo_card
+      nova = -> { create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming, content: 'Espera') }
+      ia_responde(fim, suggested_stage_id: perda.id, durante: nova)
+
+      expect(avaliar(card).status).to eq(:suggested)
+      expect(card.reload).to have_attributes(status: 'open', stage_id: stage.id)
+    end
+
+    it 'sem a flag: a etapa de perda move como sempre' do
+      account.disable_features!(described_class::FLAG)
+      card = novo_card
+      ia_responde(fim, suggested_stage_id: perda.id)
+
+      expect(avaliar(card).status).to eq(:auto_moved)
+    end
+  end
+
   # Pega: o pedido de pessoa sumir porque o card fechou antes da passagem.
   it 'pedido de pessoa na mesma resposta: não fecha' do
     card = novo_card
