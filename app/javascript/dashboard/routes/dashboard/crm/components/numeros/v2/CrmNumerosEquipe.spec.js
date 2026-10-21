@@ -44,8 +44,9 @@ const ia = (extra = {}) => ({
   nome: 'Sofia',
   agenteId: 5,
   atendeu: 180,
-  venda: { atendeu: 110, passou: 30, participou: 7, valor: 5400 },
-  atende: { resolveuSozinha: 40, passou: 25 },
+  passou: 55,
+  venda: { participou: 7, valor: 5400 },
+  atende: { resolveuSozinha: 40 },
   custo: null,
   ...extra,
 });
@@ -116,6 +117,13 @@ const dados = (extra = {}) => ({
         nome: 'Carla',
         voce: true,
         atende: { resolveu: 70, noPrazo: null, meta: null, pct: null },
+      },
+      {
+        id: 12,
+        nome: 'Bruno',
+        voce: false,
+        venda: { recebeu: 10, fechou: 2, valor: 1800, meta: null, pct: null },
+        atende: { resolveu: 3, noPrazo: null, meta: null, pct: null },
       },
     ],
     caminhoCerto: [],
@@ -198,7 +206,7 @@ describe('CrmNumerosEquipe', () => {
     expect(linha.exists()).toBe(true);
     expect(linha.text()).toContain('Sofia');
     expect(linha.find('[data-custo-ia]').exists()).toBe(false);
-    expect(wrapper.findAll('[data-pessoa]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-pessoa]')).toHaveLength(3);
   });
 
   it('o dono vê o custo da IA na moeda que o servidor manda', async () => {
@@ -241,6 +249,49 @@ describe('CrmNumerosEquipe', () => {
       'A'
     );
     expect(linhas[1].find('[data-ajuda="retornos"]').exists()).toBe(false);
+  });
+
+  // #1999: quem vende e atende tem uma linha só, com os dois números.
+  it('"Quem cuidou": uma linha por pessoa, com venda e atendimento lado a lado', async () => {
+    const wrapper = await montar(dados());
+
+    const bruno = wrapper.findAll('[data-pessoa="pessoa-12"]');
+    expect(bruno).toHaveLength(1);
+    expect(bruno[0].text()).toContain('CUIDOU.VENDA');
+    expect(bruno[0].text()).toContain('CUIDOU.ATENDE_SEM_PRAZO');
+  });
+
+  // #1999: sem meta de casos, abrir a linha não repete o "resolveu".
+  it('abrir a linha de quem atende não repete o número de resolvidos', async () => {
+    const wrapper = await montar(dados());
+
+    await wrapper.find('[data-pessoa="pessoa-13"]').trigger('click');
+
+    expect(wrapper.find('[data-numeros-cuidou]').text()).not.toContain(
+      'DETALHE_ATENDE'
+    );
+  });
+
+  // #1999: um número de cada para a IA, e a linha não repete a frase do topo.
+  it('a linha da IA tem um "passou" só e não repete o que a frase do topo já diz', async () => {
+    const wrapper = await montar(dados());
+
+    const numeros = wrapper.find('[data-ia-numeros]').text();
+    expect(numeros.split('CUIDOU.IA_PASSOU')).toHaveLength(2);
+    expect(numeros).toContain('CUIDOU.IA_PASSOU {"n":55}');
+    expect(numeros).toContain('CUIDOU.IA_RESOLVEU_SOZINHA {"n":40}');
+    expect(numeros).not.toContain('IA_ATENDEU');
+    expect(numeros).not.toContain('IA_PARTICIPOU');
+  });
+
+  it('sem a frase do topo, a linha da IA diz também quantos atendeu', async () => {
+    const resposta = dados();
+    resposta.quemCuidou.plataforma = null;
+    const wrapper = await montar(resposta);
+
+    const numeros = wrapper.find('[data-ia-numeros]').text();
+    expect(numeros).toContain('CUIDOU.IA_ATENDEU {"n":180}');
+    expect(numeros).toContain('CUIDOU.IA_PARTICIPOU');
   });
 
   it('modo leitura: avisa e não mostra o próximo passo', async () => {

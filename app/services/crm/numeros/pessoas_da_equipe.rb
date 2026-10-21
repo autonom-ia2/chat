@@ -1,6 +1,6 @@
 # As pessoas da equipe em CRM › Números, visão "Equipe" (#1992, F5 do #1871): as linhas de "Quem cuidou" e o "Quem
-# precisa de ajuda". Uma linha por pessoa e por tipo de funil, em ordem alfabética (nunca um ranking). A IA nunca entra
-# aqui: ela tem a linha própria (Crm::Numeros::IaNoTime).
+# precisa de ajuda". Uma linha por pessoa, em ordem alfabética (nunca um ranking): quem vende e atende tem os dois
+# números na mesma linha (#1999). A IA nunca entra aqui: ela tem a linha própria (Crm::Numeros::IaNoTime).
 #
 # "Precisa de ajuda" é uma linha por pessoa: os retornos atrasados (Vender) e os casos parados há 7 dias (Atender) no
 # funil principal, somados, a partir de LIMITE_AJUDA. Cada número abre a fila daquela pessoa. A ordem é pela soma, de
@@ -23,7 +23,10 @@ class Crm::Numeros::PessoasDaEquipe
   end
 
   def linhas
-    @linhas ||= (linhas_de(:venda) + linhas_de(:atende))
+    @linhas ||= pessoas.slice(*candidatos).sort_by { |_id, nome| nome.to_s.downcase }.filter_map do |id, nome|
+      numeros = numeros_de(id)
+      { id: id, nome: nome, voce: id == @user.id }.merge(numeros) if numeros.any?
+    end
   end
 
   def quantas
@@ -53,13 +56,9 @@ class Crm::Numeros::PessoasDaEquipe
     pct.present? && pct >= esperado_pct
   end
 
-  def linhas_de(tipo)
-    return [] unless @cards.tem?(tipo)
-
-    ids = candidatos.select { |id| papeis_de(id).include?(tipo) }
-    pessoas.slice(*ids).sort_by { |_id, nome| nome.to_s.downcase }.map do |id, nome|
-      { id: id, nome: nome, voce: id == @user.id }.merge(tipo => tipo == :venda ? venda_de(id) : atende_de(id))
-    end
+  # Os números de cada papel da pessoa, só nos tipos de funil que quem abre enxerga.
+  def numeros_de(id)
+    papeis_de(id).select { |tipo| @cards.tem?(tipo) }.index_with { |tipo| tipo == :venda ? venda_de(id) : atende_de(id) }
   end
 
   # Quem teve movimento no mês nos funis visíveis: crédito, card aberto ou card recebido.

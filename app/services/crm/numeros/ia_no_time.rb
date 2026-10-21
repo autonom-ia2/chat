@@ -3,9 +3,10 @@
 # os clientes que entraram num funil que quem abre enxerga (o card ligado à conversa), separados pelo tipo do funil.
 #
 #   atendeu         conversas com resposta de robô no mês (mensagem de saída de AgentBot: os agentes de IA respondem
-#                   pelo robô-espelho da caixa, e o n8n pelo token do robô);
-#   passou          conversas que a IA passou para uma pessoa no mês (Crm::Passagem.da_ia_para_equipe, o mesmo critério
-#                   do "Recebidas da IA"). As passagens que hoje não ficam gravadas são o #1887;
+#                   pelo robô-espelho da caixa, e o n8n pelo token do robô), nos funis de Vender e de Atender juntos;
+#   passou          conversas que a IA passou para uma pessoa da equipe no mês (Crm::Passagem.da_ia_para_equipe, o
+#                   mesmo critério do "Recebidas da IA"), também nos dois tipos de funil. Um número só de cada: a frase
+#                   do topo e a linha da IA leem os mesmos (#1999). As passagens que hoje não ficam gravadas são o #1887;
 #   participou      vendas do mês em conversas que a IA atendeu em algum momento (a IA não leva crédito, Decisão 3);
 #   resolveuSozinha conversas de Atender resolvidas no mês que a IA atendeu, sem passagem para pessoa, sem resposta de
 #                   pessoa e sem o "humano assumiu" do core;
@@ -27,9 +28,10 @@ class Crm::Numeros::IaNoTime
 
   def perform
     atendeu = atendidas(conversas_dos_funis).count
-    return if atendeu.zero? && passagens(conversas_dos_funis).count.zero?
+    passou = passagens(conversas_dos_funis).count
+    return if atendeu.zero? && passou.zero?
 
-    identidade.merge(atendeu: atendeu, venda: @cards.tem?(:venda) ? venda : nil,
+    identidade.merge(atendeu: atendeu, passou: passou, venda: @cards.tem?(:venda) ? venda : nil,
                      atende: @cards.tem?(:atende) ? atende : nil, custo: @custo ? custo : nil)
   end
 
@@ -37,14 +39,11 @@ class Crm::Numeros::IaNoTime
 
   def venda
     vendas = @account.crm_cards.where(id: @ganhos, pipeline_id: @cards.ids(:venda)).where(com_robo_sql('crm_cards.conversation_id'))
-    {
-      atendeu: atendidas(conversas(:venda)).count, passou: passagens(conversas(:venda)).count,
-      participou: vendas.count, valor: (vendas.where(currency: @moeda).sum(:value_cents) / 100.0).round(2)
-    }
+    { participou: vendas.count, valor: (vendas.where(currency: @moeda).sum(:value_cents) / 100.0).round(2) }
   end
 
   def atende
-    { resolveuSozinha: resolvidas_sozinha.count, passou: passagens(conversas(:atende)).count }
+    { resolveuSozinha: resolvidas_sozinha.count }
   end
 
   # As conversas dos cards dos funis (sem mês: o card pode ter nascido antes).

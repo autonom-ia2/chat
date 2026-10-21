@@ -47,50 +47,48 @@ const caminho = computed(() => {
   return t(`${P}.CUIDOU.CAMINHO`, { nomes: lista });
 });
 
-const linhaDeVenda = (linha, nome) => {
-  const v = linha.venda;
-  const params = {
-    ...v,
-    valor: dinheiro(v.valor),
-    meta: dinheiro(v.meta || 0),
-  };
-  return {
-    chave: `venda-${linha.id}`,
-    nome,
-    numeros: t(`${P}.CUIDOU.VENDA`, v),
-    pct: v.meta ? v.pct : null,
-    detalhe: v.meta
-      ? t(`${P}.CUIDOU.DETALHE_VENDA`, params)
-      : t(`${P}.CUIDOU.DETALHE_VENDA_SEM_META`, params),
-    relatorio: null,
-  };
-};
+// Uma linha por pessoa (#1999): quem vende e atende tem os dois números lado a
+// lado. O prazo por pessoa ainda não é gravado: de quem atende, só quanto
+// resolveu, e o link para as conversas dela no relatório.
+const vendaDe = v => ({
+  numeros: t(`${P}.CUIDOU.VENDA`, v),
+  pct: v.meta ? v.pct : null,
+  detalhe: t(
+    `${P}.CUIDOU.${v.meta ? 'DETALHE_VENDA' : 'DETALHE_VENDA_SEM_META'}`,
+    { ...v, valor: dinheiro(v.valor), meta: dinheiro(v.meta || 0) }
+  ),
+});
 
-// O prazo por pessoa ainda não é gravado: a linha de quem atende diz só quanto
-// resolveu, e abre as conversas dela no relatório (quando a pessoa pode abrir).
-const linhaDeAtendimento = (linha, nome) => {
-  const a = linha.atende;
+// Sem meta de casos (#1998), o detalhe repetiria o "resolveu": fica vazio.
+const atendeDe = a => ({
+  numeros: t(`${P}.CUIDOU.ATENDE_SEM_PRAZO`, a, a.resolveu),
+  detalhe: '',
+});
+
+const linhaDe = linha => {
+  const partes = [
+    linha.venda ? vendaDe(linha.venda) : null,
+    linha.atende ? atendeDe(linha.atende) : null,
+  ].filter(Boolean);
   return {
-    chave: `atende-${linha.id}`,
-    nome,
-    numeros: t(`${P}.CUIDOU.ATENDE_SEM_PRAZO`, a, a.resolveu),
-    pct: a.meta ? a.pct : null,
-    detalhe: t(`${P}.CUIDOU.DETALHE_ATENDE_SEM_META`, a, a.resolveu),
-    relatorio: props.destinoDe('relatorio_pessoa', { item: linha }),
+    chave: `pessoa-${linha.id}`,
+    nome: linha.voce
+      ? t(`${P}.CUIDOU.VOCE_NOME`, { nome: linha.nome })
+      : linha.nome,
+    numeros: partes.map(parte => parte.numeros).join(' · '),
+    pct: linha.venda ? vendaDe(linha.venda).pct : null,
+    detalhe: partes
+      .map(parte => parte.detalhe)
+      .filter(Boolean)
+      .join(' '),
+    relatorio: linha.atende
+      ? props.destinoDe('relatorio_pessoa', { item: linha })
+      : null,
     relatorioTexto: t(`${P}.CUIDOU.VER_CONVERSAS`, { nome: linha.nome }),
   };
 };
 
-const linhas = computed(() =>
-  props.cuidou.linhas.map(linha => {
-    const nome = linha.voce
-      ? t(`${P}.CUIDOU.VOCE_NOME`, { nome: linha.nome })
-      : linha.nome;
-    return linha.venda
-      ? linhaDeVenda(linha, nome)
-      : linhaDeAtendimento(linha, nome);
-  })
-);
+const linhas = computed(() => props.cuidou.linhas.map(linhaDe));
 
 const custoDaIa = custo => {
   const emDinheiro = valor =>
@@ -105,28 +103,34 @@ const custoDaIa = custo => {
       });
 };
 
+// A linha da IA não repete a frase do topo (#1999): com a frase, ela diz só o
+// que a frase não diz (passou e resolveu sozinha); sem a frase (quem vê um tipo
+// de funil só), diz também quantos atendeu e de quantas vendas participou. Um
+// número de cada: os mesmos que a frase lê.
+const numerosDaIa = i => {
+  const comFrase = Boolean(props.cuidou.plataforma);
+  const parte = (chave, n, extra = {}) =>
+    t(`${P}.CUIDOU.${chave}`, { n, ...extra }, n);
+  return [
+    comFrase ? null : parte('IA_ATENDEU', i.atendeu),
+    !comFrase && i.venda
+      ? parte('IA_PARTICIPOU', i.venda.participou, {
+          valor: dinheiro(i.venda.valor),
+        })
+      : null,
+    parte('IA_PASSOU', i.passou),
+    i.atende ? parte('IA_RESOLVEU_SOZINHA', i.atende.resolveuSozinha) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+};
+
 const ia = computed(() => {
   const i = props.cuidou.ia;
   if (!i) return null;
-  const partes = [];
-  if (i.venda)
-    partes.push(
-      t(
-        `${P}.CUIDOU.IA_VENDA`,
-        { ...i.venda, valor: dinheiro(i.venda.valor) },
-        i.venda.participou
-      )
-    );
-  if (i.atende)
-    partes.push(
-      t(`${P}.CUIDOU.IA_ATENDE`, {
-        resolveu: i.atende.resolveuSozinha,
-        passou: i.atende.passou,
-      })
-    );
   return {
     nome: nomeDaIa.value,
-    partes,
+    numeros: numerosDaIa(i),
     custo: i.custo ? custoDaIa(i.custo) : '',
     destino: props.destinoDe('agente', { item: i }),
     ver: t(`${P}.CUIDOU.${i.agenteId ? 'IA_VER' : 'IA_VER_TODOS'}`),
@@ -184,10 +188,12 @@ const alternar = chave => {
           </span>
         </button>
         <div
-          v-if="aberta === linha.chave"
+          v-if="aberta === linha.chave && (linha.detalhe || linha.relatorio)"
           class="flex flex-wrap items-center justify-between gap-x-3 px-3 pb-2"
         >
-          <span class="text-sm text-n-slate-11">{{ linha.detalhe }}</span>
+          <span v-if="linha.detalhe" class="text-sm text-n-slate-11">
+            {{ linha.detalhe }}
+          </span>
           <RouterLink
             v-if="linha.relatorio"
             :to="linha.relatorio.to"
@@ -215,12 +221,8 @@ const alternar = chave => {
             {{ t(`${P}.CUIDOU.IA_SELO`) }}
           </span>
         </span>
-        <span
-          v-for="parte in ia.partes"
-          :key="parte"
-          class="text-sm text-n-slate-11"
-        >
-          {{ parte }}
+        <span data-ia-numeros class="text-sm text-n-slate-11">
+          {{ ia.numeros }}
         </span>
         <span v-if="ia.custo" data-custo-ia class="text-sm text-n-slate-11">
           {{ ia.custo }}

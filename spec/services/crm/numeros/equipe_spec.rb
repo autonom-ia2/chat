@@ -78,7 +78,7 @@ RSpec.describe Crm::Numeros::Equipe do
     linhas = result[:quemCuidou][:linhas]
     expect(linhas.map { |linha| [linha[:nome], linha.key?(:venda) ? linha[:venda][:valor] : linha[:atende][:resolveu]] })
       .to eq([['Ana', 7200.0], ['Bruno', 2900.0], ['Carla', 1]])
-    expect(result[:quemCuidou][:ia]).to include(nome: 'Sofia', atendeu: 1, venda: include(passou: 1, participou: 1, valor: 1000.0),
+    expect(result[:quemCuidou][:ia]).to include(nome: 'Sofia', atendeu: 1, passou: 1, venda: { participou: 1, valor: 1000.0 },
                                                 custo: { valor: 10.0, porConversa: 10.0, moeda: 'BRL' })
     expect(result[:quemCuidou][:plataforma]).to eq(ia: 'Sofia', atendeu: 1, participou: 1, valor: 1000.0)
   end
@@ -146,7 +146,35 @@ RSpec.describe Crm::Numeros::Equipe do
       create(:reporting_event, account: account, conversation_id: chat.id, name: 'conversation_resolved', event_end_time: 1.day.ago)
     end
 
-    expect(equipe[:quemCuidou][:ia][:atende]).to eq(resolveuSozinha: 1, passou: 0)
+    expect(equipe[:quemCuidou][:ia][:atende]).to eq(resolveuSozinha: 1)
+  end
+
+  # #1999: a frase do topo e a linha da IA leem o mesmo "atendeu" e o mesmo "passou", somando Vender e Atender.
+  it 'a IA tem um número só de atendidas e de passadas, nos dois tipos de funil' do
+    [sale, service].each do |funil|
+      chat = conversation
+      card(funil, owner: carla, conversation: chat)
+      resposta_do_robo(chat)
+      passagem(chat, carla)
+    end
+
+    result = equipe
+
+    expect(result[:quemCuidou][:ia]).to include(atendeu: 2, passou: 2)
+    expect(result[:quemCuidou][:ia][:venda]).not_to have_key(:passou)
+    expect(result[:quemCuidou][:ia][:atende]).not_to have_key(:passou)
+    expect(result[:quemCuidou][:plataforma]).to include(atendeu: 2)
+  end
+
+  # #1999: quem vende e atende tem uma linha só, com os dois números.
+  it '"Quem cuidou" tem uma linha por pessoa, com venda e atendimento juntos' do
+    close(card(sale, owner: bruno, value_cents: 10_000))
+    close(card(service, owner: bruno), 'resolved')
+
+    linhas = equipe[:quemCuidou][:linhas].select { |linha| linha[:nome] == 'Bruno' }
+
+    expect(linhas.size).to eq(1)
+    expect(linhas.first).to include(venda: include(fechou: 1), atende: include(resolveu: 1))
   end
 
   it 'quem precisa de ajuda: a partir de 5 atrasos somados, com o motivo e sem posição' do
