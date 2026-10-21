@@ -931,13 +931,6 @@
       "CAMPAIGN_NAME_PLACEHOLDER": "Ex.: renovacao_auto_novembro"
     }
   },
-  "RESULT_JOURNEY": {
-    "OVERVIEW": {
-      "TOTALS": {
-        "DEALS": "Viraram cards no CRM"
-      }
-    }
-  },
   "BRAND_KITS": {
     "PREVIEW": {
       "SAMPLE_SUBJECT": "Seu seguro com quem cuida de você",
@@ -1082,5 +1075,155 @@
     "PARSER": {
       "DOCUMENT_NAME_PLACEHOLDER": "Informe o nome do arquivo do documento (ex.: Apolice_2026.pdf)"
     }
+  },
+  "AGENTS": {
+    "JORNADA": {
+      "MODELOS": {
+        "SUPPORT": {
+          "TEXTO": "Tira dúvidas sobre o seguro, a parcela, a segunda via e o que mais perguntarem.",
+          "CLIENTE": "Como peço a segunda via do boleto?",
+          "AGENTE": "Eu chamo alguém da equipe para te ajudar com a segunda via."
+        },
+        "SDR": {
+          "TITULO": "Atender quem quer fazer seguro",
+          "TEXTO": "Entende qual seguro a pessoa procura e passa para a equipe.",
+          "CLIENTE": "Quero fazer o seguro do meu carro",
+          "AGENTE": "Que bom! Me conta qual é o carro que já chamo alguém da equipe."
+        },
+        "RECEPTION": {
+          "TEXTO": "Dá as boas-vindas, entende se é cotação, parcela ou sinistro e passa para a equipe.",
+          "CLIENTE": "Oi, bati o carro",
+          "AGENTE": "Poxa, sinto muito. Está todo mundo bem? Já chamo a equipe para te ajudar."
+        }
+      },
+      "PAGINA": {
+        "TESTE": {
+          "CHIPS": {
+            "SUPPORT": {
+              "A": "Quanto fica o seguro do meu carro?",
+              "B": "Meu seguro cobre carro reserva?"
+            },
+            "SDR": {
+              "A": "Quero fazer o seguro do meu carro",
+              "B": "Quanto fica, mais ou menos?"
+            },
+            "RECEPTION": {
+              "B": "Troquei de carro. Como mudo no seguro?",
+              "A": "Oi, bati o carro"
+            }
+          }
+        },
+        "SABE": {
+          "ENVIAR_ARQUIVO_TEXTO": "Condições gerais, lista de documentos, perguntas comuns. Até 25 MB.",
+          "SITE_ERRO": "Confira o endereço do site. Ex.: www.suacorretora.com.br"
+        },
+        "MUDAR_VISTA": {
+          "CHIPS_GERAL": {
+            "B": "Mudar regras ou documentos pedidos"
+          }
+        },
+        "GAVETA_AGENDA": {
+          "EXEMPLO": {
+            "CLIENTE": "Oi! Queria conversar sobre o seguro da minha empresa."
+          }
+        }
+      },
+      "CRIAR": {
+        "CONFIRA": {
+          "PERGUNTAS": {
+            "QUANTO_CUSTA": "Quanto fica o seguro do meu carro?",
+            "SABADO": "Meu seguro cobre carro reserva?",
+            "PEDIDO": "Quero fazer o seguro do meu carro",
+            "DESCONTO": "Quanto fica, mais ou menos?",
+            "TROCAR": "Troquei de carro. Como mudo no seguro?",
+            "COMO_RESPONDO": "A pessoa achou a cotação cara. Como respondo?",
+            "PROXIMO_PASSO": "Mandei as opções da cotação e a pessoa sumiu. Qual o próximo passo?",
+            "RASCUNHO": "Escreva uma mensagem pedindo a CNH e o documento do carro",
+            "AJUDA": "Oi, bati o carro"
+          }
+        },
+        "CONTE": {
+          "IDEIAS": {
+            "ROUPAS": "Corretora de seguro auto",
+            "DOCES": "Corretora de vários seguros",
+            "ESTETICA": "Corretora de vida e saúde",
+            "OFICINA": "Seguro empresarial e de carga"
+          },
+          "EXEMPLO_DO_MEU_JEITO": "Ex.: tirar dúvidas sobre o seguro do carro e passar para a equipe",
+          "EXEMPLO_COPILOTO": "Ex.: resumir a conversa e dizer o que falta para cotar",
+          "EXEMPLO_AJUDANTE": "Ex.: tirar as dúvidas sobre as condições gerais para os outros agentes",
+          "ANEXO_FRASE": "Tem as condições gerais, uma lista de perguntas comuns ou o seu site? {acao} Não é obrigatório."
+        },
+        "BASE": {
+          "VAZIO": "Ainda não tem nada aqui. Mande as condições gerais, a lista de documentos de cada seguro ou o endereço do seu site.",
+          "SITE_EXEMPLO": "www.suacorretora.com.br"
+        }
+      },
+      "AJUDANTE": {
+        "QUANDO": {
+          "EXEMPLO": "Ex.: quando a dúvida for sobre as condições gerais ou os documentos"
+        }
+      }
+    },
+    "OUTRO_SISTEMA": {
+      "NOME_EXEMPLO": "Ex.: Robô do site",
+      "DESCRICAO_EXEMPLO": "Ex.: tira dúvidas sobre o seguro e passa para a equipe"
+    },
+    "TUNE": {
+      "GREETING_PLACEHOLDER": "Olá! Tudo bem? Como posso ajudar com o seu seguro?"
+    }
+  },
+  "AUTOMATION": {
+    "DESCRIPTION": "A automação faz sozinha o trabalho repetido, como pôr a etiqueta certa (auto, residencial, sinistro) e passar a conversa para quem cuida dela. Assim sobra tempo para a equipe cotar e atender.",
+    "ADD": {
+      "FORM": {
+        "NAME": {
+          "PLACEHOLDER": "Ex.: Etiqueta de sinistro"
+        },
+        "DESC": {
+          "PLACEHOLDER": "Ex.: põe a etiqueta sinistro e passa para o time de sinistro"
+        }
+      }
+    }
+  },
+  "AGENT_BOTS": {
+    "FORM": {
+      "DESCRIPTION": {
+        "PLACEHOLDER": "Ex.: tira dúvidas sobre o seguro e passa para a equipe"
+      }
+    }
+  },
+  "BOOKING": {
+    "PAGE": {
+      "SUBTITLE": "Crie a página onde a pessoa marca um horário para falar do seguro com você."
+    },
+    "TEMPLATE": {
+      "SALES": {
+        "NAME": "Conversa para cotar"
+      },
+      "CONSULT": {
+        "NAME": "Atendimento no escritório"
+      },
+      "VISIT": {
+        "NAME": "Reunião com empresa"
+      }
+    },
+    "LOOK": {
+      "HEADLINE_PLACEHOLDER": "Escolha o melhor horário para falar do seu seguro"
+    },
+    "PREVIEW": {
+      "PUBLISHED_TEXT": "Mande o link junto com a cotação ou a renovação, ou mostre o QR code."
+    }
+  },
+  "LABEL_REPORTS": {
+    "DESCRIPTION": "Veja, por etiqueta, quantas conversas chegaram e quanto tempo a equipe levou para responder e resolver. Ex.: Auto, Residencial, Sinistro, Segunda via. Clique numa etiqueta para ver mais.",
+    "FILTERS": {
+      "INPUT_PLACEHOLDER": {
+        "LABELS": "Buscar etiqueta. Ex.: sinistro"
+      }
+    }
+  },
+  "TEAM_REPORTS": {
+    "DESCRIPTION": "Veja como cada time está: conversas, tempo para responder e tempo para resolver. Ex.: vendas, renovação, sinistro. Clique num time para ver mais."
   }
 }

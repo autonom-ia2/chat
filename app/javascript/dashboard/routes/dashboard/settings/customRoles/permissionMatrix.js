@@ -1,6 +1,13 @@
 // Maps the flat custom-role permission keys to one access level per module (#452).
 // Keys are never renamed, so roles saved before the matrix existed load unchanged.
 // A `<module>_manage` key implies `<module>_view` on the backend, so only the highest key is stored.
+import {
+  CUSTOM_ROLE_MANAGE_PERMISSION,
+  FINANCIAL_MANAGE_PERMISSION,
+  FINANCIAL_VIEW_PERMISSION,
+  GRANT_ABOVE_OWN_PERMISSION,
+  PEOPLE_MANAGE_PERMISSION,
+} from 'dashboard/constants/permissions';
 
 export const LEVELS = { NONE: 'none', VIEW: 'view', MANAGE: 'manage' };
 // Conversas: só olha (conversation_view, #1800), ou atende as próprias (LIMITED) ou todas (ALL). Na tela, as duas
@@ -42,6 +49,9 @@ export const SENSITIVE_EXTRAS = [
   CRM_ADMIN,
   'contact_export',
   'contact_delete',
+  'campaign_send',
+  CUSTOM_ROLE_MANAGE_PERMISSION,
+  GRANT_ABOVE_OWN_PERMISSION,
 ];
 
 export const MODULE_GROUPS = [
@@ -140,6 +150,9 @@ export const MODULE_GROUPS = [
         key: 'CAMPAIGNS',
         icon: 'i-lucide-megaphone',
         levels: { view: 'campaign_view', manage: 'campaign_manage' },
+        // #1898: disparar é chave própria; sem ela, quem edita monta e deixa pronta.
+        extras: ['campaign_send'],
+        manageOnlyExtras: ['campaign_send'],
       },
       {
         // Modelos de mensagem do WhatsApp oficial (#1330, #1332). Editar cria, altera e
@@ -224,6 +237,31 @@ export const MODULE_GROUPS = [
           level: LEVELS.MANAGE,
           module: 'INBOXES',
           targetLevel: LEVELS.VIEW,
+        },
+      },
+      {
+        // Pessoas (#1931): agentes e times. Montar funções e entregar acima do próprio acesso
+        // são ajustes finos de quem já cuida das pessoas; nenhum faz alguém virar administrador.
+        key: 'PEOPLE',
+        icon: 'i-lucide-users',
+        settings: true,
+        levels: { manage: PEOPLE_MANAGE_PERMISSION },
+        extras: [CUSTOM_ROLE_MANAGE_PERMISSION, GRANT_ABOVE_OWN_PERMISSION],
+      },
+    ],
+  },
+  {
+    key: 'FINANCE',
+    modules: [
+      {
+        // Financeiro (#1969): ver os custos da conta em dinheiro (uso de IA) e a autorização de
+        // cobranças da Meta; editar liga e desliga essa autorização. Plano e faturas ficam com o
+        // administrador. As duas chaves só o administrador entrega (DELEGATION_KEYS).
+        key: 'FINANCE',
+        icon: 'i-lucide-wallet',
+        levels: {
+          view: FINANCIAL_VIEW_PERMISSION,
+          manage: FINANCIAL_MANAGE_PERMISSION,
         },
       },
     ],
@@ -361,7 +399,10 @@ export const setLevel = (module, level, permissions) => {
 // Extras are the fine-grained toggles shown under a module once it has access.
 export const visibleExtras = (module, permissions) => {
   const level = getLevel(module, permissions);
-  if (!module.extras || level === LEVELS.NONE) return [];
+  if (!module.extras) return [];
+  // Sem acesso à área, só aparece o ajuste que ficou ligado (por exemplo, salvo pela API), para dar para desligar.
+  if (level === LEVELS.NONE)
+    return module.extras.filter(key => permissions.includes(key));
   if (module.type === 'conversations')
     return level === CONVERSATION_LEVELS.LIMITED ? module.extras : [];
   // Editing cards already includes moving them.
@@ -483,7 +524,7 @@ export const PRESETS = {
     'crm_view_reports',
   ],
   FINANCE: () => [
-    ...build({ REPORTS: LEVELS.VIEW, CRM: LEVELS.VIEW }),
+    ...build({ REPORTS: LEVELS.VIEW, CRM: LEVELS.VIEW, FINANCE: LEVELS.VIEW }),
     'crm_view_reports',
   ],
   OPERATIONS: () =>

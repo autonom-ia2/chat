@@ -9,11 +9,13 @@ class Crm::Ai::UsageBroadcaster
     @event = event
   end
 
+  # The cost in money goes only to who sees the account's costs: administrator or financial_view (#1969).
   def broadcast
-    permitted_users.find_each do |user|
-      next if user.pubsub_token.blank?
+    permitted_account_users.each do |account_user|
+      token = account_user.user.pubsub_token
+      next if token.blank?
 
-      ActionCable.server.broadcast(user.pubsub_token, { event: EVENT, data: payload })
+      ActionCable.server.broadcast(token, { event: EVENT, data: payload(com_valores: account_user.permission_granted?('financial_view')) })
     end
   rescue StandardError => e
     Rails.logger.warn("[crm][ai][usage] broadcast failed event_id=#{event.id}: #{e.class}: #{e.message}")
@@ -24,12 +26,8 @@ class Crm::Ai::UsageBroadcaster
 
   attr_reader :event
 
-  def permitted_users
-    User.where(id: permitted_account_user_ids)
-  end
-
-  def permitted_account_user_ids
-    account_users.select { |account_user| report_policy(account_user).view? }.map(&:user_id)
+  def permitted_account_users
+    account_users.select { |account_user| report_policy(account_user).view? }
   end
 
   def account_users
@@ -49,24 +47,19 @@ class Crm::Ai::UsageBroadcaster
     )
   end
 
-  def payload
-    {
+  def payload(com_valores:)
+    data = {
       id: event.id,
       account_id: event.account_id,
       resource: Crm::Reports::AiUsage.resource_for_feature(event.feature),
       created_at: event.created_at.iso8601
     }.merge(token_payload)
+    com_valores ? data.merge(cost_usd: event.cost_estimate.to_d.round(6).to_f) : data
   end
 
   def token_payload
     input = event.input_tokens.to_i
     output = event.output_tokens.to_i
-    {
-      input_tokens: input,
-      cached_tokens: event.cached_tokens,
-      output_tokens: output,
-      total_tokens: input + output,
-      cost_usd: event.cost_estimate.to_d.round(6).to_f
-    }
+    { input_tokens: input, cached_tokens: event.cached_tokens, output_tokens: output, total_tokens: input + output }
   end
 end

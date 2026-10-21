@@ -354,7 +354,10 @@ module Autonomia
         blocks = @snippets.map do |snippet|
           "[##{snippet.id}] (fonte: #{source_label(snippet)})\n#{snippet_content(snippet)}"
         end
-        "#{header}\n\n#{blocks.join("\n\n")}"
+        # #1426 (tema 4b) — a escolha do dono nas contradições entre materiais (só Fase 2; sem escolha, nada muda).
+        decisoes = Autonomia::Agents::Material::DecisoesDoMaterial.texto(@agent)
+        texto = "#{header}\n\n#{blocks.join("\n\n")}"
+        decisoes ? "#{texto}\n\n#{decisoes}" : texto
       end
 
       def snippet_content(snippet)

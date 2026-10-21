@@ -38,6 +38,10 @@ const props = defineProps({
   // Fork (Modelos do WhatsApp): motivo para "Enviar agora" ficar desativado (modelo ainda
   // em análise). Vazio, as duas opções valem.
   nowBlockedReason: { type: String, default: '' },
+  // #1898: quem monta sem a chave de disparar deixa a campanha pronta, sem enviar.
+  soDeixaPronta: { type: Boolean, default: false },
+  // #1898: quem dispara abriu uma campanha que outra pessoa deixou pronta.
+  montadaPor: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update', 'go', 'back', 'submit', 'testSend']);
@@ -87,9 +91,10 @@ const whenText = computed(() => {
     toLocaleTag(locale.value)
   );
 });
-const actionLabel = computed(() =>
-  isLater.value ? t(`${NS}.SCHEDULE`) : t(`${NS}.SEND_NOW`)
-);
+const actionLabel = computed(() => {
+  if (props.soDeixaPronta) return t(`${NS}.PRONTA.DEIXAR`);
+  return isLater.value ? t(`${NS}.SCHEDULE`) : t(`${NS}.SEND_NOW`);
+});
 const confirmTitle = computed(() =>
   t(
     isLater.value ? `${NS}.CONFIRM_LATER` : `${NS}.CONFIRM_NOW`,
@@ -106,6 +111,11 @@ const isBlocked = computed(() => props.checks.some(check => !check.ok));
 
 const openConfirmation = () => {
   if (!isScheduleValid.value || isBlocked.value) return;
+  // Deixar pronta não envia nada: sem a confirmação de quantas pessoas vão receber.
+  if (props.soDeixaPronta) {
+    emit('submit');
+    return;
+  }
   confirmRef.value?.open();
 };
 
@@ -278,6 +288,21 @@ const submit = () => {
       <p v-if="errorMessage" role="alert" class="m-0 text-sm text-n-ruby-11">
         {{ errorMessage }}
       </p>
+      <p
+        v-if="soDeixaPronta || montadaPor"
+        class="m-0 flex items-start gap-2 rounded-xl bg-n-alpha-1 p-3 text-sm text-n-slate-12"
+        data-test="aviso-pronta"
+      >
+        <span
+          class="i-lucide-send size-4 mt-0.5 shrink-0 text-n-slate-11"
+          aria-hidden="true"
+        />
+        {{
+          soDeixaPronta
+            ? t(`${NS}.PRONTA.QUEM_MONTA`)
+            : t(`${NS}.PRONTA.QUEM_DISPARA`, { nome: montadaPor })
+        }}
+      </p>
       <Button
         :label="actionLabel"
         :disabled="!isScheduleValid || !receivers || isBlocked || isSubmitting"
@@ -286,7 +311,9 @@ const submit = () => {
         data-test="open-confirmation"
         @click="openConfirmation"
       />
-      <p class="m-0 text-xs text-n-slate-11">{{ t(`${NS}.EDIT_NOTE`) }}</p>
+      <p v-if="!soDeixaPronta" class="m-0 text-xs text-n-slate-11">
+        {{ t(`${NS}.EDIT_NOTE`) }}
+      </p>
       <Button
         :label="t('CAMPAIGN_JOURNEY.NEW_CAMPAIGN.BACK')"
         variant="outline"

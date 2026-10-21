@@ -15,6 +15,9 @@ export const createMessagePayload = (payload, message) => {
       JSON.stringify(message.content_attributes)
     );
   }
+  // #1988: a gravação da gaveta sai como mensagem de voz (o MessageBuilder lê a marca).
+  if (message.is_voice_message)
+    payload.append('message[is_voice_message]', true);
 };
 
 export const createConversationPayload = ({ params, contactId, files }) => {

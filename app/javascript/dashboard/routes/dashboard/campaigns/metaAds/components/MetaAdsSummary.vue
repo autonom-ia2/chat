@@ -206,7 +206,7 @@ onMounted(() => {
   <section data-meta-ads-summary class="flex flex-col gap-5">
     <div
       class="relative flex flex-col gap-5 p-6 overflow-hidden text-white rounded-xl sm:p-8"
-      :class="attention ? 'bg-n-amber-11' : 'bg-[#0D2344]'"
+      :class="attention ? 'bg-n-amber-11' : 'bg-n-heroi dark:bg-n-heroi-escuro'"
     >
       <span
         aria-hidden="true"
@@ -321,7 +321,7 @@ onMounted(() => {
           v-else
           data-summary-crm
           :to="{ name: 'crm_kanban_index' }"
-          class="inline-flex items-center gap-2 px-4 text-sm font-520 no-underline bg-white rounded-lg min-h-11 text-[#0D2344] hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          class="inline-flex items-center gap-2 px-4 text-sm font-520 no-underline bg-white rounded-lg min-h-11 text-n-heroi hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           <span class="i-lucide-kanban size-4" aria-hidden="true" />
           {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.OPEN_CRM') }}

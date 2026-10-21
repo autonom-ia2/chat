@@ -3,6 +3,12 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+// #1898: building is separate from sending (campaign_send).
+import {
+  guardarPronta,
+  listarProntas,
+} from 'dashboard/components-next/CampaignJourney/prontasParaDisparar';
+import { emptyDraft } from 'dashboard/components-next/CampaignJourney/campaignDraft';
 import { useAlert } from 'dashboard/composables';
 import {
   safeError,
@@ -19,7 +25,49 @@ const emit = defineEmits(['edit', 'recipients', 'sender', 'done']);
 const { t, locale } = useI18n();
 const store = useStore();
 const canManage = useCanManage('campaign_manage');
+const canSend = useCanManage('campaign_send');
+const PRONTA = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW.PRONTA';
+// The server draft that left this e-mail ready, if any. Sending it removes the draft on the server.
+const pronta = ref(null);
+// "Deixar pronta" waits for the list: without it, a click would create a second draft of the same e-mail.
+const prontaCarregada = ref(false);
+const loadPronta = async () => {
+  try {
+    const prontas = await listarProntas();
+    pronta.value =
+      prontas.find(item => item.draft?.emailCampaignId === props.campaign.id) ||
+      null;
+    prontaCarregada.value = true;
+  } catch {
+    pronta.value = null;
+    useAlert(t(`${PRONTA}.ERRO_LISTA`));
+  }
+};
 const UX = 'CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE';
+const isSavingPronta = ref(false);
+const deixarPronta = async () => {
+  isSavingPronta.value = true;
+  try {
+    // Keeps the saved draft: a second click updates it instead of creating another one.
+    pronta.value = await guardarPronta({
+      id: pronta.value?.id,
+      title: props.campaign.name,
+      channel: 'email',
+      draft: {
+        ...emptyDraft(),
+        title: props.campaign.name,
+        channel: 'email',
+        emailCampaignId: props.campaign.id,
+      },
+    });
+    useAlert(t(`${PRONTA}.SALVA`));
+    emit('done');
+  } catch {
+    useAlert(t(`${PRONTA}.ERRO`));
+  } finally {
+    isSavingPronta.value = false;
+  }
+};
 const stepNumbers = [1, 2, 3];
 const emptyValue = '—';
 const senderLabel = computed(
@@ -111,7 +159,10 @@ const send = async () => {
     isSending.value = false;
   }
 };
-onMounted(reload);
+onMounted(() => {
+  reload();
+  loadPronta();
+});
 </script>
 
 <template>
@@ -469,13 +520,37 @@ onMounted(reload);
               />
             </div>
             <p
-              v-else
+              v-else-if="canSend"
               class="mb-0 mt-5 rounded-xl bg-n-blue-3 p-3 text-xs leading-5 text-n-blue-11"
             >
               {{ t(`${UX}.FINAL_CONFIRMATION_HINT`) }}
             </p>
+            <p
+              v-if="canManage && (!canSend || pronta)"
+              class="mb-0 mt-4 flex items-start gap-2 rounded-xl bg-n-alpha-1 p-3 text-sm text-n-slate-12"
+              data-test="aviso-pronta"
+            >
+              <span
+                class="i-lucide-send size-4 mt-0.5 shrink-0 text-n-slate-11"
+                aria-hidden="true"
+              />
+              {{
+                canSend
+                  ? t(`${PRONTA}.QUEM_DISPARA`, { nome: pronta.autor })
+                  : t(`${PRONTA}.QUEM_MONTA`)
+              }}
+            </p>
             <Button
-              v-if="canManage"
+              v-if="canManage && !canSend"
+              :label="t(`${PRONTA}.DEIXAR`)"
+              icon="i-lucide-send"
+              class="mt-4 !min-h-12 w-full !rounded-xl"
+              :disabled="!canConfirm || isSavingPronta || !prontaCarregada"
+              :is-loading="isSavingPronta"
+              @click="deixarPronta"
+            />
+            <Button
+              v-if="canManage && canSend"
               :label="
                 t(
                   `${UX}.${delivery === 'now' ? 'SEND_CAMPAIGN' : 'REVIEW_SCHEDULE'}`

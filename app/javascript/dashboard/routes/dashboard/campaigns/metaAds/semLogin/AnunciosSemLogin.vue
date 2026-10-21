@@ -1,0 +1,73 @@
+<script setup>
+import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { SEM_LOGIN } from './anunciosSemLogin';
+import { examplePanel } from './anunciosExemplo';
+import AnunciosVazio from './AnunciosVazio.vue';
+import MetaAdsPanel from '../components/MetaAdsPanel.vue';
+
+// Anúncios sem login (#1960, degrau 0): a página abre pronta, com o mesmo painel de quem conectou a conta de
+// anúncios (MetaAdsPanel), só sem gasto — o resultado sai do que o WhatsApp oficial contou. Aparece com a flag
+// anuncios_sem_login, WhatsApp oficial e nenhuma conexão de anúncios. Sem ninguém vindo de anúncio em 90 dias, a
+// tela "pronto" com o exemplo; quem não é administrador vê o mesmo, só leitura.
+const props = defineProps({
+  // { enabled, official_inboxes: [{ id, name, phone }], recent_ad_touch }
+  result: { type: Object, required: true },
+  readOnly: { type: Boolean, default: false },
+});
+
+const { t } = useI18n();
+const example = ref(false);
+
+const screen = computed(() => {
+  if (props.result.recent_ad_touch) return 'result';
+  return example.value ? 'example' : 'ready';
+});
+
+const sample = days => examplePanel(days, t);
+</script>
+
+<template>
+  <div
+    data-anuncios-sem-login
+    :data-screen="screen"
+    class="flex flex-col gap-5"
+  >
+    <AnunciosVazio
+      v-if="screen === 'ready'"
+      :inboxes="result.official_inboxes || []"
+      @example="example = true"
+    />
+
+    <template v-else-if="screen === 'example'">
+      <div
+        data-anuncios-exemplo
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-n-amber-2 p-4 ring-1 ring-inset ring-n-amber-6"
+      >
+        <span class="flex flex-wrap items-center gap-3">
+          <span
+            data-anuncios-exemplo-selo
+            class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 bg-n-amber-4 text-n-amber-12"
+          >
+            {{ $t(`${SEM_LOGIN}.EXAMPLE.BADGE`) }}
+          </span>
+          <span class="text-sm text-n-amber-12">
+            {{ $t(`${SEM_LOGIN}.EXAMPLE.TEXT`) }}
+          </span>
+        </span>
+        <button
+          type="button"
+          data-anuncios-exemplo-voltar
+          class="inline-flex min-h-11 items-center gap-2 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 no-underline ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          @click="example = false"
+        >
+          <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
+          {{ $t(`${SEM_LOGIN}.EXAMPLE.BACK`) }}
+        </button>
+      </div>
+      <MetaAdsPanel :sample="sample" read-only />
+    </template>
+
+    <MetaAdsPanel v-else :read-only="readOnly" />
+  </div>
+</template>
