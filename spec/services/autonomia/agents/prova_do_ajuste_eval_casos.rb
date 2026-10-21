@@ -4,6 +4,11 @@
 # Construtor precisam provocar para mostrar a mudança. Quem lê o critério é o juiz do eval (um modelo), nunca uma lista
 # de palavras.
 module AvaliacaoDaProvaDoAjuste
+  # O que todo agente do eval tem igual (o resto vem de AGENTES).
+  TOM = 'cordial e breve'.freeze
+  MENSAGEM_FIXA = 'Vou confirmar com a equipe e te retorno.'.freeze
+  REGRA_DE_PASSAGEM = 'Passe para a equipe quando o cliente pedir.'.freeze
+
   # Um agente por ramo: o que o Construtor recebe como o agente de hoje.
   AGENTES = {
     corretora: {
@@ -70,19 +75,17 @@ module AvaliacaoDaProvaDoAjuste
   }.freeze
 
   # `obedece`: o critério da cena para as mensagens de cliente. `extra`: uma pergunta fora da mudança acrescentada à prova
-  # (não pode virar ✓ no placar). `controle`: caso de controle, fora dos 20 do t6d (as perguntas são trocadas por
-  # `perguntas_fixas` antes da prova). Sem `espera`, o controle passa com a prova sem `completa`. `espera` (com o juiz do
-  # eval de acordo com cada teste): `:teste_nao`, uma mesma pergunta com um ok e um nao; `:so_forma`, um pedido fora de
-  # todos os testes; `:julgado`, prova completa. `resposta_fixa`: o agente em modo prova responde esse texto, sem chamar a
-  # IA (a armadilha da revisão: curta e COM emoji).
+  # (não pode virar ✓ no placar). Forense do t6d (M3): tom e tratamento pedem mensagem que não traga a forma pronta, e
+  # pedido de tamanho pede uma mensagem que puxaria resposta longa.
   CASOS = [
     { nome: 'prova_duas_frases_e_preco', agente: :corretora,
       fala: 'Responda em no máximo 2 frases e preço passa para a equipe.',
-      obedece: 'Ao menos uma mensagem pede preço ou valor de um seguro; as mensagens, juntas, deixam ver se o agente responde ' \
-               'em no máximo 2 frases.' },
+      obedece: 'Ao menos uma mensagem pede preço ou valor de um seguro; ao menos uma pede algo que puxaria uma resposta ' \
+               'longa; as mensagens, juntas, deixam ver se o agente responde em no máximo 2 frases.' },
     { nome: 'prova_tom_formal', agente: :corretora, fala: 'Deixe o tom mais formal, trate o cliente por senhor ou senhora.',
       obedece: 'Mensagens comuns de cliente que façam o agente responder com frases dirigidas ao cliente, onde se veja o ' \
-               'tratamento por senhor ou senhora.' },
+               'tratamento por senhor ou senhora; a mensagem do cliente não traz o tratamento pronto (não se apresenta ' \
+               'como senhor ou senhora).' },
     { nome: 'prova_sem_seguro_viagem', agente: :corretora,
       fala: 'Quando perguntarem de seguro viagem, diga que a Hub2You não trabalha com esse tipo e ofereça os que temos.',
       obedece: 'Ao menos uma mensagem pergunta sobre seguro viagem.' },
@@ -95,7 +98,8 @@ module AvaliacaoDaProvaDoAjuste
       fala: 'Nunca diga o que o paciente tem nem indique remédio. Oriente a marcar uma avaliação.',
       obedece: 'Ao menos uma mensagem descreve um sintoma e pede o que pode ser ou que remédio tomar.' },
     { nome: 'loja_sem_emoji_curto', agente: :loja, fala: 'Pare de usar emoji e responda de forma mais curta.',
-      obedece: 'Mensagens comuns de cliente da loja cuja resposta deixe ver se há emoji e se ela ficou curta.' },
+      obedece: 'Mensagens comuns de cliente da loja cuja resposta deixe ver se há emoji e se ela ficou curta; ao menos uma ' \
+               'pede algo que puxaria uma resposta longa.' },
     { nome: 'loja_troca_30_dias', agente: :loja,
       fala: 'Explique que a primeira troca é grátis em até 30 dias depois de receber o pedido.',
       obedece: 'Ao menos uma mensagem pergunta sobre troca, devolução ou o que fazer quando a peça não serviu.' },
@@ -132,27 +136,26 @@ module AvaliacaoDaProvaDoAjuste
       obedece: 'Ao menos uma mensagem pergunta algo que o agente não tem como saber pelo que conhece do pet shop.' },
     { nome: 'salao_tres_frases_e_nome', agente: :salao,
       fala: 'Responda em no máximo 3 frases e sempre pergunte o nome da cliente se ela ainda não disse.',
-      obedece: 'Ao menos uma mensagem vem de cliente que ainda não disse o nome; as mensagens, juntas, deixam ver se o ' \
-               'agente responde em no máximo 3 frases.' },
-    # Revisão do t6d (MÉDIO): ajuste misto sem nenhuma pergunta de preço. A prova não pode sair completa (sem ✓).
-    { nome: 'controle_misto_sem_preco', agente: :corretora, controle: true,
-      fala: 'Responda em no máximo 2 frases e preço passa para a equipe.',
-      perguntas_fixas: ['Quais seguros vocês têm?', 'Vocês atendem em Curitiba?'],
-      obedece: 'Nenhuma mensagem pede preço: a prova não cobre o pedido do preço e não pode sair completa.' },
-    { nome: 'controle_curta_com_emoji', agente: :loja, controle: true, espera: :teste_nao,
-      fala: 'Responda de forma curta e não use emoji.',
-      perguntas_fixas: ['Quais formas de pagamento vocês aceitam?'], resposta_fixa: 'Aceitamos Pix e cartão em até 6x 😊',
-      obedece: 'A resposta é curta e tem emoji: na mesma pergunta, o pedido de responder curto leva ok e o de não usar ' \
-               'emoji leva nao.' },
-    { nome: 'controle_curta_sem_preco', agente: :corretora, controle: true, espera: :so_forma,
-      fala: 'Responda de forma curta e preço passa para a equipe.',
-      perguntas_fixas: ['Que horas vocês abrem?', 'Vocês atendem em Curitiba?'],
-      obedece: 'Nenhuma mensagem pede preço: as respostas testam o pedido de responder curto, e o pedido do preço não ' \
-               'entra em nenhum teste.' },
-    { nome: 'controle_gatilho_por_situacao', agente: :corretora, controle: true, espera: :julgado,
-      fala: 'Quando não souber responder, passe a conversa para a equipe.',
-      perguntas_fixas: ['Vocês fazem seguro para drone?', 'Quais seguros vocês têm?'],
-      obedece: 'A primeira mensagem pergunta algo que a corretora não tem como saber e cria a situação do pedido, que ' \
-               'entra no teste dela; a segunda o agente sabe responder e não testa o pedido.' }
+      obedece: 'Ao menos uma mensagem vem de cliente que ainda não disse o nome; ao menos uma pede algo que puxaria uma ' \
+               'resposta longa; as mensagens, juntas, deixam ver se o agente responde em no máximo 3 frases.' }
+  ].freeze
+
+  # Forense do t6d (M2): os controles chamam SÓ o juiz de produção (JuizDaProva#julgar), com pedidos e respostas fixos,
+  # REPETICOES_DO_CONTROLE vezes cada. Fora dos 20. `espera`, pelas posições na lista de pedidos (a partir de 0): `nao`
+  # e `ok`, o veredito que o pedido leva em algum teste; `presentes` e `ausentes`, se o pedido aparece em algum teste.
+  CONTROLES = [
+    { nome: 'controle_emoji', agente: :loja, pedidos: ['Responda de forma curta', 'Não use emoji'],
+      itens: [{ 'pergunta' => 'Quais formas de pagamento vocês aceitam?', 'resposta' => 'Aceitamos Pix e cartão em até 6x 😊',
+                'equipe' => false }],
+      espera: { nao: [1] } },
+    { nome: 'controle_preco', agente: :corretora, pedidos: ['Responda de forma curta', 'Preço passa para a equipe'],
+      itens: [{ 'pergunta' => 'Quais seguros vocês têm?', 'resposta' => 'Trabalhamos com seguro auto, residencial e de vida.',
+                'equipe' => false },
+              { 'pergunta' => 'Vocês atendem em Curitiba?', 'resposta' => 'Sim, atendemos Curitiba e toda a região.',
+                'equipe' => false }],
+      espera: { presentes: [0], ausentes: [1] } },
+    { nome: 'controle_gatilho', agente: :corretora, pedidos: ['Quando não souber responder, passe a conversa para a equipe'],
+      itens: [{ 'pergunta' => 'Minha apólice 4471 já foi emitida?', 'resposta' => MENSAGEM_FIXA, 'equipe' => true }],
+      espera: { ok: [0] } }
   ].freeze
 end
