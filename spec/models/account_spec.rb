@@ -179,9 +179,9 @@ RSpec.describe Account do
   describe 'feature flag columns' do
     let(:account) { described_class.new(name: 'Test Account') }
 
-    it 'configures the account feature flag extension column' do
-      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1')
-      expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(
+    # O mapa da feature_flags_ext_1: a posição no features.yml é o bit; só se acrescenta no fim.
+    let(:mapa_ext_1) do
+      {
         feature_whatsapp_manual_transfer: 1,
         feature_data_import: 1 << 1,
         feature_api_and_webhooks: 1 << 2,
@@ -250,8 +250,15 @@ RSpec.describe Account do
         # #1984: posição 49 (1 << 48), definitiva da Orquestração (21/10), logo depois de hibrido_foto_do_contato.
         feature_convite_da_reuniao: 1 << 48,
         # #1991: posição 50 (1 << 49), definitiva da Orquestração (21/10), logo depois de convite_da_reuniao.
-        feature_crm_metas: 1 << 49
-      )
+        feature_crm_metas: 1 << 49,
+        # #1992: posição 51 (1 << 50), da Orquestração (21/10), logo depois de crm_metas.
+        feature_crm_numeros_equipe: 1 << 50
+      }
+    end
+
+    it 'configures the account feature flag extension column' do
+      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1')
+      expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(mapa_ext_1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(16)

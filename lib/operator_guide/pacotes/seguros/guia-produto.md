@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (234 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (235 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -587,7 +587,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
 - pre_requisitos: ao menos um funil com cards; metas e dados de reuniões aparecem quando houver configuração/dados.
 - passos: Abra CRM Dashboard; selecione funil; escolha período; revise os números do topo, funil, fechados, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram. Os números do topo seguem o tipo do funil: num funil de Vender, **Seguros fechados**, **Não fecharam**, **Taxa de fechamento**, **Valor fechado** e a meta do mês; num funil de Atender, **Resolvidos** e **Cancelados**.
-- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados. Com Números por papel ligado na conta, esta é a visão **Equipe**: só administrador e função com "Visualizar relatórios do CRM" a veem, com o seletor **Só eu · Equipe** no topo; o atendente sem função passa a ver só os próprios números (fluxo ver_meus_numeros_do_mes).
+- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados. Com Números por papel ligado na conta, esta é a visão **Equipe**: só administrador e função com "Visualizar relatórios do CRM" a veem, com o seletor **Só eu · Equipe** no topo; o atendente sem função passa a ver só os próprios números (fluxo ver_meus_numeros_do_mes). Com a flag crm_numeros_equipe também ligada, a visão Equipe deixa de ser este painel e passa a ser a tela nova (fluxo ver_numeros_da_equipe).
 - nav_target: `crm_dashboard_index`
 
 ### Ver os meus números do mês (Só eu)
@@ -608,6 +608,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: Números por papel (flag crm_numeros_lentes) e Metas do mês por pessoa (flag crm_metas) ligados na conta; ao menos um funil de Vender; ser administrador ou ter uma função com **Ver e definir as metas do mês** (ou Administrador do CRM).
 - passos: Abra Números; clique em **Metas de <mês>**; com mais de um funil de Vender, escolha o funil no alto; ajuste a meta do funil, se quiser; em cada pessoa, digite a meta em dinheiro ou clique em **Usar a sugestão** (a média do que ela fechou nos 3 meses anteriores); ou use **Repetir <mês anterior>** ou **Dividir igualmente**, que só preenchem os campos; clique em **Salvar as metas**.
 - gotchas: a lista de cada funil mostra quem vende (a mesma régua do Só eu: vendeu no mês, tem card aberto em funil de Vender ou, sem card, enxerga funil de Vender) e quem já tem meta nele; quem só atende não aparece; as metas valem para o mês de hoje, no fuso da conta; meses fechados não mudam; campo vazio (ou zero) é sem meta; use só números, sem pontos; a meta fica na moeda do funil; a meta do funil não precisa ser a soma das pessoas, e a gaveta avisa quando é diferente; a venda conta 100% para quem era o Responsável no fechamento; quem vende vê só a própria meta e a barra da equipe em porcentagem, sem nomes; o atendente sem função nunca define metas; funis de Atender não têm meta.
+- nav_target: `crm_dashboard_index`
+
+### Ver os números da equipe e a IA no time (Equipe)
+- intent: "Como está a equipe este mês?"; "Quem precisa de ajuda?"; "Quanto cada vendedor fechou?"; "Quanto a IA atendeu e passou para a equipe?"; "Quanto a IA custou este mês?"
+- onde_fica: No menu novo: Acompanhar > CRM > aba Números, seletor **Equipe**. No menu antigo: Sidebar > CRM > CRM Dashboard, seletor **Equipe**.
+- rota: `crm_dashboard_index` - `/app/accounts/:accountId/crm/dashboard`
+- gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
+- pre_requisitos: Números por papel ligado na conta (flags crm_numeros_lentes e crm_numeros_equipe); administrador ou função com "Visualizar relatórios do CRM"; ao menos um funil que a pessoa enxergue no painel.
+- passos: Abra Números e escolha **Equipe**; leia o topo (o mês da empresa, ou da equipe de vendas ou de atendimento, com a meta do funil quando houver); use o botão do topo para abrir a lista do funil (negociações paradas, retornos atrasados ou lembretes para trás); veja o próximo passo, os blocos **Vendendo** e **Atendendo** e **Quem precisa de ajuda** (o motivo e o botão que abre a lista daquela pessoa); abra **Quem cuidou** para ver uma linha por pessoa e a IA numa linha própria; troque de mês pelas setas.
+- gotchas: os blocos seguem os funis que a pessoa enxerga no painel: quem só vê funis de Vender vê Vendendo, quem só vê funis de Atender vê Atendendo; o valor fechado de cada pessoa aparece para quem vê a equipe, mas o custo da IA só para o administrador ou o Financeiro (quem tem Ver custos da conta); a IA conta como uma linha só, mesmo com vários agentes ou robôs, e uma conversa conta uma vez; a IA não tem meta nem entra em "Quem precisa de ajuda"; contamos só os clientes que entraram num funil; "passou" conta só as passagens que ficam registradas, e algumas passagens da IA ainda não ficam (#1887); "precisa de ajuda" é quem soma 5 ou mais retornos atrasados e casos parados há 7 dias no funil principal, uma linha por pessoa com os dois números, de quem tem mais atraso para quem tem menos, até 3 pessoas, sem posição numerada; a caixa aberta pelo "a IA está esperando" abre em Todos e em Abertas, para bater com o número; o prazo por pessoa ainda não é gravado, por isso a tela não fala em "no prazo"; a meta por pessoa só aparece quando as metas do mês existirem; a função só com "Visualizar relatórios do CRM", sem acesso ao CRM, vê em modo leitura, sem os botões; sem a flag crm_numeros_equipe a aba Equipe continua o painel de sempre (fluxo ver_dashboard_crm_e_metricas_de_funil).
 - nav_target: `crm_dashboard_index`
 
 ### Usar calendário CRM e agendar reunião

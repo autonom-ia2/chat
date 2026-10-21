@@ -12,6 +12,11 @@ import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
 import {
   filtroDoLinkDaLista,
+  abaDoFiltroDoLink,
+  statusDoFiltroDoLink,
+  funilDoFiltroDoLink,
+  abaDaListaComLink,
+  chaveDaPaginaDaLista,
   useFiltrosDoLinkNaCaixa,
   useReleituraPeriodica,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
@@ -249,23 +254,59 @@ function defaultAssigneeTab() {
     : ME;
 }
 
+// #1809: Spam e Lixeira da caixa de e-mail (a pasta vem do endereço, ?pasta=).
+const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
+
+// #1883: filtros pelo link do Números (?da_ia=1, ?esperando_min=30). No Spam e na Lixeira a pasta manda; com filtro
+// avançado ou pasta salva, a lista vem de outro pedido e eles não valem.
+const {
+  daIa: daIaDoLink,
+  esperandoMin: esperandoDoLink,
+  noFunil: noFunilDoLink,
+  assinatura: assinaturaDoLink,
+  limparTudo: limparTudoDoLink,
+  irParaALista,
+} = useFiltrosDoLinkNaCaixa();
+const idsDoFiltroDoLink = useMapGetter('getIdsDoFiltroDoLink');
+const filtroDoLink = computed(() =>
+  filtroDoLinkDaLista({
+    daIa: daIaDoLink.value,
+    esperandoMin: esperandoDoLink.value,
+    noFunil: noFunilDoLink.value,
+    pasta: pastaDoEmail.value,
+    filtroAvancado: hasAppliedFiltersOrActiveFolders.value,
+  })
+);
+// #1999: sem a aba "Todas", a lista do link junta as abas da pessoa (o servidor corta pelas permissões dela), e as abas
+// somem enquanto o link está ligado, porque a lista é a do link.
+const abaDaLista = computed(() =>
+  abaDaListaComLink(
+    filtroDoLink.value,
+    assigneeTabItems.value.map(item => item.key),
+    activeAssigneeTab.value,
+    wootConstants.ASSIGNEE_TYPE.ALL
+  )
+);
+const listaJuntaDoLink = computed(
+  () => abaDaLista.value !== activeAssigneeTab.value
+);
+
 const showAssigneeInConversationCard = computed(() => {
   return (
     hasAppliedFiltersOrActiveFolders.value ||
-    activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ALL
+    abaDaLista.value === wootConstants.ASSIGNEE_TYPE.ALL
   );
 });
 
-const currentPageFilterKey = computed(() => {
-  return hasAppliedFiltersOrActiveFolders.value
-    ? 'appliedFilters'
-    : activeAssigneeTab.value;
-});
+// A página e o fim da lista seguem a aba que a lista pede (#1999), onde a resposta grava o avanço.
+const currentPageFilterKey = computed(() =>
+  chaveDaPaginaDaLista(hasAppliedFiltersOrActiveFolders.value, abaDaLista.value)
+);
 
 const inbox = useFunctionGetter('inboxes/getInbox', activeInbox);
 const currentPage = useFunctionGetter(
   'conversationPage/getCurrentPageFilter',
-  activeAssigneeTab
+  abaDaLista
 );
 const currentFiltersPage = useFunctionGetter(
   'conversationPage/getCurrentPageFilter',
@@ -281,11 +322,12 @@ const conversationCustomAttributes = useFunctionGetter(
   'conversation_attribute'
 );
 
-// Antes de montar, a aba ainda é "Minhas", que quem só lê não tem (#1800).
+// Antes de montar, a aba ainda é "Minhas", que quem só lê não tem (#1800). Com a lista junta do link (#1999), a aba
+// "Todas" que a pessoa não tem: sem contagem, a paginação segue a página gravada.
 const activeAssigneeTabCount = computed(
   () =>
-    assigneeTabItems.value.find(item => item.key === activeAssigneeTab.value)
-      ?.count || 0
+    assigneeTabItems.value.find(item => item.key === abaDaLista.value)?.count ||
+    0
 );
 
 const conversationListPagination = computed(() => {
@@ -307,27 +349,19 @@ const conversationListPagination = computed(() => {
 
   return currentPage.value + 1;
 });
-
-// #1809: Spam e Lixeira da caixa de e-mail (a pasta vem do endereço, ?pasta=).
-const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
-
-// #1883: filtros pelo link do Números (?da_ia=1, ?esperando_min=30). No Spam e na Lixeira a pasta manda; com filtro
-// avançado ou pasta salva, a lista vem de outro pedido e eles não valem.
-const {
-  daIa: daIaDoLink,
-  esperandoMin: esperandoDoLink,
-  limparTudo: limparTudoDoLink,
-  irParaALista,
-} = useFiltrosDoLinkNaCaixa();
-const idsDoFiltroDoLink = useMapGetter('getIdsDoFiltroDoLink');
-const filtroDoLink = computed(() =>
-  filtroDoLinkDaLista({
-    daIa: daIaDoLink.value,
-    esperandoMin: esperandoDoLink.value,
-    pasta: pastaDoEmail.value,
-    filtroAvancado: hasAppliedFiltersOrActiveFolders.value,
-  })
+// #1999: com o filtro do link, o funil da lista vem do link; o escolhido na caixa não é tocado.
+const funilDaLista = computed(() =>
+  funilDoFiltroDoLink(filtroDoLink.value, crmPipelineId.value, FUNNEL_ALL)
 );
+// #1999: com o filtro do link, a caixa abre em "Todas" (se a pessoa tem) e em "Abertas", para bater com o número do
+// Números.
+function abaAoAbrir() {
+  const abas = assigneeTabItems.value.map(item => item.key);
+  const todas = wootConstants.ASSIGNEE_TYPE.ALL;
+  return (
+    abaDoFiltroDoLink(filtroDoLink.value, abas, todas) || defaultAssigneeTab()
+  );
+}
 // A conversa aberta fica na lista filtrada enquanto estiver aberta.
 const conversaAberta = useMapGetter('getSelectedChat');
 // Saindo da caixa, nenhuma releitura agendada roda por baixo.
@@ -347,7 +381,7 @@ const tituloDoFiltroDoLink = computed(() => {
 const conversationFilters = computed(() => {
   return {
     inboxId: props.conversationInbox ? props.conversationInbox : undefined,
-    assigneeType: activeAssigneeTab.value,
+    assigneeType: abaDaLista.value,
     // #1809: Spam e Lixeira resolvem a conversa; dentro da pasta, todos os status.
     status: pastaDoEmail.value ? 'all' : activeStatus.value,
     sortBy: activeSortBy.value,
@@ -355,7 +389,7 @@ const conversationFilters = computed(() => {
     labels: props.label ? [props.label] : undefined,
     teamId: props.teamId || undefined,
     conversationType: props.conversationType || undefined,
-    crmPipelineId: (isCrmEnabled && crmPipelineId.value) || undefined,
+    crmPipelineId: (isCrmEnabled && funilDaLista.value) || undefined,
     pasta: pastaDoEmail.value || undefined,
     ...filtroDoLink.value,
   };
@@ -405,12 +439,12 @@ const pageTitle = computed(() => {
 });
 
 function filterByAssigneeTab(conversations) {
-  if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ME) {
+  if (abaDaLista.value === wootConstants.ASSIGNEE_TYPE.ME) {
     return conversations.filter(
       c => c.meta?.assignee?.id === currentUser.value?.id
     );
   }
-  if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
+  if (abaDaLista.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
     return conversations.filter(c => !c.meta?.assignee);
   }
   return [...conversations];
@@ -433,9 +467,9 @@ const conversationList = computed(() => {
       localConversationList = filterByAssigneeTab(
         participatingChatsList.value(filters)
       );
-    } else if (activeAssigneeTab.value === 'me') {
+    } else if (abaDaLista.value === 'me') {
       localConversationList = [...mineChatsList.value(filters)];
-    } else if (activeAssigneeTab.value === 'unassigned') {
+    } else if (abaDaLista.value === 'unassigned') {
       localConversationList = [...unAssignedChatsList.value(filters)];
     } else {
       localConversationList = [...allChatList.value(filters)];
@@ -610,7 +644,7 @@ function initializeExistingFilterToModal() {
   const statusFilter = initializeStatusAndAssigneeFilterToModal(
     activeStatus.value,
     currentUserDetails.value,
-    activeAssigneeTab.value
+    abaDaLista.value
   );
   // TODO: Remove the usage of useCamelCase after migrating useFilter to camelcase
   if (statusFilter) {
@@ -937,9 +971,14 @@ useEmitter('fetch_conversation_stats', () => {
 });
 
 onMounted(() => {
-  activeAssigneeTab.value = defaultAssigneeTab();
+  activeAssigneeTab.value = abaAoAbrir();
   store.dispatch('setChatListFilters', conversationFilters.value);
   setFiltersFromUISettings();
+  activeStatus.value = statusDoFiltroDoLink(
+    filtroDoLink.value,
+    activeStatus.value,
+    wootConstants.STATUS_TYPE.OPEN
+  );
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
   resetAndFetchData();
@@ -997,7 +1036,7 @@ watch(
 );
 watch([pastaDoEmail, versaoDasPastas], () => resetAndFetchData());
 // Os valores do link, não o filtro já combinado: aplicar um filtro avançado não pode disparar uma releitura que o apaga.
-watch([daIaDoLink, esperandoDoLink], () => resetAndFetchData());
+watch(assinaturaDoLink, () => resetAndFetchData());
 
 // A seta "Limpar filtros" do topo: um clique limpa tudo. Com o link no endereço (mesmo com o filtro avançado por cima),
 // tira o link e o watch acima relê a lista, o que também tira o avançado.
@@ -1088,12 +1127,14 @@ watch(appliedFilters, () => resetBulkActions());
     />
 
     <FunnelFilter
-      v-if="isCrmEnabled && !hasAppliedFiltersOrActiveFolders"
+      v-if="
+        isCrmEnabled && !hasAppliedFiltersOrActiveFolders && !temFiltroDoLink
+      "
       v-model="crmPipelineId"
     />
 
     <ChatTypeTabs
-      v-if="!hasAppliedFiltersOrActiveFolders"
+      v-if="!hasAppliedFiltersOrActiveFolders && !listaJuntaDoLink"
       :items="assigneeTabItems"
       :active-tab="activeAssigneeTab"
       is-compact

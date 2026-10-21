@@ -21,6 +21,7 @@ class ConversationApi extends ApiClient {
       pasta,
       daIa,
       esperandoMin,
+      noFunil,
     },
     options = {}
   ) {
@@ -42,6 +43,7 @@ class ConversationApi extends ApiClient {
         // #1883: filtros pelo link do Números (Crm::ConversationFinderComFiltrosDoLink).
         da_ia: daIa ? 1 : undefined,
         esperando_min: esperandoMin || undefined,
+        no_funil: noFunil ? 1 : undefined,
       },
     });
   }
@@ -126,6 +128,7 @@ class ConversationApi extends ApiClient {
     crmPipelineId,
     daIa,
     esperandoMin,
+    noFunil,
   }) {
     return axios.get(`${this.url}/meta`, {
       params: {
@@ -138,6 +141,7 @@ class ConversationApi extends ApiClient {
         crm_pipeline_id: crmPipelineId,
         da_ia: daIa ? 1 : undefined,
         esperando_min: esperandoMin || undefined,
+        no_funil: noFunil ? 1 : undefined,
       },
     });
   }
