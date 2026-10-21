@@ -52,7 +52,7 @@ module AvaliacaoDoAjustePorLista
              'passagem, mensagem de fallback e perguntas iniciais iguais às de antes.' },
     # Revisão do t6d (ALTO 2): "sem emoji" contradiz de forma literal a saudação com emoji, e só aí ela muda.
     { nome: 't6c_sem_emoji_tira_da_saudacao', fala: 'Pare de usar emoji.', aplica: true,
-      saudacao_inicial: 'Oi! 😊 Aqui é o Hubber, da Hub2You.', muda: %w[greeting],
+      saudacao_inicial: 'Oi! 😊 Aqui é o Hubber, da Hub2You.', muda: %w[greeting], nada_desfeito: true,
       so: %w[tone instruction human_card greeting guardrails],
       certo: 'A saudação DEPOIS não tem emoji e diz o mesmo de antes (oi, Hubber, Hub2You); o agente DEPOIS não usa emoji ' \
              '(no tom, na instrução ou nos limites). Mensagem de fallback, regra de passagem e perguntas iniciais iguais.' },
