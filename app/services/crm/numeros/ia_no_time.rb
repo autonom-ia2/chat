@@ -3,14 +3,11 @@
 # os clientes que entraram num funil que quem abre enxerga: a conversa do card, pelo card principal ou pelo vínculo
 # (crm_card_conversations, Crm::Cards::ConversationLinker); a conversa ligada aos dois jeitos conta uma vez.
 #
-#   atendeu         conversas com resposta de robô no mês (mensagem de saída de AgentBot: os agentes de IA respondem
-#                   pelo robô-espelho da caixa, e o n8n pelo token do robô), nos funis de Vender e de Atender juntos;
-#   passou          conversas que a IA passou para uma pessoa da equipe no mês (Crm::Passagem.da_ia_para_equipe, o
-#                   mesmo critério do "Recebidas da IA"), também nos dois tipos de funil. Um número só de cada: a frase
-#                   do topo e a linha da IA leem os mesmos (#1999). As passagens que hoje não ficam gravadas são o #1887;
+#   atendeu, passou e resolveuSozinha: a conta única da IA (Autonomia::ContaDaIa, #2000), a mesma da página do agente.
+#                   "atendeu" e "passou" somam os funis de Vender e de Atender; "resolveuSozinha" conta só os de Atender.
+#                   A frase do topo e a linha da IA leem os mesmos (#1999). As passagens que hoje não ficam gravadas são o
+#                   #1887;
 #   participou      vendas do mês em conversas que a IA atendeu em algum momento (a IA não leva crédito, Decisão 3);
-#   resolveuSozinha conversas de Atender resolvidas no mês que a IA atendeu, sem passagem para pessoa, sem resposta de
-#                   pessoa e sem o "humano assumiu" do core;
 #   custo           só para o administrador ou o Financeiro (financial_view, #1982): o consumo das respostas dos agentes no mês (Crm::AiUsageEvent
 #                   `agente_resposta`), em reais quando a cotação existe. O consumo não guarda o agente: é o de todos.
 class Crm::Numeros::IaNoTime
@@ -30,7 +27,7 @@ class Crm::Numeros::IaNoTime
   # Some só quando a IA não fez nada no mês: nem atendeu, nem passou, nem participou de venda (a resposta pode ser de
   # um mês antes do fechamento), nem resolveu caso sozinha.
   def perform
-    numeros = { atendeu: atendidas(conversas_dos_funis).count, passou: passagens(conversas_dos_funis).count,
+    numeros = { atendeu: contar(conta.atendidas), passou: contar(conta.passadas),
                 venda: @cards.tem?(:venda) ? venda : nil, atende: @cards.tem?(:atende) ? atende : nil }
     return unless fez_algo?(numeros)
 
@@ -50,7 +47,15 @@ class Crm::Numeros::IaNoTime
   end
 
   def atende
-    { resolveuSozinha: resolvidas_sozinha.count }
+    { resolveuSozinha: contar(conta.resolvidas_sozinha(conversas(:atende))) }
+  end
+
+  def conta
+    @conta ||= Autonomia::ContaDaIa.new(account: @account, range: @range, conversas: conversas_dos_funis)
+  end
+
+  def contar(relation)
+    relation.distinct.count(:conversation_id)
   end
 
   # As conversas dos cards dos funis (sem mês: o card pode ter nascido antes), pelo card principal ou pelo vínculo.
@@ -70,53 +75,13 @@ class Crm::Numeros::IaNoTime
                 .or(Conversation.where(account_id: @account.id, id: vinculadas)).select(:id)
   end
 
-  def respostas_de_robo
-    Message.unscope(:order).where(account_id: @account.id, message_type: Message.message_types[:outgoing], sender_type: 'AgentBot')
-  end
-
-  def atendidas(conversas)
-    respostas_de_robo.where(created_at: @range, conversation_id: conversas).distinct.select(:conversation_id)
-  end
-
-  def passagens(conversas)
-    Crm::Passagem.da_ia_para_equipe.where(account_id: @account.id, em: @range, conversation_id: conversas)
-                 .distinct.select(:conversation_id)
-  end
-
-  # Resolvidas no mês, nos funis de Atender, com resposta de robô e sem pessoa no meio em momento nenhum.
-  def resolvidas_sozinha
-    resolvidas = ReportingEvent.where(account_id: @account.id, name: 'conversation_resolved', event_end_time: @range,
-                                      conversation_id: conversas(:atende)).select(:conversation_id)
-    Conversation.where(account_id: @account.id, id: resolvidas)
-                .where(com_robo_sql('conversations.id'))
-                .where.not(id: passadas_para_pessoa(resolvidas)).where.not(id: com_resposta_de_pessoa(resolvidas))
-  end
-
-  # Alguma vez uma pessoa entrou: a passagem gravada ou o "humano assumiu" do core.
-  # Só entre as candidatas (as resolvidas do mês): nada de varrer o histórico da conta.
-  def passadas_para_pessoa(candidatas)
-    passagens = Crm::Passagem.da_ia_para_equipe.where(account_id: @account.id, conversation_id: candidatas).select(:conversation_id)
-    assumidas = ReportingEvent.where(account_id: @account.id, name: 'conversation_bot_handoff', conversation_id: candidatas)
-                              .select(:conversation_id)
-    Conversation.where(id: passagens).or(Conversation.where(id: assumidas)).select(:id)
-  end
-
-  def com_resposta_de_pessoa(candidatas)
-    Message.unscope(:order).where(account_id: @account.id, conversation_id: candidatas, message_type: Message.message_types[:outgoing],
-                                  sender_type: 'User', private: false).select(:conversation_id)
-  end
-
   # O card teve resposta de robô na conversa principal ou numa vinculada.
   def card_com_robo_sql
     vinculadas = Crm::CardConversation.where(Crm::CardConversation.arel_table[:card_id].eq(Crm::Card.arel_table[:id]))
                                       .select(:conversation_id)
-    resposta = respostas_de_robo.where('messages.conversation_id = crm_cards.conversation_id')
-                                .or(respostas_de_robo.where(conversation_id: vinculadas))
+    respostas = conta.respostas_da_ia
+    resposta = respostas.where('messages.conversation_id = crm_cards.conversation_id').or(respostas.where(conversation_id: vinculadas))
     Arel.sql("EXISTS (#{resposta.select(1).to_sql})")
-  end
-
-  def com_robo_sql(coluna)
-    Arel.sql("EXISTS (#{respostas_de_robo.where("messages.conversation_id = #{coluna}").select(1).to_sql})")
   end
 
   # O nome e o link do agente quando foi um só no mês; com vários, a tela diz "A IA".
@@ -135,14 +100,14 @@ class Crm::Numeros::IaNoTime
   end
 
   def atendidas_ids_de_robo
-    respostas_de_robo.where(created_at: @range, conversation_id: conversas_dos_funis).distinct.limit(MAX_ROBOS).pluck(:sender_id)
+    conta.atendidas.distinct.limit(MAX_ROBOS).pluck(:sender_id)
   end
 
   def custo
     usd = Crm::AiUsageEvent.for_account(@account.id).where(feature: FEATURE_RESPOSTA, created_at: @range).sum(:cost_estimate).to_d
     taxa = Crm::Ai::ExchangeRate.current[:rate]
     valor, moeda = @moeda == 'BRL' && taxa.present? ? [usd * taxa.to_d, 'BRL'] : [usd, 'USD']
-    conversas = respostas_de_robo.where(created_at: @range).distinct.count(:conversation_id)
+    conversas = conta.respostas_da_ia.where(created_at: @range).distinct.count(:conversation_id)
     { valor: valor.round(2).to_f, porConversa: conversas.zero? ? nil : (valor / conversas).round(2).to_f, moeda: moeda }
   end
 end

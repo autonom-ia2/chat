@@ -284,6 +284,15 @@ describe('CrmNumerosEquipe', () => {
     expect(numeros).not.toContain('IA_PARTICIPOU');
   });
 
+  // #2000: a página do agente mostra a mesma conta por semana; a linha avisa, ao lado do link.
+  it('a linha da IA avisa que a página do agente mostra a mesma conta por semana', async () => {
+    const wrapper = await montar(dados());
+
+    expect(wrapper.find('[data-ia-semana]').text()).toContain(
+      'CUIDOU.IA_SEMANA'
+    );
+  });
+
   it('sem a frase do topo, a linha da IA diz também quantos atendeu', async () => {
     const resposta = dados();
     resposta.quemCuidou.plataforma = null;

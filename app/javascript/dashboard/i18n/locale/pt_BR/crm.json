@@ -130,6 +130,13 @@
     "PRIVACY_FOOTER": "Nunca mostramos o conteúdo das conversas com a IA.",
     "RATE_UNAVAILABLE": "A cotação em BRL está indisponível agora; mostrando valores em USD.",
     "RESOURCE_FALLBACK": "Outros",
+    "IA_VS_HUMANO": {
+      "TITULO": "O que a IA fez no funil",
+      "MUDOU": "No período, a IA mudou clientes de etapa sozinha {auto} vez. | No período, a IA mudou clientes de etapa sozinha {auto} vezes.",
+      "NAO_MUDOU": "No período, a IA não mudou ninguém de etapa sozinha.",
+      "SUGERIU": "Ela também sugeriu mudanças: a equipe aceitou {aceitas} e recusou {recusadas}.",
+      "VAZIA": "No período, a IA não mudou ninguém de etapa nem sugeriu mudanças."
+    },
     "LOADING": "Carregando uso de IA…",
     "ERROR": "Não foi possível carregar o uso de IA. Tente novamente."
   },
@@ -439,7 +446,7 @@
     },
     "DASHBOARD": {
       "TITLE": "Dashboard do CRM",
-      "SUBTITLE": "Desempenho do funil: funil de etapas, negócios ganhos e perdidos, IA vs humano e throughput.",
+      "SUBTITLE": "Desempenho do funil: funil de etapas, negócios ganhos e perdidos e throughput.",
       "META_SYNC": {
         "TITLE": "Conversões no Meta Ads",
         "SUBTITLE": "Conversões enviadas de volta à Meta para otimizar seus anúncios: clique para WhatsApp pela conexão do WhatsApp, vendas de landing page pelo Pixel do site.",
@@ -512,14 +519,6 @@
         "CARDS": "cards",
         "EMPTY": "Nenhum card aberto neste funil."
       },
-      "AI": {
-        "TITLE": "IA vs humano",
-        "AUTO_MOVES": "Movimentos automáticos da IA",
-        "ACCEPTED": "Aceitos por humano",
-        "DISMISSED": "Dispensados",
-        "ACCEPTANCE_RATE": "Taxa de aceitação",
-        "EMPTY": "Nenhuma atividade de IA no período."
-      },
       "THROUGHPUT": {
         "TITLE": "Throughput (fechados)",
         "WON": "Ganhos",
@@ -550,7 +549,7 @@
         "SO_DIAS": "{d} d",
         "SO_HORAS": "{h} h"
       },
-      "SUBTITLE_ATENDER": "Desempenho do funil: etapas, resolvidos e cancelados, tempo de solução e IA vs humano."
+      "SUBTITLE_ATENDER": "Desempenho do funil: etapas, resolvidos e cancelados e tempo de solução."
     },
     "ACTIONS": {
       "REFRESH": "Atualizar",
@@ -6112,7 +6111,7 @@
     "CUIDOU": {
       "TITULO": "Quem cuidou · {n} pessoa e 1 IA | Quem cuidou · {n} pessoas e 1 IA",
       "TITULO_SEM_IA": "Quem cuidou · {n} pessoa | Quem cuidou · {n} pessoas",
-      "PLATAFORMA": "Este mês {ia} atendeu {atendeu} clientes e participou de {participou} venda ({valor}). | Este mês {ia} atendeu {atendeu} clientes e participou de {participou} vendas ({valor}).",
+      "PLATAFORMA": "Este mês {ia} respondeu {atendeu} conversas e participou de {participou} venda ({valor}). | Este mês {ia} respondeu {atendeu} conversas e participou de {participou} vendas ({valor}).",
       "CAMINHO": "No caminho certo: {nomes}.",
       "VOCE": "você",
       "E": "e",
@@ -6125,11 +6124,12 @@
       "FORA_DA_EQUIPE": "Sem responsável ou fora da equipe",
       "FORA_VENDA": "fechou {fechou} · {valor}",
       "IA_SELO": "IA",
-      "IA_ATENDEU": "atendeu {n} cliente | atendeu {n} clientes",
+      "IA_ATENDEU": "respondeu {n} conversa | respondeu {n} conversas",
       "IA_PARTICIPOU": "participou de {n} venda ({valor}) | participou de {n} vendas ({valor})",
-      "IA_PASSOU": "passou {n} cliente para alguém da equipe | passou {n} clientes para alguém da equipe",
-      "IA_RESOLVEU_SOZINHA": "resolveu {n} caso sozinha | resolveu {n} casos sozinha",
+      "IA_PASSOU": "passou {n} conversa para alguém da equipe | passou {n} conversas para alguém da equipe",
+      "IA_RESOLVEU_SOZINHA": "resolveu {n} conversa sem a equipe | resolveu {n} conversas sem a equipe",
       "IA_VER": "Ver o agente",
+      "IA_SEMANA": "Na página do agente, a mesma conta aparece por semana.",
       "IA_VER_TODOS": "Ver os agentes",
       "IA_CUSTO_AGENTES": "Custo dos agentes de IA: {valor} este mês, cerca de {porConversa} por conversa.",
       "IA_CUSTO_AGENTES_SEM_CONVERSA": "Custo dos agentes de IA: {valor} este mês.",

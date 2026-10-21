@@ -1166,9 +1166,14 @@
           "ROTULO": "Números desta semana",
           "VAZIA": "Ainda sem conversas esta semana. Os números aparecem aqui assim que {nome} responder alguém.",
           "RESPONDIDAS": "conversa respondida | conversas respondidas",
-          "PASSADAS": "passada para a equipe | passadas para a equipe",
-          "NOTA_RESPONDIDAS": "Esta semana, {nome} respondeu {n} conversa e passou {m} para a equipe. | Esta semana, {nome} respondeu {n} conversas e passou {m} para a equipe.",
-          "NOTA_PASSADAS": "Quando não soube responder."
+          "PASSADAS": "passada para alguém da equipe | passadas para alguém da equipe",
+          "RESOLVIDAS": "resolvida sem a equipe | resolvidas sem a equipe",
+          "PERIODO": "Esta semana (os últimos 7 dias, contando hoje)",
+          "NO_MES": "Em Números › Equipe, a mesma conta aparece por mês.",
+          "VER": "Ver as conversas",
+          "NOTA_RESPONDIDAS": "Conversas em que {nome} mandou ao menos uma resposta.",
+          "NOTA_PASSADAS": "Por horário, a pedido do cliente ou porque não soube.",
+          "NOTA_RESOLVIDAS": "Terminaram sem ninguém da equipe precisar entrar."
         },
         "SILENCIOS": {
           "TITULO": "Quando {nome} não respondeu",
@@ -1186,6 +1191,7 @@
           "MOSTRAR": "Mostrar",
           "RESPONDIDAS": "Respondidas",
           "PASSADAS": "Passadas para a equipe",
+          "RESOLVIDAS": "Resolvidas sem a equipe",
           "CARREGANDO": "Carregando as conversas",
           "ABRIR": "Abrir conversa",
           "ABRIR_ARIA": "Abrir conversa com {contato}",

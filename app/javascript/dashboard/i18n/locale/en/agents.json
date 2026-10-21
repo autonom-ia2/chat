@@ -1166,9 +1166,14 @@
           "ROTULO": "This week in numbers",
           "VAZIA": "No conversations this week yet. The numbers show up here as soon as {nome} answers someone.",
           "RESPONDIDAS": "conversation answered | conversations answered",
-          "PASSADAS": "handed to the team | handed to the team",
-          "NOTA_RESPONDIDAS": "This week, {nome} answered {n} conversation and handed {m} to the team. | This week, {nome} answered {n} conversations and handed {m} to the team.",
-          "NOTA_PASSADAS": "When it did not know how to answer."
+          "PASSADAS": "handed to someone on the team | handed to someone on the team",
+          "RESOLVIDAS": "solved without the team | solved without the team",
+          "PERIODO": "This week (the last 7 days, today included)",
+          "NO_MES": "In Numbers › Team, the same count shows by month.",
+          "VER": "See the conversations",
+          "NOTA_RESPONDIDAS": "Conversations where {nome} sent at least one answer.",
+          "NOTA_PASSADAS": "Because of business hours, at the customer's request or because it did not know.",
+          "NOTA_RESOLVIDAS": "Closed with no one from the team stepping in."
         },
         "SILENCIOS": {
           "TITULO": "When {nome} did not answer",
@@ -1186,6 +1191,7 @@
           "MOSTRAR": "Show",
           "RESPONDIDAS": "Answered",
           "PASSADAS": "Handed to the team",
+          "RESOLVIDAS": "Solved without the team",
           "CARREGANDO": "Loading the conversations",
           "ABRIR": "Open conversation",
           "ABRIR_ARIA": "Open conversation with {contato}",

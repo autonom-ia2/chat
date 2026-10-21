@@ -118,7 +118,7 @@ const L2 = [
 const preparar = ({
   agente = bia(),
   show = null,
-  semana = { answered: 12, handed: 3 },
+  semana = { answered: 12, handed: 3, resolved: 5 },
   canais = L2,
   perguntas = [],
   caixas = [{ id: 1, working_hours_enabled: false }],
@@ -296,6 +296,7 @@ describe('AgentePage', () => {
       expect(todos('[data-numero]').map(n => n.textContent)).toEqual([
         expect.stringContaining('12'),
         expect.stringContaining('3'),
+        expect.stringContaining('5'),
       ]);
       expect(texto()).not.toContain('%');
       wrapper.unmount();
@@ -601,7 +602,7 @@ describe('AgentePage', () => {
       await clicar('[data-numero="passadas"]');
       expect(agentesApi.analyticsConversations).toHaveBeenCalledWith(7, {
         range: '7d',
-        metric: 'handed_off',
+        metric: 'passadas',
       });
       wrapper.unmount();
     });
