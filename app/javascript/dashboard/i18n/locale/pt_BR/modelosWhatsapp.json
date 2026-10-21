@@ -742,7 +742,7 @@
       "CAIXA_RECONECTAR": "{nome} · precisa reconectar",
       "RECONECTAR_MOTIVO": "{nome} precisa ser reconectado ao WhatsApp para enviar campanhas.",
       "RECONECTAR": "Reconectar",
-      "SEM_MODELO": "Esta conta do WhatsApp ainda não tem modelo pronto para campanha.",
+      "SEM_MODELO": "Esta conta do WhatsApp ainda não tem mensagem aprovada para campanha.",
       "NAO_VAI": {
         "FORMATO_NAO_VAI": "ainda não vai em campanha",
         "RECUSADO": "recusado",
