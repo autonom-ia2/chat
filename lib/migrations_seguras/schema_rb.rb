@@ -163,6 +163,8 @@ class MigrationsSeguras::SchemaRb
 
   def texto(node)
     case node
+    # Chamada sem argumento (o Rails não escreve, mas um schema.rb editado à mão pode): o erro diz onde.
+    when nil then raise ArgumentError, 'schema.rb com comando sem o argumento esperado (nome da tabela, coluna ou SQL)'
     when Prism::StringNode, Prism::SymbolNode then node.unescaped
     # Heredoc com interpolação: o slice seria só o `<<-SQL`.
     when Prism::InterpolatedStringNode then node.parts.map { |parte| texto(parte) }.join
