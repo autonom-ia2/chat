@@ -441,6 +441,37 @@ describe('permissionMatrix', () => {
     });
   });
 
+  describe('campanhas: disparar (#1898)', () => {
+    const campaigns = MODULES.find(module => module.key === 'CAMPAIGNS');
+
+    it('mostra disparar só para quem edita', () => {
+      expect(visibleExtras(campaigns, ['campaign_view'])).toEqual([]);
+      expect(visibleExtras(campaigns, ['campaign_manage'])).toEqual([
+        'campaign_send',
+      ]);
+    });
+
+    it('voltar para ver ou tirar o acesso tira disparar', () => {
+      const permissions = ['campaign_manage', 'campaign_send'];
+      expect(setLevel(campaigns, LEVELS.VIEW, permissions)).toEqual([
+        'campaign_view',
+      ]);
+      expect(setLevel(campaigns, LEVELS.NONE, permissions)).toEqual([]);
+    });
+
+    it('editar sozinho não liga disparar', () => {
+      expect(setLevel(campaigns, LEVELS.MANAGE, [])).toEqual([
+        'campaign_manage',
+      ]);
+    });
+
+    it('trata disparar como sensível', () => {
+      expect(sensitiveExtrasOn(['campaign_manage', 'campaign_send'])).toEqual([
+        'campaign_send',
+      ]);
+    });
+  });
+
   describe('crm: arquivar cards (#1874)', () => {
     const crm = moduleByKey('CRM');
 
