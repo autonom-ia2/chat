@@ -155,7 +155,7 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       expect(response.parsed_body['code']).to eq('comparar_antes')
     end
 
-    # O antes e depois vale para o agente como estava ao comparar: mudou a instrução, a comparação não vale mais.
+    # O antes e depois vale para o agente como estava ao comparar: mudou o agente (aqui, a instrução), não vale mais.
     it 'a instrução mudou depois de comparar: 422 (comparar_antes) e nada muda' do
       comparou
       agente.update!(instruction: 'Outra instrução, escrita depois da comparação.')
@@ -165,6 +165,45 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['code']).to eq('comparar_antes')
       expect(agente.reload.config['base']).to eq(seguradora)
+    end
+
+    # Tudo o que muda a resposta entra no retrato (o mesmo da versão do agente), não só a instrução.
+    it 'o jeito de falar mudou depois de comparar: 422 (comparar_antes) e nada muda' do
+      comparou
+      agente.update!(tone: 'formal')
+
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('comparar_antes')
+      expect(agente.reload.config['base']).to eq(seguradora)
+    end
+
+    it 'ligar ou desligar o agente depois de comparar não pede outra comparação' do
+      comparou
+      agente.update!(enabled: false)
+
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    # A conferência vale sob a trava: a instrução salva entre a conferência e a troca não passa.
+    it 'a instrução salva entre a conferência e a trava: 422 (comparar_antes) e a base fica intacta' do
+      comparou
+      comparada = Autonomia::Agents::BaseDeSeguros::Comparada
+      allow(comparada).to receive(:viu?).and_wrap_original do |original, *args|
+        viu = original.call(*args)
+        Autonomia::Agents::Agent.where(id: agente.id).update_all(instruction: 'Salva no meio.') # rubocop:disable Rails/SkipsModelValidations
+        viu
+      end
+
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('comparar_antes')
+      expect(agente.reload.config['base']).to eq(seguradora)
+      expect(agente.instruction_versions.where(reason: 'base_de_seguros')).to be_empty
     end
 
     # A marca de quem viu vale para uma troca só: depois do Desfazer, trocar de novo pede outra comparação.

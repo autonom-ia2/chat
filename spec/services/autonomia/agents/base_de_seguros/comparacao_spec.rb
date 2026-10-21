@@ -70,6 +70,16 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     expect { limite.reservar!(agent) }.not_to raise_error
   end
 
+  # "Hoje", "nova" e a marca de quem viu saem do mesmo agente: a cópia com a base nova não relê o banco.
+  it 'a cópia com a base nova sai do próprio agente comparado, não de uma nova leitura' do
+    agent.instruction = 'INSTRUÇÃO DESTE OBJETO'
+
+    described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
+
+    expect(chamadas.map { |chamada| chamada[:agent].instruction }.uniq).to eq(['INSTRUÇÃO DESTE OBJETO'])
+    expect(chamadas.map { |chamada| chamada[:agent].id }.uniq).to eq([agent.id])
+  end
+
   it 'usa o motor do Testar sem ferramenta, com a etiqueta de custo do Testar' do
     described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
 

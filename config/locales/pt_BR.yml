@@ -1330,7 +1330,7 @@ pt_BR:
       sem_base_nova: 'Não há base de seguros nova para este agente. A página foi atualizada.'
       base_mudou: 'O agente mudou enquanto isso. A página foi atualizada.'
       comparar_espere: 'Espere uns 2 minutos para comparar de novo.'
-      comparar_amanha: 'Esta conta já comparou muitas vezes hoje. Amanhã você pode atualizar de novo.'
+      comparar_amanha: 'Hoje esta conta já comparou muitas vezes. Amanhã dá para comparar de novo.'
       comparar_antes: 'Compare as respostas antes de atualizar a base.'
       sem_instrucao: 'Este agente ainda não tem instruções, então a base dele não pode ser atualizada.'
       desfazer_fechado: 'O agente mudou depois da atualização, e o Desfazer não vale mais. Para voltar, use o histórico de versões.'

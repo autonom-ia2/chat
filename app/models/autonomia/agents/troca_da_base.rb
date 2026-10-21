@@ -20,6 +20,8 @@ module Autonomia::Agents::TrocaDaBase
   class TrocaIndisponivel < StandardError; end
   # O agente mudou depois da troca (ou nunca houve troca): o caminho é Versões.
   class BaseMudou < StandardError; end
+  # O agente mudou depois do antes e depois que a pessoa viu: a comparação não vale para ele como está.
+  class RetratoMudou < StandardError; end
 
   # A CORRIDA com o save comum (painel, API): ele grava o `config` inteiro que leu no começo. Se a troca (ou o Desfazer)
   # entrou no meio, a base velha voltaria em silêncio. Todo save que muda o `config` sem mexer na base relê, sob a trava
@@ -34,14 +36,24 @@ module Autonomia::Agents::TrocaDaBase
     versao_completa? && instruction.present?
   end
 
-  # -> true quando trocou, false quando a base já era essa.
-  def trocar_base!(marca, created_by: nil)
+  # O agente como ele responde: o mesmo retrato da versão (instrução, jeito de falar, regras, config versionada com a
+  # base), em hash. Ligar, desligar, o material e a hora da última edição ficam fora: não mudam a resposta.
+  # As chaves vão em ordem: o jsonb do banco devolve outra ordem que o objeto em memória, e o hash precisa ser o mesmo.
+  def retrato_para_comparar
+    retrato = retrato_da_versao.merge('instruction' => instruction.to_s).as_json
+    Digest::SHA256.hexdigest(em_ordem(retrato).to_json)[0, 16]
+  end
+
+  # -> true quando trocou, false quando a base já era essa. `retrato` (opcional): o do agente que a pessoa comparou;
+  # conferido sob a trava, porque o agente pode ter sido salvo entre a conferência de fora e aqui (RetratoMudou).
+  def trocar_base!(marca, created_by: nil, retrato: nil)
     recusar_se_instrucao_mantida!
     raise TrocaIndisponivel unless troca_da_base_disponivel?
 
     transaction do
       travar_conversas!
       lock!
+      conferir_retrato!(retrato)
       next false if config.to_h['base'] == marca
 
       gravar_versao!('base', nil) unless estado_atual_guardado?
@@ -82,6 +94,18 @@ module Autonomia::Agents::TrocaDaBase
   end
 
   private
+
+  def em_ordem(valor)
+    case valor
+    when Hash then valor.sort.to_h.transform_values { |item| em_ordem(item) }
+    when Array then valor.map { |item| em_ordem(item) }
+    else valor
+    end
+  end
+
+  def conferir_retrato!(retrato)
+    raise RetratoMudou if retrato && retrato_para_comparar != retrato
+  end
 
   def manter_base_salva?
     will_save_change_to_config? && attribute_in_database(:config).to_h['base'] == config.to_h['base'] &&

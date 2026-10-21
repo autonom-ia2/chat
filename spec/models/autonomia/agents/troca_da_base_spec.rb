@@ -130,6 +130,37 @@ RSpec.describe Autonomia::Agents::TrocaDaBase do
     end
   end
 
+  describe '#retrato_para_comparar' do
+    it 'é o mesmo no objeto em memória e relido do banco (a ordem das chaves do jsonb não conta)' do
+      expect(agent.retrato_para_comparar).to eq(Autonomia::Agents::Agent.find(agent.id).retrato_para_comparar)
+    end
+
+    it 'não muda sozinho: ligar, desligar e o resultado do material não contam' do
+      antes = agent.retrato_para_comparar
+
+      agent.update!(enabled: false)
+      Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', { 'situacao' => 'ok' })
+
+      expect(agent.reload.retrato_para_comparar).to eq(antes)
+    end
+
+    it 'muda com o que muda a resposta: o jeito de falar e a base' do
+      antes = agent.retrato_para_comparar
+
+      expect(agent.tap { |agente| agente.update!(tone: 'formal') }.retrato_para_comparar).not_to eq(antes)
+      expect(agent.tap { |agente| agente.update_columns(config: agente.config.merge('base' => nova)) }.retrato_para_comparar) # rubocop:disable Rails/SkipsModelValidations
+        .not_to eq(antes)
+    end
+
+    it 'a troca confere o retrato sob a trava: o agente salvo depois da conferência não é trocado' do
+      retrato = agent.retrato_para_comparar
+      Autonomia::Agents::Agent.where(id: agent.id).update_all(instruction: 'Salva no meio.') # rubocop:disable Rails/SkipsModelValidations
+
+      expect { agent.trocar_base!(nova, retrato: retrato) }.to raise_error(described_class::RetratoMudou)
+      expect(agent.reload.config['base']).to eq(antiga)
+    end
+  end
+
   describe 'save comum do agente durante a troca' do
     it 'um objeto lido antes da troca não regrava a base antiga ao salvar outra coisa' do
       lido_antes = Autonomia::Agents::Agent.find(agent.id)

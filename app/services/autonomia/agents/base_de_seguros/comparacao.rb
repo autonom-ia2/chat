@@ -43,9 +43,11 @@ class Autonomia::Agents::BaseDeSeguros::Comparacao
     { pergunta: pergunta, hoje: hoje[:texto], hoje_equipe: hoje[:equipe], nova: nova[:texto], nova_equipe: nova[:equipe] }
   end
 
-  # O mesmo agente, relido, com a base nova só na memória. readonly!: se algo no caminho tentar salvá-lo, falha.
+  # O MESMO agente comparado (uma cópia dos atributos dele, sem reler o banco), com a base nova só na memória: "hoje",
+  # "nova" e a marca de quem viu saem do mesmo retrato. É um registro salvo (com o id), para o caminho do Testar achar
+  # o material dele. readonly!: se algo no caminho tentar salvá-lo, falha.
   def agente_com_a_base(marca)
-    copia = Autonomia::Agents::Agent.find(@agent.id)
+    copia = Autonomia::Agents::Agent.instantiate(@agent.attributes_before_type_cast)
     copia.config = copia.config.to_h.merge('base' => marca)
     copia.readonly!
     copia

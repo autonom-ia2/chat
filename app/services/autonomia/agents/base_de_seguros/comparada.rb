@@ -5,9 +5,11 @@
 # - O resultado: o antes e depois do agente para aquela versão, no idioma em que foi feito, pelos mesmos 2 minutos da
 #   espera entre comparações. Reabrir a gaveta nesse intervalo mostra o mesmo antes e depois em vez de mandar esperar.
 #
-# Os dois valem para o agente como ele estava ao comparar (o RETRATO: a instrução e a versão da base de hoje). Mudou a
-# instrução (edição, volta de versão) ou a base (atualizar e Desfazer), o "hoje" comparado não é mais o de agora: a marca
-# não vale e o resultado guardado não serve. Não usa o updated_at, que muda por motivos que não mexem na resposta.
+# Os dois valem para o agente como ele estava ao comparar (o RETRATO: o mesmo da versão do agente, com a instrução, o
+# jeito de falar, as regras de passagem, a mensagem de quando não sabe, a config versionada e a base). Mudou qualquer um
+# (edição, volta de versão, atualizar e Desfazer), o "hoje" comparado não é mais o de agora: a marca não vale e o
+# resultado guardado não serve. Ligar, desligar e o material ficam fora; o updated_at também, porque muda por motivos
+# que não mexem na resposta.
 module Autonomia::Agents::BaseDeSeguros::Comparada
   PRAZO_DE_QUEM_VIU = 30.minutes
   PREFIXO = 'autonomia:base_de_seguros:comparada'.freeze
@@ -41,11 +43,9 @@ module Autonomia::Agents::BaseDeSeguros::Comparada
     JSON.parse(guardado) if guardado
   end
 
-  # O agente como ele responde hoje, para o que muda a resposta da comparação: a instrução e a versão da base gravada.
+  # O agente como ele responde hoje (TrocaDaBase#retrato_para_comparar: o retrato da versão com a instrução).
   def retrato(agent)
-    base = agent.config.to_h['base']
-    versao_da_base = base.is_a?(Hash) ? base['versao'] : nil
-    Digest::SHA256.hexdigest([agent.instruction.to_s, versao_da_base.to_s].to_json)[0, 16]
+    agent.retrato_para_comparar
   end
 
   def marca(agent, versao)

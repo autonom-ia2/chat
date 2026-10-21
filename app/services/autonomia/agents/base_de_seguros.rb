@@ -58,9 +58,12 @@ class Autonomia::Agents::BaseDeSeguros
   def atualizar!(created_by:, versao:, account_user:)
     marca = marca_para_trocar!
     raise VersaoMudou if versao != marca['versao']
+
+    retrato = @agent.retrato_para_comparar
     raise NaoComparou unless Autonomia::Agents::BaseDeSeguros::Comparada.viu?(@agent, account_user, versao)
 
-    trocou = @agent.trocar_base!(marca, created_by: created_by)
+    # Conferido de novo sob a trava da troca: um save entre a conferência e a trava não passa.
+    trocou = @agent.trocar_base!(marca, created_by: created_by, retrato: retrato)
     # A comparação valeu para esta troca: depois de um Desfazer, trocar de novo pede outra.
     Autonomia::Agents::BaseDeSeguros::Comparada.esquecer_quem_viu!(@agent, account_user)
     trocou

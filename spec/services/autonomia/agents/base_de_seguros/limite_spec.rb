@@ -57,8 +57,9 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Limite do
   end
 
   it 'o aviso do dia diz em palavras simples quando libera, sem hora' do
-    expect(I18n.t('autonomia.base_de_seguros.comparar_amanha', locale: :pt_BR)).to include('Amanhã você pode atualizar de novo.')
-    expect(I18n.t('autonomia.base_de_seguros.comparar_amanha', locale: :en)).to include('You can update again tomorrow.')
-    expect(I18n.t('autonomia.base_de_seguros.comparar_amanha', locale: :pt_BR)).not_to include('UTC')
+    aviso = ->(idioma) { I18n.t('autonomia.base_de_seguros.comparar_amanha', locale: idioma) }
+    expect(aviso.call(:pt_BR)).to eq('Hoje esta conta já comparou muitas vezes. Amanhã dá para comparar de novo.')
+    expect(aviso.call(:en)).to eq('This account has compared many times today. You can compare again tomorrow.')
+    expect(aviso.call(:pt_BR)).not_to include('UTC')
   end
 end

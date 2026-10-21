@@ -18,7 +18,7 @@ class Api::V1::Accounts::Autonomia::Agents::BaseDeSegurosController < Api::V1::A
   end
   rescue_from(BASE::SemBaseNova) { aviso('sem_base_nova', :unprocessable_entity) }
   rescue_from(::Autonomia::Agents::TrocaDaBase::TrocaIndisponivel) { aviso('sem_instrucao', :unprocessable_entity) }
-  rescue_from(BASE::NaoComparou) { aviso('comparar_antes', :unprocessable_entity) }
+  rescue_from(BASE::NaoComparou, ::Autonomia::Agents::TrocaDaBase::RetratoMudou) { aviso('comparar_antes', :unprocessable_entity) }
   rescue_from(BASE::VersaoMudou) { aviso('base_mudou', :conflict) }
   rescue_from(::Autonomia::Agents::TrocaDaBase::BaseMudou) { aviso('desfazer_fechado', :conflict) }
   rescue_from(BASE::Limite::Excedido) { |erro| aviso("comparar_#{erro.motivo}", :too_many_requests) }

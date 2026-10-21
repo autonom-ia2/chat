@@ -4,6 +4,8 @@
 #
 # O DIA é o da conta: o fuso dos relatórios e do painel (Crm::Timezone::Resolver: `reporting_timezone`, sem ele o padrão
 # do produto). A chave leva a data local e expira na meia-noite local (com folga), que é quando o aviso diz que libera.
+# Trocar o fuso da conta no meio do dia pode abrir uma contagem nova (a data local muda): aceito, porque o custo extra fica
+# limitado a mais 10 comparações naquele dia e a troca de fuso é rara.
 module Autonomia::Agents::BaseDeSeguros::Limite
   ENTRE_PEDIDOS = 2.minutes
   POR_DIA = 10
