@@ -12,6 +12,11 @@
 # e veredito ficam nil: sem gasto não há o que dividir, e "R$ 0 por venda" leria como anúncio de graça.
 # Cada anúncio e o total também dizem quantos estão em negociação (card aberto) e quantos se perderam.
 #
+# Com conexão (#2054), os anúncios se separam em dois blocos. `ads` são os que levam para o WhatsApp: os que trouxeram
+# conversa (nosso clique ou a contagem da Meta, em qualquer época); o gasto, o custo por conversa e o custo por venda
+# saem só deles. `other_ads` são os demais (site, alcance, vídeo…): gasto e o resultado que a Meta mede (cliques e
+# impressões), sem conversa nem venda, para o gasto deles não inflar o custo de quem leva ao WhatsApp.
+#
 # O anúncio por dentro (F3b, Panel::AdDetail) lê daqui o período, a coorte, a linha do anúncio e a média da conta,
 # para que o número da lista e o da tela do anúncio nunca divirjam.
 class Crm::MetaAds::Panel::Report
@@ -28,10 +33,10 @@ class Crm::MetaAds::Panel::Report
 
   def payload
     base = { period: period.key, days: days, from: first_day, to: last_day, open: period.open?, currency: currency,
-             totals: totals, ads: ads }
+             totals: totals.merge(other_spend: other_ads.sum { |row| row[:spend] }.round(2)), ads: ads, other_ads: other_ads }
     return base.merge(confidence: confidence) unless whatsapp_only?
 
-    base.merge(source: 'whatsapp', totals: totals.merge(spend: nil), ads: ads.map { |ad| ad.merge(spend: nil) })
+    base.merge(source: 'whatsapp', totals: totals.merge(spend: nil, other_spend: nil), ads: ads.map { |ad| ad.merge(spend: nil) })
   end
 
   # Sem conexão: o painel só com o que o WhatsApp contou (#1960).
@@ -76,16 +81,21 @@ class Crm::MetaAds::Panel::Report
   end
 
   def ads
-    @ads ||= ad_ids.map { |ad_id| ad_row(ad_id) }
-                   .map { |row| row.merge(verdict: whatsapp_only? ? nil : verdict(row)) }
-                   .sort_by { |row| [-row[:sales], -row[:conversations], -row[:spend]] }
+    @ads ||= whatsapp_ad_ids.map { |ad_id| ad_row(ad_id) }
+                            .map { |row| row.merge(verdict: whatsapp_only? ? nil : verdict(row)) }
+                            .sort_by { |row| [-row[:sales], -row[:conversations], -row[:spend]] }
+  end
+
+  # Anúncios com gasto que não levam para o WhatsApp, do maior gasto ao menor.
+  def other_ads
+    @other_ads ||= (spend_by_ad.keys - whatsapp_ad_ids).map { |ad_id| other_ad_row(ad_id) }.sort_by { |row| -row[:spend] }
   end
 
   # Custo por venda da conta, só com os anúncios que venderam; nil enquanto nenhum vendeu.
   def average_cost_per_sale
     return @average_cost_per_sale if defined?(@average_cost_per_sale)
 
-    selling = ad_ids.map { |ad_id| ad_row(ad_id) }.select { |row| row[:sales].positive? }
+    selling = whatsapp_ad_ids.map { |ad_id| ad_row(ad_id) }.select { |row| row[:sales].positive? }
     @average_cost_per_sale = ratio(selling.sum { |row| row[:spend] }, selling.sum { |row| row[:sales] })
   end
 
@@ -136,12 +146,34 @@ class Crm::MetaAds::Panel::Report
       return_per_real: sales.any? ? ratio(value, total_spend) : nil }
   end
 
+  # Gasto dos anúncios que levam para o WhatsApp: é dele que saem o custo por conversa e por venda.
   def total_spend
-    spend_by_ad.values.sum
+    whatsapp_ad_ids.sum { |ad_id| spend_by_ad.fetch(ad_id, 0.0) }
   end
 
-  def ad_ids
-    (spend_by_ad.keys + cohort.conversation_ads.values.compact).uniq
+  def whatsapp_ad_ids
+    @whatsapp_ad_ids ||= (spend_by_ad.keys.select { |ad_id| messaging_ad_ids.include?(ad_id) } +
+                          cohort.conversation_ads.values.compact).uniq
+  end
+
+  # Anúncio de conversa: já trouxe conversa pelo clique (qualquer época) ou a Meta já contou conversa iniciada nele.
+  def messaging_ad_ids
+    @messaging_ad_ids ||= if whatsapp_only?
+                            Set.new
+                          else
+                            Set.new(insights_since_ever.where(conversations_started: 1..).distinct.pluck(:ad_id)) |
+                              Crm::MetaAdLink.where(account_id: @account_id, ad_id: spend_by_ad.keys).distinct.pluck(:ad_id)
+                          end
+  end
+
+  def other_metrics
+    @other_metrics ||= insights.group(:ad_id).pluck(:ad_id, Arel.sql('SUM(impressions)'), Arel.sql('SUM(link_clicks)'))
+                               .to_h { |ad_id, impressions, clicks| [ad_id, { impressions: impressions.to_i, link_clicks: clicks.to_i }] }
+  end
+
+  def other_ad_row(ad_id)
+    { ad_id: ad_id, spend: spend_by_ad.fetch(ad_id, 0.0).round(2) }
+      .merge(other_metrics.fetch(ad_id, { impressions: 0, link_clicks: 0 }), ad_look(ad_id))
   end
 
   def ad_row(ad_id)
@@ -167,7 +199,7 @@ class Crm::MetaAds::Panel::Report
   end
 
   def objects
-    @objects ||= Crm::MetaAdObject.where(account_id: @account_id, meta_object_id: ad_ids)
+    @objects ||= Crm::MetaAdObject.where(account_id: @account_id, meta_object_id: whatsapp_ad_ids + spend_by_ad.keys)
                                   .with_attached_image.index_by(&:meta_object_id)
   end
 

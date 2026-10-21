@@ -59,12 +59,25 @@ const chooseView = value => {
   view.value = value;
   router.replace({ query: { ...route.query, aba: value } });
 };
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
 // "Agora não" no passo 4: segue para o resumo, com o passo marcado "Desligado".
 const salesLater = ref(false);
 
+// Com Anúncios sem login (#2054), avisar a Meta das vendas é opcional: quem conectou para ver o gasto vai direto ao
+// painel, e o passo fica "Desligado" na Conexão, com o botão para ligar.
+const salesOptional = computed(
+  () =>
+    salesLater.value ||
+    isFeatureEnabledonAccount.value(
+      Number(route.params.accountId),
+      FEATURE_FLAGS.ANUNCIOS_SEM_LOGIN
+    )
+);
 const step = computed(() => {
   const value = currentStep(connection.value);
-  return value === SALES_STEP && salesLater.value ? DONE : value;
+  return value === SALES_STEP && salesOptional.value ? DONE : value;
 });
 const salesOff = computed(
   () => step.value === DONE && !connection.value?.sales_signal?.enabled
@@ -104,9 +117,6 @@ const showPanel = computed(
 // Anúncios sem login (#1960, degrau 0): com a flag e sem conexão de anúncios nenhuma (o servidor diz em
 // whatsapp_result.enabled), a página abre pronta com o resultado que chega pelo WhatsApp. Quem já tem
 // conexão (ativa, caída ou no meio da escolha) segue no caminho de sempre, com "Conectar de novo".
-const isFeatureEnabledonAccount = useMapGetter(
-  'accounts/isFeatureEnabledonAccount'
-);
 const semLogin = computed(
   () =>
     isFeatureEnabledonAccount.value(
@@ -170,6 +180,12 @@ const finished = async () => {
 const later = () => {
   salesLater.value = true;
   openStep.value = null;
+};
+
+// Conectado a partir do painel sem login (#2054): direto para o painel com gasto.
+const connectedFromWhatsapp = async () => {
+  chooseView('resultado');
+  await load();
 };
 
 const reconnect = () => {
@@ -238,7 +254,9 @@ onMounted(load);
       <AnunciosSemLogin
         v-else-if="semLogin"
         :result="connection.whatsapp_result"
+        :connection="connection"
         :read-only="readOnly"
+        @connected="connectedFromWhatsapp"
       />
 
       <template v-else-if="readOnly">

@@ -41,12 +41,16 @@ import MetaAdsReportButton from './MetaAdsReportButton.vue';
 // Sem conexão (Anúncios sem login, #1960, panel.source 'whatsapp'): o mesmo painel com o que o WhatsApp contou,
 // sem gasto, custo, veredito, consultor nem "quanto confiar". `sample` (período → painel) mostra números de
 // exemplo, sem servidor e sem abrir anúncio ou lista.
+//
+// Conectar a conta de anúncios (#2054): sem conexão, o caminho começa num "Investimento" sem valor, com "Ver quanto
+// gastei" (emite 'connect'). Com conexão, os anúncios que não levam ao WhatsApp ficam num bloco à parte ("Outros
+// anúncios", panel.other_ads), com gasto, cliques e vezes que apareceram, fora do custo por conversa e por venda.
 const props = defineProps({
   // Quem só tem meta_ads_view (#1794): o painel sem os gestos do consultor nem os atalhos para a conexão.
   readOnly: { type: Boolean, default: false },
   sample: { type: Function, default: null },
 });
-const emit = defineEmits(['open']);
+const emit = defineEmits(['open', 'connect']);
 
 const { t, locale } = useI18n();
 const route = useRoute();
@@ -160,6 +164,8 @@ const periodEmpty = computed(
 );
 
 const fmt = value => amount(value, panel.value?.currency, locale.value);
+const number = value =>
+  new Intl.NumberFormat(locale.value.replace('_', '-')).format(value || 0);
 
 const totals = computed(() => panel.value?.totals || {});
 const updated = computed(() =>
@@ -214,10 +220,29 @@ const toggleList = step => {
   openList.value = openList.value === step ? null : step;
 };
 
+// Sem conexão, quem pode conectar vê o investimento como o primeiro passo do caminho, ainda sem valor.
+const canConnect = computed(
+  () => panel.value?.source === 'whatsapp' && !props.readOnly && !props.sample
+);
+const spendStep = computed(() => {
+  if (!withoutSpend.value) {
+    return [{ key: 'SPEND', value: fmt(totals.value.spend), plural: 2 }];
+  }
+  return canConnect.value
+    ? [
+        {
+          key: 'SPEND',
+          value: '—',
+          plural: 2,
+          connect: true,
+          note: t('CRM_KANBAN.META_ADS_HUB.PANEL.CONNECT_SPEND.NOTE'),
+        },
+      ]
+    : [];
+});
+
 const path = computed(() => [
-  ...(withoutSpend.value
-    ? []
-    : [{ key: 'SPEND', value: fmt(totals.value.spend), plural: 2 }]),
+  ...spendStep.value,
   {
     key: 'CONVERSATIONS',
     response: responseTime.value,
@@ -258,6 +283,7 @@ const path = computed(() => [
 ]);
 
 const ads = computed(() => panel.value?.ads || []);
+const otherAds = computed(() => panel.value?.other_ads || []);
 // O link de imagem da Meta vence (o "oe=" da URL); imagem que não abre vira o quadro de reserva. Guarda o link
 // que falhou por anúncio: quando a renovação diária traz um link novo, a imagem volta sem recarregar a página.
 const brokenImages = ref({});
@@ -585,18 +611,19 @@ onMounted(() => {
           </h4>
           <ol
             class="m-0 grid list-none grid-cols-2 gap-2 p-0"
-            :class="withoutSpend ? 'xl:grid-cols-3' : 'xl:grid-cols-4'"
+            :class="path.length === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-4'"
           >
             <li
               v-for="step in path"
               :key="step.key"
               :data-panel-path="step.key"
               class="relative flex min-w-0 flex-col gap-1 rounded-xl bg-n-solid-1 px-4 py-3 ring-1 ring-inset ring-n-weak has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
-              :class="
-                PATH_LISTS[step.key] && !sample
+              :class="[
+                (PATH_LISTS[step.key] && !sample) || step.connect
                   ? 'transition hover:bg-n-alpha-1 hover:ring-n-slate-6'
-                  : ''
-              "
+                  : '',
+                step.connect ? 'bg-n-blue-1 ring-n-blue-5 border-dashed' : '',
+              ]"
             >
               <span
                 class="text-xl font-semibold tabular-nums sm:text-2xl"
@@ -622,6 +649,19 @@ onMounted(() => {
               <span v-if="step.note" class="text-xs text-n-slate-10">
                 {{ step.note }}
               </span>
+              <button
+                v-if="step.connect"
+                type="button"
+                data-panel-connect
+                class="inline-flex min-h-11 items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-semibold text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+                @click="emit('connect')"
+              >
+                {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.CONNECT_SPEND.CTA') }}
+                <span
+                  class="i-lucide-arrow-right size-3.5"
+                  aria-hidden="true"
+                />
+              </button>
               <span
                 v-if="step.response"
                 data-panel-response-time
@@ -737,7 +777,11 @@ onMounted(() => {
           class="flex flex-col gap-5 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
         >
           <h4 class="m-0 text-sm font-semibold text-n-slate-11">
-            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_TITLE') }}
+            {{
+              otherAds.length
+                ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_WHATSAPP_TITLE')
+                : $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_TITLE')
+            }}
           </h4>
           <p v-if="!ads.length" class="m-0 text-sm text-n-slate-11">
             {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_EMPTY') }}
@@ -864,6 +908,90 @@ onMounted(() => {
                   />
                 </button>
               </div>
+            </li>
+          </ul>
+        </div>
+
+        <div
+          v-if="otherAds.length"
+          data-panel-other-ads
+          class="flex flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
+        >
+          <div
+            class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+          >
+            <h4 class="m-0 text-sm font-semibold text-n-slate-11">
+              {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.TITLE') }}
+            </h4>
+            <span class="text-sm font-semibold tabular-nums text-n-slate-12">
+              {{
+                $t('CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.TOTAL', {
+                  value: fmt(totals.other_spend),
+                })
+              }}
+            </span>
+          </div>
+          <p class="m-0 max-w-3xl text-sm text-n-slate-11">
+            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.HINT') }}
+          </p>
+          <ul class="m-0 flex list-none flex-col gap-2 p-0">
+            <li
+              v-for="ad in otherAds"
+              :key="ad.ad_id"
+              :data-panel-other-ad="ad.ad_id"
+              class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-3 py-3 ring-1 ring-inset ring-n-weak"
+            >
+              <span
+                class="relative size-12 flex-none overflow-hidden rounded-lg bg-n-alpha-1"
+              >
+                <img
+                  v-if="imageOf(ad)"
+                  :src="imageOf(ad)"
+                  alt=""
+                  loading="lazy"
+                  class="size-full object-cover"
+                  @error="imageFailed(ad)"
+                />
+                <span
+                  v-else
+                  class="grid size-full place-items-center bg-gradient-to-br"
+                  :class="thumbClass(ad.ad_id)"
+                >
+                  <span
+                    class="i-lucide-image size-5 text-white/50"
+                    aria-hidden="true"
+                  />
+                </span>
+              </span>
+              <span
+                class="min-w-0 flex-1 basis-40 text-sm font-semibold text-n-slate-12 line-clamp-2"
+              >
+                {{ ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME') }}
+              </span>
+              <dl
+                class="m-0 grid grid-cols-3 gap-x-5 text-end tabular-nums sm:w-auto"
+              >
+                <div
+                  v-for="stat in ['SPEND', 'CLICKS', 'SHOWN']"
+                  :key="stat"
+                  class="flex flex-col gap-0.5"
+                >
+                  <dt class="text-xs text-n-slate-11">
+                    {{ $t(`CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.${stat}`) }}
+                  </dt>
+                  <dd
+                    class="m-0 whitespace-nowrap text-sm font-semibold text-n-slate-12"
+                  >
+                    {{
+                      stat === 'SPEND'
+                        ? fmt(ad.spend)
+                        : number(
+                            stat === 'CLICKS' ? ad.link_clicks : ad.impressions
+                          )
+                    }}
+                  </dd>
+                </div>
+              </dl>
             </li>
           </ul>
         </div>
