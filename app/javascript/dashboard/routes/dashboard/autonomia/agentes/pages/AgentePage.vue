@@ -917,6 +917,7 @@ const tirarPergunta = id => {
               :pode-gerenciar="podeGerenciar"
               :desfazendo="baseDoAgente.desfazendo.value"
               :erro-desfazer="baseDoAgente.erroDesfazer.value"
+              :texto-erro-desfazer="baseDoAgente.textoErroDesfazer.value"
               @atualizar="abrirNovaBase"
               @desfazer="desfazerBase"
             />

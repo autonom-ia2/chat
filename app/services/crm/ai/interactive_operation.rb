@@ -41,7 +41,7 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     when 'copilot_run', 'copilot_chat' then copilot_result
     when 'copilot_text' then Autonomia::Copilot::ConversationCopilot.new(account: @account, **@inputs).perform.to_h
     when 'agent_test', 'agent_suggest' then playground_result
-    when 'agent_base_compare' then Autonomia::Agents::BaseDeSeguros::Comparacao.new(agent, idioma: I18n.locale.to_s).rodar
+    when 'agent_base_compare' then agent_base_compare
     when 'email_rewrite' then EmailCampaigns::Ai::Rewriter.new(account: @account, **@inputs).perform
     when 'stage_criteria', 'stage_criteria_draft'
       Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **@inputs.except(:pipeline_id, :pipeline_name)).perform
@@ -185,6 +185,11 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     permitido = Autonomia::Agents::Config.enabled?(@account) && Autonomia::Agents::Fase2.ligada?(@account) &&
                 @account_user.permission_granted?('autonomia_manage')
     raise Pundit::NotAuthorizedError unless permitido && Autonomia::Agents::BaseDeSeguros.elegivel?(agent)
+  end
+
+  # Quem pediu fica guardado como quem viu o antes e depois (só essa pessoa pode atualizar depois).
+  def agent_base_compare
+    Autonomia::Agents::BaseDeSeguros::Comparacao.new(agent, idioma: I18n.locale.to_s, account_user: @account_user).rodar
   end
 
   def copilot_result

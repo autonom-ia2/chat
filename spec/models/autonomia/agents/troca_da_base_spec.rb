@@ -151,5 +151,28 @@ RSpec.describe Autonomia::Agents::TrocaDaBase do
 
       expect(sem_marca.reload.config['base']).to eq(nova)
     end
+
+    # A corrida espelhada: lido entre a troca e o Desfazer, salvo depois do Desfazer.
+    it 'um objeto lido depois da troca e salvo depois do Desfazer não regrava a base nova' do
+      agent.trocar_base!(nova)
+      lido_no_meio = Autonomia::Agents::Agent.find(agent.id)
+      agent.reload.desfazer_troca_da_base!
+
+      lido_no_meio.update!(config: lido_no_meio.config.merge('voice' => 'grave'))
+
+      expect(agent.reload.config['base']).to eq(antiga)
+      expect(agent.config['voice']).to eq('grave')
+    end
+
+    it 'o mesmo num agente sem marca: o Desfazer tirou a chave, e o save não a devolve' do
+      sem_marca = criar_principal(conta, nome: 'Sem marca')
+      sem_marca.trocar_base!(nova)
+      lido_no_meio = Autonomia::Agents::Agent.find(sem_marca.id)
+      sem_marca.reload.desfazer_troca_da_base!
+
+      lido_no_meio.update!(config: lido_no_meio.config.merge('voice' => 'grave'))
+
+      expect(sem_marca.reload.config).not_to have_key('base')
+    end
   end
 end

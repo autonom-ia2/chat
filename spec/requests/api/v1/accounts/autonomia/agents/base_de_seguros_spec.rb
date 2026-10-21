@@ -29,6 +29,11 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
     usuario
   end
 
+  # O antes e depois desta pessoa terminou (o que a Comparacao grava ao fim do job).
+  def comparou(usuario = admin, versao: bloco.versao('seguros/corretora'))
+    Autonomia::Agents::BaseDeSeguros::Comparada.marcar_quem_viu!(agente, usuario.account_users.find_by(account: conta), versao)
+  end
+
   def caminho(acao = nil, agent: agente)
     ["/api/v1/accounts/#{conta.id}/autonomia/agents/#{agent.id}/base", acao].compact.join('/')
   end
@@ -73,14 +78,16 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       end
     end
 
-    it 'a Lia não tem base: 404' do
+    it 'a Lia não tem base: 404 nas 4 ações, sem gastar o limite' do
       lia = Autonomia::Agents::Agent.create!(account: conta, name: 'Lia', agent_type: 'insurance_quote', instruction: 'Cotação.',
                                              config: { 'with_knowledge' => false })
 
-      [[:get, nil], [:post, 'atualizar']].each do |metodo, acao|
-        pedir(metodo, acao, agent: lia)
+      [[:get, nil], [:post, 'comparar'], [:post, 'atualizar'], [:post, 'desfazer']].each do |metodo, acao|
+        pedir(metodo, acao, agent: lia, params: { versao: bloco.versao('seguros/corretora') })
         expect(response).to have_http_status(:not_found), "#{metodo} #{acao}"
       end
+      expect(Redis::Alfred.get(Autonomia::Agents::BaseDeSeguros::Limite.chave_da_conta(conta))).to be_nil
+      expect(lia.reload.config).not_to have_key('base')
     end
 
     it 'o Guia (system_key) não existe para esta API: 404' do
@@ -109,7 +116,8 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
   end
 
   describe 'POST base/atualizar e base/desfazer' do
-    it 'quem gerencia atualiza: só a base muda, e o Desfazer aparece' do
+    it 'quem gerencia atualiza depois de comparar: só a base muda, e o Desfazer aparece' do
+      comparou(gerencia)
       pedir(:post, 'atualizar', usuario: gerencia, params: { versao: bloco.versao('seguros/corretora') })
 
       expect(response).to have_http_status(:ok)
@@ -121,7 +129,45 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       expect(response.body).not_to include(bloco.for_segmento('seguros/corretora'))
     end
 
+    # O antes e depois é exigido pelo servidor: nem o Guia nem a API trocam a base sem ele.
+    it 'sem comparar antes: 422 (comparar_antes) e nada muda' do
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('comparar_antes')
+      expect(agente.reload.config['base']).to eq(seguradora)
+    end
+
+    it 'a comparação de outra pessoa não vale: 422 e nada muda' do
+      comparou(gerencia)
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('comparar_antes')
+      expect(agente.reload.config['base']).to eq(seguradora)
+    end
+
+    it 'a comparação de outra versão não vale: 422 e nada muda' do
+      comparou(versao: 'outra0000000')
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('comparar_antes')
+    end
+
+    it 'agente sem instrução: 422 com o motivo próprio (sem_instrucao), no comparar e no atualizar' do
+      sem_instrucao = criar_principal(conta, nome: 'Sem instrução', instruction: nil, config: { 'with_knowledge' => false })
+
+      %w[comparar atualizar].each do |acao|
+        pedir(:post, acao, agent: sem_instrucao, params: { versao: bloco.versao('seguros/corretora') })
+        expect(response).to have_http_status(:unprocessable_entity), acao
+        expect(response.parsed_body['code']).to eq('sem_instrucao'), acao
+      end
+      expect(Redis::Alfred.get(Autonomia::Agents::BaseDeSeguros::Limite.chave_da_conta(conta))).to be_nil
+    end
+
     it 'desfaz e volta à base de antes; pedir de novo é 409' do
+      comparou
       pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
       pedir(:post, 'desfazer')
 
@@ -131,6 +177,7 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
 
       pedir(:post, 'desfazer')
       expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body['code']).to eq('desfazer_fechado')
     end
 
     it 'a base nova mudou desde que a pessoa viu: 409 e nada muda' do
@@ -154,6 +201,7 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       pedir(:post, 'atualizar')
 
       expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('comparar_antes')
       expect(agente.reload.config['base']).to eq(seguradora)
     end
 
@@ -191,10 +239,49 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.base_de_seguros.comparar_espere', locale: :pt_BR))
 
       pedir(:post, 'atualizar', params: { versao: '' })
-      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.base_de_seguros.sem_base_nova', locale: :pt_BR))
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.base_de_seguros.comparar_antes', locale: :pt_BR))
 
       pedir(:post, 'atualizar', params: { versao: 'outra' })
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.base_de_seguros.base_mudou', locale: :pt_BR))
+    end
+
+    # Reabrir a gaveta nos 2 minutos depois de uma comparação pronta: o mesmo antes e depois, não a espera.
+    it 'com a comparação pronta guardada: devolve ela (200), sem job e sem 429, e quem pediu passa a poder atualizar' do
+      admin.update!(ui_settings: { 'locale' => 'en' })
+      versao = bloco.versao('seguros/corretora')
+      pronta = { versao: versao, perguntas: [{ pergunta: 'O que é franquia?', hoje: 'a', hoje_equipe: false, nova: 'b', nova_equipe: false }] }
+      Autonomia::Agents::BaseDeSeguros::Limite.reservar!(agente)
+      Autonomia::Agents::BaseDeSeguros::Comparada.guardar!(agente, gerencia.account_users.find_by(account: conta), 'en', pronta)
+
+      expect { pedir(:post, 'comparar') }.not_to have_enqueued_job(Crm::Ai::InteractiveJob)
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq(pronta.deep_stringify_keys)
+
+      pedir(:post, 'atualizar', params: { versao: versao })
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'a comparação guardada em outro idioma não serve: segue a regra da espera' do
+      admin.update!(ui_settings: { 'locale' => 'en' })
+      pronta = { versao: bloco.versao('seguros/corretora'), perguntas: [{ pergunta: 'O que é franquia?' }] }
+      Autonomia::Agents::BaseDeSeguros::Limite.reservar!(agente)
+      Autonomia::Agents::BaseDeSeguros::Comparada.guardar!(agente, admin.account_users.find_by(account: conta), 'pt_BR', pronta)
+
+      pedir(:post, 'comparar')
+
+      expect(response).to have_http_status(:too_many_requests)
+    end
+
+    it 'tipo sem perguntas para o antes e depois: 422, sem gastar o limite, e a linha não oferece o botão' do
+      allow(Autonomia::Segmentos::Bloco).to receive(:perguntas).and_return([])
+
+      pedir(:post, 'comparar')
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('sem_base_nova')
+      expect(Redis::Alfred.get(Autonomia::Agents::BaseDeSeguros::Limite.chave_da_conta(conta))).to be_nil
+
+      pedir(:get)
+      expect(response.parsed_body['pode_atualizar']).to be(false)
     end
 
     it 'no máximo 10 por dia na conta: a 11ª é 429' do

@@ -1331,6 +1331,9 @@ pt_BR:
       base_mudou: 'O agente mudou enquanto isso. Nada mudou agora. A página foi atualizada.'
       comparar_espere: 'Espere uns 2 minutos para comparar de novo.'
       comparar_amanha: 'Esta conta já comparou muitas vezes hoje. Amanhã dá para comparar de novo.'
+      comparar_antes: 'Compare as respostas antes de atualizar a base. Nada mudou.'
+      sem_instrucao: 'Este agente ainda não tem instruções, então a base dele não pode ser atualizada. Nada mudou.'
+      desfazer_fechado: 'O agente mudou depois da atualização, e o Desfazer não vale mais. Para voltar, use o histórico de versões.'
     source:
       invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."
       arquivo_grande: "O arquivo é grande demais. O tamanho máximo é 25 MB."

@@ -8,6 +8,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
   let(:antiga) { { 'segmento' => 'seguros/seguradora', 'versao' => 'antiga000000', 'texto' => 'TEXTO ANTIGO' } }
   let(:agent) { criar_principal(conta, config: { 'with_knowledge' => false, 'base' => antiga }) }
   let(:chamadas) { [] }
+  let(:quem) { conta.account_users.find_by(user: create(:user, account: conta, role: :administrator)) }
 
   around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true', AUTONOMIA_PACOTES_ENABLED: 'true') { example.run } }
 
@@ -28,7 +29,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
   end
 
   it 'responde as 3 perguntas do tipo novo com a base de hoje e com a nova' do
-    resultado = described_class.new(agent, idioma: 'pt_BR').rodar
+    resultado = described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
 
     perguntas = bloco.perguntas('seguros/corretora', 'pt_BR')
     expect(resultado[:perguntas].pluck(:pergunta)).to eq(perguntas)
@@ -38,8 +39,39 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     expect(resultado[:versao]).to eq(bloco.versao('seguros/corretora'))
   end
 
+  it 'ao terminar, guarda que esta pessoa viu esta versão e o resultado, para reabrir a gaveta' do
+    comparada = Autonomia::Agents::BaseDeSeguros::Comparada
+    versao = bloco.versao('seguros/corretora')
+
+    resultado = described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
+
+    expect(comparada.viu?(agent, quem, versao)).to be(true)
+    expect(comparada.resultado(agent, versao, 'pt_BR')).to eq(resultado.deep_stringify_keys)
+    expect(comparada.resultado(agent, versao, 'en')).to be_nil
+    outra_pessoa = conta.account_users.find_by(user: create(:user, account: conta, role: :administrator))
+    expect(comparada.viu?(agent, outra_pessoa, versao)).to be(false)
+  end
+
+  it 'falhou: não guarda nada (ninguém atualiza sem ter visto o antes e depois)' do
+    allow(Autonomia::Agents::Answerer).to receive(:new)
+      .and_return(instance_double(Autonomia::Agents::Answerer, answer: resposta('', error: 'ia_indisponivel')))
+
+    expect { described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar }.to raise_error(described_class::Falhou)
+    expect(Autonomia::Agents::BaseDeSeguros::Comparada.viu?(agent, quem, bloco.versao('seguros/corretora'))).to be(false)
+  end
+
+  it 'tipo sem perguntas: SemBaseNova antes de chamar a IA, e o agente fica livre' do
+    allow(Autonomia::Segmentos::Bloco).to receive(:perguntas).and_return([])
+    limite = Autonomia::Agents::BaseDeSeguros::Limite
+    limite.reservar!(agent)
+
+    expect { described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar }.to raise_error(described_class::SemBaseNova)
+    expect(chamadas).to be_empty
+    expect { limite.reservar!(agent) }.not_to raise_error
+  end
+
   it 'usa o motor do Testar sem ferramenta, com a etiqueta de custo do Testar' do
-    described_class.new(agent, idioma: 'pt_BR').rodar
+    described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
 
     expect(chamadas).to all(include(prova: true, feature: Autonomia::Agents::Playground::USAGE_FEATURE))
     expect(chamadas.pluck(:texto_da_base).uniq).to contain_exactly('TEXTO ANTIGO', bloco.for_segmento('seguros/corretora'))
@@ -48,7 +80,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
   it 'não grava nada no agente' do
     antes = agent.reload.attributes
 
-    described_class.new(agent, idioma: 'pt_BR').rodar
+    described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
 
     expect(agent.reload.attributes).to eq(antes)
     expect(agent.instruction_versions).to be_empty
@@ -59,7 +91,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
   end
 
   it 'pergunta no idioma de quem pediu' do
-    resultado = described_class.new(agent, idioma: 'en').rodar
+    resultado = described_class.new(agent, idioma: 'en', account_user: quem).rodar
 
     expect(resultado[:perguntas].pluck(:pergunta)).to eq(bloco.perguntas('seguros/corretora', 'en'))
   end
@@ -68,7 +100,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     allow(Autonomia::Agents::Answerer).to receive(:new)
       .and_return(instance_double(Autonomia::Agents::Answerer, answer: resposta(nil, equipe: true)))
 
-    item = described_class.new(agent, idioma: 'pt_BR').rodar[:perguntas].first
+    item = described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar[:perguntas].first
 
     expect(item).to include(hoje: nil, hoje_equipe: true, nova: nil, nova_equipe: true)
   end
@@ -79,7 +111,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     limite = Autonomia::Agents::BaseDeSeguros::Limite
     limite.reservar!(agent)
 
-    expect { described_class.new(agent, idioma: 'pt_BR').rodar }.to raise_error(described_class::Falhou)
+    expect { described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar }.to raise_error(described_class::Falhou)
     expect { limite.reservar!(agent) }.not_to raise_error
   end
 
@@ -87,7 +119,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     agent.update!(config: agent.config.merge('base' => { 'segmento' => 'seguros/corretora', 'versao' => bloco.versao('seguros/corretora'),
                                                          'texto' => bloco.for_segmento('seguros/corretora') }))
 
-    expect { described_class.new(agent, idioma: 'pt_BR').rodar }.to raise_error(described_class::SemBaseNova)
+    expect { described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar }.to raise_error(described_class::SemBaseNova)
     expect(chamadas).to be_empty
   end
 
@@ -97,7 +129,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     agent.update!(config: agent.config.merge('base' => { 'segmento' => 'seguros/corretora', 'versao' => bloco.versao('seguros/corretora'),
                                                          'texto' => bloco.for_segmento('seguros/corretora') }))
 
-    expect { described_class.new(agent, idioma: 'pt_BR').rodar }.to raise_error(described_class::SemBaseNova)
+    expect { described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar }.to raise_error(described_class::SemBaseNova)
     expect { limite.reservar!(agent) }.not_to raise_error
   end
 
@@ -119,7 +151,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     it 'não manda ferramenta ao modelo, troca só a base e não grava nada' do
       antes = agent.reload.attributes
 
-      resultado = described_class.new(agent, idioma: 'pt_BR').rodar
+      resultado = described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
 
       expect(resultado[:perguntas].pluck(:hoje, :nova)).to all(eq(%w[ok ok]))
       expect(pedidos.size).to eq(6)
@@ -153,6 +185,25 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
       usuario.account_users.find_by(account: conta).update!(custom_role: create(:custom_role, account: conta, permissions: %w[autonomia_view]))
 
       expect { operacao(usuario).authorize! }.to raise_error(Pundit::NotAuthorizedError)
+    end
+
+    it 'a Lia (instrução mantida) é recusada' do
+      lia = Autonomia::Agents::Agent.create!(account: conta, name: 'Lia', agent_type: 'insurance_quote', instruction: 'Cotação.',
+                                             config: { 'with_knowledge' => false })
+      account_user = conta.account_users.find_by(user: dono)
+      op = Crm::Ai::InteractiveOperation.new('account_id' => conta.id, 'account_user_id' => account_user.id,
+                                             'operation' => 'agent_base_compare', 'inputs' => { 'agent_id' => lia.id }, 'locale' => 'pt_BR')
+
+      expect { op.authorize! }.to raise_error(Pundit::NotAuthorizedError)
+    end
+
+    it 'guarda quem pediu como quem viu' do
+      op = operacao(dono)
+      op.authorize!
+      op.perform
+
+      account_user = conta.account_users.find_by(user: dono)
+      expect(Autonomia::Agents::BaseDeSeguros::Comparada.viu?(agent, account_user, bloco.versao('seguros/corretora'))).to be(true)
     end
 
     it 'sem a Fase 2 é recusado' do

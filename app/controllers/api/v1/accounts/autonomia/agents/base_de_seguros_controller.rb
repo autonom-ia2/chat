@@ -16,39 +16,36 @@ class Api::V1::Accounts::Autonomia::Agents::BaseDeSegurosController < Api::V1::A
   rescue_from ActiveRecord::Deadlocked do
     switch_locale_using_account_locale { render_conflito_de_trava }
   end
-  rescue_from BASE::SemBaseNova, ::Autonomia::Agents::TrocaDaBase::TrocaIndisponivel do
-    switch_locale_using_account_locale { render_unprocessable(I18n.t('autonomia.base_de_seguros.sem_base_nova')) }
-  end
-  rescue_from BASE::VersaoMudou, ::Autonomia::Agents::TrocaDaBase::BaseMudou do
-    switch_locale_using_account_locale do
-      render json: { error: I18n.t('autonomia.base_de_seguros.base_mudou'), code: 'base_mudou' }, status: :conflict
-    end
-  end
-  rescue_from BASE::Limite::Excedido do |erro|
-    codigo = "comparar_#{erro.motivo}"
-    switch_locale_using_account_locale do
-      render json: { error: I18n.t("autonomia.base_de_seguros.#{codigo}"), code: codigo }, status: :too_many_requests
-    end
-  end
+  rescue_from(BASE::SemBaseNova) { aviso('sem_base_nova', :unprocessable_entity) }
+  rescue_from(::Autonomia::Agents::TrocaDaBase::TrocaIndisponivel) { aviso('sem_instrucao', :unprocessable_entity) }
+  rescue_from(BASE::NaoComparou) { aviso('comparar_antes', :unprocessable_entity) }
+  rescue_from(BASE::VersaoMudou) { aviso('base_mudou', :conflict) }
+  rescue_from(::Autonomia::Agents::TrocaDaBase::BaseMudou) { aviso('desfazer_fechado', :conflict) }
+  rescue_from(BASE::Limite::Excedido) { |erro| aviso("comparar_#{erro.motivo}", :too_many_requests) }
 
   def show
     render json: payload
   end
 
-  # O antes e depois (BaseDeSeguros::Comparacao) vai para um job; a tela busca a resposta no poll_url.
+  # O antes e depois (BaseDeSeguros::Comparacao) vai para um job; a tela busca a resposta no poll_url. Com uma comparação
+  # pronta desta versão nos últimos 2 minutos (Comparada), devolve ela na hora: reabrir a gaveta mostra o mesmo antes e
+  # depois, sem gastar a vez nem mandar esperar, e quem pediu passa a ter visto.
   def comparar
-    raise BASE::SemBaseNova unless servico.to_h&.dig(:pode_atualizar)
+    versao = servico.marca_para_trocar!['versao']
+    pronta = BASE::Comparada.resultado(@agent, versao, I18n.locale.to_s)
+    return mostrar_comparacao_pronta(versao, pronta) if pronta
 
     BASE::Limite.reservar!(@agent)
     defer_interactive_ai('agent_base_compare', { agent_id: @agent.id })
   end
 
-  # `versao` (obrigatória): a da base nova que a pessoa comparou; sem ela, 422; outra versão, 409; nos dois, nada muda.
+  # `versao` (obrigatória): a da base nova que a pessoa comparou. Sem ela, ou sem o antes e depois dela por esta pessoa,
+  # 422 (comparar_antes); outra versão, 409. Em todos, nada muda.
   def atualizar
     versao = params[:versao].to_s
-    raise BASE::SemBaseNova if versao.blank?
+    raise BASE::NaoComparou if versao.blank?
 
-    servico.atualizar!(created_by: Current.user, versao: versao)
+    servico.atualizar!(created_by: Current.user, versao: versao, account_user: Current.account_user)
     render json: payload
   end
 
@@ -58,6 +55,17 @@ class Api::V1::Accounts::Autonomia::Agents::BaseDeSegurosController < Api::V1::A
   end
 
   private
+
+  def aviso(codigo, status)
+    switch_locale_using_account_locale do
+      render json: { error: I18n.t("autonomia.base_de_seguros.#{codigo}"), code: codigo }, status: status
+    end
+  end
+
+  def mostrar_comparacao_pronta(versao, pronta)
+    BASE::Comparada.marcar_quem_viu!(@agent, Current.account_user, versao)
+    render json: pronta
+  end
 
   def ensure_fase2
     head :not_found unless ::Autonomia::Agents::Fase2.ligada?(Current.account)

@@ -8,7 +8,10 @@ import { pollAiRequest } from '../../helper/aiRequestPolling';
 //     atual:    { segmento, data } | null          (null = trabalha sem base)
 //     nova:     { segmento, data, versao } | null
 //     desfazer: { anterior: { segmento, data } | null } | null  (existe logo depois de atualizar)
-//   comparar → { data: { versao, perguntas: [{ pergunta, hoje, hoje_equipe, nova, nova_equipe }] } } (job, com poll)
+//   comparar → { data: { versao, perguntas: [{ pergunta, hoje, hoje_equipe, nova, nova_equipe }] } } (job, com poll; 200
+//              na hora quando há uma comparação pronta desta versão dos últimos 2 minutos)
+//   erros com { error, code }: 422 sem_base_nova | sem_instrucao | comparar_antes, 409 base_mudou | desfazer_fechado,
+//              429 comparar_espere | comparar_amanha
 class BaseDoAgenteAPI extends ApiClient {
   constructor() {
     super('autonomia/agents', { accountScoped: true });

@@ -10,9 +10,11 @@ class Autonomia::Agents::BaseDeSeguros::Comparacao
   class SemBaseNova < StandardError; end
   class Falhou < StandardError; end
 
-  def initialize(agent, idioma:)
+  # `account_user`: quem pediu. Ao fim, fica guardado que essa pessoa viu esta versão (Comparada): só ela pode atualizar.
+  def initialize(agent, idioma:, account_user:)
     @agent = agent
     @idioma = idioma
+    @account_user = account_user
   end
 
   # -> { versao, perguntas: [{ pergunta, hoje, hoje_equipe, nova, nova_equipe }] }. `versao`: a da base nova comparada, que
@@ -21,9 +23,13 @@ class Autonomia::Agents::BaseDeSeguros::Comparacao
     marca = Autonomia::Agents::BaseDeSeguros.new(@agent).marca_nova
     raise SemBaseNova if marca.nil?
 
-    com_a_nova = agente_com_a_base(marca)
     perguntas = Autonomia::Segmentos::Bloco.perguntas(marca['segmento'], @idioma)
-    { versao: marca['versao'], perguntas: perguntas.map { |pergunta| comparar(pergunta, com_a_nova) } }
+    raise SemBaseNova if perguntas.blank?
+
+    com_a_nova = agente_com_a_base(marca)
+    resultado = { versao: marca['versao'], perguntas: perguntas.map { |pergunta| comparar(pergunta, com_a_nova) } }
+    Autonomia::Agents::BaseDeSeguros::Comparada.guardar!(@agent, @account_user, @idioma, resultado)
+    resultado
   rescue StandardError
     Autonomia::Agents::BaseDeSeguros::Limite.liberar!(@agent)
     raise

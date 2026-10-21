@@ -15,6 +15,8 @@ const props = defineProps({
   podeGerenciar: { type: Boolean, default: false },
   desfazendo: { type: Boolean, default: false },
   erroDesfazer: { type: Boolean, default: false },
+  // O motivo do servidor quando o Desfazer não vale mais (409); vazio, o aviso genérico.
+  textoErroDesfazer: { type: String, default: '' },
 });
 
 const emit = defineEmits(['atualizar', 'desfazer']);
@@ -100,7 +102,7 @@ const podeDesfazer = computed(
           role="alert"
           class="m-0 text-sm text-n-ruby-11"
         >
-          {{ t(`${NS}.DESFAZER_ERRO`) }}
+          {{ textoErroDesfazer || t(`${NS}.DESFAZER_ERRO`) }}
         </p>
       </div>
     </div>

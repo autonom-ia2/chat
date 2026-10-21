@@ -18,6 +18,8 @@ class Autonomia::Agents::BaseDeSeguros
   class SemBaseNova < StandardError; end
   # A base nova não é mais a que a pessoa viu (a versão mudou entre a leitura e o clique).
   class VersaoMudou < StandardError; end
+  # Esta pessoa não terminou o antes e depois desta versão (ou ele passou do prazo): o servidor exige a comparação.
+  class NaoComparou < StandardError; end
 
   def self.elegivel?(agent)
     Autonomia::Agents::Fase2.ligada?(agent.account) && !agent.instrucao_mantida? && agent.config.to_h['system_key'].blank?
@@ -41,11 +43,22 @@ class Autonomia::Agents::BaseDeSeguros
     marca if marca && marca['texto'].present? && TROCAVEIS.include?(situacao_atual)
   end
 
-  # Grava a base nova. `versao`: a da base nova que a pessoa comparou (a guarda contra trocar por outra que ela não viu).
-  def atualizar!(created_by:, versao:)
+  # A base nova que dá para comparar e gravar, ou o motivo: SemBaseNova (não há base nova, ou o tipo dela não tem as
+  # perguntas do antes e depois) ou TrocaIndisponivel (o agente não tem instrução para a versão guardar).
+  def marca_para_trocar!
     marca = marca_nova
-    raise SemBaseNova if marca.nil? || !@agent.troca_da_base_disponivel?
+    raise SemBaseNova if marca.nil? || !tem_perguntas?(marca)
+    raise Autonomia::Agents::TrocaDaBase::TrocaIndisponivel unless @agent.troca_da_base_disponivel?
+
+    marca
+  end
+
+  # Grava a base nova. `versao`: a da base nova que a pessoa comparou (a guarda contra trocar por outra que ela não viu).
+  # `account_user`: quem pede; precisa ter terminado o antes e depois desta versão (Comparada).
+  def atualizar!(created_by:, versao:, account_user:)
+    marca = marca_para_trocar!
     raise VersaoMudou if versao != marca['versao']
+    raise NaoComparou unless Autonomia::Agents::BaseDeSeguros::Comparada.viu?(@agent, account_user, versao)
 
     @agent.trocar_base!(marca, created_by: created_by)
   end
@@ -87,7 +100,13 @@ class Autonomia::Agents::BaseDeSeguros
   end
 
   def pode_atualizar?
-    marca_nova.present? && @agent.troca_da_base_disponivel?
+    marca = marca_nova
+    marca.present? && tem_perguntas?(marca) && @agent.troca_da_base_disponivel?
+  end
+
+  # As perguntas caem no pt_BR quando falta o idioma (Bloco.perguntas): ter as do padrão basta.
+  def tem_perguntas?(marca)
+    Autonomia::Segmentos::Bloco.perguntas(marca['segmento'], Autonomia::Segmentos::Bloco::IDIOMA_PADRAO).present?
   end
 
   def desfazer

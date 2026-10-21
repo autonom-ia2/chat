@@ -66,7 +66,7 @@ describe('BaseDoAgenteLinha', () => {
       'É o que Bia sabe sobre o ramo de seguros. Só muda quando alguém atualiza.'
     );
     expect(wrapper.find('[data-base-nova]').text()).toBe(
-      'Base nova disponível: Corretora · de 21/10'
+      'Base nova disponível: Corretora · de 21/10/2026'
     );
     await wrapper.find('[data-base-atualizar]').trigger('click');
     expect(wrapper.emitted('atualizar')).toHaveLength(1);
@@ -78,7 +78,7 @@ describe('BaseDoAgenteLinha', () => {
     });
 
     expect(wrapper.find('[data-base-atual]').text()).toBe(
-      'Corretora · de 21/10'
+      'Corretora · de 21/10/2026'
     );
     expect(wrapper.find('[data-base-atualizar]').exists()).toBe(false);
   });
@@ -100,7 +100,7 @@ describe('BaseDoAgenteLinha', () => {
     });
 
     expect(wrapper.find('[data-base-nova]').text()).toBe(
-      'A conta agora é Corretora. Base nova disponível: Corretora · de 21/10'
+      'A conta agora é Corretora. Base nova disponível: Corretora · de 21/10/2026'
     );
   });
 
@@ -152,6 +152,20 @@ describe('BaseDoAgenteLinha', () => {
     expect(wrapper.find('[data-base-erro-desfazer]').text()).toBe(
       'Não deu para desfazer agora. Nada mudou.'
     );
+  });
+
+  it('when undo no longer applies (409), shows the server reason, with no retry', () => {
+    const wrapper = linha({
+      base: base({ situacao: 'em_dia', atual: corretora, nova: null }),
+      erroDesfazer: true,
+      textoErroDesfazer:
+        'O agente mudou depois da atualização, e o Desfazer não vale mais. Para voltar, use o histórico de versões.',
+    });
+
+    expect(wrapper.find('[data-base-erro-desfazer]').text()).toBe(
+      'O agente mudou depois da atualização, e o Desfazer não vale mais. Para voltar, use o histórico de versões.'
+    );
+    expect(wrapper.find('[data-base-desfazer]').exists()).toBe(false);
   });
 
   it('has no native select', () => {
@@ -224,11 +238,11 @@ describe('GavetaNovaBase', () => {
     await flushPromises();
 
     const hoje = [...document.querySelectorAll('[data-resposta="hoje"]')];
-    expect(hoje[0].textContent).toContain('Hoje (Seguradora · de 02/10)');
+    expect(hoje[0].textContent).toContain('Hoje (Seguradora · de 02/10/2026)');
     expect(hoje[1].textContent).toContain('Passaria a conversa para a equipe.');
     expect(
       document.querySelector('[data-resposta="nova"]').textContent
-    ).toContain('Com a base nova (Corretora · de 21/10)');
+    ).toContain('Com a base nova (Corretora · de 21/10/2026)');
     wrapper.unmount();
   });
 
@@ -310,7 +324,7 @@ describe('GavetaNovaBase', () => {
     expect(sinal.aborted).toBe(true);
   });
 
-  it('over the limit, shows the server message and no confirm button', async () => {
+  it('over the limit, shows only the wait: server message, no Try again, no confirm button', async () => {
     const erro = Object.assign(new Error('429'), {
       response: {
         status: 429,
@@ -320,10 +334,38 @@ describe('GavetaNovaBase', () => {
     const wrapper = gaveta({ comparar: vi.fn().mockRejectedValue(erro) });
     await flushPromises();
 
-    expect(
-      document.querySelector('[data-erro-comparar]').textContent
-    ).toContain('Espere uns 2 minutos para comparar de novo.');
+    const aviso = document.querySelector('[data-erro-comparar]');
+    expect(aviso.textContent).toContain(
+      'Espere uns 2 minutos para comparar de novo.'
+    );
+    expect(aviso.textContent).not.toContain('Tentar de novo');
+    expect(aviso.querySelector('button')).toBeNull();
     expect(document.querySelector('[data-confirmar-base]')).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('when the server asks to compare first (422), goes back to the error with Try again', async () => {
+    const erro = Object.assign(new Error('422'), {
+      response: {
+        status: 422,
+        data: {
+          error: 'Compare as respostas antes de atualizar a base. Nada mudou.',
+          code: 'comparar_antes',
+        },
+      },
+    });
+    const wrapper = gaveta({ atualizar: vi.fn().mockRejectedValue(erro) });
+    await flushPromises();
+
+    document.querySelector('[data-confirmar-base]').click();
+    await flushPromises();
+
+    const aviso = document.querySelector('[data-erro-comparar]');
+    expect(aviso.textContent).toContain(
+      'Compare as respostas antes de atualizar a base. Nada mudou.'
+    );
+    expect(aviso.textContent).toContain('Tentar de novo');
+    expect(document.querySelector('[data-erro-atualizar]')).toBeNull();
     wrapper.unmount();
   });
 });
@@ -368,7 +410,24 @@ describe('useBaseDoAgente', () => {
     await flushPromises();
 
     expect(estado.erroDesfazer.value).toBe(true);
+    expect(estado.textoErroDesfazer.value).toBe('');
     expect(estado.base.value.desfazer).toBeNull();
+  });
+
+  it('keeps the server reason when undo no longer applies (409)', async () => {
+    api.ler.mockResolvedValue({ data: base({ desfazer: { anterior: null } }) });
+    api.desfazer.mockRejectedValue(
+      Object.assign(new Error('409'), {
+        response: { status: 409, data: { error: 'Use o histórico.' } },
+      })
+    );
+    const estado = useBaseDoAgente(7);
+    await estado.carregar();
+
+    await estado.desfazer();
+
+    expect(estado.erroDesfazer.value).toBe(true);
+    expect(estado.textoErroDesfazer.value).toBe('Use o histórico.');
   });
 
   it('reads the line again when the update fails, and passes the error on', async () => {

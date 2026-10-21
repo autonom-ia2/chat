@@ -15,6 +15,7 @@ export function useBaseDoAgente(agentId) {
   const base = ref(null);
   const desfazendo = ref(false);
   const erroDesfazer = ref(false);
+  const textoErroDesfazer = ref('');
 
   const id = () => Number(toValue(agentId));
 
@@ -59,21 +60,27 @@ export function useBaseDoAgente(agentId) {
       const { data } = await BaseDoAgenteAPI.atualizar(id(), versao);
       base.value = data;
       erroDesfazer.value = false;
+      textoErroDesfazer.value = '';
     } catch (erro) {
       recarregar();
       throw erro;
     }
   };
 
+  // O Desfazer que não vale mais (409: o agente mudou depois) traz o motivo do servidor; a linha mostra ele, sem
+  // sugerir tentar de novo. Outra falha: o aviso genérico da linha.
   const desfazer = async () => {
     desfazendo.value = true;
     erroDesfazer.value = false;
+    textoErroDesfazer.value = '';
     try {
       const { data } = await BaseDoAgenteAPI.desfazer(id());
       base.value = data;
       return true;
-    } catch {
+    } catch (erro) {
       erroDesfazer.value = true;
+      textoErroDesfazer.value =
+        erro?.response?.status === 409 ? erro.response.data?.error || '' : '';
       recarregar();
       return false;
     } finally {
@@ -87,6 +94,7 @@ export function useBaseDoAgente(agentId) {
     temOQueMostrar,
     desfazendo,
     erroDesfazer,
+    textoErroDesfazer,
     carregar,
     recarregar,
     comparar,

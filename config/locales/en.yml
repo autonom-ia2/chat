@@ -582,6 +582,9 @@ en:
       base_mudou: 'The agent changed in the meantime. Nothing was changed now. The page was updated.'
       comparar_espere: 'Wait a couple of minutes to compare again.'
       comparar_amanha: 'This account already compared many times today. You can compare again tomorrow.'
+      comparar_antes: 'Compare the answers before updating the base. Nothing was changed.'
+      sem_instrucao: 'This agent has no instructions yet, so its base cannot be updated. Nothing was changed.'
+      desfazer_fechado: 'The agent changed after the update, so Undo no longer applies. To go back, use the version history.'
     source:
       invalid_kind: 'This kind of material is not available. Reload the page and try again.'
       arquivo_grande: 'The file is too large. The maximum size is 25 MB.'

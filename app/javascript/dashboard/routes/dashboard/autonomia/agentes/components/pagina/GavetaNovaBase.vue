@@ -10,9 +10,10 @@ import { rotuloDaBase } from '../../utils/baseDoAgente';
 // #1429 F3 — "Atualizar com a nova base": antes de confirmar, o dono vê as mesmas perguntas respondidas agora pelo
 // agente com a base de hoje e com a nova, lado a lado (empilhadas no celular). Só a base muda; o resto do agente fica.
 // Uma ação principal: o botão de atualizar só aparece depois que as respostas chegam, e grava a versão que foi
-// comparada. Errou a comparação, o erro padrão com "Tentar de novo" no lugar (passado o limite, com o texto do
-// servidor). A base nova mudou no meio (409): volta para o erro com "Tentar de novo", que compara a base que vale agora;
-// nunca grava uma base que a pessoa não viu. Outro erro ao atualizar: o aviso no rodapé, e nada muda.
+// comparada. Errou a comparação, o erro padrão com "Tentar de novo" no lugar. No limite (429), só a espera, com o texto
+// do servidor e sem "Tentar de novo". A base nova mudou no meio (409) ou o servidor pede a comparação de novo (422):
+// volta para o erro com "Tentar de novo", que compara a base que vale agora; nunca grava uma base que a pessoa não viu.
+// Outro erro ao atualizar: o aviso no rodapé, e nada muda.
 const props = defineProps({
   base: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -24,13 +25,19 @@ const emit = defineEmits(['fechar', 'atualizado']);
 
 const { t, locale } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA.BASE.GAVETA';
-// Os avisos do servidor que a gaveta mostra no lugar da comparação: o limite e a base nova que mudou.
-const COM_TEXTO_DO_SERVIDOR = [409, 429];
+// Os avisos do servidor que a gaveta mostra no lugar da comparação: sem base nova ou sem comparação válida (422), a base
+// nova que mudou (409) e o limite (429).
+const COM_TEXTO_DO_SERVIDOR = [409, 422, 429];
+// Depois de atualizar, estes mandam comparar de novo (a base que vale agora, ou a comparação que passou do prazo).
+const COMPARAR_DE_NOVO = [409, 422];
+const LIMITE = 429;
 
 const estado = ref('comparando');
 const perguntas = ref([]);
 const versaoComparada = ref(null);
 const erroComparar = ref('');
+// No limite, a gaveta só mostra a espera: "Tentar de novo" ali só daria outro 429.
+const esperando = ref(false);
 const atualizando = ref(false);
 const falhouAtualizar = ref(false);
 const rotuloHoje = ref('');
@@ -59,6 +66,7 @@ const lerComparacao = async () => {
   rotuloNova.value = rotuloDe(props.base.nova);
   estado.value = 'comparando';
   erroComparar.value = '';
+  esperando.value = false;
   pedido = new AbortController();
   try {
     const { versao, perguntas: lista } = await props.comparar(pedido.signal);
@@ -68,6 +76,7 @@ const lerComparacao = async () => {
   } catch (erro) {
     if (pedido?.signal.aborted) return;
     erroComparar.value = textoDoServidor(erro);
+    esperando.value = erro?.response?.status === LIMITE;
     estado.value = 'erro';
   }
 };
@@ -84,7 +93,7 @@ const confirmar = async () => {
     await props.atualizar(versaoComparada.value);
     emit('atualizado');
   } catch (erro) {
-    if (erro?.response?.status === 409) {
+    if (COMPARAR_DE_NOVO.includes(erro?.response?.status)) {
       erroComparar.value = textoDoServidor(erro);
       estado.value = 'erro';
     } else {
@@ -133,7 +142,8 @@ const podeFechar = () => !atualizando.value;
       data-erro-comparar
       :titulo="tituloDoErro"
       :garantia="t(`${NS}.NADA_MUDOU`)"
-      :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
+      :tom="esperando ? 'ambar' : 'rubi'"
+      :acao="esperando ? '' : t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
       @acao="lerComparacao"
     />
 
