@@ -1,4 +1,6 @@
 // Pasta aberta na caixa de e-mail (#1809, fase 1): Entrada, Spam ou Lixeira do painel.
+// #1938: Enviados é uma vista (as conversas em que nós mandamos mensagem); não se move
+// conversa para ela, e a conversa continua na Entrada.
 // A lista guarda a pasta no endereço (`?pasta=lixeira`): voltar de uma conversa (Voltar
 // do navegador ou do app) cai na mesma pasta, e recarregar também. Abrir a conversa
 // mantém a pasta da lista ao lado. Vale para a caixa em que foi escolhida; em outra
@@ -8,7 +10,8 @@ import { useRoute, useRouter } from 'vue-router';
 import ConversaEmailPastasAPI from 'dashboard/api/pastasDoEmail';
 
 export const PASTAS = { SPAM: 'spam', LIXEIRA: 'lixeira' };
-const VALIDAS = Object.values(PASTAS);
+export const ENVIADOS = 'enviados';
+const VALIDAS = [...Object.values(PASTAS), ENVIADOS];
 const LISTA = 'inbox_dashboard';
 
 export const pastaDoEndereco = destino => {

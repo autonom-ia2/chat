@@ -57,10 +57,24 @@
 #   only the conversations the person already sees. Connecting and configuring stay with administrators.
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 # - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
+# - 'people_manage': add, invite, edit and remove agents, and manage teams (#1931). Never administrators, never one's own
+#   access (CustomRoles::GrantGuard and AccountUsers::AccessGuard).
+# - 'custom_role_manage': create, edit and delete custom roles, within one's own keys (#1931).
+# - 'grant_above_own': with people_manage or custom_role_manage, hand out any custom role of the account, even above
+#   one's own; never administrator. The audit log is the safeguard (#1931).
+# - 'financial_view': the account's costs in money: AI usage values (R$/US$, CSV, live push) and the Meta charge
+#   authorization screen (#1969). 'financial_manage': turn the Meta charge authorization on and off. Plan, invoices and
+#   payments (Financeiro module) stay with administrators.
 
 class CustomRole < ApplicationRecord
   belongs_to :account
   has_many :account_users, dependent: :nullify
+
+  # Roles behind integration tokens (Crm/Mcp::IntegrationToken) belong to a hidden integration member. They are managed
+  # by the token screens and never listed, edited or handed out as a person's role (#1931).
+  scope :for_people, lambda {
+    where.not(id: AccountUser.where(integration: true).where.not(custom_role_id: nil).select(:custom_role_id))
+  }
 
   before_destroy :capture_filtered_unread_count_user_ids, prepend: true
   after_update_commit :invalidate_filtered_unread_count_visibility_update, if: :filtered_unread_count_permissions_changed?
@@ -112,7 +126,15 @@ class CustomRole < ApplicationRecord
     macro_manage
     sla_manage
     assignment_manage
+    people_manage
+    custom_role_manage
+    grant_above_own
+    financial_view
+    financial_manage
   ].freeze
+
+  # Delegable keys only an administrator hands out, unless the giver has grant_above_own (CLAUDE.md, #1931).
+  DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage].freeze
 
   validates :name, presence: true
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message
@@ -154,3 +176,5 @@ class CustomRole < ApplicationRecord
     Rails.configuration.dispatcher.dispatch(ACCOUNT_CACHE_INVALIDATED, Time.zone.now, account: account, cache_keys: account.cache_keys)
   end
 end
+
+CustomRole.include Enterprise::Audit::CustomRole

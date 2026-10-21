@@ -21,6 +21,10 @@
       "AGENTE": "AI agent",
       "AUTOMATICO": "{nome} · automatic"
     },
+    "ECO_DO_CELULAR": {
+      "ENVIADA_PELO_CELULAR": "Sent from the phone",
+      "ENVIADA_POR": "Sent by {nome} from the phone"
+    },
     "MAIS": {
       "ABRIR": "More ways to send",
       "LOCALIZACAO": "Location",
@@ -515,6 +519,7 @@
         "ENTRADA": "Inbox",
         "SPAM": "Spam",
         "LIXEIRA": "Trash",
+        "ENVIADOS": "Sent",
         "MARCAR_SPAM": "Spam",
         "MARCAR_SPAM_DICA": "Move to Spam and resolve. Email from this sender in this inbox goes straight to Spam",
         "MOVER_LIXEIRA": "Trash",
@@ -579,6 +584,14 @@
         "INSTRUCAO_LONGA": "The request to the AI is too long (up to {limite} characters). Make it shorter.",
         "MUITOS_PEDIDOS": "Too many AI requests in a minute. Wait a moment and try again."
       }
+    },
+    "FAIXA_WHATSAPP": {
+      "SEM_MENSAGENS": "New WhatsApp messages from this inbox are not arriving.",
+      "RECONECTAR": "Reconnect",
+      "PECA_AO_ADMIN": "Ask an administrator to reconnect."
+    },
+    "NOTA_DO_CONECTOR": {
+      "AVISO": "⚠️ A WhatsApp message did not reach this conversation. Check the inbox phone."
     }
   }
 }

@@ -284,6 +284,23 @@ RSpec.describe Crm::Subjects::Identifier do
     expect(requests.first['state'].to_json).to include('Onix')
   end
 
+  # #1924: o pedido ficava fora das 5 últimas mensagens depois de algumas idas e vindas com a equipe.
+  it 'o Jev e o modelo maior leem o pedido feito antes das 5 últimas mensagens da conversa' do
+    create_card(title: 'Joana Lima')
+    requests = stub_jev("novo_#{comercial.id}", confidence: 0.5)
+    stub_review(resposta: "novo_#{comercial.id}", titulo: 'Cancelamento do plano')
+    incoming('Quero cancelar o meu plano')
+    4.times do |indice|
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: "Equipe #{indice}")
+    end
+
+    identify(incoming('Pode ser hoje?'))
+
+    expect(requests.first['state']['messages'].first).to eq('Customer: Quero cancelar o meu plano')
+    expect(cliente).to have_received(:create).with(hash_including(input: include('Quero cancelar o meu plano'),
+                                                                  instructions: include(Crm::Subjects::Question::REGRA_DO_TIPO)))
+  end
+
   it 'retry do job com a decisão já reservada não pergunta nem aplica de novo' do
     create_card(title: 'Joana Lima')
     requests = stub_jev('sem_assunto')
@@ -938,6 +955,28 @@ RSpec.describe Crm::Subjects::Identifier do
       expect(abertos.count).to eq(1)
       expect(finder.find(conversation)).to eq(chegada)
       expect(ganho.reload).to have_attributes(status: 'won', pipeline_id: comercial.id)
+    end
+
+    # #1918: o sem assunto toca o card em foco, menos o card vazio da chegada ainda intacto (movido pela IA num "oi", ele
+    # deixaria de ser adotado pelo pedido seguinte de outro funil).
+    it '"oi" sem assunto não toca o card da chegada intacto, e o pedido seguinte ainda o adota' do
+      message, chegada = chega('oi, boa tarde')
+      stub_jev('sem_assunto')
+
+      expect(identify(message)).to have_attributes(state: 'kept', touched_card_ids: [])
+
+      seguinte = incoming('roubaram meu carro hoje de madrugada')
+      jev_no_sinistro
+      expect(identify(seguinte)).to have_attributes(action: 'rename', state: 'applied', card_id: chegada.id)
+    end
+
+    it 'sem assunto toca o card da chegada que já mudou de etapa' do
+      message, chegada = chega('já fechei com outra corretora')
+      segunda = create_crm_stage(account: account, pipeline: comercial, name: 'Em atendimento', position: 1)
+      Crm::Cards::Mover.new(card: chegada, actor: nil, target_stage: segunda).perform
+      stub_jev('sem_assunto')
+
+      expect(identify(message)).to have_attributes(state: 'kept', touched_card_ids: [chegada.id])
     end
 
     it 'agenda a IA do CRM no card já no funil do sinistro' do

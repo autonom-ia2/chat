@@ -412,7 +412,8 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     ensure_create_allowed!(resolved_params.to_h.with_indifferent_access, conversation)
     if @registration
       card = @registration.perform do |contact|
-        ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params.merge(contact_id: contact.id)).perform
+        ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params.merge(contact_id: contact.id),
+                                  etapa_escolhida: permitted_params[:stage_id].present?).perform
       end
       return [card, true]
     end
@@ -420,7 +421,8 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     current = current_open_card(conversation, resolved_params)
     return [current, false] if current
 
-    [::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform, true]
+    [::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation,
+                               etapa_escolhida: permitted_params[:stage_id].present?).perform, true]
   end
 
   # O card aberto da conversa no funil pedido, que o agente enxerga. Trava a conversa (como from_conversation) para duas

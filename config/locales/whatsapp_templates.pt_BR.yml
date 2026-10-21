@@ -72,7 +72,7 @@ pt_BR:
         marca_invalida: "Escolha Aviso de serviço ou Divulgação."
         aviso_mudou: "Os preços da Meta mudaram enquanto você lia. Confira o aviso de novo e confirme."
         utility_desligada: "A Divulgação só liga com o Aviso de serviço ligado."
-        somente_administrador: "Só quem administra a conta pode mudar."
+        somente_administrador: "Só quem administra a conta, ou tem Financeiro em Editar na função, pode mudar."
     # Reenvio do mesmo modelo para outra conversa (#1767, Whatsapp::Templates::ReenvioDoModelo): por que não foi.
     reenvio:
       motivos:

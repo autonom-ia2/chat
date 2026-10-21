@@ -30,6 +30,7 @@ import ConversationFilter from 'next/filter/ConversationFilter.vue';
 import SaveCustomView from 'next/filter/SaveCustomView.vue';
 import ChatTypeTabs from './widgets/ChatTypeTabs.vue';
 import FunnelFilter from 'dashboard/components-next/Conversation/FunnelFilter.vue';
+import FaixaDoWhatsapp from 'dashboard/components-next/conversa-canal/faixa-whatsapp/FaixaDoWhatsapp.vue';
 import {
   FUNNEL_ALL,
   readFunnelChoice,
@@ -1061,6 +1062,9 @@ watch(appliedFilters, () => resetBulkActions());
       @reset-filters="onResetFilters"
       @basic-filter-change="onBasicFilterChange"
     />
+
+    <!-- #1941: lista de uma caixa WAHA comum cujo WhatsApp parou. -->
+    <FaixaDoWhatsapp :caixa="inbox" />
 
     <TeleportWithDirection
       v-if="showAddFoldersModal"

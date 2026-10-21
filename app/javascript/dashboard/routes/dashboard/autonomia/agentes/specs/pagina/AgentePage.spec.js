@@ -77,6 +77,13 @@ const faqApi = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock('dashboard/api/autonomia/faqSuggestions', () => ({ default: faqApi }));
 const paginasApi = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('dashboard/api/crmBookingPages', () => ({ default: paginasApi }));
+// #1426 (4b) — conferências e autoteste do material.
+const materialApi = vi.hoisted(() => ({
+  get: vi.fn(),
+  resolver: vi.fn(),
+  pedirAutoteste: vi.fn(),
+}));
+vi.mock('dashboard/api/autonomia/material', () => ({ default: materialApi }));
 
 const no = seletor => document.querySelector(seletor);
 const todos = seletor => [...document.querySelectorAll(seletor)];
@@ -176,6 +183,10 @@ describe('AgentePage', () => {
     router.push.mockReset();
     router.replace.mockReset();
     alerta.mockReset();
+    materialApi.get.mockReset();
+    materialApi.get.mockResolvedValue({
+      data: { problemas: [], autoteste: null },
+    });
     preparar();
   });
 
@@ -650,6 +661,36 @@ describe('AgentePage', () => {
       it('says nothing without the Fase 2', async () => {
         const wrapper = await comMaterial(false);
         expect(no('[data-problemas-no-material]')).toBeNull();
+        wrapper.unmount();
+      });
+
+      // #1426 (4b) — os cartões do "um problema por vez" também contam, sem contar duas vezes o mesmo material.
+      it('adds the cards of the checks, once per material', async () => {
+        materialApi.get.mockResolvedValue({
+          data: {
+            problemas: [
+              { id: 'contradicao-a', tipo: 'contradicao', fontes: [4, 1] },
+              { id: 'autoteste-r-0', tipo: 'autoteste', fontes: [] },
+            ],
+            autoteste: null,
+          },
+        });
+        const wrapper = await comMaterial(true);
+        await flushPromises();
+
+        expect(materialApi.get).toHaveBeenCalledWith(7);
+        // 2 cartões + o material 2 (não deu para ler, sem cartão); o 1 já está no cartão da contradição
+        expect(
+          wrapper
+            .findComponent({ name: 'PaginaBlocos' })
+            .props('problemasNoMaterial')
+        ).toBe(3);
+        wrapper.unmount();
+      });
+
+      it('does not read the checks without the Fase 2', async () => {
+        const wrapper = await comMaterial(false);
+        expect(materialApi.get).not.toHaveBeenCalled();
         wrapper.unmount();
       });
     });

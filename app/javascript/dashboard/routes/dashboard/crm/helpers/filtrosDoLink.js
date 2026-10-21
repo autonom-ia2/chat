@@ -13,6 +13,8 @@ const DIAS_PARADO = ['3', '7', '14', '30'];
 const RESPONSAVEIS = ['agent', 'bot', 'none'];
 const RESULTADOS = ['open', 'won', 'lost', 'resolved', 'cancelled', 'archived'];
 const FECHADO_EM = ['this_month'];
+// Retornos: o mesmo filtro "Retorno" do Kanban e da Lista (#1883, opção 2 do Rodrigo).
+const RETORNOS = ['none', 'pending', 'overdue'];
 const QUEM = ['todos', 'meus'];
 
 export const CHAVES_DO_LINK = [
@@ -21,6 +23,7 @@ export const CHAVES_DO_LINK = [
   'responsible_kind',
   'result',
   'closed_in',
+  'follow_up_status',
   CRM_CAMPAIGN_QUERY,
 ];
 export const CHAVES_DO_MEU_DIA = ['quem', 'tipos', 'funil'];
@@ -51,6 +54,7 @@ export const filtrosDoLink = (query = {}, { currentUserId } = {}) =>
     responsibleKind: daLista(RESPONSAVEIS, query.responsible_kind),
     result: daLista(RESULTADOS, query.result),
     closedIn: daLista(FECHADO_EM, query.closed_in),
+    followUpStatus: daLista(RETORNOS, query.follow_up_status),
     campaignSourceIds: campaignSourceIdsFromQuery(query),
   });
 

@@ -3,12 +3,14 @@ require 'rails_helper'
 RSpec.describe Crm::Ai::ScoreCalculator do
   let(:now) { Time.zone.parse('2026-07-30 12:00:00') }
 
-  def score(signals, last_message_at: now, terminal: false)
-    described_class.new(signals: signals, last_message_at: last_message_at, terminal: terminal, now: now).perform
+  def score(signals, last_message_at: now, terminal: false, customer_waiting: false)
+    described_class.new(signals: signals, last_message_at: last_message_at, terminal: terminal,
+                        waiting_since: (last_message_at if customer_waiting), now: now).perform
   end
 
   # Espelha o card 366 do teste sombra (conta 18): cliente quis pagar, o bot prometeu o link 8x e
-  # nunca entregou, 20 dias parado. Precisa ficar no topo APESAR do silêncio.
+  # nunca entregou. Precisa ficar no topo APESAR do silêncio. #1962: só até 14 dias de silêncio (o card
+  # real tinha 20; aqui são 10) — a validade da promessa está em score_calculator_divida_spec.
   it 'puts an unfulfilled promise at the top and ignores the time decay' do
     result = score(
       {
@@ -16,7 +18,7 @@ RSpec.describe Crm::Ai::ScoreCalculator do
         blocker: 'nenhum', last_turn_owner: 'agente_plataforma', unfulfilled_promise: true,
         reason: 'Link de pagamento prometido e nunca enviado.'
       },
-      last_message_at: now - 20.days
+      last_message_at: now - 10.days
     )
 
     expect(result.value).to eq(93)
@@ -92,13 +94,15 @@ RSpec.describe Crm::Ai::ScoreCalculator do
     expect(result.reason).to eq('Card encerrado.')
   end
 
+  # #1962: quem falou por último vem do banco (waiting_since); o modelo diz se a fala pede resposta nossa.
   it 'rewards the client speaking last, because we owe the reply' do
     base = { next_stage_readiness: 'parcial', intent: 'media', urgency: 'nenhuma',
-             decision_maker: 'desconhecido', blocker: 'nenhum' }
+             decision_maker: 'desconhecido', blocker: 'nenhum', awaiting_our_reply: true }
 
-    client_waiting = score(base.merge(last_turn_owner: 'cliente'))
-    we_replied = score(base.merge(last_turn_owner: 'humano'))
+    client_waiting = score(base, customer_waiting: true)
+    we_replied = score(base)
 
-    expect(client_waiting.value - we_replied.value).to eq(8)
+    expect(client_waiting.value).to be > we_replied.value
+    expect(client_waiting.tier).to eq('quente')
   end
 end

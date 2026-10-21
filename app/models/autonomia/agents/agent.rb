@@ -53,6 +53,8 @@ module Autonomia
       include Autonomia::Agents::AgentVersioning
       # #1428 (parte 3) — o Desfazer do último ajuste do "Mudar conversando" (piloto).
       include Autonomia::Agents::DesfazerAjuste
+      # #1426 (tema 4b) — as chaves do material escritas pelo sistema (conferências e autoteste), protegidas do save.
+      include Autonomia::Agents::ConfigDoMaterial
 
       belongs_to :account
       belongs_to :created_by, class_name: 'User', optional: true
