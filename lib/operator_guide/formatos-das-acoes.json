@@ -6404,6 +6404,7 @@
           "crm_admin",
           "crm_export",
           "crm_delete_cards",
+          "crm_metas_manage",
           "contact_view",
           "contact_export",
           "contact_delete",
@@ -10682,6 +10683,40 @@
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:43"
     ],
     "sem_corpo": false
+  },
+  "POST autonomia/agents/:agent_id/base/atualizar": {
+    "campos": {
+      "versao": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#atualizar",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:44",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:45",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:75"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/agents/:agent_id/base/comparar": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#comparar",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:33",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:75"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/agents/:agent_id/base/desfazer": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#desfazer",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:75"
+    ],
+    "sem_corpo": true
   },
   "POST autonomia/agents/:agent_id/channels": {
     "campos": {
@@ -16477,6 +16512,7 @@
           "crm_admin",
           "crm_export",
           "crm_delete_cards",
+          "crm_metas_manage",
           "contact_view",
           "contact_export",
           "contact_delete",
@@ -17171,7 +17207,7 @@
     "modelo": "EmailCampaignTemplate",
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:18",
-      "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:46"
+      "app/controllers/api/v1/accounts/email_campaigns/templates_controller.rb:47"
     ],
     "sem_corpo": false
   },
@@ -23928,6 +23964,32 @@
     ],
     "sem_corpo": false
   },
+  "PUT crm/metas": {
+    "campos": {
+      "funis": {
+        "campos": {
+          "id": {},
+          "metaFunil": {},
+          "pessoas": {
+            "campos": {
+              "id": {},
+              "meta": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "mes": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/metas#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/metas_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/metas_controller.rb:48"
+    ],
+    "sem_corpo": false
+  },
   "PUT crm/my_booking_hours": {
     "campos": {
       "paused": {},
@@ -24825,6 +24887,7 @@
           "crm_admin",
           "crm_export",
           "crm_delete_cards",
+          "crm_metas_manage",
           "contact_view",
           "contact_export",
           "contact_delete",

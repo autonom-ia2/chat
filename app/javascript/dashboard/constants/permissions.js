@@ -7,6 +7,8 @@ export const CRM_VIEW_REPORTS_PERMISSION = 'crm_view_reports';
 export const CRM_ADMIN_PERMISSION = 'crm_admin';
 export const CRM_EXPORT_PERMISSION = 'crm_export';
 export const CRM_DELETE_CARDS_PERMISSION = 'crm_delete_cards';
+// #1991 — metas do mês por pessoa (gaveta "Metas do mês" em CRM › Números).
+export const CRM_METAS_MANAGE_PERMISSION = 'crm_metas_manage';
 
 // Module keys (#452): `<module>_manage` implies `<module>_view` on the backend, so routes list both.
 export const CONTACT_VIEW_PERMISSION = 'contact_view';

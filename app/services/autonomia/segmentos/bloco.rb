@@ -34,6 +34,33 @@ module Autonomia::Segmentos::Bloco
 
   VERSOES = TEXTOS.transform_values { |texto| Digest::SHA256.hexdigest(texto)[0, 12].freeze }.freeze
 
+  # F3 (#1429): ao lado de cada agentes.md, a data em que cada versão do texto entrou no ar (versoes.yml, versão => data)
+  # e as perguntas do antes e depois de "Atualizar com a nova base" (perguntas.yml, idioma => lista). Lidos uma vez no
+  # boot, como os textos. O spec do bloco falha se a versão atual de um texto não tiver data.
+  ARQUIVO_DAS_DATAS = 'versoes.yml'
+  ARQUIVO_DAS_PERGUNTAS = 'perguntas.yml'
+  IDIOMAS_DAS_PERGUNTAS = %w[pt_BR en].freeze
+  IDIOMA_PADRAO = 'pt_BR'
+  PERGUNTAS_POR_TIPO = 3
+  PERGUNTA_MAX = 200
+
+  # O segmento de cada arquivo com aquele nome, com o conteúdo YAML já convertido pelo bloco.
+  def self.ler_ao_lado(arquivo)
+    Dir.glob(PASTA.join('*', '*', arquivo).to_s).to_h do |caminho|
+      conteudo = YAML.safe_load_file(caminho, permitted_classes: [Date]) || {}
+      [Pathname(caminho).dirname.relative_path_from(PASTA).to_s.freeze, yield(conteudo).freeze]
+    end.freeze
+  end
+  private_class_method :ler_ao_lado
+
+  DATAS = ler_ao_lado(ARQUIVO_DAS_DATAS) do |datas|
+    datas.to_h { |versao, data| [versao.to_s.freeze, Date.iso8601(data.to_s).freeze] }
+  end
+
+  PERGUNTAS = ler_ao_lado(ARQUIVO_DAS_PERGUNTAS) do |por_idioma|
+    por_idioma.slice(*IDIOMAS_DAS_PERGUNTAS).transform_values { |lista| Array(lista).map { |texto| texto.to_s.strip.freeze }.freeze }
+  end
+
   module_function
 
   def segmento(account)
@@ -46,5 +73,16 @@ module Autonomia::Segmentos::Bloco
 
   def versao(segmento)
     VERSOES[segmento]
+  end
+
+  # A data (Date) em que aquela versão do texto do segmento entrou no ar; nil para versão desconhecida.
+  def data_da_versao(segmento, versao)
+    DATAS.dig(segmento, versao)
+  end
+
+  # As perguntas do antes e depois no idioma pedido; sem esse idioma, as de pt_BR. [] para segmento sem perguntas.
+  def perguntas(segmento, idioma)
+    lista = PERGUNTAS[segmento].to_h
+    lista[idioma.to_s] || lista[IDIOMA_PADRAO] || []
   end
 end

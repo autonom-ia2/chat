@@ -19,7 +19,11 @@
     "REMETENTE": {
       "AGENTE_COM_NOME": "Agente de IA · {nome}",
       "AGENTE": "Agente de IA",
-      "AUTOMATICO": "{nome} · automático"
+      "ORIGEM": {
+        "FOLLOW_UP": "Follow-up automático",
+        "RETORNO": "Retorno automático",
+        "AGENDAMENTO": "Agendamento automático"
+      }
     },
     "ECO_DO_CELULAR": {
       "ENVIADA_PELO_CELULAR": "Enviada pelo celular",
@@ -592,6 +596,9 @@
         "CANCELADA_TEXTO": "O organizador cancelou esta reunião.",
         "ENTRAR": "Entrar na reunião",
         "ENTRAR_NO": "Entrar no {app}",
+        "SEPARADOR": "·",
+        "DURACAO": "({duracao})",
+        "A_MAIS": "+{n}",
         "MINUTOS": "{n} min",
         "HORAS": "{n} h",
         "HORAS_E_MINUTOS": "{h} h {m} min",
@@ -612,6 +619,9 @@
         "RECORRENTE": "Recorrente",
         "OCORRENCIA": "Uma data de reunião recorrente",
         "PASSOU": "Esta reunião já terminou.",
+        "SUBSTITUIDO": "O organizador mudou esta reunião num e-mail mais novo. Responda pelo convite novo.",
+        "CANCELADA_DEPOIS": "O organizador cancelou esta reunião num e-mail mais novo.",
+        "VER_O_NOVO": "Abrir o e-mail mais novo",
         "MANTER": "Manter a resposta",
         "SEM_ORGANIZADOR": "Este convite não diz quem organizou, por isso não dá para responder daqui."
       }

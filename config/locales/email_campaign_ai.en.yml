@@ -1,0 +1,6 @@
+# Line of business of the account for the e-mail AI (#2037). Empty here, so an account outside a package gets the
+# prompt as it always was; the insurance layers (config/pacotes/seguros/**) fill it in.
+en:
+  email_campaigns:
+    ai:
+      vocabulario: ''

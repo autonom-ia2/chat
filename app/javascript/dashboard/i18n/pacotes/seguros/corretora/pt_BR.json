@@ -921,6 +921,9 @@
         "TITULO": "Retomar a cotação",
         "PARA": "Para voltar a falar com quem pediu cotação e sumiu.",
         "TEXTO": "Oi, [nome_cliente]! Aqui é da [nome_empresa]. Ficou alguma dúvida sobre a cotação do seu seguro? É só responder aqui que a gente continua."
+      },
+      "renovacao": {
+        "TEXTO": "Olá, [nome_cliente]. Aviso de [nome_empresa]: o seu seguro vence em [data]. Podemos preparar a renovação para você antes dessa data. Toque em uma das opções abaixo."
       }
     },
     "CAMPOS": {
@@ -1211,6 +1214,9 @@
       "BOTAO": {
         "MEUS_PARADOS": "Abrir minha cotação parada | Abrir minhas {n} cotações paradas"
       }
+    },
+    "BLOCO": {
+      "VENDENDO": "Cotando"
     }
   }
 }

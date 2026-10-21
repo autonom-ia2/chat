@@ -43,6 +43,7 @@ export const CRM_EXTRAS_IMPLIED_BY_ADMIN = [
   'crm_manage_ai',
   'crm_export',
   'crm_delete_cards',
+  'crm_metas_manage',
 ];
 
 // Extras that touch personal data, money or other people's access. The editor asks
@@ -50,6 +51,8 @@ export const CRM_EXTRAS_IMPLIED_BY_ADMIN = [
 export const SENSITIVE_EXTRAS = [
   'crm_manage_ai',
   'crm_export',
+  // #1991: abre o R$ de cada pessoa da equipe e grava a meta de todos.
+  'crm_metas_manage',
   CRM_ADMIN,
   'contact_export',
   'contact_delete',
@@ -115,6 +118,8 @@ export const MODULE_GROUPS = [
         extras: [
           CRM_MOVE_CARDS,
           'crm_delete_cards',
+          // Metas do mês de cada pessoa (#1991): o R$ dos colegas é número comercial (Decisão 1 do #1871).
+          'crm_metas_manage',
           'crm_view_reports',
           'crm_manage_pipelines',
           'crm_manage_ai',

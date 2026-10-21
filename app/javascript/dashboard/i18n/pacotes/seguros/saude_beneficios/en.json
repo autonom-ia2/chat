@@ -19,7 +19,8 @@
         "WON_VALUE_INFO": "Total value of plans closed in the period, by currency."
       },
       "META_SYNC": {
-        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a plan, the data shows up here."
+        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a plan, the data shows up here.",
+        "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, plans closed on the landing page through the website Pixel."
       }
     },
     "PIPELINE_DRAWER": {
@@ -140,6 +141,32 @@
     },
     "TOPO": {
       "SEM_META_EU": "Your month so far: {n} plan closed, {valor} | Your month so far: {n} plans closed, {valor}"
+    },
+    "BLOCO": {
+      "VENDENDO": "Closing plans"
+    },
+    "ESTIMADO": "Some plans closed before this record were counted for the card's current responsible person.",
+    "COMO_CONTAMOS": {
+      "REGRA_ANTIGAS": "Plans closed before this record count for the card's current responsible person."
+    }
+  },
+  "MODELOS_WHATSAPP": {
+    "OBJETIVOS": {
+      "renovacao": {
+        "TITULO": "Plan renewal",
+        "PARA": "To let them know the plan anniversary is coming and it will renew.",
+        "TEXTO": "Hello, [nome_cliente]. A notice from [nome_empresa]: your plan renews on [data]. Want to review the renewal with us? Tap one of the options below."
+      },
+      "andamento": {
+        "TITULO": "Reimbursement update",
+        "PARA": "To tell the beneficiary the reimbursement request has moved forward.",
+        "TEXTO": "Hello, [nome_cliente]. An update from [nome_empresa]: your reimbursement request has moved forward. Want to know the details? Tap the button below."
+      }
+    }
+  },
+  "AUTONOMIA_GUIDE": {
+    "SUGGESTIONS": {
+      "REPORTS": "How many plans did I close this month?"
     }
   }
 }

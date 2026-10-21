@@ -17,3 +17,7 @@ en:
     glossary: 'Conversation: someone messaged on WhatsApp after tapping an ad. Quote: the card reached an opportunity or negotiation stage. Sale: the card was marked as policy closed.'
     situation:
       lost: 'Not closed'
+  # Line of business for the e-mail AI (#2037). Insurer and insurtech inherit this line.
+  email_campaigns:
+    ai:
+      vocabulario: 'Line of business: insurance. Talk about insurance, policy, coverage and renewal in plain language; policyholder only for someone who already has a policy; customer only for someone who already bought.'

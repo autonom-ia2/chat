@@ -394,6 +394,9 @@ Rails.application.routes.draw do
             get :kanban, to: 'kanban#index'
             # CRM › Números por papel (#1897): a visão "Só eu" de quem abre, atrás da flag `crm_numeros_lentes`.
             get :numeros, to: 'numeros#show'
+            # Metas do mês por pessoa (#1991, F4 do #1871): a gaveta "Metas do mês", atrás da flag `crm_metas`.
+            get :metas, to: 'metas#show'
+            put :metas, to: 'metas#update'
             scope :reports, controller: :reports do
               get :pipelines, action: :pipelines, as: :crm_report_pipelines
               get :summary, action: :summary, as: :crm_report_summary
@@ -536,6 +539,11 @@ Rails.application.routes.draw do
               get 'material', to: 'agents/material#show'
               post 'material/problemas/:problema_id/resolver', to: 'agents/material#resolver'
               post 'material/autoteste', to: 'agents/material#autoteste'
+              # #1429 (tema 8, F3) — a base de seguros do agente: ler, comparar (antes e depois), atualizar e desfazer.
+              get 'base', to: 'agents/base_de_seguros#show'
+              post 'base/comparar', to: 'agents/base_de_seguros#comparar'
+              post 'base/atualizar', to: 'agents/base_de_seguros#atualizar'
+              post 'base/desfazer', to: 'agents/base_de_seguros#desfazer'
               # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
               put 'onde_atende', to: 'agents/onde_atende#update'
               resources :channels, only: [:index, :create, :destroy],

@@ -7,6 +7,10 @@
 # certeza: nada muda), no_content, no_quota, failed.
 # touched_card_ids (#1693): os cards que a mensagem tocou, o principal primeiro, para a IA do CRM avaliar numa chamada
 # só. Nulo: não calculado (sem a flag `crm_avaliar_toda_mensagem`, dúvida, falha); vazio: nenhum assunto ("obrigado!").
+# Medição (#2018), só registro: jev_answer é o tipo da opção que o Jev escolheu (sem_assunto, mesmo, card, novo, varios),
+# nulo quando ele não respondeu. review_reason é por que o modelo maior foi chamado (certeza_baixa, pedido_novo, varios,
+# nome_do_atual; o primeiro que vale, nessa ordem), nulo quando o Jev decidiu sozinho. Com o modelo maior, a decisão
+# final pode diferir do jev_answer.
 class Crm::SubjectDecision < ApplicationRecord
   self.table_name = 'crm_subject_decisions'
 

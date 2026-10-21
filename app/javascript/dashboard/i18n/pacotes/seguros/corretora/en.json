@@ -921,6 +921,9 @@
         "TITULO": "Resume the quote",
         "PARA": "To talk again to someone who asked for a quote and went quiet.",
         "TEXTO": "Hi, [nome_cliente]! This is [nome_empresa]. Any questions left about your insurance quote? Just reply here and we will pick it up."
+      },
+      "renovacao": {
+        "TEXTO": "Hello, [nome_cliente]. A notice from [nome_empresa]: your insurance expires on [data]. We can prepare the renewal for you before that date. Tap one of the options below."
       }
     },
     "CAMPOS": {
@@ -1211,6 +1214,9 @@
       "BOTAO": {
         "MEUS_PARADOS": "Open my stalled quote | Open my {n} stalled quotes"
       }
+    },
+    "BLOCO": {
+      "VENDENDO": "Quoting"
     }
   }
 }

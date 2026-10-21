@@ -1000,6 +1000,8 @@ GEM
     stackprof (0.2.25)
     statsd-ruby (1.5.0)
     stripe (18.0.1)
+    strong_migrations (2.8.0)
+      activerecord (>= 7.2)
     telephone_number (1.4.20)
     test-prof (1.6.3)
       logger
@@ -1237,6 +1239,7 @@ DEPENDENCIES
   ssrf_filter (~> 1.5)
   stackprof
   stripe (~> 18.0)
+  strong_migrations (~> 2.8)
   telephone_number
   test-prof
   tidewave
