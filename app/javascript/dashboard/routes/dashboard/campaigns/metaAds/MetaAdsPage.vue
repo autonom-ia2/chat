@@ -363,7 +363,8 @@ onMounted(load);
               :partner-name="partnerName"
               :current="connection"
               @saved="accountSaved"
-              @back="openStep = 1"
+              @switch="openStep = 1"
+              @back="canGoBack ? goBack() : (openStep = 1)"
             />
             <MetaAdsDestinationsStep
               v-else-if="activeStep === 3"

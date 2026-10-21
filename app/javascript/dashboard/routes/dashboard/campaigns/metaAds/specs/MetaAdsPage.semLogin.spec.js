@@ -169,6 +169,28 @@ describe('MetaAdsPage · Anúncios sem login (#1960)', () => {
     expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(false);
   });
 
+  it('on the account step opened from Change, its Back leaves and Switch goes to step 1', async () => {
+    routing.query = { aba: 'conexao' };
+    reply(CONNECTED);
+    const wrapper = await mountPage();
+    const summary = () => wrapper.findComponent({ name: 'MetaAdsSummary' });
+    const account = () => wrapper.findComponent({ name: 'MetaAdsAccountStep' });
+
+    summary().vm.$emit('open', 2);
+    await flushPromises();
+    account().vm.$emit('back');
+    await flushPromises();
+    expect(summary().exists()).toBe(true);
+
+    summary().vm.$emit('open', 2);
+    await flushPromises();
+    account().vm.$emit('switch');
+    await flushPromises();
+    expect(wrapper.findComponent({ name: 'MetaAdsConnectStep' }).exists()).toBe(
+      true
+    );
+  });
+
   it('the first setup has no Back on the steps', async () => {
     reply({ configured: false, whatsapp_result: { enabled: false } });
     flags.value = {};

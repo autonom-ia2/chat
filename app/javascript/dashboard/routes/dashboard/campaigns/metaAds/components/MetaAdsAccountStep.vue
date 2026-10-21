@@ -18,7 +18,8 @@ const props = defineProps({
   current: { type: Object, default: null },
 });
 
-const emit = defineEmits(['saved', 'back']);
+// `switch`: trocar o jeito de conectar (passo 1). `back`: sair deste passo (quem abriu decide para onde).
+const emit = defineEmits(['saved', 'back', 'switch']);
 
 const { t, locale } = useI18n();
 
@@ -199,7 +200,7 @@ onMounted(load);
         type="button"
         data-account-switch
         class="inline-flex items-center px-2 text-sm font-semibold bg-transparent border-0 rounded-lg min-h-11 text-n-blue-11 hover:bg-n-alpha-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-        @click="emit('back')"
+        @click="emit('switch')"
       >
         {{ $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.SWITCH') }}
       </button>
