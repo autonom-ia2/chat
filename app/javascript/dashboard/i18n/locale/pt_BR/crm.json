@@ -2360,7 +2360,8 @@
           "DONE": {
             "TITLE": "Pronto, está conectado!",
             "TEXT": "Estamos trazendo os gastos de {name}. Em alguns minutos eles aparecem no seu painel, ao lado das conversas e vendas.",
-            "CTA": "Ver meu painel"
+            "CTA": "Ver meu painel",
+            "DESTINATION_FAILED": "Não conseguimos marcar o WhatsApp como destino dos anúncios. Abra a aba Conexão, em \"Destino do anúncio\", e escolha WhatsApp."
           },
           "GUIDE": {
             "LABEL": "Onde tocar na Meta",

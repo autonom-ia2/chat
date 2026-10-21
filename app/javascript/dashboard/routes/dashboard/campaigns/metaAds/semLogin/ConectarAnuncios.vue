@@ -59,6 +59,7 @@ const chosen = ref(null);
 const copied = ref(false);
 const rechecks = ref(0);
 const autoChecking = ref(false);
+const destinationFailed = ref(false);
 const root = ref(null);
 let recheckTimer = null;
 
@@ -216,8 +217,10 @@ const connectAccount = async account => {
       whatsapp: true,
       site: false,
     });
+    destinationFailed.value = false;
   } catch {
-    // Segue para "pronto": a conexão vale sem o destino marcado.
+    // A conexão vale sem o destino marcado: "pronto" diz onde marcar.
+    destinationFailed.value = true;
   }
   go('done');
 };
@@ -780,6 +783,13 @@ onBeforeUnmount(stopRecheck);
       </h2>
       <p class="m-0 max-w-md text-base text-n-slate-11">
         {{ $t(`${C}.DONE.TEXT`, { name: chosen?.name }) }}
+      </p>
+      <p
+        v-if="destinationFailed"
+        data-conectar-destino-falhou
+        class="m-0 max-w-md rounded-xl bg-n-amber-2 p-4 text-sm text-n-amber-12 ring-1 ring-inset ring-n-amber-6"
+      >
+        {{ $t(`${C}.DONE.DESTINATION_FAILED`) }}
       </p>
       <Button
         data-conectar-ver-painel

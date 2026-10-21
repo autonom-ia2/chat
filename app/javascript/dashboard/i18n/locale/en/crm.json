@@ -2359,7 +2359,8 @@
           "DONE": {
             "TITLE": "Done, you are connected!",
             "TEXT": "We are bringing the spend of {name}. In a few minutes it shows on your panel, next to conversations and sales.",
-            "CTA": "See my panel"
+            "CTA": "See my panel",
+            "DESTINATION_FAILED": "We could not mark WhatsApp as where your ads lead. Open the Connection tab, in \"Ad destination\", and choose WhatsApp."
           },
           "GUIDE": {
             "LABEL": "Where to tap on Meta",

@@ -207,6 +207,19 @@ RSpec.describe Crm::MetaAds::Insights::Sync do
       expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id).destination_type).to eq('UNDEFINED')
     end
 
+    it 'lista cortada no teto de páginas: só grava os que vieram, o resto fica para a próxima leitura' do
+      stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
+      page = { data: [{ id: '999', destination_type: 'WHATSAPP' }], paging: { cursors: { after: 'C' }, next: 'https://graph.facebook.com/n' } }
+      stub_request(:get, meta_graph_url("act_#{ad_account_id}/adsets"))
+        .with(query: hash_including('fields' => 'id,destination_type'))
+        .to_return(status: 200, body: page.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      sync.perform('today')
+
+      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id).destination_type).to be_nil
+      expect(Crm::MetaAdObject.find_by(meta_object_id: '999')).to be_nil
+    end
+
     it 'erro na lista de conjuntos não muda o resultado nem a conexão, e tenta de novo na próxima' do
       stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
       adsets = stub_meta_ad_set_destinations(ad_account_id, status: 400)

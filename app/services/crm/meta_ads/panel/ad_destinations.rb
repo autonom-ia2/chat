@@ -1,11 +1,11 @@
-# Para onde cada anúncio leva (#2054), pelo `destination_type` do conjunto que a Meta manda (Crm::MetaAds::NameResolver).
+# Para onde cada anúncio leva (#2054), pelo `destination_type` do conjunto que a Meta manda (Crm::MetaAds::Insights::Destinations).
 #
 # Só afirma "não leva a uma conversa" quando a Meta disse um destino que está em OUTSIDE (site, app, vídeo, perfil…).
 # Sem o destino — conjunto ainda não lido (Insights::Destinations), UNDEFINED ou um valor novo da Meta — não afirma
 # nada: o anúncio segue entre os que trazem conversa, como um anúncio novo de WhatsApp sem a primeira mensagem.
 class Crm::MetaAds::Panel::AdDestinations
-  # Os destinos que não são de mensagem, da referência do conjunto de anúncios (Marketing API, destination_type). Os de
-  # mensagem (WHATSAPP, MESSENGER, INSTAGRAM_DIRECT e os MESSAGING_*) ficam de fora de propósito.
+  # Os destinos que não são de mensagem, da referência do conjunto de anúncios (Marketing API, destination_type,
+  # conferida em 21/10/2026). Os de mensagem (WHATSAPP, MESSENGER, INSTAGRAM_DIRECT e os MESSAGING_*) ficam de fora.
   OUTSIDE = %w[
     WEBSITE APP APPLINKS_AUTOMATIC FACEBOOK SHOP_AUTOMATIC ON_AD ON_POST ON_EVENT ON_VIDEO ON_PAGE INSTAGRAM_PROFILE
     FACEBOOK_PAGE INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE INSTAGRAM_LIVE FACEBOOK_LIVE IMAGINE

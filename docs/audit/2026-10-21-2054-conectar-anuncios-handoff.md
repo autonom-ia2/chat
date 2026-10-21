@@ -99,6 +99,42 @@ ESLint e Rubocop limpos. Demo zerada (sem conexão, `meta_modo=uma`).
    - parecer de Funções personalizadas;
    - vaga com a Orquestração.
 
+## Depois da aprovação (21/10, fim da tarde)
+
+Rodrigo aprovou o protótipo ("pode seguir com specs e PR"), aprovou a lista lateral fora do Resultado conectado
+("é isso mesmo, pode implementar") e escolheu ler da Meta o destino do conjunto.
+
+Feito:
+- Painel conectado: a lista dos 4 passos só aparece na aba Conexão ou com um passo aberto.
+- Destino do conjunto (`crm_meta_ad_objects.destination_type`, migration 20261108330000, versão reservada com a
+  Orquestração):
+  - lido por `Insights::Destinations` depois do gasto de hoje, com uma chamada a `act_<id>/adsets`, só quando
+    falta destino;
+  - `Panel::AdDestinations` põe em "Outros" só o anúncio que nunca trouxe conversa e cujo conjunto leva a um
+    destino da lista OUTSIDE (site, vídeo, perfil…);
+  - sem destino, o anúncio fica entre os que trazem conversa. Assim o anúncio novo de WhatsApp continua no custo
+    por conversa e no consultor ("espere").
+- O AdDetail abre também os outros anúncios, sem veredito.
+- O relatório baixado mostra a linha "Outros anúncios (sem conversa)".
+- Specs Ruby e vitest novos.
+
+Validação no M2, snapshot `/Users/Shared/maccluster-workspaces/20261021-2054-merge/20261021-164420-818bf2be-…/src`
+com a main mesclada:
+- rspec de meta_ads: 539 exemplos, 0 falhas;
+- vitest de metaAds: 201/201;
+- Rubocop e ESLint sem erro;
+- `i18n:fork:check` ok.
+
+Falha que depende da ordem, fora do PR: `meta_advisor_action_spec` 65 e 74 falharam uma vez na suíte e passaram
+sozinhos.
+
+Depois do deploy:
+- a conta 18 só passa o EUA para "Outros" quando a leitura de hoje gravar o destino, até 30 minutos depois de
+  abrir a tela;
+- teste real da conta 6 com a pessoa testadora (ver Riscos).
+
+Limpeza extra: o snapshot `20261021-2054-merge` e o wrapper `rt2.sh` na pasta da demo.
+
 ## Riscos e pendências
 
 - **Não provado:** o token de um **testador** lê a conta de anúncios dele com o app no nível "Limited"? A documentação

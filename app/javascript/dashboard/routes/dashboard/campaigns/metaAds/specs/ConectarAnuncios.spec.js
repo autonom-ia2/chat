@@ -119,6 +119,7 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
       site: false,
     });
     expect(wrapper.attributes('data-screen')).toBe('done');
+    expect(wrapper.find('[data-conectar-destino-falhou]').exists()).toBe(false);
 
     await wrapper.find('[data-conectar-ver-painel]').trigger('click');
     expect(wrapper.emitted('connected')).toHaveLength(1);
@@ -198,6 +199,7 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
 
     expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledTimes(1);
     expect(wrapper.attributes('data-screen')).toBe('done');
+    expect(wrapper.find('[data-conectar-destino-falhou]').exists()).toBe(true);
   });
 
   it('sharing as partner: copy, open Meta, mark, and it checks again by itself while it has not arrived', async () => {
