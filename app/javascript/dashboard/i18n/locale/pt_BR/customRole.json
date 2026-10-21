@@ -33,6 +33,10 @@
         "DESCRIPTION": "Descrição",
         "PERMISSIONS": "Permissões",
         "ACTIONS": "Ações"
+      },
+      "LOCK": {
+        "MINE": "É a sua função",
+        "ABOVE": "Acima do seu acesso"
       }
     },
     "PERMISSIONS": {
@@ -73,7 +77,13 @@
       "ATTRIBUTE_MANAGE": "Editar atributos personalizados",
       "MACRO_MANAGE": "Editar macros da equipe",
       "SLA_MANAGE": "Editar políticas de SLA",
-      "CONVERSATION_VIEW": "Lê as outras conversas da caixa"
+      "CONVERSATION_VIEW": "Lê as outras conversas da caixa",
+      "CAMPAIGN_SEND": "Disparar campanhas",
+      "PEOPLE_MANAGE": "Cuidar das pessoas e dos times",
+      "CUSTOM_ROLE_MANAGE": "Montar funções",
+      "GRANT_ABOVE_OWN": "Pode entregar acesso acima do próprio",
+      "FINANCIAL_VIEW": "Ver os custos da conta",
+      "FINANCIAL_MANAGE": "Ligar e desligar a autorização de cobranças da Meta"
     },
     "MATRIX": {
       "GROUPS": {
@@ -82,7 +92,8 @@
         "AUTONOMIA": "Autonom.ia",
         "MARKETING": "Marketing",
         "CONNECTIONS": "Conexões",
-        "SETTINGS": "Configurações da conta"
+        "SETTINGS": "Configurações da conta",
+        "FINANCE": "Financeiro"
       },
       "LEVELS": {
         "NONE": "Sem acesso",
@@ -132,9 +143,9 @@
         },
         "CRM": {
           "NAME": "CRM",
-          "HINT": "Funis, oportunidades e agenda",
-          "LEVEL_VIEW": "Vê o quadro e as oportunidades. Não altera.",
-          "LEVEL_MANAGE": "Cria, edita e move oportunidades."
+          "HINT": "Funis, cards e agenda",
+          "LEVEL_VIEW": "Vê o quadro e os cards. Não altera.",
+          "LEVEL_MANAGE": "Cria, edita e move cards."
         },
         "AUTONOMIA": {
           "NAME": "Agentes Autonom.ia",
@@ -159,7 +170,7 @@
           "NAME": "Campanhas",
           "HINT": "E-mail, WhatsApp, SMS, links e QR codes",
           "LEVEL_VIEW": "Vê campanhas e resultados.",
-          "LEVEL_MANAGE": "Cria e dispara campanhas. Gera custo."
+          "LEVEL_MANAGE": "Monta campanhas. Disparar é o ajuste abaixo."
         },
         "WHATSAPP_TEMPLATES": {
           "NAME": "Modelos do WhatsApp",
@@ -215,6 +226,17 @@
           "HINT": "Quem recebe cada conversa e quantas de cada vez",
           "LEVEL_MANAGE": "Cria e altera as regras de distribuição e de capacidade.",
           "SUGGESTION": "Para listar todas as caixas nos formulários, Caixas de entrada precisa estar ao menos em Ver."
+        },
+        "PEOPLE": {
+          "NAME": "Pessoas",
+          "HINT": "Agentes, times e funções",
+          "LEVEL_MANAGE": "Convida, edita e remove agentes e cuida dos times. Nunca mexe em administradores."
+        },
+        "FINANCE": {
+          "NAME": "Financeiro",
+          "HINT": "Custos da conta e a autorização de cobranças da Meta",
+          "LEVEL_VIEW": "Vê a autorização de cobranças da Meta e, para quem também tem os relatórios do CRM, quanto a IA custa em reais. Plano e faturas ficam com o administrador.",
+          "LEVEL_MANAGE": "Também liga e desliga a autorização de cobranças da Meta."
         }
       }
     },
@@ -271,7 +293,7 @@
     "EXTRAS": {
       "CONVERSATION_UNASSIGNED_MANAGE": "Vê a fila de conversas sem responsável e pode assumir.",
       "CONVERSATION_PARTICIPATING_MANAGE": "Vê as conversas em que participa, mesmo atribuídas a outra pessoa.",
-      "CRM_MOVE_CARDS": "Arrasta oportunidades entre etapas sem editar o resto.",
+      "CRM_MOVE_CARDS": "Arrasta cards entre etapas sem editar o resto.",
       "CRM_VIEW_REPORTS": "Painel do funil e custo de IA.",
       "CRM_MANAGE_PIPELINES": "Etapas, automações e caixas do funil.",
       "CRM_MANAGE_AI": "Configura e aceita sugestões da IA. Gera custo.",
@@ -281,7 +303,10 @@
       "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas.",
       "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder.",
       "CONTACT_EXPORT": "Baixa a base de contatos numa planilha.",
-      "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez."
+      "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez.",
+      "CAMPAIGN_SEND": "Envia e agenda campanhas e retoma as pausadas. Sem isto, monta e deixa pronta para quem dispara.",
+      "CUSTOM_ROLE_MANAGE": "Cria e edita funções, dentro das próprias chaves.",
+      "GRANT_ABOVE_OWN": "Entrega qualquer função da conta, menos administrador. Tudo fica no histórico."
     },
     "EDITOR": {
       "NEW_TITLE": "Ajuste o que for diferente",
@@ -303,12 +328,12 @@
       "FOOTER_COUNT": "Nenhuma área liberada | 1 área liberada | {n} áreas liberadas",
       "ADMIN_ONLY": {
         "TITLE": "Sempre do administrador",
-        "ITEMS": "Agentes, times, robôs, integrações, conta, segurança, cobrança, auditoria e funções personalizadas.",
+        "ITEMS": "Robôs, integrações, conta, segurança, cobrança e auditoria.",
         "GUIDE": "O Guia da Plataforma segue esta função: só mostra e só faz o que a pessoa pode fazer."
       },
       "SENSITIVE_CONFIRM": {
         "TITLE": "Liberar “{name}”?",
-        "DESCRIPTION": "Esta permissão mexe com dado pessoal ou gera custo. Libere só para quem precisa.",
+        "DESCRIPTION": "Esta permissão mexe com dado pessoal, gera custo ou entrega acesso. Libere só para quem precisa.",
         "CONFIRM": "Liberar"
       },
       "APPLY_CONFIRM": {
@@ -317,7 +342,11 @@
         "CONFIRM": "Aplicar modelo",
         "DONE": "Modelo {name} aplicado."
       },
-      "INCLUDED_IN_ADMIN": "Incluído no acesso total ao CRM."
+      "INCLUDED_IN_ADMIN": "Incluído no acesso total ao CRM.",
+      "LOCK": {
+        "MISSING": "Você não tem esta chave",
+        "DELEGATION": "Só quem pode entregar acima do próprio acesso"
+      }
     },
     "SUMMARY": {
       "CAN_TITLE": "Esta pessoa poderá",
@@ -396,7 +425,7 @@
       "PHRASES": {
         "OWN_CONVERSATIONS": "Atender as próprias conversas e pegar da fila",
         "READ_CONTACTS_KB": "Consultar contatos e a base de conhecimento",
-        "MANAGE_DEALS": "Criar e mover oportunidades no CRM",
+        "MANAGE_DEALS": "Criar e mover cards no CRM",
         "OTHERS_CONVERSATIONS": "Ver conversas de outros atendentes",
         "REPORTS": "Ver relatórios",
         "SETTINGS": "Mexer em configurações",
@@ -411,7 +440,7 @@
         "EXPORT_CRM": "Exportar a lista do CRM",
         "ALL_SEARCHES": "Ver as buscas de prospecção de todos",
         "ANSWER_CONVERSATIONS": "Atender conversas",
-        "EDIT_DEALS": "Editar oportunidades no CRM",
+        "EDIT_DEALS": "Editar cards no CRM",
         "CRM_DASHBOARD": "Ver o painel do CRM e o custo de IA",
         "CHANGE_ANYTHING": "Alterar qualquer coisa",
         "SETUP_INBOXES": "Configurar caixas e reconectar o WhatsApp",

@@ -7,7 +7,10 @@
 # e-mail ou telefone, que é o que a plataforma põe quando não sabe o nome, nem como atributo
 # personalizado (um valor com forma de e-mail ou de telefone fica de fora). As mensagens são as 5
 # últimas até a mensagem da pergunta, cada uma cortada em 5.000 caracteres (#1000: formulário de
-# site por e-mail tem cabeçalho e rodapé).
+# site por e-mail tem cabeçalho e rodapé). Quem chama pode pedir outra janela (#1924: a IA de assunto
+# lê mais, porque o pedido costuma ficar algumas idas e vindas antes da última mensagem) e cortar mais curtas
+# as mensagens além das 5 mais recentes, para a janela maior não multiplicar o texto de e-mails longos. As 5
+# mais recentes com texto seguem nos 5.000 de sempre: a janela maior nunca lê menos do que a de 5 lia.
 #
 # Sem `leituras`, lê o que a etapa 1 lia: canal, assunto e as mensagens do cliente.
 class Autonomia::Decisores::Estado
@@ -40,13 +43,15 @@ class Autonomia::Decisores::Estado
   end
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
-                 leituras: Autonomia::Decisor::LEITURAS_PADRAO)
+                 leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES)
     @conversation = conversation
     @message = message
     @card = card
     @contact = contact
     @texto = texto.to_s.strip.first(MAX_CARACTERES).presence
     @leituras = leituras
+    @max_mensagens = max_mensagens
+    @max_caracteres_anteriores = max_caracteres_anteriores
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -205,12 +210,13 @@ class Autonomia::Decisores::Estado
   end
 
   # #1807 (flag `email_autoria`): e-mail recebido sem o histórico citado; o de outro endereço sempre diz quem escreveu.
+  # #1924: as MAX_MENSAGENS mais recentes com texto vão até MAX_CARACTERES; as mais antigas da janela, até
+  # @max_caracteres_anteriores. A posição conta depois de tirar as vazias (e-mail só com citação).
   def textos(lista, com_autor: false)
-    lista.filter_map do |mensagem|
-      texto = email_autoria.texto(mensagem).strip.first(MAX_CARACTERES).presence
-      next texto unless texto && (com_autor || email_autoria.de(mensagem))
-
-      "#{autor(mensagem)}: #{texto}"
+    com_texto = lista.map { |mensagem| [mensagem, email_autoria.texto(mensagem).strip] }.reject { |(_, texto)| texto.empty? }
+    com_texto.each_with_index.map do |(mensagem, inteiro), posicao|
+      texto = inteiro.first(posicao < com_texto.size - MAX_MENSAGENS ? @max_caracteres_anteriores : MAX_CARACTERES)
+      com_autor || email_autoria.de(mensagem) ? "#{autor(mensagem)}: #{texto}" : texto
     end
   end
 
@@ -236,7 +242,7 @@ class Autonomia::Decisores::Estado
 
     escopo = escopo.where.not(content: [nil, ''])
     escopo = escopo.where(id: ..message.id) if message
-    escopo.reorder(id: :desc).limit(MAX_MENSAGENS).to_a.reverse
+    escopo.reorder(id: :desc).limit(@max_mensagens).to_a.reverse
   end
 
   def card_da_conversa

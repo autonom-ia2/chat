@@ -2,6 +2,12 @@ module Crm
   module Ai
     class Evaluator # rubocop:disable Metrics/ClassLength -- no teto (175) antes do #1828; a saída da cópia é uma linha
       Result = Struct.new(:status, :suggestion, :error, keyword_init: true)
+      # #1918 (decisão do Rodrigo, 20/10): card em que uma pessoa escolheu a etapa há menos que isto (moveu, reabriu ou
+      # criou numa etapa) não tem a etapa mexida pela IA em nenhum gatilho automático: nem move, nem sugere. O resto da
+      # avaliação (campos, pedido de atendente, retorno) segue. O mesmo tempo do respeito à escolha de assunto feita por
+      # uma pessoa (Crm::Subjects::RESPEITO_AO_FOCO, #1260). "Avaliar agora" é a pessoa pedindo e não tem essa trava.
+      RESPEITO_AO_MOVIMENTO = Crm::Subjects::RESPEITO_AO_FOCO
+      ESCOLHAS_DE_ETAPA = %w[move reopen].freeze
 
       # tocado (#1693): a IA de assunto disse que a mensagem é sobre este card; ele é avaliado mesmo fora do foco.
       def initialize(card:, trigger: 'message', tocado: false)
@@ -50,7 +56,8 @@ module Crm
         # #1828: quem não é o cliente e pediu para sair da cópia (de carona nesta avaliação, flag `email_autoria`).
         Crm::Email::SaidaDaCopia.aplicar!(@card, classification[:saida_da_copia])
         result = apply_classification(classification)
-        return result.tap { Crm::Memoria::Pendente.descartar!(@card) } if @pipeline_mudou
+        # Card arquivado como "não é negócio" (#1922): o resto (pedido de atendente, retorno, campos) era do card aberto.
+        return result.tap { Crm::Memoria::Pendente.descartar!(@card) } if @pipeline_mudou || result.status == :archived
 
         refresh_post_classification_context!
         classification = refresh_handoff_classification_if_needed(classification, result, regra)
@@ -67,6 +74,8 @@ module Crm
       def stage_classifier(client:, fora: [])
         # O funil do card no começo: a resposta do modelo é sobre as etapas DELE (#1711).
         @pipeline_inicial ||= @card.pipeline_id
+        # Quando a conversa foi lida: mensagem do cliente depois disto deixa velha a decisão de arquivar (#1922).
+        @lido_em ||= Time.current
         StageClassifier.new(
           card: @card, client: client, stages: stages, context: contexto(fora),
           model: modelo, reasoning_effort: Config::CLASSIFY_REASONING_EFFORT,
@@ -87,7 +96,12 @@ module Crm
       private
 
       # Memória das IAs (#1601): de carona nesta avaliação, só com a flag e num card com contato (ids locais e fatos).
-      def contexto(fora) = ContextBuilder.new(card: @card, fora: fora, memoria: Crm::Memoria::Pendente.avaliar?(@card)).perform
+      # A janela da avaliação (#1926): até MAX_MESSAGES_CAP mensagens, não as 12 dos outros leitores.
+      # Card que renasce (#1925): o pedido encerrado antes deste, para a IA decidir se é o mesmo retomado.
+      def contexto(fora)
+        ContextBuilder.new(card: @card, fora: fora, memoria: Crm::Memoria::Pendente.avaliar?(@card), janela: :avaliacao,
+                           pedido_anterior: true).perform
+      end
 
       def credential_resolver
         @credential_resolver ||= CredentialResolver.new(account: @account)
@@ -173,6 +187,9 @@ module Crm
         touch_evaluation_metadata(classification)
         return Result.new(status: :skipped, error: 'pipeline_changed') if @pipeline_mudou
 
+        return pessoa_mexeu_na_etapa! if pessoa_mexeu_na_etapa?
+        return Result.new(status: :archived) if nao_e_negocio!(classification)
+
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
         return Result.new(status: :skipped, error: 'unknown_stage') if target_stage.blank?
         return Result.new(status: :skipped, error: 'same_stage') if target_stage.id == @card.stage_id
@@ -209,6 +226,37 @@ module Crm
         true
       rescue ArgumentError
         false
+      end
+
+      # A linha do tempo do card: a etapa escolhida por uma pessoa (mover no quadro, em lote ou aceitando uma sugestão;
+      # reabrir; criar o card escolhendo a etapa, Crm::Cards::Creator `etapa_escolhida`).
+      def pessoa_mexeu_na_etapa?
+        return false if @trigger == 'manual'
+
+        da_pessoa = Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user',
+                                        created_at: RESPEITO_AO_MOVIMENTO.ago..)
+        criou_na_etapa = da_pessoa.where(event_type: 'create').where('payload @> ?', { etapa_escolhida: true }.to_json)
+        da_pessoa.where(event_type: ESCOLHAS_DE_ETAPA).or(criou_na_etapa).exists?
+      end
+
+      # Nem sugere: a sugestão de etapa que esperava uma pessoa, de antes da escolha dela, também sai.
+      def pessoa_mexeu_na_etapa!
+        pendentes = @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).to_a
+        pendentes.each { |sugestao| sugestao.update!(status: :expired) }
+        Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_UPDATED) if pendentes.any?
+        Result.new(status: :skipped, error: 'pessoa_mexeu_na_etapa')
+      end
+
+      # #1922: o modelo disse que o card não é negócio. Só com a flag da conta (`crm_ia_arquiva_lixo`) e no automático do
+      # funil, como mover sozinho; "Avaliar agora" é a pessoa olhando o card, e ela mesma arquiva se quiser. As guardas do
+      # card são do Crm::Ai::NaoENegocio. Com pedido de atendente neste card, ele fica: arquivar pularia a passagem.
+      def nao_e_negocio!(classification)
+        return false if @trigger == 'manual' || classification[:nao_e_negocio].blank?
+        return false unless NaoENegocio.ligada?(@card.account)
+        return false if HandoffIntent.requested?(classification[:handoff])
+        return false unless auto_move_allowed?
+
+        NaoENegocio.new(card: @card, decisao: classification[:nao_e_negocio], lido_em: @lido_em).aplicar!
       end
 
       def stage_criteria_present?(stage)

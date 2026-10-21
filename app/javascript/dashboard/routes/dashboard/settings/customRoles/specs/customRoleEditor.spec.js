@@ -53,9 +53,16 @@ const AssignStub = {
   },
 };
 
+const ADMIN_SEAT = {
+  role: 'administrator',
+  customRoleId: null,
+  permissions: [],
+};
+
 const buildStore = (
   roles = [],
-  account = { features: { custom_roles: true } }
+  account = { features: { custom_roles: true } },
+  seat = ADMIN_SEAT
 ) => {
   const actions = {
     getCustomRole: vi.fn(),
@@ -65,6 +72,18 @@ const buildStore = (
   const store = createStore({
     getters: {
       getCurrentAccountId: () => 1,
+      getCurrentRole: () => seat.role,
+      getCurrentCustomRoleId: () => seat.customRoleId,
+      getCurrentUser: () => ({
+        id: 2,
+        accounts: [
+          {
+            id: 1,
+            custom_role_id: seat.customRoleId,
+            permissions: seat.permissions,
+          },
+        ],
+      }),
       'accounts/getAccount': () => () => (account ? { id: 1, ...account } : {}),
       'accounts/isFeatureEnabledonAccount': () => (_, feature) =>
         Boolean(account?.features?.[feature]),
@@ -204,6 +223,59 @@ describe('CustomRoleEditor', () => {
 
     expect(router.replace).not.toHaveBeenCalled();
     expect(wrapper.findComponent(ProfilePicker).exists()).toBe(true);
+  });
+
+  describe('fora do administrador (#1931)', () => {
+    const builder = {
+      role: 'agent',
+      customRoleId: 5,
+      permissions: ['custom_role_manage', 'crm_view', 'custom_role'],
+    };
+    const features = { features: { custom_roles: true } };
+
+    it('does not open the role the person holds', async () => {
+      route.params = { roleId: '5' };
+      const { store } = buildStore(
+        [{ id: 5, name: 'Minha', permissions: builder.permissions }],
+        features,
+        builder
+      );
+      await mountEditor(store);
+
+      expect(router.replace).toHaveBeenCalledWith({
+        name: 'custom_roles_list',
+      });
+    });
+
+    it('does not open a role above the person reach', async () => {
+      route.params = { roleId: '6' };
+      const { store } = buildStore(
+        [{ id: 6, name: 'Caixas', permissions: ['inbox_manage'] }],
+        features,
+        builder
+      );
+      await mountEditor(store);
+
+      expect(router.replace).toHaveBeenCalledWith({
+        name: 'custom_roles_list',
+      });
+    });
+
+    it('keeps only reachable keys from a profile and skips assigning without people_manage', async () => {
+      const { store, actions } = buildStore([], features, builder);
+      const wrapper = await mountEditor(store);
+      wrapper.findComponent(ProfilePicker).vm.$emit('choose', 'FINANCE');
+      await flushPromises();
+
+      await buttonWith(wrapper, 'CUSTOM_ROLE.ADD.SUBMIT').trigger('click');
+      await flushPromises();
+
+      expect(actions.createCustomRole.mock.calls[0][1].permissions).toEqual([
+        'crm_view',
+      ]);
+      expect(assignOpen).not.toHaveBeenCalled();
+      expect(router.push).toHaveBeenCalledWith({ name: 'custom_roles_list' });
+    });
   });
 
   it('goes back to the list when the plan has no custom roles', async () => {

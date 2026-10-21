@@ -1361,6 +1361,13 @@
       "mode"
     ]
   },
+  "crm/meta_ads_connection/report": {
+    "controller": "api/v1/accounts/crm/meta_ads_reports#show",
+    "parametros": [
+      "days",
+      "formato"
+    ]
+  },
   "crm/meta_ads_connection/whatsapp_report": {
     "controller": "api/v1/accounts/crm/meta_ads_whatsapp_reports#show",
     "parametros": []
@@ -2107,6 +2114,10 @@
   },
   "waha_inboxes/:inbox_id/connection": {
     "controller": "api/v1/accounts/waha_inboxes#connection",
+    "parametros": []
+  },
+  "waha_inboxes/:inbox_id/status": {
+    "controller": "api/v1/accounts/waha_inboxes#status",
     "parametros": []
   },
   "webhooks": {

@@ -21,7 +21,6 @@ import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
 import { readsOnlyConversations } from 'dashboard/store/modules/conversations/helpers';
 import {
   CRM_VIEW_PERMISSION,
-  CRM_VIEW_REPORTS_PERMISSION,
   CRM_ADMIN_PERMISSION,
   CRM_MANAGE_AI_PERMISSION,
   AUTONOMIA_PERMISSIONS,
@@ -52,6 +51,7 @@ import EmojiIcon from 'next/emoji-icon-picker/EmojiIcon.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
 import ForkSidebarNav from './fork/ForkSidebarNav.vue';
 import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
+import { useQuemVeNumeros } from 'dashboard/routes/dashboard/crm/components/numeros/useQuemVeNumeros';
 import {
   SIDEBAR_SORT_SECTIONS,
   getSidebarSortOptions,
@@ -254,18 +254,11 @@ const canViewCrm = computed(() => {
   );
 });
 
-// CRM reports (Dashboard) follow the same "admin/plain agent = full access"
-// rule, gated by crm_view_reports for custom-role seats.
-const canViewCrmReports = computed(() => {
-  if (currentRole.value === 'administrator' || !currentCustomRoleId.value) {
-    return true;
-  }
-  const permissions = getUserPermissions(currentUser.value, accountId.value);
-  return (
-    permissions.includes(CRM_ADMIN_PERMISSION) ||
-    permissions.includes(CRM_VIEW_REPORTS_PERMISSION)
-  );
-});
+// CRM reports (Dashboard): admin/plain agent = full access, crm_view_reports for custom-role seats. With
+// `crm_numeros_lentes` (#1897) Números also opens "Só eu" (plain agent, crm_view) and only who sees the team keeps
+// the AI usage page.
+const { abreNumeros: canViewCrmReports, veEquipe: canViewCrmTeamReports } =
+  useQuemVeNumeros();
 
 // CRM SLA management is admin-grade (administrators, crm_admin or sla_manage seats, #1618)
 // AND requires the enterprise `sla` feature (the backend gate 404s without it).
@@ -1007,7 +1000,7 @@ const menuItems = computed(() => {
                     },
                   ]
                 : []),
-              ...(canViewCrmReports.value && crmAiEnabled.value
+              ...(canViewCrmTeamReports.value && crmAiEnabled.value
                 ? [
                     {
                       name: 'CRM AI Usage',

@@ -14,6 +14,7 @@ import Icon from 'next/icon/Icon.vue';
 import { remetenteDoEmail, semRastreio } from './dadosDoEmail';
 import { imagemSemRastreio, linkSemRastreio } from './documentoDoEmail';
 import { htmlComCssSeguro } from './estiloSeguroDoEmail';
+import { htmlDoTextoComImagens } from './imagemNoTextoDoEmail';
 
 const props = defineProps({
   // A mensagem citada, como vem do store (snake_case).
@@ -46,13 +47,15 @@ const quem = computed(
 // web, e-mail e telefone.
 const recursoSemRastreio = imagemSemRastreio(semRastreio);
 const linkDoLetter = linkSemRastreio(semRastreio);
-const html = computed(() =>
-  htmlComCssSeguro(dados.value.html_content?.full || '', {
-    conferirUrls: true,
-  })
-);
 const texto = computed(
   () => dados.value.text_content?.full || props.mensagem?.content || ''
+);
+// #1942: texto puro com imagem embutida pelo Chatwoot vai como HTML só com as imagens.
+const html = computed(() =>
+  htmlComCssSeguro(
+    dados.value.html_content?.full || htmlDoTextoComImagens(texto.value),
+    { conferirUrls: true }
+  )
 );
 const ehEncaminhado = computed(() => props.tipo === 'encaminhado');
 const CSS_PERMITIDO = [
@@ -158,7 +161,7 @@ const LINK =
       data-original-citado
     >
       <Letter
-        class-name="prose prose-bubble !max-w-none letter-render"
+        class-name="prose prose-bubble !max-w-none letter-render [&_img]:max-w-full"
         :html="html"
         :text="texto"
         :allowed-css-properties="CSS_PERMITIDO"

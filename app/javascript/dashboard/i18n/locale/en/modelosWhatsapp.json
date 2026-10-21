@@ -1153,7 +1153,7 @@
         "LIGADA_TUDO": "On for Service notice and Promotion.",
         "ABRIR": "See permission"
       },
-      "SO_ADMIN": "Only account administrators can change this."
+      "SO_ADMIN": "Only account administrators, or roles with Finance in Edit, can change this."
     },
     "CONVERSA": {
       "SELO": {

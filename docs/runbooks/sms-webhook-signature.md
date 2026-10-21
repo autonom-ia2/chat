@@ -133,7 +133,7 @@ Mudança de autenticação em webhook: **cada passo em produção exige OK do Ro
 |---|---|---|
 | Callback legítimo recusado (`action=rejected`) | Trocar no SSM para `SMS_WEBHOOK_SIGNATURE_MODE=log` (ou restaurar a versão anterior do parâmetro) e rodar o deploy no mesmo SHA | ~15 min |
 | Qualquer problema no código novo | `SMS_WEBHOOK_SIGNATURE_MODE=off` pelo mesmo procedimento | ~15 min |
-| Problema geral após o deploy | Workflow de deploy da stack com `action=rollback`, `confirm_production=true` | ~5 min |
+| Problema geral após o deploy | Workflow de deploy da stack com `action=rollback`, `confirm_production=true`, `esperado_sha=<SHA de antes do deploy>` (#1979) | ~5 min, mais a espera de um deploy que já esteja trocando o tráfego |
 
 Abortar e executar o rollback se: `/health` falhar, a contagem de chaves do SSM cair, ou aparecer
 `action=rejected` em canal legítimo.

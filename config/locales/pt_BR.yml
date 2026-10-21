@@ -218,11 +218,11 @@ pt_BR:
     reports:
       date_range_too_long: O intervalo de datas não pode exceder 6 meses
     crm:
-      contact_already_linked: "já está vinculado a esta oportunidade. Use o contato existente ou altere o vínculo explicitamente."
-      contact_idempotency_required: "É preciso informar uma Idempotency-Key para criar um contato nesta oportunidade."
+      contact_already_linked: "já está vinculado a este card. Use o contato existente ou altere o vínculo explicitamente."
+      contact_idempotency_required: "É preciso informar uma Idempotency-Key para criar um contato neste card."
       contact_identity_taken: "Já existe um contato com esses dados. Use o contato existente."
       invalid_contact_input: "Informe um contato com nome preenchido, e-mail e telefone opcionais em texto e atributos válidos."
-      contact_conversation_conflict: "não pode ser alterado enquanto esta oportunidade tiver conversas de outro contato. Revise primeiro os vínculos das conversas."
+      contact_conversation_conflict: "não pode ser alterado enquanto este card tiver conversas de outro contato. Revise primeiro os vínculos das conversas."
   profile:
     mfa:
       enabled: MFA habilitado com sucesso
@@ -708,7 +708,7 @@ pt_BR:
       subject: 'Lembrete: %{title}'
       push_title: 'Lembrete: %{title}'
       greeting: 'Olá %{name},'
-      card: 'Negócio: %{card}'
+      card: 'Card: %{card}'
       due_at: 'Vence em: %{time}'
       cta: 'Abrir CRM'
     meetings:

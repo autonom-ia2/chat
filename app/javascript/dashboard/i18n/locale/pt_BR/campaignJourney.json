@@ -21,7 +21,8 @@
       "CANCELLED": "Cancelada",
       "FAILED": "Falhou",
       "ALWAYS_ON": "Sempre ativa",
-      "STOPPED": "Parada"
+      "STOPPED": "Parada",
+      "READY": "Pronta para disparar"
     },
     "CHOOSER": {
       "TITLE": "Por onde vai a campanha?",
@@ -67,7 +68,8 @@
       },
       "SENT_OF": "{sent} de {total} enviadas",
       "OPEN": "Abrir",
-      "OPEN_ARIA": "Abrir a campanha {name}"
+      "OPEN_ARIA": "Abrir a campanha {name}",
+      "MONTADA_POR": "montada por {nome}"
     },
     "AUDIENCES": {
       "TITLE": "Público",
@@ -384,6 +386,7 @@
           "WHATSAPP_CLOUD_REQUIRED": "Esta caixa não envia modelos aprovados. Escolha uma caixa do WhatsApp Cloud.",
           "CHANNEL_NOT_IN_AUDIENCE": "Este público não tem celular ligado para WhatsApp.",
           "AUDIENCE_NOT_READY": "Este público ainda não foi salvo. Aguarde um pouco e tente de novo.",
+          "DRAFT_GONE": "Esta campanha pronta já foi enviada por outra pessoa ou em outra aba. Confira a lista de campanhas.",
           "INVALID_VARIABLE_BINDINGS": "Alguma parte da mensagem está sem origem válida. Confira de onde vem cada parte.",
           "INVALID_CAMPAIGN": "Não foi possível salvar a campanha. Confira o nome e o modelo.",
           "JOURNEY_DISABLED": "A nova jornada de campanhas está desligada nesta instalação.",
@@ -439,12 +442,22 @@
           "IMPORT": "Importação concluída",
           "HYGIENE": "Endereços verificados",
           "PROVIDER": "Reputação do envio dentro do limite",
-          "AUDIENCE_CHANNEL": "E-mail ligado no público"
+          "AUDIENCE_CHANNEL": "E-mail ligado no público",
+          "ANEXO": "Anexo escolhido de novo (o arquivo não fica guardado na campanha pronta)"
         },
         "CONTENT": "Conteúdo",
         "CONTENT_DETAIL": "Assunto: {subject}",
         "EMAIL_DETAIL": "De {sender}",
-        "API_DETAIL": "Caixa {inbox} · ritmo automático"
+        "API_DETAIL": "Caixa {inbox} · ritmo automático",
+        "PRONTA": {
+          "DEIXAR": "Deixar pronta para disparar",
+          "QUEM_MONTA": "Você monta e deixa pronta. Quem pode disparar confere e envia.",
+          "QUEM_DISPARA": "{nome} montou e deixou pronta. Confira e envie.",
+          "SALVA": "Pronta para disparar. Quem pode disparar envia pela lista.",
+          "ERRO": "Não deu para deixar pronta. Tente de novo.",
+          "SALVA_COM_ANEXO": "Pronta para disparar. O anexo não fica guardado: quem disparar escolhe o arquivo de novo.",
+          "ERRO_LISTA": "Não deu para carregar as campanhas prontas para disparar. Recarregue a página."
+        }
       },
       "API": {
         "INBOX_LABEL": "Caixa de envio",

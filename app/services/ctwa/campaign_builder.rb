@@ -73,6 +73,7 @@ module Ctwa::CampaignBuilder
     # a write to keep board pills/filters live (job no-ops without linked cards).
     Crm::Cards::RebroadcastConversationCardsJob.perform_later(conversation.id) if persisted && Crm::Config.enabled?
     Crm::MetaAds::EnrichTouchesJob.enqueue_for(conversation, touch) if persisted
+    Crm::MetaAds::ReferralImageJob.enqueue_for(conversation, touch, referral) if persisted
 
     persisted
   end

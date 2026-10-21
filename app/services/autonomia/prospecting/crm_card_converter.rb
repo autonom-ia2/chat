@@ -87,7 +87,8 @@ class Autonomia::Prospecting::CrmCardConverter
     ::Crm::Cards::Creator.new(
       account: @account,
       user: @user,
-      params: card_params(stage: stage, contact: contact, company: company)
+      params: card_params(stage: stage, contact: contact, company: company),
+      etapa_escolhida: true
     ).perform
   end
 
