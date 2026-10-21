@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { startServer, root, output, origin } from './server.mjs';
+import { startServer, warmUp, root, output, origin } from './server.mjs';
 import {
   sourceFingerprints,
   styleFingerprints,
@@ -707,6 +707,8 @@ try {
     version: browser.version(),
     externalNetwork: 'blocked',
   };
+  results.warmup = await warmUp(browser);
+  process.stdout.write(`WARMUP ${JSON.stringify(results.warmup)}\n`);
   for (const definition of cases) {
     for (const view of views) {
       for (const theme of themes) {
