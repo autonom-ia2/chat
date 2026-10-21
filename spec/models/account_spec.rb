@@ -243,8 +243,10 @@ RSpec.describe Account do
         feature_anuncios_sem_login: 1 << 44,
         # #1922: posição 46 (1 << 45), definitiva da Orquestração (21/10), logo depois de anuncios_sem_login.
         feature_crm_ia_arquiva_lixo: 1 << 45,
-        # #1984: provisória 48 (1 << 47) da Orquestração (21/10); enquanto o #1967 (47) não entra, é a 47 da lista.
-        feature_convite_da_reuniao: 1 << 46
+        # #1923: posição 47 (1 << 46), definitiva da Orquestração (21/10), logo depois de crm_ia_arquiva_lixo.
+        feature_crm_ia_avalia_mensagem_equipe: 1 << 46,
+        # #1984: posição 49 (1 << 48) da Orquestração (21/10); enquanto o #1957 (48) não entra, é a 48 da lista.
+        feature_convite_da_reuniao: 1 << 47
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

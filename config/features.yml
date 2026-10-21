@@ -666,12 +666,22 @@
   enabled: false
   column: feature_flags_ext_1
 
+# Mensagem da equipe ao cliente relê o card em foco (#1923). Ligada (junto com `crm_avaliar_toda_mensagem`): a mensagem
+# que uma pessoa da equipe manda ao cliente (pelo painel, ou o eco do que mandou pelo app) agenda a avaliação do card em
+# foco, com a espera da equipe e o gatilho `mensagem_da_equipe` (Crm::Conversations::CardEmFoco). Posição 47 na
+# feature_flags_ext_1 (1 << 46), definitiva da Orquestração (21/10), logo depois de crm_ia_arquiva_lixo. Sem migration.
+# Desligada (padrão): só a mensagem do cliente dispara a avaliação, como antes. Nasce ligada só nas contas 1, 16 e 18 da
+# stack Hub2You (Orquestração, depois do deploy).
+- name: crm_ia_avalia_mensagem_equipe
+  display_name: Mensagem da equipe ao cliente relê o card em foco
+  enabled: false
+  column: feature_flags_ext_1
+
 # Convite de reunião no e-mail (#1984): o convite que chega como parte text/calendar vira um cartão na conversa, com
 # Sim / Talvez / Não ao organizador (pela agenda Google ou Microsoft ligada na caixa, ou por e-mail iMIP nas demais).
-# Posição na feature_flags_ext_1 = lugar na lista (o bit): provisória 48 (140737488355328 = 1 << 47) da Orquestração
-# (21/10), depois do crm_ia_avalia_mensagem_equipe (47, #1967); enquanto o #1967 não entra, fica na 47. Definitiva = fim
-# da main na vaga. O cartão lê o convite guardado em todo e-mail; a flag só
-# mostra o cartão e libera a resposta.
+# Posição na feature_flags_ext_1 = lugar na lista (o bit): 49 (281474976710656 = 1 << 48) da Orquestração (21/10),
+# depois do hibrido_foto_do_contato (48, #1957); enquanto o #1957 não entra, fica na 48. Definitiva = fim da main na
+# vaga. O cartão lê o convite guardado em todo e-mail; a flag só mostra o cartão e libera a resposta.
 # Ligada nas contas 1, 16 e 18 da stack Hub2You (piloto, pela Orquestração depois do deploy); conta nova nasce ligada
 # (migration 20261108250000).
 - name: convite_da_reuniao
