@@ -54,18 +54,16 @@ module Autonomia::Agents::PromptParts
     end
   end
 
-  # O SEGMENTO DA CONTA (tema 8, #1429): o bloco de `Autonomia::Segmentos::Bloco`, com a moldura de dado, para o
-  # Construtor e para o agente que atende (Answerer, Testar e Copiloto). Só com a Fase 2 ligada na conta e com bloco;
-  # fora disso, nil, e quem monta o pedido não acrescenta nada: o pedido fica byte a byte o de antes.
-  # Quem chama põe o bloco depois da instrução fixa e antes da conversa. Ele só depende da conta, então o começo do
-  # pedido continua o mesmo em todo turno daquela conta (cache).
+  # O SEGMENTO (tema 8, #1429): o texto do bloco de segmento, com a moldura de dado, para o Construtor e para o agente
+  # que atende (Answerer, Testar e Copiloto). Só com a Fase 2 ligada na conta e com texto; fora disso, nil, e quem monta
+  # o pedido não acrescenta nada: o pedido fica byte a byte o de antes. Quem chama escolhe o texto (o gravado na marca do
+  # agente, ou o atual da conta quando o agente está nascendo) e põe o bloco depois da instrução fixa e antes da
+  # conversa. Ele não muda de um turno para outro (cache).
   module SegmentoDaConta
     module_function
 
-    def texto(account)
+    def texto(account, bloco)
       return nil unless ::Autonomia::Agents::Fase2.ligada?(account)
-
-      bloco = ::Autonomia::Segmentos::Bloco.for(account)
       return nil if bloco.blank?
 
       <<~TXT.strip
@@ -77,9 +75,72 @@ module Autonomia::Agents::PromptParts
       TXT
     end
 
-    def mensagem(account)
-      conteudo = texto(account)
+    def mensagem(account, bloco)
+      conteudo = texto(account, bloco)
       conteudo && Mensagem.montar('user', conteudo)
+    end
+
+    # O texto atual do segmento da conta: o que um agente nascendo agora recebe e grava na marca.
+    def bloco_atual(account)
+      SegmentoDoAgente.texto_que_cabe(::Autonomia::Segmentos::Bloco.segmento(account))
+    end
+  end
+
+  # A MARCA DE BASE do agente (#1429): `config['base'] = { 'segmento', 'versao', 'texto' }`, gravada quando ele nasce com
+  # a Fase 2 ligada, com o texto e a versão vigentes do segmento da conta.
+  #
+  # A REGRA (decisão do Rodrigo, "só pelo botão"): o agente recebe o `texto` GRAVADO na marca, nunca o texto atual do
+  # segmento. Nada muda agente existente sozinho: nem a troca de tipo da conta no super admin, nem uma edição nossa do
+  # texto do tipo. Só o botão "Atualizar com a nova base" (F3) troca a marca. Sem texto gravado (sem marca, texto nil ou
+  # vazio), não há bloco. O texto é dado nosso e fica oculto: não sai em jbuilder nenhum, como a instrução.
+  module SegmentoDoAgente
+    module_function
+
+    LOG_TAG = '[Autonomia::Agents::PromptParts::SegmentoDoAgente]'.freeze
+
+    # A marca com que um agente nasce nesta conta. nil sem a Fase 2: o bloco só entra com ela, e quem nasce fora dela
+    # fica como os agentes de antes (sem marca, sem bloco). Conta geral grava segmento nil: "nasceu sem base". Falha ao
+    # ler o segmento também é nil (sem marca, não "conta geral"): o botão da F3 trata depois. Texto acima do teto não é
+    # gravado: texto e versão nil.
+    def marca(account)
+      return nil unless ::Autonomia::Agents::Fase2.ligada?(account) && segmento_legivel?(account)
+
+      segmento = ::Autonomia::Segmentos::Bloco.segmento(account)
+      texto = texto_que_cabe(segmento)
+      { 'segmento' => segmento, 'versao' => (::Autonomia::Segmentos::Bloco.versao(segmento) if texto), 'texto' => texto }
+    end
+
+    # `Pacotes.camadas` engole a falha e devolve [] (a conta geral). Para não gravar "geral" por engano, a marca relê a
+    # escolha da conta (a mesma leitura das camadas) e, se ela falha, o agente nasce sem marca.
+    def segmento_legivel?(account)
+      ::Autonomia::Agents::Nicho.for(account) if ::Autonomia::Segmentos::Pacotes.enabled?
+      true
+    rescue StandardError => e
+      # Só a classe: a mensagem pode carregar dado da conta.
+      Rails.logger.error("#{LOG_TAG} account=#{account&.id} #{e.class}; agente nasce sem marca de base")
+      false
+    end
+
+    # O texto do segmento, se couber no teto; acima dele, nil e erro no log (segmento e tamanho, nunca o texto).
+    def texto_que_cabe(segmento)
+      return nil if segmento.blank?
+
+      texto = ::Autonomia::Segmentos::Bloco.for_segmento(segmento)
+      tamanho = texto.to_s.bytesize
+      return texto if tamanho <= ::Autonomia::Segmentos::Bloco::TEXTO_DA_BASE_MAX
+
+      Rails.logger.error("#{LOG_TAG} texto do segmento=#{segmento} com #{tamanho} bytes passa do teto; não gravado")
+      nil
+    end
+
+    # O texto gravado na marca; nil sem marca.
+    def texto(agent)
+      base = agent.config.to_h['base']
+      base['texto'] if base.is_a?(Hash)
+    end
+
+    def mensagem(agent)
+      SegmentoDaConta.mensagem(agent.account, texto(agent))
     end
   end
 

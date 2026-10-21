@@ -21,9 +21,9 @@ module Autonomia::Agents::AgentVersioning
   # instrução gerada pelo Construtor nunca fica num agente manual, onde a API a mostraria (#1484).
   CAMPOS = %w[name agent_type mode scaffold tone handoff_rule greeting fallback_message starter_questions
               human_card].freeze
-  # As chaves do jsonb `config` que o Construtor escreve. As demais (topic_map, model, agenda…) não são
-  # versionadas e ficam como estão ao voltar.
-  CHAVES_DA_CONFIG = %w[guardrails voice with_knowledge].freeze
+  # As chaves do jsonb `config` que o Construtor escreve, mais a marca de base do segmento (#1429). As demais (topic_map,
+  # model, agenda…) não são versionadas e ficam como estão ao voltar.
+  CHAVES_DA_CONFIG = %w[guardrails voice with_knowledge base].freeze
   # Guardadas no retrato só para saber se a aplicação mudou algo (`sem_mudanca`); voltar NÃO as devolve.
   # `actuation`: o controller recusa agente interno com canal conectado (`reject_internal_with_channels`), e
   # a volta, que não passa por ele, poderia gravar exatamente esse estado.
@@ -182,10 +182,13 @@ module Autonomia::Agents::AgentVersioning
     { 'instruction' => instruction.to_s, 'agente' => retrato_da_versao }
   end
 
+  # A marca de base só entra no retrato quando o agente a tem: o retrato de quem não tem fica igual ao das versões de antes
+  # do #1429 (a comparação do Desfazer e de `estado_atual_guardado?` segue valendo para elas).
   def retrato_da_versao
     atual = config.to_h
+    config_versionada = CHAVES_DA_CONFIG.index_with { |chave| atual[chave] }
     (CAMPOS + SO_PARA_COMPARAR).index_with { |campo| self[campo] }
-                               .merge('config' => CHAVES_DA_CONFIG.index_with { |chave| atual[chave] })
+                               .merge('config' => atual.key?('base') ? config_versionada : config_versionada.except('base'))
   end
 
   def ultima_versao(escopo = instruction_versions)
