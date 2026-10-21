@@ -729,7 +729,7 @@
       "CAIXA_RECONECTAR": "{nome} · needs reconnecting",
       "RECONECTAR_MOTIVO": "{nome} needs to be reconnected to WhatsApp to send campaigns.",
       "RECONECTAR": "Reconnect",
-      "SEM_MODELO": "This WhatsApp account has no template ready for campaigns yet.",
+      "SEM_MODELO": "This WhatsApp account has no approved message for campaigns yet.",
       "NAO_VAI": {
         "FORMATO_NAO_VAI": "cannot go in campaigns yet",
         "RECUSADO": "rejected",
