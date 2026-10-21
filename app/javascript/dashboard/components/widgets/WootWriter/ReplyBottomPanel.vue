@@ -17,7 +17,6 @@ import BotoesDoEmail from 'dashboard/components-next/conversa-canal/email/Botoes
 import BotaoDeAudio from 'dashboard/components-next/conversa-canal/email/BotaoDeAudio.vue';
 import MaisDoEmail from 'dashboard/components-next/conversa-canal/email/MaisDoEmail.vue';
 import FicarComAConversa from 'dashboard/components-next/conversa-canal/atribuir/FicarComAConversa.vue';
-import EnviarDeOutroJeito from 'dashboard/components-next/conversa-canal/atribuir/EnviarDeOutroJeito.vue';
 import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import {
   anexarArquivos,
@@ -32,7 +31,6 @@ export default {
     BotaoDeAudio,
     MaisDoEmail,
     FicarComAConversa,
-    EnviarDeOutroJeito,
     NextButton,
     FileUpload,
     VideoCallButton,
@@ -109,7 +107,8 @@ export default {
       type: Boolean,
       default: false,
     },
-    // #2067: "ficar com a conversa ao enviar" (null quando não se aplica agora).
+    // #2067: o ícone "ficar com a conversa ao enviar" (null quando não se aplica: a conversa
+    // já é minha, ou é nota privada).
     ficar: {
       type: Object,
       default: null,
@@ -214,13 +213,6 @@ export default {
     };
   },
   computed: {
-    // #2067, forma C: o Enviar diz que fica com a conversa quando é o padrão.
-    dicaDoEnviar() {
-      if (this.ficar?.forma === 'c' && this.ficar.ligada) {
-        return this.$t('CONVERSA_CANAL.FICAR.ENVIAR_E_FICAR');
-      }
-      return this.sendButtonText;
-    },
     ...mapGetters({
       accountId: 'getCurrentAccountId',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
@@ -492,6 +484,7 @@ export default {
     </div>
     <div class="right-wrap">
       <BotoesDoEmail v-if="emailNovo" parte="direita" />
+      <FicarComAConversa v-if="ficar" :ficar="ficar" />
       <button
         v-if="microfoneNaDireita"
         type="button"
@@ -503,14 +496,9 @@ export default {
       >
         <span class="i-ph-microphone size-6" />
       </button>
-      <FicarComAConversa
-        v-if="ficar && ficar.forma === 'a' && !microfoneNaDireita"
-        :ficar="ficar"
-        forma="chip"
-      />
       <NextButton
-        v-if="!microfoneNaDireita"
-        v-tooltip.top-end="ehWhatsapp ? dicaDoEnviar : null"
+        v-else
+        v-tooltip.top-end="ehWhatsapp ? sendButtonText : null"
         :label="ehWhatsapp ? '' : sendButtonText"
         :icon="
           ehWhatsapp
@@ -530,12 +518,6 @@ export default {
           isNote ? classesDaResposta.enviarNota : classesDaResposta.enviar
         "
         @click="onSend"
-      />
-      <EnviarDeOutroJeito
-        v-if="ficar && ficar.forma === 'c' && !microfoneNaDireita"
-        :ficar="ficar"
-        :enviar="onSend"
-        :desligado="isSendDisabled"
       />
     </div>
   </div>

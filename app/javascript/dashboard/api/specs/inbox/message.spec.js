@@ -116,6 +116,26 @@ describe('#ConversationAPI', () => {
       ).toEqual([]);
     });
 
+    it('sends ficar_com_a_conversa only when the reply box decided it (#2067)', () => {
+      expect(
+        buildCreatePayload({ message: 'oi', ficarComAConversa: true })
+          .ficar_com_a_conversa
+      ).toBe(true);
+      expect(
+        buildCreatePayload({ message: 'oi', ficarComAConversa: false })
+          .ficar_com_a_conversa
+      ).toBe(false);
+      const files = [new Blob(['png'], { type: 'image/png' })];
+      expect(
+        buildCreatePayload({ files, ficarComAConversa: true }).get(
+          'ficar_com_a_conversa'
+        )
+      ).toBe('true');
+      expect(
+        buildCreatePayload({ files }).get('ficar_com_a_conversa')
+      ).toBeNull();
+    });
+
     it('does not append is_voice_message when isVoiceMessage is false', () => {
       const formPayload = buildCreatePayload({
         message: 'regular audio',

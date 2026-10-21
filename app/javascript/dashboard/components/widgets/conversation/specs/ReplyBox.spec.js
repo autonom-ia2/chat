@@ -564,6 +564,7 @@ describe('ReplyBox CRM subject', () => {
     expect(dispatch).toHaveBeenCalledWith('createPendingMessageAndSend', {
       conversationId: 1,
       message: 'Oi',
+      ficarComAConversa: true,
     });
 
     wrapper.vm.crmSubjectCardId = 5;
@@ -576,6 +577,100 @@ describe('ReplyBox CRM subject', () => {
       conversationId: 1,
       message: 'Segue a proposta',
       contentAttributes: { in_reply_to: 3, crm_card_id: 5 },
+      ficarComAConversa: true,
+    });
+  });
+});
+
+// #2067: o ícone "ficar com a conversa ao enviar" ao lado do Enviar; quem atribui é o servidor.
+describe('ReplyBox ficar com a conversa (#2067)', () => {
+  const ANA = { id: 9, name: 'Ana' };
+  const LIA = { id: 3, name: 'Lia' };
+  const montar = meta =>
+    mountWith({
+      inbox: { channel_type: 'Channel::Whatsapp' },
+      chat: { meta: { sender: { id: 2 }, ...meta } },
+    });
+  const enviado = dispatch =>
+    dispatch.mock.calls.find(
+      ([nome]) => nome === 'createPendingMessageAndSend'
+    )[1];
+
+  it.each([
+    ['sem ninguém', {}, true],
+    ['com a IA', { assignee: LIA, assignee_type: 'AgentBot' }, true],
+    ['com colega', { assignee: ANA, assignee_type: 'User' }, false],
+  ])('%s: o ícone aparece mesmo sem nada digitado', (_n, meta, ligada) => {
+    const { wrapper } = montar(meta);
+    expect(bottomPanel(wrapper).ficar).toMatchObject({ aplica: true, ligada });
+  });
+
+  it('não aparece quando a conversa já é minha', () => {
+    const { wrapper } = montar({ assignee: { id: 7 }, assignee_type: 'User' });
+    expect(bottomPanel(wrapper).ficar).toBeNull();
+  });
+
+  it('nunca na nota privada, e a nota não pede para ficar', async () => {
+    const { wrapper, store } = montar({});
+    wrapper.vm.setReplyMode(REPLY_EDITOR_MODES.NOTE);
+    await nextTick();
+    expect(bottomPanel(wrapper).ficar).toBeNull();
+
+    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+    await wrapper.vm.sendMessage({
+      conversationId: 1,
+      message: 'nota',
+      private: true,
+    });
+    expect(enviado(dispatch).ficarComAConversa).toBe(false);
+  });
+
+  it('o modelo segue a regra do texto: de colega continua com o colega', async () => {
+    const { wrapper, store } = montar({ assignee: ANA, assignee_type: 'User' });
+    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+
+    await wrapper.vm.onSendWhatsAppReply({
+      message: 'Olá',
+      templateParams: { name: 'oi' },
+    });
+    expect(enviado(dispatch)).toMatchObject({
+      templateParams: { name: 'oi' },
+      ficarComAConversa: false,
+    });
+  });
+
+  it('ligar o ícone vale para aquela mensagem e volta ao padrão depois de enviar', async () => {
+    const { wrapper, store } = montar({ assignee: ANA, assignee_type: 'User' });
+    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+
+    wrapper.vm.ficar.alternar();
+    await wrapper.vm.onSendWhatsAppReply({
+      message: 'Olá',
+      templateParams: { name: 'oi' },
+    });
+    expect(enviado(dispatch).ficarComAConversa).toBe(true);
+    expect(wrapper.vm.ficar.ligada).toBe(false);
+  });
+
+  it('texto e anexo que saem em várias mensagens levam a mesma decisão', () => {
+    const { wrapper, store } = montar({
+      assignee: LIA,
+      assignee_type: 'AgentBot',
+    });
+    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+    wrapper.vm.message = 'Segue a foto';
+    wrapper.vm.attachedFiles = [
+      { resource: { file: new Blob(['x']) }, isPrivate: false },
+    ];
+
+    wrapper.vm.confirmOnSendReply();
+
+    const envios = dispatch.mock.calls.filter(
+      ([nome]) => nome === 'createPendingMessageAndSend'
+    );
+    expect(envios.length).toBeGreaterThan(0);
+    envios.forEach(([, payload]) => {
+      expect(payload.ficarComAConversa).toBe(true);
     });
   });
 });

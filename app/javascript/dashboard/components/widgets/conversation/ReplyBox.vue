@@ -29,7 +29,6 @@ import MessageSignatureMissingAlert from './MessageSignatureMissingAlert.vue';
 import AvisoDeAssinatura from 'dashboard/components-next/conversa-canal/email/AvisoDeAssinatura.vue';
 import ReplyBoxBanner from './ReplyBoxBanner.vue';
 import WhatsappApiReplyHint from './WhatsappApiReplyHint.vue';
-import FicarComAConversa from 'dashboard/components-next/conversa-canal/atribuir/FicarComAConversa.vue';
 import DevolverParaIa from 'dashboard/components-next/conversa-canal/atribuir/DevolverParaIa.vue';
 import { useFicarComAConversa } from 'dashboard/components-next/conversa-canal/atribuir/useFicarComAConversa';
 import QuotedEmailPreview from './QuotedEmailPreview.vue';
@@ -122,7 +121,6 @@ export default {
     JanelaDeEmojis,
     ReplyBoxBanner,
     WhatsappApiReplyHint,
-    FicarComAConversa,
     DevolverParaIa,
     MessageSignatureMissingAlert,
     AvisoDeAssinatura,
@@ -387,14 +385,10 @@ export default {
       );
       return !!stripped.trim();
     },
-    // #2067: a opção só aparece com algo para mandar ao cliente, e nunca na nota privada.
+    // #2067: o ícone aparece mesmo sem nada digitado (o modelo e o áudio também ficam com a
+    // conversa), nunca na nota privada nem na conversa que já é minha.
     mostrarFicarComAConversa() {
-      return (
-        this.ficar.aplica &&
-        !this.isOnPrivateNote &&
-        !this.isEditorDisabled &&
-        (this.hasMeaningfulEditorContent || this.hasAttachments)
-      );
+      return this.ficar.aplica && !this.isOnPrivateNote;
     },
     isBotOwnedPendingConversation() {
       return (
@@ -1190,17 +1184,17 @@ export default {
       copilotAcceptedMessage = ''
     ) {
       // #2067: decide antes de esperar o servidor (os envios em várias mensagens partem juntos).
-      const fica =
+      // Quem atribui é o servidor, depois de aceitar a mensagem: texto, anexo, áudio e modelo.
+      const ficarComAConversa =
         this.ficaNesteEnvio ??
         this.ficar.decidir({ privada: messagePayload.private });
       try {
         await this.$store.dispatch(
           'createPendingMessageAndSend',
-          this.setCrmSubjectInPayload(messagePayload)
+          this.setCrmSubjectInPayload({ ...messagePayload, ficarComAConversa })
         );
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
         emitter.emit(BUS_EVENTS.MESSAGE_SENT);
-        if (fica) this.ficar.atribuirAMim();
         this.removeFromDraft();
         this.sendMessageAnalyticsData(messagePayload.private, {
           editorMessage,
@@ -1216,13 +1210,13 @@ export default {
     // envio do robô (#1473), com resposta citada e assunto do CRM como o texto. Espera o
     // servidor: a janela só fecha quando a mensagem foi aceita e mostra a recusa.
     async onSendRichMessage({ content, richMessage }) {
-      const fica = this.ficar.decidir();
       const payload = this.setReplyToInPayload({
         conversationId: this.currentChat.id,
         message: content,
         private: false,
         sender: this.sender,
         contentAttributes: { rich_message: richMessage },
+        ficarComAConversa: this.ficar.decidir(),
       });
       await this.$store.dispatch(
         'sendMessageWithData',
@@ -1231,7 +1225,6 @@ export default {
       this.resetReplyToMessage();
       emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
       emitter.emit(BUS_EVENTS.MESSAGE_SENT);
-      if (fica) this.ficar.atribuirAMim();
     },
     async onSendWhatsAppReply(messagePayload) {
       this.sendMessage({
@@ -1825,16 +1818,7 @@ export default {
     :conversation="currentChat"
     :is-on-private-note="isOnPrivateNote"
   />
-  <DevolverParaIa
-    v-if="ficar.lugarDoDevolver === 'barra'"
-    :conversation="currentChat"
-    forma="barra"
-  />
-  <FicarComAConversa
-    v-if="ficar.forma === 'b' && mostrarFicarComAConversa"
-    :ficar="ficar"
-    forma="linha"
-  />
+  <DevolverParaIa :conversation="currentChat" />
   <div class="reply-box" :class="replyBoxClass">
     <TopoDaResposta
       v-if="emailNovo"

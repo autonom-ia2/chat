@@ -95,7 +95,7 @@ const onClickBotHandoff = async () => {
 
 <template>
   <Banner
-    v-if="showBotHandoffBanner"
+    v-show="showBotHandoffBanner"
     action-button-variant="ghost"
     color-scheme="secondary"
     class="mx-2 mb-2 rounded-lg !py-2"

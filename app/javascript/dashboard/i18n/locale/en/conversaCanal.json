@@ -172,14 +172,8 @@
       "FICA_COM_VOCE_SAI_DE": "When you send, the conversation moves from {nome} to you",
       "CONTINUA_SEM_NINGUEM": "When you send, the conversation stays unassigned",
       "CONTINUA_COM": "When you send, the conversation stays with {nome}",
-      "NAO_FICAR": "Don't keep it",
-      "FICAR_COM_ELA": "Keep it",
       "DICA_LIGADA": "Click to not keep the conversation",
-      "DICA_DESLIGADA": "Click to keep the conversation",
-      "ENVIAR_E_FICAR": "Send and keep the conversation",
-      "SO_ENVIAR": "Just send, without keeping the conversation",
-      "MAIS_OPCOES_DE_ENVIO": "More send options",
-      "FALHOU": "The message was sent, but the conversation could not be assigned to you. Try again."
+      "DICA_DESLIGADA": "Click to keep the conversation"
     },
     "DEVOLVER": {
       "PARA": "Hand back to {nome}",

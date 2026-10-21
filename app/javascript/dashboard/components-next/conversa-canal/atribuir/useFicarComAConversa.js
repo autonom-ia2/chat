@@ -1,25 +1,22 @@
 // #2067: "ficar com a conversa ao enviar" (opt-out). Substitui a faixa "Atribuir a mim".
 // - Não aparece quando a conversa já é de quem escreve.
-// - Vem ligada sem ninguém ou com a IA; desligada quando é de outra pessoa.
-// - A atribuição só acontece depois que a mensagem sai (digitar e desistir não muda nada).
-// - Mudar a opção vale para a próxima mensagem desta conversa: depois de enviar, ou ao
-//   trocar de conversa, volta à regra padrão.
+// - Vem ligado sem ninguém ou com a IA; desligado quando é de outra pessoa.
+// - Quem atribui é o servidor, depois que a mensagem foi aceita: o envio leva
+//   `ficar_com_a_conversa` (Message#claim_conversation_for_person). Digitar e desistir não
+//   muda nada.
+// - Mudar o ícone vale só para a próxima mensagem: depois de enviar, ou ao trocar de
+//   conversa, volta à regra padrão.
 import { computed, reactive, ref, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
-import ConversationApi from 'dashboard/api/inbox/conversation';
-import { useAlert } from 'dashboard/composables';
 import {
   QUEM_ESTA,
   ficarVemLigada,
   quemEstaComAConversa,
 } from './quemEstaComAConversa';
-import { escolhaDoPrototipo } from './prototipo2067';
 
 export const useFicarComAConversa = () => {
   const store = useStore();
-  const route = useRoute();
   const { t } = useI18n();
 
   const conversa = computed(() => store.getters.getSelectedChat);
@@ -56,54 +53,14 @@ export const useFicarComAConversa = () => {
     escolha.value = !ligada.value;
   };
 
-  // Na hora de enviar: fica ou não, e a opção volta à regra padrão. Nota privada não
-  // atribui. Uma decisão por envio (texto e anexos que saem em várias mensagens usam a
-  // mesma), e a atribuição só acontece depois que a mensagem é aceita (atribuirAMim).
+  // Na hora de enviar: o valor que vai no pedido, e o ícone volta à regra padrão. Nota
+  // privada nunca fica; conversa que já é minha não tem o que pedir. Uma decisão por envio
+  // (texto e anexos que saem em várias mensagens levam a mesma).
   const decidir = ({ privada = false } = {}) => {
     const fica = aplica.value && ligada.value && !privada;
     escolha.value = null;
     return fica;
   };
 
-  let atribuindo = false;
-  const atribuirAMim = async () => {
-    if (atribuindo || !aplica.value) return;
-    atribuindo = true;
-    const conversationId = conversa.value.id;
-    try {
-      const { data } = await ConversationApi.assignAgent({
-        conversationId,
-        agentId: eu.value.id,
-      });
-      store.dispatch('setCurrentChatAssignee', {
-        conversationId,
-        assignee: data,
-        assigneeType: 'User',
-      });
-    } catch {
-      useAlert(t('CONVERSA_CANAL.FICAR.FALHOU'));
-    } finally {
-      atribuindo = false;
-    }
-  };
-
-  // Enviar "do outro jeito" (forma C): muda a opção só para este envio.
-  const enviarAssim = (ficar, enviar) => {
-    escolha.value = ficar;
-    enviar();
-  };
-
-  const prototipo = computed(() => escolhaDoPrototipo(route?.query));
-
-  return reactive({
-    aplica,
-    ligada,
-    frase,
-    alternar,
-    decidir,
-    atribuirAMim,
-    enviarAssim,
-    forma: computed(() => prototipo.value.forma),
-    lugarDoDevolver: computed(() => prototipo.value.lugar),
-  });
+  return reactive({ aplica, ligada, frase, alternar, decidir });
 };

@@ -12,8 +12,6 @@ import ConversationCallButton from './ConversationCallButton.vue';
 import CrmConversationCardButton from './CrmConversationCardButton.vue';
 import BookingInviteButton from 'dashboard/components-next/Booking/BookingInviteButton.vue';
 import PassarParaButton from 'dashboard/components-next/PassarPara/PassarParaButton.vue';
-import DevolverParaIa from 'dashboard/components-next/conversa-canal/atribuir/DevolverParaIa.vue';
-import { escolhaDoPrototipo } from 'dashboard/components-next/conversa-canal/atribuir/prototipo2067';
 import ConversationCampaignMark from 'dashboard/components-next/CampaignJourney/ConversationCampaignMark.vue';
 import { BULLET } from 'dashboard/components-next/CampaignJourney/textMarks';
 import wootConstants from 'dashboard/constants/globals';
@@ -50,10 +48,6 @@ const { isAWebWidgetInbox } = useInbox();
 const currentChat = computed(() => store.getters.getSelectedChat);
 // Quem só lê (#1800) não liga, não abre o card, não agenda, não passa e não resolve: o servidor recusa tudo isso.
 const canOperate = useCanOperateConversation(currentChat);
-// #2067 (protótipo): o "Devolver para <agente>" fica aqui, salvo com ?devolver=barra.
-const devolverNoTopo = computed(
-  () => escolhaDoPrototipo(route.query).lugar === 'topo'
-);
 const accountId = computed(() => store.getters.getCurrentAccountId);
 
 const chatMetadata = computed(() => props.chat.meta);
@@ -198,7 +192,6 @@ const copyConversationId = async () => {
         class="hidden md:flex"
       />
       <template v-if="canOperate">
-        <DevolverParaIa v-if="devolverNoTopo" :conversation="currentChat" />
         <ConversationCallButton :inbox="inbox" :chat="currentChat" />
         <CrmConversationCardButton :chat="currentChat" />
         <BookingInviteButton :conversation="currentChat" />

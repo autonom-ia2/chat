@@ -14,6 +14,7 @@ export const buildCreatePayload = ({
   templateParams,
   isVoiceMessage = false,
   documentIndexes = [],
+  ficarComAConversa,
 }) => {
   let payload;
   if (files && files.length !== 0) {
@@ -43,6 +44,9 @@ export const buildCreatePayload = ({
     documentIndexes.forEach(indice => {
       payload.append('document_indexes[]', indice);
     });
+    if (typeof ficarComAConversa === 'boolean') {
+      payload.append('ficar_com_a_conversa', ficarComAConversa);
+    }
   } else {
     payload = {
       content: message,
@@ -53,6 +57,8 @@ export const buildCreatePayload = ({
       bcc_emails: bccEmails,
       to_emails: toEmails,
       template_params: templateParams,
+      // #2067: o ícone "ficar com a conversa ao enviar"; sem ele, o servidor segue a regra de antes.
+      ficar_com_a_conversa: ficarComAConversa,
     };
   }
   return payload;
@@ -76,6 +82,7 @@ class MessageApi extends ApiClient {
     templateParams,
     isVoiceMessage = false,
     documentIndexes = [],
+    ficarComAConversa,
   }) {
     return axios({
       method: 'post',
@@ -92,6 +99,7 @@ class MessageApi extends ApiClient {
         templateParams,
         isVoiceMessage,
         documentIndexes,
+        ficarComAConversa,
       }),
     });
   }

@@ -23,6 +23,8 @@ class Messages::MessageBuilder
 
   def perform
     @message = @conversation.messages.build(message_params)
+    # #2067: o ícone "ficar com a conversa ao enviar" do painel; nil quando o pedido não diz.
+    @message.ficar_com_a_conversa = ActiveModel::Type::Boolean.new.cast(@params[:ficar_com_a_conversa])
     process_attachments
     process_emails
     # When the message has no quoted content, it will just be rendered as a regular message
@@ -96,8 +98,7 @@ class Messages::MessageBuilder
     return unless should_process_email_content?
 
     @message.content_attributes ||= {}
-    email_attributes = build_email_attributes
-    @message.content_attributes[:email] = email_attributes
+    @message.content_attributes[:email] = build_email_attributes
   end
 
   def process_email_string(email_string)

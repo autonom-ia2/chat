@@ -40,7 +40,7 @@
 #
 
 class Message < ApplicationRecord
-  # Teto de espera pela linha da conversa quando uma pessoa responde uma conversa à espera (#1499).
+  # Teto de espera pela linha da conversa quando uma pessoa fica com ela ao responder (#1499, #2067).
   PERSON_CLAIM_LOCK_TIMEOUT = '2s'.freeze
 
   searchkick callbacks: false if ChatwootApp.advanced_search_allowed?
@@ -87,6 +87,9 @@ class Message < ApplicationRecord
   attr_accessor :echo_id
   # Transient flag used to skip waiting_since clearing for specific bot/system messages.
   attr_accessor :preserve_waiting_since
+  # #2067: "ficar com a conversa ao enviar", o ícone ao lado do Enviar no painel. true ou false = a pessoa decidiu nesta
+  # mensagem; nil = o pedido não disse (API, app, integrações) e vale a regra de antes (claim_conversation_for_person).
+  attr_accessor :ficar_com_a_conversa
 
   enum message_type: { incoming: 0, outgoing: 1, activity: 2, template: 3 }
   enum content_type: {
@@ -346,7 +349,7 @@ class Message < ApplicationRecord
     dispatch_create_events
     send_reply
     claim_conversation_for_bot
-    claim_waiting_conversation_for_person
+    claim_conversation_for_person
     execute_message_template_hooks
     update_contact_activity
   end
@@ -372,28 +375,44 @@ class Message < ApplicationRecord
     ChatwootExceptionTracker.new(e, account: account).capture_exception
   end
 
-  # Pessoa respondendo numa conversa que o robô já passou e está à espera de pessoa fica com ela (#1499, decisão do
-  # Rodrigo em 13/10, opção b): senão a fila do motor de entrega a daria a outro enquanto o cliente fala com quem
-  # respondeu. Enquanto o robô ainda atende (sem marca de espera), responder não tira o robô: só "Atribuir a mim".
-  # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa). Olha as marcas antes de travar (a maioria
-  # das respostas não está à espera) e trava com teto, como a fila do motor: a resposta não fica presa atrás de uma entrega.
-  def claim_waiting_conversation_for_person
-    # Leitura nova (sem trava): a conversa em memória vem do começo do pedido e pode não ver uma passagem recém-gravada.
-    return unless public_person_reply? && waiting_for_person?(Conversation.find(conversation_id))
+  # Quem responde pelo painel fica com a conversa (#2067, decisão do Rodrigo em 21/10, que troca a de 13/10 do #1377/#1405
+  # "atendente responde não assume"). Roda depois da mensagem gravada e uma vez só, numa trava com teto, como a fila do
+  # motor: a resposta não fica presa atrás de uma entrega.
+  # - Ícone ligado (ficar_com_a_conversa = true): fica com ela, esteja sem ninguém, com a IA ou com um colega. Tomar
+  #   conversa de colega só com este pedido explícito; o painel manda true por padrão só sem ninguém ou com a IA.
+  # - Ícone desligado (false): ninguém fica, nem na conversa à espera de pessoa.
+  # - O pedido não disse (nil: API, app): a regra de antes. Só a conversa que o robô já passou e espera pessoa fica com
+  #   quem respondeu (#1499, opção b), senão a fila do motor de entrega a daria a outro; com o robô atendendo, não.
+  # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa), e o registro de passagens grava a troca.
+  def claim_conversation_for_person
+    return unless public_person_reply? && claim_requested?
 
     Conversation.transaction do
       Conversation.connection.execute("SET LOCAL lock_timeout = '#{PERSON_CLAIM_LOCK_TIMEOUT}'")
       locked = Conversation.lock.find(conversation_id)
-      next unless waiting_for_person?(locked)
+      next unless claim_for_person?(locked)
 
-      locked.update!(assignee: sender, status: :open)
+      locked.update!(assignee: sender, status: locked.pending? ? :open : locked.status)
     end
   rescue ActiveRecord::LockWaitTimeout
     # Linha presa por uma entrega em andamento: quem decide é ela; a resposta já foi gravada e enviada.
     Rails.logger.warn("[crm][entrega] resposta conversa=#{conversation_id} não assumiu: trava ocupada")
   rescue ActiveRecord::ActiveRecordError => e
-    # A mensagem já está gravada e enviada; a conversa segue na fila do motor, que a entrega a alguém.
+    # A mensagem já está gravada e enviada; a conversa segue como estava (ou na fila do motor, que a entrega a alguém).
     ChatwootExceptionTracker.new(e, account: account).capture_exception
+  end
+
+  # Olha antes de travar: a maioria das respostas sem pedido não está à espera. Leitura nova (sem trava): a conversa em
+  # memória vem do começo do pedido e pode não ver uma passagem recém-gravada.
+  def claim_requested?
+    return ficar_com_a_conversa unless ficar_com_a_conversa.nil?
+
+    waiting_for_person?(Conversation.find(conversation_id))
+  end
+
+  # Na linha travada: com o pedido, só se ainda não é dela; sem ele, só se ainda espera pessoa.
+  def claim_for_person?(conv)
+    ficar_com_a_conversa ? conv.assignee_id != sender_id : waiting_for_person?(conv)
   end
 
   # Resposta pública que a própria pessoa mandou agora (ela é quem está logado no pedido). Aviso, follow-up ou envio

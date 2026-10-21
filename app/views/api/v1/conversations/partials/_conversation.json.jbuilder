@@ -31,6 +31,10 @@ json.meta do
       json.partial! 'api/v1/models/agent', formats: [:json], resource: conversation.assigned_entity
     end
     json.assignee_type 'User'
+    # #2067: o agente de IA de onde a conversa veio, para o "Devolver para" (Crm::Passagens::VeioDaIa). As listas passam
+    # a página inteira (veio_da_ia), em consultas fixas; a conversa lida sozinha consulta a dela.
+    veio_da_ia = local_assigns.key?(:veio_da_ia) ? local_assigns[:veio_da_ia][conversation.id] : Crm::Passagens::VeioDaIa.de(conversation)
+    json.veio_da_ia veio_da_ia
   end
   json.partial! 'enterprise/api/v1/conversations/partials/assignee', conversation: conversation if ChatwootApp.enterprise?
   if conversation.team.present?

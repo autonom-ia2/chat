@@ -172,14 +172,8 @@
       "FICA_COM_VOCE_SAI_DE": "Ao enviar, a conversa sai de {nome} e fica com você",
       "CONTINUA_SEM_NINGUEM": "Ao enviar, a conversa continua sem ninguém",
       "CONTINUA_COM": "Ao enviar, a conversa continua com {nome}",
-      "NAO_FICAR": "Não ficar",
-      "FICAR_COM_ELA": "Ficar com ela",
       "DICA_LIGADA": "Clique para não ficar com a conversa",
-      "DICA_DESLIGADA": "Clique para ficar com a conversa",
-      "ENVIAR_E_FICAR": "Enviar e ficar com a conversa",
-      "SO_ENVIAR": "Só enviar, sem ficar com a conversa",
-      "MAIS_OPCOES_DE_ENVIO": "Mais opções de envio",
-      "FALHOU": "A mensagem foi enviada, mas não deu para a conversa ficar com você. Tente de novo."
+      "DICA_DESLIGADA": "Clique para ficar com a conversa"
     },
     "DEVOLVER": {
       "PARA": "Devolver para {nome}",
