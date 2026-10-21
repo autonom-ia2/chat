@@ -27,6 +27,7 @@ Até aqui o painel falava a língua da conta, mas o Guia e a Central de Ajuda ai
 
 - `Autonomia::Segmentos::Bloco.for(conta)` devolve o texto de `config/agentes_por_pacote/seguros/<tipo>/agentes.md` (corretora, seguradora, insurtech, saúde e benefícios). O texto é só orientação e vocabulário do ramo, sem frase pronta, e fala de passar para a equipe o que não souber.
 - Só vale com o interruptor ligado e com a Fase 2 dos agentes. Não entra no Guia nem na Lia (Cotação).
+- O bloco chega ao agente pela marca gravada nele (`config['base'] = {segmento, versao, texto}`, PR da Agentes IA que entra antes deste lote), não pela conta a cada mensagem. O prompt usa o texto gravado no agente: uma edição em `agentes.md` só chega a um agente que já existe pelo botão (decisão do Rodrigo, 20/10: "Só pelo botão"). `Bloco.segmento(account)` é a camada; `Bloco.for_segmento` devolve o texto e `Bloco.versao` os 12 primeiros caracteres do SHA-256 dele. Agente novo nasce com a marca. Só recebe bloco o agente com `versao` gravada: quem nasceu antes deste lote tem `versao` nil e fica sem bloco, como o agente que já existia (contas 1, 16 e 18) e não tem marca, até o botão "Atualizar com a nova base", que sai na F3. Trocar o tipo da conta no super admin não muda agente nenhum.
 - Fica fora de `config/pacotes`, porque lá cada camada só aceita `en.yml` e `pt_BR.yml` (`i18n:fork:check`).
 - Eval pago (com OK do Rodrigo): com o bloco, 36 de 36; sem o bloco, 32 de 36. Custo US$ 0,46. Relatório em `docs/audit/2026-10-19-1802-eval-segmento/`.
 
