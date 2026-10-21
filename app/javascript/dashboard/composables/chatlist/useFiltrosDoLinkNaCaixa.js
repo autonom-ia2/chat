@@ -78,6 +78,11 @@ export const filtroDoLinkDaLista = ({
 export const abaDaListaComLink = ({ daIa, esperandoMin }, abas, aba, todas) =>
   (daIa || esperandoMin) && !abas.includes(todas) ? todas : aba;
 
+// Onde a página da lista fica gravada (#1999): a resposta grava na aba que a lista pediu (a da lista, não a escolhida),
+// e a próxima página e o fim da lista têm que ser lidos no mesmo lugar. Com o filtro avançado, a gaveta dele.
+export const chaveDaPaginaDaLista = (filtroAvancado, abaDaLista) =>
+  filtroAvancado ? 'appliedFilters' : abaDaLista;
+
 // O funil da lista com o filtro do link (#1999): o escopo vem do link, e o funil escolhido na caixa fica de lado (sem
 // gravar nada: a escolha salva volta quando o link sai). Sem o filtro, o funil escolhido.
 export const funilDoFiltroDoLink = ({ daIa, esperandoMin }, funil, todos) =>

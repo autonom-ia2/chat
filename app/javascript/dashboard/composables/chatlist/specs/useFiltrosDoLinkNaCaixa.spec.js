@@ -1,11 +1,15 @@
 import { defineComponent, h, ref, nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createRouter, createMemoryHistory } from 'vue-router';
+import { createStore } from 'vuex';
+import conversationPage from 'dashboard/store/modules/conversationPage';
+import { setPageFilter } from 'dashboard/store/modules/conversations/helpers/actionHelpers';
 import {
   abaDoFiltroDoLink,
   statusDoFiltroDoLink,
   funilDoFiltroDoLink,
   abaDaListaComLink,
+  chaveDaPaginaDaLista,
   filtroDoLinkDaLista,
   filtrosDoEndereco,
   useFiltrosDoLinkNaCaixa,
@@ -462,5 +466,74 @@ describe('assinatura do link', () => {
     await nextTick();
 
     expect(filtros.assinatura.value).not.toBe(antes);
+  });
+});
+
+// #1999, revisão 3: a lista junta do link pede "todas" e a resposta grava o avanço em "todas"; a próxima página e o fim
+// da lista têm que ser lidos ali. Simula a rolagem da caixa com o módulo de páginas de verdade.
+describe('paginação da lista junta do link', () => {
+  const POR_PAGINA = 25;
+  const novaLoja = () =>
+    createStore({
+      modules: {
+        conversationPage: {
+          ...conversationPage,
+          state: structuredClone(conversationPage.state),
+        },
+      },
+    });
+
+  // Pede páginas como o rodapé da lista: lê a página e o fim na chave dada; a resposta grava na aba que a lista pediu.
+  const rolar = (loja, { abaPedida, chave, total }) => {
+    const pedidas = [];
+    for (let vez = 0; vez < 6; vez += 1) {
+      if (loja.getters['conversationPage/getHasEndReached'](chave)) break;
+      const pagina =
+        loja.getters['conversationPage/getCurrentPageFilter'](chave) + 1;
+      pedidas.push(pagina);
+      const vieram = Math.max(
+        0,
+        Math.min(POR_PAGINA, total - (pagina - 1) * POR_PAGINA)
+      );
+      setPageFilter({
+        dispatch: loja.dispatch,
+        filter: abaPedida,
+        page: pagina,
+        markEndReached: vieram === 0,
+      });
+    }
+    return pedidas;
+  };
+
+  it('quem não tem Todas avança 1→2→3 e para quando a lista acaba', () => {
+    const loja = novaLoja();
+    const abaDaLista = abaDaListaComLink(
+      { daIa: true, esperandoMin: 30 },
+      ['me', 'unassigned'],
+      'me',
+      'all'
+    );
+
+    const pedidas = rolar(loja, {
+      abaPedida: abaDaLista,
+      chave: chaveDaPaginaDaLista(false, abaDaLista),
+      total: 60,
+    });
+
+    expect(pedidas).toEqual([1, 2, 3, 4]);
+    expect(loja.getters['conversationPage/getHasEndReached']('all')).toBe(true);
+  });
+
+  it('lendo a página na aba escolhida (Minhas), a lista ficaria na página 1', () => {
+    const loja = novaLoja();
+
+    const pedidas = rolar(loja, { abaPedida: 'all', chave: 'me', total: 60 });
+
+    expect(pedidas).toEqual([1, 1, 1, 1, 1, 1]);
+  });
+
+  it('com o filtro avançado, a página fica na gaveta dele', () => {
+    expect(chaveDaPaginaDaLista(true, 'all')).toBe('appliedFilters');
+    expect(chaveDaPaginaDaLista(false, 'unassigned')).toBe('unassigned');
   });
 });

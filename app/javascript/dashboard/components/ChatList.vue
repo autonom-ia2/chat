@@ -16,6 +16,7 @@ import {
   statusDoFiltroDoLink,
   funilDoFiltroDoLink,
   abaDaListaComLink,
+  chaveDaPaginaDaLista,
   useFiltrosDoLinkNaCaixa,
   useReleituraPeriodica,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
@@ -252,65 +253,6 @@ function defaultAssigneeTab() {
     : ME;
 }
 
-const showAssigneeInConversationCard = computed(() => {
-  return (
-    hasAppliedFiltersOrActiveFolders.value ||
-    activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ALL
-  );
-});
-
-const currentPageFilterKey = computed(() => {
-  return hasAppliedFiltersOrActiveFolders.value
-    ? 'appliedFilters'
-    : activeAssigneeTab.value;
-});
-
-const inbox = useFunctionGetter('inboxes/getInbox', activeInbox);
-const currentPage = useFunctionGetter(
-  'conversationPage/getCurrentPageFilter',
-  activeAssigneeTab
-);
-const currentFiltersPage = useFunctionGetter(
-  'conversationPage/getCurrentPageFilter',
-  currentPageFilterKey
-);
-const hasCurrentPageEndReached = useFunctionGetter(
-  'conversationPage/getHasEndReached',
-  currentPageFilterKey
-);
-
-const conversationCustomAttributes = useFunctionGetter(
-  'attributes/getAttributesByModel',
-  'conversation_attribute'
-);
-
-// Antes de montar, a aba ainda é "Minhas", que quem só lê não tem (#1800).
-const activeAssigneeTabCount = computed(
-  () =>
-    assigneeTabItems.value.find(item => item.key === activeAssigneeTab.value)
-      ?.count || 0
-);
-
-const conversationListPagination = computed(() => {
-  const conversationsPerPage = 25;
-  const hasChatsOnView =
-    chatsOnView.value &&
-    Array.isArray(chatsOnView.value) &&
-    !chatsOnView.value.length;
-  const isNoFiltersOrFoldersAndChatListNotEmpty =
-    !hasAppliedFiltersOrActiveFolders.value && hasChatsOnView;
-  const isUnderPerPage =
-    chatsOnView.value.length < conversationsPerPage &&
-    activeAssigneeTabCount.value < conversationsPerPage &&
-    activeAssigneeTabCount.value > chatsOnView.value.length;
-
-  if (isNoFiltersOrFoldersAndChatListNotEmpty && isUnderPerPage) {
-    return 1;
-  }
-
-  return currentPage.value + 1;
-});
-
 // #1809: Spam e Lixeira da caixa de e-mail (a pasta vem do endereço, ?pasta=).
 const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
 
@@ -347,6 +289,65 @@ const abaDaLista = computed(() =>
 const listaJuntaDoLink = computed(
   () => abaDaLista.value !== activeAssigneeTab.value
 );
+
+const showAssigneeInConversationCard = computed(() => {
+  return (
+    hasAppliedFiltersOrActiveFolders.value ||
+    abaDaLista.value === wootConstants.ASSIGNEE_TYPE.ALL
+  );
+});
+
+// A página e o fim da lista seguem a aba que a lista pede (#1999), onde a resposta grava o avanço.
+const currentPageFilterKey = computed(() =>
+  chaveDaPaginaDaLista(hasAppliedFiltersOrActiveFolders.value, abaDaLista.value)
+);
+
+const inbox = useFunctionGetter('inboxes/getInbox', activeInbox);
+const currentPage = useFunctionGetter(
+  'conversationPage/getCurrentPageFilter',
+  abaDaLista
+);
+const currentFiltersPage = useFunctionGetter(
+  'conversationPage/getCurrentPageFilter',
+  currentPageFilterKey
+);
+const hasCurrentPageEndReached = useFunctionGetter(
+  'conversationPage/getHasEndReached',
+  currentPageFilterKey
+);
+
+const conversationCustomAttributes = useFunctionGetter(
+  'attributes/getAttributesByModel',
+  'conversation_attribute'
+);
+
+// Antes de montar, a aba ainda é "Minhas", que quem só lê não tem (#1800). Com a lista junta do link (#1999), a aba
+// "Todas" que a pessoa não tem: sem contagem, a paginação segue a página gravada.
+const activeAssigneeTabCount = computed(
+  () =>
+    assigneeTabItems.value.find(item => item.key === abaDaLista.value)?.count ||
+    0
+);
+
+const conversationListPagination = computed(() => {
+  const conversationsPerPage = 25;
+  const hasChatsOnView =
+    chatsOnView.value &&
+    Array.isArray(chatsOnView.value) &&
+    !chatsOnView.value.length;
+  const isNoFiltersOrFoldersAndChatListNotEmpty =
+    !hasAppliedFiltersOrActiveFolders.value && hasChatsOnView;
+  const isUnderPerPage =
+    chatsOnView.value.length < conversationsPerPage &&
+    activeAssigneeTabCount.value < conversationsPerPage &&
+    activeAssigneeTabCount.value > chatsOnView.value.length;
+
+  if (isNoFiltersOrFoldersAndChatListNotEmpty && isUnderPerPage) {
+    return 1;
+  }
+
+  return currentPage.value + 1;
+});
 // #1999: com o filtro do link, o funil da lista vem do link; o escolhido na caixa não é tocado.
 const funilDaLista = computed(() =>
   funilDoFiltroDoLink(filtroDoLink.value, crmPipelineId.value, FUNNEL_ALL)
@@ -437,12 +438,12 @@ const pageTitle = computed(() => {
 });
 
 function filterByAssigneeTab(conversations) {
-  if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.ME) {
+  if (abaDaLista.value === wootConstants.ASSIGNEE_TYPE.ME) {
     return conversations.filter(
       c => c.meta?.assignee?.id === currentUser.value?.id
     );
   }
-  if (activeAssigneeTab.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
+  if (abaDaLista.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
     return conversations.filter(c => !c.meta?.assignee);
   }
   return [...conversations];
@@ -642,7 +643,7 @@ function initializeExistingFilterToModal() {
   const statusFilter = initializeStatusAndAssigneeFilterToModal(
     activeStatus.value,
     currentUserDetails.value,
-    activeAssigneeTab.value
+    abaDaLista.value
   );
   // TODO: Remove the usage of useCamelCase after migrating useFilter to camelcase
   if (statusFilter) {
