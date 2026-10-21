@@ -1740,7 +1740,7 @@ describe('AgentePage', () => {
       const wrapper = await montar();
       await clicar('[data-base-atualizar]');
       expect(no('[data-comparando]')).not.toBeNull();
-      expect(baseApi.comparar).toHaveBeenCalledWith(7);
+      expect(baseApi.comparar).toHaveBeenCalledWith(7, expect.any(AbortSignal));
       wrapper.unmount();
     });
 

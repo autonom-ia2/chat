@@ -16,7 +16,8 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     conta.update!(internal_attributes: conta.internal_attributes.to_h.merge(nicho::NICHO_KEY => 'seguros', nicho::PERFIL_KEY => 'corretora'))
     allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
       texto = Autonomia::Agents::PromptParts::SegmentoDoAgente.texto(kwargs[:agent])
-      chamadas << kwargs.merge(texto_da_base: texto, salvo: kwargs[:agent].persisted? && !kwargs[:agent].changed?)
+      agente = kwargs[:agent]
+      chamadas << kwargs.merge(texto_da_base: texto, so_leitura: agente.readonly?, mudado: agente.changed?)
       instance_double(Autonomia::Agents::Answerer, answer: resposta(texto == 'TEXTO ANTIGO' ? 'com a antiga' : 'com a nova'))
     end
   end
@@ -34,6 +35,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     expect(resultado[:perguntas].pluck(:hoje)).to all(eq('com a antiga'))
     expect(resultado[:perguntas].pluck(:nova)).to all(eq('com a nova'))
     expect(chamadas.size).to eq(6)
+    expect(resultado[:versao]).to eq(bloco.versao('seguros/corretora'))
   end
 
   it 'usa o motor do Testar sem ferramenta, com a etiqueta de custo do Testar' do
@@ -50,6 +52,10 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
 
     expect(agent.reload.attributes).to eq(antes)
     expect(agent.instruction_versions).to be_empty
+    # A base nova vai numa cópia só de leitura, mudada só na memória; o agente de hoje vai como está.
+    novas = chamadas.reject { |chamada| chamada[:texto_da_base] == 'TEXTO ANTIGO' }
+    expect(novas).to all(include(so_leitura: true, mudado: true))
+    expect(chamadas - novas).to all(include(so_leitura: false, mudado: false))
   end
 
   it 'pergunta no idioma de quem pediu' do
@@ -83,6 +89,47 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
 
     expect { described_class.new(agent, idioma: 'pt_BR').rodar }.to raise_error(described_class::SemBaseNova)
     expect(chamadas).to be_empty
+  end
+
+  it 'qualquer outra falha também libera o agente (a base ficou em dia entre o pedido e o job)' do
+    limite = Autonomia::Agents::BaseDeSeguros::Limite
+    limite.reservar!(agent)
+    agent.update!(config: agent.config.merge('base' => { 'segmento' => 'seguros/corretora', 'versao' => bloco.versao('seguros/corretora'),
+                                                         'texto' => bloco.for_segmento('seguros/corretora') }))
+
+    expect { described_class.new(agent, idioma: 'pt_BR').rodar }.to raise_error(described_class::SemBaseNova)
+    expect { limite.reservar!(agent) }.not_to raise_error
+  end
+
+  # Sem stub do Answerer: o caminho real em modo prova, só a ida ao modelo é trocada.
+  describe 'com o Answerer de verdade' do
+    let(:pedidos) { [] }
+
+    before do
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_call_original
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', api_base: 'https://api.openai.com', source: :system }))
+      allow_any_instance_of(Crm::Ai::ResponsesClient).to receive(:create_with_tool_executor) do |_cliente, **kwargs| # rubocop:disable RSpec/AnyInstance
+        pedidos << kwargs
+        { text: { reply: 'ok', confidence: 0.9, should_handoff: false, handoff_reason: nil, used_snippet_ids: [],
+                  answered_from_knowledge: false }.to_json, usage: {} }
+      end
+    end
+
+    it 'não manda ferramenta ao modelo, troca só a base e não grava nada' do
+      antes = agent.reload.attributes
+
+      resultado = described_class.new(agent, idioma: 'pt_BR').rodar
+
+      expect(resultado[:perguntas].pluck(:hoje, :nova)).to all(eq(%w[ok ok]))
+      expect(pedidos.size).to eq(6)
+      expect(pedidos.pluck(:tools)).to all(be_blank)
+      textos = pedidos.map { |pedido| pedido[:input].to_json }
+      expect(textos.count { |texto| texto.include?('TEXTO ANTIGO') }).to eq(3)
+      expect(textos.count { |texto| texto.include?('Ramo: corretora de seguros') }).to eq(3)
+      expect(pedidos.pluck(:instructions).uniq.size).to eq(1)
+      expect(agent.reload.attributes).to eq(antes)
+    end
   end
 
   describe 'pela operação interativa (Crm::Ai::InteractiveJob)' do

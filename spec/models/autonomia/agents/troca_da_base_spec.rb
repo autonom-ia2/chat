@@ -117,5 +117,39 @@ RSpec.describe Autonomia::Agents::TrocaDaBase do
       expect(agent.reload.config['base']).to eq(antiga)
       expect(agent.base_desfazivel).to be_nil
     end
+
+    # A regra das versões da marca (#1802, lote 6): versão sem marca mantém a marca atual. O caminho de volta a "sem base"
+    # é o Desfazer, que devolve a chave como estava.
+    it 'a volta por Versões a antes da troca, num agente que nasceu sem marca, mantém a base atual' do
+      sem_marca = criar_principal(conta, nome: 'Sem marca')
+      sem_marca.trocar_base!(nova)
+
+      sem_marca.restore_instruction!(sem_marca.instruction_versions.order(:id).first)
+
+      expect(sem_marca.reload.config['base']).to eq(nova)
+    end
+  end
+
+  describe 'save comum do agente durante a troca' do
+    it 'um objeto lido antes da troca não regrava a base antiga ao salvar outra coisa' do
+      lido_antes = Autonomia::Agents::Agent.find(agent.id)
+      agent.trocar_base!(nova)
+
+      lido_antes.update!(tone: 'formal', config: lido_antes.config.merge('voice' => 'grave'))
+
+      expect(agent.reload.config['base']).to eq(nova)
+      expect(agent.config['voice']).to eq('grave')
+      expect(agent.tone).to eq('formal')
+    end
+
+    it 'um objeto lido antes da troca, num agente sem marca, não apaga a base nova' do
+      sem_marca = criar_principal(conta, nome: 'Sem marca')
+      lido_antes = Autonomia::Agents::Agent.find(sem_marca.id)
+      sem_marca.trocar_base!(nova)
+
+      lido_antes.update!(config: lido_antes.config.merge('voice' => 'grave'))
+
+      expect(sem_marca.reload.config['base']).to eq(nova)
+    end
   end
 end

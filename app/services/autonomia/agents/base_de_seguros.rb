@@ -41,11 +41,11 @@ class Autonomia::Agents::BaseDeSeguros
     marca if marca && marca['texto'].present? && TROCAVEIS.include?(situacao_atual)
   end
 
-  # Grava a base nova. `versao`: a da base nova que a pessoa viu (a guarda contra trocar por outra).
-  def atualizar!(created_by:, versao: nil)
+  # Grava a base nova. `versao`: a da base nova que a pessoa comparou (a guarda contra trocar por outra que ela não viu).
+  def atualizar!(created_by:, versao:)
     marca = marca_nova
     raise SemBaseNova if marca.nil? || !@agent.troca_da_base_disponivel?
-    raise VersaoMudou if versao.present? && versao != marca['versao']
+    raise VersaoMudou if versao != marca['versao']
 
     @agent.trocar_base!(marca, created_by: created_by)
   end

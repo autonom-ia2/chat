@@ -1446,7 +1446,8 @@
             "CORRETORA": "Corretora",
             "SEGURADORA": "Seguradora",
             "INSURTECH": "Insurtech",
-            "SAUDE_BENEFICIOS": "Saúde e benefícios"
+            "SAUDE_BENEFICIOS": "Saúde e benefícios",
+            "OUTRO": "Seguros"
           },
           "ATUALIZAR": "Atualizar com a nova base",
           "ATUALIZADA": "Base atualizada. Se não gostar das respostas, dá para desfazer.",
@@ -1468,6 +1469,7 @@
             "NOVA": "Com a base nova ({base})",
             "SEM_BASE": "sem base",
             "PASSA_EQUIPE": "Passaria a conversa para a equipe.",
+            "PRONTAS": "As respostas chegaram. Compare antes de atualizar {nome}.",
             "NOTA": "Depois de atualizar, se não gostar, use Desfazer na página de {nome}.",
             "AGORA_NAO": "Agora não",
             "ATUALIZANDO": "Atualizando…",

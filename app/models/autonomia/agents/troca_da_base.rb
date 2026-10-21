@@ -21,6 +21,14 @@ module Autonomia::Agents::TrocaDaBase
   # O agente mudou depois da troca (ou nunca houve troca): o caminho é Versões.
   class BaseMudou < StandardError; end
 
+  # A CORRIDA com o save comum (painel, API): ele grava o `config` inteiro que leu no começo. Se a troca (ou o Desfazer)
+  # entrou no meio, a base velha voltaria em silêncio. Todo save que muda o `config` sem mexer na base relê, sob a trava
+  # da linha (a mesma de ConfigDoMaterial), a base salva e a mantém. Quem muda a base de propósito por save (o
+  # nascimento com a marca, os testes) segue mudando.
+  included do
+    before_update :manter_base_salva, if: :manter_base_salva?
+  end
+
   # Pode trocar: Fase 2 ligada e uma instrução para a versão guardar.
   def troca_da_base_disponivel?
     versao_completa? && instruction.present?
@@ -74,6 +82,16 @@ module Autonomia::Agents::TrocaDaBase
   end
 
   private
+
+  def manter_base_salva?
+    will_save_change_to_config? && attribute_in_database(:config).to_h['base'] == config.to_h['base'] &&
+      Autonomia::Agents::Fase2.ligada?(account)
+  end
+
+  def manter_base_salva
+    salvo = self.class.where(id: id).lock.pick(:config).to_h
+    self.config = salvo.key?('base') ? config.to_h.merge('base' => salvo['base']) : config.to_h.except('base')
+  end
 
   def troca_aberta?(aplicada)
     fora = Autonomia::Agents::AgentVersioning::SO_PARA_COMPARAR

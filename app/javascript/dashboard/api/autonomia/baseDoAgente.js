@@ -8,7 +8,7 @@ import { pollAiRequest } from '../../helper/aiRequestPolling';
 //     atual:    { segmento, data } | null          (null = trabalha sem base)
 //     nova:     { segmento, data, versao } | null
 //     desfazer: { anterior: { segmento, data } | null } | null  (existe logo depois de atualizar)
-//   comparar → { data: { perguntas: [{ pergunta, hoje, hoje_equipe, nova, nova_equipe }] } } (job, com poll)
+//   comparar → { data: { versao, perguntas: [{ pergunta, hoje, hoje_equipe, nova, nova_equipe }] } } (job, com poll)
 class BaseDoAgenteAPI extends ApiClient {
   constructor() {
     super('autonomia/agents', { accountScoped: true });
@@ -18,11 +18,15 @@ class BaseDoAgenteAPI extends ApiClient {
     return axios.get(`${this.url}/${agentId}/base`);
   }
 
-  comparar(agentId) {
-    return pollAiRequest(axios.post(`${this.url}/${agentId}/base/comparar`));
+  // `signal`: fechar a gaveta para o poll (AbortController).
+  comparar(agentId, signal) {
+    return pollAiRequest(
+      axios.post(`${this.url}/${agentId}/base/comparar`, {}, { signal }),
+      { signal }
+    );
   }
 
-  // `versao`: a da base nova que a pessoa viu; o servidor recusa (409) se ela mudou.
+  // `versao`: a da base nova que a pessoa comparou; o servidor recusa (409) se ela mudou.
   atualizar(agentId, versao) {
     return axios.post(`${this.url}/${agentId}/base/atualizar`, { versao });
   }

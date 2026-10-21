@@ -49,6 +49,9 @@ describe('rotuloDoTipo', () => {
       'AGENTS.JORNADA.PAGINA.BASE.TIPOS.SAUDE_BENEFICIOS'
     );
     expect(rotuloDoTipo(null, t)).toBe('');
+    expect(rotuloDoTipo('seguros/novo_tipo', t)).toBe(
+      'AGENTS.JORNADA.PAGINA.BASE.TIPOS.OUTRO'
+    );
   });
 });
 
@@ -139,6 +142,18 @@ describe('BaseDoAgenteLinha', () => {
     expect(wrapper.emitted('desfazer')).toHaveLength(1);
   });
 
+  it('after a refused undo, says nothing changed even without the button', () => {
+    const wrapper = linha({
+      base: base({ situacao: 'em_dia', atual: corretora, nova: null }),
+      erroDesfazer: true,
+    });
+
+    expect(wrapper.find('[data-base-desfazer]').exists()).toBe(false);
+    expect(wrapper.find('[data-base-erro-desfazer]').text()).toBe(
+      'Não deu para desfazer agora. Nada mudou.'
+    );
+  });
+
   it('has no native select', () => {
     expect(linha().find('select').exists()).toBe(false);
   });
@@ -168,7 +183,9 @@ describe('GavetaNovaBase', () => {
       props: {
         base: base({ situacao: 'conta_mudou', atual: seguradora }),
         nome: 'Bia',
-        comparar: vi.fn().mockResolvedValue(perguntas),
+        comparar: vi
+          .fn()
+          .mockResolvedValue({ versao: 'bc7dee3b0b25', perguntas }),
         atualizar: vi.fn().mockResolvedValue(),
         ...props,
       },
@@ -192,7 +209,7 @@ describe('GavetaNovaBase', () => {
     expect(document.querySelector('[data-comparando]')).not.toBeNull();
     expect(document.querySelector('[data-confirmar-base]')).toBeNull();
 
-    responder(perguntas);
+    responder({ versao: 'bc7dee3b0b25', perguntas });
     await flushPromises();
 
     expect(document.querySelectorAll('[data-pergunta-comparada]')).toHaveLength(
@@ -223,14 +240,14 @@ describe('GavetaNovaBase', () => {
     document.querySelector('[data-confirmar-base]').click();
     await flushPromises();
 
-    expect(atualizar).toHaveBeenCalledTimes(1);
+    expect(atualizar).toHaveBeenCalledWith('bc7dee3b0b25');
     expect(wrapper.emitted('atualizado')).toHaveLength(1);
     wrapper.unmount();
   });
 
   it('a failed update says nothing changed and keeps the drawer', async () => {
     const wrapper = gaveta({
-      atualizar: vi.fn().mockRejectedValue(new Error('409')),
+      atualizar: vi.fn().mockRejectedValue(new Error('rede')),
     });
     await flushPromises();
 
@@ -242,6 +259,55 @@ describe('GavetaNovaBase', () => {
     ).toContain('Não deu para atualizar agora. Nada mudou.');
     expect(wrapper.emitted('atualizado')).toBeUndefined();
     wrapper.unmount();
+  });
+
+  it('when the new base changed meanwhile (409), never saves it: back to the error with Try again', async () => {
+    const erro = Object.assign(new Error('409'), {
+      response: {
+        status: 409,
+        data: { error: 'O agente mudou enquanto isso.' },
+      },
+    });
+    const comparar = vi
+      .fn()
+      .mockResolvedValue({ versao: 'bc7dee3b0b25', perguntas });
+    const atualizar = vi.fn().mockRejectedValue(erro);
+    const wrapper = gaveta({ comparar, atualizar });
+    await flushPromises();
+
+    document.querySelector('[data-confirmar-base]').click();
+    await flushPromises();
+
+    expect(
+      document.querySelector('[data-erro-comparar]').textContent
+    ).toContain('O agente mudou enquanto isso.');
+    expect(document.querySelector('[data-confirmar-base]')).toBeNull();
+    expect(atualizar).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
+  });
+
+  it('announces when the answers arrive', async () => {
+    const wrapper = gaveta();
+    await flushPromises();
+
+    expect(
+      document.querySelector('[data-respostas-prontas]').getAttribute('role')
+    ).toBe('status');
+    wrapper.unmount();
+  });
+
+  it('closing the drawer stops waiting for the comparison', async () => {
+    let sinal;
+    const comparar = vi.fn(signal => {
+      sinal = signal;
+      return new Promise(() => {});
+    });
+    const wrapper = gaveta({ comparar });
+    await flushPromises();
+
+    wrapper.unmount();
+
+    expect(sinal.aborted).toBe(true);
   });
 
   it('over the limit, shows the server message and no confirm button', async () => {
@@ -279,16 +345,30 @@ describe('useBaseDoAgente', () => {
     expect(base2.temOQueMostrar.value).toBe(false);
   });
 
-  it('updates with the version the person saw', async () => {
+  it('updates with the version that was compared', async () => {
     api.ler.mockResolvedValue({ data: base() });
     api.atualizar.mockResolvedValue({ data: base({ situacao: 'em_dia' }) });
     const estado = useBaseDoAgente(7);
     await estado.carregar();
 
-    await estado.atualizar();
+    await estado.atualizar('bc7dee3b0b25');
 
     expect(api.atualizar).toHaveBeenCalledWith(7, 'bc7dee3b0b25');
     expect(estado.base.value.situacao).toBe('em_dia');
+  });
+
+  it('a refused undo reads the line again and keeps the error', async () => {
+    api.ler.mockResolvedValue({ data: base({ desfazer: { anterior: null } }) });
+    api.desfazer.mockRejectedValue(new Error('409'));
+    const estado = useBaseDoAgente(7);
+    await estado.carregar();
+    api.ler.mockResolvedValue({ data: base({ desfazer: null }) });
+
+    expect(await estado.desfazer()).toBe(false);
+    await flushPromises();
+
+    expect(estado.erroDesfazer.value).toBe(true);
+    expect(estado.base.value.desfazer).toBeNull();
   });
 
   it('reads the line again when the update fails, and passes the error on', async () => {

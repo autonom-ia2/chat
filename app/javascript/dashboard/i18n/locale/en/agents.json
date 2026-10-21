@@ -1446,7 +1446,8 @@
             "CORRETORA": "Broker",
             "SEGURADORA": "Insurer",
             "INSURTECH": "Insurtech",
-            "SAUDE_BENEFICIOS": "Health and benefits"
+            "SAUDE_BENEFICIOS": "Health and benefits",
+            "OUTRO": "Insurance"
           },
           "ATUALIZAR": "Update with the new base",
           "ATUALIZADA": "Base updated. If you do not like the answers, you can undo it.",
@@ -1468,6 +1469,7 @@
             "NOVA": "With the new base ({base})",
             "SEM_BASE": "no base",
             "PASSA_EQUIPE": "Would hand the conversation over to the team.",
+            "PRONTAS": "The answers are ready. Compare them before updating {nome}.",
             "NOTA": "After updating, if you do not like it, use Undo on the page of {nome}.",
             "AGORA_NAO": "Not now",
             "ATUALIZANDO": "Updating…",

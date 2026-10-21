@@ -29,28 +29,38 @@ export function useBaseDoAgente(agentId) {
     }
   };
 
+  // Relê sem tirar a linha da tela (depois de outra gaveta, do Mudar conversando ou de um Desfazer recusado). Falhou, fica
+  // o que está.
+  const recarregar = async () => {
+    try {
+      const { data } = await BaseDoAgenteAPI.ler(id());
+      base.value = data;
+      estado.value = ESTADO_BASE.PRONTO;
+    } catch {
+      // a linha segue como estava
+    }
+  };
+
   // A linha aparece quando o servidor manda uma situação (nula: conta geral com agente sem base).
   const temOQueMostrar = computed(
     () => estado.value === ESTADO_BASE.PRONTO && Boolean(base.value?.situacao)
   );
 
-  const comparar = async () => {
-    const { data } = await BaseDoAgenteAPI.comparar(id());
-    return data?.perguntas || [];
+  // -> { versao, perguntas }: `versao` é a da base nova comparada, a que o "atualizar" manda.
+  const comparar = async signal => {
+    const { data } = await BaseDoAgenteAPI.comparar(id(), signal);
+    return { versao: data?.versao, perguntas: data?.perguntas || [] };
   };
 
-  // Quem chama trata o erro (a gaveta mostra "Não deu para atualizar" no lugar). A linha é relida: se a base nova
-  // mudou (409) ou não existe mais (422), ela passa a mostrar o que vale agora.
-  const atualizar = async () => {
+  // Quem chama trata o erro (a gaveta mostra o motivo no lugar). A linha é relida: se a base nova mudou (409) ou não
+  // existe mais (422), ela passa a mostrar o que vale agora.
+  const atualizar = async versao => {
     try {
-      const { data } = await BaseDoAgenteAPI.atualizar(
-        id(),
-        base.value?.nova?.versao
-      );
+      const { data } = await BaseDoAgenteAPI.atualizar(id(), versao);
       base.value = data;
       erroDesfazer.value = false;
     } catch (erro) {
-      carregar();
+      recarregar();
       throw erro;
     }
   };
@@ -64,6 +74,7 @@ export function useBaseDoAgente(agentId) {
       return true;
     } catch {
       erroDesfazer.value = true;
+      recarregar();
       return false;
     } finally {
       desfazendo.value = false;
@@ -77,6 +88,7 @@ export function useBaseDoAgente(agentId) {
     desfazendo,
     erroDesfazer,
     carregar,
+    recarregar,
     comparar,
     atualizar,
     desfazer,

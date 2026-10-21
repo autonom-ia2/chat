@@ -4,7 +4,8 @@
 # É o motor do Testar (Answerer, com a etiqueta de custo do Testar), sem ferramenta nenhuma (modo `prova`, como a prova do
 # ajuste e o autoteste): nada é executado nem chega a cliente. A base nova vai numa cópia do agente só na memória, só
 # leitura: nada é gravado, nem no agente nem no histórico. Roda num job (Crm::Ai::InteractiveJob); a tela busca o
-# resultado. Se a IA falha em qualquer resposta, a comparação inteira falha e o agente fica livre para tentar de novo.
+# resultado. Se a IA falha em qualquer resposta (ou qualquer outra coisa falha), a comparação inteira falha e o agente
+# fica livre para tentar de novo.
 class Autonomia::Agents::BaseDeSeguros::Comparacao
   class SemBaseNova < StandardError; end
   class Falhou < StandardError; end
@@ -14,15 +15,16 @@ class Autonomia::Agents::BaseDeSeguros::Comparacao
     @idioma = idioma
   end
 
-  # -> { perguntas: [{ pergunta, hoje, hoje_equipe, nova, nova_equipe }] }
+  # -> { versao, perguntas: [{ pergunta, hoje, hoje_equipe, nova, nova_equipe }] }. `versao`: a da base nova comparada, que
+  # a tela manda de volta no "atualizar" (a guarda contra gravar uma base que a pessoa não viu).
   def rodar
     marca = Autonomia::Agents::BaseDeSeguros.new(@agent).marca_nova
     raise SemBaseNova if marca.nil?
 
     com_a_nova = agente_com_a_base(marca)
     perguntas = Autonomia::Segmentos::Bloco.perguntas(marca['segmento'], @idioma)
-    { perguntas: perguntas.map { |pergunta| comparar(pergunta, com_a_nova) } }
-  rescue Falhou
+    { versao: marca['versao'], perguntas: perguntas.map { |pergunta| comparar(pergunta, com_a_nova) } }
+  rescue StandardError
     Autonomia::Agents::BaseDeSeguros::Limite.liberar!(@agent)
     raise
   end

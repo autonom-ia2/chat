@@ -372,6 +372,8 @@ const fechar = () => {
   aberta.value = null;
   nomeSugerido.value = '';
   limparAbaDaUrl();
+  // #1429 F3 — outra gaveta (Versões, comportamento) pode ter mudado o agente: a linha da base é relida.
+  if (temBase.value) baseDoAgente.recarregar();
 };
 
 // #1370 — `?gaveta=` (a volta do assistente de páginas de agendamento) vale uma vez: sai da URL
@@ -527,6 +529,7 @@ const mudarDaGaveta = () => {
 const sairDoMudar = () => {
   vista.value = 'pagina';
   testeInicial.value = null;
+  if (temBase.value) baseDoAgente.recarregar();
 };
 
 const voltarNome = antigo => {

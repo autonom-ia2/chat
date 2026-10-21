@@ -86,17 +86,16 @@ const podeDesfazer = computed(
         <p
           v-if="podeDesfazer"
           data-base-atualizada
-          role="status"
           class="flex items-center gap-1.5 m-0 text-sm text-n-slate-12"
         >
           <span
             class="i-lucide-circle-check size-4 shrink-0 text-n-teal-11"
             aria-hidden="true"
           />
-          {{ t(`${NS}.ATUALIZADA`, { nome }) }}
+          {{ t(`${NS}.ATUALIZADA`) }}
         </p>
         <p
-          v-if="podeDesfazer && erroDesfazer"
+          v-if="podeGerenciar && erroDesfazer"
           data-base-erro-desfazer
           role="alert"
           class="m-0 text-sm text-n-ruby-11"

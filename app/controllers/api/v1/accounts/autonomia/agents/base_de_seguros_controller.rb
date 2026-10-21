@@ -10,6 +10,8 @@ class Api::V1::Accounts::Autonomia::Agents::BaseDeSegurosController < Api::V1::A
   before_action :ensure_fase2
   before_action :fetch_agent
 
+  # A mesma ordem de travas do Construtor e da volta por Versões (as conversas, depois o agente).
+  rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
   rescue_from BASE::SemBaseNova, ::Autonomia::Agents::TrocaDaBase::TrocaIndisponivel do
     render_unprocessable(I18n.t('autonomia.base_de_seguros.sem_base_nova'))
   end
@@ -33,9 +35,12 @@ class Api::V1::Accounts::Autonomia::Agents::BaseDeSegurosController < Api::V1::A
     defer_interactive_ai('agent_base_compare', { agent_id: @agent.id })
   end
 
-  # `versao`: a da base nova que a pessoa viu; outra versão é 409 e nada muda.
+  # `versao` (obrigatória): a da base nova que a pessoa comparou; sem ela, 422; outra versão, 409; nos dois, nada muda.
   def atualizar
-    servico.atualizar!(created_by: Current.user, versao: params[:versao].presence&.to_s)
+    versao = params[:versao].to_s
+    raise BASE::SemBaseNova if versao.blank?
+
+    servico.atualizar!(created_by: Current.user, versao: versao)
     render json: payload
   end
 

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import AgenteGaveta from '../AgenteGaveta.vue';
@@ -9,9 +9,10 @@ import { rotuloDaBase } from '../../utils/baseDoAgente';
 
 // #1429 F3 — "Atualizar com a nova base": antes de confirmar, o dono vê as mesmas perguntas respondidas agora pelo
 // agente com a base de hoje e com a nova, lado a lado (empilhadas no celular). Só a base muda; o resto do agente fica.
-// Uma ação principal: o botão de atualizar só aparece depois que as respostas chegam. Errou a comparação, o erro padrão
-// com "Tentar de novo" no lugar (passado o limite, com o texto do servidor); errou a atualização, o erro no rodapé e
-// nada muda.
+// Uma ação principal: o botão de atualizar só aparece depois que as respostas chegam, e grava a versão que foi
+// comparada. Errou a comparação, o erro padrão com "Tentar de novo" no lugar (passado o limite, com o texto do
+// servidor). A base nova mudou no meio (409): volta para o erro com "Tentar de novo", que compara a base que vale agora;
+// nunca grava uma base que a pessoa não viu. Outro erro ao atualizar: o aviso no rodapé, e nada muda.
 const props = defineProps({
   base: { type: Object, required: true },
   nome: { type: String, required: true },
@@ -23,20 +24,21 @@ const emit = defineEmits(['fechar', 'atualizado']);
 
 const { t, locale } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA.BASE.GAVETA';
-const LIMITE = 429;
+// Os avisos do servidor que a gaveta mostra no lugar da comparação: o limite e a base nova que mudou.
+const COM_TEXTO_DO_SERVIDOR = [409, 429];
 
 const estado = ref('comparando');
 const perguntas = ref([]);
+const versaoComparada = ref(null);
 const erroComparar = ref('');
 const atualizando = ref(false);
 const falhouAtualizar = ref(false);
+const rotuloHoje = ref('');
+const rotuloNova = ref('');
+let pedido = null;
 
 const rotuloDe = base =>
   base ? rotuloDaBase(base, t, locale.value) : t(`${NS}.SEM_BASE`);
-
-// Os rótulos ficam os da hora em que a gaveta abriu: são as bases que as respostas compararam.
-const rotuloHoje = rotuloDe(props.base.atual);
-const rotuloNova = rotuloDe(props.base.nova);
 
 // A resposta do agente, ou o aviso de que ele passaria a conversa para a equipe.
 const resposta = (texto, equipe) =>
@@ -46,31 +48,48 @@ const tituloDoErro = computed(
   () => erroComparar.value || t(`${NS}.ERRO_COMPARAR`)
 );
 
+const textoDoServidor = erro =>
+  COM_TEXTO_DO_SERVIDOR.includes(erro?.response?.status)
+    ? erro.response.data?.error || ''
+    : '';
+
 const lerComparacao = async () => {
+  // Os rótulos são os das bases que esta comparação usa (a linha já foi relida depois de um 409).
+  rotuloHoje.value = rotuloDe(props.base.atual);
+  rotuloNova.value = rotuloDe(props.base.nova);
   estado.value = 'comparando';
   erroComparar.value = '';
+  pedido = new AbortController();
   try {
-    perguntas.value = await props.comparar();
-    estado.value = perguntas.value.length ? 'pronto' : 'erro';
+    const { versao, perguntas: lista } = await props.comparar(pedido.signal);
+    versaoComparada.value = versao;
+    perguntas.value = lista;
+    estado.value = lista.length && versao ? 'pronto' : 'erro';
   } catch (erro) {
-    if (erro?.response?.status === LIMITE) {
-      erroComparar.value = erro.response.data?.error || '';
-    }
+    if (pedido?.signal.aborted) return;
+    erroComparar.value = textoDoServidor(erro);
     estado.value = 'erro';
   }
 };
 
 onMounted(lerComparacao);
+// Fechou a gaveta: o poll da comparação para.
+onBeforeUnmount(() => pedido?.abort());
 
 const confirmar = async () => {
   if (atualizando.value) return;
   atualizando.value = true;
   falhouAtualizar.value = false;
   try {
-    await props.atualizar();
+    await props.atualizar(versaoComparada.value);
     emit('atualizado');
-  } catch {
-    falhouAtualizar.value = true;
+  } catch (erro) {
+    if (erro?.response?.status === 409) {
+      erroComparar.value = textoDoServidor(erro);
+      estado.value = 'erro';
+    } else {
+      falhouAtualizar.value = true;
+    }
   } finally {
     atualizando.value = false;
   }
@@ -168,6 +187,11 @@ const podeFechar = () => !atualizando.value;
         </div>
       </li>
     </ol>
+    <div v-if="estado === 'pronto'" class="relative">
+      <p data-respostas-prontas role="status" class="sr-only">
+        {{ t(`${NS}.PRONTAS`, { nome }) }}
+      </p>
+    </div>
     <p v-if="estado === 'pronto'" class="m-0 text-sm text-n-slate-11">
       {{ t(`${NS}.NOTA`, { nome }) }}
     </p>

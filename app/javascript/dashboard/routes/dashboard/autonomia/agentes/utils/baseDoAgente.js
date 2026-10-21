@@ -10,12 +10,19 @@ export const dataDaBase = (publicadaEm, locale) => {
   );
 };
 
+// Os tipos de conta de seguros com nome no i18n (Autonomia::Agents::Nicho::PERFIS). Tipo novo sem nome ainda: "Seguros".
+const TIPOS = {
+  corretora: 'CORRETORA',
+  seguradora: 'SEGURADORA',
+  insurtech: 'INSURTECH',
+  saude_beneficios: 'SAUDE_BENEFICIOS',
+};
+
 // O nome do tipo de seguro ('seguros/saude_beneficios' → "Saúde e benefícios"), sempre pelo i18n.
 export const rotuloDoTipo = (segmento, t) => {
   const tipo = (segmento || '').split('/').pop();
-  return tipo
-    ? t(`AGENTS.JORNADA.PAGINA.BASE.TIPOS.${tipo.toUpperCase()}`)
-    : '';
+  if (!tipo) return '';
+  return t(`AGENTS.JORNADA.PAGINA.BASE.TIPOS.${TIPOS[tipo] || 'OUTRO'}`);
 };
 
 // "Corretora · de 21/10", ou só "Corretora" quando a versão não tem data registrada.

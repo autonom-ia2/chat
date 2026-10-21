@@ -122,7 +122,7 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
     end
 
     it 'desfaz e volta à base de antes; pedir de novo é 409' do
-      pedir(:post, 'atualizar')
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
       pedir(:post, 'desfazer')
 
       expect(response).to have_http_status(:ok)
@@ -145,8 +145,16 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
                  'texto' => bloco.for_segmento('seguros/corretora') }
       agente.update!(config: agente.config.merge('base' => em_dia))
 
-      expect { pedir(:post, 'atualizar') }.not_to change(Autonomia::Agents::InstructionVersion, :count)
+      versao = bloco.versao('seguros/corretora')
+      expect { pedir(:post, 'atualizar', params: { versao: versao }) }.not_to change(Autonomia::Agents::InstructionVersion, :count)
       expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'sem a versão que a pessoa viu: 422 e nada muda' do
+      pedir(:post, 'atualizar')
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(agente.reload.config['base']).to eq(seguradora)
     end
 
     it 'a API genérica do agente continua sem gravar a base' do
