@@ -234,6 +234,15 @@ describe('modelos prontos (#1380)', () => {
       });
   });
 
+  it('confere todos os pacotes de tradução, nos dois idiomas', () => {
+    expect(PACOTES).toEqual([
+      'seguros',
+      'seguros.corretora',
+      'seguros.saude_beneficios',
+    ]);
+    expect(CATALOGOS).toHaveLength(8);
+  });
+
   it('renovação e andamento (#2035): avisos com respostas rápidas, em todo pacote', () => {
     const botoes = { renovacao: 2, andamento: 1 };
     Object.entries(botoes).forEach(([chave, quantos]) => {
