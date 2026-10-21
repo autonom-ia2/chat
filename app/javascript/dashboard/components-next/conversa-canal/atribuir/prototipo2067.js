@@ -33,8 +33,8 @@ export const escolhaDoPrototipo = query => {
     ? query.devolver
     : guardado.lugar;
   const escolha = {
-    forma: FORMAS.includes(forma) ? forma : 'b',
-    lugar: LUGARES.includes(lugar) ? lugar : 'topo',
+    forma: FORMAS.includes(forma) ? forma : 'a',
+    lugar: LUGARES.includes(lugar) ? lugar : 'barra',
   };
   guardar(escolha);
   return escolha;
