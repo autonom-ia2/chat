@@ -18,7 +18,11 @@ modelo_usado = atributos['template_params'].is_a?(Hash) ? atributos['template_pa
 if modelo_usado['name'].blank?
   modelo_usado = { 'name' => atributos['campaign_template_name'], 'enviado' => atributos['campaign_template_enviado'] }.compact
 end
-json.additional_attributes({ template_params: modelo_usado }) if modelo_usado['name'].present?
+# #2049: e de qual campanha veio (e com que modelo), para o rótulo do balão mostrar o nome dela também depois de
+# recarregar, como já mostra ao vivo pelo websocket.
+visiveis = atributos.slice('campaign_id', 'whatsapp_api_campaign_id', 'campaign_template_name').compact
+visiveis = visiveis.merge('template_params' => modelo_usado) if modelo_usado['name'].present?
+json.additional_attributes(visiveis) if visiveis.present?
 json.created_at message.created_at.to_i
 json.private message.private
 json.source_id message.source_id
