@@ -597,13 +597,14 @@
 # CRM › Números por papel, visão "Só eu" (#1897, F3 do épico #1871). Ligada: CRM › Números abre a visão de quem abre
 # (quem vende, quem atende, quem vende e atende; o papel vem do tipo do funil), com o seletor "Só eu · Equipe" para quem
 # vê a equipe (administrador e função com `crm_view_reports`), e o agente comum (e a função só com `crm_view`) deixa de
-# ver os números da equipe, o valor dos colegas e o gasto da IA (Crm::ReportPolicy, Decisão 2). Desligada (padrão): a
+# ver os números da equipe, o valor dos colegas e o gasto da IA (Crm::ReportPolicy, Decisão 2). Desligada: a
 # tela de hoje. Posição 41 na feature_flags_ext_1 (1099511627776 = 1 << 40), logo depois de `email_lido_sincronizado`
 # (tabela da Orquestração, 19/10).
-# Sem migration: nasce desligada e nenhuma migration liga conta.
+# Ligada nas contas existentes pela Orquestração em 20/10/2026. Padrão das contas novas: ligada desde o #1976
+# (migration 20261108240000).
 - name: crm_numeros_lentes
   display_name: CRM › Números por papel (visão "Só eu")
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Contato pelo e-mail recebido (#1813, parte do #1701): quando chega um e-mail escrito pelo próprio contato (From é
@@ -653,4 +654,62 @@
 - name: anuncios_sem_login
   display_name: Anúncios sem login (resultado do WhatsApp)
   enabled: true
+  column: feature_flags_ext_1
+
+# "Não é negócio" na IA de etapa (#1922). Ligada: a avaliação de etapa (no automático do funil, com confiança alta) pode
+# arquivar o card que não é pedido de cliente (fornecedor, engano, só robôs, repetido), sem contar como perda
+# (Crm::Ai::NaoENegocio). A regra do prompt (ClassifierPrompt::NAO_E_NEGOCIO), o campo `nao_e_negocio` do schema e o
+# `id` em other_subjects só vão ao modelo com ela. Posição 46 na feature_flags_ext_1 (1 << 45), definitiva da
+# Orquestração (21/10), logo depois de anuncios_sem_login. Sem migration.
+# Desligada (padrão): prompt, schema e entrada iguais aos de antes, e nada é arquivado. Nasce ligada só nas contas 1, 16
+# e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: crm_ia_arquiva_lixo
+  display_name: IA de etapa arquiva o card que não é negócio
+  enabled: false
+  column: feature_flags_ext_1
+
+# Mensagem da equipe ao cliente relê o card em foco (#1923). Ligada (junto com `crm_avaliar_toda_mensagem`): a mensagem
+# que uma pessoa da equipe manda ao cliente (pelo painel, ou o eco do que mandou pelo app) agenda a avaliação do card em
+# foco, com a espera da equipe e o gatilho `mensagem_da_equipe` (Crm::Conversations::CardEmFoco). Posição 47 na
+# feature_flags_ext_1 (1 << 46), definitiva da Orquestração (21/10), logo depois de crm_ia_arquiva_lixo. Sem migration.
+# Desligada (padrão): só a mensagem do cliente dispara a avaliação, como antes. Nasce ligada só nas contas 1, 16 e 18 da
+# stack Hub2You (Orquestração, depois do deploy).
+- name: crm_ia_avalia_mensagem_equipe
+  display_name: Mensagem da equipe ao cliente relê o card em foco
+  enabled: false
+  column: feature_flags_ext_1
+
+# Foto de perfil do contato na caixa híbrida (#1934). Ligada: mensagem recebida numa caixa híbrida, de contato sem foto,
+# busca a foto pela sessão WAHA da própria caixa (mesmo número) e grava com Avatar::AvatarFromUrlJob
+# (WhatsappHybrid::FotoDoContato). No máximo 1 tentativa a cada 7 dias por contato (30 dias quando a foto está escondida),
+# 1 consulta a cada 15 s e 300 por dia por sessão; erro do motor pausa a sessão por 1 hora. A Cloud pura segue sem foto
+# (decisão do Rodrigo, 20/10). Posição 48 na feature_flags_ext_1 (1 << 47), definitiva da Orquestração (21/10), logo
+# depois de crm_ia_avalia_mensagem_equipe. Ligada em
+# TODAS as contas (Rodrigo, 20/10: o Híbrido já está liberado e o gate é a caixa híbrida): as existentes pela
+# Orquestração depois do deploy; conta nova nasce ligada (migration 20261108220000).
+- name: hibrido_foto_do_contato
+  display_name: Foto de perfil do contato no WhatsApp Híbrido
+  enabled: true
+  column: feature_flags_ext_1
+
+# Convite de reunião no e-mail (#1984): o convite que chega como parte text/calendar vira um cartão na conversa, com
+# Sim / Talvez / Não ao organizador (pela agenda Google ou Microsoft ligada na caixa, ou por e-mail iMIP nas demais).
+# Posição 49 na feature_flags_ext_1 (281474976710656 = 1 << 48), definitiva da Orquestração (21/10), logo depois de
+# hibrido_foto_do_contato. O cartão lê o convite guardado em todo e-mail; a flag só mostra o cartão e libera a resposta.
+# Ligada nas contas 1, 16 e 18 da stack Hub2You (piloto, pela Orquestração depois do deploy); conta nova nasce ligada
+# (migration 20261108250000).
+- name: convite_da_reuniao
+  display_name: Convite de reunião no e-mail (cartão e resposta)
+  enabled: true
+  column: feature_flags_ext_1
+
+# Metas do mês por pessoa em CRM › Números (#1991, F4 do épico #1871). Ligada: a gaveta "Metas do mês" (funis de Vender,
+# meta do funil e de cada pessoa, em R$ na moeda do funil) para o administrador e a função com `crm_metas_manage` (ou
+# `crm_admin`), e quem vende vê a própria meta no topo de "Só eu" (Decisão 4: nunca a dos colegas). Desligada (padrão):
+# tudo como antes. Posição 50 (1 << 49 = 562949953421312), definitiva da Orquestração (21/10), na feature_flags_ext_1,
+# logo depois de convite_da_reuniao.
+# Sem migration: a Orquestração liga depois do deploy, na stack Hub2You, contas 1, 16 e 18.
+- name: crm_metas
+  display_name: CRM › Metas do mês por pessoa
+  enabled: false
   column: feature_flags_ext_1

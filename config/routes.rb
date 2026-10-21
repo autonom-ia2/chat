@@ -394,6 +394,9 @@ Rails.application.routes.draw do
             get :kanban, to: 'kanban#index'
             # CRM › Números por papel (#1897): a visão "Só eu" de quem abre, atrás da flag `crm_numeros_lentes`.
             get :numeros, to: 'numeros#show'
+            # Metas do mês por pessoa (#1991, F4 do #1871): a gaveta "Metas do mês", atrás da flag `crm_metas`.
+            get :metas, to: 'metas#show'
+            put :metas, to: 'metas#update'
             scope :reports, controller: :reports do
               get :pipelines, action: :pipelines, as: :crm_report_pipelines
               get :summary, action: :summary, as: :crm_report_summary
@@ -500,6 +503,8 @@ Rails.application.routes.draw do
             end
             resources :pastas_do_email, only: [:show, :update, :destroy], param: :conversation_id
             resources :reacoes, only: [:create]
+            # #1984 — Sim / Talvez / Não ao convite de reunião que chegou no e-mail (:id é o da mensagem).
+            resources :convites_do_email, only: [:update]
             resources :encaminhamentos, only: [:index, :create]
             resources :formularios, only: [:index] do
               get :primeira_tela, on: :member

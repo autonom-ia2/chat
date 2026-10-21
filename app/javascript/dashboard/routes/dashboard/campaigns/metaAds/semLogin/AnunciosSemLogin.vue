@@ -8,10 +8,10 @@ import MetaAdsPanel from '../components/MetaAdsPanel.vue';
 
 // Anúncios sem login (#1960, degrau 0): a página abre pronta, com o mesmo painel de quem conectou a conta de
 // anúncios (MetaAdsPanel), só sem gasto — o resultado sai do que o WhatsApp oficial contou. Aparece com a flag
-// anuncios_sem_login, WhatsApp oficial e nenhuma conexão de anúncios. Sem ninguém vindo de anúncio em 90 dias, a
+// anuncios_sem_login, WhatsApp oficial e nenhuma conexão de anúncios. Sem ninguém vindo de anúncio em época nenhuma, a
 // tela "pronto" com o exemplo; quem não é administrador vê o mesmo, só leitura.
 const props = defineProps({
-  // { enabled, official_inboxes: [{ id, name, phone }], recent_ad_touch }
+  // { enabled, official_inboxes: [{ id, name, phone }], ad_touch }
   result: { type: Object, required: true },
   readOnly: { type: Boolean, default: false },
 });
@@ -20,7 +20,7 @@ const { t } = useI18n();
 const example = ref(false);
 
 const screen = computed(() => {
-  if (props.result.recent_ad_touch) return 'result';
+  if (props.result.ad_touch) return 'result';
   return example.value ? 'example' : 'ready';
 });
 

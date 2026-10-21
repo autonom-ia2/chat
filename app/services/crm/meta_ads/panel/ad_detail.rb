@@ -11,18 +11,18 @@
 class Crm::MetaAds::Panel::AdDetail
   QUOTES_LIMIT = 20
 
-  def initialize(connection, ad_id:, days:, visible: nil, account: nil)
+  def initialize(connection, ad_id:, period: nil, visible: nil, account: nil)
     @connection = connection
     @visible = visible
     @ad_id = ad_id.to_s
-    @report = Crm::MetaAds::Panel::Report.new(connection, days: days, account: account)
+    @report = Crm::MetaAds::Panel::Report.new(connection, period: period, account: account)
   end
 
   def payload
     return if row.nil?
 
     row.merge(
-      days: @report.days, from: @report.first_day, to: @report.today, currency: @report.currency,
+      period: @report.period.key, days: @report.days, from: @report.first_day, to: @report.last_day, currency: @report.currency,
       preview_url: object&.preview_url, campaign_name: parent_name(:campaign_id), adset_name: parent_name(:adset_id),
       account_average_cost_per_sale: @report.average_cost_per_sale,
       reason: @report.whatsapp_only? ? nil : Crm::MetaAds::Panel::Verdict.reason(row, average_cost_per_sale: @report.average_cost_per_sale),
@@ -57,7 +57,7 @@ class Crm::MetaAds::Panel::AdDetail
     spend = @report.insights.where(ad_id: @ad_id).group(:date).sum(:spend)
     conversations = @report.cohort.touches.values.select { |ad, _at| ad == @ad_id }
                            .map { |_ad, at| at.in_time_zone(@report.zone).to_date }.tally
-    (@report.first_day..@report.today).map do |date|
+    (@report.first_day..@report.last_day).map do |date|
       { date: date, spend: spend.fetch(date, 0).to_f.round(2), conversations: conversations.fetch(date, 0) }
     end
   end
@@ -72,8 +72,8 @@ class Crm::MetaAds::Panel::AdDetail
   end
 
   def people
-    Crm::MetaAds::Panel::PathList.new(@connection, step: 'conversations', days: @report.days, visible: @visible,
-                                                   report: @report, ad_id: @ad_id).payload[:items]
+    Crm::MetaAds::Panel::PathList.new(@connection, step: 'conversations', visible: @visible, report: @report,
+                                                   ad_id: @ad_id).payload[:items]
   end
 
   def only_visible(cards)

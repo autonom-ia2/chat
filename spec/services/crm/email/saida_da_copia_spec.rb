@@ -90,7 +90,7 @@ RSpec.describe Crm::Email::SaidaDaCopia do
                                            primary_conversation: outra_conversa, inbox: inbox, currency: 'BRL')
     classificadores = [card, outro_card].map do |alvo|
       instance_double(Crm::Ai::StageClassifier, pacote: { card: { id: alvo.id }, eligible_agents: [] }, conversa: { recent_messages: [] },
-                                                memoria?: false, email_autoria?: true)
+                                                memoria?: false, email_autoria?: true, nao_e_negocio?: false)
     end
     allow(Crm::Ai::OutrasConversas).to receive(:por_card).and_return({})
     item = ->(alvo) { { card_id: alvo.id, suggested_stage_id: alvo.stage_id, confidence: 0.2, reasoning: 'x' } }

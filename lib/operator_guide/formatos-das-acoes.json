@@ -123,8 +123,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:88",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:128"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:89",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:129"
     ],
     "sem_corpo": true
   },
@@ -138,10 +138,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents#avatar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:105",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:103",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:128"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:94",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:106",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:104",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:129"
     ],
     "sem_corpo": false
   },
@@ -257,8 +257,8 @@
     "controller": "api/v1/accounts/campaigns#destroy",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:19",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:20",
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:46"
     ],
     "sem_corpo": true
   },
@@ -597,7 +597,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destroy",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:90"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:91"
     ],
     "sem_corpo": true
   },
@@ -934,7 +934,7 @@
     "completo": true,
     "controller": "api/v1/accounts/integrations/shopify#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:37"
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:39"
     ],
     "sem_corpo": true
   },
@@ -3554,13 +3554,13 @@
     "envelope": "agent",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:74",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:195",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:75",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:204",
       "app/controllers/concerns/autonomia/modo_do_agente.rb:30",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:279",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:231",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:155",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:128"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:288",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:240",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:163",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:129"
     ],
     "sem_corpo": false
   },
@@ -3574,10 +3574,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents#avatar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:93",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:105",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:103",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:128"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:94",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:106",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:104",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:129"
     ],
     "sem_corpo": false
   },
@@ -4167,8 +4167,8 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:50",
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:46"
     ],
     "sem_corpo": false
   },
@@ -4699,6 +4699,20 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH conversa_canal/convites_do_email/:id": {
+    "campos": {
+      "conversation_id": {},
+      "resposta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/convites_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:11",
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:29",
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:25"
     ],
     "sem_corpo": false
   },
@@ -5436,8 +5450,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:59",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:268"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:269"
     ],
     "sem_corpo": false
   },
@@ -5446,7 +5460,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destinations",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:147"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:148"
     ],
     "sem_corpo": true
   },
@@ -5472,10 +5486,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnel",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:161",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:264",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:165",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:164"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:162",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:265",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:166",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:165"
     ],
     "sem_corpo": false
   },
@@ -6377,6 +6391,7 @@
           "conversation_unassigned_manage",
           "conversation_participating_manage",
           "conversation_view",
+          "conversation_message_delete",
           "contact_manage",
           "report_manage",
           "knowledge_base_manage",
@@ -6389,6 +6404,7 @@
           "crm_admin",
           "crm_export",
           "crm_delete_cards",
+          "crm_metas_manage",
           "contact_view",
           "contact_export",
           "contact_delete",
@@ -6397,6 +6413,7 @@
           "autonomia_manage",
           "campaign_view",
           "campaign_manage",
+          "campaign_send",
           "inbox_view",
           "inbox_manage",
           "canned_response_manage",
@@ -10657,9 +10674,9 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:42",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:195",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:279",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:231",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:204",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:288",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:240",
       "app/controllers/concerns/autonomia/modo_do_agente.rb:30",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:43"
     ],
@@ -10911,10 +10928,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/playground#suggest",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:20",
-      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:44",
-      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:39",
-      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:34"
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:57",
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:42"
     ],
     "sem_corpo": false
   },
@@ -10937,11 +10954,12 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/playground#test",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:11",
-      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:56",
-      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:44",
-      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:39",
-      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:34"
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:15",
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:69",
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:57",
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:18",
+      "app/controllers/api/v1/accounts/autonomia/agents/playground_controller.rb:42"
     ],
     "sem_corpo": false
   },
@@ -12161,8 +12179,8 @@
       "leitura crua sem tipo: omniauth_token"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:26",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:82"
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:29",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:85"
     ],
     "sem_corpo": false
   },
@@ -12181,9 +12199,9 @@
       "leitura crua sem tipo: omniauth_token"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:45",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:82",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:62"
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:48",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:85",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:65"
     ],
     "sem_corpo": false
   },
@@ -12207,11 +12225,11 @@
       "leitura crua sem tipo: inbox_name"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:4",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:8",
       "app/controllers/api/v1/accounts/callbacks_controller.rb:7",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:6",
-      "app/controllers/api/v1/accounts/callbacks_controller.rb:5"
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:11",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:10",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:9",
+      "app/controllers/api/v1/accounts/callbacks_controller.rb:8"
     ],
     "sem_corpo": false
   },
@@ -12331,8 +12349,7 @@
         "tipo": "inteiro"
       },
       "channel": {
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
+        "tipo": "string"
       },
       "draft_id": {
         "tipo": "id",
@@ -12341,17 +12358,17 @@
     },
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:15",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:104",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:110",
       "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:19",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:88",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:51",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:39",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:78",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:64",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:18",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:17"
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:122",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:128",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:33",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:105",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:68",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:56",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:95",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:81",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:22",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:21"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -12527,7 +12544,7 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:8",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:31"
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:50"
     ],
     "sem_corpo": false
   },
@@ -15487,8 +15504,8 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#facebook_login",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:73",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:74"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:74",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:75"
     ],
     "sem_corpo": false
   },
@@ -15497,7 +15514,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#insights",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:95"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:96"
     ],
     "sem_corpo": true
   },
@@ -15540,9 +15557,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#selection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:138",
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:139",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:200"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:140",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:201"
     ],
     "sem_corpo": false
   },
@@ -15557,9 +15574,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#suggest_stages",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:175",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:179",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:178"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:176",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:180",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:179"
     ],
     "sem_corpo": false
   },
@@ -16446,6 +16463,7 @@
           "conversation_unassigned_manage",
           "conversation_participating_manage",
           "conversation_view",
+          "conversation_message_delete",
           "contact_manage",
           "report_manage",
           "knowledge_base_manage",
@@ -16458,6 +16476,7 @@
           "crm_admin",
           "crm_export",
           "crm_delete_cards",
+          "crm_metas_manage",
           "contact_view",
           "contact_export",
           "contact_delete",
@@ -16466,6 +16485,7 @@
           "autonomia_manage",
           "campaign_view",
           "campaign_manage",
+          "campaign_send",
           "inbox_view",
           "inbox_manage",
           "canned_response_manage",
@@ -18002,7 +18022,7 @@
     "controller": "api/v1/accounts/integrations/linear#create_issue",
     "origem": [
       "app/controllers/api/v1/accounts/integrations/linear_controller.rb:31",
-      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:118"
+      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:120"
     ],
     "sem_corpo": false
   },
@@ -18026,7 +18046,7 @@
     "controller": "api/v1/accounts/integrations/linear#link_issue",
     "origem": [
       "app/controllers/api/v1/accounts/integrations/linear_controller.rb:46",
-      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:118"
+      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:120"
     ],
     "sem_corpo": false
   },
@@ -18050,7 +18070,7 @@
     "controller": "api/v1/accounts/integrations/linear#unlink_issue",
     "origem": [
       "app/controllers/api/v1/accounts/integrations/linear_controller.rb:63",
-      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:118"
+      "app/controllers/api/v1/accounts/integrations/linear_controller.rb:120"
     ],
     "sem_corpo": false
   },
@@ -18064,8 +18084,8 @@
     "completo": true,
     "controller": "api/v1/accounts/integrations/shopify#auth",
     "origem": [
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:10",
-      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:11"
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:12",
+      "app/controllers/api/v1/accounts/integrations/shopify_controller.rb:13"
     ],
     "sem_corpo": false
   },
@@ -19323,13 +19343,13 @@
     "completo": true,
     "controller": "api/v1/accounts/whatsapp/authorizations#create",
     "origem": [
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:10",
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:33",
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:11",
       "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:34",
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:35",
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:82",
       "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:81",
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:80",
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:23",
-      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:40"
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:24",
+      "app/controllers/api/v1/accounts/whatsapp/authorizations_controller.rb:41"
     ],
     "sem_corpo": false
   },
@@ -22110,13 +22130,13 @@
     "envelope": "agent",
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:74",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:195",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:75",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:204",
       "app/controllers/concerns/autonomia/modo_do_agente.rb:30",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:279",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:231",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:155",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:128"
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:288",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:240",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:163",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:129"
     ],
     "sem_corpo": false
   },
@@ -22691,8 +22711,8 @@
     "modelo": "Campaign",
     "origem": [
       "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:50",
+      "app/controllers/api/v1/accounts/campaigns_controller.rb:46"
     ],
     "sem_corpo": false
   },
@@ -23194,6 +23214,20 @@
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
+    ],
+    "sem_corpo": false
+  },
+  "PUT conversa_canal/convites_do_email/:id": {
+    "campos": {
+      "conversation_id": {},
+      "resposta": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversa_canal/convites_do_email#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:11",
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:29",
+      "app/controllers/api/v1/accounts/conversa_canal/convites_do_email_controller.rb:25"
     ],
     "sem_corpo": false
   },
@@ -23887,8 +23921,34 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:59",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:268"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:269"
+    ],
+    "sem_corpo": false
+  },
+  "PUT crm/metas": {
+    "campos": {
+      "funis": {
+        "campos": {
+          "id": {},
+          "metaFunil": {},
+          "pessoas": {
+            "campos": {
+              "id": {},
+              "meta": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "mes": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/metas#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/metas_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/metas_controller.rb:48"
     ],
     "sem_corpo": false
   },
@@ -24776,6 +24836,7 @@
           "conversation_unassigned_manage",
           "conversation_participating_manage",
           "conversation_view",
+          "conversation_message_delete",
           "contact_manage",
           "report_manage",
           "knowledge_base_manage",
@@ -24788,6 +24849,7 @@
           "crm_admin",
           "crm_export",
           "crm_delete_cards",
+          "crm_metas_manage",
           "contact_view",
           "contact_export",
           "contact_delete",
@@ -24796,6 +24858,7 @@
           "autonomia_manage",
           "campaign_view",
           "campaign_manage",
+          "campaign_send",
           "inbox_view",
           "inbox_manage",
           "canned_response_manage",

@@ -21,7 +21,7 @@ module Crm::MetaAdsPanelSource
 
   # O mesmo painel da conexão, sem gasto, com o tempo de resposta do período (das conversas que o WhatsApp contou).
   def whatsapp_panel_payload
-    report = ::Crm::MetaAds::Panel::Report.new(nil, days: params[:days], account: Current.account)
+    report = ::Crm::MetaAds::Panel::Report.new(nil, period: panel_period, account: Current.account)
     report.payload.merge(response_time: whatsapp_response_time(report))
   end
 
@@ -32,8 +32,13 @@ module Crm::MetaAdsPanelSource
                                        .payload.merge(days: report.days)
   end
 
+  # O período pedido (#2011): `period` pelo nome; o `days` antigo (7 ou 30) segue valendo para quem ainda pede assim.
+  def panel_period
+    ::Crm::MetaAds::Panel::Period.key_for(period: params[:period], days: params[:days])
+  end
+
   # Período, conversas que a pessoa já vê (#1794) e a conta, comuns ao anúncio por dentro e às listas.
   def panel_scope
-    { days: params[:days], visible: ::Crm::MetaAds::VisibleConversations.current, account: Current.account }
+    { period: panel_period, visible: ::Crm::MetaAds::VisibleConversations.current, account: Current.account }
   end
 end

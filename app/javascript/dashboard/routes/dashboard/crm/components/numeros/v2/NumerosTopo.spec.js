@@ -30,6 +30,9 @@ const montar = topo =>
     global: { plugins: [i18n], stubs: { RouterLink: true } },
   });
 
+// O Intl separa "R$" do valor com espaço sem quebra.
+const semNbsp = alvo => alvo.text().replaceAll('\u00a0', ' ');
+
 describe('NumerosTopo', () => {
   it('quem atende, nos dias 1 a 3: conta casos, sem R$', () => {
     const texto = montar({
@@ -72,5 +75,44 @@ describe('NumerosTopo', () => {
     });
     expect(wrapper.text()).toContain('Faltam 4 para a sua meta.');
     expect(wrapper.text()).not.toContain('R$');
+  });
+
+  // #1991: com a meta da pessoa, o título diz quanto falta; quem define as metas
+  // ganha o atalho para a gaveta, e quem não define não vê o atalho.
+  const comMeta = podeDefinirMetas =>
+    mount(NumerosTopo, {
+      props: {
+        topo: {
+          medida: 'valor',
+          feito: 6200,
+          meta: 8000,
+          fechadas: 9,
+          esperadoPct: 61,
+          frase: { tipo: 'eu_vende', feito: 6200, meta: 8000, dias: 12 },
+        },
+        mes: { dia: 19, diasNoMes: 31, fechado: false },
+        mesNome: 'outubro',
+        rotuloDoMes: 'Outubro',
+        podeDefinirMetas,
+      },
+      global: { plugins: [i18n], stubs: { RouterLink: true } },
+    });
+
+  it('quem vende com meta: quanto falta e a barra', () => {
+    const wrapper = comMeta(false);
+    expect(semNbsp(wrapper)).toContain('Faltam R$ 1.800 para a sua meta');
+    expect(semNbsp(wrapper)).toContain('Você fechou R$ 6.200 de R$ 8.000.');
+    expect(
+      wrapper.find('[role="progressbar"]').attributes('aria-valuenow')
+    ).toBe('78');
+    expect(wrapper.find('[data-topo-metas]').exists()).toBe(false);
+  });
+
+  it('quem define as metas abre a gaveta pelo topo', async () => {
+    const wrapper = comMeta(true);
+    const atalho = wrapper.find('[data-topo-metas]');
+    expect(atalho.text()).toBe('Metas de outubro');
+    await atalho.trigger('click');
+    expect(wrapper.emitted('metas')).toHaveLength(1);
   });
 });

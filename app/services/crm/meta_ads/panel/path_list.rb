@@ -19,21 +19,21 @@ class Crm::MetaAds::Panel::PathList
   LIST_LIMIT = 50
   SLOW_SECONDS = 300
 
-  def initialize(connection, step:, days:, visible: nil, **scope)
+  def initialize(connection, step:, period: nil, visible: nil, **scope)
     raise ArgumentError, "unknown step #{step}" unless STEPS.include?(step)
 
     @step = step
     @visible = visible
     @ad_id = scope[:ad_id]&.to_s
     @limit = scope[:limit] || LIST_LIMIT
-    @report = scope[:report] || Crm::MetaAds::Panel::Report.new(connection, days: days, account: scope[:account])
+    @report = scope[:report] || Crm::MetaAds::Panel::Report.new(connection, period: period, account: scope[:account])
   end
 
   def payload
     rows = only_visible(send(:"#{@step}_rows"))
     shown = rows.first(@limit)
     names = contact_names(shown.reject { |_id, card| card&.title.present? }.map(&:first))
-    { step: @step, days: @report.days, total: rows.size, items: shown.map { |id, card| item(id, card, names) } }
+    { step: @step, period: @report.period.key, days: @report.days, total: rows.size, items: shown.map { |id, card| item(id, card, names) } }
   end
 
   private

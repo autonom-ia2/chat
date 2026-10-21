@@ -50,12 +50,12 @@ class Crm::MetaAds::Relatorio::Pdf
   end
 
   def periodo
-    t('period', days: @dados.report.days, from: dia(@dados.report.first_day), to: dia(@dados.report.today))
+    t('period', name: nome_do_periodo(@dados.report), from: dia(@dados.report.first_day), to: dia(@dados.report.last_day))
   end
 
   def capa
     topo = @pdf.capa(conta: @dados.account.name, titulo: t('title'), periodo: periodo,
-                     rotulo: t('hero_label', days: @dados.report.days), frase: frase)
+                     rotulo: t('hero_label', name: nome_do_periodo(@dados.report)), frase: frase)
     return @pdf.nota(t('empty'), topo: topo - 30, tamanho: 12) if totais[:conversations].to_i.zero?
 
     topo = @pdf.kpis(numeros, topo: topo + 34) - 26
