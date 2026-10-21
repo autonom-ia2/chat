@@ -597,13 +597,14 @@
 # CRM › Números por papel, visão "Só eu" (#1897, F3 do épico #1871). Ligada: CRM › Números abre a visão de quem abre
 # (quem vende, quem atende, quem vende e atende; o papel vem do tipo do funil), com o seletor "Só eu · Equipe" para quem
 # vê a equipe (administrador e função com `crm_view_reports`), e o agente comum (e a função só com `crm_view`) deixa de
-# ver os números da equipe, o valor dos colegas e o gasto da IA (Crm::ReportPolicy, Decisão 2). Desligada (padrão): a
+# ver os números da equipe, o valor dos colegas e o gasto da IA (Crm::ReportPolicy, Decisão 2). Desligada: a
 # tela de hoje. Posição 41 na feature_flags_ext_1 (1099511627776 = 1 << 40), logo depois de `email_lido_sincronizado`
 # (tabela da Orquestração, 19/10).
-# Sem migration: nasce desligada e nenhuma migration liga conta.
+# Ligada nas contas existentes pela Orquestração em 20/10/2026. Padrão das contas novas: ligada desde o #1976
+# (migration 20261108240000).
 - name: crm_numeros_lentes
   display_name: CRM › Números por papel (visão "Só eu")
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Contato pelo e-mail recebido (#1813, parte do #1701): quando chega um e-mail escrito pelo próprio contato (From é
@@ -687,5 +688,16 @@
 # Orquestração depois do deploy; conta nova nasce ligada (migration 20261108220000).
 - name: hibrido_foto_do_contato
   display_name: Foto de perfil do contato no WhatsApp Híbrido
+  enabled: true
+  column: feature_flags_ext_1
+
+# Convite de reunião no e-mail (#1984): o convite que chega como parte text/calendar vira um cartão na conversa, com
+# Sim / Talvez / Não ao organizador (pela agenda Google ou Microsoft ligada na caixa, ou por e-mail iMIP nas demais).
+# Posição 49 na feature_flags_ext_1 (281474976710656 = 1 << 48), definitiva da Orquestração (21/10), logo depois de
+# hibrido_foto_do_contato. O cartão lê o convite guardado em todo e-mail; a flag só mostra o cartão e libera a resposta.
+# Ligada nas contas 1, 16 e 18 da stack Hub2You (piloto, pela Orquestração depois do deploy); conta nova nasce ligada
+# (migration 20261108250000).
+- name: convite_da_reuniao
+  display_name: Convite de reunião no e-mail (cartão e resposta)
   enabled: true
   column: feature_flags_ext_1
