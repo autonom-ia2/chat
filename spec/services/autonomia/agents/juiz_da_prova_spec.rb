@@ -1,8 +1,8 @@
 require 'rails_helper'
 
-# #1428 (tema 6, parte 3, entrega B) — o juiz das perguntas de prova: só { indice, veredito, pedido } (ok, nao, nao_testa;
-# o número do pedido que a mensagem testa), um por item. Faltando item, malformado ou provedor fora: nil (a prova fica
-# indisponível, nunca um ✓ inventado). Pedido fora da lista não cobre nada (a prova não fica completa).
+# #1428 (tema 6, parte 3, entrega B) — o juiz das perguntas de prova: só { indice, veredito, pedidos } (ok, nao,
+# nao_testa; os números dos pedidos que a resposta testa, que podem ser mais de um), um por item. Faltando item,
+# malformado ou provedor fora: nil (a prova fica indisponível, nunca um ✓ inventado). Número fora da lista não cobre nada.
 RSpec.describe Autonomia::Agents::JuizDaProva do
   let(:account) { create(:account) }
   let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
@@ -29,24 +29,31 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     described_class.new(account: account).julgar(pedidos: pedidos, itens: itens)
   end
 
-  # Os pedidos vão ao juiz numerados a partir de 1; o que volta é a posição na lista (a partir de 0).
-  it 'um veredito por item, na ordem dos índices, com os três estados e a posição do pedido testado' do
+  # Os pedidos vão ao juiz numerados a partir de 1; o que volta é a lista de posições (a partir de 0).
+  it 'um veredito por item, na ordem dos índices, com os três estados e as posições dos pedidos testados' do
     itens << { 'pergunta' => 'Vocês atendem em Curitiba?', 'resposta' => 'Atendemos.', 'equipe' => false }
-    juiz_responde([{ indice: 2, veredito: 'nao_testa', pedido: 0 }, { indice: 1, veredito: 'nao', pedido: 2 },
-                   { indice: 0, veredito: 'ok', pedido: 1 }])
+    juiz_responde([{ indice: 2, veredito: 'nao_testa', pedidos: [] }, { indice: 1, veredito: 'nao', pedidos: [2] },
+                   { indice: 0, veredito: 'ok', pedidos: [1] }])
 
-    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedido' => 0 }, { 'veredito' => 'nao', 'pedido' => 1 },
-                          { 'veredito' => 'nao_testa', 'pedido' => nil }])
+    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedidos' => [0] }, { 'veredito' => 'nao', 'pedidos' => [1] },
+                          { 'veredito' => 'nao_testa', 'pedidos' => [] }])
   end
 
-  # Revisão do t6d (MÉDIO): o juiz diz qual pedido cada pergunta testou. Número fora da lista não cobre pedido nenhum.
-  it 'pedido fora da faixa de 1 até o total, ou numa pergunta que não testa, vira nil' do
-    itens << { 'pergunta' => 'Vocês atendem em Curitiba?', 'resposta' => 'Atendemos.', 'equipe' => false }
-    juiz_responde([{ indice: 0, veredito: 'ok', pedido: 7 }, { indice: 1, veredito: 'ok', pedido: 0 },
-                   { indice: 2, veredito: 'nao_testa', pedido: 1 }])
+  # t6d R4/R5: "Pix ou cartão em até 6x." é curta E sem emoji. Uma resposta pode testar mais de um pedido de uma vez.
+  it 'uma resposta que testa dois pedidos devolve as duas posições' do
+    juiz_responde([{ indice: 0, veredito: 'ok', pedidos: [1, 2] }, { indice: 1, veredito: 'ok', pedidos: [2] }])
 
-    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedido' => nil }, { 'veredito' => 'ok', 'pedido' => nil },
-                          { 'veredito' => 'nao_testa', 'pedido' => nil }])
+    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedidos' => [0, 1] }, { 'veredito' => 'ok', 'pedidos' => [1] }])
+  end
+
+  # Número fora de 1 até o total, repetido, que não é inteiro, ou numa pergunta que não testa: não cobre nada.
+  it 'número fora da faixa é ignorado; lista vazia fica vazia; quem não testa não cobre' do
+    itens << { 'pergunta' => 'Vocês atendem em Curitiba?', 'resposta' => 'Atendemos.', 'equipe' => false }
+    juiz_responde([{ indice: 0, veredito: 'ok', pedidos: [7, 0, 2, 2, '1', -1] }, { indice: 1, veredito: 'ok', pedidos: [] },
+                   { indice: 2, veredito: 'nao_testa', pedidos: [1] }])
+
+    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedidos' => [1] }, { 'veredito' => 'ok', 'pedidos' => [] },
+                          { 'veredito' => 'nao_testa', 'pedidos' => [] }])
   end
 
   it 'veredito fora dos três: nil' do
@@ -57,6 +64,7 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
 
   it 'a instrução separa a pergunta que não toca a mudança' do
     expect(described_class::INSTRUCAO).to include('nao_testa: a mensagem nao toca nenhuma das mudancas')
+    expect(described_class::INSTRUCAO).to include('Uma resposta pode testar mais de um pedido ao mesmo tempo')
     expect(described_class::SCHEMA.dig(:schema, :properties, :resultados, :items, :properties, :veredito, :enum))
       .to eq(%w[ok nao nao_testa])
   end
@@ -70,7 +78,7 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
       .with(hash_including(feature: 'agente_prova_juiz', account: account, max_retries: 0))
     expect(cliente).to have_received(:create) do |**kwargs|
       expect(kwargs[:model]).not_to eq(Autonomia::Agents::Config::ANSWERER_MODEL)
-      expect(kwargs[:schema][:schema][:properties][:resultados][:items][:properties].keys).to eq(%i[indice veredito pedido])
+      expect(kwargs[:schema][:schema][:properties][:resultados][:items][:properties].keys).to eq(%i[indice veredito pedidos])
       expect(kwargs[:timeout]).to eq(30)
       texto = kwargs[:input].first[:content].first[:text]
       expect(texto).to include('Respostas curtas.', '"numero": 1', '"numero": 2', 'Quais seguros?', 'Auto e vida.', '"passa_para_equipe": true')
@@ -96,8 +104,8 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
   end
 
   it 'índice repetido vale o primeiro' do
-    juiz_responde([{ indice: 0, veredito: 'nao', pedido: 1 }, { indice: 0, veredito: 'ok', pedido: 1 },
-                   { indice: 1, veredito: 'ok', pedido: 2 }])
+    juiz_responde([{ indice: 0, veredito: 'nao', pedidos: [1] }, { indice: 0, veredito: 'ok', pedidos: [1] },
+                   { indice: 1, veredito: 'ok', pedidos: [2] }])
 
     expect(julgar.pluck('veredito')).to eq(%w[nao ok])
   end
