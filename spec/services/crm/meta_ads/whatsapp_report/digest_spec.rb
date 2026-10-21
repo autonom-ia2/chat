@@ -124,8 +124,7 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
 
     it 'com custo por conversa, o corte é 2 vezes ele; anúncio com conversa hoje fica fora; vai o de maior gasto' do
       travel_to(afternoon) do
-        # 30 dias: R$ 75 e 11 conversas → R$ 6,82 por conversa → corte R$ 13,64. O gasto do capa, que nunca trouxe
-        # conversa, fica fora do custo por conversa (#2054), como no painel.
+        # 30 dias: R$ 96 e 11 conversas → R$ 8,73 por conversa → corte R$ 17,46.
         spend(promo, Date.new(2026, 10, 1), 50)
         10.times { from_ad(promo, at: Time.zone.parse('2026-10-01T10:00:00-03:00')) }
         spend(promo, Date.new(2026, 10, 7), 25)
@@ -135,7 +134,7 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
 
         candidate = described_class.new(connection).candidate
 
-        expect(candidate).to include(ad_id: capa, spend: 21.0, threshold: 13.64)
+        expect(candidate).to include(ad_id: capa, spend: 21.0, threshold: 17.46)
       end
     end
 
