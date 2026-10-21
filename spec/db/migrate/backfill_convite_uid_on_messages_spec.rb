@@ -1,8 +1,9 @@
 require 'rails_helper'
 require Rails.root.join('db/migrate/20261108310000_add_convite_uid_index_to_messages.rb')
+require Rails.root.join('db/migrate/20261108320000_backfill_convite_uid_on_messages.rb')
 
 # #2042 — os convites já recebidos ganham a chave do UID que a busca da versão anterior usa pelo índice.
-RSpec.describe AddConviteUidIndexToMessages do
+RSpec.describe BackfillConviteUidOnMessages do
   let(:account) { create(:account) }
   let(:inbox) { create(:channel_email, account: account).inbox }
   let(:conversation) { create(:conversation, account: account, inbox: inbox) }
@@ -18,7 +19,7 @@ RSpec.describe AddConviteUidIndexToMessages do
   end
 
   def preencher
-    described_class.new.send(:preencher)
+    BackfillConviteUidOnMessages.new.up
   end
 
   it 'grava a chave do UID no convite já recebido, lendo o JSON guardado em texto' do
@@ -52,9 +53,15 @@ RSpec.describe AddConviteUidIndexToMessages do
     expect(convite.reload.additional_attributes).to eq('origem' => 'imap', 'convite_uid_sha256' => chave)
   end
 
-  it 'o índice parcial existe e é válido', :aggregate_failures do
-    migration = described_class.new
-    expect(ActiveRecord::Base.connection.index_exists?(:messages, nil, name: described_class::INDICE)).to be(true)
+  it 'o índice parcial existe, é válido, e o statement_timeout volta ao de antes', :aggregate_failures do
+    migration = AddConviteUidIndexToMessages.new
+    antes = ActiveRecord::Base.connection.select_value('SHOW statement_timeout')
+    durante = migration.send(:sem_limite_de_tempo) { ActiveRecord::Base.connection.select_value('SHOW statement_timeout') }
+
+    expect(durante).to eq('0')
+
+    expect(ActiveRecord::Base.connection.index_exists?(:messages, nil, name: AddConviteUidIndexToMessages::INDICE)).to be(true)
     expect(migration.send(:indice_invalido?)).to be(false)
+    expect(ActiveRecord::Base.connection.select_value('SHOW statement_timeout')).to eq(antes)
   end
 end
