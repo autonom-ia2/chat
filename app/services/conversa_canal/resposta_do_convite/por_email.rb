@@ -74,7 +74,17 @@ class ConversaCanal::RespostaDoConvite::PorEmail
     evento.dtstamp = Icalendar::Values::DateTime.new(Time.now.utc, 'tzid' => 'UTC')
     evento.dtstart = horario(convite['inicio']) if convite['inicio']
     evento.dtend = horario(convite['fim']) if convite['fim']
-    evento.recurrence_id = horario(convite['ocorrencia']) if convite['ocorrencia']
+    evento.recurrence_id = ocorrencia if convite['ocorrencia']
+  end
+
+  # A ocorrência que chegou sem fuso conhecido volta como veio (o mesmo texto e o mesmo TZID, #1995): convertida para
+  # UTC, ela apontaria outro horário e o organizador não acharia a ocorrência. Com TZID, sai sem o VTIMEZONE que a
+  # RFC 5545 pede: o convite não trouxe um que dê para copiar, e é o mesmo TZID que o organizador mandou.
+  def ocorrencia
+    original = convite['ocorrencia_original']
+    return horario(convite['ocorrencia']) if original.blank?
+
+    Icalendar::Values::DateTime.new(original['valor'], original['tzid'] ? { 'tzid' => original['tzid'] } : {})
   end
 
   def horario(segundos)
