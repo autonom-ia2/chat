@@ -118,4 +118,6 @@ const titulo = computed(() => `silencios-${props.agentId}`);
       </li>
     </ul>
   </section>
+  <!-- Agente que não fala com o cliente, semana sem conversa ou leitura sem resposta: o bloco não aparece. -->
+  <template v-else />
 </template>

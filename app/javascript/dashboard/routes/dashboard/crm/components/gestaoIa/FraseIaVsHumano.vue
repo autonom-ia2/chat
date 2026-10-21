@@ -74,4 +74,6 @@ const frase = computed(() => {
       {{ frase }}
     </p>
   </section>
+  <!-- Sem a leitura, ou ainda sem resposta: a frase não aparece. -->
+  <template v-else />
 </template>
