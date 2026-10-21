@@ -49,10 +49,10 @@ module Crm::Ai::FatosDaConversa
       outro sistema. Nenhuma das duas é pedido do cliente nem prova do que o cliente quer ou aceitou.
     - "handoff.promised_by_our_assistant": true SOMENTE quando o nosso assistente ("platform_agent") disse ao cliente
       que uma pessoa da equipe vai assumir ou atender, "conversation_state.assigned_to_human" é false e as mensagens
-      depois dessa promessa não mostram o problema resolvido. Nesse caso, "intent": "transferir" e "should_handoff":
-      true, mesmo que o handoff_trigger não fale disso: a promessa feita ao cliente precisa ser cumprida. Se depois da
-      promessa a conversa mostra o problema resolvido, false e "intent": "continuar". Promessa de outro sistema
-      ("external_agent") ou de uma pessoa da equipe não conta. Sem promessa, false.
+      depois dessa promessa não mostram o problema resolvido. Se depois da promessa a conversa mostra o problema
+      resolvido, false. Promessa de outro sistema ("external_agent") ou de uma pessoa da equipe não conta. Sem
+      promessa, false. É um fato à parte: "intent" e "should_handoff" seguem as regras de sempre, e o sistema decide o
+      que fazer com a promessa.
   ORDEM
 
   PROMESSA = {
@@ -84,20 +84,27 @@ module Crm::Ai::FatosDaConversa
     ActiveModel::Type::Boolean.new.cast(dados[:promised_by_our_assistant]) == true
   end
 
-  # Cada mensagem do cliente com o papel de quem falou logo antes (`after`); as outras, iguais. Novos hashes.
+  # Cada mensagem do cliente com o papel de quem falou logo antes NA MESMA CONVERSA (`after`; o card pode juntar várias
+  # conversas, e a fala de outra conversa não vem "antes" desta); as outras, iguais. Novos hashes.
   def com_ordem(mensagens)
-    mensagens.each_with_index.map do |mensagem, posicao|
-      next mensagem unless mensagem[:role] == 'customer'
-
-      mensagem.merge(after: posicao.zero? ? nil : mensagens[posicao - 1][:role])
+    anterior = {}
+    mensagens.map do |mensagem|
+      chave = mensagem[:conversation_id]
+      antes = anterior[chave]
+      anterior[chave] = mensagem[:role]
+      mensagem[:role] == 'customer' ? mensagem.merge(after: antes) : mensagem
     end
   end
 
-  # pares: [papel, hora] em ordem de chegada. A hora da 1ª mensagem do cliente depois da última fala de qualquer outro
-  # papel, ou nil quando a última fala não é do cliente.
-  def cliente_espera_desde(pares)
-    seguidas = pares.reverse.take_while { |(papel, _hora)| papel == 'customer' }
-    seguidas.last&.last&.iso8601
+  # trios: [conversa, papel, hora] em ordem de chegada. Em cada conversa, a hora da 1ª mensagem do cliente depois da
+  # última fala de qualquer outro papel; entre as conversas em que o cliente espera, a mais antiga. nil quando em todas
+  # a última fala não é do cliente.
+  def cliente_espera_desde(trios)
+    trios.group_by(&:first).values.filter_map { |da_conversa| espera_na_conversa(da_conversa) }.min&.iso8601
+  end
+
+  def espera_na_conversa(trios)
+    trios.reverse.take_while { |(_conversa, papel, _hora)| papel == 'customer' }.last&.last
   end
 
   # A fala pública do NOSSO agente de IA ao cliente (não follow-up nem Agendamento, que saem em nome de uma pessoa; não

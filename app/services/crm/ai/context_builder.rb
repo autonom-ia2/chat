@@ -139,7 +139,7 @@ module Crm
       def espera_do_cliente
         return {} unless fatos_da_ordem?
 
-        { customer_waiting_since: FatosDaConversa.cliente_espera_desde(recent_records.map { |m| [role_for(m), m.created_at] }) }
+        { customer_waiting_since: FatosDaConversa.cliente_espera_desde(recent_records.map { |m| [m.conversation_id, role_for(m), m.created_at] }) }
       end
 
       def fatos_da_ordem?

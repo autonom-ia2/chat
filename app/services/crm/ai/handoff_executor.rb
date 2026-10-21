@@ -24,11 +24,14 @@ module Crm
       # ninguém. O n8n e a conversa sem robô seguem como antes. A fila da conversa (HandoffDrainJob) usa a mesma regra.
       # Exceção (IA entende a conversa F1, flag `crm_ia_fatos_da_conversa`, regra f do Rodrigo): o nosso assistente já
       # prometeu ao cliente que uma pessoa vai assumir, ninguém assumiu e o problema não foi resolvido depois
-      # (`handoff.promised_by_our_assistant`, lido pelo modelo). Aí a IA do CRM cumpre a promessa pela Entrega de sempre,
-      # com as outras guardas valendo (pessoa já atribuída, intervalo, devolução). Nunca com o agente protegido (o de
-      # cotação, `instrucao_mantida?`), que segue com a conversa.
+      # (`handoff.promised_by_our_assistant`, lido pelo modelo). A promessa é um fato à parte da intenção (`intent`), e
+      # só vale com um agente nosso dono da conversa (o caso do #1673): aí a IA do CRM cumpre a promessa pela Entrega de
+      # sempre, com as outras guardas valendo (pessoa já atribuída, intervalo, devolução). Sem dono nosso, ou com o agente
+      # protegido (`instrucao_mantida?`) dono, a promessa não muda nada. A espera vai com o motivo do pedido do robô
+      # (MOTIVO_DA_PROMESSA): foi o robô que prometeu, e a fila (HandoffDrainJob) não larga a espera de volta para ele.
       OWNED_BY_OUR_AGENT = 'owned_by_our_agent'.freeze
       MOTIVO_DA_ENTREGA = 'ia_crm'.freeze
+      MOTIVO_DA_PROMESSA = 'robo_pediu'.freeze
 
       # pelo_card (#1693, decisão 1a do Rodrigo, 16/10): numa mensagem de vários assuntos, o pedido vai pela regra do card
       # a que o cliente o ligou, mesmo fora do foco, enquanto ele seguir aberto nesta conversa; senão, pela regra do foco.
@@ -49,7 +52,8 @@ module Crm
         # Decisão do Rodrigo (16/10, opção a): o card do pedido saiu da conversa (fechou) e o cliente pediu gente;
         # alguém recebe, pela regra do foco. A linha deixa contar quantas vezes isso acontece.
         registrar('desvio', motivo: 'pedido_card_fechado_foco') if @pelo_card && !Crm::Assunto.da_conversa?(@card, @conversation)
-        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: MOTIVO_DA_ENTREGA, origem: @trigger, pelo_card: @pelo_card,
+        motivo = promessa_a_cumprir? ? MOTIVO_DA_PROMESSA : MOTIVO_DA_ENTREGA
+        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: motivo, origem: @trigger, pelo_card: @pelo_card,
                                    pedido: { sugestao: @handoff[:suggested_agent], razao: @handoff[:reason] }).call
         depois_da_entrega(entrega)
       end
@@ -82,16 +86,25 @@ module Crm
       end
 
       def agente_nosso_segura?
-        dono = ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
-        return false if dono.nil?
-        return true unless promessa_do_nosso_assistente?(dono)
+        return false if dono_ativo.nil?
+        return true unless promessa_a_cumprir?
 
         registrar('promessa_do_robo', motivo: OWNED_BY_OUR_AGENT)
         false
       end
 
-      def promessa_do_nosso_assistente?(dono)
-        FatosDaConversa.ligada?(@card.account) && FatosDaConversa.promessa?(@handoff) && !dono.agent&.instrucao_mantida?
+      def dono_ativo
+        return @dono_ativo if defined?(@dono_ativo)
+
+        @dono_ativo = ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
+      end
+
+      # A promessa só conta com a flag, com um agente nosso dono da conversa e que não seja o protegido.
+      def promessa_a_cumprir?
+        return @promessa_a_cumprir if defined?(@promessa_a_cumprir)
+
+        @promessa_a_cumprir = FatosDaConversa.ligada?(@card.account) && FatosDaConversa.promessa?(@handoff) &&
+                              dono_ativo.present? && !dono_ativo.agent&.instrucao_mantida?
       end
 
       def depois_da_entrega(entrega)
@@ -129,7 +142,12 @@ module Crm
 
       # Só "transferir" dispara. "consultar" fica em standby e "continuar" segue o atendimento. Fallback ao
       # should_handoff legado enquanto respostas antigas (sem intent) circulam.
+      # IA entende a conversa F1: a promessa do nosso assistente a cumprir também é pedido (promessa_a_cumprir?).
       def requested?
+        pedido_do_modelo? || promessa_a_cumprir?
+      end
+
+      def pedido_do_modelo?
         intent = @handoff[:intent].to_s
         return true if intent == 'transferir'
         return false if %w[continuar consultar].include?(intent)

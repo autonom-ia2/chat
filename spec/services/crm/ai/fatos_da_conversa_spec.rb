@@ -11,19 +11,32 @@ RSpec.describe Crm::Ai::FatosDaConversa do
       expect(described_class.com_ordem(mensagens)[2]).not_to have_key(:after)
       expect(mensagens.first).not_to have_key(:after)
     end
+
+    it 'com várias conversas no card, "after" é o de quem falou antes na MESMA conversa' do
+      mensagens = [{ role: 'human_agent', conversation_id: 1 }, { role: 'customer', conversation_id: 2 },
+                   { role: 'customer', conversation_id: 1 }]
+
+      expect(described_class.com_ordem(mensagens).map { |m| m[:after] }).to eq([nil, nil, 'human_agent'])
+    end
   end
 
   describe '.cliente_espera_desde' do
     let(:t0) { Time.zone.parse('2026-10-14 10:00') }
 
     it 'a hora da 1ª mensagem do cliente depois da última fala do atendimento' do
-      pares = [['customer', t0], ['human_agent', t0 + 1.minute], ['customer', t0 + 2.minutes], ['customer', t0 + 3.minutes]]
+      trios = [[1, 'customer', t0], [1, 'human_agent', t0 + 1.minute], [1, 'customer', t0 + 2.minutes], [1, 'customer', t0 + 3.minutes]]
 
-      expect(described_class.cliente_espera_desde(pares)).to eq((t0 + 2.minutes).iso8601)
+      expect(described_class.cliente_espera_desde(trios)).to eq((t0 + 2.minutes).iso8601)
+    end
+
+    it 'com várias conversas, a resposta numa não encerra a espera da outra; vale a espera mais antiga' do
+      trios = [[2, 'customer', t0], [1, 'customer', t0 + 1.minute], [1, 'human_agent', t0 + 2.minutes], [2, 'customer', t0 + 3.minutes]]
+
+      expect(described_class.cliente_espera_desde(trios)).to eq(t0.iso8601)
     end
 
     it 'nil quando a última fala é do atendimento ou não há mensagem', :aggregate_failures do
-      expect(described_class.cliente_espera_desde([['customer', t0], ['platform_agent', t0 + 1.minute]])).to be_nil
+      expect(described_class.cliente_espera_desde([[1, 'customer', t0], [1, 'platform_agent', t0 + 1.minute]])).to be_nil
       expect(described_class.cliente_espera_desde([])).to be_nil
     end
   end

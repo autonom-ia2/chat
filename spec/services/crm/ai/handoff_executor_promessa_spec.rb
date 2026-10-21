@@ -50,8 +50,33 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     expect(entregar(prometida).error).to eq('already_assigned')
   end
 
-  it 'o problema resolvido (intent continuar) não passa, mesmo com a marca' do
+  it 'a promessa é fato à parte da intenção: com o agente nosso dono, cumpre mesmo com "continuar"' do
+    expect(entregar(prometida.merge(intent: 'continuar', should_handoff: false))).to have_attributes(status: :handed_off, assignee: pessoa)
+  end
+
+  it 'problema resolvido depois da promessa (o modelo devolve false) não passa' do
+    expect(entregar(sem_promessa.merge(intent: 'continuar', should_handoff: false))).to have_attributes(status: :skipped, error: 'not_requested')
+  end
+
+  it 'sem agente nosso dono da conversa, a promessa não vira pedido (só a intenção de sempre)' do
+    allow(Autonomia::Agents::QuemResponde).to receive(:dono_ativo).and_return(nil)
+
     expect(entregar(prometida.merge(intent: 'continuar', should_handoff: false))).to have_attributes(status: :skipped, error: 'not_requested')
+  end
+
+  it 'o agente protegido: a promessa sozinha não vira pedido' do
+    allow_any_instance_of(Autonomia::Agents::Agent).to receive(:instrucao_mantida?).and_return(true) # rubocop:disable RSpec/AnyInstance
+
+    expect(entregar(prometida.merge(intent: 'continuar', should_handoff: false))).to have_attributes(status: :skipped, error: 'not_requested')
+  end
+
+  it 'ninguém online: a espera fica com o motivo do pedido do robô, e a fila não a devolve ao agente', :aggregate_failures do
+    allow(OnlineStatusTracker).to receive(:get_available_users).with(account.id).and_return({})
+
+    expect(entregar(prometida).status).not_to eq(:handed_off)
+    marca = Crm::Entrega::Marca.dados(conversation.reload)
+    expect(marca).to include('modo' => Crm::Entrega::Marca::SEGURANDO, 'motivo' => described_class::MOTIVO_DA_PROMESSA)
+    expect(Crm::Ai::HandoffDrainJob.new.send(:da_ia_do_crm_com_agente_nosso?, conversation, marca)).to be(false)
   end
 
   it 'sem a flag, a promessa não muda nada (como antes)' do
