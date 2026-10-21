@@ -252,8 +252,9 @@ class Crm::Subjects::Identifier
     @retrato.nil? && @mode == 'auto' && Crm::Subjects::Etapa.ligada?(@account)
   end
 
+  # IA entende a conversa F1: com a flag, a conversa vai com a hora e o papel de quem falou (Crm::Subjects.janela).
   def estado
-    @estado ||= Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message, leituras: LEITURAS, **Crm::Subjects::JANELA)
+    @estado ||= Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message, leituras: LEITURAS, **Crm::Subjects.janela(@account))
   end
 
   # Os funis ativos ligados à caixa da conversa, com etapa para o card nascer e a IA do funil ligada, na ordem do CRM.

@@ -8,6 +8,9 @@
 # Com a coluna do card novo (#1910, Crm::Subjects::Etapa), a entrada leva as etapas candidatas de cada funil e a
 # resposta (ou cada item da lista) ganha `etapa`. Sem a flag, a entrada e o schema não levam etapa.
 #
+# Fatos da conversa (IA entende a conversa F1): com a flag, a mesma frase que vai ao Jev no fim das instruções
+# (Crm::Subjects::Question#com_fatos).
+#
 # Venda × pós-venda (#1924): as instruções levam a regra do tipo do funil (Crm::Subjects::Question::REGRA_DO_TIPO), a
 # mesma que vai ao Jev, para todas as contas; as opções já dizem o tipo de cada funil.
 class Crm::Subjects::Reviewer
@@ -71,6 +74,7 @@ class Crm::Subjects::Reviewer
   def revisar(estado, jev)
     instrucoes = @question.varios? ? INSTRUCOES_VARIOS : INSTRUCOES
     instrucoes += INSTRUCOES_ETAPA if @question.etapas?
+    instrucoes = @question.com_fatos(instrucoes)
     texto = cliente.create(model: MODELO, instructions: instrucoes, input: entrada(estado, jev).to_json, schema: schema,
                            reasoning_effort: ESFORCO)[:text]
     resposta = JSON.parse(texto)

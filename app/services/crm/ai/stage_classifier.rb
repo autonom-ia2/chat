@@ -138,8 +138,13 @@ module Crm
         email_autoria? ? Crm::Email::SaidaDaCopia.com_saida(esquema_do_card) : esquema_do_card
       end
 
-      # #1922: com a flag `crm_ia_arquiva_lixo`, o campo `nao_e_negocio` antes da memória; sem ela, o schema de sempre.
+      # IA entende a conversa F1: com a flag `crm_ia_fatos_da_conversa`, o `handoff` ganha `promised_by_our_assistant`.
       def esquema_do_card
+        fatos? ? FatosDaConversa.com_promessa(esquema_sem_fatos) : esquema_sem_fatos
+      end
+
+      # #1922: com a flag `crm_ia_arquiva_lixo`, o campo `nao_e_negocio` antes da memória; sem ela, o schema de sempre.
+      def esquema_sem_fatos
         return (memoria? ? CLASSIFICATION_SCHEMA_MEMORIA : CLASSIFICATION_SCHEMA) unless nao_e_negocio?
 
         base = NaoENegocio.com_campo(CLASSIFICATION_SCHEMA)
@@ -148,6 +153,9 @@ module Crm
 
       # #1922: a regra e o campo "não é negócio" só vão ao modelo com a flag da conta.
       def nao_e_negocio? = NaoENegocio.ligada?(@card&.account)
+
+      # IA entende a conversa F1: a ordem da conversa e a promessa do nosso assistente só com a flag da conta.
+      def fatos? = FatosDaConversa.ligada?(@card&.account)
 
       # A parte deste card na avaliação conjunta (Crm::Ai::ClassificacaoConjunta), com os mesmos campos de sempre.
       def pacote = entrada.slice(*PACOTE)
@@ -161,7 +169,7 @@ module Crm
       # variante com os agentes de IA, #1593). Estágios/critérios DINÂMICOS ficam no user_input. Ver ClassifierPrompt.
       def instructions
         ClassifierPrompt.para(@eligible_agents, memoria: memoria?, email_autoria: email_autoria?, nao_e_negocio: nao_e_negocio?,
-                                                pedido_anterior: pedido_anterior?)
+                                                pedido_anterior: pedido_anterior?, fatos: fatos?)
       end
 
       def user_input = entrada.merge(other_subjects_payload).to_json

@@ -13,7 +13,11 @@
 # mais recentes com texto seguem nos 5.000 de sempre: a janela maior nunca lê menos do que a de 5 lia.
 #
 # Sem `leituras`, lê o que a etapa 1 lia: canal, assunto e as mensagens do cliente.
-class Autonomia::Decisores::Estado
+#
+# `papeis: true` (IA entende a conversa F1, só a IA de assunto com a flag `crm_ia_fatos_da_conversa`): nas mensagens com
+# autor, cada linha diz a hora local e QUEM falou (Crm::Ai::FatosDaConversa::Rotulo: cliente, pessoa da equipe, nosso
+# assistente ou outro sistema), em vez de "Customer"/"Team"; o envio que falhou não chegou ao cliente e sai. Sem ele, igual.
+class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength -- no teto (175) antes da F1; os papéis são 5 linhas
   MAX_MENSAGENS = 5
   MAX_CARACTERES = 5_000
   TRECHO = 140
@@ -43,7 +47,8 @@ class Autonomia::Decisores::Estado
   end
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
-                 leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES)
+                 leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES,
+                 papeis: false)
     @conversation = conversation
     @message = message
     @card = card
@@ -52,6 +57,7 @@ class Autonomia::Decisores::Estado
     @leituras = leituras
     @max_mensagens = max_mensagens
     @max_caracteres_anteriores = max_caracteres_anteriores
+    @rotulo = Crm::Ai::FatosDaConversa::Rotulo.new(conversation) if papeis
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -216,9 +222,11 @@ class Autonomia::Decisores::Estado
     com_texto = lista.map { |mensagem| [mensagem, email_autoria.texto(mensagem).strip] }.reject { |(_, texto)| texto.empty? }
     com_texto.each_with_index.map do |(mensagem, inteiro), posicao|
       texto = inteiro.first(posicao < com_texto.size - MAX_MENSAGENS ? @max_caracteres_anteriores : MAX_CARACTERES)
-      com_autor || email_autoria.de(mensagem) ? "#{autor(mensagem)}: #{texto}" : texto
+      com_autor || email_autoria.de(mensagem) ? "#{quem(mensagem)}: #{texto}" : texto
     end
   end
+
+  def quem(mensagem) = @rotulo ? @rotulo.de(mensagem, autor(mensagem)) : autor(mensagem)
 
   # #1807: e-mail de outro endereço que não o do cliente diz quem escreveu, sem o endereço (o e-mail não vai ao Jev).
   def autor(mensagem)
@@ -234,7 +242,9 @@ class Autonomia::Decisores::Estado
   end
 
   def dos_dois_lados
-    ultimas(conversation&.messages&.where(message_type: %i[incoming outgoing], private: false))
+    escopo = conversation&.messages&.where(message_type: %i[incoming outgoing], private: false)
+    escopo = escopo&.where('messages.status IS DISTINCT FROM ?', Message.statuses[:failed]) if @rotulo
+    ultimas(escopo)
   end
 
   def ultimas(escopo)

@@ -250,7 +250,10 @@ RSpec.describe Account do
         # #1984: posição 49 (1 << 48), definitiva da Orquestração (21/10), logo depois de hibrido_foto_do_contato.
         feature_convite_da_reuniao: 1 << 48,
         # #1991: posição 50 (1 << 49), definitiva da Orquestração (21/10), logo depois de convite_da_reuniao.
-        feature_crm_metas: 1 << 49
+        feature_crm_metas: 1 << 49,
+        # IA entende a conversa F1: posição PROVISÓRIA (52 com a 51 do crm_numeros_equipe; aqui, sem ela, 51). A
+        # Orquestração dá a definitiva.
+        feature_crm_ia_fatos_da_conversa: 1 << 50
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

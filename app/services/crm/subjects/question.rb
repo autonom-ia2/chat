@@ -14,6 +14,10 @@
 # nome e `crm_avaliar_toda_mensagem`, o pedido novo tem o mesmo texto em todos os funis: antes o do funil dele era mais
 # convidativo e puxava o pedido para lá.
 #
+# Fatos da conversa (IA entende a conversa F1, flag `crm_ia_fatos_da_conversa`): a conversa chega com a hora e o papel de
+# quem falou (Autonomia::Decisores::Estado com `papeis: true`), e as instruções ganham, no fim, a frase que explica isso
+# (Crm::Ai::FatosDaConversa::INSTRUCAO_DO_ASSUNTO). Sem a flag, a pergunta é a de sempre.
+#
 # Com a flag do #1693, o assunto atual sem nome também é "mesmo assunto" (#1918): a mensagem que muda a situação do
 # pedido ("desisti", "paguei") fica nele e chega à IA de etapa, em vez de virar "dar nome" ou "nenhum assunto".
 class Crm::Subjects::Question
@@ -82,9 +86,14 @@ class Crm::Subjects::Question
   end
 
   def pergunta = PERGUNTA
-  def instrucoes = @varios ? INSTRUCOES_VARIOS : INSTRUCOES
+  def instrucoes = com_fatos(@varios ? INSTRUCOES_VARIOS : INSTRUCOES)
   def exemplos = []
   def varios? = @varios
+  # A conversa vem com a hora e o papel de quem falou (F1, flag da conta).
+  def fatos? = Crm::Ai::FatosDaConversa.ligada?(@account)
+
+  # A frase dos fatos da conversa no fim do texto, só com a flag (F1).
+  def com_fatos(texto) = fatos? ? "#{texto} #{Crm::Ai::FatosDaConversa::INSTRUCAO_DO_ASSUNTO}" : texto
 
   def respostas
     opcoes.map { |opcao| { 'chave' => opcao.chave, 'descricao' => descricao(opcao) } }

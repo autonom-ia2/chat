@@ -22,6 +22,11 @@ module Crm
       # instrução); a IA do CRM não tira a conversa por conta própria. Só quando o agente pode responder agora (o dono
       # do QuemResponde): espelho de vínculo arquivado ou de agente pausado não segura a conversa, senão ela ficaria sem
       # ninguém. O n8n e a conversa sem robô seguem como antes. A fila da conversa (HandoffDrainJob) usa a mesma regra.
+      # Exceção (IA entende a conversa F1, flag `crm_ia_fatos_da_conversa`, regra f do Rodrigo): o nosso assistente já
+      # prometeu ao cliente que uma pessoa vai assumir, ninguém assumiu e o problema não foi resolvido depois
+      # (`handoff.promised_by_our_assistant`, lido pelo modelo). Aí a IA do CRM cumpre a promessa pela Entrega de sempre,
+      # com as outras guardas valendo (pessoa já atribuída, intervalo, devolução). Nunca com o agente protegido (o de
+      # cotação, `instrucao_mantida?`), que segue com a conversa.
       OWNED_BY_OUR_AGENT = 'owned_by_our_agent'.freeze
       MOTIVO_DA_ENTREGA = 'ia_crm'.freeze
 
@@ -68,12 +73,25 @@ module Crm
         # Com pelo_card, quem escolhe a regra é a Entrega: a do card do pedido, ou a do foco se ele saiu da conversa.
         return 'assunto_mudou' unless @pelo_card || Crm::Assunto.atual?(@card, @conversation)
         return 'already_assigned' if @conversation.assignee_id.present?
-        return OWNED_BY_OUR_AGENT if ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
+        return OWNED_BY_OUR_AGENT if agente_nosso_segura?
         # Devolvida à IA por um humano e sem nada novo desde então: a "transferência" que a IA leu é a fala antiga.
         return 'devolvida_sem_pedido_novo' if Crm::Ai::DevolucaoAIa.sem_pedido_novo?(@card, @conversation)
         return 'cooldown' if registro.intervalo_ativo?
 
         nil
+      end
+
+      def agente_nosso_segura?
+        dono = ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
+        return false if dono.nil?
+        return true unless promessa_do_nosso_assistente?(dono)
+
+        registrar('promessa_do_robo', motivo: OWNED_BY_OUR_AGENT)
+        false
+      end
+
+      def promessa_do_nosso_assistente?(dono)
+        FatosDaConversa.ligada?(@card.account) && FatosDaConversa.promessa?(@handoff) && !dono.agent&.instrucao_mantida?
       end
 
       def depois_da_entrega(entrega)

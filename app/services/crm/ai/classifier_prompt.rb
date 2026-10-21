@@ -364,17 +364,25 @@ module Crm::Ai::ClassifierPrompt
   # parágrafo dela no fim; com pedido anterior (#1925), o dele depois. Com a flag `email_autoria` (#1807), a legenda do
   # aviso de e-mail depois de tudo (o cache das contas sem a flag não muda).
   # Com a flag `crm_ia_arquiva_lixo` (#1922), a regra "não é negócio" logo depois do prefixo de sempre.
-  def self.para(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false, pedido_anterior: false)
+  # Com a flag `crm_ia_fatos_da_conversa` (IA entende a conversa F1), a ordem da conversa e a promessa do nosso assistente
+  # (Crm::Ai::FatosDaConversa::ORDEM) depois de tudo: o prefixo das contas sem a flag não muda.
+  def self.para(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false, pedido_anterior: false, # rubocop:disable Metrics/ParameterLists
+                fatos: false)
     base = Array(eligible_agents).any? { |nome| Crm::AgentesIa.rotulo_de_agente?(nome) } ? TEXT_COM_AGENTES_IA : TEXT
     base = "#{base}\n\n#{NAO_E_NEGOCIO}" if nao_e_negocio
-    montar(base, memoria, pedido_anterior, email_autoria)
+    com_fatos(montar(base, memoria, pedido_anterior, email_autoria), fatos)
   end
 
   # O prefixo da avaliação conjunta (#1693), com a mesma escolha da variante dos agentes de IA.
-  def self.para_varios(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false, pedido_anterior: false)
+  def self.para_varios(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false, pedido_anterior: false, # rubocop:disable Metrics/ParameterLists
+                       fatos: false)
     base = para(eligible_agents).equal?(TEXT) ? TEXT_VARIOS : TEXT_VARIOS_COM_AGENTES_IA
     base = "#{para(eligible_agents, nao_e_negocio: true)}\n\n#{VARIOS}" if nao_e_negocio
-    montar(base, memoria, pedido_anterior, email_autoria)
+    com_fatos(montar(base, memoria, pedido_anterior, email_autoria), fatos)
+  end
+
+  def self.com_fatos(prefixo, fatos)
+    fatos ? "#{prefixo}\n\n#{Crm::Ai::FatosDaConversa::ORDEM}" : prefixo
   end
 
   def self.montar(base, memoria, pedido_anterior, email_autoria)

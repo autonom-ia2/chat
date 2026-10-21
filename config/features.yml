@@ -713,3 +713,17 @@
   display_name: CRM › Metas do mês por pessoa
   enabled: false
   column: feature_flags_ext_1
+
+# IA entende a conversa, F1 — fatos da conversa (sem Issue própria ainda; épico "IA entende a conversa" do CRM).
+# Ligada: (a) a IA de assunto lê quem falou (cliente, pessoa da equipe, nosso assistente, outro sistema) e a hora de
+# cada mensagem, e a de etapa lê a ordem (`after`) e desde quando o cliente espera (`customer_waiting_since`); (b) a
+# fala pública do nosso agente de IA relê o card em foco 2 min depois (até 6 vezes por card por dia; follow-up,
+# Agendamento e o agente de cotação ficam de fora); (c) a passagem para pessoa que o nosso assistente prometeu e
+# ninguém cumpriu é honrada pela IA do CRM, mesmo com o agente dono da conversa (exceção ao #1673; nunca com o agente
+# de cotação). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration.
+# Posição PROVISÓRIA 52 na feature_flags_ext_1 (1 << 51), contando a 51 reservada ao crm_numeros_equipe (#1999), que
+# ainda não está na main: enquanto ela não entrar, esta linha cai na 51. A Orquestração dá a definitiva.
+- name: crm_ia_fatos_da_conversa
+  display_name: CRM › IA lê quem falou e em que ordem
+  enabled: false
+  column: feature_flags_ext_1
