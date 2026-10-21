@@ -165,6 +165,9 @@ jobs:
       old_previous_tg_arn: ${{ steps.hand-off.outputs.old_previous_tg_arn }}
       # Lido pelo job avisar-descongelar: o passo tem continue-on-error para não pular a entrega da blue.
       unfreeze_outcome: ${{ steps.unfreeze.outcome }}
+      # #2004: horários da green para o job Tempos do deploy. Lidos pelo passo de diagnóstico, que só lê.
+      green_launch_time: ${{ steps.diagnostico.outputs.green_launch_time }}
+      green_boot_done: ${{ steps.diagnostico.outputs.green_boot_done }}
 
     steps:
       - name: Checkout
@@ -1201,6 +1204,21 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # #2004: só leitura. Horários da green sempre; pacote de diagnóstico (target health, status checks, console e,
+      # via SSM, docker ps, logs do web e do worker, cloud-init, df, free e o curl local) quando um passo crítico
+      # falhou ou demorou. Fica antes da limpeza, que termina a green. Não roda no cancelamento, para não tomar o
+      # tempo da limpeza, e falhar aqui não muda nada no deploy.
+      - name: Collect green diagnostics
+        id: diagnostico
+        if: ${{ !cancelled() && env.GREEN_INSTANCE_ID != '' }}
+        continue-on-error: true
+        timeout-minutes: 4
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          bash scripts/deploy/green-diagnostics.sh
+
       - name: Cleanup failed green resources before traffic shift
         # Também no cancelamento (manual ou timeout): cancelar entre parar o worker azul e ligar o verde deixava a
         # plataforma sem Sidekiq. Os comandos daqui já toleram falha parcial e podem rodar mais de uma vez.
@@ -1362,6 +1380,18 @@ jobs:
                 --instance-ids "$GREEN_INSTANCE_ID"
             fi
           fi
+
+      # #2004: sobe o pacote do passo de diagnóstico (já sanitizado). Depois da limpeza: nunca a atrasa.
+      - name: Upload green diagnostics
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-diagnostico-autonomia-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deploy-diagnostico
+          if-no-files-found: ignore
+          retention-days: 30
 
   # Fora do caminho crítico: a janela de 5 min com a blue ligada (rollback rápido), a parada da blue e a terminação
   # do rollback mais antigo rodavam no fim do job deploy e seguravam a trava do próximo deploy por ~5,5 min. Mesma
@@ -1536,6 +1566,52 @@ jobs:
                 ;;
             esac
           fi
+
+  # #2004: tempo de cada fase do deploy (build, boot da green, saúde local, registro no target group, workers,
+  # listener e desligamento da blue) no Step Summary e num artifact JSON, para comparar um deploy com outro. Só lê a
+  # API do GitHub e os horários que o Deploy Green já coletou; não fala com a AWS e não decide nada.
+  tempos:
+    name: Tempos do deploy
+    needs: [deploy, desligar-blue]
+    if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Summarize deploy phase durations
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_STACK: autonomia
+          GREEN_LAUNCH_TIME: ${{ needs.deploy.outputs.green_launch_time }}
+          GREEN_BOOT_DONE: ${{ needs.deploy.outputs.green_boot_done }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/deploy-tempos"
+          if ! gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" \
+            > "$RUNNER_TEMP/deploy-jobs.json"; then
+            echo "::warning::API do GitHub indisponível: a tabela de tempos sai sem os passos."
+            : > "$RUNNER_TEMP/deploy-jobs.json"
+          fi
+          python3 scripts/deploy/deploy-telemetry.py phases "$RUNNER_TEMP/deploy-jobs.json" \
+            "$RUNNER_TEMP/deploy-tempos/tempos.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload deploy phase durations
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-tempos-autonomia-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deploy-tempos
+          if-no-files-found: ignore
+          retention-days: 90
 
   # #1979: rollback em dois jobs. "Congelar a produção" roda fora da trava: confere o SHA esperado antes de qualquer
   # mudança, congela (deploy novo nem pede a vez) e cancela o deploy que ainda não chegou ao tráfego. O rollback pede
