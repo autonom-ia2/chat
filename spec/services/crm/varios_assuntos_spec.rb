@@ -757,7 +757,8 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
 
       criterios = requisicoes.first['questions']['decisao']['criteria']
       expect(criterios.keys).to contain_exactly('sem_assunto', "novo_#{vendas.id}")
-      expect(criterios["novo_#{vendas.id}"]).to eq('The customer shows what they want, and it belongs to the pipeline "Vendas".')
+      expect(criterios["novo_#{vendas.id}"])
+        .to eq('The customer shows what they want, and it belongs to the pipeline "Vendas" (type: sales, closing a deal).')
       expect(requisicoes.first['state']['instructions']).to eq(Crm::Subjects::Question::INSTRUCOES)
     end
 

@@ -12,8 +12,12 @@ export const PASSOS = ['O_QUE_FAZ', 'PARA_ONDE', 'PREENCHE', 'COMO_ENTRA'];
 const AUTOMATICOS = ['content-type', 'accept'];
 const LETRAS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const PERMITIDOS = `${LETRAS}0123456789_`;
-const EXEMPLO_ENDERECO =
-  'https://api.sualoja.com.br/estoque/busca?termo={{ termo | url_encode }}';
+// O exemplo vem do i18n, para o pacote da conta trocar (#1802). As chaves e o filtro ficam no código:
+// "{" e "|" têm significado no vue-i18n.
+const NS_EXEMPLO = 'AGENTS.JORNADA.PAGINA.FERRAMENTAS';
+const VARIAVEL_DO_EXEMPLO = '?termo={{ termo | url_encode }}';
+export const enderecoDeExemplo = t =>
+  `${t(`${NS_EXEMPLO}.RASCUNHO_EXEMPLO.ENDERECO`)}${VARIAVEL_DO_EXEMPLO}`;
 
 const preenchido = valor => String(valor ?? '').trim() !== '';
 const ehDigito = c => c >= '0' && c <= '9';
@@ -164,18 +168,17 @@ export const rascunhoVazio = () => ({
 });
 
 // Exemplo genérico (decisão do Rodrigo, 11/10): nenhuma URL de cliente real.
-export const rascunhoDeExemplo = () => ({
+export const rascunhoDeExemplo = t => ({
   ...rascunhoVazio(),
-  nome: 'Busca no estoque',
-  quando:
-    'Use quando a pessoa perguntar se uma peça tem em estoque ou quanto custa. Traz nome, preço e quantidade.',
-  endereco: EXEMPLO_ENDERECO,
+  nome: t(`${NS_EXEMPLO}.RASCUNHO_EXEMPLO.NOME`),
+  quando: t(`${NS_EXEMPLO}.PASSOS.UM.QUANDO_EXEMPLO`),
+  endereco: enderecoDeExemplo(t),
   informacoes: [
     {
       id: novoId(),
       nome: 'termo',
       tipo: 'string',
-      descricao: 'A peça que a pessoa procura, do jeito que ela falou.',
+      descricao: t(`${NS_EXEMPLO}.PASSOS.TRES.DESCRICAO_EXEMPLO`),
       podeFaltar: false,
     },
   ],

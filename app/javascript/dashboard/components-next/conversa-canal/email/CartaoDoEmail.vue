@@ -16,7 +16,9 @@ import TranslationToggle from 'dashboard/components-next/message/TranslationTogg
 import { EmailQuoteExtractor } from 'dashboard/helper/emailQuoteExtractor.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import { emitter } from 'shared/helpers/mitt';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useMessageContext } from '../../message/provider.js';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../message/constants.js';
 import { useAgora } from '../useAgora';
@@ -49,6 +51,7 @@ import CorpoIsoladoDoEmail from './CorpoIsoladoDoEmail.vue';
 import { abrirImagemDoCorpo } from './imagemDoCorpo';
 import { htmlComCssSeguro } from './estiloSeguroDoEmail';
 import OriginalDoEmail from './OriginalDoEmail.vue';
+import ConviteDaReuniao from './ConviteDaReuniao.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import { useAcoesDoEmail } from './useAcoesDoEmail';
 import { useRecursosDoEmail } from './recursosDoEmail';
@@ -269,8 +272,14 @@ const emProcesso = computed(
   () => falhou.value || status.value === MESSAGE_STATUS.PROGRESS
 );
 const temTexto = computed(() => Boolean(content.value || temEmail.value));
-const { recursos } = useRecursosDoEmail(
-  useMapGetter('getCurrentAccountId').value
+const contaAtual = useMapGetter('getCurrentAccountId');
+const { recursos } = useRecursosDoEmail(contaAtual.value);
+// Convite de reunião (#1984): o cartão só com a chave da conta ligada.
+const flagLigada = useMapGetter('accounts/isFeatureEnabledonAccount');
+const mostraConvite = computed(
+  () =>
+    Boolean(contentAttributes.value?.email?.convite) &&
+    flagLigada.value(contaAtual.value, FEATURE_FLAGS.CONVITE_DA_REUNIAO)
 );
 const podeTraduzir = computed(
   () =>
@@ -279,9 +288,13 @@ const podeTraduzir = computed(
     !emProcesso.value &&
     !hasTranslations.value
 );
+// Quem tem cargo só exclui com a chave de apagar mensagem (#1893).
+const podeApagarMensagem = useCanManage('conversation_message_delete');
 const podeExcluir = computed(
   () =>
-    !emProcesso.value && (temTexto.value || Boolean(attachments.value?.length))
+    podeApagarMensagem.value &&
+    !emProcesso.value &&
+    (temTexto.value || Boolean(attachments.value?.length))
 );
 const assuntoDoEmail = computed(
   () => contentAttributes.value?.email?.subject || email.assunto.value || ''
@@ -532,6 +545,15 @@ const excluir = async () => {
       </header>
 
       <section class="mt-3 ps-[60px] sm:ps-[68px] pe-2 sm:pe-4">
+        <ConviteDaReuniao
+          v-if="mostraConvite"
+          :convite="contentAttributes.email.convite"
+          :mensagem-id="id"
+          :conversation-id="conversationId"
+          :caixa="caixa"
+          :pode-operar="email.podeOperar.value"
+          :fuso="fuso"
+        />
         <div
           ref="corpo"
           class="relative text-sm text-n-slate-12 [&_img:not(a_img)]:cursor-zoom-in"

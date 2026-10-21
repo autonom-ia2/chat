@@ -13,7 +13,8 @@
 #   - com cards: cada card aberto da lista conta a mensagem como atividade e recebe o mesmo token de agendamento, que
 #     deixa velha qualquer avaliação dele agendada antes (a troca de foco e o card novo da mesma mensagem): uma
 #     mensagem, uma chamada. Se todos já têm avaliação agendada depois da mensagem (retry do IdentifyJob, ou a troca de
-#     foco de um assunto só), não agenda de novo.
+#     foco de um assunto só) para rodar dentro do debounce do cliente, não agenda de novo; a avaliação da mensagem da
+#     equipe (#1923), mais longa, não conta, senão o cliente esperaria a espera dela.
 # O principal é o card da decisão; com o principal em dúvida (#1693, C27), o card em foco, se a mensagem o tocou. É nele
 # que a IA põe o pedido de atendente que o cliente não ligou a nenhum assunto.
 class Crm::Conversations::CardsTocados < Crm::Conversations::CardEmFoco
@@ -34,7 +35,7 @@ class Crm::Conversations::CardsTocados < Crm::Conversations::CardEmFoco
 
   def tocar(cards, principal_id)
     cards.each { |card| avisar(card) if registrar_atividade(card) }
-    agendar(cards, principal_id) unless cards.all? { |card| Crm::Ai::Observer.new(card: card).agendada_desde?(chegada) }
+    agendar(cards, principal_id) unless cards.all? { |card| Crm::Ai::Observer.new(card: card).agendada_para_o_cliente?(chegada) }
     cards
   end
 

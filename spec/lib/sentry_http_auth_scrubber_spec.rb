@@ -237,6 +237,17 @@ RSpec.describe SentryHttpAuthScrubber do
     expect(filtered.values).not_to include(*secrets.values)
   end
 
+  # #1427 — o corpo JSON do Testar do agente leva as fotos em `images` (data-url): o Sentry lê o corpo cru, sem o
+  # filter_parameters do Rails, então a chave sai aqui também.
+  it 'filters the photos of the agent test (images) from a JSON body, keeping the question' do
+    foto = "data:image/png;base64,#{Base64.strict_encode64('foto-de-teste')}"
+    data = { body: JSON.generate(message: 'Quanto custa este?', images: [foto]) }
+
+    filtered = JSON.parse(described_class.scrub(data)[:body])
+
+    expect(filtered).to eq('message' => 'Quanto custa este?', 'images' => '[FILTERED]')
+  end
+
   %i[before_send before_send_transaction].each do |callback_name|
     it "preserves #{callback_name} behavior and sanitizes its returned event" do
       hint = { background: false }

@@ -57,14 +57,22 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 WORKDIR /app
 
-COPY Gemfile Gemfile.lock ./
-
 # natively compile grpc and protobuf to support alpine musl (dialogflow-docker workflow)
 # https://github.com/googleapis/google-cloud-ruby/issues/13306
 # adding xz as nokogiri was failing to build libxml
 # https://github.com/chatwoot/chatwoot/issues/4045
 RUN apk update && apk add --no-cache build-base musl ruby-full ruby-dev gcc make musl-dev openssl openssl-dev g++ linux-headers xz vips
 RUN bundle config set --local force_ruby_platform true
+
+# #2012: o grpc compilado do código-fonte leva ~15 min (dos 23 min de build do deploy de 21/10). Numa camada própria,
+# antes do Gemfile, trocar outra gem não o recompila: o bundle install abaixo encontra o grpc já instalado e só o usa.
+# A versão tem de ser a do Gemfile.lock (tests/instagram_testers/deploy-paths_test.py confere). Se divergir, o bundle
+# install instala a certa e só se perde o atalho. Sem dependências aqui: as do grpc vêm do bundle, nas versões do lock.
+ARG GRPC_VERSION=1.72.0
+RUN gem install grpc -v "$GRPC_VERSION" --platform ruby --ignore-dependencies --no-document \
+  --install-dir "$BUNDLE_PATH/ruby/3.4.0"
+
+COPY Gemfile Gemfile.lock ./
 
 # Do not install development or test gems in production
 RUN if [ "$RAILS_ENV" = "production" ]; then \

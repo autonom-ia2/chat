@@ -69,6 +69,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git switch -c "$ramo"
           git add lib/operator_guide/porques.md lib/operator_guide/guia-produto.md \
+                  lib/operator_guide/pacotes \
                   app/javascript/dashboard/helper/guideRouteRegistry.js
           git commit -m "docs(guia): rascunho do modo aprendiz para ${curto}"
           git push origin "$ramo"

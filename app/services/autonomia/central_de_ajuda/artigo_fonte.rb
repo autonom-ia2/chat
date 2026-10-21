@@ -22,10 +22,11 @@ class Autonomia::CentralDeAjuda::ArtigoFonte
   end
 
   # titulos: { '02.04' => 'Sua assinatura de mensagens', ... } — para trocar `[02.04]` pelo título.
-  def initialize(caminho, titulos:)
+  # texto: o arquivo já composto (a variante de pacote, #1802); sem ele, lê o caminho.
+  def initialize(caminho, titulos:, texto: nil)
     @caminho = caminho
     @titulos = titulos
-    @cabecalho, @corpo = separar(File.read(caminho))
+    @cabecalho, @corpo = separar(texto || File.read(caminho))
   end
 
   def id = cabecalho.fetch('id')

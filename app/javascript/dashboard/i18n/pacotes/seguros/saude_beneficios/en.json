@@ -2,7 +2,8 @@
   "CRM_KANBAN": {
     "DRAWER": {
       "STATUS_WON": "Active plan",
-      "ACTIVITY_WON": "Plan closed"
+      "ACTIVITY_WON": "Plan closed",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Not a sale: nobody asked for a plan. To undo, reopen the card."
     },
     "META_SYNC_STATUS": {
       "EVENT_WON": "Plan closed"
@@ -57,6 +58,19 @@
         "QUOTE": {
           "REASONS": {
             "CLOSED": "The customer already closed the plan. Nothing to resume here."
+          }
+        }
+      },
+      "SEM_LOGIN": {
+        "AD": {
+          "STATUS": {
+            "BOUGHT": "Plan closed: {value}",
+            "BOUGHT_NO_VALUE": "Plan closed"
+          }
+        },
+        "EXAMPLE": {
+          "ADS": {
+            "WINTER": "Health plan for your company"
           }
         }
       }
@@ -118,6 +132,14 @@
           "CRM_CARD_WON": "A card closed a plan."
         }
       }
+    }
+  },
+  "CRM_NUMEROS_V2": {
+    "IA_AJUDOU": {
+      "VIRARAM": "None closed a plan yet. | 1 closed a plan. | {n} closed a plan."
+    },
+    "TOPO": {
+      "SEM_META_EU": "Your month so far: {n} plan closed, {valor} | Your month so far: {n} plans closed, {valor}"
     }
   }
 }

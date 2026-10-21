@@ -237,6 +237,18 @@ RSpec.describe Account do
         feature_contato_pelo_email: 1 << 41,
         # #1910: posição 43 (definitiva da Orquestração, 19/10), depois de contato_pelo_email (42, #1917).
         feature_crm_assunto_na_etapa: 1 << 42,
+        # #1938: posição 44 (Orquestração, 20/10: fica com a 44 se o PR abrir antes do etiquetas_do_celular do Max).
+        feature_email_enviados: 1 << 43,
+        # #1960: posição 45 (definitiva da Orquestração, 21/10), logo depois de email_enviados.
+        feature_anuncios_sem_login: 1 << 44,
+        # #1922: posição 46 (1 << 45), definitiva da Orquestração (21/10), logo depois de anuncios_sem_login.
+        feature_crm_ia_arquiva_lixo: 1 << 45,
+        # #1923: posição 47 (1 << 46), definitiva da Orquestração (21/10), logo depois de crm_ia_arquiva_lixo.
+        feature_crm_ia_avalia_mensagem_equipe: 1 << 46,
+        # #1934: posição 48 (1 << 47), definitiva da Orquestração (21/10), logo depois de crm_ia_avalia_mensagem_equipe.
+        feature_hibrido_foto_do_contato: 1 << 47,
+        # #1984: posição 49 (1 << 48), definitiva da Orquestração (21/10), logo depois de hibrido_foto_do_contato.
+        feature_convite_da_reuniao: 1 << 48,
         # #1991: posição 51 reservada pela Orquestração (20/10, provisória); nesta branch é a 44 até as 44 a 50 entrarem.
         feature_crm_metas: 1 << 43
       )

@@ -284,6 +284,23 @@ RSpec.describe Crm::Subjects::Identifier do
     expect(requests.first['state'].to_json).to include('Onix')
   end
 
+  # #1924: o pedido ficava fora das 5 últimas mensagens depois de algumas idas e vindas com a equipe.
+  it 'o Jev e o modelo maior leem o pedido feito antes das 5 últimas mensagens da conversa' do
+    create_card(title: 'Joana Lima')
+    requests = stub_jev("novo_#{comercial.id}", confidence: 0.5)
+    stub_review(resposta: "novo_#{comercial.id}", titulo: 'Cancelamento do plano')
+    incoming('Quero cancelar o meu plano')
+    4.times do |indice|
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: "Equipe #{indice}")
+    end
+
+    identify(incoming('Pode ser hoje?'))
+
+    expect(requests.first['state']['messages'].first).to eq('Customer: Quero cancelar o meu plano')
+    expect(cliente).to have_received(:create).with(hash_including(input: include('Quero cancelar o meu plano'),
+                                                                  instructions: include(Crm::Subjects::Question::REGRA_DO_TIPO)))
+  end
+
   it 'retry do job com a decisão já reservada não pergunta nem aplica de novo' do
     create_card(title: 'Joana Lima')
     requests = stub_jev('sem_assunto')
@@ -473,6 +490,19 @@ RSpec.describe Crm::Subjects::Identifier do
 
       expect { identify(incoming('Quero os agentes de novo')) }.not_to change(Crm::Card, :count)
       expect(Crm::SubjectDecision.last).to have_attributes(action: 'create', state: 'suggested')
+    end
+
+    # Pega (#1922): o arquivamento da IA ("não é negócio") contar como fechamento de uma pessoa, e o cliente que volta
+    # ganhar só uma sugestão: um falso positivo da IA viraria pedido perdido em silêncio.
+    it 'card arquivado pela IA como "não é negócio": o pedido novo vira card' do
+      arquivado = create_card(title: 'Agentes de IA', focused_at: 1.hour.ago)
+      arquivado.update!(status: :archived)
+      Crm::ActivityLogger.new(card: arquivado, actor: nil, event_type: 'archive', payload: { by: 'ai', motivo: 'fora_do_negocio' }).perform
+      create_card(title: 'Chat2You', focused_at: 2.hours.ago)
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Agentes de IA')
+
+      expect { identify(incoming('Quero os agentes de novo')) }.to change(Crm::Card, :count).by(1)
     end
 
     it 'sugestão de nome dispensada também não volta' do

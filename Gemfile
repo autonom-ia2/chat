@@ -47,12 +47,18 @@ gem 'down'
 gem 'ssrf_filter', '~> 1.5'
 # authentication type to fetch and send mail over oauth2.0
 gem 'gmail_xoauth'
+# Convite de reunião no e-mail (#1984): lê o .ics (RFC 5545) e monta a resposta (iMIP, RFC 6047)
+gem 'icalendar', '~> 2.12.5'
 # Lock net-smtp to 0.3.4 to avoid issues with gmail_xoauth2
 gem 'net-smtp',  '~> 0.3.4'
 # Prevent CSV injection
 gem 'csv-safe'
 # Excel (.xlsx) export of the CRM list
 gem 'caxlsx', '~> 4.5'
+# PDF dos relatórios (A4 deitado, Inter embutida): Ruby puro, sem programa novo na imagem
+gem 'prawn', '~> 2.4.0'
+gem 'prawn-table', '~> 0.2'
+gem 'matrix', '~> 0.4' # o prawn 2.4 usa; saiu das gems padrão do Ruby 3.1+
 
 ##-- for active storage --##
 gem 'aws-sdk-s3', require: false

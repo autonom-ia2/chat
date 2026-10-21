@@ -4,7 +4,7 @@
 // `pnpm guia:build` — ou quando editou o arquivo gerado à mão.
 import fs from 'fs';
 import path from 'path';
-import { construir } from './build.mjs';
+import { construir, PASTA_PACOTES, SAIDA_DO_PACOTE } from './build.mjs';
 
 const r = p => path.resolve(process.cwd(), p);
 
@@ -23,7 +23,27 @@ const desatualizados = [
     'app/javascript/dashboard/helper/guideRouteRegistry.js',
     resultado.registry
   ),
+  // Pacote de tradução (#1802): só existe quando há `pacotes/<camada>/porques.md`.
+  ...Object.entries(resultado.pacotes).map(([camada, texto]) =>
+    conferir(`${PASTA_PACOTES}/${camada}/${SAIDA_DO_PACOTE}`, texto)
+  ),
 ].filter(Boolean);
+
+// Base de pacote sem o porques.md dela: o Guia leria um texto que ninguém mais gera.
+const orfaos = fs.existsSync(r(PASTA_PACOTES))
+  ? fs
+      .readdirSync(r(PASTA_PACOTES), { recursive: true })
+      .filter(arquivo => path.basename(arquivo) === SAIDA_DO_PACOTE)
+      .map(arquivo => path.dirname(arquivo).split(path.sep).join('/'))
+      .filter(camada => !resultado.pacotes[camada])
+      .map(camada => `${PASTA_PACOTES}/${camada}/${SAIDA_DO_PACOTE}`)
+  : [];
+if (orfaos.length) {
+  console.error('Base do Guia de pacote sem o porques.md da camada:');
+  orfaos.forEach(caminho => console.error(`  - ${caminho}`));
+  console.error('\nApague o arquivo ou devolva o porques.md da camada.');
+  process.exit(1);
+}
 
 if (desatualizados.length) {
   console.error('O mapa do Guia está desatualizado:');
