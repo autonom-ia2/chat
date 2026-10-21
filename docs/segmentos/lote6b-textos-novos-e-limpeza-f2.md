@@ -14,7 +14,7 @@ O texto geral mudou depois dos lotes 1 a 5: entraram a tela Números por papel (
 | Números, botão | "negociações paradas" | herda | "cotações paradas" | herda |
 | Números, A IA te ajudou | "te passou {n} clientes… viraram venda" | "te passou {n} pessoas interessadas… fecharam o seguro" | herda | "…fecharam o plano" |
 | Anúncios sem login, situação | "Comprou" | "Fechou o seguro" | herda | "Fechou o plano" |
-| Anúncios sem login, exemplo | "Promoção de inverno", "Frete grátis" | "Seguro auto com desconto", "Cotação grátis esta semana" | herda | "Plano de saúde para sua empresa" |
+| Anúncios sem login, exemplo | "Promoção de inverno", "Frete grátis" | "Seguro auto com desconto", "Proteja sua família" | herda | "Plano de saúde para sua empresa" |
 | Histórico do card | "Não é negócio: ninguém pediu o que a gente vende." | "Não é venda: ninguém pediu um seguro." | herda | "…um plano." |
 
 "Pessoas interessadas" porque "cliente" é só quem já comprou. "Venda", "Vendendo" e as regras de **Como contamos** ficam como no geral: os pacotes de seguros já falam em venda ("Funis de venda", "meta de vendas").
