@@ -1,0 +1,11 @@
+# As 3 perguntas do antes e depois de "Atualizar com a nova base" (#1429, F3): o agente responde cada uma com a base de
+# hoje e com a nova. Curtas, como quem escreve no WhatsApp, sem dado pessoal: um termo do ramo, um caso de sinistro ou
+# evento, e um limite de quem decide. pt_BR e en com o mesmo número de perguntas, na mesma ordem.
+pt_BR:
+  - "O que é vigência?"
+  - "Quebrei a tela do celular. Como aciono o seguro pelo app?"
+  - "O seguro cobre se eu perder o celular?"
+en:
+  - "What does the coverage period mean?"
+  - "I cracked my phone screen. How do I use my insurance in the app?"
+  - "Does the insurance cover it if I lose my phone?"
