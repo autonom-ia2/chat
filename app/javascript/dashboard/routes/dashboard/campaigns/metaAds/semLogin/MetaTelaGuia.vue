@@ -45,8 +45,9 @@ const STEP = [1, 2, 3];
         <li class="flex items-center gap-3">
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >{{ STEP[0] }}</span
           >
+            {{ STEP[0] }}
+          </span>
           <span
             class="inline-flex items-center gap-1.5 rounded-lg bg-n-blue-9 px-3 py-1.5 text-sm font-semibold text-white"
           >
@@ -57,8 +58,9 @@ const STEP = [1, 2, 3];
         <li class="flex items-center gap-3">
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >{{ STEP[1] }}</span
           >
+            {{ STEP[1] }}
+          </span>
           <span
             class="rounded-lg bg-n-solid-1 px-3 py-1.5 text-sm text-n-slate-12 shadow-sm ring-2 ring-n-blue-7"
           >
@@ -68,8 +70,9 @@ const STEP = [1, 2, 3];
         <li class="flex flex-wrap items-center gap-3">
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >{{ STEP[2] }}</span
           >
+            {{ STEP[2] }}
+          </span>
           <span class="flex min-w-0 flex-col gap-1">
             <span class="text-xs text-n-slate-11">{{
               $t(`${G}.PARTNER_ID`)
@@ -93,8 +96,9 @@ const STEP = [1, 2, 3];
         <span class="flex items-center gap-3">
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >{{ STEP[0] }}</span
           >
+            {{ STEP[0] }}
+          </span>
           <span
             class="grid size-5 place-items-center rounded bg-n-blue-9 text-white"
           >
@@ -113,8 +117,9 @@ const STEP = [1, 2, 3];
           </span>
           <span
             class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-            >{{ STEP[1] }}</span
           >
+            {{ STEP[1] }}
+          </span>
         </span>
         <span class="flex items-center gap-3 ps-10 opacity-60">
           <span class="text-sm text-n-slate-11">{{ $t(`${G}.MANAGE`) }}</span>
@@ -128,8 +133,9 @@ const STEP = [1, 2, 3];
       <span class="flex items-center gap-3">
         <span
           class="grid size-7 flex-none place-items-center rounded-full bg-n-blue-9 text-xs font-bold text-white"
-          >{{ STEP[2] }}</span
         >
+          {{ STEP[2] }}
+        </span>
         <span
           class="rounded-lg bg-n-blue-9 px-3 py-1.5 text-sm font-semibold text-white"
         >
