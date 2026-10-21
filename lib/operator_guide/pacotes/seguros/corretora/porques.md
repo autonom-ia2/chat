@@ -37,3 +37,9 @@ Rode `pnpm guia:build` depois de mexer aqui.
 ### criar_oportunidade_pela_ficha_do_contato
 - intent: "Como crio um card para este contato?"; "Como crio uma cotação para este contato?"; "Como levo o contato de Relacionamentos para o CRM?"
 - passos: Na ficha do contato, clique em **Novo card**. O CRM abre em outra aba com a pessoa e sua empresa cadastrada selecionadas. Preencha os dados do seguro e confirme em **Colocar no funil**. O card criado abre com o mesmo contato vinculado. **Voltar ao contato** retorna à ficha; se houver dados comerciais não salvos, confirme o descarte ou continue editando.
+
+### ver_meus_numeros_do_mes
+- passos: Abra Números; leia o topo (o seu mês até agora: seguros fechados e valor, ou casos resolvidos); use o botão do topo para abrir a sua lista (retornos atrasados, senão cotações paradas, senão os seus cards); veja o próximo passo, os blocos Vendendo e Atendendo, **A IA te ajudou** e a barra da equipe; troque de mês pelas setas; **Como contamos** explica as regras.
+
+### ver_anuncios_sem_login
+- passos: 1. Abra Anúncios: a página já mostra quantas conversas vieram de anúncio no período, quantas viraram cotação e quantas viraram venda, com o valor e o tempo de resposta; 2. Escolha 7 ou 30 dias; 3. Clique em Conversas, Cotações ou Vendas para abrir a lista daquela etapa, com Abrir conversa em cada linha; 4. Em Anúncios, clique num anúncio para ver a foto, as conversas por dia e quem veio dele, com a situação de cada pessoa e Abrir conversa.
