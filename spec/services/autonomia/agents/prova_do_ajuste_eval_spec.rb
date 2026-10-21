@@ -5,8 +5,8 @@ require_relative 'prova_do_ajuste_eval_casos'
 # `AUTONOMIA_EVAL_PAGO=1`, `PROVA_DO_AJUSTE_EVAL=1` e `OPENAI_API_KEY`: o Construtor de verdade aplica o pedido e escreve
 # as perguntas, o job da prova responde (sem ferramenta) e o juiz de produção dá o veredito. Um juiz de OUTRO modelo diz,
 # pelo critério do caso, se as perguntas obedecem ao pedido (mostram a mudança), se alguma cita a instrução interna e se
-# cada veredito de produção está certo. Os 20 casos (10 ramos) e o caso de controle ficam em prova_do_ajuste_eval_casos.rb,
-# ao lado. t6d: pelo menos 18 de 20 aprovados (o controle conta à parte). Teto por rodada em
+# cada veredito de produção está certo. Os 20 casos (10 ramos) e os casos de controle ficam em prova_do_ajuste_eval_casos.rb,
+# ao lado. t6d: pelo menos 18 de 20 aprovados (os controles contam à parte). Teto por rodada em
 # `PROVA_DO_AJUSTE_EVAL_TETO_USD` (padrão US$ 0,90), somado pelo
 # consumo gravado. Opcional: `PROVA_DO_AJUSTE_EVAL_SAIDA=<arquivo>` grava o relatório; `PROVA_DO_AJUSTE_EVAL_CENA=<a,b>`
 # roda só esses casos.
@@ -44,6 +44,8 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
   let(:conta) { conta_da_fase2 }
   let(:relatorio) { [] }
   let(:vereditos) { [] }
+  # O texto fixo que o agente responde na prova do caso em curso (a armadilha); vazio, a IA responde.
+  let(:resposta_fixa) { {} }
 
   around do |example|
     WebMock.allow_net_connect!
@@ -75,11 +77,27 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: criar_agente(caso[:agente]))
     thread.append_message!('user', caso[:fala])
     Autonomia::Agents::Builder.new(account: conta, build_thread: thread).run!(thread.begin_build!)
-    acrescentar_pergunta(thread, caso[:extra]) if caso[:extra]
-    trocar_perguntas(thread, caso[:perguntas_fixas]) if caso[:perguntas_fixas]
+    preparar_prova(thread, caso)
     vereditos.clear
+    resposta_fixa[:texto] = caso[:resposta_fixa]
     perform_enqueued_jobs(only: Autonomia::Agents::ProvaDoAjusteJob)
     thread.reload.state.to_h
+  ensure
+    resposta_fixa.delete(:texto)
+  end
+
+  # A armadilha: na prova, o agente responde o texto do caso, sem chamar a IA.
+  def resposta_fixa_na_prova
+    allow_any_instance_of(Autonomia::Agents::Answerer).to receive(:answer).and_wrap_original do |original| # rubocop:disable RSpec/AnyInstance
+      next original.call if resposta_fixa[:texto].nil?
+
+      Autonomia::Agents::AnswerResult.new(reply: resposta_fixa[:texto], confidence: 0.9, handoff: { should: false, reason: nil }, error: nil)
+    end
+  end
+
+  def preparar_prova(thread, caso)
+    acrescentar_pergunta(thread, caso[:extra]) if caso[:extra]
+    trocar_perguntas(thread, caso[:perguntas_fixas]) if caso[:perguntas_fixas]
   end
 
   # A pergunta fora da mudança entra na prova pendente, como se o Construtor a tivesse escrito.
@@ -133,11 +151,19 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
       custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
-  # O controle não chama o juiz do eval: a estrutura basta (pronta e sem prova completa).
+  # O controle não chama o juiz do eval: a estrutura basta.
   def rodar_controle(caso, estado, prova)
     { caso: caso[:nome], agente: caso[:agente], controle: true, applied: estado['applied'], prova: prova,
-      vereditos_de_producao: vereditos.last, aprovada: prova['status'] == 'pronta' && prova['completa'] == false,
-      custo_acumulado_usd: custo_ate_agora.round(4) }
+      vereditos_de_producao: vereditos.last, aprovada: controle_ok?(caso, prova), custo_acumulado_usd: custo_ate_agora.round(4) }
+  end
+
+  # Sem `espera`: pronta e sem prova completa. `:teste_nao`: algum pedido levou nao e a prova não dá ✓ geral.
+  def controle_ok?(caso, prova)
+    return false unless prova['status'] == 'pronta'
+    return prova['completa'] == false unless caso[:espera] == :teste_nao
+
+    testes = Array(prova['perguntas']).flat_map { |item| Array(item['testes']) }
+    testes.any? { |teste| teste['veredito'] == 'nao' } && !(prova['ok'] == prova['total'] && prova['completa'] == true)
   end
 
   # Estrutura (do código): o ajuste entrou, a prova ficou pronta com 1 a 3 perguntas do Construtor, pelo menos uma tocou a
@@ -189,6 +215,7 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     allow_any_instance_of(Autonomia::Agents::JuizDaProva).to receive(:julgar).and_wrap_original do |original, **kwargs| # rubocop:disable RSpec/AnyInstance
       original.call(**kwargs).tap { |saida| vereditos << saida }
     end
+    resposta_fixa_na_prova
 
     casos = casos_escolhidos
     casos.each do |caso|

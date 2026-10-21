@@ -71,7 +71,9 @@ module AvaliacaoDaProvaDoAjuste
 
   # `obedece`: o critério da cena para as mensagens de cliente. `extra`: uma pergunta fora da mudança acrescentada à prova
   # (não pode virar ✓ no placar). `controle`: caso de controle, fora dos 20 do t6d (as perguntas são trocadas por
-  # `perguntas_fixas` antes da prova).
+  # `perguntas_fixas` antes da prova). Sem `espera`, o controle passa com a prova sem `completa`; com `espera: :teste_nao`,
+  # passa quando algum pedido levou nao e a prova não dá ✓ geral. `resposta_fixa`: o agente responde esse texto na prova,
+  # sem chamar a IA (a armadilha da revisão: curta e COM emoji).
   CASOS = [
     { nome: 'prova_duas_frases_e_preco', agente: :corretora,
       fala: 'Responda em no máximo 2 frases e preço passa para a equipe.',
@@ -135,6 +137,15 @@ module AvaliacaoDaProvaDoAjuste
     { nome: 'controle_misto_sem_preco', agente: :corretora, controle: true,
       fala: 'Responda em no máximo 2 frases e preço passa para a equipe.',
       perguntas_fixas: ['Quais seguros vocês têm?', 'Vocês atendem em Curitiba?'],
-      obedece: 'Nenhuma mensagem pede preço: a prova não cobre o pedido do preço e não pode sair completa.' }
+      obedece: 'Nenhuma mensagem pede preço: a prova não cobre o pedido do preço e não pode sair completa.' },
+    { nome: 'controle_curta_com_emoji', agente: :loja, controle: true, espera: :teste_nao,
+      fala: 'Responda de forma curta e não use emoji.',
+      perguntas_fixas: ['Quais formas de pagamento vocês aceitam?'], resposta_fixa: 'Aceitamos Pix e cartão em até 6x 😊',
+      obedece: 'A resposta é curta e tem emoji: o pedido do emoji leva nao, e a prova não pode dar ✓.' },
+    { nome: 'controle_curta_sem_preco', agente: :corretora, controle: true,
+      fala: 'Responda de forma curta e preço passa para a equipe.',
+      perguntas_fixas: ['Que horas vocês abrem?', 'Vocês atendem em Curitiba?'],
+      obedece: 'Nenhuma mensagem pede preço: a resposta curta sobre horário não testa o preço, e a prova não pode sair ' \
+               'completa.' }
   ].freeze
 end
