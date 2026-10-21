@@ -163,5 +163,10 @@
         "TEXTO": "Hello, [nome_cliente]. An update from [nome_empresa]: your reimbursement request has moved forward. Want to know the details? Tap the button below."
       }
     }
+  },
+  "AUTONOMIA_GUIDE": {
+    "SUGGESTIONS": {
+      "REPORTS": "How many plans did I close this month?"
+    }
   }
 }
