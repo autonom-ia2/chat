@@ -127,6 +127,7 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(contexto).to include('PERGUNTA PENDENTE', texto(:nao_consegui, pedidos: preco))
       expect(thread.messages.pluck('content')).to include("#{texto(:nao_consegui, pedidos: preco)} #{texto(:de_outro_jeito)}")
       expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h).not_to have_key(:pergunta_curta)
+      expect(estado).to include('applied' => false, 'pergunta_na_tela' => nil)
     end
 
     it 'depois do Desfazer, o cartão não leva a versão curta (a conversa mostra a pergunta inteira)' do

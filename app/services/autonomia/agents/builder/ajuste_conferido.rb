@@ -165,7 +165,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     # próximo ajuste aplicado ou o Desfazer (#1428, parte 3).
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
              .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false,
-                    'opcoes_de_resposta' => [])
+                    'opcoes_de_resposta' => [], 'pergunta_na_tela' => nil)
              .merge(extra)
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end
