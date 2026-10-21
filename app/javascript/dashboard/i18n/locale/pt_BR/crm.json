@@ -6122,6 +6122,8 @@
       "DETALHE_VENDA_SEM_META": "{valor} fechados.",
       "VOCE_NOME": "{nome} (você)",
       "VER_CONVERSAS": "Ver as conversas de {nome}",
+      "FORA_DA_EQUIPE": "Sem responsável ou fora da equipe",
+      "FORA_VENDA": "fechou {fechou} · {valor}",
       "IA_SELO": "IA",
       "IA_ATENDEU": "atendeu {n} cliente | atendeu {n} clientes",
       "IA_PARTICIPOU": "participou de {n} venda ({valor}) | participou de {n} vendas ({valor})",

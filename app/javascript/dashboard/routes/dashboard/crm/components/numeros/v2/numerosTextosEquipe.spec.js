@@ -157,7 +157,7 @@ describe('destinoDaEquipe', () => {
     });
     expect(destinoDaEquipe('ia_esperando', { funis }).to).toEqual({
       name: 'home',
-      query: { da_ia: '1', esperando_min: '30' },
+      query: { da_ia: '1', esperando_min: '30', no_funil: '1' },
     });
   });
 

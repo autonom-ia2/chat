@@ -1,6 +1,7 @@
 # A IA no time de CRM › Números, visão "Equipe" (#1992, F5 do #1871). Uma conta só para a IA: todos os agentes de IA e
 # robôs da conta viram uma linha, e cada conversa conta uma vez, mesmo que dois deles tenham respondido nela. Conta só
-# os clientes que entraram num funil que quem abre enxerga (o card ligado à conversa), separados pelo tipo do funil.
+# os clientes que entraram num funil que quem abre enxerga: a conversa do card, pelo card principal ou pelo vínculo
+# (crm_card_conversations, Crm::Cards::ConversationLinker); a conversa ligada aos dois jeitos conta uma vez.
 #
 #   atendeu         conversas com resposta de robô no mês (mensagem de saída de AgentBot: os agentes de IA respondem
 #                   pelo robô-espelho da caixa, e o n8n pelo token do robô), nos funis de Vender e de Atender juntos;
@@ -26,19 +27,25 @@ class Crm::Numeros::IaNoTime
     @custo = custo
   end
 
+  # Some só quando a IA não fez nada no mês: nem atendeu, nem passou, nem participou de venda (a resposta pode ser de
+  # um mês antes do fechamento), nem resolveu caso sozinha.
   def perform
-    atendeu = atendidas(conversas_dos_funis).count
-    passou = passagens(conversas_dos_funis).count
-    return if atendeu.zero? && passou.zero?
+    numeros = { atendeu: atendidas(conversas_dos_funis).count, passou: passagens(conversas_dos_funis).count,
+                venda: @cards.tem?(:venda) ? venda : nil, atende: @cards.tem?(:atende) ? atende : nil }
+    return unless fez_algo?(numeros)
 
-    identidade.merge(atendeu: atendeu, passou: passou, venda: @cards.tem?(:venda) ? venda : nil,
-                     atende: @cards.tem?(:atende) ? atende : nil, custo: @custo ? custo : nil)
+    identidade.merge(numeros).merge(custo: @custo ? custo : nil)
   end
 
   private
 
+  def fez_algo?(numeros)
+    [numeros[:atendeu], numeros[:passou], numeros.dig(:venda, :participou).to_i,
+     numeros.dig(:atende, :resolveuSozinha).to_i].any?(&:positive?)
+  end
+
   def venda
-    vendas = @account.crm_cards.where(id: @ganhos, pipeline_id: @cards.ids(:venda)).where(com_robo_sql('crm_cards.conversation_id'))
+    vendas = @account.crm_cards.where(id: @ganhos, pipeline_id: @cards.ids(:venda)).where(card_com_robo_sql)
     { participou: vendas.count, valor: (vendas.where(currency: @moeda).sum(:value_cents) / 100.0).round(2) }
   end
 
@@ -46,14 +53,21 @@ class Crm::Numeros::IaNoTime
     { resolveuSozinha: resolvidas_sozinha.count }
   end
 
-  # As conversas dos cards dos funis (sem mês: o card pode ter nascido antes).
+  # As conversas dos cards dos funis (sem mês: o card pode ter nascido antes), pelo card principal ou pelo vínculo.
   def conversas(tipo)
-    @account.crm_cards.where(pipeline_id: @cards.ids(tipo)).where.not(conversation_id: nil).select(:conversation_id)
+    conversas_de(@cards.ids(tipo))
   end
 
   def conversas_dos_funis
-    @account.crm_cards.where(pipeline_id: @cards.ids(:venda) + @cards.ids(:atende)).where.not(conversation_id: nil)
-            .select(:conversation_id)
+    conversas_de(@cards.ids(:venda) + @cards.ids(:atende))
+  end
+
+  def conversas_de(pipeline_ids)
+    cards = @account.crm_cards.where(pipeline_id: pipeline_ids)
+    principais = cards.where.not(conversation_id: nil).select(:conversation_id)
+    vinculadas = Crm::CardConversation.where(account_id: @account.id, card_id: cards.select(:id)).select(:conversation_id)
+    Conversation.where(account_id: @account.id).where(id: principais)
+                .or(Conversation.where(account_id: @account.id, id: vinculadas)).select(:id)
   end
 
   def respostas_de_robo
@@ -90,6 +104,15 @@ class Crm::Numeros::IaNoTime
   def com_resposta_de_pessoa(candidatas)
     Message.unscope(:order).where(account_id: @account.id, conversation_id: candidatas, message_type: Message.message_types[:outgoing],
                                   sender_type: 'User', private: false).select(:conversation_id)
+  end
+
+  # O card teve resposta de robô na conversa principal ou numa vinculada.
+  def card_com_robo_sql
+    vinculadas = Crm::CardConversation.where(Crm::CardConversation.arel_table[:card_id].eq(Crm::Card.arel_table[:id]))
+                                      .select(:conversation_id)
+    resposta = respostas_de_robo.where('messages.conversation_id = crm_cards.conversation_id')
+                                .or(respostas_de_robo.where(conversation_id: vinculadas))
+    Arel.sql("EXISTS (#{resposta.select(1).to_sql})")
   end
 
   def com_robo_sql(coluna)

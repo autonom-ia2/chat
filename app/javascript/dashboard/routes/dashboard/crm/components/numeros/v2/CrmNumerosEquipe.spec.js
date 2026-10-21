@@ -294,6 +294,21 @@ describe('CrmNumerosEquipe', () => {
     expect(numeros).toContain('CUIDOU.IA_PARTICIPOU');
   });
 
+  // #1999: a última linha fecha a conta com o que fechou sem responsável ou com quem saiu.
+  it('"Quem cuidou" fecha a conta com a linha de sem responsável ou fora da equipe', async () => {
+    const resposta = dados();
+    resposta.quemCuidou.foraDaEquipe = {
+      venda: { fechou: 2, valor: 800 },
+      atende: { resolveu: 1 },
+    };
+    const wrapper = await montar(resposta);
+
+    const fora = wrapper.find('[data-fora-da-equipe]');
+    expect(fora.text()).toContain('CUIDOU.FORA_DA_EQUIPE');
+    expect(fora.text()).toContain('CUIDOU.FORA_VENDA');
+    expect(fora.text()).toContain('CUIDOU.ATENDE_SEM_PRAZO');
+  });
+
   it('modo leitura: avisa e não mostra o próximo passo', async () => {
     const wrapper = await montar(
       dados({

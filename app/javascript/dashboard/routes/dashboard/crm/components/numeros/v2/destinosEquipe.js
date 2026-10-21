@@ -1,7 +1,8 @@
 // #1992 (F5 do #1871) — para onde leva cada número da visão "Equipe" de CRM ›
 // Números. As mesmas listas da visão "Só eu" (destinos.js), sem o "responsável =
 // eu": o Kanban e a Lista do funil principal com os filtros do link da F2
-// (#1886), a caixa com ?da_ia=1&esperando_min=30 (#1889), e o filtro por uma
+// (#1886), a caixa com ?da_ia=1&esperando_min=30&no_funil=1 (#1889, #1999: só
+// os funis que a pessoa vê no Números), e o filtro por uma
 // pessoa no "Quem precisa de ajuda". O servidor conta o mesmo que a lista mostra.
 
 const kanban = (funilId, extra = {}) => ({
@@ -36,7 +37,7 @@ export const DESTINOS_DA_EQUIPE = {
     }),
   ia_esperando: () => ({
     name: 'home',
-    query: { da_ia: '1', esperando_min: '30' },
+    query: { da_ia: '1', esperando_min: '30', no_funil: '1' },
   }),
   // Vendendo e Atendendo
   fechadas: ({ funis, fechado, item }) =>

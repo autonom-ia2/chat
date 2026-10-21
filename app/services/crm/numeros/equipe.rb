@@ -8,6 +8,7 @@
 class Crm::Numeros::Equipe
   ESPERANDO_MIN = 30
   MAX_PROXIMO = 2
+  LINK_IA_ESPERANDO = { da_ia: '1', esperando_min: ESPERANDO_MIN.to_s, no_funil: '1' }.freeze
 
   # perfil: { dono:, custo:, leitura: } de quem abre. dono = administrador (o papel na tela); custo = financial_view.
   def initialize(account:, user:, mes:, acesso:, perfil:)
@@ -130,7 +131,7 @@ class Crm::Numeros::Equipe
   end
 
   def vendendo
-    lista = !@mes.fechado? && @cards.fechados_na_lista(:venda, @mes.inicio).sort == credito[:ganhos].sort
+    lista = !@mes.fechado? && @cards.lista_bate?(:venda, @mes.inicio, credito[:ganhos])
     abertos = @cards.abertos(:venda)
     { escopo: 'equipe', itens: [
       { tipo: 'fechadas', n: somado(:vendas), valor: reais(somado(:valor)), lista: lista },
@@ -140,7 +141,7 @@ class Crm::Numeros::Equipe
   end
 
   def atendendo
-    lista = !@mes.fechado? && @cards.fechados_na_lista(:atende, @mes.inicio).sort == credito[:resolvidos].sort
+    lista = !@mes.fechado? && @cards.lista_bate?(:atende, @mes.inicio, credito[:resolvidos])
     abertos = @cards.abertos(:atende)
     { escopo: 'equipe', itens: [
       { tipo: 'resolvidos', n: somado(:resolvidos), lista: lista },
@@ -160,10 +161,11 @@ class Crm::Numeros::Equipe
     { tipo: 'sem_responsavel', n: n, aviso: true } if n.positive?
   end
 
-  # As conversas que a IA passou e esperam alguém há mais de 30 min: a mesma conta da caixa com ?da_ia=1&esperando_min=30
-  # (Crm::ConversationFinderComFiltrosDoLink), com a visibilidade de quem abre.
+  # As conversas que a IA passou e esperam alguém há mais de 30 min, nos funis que quem abre vê no Números: a mesma conta
+  # da caixa com ?da_ia=1&esperando_min=30&no_funil=1 (Crm::ConversationFinderComFiltrosDoLink), com a visibilidade de
+  # quem abre.
   def ia_esperando
-    contagem = ConversationFinder.new(@user, { da_ia: '1', esperando_min: ESPERANDO_MIN.to_s }).perform_meta_only
+    contagem = ConversationFinder.new(@user, LINK_IA_ESPERANDO).perform_meta_only
     n = contagem.dig(:count, :all_count).to_i
     { tipo: 'ia_esperando', n: n, ia: ia&.dig(:nome), aviso: true } if n.positive?
   end
@@ -186,7 +188,8 @@ class Crm::Numeros::Equipe
 
   def quem_cuidou
     {
-      pessoas: pessoas.quantas, linhas: pessoas.linhas, caminhoCerto: pessoas.caminho_certo(esperado_pct),
+      pessoas: pessoas.quantas, linhas: pessoas.linhas, foraDaEquipe: pessoas.fora_da_equipe,
+      caminhoCerto: pessoas.caminho_certo(esperado_pct),
       reconhecimento: nil, ia: ia, plataforma: vende? && atende? && ia ? plataforma : nil
     }
   end

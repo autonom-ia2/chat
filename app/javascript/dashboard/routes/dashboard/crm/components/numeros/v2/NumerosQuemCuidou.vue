@@ -90,6 +90,26 @@ const linhaDe = linha => {
 
 const linhas = computed(() => props.cuidou.linhas.map(linhaDe));
 
+// O que fechou sem responsável ou com quem saiu da conta (#1999): a última
+// linha fecha a conta, e a soma das linhas bate com o topo.
+const foraDaEquipe = computed(() => {
+  const fora = props.cuidou.foraDaEquipe;
+  if (!fora) return '';
+  return [
+    fora.venda
+      ? t(`${P}.CUIDOU.FORA_VENDA`, {
+          fechou: fora.venda.fechou,
+          valor: dinheiro(fora.venda.valor),
+        })
+      : null,
+    fora.atende
+      ? t(`${P}.CUIDOU.ATENDE_SEM_PRAZO`, fora.atende, fora.atende.resolveu)
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+});
+
 const custoDaIa = custo => {
   const emDinheiro = valor =>
     formatarDinheiro(valor, { locale: locale(), moeda: custo.moeda });
@@ -202,6 +222,16 @@ const alternar = chave => {
             {{ linha.relatorioTexto }}
           </RouterLink>
         </div>
+      </li>
+      <li
+        v-if="foraDaEquipe"
+        data-fora-da-equipe
+        class="flex min-h-11 flex-wrap items-baseline justify-between gap-x-3 rounded-xl px-3 py-2 ring-1 ring-inset ring-n-weak"
+      >
+        <span class="text-sm font-semibold text-n-slate-11">
+          {{ t(`${P}.CUIDOU.FORA_DA_EQUIPE`) }}
+        </span>
+        <span class="text-sm text-n-slate-11">{{ foraDaEquipe }}</span>
       </li>
     </ul>
 

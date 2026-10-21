@@ -177,6 +177,80 @@ RSpec.describe Crm::Numeros::Equipe do
     expect(linhas.first).to include(venda: include(fechou: 1), atende: include(resolveu: 1))
   end
 
+  # Revisão do #1999, achado 1: o "a IA está esperando" conta só as conversas dos funis que quem abre vê no Números.
+  it 'a IA esperando conta só as conversas de cliente num funil, como a caixa aberta pelo link' do
+    [true, false].each do |no_funil|
+      chat = conversation(assignee: ana)
+      card(sale, owner: ana, conversation: chat) if no_funil
+      passagem(chat, ana)
+      chat.update!(waiting_since: 1.hour.ago)
+    end
+
+    expect(equipe[:proximo].find { |item| item[:tipo] == 'ia_esperando' }).to include(n: 1)
+  end
+
+  # Achado 2: no teto do crédito a conta pode ter sido cortada; o número não abre a Lista, que mostraria outro conjunto.
+  it 'fechadas abre a Lista quando ela bate, e não abre no teto do crédito' do
+    2.times { close(card(sale, owner: ana, value_cents: 1000)) }
+
+    expect(equipe[:vendendo][:itens].first).to include(tipo: 'fechadas', lista: true)
+    stub_const('Crm::Numeros::Credito::MAX_CARDS', 2)
+    expect(equipe[:vendendo][:itens].first).to include(tipo: 'fechadas', lista: false)
+  end
+
+  # Achado 3: a conversa ligada ao card pelo vínculo (crm_card_conversations) conta como a principal, uma vez só.
+  it 'a IA conta a conversa vinculada ao card, e a ligada dos dois jeitos uma vez só' do
+    vinculada = conversation
+    ganho = card(sale, owner: ana, value_cents: 50_000)
+    Crm::CardConversation.create!(account: account, card: ganho, conversation: vinculada)
+    resposta_do_robo(vinculada)
+    dupla = conversation
+    outro = card(sale, owner: ana, conversation: dupla)
+    Crm::CardConversation.create!(account: account, card: outro, conversation: dupla)
+    resposta_do_robo(dupla)
+    close(ganho)
+
+    ia = equipe[:quemCuidou][:ia]
+
+    expect(ia).to include(atendeu: 2, venda: { participou: 1, valor: 500.0 })
+  end
+
+  # Achado 4: a IA respondeu em setembro e a venda fechou em outubro: ela participou, então a linha dela aparece.
+  it 'a IA aparece quando só participou de venda do mês, com a resposta de um mês antes' do
+    chat = conversation
+    resposta_do_robo(chat, quando: 40.days.ago)
+    close(card(sale, owner: ana, conversation: chat, value_cents: 80_000))
+
+    expect(equipe[:quemCuidou][:ia]).to include(atendeu: 0, venda: { participou: 1, valor: 800.0 })
+  end
+
+  # Achado 5: o topo soma tudo; a última linha (sem responsável ou fora da equipe) fecha a conta.
+  it 'a soma das linhas de "Quem cuidou" bate com o topo, com quem saiu e sem responsável' do
+    close(card(sale, owner: ana, value_cents: 100_000))
+    close(card(sale, owner: bruno, value_cents: 50_000))
+    close(card(sale, owner: nil, value_cents: 30_000))
+    close(card(service, owner: carla), 'resolved')
+    close(card(service, owner: bruno), 'resolved')
+    account.account_users.find_by(user: bruno).destroy!
+
+    result = equipe
+    linhas = result[:quemCuidou][:linhas]
+    fora = result[:quemCuidou][:foraDaEquipe]
+
+    expect(linhas.sum { |linha| linha.dig(:venda, :fechou).to_i } + fora[:venda][:fechou]).to eq(result[:topo][:fechadas])
+    expect(linhas.sum { |linha| linha.dig(:venda, :valor).to_f } + fora[:venda][:valor]).to eq(result[:topo][:feito])
+    expect(linhas.sum { |linha| linha.dig(:atende, :resolveu).to_i } + fora[:atende][:resolveu])
+      .to eq(result[:topo][:frase][:resolvidos])
+    expect(fora).to eq(venda: { fechou: 2, valor: 800.0 }, atende: { resolveu: 1 })
+  end
+
+  it 'a linha de fora da equipe não diz "resolveu 0"' do
+    close(card(sale, owner: nil, value_cents: 30_000))
+    close(card(service, owner: carla), 'resolved')
+
+    expect(equipe[:quemCuidou][:foraDaEquipe]).to eq(venda: { fechou: 1, valor: 300.0 })
+  end
+
   it 'quem precisa de ajuda: a partir de 5 atrasos somados, com o motivo e sem posição' do
     5.times { card(sale, owner: bruno, next_follow_up_at: 1.day.ago) }
     4.times { card(sale, owner: ana, next_follow_up_at: 1.day.ago) }

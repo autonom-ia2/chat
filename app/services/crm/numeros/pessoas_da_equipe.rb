@@ -33,6 +33,16 @@ class Crm::Numeros::PessoasDaEquipe
     linhas.pluck(:id).uniq.size
   end
 
+  # O que fechou sem responsável ou com quem já saiu da conta (#1999): o topo soma tudo, então a última linha de "Quem
+  # cuidou" fecha a conta, e a soma das linhas bate com o topo. Sem nada assim, nil.
+  def fora_da_equipe
+    totais = @credito.reject { |id, _total| pessoas.key?(id) }.values
+    return if totais.sum { |total| total[:vendas] + total[:resolvidos] }.zero?
+
+    resolvidos = totais.sum { |total| total[:resolvidos] }
+    { venda: fora_venda(totais), atende: ({ resolveu: resolvidos } if resolvidos.positive?) }.compact
+  end
+
   # Quem está no ritmo da própria meta (só com meta, F4): os nomes, e "você" por último.
   def caminho_certo(esperado_pct)
     no_ritmo = linhas.select { |linha| no_ritmo?(linha, esperado_pct) }
@@ -50,6 +60,14 @@ class Crm::Numeros::PessoasDaEquipe
   end
 
   private
+
+  # Só com venda: a linha não diz "fechou 0".
+  def fora_venda(totais)
+    vendas = totais.sum { |total| total[:vendas] }
+    return unless vendas.positive?
+
+    { fechou: vendas, valor: (totais.sum { |total| total[:valores][@moeda].to_i } / 100.0).round(2) }
+  end
 
   def no_ritmo?(linha, esperado_pct)
     pct = linha.dig(:venda, :pct)

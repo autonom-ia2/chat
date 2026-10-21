@@ -32,7 +32,8 @@ const CONVERSAS = [
   'conversation_through_unattended',
   'conversation_through_participating',
 ];
-const PARAMETROS = ['da_ia', 'esperando_min'];
+// `no_funil=1` (#1999): só as de cliente num funil que a pessoa vê no Números. Vem junto de um dos outros dois.
+const PARAMETROS = ['da_ia', 'esperando_min', 'no_funil'];
 
 const minutosValidos = valor => {
   const texto = String(valor ?? '');
@@ -46,6 +47,7 @@ const minutosValidos = valor => {
 export const filtrosDoEndereco = destino => ({
   daIa: destino?.query?.da_ia === '1',
   esperandoMin: minutosValidos(destino?.query?.esperando_min),
+  noFunil: destino?.query?.no_funil === '1',
 });
 
 // O filtro que a lista pede ao servidor. No Spam e na Lixeira a pasta manda; com filtro avançado ou pasta salva, a lista
@@ -54,14 +56,25 @@ export const filtrosDoEndereco = destino => ({
 export const filtroDoLinkDaLista = ({
   daIa,
   esperandoMin,
+  noFunil,
   pasta,
   filtroAvancado,
 }) => {
   if (pasta || filtroAvancado) {
-    return { daIa: undefined, esperandoMin: undefined };
+    return { daIa: undefined, esperandoMin: undefined, noFunil: undefined };
   }
-  return { daIa: daIa || undefined, esperandoMin: esperandoMin ?? undefined };
+  const ligado = Boolean(daIa || esperandoMin);
+  return {
+    daIa: daIa || undefined,
+    esperandoMin: esperandoMin ?? undefined,
+    noFunil: (ligado && noFunil) || undefined,
+  };
 };
+
+// O funil da lista com o filtro do link (#1999): o escopo vem do link, e o funil escolhido na caixa fica de lado (sem
+// gravar nada: a escolha salva volta quando o link sai). Sem o filtro, o funil escolhido.
+export const funilDoFiltroDoLink = ({ daIa, esperandoMin }, funil, todos) =>
+  daIa || esperandoMin ? todos : funil;
 
 // A aba em que a caixa abre com o filtro do link (#1999): o Números conta todas as conversas que a pessoa enxerga, então
 // a caixa abre em "Todas", quando a pessoa tem essa aba, para o número da lista bater com o do Números. Sem o filtro do
@@ -119,10 +132,11 @@ export const useFiltrosDoLinkNaCaixa = () => {
   const filtros = computed(() =>
     naCaixa(route)
       ? filtrosDoEndereco(route)
-      : { daIa: false, esperandoMin: null }
+      : { daIa: false, esperandoMin: null, noFunil: false }
   );
   const daIa = computed(() => filtros.value.daIa);
   const esperandoMin = computed(() => filtros.value.esperandoMin);
+  const noFunil = computed(() => filtros.value.noFunil);
   const linkNoEndereco = computed(() => Object.keys(doLink(route)).length > 0);
 
   // Tira só o link do endereço; o filtro desliga junto, porque ele é o endereço.
@@ -158,6 +172,9 @@ export const useFiltrosDoLinkNaCaixa = () => {
     ...(esperandoMin.value
       ? { esperando_min: String(esperandoMin.value) }
       : {}),
+    ...(noFunil.value && (daIa.value || esperandoMin.value)
+      ? { no_funil: '1' }
+      : {}),
   }));
 
   // Voltar da conversa para a lista (marcar como não lida, excluir): com o filtro ligado, a lista volta filtrada.
@@ -171,6 +188,7 @@ export const useFiltrosDoLinkNaCaixa = () => {
   return {
     daIa,
     esperandoMin,
+    noFunil,
     limpar,
     limparTudo,
     linkDoFiltro,

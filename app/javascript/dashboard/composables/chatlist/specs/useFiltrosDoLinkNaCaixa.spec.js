@@ -4,6 +4,7 @@ import { createRouter, createMemoryHistory } from 'vue-router';
 import {
   abaDoFiltroDoLink,
   statusDoFiltroDoLink,
+  funilDoFiltroDoLink,
   filtroDoLinkDaLista,
   filtrosDoEndereco,
   useFiltrosDoLinkNaCaixa,
@@ -45,14 +46,14 @@ describe('filtrosDoEndereco', () => {
   it('lê da_ia=1 e esperando_min dentro de 1..1440', () => {
     expect(
       filtrosDoEndereco({ query: { da_ia: '1', esperando_min: '30' } })
-    ).toEqual({ daIa: true, esperandoMin: 30 });
+    ).toEqual({ daIa: true, esperandoMin: 30, noFunil: false });
   });
 
   it('ignora valor que a caixa não oferece', () => {
     ['0', '1441', '-1', 'abc', '30.5', '0x1e', ''].forEach(valor => {
       expect(
         filtrosDoEndereco({ query: { da_ia: 'sim', esperando_min: valor } })
-      ).toEqual({ daIa: false, esperandoMin: null });
+      ).toEqual({ daIa: false, esperandoMin: null, noFunil: false });
     });
   });
 });
@@ -382,5 +383,30 @@ describe('statusDoFiltroDoLink', () => {
         'open'
       )
     ).toBe('pending');
+  });
+});
+
+// #1999: com o filtro do link, o escopo do funil vem do link (no_funil), e o funil escolhido na caixa fica de lado.
+describe('funil da lista com o filtro do link', () => {
+  it('com o filtro do link, a lista ignora o funil escolhido; sem ele, vale o escolhido', () => {
+    expect(funilDoFiltroDoLink({ daIa: true }, '42', '')).toBe('');
+    expect(funilDoFiltroDoLink({ daIa: undefined }, '42', '')).toBe('42');
+  });
+
+  it('no_funil vai ao servidor só junto de um dos filtros do link', () => {
+    expect(
+      filtroDoLinkDaLista({ daIa: true, esperandoMin: 30, noFunil: true })
+    ).toEqual({ daIa: true, esperandoMin: 30, noFunil: true });
+    expect(filtroDoLinkDaLista({ noFunil: true })).toEqual({
+      daIa: undefined,
+      esperandoMin: undefined,
+      noFunil: undefined,
+    });
+  });
+
+  it('lê no_funil=1 do endereço', () => {
+    expect(
+      filtrosDoEndereco({ query: { da_ia: '1', no_funil: '1' } }).noFunil
+    ).toBe(true);
   });
 });

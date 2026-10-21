@@ -6121,6 +6121,8 @@
       "DETALHE_VENDA_SEM_META": "{valor} closed.",
       "VOCE_NOME": "{nome} (you)",
       "VER_CONVERSAS": "See {nome}'s conversations",
+      "FORA_DA_EQUIPE": "No owner or no longer on the team",
+      "FORA_VENDA": "closed {fechou} · {valor}",
       "IA_SELO": "AI",
       "IA_ATENDEU": "served {n} customer | served {n} customers",
       "IA_PARTICIPOU": "took part in {n} sale ({valor}) | took part in {n} sales ({valor})",

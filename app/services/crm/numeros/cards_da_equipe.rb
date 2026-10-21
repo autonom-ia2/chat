@@ -44,11 +44,14 @@ class Crm::Numeros::CardsDaEquipe
     cards.where.not(owner_id: nil).group(:owner_id).count
   end
 
-  # Os fechados neste mês no funil principal, de todos (a Lista com result + closed_in=this_month, sem responsável).
-  def fechados_na_lista(tipo, desde)
-    return [] if funil(tipo).nil?
+  # A Lista do funil principal (result + closed_in=this_month, sem responsável) mostra exatamente os `ids` contados?
+  # Conta no banco, sem trazer os ids da Lista. No teto do crédito (Crm::Numeros::Credito::MAX_CARDS) a conta pode ter
+  # sido cortada: aí o número não abre a Lista, que mostraria outro conjunto.
+  def lista_bate?(tipo, desde, ids)
+    return false if funil(tipo).nil? || ids.size >= Crm::Numeros::Credito::MAX_CARDS
 
-    @account.crm_cards.where(pipeline_id: funil(tipo), status: Crm::Numeros::MeusCards::FECHADOS, closed_at: desde..).pluck(:id)
+    na_lista = @account.crm_cards.where(pipeline_id: funil(tipo), status: Crm::Numeros::MeusCards::FECHADOS, closed_at: desde..)
+    na_lista.count == ids.size && na_lista.where(id: ids).count == ids.size
   end
 
   # Ganhos do mês no funil principal que hoje estão sem responsável nenhum, nem pessoa nem robô: a Lista com

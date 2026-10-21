@@ -14,6 +14,7 @@ import {
   filtroDoLinkDaLista,
   abaDoFiltroDoLink,
   statusDoFiltroDoLink,
+  funilDoFiltroDoLink,
   useFiltrosDoLinkNaCaixa,
   useReleituraPeriodica,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
@@ -317,6 +318,7 @@ const { pasta: pastaDoEmail, versao: versaoDasPastas } = usePastaDoEmail();
 const {
   daIa: daIaDoLink,
   esperandoMin: esperandoDoLink,
+  noFunil: noFunilDoLink,
   limparTudo: limparTudoDoLink,
   irParaALista,
 } = useFiltrosDoLinkNaCaixa();
@@ -325,9 +327,14 @@ const filtroDoLink = computed(() =>
   filtroDoLinkDaLista({
     daIa: daIaDoLink.value,
     esperandoMin: esperandoDoLink.value,
+    noFunil: noFunilDoLink.value,
     pasta: pastaDoEmail.value,
     filtroAvancado: hasAppliedFiltersOrActiveFolders.value,
   })
+);
+// #1999: com o filtro do link, o funil da lista vem do link; o escolhido na caixa não é tocado.
+const funilDaLista = computed(() =>
+  funilDoFiltroDoLink(filtroDoLink.value, crmPipelineId.value, FUNNEL_ALL)
 );
 // #1999: com o filtro do link, a caixa abre em "Todas" (se a pessoa tem) e em "Abertas", para bater com o número do
 // Números.
@@ -365,7 +372,7 @@ const conversationFilters = computed(() => {
     labels: props.label ? [props.label] : undefined,
     teamId: props.teamId || undefined,
     conversationType: props.conversationType || undefined,
-    crmPipelineId: (isCrmEnabled && crmPipelineId.value) || undefined,
+    crmPipelineId: (isCrmEnabled && funilDaLista.value) || undefined,
     pasta: pastaDoEmail.value || undefined,
     ...filtroDoLink.value,
   };
@@ -1100,7 +1107,9 @@ watch(appliedFilters, () => resetBulkActions());
     />
 
     <FunnelFilter
-      v-if="isCrmEnabled && !hasAppliedFiltersOrActiveFolders"
+      v-if="
+        isCrmEnabled && !hasAppliedFiltersOrActiveFolders && !temFiltroDoLink
+      "
       v-model="crmPipelineId"
     />
 
