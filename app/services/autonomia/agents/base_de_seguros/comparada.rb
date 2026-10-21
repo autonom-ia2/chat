@@ -8,8 +8,16 @@
 # Os dois valem para o agente como ele estava ao comparar (o RETRATO: o mesmo da versão do agente, com a instrução, o
 # jeito de falar, as regras de passagem, a mensagem de quando não sabe, a config versionada e a base). Mudou qualquer um
 # (edição, volta de versão, atualizar e Desfazer), o "hoje" comparado não é mais o de agora: a marca não vale e o
-# resultado guardado não serve. Ligar, desligar e o material ficam fora; o updated_at também, porque muda por motivos
-# que não mexem na resposta.
+# resultado guardado não serve. Também entra o portão de confiança (confidence_threshold), que fica fora da versão mas
+# decide quando o agente passa para a equipe.
+#
+# FICA FORA, por não mudar a resposta da comparação (o caminho do Testar em modo prova, sem ferramenta):
+# - model e temperature: o Answerer usa o modelo fixo dele (Config::ANSWERER_MODEL) e não passa temperatura;
+# - handoff_strategy/handoff_target_id: dizem para QUEM vai a conversa, não o que o agente responde;
+# - business_hours, response_window, audience: dizem QUANDO e PARA QUEM ele atende, não o texto;
+# - topic_map, knowledge_summary, knowledge_confidence, o material e os ajudantes: o sistema reescreve o material e o
+#   resumo sozinho (entrariam como falso "compare de novo"), e os ajudantes só entram com ferramenta, que a prova não usa;
+# - ligar, desligar e o updated_at: mudam por motivos que não mexem na resposta.
 module Autonomia::Agents::BaseDeSeguros::Comparada
   PRAZO_DE_QUEM_VIU = 30.minutes
   PREFIXO = 'autonomia:base_de_seguros:comparada'.freeze

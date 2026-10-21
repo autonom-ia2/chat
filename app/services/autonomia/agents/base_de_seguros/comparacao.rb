@@ -43,11 +43,12 @@ class Autonomia::Agents::BaseDeSeguros::Comparacao
     { pergunta: pergunta, hoje: hoje[:texto], hoje_equipe: hoje[:equipe], nova: nova[:texto], nova_equipe: nova[:equipe] }
   end
 
-  # O MESMO agente comparado (uma cópia dos atributos dele, sem reler o banco), com a base nova só na memória: "hoje",
-  # "nova" e a marca de quem viu saem do mesmo retrato. É um registro salvo (com o id), para o caminho do Testar achar
-  # o material dele. readonly!: se algo no caminho tentar salvá-lo, falha.
+  # O MESMO agente comparado, sem reler o banco: uma cópia dos atributos como iriam ao banco (o enum alterado em memória
+  # fica como está, e o jsonb não divide objeto com o agente), com a base nova só na memória. "Hoje", "nova" e a marca de
+  # quem viu saem do mesmo retrato. É um registro salvo (com o id), para o caminho do Testar achar o material dele.
+  # readonly!: se algo no caminho tentar salvá-lo, falha.
   def agente_com_a_base(marca)
-    copia = Autonomia::Agents::Agent.instantiate(@agent.attributes_before_type_cast)
+    copia = Autonomia::Agents::Agent.instantiate(@agent.attributes_for_database)
     copia.config = copia.config.to_h.merge('base' => marca)
     copia.readonly!
     copia

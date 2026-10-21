@@ -80,6 +80,15 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     expect(chamadas.map { |chamada| chamada[:agent].id }.uniq).to eq([agent.id])
   end
 
+  it 'a cópia mantém o enum e a config alterados em memória, sem dividir o objeto da config com o agente' do
+    agent.mode = 'manual'
+
+    described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
+
+    expect(chamadas.map { |chamada| chamada[:agent].mode }.uniq).to eq(['manual'])
+    expect(agent.config['base']).to eq(antiga)
+  end
+
   it 'usa o motor do Testar sem ferramenta, com a etiqueta de custo do Testar' do
     described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
 
