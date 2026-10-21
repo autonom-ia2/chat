@@ -384,6 +384,8 @@ onMounted(async () => {
         />
       </div>
     </header>
+    <!-- #1897: com CRM › Números por papel, o seletor "Só eu · Equipe" e o aviso aos administradores. -->
+    <slot name="topo" />
 
     <div
       v-if="isLoading && !summary"

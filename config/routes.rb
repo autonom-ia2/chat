@@ -369,6 +369,8 @@ Rails.application.routes.draw do
             end
             # Anúncios da Meta F4 (#1100): ação do dia e mensagem sugerida pela IA; resumo e alerta no WhatsApp.
             scope 'meta_ads_connection' do
+              # Relatório baixado (#1960): PDF ou planilha do painel no período.
+              get :report, to: 'meta_ads_reports#show'
               post :daily_action, to: 'meta_ads_ai#daily_action'
               post :quote_message, to: 'meta_ads_ai#quote_message'
               get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
@@ -528,6 +530,10 @@ Rails.application.routes.draw do
               resources :sources, only: [:index, :create, :destroy], controller: 'agents/sources' do
                 member { post :resync }
               end
+              # #1426 (tema 4b) — conferências e autoteste do material (gaveta "O que sabe", Fase 2).
+              get 'material', to: 'agents/material#show'
+              post 'material/problemas/:problema_id/resolver', to: 'agents/material#resolver'
+              post 'material/autoteste', to: 'agents/material#autoteste'
               # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
               put 'onde_atende', to: 'agents/onde_atende#update'
               resources :channels, only: [:index, :create, :destroy],
@@ -939,6 +945,7 @@ Rails.application.routes.draw do
           resources :waha_inboxes, only: [:create], param: :inbox_id do
             member do
               get :connection
+              get :status
               post :reconnect
             end
           end

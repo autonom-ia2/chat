@@ -1,6 +1,7 @@
 class Api::V1::Accounts::WahaInboxesController < Api::V1::Accounts::BaseController
   before_action :fetch_inbox, only: [:connection, :reconnect]
-  before_action :ensure_waha_inbox, only: [:connection, :reconnect]
+  before_action :fetch_visible_inbox, only: [:status]
+  before_action :ensure_waha_inbox, only: [:connection, :reconnect, :status]
 
   # Estados internos do motor mapeados para termos neutros (whitelabel).
   STATUS_MAP = {
@@ -42,6 +43,22 @@ class Api::V1::Accounts::WahaInboxesController < Api::V1::Accounts::BaseControll
     }
   end
 
+  # Só o estado da conexão (#1941, item 5), para a faixa da lista da caixa: quem vê a caixa vê se ela está conectada.
+  # Sem QR e sem telefone (o QR pareia o número: só admin, em `connection`). Guardado 30 s por caixa, para a lista
+  # aberta em vários atendentes não consultar o motor a cada abertura.
+  STATUS_TTL = 30.seconds
+
+  def status
+    key = "waha/inbox_status/#{@inbox.id}"
+    status = Rails.cache.read(key)
+    unless status
+      status = STATUS_MAP.fetch(safe_session(Waha::Client.new, waha_session)['status'], 'unknown')
+      # "unknown" (o motor não respondeu) não fica guardado: a próxima consulta pergunta de novo.
+      Rails.cache.write(key, status, expires_in: STATUS_TTL) unless status == 'unknown'
+    end
+    render json: { status: status, connected: status == 'connected' }
+  end
+
   # Reinicia o pareamento (gera novo QR).
   def reconnect
     session = waha_session
@@ -67,6 +84,11 @@ class Api::V1::Accounts::WahaInboxesController < Api::V1::Accounts::BaseControll
   def fetch_inbox
     @inbox = Current.account.inboxes.find(params[:inbox_id])
     authorize @inbox, :update?
+  end
+
+  def fetch_visible_inbox
+    @inbox = Current.account.inboxes.find(params[:inbox_id])
+    authorize @inbox, :show?
   end
 
   def ensure_waha_inbox

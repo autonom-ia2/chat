@@ -197,15 +197,40 @@ module Crm::Ai::ClassifierPrompt
       quando a proposta de fato existir.
     - Sem nenhuma evidência nova relevante desde a última interação: mantenha o estágio atual com
       confiança baixa; não invente progresso.
-    - Cliente diz explicitamente que fechou negócio e há um estágio de conclusão/ganho: mover para ele
-      com confiança alta e preencher "value" apenas se o preço da NOSSA oferta foi citado.
+    - Cliente diz explicitamente que fechou negócio CONOSCO e há um estágio de conclusão/ganho: mover para
+      ele com confiança alta e preencher "value" apenas se o preço da NOSSA oferta foi citado. Se ele não diz
+      com quem fechou, veja "QUANDO O CLIENTE DIZ QUE O ASSUNTO TERMINOU".
     - Cliente diz que desistiu/escolheu concorrente e há um estágio de perda: mover para ele com
       confiança alta. Sem declaração explícita, NÃO trate atraso ou silêncio como perda.
   EX
 
-  # Vale para todas as contas (#1140): a avaliação conjunta já avisava (VARIOS), a de um card não. Fica no FIM do prefixo
-  # de propósito: o cache de prompt é por prefixo, então tudo antes daqui segue byte a byte igual ao de antes e só o
-  # trecho final (e a entrada, que já muda a cada chamada) é processado de novo na primeira chamada depois do deploy.
+  # #1926: "já conseguimos fechar", sem dizer com quem, ia para a etapa do meio que fala em "fechar" (Negociação) e até
+  # para Ganho; "já resolvi", para a etapa do meio. Um fim ambíguo não é progresso: é um dos fins ou manter, e o
+  # incerto vira sugestão para uma pessoa confirmar. A faixa da sugestão sai dos limiares do Evaluator (Config): se um
+  # deles mudar, o texto acompanha e o caso incerto continua sem mover sozinho.
+  # Cache: o EXAMPLES (antes daqui) também mudou neste PR, então o prefixo se perde a partir dele, uma vez, na primeira
+  # chamada depois do deploy; daí em diante volta a ser estável.
+  FIM_DO_ASSUNTO = <<~FIM.strip
+    QUANDO O CLIENTE DIZ QUE O ASSUNTO TERMINOU:
+    - Uma fala de que o assunto acabou (fechou, resolveu, já conseguiu, não precisa mais) não é progresso: o card não
+      vai para uma etapa do meio do funil, mesmo que o critério dela fale em fechamento ou decisão. As saídas são uma
+      etapa de fim (ganho, perda, resolvido, concluído), escolhida pelo COMO terminou, ou ficar onde está.
+    - Em "sell", o fim depende de com quem terminou. Ganho só quando a conversa mostra que foi CONOSCO: aceitou a
+      nossa proposta, pediu contrato, boleto ou dados para pagar, pagou ou confirmou com a nossa equipe. Fechou com
+      outro, resolveu sozinho ou desistiu: o fim de perda.
+    - Se a fala não diz com quem nem como, e a conversa não mostra que foi conosco, a leitura é INCERTA: um
+      agradecimento ou a proposta já enviada não provam que foi conosco. Escolha a etapa de fim que os critérios
+      indicam para quem não precisa mais da nossa oferta, com confiança de pelo menos
+      #{Crm::Ai::Config::SUGGESTION_THRESHOLD} e abaixo de #{Crm::Ai::Config::AUTO_MOVE_THRESHOLD} (a partir de
+      #{Crm::Ai::Config::AUTO_MOVE_THRESHOLD}, o card se move sem ninguém confirmar). Sem etapa assim, mantenha o
+      estágio atual com confiança baixa.
+    - Em "serve", o fim é o de resolvido ou concluído quando os critérios o descrevem; se não está claro que foi o
+      problema DESTE card que se resolveu, mantenha.
+  FIM
+
+  # Vale para todas as contas (#1140): a avaliação conjunta já avisava (VARIOS), a de um card não. Ficou no FIM do
+  # prefixo de propósito: o cache de prompt é por prefixo, e o que vem antes não mudou com ele (o #1926 mudou depois:
+  # ver o FIM_DO_ASSUNTO).
   # Na avaliação conjunta, o VARIOS vem depois deste bloco: o prefixo dela muda a partir daqui (uma perda de cache só).
   # Os critérios das etapas e o handoff_trigger seguem valendo como regra (o gatilho MANDA, no HANDOFF): o aviso só
   # impede que outra ordem escrita neles, ou nas mensagens, seja seguida.
@@ -220,6 +245,30 @@ module Crm::Ai::ClassifierPrompt
     #{Crm::Ai::ContextBuilder::FORWARDED_LEGEND}
   DADOS
 
+  # #1922: o card que não é negócio sai do funil sem contar como perda (Crm::Ai::NaoENegocio). Só com a flag
+  # `crm_ia_arquiva_lixo` (ClassifierPrompt.para), logo depois do aviso de dados e antes do VARIOS e da memória: o texto
+  # antes daqui não muda, e as contas sem a flag seguem com o prefixo e o cache de antes. Com a flag, o schema também
+  # ganha o campo, e cada variante perde o cache uma vez, na primeira chamada; depois o prefixo volta a ser estável.
+  NAO_E_NEGOCIO = <<~NEGOCIO.strip
+    NÃO É NEGÓCIO ("nao_e_negocio"):
+    Preencha só quando ESTE card não é um pedido de cliente e não deveria estar no funil:
+    - "fora_do_negocio": ninguém pede nada do que vendemos ou atendemos. Exemplos: alguém oferecendo produto,
+      serviço ou parceria PARA a empresa; mensagem enviada por engano ou para a pessoa errada; só robôs dos dois lados
+      (o nosso e uma resposta automática do outro lado), sem nenhuma pessoa pedindo nada. "duplicado_de": null.
+    - "duplicado": outro card aberto, em "other_subjects" ou em "cards", do MESMO funil deste, é o MESMO pedido deste,
+      do mesmo cliente, e nada separa os dois. Em "duplicado_de", o "id" desse outro card, o que fica (o mais antigo).
+      Pedidos parecidos em funis diferentes, ou do mesmo funil sobre coisas diferentes, não são duplicados.
+    NUNCA preencha quando: o cliente pediu, perguntou ou mostrou interesse em algo que vendemos ou atendemos, mesmo pouco,
+    vago ou fora do nosso perfil; ele desistiu, recusou ou fechou com outro (isso é perda: use a etapa de perda, nunca
+    este campo); a conversa está começando (um "oi" é começo de conversa); a pessoa mandou só um link, o texto de um
+    anúncio, uma foto, um áudio, uma figurinha ou um caractere, mesmo sem escrever mais nada depois (pode ser quem
+    chegou por um anúncio ou começou mostrando o que quer); só nós escrevemos e o cliente ainda não respondeu
+    (prospecção, retorno ou follow-up sem resposta é silêncio, não lixo); é cliente de um pedido já feito pedindo
+    atendimento; houver dúvida.
+    Com "nao_e_negocio" preenchido, mantenha o estágio atual (suggested_stage_id = current_stage_id). "confidence" segue
+    a escala de CONFIANÇA; "reasoning" cita o fato da conversa. Em todos os outros casos, "nao_e_negocio": null.
+  NEGOCIO
+
   PARTES = [
     ROLE_AND_TASK,
     METHODOLOGY,
@@ -232,6 +281,7 @@ module Crm::Ai::ClassifierPrompt
     OTHER_SUBJECTS,
     OUTPUT_DISCIPLINE,
     EXAMPLES,
+    FIM_DO_ASSUNTO,
     DADOS_NAO_INSTRUCOES
   ].freeze
   TEXT = PARTES.join("\n\n").freeze
@@ -293,14 +343,17 @@ module Crm::Ai::ClassifierPrompt
   # O prefixo desta chamada: com algum agente de IA entre os elegíveis, a variante que explica o rótulo. Com a memória, o
   # parágrafo dela no fim. Com a flag `email_autoria` (#1807), a legenda do aviso de e-mail depois de tudo (o cache das
   # contas sem a flag não muda).
-  def self.para(eligible_agents, memoria: false, email_autoria: false)
+  # Com a flag `crm_ia_arquiva_lixo` (#1922), a regra "não é negócio" logo depois do prefixo de sempre.
+  def self.para(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false)
     base = Array(eligible_agents).any? { |nome| Crm::AgentesIa.rotulo_de_agente?(nome) } ? TEXT_COM_AGENTES_IA : TEXT
+    base = "#{base}\n\n#{NAO_E_NEGOCIO}" if nao_e_negocio
     com_email(memoria ? "#{base}\n\n#{MEMORIA}" : base, email_autoria)
   end
 
   # O prefixo da avaliação conjunta (#1693), com a mesma escolha da variante dos agentes de IA.
-  def self.para_varios(eligible_agents, memoria: false, email_autoria: false)
+  def self.para_varios(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false)
     base = para(eligible_agents).equal?(TEXT) ? TEXT_VARIOS : TEXT_VARIOS_COM_AGENTES_IA
+    base = "#{para(eligible_agents, nao_e_negocio: true)}\n\n#{VARIOS}" if nao_e_negocio
     com_email(memoria ? "#{base}\n\n#{MEMORIA}" : base, email_autoria)
   end
 

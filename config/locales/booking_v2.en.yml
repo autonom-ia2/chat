@@ -37,7 +37,7 @@ en:
         stop_button_label: "Stop reminders"
         test_prefix: "This is a test of your booking page. Your client receives a link like this one:"
       notice_templates:
-        platform_reason: "Ready message made for this notice and approved by Meta."
+        platform_reason: "Message approved by Meta, made for this notice."
       notice_texts:
         sample_name: "Ana"
         ai_failed: "We could not write it right now. Try again, or write it your own way."

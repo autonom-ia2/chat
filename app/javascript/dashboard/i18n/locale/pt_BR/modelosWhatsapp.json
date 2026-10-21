@@ -1153,7 +1153,7 @@
         "LIGADA_TUDO": "Ligada para Aviso de serviço e Divulgação.",
         "ABRIR": "Ver autorização"
       },
-      "SO_ADMIN": "Só quem administra a conta pode mudar."
+      "SO_ADMIN": "Só quem administra a conta, ou tem Financeiro em Editar na função, pode mudar."
     },
     "CONVERSA": {
       "SELO": {

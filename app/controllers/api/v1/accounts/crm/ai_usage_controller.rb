@@ -36,7 +36,13 @@ class Api::V1::Accounts::Crm::AiUsageController < Api::V1::Accounts::Crm::BaseCo
   end
 
   def builder
-    ::Crm::Reports::AiUsage.new(account: Current.account, params: report_params)
+    ::Crm::Reports::AiUsage.new(account: Current.account, params: report_params, com_valores: com_valores?)
+  end
+
+  # Values in money are the account's costs: administrator or financial_view (#1969). Who only sees CRM reports gets
+  # counts and tokens.
+  def com_valores?
+    Current.account_user&.permission_granted?('financial_view') || false
   end
 
   def export_json(payload)
@@ -54,17 +60,12 @@ class Api::V1::Accounts::Crm::AiUsageController < Api::V1::Accounts::Crm::BaseCo
   end
 
   def csv_for(payload)
+    valores = payload[:com_valores]
     CSV.generate do |csv|
-      csv << ['Quando', 'Recurso', 'Conta', 'Tokens', 'Custo USD', 'Custo BRL']
+      csv << (%w[Quando Recurso Conta Tokens] + (valores ? ['Custo USD', 'Custo BRL'] : []))
       payload.dig(:history, :rows).to_a.each do |row|
-        csv << [
-          row[:created_at],
-          csv_safe(row[:resource]),
-          csv_safe(row.dig(:account, :name)),
-          row[:total_tokens],
-          row[:cost_usd],
-          row[:cost_brl]
-        ]
+        linha = [row[:created_at], csv_safe(row[:resource]), csv_safe(row.dig(:account, :name)), row[:total_tokens]]
+        csv << (valores ? linha + [row[:cost_usd], row[:cost_brl]] : linha)
       end
     end
   end

@@ -207,3 +207,10 @@ export const thumbClass = adId => {
   );
   return THUMBS[sum % THUMBS.length];
 };
+
+// Foto do anúncio (#1960): primeiro a guardada do clique no WhatsApp, que não vence; depois a da Meta, que vence
+// em poucos dias. `failed` são os endereços que já não abriram: sem nenhum que abra, o quadro de reserva.
+export const adImage = (ad, failed = []) =>
+  [ad?.image_url, ad?.thumbnail_url].find(
+    url => url && !failed.includes(url)
+  ) || null;

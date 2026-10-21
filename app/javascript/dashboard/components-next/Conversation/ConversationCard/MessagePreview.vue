@@ -6,6 +6,8 @@ import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { ultimaEFigurinha } from 'dashboard/components-next/conversa-canal/figurinha';
 import { ultimaEVisualizacaoUnica } from 'dashboard/components-next/conversa-canal/visualizacaoUnica';
 import { usePeleDaMensagem } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import { useNotaDoConector } from 'dashboard/components-next/conversa-canal/useNotaDoConector';
+import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
 
 const props = defineProps({
   message: {
@@ -27,6 +29,8 @@ const props = defineProps({
 });
 
 const { getPlainText } = useMessageFormatter();
+// #1941: a nota técnica antiga do conector WAHA aparece como aviso, com o texto curto.
+const notaDoConector = useNotaDoConector(() => props.message);
 
 const attachmentIcons = {
   image: 'i-lucide-image',
@@ -39,23 +43,28 @@ const attachmentIcons = {
 
 const messageByAgent = computed(() => {
   const { message_type: messageType } = props.message;
-  return messageType === MESSAGE_TYPE.OUTGOING;
+  return !notaDoConector.value && messageType === MESSAGE_TYPE.OUTGOING;
 });
 
 const isMessageAnActivity = computed(() => {
   const { message_type: messageType } = props.message;
-  return messageType === MESSAGE_TYPE.ACTIVITY;
+  return notaDoConector.value || messageType === MESSAGE_TYPE.ACTIVITY;
 });
 
 const isMessagePrivate = computed(() => {
   const { private: isPrivate } = props.message;
-  return isPrivate;
+  return !notaDoConector.value && isPrivate;
 });
+
+// #1941: mandada pelo celular, sem o prefixo do conector WAHA. Sem a marca, o texto de sempre.
+const textoDaPrevia = computed(() =>
+  textoDaMensagem(props.message.content, props.message.content_attributes)
+);
 
 const parsedLastMessage = computed(() => {
   const { content_attributes: contentAttributes } = props.message;
   const { email: { subject } = {} } = contentAttributes || {};
-  return getPlainText(subject || props.message.content);
+  return getPlainText(subject || textoDaPrevia.value);
 });
 
 const lastMessageFileType = computed(() => {
@@ -146,7 +155,11 @@ const isMessageSticker = computed(() => {
         {{ $t('CHAT_LIST.ATTACHMENTS.image.CONTENT') }}
       </span>
 
-      <template v-else-if="message.content">
+      <template v-else-if="notaDoConector">
+        {{ $t('CONVERSA_CANAL.NOTA_DO_CONECTOR.AVISO') }}
+      </template>
+
+      <template v-else-if="textoDaPrevia">
         {{ parsedLastMessage }}
       </template>
 
