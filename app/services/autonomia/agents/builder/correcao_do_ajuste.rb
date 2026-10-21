@@ -38,14 +38,22 @@ module Autonomia::Agents::Builder::CorrecaoDoAjuste
     Array(conferencia['itens']).reject { |item| item['pedido_pelo_dono'] == false }.pluck('pedido').uniq
   end
 
-  # -> [mudanças com o texto de pedido da lista, quantas saíram]. Com pedido fora da lista, o texto novo fica.
+  # -> [mudanças com o texto de pedido da lista, quantas saíram]. Com pedido fora da lista, o texto novo fica só num
+  # campo que a lista não tem (é o pedido que faltou). Um campo com item que saiu perde os outros itens dele (revisão 2,
+  # BAIXOs 5 e 6): o campo não fica pela metade.
   def conferir_pedidos(mudancas, conferencia)
-    lista = pedidos(conferencia)
-    conferidas = mudancas.map { |item| no_texto_da_lista(item, lista) }
-    return [mudancas.zip(conferidas).map { |item, conferida| conferida || item }, 0] if conferencia['faltou_fora_da_lista']
+    pares = conferidas(mudancas, conferencia)
+    sem_texto = pares.reject(&:last).map(&:first).pluck('campo')
+    validas, fora = pares.partition { |item, conferida| conferida && sem_texto.exclude?(item['campo']) }
+    avisar_descartes(fora.map(&:first))
+    [validas.map(&:last), fora.size]
+  end
 
-    mudancas.zip(conferidas).each { |item, conferida| avisar_descarte(item) if conferida.nil? }
-    [conferidas.compact, conferidas.count(nil)]
+  # -> [[mudança, a mudança com o texto da lista (ou ela mesma, num campo que a lista não tem) ou nil]]
+  def conferidas(mudancas, conferencia)
+    lista = pedidos(conferencia)
+    livres = conferencia['faltou_fora_da_lista'] ? mudancas.pluck('campo') - Array(conferencia['itens']).pluck('campo') : []
+    mudancas.map { |item| [item, no_texto_da_lista(item, lista) || (item if livres.include?(item['campo']))] }
   end
 
   def no_texto_da_lista(item, lista)
@@ -53,8 +61,8 @@ module Autonomia::Agents::Builder::CorrecaoDoAjuste
     item.merge('pedido' => texto) if texto
   end
 
-  def avisar_descarte(item)
-    Rails.logger.warn("[autonomia][builder] correcao pedido_fora_da_lista campo=#{item['campo']}")
+  def avisar_descartes(itens)
+    itens.each { |item| Rails.logger.warn("[autonomia][builder] correcao pedido_fora_da_lista campo=#{item['campo']}") }
   end
 
   # O texto da lista igual ao pedido; o ponto final não conta. nil quando não há.

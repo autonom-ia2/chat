@@ -612,6 +612,26 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(Rails.logger).to have_received(:warn).with(a_string_including('pedido_fora_da_lista', 'campo=fallback_message'))
       end
 
+      # Revisão 2 do t6d (BAIXO 5): um campo com item descartado não fica pela metade.
+      it 'um campo com item descartado perde os outros itens dele, e todos contam como descartados' do
+        allow(Rails.logger).to receive(:warn)
+        lista = [mudanca('tone', 'sem emoji'), mudanca('tone', 'outro texto'), mudanca('greeting', 'mais curto')]
+
+        expect(correcao.conferir_pedidos(lista, 'itens' => itens)).to eq([[mudanca('greeting', 'mais curto')], 2])
+      end
+
+      # Revisão 2 do t6d (BAIXO 6): o texto novo só vale num campo que a lista não tem.
+      it 'com pedido fora da lista, texto novo num campo da lista sai; num campo fora dela, fica' do
+        allow(Rails.logger).to receive(:warn)
+        lista = [mudanca('handoff_rule', 'preço vai para a equipe'), mudanca('tone', 'texto novo'),
+                 mudanca('instruction', 'sem emoji')]
+
+        validos, descartados = correcao.conferir_pedidos(lista, 'itens' => itens, 'faltou_fora_da_lista' => true)
+
+        expect(validos).to eq([mudanca('handoff_rule', 'preço vai para a equipe'), mudanca('instruction', 'sem emoji')])
+        expect(descartados).to eq(1)
+      end
+
       it 'com pedido fora da lista, o texto novo fica (é o pedido que faltou)' do
         validos, descartados = correcao.conferir_pedidos([mudanca('handoff_rule', 'preço vai para a equipe')],
                                                          'itens' => itens, 'faltou_fora_da_lista' => true)
