@@ -278,6 +278,16 @@
         "PARA": "To talk again to someone who went quiet.",
         "TEXTO": "Hi, [nome_cliente]! This is [nome_empresa]. Any questions left from our last conversation? Just reply here and we will pick it up."
       },
+      "renovacao": {
+        "TITULO": "Renewal coming up",
+        "PARA": "To let them know the contract is about to expire and needs renewing.",
+        "TEXTO": "Hello, [nome_cliente]. A notice from [nome_empresa]: your contract expires on [data]. Do you want to renew? Tap one of the options below."
+      },
+      "andamento": {
+        "TITULO": "Order update",
+        "PARA": "To tell the customer their order has moved forward.",
+        "TEXTO": "Hello, [nome_cliente]. An update from [nome_empresa]: your order has moved forward. Want to know the details? Tap the button below."
+      },
       "em_branco": {
         "TITULO": "Start from scratch",
         "PARA": "Write everything your own way."
@@ -294,7 +304,10 @@
       "COPIAR_CODIGO": "Copy code",
       "QUERO_CONTINUAR": "Let's continue",
       "SEGUNDA_VIA": "I need a copy of the bill",
-      "JA_PAGUEI": "I have already paid"
+      "JA_PAGUEI": "I have already paid",
+      "QUERO_RENOVAR": "I want to renew",
+      "FALAR_COM_ALGUEM": "Talk to someone",
+      "VER_DETALHES": "See details"
     },
     "CAMPOS": {
       "nome_cliente": {
