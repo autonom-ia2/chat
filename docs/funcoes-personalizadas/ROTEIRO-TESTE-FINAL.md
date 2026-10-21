@@ -101,6 +101,15 @@ Esse teste só funciona se a conta 16 tiver os Anúncios da Meta conectados.
 6. Troque o CRM para **Só olha**. O ajuste **Arquivar cards do CRM** some (só vale para quem mexe).
 7. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha `crm_manage_cards` antes do deploy tem `crm_delete_cards` depois, inclusive os cargos gerenciados de token de integração do CRM.
 
+## Teste 9: apagar mensagem (#1893)
+
+1. Edite a função. Em **Conversas**, deixe **Atender** e **Só as próprias**, sem ligar **Apagar mensagens**. Salve.
+2. Na janela anônima, abra uma conversa de teste atribuída à pessoa. No menu da mensagem (botão direito ou os três pontos), **Apagar** não aparece. Responder, copiar e os outros itens seguem lá. Numa conversa de e-mail, o ⋮ do e-mail também não tem **Excluir**.
+3. Volte à função. Em **Ajustes finos** de Conversas, ligue **Apagar mensagens** (pede confirmação) e salve. Na janela anônima, recarregue: **Apagar** aparece e apaga. Use uma mensagem enviada só para o teste.
+4. Troque Conversas para **Todas**: o ajuste **Apagar mensagens** continua visível e ligado. Troque para **Só olha**: o ajuste some e, ao voltar para **Atender**, vem desligado.
+5. Com uma pessoa sem função (agente comum), **Apagar** segue aparecendo como antes.
+6. Conferência da migração (só leitura, pela Orquestração ou por psql): todo cargo que tinha alguma das três chaves de atender conversa antes do deploy tem `conversation_message_delete` depois; quem tinha só `conversation_view` não ganhou.
+
 ## Teste 10: montar sem disparar campanhas (#1898)
 
 1. Edite a função. Em **Marketing**, deixe **Campanhas** em **Editar**, sem ligar **Disparar campanhas** em **Ajustes finos**. Salve.
