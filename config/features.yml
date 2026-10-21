@@ -756,3 +756,16 @@
   display_name: CRM › IA fecha o card (perdido com motivo, resolvido)
   enabled: false
   column: feature_flags_ext_1
+
+# IA entende a conversa, F4 — leitor de mídia na chegada (sem Issue própria ainda; épico "IA entende a conversa" do
+# CRM). Ligada: a mensagem com anexo (dos dois lados, numa caixa com o CRM) é lida uma vez, na chegada
+# (Crm::Ai::LeitorDeMidia): áudio transcrito, foto descrita e PDF com a camada de texto lida (sem OCR); a IA de assunto
+# passa a ler a mensagem só de mídia (antes descartada) e as IAs de etapa e memória leem o texto do PDF. Tetos: 4 fotos,
+# 2 PDFs e 3 áudios por mensagem; 500 leituras por conta por dia. Desligada (padrão): leitura, prompts e comportamento
+# iguais aos de antes. Sem migration, sem tela.
+# Posição PROVISÓRIA 55 na feature_flags_ext_1 (1 << 54), contando a 51 reservada ao crm_numeros_equipe (#1999), que
+# ainda não está na main: enquanto ela não entrar, esta linha cai na 54. A Orquestração dá a definitiva.
+- name: crm_ia_leitor_de_midia
+  display_name: CRM › IA lê foto, áudio e PDF na chegada
+  enabled: false
+  column: feature_flags_ext_1

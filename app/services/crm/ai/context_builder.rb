@@ -285,30 +285,20 @@ module Crm
 
       # Combines the text body with text extracted from media attachments
       # (audio transcription, image caption) and presence markers for media we
-      # don't process (video, document).
+      # don't process (video, document). O fragmento de cada anexo é o do Crm::Ai::TextoDaMidia; com a flag
+      # `crm_ia_leitor_de_midia` (IA entende a conversa F4), o texto do PDF lido entra também.
       def message_content(message)
         parts = []
         # #1807: e-mail recebido sem o histórico citado (com a flag); o resto, o content de sempre.
         text = email_autoria.texto(message).strip
         parts << text if text.present?
-        message.attachments.each { |attachment| parts << media_fragment(attachment) }
+        message.attachments.each { |attachment| parts << Crm::Ai::TextoDaMidia.fragmento(attachment, pdf: le_pdf?) }
         parts.compact_blank.join("\n").presence || '[mensagem sem texto]'
       end
 
-      def media_fragment(attachment)
-        meta = attachment.meta.to_h
-        case attachment.file_type.to_s
-        when 'audio'
-          transcript = meta['transcribed_text'].to_s.strip
-          transcript.present? ? "[áudio transcrito]: #{transcript.truncate(Config::TRANSCRIPT_MAX_CHARS)}" : '[áudio recebido, não transcrito]'
-        when 'image'
-          caption = meta['ai_caption'].to_s.strip
-          caption.present? ? "[imagem]: #{caption.truncate(Config::CAPTION_MAX_CHARS)}" : '[imagem recebida]'
-        when 'video'
-          '[vídeo recebido]'
-        when 'file'
-          '[documento recebido]'
-        end
+      def le_pdf?
+        @le_pdf = Crm::Ai::LeitorDeMidia.ligada?(@card.account) unless defined?(@le_pdf)
+        @le_pdf
       end
     end
   end

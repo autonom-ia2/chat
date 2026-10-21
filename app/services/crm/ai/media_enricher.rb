@@ -8,6 +8,8 @@ module Crm
     # cost/latency. Failures are marked done so they are not retried forever.
     # #1926: a janela é a da avaliação de etapa (ContextBuilder.janela_da_avaliacao), não as 12 últimas: áudio ou imagem
     # que a avaliação lê também chega transcrito/descrito. O teto por rodada (limit) segue, das mais novas às mais antigas.
+    # IA entende a conversa F4 (flag `crm_ia_leitor_de_midia`): o anexo é lido pelo Crm::Ai::LeitorDeMidia, o mesmo da
+    # chegada (mesmas chaves, trava e teto do dia), e o PDF entra também. Sem a flag, igual.
     class MediaEnricher
       def initialize(card:, limit: Config::MAX_MEDIA_ENRICH_PER_EVAL)
         @card = card
@@ -47,6 +49,8 @@ module Crm
       end
 
       def needs_enrich?(attachment)
+        return Crm::Ai::LeitorDeMidia.pendente?(attachment) if leitor?
+
         meta = attachment.meta.to_h
         case attachment.file_type.to_s
         when 'audio'
@@ -59,6 +63,8 @@ module Crm
       end
 
       def enrich(attachment, credential)
+        return Crm::Ai::LeitorDeMidia.new(attachment.message, pipeline: @card.pipeline).ler(attachment) if leitor?
+
         case attachment.file_type.to_s
         when 'audio' then transcribe(attachment, credential)
         when 'image' then caption(attachment, credential)
@@ -83,6 +89,11 @@ module Crm
       rescue StandardError => e
         Rails.logger.warn("[CRM AI] caption failed attachment=#{attachment.id}: #{e.message}")
         store(attachment, 'ai_caption', nil, done_key: 'crm_ai_image_done')
+      end
+
+      def leitor?
+        @leitor = Crm::Ai::LeitorDeMidia.ligada?(@account) unless defined?(@leitor)
+        @leitor
       end
 
       def store(attachment, key, value, done_key:)

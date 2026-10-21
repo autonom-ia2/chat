@@ -17,7 +17,11 @@
 # `papeis: true` (IA entende a conversa F1, só a IA de assunto com a flag `crm_ia_fatos_da_conversa`): nas mensagens com
 # autor, cada linha diz a hora local e QUEM falou (Crm::Ai::FatosDaConversa::Rotulo: cliente, pessoa da equipe, nosso
 # assistente ou outro sistema), em vez de "Customer"/"Team"; o envio que falhou não chegou ao cliente e sai. Sem ele, igual.
-class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength -- no teto (175) antes da F1; os papéis são 5 linhas
+#
+# `com_midia: true` (IA entende a conversa F4, só a IA de assunto com a flag `crm_ia_leitor_de_midia`): a mensagem sem
+# texto com anexo também entra, e o texto lido do anexo (Crm::Ai::TextoDaMidia.lido: transcrição, descrição, texto do
+# PDF) vai junto do texto da mensagem. Anexo ainda sem leitura não vira texto. Sem ele, igual.
+class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength -- no teto (175) antes da F1; papéis (F1) e mídia (F4) somam poucas linhas
   MAX_MENSAGENS = 5
   MAX_CARACTERES = 5_000
   TRECHO = 140
@@ -48,7 +52,7 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength -- no t
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
                  leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES,
-                 papeis: false)
+                 papeis: false, com_midia: false)
     @conversation = conversation
     @message = message
     @card = card
@@ -58,6 +62,7 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength -- no t
     @max_mensagens = max_mensagens
     @max_caracteres_anteriores = max_caracteres_anteriores
     @rotulo = Crm::Ai::FatosDaConversa::Rotulo.new(conversation) if papeis
+    @com_midia = com_midia
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -219,11 +224,18 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength -- no t
   # #1924: as MAX_MENSAGENS mais recentes com texto vão até MAX_CARACTERES; as mais antigas da janela, até
   # @max_caracteres_anteriores. A posição conta depois de tirar as vazias (e-mail só com citação).
   def textos(lista, com_autor: false)
-    com_texto = lista.map { |mensagem| [mensagem, email_autoria.texto(mensagem).strip] }.reject { |(_, texto)| texto.empty? }
+    com_texto = lista.map { |mensagem| [mensagem, texto_de(mensagem)] }.reject { |(_, texto)| texto.empty? }
     com_texto.each_with_index.map do |(mensagem, inteiro), posicao|
       texto = inteiro.first(posicao < com_texto.size - MAX_MENSAGENS ? @max_caracteres_anteriores : MAX_CARACTERES)
       com_autor || email_autoria.de(mensagem) ? "#{quem(mensagem)}: #{texto}" : texto
     end
+  end
+
+  def texto_de(mensagem)
+    texto = email_autoria.texto(mensagem).strip
+    return texto unless @com_midia
+
+    [texto, *mensagem.attachments.map { |anexo| Crm::Ai::TextoDaMidia.lido(anexo) }].compact_blank.join("\n")
   end
 
   def quem(mensagem) = @rotulo ? @rotulo.de(mensagem, autor(mensagem)) : autor(mensagem)
@@ -250,9 +262,13 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength -- no t
   def ultimas(escopo)
     return [] if escopo.nil?
 
-    escopo = escopo.where.not(content: [nil, ''])
+    escopo = @com_midia ? com_texto_ou_anexo(escopo) : escopo.where.not(content: [nil, ''])
     escopo = escopo.where(id: ..message.id) if message
     escopo.reorder(id: :desc).limit(@max_mensagens).to_a.reverse
+  end
+
+  def com_texto_ou_anexo(escopo)
+    escopo.where.not(content: [nil, '']).or(escopo.where(Crm::Ai::LeitorDeMidia.com_anexo)).includes(:attachments)
   end
 
   def card_da_conversa
