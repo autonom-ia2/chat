@@ -179,7 +179,7 @@ RSpec.describe Account do
   describe 'feature flag columns' do
     let(:account) { described_class.new(name: 'Test Account') }
 
-    it 'configures the account feature flag extension column' do
+    it 'configures the account feature flag extension column' do # rubocop:disable RSpec/ExampleLength -- o mapa inteiro de flags é o teste
       expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1')
       expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(
         feature_whatsapp_manual_transfer: 1,
@@ -251,17 +251,10 @@ RSpec.describe Account do
         feature_convite_da_reuniao: 1 << 48,
         # #1991: posição 50 (1 << 49), definitiva da Orquestração (21/10), logo depois de convite_da_reuniao.
         feature_crm_metas: 1 << 49,
-        # IA entende a conversa F1: posição PROVISÓRIA (52 com a 51 do crm_numeros_equipe; aqui, sem ela, 51). A
-        # Orquestração dá a definitiva.
+        # IA entende a conversa F1–F4: posições PROVISÓRIAS (uma a mais com a 51 do crm_numeros_equipe); a Orquestração dá a definitiva.
         feature_crm_ia_fatos_da_conversa: 1 << 50,
-        # IA entende a conversa F2: posição PROVISÓRIA (53 com a 51 do crm_numeros_equipe; aqui, sem ela, 52). A
-        # Orquestração dá a definitiva.
         feature_crm_ia_assunto_encerrado: 1 << 51,
-        # IA entende a conversa F3: posição PROVISÓRIA (54 com a 51 do crm_numeros_equipe; aqui, sem ela, 53). A
-        # Orquestração dá a definitiva.
         feature_crm_ia_fecha_card: 1 << 52,
-        # IA entende a conversa F4: posição PROVISÓRIA (55 com a 51 do crm_numeros_equipe; aqui, sem ela, 54). A
-        # Orquestração dá a definitiva.
         feature_crm_ia_leitor_de_midia: 1 << 53
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
