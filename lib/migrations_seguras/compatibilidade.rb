@@ -120,6 +120,16 @@ class MigrationsSeguras::Compatibilidade
     avisar_novos(tabela, antes, depois, 'chaves_estrangeiras', 'chave estrangeira nova em tabela que já existe')
     avisar_novos(tabela, antes, depois, 'restricoes', 'restrição (CHECK) nova em tabela que já existe')
     avisar_novos(tabela, depois, antes, 'indices', 'índice removido; consulta do código anterior pode ficar lenta')
+    avisar_mudados(tabela, antes, depois, 'indices',
+                   'índice com a definição mudada (colunas, WHERE, método); um único pode recusar o que o código anterior grava')
+    avisar_mudados(tabela, antes, depois, 'restricoes', 'restrição com a expressão mudada; pode recusar o que o código anterior grava')
+  end
+
+  # Mesmo nome nos dois lados, definição diferente.
+  def avisar_mudados(tabela, antes, depois, chave, motivo)
+    antes.fetch(chave).each do |nome, definicao|
+      avisar("#{tabela}.#{nome}", motivo) if depois.fetch(chave).key?(nome) && depois.fetch(chave)[nome] != definicao
+    end
   end
 
   # Avisa o que existe em `depois` e não em `antes` (com os dois trocados, o que sumiu).

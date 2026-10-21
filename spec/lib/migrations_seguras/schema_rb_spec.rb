@@ -37,7 +37,7 @@ RSpec.describe MigrationsSeguras::SchemaRb do
   it 'lê as colunas com tipo, limite, nulo e default, sem banco' do
     colunas = described_class.ler(base).dig('tabelas', 'contacts', 'colunas')
 
-    expect(colunas['id']).to include('tipo' => 'integer', 'nulo' => false)
+    expect(colunas['id']).to include('tipo' => 'integer limit=4', 'tipo_base' => 'integer', 'limite' => 4, 'nulo' => false)
     expect(colunas['email']).to include('tipo' => 'string limit=50', 'tipo_base' => 'string', 'limite' => 50)
     expect(colunas['account_id']['nulo']).to be(false)
     expect(colunas['name']['default']).to eq('')
@@ -73,11 +73,22 @@ RSpec.describe MigrationsSeguras::SchemaRb do
       expect(comparar(sem_apelido, 'colunas' => ['contacts.apelido'])).to be_compativel
     end
 
-    it 'só avisa quando o limite do mesmo tipo aumentou' do
-      verificacao = comparar(base.sub('limit: 50', 'limit: 100'))
+    it 'só avisa quando o limite do mesmo tipo aumentou, inclusive integer para bigint' do
+      verificacao = comparar(base.sub('limit: 50', 'limit: 100').sub('t.integer "account_id"', 't.bigint "account_id"'))
 
       expect(verificacao).to be_compativel
-      expect(verificacao.avisos.map(&:onde)).to eq(['contacts.email'])
+      expect(verificacao.avisos.map(&:onde)).to contain_exactly('contacts.email', 'contacts.account_id')
+    end
+
+    it 'avisa índice com a definição mudada e SQL do schema.rb (gatilho) que sumiu ou mudou' do
+      com_gatilho = schema(%(#{contatos}#{notas}  execute("CREATE TRIGGER trava BEFORE DELETE ON notas")\n))
+      mudado = schema(contatos.sub('name: "index_contacts_on_account_id"', 'name: "index_contacts_on_account_id", where: "account_id > 0"') + notas)
+
+      verificacao = MigrationsSeguras::Compatibilidade.new(antes: described_class.ler(com_gatilho), depois: described_class.ler(mudado))
+
+      expect(verificacao).to be_compativel
+      expect(verificacao.avisos.map(&:onde)).to contain_exactly('contacts.index_contacts_on_account_id',
+                                                                'CREATE TRIGGER trava BEFORE DELETE ON notas')
     end
   end
 

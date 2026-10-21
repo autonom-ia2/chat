@@ -44,4 +44,18 @@ RSpec.describe MigrationsSeguras::Dados do
 
     expect(described_class.motivos(arquivo)).to include('execute (SQL ou linhas)')
   end
+
+  it 'marca update de um registro e código no corpo da classe, sem marcar ENV' do
+    codigo = <<~RUBY
+      class Ajusta < ActiveRecord::Migration[7.2]
+        Account.first&.touch
+
+        def up
+          Contact.first.update(name: ENV.fetch('NOME', 'x'))
+        end
+      end
+    RUBY
+
+    expect(motivos(codigo)).to contain_exactly('chama Account', 'touch (SQL ou linhas)', 'chama Contact', 'update (SQL ou linhas)')
+  end
 end

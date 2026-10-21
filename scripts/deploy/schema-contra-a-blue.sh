@@ -8,7 +8,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/blue-aws.sh"
 
 if ! blue=$(commit_da_blue) || [ -z "$blue" ]; then
-  echo "::error::Não deu para saber de que commit veio a blue $BLUE_INSTANCE_ID. Sem ele não dá para conferir se ela aguenta o schema novo; a green não foi lançada. Rodar o deploy de novo."
+  echo "::error::Não deu para saber de que commit veio a blue (tag Name da instância ou API do GitHub). Sem ele não dá para conferir se ela aguenta o schema novo; a green não foi lançada. Rodar o deploy de novo."
   exit 1
 fi
 echo "BLUE_SHA=$blue" >> "$GITHUB_ENV"

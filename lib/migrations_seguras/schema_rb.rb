@@ -9,6 +9,11 @@ require 'prism'
 # Ruby puro: o deploy roda isto sem o Rails.
 class MigrationsSeguras::SchemaRb
   TIPOS_DA_CHAVE = { 'serial' => 'integer', 'bigserial' => 'bigint' }.freeze
+  # Como o banco vê os inteiros: um tipo só, com o tamanho no limite. Assim integer -> bigint é "ganhou espaço",
+  # igual ao que a Estrutura lê do banco.
+  TAMANHO_DO_INTEIRO = { 'integer' => 4, 'bigint' => 8 }.freeze
+  # Restrições de tabela que o schema.rb escreve dentro do create_table.
+  RESTRICOES = %i[check_constraint unique_constraint exclusion_constraint].freeze
 
   def self.ler(texto)
     new(texto).estrutura
@@ -19,7 +24,7 @@ class MigrationsSeguras::SchemaRb
     raise ArgumentError, "schema.rb não é Ruby válido: #{resultado.errors.first&.message}" if resultado.failure?
 
     @raiz = resultado.value
-    @estrutura = { 'extensoes' => [], 'tipos_enum' => {}, 'tabelas' => {}, 'views' => [], 'funcoes' => [], 'gatilhos' => [] }
+    @estrutura = { 'extensoes' => [], 'tipos_enum' => {}, 'tabelas' => {}, 'views' => [], 'funcoes' => [], 'gatilhos' => {} }
   end
 
   def estrutura
@@ -38,15 +43,22 @@ class MigrationsSeguras::SchemaRb
     definicao.block.body&.body || []
   end
 
+  LEITORES = { create_table: :ler_tabela, enable_extension: :ler_extensao, create_enum: :ler_enum,
+               add_foreign_key: :ler_chave, execute: :ler_sql }.freeze
+
   def ler_comando(comando)
     return unless comando.is_a?(Prism::CallNode) && comando.receiver.nil?
 
-    case comando.name
-    when :create_table then ler_tabela(comando)
-    when :enable_extension then @estrutura['extensoes'] << texto(argumentos(comando).first)
-    when :create_enum then @estrutura['tipos_enum'][texto(argumentos(comando).first)] = valor(argumentos(comando)[1])
-    when :add_foreign_key then ler_chave(comando)
-    end
+    leitor = LEITORES[comando.name]
+    send(leitor, comando) if leitor
+  end
+
+  def ler_extensao(comando)
+    @estrutura['extensoes'] << texto(argumentos(comando).first)
+  end
+
+  def ler_enum(comando)
+    @estrutura['tipos_enum'][texto(argumentos(comando).first)] = valor(argumentos(comando)[1])
   end
 
   def ler_tabela(comando)
@@ -71,30 +83,47 @@ class MigrationsSeguras::SchemaRb
   def ler_linha(tabela, linha)
     case linha.name
     when :index then ler_indice(tabela, linha)
-    when :check_constraint
-      tabela['restricoes'][opcoes(linha).fetch('name')] = texto(argumentos(linha).first)
+    when *RESTRICOES
+      tabela['restricoes'][opcoes(linha)['name'] || linha.slice] = texto(argumentos(linha).first)
     else
       tabela['colunas'][texto(argumentos(linha).first)] = coluna(linha.name.to_s, opcoes(linha))
     end
   end
 
+  # Colunas, unicidade e o resto da definição (where, using, opclass, order): índice de mesmo nome que mudou aparece.
   def ler_indice(tabela, linha)
     opcoes = opcoes(linha)
-    tabela['indices'][opcoes.fetch('name')] = { 'colunas' => valor(argumentos(linha).first), 'unico' => opcoes['unique'] == true }
+    tabela['indices'][opcoes.fetch('name')] = opcoes.except('name').merge(
+      'colunas' => valor(argumentos(linha).first), 'unico' => opcoes['unique'] == true
+    )
+  end
+
+  # Os `execute` do schema.rb são as funções e os gatilhos (hairtrigger). Sem ler o SQL, o próprio texto é a chave:
+  # sumiu ou mudou, a Compatibilidade avisa, como faz com o gatilho que o banco perde.
+  def ler_sql(comando)
+    @estrutura['gatilhos'][texto(argumentos(comando).first)] = true
   end
 
   def coluna(tipo, opcoes)
-    medidas = %w[limit precision scale array].filter_map { |chave| "#{chave}=#{opcoes[chave].inspect}" if opcoes.key?(chave) }
+    tipo_base, limite = medida_do_tipo(tipo, opcoes)
+    medidas = %w[precision scale array].filter_map { |chave| "#{chave}=#{opcoes[chave].inspect}" if opcoes.key?(chave) }
+    medidas.unshift("limit=#{limite.inspect}") unless limite.nil?
     {
-      'tipo' => ([tipo] + medidas).join(' '),
-      'tipo_base' => tipo,
-      'limite' => opcoes['limit'],
+      'tipo' => ([tipo_base] + medidas).join(' '),
+      'tipo_base' => tipo_base,
+      'limite' => limite,
       'precisao' => opcoes['precision'],
       'escala' => opcoes['scale'],
       'nulo' => opcoes['null'] != false,
       'default' => opcoes['default']&.to_s,
       'default_funcao' => nil
     }
+  end
+
+  def medida_do_tipo(tipo, opcoes)
+    return [tipo, opcoes['limit']] unless TAMANHO_DO_INTEIRO.key?(tipo)
+
+    ['integer', opcoes['limit'] || TAMANHO_DO_INTEIRO.fetch(tipo)]
   end
 
   def ler_chave(comando)

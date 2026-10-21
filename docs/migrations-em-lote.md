@@ -78,6 +78,12 @@ O deploy confere o mesmo de novo contra a **blue**: se o PR 1 entrou na `main` m
 mesmo deploy, o passo **Check the schema against the blue** para o deploy antes de lançar a green, e nada é mexido.
 A saída é subir o PR 1 sozinho (reverter o PR 2 na `main`, deploy, e voltar o PR 2 depois do "ok, SHA").
 
+Esse passo roda em todo deploy e é fechado por padrão: se não der para saber o commit da blue (tag `Name` da
+instância ou API do GitHub, com três tentativas), o deploy para ali, antes de existir green, e é só disparar de novo.
+É o mesmo pré-requisito do rollback (`check-rollback-target.sh`). Lido sem banco, o `schema.rb` mostra tabelas,
+colunas, índices, restrições e chaves; funções e gatilhos (os `execute` do hairtrigger) entram pelo texto do SQL e,
+como no job, só geram aviso.
+
 ## Quando um lote para no meio
 
 Cada migration roda na sua transação. Se uma esgota o `lock_timeout` (5 s, 3 tentativas) ou falha por outro motivo, as

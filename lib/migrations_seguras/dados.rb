@@ -10,11 +10,13 @@ class MigrationsSeguras::Dados
   # Métodos que leem ou gravam linhas, chamados no model, na connection ou direto na migration.
   METODOS_DE_DADOS = %i[
     execute exec_query exec_update exec_delete exec_insert select_all select_one select_value select_values select_rows
-    update_all delete_all destroy_all insert_all insert_all! upsert_all update_columns update_column update! save!
-    create! create destroy find_each find_in_batches in_batches
+    update_all delete_all destroy_all insert_all insert_all! upsert_all upsert insert insert! update_columns update_column
+    update update! update_attribute update_counters save save! create create! destroy delete delete_by destroy_by touch
+    increment! decrement! toggle! find_or_create_by find_or_create_by! create_or_find_by find_each find_in_batches
+    in_batches
   ].freeze
-  # Constantes que aparecem em migration de schema sem tocar em dado.
-  CONSTANTES_DE_SCHEMA = %w[ActiveRecord Rails].freeze
+  # Constantes que aparecem em migration sem tocar em dado: o próprio Rails e utilitários do Ruby.
+  CONSTANTES_SEM_DADOS = %w[ActiveRecord Rails StrongMigrations ENV Time Date DateTime SecureRandom YAML JSON File Pathname].freeze
 
   def self.motivos(caminho)
     new(File.read(caminho)).motivos
@@ -26,21 +28,15 @@ class MigrationsSeguras::Dados
   end
 
   def motivos
-    metodos_da_migration.each { |metodo| visitar(metodo.body) }
+    classes.each { |classe| visitar(classe.body) }
     @motivos.uniq
   end
 
   private
 
-  # Só o corpo dos métodos (up, down, change, auxiliares): o `require` no topo do arquivo não conta.
-  def metodos_da_migration
-    encontrados = []
-    pendentes = [@raiz]
-    until pendentes.empty?
-      node = pendentes.shift
-      node.is_a?(Prism::DefNode) ? encontrados << node : pendentes.concat(node.compact_child_nodes)
-    end
-    encontrados
+  # Tudo dentro da classe da migration (métodos e o corpo dela); o `require` no topo do arquivo não conta.
+  def classes
+    @raiz.statements.body.select { |node| node.is_a?(Prism::ClassNode) }
   end
 
   def visitar(node)
@@ -53,7 +49,7 @@ class MigrationsSeguras::Dados
   def registrar(chamada)
     @motivos << "#{chamada.name} (SQL ou linhas)" if METODOS_DE_DADOS.include?(chamada.name)
     constante = nome_da_constante(chamada.receiver)
-    @motivos << "chama #{constante}" if constante && CONSTANTES_DE_SCHEMA.exclude?(constante.split('::').first)
+    @motivos << "chama #{constante}" if constante && CONSTANTES_SEM_DADOS.exclude?(constante.split('::').first)
   end
 
   def nome_da_constante(node)
