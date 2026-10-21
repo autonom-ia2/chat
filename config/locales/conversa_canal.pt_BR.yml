@@ -71,6 +71,8 @@ pt_BR:
       nao_e_email: 'Só dá para responder convite que chegou numa caixa de e-mail.'
       nao_convidada: 'Esta caixa não está na lista de convidados desta reunião.'
       ja_passou: 'Esta reunião já terminou.'
+      substituido: 'O organizador mudou ou cancelou esta reunião num e-mail mais novo.'
+      em_andamento: 'Alguém está respondendo a este convite agora. Espere um instante e recarregue a conversa.'
       sem_envio: 'Esta caixa não envia e-mail (só recebe por encaminhamento). Conecte por IMAP/SMTP, Google ou Microsoft para responder.'
       falhou: 'Não deu para mandar a resposta ao organizador. Tente de novo em instantes.'
       assunto:

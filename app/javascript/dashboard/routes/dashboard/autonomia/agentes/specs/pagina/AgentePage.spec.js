@@ -84,6 +84,14 @@ const materialApi = vi.hoisted(() => ({
   pedirAutoteste: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/material', () => ({ default: materialApi }));
+// #1429 F3 — a base de seguros do agente.
+const baseApi = vi.hoisted(() => ({
+  ler: vi.fn(),
+  comparar: vi.fn(),
+  atualizar: vi.fn(),
+  desfazer: vi.fn(),
+}));
+vi.mock('dashboard/api/autonomia/baseDoAgente', () => ({ default: baseApi }));
 
 const no = seletor => document.querySelector(seletor);
 const todos = seletor => [...document.querySelectorAll(seletor)];
@@ -1692,6 +1700,81 @@ describe('AgentePage', () => {
       expect(no('[data-interruptor]').getAttribute('aria-label')).toBe(
         'AGENTS.JORNADA.PAGINA.INTERRUPTOR'
       );
+      wrapper.unmount();
+    });
+  });
+
+  // #1429 F3 — a linha "Base de seguros", só com a Fase 2 e fora da Lia.
+  describe('base de seguros', () => {
+    const comFase2 = () => {
+      store.state['accounts/getAccount'] = () => ({
+        autonomia_agents_fase2: true,
+      });
+      store.state.getCurrentAccountId = 1;
+    };
+    const semBase = {
+      situacao: 'sem_base',
+      atual: null,
+      nova: { segmento: 'seguros/corretora', data: '2026-10-21', versao: 'v' },
+      pode_atualizar: true,
+      desfazer: null,
+    };
+
+    beforeEach(() => {
+      Object.values(baseApi).forEach(fn => fn.mockReset());
+      baseApi.ler.mockResolvedValue({ data: semBase });
+    });
+
+    it('shows the line below the name and voice, with the button for who manages', async () => {
+      comFase2();
+      const wrapper = await montar();
+      expect(baseApi.ler).toHaveBeenCalledWith(7);
+      expect(no('[data-linha="base"]')).not.toBeNull();
+      expect(no('[data-base-atualizar]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('opens the before and after drawer from the button', async () => {
+      comFase2();
+      baseApi.comparar.mockReturnValue(new Promise(() => {}));
+      const wrapper = await montar();
+      await clicar('[data-base-atualizar]');
+      expect(no('[data-comparando]')).not.toBeNull();
+      expect(baseApi.comparar).toHaveBeenCalledWith(7, expect.any(AbortSignal));
+      wrapper.unmount();
+    });
+
+    it('who only views sees the line without the button', async () => {
+      comFase2();
+      estado.podeGerenciar = false;
+      const wrapper = await montar();
+      expect(no('[data-linha="base"]')).not.toBeNull();
+      expect(no('[data-base-atualizar]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('without the Fase 2 it does not even ask', async () => {
+      const wrapper = await montar();
+      expect(baseApi.ler).not.toHaveBeenCalled();
+      expect(no('[data-linha="base"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('the quote agent (Lia) has no line', async () => {
+      preparar({ agente: bia({ agent_type: 'insurance_quote' }) });
+      comFase2();
+      const wrapper = await montar();
+      expect(baseApi.ler).not.toHaveBeenCalled();
+      expect(no('[data-linha="base"]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('a failed read hides the line, with no error', async () => {
+      comFase2();
+      baseApi.ler.mockRejectedValue(new Error('404'));
+      const wrapper = await montar();
+      expect(no('[data-linha="base"]')).toBeNull();
+      expect(alerta).not.toHaveBeenCalled();
       wrapper.unmount();
     });
   });

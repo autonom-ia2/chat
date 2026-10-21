@@ -528,6 +528,9 @@ onMounted(() => {
         </template>
       </div>
 
+      <!-- #1429 F3: a linha "Base de seguros" (BaseDoAgenteLinha), quando a página a manda. -->
+      <slot name="base" />
+
       <div
         v-if="mostrarAgenda"
         data-linha="agenda"

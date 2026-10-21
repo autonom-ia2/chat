@@ -108,6 +108,78 @@ RSpec.describe ConversaCanal::ConviteDoEmail do
     expect(described_class.ler(email_com(ocorrencia))[:ocorrencia]).to eq(Time.utc(2026, 10, 29, 13).to_i)
   end
 
+  describe 'fim da série (#1995): limite por cima, sem percorrer as ocorrências' do
+    def serie(regra, inicio: 'DTSTART:20261022T130000Z')
+      ics('google_meet').sub('DTSTART:20261022T130000Z', inicio).sub('SEQUENCE:0', "SEQUENCE:0\nRRULE:#{regra}")
+    end
+
+    def fim_da_serie(regra, **)
+      described_class.ler(email_com(serie(regra, **)))[:fim_da_serie]
+    end
+
+    it 'COUNT: o começo mais COUNT períodos, e a duração da reunião', :aggregate_failures do
+      expect(fim_da_serie('FREQ=DAILY;COUNT=3')).to eq(Time.utc(2026, 10, 25, 14).to_i)
+      expect(fim_da_serie('FREQ=WEEKLY;INTERVAL=2;COUNT=2')).to eq(Time.utc(2026, 11, 19, 14).to_i)
+      # Quinta 22/10, segunda e quarta, 4 vezes (última em 4/11): duas semanas cheias, mais uma de folga.
+      expect(fim_da_serie('FREQ=WEEKLY;BYDAY=MO,WE;COUNT=4')).to eq(Time.utc(2026, 11, 12, 14).to_i)
+    end
+
+    it 'UNTIL: até o UNTIL, mais a duração', :aggregate_failures do
+      expect(fim_da_serie('FREQ=DAILY;UNTIL=20261025T130000Z')).to eq(Time.utc(2026, 10, 25, 14).to_i)
+      # Só com data: o dia todo, até onde ele termina no fuso mais a oeste (UTC-12).
+      expect(fim_da_serie('FREQ=WEEKLY;UNTIL=20261029')).to eq(Time.utc(2026, 10, 30, 12, 59, 59).to_i)
+      # Sem o Z (flutuante): o horário no fuso mais a oeste.
+      expect(fim_da_serie('FREQ=DAILY;UNTIL=20261025T130000')).to eq(Time.utc(2026, 10, 26, 2).to_i)
+    end
+
+    it 'dia inteiro com UNTIL no mesmo dia não vira reunião que já passou' do
+      texto = ics('dia_inteiro').sub('SEQUENCE:0', "SEQUENCE:0\nRRULE:FREQ=WEEKLY;UNTIL=20261105")
+      expect(described_class.ler(email_com(texto))[:fim_da_serie]).to be > Time.utc(2026, 11, 5, 12).to_i
+    end
+
+    it 'o limite sai no fuso do convite (VTIMEZONE do Outlook)' do
+      # Sexta 23/10 às 22h em São Paulo (sábado 01h UTC), 2 vezes: a última é 30/10; o limite, 06/11 às 22h30 de lá.
+      texto = ics('outlook_teams').sub(/^DTSTART;.*$/, 'DTSTART;TZID=E. South America Standard Time:20261023T220000')
+                                  .sub(/^DTEND;.*$/, 'DTEND;TZID=E. South America Standard Time:20261023T223000')
+                                  .sub('SEQUENCE:2', "SEQUENCE:2\nRRULE:FREQ=WEEKLY;BYDAY=FR;COUNT=2")
+      expect(described_class.ler(email_com(texto))[:fim_da_serie]).to eq(Time.utc(2026, 11, 7, 1, 30).to_i)
+    end
+
+    it 'UNTIL antes do começo: o próprio DTSTART ainda é uma ocorrência' do
+      expect(fim_da_serie('FREQ=DAILY;UNTIL=20261022T030000Z')).to eq(Time.utc(2026, 10, 22, 14).to_i)
+    end
+
+    it 'COUNT com horário sem fuso conta até onde ele pode estar (UTC-12)' do
+      expect(fim_da_serie('FREQ=HOURLY;COUNT=2', inicio: 'DTSTART:20261022T130000')).to eq(Time.utc(2026, 10, 23, 4).to_i)
+    end
+
+    it 'regra de minuto em minuto até 2099 não trava o recebimento' do
+      inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      expect(fim_da_serie('FREQ=MINUTELY;UNTIL=20991231T000000Z')).to eq(Time.utc(2099, 12, 31, 1).to_i)
+      expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 1
+    end
+
+    it 'regra que pode pular períodos, ou série sem fim, fica sem fim_da_serie', :aggregate_failures do
+      expect(fim_da_serie('FREQ=WEEKLY')).to be_nil
+      expect(fim_da_serie('FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=1;COUNT=6')).to be_nil
+      expect(fim_da_serie('FREQ=MONTHLY;BYDAY=2TU;COUNT=3')).to be_nil
+      expect(fim_da_serie('FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR;COUNT=10')).to be_nil
+      expect(fim_da_serie('FREQ=MONTHLY;COUNT=3', inicio: 'DTSTART:20261031T130000Z')).to be_nil
+      expect(described_class.ler(email_com(serie('FREQ=WEEKLY;COUNT=2')))[:recorrente]).to be(true)
+    end
+  end
+
+  it 'ocorrência sem fuso guarda o RECURRENCE-ID como veio (#1995)', :aggregate_failures do
+    flutuante = ics('google_meet').sub('SEQUENCE:0', "SEQUENCE:0\nRECURRENCE-ID:20261029T130000")
+    expect(described_class.ler(email_com(flutuante))[:ocorrencia_original]).to eq(valor: '20261029T130000')
+
+    inventado = ics('google_meet').sub('SEQUENCE:0', "SEQUENCE:0\nRECURRENCE-ID;TZID=Fuso Inventado:20261029T130000")
+    expect(described_class.ler(email_com(inventado))[:ocorrencia_original]).to eq(valor: '20261029T130000', tzid: 'Fuso Inventado')
+
+    com_fuso = ics('google_meet').sub('SEQUENCE:0', "SEQUENCE:0\nRECURRENCE-ID:20261029T130000Z")
+    expect(described_class.ler(email_com(com_fuso))).not_to have_key(:ocorrencia_original)
+  end
+
   it 'dia inteiro sem DTEND dura o próprio dia' do
     texto = ics('dia_inteiro').sub("DTEND;VALUE=DATE:20261106\n", '')
     expect(described_class.ler(email_com(texto))[:fim]).to eq(Time.utc(2026, 11, 6, 12).to_i)

@@ -592,6 +592,9 @@
         "CANCELADA_TEXTO": "The organizer canceled this meeting.",
         "ENTRAR": "Join meeting",
         "ENTRAR_NO": "Join on {app}",
+        "SEPARADOR": "·",
+        "DURACAO": "({duracao})",
+        "A_MAIS": "+{n}",
         "MINUTOS": "{n} min",
         "HORAS": "{n} h",
         "HORAS_E_MINUTOS": "{h} h {m} min",
@@ -612,6 +615,9 @@
         "RECORRENTE": "Recurring",
         "OCORRENCIA": "One date of a recurring meeting",
         "PASSOU": "This meeting has already ended.",
+        "SUBSTITUIDO": "The organizer changed this meeting in a newer email. Answer the new invitation.",
+        "CANCELADA_DEPOIS": "The organizer canceled this meeting in a newer email.",
+        "VER_O_NOVO": "Open the newer email",
         "MANTER": "Keep my answer",
         "SEM_ORGANIZADOR": "This invitation does not say who organized it, so it cannot be answered from here."
       }
