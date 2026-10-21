@@ -8,7 +8,9 @@ require 'rails_helper'
 # As variantes vão intercaladas (pergunta × variante), e os tipos também: se o teto cortar, a cobertura fica igual.
 # O juiz, de outro modelo, não sabe a variante e lê o sentido (nunca lista de palavras). Teto somado pelo consumo
 # gravado em Crm::AiUsageEvent, com o juiz incluído; antes de cada execução sobra uma folga para ela caber no teto.
-# `GUIA_VOCABULARIO_EVAL_SAIDA=<arquivo>` grava o relatório em JSON.
+# `GUIA_VOCABULARIO_EVAL_SAIDA=<arquivo>` grava o relatório em JSON. Para rodar só parte (e caber no que sobrou do
+# orçamento): `GUIA_VOCABULARIO_EVAL_TIPOS=seguradora,insurtech`, `GUIA_VOCABULARIO_EVAL_PERGUNTAS=p5,p4` (nesta ordem)
+# e `GUIA_VOCABULARIO_EVAL_TETO_USD=<valor>`, que só abaixa o teto, nunca passa de TETO_USD.
 module AvaliacaoDoVocabulario
   JUIZ = 'gpt-5.4'.freeze
   TETO_USD = 2.0
@@ -17,14 +19,18 @@ module AvaliacaoDoVocabulario
   FOLGA_MINIMA_USD = 0.30
   REPETICOES = 1
   VARIANTES = %i[sem_camada com_camada].freeze
-  TIPOS = %w[corretora saude_beneficios seguradora].freeze
+  TIPOS = %w[corretora saude_beneficios seguradora insurtech].freeze
+  NAO_CORRETORA = %w[seguradora insurtech].freeze
 
-  # As mesmas perguntas nos três tipos, do jeito que o operador fala (com "vendas" e "cliente" de propósito).
+  # As mesmas perguntas em todos os tipos, do jeito que o operador fala (com "vendas" e "cliente" de propósito). As de
+  # `tipos:` puxam o critério que importa para quem não é corretora: a pergunta já vem com "cotação".
   PERGUNTAS = [
     { letra: 'p1', texto: 'Quantas vendas eu fechei esse mês?' },
     { letra: 'p2', texto: 'Como cadastro um cliente novo?' },
     { letra: 'p3', texto: 'Onde vejo as propostas paradas?' },
-    { letra: 'p4', texto: 'Como marco que o cliente fechou?' }
+    { letra: 'p4', texto: 'Como marco que o cliente fechou?' },
+    { letra: 'p5', texto: 'Como crio uma cotação nova?', tipos: NAO_CORRETORA },
+    { letra: 'p6', texto: 'Como faço uma proposta para um cliente?', tipos: NAO_CORRETORA }
   ].freeze
 
   # O que cada tipo espera ouvir, escrito para o juiz (não é o texto da camada).
@@ -37,7 +43,10 @@ module AvaliacaoDoVocabulario
                           'nunca "ganho".',
     'seguradora' => 'Seguradora (não é corretora). Fala de seguro, proposta, apólice, sinistro e renovação; nunca chama ' \
                     'a conta, a equipe ou o trabalho dela de corretora, corretor ou cotação; "segurado" só com ' \
-                    'apólice; negócio fechado é "fechou o seguro", nunca "ganho".'
+                    'apólice; negócio fechado é "fechou o seguro", nunca "ganho".',
+    'insurtech' => 'Empresa de seguros digital (não é corretora). Fala de seguro, proposta, apólice, sinistro e ' \
+                   'renovação; nunca chama a conta, a equipe ou o trabalho dela de corretora, corretor ou cotação; ' \
+                   '"segurado" só com apólice; negócio fechado é "fechou o seguro", nunca "ganho".'
   }.freeze
 
   RUINS = %w[chama_de_segurado_sem_apolice diz_vendedor_ou_ganho diz_corretora_ou_cotacao].freeze
@@ -58,8 +67,10 @@ module AvaliacaoDoVocabulario
                                                                        'de saúde, chama alguém de segurado?' },
         diz_vendedor_ou_ganho: { type: 'boolean', description: 'Chama quem vende de vendedor (ou de produtor, na ' \
                                                                'corretora), ou o negócio fechado de ganho ou venda ganha?' },
-        diz_corretora_ou_cotacao: { type: 'boolean', description: 'Só para a seguradora: chama a conta, a equipe ou o ' \
-                                                                  'trabalho dela de corretora, corretor ou cotação? ' \
+        diz_corretora_ou_cotacao: { type: 'boolean', description: 'Só para seguradora e insurtech: chama a conta, a ' \
+                                                                  'equipe ou o trabalho dela de corretora, corretor ou ' \
+                                                                  'cotação, como palavra dela? O nome de uma tela ou ' \
+                                                                  'menu citado como aparece (o menu Cotação) não conta. ' \
                                                                   'Para os outros tipos, false.' },
         justificativa: { type: 'string', description: 'Uma frase.' }
       }
@@ -69,11 +80,13 @@ module AvaliacaoDoVocabulario
   INSTRUCAO_DO_JUIZ = 'Você avalia a resposta do assistente interno de uma plataforma de atendimento e CRM. Quem pergunta ' \
                       'é a pessoa que opera a conta. Você recebe o tipo da conta e as palavras que ele usa, os dados da ' \
                       'conta, a pergunta e a resposta. Nome de botão ou menu citado como aparece na tela e nome de funil ou ' \
-                      'etapa que a conta criou (Comercial, Novo Lead, Proposta enviada) não contam contra o vocabulário. ' \
+                      'etapa que a conta criou (Comercial, Novo Lead, Proposta enviada, e o menu Cotação, que existe) não ' \
+                      'contam contra o vocabulário. ' \
                       'A pergunta pode usar palavras que o tipo não usa; julgue só a resposta. Responda cada campo pelo ' \
                       'sentido, sem ser generoso.'.freeze
 
-  DADOS_DA_CONTA = 'Funil Comercial com as etapas Novo Lead e Proposta enviada. Três cards: um fechado neste mês ' \
+  DADOS_DA_CONTA = 'Funil Comercial, do tipo Vender (o tipo do funil, que aparece como "funil de Vender"), com as etapas ' \
+                   'Novo Lead e Proposta enviada. Três cards: um fechado neste mês ' \
                    '(R$ 1.200,00, de Pedro Lima), um aberto em Proposta enviada sem movimento há 20 dias (Maria Souza) ' \
                    'e um aberto em Novo Lead (João Alves). A pessoa que pergunta administra a conta.'.freeze
 end
@@ -81,7 +94,7 @@ end
 RSpec.describe 'Avaliação paga do vocabulário do Guia (#1802, 6.B)', :eval_pago do # rubocop:disable RSpec/DescribeClass
   let(:relatorio) { [] }
   let(:pulados) { [] }
-  let(:contas) { AvaliacaoDoVocabulario::TIPOS.index_with { |perfil| conta_do_tipo!(perfil) } }
+  let(:contas) { tipos_escolhidos.index_with { |perfil| conta_do_tipo!(perfil) } }
 
   around do |example|
     WebMock.allow_net_connect!
@@ -166,15 +179,42 @@ RSpec.describe 'Avaliação paga do vocabulário do Guia (#1802, 6.B)', :eval_pa
     [AvaliacaoDoVocabulario::FOLGA_MINIMA_USD, maior * 2].max
   end
 
-  # Intercalado: vez × pergunta × tipo × variante.
+  def lista_do_env(nome)
+    ENV.fetch(nome, '').split(',').map(&:strip).compact_blank
+  end
+
+  def tipos_escolhidos
+    pedidos = lista_do_env('GUIA_VOCABULARIO_EVAL_TIPOS')
+    pedidos.empty? ? AvaliacaoDoVocabulario::TIPOS : AvaliacaoDoVocabulario::TIPOS & pedidos
+  end
+
+  def perguntas_escolhidas
+    pedidas = lista_do_env('GUIA_VOCABULARIO_EVAL_PERGUNTAS')
+    return AvaliacaoDoVocabulario::PERGUNTAS if pedidas.empty?
+
+    pedidas.filter_map { |letra| AvaliacaoDoVocabulario::PERGUNTAS.find { |pergunta| pergunta[:letra] == letra } }
+  end
+
+  def teto
+    pedido = ENV.fetch('GUIA_VOCABULARIO_EVAL_TETO_USD', nil).presence&.to_f
+    [pedido || AvaliacaoDoVocabulario::TETO_USD, AvaliacaoDoVocabulario::TETO_USD].min
+  end
+
+  # Intercalado: vez × pergunta × tipo × variante. Pergunta com `tipos:` só vai a esses tipos.
   def rodadas
-    (1..AvaliacaoDoVocabulario::REPETICOES).to_a.product(AvaliacaoDoVocabulario::PERGUNTAS, AvaliacaoDoVocabulario::TIPOS,
-                                                         AvaliacaoDoVocabulario::VARIANTES)
+    (1..AvaliacaoDoVocabulario::REPETICOES).to_a.product(perguntas_escolhidas, tipos_escolhidos, AvaliacaoDoVocabulario::VARIANTES)
+                                           .select { |_vez, pergunta, perfil, _variante| pergunta.fetch(:tipos, [perfil]).include?(perfil) }
+  end
+
+  # O eval grava a chave da OpenAI em InstallationConfig: só no banco de teste.
+  def banco_de_teste!
+    banco = ActiveRecord::Base.connection.current_database.to_s
+    raise "eval só roda no banco de teste (#{banco})" unless Rails.env.test? && banco.start_with?('chatwoot_test')
   end
 
   def rodar_todas
     rodadas.each do |vez, pergunta, perfil, variante|
-      if custo_ate_agora + folga > AvaliacaoDoVocabulario::TETO_USD
+      if custo_ate_agora + folga > teto
         pulados << { tipo: perfil, pergunta: pergunta[:letra], variante: variante, execucao: vez }
         next
       end
@@ -197,6 +237,8 @@ RSpec.describe 'Avaliação paga do vocabulário do Guia (#1802, 6.B)', :eval_pa
     ligada = ENV['AUTONOMIA_EVAL_PAGO'] == '1' && ENV['GUIA_VOCABULARIO_EVAL'] == '1' && ENV['OPENAI_API_KEY'].present?
     skip 'avaliação paga: rode com AUTONOMIA_EVAL_PAGO=1, GUIA_VOCABULARIO_EVAL=1 e OPENAI_API_KEY' unless ligada
 
+    banco_de_teste!
+    expect(rodadas).not_to be_empty, 'nenhuma execução com os filtros pedidos'
     InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').destroy_all
     InstallationConfig.create!(name: 'CAPTAIN_OPEN_AI_API_KEY', value: ENV.fetch('OPENAI_API_KEY'))
 
@@ -207,7 +249,7 @@ RSpec.describe 'Avaliação paga do vocabulário do Guia (#1802, 6.B)', :eval_pa
       File.write(destino, JSON.pretty_generate(placar: placar, custo_usd: custo_ate_agora.round(4), pulados: pulados,
                                                execucoes: relatorio))
     end
-    expect(custo_ate_agora).to be <= AvaliacaoDoVocabulario::TETO_USD
+    expect(custo_ate_agora).to be <= teto
     expect(pulados).to be_empty, "teto de custo atingido: #{pulados.size} execuções puladas"
   end
 end

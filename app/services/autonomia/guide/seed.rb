@@ -1,7 +1,7 @@
 module Autonomia
   module Guide
     # Cria/garante o agente "Guia da Plataforma" de uma conta e ingere a base de conhecimento
-    # (os ~81 fluxos) com chunking POR FLUXO (1 fluxo = 1 KnowledgeEntry) para retrieval exato.
+    # (os fluxos de guia-produto.md) com chunking POR FLUXO (1 fluxo = 1 KnowledgeEntry) para retrieval exato.
     #
     # GLOBAL / AUTO-ON: o Guia nasce sozinho em QUALQUER conta elegível (Autonomia habilitada =
     # ENV master + chave de IA do Kanban resolvível). Idempotente: chamado no boot do chat (lazy)
