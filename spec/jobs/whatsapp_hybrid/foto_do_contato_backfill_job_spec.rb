@@ -41,6 +41,7 @@ describe WhatsappHybrid::FotoDoContatoBackfillJob do
 
     jobs = enqueued_jobs.select { |job| job['job_class'] == 'WhatsappHybrid::FotoDoContatoJob' }
     expect(agendados).to eq([novo.id, antigo.id])
+    expect(jobs.map { |job| job['arguments'].last }).to all(eq(described_class::TETO_DO_BACKFILL))
     expect(jobs.last['scheduled_at'].to_time - jobs.first['scheduled_at'].to_time).to be >= 60
   end
 
@@ -53,7 +54,7 @@ describe WhatsappHybrid::FotoDoContatoBackfillJob do
     expect(agendados).to be_empty
   end
 
-  it 'continua de onde parou e não dá a caixa por feita enquanto houver contato sem marca adiante' do
+  it 'pula os marcados sem travar e não dá a caixa por feita enquanto houver contato sem marca adiante' do
     stub_const("#{described_class}::LOTE", 2)
     contatos = Array.new(9) { |i| contato_com_conversa("+55119000001#{i.to_s.rjust(2, '0')}") }
     contatos.last(8).each { |c| Redis::Alfred.setex(WhatsappHybrid::FotoDoContato.chave_do_contato(c.id), 1, 60) }
@@ -90,14 +91,28 @@ describe WhatsappHybrid::FotoDoContatoBackfillJob do
     expect(agendados).to eq([valido.id])
   end
 
-  it 'dá duas voltas e só então marca a caixa como feita e não volta a ela' do
-    described_class.perform_now
-    expect(Redis::Alfred.exists?(feito)).to be(false)
-    described_class.perform_now
-    contato_com_conversa('+5511900000006', 1.hour.ago)
+  it 'na segunda volta pega quem ficou sem consulta na primeira, e só então marca a caixa como feita' do
+    devolvido = contato_com_conversa('+5511900000006')
 
+    described_class.perform_now
+    expect(agendados).to eq([devolvido.id])
+    expect(Redis::Alfred.exists?(feito)).to be(false)
+
+    described_class.perform_now
+    expect(agendados).to eq([devolvido.id, devolvido.id])
     expect(Redis::Alfred.exists?(feito)).to be(true)
+
+    contato_com_conversa('+5511900000016')
     expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappHybrid::FotoDoContatoJob)
+  end
+
+  it 'uma rodada por caixa de cada vez' do
+    contato_com_conversa('+5511900000017')
+    Redis::Alfred.set("#{described_class::RODANDO}#{inbox.id}", 1, ex: 60)
+
+    expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappHybrid::FotoDoContatoJob)
+    Redis::Alfred.delete("#{described_class::RODANDO}#{inbox.id}")
+    expect { described_class.perform_now }.to have_enqueued_job(WhatsappHybrid::FotoDoContatoJob)
   end
 
   it 'no máximo LOTE por rodada e nunca além do teto do dia' do
@@ -121,23 +136,52 @@ describe WhatsappHybrid::FotoDoContatoBackfillJob do
       -> { Redis::Alfred.set(WhatsappHybrid::FotoDoContato.chave_do_dia(connection.session_name), described_class::TETO_DO_BACKFILL) }
     ]
 
-    cenarios.each do |cenario|
+    restaurar = lambda do
       account.enable_features!(WhatsappHybrid::FotoDoContato::FLAG)
       connection.update!(paused_at: nil)
       allow(client).to receive(:get_session).and_return({ 'status' => 'WORKING' })
       Redis::Alfred.delete(WhatsappHybrid::FotoDoContato.chave_do_dia(connection.session_name))
+      Redis::Alfred.scan_each(match: 'whatsapp_hybrid:foto_do_contato:backfill_*') { |key| Redis::Alfred.delete(key) }
+    end
+    allow(Rails.logger).to receive(:error)
+
+    cenarios.each do |cenario|
+      restaurar.call
       cenario.call
 
       expect { described_class.perform_now }.not_to have_enqueued_job(WhatsappHybrid::FotoDoContatoJob)
     end
-    expect(Redis::Alfred.exists?(feito)).to be(false)
+    restaurar.call
+    expect { described_class.perform_now }.to have_enqueued_job(WhatsappHybrid::FotoDoContatoJob)
+    expect(Rails.logger).not_to have_received(:error)
   end
 
-  it 'erro numa caixa não para as outras e não marca como feita' do
+  it 'erro do motor ao consultar a sessão pausa a busca da sessão por 1 hora, sem marcar a caixa' do
     allow(client).to receive(:get_session).and_raise(Waha::Client::Timeout, 'sem resposta')
     contato_com_conversa('+5511900000008', 1.hour.ago)
 
     expect { described_class.perform_now }.not_to raise_error
+    chave = WhatsappHybrid::FotoDoContato.chave_da_sessao(connection.session_name)
+    expect(Redis::Alfred.ttl(chave)).to be_within(60).of(WhatsappHybrid::FotoDoContato::PAUSA_DA_SESSAO.to_i)
     expect(Redis::Alfred.exists?(feito)).to be(false)
+    expect(agendados).to be_empty
+  end
+
+  it 'erro numa caixa não para a outra' do
+    outro_canal = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false,
+                                            validate_provider_config: false)
+    WhatsappHybrid::Connection.create!(account: account, inbox: outro_canal.inbox, session_name: 'hybrid-foto-backfill-2',
+                                       status: 'connected', connected_phone: outro_canal.phone_number.delete('^0-9'),
+                                       risk_accepted_at: Time.current)
+    contato = create(:contact, account: account, phone_number: '+5511900000018')
+    create(:conversation, account: account, inbox: outro_canal.inbox, contact: contato)
+    contato_com_conversa('+5511900000019')
+    allow(client).to receive(:get_session).with('hybrid-foto-backfill', anything).and_raise(ArgumentError, 'quebrou')
+    allow(Rails.logger).to receive(:error)
+
+    with_modified_env(WHATSAPP_HYBRID_FOTO_BACKFILL_INBOX_IDS: "#{inbox.id},#{outro_canal.inbox.id}") { described_class.perform_now }
+
+    expect(agendados).to eq([contato.id])
+    expect(Rails.logger).to have_received(:error).with(/inbox=#{inbox.id} ArgumentError/)
   end
 end

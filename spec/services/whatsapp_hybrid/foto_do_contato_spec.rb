@@ -110,6 +110,18 @@ describe WhatsappHybrid::FotoDoContato do
       expect(Redis::Alfred.exists?(described_class.chave_do_contato(contact.id))).to be(false)
     end
 
+    it 'com teto menor (backfill), não consulta quando a sessão já chegou nele no dia, e não gasta a cota' do
+      allow(client).to receive(:profile_picture)
+      chave = described_class.chave_do_dia(connection.session_name)
+      Redis::Alfred.set(chave, 80, ex: 60)
+
+      described_class.new(contact: contact, connection: connection, client: client, teto: 80).perform
+
+      expect(client).not_to have_received(:profile_picture)
+      expect(Redis::Alfred.get(chave).to_i).to eq(80)
+      expect(Redis::Alfred.exists?(described_class.chave_do_contato(contact.id))).to be(false)
+    end
+
     it 'não consulta com a sessão fora do ar, pausada, em outro número ou com o WhatsApp API desligado na caixa' do
       allow(client).to receive(:profile_picture)
       [{ status: 'disconnected' }, { paused_at: Time.current }, { connected_phone: '5511000000000' },

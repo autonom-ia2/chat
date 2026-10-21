@@ -64,10 +64,24 @@ class WhatsappHybrid::FotoDoContato
     ::Redis::Alfred.get(chave_do_dia(session_name)).to_i
   end
 
-  def initialize(contact:, connection:, client: Waha::Client.new)
+  # Sem resposta (status nil: conexão, timeout), limite de consultas ou erro do servidor do motor.
+  def self.erro_do_motor?(error)
+    return true if ERROS_DE_REDE.any? { |classe| error.is_a?(classe) }
+    return false unless error.is_a?(Waha::Client::Error) && !error.is_a?(Waha::Client::InvalidResponse)
+
+    error.status.nil? || error.status == LIMITE_DE_CONSULTAS || error.status >= 500
+  end
+
+  def self.pausar_a_sessao!(connection)
+    ::Redis::Alfred.setex(chave_da_sessao(connection.session_name), 1, PAUSA_DA_SESSAO.to_i)
+  end
+
+  # teto: o máximo de consultas da sessão no dia para esta busca (o backfill passa um teto menor que o do ao vivo).
+  def initialize(contact:, connection:, client: Waha::Client.new, teto: TETO_DIARIO)
     @contact = contact
     @connection = connection
     @client = client
+    @teto = [teto.to_i, TETO_DIARIO].min
   end
 
   def perform
@@ -77,7 +91,7 @@ class WhatsappHybrid::FotoDoContato
 
     consultar
   rescue StandardError => e
-    erro_do_motor?(e) ? pausar_a_sessao(e) : adiar_o_contato(e)
+    self.class.erro_do_motor?(e) ? pausar_a_sessao(e) : adiar_o_contato(e)
   end
 
   private
@@ -102,7 +116,9 @@ class WhatsappHybrid::FotoDoContato
 
     chave_do_dia = self.class.chave_do_dia(sessao)
     ::Redis::Alfred.set(chave_do_dia, 0, nx: true, ex: 1.day.to_i)
-    ::Redis::Alfred.incr(chave_do_dia) <= TETO_DIARIO
+    return false if ::Redis::Alfred.get(chave_do_dia).to_i >= @teto
+
+    ::Redis::Alfred.incr(chave_do_dia) <= @teto
   end
 
   # Resposta que não é o formato esperado não é "sem foto": o contato fica adiado (ver o rescue do perform).
@@ -113,17 +129,9 @@ class WhatsappHybrid::FotoDoContato
     resposta['profilePictureURL'].presence
   end
 
-  # Sem resposta (status nil: conexão, timeout), limite de consultas ou erro do servidor do motor.
-  def erro_do_motor?(error)
-    return true if ERROS_DE_REDE.any? { |classe| error.is_a?(classe) }
-    return false unless error.is_a?(Waha::Client::Error) && !error.is_a?(Waha::Client::InvalidResponse)
-
-    error.status.nil? || error.status == LIMITE_DE_CONSULTAS || error.status >= 500
-  end
-
   def pausar_a_sessao(error)
     devolver_o_contato
-    ::Redis::Alfred.setex(self.class.chave_da_sessao(@connection.session_name), 1, PAUSA_DA_SESSAO.to_i)
+    self.class.pausar_a_sessao!(@connection)
     Rails.logger.warn("[whatsapp_hybrid] foto do contato: busca pausada na sessão inbox=#{@connection.inbox_id} #{detalhe(error)}")
   end
 
