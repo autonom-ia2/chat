@@ -97,8 +97,10 @@ module Crm
 
       # Memória das IAs (#1601): de carona nesta avaliação, só com a flag e num card com contato (ids locais e fatos).
       # A janela da avaliação (#1926): até MAX_MESSAGES_CAP mensagens, não as 12 dos outros leitores.
+      # Card que renasce (#1925): o pedido encerrado antes deste, para a IA decidir se é o mesmo retomado.
       def contexto(fora)
-        ContextBuilder.new(card: @card, fora: fora, memoria: Crm::Memoria::Pendente.avaliar?(@card), janela: :avaliacao).perform
+        ContextBuilder.new(card: @card, fora: fora, memoria: Crm::Memoria::Pendente.avaliar?(@card), janela: :avaliacao,
+                           pedido_anterior: true).perform
       end
 
       def credential_resolver

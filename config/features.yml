@@ -677,11 +677,23 @@
   enabled: false
   column: feature_flags_ext_1
 
+# Foto de perfil do contato na caixa híbrida (#1934). Ligada: mensagem recebida numa caixa híbrida, de contato sem foto,
+# busca a foto pela sessão WAHA da própria caixa (mesmo número) e grava com Avatar::AvatarFromUrlJob
+# (WhatsappHybrid::FotoDoContato). No máximo 1 tentativa a cada 7 dias por contato (30 dias quando a foto está escondida),
+# 1 consulta a cada 15 s e 300 por dia por sessão; erro do motor pausa a sessão por 1 hora. A Cloud pura segue sem foto
+# (decisão do Rodrigo, 20/10). Posição 48 na feature_flags_ext_1 (1 << 47), definitiva da Orquestração (21/10), logo
+# depois de crm_ia_avalia_mensagem_equipe. Ligada em
+# TODAS as contas (Rodrigo, 20/10: o Híbrido já está liberado e o gate é a caixa híbrida): as existentes pela
+# Orquestração depois do deploy; conta nova nasce ligada (migration 20261108220000).
+- name: hibrido_foto_do_contato
+  display_name: Foto de perfil do contato no WhatsApp Híbrido
+  enabled: true
+  column: feature_flags_ext_1
+
 # Convite de reunião no e-mail (#1984): o convite que chega como parte text/calendar vira um cartão na conversa, com
 # Sim / Talvez / Não ao organizador (pela agenda Google ou Microsoft ligada na caixa, ou por e-mail iMIP nas demais).
-# Posição na feature_flags_ext_1 = lugar na lista (o bit): 49 (281474976710656 = 1 << 48) da Orquestração (21/10),
-# depois do hibrido_foto_do_contato (48, #1957); enquanto o #1957 não entra, fica na 48. Definitiva = fim da main na
-# vaga. O cartão lê o convite guardado em todo e-mail; a flag só mostra o cartão e libera a resposta.
+# Posição 49 na feature_flags_ext_1 (281474976710656 = 1 << 48), definitiva da Orquestração (21/10), logo depois de
+# hibrido_foto_do_contato. O cartão lê o convite guardado em todo e-mail; a flag só mostra o cartão e libera a resposta.
 # Ligada nas contas 1, 16 e 18 da stack Hub2You (piloto, pela Orquestração depois do deploy); conta nova nasce ligada
 # (migration 20261108250000).
 - name: convite_da_reuniao

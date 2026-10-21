@@ -83,7 +83,8 @@
       "CUSTOM_ROLE_MANAGE": "Montar funções",
       "GRANT_ABOVE_OWN": "Pode entregar acesso acima do próprio",
       "FINANCIAL_VIEW": "Ver os custos da conta",
-      "FINANCIAL_MANAGE": "Ligar e desligar a autorização de cobranças da Meta"
+      "FINANCIAL_MANAGE": "Ligar e desligar a autorização de cobranças da Meta",
+      "CONVERSATION_MESSAGE_DELETE": "Apagar mensagens"
     },
     "MATRIX": {
       "GROUPS": {
@@ -302,6 +303,7 @@
       "CRM_ADMIN": "Liga tudo acima, o SLA do CRM e os tokens de integração.",
       "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas.",
       "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder.",
+      "CONVERSATION_MESSAGE_DELETE": "Apaga mensagens das conversas que atende. O anexo some e a mensagem fica como apagada.",
       "CONTACT_EXPORT": "Baixa a base de contatos numa planilha.",
       "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez.",
       "CAMPAIGN_SEND": "Envia e agenda campanhas e retoma as pausadas. Sem isto, monta e deixa pronta para quem dispara.",
