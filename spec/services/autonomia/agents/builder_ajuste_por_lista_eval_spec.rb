@@ -12,6 +12,7 @@ require 'rails_helper'
 # de palavras. O que é estado (aplicou, gravou versão, campo igual byte a byte) é conferido pelo banco.
 module AvaliacaoDoAjustePorLista
   JUIZ = 'gpt-5.4'.freeze
+  SAUDACAO = 'Oi! Aqui é o Hubber, da Hub2You.'.freeze
   SAUDACAO_NAO_PEDIDA = 'Olá, sou o Hubber!'.freeze
   TETO_USD = 1.8
   CAMPOS_COMPARADOS = %w[name instruction tone greeting fallback_message handoff_rule starter_questions human_card
@@ -32,6 +33,7 @@ module AvaliacaoDoAjustePorLista
   # o turno anterior mudou a saudação sem o dono pedir e o cartão da tela o avisou (sem bolha na conversa); `saudacao`:
   # :original (voltou) ou :nao_pedida (ficou). `opcoes` (#1428, entrega C): :nenhuma (o turno não deixa resposta pronta),
   # :coerentes (2 a 4, e o juiz as acha coerentes com a pergunta) ou :sem_inventar (zero, ou coerentes pelo juiz).
+  # `saudacao_inicial` (opcional): a saudação do agente antes da fala. `muda` (opcional): os campos que TÊM de mudar.
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
       opcoes: :nenhuma,
@@ -48,6 +50,12 @@ module AvaliacaoDoAjustePorLista
       so: %w[tone instruction human_card],
       certo: 'O agente DEPOIS tem tom formal e trata o cliente por senhor ou senhora. Saudação, nome, voz, regra de ' \
              'passagem, mensagem de fallback e perguntas iniciais iguais às de antes.' },
+    # Revisão do t6d (ALTO 2): "sem emoji" contradiz de forma literal a saudação com emoji, e só aí ela muda.
+    { nome: 't6c_sem_emoji_tira_da_saudacao', fala: 'Pare de usar emoji.', aplica: true,
+      saudacao_inicial: 'Oi! 😊 Aqui é o Hubber, da Hub2You.', muda: %w[greeting],
+      so: %w[tone instruction human_card greeting guardrails],
+      certo: 'A saudação DEPOIS não tem emoji e diz o mesmo de antes (oi, Hubber, Hub2You); o agente DEPOIS não usa emoji ' \
+             '(no tom, na instrução ou nos limites). Mensagem de fallback, regra de passagem e perguntas iniciais iguais.' },
     { nome: 'nao_fale_de_preco', fala: 'Não fale de preço com o cliente.', aplica: true,
       certo: 'O agente DEPOIS tem escrito que não fala de preço com o cliente (nos limites e na instrução), mesmo já ' \
              'tendo a regra geral de não inventar valores.' },
@@ -152,10 +160,10 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     Crm::AiUsageEvent.where(account_id: conta.id).sum(:cost_estimate).to_f
   end
 
-  def criar_hubber
+  def criar_hubber(saudacao)
     Autonomia::Agents::Agent.create!(
       account: conta, name: 'Hubber', agent_type: 'support', mode: :guided, status: :active, enabled: true,
-      instruction: AvaliacaoDoAjustePorLista::HUBBER, tone: 'cordial e breve', greeting: 'Oi! Aqui é o Hubber, da Hub2You.',
+      instruction: AvaliacaoDoAjustePorLista::HUBBER, tone: 'cordial e breve', greeting: saudacao,
       fallback_message: 'Vou confirmar com a equipe e te retorno.', handoff_rule: 'Passe para a equipe quando o cliente pedir.',
       starter_questions: ['Quais seguros vocês têm?'], human_card: 'O Hubber atende os clientes da Hub2You.',
       config: { 'guardrails' => ['Nunca invente valores, coberturas ou prazos.'], 'voice' => 'masculina',
@@ -168,7 +176,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   end
 
   def ajustar(cena)
-    agente = criar_hubber
+    agente = criar_hubber(cena[:saudacao_inicial] || AvaliacaoDoAjustePorLista::SAUDACAO)
     thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: agente)
     Array(cena[:historico]).each { |papel, texto| thread.append_message!(papel, texto) }
     abrir_pendencia(thread, cena[:pendente]) if cena[:pendente]
@@ -223,8 +231,9 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   end
 
   def extras_certos?(cena, agente, antes, depois, estado)
-    so_os_permitidos?(cena, antes, depois) && pendencia_certa?(cena, estado) && nada_desfeito?(cena, estado) &&
-      informou_sem_perguntar?(cena, estado) && saudacao_certa?(cena, agente, estado) && opcoes_no_estado_certas?(cena, estado)
+    so_os_permitidos?(cena, antes, depois) && mudou_os_exigidos?(cena, antes, depois) && pendencia_certa?(cena, estado) &&
+      nada_desfeito?(cena, estado) && informou_sem_perguntar?(cena, estado) && saudacao_certa?(cena, agente, estado) &&
+      opcoes_no_estado_certas?(cena, estado)
   end
 
   # O que é estado: quantas opções o turno deixou. Se são coerentes com a pergunta, quem diz é o juiz.
@@ -255,7 +264,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   def saudacao_certa?(cena, agente, estado)
     return true unless cena[:tambem_mudei]
 
-    esperada = cena[:saudacao] == :original ? 'Oi! Aqui é o Hubber, da Hub2You.' : AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA
+    esperada = cena[:saudacao] == :original ? AvaliacaoDoAjustePorLista::SAUDACAO : AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA
     estado['nao_pedido_anterior'].nil? && agente.reload.greeting == esperada
   end
 
@@ -281,6 +290,10 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
 
   def so_os_permitidos?(cena, antes, depois)
     cena[:so].nil? || (AvaliacaoDoAjustePorLista::CAMPOS_COMPARADOS - cena[:so]).all? { |campo| antes[campo] == depois[campo] }
+  end
+
+  def mudou_os_exigidos?(cena, antes, depois)
+    Array(cena[:muda]).all? { |campo| antes[campo] != depois[campo] }
   end
 
   def rodar(cena)
