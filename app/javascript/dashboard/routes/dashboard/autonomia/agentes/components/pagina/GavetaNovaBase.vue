@@ -31,6 +31,9 @@ const COM_TEXTO_DO_SERVIDOR = [409, 422, 429];
 // Depois de atualizar, estes mandam comparar de novo (a base que vale agora, ou a comparação que passou do prazo).
 const COMPARAR_DE_NOVO = [409, 422];
 const LIMITE = 429;
+// Recusas que comparar de novo não resolve: sem base nova e agente sem instrução. A comparação que passou ou não vale
+// (comparar_antes), a base que mudou e a falha da própria comparação oferecem "Tentar de novo".
+const SEM_TENTAR_DE_NOVO = ['sem_base_nova', 'sem_instrucao'];
 
 const estado = ref('comparando');
 const perguntas = ref([]);
@@ -38,6 +41,7 @@ const versaoComparada = ref(null);
 const erroComparar = ref('');
 // No limite, a gaveta só mostra a espera: "Tentar de novo" ali só daria outro 429.
 const esperando = ref(false);
+const podeTentar = ref(true);
 const atualizando = ref(false);
 const falhouAtualizar = ref(false);
 const rotuloHoje = ref('');
@@ -60,6 +64,16 @@ const textoDoServidor = erro =>
     ? erro.response.data?.error || ''
     : '';
 
+// O aviso no lugar da comparação, com ou sem "Tentar de novo" conforme o motivo do servidor.
+const mostrarErro = erro => {
+  const { status, data } = erro?.response || {};
+  erroComparar.value = textoDoServidor(erro);
+  esperando.value = status === LIMITE;
+  podeTentar.value =
+    !esperando.value && !SEM_TENTAR_DE_NOVO.includes(data?.code);
+  estado.value = 'erro';
+};
+
 const lerComparacao = async () => {
   // Os rótulos são os das bases que esta comparação usa (a linha já foi relida depois de um 409).
   rotuloHoje.value = rotuloDe(props.base.atual);
@@ -67,6 +81,7 @@ const lerComparacao = async () => {
   estado.value = 'comparando';
   erroComparar.value = '';
   esperando.value = false;
+  podeTentar.value = true;
   pedido = new AbortController();
   try {
     const { versao, perguntas: lista } = await props.comparar(pedido.signal);
@@ -75,9 +90,7 @@ const lerComparacao = async () => {
     estado.value = lista.length && versao ? 'pronto' : 'erro';
   } catch (erro) {
     if (pedido?.signal.aborted) return;
-    erroComparar.value = textoDoServidor(erro);
-    esperando.value = erro?.response?.status === LIMITE;
-    estado.value = 'erro';
+    mostrarErro(erro);
   }
 };
 
@@ -94,8 +107,7 @@ const confirmar = async () => {
     emit('atualizado');
   } catch (erro) {
     if (COMPARAR_DE_NOVO.includes(erro?.response?.status)) {
-      erroComparar.value = textoDoServidor(erro);
-      estado.value = 'erro';
+      mostrarErro(erro);
     } else {
       falhouAtualizar.value = true;
     }
@@ -143,7 +155,7 @@ const podeFechar = () => !atualizando.value;
       :titulo="tituloDoErro"
       :garantia="t(`${NS}.NADA_MUDOU`)"
       :tom="esperando ? 'ambar' : 'rubi'"
-      :acao="esperando ? '' : t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
+      :acao="podeTentar ? t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO') : ''"
       @acao="lerComparacao"
     />
 

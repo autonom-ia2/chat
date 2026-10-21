@@ -60,7 +60,10 @@ class Autonomia::Agents::BaseDeSeguros
     raise VersaoMudou if versao != marca['versao']
     raise NaoComparou unless Autonomia::Agents::BaseDeSeguros::Comparada.viu?(@agent, account_user, versao)
 
-    @agent.trocar_base!(marca, created_by: created_by)
+    trocou = @agent.trocar_base!(marca, created_by: created_by)
+    # A comparação valeu para esta troca: depois de um Desfazer, trocar de novo pede outra.
+    Autonomia::Agents::BaseDeSeguros::Comparada.esquecer_quem_viu!(@agent, account_user)
+    trocou
   end
 
   private

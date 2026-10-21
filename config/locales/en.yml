@@ -579,11 +579,11 @@ en:
       autoteste_amanha: 'This agent was already tested many times today. You can test again tomorrow.'
     base_de_seguros:
       sem_base_nova: 'There is no new insurance base for this agent. The page was updated.'
-      base_mudou: 'The agent changed in the meantime. Nothing was changed now. The page was updated.'
+      base_mudou: 'The agent changed in the meantime. The page was updated.'
       comparar_espere: 'Wait a couple of minutes to compare again.'
       comparar_amanha: 'This account already compared many times today. You can compare again tomorrow.'
-      comparar_antes: 'Compare the answers before updating the base. Nothing was changed.'
-      sem_instrucao: 'This agent has no instructions yet, so its base cannot be updated. Nothing was changed.'
+      comparar_antes: 'Compare the answers before updating the base.'
+      sem_instrucao: 'This agent has no instructions yet, so its base cannot be updated.'
       desfazer_fechado: 'The agent changed after the update, so Undo no longer applies. To go back, use the version history.'
     source:
       invalid_kind: 'This kind of material is not available. Reload the page and try again.'

@@ -1328,11 +1328,11 @@ pt_BR:
       autoteste_amanha: 'Este agente já foi testado muitas vezes hoje. Amanhã dá para testar de novo.'
     base_de_seguros:
       sem_base_nova: 'Não há base de seguros nova para este agente. A página foi atualizada.'
-      base_mudou: 'O agente mudou enquanto isso. Nada mudou agora. A página foi atualizada.'
+      base_mudou: 'O agente mudou enquanto isso. A página foi atualizada.'
       comparar_espere: 'Espere uns 2 minutos para comparar de novo.'
       comparar_amanha: 'Esta conta já comparou muitas vezes hoje. Amanhã dá para comparar de novo.'
-      comparar_antes: 'Compare as respostas antes de atualizar a base. Nada mudou.'
-      sem_instrucao: 'Este agente ainda não tem instruções, então a base dele não pode ser atualizada. Nada mudou.'
+      comparar_antes: 'Compare as respostas antes de atualizar a base.'
+      sem_instrucao: 'Este agente ainda não tem instruções, então a base dele não pode ser atualizada.'
       desfazer_fechado: 'O agente mudou depois da atualização, e o Desfazer não vale mais. Para voltar, use o histórico de versões.'
     source:
       invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."

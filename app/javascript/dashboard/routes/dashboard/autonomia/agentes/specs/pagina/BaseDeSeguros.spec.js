@@ -344,12 +344,40 @@ describe('GavetaNovaBase', () => {
     wrapper.unmount();
   });
 
+  it.each(['sem_base_nova', 'sem_instrucao'])(
+    'a permanent refusal (422 %s) shows the reason with no Try again',
+    async code => {
+      const erro = Object.assign(new Error('422'), {
+        response: { status: 422, data: { error: 'Motivo do servidor.', code } },
+      });
+      const wrapper = gaveta({ comparar: vi.fn().mockRejectedValue(erro) });
+      await flushPromises();
+
+      const aviso = document.querySelector('[data-erro-comparar]');
+      expect(aviso.textContent).toContain('Motivo do servidor.');
+      expect(aviso.querySelector('button')).toBeNull();
+      wrapper.unmount();
+    }
+  );
+
+  it('when the comparison itself fails (no code), offers Try again', async () => {
+    const wrapper = gaveta({
+      comparar: vi.fn().mockRejectedValue(new Error('ai_request_failed')),
+    });
+    await flushPromises();
+
+    expect(
+      document.querySelector('[data-erro-comparar]').textContent
+    ).toContain('Tentar de novo');
+    wrapper.unmount();
+  });
+
   it('when the server asks to compare first (422), goes back to the error with Try again', async () => {
     const erro = Object.assign(new Error('422'), {
       response: {
         status: 422,
         data: {
-          error: 'Compare as respostas antes de atualizar a base. Nada mudou.',
+          error: 'Compare as respostas antes de atualizar a base.',
           code: 'comparar_antes',
         },
       },
@@ -362,7 +390,7 @@ describe('GavetaNovaBase', () => {
 
     const aviso = document.querySelector('[data-erro-comparar]');
     expect(aviso.textContent).toContain(
-      'Compare as respostas antes de atualizar a base. Nada mudou.'
+      'Compare as respostas antes de atualizar a base.'
     );
     expect(aviso.textContent).toContain('Tentar de novo');
     expect(document.querySelector('[data-erro-atualizar]')).toBeNull();

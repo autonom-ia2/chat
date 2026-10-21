@@ -155,6 +155,33 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       expect(response.parsed_body['code']).to eq('comparar_antes')
     end
 
+    # O antes e depois vale para o agente como estava ao comparar: mudou a instrução, a comparação não vale mais.
+    it 'a instrução mudou depois de comparar: 422 (comparar_antes) e nada muda' do
+      comparou
+      agente.update!(instruction: 'Outra instrução, escrita depois da comparação.')
+
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('comparar_antes')
+      expect(agente.reload.config['base']).to eq(seguradora)
+    end
+
+    # A marca de quem viu vale para uma troca só: depois do Desfazer, trocar de novo pede outra comparação.
+    it 'atualizar, Desfazer e atualizar de novo sem comparar: 422 (comparar_antes)' do
+      comparou
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
+      expect(response).to have_http_status(:ok)
+      pedir(:post, 'desfazer')
+      expect(response).to have_http_status(:ok)
+
+      pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('comparar_antes')
+      expect(agente.reload.config['base']).to eq(seguradora)
+    end
+
     it 'agente sem instrução: 422 com o motivo próprio (sem_instrucao), no comparar e no atualizar' do
       sem_instrucao = criar_principal(conta, nome: 'Sem instrução', instruction: nil, config: { 'with_knowledge' => false })
 
@@ -261,6 +288,16 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       expect(response).to have_http_status(:ok)
     end
 
+    it 'reabrir depois de editar a instrução compara de novo: a guardada mostrava o "hoje" de antes' do
+      admin.update!(ui_settings: { 'locale' => 'en' })
+      pronta = { versao: bloco.versao('seguros/corretora'), perguntas: [{ pergunta: 'O que é franquia?' }] }
+      Autonomia::Agents::BaseDeSeguros::Comparada.guardar!(agente, admin.account_users.find_by(account: conta), 'en', pronta)
+      agente.update!(instruction: 'Outra instrução, escrita depois da comparação.')
+
+      expect { pedir(:post, 'comparar') }.to have_enqueued_job(Crm::Ai::InteractiveJob)
+      expect(response).to have_http_status(:accepted)
+    end
+
     it 'a comparação guardada em outro idioma não serve: segue a regra da espera' do
       admin.update!(ui_settings: { 'locale' => 'en' })
       pronta = { versao: bloco.versao('seguros/corretora'), perguntas: [{ pergunta: 'O que é franquia?' }] }
@@ -282,6 +319,14 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
 
       pedir(:get)
       expect(response.parsed_body['pode_atualizar']).to be(false)
+    end
+
+    # A gaveta já mostra a garantia "Nada mudou." embaixo do aviso: o texto do servidor não a repete.
+    it 'os avisos que a gaveta mostra não repetem a garantia de que nada mudou' do
+      %w[sem_base_nova sem_instrucao comparar_antes base_mudou comparar_espere comparar_amanha].each do |codigo|
+        expect(I18n.t("autonomia.base_de_seguros.#{codigo}", locale: :pt_BR)).not_to include('Nada mudou'), codigo
+        expect(I18n.t("autonomia.base_de_seguros.#{codigo}", locale: :en).downcase).not_to include('nothing'), codigo
+      end
     end
 
     it 'no máximo 10 por dia na conta: a 11ª é 429' do
