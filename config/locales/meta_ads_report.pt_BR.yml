@@ -11,7 +11,7 @@ pt_BR:
       90d: 'Últimos 90 dias'
       this_month: 'Este mês'
       last_month: 'Mês passado'
-      all: 'Desde o primeiro anúncio'
+      all: 'Desde o início'
     generated: 'Gerado em %{date}'
     page: 'Página <page> de <total>'
     hero_label: 'Anúncios · %{name}'

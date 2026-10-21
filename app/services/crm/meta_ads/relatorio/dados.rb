@@ -78,7 +78,7 @@ class Crm::MetaAds::Relatorio::Dados
 
   # Conversas de cada dia do período, de um anúncio, no fuso da conta.
   def por_dia(ad_id)
-    contagem = @report.cohort.touches.values.select { |ad, _at| ad == ad_id }.map { |_ad, at| at.in_time_zone(zona).to_date }.tally
+    contagem = contagem_por_anuncio.fetch(ad_id, {})
     dias.map { |dia| contagem.fetch(dia, 0) }
   end
 
@@ -91,6 +91,13 @@ class Crm::MetaAds::Relatorio::Dados
   end
 
   private
+
+  # { ad_id => { dia => conversas } }, contado uma vez para todos os anúncios (o período inteiro pode ter meses).
+  def contagem_por_anuncio
+    @contagem_por_anuncio ||= @report.cohort.touches.values.group_by(&:first).transform_values do |toques|
+      toques.map { |_ad, at| at.in_time_zone(zona).to_date }.tally
+    end
+  end
 
   def foto_processada(ad_id)
     objeto = objetos[ad_id]

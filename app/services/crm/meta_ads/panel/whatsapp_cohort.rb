@@ -33,18 +33,13 @@ class Crm::MetaAds::Panel::WhatsappCohort < Crm::MetaAds::Panel::Cohort
     end
   end
 
-  # Horário do primeiro toque de anúncio no período (#2011, "desde o primeiro anúncio"). Lê em lotes pela ordem de
-  # criação e para quando a conversa do lote já é mais nova que o toque achado: toque vem sempre depois da conversa.
+  # Horário do primeiro toque de anúncio no período (#2011, "desde o primeiro anúncio"). Lê todas as candidatas, em
+  # lotes: o toque gravado pode ser anterior à conversa (visita ao site), então a ordem de criação não diz qual é o
+  # primeiro. O custo é o da própria coorte desse período, que a tela lê em seguida.
   def first_touch_at
-    first = nil
-    candidates.in_batches(of: BATCH_SIZE) do |batch|
-      rows = batch.pluck(*COLUMNS)
-      break if first && rows.map { |row| row[1] }.min > first
-
-      found = rows.flat_map { |columns| conversation_rows(*columns) }.map(&:last).min
-      first = [first, found].compact.min
-    end
-    first
+    candidates.in_batches(of: BATCH_SIZE).filter_map do |batch|
+      batch.pluck(*COLUMNS).flat_map { |columns| conversation_rows(*columns) }.map(&:last).min
+    end.min
   end
 
   private

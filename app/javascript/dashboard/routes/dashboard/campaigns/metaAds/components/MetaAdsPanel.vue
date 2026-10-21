@@ -6,6 +6,7 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
+import { useAlert } from 'dashboard/composables';
 import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import {
   DEFAULT_PERIOD,
@@ -91,13 +92,23 @@ watch(anuncioFromRoute, value => {
 });
 
 const live = useMetaAdsLive({
-  // Troca de período no meio de uma leitura: a resposta do período antigo é descartada.
+  // Troca de período no meio de uma leitura: a resposta do período antigo é descartada. Se a troca falha, a tela
+  // volta ao período dos números que ela mostra e avisa; a próxima rodada segue tentando o período da tela.
   load: async () => {
     const asked = period.value;
-    const { data } = await CrmMetaAdsConnectionAPI.panel(asked);
-    if (asked !== period.value) return;
-    panel.value = data.panel;
-    loading.value = false;
+    try {
+      const { data } = await CrmMetaAdsConnectionAPI.panel(asked);
+      if (asked !== period.value) return;
+      panel.value = data.panel;
+      loading.value = false;
+    } catch (error) {
+      if (asked === period.value && panel.value?.period) {
+        period.value = panel.value.period;
+        loading.value = false;
+        useAlert(t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_ERROR'));
+      }
+      throw error;
+    }
   },
   // A IA escrevendo em outra aba também é espera: o texto chega em segundos, não em 2 minutos.
   waiting: () =>
@@ -365,7 +376,10 @@ onMounted(() => {
             />
           </div>
         </div>
-        <MetaAdsReportButton v-if="!sample && panel" :period="period" />
+        <MetaAdsReportButton
+          v-if="!sample && panel"
+          :period="panel.period || period"
+        />
       </div>
       <p
         data-panel-period-hint

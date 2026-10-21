@@ -2622,6 +2622,7 @@
         },
         "MORE_PERIODS": "More periods",
         "PERIOD_LOADING": "Loading the period…",
+        "PERIOD_ERROR": "Could not load this period right now. Try again.",
         "PERIOD_EMPTY": {
           "TITLE": "Nobody came from an ad {when}.",
           "SEE_ALL": "See since the first ad"

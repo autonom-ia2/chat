@@ -2623,6 +2623,7 @@
         },
         "MORE_PERIODS": "Mais períodos",
         "PERIOD_LOADING": "Carregando o período…",
+        "PERIOD_ERROR": "Não deu para trazer este período agora. Tente de novo.",
         "PERIOD_EMPTY": {
           "TITLE": "Ninguém chegou por anúncio {when}.",
           "SEE_ALL": "Ver desde o primeiro anúncio"

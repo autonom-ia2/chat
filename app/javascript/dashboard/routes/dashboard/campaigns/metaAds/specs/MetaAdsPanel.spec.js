@@ -7,6 +7,7 @@ import confidenceSource from '../components/MetaAdsConfidence.vue?raw';
 import en from 'dashboard/i18n/locale/en/crm.json';
 import ptBR from 'dashboard/i18n/locale/pt_BR/crm.json';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
+import { useAlert } from 'dashboard/composables';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 
@@ -27,6 +28,7 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
     quoteMessage: vi.fn(),
   },
 }));
+vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('vue-router', () => ({
   useRoute: () => routing.route,
   useRouter: () => ({ replace: routing.replace }),
@@ -693,6 +695,23 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     await flushPromises();
 
     expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenLastCalledWith('all');
+  });
+
+  it('goes back to the period on screen and warns when the new period fails (#2011)', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: { panel: { ...PANEL, period: '30d' } },
+    });
+    const wrapper = await mountPanel();
+    CrmMetaAdsConnectionAPI.panel.mockRejectedValueOnce(new Error('500'));
+
+    await wrapper.find('[data-panel-period="7d"]').trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledTimes(1);
+    expect(
+      wrapper.find('[data-panel-period="30d"]').attributes('aria-pressed')
+    ).toBe('true');
+    expect(wrapper.find('[data-panel-period-loading]').exists()).toBe(false);
   });
 
   it('drops the answer of a period that is no longer chosen', async () => {

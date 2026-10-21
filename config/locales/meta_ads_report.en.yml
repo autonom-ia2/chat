@@ -11,7 +11,7 @@ en:
       90d: 'Last 90 days'
       this_month: 'This month'
       last_month: 'Last month'
-      all: 'Since the first ad'
+      all: 'All time'
     generated: 'Generated on %{date}'
     page: 'Page <page> of <total>'
     hero_label: 'Ads · %{name}'
