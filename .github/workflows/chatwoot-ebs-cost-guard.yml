@@ -58,6 +58,8 @@ jobs:
       MIN_STOPPED_HOURS: ${{ github.event.inputs.min_stopped_hours || '24' }}
       CURRENT_INSTANCE_PARAMETER: /chatwoot/prod/blue-green/current-instance-id
       PREVIOUS_INSTANCE_PARAMETER: /chatwoot/prod/blue-green/previous-instance-id
+      DEPLOY_FREEZE_PARAMETER: /chatwoot/prod/blue-green/deploy-freeze
+      DEPLOY_FREEZE_RELEASED_PARAMETER: /chatwoot/prod/blue-green/deploy-freeze-released
 
     steps:
       - name: Checkout
@@ -80,9 +82,13 @@ jobs:
             --name-prefix "${{ matrix.name_prefix }}" \
             --current-instance-parameter "$CURRENT_INSTANCE_PARAMETER" \
             --previous-instance-parameter "$PREVIOUS_INSTANCE_PARAMETER" \
+            --deploy-freeze-parameter "$DEPLOY_FREEZE_PARAMETER" \
+            --deploy-freeze-released-parameter "$DEPLOY_FREEZE_RELEASED_PARAMETER" \
             --output "artifacts/${{ matrix.tenant }}-ebs-cost-guard.json"
 
+      # Também quando a leitura do congelamento falha: o inventário já foi escrito.
       - name: Upload inventory artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.tenant }}-ebs-cost-guard

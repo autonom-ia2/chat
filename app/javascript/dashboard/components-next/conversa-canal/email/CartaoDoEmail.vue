@@ -179,9 +179,9 @@ const htmlDoRemetente = computed(
   () =>
     recebido.value && Boolean(contentAttributes.value?.email?.htmlContent?.full)
 );
-// Citação do Gmail e afins pelo extrator do Chatwoot; a do iPhone e a do Outlook em
-// português pelo nosso (citacaoDosLeitores.js). No HTML do remetente, no documento
-// inteiro, sem perder o <head> e o <body>.
+// No HTML do remetente, só a marca que o leitor de e-mail põe na resposta (Gmail, Yahoo,
+// Proton, Thunderbird, iPhone, Outlook: citacaoDosLeitores.js), no documento inteiro, sem
+// perder o <head> e o <body>. Fora dele, o extrator do Chatwoot, como antes.
 const documentoSemCitacao = computed(() =>
   htmlDoRemetente.value ? citacaoDoDocumento(htmlCompleto.value) : null
 );

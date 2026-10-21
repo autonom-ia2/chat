@@ -30,6 +30,7 @@ import {
 import { previaDoAnexoCitado } from '../../conversa-canal/citacaoDoAnexo';
 import { citacaoSolta } from '../../conversa-canal/citacaoSolta';
 import { previaDaCitada } from '../../conversa-canal/useFormatoDoWhatsapp';
+import { textoDaMensagem } from '../../conversa-canal/ecoDoCelular';
 
 const props = defineProps({
   hideMeta: { type: Boolean, default: false },
@@ -151,11 +152,13 @@ const shouldShowMeta = computed(
 const replyToPreview = computed(() => {
   if (!inReplyTo) return '';
 
-  const { content, attachments } = inReplyTo.value;
+  const { attachments, contentAttributes: atributosDaCitada } = inReplyTo.value;
+  // #1941: citação de mensagem mandada pelo celular, sem o prefixo do conector.
+  const content = textoDaMensagem(inReplyTo.value.content, atributosDaCitada);
 
   // #1740: com a pele, a citação lê o texto como o balão dela (formato do WhatsApp).
   if (content && peleDoBalao.ativa.value)
-    return previaDaCitada(inReplyTo.value);
+    return previaDaCitada({ ...inReplyTo.value, content });
   if (content) return new MessageFormatter(content).formattedMessage;
   if (attachments?.length) {
     // #1702: com a pele, os rótulos da citação do app ("Foto", "Figurinha", o nome do

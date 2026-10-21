@@ -6,6 +6,9 @@ export const BUS_EVENTS = {
   FOCUS_CUSTOM_ATTRIBUTE: 'FOCUS_CUSTOM_ATTRIBUTE',
   SCROLL_TO_MESSAGE: 'SCROLL_TO_MESSAGE',
   MESSAGE_SENT: 'MESSAGE_SENT',
+  // #1988 — chegou mensagem pelo websocket (`message.created`), em qualquer conversa
+  // da conta, esteja ela carregada na lista ou não (a gaveta "Enviar mensagem" ouve).
+  MENSAGEM_AO_VIVO: 'MENSAGEM_AO_VIVO',
   ON_MESSAGE_LIST_SCROLL: 'ON_MESSAGE_LIST_SCROLL',
   WEBSOCKET_DISCONNECT: 'WEBSOCKET_DISCONNECT',
   WEBSOCKET_RECONNECT: 'WEBSOCKET_RECONNECT',

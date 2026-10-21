@@ -113,6 +113,15 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     });
   }
 
+  // Downloaded report (#1960): the panel of the period as a landscape PDF or a
+  // spreadsheet. formato: 'pdf' | 'planilha'. Answers the file (blob).
+  report(formato, days) {
+    return axios.get(`${this.url}/report`, {
+      params: { formato, days },
+      responseType: 'blob',
+    });
+  }
+
   // AI reads the stages and answers { suggestions: [{ stage_id, type, reason }] }.
   suggestStages(pipelineId) {
     return pollAiRequest(

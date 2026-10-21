@@ -189,4 +189,69 @@ RSpec.describe 'Anúncios da Meta com meta_ads_view', type: :request do
       end
     end
   end
+
+  # Anúncios sem login (#1960): o painel do WhatsApp segue as mesmas regras de quem só olha.
+  describe 'sem login' do
+    def de_anuncio(caixa)
+      conversation = create(:conversation, account: account, inbox: caixa)
+      click = { 'source' => 'meta_ctwa', 'source_id' => '120254710362980416', 'touched_at' => 1.day.ago.utc.iso8601 }
+      conversation.update_columns(additional_attributes: { 'campaign_touches' => [click] }) # rubocop:disable Rails/SkipsModelValidations
+      conversation
+    end
+
+    before do
+      account.enable_features!('anuncios_sem_login')
+      create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)
+    end
+
+    it 'vê o resultado e, nas listas, só as conversas da caixa dela' do
+      atende = pessoa_com(%w[meta_ads_view conversation_manage])
+      minha = de_anuncio(dela)
+      de_anuncio(alheia)
+
+      get "#{path}/panel", headers: auth_headers(atende)
+      expect(response.parsed_body.dig('panel', 'source')).to eq('whatsapp')
+
+      get "#{path}/panel_list", params: { step: 'conversations' }, headers: auth_headers(atende)
+      expect(response.parsed_body['list']['items'].pluck('conversation_id')).to eq([minha.id])
+
+      get "#{path}/panel_ad", params: { ad_id: '120254710362980416' }, headers: auth_headers(atende)
+      expect(response.parsed_body.dig('ad', 'people').pluck('conversation_id')).to eq([minha.id])
+    end
+
+    it 'com crm_export, baixa o relatório com os totais da conta e, na lista de conversas, só as da caixa dela' do
+      atende = pessoa_com(%w[meta_ads_view conversation_manage crm_view crm_export])
+      de_anuncio(dela).contact.update!(name: 'Pessoa da caixa dela')
+      de_anuncio(alheia).contact.update!(name: 'Pessoa da outra caixa')
+
+      get "#{path}/report", params: { formato: 'planilha' }, headers: auth_headers(atende)
+
+      expect(response).to have_http_status(:ok)
+      planilha = Roo::Excelx.new(StringIO.new(response.body))
+      celulas = ->(aba) { (1..planilha.sheet(aba).last_row).flat_map { |linha| planilha.sheet(aba).row(linha) } }
+      expect(celulas.call(0)).to include(I18n.t('meta_ads_report.summary.conversations'), 2)
+      expect(celulas.call(2)).to include('Pessoa da caixa dela')
+      expect(celulas.call(2)).not_to include('Pessoa da outra caixa')
+    end
+
+    # Lista de pessoas no arquivo é dado pessoal em lote: pede crm_export, como a planilha da Lista do CRM.
+    it 'sem crm_export, baixa só os números: nenhuma aba nem nome de contato' do
+      atende = pessoa_com(%w[meta_ads_view conversation_manage])
+      de_anuncio(dela).contact.update!(name: 'Pessoa da caixa dela')
+
+      get "#{path}/report", params: { formato: 'planilha' }, headers: auth_headers(atende)
+      planilha = Roo::Excelx.new(StringIO.new(response.body))
+      celulas = planilha.sheets.flat_map do |aba|
+        (1..planilha.sheet(aba).last_row.to_i).flat_map { |linha| planilha.sheet(aba).row(linha) }
+      end
+      expect(planilha.sheets.size).to eq(3)
+      expect(celulas).to include(I18n.t('meta_ads_report.summary.conversations'), 1)
+      expect(celulas).not_to include('Pessoa da caixa dela')
+
+      get "#{path}/report", params: { formato: 'pdf' }, headers: auth_headers(atende)
+      texto = PDF::Reader.new(StringIO.new(response.body)).pages.map(&:text).join("\n")
+      expect(response).to have_http_status(:ok)
+      expect(texto).not_to include('Pessoa da caixa dela')
+    end
+  end
 end

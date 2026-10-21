@@ -8,6 +8,8 @@ import { required, email } from '@vuelidate/validators';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { useAgentRoleChoices } from './useAgentRoleChoices';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import CrmScheduleEditor from 'dashboard/routes/dashboard/crm/components/sla/CrmScheduleEditor.vue';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 
@@ -39,7 +41,6 @@ const v$ = useVuelidate(rules, {
 });
 
 const uiFlags = useMapGetter('agents/getUIFlags');
-const getCustomRoles = useMapGetter('customRole/getCustomRoles');
 const inboxes = useMapGetter('inboxes/getInboxes');
 const accountId = useMapGetter('getCurrentAccountId');
 const isFeatureEnabledonAccount = useMapGetter(
@@ -59,8 +60,12 @@ const createdAgent = ref(null);
 const showScheduleEditor = ref(false);
 const manualInvitation = ref(null);
 
+// Pôr a pessoa em caixas, ou criar a caixa do WhatsApp dela, pede inbox_manage no servidor: o convite é recusado sem
+// ela, e o aceite confere de novo se quem convidou ainda a tem (#1931).
+const { canManageInboxes } = usePeopleAccess();
+
 onMounted(() => {
-  store.dispatch('inboxes/get');
+  if (canManageInboxes.value) store.dispatch('inboxes/get');
 });
 
 const finishAndClose = () => {
@@ -80,32 +85,7 @@ const copyManualInvitation = async () => {
   }
 };
 
-const roles = computed(() => {
-  const defaultRoles = [
-    {
-      id: 'administrator',
-      name: 'administrator',
-      label: t('AGENT_MGMT.AGENT_TYPES.ADMINISTRATOR'),
-    },
-    {
-      id: 'agent',
-      name: 'agent',
-      label: t('AGENT_MGMT.AGENT_TYPES.AGENT'),
-    },
-  ];
-
-  const customRoles = getCustomRoles.value.map(role => ({
-    id: role.id,
-    name: `custom_${role.id}`,
-    label: role.name,
-  }));
-
-  return [...defaultRoles, ...customRoles];
-});
-
-const roleChoices = computed(() =>
-  roles.value.map(role => ({ value: role.id, label: role.label }))
-);
+const { roles, roleChoices } = useAgentRoleChoices();
 
 const selectedRole = computed(() =>
   roles.value.find(
@@ -287,7 +267,7 @@ const addAgent = async () => {
         </label>
       </div>
 
-      <div class="flex flex-col w-full gap-2 py-2">
+      <div v-if="canManageInboxes" class="flex flex-col w-full gap-2 py-2">
         <p class="mb-0 text-sm font-medium text-n-slate-12">
           {{ $t('AGENT_MGMT.ADD.FORM.INBOXES.LABEL') }}
         </p>

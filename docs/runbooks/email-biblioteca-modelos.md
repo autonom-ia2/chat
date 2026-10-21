@@ -140,7 +140,7 @@ O deploy em si não muda dados; o apply é que troca a galeria. Rollback, do mai
    ```
    Rodar a verificação: `antigos=14 novos=0`.
 3. **Voltar o código**: `git revert -m 1 <merge do PR>` → PR → merge → deploy, ou o rollback do blue-green
-   (`workflow_dispatch` com `action=rollback`, `confirm_production=true`) para a imagem anterior. Atenção: o
+   (`workflow_dispatch` com `action=rollback`, `confirm_production=true` e `esperado_sha=<SHA de antes do deploy>`, #1979) para a imagem anterior. Atenção: o
    revert sozinho **não** volta a galeria — a rake antiga não apaga os 13 nem existe no runner de ops depois do
    revert — e a imagem antiga não tem `public/email-templates/`, então as fotos dos 13 dariam 404. Código antigo
    só junto com o passo 2.

@@ -17,10 +17,12 @@ import {
 } from 'dashboard/helper/choiceKeys';
 
 const props = defineProps({
-  // { value, label, disabled?, shortLabel?, searchLabel? }. value pode ser
-  // string, número, booleano ou null. shortLabel: o que o botão mostra quando
-  // a opção está escolhida (ex.: "🇧🇷 +55"); searchLabel: o texto que a busca
-  // por digitação compara (ex.: "Brasil"). Sem eles, vale o label.
+  // { value, label, disabled?, hint?, shortLabel?, searchLabel? }. value pode
+  // ser string, número, booleano ou null. hint: uma linha embaixo do rótulo,
+  // ligada por aria-describedby (ex.: por que a opção está desabilitada).
+  // shortLabel: o que o botão mostra quando a opção está escolhida (ex.:
+  // "🇧🇷 +55"); searchLabel: o texto que a busca por digitação compara (ex.:
+  // "Brasil"). Sem eles, vale o label.
   options: { type: Array, default: () => [], validator: isChoiceList },
   // Alternativa a `options`, como <optgroup>: [{ label, options: [...] }].
   groups: {
@@ -69,6 +71,8 @@ const id = useId();
 const listId = `${id}-list`;
 const optionId = index => `${id}-option-${index}`;
 const groupLabelId = index => `${id}-group-${index}`;
+const hintId = index => `${id}-hint-${index}`;
+const labelId = index => `${id}-label-${index}`;
 
 const root = useTemplateRef('root');
 const trigger = useTemplateRef('trigger');
@@ -410,6 +414,8 @@ onClickOutside(
             :data-value="String(option.value)"
             :aria-selected="index === selected"
             :aria-disabled="option.disabled || undefined"
+            :aria-labelledby="option.hint ? labelId(index) : undefined"
+            :aria-describedby="option.hint ? hintId(index) : undefined"
             class="flex items-center justify-between gap-2 px-3 text-sm min-h-11"
             :class="{
               'bg-n-alpha-2': index === active,
@@ -421,7 +427,18 @@ onClickOutside(
             @pointermove="active = index"
             @click.prevent="commit(index)"
           >
-            <span class="truncate">{{ option.label }}</span>
+            <span class="flex flex-col min-w-0">
+              <span :id="labelId(index)" class="truncate">{{
+                option.label
+              }}</span>
+              <span
+                v-if="option.hint"
+                :id="hintId(index)"
+                class="text-xs truncate text-n-slate-10"
+              >
+                {{ option.hint }}
+              </span>
+            </span>
             <span
               v-if="index === selected"
               class="flex-shrink-0 i-lucide-check size-4 text-n-slate-11"

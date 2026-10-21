@@ -524,19 +524,111 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
   describe 'com um card em foco' do
     let!(:auto) { card(vendas, 'Seguro auto', 'Proposta', focused_at: 1.minute.ago) }
 
-    it '(5) "obrigado!" não chama a IA do CRM' do
+    # #1918 revoga o critério 5 do #1693: mensagem sem pedido novo relê o card em foco, e a IA de etapa decide se ele
+    # fica (aqui fica: a IA responde a mesma etapa).
+    it '(5) "obrigado!" relê o card em foco: conta como atividade e a IA do CRM decide (fica)' do
       stub_jev('sem_assunto')
-      movimentos['Seguro auto'] = { etapa: 'Fechamento' }
 
       decisao = receber('obrigado!')
 
-      expect(decisao).to have_attributes(state: 'kept', touched_card_ids: [])
-      expect(avaliacoes).to be_empty
+      expect(decisao).to have_attributes(state: 'kept', touched_card_ids: [auto.id])
+      expect(avaliacoes.size).to eq(1)
+      expect(JSON.parse(avaliacoes.first[:input])['card']['id']).to eq(auto.id)
       expect(a_request(:post, 'https://api.typesafe.ai/v1/systemone').with do |request|
-        JSON.parse(request.body)['state']['instructions'].include?('A greeting, a thank-you or a goodbye without a request')
+        JSON.parse(request.body)['state']['instructions']
+            .include?('A greeting, a thank-you, an acknowledgement or a goodbye that says nothing about a request')
       end).to have_been_made
       expect(auto.reload.stage.name).to eq('Proposta')
-      expect(auto.last_activity_at).to be < 1.day.ago
+      expect(auto.last_activity_at).to be > 1.minute.ago
+    end
+
+    it 'o modelo maior responde a lista vazia: o card em foco é o tocado' do
+      stub_jev(Crm::Subjects::Question::VARIOS)
+      revisao.merge!(assuntos: [], principal: 0, motivo: 'só agradeceu')
+
+      decisao = receber('valeu')
+
+      expect(decisao).to have_attributes(state: 'kept', touched_card_ids: [auto.id])
+      expect(avaliacoes.size).to eq(1)
+    end
+
+    it 'sugestão de pedido novo esperando uma pessoa: a lista segue vazia e nada é avaliado (#1147)' do
+      anterior = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'x')
+      Crm::SubjectDecision.create!(account: account, conversation: conversation, message: anterior, mode: 'auto', action: 'create',
+                                   state: 'suggested', pipeline_id: vendas.id, title: 'Seguro moto')
+      stub_jev("novo_#{vendas.id}")
+
+      decisao = receber('e a moto?')
+
+      expect(decisao).to have_attributes(state: 'kept', reason: 'sugestao_pendente', touched_card_ids: [])
+      expect(avaliacoes).to be_empty
+    end
+
+    describe 'movido por uma pessoa há pouco (#1918)' do
+      def mover_pela_pessoa(card, nome, tempo:)
+        travel_to(tempo.ago) { Crm::Cards::Mover.new(card: card, actor: admin, target_stage: etapa(vendas, nome)).perform }
+      end
+
+      def sugestoes(card)
+        account.crm_ai_stage_suggestions.where(card: card)
+      end
+
+      it '"ok" não mexe no card que a pessoa acabou de mover: nem move, nem sugere' do
+        mover_pela_pessoa(auto, 'Fechamento', tempo: 1.hour)
+        stub_jev('sem_assunto')
+        movimentos['Seguro auto'] = { etapa: 'Proposta' }
+
+        decisao = receber('ok')
+
+        expect(decisao.touched_card_ids).to eq([auto.id])
+        expect(avaliacoes.size).to eq(1)
+        expect(auto.reload.stage.name).to eq('Fechamento')
+        expect(sugestoes(auto)).to be_empty
+      end
+
+      it '"ok" não mexe no card que a pessoa acabou de reabrir' do
+        auto.update!(status: :lost)
+        travel_to(1.hour.ago) { Crm::Cards::Closer.new(card: auto, actor: admin, result: 'reopen').perform }
+        stub_jev('sem_assunto')
+        movimentos['Seguro auto'] = { etapa: 'Fechamento' }
+
+        decisao = receber('ok')
+
+        expect(decisao.touched_card_ids).to eq([auto.id])
+        expect(avaliacoes.size).to eq(1)
+        expect(auto.reload).to have_attributes(status: 'open')
+        expect(auto.stage.name).to eq('Proposta')
+        expect(sugestoes(auto)).to be_empty
+      end
+
+      it 'passada a janela de respeito, a IA volta a mover sozinha' do
+        mover_pela_pessoa(auto, 'Fechamento', tempo: Crm::Ai::Evaluator::RESPEITO_AO_MOVIMENTO + 1.minute)
+        stub_jev('sem_assunto')
+        movimentos['Seguro auto'] = { etapa: 'Proposta' }
+
+        receber('ok')
+
+        expect(auto.reload.stage.name).to eq('Proposta')
+      end
+
+      it 'movimento da própria IA não conta como de pessoa' do
+        travel_to(1.hour.ago) { Crm::Cards::Mover.new(card: auto, actor: nil, target_stage: etapa(vendas, 'Fechamento')).perform }
+        stub_jev('sem_assunto')
+        movimentos['Seguro auto'] = { etapa: 'Proposta' }
+
+        receber('ok')
+
+        expect(auto.reload.stage.name).to eq('Proposta')
+      end
+
+      it '"Avaliar agora" (manual) é escolha da pessoa: move mesmo assim' do
+        mover_pela_pessoa(auto, 'Fechamento', tempo: 1.hour)
+        movimentos['Seguro auto'] = { etapa: 'Proposta' }
+
+        Crm::Ai::Evaluator.new(card: auto.reload, trigger: 'manual').perform
+
+        expect(auto.reload.stage.name).to eq('Proposta')
+      end
     end
 
     it 'assunto em dúvida: relê o card em foco, como no #1675' do
@@ -584,6 +676,213 @@ RSpec.describe 'Vários assuntos numa mensagem' do # rubocop:disable RSpec/Descr
       expect(requisicoes.first['questions']['decisao']['criteria'].keys).not_to include(Crm::Subjects::Question::VARIOS)
       expect(requisicoes.first['state']['instructions']).to eq(Crm::Subjects::Question::INSTRUCOES)
       expect(avaliacoes).to be_empty
+    end
+  end
+
+  # #1918: o card que a caixa criou com o nome do contato. PR1: o sem_assunto relê o card. PR2: ele também é "o mesmo
+  # assunto", e a notícia sobre o pedido fica nele em vez de virar "dar nome".
+  describe 'com o card sem nome em foco, em Proposta' do
+    let(:vendas) { funil('Vendas', %w[Proposta Perdido]) }
+    let!(:sem_nome) do
+      card(vendas, contact.name, 'Proposta', focused_at: 1.minute.ago).tap { |card| card.update!(metadata: {}) }
+    end
+
+    it '"já fechei com outra corretora": a IA do CRM relê o card e ele vai para Perdido' do
+      stub_jev('sem_assunto')
+      movimentos[contact.name] = { etapa: 'Perdido' }
+
+      decisao = receber('já fechei com outra corretora, obrigado')
+
+      expect(decisao).to have_attributes(state: 'kept', touched_card_ids: [sem_nome.id])
+      expect(sem_nome.reload.stage.name).to eq('Perdido')
+    end
+
+    it 'a pergunta oferece "o mesmo assunto" sem o nome do contato e separa a cortesia da notícia sobre o pedido' do
+      requisicoes = []
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do |request|
+        requisicoes << JSON.parse(request.body)
+        { status: 200, body: { model: 'jev-1.13.0', usage: {},
+                               answers: { decisao: { type: 'choice', choice: 'mesmo_assunto', confidence: 0.95 } } }.to_json }
+      end
+      revisao.merge!(assuntos: [{ resposta: 'mesmo_assunto', titulo: '' }], principal: 0, motivo: 'ok')
+      movimentos[contact.name] = { etapa: 'Perdido' }
+
+      decisao = receber('desisti, fechei com outra')
+
+      criterios = requisicoes.first['questions']['decisao']['criteria']
+      expect(criterios.keys).to include('sem_assunto', 'mesmo_assunto', "novo_#{vendas.id}")
+      expect(criterios['mesmo_assunto']).to include('no name yet', '"Vendas"', '"Proposta"')
+      expect(criterios['mesmo_assunto']).not_to include(contact.name)
+      expect(requisicoes.first['state']['instructions']).to eq(Crm::Subjects::Question::INSTRUCOES_VARIOS)
+      expect(decisao).to have_attributes(state: 'kept', action: 'none', card_id: sem_nome.id, touched_card_ids: [sem_nome.id])
+      expect(sem_nome.reload).to have_attributes(title: contact.name, stage: etapa(vendas, 'Perdido'))
+      expect(sem_nome.metadata).not_to have_key('subject')
+    end
+
+    it 'o Jev com certeza alta em "o mesmo assunto" do card sem nome não decide sozinho: o modelo maior pode dar o nome' do
+      stub_jev('mesmo_assunto')
+      revisao.merge!(assuntos: [{ resposta: "novo_#{vendas.id}", titulo: 'Seguro do Corolla' }], principal: 0, motivo: 'ok')
+
+      decisao = receber('quero cotar o seguro do meu Corolla')
+
+      expect(decisao).to have_attributes(state: 'applied', action: 'rename', decided_by: 'review', card_id: sem_nome.id)
+      expect(sem_nome.reload.title).to eq('Seguro do Corolla')
+      expect(account.crm_cards.count).to eq(1)
+    end
+
+    it 'no Sugerir, com o nome dele dispensado há pouco: o "mesmo assunto" do Jev vale e o modelo maior não é chamado (#1260)' do
+      account.crm_inbox_settings.find_by!(inbox: inbox).update!(subject_ai_mode: :suggest)
+      anterior = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'oi')
+      Crm::SubjectDecision.create!(account: account, conversation: conversation, message: anterior, mode: 'suggest',
+                                   action: 'rename', state: 'dismissed', pipeline_id: vendas.id, card: sem_nome)
+      stub_jev('mesmo_assunto')
+
+      decisao = receber('mandei o comprovante')
+
+      expect(decisao).to have_attributes(state: 'kept', action: 'none', decided_by: 'jev', card_id: sem_nome.id)
+      expect(chamadas.map { |args| args.dig(:schema, :name) }).not_to include('assuntos_revisao')
+      expect(Crm::SubjectDecision.where(state: 'suggested')).to be_empty
+    end
+
+    it 'flag desligada: sem "o mesmo assunto" e com a descrição de sempre do pedido novo' do
+      account.disable_features!(Crm::Conversations::CardEmFoco::FLAG)
+      requisicoes = []
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do |request|
+        requisicoes << JSON.parse(request.body)
+        { status: 200, body: { model: 'jev-1.13.0', usage: {},
+                               answers: { decisao: { type: 'choice', choice: 'sem_assunto', confidence: 0.95 } } }.to_json }
+      end
+
+      receber('desisti, fechei com outra')
+
+      criterios = requisicoes.first['questions']['decisao']['criteria']
+      expect(criterios.keys).to contain_exactly('sem_assunto', "novo_#{vendas.id}")
+      expect(criterios["novo_#{vendas.id}"])
+        .to eq('The customer shows what they want, and it belongs to the pipeline "Vendas" (type: sales, closing a deal).')
+      expect(requisicoes.first['state']['instructions']).to eq(Crm::Subjects::Question::INSTRUCOES)
+    end
+
+    it 'decisão reaberta pelo WhatsApp Híbrido: de um assunto só, sem "o mesmo assunto" para o card sem nome (#1638)' do
+      stub_jev('sem_assunto')
+      decisao = receber('oi')
+
+      requisicoes = []
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do |request|
+        requisicoes << JSON.parse(request.body)
+        { status: 200, body: { model: 'jev-1.13.0', usage: {},
+                               answers: { decisao: { type: 'choice', choice: 'sem_assunto', confidence: 0.95 } } }.to_json }
+      end
+      decisao.message.update!(content_attributes: { 'hybrid_recovered_at' => 5.seconds.from_now.iso8601 })
+      Crm::Subjects::Identifier.new(conversation: conversation, message: decisao.message.reload).perform
+
+      expect(requisicoes.first['questions']['decisao']['criteria'].keys).to contain_exactly('sem_assunto', "novo_#{vendas.id}")
+      expect(requisicoes.first['state']['instructions']).to eq(Crm::Subjects::Question::INSTRUCOES)
+    end
+
+    describe 'quando ele é o card da chegada intocado (C36)' do
+      before do
+        sem_nome.update!(metadata: { Crm::Conversations::CardSyncer::AUTO_SYNC_METADATA =>
+                                       { 'source' => Crm::Conversations::CardSyncer::OBSERVER_SOURCE } })
+      end
+
+      it 'não é "o mesmo assunto": a pergunta não oferece a opção e a cortesia não o move' do
+        requisicoes = []
+        stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do |request|
+          requisicoes << JSON.parse(request.body)
+          { status: 200, body: { model: 'jev-1.13.0', usage: {},
+                                 answers: { decisao: { type: 'choice', choice: 'sem_assunto', confidence: 0.95 } } }.to_json }
+        end
+        movimentos[contact.name] = { etapa: 'Perdido' }
+
+        decisao = receber('oi, bom dia')
+
+        expect(requisicoes.first['questions']['decisao']['criteria'].keys).not_to include('mesmo_assunto')
+        expect(decisao).to have_attributes(state: 'kept', touched_card_ids: [])
+        expect(sem_nome.reload.stage.name).to eq('Proposta')
+        expect(avaliacoes).to be_empty
+      end
+    end
+
+    it 'o modelo maior põe o card sem nome na lista como o mesmo assunto: nada nasce, nada ganha nome e a IA do CRM avalia' do
+      stub_jev(Crm::Subjects::Question::VARIOS)
+      revisao.merge!(assuntos: [{ resposta: 'mesmo_assunto', titulo: '' }], principal: 0, motivo: 'ok')
+      movimentos[contact.name] = { etapa: 'Perdido' }
+
+      decisao = receber('mandei o comprovante, mas no fim desisti')
+
+      expect(decisao).to have_attributes(state: 'kept', decided_by: 'review', touched_card_ids: [sem_nome.id])
+      expect(sem_nome.reload.title).to eq(contact.name)
+      expect(sem_nome.stage.name).to eq('Perdido')
+      expect(account.crm_cards.count).to eq(1)
+    end
+
+    it 'o primeiro pedido no funil dele ainda dá nome ao card, e a IA do CRM avalia o card nomeado' do
+      stub_jev("novo_#{vendas.id}")
+      revisao.merge!(assuntos: [{ resposta: "novo_#{vendas.id}", titulo: 'Seguro do Corolla' }], principal: 0, motivo: 'ok')
+
+      decisao = receber('quero cotar o seguro do meu Corolla')
+
+      expect(decisao).to have_attributes(state: 'applied', action: 'rename', card_id: sem_nome.id, touched_card_ids: [sem_nome.id])
+      expect(sem_nome.reload.title).to eq('Seguro do Corolla')
+      expect(avaliacoes.size).to eq(1)
+      expect(account.crm_cards.count).to eq(1)
+    end
+  end
+
+  describe 'sem card aberto na conversa' do
+    it '"obrigado!" não toca nada e nada é avaliado' do
+      vendas
+      stub_jev('sem_assunto')
+
+      decisao = receber('obrigado!')
+
+      expect(decisao).to have_attributes(state: 'kept', touched_card_ids: [])
+      expect(avaliacoes).to be_empty
+    end
+  end
+
+  describe 'com dois assuntos (Auto em foco, Sinistro fora do foco)' do
+    let(:pos_venda) { funil('Pós-venda', %w[Análise Resolvido]) }
+    let!(:auto) { card(vendas, 'Seguro auto', 'Proposta', focused_at: 1.minute.ago) }
+    let!(:sinistro) { card(pos_venda, 'Sinistro do carro', 'Análise', focused_at: 2.minutes.ago) }
+
+    before do
+      movimentos['Seguro auto'] = { etapa: 'Fechamento' }
+      movimentos['Sinistro do carro'] = { etapa: 'Resolvido' }
+    end
+
+    it 'guarda de regressão: "obrigado" ligado ao Sinistro (card_) relê só ele, e o Auto não anda' do
+      stub_jev("card_#{sinistro.id}")
+
+      decisao = receber('obrigado pela ajuda com o sinistro')
+
+      expect(decisao.touched_card_ids).to eq([sinistro.id])
+      expect(avaliacoes.map { |args| JSON.parse(args[:input]).dig('card', 'id') }).to eq([sinistro.id])
+      expect(auto.reload.stage.name).to eq('Proposta')
+    end
+
+    it 'dois cards tocados e só o Sinistro movido por uma pessoa há pouco: ele fica como está, o Auto anda' do
+      travel_to(1.hour.ago) { Crm::Cards::Mover.new(card: sinistro, actor: admin, target_stage: etapa(pos_venda, 'Novo Lead')).perform }
+      stub_jev(Crm::Subjects::Question::VARIOS)
+      revisao.merge!(assuntos: [{ resposta: "card_#{sinistro.id}", titulo: '' }, { resposta: 'mesmo_assunto', titulo: '' }],
+                     principal: 1, motivo: 'ok')
+
+      receber('ok para os dois')
+
+      expect(avaliacoes.map { |args| args.dig(:schema, :name) }).to eq(['stage_classification_cards'])
+      expect(auto.reload.stage.name).to eq('Fechamento')
+      expect(sinistro.reload.stage.name).to eq('Novo Lead')
+      expect(account.crm_ai_stage_suggestions.where(card: sinistro)).to be_empty
+    end
+
+    it 'sem assunto: só o card em foco é relido, e o Sinistro fora do foco não anda' do
+      stub_jev('sem_assunto')
+
+      decisao = receber('obrigado!')
+
+      expect(decisao.touched_card_ids).to eq([auto.id])
+      expect(avaliacoes.map { |args| JSON.parse(args[:input]).dig('card', 'id') }).to eq([auto.id])
+      expect(sinistro.reload.stage.name).to eq('Análise')
     end
   end
 end

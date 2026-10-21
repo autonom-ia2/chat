@@ -9,6 +9,8 @@ import { resultRoute } from 'dashboard/components-next/CampaignResult/resultMetr
 
 export const JOURNEY_STATUSES = {
   DRAFT: 'draft',
+  // #1898: montada por quem não dispara, esperando quem pode disparar.
+  READY: 'ready',
   SCHEDULED: 'scheduled',
   SENDING: 'sending',
   PAUSED: 'paused',

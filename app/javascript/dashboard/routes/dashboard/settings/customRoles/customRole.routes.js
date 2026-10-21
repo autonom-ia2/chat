@@ -1,6 +1,7 @@
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import { INSTALLATION_TYPES } from 'dashboard/constants/installationTypes';
 import { frontendURL } from 'dashboard/helper/URLHelper';
+import { CUSTOM_ROLE_MANAGE_PERMISSION } from 'dashboard/constants/permissions.js';
 
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const CustomRolesHome = () => import('./Index.vue');
@@ -9,7 +10,7 @@ const CustomRoleEditor = () => import('./CustomRoleEditor.vue');
 const meta = {
   featureFlag: FEATURE_FLAGS.CUSTOM_ROLES,
   installationTypes: [INSTALLATION_TYPES.CLOUD, INSTALLATION_TYPES.ENTERPRISE],
-  permissions: ['administrator'],
+  permissions: ['administrator', CUSTOM_ROLE_MANAGE_PERMISSION],
 };
 
 export default {

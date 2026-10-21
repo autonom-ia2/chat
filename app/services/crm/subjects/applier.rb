@@ -108,7 +108,15 @@ class Crm::Subjects::Applier
     vinculados = Crm::CardConversation.where(account_id: @account.id, conversation_id: @conversation.id).select(:card_id)
     do_funil = @account.crm_cards.where(pipeline_id: pipeline.id)
     cards = do_funil.where(conversation_id: @conversation.id).or(do_funil.where(id: vinculados))
-    cards.where(closed_at: desde..).or(cards.where(status: :archived, updated_at: desde..)).exists?
+    arquivados = cards.where(status: :archived, updated_at: desde..).where.not(id: arquivados_pela_ia(desde))
+    cards.where(closed_at: desde..).or(arquivados).exists?
+  end
+
+  # O card que a IA de etapa tirou do funil como "não é negócio" (#1922) não é fechamento de uma pessoa: o cliente que
+  # volta ganha card, não só sugestão.
+  def arquivados_pela_ia(desde)
+    Crm::Activity.where(account_id: @account.id, event_type: 'archive', actor_type: 'system', created_at: desde..)
+                 .where('payload @> ?', { by: 'ai' }.to_json).select(:card_id)
   end
 
   def executar(action, atributos)

@@ -36,9 +36,16 @@ class Crm::MetaAdObject < ApplicationRecord
   URL_LIMIT = 2048
 
   belongs_to :account
+  # Foto do anúncio guardada do clique para o WhatsApp (#1960): o link que a Meta manda no clique expira em poucos
+  # dias, então a imagem é baixada uma vez por anúncio (Crm::MetaAds::ReferralImageJob).
+  has_one_attached :image
 
   validates :meta_object_id, presence: true, uniqueness: { scope: :account_id }
   validates :object_type, inclusion: { in: TYPES }, allow_nil: true
 
   scope :fresh, -> { where(fetched_at: CACHE_TTL.ago..) }
+
+  def image_path
+    Rails.application.routes.url_helpers.rails_blob_path(image, only_path: true) if image.attached?
+  end
 end
