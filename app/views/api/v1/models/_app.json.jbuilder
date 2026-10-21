@@ -4,7 +4,8 @@ json.description resource.description
 json.short_description resource.short_description.presence
 json.enabled resource.enabled?(@current_account)
 
-if Current.account_user&.administrator?
+# The connect URL carries a signed state: only for who may connect (#2027).
+if Current.account_user&.permission_granted?('integration_manage')
   json.call(resource.params, *resource.params.keys)
   json.action resource.action
   json.button resource.action

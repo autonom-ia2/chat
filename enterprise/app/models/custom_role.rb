@@ -67,6 +67,11 @@
 # - 'financial_view': the account's costs in money: AI usage values (R$/US$, CSV, live push) and the Meta charge
 #   authorization screen (#1969). 'financial_manage': turn the Meta charge authorization on and off. Plan, invoices and
 #   payments (Financeiro module) stay with administrators.
+# - 'integration_manage': connect, configure and disconnect integrations (Slack, Linear, Notion, Shopify, dashboard apps,
+#   imports), webhooks and agent bots, and swap the credentials of an existing inbox (#2027). Creating an inbox stays
+#   with inbox_manage. Credentials pasted from other systems are never shown back to it.
+# - 'token_manage': see and rotate the secrets the platform issues (inbox HMAC and API secret, webhook signing secret,
+#   agent bot token and secret, CRM integration tokens, Google conversion feed), never minting more than one holds (#2027).
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -134,10 +139,13 @@ class CustomRole < ApplicationRecord
     grant_above_own
     financial_view
     financial_manage
+    integration_manage
+    token_manage
   ].freeze
 
   # Delegable keys only an administrator hands out, unless the giver has grant_above_own (CLAUDE.md, #1931).
-  DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage].freeze
+  DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage integration_manage
+                       token_manage].freeze
 
   validates :name, presence: true
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message

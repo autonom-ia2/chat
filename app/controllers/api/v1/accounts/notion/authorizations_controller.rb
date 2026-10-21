@@ -1,6 +1,10 @@
 class Api::V1::Accounts::Notion::AuthorizationsController < Api::V1::Accounts::OauthAuthorizationController
   include NotionConcern
 
+  # Notion is an integration of the account, not an inbox (#2027).
+  before_action -> { check_permission_granted!('integration_manage') }
+  skip_before_action :check_authorization
+
   def create
     redirect_url = notion_client.auth_code.authorize_url(
       {
