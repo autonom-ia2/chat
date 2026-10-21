@@ -92,6 +92,28 @@ RSpec.describe MigrationsSeguras::SchemaRb do
     end
   end
 
+  it 'lê função em heredoc e create_trigger encadeado (hairtrigger), com o md5 do corpo' do
+    funcao = <<~RUBY
+        execute(<<-SQL)
+      CREATE OR REPLACE FUNCTION public.trava()
+       RETURNS trigger
+      AS $function$ BEGIN RAISE EXCEPTION 'não'; END; $function$
+        SQL
+        create_trigger("notas_tr", generated: true, compatibility: 1).
+            on("notas").
+            before(:delete) do
+          "RAISE EXCEPTION 'não';"
+        end
+    RUBY
+    antes = described_class.ler(schema(contatos + notas + funcao))
+    depois = described_class.ler(schema(contatos + notas + funcao.sub("RAISE EXCEPTION 'não'; END", 'RETURN OLD; END')))
+
+    expect(antes['funcoes'].keys).to eq(['CREATE OR REPLACE FUNCTION public.trava()'])
+    expect(antes['gatilhos'].keys).to eq(['create_trigger notas_tr'])
+    avisos = MigrationsSeguras::Compatibilidade.new(antes: antes, depois: depois).avisos.map(&:to_s)
+    expect(avisos).to eq(['`CREATE OR REPLACE FUNCTION public.trava()`: função com o corpo mudado'])
+  end
+
   describe 'scripts/deploy/compatibilidade_com_a_blue.rb' do
     def rodar(schema_novo, retiradas: nil)
       Dir.mktmpdir do |pasta|

@@ -1,3 +1,4 @@
+require 'digest'
 require 'prism'
 
 # Estrutura de um db/schema.rb lida pela árvore sintática do Ruby (Prism), sem banco (#2024).
@@ -24,7 +25,7 @@ class MigrationsSeguras::SchemaRb
     raise ArgumentError, "schema.rb não é Ruby válido: #{resultado.errors.first&.message}" if resultado.failure?
 
     @raiz = resultado.value
-    @estrutura = { 'extensoes' => [], 'tipos_enum' => {}, 'tabelas' => {}, 'views' => [], 'funcoes' => [], 'gatilhos' => {} }
+    @estrutura = { 'extensoes' => [], 'tipos_enum' => {}, 'tabelas' => {}, 'views' => [], 'funcoes' => {}, 'gatilhos' => {} }
   end
 
   def estrutura
@@ -47,10 +48,21 @@ class MigrationsSeguras::SchemaRb
                add_foreign_key: :ler_chave, execute: :ler_sql }.freeze
 
   def ler_comando(comando)
-    return unless comando.is_a?(Prism::CallNode) && comando.receiver.nil?
+    return unless comando.is_a?(Prism::CallNode)
+    return ler_gatilho_encadeado(comando) if comando.receiver
 
     leitor = LEITORES[comando.name]
     send(leitor, comando) if leitor
+  end
+
+  # `create_trigger("nome").on("tabela").after(:insert).for_each(:row) do ... end` (hairtrigger): a chamada de fora tem
+  # receptor; o create_trigger fica na raiz da cadeia.
+  def ler_gatilho_encadeado(comando)
+    raiz = comando
+    raiz = raiz.receiver while raiz.receiver.is_a?(Prism::CallNode)
+    return unless raiz.name == :create_trigger && raiz.receiver.nil?
+
+    @estrutura['gatilhos']["create_trigger #{texto(argumentos(raiz).first)}"] = Digest::MD5.hexdigest(comando.slice)
   end
 
   def ler_extensao(comando)
@@ -98,10 +110,14 @@ class MigrationsSeguras::SchemaRb
     )
   end
 
-  # Os `execute` do schema.rb são as funções e os gatilhos (hairtrigger). Sem ler o SQL, o próprio texto é a chave:
-  # sumiu ou mudou, a Compatibilidade avisa, como faz com o gatilho que o banco perde.
+  # Os `execute` do schema.rb são as funções e os gatilhos (hairtrigger), quase sempre em heredoc. A chave é a primeira
+  # linha do SQL (CREATE OR REPLACE FUNCTION public.x() / CREATE TRIGGER x ...) e o valor é o md5 do SQL inteiro: some
+  # ou muda, a Compatibilidade avisa, como faz com o que o banco perde.
   def ler_sql(comando)
-    @estrutura['gatilhos'][texto(argumentos(comando).first)] = true
+    sql = texto(argumentos(comando).first)
+    cabeca = sql.lines.map(&:strip).find { |linha| !linha.empty? }.to_s
+    grupo = cabeca.start_with?('CREATE OR REPLACE FUNCTION', 'CREATE FUNCTION') ? 'funcoes' : 'gatilhos'
+    @estrutura[grupo][cabeca] = Digest::MD5.hexdigest(sql)
   end
 
   def coluna(tipo, opcoes)
@@ -148,6 +164,8 @@ class MigrationsSeguras::SchemaRb
   def texto(node)
     case node
     when Prism::StringNode, Prism::SymbolNode then node.unescaped
+    # Heredoc com interpolação: o slice seria só o `<<-SQL`.
+    when Prism::InterpolatedStringNode then node.parts.map { |parte| texto(parte) }.join
     else node.slice
     end
   end

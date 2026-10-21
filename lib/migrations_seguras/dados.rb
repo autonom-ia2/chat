@@ -12,7 +12,8 @@ class MigrationsSeguras::Dados
     execute exec_query exec_update exec_delete exec_insert select_all select_one select_value select_values select_rows
     update_all delete_all destroy_all insert_all insert_all! upsert_all upsert insert insert! update_columns update_column
     update update! update_attribute update_counters save save! create create! destroy delete delete_by destroy_by touch
-    increment! decrement! toggle! find_or_create_by find_or_create_by! create_or_find_by find_each find_in_batches
+    increment! decrement! toggle! find_or_create_by find_or_create_by! create_or_find_by first_or_create first_or_create!
+    reset_counters increment_counter decrement_counter touch_all exec exec_params query find_each find_in_batches
     in_batches
   ].freeze
   # Constantes que aparecem em migration sem tocar em dado: o próprio Rails e utilitários do Ruby.
@@ -27,17 +28,14 @@ class MigrationsSeguras::Dados
     @motivos = []
   end
 
+  # O arquivo inteiro, onde quer que a classe esteja (dentro de module, if...). O `require` do topo não marca nada:
+  # require não está na lista e Rails é das constantes sem dados.
   def motivos
-    classes.each { |classe| visitar(classe.body) }
+    visitar(@raiz)
     @motivos.uniq
   end
 
   private
-
-  # Tudo dentro da classe da migration (métodos e o corpo dela); o `require` no topo do arquivo não conta.
-  def classes
-    @raiz.statements.body.select { |node| node.is_a?(Prism::ClassNode) }
-  end
 
   def visitar(node)
     return unless node
