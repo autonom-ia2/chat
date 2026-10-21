@@ -100,7 +100,8 @@ module Autonomia::Agents::Areas
   # A PAUSA do principal não entra nessa ordem (#1600): ela trava só o próprio agente, e a leitura de `operating?` aqui
   # não o trava. Uma pausa ainda sem commit pode cruzar com esta conferência, e a área entra numa caixa cujo principal
   # acaba de parar. É de propósito: o resultado é o mesmo da área que entra e do principal que pausa logo depois, estado
-  # que já vale (sendo porta, ao parar, as áreas da caixa ficam; ver Agent#release_bot_conversations). Travar a caixa na
+  # que já vale (sendo porta, ao parar, as áreas da caixa ficam; ver Agent#sync_mirror_bots →
+  # AgentInbox#release_bot_conversations!). Travar a caixa na
   # pausa só escolheria qual das duas ordens vence; ler o principal com trava aqui inverteria a ordem para caixa → agente
   # e criaria deadlock com o InboxConnector#disconnect!.
   #
