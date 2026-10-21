@@ -61,6 +61,45 @@ describe('#hasMessageFailedWithExternalError', () => {
   });
 });
 
+describe('#sendMessageWithData (#2067)', () => {
+  const pendente = extra => ({
+    conversation_id: 1,
+    id: 'temp-1',
+    status: 'progress',
+    content_attributes: {},
+    ...extra,
+  });
+
+  beforeEach(() => {
+    dispatch.mockClear();
+  });
+
+  it('relê a conversa depois do envio que pediu para ficar com ela', async () => {
+    axios.mockResolvedValueOnce({ data: { id: 10, conversation_id: 1 } });
+    await actions.sendMessageWithData(
+      { commit, dispatch },
+      pendente({ ficarComAConversa: true })
+    );
+    expect(dispatch).toHaveBeenCalledWith('getConversation', 1);
+  });
+
+  it('não relê quando o envio não pediu, nem quando a mensagem foi recusada', async () => {
+    axios.mockResolvedValueOnce({ data: { id: 11, conversation_id: 1 } });
+    await actions.sendMessageWithData(
+      { commit, dispatch },
+      pendente({ ficarComAConversa: false })
+    );
+    axios.mockRejectedValueOnce({ response: { data: { error: 'x' } } });
+    await expect(
+      actions.sendMessageWithData(
+        { commit, dispatch },
+        pendente({ ficarComAConversa: true })
+      )
+    ).rejects.toBeTruthy();
+    expect(dispatch).not.toHaveBeenCalledWith('getConversation', 1);
+  });
+});
+
 describe('#actions', () => {
   describe('conversation history loading', () => {
     let store;
