@@ -519,6 +519,7 @@
         "ENTRADA": "Entrada",
         "SPAM": "Spam",
         "LIXEIRA": "Lixeira",
+        "ENVIADOS": "Enviados",
         "MARCAR_SPAM": "Spam",
         "MARCAR_SPAM_DICA": "Mover para o Spam e resolver. E-mail deste remetente nesta caixa cai direto no Spam",
         "MOVER_LIXEIRA": "Lixeira",

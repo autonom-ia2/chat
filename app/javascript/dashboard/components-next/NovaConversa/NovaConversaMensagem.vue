@@ -7,8 +7,9 @@ import NovaConversaTexto from './NovaConversaTexto.vue';
 import NovaConversaPronta from './NovaConversaPronta.vue';
 import NovaConversaEmail from './NovaConversaEmail.vue';
 import NovaConversaAnexo from './NovaConversaAnexo.vue';
+import NovaConversaCaixaDoWhatsapp from './NovaConversaCaixaDoWhatsapp.vue';
 import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
-import { MODOS, TIPOS, aceitaAnexo } from './novaConversa';
+import { MODOS, TIPOS, aceitaAnexo, usaCaixaDoWhatsapp } from './novaConversa';
 
 // #1459 — "Sua mensagem": o que aparece depende do canal escolhido. Escrever
 // é um campo simples; mensagem pronta é uma lista de modelos aprovados pelo
@@ -21,9 +22,12 @@ const props = defineProps({
   podeCriarPronta: { type: Boolean, default: false },
   // #1505 — a mensagem entra numa conversa que já existe.
   continuando: { type: Boolean, default: false },
+  // #1988 — caixa híbrida pelo número reserva: só texto (sem "+" e sem microfone).
+  soTexto: { type: Boolean, default: false },
 });
 
 defineEmits([
+  'enviar',
   'update:camposProntos',
   'update:textoDoModelo',
   'enviarPronta',
@@ -60,6 +64,12 @@ const escolhePronta = computed(
 );
 const escreve = computed(
   () => props.tipo === TIPOS.TEXTO || (livre.value && !escolhePronta.value)
+);
+// #1988 — no WhatsApp (oficial e comum) o texto livre ganha a caixa com a barra.
+const caixaDoWhatsapp = computed(
+  () =>
+    escreve.value &&
+    usaCaixaDoWhatsapp({ canal: props.canal, tipo: props.tipo })
 );
 
 // "Começar pronto": quando só dá para enviar mensagem pronta e há uma só
@@ -118,8 +128,20 @@ defineExpose({ montar: () => pronta.value?.montar() ?? null });
       </p>
     </header>
 
+    <NovaConversaCaixaDoWhatsapp
+      v-if="caixaDoWhatsapp"
+      v-model:mensagem="mensagem"
+      v-model:anexos="anexos"
+      :canal="canal"
+      :assinatura="assinatura"
+      :com-assinatura="comAssinatura"
+      :so-texto="soTexto"
+      :com-rotulo="!comEscolha"
+      @enviar="$emit('enviar')"
+    />
+
     <NovaConversaTexto
-      v-if="escreve"
+      v-else-if="escreve"
       v-model="mensagem"
       :com-rotulo="!comEscolha"
     />

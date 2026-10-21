@@ -131,7 +131,18 @@
     "RATE_UNAVAILABLE": "BRL exchange rate is unavailable right now; showing values in USD.",
     "RESOURCE_FALLBACK": "Other",
     "LOADING": "Loading AI usage…",
-    "ERROR": "Could not load AI usage. Try again."
+    "ERROR": "Could not load AI usage. Try again.",
+    "SEM_VALORES": {
+      "DESCRICAO": "Follow how much AI is used by feature, period and recent uses.",
+      "AVISO": "You see how much AI was used. Money values show for roles with Finance.",
+      "POR_RECURSO": "Usage by feature",
+      "USOS": "{n} use | {n} uses",
+      "SERIE": {
+        "TODAY": "Uses per hour today",
+        "WEEK": "Uses per day this week",
+        "MONTH": "Uses per day this month"
+      }
+    }
   },
   "CRM_DASHBOARD": {
     "ORIGIN": {

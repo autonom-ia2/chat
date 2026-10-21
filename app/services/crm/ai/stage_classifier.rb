@@ -77,7 +77,7 @@ module Crm
               required: %w[contact conversation card],
               additionalProperties: false
             },
-            score_signals: ScoreCalculator::SIGNALS_SCHEMA
+            score_signals: ScoreSignalsSchema::SCHEMA
           },
           required: %w[suggested_stage_id confidence reasoning value handoff callback_request extracted_attributes score_signals],
           additionalProperties: false
