@@ -2344,7 +2344,8 @@
           },
           "CHOOSE": {
             "TITLE": "Qual é a conta dos anúncios do WhatsApp?",
-            "TEXT": "Achamos mais de uma. Toque na que você usa."
+            "TEXT": "Achamos mais de uma. Toque na que você usa.",
+            "RECOMMENDED": "Mais usada"
           },
           "NOT_YET": {
             "TITLE": "Ainda não chegou",

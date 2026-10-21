@@ -60,9 +60,30 @@ Feito no código:
   no M2 e o `rails.log`.
 - Túnel para o Rodrigo: `ssh -f -N -L 3981:127.0.0.1:3981 -L '3983:[::1]:3983' m2`.
 
+## QA do protótipo (21/10, à tarde) — feito
+
+Jornada inteira percorrida no Chrome: o cartão "Ver quanto gastei" leva a "Entrar com o Facebook" (simulado), depois
+a "Achamos sua conta" e "Conectar". A tela "Pronto" leva ao painel com gasto. O histórico se manteve (142 conversas e
+8 vendas, antes e depois) e o painel separa R$ 3.490 (WhatsApp) de R$ 1.494 (outros).
+
+Também conferidos:
+- os casos de duas contas (com o selo "Mais usada"), recusa do Facebook e "ainda não chegou" (conferiu sozinho e
+  achou);
+- a mensagem para outra pessoa e o compartilhamento em 3 passos com o desenho da Meta;
+- os avisos `choosing` (Continuar retoma na escolha) e `broken`;
+- celular (390 px) e tema claro e escuro.
+
+Ajustes feitos no QA:
+- nome do anúncio cai para o título do clique logo depois de conectar;
+- CTA sólido no cartão "Investimento", que não quebra no celular;
+- faixa "Entrar → Confirmar → Ver";
+- a conexão abre no topo da tela.
+
+ESLint e Rubocop limpos. Demo zerada (sem conexão, `meta_modo=uma`).
+
 ## Próxima ação
 
-1. Confirmar que o painel subiu e fazer o QA:
+1. ~~Confirmar que o painel subiu e fazer o QA~~ (feito):
    - toda a jornada: Ver quanto gastei → Entrar com o Facebook → Conectar → Pronto → painel com gasto e "Outros
      anúncios";
    - os modos `duas`, `nada`, `recusa` e `aos_poucos`;

@@ -63,6 +63,18 @@ const partnersUrl = computed(() => {
     : META_PARTNERS_URL;
 });
 const partnerStep = computed(() => PARTNER_STEPS.indexOf(screen.value) + 1);
+// Depois de entrar com o Facebook, a faixa "Entrar → Confirmar → Ver" mostra onde a pessoa está.
+const FACEBOOK_SCREENS = {
+  checking: 2,
+  found: 2,
+  choose: 2,
+  connecting: 2,
+  notyet: 2,
+  done: 3,
+};
+const facebookStep = computed(() =>
+  mode.value === 'facebook_login' ? FACEBOOK_SCREENS[screen.value] || 0 : 0
+);
 const broken = computed(() => props.resume?.state === 'broken');
 const message = computed(() =>
   t(`${C}.SEND.MESSAGE`, {
@@ -202,6 +214,8 @@ const startOver = () => {
 };
 
 onMounted(() => {
+  // Aberta do meio do painel (o cartão Investimento fica abaixo do herói): a conexão começa no topo.
+  root.value?.scrollIntoView?.({ block: 'start' });
   if (hasFacebook.value) preload(facebook.value).catch(() => {});
   if (props.resume?.state === 'choosing') {
     mode.value = props.resume.mode === 'partner' ? 'partner' : 'facebook_login';
@@ -218,7 +232,10 @@ onBeforeUnmount(stopRecheck);
     :data-screen="screen"
     class="mx-auto flex w-full max-w-2xl flex-col gap-6 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-8"
   >
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div
+      v-if="screen !== 'done' || partnerStep"
+      class="flex flex-wrap items-center justify-between gap-3"
+    >
       <button
         v-if="screen !== 'done'"
         type="button"
@@ -239,6 +256,50 @@ onBeforeUnmount(stopRecheck);
         }}
       </span>
     </div>
+
+    <ol
+      v-if="facebookStep"
+      data-conectar-faixa
+      class="m-0 flex list-none items-center gap-2 p-0 text-xs font-medium sm:text-sm"
+    >
+      <li
+        v-for="(item, index) in FACEBOOK_STEPS"
+        :key="item"
+        class="flex min-w-0 items-center gap-2"
+        :aria-current="index + 1 === facebookStep ? 'step' : undefined"
+      >
+        <span
+          class="grid size-6 flex-none place-items-center rounded-full text-xs font-bold"
+          :class="
+            index + 1 < facebookStep
+              ? 'bg-n-teal-9 text-white'
+              : index + 1 === facebookStep
+                ? 'bg-n-blue-9 text-white'
+                : 'bg-n-alpha-2 text-n-slate-11'
+          "
+        >
+          <span
+            v-if="index + 1 < facebookStep"
+            class="i-lucide-check size-3.5"
+            aria-hidden="true"
+          />
+          <template v-else>{{ index + 1 }}</template>
+        </span>
+        <span
+          class="truncate"
+          :class="
+            index + 1 === facebookStep ? 'text-n-slate-12' : 'text-n-slate-11'
+          "
+        >
+          {{ $t(`${C}.START.STEPS.${item}`) }}
+        </span>
+        <span
+          v-if="index < FACEBOOK_STEPS.length - 1"
+          class="h-px w-4 flex-none bg-n-weak sm:w-8"
+          aria-hidden="true"
+        />
+      </li>
+    </ol>
 
     <!-- Começo: Entrar com o Facebook -->
     <template v-if="screen === 'start'">
@@ -594,10 +655,17 @@ onBeforeUnmount(stopRecheck);
             class="flex min-h-16 w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl border-0 bg-n-solid-1 px-5 py-4 text-start ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 hover:ring-n-blue-7 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
             @click="connectAccount(row)"
           >
-            <span
-              class="min-w-0 flex-1 text-base font-semibold text-n-slate-12"
-            >
-              {{ row.name }}
+            <span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <span class="text-base font-semibold text-n-slate-12">
+                {{ row.name }}
+              </span>
+              <span
+                v-if="row.recommended"
+                data-conectar-mais-usada
+                class="inline-flex items-center rounded-md bg-n-teal-3 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-n-teal-11"
+              >
+                {{ $t(`${C}.CHOOSE.RECOMMENDED`) }}
+              </span>
             </span>
             <span
               v-if="row.spend_30d != null"

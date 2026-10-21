@@ -2343,7 +2343,8 @@
           },
           "CHOOSE": {
             "TITLE": "Which account runs your WhatsApp ads?",
-            "TEXT": "We found more than one. Tap the one you use."
+            "TEXT": "We found more than one. Tap the one you use.",
+            "RECOMMENDED": "Most used"
           },
           "NOT_YET": {
             "TITLE": "Not there yet",

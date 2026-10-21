@@ -191,10 +191,11 @@ class Crm::MetaAds::Panel::Report
     }.merge(ad_look(ad_id), outcome_counts(cards))
   end
 
-  # Nome (o resolvido pela Meta, senão o título do clique) e imagens do anúncio.
+  # Nome (o resolvido pela Meta, senão o título do clique, também logo depois de conectar, enquanto a Meta não manda
+  # os nomes) e imagens do anúncio.
   def ad_look(ad_id)
     object = objects[ad_id]
-    name = object&.name.presence || (headlines[ad_id] if whatsapp_only?)
+    name = object&.name.presence || headlines[ad_id]
     { name: name, thumbnail_url: object&.thumbnail_url, image_url: object&.image_path }
   end
 

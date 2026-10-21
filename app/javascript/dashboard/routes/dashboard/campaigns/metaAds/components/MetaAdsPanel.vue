@@ -622,7 +622,7 @@ onMounted(() => {
                 (PATH_LISTS[step.key] && !sample) || step.connect
                   ? 'transition hover:bg-n-alpha-1 hover:ring-n-slate-6'
                   : '',
-                step.connect ? 'bg-n-blue-1 ring-n-blue-5 border-dashed' : '',
+                step.connect ? '!bg-n-blue-2 !ring-n-blue-6' : '',
               ]"
             >
               <span
@@ -653,12 +653,12 @@ onMounted(() => {
                 v-if="step.connect"
                 type="button"
                 data-panel-connect
-                class="inline-flex min-h-11 items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-semibold text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+                class="mt-1 inline-flex min-h-11 items-center gap-1.5 self-start whitespace-nowrap rounded-xl border-0 bg-n-blue-9 px-3 text-sm sm:px-4 font-semibold text-white transition hover:bg-n-blue-10 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
                 @click="emit('connect')"
               >
                 {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.CONNECT_SPEND.CTA') }}
                 <span
-                  class="i-lucide-arrow-right size-3.5"
+                  class="i-lucide-arrow-right hidden size-3.5 sm:inline-block"
                   aria-hidden="true"
                 />
               </button>
