@@ -145,9 +145,21 @@ class MigrationsSeguras::SchemaRb
   def ler_chave(comando)
     origem, destino = argumentos(comando).first(2).map { |argumento| texto(argumento) }
     opcoes = opcoes(comando)
-    nome = opcoes['name'] || "#{destino}.#{opcoes['column']}"
+    coluna = opcoes['column'] || "#{singular(destino)}_id"
+    nome = opcoes['name'] || "#{destino}.#{Array(coluna).join(',')}"
     tabela = @estrutura['tabelas'][origem]
     tabela['chaves_estrangeiras'][nome] = { 'para' => destino } if tabela
+  end
+
+  # O schema.rb só escreve column: quando ela foge do padrão do Rails (<destino no singular>_id). Sem o Rails aqui, o
+  # singular cobre as formas das tabelas do fork (accounts, companies, addresses). Errar o singular de um nome raro não
+  # cria falso alarme: a chave só precisa ser a mesma nas duas leituras de schema.rb, a da blue e a deste commit.
+  def singular(tabela)
+    return "#{tabela.delete_suffix('ies')}y" if tabela.end_with?('ies')
+    return tabela.delete_suffix('es') if tabela.end_with?('sses')
+    return tabela.delete_suffix('s') if tabela.end_with?('s') && !tabela.end_with?('ss')
+
+    tabela
   end
 
   def argumentos(chamada)

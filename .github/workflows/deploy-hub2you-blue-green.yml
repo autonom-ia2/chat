@@ -59,6 +59,11 @@ on:
         required: false
         default: false
         type: boolean
+      blue_sha:
+        description: Deploy - SHA completo do commit da blue, só quando a tag Name não diz. Não pula a conferência do schema (#2024).
+        required: false
+        default: ''
+        type: string
       esperado_sha:
         description: Rollback - SHA (7+ caracteres) do commit que estava no ar antes do deploy a desfazer.
         required: false
@@ -365,12 +370,16 @@ jobs:
       # #2024: a CI compara as migrations com a main, mas a blue pode estar vários PRs atrás. Antes de existir green,
       # o schema.rb deste commit é comparado com o da blue (e o db/retiradas.yml dela): remoção que a blue não
       # anunciou para o deploy aqui. Ruby puro (Prism), sem bundle.
+      # Fixado no SHA (v1.331.0, o v1 em 21/10/2026): este job roda com credencial de produção.
       - name: Set up Ruby for the schema check
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@824c0e29fdfc7d689c191c27acc969d2d04b7dd8
+        with:
+          bundler: none
 
       - name: Check the schema against the blue
         env:
           GH_TOKEN: ${{ github.token }}
+          BLUE_SHA_INFORMADO: ${{ github.event_name == 'workflow_dispatch' && inputs.blue_sha || '' }}
         run: bash scripts/deploy/schema-contra-a-blue.sh
 
       # #2024: snapshot do RDS pedido aqui, quando o deploy traz migration que a blue não tem, e esperado antes de lançar

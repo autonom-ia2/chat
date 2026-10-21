@@ -33,5 +33,6 @@ if verificacao.compativel?
 end
 
 verificacao.bloqueios.each { |achado| puts "::error::A blue não aguenta o schema novo: #{achado}" }
-puts 'Nada foi mexido: a green não foi lançada e a blue segue no ar. Ver docs/migrations-em-lote.md (Remover ou renomear).'
+puts 'A green não foi lançada: nenhuma instância nem o banco foram tocados, e a blue segue no ar. ' \
+     'Ver docs/migrations-em-lote.md (Remover ou renomear).'
 exit 1

@@ -43,7 +43,9 @@ O job roda no PostgreSQL 18, a mesma major da produção (18.3 nas duas stacks),
 (`target_postgresql_version`). O RSpec comum segue no 16.
 
 O strong_migrations ignora as migrations até `StrongMigrations.start_after` (a última da `main` quando a gem entrou).
-No job ele checa **toda** migration nova do lote, mesmo com versão menor que essa.
+No job ele checa **toda** migration nova do lote, mesmo com versão menor que essa. O valor precisa ser conferido contra
+a `origin/main` **imediatamente antes do merge** do PR que traz a gem: migration que entrar antes dele com versão
+maior passaria a ser checada na green, e pode não passar.
 
 O job roda no PR e na fila de merge. Na fila, a base é a `main` e o lote é a soma dos PRs da rodada: é o teste do lote
 inteiro, na ordem das versões. Ele faz parte do check obrigatório **RSpec**.
@@ -75,12 +77,22 @@ remover a antiga por este caminho.
 O PR 2 é a migration que não é só aditiva. Ele sobe sozinho e com OK do Rodrigo (`processo-de-release.md`).
 
 O deploy confere o mesmo de novo contra a **blue**: se o PR 1 entrou na `main` mas não chegou a subir, e o PR 2 vem no
-mesmo deploy, o passo **Check the schema against the blue** para o deploy antes de lançar a green, e nada é mexido.
-A saída é subir o PR 1 sozinho (reverter o PR 2 na `main`, deploy, e voltar o PR 2 depois do "ok, SHA").
+mesmo deploy, o passo **Check the schema against the blue** para o deploy antes de lançar a green. Parando ali,
+nenhuma instância nem o banco foram tocados. Só o parâmetro de env, que o passo das flags de runtime regrava em
+todo deploy, já foi escrito.
+
+**O custo.** O deploy sobe sempre a ponta da `main`. Enquanto o PR 1 e o PR 2 estiverem juntos na `main` e a blue
+não tiver o PR 1, **todo** deploy para nesse passo, de qualquer PR, até alguém reverter o PR 2 na `main`. A
+produção segue no ar, na versão da blue, mas nada mais sobe. Reverter o PR 2, subir, e voltar o PR 2 depois do
+"ok, SHA" custa dois PRs e dois deploys. A alternativa, esperar, mantém a fila parada. **Quem decide é o Rodrigo**: o
+passo não reverte nada sozinho, só avisa no `::error` qual coluna ou tabela a blue ainda usa.
 
 Esse passo roda em todo deploy e é fechado por padrão: se não der para saber o commit da blue (tag `Name` da
 instância ou API do GitHub, com três tentativas), o deploy para ali, antes de existir green, e é só disparar de novo.
-É o mesmo pré-requisito do rollback (`check-rollback-target.sh`). Lido sem banco, o `schema.rb` mostra tabelas,
+É o mesmo pré-requisito do rollback (`check-rollback-target.sh`). Se a tag continuar sem dizer, o deploy manual
+aceita `blue_sha` (o SHA completo do commit que a blue roda): ele troca só a descoberta, a comparação roda igual, e
+não existe jeito de pular o passo. O Ruby do passo vem de `ruby/setup-ruby` fixado no SHA e sem bundle, porque o
+job tem credencial de produção. Lido sem banco, o `schema.rb` mostra tabelas,
 colunas, índices, restrições e chaves; funções e gatilhos (os `execute` do hairtrigger) entram pelo texto do SQL e,
 como no job, só geram aviso.
 

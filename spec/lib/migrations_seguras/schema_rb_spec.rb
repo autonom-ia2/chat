@@ -50,7 +50,26 @@ RSpec.describe MigrationsSeguras::SchemaRb do
     expect(estrutura['extensoes']).to eq(['pg_trgm'])
     expect(estrutura.dig('tabelas', 'contacts')).to include('chave_primaria' => ['id'], 'restricoes' => { 'conta_positiva' => 'account_id > 0' })
     expect(estrutura.dig('tabelas', 'contacts', 'indices').keys).to eq(['index_contacts_on_account_id'])
-    expect(estrutura.dig('tabelas', 'notas')).to include('chave_primaria' => [], 'chaves_estrangeiras' => { 'contacts.' => { 'para' => 'contacts' } })
+    expect(estrutura.dig('tabelas', 'notas'))
+      .to include('chave_primaria' => [], 'chaves_estrangeiras' => { 'contacts.contact_id' => { 'para' => 'contacts' } })
+  end
+
+  it 'dá à chave estrangeira sem column: a coluna padrão do Rails, no singular do destino' do
+    texto = schema(<<~SCHEMA)
+      create_table "notas", force: :cascade do |t|
+        t.bigint "company_id"
+        t.bigint "address_id"
+        t.bigint "autor_id"
+      end
+
+      add_foreign_key "notas", "companies"
+      add_foreign_key "notas", "addresses"
+      add_foreign_key "notas", "users", column: "autor_id"
+    SCHEMA
+
+    chaves = described_class.ler(texto).dig('tabelas', 'notas', 'chaves_estrangeiras').keys
+
+    expect(chaves).to eq(['companies.company_id', 'addresses.address_id', 'users.autor_id'])
   end
 
   it 'lê o db/schema.rb do repositório inteiro' do
