@@ -155,5 +155,10 @@
         "TEXTO": "Olá, [nome_cliente]. Atualização de [nome_empresa]: o seu pedido de reembolso teve andamento. Quer saber os detalhes? Toque no botão abaixo."
       }
     }
+  },
+  "AUTONOMIA_GUIDE": {
+    "SUGGESTIONS": {
+      "REPORTS": "Quantos planos fechei este mês?"
+    }
   }
 }

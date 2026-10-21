@@ -227,5 +227,10 @@
         "TEXTO": "Olá, [nome_cliente]. Atualização de [nome_empresa]: o seu sinistro teve andamento. Quer saber os detalhes? Toque no botão abaixo."
       }
     }
+  },
+  "AUTONOMIA_GUIDE": {
+    "SUGGESTIONS": {
+      "REPORTS": "Quantos seguros fechei este mês?"
+    }
   }
 }
