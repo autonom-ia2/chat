@@ -4,7 +4,8 @@
 # `substituido_cancelado` e `substituido_na_conversa` (onde está a versão nova); o cartão troca a pergunta por um aviso
 # e a resposta (RespostaDoConvite) recusa.
 # - Mesma reunião: mesmo UID e mesmo organizador, do mesmo remetente e na mesma caixa, em qualquer conversa (o Outlook
-#   manda a atualização num e-mail novo). Olha só o último ano.
+#   manda a atualização num e-mail novo). O UID é achado pela chave em additional_attributes.convite_uid_sha256, por
+#   índice (#2042): o SHA-256 cabe no índice mesmo quando o UID que veio no convite é enorme.
 # - Substitui quem tem SEQUENCE maior. Na mesma SEQUENCE, só a troca de método (CANCEL depois do REQUEST, ou o REQUEST
 #   que readiciona a caixa depois do CANCEL), pelo DTSTAMP; o mesmo convite reenviado (só um convidado a mais) não
 #   substitui, e a resposta já dada continua valendo.
@@ -13,10 +14,12 @@
 # - Vale também fora de ordem (o convite antigo que chega depois do novo já nasce substituído) e com dois e-mails
 #   chegando juntos: a marca só troca para uma versão mais nova que a já marcada.
 class ConversaCanal::ConviteSubstituido
-  JANELA = 1.year
-
   def self.marcar(message)
     new(message).perform
+  end
+
+  def self.chave(uid)
+    Digest::SHA256.hexdigest(uid.to_s)
   end
 
   def initialize(message)
@@ -43,14 +46,11 @@ class ConversaCanal::ConviteSubstituido
     (message.content_attributes || {}).deep_stringify_keys.dig('email', 'convite') || {}
   end
 
-  # O UID filtra no banco pelo texto de content_attributes, sem aspas: em produção o JSON vem guardado como texto, com
-  # as aspas escapadas (um UID com aspas ou barra invertida não casa, e o convite antigo fica como está). A conferência
-  # campo a campo vem depois, aqui. Roda num job da fila low: o volume é o do remetente nessa caixa, num ano.
+  # A chave do UID acha as candidatas pelo índice; a conferência campo a campo (UID e organizador) vem depois, aqui.
   def mesma_reuniao
     Message.incoming
+           .where("messages.additional_attributes ->> 'convite_uid_sha256' = ?", self.class.chave(uid))
            .where(inbox_id: @message.inbox_id, sender_type: @message.sender_type, sender_id: @message.sender_id)
-           .where(created_at: JANELA.ago..)
-           .where('messages.content_attributes::text LIKE ?', "%#{Message.sanitize_sql_like(uid)}%")
            .to_a
            .select { |message| mesma_reuniao?(convite(message)) }
   end
