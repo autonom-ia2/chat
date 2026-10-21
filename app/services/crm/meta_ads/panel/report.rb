@@ -88,9 +88,10 @@ class Crm::MetaAds::Panel::Report
   end
 
   # Um anúncio do período na forma da lista, esteja entre os que trazem conversa ou entre os outros: a tela do
-  # anúncio (Panel::AdDetail) abre os dois, e o aviso de gasto sem conversa aponta justamente para um dos outros.
+  # anúncio (Panel::AdDetail) abre os dois. O dos outros vem sem veredito: ele não traz conversa por desenho, e
+  # "faltam conversas para saber" não vale para ele.
   def ad(ad_id)
-    ads.find { |row| row[:ad_id] == ad_id } || (with_verdict(ad_row(ad_id)) if spend_by_ad.key?(ad_id))
+    ads.find { |row| row[:ad_id] == ad_id } || (ad_row(ad_id).merge(verdict: nil) if spend_by_ad.key?(ad_id))
   end
 
   # Anúncios com gasto que não levam a conversa (ver outside_conversation?), do maior gasto ao menor.
@@ -177,7 +178,7 @@ class Crm::MetaAds::Panel::Report
     @messaging_ad_ids ||= if whatsapp_only?
                             Set.new
                           else
-                            Set.new(insights_since_ever.where(conversations_started: 1..).distinct.pluck(:ad_id)) |
+                            Set.new(insights_since_ever.where(ad_id: spend_by_ad.keys, conversations_started: 1..).distinct.pluck(:ad_id)) |
                               Crm::MetaAdLink.where(account_id: @account_id, ad_id: spend_by_ad.keys).distinct.pluck(:ad_id)
                           end
   end

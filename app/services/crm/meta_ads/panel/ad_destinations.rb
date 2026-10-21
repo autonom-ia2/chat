@@ -1,13 +1,14 @@
 # Para onde cada anúncio leva (#2054), pelo `destination_type` do conjunto que a Meta manda (Crm::MetaAds::NameResolver).
 #
-# Só afirma "não leva a uma conversa" quando a Meta disse o destino e ele não é de mensagem (site, vídeo, perfil…).
-# Sem o destino — conjunto ainda não resolvido, ou a Meta não mandou — não afirma nada: o anúncio segue entre os que
-# trazem conversa, como um anúncio novo de WhatsApp que ainda não recebeu a primeira mensagem.
+# Só afirma "não leva a uma conversa" quando a Meta disse um destino que está em OUTSIDE (site, app, vídeo, perfil…).
+# Sem o destino — conjunto ainda não lido (Insights::Destinations), UNDEFINED ou um valor novo da Meta — não afirma
+# nada: o anúncio segue entre os que trazem conversa, como um anúncio novo de WhatsApp sem a primeira mensagem.
 class Crm::MetaAds::Panel::AdDestinations
-  # Os destinos de mensagem da referência do conjunto de anúncios (Marketing API, campo destination_type).
-  MESSAGING = %w[
-    WHATSAPP MESSENGER INSTAGRAM_DIRECT MESSAGING_MESSENGER_WHATSAPP MESSAGING_INSTAGRAM_DIRECT_MESSENGER
-    MESSAGING_INSTAGRAM_DIRECT_MESSENGER_WHATSAPP MESSAGING_INSTAGRAM_DIRECT_WHATSAPP
+  # Os destinos que não são de mensagem, da referência do conjunto de anúncios (Marketing API, destination_type). Os de
+  # mensagem (WHATSAPP, MESSENGER, INSTAGRAM_DIRECT e os MESSAGING_*) ficam de fora de propósito.
+  OUTSIDE = %w[
+    WEBSITE APP APPLINKS_AUTOMATIC FACEBOOK SHOP_AUTOMATIC ON_AD ON_POST ON_EVENT ON_VIDEO ON_PAGE INSTAGRAM_PROFILE
+    FACEBOOK_PAGE INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE INSTAGRAM_LIVE FACEBOOK_LIVE IMAGINE
   ].freeze
   UNDEFINED = 'UNDEFINED'.freeze
 
@@ -18,8 +19,7 @@ class Crm::MetaAds::Panel::AdDestinations
   end
 
   def outside_conversation?(ad_id)
-    destination = destinations[adsets[ad_id]]
-    destination.present? && destination != UNDEFINED && MESSAGING.exclude?(destination)
+    OUTSIDE.include?(destinations[adsets[ad_id]])
   end
 
   private

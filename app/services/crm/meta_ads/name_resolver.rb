@@ -18,16 +18,14 @@ class Crm::MetaAds::NameResolver
   MIN_ID_LENGTH = 6
   MAX_ID_LENGTH = 30
   FIELDS = {
-    'ad' => 'name,account_id,adset{id,name,destination_type},campaign{id,name},preview_shareable_link,creative{image_url,thumbnail_url}',
-    'adset' => 'name,account_id,destination_type,campaign{id,name}',
+    'ad' => 'name,account_id,adset{id,name},campaign{id,name},preview_shareable_link,creative{image_url,thumbnail_url}',
+    'adset' => 'name,account_id,campaign{id,name}',
     'campaign' => 'name,account_id'
   }.freeze
   UNKNOWN_TYPE_FIELDS = 'name,account_id'.freeze
-  # Para onde o conjunto leva (#2054): só o conjunto traz; o painel lê em Panel::AdDestinations.
-  DESTINATION_LIMIT = 64
   # A miniatura do criativo (64 px, anúncio em vídeo) só preenche linha sem imagem: não passa por cima da imagem de
   # 1080 px que o Crm::MetaAds::AdImages já gravou (#1088). As outras colunas são trocadas como sempre.
-  REPLACED_COLUMNS = %i[object_type name campaign_id adset_id preview_url destination_type fetched_at updated_at].freeze
+  REPLACED_COLUMNS = %i[object_type name campaign_id adset_id preview_url fetched_at updated_at].freeze
   KEEP_BIG_IMAGE = Arel.sql(
     (REPLACED_COLUMNS.map { |column| "#{column} = EXCLUDED.#{column}" } +
       ['thumbnail_url = COALESCE(crm_meta_ad_objects.thumbnail_url, EXCLUDED.thumbnail_url)']).join(', ')
@@ -195,7 +193,6 @@ class Crm::MetaAds::NameResolver
       name: object['name'].to_s.first(Crm::MetaAdObject::NAME_LIMIT).presence,
       campaign_id: campaign_id&.to_s, adset_id: adset_id&.to_s,
       preview_url: http_url(object['preview_shareable_link']), thumbnail_url: creative_image(object['creative']),
-      destination_type: object['destination_type'].to_s.first(DESTINATION_LIMIT).presence,
       fetched_at: now, created_at: now, updated_at: now
     }
   end

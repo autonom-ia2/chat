@@ -44,20 +44,6 @@ RSpec.describe Crm::MetaAds::NameResolver do
       expect(connection.reload.last_checked_at).to be_present
     end
 
-    it 'guarda para onde o conjunto leva, que vem embutido no anúncio ou no próprio conjunto (#2054)' do
-      body = ad_body(ad_id).merge(adset: { id: adset_id, name: 'Conjunto 60+', destination_type: 'WEBSITE' })
-      stub_meta_object(id: ad_id, fields: ad_fields, body: body)
-      other_adset = '120254710067060888'
-      stub_meta_object(id: other_adset, fields: described_class::FIELDS.fetch('adset'),
-                       body: { id: other_adset, name: 'Conjunto WhatsApp', destination_type: 'WHATSAPP' })
-
-      resolver.resolve([ad_id], type: 'ad')
-      resolver.resolve([other_adset], type: 'adset')
-
-      expect(Crm::MetaAdObject.where(account_id: account.id).pluck(:meta_object_id, :destination_type).to_h)
-        .to eq(ad_id => nil, adset_id => 'WEBSITE', campaign_id => nil, other_adset => 'WHATSAPP')
-    end
-
     it 'guarda a prévia e a miniatura do anúncio, só com https (#1047, CA-1.11)' do
       body = ad_body(ad_id).merge(preview_shareable_link: 'https://fb.me/adspreview/abc',
                                   creative: { id: '9', thumbnail_url: 'http://inseguro.example/x.jpg' })

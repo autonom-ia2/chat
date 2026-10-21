@@ -1,5 +1,12 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -34,8 +41,11 @@ const FACEBOOK_STEPS = ['ENTER', 'CHOOSE', 'SEE'];
 const PARTNER_STEPS = ['copy', 'meta', 'mark'];
 
 const { t, locale } = useI18n();
-const { isConnecting, preload, connect: facebookConnect } =
-  useMetaAdsFacebookLogin();
+const {
+  isConnecting,
+  preload,
+  connect: facebookConnect,
+} = useMetaAdsFacebookLogin();
 const facebook = computed(() => props.connection.facebook_login || {});
 const hasFacebook = computed(() => Boolean(facebook.value.available));
 
@@ -194,16 +204,22 @@ const connectAccount = async account => {
       adAccountId: account.id,
       pixelId: null,
     });
-    // Quem conecta a partir do WhatsApp mede o WhatsApp: o destino já vem marcado.
+  } catch (error) {
+    errorCode.value = error?.response?.data?.error || 'generic';
+    go('notyet');
+    return;
+  }
+  // Quem conecta a partir do WhatsApp mede o WhatsApp: o destino já vem marcado. A conta já está conectada; se
+  // marcar o destino falhar, a pessoa ajusta depois na aba Conexão (passo "Destino do anúncio").
+  try {
     await CrmMetaAdsConnectionAPI.updateDestinations({
       whatsapp: true,
       site: false,
     });
-    go('done');
-  } catch (error) {
-    errorCode.value = error?.response?.data?.error || 'generic';
-    go('notyet');
+  } catch {
+    // Segue para "pronto": a conexão vale sem o destino marcado.
   }
+  go('done');
 };
 
 const startOver = () => {
@@ -354,9 +370,7 @@ onBeforeUnmount(stopRecheck);
             :class="{ 'animate-pulse': isConnecting }"
             aria-hidden="true"
           />
-          {{
-            loginNotice ? $t(`${C}.START.RETRY`) : $t(`${C}.START.CTA`)
-          }}
+          {{ loginNotice ? $t(`${C}.START.RETRY`) : $t(`${C}.START.CTA`) }}
         </button>
         <p
           v-if="isConnecting"
@@ -694,18 +708,19 @@ onBeforeUnmount(stopRecheck);
         class="m-0 text-2xl font-bold tracking-tight text-balance text-n-slate-12 outline-none"
       >
         {{
-          errorCode
-            ? $t(`${C}.NOT_YET.TITLE_ERROR`)
-            : $t(`${C}.NOT_YET.TITLE`)
+          errorCode ? $t(`${C}.NOT_YET.TITLE_ERROR`) : $t(`${C}.NOT_YET.TITLE`)
         }}
       </h2>
       <p data-conectar-motivo class="m-0 text-base text-n-slate-11">
         {{
           errorCode
             ? errorText(errorCode)
-            : $t(`${C}.NOT_YET.${mode === 'partner' ? 'TEXT' : 'TEXT_FACEBOOK'}`, {
-                partner: partnerName,
-              })
+            : $t(
+                `${C}.NOT_YET.${mode === 'partner' ? 'TEXT' : 'TEXT_FACEBOOK'}`,
+                {
+                  partner: partnerName,
+                }
+              )
         }}
       </p>
       <p
@@ -713,7 +728,10 @@ onBeforeUnmount(stopRecheck);
         class="m-0 inline-flex items-center gap-2 text-sm text-n-slate-11"
         aria-live="polite"
       >
-        <span class="i-lucide-refresh-cw size-4 animate-spin" aria-hidden="true" />
+        <span
+          class="i-lucide-refresh-cw size-4 animate-spin"
+          aria-hidden="true"
+        />
         {{ $t(`${C}.NOT_YET.AUTO`) }}
       </p>
       <div class="flex flex-wrap items-center gap-3">
