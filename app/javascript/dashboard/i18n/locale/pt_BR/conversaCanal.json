@@ -585,6 +585,11 @@
         "MUITOS_PEDIDOS": "Muitos pedidos à IA em um minuto. Espere um pouco e peça de novo."
       }
     },
+    "FAIXA_WHATSAPP": {
+      "SEM_MENSAGENS": "As mensagens novas do WhatsApp desta caixa não estão chegando.",
+      "RECONECTAR": "Reconectar",
+      "PECA_AO_ADMIN": "Peça a um administrador para reconectar."
+    },
     "NOTA_DO_CONECTOR": {
       "AVISO": "⚠️ Uma mensagem do WhatsApp não chegou aqui. Confira no celular da caixa."
     }
