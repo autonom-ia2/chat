@@ -1,8 +1,9 @@
 require 'rails_helper'
 
-# #1428 (tema 6, parte 3, entrega B) — o juiz das perguntas de prova: só { indice, veredito, pedidos } (ok, nao,
-# nao_testa; os números dos pedidos que a resposta testa, que podem ser mais de um), um por item. Faltando item,
-# malformado ou provedor fora: nil (a prova fica indisponível, nunca um ✓ inventado). Número fora da lista não cobre nada.
+# #1428 (tema 6, parte 3, entrega B) — o juiz das perguntas de prova: só { indice, testes: [{ pedido, veredito }] }, um
+# por item. Cada pedido que a mensagem testa tem o SEU veredito (ok ou nao); pedido não testado não entra; lista vazia é
+# nao_testa. O veredito da pergunta sai dos testes: nao se algum é nao, ok se todos são ok. Faltando item, malformado ou
+# provedor fora: nil (a prova fica indisponível, nunca um ✓ inventado). Número fora da lista não cobre nada.
 RSpec.describe Autonomia::Agents::JuizDaProva do
   let(:account) { create(:account) }
   let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
@@ -29,48 +30,68 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     described_class.new(account: account).julgar(pedidos: pedidos, itens: itens)
   end
 
-  # Os pedidos vão ao juiz numerados a partir de 1; o que volta é a lista de posições (a partir de 0).
-  it 'um veredito por item, na ordem dos índices, com os três estados e as posições dos pedidos testados' do
+  def teste(pedido, veredito)
+    { pedido: pedido, veredito: veredito }
+  end
+
+  # Os pedidos vão ao juiz numerados a partir de 1; o que volta é a posição na lista (a partir de 0).
+  it 'um veredito por item, na ordem dos índices, derivado dos testes, com a posição de cada pedido testado' do
     itens << { 'pergunta' => 'Vocês atendem em Curitiba?', 'resposta' => 'Atendemos.', 'equipe' => false }
-    juiz_responde([{ indice: 2, veredito: 'nao_testa', pedidos: [] }, { indice: 1, veredito: 'nao', pedidos: [2] },
-                   { indice: 0, veredito: 'ok', pedidos: [1] }])
+    juiz_responde([{ indice: 2, testes: [] }, { indice: 1, testes: [teste(2, 'nao')] },
+                   { indice: 0, testes: [teste(1, 'ok')] }])
 
-    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedidos' => [0] }, { 'veredito' => 'nao', 'pedidos' => [1] },
-                          { 'veredito' => 'nao_testa', 'pedidos' => [] }])
+    expect(julgar).to eq([{ 'veredito' => 'ok', 'testes' => [{ 'pedido' => 0, 'veredito' => 'ok' }] },
+                          { 'veredito' => 'nao', 'testes' => [{ 'pedido' => 1, 'veredito' => 'nao' }] },
+                          { 'veredito' => 'nao_testa', 'testes' => [] }])
   end
 
-  # t6d R4/R5: "Pix ou cartão em até 6x." é curta E sem emoji. Uma resposta pode testar mais de um pedido de uma vez.
-  it 'uma resposta que testa dois pedidos devolve as duas posições' do
-    juiz_responde([{ indice: 0, veredito: 'ok', pedidos: [1, 2] }, { indice: 1, veredito: 'ok', pedidos: [2] }])
+  # Revisão do t6d (ALTO): curta E com emoji não é ✓. Cada pedido tem o seu veredito, e um nao derruba a pergunta.
+  it 'resposta curta com emoji: ok para o tamanho, nao para o emoji, e a pergunta sai nao' do
+    juiz_responde([{ indice: 0, testes: [teste(1, 'ok'), teste(2, 'nao')] }, { indice: 1, testes: [] }])
 
-    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedidos' => [0, 1] }, { 'veredito' => 'ok', 'pedidos' => [1] }])
+    expect(julgar.first).to eq('veredito' => 'nao',
+                               'testes' => [{ 'pedido' => 0, 'veredito' => 'ok' }, { 'pedido' => 1, 'veredito' => 'nao' }])
   end
 
-  # Número fora de 1 até o total, repetido, que não é inteiro, ou numa pergunta que não testa: não cobre nada.
-  it 'número fora da faixa é ignorado; lista vazia fica vazia; quem não testa não cobre' do
-    itens << { 'pergunta' => 'Vocês atendem em Curitiba?', 'resposta' => 'Atendemos.', 'equipe' => false }
-    juiz_responde([{ indice: 0, veredito: 'ok', pedidos: [7, 0, 2, 2, '1', -1] }, { indice: 1, veredito: 'ok', pedidos: [] },
-                   { indice: 2, veredito: 'nao_testa', pedidos: [1] }])
+  it 'dois pedidos ok na mesma resposta: a pergunta sai ok, com as duas posições' do
+    juiz_responde([{ indice: 0, testes: [teste(1, 'ok'), teste(2, 'ok')] }, { indice: 1, testes: [] }])
 
-    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedidos' => [1] }, { 'veredito' => 'ok', 'pedidos' => [] },
-                          { 'veredito' => 'nao_testa', 'pedidos' => [] }])
+    expect(julgar.first).to eq('veredito' => 'ok',
+                               'testes' => [{ 'pedido' => 0, 'veredito' => 'ok' }, { 'pedido' => 1, 'veredito' => 'ok' }])
   end
 
-  it 'veredito fora dos três: nil' do
-    juiz_responde([{ indice: 0, veredito: 'ok' }, { indice: 1, veredito: 'talvez' }])
+  # Número fora de 1 até o total, ou que não é inteiro: descartado. Pedido repetido vale uma vez só, e nao prevalece.
+  it 'número fora da faixa é descartado; repetido vira um teste só, e o nao prevalece' do
+    juiz_responde([{ indice: 0, testes: [teste(7, 'ok'), teste(0, 'ok'), teste(-1, 'ok'), teste('1', 'ok')] },
+                   { indice: 1, testes: [teste(2, 'ok'), teste(2, 'nao'), teste(2, 'ok')] }])
+
+    expect(julgar).to eq([{ 'veredito' => 'nao_testa', 'testes' => [] },
+                          { 'veredito' => 'nao', 'testes' => [{ 'pedido' => 1, 'veredito' => 'nao' }] }])
+  end
+
+  it 'veredito de teste fora de ok e nao: nil' do
+    juiz_responde([{ indice: 0, testes: [teste(1, 'talvez')] }, { indice: 1, testes: [] }])
 
     expect(julgar).to be_nil
   end
 
-  it 'a instrução separa a pergunta que não toca a mudança' do
-    expect(described_class::INSTRUCAO).to include('nao_testa: a mensagem nao toca nenhuma das mudancas')
-    expect(described_class::INSTRUCAO).to include('Uma resposta pode testar mais de um pedido ao mesmo tempo')
-    expect(described_class::SCHEMA.dig(:schema, :properties, :resultados, :items, :properties, :veredito, :enum))
-      .to eq(%w[ok nao nao_testa])
+  it 'item sem a lista de testes: nil' do
+    juiz_responde([{ indice: 0, veredito: 'ok' }, { indice: 1, testes: [] }])
+
+    expect(julgar).to be_nil
   end
 
-  it 'outro modelo, a feature da prova, schema só de índices e sem nova tentativa', :aggregate_failures do
-    juiz_responde([{ indice: 0, veredito: 'ok' }, { indice: 1, veredito: 'ok' }])
+  # Revisão do t6d (MÉDIO 1): assunto ou gatilho só entra em testes quando a mensagem traz o assunto; forma, sempre.
+  it 'a instrução separa forma (qualquer resposta) de assunto ou gatilho (só quando a mensagem traz o assunto)' do
+    expect(described_class::INSTRUCAO.squish).to include(
+      'Um pedido de assunto ou de gatilho (ex.: "preco passa para a equipe") so entra em testes quando a mensagem do ' \
+      'cliente traz esse assunto: uma resposta curta sobre horario nao testa o pedido do preco.',
+      'Uma resposta pode testar mais de um pedido ao mesmo tempo, cada um com o seu veredito'
+    )
+  end
+
+  it 'outro modelo, a feature da prova, schema só de índices e testes e sem nova tentativa', :aggregate_failures do
+    juiz_responde([{ indice: 0, testes: [] }, { indice: 1, testes: [] }])
 
     julgar
 
@@ -78,7 +99,7 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
       .with(hash_including(feature: 'agente_prova_juiz', account: account, max_retries: 0))
     expect(cliente).to have_received(:create) do |**kwargs|
       expect(kwargs[:model]).not_to eq(Autonomia::Agents::Config::ANSWERER_MODEL)
-      expect(kwargs[:schema][:schema][:properties][:resultados][:items][:properties].keys).to eq(%i[indice veredito pedidos])
+      expect(kwargs[:schema][:schema][:properties][:resultados][:items][:properties].keys).to eq(%i[indice testes])
       expect(kwargs[:timeout]).to eq(30)
       texto = kwargs[:input].first[:content].first[:text]
       expect(texto).to include('Respostas curtas.', '"numero": 1', '"numero": 2', 'Quais seguros?', 'Auto e vida.', '"passa_para_equipe": true')
@@ -86,26 +107,38 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
   end
 
   # A rodada 3 do eval do t6d (21/10) veio toda "indisponível": o provedor recusa schema estrito em que algum objeto não
-  # lista todas as propriedades em `required`. Confere o schema inteiro, em todo nível.
-  it 'schema estrito: todo objeto lista todas as propriedades em required e não aceita outras' do
+  # lista todas as propriedades em `required`. Confere o schema inteiro, em todo nível, e o tipo de cada campo.
+  it 'schema estrito: todo objeto lista todas as propriedades em required, não aceita outras e tipa cada campo' do
     expect_schema_estrito(described_class::SCHEMA[:schema])
+    testes = described_class::SCHEMA.dig(:schema, :properties, :resultados, :items, :properties, :testes)
+    expect(testes).to include(type: 'array')
+    expect(testes[:items]).to include(type: 'object', required: %w[pedido veredito])
+    expect(testes[:items][:properties]).to eq(pedido: { type: 'integer' }, veredito: { type: 'string', enum: %w[ok nao] })
+  end
+
+  it 'o helper do schema estrito recusa campo sem tipo e lista sem tipo de item' do
+    sem_tipo = { type: 'object', additionalProperties: false, required: %w[a], properties: { a: {} } }
+    lista_sem_item = { type: 'object', additionalProperties: false, required: %w[a], properties: { a: { type: 'array' } } }
+
+    expect { expect_schema_estrito(sem_tipo) }.to raise_error(RSpec::Expectations::ExpectationNotMetError)
+    expect { expect_schema_estrito(lista_sem_item) }.to raise_error(RSpec::Expectations::ExpectationNotMetError)
   end
 
   it 'faltando um índice: nil' do
-    juiz_responde([{ indice: 0, veredito: 'ok' }])
+    juiz_responde([{ indice: 0, testes: [] }])
 
     expect(julgar).to be_nil
   end
 
   it 'índice fora da lista não preenche o que falta' do
-    juiz_responde([{ indice: 0, veredito: 'ok' }, { indice: 7, veredito: 'ok' }])
+    juiz_responde([{ indice: 0, testes: [] }, { indice: 7, testes: [] }])
 
     expect(julgar).to be_nil
   end
 
   it 'índice repetido vale o primeiro' do
-    juiz_responde([{ indice: 0, veredito: 'nao', pedidos: [1] }, { indice: 0, veredito: 'ok', pedidos: [1] },
-                   { indice: 1, veredito: 'ok', pedidos: [2] }])
+    juiz_responde([{ indice: 0, testes: [teste(1, 'nao')] }, { indice: 0, testes: [teste(1, 'ok')] },
+                   { indice: 1, testes: [teste(2, 'ok')] }])
 
     expect(julgar.pluck('veredito')).to eq(%w[nao ok])
   end

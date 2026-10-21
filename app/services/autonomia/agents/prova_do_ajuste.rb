@@ -80,8 +80,9 @@ class Autonomia::Agents::ProvaDoAjuste
 
   private
 
-  # O placar conta só as perguntas que tocam a mudança (`total` 0: nenhuma testou, a tela não mostra ✓). `completa`: cada
-  # pedido do dono teve ao menos uma pergunta que o testou (o juiz diz qual); sem isso, a tela não mostra ✓.
+  # O placar conta só as perguntas que tocam a mudança (`total` 0: nenhuma testou, a tela não mostra ✓), pelo veredito
+  # da pergunta que o juiz deriva dos testes (um nao em qualquer pedido: a pergunta é nao). `completa`: cada pedido do
+  # dono teve ao menos um teste; sem isso, a tela não mostra ✓.
   def julgar_e_gravar!(itens)
     pedidos = pedidos_aplicados
     veredito = Autonomia::Agents::JuizDaProva.new(account: @thread.account).julgar(pedidos: pedidos, itens: itens)
@@ -93,14 +94,12 @@ class Autonomia::Agents::ProvaDoAjuste
             'perguntas' => itens.zip(veredito).map { |item, nota| item.merge(nota) })
   end
 
-  # Com um pedido só, qualquer pergunta que testa o cobre. Com mais, cada posição da lista de pedidos (as que o juiz
-  # devolve, a partir de 0; uma resposta pode cobrir várias) precisa de ao menos uma pergunta que a testou.
+  # Cada posição da lista de pedidos (a partir de 0) aparece em algum teste do juiz: uma resposta pode testar várias, e
+  # um pedido testado com nao conta como testado (o placar `ok` de `total` mostra a falha). Com um pedido só, uma
+  # pergunta que o testa basta.
   def completa?(pedidos, veredito)
-    testam = veredito.reject { |nota| nota['veredito'] == 'nao_testa' }
-    return testam.any? if pedidos.one?
-
-    cobertos = testam.flat_map { |nota| Array(nota['pedidos']) }
-    pedidos.any? && pedidos.each_index.all? { |posicao| cobertos.include?(posicao) }
+    testados = veredito.flat_map { |nota| Array(nota['testes']) }.pluck('pedido')
+    pedidos.any? && pedidos.each_index.all? { |posicao| testados.include?(posicao) }
   end
 
   # A resposta do agente, pelo mesmo caminho do Testar, sem ferramenta. nil quando a IA falhou. `equipe`: o agente

@@ -37,9 +37,13 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     described_class.new(thread.reload, versao_aplicada).rodar!
   end
 
-  # O que o juiz devolve: o veredito e as posições dos pedidos testados (o primeiro, salvo quando a pergunta não testa).
+  # O que o juiz devolve: o veredito da pergunta e um teste por pedido testado, com o mesmo veredito (o primeiro pedido,
+  # salvo quando a pergunta não testa nada).
   def vereditos(*notas, pedidos: [0])
-    notas.map { |nota| { 'veredito' => nota, 'pedidos' => nota == 'nao_testa' ? [] : pedidos } }
+    notas.map do |nota|
+      testes = nota == 'nao_testa' ? [] : pedidos.map { |posicao| { 'pedido' => posicao, 'veredito' => nota } }
+      { 'veredito' => nota, 'testes' => testes }
+    end
   end
 
   before do
@@ -112,8 +116,10 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(estado['prova']).to include('status' => 'pronta', 'ok' => 1, 'total' => 2, 'versao_id' => versao_aplicada,
                                          'completa' => true)
       expect(estado['prova']['perguntas']).to eq(
-        [{ 'pergunta' => perguntas[0], 'resposta' => 'Passo para a equipe.', 'equipe' => false, 'veredito' => 'ok', 'pedidos' => [0] },
-         { 'pergunta' => perguntas[1], 'resposta' => nil, 'equipe' => true, 'veredito' => 'nao', 'pedidos' => [0] }]
+        [{ 'pergunta' => perguntas[0], 'resposta' => 'Passo para a equipe.', 'equipe' => false, 'veredito' => 'ok',
+           'testes' => [{ 'pedido' => 0, 'veredito' => 'ok' }] },
+         { 'pergunta' => perguntas[1], 'resposta' => nil, 'equipe' => true, 'veredito' => 'nao',
+           'testes' => [{ 'pedido' => 0, 'veredito' => 'nao' }] }]
       )
     end
 
@@ -354,21 +360,31 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     end
 
     # t6d R4/R5: a resposta curta e sem emoji testa os dois pedidos de uma vez.
-    it 'uma resposta que testa os dois pedidos de uma vez: completa' do
+    it 'uma resposta que testa os dois pedidos, os dois ok: completa e ok' do
       allow(juiz).to receive(:julgar).and_return(vereditos('ok', pedidos: [0, 1]) + vereditos('nao_testa'))
 
       provar!
 
       expect(estado['prova']).to include('ok' => 1, 'total' => 1, 'completa' => true)
-      expect(estado['prova']['perguntas'].first).to include('pedidos' => [0, 1])
+      expect(estado['prova']['perguntas'].first['testes'].pluck('pedido')).to eq([0, 1])
     end
 
-    it 'veredito ok com a lista vazia não cobre pedido nenhum' do
-      allow(juiz).to receive(:julgar).and_return(vereditos('ok', 'ok', pedidos: []))
+    # Revisão do t6d (ALTO): curta e com emoji. O pedido do emoji foi testado e falhou: completa, mas a pergunta é nao.
+    it 'uma resposta ok num pedido e nao no outro: a pergunta conta como nao, sem ✓' do
+      testes = [{ 'pedido' => 0, 'veredito' => 'ok' }, { 'pedido' => 1, 'veredito' => 'nao' }]
+      allow(juiz).to receive(:julgar).and_return([{ 'veredito' => 'nao', 'testes' => testes }] + vereditos('nao_testa'))
 
       provar!
 
-      expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => false)
+      expect(estado['prova']).to include('ok' => 0, 'total' => 1, 'completa' => true)
+    end
+
+    it 'pedido testado com nao conta como coberto, mas o placar mostra a falha' do
+      allow(juiz).to receive(:julgar).and_return(vereditos('nao', pedidos: [0]) + vereditos('ok', pedidos: [1]))
+
+      provar!
+
+      expect(estado['prova']).to include('ok' => 1, 'total' => 2, 'completa' => true)
     end
   end
 
@@ -389,11 +405,10 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => true)
     end
 
-    it 'com um pedido só, a pergunta que testa cobre o pedido mesmo sem o juiz dizer qual' do
+    it 'com um pedido só, uma pergunta que o testa basta' do
       aplicar_ajuste
       agente_responde
-      allow(juiz).to receive(:julgar).and_return([{ 'veredito' => 'ok', 'pedidos' => [] },
-                                                  { 'veredito' => 'nao_testa', 'pedidos' => [] }])
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', 'nao_testa'))
 
       provar!
 
