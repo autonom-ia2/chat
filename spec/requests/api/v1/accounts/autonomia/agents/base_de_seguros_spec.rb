@@ -183,6 +183,20 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       expect(response.parsed_body['code']).to eq('comparar_espere')
     end
 
+    # O rescue_from roda fora do around_action do idioma (#1419): sem reabrir o idioma, o aviso sairia em inglês.
+    it 'os avisos saem no idioma de quem pediu' do
+      admin.update!(ui_settings: { 'locale' => 'pt_BR' })
+      pedir(:post, 'comparar')
+      pedir(:post, 'comparar')
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.base_de_seguros.comparar_espere', locale: :pt_BR))
+
+      pedir(:post, 'atualizar', params: { versao: '' })
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.base_de_seguros.sem_base_nova', locale: :pt_BR))
+
+      pedir(:post, 'atualizar', params: { versao: 'outra' })
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.base_de_seguros.base_mudou', locale: :pt_BR))
+    end
+
     it 'no máximo 10 por dia na conta: a 11ª é 429' do
       limite = Autonomia::Agents::BaseDeSeguros::Limite
       limite::POR_DIA.times { Redis::Alfred.incr(limite.chave_da_conta(conta)) }

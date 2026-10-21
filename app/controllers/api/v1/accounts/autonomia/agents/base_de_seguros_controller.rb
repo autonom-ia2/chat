@@ -10,17 +10,25 @@ class Api::V1::Accounts::Autonomia::Agents::BaseDeSegurosController < Api::V1::A
   before_action :ensure_fase2
   before_action :fetch_agent
 
+  # Os avisos abaixo respondem pelo `rescue_from`, que o Rails roda fora do `around_action` do idioma (#1419): cada um
+  # reabre o idioma da pessoa (ou da conta) antes de montar a mensagem.
   # A mesma ordem de travas do Construtor e da volta por Versões (as conversas, depois o agente).
-  rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
+  rescue_from ActiveRecord::Deadlocked do
+    switch_locale_using_account_locale { render_conflito_de_trava }
+  end
   rescue_from BASE::SemBaseNova, ::Autonomia::Agents::TrocaDaBase::TrocaIndisponivel do
-    render_unprocessable(I18n.t('autonomia.base_de_seguros.sem_base_nova'))
+    switch_locale_using_account_locale { render_unprocessable(I18n.t('autonomia.base_de_seguros.sem_base_nova')) }
   end
   rescue_from BASE::VersaoMudou, ::Autonomia::Agents::TrocaDaBase::BaseMudou do
-    render json: { error: I18n.t('autonomia.base_de_seguros.base_mudou'), code: 'base_mudou' }, status: :conflict
+    switch_locale_using_account_locale do
+      render json: { error: I18n.t('autonomia.base_de_seguros.base_mudou'), code: 'base_mudou' }, status: :conflict
+    end
   end
   rescue_from BASE::Limite::Excedido do |erro|
     codigo = "comparar_#{erro.motivo}"
-    render json: { error: I18n.t("autonomia.base_de_seguros.#{codigo}"), code: codigo }, status: :too_many_requests
+    switch_locale_using_account_locale do
+      render json: { error: I18n.t("autonomia.base_de_seguros.#{codigo}"), code: codigo }, status: :too_many_requests
+    end
   end
 
   def show
