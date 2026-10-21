@@ -71,9 +71,10 @@ module AvaliacaoDaProvaDoAjuste
 
   # `obedece`: o critério da cena para as mensagens de cliente. `extra`: uma pergunta fora da mudança acrescentada à prova
   # (não pode virar ✓ no placar). `controle`: caso de controle, fora dos 20 do t6d (as perguntas são trocadas por
-  # `perguntas_fixas` antes da prova). Sem `espera`, o controle passa com a prova sem `completa`; com `espera: :teste_nao`,
-  # passa quando algum pedido levou nao e a prova não dá ✓ geral. `resposta_fixa`: o agente responde esse texto na prova,
-  # sem chamar a IA (a armadilha da revisão: curta e COM emoji).
+  # `perguntas_fixas` antes da prova). Sem `espera`, o controle passa com a prova sem `completa`. `espera` (com o juiz do
+  # eval de acordo com cada teste): `:teste_nao`, uma mesma pergunta com um ok e um nao; `:so_forma`, um pedido fora de
+  # todos os testes; `:julgado`, prova completa. `resposta_fixa`: o agente em modo prova responde esse texto, sem chamar a
+  # IA (a armadilha da revisão: curta e COM emoji).
   CASOS = [
     { nome: 'prova_duas_frases_e_preco', agente: :corretora,
       fala: 'Responda em no máximo 2 frases e preço passa para a equipe.',
@@ -141,11 +142,17 @@ module AvaliacaoDaProvaDoAjuste
     { nome: 'controle_curta_com_emoji', agente: :loja, controle: true, espera: :teste_nao,
       fala: 'Responda de forma curta e não use emoji.',
       perguntas_fixas: ['Quais formas de pagamento vocês aceitam?'], resposta_fixa: 'Aceitamos Pix e cartão em até 6x 😊',
-      obedece: 'A resposta é curta e tem emoji: o pedido do emoji leva nao, e a prova não pode dar ✓.' },
-    { nome: 'controle_curta_sem_preco', agente: :corretora, controle: true,
+      obedece: 'A resposta é curta e tem emoji: na mesma pergunta, o pedido de responder curto leva ok e o de não usar ' \
+               'emoji leva nao.' },
+    { nome: 'controle_curta_sem_preco', agente: :corretora, controle: true, espera: :so_forma,
       fala: 'Responda de forma curta e preço passa para a equipe.',
       perguntas_fixas: ['Que horas vocês abrem?', 'Vocês atendem em Curitiba?'],
-      obedece: 'Nenhuma mensagem pede preço: a resposta curta sobre horário não testa o preço, e a prova não pode sair ' \
-               'completa.' }
+      obedece: 'Nenhuma mensagem pede preço: as respostas testam o pedido de responder curto, e o pedido do preço não ' \
+               'entra em nenhum teste.' },
+    { nome: 'controle_gatilho_por_situacao', agente: :corretora, controle: true, espera: :julgado,
+      fala: 'Quando não souber responder, passe a conversa para a equipe.',
+      perguntas_fixas: ['Vocês fazem seguro para drone?', 'Quais seguros vocês têm?'],
+      obedece: 'A primeira mensagem pergunta algo que a corretora não tem como saber e cria a situação do pedido, que ' \
+               'entra no teste dela; a segunda o agente sabe responder e não testa o pedido.' }
   ].freeze
 end

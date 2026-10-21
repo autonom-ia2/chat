@@ -26,24 +26,31 @@ module AvaliacaoDaProvaDoAjuste
         alguma_cita_instrucao: { type: 'boolean', description: 'Alguma mensagem de cliente cita ou parafraseia texto ' \
                                                                'interno de instrução, em vez de soar como um cliente?' },
         vereditos_certos: { type: 'array', items: { type: 'boolean' },
-                            description: 'Para cada item, na ordem: o veredito dado (ok, nao ou nao_testa) está certo?' },
+                            description: 'Para cada item, na ordem: os pedidos em testes são exatamente os que a mensagem ' \
+                                         'testa (nenhum faltando, nenhum a mais) e o veredito de cada um (ok ou nao) está ' \
+                                         'certo?' },
         justificativa: { type: 'string', description: 'Uma frase.' }
       }
     }
   }.freeze
 
   INSTRUCAO_DO_JUIZ = 'Você avalia um teste automático feito depois de um ajuste no agente de atendimento de um negócio. ' \
-                      'Você recebe o pedido do dono, o critério do caso (o que as mensagens de teste precisam provocar), as ' \
-                      'mensagens de cliente escritas para testar, as respostas do agente e o veredito dado a cada resposta: ok ' \
-                      '(a mensagem toca a mudança e a resposta a respeita), nao (toca e a resposta contradiz ou ignora) ou ' \
-                      'nao_testa (a mensagem não toca nenhuma mudança). No teste o agente não usa ferramentas. Responda cada ' \
-                      'campo pelo sentido, sem ser generoso.'.freeze
+                      'Você recebe o pedido do dono, os pedidos que entraram no ajuste, o critério do caso (o que as ' \
+                      'mensagens de teste precisam provocar), as mensagens de cliente escritas para testar, as respostas do ' \
+                      'agente e, em cada item, os testes dados: cada pedido que a mensagem testa, com ok (a resposta respeita ' \
+                      'o pedido) ou nao (a resposta contradiz ou ignora o pedido). Testes vazios querem dizer que a mensagem ' \
+                      'não testa nenhum pedido. Um pedido de forma (tamanho, tom, emoji) é testado por qualquer resposta ' \
+                      'escrita pelo agente; um pedido de assunto ou de gatilho, só quando a mensagem traz o assunto ou cria a ' \
+                      'situação. No teste o agente não usa ferramentas. Responda cada campo pelo sentido, sem ser ' \
+                      'generoso.'.freeze
 end
 
 RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do # rubocop:disable RSpec/DescribeClass
   let(:conta) { conta_da_fase2 }
   let(:relatorio) { [] }
   let(:vereditos) { [] }
+  # Os pedidos que o juiz de produção recebeu, por chamada (o texto de cada posição dos testes).
+  let(:pedidos_do_juiz) { [] }
   # O texto fixo que o agente responde na prova do caso em curso (a armadilha); vazio, a IA responde.
   let(:resposta_fixa) { {} }
 
@@ -79,6 +86,7 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     Autonomia::Agents::Builder.new(account: conta, build_thread: thread).run!(thread.begin_build!)
     preparar_prova(thread, caso)
     vereditos.clear
+    pedidos_do_juiz.clear
     resposta_fixa[:texto] = caso[:resposta_fixa]
     perform_enqueued_jobs(only: Autonomia::Agents::ProvaDoAjusteJob)
     thread.reload.state.to_h
@@ -86,12 +94,14 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     resposta_fixa.delete(:texto)
   end
 
-  # A armadilha: na prova, o agente responde o texto do caso, sem chamar a IA.
+  # A armadilha: só o agente em modo prova responde o texto do caso, sem chamar a IA.
   def resposta_fixa_na_prova
-    allow_any_instance_of(Autonomia::Agents::Answerer).to receive(:answer).and_wrap_original do |original| # rubocop:disable RSpec/AnyInstance
-      next original.call if resposta_fixa[:texto].nil?
+    allow(Autonomia::Agents::Answerer).to receive(:new).and_wrap_original do |original, **kwargs|
+      texto = resposta_fixa[:texto]
+      next original.call(**kwargs) unless texto && kwargs[:prova] == true
 
-      Autonomia::Agents::AnswerResult.new(reply: resposta_fixa[:texto], confidence: 0.9, handoff: { should: false, reason: nil }, error: nil)
+      resultado = Autonomia::Agents::AnswerResult.new(reply: texto, confidence: 0.9, handoff: { should: false, reason: nil }, error: nil)
+      instance_double(Autonomia::Agents::Answerer, answer: resultado)
     end
   end
 
@@ -122,12 +132,24 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     vereditos.last.to_a.pluck('veredito')
   end
 
+  def pedidos_aplicados
+    pedidos_do_juiz.last.to_a
+  end
+
+  # Os testes do juiz de produção para a pergunta, com o TEXTO do pedido no lugar da posição.
+  def testes_com_texto(indice)
+    Array(vereditos.last.to_a.dig(indice, 'testes')).map do |teste|
+      { 'pedido' => pedidos_aplicados.dig(teste['pedido'], 'pedido'), 'veredito' => teste['veredito'] }
+    end
+  end
+
   def julgar(caso, prova)
     itens = Array(prova['perguntas']).each_with_index.map do |item, indice|
       { 'cliente' => item['pergunta'], 'agente' => item['resposta'], 'passa_para_equipe' => item['equipe'],
-        'veredito' => notas[indice] }
+        'testes' => testes_com_texto(indice) }
     end
-    texto = "Pedido do dono: #{caso[:fala]}\nCritério do caso: #{caso[:obedece]}\n\nTeste:\n#{JSON.pretty_generate(itens)}"
+    texto = "Pedido do dono: #{caso[:fala]}\nPedidos que entraram: #{JSON.generate(pedidos_aplicados.pluck('pedido'))}\n" \
+            "Critério do caso: #{caso[:obedece]}\n\nTeste:\n#{JSON.pretty_generate(itens)}"
     cliente = Crm::Ai::ResponsesClient.new(credential: Crm::Ai::CredentialResolver.new(account: conta).resolve,
                                            feature: 'eval_juiz', account: conta)
     raw = cliente.create(model: AvaliacaoDaProvaDoAjuste::JUIZ, instructions: AvaliacaoDaProvaDoAjuste::INSTRUCAO_DO_JUIZ,
@@ -151,19 +173,39 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
       custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
-  # O controle não chama o juiz do eval: a estrutura basta.
+  # O controle sem `espera` não chama o juiz do eval: a estrutura basta. Os outros pedem a estrutura do caso e o juiz do
+  # eval dizendo que cada pedido testado e o seu veredito estão certos. O relatório grava o texto do pedido de cada nao.
   def rodar_controle(caso, estado, prova)
+    veredito = caso[:espera] && prova['status'] == 'pronta' ? julgar(caso, prova) : {}
+    testes = Array(prova['perguntas']).each_index.map { |indice| testes_com_texto(indice) }
     { caso: caso[:nome], agente: caso[:agente], controle: true, applied: estado['applied'], prova: prova,
-      vereditos_de_producao: vereditos.last, aprovada: controle_ok?(caso, prova), custo_acumulado_usd: custo_ate_agora.round(4) }
+      pedidos_aplicados: pedidos_aplicados.pluck('pedido'), testes: testes, veredito: veredito,
+      pedidos_do_nao: testes.flatten.select { |teste| teste['veredito'] == 'nao' }.pluck('pedido').uniq,
+      aprovada: controle_ok?(caso, prova, veredito), custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
-  # Sem `espera`: pronta e sem prova completa. `:teste_nao`: algum pedido levou nao e a prova não dá ✓ geral.
-  def controle_ok?(caso, prova)
+  # Sem `espera`: pronta e sem prova completa. `:teste_nao`: 2+ pedidos e uma mesma pergunta com um ok e um nao.
+  # `:so_forma`: 2+ pedidos, alguma pergunta testa, e um pedido fica fora de todos os testes. `:julgado`: completa. Os três
+  # últimos pedem o juiz do eval de acordo com cada teste (qual pedido levou o nao, qual ficou de fora).
+  def controle_ok?(caso, prova, veredito)
     return false unless prova['status'] == 'pronta'
-    return prova['completa'] == false unless caso[:espera] == :teste_nao
+    return prova['completa'] == false if caso[:espera].nil?
 
-    testes = Array(prova['perguntas']).flat_map { |item| Array(item['testes']) }
-    testes.any? { |teste| teste['veredito'] == 'nao' } && !(prova['ok'] == prova['total'] && prova['completa'] == true)
+    estrutura = { teste_nao: ok_e_nao_na_mesma_pergunta?(prova), so_forma: um_pedido_fora?(prova),
+                  julgado: prova['total'].to_i >= 1 && prova['completa'] == true }.fetch(caso[:espera])
+    estrutura && vereditos_certos?(veredito, prova)
+  end
+
+  def ok_e_nao_na_mesma_pergunta?(prova)
+    ok_e_nao = %w[ok nao]
+    pedidos_aplicados.size >= 2 && Array(prova['perguntas']).any? do |item|
+      (ok_e_nao - Array(item['testes']).pluck('veredito')).empty?
+    end
+  end
+
+  def um_pedido_fora?(prova)
+    testados = Array(prova['perguntas']).flat_map { |item| Array(item['testes']).pluck('pedido') }.uniq
+    prova['total'].to_i >= 1 && pedidos_aplicados.size >= 2 && testados.size == pedidos_aplicados.size - 1
   end
 
   # Estrutura (do código): o ajuste entrou, a prova ficou pronta com 1 a 3 perguntas do Construtor, pelo menos uma tocou a
@@ -174,11 +216,15 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
       prova['completa'] == true
   end
 
-  # Um veredito certo por pergunta, nem mais nem menos.
   def julgamento_ok?(veredito, prova)
-    certos = Array(veredito['vereditos_certos'])
     veredito['perguntas_mostram_a_mudanca'] == true && veredito['alguma_cita_instrucao'] == false &&
-      certos.size == Array(prova['perguntas']).size && certos.all?(true)
+      vereditos_certos?(veredito, prova)
+  end
+
+  # Um julgamento certo por pergunta, nem mais nem menos.
+  def vereditos_certos?(veredito, prova)
+    certos = Array(veredito['vereditos_certos'])
+    certos.size == Array(prova['perguntas']).size && certos.all?(true)
   end
 
   # A pergunta fora da mudança (a última) ficou fora do placar.
@@ -213,6 +259,7 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     InstallationConfig.where(name: 'CAPTAIN_OPEN_AI_API_KEY').destroy_all
     InstallationConfig.create!(name: 'CAPTAIN_OPEN_AI_API_KEY', value: ENV.fetch('OPENAI_API_KEY'))
     allow_any_instance_of(Autonomia::Agents::JuizDaProva).to receive(:julgar).and_wrap_original do |original, **kwargs| # rubocop:disable RSpec/AnyInstance
+      pedidos_do_juiz << kwargs[:pedidos]
       original.call(**kwargs).tap { |saida| vereditos << saida }
     end
     resposta_fixa_na_prova
