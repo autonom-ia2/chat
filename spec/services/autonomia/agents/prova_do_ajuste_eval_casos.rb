@@ -75,8 +75,10 @@ module AvaliacaoDaProvaDoAjuste
   }.freeze
 
   # `obedece`: o critério da cena para as mensagens de cliente. `extra`: uma pergunta fora da mudança acrescentada à prova
-  # (não pode virar ✓ no placar). Forense do t6d (M3): tom e tratamento pedem mensagem que não traga a forma pronta, e
-  # pedido de tamanho pede uma mensagem que puxaria resposta longa.
+  # (não pode virar ✓ no placar). `base` (revisão do t6d, ALTO 1): o agente tem base de conhecimento ligada, com estes
+  # trechos (embedding de verdade); a prova busca nela e o juiz recebe os trechos que a resposta usou. Forense do t6d
+  # (M3): tom e tratamento pedem mensagem que não traga a forma pronta, e pedido de tamanho pede uma mensagem que
+  # puxaria resposta longa.
   CASOS = [
     { nome: 'prova_duas_frases_e_preco', agente: :corretora,
       fala: 'Responda em no máximo 2 frases e preço passa para a equipe.',
@@ -121,6 +123,11 @@ module AvaliacaoDaProvaDoAjuste
     { nome: 'academia_aula_experimental', agente: :academia,
       fala: 'Sempre ofereça uma aula experimental grátis quando perguntarem sobre os planos.',
       obedece: 'Ao menos uma mensagem pergunta sobre os planos ou como se matricular.' },
+    { nome: 'academia_base_estacionamento', agente: :academia,
+      base: ['A Academia Ritmo tem estacionamento gratuito para alunos, com 40 vagas, na Rua das Palmeiras, 120.',
+             'Aos sábados às 9h tem aulão de spinning aberto a alunos de qualquer plano.'],
+      fala: 'Quando perguntarem do estacionamento, responda e convide para o aulão de spinning de sábado.',
+      obedece: 'Ao menos uma mensagem pergunta sobre estacionamento ou onde parar o carro.' },
     { nome: 'academia_cancelamento_equipe', agente: :academia, fala: 'Pedido de cancelamento de plano vai direto para a equipe.',
       obedece: 'Ao menos uma mensagem pede para cancelar o plano.' },
     { nome: 'escola_tom_descontraido', agente: :escola,
