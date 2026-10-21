@@ -127,6 +127,101 @@ terminate_green_without_image() {
   exit "$status"
 }
 
+# #1979: congelamento em duas chaves, cada uma com um único dono, porque o SSM não lê e grava de forma atômica.
+# O rollback grava o pedido (DEPLOY_FREEZE_PARAMETER = on:<run>:<tentativa>:pedido|trava); o deploy manual com descongelar=true
+# grava a liberação (DEPLOY_FREEZE_RELEASED_PARAMETER) com o pedido que viu na largada. Congelada = há pedido e ele não
+# é o liberado. Liberação velha, mesmo gravada atrasada, nunca solta um rollback mais novo, que tem outro valor.
+# Chave que não existe conta como vazia; qualquer outro erro falha, para nenhum deploy seguir sem saber.
+read_ssm_value() {
+  local error_file status=0
+  error_file=$(mktemp)
+  SSM_VALUE=$(aws ssm get-parameter --name "$1" --query Parameter.Value --output text 2>"$error_file") || status=$?
+  if [ "$status" -ne 0 ]; then
+    SSM_VALUE=""
+    if grep -qF ParameterNotFound "$error_file"; then
+      rm -f "$error_file"
+      return 0
+    fi
+    cat "$error_file" >&2
+    rm -f "$error_file"
+    return 1
+  fi
+  rm -f "$error_file"
+}
+
+read_deploy_freeze() {
+  local released
+  read_ssm_value "$DEPLOY_FREEZE_RELEASED_PARAMETER" || return 1
+  released="$SSM_VALUE"
+  read_ssm_value "$DEPLOY_FREEZE_PARAMETER" || return 1
+  DEPLOY_FREEZE_VALUE="$SSM_VALUE"
+  case "$DEPLOY_FREEZE_VALUE" in
+    ''|off) DEPLOY_FREEZE=off ;;
+    on|on:*)
+      if [ "$DEPLOY_FREEZE_VALUE" = "$released" ]; then
+        DEPLOY_FREEZE=off
+      else
+        DEPLOY_FREEZE=on
+      fi
+      ;;
+    *)
+      echo "deploy_freeze_invalid:$DEPLOY_FREEZE_VALUE" >&2
+      return 1
+      ;;
+  esac
+}
+
+# Só o rollback chama.
+write_deploy_freeze() {
+  aws ssm put-parameter --name "$DEPLOY_FREEZE_PARAMETER" --type String --value "$1" --overwrite >/dev/null
+}
+
+# Só o deploy manual com descongelar=true chama, com o pedido que viu na largada.
+release_deploy_freeze() {
+  aws ssm put-parameter --name "$DEPLOY_FREEZE_RELEASED_PARAMETER" --type String --value "$1" --overwrite >/dev/null
+}
+
+abort_if_frozen() {
+  read_deploy_freeze || return 1
+  if [ "$DEPLOY_FREEZE" = on ]; then
+    echo "::error::Produção congelada por um rollback (#1979): este deploy não sobe. Para soltar, deploy manual (workflow_dispatch, action=deploy) com descongelar=true."
+    return 1
+  fi
+}
+
+# #1979: rerun de um deploy velho não volta a produção para trás. Falha quando $1 é ancestral estrito do commit da
+# última imagem construída (RUNTIME_IMAGE_PARAMETER, gravado antes do tráfego). Erro ao ler ou comparar não trava o
+# deploy: rerun é raro, e travar todo deploy por uma falha de API repetiria a produção parada. Precisa de GH_TOKEN.
+abort_if_older_than_published() {
+  local published published_sha relation
+  if ! published=$(aws ssm get-parameter --name "$RUNTIME_IMAGE_PARAMETER" --query Parameter.Value --output text); then
+    echo "::warning::Não deu para ler a última imagem construída: a conferência de rerun foi pulada."
+    return 0
+  fi
+  published_sha="${published##*:}"
+  if [ "$published_sha" = "$1" ]; then
+    return 0
+  fi
+  case "$published_sha" in
+    *[!0-9a-f]*|'')
+      echo "::warning::A imagem publicada ($published_sha) não tem SHA de commit: a conferência de rerun foi pulada."
+      return 0
+      ;;
+  esac
+  if [ "${#published_sha}" -ne 40 ]; then
+    echo "::warning::A imagem publicada ($published_sha) não tem SHA de commit: a conferência de rerun foi pulada."
+    return 0
+  fi
+  if ! relation=$(gh api "repos/$GITHUB_REPOSITORY/compare/$1...$published_sha" --jq .status); then
+    echo "::warning::Não deu para comparar $1 com a última imagem construída ($published_sha): a conferência de rerun foi pulada."
+    return 0
+  fi
+  if [ "$relation" = ahead ]; then
+    echo "::error::$1 é mais velho que a última imagem construída ($published_sha): rerun de deploy antigo não sobe. Para subir a main atual, dispare um deploy novo pelo workflow_dispatch."
+    return 1
+  fi
+}
+
 # The helper is shipped by the workflow, never required on an older target.
 # Failure propagates before stopping the remaining worker whenever target is online.
 # Optional $2: marker line written in the same command, so later steps know the suspension (#1540).

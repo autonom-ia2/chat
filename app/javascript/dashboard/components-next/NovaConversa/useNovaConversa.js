@@ -1,6 +1,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
 import { createPendingMessage } from 'dashboard/helper/commons';
@@ -22,8 +23,11 @@ import {
   linhaDoCanal,
   oQueFalta,
   tipoDeMensagem,
+  umAnexoPorMensagem,
+  usaCaixaDoWhatsapp,
   usaModelo,
 } from './novaConversa';
+import { partesDoWhatsapp } from './envioNoWhatsapp';
 import { useModeloDoEmailNaGaveta } from './useModeloDoEmailNaGaveta';
 import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
 import { assuntoDaResposta } from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
@@ -84,23 +88,46 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   const comModelo = computed(() =>
     usaModelo({ tipo: tipo.value, modo: form.modo })
   );
+  // #1988 — a caixa do WhatsApp (texto livre no oficial e no comum), com a barra.
+  const caixaDoWhatsapp = computed(
+    () =>
+      !comModelo.value &&
+      usaCaixaDoWhatsapp({ canal: canal.value, tipo: tipo.value })
+  );
+  // Só texto: a caixa híbrida responde pelo número reserva (fora das 24 h). Na conversa
+  // nova do oficial, o texto livre só existe por esse número (`whatsapp_api_start`).
+  const soTexto = computed(() => {
+    if (!caixaDoWhatsapp.value) return false;
+    if (canal.value?.channelType !== INBOX_TYPES.WHATSAPP) return false;
+    return destino.value ? Boolean(continuar?.soTexto?.value) : true;
+  });
   const comAssinatura = computed(
     () =>
-      tipo.value === TIPOS.EMAIL &&
+      (tipo.value === TIPOS.EMAIL || caixaDoWhatsapp.value) &&
       Boolean(fetchSignatureFlagFromUISettings(canal.value?.channelType))
   );
+  // #1988: no WhatsApp a assinatura não entra no campo; vai no fim do texto que sai,
+  // como na caixa de resposta. Sem texto (só a gravação), vai sem assinatura.
+  const textoQueSai = computed(() => {
+    const texto = form.mensagem;
+    if (!caixaDoWhatsapp.value || !comAssinatura.value) return texto;
+    if (!assinatura.value || !texto.trim()) return texto;
+    return appendSignature(texto, assinatura.value, formatoDe(canal.value));
+  });
   const falta = computed(() => {
     if (continuar?.esperando.value) return 'CONVERSA';
     return oQueFalta({
       contato: contato.value,
       canal: canal.value,
       ...form,
+      // #1988: no WhatsApp a gravação ou o anexo já bastam; em outro canal, não.
+      anexos: caixaDoWhatsapp.value ? form.anexos : [],
       tipo: tipo.value,
       comAssunto: !destino.value,
     });
   });
   const previa = computed(() =>
-    comModelo.value ? form.textoDoModelo : form.mensagem
+    comModelo.value ? form.textoDoModelo : textoQueSai.value
   );
   const modeloDoEmail = useModeloDoEmailNaGaveta({
     form,
@@ -138,8 +165,13 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
         }
       : atributos;
 
+  // #1988: a conversa em que as primeiras partes de um envio do WhatsApp já entraram,
+  // quando uma parte do meio falhou. O Enviar de novo manda só o resto, nela.
+  const retomada = ref(null);
+
   const limpar = () => {
     modeloDoEmail.cancelar();
+    retomada.value = null;
     Object.assign(form, formVazio());
   };
 
@@ -154,9 +186,16 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     if (novo && texto) {
       texto = stripUnsupportedMarkdown(texto, formatoDe(novo), false);
     }
-    if (novo && comAssinatura.value && assinatura.value) {
+    // No WhatsApp a assinatura vai só no envio (textoQueSai).
+    if (
+      novo &&
+      tipo.value === TIPOS.EMAIL &&
+      comAssinatura.value &&
+      assinatura.value
+    ) {
       texto = appendSignature(texto, assinatura.value, formatoDe(novo));
     }
+    retomada.value = null;
     Object.assign(form, {
       ...formVazio(),
       mensagem: texto,
@@ -172,6 +211,7 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     () => destino.value?.displayId ?? null,
     () => {
       form.historicoDesligado = false;
+      retomada.value = null;
     }
   );
 
@@ -205,12 +245,14 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   // `crm_card_id`: a gaveta não tem o seletor de assunto do CRM, então a
   // mensagem fica no assunto atual da conversa, como uma resposta em conversa
   // de um assunto só.
-  const responderNaConversa = dados => async () => {
-    const id = destino.value.displayId;
-    await store.dispatch(
+  const responderEm = (id, dados) =>
+    store.dispatch(
       'sendMessageWithData',
       createPendingMessage({ conversationId: id, private: false, ...dados })
     );
+  const responderNaConversa = dados => async () => {
+    const id = destino.value.displayId;
+    await responderEm(id, dados);
     return { id, contaId: contaAtual.value, numero: id };
   };
 
@@ -331,7 +373,73 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     });
   };
 
+  // #1988 — WhatsApp: cada parte é uma mensagem (partesDoWhatsapp). A primeira cria a
+  // conversa ou entra na que continua; as outras entram, na ordem, na mesma conversa.
+  // A gravação sai como mensagem de voz (`is_voice_message`), como na caixa de resposta.
+  const diretos = () => Boolean(config.value.directUploadsEnabled);
+  const dadosDaParte = ({ texto, anexos, voz }) => ({
+    message: texto,
+    ...(anexos.length
+      ? { files: prepareAttachmentPayload(anexos, diretos()) }
+      : {}),
+    ...(voz ? { isVoiceMessage: true } : {}),
+  });
+  const criarComParte = async ({ texto, anexos, voz }) => {
+    const params = prepareNewMessagePayload({
+      targetInbox: canal.value,
+      selectedContact: contato.value,
+      message: texto,
+      currentUser: usuario.value,
+      attachedFiles: anexos,
+      directUploadsEnabled: diretos(),
+    });
+    return criarConversa(
+      voz
+        ? { ...params, message: { ...params.message, is_voice_message: true } }
+        : params,
+      false
+    )();
+  };
+  const enviarNoWhatsapp = () => {
+    const partes = partesDoWhatsapp({
+      texto: textoQueSai.value,
+      anexos: form.anexos,
+      umPorMensagem: umAnexoPorMensagem(canal.value),
+    });
+    const contatoId = String(contato.value?.id ?? '');
+    const mesmoContato = () => String(contato.value?.id ?? '') === contatoId;
+    // Com várias partes, o que já saiu sai do rascunho (e a conversa fica guardada): se
+    // uma parte do meio falhar, nada é mandado duas vezes ao cliente.
+    const jaSaiu = (parte, onde) => {
+      if (partes.length < 2 || !mesmoContato()) return;
+      retomada.value = onde;
+      if (parte.texto) form.mensagem = '';
+      form.anexos = form.anexos.filter(anexo => !parte.anexos.includes(anexo));
+    };
+    const mandarParte = async (onde, parte) => {
+      if (onde) {
+        await responderEm(onde.id, dadosDaParte(parte));
+        return onde;
+      }
+      return destino.value
+        ? responderNaConversa(dadosDaParte(parte))()
+        : criarComParte(parte);
+    };
+    // Uma por vez, para chegarem na ordem em que foram anexadas.
+    const mandar = async () => {
+      const onde = await partes.reduce(async (anterior, parte) => {
+        const agora = await mandarParte(await anterior, parte);
+        jaSaiu(parte, agora);
+        return agora;
+      }, Promise.resolve(retomada.value));
+      retomada.value = null;
+      return onde;
+    };
+    return despachar(mandar, textoQueSai.value);
+  };
+
   const enviarEscrita = () => {
+    if (caixaDoWhatsapp.value) return enviarNoWhatsapp();
     const doTexto =
       tipo.value === TIPOS.EMAIL
         ? modeloDoEmail.noEnvio(form.mensagem)
@@ -362,6 +470,8 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     assuntoNaPrevia,
     comAssinatura,
     assinatura,
+    caixaDoWhatsapp,
+    soTexto,
     falta,
     previa,
     enviando,

@@ -117,6 +117,23 @@ Precisa de uma segunda pessoa de teste, "Teste Atendente" (perfil Agente, sem fu
 7. Na janela normal, ligue **Pode entregar acesso acima do próprio** (pede confirmação). Na anônima, recarregue: ela consegue dar a "Teste Atendente" uma função com CRM. **Administrador** continua desabilitado.
 8. Na janela normal, abra **Configurações → Auditoria** e confira as linhas: a troca de função de "Teste Atendente", a criação de "Teste – montada" e o time criado e apagado, com o nome da pessoa de teste como autora.
 
+## Teste 12: Financeiro, custos sem plano nem faturas (#1969)
+
+Precisa de uma conta com a IA do CRM e a nova tela de Modelos do WhatsApp ligadas.
+
+1. Edite a função da pessoa de teste. Deixe **CRM** com **Relatórios** ligado e o novo grupo **Financeiro** em **Sem acesso**. Salve.
+2. Na janela anônima (recarregue), abra **Gasto com IA** (menu antigo: CRM → Gestão de IA). O esperado:
+   - um aviso diz que ela vê quanto a IA foi usada e que os valores aparecem para quem tem Financeiro;
+   - só o cartão de **Usos** aparece; não há gasto, economia nem custo médio;
+   - o gráfico e a lista por recurso contam usos, sem R$ nem US$;
+   - o histórico não tem a coluna de custo, e o relatório baixado também não.
+3. Volte à função, ponha **Financeiro** em **Ver** e salve. Recarregue a anônima: os valores voltam (cartões, gráfico em reais, coluna de custo e as colunas de custo no relatório).
+4. Na anônima, abra **Configurações → Custos do WhatsApp** (ou Campanhas → Modelos WhatsApp → Ver autorização). Tudo aparece travado, com a frase de que só o administrador ou quem tem Financeiro em Editar muda.
+5. Ponha **Financeiro** em **Editar** e salve. Recarregue: as caixas e o botão de ligar ficam liberados e a frase some. Clique em **Ligar autorização** só até ver a confirmação com o custo e **cancele**: ligar de verdade autoriza cobranças da Meta na conta. Ligue apenas se o dono da conta quiser; nesse caso, o histórico mostra o nome da pessoa de teste como quem ligou.
+6. Em qualquer nível de Financeiro, o menu **Financeiro** antigo (Assinatura e Faturas) e o cartão **Plano e faturas** não aparecem para ela.
+7. Se a conta tiver alguém só com **Pessoas** (sem **Pode entregar acesso acima do próprio**), na tela de Usuários a função com Financeiro aparece desabilitada para ele, e na montagem de funções a linha Financeiro fica travada.
+8. Ao final, volte **Financeiro** para **Sem acesso**.
+
 ## No fim (limpeza)
 
 1. Remova a pessoa de teste em **Configurações → Usuários**, para não contar no plano.

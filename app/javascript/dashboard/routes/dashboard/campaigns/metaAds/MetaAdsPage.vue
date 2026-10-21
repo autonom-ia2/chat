@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { useMapGetter } from 'dashboard/composables/store';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
@@ -13,6 +15,7 @@ import MetaAdsDestinationsStep from './components/MetaAdsDestinationsStep.vue';
 import MetaAdsFunnelStep from './components/MetaAdsFunnelStep.vue';
 import MetaAdsSummary from './components/MetaAdsSummary.vue';
 import MetaAdsPanel from './components/MetaAdsPanel.vue';
+import AnunciosSemLogin from './semLogin/AnunciosSemLogin.vue';
 import { currentStep } from './metaAdsHelpers';
 
 // Campanhas › Anúncios da Meta (#1047, F1b): a conexão guiada num lugar só, em 4 passos —
@@ -97,6 +100,19 @@ const panelAvailable = computed(
 );
 const showPanel = computed(
   () => view.value === 'resultado' && panelAvailable.value
+);
+// Anúncios sem login (#1960, degrau 0): com a flag e sem conexão de anúncios nenhuma (o servidor diz em
+// whatsapp_result.enabled), a página abre pronta com o resultado que chega pelo WhatsApp. Quem já tem
+// conexão (ativa, caída ou no meio da escolha) segue no caminho de sempre, com "Conectar de novo".
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const semLogin = computed(
+  () =>
+    isFeatureEnabledonAccount.value(
+      Number(route.params.accountId),
+      FEATURE_FLAGS.ANUNCIOS_SEM_LOGIN
+    ) && Boolean(connection.value?.whatsapp_result?.enabled)
 );
 const showHero = computed(
   () => !connection.value?.configured && !started.value
@@ -218,6 +234,12 @@ onMounted(load);
           @click="load"
         />
       </div>
+
+      <AnunciosSemLogin
+        v-else-if="semLogin"
+        :result="connection.whatsapp_result"
+        :read-only="readOnly"
+      />
 
       <template v-else-if="readOnly">
         <MetaAdsPanel v-if="panelAvailable" read-only />

@@ -80,7 +80,9 @@
       "CONVERSATION_VIEW": "Lê as outras conversas da caixa",
       "PEOPLE_MANAGE": "Cuidar das pessoas e dos times",
       "CUSTOM_ROLE_MANAGE": "Montar funções",
-      "GRANT_ABOVE_OWN": "Pode entregar acesso acima do próprio"
+      "GRANT_ABOVE_OWN": "Pode entregar acesso acima do próprio",
+      "FINANCIAL_VIEW": "Ver os custos da conta",
+      "FINANCIAL_MANAGE": "Ligar e desligar a autorização de cobranças da Meta"
     },
     "MATRIX": {
       "GROUPS": {
@@ -89,7 +91,8 @@
         "AUTONOMIA": "Autonom.ia",
         "MARKETING": "Marketing",
         "CONNECTIONS": "Conexões",
-        "SETTINGS": "Configurações da conta"
+        "SETTINGS": "Configurações da conta",
+        "FINANCE": "Financeiro"
       },
       "LEVELS": {
         "NONE": "Sem acesso",
@@ -227,6 +230,12 @@
           "NAME": "Pessoas",
           "HINT": "Agentes, times e funções",
           "LEVEL_MANAGE": "Convida, edita e remove agentes e cuida dos times. Nunca mexe em administradores."
+        },
+        "FINANCE": {
+          "NAME": "Financeiro",
+          "HINT": "Custos da conta e a autorização de cobranças da Meta",
+          "LEVEL_VIEW": "Vê a autorização de cobranças da Meta e, para quem também tem os relatórios do CRM, quanto a IA custa em reais. Plano e faturas ficam com o administrador.",
+          "LEVEL_MANAGE": "Também liga e desliga a autorização de cobranças da Meta."
         }
       }
     },

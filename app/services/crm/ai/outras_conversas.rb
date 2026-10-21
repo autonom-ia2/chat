@@ -1,7 +1,7 @@
 # As mensagens de outras conversas dos cards da avaliação conjunta (#1693; outro canal, #1664: e-mail + WhatsApp).
 #
 # A avaliação de um card lê as mensagens recentes de TODAS as conversas dele (Crm::Ai::ContextBuilder#recent_messages,
-# até MAX_RECENT_MESSAGES por conversa e MAX_MESSAGES_CAP no total). Na conjunta, a conversa comum é o recorte do
+# na janela da avaliação: até MAX_MESSAGES_CAP no total, divididas entre as conversas, #1926). Na conjunta, a conversa comum é o recorte do
 # principal; de cada outro card vai, no pacote dele, o que o recorte dele traz e a conversa comum não tem. O limite é
 # por card (MAX_POR_CARD, as mais recentes dele) e por chamada (MAX_TOTAL, as mais recentes entre todos os cards).
 #
@@ -15,7 +15,9 @@
 # avaliação de um card só) e as vinculadas que chegam por uma caixa que alimenta o funil dele; uma conversa vinculada
 # de um canal que o funil não atende não vai para a chamada.
 class Crm::Ai::OutrasConversas
-  MAX_POR_CARD = Crm::Ai::ContextBuilder::MAX_RECENT_MESSAGES
+  # #1926: o recorte que a avaliação do card lê de uma conversa quando ele tem duas (a comum e a do outro canal, o caso
+  # da conjunta). Com 12, a proposta antiga do outro canal, que a avaliação do card sozinho já via, sumia aqui.
+  MAX_POR_CARD = Crm::Ai::ContextBuilder.janela_da_avaliacao(2)
   MAX_TOTAL = Crm::Ai::ContextBuilder::MAX_MESSAGES_CAP
 
   # classificadores: um StageClassifier por card, o principal primeiro.

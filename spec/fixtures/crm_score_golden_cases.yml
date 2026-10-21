@@ -3,6 +3,9 @@
   resumo: Link de pagamento prometido 8x e nunca enviado; emissao travada ha 20 dias
   idle_days: 20
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: promessa de 20 dias venceu aos 14: sai o bônus e o piso, e o card esfria a partir do fim da validade (6 dias, -8). Fica a nota da conversa, pronta e com pedido de compra: quente, não mais urgente; o urgente antigo era um dos 21 zumbis de 20/10.'
   signals:
     next_stage_readiness: pronta
     intent: alta
@@ -118,6 +121,9 @@
   resumo: Cliente aceitou o preço mas 20 dias sem retorno após instabilidade no sistema
   idle_days: 20
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: aceitou o preço e espera há 20 dias. A dívida (promessa e espera) venceu aos 14; esfria do fim da validade e fica quente pela conversa forte, sem o piso de urgente.'
   signals:
     next_stage_readiness: pronta
     intent: alta
@@ -295,6 +301,7 @@
     blocker: leve
     last_turn_owner: cliente
     buying_signal: true
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a18_c977
@@ -599,6 +606,7 @@
     blocker: nenhum
     last_turn_owner: cliente
     buying_signal: true
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a18_c947
@@ -837,6 +845,9 @@
   resumo: Lead novo mandou só 'Oi' e segue sem nenhuma resposta do atendimento
   idle_days: 1
   expected_tier: morno
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: lead novo mandou "Oi" e ninguém respondeu: há resposta nossa pendente e o banco sabe disso. Piso de quente enquanto a espera for de até 14 dias; o morno antigo não via a espera.'
   signals:
     next_stage_readiness: nenhuma
     intent: baixa
@@ -939,6 +950,9 @@
   resumo: Prometemos retorno de outra seguradora em 03/07 e nunca voltamos
   idle_days: 21
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: frio
+    motivo: '#1962: promessa de 21 dias venceu aos 14; sem ela sobra conversa fraca com objeção leve (13) e 5 dias de decaimento contados do fim da validade.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -953,6 +967,9 @@
   resumo: Negócio fechado, mas cliente está lendo e vai trazer dúvidas hoje
   idle_days: 0
   expected_tier: quente
+  revisado_1962:
+    expected_tier: morno
+    motivo: '#1962: a bola está com o cliente (vai ler e trazer dúvidas): não há resposta nossa pendente (awaiting_our_reply false). Fica em 53, topo de morno; o quente original vinha do +8 do antigo last_turn_owner, que saiu.'
   signals:
     next_stage_readiness: pronta
     intent: media
@@ -961,6 +978,7 @@
     blocker: leve
     last_turn_owner: cliente
     buying_signal: true
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a6_c1094
@@ -1161,6 +1179,7 @@
     blocker: leve
     last_turn_owner: cliente
     buying_signal: true
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a6_c1156
@@ -1352,6 +1371,9 @@
   resumo: Prometemos a cotacao em 08/07 e nunca enviamos; lead de alto valor
   idle_days: 21
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: morno
+    motivo: '#1962: promessa de 21 dias venceu aos 14; sem bônus nem piso, a conversa pronta com pedido de compra (55) perde 10 de decaimento contado do fim da validade: morno.'
   nota: 'regra de produto: promessa nossa em aberto e sempre urgente'
   signals:
     next_stage_readiness: pronta
@@ -1375,6 +1397,7 @@
     blocker: nenhum
     last_turn_owner: cliente
     buying_signal: false
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a6_c925
@@ -1424,6 +1447,9 @@
   resumo: Lead inbound do site (Seguro ANTT) nunca contatado, 14 dias parado
   idle_days: 14
   expected_tier: frio
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: lead do site nunca contatado, 14 dias: a resposta nossa está pendente e ainda dentro da validade da dívida (até 14 dias), então piso de quente. O frio antigo deixava esse lead sumir da fila.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1467,6 +1493,9 @@
   resumo: Lead inbound do site (Seguro ANTT) nunca contatado, 9 dias parado
   idle_days: 9
   expected_tier: frio
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: lead do site nunca contatado, 9 dias: resposta nossa pendente dentro da validade, piso de quente. O frio antigo deixava esse lead sumir da fila.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1509,6 +1538,9 @@
   resumo: Lead inbound do site (Seguro ANTT) nunca contatado, 14 dias parado
   idle_days: 14
   expected_tier: frio
+  revisado_1962:
+    expected_tier: quente
+    motivo: '#1962: lead do site nunca contatado, 14 dias: resposta nossa pendente no último dia da validade, piso de quente. O frio antigo deixava esse lead sumir da fila.'
   signals:
     next_stage_readiness: inicial
     intent: media
@@ -1559,6 +1591,7 @@
     blocker: nenhum
     last_turn_owner: cliente
     buying_signal: false
+    awaiting_our_reply: false
     unfulfilled_promise: false
     unreadable: false
 - ref: a16_c707
@@ -1594,6 +1627,9 @@
   resumo: Bot prometeu encaminhar ao time comercial; cliente aguarda há 15 dias
   idle_days: 15
   expected_tier: urgente
+  revisado_1962:
+    expected_tier: morno
+    motivo: '#1962: a promessa do robô venceu ontem (15 dias). Sai o piso de urgente, mas o card esfria a partir do fim da validade: cai para a nota da conversa (44), não para frio de uma vez.'
   signals:
     next_stage_readiness: parcial
     intent: alta
@@ -1724,6 +1760,9 @@
   resumo: Cliente perguntou forma de pagamento e parcelas; link ainda não enviado
   idle_days: 0
   expected_tier: quente
+  revisado_1962:
+    expected_tier: urgente
+    motivo: '#1962: perguntou forma de pagamento e parcelas hoje, sem objeção, e a resposta é nossa: dinheiro parado do nosso lado, piso de urgente. O "borderline quente alto" original não tinha a espera do banco.'
   nota: 'borderline: pediu parcelas hoje, quente alto'
   signals:
     next_stage_readiness: pronta

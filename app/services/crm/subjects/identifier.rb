@@ -230,7 +230,7 @@ class Crm::Subjects::Identifier
 
   def question
     @question ||= begin
-      abertos = Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).includes(:pipeline, :contact).to_a.select(&:open?)
+      abertos = Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).includes(:pipeline, :stage, :contact).select(&:open?)
       # Voltar a um assunto só entre os funis com a IA ligada (#1260); o atual segue sendo o atual, de qualquer funil.
       ids = pipelines.map(&:id)
       cards = abertos.select { |card| ids.include?(card.pipeline_id) }
@@ -253,7 +253,7 @@ class Crm::Subjects::Identifier
   end
 
   def estado
-    @estado ||= Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message, leituras: LEITURAS)
+    @estado ||= Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message, leituras: LEITURAS, **Crm::Subjects::JANELA)
   end
 
   # Os funis ativos ligados à caixa da conversa, com etapa para o card nascer e a IA do funil ligada, na ordem do CRM.

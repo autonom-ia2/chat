@@ -3,6 +3,8 @@
 // A `<module>_manage` key implies `<module>_view` on the backend, so only the highest key is stored.
 import {
   CUSTOM_ROLE_MANAGE_PERMISSION,
+  FINANCIAL_MANAGE_PERMISSION,
+  FINANCIAL_VIEW_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
   PEOPLE_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
@@ -241,6 +243,22 @@ export const MODULE_GROUPS = [
         settings: true,
         levels: { manage: PEOPLE_MANAGE_PERMISSION },
         extras: [CUSTOM_ROLE_MANAGE_PERMISSION, GRANT_ABOVE_OWN_PERMISSION],
+      },
+    ],
+  },
+  {
+    key: 'FINANCE',
+    modules: [
+      {
+        // Financeiro (#1969): ver os custos da conta em dinheiro (uso de IA) e a autorização de
+        // cobranças da Meta; editar liga e desliga essa autorização. Plano e faturas ficam com o
+        // administrador. As duas chaves só o administrador entrega (DELEGATION_KEYS).
+        key: 'FINANCE',
+        icon: 'i-lucide-wallet',
+        levels: {
+          view: FINANCIAL_VIEW_PERMISSION,
+          manage: FINANCIAL_MANAGE_PERMISSION,
+        },
       },
     ],
   },
@@ -502,7 +520,7 @@ export const PRESETS = {
     'crm_view_reports',
   ],
   FINANCE: () => [
-    ...build({ REPORTS: LEVELS.VIEW, CRM: LEVELS.VIEW }),
+    ...build({ REPORTS: LEVELS.VIEW, CRM: LEVELS.VIEW, FINANCE: LEVELS.VIEW }),
     'crm_view_reports',
   ],
   OPERATIONS: () =>
