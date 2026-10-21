@@ -93,6 +93,12 @@ purge_whatsapp_conversation_uploads_job:
   class: 'Whatsapp::Templates::PurgeConversationUploadsJob'
   queue: scheduled_jobs
 
+# #2005: foto do anúncio que já teve clique antes da flag `anuncios_sem_login` (o link da Meta vence em ~4 dias).
+crm_meta_ads_referral_image_backfill_job:
+  cron: '20 */6 * * *'
+  class: 'Crm::MetaAds::ReferralImageBackfillJob'
+  queue: scheduled_jobs
+
 # executed every minute; feature flag checked inside the job
 crm_follow_up_due_job:
   cron: '*/1 * * * *'
