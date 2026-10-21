@@ -206,5 +206,18 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
         .to include(completa: false)
       expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => perguntas)).to include(completa: true)
     end
+
+    # A troca de `pedido` por `pedidos` (t6d R4/R5) não mexe na prova já gravada: a tela lê só a `completa` gravada e a
+    # pergunta e a resposta de cada item. Sem nenhum dos dois campos, igual a antes; com o campo antigo, idem.
+    it 'prova gravada antes da troca (sem pedidos, com ou sem o pedido antigo) continua igual' do
+      sem_campo = [{ 'pergunta' => 'Oi?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'ok' }]
+      antigo = [sem_campo.first.merge('pedido' => 0)]
+      igual = { status: 'pronta', total: 1, ok: 1, completa: true, perguntas: [{ pergunta: 'Oi?', resposta: 'r', equipe: false, ok: true }] }
+
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => sem_campo)).to eq(igual)
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => antigo)).to eq(igual)
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'completa' => false, 'perguntas' => antigo))
+        .to eq(igual.merge(completa: false))
+    end
   end
 end
