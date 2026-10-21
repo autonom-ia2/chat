@@ -123,7 +123,7 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       provar!
 
       expect(juiz).to have_received(:julgar).with(
-        pedidos: [{ 'numero' => 0, 'pedido' => fala, 'o_que_mudou' => ['Respostas curtas.'] }],
+        pedidos: [{ 'numero' => 1, 'pedido' => fala, 'o_que_mudou' => ['Respostas curtas.'] }],
         itens: perguntas.map { |pergunta| { 'pergunta' => pergunta, 'resposta' => 'Em até 2 frases.', 'equipe' => false } }
       )
     end
@@ -331,8 +331,8 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       provar!
 
       expect(juiz).to have_received(:julgar).with(
-        pedidos: [{ 'numero' => 0, 'pedido' => fala, 'o_que_mudou' => ['Respostas curtas.', 'No máximo 2 frases.'] },
-                  { 'numero' => 1, 'pedido' => preco, 'o_que_mudou' => ['Preço vai à equipe.'] }],
+        pedidos: [{ 'numero' => 1, 'pedido' => fala, 'o_que_mudou' => ['Respostas curtas.', 'No máximo 2 frases.'] },
+                  { 'numero' => 2, 'pedido' => preco, 'o_que_mudou' => ['Preço vai à equipe.'] }],
         itens: anything
       )
     end
@@ -351,6 +351,35 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       provar!
 
       expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => true)
+    end
+  end
+
+  # Revisão do t6d (MÉDIOS): os pedidos da prova são os mesmos grupos do cartão, e com um pedido só não há o que cobrir.
+  describe '#rodar! com os grupos do cartão' do
+    it 'o mesmo pedido no tom e na instrução, com ponto final só num deles, é 1 pedido e a prova sai completa' do
+      aplicar_ajuste('mudancas' => [mudanca('tone', fala, 'Respostas curtas.'),
+                                    mudanca('instruction', "#{fala}.", 'No máximo 2 frases.')])
+      agente_responde
+      allow(juiz).to receive(:julgar).and_return(vereditos('ok', 'ok', pedido: 0))
+
+      provar!
+
+      expect(juiz).to have_received(:julgar).with(
+        pedidos: [{ 'numero' => 1, 'pedido' => fala, 'o_que_mudou' => ['Respostas curtas.', 'No máximo 2 frases.'] }],
+        itens: anything
+      )
+      expect(estado['prova']).to include('ok' => 2, 'total' => 2, 'completa' => true)
+    end
+
+    it 'com um pedido só, a pergunta que testa cobre o pedido mesmo sem o juiz dizer qual' do
+      aplicar_ajuste
+      agente_responde
+      allow(juiz).to receive(:julgar).and_return([{ 'veredito' => 'ok', 'pedido' => nil },
+                                                  { 'veredito' => 'nao_testa', 'pedido' => nil }])
+
+      provar!
+
+      expect(estado['prova']).to include('ok' => 1, 'total' => 1, 'completa' => true)
     end
   end
 

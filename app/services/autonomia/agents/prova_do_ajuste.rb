@@ -93,9 +93,14 @@ class Autonomia::Agents::ProvaDoAjuste
             'perguntas' => itens.zip(veredito).map { |item, nota| item.merge(nota) })
   end
 
+  # Com um pedido só, qualquer pergunta que testa o cobre. Com mais, cada posição da lista de pedidos (a que o juiz
+  # devolve, a partir de 0) precisa de ao menos uma pergunta que a testou.
   def completa?(pedidos, veredito)
-    testados = veredito.pluck('pedido').compact
-    testados.any? && pedidos.pluck('numero').all? { |numero| testados.include?(numero) }
+    testam = veredito.reject { |nota| nota['veredito'] == 'nao_testa' }
+    return testam.any? if pedidos.one?
+
+    cobertos = testam.pluck('pedido').compact
+    pedidos.any? && pedidos.each_index.all? { |posicao| cobertos.include?(posicao) }
   end
 
   # A resposta do agente, pelo mesmo caminho do Testar, sem ferramenta. nil quando a IA falhou. `equipe`: o agente
@@ -109,13 +114,17 @@ class Autonomia::Agents::ProvaDoAjuste
     { 'resposta' => texto, 'equipe' => equipe }
   end
 
-  # O que entrou neste ajuste, um item numerado por pedido do dono, nas palavras que o Construtor escreveu para ele
-  # (`pedido` e os `resumo` dos campos desse pedido).
+  # O que entrou neste ajuste: os pedidos do dono pelos MESMOS grupos do cartão (ResultadoDoAjuste#grupos_pedidos), só
+  # os aplicados, numerados a partir de 1 para o juiz, nas palavras que o Construtor escreveu (`pedido` e os `resumo`
+  # dos campos de cada pedido).
   def pedidos_aplicados
-    itens = Array(@thread.state.dig('ultimo_ajuste', 'conferencia', 'itens'))
-    itens.reject { |item| item['atendido'] == false || item['pedido_pelo_dono'] == false }
-         .group_by { |item| item['pedido'] }.each_with_index
-         .map { |(pedido, grupo), numero| { 'numero' => numero, 'pedido' => pedido, 'o_que_mudou' => grupo.pluck('resumo').uniq } }
+    conferencia = @thread.state.dig('ultimo_ajuste', 'conferencia').to_h
+    grupos = Autonomia::Agents::ResultadoDoAjuste.new(nil, conferencia).grupos_pedidos
+                                                 .reject { |grupo| grupo.any? { |item| item['atendido'] == false } }
+    grupos.each_with_index.map do |grupo, posicao|
+      { 'numero' => posicao + 1, 'pedido' => Autonomia::Agents::ResultadoDoAjuste.sem_ponto(grupo.first['pedido']),
+        'o_que_mudou' => grupo.pluck('resumo').uniq }
+    end
   end
 
   # A prova ainda está pendente, e o ajuste dela ainda é o último da conversa e vale (não desfeito, o agente com os campos

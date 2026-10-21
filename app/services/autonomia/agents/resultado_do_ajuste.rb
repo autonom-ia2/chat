@@ -110,7 +110,13 @@ class Autonomia::Agents::ResultadoDoAjuste
     nao_pedidos = agrupar(sem_pedido_que_mudou(sem_pedido)).map do |grupo|
       { estado: 'sem_pedido', texto: sem_ponto(grupo.first['resumo']) }
     end
-    agrupar(@itens - sem_pedido).map { |grupo| linha_pedida(grupo) } + nao_pedidos
+    grupos_pedidos.map { |grupo| linha_pedida(grupo) } + nao_pedidos
+  end
+
+  # Os pedidos do dono como o cartão os agrupa (uma linha por grupo), cada um com os seus itens. Fonte única: a prova
+  # (ProvaDoAjuste) numera os pedidos por estes mesmos grupos.
+  def grupos_pedidos
+    agrupar(@itens - Autonomia::Agents::Builder::DesfechoDoAjuste.sem_pedido(@itens))
   end
 
   # Sem a conferência (o provedor falhou) ou sem a marca dos itens (a 2ª conferência passou do teto): mudou, sem conferir.
@@ -120,10 +126,11 @@ class Autonomia::Agents::ResultadoDoAjuste
 
   private
 
-  # Grupos pelo texto do `pedido`, na ordem da lista; o destino secundário vai para o grupo do principal.
+  # Grupos pelo texto do `pedido` (sem o ponto final, como a linha mostra), na ordem da lista; o destino secundário vai
+  # para o grupo do principal.
   def agrupar(itens)
     secundarios, principais = itens.partition { |item| secundario?(item, itens) }
-    grupos = principais.group_by { |item| item['pedido'] }.values
+    grupos = principais.group_by { |item| sem_ponto(item['pedido']) }.values
     secundarios.each do |item|
       grupo = grupos.find { |itens_do_grupo| itens_do_grupo.pluck('campo').intersect?(SECUNDARIO_DE[item['campo']]) }
       grupo ? grupo << item : grupos << [item]
@@ -136,7 +143,8 @@ class Autonomia::Agents::ResultadoDoAjuste
     return false unless item['pedido_pelo_dono'] == false && SECUNDARIO_DE.key?(item['campo'])
 
     pedidos = itens.reject { |outro| outro['pedido_pelo_dono'] == false }
-    pedidos.pluck('pedido').exclude?(item['pedido']) && pedidos.pluck('campo').intersect?(SECUNDARIO_DE[item['campo']])
+    pedidos.map { |outro| sem_ponto(outro['pedido']) }.exclude?(sem_ponto(item['pedido'])) &&
+      pedidos.pluck('campo').intersect?(SECUNDARIO_DE[item['campo']])
   end
 
   def linha_pedida(grupo)

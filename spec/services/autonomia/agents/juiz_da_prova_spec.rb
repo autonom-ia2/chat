@@ -7,8 +7,8 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
   let(:account) { create(:account) }
   let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
   let(:pedidos) do
-    [{ 'numero' => 0, 'pedido' => 'no máximo 2 frases', 'o_que_mudou' => ['Respostas curtas.'] },
-     { 'numero' => 1, 'pedido' => 'preço passa para a equipe', 'o_que_mudou' => ['Preço vai à equipe.'] }]
+    [{ 'numero' => 1, 'pedido' => 'no máximo 2 frases', 'o_que_mudou' => ['Respostas curtas.'] },
+     { 'numero' => 2, 'pedido' => 'preço passa para a equipe', 'o_que_mudou' => ['Preço vai à equipe.'] }]
   end
   let(:itens) do
     [{ 'pergunta' => 'Quais seguros?', 'resposta' => 'Auto e vida.', 'equipe' => false },
@@ -29,20 +29,24 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     described_class.new(account: account).julgar(pedidos: pedidos, itens: itens)
   end
 
-  it 'um veredito por item, na ordem dos índices, com os três estados' do
+  # Os pedidos vão ao juiz numerados a partir de 1; o que volta é a posição na lista (a partir de 0).
+  it 'um veredito por item, na ordem dos índices, com os três estados e a posição do pedido testado' do
     itens << { 'pergunta' => 'Vocês atendem em Curitiba?', 'resposta' => 'Atendemos.', 'equipe' => false }
-    juiz_responde([{ indice: 2, veredito: 'nao_testa', pedido: -1 }, { indice: 1, veredito: 'nao', pedido: 1 },
-                   { indice: 0, veredito: 'ok', pedido: 0 }])
+    juiz_responde([{ indice: 2, veredito: 'nao_testa', pedido: 0 }, { indice: 1, veredito: 'nao', pedido: 2 },
+                   { indice: 0, veredito: 'ok', pedido: 1 }])
 
     expect(julgar).to eq([{ 'veredito' => 'ok', 'pedido' => 0 }, { 'veredito' => 'nao', 'pedido' => 1 },
                           { 'veredito' => 'nao_testa', 'pedido' => nil }])
   end
 
   # Revisão do t6d (MÉDIO): o juiz diz qual pedido cada pergunta testou. Número fora da lista não cobre pedido nenhum.
-  it 'pedido fora da lista, ou numa pergunta que não testa, vira nil' do
-    juiz_responde([{ indice: 0, veredito: 'ok', pedido: 7 }, { indice: 1, veredito: 'nao_testa', pedido: 0 }])
+  it 'pedido fora da faixa de 1 até o total, ou numa pergunta que não testa, vira nil' do
+    itens << { 'pergunta' => 'Vocês atendem em Curitiba?', 'resposta' => 'Atendemos.', 'equipe' => false }
+    juiz_responde([{ indice: 0, veredito: 'ok', pedido: 7 }, { indice: 1, veredito: 'ok', pedido: 0 },
+                   { indice: 2, veredito: 'nao_testa', pedido: 1 }])
 
-    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedido' => nil }, { 'veredito' => 'nao_testa', 'pedido' => nil }])
+    expect(julgar).to eq([{ 'veredito' => 'ok', 'pedido' => nil }, { 'veredito' => 'ok', 'pedido' => nil },
+                          { 'veredito' => 'nao_testa', 'pedido' => nil }])
   end
 
   it 'veredito fora dos três: nil' do
@@ -69,24 +73,14 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
       expect(kwargs[:schema][:schema][:properties][:resultados][:items][:properties].keys).to eq(%i[indice veredito pedido])
       expect(kwargs[:timeout]).to eq(30)
       texto = kwargs[:input].first[:content].first[:text]
-      expect(texto).to include('Respostas curtas.', '"numero": 1', 'Quais seguros?', 'Auto e vida.', '"passa_para_equipe": true')
+      expect(texto).to include('Respostas curtas.', '"numero": 1', '"numero": 2', 'Quais seguros?', 'Auto e vida.', '"passa_para_equipe": true')
     end
   end
 
   # A rodada 3 do eval do t6d (21/10) veio toda "indisponível": o provedor recusa schema estrito em que algum objeto não
   # lista todas as propriedades em `required`. Confere o schema inteiro, em todo nível.
   it 'schema estrito: todo objeto lista todas as propriedades em required e não aceita outras' do
-    objetos = lambda do |no|
-      next [] unless no.is_a?(Hash)
-
-      proprios = no[:type] == 'object' ? [no] : []
-      proprios + no.values.flat_map { |valor| objetos.call(valor) }
-    end
-
-    objetos.call(described_class::SCHEMA[:schema]).each do |objeto|
-      expect(objeto[:required].map(&:to_s)).to match_array(objeto[:properties].keys.map(&:to_s))
-      expect(objeto[:additionalProperties]).to be(false)
-    end
+    expect_schema_estrito(described_class::SCHEMA[:schema])
   end
 
   it 'faltando um índice: nil' do
@@ -102,8 +96,8 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
   end
 
   it 'índice repetido vale o primeiro' do
-    juiz_responde([{ indice: 0, veredito: 'nao', pedido: 0 }, { indice: 0, veredito: 'ok', pedido: 0 },
-                   { indice: 1, veredito: 'ok', pedido: 1 }])
+    juiz_responde([{ indice: 0, veredito: 'nao', pedido: 1 }, { indice: 0, veredito: 'ok', pedido: 1 },
+                   { indice: 1, veredito: 'ok', pedido: 2 }])
 
     expect(julgar.pluck('veredito')).to eq(%w[nao ok])
   end

@@ -34,6 +34,13 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
     expect(saida).to include(conferido: true, faltou_fora: false, desfeito: false, desfeito_sozinho: false)
   end
 
+  # Revisão do t6d (MÉDIO): o mesmo pedido, com e sem ponto final, é uma linha só (o grupo que a prova também usa).
+  it 'o mesmo pedido com e sem ponto final é uma linha só' do
+    saida = resultado('itens' => [item('tone', '2 frases', 'Respostas curtas.'), item('instruction', '2 frases.', 'No máximo 2 frases.')])
+
+    expect(saida[:itens]).to eq([{ estado: 'aplicado', texto: 'Respostas curtas.' }])
+  end
+
   it 'o destino secundário pela tabela entra no grupo do pedido principal' do
     saida = resultado('itens' => [item('tone', 'mais curto', 'Respostas curtas.'),
                                   item('instruction', 'regra de tamanho', 'No máximo 2 frases.', atendido: false,
