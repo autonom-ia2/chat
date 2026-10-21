@@ -741,3 +741,17 @@
   display_name: CRM › IA reconhece assunto encerrado
   enabled: false
   column: feature_flags_ext_1
+
+# IA entende a conversa, F3 — a IA fecha o card (sem Issue própria ainda; épico "IA entende a conversa" do CRM).
+# Ligada: (a) a IA de etapa pode marcar Perdido com motivo (adiou, recusou, fechou com outra; "adiou" = agora não sem
+# recusa, em qualquer funil, com lembrete de retorno na data do cliente ou em 30 dias), e Resolvido só em funil de
+# Atender, com confirmação do cliente; nunca Ganho; silêncio nunca fecha (a avaliação do card parado não fecha); (b)
+# "era teste" sai arquivado como não é negócio (com a flag crm_ia_arquiva_lixo); (c) uma pessoa escolheu a etapa há
+# pouco e a IA quer voltar o card: vira sugestão; (d) o card fechado pela IA não segura o pedido novo pelo respeito de
+# 24 h. Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration, sem tela.
+# Posição PROVISÓRIA 54 na feature_flags_ext_1 (1 << 53), contando a 51 reservada ao crm_numeros_equipe (#1999), que
+# ainda não está na main: enquanto ela não entrar, esta linha cai na 53. A Orquestração dá a definitiva.
+- name: crm_ia_fecha_card
+  display_name: CRM › IA fecha o card (perdido com motivo, resolvido)
+  enabled: false
+  column: feature_flags_ext_1

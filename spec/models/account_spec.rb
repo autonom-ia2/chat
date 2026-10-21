@@ -256,7 +256,10 @@ RSpec.describe Account do
         feature_crm_ia_fatos_da_conversa: 1 << 50,
         # IA entende a conversa F2: posição PROVISÓRIA (53 com a 51 do crm_numeros_equipe; aqui, sem ela, 52). A
         # Orquestração dá a definitiva.
-        feature_crm_ia_assunto_encerrado: 1 << 51
+        feature_crm_ia_assunto_encerrado: 1 << 51,
+        # IA entende a conversa F3: posição PROVISÓRIA (54 com a 51 do crm_numeros_equipe; aqui, sem ela, 53). A
+        # Orquestração dá a definitiva.
+        feature_crm_ia_fecha_card: 1 << 52
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

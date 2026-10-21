@@ -58,6 +58,7 @@ module Crm
         result = apply_classification(classification)
         # Card arquivado como "não é negócio" (#1922): o resto (pedido de atendente, retorno, campos) era do card aberto.
         return result.tap { Crm::Memoria::Pendente.descartar!(@card) } if @pipeline_mudou || result.status == :archived
+        return depois_de_fechar(classification, result) if result.status == :closed
 
         refresh_post_classification_context!
         classification = refresh_handoff_classification_if_needed(classification, result, regra)
@@ -187,8 +188,9 @@ module Crm
         touch_evaluation_metadata(classification)
         return Result.new(status: :skipped, error: 'pipeline_changed') if @pipeline_mudou
 
-        return pessoa_mexeu_na_etapa! if pessoa_mexeu_na_etapa?
+        return voltar_como_sugestao(classification) || pessoa_mexeu_na_etapa! if pessoa_mexeu_na_etapa?
         return Result.new(status: :archived) if nao_e_negocio!(classification)
+        return Result.new(status: :closed) if fechar_card!(classification)
 
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
         return Result.new(status: :skipped, error: 'unknown_stage') if target_stage.blank?
@@ -257,6 +259,45 @@ module Crm
         return false unless auto_move_allowed?
 
         NaoENegocio.new(card: @card, decisao: classification[:nao_e_negocio], lido_em: @lido_em).aplicar!
+      end
+
+      # IA entende a conversa F3: o modelo disse que o pedido deste card terminou. Só com a flag `crm_ia_fecha_card` e
+      # no automático do funil, como mover sozinho; nem no "Avaliar agora" nem na avaliação do card parado (silêncio
+      # nunca fecha). Com pedido ou promessa de pessoa neste card, ele fica: fechar pularia a passagem. As guardas do card
+      # são do Crm::Ai::FecharCard.
+      def fechar_card!(classification)
+        return false if FecharCard::GATILHOS_SEM_FECHAMENTO.include?(@trigger) || classification[:fechar_card].blank?
+        return false unless FecharCard.ligada?(@account)
+        return false if HandoffIntent.requested?(classification[:handoff]) || FatosDaConversa.promessa?(classification[:handoff])
+        return false unless auto_move_allowed?
+
+        FecharCard.new(card: @card, decisao: classification[:fechar_card], lido_em: @lido_em).aplicar!
+      end
+
+      # O card que a IA fechou não passa a conversa nem pontua (isso é de card aberto). Os campos e a memória seguem, e o
+      # "adiou" ganha o lembrete de retorno.
+      def depois_de_fechar(classification, result)
+        refresh_post_classification_context!
+        FecharCard.agendar_retorno(@card, classification[:fechar_card], classification[:callback_request])
+        attribute_extraction.apply(classification[:extracted_attributes])
+        Crm::Memoria::Pendente.aplicar!(@card)
+        result
+      end
+
+      # IA entende a conversa F3, regra h (D1): uma pessoa escolheu a etapa há pouco e a IA quer VOLTAR o card a uma
+      # etapa anterior: vira sugestão pendente, para a pessoa decidir. Avançar segue a regra do #1918 (nem move, nem
+      # sugere). Sem a flag, nil: tudo como antes.
+      def voltar_como_sugestao(classification)
+        return unless FecharCard.ligada?(@account)
+
+        alvo = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
+        atual = stages.index { |stage| stage.id == @card.stage_id }
+        return if alvo.nil? || atual.nil? || stages.index(alvo) >= atual || alvo.is_won_stage || alvo.is_lost_stage
+
+        confidence = classification[:confidence].to_f
+        return if confidence < Config::SUGGESTION_THRESHOLD
+
+        Result.new(status: :suggested, suggestion: record_suggestion(alvo, confidence, classification, :pending))
       end
 
       def stage_criteria_present?(stage)

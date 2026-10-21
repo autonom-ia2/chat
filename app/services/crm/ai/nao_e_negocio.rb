@@ -22,6 +22,9 @@
 class Crm::Ai::NaoENegocio
   FLAG = 'crm_ia_arquiva_lixo'.freeze
   MOTIVOS = %w[fora_do_negocio duplicado].freeze
+  # IA entende a conversa F3, regra k: "era teste" sai arquivado como não é negócio, sem contar como perda. Só com a flag
+  # `crm_ia_fecha_card` (Crm::Ai::FecharCard::TESTE); as guardas do arquivamento são as mesmas.
+  MOTIVO_TESTE = 'teste'.freeze
 
   # O campo da avaliação de etapa (a regra está em ClassifierPrompt::NAO_E_NEGOCIO).
   CAMPO = {
@@ -41,11 +44,18 @@ class Crm::Ai::NaoENegocio
     account.present? && account.feature_enabled?(FLAG)
   end
 
-  # O schema de um card (StageClassifier::CLASSIFICATION_SCHEMA) com o campo `nao_e_negocio` no fim, obrigatório.
-  def self.com_campo(schema)
+  # Os motivos aceitos na conta: com a flag da F3, também o "teste".
+  def self.motivos(account)
+    Crm::Ai::FecharCard.ligada?(account) ? [*MOTIVOS, MOTIVO_TESTE] : MOTIVOS
+  end
+
+  # O schema de um card (StageClassifier::CLASSIFICATION_SCHEMA) com o campo `nao_e_negocio` no fim, obrigatório. teste:
+  # o enum do motivo com o "teste" (F3).
+  def self.com_campo(schema, teste: false)
     corpo = schema[:schema]
+    campo = teste ? CAMPO.deep_merge(properties: { motivo: { enum: [*MOTIVOS, MOTIVO_TESTE] } }) : CAMPO
     schema.merge(
-      schema: corpo.merge(properties: corpo[:properties].merge(nao_e_negocio: CAMPO), required: [*corpo[:required], 'nao_e_negocio'])
+      schema: corpo.merge(properties: corpo[:properties].merge(nao_e_negocio: campo), required: [*corpo[:required], 'nao_e_negocio'])
     ).freeze
   end
 
@@ -72,7 +82,7 @@ class Crm::Ai::NaoENegocio
   def confianca = @decisao[:confidence].to_f
 
   def decisao_valida?
-    MOTIVOS.include?(motivo) && confianca >= Crm::Ai::Config::AUTO_MOVE_THRESHOLD && @lido_em.present?
+    self.class.motivos(@card.account).include?(motivo) && confianca >= Crm::Ai::Config::AUTO_MOVE_THRESHOLD && @lido_em.present?
   end
 
   def pode_arquivar?

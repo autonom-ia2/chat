@@ -1028,6 +1028,13 @@ en:
   automation:
     system_name: 'Automation System'
   crm:
+    # IA entende a conversa F3: o motivo que a IA grava ao marcar Perdido (lost_reason) e o título do retorno do "adiou".
+    ai_fechar_card:
+      motivos:
+        adiou: 'Postponed'
+        recusou: 'Declined'
+        fechou_com_outra: 'Went with someone else'
+      retorno: 'Get back in touch: the customer postponed'
     # #1498: titles of the Serve reminders (shown in the card agenda).
     service_reminders:
       progress: 'Share progress'
