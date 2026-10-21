@@ -150,6 +150,11 @@ def fake_aws():
         result = state.get('target_envelopes', {}).get(arg('--target-group-arn'), state.get('target_envelope', {'TargetHealthDescriptions': [
             {'Target': {'Id': target, 'Port': 3000}, 'TargetHealth': {'State': 'healthy'}}]}))
     elif operation == 'get-parameter':
+        if arg('--name') not in state['parameters']:
+            save()
+            print(f'An error occurred (ParameterNotFound) when calling the GetParameter operation: {arg("--name")}',
+                  file=sys.stderr)
+            sys.exit(254)
         envelope = {'Parameter': {'Value': state['parameters'][arg('--name')], 'Type': 'String'}}
         assert arg('--query') == 'Parameter.Value'
         result = envelope['Parameter']['Value']
@@ -347,6 +352,8 @@ class DeployRecoveryTest(unittest.TestCase):
             'GITHUB_ENV': str(self.directory / 'github-env'),
             'CURRENT_TG_PARAMETER': 'current-tg', 'CURRENT_INSTANCE_PARAMETER': 'current-instance',
             'PREVIOUS_TG_PARAMETER': 'previous-tg', 'PREVIOUS_INSTANCE_PARAMETER': 'previous-instance',
+            # #1979: congelamento em duas chaves; sem as chaves no SSM falso, a produção está descongelada.
+            'DEPLOY_FREEZE_PARAMETER': 'deploy-freeze', 'DEPLOY_FREEZE_RELEASED_PARAMETER': 'deploy-freeze-released',
             'LISTENER_ARN': 'listener-test', 'ALB_NAME': 'lb-test',
             'BLUE_TG_ARN': 'tg-blue', 'BLUE_INSTANCE_ID': 'i-blue',
             'GREEN_TG_ARN': 'tg-green', 'GREEN_INSTANCE_ID': 'i-green',
@@ -1365,6 +1372,72 @@ printf 'shutdown\\n' >> "$REMOTE_LOG"
                 'parameters': {'current-tg': 'tg-blue', 'current-instance': 'i-blue',
                                'previous-tg': 'tg-older', 'previous-instance': 'i-older'}}
 
+    def assert_blue_untouched(self, state):
+        self.assertNotIn('i-blue', state.get('command_suspensions', {}).values())
+        self.assertNotIn('i-blue', state.get('command_web_restarts', {}).values())
+        self.assertFalse(any(call[1] == 'modify-listener' for call in state['calls']))
+        self.assertEqual(state['writes'], [])
+
+    def test_cleanup_after_freeze_abort_keeps_blue_untouched(self):
+        # #1979: o deploy parou pelo congelamento logo antes do balanceador. A imagem já subiu e a green rodou o boot,
+        # mas tráfego, worker e Instagram nunca saíram da blue.
+        for workflow in WORKFLOWS:
+            initial = self.before_image()
+            self.env['GREEN_IMAGE_PUBLISHED'] = 'true'
+            self.env['FREEZE_ABORTED'] = 'true'
+            self.addCleanup(self.env.pop, 'FREEZE_ABORTED', None)
+            script = run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift')
+            with self.subTest(stack=workflow.name, scenario='boot-done'):
+                result, state = self.execute(script, deploy_status='DEPLOY_IDLE', **initial)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_blue_untouched(state)
+                self.assertEqual(state['terminated'], ['i-green'])
+                self.assertEqual(state['running_workers'], ['i-blue'])
+                self.assert_pointers(state, 'tg-blue', 'i-blue')
+            with self.subTest(stack=workflow.name, scenario='listener-not-on-blue'):
+                result, state = self.execute(script, deploy_status='DEPLOY_IDLE', **{**initial, 'listener': 'tg-green'})
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn('blue_green_destination_mismatch', result.stderr)
+                self.assert_blue_untouched(state)
+                self.assertNotIn('terminated', state)
+            with self.subTest(stack=workflow.name, scenario='blue-worker-stopped'):
+                # Sem o congelamento como causa única (worker da blue já parado), a recuperação completa continua.
+                self.env['BLUE_WORKER_STOPPED'] = 'true'
+                try:
+                    result, state = self.execute(script, deploy_status='DEPLOY_IDLE', **initial)
+                finally:
+                    self.env['BLUE_WORKER_STOPPED'] = 'false'
+                self.assertIn('i-blue', state.get('command_suspensions', {}).values())
+
+    def test_freeze_abort_steps_mark_the_abort_for_cleanup(self):
+        for workflow in WORKFLOWS:
+            source = workflow.read_text()
+            for name in ('Abort if production was frozen', 'Abort if production was frozen before traffic'):
+                with self.subTest(stack=workflow.name, step=name):
+                    block = run_block(source, name)
+                    self.env['DESCONGELAR'] = 'false'
+                    try:
+                        result, state = self.execute(block, parameters={'deploy-freeze': 'on:1:1:pedido'})
+                        self.assertEqual(result.returncode, 1, result.stderr)
+                        self.assertIn('FREEZE_ABORTED=true', (self.directory / 'github-env').read_text())
+                        result, state = self.execute(block, parameters={'deploy-freeze': 'on:1:1:pedido',
+                                                                        'deploy-freeze-released': 'on:1:1:pedido'})
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertEqual((self.directory / 'github-env').read_text(), '')
+                        self.env['DESCONGELAR'] = 'true'
+                        result, state = self.execute(block, parameters={'deploy-freeze': 'on:1:1:pedido'})
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                    finally:
+                        self.env.pop('DESCONGELAR', None)
+        # O passo antes do tráfego fica entre a credencial renovada e o registro da green.
+        for workflow in WORKFLOWS:
+            source = workflow.read_text()
+            with self.subTest(stack=workflow.name, check='order'):
+                self.assertLess(source.index('      - name: Refresh AWS credentials before traffic steps'),
+                                source.index('      - name: Abort if production was frozen before traffic'))
+                self.assertLess(source.index('      - name: Abort if production was frozen before traffic'),
+                                source.index('      - name: Register green target group'))
+
     def test_cleanup_without_image_terminates_green_even_when_blue_recovery_fails(self):
         for workflow in WORKFLOWS:
             initial = self.before_image()
@@ -1379,18 +1452,23 @@ printf 'shutdown\\n' >> "$REMOTE_LOG"
                 self.assertNotIn('tags', state)
                 self.assertFalse(any(event[0] == 'sleep' for event in state['events']))
                 self.assert_pointers(state, 'tg-blue', 'i-blue')
-            with self.subTest(stack=workflow.name, scenario='suspension-failed'):
-                result, state = self.execute(script, fail_suspension_instance='i-blue', **initial)
-                # O erro original da blue (o status 1 do helper) não é engolido pela terminação da green.
-                self.assertEqual(result.returncode, 1, result.stderr)
-                self.assertIn('instagram_recovery_suspension_failed:i-blue', result.stderr)
+                # #1979: a blue não foi tocada: nem suspensão, nem web reiniciado, nem listener ou ponteiro regravado.
+                self.assert_blue_untouched(state)
+            with self.subTest(stack=workflow.name, scenario='listener-unreadable'):
+                result, state = self.execute(script, fail_operation='describe-listeners', **initial)
+                # O erro original da conferência não é engolido pela terminação da green.
+                self.assertNotEqual(result.returncode, 0, result.stderr)
                 self.assertIn('não chegou a receber a imagem', result.stdout)
                 self.assertEqual(state['terminated'], ['i-green'])
                 self.assertEqual(state['calls'][-1][:2], ['ec2', 'terminate-instances'])
-                # A regra da blue não muda: sem a suspensão, nada de reiniciar web, trocar listener ou gravar ponteiro.
-                self.assertFalse(any(call[1] == 'modify-listener' for call in state['calls']))
-                self.assertEqual(state['writes'], [])
+                self.assert_blue_untouched(state)
                 self.assertEqual(state['running_workers'], ['i-blue'])
+            with self.subTest(stack=workflow.name, scenario='listener-not-on-blue'):
+                result, state = self.execute(script, **{**initial, 'listener': 'tg-green'})
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn('blue_green_destination_mismatch', result.stderr)
+                self.assertEqual(state['terminated'], ['i-green'])
+                self.assert_blue_untouched(state)
             with self.subTest(stack=workflow.name, scenario='blue-binding-missing'):
                 original = self.env['BLUE_TG_ARN']
                 self.env['BLUE_TG_ARN'] = ''
@@ -1409,12 +1487,13 @@ printf 'shutdown\\n' >> "$REMOTE_LOG"
             script = run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift')
             for blue_failure in (False, True):
                 with self.subTest(stack=workflow.name, blue_failure=blue_failure):
-                    extra = {'fail_suspension_instance': 'i-blue'} if blue_failure else {}
-                    result, state = self.execute(script, fail_operation='terminate-instances', **extra, **initial)
+                    # #1979: com a blue intocada, a falha possível dela é o listener fora da blue.
+                    extra = {'listener': 'tg-green'} if blue_failure else {}
+                    result, state = self.execute(script, fail_operation='terminate-instances', **{**initial, **extra})
                     self.assertIn('blue_green_unused_green_termination_failed:i-green', result.stderr)
                     # Com falha na blue, sai com o erro dela; sem, a terminação falha o job. Nunca sucesso.
                     self.assertEqual(result.returncode, 1, result.stderr)
-                    self.assertEqual('instagram_recovery_suspension_failed:i-blue' in result.stderr, blue_failure)
+                    self.assertEqual('blue_green_destination_mismatch' in result.stderr, blue_failure)
                     self.assertNotIn('terminated', state)
                     self.assertEqual(state['calls'][-1][:2], ['ec2', 'terminate-instances'])
 

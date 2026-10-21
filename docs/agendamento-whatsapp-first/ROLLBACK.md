@@ -66,8 +66,8 @@ COMMIT;
 Usar quando o problema é do código do deploy, não da flag.
 
 ```sh
-gh workflow run deploy-hub2you-blue-green.yml -R autonom-ia2/chat -f action=rollback
-gh workflow run deploy-autonomia-blue-green.yml -R autonom-ia2/chat -f action=rollback
+gh workflow run deploy-hub2you-blue-green.yml -R autonom-ia2/chat -f action=rollback -f confirm_production=true -f esperado_sha=<SHA de antes do deploy>
+gh workflow run deploy-autonomia-blue-green.yml -R autonom-ia2/chat -f action=rollback -f confirm_production=true -f esperado_sha=<SHA de antes do deploy>
 ```
 
 - **Efeito:** o tráfego volta para a instância anterior. Só volta **um degrau**: a instância de dois deploys atrás é
