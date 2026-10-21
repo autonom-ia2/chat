@@ -57,7 +57,8 @@ class Crm::Ai::ClassificacaoConjunta
   def instructions
     Crm::Ai::ClassifierPrompt.para_varios(@classificadores.flat_map { |classificador| classificador.pacote[:eligible_agents] },
                                           memoria: memoria?, email_autoria: @classificadores.first.email_autoria?,
-                                          nao_e_negocio: nao_e_negocio?)
+                                          nao_e_negocio: nao_e_negocio?,
+                                          pedido_anterior: @classificadores.any? { |classificador| classificador.pacote.key?(:previous_card) })
   end
 
   # #1828: com a flag `email_autoria`, `saida_da_copia` no topo (é da conversa, não de um card); sem ela, o de sempre.

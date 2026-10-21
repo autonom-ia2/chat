@@ -609,7 +609,7 @@ onMounted(() => {
         </p>
         <ul
           v-else
-          class="grid items-start gap-5 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
+          class="grid items-stretch gap-5 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
         >
           <li
             v-for="ad in ads"
@@ -617,20 +617,31 @@ onMounted(() => {
             :data-panel-ad="ad.ad_id"
             class="relative flex flex-col overflow-hidden rounded-xl bg-n-solid-1 ring-1 ring-n-weak transition hover:ring-n-slate-6 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
           >
-            <div class="flex justify-center bg-n-alpha-1">
-              <img
-                v-if="imageOf(ad)"
-                :src="imageOf(ad)"
-                :alt="ad.name || ''"
-                loading="lazy"
-                data-panel-ad-image
-                class="block object-contain w-full h-auto max-h-[32rem]"
-                @error="imageFailed(ad)"
-              />
+            <!-- Moldura 4:5 em todos os cartões (#2010): o criativo aparece inteiro (vertical, feed ou quadrado) e a
+                 sobra é a própria foto desfocada, para a linha de cartões ficar alinhada sem cortar o texto do anúncio. -->
+            <div class="relative overflow-hidden aspect-[4/5] bg-n-alpha-1">
+              <template v-if="imageOf(ad)">
+                <img
+                  :src="imageOf(ad)"
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  data-panel-ad-image-backdrop
+                  class="absolute inset-0 object-cover scale-110 size-full blur-2xl brightness-90"
+                />
+                <img
+                  :src="imageOf(ad)"
+                  :alt="ad.name || ''"
+                  loading="lazy"
+                  data-panel-ad-image
+                  class="relative block object-contain size-full"
+                  @error="imageFailed(ad)"
+                />
+              </template>
               <div
                 v-else
                 data-panel-ad-placeholder
-                class="grid w-full aspect-square place-items-center bg-gradient-to-br"
+                class="grid size-full place-items-center bg-gradient-to-br"
                 :class="thumbClass(ad.ad_id)"
               >
                 <span
@@ -639,7 +650,7 @@ onMounted(() => {
                 />
               </div>
             </div>
-            <div class="flex flex-col gap-4 p-4">
+            <div class="flex flex-col flex-1 gap-4 p-4">
               <div
                 class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2"
               >
@@ -707,7 +718,7 @@ onMounted(() => {
                       ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME'),
                   })
                 "
-                class="inline-flex min-h-11 items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+                class="inline-flex min-h-11 mt-auto items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
                 @click="rememberAd(String(ad.ad_id))"
               >
                 {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD') }}

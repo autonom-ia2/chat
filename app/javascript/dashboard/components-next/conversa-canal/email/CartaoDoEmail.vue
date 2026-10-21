@@ -16,6 +16,7 @@ import TranslationToggle from 'dashboard/components-next/message/TranslationTogg
 import { EmailQuoteExtractor } from 'dashboard/helper/emailQuoteExtractor.js';
 import { useTranslations } from 'dashboard/composables/useTranslations';
 import { useMapGetter } from 'dashboard/composables/store';
+import { useCanManage } from 'dashboard/composables/useCanManage';
 import { emitter } from 'shared/helpers/mitt';
 import { useMessageContext } from '../../message/provider.js';
 import { MESSAGE_STATUS, MESSAGE_TYPES } from '../../message/constants.js';
@@ -279,9 +280,13 @@ const podeTraduzir = computed(
     !emProcesso.value &&
     !hasTranslations.value
 );
+// Quem tem cargo só exclui com a chave de apagar mensagem (#1893).
+const podeApagarMensagem = useCanManage('conversation_message_delete');
 const podeExcluir = computed(
   () =>
-    !emProcesso.value && (temTexto.value || Boolean(attachments.value?.length))
+    podeApagarMensagem.value &&
+    !emProcesso.value &&
+    (temTexto.value || Boolean(attachments.value?.length))
 );
 const assuntoDoEmail = computed(
   () => contentAttributes.value?.email?.subject || email.assunto.value || ''

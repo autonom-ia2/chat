@@ -24,6 +24,11 @@ module Enterprise::ConversationPolicy
     super && !(reads_by_role? && !custom_role_permissions.intersect?(OPERATING_KEYS))
   end
 
+  # Apagar mensagem: quem tem cargo precisa da chave, além de operar a conversa. Agente sem cargo segue apagando (#1893).
+  def delete_message?
+    show? && (!custom_role_permissions? || custom_role_permissions.include?('conversation_message_delete'))
+  end
+
   private
 
   def reads_by_role?

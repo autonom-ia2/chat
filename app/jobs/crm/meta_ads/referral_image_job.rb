@@ -8,6 +8,8 @@
 # próximo clique no mesmo anúncio traz um link novo. O endereço não vai para o log (é assinado).
 class Crm::MetaAds::ReferralImageJob < ApplicationJob
   queue_as :low
+  # O link é assinado: não vai para o log do enfileirar nem do rodar.
+  self.log_arguments = false
 
   MAX_BYTES = 5.megabytes
   META_HOSTS = %w[fbcdn.net cdninstagram.com].freeze
@@ -42,6 +44,8 @@ class Crm::MetaAds::ReferralImageJob < ApplicationJob
   end
 
   def perform(account_id, ad_id, url)
+    return unless self.class.meta_cdn?(url)
+
     object = ad_object(account_id, ad_id)
     return if object.image.attached?
 
