@@ -546,6 +546,11 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(described_class::AjustePorLista::TABELA_DE_DESTINO).to include('perguntas_de_prova')
     end
 
+    # Revisão do t6d (BAIXO): o mesmo schema estrito do juiz da prova vale para o schema do ajuste.
+    it 'o schema do ajuste é estrito: todo objeto lista todas as propriedades em required' do
+      expect_schema_estrito(described_class::AjustePorLista::SCHEMA[:schema])
+    end
+
     it 'as perguntas de prova: até 3, sem branco nem repetida, só texto, cada uma cortada em 200 caracteres' do
       lido = Autonomia::Agents::ProvaDoAjuste.perguntas(
         'perguntas_de_prova' => [' Quanto custa? ', 'Quanto custa?', '', 7, 'b' * 500, 'Tem vida?', 'Quarta']
