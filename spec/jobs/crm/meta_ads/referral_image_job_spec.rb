@@ -38,6 +38,16 @@ RSpec.describe Crm::MetaAds::ReferralImageJob do
   end
 
   describe '#perform' do
+    it 'não baixa endereço fora da Meta, nem leva o link assinado para o log' do
+      evil = stub_request(:get, 'https://evil.example.com/a.jpg')
+
+      described_class.perform_now(account.id, ad_id, 'https://evil.example.com/a.jpg')
+
+      expect(evil).not_to have_been_requested
+      expect(Crm::MetaAdObject.where(account: account)).to be_empty
+      expect(described_class.log_arguments?).to be(false)
+    end
+
     it 'baixa e guarda a foto no anúncio' do
       stub_request(:get, url).to_return(status: 200, body: Rails.root.join('spec/assets/sample.png').read, headers: { 'Content-Type' => 'image/png' })
 
