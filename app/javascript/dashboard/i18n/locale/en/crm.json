@@ -6103,9 +6103,9 @@
     },
     "AJUDA": {
       "TITULO": "Who needs help",
-      "RETORNOS": "{nome} · received {recebeu} · closed {fechou}. {n} follow-ups fell behind.",
+      "RETORNOS_N": "{n} overdue follow-up | {n} overdue follow-ups",
       "RETORNOS_ACAO": "Open {nome}'s follow-ups",
-      "CASOS_PARADOS": "{nome} · resolved {resolveu} · {n} cases stalled for more than 7 days.",
+      "CASOS_PARADOS_N": "{n} case stalled for more than 7 days | {n} cases stalled for more than 7 days",
       "CASOS_PARADOS_ACAO": "Open {nome}'s cases"
     },
     "CUIDOU": {

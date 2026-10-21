@@ -2,10 +2,10 @@
 # precisa de ajuda". Uma linha por pessoa e por tipo de funil, em ordem alfabética (nunca um ranking). A IA nunca entra
 # aqui: ela tem a linha própria (Crm::Numeros::IaNoTime).
 #
-# "Precisa de ajuda" é quem acumulou retornos atrasados (Vender) ou casos parados há 7 dias (Atender) no funil principal,
-# a partir de LIMITE_AJUDA, porque é isso que o "Abrir os retornos de Ana" abre. Mostra o motivo e a ação, nunca a posição.
-# A ordem é de quem tem mais atraso (retornos atrasados ou casos parados) para quem tem menos, com desempate pelo nome:
-# os MAX_AJUDA que a lista mostra são os que mais precisam.
+# "Precisa de ajuda" é uma linha por pessoa: os retornos atrasados (Vender) e os casos parados há 7 dias (Atender) no
+# funil principal, somados, a partir de LIMITE_AJUDA. Cada número abre a fila daquela pessoa. A ordem é pela soma, de
+# quem tem mais atraso para quem tem menos, com desempate pelo nome: os MAX_AJUDA que a lista mostra são os que mais
+# precisam. Mostra o motivo e a ação, nunca a posição.
 class Crm::Numeros::PessoasDaEquipe
   LIMITE_AJUDA = 5
   MAX_AJUDA = 3
@@ -42,7 +42,8 @@ class Crm::Numeros::PessoasDaEquipe
   end
 
   def precisam_de_ajuda
-    @precisam_de_ajuda ||= (ajuda_de_venda + ajuda_de_atendimento).sort_by { |item| [-item[:n], item[:pessoa][:nome].to_s.downcase] }
+    @precisam_de_ajuda ||= ajuda_por_pessoa.select { |item| item[:total] >= LIMITE_AJUDA }
+                                           .sort_by { |item| [-item[:total], item[:pessoa][:nome].to_s.downcase] }
   end
 
   private
@@ -116,23 +117,20 @@ class Crm::Numeros::PessoasDaEquipe
     { resolveu: total(id)[:resolvidos], noPrazo: nil, meta: nil, pct: nil }
   end
 
-  def ajuda_de_venda
-    return [] unless @cards.tem?(:venda)
-
-    acima(@cards.por_responsavel(@cards.atrasados(@cards.abertos(:venda)))).map do |id, n|
-      { tipo: 'retornos', pessoa: { id: id, nome: pessoas[id] }, recebeu: recebidos[id].to_i, fechou: total(id)[:vendas], n: n }
+  def ajuda_por_pessoa
+    retornos = atrasos(:venda)
+    casos = atrasos(:atende)
+    (retornos.keys | casos.keys).select { |id| pessoas.key?(id) }.map do |id|
+      { pessoa: { id: id, nome: pessoas[id] }, retornos: retornos[id].to_i, casosParados: casos[id].to_i,
+        total: retornos[id].to_i + casos[id].to_i }
     end
   end
 
-  def ajuda_de_atendimento
-    return [] unless @cards.tem?(:atende)
+  # Por responsável: retornos atrasados em Vender, casos parados em Atender.
+  def atrasos(tipo)
+    return {} unless @cards.tem?(tipo)
 
-    acima(@cards.por_responsavel(@cards.parados(@cards.abertos(:atende)))).map do |id, n|
-      { tipo: 'casos_parados', pessoa: { id: id, nome: pessoas[id] }, resolveu: total(id)[:resolvidos], n: n }
-    end
-  end
-
-  def acima(contagem)
-    contagem.select { |id, n| n >= LIMITE_AJUDA && pessoas.key?(id) }
+    abertos = @cards.abertos(tipo)
+    @cards.por_responsavel(tipo == :venda ? @cards.atrasados(abertos) : @cards.parados(abertos))
   end
 end

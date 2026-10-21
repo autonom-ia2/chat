@@ -69,6 +69,11 @@ export const filtroDoLinkDaLista = ({
 export const abaDoFiltroDoLink = ({ daIa, esperandoMin }, abas, todas) =>
   (daIa || esperandoMin) && abas.includes(todas) ? todas : null;
 
+// O status com o filtro do link (#1999): o Números conta as conversas abertas, então a caixa abre em "Abertas" mesmo
+// que a pessoa tenha salvo outro status. Só nesta abertura: a escolha salva da pessoa não muda. Sem o filtro, o de sempre.
+export const statusDoFiltroDoLink = ({ daIa, esperandoMin }, status, aberto) =>
+  daIa || esperandoMin ? aberto : status;
+
 export const naCaixa = destino =>
   LISTAS.includes(destino?.name) || CONVERSAS.includes(destino?.name);
 

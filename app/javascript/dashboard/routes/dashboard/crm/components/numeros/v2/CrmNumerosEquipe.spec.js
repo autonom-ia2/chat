@@ -90,11 +90,16 @@ const dados = (extra = {}) => ({
   },
   ajuda: [
     {
-      tipo: 'retornos',
       pessoa: { id: 12, nome: 'Bruno' },
-      recebeu: 30,
-      fechou: 4,
-      n: 8,
+      retornos: 8,
+      casosParados: 5,
+      total: 13,
+    },
+    {
+      pessoa: { id: 13, nome: 'Carla' },
+      retornos: 0,
+      casosParados: 6,
+      total: 6,
     },
   ],
   quemCuidou: {
@@ -216,6 +221,26 @@ describe('CrmNumerosEquipe', () => {
       );
     expect(comeca(ptBR, 'Custo dos agentes de IA:')).toBe(true);
     expect(comeca(en, 'AI agents cost:')).toBe(true);
+  });
+
+  // #1999: a mesma pessoa não ocupa duas vagas; cada número abre a sua fila.
+  it('"precisa de ajuda": uma linha por pessoa, com retornos e casos parados lado a lado', async () => {
+    const wrapper = await montar(dados());
+
+    const linhas = wrapper.findAll('[data-ajuda-pessoa]');
+    expect(linhas.map(linha => linha.attributes('data-ajuda-pessoa'))).toEqual([
+      '12',
+      '13',
+    ]);
+    const bruno = linhas[0];
+    expect(bruno.text()).toContain('Bruno');
+    expect(bruno.text()).toContain('AJUDA.RETORNOS_N {"n":8}');
+    expect(bruno.text()).toContain('AJUDA.CASOS_PARADOS_N {"n":5}');
+    expect(bruno.find('[data-ajuda="retornos"]').element.tagName).toBe('A');
+    expect(bruno.find('[data-ajuda="casos_parados"]').element.tagName).toBe(
+      'A'
+    );
+    expect(linhas[1].find('[data-ajuda="retornos"]').exists()).toBe(false);
   });
 
   it('modo leitura: avisa e não mostra o próximo passo', async () => {

@@ -149,33 +149,42 @@ RSpec.describe Crm::Numeros::Equipe do
     expect(equipe[:quemCuidou][:ia][:atende]).to eq(resolveuSozinha: 1, passou: 0)
   end
 
-  it 'quem precisa de ajuda: a partir de 5 retornos atrasados, com o motivo e sem posição' do
+  it 'quem precisa de ajuda: a partir de 5 atrasos somados, com o motivo e sem posição' do
     5.times { card(sale, owner: bruno, next_follow_up_at: 1.day.ago) }
     4.times { card(sale, owner: ana, next_follow_up_at: 1.day.ago) }
 
     result = equipe
 
-    expect(result[:ajuda]).to eq([{ tipo: 'retornos', pessoa: { id: bruno.id, nome: 'Bruno' }, recebeu: 5, fechou: 0, n: 5 }])
+    expect(result[:ajuda]).to eq([{ pessoa: { id: bruno.id, nome: 'Bruno' }, retornos: 5, casosParados: 0, total: 5 }])
     expect(result[:topo][:frase]).to be_present
     expect(equipe(chave: '2026-09')[:ajuda]).to eq([])
   end
 
-  it 'a lista de ajuda mostra até 3 pessoas, de quem tem mais atraso para quem tem menos, e a frase conta todas' do
+  it 'a lista de ajuda mostra até 3 pessoas, pela soma dos atrasos, e a frase conta todas' do
     { ana => 5, bruno => 7, carla => 7, admin => 8 }.each do |pessoa, n|
       n.times { card(sale, owner: pessoa, next_follow_up_at: 1.day.ago) }
     end
 
     result = equipe(pipelines: [sale])
 
-    expect(result[:ajuda].map { |item| [item[:pessoa][:nome], item[:n]] }).to eq([['Marcos', 8], ['Bruno', 7], ['Carla', 7]])
+    expect(result[:ajuda].map { |item| [item[:pessoa][:nome], item[:total]] }).to eq([['Marcos', 8], ['Bruno', 7], ['Carla', 7]])
     expect(result[:topo][:frase]).to include(tipo: 'equipe_vendas', ajuda: 4)
   end
 
-  it 'a ajuda junta retornos e casos parados numa ordem só, pelo tamanho do atraso' do
+  # #1999: a mesma pessoa não ocupa duas vagas; retornos e casos parados somam na mesma linha.
+  it 'a ajuda tem uma linha por pessoa, com retornos e casos parados somados' do
+    parado = { last_message_at: 10.days.ago, entered_stage_at: 10.days.ago }
+    8.times { card(sale, owner: bruno, next_follow_up_at: 1.day.ago) }
+    5.times { card(service, owner: bruno, **parado) }
+    6.times { card(service, owner: carla, **parado) }
     5.times { card(sale, owner: ana, next_follow_up_at: 1.day.ago) }
-    6.times { card(service, owner: carla, last_message_at: 10.days.ago, entered_stage_at: 10.days.ago) }
+    3.times { card(sale, owner: admin, next_follow_up_at: 1.day.ago) }
+    2.times { card(service, owner: admin, **parado) }
 
-    expect(equipe[:ajuda].map { |item| [item[:tipo], item[:pessoa][:nome]] }).to eq([%w[casos_parados Carla], %w[retornos Ana]])
+    result = equipe
+
+    expect(result[:ajuda].map { |item| [item[:pessoa][:nome], item[:retornos], item[:casosParados]] })
+      .to eq([['Bruno', 8, 5], ['Carla', 0, 6], ['Ana', 5, 0]])
   end
 
   # A régua da linha (#1999): dono de card aberto ou movimento no mês. Guarda o encaixe com o Crm::Numeros::Papel (#1997),

@@ -6104,9 +6104,9 @@
     },
     "AJUDA": {
       "TITULO": "Quem precisa de ajuda",
-      "RETORNOS": "{nome} · recebeu {recebeu} · fechou {fechou}. {n} retornos ficaram para trás.",
+      "RETORNOS_N": "{n} retorno atrasado | {n} retornos atrasados",
       "RETORNOS_ACAO": "Abrir os retornos de {nome}",
-      "CASOS_PARADOS": "{nome} · resolveu {resolveu} · {n} casos parados há mais de 7 dias.",
+      "CASOS_PARADOS_N": "{n} caso parado há mais de 7 dias | {n} casos parados há mais de 7 dias",
       "CASOS_PARADOS_ACAO": "Abrir os casos de {nome}"
     },
     "CUIDOU": {

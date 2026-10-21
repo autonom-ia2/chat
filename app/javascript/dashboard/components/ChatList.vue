@@ -13,6 +13,7 @@ import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/
 import {
   filtroDoLinkDaLista,
   abaDoFiltroDoLink,
+  statusDoFiltroDoLink,
   useFiltrosDoLinkNaCaixa,
   useReleituraPeriodica,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
@@ -328,7 +329,8 @@ const filtroDoLink = computed(() =>
     filtroAvancado: hasAppliedFiltersOrActiveFolders.value,
   })
 );
-// #1999: com o filtro do link, a caixa abre em "Todas" (se a pessoa tem), para bater com o número do Números.
+// #1999: com o filtro do link, a caixa abre em "Todas" (se a pessoa tem) e em "Abertas", para bater com o número do
+// Números.
 function abaAoAbrir() {
   const abas = assigneeTabItems.value.map(item => item.key);
   const todas = wootConstants.ASSIGNEE_TYPE.ALL;
@@ -948,6 +950,11 @@ onMounted(() => {
   activeAssigneeTab.value = abaAoAbrir();
   store.dispatch('setChatListFilters', conversationFilters.value);
   setFiltersFromUISettings();
+  activeStatus.value = statusDoFiltroDoLink(
+    filtroDoLink.value,
+    activeStatus.value,
+    wootConstants.STATUS_TYPE.OPEN
+  );
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
   resetAndFetchData();

@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import {
   abaDoFiltroDoLink,
+  statusDoFiltroDoLink,
   filtroDoLinkDaLista,
   filtrosDoEndereco,
   useFiltrosDoLinkNaCaixa,
@@ -362,5 +363,24 @@ describe('abaDoFiltroDoLink', () => {
     expect(
       abaDoFiltroDoLink({ daIa: true, esperandoMin: 30 }, ['me'], 'all')
     ).toBeNull();
+  });
+});
+
+// #1999: o Números conta as conversas abertas; com o filtro do link, a caixa abre em "Abertas" mesmo com outro salvo.
+describe('statusDoFiltroDoLink', () => {
+  it('com o filtro do link, abre em Abertas mesmo com Pendentes salvo', () => {
+    expect(
+      statusDoFiltroDoLink({ daIa: true, esperandoMin: 30 }, 'pending', 'open')
+    ).toBe('open');
+  });
+
+  it('sem o filtro do link, fica o status salvo', () => {
+    expect(
+      statusDoFiltroDoLink(
+        { daIa: undefined, esperandoMin: undefined },
+        'pending',
+        'open'
+      )
+    ).toBe('pending');
   });
 });
