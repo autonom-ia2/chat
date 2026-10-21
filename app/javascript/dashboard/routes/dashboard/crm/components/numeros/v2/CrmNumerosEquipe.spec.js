@@ -199,7 +199,7 @@ describe('CrmNumerosEquipe', () => {
     );
   });
 
-  it('a IA numa linha própria, sem meta e sem custo para quem não é o dono', async () => {
+  it('a IA numa linha própria, sem meta e sem custo para quem não vê os custos da conta', async () => {
     const wrapper = await montar(dados());
 
     const linha = wrapper.find('[data-linha-ia]');
@@ -209,7 +209,7 @@ describe('CrmNumerosEquipe', () => {
     expect(wrapper.findAll('[data-pessoa]')).toHaveLength(3);
   });
 
-  it('o dono vê o custo da IA na moeda que o servidor manda', async () => {
+  it('quem vê os custos da conta vê o custo da IA na moeda que o servidor manda', async () => {
     const resposta = dados();
     resposta.quemCuidou.ia = ia({
       custo: { valor: 52, porConversa: 0.29, moeda: 'BRL' },

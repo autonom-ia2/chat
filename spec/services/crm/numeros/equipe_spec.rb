@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # A visão "Equipe" de CRM › Números (#1992, F5 do #1871): os números da equipe nos funis que quem abre enxerga, o R$
-# dos colegas, "Quem precisa de ajuda", a IA numa linha só e o custo da IA só para o dono.
+# dos colegas, "Quem precisa de ajuda", a IA numa linha só e o custo da IA só para o administrador ou o Financeiro (financial_view).
 RSpec.describe Crm::Numeros::Equipe do
   let(:account) { create(:account, reporting_timezone: 'America/Sao_Paulo') }
   let(:admin) { create(:user, account: account, role: :administrator, name: 'Marcos', display_name: 'Marcos') }
@@ -31,7 +31,7 @@ RSpec.describe Crm::Numeros::Equipe do
   def equipe(user: admin, dono: true, leitura: false, pipelines: nil, chave: nil)
     Current.account = account
     described_class.new(account: account, user: user, mes: Crm::Numeros::Mes.new(account: account, chave: chave),
-                        acesso: acesso(pipelines), perfil: { dono: dono, leitura: leitura }).perform
+                        acesso: acesso(pipelines), perfil: { dono: dono, custo: dono, leitura: leitura }).perform
   end
 
   def card(pipeline_and_stage, owner:, conversation: nil, **attrs)

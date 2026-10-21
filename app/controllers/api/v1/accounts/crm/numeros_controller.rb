@@ -46,11 +46,17 @@ class Api::V1::Accounts::Crm::NumerosController < Api::V1::Accounts::Crm::BaseCo
     policy.equipe? && ::Crm::Config.numeros_equipe_enabled?(Current.account) && (params[:visao] == 'equipe' || !policy.eu?)
   end
 
-  # O custo da IA é só do dono (Decisão 1 do #1871). Quem vê a equipe sem trabalhar no CRM vê sem os botões.
+  # O papel "dono" na tela é o administrador. O custo da IA é dinheiro da conta: segue `financial_view`, como o resto do
+  # uso de IA (#1982), ou seja, administrador ou Financeiro. Quem vê a equipe sem trabalhar no CRM vê sem os botões.
   def equipe(mes)
     corpo = ::Crm::Numeros::Equipe.new(account: Current.account, user: Current.user, mes: mes, acesso: acesso,
-                                       perfil: { dono: Current.account_user&.administrator? || false, leitura: !policy.eu? }).perform
+                                       perfil: perfil_da_equipe).perform
     corpo.merge(visoes: visoes, visao: 'equipe', podeCriarFunil: pode_criar_funil?)
+  end
+
+  def perfil_da_equipe
+    conta = Current.account_user
+    { dono: conta&.administrator? || false, custo: conta&.permission_granted?('financial_view') || false, leitura: !policy.eu? }
   end
 
   def pode_criar_funil?

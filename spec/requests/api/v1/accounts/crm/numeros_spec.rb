@@ -179,6 +179,28 @@ RSpec.describe 'Api::V1::Accounts::Crm::Numeros', type: :request do
       expect(response.parsed_body.dig('quemCuidou', 'ia', 'custo')).to be_nil
     end
 
+    # #1999: o custo da IA é dinheiro da conta e segue financial_view (#1982), não o papel de administrador.
+    it 'com a flag, o custo da IA aparece para quem tem financial_view e some para quem só vê os relatórios' do
+      ligar_equipe
+      allow(Crm::Ai::ExchangeRate).to receive(:current).and_return(rate: 5.0, fetched_at: nil)
+      robo = create(:agent_bot, account: account, name: 'Sofia')
+      chat = create_crm_conversation(account: account, inbox: create_crm_inbox(account: account, members: [ana]),
+                                     contact: create(:contact, account: account))
+      card(owner: ana, primary_conversation: chat)
+      create(:message, account: account, inbox: chat.inbox, conversation: chat, message_type: :outgoing, sender: robo)
+      financeiro = role_user('crm_view_reports')
+      # A chave financial_view entra no CustomRole::PERMISSIONS no #1969; até o merge com a main, gravada direto.
+      financeiro.account_users.find_by(account: account).custom_role
+                .update_column(:permissions, %w[crm_view_reports financial_view]) # rubocop:disable Rails/SkipsModelValidations
+
+      call(financeiro, "#{base}/numeros")
+      expect(response.parsed_body.dig('quemCuidou', 'ia', 'custo')).to include('moeda')
+
+      call(socio, "#{base}/numeros")
+      expect(response.parsed_body.dig('quemCuidou', 'ia')).to be_present
+      expect(response.parsed_body.dig('quemCuidou', 'ia', 'custo')).to be_nil
+    end
+
     it 'com a flag, o agente comum que pede a equipe continua no "Só eu", sem nome de colega' do
       ligar_equipe
 

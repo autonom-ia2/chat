@@ -2,18 +2,20 @@
 # protótipo aprovado): topo, próximo passo, Vendendo, Atendendo, "Quem precisa de ajuda" e "Quem cuidou", com a IA numa
 # linha própria. Só os funis que quem abre enxerga no painel: o gestor de vendas vê Vender, o de atendimento vê Atender.
 #
-# O R$ dos colegas é número comercial e aparece para quem vê a equipe; o custo da IA, só para o dono (Decisão 1).
+# O R$ dos colegas é número comercial e aparece para quem vê a equipe; o custo da IA, só para o administrador ou o
+# Financeiro (`financial_view`, #1982).
 # `leitura`: quem vê a equipe mas não trabalha no CRM (função só com `crm_view_reports`) vê os números sem os botões.
 class Crm::Numeros::Equipe
   ESPERANDO_MIN = 30
   MAX_PROXIMO = 2
 
-  # perfil: { dono:, leitura: } de quem abre.
+  # perfil: { dono:, custo:, leitura: } de quem abre. dono = administrador (o papel na tela); custo = financial_view.
   def initialize(account:, user:, mes:, acesso:, perfil:)
     @account = account
     @user = user
     @mes = mes
     @dono = perfil[:dono]
+    @custo = perfil[:custo]
     @leitura = perfil[:leitura]
     @cards = Crm::Numeros::CardsDaEquipe.new(account: account, pipelines: acesso.apply_to_reports(account.crm_pipelines))
   end
@@ -170,7 +172,7 @@ class Crm::Numeros::Equipe
     return @ia if defined?(@ia)
 
     @ia = Crm::Numeros::IaNoTime.new(account: @account, range: @mes.range, cards: @cards,
-                                     ganhos: { ids: credito[:ganhos], moeda: moeda }, custo: @dono).perform
+                                     ganhos: { ids: credito[:ganhos], moeda: moeda }, custo: @custo).perform
   end
 
   def pessoas

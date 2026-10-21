@@ -10,13 +10,13 @@
 #   participou      vendas do mês em conversas que a IA atendeu em algum momento (a IA não leva crédito, Decisão 3);
 #   resolveuSozinha conversas de Atender resolvidas no mês que a IA atendeu, sem passagem para pessoa, sem resposta de
 #                   pessoa e sem o "humano assumiu" do core;
-#   custo           só para o dono (Decisão 1): o consumo das respostas dos agentes no mês (Crm::AiUsageEvent
+#   custo           só para o administrador ou o Financeiro (financial_view, #1982): o consumo das respostas dos agentes no mês (Crm::AiUsageEvent
 #                   `agente_resposta`), em reais quando a cotação existe. O consumo não guarda o agente: é o de todos.
 class Crm::Numeros::IaNoTime
   FEATURE_RESPOSTA = 'agente_resposta'.freeze
   MAX_ROBOS = 50
 
-  # ganhos: { ids: os cards ganhos no mês, moeda: a da tela }; custo: true só para o dono.
+  # ganhos: { ids: os cards ganhos no mês, moeda: a da tela }; custo: true só com financial_view.
   def initialize(account:, range:, cards:, ganhos:, custo:)
     @account = account
     @range = range
