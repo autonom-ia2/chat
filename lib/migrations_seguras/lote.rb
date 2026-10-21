@@ -128,7 +128,7 @@ class MigrationsSeguras::Lote
   def subir(migration)
     contexto.run(:up, migration.version)
   rescue StandardError => e
-    raise e.class, "#{migration.version} #{migration.name}: #{e.message}", e.backtrace
+    raise e.exception("#{migration.version} #{migration.name}: #{e.message}")
   end
 
   def descer(migration, resultado)

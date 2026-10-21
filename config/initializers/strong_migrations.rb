@@ -1,11 +1,12 @@
 # strong_migrations (#2024): barra, na hora de rodar, a migration que trava tabela por muito tempo ou que o código
-# anterior não aguenta (remover coluna sem ignored_columns, renomear, trocar tipo, NOT NULL em coluna existente). Vale
-# em todo ambiente, inclusive na green do deploy: é a última barreira depois do job "Migrations do lote" do CI.
+# anterior não aguenta (remover coluna sem ignored_columns, renomear, trocar tipo, NOT NULL em coluna existente). A
+# barreira principal é o job "Migrations do lote" do CI, que checa toda migration nova; a green checa de novo as que
+# têm versão acima do start_after.
 # Guia de cada bloqueio e do jeito seguro: https://github.com/ankane/strong_migrations#checks
 # Regras do fork: docs/migrations-em-lote.md.
 
-# As migrations até esta versão (a última da main quando a gem entrou) já rodaram em produção e não passam pelos
-# bloqueios; o lock_timeout abaixo vale para todas. Migration nova com versão menor que esta (gerada com a data do dia,
+# As migrations até esta versão (a última da main quando a gem entrou) não passam pelos bloqueios; o lock_timeout
+# abaixo vale para todas (a gem o aplica antes de olhar a versão). Migration nova com versão menor que esta (gerada com a data do dia,
 # por exemplo) também escaparia aqui, por isso o job "Migrations do lote" zera o start_after e checa toda migration
 # nova do lote, qualquer que seja a versão.
 StrongMigrations.start_after = 20_261_108_230_000
