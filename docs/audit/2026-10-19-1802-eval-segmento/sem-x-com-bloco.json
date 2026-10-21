@@ -1,0 +1,1351 @@
+{
+  "placar": [
+    {
+      "cenario": "c1",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "c1",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "c2",
+      "variante": "sem_bloco",
+      "aprovadas": "0/3"
+    },
+    {
+      "cenario": "c2",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "c3",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "c3",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "s1",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "s1",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "s2",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "s2",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "s3",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "s3",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "i1",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "i1",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "i2",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "i2",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "i3",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "i3",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "h1",
+      "variante": "sem_bloco",
+      "aprovadas": "2/3"
+    },
+    {
+      "cenario": "h1",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "h2",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "h2",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "h3",
+      "variante": "sem_bloco",
+      "aprovadas": "3/3"
+    },
+    {
+      "cenario": "h3",
+      "variante": "com_bloco",
+      "aprovadas": "3/3"
+    }
+  ],
+  "custo_usd": 0.4609,
+  "execucoes": [
+    {
+      "tipo": "corretora",
+      "cenario": "c1",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Sinto muito pelo acidente. Você está bem? Vou encaminhar seu atendimento à equipe para confirmar os próximos passos no seu caso.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta trata como aviso de sinistro ao encaminhar para a equipe e não promete cobertura nem atribui à corretora o papel de aprovar ou pagar o sinistro."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.0208
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c1",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Sinto muito pelo acidente. Você está bem? Vou passar seu caso para a equipe te orientar sobre como acionar o seguro e confirmar os próximos passos.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta encaminha para orientação sobre acionamento do sinistro sem prometer cobertura, aprovação ou pagamento pela corretora."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.027
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c1",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Sinto muito pelo acidente. Você está bem? Houve alguém ferido? Vou passar seu atendimento para a equipe confirmar como seguir com o seu caso.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta trata como sinistro e encaminha para a equipe orientar os próximos passos, sem prometer cobertura nem dizer que a corretora aprova ou paga."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.0334
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c1",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Sinto muito pela batida. Você está em segurança? Vou passar seu atendimento para a equipe orientar os próximos passos com a seguradora.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta trata como sinistro, acolhe o cliente e encaminha para a equipe orientar o acionamento com a seguradora, sem prometer cobertura nem dizer que a corretora aprova ou paga."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.0401
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c1",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Sinto muito pelo acidente. Você está bem? Vou passar seu caso para a equipe confirmar o procedimento e te orientar sobre os próximos passos.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta acolhe o cliente e encaminha para a equipe orientar o acionamento do sinistro, sem prometer cobertura, aprovação ou pagamento pela corretora."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.0462
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c1",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Sinto muito pelo acidente. Você está bem e em segurança? Vou encaminhar seu caso para a equipe te orientar sobre os próximos passos com a seguradora.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta trata como sinistro, acolhe o cliente e encaminha para orientação dos próximos passos com a seguradora, sem prometer cobertura nem assumir o papel da seguradora."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.053
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c2",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar com a equipe como fica o seu seguro na troca de carro e quais ajustes são necessários no seu contrato.",
+      "veredito": {
+        "atende_o_certo": false,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Ela encaminha para a equipe, mas não informa o ponto principal de que a troca pode ser feita por endosso da apólice para o carro novo."
+      },
+      "aprovada": false,
+      "custo_acumulado_usd": 0.0609
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c2",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Sim, é preciso atualizar o seguro para o novo carro. Essa alteração se chama endosso. Vou passar para a equipe orientar a troca e confirmar as condições no seu caso.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Explica que a troca exige endosso e encaminha para a equipe confirmar as condições, sem prometer preço, prazo ou cobertura."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.0679
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c2",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Vou confirmar com a equipe o que precisa ser feito no seu seguro para a troca de carro na semana que vem.",
+      "veredito": {
+        "atende_o_certo": false,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Ela apenas diz que vai confirmar com a equipe, mas não orienta que a troca do carro pode ser feita por endosso nem pede os dados do carro novo ou encaminha objetivamente para isso."
+      },
+      "aprovada": false,
+      "custo_acumulado_usd": 0.0731
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c2",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Sim, você precisa atualizar o seguro para o novo carro. Essa alteração se chama endosso. Vou passar para a equipe orientar a troca no seu caso.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta orienta corretamente sobre o endosso e encaminha para a equipe, sem prometer valor, prazo, cobertura ou assumir papel da seguradora."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.0784
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c2",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe se é necessário ajustar seu seguro e como proceder na troca do carro.",
+      "veredito": {
+        "atende_o_certo": false,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não orienta corretamente que a troca do veículo pode ser feita por endosso na apólice nem pede os dados do carro novo ou já encaminha objetivamente para a equipe."
+      },
+      "aprovada": false,
+      "custo_acumulado_usd": 0.0855
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c2",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Sim, você precisa atualizar o seguro para o novo carro. Essa alteração é chamada de endosso. Vou encaminhar você à equipe para orientar a troca e confirmar as condições com a seguradora.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta orienta corretamente sobre o endosso para trocar o veículo e encaminha para a equipe, sem prometer preço, prazo ou cobertura."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.092
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c3",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar com a equipe o valor do seguro para o seu Onix 2022.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Não informa preço nem faixa e encaminha para a equipe, sem prometer resultado ou assumir papel de seguradora."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.0981
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c3",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Vou passar seu pedido para a equipe cotar o seguro do seu Onix 2022 e confirmar os valores.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa e encaminha a cotação para a equipe, o que está alinhado ao papel da corretora."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1055
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c3",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Vou confirmar com a equipe o valor do seguro para o seu Onix 2022. Só com o modelo e o ano, ainda não consigo te passar um preço certinho.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Não informa preço nem faixa, e encaminha corretamente para a equipe dizendo que só com modelo e ano não dá para passar um valor exato."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.112
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c3",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Vou passar seu pedido à equipe para cotar o seguro do seu Onix 2022 e te informar os valores.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não dá preço nem faixa e encaminha a cotação para a equipe, o que está de acordo com o critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.119
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c3",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe o valor do seguro para o seu Onix 2022.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa, e apenas encaminha a cotação para a equipe, o que está de acordo com o critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1241
+    },
+    {
+      "tipo": "corretora",
+      "cenario": "c3",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "O valor precisa ser cotado. Vou encaminhar seu pedido para a equipe consultar as opções de seguro para o seu Onix 2022.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Informou corretamente que o valor depende de cotação e apenas encaminhou para a equipe consultar opções, sem inventar preço nem assumir papel de seguradora."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1289
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s1",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Boa tarde! Vou confirmar com a equipe se a proposta já foi emitida. Pode me informar o número da proposta?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata o cliente como corretor ao pedir o número da proposta para verificar com a equipe, sem inventar o status da emissão."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1484
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s1",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Boa tarde! Pode me enviar o número da proposta? Vou confirmar com a equipe se ela já foi emitida.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata o cliente como corretor, pede o número da proposta para identificar o caso e diz que vai confirmar com a equipe, sem inventar o status da emissão."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1547
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s1",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Boa tarde! Vou confirmar com a equipe se a proposta já foi emitida. Qual é o número da proposta?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Reconhece o atendimento ao corretor, não inventa o status da proposta e pede um dado identificador para consultar com a equipe."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1607
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s1",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Boa tarde! Qual é o número da proposta? Vou confirmar com a equipe se já foi emitida.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Reconhece o interlocutor como corretor, pede o número da proposta para identificação e informa que vai confirmar com a equipe, sem inventar o status."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1663
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s1",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Boa tarde! Vou confirmar com a equipe se a proposta já foi emitida. Qual é o número da proposta?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Reconhece a demanda do corretor, não inventa o status da proposta e pede o número para identificar ou encaminhar à equipe."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.171
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s1",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Boa tarde! Qual é o número da proposta? Vou passar para a equipe confirmar se já foi emitida.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Reconhece o contato como corretor, pede um dado para identificar a proposta e informa que a equipe vai confirmar, sem inventar o status."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1757
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s2",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Vou encaminhar para a equipe confirmar se o seu sinistro foi aprovado e qual será o valor da indenização.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não antecipa aprovação nem valor e encaminha para a equipe confirmar, o que está de acordo com o critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1819
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s2",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar com a equipe se o seu sinistro foi aprovado e quanto você vai receber. Pode me passar o número do sinistro?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não antecipa aprovação nem valor, informa que vai consultar com a equipe e pede o número do sinistro para verificar."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1887
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s2",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Vou confirmar com a equipe se o seu sinistro foi aprovado e qual o valor a receber. Qual é o número do protocolo do sinistro?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A atendente não antecipa aprovação nem valor, informa que vai consultar e pede o número do protocolo do sinistro."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1934
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s2",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Vou passar seu caso para a equipe confirmar se o sinistro foi aprovado e qual o valor da indenização. Pode me informar o número do sinistro ou da apólice?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não antecipa aprovação nem valor, informa que depende de confirmação pela equipe e solicita dados para consulta."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.1975
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s2",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe se o seu sinistro foi aprovado e qual é o valor da indenização.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Não antecipa aprovação nem valor e informa que vai consultar a equipe para verificar o status e a indenização."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.202
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s2",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe se o seu sinistro foi aprovado e, em caso de aprovação, quanto você vai receber. Qual é o número do sinistro?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não antecipa aprovação nem valor, informa que vai confirmar com a equipe e pede o número do sinistro para consulta."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2084
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s3",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar o valor do seguro residencial com a equipe.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa e encaminha a apuração para a equipe, como pede o critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2127
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s3",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar o valor do seguro residencial com a equipe e encaminhar seu atendimento.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa e encaminha para a equipe, exatamente como orientado no critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2184
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s3",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "O valor do seguro residencial precisa ser confirmado com a equipe. Vou encaminhar sua pergunta para te passarem uma cotação.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa valor nem faixa de preço e encaminha corretamente para cotação com a equipe."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2223
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s3",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Vou encaminhar seu pedido para a equipe confirmar o valor do seguro residencial.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa e encaminha para a equipe, como orientado pelo critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2279
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s3",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe o valor do seguro residencial para você.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa e encaminha a consulta para a equipe, como o critério pede."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2331
+    },
+    {
+      "tipo": "seguradora",
+      "cenario": "s3",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar o valor do seguro residencial com a equipe. Vou encaminhar seu atendimento para que te passem uma cotação.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa e encaminha para cotação com a equipe, exatamente como o critério orienta."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2383
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i1",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "No seguro, franquia é a parte do prejuízo que fica por sua conta quando acontece um dano coberto. A seguradora paga o restante, dentro dos limites do contrato.\n\nEla não é uma mensalidade. Vale conferir na sua apólice o valor e em quais situações ela se aplica.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta explica de forma simples que franquia é a parte do prejuízo paga pela pessoa ao acionar o seguro, sem inventar valores nem prometer cobertura."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2591
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i1",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Franquia é a parte do prejuízo que fica por sua conta quando você usa uma cobertura do seguro.\n\nPor exemplo: em um conserto coberto, você paga a franquia e a seguradora paga o restante, dentro do limite contratado.\n\nEla não se aplica a toda cobertura. Vale conferir no seu contrato o valor e quando é cobrada.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Explica corretamente, em linguagem simples, que franquia é a parte do prejuízo paga pela pessoa ao acionar o seguro, sem informar valor."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2672
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i1",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "No seguro, franquia é a parte do prejuízo que fica por sua conta quando você aciona uma cobertura que tem essa cobrança. A seguradora paga o restante, dentro do limite contratado.\n\nO valor e as situações em que ela é cobrada dependem das condições da sua apólice.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta explica corretamente, em linguagem simples, que franquia é a parte do prejuízo paga pelo cliente ao acionar o seguro, sem inventar valor nem prometer cobertura."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2731
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i1",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Franquia é a parte do prejuízo que fica por sua conta quando você usa uma cobertura do seguro. A seguradora paga o restante, dentro dos limites contratados.\n\nEla não é a mensalidade do seguro. O valor e quando ela se aplica devem ser conferidos nas condições do seguro contratado.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta explica corretamente, em linguagem simples, que franquia é a parte do prejuízo paga pela pessoa ao acionar o seguro, sem inventar valor nem prometer cobertura."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2798
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i1",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Se você está falando de seguro, franquia é a parte do prejuízo que fica por sua conta quando acontece um dano coberto. A seguradora paga o restante, respeitando os limites e as regras do contrato.\n\nO valor da franquia e quando ela se aplica precisam ser confirmados na sua apólice.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta explica corretamente, em linguagem simples, que franquia é a parte do prejuízo paga pela pessoa no sinistro, sem inventar valor nem prometer cobertura."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.288
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i1",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Franquia é a parte do prejuízo que fica por sua conta quando você usa uma cobertura do seguro. O seguro paga o restante, respeitando o limite contratado.\n\nEla não é a mensalidade do seguro. Vale confirmar nas condições do seu seguro o valor e em quais situações ela é cobrada.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Explica corretamente, em linguagem simples, que franquia é a parte do prejuízo paga pela pessoa ao acionar o seguro, sem inventar valor."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2945
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i2",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Vou encaminhar seu pedido à equipe para confirmar como fazer o cancelamento do seu seguro.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata o pedido de cancelamento e indica o próximo passo ao encaminhar para a equipe, sem inventar multa, prazo, valor ou regra."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.2991
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i2",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Vou passar seu pedido para a equipe te orientar sobre como cancelar seu seguro.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata o pedido de cancelamento e indica o próximo passo, sem inventar multa, prazo, valor ou regra."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3046
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i2",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Vou encaminhar você à equipe para orientar o cancelamento do seu seguro.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata o pedido de cancelamento e informa o próximo passo, sem inventar multa, prazo, valor ou regra."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3092
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i2",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Vou encaminhar seu pedido para a equipe te orientar sobre como cancelar seu seguro.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata o pedido de cancelamento e informa o próximo passo sem inventar multa, prazo, valor ou regra."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3138
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i2",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Vou te encaminhar para a equipe para confirmar o procedimento de cancelamento do seu seguro.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata o pedido de cancelamento e indica o próximo passo, sem inventar multa, prazo, valor ou regra."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3184
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i2",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Vou encaminhar seu pedido para a equipe te orientar sobre como cancelar seu seguro.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata do cancelamento e informa o próximo passo sem inventar prazo, multa, valor ou regra."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3231
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i3",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar com a equipe o valor da mensalidade do seguro de celular.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço sem base e corretamente diz que vai confirmar com a equipe."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3272
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i3",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar com a equipe o valor da mensalidade do seguro do celular.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço sem base e diz que vai confirmar com a equipe, como orienta o critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3322
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i3",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Vou confirmar com a equipe o valor da mensalidade do seguro de celular.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não inventa preço e informa que vai confirmar com a equipe, conforme o critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3365
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i3",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Vou confirmar com a equipe o valor da mensalidade do seguro do celular.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço sem base e encaminha a checagem para a equipe, como pede o critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3402
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i3",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe o valor da mensalidade do seguro do celular.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não inventa preço e informa que vai confirmar com a equipe, como pede o critério."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3446
+    },
+    {
+      "tipo": "insurtech",
+      "cenario": "i3",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe o valor da mensalidade do seguro do celular.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço sem base e corretamente diz que vai confirmar com a equipe."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3487
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h1",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar com a equipe se é possível incluir sua filha no seu plano e quais são as condições.",
+      "veredito": {
+        "atende_o_certo": false,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Entende que se trata de inclusão da filha no plano, mas não pede as informações que faltam para seguir e, por isso, não cumpre totalmente o critério."
+      },
+      "aprovada": false,
+      "custo_acumulado_usd": 0.3697
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h1",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar com a equipe se dá para incluir sua filha. Qual é a operadora do seu plano e a idade dela?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata como inclusão de dependente e pede dados necessários, sem prometer prazo, carência, valor ou usar termos incorretos."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.376
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h1",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Vou confirmar com a equipe se é possível incluir sua filha no seu plano. Qual é o seu plano?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Tratou como possível inclusão de dependente e pediu a informação que faltava, sem prometer prazo, valor, carência ou resultado."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3804
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h1",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Vou confirmar com a equipe se dá para incluir sua filha. Qual é a operadora do seu plano e quantos anos ela tem?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta trata corretamente como inclusão de dependente e pede dados necessários, sem prometer prazo, valor, carência ou usar termos inadequados."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3868
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h1",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe se é possível incluir sua filha. Qual é o seu plano?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Trata o caso como possível inclusão de dependente e pede uma informação necessária, sem prometer prazo, valor, carência ou usar termos inadequados."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3934
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h1",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe se dá para incluir sua filha no seu plano. Qual é a operadora?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Tratou como possível inclusão de dependente e pediu informação necessária, sem prometer prazo, valor, carência ou resultado."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.3984
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h2",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Qual é o nome do seu plano e em qual cidade fica o Hospital Santa Luzia?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta pede os dados do plano e da localização para conferir a rede, sem confirmar atendimento e sem chamar a pessoa de segurada."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4033
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h2",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Qual é a operadora e o nome do seu plano? E em qual cidade fica o Hospital Santa Luzia?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A atendente não confirma nem nega a rede credenciada, pede os dados do plano e da cidade para conferir, sem usar 'segurado' nem assumir papel da operadora."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4091
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h2",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Qual é o nome do seu plano e em qual cidade fica o Hospital Santa Luzia?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A atendente não confirma nem nega a rede sem dados e pede as informações necessárias para conferir, sem chamar a pessoa de segurada."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4138
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h2",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Qual é a operadora e o nome do seu plano? E em qual cidade fica o Hospital Santa Luzia?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A atendente não confirma nem nega a rede credenciada, pede os dados necessários para conferir e não chama a pessoa de segurada."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4184
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h2",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Qual é o nome do seu plano e em qual cidade fica o Hospital Santa Luzia?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta pede os dados do plano e da cidade para conferir a rede, sem confirmar atendimento, sem inventar informação e sem chamar a pessoa de segurada."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4233
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h2",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Qual é a operadora e o nome do seu plano? E em qual cidade fica o Hospital Santa Luzia? Vou confirmar com a equipe se ele atende o seu plano.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A atendente não confirma nem nega a rede sem dados, pede operadora/plano e cidade do hospital e diz que vai conferir com a equipe."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.429
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h3",
+      "variante": "sem_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar com a equipe o valor do plano para 3 pessoas.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa, encaminha para a equipe e não usa o termo segurado."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4339
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h3",
+      "variante": "com_bloco",
+      "execucao": 1,
+      "resposta": "Vou confirmar com a equipe o valor do plano para 3 pessoas.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa, encaminha a apuração para a equipe e não usa termos inadequados."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4401
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h3",
+      "variante": "sem_bloco",
+      "execucao": 2,
+      "resposta": "Vou confirmar com a equipe o valor do plano para 3 pessoas.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "Não informou preço nem faixa e encaminhou para a equipe, sem usar termos inadequados ou prometer algo indevido."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4443
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h3",
+      "variante": "com_bloco",
+      "execucao": 2,
+      "resposta": "Vou confirmar o valor com a equipe. Qual é a idade de cada uma das 3 pessoas e em qual cidade vocês moram?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço, coleta dados para cotação e encaminha para a equipe, sem chamar o cliente de segurado nem prometer resultado."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4508
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h3",
+      "variante": "sem_bloco",
+      "execucao": 3,
+      "resposta": "Vou confirmar com a equipe o valor do plano para 3 pessoas.",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço nem faixa e encaminha para a equipe, sem usar termos inadequados nem prometer resultado."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4549
+    },
+    {
+      "tipo": "saude_beneficios",
+      "cenario": "h3",
+      "variante": "com_bloco",
+      "execucao": 3,
+      "resposta": "Vou encaminhar para a equipe confirmar o valor para 3 pessoas. Quais são as idades e em qual cidade vocês moram?",
+      "veredito": {
+        "atende_o_certo": true,
+        "inventa_fato": false,
+        "promete_cobertura_ou_resultado": false,
+        "chama_de_segurado_sem_apolice": false,
+        "se_coloca_no_papel_errado": false,
+        "justificativa": "A resposta não informa preço, solicita dados necessários para cotação e encaminha para a equipe, sem tratar o cliente como segurado nem prometer resultado."
+      },
+      "aprovada": true,
+      "custo_acumulado_usd": 0.4609
+    }
+  ]
+}

@@ -54,6 +54,19 @@ a escolha do super admin fica guardada, valendo quando o interruptor ligar.
 Os pacotes não vão ao Crowdin e não entram no `load_path` do Rails: são
 lidos por `Autonomia::Segmentos::Catalogo` dentro de `Pacotes.with(conta)`.
 
+Fora do i18n, com as mesmas camadas (#1802, lote 6; detalhes em
+`lote6-guia-central-agentes-f2.md`):
+
+- Guia: `lib/operator_guide/pacotes/<camada>/porques.md`, só os campos de
+  texto que mudam; o `pnpm guia:build` gera o `guia-produto.md` da camada.
+- Central de Ajuda: `lib/central_de_ajuda_pacotes/<camada>/<cap>/<id>-<slug>.md`,
+  só as seções que mudam; a troca é feita na leitura da conta.
+- Agentes: `config/agentes_por_pacote/seguros/<tipo>/agentes.md`, o bloco de
+  segmento (`Autonomia::Segmentos::Bloco`).
+
+Essas camadas trocam o campo ou a seção inteira: mudança no texto geral de um
+trecho que a camada sobrepõe precisa ser repetida nela.
+
 ## Como acrescentar uma chave
 
 1. Achar a chave no catálogo geral (painel ou servidor). O pacote só pode
@@ -113,8 +126,8 @@ pacote, com texto que segue as regras: podem voltar por chave montada.
 Ficam fora do pacote, porque o pacote não chega neles: as etapas "Fechado" já
 gravadas nos funis (dado no banco), os prompts da IA, a conversão
 `'Lead Perdido WhatsApp'` do Google Ads, o texto fixo de `card.rb`, o
-`automation_rule_schema/acoes.rb` (formatos do Guia), o Guia e a Central de
-Ajuda.
+`automation_rule_schema/acoes.rb` (formatos do Guia). O Guia e a Central de
+Ajuda têm camadas próprias (veja abaixo).
 
 ### Trava de cobertura (CI)
 
@@ -153,5 +166,5 @@ IA ou a Central dizendo "Ganhou", a equipe vê dois nomes para a mesma coisa.
 
 ## Fora desta fase
 
-Conteúdo por tipo além do mínimo, funis, Central de Ajuda e Guia por pacote,
-página pública e canal como camada.
+Conteúdo por tipo além do mínimo, instrução do Guia por pacote, Central em
+inglês por pacote, página pública e canal como camada.

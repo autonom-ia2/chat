@@ -57,7 +57,7 @@ module Autonomia
         return false unless eligible?(account)
         return true if ready_agent_for(account).present?
 
-        cache_key = "autonomia:guide:ensure:account:#{account.id}:#{kb_version}"
+        cache_key = "autonomia:guide:ensure:account:#{account.id}:#{kb_version(account)}"
         Rails.cache.fetch(cache_key, expires_in: 5.minutes) do
           ::Autonomia::Guide::EnsureJob.perform_later(account.id)
           true
@@ -110,10 +110,23 @@ module Autonomia
 
       # Versão de freshness = hash do KB + da INSTRUÇÃO. Assim, editar a instrução (não só o KB) muda a
       # versão → fresh? falha → canonicalize! relê a instrução → a mudança chega em prod sem deploy.
-      def self.kb_version
-        Digest::SHA256.hexdigest(File.read(KB_PATH) + File.read(INSTRUCTION_PATH))[0, 16]
+      # Com a conta, o KB é o do pacote dela (kb_path_for); conta geral, ou interruptor desligado, tem o mesmo
+      # arquivo e o mesmo hash de antes, e o Guia dela não é re-semeado.
+      def self.kb_version(account = nil)
+        caminho = account ? kb_path_for(account) : KB_PATH
+        Digest::SHA256.hexdigest(File.read(caminho) + File.read(INSTRUCTION_PATH))[0, 16]
       rescue StandardError
         'unknown'
+      end
+
+      def self.kb_path_for(account)
+        ::Autonomia::Guide::BaseDoPacote.caminho(account) || KB_PATH
+      end
+
+      # Uma versão para a instalação inteira, base e pacotes juntos (o WarmUpJob reaquece uma vez quando qualquer
+      # um muda). Sem pacote, é o kb_version de sempre.
+      def self.versao_da_instalacao
+        ::Autonomia::Guide::BaseDoPacote.versao_com(kb_version)
       end
 
       private
@@ -134,7 +147,7 @@ module Autonomia
       # setável via API (chave reservada), então um row forjado não consegue parecer fresh; o check
       # canônico (in-memory, sem I/O) é defesa extra — qualquer divergência cai no lock + canonicalize.
       def fresh?(agent)
-        agent.config.to_h['guide_kb_version'] == self.class.kb_version &&
+        agent.config.to_h['guide_kb_version'] == self.class.kb_version(@account) &&
           agent.knowledge_entries.ready.exists? &&
           active_column_populated?(agent) &&
           canonical_state?(agent)
@@ -192,7 +205,7 @@ module Autonomia
       # Chunking POR FLUXO: divide o KB nos blocos `### ` (cada fluxo é autocontido) e cria uma
       # KnowledgeEntry por fluxo → o retrieval devolve o fluxo INTEIRO, não pedaços.
       def ensure_knowledge(agent)
-        flows = split_flows(File.read(KB_PATH))
+        flows = split_flows(File.read(self.class.kb_path_for(@account)))
         return if flows.empty?
 
         # B1 — o Guia grava na MESMA tabela e é lido pelo MESMO Retriever (que usa o modelo GLOBAL).
@@ -216,7 +229,7 @@ module Autonomia
           end
         end
 
-        agent.update!(config: agent.config.to_h.merge('guide_kb_version' => self.class.kb_version))
+        agent.update!(config: agent.config.to_h.merge('guide_kb_version' => self.class.kb_version(@account)))
       end
 
       # Grava uma entry do Guia na coluna do modelo ativo (mesma regra do Ingestor). large -> halfvec

@@ -3,8 +3,9 @@
 # números. A ação do dia saiu daqui na F5 (#1110): é o consultor (Crm::MetaAds::Advisor), que não depende do
 # período da tela (D5.2). O "quanto confiar" segue o período (D5.8).
 #
-# O período são os últimos `days` dias contando hoje, no fuso da conta de anúncios (o mesmo em que a Meta conta
-# o gasto). Tudo sai do banco: gasto da coleta diária (F2a), ligações conversa → anúncio (F2b) e cards do CRM.
+# O período (Panel::Period, #2011) é um dos nomes da tela — últimos 7, 30 ou 90 dias, este mês, mês passado ou desde
+# o primeiro anúncio —, em dias do fuso da conta de anúncios (o mesmo em que a Meta conta o gasto). Tudo sai do
+# banco: gasto da coleta diária (F2a), ligações conversa → anúncio (F2b) e cards do CRM.
 #
 # Sem conexão (`connection` nil, Anúncios sem login, #1960): só o que o WhatsApp contou. Sem gasto, o fuso é o da
 # conta, o nome do anúncio é o título que veio no clique e a foto é a guardada do clique (MetaAdObject#image). Custo
@@ -14,19 +15,20 @@
 # O anúncio por dentro (F3b, Panel::AdDetail) lê daqui o período, a coorte, a linha do anúncio e a média da conta,
 # para que o número da lista e o da tela do anúncio nunca divirjam.
 class Crm::MetaAds::Panel::Report
-  PERIODS = [7, 30].freeze
+  attr_reader :zone, :account_id, :period
 
-  attr_reader :days, :zone, :account_id
-
-  def initialize(connection, days:, account: nil)
+  # period: nome do Panel::Period; days: o pedido antigo (7 ou 30), para quem ainda chama assim.
+  def initialize(connection, period: nil, days: nil, account: nil)
     @connection = connection
     @account_id = connection&.account_id || account.id
-    @days = PERIODS.include?(days.to_i) ? days.to_i : PERIODS.last
     @zone = zone_for(connection, account)
+    @period = Crm::MetaAds::Panel::Period.new(Crm::MetaAds::Panel::Period.key_for(period: period, days: days),
+                                              today: today, first_ad_day: -> { first_ad_day })
   end
 
   def payload
-    base = { days: @days, from: first_day, to: today, currency: currency, totals: totals, ads: ads }
+    base = { period: period.key, days: days, from: first_day, to: last_day, open: period.open?, currency: currency,
+             totals: totals, ads: ads }
     return base.merge(confidence: confidence) unless whatsapp_only?
 
     base.merge(source: 'whatsapp', totals: totals.merge(spend: nil), ads: ads.map { |ad| ad.merge(spend: nil) })
@@ -41,14 +43,22 @@ class Crm::MetaAds::Panel::Report
     @today ||= Time.current.in_time_zone(@zone).to_date
   end
 
-  def first_day
-    today - (@days - 1)
+  def days
+    period.days
   end
 
-  # Do início do primeiro dia, no fuso da conta de anúncios, até agora. A coorte, o tempo de resposta e o "quanto
-  # confiar" do período usam este mesmo intervalo.
+  def first_day
+    period.first_day
+  end
+
+  def last_day
+    period.last_day
+  end
+
+  # Do início do primeiro dia ao fim do último, no fuso da conta de anúncios, sem passar de agora. A coorte, o tempo
+  # de resposta e o "quanto confiar" do período usam este mesmo intervalo.
   def range
-    @range ||= first_day.in_time_zone(@zone)..Time.current
+    @range ||= first_day.in_time_zone(@zone)..[last_day.in_time_zone(@zone).end_of_day, Time.current].min
   end
 
   def cohort
@@ -58,7 +68,7 @@ class Crm::MetaAds::Panel::Report
   def insights
     return Crm::MetaAdInsightDaily.none if whatsapp_only?
 
-    Crm::MetaAdInsightDaily.where(account_id: @account_id, ad_account_id: @connection.ad_account_id, date: first_day..today)
+    Crm::MetaAdInsightDaily.where(account_id: @account_id, ad_account_id: @connection.ad_account_id, date: first_day..last_day)
   end
 
   def currency
@@ -80,6 +90,20 @@ class Crm::MetaAds::Panel::Report
   end
 
   private
+
+  # Dia do primeiro toque de anúncio da conta (e, com conexão, do primeiro gasto guardado), para "desde o primeiro
+  # anúncio". Lido só quando esse é o período pedido.
+  def first_ad_day
+    all_time = Time.zone.at(0)..Time.current
+    cohort_class = whatsapp_only? ? Crm::MetaAds::Panel::WhatsappCohort : Crm::MetaAds::Panel::Cohort
+    days = [cohort_class.new(@account_id, all_time).first_touch_at&.in_time_zone(@zone)&.to_date]
+    days << insights_since_ever.minimum(:date) unless whatsapp_only?
+    days.compact.min
+  end
+
+  def insights_since_ever
+    Crm::MetaAdInsightDaily.where(account_id: @account_id, ad_account_id: @connection.ad_account_id)
+  end
 
   def zone_for(connection, account)
     name = connection ? connection.ad_account_timezone : account.reporting_timezone

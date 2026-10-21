@@ -28,7 +28,7 @@ RSpec.describe Crm::MetaAds::Relatorio::Planilha do
   end
 
   def dados
-    Crm::MetaAds::Relatorio::Dados.new(nil, days: 30, account: account)
+    Crm::MetaAds::Relatorio::Dados.new(nil, period: '30d', account: account)
   end
 
   around do |example|

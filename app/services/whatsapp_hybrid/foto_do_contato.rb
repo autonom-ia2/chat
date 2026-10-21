@@ -50,10 +50,38 @@ class WhatsappHybrid::FotoDoContato
     "whatsapp_hybrid:foto_do_contato:pausa:#{session_name}"
   end
 
-  def initialize(contact:, connection:, client: Waha::Client.new)
+  def self.chave_do_dia(session_name)
+    "whatsapp_hybrid:foto_do_contato:dia:#{session_name}:#{Time.current.utc.to_date}"
+  end
+
+  # A sessão em uso pelo Híbrido, com as chaves gerais ligadas e sem pausa da busca de foto.
+  def self.sessao_pronta?(connection)
+    WhatsappHybrid::Config.routing_enabled? && WhatsappHybrid::Config.account_allowed?(connection.account_id) &&
+      connection.routable? && !::Redis::Alfred.exists?(chave_da_sessao(connection.session_name))
+  end
+
+  def self.consultas_hoje(session_name)
+    ::Redis::Alfred.get(chave_do_dia(session_name)).to_i
+  end
+
+  # Sem resposta (status nil: conexão, timeout), limite de consultas ou erro do servidor do motor.
+  def self.erro_do_motor?(error)
+    return true if ERROS_DE_REDE.any? { |classe| error.is_a?(classe) }
+    return false unless error.is_a?(Waha::Client::Error) && !error.is_a?(Waha::Client::InvalidResponse)
+
+    error.status.nil? || error.status == LIMITE_DE_CONSULTAS || error.status >= 500
+  end
+
+  def self.pausar_a_sessao!(connection)
+    ::Redis::Alfred.setex(chave_da_sessao(connection.session_name), 1, PAUSA_DA_SESSAO.to_i)
+  end
+
+  # teto: o máximo de consultas da sessão no dia para esta busca (o backfill passa um teto menor que o do ao vivo).
+  def initialize(contact:, connection:, client: Waha::Client.new, teto: TETO_DIARIO)
     @contact = contact
     @connection = connection
     @client = client
+    @teto = [teto.to_i, TETO_DIARIO].min
   end
 
   def perform
@@ -63,7 +91,7 @@ class WhatsappHybrid::FotoDoContato
 
     consultar
   rescue StandardError => e
-    erro_do_motor?(e) ? pausar_a_sessao(e) : adiar_o_contato(e)
+    self.class.erro_do_motor?(e) ? pausar_a_sessao(e) : adiar_o_contato(e)
   end
 
   private
@@ -77,8 +105,7 @@ class WhatsappHybrid::FotoDoContato
   end
 
   def sessao_pronta?
-    WhatsappHybrid::Config.routing_enabled? && WhatsappHybrid::Config.account_allowed?(@connection.account_id) &&
-      @connection.routable? && !::Redis::Alfred.exists?(self.class.chave_da_sessao(@connection.session_name))
+    self.class.sessao_pronta?(@connection)
   end
 
   # 1 consulta a cada RITMO por sessão (SET NX) e no máximo TETO_DIARIO por dia. O contador do dia nasce com prazo
@@ -87,9 +114,11 @@ class WhatsappHybrid::FotoDoContato
     sessao = @connection.session_name
     return false unless ::Redis::Alfred.set("whatsapp_hybrid:foto_do_contato:ritmo:#{sessao}", 1, nx: true, ex: RITMO.to_i)
 
-    chave_do_dia = "whatsapp_hybrid:foto_do_contato:dia:#{sessao}:#{Time.current.utc.to_date}"
+    chave_do_dia = self.class.chave_do_dia(sessao)
     ::Redis::Alfred.set(chave_do_dia, 0, nx: true, ex: 1.day.to_i)
-    ::Redis::Alfred.incr(chave_do_dia) <= TETO_DIARIO
+    return false if ::Redis::Alfred.get(chave_do_dia).to_i >= @teto
+
+    ::Redis::Alfred.incr(chave_do_dia) <= @teto
   end
 
   # Resposta que não é o formato esperado não é "sem foto": o contato fica adiado (ver o rescue do perform).
@@ -100,17 +129,9 @@ class WhatsappHybrid::FotoDoContato
     resposta['profilePictureURL'].presence
   end
 
-  # Sem resposta (status nil: conexão, timeout), limite de consultas ou erro do servidor do motor.
-  def erro_do_motor?(error)
-    return true if ERROS_DE_REDE.any? { |classe| error.is_a?(classe) }
-    return false unless error.is_a?(Waha::Client::Error) && !error.is_a?(Waha::Client::InvalidResponse)
-
-    error.status.nil? || error.status == LIMITE_DE_CONSULTAS || error.status >= 500
-  end
-
   def pausar_a_sessao(error)
     devolver_o_contato
-    ::Redis::Alfred.setex(self.class.chave_da_sessao(@connection.session_name), 1, PAUSA_DA_SESSAO.to_i)
+    self.class.pausar_a_sessao!(@connection)
     Rails.logger.warn("[whatsapp_hybrid] foto do contato: busca pausada na sessão inbox=#{@connection.inbox_id} #{detalhe(error)}")
   end
 

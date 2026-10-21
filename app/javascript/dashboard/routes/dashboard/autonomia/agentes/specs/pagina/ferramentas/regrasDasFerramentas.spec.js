@@ -16,7 +16,12 @@ import {
   novoCabecalho,
   novaInformacao,
   rascunhoVazio,
+  enderecoDeExemplo,
 } from '../../../utils/ferramentas';
+import ptBR from 'dashboard/i18n/locale/pt_BR/agents.json';
+import { composeMessages } from 'dashboard/i18n/pacotesDoPainel';
+import segurosPtBR from 'dashboard/i18n/pacotes/seguros/pt_BR.json';
+import corretoraPtBR from 'dashboard/i18n/pacotes/seguros/corretora/pt_BR.json';
 import {
   lerResposta,
   montarChamada,
@@ -26,6 +31,11 @@ import {
 
 // #1301 — regras das Ferramentas (protótipo ferramentas.html). Tudo por métodos de string: nada de
 // regex para ler endereço, nome ou erro.
+
+// Tradutor mínimo, como o vue-i18n: busca a chave no catálogo.
+const tradutor = mensagens => chave =>
+  chave.split('.').reduce((nivel, parte) => nivel?.[parte], mensagens);
+const t = tradutor(ptBR);
 
 const FERRAMENTA = {
   id: 3,
@@ -113,12 +123,38 @@ describe('regras das Ferramentas', () => {
   });
 
   it('starts from a generic example, never a real customer address', () => {
-    const exemplo = rascunhoDeExemplo();
+    const exemplo = rascunhoDeExemplo(t);
     expect(exemplo.endereco).toBe(
       'https://api.sualoja.com.br/estoque/busca?termo={{ termo | url_encode }}'
     );
     expect(exemplo.informacoes.map(i => i.nome)).toEqual(['termo']);
     expect(JSON.stringify(exemplo)).not.toContain('gira');
+  });
+
+  // #1802: o exemplo vem do i18n. O geral fica como era; a corretora ganha um exemplo de seguro.
+  it('keeps the general example exactly as it was', () => {
+    const exemplo = rascunhoDeExemplo(t);
+    expect(exemplo).toMatchObject({
+      nome: 'Busca no estoque',
+      quando:
+        'Use quando a pessoa perguntar se uma peça tem em estoque ou quanto custa. Traz nome, preço e quantidade.',
+    });
+    expect(exemplo.informacoes[0].descricao).toBe(
+      'A peça que a pessoa procura, do jeito que ela falou.'
+    );
+    expect(enderecoDeExemplo(t)).toBe(exemplo.endereco);
+  });
+
+  it('uses the brokerage example from the pack, with a generic address', () => {
+    const exemplo = rascunhoDeExemplo(
+      tradutor(composeMessages(ptBR, [segurosPtBR, corretoraPtBR]))
+    );
+    expect(exemplo.nome).toBe('Consulta de apólice');
+    expect(exemplo.endereco).toBe(
+      'https://api.suacorretora.com.br/apolices/busca?termo={{ termo | url_encode }}'
+    );
+    expect(exemplo.informacoes.map(i => i.nome)).toEqual(['termo']);
+    expect(conferirEndereco(exemplo.endereco)).toBe('');
   });
 
   describe('rascunho ↔ API', () => {
@@ -211,7 +247,7 @@ describe('regras das Ferramentas', () => {
   });
 
   describe('validarPasso', () => {
-    const base = () => ({ ...rascunhoDeExemplo(), nome: 'Estoque' });
+    const base = () => ({ ...rascunhoDeExemplo(t), nome: 'Estoque' });
 
     it('step 1: name is required; empty "Quando usar" only warns once', () => {
       expect(validarPasso(1, { ...base(), nome: ' ' }, false).erros).toEqual({
@@ -590,22 +626,22 @@ describe('regras das Ferramentas', () => {
       expect(nomeTecnico('123 estoque')).toBe('f_123_estoque');
       expect(nomeTecnico('Estoque')).toBe('estoque');
       expect(
-        validarPasso(2, { ...rascunhoDeExemplo(), slug: '1abc' }).erros
+        validarPasso(2, { ...rascunhoDeExemplo(t), slug: '1abc' }).erros
       ).toEqual({ slug: 'SLUG' });
       expect(
-        validarPasso(2, { ...rascunhoDeExemplo(), slug: '_abc' }).erros
+        validarPasso(2, { ...rascunhoDeExemplo(t), slug: '_abc' }).erros
       ).toEqual({ slug: 'SLUG' });
       expect(
-        validarPasso(2, { ...rascunhoDeExemplo(), slug: 'a'.repeat(65) }).erros
+        validarPasso(2, { ...rascunhoDeExemplo(t), slug: 'a'.repeat(65) }).erros
       ).toEqual({ slug: 'SLUG' });
       expect(
-        paraApi({ ...rascunhoDeExemplo(), nome: '123 estoque', slug: '' }).slug
+        paraApi({ ...rascunhoDeExemplo(t), nome: '123 estoque', slug: '' }).slug
       ).toBe('f_123_estoque');
     });
 
     it('checks the header name: letters, numbers and hyphen', () => {
       const r = {
-        ...rascunhoDeExemplo(),
+        ...rascunhoDeExemplo(t),
         cabecalhos: [{ ...novoCabecalho(), chave: 'x api_key', valor: 'v' }],
       };
       expect(validarPasso(4, r).erros).toEqual({ c0: 'CHAVE' });

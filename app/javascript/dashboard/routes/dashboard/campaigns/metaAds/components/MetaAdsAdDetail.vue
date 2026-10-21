@@ -17,6 +17,7 @@ import {
   adImage,
   amount,
   intlLocale,
+  periodRange,
   relativeTime,
   thumbClass,
 } from '../metaAdsHelpers';
@@ -31,12 +32,13 @@ import { useMetaAdsLive } from '../useMetaAdsLive';
 // e, no lugar das propostas, a lista de quem veio do anúncio (`people`), com a situação de cada um.
 const props = defineProps({
   adId: { type: String, required: true },
-  days: { type: Number, required: true },
+  period: { type: String, required: true },
 });
 
 const emit = defineEmits(['back']);
 
 const { t, locale } = useI18n();
+
 const route = useRoute();
 const ad = ref(null);
 const loading = ref(true);
@@ -45,18 +47,29 @@ const heading = ref(null);
 const quotesHeading = ref(null);
 let focused = false;
 
+// "Este mês · 1 – 21 de out.": o nome do período e as datas que o servidor devolveu (#2011).
+const periodContext = computed(() => {
+  const name = t(
+    `CRM_KANBAN.META_ADS_HUB.PANEL.PERIODS.${ad.value?.period || props.period}.NAME`
+  );
+  const range = periodRange(ad.value?.from, ad.value?.to, locale.value);
+  return range
+    ? t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_CTX', { name, range })
+    : name;
+});
+
 const isCurrent = asked =>
-  asked.adId === props.adId && asked.days === props.days;
+  asked.adId === props.adId && asked.period === props.period;
 
 const live = useMetaAdsLive({
   // Trocar de anúncio ou de período no meio de uma leitura: a resposta antiga é descartada.
   load: async () => {
-    const asked = { adId: props.adId, days: props.days };
+    const asked = { adId: props.adId, period: props.period };
     let data;
     try {
       ({ data } = await CrmMetaAdsConnectionAPI.panelAd(
         asked.adId,
-        asked.days
+        asked.period
       ));
     } catch (error) {
       // Sem nenhum número na tela, a falha vira aviso com "tentar de novo" em vez de spinner sem fim; com
@@ -84,7 +97,7 @@ const retry = () => {
   live.reload();
 };
 
-watch(() => [props.adId, props.days], retry);
+watch(() => [props.adId, props.period], retry);
 
 const fmt = value => amount(value, ad.value?.currency, locale.value);
 
@@ -322,7 +335,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           class="pointer-events-none absolute -end-16 -top-24 size-72 rounded-full border-[3rem] border-n-blue-9 opacity-15"
         />
         <p class="relative m-0 text-sm font-medium text-white/70">
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.PERIOD_CTX', { days }) }}
+          {{ periodContext }}
         </p>
         <h3
           ref="heading"

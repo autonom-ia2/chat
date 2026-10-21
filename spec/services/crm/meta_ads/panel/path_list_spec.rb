@@ -29,7 +29,7 @@ RSpec.describe Crm::MetaAds::Panel::PathList do
   end
 
   def list(step, days: 30)
-    described_class.new(connection, step: step, days: days).payload
+    described_class.new(connection, step: step, period: "#{days}d").payload
   end
 
   it 'conversas: a mais recente primeiro, com o card principal, o anúncio e o tempo de resposta' do

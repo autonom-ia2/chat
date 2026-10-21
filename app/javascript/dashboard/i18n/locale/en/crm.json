@@ -2590,10 +2590,45 @@
         },
         "HEADLINE": "You invested {spend}. {conversations} and {sales} came in.",
         "HEADLINE_WHATSAPP": "{conversations} came in from your ads on WhatsApp, and {sales}.",
-        "PERIOD": "{days} days",
         "PERIOD_LABEL": "Period",
-        "PERIOD_CTX": "Last {days} days",
-        "PERIOD_HINT": "What happened to the people who came from ads in the last {days} days.",
+        "PERIODS": {
+          "7d": {
+            "BUTTON": "7 days",
+            "NAME": "Last 7 days",
+            "IN": "in the last 7 days"
+          },
+          "30d": {
+            "BUTTON": "30 days",
+            "NAME": "Last 30 days",
+            "IN": "in the last 30 days"
+          },
+          "90d": {
+            "BUTTON": "90 days",
+            "NAME": "Last 90 days",
+            "IN": "in the last 90 days"
+          },
+          "this_month": {
+            "NAME": "This month",
+            "IN": "this month"
+          },
+          "last_month": {
+            "NAME": "Last month",
+            "IN": "last month"
+          },
+          "all": {
+            "NAME": "All time",
+            "IN": "since the first ad"
+          }
+        },
+        "MORE_PERIODS": "More periods",
+        "PERIOD_LOADING": "Loading the period…",
+        "PERIOD_ERROR": "Could not load this period right now. Try again.",
+        "PERIOD_EMPTY": {
+          "TITLE": "Nobody came from an ad {when}.",
+          "SEE_ALL": "See since the first ad"
+        },
+        "PERIOD_CTX": "{name} · {range}",
+        "PERIOD_HINT": "What happened to the people who came from an ad {when}.",
         "TODAY": "What to do today",
         "SEVERAL_ADS": "several ads",
         "ACTION": {
@@ -2738,7 +2773,7 @@
         "REPORT": {
           "BUTTON": "Download report",
           "TITLE": "Download the report",
-          "DESCRIPTION": "Last {days} days, with the same numbers as the screen.",
+          "DESCRIPTION": "{name}, with the same numbers as the screen.",
           "PDF_TITLE": "PDF to present",
           "PDF_HINT": "Ready pages to show or send to someone.",
           "SHEET_TITLE": "Spreadsheet to work the numbers",

@@ -31,7 +31,7 @@ const INBOX = { id: 7, name: 'Vendas', phone: '+5511988887777' };
 const result = overrides => ({
   enabled: true,
   official_inboxes: [INBOX],
-  recent_ad_touch: true,
+  ad_touch: true,
   ...overrides,
 });
 
@@ -109,7 +109,7 @@ describe('Anúncios sem login (#1960, degrau 0)', () => {
   describe('tela "pronto": WhatsApp oficial, sem anúncio em 90 dias', () => {
     it('shows the formatted phone and never loads the panel', async () => {
       const wrapper = await mountPage({
-        result: result({ recent_ad_touch: false }),
+        result: result({ ad_touch: false }),
       });
 
       expect(wrapper.find('[data-ready-text]').text()).toContain(
@@ -120,7 +120,7 @@ describe('Anúncios sem login (#1960, degrau 0)', () => {
 
     it('opens the panel with marked example numbers, without opening ads or lists, and goes back', async () => {
       const wrapper = await mountPage({
-        result: result({ recent_ad_touch: false }),
+        result: result({ ad_touch: false }),
       });
 
       await wrapper.find('[data-see-example]').trigger('click');
@@ -137,7 +137,7 @@ describe('Anúncios sem login (#1960, degrau 0)', () => {
       expect(wrapper.find('[data-panel-path-open]').exists()).toBe(false);
       expect(CrmMetaAdsConnectionAPI.panel).not.toHaveBeenCalled();
 
-      await wrapper.find('[data-panel-period="7"]').trigger('click');
+      await wrapper.find('[data-panel-period="7d"]').trigger('click');
       expect(wrapper.find('[data-panel-headline]').text()).toBe(
         'Pelo WhatsApp, vieram 9 conversas de anúncio e 1 venda.'
       );
@@ -151,7 +151,7 @@ describe('Anúncios sem login (#1960, degrau 0)', () => {
     it('shows conversations, quotes and sales without spend, cost, verdict or confidence', async () => {
       const wrapper = await mountPage();
 
-      expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledWith(30);
+      expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledWith('30d');
       expect(wrapper.find('[data-panel-headline]').text()).toBe(
         'Pelo WhatsApp, vieram 75 conversas de anúncio e 6 vendas.'
       );
@@ -204,7 +204,7 @@ describe('Anúncios sem login (#1960, degrau 0)', () => {
 
       expect(CrmMetaAdsConnectionAPI.panelList).toHaveBeenCalledWith(
         'conversations',
-        30
+        '30d'
       );
     });
   });
@@ -245,7 +245,7 @@ describe('Anúncios sem login (#1960, degrau 0)', () => {
     it('lists who came from the ad, in the account time zone, with situation and the conversation', async () => {
       CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue({ data: { ad: AD } });
       const wrapper = mount(MetaAdsAdDetail, {
-        props: { adId: '120', days: 30 },
+        props: { adId: '120', period: '30d' },
         global: { stubs },
       });
       await flushPromises();
