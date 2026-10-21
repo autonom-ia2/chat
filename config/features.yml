@@ -653,3 +653,15 @@
   display_name: Anúncios sem login (resultado do WhatsApp)
   enabled: false
   column: feature_flags_ext_1
+
+# "Não é negócio" na IA de etapa (#1922). Ligada: a avaliação de etapa (no automático do funil, com confiança alta) pode
+# arquivar o card que não é pedido de cliente (fornecedor, engano, só robôs, repetido), sem contar como perda
+# (Crm::Ai::NaoENegocio). A regra do prompt (ClassifierPrompt::NAO_E_NEGOCIO), o campo `nao_e_negocio` do schema e o
+# `id` em other_subjects só vão ao modelo com ela. Posição 46 na feature_flags_ext_1 (1 << 45), definitiva da
+# Orquestração (21/10), logo depois de anuncios_sem_login. Sem migration.
+# Desligada (padrão): prompt, schema e entrada iguais aos de antes, e nada é arquivado. Nasce ligada só nas contas 1, 16
+# e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: crm_ia_arquiva_lixo
+  display_name: IA de etapa arquiva o card que não é negócio
+  enabled: false
+  column: feature_flags_ext_1
