@@ -4,9 +4,11 @@
 # Guia de cada bloqueio e do jeito seguro: https://github.com/ankane/strong_migrations#checks
 # Regras do fork: docs/migrations-em-lote.md.
 
-# As migrations até esta versão já estavam na main ou reservadas na fila de 21/10/2026 quando a gem entrou. Elas não
-# passam pelos bloqueios (o lock_timeout abaixo vale para todas). Migration nova pede versão maior que esta.
-StrongMigrations.start_after = 20_261_108_290_000 # 2026-11-08 29:00:00, a última da fila de 21/10
+# As migrations até esta versão (a última da main quando a gem entrou) já rodaram em produção e não passam pelos
+# bloqueios; o lock_timeout abaixo vale para todas. Migration nova com versão menor que esta (gerada com a data do dia,
+# por exemplo) também escaparia aqui, por isso o job "Migrations do lote" zera o start_after e checa toda migration
+# nova do lote, qualquer que seja a versão.
+StrongMigrations.start_after = 20_261_108_230_000
 
 # ALTER TABLE pede trava exclusiva. Atrás de uma transação longa ele espera, e toda leitura e escrita da tabela espera
 # atrás dele. Com 5 s a migration desiste e é tentada de novo; esgotadas as tentativas, o deploy falha antes do

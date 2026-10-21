@@ -362,8 +362,8 @@ jobs:
             echo "GREEN_IMAGE_PUBLISHED=false"
           } >> "$GITHUB_ENV"
 
-      # #2024: snapshot do RDS pedido aqui, quando o deploy traz migration que a blue não tem, e esperado antes do build
-      # (a green só roda o db:migrate quando a imagem chega ao ECR). Desligado enquanto a variável estiver vazia.
+      # #2024: snapshot do RDS pedido aqui, quando o deploy traz migration que a blue não tem, e esperado antes de lançar
+      # a green (é ela quem roda o db:migrate). Desligado enquanto a variável estiver vazia.
       - name: Request RDS snapshot before migrations
         env:
           GH_TOKEN: ${{ github.token }}
@@ -851,6 +851,11 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # #2024: antes de a green existir. Ela roda o db:migrate assim que acha a imagem deste commit no ECR, e num rerun
+      # a imagem já está lá.
+      - name: Wait for RDS snapshot before the green
+        run: bash scripts/deploy/rds-snapshot-antes-da-migration.sh esperar
+
       - name: Launch green EC2 instance
         run: |
           green_instance_id=$(aws ec2 run-instances \
@@ -879,9 +884,6 @@ jobs:
             echo "FREEZE_ABORTED=true" >> "$GITHUB_ENV"
             exit 1
           fi
-
-      - name: Wait for RDS snapshot before the image
-        run: bash scripts/deploy/rds-snapshot-antes-da-migration.sh esperar
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

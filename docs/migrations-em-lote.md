@@ -23,7 +23,14 @@ quantidade. Era a classe de cada migration, e agora a CI confere essa classe ant
 | `down` quebrado | Job: `down` de cada migration nova, da última para a primeira, tem de devolver a estrutura da base; `up` de novo tem de chegar ao mesmo lugar |
 | `schema.rb` que não bate com as migrations | Job: o `schema.rb` do PR é carregado e comparado com o banco migrado |
 | Versão repetida entre PRs | Job na fila de merge: a rodada junta as migrations de todos os PRs do lote, e o Rails recusa versão repetida |
-| Falha no meio do lote | Coberta pela compatibilidade: cada migration é aditiva, então qualquer prefixo do lote deixa a blue de pé |
+| Falha no meio do lote | Job: as migrations sobem uma por vez, e a compatibilidade é conferida no estado depois de **cada** uma, porque um lote que para no meio deixa a blue naquele estado |
+| Migration já na `main` editada, apagada ou renomeada | Job: falha. Ela já rodou em produção; correção vai numa migration nova |
+
+Índice único, chave estrangeira e restrição CHECK novos numa tabela que já existe, e índice removido, **não bloqueiam**:
+saem como aviso no relatório, para a revisão conferir se o código anterior não grava algo que a regra nova recusa.
+
+O strong_migrations ignora as migrations até `StrongMigrations.start_after` (a última da `main` quando a gem entrou).
+No job ele checa **toda** migration nova do lote, mesmo com versão menor que essa.
 
 O job roda no PR e na fila de merge. Na fila, a base é a `main` e o lote é a soma dos PRs da rodada: é o teste do lote
 inteiro, na ordem das versões. Ele faz parte do check obrigatório **RSpec**.
@@ -67,9 +74,10 @@ O PR 2 é a migration que não é só aditiva. Ele sobe sozinho e com OK do Rodr
 ## Snapshot automático no deploy
 
 Os dois workflows de deploy pedem um snapshot manual do RDS quando o commit traz migration que o da blue não tem
-(`scripts/deploy/rds-snapshot-antes-da-migration.sh`). O pedido sai cedo no job, e o build espera o snapshot ficar
-`available`, porque a green só roda o `db:migrate` quando a imagem chega ao ECR. Sem saber o commit da blue, o
-snapshot é tirado do mesmo jeito.
+(`scripts/deploy/rds-snapshot-antes-da-migration.sh`). O pedido sai cedo no job, e o deploy espera o snapshot ficar
+`available` antes de lançar a green, que é quem roda o `db:migrate` (num rerun a imagem já está no ECR e a green
+começaria na hora). O `aws rds wait` desiste em 30 min: snapshot mais demorado falha o deploy antes de existir green.
+Na dúvida (commit da blue desconhecido, fetch ou comparação que falha), o snapshot é tirado do mesmo jeito.
 
 Fica **desligado** até o Rodrigo ligar. Para ligar, por stack:
 
@@ -92,5 +100,3 @@ Pontos de atenção:
   tira da standby e não suspende;
 - se o RDS tem backup automático com retenção maior que zero, a restauração para um ponto no tempo já cobre o
   minuto antes do deploy. O snapshot é a cópia nomeada e fácil de achar;
-- rerun de um deploy cuja imagem já está no ECR: a green pode começar a migration antes do snapshot. Nesse caso as
-  migrations quase sempre já rodaram na primeira tentativa.

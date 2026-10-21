@@ -425,7 +425,16 @@ jobs:
               exit 0
               ;;
           esac
-          mudou=$(git diff --name-only "$base" HEAD -- db/migrate db/schema.rb)
+          # Migration que já está na main rodou em produção: editar, apagar ou renomear não muda o banco de ninguém e
+          # só faz o código divergir do que rodou. Correção vai numa migration nova.
+          alteradas=$(git diff --name-only --diff-filter=MDR "$base" HEAD -- db/migrate)
+          if [ -n "$alteradas" ]; then
+            printf '::error::Migration que já está na main foi alterada, apagada ou renomeada:\n%s\n' "$alteradas"
+            exit 1
+          fi
+          # O próprio verificador também dispara o teste (sem migration nova, ele confere o schema.rb).
+          mudou=$(git diff --name-only "$base" HEAD -- db/migrate db/schema.rb lib/migrations_seguras \
+            lib/tasks/migrations_seguras.rake config/initializers/strong_migrations.rb)
           echo "base=$base" >> "$GITHUB_OUTPUT"
           if [ -z "$mudou" ]; then
             echo "O lote não mexe em db/migrate nem no schema.rb."

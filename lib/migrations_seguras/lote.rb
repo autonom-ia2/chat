@@ -10,7 +10,7 @@
 # Migration irreversível (down levanta ActiveRecord::IrreversibleMigration) para o teste do down nela e sai no
 # relatório: a volta do banco dela é o snapshot.
 #
-# Apaga e recria o banco configurado. Só roda fora de produção e com o nome do banco repetido em `banco:`.
+# Apaga e recria o banco configurado. Só roda no ambiente de teste e com o nome do banco repetido em `banco:`.
 class MigrationsSeguras::Lote
   Etapa = Struct.new(:nome, :ok, :detalhe, keyword_init: true)
 
@@ -41,13 +41,13 @@ class MigrationsSeguras::Lote
     return sem_migration_nova if novas.empty?
 
     deixar_pendentes(novas)
-    testar(novas)
+    checando_todas { testar(novas) }
   end
 
   private
 
   def conferir_banco!(banco)
-    raise ArgumentError, 'migrations_seguras não roda em produção' if Rails.env.production?
+    raise ArgumentError, 'migrations_seguras só roda no ambiente de teste' unless Rails.env.test?
     return if banco.present? && banco == @db_config.database
 
     raise ArgumentError, "o banco configurado é #{@db_config.database}; repita o nome dele para confirmar que pode apagá-lo"
@@ -64,13 +64,29 @@ class MigrationsSeguras::Lote
     resultado
   end
 
+  # Aqui só rodam as migrations novas do lote: todas passam pelos bloqueios, mesmo com versão abaixo do start_after.
+  def checando_todas
+    anterior = StrongMigrations.start_after
+    StrongMigrations.start_after = 0
+    yield
+  ensure
+    StrongMigrations.start_after = anterior
+  end
+
   def testar(novas)
     resultado = Resultado.new(migrations: novas, etapas: [], descidas: [], irreversiveis: [])
     antes = retrato
-    return resultado unless etapa(resultado, 'up do lote sobre a base') { contexto.migrate }
+    estados = []
+    subiu = etapa(resultado, 'up do lote sobre a base, uma por vez na ordem das versões') do
+      novas.each do |migration|
+        subir(migration)
+        estados << retrato
+      end
+    end
+    return resultado unless subiu
 
-    depois = retrato
-    resultado.compatibilidade = MigrationsSeguras::Compatibilidade.new(antes: antes, depois: depois, retiradas: @retiradas)
+    depois = estados.last
+    resultado.compatibilidade = compatibilidade_de_cada_prefixo(antes, estados)
     testar_volta(resultado, novas, antes, depois)
     etapa(resultado, 'schema.rb do PR igual ao que as migrations produzem') do
       recriar_com(@schema_do_pr)
@@ -95,6 +111,24 @@ class MigrationsSeguras::Lote
       contexto.migrate
       igual!(depois, retrato)
     end
+  end
+
+  # O lote pode parar no meio (lock_timeout, erro), e a blue fica no schema daquele ponto. Por isso o código anterior
+  # tem de aguentar o estado depois de cada migration, não só o final.
+  def compatibilidade_de_cada_prefixo(antes, estados)
+    verificacoes = estados.map do |estado|
+      MigrationsSeguras::Compatibilidade.new(antes: antes, depois: estado, retiradas: @retiradas)
+    end
+    final = verificacoes.last
+    verificacoes[0...-1].each { |verificacao| final.incorporar(verificacao) }
+    final
+  end
+
+  # O erro do Rails não diz qual migration falhou; o relatório diz.
+  def subir(migration)
+    contexto.run(:up, migration.version)
+  rescue StandardError => e
+    raise e.class, "#{migration.version} #{migration.name}: #{e.message}", e.backtrace
   end
 
   def descer(migration, resultado)

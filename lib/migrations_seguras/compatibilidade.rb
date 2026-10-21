@@ -32,6 +32,12 @@ class MigrationsSeguras::Compatibilidade
     bloqueios.empty?
   end
 
+  # Junta os achados de outra verificação do mesmo lote (um estado do meio), sem repetir.
+  def incorporar(outra)
+    @bloqueios |= outra.bloqueios
+    @avisos |= outra.avisos
+  end
+
   private
 
   def verificar

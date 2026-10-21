@@ -26,5 +26,11 @@ RSpec.describe MigrationsSeguras::Estrutura do
       expect(retrato['extensoes']).to include('pg_trgm')
       expect(retrato['gatilhos']).to include('email_reputation_audits.email_reputation_audit_append_only')
     end
+
+    it 'lê os valores de cada tipo enum, para a remoção de valor ser vista' do
+      ActiveRecord::Base.connection.create_enum(:situacao_do_teste_2024, %w[aberta fechada])
+
+      expect(described_class.capturar.dig('tipos_enum', 'situacao_do_teste_2024')).to eq(%w[aberta fechada])
+    end
   end
 end
