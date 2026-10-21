@@ -73,6 +73,22 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     end
   end
 
+  # A rodada 3 do eval do t6d (21/10) veio toda "indisponível": o provedor recusa schema estrito em que algum objeto não
+  # lista todas as propriedades em `required`. Confere o schema inteiro, em todo nível.
+  it 'schema estrito: todo objeto lista todas as propriedades em required e não aceita outras' do
+    objetos = lambda do |no|
+      next [] unless no.is_a?(Hash)
+
+      proprios = no[:type] == 'object' ? [no] : []
+      proprios + no.values.flat_map { |valor| objetos.call(valor) }
+    end
+
+    objetos.call(described_class::SCHEMA[:schema]).each do |objeto|
+      expect(objeto[:required].map(&:to_s)).to match_array(objeto[:properties].keys.map(&:to_s))
+      expect(objeto[:additionalProperties]).to be(false)
+    end
+  end
+
   it 'faltando um índice: nil' do
     juiz_responde([{ indice: 0, veredito: 'ok' }])
 

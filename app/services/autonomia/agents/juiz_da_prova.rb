@@ -48,7 +48,7 @@ class Autonomia::Agents::JuizDaProva
       properties: {
         resultados: {
           type: 'array',
-          items: { type: 'object', additionalProperties: false, required: %w[indice veredito],
+          items: { type: 'object', additionalProperties: false, required: %w[indice veredito pedido],
                    properties: { indice: { type: 'integer' }, veredito: { type: 'string', enum: VEREDITOS },
                                  pedido: { type: 'integer' } } }
         }
