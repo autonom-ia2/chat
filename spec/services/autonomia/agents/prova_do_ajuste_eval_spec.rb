@@ -1,5 +1,6 @@
 require 'rails_helper'
 require_relative 'prova_do_ajuste_eval_casos'
+require_relative 'prova_do_ajuste_eval_controles'
 
 # AVALIAÇÃO PAGA DAS PERGUNTAS DE PROVA (#1428, tema 6: entrega B e termo t6d), DESLIGADA POR PADRÃO. Roda só com
 # `AUTONOMIA_EVAL_PAGO=1`, `PROVA_DO_AJUSTE_EVAL=1` e `OPENAI_API_KEY`.
@@ -11,8 +12,8 @@ require_relative 'prova_do_ajuste_eval_casos'
 #   - Os controles (fora dos casos): só o juiz de produção, com pedidos e respostas fixos, REPETICOES_DO_CONTROLE vezes.
 #   - `PROVA_DO_AJUSTE_EVAL_REJULGAR=<relatorio.json>`: lê um relatório gravado e chama SÓ o juiz do eval de novo
 #     (os casos; sem Construtor, sem prova, sem controle), com o retrato do agente que o juiz de produção recebeu.
-# t6d: pelo menos 18 de 20 aprovados (com o caso da base, 19 de 21; ver o doc), com todos os controles certos nas repetições. Teto por rodada em
-# `PROVA_DO_AJUSTE_EVAL_TETO_USD` (padrão US$ 0,90), somado pelo consumo gravado. Opcional:
+# t6d (régua no doc): pelo menos 19 de 21 aprovados nas 2 rodadas, o caso da base aprovado nas 2 e todos os controles
+# certos em todas as repetições. Teto por rodada em `PROVA_DO_AJUSTE_EVAL_TETO_USD` (padrão US$ 0,90), somado pelo consumo gravado. Opcional:
 # `PROVA_DO_AJUSTE_EVAL_SAIDA=<arquivo>` grava o relatório; `PROVA_DO_AJUSTE_EVAL_CENA=<a,b>` roda só esses casos ou
 # controles. A régua (critérios e os dois juízes) fica congelada num commit registrado no doc antes de rodar.
 module AvaliacaoDaProvaDoAjuste
@@ -193,7 +194,12 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
   def estrutura_ok?(applied, prova, caso)
     escritas = Array(prova['perguntas']).size - (caso[:extra] ? 1 : 0)
     applied == true && prova['status'] == 'pronta' && escritas.between?(1, 3) && prova['total'].to_i >= 1 &&
-      prova['completa'] == true
+      prova['completa'] == true && base_usada?(caso, prova)
+  end
+
+  # Revisão 2 do t6d (MÉDIO 2): no caso com base, ao menos uma resposta usou um trecho dela.
+  def base_usada?(caso, prova)
+    caso[:base].nil? || Array(prova['perguntas']).any? { |item| Array(item['trechos']).any? }
   end
 
   def julgamento_ok?(veredito, prova)
@@ -233,9 +239,10 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
   end
 
   def vereditos_esperados?(espera, testes)
-    %w[nao ok].all? do |veredito|
+    esperados = %w[nao ok].all? do |veredito|
       Array(espera[veredito.to_sym]).all? { |posicao| testes.include?('pedido' => posicao, 'veredito' => veredito) }
     end
+    esperados && Array(espera[:sem_nao]).none? { |posicao| testes.include?('pedido' => posicao, 'veredito' => 'nao') }
   end
 
   def presencas_esperadas?(espera, testados)
@@ -319,6 +326,18 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
       expect(rodar_controle(controle('controle_preco'))[:aprovada]).to be(false)
     end
 
+    it 'base: com os trechos, aprova o pedido fora dos testes ou ok e reprova o nao; sem os trechos, só o nao aprova' do
+      juiz = juiz_devolve([nota])
+      expect(rodar_controle(controle('controle_base_com_trechos'))[:aprovada]).to be(true)
+      expect(juiz).to have_received(:julgar).exactly(3).times.with(hash_including(itens: [hash_including('trechos')]))
+      juiz_devolve([nota([0, 'ok'])], [nota], [nota([0, 'nao'])])
+      expect(rodar_controle(controle('controle_base_com_trechos'))[:aprovada]).to be(false)
+      juiz_devolve([nota([0, 'nao'])])
+      expect(rodar_controle(controle('controle_base_sem_trechos'))[:aprovada]).to be(true)
+      juiz_devolve([nota])
+      expect(rodar_controle(controle('controle_base_sem_trechos'))[:aprovada]).to be(false)
+    end
+
     it 'gatilho: aprova o ok no pedido da situação; sem teste, reprova' do
       juiz_devolve([nota([0, 'ok'])])
       expect(rodar_controle(controle('controle_gatilho'))[:aprovada]).to be(true)
@@ -347,6 +366,19 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
       texto = kwargs[:input].first[:content].first[:text]
       expect(texto).to include('"pedido": "preço"', '{"tone":"formal depois"}', '"trechos_da_base_usados": [', 'Aulas às 19h.')
     end
+  end
+
+  # Revisão 2 do t6d (MÉDIO 2): o caso da base reprova na estrutura quando nenhuma resposta usou trecho da base.
+  it 'caso com base: a estrutura exige um trecho da base em ao menos uma resposta' do
+    caso = AvaliacaoDaProvaDoAjuste::CASOS.find { |candidato| candidato[:base] }
+    prova = { 'status' => 'pronta', 'total' => 1, 'completa' => true,
+              'perguntas' => [{ 'pergunta' => 'Tem estacionamento?', 'resposta' => 'Tem.', 'testes' => [] }] }
+
+    expect(estrutura_ok?(true, prova, caso)).to be(false)
+    prova['perguntas'].first['trechos'] = [AvaliacaoDaProvaDoAjuste::BASE_DA_ACADEMIA.first]
+    expect(estrutura_ok?(true, prova, caso)).to be(true)
+    expect(estrutura_ok?(true, prova.merge('perguntas' => [{ 'pergunta' => 'Oi' }]), AvaliacaoDaProvaDoAjuste::CASOS.first))
+      .to be(true)
   end
 
   # Revisão do t6d (BAIXOS do rejulgar): o arquivo gravado, lido de verdade.

@@ -1,4 +1,4 @@
-# #1428 (tema 6, t6d) — os 20 casos da avaliação paga das perguntas de prova, carregados só pelo
+# #1428 (tema 6, t6d) — os 21 casos da avaliação paga das perguntas de prova, carregados só pelo
 # prova_do_ajuste_eval_spec.rb (require_relative): 10 ramos de negócio, cada um com um agente fictício (sem dado de cliente), e em cada
 # caso o pedido de mudança do dono e o CRITÉRIO de "a prova obedece": o que as mensagens de cliente escritas pelo
 # Construtor precisam provocar para mostrar a mudança. Quem lê o critério é o juiz do eval (um modelo), nunca uma lista
@@ -8,6 +8,10 @@ module AvaliacaoDaProvaDoAjuste
   TOM = 'cordial e breve'.freeze
   MENSAGEM_FIXA = 'Vou confirmar com a equipe e te retorno.'.freeze
   REGRA_DE_PASSAGEM = 'Passe para a equipe quando o cliente pedir.'.freeze
+
+  # A base da academia: fatos que estão SÓ nela, em nenhum campo do agente (revisão 2 do t6d, MÉDIO 2).
+  BASE_DA_ACADEMIA = ['A Academia Ritmo tem estacionamento gratuito para alunos, com 40 vagas, na Rua das Palmeiras, 120.',
+                      'Aos sábados às 9h tem aulão de spinning aberto a alunos de qualquer plano.'].freeze
 
   # Um agente por ramo: o que o Construtor recebe como o agente de hoje.
   AGENTES = {
@@ -124,10 +128,10 @@ module AvaliacaoDaProvaDoAjuste
       fala: 'Sempre ofereça uma aula experimental grátis quando perguntarem sobre os planos.',
       obedece: 'Ao menos uma mensagem pergunta sobre os planos ou como se matricular.' },
     { nome: 'academia_base_estacionamento', agente: :academia,
-      base: ['A Academia Ritmo tem estacionamento gratuito para alunos, com 40 vagas, na Rua das Palmeiras, 120.',
-             'Aos sábados às 9h tem aulão de spinning aberto a alunos de qualquer plano.'],
-      fala: 'Quando perguntarem do estacionamento, responda e convide para o aulão de spinning de sábado.',
-      obedece: 'Ao menos uma mensagem pergunta sobre estacionamento ou onde parar o carro.' },
+      base: BASE_DA_ACADEMIA, fala: 'Quando perguntarem do estacionamento, responda e convide para o aulão de sábado.',
+      obedece: 'Ao menos uma mensagem pergunta sobre estacionamento ou onde parar o carro, e a resposta a ela mostra o ' \
+               'pedido com fatos que estão só na base de conhecimento: o estacionamento gratuito para alunos e o ' \
+               'aulão de spinning de sábado às 9h.' },
     { nome: 'academia_cancelamento_equipe', agente: :academia, fala: 'Pedido de cancelamento de plano vai direto para a equipe.',
       obedece: 'Ao menos uma mensagem pede para cancelar o plano.' },
     { nome: 'escola_tom_descontraido', agente: :escola,
@@ -145,24 +149,5 @@ module AvaliacaoDaProvaDoAjuste
       fala: 'Responda em no máximo 3 frases e sempre pergunte o nome da cliente se ela ainda não disse.',
       obedece: 'Ao menos uma mensagem vem de cliente que ainda não disse o nome; ao menos uma pede algo que puxaria uma ' \
                'resposta longa; as mensagens, juntas, deixam ver se o agente responde em no máximo 3 frases.' }
-  ].freeze
-
-  # Forense do t6d (M2): os controles chamam SÓ o juiz de produção (JuizDaProva#julgar), com pedidos e respostas fixos,
-  # REPETICOES_DO_CONTROLE vezes cada. Fora dos 20. `espera`, pelas posições na lista de pedidos (a partir de 0): `nao`
-  # e `ok`, o veredito que o pedido leva em algum teste; `presentes` e `ausentes`, se o pedido aparece em algum teste.
-  CONTROLES = [
-    { nome: 'controle_emoji', agente: :loja, pedidos: ['Responda de forma curta', 'Não use emoji'],
-      itens: [{ 'pergunta' => 'Quais formas de pagamento vocês aceitam?', 'resposta' => 'Aceitamos Pix e cartão em até 6x 😊',
-                'equipe' => false }],
-      espera: { nao: [1] } },
-    { nome: 'controle_preco', agente: :corretora, pedidos: ['Responda de forma curta', 'Preço passa para a equipe'],
-      itens: [{ 'pergunta' => 'Quais seguros vocês têm?', 'resposta' => 'Trabalhamos com seguro auto, residencial e de vida.',
-                'equipe' => false },
-              { 'pergunta' => 'Vocês atendem em Curitiba?', 'resposta' => 'Sim, atendemos Curitiba e toda a região.',
-                'equipe' => false }],
-      espera: { presentes: [0], ausentes: [1] } },
-    { nome: 'controle_gatilho', agente: :corretora, pedidos: ['Quando não souber responder, passe a conversa para a equipe'],
-      itens: [{ 'pergunta' => 'Minha apólice 4471 já foi emitida?', 'resposta' => MENSAGEM_FIXA, 'equipe' => true }],
-      espera: { ok: [0] } }
   ].freeze
 end
