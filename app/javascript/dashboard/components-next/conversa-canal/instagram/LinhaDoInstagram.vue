@@ -22,6 +22,10 @@ import AlbumDoInstagram from './AlbumDoInstagram.vue';
 import VozDoInstagram from './VozDoInstagram.vue';
 import CompartilhadoDoInstagram from './CompartilhadoDoInstagram.vue';
 
+// "Responder" segue a mesma regra do menu (quem só lê, nota, falha, caixa sem resposta).
+defineProps({
+  podeResponder: { type: Boolean, default: false },
+});
 const emit = defineEmits(['responder', 'menu']);
 
 const { t } = useI18n();
@@ -206,6 +210,7 @@ const textoCitado = computed(() => {
       :class="enviada ? 'flex-row-reverse' : 'flex-row'"
     >
       <button
+        v-if="podeResponder"
         type="button"
         class="flex size-6 shrink-0 items-center justify-center p-0"
         :aria-label="t('CONVERSA_CANAL.INSTAGRAM.RESPONDER')"

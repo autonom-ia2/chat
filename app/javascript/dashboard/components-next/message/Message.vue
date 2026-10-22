@@ -845,6 +845,7 @@ provideMessageContext({
     </div>
     <LinhaDoInstagram
       v-else-if="linhaDoInstagram"
+      :pode-responder="contextMenuEnabledOptions.replyTo"
       @responder="handleReplyTo"
       @menu="openContextMenu($event)"
     />
