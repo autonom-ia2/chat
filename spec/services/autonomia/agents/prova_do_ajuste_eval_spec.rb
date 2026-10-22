@@ -180,7 +180,7 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     estrutura = estrutura_ok?(applied, prova, caso)
     { caso: caso[:nome], agente: caso[:agente], applied: applied, estrutura: estrutura, prova: prova,
       pedidos_aplicados: pedidos, veredito: veredito, declarado_x_testado: declarado_x_testado(prova, pedidos),
-      aprovada: estrutura && julgamento_ok?(veredito, prova) && fora_certa?(caso, prova),
+      aprovada: estrutura && julgamento_ok?(veredito, prova, caso) && fora_certa?(caso, prova),
       custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
@@ -196,8 +196,15 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
 
   def estrutura_ok?(applied, prova, caso)
     escritas = Array(prova['perguntas']).size - (caso[:extra] ? 1 : 0)
-    applied == true && prova['status'] == 'pronta' && escritas.between?(1, 3) && prova['total'].to_i >= 1 &&
-      prova['completa'] == true && base_usada?(caso, prova)
+    applied == true && prova['status'] == 'pronta' && escritas.between?(1, 3) && placar_certo?(prova, caso) &&
+      base_usada?(caso, prova)
+  end
+
+  # Prova completa com ao menos um teste. No caso em que a forma pode não aparecer (série 3 anulada), vale também a
+  # prova incompleta, desde que nenhum pedido tenha recebido ✓: nenhuma resposta deixou ver a forma.
+  def placar_certo?(prova, caso)
+    completa = prova['completa'] == true && prova['total'].to_i >= 1
+    completa || (caso[:forma_pode_nao_aparecer] == true && prova['completa'] == false && prova['ok'].to_i.zero?)
   end
 
   # Revisão 2 do t6d (MÉDIO 2): no caso com base, ao menos uma resposta usou um trecho dela.
@@ -205,10 +212,12 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     caso[:base].nil? || Array(prova['perguntas']).any? { |item| Array(item['trechos']).any? }
   end
 
-  def julgamento_ok?(veredito, prova)
+  # Com a forma que pode não aparecer, as mensagens não precisam ter mostrado a mudança: quem reprova o ✓ numa resposta
+  # que não mostra a forma é o teste errado (vereditos_certos), pela régua de produção.
+  def julgamento_ok?(veredito, prova, caso = {})
     certos = Array(veredito['vereditos_certos'])
-    veredito['perguntas_mostram_a_mudanca'] == true && veredito['alguma_cita_instrucao'] == false &&
-      certos.size == Array(prova['perguntas']).size && certos.all?(true)
+    mostrou = caso[:forma_pode_nao_aparecer] == true || veredito['perguntas_mostram_a_mudanca'] == true
+    mostrou && veredito['alguma_cita_instrucao'] == false && certos.size == Array(prova['perguntas']).size && certos.all?(true)
   end
 
   # A pergunta fora da mudança (a última) ficou fora do placar.
@@ -455,6 +464,39 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     expect(estrutura_ok?(true, prova, caso)).to be(true)
     expect(estrutura_ok?(true, prova.merge('perguntas' => [{ 'pergunta' => 'Oi' }]), AvaliacaoDaProvaDoAjuste::CASOS.first))
       .to be(true)
+  end
+
+  # Série 3 do t6d anulada: a escola aprova com a forma vista e ✓ certo, ou sem forma vista e sem ✓; reprova o ✓ falso.
+  describe 'o caso da forma que pode não aparecer' do
+    let(:caso) { AvaliacaoDaProvaDoAjuste::CASOS.find { |candidato| candidato[:forma_pode_nao_aparecer] } }
+    let(:itens) { [{ 'pergunta' => 'Oi', 'resposta' => 'Oi! Como posso ajudar você?' }, { 'pergunta' => 'Tem online?', 'resposta' => 'Temos.' }] }
+
+    def prova(completa:, certas:, total:)
+      { 'status' => 'pronta', 'completa' => completa, 'ok' => certas, 'total' => total, 'perguntas' => itens }
+    end
+
+    def veredito(certos, mostram: false)
+      { 'perguntas_mostram_a_mudanca' => mostram, 'alguma_cita_instrucao' => false, 'vereditos_certos' => certos }
+    end
+
+    it 'aprova quando uma resposta mostra a forma e o ✓ está certo' do
+      expect(linha(caso, true, prova(completa: true, certas: 1, total: 1), ['p'], veredito([true, true], mostram: true))[:aprovada])
+        .to be(true)
+    end
+
+    it 'aprova quando nenhuma resposta mostra a forma e o pedido não recebe ✓' do
+      expect(linha(caso, true, prova(completa: false, certas: 0, total: 0), ['p'], veredito([true, true]))[:aprovada]).to be(true)
+    end
+
+    it 'reprova o ✓ numa resposta que não mostra a forma' do
+      expect(linha(caso, true, prova(completa: true, certas: 2, total: 2), ['p'], veredito([true, false]))[:aprovada]).to be(false)
+    end
+
+    it 'outro caso continua exigindo prova completa e as mensagens mostrando a mudança' do
+      outro = AvaliacaoDaProvaDoAjuste::CASOS.first
+      expect(linha(outro, true, prova(completa: false, certas: 0, total: 0), ['p'], veredito([true, true]))[:aprovada]).to be(false)
+      expect(linha(outro, true, prova(completa: true, certas: 1, total: 1), ['p'], veredito([true, true]))[:aprovada]).to be(false)
+    end
   end
 
   # Revisão do t6d (BAIXOS do rejulgar): o arquivo gravado, lido de verdade.

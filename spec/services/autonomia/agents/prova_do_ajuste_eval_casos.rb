@@ -82,7 +82,9 @@ module AvaliacaoDaProvaDoAjuste
   # (não pode virar ✓ no placar). `base` (revisão do t6d, ALTO 1): o agente tem base de conhecimento ligada, com estes
   # trechos (embedding de verdade); a prova busca nela e o juiz recebe os trechos que a resposta usou. Forense do t6d
   # (M3): tom e tratamento pedem mensagem que não traga a forma pronta, e pedido de tamanho pede uma mensagem que
-  # puxaria resposta longa.
+  # puxaria resposta longa. `forma_pode_nao_aparecer` (série 3 anulada, decisão do Rodrigo de 22/10): o caso aprova
+  # quando alguma resposta mostra a forma e o juiz dá ✓, ou quando nenhuma mostra e o pedido não recebe ✓; reprova
+  # quando o juiz dá ✓ numa resposta que não mostra a forma (o juiz do eval confere cada teste pela régua de produção).
   CASOS = [
     { nome: 'prova_duas_frases_e_preco', agente: :corretora,
       fala: 'Responda em no máximo 2 frases e preço passa para a equipe.',
@@ -134,7 +136,7 @@ module AvaliacaoDaProvaDoAjuste
                'alunos ou o aulão de spinning de sábado. O horário do aulão não é exigido: o pedido do dono não pede.' },
     { nome: 'academia_cancelamento_equipe', agente: :academia, fala: 'Pedido de cancelamento de plano vai direto para a equipe.',
       obedece: 'Ao menos uma mensagem pede para cancelar o plano.' },
-    { nome: 'escola_tom_descontraido', agente: :escola,
+    { nome: 'escola_tom_descontraido', agente: :escola, forma_pode_nao_aparecer: true,
       fala: 'Use um tom mais descontraído, tratando o aluno por você, como um professor jovem.',
       obedece: 'Mensagens comuns de aluno cuja resposta deixe ver o tom descontraído e o tratamento por você.' },
     { nome: 'escola_sem_prometer_fluencia', agente: :escola, fala: 'Nunca prometa fluência em prazo nenhum.',
