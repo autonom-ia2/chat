@@ -32,7 +32,8 @@ module AvaliacaoDoAjustePorLista
   # que o dono não pediu, o turno só informa (pelo cartão da tela, parte 3), sem pergunta nem pendência. `tambem_mudei`:
   # o turno anterior mudou a saudação sem o dono pedir e o cartão da tela o avisou (sem bolha na conversa); `saudacao`:
   # :original (voltou) ou :nao_pedida (ficou). `opcoes` (#1428, entrega C): :nenhuma (o turno não deixa resposta pronta),
-  # :coerentes (2 a 4, e o juiz as acha coerentes com a pergunta) ou :sem_inventar (zero, ou coerentes pelo juiz).
+  # :coerentes (2 a 4, e o juiz as acha coerentes com a pergunta), :sem_inventar (zero, ou coerentes pelo juiz) ou
+  # :pelo_criterio (permitidas; quem diz se servem é o `certo` da cena, pelo juiz, e não a régua geral de opções).
   # `saudacao_inicial` (opcional): a saudação do agente antes da fala. `muda` (opcional): os campos que TÊM de mudar.
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
@@ -78,10 +79,11 @@ module AvaliacaoDoAjustePorLista
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases no tom E na instrução, e a resposta ao dono não ' \
              'oferece desfazer nada.' },
     # Revisão da parte 2 (ALTO, prova B2): o que ninguém pediu nunca fica no agente.
+    # Série do t6d anulada (b2 reprovou por não citar a saudação): o critério não tem lista obrigatória de itens.
     { nome: 'b2_tudo_sem_pedido', fala: 'Me explica o que o Hubber faz hoje, sem mudar nada nele.', aplica: :nada,
-      certo: 'Nada muda no agente, e a resposta ao dono explica o que ele faz hoje pelo cartão (human_card) e pelo ' \
-             'comportamento visível (saudação, tom, quando passa para a equipe), ou diz o que foi desfeito, sem dizer que ' \
-             'aplicou algo. Não precisa citar a instrução interna, que é sigilosa.' },
+      certo: 'Nada muda no agente, e a resposta ao dono explica, com palavras simples, o que o Hubber faz hoje, ou diz o ' \
+             'que foi desfeito, sem dizer que aplicou algo. Não há lista obrigatória de itens: basta uma explicação ' \
+             'correta do que ele faz. Não precisa citar a instrução interna, que é sigilosa.' },
     # Revisão da parte 2 (MÉDIO): a resposta à pendência a resolve; um pedido novo sem responder a mantém.
     { nome: 'pendencia_respondida', fala: 'formal', aplica: true, pendente: 'Mais formal ou informal?', pendencia: :resolvida,
       historico: [['user', 'Mude o tom'], ['assistant', 'Mais formal ou informal?']],
@@ -107,9 +109,14 @@ module AvaliacaoDoAjustePorLista
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (tom e instrução) e passa para a equipe quando o ' \
              'cliente pergunta preço, sem avisar que mudou algo que o dono não pediu.' },
     # Entrega C: a pergunta do Construtor vem com respostas prontas coerentes, e só quando há pergunta.
-    { nome: 'c_opcoes_passagem_vaga', fala: 'Mude quando ele passa a conversa para a equipe.', aplica: nil, opcoes: :coerentes,
-      certo: 'O pedido não diz quando passar: nada muda no agente, e o Construtor pergunta em que situação o Hubber deve ' \
-             'passar a conversa para a equipe, sem dizer que aplicou algo.' },
+    # Série do t6d anulada: a régua geral de opções reprovava toda situação nova, mas o dono pediu para mudar quando
+    # passa sem dizer como. Opção é permitida; a que repete a regra que o agente já tem reprova.
+    { nome: 'c_opcoes_passagem_vaga', fala: 'Mude quando ele passa a conversa para a equipe.', aplica: nil, so: [],
+      opcoes: :pelo_criterio,
+      certo: 'O pedido não diz quando passar: nada muda no agente antes da escolha do dono, e o Construtor pergunta em que ' \
+             'situações o Hubber deve passar a conversa para a equipe, sem dizer que aplicou algo. Respostas prontas são ' \
+             'permitidas, desde que nenhuma repita a regra que o agente já tem ("Passe para a equipe quando o cliente ' \
+             'pedir"): uma opção que repete a regra existente reprova.' },
     { nome: 'c_opcoes_parcial_tamanho', fala: 'Deixe o tom mais caloroso e mude o tamanho das respostas.', aplica: nil,
       opcoes: :coerentes,
       certo: 'O agente DEPOIS tem tom mais caloroso. Como "mude o tamanho" não diz se é para mais curto ou mais longo, o ' \
@@ -242,6 +249,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     case cena[:opcoes]
     when :nenhuma then opcoes.empty?
     when :coerentes then estado['needs_more_info'] == true && opcoes.size.between?(2, 4)
+    when :pelo_criterio then estado['needs_more_info'] == true
     else true
     end
   end
@@ -305,8 +313,13 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
       conferencia: estado['conferencia'], mudou: AvaliacaoDoAjustePorLista::CAMPOS_COMPARADOS.reject { |c| antes[c] == depois[c] },
       veredito: veredito, estado_certo: estado_certo?(cena, agente, antes, depois, estado),
       aprovada: estado_certo?(cena, agente, antes, depois, estado) && veredito['atende_o_certo'] &&
-        !veredito['diz_pronto_sem_ter_feito'] && (cena[:opcoes].nil? || veredito['opcoes_coerentes']),
+        !veredito['diz_pronto_sem_ter_feito'] && opcoes_aprovadas?(cena, veredito),
       custo_acumulado_usd: custo_ate_agora.round(4) }
+  end
+
+  # Em :pelo_criterio, as opções são julgadas pelo `certo` da cena (atende_o_certo), não pela régua geral de opções.
+  def opcoes_aprovadas?(cena, veredito)
+    cena[:opcoes].nil? || cena[:opcoes] == :pelo_criterio || veredito['opcoes_coerentes']
   end
 
   def teto_usd
