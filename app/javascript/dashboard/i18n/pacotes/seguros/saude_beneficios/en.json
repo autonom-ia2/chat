@@ -400,11 +400,11 @@
       },
       "cobranca": {
         "PARA": "To remind the customer of a health plan bill coming due.",
-        "TEXTO": "Hello, [nome_cliente]. A reminder from [nome_empresa]: your health plan bill of [valor] is due on [data]. If you have already paid, please disregard. If you need a copy, tap the button below.",
+        "TEXTO": "Hello, [nome_cliente]. A reminder from [nome_empresa]: your health plan bill of [valor] is due on [data]. If you have already paid, please disregard. Check that the bill is in the plan provider's name. If you need a copy, tap the button below.",
         "TITULO": "Bill due"
       },
       "promocao": {
-        "TEXTO": "Hi, [nome_cliente]! Until [data], you get [desconto] off health plans with [nome_empresa]. Want a quote? Tap the button below."
+        "TEXTO": "Hi, [nome_cliente]! Until [data], [nome_empresa] has a campaign with [desconto] off health plans, under the plan provider's rules. Want a quote? Tap the button below."
       },
       "retomar": {
         "PARA": "To talk again to someone who asked for a quote and went quiet.",
@@ -605,7 +605,7 @@
         },
         "CONTE": {
           "ANEXO_FRASE": "Do you have the plan price list, a list of common questions or your website? {acao} It is optional.",
-          "EXEMPLO_AJUDANTE": "E.g.: answer questions about the plans' waiting periods and networks for the other agents",
+          "EXEMPLO_AJUDANTE": "E.g.: explain waiting periods and networks based on the plan provider's material, for the other agents",
           "EXEMPLO_DO_MEU_JEITO": "E.g.: answer questions about health plans and hand over to the team",
           "IDEIAS": {
             "DOCES": "Health and dental plan broker",

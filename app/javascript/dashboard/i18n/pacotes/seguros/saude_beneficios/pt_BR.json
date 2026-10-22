@@ -400,11 +400,11 @@
       },
       "cobranca": {
         "PARA": "Para lembrar o cliente do boleto do plano que vai vencer.",
-        "TEXTO": "Olá, [nome_cliente]. Lembrete da [nome_empresa]: o boleto do seu plano, de [valor], vence em [data]. Se já pagou, pode desconsiderar. Se precisar da segunda via, toque no botão abaixo.",
+        "TEXTO": "Olá, [nome_cliente]. Lembrete da [nome_empresa]: o boleto do seu plano, de [valor], vence em [data]. Se já pagou, pode desconsiderar. Confira se o boleto está no nome da operadora. Se precisar da segunda via, toque no botão abaixo.",
         "TITULO": "Boleto a vencer"
       },
       "promocao": {
-        "TEXTO": "Oi, [nome_cliente]! Até [data], você tem [desconto] de desconto em planos com a [nome_empresa]. Quer uma cotação? Toque no botão abaixo."
+        "TEXTO": "Oi, [nome_cliente]! Até [data], a [nome_empresa] tem uma campanha com [desconto] de desconto em planos, pelas regras da operadora. Quer uma cotação? Toque no botão abaixo."
       },
       "retomar": {
         "PARA": "Para voltar a falar com quem pediu cotação e sumiu.",
@@ -605,7 +605,7 @@
         },
         "CONTE": {
           "ANEXO_FRASE": "Tem a tabela de preços dos planos, uma lista de perguntas comuns ou o seu site? {acao} Não é obrigatório.",
-          "EXEMPLO_AJUDANTE": "Ex.: tirar as dúvidas sobre carência e rede dos planos para os outros agentes",
+          "EXEMPLO_AJUDANTE": "Ex.: explicar carência e rede com base no material da operadora, para os outros agentes",
           "EXEMPLO_DO_MEU_JEITO": "Ex.: tirar dúvidas sobre os planos de saúde e passar para a equipe",
           "IDEIAS": {
             "DOCES": "Corretora de planos de saúde e odonto",
@@ -617,7 +617,7 @@
       },
       "MODELOS": {
         "SDR": {
-          "AGENTE": "Que bom! Me conta quantas pessoas vão entrar no plano e a idade de cada uma que já chamo alguém da equipe.",
+          "AGENTE": "Que bom! Me conta quantas pessoas vão entrar no plano e a idade de cada uma. Já chamo alguém da equipe.",
           "CLIENTE": "Quero fazer um plano de saúde",
           "TEXTO": "Entende qual plano a pessoa procura e passa para a equipe cotar.",
           "TITULO": "Atender quem quer um plano"

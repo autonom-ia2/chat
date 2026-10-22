@@ -21,7 +21,8 @@ Camada `seguros/saude_beneficios`: corretor de planos de saúde, odonto e benef�
   Novo · Cotação · Proposta · Na operadora · Implantado. Uma recusa da operadora não conta como perda. O card fica em "Na operadora" até a proposta voltar, e a pendência é só uma marca.
   - Critérios: `crm.stage_criteria.vendas.e1..e5` em `config/pacotes/seguros/saude_beneficios/{pt_BR,en}.yml`.
 - **Carteira** (`CARTEIRA`, Atender, `camadas: ['seguros/saude_beneficios']`): Boas-vindas · Em uso · Aniversário do contrato · Renovado. Desfechos "Renovado" / "Cancelado".
-  - "Aniversário do contrato" é andamento, não espera do cliente, então não pausa o prazo.
+  - "Aniversário do contrato" é andamento, não espera do cliente: a variante da saúde (`funil/variantes.json`, lida pelo painel e pelo servidor) faz da E3 andamento, e o prazo não pausa.
+  - Nasce sem o aviso de andamento e sem o "deu certo?" (`Crm::Ai::Config::SEM_PEDIDO_TEMPLATES`): o card fica meses em "Em uso" e não há pedido aberto. A pessoa pode ligar os dois no funil.
   - Critérios: `crm.stage_criteria.carteira.e1..e4` no catálogo base.
   - Aparece primeiro no Atender, como os modelos da corretora.
 - O funil que a conta já tem não muda.
@@ -29,4 +30,4 @@ Camada `seguros/saude_beneficios`: corretor de planos de saúde, odonto e benef�
 
 ## Textos do painel
 
-Os textos do CRM (`CRM_*`) na camada da saúde foram escritos por agentes, um por área, e conferidos por um revisor por área. Cada chave foi decidida como "própria" ou "herda" (herda a camada seguros e, depois, a base). O resto do painel, o Guia, a Central e os agentes vêm nos próximos lotes do #2083.
+Todos os textos que alguma camada de seguros troca no painel (531 chaves: CRM, Agentes, Modelos, Automações, Integrações e outras) foram escritos por agentes, um por área, e conferidos por um revisor por área. Cada chave foi decidida como "própria" ou "herda" (herda a camada seguros e, depois, a base). O Guia, a Central de Ajuda, as instruções dos agentes de IA e o resto dos textos do servidor vêm no próximo lote do #2083.

@@ -72,7 +72,7 @@ RSpec.describe 'CRM funis da saúde (#2083)', type: :request do
     end
   end
 
-  it 'a Carteira nasce sem lembrete de andamento nem de "deu certo?"; o Suporte segue com os dois' do
+  it 'a Carteira nasce sem lembrete de andamento nem de "deu certo?"; Suporte e Cobrança seguem como hoje' do
     carteira, = create_crm_pipeline(account: saude, user: admin_de(saude))
     carteira.update!(counts_as_sale: false, metadata: carteira.metadata.merge('template' => 'CARTEIRA'))
     suporte, = create_crm_pipeline(account: saude, user: admin_de(saude))
@@ -80,9 +80,12 @@ RSpec.describe 'CRM funis da saúde (#2083)', type: :request do
 
     expect(Crm::Ai::Config.service_reminders_settings(carteira)).to include('progress' => false, 'resolved_check' => false)
     expect(Crm::Ai::Config.service_reminders_settings(suporte)).to include('progress' => true, 'resolved_check' => true)
+    cobranca, = create_crm_pipeline(account: saude, user: admin_de(saude))
+    cobranca.update!(counts_as_sale: false, metadata: cobranca.metadata.merge('template' => 'COBRANCA'))
+    expect(Crm::Ai::Config.service_reminders_settings(cobranca)).to include('progress' => false, 'resolved_check' => false, 'payment' => true)
   end
 
-  it 'o servidor grava a E3 da Carteira como andamento na saúde' do
+  it 'a variante da saúde dá andamento à E3 da Carteira; a conta geral não tem variante' do
     expect(Crm::PipelineStages::TemplateVariant.category_for(account: saude, template: 'CARTEIRA', position: 3)).to eq('andamento')
     expect(Crm::PipelineStages::TemplateVariant.category_for(account: geral, template: 'CARTEIRA', position: 3)).to be_nil
   end

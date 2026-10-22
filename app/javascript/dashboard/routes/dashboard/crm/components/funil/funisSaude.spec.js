@@ -20,6 +20,12 @@ const SAUDE = 'seguros.saude_beneficios';
 const chaves = (tipo, pacote) =>
   modelosDoTipo(tipo, pacote).map(modelo => modelo.chave);
 const carteira = MODELOS.find(modelo => modelo.chave === 'CARTEIRA');
+const folhas = (no, prefixo = '') =>
+  Object.entries(no).flatMap(([chave, valor]) =>
+    typeof valor === 'object'
+      ? folhas(valor, `${prefixo}${chave}.`)
+      : [`${prefixo}${chave}`]
+  );
 
 describe('health templates', () => {
   it('health account: Sell keeps only Sales; Serve starts at the Portfolio', () => {
@@ -98,19 +104,35 @@ describe('health texts', () => {
   });
 
   // O vocabulário que o Rodrigo aprovou: nada de seguro de carro, apólice ou
-  // "fechou o plano" em nenhum texto que a saúde troca.
+  // "fechou o plano" no que a conta de saúde vê nas chaves que as camadas de
+  // seguros trocam (o texto da saúde ou, sem ele, o da camada seguros).
   it.each([
     [
       'pt_BR',
       saudePtBR,
       ['segurad', 'apólice', 'sinistro', 'fechou o plano', 'beneficiári'],
     ],
-    ['en', saudeEn, ['policyholder', 'policy', 'insured', 'closed a plan']],
+    [
+      'en',
+      saudeEn,
+      ['policyholder', 'policy', 'insured', 'claim', 'closed a plan'],
+    ],
   ])(
     '%s health texts avoid the words of other lines',
     (_, pacote, palavras) => {
-      const texto = JSON.stringify(pacote).toLowerCase();
-      palavras.forEach(palavra => expect(texto).not.toContain(palavra));
+      const [base, seguros] =
+        pacote === saudePtBR ? [ptBR, segurosPtBR] : [en, segurosEn];
+      const visto = composeMessages(base, [seguros, pacote]);
+      const caminhos = [...folhas(seguros), ...folhas(pacote)];
+      caminhos.forEach(caminho => {
+        const texto = caminho
+          .split('.')
+          .reduce((no, parte) => no?.[parte], visto)
+          .toLowerCase();
+        palavras.forEach(palavra =>
+          expect(texto, caminho).not.toContain(palavra)
+        );
+      });
     }
   );
 });
