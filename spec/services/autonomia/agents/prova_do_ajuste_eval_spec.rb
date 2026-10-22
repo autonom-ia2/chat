@@ -20,6 +20,9 @@ module AvaliacaoDaProvaDoAjuste
   JUIZ = 'gpt-5.4'.freeze
   TETO_USD = 0.9
   REPETICOES_DO_CONTROLE = 3
+  # A régua do t6d (doc): 90% dos casos, arredondando para cima (19 de 21), o caso da base sempre e todos os controles.
+  PISO_DE_APROVADOS = Rational(9, 10)
+  CASO_DA_BASE = 'academia_base_estacionamento'.freeze
 
   VEREDITO = {
     name: 'veredito_prova_do_ajuste',
@@ -260,9 +263,31 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     return if destino.blank?
 
     casos, controles = relatorio.partition { |linha| linha[:controle].nil? }
-    File.write(destino, JSON.pretty_generate(custo_usd: custo_ate_agora.round(4), aprovados: casos.count { |linha| linha[:aprovada] },
-                                             rodados: casos.size, controles_ok: controles.count { |linha| linha[:aprovada] },
-                                             controles: controles.size, execucoes: relatorio))
+    File.write(destino, JSON.pretty_generate(custo_usd: custo_ate_agora.round(4), rodados: casos.size, controles: controles.size,
+                                             regua: regua(relatorio), execucoes: relatorio))
+  end
+
+  # A régua do t6d, sobre o relatório da rodada: casos aprovados acima do piso, o caso da base aprovado e todos os
+  # controles aprovados. Rodada parcial (PROVA_DO_AJUSTE_EVAL_CENA) exige todos os escolhidos e não vale como rodada.
+  def regua(linhas, parcial: ENV.fetch('PROVA_DO_AJUSTE_EVAL_CENA', '').present?)
+    casos, controles = linhas.partition { |linha| linha[:controle].nil? }
+    resultado = { casos_aprovados: casos.count { |linha| linha[:aprovada] }, minimo_de_casos: minimo_de_casos(casos, parcial),
+                  caso_da_base_aprovado: caso_da_base_aprovado(casos, parcial),
+                  controles_aprovados: controles.all? { |linha| linha[:aprovada] } }
+    resultado.merge(aprovada: resultado[:casos_aprovados] >= resultado[:minimo_de_casos] &&
+                              resultado[:caso_da_base_aprovado] != false && resultado[:controles_aprovados])
+  end
+
+  def minimo_de_casos(casos, parcial)
+    parcial ? casos.size : (AvaliacaoDaProvaDoAjuste::CASOS.size * AvaliacaoDaProvaDoAjuste::PISO_DE_APROVADOS).ceil
+  end
+
+  # nil numa rodada parcial sem o caso da base; senão, se ele foi aprovado (ausente numa rodada completa = reprovado).
+  def caso_da_base_aprovado(casos, parcial)
+    base = casos.find { |linha| linha[:caso] == AvaliacaoDaProvaDoAjuste::CASO_DA_BASE }
+    return if parcial && base.nil?
+
+    base.to_h[:aprovada] == true
   end
 
   it 'escreve perguntas que obedecem ao pedido, responde sem ferramenta e julga certo' do
@@ -284,7 +309,37 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
 
     gravar_relatorio
     expect(relatorio.size).to eq(todos.size), "teto de custo atingido: #{relatorio.size} de #{todos.size}"
-    expect(relatorio.reject { |linha| linha[:aprovada] }.pluck(:caso)).to eq([])
+    expect(regua(relatorio)).to include(aprovada: true), "reprovados: #{relatorio.reject { |linha| linha[:aprovada] }.pluck(:caso)}"
+  end
+
+  # Revisão 3 do t6d: a régua do relatório, sem custo. 19 de 21, o caso da base e todos os controles.
+  describe 'a régua da rodada' do
+    def rodada(reprovados, controle_ok: true)
+      casos = AvaliacaoDaProvaDoAjuste::CASOS.map { |caso| { caso: caso[:nome], aprovada: reprovados.exclude?(caso[:nome]) } }
+      casos + AvaliacaoDaProvaDoAjuste::CONTROLES.each_with_index.map do |controle, i|
+        { caso: controle[:nome], controle: true, aprovada: controle_ok || i.positive? }
+      end
+    end
+
+    let(:outros) { AvaliacaoDaProvaDoAjuste::CASOS.pluck(:nome) - [AvaliacaoDaProvaDoAjuste::CASO_DA_BASE] }
+
+    it 'o mínimo é 90% dos casos, para cima: 19 de 21' do
+      expect(regua(rodada([]), parcial: false)[:minimo_de_casos]).to eq(19)
+    end
+
+    it '19 de 21 passa; 18 de 21 falha' do
+      expect(regua(rodada(outros.first(2)), parcial: false)).to include(casos_aprovados: 19, aprovada: true)
+      expect(regua(rodada(outros.first(3)), parcial: false)).to include(casos_aprovados: 18, aprovada: false)
+    end
+
+    it '20 de 21 com o caso da base reprovado falha' do
+      expect(regua(rodada([AvaliacaoDaProvaDoAjuste::CASO_DA_BASE]), parcial: false))
+        .to include(casos_aprovados: 20, caso_da_base_aprovado: false, aprovada: false)
+    end
+
+    it 'um controle reprovado falha, mesmo com 21 de 21' do
+      expect(regua(rodada([], controle_ok: false), parcial: false)).to include(controles_aprovados: false, aprovada: false)
+    end
   end
 
   # Sem custo (roda sempre): a régua dos controles aprova a saída certa e reprova a errada, nas repetições.
