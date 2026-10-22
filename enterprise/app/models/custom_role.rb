@@ -79,6 +79,10 @@
 #   with inbox_manage. Credentials pasted from other systems are never shown back to it.
 # - 'token_manage': see and rotate the secrets the platform issues (inbox HMAC and API secret, webhook signing secret,
 #   agent bot token and secret, CRM integration tokens, Google conversion feed), never minting more than one holds (#2027).
+# - 'sales_value_view': see sales values in money in the CRM: card value, sums, goals in money and ratios taken from
+#   money (ROI, % of goal, win rate by value). Without it, counts stay, and a person still sees the value of the cards
+#   they own and their own numbers. A delegation key, so crm_admin does not imply it; agents without a custom role keep
+#   seeing values (#2075).
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -150,11 +154,12 @@ class CustomRole < ApplicationRecord
     financial_manage
     integration_manage
     token_manage
+    sales_value_view
   ].freeze
 
   # Delegable keys only an administrator hands out, unless the giver has grant_above_own (CLAUDE.md, #1931).
   DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage integration_manage
-                       token_manage meta_ads_manage].freeze
+                       token_manage meta_ads_manage sales_value_view].freeze
 
   validates :name, presence: true
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message

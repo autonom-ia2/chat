@@ -137,6 +137,14 @@ const promessa = computed(() => {
   const dia = promessaDoCard(props.card);
   return dia ? diaFalado(diaLocal(dia)) : '';
 });
+// #2075 — valor que a pessoa não vê (sem a chave de valores): a frase diz isso, nunca "R$ 0".
+const valorOculto = computed(() => Boolean(props.card.value_hidden));
+const fraseNegocio = computed(() => {
+  if (valorOculto.value) return `${R}.NEGOCIO_VALOR_OCULTO`;
+  return props.card.value_cents
+    ? `${R}.NEGOCIO_FRASE`
+    : `${R}.NEGOCIO_SEM_VALOR`;
+});
 const fraseCobranca = computed(() => {
   if (!vencimento.value) return `${R}.COBRANCA_SEM_DATA`;
   return diasDaqui(vencimento.value) < 0
@@ -345,7 +353,11 @@ const temConversa = computed(() =>
             </template>
             <template #valor>
               <strong class="font-semibold">
-                {{ formato.dinheiro(card.value_cents, card.currency) }}
+                {{
+                  valorOculto
+                    ? t(`${R}.VALOR_OCULTO`)
+                    : formato.dinheiro(card.value_cents, card.currency)
+                }}
               </strong>
             </template>
             <template #vencimento>
@@ -385,9 +397,7 @@ const temConversa = computed(() =>
         </I18nT>
         <I18nT
           v-else
-          :keypath="
-            card.value_cents ? `${R}.NEGOCIO_FRASE` : `${R}.NEGOCIO_SEM_VALOR`
-          "
+          :keypath="fraseNegocio"
           tag="p"
           scope="global"
           class="mb-0"

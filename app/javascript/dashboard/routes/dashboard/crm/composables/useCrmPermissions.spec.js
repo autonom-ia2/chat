@@ -80,3 +80,27 @@ describe('useCrmPermissions — canDeleteCards', () => {
     ).toBe(true);
   });
 });
+
+// #2075 — valores de venda em R$: chave protegida, o crm_admin não liga.
+describe('useCrmPermissions — canSeeSalesValues', () => {
+  it('libera o administrador e o agente sem função', () => {
+    expect(seat({ papel: 'administrator' }).canSeeSalesValues.value).toBe(true);
+    expect(seat().canSeeSalesValues.value).toBe(true);
+  });
+
+  it('libera a função com sales_value_view', () => {
+    expect(
+      seat({ funcao: 3, chaves: ['crm_view', 'sales_value_view'] })
+        .canSeeSalesValues.value
+    ).toBe(true);
+  });
+
+  it('não libera a função só com crm_admin ou crm_view', () => {
+    expect(
+      seat({ funcao: 3, chaves: ['crm_admin'] }).canSeeSalesValues.value
+    ).toBe(false);
+    expect(
+      seat({ funcao: 3, chaves: ['crm_view'] }).canSeeSalesValues.value
+    ).toBe(false);
+  });
+});

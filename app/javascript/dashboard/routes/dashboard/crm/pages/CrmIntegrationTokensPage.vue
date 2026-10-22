@@ -37,6 +37,8 @@ const SCOPE_KEYS = [
   'crm_manage_ai',
   'crm_view_reports',
   'crm_admin',
+  // #2075: sem ela, o token lê o CRM sem os valores de venda em R$.
+  'sales_value_view',
 ];
 
 const grantableScopes = computed(() =>

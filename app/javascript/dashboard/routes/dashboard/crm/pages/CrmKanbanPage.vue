@@ -146,7 +146,16 @@ const {
   canManageAi,
   canExportCrm,
   canAdminCrm,
+  canSeeSalesValues,
 } = useCrmPermissions();
+
+// #2075 — sem a chave de valores o servidor ignora filtro e ordem por valor; a tela também larga os dois.
+const temFiltroDeValor = f =>
+  Boolean(f) && (`${f.valueMin ?? ''}` !== '' || `${f.valueMax ?? ''}` !== '');
+const semFiltroDeValor = f =>
+  canSeeSalesValues.value ? f : { ...f, valueMin: '', valueMax: '' };
+const ordemPermitida = sort =>
+  !canSeeSalesValues.value && sort?.id === 'value' ? null : sort;
 
 // Ação em massa (#1874): cada botão só para quem pode a ação; sem nenhuma, a lista não tem seleção.
 const bulkPermissions = computed(() => ({
@@ -238,7 +247,7 @@ watch(
   },
   { immediate: true }
 );
-const filters = ref({ ...storedFilters.value });
+const filters = ref(semFiltroDeValor({ ...storedFilters.value }));
 const drawerMode = ref('create');
 const selectedCard = ref(null);
 // Acesso por funil (#1149): o card aberto diz se a pessoa pode mexer nele.
@@ -828,7 +837,7 @@ const hasMoreCards = computed(
 // FilterQuery whitelists (e.g. `value_cents`). Empty when no sort is active.
 // Shared by the list fetch and the Excel export (#722), so both use the same order.
 const listSortParams = computed(() => {
-  const activeSort = listSort.value;
+  const activeSort = ordemPermitida(listSort.value);
   const sortParam = activeSort?.id
     ? COLUMN_TO_SORT_PARAM[activeSort.id]
     : undefined;
@@ -1855,13 +1864,20 @@ const onSavedViewApply = async ({ view }) => {
       ...(config.density ? { density: config.density } : {}),
     });
   }
-  store.dispatch('crmKanban/setListSort', config.sort || null);
+  const valorIgnorado =
+    !canSeeSalesValues.value &&
+    (temFiltroDeValor(config.filters) || config.sort?.id === 'value');
+  store.dispatch('crmKanban/setListSort', ordemPermitida(config.sort || null));
   store.dispatch('crmKanban/setListGroupBy', config.group_by || 'none');
   if (config.filters) {
-    filters.value = { ...defaultFilters(), ...config.filters };
+    filters.value = semFiltroDeValor({
+      ...defaultFilters(),
+      ...config.filters,
+    });
     await store.dispatch('crmKanban/setFilters', filters.value);
   }
   await loadCurrentList();
+  if (valorIgnorado) useAlert(t('CRM_KANBAN.LIST.SAVED_VIEWS.VALUE_IGNORED'));
 };
 
 const onSavedViewCreate = async payload => {
@@ -2912,7 +2928,7 @@ onUnmounted(() => {
         :show-meta-column="isMetaSyncActive"
         :loading="uiFlags.isFetchingCardsList"
         :error="!!loadError"
-        :sort="listSort"
+        :sort="ordemPermitida(listSort)"
         :group-by="listGroupBy"
         :column-state="listColumnState"
         :selected-ids="listSelection"

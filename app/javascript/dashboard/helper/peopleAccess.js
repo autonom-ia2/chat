@@ -5,6 +5,7 @@
 import {
   DELEGATION_KEYS,
   GRANT_ABOVE_OWN_PERMISSION,
+  KEY_DEPENDENCIES,
 } from 'dashboard/constants/permissions';
 
 const VIEW_SUFFIX = '_view';
@@ -58,10 +59,13 @@ export const roleLockReason = (giver, role) => {
   return reachesRole(giver, role) ? null : LOCK_REASONS.ABOVE;
 };
 
-// Why the giver cannot put this key in a role, or null when they can.
+// Why the giver cannot put this key in a role, or null when they can. A key that needs another (KEY_DEPENDENCIES,
+// #2075) is locked by the other one too: the role editor turns both on together.
 export const keyLockReason = (giver, key) => {
-  if (reachesKeys(giver, [key])) return null;
-  return DELEGATION_KEYS.includes(key)
+  const keys = KEY_DEPENDENCIES[key] ? [key, KEY_DEPENDENCIES[key]] : [key];
+  const locked = keys.find(item => !reachesKeys(giver, [item]));
+  if (!locked) return null;
+  return DELEGATION_KEYS.includes(locked)
     ? LOCK_REASONS.DELEGATION
     : LOCK_REASONS.MISSING;
 };

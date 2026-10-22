@@ -678,10 +678,14 @@ describe('permissionMatrix', () => {
       expect(ptBR.CUSTOM_ROLE.EXTRAS.CRM_METAS_MANAGE).toBeTruthy();
     });
 
-    it('liga e desliga sozinha, e sem acesso ao CRM sai junto', () => {
+    // #2075: a meta é dinheiro; ligar as metas liga os valores em R$, desligar as metas deixa os valores.
+    it('liga junto com os valores em R$, desliga sozinha, e sem acesso ao CRM sai junto', () => {
       const on = toggleExtra(crm, METAS, ['crm_view']);
-      expect(on).toEqual(['crm_view', METAS]);
-      expect(toggleExtra(crm, METAS, on)).toEqual(['crm_view']);
+      expect(on).toEqual(['crm_view', METAS, 'sales_value_view']);
+      expect(toggleExtra(crm, METAS, on)).toEqual([
+        'crm_view',
+        'sales_value_view',
+      ]);
       expect(setLevel(crm, LEVELS.NONE, on)).toEqual([]);
     });
 
@@ -693,6 +697,39 @@ describe('permissionMatrix', () => {
       const on = toggleExtra(crm, 'crm_admin', ['crm_view']);
       expect(on).toContain(METAS);
       expect(isExtraLocked(METAS, on)).toBe(true);
+    });
+  });
+
+  describe('crm: valores de venda em R$ (#2075)', () => {
+    const crm = moduleByKey('CRM');
+    const VALORES = 'sales_value_view';
+
+    it('aparece para quem vê o CRM, não liga sozinha e tem texto em en e pt_BR', () => {
+      expect(visibleExtras(crm, ['crm_view'])).toContain(VALORES);
+      expect(setLevel(crm, LEVELS.MANAGE, ['crm_view'])).not.toContain(VALORES);
+      expect(en.CUSTOM_ROLE.PERMISSIONS.SALES_VALUE_VIEW).toBeTruthy();
+      expect(ptBR.CUSTOM_ROLE.PERMISSIONS.SALES_VALUE_VIEW).toBeTruthy();
+      expect(en.CUSTOM_ROLE.EXTRAS.SALES_VALUE_VIEW).toBeTruthy();
+      expect(ptBR.CUSTOM_ROLE.EXTRAS.SALES_VALUE_VIEW).toBeTruthy();
+    });
+
+    it('desligar os valores desliga as metas, que dependem deles, menos as que o crm_admin trava', () => {
+      const on = ['crm_view', 'crm_metas_manage', VALORES];
+      expect(toggleExtra(crm, VALORES, on)).toEqual(['crm_view']);
+      const admin = toggleExtra(crm, 'crm_admin', ['crm_view', VALORES]);
+      expect(toggleExtra(crm, VALORES, admin)).toContain('crm_metas_manage');
+      expect(toggleExtra(crm, VALORES, ['crm_view'])).toEqual([
+        'crm_view',
+        VALORES,
+      ]);
+    });
+
+    // Chave protegida: o Administrador do CRM, que quem cuida de Pessoas repassa, não a liga.
+    it('é sensível e o Administrador do CRM não a liga', () => {
+      expect(sensitiveExtrasOn(['crm_view', VALORES])).toEqual([VALORES]);
+      const on = toggleExtra(crm, 'crm_admin', ['crm_view']);
+      expect(on).not.toContain(VALORES);
+      expect(isExtraLocked(VALORES, on)).toBe(false);
     });
   });
 

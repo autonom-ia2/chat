@@ -46,6 +46,7 @@ import {
   CONVERSAS_DO_CONTATO,
   useConversaDeEmail,
 } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
+import { useConversaDoInstagram } from 'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
 import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
@@ -112,6 +113,11 @@ export default {
       classesDaLista: classesDoEmail,
       classesDaBarra: classesDaRespostaDoEmail,
     } = useConversaDeEmail();
+    // #2079: conversa do Instagram com a cara do Direct, atrás da chave própria.
+    const {
+      classesDaLista: classesDoInstagram,
+      classesDaBarra: classesDaRespostaDoInstagram,
+    } = useConversaDoInstagram();
     // #1702: superadmin entrando como o usuário não marca a mensagem como lida no WhatsApp do cliente.
     const { isImpersonating } = useImpersonation();
 
@@ -134,6 +140,8 @@ export default {
       emailNovo,
       classesDoEmail,
       classesDaRespostaDoEmail,
+      classesDoInstagram,
+      classesDaRespostaDoInstagram,
       isImpersonating,
       selecaoParaEncaminhar,
     };
@@ -767,7 +775,7 @@ export default {
     <MessageList
       ref="conversationPanelRef"
       class="conversation-panel flex-shrink flex-grow basis-px flex flex-col overflow-y-auto relative h-full m-0 pb-4"
-      :class="[classesDaLista, classesDoEmail]"
+      :class="[classesDaLista, classesDoEmail, classesDoInstagram]"
       :current-user-id="currentUserId"
       :first-unread-id="primeiraNaoLidaDaLista"
       :is-an-email-channel="isAnEmailChannel"
@@ -832,7 +840,11 @@ export default {
     </MessageList>
     <div
       class="flex relative flex-col bg-n-surface-1"
-      :class="[classesDaBarra, classesDaRespostaDoEmail]"
+      :class="[
+        classesDaBarra,
+        classesDaRespostaDoEmail,
+        classesDaRespostaDoInstagram,
+      ]"
     >
       <div
         v-if="isAnyoneTyping"

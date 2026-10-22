@@ -77,6 +77,8 @@ import {
   indicesDeDocumento,
   usePeleDaResposta,
 } from 'dashboard/components-next/conversa-canal/usePeleDaResposta';
+import { useInstagramDaConversa } from 'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram';
+import { GRAVADOR_DO_INSTAGRAM } from 'dashboard/components-next/conversa-canal/instagram/visualInstagram';
 import { ABRIR_MODELOS_DO_WHATSAPP } from 'dashboard/components-next/conversa-canal/pele';
 import GravadorDoWhatsapp from 'dashboard/components-next/conversa-canal/GravadorDoWhatsapp.vue';
 import CabecaDaResposta from 'dashboard/components-next/conversa-canal/email/CabecaDaResposta.vue';
@@ -162,6 +164,8 @@ export default {
     // #1786: na conversa de e-mail nova, Responder / Responder a todos / Encaminhar.
     const { ligado: emailNovo, fecharResposta: fecharRespostaDoEmail } =
       useEmailDaConversa();
+    // #2079: na conversa do Instagram, o "Mensagem..." do Direct (a pílula vem de usePeleDaResposta).
+    const { ligado: instagram } = useInstagramDaConversa();
     // #2067: ficar com a conversa ao enviar (com a flag da conta, no lugar da faixa
     // "Atribuir a mim").
     const ficar = useFicarComAConversa();
@@ -231,6 +235,8 @@ export default {
       iaDoEmail,
       shortcutKey,
       macroExecution,
+      instagram,
+      GRAVADOR_DO_INSTAGRAM,
       classesDaResposta,
       ehWhatsapp,
       emailNovo,
@@ -427,6 +433,9 @@ export default {
         return this.$t('CONVERSATION.FOOTER.MESSAGING_RESTRICTED');
       }
       if (!this.isPrivate && this.textoDoCampo) return this.textoDoCampo;
+      if (!this.isPrivate && this.instagram) {
+        return this.$t('CONVERSA_CANAL.INSTAGRAM.CAMPO');
+      }
       // #1786: no e-mail novo, uma frase simples no lugar do atalho técnico.
       if (!this.isPrivate && this.emailNovo) {
         return this.$t('CONVERSA_CANAL.EMAIL.ESCREVA');
@@ -2000,10 +2009,13 @@ export default {
           v-model:to-emails="toEmails"
         />
         <GravadorDoWhatsapp
-          v-if="showAudioRecorderEditor && textoDoCampo && !isPrivate"
+          v-if="
+            showAudioRecorderEditor && (textoDoCampo || instagram) && !isPrivate
+          "
           ref="audioRecorderInput"
           :audio-record-format="audioRecordFormat"
           :duracao="recordingAudioDurationText"
+          :visual="instagram ? GRAVADOR_DO_INSTAGRAM : null"
           @recorder-progress-changed="onRecordProgressChanged"
           @finish-record="onFinishRecorder"
           @record-error="onRecordError"
@@ -2043,7 +2055,7 @@ export default {
           class="input popover-prosemirror-menu"
           :is-private="isOnPrivateNote"
           :placeholder="messagePlaceHolder"
-          :reload-on-placeholder-change="emailNovo"
+          :reload-on-placeholder-change="emailNovo || instagram"
           :hidden-menu-options="emailNovo ? FORA_DA_REGUA : []"
           :copilot-available="emailNovo ? iaDoEmail.disponivel.value : null"
           :update-selection-with="updateEditorSelectionWith"

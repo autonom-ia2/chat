@@ -5,12 +5,15 @@
 # O R$ dos colegas é número comercial e aparece para quem vê a equipe; o custo da IA, só para o administrador ou o
 # Financeiro (`financial_view`, #1982).
 # `leitura`: quem vê a equipe mas não trabalha no CRM (função só com `crm_view_reports`) vê os números sem os botões.
+# `valor`: sem `sales_value_view` (#2075), todo R$ (vendido, meta, parado, por pessoa, da IA) e o "no ritmo da meta" vêm
+# vazios, com `valorOculto: true`; as contagens ficam.
 class Crm::Numeros::Equipe
   ESPERANDO_MIN = 30
   MAX_PROXIMO = 2
   LINK_IA_ESPERANDO = { da_ia: '1', esperando_min: ESPERANDO_MIN.to_s, no_funil: '1' }.freeze
 
-  # perfil: { dono:, custo:, leitura: } de quem abre. dono = administrador (o papel na tela); custo = financial_view.
+  # perfil: { dono:, custo:, leitura:, valor: } de quem abre. dono = administrador (o papel na tela); custo =
+  # financial_view; valor = sales_value_view.
   def initialize(account:, user:, mes:, acesso:, perfil:)
     @account = account
     @user = user
@@ -18,6 +21,7 @@ class Crm::Numeros::Equipe
     @dono = perfil[:dono]
     @custo = perfil[:custo]
     @leitura = perfil[:leitura]
+    @valor = perfil.fetch(:valor, true)
     @cards = Crm::Numeros::CardsDaEquipe.new(account: account, pipelines: acesso.apply_to_reports(account.crm_pipelines.active))
   end
 
@@ -26,6 +30,7 @@ class Crm::Numeros::Equipe
 
     {
       vazio: false, papel: papel, mes: @mes.info, moeda: moeda, estimado: credito[:estimado], leitura: @leitura,
+      valorOculto: !@valor,
       funis: { vendas: @cards.funil(:venda), suporte: @cards.funil(:atende) },
       topo: topo, proximo: proximo, vendendo: vende? ? vendendo : nil, atendendo: atende? ? atendendo : nil,
       ajuda: @mes.fechado? ? [] : pessoas.ajuda, quemCuidou: quem_cuidou
@@ -74,12 +79,17 @@ class Crm::Numeros::Equipe
             .pick(:metadata)&.dig('goals', 'currency').presence
   end
 
+  # R$ na tela: nil para quem não vê valores de venda.
   def reais(cents)
-    (cents.to_i / 100.0).round(2)
+    (cents.to_i / 100.0).round(2) if @valor
   end
 
   # A soma das metas do mês dos funis de Vender, na moeda da tela (a mesma conta da barra da equipe, F3). Sem meta: nil.
   def meta_de_venda
+    soma_das_metas if @valor
+  end
+
+  def soma_das_metas
     metas = @account.crm_pipelines.active.where(id: @cards.ids(:venda)).pluck(:metadata).filter_map do |metadata|
       goals = (metadata || {})['goals'] || {}
       goals['monthly_target_cents'].to_i if (goals['currency'].presence || 'BRL') == moeda
@@ -174,12 +184,13 @@ class Crm::Numeros::Equipe
     return @ia if defined?(@ia)
 
     @ia = Crm::Numeros::IaNoTime.new(account: @account, range: @mes.range, cards: @cards,
-                                     ganhos: { ids: credito[:ganhos], moeda: moeda }, custo: @custo).perform
+                                     ganhos: { ids: credito[:ganhos], moeda: moeda, valor: @valor }, custo: @custo).perform
   end
 
   def pessoas
     @pessoas ||= Crm::Numeros::PessoasDaEquipe.new(account: @account, user: @user, range: @mes.range, cards: @cards,
-                                                   valores: { credito: credito[:por_pessoa], moeda: moeda, metas: metas })
+                                                   valores: { credito: credito[:por_pessoa], moeda: moeda, metas: metas,
+                                                              visivel: @valor })
   end
 
   def metas

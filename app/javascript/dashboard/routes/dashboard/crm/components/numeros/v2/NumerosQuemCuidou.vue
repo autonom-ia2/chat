@@ -31,8 +31,10 @@ const titulo = computed(() => {
 const plataforma = computed(() => {
   const p = props.cuidou.plataforma;
   if (!p) return '';
+  // #2075 — sem a chave de valores o servidor manda o R$ vazio (null): a frase fica só com as contagens.
+  const chave = p.valor === null ? 'PLATAFORMA_SEM_VALOR' : 'PLATAFORMA';
   return t(
-    `${P}.CUIDOU.PLATAFORMA`,
+    `${P}.CUIDOU.${chave}`,
     { ...p, ia: nomeDaIa.value, valor: dinheiro(p.valor || 0) },
     p.participou || 0
   );
@@ -50,13 +52,16 @@ const caminho = computed(() => {
 // Uma linha por pessoa (#1999): quem vende e atende tem os dois números lado a
 // lado. O prazo por pessoa ainda não é gravado: de quem atende, só quanto
 // resolveu, e o link para as conversas dela no relatório.
+const detalheDaVenda = v =>
+  t(`${P}.CUIDOU.${v.meta ? 'DETALHE_VENDA' : 'DETALHE_VENDA_SEM_META'}`, {
+    ...v,
+    valor: dinheiro(v.valor),
+    meta: dinheiro(v.meta || 0),
+  });
 const vendaDe = v => ({
   numeros: t(`${P}.CUIDOU.VENDA`, v),
   pct: v.meta ? v.pct : null,
-  detalhe: t(
-    `${P}.CUIDOU.${v.meta ? 'DETALHE_VENDA' : 'DETALHE_VENDA_SEM_META'}`,
-    { ...v, valor: dinheiro(v.valor), meta: dinheiro(v.meta || 0) }
-  ),
+  detalhe: v.valor === null ? '' : detalheDaVenda(v),
 });
 
 // Sem meta de casos (#1998), o detalhe repetiria o "resolveu": fica vazio.
@@ -97,10 +102,10 @@ const foraDaEquipe = computed(() => {
   if (!fora) return '';
   return [
     fora.venda
-      ? t(`${P}.CUIDOU.FORA_VENDA`, {
-          fechou: fora.venda.fechou,
-          valor: dinheiro(fora.venda.valor),
-        })
+      ? t(
+          `${P}.CUIDOU.${fora.venda.valor === null ? 'FORA_VENDA_SEM_VALOR' : 'FORA_VENDA'}`,
+          { fechou: fora.venda.fechou, valor: dinheiro(fora.venda.valor) }
+        )
       : null,
     fora.atende
       ? t(`${P}.CUIDOU.ATENDE_SEM_PRAZO`, fora.atende, fora.atende.resolveu)
@@ -134,9 +139,11 @@ const numerosDaIa = i => {
   return [
     comFrase ? null : parte('IA_ATENDEU', i.atendeu),
     !comFrase && i.venda
-      ? parte('IA_PARTICIPOU', i.venda.participou, {
-          valor: dinheiro(i.venda.valor),
-        })
+      ? parte(
+          i.venda.valor === null ? 'IA_PARTICIPOU_SEM_VALOR' : 'IA_PARTICIPOU',
+          i.venda.participou,
+          { valor: dinheiro(i.venda.valor) }
+        )
       : null,
     parte('IA_PASSOU', i.passou),
     i.atende ? parte('IA_RESOLVEU_SOZINHA', i.atende.resolveuSozinha) : null,

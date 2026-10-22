@@ -1,5 +1,5 @@
 # A gaveta "Metas do mês" de CRM › Números (#1991, F4 do #1871). Atrás da flag da conta (`crm_metas`, 404 desligada) e
-# da Crm::MetasPolicy (administrador; no EE, também `crm_metas_manage` com `crm_view`, ou `crm_admin`).
+# da Crm::MetasPolicy (administrador; no EE, `crm_metas_manage` com `crm_view`, ou `crm_admin`, sempre com `sales_value_view`).
 #
 #   GET metas   o mês de hoje (fuso da conta): os funis de Vender, a meta do funil e a de cada pessoa, com a sugestão
 #   PUT metas   grava { mes, funis: [{ id, metaFunil, pessoas: [{ id, meta }] }] } (reais inteiros; vazio ou 0 tira a

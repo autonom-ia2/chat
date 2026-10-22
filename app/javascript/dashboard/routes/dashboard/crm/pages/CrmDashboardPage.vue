@@ -21,6 +21,7 @@ import {
   throughputDatasets,
 } from '../helpers/dashboardOutcomes';
 import { originRows as buildOriginRows } from '../helpers/dashboardOrigins';
+import { useCrmPermissions } from '../composables/useCrmPermissions';
 
 const { t } = useI18n();
 const { resolvedLocale } = useLocale();
@@ -171,6 +172,12 @@ const hasFunnel = computed(() =>
 
 // Funil de atendimento (#1151) mostra resolvidos e cancelados, nunca venda.
 const isSaleFunnel = computed(() => showsSales(summary.value));
+// #2075 — sem a chave de valores o servidor manda o dinheiro vazio: os quadros em R$ e a meta somem
+// (as contagens ficam), em vez de mostrar "R$ 0".
+const { canSeeSalesValues } = useCrmPermissions();
+const comValores = computed(
+  () => isSaleFunnel.value && canSeeSalesValues.value
+);
 const outcomeCards = computed(() => outcomeKpis(summary.value));
 // #1498 — funil de Atender: tempo de solução (média), sem a espera do cliente.
 const tempoDeSolucao = computed(() => {
@@ -469,7 +476,7 @@ onMounted(async () => {
           />
         </div>
         <div
-          v-if="isSaleFunnel"
+          v-if="comValores"
           class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
         >
           <ReportMetricCard
@@ -479,7 +486,7 @@ onMounted(async () => {
           />
         </div>
         <div
-          v-if="isSaleFunnel"
+          v-if="comValores"
           class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
         >
           <ReportMetricCard
@@ -489,7 +496,7 @@ onMounted(async () => {
           />
         </div>
         <div
-          v-if="isSaleFunnel"
+          v-if="comValores"
           class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
         >
           <ReportMetricCard
@@ -499,7 +506,7 @@ onMounted(async () => {
           />
         </div>
         <div
-          v-if="isSaleFunnel"
+          v-if="comValores"
           class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
         >
           <ReportMetricCard
@@ -509,7 +516,7 @@ onMounted(async () => {
           />
         </div>
         <div
-          v-if="isSaleFunnel"
+          v-if="comValores"
           class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
         >
           <h3
@@ -581,7 +588,10 @@ onMounted(async () => {
               :value="formatNumber(metaSummary?.accepted_count)"
             />
           </div>
-          <div class="p-4 border rounded-xl border-n-weak bg-n-solid-1">
+          <div
+            v-if="canSeeSalesValues"
+            class="p-4 border rounded-xl border-n-weak bg-n-solid-1"
+          >
             <ReportMetricCard
               :label="t('CRM_KANBAN.DASHBOARD.META_SYNC.REVENUE')"
               :value="metaRevenueLabel"
@@ -654,7 +664,7 @@ onMounted(async () => {
                   {{ t('CRM_DASHBOARD.ORIGIN.WON') }}
                 </p>
               </div>
-              <div>
+              <div v-if="canSeeSalesValues">
                 <p class="m-0 text-sm font-medium truncate text-n-slate-12">
                   {{ formatCurrencyList(row.valueList) }}
                 </p>
@@ -731,7 +741,7 @@ onMounted(async () => {
               {{ formatNumber(stage.count) }}
             </span>
             <span
-              v-if="isSaleFunnel"
+              v-if="comValores"
               class="w-48 text-xs text-right truncate shrink-0 text-n-slate-11"
             >
               {{ formatCurrencyList(stage.value_by_currency) }}

@@ -121,6 +121,18 @@ describe('peopleAccess', () => {
       expect(keyLockReason(manager, 'contact_view')).toBeNull();
     });
 
+    // #2075: as metas do mês precisam dos valores em R$, que são chave protegida.
+    it('locks a key whose dependency is out of reach, with the dependency reason', () => {
+      const metas = {
+        ...manager,
+        permissions: ['crm_view', 'crm_metas_manage'],
+      };
+      expect(keyLockReason(metas, 'crm_metas_manage')).toBe(
+        LOCK_REASONS.DELEGATION
+      );
+      expect(keyLockReason(grantAbove, 'crm_metas_manage')).toBeNull();
+    });
+
     it('opens every key to whoever reaches everything', () => {
       expect(keyLockReason(grantAbove, 'grant_above_own')).toBeNull();
       expect(keyLockReason(admin, 'inbox_manage')).toBeNull();
