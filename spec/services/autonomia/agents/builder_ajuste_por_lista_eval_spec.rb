@@ -83,8 +83,9 @@ module AvaliacaoDoAjustePorLista
     { nome: 'b2_tudo_sem_pedido', fala: 'Me explica o que o Hubber faz hoje, sem mudar nada nele.', aplica: :nada,
       certo: 'Nada muda no agente, e a resposta ao dono explica, com palavras simples, ao menos duas coisas concretas que ' \
              'o Hubber faz hoje com o cliente, em qualquer combinação (ex.: o que explica, o que coleta, quando passa ' \
-             'para a equipe, o que não faz), sem dizer que aplicou algo. Uma frase genérica como "ele atende os ' \
-             'clientes" não basta. Não precisa citar a instrução interna, que é sigilosa.' },
+             'para a equipe, o que não faz), ou, quando algo que ninguém pediu foi desfeito, diz o que foi desfeito (o ' \
+             'texto fixo do desfeito é um desfecho certo), sem dizer que aplicou algo. Uma frase genérica como "ele ' \
+             'atende os clientes" não basta. Não precisa citar a instrução interna, que é sigilosa.' },
     # Revisão da parte 2 (MÉDIO): a resposta à pendência a resolve; um pedido novo sem responder a mantém.
     { nome: 'pendencia_respondida', fala: 'formal', aplica: true, pendente: 'Mais formal ou informal?', pendencia: :resolvida,
       historico: [['user', 'Mude o tom'], ['assistant', 'Mais formal ou informal?']],
@@ -118,8 +119,9 @@ module AvaliacaoDoAjustePorLista
              'situações o Hubber deve passar a conversa para a equipe, sem dizer que aplicou algo. Respostas prontas são ' \
              'permitidas, desde que nenhuma repita a regra que o agente já tem ("Passe para a equipe quando o cliente ' \
              'pedir"): uma opção que repete a regra existente reprova. Cada resposta pronta é uma situação de passar a ' \
-             'conversa para a equipe, plausível para uma corretora, que não repete a regra de hoje, não inventa dado do ' \
-             'negócio (preço, horário, endereço, nome) e não muda outra coisa do agente.' },
+             'conversa para a equipe, plausível para uma corretora, que não repete a regra de hoje, não inventa valor, ' \
+             'horário, endereço ou nome (citar o assunto, como perguntar sobre valores, é uma situação válida) e não ' \
+             'muda outra coisa do agente.' },
     { nome: 'c_opcoes_parcial_tamanho', fala: 'Deixe o tom mais caloroso e mude o tamanho das respostas.', aplica: nil,
       opcoes: :coerentes,
       certo: 'O agente DEPOIS tem tom mais caloroso. Como "mude o tamanho" não diz se é para mais curto ou mais longo, o ' \
