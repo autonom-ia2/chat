@@ -73,7 +73,8 @@ class Crm::MetaAds::Relatorio::Planilha
 
   def gasto
     [[t('summary.spend'), totais[:spend].to_f, :dinheiro]] +
-      (totais[:cost_per_sale] ? [[t('summary.cost_per_sale'), totais[:cost_per_sale].to_f, :dinheiro]] : [])
+      (totais[:cost_per_sale] ? [[t('summary.cost_per_sale'), totais[:cost_per_sale].to_f, :dinheiro]] : []) +
+      (totais[:other_spend].to_f.positive? ? [[t('summary.other_spend'), totais[:other_spend].to_f, :dinheiro]] : [])
   end
 
   def colunas_de_anuncio

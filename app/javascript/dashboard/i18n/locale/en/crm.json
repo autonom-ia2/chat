@@ -130,6 +130,13 @@
     "PRIVACY_FOOTER": "We never show the content of conversations with AI.",
     "RATE_UNAVAILABLE": "BRL exchange rate is unavailable right now; showing values in USD.",
     "RESOURCE_FALLBACK": "Other",
+    "IA_VS_HUMANO": {
+      "TITULO": "What the AI did in the pipeline",
+      "MUDOU": "In this period, the AI moved customers to another stage on its own {auto} time. | In this period, the AI moved customers to another stage on its own {auto} times.",
+      "NAO_MUDOU": "In this period, the AI did not move anyone to another stage on its own.",
+      "SUGERIU": "It also suggested changes: the team accepted {aceitas} and turned down {recusadas}.",
+      "VAZIA": "In this period, the AI did not move anyone to another stage, nor suggest changes."
+    },
     "LOADING": "Loading AI usage…",
     "ERROR": "Could not load AI usage. Try again.",
     "SEM_VALORES": {
@@ -450,7 +457,7 @@
     },
     "DASHBOARD": {
       "TITLE": "CRM Dashboard",
-      "SUBTITLE": "Pipeline performance: funnel, deals won and lost, AI vs human, and throughput.",
+      "SUBTITLE": "Pipeline performance: funnel, deals won and lost, and throughput.",
       "META_SYNC": {
         "TITLE": "Meta conversions (Ads)",
         "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, landing page sales through the website Pixel.",
@@ -523,14 +530,6 @@
         "CARDS": "cards",
         "EMPTY": "No open cards in this pipeline."
       },
-      "AI": {
-        "TITLE": "AI vs human",
-        "AUTO_MOVES": "AI auto-moves",
-        "ACCEPTED": "Accepted by human",
-        "DISMISSED": "Dismissed",
-        "ACCEPTANCE_RATE": "Acceptance rate",
-        "EMPTY": "No AI activity in the period."
-      },
       "THROUGHPUT": {
         "TITLE": "Throughput (closed)",
         "WON": "Won",
@@ -561,7 +560,7 @@
         "SO_DIAS": "{d} d",
         "SO_HORAS": "{h} h"
       },
-      "SUBTITLE_ATENDER": "Pipeline performance: stages, resolved and cancelled, resolution time and AI vs human."
+      "SUBTITLE_ATENDER": "Pipeline performance: stages, resolved and cancelled, and resolution time."
     },
     "ACTIONS": {
       "REFRESH": "Refresh",
@@ -2260,6 +2259,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
+        "BACK": "Back",
         "TITLE": "Ads",
         "SUBTITLE": "See which ads bring conversations and sales.",
         "LOADING": "Loading…",
@@ -2297,6 +2297,114 @@
             "TALKING": "Talking",
             "LOST": "Lost",
             "NO_ANSWER": "No reply"
+          }
+        },
+        "CONNECT": {
+          "BACK": "Back to the panel",
+          "STEP_OF": "Step {step} of {total}",
+          "COPIED": "Copied",
+          "COPY_AGAIN": "Copy the code again",
+          "TRUST": {
+            "SAFE": "We only see the numbers. Nothing changes in your ads",
+            "TIME": "No password, no key",
+            "OFF": "Turn it off anytime"
+          },
+          "COPY": {
+            "TITLE": "Copy the {partner} code",
+            "TEXT": "This is how Meta knows who to share with.",
+            "CTA": "Copy and continue"
+          },
+          "META": {
+            "TITLE": "Paste the code on Meta",
+            "TEXT": "On the Partners screen, tap Add, choose to give access to your assets and paste the code.",
+            "CTA": "Open Meta",
+            "AGAIN": "Open Meta again"
+          },
+          "MARK": {
+            "TITLE": "Check the ad account",
+            "TEXT": "Turn on only \"View performance\" and save. Nothing else is needed.",
+            "CTA": "Done, I shared it"
+          },
+          "SEND": {
+            "TITLE": "Send this message to who creates your ads",
+            "TEXT": "It explains what to do, step by step.",
+            "MESSAGE": "Hi! Please share our ad account with {partner}, just to see the numbers.\n\n1. Open: {link}\n2. Tap Add and choose to give access to your assets\n3. Paste the code {id}\n4. Check the ad account, turn on only \"View performance\" and save\n\nThanks!",
+            "WHATSAPP": "Send on WhatsApp",
+            "COPY": "Copy message",
+            "AFTER": "When they say it is shared, tap here:",
+            "CHECK": "Check now"
+          },
+          "CHECKING": "Looking for your account on Meta…",
+          "CONNECTING": "Connecting {name}…",
+          "SPEND_30D": "{value} in the last 30 days",
+          "FOUND": {
+            "TITLE": "We found your ad account",
+            "CTA": "Connect this account"
+          },
+          "CHOOSE": {
+            "TITLE": "Which account runs your WhatsApp ads?",
+            "TEXT": "We found more than one. Tap the one you use.",
+            "RECOMMENDED": "Most used"
+          },
+          "NOT_YET": {
+            "TITLE": "Not there yet",
+            "TITLE_ERROR": "Could not connect",
+            "TEXT": "Meta does not show the account shared with {partner} yet. Sometimes it takes a few minutes.",
+            "AUTO": "Checking again by itself…",
+            "CHECK": "Check again",
+            "STEPS": "See the steps again",
+            "ASK_SOMEONE": "Rather ask someone else?",
+            "TEXT_FACEBOOK": "We found no ad account on this Facebook. Sign in with the Facebook you use to create your ads."
+          },
+          "DONE": {
+            "TITLE": "Done, you are connected!",
+            "TEXT": "We are bringing the spend of {name}. In a few minutes it shows on your panel, next to conversations and sales.",
+            "CTA": "See my panel",
+            "DESTINATION_FAILED": "We could not mark WhatsApp as where your ads lead. Open the Connection tab, in \"Ad destination\", and choose WhatsApp."
+          },
+          "GUIDE": {
+            "LABEL": "Where to tap on Meta",
+            "SETTINGS": "Business settings",
+            "PARTNERS": "Partners",
+            "ADD": "Add",
+            "GIVE_ACCESS": "Give a partner access to your assets",
+            "PARTNER_ID": "Partner ID",
+            "PASTE": "paste the code here",
+            "AD_ACCOUNTS": "Ad accounts",
+            "YOUR_ACCOUNT": "Your ad account",
+            "VIEW": "View performance",
+            "MANAGE": "Manage campaigns",
+            "SAVE": "Save changes",
+            "CAPTION": "A drawing to guide you. The Meta screen may look a little different."
+          },
+          "START": {
+            "TITLE": "See how much you spent on each ad",
+            "TEXT": "Sign in with the same Facebook you use to create your ads. We find the account for you.",
+            "HOW": "How it works",
+            "STEPS": {
+              "ENTER": "Sign in with Facebook",
+              "CHOOSE": "Confirm your account",
+              "SEE": "See your spend"
+            },
+            "CTA": "Sign in with Facebook",
+            "RETRY": "Sign in again",
+            "WAITING": "The Facebook window is open. Keep everything checked and tap \"Continue\" until the end.",
+            "POPUP_TITLE": "The Facebook window did not open",
+            "POPUP_TEXT": "The browser may have blocked it. Tap the blocked window icon in the address bar, choose \"Always allow\" and sign in again.",
+            "REFUSED_TITLE": "Facebook did not share your ads",
+            "BROKEN": "The connection with Meta dropped. Sign in again to see your spend.",
+            "SOMEONE": "Someone else takes care of my ads",
+            "PARTNER": "Share through Business Manager"
+          }
+        },
+        "PENDING": {
+          "CHOOSING": {
+            "TEXT": "You only need to pick your ad account.",
+            "CTA": "Continue"
+          },
+          "BROKEN": {
+            "TEXT": "Meta stopped sending your spend. Meanwhile, the panel shows what WhatsApp counted.",
+            "CTA": "Connect again"
           }
         }
       },
@@ -2781,6 +2889,19 @@
           "CONFIRM": "Download",
           "ERROR": "Could not download right now. Try again.",
           "NO_PEOPLE": "Without the \"Export the CRM list to Excel\" permission, the file has only the numbers, without the list of people."
+        },
+        "CONNECT_SPEND": {
+          "NOTE": "Connect your ad account to see it",
+          "CTA": "See how much I spent"
+        },
+        "ADS_WHATSAPP_TITLE": "Ads that bring conversations",
+        "OTHER_ADS": {
+          "TITLE": "Other ads",
+          "TOTAL": "{value} invested",
+          "HINT": "They brought no conversation: they lead to your website, a video or your profile. They stay out of the cost per conversation and per sale.",
+          "SPEND": "Invested",
+          "CLICKS": "Clicks",
+          "SHOWN": "Shown"
         }
       },
       "AD_DETAIL": {
@@ -3398,7 +3519,7 @@
     "TITLE": "CRM integration tokens",
     "SUBTITLE": "Per-account, scoped, revocable tokens so external systems like n8n can call the CRM API without a full-access user credential.",
     "BACK": "Back",
-    "NO_PERMISSION": "You need the CRM admin permission to manage integration tokens.",
+    "NO_PERMISSION": "Only administrators or whoever looks after tokens create and rotate integration tokens.",
     "STATUS": {
       "ACTIVE": "Active",
       "REVOKED": "Revoked"
@@ -3428,6 +3549,7 @@
       "NAME_LABEL": "Name",
       "NAME_PLACEHOLDER": "e.g. n8n production",
       "SCOPES_LABEL": "Scopes",
+      "NO_SCOPES": "A token only carries what your role already has in the CRM, and yours has nothing in the CRM. Ask an administrator.",
       "SUBMIT": "Create token",
       "CANCEL": "Cancel",
       "SUCCESS": "Token created. Copy the secret now — it is shown only once.",
@@ -4637,6 +4759,7 @@
         "PASSOS": "Steps to turn on Google",
         "COPIE_TITULO": "Copy this address",
         "COPIE_TEXTO": "This is how Google learns about your sales. It is only yours.",
+        "SEM_TOKEN": "The Google address is created by whoever looks after tokens.",
         "COLE_TITULO": "Paste the address in Google Ads",
         "COLE_1": "Sign in to Google Ads, in your ads account.",
         "COLE_2": "In the Google Ads search, type “uploads” and open Scheduled uploads.",
@@ -6129,21 +6252,43 @@
         "EU_ATENDE_SEM_FALTA": "{noPrazo} on time.",
         "EU_ATENDE_SEM_PRAZO": "{dias} day left in the month. | {dias} days left in the month.",
         "CEDO": "The month started {dias} day ago. So far: {valor}. | The month started {dias} days ago. So far: {valor}.",
-        "CEDO_RESOLVEU": "The month started {dias} day ago. Cases solved so far: {n}. | The month started {dias} days ago. Cases solved so far: {n}."
+        "CEDO_RESOLVEU": "The month started {dias} day ago. Cases solved so far: {n}. | The month started {dias} days ago. Cases solved so far: {n}.",
+        "EMPRESA": "You closed {feito} of {meta}. Support resolved {resolvidos} of {metaResolvidos}.",
+        "EMPRESA_RESOLVEU": "You closed {feito} of {meta}. Support resolved {resolvidos}.",
+        "EMPRESA_SEM_META": "There is no goal for this month yet. Support resolved {resolvidos}.",
+        "EQUIPE_VENDAS": "The team closed {feito} of {meta}. Nobody needs help. | The team closed {feito} of {meta}. {ajuda} person needs help. | The team closed {feito} of {meta}. {ajuda} people need help.",
+        "EQUIPE_VENDAS_SEM_META": "There is no goal for this month yet.",
+        "EQUIPE_ATENDE_SEM_PRAZO": "No reminder fell behind. | {lembretes} reminder fell behind. | {lembretes} reminders fell behind."
       },
       "BOTAO": {
         "MEUS_ATRASADOS": "Open my overdue follow-up | Open my {n} overdue follow-ups",
         "MEUS_PARADOS": "Open my stalled deal | Open my {n} stalled deals",
         "MEUS_CARDS": "Open my cards",
         "MEUS_LEMBRETES": "Open my overdue reminder | Open my {n} overdue reminders",
-        "MEUS_CASOS": "Open my cases"
+        "MEUS_CASOS": "Open my cases",
+        "PARADOS": "Open {n} stalled deal ({valor}) | Open {n} stalled deals ({valor})",
+        "ATRASADOS_EQUIPE": "Open the team's overdue follow-up | Open the team's {n} overdue follow-ups",
+        "CARDS_EQUIPE": "Open the team's cards",
+        "LEMBRETES_EQUIPE": "Open the overdue reminder | Open the {n} overdue reminders",
+        "CASOS_EQUIPE": "Open the team's cases"
       },
+      "SEM_META_EMPRESA": "You closed {valor} in {mes}",
+      "SEM_META_EQUIPE": "The team closed {valor} in {mes}",
+      "SEM_META_RESOLVEU_EQUIPE": "The team resolved {n} case in {mes} | The team resolved {n} cases in {mes}",
+      "FALTAM_EMPRESA": "{valor} to go for the {mes} goal",
+      "FALTAM_EQUIPE": "{valor} to go for the team goal",
+      "RESOLVEU_EQUIPE": "The team resolved {feito} of {meta}",
+      "BATIDA_EMPRESA": "You hit the {mes} goal",
+      "BATIDA_EQUIPE": "The team hit the {mes} goal",
+      "LEITURA": "You are viewing in read-only mode.",
       "METAS_LINK": "{mes} goals"
     },
     "PROXIMO": {
       "TITULO": "Next step",
       "CAMPANHA_COM_VOCE": "{n} person who replied to the {campanha} campaign is with you | {n} people who replied to the {campanha} campaign are with you",
-      "VER": "See"
+      "VER": "See",
+      "SEM_RESPONSAVEL": "{n} sale this month has no owner | {n} sales this month have no owner",
+      "IA_ESPERANDO": "{n} conversation {ia} handed over has been waiting for someone for more than 30 min | {n} conversations {ia} handed over have been waiting for someone for more than 30 min"
     },
     "BLOCO": {
       "VENDENDO": "Selling",
@@ -6153,7 +6298,11 @@
       "ATRASADOS": "overdue follow-up | overdue follow-ups",
       "RESOLVIDOS": "solved | solved",
       "COM_VOCE": "with you now",
-      "DEU_CERTO": "got the \"did it work out?\""
+      "DEU_CERTO": "got the \"did it work out?\"",
+      "VENDENDO_EQUIPE": "Selling (team)",
+      "ATENDENDO_EQUIPE": "Support (team)",
+      "LEMBRETES": "overdue reminder | overdue reminders",
+      "PARADOS_ATENDE": "stalled for 7+ days | stalled for 7+ days"
     },
     "ESTIMADO": "Some older sales were counted for the card's current responsible person.",
     "IA_AJUDOU": {
@@ -6190,6 +6339,41 @@
       "EXEMPLO_2": "Day 8: Bruno takes a day off and hands him to Ana.",
       "EXEMPLO_3": "Day 15: Ana closes. Marcos is the one who marked it closed.",
       "EXEMPLO_RESULTADO": "The R$ 3,000 count for Ana. Bruno and Sofia took part."
+    },
+    "AJUDA": {
+      "TITULO": "Who needs help",
+      "RETORNOS_N": "{n} overdue follow-up | {n} overdue follow-ups",
+      "RETORNOS_ACAO": "Open {nome}'s follow-ups",
+      "CASOS_PARADOS_N": "{n} case stalled for more than 7 days | {n} cases stalled for more than 7 days",
+      "CASOS_PARADOS_ACAO": "Open {nome}'s cases"
+    },
+    "CUIDOU": {
+      "TITULO": "Who took care · {n} person and 1 AI | Who took care · {n} people and 1 AI",
+      "TITULO_SEM_IA": "Who took care · {n} person | Who took care · {n} people",
+      "PLATAFORMA": "This month {ia} answered {atendeu} conversations and took part in {participou} sale ({valor}). | This month {ia} answered {atendeu} conversations and took part in {participou} sales ({valor}).",
+      "CAMINHO": "On track: {nomes}.",
+      "VOCE": "you",
+      "E": "and",
+      "VENDA": "received {recebeu} · closed {fechou}",
+      "ATENDE_SEM_PRAZO": "resolved {resolveu}",
+      "DETALHE_VENDA": "{valor} of {meta}, {pct}% of the goal.",
+      "DETALHE_VENDA_SEM_META": "{valor} closed.",
+      "VOCE_NOME": "{nome} (you)",
+      "VER_CONVERSAS": "See {nome}'s conversations",
+      "FORA_DA_EQUIPE": "No owner or no longer on the team",
+      "FORA_VENDA": "closed {fechou} · {valor}",
+      "IA_SELO": "AI",
+      "IA_ATENDEU": "answered {n} conversation | answered {n} conversations",
+      "IA_PARTICIPOU": "took part in {n} sale ({valor}) | took part in {n} sales ({valor})",
+      "IA_PASSOU": "handed {n} conversation to someone on the team | handed {n} conversations to someone on the team",
+      "IA_RESOLVEU_SOZINHA": "solved {n} conversation without the team | solved {n} conversations without the team",
+      "IA_VER": "See the agent",
+      "IA_SEMANA": "On the agent page, the same count shows by week.",
+      "IA_VER_TODOS": "See the agents",
+      "IA_CUSTO_AGENTES": "AI agents cost: {valor} this month, about {porConversa} per conversation.",
+      "IA_CUSTO_AGENTES_SEM_CONVERSA": "AI agents cost: {valor} this month.",
+      "IA_CUSTO_FALTA": "Estimate: AI usage is not split by agent.",
+      "RODAPE": "We only count customers who entered the pipeline."
     },
     "METAS": {
       "TITULO": "{mes} goals",

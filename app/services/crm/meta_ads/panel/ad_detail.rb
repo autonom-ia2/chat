@@ -25,17 +25,24 @@ class Crm::MetaAds::Panel::AdDetail
       period: @report.period.key, days: @report.days, from: @report.first_day, to: @report.last_day, currency: @report.currency,
       preview_url: object&.preview_url, campaign_name: parent_name(:campaign_id), adset_name: parent_name(:adset_id),
       account_average_cost_per_sale: @report.average_cost_per_sale,
-      reason: @report.whatsapp_only? ? nil : Crm::MetaAds::Panel::Verdict.reason(row, average_cost_per_sale: @report.average_cost_per_sale),
+      reason: reason,
       daily: daily, quotes_list: quotes_list
     ).merge(@report.whatsapp_only? ? { people: people, spend: nil } : {})
   end
 
   private
 
+  # Sem veredito (sem conexão, ou anúncio que leva para fora de conversa) não há porquê.
+  def reason
+    return if @report.whatsapp_only? || row[:verdict].nil?
+
+    Crm::MetaAds::Panel::Verdict.reason(row, average_cost_per_sale: @report.average_cost_per_sale)
+  end
+
   def row
     return @row if defined?(@row)
 
-    @row = @ad_id.present? ? @report.ads.find { |ad| ad[:ad_id] == @ad_id } : nil
+    @row = @ad_id.present? ? @report.ad(@ad_id) : nil
   end
 
   def object

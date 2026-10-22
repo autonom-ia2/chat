@@ -91,8 +91,9 @@ class Crm::MetaAds::Relatorio::Pdf
   end
 
   def gasto
-    nota = totais[:cost_per_sale] ? t('numbers.cost_per_sale', value: moeda(totais[:cost_per_sale])) : nil
-    { rotulo: t('numbers.spend'), valor: moeda(totais[:spend]), nota: nota }
+    notas = [totais[:cost_per_sale] && t('numbers.cost_per_sale', value: moeda(totais[:cost_per_sale])),
+             totais[:other_spend].to_f.positive? && t('numbers.other_spend', value: moeda(totais[:other_spend]))]
+    { rotulo: t('numbers.spend'), valor: moeda(totais[:spend]), nota: notas.select(&:itself).join(' · ').presence }
   end
 
   def resposta

@@ -34,7 +34,7 @@ describe('cópia da lista em pt_BR', () => {
   it('writes the week line with bold numbers', () => {
     const semana = montar().get('[data-semana]');
     expect(semana.text()).toContain('Esta semana: 12 conversas respondidas');
-    expect(semana.text()).toContain('3 passadas para a equipe');
+    expect(semana.text()).toContain('3 passadas para alguém da equipe');
     expect(semana.findAll('b').map(b => b.text())).toEqual(['12', '3']);
   });
 
@@ -43,7 +43,7 @@ describe('cópia da lista em pt_BR', () => {
       '[data-semana]'
     );
     expect(semana.text()).toContain('Esta semana: 1 conversa respondida');
-    expect(semana.text()).toContain('1 passada para a equipe');
+    expect(semana.text()).toContain('1 passada para alguém da equipe');
   });
 
   it('names the inbox, or counts them without the name', () => {

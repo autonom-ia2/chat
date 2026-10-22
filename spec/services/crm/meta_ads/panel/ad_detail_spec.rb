@@ -84,6 +84,16 @@ RSpec.describe Crm::MetaAds::Panel::AdDetail do
     end
   end
 
+  it 'anúncio que leva ao site (#2054) abre com os números, sem veredito nem porquê' do
+    travel_to(now) do
+      Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-site', object_type: 'adset', destination_type: 'WEBSITE', fetched_at: now)
+      Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: capa, date: Date.new(2026, 10, 6),
+                                      currency: 'BRL', spend: 40, adset_id: 'set-site', attribution_window: '7d_click', fetched_at: now)
+
+      expect(detail(capa)).to include(spend: 40.0, conversations: 0, verdict: nil, reason: nil)
+    end
+  end
+
   it 'lista as propostas: abertas primeiro pela espera mais antiga, depois as vendas' do
     travel_to(now) do
       lead_stage = account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'Novo', position: 1, metadata: { 'funnel_stage_type' => 'lead' })

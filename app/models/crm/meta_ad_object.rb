@@ -2,18 +2,19 @@
 #
 # Table name: crm_meta_ad_objects
 #
-#  id             :bigint           not null, primary key
-#  fetched_at     :datetime
-#  meta_object_id :string           not null
-#  name           :string(255)
-#  object_type    :string
-#  preview_url    :text
-#  thumbnail_url  :text
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  account_id     :bigint           not null
-#  adset_id       :string
-#  campaign_id    :string
+#  id               :bigint           not null, primary key
+#  destination_type :string
+#  fetched_at       :datetime
+#  meta_object_id   :string           not null
+#  name             :string(255)
+#  object_type      :string
+#  preview_url      :text
+#  thumbnail_url    :text
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  account_id       :bigint           not null
+#  adset_id         :string
+#  campaign_id      :string
 #
 # Indexes
 #

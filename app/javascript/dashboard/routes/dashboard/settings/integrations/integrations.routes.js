@@ -1,5 +1,6 @@
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import { frontendURL } from '../../../../helper/URLHelper';
+import { INTEGRATION_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const IntegrationHooks = () => import('./IntegrationHooks.vue');
@@ -25,7 +26,7 @@ export default {
           component: Index,
           meta: {
             featureFlag: FEATURE_FLAGS.INTEGRATIONS,
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
         },
         {
@@ -34,7 +35,7 @@ export default {
           name: 'settings_integrations_dashboard_apps',
           meta: {
             featureFlag: FEATURE_FLAGS.INTEGRATIONS,
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
         },
         {
@@ -43,7 +44,7 @@ export default {
           name: 'settings_integrations_webhook',
           meta: {
             featureFlag: FEATURE_FLAGS.INTEGRATIONS,
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
         },
       ],
@@ -58,7 +59,7 @@ export default {
           component: Slack,
           meta: {
             featureFlag: FEATURE_FLAGS.INTEGRATIONS,
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
           props: route => ({ code: route.query.code }),
         },
@@ -67,7 +68,7 @@ export default {
           name: 'settings_integrations_linear',
           component: Linear,
           meta: {
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
           props: route => ({ code: route.query.code }),
         },
@@ -76,7 +77,7 @@ export default {
           name: 'settings_integrations_notion',
           component: Notion,
           meta: {
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
           props: route => ({ code: route.query.code }),
         },
@@ -86,7 +87,7 @@ export default {
           component: Shopify,
           meta: {
             featureFlag: FEATURE_FLAGS.INTEGRATIONS,
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
           props: route => ({ error: route.query.error }),
         },
@@ -96,7 +97,7 @@ export default {
           component: CrmN8n,
           meta: {
             featureFlag: FEATURE_FLAGS.INTEGRATIONS,
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
         },
         {
@@ -105,7 +106,7 @@ export default {
           component: IntegrationHooks,
           meta: {
             featureFlag: FEATURE_FLAGS.INTEGRATIONS,
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
           props: route => ({
             integrationId: route.params.integration_id,

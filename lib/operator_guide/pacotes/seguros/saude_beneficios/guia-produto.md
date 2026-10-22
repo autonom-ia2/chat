@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (234 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (235 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -407,10 +407,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como crio um webhook?; Onde configuro callback HTTP?; Como assino eventos da conta?
 - onde_fica: Configuracoes > Integracoes > Webhook
 - rota: `settings_integrations_webhook` - `/app/accounts/:accountId/settings/integrations/webhook`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: endpoint publico HTTPS; saber quais eventos assinar
-- passos: 1. Abra Configuracoes > Integracoes; 2. Entre em Webhook; 3. Clique em adicionar novo webhook; 4. Informe nome, endpoint e eventos; 5. Crie e copie o segredo quando exibido.
-- gotchas: endpoints privados, locais ou sem HTTPS podem falhar; copie/guarde o segredo para validar assinaturas.
+- passos: 1. Abra Configuracoes > Integracoes; 2. Entre em Webhook; 3. Clique em adicionar novo webhook; 4. Informe nome, endpoint e eventos; 5. Crie e copie o segredo quando exibido (ele so aparece para administrator ou quem tem `token_manage`; sem ela, peca o segredo a quem cuida dos tokens).
+- gotchas: endpoints privados, locais ou sem HTTPS podem falhar; copie/guarde o segredo para validar assinaturas; a chave de assinatura so aparece para administrator ou quem tem `token_manage`.
 - nav_target: `settings_integrations_webhook`
 - highlight: `settings-add-webhook`
 
@@ -418,7 +418,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde conecto Slack, Linear, Notion ou Shopify?; Como vejo integracoes disponiveis?; Onde configuro aplicativos do dashboard?
 - onde_fica: Configuracoes > Integracoes
 - rota: `settings_applications` - `/app/accounts/:accountId/settings/integrations`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: credenciais/conta externa quando a integracao exigir OAuth ou token
 - passos: 1. Abra Configuracoes > Integracoes; 2. Escolha a integracao; 3. Conecte ou configure hooks; 4. Autorize no provedor externo quando solicitado; 5. Salve e teste.
 - gotchas: `linear_integration`, `notion_integration`, `shopify_integration` e apps custom podem ter disponibilidade separada; webhook e dashboard apps ficam dentro da mesma area.
@@ -587,7 +587,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
 - pre_requisitos: ao menos um funil com cards; metas e dados de reuniões aparecem quando houver configuração/dados.
 - passos: Abra CRM Dashboard; selecione funil; escolha período; revise os números do topo, funil, fechados, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram. Os números do topo seguem o tipo do funil: num funil de Vender, **Planos fechados**, **Não fecharam**, **Taxa de fechamento**, **Valor fechado** e a meta do mês; num funil de Atender, **Resolvidos** e **Cancelados**.
-- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados. Com Números por papel ligado na conta, esta é a visão **Equipe**: só administrador e função com "Visualizar relatórios do CRM" a veem, com o seletor **Só eu · Equipe** no topo; o atendente sem função passa a ver só os próprios números (fluxo ver_meus_numeros_do_mes).
+- gotchas: funil de Atender não mostra valor nem meta; moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados. Com Números por papel ligado na conta, esta é a visão **Equipe**: só administrador e função com "Visualizar relatórios do CRM" a veem, com o seletor **Só eu · Equipe** no topo; o atendente sem função passa a ver só os próprios números (fluxo ver_meus_numeros_do_mes). Com a flag crm_numeros_equipe também ligada, a visão Equipe deixa de ser este painel e passa a ser a tela nova (fluxo ver_numeros_da_equipe).
 - nav_target: `crm_dashboard_index`
 
 ### Ver os meus números do mês (Só eu)
@@ -608,6 +608,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: Números por papel (flag crm_numeros_lentes) e Metas do mês por pessoa (flag crm_metas) ligados na conta; ao menos um funil de Vender; ser administrador ou ter uma função com **Ver e definir as metas do mês** (ou Administrador do CRM).
 - passos: Abra Números; clique em **Metas de <mês>**; com mais de um funil de Vender, escolha o funil no alto; ajuste a meta do funil, se quiser; em cada pessoa, digite a meta em dinheiro ou clique em **Usar a sugestão** (a média do que ela fechou nos 3 meses anteriores); ou use **Repetir <mês anterior>** ou **Dividir igualmente**, que só preenchem os campos; clique em **Salvar as metas**.
 - gotchas: a lista de cada funil mostra quem vende (a mesma régua do Só eu: vendeu no mês, tem card aberto em funil de Vender ou, sem card, enxerga funil de Vender) e quem já tem meta nele; quem só atende não aparece; as metas valem para o mês de hoje, no fuso da conta; meses fechados não mudam; campo vazio (ou zero) é sem meta; use só números, sem pontos; a meta fica na moeda do funil; a meta do funil não precisa ser a soma das pessoas, e a gaveta avisa quando é diferente; a venda conta 100% para quem era o Responsável no fechamento; quem vende vê só a própria meta e a barra da equipe em porcentagem, sem nomes; o atendente sem função nunca define metas; funis de Atender não têm meta.
+- nav_target: `crm_dashboard_index`
+
+### Ver os números da equipe e a IA no time (Equipe)
+- intent: "Como está a equipe este mês?"; "Quem precisa de ajuda?"; "Quanto cada vendedor fechou?"; "Quanto a IA atendeu e passou para a equipe?"; "Quanto a IA custou este mês?"
+- onde_fica: No menu novo: Acompanhar > CRM > aba Números, seletor **Equipe**. No menu antigo: Sidebar > CRM > CRM Dashboard, seletor **Equipe**.
+- rota: `crm_dashboard_index` - `/app/accounts/:accountId/crm/dashboard`
+- gate: papel `administrator` ou `agent` ou `crm_view_reports` ou `crm_view`
+- pre_requisitos: Números por papel ligado na conta (flags crm_numeros_lentes e crm_numeros_equipe); administrador ou função com "Visualizar relatórios do CRM"; ao menos um funil que a pessoa enxergue no painel.
+- passos: Abra Números e escolha **Equipe**; leia o topo (o mês da empresa, ou da equipe de vendas ou de atendimento, com a meta do funil quando houver); use o botão do topo para abrir a lista do funil (negociações paradas, retornos atrasados ou lembretes para trás); veja o próximo passo, os blocos **Vendendo** e **Atendendo** e **Quem precisa de ajuda** (o motivo e o botão que abre a lista daquela pessoa); abra **Quem cuidou** para ver uma linha por pessoa e a IA numa linha própria; troque de mês pelas setas.
+- gotchas: os blocos seguem os funis que a pessoa enxerga no painel: quem só vê funis de Vender vê Vendendo, quem só vê funis de Atender vê Atendendo; o valor fechado de cada pessoa aparece para quem vê a equipe, mas o custo da IA só para o administrador ou o Financeiro (quem tem Ver custos da conta); a IA conta como uma linha só, mesmo com vários agentes ou robôs, e uma conversa conta uma vez; a IA não tem meta nem entra em "Quem precisa de ajuda"; contamos só os clientes que entraram num funil; "passou" conta só as passagens que ficam registradas, e algumas passagens da IA ainda não ficam (#1887); "precisa de ajuda" é quem soma 5 ou mais retornos atrasados e casos parados há 7 dias no funil principal, uma linha por pessoa com os dois números, de quem tem mais atraso para quem tem menos, até 3 pessoas, sem posição numerada; a caixa aberta pelo "a IA está esperando" abre em Todos e em Abertas, para bater com o número; o prazo por pessoa ainda não é gravado, por isso a tela não fala em "no prazo"; a meta por pessoa só aparece quando as metas do mês existirem; a função só com "Visualizar relatórios do CRM", sem acesso ao CRM, vê em modo leitura, sem os botões; sem a flag crm_numeros_equipe a aba Equipe continua o painel de sempre (fluxo ver_dashboard_crm_e_metricas_de_funil).
 - nav_target: `crm_dashboard_index`
 
 ### Usar calendário CRM e agendar reunião
@@ -1120,9 +1130,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde coloco a chave da OpenAI?; Como habilito a IA do CRM Kanban?; Por que a IA nao funciona nesta conta?; Onde configuro a IA da plataforma?
 - onde_fica: Configuracoes > Integracoes > CRM Kanban AI; depois CRM > CRM Kanban > editar funil > IA
 - rota: `settings_applications_integration` - `/app/accounts/:accountId/settings/integrations/:integration_id`
-- gate: feature flag `integrations`; papel `administrator`
-- perfil: `administrator` cadastra ou troca a chave da conta. `agent` nao cadastra chave; diga para pedir a um administrator. Custom role `crm_manage_ai` ou `crm_admin` pode ajustar a IA do funil no CRM quando a rota do CRM estiver liberada, mas nao acessa a tela de Integracoes; se nao puder, diga que a credencial precisa ser configurada por um administrator.
-- pre_requisitos: chave OpenAI valida; acesso de administrator; opcionalmente API Base URL quando nao usar `https://api.openai.com`.
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
+- perfil: `administrator` ou custom role com `integration_manage` cadastra ou troca a chave da conta. `agent` nao cadastra chave; diga para pedir a um administrator ou a quem cuida das integracoes. Custom role `crm_manage_ai` ou `crm_admin` pode ajustar a IA do funil no CRM quando a rota do CRM estiver liberada, mas nao acessa a tela de Integracoes; se nao puder, diga que a credencial precisa ser configurada por um administrator.
+- pre_requisitos: chave OpenAI valida; acesso de administrator ou `integration_manage`; opcionalmente API Base URL quando nao usar `https://api.openai.com`.
 - passos: 1. Abra Configuracoes > Integracoes; 2. Entre em CRM Kanban AI; 3. Clique para configurar ou adicionar a integracao; 4. Preencha API Key e, se precisar, API Base URL: conectar ja liga a IA, nao existe mais caixa Enable CRM Kanban AI no formulario; 5. Salve e depois abra CRM Kanban para configurar a IA por funil.
 - gotchas: depois de conectar, a tela da integracao mostra "Conectado e funcionando"; se mostrar "Conectado, mas desligado", a conta ficou com a IA desligada e e preciso desconectar e conectar de novo; chave recusada costuma ser chave errada, revogada ou conta OpenAI sem credito; a integracao generica `openai` nao e a mesma coisa que `crm_kanban_ai`; se ja existir um hook `crm_kanban_ai` vazio ou desativado, ele impede o fallback para a chave global de sistema; a chave global de fallback e configuracao de super-admin, nao da conta; a tela de IA do funil ajusta criterios/auto-move/follow-up, mas nao cria a credencial.
 - nav_target: `settings_applications_integration` com `integration_id=crm_kanban_ai`
@@ -1228,10 +1238,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde crio um bot nativo?; Como conecto um bot webhook/API?; Como ligo um bot a uma caixa?; Onde configuro Dialogflow?; Como conecto um agente montado em outro sistema?
 - onde_fica: com a nova jornada de Agentes e a aba Agente de IA por caixa ligada na conta (piloto): Agentes > Conectar agente de outro sistema (e a pagina do agente pela lista de Agentes); sem ela: Sidebar > Configuracoes > Robos. Para escolher quem atende primeiro na caixa: Configuracoes > Caixas de entrada > selecionar caixa > aba Agente de IA (no piloto) ou aba Robo (nas outras contas)
 - rota: `agent_bots` - `/app/accounts/:accountId/settings/agent-bots`
-- gate: feature flag `agent_bots`; papel `administrator`
-- perfil: somente `administrator`. Se o perfil nao puder, diga que bots e conexao de bots por caixa sao configuracoes administrativas.
+- gate: feature flag `agent_bots`; papel `administrator` ou `integration_manage`
+- perfil: `administrator` ou custom role com `integration_manage` cria, edita e apaga robos; trocar o token e o segredo do robo pede `token_manage` (sem ela, o token nem aparece). Se o perfil nao puder, diga para pedir a um administrator ou a quem cuida das integracoes.
 - pre_requisitos: endpoint HTTPS do bot webhook/API; caixa criada para conectar o bot; credenciais JSON e Project ID se for Dialogflow
-- passos: 1. Com a nova jornada, abra Agentes e clique em Conectar agente de outro sistema (sem ela, Configuracoes > Robos); 2. Preencha nome, foto e o que o agente faz, depois o endereco do webhook, e clique em Conectar; 3. Copie a chave de acesso e cole no outro sistema; 4. Abra a caixa desejada, entre na aba Agente de IA e escolha o agente em Quem atende primeiro; 5. Confira o aviso de troca e clique em Trocar (ou Confirmar); 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
+- passos: 1. Com a nova jornada, abra Agentes e clique em Conectar agente de outro sistema (sem ela, Configuracoes > Robos); 2. Preencha nome, foto e o que o agente faz, depois o endereco do webhook, e clique em Conectar; 3. Copie a chave de acesso (ela so aparece para administrator ou quem tem `token_manage`; sem ela, peca a chave a quem cuida dos tokens) e cole no outro sistema; 4. Abra a caixa desejada, entre na aba Agente de IA e escolha o agente em Quem atende primeiro; 5. Confira o aviso de troca e clique em Trocar (ou Confirmar); 6. Para Dialogflow, va em Aplicacoes > Dialogflow e conecte a uma caixa.
 - gotchas: para quem usa, agente da plataforma e agente de outro sistema sao todos agentes de IA, na mesma lista e na mesma escolha da caixa; nesta fork, `agent_bots` cria bot do tipo webhook; Dialogflow nao e criado nessa tela, e sim em Integracoes; bots `system_bot` nao aparecem na lista de Agentes; tirar o agente da caixa nao apaga o agente; os espelhos dos agentes da plataforma nao aparecem na lista de Robos nem se editam por ela; a troca pela aba Agente de IA e completa: quem atendia primeiro sai pelo caminho certo e as conversas dele vao para as pessoas; no canal em que um agente da plataforma atende primeiro, por o agente de outro sistema e pela aba Agente de IA do canal, que tira o agente da plataforma e poe o outro de uma vez; no canal so com agentes da equipe, o agente de outro sistema entra e os agentes da equipe continuam recebendo quando alguem passa.
 - nav_target: `agent_bots`
 - highlight: `settings-add-bot`
@@ -1307,8 +1317,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde configuro integracoes?; Como crio app no painel da conversa?; Como conecto Dialogflow, Slack ou webhook?; O que sao dashboard apps?
 - onde_fica: Sidebar > Configuracoes > Integracoes; para apps embutidos: Integracoes > Dashboard Apps
 - rota: `settings_applications` - `/app/accounts/:accountId/settings/integrations`
-- gate: feature flag `integrations`; papel `administrator`
-- perfil: somente `administrator`. Se o perfil nao puder, diga que integrar aplicativos, webhooks e dashboard apps exige administrador.
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
+- perfil: `administrator` ou custom role com `integration_manage`. Se o perfil nao puder, diga que integrar aplicativos, webhooks e dashboard apps e de quem cuida das integracoes ou do administrador.
 - pre_requisitos: credenciais da integracao ou URL do app; para dashboard app, titulo e URL valida; para Dialogflow, Project ID, JSON de credenciais e caixa de entrada
 - passos: 1. Abra Configuracoes > Integracoes; 2. Pesquise a aplicacao desejada; 3. Clique em configurar; 4. Para hooks, preencha credenciais e selecione a caixa de entrada quando a integracao for por caixa de entrada; 5. Para Dashboard Apps, abra a area propria e cadastre titulo e URL; 6. Salve e teste no contexto da conversa/caixa.
 - gotchas: Dashboard App usa conteudo do tipo `frame` com URL valida; Dialogflow e uma integracao por caixa de entrada, nao um `agent_bot`; algumas integracoes so aparecem como ativas se houver credencial global ou feature habilitada; remover hook desconecta a integracao.
@@ -1372,10 +1382,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Gerenciar tokens de integracao do CRM
 - intent: "Onde crio token para integrar o CRM?"; "Como gero token para n8n?"; "Como revogo ou rotaciono um token do CRM?"
-- onde_fica: URL direta de CRM Settings > Integration tokens; tambem acessivel pelo guia de n8n em Configuracoes > Integracoes > n8n (Conexoes do CRM)
+- onde_fica: Configuracoes > Integracoes > n8n (Conexoes do CRM) > token de API; tambem pela URL direta de CRM Settings > Integration tokens
 - rota: `crm_integration_tokens_index` - `/app/accounts/:accountId/crm/settings/integration-tokens`
-- gate: papel `administrator` ou `crm_admin`
-- perfil: `administrator` ou custom role com `crm_admin`; agentes comuns, agentes sem custom role e custom roles sem `crm_admin` nao podem gerenciar tokens. Diga que tokens sao credenciais administrativas e devem ser criados por admin/CRM admin.
+- gate: papel `administrator` ou `token_manage`
+- perfil: `administrator` ou custom role com `token_manage` (desde #2027; `crm_admin` sozinho nao abre mais a tela). Quem tem `token_manage` so cria ou rotaciona token com escopos que a propria funcao tem. Agentes comuns nao gerenciam tokens: diga para pedir a um administrator ou a quem cuida dos tokens.
 - pre_requisitos: saber o nome da integracao e os escopos minimos necessarios (`crm_view`, `crm_manage_cards`, `crm_move_cards`, `crm_delete_cards`, `crm_manage_pipelines`, `crm_manage_ai`, `crm_view_reports`, `crm_admin`).
 - passos: 1. Abra a pagina de tokens; 2. Informe um nome identificavel; 3. Marque somente os escopos necessarios; 4. Crie o token; 5. Copie o segredo exibido uma unica vez; 6. Use Rotacionar ou Revogar quando precisar trocar ou encerrar o acesso.
 - gotchas: o segredo nao e mostrado de novo depois de dispensado; rotacionar revoga o token anterior imediatamente; revogar remove o acesso na hora; para n8n, a tela mostra o header `api_access_token`.
@@ -1386,8 +1396,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: "Como conecto o CRM ao n8n?"; "Quais eventos do CRM posso enviar por webhook?"; "Onde configuro automacao externa para cards?"
 - onde_fica: Configuracoes > Integracoes > n8n (Conexoes do CRM)
 - rota: `settings_integrations_crm_n8n` - `/app/accounts/:accountId/settings/integrations/crm_n8n`
-- gate: feature flag `integrations`; papel `administrator`
-- perfil: `administrator`; se o perfil nao puder, diga que a tela de integracoes e webhooks e administrativa. Custom role `crm_admin` pode acessar tokens pela rota do CRM, mas nao substitui o acesso administrativo a Configuracoes > Integracoes.
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
+- perfil: `administrator` ou custom role com `integration_manage` abre a tela e cria o webhook; o link do token aparece para quem tambem tem `token_manage`. Se o perfil nao puder, diga para pedir a um administrator ou a quem cuida das integracoes.
 - pre_requisitos: endpoint HTTPS publico do n8n; token de CRM com escopos adequados; decidir quais eventos assinar.
 - passos: 1. Abra n8n (Conexoes do CRM); 2. Clique para criar token de API do CRM; 3. Copie o token no n8n usando o header `api_access_token`; 4. Volte e crie um webhook; 5. Marque eventos como `crm.card.created`, `crm.card.moved`, `crm.card.won`, `crm.card.lost`, `crm.card.resolved`, `crm.card.cancelled`, `crm.card.reopened` ou `crm.card.archived`.
 - gotchas: n8n local ou URL privada pode ser bloqueado por protecao SSRF; eventos de CRM so aparecem no webhook quando `CRM_KANBAN_ENABLED=true`; token e webhook sao duas partes separadas da integracao.
@@ -2244,7 +2254,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como coloco as conversas no Slack?; Dá para responder o cliente de dentro do Slack?; Por que não acho o Slack nas integrações?; Conectei o Slack e nada chega, o que falta?
 - onde_fica: Configurações > Integrações > Slack
 - rota: `settings_integrations_slack` - `/app/accounts/:accountId/settings/integrations/slack`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, e a credencial do Slack configurada pelo time da plataforma, senão o cartão nem aparece
 - passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Slack e conecte; 3. Autorize no seu espaço do Slack; 4. Escolha o canal; 5. Escolha entre sincronização nos dois sentidos e somente alertas.
 - gotchas: autorizar não basta, a integração fica inativa até você escolher um canal; para canal privado, adicione o aplicativo ao canal no Slack antes; na sincronização nos dois sentidos tudo que a equipe escrever na conversa do Slack vai para o cliente, e só vira nota interna com o prefixo note:; a resposta só sai com o nome do agente se o e-mail dele no Slack for o mesmo da plataforma; quando a conexão expira, a saída é excluir e conectar de novo.
@@ -2254,7 +2264,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde conecto o Linear?; Como abro uma tarefa a partir de uma conversa?; O Linear não aparece nas integrações, por quê?; Como desconecto o Linear?
 - onde_fica: Configurações > Integrações > Linear
 - rota: `settings_integrations_linear` - `/app/accounts/:accountId/settings/integrations/linear`
-- gate: papel `administrator`
+- gate: papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, recurso liberado na conta e credencial configurada pelo time da plataforma
 - passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Linear; 3. Conecte; 4. Autorize dentro do Linear; 5. Confirme que a tela mostra conectado.
 - gotchas: são duas condições somadas para o cartão existir, recurso na conta e credencial da plataforma, e faltando uma não há nada a fazer pelo painel; a conta aceita uma conexão só; depois de conectado, o uso acontece dentro da conversa, não nesta tela; desconectar derruba os vínculos existentes.
@@ -2264,7 +2274,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como conecto o Notion?; Onde autorizo meu espaço do Notion?; Não encontro o Notion nas integrações; Como removo o acesso?
 - onde_fica: Configurações > Integrações > Notion
 - rota: `settings_integrations_notion` - `/app/accounts/:accountId/settings/integrations/notion`
-- gate: papel `administrator`
+- gate: papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, recurso liberado na conta e credencial configurada pelo time da plataforma
 - passos: 1. Abra Configurações > Integrações; 2. Clique no cartão do Notion; 3. Conecte; 4. Escolha o espaço de trabalho e autorize; 5. Confirme que aparece conectado.
 - gotchas: mesmo padrão do Linear, e se faltar recurso ou credencial o cartão some da lista; a conexão é da conta inteira, não por caixa de entrada; excluir remove o acesso ao espaço e derruba o que dependia dele.
@@ -2274,7 +2284,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como conecto minha loja Shopify?; Qual endereço eu coloco para conectar a loja?; Deu erro ao voltar da Shopify, e agora?; Por que a Shopify não aparece nas integrações?
 - onde_fica: Configurações > Integrações > Shopify
 - rota: `settings_integrations_shopify` - `/app/accounts/:accountId/settings/integrations/shopify`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, a integração ligada na instalação e liberada na conta, e o endereço da loja no formato sualoja.myshopify.com
 - passos: 1. Abra Configurações > Integrações; 2. Clique no cartão da Shopify; 3. Conecte; 4. Digite o endereço da loja; 5. Conclua a autorização e volte.
 - gotchas: o campo só aceita endereço terminado em myshopify.com, e o domínio próprio da loja é recusado, mesmo sendo o que seus clientes usam; são três condições para o cartão aparecer, e sem elas o endereço direto dá página não encontrada; se a volta trouxer erro, a tela avisa e basta repetir.
@@ -2284,7 +2294,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como mostro os dados do meu sistema dentro da conversa?; Onde cadastro um aplicativo no painel?; Dá para ver a apólice do cliente sem sair do atendimento?; Cadastrei o aplicativo e ele abre em branco, por quê?
 - onde_fica: Configurações > Integrações > Painel de Aplicativos
 - rota: `settings_integrations_dashboard_apps` - `/app/accounts/:accountId/settings/integrations/dashboard_apps`
-- gate: feature flag `integrations`; papel `administrator`
+- gate: feature flag `integrations`; papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador e ter uma página publicada que possa ser aberta dentro de outra
 - passos: 1. Abra Configurações > Integrações; 2. Entre em Painel de Aplicativos; 3. Adicione um aplicativo; 4. Preencha o nome e o endereço da sua página; 5. Salve e confira numa conversa.
 - gotchas: nome e endereço válido são obrigatórios; a plataforma entrega o contexto da conversa à sua página por um aviso de janela, e se a sua página não escutar esse aviso ela abre em branco, parecendo quebrada, embora o cadastro esteja certo; excluir tira o aplicativo de todas as conversas na hora.
@@ -2366,7 +2376,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como trago meus contatos da ferramenta antiga?; Dá para importar o histórico de conversas?; De quais sistemas eu consigo importar?; Posso rodar duas importações ao mesmo tempo?
 - onde_fica: Configurações > Dados > Importar
 - rota: `settings_data_imports` - `/app/accounts/:accountId/settings/data`
-- gate: feature flag `data_import`; papel `administrator`
+- gate: feature flag `data_import`; papel `administrator` ou `integration_manage`
 - pre_requisitos: ser administrador, recurso liberado na conta, e a chave de acesso do sistema de origem
 - passos: 1. Abra Configurações > Dados; 2. Clique em importar; 3. Escolha a fonte; 4. Dê um nome que você reconheça depois; 5. Cole a chave e, quando for o caso, o domínio; 6. Marque contatos, conversas ou os dois e importe.
 - gotchas: as fontes são apenas as duas listadas, e não existe envio de planilha nesta tela, porque o CSV de contatos fica em Contatos; a chave é testada antes e o botão só libera quando ela é aceita, então chave errada trava aqui e não no meio da carga; só uma importação roda por vez; a aba de exportar existe mas ainda não está disponível.
@@ -2376,7 +2386,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como sei se a importação terminou?; Quantos contatos entraram de verdade?; O que deu erro na importação?; Por que alguns registros foram ignorados?
 - onde_fica: Configurações > Dados > clicar na importação
 - rota: `settings_data_import_show` - `/app/accounts/:accountId/settings/data/:dataImportId`
-- gate: feature flag `data_import`; papel `administrator`
+- gate: feature flag `data_import`; papel `administrator` ou `integration_manage`
 - pre_requisitos: uma importação já iniciada
 - passos: 1. Abra Configurações > Dados; 2. Clique na importação; 3. Leia os totais e o progresso; 4. Abra as seções de erros e de ignorados; 5. Baixe o arquivo de cada uma para conferir linha a linha; 6. Se precisar, tente novamente ou cancele.
 - gotchas: registro ignorado não é erro, é linha que a plataforma decidiu não trazer, e o motivo está no arquivo; as seções abrem sozinhas quando há algo dentro; a tela se atualiza enquanto a importação roda e para quando termina; cancelar encerra e não volta sozinha.

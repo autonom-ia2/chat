@@ -6,7 +6,9 @@ import {
   FINANCIAL_MANAGE_PERMISSION,
   FINANCIAL_VIEW_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
+  INTEGRATION_MANAGE_PERMISSION,
   PEOPLE_MANAGE_PERMISSION,
+  TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
 
 export const LEVELS = { NONE: 'none', VIEW: 'view', MANAGE: 'manage' };
@@ -190,6 +192,23 @@ export const MODULE_GROUPS = [
         icon: 'i-lucide-inbox',
         settings: true,
         levels: { view: 'inbox_view', manage: 'inbox_manage' },
+      },
+      {
+        // Integrações (#2027): conectar, configurar e desconectar integrações, webhooks, robôs e importações, e
+        // reconectar um canal que já existe. Criar caixa nova fica com inbox_manage. Ver e trocar os tokens que a
+        // plataforma gera é ajuste fino de quem cuida das integrações: as telas deles (robôs, webhooks, CRM/n8n)
+        // ficam aqui. Só o administrador entrega as duas chaves (DELEGATION_KEYS).
+        key: 'INTEGRATIONS',
+        icon: 'i-lucide-plug',
+        settings: true,
+        levels: { manage: INTEGRATION_MANAGE_PERMISSION },
+        extras: [TOKEN_MANAGE_PERMISSION],
+        // Reconectar um canal acontece dentro das configurações da caixa.
+        suggests: {
+          level: LEVELS.MANAGE,
+          module: 'INBOXES',
+          targetLevel: LEVELS.VIEW,
+        },
       },
     ],
   },

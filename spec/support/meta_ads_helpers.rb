@@ -48,6 +48,14 @@ module MetaAdsHelpers
     }.merge(extra)
   end
 
+  # Destino dos conjuntos da conta (#2054), lido depois do gasto de hoje. rows: [{ id:, destination_type: }].
+  def stub_meta_ad_set_destinations(ad_account_id, rows: [], status: 200)
+    body = status == 200 ? { data: rows } : meta_graph_error(100)
+    stub_request(:get, meta_graph_url("act_#{ad_account_id}/adsets"))
+      .with(query: hash_including('fields' => 'id,destination_type'))
+      .to_return(status: status, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
+  end
+
   # response: status (200) e headers extras da resposta.
   def stub_meta_insights(ad_account_id, date_preset:, rows:, breakdowns: nil, **response)
     status = response.fetch(:status, 200)
@@ -72,7 +80,10 @@ RSpec.shared_context 'with a meta ads insights connection' do
   let(:connection) { create_meta_ads_insights_connection(account) }
   let(:ad_account_id) { connection.ad_account_id }
 
-  before { account.enable_features!('meta_ads_hub') }
+  before do
+    account.enable_features!('meta_ads_hub')
+    stub_meta_ad_set_destinations(ad_account_id)
+  end
 
   after do
     %w[today recent].each { |scope| Crm::MetaAds::Insights::Refresh.release(connection.id, scope) }

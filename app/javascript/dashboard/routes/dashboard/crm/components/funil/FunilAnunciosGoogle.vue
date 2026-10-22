@@ -7,6 +7,8 @@ import CrmGoogleConversionFeedAPI from 'dashboard/api/crmGoogleConversionFeed';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import FunilPassos from './FunilPassos.vue';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { TOKEN_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 
 // #1384 — ligar o Google em três passos, um por vez: Copie → Cole → Ligue.
 // O endereço é só desta conta; o Google passa a buscar as vendas nele. O
@@ -19,7 +21,10 @@ defineEmits(['ir']);
 
 const { t } = useI18n();
 const link = ref('');
+// O link é um token da plataforma: criar e ver fica com token_manage (#2027).
+const canManageTokens = usePermissionGranted(TOKEN_MANAGE_PERMISSION);
 onMounted(async () => {
+  if (!canManageTokens.value) return;
   try {
     const { data } = await CrmGoogleConversionFeedAPI.create();
     link.value = data.url || '';
@@ -68,7 +73,10 @@ const PASSOS = [`${A}.PASSO_1`, `${A}.PASSO_2`, `${A}.PASSO_3`];
           {{ $t(`${A}.COPIE_TEXTO`) }}
         </p>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
+      <p v-if="!canManageTokens" class="mb-0 text-[0.9375rem] text-n-slate-11">
+        {{ $t(`${A}.SEM_TOKEN`) }}
+      </p>
+      <div v-else class="flex flex-wrap items-center gap-2">
         <input
           id="google-conversions-feed-url"
           :value="link"

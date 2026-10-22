@@ -546,6 +546,77 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(ad.find('[data-verdict]').text()).toContain('VERDICT.EARLY');
   });
 
+  it('without a connection, the spend step invites to connect and says so to the page (#2054)', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          source: 'whatsapp',
+          totals: { ...PANEL.totals, spend: null },
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    const spend = wrapper.find('[data-panel-path="SPEND"]');
+    expect(spend.text()).toContain('—');
+    await spend.find('[data-panel-connect]').trigger('click');
+
+    expect(wrapper.emitted('connect')).toHaveLength(1);
+  });
+
+  it('read-only without a connection: no spend step to connect (#2054)', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          source: 'whatsapp',
+          totals: { ...PANEL.totals, spend: null },
+        },
+      },
+    });
+    const wrapper = await mountPanel({ props: { readOnly: true } });
+
+    expect(wrapper.find('[data-panel-connect]').exists()).toBe(false);
+  });
+
+  it('ads without a conversation go to their own block, with spend, clicks and reach (#2054)', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          totals: { ...PANEL.totals, other_spend: 101.76 },
+          other_ads: [
+            {
+              ad_id: '9',
+              name: 'EUA',
+              spend: 101.76,
+              link_clicks: 540,
+              impressions: 35454,
+              thumbnail_url: null,
+              image_url: null,
+            },
+          ],
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    const other = wrapper.find('[data-panel-other-ads]');
+    expect(other.text()).toContain('PANEL.OTHER_ADS.TITLE');
+    expect(other.find('[data-panel-other-ad="9"]').text()).toContain('EUA');
+    expect(other.find('[data-panel-other-ad="9"]').text()).toContain('540');
+    expect(wrapper.text()).toContain('PANEL.ADS_WHATSAPP_TITLE');
+    expect(wrapper.find('[data-panel-ad="9"]').exists()).toBe(false);
+  });
+
+  it('without ads outside WhatsApp there is no other block and the usual title (#2054)', async () => {
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-other-ads]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('PANEL.ADS_TITLE');
+  });
+
   it('shows the whole ad image in the same 4:5 frame for every card, or a placeholder without one', async () => {
     CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
       data: {

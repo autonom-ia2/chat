@@ -179,9 +179,9 @@ RSpec.describe Account do
   describe 'feature flag columns' do
     let(:account) { described_class.new(name: 'Test Account') }
 
-    it 'configures the account feature flag extension column' do # rubocop:disable RSpec/ExampleLength -- o mapa inteiro de flags é o teste
-      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1')
-      expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(
+    # O mapa da feature_flags_ext_1: a posição no features.yml é o bit; só se acrescenta no fim.
+    let(:mapa_ext_1) do
+      {
         feature_whatsapp_manual_transfer: 1,
         feature_data_import: 1 << 1,
         feature_api_and_webhooks: 1 << 2,
@@ -251,12 +251,19 @@ RSpec.describe Account do
         feature_convite_da_reuniao: 1 << 48,
         # #1991: posição 50 (1 << 49), definitiva da Orquestração (21/10), logo depois de convite_da_reuniao.
         feature_crm_metas: 1 << 49,
-        # IA entende a conversa F1–F4: posições PROVISÓRIAS (uma a mais com a 51 do crm_numeros_equipe); a Orquestração dá a definitiva.
-        feature_crm_ia_fatos_da_conversa: 1 << 50,
-        feature_crm_ia_assunto_encerrado: 1 << 51,
-        feature_crm_ia_fecha_card: 1 << 52,
-        feature_crm_ia_leitor_de_midia: 1 << 53
-      )
+        # #1992: posição 51 (1 << 50), da Orquestração (21/10), logo depois de crm_metas.
+        feature_crm_numeros_equipe: 1 << 50,
+        # IA entende a conversa F1–F4: posições 52 a 55 (1 << 51 a 1 << 54), definitivas da Orquestração (22/10).
+        feature_crm_ia_fatos_da_conversa: 1 << 51,
+        feature_crm_ia_assunto_encerrado: 1 << 52,
+        feature_crm_ia_fecha_card: 1 << 53,
+        feature_crm_ia_leitor_de_midia: 1 << 54
+      }
+    end
+
+    it 'configures the account feature flag extension column' do
+      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1')
+      expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(mapa_ext_1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(16)

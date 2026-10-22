@@ -715,6 +715,17 @@
   enabled: true
   column: feature_flags_ext_1
 
+# CRM › Números por papel, visão "Equipe" nova e a IA no time (#1992, F5 do épico #1871). Ligada (com a
+# `crm_numeros_lentes`): a aba Equipe de CRM › Números mostra o topo, o próximo passo, Vendendo, Atendendo, "Quem
+# precisa de ajuda" e o resto recolhido ("Quem cuidou", com a IA numa linha própria, sem meta). Quem vê continua o mesmo
+# (administrador e função com `crm_view_reports`); o custo da IA fica só com o administrador. Desligada (padrão): a aba
+# Equipe é o painel de sempre. Posição 51 na feature_flags_ext_1 (1125899906842624 = 1 << 50), da Orquestração (21/10),
+# logo depois de crm_metas. Sem migration: a Orquestração liga na stack Hub2You, contas 1, 16 e 18, depois do deploy.
+- name: crm_numeros_equipe
+  display_name: CRM › Números por papel (visão "Equipe" e a IA no time)
+  enabled: false
+  column: feature_flags_ext_1
+
 # IA entende a conversa, F1 — fatos da conversa (sem Issue própria ainda; épico "IA entende a conversa" do CRM).
 # Ligada: (a) a IA de assunto lê quem falou (cliente, pessoa da equipe, nosso assistente, outro sistema) e a hora de
 # cada mensagem, e a de etapa lê a ordem (`after`) e desde quando o cliente espera (`customer_waiting_since`); (b) a
@@ -722,8 +733,7 @@
 # Agendamento e o agente de cotação ficam de fora); (c) a passagem para pessoa que o nosso assistente prometeu e
 # ninguém cumpriu é honrada pela IA do CRM, mesmo com o agente dono da conversa (exceção ao #1673; nunca com o agente
 # de cotação). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration.
-# Posição PROVISÓRIA 52 na feature_flags_ext_1 (1 << 51), contando a 51 reservada ao crm_numeros_equipe (#1999), que
-# ainda não está na main: enquanto ela não entrar, esta linha cai na 51. A Orquestração dá a definitiva.
+# Posição 52 na feature_flags_ext_1 (1 << 51), definitiva da Orquestração (22/10).
 - name: crm_ia_fatos_da_conversa
   display_name: CRM › IA lê quem falou e em que ordem
   enabled: false
@@ -735,9 +745,7 @@
 # e a IA de etapa não relê card por causa dela (assunto de card fechado não continua); pedido novo sobre o mesmo
 # assunto segue sendo pedido novo; (b) a IA de etapa lê o "quando usar" do funil e, sem ele, a descrição que a conta já
 # escreveu. Desligada (padrão): pergunta, instruções e entrada iguais às de antes. Sem migration, sem tela.
-# Posição PROVISÓRIA 53 na feature_flags_ext_1 (1 << 52), contando a 51 reservada ao crm_numeros_equipe (#1999), que
-# ainda não está na main: enquanto ela não entrar, esta linha cai na 52. O plano previa 54 com a F3 antes desta; a F3
-# ainda não entrou e vem depois. A Orquestração dá a definitiva.
+# Posição 53 na feature_flags_ext_1 (1 << 52), definitiva da Orquestração (22/10).
 - name: crm_ia_assunto_encerrado
   display_name: CRM › IA reconhece assunto encerrado
   enabled: false
@@ -747,11 +755,11 @@
 # Ligada: (a) a IA de etapa pode marcar Perdido com motivo (adiou, recusou, fechou com outra; "adiou" = agora não sem
 # recusa, em qualquer funil, com lembrete de retorno na data do cliente ou em 30 dias), e Resolvido só em funil de
 # Atender, com confirmação do cliente; nunca Ganho; silêncio nunca fecha (a avaliação do card parado não fecha); (b)
-# "era teste" sai arquivado como não é negócio (com a flag crm_ia_arquiva_lixo); (c) uma pessoa escolheu a etapa há
+# "era teste" vira sugestão de arquivar como não é negócio (com a flag crm_ia_arquiva_lixo); (c) uma pessoa escolheu a etapa há
 # pouco e a IA quer voltar o card: vira sugestão; (d) o card fechado pela IA não segura o pedido novo pelo respeito de
-# 24 h. Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration, sem tela.
-# Posição PROVISÓRIA 54 na feature_flags_ext_1 (1 << 53), contando a 51 reservada ao crm_numeros_equipe (#1999), que
-# ainda não está na main: enquanto ela não entrar, esta linha cai na 53. A Orquestração dá a definitiva.
+# 24 h; (e) fechar é sugestão por padrão, que a pessoa aceita num clique; sozinha, só com confiança de 0,95
+# (Crm::Ai::Config::AUTO_CLOSE_THRESHOLD). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration, sem tela.
+# Posição 54 na feature_flags_ext_1 (1 << 53), definitiva da Orquestração (22/10).
 - name: crm_ia_fecha_card
   display_name: CRM › IA fecha o card (perdido com motivo, resolvido)
   enabled: false
@@ -763,8 +771,7 @@
 # passa a ler a mensagem só de mídia (antes descartada) e as IAs de etapa e memória leem o texto do PDF. Tetos: 4 fotos,
 # 2 PDFs e 3 áudios por mensagem; 500 leituras por conta por dia. Desligada (padrão): leitura, prompts e comportamento
 # iguais aos de antes. Sem migration, sem tela.
-# Posição PROVISÓRIA 55 na feature_flags_ext_1 (1 << 54), contando a 51 reservada ao crm_numeros_equipe (#1999), que
-# ainda não está na main: enquanto ela não entrar, esta linha cai na 54. A Orquestração dá a definitiva.
+# Posição 55 na feature_flags_ext_1 (1 << 54), definitiva da Orquestração (22/10).
 - name: crm_ia_leitor_de_midia
   display_name: CRM › IA lê foto, áudio e PDF na chegada
   enabled: false

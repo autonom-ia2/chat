@@ -31,6 +31,12 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
 
   private
 
+  # Connecting a new account creates an inbox (inbox_manage); reauthorizing a live inbox swaps its credentials
+  # (integration_manage). Admin always (#2027).
+  def check_authorization
+    check_permission_granted!(params.key?(:inbox_id) ? 'integration_manage' : 'inbox_manage')
+  end
+
   def browser_assisted_authorization?
     Instagram::Testers::BrowserOperationStore.runtime_enabled? &&
       Current.account.feature_enabled?('instagram_assisted_onboarding') &&
