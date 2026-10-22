@@ -10,6 +10,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ReportMetricCard from 'dashboard/routes/dashboard/settings/reports/components/ReportMetricCard.vue';
 import BarChart from 'shared/components/charts/BarChart.vue';
+import FraseIaVsHumano from '../components/gestaoIa/FraseIaVsHumano.vue';
 
 const { t } = useI18n();
 const { resolvedLocale } = useLocale();
@@ -550,6 +551,11 @@ onMounted(fetchUsage);
           />
         </div>
       </div>
+
+      <FraseIaVsHumano
+        :since="requestParams.since"
+        :until="requestParams.until"
+      />
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section class="p-5 border rounded-xl border-n-weak bg-n-solid-1">

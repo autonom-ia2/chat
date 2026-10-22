@@ -40,7 +40,6 @@ const selectedPeriodKey = ref('LAST_30');
 
 const summary = ref(null);
 const funnel = ref(null);
-const aiVsHuman = ref(null);
 const throughput = ref(null);
 const followUps = ref(null);
 const workload = ref(null);
@@ -170,12 +169,6 @@ const hasFunnel = computed(() =>
   (funnel.value?.stages || []).some(stage => stage.count > 0)
 );
 
-const hasAiActivity = computed(() => {
-  const ai = aiVsHuman.value;
-  if (!ai) return false;
-  return ai.ai_auto_moves + ai.ai_accepted + ai.ai_dismissed > 0;
-});
-
 // Funil de atendimento (#1151) mostra resolvidos e cancelados, nunca venda.
 const isSaleFunnel = computed(() => showsSales(summary.value));
 const outcomeCards = computed(() => outcomeKpis(summary.value));
@@ -233,7 +226,6 @@ const fetchReports = async () => {
     const [
       summaryRes,
       funnelRes,
-      aiRes,
       throughputRes,
       followUpsRes,
       workloadRes,
@@ -242,7 +234,6 @@ const fetchReports = async () => {
     ] = await Promise.all([
       CrmKanbanAPI.getReportSummary(params),
       CrmKanbanAPI.getReportFunnel(params),
-      CrmKanbanAPI.getReportAiVsHuman(params),
       CrmKanbanAPI.getReportThroughput(params),
       CrmKanbanAPI.getReportFollowUps(params),
       CrmKanbanAPI.getReportWorkload(params),
@@ -258,7 +249,6 @@ const fetchReports = async () => {
     ]);
     summary.value = summaryRes.data.payload;
     funnel.value = funnelRes.data.payload;
-    aiVsHuman.value = aiRes.data.payload;
     throughput.value = throughputRes.data.payload;
     followUps.value = followUpsRes.data.payload;
     workload.value = workloadRes.data.payload;
@@ -750,96 +740,50 @@ onMounted(async () => {
         </div>
       </section>
 
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- AI vs human -->
-        <section class="p-5 border rounded-xl border-n-weak bg-n-solid-1">
-          <h3 class="mb-4 text-sm font-medium text-n-slate-12">
-            {{ t('CRM_KANBAN.DASHBOARD.AI.TITLE') }}
-          </h3>
-          <p v-if="!hasAiActivity" class="text-sm text-n-slate-11">
-            {{ t('CRM_KANBAN.DASHBOARD.AI.EMPTY') }}
-          </p>
-          <div v-else class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="m-0 text-2xl font-semibold text-n-slate-12">
-                {{ formatNumber(aiVsHuman.ai_auto_moves) }}
-              </p>
-              <p class="m-0 text-xs text-n-slate-11">
-                {{ t('CRM_KANBAN.DASHBOARD.AI.AUTO_MOVES') }}
-              </p>
-            </div>
-            <div>
-              <p class="m-0 text-2xl font-semibold text-n-slate-12">
-                {{ formatNumber(aiVsHuman.ai_accepted) }}
-              </p>
-              <p class="m-0 text-xs text-n-slate-11">
-                {{ t('CRM_KANBAN.DASHBOARD.AI.ACCEPTED') }}
-              </p>
-            </div>
-            <div>
-              <p class="m-0 text-2xl font-semibold text-n-slate-12">
-                {{ formatNumber(aiVsHuman.ai_dismissed) }}
-              </p>
-              <p class="m-0 text-xs text-n-slate-11">
-                {{ t('CRM_KANBAN.DASHBOARD.AI.DISMISSED') }}
-              </p>
-            </div>
-            <div>
-              <p class="m-0 text-2xl font-semibold text-n-slate-12">
-                {{ formatPercent(aiVsHuman.acceptance_rate) }}
-              </p>
-              <p class="m-0 text-xs text-n-slate-11">
-                {{ t('CRM_KANBAN.DASHBOARD.AI.ACCEPTANCE_RATE') }}
-              </p>
-            </div>
+      <!-- Follow-ups -->
+      <section class="p-5 border rounded-xl border-n-weak bg-n-solid-1">
+        <h3 class="mb-4 text-sm font-medium text-n-slate-12">
+          {{ t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.TITLE') }}
+        </h3>
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <p class="m-0 text-2xl font-semibold text-n-slate-12">
+              {{ formatNumber(followUps?.by_status?.pending) }}
+            </p>
+            <p class="m-0 text-xs text-n-slate-11">
+              {{ t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.PENDING') }}
+            </p>
           </div>
-        </section>
-
-        <!-- Follow-ups -->
-        <section class="p-5 border rounded-xl border-n-weak bg-n-solid-1">
-          <h3 class="mb-4 text-sm font-medium text-n-slate-12">
-            {{ t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.TITLE') }}
-          </h3>
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <p class="m-0 text-2xl font-semibold text-n-slate-12">
-                {{ formatNumber(followUps?.by_status?.pending) }}
-              </p>
-              <p class="m-0 text-xs text-n-slate-11">
-                {{ t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.PENDING') }}
-              </p>
-            </div>
-            <div>
-              <p class="m-0 text-2xl font-semibold text-n-ruby-11">
-                {{ formatNumber(followUps?.overdue) }}
-              </p>
-              <p class="m-0 text-xs text-n-slate-11">
-                {{ t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.OVERDUE') }}
-              </p>
-              <p
-                v-if="followUps?.overdue_by && followUps.overdue > 0"
-                data-overdue-by
-                class="m-0 text-xs text-n-slate-10"
-              >
-                {{
-                  t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.OVERDUE_BY', {
-                    ai: formatNumber(followUps.overdue_by.ai),
-                    human: formatNumber(followUps.overdue_by.human),
-                  })
-                }}
-              </p>
-            </div>
-            <div>
-              <p class="m-0 text-2xl font-semibold text-n-slate-12">
-                {{ formatNumber(followUps?.due_soon) }}
-              </p>
-              <p class="m-0 text-xs text-n-slate-11">
-                {{ t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.DUE_SOON') }}
-              </p>
-            </div>
+          <div>
+            <p class="m-0 text-2xl font-semibold text-n-ruby-11">
+              {{ formatNumber(followUps?.overdue) }}
+            </p>
+            <p class="m-0 text-xs text-n-slate-11">
+              {{ t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.OVERDUE') }}
+            </p>
+            <p
+              v-if="followUps?.overdue_by && followUps.overdue > 0"
+              data-overdue-by
+              class="m-0 text-xs text-n-slate-10"
+            >
+              {{
+                t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.OVERDUE_BY', {
+                  ai: formatNumber(followUps.overdue_by.ai),
+                  human: formatNumber(followUps.overdue_by.human),
+                })
+              }}
+            </p>
           </div>
-        </section>
-      </div>
+          <div>
+            <p class="m-0 text-2xl font-semibold text-n-slate-12">
+              {{ formatNumber(followUps?.due_soon) }}
+            </p>
+            <p class="m-0 text-xs text-n-slate-11">
+              {{ t('CRM_KANBAN.DASHBOARD.FOLLOW_UPS.DUE_SOON') }}
+            </p>
+          </div>
+        </div>
+      </section>
 
       <!-- Throughput -->
       <section class="p-5 border rounded-xl border-n-weak bg-n-solid-1">

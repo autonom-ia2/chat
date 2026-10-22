@@ -260,6 +260,9 @@ const alternar = chave => {
             {{ t(`${P}.CUIDOU.IA_CUSTO_FALTA`) }}
           </span>
         </span>
+        <span v-if="ia.destino" data-ia-semana class="text-xs text-n-slate-11">
+          {{ t(`${P}.CUIDOU.IA_SEMANA`) }}
+        </span>
         <RouterLink
           v-if="ia.destino"
           :to="ia.destino.to"

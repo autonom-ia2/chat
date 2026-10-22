@@ -86,7 +86,7 @@ const proximo = computed(() =>
     </header>
 
     <main
-      class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6"
+      class="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-24 pt-5 sm:px-6 md:pb-5"
       data-numeros-v2
       data-numeros-visao-equipe
       :data-papel="dados?.papel"

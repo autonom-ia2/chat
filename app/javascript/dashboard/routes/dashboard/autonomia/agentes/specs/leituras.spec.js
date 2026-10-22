@@ -25,7 +25,7 @@ describe('useNumerosDaSemana (L1)', () => {
       data: {
         range: '7d',
         payload: [
-          { agent_id: 1, answered: 12, handed: 3 },
+          { agent_id: 1, answered: 12, handed: 3, resolved: 4 },
           { agent_id: 2, answered: 0, handed: 0 },
         ],
       },
@@ -46,13 +46,21 @@ describe('useNumerosDaSemana (L1)', () => {
     expect(api.semana).toHaveBeenCalledTimes(1);
     expect(api.semana).toHaveBeenCalledWith({});
     expect(exposto().estado.value).toBe('pronto');
-    expect(exposto().numerosDe(1)).toEqual({ respondidas: 12, passadas: 3 });
+    expect(exposto().numerosDe(1)).toEqual({
+      respondidas: 12,
+      passadas: 3,
+      resolvidas: 4,
+    });
   });
 
   it('gives zero to an agent the reading does not list', async () => {
     const { exposto } = montarCom(() => useNumerosDaSemana());
     await flushPromises();
-    expect(exposto().numerosDe(99)).toEqual({ respondidas: 0, passadas: 0 });
+    expect(exposto().numerosDe(99)).toEqual({
+      respondidas: 0,
+      passadas: 0,
+      resolvidas: 0,
+    });
   });
 
   it('asks for one agent when given one', async () => {
