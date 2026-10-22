@@ -446,6 +446,7 @@ const salvarNegocio = () => {
   if (!podeGerenciar.value || !negocio.valido.value) return;
   const payload = payloadDoNegocio(negocio.form, {
     cobranca: jeito.cobranca.value,
+    valorOculto: Boolean(card.value.value_hidden),
   });
   emit('save', payload, undefined, () => {
     negocio.carregar({ ...props.card, ...payload });

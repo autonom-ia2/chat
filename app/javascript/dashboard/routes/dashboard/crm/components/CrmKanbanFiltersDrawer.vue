@@ -7,6 +7,7 @@ import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState'
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import { useCrmPermissions } from '../composables/useCrmPermissions';
 
 const props = defineProps({
   // #1498 — funil de Atender: "Meus atendimentos", sem falar de venda.
@@ -37,6 +38,8 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'apply', 'clear', 'search-company']);
 const { t } = useI18n();
+// #2075 — sem a chave de valores o servidor ignora a faixa de valor: a tela nem oferece.
+const { canSeeSalesValues } = useCrmPermissions();
 const drawerElement = ref(null);
 const draft = reactive(defaultFilters());
 const selectedCompanyOption = ref(null);
@@ -739,7 +742,7 @@ useFixedPanelPresence(computed(() => props.show));
               />
             </summary>
             <div class="grid gap-5 pb-5">
-              <div class="grid gap-1">
+              <div v-if="canSeeSalesValues" class="grid gap-1">
                 <span class="text-sm font-medium text-n-slate-12">
                   {{ t('CRM_KANBAN.FILTERS.VALUE_RANGE') }}
                 </span>

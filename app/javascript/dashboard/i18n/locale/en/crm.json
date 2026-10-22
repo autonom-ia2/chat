@@ -761,8 +761,10 @@
         "NEW": "New view",
         "RENAME": "Rename",
         "DELETE": "Delete view",
-        "SAVE": "Save view"
-      }
+        "SAVE": "Save view",
+        "VALUE_IGNORED": "This view filters or sorts by value. Without access to sales values, that part was left out."
+      },
+      "VALUE_HIDDEN": "You can't see sales values"
     },
     "CALENDAR": {
       "FOLLOW_UP": "Follow-up",
@@ -4990,7 +4992,8 @@
       },
       "CANCELAR_EXEMPLO": "Why was it cancelled?",
       "PERDEU_TITULO_ROTULO": "{rotulo}: what happened?",
-      "PERDEU_CONFIRMA_ROTULO": "Mark as: {rotulo}"
+      "PERDEU_CONFIRMA_ROTULO": "Mark as: {rotulo}",
+      "VALOR_OCULTO": "The deal's amount stays as it is."
     },
     "ARQUIVAR": {
       "BOTAO": "Archive",
@@ -5124,7 +5127,9 @@
       "EM_DIA": "on {dia}",
       "ASSUNTO_FRASE": "{titulo}. Priority: {prioridade}, open for {tempo}.",
       "ASSUNTO_SEM_TEMPO": "{titulo}. Priority: {prioridade}.",
-      "SEM_CONTATO_ATENDER": "No person is linked to this request yet."
+      "SEM_CONTATO_ATENDER": "No person is linked to this request yet.",
+      "NEGOCIO_VALOR_OCULTO": "{titulo}. Urgency: {urgencia}.",
+      "VALOR_OCULTO": "hidden amount"
     },
     "ETAPA": {
       "TELA": "Stage",
@@ -5169,7 +5174,8 @@
       "FECHAR_ATE": "Should close by",
       "ATALHO_MES": "End of month",
       "ATALHO_15": "In 15 days",
-      "ATALHO_30": "In 30 days"
+      "ATALHO_30": "In 30 days",
+      "VALOR_OCULTO": "Only people with access to sales values see this deal's amount."
     },
     "DONO": {
       "TELA": "Who handles it",
@@ -6258,7 +6264,9 @@
         "EMPRESA_SEM_META": "There is no goal for this month yet. Support resolved {resolvidos}.",
         "EQUIPE_VENDAS": "The team closed {feito} of {meta}. Nobody needs help. | The team closed {feito} of {meta}. {ajuda} person needs help. | The team closed {feito} of {meta}. {ajuda} people need help.",
         "EQUIPE_VENDAS_SEM_META": "There is no goal for this month yet.",
-        "EQUIPE_ATENDE_SEM_PRAZO": "No reminder fell behind. | {lembretes} reminder fell behind. | {lembretes} reminders fell behind."
+        "EQUIPE_ATENDE_SEM_PRAZO": "No reminder fell behind. | {lembretes} reminder fell behind. | {lembretes} reminders fell behind.",
+        "EQUIPE_VENDAS_SEM_VALOR": "Nobody needs help. | {ajuda} person needs help. | {ajuda} people need help.",
+        "EMPRESA_SEM_VALOR": "Support resolved {resolvidos}."
       },
       "BOTAO": {
         "MEUS_ATRASADOS": "Open my overdue follow-up | Open my {n} overdue follow-ups",
@@ -6270,7 +6278,8 @@
         "ATRASADOS_EQUIPE": "Open the team's overdue follow-up | Open the team's {n} overdue follow-ups",
         "CARDS_EQUIPE": "Open the team's cards",
         "LEMBRETES_EQUIPE": "Open the overdue reminder | Open the {n} overdue reminders",
-        "CASOS_EQUIPE": "Open the team's cases"
+        "CASOS_EQUIPE": "Open the team's cases",
+        "PARADOS_SEM_VALOR": "Open {n} stalled deal | Open {n} stalled deals"
       },
       "SEM_META_EMPRESA": "You closed {valor} in {mes}",
       "SEM_META_EQUIPE": "The team closed {valor} in {mes}",
@@ -6281,7 +6290,9 @@
       "BATIDA_EMPRESA": "You hit the {mes} goal",
       "BATIDA_EQUIPE": "The team hit the {mes} goal",
       "LEITURA": "You are viewing in read-only mode.",
-      "METAS_LINK": "{mes} goals"
+      "METAS_LINK": "{mes} goals",
+      "FECHOU_EQUIPE_SEM_VALOR": "The team closed {n} sale | The team closed {n} sales",
+      "FECHOU_EMPRESA_SEM_VALOR": "You closed {n} sale | You closed {n} sales"
     },
     "PROXIMO": {
       "TITULO": "Next step",
@@ -6302,7 +6313,8 @@
       "VENDENDO_EQUIPE": "Selling (team)",
       "ATENDENDO_EQUIPE": "Support (team)",
       "LEMBRETES": "overdue reminder | overdue reminders",
-      "PARADOS_ATENDE": "stalled for 7+ days | stalled for 7+ days"
+      "PARADOS_ATENDE": "stalled for 7+ days | stalled for 7+ days",
+      "FECHADAS_SEM_VALOR": "sale closed | sales closed"
     },
     "ESTIMADO": "Some older sales were counted for the card's current responsible person.",
     "IA_AJUDOU": {
@@ -6373,7 +6385,10 @@
       "IA_CUSTO_AGENTES": "AI agents cost: {valor} this month, about {porConversa} per conversation.",
       "IA_CUSTO_AGENTES_SEM_CONVERSA": "AI agents cost: {valor} this month.",
       "IA_CUSTO_FALTA": "Estimate: AI usage is not split by agent.",
-      "RODAPE": "We only count customers who entered the pipeline."
+      "RODAPE": "We only count customers who entered the pipeline.",
+      "PLATAFORMA_SEM_VALOR": "This month {ia} answered {atendeu} conversations and took part in {participou} sale. | This month {ia} answered {atendeu} conversations and took part in {participou} sales.",
+      "IA_PARTICIPOU_SEM_VALOR": "took part in {n} sale | took part in {n} sales",
+      "FORA_VENDA_SEM_VALOR": "closed {fechou}"
     },
     "METAS": {
       "TITULO": "{mes} goals",

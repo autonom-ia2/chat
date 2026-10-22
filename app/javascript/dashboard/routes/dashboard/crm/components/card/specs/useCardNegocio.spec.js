@@ -34,3 +34,22 @@ describe('useCardNegocio promessa', () => {
     ).toBe('2026-10-20');
   });
 });
+
+// #2075 — sem a chave de valores a pessoa não vê o valor: salvar não manda valor nem moeda.
+describe('useCardNegocio valor oculto', () => {
+  it('leaves value and currency out when the value is hidden', () => {
+    const form = negocioDoCard({ title: 'Plano', value_cents: null });
+    const payload = payloadDoNegocio(form, { valorOculto: true });
+    expect(payload).not.toHaveProperty('value_cents');
+    expect(payload).not.toHaveProperty('currency');
+    expect(payload.title).toBe('Plano');
+  });
+
+  it('keeps sending the value when the person sees it', () => {
+    const form = negocioDoCard({ title: 'Plano', value_cents: 150000 });
+    expect(payloadDoNegocio(form)).toMatchObject({
+      value_cents: 150000,
+      currency: 'BRL',
+    });
+  });
+});

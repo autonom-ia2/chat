@@ -13,6 +13,8 @@ import {
   CRM_DELETE_CARDS_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 
+const SALES_VALUE_VIEW_KEY = 'sales_value_view';
+
 /**
  * CRM permission computeds for UI gating.
  *
@@ -82,6 +84,15 @@ export function useCrmPermissions() {
     () => canAdminCrm.value || permissions.value.includes(CRM_EXPORT_PERMISSION)
   );
 
+  // #2075 — valores de venda em R$: chave protegida, o crm_admin NÃO liga (espelho de Crm::ValorDeVenda.ve?).
+  // Sem ela o servidor já manda o valor vazio; aqui a tela só some com o que não faria sentido (soma, filtro, ordem).
+  const canSeeSalesValues = computed(
+    () =>
+      isUngatedSeat.value ||
+      permissions.value.includes('administrator') ||
+      permissions.value.includes(SALES_VALUE_VIEW_KEY)
+  );
+
   return {
     hasCrmPermission,
     canViewCrm,
@@ -93,5 +104,6 @@ export function useCrmPermissions() {
     canViewReports,
     canAdminCrm,
     canExportCrm,
+    canSeeSalesValues,
   };
 }

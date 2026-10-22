@@ -217,7 +217,9 @@ const destination = card => ({
             >
               {{ t(`CRM_KANBAN.DRAWER.STATUS_${card.status.toUpperCase()}`) }}
             </div>
-            <span class="text-sm font-semibold">{{ amount(card) }}</span>
+            <span v-if="!card.value_hidden" class="text-sm font-semibold">{{
+              amount(card)
+            }}</span>
           </div>
           <div
             class="flex flex-wrap items-center justify-between gap-2 border-t border-n-weak pt-3 text-xs text-n-slate-11"

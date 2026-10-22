@@ -179,6 +179,19 @@ Esse teste só funciona se a conta 16 tiver Anúncios da Meta ligado. Use a mesm
 6. Dê à pessoa também **Montar funções** e tente, na janela anônima, criar uma função com Anúncios da Meta em **Editar**: o nível aparece travado, com a frase de que só quem pode entregar acima do próprio acesso entrega. Em **Ver** ela consegue.
 7. Ao final, apague a função "Teste – anúncios" e a que ela criou no passo 6.
 
+## Teste 15: Valores de venda sem ser administrador (#2075)
+
+Use a mesma pessoa de teste, com uma função própria ("Teste – valores"). Tenha na conta 16 um funil de venda com dois cards com valor: um com a pessoa de teste como responsável e outro com outra pessoa.
+
+1. Como administrador, monte a função com **CRM** em **Editar** e **Relatórios do CRM**, sem **Ver os valores de venda em R$**. Salve e recarregue a janela anônima.
+2. Na janela anônima, abra o quadro do funil: o card da outra pessoa aparece sem valor; o card da pessoa de teste mostra o valor. Na **Lista**, a coluna Valor mostra um traço no card da outra pessoa, o total do grupo mostra só a quantidade e a coluna não ordena. Nos **Filtros**, a faixa de valor não aparece.
+3. Abra o card da outra pessoa: o resumo não fala de valor e, em **Negócio**, aparece "Só quem tem acesso aos valores de venda vê o valor deste negócio." Mude o título e salve: o título muda e o valor continua o mesmo (confira como administrador).
+4. Marque esse card como ganho: o diálogo não pede valor e avisa que o valor do negócio fica como está. Confira como administrador que o valor não mudou.
+5. No **Painel do CRM**, as contagens e a taxa de ganho aparecem; os quadros em R$, a meta do mês e os valores por etapa não aparecem. Em **Números**, "Só eu" mostra o que a pessoa vendeu e a meta dela, sem a barra da equipe; em "Equipe", aparecem as contagens, sem R$.
+6. Ligue **Ver os valores de venda em R$** na função, salve e recarregue: todos os valores voltam, inclusive a faixa de valor nos Filtros e a meta no Painel.
+7. Dê à pessoa também **Montar funções** e tente, na janela anônima, ligar **Metas do mês** numa função: aparece travada, com a frase de que só quem pode entregar acima do próprio acesso entrega.
+8. Ao final, apague a função "Teste – valores".
+
 ## No fim (limpeza)
 
 1. Remova a pessoa de teste em **Configurações → Usuários**, para não contar no plano.
@@ -187,5 +200,6 @@ Esse teste só funciona se a conta 16 tiver Anúncios da Meta ligado. Use a mesm
 4. Remova "Teste Atendente" e apague a função "Teste – montada" do teste 11.
 5. Confira que a função "Teste – integrações" do teste 13 foi apagada.
 6. Confira que as funções "Teste – anúncios" e a criada no passo 6 do teste 14 foram apagadas.
+7. Confira que a função "Teste – valores" do teste 15 foi apagada.
 
 Se algo não bater com o esperado, me mande o print e o número do teste e do passo, que eu investigo.

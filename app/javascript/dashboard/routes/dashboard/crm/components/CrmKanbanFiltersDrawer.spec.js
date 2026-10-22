@@ -2,6 +2,11 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { defaultFilters } from 'dashboard/store/modules/crmKanban';
 import CrmKanbanFiltersDrawer from './CrmKanbanFiltersDrawer.vue';
 
+// #2075 — quem vê os valores de venda (o padrão das telas sem função personalizada).
+vi.mock('../composables/useCrmPermissions', () => ({
+  useCrmPermissions: () => ({ canSeeSalesValues: { value: true } }),
+}));
+
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),

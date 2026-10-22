@@ -402,8 +402,9 @@ const cardMatchesFilters = (card, filters) => {
   if (filters.teamId && !stringMatches(card.team_id, filters.teamId)) {
     return false;
   }
-  const valueMinCents = toCents(filters.valueMin);
-  const valueMaxCents = toCents(filters.valueMax);
+  // #2075 — card com valor oculto: o servidor não filtra por um valor que a pessoa não vê.
+  const valueMinCents = card.value_hidden ? null : toCents(filters.valueMin);
+  const valueMaxCents = card.value_hidden ? null : toCents(filters.valueMax);
   if (valueMinCents != null && Number(card.value_cents || 0) < valueMinCents) {
     return false;
   }

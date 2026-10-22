@@ -761,8 +761,10 @@
         "NEW": "Nova visualização",
         "RENAME": "Renomear",
         "DELETE": "Excluir visualização",
-        "SAVE": "Salvar visualização"
-      }
+        "SAVE": "Salvar visualização",
+        "VALUE_IGNORED": "Esta visão filtra ou ordena por valor. Sem acesso aos valores de venda, essa parte ficou de fora."
+      },
+      "VALUE_HIDDEN": "Você não vê os valores de venda"
     },
     "CALENDAR": {
       "FOLLOW_UP": "Retorno",
@@ -4991,7 +4993,8 @@
       },
       "CANCELAR_EXEMPLO": "Por que foi cancelado?",
       "PERDEU_TITULO_ROTULO": "{rotulo}: o que houve?",
-      "PERDEU_CONFIRMA_ROTULO": "Marcar: {rotulo}"
+      "PERDEU_CONFIRMA_ROTULO": "Marcar: {rotulo}",
+      "VALOR_OCULTO": "O valor do negócio fica como está."
     },
     "ARQUIVAR": {
       "BOTAO": "Arquivar",
@@ -5125,7 +5128,9 @@
       "EM_DIA": "em {dia}",
       "ASSUNTO_FRASE": "{titulo}. Prioridade {prioridade}, aberto há {tempo}.",
       "ASSUNTO_SEM_TEMPO": "{titulo}. Prioridade {prioridade}.",
-      "SEM_CONTATO_ATENDER": "Ainda não há uma pessoa ligada a este atendimento."
+      "SEM_CONTATO_ATENDER": "Ainda não há uma pessoa ligada a este atendimento.",
+      "NEGOCIO_VALOR_OCULTO": "{titulo}. Urgência {urgencia}.",
+      "VALOR_OCULTO": "valor oculto"
     },
     "ETAPA": {
       "TELA": "Etapa",
@@ -5170,7 +5175,8 @@
       "FECHAR_ATE": "Deve fechar até",
       "ATALHO_MES": "Fim do mês",
       "ATALHO_15": "Em 15 dias",
-      "ATALHO_30": "Em 30 dias"
+      "ATALHO_30": "Em 30 dias",
+      "VALOR_OCULTO": "Só quem tem acesso aos valores de venda vê o valor deste negócio."
     },
     "DONO": {
       "TELA": "Quem cuida",
@@ -6259,7 +6265,9 @@
         "EMPRESA_SEM_META": "Ainda não há meta para este mês. O suporte resolveu {resolvidos}.",
         "EQUIPE_VENDAS": "A equipe fechou {feito} de {meta}. Ninguém precisa de ajuda. | A equipe fechou {feito} de {meta}. {ajuda} pessoa precisa de ajuda. | A equipe fechou {feito} de {meta}. {ajuda} pessoas precisam de ajuda.",
         "EQUIPE_VENDAS_SEM_META": "Ainda não há meta para este mês.",
-        "EQUIPE_ATENDE_SEM_PRAZO": "Nenhum lembrete ficou para trás. | {lembretes} lembrete ficou para trás. | {lembretes} lembretes ficaram para trás."
+        "EQUIPE_ATENDE_SEM_PRAZO": "Nenhum lembrete ficou para trás. | {lembretes} lembrete ficou para trás. | {lembretes} lembretes ficaram para trás.",
+        "EQUIPE_VENDAS_SEM_VALOR": "Ninguém precisa de ajuda. | {ajuda} pessoa precisa de ajuda. | {ajuda} pessoas precisam de ajuda.",
+        "EMPRESA_SEM_VALOR": "O suporte resolveu {resolvidos}."
       },
       "BOTAO": {
         "MEUS_ATRASADOS": "Abrir meu retorno atrasado | Abrir meus {n} retornos atrasados",
@@ -6271,7 +6279,8 @@
         "ATRASADOS_EQUIPE": "Abrir o retorno atrasado da equipe | Abrir os {n} retornos atrasados da equipe",
         "CARDS_EQUIPE": "Abrir os cards da equipe",
         "LEMBRETES_EQUIPE": "Abrir o lembrete para trás | Abrir os {n} lembretes para trás",
-        "CASOS_EQUIPE": "Abrir os casos da equipe"
+        "CASOS_EQUIPE": "Abrir os casos da equipe",
+        "PARADOS_SEM_VALOR": "Abrir {n} negociação parada | Abrir {n} negociações paradas"
       },
       "SEM_META_EMPRESA": "Vocês fecharam {valor} em {mes}",
       "SEM_META_EQUIPE": "A equipe fechou {valor} em {mes}",
@@ -6282,7 +6291,9 @@
       "BATIDA_EMPRESA": "Vocês bateram a meta de {mes}",
       "BATIDA_EQUIPE": "A equipe bateu a meta de {mes}",
       "LEITURA": "Você está vendo em modo leitura.",
-      "METAS_LINK": "Metas de {mes}"
+      "METAS_LINK": "Metas de {mes}",
+      "FECHOU_EQUIPE_SEM_VALOR": "A equipe fechou {n} venda | A equipe fechou {n} vendas",
+      "FECHOU_EMPRESA_SEM_VALOR": "Vocês fecharam {n} venda | Vocês fecharam {n} vendas"
     },
     "PROXIMO": {
       "TITULO": "Próximo passo",
@@ -6303,7 +6314,8 @@
       "VENDENDO_EQUIPE": "Vendendo (equipe)",
       "ATENDENDO_EQUIPE": "Atendendo (equipe)",
       "LEMBRETES": "lembrete para trás | lembretes para trás",
-      "PARADOS_ATENDE": "parado há 7+ dias | parados há 7+ dias"
+      "PARADOS_ATENDE": "parado há 7+ dias | parados há 7+ dias",
+      "FECHADAS_SEM_VALOR": "venda fechada | vendas fechadas"
     },
     "ESTIMADO": "Algumas vendas antigas foram contadas pelo responsável atual do card.",
     "IA_AJUDOU": {
@@ -6374,7 +6386,10 @@
       "IA_CUSTO_AGENTES": "Custo dos agentes de IA: {valor} este mês, cerca de {porConversa} por conversa.",
       "IA_CUSTO_AGENTES_SEM_CONVERSA": "Custo dos agentes de IA: {valor} este mês.",
       "IA_CUSTO_FALTA": "Estimado: o consumo da IA não separa os agentes.",
-      "RODAPE": "Contamos só os clientes que entraram no funil."
+      "RODAPE": "Contamos só os clientes que entraram no funil.",
+      "PLATAFORMA_SEM_VALOR": "Este mês {ia} respondeu {atendeu} conversas e participou de {participou} venda. | Este mês {ia} respondeu {atendeu} conversas e participou de {participou} vendas.",
+      "IA_PARTICIPOU_SEM_VALOR": "participou de {n} venda | participou de {n} vendas",
+      "FORA_VENDA_SEM_VALOR": "fechou {fechou}"
     },
     "METAS": {
       "TITULO": "Metas de {mes}",
