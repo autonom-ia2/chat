@@ -26,11 +26,9 @@ class Conversations::EventDataPresenter < SimpleDelegator
 
   # Like #push_data but with message text normalized for external integrations (webhooks).
   def webhook_data
-    data = push_data
-    data.merge(
+    push_data.merge(
       account: account.webhook_data,
-      messages: webhook_push_messages,
-      meta: data[:meta].except(:veio_da_ia) # #2067: só para o painel; o contrato do webhook não muda
+      messages: webhook_push_messages
     )
   end
 
@@ -74,8 +72,7 @@ class Conversations::EventDataPresenter < SimpleDelegator
       assignee: assigned_entity&.push_event_data,
       assignee_type: assignee_type,
       team: team&.push_event_data,
-      hmac_verified: contact_inbox&.hmac_verified,
-      veio_da_ia: Crm::Passagens::VeioDaIa.de(__getobj__) # #2067: o "Devolver para" da caixa de resposta
+      hmac_verified: contact_inbox&.hmac_verified
     }
   end
 
