@@ -61,9 +61,10 @@ const { hasTranslations, translationContent } = useTranslations(
   mensagem.contentAttributes
 );
 const verOriginal = ref(false);
+// Mensagem que o cliente apagou fica com o aviso de apagada: a tradução era do texto que saiu.
 const texto = computed(() => {
   const traduzido =
-    hasTranslations.value && !verOriginal.value
+    hasTranslations.value && !verOriginal.value && tipo.value !== BALOES.APAGADA
       ? translationContent.value
       : null;
   return (traduzido || dados.value.content || '').trim();
