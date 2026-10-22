@@ -22,6 +22,12 @@ class ConversaCanal::ConviteSubstituido
     Digest::SHA256.hexdigest(uid.to_s)
   end
 
+  # Sem a ordem do default_scope: com ORDER BY created_at o planner pode trocar o índice parcial pelo de created_at
+  # (#2072). A ordem que vale é decidida aqui, em Ruby (`ordem`).
+  def self.pela_chave(uid)
+    Message.unscope(:order).where("messages.additional_attributes ->> 'convite_uid_sha256' = ?", chave(uid))
+  end
+
   def initialize(message)
     @message = message
   end
@@ -48,11 +54,11 @@ class ConversaCanal::ConviteSubstituido
 
   # A chave do UID acha as candidatas pelo índice; a conferência campo a campo (UID e organizador) vem depois, aqui.
   def mesma_reuniao
-    Message.incoming
-           .where("messages.additional_attributes ->> 'convite_uid_sha256' = ?", self.class.chave(uid))
-           .where(inbox_id: @message.inbox_id, sender_type: @message.sender_type, sender_id: @message.sender_id)
-           .to_a
-           .select { |message| mesma_reuniao?(convite(message)) }
+    self.class.pela_chave(uid)
+        .incoming
+        .where(inbox_id: @message.inbox_id, sender_type: @message.sender_type, sender_id: @message.sender_id)
+        .to_a
+        .select { |message| mesma_reuniao?(convite(message)) }
   end
 
   # A versão que vale hoje para o convite antigo, seguindo a fila de substituições: REQUEST, depois CANCEL, depois o
