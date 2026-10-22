@@ -1,50 +1,105 @@
 # Excluir de vez (#2096, Parte C): apaga o card e todo o histórico dele. A conversa do cliente e as mensagens não são
 # tocadas: só o vínculo do card com elas (crm_card_conversations) sai.
 #
-# Quem decide se pode (administrador, card arquivado, confirmação) é quem chama. Este serviço só apaga, em lote, os
-# cards da conta que receber, e roda o bloco do chamador na mesma transação (a auditoria, o contato da LGPD, o funil).
+# Quem decide se pode (administrador, confirmação) é quem chama. Este serviço apaga, em lote, os cards da conta que
+# receber, e roda o bloco do chamador na mesma transação (a auditoria, o contato da LGPD, o funil).
+#
+# `somente_arquivados` (o padrão): só apaga card arquivado, conferido duas vezes. A conferência do chamador vem antes das
+# chamadas ao calendário, que levam segundos; alguém pode restaurar o card nesse meio tempo. Por isso o status é relido
+# logo antes de cancelar as reuniões e de novo sob a trava, dentro da transação: se um card não estiver mais arquivado
+# (ou tiver sumido), nada é apagado (Crm::ExclusaoDefinitiva::Mudou). O contato da LGPD e o funil com "apagar os cards"
+# passam `somente_arquivados: false`: ali o card aberto também sai, por decisão de quem apaga o contato ou o funil.
+#
+# `conferir`: roda primeiro dentro da transação, com os ids, antes das travas dos cards. O funil o usa para se travar e
+# conferir que continua arquivado e com os mesmos cards (Crm::Pipelines::Excluidor).
 #
 # Ordem:
 # 1. Reunião futura é cancelada no calendário antes de apagar (o cliente recebe o cancelamento do Google ou da
-#    Microsoft). Se o calendário falhar, nada é apagado: ReuniaoNaoCancelada. Reunião já cancelada antes da falha fica
-#    cancelada, como no "Cancelar" da agenda.
-# 2. Numa transação só: as tabelas que apontam para o card sem chave estrangeira, as reuniões (os convidados não têm
-#    cascata no banco), o card (o Rails apaga atividades, retornos, sugestões e vínculos de conversa; o banco apaga
-#    séries, memória do card, execuções de automação e decisões do agente, e solta passagens, decisões de assunto,
-#    convites e leads de prospecção) e o bloco do chamador.
+#    Microsoft, e o card ganha a atividade "reunião cancelada"). Se o calendário falhar, nada é apagado:
+#    ReuniaoNaoCancelada, com as reuniões que já tinham sido canceladas antes da falha (essas ficam canceladas, como no
+#    "Cancelar" da agenda).
+# 2. Numa transação só, com as travas na ordem do resto do CRM (série, reunião, lembrete, card; ver
+#    Crm::Cards::Archiver da Parte A e Crm::Meetings::CancelService): a releitura dos cards, as tabelas que apontam
+#    para o card sem chave estrangeira, as reuniões (os convidados não têm cascata no banco), o histórico do card de uma
+#    vez (atividades, retornos, sugestões e vínculos de conversa, em vez de um por um), o card (o banco apaga séries,
+#    memória do card, execuções de automação e decisões do agente, e solta passagens, decisões de assunto, convites e
+#    leads de prospecção) e o bloco do chamador.
 class Crm::Cards::Excluidor
   class ReuniaoNaoCancelada < StandardError
-    attr_reader :meeting_id
+    attr_reader :meeting_id, :canceladas
 
-    def initialize(meeting_id)
+    def initialize(meeting_id, canceladas = [])
       @meeting_id = meeting_id
+      @canceladas = canceladas
       super("meeting #{meeting_id} could not be canceled at the calendar provider")
     end
   end
 
-  def initialize(account:, card_ids:)
+  def initialize(account:, card_ids:, somente_arquivados: true)
     @account = account
     @card_ids = Array(card_ids)
+    @somente_arquivados = somente_arquivados
+    @canceladas = []
   end
 
   # Devolve os ids apagados. O bloco recebe esses ids e roda dentro da transação.
-  def perform
+  def perform(conferir: nil, &)
     ids = @account.crm_cards.where(id: @card_ids).order(:id).pluck(:id)
+    conferir_antes!(ids)
     conversation_ids = conversas_dos(ids)
     cancelar_reunioes_futuras!(ids)
-
-    ActiveRecord::Base.transaction do
-      limpar_registros_sem_chave!(ids)
-      Crm::Meeting.where(account_id: @account.id, card_id: ids).find_each(&:destroy!)
-      @account.crm_cards.where(id: ids).find_each(&:destroy!)
-      yield ids if block_given?
-    end
-
+    apagar!(ids, conferir, &)
     avisar_acesso_por_funil(conversation_ids)
     ids
   end
 
   private
+
+  def apagar!(ids, conferir)
+    ActiveRecord::Base.transaction do
+      conferir&.call(ids)
+      travar!(ids)
+      limpar_registros_sem_chave!(ids)
+      Crm::Meeting.where(account_id: @account.id, card_id: ids).find_each(&:destroy!)
+      apagar_historico!(ids)
+      @account.crm_cards.where(id: ids).find_each(&:destroy!)
+      yield ids if block_given?
+    end
+  rescue Crm::ExclusaoDefinitiva::Mudou => e
+    raise Crm::ExclusaoDefinitiva::Mudou.new(e.motivo, canceladas: @canceladas)
+  end
+
+  # Antes do calendário e sob a trava: card que voltou ao quadro (ou sumiu) faz o pedido inteiro desistir.
+  def conferir_antes!(ids)
+    return unless @somente_arquivados
+
+    conferir_arquivados!(@account.crm_cards.where(id: ids).select(:id, :status).to_a, ids.size)
+  end
+
+  def conferir_arquivados!(cards, esperados)
+    return unless @somente_arquivados
+    return if cards.size == esperados && cards.all?(&:archived?)
+
+    raise Crm::ExclusaoDefinitiva::Mudou.new('not_archived', canceladas: @canceladas)
+  end
+
+  def travar!(ids)
+    da_conta = { account_id: @account.id, card_id: ids }
+    Crm::FollowUpSeries.where(da_conta).order(:id).lock.load
+    Crm::Meeting.where(da_conta).order(:id).lock.load
+    Crm::FollowUp.where(da_conta).order(:id).lock.load
+    travados = @account.crm_cards.where(id: ids).order(:id).lock.to_a
+    raise Crm::ExclusaoDefinitiva::Mudou.new('cards_changed', canceladas: @canceladas) if travados.size != ids.size
+
+    conferir_arquivados!(travados, ids.size)
+  end
+
+  # Tudo isto tem cascata no banco e nenhum callback que importe ao apagar (o aviso do acesso por funil que o vínculo de
+  # conversa daria, avisar_acesso_por_funil dá). Um DELETE por tabela, em vez de um por linha.
+  def apagar_historico!(ids)
+    da_conta = { account_id: @account.id, card_id: ids }
+    [Crm::Activity, Crm::AiStageSuggestion, Crm::FollowUp, Crm::CardConversation].each { |modelo| modelo.where(da_conta).delete_all }
+  end
 
   def conversas_dos(ids)
     primarias = @account.crm_cards.where(id: ids).where.not(conversation_id: nil).pluck(:conversation_id)
@@ -52,10 +107,11 @@ class Crm::Cards::Excluidor
   end
 
   def cancelar_reunioes_futuras!(ids)
-    Crm::Meeting.where(account_id: @account.id, card_id: ids).upcoming.find_each do |meeting|
+    Crm::Meeting.where(account_id: @account.id, card_id: ids).upcoming.order(:id).each do |meeting|
       Crm::Meetings::CancelService.new(meeting: meeting).perform
+      @canceladas << meeting.id
     rescue *erros_do_calendario
-      raise ReuniaoNaoCancelada, meeting.id
+      raise ReuniaoNaoCancelada.new(meeting.id, @canceladas.dup)
     end
   end
 

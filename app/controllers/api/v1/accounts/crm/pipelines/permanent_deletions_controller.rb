@@ -1,6 +1,7 @@
 # Excluir de vez um funil arquivado (#2096, Parte C). Só administrador, só funil arquivado e com o nome do funil digitado.
 # Funil com cards exige a escolha explícita em `cards`: 'move' (com `target_stage_id`, etapa de outro funil ativo) ou
-# 'delete' (apaga os cards de vez junto). Sem cards, apaga na hora (200); com cards, vai para um job (202).
+# 'delete' (apaga os cards de vez junto). Sem cards, apaga na hora (200); com cards, vai para um job (202), que grava o
+# desfecho na Auditoria da conta quando desiste (Crm::ExclusaoDefinitiva::FALHOU).
 class Api::V1::Accounts::Crm::Pipelines::PermanentDeletionsController < Api::V1::Accounts::Crm::BaseController
   before_action :fetch_pipeline
   before_action :ensure_deletable!
@@ -29,9 +30,12 @@ class Api::V1::Accounts::Crm::Pipelines::PermanentDeletionsController < Api::V1:
     render_error('crm.permanent_delete.confirmation_mismatch') unless params[:confirmation].to_s.strip == @pipeline.name.strip
   end
 
+  # O serviço relê o funil sob a trava: restaurado ou com card novo nesse meio tempo, nada sai (422 com o motivo).
   def excluir_agora
     ::Crm::Pipelines::Excluidor.new(pipeline: @pipeline, actor: Current.user).perform
     render json: { payload: { status: 'deleted', cards_count: 0 } }
+  rescue ::Crm::ExclusaoDefinitiva::Mudou => e
+    render_error("crm.permanent_delete.#{e.motivo}")
   end
 
   def modo

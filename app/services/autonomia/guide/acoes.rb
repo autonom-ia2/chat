@@ -95,8 +95,6 @@ class Autonomia::Guide::Acoes
     'PATCH crm/meta_ads_connection/destinations',
     # #1069 — entrar com o Facebook grava uma credencial nova da Meta e troca de onde a plataforma lê.
     'POST crm/meta_ads_connection/facebook_login',
-    # #2096 — excluir de vez card e funil arquivados apaga o histórico inteiro, sem volta: o caderno não traz a cascata.
-    'POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
     # #1809 — "Excluir para sempre" da Lixeira do e-mail apaga a conversa pelo DeleteObjectJob, como o DELETE da conversa.
     'DELETE conversa_canal/pastas_do_email/:conversation_id'
   ].freeze
@@ -105,7 +103,11 @@ class Autonomia::Guide::Acoes
   # para o sistema criar modelos da Meta vale pelo texto exato do aviso que a tela mostra e o registro grava; uma
   # proposta do Guia não mostra esse texto. Vale para o catálogo e para o formato (`Formatos::RotasDeEscrita`).
   # A chave é a resposta que o Guia dá ao pedido (autonomia.guide.only_on_screen.*), com o caminho da tela.
-  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent' }.freeze
+  # #2096: excluir de vez (card, funil e os cards do contato) exige que a pessoa digite a confirmação; uma proposta do Guia
+  # a preencheria sozinha.
+  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent' }
+               .merge(['POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
+                       'POST crm/contacts/:contact_id/permanent_delete'].index_with('crm_permanent_delete')).freeze
 
   # O que é encanamento do painel, não ação de quem usa: nem entra no catálogo nem tem formato. #1841: o registro
   # de erro do navegador; o Guia chamando isso só gravaria linha falsa no log de diagnóstico.

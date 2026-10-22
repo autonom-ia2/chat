@@ -46,11 +46,21 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(para(admin).desfazivel?('PUT conversa_canal/pastas_do_email/:conversation_id')).to be(true)
     end
 
-    # #2096: excluir de vez card e funil arquivados não tem volta; o Guia propõe e a pessoa confirma.
-    it 'excluir de vez card e funil pede confirmação, arquivar não' do
-      expect(para(admin).desfazivel?('POST crm/cards/permanent_delete')).to be(false)
-      expect(para(admin).desfazivel?('POST crm/pipelines/:id/permanent_delete')).to be(false)
+    # #2096: excluir de vez exige a confirmação digitada pela pessoa; o Guia não propõe (ele a preencheria sozinho).
+    # Arquivar continua com desfazer.
+    it 'deixa excluir de vez só na tela, e arquivar no catálogo', :aggregate_failures do
+      excluir_de_vez = ['POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
+                        'POST crm/contacts/:contact_id/permanent_delete']
+      rotas = Rails.application.routes.routes.map { |rota| Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', '')) }
+      expect(rotas).to include(*excluir_de_vez.map { |acao| acao.split(' ', 2).last })
+
+      expect(para(admin).catalogo).not_to include(*excluir_de_vez)
+      expect(Autonomia::Guide::Formatos::RotasDeEscrita.todas.map(&:acao)).not_to include(*excluir_de_vez)
       expect(para(admin).desfazivel?('DELETE crm/cards/:id')).to be(true)
+      I18n.with_locale(:pt_BR) do
+        expect { para(admin).conferir!('POST crm/cards/permanent_delete', {}) }
+          .to raise_error(described_class::Recusada, /Excluir de vez só se faz na tela/)
+      end
     end
 
     # Dinheiro da conta na plataforma nunca entra no catálogo do Guia.
@@ -62,7 +72,7 @@ RSpec.describe Autonomia::Guide::Acoes do
 
     # #1586: o aceite do dono para o sistema criar modelos só vale dado na tela, onde o texto do aviso é mostrado.
     it 'deixa de fora o que só se faz na tela, também no formato das ações', :aggregate_failures do
-      expect(described_class::SO_NA_TELA.keys).to eq(['POST whatsapp_template_consent'])
+      expect(described_class::SO_NA_TELA.keys).to include('POST whatsapp_template_consent')
       expect(para(admin).catalogo).not_to include('POST whatsapp_template_consent')
       expect(Autonomia::Guide::Formatos::RotasDeEscrita.todas.map(&:acao)).not_to include('POST whatsapp_template_consent')
       I18n.with_locale(:pt_BR) do

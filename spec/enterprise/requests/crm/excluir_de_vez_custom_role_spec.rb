@@ -48,7 +48,8 @@ RSpec.describe 'Excluir de vez com função personalizada', type: :request do
     give_role(%w[contact_view contact_delete crm_admin])
     card
 
-    delete "#{base}/contacts/#{contact.id}", params: { delete_crm_cards: true }, headers: agent.create_new_auth_token, as: :json
+    post "#{base}/crm/contacts/#{contact.id}/permanent_delete",
+         params: { confirmation: 'EXCLUIR' }, headers: agent.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)
     expect([Contact.exists?(contact.id), Crm::Card.exists?(card.id)]).to eq([true, true])
 

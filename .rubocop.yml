@@ -29,9 +29,6 @@ Metrics/ClassLength:
     - 'app/models/conversation.rb'
     # Upstream controller already above the limit (190 lines on main before #452).
     - 'app/controllers/api/v1/accounts/inboxes_controller.rb'
-    # Upstream controller exactly at the limit (175 lines on main); #2096 adds the LGPD branch of destroy, whose logic
-    # lives in Crm::ContactCardsDeletion.
-    - 'app/controllers/api/v1/accounts/contacts_controller.rb'
     - 'config/initializers/rack_attack.rb'
 
 Metrics/MethodLength:

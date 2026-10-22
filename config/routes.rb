@@ -268,6 +268,8 @@ Rails.application.routes.draw do
           resources :ctwa_tracked_links, only: [:index, :create, :update, :destroy]
           namespace :crm do
             get 'contacts/:contact_id/opportunities', to: 'contact_opportunities#index'
+            # LGPD (#2096): excluir o contato com os cards dele de vez, só administrador.
+            post 'contacts/:contact_id/permanent_delete', to: 'contacts/permanent_deletions#create'
             get 'companies/:company_id/opportunities', to: 'company_opportunities#index' if ChatwootApp.enterprise?
             resources :pipelines, only: [:index, :create, :show, :update, :destroy] do
               # Excluir de vez um funil arquivado (#2096), só administrador.

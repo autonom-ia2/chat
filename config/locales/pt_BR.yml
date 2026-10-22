@@ -962,6 +962,7 @@ pt_BR:
       unknown_action: 'Isto o Guia não faz.'
       only_on_screen:
         whatsapp_template_consent: 'Isto só se faz na tela: Modelos › Autorização.'
+        crm_permanent_delete: 'Excluir de vez só se faz na tela, digitando a confirmação: no CRM, em Arquivados, ou ao excluir o contato.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'

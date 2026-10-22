@@ -1,6 +1,9 @@
 # Excluir de vez cards arquivados (#2096, Parte C), um ou vários. Só administrador, só card arquivado e com a palavra
 # EXCLUIR digitada. Apaga o card e todo o histórico dele; a conversa do cliente fica (Crm::Cards::Excluidor).
-# Tudo ou nada: um card que não pode sair recusa o pedido inteiro, e nada é apagado.
+# Tudo ou nada: um card que não pode sair recusa o pedido inteiro, e nada é apagado. O serviço confere o arquivado de
+# novo, sob a trava: um card restaurado no meio do caminho não é apagado (422 not_archived).
+# Em todo 422 depois de começar, `canceled_meeting_ids` diz quais reuniões futuras já tinham sido canceladas no calendário
+# (o cliente já foi avisado; o card tem a atividade "reunião cancelada").
 class Api::V1::Accounts::Crm::Cards::PermanentDeletionsController < Api::V1::Accounts::Crm::BaseController
   CONFIRMACAO = 'EXCLUIR'.freeze
   MAX_CARDS = ::Crm::Cards::BulkAction::MAX_IDS
@@ -14,7 +17,10 @@ class Api::V1::Accounts::Crm::Cards::PermanentDeletionsController < Api::V1::Acc
 
     render json: { payload: { deleted_ids: excluir!(cards.map(&:id)) } }
   rescue ::Crm::Cards::Excluidor::ReuniaoNaoCancelada => e
-    render_error('crm.permanent_delete.meeting_cancel_failed', meeting_id: e.meeting_id)
+    render_error('crm.permanent_delete.meeting_cancel_failed', meeting_id: e.meeting_id, canceled_meeting_ids: e.canceladas)
+  rescue ::Crm::ExclusaoDefinitiva::Mudou => e
+    # Restaurado (ou apagado por outro pedido) enquanto este esperava o calendário ou a trava: nada saiu.
+    render_error("crm.permanent_delete.#{e.motivo}", canceled_meeting_ids: e.canceladas)
   end
 
   private

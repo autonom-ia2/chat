@@ -110,6 +110,44 @@ RSpec.describe 'CRM excluir de vez', type: :request do
       expect(response.parsed_body).to eq('error' => 'crm.permanent_delete.too_many_cards', 'max' => 100)
     end
 
+    # Duas reuniões: a primeira cancela, a segunda não. Nada é apagado, e a resposta diz qual já foi cancelada (o cliente
+    # já recebeu o aviso; o card tem a atividade).
+    it 'quando a segunda reunião não cancela, diz qual já foi cancelada e não apaga nada' do
+      card = card_arquivado
+      primeira = create_reuniao(account: account, card: card, user: admin, contact: contact, starts_at: 2.days.from_now)
+      segunda = create_reuniao(account: account, card: card, user: admin, contact: contact, starts_at: 3.days.from_now)
+      allow(Crm::Meetings::CancelService).to receive(:new).and_wrap_original do |original, **args|
+        raise Net::ReadTimeout if args[:meeting].id == segunda.id
+
+        original.call(**args)
+      end
+
+      call(admin, path, card_ids: [card.id], confirmation: 'EXCLUIR')
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'crm.permanent_delete.meeting_cancel_failed', 'meeting_id' => segunda.id,
+                                         'canceled_meeting_ids' => [primeira.id])
+      expect([card.reload.status, primeira.reload.status, segunda.reload.status]).to eq(%w[archived canceled scheduled])
+      expect(card.activities.where(event_type: 'meeting_canceled').count).to eq(1)
+      expect(auditorias).to be_empty
+    end
+
+    # O card voltou ao quadro entre a conferência do controller e a transação (o calendário leva segundos).
+    it 'não apaga o card restaurado no meio do caminho (422), e devolve as reuniões já canceladas' do
+      card = card_arquivado
+      futura = create_reuniao(account: account, card: card, user: admin, contact: contact, starts_at: 2.days.from_now)
+      allow(Crm::Meetings::CancelService).to receive(:new).and_wrap_original do |original, **args|
+        original.call(**args).tap { Crm::Card.find(card.id).update!(status: :open) }
+      end
+
+      call(admin, path, card_ids: [card.id], confirmation: 'EXCLUIR')
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'crm.permanent_delete.not_archived', 'canceled_meeting_ids' => [futura.id])
+      expect(card.reload).to be_open
+      expect(auditorias).to be_empty
+    end
+
     it 'não apaga nada quando a reunião futura não cancela no calendário (422)' do
       card = card_arquivado
       meeting = create_reuniao(account: account, card: card, user: admin, contact: contact, starts_at: 2.days.from_now)
@@ -120,7 +158,8 @@ RSpec.describe 'CRM excluir de vez', type: :request do
       call(admin, path, card_ids: [card.id], confirmation: 'EXCLUIR')
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body).to eq('error' => 'crm.permanent_delete.meeting_cancel_failed', 'meeting_id' => meeting.id)
+      expect(response.parsed_body).to eq('error' => 'crm.permanent_delete.meeting_cancel_failed', 'meeting_id' => meeting.id,
+                                         'canceled_meeting_ids' => [])
       expect(card.reload).to be_present
       expect(auditorias).to be_empty
     end
@@ -231,6 +270,35 @@ RSpec.describe 'CRM excluir de vez', type: :request do
       expect(auditorias.sole.audited_changes).to include('alvo' => 'funil', 'card_ids' => [], 'cards_movidos' => 2)
     end
 
+    def mover_para(etapa)
+      perform_enqueued_jobs(only: Crm::Pipelines::ExcluirDeVezJob) do
+        call(admin, path, confirmation: 'Funil Comercial', cards: 'move', target_stage_id: etapa.id)
+      end
+      expect(response).to have_http_status(:accepted)
+    end
+
+    # #1498: o atendimento Resolvido que vai para um funil de Vender volta aberto, e por isso entra na etapa escolhida,
+    # no quadro; nunca aberto na primeira etapa.
+    it 'card Resolvido de Atender que vai para Vender entra aberto na etapa escolhida' do
+      pipeline.update!(counts_as_sale: false)
+      resolvido = card_arquivado(title: 'Resolvido', status: :resolved)
+      pipeline.archived!
+
+      mover_para(destino_stage)
+
+      expect(resolvido.reload).to have_attributes(pipeline_id: destino_and_stage.first.id, stage_id: destino_stage.id, status: 'open')
+    end
+
+    it 'card Ganho de Vender que vai para Atender fica Resolvido, na primeira etapa, fora do quadro' do
+      destino_and_stage.first.update!(counts_as_sale: false)
+      ganho = card_arquivado(title: 'Ganho', status: :won, value_cents: 10_000)
+      pipeline.archived!
+
+      mover_para(destino_stage)
+
+      expect(ganho.reload).to have_attributes(stage_id: destino_and_stage.last.id, status: 'resolved')
+    end
+
     it 'apaga os cards junto quando pedido' do
       card = create_card_cheio(account: account, user: admin, pipeline: pipeline, contact: contact, conversation: conversation)
       pipeline.archived!
@@ -255,31 +323,69 @@ RSpec.describe 'CRM excluir de vez', type: :request do
       perform_enqueued_jobs(only: Crm::Pipelines::ExcluirDeVezJob)
 
       expect(pipeline.reload.cards.count).to eq(1)
+      falha = Audited.audit_class.find_by!(auditable: account, action: Crm::ExclusaoDefinitiva::FALHOU)
+      expect(falha.audited_changes).to eq('alvo' => 'funil', 'motivo' => 'not_archived', 'pipeline_id' => pipeline.id)
+      expect(auditorias).to be_empty
     end
   end
 
-  describe 'DELETE contacts/:id com delete_crm_cards (LGPD)' do
-    def destroy_contact(user, params = {})
-      delete "#{base}/contacts/#{contact.id}", params: params, headers: user.create_new_auth_token, as: :json
-    end
+  describe 'POST crm/contacts/:contact_id/permanent_delete (LGPD)' do
+    let(:path) { "#{base}/crm/contacts/#{contact.id}/permanent_delete" }
 
-    it 'apaga o contato e, com o parâmetro, os cards dele de vez' do
+    it 'apaga o contato e os cards dele de vez, abertos, ganhos e arquivados, e deixa a conversa' do
       aberto = card_arquivado(status: :open)
+      ganho = card_arquivado(title: 'Venda', status: :won, value_cents: 90_000)
       arquivado = card_arquivado(title: 'Antigo')
+      conversation
 
-      destroy_contact(admin, delete_crm_cards: true)
+      call(admin, path, confirmation: 'EXCLUIR')
 
       expect(response).to have_http_status(:ok)
+      ids = [aberto.id, ganho.id, arquivado.id].sort
+      expect(response.parsed_body['payload']).to eq('deleted_card_ids' => ids)
       expect(Contact.exists?(contact.id)).to be(false)
-      expect(Crm::Card.where(id: [aberto.id, arquivado.id])).to be_empty
-      expect(auditorias.sole.audited_changes).to eq('alvo' => 'contato', 'cards_apagados' => 2,
-                                                    'card_ids' => [aberto.id, arquivado.id].sort, 'contact_id' => contact.id)
+      expect(Crm::Card.where(id: ids)).to be_empty
+      expect(Conversation.exists?(conversation.id)).to be(true)
+      expect(auditorias.sole.audited_changes).to eq('alvo' => 'contato', 'cards_apagados' => 3, 'card_ids' => ids,
+                                                    'contact_id' => contact.id)
     end
 
-    it 'sem o parâmetro, mantém o comportamento de hoje: os cards ficam sem contato' do
+    it 'exige a confirmação digitada (422) e não apaga nada' do
       card = card_arquivado(status: :open)
 
-      destroy_contact(admin)
+      ['', 'excluir', 'true'].each do |confirmation|
+        call(admin, path, confirmation: confirmation)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('crm.permanent_delete.confirmation_mismatch')
+      end
+      expect([Contact.exists?(contact.id), Crm::Card.exists?(card.id)]).to eq([true, true])
+    end
+
+    it 'recusa agente sem função (403) e não apaga nada' do
+      card = card_arquivado(status: :won)
+
+      call(agent, path, confirmation: 'EXCLUIR')
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body['error']).to eq('crm.permanent_delete.admin_only')
+      expect([Contact.exists?(contact.id), Crm::Card.exists?(card.id)]).to eq([true, true])
+    end
+
+    it 'não acha contato de outra conta (404)' do
+      outra = create(:account)
+      alheio = outra.contacts.create!(name: 'Alheio', phone_number: '+5511999990009')
+
+      call(admin, "#{base}/crm/contacts/#{alheio.id}/permanent_delete", confirmation: 'EXCLUIR')
+
+      expect(response).to have_http_status(:not_found)
+      expect(Contact.exists?(alheio.id)).to be(true)
+    end
+
+    it 'o DELETE do contato de sempre não muda: os cards ficam sem contato, e o parâmetro antigo não apaga card' do
+      card = card_arquivado(status: :open)
+
+      delete "#{base}/contacts/#{contact.id}", params: { delete_crm_cards: true }, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(card.reload.contact_id).to be_nil
@@ -293,10 +399,10 @@ RSpec.describe 'CRM excluir de vez', type: :request do
       allow(servico).to receive(:perform).and_raise(Errno::ECONNREFUSED)
       allow(Crm::Meetings::CancelService).to receive(:new).and_return(servico)
 
-      destroy_contact(admin, delete_crm_cards: true)
+      call(admin, path, confirmation: 'EXCLUIR')
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq('crm.permanent_delete.meeting_cancel_failed')
+      expect(response.parsed_body).to include('error' => 'crm.permanent_delete.meeting_cancel_failed', 'canceled_meeting_ids' => [])
       expect([Contact.exists?(contact.id), Crm::Card.exists?(card.id)]).to eq([true, true])
     end
   end

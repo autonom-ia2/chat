@@ -1,10 +1,15 @@
-# Excluir de vez um funil arquivado (#2096, Parte C). Quem chama já conferiu administrador, funil arquivado e
-# confirmação. Com cards, a escolha é explícita:
+# Excluir de vez um funil arquivado (#2096, Parte C). Quem chama já conferiu administrador e confirmação. Com cards, a
+# escolha é explícita:
 # - 'move': cada card vai para o funil de destino (Crm::Cards::Mover, com o histórico "move" e sem rodar as automações
-#   da etapa de destino). O aberto vai para a etapa escolhida; o fechado e o arquivado, para a primeira etapa do destino,
-#   porque não estão no quadro.
+#   da etapa de destino). Card que fica aberto no destino vai para a etapa escolhida; o que fica fechado ou arquivado
+#   vai para a primeira etapa do destino, porque não aparece no quadro. Quem decide é o status DEPOIS de mudar de
+#   funil (Crm::Cards::Outcome.status_after_move): o atendimento Resolvido ou Cancelado que vai para um funil de Vender
+#   volta aberto, e entra na etapa escolhida, no quadro.
 # - 'delete': os cards são apagados de vez junto (Crm::Cards::Excluidor, com o cancelamento das reuniões futuras).
-# Tudo numa transação: se algo falhar, o funil e os cards ficam como estavam.
+#
+# Tudo numa transação, que começa travando o funil e o relendo: funil restaurado, apagado por outro pedido igual (dois
+# cliques, dois jobs) ou com cards diferentes dos conferidos faz o pedido desistir sem apagar nada
+# (Crm::ExclusaoDefinitiva::Mudou). Os cards são calculados já sob a trava; a auditoria leva só o que saiu de fato.
 class Crm::Pipelines::Excluidor
   MOVER = 'move'.freeze
   APAGAR = 'delete'.freeze
@@ -26,13 +31,11 @@ class Crm::Pipelines::Excluidor
 
   def perform
     card_ids = @pipeline.cards.order(:id).pluck(:id)
-    raise ArgumentError, 'pipeline has cards: choose move or delete' if card_ids.any? && MODOS.exclude?(@modo)
     return apagar_com_os_cards(card_ids) if @modo == APAGAR && card_ids.any?
 
-    movidos = []
-    ActiveRecord::Base.transaction do
-      movidos = mover_cards!
-      apagar_funil!(card_ids: [], cards_movidos: movidos.size)
+    movidos = ActiveRecord::Base.transaction do
+      travar_funil!
+      mover_cards!.tap { |cards| apagar_funil!(card_ids: [], cards_movidos: cards.size) }
     end
     movidos.each { |card| Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_MOVED) }
   end
@@ -40,19 +43,50 @@ class Crm::Pipelines::Excluidor
   private
 
   def apagar_com_os_cards(card_ids)
-    Crm::Cards::Excluidor.new(account: @account, card_ids: card_ids).perform do |ids|
+    raise Crm::ExclusaoDefinitiva::Mudou, 'not_archived' unless Crm::Pipeline.archived.exists?(id: @pipeline.id)
+
+    conferir = lambda do |ids|
+      travar_funil!
+      raise Crm::ExclusaoDefinitiva::Mudou, 'cards_changed' if @pipeline.cards.order(:id).pluck(:id) != ids
+    end
+    Crm::Cards::Excluidor.new(account: @account, card_ids: card_ids, somente_arquivados: false).perform(conferir: conferir) do |ids|
       apagar_funil!(card_ids: ids, cards_movidos: 0)
     end
   end
 
-  def mover_cards!
-    return [] if @target_stage.blank?
+  # Relê o funil com a trava. Restaurar (PATCH status) e arquivar travam a mesma linha: esperam este pedido, ou este
+  # espera o deles e vê o resultado.
+  def travar_funil!
+    travado = Crm::Pipeline.lock.find_by(id: @pipeline.id)
+    raise Crm::ExclusaoDefinitiva::Mudou, 'already_deleted' if travado.blank?
+    raise Crm::ExclusaoDefinitiva::Mudou, 'not_archived' unless travado.archived?
 
-    primeira_etapa = @target_stage.pipeline.stages.order(:position, :id).first
-    @pipeline.cards.order(:id).map do |card|
-      etapa = card.open? ? @target_stage : primeira_etapa
-      Crm::Cards::Mover.new(card: card, actor: @actor, target_stage: etapa, automation_context: { skip_automations: true }).perform
+    @pipeline = travado
+  end
+
+  def mover_cards!
+    cards = @pipeline.cards.order(:id).to_a
+    return [] if cards.empty?
+    raise Crm::ExclusaoDefinitiva::Mudou, 'pipeline_has_cards' if @modo != MOVER
+
+    destino = travar_destino!
+    primeira_etapa = destino.stages.order(:position, :id).first
+    cards.map do |card|
+      Crm::Cards::Mover.new(card: card, actor: @actor, target_stage: etapa_para(card, destino, primeira_etapa),
+                            automation_context: { skip_automations: true }).perform
     end
+  end
+
+  # O funil de destino não pode ser arquivado enquanto recebe os cards (FOR SHARE barra o UPDATE dele até o fim).
+  def travar_destino!
+    destino = Crm::Pipeline.lock('FOR SHARE').find_by(id: @target_stage&.pipeline_id, account_id: @account.id)
+    raise Crm::ExclusaoDefinitiva::Mudou, 'target_unavailable' unless destino&.active? && destino.stages.exists?(id: @target_stage.id)
+
+    destino
+  end
+
+  def etapa_para(card, destino, primeira_etapa)
+    Crm::Cards::Outcome.status_after_move(destino, card.status).to_s == 'open' ? @target_stage : primeira_etapa
   end
 
   # O que aponta para o funil ou para as etapas dele sem cascata no banco sai antes do destroy; o resto o banco faz

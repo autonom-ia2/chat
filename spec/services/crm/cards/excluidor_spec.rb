@@ -89,6 +89,29 @@ RSpec.describe Crm::Cards::Excluidor do
     expect(Crm::AiUsageEvent.find_by!(account_id: account.id).card_id).to eq(card.id)
   end
 
+  it 'desiste antes do calendário quando um card não está mais arquivado, sem cancelar reunião nem apagar' do
+    card.update!(status: :open)
+    futura = create_reuniao(account: account, card: card, user: user, contact: contact, starts_at: 2.days.from_now)
+
+    expect { excluir }.to raise_error(Crm::ExclusaoDefinitiva::Mudou) { |erro| expect([erro.motivo, erro.canceladas]).to eq(['not_archived', []]) }
+    expect([Crm::Card.exists?(card.id), futura.reload.status]).to eq([true, 'scheduled'])
+  end
+
+  it 'apaga card aberto quando quem chama decide (contato da LGPD, funil com "apagar os cards")' do
+    card.update!(status: :open)
+
+    expect(described_class.new(account: account, card_ids: [card.id], somente_arquivados: false).perform).to eq([card.id])
+    expect(onde_o_card_ainda_aparece(card.id)).to eq([])
+  end
+
+  it 'desiste quando a conferência do chamador barra, já dentro da transação' do
+    conferir = ->(_ids) { raise Crm::ExclusaoDefinitiva::Mudou, 'cards_changed' }
+
+    expect { described_class.new(account: account, card_ids: [card.id]).perform(conferir: conferir) }
+      .to raise_error(Crm::ExclusaoDefinitiva::Mudou, /cards_changed/)
+    expect(Crm::Card.exists?(card.id)).to be(true)
+  end
+
   it 'ignora card de outra conta' do
     outra_conta = create(:account)
     outro_user = create(:user, account: outra_conta, role: :administrator)

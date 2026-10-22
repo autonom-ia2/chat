@@ -417,29 +417,22 @@
     "sem_corpo": true
   },
   "DELETE contacts/:id": {
-    "campos": {
-      "delete_crm_cards": {
-        "tipo": "booleano",
-        "tipo_pela_leitura": "uso"
-      }
-    },
     "completo": true,
     "controller": "api/v1/accounts/contacts#destroy",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:105",
-      "app/controllers/concerns/crm/contact_cards_deletion.rb:8",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:220"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:104",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218"
     ],
-    "sem_corpo": false
+    "sem_corpo": true
   },
   "DELETE contacts/:id/avatar": {
     "completo": true,
     "controller": "api/v1/accounts/contacts#avatar",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:118",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:220"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:116",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218"
     ],
     "sem_corpo": true
   },
@@ -4697,15 +4690,15 @@
     "controller": "api/v1/accounts/contacts#update",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:97",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:188",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:224",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:96",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:186",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:222",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:220",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:211",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:210"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:209",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:208"
     ],
     "sem_corpo": false
   },
@@ -13449,12 +13442,12 @@
     "controller": "api/v1/accounts/contacts#create",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:88",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:188",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:224",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:183",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:179",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:87",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:186",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:222",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:181",
       "app/controllers/api/v1/accounts/contacts_controller.rb:177",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:175",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24"
@@ -13574,9 +13567,9 @@
     "controller": "api/v1/accounts/contacts#destroy_custom_attributes",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:81",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:83",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:220"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:80",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:82",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218"
     ],
     "sem_corpo": false
   },
@@ -13588,13 +13581,13 @@
     "controller": "api/v1/accounts/contacts#export",
     "modelo": "Contact",
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:48)",
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:47)",
       "leitura crua sem tipo: column_names"
     ],
     "origem": [
+      "app/controllers/api/v1/accounts/contacts_controller.rb:45",
       "app/controllers/api/v1/accounts/contacts_controller.rb:46",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:47",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:48"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:47"
     ],
     "sem_corpo": false
   },
@@ -13613,15 +13606,15 @@
     "controller": "api/v1/accounts/contacts#filter",
     "modelo": "Contact",
     "motivos": [
-      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:64)",
+      "aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:63)",
       "params inteiro repassado a ::Contacts::FilterService.new"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:63",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:142",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:211",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:210",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:64"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:62",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:140",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:209",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:208",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -13636,9 +13629,9 @@
     "controller": "api/v1/accounts/contacts#import",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:35",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:40",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:36"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:34",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:39",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:35"
     ],
     "sem_corpo": false
   },
@@ -14998,27 +14991,6 @@
     ],
     "sem_corpo": false
   },
-  "POST crm/cards/permanent_delete": {
-    "campos": {
-      "card_ids": {
-        "tipo": "lista",
-        "tipo_pela_leitura": "uso"
-      },
-      "confirmation": {
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
-      }
-    },
-    "completo": true,
-    "controller": "api/v1/accounts/crm/cards/permanent_deletions#create",
-    "modelo": "Crm::Card",
-    "origem": [
-      "app/controllers/api/v1/accounts/crm/cards/permanent_deletions_controller.rb:11",
-      "app/controllers/api/v1/accounts/crm/cards/permanent_deletions_controller.rb:51",
-      "app/controllers/api/v1/accounts/crm/cards/permanent_deletions_controller.rb:13"
-    ],
-    "sem_corpo": false
-  },
   "POST crm/conversations/:conversation_id/focus": {
     "campos": {
       "card_id": {
@@ -15713,32 +15685,6 @@
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:108",
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:89",
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:58"
-    ],
-    "sem_corpo": false
-  },
-  "POST crm/pipelines/:id/permanent_delete": {
-    "campos": {
-      "cards": {
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
-      },
-      "confirmation": {
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
-      },
-      "target_stage_id": {
-        "tipo": "id",
-        "tipo_pela_leitura": "nome"
-      }
-    },
-    "completo": true,
-    "controller": "api/v1/accounts/crm/pipelines/permanent_deletions#create",
-    "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines/permanent_deletions_controller.rb:8",
-      "app/controllers/api/v1/accounts/crm/pipelines/permanent_deletions_controller.rb:48",
-      "app/controllers/api/v1/accounts/crm/pipelines/permanent_deletions_controller.rb:38",
-      "app/controllers/api/v1/accounts/crm/pipelines/permanent_deletions_controller.rb:22",
-      "app/controllers/api/v1/accounts/crm/pipelines/permanent_deletions_controller.rb:29"
     ],
     "sem_corpo": false
   },
@@ -23301,15 +23247,15 @@
     "controller": "api/v1/accounts/contacts#update",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:97",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:188",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:224",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:96",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:186",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:222",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:220",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:211",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:210"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:209",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:208"
     ],
     "sem_corpo": false
   },
