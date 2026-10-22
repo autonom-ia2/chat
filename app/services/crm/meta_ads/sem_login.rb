@@ -34,7 +34,8 @@ module Crm::MetaAds::SemLogin
   end
 
   # O que a tela vazia precisa saber: quais WhatsApp oficiais estão prontos e se já chegou alguém de anúncio. As
-  # caixas (nome e número) são só as que a pessoa acessa; o administrador vê todas.
+  # caixas (nome e número) são só as que a pessoa acessa; quem configura os anúncios da conta (administrador ou
+  # `meta_ads_manage`, #2070) vê todas, como já vê nas origens do resumo no WhatsApp.
   def payload(account, account_user)
     return { enabled: false } unless whatsapp_panel?(account)
 
@@ -44,7 +45,7 @@ module Crm::MetaAds::SemLogin
 
   def official_inboxes(account, account_user)
     caixas = account.inboxes.where(channel_type: 'Channel::Whatsapp')
-    caixas = caixas.where(id: account_user&.user&.inboxes&.select(:id) || Inbox.none) unless account_user&.administrator?
+    caixas = caixas.where(id: account_user&.user&.inboxes&.select(:id) || Inbox.none) unless account_user&.permission_granted?('meta_ads_manage')
     caixas.includes(:channel).order(:id).map do |inbox|
       { id: inbox.id, name: inbox.name, phone: inbox.channel.phone_number }
     end

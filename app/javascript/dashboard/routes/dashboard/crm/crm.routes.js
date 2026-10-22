@@ -101,11 +101,12 @@ export const routes = [
   },
   {
     // Anúncios da Meta (#1047): conexão guiada e painel, atrás da flag por conta meta_ads_hub.
-    // Ver: administrador ou meta_ads_view (#1794). Conectar e configurar: só administrador.
+    // Ver: administrador, meta_ads_view (#1794) ou meta_ads_manage (#2070). A função guarda só a chave mais alta, e a
+    // lista de chaves que chega ao painel não expande manage em view: as duas entram aqui.
     path: frontendURL('accounts/:accountId/campaigns/meta-ads'),
     name: 'campaigns_meta_ads_index',
     meta: {
-      permissions: ['administrator', 'meta_ads_view'],
+      permissions: ['administrator', 'meta_ads_view', 'meta_ads_manage'],
       featureFlag: FEATURE_FLAGS.META_ADS_HUB,
     },
     beforeEnter: ensureCrmEnabled,

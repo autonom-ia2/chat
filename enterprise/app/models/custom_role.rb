@@ -58,7 +58,11 @@
 # - 'whatsapp_templates_view' / 'whatsapp_templates_manage': WhatsApp (Cloud) message templates of the inboxes (#1330).
 #   manage creates, edits, duplicates and deletes them at Meta; platform templates stay read-only.
 # - 'meta_ads_view': Meta Ads panel, connection state and the panel AI (#1794). Lists that lead to a conversation show
-#   only the conversations the person already sees. Connecting and configuring stay with administrators.
+#   only the conversations the person already sees.
+# - 'meta_ads_manage': connect, configure and disconnect Meta Ads (token, Facebook login, ad account and Pixel choice,
+#   destinations, funnel sale signal, insights refresh, the owner's WhatsApp report) and act on the advisor (#2070).
+#   Protected key (two-list rule, #1782; decision D7 of lote 11): choosing an ad account grants the platform system
+#   user access to the client's ad account. Money figures (spend, sales value) are out of its scope (lote 13).
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 # - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
 # - 'people_manage': add, invite, edit and remove agents, and manage teams (#1931). Never administrators, never one's own
@@ -132,6 +136,7 @@ class CustomRole < ApplicationRecord
     whatsapp_templates_view
     whatsapp_templates_manage
     meta_ads_view
+    meta_ads_manage
     label_manage
     attribute_manage
     macro_manage
@@ -148,7 +153,7 @@ class CustomRole < ApplicationRecord
 
   # Delegable keys only an administrator hands out, unless the giver has grant_above_own (CLAUDE.md, #1931).
   DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage integration_manage
-                       token_manage].freeze
+                       token_manage meta_ads_manage].freeze
 
   validates :name, presence: true
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message

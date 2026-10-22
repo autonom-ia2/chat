@@ -1,6 +1,6 @@
-# Resumo diário e alerta de Anúncios da Meta no WhatsApp do dono (#1100, F4b). Só administrador, pela policy da
-# conexão (Crm::MetaAdsConnection :update?), também na leitura: ela traz o telefone de quem recebe e os números das
-# caixas (#1794, `meta_ads_view` não alcança).
+# Resumo diário e alerta de Anúncios da Meta no WhatsApp do dono (#1100, F4b). Administrador ou `meta_ads_manage`
+# (#2070), pela policy da conexão (Crm::MetaAdsConnection :update?), também na leitura: ela traz o telefone de quem
+# recebe e os números das caixas (#1794, `meta_ads_view` não alcança).
 #
 # GET   whatsapp_report      → configuração, números de origem conectados, texto dos modelos do Oficial e horários
 # PATCH whatsapp_report      → liga/desliga, escolhe a origem e o número que recebe (chaves ausentes ficam)
@@ -14,7 +14,7 @@ class Api::V1::Accounts::Crm::MetaAdsWhatsappReportsController < Api::V1::Accoun
   PERMITTED = %w[enabled alert_enabled inbox_id phone].freeze
   FEATURE = 'meta_ads_hub'.freeze
 
-  before_action :ensure_administrator
+  before_action :ensure_manage
   before_action :ensure_feature, only: [:update, :test_send]
   before_action :ensure_connection, only: [:update, :test_send]
 
@@ -44,7 +44,7 @@ class Api::V1::Accounts::Crm::MetaAdsWhatsappReportsController < Api::V1::Accoun
 
   private
 
-  def ensure_administrator
+  def ensure_manage
     return if Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).update?
 
     render json: { error: 'forbidden' }, status: :forbidden

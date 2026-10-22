@@ -167,6 +167,18 @@ Use a mesma pessoa de teste, com uma função própria ("Teste – integrações
 6. Troque a função para **Caixas** em **Editar**, sem **Integrações**. Numa caixa que precisa reconectar, aparece "peça a quem cuida das integrações", sem botão. O endereço do webhook da caixa de API fica só leitura.
 7. Ao final, apague a função "Teste – integrações".
 
+## Teste 14: Anúncios da Meta sem ser administrador (#2070)
+
+Esse teste só funciona se a conta 16 tiver Anúncios da Meta ligado. Use a mesma pessoa de teste, com uma função própria ("Teste – anúncios").
+
+1. Como administrador, monte a função com **Marketing → Anúncios da Meta** em **Editar**. Salve e recarregue a janela anônima.
+2. Na janela anônima, o menu **Campanhas → Anúncios** aparece. Abra: ela conecta (ou continua a conexão), escolhe a conta de anúncios e o Pixel, marca para onde os anúncios levam e grava o aviso no funil, como o administrador.
+3. Na aba **Resultado**, os botões **Feito** e **Dispensar** de O que fazer hoje aparecem e funcionam. Na aba **Conexão**, o resumo no WhatsApp abre, muda e testa.
+4. Deixe a tela de Anúncios aberta na janela anônima: quando a leitura de hoje termina, o "atualizando…" some e os números trocam sozinhos, sem recarregar.
+5. Troque a função para **Ver**: o painel continua, sem **Feito**, **Dispensar**, aba **Conexão** nem botão de conectar.
+6. Dê à pessoa também **Montar funções** e tente, na janela anônima, criar uma função com Anúncios da Meta em **Editar**: o nível aparece travado, com a frase de que só quem pode entregar acima do próprio acesso entrega. Em **Ver** ela consegue.
+7. Ao final, apague a função "Teste – anúncios" e a que ela criou no passo 6.
+
 ## No fim (limpeza)
 
 1. Remova a pessoa de teste em **Configurações → Usuários**, para não contar no plano.
@@ -174,5 +186,6 @@ Use a mesma pessoa de teste, com uma função própria ("Teste – integrações
 3. Confira que o contato e a empresa de teste do teste 6 foram excluídos e que os cards de teste do teste 8 ficaram arquivados.
 4. Remova "Teste Atendente" e apague a função "Teste – montada" do teste 11.
 5. Confira que a função "Teste – integrações" do teste 13 foi apagada.
+6. Confira que as funções "Teste – anúncios" e a criada no passo 6 do teste 14 foram apagadas.
 
 Se algo não bater com o esperado, me mande o print e o número do teste e do passo, que eu investigo.
