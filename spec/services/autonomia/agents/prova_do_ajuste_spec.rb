@@ -228,6 +228,17 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       expect(descricao).not_to include('sem base de conhecimento')
     end
 
+    # Série 2 do t6d anulada (escola): "Qual é o nome da escola?" tem resposta quase igual antes e depois do pedido e não
+    # mostra o tom. Para pedido de forma, a mensagem puxa uma resposta em que a forma aparece; o exemplo é de outro ramo.
+    it 'a descrição: em pedido de forma, a resposta mostra a forma numa frase ao cliente; dado curto não serve' do
+      descricao = described_class::PERGUNTAS_DESCRIPTION
+      expect(descricao).to include('em todo pedido de forma, cada mensagem puxa uma resposta em que a forma aparece',
+                                   'com ao menos uma frase dirigida ao cliente',
+                                   'pergunta de dado curto (um nome, um endereco) nao serve para pedido de forma',
+                                   'a resposta sai quase igual antes e depois do pedido', 'numa padaria')
+      expect(descricao).not_to include('escola')
+    end
+
     it 'o item do schema é {mensagem, pedido}, estrito' do
       item = described_class::PERGUNTA_DE_PROVA
       expect(item).to include(type: 'object', additionalProperties: false, required: %w[mensagem pedido])

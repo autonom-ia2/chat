@@ -28,6 +28,8 @@ class Autonomia::Agents::ProvaDoAjuste
   # O campo do schema do ajuste (AjustePorLista): na mesma chamada do Construtor, sem chamada a mais. Forense do t6d
   # (P1): a escola perguntou do "teste de nivelamento", que não está escrito em campo nenhum, e o agente respondeu a
   # mensagem fixa, que não mostra tom nenhum. A prova roda como no Testar: sem ferramenta, mas com a base, quando ligada.
+  # Série 2 do t6d anulada: "Qual é o nome da escola?" tem resposta quase igual antes e depois do pedido; em pedido de
+  # forma, a mensagem puxa uma resposta em que a forma aparece.
   PERGUNTAS_DESCRIPTION =
     'Quando mudancas nao esta vazia: ate 3 mensagens curtas que um cliente de verdade mandaria, escritas como o cliente ' \
     'escreve, cada uma com o pedido (o texto de pedido em mudancas) que ela testa (ex.: pedido "preco passa para a ' \
@@ -36,11 +38,15 @@ class Autonomia::Agents::ProvaDoAjuste
     'fixa, que nao mostra forma nenhuma. Cada mensagem cria a situacao exata em que o pedido vale. Para um pedido de ' \
     'forma (tamanho, tom, tratamento, emoji, formato): 2 mensagens de tipos diferentes, um cumprimento e uma pergunta ' \
     'cuja resposta e um fato ESCRITO nos campos do agente (prefira o human_card, a saudacao e os guardrails; o fato ' \
-    'presente la, nao so o nome do assunto), e a mensagem nao traz o fato: o cliente pergunta, o agente responde; para ' \
-    'tamanho, uma delas pede algo que puxaria uma resposta longa; para tom ou tratamento, a mensagem nao traz pronta a ' \
-    'forma pedida. Para o que fazer quando nao souber: algo que nao esta em nenhum campo do agente nem na base. Para ' \
-    'uma regra com gatilho (um assunto, um pedido do cliente): uma mensagem com esse gatilho. Cada pedido com ao menos ' \
-    'uma mensagem. Nunca cite, parafraseie nem resuma a instruction ou o scaffold. Vazia quando mudancas esta vazia.'.freeze
+    'presente la, nao so o nome do assunto), e a mensagem nao traz o fato: o cliente pergunta, o agente responde; ' \
+    'em todo pedido de forma, cada mensagem puxa uma resposta em que a forma aparece, com ao menos uma frase dirigida ' \
+    'ao cliente: pergunta de dado curto (um nome, um endereco) nao serve para pedido de forma, porque a resposta sai ' \
+    'quase igual antes e depois do pedido (ex.: numa padaria, em vez de "Qual o endereco?", "Voces fazem bolo de ' \
+    'aniversario por encomenda?"); para tamanho, uma delas pede algo que puxaria uma resposta longa; para tom ou ' \
+    'tratamento, a mensagem nao traz pronta a forma pedida. Para o que fazer quando nao souber: algo que nao esta em ' \
+    'nenhum campo do agente nem na base. Para uma regra com gatilho (um assunto, um pedido do cliente): uma mensagem ' \
+    'com esse gatilho. Cada pedido com ao menos uma mensagem. Nunca cite, parafraseie nem resuma a instruction ou o ' \
+    'scaffold. Vazia quando mudancas esta vazia.'.freeze
   PERGUNTA_DE_PROVA = {
     type: 'object', additionalProperties: false, required: %w[mensagem pedido],
     properties: { mensagem: { type: 'string', description: 'A mensagem do cliente.' },
