@@ -145,6 +145,54 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
       expect(meta(foto)).not_to have_key('crm_ai_image_done')
     end
 
+    describe 'arquivo que ainda não chegou ao storage (corrida com o upload)' do
+      before { allow(legendas).to receive(:caption).and_raise(ActiveStorage::FileNotFoundError) }
+
+      it 'não marca o anexo e sobe, para o job tentar de novo', :aggregate_failures do
+        foto = anexar_imagem(mensagem)
+
+        expect { described_class.new(foto.message).perform }.to raise_error(ActiveStorage::FileNotFoundError)
+        expect(meta(foto)).not_to have_key('crm_ai_image_done')
+        expect(described_class.pendente?(foto.reload)).to be(true)
+      end
+
+      it 'a tentativa que falhou não conta no teto do dia', :aggregate_failures do
+        stub_const("#{described_class}::MAX_LEITURAS_POR_DIA", 1)
+        ausente = anexar_imagem(mensagem)
+        expect { described_class.new(ausente.message).perform }.to raise_error(ActiveStorage::FileNotFoundError)
+
+        allow(legendas).to receive(:caption).and_return('descrição da foto')
+        chegou = anexar_imagem(mensagem)
+
+        expect(chegou.message_id).not_to eq(ausente.message_id)
+        expect(described_class.new(chegou.message).perform).to eq(1)
+        expect(meta(chegou)['ai_caption']).to eq('descrição da foto')
+      end
+
+      it 'na última tentativa, marca o anexo sem texto', :aggregate_failures do
+        foto = anexar_imagem(mensagem)
+
+        expect(described_class.new(foto.message, ultima_tentativa: true).perform).to eq(1)
+        expect(meta(foto)['crm_ai_image_done']).to be(true)
+        expect(meta(foto)).not_to have_key('ai_caption')
+      end
+
+      it 'na leitura em linha, não marca, não sobe e as outras mensagens da rajada seguem', :aggregate_failures do
+        antiga = anexar_imagem(mensagem)
+        nova = anexar_imagem(mensagem)
+        allow(legendas).to receive(:caption) do |anexo|
+          raise ActiveStorage::FileNotFoundError if anexo.id == nova.id
+
+          'descrição da foto'
+        end
+
+        expect { described_class.ler_a_rajada(conversation, nova.message) }.not_to raise_error
+        expect(legendas).to have_received(:caption).twice
+        expect(meta(nova)).not_to have_key('crm_ai_image_done')
+        expect(meta(antiga)['ai_caption']).to eq('descrição da foto')
+      end
+    end
+
     it 'sem credencial da conta: não lê foto nem áudio, e o PDF segue', :aggregate_failures do
       allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: nil))
       chegada = mensagem
@@ -250,6 +298,17 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
       Crm::Ai::MediaEnricher.new(card: card).perform
 
       expect(meta(pdf)['ai_text']).to include('Conteúdo do documento')
+    end
+
+    it 'com a flag, o arquivo que ainda não chegou fica pendente e a avaliação segue', :aggregate_failures do
+      account.enable_features!(described_class::FLAG)
+      allow(legendas).to receive(:caption).and_raise(ActiveStorage::FileNotFoundError)
+      foto = anexar_imagem(mensagem)
+
+      expect(described_class.ligada?(account)).to be(true)
+      expect { Crm::Ai::MediaEnricher.new(card: card).perform }.not_to raise_error
+      expect(legendas).to have_received(:caption)
+      expect(meta(foto)).not_to have_key('crm_ai_image_done')
     end
 
     it 'sem a flag, o PDF segue sem leitura (como antes)' do
