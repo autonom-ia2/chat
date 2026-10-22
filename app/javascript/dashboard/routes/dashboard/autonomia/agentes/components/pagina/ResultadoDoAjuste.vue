@@ -81,11 +81,33 @@ const textoIncompleta = computed(() =>
     ? t(`${NS}.PROVA_INCOMPLETA`, { pedidos: pedidosSemTeste.value })
     : t(`${NS}.PROVA_SEM_TESTE`)
 );
+const contraditas = computed(() => prova.value?.mudancas?.contraditas || 0);
 const provaOk = computed(
-  () => prova.value?.ok === prova.value?.total && provaCompleta.value
+  () =>
+    prova.value?.ok === prova.value?.total &&
+    provaCompleta.value &&
+    !contraditas.value
 );
-// Ajuste aprovado pelo Rodrigo (22/10): o título conta mudanças (pedidos), não perguntas. Prova antiga, sem
-// `mudancas`, mantém o placar de perguntas.
+// Ajuste aprovado pelo Rodrigo (22/10): o título conta mudanças (pedidos), não perguntas, e diz quantas a resposta
+// do teste contrariou. Prova antiga, sem `mudancas`, mantém o placar de perguntas.
+const contagemDaProva = mudancas => {
+  if (mudancas.testadas === mudancas.total) {
+    return t(`${NS}.PROVA_TESTEI_TODAS`, { n: mudancas.total }, mudancas.total);
+  }
+  return t(`${NS}.PROVA_TESTEI_PARTE`, {
+    x: mudancas.testadas,
+    n: mudancas.total,
+  });
+};
+const contradicao = mudancas => {
+  if (!contraditas.value) return '';
+  if (mudancas.total === 1) return t(`${NS}.PROVA_CONTRARIO_UMA`);
+  return t(
+    `${NS}.PROVA_CONTRARIO`,
+    { k: contraditas.value },
+    contraditas.value
+  );
+};
 const tituloDaProva = computed(() => {
   const mudancas = prova.value?.mudancas;
   if (!mudancas) {
@@ -95,19 +117,20 @@ const tituloDaProva = computed(() => {
       prova.value.total
     );
   }
-  if (mudancas.testadas === mudancas.total) {
-    return t(`${NS}.PROVA_TESTEI_TODAS`, { n: mudancas.total }, mudancas.total);
-  }
-  return t(`${NS}.PROVA_TESTEI_PARTE`, {
-    x: mudancas.testadas,
-    n: mudancas.total,
-  });
+  return [contagemDaProva(mudancas), contradicao(mudancas)]
+    .filter(Boolean)
+    .join(' ');
 });
 // O que a prova viu de cada linha aplicada: o ✓ de "mudei" não vem junto de "não deu para ver". O ícone nunca é a
-// única informação: o leitor de tela ouve o rótulo. `nao` (contradição) e a prova antiga ficam como antes.
+// única informação: o leitor de tela ouve o rótulo. A prova antiga fica como antes.
 const ROTULO_DA_PROVA = {
   ok: 'APLICADO_TESTADO',
+  nao: 'APLICADO_CONTRARIO',
   sem_teste: 'APLICADO_SEM_TESTE',
+};
+const ICONE_DA_PROVA = {
+  nao: 'i-lucide-triangle-alert text-n-amber-11',
+  sem_teste: 'i-lucide-circle-dashed text-n-slate-10',
 };
 const rotuloAplicado = item =>
   t(`${NS}.${ROTULO_DA_PROVA[item.prova] || 'APLICADO'}`);
@@ -163,9 +186,8 @@ const podeDesfazer = computed(
           <span
             class="size-5 shrink-0"
             :class="
-              item.prova === 'sem_teste'
-                ? 'i-lucide-circle-dashed text-n-slate-10'
-                : 'i-lucide-circle-check text-n-teal-11'
+              ICONE_DA_PROVA[item.prova] ||
+              'i-lucide-circle-check text-n-teal-11'
             "
             aria-hidden="true"
           />

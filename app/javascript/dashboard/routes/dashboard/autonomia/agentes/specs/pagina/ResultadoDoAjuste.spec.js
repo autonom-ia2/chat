@@ -347,7 +347,7 @@ describe('ResultadoDoAjuste', () => {
       { estado: 'aplicado', texto: 'Sem gíria.', prova: 'sem_teste' },
     ];
 
-    it("check for the seen change, a gray circle for the unseen one, and today's mark for the contradicted one", () => {
+    it('check for the seen change, a gray circle for the unseen one, an amber triangle for the contradicted one', () => {
       const linhas = montar({ itens: ITENS, prova: VISTA }).findAll(
         '[data-item]'
       );
@@ -359,8 +359,13 @@ describe('ResultadoDoAjuste', () => {
       ]);
       expect(linhas[0].find('.i-lucide-circle-check').exists()).toBe(true);
       expect(linhas[0].find('.sr-only').text()).toBe('Aplicado e testado:');
-      expect(linhas[1].find('.i-lucide-circle-check').exists()).toBe(true);
-      expect(linhas[1].find('.sr-only').text()).toBe('Aplicado:');
+      expect(linhas[1].find('.i-lucide-circle-check').exists()).toBe(false);
+      expect(linhas[1].find('.i-lucide-triangle-alert').classes()).toContain(
+        'text-n-amber-11'
+      );
+      expect(linhas[1].find('.sr-only').text()).toBe(
+        'Aplicado, mas no teste a resposta fez o contrário:'
+      );
       expect(linhas[2].find('.i-lucide-circle-check').exists()).toBe(false);
       expect(linhas[2].find('.i-lucide-circle-dashed').classes()).toContain(
         'text-n-slate-10'
@@ -402,6 +407,54 @@ describe('ResultadoDoAjuste', () => {
       expect(todas.text()).toBe('Testei as 3 mudanças.');
       expect(todas.find('.i-lucide-circle-check').exists()).toBe(true);
       expect(uma.text()).toBe('Testei a mudança.');
+    });
+
+    // Textos do caso de contradição aprovados pelo Rodrigo (22/10).
+    const titulo = mudancas =>
+      montar({ itens: ITENS, prova: { ...ANTIGA, ok: 0, mudancas } })
+        .find('[data-titulo-prova]')
+        .text();
+
+    it('all tested, one contradicted: says how many did not come out as asked', () => {
+      const prova = montar({
+        itens: ITENS,
+        prova: {
+          ...ANTIGA,
+          mudancas: { testadas: 3, total: 3, contraditas: 1 },
+        },
+      }).find('[data-prova]');
+
+      expect(prova.find('[data-titulo-prova]').text()).toBe(
+        'Testei as 3 mudanças. 1 não saiu como você pediu.'
+      );
+      expect(prova.find('.i-lucide-triangle-alert').exists()).toBe(true);
+      expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
+    });
+
+    it('contradicted: plural, and the single change', () => {
+      expect(titulo({ testadas: 3, total: 3, contraditas: 2 })).toBe(
+        'Testei as 3 mudanças. 2 não saíram como você pediu.'
+      );
+      expect(titulo({ testadas: 1, total: 1, contraditas: 1 })).toBe(
+        'Testei a mudança. Ela não saiu como você pediu.'
+      );
+    });
+
+    it('contradicted and some unseen: partial count, and the unseen text below', () => {
+      const prova = montar({
+        itens: ITENS,
+        prova: {
+          ...VISTA,
+          mudancas: { testadas: 2, total: 3, contraditas: 1 },
+        },
+      }).find('[data-prova]');
+
+      expect(prova.find('[data-titulo-prova]').text()).toBe(
+        'Testei 2 de 3 mudanças. 1 não saiu como você pediu.'
+      );
+      expect(prova.find('[data-prova-incompleta]').text()).toBe(
+        'Não deu para ver nas respostas do teste: nada de gíria. Converse com o agente no Testar para conferir.'
+      );
     });
 
     it('none seen: no count title, only the approved text', () => {
