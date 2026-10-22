@@ -1,5 +1,6 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { useUISettings } from 'dashboard/composables/useUISettings';
@@ -31,6 +32,10 @@ import { partesDoWhatsapp } from './envioNoWhatsapp';
 import { useModeloDoEmailNaGaveta } from './useModeloDoEmailNaGaveta';
 import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
 import { assuntoDaResposta } from 'dashboard/components-next/conversa-canal/email/dadosDoEmail';
+import {
+  camposDoEnvio,
+  useFicarComAConversa,
+} from 'dashboard/components-next/conversa-canal/atribuir/useFicarComAConversa';
 
 // #1459 — a mensagem e o envio. Conversa nova: a mesma chamada da tela antiga
 // (`contactConversations/create`), com os mesmos formatos de payload.
@@ -82,6 +87,21 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
 
   // A conversa em que a mensagem vai entrar (#1505), ou null para criar.
   const destino = computed(() => continuar?.conversa.value ?? null);
+  // #2067: na conversa que já existe, o mesmo ícone "ficar com a conversa ao enviar" da
+  // caixa de resposta (a mesma escolha guardada, pela mesma conversa). Conversa nova: não.
+  const ficar = useFicarComAConversa({
+    conversa: computed(() =>
+      destino.value && continuar?.meta?.value
+        ? { id: destino.value.displayId, meta: continuar.meta.value }
+        : null
+    ),
+  });
+  // A decisão do envio em curso: uma para todas as partes (texto, modelo, anexos).
+  let decisaoDoEnvio = null;
+  // O servidor respondeu que não deu para ficar com a conversa (trava ocupada, outro dono).
+  let naoDeuFicar = false;
+  // #2067: partes já mandadas neste envio (só a 1ª pede para ficar).
+  let partesDoEnvio = 0;
   const tipo = computed(
     () => (destino.value && continuar.tipo.value) || tipoDeMensagem(canal.value)
   );
@@ -245,11 +265,20 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   // `crm_card_id`: a gaveta não tem o seletor de assunto do CRM, então a
   // mensagem fica no assunto atual da conversa, como uma resposta em conversa
   // de um assunto só.
-  const responderEm = (id, dados) =>
-    store.dispatch(
+  const responderEm = async (id, dados) => {
+    const data = await store.dispatch(
       'sendMessageWithData',
-      createPendingMessage({ conversationId: id, private: false, ...dados })
+      createPendingMessage({
+        conversationId: id,
+        private: false,
+        ...dados,
+        ...camposDoEnvio(decisaoDoEnvio, { parte: partesDoEnvio }),
+      })
     );
+    partesDoEnvio += 1;
+    if (data?.ficar_com_a_conversa_nao_deu) naoDeuFicar = true;
+    return data;
+  };
   const responderNaConversa = dados => async () => {
     const id = destino.value.displayId;
     await responderEm(id, dados);
@@ -281,6 +310,11 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     if (enviando.value) return;
     enviando.value = true;
     erro.value = '';
+    // #2067: uma decisão por envio, só na conversa que já existe (a nova segue a regra da
+    // caixa). As partes leem esta mesma (responderEm).
+    decisaoDoEnvio = destino.value ? ficar.decidir() : null;
+    naoDeuFicar = false;
+    partesDoEnvio = 0;
     const retrato = retratoDoEnvio(texto);
     try {
       const onde = await mandar();
@@ -289,11 +323,14 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
       // de sair, então a gaveta pergunta de novo ao servidor.
       if (destino.value) continuar?.carregar();
       enviada.value = { ...onde, ...confirmacao };
+      if (naoDeuFicar) useAlert(t('CONVERSA_CANAL.FICAR.NAO_DEU'));
       if (String(contato.value?.id ?? null) === String(contatoId)) limpar();
     } catch (error) {
       erro.value = textoDoErro(error) || t('NOVA_CONVERSA.ERRO.PADRAO');
+      ficar.restaurar(decisaoDoEnvio);
     } finally {
       enviando.value = false;
+      decisaoDoEnvio = null;
     }
   };
 
@@ -480,5 +517,6 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     limpar,
     enviar,
     enviarPronta,
+    ficar,
   };
 }

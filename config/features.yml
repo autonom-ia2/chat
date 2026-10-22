@@ -726,6 +726,18 @@
   enabled: false
   column: feature_flags_ext_1
 
+# Ficar com a conversa ao enviar (#2067). Ligada: na caixa de resposta e na gaveta "Enviar mensagem" (conversa que já
+# existe), o ícone ao lado do Enviar decide se quem envia fica com a conversa (ligado sem ninguém ou com a IA; desligado
+# na conversa de colega), e a conversa que veio de um agente de IA mostra "Devolver para <agente>" a quem está com ela.
+# Desligada: a tela é a de antes (faixa "Atribuir a mim") e o servidor ignora o pedido do envio. Posição provisória 52 na
+# feature_flags_ext_1 (1 << 51), logo depois de crm_numeros_equipe; a Orquestração reserva a 56 (o #2065 tem 52–55) e
+# reemite na vez do PR. Ligada nas contas existentes pela Orquestração depois do deploy (psql); padrão das contas novas:
+# ligada (migration 20261108340000).
+- name: ficar_com_a_conversa_ao_enviar
+  display_name: Ficar com a conversa ao enviar e Devolver para a IA
+  enabled: true
+  column: feature_flags_ext_1
+
 # IA entende a conversa, F1 — fatos da conversa (sem Issue própria ainda; épico "IA entende a conversa" do CRM).
 # Ligada: (a) a IA de assunto lê quem falou (cliente, pessoa da equipe, nosso assistente, outro sistema) e a hora de
 # cada mensagem, e a de etapa lê a ordem (`after`) e desde quando o cliente espera (`customer_waiting_since`); (b) a
@@ -733,7 +745,7 @@
 # Agendamento e o agente de cotação ficam de fora); (c) a passagem para pessoa que o nosso assistente prometeu e
 # ninguém cumpriu é honrada pela IA do CRM, mesmo com o agente dono da conversa (exceção ao #1673; nunca com o agente
 # de cotação). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration.
-# Posição 52 na feature_flags_ext_1 (1 << 51), definitiva da Orquestração (22/10).
+# Posição 53 na feature_flags_ext_1 (1 << 52), definitiva da Orquestração (22/10).
 - name: crm_ia_fatos_da_conversa
   display_name: CRM › IA lê quem falou e em que ordem
   enabled: false
@@ -745,7 +757,7 @@
 # e a IA de etapa não relê card por causa dela (assunto de card fechado não continua); pedido novo sobre o mesmo
 # assunto segue sendo pedido novo; (b) a IA de etapa lê o "quando usar" do funil e, sem ele, a descrição que a conta já
 # escreveu. Desligada (padrão): pergunta, instruções e entrada iguais às de antes. Sem migration, sem tela.
-# Posição 53 na feature_flags_ext_1 (1 << 52), definitiva da Orquestração (22/10).
+# Posição 54 na feature_flags_ext_1 (1 << 53), definitiva da Orquestração (22/10).
 - name: crm_ia_assunto_encerrado
   display_name: CRM › IA reconhece assunto encerrado
   enabled: false
@@ -759,7 +771,7 @@
 # pouco e a IA quer voltar o card: vira sugestão; (d) o card fechado pela IA não segura o pedido novo pelo respeito de
 # 24 h; (e) fechar é sugestão por padrão, que a pessoa aceita num clique; sozinha, só com confiança de 0,95
 # (Crm::Ai::Config::AUTO_CLOSE_THRESHOLD). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration, sem tela.
-# Posição 54 na feature_flags_ext_1 (1 << 53), definitiva da Orquestração (22/10).
+# Posição 55 na feature_flags_ext_1 (1 << 54), definitiva da Orquestração (22/10).
 - name: crm_ia_fecha_card
   display_name: CRM › IA fecha o card (perdido com motivo, resolvido)
   enabled: false
@@ -771,7 +783,7 @@
 # passa a ler a mensagem só de mídia (antes descartada) e as IAs de etapa e memória leem o texto do PDF. Tetos: 4 fotos,
 # 2 PDFs e 3 áudios por mensagem; 500 leituras por conta por dia. Desligada (padrão): leitura, prompts e comportamento
 # iguais aos de antes. Sem migration, sem tela.
-# Posição 55 na feature_flags_ext_1 (1 << 54), definitiva da Orquestração (22/10).
+# Posição 56 na feature_flags_ext_1 (1 << 55), definitiva da Orquestração (22/10).
 - name: crm_ia_leitor_de_midia
   display_name: CRM › IA lê foto, áudio e PDF na chegada
   enabled: false

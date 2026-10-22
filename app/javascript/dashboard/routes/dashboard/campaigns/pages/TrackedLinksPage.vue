@@ -5,8 +5,11 @@ import QRCode from 'qrcode';
 import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
-import { useCanManage } from 'dashboard/composables/useCanManage';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import {
+  useCanManage,
+  usePermissionGranted,
+} from 'dashboard/composables/useCanManage';
+import { META_ADS_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -24,8 +27,9 @@ const NS = 'CRM_KANBAN.TRACKED_LINKS.PAGE';
 const store = useStore();
 const inboxes = useMapGetter('inboxes/getWhatsAppInboxes');
 const canManage = useCanManage('campaign_manage');
-const { isAdmin } = useAdmin();
-// Anúncios da Meta (#1047): com a página nova ligada, a conexão com a Meta sai daqui e vira um atalho.
+// Anúncios da Meta (#1047): com a página nova ligada, a conexão com a Meta sai daqui e vira um atalho. Quem conecta:
+// administrador ou meta_ads_manage (#2070).
+const canManageMetaAds = usePermissionGranted(META_ADS_MANAGE_PERMISSION);
 const accountId = useMapGetter('getCurrentAccountId');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
@@ -355,7 +359,7 @@ onMounted(fetchLinks);
               </div>
             </div>
             <router-link
-              v-if="isAdmin && metaAdsHubEnabled"
+              v-if="canManageMetaAds && metaAdsHubEnabled"
               data-meta-ads-moved
               :to="{ name: 'campaigns_meta_ads_index' }"
               class="flex items-center gap-3 p-4 mt-4 border rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-7"
@@ -372,7 +376,7 @@ onMounted(fetchLinks);
                 aria-hidden="true"
               />
             </router-link>
-            <MetaAdsNamesCard v-else-if="isAdmin" class="mt-4" />
+            <MetaAdsNamesCard v-else-if="canManageMetaAds" class="mt-4" />
           </section>
 
           <aside

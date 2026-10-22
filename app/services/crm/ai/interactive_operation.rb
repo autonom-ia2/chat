@@ -100,7 +100,8 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
     Pundit.authorize(@context, pipeline, :manage_ai?)
   end
 
-  # Anúncios da Meta (#1047): só administrador, e só funil ligado ao WhatsApp oficial da conta.
+  # Anúncios da Meta (#1047): administrador ou `meta_ads_manage` (#2070, policy Crm::MetaAdsConnection :update?), e só
+  # funil ligado ao WhatsApp oficial da conta.
   def authorize_meta_funnel!
     raise Pundit::NotAuthorizedError unless Crm::Config.enabled? && Crm::Ai::Config.enabled?
 

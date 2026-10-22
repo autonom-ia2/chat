@@ -87,7 +87,8 @@
       "FINANCIAL_MANAGE": "Turn the Meta charge authorization on and off",
       "CONVERSATION_MESSAGE_DELETE": "Delete messages",
       "INTEGRATION_MANAGE": "Manage integrations",
-      "TOKEN_MANAGE": "See and rotate tokens and keys"
+      "TOKEN_MANAGE": "See and rotate tokens and keys",
+      "META_ADS_MANAGE": "Connect and configure Meta ads"
     },
     "MATRIX": {
       "GROUPS": {
@@ -185,7 +186,8 @@
         "META_ADS": {
           "NAME": "Meta ads",
           "HINT": "Facebook and Instagram ads panel",
-          "LEVEL_VIEW": "Sees the ads panel and its results. Connecting stays with administrators."
+          "LEVEL_VIEW": "Sees the ads panel and its results. Connecting and configuring need Edit.",
+          "LEVEL_MANAGE": "Also connects, configures and disconnects the ad account, where ads lead, the sales signal in the pipeline and the WhatsApp report, and acts on the advisor."
         },
         "INBOXES": {
           "NAME": "Inboxes",

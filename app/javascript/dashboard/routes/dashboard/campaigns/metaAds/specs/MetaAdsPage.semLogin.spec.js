@@ -6,7 +6,8 @@ import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 // Anúncios sem login (#1960): a página só troca de tela com a flag ligada, o servidor dizendo
 // que vale e sem conta de anúncios conectada. Fora disso, tudo como antes.
 const flags = ref({ anuncios_sem_login: true });
-const admin = ref(true);
+// Chaves que a pessoa tem (#2070): quem conecta é quem tem meta_ads_manage (o administrador também passa).
+const granted = ref(['meta_ads_manage']);
 const routing = vi.hoisted(() => ({ query: {} }));
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
@@ -20,8 +21,8 @@ vi.mock('dashboard/composables/store', () => ({
   useMapGetter: () =>
     computed(() => (_accountId, flag) => Boolean(flags.value[flag])),
 }));
-vi.mock('dashboard/composables/useAdmin', () => ({
-  useAdmin: () => ({ isAdmin: admin }),
+vi.mock('dashboard/composables/useCanManage', () => ({
+  usePermissionGranted: key => computed(() => granted.value.includes(key)),
 }));
 
 const WHATSAPP_RESULT = {
@@ -45,7 +46,7 @@ describe('MetaAdsPage · Anúncios sem login (#1960)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     flags.value = { anuncios_sem_login: true };
-    admin.value = true;
+    granted.value = ['meta_ads_manage'];
     routing.query = {};
   });
 
@@ -60,8 +61,8 @@ describe('MetaAdsPage · Anúncios sem login (#1960)', () => {
     expect(wrapper.findComponent({ name: 'MetaAdsHero' }).exists()).toBe(false);
   });
 
-  it('passes read-only to who is not admin', async () => {
-    admin.value = false;
+  it('passes read-only to who only views (meta_ads_view)', async () => {
+    granted.value = ['meta_ads_view'];
     reply({ configured: false, whatsapp_result: WHATSAPP_RESULT });
     const wrapper = await mountPage();
 

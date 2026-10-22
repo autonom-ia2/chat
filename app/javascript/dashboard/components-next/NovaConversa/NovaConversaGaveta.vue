@@ -145,7 +145,10 @@ const {
   historico,
   comHistorico,
   assuntoNaPrevia,
+  ficar,
 } = useNovaConversa({ contato, canal, continuar });
+// #2067: o ícone "ficar com a conversa" só na conversa que já existe e não é minha.
+const ficarNoRodape = computed(() => (ficar.aplica ? ficar : null));
 
 // #1809 — para quem vai e o modelo de e-mail do "+", para a caixa do e-mail.
 provide(EMAIL_DA_GAVETA, {
@@ -515,6 +518,7 @@ useFixedPanelPresence(aberta);
           :modo="modoDoRodape"
           :falta="falta"
           :enviando="enviando"
+          :ficar="ficarNoRodape"
           @cancelar="cancelar"
           @enviar="mandar"
           @abrir="abrirConversa"

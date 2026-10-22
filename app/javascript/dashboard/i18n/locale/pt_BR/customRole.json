@@ -87,7 +87,8 @@
       "FINANCIAL_MANAGE": "Ligar e desligar a autorização de cobranças da Meta",
       "CONVERSATION_MESSAGE_DELETE": "Apagar mensagens",
       "INTEGRATION_MANAGE": "Cuidar das integrações",
-      "TOKEN_MANAGE": "Ver e trocar tokens e chaves"
+      "TOKEN_MANAGE": "Ver e trocar tokens e chaves",
+      "META_ADS_MANAGE": "Conectar e configurar os anúncios da Meta"
     },
     "MATRIX": {
       "GROUPS": {
@@ -185,7 +186,8 @@
         "META_ADS": {
           "NAME": "Anúncios da Meta",
           "HINT": "Painel dos anúncios do Facebook e do Instagram",
-          "LEVEL_VIEW": "Vê o painel dos anúncios e os resultados. Conectar fica com o administrador."
+          "LEVEL_VIEW": "Vê o painel dos anúncios e os resultados. Conectar e configurar pede Editar.",
+          "LEVEL_MANAGE": "Também conecta, configura e desconecta a conta de anúncios, para onde os anúncios levam, o aviso de vendas no funil e o resumo no WhatsApp, e age sobre o consultor."
         },
         "INBOXES": {
           "NAME": "Caixas de entrada",

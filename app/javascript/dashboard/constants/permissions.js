@@ -31,8 +31,11 @@ export const SCHEDULING_PERMISSIONS = [
   'agendamento_view',
   'agendamento_manage',
 ];
-// Anúncios da Meta (#1794): ver o painel. Conectar e configurar seguem só do administrador.
+// Anúncios da Meta (#1794): ver o painel. Conectar, configurar e desconectar: meta_ads_manage (#2070), chave protegida
+// (regra das duas listas, #1782): só o administrador entrega, ou quem tem o ajuste 'Pode entregar acima do próprio',
+// que só o administrador liga.
 export const META_ADS_VIEW_PERMISSION = 'meta_ads_view';
+export const META_ADS_MANAGE_PERMISSION = 'meta_ads_manage';
 
 // Pessoas (#1931): agentes e times, montar funções, entregar acesso acima do próprio.
 export const PEOPLE_MANAGE_PERMISSION = 'people_manage';
@@ -57,6 +60,7 @@ export const DELEGATION_KEYS = [
   FINANCIAL_MANAGE_PERMISSION,
   INTEGRATION_MANAGE_PERMISSION,
   TOKEN_MANAGE_PERMISSION,
+  META_ADS_MANAGE_PERMISSION,
 ];
 
 export const ROLES = ['agent', 'administrator'];

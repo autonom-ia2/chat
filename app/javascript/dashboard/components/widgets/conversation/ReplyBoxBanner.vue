@@ -17,6 +17,12 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // #2067: com "ficar com a conversa ao enviar" ligado na conta, o ícone ao lado do Enviar
+  // faz o papel desta faixa; desligado, a faixa "Atribuir a mim" fica como sempre foi.
+  ficarAoEnviar: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const store = useStore();
@@ -52,7 +58,9 @@ const isAssignedToOtherAgent = computed(
 
 const showSelfAssignBanner = computed(() => {
   return (
-    isUserTyping.value && (isUnassigned.value || isAssignedToOtherAgent.value)
+    !props.ficarAoEnviar &&
+    isUserTyping.value &&
+    (isUnassigned.value || isAssignedToOtherAgent.value)
   );
 });
 

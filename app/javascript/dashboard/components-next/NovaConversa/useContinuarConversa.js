@@ -36,6 +36,9 @@ export function useContinuarConversa({ contato, canal }) {
   // último e-mail, que vai como histórico no fim, como na resposta.
   const assunto = ref('');
   const ultimoEmail = ref(null);
+  // #2067: com quem a conversa está (meta do servidor: assignee e assignee_type), para o
+  // ícone "ficar com a conversa ao enviar" ao lado do Enviar.
+  const meta = ref(null);
   const ehCaixaDeEmailNova = useCaixaDeEmailNova();
   const carregando = ref(false);
   const erro = ref(false);
@@ -82,6 +85,7 @@ export function useContinuarConversa({ contato, canal }) {
       if (pedido !== ultimoPedido) return;
       podeResponder.value = data?.can_reply === true;
       soTexto.value = data?.whatsapp_api_reply === true;
+      meta.value = data?.meta || null;
     } catch (error) {
       // A resposta anterior continua valendo (ver acima).
     }
@@ -95,6 +99,7 @@ export function useContinuarConversa({ contato, canal }) {
     soTexto.value = false;
     assunto.value = '';
     ultimoEmail.value = null;
+    meta.value = null;
     erro.value = false;
     carregando.value = Boolean(alvo);
     if (!alvo) return;
@@ -114,6 +119,7 @@ export function useContinuarConversa({ contato, canal }) {
       if (pedido !== ultimoPedido) return;
       podeResponder.value = data?.can_reply === true;
       soTexto.value = data?.whatsapp_api_reply === true;
+      meta.value = data?.meta || null;
       const emails = (mensagens?.data?.payload || []).filter(ehEmail);
       assunto.value = email
         ? assuntoDaConversa({ conversa: data, emails })
@@ -176,5 +182,6 @@ export function useContinuarConversa({ contato, canal }) {
     soTexto,
     assunto,
     ultimoEmail,
+    meta,
   };
 }

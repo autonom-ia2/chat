@@ -29,6 +29,7 @@ import {
   INSURANCE_PERMISSIONS,
   SLA_MANAGE_PERMISSION,
   META_ADS_VIEW_PERMISSION,
+  META_ADS_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions.js';
 import { canViewRelationshipRecordsFrom } from 'dashboard/composables/useRelationshipPermissions';
 
@@ -132,7 +133,8 @@ const slaFeatureEnabled = computed(() =>
 const whatsappApiCampaignsEnabled = computed(
   () => globalConfig.value?.whatsappApiCampaignsEnabled === true
 );
-// Anúncios da Meta (#1047): por conta. Vê o item o administrador ou quem tem meta_ads_view (#1794).
+// Anúncios da Meta (#1047): por conta. Vê o item o administrador ou quem tem meta_ads_view (#1794) ou meta_ads_manage
+// (#2070; a função guarda só a chave mais alta).
 const metaAdsHubEnabled = computed(() =>
   isFeatureEnabledonAccount.value(accountId.value, FEATURE_FLAGS.META_ADS_HUB)
 );
@@ -1133,7 +1135,11 @@ const menuItems = computed(() => {
           : []),
         ...(crmKanbanEnabled.value &&
         metaAdsHubEnabled.value &&
-        (isAdministrator.value || hasAnyPermission([META_ADS_VIEW_PERMISSION]))
+        (isAdministrator.value ||
+          hasAnyPermission([
+            META_ADS_VIEW_PERMISSION,
+            META_ADS_MANAGE_PERMISSION,
+          ]))
           ? [
               {
                 name: 'Campaign Meta Ads',
