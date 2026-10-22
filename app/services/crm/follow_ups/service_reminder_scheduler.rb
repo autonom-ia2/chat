@@ -226,7 +226,7 @@ class Crm::FollowUps::ServiceReminderScheduler
 
     @card.account.crm_follow_ups.create!(
       card: @card, conversation: conversation, contact: @card.contact, inbox: conversation.inbox,
-      title: I18n.with_locale(@card.account.locale) { I18n.t("crm.service_reminders.#{reminder.kind}") },
+      title: Crm::FollowUps::ServiceReminderTitle.for(@card.account, reminder.kind),
       due_at: reminder.due_at, timezone: timezone, follow_up_type: :message, automation_mode: :auto_send_message,
       assignee_id: sender&.id, created_by_id: sender&.id,
       metadata: reminder_metadata(reminder)
