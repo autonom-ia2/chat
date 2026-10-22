@@ -11,7 +11,8 @@ class Crm::Numeros::PessoasDaEquipe
   MAX_AJUDA = 3
 
   # cards: Crm::Numeros::CardsDaEquipe. valores: { credito: Crm::Numeros::CreditoDaEquipe#perform[:por_pessoa], moeda:,
-  # metas: { user_id => cents } (Crm::Numeros::MetasDaEquipe, vazio até a F4) }.
+  # metas: { user_id => cents } (Crm::Numeros::MetasDaEquipe, vazio até a F4), visivel: false sem sales_value_view, e
+  # aí o R$, a meta e o % de cada pessoa vêm nil (#2075) }.
   def initialize(account:, user:, range:, cards:, valores:)
     @account = account
     @user = user
@@ -20,6 +21,7 @@ class Crm::Numeros::PessoasDaEquipe
     @credito = valores[:credito]
     @moeda = valores[:moeda]
     @metas = valores[:metas]
+    @visivel = valores.fetch(:visivel, true)
   end
 
   def linhas
@@ -66,7 +68,7 @@ class Crm::Numeros::PessoasDaEquipe
     vendas = totais.sum { |total| total[:vendas] }
     return unless vendas.positive?
 
-    { fechou: vendas, valor: (totais.sum { |total| total[:valores][@moeda].to_i } / 100.0).round(2) }
+    { fechou: vendas, valor: @visivel ? (totais.sum { |total| total[:valores][@moeda].to_i } / 100.0).round(2) : nil }
   end
 
   def no_ritmo?(linha, esperado_pct)
@@ -123,6 +125,8 @@ class Crm::Numeros::PessoasDaEquipe
   end
 
   def venda_de(id)
+    return { recebeu: recebidos[id].to_i, fechou: total(id)[:vendas], valor: nil, meta: nil, pct: nil } unless @visivel
+
     valor = (total(id)[:valores][@moeda].to_i / 100.0).round(2)
     meta = @metas[id] && (@metas[id] / 100.0).round(2)
     { recebeu: recebidos[id].to_i, fechou: total(id)[:vendas], valor: valor, meta: meta,

@@ -1,15 +1,18 @@
 class Crm::Kanban::CardPayloadBuilder
   UNRESOLVED_COMPANY = Object.new.freeze
 
-  def initialize(card:, conversation_visibility:, pending_suggestion: nil, company: UNRESOLVED_COMPANY)
+  def initialize(card:, conversation_visibility:, account_user:, pending_suggestion: nil, company: UNRESOLVED_COMPANY)
     @card = card
+    @account_user = account_user
     @conversation_visibility = conversation_visibility
     @pending_suggestion = pending_suggestion
     @company = company.equal?(UNRESOLVED_COMPANY) ? Crm::Cards::CompanyResolver.for_card(card) : company
   end
 
+  # Valor de venda (#2075): sem `sales_value_view`, o card sai sem value_cents, menos o card de que a pessoa é dona.
   def perform
-    identity_payload.merge(status_payload, link_payload)
+    payload = identity_payload.merge(status_payload, link_payload)
+    Crm::ValorDeVenda.ve_o_card?(@account_user, @card) ? payload : Crm::ValorDeVenda.oculta_card!(payload)
   end
 
   private

@@ -12,10 +12,12 @@ module Crm
       MAX_RANGE_DAYS = 366
 
       # pipelines: os funis que a pessoa enxerga (acesso por funil, #1148, PR D); sem restrição, todos os da conta.
-      def initialize(account:, params: {}, pipelines: nil)
+      # value_visible: false tira os valores de venda em R$ de quem não tem `sales_value_view` (#2075); contagens ficam.
+      def initialize(account:, params: {}, pipelines: nil, value_visible: true)
         @account = account
         @params = params || {}
         @pipelines = pipelines || account.crm_pipelines
+        @value_visible = value_visible
       end
 
       def perform
@@ -25,6 +27,10 @@ module Crm
       private
 
       attr_reader :account, :params, :pipelines
+
+      def value_visible?
+        @value_visible
+      end
 
       def pipeline
         @pipeline ||= pipelines.find_by(id: params[:pipeline_id]) || default_pipeline
@@ -69,7 +75,10 @@ module Crm
         value > max ? max : value
       end
 
+      # nil quando a pessoa não vê valores de venda (#2075).
       def currency_amount(scope)
+        return unless value_visible?
+
         scope.group(:currency).sum(:value_cents).map do |currency, cents|
           { currency: currency, value_cents: cents }
         end

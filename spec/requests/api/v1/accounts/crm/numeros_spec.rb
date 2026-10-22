@@ -165,7 +165,8 @@ RSpec.describe 'Api::V1::Accounts::Crm::Numeros', type: :request do
       expect(response.parsed_body.keys).to contain_exactly('visoes', 'visao', 'mes')
     end
 
-    it 'com a flag, o administrador vê o R$ de cada um e o custo da IA; o gestor vê o R$, sem o custo' do
+    # #2075: o gestor desta função não tem sales_value_view, então vê as linhas sem o R$.
+    it 'com a flag, o administrador vê o R$ de cada um e o custo da IA; o gestor vê as linhas sem R$ nem custo' do
       ligar_equipe
 
       call(admin, "#{base}/numeros", visao: 'equipe')
@@ -175,7 +176,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::Numeros', type: :request do
 
       call(gestor, "#{base}/numeros", visao: 'equipe')
       expect(response.parsed_body).to include('visao' => 'equipe', 'papel' => 'gestor_vendas')
-      expect(response.parsed_body['quemCuidou']['linhas'].size).to eq(2)
+      expect(response.parsed_body['quemCuidou']['linhas'].map { |linha| linha['venda']['valor'] }).to eq([nil, nil])
       expect(response.parsed_body.dig('quemCuidou', 'ia', 'custo')).to be_nil
     end
 

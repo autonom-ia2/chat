@@ -20,7 +20,8 @@ class Api::V1::Accounts::Crm::NumerosController < Api::V1::Accounts::Crm::BaseCo
     return render json: equipe(mes) if equipe_nova?
     return render json: { visoes: visoes, visao: 'equipe', mes: mes.info } unless policy.eu?
 
-    corpo = ::Crm::Numeros::SoEu.new(account: Current.account, user: Current.user, mes: mes, acesso: acesso).perform
+    corpo = ::Crm::Numeros::SoEu.new(account: Current.account, user: Current.user, mes: mes, acesso: acesso,
+                                     valor_da_equipe: valor_de_venda?).perform
     render json: corpo.merge(visoes: visoes, visao: 'eu', podeCriarFunil: pode_criar_funil?)
   end
 
@@ -54,9 +55,15 @@ class Api::V1::Accounts::Crm::NumerosController < Api::V1::Accounts::Crm::BaseCo
     corpo.merge(visoes: visoes, visao: 'equipe', podeCriarFunil: pode_criar_funil?)
   end
 
+  # valor: o R$ das vendas da equipe segue `sales_value_view` (#2075); sem ela, a Equipe mostra as contagens.
   def perfil_da_equipe
     conta = Current.account_user
-    { dono: conta&.administrator? || false, custo: conta&.permission_granted?('financial_view') || false, leitura: !policy.eu? }
+    { dono: conta&.administrator? || false, custo: conta&.permission_granted?('financial_view') || false, leitura: !policy.eu?,
+      valor: valor_de_venda? }
+  end
+
+  def valor_de_venda?
+    ::Crm::ValorDeVenda.ve?(Current.account_user)
   end
 
   def pode_criar_funil?

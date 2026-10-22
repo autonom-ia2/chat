@@ -67,9 +67,15 @@ class Crm::Cards::PayloadBuilder
               .merge(timestamp_payload)
               .tap { |payload| sanitize_hidden_conversation!(payload) }
               .tap { |payload| append_nested_payloads(payload) }
+              .tap { |payload| Crm::ValorDeVenda.oculta_card!(payload) unless value_visible? }
   end
 
   private
+
+  # Valor de venda (#2075): sem `sales_value_view`, o card sai sem value_cents, menos o card de que a pessoa é dona.
+  def value_visible?
+    Crm::ValorDeVenda.ve_o_card?(@account_user, @card)
+  end
 
   def sanitize_hidden_conversation!(payload)
     return if primary_conversation_visible?

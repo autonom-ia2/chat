@@ -8,6 +8,7 @@
 #
 # `key` is the stage_id / owner_id (or nil for "no owner"); `label` is the
 # human-readable stage/agent name resolved in one batched lookup.
+# Valor de venda (#2075): sem `sales_value_view`, sum_cents vem nil (a contagem fica).
 class Crm::Cards::GroupSummary
   GROUP_COLUMNS = {
     'stage' => :stage_id,
@@ -16,8 +17,9 @@ class Crm::Cards::GroupSummary
 
   DEFAULT_CURRENCY = 'BRL'.freeze
 
-  def initialize(scope:, params:, group_by:, conversation_visibility:)
+  def initialize(scope:, params:, group_by:, conversation_visibility:, value_visible: true)
     @scope = scope
+    @value_visible = value_visible
     @params = params
     @group_by = group_by.to_s
     @conversation_visibility = conversation_visibility
@@ -66,7 +68,7 @@ class Crm::Cards::GroupSummary
         key: key,
         label: labels[key],
         count: count.to_i,
-        sum_cents: sum_value_cents.to_i,
+        sum_cents: (sum_value_cents.to_i if @value_visible),
         currency: currency.presence || DEFAULT_CURRENCY
       }
     end
