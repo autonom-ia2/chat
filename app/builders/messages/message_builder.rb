@@ -23,6 +23,9 @@ class Messages::MessageBuilder
 
   def perform
     @message = @conversation.messages.build(message_params)
+    # #2067: o ícone "ficar com a conversa ao enviar" do painel e o dono que a tela viu; nil quando o pedido não diz ou a
+    # conta está com a flag desligada (Conversations::FicarAoEnviar).
+    @message.ficar_com_a_conversa = Conversations::FicarAoEnviar.pedido(@account, @params)
     process_attachments
     process_emails
     # When the message has no quoted content, it will just be rendered as a regular message
@@ -96,8 +99,7 @@ class Messages::MessageBuilder
     return unless should_process_email_content?
 
     @message.content_attributes ||= {}
-    email_attributes = build_email_attributes
-    @message.content_attributes[:email] = email_attributes
+    @message.content_attributes[:email] = build_email_attributes
   end
 
   def process_email_string(email_string)

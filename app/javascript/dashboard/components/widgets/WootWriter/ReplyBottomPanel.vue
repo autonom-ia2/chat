@@ -16,6 +16,7 @@ import MaisDoWhatsapp from 'dashboard/components-next/conversa-canal/mais/MaisDo
 import BotoesDoEmail from 'dashboard/components-next/conversa-canal/email/BotoesDoEmail.vue';
 import BotaoDeAudio from 'dashboard/components-next/conversa-canal/email/BotaoDeAudio.vue';
 import MaisDoEmail from 'dashboard/components-next/conversa-canal/email/MaisDoEmail.vue';
+import FicarComAConversa from 'dashboard/components-next/conversa-canal/atribuir/FicarComAConversa.vue';
 import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import {
   anexarArquivos,
@@ -29,6 +30,7 @@ export default {
     BotoesDoEmail,
     BotaoDeAudio,
     MaisDoEmail,
+    FicarComAConversa,
     NextButton,
     FileUpload,
     VideoCallButton,
@@ -102,6 +104,17 @@ export default {
       default: '',
     },
     isSendDisabled: {
+      type: Boolean,
+      default: false,
+    },
+    // #2067: o ícone "ficar com a conversa ao enviar" (null quando não se aplica: a conversa
+    // já é minha, ou é nota privada).
+    ficar: {
+      type: Object,
+      default: null,
+    },
+    // #2067: a flag da conta; desligada, a barra fica como na main.
+    ficarNaConta: {
       type: Boolean,
       default: false,
     },
@@ -474,8 +487,9 @@ export default {
         @click="toggleInsertArticle"
       />
     </div>
-    <div class="right-wrap">
+    <div class="right-wrap" :class="{ 'items-center gap-1': ficarNaConta }">
       <BotoesDoEmail v-if="emailNovo" parte="direita" />
+      <FicarComAConversa v-if="ficar" :ficar="ficar" />
       <button
         v-if="microfoneNaDireita"
         type="button"

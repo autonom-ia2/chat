@@ -725,3 +725,15 @@
   display_name: CRM › Números por papel (visão "Equipe" e a IA no time)
   enabled: false
   column: feature_flags_ext_1
+
+# Ficar com a conversa ao enviar (#2067). Ligada: na caixa de resposta e na gaveta "Enviar mensagem" (conversa que já
+# existe), o ícone ao lado do Enviar decide se quem envia fica com a conversa (ligado sem ninguém ou com a IA; desligado
+# na conversa de colega), e a conversa que veio de um agente de IA mostra "Devolver para <agente>" a quem está com ela.
+# Desligada: a tela é a de antes (faixa "Atribuir a mim") e o servidor ignora o pedido do envio. Posição provisória 52 na
+# feature_flags_ext_1 (1 << 51), logo depois de crm_numeros_equipe; a Orquestração reserva a 56 (o #2065 tem 52–55) e
+# reemite na vez do PR. Ligada nas contas existentes pela Orquestração depois do deploy (psql); padrão das contas novas:
+# ligada (migration 20261108340000).
+- name: ficar_com_a_conversa_ao_enviar
+  display_name: Ficar com a conversa ao enviar e Devolver para a IA
+  enabled: true
+  column: feature_flags_ext_1

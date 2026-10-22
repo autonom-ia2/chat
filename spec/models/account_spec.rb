@@ -252,7 +252,9 @@ RSpec.describe Account do
         # #1991: posição 50 (1 << 49), definitiva da Orquestração (21/10), logo depois de convite_da_reuniao.
         feature_crm_metas: 1 << 49,
         # #1992: posição 51 (1 << 50), da Orquestração (21/10), logo depois de crm_metas.
-        feature_crm_numeros_equipe: 1 << 50
+        feature_crm_numeros_equipe: 1 << 50,
+        # #2067: posição provisória 52 (1 << 51), logo depois de crm_numeros_equipe; a Orquestração reserva a 56 e reemite.
+        feature_ficar_com_a_conversa_ao_enviar: 1 << 51
       }
     end
 

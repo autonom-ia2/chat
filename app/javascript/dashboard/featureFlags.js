@@ -74,6 +74,7 @@ export const FEATURE_FLAGS = {
   CONTATO_PELO_EMAIL: 'contato_pelo_email',
   EMAIL_ENVIADOS: 'email_enviados',
   CONVITE_DA_REUNIAO: 'convite_da_reuniao',
+  FICAR_COM_A_CONVERSA_AO_ENVIAR: 'ficar_com_a_conversa_ao_enviar',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',
