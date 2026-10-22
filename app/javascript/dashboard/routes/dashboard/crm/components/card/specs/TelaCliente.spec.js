@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import TelaCliente from '../telas/TelaCliente.vue';
+import PhoneNumberInput from 'dashboard/components-next/phonenumberinput/PhoneNumberInput.vue';
 
 const api = vi.hoisted(() => ({ update: vi.fn() }));
 vi.mock('dashboard/api/contacts', () => ({ default: api }));
@@ -72,9 +73,16 @@ describe('TelaCliente — erro ao salvar a pessoa', () => {
     );
   });
 
-  it('o telefone tem a altura das outras caixas (h-10)', () => {
+  // Quem define a altura é a prop `compact` do PhoneNumberInput: ela troca
+  // h-8 por h-10 na moldura (a borda que a pessoa vê) e no próprio campo.
+  it('o telefone não é a caixa compacta: moldura e campo com 40 px', () => {
     const wrapper = montar();
-    const caixa = wrapper.find('[data-campo-telefone] input[type="tel"]');
-    expect(caixa.classes()).toContain('h-10');
+    const telefone = wrapper.findComponent(PhoneNumberInput);
+    expect(telefone.props('compact')).toBe(false);
+    const moldura = telefone.find('div.outline-1');
+    expect(moldura.classes()).toContain('h-10');
+    expect(moldura.classes()).not.toContain('h-8');
+    const campo = telefone.find('input[type="tel"]');
+    expect(campo.classes()).not.toContain('h-8');
   });
 });

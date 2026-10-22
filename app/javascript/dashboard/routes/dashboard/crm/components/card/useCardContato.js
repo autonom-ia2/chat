@@ -1,6 +1,6 @@
 import { computed, reactive, ref } from 'vue';
-import * as Sentry from '@sentry/vue';
 import ContactAPI from 'dashboard/api/contacts';
+import { reportarSemDados } from 'dashboard/helper/sentryPrivacy';
 
 // #1423 — editar a pessoa do card sem sair da gaveta (RL-05). Grava só o que
 // mudou: o servidor junta os atributos extras, e o resto do contato fica como
@@ -62,10 +62,7 @@ export const motivoDoErro = (erro, texto) => {
   }
   if (erro?.isAxiosError)
     return { texto: texto('SAVE_ERROR_REDE'), campos: [] };
-  Sentry.captureException(erro, {
-    tags: { tela: 'crm_card_contato' },
-    extra: { acao: 'salvar_contato' },
-  });
+  reportarSemDados(erro, { tela: 'crm_card_contato' });
   return { texto: texto('SAVE_ERROR_TELA'), campos: [] };
 };
 

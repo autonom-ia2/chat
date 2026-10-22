@@ -4,8 +4,9 @@ import ptBR from 'dashboard/i18n/locale/pt_BR/crm.json';
 
 const api = vi.hoisted(() => ({ update: vi.fn() }));
 vi.mock('dashboard/api/contacts', () => ({ default: api }));
-const sentry = vi.hoisted(() => ({ captureException: vi.fn() }));
-vi.mock('@sentry/vue', () => sentry);
+// O evento que de fato sai ao Sentry é conferido em useCardContato.sentry.spec.js.
+const sentry = vi.hoisted(() => ({ reportarSemDados: vi.fn() }));
+vi.mock('dashboard/helper/sentryPrivacy', () => sentry);
 
 const texto = (chave, valores) =>
   valores ? `${chave}:${JSON.stringify(valores)}` : chave;
@@ -45,7 +46,7 @@ const erroDaApi = (status, data) =>
 describe('useCardContato — salvar', () => {
   beforeEach(() => {
     api.update.mockReset();
-    sentry.captureException.mockReset();
+    sentry.reportarSemDados.mockReset();
   });
 
   it('grava só o que mudou e fecha a edição', async () => {
@@ -79,7 +80,7 @@ describe('useCardContato — salvar', () => {
     );
     expect(card.camposComErro.value).toEqual(['email', 'phoneNumber']);
     expect(card.editando.value).toBe(true);
-    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(sentry.reportarSemDados).not.toHaveBeenCalled();
   });
 
   it('resposta da API sem motivo: diz o código e que pode ter salvo', async () => {
@@ -89,7 +90,7 @@ describe('useCardContato — salvar', () => {
     await card.salvar(texto);
     expect(card.erro.value).toBe('SAVE_ERROR_SERVIDOR:{"status":502}');
     expect(card.camposComErro.value).toEqual([]);
-    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(sentry.reportarSemDados).not.toHaveBeenCalled();
   });
 
   it('sem resposta (rede): diz que não falou com o servidor', async () => {
@@ -100,10 +101,10 @@ describe('useCardContato — salvar', () => {
 
     await card.salvar(texto);
     expect(card.erro.value).toBe('SAVE_ERROR_REDE');
-    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(sentry.reportarSemDados).not.toHaveBeenCalled();
   });
 
-  it('erro da própria tela vai ao Sentry, com a tela e sem o que foi digitado', async () => {
+  it('erro da própria tela vai ao Sentry pelo envio sem dados', async () => {
     const defeito = new TypeError('x.trim is not a function');
     api.update.mockImplementation(() => {
       throw defeito;
@@ -112,14 +113,9 @@ describe('useCardContato — salvar', () => {
 
     expect(await card.salvar(texto)).toBe(false);
     expect(card.erro.value).toBe('SAVE_ERROR_TELA');
-    expect(sentry.captureException).toHaveBeenCalledTimes(1);
-    const [enviado, contexto] = sentry.captureException.mock.calls[0];
-    expect(enviado).toBe(defeito);
-    expect(contexto.tags).toEqual({ tela: 'crm_card_contato' });
-    const relatorio = JSON.stringify(contexto);
-    ['Mariana', 'nova@exemplo', '5511912345678', 'Campinas', 'Rua A'].forEach(
-      digitado => expect(relatorio).not.toContain(digitado)
-    );
+    expect(sentry.reportarSemDados).toHaveBeenCalledWith(defeito, {
+      tela: 'crm_card_contato',
+    });
   });
 
   // Atributo personalizado da conta com a chave `address`/`job_title` pode
@@ -137,7 +133,7 @@ describe('useCardContato — salvar', () => {
 
     expect(card.form.address).toBe('123');
     expect(await card.salvar(texto)).toBe(true);
-    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(sentry.reportarSemDados).not.toHaveBeenCalled();
     expect(api.update).toHaveBeenCalledWith(7, { name: 'Mariana C. Costa' });
   });
 
