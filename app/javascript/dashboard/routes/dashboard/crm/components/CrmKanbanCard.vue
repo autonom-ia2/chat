@@ -196,6 +196,8 @@ const scoreView = computed(() => {
 const aiSuggestionLabel = computed(() => {
   const suggestion = props.card.ai_suggestion;
   if (!suggestion?.to_stage_name) return '';
+  // F3: a sugestão de fechar o card não é uma etapa.
+  if (suggestion.fechar) return t('CRM_CARD.FECHAR_SUGESTAO.BADGE');
   return t('CRM_KANBAN.AI_CARD.BADGE', { stage: suggestion.to_stage_name });
 });
 

@@ -8,6 +8,7 @@ import CardMaisDetalhes from './CardMaisDetalhes.vue';
 import { atrasado } from './proximoPasso';
 import { formatClientPhone } from '../../helpers/meetingDay';
 import { promessaDoCard } from './useCardNegocio';
+import { textoDoFechamento } from './sugestaoDeFechar';
 
 // #1423 — o card em quatro frases, sempre na mesma ordem: Cliente, Negócio,
 // Agenda e Conversa. Cada coisa aparece num lugar só da tela: o que já está no
@@ -84,6 +85,13 @@ const posicao = computed(() =>
 const etapaAtual = computed(
   () => props.etapas[posicao.value]?.name || props.card.stage?.name || ''
 );
+// F3: a sugestão de fechar o card diz o que acabou, e não a etapa.
+const textoDaSugestao = computed(() => {
+  const fechar = textoDoFechamento(props.sugestao);
+  if (!fechar)
+    return t(`${R}.SUGESTAO`, { etapa: props.sugestao?.to_stage_name });
+  return t(fechar.frase, { motivo: fechar.motivo ? t(fechar.motivo) : '' });
+});
 const sugestaoNaLinha = computed(
   () =>
     props.ia &&
@@ -463,7 +471,7 @@ const temConversa = computed(() =>
               class="i-lucide-sparkles mt-0.5 size-4 shrink-0"
               aria-hidden="true"
             />
-            {{ t(`${R}.SUGESTAO`, { etapa: sugestao.to_stage_name }) }}
+            {{ textoDaSugestao }}
           </p>
         </template>
       </CardCartao>

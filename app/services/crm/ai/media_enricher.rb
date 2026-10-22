@@ -8,6 +8,8 @@ module Crm
     # cost/latency. Failures are marked done so they are not retried forever.
     # #1926: a janela é a da avaliação de etapa (ContextBuilder.janela_da_avaliacao), não as 12 últimas: áudio ou imagem
     # que a avaliação lê também chega transcrito/descrito. O teto por rodada (limit) segue, das mais novas às mais antigas.
+    # IA entende a conversa F4 (flag `crm_ia_leitor_de_midia`): o anexo é lido pelo Crm::Ai::LeitorDeMidia, o mesmo da
+    # chegada (mesmas chaves, trava e teto do dia), e o PDF entra também. Sem a flag, igual.
     class MediaEnricher
       def initialize(card:, limit: Config::MAX_MEDIA_ENRICH_PER_EVAL)
         @card = card
@@ -37,14 +39,18 @@ module Crm
         conversation = @card.primary_conversation
         return [] if conversation.blank?
 
-        conversation.messages
-                    .where(private: false)
-                    .where.not(message_type: :activity)
-                    .reorder(id: :desc)
-                    .limit(ContextBuilder.janela_da_avaliacao(1))
-                    .flat_map(&:attachments)
-                    .select { |attachment| needs_enrich?(attachment) }
+        mensagens = conversation.messages
+                                .where(private: false)
+                                .where.not(message_type: :activity)
+                                .reorder(id: :desc)
+                                .limit(ContextBuilder.janela_da_avaliacao(1))
+        # Com o leitor, a mesma seleção da chegada (o teto por mensagem e por tipo do Crm::Ai::LeitorDeMidia).
+        return mensagens.flat_map { |mensagem| leitor_de(mensagem).escolhidos } if leitor?
+
+        mensagens.flat_map(&:attachments).select { |attachment| needs_enrich?(attachment) }
       end
+
+      def leitor_de(mensagem) = Crm::Ai::LeitorDeMidia.new(mensagem, pipeline: @card.pipeline)
 
       def needs_enrich?(attachment)
         meta = attachment.meta.to_h
@@ -59,6 +65,8 @@ module Crm
       end
 
       def enrich(attachment, credential)
+        return ler_pelo_leitor(attachment) if leitor?
+
         case attachment.file_type.to_s
         when 'audio' then transcribe(attachment, credential)
         when 'image' then caption(attachment, credential)
@@ -83,6 +91,19 @@ module Crm
       rescue StandardError => e
         Rails.logger.warn("[CRM AI] caption failed attachment=#{attachment.id}: #{e.message}")
         store(attachment, 'ai_caption', nil, done_key: 'crm_ai_image_done')
+      end
+
+      # Arquivo que ainda não chegou ao storage fica pendente (o job da chegada tenta de novo), e a avaliação segue.
+      def ler_pelo_leitor(attachment)
+        leitor_de(attachment.message).ler(attachment)
+      rescue ActiveStorage::FileNotFoundError
+        Rails.logger.warn("[crm][midia] arquivo_ainda_nao_chegou origem=avaliacao anexo=#{attachment.id}")
+        false
+      end
+
+      def leitor?
+        @leitor = Crm::Ai::LeitorDeMidia.ligada?(@account) unless defined?(@leitor)
+        @leitor
       end
 
       def store(attachment, key, value, done_key:)

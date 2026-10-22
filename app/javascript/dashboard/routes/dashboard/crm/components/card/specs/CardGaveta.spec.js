@@ -494,6 +494,34 @@ describe('CardGaveta (#1423)', () => {
     delete window.globalConfig;
   });
 
+  // IA entende a conversa F3: a sugestão de fechar usa o mesmo cartão, com o
+  // texto dela (o que acabou e por quê) e o botão Encerrar, em vez de "Mover".
+  it('sugestão de fechar: frase do fim, aviso do retorno e Encerrar', async () => {
+    const api = (await import('dashboard/api/crmKanban')).default;
+    const sugestao = {
+      id: 7,
+      to_stage_id: 10,
+      to_stage_name: 'Novo',
+      reasoning: 'Disse que vai pensar.',
+      fechar: { resultado: 'perdido', motivo: 'adiou' },
+    };
+    window.globalConfig = { CRM_AI_ENABLED: 'true' };
+    const wrapper = montar({ card: { ...cardBase, ai_suggestion: sugestao } });
+    await flushPromises();
+    const cartao = wrapper.find('[data-card-proximo]');
+    expect(cartao.attributes('data-passo')).toBe('sugestao');
+    expect(cartao.text()).toContain('CRM_CARD.FECHAR_SUGESTAO.FRASE.PERDIDO');
+    expect(cartao.text()).toContain('CRM_CARD.FECHAR_SUGESTAO.RETORNO');
+    expect(cartao.text()).not.toContain('CRM_CARD.PASSO.SUGESTAO');
+    expect(wrapper.find('[data-passo-principal]').text()).toContain(
+      'CRM_CARD.FECHAR_SUGESTAO.ENCERRAR'
+    );
+    await clicar(wrapper, '[data-passo-principal]');
+    expect(api.acceptAiSuggestion).toHaveBeenCalledWith(7);
+    expect(alertSpy).toHaveBeenCalledWith('CRM_CARD.FECHAR_SUGESTAO.FECHOU');
+    delete window.globalConfig;
+  });
+
   it('guardNavigation roda a ação na hora quando não há rascunho', async () => {
     const wrapper = montar();
     await flushPromises();

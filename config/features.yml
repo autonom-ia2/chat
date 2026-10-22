@@ -738,12 +738,63 @@
   enabled: true
   column: feature_flags_ext_1
 
+# IA entende a conversa, F1 — fatos da conversa (sem Issue própria ainda; épico "IA entende a conversa" do CRM).
+# Ligada: (a) a IA de assunto lê quem falou (cliente, pessoa da equipe, nosso assistente, outro sistema) e a hora de
+# cada mensagem, e a de etapa lê a ordem (`after`) e desde quando o cliente espera (`customer_waiting_since`); (b) a
+# fala pública do nosso agente de IA relê o card em foco 2 min depois (até 6 vezes por card por dia; follow-up,
+# Agendamento e o agente de cotação ficam de fora); (c) a passagem para pessoa que o nosso assistente prometeu e
+# ninguém cumpriu é honrada pela IA do CRM, mesmo com o agente dono da conversa (exceção ao #1673; nunca com o agente
+# de cotação). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration.
+# Posição 53 na feature_flags_ext_1 (1 << 52), definitiva da Orquestração (22/10).
+- name: crm_ia_fatos_da_conversa
+  display_name: CRM › IA lê quem falou e em que ordem
+  enabled: false
+  column: feature_flags_ext_1
+
+# IA entende a conversa, F2 — assunto encerrado e "o que entra aqui" (sem Issue própria ainda; épico "IA entende a
+# conversa" do CRM). Ligada: (a) os cards da conversa fechados nos últimos 90 dias (até 3, arquivado fora) viram opção
+# da IA de assunto; mensagem só sobre um deles (agradecer, comentar, dar notícia) não cria, não foca e não reabre card,
+# e a IA de etapa não relê card por causa dela (assunto de card fechado não continua); pedido novo sobre o mesmo
+# assunto segue sendo pedido novo; (b) a IA de etapa lê o "quando usar" do funil e, sem ele, a descrição que a conta já
+# escreveu. Desligada (padrão): pergunta, instruções e entrada iguais às de antes. Sem migration, sem tela.
+# Posição 54 na feature_flags_ext_1 (1 << 53), definitiva da Orquestração (22/10).
+- name: crm_ia_assunto_encerrado
+  display_name: CRM › IA reconhece assunto encerrado
+  enabled: false
+  column: feature_flags_ext_1
+
+# IA entende a conversa, F3 — a IA fecha o card (sem Issue própria ainda; épico "IA entende a conversa" do CRM).
+# Ligada: (a) a IA de etapa pode marcar Perdido com motivo (adiou, recusou, fechou com outra; "adiou" = agora não sem
+# recusa, em qualquer funil, com lembrete de retorno na data do cliente ou em 30 dias), e Resolvido só em funil de
+# Atender, com confirmação do cliente; nunca Ganho; silêncio nunca fecha (a avaliação do card parado não fecha); (b)
+# "era teste" vira sugestão de arquivar como não é negócio (com a flag crm_ia_arquiva_lixo); (c) uma pessoa escolheu a etapa há
+# pouco e a IA quer voltar o card: vira sugestão; (d) o card fechado pela IA não segura o pedido novo pelo respeito de
+# 24 h; (e) fechar é sugestão por padrão, que a pessoa aceita num clique; sozinha, só com confiança de 0,95
+# (Crm::Ai::Config::AUTO_CLOSE_THRESHOLD). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration, sem tela.
+# Posição 55 na feature_flags_ext_1 (1 << 54), definitiva da Orquestração (22/10).
+- name: crm_ia_fecha_card
+  display_name: CRM › IA fecha o card (perdido com motivo, resolvido)
+  enabled: false
+  column: feature_flags_ext_1
+
+# IA entende a conversa, F4 — leitor de mídia na chegada (sem Issue própria ainda; épico "IA entende a conversa" do
+# CRM). Ligada: a mensagem com anexo (dos dois lados, numa caixa com o CRM) é lida uma vez, na chegada
+# (Crm::Ai::LeitorDeMidia): áudio transcrito, foto descrita e PDF com a camada de texto lida (sem OCR); a IA de assunto
+# passa a ler a mensagem só de mídia (antes descartada) e as IAs de etapa e memória leem o texto do PDF. Tetos: 4 fotos,
+# 2 PDFs e 3 áudios por mensagem; 500 leituras por conta por dia. Desligada (padrão): leitura, prompts e comportamento
+# iguais aos de antes. Sem migration, sem tela.
+# Posição 56 na feature_flags_ext_1 (1 << 55), definitiva da Orquestração (22/10).
+- name: crm_ia_leitor_de_midia
+  display_name: CRM › IA lê foto, áudio e PDF na chegada
+  enabled: false
+  column: feature_flags_ext_1
+
 # Conversa do Instagram com a cara do Direct (#2079, épico #1701). Ligada: na caixa Instagram, a conversa usa as cores,
 # os balões, os horários, o "Visto" e a caixa de escrever do instagram.com/direct, nos modos claro e escuro; só muda o
-# desenho, com o que já chega gravado (envio e recebimento iguais). Desligada: a conversa de sempre. Posição provisória
-# 57 na feature_flags_ext_1 (1 << 56), dada pela Orquestração; a definitiva é o fim da main na vez do PR. Padrão das
-# contas novas: desligada (`enabled: false`); o piloto 1/16/18 é ligado pela Orquestração por psql depois do deploy.
+# desenho, com o que já chega gravado (envio e recebimento iguais). Desligada: a conversa de sempre. Posição 57 na
+# feature_flags_ext_1 (1 << 56), definitiva da Orquestração (22/10). Liberada para todas as contas (Rodrigo, 22/10):
+# conta nova nasce ligada pela migration 20261108350000; as existentes são ligadas pela Orquestração depois do deploy.
 - name: conversa_instagram
   display_name: Conversa do Instagram com a cara do Direct
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
