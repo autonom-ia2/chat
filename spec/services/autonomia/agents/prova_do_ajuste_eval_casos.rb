@@ -130,8 +130,8 @@ module AvaliacaoDaProvaDoAjuste
     { nome: 'academia_base_estacionamento', agente: :academia,
       base: BASE_DA_ACADEMIA, fala: 'Quando perguntarem do estacionamento, responda e convide para o aulão de sábado.',
       obedece: 'Ao menos uma mensagem pergunta sobre estacionamento ou onde parar o carro, e a resposta a ela mostra o ' \
-               'pedido com fatos que estão só na base de conhecimento: o estacionamento gratuito para alunos e o ' \
-               'aulão de spinning de sábado às 9h.' },
+               'pedido com ao menos um fato que está só na base de conhecimento: o estacionamento gratuito para ' \
+               'alunos ou o aulão de spinning de sábado. O horário do aulão não é exigido: o pedido do dono não pede.' },
     { nome: 'academia_cancelamento_equipe', agente: :academia, fala: 'Pedido de cancelamento de plano vai direto para a equipe.',
       obedece: 'Ao menos uma mensagem pede para cancelar o plano.' },
     { nome: 'escola_tom_descontraido', agente: :escola,
