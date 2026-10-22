@@ -179,7 +179,8 @@ export const MODULE_GROUPS = [
       },
       {
         // Anúncios da Meta: ver o painel (#1794); editar conecta, configura e desconecta e age
-        // sobre o consultor (#2070). meta_ads_manage só o administrador entrega (DELEGATION_KEYS).
+        // sobre o consultor (#2070). meta_ads_manage só o administrador entrega, ou quem tem o
+        // ajuste 'Pode entregar acima do próprio', que só o administrador liga (DELEGATION_KEYS).
         key: 'META_ADS',
         icon: 'i-lucide-chart-no-axes-combined',
         levels: {
@@ -202,7 +203,8 @@ export const MODULE_GROUPS = [
         // Integrações (#2027): conectar, configurar e desconectar integrações, webhooks, robôs e importações, e
         // reconectar um canal que já existe. Criar caixa nova fica com inbox_manage. Ver e trocar os tokens que a
         // plataforma gera é ajuste fino de quem cuida das integrações: as telas deles (robôs, webhooks, CRM/n8n)
-        // ficam aqui. Só o administrador entrega as duas chaves (DELEGATION_KEYS).
+        // ficam aqui. Só o administrador entrega as duas chaves, ou quem tem o ajuste 'Pode entregar
+        // acima do próprio', que só o administrador liga (DELEGATION_KEYS).
         key: 'INTEGRATIONS',
         icon: 'i-lucide-plug',
         settings: true,
@@ -289,7 +291,8 @@ export const MODULE_GROUPS = [
       {
         // Financeiro (#1969): ver os custos da conta em dinheiro (uso de IA) e a autorização de
         // cobranças da Meta; editar liga e desliga essa autorização. Plano e faturas ficam com o
-        // administrador. As duas chaves só o administrador entrega (DELEGATION_KEYS).
+        // administrador. As duas chaves só o administrador entrega, ou quem tem o ajuste 'Pode
+        // entregar acima do próprio', que só o administrador liga (DELEGATION_KEYS).
         key: 'FINANCE',
         icon: 'i-lucide-wallet',
         levels: {

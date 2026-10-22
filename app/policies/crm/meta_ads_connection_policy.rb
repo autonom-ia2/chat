@@ -3,7 +3,8 @@
 # ou `meta_ads_manage` (lote 12, #2070), que também vê (manage implica view, Enterprise::AccountUser).
 #
 # `meta_ads_manage` é chave protegida (regra das duas listas, #1782; decisão D7 do lote 11): só o administrador a
-# entrega (CustomRole::DELEGATION_KEYS). Ela dá acesso de usuário do sistema da plataforma à conta de anúncios do
+# entrega, ou quem tem o ajuste 'Pode entregar acima do próprio' (grant_above_own), que só o administrador liga
+# (CustomRole::DELEGATION_KEYS, CustomRoles::GrantGuard). Ela dá acesso de usuário do sistema da plataforma à conta de anúncios do
 # cliente (selection), grava o token, liga o aviso de vendas no funil (meta_sync) e o resumo no WhatsApp do dono.
 class Crm::MetaAdsConnectionPolicy < ApplicationPolicy
   def show?

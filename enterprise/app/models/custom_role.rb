@@ -61,8 +61,9 @@
 #   only the conversations the person already sees.
 # - 'meta_ads_manage': connect, configure and disconnect Meta Ads (token, Facebook login, ad account and Pixel choice,
 #   destinations, funnel sale signal, insights refresh, the owner's WhatsApp report) and act on the advisor (#2070).
-#   Protected key (two-list rule, #1782; decision D7 of lote 11): choosing an ad account grants the platform system
-#   user access to the client's ad account. Money figures (spend, sales value) are out of its scope (lote 13).
+#   Protected key (two-list rule, #1782; decision D7 of lote 11): only an administrator hands it out, or whoever holds
+#   grant_above_own, which only an administrator turns on. Choosing an ad account grants the platform system user
+#   access to the client's ad account. Money figures (spend, sales value) are out of its scope (lote 13).
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 # - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
 # - 'people_manage': add, invite, edit and remove agents, and manage teams (#1931). Never administrators, never one's own

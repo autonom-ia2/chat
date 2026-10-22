@@ -32,7 +32,8 @@ export const SCHEDULING_PERMISSIONS = [
   'agendamento_manage',
 ];
 // Anúncios da Meta (#1794): ver o painel. Conectar, configurar e desconectar: meta_ads_manage (#2070), chave protegida
-// (regra das duas listas, #1782): só o administrador entrega.
+// (regra das duas listas, #1782): só o administrador entrega, ou quem tem o ajuste 'Pode entregar acima do próprio',
+// que só o administrador liga.
 export const META_ADS_VIEW_PERMISSION = 'meta_ads_view';
 export const META_ADS_MANAGE_PERMISSION = 'meta_ads_manage';
 

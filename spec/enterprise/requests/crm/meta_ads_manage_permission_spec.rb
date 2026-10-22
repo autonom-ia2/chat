@@ -181,6 +181,15 @@ RSpec.describe 'Anúncios da Meta com meta_ads_manage (#2070)', :aggregate_failu
       expect(account.custom_roles.where(name: 'Anúncios')).to be_empty
     end
 
+    it 'quem tem o ajuste Pode entregar acima do próprio (grant_above_own) entrega meta_ads_manage' do
+      builder = pessoa_com(%w[custom_role_manage grant_above_own])
+
+      create_role(as: builder, name: 'Anúncios', permissions: %w[meta_ads_manage])
+
+      expect(response).to have_http_status(:ok)
+      expect(account.custom_roles.find_by(name: 'Anúncios').permissions).to eq(%w[meta_ads_manage])
+    end
+
     it 'o administrador entrega' do
       create_role(as: admin, name: 'Anúncios', permissions: %w[meta_ads_manage])
 
