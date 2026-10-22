@@ -508,6 +508,48 @@ RSpec.describe Crm::Ai::FecharCard do
     expect(account.crm_ai_stage_suggestions.where(card: card)).to be_empty
   end
 
+  # Verificação do Codex (item 11, parcial): o "voltar de etapa" (regra h) gravava a sugestão sem a trava, e uma pessoa
+  # que fechava o card enquanto o modelo pensava deixava uma sugestão pendente num card perdido.
+  it 'voltar de etapa com o card fechado enquanto o modelo pensava: não grava sugestão', :aggregate_failures do
+    proposta = create_crm_stage(account: account, pipeline: pipeline, name: 'Proposta', position: 1)
+    card = novo_card(etapa: proposta)
+    Crm::ActivityLogger.new(card: card, actor: admin, event_type: 'move', payload: {}).perform
+    fechar = -> { Crm::Cards::Closer.new(card: Crm::Card.find(card.id), actor: admin, result: 'lost').perform }
+    ia_responde(nil, suggested_stage_id: stage.id, durante: fechar)
+
+    expect(avaliar(card)).to have_attributes(status: :skipped, error: 'card_not_open')
+    expect(card.reload).to be_lost
+    expect(account.crm_ai_stage_suggestions.where(card: card)).to be_empty
+  end
+
+  # Verificação do Codex (item 11): a trava nova não pode custar nada às contas sem a IA entende a conversa.
+  describe 'consultas da gravação da sugestão de etapa' do
+    def travas_ao_sugerir(card)
+      outra = create_crm_stage(account: account, pipeline: pipeline, name: 'Proposta', position: 1)
+      pipeline.update!(metadata: { 'ai' => { 'auto_move_enabled' => false } })
+      ia_responde(nil, suggested_stage_id: outra.id)
+      travas = []
+      contador = ->(*, dados) { travas << dados[:sql] if dados[:sql].include?('FOR UPDATE') }
+      resultado = nil
+      ActiveSupport::Notifications.subscribed(contador, 'sql.active_record') { resultado = avaliar(card) }
+      expect(resultado.status).to eq(:suggested)
+      travas.size
+    end
+
+    it 'sem as 4 flags: só a trava de sempre (a do carimbo da avaliação), como na main' do
+      account.disable_features!(described_class::FLAG)
+
+      expect(travas_ao_sugerir(novo_card)).to eq(1)
+    end
+
+    it 'com uma flag F1–F4: a trava a mais que relê o card antes de gravar' do
+      account.disable_features!(described_class::FLAG)
+      account.enable_features!(Crm::Ai::FatosDaConversa::FLAG)
+
+      expect(travas_ao_sugerir(novo_card)).to eq(2)
+    end
+  end
+
   describe '.fechados_pela_ia' do
     it 'traz o card fechado pela IA e tira o que uma pessoa fechou ou reabriu depois', :aggregate_failures do
       pela_ia = novo_card

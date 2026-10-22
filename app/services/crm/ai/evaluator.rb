@@ -217,10 +217,18 @@ module Crm
         end
       end
 
-      # O card pode ter sido fechado ou arquivado enquanto o modelo pensava (por uma pessoa ou por outro caminho): relido
-      # sob a trava antes de gravar a sugestão. nil quando ele não está mais aberto.
+      # IA entende a conversa (revisão adversarial): o card pode ter sido fechado ou arquivado enquanto o modelo pensava
+      # (por uma pessoa ou por outro caminho): relido sob a trava antes de gravar a sugestão. nil quando ele não está mais
+      # aberto. Sem nenhuma das flags F1–F4, o caminho de antes, sem trava nem releitura.
       def gravar_se_aberto(target_stage, confidence, classification, status)
+        return record_suggestion(target_stage, confidence, classification, status) unless ia_entende_ligada?
+
         @card.with_lock { record_suggestion(target_stage, confidence, classification, status) if @card.open? }
+      end
+
+      # Alguma flag da IA entende a conversa (F1–F4) na conta. Só lê as flags da conta já carregada: nenhuma consulta.
+      def ia_entende_ligada?
+        [FatosDaConversa, Crm::Subjects::Encerrado, FecharCard, LeitorDeMidia].any? { |fase| fase.ligada?(@account) }
       end
 
       def card_fechou = Result.new(status: :skipped, error: 'card_not_open')
@@ -348,7 +356,8 @@ module Crm
         confidence = classification[:confidence].to_f
         return if confidence < Config::SUGGESTION_THRESHOLD
 
-        Result.new(status: :suggested, suggestion: record_suggestion(alvo, confidence, classification, :pending))
+        suggestion = gravar_se_aberto(alvo, confidence, classification, :pending)
+        suggestion ? Result.new(status: :suggested, suggestion: suggestion) : card_fechou
       end
 
       def stage_criteria_present?(stage)
