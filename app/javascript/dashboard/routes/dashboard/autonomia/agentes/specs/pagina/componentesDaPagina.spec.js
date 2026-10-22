@@ -222,12 +222,19 @@ describe('AgenteSemana', () => {
     expect(wrapper.find('[data-numero]').exists()).toBe(false);
   });
 
-  it('shows two light cards, with no percentage', () => {
-    const wrapper = montar({ numeros: { respondidas: 1234, passadas: 3 } });
+  it('shows three light cards of this week, with no percentage (#2000)', () => {
+    const wrapper = montar({
+      numeros: { respondidas: 1234, passadas: 3, resolvidas: 5 },
+    });
     const cartoes = wrapper.findAll('[data-numero]');
-    expect(cartoes).toHaveLength(2);
+    expect(cartoes).toHaveLength(3);
     expect(cartoes[0].text()).toContain('1,234');
     expect(cartoes[1].text()).toContain('3');
+    expect(cartoes[2].attributes('data-numero')).toBe('resolvidas');
+    expect(cartoes[2].text()).toContain('5');
+    expect(wrapper.get('[data-periodo]').text()).toBe(
+      'AGENTS.JORNADA.PAGINA.SEMANA.PERIODO'
+    );
     expect(wrapper.text()).not.toContain('%');
     expect(cartoes[0].element.tagName).toBe('DIV');
   });
@@ -241,6 +248,16 @@ describe('AgenteSemana', () => {
     expect(passadas.element.tagName).toBe('BUTTON');
     await passadas.trigger('click');
     expect(wrapper.emitted('abrir')).toEqual([['passadas']]);
+    await wrapper.get('[data-numero="resolvidas"]').trigger('click');
+    expect(wrapper.emitted('abrir')).toEqual([['passadas'], ['resolvidas']]);
+  });
+
+  it('is not empty when the agent only solved conversations this week', () => {
+    const wrapper = montar({
+      numeros: { respondidas: 0, passadas: 0, resolvidas: 1 },
+    });
+    expect(wrapper.find('[data-semana-vazia]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-numero]')).toHaveLength(3);
   });
 });
 
@@ -276,7 +293,7 @@ describe('GavetaConversas', () => {
 
     expect(agentesApi.analyticsConversations).toHaveBeenCalledWith(7, {
       range: '7d',
-      metric: 'handled',
+      metric: 'respondidas',
     });
     const linhas = document.querySelectorAll('[data-linha]');
     expect(linhas).toHaveLength(1);
@@ -292,7 +309,7 @@ describe('GavetaConversas', () => {
     await flushPromises();
     expect(agentesApi.analyticsConversations).toHaveBeenLastCalledWith(7, {
       range: '7d',
-      metric: 'handed_off',
+      metric: 'passadas',
     });
     expect(
       document
@@ -300,6 +317,28 @@ describe('GavetaConversas', () => {
         .getAttribute('aria-pressed')
     ).toBe('true');
     expect(document.querySelector('[data-vazio]')).not.toBeNull();
+    wrapper.unmount();
+  });
+
+  it('opens the solved-without-the-team list from its own card (#2000)', async () => {
+    agentesApi.analyticsConversations.mockResolvedValueOnce({
+      data: { payload: [linha(3, 'Carla')], meta: {} },
+    });
+    const wrapper = mount(GavetaConversas, {
+      attachTo: document.body,
+      props: { agentId: 7, aba: 'resolvidas' },
+    });
+    await flushPromises();
+    expect(agentesApi.analyticsConversations).toHaveBeenCalledWith(7, {
+      range: '7d',
+      metric: 'resolvidas_sozinha',
+    });
+    expect(
+      document
+        .querySelector('[data-aba="resolvidas"]')
+        .getAttribute('aria-pressed')
+    ).toBe('true');
+    expect(document.querySelectorAll('[data-linha]')).toHaveLength(1);
     wrapper.unmount();
   });
 

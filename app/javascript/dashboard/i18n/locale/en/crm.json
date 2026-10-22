@@ -130,6 +130,13 @@
     "PRIVACY_FOOTER": "We never show the content of conversations with AI.",
     "RATE_UNAVAILABLE": "BRL exchange rate is unavailable right now; showing values in USD.",
     "RESOURCE_FALLBACK": "Other",
+    "IA_VS_HUMANO": {
+      "TITULO": "What the AI did in the pipeline",
+      "MUDOU": "In this period, the AI moved customers to another stage on its own {auto} time. | In this period, the AI moved customers to another stage on its own {auto} times.",
+      "NAO_MUDOU": "In this period, the AI did not move anyone to another stage on its own.",
+      "SUGERIU": "It also suggested changes: the team accepted {aceitas} and turned down {recusadas}.",
+      "VAZIA": "In this period, the AI did not move anyone to another stage, nor suggest changes."
+    },
     "LOADING": "Loading AI usage…",
     "ERROR": "Could not load AI usage. Try again.",
     "SEM_VALORES": {
@@ -450,7 +457,7 @@
     },
     "DASHBOARD": {
       "TITLE": "CRM Dashboard",
-      "SUBTITLE": "Pipeline performance: funnel, deals won and lost, AI vs human, and throughput.",
+      "SUBTITLE": "Pipeline performance: funnel, deals won and lost, and throughput.",
       "META_SYNC": {
         "TITLE": "Meta conversions (Ads)",
         "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, landing page sales through the website Pixel.",
@@ -523,14 +530,6 @@
         "CARDS": "cards",
         "EMPTY": "No open cards in this pipeline."
       },
-      "AI": {
-        "TITLE": "AI vs human",
-        "AUTO_MOVES": "AI auto-moves",
-        "ACCEPTED": "Accepted by human",
-        "DISMISSED": "Dismissed",
-        "ACCEPTANCE_RATE": "Acceptance rate",
-        "EMPTY": "No AI activity in the period."
-      },
       "THROUGHPUT": {
         "TITLE": "Throughput (closed)",
         "WON": "Won",
@@ -561,7 +560,7 @@
         "SO_DIAS": "{d} d",
         "SO_HORAS": "{h} h"
       },
-      "SUBTITLE_ATENDER": "Pipeline performance: stages, resolved and cancelled, resolution time and AI vs human."
+      "SUBTITLE_ATENDER": "Pipeline performance: stages, resolved and cancelled, and resolution time."
     },
     "ACTIONS": {
       "REFRESH": "Refresh",
@@ -2260,6 +2259,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
+        "BACK": "Back",
         "TITLE": "Ads",
         "SUBTITLE": "See which ads bring conversations and sales.",
         "LOADING": "Loading…",
@@ -6328,7 +6328,7 @@
     "CUIDOU": {
       "TITULO": "Who took care · {n} person and 1 AI | Who took care · {n} people and 1 AI",
       "TITULO_SEM_IA": "Who took care · {n} person | Who took care · {n} people",
-      "PLATAFORMA": "This month {ia} served {atendeu} customers and took part in {participou} sale ({valor}). | This month {ia} served {atendeu} customers and took part in {participou} sales ({valor}).",
+      "PLATAFORMA": "This month {ia} answered {atendeu} conversations and took part in {participou} sale ({valor}). | This month {ia} answered {atendeu} conversations and took part in {participou} sales ({valor}).",
       "CAMINHO": "On track: {nomes}.",
       "VOCE": "you",
       "E": "and",
@@ -6341,11 +6341,12 @@
       "FORA_DA_EQUIPE": "No owner or no longer on the team",
       "FORA_VENDA": "closed {fechou} · {valor}",
       "IA_SELO": "AI",
-      "IA_ATENDEU": "served {n} customer | served {n} customers",
+      "IA_ATENDEU": "answered {n} conversation | answered {n} conversations",
       "IA_PARTICIPOU": "took part in {n} sale ({valor}) | took part in {n} sales ({valor})",
-      "IA_PASSOU": "handed {n} customer to someone on the team | handed {n} customers to someone on the team",
-      "IA_RESOLVEU_SOZINHA": "solved {n} case on its own | solved {n} cases on its own",
+      "IA_PASSOU": "handed {n} conversation to someone on the team | handed {n} conversations to someone on the team",
+      "IA_RESOLVEU_SOZINHA": "solved {n} conversation without the team | solved {n} conversations without the team",
       "IA_VER": "See the agent",
+      "IA_SEMANA": "On the agent page, the same count shows by week.",
       "IA_VER_TODOS": "See the agents",
       "IA_CUSTO_AGENTES": "AI agents cost: {valor} this month, about {porConversa} per conversation.",
       "IA_CUSTO_AGENTES_SEM_CONVERSA": "AI agents cost: {valor} this month.",
