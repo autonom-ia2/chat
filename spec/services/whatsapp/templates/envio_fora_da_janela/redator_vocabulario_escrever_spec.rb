@@ -50,8 +50,22 @@ RSpec.describe Whatsapp::Templates::EnvioForaDaJanela::Redator, '#escrever' do
     end
   end
 
+  it 'a linha vem no fim do pedido, depois de "só o corpo"' do
+    expect(pedido_escrito).to end_with("#{described_class::SO_CORPO} #{linha_corretora}")
+  end
+
   describe 'com o interruptor de pacotes desligado' do
     let(:pacote) { nil }
+
+    it 'o pedido é o de sempre' do
+      regra = described_class::REGRA_DA_CATEGORIA.fetch(tipo.categoria)
+
+      expect(pedido_escrito).to eq([tipo.proposito, regra, described_class::SO_CORPO].join(' '))
+    end
+  end
+
+  describe 'em conta fora do nicho de seguros, com os pacotes ligados' do
+    before { account.update!(internal_attributes: {}) }
 
     it 'o pedido é o de sempre' do
       regra = described_class::REGRA_DA_CATEGORIA.fetch(tipo.categoria)

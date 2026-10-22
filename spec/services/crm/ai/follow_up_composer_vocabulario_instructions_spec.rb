@@ -80,9 +80,15 @@ RSpec.describe Crm::Ai::FollowUpComposer, '#instructions' do
 
   describe 'sem pacote, o texto é o de sempre' do
     let(:sem_pacote) { described_class.new(card: nil, client: nil, context: {}) }
+    let(:tom_do_dono) { 'INSTRUÇÕES DE TOM/MARCA (siga rigorosamente): Seja breve.' }
 
     describe 'com o interruptor de pacotes desligado' do
       let(:pacote) { nil }
+
+      it 'a linha do tom do dono é a de sempre, sem linha em branco antes' do
+        expect(described_class.new(card: card, client: nil, context: {}, tone_instructions: 'Seja breve.')
+          .send(:tone_instructions_line)).to eq(tom_do_dono)
+      end
 
       it 'não muda nenhuma instrução' do
         servico = described_class.new(card: nil, client: nil, context: {}, purpose: :service)
@@ -94,6 +100,11 @@ RSpec.describe Crm::Ai::FollowUpComposer, '#instructions' do
 
     describe 'em conta fora do nicho de seguros' do
       let(:account) { create(:account) }
+
+      it 'a linha do tom do dono é a de sempre, sem linha em branco antes' do
+        expect(described_class.new(card: card, client: nil, context: {}, tone_instructions: 'Seja breve.')
+          .send(:tone_instructions_line)).to eq(tom_do_dono)
+      end
 
       it 'não muda nenhuma instrução' do
         callback = described_class.new(card: nil, client: nil, context: {}, purpose: :callback)
