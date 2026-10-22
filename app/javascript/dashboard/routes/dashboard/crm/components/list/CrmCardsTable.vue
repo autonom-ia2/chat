@@ -428,6 +428,7 @@ const slaChatFor = card => {
 
 const isEditable = column => !!column.columnDef.meta?.editable;
 // #2075 — valor que a pessoa não vê: só um traço, sem edição.
+const TRACO = '—';
 const isHiddenValue = (column, card) =>
   column.columnDef.meta?.kind === 'value' && !!card.value_hidden;
 const cellKind = column => column.columnDef.meta?.kind;
@@ -852,7 +853,7 @@ const onRowKeydown = (event, card) => {
                       :title="t('CRM_KANBAN.LIST.VALUE_HIDDEN')"
                       data-crm-value-hidden
                     >
-                      {{ '—' }}
+                      {{ TRACO }}
                       <span class="sr-only">{{
                         t('CRM_KANBAN.LIST.VALUE_HIDDEN')
                       }}</span>
