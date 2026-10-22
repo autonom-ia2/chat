@@ -788,3 +788,13 @@
   display_name: CRM › IA lê foto, áudio e PDF na chegada
   enabled: false
   column: feature_flags_ext_1
+
+# Conversa do Instagram com a cara do Direct (#2079, épico #1701). Ligada: na caixa Instagram, a conversa usa as cores,
+# os balões, os horários, o "Visto" e a caixa de escrever do instagram.com/direct, nos modos claro e escuro; só muda o
+# desenho, com o que já chega gravado (envio e recebimento iguais). Desligada: a conversa de sempre. Posição 57 na
+# feature_flags_ext_1 (1 << 56), definitiva da Orquestração (22/10). Liberada para todas as contas (Rodrigo, 22/10):
+# conta nova nasce ligada pela migration 20261108350000; as existentes são ligadas pela Orquestração depois do deploy.
+- name: conversa_instagram
+  display_name: Conversa do Instagram com a cara do Direct
+  enabled: true
+  column: feature_flags_ext_1

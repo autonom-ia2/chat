@@ -259,7 +259,9 @@ RSpec.describe Account do
         feature_crm_ia_fatos_da_conversa: 1 << 52,
         feature_crm_ia_assunto_encerrado: 1 << 53,
         feature_crm_ia_fecha_card: 1 << 54,
-        feature_crm_ia_leitor_de_midia: 1 << 55
+        feature_crm_ia_leitor_de_midia: 1 << 55,
+        # #2079: posição 57 (1 << 56), definitiva da Orquestração (22/10).
+        feature_conversa_instagram: 1 << 56
       }
     end
 

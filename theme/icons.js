@@ -500,5 +500,11 @@ export const icons = {
     width: 48,
     height: 48,
   },
+  // #2079: fotos e vídeos na pílula da conversa do Instagram (quadrado bem arredondado, ponto e montanhas).
+  'midia-do-instagram': {
+    body: `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5.5"/><path d="M3.6 17.2 7.4 13.6l3.6 3.4 6-6 3.4 3.4"/></g><circle cx="8" cy="8" r="1.6" fill="currentColor"/>`,
+    width: 24,
+    height: 24,
+  },
   /** Ends */
 };

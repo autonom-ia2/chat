@@ -657,6 +657,29 @@
     },
     "NOTA_DO_CONECTOR": {
       "AVISO": "⚠️ Uma mensagem do WhatsApp não chegou aqui. Confira no celular da caixa."
+    },
+    "INSTAGRAM": {
+      "HORARIO": "{dia} de {mes} de {ano} {hora}",
+      "VISTO": "Visto",
+      "RESPONDER": "Responder",
+      "MAIS_OPCOES": "Mais opções",
+      "VOCE_RESPONDEU": "Você respondeu",
+      "RESPONDEU_A_VOCE": "Respondeu a você",
+      "RESPONDEU_AO_STORY": "Respondeu ao seu story",
+      "VOCE_RESPONDEU_AO_STORY": "Você respondeu ao story",
+      "MENCIONOU_NO_STORY": "Mencionou você no próprio story",
+      "VOCE_MENCIONOU_NO_STORY": "Você mencionou no seu story",
+      "STORY_INDISPONIVEL": "Story indisponível",
+      "POST": "Post compartilhado",
+      "CLIPE": "Clipe",
+      "ABRIR_FOTO": "Abrir foto",
+      "ABRIR_VIDEO": "Abrir o vídeo",
+      "REPRODUZIR": "Reproduzir",
+      "PAUSAR": "Pausar",
+      "MENSAGEM_VAZIA": "Mensagem",
+      "CAMPO": "Mensagem...",
+      "VER_TRANSCRICAO": "Ver transcrição",
+      "MIDIA_INDISPONIVEL": "Mídia indisponível"
     }
   }
 }
