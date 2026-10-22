@@ -96,8 +96,22 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     expect(julgar).to be_nil
   end
 
-  # Revisão do t6d (MÉDIO 1): assunto ou gatilho só entra em testes quando a mensagem traz o assunto; forma, sempre.
-  it 'a instrução separa forma (qualquer resposta) de assunto ou gatilho (só quando a mensagem traz o assunto)' do
+  # Série 3 do t6d anulada (decisão do Rodrigo, 22/10): forma só entra em testes quando a resposta deixa ver a forma.
+  # A resposta que não deixa ver não vira nao: o agente não errou. O exemplo é de outro ramo, nunca o do eval.
+  it 'a instrução: forma só entra em testes quando a resposta mostra ou contradiz a forma; sem mostrar, fica fora' do
+    instrucao = described_class::INSTRUCAO.squish
+    expect(instrucao).to include(
+      'Mudanca de forma (tamanho da resposta, tom, tratamento, emoji, formato) so entra em testes quando a resposta ' \
+      'deixa ver a forma pedida: quando a mostra (ok) ou a contradiz (nao), mesmo que o assunto seja outro.',
+      'Uma resposta que nao deixa ver a forma nao testa esse pedido: ele fica fora de testes daquela mensagem, e nao ' \
+      'vira nao, porque o agente nao errou, a resposta so nao deixou ver',
+      'numa loja de roupas', '"Temos no tamanho M." nao fala com a cliente e nao mostra o tratamento'
+    )
+    expect(instrucao).not_to include('aparece em qualquer resposta que o agente escreve', 'escola')
+  end
+
+  # Revisão do t6d (MÉDIO 1): assunto ou gatilho só entra em testes quando a mensagem traz o assunto.
+  it 'a instrução separa forma de assunto ou gatilho (só quando a mensagem traz o assunto)' do
     expect(described_class::INSTRUCAO.squish).to include(
       'Um pedido de assunto ou de gatilho (ex.: "preco passa para a equipe") so entra em testes quando a mensagem do ' \
       'cliente traz esse assunto: uma resposta curta sobre horario nao testa o pedido do preco.',

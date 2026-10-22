@@ -11,7 +11,8 @@
 # testes: nao se algum é nao, ok se todos são ok, nao_testa sem teste. Os pedidos vão ao modelo numerados a partir de 1
 # (`numero`); cada número volta a posição aqui, explicitamente. Número fora de 1 até o total, ou que não é inteiro, é
 # saída malformada (a prova fica indisponível: descartar o teste de um nao daria ✓ falso); pedido repetido vira um teste
-# só, e o nao prevalece.
+# só, e o nao prevalece. Pedido de forma só entra em testes quando a resposta deixa ver a forma (série 3 do t6d anulada,
+# decisão do Rodrigo de 22/10): a que não deixa ver fica fora, sem nao, e sem nenhuma que mostre a prova sai incompleta.
 class Autonomia::Agents::JuizDaProva
   # O custo do juiz vai para o Construtor de agente na Gestão IA; as respostas do agente, para o Assistente de respostas.
   FEATURE = 'agente_prova_juiz'.freeze
@@ -44,9 +45,13 @@ class Autonomia::Agents::JuizDaProva
     vazia.
     Uma resposta pode testar mais de um pedido ao mesmo tempo, cada um com o seu veredito: uma resposta curta e com emoji
     e ok para o pedido de responder curto e nao para o pedido de nao usar emoji.
-    Mudanca de forma (tamanho da resposta, tom, tratamento, emoji, formato) aparece em qualquer resposta que o agente
-    escreve com as proprias palavras: ela entra em testes, mesmo que o assunto seja outro. Quando a resposta e so a
-    passagem para a equipe ou uma mensagem fixa curta, ela nao mostra a forma: a mudanca de forma nao entra em testes.
+    Mudanca de forma (tamanho da resposta, tom, tratamento, emoji, formato) so entra em testes quando a resposta
+    deixa ver a forma pedida: quando a mostra (ok) ou a contradiz (nao), mesmo que o assunto seja outro. Uma resposta
+    que nao deixa ver a forma nao testa esse pedido: ele fica fora de testes daquela mensagem, e nao vira nao, porque o
+    agente nao errou, a resposta so nao deixou ver (ex.: numa loja de roupas, o dono pediu para tratar a cliente por
+    senhora; a resposta "Temos no tamanho M." nao fala com a cliente e nao mostra o tratamento, entao o pedido fica fora
+    de testes; "Temos sim, senhora, no tamanho M." mostra). Quando a resposta e so a passagem para a equipe ou uma
+    mensagem fixa curta, ela nao mostra a forma: a mudanca de forma nao entra em testes.
     Um pedido de assunto ou de gatilho (ex.: "preco passa para a equipe") so entra em testes quando a mensagem do
     cliente traz esse assunto: uma resposta curta sobre horario nao testa o pedido do preco. Um pedido de gatilho por
     situacao (ex.: "quando nao souber, passe para a equipe") entra em testes quando a mensagem cria essa situacao: o
