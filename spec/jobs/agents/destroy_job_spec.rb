@@ -32,6 +32,22 @@ RSpec.describe Agents::DestroyJob do
       expect(user.assigned_conversations.where(account: account).length).to eq 0
     end
 
+    # #2095: com o id de quem saiu, o card não se grava mais (Crm::Card#validate_owner_account).
+    it 'solta os cards do CRM de quem saiu da conta, e só os desta conta' do
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      mine = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Do que sai', owner: user, status: :archived)
+      other_account = create(:account)
+      create(:account_user, account: other_account, user: user)
+      other_pipeline, other_stage = create_crm_pipeline(account: other_account, user: user)
+      elsewhere = other_account.crm_cards.create!(pipeline: other_pipeline, stage: other_stage, title: 'Outra conta', owner: user)
+
+      described_class.perform_now(account, user)
+
+      expect(mine.reload.owner_id).to be_nil
+      expect(elsewhere.reload.owner_id).to eq(user.id)
+      expect(mine.update(status: :open)).to be(true)
+    end
+
     it 'invalidates saved filter snapshots when assigned conversations are unassigned' do
       account.enable_features!(:unread_count_for_filters)
 

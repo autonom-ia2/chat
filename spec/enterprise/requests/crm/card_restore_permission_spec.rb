@@ -63,6 +63,29 @@ RSpec.describe 'Restaurar arquivados com função personalizada', type: :request
     expect(card.reload.status).to eq('archived')
   end
 
+  it 'com Pode mexer, sem Arquivar, também não restaura pelo reabrir antigo (/close e lote)' do
+    give_role(%w[crm_view crm_manage_cards conversation_participating_manage])
+    card.update!(status: :archived)
+
+    post "#{base}/cards/#{card.id}/close", params: { result: 'reopen' }, headers: agent.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unauthorized)
+
+    post "#{base}/cards/bulk", params: { ids: [card.id], bulk_action: 'status', payload: { result: 'open' } },
+                               headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body.dig('payload', 'failed')).to eq([{ 'id' => card.id, 'error' => 'forbidden' }])
+    expect(card.reload.status).to eq('archived')
+  end
+
+  it 'só com Arquivar cards, restaura pelo reabrir antigo (/close)' do
+    give_role(%w[crm_view crm_delete_cards conversation_participating_manage])
+    card.update!(status: :archived)
+
+    post "#{base}/cards/#{card.id}/close", params: { result: 'reopen' }, headers: agent.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(card.reload.status).to eq('open')
+  end
+
   it 'sem Valor de venda, a lista de arquivados esconde o valor do card de outra pessoa' do
     give_role(%w[crm_view crm_delete_cards conversation_participating_manage])
     card.update!(status: :archived, owner: admin, value_cents: 150_000)

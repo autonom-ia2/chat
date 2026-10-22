@@ -18,6 +18,8 @@ class Crm::Cards::Restorer
   NOT_ARCHIVED = 'crm.card_restore_not_archived'.freeze
   PIPELINE_ARCHIVED = 'crm.card_restore_pipeline_archived'.freeze
   CONFLICT = 'crm.card_restore_conflict'.freeze
+  # Ganhar ou perder um card arquivado pelo fechar (o /close ou o lote): restaure antes. Reabrir por lá é restaurar.
+  CLOSE_ARCHIVED = 'crm.card_close_archived'.freeze
 
   Result = Struct.new(:restored, :error, :open_card, keyword_init: true) do
     def restored?
@@ -54,8 +56,15 @@ class Crm::Cards::Restorer
     Result.new(restored: false, error: error) if error
   end
 
+  # O card arquivado há tempo pode ter um dono que já saiu da conta: ele volta sem dono (Crm::Card.donos_fora_da_conta),
+  # e a atividade guarda quem era.
   def restore!
-    Crm::Cards::Closer.new(card: @card, actor: @actor, result: 'reopen', payload_extra: { restored: true }).perform
+    payload = { restored: true }
+    if @card.dono_saiu_da_conta?
+      payload[:dono_que_saiu_id] = @card.owner_id
+      @card.owner_id = nil
+    end
+    Crm::Cards::Closer.new(card: @card, actor: @actor, result: 'reopen', payload_extra: payload).perform
     conflict = open_sibling if @card.open? && !@force
     return Result.new(restored: false, error: CONFLICT, open_card: conflict) if conflict
 

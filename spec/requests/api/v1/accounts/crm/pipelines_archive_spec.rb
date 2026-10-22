@@ -37,7 +37,8 @@ RSpec.describe 'CRM: arquivar e restaurar funil', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body['payload']).to eq(
         'open_cards_count' => 2,
-        'inboxes' => [{ 'id' => inbox.id, 'name' => 'WhatsApp Pós-venda', 'auto_create_card' => true }]
+        'inboxes' => [{ 'id' => inbox.id, 'name' => 'WhatsApp Pós-venda', 'auto_create_card' => true }],
+        'follow_ups_count' => 0, 'follow_up_series_count' => 0, 'upcoming_meetings_count' => 0
       )
     end
 
@@ -112,6 +113,41 @@ RSpec.describe 'CRM: arquivar e restaurar funil', type: :request do
 
       expect(pipeline.reload).to be_active
       expect([first.reload.pipeline_id, second.reload.pipeline_id]).to eq([pipeline.id, pipeline.id])
+    end
+
+    it 'recusa arquivar o último funil ativo pelo DELETE, como o PATCH (Parte A), e não move nada' do
+      open_card = card
+      target_pipeline_and_stage.first.archived!
+
+      delete "#{base}/#{pipeline.id}", headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'crm.pipeline_archive_last_active',
+                                              'message' => I18n.t('crm.pipelines.archive_last_active'))
+      expect(pipeline.reload).to be_active
+      expect(open_card.reload.pipeline_id).to eq(pipeline.id)
+    end
+
+    it 'card de dono que saiu da conta não trava o arquivar com mudança: vai sem dono' do
+      gone = create(:user, account: account, role: :agent)
+      moved = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Do que saiu', owner: gone)
+      AccountUser.where(account: account, user: gone).delete_all
+
+      delete "#{base}/#{pipeline.id}", params: { move_to_stage_id: target_stage.id }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect([moved.reload.stage_id, moved.owner_id]).to eq([target_stage.id, nil])
+    end
+
+    it 'sem destino, diz quantos retornos dos cards que ficaram pararam' do
+      kept = card
+      Crm::FollowUp.create!(account: account, card: kept, created_by: admin, title: 'Ligar', due_at: 2.days.from_now,
+                            timezone: 'America/Sao_Paulo', status: :pending)
+
+      delete "#{base}/#{pipeline.id}", headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body['payload']).to include('open_cards_count' => 1, 'stopped_follow_ups_count' => 1)
+      expect(kept.follow_ups.first).to be_canceled
     end
 
     it 'no funil já arquivado, leva os cards que ficaram presos nele' do

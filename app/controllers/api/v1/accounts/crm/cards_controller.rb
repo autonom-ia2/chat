@@ -141,7 +141,11 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     end
   end
 
+  # Card arquivado (#2095): reabrir por aqui é restaurar, com as regras do restaurar (permissão de arquivar, funil
+  # arquivado, cliente que já voltou). Ganhar ou perder um card arquivado é recusado: restaure antes.
   def close
+    return close_archived if @card.archived?
+
     with_idempotency do
       @card = ::Crm::Cards::Closer.new(
         card: @card,
@@ -395,7 +399,20 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       { contact: Crm::Cards::CompanyResolver.contact_preload },
       :owner, :inbox, :stage, :pipeline, :primary_conversation
     ).find(params[:id])
-    authorize @card, "#{action_name}?".to_sym
+    authorize @card, card_policy_query
+  end
+
+  # Reabrir o card arquivado pelo /close é restaurar (#2095): a regra é a do restaurar, não a do fechar.
+  def card_policy_query
+    return :restore? if action_name == 'close' && @card.archived?
+
+    "#{action_name}?".to_sym
+  end
+
+  def close_archived
+    return render_unprocessable(::Crm::Cards::Restorer::CLOSE_ARCHIVED) unless ::Crm::Cards::Closer.reopen?(params[:result])
+
+    restore
   end
 
   def conversation_for_from_conversation!

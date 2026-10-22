@@ -144,6 +144,104 @@ RSpec.describe 'CRM: restaurar card arquivado', type: :request do
     end
   end
 
+  # Card cujo dono saiu da conta antes de o Agents::DestroyJob soltar os cards: o modelo recusaria gravá-lo.
+  describe 'dono que saiu da conta' do
+    let(:gone) { create(:user, account: account, role: :agent) }
+
+    def card_of_gone(title)
+      account.crm_cards.create!(pipeline: pipeline, stage: second_stage, title: title, owner: gone,
+                                contact: create(:contact, account: account)).tap do |card|
+        card.update!(status: :archived)
+      end
+    end
+
+    before { gone }
+
+    it 'restaura um sem dono, e a atividade diz quem era' do
+      card = card_of_gone('Do que saiu')
+      AccountUser.where(account: account, user: gone).delete_all
+
+      post "#{base}/cards/#{card.id}/restore", headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect([card.reload.status, card.owner_id]).to eq(['open', nil])
+      expect(card.activities.where(event_type: 'reopen').last.payload).to include('restored' => true, 'dono_que_saiu_id' => gone.id)
+    end
+
+    it 'um card desses não derruba o lote dos outros' do
+      broken = card_of_gone('Do que saiu')
+      fine = card_in(stage: second_stage, contact: create(:contact, account: account))
+      archive!(fine)
+      AccountUser.where(account: account, user: gone).delete_all
+
+      post "#{base}/cards/restore", params: { ids: [broken.id, fine.id] }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body['payload']).to eq('restored' => [broken.id, fine.id], 'skipped' => [])
+    end
+  end
+
+  # O reabrir antigo (/close result=reopen e o lote com status=open) não pode restaurar sem as regras do restaurar.
+  describe 'reabrir o arquivado pelo fechar' do
+    it 'no /close, reabrir é restaurar: volta para a etapa e registra como restauração' do
+      card = card_in(stage: second_stage)
+      archive!(card)
+
+      post "#{base}/cards/#{card.id}/close", params: { result: 'reopen' }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect([card.reload.status, card.stage_id]).to eq(['open', second_stage.id])
+      expect(card.activities.where(event_type: 'reopen').last.payload).to include('restored' => true)
+    end
+
+    it 'no /close, recusa o card de funil arquivado e avisa o cliente que já voltou' do
+      card = card_in(stage: second_stage)
+      archive!(card)
+      open_card = card_in(stage: pipeline_and_stage.last, title: 'Voltou')
+
+      post "#{base}/cards/#{card.id}/close", params: { result: 'open' }, headers: auth_headers(admin), as: :json
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body.dig('open_card', 'id')).to eq(open_card.id)
+
+      open_card.update!(status: :lost)
+      create_crm_pipeline(account: account, user: admin, name: 'Outro')
+      pipeline.archived!
+      post "#{base}/cards/#{card.id}/close", params: { result: 'reopen' }, headers: auth_headers(admin), as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('crm.card_restore_pipeline_archived')
+      expect(card.reload.status).to eq('archived')
+    end
+
+    it 'no /close, ganhar ou perder o arquivado é recusado: restaure antes' do
+      card = card_in(stage: second_stage)
+      archive!(card)
+
+      post "#{base}/cards/#{card.id}/close", params: { result: 'won' }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('crm.card_close_archived')
+      expect(card.reload.status).to eq('archived')
+    end
+
+    it 'no lote, "Aberto" restaura com as recusas do restaurar, e ganho é recusado' do
+      restored = card_in(stage: second_stage)
+      conflicting = card_in(stage: second_stage, title: 'Do mesmo contato')
+      won = card_in(stage: second_stage, contact: create(:contact, account: account), title: 'Pediu ganho')
+      [restored, conflicting, won].each { |card| archive!(card) }
+
+      post "#{base}/cards/bulk", params: { ids: [restored.id, conflicting.id], bulk_action: 'status', payload: { result: 'open' } },
+                                 headers: auth_headers(admin), as: :json
+      expect(response.parsed_body['payload']).to eq(
+        'updated' => [restored.id], 'failed' => [{ 'id' => conflicting.id, 'error' => 'crm.card_restore_conflict' }]
+      )
+
+      post "#{base}/cards/bulk", params: { ids: [won.id], bulk_action: 'status', payload: { result: 'won' } },
+                                 headers: auth_headers(admin), as: :json
+      expect(response.parsed_body.dig('payload', 'failed')).to eq([{ 'id' => won.id, 'error' => 'crm.card_close_archived' }])
+      expect([restored.reload.status, conflicting.reload.status, won.reload.status]).to eq(%w[open archived archived])
+      expect(restored.activities.where(event_type: 'reopen').last.payload).to include('restored' => true)
+    end
+  end
+
   describe 'GET /crm/cards/archived' do
     let(:agent) { create(:user, account: account, role: :agent) }
 
