@@ -714,3 +714,14 @@
   display_name: CRM › Metas do mês por pessoa
   enabled: true
   column: feature_flags_ext_1
+
+# CRM › Números por papel, visão "Equipe" nova e a IA no time (#1992, F5 do épico #1871). Ligada (com a
+# `crm_numeros_lentes`): a aba Equipe de CRM › Números mostra o topo, o próximo passo, Vendendo, Atendendo, "Quem
+# precisa de ajuda" e o resto recolhido ("Quem cuidou", com a IA numa linha própria, sem meta). Quem vê continua o mesmo
+# (administrador e função com `crm_view_reports`); o custo da IA fica só com o administrador. Desligada (padrão): a aba
+# Equipe é o painel de sempre. Posição 51 na feature_flags_ext_1 (1125899906842624 = 1 << 50), da Orquestração (21/10),
+# logo depois de crm_metas. Sem migration: a Orquestração liga na stack Hub2You, contas 1, 16 e 18, depois do deploy.
+- name: crm_numeros_equipe
+  display_name: CRM › Números por papel (visão "Equipe" e a IA no time)
+  enabled: false
+  column: feature_flags_ext_1

@@ -70,6 +70,7 @@ export const FEATURE_FLAGS = {
   EMAIL_LIDO_SINCRONIZADO: 'email_lido_sincronizado',
   CRM_NUMEROS_LENTES: 'crm_numeros_lentes',
   CRM_METAS: 'crm_metas',
+  CRM_NUMEROS_EQUIPE: 'crm_numeros_equipe',
   CONTATO_PELO_EMAIL: 'contato_pelo_email',
   EMAIL_ENVIADOS: 'email_enviados',
   CONVITE_DA_REUNIAO: 'convite_da_reuniao',

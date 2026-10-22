@@ -989,6 +989,7 @@
       "esperando_min",
       "inbox_id",
       "labels",
+      "no_funil",
       "page",
       "pasta",
       "q",
@@ -1051,6 +1052,7 @@
       "esperando_min",
       "inbox_id",
       "labels",
+      "no_funil",
       "page",
       "pasta",
       "q",
@@ -1071,6 +1073,7 @@
       "esperando_min",
       "inbox_id",
       "labels",
+      "no_funil",
       "page",
       "pasta",
       "q",
@@ -1410,7 +1413,8 @@
   "crm/numeros": {
     "controller": "api/v1/accounts/crm/numeros#show",
     "parametros": [
-      "mes"
+      "mes",
+      "visao"
     ]
   },
   "crm/pipelines": {
