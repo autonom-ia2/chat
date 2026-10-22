@@ -42,8 +42,10 @@ json.meta do
 end
 # #2067: o agente de IA de onde a conversa veio, para o "Devolver para" (Crm::Passagens::VeioDaIa), só com a flag da conta
 # ligada e a conversa com uma pessoa (entra no mesmo meta). As listas passam a página inteira (veio_da_ia), em consultas
-# fixas; a conversa lida sozinha consulta a dela.
-if Conversations::FicarAoEnviar.ligado?(conversation.account) && conversation.assignee_type == 'User'
+# fixas; a conversa lida sozinha consulta a dela. `veio_da_ia: false`: a resposta não leva a chave (marcar como lida/não
+# lida), porque null quer dizer "não veio da IA".
+if local_assigns[:veio_da_ia] != false && Conversations::FicarAoEnviar.ligado?(conversation.account) &&
+   conversation.assignee_type == 'User'
   json.meta { json.veio_da_ia Crm::Passagens::VeioDaIa.da_pagina_ou_de(conversation, local_assigns[:veio_da_ia]) }
 end
 

@@ -64,7 +64,7 @@ RSpec.describe 'Ficar com a conversa ao enviar' do # rubocop:disable RSpec/Descr
     create(:message, account: account, inbox: inbox, conversation: outra, message_type: :outgoing, sender: ana,
                      content: 'Oi', ficar_com_a_conversa: nil)
     expect(outra.reload.assignee_id).to eq(ana.id)
-    expect(Crm::Passagem.where(conversation_id: outra.id).last.motivo).not_to eq('ficou_ao_enviar')
+    expect(Crm::Passagem.where(conversation_id: outra.id).last.motivo).to eq('atribuicao')
   end
 
   it 'ligado, sem ninguém: quem respondeu fica com ela' do

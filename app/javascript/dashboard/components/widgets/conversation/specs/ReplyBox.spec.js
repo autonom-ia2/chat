@@ -737,8 +737,8 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
     });
   });
 
-  // Pega o aviso falso "Não deu para ficar" nas partes seguintes (a 1ª já ficou).
-  it('dois anexos: duas mensagens, só a 1ª pede para ficar', () => {
+  // Pega a conversa que ninguém pega quando a 1ª parte falha e a 2ª sai (as partes saem em paralelo).
+  it('dois anexos: duas mensagens, todas com o mesmo pedido', () => {
     const { wrapper, store } = montar({ assignee: ANA, assignee_type: 'User' });
     const dispatch = espiar(store);
     wrapper.vm.ficar.alternar();
@@ -753,7 +753,7 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
     expect(envios(dispatch)).toHaveLength(2);
     expect(envios(dispatch).map(p => p.ficarComAConversa)).toEqual([
       true,
-      false,
+      true,
     ]);
   });
 
@@ -900,6 +900,39 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
     await esperar();
 
     expect(wrapper.vm.ficar.ligada).toBe(true);
+  });
+
+  // Pega o aviso falso: uma parte ficou, a outra achou a conversa já minha ou perdeu a trava.
+  it.each([
+    ['nenhuma parte ficou: avisa', [true, true], true],
+    ['uma parte ficou: não avisa', [true, false], false],
+  ])('em partes, %s', async (_n, naoDeu, avisa) => {
+    const { wrapper, store } = montar({});
+    const alertas = [];
+    const escutar = mensagem => alertas.push(mensagem);
+    const { emitter } = await import('shared/helpers/mitt');
+    emitter.on('newToastMessage', escutar);
+    const respostas = naoDeu.map(nao =>
+      nao ? { ficar_com_a_conversa_nao_deu: true } : {}
+    );
+    espiar(store, nome =>
+      Promise.resolve(
+        nome === 'createPendingMessageAndSend' ? respostas.shift() : {}
+      )
+    );
+    wrapper.vm.message = 'Seguem';
+    wrapper.vm.attachedFiles = [
+      { resource: { file: new Blob(['a']) }, isPrivate: false },
+      { resource: { file: new Blob(['b']) }, isPrivate: false },
+    ];
+
+    wrapper.vm.confirmOnSendReply();
+    await esperar();
+    emitter.off('newToastMessage', escutar);
+
+    expect(
+      JSON.stringify(alertas).includes('CONVERSA_CANAL.FICAR.NAO_DEU')
+    ).toBe(avisa);
   });
 
   it('o servidor não conseguiu ficar com a conversa: a tela avisa', async () => {

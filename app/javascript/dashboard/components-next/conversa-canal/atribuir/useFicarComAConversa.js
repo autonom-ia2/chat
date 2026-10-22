@@ -9,9 +9,11 @@
 // - Mudar o ícone vale só para a próxima mensagem daquela conversa: fica guardado junto do
 //   rascunho (trocar de conversa e voltar mantém), até enviar ou o dono mudar. Se o envio
 //   falhar, a escolha volta (`restaurar`).
-// - Fora do ícone, na regra de antes (decisão da Orquestração, 22/10): reenviar pelo balão
-//   (MessagesView#handleMessageRetry tira o pedido do envio original), encaminhar e a
-//   mensagem de cotação do Meta Ads (MetaAdsQuoteMessage) não tomam a conversa.
+// - Fora do ícone, na regra de antes (decisão da Orquestração, 22/10): reenviar pelo balão,
+//   encaminhar e a mensagem de cotação do Meta Ads (MetaAdsQuoteMessage) não mandam o
+//   pedido. O reenvio pelo balão já não leva: MessagesView#handleMessageRetry passa a
+//   mensagem por useSnakeCase (MessageApi.create só lê os campos em camelCase), e o
+//   reenvio de falha externa (MessageApi.retry) não tem corpo.
 // `conversa`: a conversa em que se escreve (padrão: a aberta na tela).
 import { computed, reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -133,9 +135,10 @@ export const useFicarComAConversa = ({ conversa: daConversa = null } = {}) => {
   return reactive({ aplica, ligada, frase, alternar, decidir, restaurar });
 };
 
-// Os campos do envio (MessageApi.create) a partir da decisão; vazio sem a flag. Envio em
-// partes: só a 1ª pede para ficar; as outras vão com o ícone desligado (não tomam a conversa
-// pela regra de antes nem geram o aviso "Não deu para ficar" depois que a 1ª ficou).
+// Os campos do envio (MessageApi.create) a partir da decisão; vazio sem a flag. `parte`: a
+// gaveta manda as partes uma de cada vez (para de mandar quando uma falha), e só a 1ª pede
+// para ficar; as outras vão com o ícone desligado (não tomam a conversa pela regra de antes
+// nem geram aviso falso). A caixa de resposta manda em paralelo e todas levam o pedido.
 export const camposDoEnvio = (decisao, { parte = 0 } = {}) =>
   decisao
     ? {

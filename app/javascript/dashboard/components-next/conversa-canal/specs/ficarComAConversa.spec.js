@@ -256,17 +256,21 @@ describe('useFicarComAConversa', () => {
     const { ficar, store } = montarRegra(comColega());
     ficar.alternar();
     const decisao = ficar.decidir();
-    store.commit('trocar', conversa({}, 2));
+    // A conversa 2 é de colega (padrão desligado): a escolha da 1 não vaza para ela.
+    store.commit(
+      'trocar',
+      conversa({ assignee: ANA, assignee_type: 'User' }, 2)
+    );
     await nextTick();
     ficar.restaurar(decisao);
-    expect(ficar.ligada).toBe(true); // a conversa 2 segue no padrão (sem ninguém)
+    expect(ficar.ligada).toBe(false);
 
     store.commit('trocar', comColega());
     await nextTick();
     expect(ficar.ligada).toBe(true);
   });
 
-  it('envio em partes: só a 1ª pede para ficar', () => {
+  it('envio em partes da gaveta (uma de cada vez): só a 1ª pede para ficar', () => {
     const decisao = montarRegra(comIa()).ficar.decidir();
     expect(camposDoEnvio(decisao, { parte: 0 }).ficarComAConversa).toBe(true);
     expect(camposDoEnvio(decisao, { parte: 1 })).toEqual({

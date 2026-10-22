@@ -52,7 +52,7 @@ RSpec.describe 'Veio da IA no payload da conversa', type: :request do
     end
 
     # Pega a consulta a cada troca de conversa: marcar lida/não lida não calcula de onde a conversa veio.
-    it 'marcar como lida e não lida: não calcula', :aggregate_failures do
+    it 'marcar como lida e não lida: não calcula nem leva a chave', :aggregate_failures do
       expect(Crm::Passagens::VeioDaIa).not_to receive(:de)
       expect(Crm::Passagens::VeioDaIa).not_to receive(:da_lista)
 
@@ -60,6 +60,7 @@ RSpec.describe 'Veio da IA no payload da conversa', type: :request do
         post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/#{acao}",
              headers: ana.create_new_auth_token, as: :json
         expect(response).to have_http_status(:success)
+        expect(response.parsed_body['meta']).not_to have_key('veio_da_ia')
       end
     end
 

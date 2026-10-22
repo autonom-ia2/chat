@@ -702,16 +702,9 @@ export default {
         readReceipt: !this.isImpersonating && !!this.pele,
       });
     },
-    // #2067: reenviar pelo balão segue a regra de antes (não toma a conversa): o pedido de
-    // "ficar com a conversa" do envio original não vai de novo.
     async handleMessageRetry(message) {
       if (!message) return;
-      const {
-        ficarComAConversa: _fica,
-        ficarComAConversaDe: _de,
-        ...original
-      } = message;
-      const payload = useSnakeCase(original);
+      const payload = useSnakeCase(message);
       await this.$store.dispatch('sendMessageWithData', payload);
     },
     toggleReplyEditorSize() {

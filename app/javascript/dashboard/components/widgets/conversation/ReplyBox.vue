@@ -1120,13 +1120,12 @@ export default {
       decisao = null
     ) {
       const messages = this.getMultipleMessagesPayload(message);
-      return messages.map((messagePayload, parte) =>
+      return messages.map(messagePayload =>
         this.sendMessage(
           messagePayload,
           messagePayload.message || '',
           copilotAcceptedMessage,
-          decisao,
-          parte
+          decisao
         )
       );
     },
@@ -1201,21 +1200,21 @@ export default {
       }
     },
     // `decisao` (#2067): a de "ficar com a conversa" do envio de que esta mensagem é parte
-    // (`parte`: só a 1ª pede para ficar). Sem ela (modelo, mensagem pronta), o envio decide
-    // sozinho. Devolve { ok, data }.
+    // (todas as partes levam o mesmo pedido: saem em paralelo, e qualquer uma que chegue
+    // primeiro fica). Sem ela (modelo, mensagem pronta), o envio decide sozinho. Devolve
+    // { ok, data }.
     async sendMessage(
       messagePayload,
       editorMessage = '',
       copilotAcceptedMessage = '',
-      decisao = undefined,
-      parte = 0
+      decisao = undefined
     ) {
       const sozinho = decisao === undefined;
       const daqui = sozinho
         ? this.ficar.decidir({ privada: messagePayload.private })
         : decisao;
       const envio = this.enviarParte(
-        { ...messagePayload, ...camposDoEnvio(daqui, { parte }) },
+        { ...messagePayload, ...camposDoEnvio(daqui) },
         editorMessage,
         copilotAcceptedMessage
       );
@@ -1263,8 +1262,9 @@ export default {
       );
     },
     // #2067: depois de todas as partes de um envio. Alguma não saiu: a escolha do ícone
-    // volta. Pediu para ficar e o servidor não conseguiu: avisa. Ficou: a tela mostra o
-    // dono novo pelo evento ao vivo; se ele ainda não chegou, relê a conversa uma vez.
+    // volta. Pediu para ficar e o servidor não conseguiu em NENHUMA parte: avisa (uma parte
+    // que ficou basta; as outras acham a conversa já minha). Ficou: a tela mostra o dono
+    // novo pelo evento ao vivo; se ele ainda não chegou, relê a conversa uma vez.
     async depoisDoEnvio(decisao, envios) {
       if (!decisao) return;
       const conversationId = this.currentChat?.id;
@@ -1274,7 +1274,7 @@ export default {
         return;
       }
       if (!decisao.fica) return;
-      if (resultados.some(({ data }) => data?.ficar_com_a_conversa_nao_deu)) {
+      if (resultados.every(({ data }) => data?.ficar_com_a_conversa_nao_deu)) {
         useAlert(this.$t('CONVERSA_CANAL.FICAR.NAO_DEU'));
         return;
       }
