@@ -18,7 +18,7 @@ const props = defineProps({
 
 const emit = defineEmits(['desfazer']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA.MUDAR_VISTA.CONFERIDO';
 
 const pedidos = computed(() =>
@@ -62,6 +62,20 @@ const cor = computed(() => {
 const prova = computed(() => props.resultado.prova || null);
 // Revisão do t6d: o ✓ só sai quando cada pedido teve uma pergunta que o testou (`completa`).
 const provaCompleta = computed(() => prova.value?.completa !== false);
+// Prova incompleta (texto aprovado pelo Rodrigo, 22/10): os pedidos que não deu para ver, juntos como o idioma
+// junta uma lista ("a, b e c"); sem a lista (prova antiga), o texto geral.
+const pedidosSemTeste = computed(() => {
+  const lista = prova.value?.pedidos_sem_teste || [];
+  if (!lista.length) return '';
+  return new Intl.ListFormat(locale.value.replace('_', '-'), {
+    type: 'conjunction',
+  }).format(lista);
+});
+const textoIncompleta = computed(() =>
+  pedidosSemTeste.value
+    ? t(`${NS}.PROVA_INCOMPLETA`, { pedidos: pedidosSemTeste.value })
+    : t(`${NS}.PROVA_SEM_TESTE`)
+);
 const provaOk = computed(
   () => prova.value?.ok === prova.value?.total && provaCompleta.value
 );
@@ -208,7 +222,7 @@ const podeDesfazer = computed(
           data-prova-incompleta
           class="m-0 text-sm text-n-slate-12 ps-8"
         >
-          {{ t(`${NS}.PROVA_INCOMPLETA`) }}
+          {{ textoIncompleta }}
         </p>
         <button
           data-ver-prova

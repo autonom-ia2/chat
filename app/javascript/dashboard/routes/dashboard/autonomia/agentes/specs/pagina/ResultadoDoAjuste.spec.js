@@ -233,14 +233,30 @@ describe('ResultadoDoAjuste', () => {
       expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
     });
 
-    // Revisão do t6d (MÉDIO): ajuste misto em que um dos pedidos ficou sem pergunta.
-    it('no check when some request had no question testing it', () => {
+    // Texto aprovado pelo Rodrigo (22/10): diz quais pedidos não deu para ver, juntos como o idioma junta uma lista.
+    it('no check when some request was not seen, naming the requests', () => {
+      const prova = montar({
+        prova: {
+          ...PRONTA,
+          completa: false,
+          pedidos_sem_teste: ['preço com a equipe', 'sem gíria'],
+        },
+      }).find('[data-prova]');
+
+      expect(prova.find('[data-prova-incompleta]').text()).toBe(
+        'Não deu para ver nas respostas do teste: preço com a equipe e sem gíria. Converse com o agente no Testar para conferir.'
+      );
+      expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
+      expect(prova.find('.i-lucide-triangle-alert').exists()).toBe(true);
+    });
+
+    it('incomplete proof without the list uses the general text', () => {
       const prova = montar({ prova: { ...PRONTA, completa: false } }).find(
         '[data-prova]'
       );
 
       expect(prova.find('[data-prova-incompleta]').text()).toBe(
-        'Sem prova completa: nem tudo o que mudou foi testado.'
+        'As respostas do teste não deixaram ver a mudança. Converse com o agente no Testar para conferir.'
       );
       expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
       expect(prova.find('.i-lucide-triangle-alert').exists()).toBe(true);
@@ -251,7 +267,7 @@ describe('ResultadoDoAjuste', () => {
       const prova = wrapper.find('[data-prova]');
 
       expect(prova.find('[data-sem-teste]').text()).toBe(
-        'As perguntas não testaram a mudança.'
+        'As respostas do teste não deixaram ver a mudança. Converse com o agente no Testar para conferir.'
       );
       expect(prova.text()).not.toContain('perguntas de prova ok');
       expect(prova.find('.i-lucide-circle-check').exists()).toBe(false);
