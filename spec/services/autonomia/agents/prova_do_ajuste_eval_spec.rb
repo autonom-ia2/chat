@@ -180,7 +180,7 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     estrutura = estrutura_ok?(applied, prova, caso)
     { caso: caso[:nome], agente: caso[:agente], applied: applied, estrutura: estrutura, prova: prova,
       pedidos_aplicados: pedidos, veredito: veredito, declarado_x_testado: declarado_x_testado(prova, pedidos),
-      aprovada: estrutura && julgamento_ok?(veredito, prova, caso) && fora_certa?(caso, prova),
+      aprovada: estrutura && julgamento_ok?(veredito, prova) && fora_certa?(caso, prova),
       custo_acumulado_usd: custo_ate_agora.round(4) }
   end
 
@@ -201,10 +201,16 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
   end
 
   # Prova completa com ao menos um teste. No caso em que a forma pode não aparecer (série 3 anulada), vale também a
-  # prova incompleta, desde que nenhum pedido tenha recebido ✓: nenhuma resposta deixou ver a forma.
+  # prova incompleta, desde que nenhuma resposta tenha sido testada (nenhum ✓) e toda mensagem tenha declarado um pedido
+  # da lista (revisão do 8d379379b7): a incompleta é só a forma que não apareceu, nunca uma mensagem fora da lista.
   def placar_certo?(prova, caso)
     completa = prova['completa'] == true && prova['total'].to_i >= 1
-    completa || (caso[:forma_pode_nao_aparecer] == true && prova['completa'] == false && prova['ok'].to_i.zero?)
+    completa || (caso[:forma_pode_nao_aparecer] == true && incompleta_sem_forma?(prova))
+  end
+
+  def incompleta_sem_forma?(prova)
+    prova['completa'] == false && prova['total'].to_i.zero? &&
+      Array(prova['perguntas']).all? { |item| !item['pedido'].nil? }
   end
 
   # Revisão 2 do t6d (MÉDIO 2): no caso com base, ao menos uma resposta usou um trecho dela.
@@ -212,12 +218,12 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     caso[:base].nil? || Array(prova['perguntas']).any? { |item| Array(item['trechos']).any? }
   end
 
-  # Com a forma que pode não aparecer, as mensagens não precisam ter mostrado a mudança: quem reprova o ✓ numa resposta
-  # que não mostra a forma é o teste errado (vereditos_certos), pela régua de produção.
-  def julgamento_ok?(veredito, prova, caso = {})
+  # Todo caso exige o critério das mensagens (perguntas_mostram_a_mudanca); o da escola julga só as mensagens (revisão
+  # do 8d379379b7). O ✓ numa resposta que não mostra a forma reprova pelo teste errado (vereditos_certos).
+  def julgamento_ok?(veredito, prova)
     certos = Array(veredito['vereditos_certos'])
-    mostrou = caso[:forma_pode_nao_aparecer] == true || veredito['perguntas_mostram_a_mudanca'] == true
-    mostrou && veredito['alguma_cita_instrucao'] == false && certos.size == Array(prova['perguntas']).size && certos.all?(true)
+    veredito['perguntas_mostram_a_mudanca'] == true && veredito['alguma_cita_instrucao'] == false &&
+      certos.size == Array(prova['perguntas']).size && certos.all?(true)
   end
 
   # A pergunta fora da mudança (a última) ficou fora do placar.
@@ -254,7 +260,9 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     esperados = %w[nao ok].all? do |veredito|
       Array(espera[veredito.to_sym]).all? { |posicao| testes.include?('pedido' => posicao, 'veredito' => veredito) }
     end
-    esperados && Array(espera[:sem_nao]).none? { |posicao| testes.include?('pedido' => posicao, 'veredito' => 'nao') }
+    esperados && %w[nao ok].all? do |veredito|
+      Array(espera[:"sem_#{veredito}"]).none? { |posicao| testes.include?('pedido' => posicao, 'veredito' => veredito) }
+    end
   end
 
   def presencas_esperadas?(espera, testados)
@@ -423,6 +431,17 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
       expect(rodar_controle(controle('controle_base_sem_trechos'))[:aprovada]).to be(false)
     end
 
+    it 'tratamento: a forma oposta aprova só com nao; a resposta neutra reprova só com ok' do
+      juiz_devolve([nota([0, 'nao'])])
+      expect(rodar_controle(controle('controle_tratamento_oposto'))[:aprovada]).to be(true)
+      juiz_devolve([nota])
+      expect(rodar_controle(controle('controle_tratamento_oposto'))[:aprovada]).to be(false)
+      juiz_devolve([nota], [nota([0, 'nao'])], [nota])
+      expect(rodar_controle(controle('controle_tratamento_neutro'))[:aprovada]).to be(true)
+      juiz_devolve([nota], [nota([0, 'ok'])], [nota])
+      expect(rodar_controle(controle('controle_tratamento_neutro'))[:aprovada]).to be(false)
+    end
+
     it 'gatilho: aprova o ok no pedido da situação; sem teste, reprova' do
       juiz_devolve([nota([0, 'ok'])])
       expect(rodar_controle(controle('controle_gatilho'))[:aprovada]).to be(true)
@@ -469,22 +488,24 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
   # Série 3 do t6d anulada: a escola aprova com a forma vista e ✓ certo, ou sem forma vista e sem ✓; reprova o ✓ falso.
   describe 'o caso da forma que pode não aparecer' do
     let(:caso) { AvaliacaoDaProvaDoAjuste::CASOS.find { |candidato| candidato[:forma_pode_nao_aparecer] } }
-    let(:itens) { [{ 'pergunta' => 'Oi', 'resposta' => 'Oi! Como posso ajudar você?' }, { 'pergunta' => 'Tem online?', 'resposta' => 'Temos.' }] }
-
-    def prova(completa:, certas:, total:)
-      { 'status' => 'pronta', 'completa' => completa, 'ok' => certas, 'total' => total, 'perguntas' => itens }
+    let(:itens) do
+      [{ 'pergunta' => 'Oi', 'pedido' => 'p', 'resposta' => 'Oi! Como posso ajudar você?' },
+       { 'pergunta' => 'Tem online?', 'pedido' => 'p', 'resposta' => 'Temos.' }]
     end
 
-    def veredito(certos, mostram: false)
+    def prova(completa:, certas:, total:, perguntas: itens)
+      { 'status' => 'pronta', 'completa' => completa, 'ok' => certas, 'total' => total, 'perguntas' => perguntas }
+    end
+
+    def veredito(certos, mostram: true)
       { 'perguntas_mostram_a_mudanca' => mostram, 'alguma_cita_instrucao' => false, 'vereditos_certos' => certos }
     end
 
     it 'aprova quando uma resposta mostra a forma e o ✓ está certo' do
-      expect(linha(caso, true, prova(completa: true, certas: 1, total: 1), ['p'], veredito([true, true], mostram: true))[:aprovada])
-        .to be(true)
+      expect(linha(caso, true, prova(completa: true, certas: 1, total: 1), ['p'], veredito([true, true]))[:aprovada]).to be(true)
     end
 
-    it 'aprova quando nenhuma resposta mostra a forma e o pedido não recebe ✓' do
+    it 'aprova quando nenhuma resposta mostra a forma, nada foi testado e toda mensagem declarou o pedido' do
       expect(linha(caso, true, prova(completa: false, certas: 0, total: 0), ['p'], veredito([true, true]))[:aprovada]).to be(true)
     end
 
@@ -492,10 +513,23 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
       expect(linha(caso, true, prova(completa: true, certas: 2, total: 2), ['p'], veredito([true, false]))[:aprovada]).to be(false)
     end
 
+    it 'reprova quando o critério das mensagens não foi cumprido, mesmo sem ✓ falso' do
+      expect(linha(caso, true, prova(completa: false, certas: 0, total: 0), ['p'], veredito([true, true], mostram: false))[:aprovada])
+        .to be(false)
+    end
+
+    it 'incompleta só vale sem nenhum teste e com toda mensagem declarando um pedido da lista' do
+      com_teste = prova(completa: false, certas: 0, total: 1)
+      fora_da_lista = prova(completa: false, certas: 0, total: 0, perguntas: itens.map { |item| item.merge('pedido' => nil) })
+      expect(linha(caso, true, com_teste, ['p'], veredito([true, true]))[:aprovada]).to be(false)
+      expect(linha(caso, true, fora_da_lista, ['p'], veredito([true, true]))[:aprovada]).to be(false)
+    end
+
     it 'outro caso continua exigindo prova completa e as mensagens mostrando a mudança' do
       outro = AvaliacaoDaProvaDoAjuste::CASOS.first
       expect(linha(outro, true, prova(completa: false, certas: 0, total: 0), ['p'], veredito([true, true]))[:aprovada]).to be(false)
-      expect(linha(outro, true, prova(completa: true, certas: 1, total: 1), ['p'], veredito([true, true]))[:aprovada]).to be(false)
+      expect(linha(outro, true, prova(completa: true, certas: 1, total: 1), ['p'], veredito([true, true], mostram: false))[:aprovada])
+        .to be(false)
     end
   end
 
