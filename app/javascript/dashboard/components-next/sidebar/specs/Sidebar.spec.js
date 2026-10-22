@@ -255,3 +255,26 @@ describe('Sidebar: SLA no grupo CRM', () => {
     expect(comSla(['crm_view'])).not.toContain('CRM SLA');
   });
 });
+
+// #2070: o item de Anúncios da Meta aparece para quem tem só meta_ads_manage (a função guarda só a chave mais alta).
+describe('Sidebar: Anúncios da Meta em Campanhas', () => {
+  const campanhasCom = keys => {
+    seat({ role: 'agent', customRoleId: 7, keys });
+    getters['accounts/isFeatureEnabledonAccount'] = ref(
+      (_id, flag) => flag !== 'menu_lateral_novo'
+    );
+    return childrenOf(mountSidebar(), 'Campaigns') || [];
+  };
+
+  it('função só com meta_ads_manage vê o item', () => {
+    expect(campanhasCom(['meta_ads_manage'])).toContain('Campaign Meta Ads');
+  });
+
+  it('função só com meta_ads_view continua vendo o item', () => {
+    expect(campanhasCom(['meta_ads_view'])).toContain('Campaign Meta Ads');
+  });
+
+  it('função sem chave de Anúncios da Meta não vê o item', () => {
+    expect(campanhasCom(['campaign_view'])).not.toContain('Campaign Meta Ads');
+  });
+});

@@ -2,7 +2,7 @@ require 'rails_helper'
 
 # Funções personalizadas, lote 2 (#1794): `meta_ads_view` vê os Anúncios da Meta sem ser administrador.
 # - Ver: conexão, painel, anúncio por dentro, listas do caminho, IA do dia e o resumo no WhatsApp.
-# - Conectar, configurar, desconectar e os gestos do consultor seguem só do administrador.
+# - Conectar, configurar, desconectar e os gestos do consultor pedem meta_ads_manage (#2070, meta_ads_manage_permission_spec).
 # - As listas que levam a uma conversa mostram só as conversas que a pessoa já veria (caixa, funil e função).
 RSpec.describe 'Anúncios da Meta com meta_ads_view', type: :request do
   around do |example|
@@ -68,7 +68,7 @@ RSpec.describe 'Anúncios da Meta com meta_ads_view', type: :request do
     end
   end
 
-  describe 'o que segue só do administrador' do
+  describe 'o que pede meta_ads_manage' do
     before { create_meta_ads_insights_connection(account) }
 
     it 'não conecta' do

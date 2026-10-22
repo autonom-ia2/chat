@@ -1,5 +1,5 @@
 # Conexão da conta com os anúncios da Meta (#1034, #1047). Ver (READ_ACTIONS): administrador ou `meta_ads_view` (#1794);
-# o resto só administrador (policy Crm::MetaAdsConnection).
+# o resto: administrador ou `meta_ads_manage`, chave protegida (#2070, policy Crm::MetaAdsConnection).
 #
 # GET    → estado da conexão (nunca o token), dados do portfólio parceiro da plataforma e se algum funil
 #          ligado ao WhatsApp oficial já avisa a Meta das vendas.
@@ -47,7 +47,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   SELECTION_RESET = { ad_account_id: nil, ad_account_name: nil, ad_account_business_id: nil, ad_account_timezone: nil,
                       pixel_id: nil, pixel_name: nil, verified_at: nil }.freeze
   # O que `meta_ads_view` alcança (#1794): o estado da conexão e o painel. Contas, Pixels, funis e a leitura avulsa
-  # são da conexão guiada e do resumo, do administrador (chamam a Meta com o token ou trazem caixas e funis).
+  # são da conexão guiada e do resumo, de `meta_ads_manage` (#2070; chamam a Meta com o token ou trazem caixas e funis).
   READ_ACTIONS = %w[show panel panel_ad panel_list].freeze
 
   before_action :ensure_allowed

@@ -7,6 +7,8 @@ import {
   FINANCIAL_VIEW_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
   INTEGRATION_MANAGE_PERMISSION,
+  META_ADS_MANAGE_PERMISSION,
+  META_ADS_VIEW_PERMISSION,
   PEOPLE_MANAGE_PERMISSION,
   TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
@@ -176,11 +178,15 @@ export const MODULE_GROUPS = [
         },
       },
       {
-        // Anúncios da Meta (#1794): só ver o painel. Conectar e configurar seguem do
-        // administrador até a chave protegida meta_ads_manage.
+        // Anúncios da Meta: ver o painel (#1794); editar conecta, configura e desconecta e age
+        // sobre o consultor (#2070). meta_ads_manage só o administrador entrega, ou quem tem o
+        // ajuste 'Pode entregar acima do próprio', que só o administrador liga (DELEGATION_KEYS).
         key: 'META_ADS',
         icon: 'i-lucide-chart-no-axes-combined',
-        levels: { view: 'meta_ads_view' },
+        levels: {
+          view: META_ADS_VIEW_PERMISSION,
+          manage: META_ADS_MANAGE_PERMISSION,
+        },
       },
     ],
   },
@@ -197,7 +203,8 @@ export const MODULE_GROUPS = [
         // Integrações (#2027): conectar, configurar e desconectar integrações, webhooks, robôs e importações, e
         // reconectar um canal que já existe. Criar caixa nova fica com inbox_manage. Ver e trocar os tokens que a
         // plataforma gera é ajuste fino de quem cuida das integrações: as telas deles (robôs, webhooks, CRM/n8n)
-        // ficam aqui. Só o administrador entrega as duas chaves (DELEGATION_KEYS).
+        // ficam aqui. Só o administrador entrega as duas chaves, ou quem tem o ajuste 'Pode entregar
+        // acima do próprio', que só o administrador liga (DELEGATION_KEYS).
         key: 'INTEGRATIONS',
         icon: 'i-lucide-plug',
         settings: true,
@@ -284,7 +291,8 @@ export const MODULE_GROUPS = [
       {
         // Financeiro (#1969): ver os custos da conta em dinheiro (uso de IA) e a autorização de
         // cobranças da Meta; editar liga e desliga essa autorização. Plano e faturas ficam com o
-        // administrador. As duas chaves só o administrador entrega (DELEGATION_KEYS).
+        // administrador. As duas chaves só o administrador entrega, ou quem tem o ajuste 'Pode
+        // entregar acima do próprio', que só o administrador liga (DELEGATION_KEYS).
         key: 'FINANCE',
         icon: 'i-lucide-wallet',
         levels: {
