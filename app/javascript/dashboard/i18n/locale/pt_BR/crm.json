@@ -2260,6 +2260,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
+        "BACK": "Voltar",
         "TITLE": "Anúncios",
         "SUBTITLE": "Veja quais anúncios trazem conversas e vendas.",
         "LOADING": "Carregando…",

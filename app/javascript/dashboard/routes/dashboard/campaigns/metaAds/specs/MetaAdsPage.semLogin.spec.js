@@ -145,4 +145,95 @@ describe('MetaAdsPage · Anúncios sem login (#1960)', () => {
       true
     );
   });
+
+  // #2054: o passo aberto por "Alterar" tem "Voltar", que fecha o passo e volta à aba.
+  it('a step opened from Change has Back, which goes back to the Connection tab', async () => {
+    routing.query = { aba: 'conexao' };
+    reply(CONNECTED);
+    const wrapper = await mountPage();
+
+    wrapper.findComponent({ name: 'MetaAdsSummary' }).vm.$emit('open', 3);
+    await flushPromises();
+    expect(
+      wrapper.findComponent({ name: 'MetaAdsDestinationsStep' }).exists()
+    ).toBe(true);
+
+    await wrapper.find('[data-meta-ads-step-back]').trigger('click');
+
+    expect(
+      wrapper.findComponent({ name: 'MetaAdsDestinationsStep' }).exists()
+    ).toBe(false);
+    expect(wrapper.findComponent({ name: 'MetaAdsSummary' }).exists()).toBe(
+      true
+    );
+    expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(false);
+  });
+
+  it('on the account step opened from Change, only the top Back shows', async () => {
+    routing.query = { aba: 'conexao' };
+    reply(CONNECTED);
+    const wrapper = await mountPage();
+
+    wrapper.findComponent({ name: 'MetaAdsSummary' }).vm.$emit('open', 2);
+    await flushPromises();
+
+    expect(
+      wrapper.findComponent({ name: 'MetaAdsAccountStep' }).props('showBack')
+    ).toBe(false);
+    expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(true);
+  });
+
+  it('mid first setup (connection saved, no account yet): no top Back, and the step Back goes to step 1', async () => {
+    reply({
+      configured: true,
+      status: 'active',
+      mode: 'facebook_login',
+      ad_account: null,
+      whatsapp_result: { enabled: false },
+    });
+    flags.value = {};
+    const wrapper = await mountPage();
+    const account = wrapper.findComponent({ name: 'MetaAdsAccountStep' });
+
+    expect(account.exists()).toBe(true);
+    expect(account.props('showBack')).toBe(true);
+    expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(false);
+
+    account.vm.$emit('back');
+    await flushPromises();
+    expect(wrapper.findComponent({ name: 'MetaAdsConnectStep' }).exists()).toBe(
+      true
+    );
+  });
+
+  it('reloaded in the middle of switching the way to connect (?modo=), Back leaves and clears it', async () => {
+    routing.query = { aba: 'conexao', modo: 'partner' };
+    reply({ ...CONNECTED, mode: 'token' });
+    const wrapper = await mountPage();
+
+    expect(wrapper.findComponent({ name: 'MetaAdsAccountStep' }).exists()).toBe(
+      true
+    );
+    await wrapper.find('[data-meta-ads-step-back]').trigger('click');
+
+    expect(wrapper.findComponent({ name: 'MetaAdsAccountStep' }).exists()).toBe(
+      false
+    );
+    expect(wrapper.findComponent({ name: 'MetaAdsSummary' }).exists()).toBe(
+      true
+    );
+  });
+
+  it('the first setup has no Back on the steps', async () => {
+    reply({ configured: false, whatsapp_result: { enabled: false } });
+    flags.value = {};
+    const wrapper = await mountPage();
+    wrapper.findComponent({ name: 'MetaAdsHero' }).vm.$emit('start');
+    await flushPromises();
+
+    expect(wrapper.findComponent({ name: 'MetaAdsConnectStep' }).exists()).toBe(
+      true
+    );
+    expect(wrapper.find('[data-meta-ads-step-back]').exists()).toBe(false);
+  });
 });
