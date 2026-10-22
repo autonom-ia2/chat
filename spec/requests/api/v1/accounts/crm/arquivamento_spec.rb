@@ -66,6 +66,31 @@ RSpec.describe 'CRM arquivamento', type: :request do
       expect(funil.first.reload).to be_active
     end
 
+    it 'recusa o último funil ativo também com o status em número (PATCH status: 1)' do
+      patch url, params: { pipeline: { status: 1 } }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('crm.pipeline_archive_last_active')
+      expect(funil.first.reload).to be_active
+    end
+
+    it 'desmarcar o principal no mesmo PATCH não libera arquivar o único principal' do
+      funil.first.update!(is_default: true)
+      create_crm_pipeline(account: account, user: admin, name: 'Pós-venda')
+
+      patch url, params: { pipeline: { status: 'archived', is_default: false } }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body['error']).to eq('crm.pipeline_archive_only_default')
+      expect(funil.first.reload).to have_attributes(status: 'active', is_default: true)
+    end
+
+    it 'PATCH sem arquivar continua gravando o funil' do
+      patch url, params: { pipeline: { name: 'Vendas novas' } }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(funil.first.reload.name).to eq('Vendas novas')
+    end
+
     it 'arquiva quando outro funil ativo é o principal' do
       funil.first.update!(is_default: true)
       outro, = create_crm_pipeline(account: account, user: admin, name: 'Pós-venda')

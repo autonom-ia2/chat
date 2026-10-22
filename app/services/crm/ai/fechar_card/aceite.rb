@@ -16,12 +16,7 @@ class Crm::Ai::FecharCard::Aceite < Crm::Ai::FecharCard
 
   # true quando o card fechou.
   def perform
-    fechado = @card.with_lock do
-      next false unless sugestao.reload.pending?
-      next expirar! unless aceitavel?
-
-      fechar_ou_arquivar!
-    end
+    fechado = arquivar? ? arquivar! : @card.with_lock { aceitar? && fechar! }
     return false unless fechado
 
     self.class.agendar_retorno(@card, @decisao, @decisao[:pedido_de_retorno])
@@ -46,16 +41,18 @@ class Crm::Ai::FecharCard::Aceite < Crm::Ai::FecharCard
     false
   end
 
-  # A sugestão aceita antes do fechamento: o Crm::Cards::Closer expira as que ainda estiverem pendentes.
-  def fechar_ou_arquivar!
+  # Sob a trava do card. A sugestão aceita antes do fechamento: o Crm::Cards::Closer expira as que ainda estiverem pendentes.
+  def aceitar?
+    return false unless sugestao.reload.pending?
+    return expirar! unless aceitavel?
+
     sugestao.update!(status: :accepted)
-    arquivar? ? arquivar! : fechar!
-    true
   end
 
-  # Como uma pessoa arquiva (Crm::Cards::Archiver). A sugestão aceita já saiu de pendente.
+  # Como uma pessoa arquiva (Crm::Cards::Archiver), que trava lembretes e card nessa ordem e relê o card antes da
+  # guarda. A sugestão aceita já saiu de pendente.
   def arquivar!
-    Crm::Cards::Archiver.new(card: @card, actor: ator, payload: payload).perform
+    Crm::Cards::Archiver.new(card: @card, actor: ator, payload: payload).perform { aceitar? }
   end
 
   # Fechado por uma pessoa: a sugestão que ela aceitou e o motivo, para a linha do tempo (sem `by: 'ai'`).

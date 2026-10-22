@@ -3,9 +3,6 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
 
   before_action :fetch_pipeline, only: [:show, :update, :destroy]
   before_action :ensure_outcome_labels_format, only: [:update]
-  # A conferência e o arquivamento numa trava da conta: dois arquivamentos ao mesmo tempo não zeram os funis ativos.
-  around_action :lock_account, only: [:destroy, :update], if: :archiving?
-  before_action :ensure_archivable, only: [:destroy, :update], if: :archiving?
 
   def index
     authorize ::Crm::Pipeline
@@ -29,7 +26,9 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   end
 
   def update
-    @pipeline.update!(permitted_pipeline_params)
+    @pipeline.assign_attributes(permitted_pipeline_params)
+    return render_archive_blocked unless save_pipeline!
+
     update_goal!
     update_outcome_labels!
     update_meta_sync!
@@ -39,26 +38,28 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   end
 
   def destroy
-    @pipeline.archived!
+    @pipeline.status = :archived
+    return render_archive_blocked unless save_pipeline!
+
     render :show
   end
 
   private
 
-  # Último funil ativo ou único principal ativo não se arquiva (pelo DELETE nem pelo PATCH de status).
-  def archiving?
-    action_name == 'destroy' || params.dig(:pipeline, :status).to_s == 'archived'
+  # Último funil ativo ou único principal ativo não se arquiva. A regra vale para a mudança que vai ser gravada (DELETE,
+  # ou PATCH com o status em qualquer forma: "archived", 1, "1"), conferida e gravada numa trava da conta: dois
+  # arquivamentos ao mesmo tempo não zeram os funis ativos. false quando a regra recusou (nada foi gravado).
+  def save_pipeline!
+    return @pipeline.save! unless @pipeline.will_save_change_to_status?(to: 'archived')
+
+    Current.account.with_lock do
+      @archive_blocked = @pipeline.motivo_para_nao_arquivar
+      @archive_blocked.nil? && @pipeline.save!
+    end
   end
 
-  def lock_account(&)
-    Current.account.with_lock(&)
-  end
-
-  def ensure_archivable
-    motivo = @pipeline.motivo_para_nao_arquivar
-    return if motivo.nil?
-
-    render json: { error: "crm.pipeline_archive_#{motivo}", message: I18n.t("crm.pipelines.archive_#{motivo}") },
+  def render_archive_blocked
+    render json: { error: "crm.pipeline_archive_#{@archive_blocked}", message: I18n.t("crm.pipelines.archive_#{@archive_blocked}") },
            status: :unprocessable_entity
   end
 

@@ -68,15 +68,16 @@ class Crm::Pipeline < ApplicationRecord
   end
 
   # Por que este funil não pode ser arquivado agora, ou nil: a conta precisa de um funil ativo e, se este é o principal,
-  # de outro principal ativo (vários podem estar marcados como principal). A API responde 422 com a mensagem
-  # crm.pipelines.archive_<motivo>.
+  # de outro principal ativo (vários podem estar marcados como principal). Lê o que está gravado, não o que vai ser:
+  # o status a gravar é o próprio arquivamento, e desmarcar o principal na mesma mudança não tira a exigência. A API
+  # responde 422 com a mensagem crm.pipelines.archive_<motivo>.
   def motivo_para_nao_arquivar
-    return if archived?
+    return if status_in_database == 'archived'
 
     outros = account.crm_pipelines.active.where.not(id: id)
     return 'last_active' unless outros.exists?
 
-    'only_default' if is_default? && !outros.exists?(is_default: true)
+    'only_default' if (is_default_in_database || is_default?) && !outros.exists?(is_default: true)
   end
 
   # Tipo do funil (#1498) para a IA: "sell" (Vender) ou "serve" (Atender).

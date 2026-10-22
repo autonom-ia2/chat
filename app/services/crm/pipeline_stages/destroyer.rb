@@ -71,12 +71,15 @@ class Crm::PipelineStages::Destroyer
     target = @stage.pipeline.stages.where.not(id: @stage.id).find_by(id: @target_stage_id)
     return if target.blank?
 
-    card_ids = @stage.cards.pluck(:id)
+    # FOR UPDATE: um card movido por outra pessoa enquanto isso espera a trava e, relido, sai da lista (não está mais
+    # nesta etapa); os da lista ficam travados até o fim da transação. Só eles mudam e só eles ganham a atividade.
+    card_ids = @stage.cards.lock.pluck(:id)
     return if card_ids.empty?
 
     now = Time.current
     # rubocop:disable Rails/SkipsModelValidations
-    Crm::Card.where(id: card_ids).update_all(stage_id: target.id, entered_stage_at: now, last_activity_at: now, updated_at: now)
+    Crm::Card.where(id: card_ids, stage_id: @stage.id)
+             .update_all(stage_id: target.id, entered_stage_at: now, last_activity_at: now, updated_at: now)
     Crm::Activity.insert_all!(card_ids.map { |card_id| move_activity(card_id, target, now) })
     # rubocop:enable Rails/SkipsModelValidations
   end
