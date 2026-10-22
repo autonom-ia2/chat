@@ -21,8 +21,11 @@ class Crm::FollowUps::SeriesMaterializer
 
   private
 
+  # Card arquivado não ganha vez nova: a série criada enquanto ele era arquivado (o Crm::Cards::Archiver não a viu) se
+  # encerra aqui, sob a trava dela.
   def materialize
     return unless @series.active?
+    return finish_series if @series.card&.archived?
     return if @series.follow_ups.pending.exists?
 
     occurrence = @series.schedule.next_after(start_from)

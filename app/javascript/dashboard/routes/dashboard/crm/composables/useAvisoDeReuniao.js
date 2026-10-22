@@ -12,9 +12,13 @@ export const dataDaReuniao = (startsAt, timeZone, locale) =>
     timeStyle: 'short',
   }).format(new Date(startsAt));
 
+// O botão Arquivar espera o aviso chegar (carregando), no máximo este tempo: depois libera, com ou sem aviso.
+export const ESPERA_MAXIMA_MS = 4000;
+
 export const useAvisoDeReuniao = () => {
   const { t, locale } = useI18n();
   const aviso = ref('');
+  const carregando = ref(false);
   let pedido = 0;
 
   // Um card: a data da reunião. Vários: quantos têm reunião.
@@ -41,10 +45,17 @@ export const useAvisoDeReuniao = () => {
     pedido += 1;
     const este = pedido;
     aviso.value = '';
+    carregando.value = Boolean(ids?.length);
     if (!ids?.length) return;
+    const limite = setTimeout(() => {
+      if (este === pedido) carregando.value = false;
+    }, ESPERA_MAXIMA_MS);
     const proximas = await buscar(ids);
-    if (este === pedido) aviso.value = texto(proximas, ids.length);
+    clearTimeout(limite);
+    if (este !== pedido) return;
+    aviso.value = texto(proximas, ids.length);
+    carregando.value = false;
   };
 
-  return { aviso, consultar };
+  return { aviso, carregando, consultar };
 };

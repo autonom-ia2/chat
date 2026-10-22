@@ -98,4 +98,85 @@ RSpec.describe Crm::Cards::Archiver, :crm_travas, :relationships_committed_fixtu
     expect(serie.reload).to be_ended
     expect(Crm::FollowUp.where(card_id: card.id).active).to be_empty
   end
+
+  # Arquivamento parado depois de travar os lembretes e antes de travar o card.
+  def arquivamento_parado_antes_do_card
+    arquivador = described_class.new(card: Crm::Card.find(card.id), actor: admin)
+    aviso = pronto
+    espera = soltar
+    primeira = true
+    allow(arquivador).to receive(:travar_lembretes).and_wrap_original do |original, *args|
+      original.call(*args).tap do
+        next unless primeira
+
+        primeira = false
+        aviso << true
+        espera.pop
+      end
+    end
+    pid = em_outra_conexao(resultados) { arquivador.perform }
+    pronto.pop
+    pid
+  end
+
+  # creator.rb cria um lembrete já vencido no meio do arquivamento; due_processor.rb:19 o trava e depois quer o card
+  # (CardNextDueUpdater). Travar lembrete depois do card fechava o ciclo.
+  it 'lembrete vencido criado no meio do arquivamento: sem Deadlocked, e o DueProcessor o cancela depois' do
+    arquivando = arquivamento_parado_antes_do_card
+    tardio = lembrete(due_at: 1.minute.ago)
+    due = Queue.new
+    segura_card = Queue.new
+    em_outra_conexao(resultados) do
+      ActiveRecord::Base.transaction do
+        Crm::FollowUp.find(tardio.id).lock!
+        due << true
+        segura_card.pop
+        Crm::Card.find(card.id).lock!
+      end
+      true
+    end
+    due.pop
+
+    soltar << true
+    esperar_fim_ou_trava(arquivando, resultados, 0)
+    segura_card << true
+    crm_travas_threads.each(&:join)
+
+    expect(resultados_de(resultados, 2)).to eq([true, true])
+    expect(card.reload).to be_archived
+    Crm::FollowUps::DueProcessor.new.perform
+    expect(tardio.reload).to have_attributes(status: 'canceled')
+    expect(tardio.metadata['canceled_reason']).to eq('card_archived')
+  end
+
+  # internal_creator.rb:45–51 marca a reunião e cria o lembrete dela no meio do arquivamento.
+  it 'reunião marcada no meio do arquivamento fica, com o lembrete, e entra em reunioes_mantidas' do
+    arquivamento_parado_antes_do_card
+    reuniao = account.crm_meetings.new(card: card, created_by: admin, title: 'Conversa', provider: :internal, status: :draft,
+                                       online_meeting_type: :whatsapp_video, timezone: 'America/Sao_Paulo',
+                                       starts_at: 3.days.from_now, ends_at: 3.days.from_now + 30.minutes, source: 'public_link')
+    reuniao.save!(validate: false)
+    reuniao.meeting_guests.create!(account: account, email: 'cliente@exemplo.invalid', guest_type: :external_email)
+    reuniao.update!(status: :scheduled, reminder: lembrete(follow_up_type: :meeting, due_at: 3.days.from_now - 15.minutes))
+
+    soltar << true
+    crm_travas_threads.each(&:join)
+
+    expect(resultados_de(resultados, 1)).to eq([true])
+    expect(reuniao.reminder.reload).to be_pending
+    expect(card.activities.where(event_type: 'archive').last.payload).to include('reunioes_mantidas' => [reuniao.id])
+    Crm::FollowUps::DueProcessor.new(now: 3.days.from_now - 10.minutes).perform
+    expect(reuniao.reminder.reload).not_to be_canceled
+  end
+
+  it 'série criada no meio do arquivamento se encerra no Materializer, sem vez nova' do
+    arquivamento_parado_antes_do_card
+    serie = Crm::FollowUpSeries.create!(account: account, card: card, created_by: admin, title: 'Toda segunda', frequency: :weekly,
+                                        starts_at: 1.day.from_now, timezone: 'America/Sao_Paulo', weekdays: [1])
+    soltar << true
+    crm_travas_threads.each(&:join)
+
+    expect(Crm::FollowUps::SeriesMaterializer.new(serie).perform).to be_nil
+    expect(serie.reload).to be_ended
+  end
 end

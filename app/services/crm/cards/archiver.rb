@@ -9,11 +9,15 @@
 # é decisão de quem atende, pela tela da reunião. Ela fica, com o lembrete dela, e a atividade do arquivamento registra
 # quais ficaram (`reunioes_mantidas`).
 #
-# Ordem das travas, a mesma do resto do CRM: série, lembretes, card. O SeriesMaterializer trava a série antes de criar a
-# vez; o DueProcessor trava o lembrete e depois o card (Crm::FollowUps::AutoFollowupRunner); o reset do follow-up da IA
-# também (CardsController#reset_auto_followup). Travar o card primeiro e o lembrete depois cruzaria com eles
-# (ActiveRecord::Deadlocked). O card é relido sob a trava: o status de agora decide o desfecho guardado, não o do objeto
-# carregado antes (outro pedido pode ter fechado o card como Ganho nesse meio tempo).
+# Ordem das travas, a mesma do resto do CRM e numa passagem só: série, lembretes, card. O SeriesMaterializer trava a série
+# antes de criar a vez; o DueProcessor e o cancelamento de reunião travam o lembrete e depois o card; o reset do follow-up
+# da IA também (CardsController#reset_auto_followup). Nada é travado depois do card: travar um lembrete com o card na mão
+# cruzaria com eles (ActiveRecord::Deadlocked). O card é relido sob a trava: o status de agora decide o desfecho guardado,
+# não o do objeto carregado antes (outro pedido pode ter fechado o card como Ganho nesse meio tempo).
+#
+# Série ou lembrete criado depois da passagem não é deste arquivamento: o SeriesMaterializer encerra a série e o
+# DueProcessor cancela o lembrete (`card_archived`) quando o encontram, sob a trava deles, num card já arquivado. A reunião
+# que ficou é lida depois das travas, então a marcada nesse meio tempo também fica, com o lembrete.
 class Crm::Cards::Archiver
   MOTIVO = 'card_archived'.freeze
 
@@ -28,14 +32,12 @@ class Crm::Cards::Archiver
   # roda sob as travas, com o card relido, e decide se ainda arquiva (as guardas da IA); false desiste sem arquivar.
   def perform
     ActiveRecord::Base.transaction do
-      travar_series
-      travar_lembretes
+      series = travar_series
+      lembretes = travar_lembretes
       @card.lock!
       next false if (block_given? && !yield) || @card.archived?
 
-      # Relidos sob a trava do card: entra o que foi criado entre uma trava e outra (criar série ou lembrete do card
-      # espera a trava do card até o fim desta transação).
-      arquivar!(travar_series, travar_lembretes)
+      arquivar!(series, lembretes)
       true
     end
   end
@@ -47,7 +49,7 @@ class Crm::Cards::Archiver
   end
 
   def travar_lembretes
-    @card.follow_ups.active.where.not(id: reunioes_mantidas.filter_map(&:reminder_id)).order(:id).lock.to_a
+    @card.follow_ups.active.order(:id).lock.to_a
   end
 
   # A série encerra antes de as vezes serem canceladas, e travada desde o começo: o SeriesMaterializer, que trava a série
@@ -56,9 +58,11 @@ class Crm::Cards::Archiver
     @card.update!(status: :archived, last_activity_at: @now)
     expirar_sugestoes!
     encerrar_series!(series)
-    cancelar_lembretes!(lembretes)
+    da_reuniao = reunioes_mantidas.filter_map(&:reminder_id)
+    cancelados = lembretes.reject { |lembrete| da_reuniao.include?(lembrete.id) }
+    cancelar_lembretes!(cancelados)
     Crm::FollowUps::CardNextDueUpdater.update(@card)
-    Crm::ActivityLogger.new(card: @card, actor: @actor, event_type: 'archive', payload: registro(lembretes.size)).perform
+    Crm::ActivityLogger.new(card: @card, actor: @actor, event_type: 'archive', payload: registro(cancelados.size)).perform
   end
 
   def expirar_sugestoes!
@@ -75,6 +79,7 @@ class Crm::Cards::Archiver
     end
   end
 
+  # Lidas com o card travado, depois de todas as travas.
   def reunioes_mantidas
     @reunioes_mantidas ||= Crm::Meeting.where(account_id: @card.account_id, card_id: @card.id).upcoming.to_a
   end

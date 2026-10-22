@@ -115,4 +115,50 @@ describe('CrmBulkActionBar', () => {
       'CRM_KANBAN.BULK.DELETE_MEETINGS'
     );
   });
+
+  it('o Arquivar do diálogo espera o aviso chegar', async () => {
+    let responder;
+    CrmKanbanAPI.upcomingMeetings.mockReturnValue(
+      new Promise(resolve => {
+        responder = resolve;
+      })
+    );
+    const wrapper = mount(CrmBulkActionBar, {
+      props: { count: 2, ids: [4, 5], permissions: { archive: true } },
+      global: {
+        stubs: {
+          SelectMenu: true,
+          ComboBox: true,
+          Button: {
+            props: ['label'],
+            emits: ['click'],
+            template:
+              '<button :data-label="label" @click="$emit(\'click\')" />',
+          },
+          Dialog: {
+            name: 'Dialog',
+            props: ['isLoading'],
+            emits: ['confirm'],
+            template: '<div data-dialogo :data-carregando="isLoading" />',
+            methods: { open() {}, close() {} },
+          },
+          Transition: false,
+        },
+      },
+    });
+    await wrapper
+      .find('[data-label="CRM_KANBAN.BULK.DELETE"]')
+      .trigger('click');
+    const dialogo = wrapper.findComponent({ name: 'Dialog' });
+
+    expect(dialogo.props('isLoading')).toBe(true);
+    dialogo.vm.$emit('confirm');
+    expect(wrapper.emitted('archive')).toBeUndefined();
+
+    responder({ data: { payload: { cards: [] } } });
+    await flushPromises();
+    expect(dialogo.props('isLoading')).toBe(false);
+    dialogo.vm.$emit('confirm');
+    expect(wrapper.emitted('archive')).toHaveLength(1);
+  });
 });

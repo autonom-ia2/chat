@@ -19,6 +19,7 @@ class Crm::FollowUps::DueProcessor
     follow_up.with_lock do
       next unless follow_up.pending? && follow_up.due_at <= @now
       next skip_paused_occurrence(follow_up) if follow_up.series&.paused?
+      next cancel_archived_card_follow_up(follow_up) if card_arquivado?(follow_up)
 
       dispatch(follow_up)
     end
@@ -49,6 +50,19 @@ class Crm::FollowUps::DueProcessor
   def skip_paused_occurrence(follow_up)
     follow_up.update!(status: :canceled, canceled_at: @now,
                       metadata: follow_up.metadata.merge('canceled_reason' => 'series_paused'))
+    finalize_follow_up(follow_up)
+  end
+
+  # O lembrete criado enquanto o card era arquivado ficou fora do Crm::Cards::Archiver, que não trava lembrete depois do
+  # card. Encontrado aqui, sob a trava do lembrete, é cancelado como o arquivamento cancela, em silêncio. O lembrete da
+  # reunião marcada fica: o arquivamento não cancela a reunião.
+  def card_arquivado?(follow_up)
+    follow_up.card&.archived? && !Crm::Meeting.exists?(reminder_id: follow_up.id, status: :scheduled)
+  end
+
+  def cancel_archived_card_follow_up(follow_up)
+    follow_up.update!(status: :canceled, canceled_at: @now,
+                      metadata: follow_up.metadata.merge('canceled_reason' => Crm::Cards::Archiver::MOTIVO))
     finalize_follow_up(follow_up)
   end
 

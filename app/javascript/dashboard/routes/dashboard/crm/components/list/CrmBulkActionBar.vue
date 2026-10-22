@@ -116,8 +116,12 @@ const handleStatus = value => {
   statusValue.value = '';
 };
 
-const { aviso: avisoDeReuniao, consultar: consultarReuniao } =
-  useAvisoDeReuniao();
+// Arquivar espera o aviso chegar (carregando, com teto em useAvisoDeReuniao).
+const {
+  aviso: avisoDeReuniao,
+  carregando: carregandoAviso,
+  consultar: consultarReuniao,
+} = useAvisoDeReuniao();
 
 const requestArchive = () => {
   consultarReuniao(props.ids);
@@ -125,6 +129,7 @@ const requestArchive = () => {
 };
 
 const confirmArchive = () => {
+  if (carregandoAviso.value) return;
   emit('archive');
   confirmDialogRef.value?.close();
 };
@@ -232,7 +237,7 @@ onBeforeUnmount(() => {
     :title="t('CRM_KANBAN.BULK.DELETE')"
     :description="archiveConfirmLabel"
     :confirm-button-label="t('CRM_KANBAN.BULK.DELETE')"
-    :is-loading="isBusy"
+    :is-loading="isBusy || carregandoAviso"
     @confirm="confirmArchive"
   >
     <p

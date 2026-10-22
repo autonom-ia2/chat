@@ -26,6 +26,15 @@ module CrmTravasHelper
     end
   end
 
+  # Espera a conexão terminar (a fila ganhou um resultado) ou parar numa trava do banco.
+  def esperar_fim_ou_trava(pid, fila, quantos_antes)
+    Timeout.timeout(5) do
+      sleep 0.02 until fila.size > quantos_antes || ActiveRecord::Base.connection.select_value(
+        "SELECT wait_event_type = 'Lock' FROM pg_stat_activity WHERE pid = #{pid.to_i}"
+      )
+    end
+  end
+
   def crm_travas_threads
     @crm_travas_threads ||= []
   end
@@ -35,15 +44,19 @@ module CrmTravasHelper
   end
 
   def apagar_conta_gravada(account, *users)
-    Crm::FollowUp.where(account_id: account.id).delete_all
-    Crm::FollowUpSeries.where(account_id: account.id).delete_all
-    Crm::Activity.where(account_id: account.id).delete_all
-    account.crm_cards.destroy_all
+    apagar_crm_gravado(account)
     account.crm_pipelines.destroy_all
     account.account_users.destroy_all
     account.destroy!
     users.each { |user| apagar_usuario_gravado(user) }
     Audited::Audit.where(associated: account).or(Audited::Audit.where(auditable: account)).delete_all
+  end
+
+  def apagar_crm_gravado(account)
+    [Crm::MeetingGuest, Crm::Meeting, Crm::FollowUp, Crm::FollowUpSeries, Crm::Activity].each do |modelo|
+      modelo.where(account_id: account.id).delete_all
+    end
+    account.crm_cards.destroy_all
   end
 
   def apagar_usuario_gravado(user)
