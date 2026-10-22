@@ -737,3 +737,13 @@
   display_name: Ficar com a conversa ao enviar e Devolver para a IA
   enabled: true
   column: feature_flags_ext_1
+
+# Conversa do Instagram com a cara do Direct (#2079, épico #1701). Ligada: na caixa Instagram, a conversa usa as cores,
+# os balões, os horários, o "Visto" e a caixa de escrever do instagram.com/direct, nos modos claro e escuro; só muda o
+# desenho, com o que já chega gravado (envio e recebimento iguais). Desligada: a conversa de sempre. Posição provisória
+# 57 na feature_flags_ext_1 (1 << 56), dada pela Orquestração; a definitiva é o fim da main na vez do PR. Padrão das
+# contas novas: desligada (`enabled: false`); o piloto 1/16/18 é ligado pela Orquestração por psql depois do deploy.
+- name: conversa_instagram
+  display_name: Conversa do Instagram com a cara do Direct
+  enabled: false
+  column: feature_flags_ext_1

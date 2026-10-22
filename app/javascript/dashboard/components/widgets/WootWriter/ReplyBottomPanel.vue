@@ -202,12 +202,15 @@ export default {
 
     useKeyboardEvents(keyboardEvents);
     // #1702: "+" e Enviar verde na conversa com a cara do WhatsApp.
-    const { ehWhatsapp, soTexto, classesDaResposta } = usePeleDaResposta();
+    // #2079: na conversa do Instagram, a pílula do Direct e o Enviar com o aviãozinho.
+    const { ehWhatsapp, ehInstagram, soTexto, classesDaResposta } =
+      usePeleDaResposta();
     // #1786: Aa, Modelos e Descartar na resposta da conversa de e-mail nova.
     const emailNovo = useEmailDaConversa().ligado;
 
     return {
       ehWhatsapp,
+      ehInstagram,
       emailNovo,
       soTexto,
       classesDaResposta,
@@ -234,6 +237,10 @@ export default {
         this.showAudioRecorderButton &&
         this.campoVazio
       );
+    },
+    // #2079: no Instagram, o Enviar é o aviãozinho do Direct (a nota segue com o texto).
+    enviarComIcone() {
+      return this.ehWhatsapp || (this.ehInstagram && !this.isNote);
     },
     wrapClass() {
       return {
@@ -346,7 +353,8 @@ export default {
 <template>
   <div
     class="flex justify-between p-3"
-    :class="[wrapClass, ehWhatsapp ? classesDaResposta.painel : '']"
+    :class="[wrapClass, classesDaResposta.painel]"
+    :data-com-texto="!campoVazio || undefined"
   >
     <div ref="barraDaEsquerda" class="left-wrap">
       <BotoesDoEmail v-if="emailNovo && !isNote" parte="esquerda" />
@@ -391,7 +399,7 @@ export default {
           v-if="showAttachButton"
           v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_ATTACH_ICON')"
           :class="{ '!hidden': emailNovo }"
-          icon="i-ph-paperclip"
+          :icon="ehInstagram ? 'i-woot-midia-do-instagram' : 'i-ph-paperclip'"
           slate
           faded
           sm
@@ -503,10 +511,10 @@ export default {
       </button>
       <NextButton
         v-else
-        v-tooltip.top-end="ehWhatsapp ? sendButtonText : null"
-        :label="ehWhatsapp ? '' : sendButtonText"
+        v-tooltip.top-end="enviarComIcone ? sendButtonText : null"
+        :label="enviarComIcone ? '' : sendButtonText"
         :icon="
-          ehWhatsapp
+          enviarComIcone
             ? classesDaResposta.iconeEnviar
             : emailNovo && !isNote
               ? 'i-lucide-send-horizontal'

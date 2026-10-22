@@ -1,0 +1,178 @@
+<script setup>
+// Uma mensagem da conversa do Instagram com a cara do Direct (#2079). Recebida à
+// esquerda, com a foto de 28 px só na última do grupo; nossa à direita, sem foto.
+// Ao passar o mouse, "Responder" e "Mais opções" ao lado do balão, como no app.
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import Avatar from 'next/avatar/Avatar.vue';
+import { useMessageContext } from 'dashboard/components-next/message/provider.js';
+import {
+  useInstagramDaConversa,
+  useSequenciaDoInstagram,
+} from './useConversaDoInstagram';
+import { BALOES, balaoDoInstagram } from './balaoDoInstagram';
+import { cantosDoBalao, ladoDaMensagem } from './sequenciaDoInstagram';
+import { RECEBIDO, ROTULO, SECUNDARIO } from './visualInstagram';
+import TextoDoInstagram from './TextoDoInstagram.vue';
+import MidiaDoInstagram from './MidiaDoInstagram.vue';
+import AlbumDoInstagram from './AlbumDoInstagram.vue';
+import VozDoInstagram from './VozDoInstagram.vue';
+import CompartilhadoDoInstagram from './CompartilhadoDoInstagram.vue';
+
+const emit = defineEmits(['responder', 'menu']);
+
+const { t } = useI18n();
+const mensagem = useMessageContext();
+const { contato } = useInstagramDaConversa();
+const sequencia = useSequenciaDoInstagram();
+
+const dados = computed(() => ({
+  id: mensagem.id.value,
+  content: mensagem.content.value,
+  attachments: mensagem.attachments.value || [],
+  contentAttributes: mensagem.contentAttributes.value || {},
+  messageType: mensagem.messageType.value,
+  private: mensagem.isPrivate.value,
+}));
+const lado = computed(() => ladoDaMensagem(dados.value));
+const enviada = computed(() => lado.value === 'direita');
+const posicao = computed(
+  () =>
+    sequencia.value.get(dados.value.id) || {
+      comAnterior: false,
+      comProxima: false,
+    }
+);
+const cantos = computed(() =>
+  cantosDoBalao({ lado: lado.value, ...posicao.value })
+);
+const tipo = computed(() => balaoDoInstagram(dados.value));
+const anexos = computed(() => dados.value.attachments);
+const texto = computed(() => (dados.value.content || '').trim());
+// O texto que vai junto da mídia (legenda, resposta ao story) vira um balão embaixo.
+const textoJunto = computed(
+  () =>
+    Boolean(texto.value) &&
+    ![BALOES.TEXTO, BALOES.APAGADA, BALOES.POST].includes(tipo.value)
+);
+const fotoDoContato = computed(
+  () => !enviada.value && !posicao.value.comProxima
+);
+
+// A citação de quem respondeu: rótulo em cima e a mensagem citada esmaecida.
+const citada = computed(() => mensagem.inReplyTo?.value || null);
+const rotuloDaCitacao = computed(() =>
+  enviada.value
+    ? t('CONVERSA_CANAL.INSTAGRAM.VOCE_RESPONDEU')
+    : t('CONVERSA_CANAL.INSTAGRAM.RESPONDEU_A_VOCE')
+);
+const textoCitado = computed(() => {
+  const citacao = citada.value;
+  if (!citacao) return '';
+  return (
+    (citacao.content || '').trim() ||
+    t('CONVERSA_CANAL.INSTAGRAM.MENSAGEM_VAZIA')
+  );
+});
+</script>
+
+<template>
+  <div
+    class="group/instagram flex w-full items-end gap-2"
+    :class="[
+      enviada ? 'flex-row-reverse' : 'flex-row',
+      posicao.comProxima ? 'mb-0.5' : 'mb-2',
+    ]"
+  >
+    <div v-if="!enviada" class="w-7 shrink-0">
+      <Avatar
+        v-if="fotoDoContato"
+        :src="contato?.thumbnail || ''"
+        :name="contato?.name || ''"
+        :size="28"
+        rounded-full
+      />
+    </div>
+    <div
+      class="flex min-w-0 flex-col gap-0.5"
+      :class="enviada ? 'items-end' : 'items-start'"
+    >
+      <template v-if="citada">
+        <span :class="ROTULO" class="mt-1">{{ rotuloDaCitacao }}</span>
+        <div
+          class="max-w-[300px] truncate rounded-[18px] px-3 py-2 text-[13px] leading-4 opacity-60"
+          :class="[RECEBIDO]"
+        >
+          {{ textoCitado }}
+        </div>
+      </template>
+      <TextoDoInstagram
+        v-if="tipo === BALOES.TEXTO"
+        :texto="texto"
+        :enviada="enviada"
+        :cantos="cantos"
+      />
+      <div
+        v-else-if="tipo === BALOES.APAGADA"
+        class="rounded-[18px] border border-[#DBDFE4] dark:border-[#363636] px-3 py-2 text-[15px] leading-5 italic"
+        :class="SECUNDARIO"
+      >
+        {{ texto }}
+      </div>
+      <MidiaDoInstagram
+        v-else-if="
+          tipo === BALOES.MIDIA ||
+          tipo === BALOES.REEL ||
+          tipo === BALOES.FIGURINHA
+        "
+        :anexo="anexos[0]"
+        :cantos="cantos"
+        :figurinha="tipo === BALOES.FIGURINHA"
+      />
+      <AlbumDoInstagram
+        v-else-if="tipo === BALOES.ALBUM"
+        :anexos="anexos"
+        :cantos="cantos"
+      />
+      <VozDoInstagram
+        v-else-if="tipo === BALOES.VOZ"
+        :anexo="anexos[0]"
+        :enviada="enviada"
+        :cantos="cantos"
+      />
+      <CompartilhadoDoInstagram
+        v-else-if="tipo === BALOES.POST || tipo === BALOES.STORY"
+        :tipo="tipo"
+        :mensagem="dados"
+        :enviada="enviada"
+      />
+      <TextoDoInstagram
+        v-if="textoJunto"
+        :texto="texto"
+        :enviada="enviada"
+        :cantos="cantos"
+      />
+    </div>
+    <div
+      class="flex shrink-0 items-center gap-2 self-center opacity-0 transition-opacity group-hover/instagram:opacity-100 focus-within:opacity-100"
+      :class="enviada ? 'flex-row-reverse' : 'flex-row'"
+    >
+      <button
+        type="button"
+        class="flex size-6 shrink-0 items-center justify-center p-0"
+        :aria-label="t('CONVERSA_CANAL.INSTAGRAM.RESPONDER')"
+        @click="emit('responder')"
+      >
+        <span class="i-ph-arrow-bend-up-left size-4" />
+      </button>
+      <button
+        type="button"
+        class="flex size-6 shrink-0 items-center justify-center p-0"
+        :aria-label="t('CONVERSA_CANAL.INSTAGRAM.MAIS_OPCOES')"
+        @click="emit('menu', $event)"
+      >
+        <span class="i-ph-dots-three-vertical-bold size-4" />
+      </button>
+    </div>
+  </div>
+</template>
