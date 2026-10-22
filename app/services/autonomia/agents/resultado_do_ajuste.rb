@@ -101,7 +101,12 @@ class Autonomia::Agents::ResultadoDoAjuste
     return { status: status, total: perguntas.size } unless status == 'pronta'
 
     { status: status, total: dados['total'], ok: dados['ok'], completa: dados['completa'] != false,
-      perguntas: perguntas.map { |item| pergunta_da_prova(item) } }
+      perguntas: perguntas.map { |item| pergunta_da_prova(item) } }.merge(pedidos_sem_teste(dados))
+  end
+
+  # Os grupos dos pedidos aplicados, na ordem do cartão: a prova numera os pedidos por eles (ProvaDoAjuste).
+  def grupos_aplicados
+    grupos_pedidos.reject { |grupo| grupo.any? { |item| item['atendido'] == false } }
   end
 
   # Uma linha por pedido (aplicado ou não) e, depois, o que o dono não pediu e mudou.
@@ -169,6 +174,27 @@ class Autonomia::Agents::ResultadoDoAjuste
   def pergunta_da_prova(item)
     { pergunta: item['pergunta'], resposta: item['resposta'], equipe: item['equipe'] == true,
       ok: { 'ok' => true, 'nao' => false }[item['veredito']] }
+  end
+
+  # Prova incompleta (texto aprovado pelo Rodrigo em 22/10, "Não deu para ver nas respostas do teste: ..."): o texto
+  # dos pedidos que nenhuma pergunta testou, na ordem do cartão. Só na prova gravada com `testes`; sem a lista, a tela
+  # usa o texto geral.
+  def pedidos_sem_teste(dados)
+    return {} unless incompleta_com_testes?(dados)
+
+    testados = Array(dados['perguntas']).flat_map { |item| Array(item['testes']) }.pluck('pedido')
+    textos = aplicados_da_prova.each_with_index.reject { |_grupo, posicao| testados.include?(posicao) }
+                               .map { |grupo, _posicao| sem_ponto(grupo.first['pedido']) }
+    textos.any? ? { pedidos_sem_teste: textos } : {}
+  end
+
+  def incompleta_com_testes?(dados)
+    dados['completa'] == false && Array(dados['perguntas']).any? { |item| item.key?('testes') }
+  end
+
+  # Os pedidos que a prova numerou: os do ajuste dela (ultimo_ajuste), não os da conferência do turno mais recente.
+  def aplicados_da_prova
+    self.class.new(nil, @thread.state.to_h.dig('ultimo_ajuste', 'conferencia')).grupos_aplicados
   end
 
   def prova_do_cartao

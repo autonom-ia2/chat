@@ -99,6 +99,16 @@ RSpec.describe 'Autonomia build threads: resultado e desfazer', type: :request d
         expect(response.body).not_to include('versao_id', 'desde', 'veredito', 'campo', 'Instrução', 'andaime')
       end
 
+      # #1428 (t6, cartão aprovado pelo Rodrigo em 22/10): a prova incompleta diz quais pedidos ficaram sem teste.
+      it 'pronta e incompleta: os textos dos pedidos sem teste, sem campo, instrução nem os testes gravados' do
+        prova = com_prova('status' => 'pronta', 'ok' => 0, 'total' => 0, 'completa' => false,
+                          'perguntas' => [{ 'pergunta' => 'Quanto custa?', 'resposta' => 'Passo para a equipe.', 'equipe' => true,
+                                            'testes' => [] }])
+
+        expect(prova).to include('completa' => false, 'pedidos_sem_teste' => ['mais curto'])
+        expect(response.body).not_to include('testes', 'campo', 'tone', 'Instrução', 'andaime')
+      end
+
       it 'depois do Desfazer, sem prova' do
         versao = thread.state.dig('ultimo_ajuste', 'versao_id')
         thread.update!(state: thread.state.merge('prova' => { 'status' => 'pendente', 'versao_id' => versao }))

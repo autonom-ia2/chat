@@ -205,8 +205,7 @@ class Autonomia::Agents::ProvaDoAjuste
   # dos campos de cada pedido).
   def pedidos_aplicados
     conferencia = @thread.state.dig('ultimo_ajuste', 'conferencia').to_h
-    grupos = Autonomia::Agents::ResultadoDoAjuste.new(nil, conferencia).grupos_pedidos
-                                                 .reject { |grupo| grupo.any? { |item| item['atendido'] == false } }
+    grupos = Autonomia::Agents::ResultadoDoAjuste.new(nil, conferencia).grupos_aplicados
     grupos.each_with_index.map do |grupo, posicao|
       { 'numero' => posicao + 1, 'pedido' => Autonomia::Agents::ResultadoDoAjuste.sem_ponto(grupo.first['pedido']),
         'o_que_mudou' => grupo.pluck('resumo').uniq }

@@ -207,6 +207,21 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
       expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => perguntas)).to include(completa: true)
     end
 
+    # Cartão da prova incompleta (texto aprovado pelo Rodrigo, 22/10): a tela diz quais pedidos não deu para ver. Só os
+    # textos dos pedidos que a prova numerou (os aplicados, na ordem do cartão), nunca o state cru nem a instrução.
+    it 'pronta e incompleta: os textos dos pedidos sem teste, na ordem do cartão; completa ou sem testes gravados, sem a lista' do
+      conferencia['itens'] = [item('tone', 'mais curto', 'Respostas curtas.'), item('greeting', 'saudação nova', 'Oi.', atendido: false),
+                              item('handoff_rule', 'preço com a equipe.', 'Preço vai à equipe.'), item('guardrails', 'sem gíria', 'Sem gíria.')]
+      perguntas = [{ 'pergunta' => 'Oi?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'ok',
+                     'testes' => [{ 'pedido' => 0, 'veredito' => 'ok' }] }]
+      dados = { 'status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => perguntas }
+
+      expect(prova_com(dados.merge('completa' => false))).to include(pedidos_sem_teste: ['preço com a equipe', 'sem gíria'])
+      expect(prova_com(dados.merge('completa' => true))).not_to have_key(:pedidos_sem_teste)
+      sem_testes = perguntas.map { |pergunta| pergunta.except('testes') }
+      expect(prova_com(dados.merge('completa' => false, 'perguntas' => sem_testes))).not_to have_key(:pedidos_sem_teste)
+    end
+
     # A troca para `testes` (revisão do t6d) não mexe na prova já gravada: a tela lê só a `completa` gravada e a
     # pergunta, a resposta e o `veredito` gravado de cada item. Sem campo, com `pedido` ou com `pedidos`, igual a antes.
     it 'prova gravada antes da troca (sem campo, com pedido ou com pedidos) continua igual' do
