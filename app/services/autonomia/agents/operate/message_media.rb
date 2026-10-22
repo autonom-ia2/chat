@@ -154,11 +154,16 @@ module Autonomia
           cached = attachment.meta.to_h['transcribed_text'].to_s
           return cached if cached.present?
 
-          text = Crm::Ai::TranscriptionClient.new(credential: credential).transcribe(attachment).to_s.strip
-          return if text.blank?
+          # A mesma trava do anexo que o leitor de mídia do CRM usa (Crm::Ai::LeitorDeMidia#ler): quem chega depois espera
+          # e relê o cache antes de pagar a transcrição de novo.
+          attachment.with_lock do
+            cached = attachment.meta.to_h['transcribed_text'].to_s
+            next cached if cached.present?
 
-          cache_transcript(attachment, text) # best-effort: a transcrição alimenta ESTE turno mesmo se o cache falhar
-          text
+            text = Crm::Ai::TranscriptionClient.new(credential: credential).transcribe(attachment).to_s.strip
+            cache_transcript(attachment, text) if text.present? # best-effort: alimenta ESTE turno mesmo se o cache falhar
+            text
+          end.presence
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] transcription_failed attachment=#{attachment.id} #{e.class}")
           nil

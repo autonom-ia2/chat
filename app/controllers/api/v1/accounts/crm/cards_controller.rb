@@ -360,7 +360,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def ai_suggestion_payload(suggestion)
-    return if suggestion.blank?
+    return if suggestion.blank? || suggestion.fechar_fora_da_tela?(@card)
 
     {
       id: suggestion.id,
@@ -371,7 +371,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       reasoning: suggestion.reasoning,
       status: suggestion.status,
       created_at: suggestion.created_at
-    }
+    }.merge(suggestion.fechar ? { fechar: suggestion.fechar } : {})
   end
 
   def fetch_card

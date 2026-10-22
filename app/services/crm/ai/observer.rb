@@ -27,6 +27,16 @@ module Crm
         agendar(espera: espera, trigger: TRIGGER_DA_EQUIPE) { |estado| self.class.pendente?(estado) }
       end
 
+      # A fala pública do nosso agente de IA (IA entende a conversa F1, Crm::Ai::FatosDaConversa): como a da equipe, não
+      # agenda nem adia com uma avaliação esperando a vez; e no máximo MAX_AVALIACOES_DO_ROBO_POR_DIA por card, contadas
+      # no `ai` do metadata sob a mesma trava. Passou do teto, não agenda e deixa a linha no log.
+      def schedule_evaluation_do_robo(espera)
+        fatos = Crm::Ai::FatosDaConversa
+        agendar(espera: espera, trigger: fatos::TRIGGER_DO_ROBO, extra: ->(estado) { fatos.contar_avaliacao_do_robo(estado) }) do |estado|
+          self.class.pendente?(estado) || cota_do_robo_esgotada?(estado)
+        end
+      end
+
       # Alguém já agendou a avaliação deste card depois de `momento` (#1675): a troca de foco ou o card novo da mesma
       # mensagem. Lê o token do card como ele veio do banco.
       def agendada_desde?(momento)
@@ -66,16 +76,24 @@ module Crm
 
       def ai_do(card) = card.metadata.to_h.fetch('ai', {}).to_h
 
+      def cota_do_robo_esgotada?(estado)
+        return false unless Crm::Ai::FatosDaConversa.cota_do_robo_esgotada?(estado)
+
+        Rails.logger.info("[crm][ai] card=#{@card.id} fala_do_robo=sem_avaliacao motivo=teto_do_dia")
+        true
+      end
+
       # A decisão (pular?) e a gravação acontecem sob a mesma trava do card: dois jobs da mesma conversa (o do cliente e o
       # da equipe) que rodam juntos não agendam os dois, e o token sai daqui de dentro, sempre maior que o gravado, para
       # que o agendamento mais novo seja sempre o que vale (#1923).
-      def agendar(espera:, trigger: nil)
+      # extra: o que mais gravar no `ai` junto com o agendamento (o contador da fala do robô), a partir do estado lido.
+      def agendar(espera:, trigger: nil, extra: nil)
         return unless Config.enabled?
 
         token = travar do |estado|
           next if yield(estado)
 
-          gravar(estado, [Time.current.to_f, estado['evaluate_token'].to_f + 0.001].max, espera)
+          gravar(estado.merge(extra ? extra.call(estado) : {}), [Time.current.to_f, estado['evaluate_token'].to_f + 0.001].max, espera)
         end
         return if token.nil?
 

@@ -20,8 +20,11 @@ module Crm
 
       class InvalidResult < StandardError; end
 
-      def initialize(card:, actor:, result:, value_cents: nil, currency: nil, lost_reason: nil)
+      # payload_extra: o que mais vai na atividade do fechamento (IA entende a conversa F3: o fechamento da IA leva
+      # `by: 'ai'`, o motivo e a confiança, Crm::Ai::FecharCard). Sem ele, a atividade é a de sempre.
+      def initialize(card:, actor:, result:, value_cents: nil, currency: nil, lost_reason: nil, payload_extra: {})
         @card = card
+        @payload_extra = payload_extra.to_h
         @actor = actor
         @result = VERB_ALIASES.fetch(result.to_s, result.to_s)
         @value_cents = value_cents
@@ -38,6 +41,8 @@ module Crm
         ActiveRecord::Base.transaction do
           @card.update!(close_attributes(@target_status))
           log_activity!
+          # IA entende a conversa F3: card fechado não tem mais o que "Encerrar".
+          Crm::Ai::FecharCard.expirar_ao_fechar(@card) if Crm::Cards::Outcome::CLOSED_STATUSES.include?(@target_status.to_s)
         end
         @card
       end
@@ -79,7 +84,7 @@ module Crm
       end
 
       def activity_payload
-        outcome_payload.merge(closed_with_payload)
+        @payload_extra.merge(outcome_payload).merge(closed_with_payload)
       end
 
       def outcome_payload

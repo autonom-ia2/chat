@@ -25,10 +25,12 @@ class Crm::Subjects::Applier
     @anterior = anterior
   end
 
-  # etapa: a chave da etapa escolhida para o pedido novo (#1910), ou nil.
+  # etapa: a chave da etapa escolhida para o pedido novo (#1910), ou nil. Assunto encerrado (F2): nada muda, nem dentro
+  # da trava (Crm::Subjects::Encerrado.decisao).
   def aplicar(opcao, titulo, etapa = nil)
     case opcao.tipo
     when :sem_assunto, :mesmo then { action: 'none', state: 'kept', card: @question.atual }
+    when Crm::Subjects::Encerrado::TIPO then Crm::Subjects::Encerrado.decisao(opcao.card)
     when :card then decidir('focus', card: opcao.card)
     when :novo then novo(opcao.pipeline, titulo, @question.etapa(opcao.pipeline, etapa))
     end
@@ -109,7 +111,10 @@ class Crm::Subjects::Applier
     do_funil = @account.crm_cards.where(pipeline_id: pipeline.id)
     cards = do_funil.where(conversation_id: @conversation.id).or(do_funil.where(id: vinculados))
     arquivados = cards.where(status: :archived, updated_at: desde..).where.not(id: arquivados_pela_ia(desde))
-    cards.where(closed_at: desde..).or(arquivados).exists?
+    fechados = cards.where(closed_at: desde..)
+    # IA entende a conversa F3: o card que a IA fechou (o "adiou", por exemplo) também não é fechamento de uma pessoa.
+    fechados = fechados.where.not(id: Crm::Ai::FecharCard.fechados_pela_ia(@account, desde)) if Crm::Ai::FecharCard.ligada?(@account)
+    fechados.or(arquivados).exists?
   end
 
   # O card que a IA de etapa tirou do funil como "não é negócio" (#1922) não é fechamento de uma pessoa: o cliente que

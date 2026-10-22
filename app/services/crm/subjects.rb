@@ -34,6 +34,13 @@ module Crm::Subjects
   # Card que a pessoa fechou ou arquivou não é recriado sozinho, e sugestão dispensada não volta, por este tempo.
   RESPEITO_AO_FECHAMENTO = 24.hours
 
+  # A leitura da conversa pela IA de assunto: a JANELA e, com a flag `crm_ia_fatos_da_conversa` (IA entende a conversa
+  # F1), a hora e o papel de quem falou (Autonomia::Decisores::Estado com `papeis: true`); com a flag
+  # `crm_ia_leitor_de_midia` (F4), também a mensagem só de mídia, com o texto lido do anexo (`com_midia: true`).
+  def self.janela(account)
+    JANELA.merge(papeis: Crm::Ai::FatosDaConversa.ligada?(account), com_midia: Crm::Ai::LeitorDeMidia.ligada?(account))
+  end
+
   # A caixa aceita sugestão esperando uma pessoa: no modo Sugerir e também na Automática, que sugere em vez de agir
   # quando respeita a pessoa (#1260). Desligada, a sugestão perde o sentido (#1221).
   def self.sugerir?(conversation)

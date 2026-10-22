@@ -72,7 +72,14 @@ export const useSugestaoEtapa = ({ t, cardId, inicial, ligada, aoMudar }) => {
       else await CrmKanbanAPI.dismissAiSuggestion(atual.id);
       sugestao.value = null;
       if (aceitar) {
-        useAlert(t('CRM_KANBAN.AI_CARD.ACCEPT_SUCCESS'));
+        // F3: aceitar a sugestão de fechar encerra o card, não muda de etapa.
+        useAlert(
+          t(
+            atual.fechar
+              ? 'CRM_CARD.FECHAR_SUGESTAO.FECHOU'
+              : 'CRM_KANBAN.AI_CARD.ACCEPT_SUCCESS'
+          )
+        );
         aoMudar();
       }
     } catch {

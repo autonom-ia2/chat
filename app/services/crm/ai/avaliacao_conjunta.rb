@@ -90,11 +90,16 @@ class Crm::Ai::AvaliacaoConjunta
   # O card em que está o pedido de atendente; sem pedido, o principal. A IA põe o pedido num card só; se puser em mais
   # de um, vale o principal, ou o primeiro da lista, e o resto fica no log.
   def quem_passa(ids, classificacoes)
-    pedem = ids.select { |id| Crm::Ai::HandoffIntent.requested?(classificacoes.dig(id, :handoff)) }
+    pedem = ids.select { |id| pede_pessoa?(classificacoes.dig(id, :handoff)) }
     return @principal&.id if pedem.empty? || pedem.include?(@principal&.id)
 
     Rails.logger.info("[crm][avaliacao_conjunta] pedido de atendente em mais de um card=#{pedem.join(',')}") if pedem.many?
     pedem.first
+  end
+
+  # IA entende a conversa F1: a promessa do nosso assistente (só existe no schema com a flag) também aponta o card.
+  def pede_pessoa?(handoff)
+    Crm::Ai::HandoffIntent.requested?(handoff) || Crm::Ai::FatosDaConversa.promessa?(handoff)
   end
 
   def pulado(motivo)

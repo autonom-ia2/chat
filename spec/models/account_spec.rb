@@ -254,7 +254,12 @@ RSpec.describe Account do
         # #1992: posição 51 (1 << 50), da Orquestração (21/10), logo depois de crm_metas.
         feature_crm_numeros_equipe: 1 << 50,
         # #2067: posição provisória 52 (1 << 51), logo depois de crm_numeros_equipe; a Orquestração reserva a 56 e reemite.
-        feature_ficar_com_a_conversa_ao_enviar: 1 << 51
+        feature_ficar_com_a_conversa_ao_enviar: 1 << 51,
+        # IA entende a conversa F1–F4: posições 53 a 56 (1 << 52 a 1 << 55), definitivas da Orquestração (22/10), depois do #2077.
+        feature_crm_ia_fatos_da_conversa: 1 << 52,
+        feature_crm_ia_assunto_encerrado: 1 << 53,
+        feature_crm_ia_fecha_card: 1 << 54,
+        feature_crm_ia_leitor_de_midia: 1 << 55
       }
     end
 

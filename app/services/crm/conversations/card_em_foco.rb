@@ -36,6 +36,12 @@
 # todo gatilho automático (Crm::Ai::Evaluator#pessoa_mexeu_na_etapa?).
 # Só a mensagem do cliente e a da equipe avançam last_message_at aqui; a do robô e a automática, não (no caminho do
 # CardSyncer com card na chegada, LastRealMessageAt conta toda mensagem `chat`). Diferença conhecida e aceita.
+#
+# FALA DO NOSSO ROBÔ (IA entende a conversa F1, flag `crm_ia_fatos_da_conversa`, além da `crm_avaliar_toda_mensagem`):
+# a fala pública do nosso agente de IA (opções enviadas, "vou passar para uma pessoa") também relê o card em foco, com a
+# espera da equipe e até Crm::Ai::FatosDaConversa::MAX_AVALIACOES_DO_ROBO_POR_DIA por card (Crm::Ai::Observer). Fica de
+# fora o que Crm::Ai::FatosDaConversa.fala_do_nosso_robo? não aceita (follow-up, Agendamento, robô de fora, envio que
+# falhou, agente protegido). Não conta como atividade do card: o StaleCardsJob não reavalia por causa dela.
 class Crm::Conversations::CardEmFoco
   FLAG = 'crm_avaliar_toda_mensagem'.freeze
   FLAG_DA_EQUIPE = 'crm_ia_avalia_mensagem_equipe'.freeze
@@ -53,10 +59,12 @@ class Crm::Conversations::CardEmFoco
   end
 
   def perform
-    return unless mensagem_do_cliente? || mensagem_da_equipe?
+    autor = autor_que_conta
+    return if autor.nil?
 
     card = Crm::Assunto.funil_atual(@conversation)
     return if card.nil?
+    return card.tap { Crm::Ai::Observer.new(card: card).schedule_evaluation_do_robo(ESPERA_DA_EQUIPE) } if autor == :robo
 
     agendar_avaliacao(card)
     Crm::Cards::Broadcaster.broadcast(card.reload, Events::Types::CRM_CARD_UPDATED) if registrar_atividade(card)
@@ -64,6 +72,14 @@ class Crm::Conversations::CardEmFoco
   end
 
   private
+
+  # Quem escreveu, entre os que relêem o card: :cliente, :equipe, :robo (o nosso agente de IA, F1) ou nil.
+  def autor_que_conta
+    return :cliente if mensagem_do_cliente?
+    return :equipe if mensagem_da_equipe?
+
+    :robo if fala_do_nosso_robo?
+  end
 
   def mensagem_do_cliente?
     @message&.incoming? && avaliar_toda_mensagem?
@@ -74,6 +90,12 @@ class Crm::Conversations::CardEmFoco
 
     equipe = Autonomia::Agents::Operate::PessoaDaEquipe
     (equipe.da_pessoa?(@message) || equipe.eco_do_celular?(@message)) && avaliar_toda_mensagem?
+  end
+
+  def fala_do_nosso_robo?
+    return false if @message.blank? || !Crm::Ai::FatosDaConversa.ligada?(@account)
+
+    Crm::Ai::FatosDaConversa.fala_do_nosso_robo?(@message) && avaliar_toda_mensagem?
   end
 
   def avaliar_toda_mensagem?

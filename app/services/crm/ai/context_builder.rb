@@ -131,7 +131,21 @@ module Crm
           # Quando um humano devolveu a conversa à IA depois de uma passagem (DevolucaoAIa). O que foi dito antes
           # disso já foi atendido por gente e não pede humano de novo.
           returned_to_ai_at: DevolucaoAIa.em(@card, @card.conversa_em_atendimento)&.iso8601
-        }.merge(handoff_history)
+        }.merge(handoff_history).merge(espera_do_cliente)
+      end
+
+      # IA entende a conversa F1 (flag `crm_ia_fatos_da_conversa`), só na avaliação de etapa: desde quando o cliente
+      # espera resposta (Crm::Ai::FatosDaConversa). Sem a flag, a entrada fica igual à de antes.
+      def espera_do_cliente
+        return {} unless fatos_da_ordem?
+
+        { customer_waiting_since: FatosDaConversa.cliente_espera_desde(recent_records.map { |m| [m.conversation_id, role_for(m), m.created_at] }) }
+      end
+
+      def fatos_da_ordem?
+        return @fatos_da_ordem if defined?(@fatos_da_ordem)
+
+        @fatos_da_ordem = @janela == :avaliacao && FatosDaConversa.ligada?(@card.account)
       end
 
       # As passagens recentes da conversa (#1606), em qualquer modo (convite, sem regra do funil, atribuição pela tela):
@@ -200,8 +214,10 @@ module Crm
       # conversas e o score/estágio precisa ler o histórico inteiro, não um pedaço dele.
       # Janela POR CONVERSA, não global: com um único LIMIT, uma conversa movimentada consumia a cota
       # inteira e a vinculada — que pode conter a promessa não cumprida — não chegava ao modelo.
+      # Com a flag `crm_ia_fatos_da_conversa`, na avaliação de etapa, a mensagem do cliente leva `after` (quem falou antes).
       def recent_messages
-        recent_records.map { |message| format_message(message) }
+        mensagens = recent_records.map { |message| format_message(message) }
+        fatos_da_ordem? ? FatosDaConversa.com_ordem(mensagens) : mensagens
       end
 
       def recent_records
@@ -258,75 +274,31 @@ module Crm
         attributes['forwarded'] == true && attributes['forwarded_from'].present?
       end
 
-      # Quatro papéis, não dois. "Cliente cobrou e só o bot respondeu" é urgente; "humano respondeu
-      # há 5 minutos" não é — e com role='agent' para todo mundo a IA não conseguia distinguir.
+      # Quem falou: a regra mora no Crm::Ai::PapelDaMensagem (a mesma da IA de assunto, IA entende a conversa F1).
       def role_for(message)
-        return 'customer' if message.incoming?
-        # O follow-up automático é entregue em nome do humano responsável (MessageSender usa
-        # created_by/assignee), então sem esta checagem a própria IA reaparece no transcript como
-        # "pessoa do time" e o cérebro conclui que houve pergunta humana sem resposta — foi o que
-        # fez a IA cobrar o mesmo cliente duas vezes pelo mesmo questionário.
-        # Continua sendo platform_agent, e não um quinto papel: o modelo conhece só quatro.
-        # #1601: o convite e o aviso do Agendamento também saem em nome de uma pessoa, mas é a plataforma que manda; e o
-        # que a equipe manda pelo app do celular volta como eco sem remetente (`external_echo`), e é uma pessoa do time.
-        # Efeito conhecido (o mesmo do PessoaDaEquipe): o eco da PRÓPRIA bolha da IA que o reconciliador do Híbrido não
-        # casou a tempo vira mensagem nova e aparece aqui como pessoa.
-        return 'platform_agent' if envio_da_plataforma?(message)
-        return 'human_agent' if eco_do_celular?(message)
-
-        case message.sender_type
-        when 'User' then 'human_agent'
-        when 'AgentBot' then platform_bot_ids.include?(message.sender_id) ? 'platform_agent' : 'external_agent'
-        # Saída sem sender (automação, API) cai em external_agent e não num quinto papel: o modelo só
-        # conhece quatro, e um valor fora deles o fazia adivinhar.
-        else 'external_agent'
-        end
+        Crm::Ai::PapelDaMensagem.de(message, robos: method(:platform_bot_ids))
       end
 
-      # As marcas que o Agendamento grava no convite e no aviso (Crm::BookingV2::InviteDeliverer / Notices).
-      MARCAS_DO_AGENDAMENTO = %w[crm_booking_invite_id crm_booking_notice].freeze
-
-      def envio_da_plataforma?(message)
-        atributos = message.content_attributes.to_h
-        atributos['crm_follow_up_id'].present? || MARCAS_DO_AGENDAMENTO.any? { |marca| atributos[marca].present? }
-      end
-
-      def eco_do_celular?(message)
-        message.sender_type.blank? && message.content_attributes.to_h['external_echo'].present?
-      end
-
-      # Bot da plataforma = AgentBot criado por um agente Autonom.ia (Operate::Responder posta com
-      # sender_id = agent_inbox.agent_bot_id). Qualquer outro AgentBot é integração externa.
       def platform_bot_ids
-        @platform_bot_ids ||= Autonomia::Agents::AgentInbox.where(account_id: @card.account_id).pluck(:agent_bot_id).compact.to_set
+        @platform_bot_ids ||= Crm::Ai::PapelDaMensagem.robos_da_conta(@card.account_id)
       end
 
       # Combines the text body with text extracted from media attachments
       # (audio transcription, image caption) and presence markers for media we
-      # don't process (video, document).
+      # don't process (video, document). O fragmento de cada anexo é o do Crm::Ai::TextoDaMidia; com a flag
+      # `crm_ia_leitor_de_midia` (IA entende a conversa F4), o texto do PDF lido entra também.
       def message_content(message)
         parts = []
         # #1807: e-mail recebido sem o histórico citado (com a flag); o resto, o content de sempre.
         text = email_autoria.texto(message).strip
         parts << text if text.present?
-        message.attachments.each { |attachment| parts << media_fragment(attachment) }
+        message.attachments.each { |attachment| parts << Crm::Ai::TextoDaMidia.fragmento(attachment, pdf: le_pdf?) }
         parts.compact_blank.join("\n").presence || '[mensagem sem texto]'
       end
 
-      def media_fragment(attachment)
-        meta = attachment.meta.to_h
-        case attachment.file_type.to_s
-        when 'audio'
-          transcript = meta['transcribed_text'].to_s.strip
-          transcript.present? ? "[áudio transcrito]: #{transcript.truncate(Config::TRANSCRIPT_MAX_CHARS)}" : '[áudio recebido, não transcrito]'
-        when 'image'
-          caption = meta['ai_caption'].to_s.strip
-          caption.present? ? "[imagem]: #{caption.truncate(Config::CAPTION_MAX_CHARS)}" : '[imagem recebida]'
-        when 'video'
-          '[vídeo recebido]'
-        when 'file'
-          '[documento recebido]'
-        end
+      def le_pdf?
+        @le_pdf = Crm::Ai::LeitorDeMidia.ligada?(@card.account) unless defined?(@le_pdf)
+        @le_pdf
       end
     end
   end

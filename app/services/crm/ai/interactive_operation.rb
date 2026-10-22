@@ -255,10 +255,11 @@ class Crm::Ai::InteractiveOperation # rubocop:disable Metrics/ClassLength
   end
 
   def suggestion_payload(suggestion)
-    return if suggestion.blank?
+    return if suggestion.blank? || suggestion.fechar_desligado?
 
     { id: suggestion.id, from_stage_id: suggestion.from_stage_id, to_stage_id: suggestion.to_stage_id,
       to_stage_name: suggestion.to_stage&.name, confidence: suggestion.confidence.to_f,
       reasoning: suggestion.reasoning, status: suggestion.status, created_at: suggestion.created_at }
+      .merge(suggestion.fechar ? { fechar: suggestion.fechar } : {})
   end
 end

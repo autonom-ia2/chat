@@ -606,6 +606,13 @@ pt_BR:
   automation:
     system_name: 'Sistema de Automação'
   crm:
+    # IA entende a conversa F3: o motivo que a IA grava ao marcar Perdido (lost_reason) e o título do retorno do "adiou".
+    ai_fechar_card:
+      motivos:
+        adiou: 'Adiou'
+        recusou: 'Recusou'
+        fechou_com_outra: 'Fechou com outra empresa'
+      retorno: 'Retomar o contato: o cliente adiou'
     # #1498: título dos lembretes de Atender (aparecem na agenda do card).
     service_reminders:
       progress: 'Avisar o andamento'
