@@ -394,13 +394,17 @@ const balaoDoWhatsapp = computed(() =>
   pele.value ? balaoDaPele(props) : null
 );
 // #2079: na conversa do Instagram com a cara do Direct, a linha inteira é a do app.
-// Tipo sem balão do Direct (arquivo, não suportada) segue no balão de sempre.
+// Tipo sem balão do Direct (arquivo, não suportada) segue no balão de sempre, e a
+// mensagem que falhou também: lá fica o erro e o "Tentar de novo".
 const instagram = useInstagramDaConversa();
 const linhaDoInstagram = computed(
   () =>
     instagram.ligado.value &&
     !props.private &&
-    variant.value !== MESSAGE_VARIANTS.ACTIVITY &&
+    ![MESSAGE_VARIANTS.ACTIVITY, MESSAGE_VARIANTS.ERROR].includes(
+      variant.value
+    ) &&
+    !props.contentAttributes?.externalError &&
     balaoDoInstagram(props) !== null
 );
 // #1702: a citação levou até aqui: a linha pisca por um instante (só com a pele).

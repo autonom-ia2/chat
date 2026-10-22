@@ -48,9 +48,10 @@ export const sequenciaDoInstagram = lista => {
 };
 
 // O "Visto" fica embaixo da última mensagem nossa, quando ela é também a última
-// mensagem da conversa e o cliente já leu (o Instagram não tem "entregue").
+// mensagem trocada com o cliente (atividade e nota privada não contam) e o cliente já
+// leu (o Instagram não tem "entregue").
 export const vistoDaConversa = lista => {
-  const ultima = lista.at(-1);
+  const ultima = lista.findLast(mensagem => ladoDaMensagem(mensagem) !== null);
   if (!ultima || ladoDaMensagem(ultima) !== LADOS.DIREITA) return null;
   return ultima.status === 'read' ? ultima.id : null;
 };

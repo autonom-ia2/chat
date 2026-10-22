@@ -1,9 +1,10 @@
 <script setup>
 // Fotos e vídeos mandados juntos (#2079): grade de 3 colunas de 125 px, como no Direct
 // (no celular estreito, encolhe junto). Só os cantos de fora do bloco ficam redondos; o resto, 4 px.
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ATTACHMENT_TYPES } from 'dashboard/components-next/message/constants';
+import { INDISPONIVEL } from './visualInstagram';
 
 const props = defineProps({
   anexos: { type: Array, required: true },
@@ -12,6 +13,11 @@ const props = defineProps({
 
 const { t } = useI18n();
 const COLUNAS = 3;
+// Endereço da Meta expirado: o quadrado mostra o aviso no lugar da mídia.
+const quebrados = ref(new Set());
+const quebrou = anexo => {
+  quebrados.value = new Set([...quebrados.value, anexo.id]);
+};
 const linhas = computed(() => Math.ceil(props.anexos.length / COLUNAS));
 const ehVideo = anexo => anexo.fileType === ATTACHMENT_TYPES.VIDEO;
 
@@ -54,17 +60,33 @@ const cantosDoQuadrado = indice => {
       class="relative block aspect-square w-full overflow-hidden"
       :style="cantosDoQuadrado(indice)"
     >
+      <span
+        v-if="quebrados.has(anexo.id)"
+        :class="INDISPONIVEL"
+        class="size-full"
+        role="img"
+        :aria-label="t('CONVERSA_CANAL.INSTAGRAM.MIDIA_INDISPONIVEL')"
+      >
+        <span class="i-ph-image-broken size-5" />
+      </span>
       <video
-        v-if="ehVideo(anexo)"
+        v-else-if="ehVideo(anexo)"
         :src="anexo.dataUrl"
         preload="metadata"
         muted
         playsinline
         class="size-full object-cover"
+        @error="quebrou(anexo)"
       />
-      <img v-else :src="anexo.dataUrl" alt="" class="size-full object-cover" />
+      <img
+        v-else
+        :src="anexo.dataUrl"
+        alt=""
+        class="size-full object-cover"
+        @error="quebrou(anexo)"
+      />
       <span
-        v-if="ehVideo(anexo)"
+        v-if="ehVideo(anexo) && !quebrados.has(anexo.id)"
         class="absolute inset-0 flex items-center justify-center pointer-events-none"
       >
         <span class="i-ph-play-fill size-8 text-white drop-shadow" />

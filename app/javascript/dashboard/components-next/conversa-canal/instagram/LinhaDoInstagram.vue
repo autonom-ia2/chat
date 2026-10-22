@@ -6,6 +6,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'next/avatar/Avatar.vue';
 import { useMessageContext } from 'dashboard/components-next/message/provider.js';
+import { ATTACHMENT_TYPES as A } from 'dashboard/components-next/message/constants';
 import {
   useInstagramDaConversa,
   useSequenciaDoInstagram,
@@ -50,11 +51,33 @@ const tipo = computed(() => balaoDoInstagram(dados.value));
 const anexos = computed(() => dados.value.attachments);
 const texto = computed(() => (dados.value.content || '').trim());
 // O texto que vai junto da mídia (legenda, resposta ao story) vira um balão embaixo.
+// Na menção em story e no story compartilhado o texto é do sistema ("mencionou você"),
+// e o rótulo em cima já diz isso: fica de fora.
+const STORY_SEM_TEXTO_DO_CLIENTE = [A.STORY_MENTION, A.IG_STORY];
 const textoJunto = computed(
   () =>
     Boolean(texto.value) &&
-    ![BALOES.TEXTO, BALOES.APAGADA, BALOES.POST].includes(tipo.value)
+    ![BALOES.TEXTO, BALOES.APAGADA, BALOES.POST].includes(tipo.value) &&
+    !STORY_SEM_TEXTO_DO_CLIENTE.includes(
+      dados.value.contentAttributes.imageType
+    )
 );
+
+// "Mais opções" pelo teclado não traz posição de mouse: o menu abre no botão.
+const abrirMenu = evento => {
+  if (evento.detail !== 0) {
+    emit('menu', evento);
+    return;
+  }
+  const { left, bottom } = evento.currentTarget.getBoundingClientRect();
+  emit('menu', {
+    type: evento.type,
+    target: evento.currentTarget,
+    pageX: left,
+    pageY: bottom,
+    preventDefault: () => evento.preventDefault(),
+  });
+};
 const fotoDoContato = computed(
   () => !enviada.value && !posicao.value.comProxima
 );
@@ -96,6 +119,7 @@ const textoCitado = computed(() => {
     <div
       class="flex min-w-0 flex-col gap-0.5"
       :class="enviada ? 'items-end' : 'items-start'"
+      @contextmenu="emit('menu', $event)"
     >
       <template v-if="citada">
         <span :class="ROTULO" class="mt-1">{{ rotuloDaCitacao }}</span>
@@ -169,7 +193,7 @@ const textoCitado = computed(() => {
         type="button"
         class="flex size-6 shrink-0 items-center justify-center p-0"
         :aria-label="t('CONVERSA_CANAL.INSTAGRAM.MAIS_OPCOES')"
-        @click="emit('menu', $event)"
+        @click="abrirMenu"
       >
         <span class="i-ph-dots-three-vertical-bold size-4" />
       </button>

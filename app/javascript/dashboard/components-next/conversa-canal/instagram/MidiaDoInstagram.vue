@@ -1,9 +1,10 @@
 <script setup>
 // Foto, vídeo, reel e figurinha do Direct (#2079): sem balão, com os cantos do grupo.
 // O reel leva o ícone "Clipe"; o vídeo, o ▶ no meio; a figurinha fica solta, 157 px.
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ATTACHMENT_TYPES } from 'dashboard/components-next/message/constants';
+import { INDISPONIVEL } from './visualInstagram';
 
 const props = defineProps({
   anexo: { type: Object, required: true },
@@ -12,6 +13,8 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+// O endereço da Meta expira: no lugar da mídia quebrada, "Mídia indisponível".
+const quebrou = ref(false);
 const ehVideo = computed(() =>
   [ATTACHMENT_TYPES.VIDEO, ATTACHMENT_TYPES.IG_REEL].includes(
     props.anexo.fileType
@@ -35,7 +38,18 @@ const tamanho = computed(() => {
 </script>
 
 <template>
+  <div
+    v-if="quebrou"
+    :class="[INDISPONIVEL, figurinha ? 'size-[157px]' : 'w-[236px] h-[160px]']"
+    :style="figurinha ? {} : cantos"
+    role="img"
+    :aria-label="t('CONVERSA_CANAL.INSTAGRAM.MIDIA_INDISPONIVEL')"
+  >
+    <span class="i-ph-image-broken size-4 shrink-0" />
+    {{ t('CONVERSA_CANAL.INSTAGRAM.MIDIA_INDISPONIVEL') }}
+  </div>
   <a
+    v-else
     :href="anexo.dataUrl"
     target="_blank"
     rel="noopener noreferrer"
@@ -52,6 +66,7 @@ const tamanho = computed(() => {
       playsinline
       class="block object-cover"
       :class="ehReel ? 'size-full' : 'max-w-[236px] max-h-[340px]'"
+      @error="quebrou = true"
     />
     <img
       v-else
@@ -63,6 +78,7 @@ const tamanho = computed(() => {
           ? 'size-full object-contain'
           : 'max-w-[236px] max-h-[340px] object-cover'
       "
+      @error="quebrou = true"
     />
     <span
       v-if="ehVideo && !ehReel"

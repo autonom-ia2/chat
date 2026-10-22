@@ -85,4 +85,22 @@ describe('balaoDoInstagram', () => {
     ).toBeNull();
     expect(balaoDoInstagram({ content: '', attachments: [] })).toBeNull();
   });
+
+  it('pesquisa de satisfação, opções e formulário de robô e chamada de vídeo ficam no balão próprio', () => {
+    ['input_csat', 'input_select', 'form'].forEach(contentType => {
+      expect(
+        balaoDoInstagram({ content: 'Avalie', contentType, attachments: [] })
+      ).toBeNull();
+    });
+    expect(
+      balaoDoInstagram({
+        content: 'Chamada',
+        contentAttributes: { type: 'dyte' },
+        attachments: [],
+      })
+    ).toBeNull();
+    expect(
+      balaoDoInstagram({ content: 'Oi', contentType: 'text', attachments: [] })
+    ).toBe(BALOES.TEXTO);
+  });
 });

@@ -45,7 +45,7 @@
     "JANELA": {
       "PREVIA": "What the customer will see",
       "CANCELAR": "Cancel",
-      "VER_TRANSCRICAO": "See transcription",
+      "ENVIAR": "Send",
       "ERROS": {
         "mensagem": "Write the message.",
         "nomeDoBotao": "Write the button name.",
@@ -396,7 +396,7 @@
       "RECENTES": "Recent chats",
       "NADA": "No conversations found",
       "CARREGANDO": "Loading conversations…",
-      "VER_TRANSCRICAO": "See transcription",
+      "ENVIAR": "Send",
       "LIMITE_DESTINOS": "You can forward to up to {limite} conversations at a time.",
       "LIMITE_MENSAGENS": "You can forward up to {limite} messages at a time.",
       "ENVIADO": "Message forwarded | Messages forwarded",
@@ -455,7 +455,7 @@
       "DESCARTAR": "Discard",
       "CONFIRMAR_DESCARTE": "Delete the draft?",
       "SALVAR_NOTA": "Save note",
-      "VER_TRANSCRICAO": "See transcription",
+      "ENVIAR": "Send",
       "ENVIAR_PARA": "Send to {nome}",
       "VAI_ENCAMINHADA": "Goes along, formatted: the message from {nome}",
       "HISTORICO_VAI": "The conversation history goes along (last email from {nome})",
@@ -678,7 +678,8 @@
       "PAUSAR": "Pause",
       "MENSAGEM_VAZIA": "Message",
       "CAMPO": "Message...",
-      "VER_TRANSCRICAO": "See transcription"
+      "VER_TRANSCRICAO": "See transcription",
+      "MIDIA_INDISPONIVEL": "Media unavailable"
     }
   }
 }

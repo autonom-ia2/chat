@@ -337,8 +337,11 @@ export default {
   },
   methods: {
     // #1895: o ReplyBox ancora a janela de emojis na barra que tem o botão do rosto.
+    // #2079: no Instagram essa barra não tem caixa própria (display: contents); a âncora
+    // é a pílula inteira.
     barraDosEmojis() {
-      return this.$refs.barraDaEsquerda;
+      const barra = this.$refs.barraDaEsquerda;
+      return this.ehInstagram ? barra?.closest('.reply-box') || barra : barra;
     },
     toggleMessageSignature() {
       this.setSignatureFlagForInbox(this.channelType, !this.sendWithSignature);

@@ -17,6 +17,8 @@ const props = defineProps({
 const { t } = useI18n();
 const anexo = computed(() => props.mensagem.attachments?.[0] || null);
 const quebrou = ref(false);
+// Story em vídeo também chega como ig_story: a foto falhou, tenta o vídeo antes de desistir.
+const tentarVideo = ref(false);
 const ehVideo = computed(
   () => anexo.value?.fileType === ATTACHMENT_TYPES.VIDEO
 );
@@ -60,7 +62,7 @@ const rotuloDoStory = computed(() => {
         class="block w-[158px] h-[237px] overflow-hidden rounded-[18px]"
       >
         <video
-          v-if="ehVideo"
+          v-if="ehVideo || tentarVideo"
           :src="anexo.dataUrl"
           preload="metadata"
           muted
@@ -73,7 +75,7 @@ const rotuloDoStory = computed(() => {
           :src="anexo.dataUrl"
           alt=""
           class="size-full object-cover"
-          @error="quebrou = true"
+          @error="tentarVideo = true"
         />
       </a>
       <span v-else :class="ROTULO" class="py-1">

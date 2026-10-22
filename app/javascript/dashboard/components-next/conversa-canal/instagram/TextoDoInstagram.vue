@@ -1,6 +1,8 @@
 <script setup>
-// Balão de texto do Direct (#2079): 15 px, 8×12 de respiro, cantos do grupo.
+// Balão de texto do Direct (#2079): 15 px, 8×12 de respiro, cantos do grupo. O texto
+// passa pelo mesmo formatador do balão de sempre (link clicável, sem HTML do cliente).
 import { computed } from 'vue';
+import MessageFormatter from 'shared/helpers/MessageFormatter.js';
 import { BALAO_DE_TEXTO, ENVIADO, RECEBIDO } from './visualInstagram';
 
 const props = defineProps({
@@ -10,10 +12,17 @@ const props = defineProps({
 });
 
 const cor = computed(() => (props.enviada ? ENVIADO : RECEBIDO));
+const formatado = computed(
+  () => new MessageFormatter(props.texto).formattedMessage
+);
 </script>
 
 <template>
-  <div :class="[BALAO_DE_TEXTO, cor]" :style="cantos" dir="auto">
-    {{ texto }}
-  </div>
+  <div
+    v-dompurify-html="formatado"
+    class="!whitespace-normal [&_p]:m-0 [&_a]:underline [&_a]:!text-[inherit]"
+    :class="[BALAO_DE_TEXTO, cor]"
+    :style="cantos"
+    dir="auto"
+  />
 </template>

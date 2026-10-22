@@ -20,6 +20,9 @@ export const ELEVADO = 'bg-[#F3F5F7] dark:bg-[#262626]';
 export const BARRA_DE_CITACAO =
   'w-1 shrink-0 rounded-sm bg-[#F3F5F7] dark:bg-[#262626]';
 
+// No lugar da foto ou do vídeo cujo endereço da Meta já expirou.
+export const INDISPONIVEL = `flex items-center justify-center gap-1.5 px-3 text-center text-[13px] leading-4 ${ELEVADO} ${SECUNDARIO}`;
+
 // Rótulos pequenos: horário entre as mensagens, "Visto", "Mencionou você no story".
 export const ROTULO = `text-xs leading-4 ${SECUNDARIO}`;
 export const HORARIO = `text-xs leading-4 font-light ${SECUNDARIO}`;

@@ -45,7 +45,7 @@
     "JANELA": {
       "PREVIA": "Como o cliente vai ver",
       "CANCELAR": "Cancelar",
-      "VER_TRANSCRICAO": "Ver transcrição",
+      "ENVIAR": "Enviar",
       "ERROS": {
         "mensagem": "Escreva a mensagem.",
         "nomeDoBotao": "Escreva o nome do botão.",
@@ -396,7 +396,7 @@
       "RECENTES": "Conversas recentes",
       "NADA": "Nenhuma conversa encontrada",
       "CARREGANDO": "Carregando conversas…",
-      "VER_TRANSCRICAO": "Ver transcrição",
+      "ENVIAR": "Enviar",
       "LIMITE_DESTINOS": "Dá para encaminhar para até {limite} conversas de uma vez.",
       "LIMITE_MENSAGENS": "Dá para encaminhar até {limite} mensagens de uma vez.",
       "ENVIADO": "Mensagem encaminhada | Mensagens encaminhadas",
@@ -455,7 +455,7 @@
       "DESCARTAR": "Descartar",
       "CONFIRMAR_DESCARTE": "Apagar o rascunho?",
       "SALVAR_NOTA": "Salvar nota",
-      "VER_TRANSCRICAO": "Ver transcrição",
+      "ENVIAR": "Enviar",
       "ENVIAR_PARA": "Enviar para {nome}",
       "VAI_ENCAMINHADA": "Vai junto, formatada: a mensagem de {nome}",
       "HISTORICO_VAI": "O histórico da conversa vai junto (último e-mail de {nome})",
@@ -678,7 +678,8 @@
       "PAUSAR": "Pausar",
       "MENSAGEM_VAZIA": "Mensagem",
       "CAMPO": "Mensagem...",
-      "VER_TRANSCRICAO": "Ver transcrição"
+      "VER_TRANSCRICAO": "Ver transcrição",
+      "MIDIA_INDISPONIVEL": "Mídia indisponível"
     }
   }
 }

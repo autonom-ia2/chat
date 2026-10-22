@@ -1,7 +1,10 @@
 // Qual balão do Instagram Direct desenha cada mensagem (#2079), só com o que já chega
 // gravado: anexos, `image_type` das mensagens compartilhadas e a marca de apagada.
 // Devolve null quando o caso não tem balão próprio: a mensagem segue no balão de sempre.
-import { ATTACHMENT_TYPES as A } from 'dashboard/components-next/message/constants';
+import {
+  ATTACHMENT_TYPES as A,
+  CONTENT_TYPES,
+} from 'dashboard/components-next/message/constants';
 
 export const BALOES = {
   TEXTO: 'texto',
@@ -39,6 +42,11 @@ const ehFigurinha = anexo => {
 
 export const balaoDoInstagram = mensagem => {
   const atributos = mensagem.contentAttributes || {};
+  // Pesquisa de satisfação, opções e formulário de robô, chamada de vídeo: balão próprio de sempre.
+  if (mensagem.contentType && mensagem.contentType !== CONTENT_TYPES.TEXT) {
+    return null;
+  }
+  if (atributos.type === 'dyte') return null;
   if (atributos.deleted) return BALOES.APAGADA;
   if (atributos.isUnsupported) return null;
   const compartilhado = COMPARTILHADOS[atributos.imageType];

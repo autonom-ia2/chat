@@ -114,6 +114,17 @@ describe('vistoDaConversa', () => {
     expect(vistoDaConversa([msg(2, NOSSA, 2, { status: 'sent' })])).toBeNull();
     expect(vistoDaConversa([])).toBeNull();
   });
+
+  it('atividade e nota privada depois da última nossa não tiram o Visto', () => {
+    expect(
+      vistoDaConversa([
+        msg(1, RECEBIDA, 1),
+        msg(2, NOSSA, 2, { status: 'read' }),
+        msg(3, 2, 3),
+        msg(4, NOSSA, 4, { private: true }),
+      ])
+    ).toBe(2);
+  });
 });
 
 describe('horarioDoInstagram', () => {
