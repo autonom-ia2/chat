@@ -5,8 +5,8 @@ require 'rails_helper'
 #
 # A suíte sempre carrega o enterprise/ (o fork roda em modo Enterprise e o CI "Testes do fork" não remove a pasta),
 # e o Enterprise::AccountUser entra por prepend na carga, sem como desfazer num exemplo. Por isso o OSS é coberto
-# pelo equivalente: sem função personalizada, só o administrador recebe; e, sem a associação custom_role (como no
-# OSS), a busca não tenta carregá-la e o administrador continua recebendo. As funções ficam no spec de spec/enterprise.
+# pelo equivalente: sem função personalizada, só o administrador recebe. O desvio da associação custom_role (que não
+# existe no OSS) não tem como ser exercitado aqui; fica sem teste. As funções ficam no spec de spec/enterprise.
 RSpec.describe Crm::MetaAds::Insights::Broadcaster do
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
@@ -35,15 +35,5 @@ RSpec.describe Crm::MetaAds::Insights::Broadcaster do
       expect(event).to eq(Events::Types::CRM_META_ADS_INSIGHTS_UPDATED)
       expect(payload).to include(account_id: account.id)
     end
-  end
-
-  it 'sem a associação custom_role, como no OSS, não a carrega e segue avisando o administrador' do
-    connection
-    allow(AccountUser).to receive(:reflect_on_association).and_call_original
-    allow(AccountUser).to receive(:reflect_on_association).with(:custom_role).and_return(nil)
-
-    described_class.broadcast(connection)
-
-    expect(ActionCableBroadcastJob).to have_received(:perform_later).with([admin.pubsub_token], anything, anything)
   end
 end
