@@ -100,6 +100,8 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   let decisaoDoEnvio = null;
   // O servidor respondeu que não deu para ficar com a conversa (trava ocupada, outro dono).
   let naoDeuFicar = false;
+  // #2067: partes já mandadas neste envio (só a 1ª pede para ficar).
+  let partesDoEnvio = 0;
   const tipo = computed(
     () => (destino.value && continuar.tipo.value) || tipoDeMensagem(canal.value)
   );
@@ -270,9 +272,10 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
         conversationId: id,
         private: false,
         ...dados,
-        ...camposDoEnvio(decisaoDoEnvio),
+        ...camposDoEnvio(decisaoDoEnvio, { parte: partesDoEnvio }),
       })
     );
+    partesDoEnvio += 1;
     if (data?.ficar_com_a_conversa_nao_deu) naoDeuFicar = true;
     return data;
   };
@@ -311,6 +314,7 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
     // caixa). As partes leem esta mesma (responderEm).
     decisaoDoEnvio = destino.value ? ficar.decidir() : null;
     naoDeuFicar = false;
+    partesDoEnvio = 0;
     const retrato = retratoDoEnvio(texto);
     try {
       const onde = await mandar();

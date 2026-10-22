@@ -182,6 +182,7 @@
       "DEVOLVIDA": "Conversation handed back to {nome}",
       "FALHOU": "Could not hand the conversation back. Try again.",
       "VEIO_DE": "This conversation came from {nome}",
+      "VEIO_DA_IA": "This conversation came from the AI",
       "A_IA": "the AI",
       "RECUSA": {
         "NAO_ATENDE_CLIENTE": "{nome} is paused right now. The conversation stays with you.",

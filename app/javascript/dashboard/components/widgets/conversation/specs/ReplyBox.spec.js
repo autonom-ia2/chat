@@ -737,7 +737,8 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
     });
   });
 
-  it('dois anexos: duas mensagens com a mesma decisão', () => {
+  // Pega o aviso falso "Não deu para ficar" nas partes seguintes (a 1ª já ficou).
+  it('dois anexos: duas mensagens, só a 1ª pede para ficar', () => {
     const { wrapper, store } = montar({ assignee: ANA, assignee_type: 'User' });
     const dispatch = espiar(store);
     wrapper.vm.ficar.alternar();
@@ -752,8 +753,137 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
     expect(envios(dispatch)).toHaveLength(2);
     expect(envios(dispatch).map(p => p.ficarComAConversa)).toEqual([
       true,
-      true,
+      false,
     ]);
+  });
+
+  // Pega o envio que passou a esperar o servidor para rolar, avisar, limpar o rascunho e medir
+  // (vale para todas as contas, inclusive com a flag desligada).
+  describe('ordem do envio igual à main', () => {
+    const ouvir = async () => {
+      const { emitter } = await import('shared/helpers/mitt');
+      const { BUS_EVENTS } = await import('shared/constants/busEvents');
+      const ouvidos = [];
+      const enviados = () => ouvidos.push('MESSAGE_SENT');
+      const toasts = () => ouvidos.push('toast');
+      emitter.on(BUS_EVENTS.MESSAGE_SENT, enviados);
+      emitter.on('newToastMessage', toasts);
+      return {
+        ouvidos,
+        parar: () => {
+          emitter.off(BUS_EVENTS.MESSAGE_SENT, enviados);
+          emitter.off('newToastMessage', toasts);
+        },
+      };
+    };
+    const servidorParado = () => {
+      const servidor = {};
+      servidor.promessa = new Promise((resolve, reject) => {
+        Object.assign(servidor, { resolve, reject });
+      });
+      return servidor;
+    };
+
+    it.each([
+      ['desligada', false],
+      ['ligada', true],
+    ])(
+      'flag %s: avisa e apaga o rascunho antes da resposta do servidor',
+      async (_n, ligada) => {
+        const { wrapper, store } = montar({}, { ligada });
+        const servidor = servidorParado();
+        const dispatch = espiar(store, nome =>
+          nome === 'createPendingMessageAndSend'
+            ? servidor.promessa
+            : Promise.resolve({})
+        );
+        const escuta = await ouvir();
+
+        const envio = wrapper.vm.sendMessage({
+          conversationId: 1,
+          message: 'Oi',
+        });
+        expect(escuta.ouvidos).toEqual(['MESSAGE_SENT']);
+        const nomes = dispatch.mock.calls.map(([nome]) => nome);
+        expect(nomes.indexOf('draftMessages/delete')).toBeGreaterThan(
+          nomes.indexOf('createPendingMessageAndSend')
+        );
+        expect(dispatch).toHaveBeenCalledWith('draftMessages/delete', {
+          key: 'draft-1-REPLY',
+        });
+
+        servidor.resolve({});
+        await envio;
+        escuta.parar();
+      }
+    );
+
+    it('flag desligada: a recusa do servidor não vira aviso (como na main)', async () => {
+      const { wrapper, store } = montar({}, { ligada: false });
+      espiar(store, nome =>
+        nome === 'createPendingMessageAndSend'
+          ? Promise.reject(new Error('x'))
+          : Promise.resolve({})
+      );
+      const escuta = await ouvir();
+
+      const resultado = await wrapper.vm.sendMessage({
+        conversationId: 1,
+        message: 'Oi',
+      });
+      await esperar();
+      escuta.parar();
+
+      expect(resultado).toEqual({ ok: false });
+      expect(escuta.ouvidos).toEqual(['MESSAGE_SENT']);
+    });
+
+    it('flag ligada: a recusa do servidor avisa', async () => {
+      const { wrapper, store } = montar({});
+      espiar(store, nome =>
+        nome === 'createPendingMessageAndSend'
+          ? Promise.reject(new Error('x'))
+          : Promise.resolve({})
+      );
+      const escuta = await ouvir();
+
+      await wrapper.vm.sendMessage({ conversationId: 1, message: 'Oi' });
+      await esperar();
+      escuta.parar();
+
+      expect(escuta.ouvidos).toEqual(['MESSAGE_SENT', 'toast']);
+    });
+
+    // Pega o rascunho de outra conversa apagado quando a resposta chega depois da troca.
+    it('trocar de conversa durante um envio lento não apaga o rascunho da outra', async () => {
+      const { wrapper, store } = montar({});
+      const servidor = servidorParado();
+      const dispatch = espiar(store, nome =>
+        nome === 'createPendingMessageAndSend'
+          ? servidor.promessa
+          : Promise.resolve({})
+      );
+
+      const envio = wrapper.vm.sendMessage({
+        conversationId: 1,
+        message: 'Oi',
+      });
+      store.commit('selectChat', { ...REPLIABLE, id: 2 });
+      store.commit('setDraft', {
+        key: 'draft-2-REPLY',
+        message: 'rascunho da 2',
+      });
+      await nextTick();
+      servidor.resolve({});
+      await envio;
+      await esperar();
+
+      const apagados = dispatch.mock.calls
+        .filter(([nome]) => nome === 'draftMessages/delete')
+        .map(([, { key }]) => key);
+      expect(apagados).not.toContain('draft-2-REPLY');
+      expect(store.state.drafts['draft-2-REPLY']).toBe('rascunho da 2');
+    });
   });
 
   // Pega a escolha perdida quando o envio falha (a promessa do envio não voltava).

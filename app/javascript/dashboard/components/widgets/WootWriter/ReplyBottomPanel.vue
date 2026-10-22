@@ -113,6 +113,11 @@ export default {
       type: Object,
       default: null,
     },
+    // #2067: a flag da conta; desligada, a barra fica como na main.
+    ficarNaConta: {
+      type: Boolean,
+      default: false,
+    },
     isOnPrivateNote: {
       type: Boolean,
       default: false,
@@ -482,7 +487,7 @@ export default {
         @click="toggleInsertArticle"
       />
     </div>
-    <div class="right-wrap items-center gap-1">
+    <div class="right-wrap" :class="{ 'items-center gap-1': ficarNaConta }">
       <BotoesDoEmail v-if="emailNovo" parte="direita" />
       <FicarComAConversa v-if="ficar" :ficar="ficar" />
       <button

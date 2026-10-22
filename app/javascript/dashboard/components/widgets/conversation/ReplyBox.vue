@@ -1120,12 +1120,13 @@ export default {
       decisao = null
     ) {
       const messages = this.getMultipleMessagesPayload(message);
-      return messages.map(messagePayload =>
+      return messages.map((messagePayload, parte) =>
         this.sendMessage(
           messagePayload,
           messagePayload.message || '',
           copilotAcceptedMessage,
-          decisao
+          decisao,
+          parte
         )
       );
     },
@@ -1199,46 +1200,67 @@ export default {
         this.confirmOnSendReply();
       }
     },
-    // `decisao` (#2067): a de "ficar com a conversa" do envio de que esta mensagem é parte.
-    // Sem ela (modelo, mensagem pronta), o envio decide sozinho. Devolve { ok, data }.
+    // `decisao` (#2067): a de "ficar com a conversa" do envio de que esta mensagem é parte
+    // (`parte`: só a 1ª pede para ficar). Sem ela (modelo, mensagem pronta), o envio decide
+    // sozinho. Devolve { ok, data }.
     async sendMessage(
       messagePayload,
       editorMessage = '',
       copilotAcceptedMessage = '',
-      decisao = undefined
+      decisao = undefined,
+      parte = 0
     ) {
       const sozinho = decisao === undefined;
       const daqui = sozinho
         ? this.ficar.decidir({ privada: messagePayload.private })
         : decisao;
       const envio = this.enviarParte(
-        { ...messagePayload, ...camposDoEnvio(daqui) },
+        { ...messagePayload, ...camposDoEnvio(daqui, { parte }) },
         editorMessage,
         copilotAcceptedMessage
       );
       if (sozinho) this.depoisDoEnvio(daqui, [envio]);
       return envio;
     },
+    // Como na main: dispara o envio e, na hora (sem esperar o servidor), rola, avisa que a
+    // mensagem saiu, apaga o rascunho desta conversa (chave tirada antes: trocar de conversa
+    // durante um envio lento não apaga o rascunho de outra) e manda a métrica. Só depois
+    // espera a resposta, para o #2067 saber se saiu ({ ok, data }). A falha do servidor só
+    // vira aviso com a flag ligada; desligada, fica como na main (a bolha mostra a falha).
     async enviarParte(messagePayload, editorMessage, copilotAcceptedMessage) {
+      const chaveDoRascunho = this.conversationIdByRoute
+        ? this.getDraftKey()
+        : null;
+      let envio;
       try {
-        const data = await this.$store.dispatch(
+        envio = this.$store.dispatch(
           'createPendingMessageAndSend',
           this.setCrmSubjectInPayload(messagePayload)
         );
-        emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
-        emitter.emit(BUS_EVENTS.MESSAGE_SENT);
-        this.removeFromDraft();
-        this.sendMessageAnalyticsData(messagePayload.private, {
-          editorMessage,
-          copilotAcceptedMessage,
-        });
-        return { ok: true, data };
       } catch (error) {
-        const errorMessage =
-          error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR');
-        useAlert(errorMessage);
+        this.avisarFalhaDoEnvio(error);
         return { ok: false };
       }
+      emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
+      emitter.emit(BUS_EVENTS.MESSAGE_SENT);
+      if (chaveDoRascunho) {
+        this.$store.dispatch('draftMessages/delete', { key: chaveDoRascunho });
+      }
+      this.sendMessageAnalyticsData(messagePayload.private, {
+        editorMessage,
+        copilotAcceptedMessage,
+      });
+      try {
+        return { ok: true, data: await envio };
+      } catch (error) {
+        if (this.ficarLigadoNaConta) this.avisarFalhaDoEnvio(error);
+        return { ok: false };
+      }
+    },
+    avisarFalhaDoEnvio(error) {
+      useAlert(
+        error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR')
+      );
     },
     // #2067: depois de todas as partes de um envio. Alguma não saiu: a escolha do ícone
     // volta. Pediu para ficar e o servidor não conseguiu: avisa. Ficou: a tela mostra o
@@ -2175,6 +2197,7 @@ export default {
         :enviar-rico="onSendRichMessage"
         :campo-vazio="!hasMeaningfulEditorContent && !hasAttachments"
         :ficar="mostrarFicarComAConversa ? ficar : null"
+        :ficar-na-conta="ficarLigadoNaConta"
         @select-whatsapp-template="openWhatsappTemplateModal"
         @select-content-template="openContentTemplateModal"
         @toggle-insert-article="toggleInsertArticle"

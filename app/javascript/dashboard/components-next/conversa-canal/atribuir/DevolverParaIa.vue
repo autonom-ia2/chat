@@ -44,6 +44,12 @@ const ia = computed(() => props.conversation?.meta?.veio_da_ia || null);
 const nome = computed(
   () => ia.value?.name || t('CONVERSA_CANAL.DEVOLVER.A_IA')
 );
+// Sem nome: "Esta conversa veio da IA" (e não "veio de a IA").
+const veioDe = computed(() =>
+  ia.value?.name
+    ? t('CONVERSA_CANAL.DEVOLVER.VEIO_DE', { nome: ia.value.name })
+    : t('CONVERSA_CANAL.DEVOLVER.VEIO_DA_IA')
+);
 const visivel = computed(() => {
   const meta = props.conversation?.meta;
   return (
@@ -119,7 +125,7 @@ const devolver = async () => {
       class="i-lucide-sparkles size-3.5 flex-shrink-0 text-n-iris-11"
       aria-hidden="true"
     />
-    <span>{{ t('CONVERSA_CANAL.DEVOLVER.VEIO_DE', { nome }) }}</span>
+    <span>{{ veioDe }}</span>
     <button
       v-tooltip.top="t('CONVERSA_CANAL.DEVOLVER.DICA', { nome })"
       type="button"

@@ -182,6 +182,7 @@
       "DEVOLVIDA": "Conversa devolvida para {nome}",
       "FALHOU": "Não deu para devolver a conversa. Tente de novo.",
       "VEIO_DE": "Esta conversa veio de {nome}",
+      "VEIO_DA_IA": "Esta conversa veio da IA",
       "A_IA": "a IA",
       "RECUSA": {
         "NAO_ATENDE_CLIENTE": "{nome} está com o atendimento parado agora. A conversa continua com você.",

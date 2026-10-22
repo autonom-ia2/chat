@@ -30,11 +30,13 @@ export const donoVisto = conversa => {
   return { tipo: 'pessoa', id: conversa.meta.assignee.id };
 };
 
-// Identifica o dono para a escolha guardada: mudou o dono, a escolha volta ao padrão.
-export const chaveDoDono = conversa => {
-  const visto = donoVisto(conversa);
-  return visto.id ? `${visto.tipo}:${visto.id}` : visto.tipo;
-};
+// Identifica o dono para a escolha guardada: mudou o dono, a escolha volta ao padrão. IA e
+// ninguém são a mesma situação ('livre'), como no servidor (Conversations::FicarAoEnviar::
+// LIVRES): a IA que passa a conversa a ninguém não apaga a escolha de quem escreve.
+export const chaveDoVisto = visto =>
+  visto?.tipo === 'pessoa' ? `pessoa:${visto.id}` : 'livre';
+
+export const chaveDoDono = conversa => chaveDoVisto(donoVisto(conversa));
 
 // #2067: o evento ao vivo da conversa não traz `veio_da_ia` (só a troca de dono traz, e as
 // leituras). Enquanto o dono é o mesmo, a tela guarda o que já sabia; trocou o dono sem

@@ -97,7 +97,9 @@ describe('quemEstaComAConversa', () => {
     expect(donoVisto(comIa())).toEqual({ tipo: 'ia' });
     expect(donoVisto(comColega())).toEqual({ tipo: 'pessoa', id: 9 });
     expect(chaveDoDono(comColega())).toBe('pessoa:9');
-    expect(chaveDoDono(comIa())).toBe('ia');
+    // IA e ninguém são a mesma situação, como no servidor (FicarAoEnviar::LIVRES).
+    expect(chaveDoDono(comIa())).toBe('livre');
+    expect(chaveDoDono(semNinguem())).toBe('livre');
   });
 });
 
@@ -236,6 +238,43 @@ describe('useFicarComAConversa', () => {
     expect(ficar.ligada).toBe(false);
   });
 
+  // Pega a escolha apagada quando a IA passa a conversa a ninguém (mesma situação para quem envia).
+  it('desligo o ícone com a IA e a IA passa para ninguém: a escolha permanece', async () => {
+    const { ficar, store } = montarRegra(comIa());
+    ficar.alternar();
+    store.commit('trocar', semNinguem());
+    await nextTick();
+    expect(ficar.ligada).toBe(false);
+    expect(ficar.decidir()).toMatchObject({
+      fica: false,
+      de: { tipo: 'ninguem' },
+    });
+  });
+
+  // Pega a escolha perdida quando a pessoa troca de conversa durante um envio que falha.
+  it('o envio falhou depois de trocar de conversa: a escolha volta na conversa do envio', async () => {
+    const { ficar, store } = montarRegra(comColega());
+    ficar.alternar();
+    const decisao = ficar.decidir();
+    store.commit('trocar', conversa({}, 2));
+    await nextTick();
+    ficar.restaurar(decisao);
+    expect(ficar.ligada).toBe(true); // a conversa 2 segue no padrão (sem ninguém)
+
+    store.commit('trocar', comColega());
+    await nextTick();
+    expect(ficar.ligada).toBe(true);
+  });
+
+  it('envio em partes: só a 1ª pede para ficar', () => {
+    const decisao = montarRegra(comIa()).ficar.decidir();
+    expect(camposDoEnvio(decisao, { parte: 0 }).ficarComAConversa).toBe(true);
+    expect(camposDoEnvio(decisao, { parte: 1 })).toEqual({
+      ficarComAConversa: false,
+      ficarComAConversaDe: { tipo: 'ia' },
+    });
+  });
+
   // Pega o envio que falhou levando a escolha embora.
   it('o envio não saiu: restaurar devolve a escolha', () => {
     const { ficar } = montarRegra(comIa());
@@ -365,9 +404,16 @@ describe('DevolverParaIa', () => {
     expect(linha(wrapper).exists()).toBe(false);
   });
 
-  it('robô sem nome: diz "a IA"', () => {
+  // Pega o "veio de a IA" quando o robô não tem nome.
+  it('robô sem nome: "Esta conversa veio da IA" e "Devolver para a IA"', () => {
     const { wrapper } = montarDevolver(
       minhaVindaDe({ tipo: 'robo', id: 40, name: null })
+    );
+    expect(linha(wrapper).text()).toContain(
+      'CONVERSA_CANAL.DEVOLVER.VEIO_DA_IA'
+    );
+    expect(linha(wrapper).text()).not.toContain(
+      'CONVERSA_CANAL.DEVOLVER.VEIO_DE'
     );
     expect(linha(wrapper).text()).toContain(
       'CONVERSA_CANAL.DEVOLVER.PARA(CONVERSA_CANAL.DEVOLVER.A_IA)'

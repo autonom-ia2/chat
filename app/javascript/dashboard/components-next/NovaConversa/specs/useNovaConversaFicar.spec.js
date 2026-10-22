@@ -144,7 +144,8 @@ describe('useNovaConversa — ficar com a conversa (#2067)', () => {
     expect(envio.ficar.ligada).toBe(false);
   });
 
-  it('envio em partes (WhatsApp, um anexo por mensagem): todas levam a mesma decisão', async () => {
+  // Pega o aviso falso "Não deu para ficar" nas partes seguintes (a 1ª já ficou com a conversa).
+  it('envio em partes (WhatsApp, um anexo por mensagem): só a 1ª pede para ficar', async () => {
     const envio = montar({ canal: WHATSAPP });
     Object.assign(envio.form, {
       mensagem: 'Seguem as fotos',
@@ -158,8 +159,11 @@ describe('useNovaConversa — ficar com a conversa (#2067)', () => {
     await flushPromises();
 
     expect(pedidos()).toHaveLength(2);
+    expect(pedidos().map(p => campo(p, 'ficar_com_a_conversa'))).toEqual([
+      'true',
+      'false',
+    ]);
     pedidos().forEach(pedido => {
-      expect(campo(pedido, 'ficar_com_a_conversa')).toBe('true');
       expect(campo(pedido, 'ficar_com_a_conversa_de[tipo]')).toBe('ia');
     });
   });
