@@ -482,7 +482,7 @@ export default {
         @click="toggleInsertArticle"
       />
     </div>
-    <div class="right-wrap">
+    <div class="right-wrap items-center gap-1">
       <BotoesDoEmail v-if="emailNovo" parte="direita" />
       <FicarComAConversa v-if="ficar" :ficar="ficar" />
       <button

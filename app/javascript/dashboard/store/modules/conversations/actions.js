@@ -696,12 +696,14 @@ const actions = {
     }
   },
 
+  // #2067: devolve a promessa do envio, para a caixa de resposta saber se saiu (e desfazer a
+  // escolha de "ficar com a conversa" quando não saiu).
   createPendingMessageAndSend: async ({ dispatch }, data) => {
     const pendingMessage = createPendingMessage(data);
-    dispatch('sendMessageWithData', pendingMessage);
+    return dispatch('sendMessageWithData', pendingMessage);
   },
 
-  sendMessageWithData: async ({ commit, dispatch }, pendingMessage) => {
+  sendMessageWithData: async ({ commit }, pendingMessage) => {
     const { conversation_id: conversationId, id } = pendingMessage;
     try {
       commit(types.ADD_MESSAGE, {
@@ -719,11 +721,8 @@ const actions = {
         ...response.data,
         status: MESSAGE_STATUS.SENT,
       });
-      // #2067: com "ficar com a conversa" o servidor passou a conversa para quem enviou;
-      // relê para a tela mostrar o dono novo sem esperar o evento ao vivo.
-      if (pendingMessage.ficarComAConversa) {
-        dispatch('getConversation', conversationId);
-      }
+      // #2067: a resposta do envio diz se "ficar com a conversa" não deu.
+      return response.data;
     } catch (error) {
       const errorMessage = error.response
         ? error.response.data.error

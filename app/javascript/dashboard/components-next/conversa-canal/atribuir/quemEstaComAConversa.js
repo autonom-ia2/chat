@@ -7,7 +7,8 @@ export const QUEM_ESTA = {
   COLEGA: 'colega',
 };
 
-// IA e robô são a mesma coisa na regra: todo dono que não é pessoa (AgentBot, assistente).
+// IA e robô são a mesma coisa na regra: todo dono que não é pessoa (AgentBot, assistente),
+// inclusive a Lia (Agente de Cotação), que atende pelo robô espelho dela.
 export const quemEstaComAConversa = (conversa, meuId) => {
   const dono = conversa?.meta?.assignee;
   if (!dono) return QUEM_ESTA.NINGUEM;
@@ -19,3 +20,29 @@ export const quemEstaComAConversa = (conversa, meuId) => {
 // (ninguém toma cliente de colega sem querer).
 export const ficarVemLigada = quem =>
   quem === QUEM_ESTA.NINGUEM || quem === QUEM_ESTA.IA;
+
+// O dono que a tela viu, como vai no envio (`ficar_com_a_conversa_de`): o servidor só
+// atribui se, na hora de gravar, o dono ainda é esse (Conversations::FicarAoEnviar).
+export const donoVisto = conversa => {
+  const quem = quemEstaComAConversa(conversa, null);
+  if (quem === QUEM_ESTA.NINGUEM) return { tipo: 'ninguem' };
+  if (quem === QUEM_ESTA.IA) return { tipo: 'ia' };
+  return { tipo: 'pessoa', id: conversa.meta.assignee.id };
+};
+
+// Identifica o dono para a escolha guardada: mudou o dono, a escolha volta ao padrão.
+export const chaveDoDono = conversa => {
+  const visto = donoVisto(conversa);
+  return visto.id ? `${visto.tipo}:${visto.id}` : visto.tipo;
+};
+
+// #2067: o evento ao vivo da conversa não traz `veio_da_ia` (só a troca de dono traz, e as
+// leituras). Enquanto o dono é o mesmo, a tela guarda o que já sabia; trocou o dono sem
+// dizer de onde veio, esquece.
+export const veioDaIaPreservado = (antes, depois) => {
+  if (!depois || 'veio_da_ia' in depois || !antes?.veio_da_ia) return depois;
+  const mesmoDono =
+    antes.assignee_type === depois.assignee_type &&
+    antes.assignee?.id === depois.assignee?.id;
+  return mesmoDono ? { ...depois, veio_da_ia: antes.veio_da_ia } : depois;
+};

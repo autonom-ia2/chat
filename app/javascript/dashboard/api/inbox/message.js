@@ -15,6 +15,7 @@ export const buildCreatePayload = ({
   isVoiceMessage = false,
   documentIndexes = [],
   ficarComAConversa,
+  ficarComAConversaDe,
 }) => {
   let payload;
   if (files && files.length !== 0) {
@@ -44,8 +45,18 @@ export const buildCreatePayload = ({
     documentIndexes.forEach(indice => {
       payload.append('document_indexes[]', indice);
     });
+    // #2067: o ícone "ficar com a conversa" e o dono que a tela viu (só com a flag da conta).
     if (typeof ficarComAConversa === 'boolean') {
       payload.append('ficar_com_a_conversa', ficarComAConversa);
+      if (ficarComAConversaDe?.tipo) {
+        payload.append(
+          'ficar_com_a_conversa_de[tipo]',
+          ficarComAConversaDe.tipo
+        );
+      }
+      if (ficarComAConversaDe?.id) {
+        payload.append('ficar_com_a_conversa_de[id]', ficarComAConversaDe.id);
+      }
     }
   } else {
     payload = {
@@ -57,8 +68,10 @@ export const buildCreatePayload = ({
       bcc_emails: bccEmails,
       to_emails: toEmails,
       template_params: templateParams,
-      // #2067: o ícone "ficar com a conversa ao enviar"; sem ele, o servidor segue a regra de antes.
+      // #2067: o ícone "ficar com a conversa ao enviar" e o dono que a tela viu; sem eles
+      // (flag desligada), o servidor segue a regra de antes.
       ficar_com_a_conversa: ficarComAConversa,
+      ficar_com_a_conversa_de: ficarComAConversaDe,
     };
   }
   return payload;
@@ -83,6 +96,7 @@ class MessageApi extends ApiClient {
     isVoiceMessage = false,
     documentIndexes = [],
     ficarComAConversa,
+    ficarComAConversaDe,
   }) {
     return axios({
       method: 'post',
@@ -100,6 +114,7 @@ class MessageApi extends ApiClient {
         isVoiceMessage,
         documentIndexes,
         ficarComAConversa,
+        ficarComAConversaDe,
       }),
     });
   }

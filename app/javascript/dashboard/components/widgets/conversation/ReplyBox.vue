@@ -30,7 +30,10 @@ import AvisoDeAssinatura from 'dashboard/components-next/conversa-canal/email/Av
 import ReplyBoxBanner from './ReplyBoxBanner.vue';
 import WhatsappApiReplyHint from './WhatsappApiReplyHint.vue';
 import DevolverParaIa from 'dashboard/components-next/conversa-canal/atribuir/DevolverParaIa.vue';
-import { useFicarComAConversa } from 'dashboard/components-next/conversa-canal/atribuir/useFicarComAConversa';
+import {
+  camposDoEnvio,
+  useFicarComAConversa,
+} from 'dashboard/components-next/conversa-canal/atribuir/useFicarComAConversa';
 import QuotedEmailPreview from './QuotedEmailPreview.vue';
 import { REPLY_EDITOR_MODES } from 'dashboard/components/widgets/WootWriter/constants';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
@@ -159,7 +162,8 @@ export default {
     // #1786: na conversa de e-mail nova, Responder / Responder a todos / Encaminhar.
     const { ligado: emailNovo, fecharResposta: fecharRespostaDoEmail } =
       useEmailDaConversa();
-    // #2067: ficar com a conversa ao enviar (no lugar da faixa "Atribuir a mim").
+    // #2067: ficar com a conversa ao enviar (com a flag da conta, no lugar da faixa
+    // "Atribuir a mim").
     const ficar = useFicarComAConversa();
 
     // Options API state and methods live on the instance proxy
@@ -241,7 +245,6 @@ export default {
       message: '',
       inReplyTo: {},
       crmSubjectCardId: null,
-      ficaNesteEnvio: null,
       isFocused: false,
       showEmojiPicker: false,
       attachedFiles: [],
@@ -389,6 +392,13 @@ export default {
     // conversa), nunca na nota privada nem na conversa que já é minha.
     mostrarFicarComAConversa() {
       return this.ficar.aplica && !this.isOnPrivateNote;
+    },
+    // #2067: a flag da conta; desligada, a tela fica como antes (faixa "Atribuir a mim").
+    ficarLigadoNaConta() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.FICAR_COM_A_CONVERSA_AO_ENVIAR
+      );
     },
     isBotOwnedPendingConversation() {
       return (
@@ -1063,7 +1073,8 @@ export default {
       }
       if (!this.showMentions) {
         // #2067: uma decisão de "ficar com a conversa" para todas as partes deste envio.
-        this.ficaNesteEnvio = this.ficar.decidir({ privada: this.isPrivate });
+        const decisao = this.ficar.decidir({ privada: this.isPrivate });
+        let envios;
         const copilotAcceptedMessage = this.getCopilotAcceptedMessage();
         const isOnWhatsApp =
           this.isATwilioWhatsAppChannel ||
@@ -1076,20 +1087,24 @@ export default {
         const isOnInstagram = this.isAnInstagramChannel;
         const isOnTiktok = this.isATiktokChannel;
         if ((isOnWhatsApp || isOnInstagram || isOnTiktok) && !this.isPrivate) {
-          this.sendMessageAsMultipleMessages(
+          envios = this.sendMessageAsMultipleMessages(
             this.message,
-            copilotAcceptedMessage
+            copilotAcceptedMessage,
+            decisao
           );
         } else {
           const messagePayload = this.getMessagePayload(this.message);
-          this.sendMessage(
-            messagePayload,
-            this.message,
-            copilotAcceptedMessage
-          );
+          envios = [
+            this.sendMessage(
+              messagePayload,
+              this.message,
+              copilotAcceptedMessage,
+              decisao
+            ),
+          ];
         }
+        this.depoisDoEnvio(decisao, envios);
 
-        this.ficaNesteEnvio = null;
         if (!this.isPrivate) {
           this.clearEmailField();
         }
@@ -1098,15 +1113,21 @@ export default {
         this.hideEmojiPicker();
       }
     },
-    sendMessageAsMultipleMessages(message, copilotAcceptedMessage = '') {
+    // #2067: devolve os envios (promessas), para decidir uma vez depois de todas as partes.
+    sendMessageAsMultipleMessages(
+      message,
+      copilotAcceptedMessage = '',
+      decisao = null
+    ) {
       const messages = this.getMultipleMessagesPayload(message);
-      messages.forEach(messagePayload => {
+      return messages.map(messagePayload =>
         this.sendMessage(
           messagePayload,
           messagePayload.message || '',
-          copilotAcceptedMessage
-        );
-      });
+          copilotAcceptedMessage,
+          decisao
+        )
+      );
     },
     sendMessageAnalyticsData(
       isPrivate,
@@ -1178,20 +1199,31 @@ export default {
         this.confirmOnSendReply();
       }
     },
+    // `decisao` (#2067): a de "ficar com a conversa" do envio de que esta mensagem é parte.
+    // Sem ela (modelo, mensagem pronta), o envio decide sozinho. Devolve { ok, data }.
     async sendMessage(
       messagePayload,
       editorMessage = '',
-      copilotAcceptedMessage = ''
+      copilotAcceptedMessage = '',
+      decisao = undefined
     ) {
-      // #2067: decide antes de esperar o servidor (os envios em várias mensagens partem juntos).
-      // Quem atribui é o servidor, depois de aceitar a mensagem: texto, anexo, áudio e modelo.
-      const ficarComAConversa =
-        this.ficaNesteEnvio ??
-        this.ficar.decidir({ privada: messagePayload.private });
+      const sozinho = decisao === undefined;
+      const daqui = sozinho
+        ? this.ficar.decidir({ privada: messagePayload.private })
+        : decisao;
+      const envio = this.enviarParte(
+        { ...messagePayload, ...camposDoEnvio(daqui) },
+        editorMessage,
+        copilotAcceptedMessage
+      );
+      if (sozinho) this.depoisDoEnvio(daqui, [envio]);
+      return envio;
+    },
+    async enviarParte(messagePayload, editorMessage, copilotAcceptedMessage) {
       try {
-        await this.$store.dispatch(
+        const data = await this.$store.dispatch(
           'createPendingMessageAndSend',
-          this.setCrmSubjectInPayload({ ...messagePayload, ficarComAConversa })
+          this.setCrmSubjectInPayload(messagePayload)
         );
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
         emitter.emit(BUS_EVENTS.MESSAGE_SENT);
@@ -1200,28 +1232,69 @@ export default {
           editorMessage,
           copilotAcceptedMessage,
         });
+        return { ok: true, data };
       } catch (error) {
         const errorMessage =
           error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR');
         useAlert(errorMessage);
+        return { ok: false };
+      }
+    },
+    // #2067: depois de todas as partes de um envio. Alguma não saiu: a escolha do ícone
+    // volta. Pediu para ficar e o servidor não conseguiu: avisa. Ficou: a tela mostra o
+    // dono novo pelo evento ao vivo; se ele ainda não chegou, relê a conversa uma vez.
+    async depoisDoEnvio(decisao, envios) {
+      if (!decisao) return;
+      const conversationId = this.currentChat?.id;
+      const resultados = await Promise.all(envios);
+      if (resultados.some(({ ok }) => !ok)) {
+        this.ficar.restaurar(decisao);
+        return;
+      }
+      if (!decisao.fica) return;
+      if (resultados.some(({ data }) => data?.ficar_com_a_conversa_nao_deu)) {
+        useAlert(this.$t('CONVERSA_CANAL.FICAR.NAO_DEU'));
+        return;
+      }
+      this.relerSeODonoNaoChegou(conversationId);
+    },
+    async relerSeODonoNaoChegou(conversationId) {
+      const conversa = this.$store.getters.getConversationById(conversationId);
+      const meta = conversa?.meta;
+      const jaEMinha =
+        meta?.assignee_type === 'User' &&
+        meta?.assignee?.id === this.currentUser?.id;
+      if (!conversationId || jaEMinha) return;
+      try {
+        await this.$store.dispatch('getConversation', conversationId);
+      } catch {
+        // O evento ao vivo da troca de dono ainda atualiza a tela.
       }
     },
     // #1702: o "+" manda localização, contato, botão de link, opções e formulário pelo
     // envio do robô (#1473), com resposta citada e assunto do CRM como o texto. Espera o
     // servidor: a janela só fecha quando a mensagem foi aceita e mostra a recusa.
     async onSendRichMessage({ content, richMessage }) {
+      const decisao = this.ficar.decidir();
       const payload = this.setReplyToInPayload({
         conversationId: this.currentChat.id,
         message: content,
         private: false,
         sender: this.sender,
         contentAttributes: { rich_message: richMessage },
-        ficarComAConversa: this.ficar.decidir(),
+        ...camposDoEnvio(decisao),
       });
-      await this.$store.dispatch(
-        'sendMessageWithData',
-        createPendingMessage(this.setCrmSubjectInPayload(payload))
-      );
+      let data;
+      try {
+        data = await this.$store.dispatch(
+          'sendMessageWithData',
+          createPendingMessage(this.setCrmSubjectInPayload(payload))
+        );
+      } catch (error) {
+        this.ficar.restaurar(decisao);
+        throw error;
+      }
+      this.depoisDoEnvio(decisao, [{ ok: true, data }]);
       this.resetReplyToMessage();
       emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
       emitter.emit(BUS_EVENTS.MESSAGE_SENT);
@@ -1808,7 +1881,11 @@ export default {
 </script>
 
 <template>
-  <ReplyBoxBanner />
+  <ReplyBoxBanner
+    :message="message"
+    :is-on-private-note="isOnPrivateNote"
+    :ficar-ao-enviar="ficarLigadoNaConta"
+  />
   <CrmRepasseDoAssunto
     v-if="crmReplySubjectEnabled"
     :conversation-id="currentChat.id"

@@ -172,15 +172,23 @@
       "FICA_COM_VOCE_SAI_DE": "When you send, the conversation moves from {nome} to you",
       "CONTINUA_SEM_NINGUEM": "When you send, the conversation stays unassigned",
       "CONTINUA_COM": "When you send, the conversation stays with {nome}",
-      "DICA_LIGADA": "Click to not keep the conversation",
-      "DICA_DESLIGADA": "Click to keep the conversation"
+      "DICA_LIGADA": "Turn off to not keep the conversation",
+      "DICA_DESLIGADA": "Turn on to keep the conversation",
+      "NAO_DEU": "Could not keep the conversation right now. It stays with whoever had it."
     },
     "DEVOLVER": {
       "PARA": "Hand back to {nome}",
       "DICA": "{nome} takes over this conversation again",
       "DEVOLVIDA": "Conversation handed back to {nome}",
       "FALHOU": "Could not hand the conversation back. Try again.",
-      "VEIO_DE": "This conversation came from {nome}"
+      "VEIO_DE": "This conversation came from {nome}",
+      "A_IA": "the AI",
+      "RECUSA": {
+        "NAO_ATENDE_CLIENTE": "{nome} is paused right now. The conversation stays with you.",
+        "SEM_VINCULO_NA_CAIXA": "{nome} no longer works in this inbox. The conversation stays with you.",
+        "CONVERSA_RESOLVIDA": "This conversation is resolved. Reopen it to hand it back.",
+        "FASE2_DESLIGADA": "AI agents are off in this account. The conversation stays with you."
+      }
     },
     "CAIXA": {
       "DIGITE": "Type a message",

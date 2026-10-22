@@ -41,6 +41,7 @@ const buildStore = ({
   drafts = {},
   inboxes,
   isMetaMessageSendingDisabled = false,
+  features = [],
 }) =>
   createStore({
     state: {
@@ -63,6 +64,8 @@ const buildStore = ({
       'draftMessages/setReplyEditorMode': ({ commit }, { mode }) =>
         commit('setReplyEditorMode', mode),
       'draftMessages/set': ({ commit }, payload) => commit('setDraft', payload),
+      'draftMessages/delete': ({ commit }, { key }) =>
+        commit('setDraft', { key }),
     },
     getters: {
       getSelectedChat: s => s.chat,
@@ -82,7 +85,9 @@ const buildStore = ({
       'contacts/getContact': () => () => ({}),
       'draftMessages/get': s => key => s.drafts[key] || '',
       'draftMessages/getReplyEditorMode': s => s.replyEditorMode,
-      'accounts/isFeatureEnabledonAccount': () => () => false,
+      'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
+        features.includes(flag),
+      getConversationById: s => id => (s.chat.id === id ? s.chat : null),
       'accounts/getAccount': () => () => ({}),
       'portals/allPortals': () => [],
       'integrations/getUIFlags': () => ({ isFetching: false }),
@@ -98,6 +103,7 @@ const mountWith = ({
   isMetaMessageSendingDisabled,
   stubs = {},
   attachTo,
+  features,
 }) => {
   const store = buildStore({
     inbox,
@@ -106,6 +112,7 @@ const mountWith = ({
     drafts,
     inboxes,
     isMetaMessageSendingDisabled,
+    features,
   });
   const wrapper = shallowMount(ReplyBox, {
     global: {
@@ -564,7 +571,6 @@ describe('ReplyBox CRM subject', () => {
     expect(dispatch).toHaveBeenCalledWith('createPendingMessageAndSend', {
       conversationId: 1,
       message: 'Oi',
-      ficarComAConversa: true,
     });
 
     wrapper.vm.crmSubjectCardId = 5;
@@ -577,24 +583,46 @@ describe('ReplyBox CRM subject', () => {
       conversationId: 1,
       message: 'Segue a proposta',
       contentAttributes: { in_reply_to: 3, crm_card_id: 5 },
-      ficarComAConversa: true,
     });
   });
 });
 
 // #2067: o ícone "ficar com a conversa ao enviar" ao lado do Enviar; quem atribui é o servidor.
 describe('ReplyBox ficar com a conversa (#2067)', () => {
+  const FLAG = 'ficar_com_a_conversa_ao_enviar';
   const ANA = { id: 9, name: 'Ana' };
   const LIA = { id: 3, name: 'Lia' };
-  const montar = meta =>
+  const montar = (meta, { inbox, ligada = true } = {}) =>
     mountWith({
-      inbox: { channel_type: 'Channel::Whatsapp' },
+      inbox: inbox || {
+        channel_type: 'Channel::Whatsapp',
+        provider: 'whatsapp_cloud',
+      },
       chat: { meta: { sender: { id: 2 }, ...meta } },
+      features: ligada ? [FLAG] : [],
     });
-  const enviado = dispatch =>
-    dispatch.mock.calls.find(
-      ([nome]) => nome === 'createPendingMessageAndSend'
-    )[1];
+  const envios = dispatch =>
+    dispatch.mock.calls
+      .filter(([nome]) => nome === 'createPendingMessageAndSend')
+      .map(([, payload]) => payload);
+  const enviado = dispatch => envios(dispatch)[0];
+  // Espia o envio sem engolir o rascunho (onde a escolha do ícone fica guardada).
+  const espiar = (store, responder = () => Promise.resolve({})) => {
+    const original = store.dispatch.bind(store);
+    return vi
+      .spyOn(store, 'dispatch')
+      .mockImplementation((nome, payload) =>
+        nome.startsWith('draftMessages/')
+          ? original(nome, payload)
+          : responder(nome, payload)
+      );
+  };
+  const esperar = async () => {
+    await nextTick();
+    await new Promise(resolve => {
+      setTimeout(resolve, 0);
+    });
+  };
 
   it.each([
     ['sem ninguém', {}, true],
@@ -610,13 +638,36 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
     expect(bottomPanel(wrapper).ficar).toBeNull();
   });
 
+  // Pega a tela nova com a flag desligada: fica exatamente como na main.
+  it('flag desligada: sem ícone, com a faixa "Atribuir a mim" e nada a mais no envio', async () => {
+    const { wrapper, store } = montar(
+      { assignee: LIA, assignee_type: 'AgentBot' },
+      { ligada: false }
+    );
+    expect(bottomPanel(wrapper).ficar).toBeNull();
+    expect(
+      wrapper.findComponent({ name: 'ReplyBoxBanner' }).props('ficarAoEnviar')
+    ).toBe(false);
+
+    const dispatch = espiar(store);
+    await wrapper.vm.sendMessage({ conversationId: 1, message: 'Oi' });
+    expect(enviado(dispatch)).toEqual({ conversationId: 1, message: 'Oi' });
+  });
+
+  it('flag ligada: a faixa "Atribuir a mim" sai', () => {
+    const { wrapper } = montar({});
+    expect(
+      wrapper.findComponent({ name: 'ReplyBoxBanner' }).props('ficarAoEnviar')
+    ).toBe(true);
+  });
+
   it('nunca na nota privada, e a nota não pede para ficar', async () => {
     const { wrapper, store } = montar({});
     wrapper.vm.setReplyMode(REPLY_EDITOR_MODES.NOTE);
     await nextTick();
     expect(bottomPanel(wrapper).ficar).toBeNull();
 
-    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+    const dispatch = espiar(store);
     await wrapper.vm.sendMessage({
       conversationId: 1,
       message: 'nota',
@@ -625,9 +676,20 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
     expect(enviado(dispatch).ficarComAConversa).toBe(false);
   });
 
+  it('o envio leva o dono que a tela viu', async () => {
+    const { wrapper, store } = montar({ assignee: ANA, assignee_type: 'User' });
+    const dispatch = espiar(store);
+
+    await wrapper.vm.sendMessage({ conversationId: 1, message: 'Oi' });
+    expect(enviado(dispatch)).toMatchObject({
+      ficarComAConversa: false,
+      ficarComAConversaDe: { tipo: 'pessoa', id: 9 },
+    });
+  });
+
   it('o modelo segue a regra do texto: de colega continua com o colega', async () => {
     const { wrapper, store } = montar({ assignee: ANA, assignee_type: 'User' });
-    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+    const dispatch = espiar(store);
 
     await wrapper.vm.onSendWhatsAppReply({
       message: 'Olá',
@@ -641,7 +703,7 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
 
   it('ligar o ícone vale para aquela mensagem e volta ao padrão depois de enviar', async () => {
     const { wrapper, store } = montar({ assignee: ANA, assignee_type: 'User' });
-    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+    const dispatch = espiar(store);
 
     wrapper.vm.ficar.alternar();
     await wrapper.vm.onSendWhatsAppReply({
@@ -657,7 +719,7 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
       assignee: LIA,
       assignee_type: 'AgentBot',
     });
-    const dispatch = vi.spyOn(store, 'dispatch').mockResolvedValue();
+    const dispatch = espiar(store);
     wrapper.vm.message = 'Segue a foto';
     wrapper.vm.attachedFiles = [
       { resource: { file: new Blob(['x']) }, isPrivate: false },
@@ -665,12 +727,144 @@ describe('ReplyBox ficar com a conversa (#2067)', () => {
 
     wrapper.vm.confirmOnSendReply();
 
-    const envios = dispatch.mock.calls.filter(
-      ([nome]) => nome === 'createPendingMessageAndSend'
+    // Uma com a foto e o texto como legenda (Cloud API: um anexo por mensagem).
+    expect(envios(dispatch)).toHaveLength(1);
+    envios(dispatch).forEach(payload => {
+      expect(payload).toMatchObject({
+        ficarComAConversa: true,
+        ficarComAConversaDe: { tipo: 'ia' },
+      });
+    });
+  });
+
+  it('dois anexos: duas mensagens com a mesma decisão', () => {
+    const { wrapper, store } = montar({ assignee: ANA, assignee_type: 'User' });
+    const dispatch = espiar(store);
+    wrapper.vm.ficar.alternar();
+    wrapper.vm.message = 'Seguem as duas';
+    wrapper.vm.attachedFiles = [
+      { resource: { file: new Blob(['a']) }, isPrivate: false },
+      { resource: { file: new Blob(['b']) }, isPrivate: false },
+    ];
+
+    wrapper.vm.confirmOnSendReply();
+
+    expect(envios(dispatch)).toHaveLength(2);
+    expect(envios(dispatch).map(p => p.ficarComAConversa)).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  // Pega a escolha perdida quando o envio falha (a promessa do envio não voltava).
+  it('o envio falhou: a escolha do ícone volta', async () => {
+    const { wrapper, store } = montar({ assignee: ANA, assignee_type: 'User' });
+    espiar(store, nome =>
+      nome === 'createPendingMessageAndSend'
+        ? Promise.reject(new Error('x'))
+        : Promise.resolve({})
     );
-    expect(envios.length).toBeGreaterThan(0);
-    envios.forEach(([, payload]) => {
-      expect(payload.ficarComAConversa).toBe(true);
+    wrapper.vm.ficar.alternar();
+
+    await wrapper.vm.sendMessage({ conversationId: 1, message: 'Oi' });
+    await esperar();
+
+    expect(wrapper.vm.ficar.ligada).toBe(true);
+  });
+
+  it('o servidor não conseguiu ficar com a conversa: a tela avisa', async () => {
+    const { wrapper, store } = montar({});
+    const alertas = [];
+    const escutar = mensagem => alertas.push(mensagem);
+    const { emitter } = await import('shared/helpers/mitt');
+    emitter.on('newToastMessage', escutar);
+    espiar(store, () =>
+      Promise.resolve({ ficar_com_a_conversa_nao_deu: true })
+    );
+
+    await wrapper.vm.sendMessage({ conversationId: 1, message: 'Oi' });
+    await esperar();
+    emitter.off('newToastMessage', escutar);
+
+    expect(JSON.stringify(alertas)).toContain('CONVERSA_CANAL.FICAR.NAO_DEU');
+  });
+
+  it('ficou: relê a conversa uma vez por envio, não por parte', async () => {
+    const { wrapper, store } = montar({});
+    const dispatch = espiar(store);
+    wrapper.vm.message = 'Segue';
+    wrapper.vm.attachedFiles = [
+      { resource: { file: new Blob(['a']) }, isPrivate: false },
+      { resource: { file: new Blob(['b']) }, isPrivate: false },
+    ];
+
+    wrapper.vm.confirmOnSendReply();
+    await esperar();
+
+    const releituras = dispatch.mock.calls.filter(
+      ([nome]) => nome === 'getConversation'
+    );
+    expect(releituras).toEqual([['getConversation', 1]]);
+  });
+
+  it('o evento ao vivo já trouxe o dono novo: não relê', async () => {
+    const { wrapper, store } = montar({});
+    const dispatch = espiar(store, nome => {
+      if (nome === 'createPendingMessageAndSend') {
+        store.commit('selectChat', {
+          ...store.state.chat,
+          meta: {
+            sender: { id: 2 },
+            assignee: { id: 7 },
+            assignee_type: 'User',
+          },
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    await wrapper.vm.sendMessage({ conversationId: 1, message: 'Oi' });
+    await esperar();
+
+    expect(dispatch).not.toHaveBeenCalledWith('getConversation', 1);
+  });
+
+  describe('o "+" (onSendRichMessage)', () => {
+    const RICO = { content: 'Escolha', richMessage: { type: 'options' } };
+    const pendente = dispatch =>
+      dispatch.mock.calls.find(([nome]) => nome === 'sendMessageWithData')[1];
+
+    it('leva a mesma regra do texto', async () => {
+      const { wrapper, store } = montar({
+        assignee: LIA,
+        assignee_type: 'AgentBot',
+      });
+      const dispatch = espiar(store);
+
+      await wrapper.vm.onSendRichMessage(RICO);
+
+      expect(pendente(dispatch)).toMatchObject({
+        ficarComAConversa: true,
+        ficarComAConversaDe: { tipo: 'ia' },
+      });
+    });
+
+    it('recusado: a escolha volta e o erro sobe para a janela', async () => {
+      const { wrapper, store } = montar({
+        assignee: ANA,
+        assignee_type: 'User',
+      });
+      espiar(store, nome =>
+        nome === 'sendMessageWithData'
+          ? Promise.reject(new Error('recusada'))
+          : Promise.resolve({})
+      );
+      wrapper.vm.ficar.alternar();
+
+      await expect(wrapper.vm.onSendRichMessage(RICO)).rejects.toThrow(
+        'recusada'
+      );
+      expect(wrapper.vm.ficar.ligada).toBe(true);
     });
   });
 });

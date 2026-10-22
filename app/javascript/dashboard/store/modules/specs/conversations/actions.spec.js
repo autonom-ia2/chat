@@ -61,42 +61,43 @@ describe('#hasMessageFailedWithExternalError', () => {
   });
 });
 
-describe('#sendMessageWithData (#2067)', () => {
-  const pendente = extra => ({
-    conversation_id: 1,
-    id: 'temp-1',
-    status: 'progress',
-    content_attributes: {},
-    ...extra,
-  });
-
-  beforeEach(() => {
-    dispatch.mockClear();
-  });
-
-  it('relê a conversa depois do envio que pediu para ficar com ela', async () => {
-    axios.mockResolvedValueOnce({ data: { id: 10, conversation_id: 1 } });
-    await actions.sendMessageWithData(
-      { commit, dispatch },
-      pendente({ ficarComAConversa: true })
+describe('#createPendingMessageAndSend (#2067)', () => {
+  // Pega a promessa perdida: a caixa de resposta precisa saber se a mensagem saiu.
+  it('devolve a resposta do envio e a recusa chega a quem enviou', async () => {
+    const enviar = vi.fn().mockResolvedValue({ id: 10, ok: true });
+    const resposta = await actions.createPendingMessageAndSend(
+      { dispatch: enviar },
+      { conversationId: 1, message: 'Oi' }
     );
-    expect(dispatch).toHaveBeenCalledWith('getConversation', 1);
-  });
-
-  it('não relê quando o envio não pediu, nem quando a mensagem foi recusada', async () => {
-    axios.mockResolvedValueOnce({ data: { id: 11, conversation_id: 1 } });
-    await actions.sendMessageWithData(
-      { commit, dispatch },
-      pendente({ ficarComAConversa: false })
+    expect(resposta).toEqual({ id: 10, ok: true });
+    expect(enviar).toHaveBeenCalledWith(
+      'sendMessageWithData',
+      expect.objectContaining({ conversation_id: 1, content: 'Oi' })
     );
-    axios.mockRejectedValueOnce({ response: { data: { error: 'x' } } });
+
+    const recusar = vi.fn().mockRejectedValue(new Error('recusada'));
     await expect(
-      actions.sendMessageWithData(
-        { commit, dispatch },
-        pendente({ ficarComAConversa: true })
+      actions.createPendingMessageAndSend(
+        { dispatch: recusar },
+        { conversationId: 1, message: 'Oi' }
       )
-    ).rejects.toBeTruthy();
-    expect(dispatch).not.toHaveBeenCalledWith('getConversation', 1);
+    ).rejects.toThrow('recusada');
+  });
+
+  it('sendMessageWithData devolve o que o servidor respondeu', async () => {
+    axios.mockResolvedValueOnce({
+      data: { id: 11, conversation_id: 1, ficar_com_a_conversa_nao_deu: true },
+    });
+    const resposta = await actions.sendMessageWithData(
+      { commit },
+      {
+        conversation_id: 1,
+        id: 'temp-1',
+        status: 'progress',
+        content_attributes: {},
+      }
+    );
+    expect(resposta.ficar_com_a_conversa_nao_deu).toBe(true);
   });
 });
 

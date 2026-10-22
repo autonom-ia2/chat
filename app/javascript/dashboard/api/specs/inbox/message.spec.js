@@ -116,21 +116,34 @@ describe('#ConversationAPI', () => {
       ).toEqual([]);
     });
 
-    it('sends ficar_com_a_conversa only when the reply box decided it (#2067)', () => {
+    it('sends ficar_com_a_conversa and the owner the screen saw only when decided (#2067)', () => {
+      const json = buildCreatePayload({
+        message: 'oi',
+        ficarComAConversa: true,
+        ficarComAConversaDe: { tipo: 'pessoa', id: 9 },
+      });
+      expect(json.ficar_com_a_conversa).toBe(true);
+      expect(json.ficar_com_a_conversa_de).toEqual({ tipo: 'pessoa', id: 9 });
       expect(
-        buildCreatePayload({ message: 'oi', ficarComAConversa: true })
-          .ficar_com_a_conversa
-      ).toBe(true);
-      expect(
-        buildCreatePayload({ message: 'oi', ficarComAConversa: false })
-          .ficar_com_a_conversa
-      ).toBe(false);
+        buildCreatePayload({ message: 'oi' }).ficar_com_a_conversa
+      ).toBeUndefined();
+
       const files = [new Blob(['png'], { type: 'image/png' })];
-      expect(
-        buildCreatePayload({ files, ficarComAConversa: true }).get(
-          'ficar_com_a_conversa'
-        )
-      ).toBe('true');
+      const form = buildCreatePayload({
+        files,
+        ficarComAConversa: false,
+        ficarComAConversaDe: { tipo: 'pessoa', id: 9 },
+      });
+      expect(form.get('ficar_com_a_conversa')).toBe('false');
+      expect(form.get('ficar_com_a_conversa_de[tipo]')).toBe('pessoa');
+      expect(form.get('ficar_com_a_conversa_de[id]')).toBe('9');
+      const daIa = buildCreatePayload({
+        files,
+        ficarComAConversa: true,
+        ficarComAConversaDe: { tipo: 'ia' },
+      });
+      expect(daIa.get('ficar_com_a_conversa_de[tipo]')).toBe('ia');
+      expect(daIa.get('ficar_com_a_conversa_de[id]')).toBeNull();
       expect(
         buildCreatePayload({ files }).get('ficar_com_a_conversa')
       ).toBeNull();

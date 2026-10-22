@@ -172,15 +172,23 @@
       "FICA_COM_VOCE_SAI_DE": "Ao enviar, a conversa sai de {nome} e fica com você",
       "CONTINUA_SEM_NINGUEM": "Ao enviar, a conversa continua sem ninguém",
       "CONTINUA_COM": "Ao enviar, a conversa continua com {nome}",
-      "DICA_LIGADA": "Clique para não ficar com a conversa",
-      "DICA_DESLIGADA": "Clique para ficar com a conversa"
+      "DICA_LIGADA": "Desative para não ficar com a conversa",
+      "DICA_DESLIGADA": "Ative para ficar com a conversa",
+      "NAO_DEU": "Não deu para ficar com a conversa agora. Ela continua com quem estava."
     },
     "DEVOLVER": {
       "PARA": "Devolver para {nome}",
       "DICA": "{nome} volta a atender esta conversa",
       "DEVOLVIDA": "Conversa devolvida para {nome}",
       "FALHOU": "Não deu para devolver a conversa. Tente de novo.",
-      "VEIO_DE": "Esta conversa veio de {nome}"
+      "VEIO_DE": "Esta conversa veio de {nome}",
+      "A_IA": "a IA",
+      "RECUSA": {
+        "NAO_ATENDE_CLIENTE": "{nome} está com o atendimento parado agora. A conversa continua com você.",
+        "SEM_VINCULO_NA_CAIXA": "{nome} não atende mais esta caixa. A conversa continua com você.",
+        "CONVERSA_RESOLVIDA": "Esta conversa já foi resolvida. Reabra para devolver.",
+        "FASE2_DESLIGADA": "Os agentes de IA não estão ligados nesta conta. A conversa continua com você."
+      }
     },
     "CAIXA": {
       "DIGITE": "Digite uma mensagem",
