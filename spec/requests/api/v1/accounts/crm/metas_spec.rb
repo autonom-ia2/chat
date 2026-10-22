@@ -265,6 +265,8 @@ RSpec.describe 'Api::V1::Accounts::Crm::Metas', type: :request do
     it 'não soma a meta de funil arquivado' do
       sale
       goal(ana, 8000)
+      # Funil arquivado sai dos Números: com outro de Vender ativo, o topo existe e não leva a meta do arquivado.
+      create_crm_pipeline(account: account, user: admin, name: 'Vendas novo')
       sale.first.archived!
 
       call(:get, ana, "#{base}/numeros")

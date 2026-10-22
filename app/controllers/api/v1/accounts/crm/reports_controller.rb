@@ -66,7 +66,7 @@ class Api::V1::Accounts::Crm::ReportsController < Api::V1::Accounts::Crm::BaseCo
   end
 
   def report_pipelines
-    @report_pipelines ||= visible_pipelines.apply_to_reports(Current.account.crm_pipelines)
+    @report_pipelines ||= visible_pipelines.apply_to_reports(Current.account.crm_pipelines.active)
   end
 
   def visible_pipelines

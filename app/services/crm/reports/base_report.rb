@@ -11,11 +11,12 @@ module Crm
       DEFAULT_RANGE_DAYS = 30
       MAX_RANGE_DAYS = 366
 
-      # pipelines: os funis que a pessoa enxerga (acesso por funil, #1148, PR D); sem restrição, todos os da conta.
+      # pipelines: os funis que a pessoa enxerga (acesso por funil, #1148, PR D); sem restrição, os ativos da conta (funil
+      # arquivado sai dos relatórios, como das Metas).
       def initialize(account:, params: {}, pipelines: nil)
         @account = account
         @params = params || {}
-        @pipelines = pipelines || account.crm_pipelines
+        @pipelines = pipelines || account.crm_pipelines.active
       end
 
       def perform

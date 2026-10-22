@@ -3,6 +3,9 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
 
   before_action :fetch_pipeline, only: [:show, :update, :destroy]
   before_action :ensure_outcome_labels_format, only: [:update]
+  # A conferência e o arquivamento numa trava da conta: dois arquivamentos ao mesmo tempo não zeram os funis ativos.
+  around_action :lock_account, only: [:destroy, :update], if: :archiving?
+  before_action :ensure_archivable, only: [:destroy, :update], if: :archiving?
 
   def index
     authorize ::Crm::Pipeline
@@ -41,6 +44,23 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   end
 
   private
+
+  # Último funil ativo ou único principal ativo não se arquiva (pelo DELETE nem pelo PATCH de status).
+  def archiving?
+    action_name == 'destroy' || params.dig(:pipeline, :status).to_s == 'archived'
+  end
+
+  def lock_account(&)
+    Current.account.with_lock(&)
+  end
+
+  def ensure_archivable
+    motivo = @pipeline.motivo_para_nao_arquivar
+    return if motivo.nil?
+
+    render json: { error: "crm.pipeline_archive_#{motivo}", message: I18n.t("crm.pipelines.archive_#{motivo}") },
+           status: :unprocessable_entity
+  end
 
   def fetch_pipeline
     @pipeline = policy_scope(::Crm::Pipeline).find(params[:id])

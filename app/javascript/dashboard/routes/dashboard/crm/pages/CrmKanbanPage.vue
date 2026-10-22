@@ -1321,8 +1321,12 @@ const archivePipeline = async () => {
     currentPipelineId.value = nextPipeline?.id || '';
     closePipelineDrawer();
     useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_ARCHIVED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_ARCHIVE_ERROR'));
+  } catch (error) {
+    // O último funil ativo e o único principal não se arquivam: a API diz por quê, na língua de quem usa.
+    useAlert(
+      error?.response?.data?.message ||
+        t('CRM_KANBAN.ALERTS.PIPELINE_ARCHIVE_ERROR')
+    );
   }
 };
 
@@ -1347,6 +1351,7 @@ const deleteStageHasCards = computed(() =>
 const STAGE_DELETE_ERROR_KEYS = {
   'crm.stage_has_cards': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_HAS_CARDS',
   'crm.stage_is_last': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_LAST_STAGE',
+  'crm.stage_in_use': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_IN_USE',
 };
 
 const deleteStageErrorMessage = error => {

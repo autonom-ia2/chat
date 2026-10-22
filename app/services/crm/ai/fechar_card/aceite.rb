@@ -53,12 +53,9 @@ class Crm::Ai::FecharCard::Aceite < Crm::Ai::FecharCard
     true
   end
 
-  # Como uma pessoa arquiva (Api::V1::Accounts::Crm::CardsController#destroy).
+  # Como uma pessoa arquiva (Crm::Cards::Archiver). A sugestão aceita já saiu de pendente.
   def arquivar!
-    @card.update!(status: :archived, last_activity_at: Time.current)
-    @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).where.not(id: sugestao.id)
-         .find_each { |pendente| pendente.update!(status: :expired) }
-    Crm::ActivityLogger.new(card: @card, actor: ator, event_type: 'archive', payload: payload).perform
+    Crm::Cards::Archiver.new(card: @card, actor: ator, payload: payload).perform
   end
 
   # Fechado por uma pessoa: a sugestão que ela aceitou e o motivo, para a linha do tempo (sem `by: 'ai'`).

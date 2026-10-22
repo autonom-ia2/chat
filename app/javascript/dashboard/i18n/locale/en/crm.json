@@ -1182,6 +1182,7 @@
       "STAGE_DELETE_ERROR": "Could not remove the stage.",
       "STAGE_DELETE_ERROR_HAS_CARDS": "This stage still has cards linked to it — move them to another stage first.",
       "STAGE_DELETE_ERROR_LAST_STAGE": "Could not remove the stage — a pipeline needs at least one stage.",
+      "STAGE_DELETE_ERROR_IN_USE": "Could not remove the stage — another record in the system still points to it. Nothing was deleted.",
       "CARD_CREATED": "Card created.",
       "CARD_UPDATED": "Card updated.",
       "CARD_LOAD_ERROR": "Could not load card details.",

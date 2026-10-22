@@ -140,10 +140,7 @@ class Crm::Ai::NaoENegocio
   end
 
   def arquivar!
-    @card.update!(status: :archived, last_activity_at: Time.current)
-    @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).find_each { |sugestao| sugestao.update!(status: :expired) }
-    Crm::ActivityLogger.new(card: @card, actor: nil, event_type: 'archive', payload: payload).perform
-    true
+    Crm::Cards::Archiver.new(card: @card, actor: nil, payload: payload).perform
   end
 
   def payload
