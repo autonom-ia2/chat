@@ -194,6 +194,21 @@ const connectedFromWhatsapp = async () => {
   await load();
 };
 
+// Com a conexão já gravada, o passo na tela que não é o da vez (aberto por "Alterar", ou a troca de caminho que
+// voltou do endereço ?modo= depois de recarregar) ganha "Voltar": fecha o passo, desfaz o caminho escolhido pela
+// metade e volta ao passo da vez — com tudo feito, à aba em que a pessoa estava. O passo da vez não tem "Voltar":
+// fechá-lo voltaria a ele mesmo.
+const canGoBack = computed(
+  () =>
+    activeStep.value <= SALES_STEP &&
+    activeStep.value !== step.value &&
+    Boolean(connection.value?.configured)
+);
+const goBack = () => {
+  rememberMode(null);
+  openStep.value = null;
+};
+
 const reconnect = () => {
   started.value = true;
   openStep.value = 1;
@@ -329,8 +344,18 @@ onMounted(load);
 
           <section
             v-if="activeStep <= 4"
-            class="p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
+            class="flex flex-col gap-4 p-5 border border-solid rounded-xl border-n-weak bg-n-solid-1 sm:p-6"
           >
+            <button
+              v-if="canGoBack"
+              type="button"
+              data-meta-ads-step-back
+              class="inline-flex items-center self-start gap-1 px-0 text-sm font-medium bg-transparent border-0 rounded-xl min-h-11 text-n-slate-11 hover:text-n-slate-12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+              @click="goBack"
+            >
+              <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
+              {{ $t('CRM_KANBAN.META_ADS_HUB.PAGE.BACK') }}
+            </button>
             <MetaAdsConnectStep
               v-if="activeStep === 1"
               :connection="connection"
@@ -343,6 +368,7 @@ onMounted(load);
               :mode="mode"
               :partner-name="partnerName"
               :current="connection"
+              :show-back="!canGoBack"
               @saved="accountSaved"
               @back="openStep = 1"
             />

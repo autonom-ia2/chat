@@ -4,6 +4,10 @@ import JornadaAPI from 'dashboard/api/autonomia/jornada';
 // #1181 L1 — conversas respondidas e passadas para a equipe nos últimos 7 dias. Busca ao montar quem
 // usa (nunca no seletor da rota nem no menu). Se a leitura falha, a tela esconde a linha inteira:
 // nada de "—" nem zero (protótipo t02-semnumeros).
+// #2000 — e as resolvidas sem ninguém da equipe. A conta é a única da IA, a mesma da linha da IA em
+// CRM › Números › Equipe (Autonomia::ContaDaIa).
+const ZERADO = { respondidas: 0, passadas: 0, resolvidas: 0 };
+
 export function useNumerosDaSemana({ agentId } = {}) {
   const estado = ref('carregando');
   const porAgente = ref({});
@@ -15,7 +19,11 @@ export function useNumerosDaSemana({ agentId } = {}) {
       porAgente.value = Object.fromEntries(
         (data?.payload || []).map(item => [
           item.agent_id,
-          { respondidas: item.answered || 0, passadas: item.handed || 0 },
+          {
+            respondidas: item.answered || 0,
+            passadas: item.handed || 0,
+            resolvidas: item.resolved || 0,
+          },
         ])
       );
       estado.value = 'pronto';
@@ -29,7 +37,7 @@ export function useNumerosDaSemana({ agentId } = {}) {
   // novo que ainda não tem conversa.
   const numerosDe = id => {
     if (estado.value !== 'pronto') return null;
-    return porAgente.value[id] || { respondidas: 0, passadas: 0 };
+    return porAgente.value[id] || ZERADO;
   };
 
   onMounted(carregar);

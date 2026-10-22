@@ -1445,6 +1445,7 @@
       "group_by",
       "pipeline_id",
       "since",
+      "todos_os_funis",
       "until"
     ]
   },

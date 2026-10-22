@@ -16,6 +16,8 @@ const props = defineProps({
   mode: { type: String, required: true },
   partnerName: { type: String, default: 'Hub2You' },
   current: { type: Object, default: null },
+  // Aberto por "Alterar", quem abriu já mostra "Voltar" no topo (#2054): o do rodapé sai para não haver dois.
+  showBack: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['saved', 'back']);
@@ -230,6 +232,7 @@ onMounted(load);
           @click="load"
         />
         <Button
+          v-if="showBack"
           class="!min-h-11 !rounded-xl"
           size="sm"
           variant="ghost"
@@ -402,6 +405,7 @@ onMounted(load);
           @click="save"
         />
         <Button
+          v-if="showBack"
           class="!min-h-11 !rounded-xl"
           variant="ghost"
           color="slate"
