@@ -35,6 +35,29 @@ RSpec.describe Conversations::FicarAoEnviar do
                                                     ficar_com_a_conversa_de: { tipo: 'outro' })).visto).to be_nil
     end
 
+    # Pega o 422 (TypeError/NoMethodError) com o dono visto malformado: a mensagem tem que sair.
+    it 'dono visto malformado (texto, número, lista, id objeto): como se não tivesse dito, sem erro', :aggregate_failures do
+      ['texto', 42, %w[pessoa 9], nil].each do |dado|
+        pedido = described_class.pedido(account, params(ficar_com_a_conversa: true, ficar_com_a_conversa_de: dado))
+        expect(pedido).to have_attributes(fica: true, visto: nil)
+      end
+      id_objeto = described_class.pedido(account, params(ficar_com_a_conversa: true,
+                                                         ficar_com_a_conversa_de: { tipo: 'pessoa', id: { x: 1 } }))
+      expect(id_objeto.visto).to eq(tipo: 'pessoa', id: 0)
+      lista_no_tipo = described_class.pedido(account, params(ficar_com_a_conversa: true,
+                                                             ficar_com_a_conversa_de: { tipo: ['ia'] }))
+      expect(lista_no_tipo.visto).to be_nil
+    end
+
+    it 'o ícone é booleano estrito: só true/false e "true"/"false"/"1"/"0"', :aggregate_failures do
+      { true => true, false => false, 'true' => true, 'false' => false, '1' => true, '0' => false }.each do |valor, fica|
+        expect(described_class.pedido(account, params(ficar_com_a_conversa: valor)).fica).to be(fica)
+      end
+      ['sim', 'on', 'yes', 1, 0, '', %w[true], { a: 1 }].each do |valor|
+        expect(described_class.pedido(account, params(ficar_com_a_conversa: valor))).to be_nil
+      end
+    end
+
     # Pega a flag desligada: o servidor ignora o pedido.
     it 'com a flag da conta desligada: nil' do
       account.disable_features!('ficar_com_a_conversa_ao_enviar')

@@ -35,6 +35,26 @@ RSpec.describe 'Ficar com a conversa ao enviar pela API do painel', type: :reque
     expect(response.parsed_body).not_to have_key('ficar_com_a_conversa_nao_deu')
   end
 
+  # Pega o 422 com o dono visto malformado: a mensagem sai e vale como se o pedido não dissesse quem a tela viu.
+  it 'dono visto malformado (texto, número, lista, id objeto): a mensagem sai, sem 422', :aggregate_failures do
+    conversation.update!(ai_assignee: bot)
+    ['texto', 42, %w[pessoa 9], { tipo: 'pessoa', id: { x: 1 } }].each_with_index do |dado, indice|
+      enviar({ content: "Oi #{indice}", ficar_com_a_conversa: true, ficar_com_a_conversa_de: dado })
+      expect(response).to have_http_status(:success)
+    end
+    expect(conversation.messages.where(sender: ana).count).to eq(4)
+    expect(conversation.reload.assignee_id).to eq(ana.id)
+  end
+
+  it 'ícone com valor fora do booleano: ignorado (a regra de antes), sem 422', :aggregate_failures do
+    conversation.update!(ai_assignee: bot)
+
+    enviar({ content: 'Oi', ficar_com_a_conversa: 'sim', ficar_com_a_conversa_de: da_ia })
+
+    expect(response).to have_http_status(:success)
+    expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: bot)
+  end
+
   it 'modelo segue a regra do texto: na conversa do colega, sem o ícone, continua com o colega', :aggregate_failures do
     conversation.update!(assignee: joao)
     modelo = { name: 'boas_vindas', category: 'UTILITY', language: 'pt_BR', processed_params: {} }

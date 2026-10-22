@@ -51,6 +51,22 @@ RSpec.describe 'Ficar com a conversa ao enviar' do # rubocop:disable RSpec/Descr
     expect(mensagem.ficar_com_a_conversa_nao_deu).to be_nil
   end
 
+  # Pega a passagem sem o porquê: o registro diz que a pessoa ficou ao enviar (e o envio sem pedido segue o de antes).
+  it 'o registro de passagens grava o motivo do pedido explícito', :aggregate_failures do
+    com_o_robo!
+    reply(ficar: pedido(true))
+    expect(passagens.sole.motivo).to eq('ficou_ao_enviar')
+    expect(Crm::Passagem::MOTIVOS_DA_IA).not_to include('ficou_ao_enviar')
+
+    outra = create(:conversation, account: account, inbox: inbox, status: :open).reload
+    outra.update!(ai_assignee: bot, assignee: nil)
+    outra.bot_handoff!
+    create(:message, account: account, inbox: inbox, conversation: outra, message_type: :outgoing, sender: ana,
+                     content: 'Oi', ficar_com_a_conversa: nil)
+    expect(outra.reload.assignee_id).to eq(ana.id)
+    expect(Crm::Passagem.where(conversation_id: outra.id).last.motivo).not_to eq('ficou_ao_enviar')
+  end
+
   it 'ligado, sem ninguém: quem respondeu fica com ela' do
     reply(ficar: pedido(true, tipo: 'ninguem'))
 

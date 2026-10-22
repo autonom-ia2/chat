@@ -16,6 +16,8 @@ module Conversations::FicarAoEnviar
   TIPOS = %w[ninguem ia pessoa].freeze
   # Ninguém e IA são a mesma situação para quem envia: o ícone vem ligado nas duas.
   LIVRES = %w[ninguem ia].freeze
+  # Só estes valores dizem o ícone (JSON ou formulário); qualquer outro é como se o pedido não dissesse.
+  BOOLEANOS = { true => true, false => false, 'true' => true, 'false' => false, '1' => true, '0' => false }.freeze
 
   # fica: o ícone ligado (true) ou desligado (false). visto: o dono que a tela viu ({ tipo:, id: }), ou nil se o pedido
   # não disse (cliente antigo da API): aí só fica se a conversa estiver sem ninguém ou com a IA.
@@ -32,20 +34,21 @@ module Conversations::FicarAoEnviar
   def pedido(account, params)
     return unless ligado?(account)
 
-    fica = ActiveModel::Type::Boolean.new.cast(params[:ficar_com_a_conversa])
+    fica = BOOLEANOS[params[:ficar_com_a_conversa]]
     return if fica.nil?
 
     Pedido.new(fica: fica, visto: visto(params[:ficar_com_a_conversa_de]))
   end
 
-  # O dono que a tela viu, do formulário ou do JSON. Tipo fora da lista: como se não tivesse dito.
+  # O dono que a tela viu, do formulário ou do JSON. Só um objeto ({ tipo:, id: }); texto, número, lista ou tipo fora da
+  # lista: como se não tivesse dito (a mensagem sai do mesmo jeito, nunca 422 por isso).
   def visto(dado)
-    return if dado.blank? || !dado.respond_to?(:[])
+    return unless dado.is_a?(Hash) || dado.is_a?(ActionController::Parameters)
 
     tipo = dado[:tipo].to_s
     return unless TIPOS.include?(tipo)
 
-    { tipo: tipo, id: tipo == 'pessoa' ? dado[:id].to_i : nil }
+    { tipo: tipo, id: tipo == 'pessoa' ? dado[:id].to_s.to_i : nil }
   end
 
   # O dono como a tela o mostra (Conversation#assignee_type): a IA primeiro, depois a pessoa.

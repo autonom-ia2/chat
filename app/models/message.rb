@@ -393,9 +393,11 @@ class Message < ApplicationRecord
   def claim_conversation_for_person
     return unless public_person_reply? && claim_requested?
 
-    resultado = Conversation.transaction do
-      Conversation.connection.execute("SET LOCAL lock_timeout = '#{PERSON_CLAIM_LOCK_TIMEOUT}'")
-      claim_locked_conversation(Conversation.lock.find(conversation_id))
+    resultado = com_motivo_do_pedido do
+      Conversation.transaction do
+        Conversation.connection.execute("SET LOCAL lock_timeout = '#{PERSON_CLAIM_LOCK_TIMEOUT}'")
+        claim_locked_conversation(Conversation.lock.find(conversation_id))
+      end
     end
     claim_not_done!(resultado) if resultado.is_a?(Symbol)
   rescue ActiveRecord::LockWaitTimeout
@@ -415,6 +417,14 @@ class Message < ApplicationRecord
     return :dono_mudou unless Conversations::FicarAoEnviar.mesmo_dono?(ficar_com_a_conversa.visto, locked)
 
     claim!(locked)
+  end
+
+  # #2067: com o pedido explícito, o registro de passagens grava o porquê ('ficou_ao_enviar'); o listener roda depois do
+  # commit, ainda dentro do bloco. Sem pedido, a regra de antes ('atribuicao').
+  def com_motivo_do_pedido(&)
+    return yield if ficar_com_a_conversa.nil?
+
+    Crm::Passagens.com_motivo(Crm::Passagens::Atribuicao::FICOU_AO_ENVIAR, &)
   end
 
   def claim!(locked)

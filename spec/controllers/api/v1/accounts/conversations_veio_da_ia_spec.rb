@@ -51,6 +51,18 @@ RSpec.describe 'Veio da IA no payload da conversa', type: :request do
       expect(da_empresa['payload'].first.dig('meta', 'veio_da_ia')).to eq(esperado)
     end
 
+    # Pega a consulta a cada troca de conversa: marcar lida/não lida não calcula de onde a conversa veio.
+    it 'marcar como lida e não lida: não calcula', :aggregate_failures do
+      expect(Crm::Passagens::VeioDaIa).not_to receive(:de)
+      expect(Crm::Passagens::VeioDaIa).not_to receive(:da_lista)
+
+      %w[update_last_seen unread].each do |acao|
+        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/#{acao}",
+             headers: ana.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:success)
+      end
+    end
+
     # Pega a tela nova com a flag desligada: o payload é o de antes (sem a chave).
     it 'flag desligada: a chave nem existe', :aggregate_failures do
       account.disable_features!('ficar_com_a_conversa_ao_enviar')
