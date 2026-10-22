@@ -245,7 +245,7 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
         saida = com_testes({})
 
         expect(saida[:itens].map { |linha| linha[:prova] }).to eq(['ok', nil, 'nao', 'sem_teste'])
-        expect(saida[:prova]).to include(mudancas: { testadas: 2, total: 3 })
+        expect(saida[:prova]).to include(mudancas: { testadas: 2, total: 3, contraditas: 1 })
       end
 
       it 'prova antiga, sem testes gravados, ou ainda pendente: sem marca nas linhas e sem a contagem' do

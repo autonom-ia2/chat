@@ -192,12 +192,14 @@ class Autonomia::Agents::ResultadoDoAjuste
     dados['completa'] == false && Array(dados['perguntas']).any? { |item| item.key?('testes') }
   end
 
-  # Cartão (aprovado pelo Rodrigo em 22/10): o título conta MUDANÇAS (os pedidos aplicados) e não perguntas.
+  # Cartão (aprovado pelo Rodrigo em 22/10): o título conta MUDANÇAS (os pedidos aplicados) e não perguntas, e diz
+  # quantas a resposta do teste contrariou.
   def contagem(dados)
     vistos = vistos_pela_prova(dados)
     return {} if vistos.nil?
 
-    { mudancas: { testadas: vistos.count { |visto| visto != 'sem_teste' }, total: vistos.size } }
+    { mudancas: { testadas: vistos.count { |visto| visto != 'sem_teste' }, total: vistos.size,
+                  contraditas: vistos.count('nao') } }
   end
 
   # O ✓ de "mudei" não vem junto de "não deu para ver": cada linha aplicada leva o que a prova viu dela. Só quando o
