@@ -2,10 +2,6 @@
 # Currently the file there is used only for search endpoint.
 # Everywhere else we use conversation builder in partials folder
 
-# #2067: o agente de IA de onde a conversa veio, para o "Devolver para" (Crm::Passagens::VeioDaIa). As listas passam a
-# página inteira (veio_da_ia), em consultas fixas; a conversa lida sozinha consulta a dela.
-veio_da_ia = local_assigns.key?(:veio_da_ia) ? local_assigns[:veio_da_ia][conversation.id] : Crm::Passagens::VeioDaIa.de(conversation)
-
 json.meta do
   json.sender do
     if conversation.contact.present?
@@ -35,7 +31,6 @@ json.meta do
       json.partial! 'api/v1/models/agent', formats: [:json], resource: conversation.assigned_entity
     end
     json.assignee_type 'User'
-    json.veio_da_ia veio_da_ia
   end
   json.partial! 'enterprise/api/v1/conversations/partials/assignee', conversation: conversation if ChatwootApp.enterprise?
   if conversation.team.present?
@@ -44,6 +39,12 @@ json.meta do
     end
   end
   json.hmac_verified conversation.contact_inbox&.hmac_verified
+end
+# #2067: o agente de IA de onde a conversa veio, para o "Devolver para" (Crm::Passagens::VeioDaIa), só com a flag da conta
+# ligada e a conversa com uma pessoa (entra no mesmo meta). As listas passam a página inteira (veio_da_ia), em consultas
+# fixas; a conversa lida sozinha consulta a dela.
+if Conversations::FicarAoEnviar.ligado?(conversation.account) && conversation.assignee_type == 'User'
+  json.meta { json.veio_da_ia Crm::Passagens::VeioDaIa.da_pagina_ou_de(conversation, local_assigns[:veio_da_ia]) }
 end
 
 json.id conversation.display_id
