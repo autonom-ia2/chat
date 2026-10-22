@@ -4888,6 +4888,28 @@
       "DONO": "a troca de quem cuida",
       "ASSUNTO": "as mudanças no assunto"
     },
+    "FECHAR_SUGESTAO": {
+      "FRASE": {
+        "PERDIDO": "Lendo a conversa, achamos que este pedido terminou: {motivo}.",
+        "RESOLVIDO": "Lendo a conversa, achamos que este pedido foi resolvido.",
+        "ARQUIVADO": "Lendo a conversa, achamos que era só um teste."
+      },
+      "MOTIVO": {
+        "ADIOU": "o cliente deixou para depois",
+        "RECUSOU": "o cliente disse que não quer",
+        "FECHOU_COM_OUTRA": "o cliente fechou com outra empresa"
+      },
+      "CURTO": {
+        "PERDIDO": "Achamos que o pedido terminou",
+        "RESOLVIDO": "Achamos que o pedido foi resolvido",
+        "ARQUIVADO": "Achamos que era só um teste"
+      },
+      "RETORNO": "Ao encerrar, marcamos um retorno para voltar a falar.",
+      "ENCERRAR": "Encerrar o pedido",
+      "ARQUIVAR": "Arquivar como teste",
+      "BADGE": "IA: encerrar",
+      "FECHOU": "Pedido encerrado."
+    },
     "PASSO": {
       "ROTULO": "Próximo passo",
       "REUNIAO_HOJE": "Reunião com {nome} {quando}.",

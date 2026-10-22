@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n, I18nT } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { textoDoFechamento } from './sugestaoDeFechar';
 
 // #1423 — o "Próximo passo": uma coisa só, com o único botão azul da tela, e
 // até duas "Depois disso". A ordem vem de proximoPasso.js. Sem botão cinza ao
@@ -114,7 +115,9 @@ const acoes = computed(() => {
     sugestao: props.podeIa
       ? [
           {
-            rotulo: t(`${P}.MOVER`, { etapa: passo.sugestao?.to_stage_name }),
+            rotulo: textoDoFechamento(passo.sugestao)
+              ? t(textoDoFechamento(passo.sugestao).botao)
+              : t(`${P}.MOVER`, { etapa: passo.sugestao?.to_stage_name }),
             icone: 'i-lucide-arrow-right',
             evento: 'aceitar',
           },
@@ -157,13 +160,20 @@ const EVENTOS = {
 };
 const disparar = acao => EVENTOS[acao.evento](acao.dado);
 
+const chaveDe = passo =>
+  passo.tipo === 'fechado' && !props.venda
+    ? `${P}.FECHADO_ATENDER`
+    : `${P}.${passo.tipo.toUpperCase()}`;
+
 const fraseDe = passo => {
   const quando = passo.quando ? props.formato.quando(passo.quando) : '';
+  // A sugestão de fechar o card (F3) diz o que acabou, e não a etapa.
+  const fechar = passo.tipo === 'sugestao' && textoDoFechamento(passo.sugestao);
   return {
-    chave:
-      passo.tipo === 'fechado' && !props.venda
-        ? `${P}.FECHADO_ATENDER`
-        : `${P}.${passo.tipo.toUpperCase()}`,
+    chave: fechar ? fechar.frase : chaveDe(passo),
+    curta: fechar ? fechar.curta : `${P}.CURTO.${passo.tipo.toUpperCase()}`,
+    motivo: fechar && fechar.motivo ? t(fechar.motivo) : '',
+    retorno: fechar && fechar.retorno ? t(fechar.retorno) : '',
     quando,
     ha: passo.quando ? props.formato.ha(passo.quando) : '',
     titulo: passo.retorno?.title || '',
@@ -221,6 +231,7 @@ const depois = computed(() =>
           <template #ha>{{ frase.ha }}</template>
           <template #titulo>{{ frase.titulo }}</template>
           <template #etapa>{{ frase.etapa }}</template>
+          <template #motivo>{{ frase.motivo }}</template>
           <template #status>{{ status }}</template>
         </I18nT>
         <p
@@ -234,6 +245,9 @@ const depois = computed(() =>
           class="mb-0 text-sm text-n-slate-11"
         >
           {{ principal.sugestao.reasoning }}
+        </p>
+        <p v-if="frase.retorno" class="mb-0 text-sm text-n-slate-11">
+          {{ frase.retorno }}
         </p>
       </div>
       <div
@@ -280,7 +294,7 @@ const depois = computed(() =>
               aria-hidden="true"
             />
             <I18nT
-              :keypath="`${P}.CURTO.${item.tipo.toUpperCase()}`"
+              :keypath="item.curta"
               tag="span"
               scope="global"
               class="min-w-0 flex-1"

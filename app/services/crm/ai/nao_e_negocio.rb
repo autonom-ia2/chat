@@ -22,8 +22,9 @@
 class Crm::Ai::NaoENegocio
   FLAG = 'crm_ia_arquiva_lixo'.freeze
   MOTIVOS = %w[fora_do_negocio duplicado].freeze
-  # IA entende a conversa F3, regra k: "era teste" sai arquivado como não é negócio, sem contar como perda. Só com a flag
-  # `crm_ia_fecha_card` (Crm::Ai::FecharCard::TESTE); as guardas do arquivamento são as mesmas.
+  # IA entende a conversa F3, regra k: "era teste" vira SUGESTÃO de arquivar como não é negócio (#sugerir_teste!), sem
+  # contar como perda; a pessoa aceita num clique. Só com a flag `crm_ia_fecha_card` (Crm::Ai::FecharCard::TESTE); as
+  # guardas do arquivamento são as mesmas.
   MOTIVO_TESTE = 'teste'.freeze
 
   # O campo da avaliação de etapa (a regra está em ClassifierPrompt::NAO_E_NEGOCIO).
@@ -59,16 +60,19 @@ class Crm::Ai::NaoENegocio
     ).freeze
   end
 
-  # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier).
-  def initialize(card:, decisao:, lido_em:)
+  # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier). origem: model_used e
+  # trigger da sugestão do "era teste".
+  def initialize(card:, decisao:, lido_em:, origem: {})
     @card = card
     @decisao = decisao.is_a?(Hash) ? decisao.with_indifferent_access : {}
     @lido_em = lido_em
+    @origem = origem.to_h.with_indifferent_access
   end
 
-  # true quando o card foi arquivado.
+  # true quando o card foi arquivado; a sugestão (Crm::AiStageSuggestion) no "era teste".
   def aplicar!
     return false unless decisao_valida?
+    return sugerir_teste! if motivo == MOTIVO_TESTE
 
     arquivado = @card.with_lock { pode_arquivar? && arquivar! }
     Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_ARCHIVED) if arquivado
@@ -81,8 +85,25 @@ class Crm::Ai::NaoENegocio
 
   def confianca = @decisao[:confidence].to_f
 
+  # IA entende a conversa F3 (decisão do Rodrigo, 22/10): o "era teste" nunca arquiva sozinho, nem com confiança
+  # máxima. Na rodada paga F5 o arquivamento errado (estresse-09:1) e o certo (c18-21:19) vieram os dois com 0,99: a
+  # confiança não separa um do outro. Vira sugestão de fechar (Crm::Ai::FecharCard.aceitar! arquiva).
+  def sugerir_teste!
+    @card.with_lock do
+      next false unless pode_arquivar?
+
+      Crm::Ai::SuggestionRecorder.new(
+        card: @card, from_stage: @card.stage, to_stage: @card.stage, confidence: confianca, reasoning: @decisao[:reasoning],
+        model_used: @origem[:model_used], status: :pending,
+        metadata: { trigger: @origem[:trigger], fechar: { resultado: Crm::Ai::FecharCard::ARQUIVADO, motivo: MOTIVO_TESTE } }.compact
+      ).perform
+    end
+  end
+
+  # O "era teste" vira sugestão: basta a confiança de sugerir.
   def decisao_valida?
-    self.class.motivos(@card.account).include?(motivo) && confianca >= Crm::Ai::Config::AUTO_MOVE_THRESHOLD && @lido_em.present?
+    minimo = motivo == MOTIVO_TESTE ? Crm::Ai::Config::SUGGESTION_THRESHOLD : Crm::Ai::Config::AUTO_MOVE_THRESHOLD
+    self.class.motivos(@card.account).include?(motivo) && confianca >= minimo && @lido_em.present?
   end
 
   def pode_arquivar?

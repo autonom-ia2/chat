@@ -13,11 +13,16 @@
 #   como Resolvido.
 # - Ganho nunca (regra c): o campo não tem esse resultado, e num funil de venda o código recusa o "resolvido".
 #
-# Guardas do código, relidas sob a trava do card (como Crm::Ai::NaoENegocio): card aberto; confiança da do movimento
-# automático; nenhuma mensagem do cliente depois de a conversa ser lida para esta avaliação; nenhuma pessoa escolheu a
-# etapa ou o desfecho do card há menos de RESPEITO_AO_MOVIMENTO. O resto é do Crm::Ai::Evaluator: só no automático do
-# funil, nunca no "Avaliar agora" (a pessoa olhando fecha se quiser) nem na avaliação do card parado (regra i: silêncio
-# nunca fecha), e nunca com pedido ou promessa de pessoa na mesma resposta (fechar pularia a passagem).
+# Sugestão por padrão (decisão do Rodrigo, 22/10): a IA fecha sozinha só com confiança de Config::AUTO_CLOSE_THRESHOLD
+# e o movimento automático do funil ligado. Abaixo disso, a partir de Config::SUGGESTION_THRESHOLD, a decisão vira uma
+# sugestão pendente (Crm::AiStageSuggestion, com o resultado, o motivo e a data de retorno em `metadata['fechar']`), e
+# a pessoa fecha num clique (.aceitar!: o mesmo fechamento, com ela como autora). Recusar não fecha nada.
+#
+# Guardas do código, relidas sob a trava do card (como Crm::Ai::NaoENegocio), para fechar e para sugerir: card aberto;
+# nenhuma mensagem do cliente depois de a conversa ser lida para esta avaliação; nenhuma pessoa escolheu a etapa ou o
+# desfecho do card há menos de RESPEITO_AO_MOVIMENTO. O resto é do Crm::Ai::Evaluator: nunca no "Avaliar agora" (a
+# pessoa olhando fecha se quiser) nem na avaliação do card parado (regra i: silêncio nunca fecha), e nunca com pedido ou
+# promessa de pessoa na mesma resposta (fechar pularia a passagem).
 #
 # Sem a flag: o prompt, o schema e o comportamento são os de antes, palavra por palavra.
 class Crm::Ai::FecharCard
@@ -25,6 +30,8 @@ class Crm::Ai::FecharCard
   RESULTADOS = %w[perdido resolvido].freeze
   MOTIVOS = %w[adiou recusou fechou_com_outra].freeze
   ADIOU = 'adiou'.freeze
+  # A sugestão do "era teste" (Crm::Ai::NaoENegocio): aceita, o card é arquivado.
+  ARQUIVADO = 'arquivado'.freeze
   # A avaliação do card parado (Crm::Ai::StaleCardsJob, com a flag): nunca fecha.
   TRIGGER_CARD_PARADO = 'card_parado'.freeze
   GATILHOS_SEM_FECHAMENTO = ['manual', TRIGGER_CARD_PARADO].freeze
@@ -111,20 +118,36 @@ class Crm::Ai::FecharCard
     nil
   end
 
-  # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier).
-  def initialize(card:, decisao:, lido_em:)
+  # A sugestão de fechar que esperava sai da tela quando a conversa é lida de novo. Sob a trava do card, como o aceite
+  # (Crm::Ai::FecharCard::Aceite): não passa por cima de uma sugestão que a pessoa aceitou nesse meio tempo.
+  def self.expirar_sugestoes(card)
+    card.with_lock do
+      card.account.crm_ai_stage_suggestions.where(card: card, status: :pending).where("metadata ->> 'fechar' IS NOT NULL")
+          .find_each { |sugestao| sugestao.update!(status: :expired) }
+    end
+  end
+
+  # A pessoa aceitou a sugestão (Crm::Ai::FecharCard::Aceite). true quando o card fechou.
+  def self.aceitar!(sugestao, ator:) = Aceite.new(sugestao, ator).perform
+
+  # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier). sozinho: a IA pode fechar
+  # sem a pessoa (movimento automático do funil); sem isso, no máximo sugere. origem: model_used e trigger da sugestão.
+  def initialize(card:, decisao:, lido_em:, sozinho: true, origem: {})
     @card = card
     @decisao = decisao.is_a?(Hash) ? decisao.with_indifferent_access : {}
     @lido_em = lido_em
+    @sozinho = sozinho
+    @origem = origem.to_h.with_indifferent_access
   end
 
-  # true quando o card foi fechado.
+  # :fechado quando o card foi fechado; a sugestão (Crm::AiStageSuggestion) quando virou sugestão; nil quando nada.
   def aplicar!
-    return false unless decisao_valida?
+    return unless aplicavel?
+    return sugerir! unless sozinho?
 
     fechado = @card.with_lock { pode_fechar? && fechar! }
     Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_UPDATED) if fechado
-    fechado
+    :fechado if fechado
   end
 
   private
@@ -137,12 +160,34 @@ class Crm::Ai::FecharCard
 
   def perdido? = resultado == 'perdido'
 
+  def aplicavel?
+    RESULTADOS.include?(resultado) && decisao_valida? && confianca >= Crm::Ai::Config::SUGGESTION_THRESHOLD && @lido_em.present?
+  end
+
+  def sozinho? = @sozinho && confianca >= Crm::Ai::Config::AUTO_CLOSE_THRESHOLD
+
   def decisao_valida?
-    return false unless RESULTADOS.include?(resultado) && confianca >= Crm::Ai::Config::AUTO_MOVE_THRESHOLD && @lido_em.present?
+    return false unless RESULTADOS.include?(resultado)
     return MOTIVOS.include?(motivo) if perdido?
 
     # Resolvido só fora da venda: num funil de venda, "deu certo" seria Ganho, que a IA nunca marca.
     !@card.pipeline.counts_as_sale?
+  end
+
+  def sugerir!
+    @card.with_lock do
+      next unless pode_fechar?
+
+      Crm::Ai::SuggestionRecorder.new(
+        card: @card, from_stage: @card.stage, to_stage: etapa_de_fim || @card.stage, confidence: confianca,
+        reasoning: @decisao[:reasoning], model_used: @origem[:model_used], status: :pending,
+        metadata: { trigger: @origem[:trigger], fechar: dados_da_sugestao, pedido_de_retorno: @origem[:pedido_de_retorno] }.compact
+      ).perform
+    end
+  end
+
+  def dados_da_sugestao
+    { resultado: resultado, motivo: (motivo if perdido?), retorno_em: (@decisao[:retorno_em].presence if motivo == ADIOU) }.compact
   end
 
   def pode_fechar?
@@ -162,21 +207,32 @@ class Crm::Ai::FecharCard
     da_pessoa.where(event_type: ESCOLHAS_DA_PESSOA).or(criou_na_etapa).exists?
   end
 
+  # Sem ator: a IA fechou sozinha. A pessoa que aceita a sugestão chega pelo Crm::Ai::FecharCard::Aceite.
   def fechar!
     ir_para_etapa_de_fim!
-    @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).find_each { |sugestao| sugestao.update!(status: :expired) }
-    Crm::Cards::Closer.new(card: @card, actor: nil, result: perdido? ? 'lost' : 'won', lost_reason: rotulo_do_motivo,
+    @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).where.not(id: sugestao&.id)
+         .find_each { |pendente| pendente.update!(status: :expired) }
+    Crm::Cards::Closer.new(card: @card, actor: ator, result: perdido? ? 'lost' : 'won', lost_reason: rotulo_do_motivo,
                            payload_extra: payload).perform
     true
   end
 
+  def ator = nil
+
+  def sugestao = nil
+
   # A etapa de perda (ou, no resolvido, a de ganho do funil de Atender), como uma pessoa que arrasta o card antes de
   # fechar. Sem ela, o card fecha onde está.
   def ir_para_etapa_de_fim!
-    etapa = @card.pipeline.stages.order(:position, :id).find_by(perdido? ? { is_lost_stage: true } : { is_won_stage: true })
+    etapa = etapa_de_fim
     return if etapa.nil? || etapa.id == @card.stage_id
 
-    Crm::Cards::Mover.new(card: @card, actor: nil, target_stage: etapa, automation_context: { source: 'crm_ai' }).perform
+    Crm::Cards::Mover.new(card: @card, actor: ator, target_stage: etapa,
+                          automation_context: { source: 'crm_ai', suggestion_id: sugestao&.id }.compact).perform
+  end
+
+  def etapa_de_fim
+    @card.pipeline.stages.order(:position, :id).find_by(perdido? ? { is_lost_stage: true } : { is_won_stage: true })
   end
 
   def rotulo_do_motivo

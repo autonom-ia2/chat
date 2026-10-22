@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # IA entende a conversa F3 (flag `crm_ia_fecha_card`), o caminho do Crm::Ai::Evaluator depois de a IA fechar o card: não
-# passa a conversa nem pontua; o "adiou" ganha o lembrete de retorno (regra a); "era teste" sai arquivado (regra k); e,
+# passa a conversa nem pontua; o "adiou" ganha o lembrete de retorno (regra a); "era teste" vira sugestão (regra k); e,
 # com uma pessoa mexendo na etapa há pouco, VOLTAR vira sugestão (regra h, D1). O modelo é simulado.
 RSpec.describe Crm::Ai::Evaluator do
   around do |example|
@@ -35,7 +35,7 @@ RSpec.describe Crm::Ai::Evaluator do
   end
 
   def adiou(retorno_em: nil)
-    { fechar_card: { resultado: 'perdido', motivo: 'adiou', retorno_em: retorno_em, confidence: 0.9, reasoning: 'Agora não.' },
+    { fechar_card: { resultado: 'perdido', motivo: 'adiou', retorno_em: retorno_em, confidence: 0.96, reasoning: 'Agora não.' },
       suggested_stage_id: stage.id }
   end
 
@@ -52,7 +52,7 @@ RSpec.describe Crm::Ai::Evaluator do
       allow(Crm::Ai::HandoffExecutor).to receive(:new)
       allow(Crm::Ai::ScoreApplier).to receive(:new)
       allow(Crm::Memoria::Pendente).to receive(:aplicar!)
-      ia_responde(fechar_card: { resultado: 'perdido', motivo: 'recusou', retorno_em: nil, confidence: 0.9, reasoning: 'Não quer.' },
+      ia_responde(fechar_card: { resultado: 'perdido', motivo: 'recusou', retorno_em: nil, confidence: 0.96, reasoning: 'Não quer.' },
                   suggested_stage_id: stage.id)
 
       expect(avaliar.status).to eq(:closed)
@@ -121,12 +121,35 @@ RSpec.describe Crm::Ai::Evaluator do
       { nao_e_negocio: { motivo: 'teste', confidence: 0.9, reasoning: 'Era um teste.', duplicado_de: nil }, suggested_stage_id: stage.id }
     end
 
-    it 'arquiva como não é negócio, sem perda', :aggregate_failures do
+    # Pega (decisão do Rodrigo, 22/10): arquivar sozinho um "teste" que não era (estresse-09:1 da F5, confiança 0,99).
+    it 'nunca arquiva sozinho, nem com confiança máxima: vira sugestão de arquivar', :aggregate_failures do
+      ia_responde(teste.deep_merge(nao_e_negocio: { confidence: 0.99 }))
+
+      resultado = avaliar
+
+      expect(resultado.status).to eq(:suggested)
+      expect(card.reload).to be_open
+      expect(resultado.suggestion.fechar).to eq('resultado' => 'arquivado', 'motivo' => 'teste')
+      expect(Crm::Activity.where(card: card, event_type: 'archive')).to be_empty
+    end
+
+    it 'aceita, arquiva como não é negócio, sem perda, com a pessoa como autora', :aggregate_failures do
+      ia_responde(teste)
+      sugestao = avaliar.suggestion
+
+      Crm::Ai::SuggestionApplier.new(card: card, suggestion: sugestao, actor: admin).perform
+
+      expect(card.reload).to have_attributes(status: 'archived', closed_at: nil)
+      expect(Crm::Activity.where(card: card, event_type: 'archive').sole)
+        .to have_attributes(actor_type: 'user', payload: include('motivo' => 'teste', 'sugestao_da_ia' => sugestao.id))
+      expect(sugestao.reload).to be_accepted
+    end
+
+    it 'funil sem movimento automático: o "era teste" ainda vira sugestão' do
+      pipeline.update!(metadata: { 'ai' => { 'auto_move_enabled' => false } })
       ia_responde(teste)
 
-      expect(avaliar.status).to eq(:archived)
-      expect(card.reload).to have_attributes(status: 'archived', closed_at: nil)
-      expect(Crm::Activity.where(card: card, event_type: 'archive').sole.payload).to include('by' => 'ai', 'motivo' => 'teste')
+      expect(avaliar.status).to eq(:suggested)
     end
 
     it 'sem a flag da F3: "teste" não é motivo aceito, e o card fica' do

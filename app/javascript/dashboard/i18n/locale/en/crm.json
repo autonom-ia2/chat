@@ -4887,6 +4887,28 @@
       "DONO": "the change of who takes care",
       "ASSUNTO": "the changes to the subject"
     },
+    "FECHAR_SUGESTAO": {
+      "FRASE": {
+        "PERDIDO": "Reading the conversation, we think this request is over: {motivo}.",
+        "RESOLVIDO": "Reading the conversation, we think this request was solved.",
+        "ARQUIVADO": "Reading the conversation, we think it was only a test."
+      },
+      "MOTIVO": {
+        "ADIOU": "the customer left it for later",
+        "RECUSOU": "the customer said no",
+        "FECHOU_COM_OUTRA": "the customer went with someone else"
+      },
+      "CURTO": {
+        "PERDIDO": "We think the request is over",
+        "RESOLVIDO": "We think the request was solved",
+        "ARQUIVADO": "We think it was only a test"
+      },
+      "RETORNO": "When you close it, we set a follow-up to get back in touch.",
+      "ENCERRAR": "Close the request",
+      "ARQUIVAR": "Archive as a test",
+      "BADGE": "AI: close",
+      "FECHOU": "Request closed."
+    },
     "PASSO": {
       "ROTULO": "Next step",
       "REUNIAO_HOJE": "Meeting with {nome} {quando}.",

@@ -49,6 +49,18 @@ class Crm::AiStageSuggestion < ApplicationRecord
 
   scope :current_pending, -> { where(status: :pending).order(created_at: :desc) }
 
+  # IA entende a conversa F3: a sugestão de FECHAR o card (Crm::Ai::FecharCard), com o resultado (perdido, resolvido ou
+  # arquivado), o motivo e a data de retorno. nil na sugestão de etapa.
+  def fechar
+    dados = metadata.to_h['fechar']
+    dados.slice('resultado', 'motivo', 'retorno_em') if dados.is_a?(Hash) && dados['resultado'].present?
+  end
+
+  # A sugestão de fechar de uma conta que desligou a flag: some da tela e não fecha nada (sem a flag, nada muda).
+  def fechar_desligado?
+    fechar.present? && !Crm::Ai::FecharCard.ligada?(account)
+  end
+
   private
 
   def stages_must_belong_to_account

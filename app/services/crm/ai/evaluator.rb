@@ -189,8 +189,9 @@ module Crm
         return Result.new(status: :skipped, error: 'pipeline_changed') if @pipeline_mudou
 
         return voltar_como_sugestao(classification) || pessoa_mexeu_na_etapa! if pessoa_mexeu_na_etapa?
-        return Result.new(status: :archived) if nao_e_negocio!(classification)
-        return Result.new(status: :closed) if fechar_card!(classification)
+
+        fim = nao_e_negocio!(classification) || fechar_card!(classification)
+        return fim_do_card(fim) if fim
 
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
         return Result.new(status: :skipped, error: 'unknown_stage') if target_stage.blank?
@@ -252,27 +253,49 @@ module Crm
 
       # #1922: o modelo disse que o card não é negócio. Só com a flag da conta (`crm_ia_arquiva_lixo`) e no automático do
       # funil, como mover sozinho; "Avaliar agora" é a pessoa olhando o card, e ela mesma arquiva se quiser. As guardas do
-      # card são do Crm::Ai::NaoENegocio. Com pedido de atendente neste card, ele fica: arquivar pularia a passagem.
+      # card são do Crm::Ai::NaoENegocio. Com pedido de atendente neste card, ele fica: arquivar pularia a passagem. O "era
+      # teste" (F3) é sempre sugestão: vale também sem o movimento automático, e a promessa de pessoa também o barra.
       def nao_e_negocio!(classification)
         return false if @trigger == 'manual' || classification[:nao_e_negocio].blank?
         return false unless NaoENegocio.ligada?(@card.account)
         return false if HandoffIntent.requested?(classification[:handoff])
-        return false unless auto_move_allowed?
 
-        NaoENegocio.new(card: @card, decisao: classification[:nao_e_negocio], lido_em: @lido_em).aplicar!
+        teste = classification.dig(:nao_e_negocio, :motivo) == NaoENegocio::MOTIVO_TESTE
+        return false if teste && FatosDaConversa.promessa?(classification[:handoff])
+        return false unless teste || auto_move_allowed?
+
+        NaoENegocio.new(card: @card, decisao: classification[:nao_e_negocio], lido_em: @lido_em, origem: origem(classification)).aplicar!
       end
 
-      # IA entende a conversa F3: o modelo disse que o pedido deste card terminou. Só com a flag `crm_ia_fecha_card` e
-      # no automático do funil, como mover sozinho; nem no "Avaliar agora" nem na avaliação do card parado (silêncio
-      # nunca fecha). Com pedido ou promessa de pessoa neste card, ele fica: fechar pularia a passagem. As guardas do card
-      # são do Crm::Ai::FecharCard.
+      # IA entende a conversa F3: o modelo disse que o pedido deste card terminou. Só com a flag `crm_ia_fecha_card`; nem
+      # no "Avaliar agora" nem na avaliação do card parado (silêncio nunca fecha). Com pedido ou promessa de pessoa neste
+      # card, ele fica: fechar pularia a passagem. Fecha sozinho só no automático do funil e com a confiança alta; senão,
+      # vira sugestão de fechar. As guardas do card são do Crm::Ai::FecharCard. A leitura nova da conversa tira da tela a
+      # sugestão de fechar que esperava (a mesma leitura grava outra, se ainda for o caso).
       def fechar_card!(classification)
-        return false if FecharCard::GATILHOS_SEM_FECHAMENTO.include?(@trigger) || classification[:fechar_card].blank?
         return false unless FecharCard.ligada?(@account)
-        return false if HandoffIntent.requested?(classification[:handoff]) || FatosDaConversa.promessa?(classification[:handoff])
-        return false unless auto_move_allowed?
+        return false if FecharCard::GATILHOS_SEM_FECHAMENTO.include?(@trigger)
 
-        FecharCard.new(card: @card, decisao: classification[:fechar_card], lido_em: @lido_em).aplicar!
+        FecharCard.expirar_sugestoes(@card)
+        return false if classification[:fechar_card].blank?
+        return false if HandoffIntent.requested?(classification[:handoff]) || FatosDaConversa.promessa?(classification[:handoff])
+
+        FecharCard.new(card: @card, decisao: classification[:fechar_card], lido_em: @lido_em, sozinho: auto_move_allowed?,
+                       origem: origem(classification)).aplicar!
+      end
+
+      # true (arquivado), :fechado ou a sugestão de fechar (Crm::AiStageSuggestion).
+      def fim_do_card(fim)
+        return Result.new(status: :suggested, suggestion: fim) if fim.is_a?(Crm::AiStageSuggestion)
+
+        Result.new(status: fim == :fechado ? :closed : :archived)
+      end
+
+      # Para a sugestão de fechar: quem leu, quando e a data de retorno que a mesma leitura achou (Retorno).
+      def origem(classification)
+        pedido = classification[:callback_request]
+        pedido = pedido.is_a?(Hash) ? pedido.with_indifferent_access.slice(:detected, :requested_at).presence : nil
+        { model_used: classification[:model_used], trigger: @trigger, pedido_de_retorno: pedido }
       end
 
       # O card que a IA fechou não passa a conversa nem pontua (isso é de card aberto). Os campos e a memória seguem, e o
