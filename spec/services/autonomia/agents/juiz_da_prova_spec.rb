@@ -98,16 +98,21 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
 
   # Série 3 do t6d anulada (decisão do Rodrigo, 22/10): forma só entra em testes quando a resposta deixa ver a forma.
   # A resposta que não deixa ver não vira nao: o agente não errou. O exemplo é de outro ramo, nunca o do eval.
-  it 'a instrução: forma só entra em testes quando a resposta mostra ou contradiz a forma; sem mostrar, fica fora' do
+  # Revisão do 8d379379b7: contradizer é usar a forma OPOSTA; sem a pedida e sem a oposta, fica fora. Tamanho e emoji
+  # sempre aparecem.
+  it 'a instrução: ok com a forma pedida, nao com a oposta, fora sem nenhuma das duas; tamanho e emoji sempre aparecem' do
     instrucao = described_class::INSTRUCAO.squish
     expect(instrucao).to include(
-      'Mudanca de forma (tamanho da resposta, tom, tratamento, emoji, formato) so entra em testes quando a resposta ' \
-      'deixa ver a forma pedida: quando a mostra (ok) ou a contradiz (nao), mesmo que o assunto seja outro.',
-      'Uma resposta que nao deixa ver a forma nao testa esse pedido: ele fica fora de testes daquela mensagem, e nao ' \
-      'vira nao, porque o agente nao errou, a resposta so nao deixou ver',
-      'numa loja de roupas', '"Temos no tamanho M." nao fala com a cliente e nao mostra o tratamento'
+      'ok quando a forma pedida aparece na resposta',
+      'nao quando a resposta usa a forma oposta a pedida (ex.: pediu tratar por voce e veio "o senhor"; pediu sem ' \
+      'emoji e veio emoji; pediu tom descontraido e veio duro e formal)',
+      'fora de testes quando a forma pedida nao aparece e a oposta tambem nao: o pedido nao entra em testes daquela ' \
+      'mensagem e nao vira nao, porque o agente nao errou, a resposta so nao deixou ver',
+      'numa loja de roupas', '"Temos no tamanho M." nao mostra nem uma forma nem a outra',
+      'Tamanho sempre aparece em qualquer resposta que o agente escreve: e sempre ok ou nao.',
+      'Emoji tambem sempre aparece: resposta sem emoji e ok para "sem emoji", e resposta com emoji e nao.'
     )
-    expect(instrucao).not_to include('aparece em qualquer resposta que o agente escreve', 'escola')
+    expect(instrucao).not_to include('aparece em qualquer resposta que o agente escreve com as proprias palavras', 'escola')
   end
 
   # Revisão do t6d (MÉDIO 1): assunto ou gatilho só entra em testes quando a mensagem traz o assunto.
