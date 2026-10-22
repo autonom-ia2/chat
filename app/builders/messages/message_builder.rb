@@ -23,8 +23,9 @@ class Messages::MessageBuilder
 
   def perform
     @message = @conversation.messages.build(message_params)
-    # #2067: o ícone "ficar com a conversa ao enviar" do painel; nil quando o pedido não diz.
-    @message.ficar_com_a_conversa = ActiveModel::Type::Boolean.new.cast(@params[:ficar_com_a_conversa])
+    # #2067: o ícone "ficar com a conversa ao enviar" do painel e o dono que a tela viu; nil quando o pedido não diz ou a
+    # conta está com a flag desligada (Conversations::FicarAoEnviar).
+    @message.ficar_com_a_conversa = Conversations::FicarAoEnviar.pedido(@account, @params)
     process_attachments
     process_emails
     # When the message has no quoted content, it will just be rendered as a regular message

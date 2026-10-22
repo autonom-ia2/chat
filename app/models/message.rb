@@ -87,9 +87,13 @@ class Message < ApplicationRecord
   attr_accessor :echo_id
   # Transient flag used to skip waiting_since clearing for specific bot/system messages.
   attr_accessor :preserve_waiting_since
-  # #2067: "ficar com a conversa ao enviar", o ícone ao lado do Enviar no painel. true ou false = a pessoa decidiu nesta
-  # mensagem; nil = o pedido não disse (API, app, integrações) e vale a regra de antes (claim_conversation_for_person).
+  # #2067: "ficar com a conversa ao enviar", o ícone ao lado do Enviar no painel (Conversations::FicarAoEnviar::Pedido:
+  # ligado ou desligado, e o dono que a tela viu). nil = o pedido não disse (API, app, integrações) ou a conta está com a
+  # flag desligada, e vale a regra de antes (claim_conversation_for_person).
   attr_accessor :ficar_com_a_conversa
+  # #2067: o ícone estava ligado e não deu para ficar com a conversa (trava ocupada, outro dono, erro). Vai na resposta do
+  # envio, para a tela avisar; nil quando ficou ou não foi pedido.
+  attr_reader :ficar_com_a_conversa_nao_deu
 
   enum message_type: { incoming: 0, outgoing: 1, activity: 2, template: 3 }
   enum content_type: {
@@ -375,44 +379,63 @@ class Message < ApplicationRecord
     ChatwootExceptionTracker.new(e, account: account).capture_exception
   end
 
-  # Quem responde pelo painel fica com a conversa (#2067, decisão do Rodrigo em 21/10, que troca a de 13/10 do #1377/#1405
-  # "atendente responde não assume"). Roda depois da mensagem gravada e uma vez só, numa trava com teto, como a fila do
-  # motor: a resposta não fica presa atrás de uma entrega.
-  # - Ícone ligado (ficar_com_a_conversa = true): fica com ela, esteja sem ninguém, com a IA ou com um colega. Tomar
-  #   conversa de colega só com este pedido explícito; o painel manda true por padrão só sem ninguém ou com a IA.
-  # - Ícone desligado (false): ninguém fica, nem na conversa à espera de pessoa.
-  # - O pedido não disse (nil: API, app): a regra de antes. Só a conversa que o robô já passou e espera pessoa fica com
-  #   quem respondeu (#1499, opção b), senão a fila do motor de entrega a daria a outro; com o robô atendendo, não.
+  # Quem responde pelo painel fica com a conversa (#2067, decisões do Rodrigo em 21 e 22/10, que trocam a de 13/10 do
+  # #1377/#1405 "atendente responde não assume"). Roda depois da mensagem gravada ("ao enviar" é ao clicar em Enviar: se o
+  # provedor recusar depois, a conversa continua com quem tentou) e uma vez só, numa trava com teto, como a fila do motor:
+  # a resposta não fica presa atrás de uma entrega.
+  # - Ícone ligado: fica com ela se o dono ainda é o que a tela viu (Conversations::FicarAoEnviar.mesmo_dono?). Sem
+  #   ninguém e com a IA valem como a mesma situação; de um colega, só se a tela viu esse colega e a pessoa ligou o ícone.
+  # - Ícone desligado: ninguém fica, nem na conversa à espera de pessoa.
+  # - O pedido não disse (API, app, ou a flag desligada): a regra de antes. Só a conversa que o robô já passou e espera
+  #   pessoa fica com quem respondeu (#1499, opção b), senão a fila do motor de entrega a daria a outro.
   # Atribuir encerra as marcas de espera e tira o robô (callbacks da conversa), e o registro de passagens grava a troca.
+  # Com o ícone ligado, não ficar nunca é calado: a resposta do envio leva `ficar_com_a_conversa_nao_deu` e o log diz por quê.
   def claim_conversation_for_person
     return unless public_person_reply? && claim_requested?
 
-    Conversation.transaction do
+    resultado = Conversation.transaction do
       Conversation.connection.execute("SET LOCAL lock_timeout = '#{PERSON_CLAIM_LOCK_TIMEOUT}'")
-      locked = Conversation.lock.find(conversation_id)
-      next unless claim_for_person?(locked)
-
-      locked.update!(assignee: sender, status: locked.pending? ? :open : locked.status)
+      claim_locked_conversation(Conversation.lock.find(conversation_id))
     end
+    claim_not_done!(resultado) if resultado.is_a?(Symbol)
   rescue ActiveRecord::LockWaitTimeout
     # Linha presa por uma entrega em andamento: quem decide é ela; a resposta já foi gravada e enviada.
     Rails.logger.warn("[crm][entrega] resposta conversa=#{conversation_id} não assumiu: trava ocupada")
+    claim_not_done!(:trava_ocupada)
   rescue ActiveRecord::ActiveRecordError => e
     # A mensagem já está gravada e enviada; a conversa segue como estava (ou na fila do motor, que a entrega a alguém).
     ChatwootExceptionTracker.new(e, account: account).capture_exception
+    claim_not_done!(:erro)
+  end
+
+  # -> true quando ficou ou já era dela; :dono_mudou quando o pedido explícito encontrou outro dono.
+  def claim_locked_conversation(locked)
+    return true if locked.assignee_id == sender_id && locked.ai_assignee_type.blank?
+    return waiting_for_person?(locked) && claim!(locked) if ficar_com_a_conversa.nil?
+    return :dono_mudou unless Conversations::FicarAoEnviar.mesmo_dono?(ficar_com_a_conversa.visto, locked)
+
+    claim!(locked)
+  end
+
+  def claim!(locked)
+    locked.update!(assignee: sender, status: locked.pending? ? :open : locked.status)
+  end
+
+  # Só o pedido explícito avisa (o envio sem pedido segue a regra de antes, em silêncio).
+  def claim_not_done!(motivo)
+    return unless ficar_com_a_conversa&.fica?
+
+    @ficar_com_a_conversa_nao_deu = true
+    Rails.logger.warn("[conversa][ficar_ao_enviar] conversa=#{conversation_id} mensagem=#{id} pessoa=#{sender_id} " \
+                      "não ficou: #{motivo}")
   end
 
   # Olha antes de travar: a maioria das respostas sem pedido não está à espera. Leitura nova (sem trava): a conversa em
   # memória vem do começo do pedido e pode não ver uma passagem recém-gravada.
   def claim_requested?
-    return ficar_com_a_conversa unless ficar_com_a_conversa.nil?
+    return ficar_com_a_conversa.fica? if ficar_com_a_conversa
 
     waiting_for_person?(Conversation.find(conversation_id))
-  end
-
-  # Na linha travada: com o pedido, só se ainda não é dela; sem ele, só se ainda espera pessoa.
-  def claim_for_person?(conv)
-    ficar_com_a_conversa ? conv.assignee_id != sender_id : waiting_for_person?(conv)
   end
 
   # Resposta pública que a própria pessoa mandou agora (ela é quem está logado no pedido). Aviso, follow-up ou envio
