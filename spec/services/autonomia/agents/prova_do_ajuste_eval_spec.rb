@@ -177,7 +177,7 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
   # Estrutura (do código): o ajuste entrou, a prova ficou pronta com 1 a 3 perguntas do Construtor, pelo menos uma tocou a
   # mudança e cada pedido teve um teste (`completa`). Julgamento (do juiz do eval): critério, sigilo e cada teste certo.
   def linha(caso, applied, prova, pedidos, veredito)
-    estrutura = estrutura_ok?(applied, prova, caso)
+    estrutura = estrutura_ok?(applied, prova, caso, pedidos)
     { caso: caso[:nome], agente: caso[:agente], applied: applied, estrutura: estrutura, prova: prova,
       pedidos_aplicados: pedidos, veredito: veredito, declarado_x_testado: declarado_x_testado(prova, pedidos),
       aprovada: estrutura && julgamento_ok?(veredito, prova) && fora_certa?(caso, prova),
@@ -194,23 +194,31 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     end
   end
 
-  def estrutura_ok?(applied, prova, caso)
+  def estrutura_ok?(applied, prova, caso, pedidos)
     escritas = Array(prova['perguntas']).size - (caso[:extra] ? 1 : 0)
-    applied == true && prova['status'] == 'pronta' && escritas.between?(1, 3) && placar_certo?(prova, caso) &&
+    applied == true && prova['status'] == 'pronta' && escritas.between?(1, 3) && placar_certo?(prova, caso, pedidos) &&
       base_usada?(caso, prova)
   end
 
   # Prova completa com ao menos um teste. No caso em que a forma pode não aparecer (série 3 anulada), vale também a
   # prova incompleta, desde que nenhuma resposta tenha sido testada (nenhum ✓) e toda mensagem tenha declarado um pedido
-  # da lista (revisão do 8d379379b7): a incompleta é só a forma que não apareceu, nunca uma mensagem fora da lista.
-  def placar_certo?(prova, caso)
+  # da lista (revisão do 8d379379b7): a incompleta é só a forma que não apareceu, nunca uma mensagem fora da lista. E cada
+  # pedido aplicado foi declarado em alguma mensagem (revisão do 7e8855d8e5): nenhum pedido ficou sem pergunta.
+  def placar_certo?(prova, caso, pedidos)
     completa = prova['completa'] == true && prova['total'].to_i >= 1
-    completa || (caso[:forma_pode_nao_aparecer] == true && incompleta_sem_forma?(prova))
+    completa || (caso[:forma_pode_nao_aparecer] == true && incompleta_sem_forma?(prova, pedidos))
   end
 
-  def incompleta_sem_forma?(prova)
-    prova['completa'] == false && prova['total'].to_i.zero? &&
-      Array(prova['perguntas']).all? { |item| !item['pedido'].nil? }
+  def incompleta_sem_forma?(prova, pedidos)
+    perguntas = Array(prova['perguntas'])
+    prova['completa'] == false && prova['total'].to_i.zero? && perguntas.all? { |item| !item['pedido'].nil? } &&
+      todo_pedido_declarado?(perguntas, pedidos)
+  end
+
+  def todo_pedido_declarado?(perguntas, pedidos)
+    sem_ponto = Autonomia::Agents::ResultadoDoAjuste.method(:sem_ponto)
+    declarados = perguntas.map { |item| sem_ponto.call(item['pedido']) }
+    pedidos.any? && pedidos.all? { |pedido| declarados.include?(sem_ponto.call(pedido)) }
   end
 
   # Revisão 2 do t6d (MÉDIO 2): no caso com base, ao menos uma resposta usou um trecho dela.
@@ -478,10 +486,10 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     prova = { 'status' => 'pronta', 'total' => 1, 'completa' => true,
               'perguntas' => [{ 'pergunta' => 'Tem estacionamento?', 'resposta' => 'Tem.', 'testes' => [] }] }
 
-    expect(estrutura_ok?(true, prova, caso)).to be(false)
+    expect(estrutura_ok?(true, prova, caso, ['p'])).to be(false)
     prova['perguntas'].first['trechos'] = [AvaliacaoDaProvaDoAjuste::BASE_DA_ACADEMIA.first]
-    expect(estrutura_ok?(true, prova, caso)).to be(true)
-    expect(estrutura_ok?(true, prova.merge('perguntas' => [{ 'pergunta' => 'Oi' }]), AvaliacaoDaProvaDoAjuste::CASOS.first))
+    expect(estrutura_ok?(true, prova, caso, ['p'])).to be(true)
+    expect(estrutura_ok?(true, prova.merge('perguntas' => [{ 'pergunta' => 'Oi' }]), AvaliacaoDaProvaDoAjuste::CASOS.first, ['p']))
       .to be(true)
   end
 
@@ -523,6 +531,14 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
       fora_da_lista = prova(completa: false, certas: 0, total: 0, perguntas: itens.map { |item| item.merge('pedido' => nil) })
       expect(linha(caso, true, com_teste, ['p'], veredito([true, true]))[:aprovada]).to be(false)
       expect(linha(caso, true, fora_da_lista, ['p'], veredito([true, true]))[:aprovada]).to be(false)
+    end
+
+    # Revisão do 7e8855d8e5 (BAIXO): a incompleta também exige que cada pedido aplicado esteja declarado numa mensagem.
+    it 'incompleta só vale com cada pedido aplicado declarado em alguma mensagem' do
+      sem_teste = prova(completa: false, certas: 0, total: 0)
+      expect(linha(caso, true, sem_teste, %w[p q], veredito([true, true]))[:aprovada]).to be(false)
+      expect(linha(caso, true, sem_teste, ['p.'], veredito([true, true]))[:aprovada]).to be(true)
+      expect(linha(caso, true, sem_teste, [], veredito([true, true]))[:aprovada]).to be(false)
     end
 
     it 'outro caso continua exigindo prova completa e as mensagens mostrando a mudança' do
