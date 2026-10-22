@@ -18,9 +18,12 @@ module Enterprise::Crm::IntegrationTokenPolicy
     token_manage?
   end
 
-  # A token never carries more than the person minting or rotating it holds (#2027).
+  # A token never carries more than the person minting or rotating it holds (#2027). Sales values (#2075) are not
+  # covered by crm_admin, so they follow Crm::ValorDeVenda.
   def grant_scopes?(scopes)
-    Array(scopes).all? { |scope| crm_permission?(scope.to_s) }
+    Array(scopes).all? do |scope|
+      scope.to_s == Crm::ValorDeVenda::CHAVE ? Crm::ValorDeVenda.ve?(account_user) : crm_permission?(scope.to_s)
+    end
   end
 
   private

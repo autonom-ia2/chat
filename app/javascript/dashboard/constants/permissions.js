@@ -9,6 +9,8 @@ export const CRM_EXPORT_PERMISSION = 'crm_export';
 export const CRM_DELETE_CARDS_PERMISSION = 'crm_delete_cards';
 // #1991 — metas do mês por pessoa (gaveta "Metas do mês" em CRM › Números).
 export const CRM_METAS_MANAGE_PERMISSION = 'crm_metas_manage';
+// #2075 — valores de venda em R$ (valor do card, somas, metas, taxas por valor). Sem ela, contagens e os próprios cards.
+export const SALES_VALUE_VIEW_PERMISSION = 'sales_value_view';
 
 // Module keys (#452): `<module>_manage` implies `<module>_view` on the backend, so routes list both.
 export const CONTACT_VIEW_PERMISSION = 'contact_view';
@@ -61,7 +63,13 @@ export const DELEGATION_KEYS = [
   INTEGRATION_MANAGE_PERMISSION,
   TOKEN_MANAGE_PERMISSION,
   META_ADS_MANAGE_PERMISSION,
+  SALES_VALUE_VIEW_PERMISSION,
 ];
+// Chave que só funciona junto com outra: a meta do mês é dinheiro (#2075). Ligar a primeira liga a segunda, e quem não
+// pode entregar a segunda também não entrega a primeira.
+export const KEY_DEPENDENCIES = {
+  [CRM_METAS_MANAGE_PERMISSION]: SALES_VALUE_VIEW_PERMISSION,
+};
 
 export const ROLES = ['agent', 'administrator'];
 

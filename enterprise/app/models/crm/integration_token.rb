@@ -53,6 +53,7 @@ class Crm::IntegrationToken < ApplicationRecord
     crm_manage_ai
     crm_view_reports
     crm_admin
+    sales_value_view
   ].freeze
 
   belongs_to :account

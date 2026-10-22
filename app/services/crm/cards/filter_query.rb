@@ -26,11 +26,12 @@ class Crm::Cards::FilterQuery
   # #1883: "fechado neste mês" (`closed_in=this_month`), para os links do Números. List-only, como o `result`.
   CLOSED_IN_THIS_MONTH = 'this_month'.freeze
 
-  def initialize(scope:, params:, conversation_visibility:, account: Current.account)
+  def initialize(scope:, params:, conversation_visibility:, account: Current.account, account_user: Current.account_user)
     @scope = scope
     @params = params
     @conversation_visibility = conversation_visibility
     @account = account
+    @account_user = account_user
   end
 
   def perform
@@ -55,6 +56,8 @@ class Crm::Cards::FilterQuery
     return cards.order(score: :desc, updated_at: :desc, id: :desc) if @params[:sort].blank?
 
     column = SORTABLE[@params[:sort].to_s] || :updated_at
+    # Valor de venda (#2075): ordenar por valor revelaria o valor; sem `sales_value_view`, vale o padrão.
+    column = :updated_at if column == :value_cents && !Crm::ValorDeVenda.ve?(@account_user)
     direction = @params[:direction].to_s == 'asc' ? :asc : :desc
     cards.order(column => direction).order(updated_at: :desc, id: :desc)
   end

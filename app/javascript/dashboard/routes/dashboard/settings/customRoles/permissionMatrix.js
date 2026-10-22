@@ -7,9 +7,11 @@ import {
   FINANCIAL_VIEW_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
   INTEGRATION_MANAGE_PERMISSION,
+  KEY_DEPENDENCIES,
   META_ADS_MANAGE_PERMISSION,
   META_ADS_VIEW_PERMISSION,
   PEOPLE_MANAGE_PERMISSION,
+  SALES_VALUE_VIEW_PERMISSION,
   TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
 
@@ -55,6 +57,8 @@ export const SENSITIVE_EXTRAS = [
   'crm_export',
   // #1991: abre o R$ de cada pessoa da equipe e grava a meta de todos.
   'crm_metas_manage',
+  // #2075: abre o R$ das vendas de toda a equipe.
+  SALES_VALUE_VIEW_PERMISSION,
   CRM_ADMIN,
   'contact_export',
   'contact_delete',
@@ -120,6 +124,8 @@ export const MODULE_GROUPS = [
         extras: [
           CRM_MOVE_CARDS,
           'crm_delete_cards',
+          // Valores de venda em R$ (#2075); as metas do mês (#1991) precisam dela.
+          SALES_VALUE_VIEW_PERMISSION,
           // Metas do mês de cada pessoa (#1991): o R$ dos colegas é número comercial (Decisão 1 do #1871).
           'crm_metas_manage',
           'crm_view_reports',
@@ -473,9 +479,17 @@ export const toggleExtra = (module, key, permissions) => {
   if (!permissions.includes(key)) {
     // Full CRM access switches every CRM option on, so the screen matches the backend.
     const implied = key === CRM_ADMIN ? CRM_EXTRAS_IMPLIED_BY_ADMIN : [];
-    return unique([...permissions, key, ...implied]);
+    // #2075: a meta do mês é dinheiro. Ligar as metas liga os valores em R$; desligar os valores desliga as metas.
+    const needed = KEY_DEPENDENCIES[key] ? [KEY_DEPENDENCIES[key]] : [];
+    return unique([...permissions, key, ...implied, ...needed]);
   }
-  const next = withoutKeys(permissions, [key]);
+  // Um dependente que o crm_admin trava continua ligado.
+  const dependents = Object.keys(KEY_DEPENDENCIES).filter(
+    dependent =>
+      KEY_DEPENDENCIES[dependent] === key &&
+      !isExtraLocked(dependent, permissions)
+  );
+  const next = withoutKeys(permissions, [key, ...dependents]);
   // A limited conversation level needs at least one scope. Só os dois alcances contam: desligar outro ajuste
   // (ler as outras, apagar mensagens) nunca é barrado por isso.
   const isScopeKey =

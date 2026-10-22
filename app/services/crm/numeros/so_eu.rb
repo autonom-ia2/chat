@@ -8,8 +8,11 @@ class Crm::Numeros::SoEu
   MAX_PROXIMO = 2
 
   # acesso: Crm::Access::VisiblePipelines da pessoa (o Kanban e o painel enxergam funis diferentes em "Só as suas").
-  def initialize(account:, user:, mes:, acesso:)
+  # valor_da_equipe: false tira a barra da equipe (% da meta em R$) de quem não tem `sales_value_view` (#2075). Os
+  # números da própria pessoa, inclusive o R$ que ela vendeu e a meta dela, ficam.
+  def initialize(account:, user:, mes:, acesso:, valor_da_equipe: true)
     @account = account
+    @valor_da_equipe = valor_da_equipe
     @user = user
     @mes = mes
     @visiveis = acesso.apply(account.crm_pipelines)
@@ -25,7 +28,7 @@ class Crm::Numeros::SoEu
       funis: { vendas: @cards.funil(:venda), suporte: @cards.funil(:atende) },
       topo: vende? ? topo_de_venda : topo_de_atendimento,
       proximo: proximo, vendendo: vende? ? vendendo : nil, atendendo: atende? ? atendendo : nil,
-      iaAjudou: ia_ajudou, equipePct: vende? ? Crm::Numeros::EquipePct.new(**equipe_args).perform : nil
+      iaAjudou: ia_ajudou, equipePct: vende? && @valor_da_equipe ? Crm::Numeros::EquipePct.new(**equipe_args).perform : nil
     }
   end
 

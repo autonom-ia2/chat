@@ -132,7 +132,8 @@ class Crm::Cards::XlsxExport
 
   def cell_value(column, card, payload)
     case LAYOUT[column].first
-    when :value then card.value_cents && (card.value_cents / 100.0)
+    # Valor de venda (#2075): o do payload, que sai vazio para quem não tem `sales_value_view` (menos o card próprio).
+    when :value then payload[:value_cents] && (payload[:value_cents] / 100.0)
     when :date then card.public_send(column)&.in_time_zone(zone)
     else text_value(column, card, payload)
     end

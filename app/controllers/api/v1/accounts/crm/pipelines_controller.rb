@@ -13,7 +13,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   def show; end
 
   def create
-    @pipeline = Current.account.crm_pipelines.new(pipeline_params)
+    @pipeline = Current.account.crm_pipelines.new(permitted_pipeline_params)
     @pipeline.created_by = Current.user
     authorize @pipeline
     return render_outcome_labels_invalid unless outcome_labels_param_valid?
@@ -26,7 +26,7 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   end
 
   def update
-    @pipeline.update!(pipeline_params)
+    @pipeline.update!(permitted_pipeline_params)
     update_goal!
     update_outcome_labels!
     update_meta_sync!
@@ -68,11 +68,26 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     parameter_set(:pipeline).permit(:name, :description, :status, :is_default, :position, :counts_as_sale, :when_to_use, metadata: {})
   end
 
+  # Valor de venda (#2075): quem não vê a meta em R$ não a muda. O metadata que a tela devolve vem sem metadata['goals']
+  # (_pipeline.json.jbuilder): gravá-lo como veio apagaria a meta sem querer, então a meta salva fica.
+  def permitted_pipeline_params
+    attributes = pipeline_params
+    return attributes if goal_visible? || !attributes.key?(:metadata)
+
+    goals = (@pipeline&.persisted? && @pipeline.metadata.to_h['goals'])
+    metadata = attributes[:metadata].to_h.except('goals')
+    attributes.merge(metadata: goals ? metadata.merge('goals' => goals) : metadata)
+  end
+
+  def goal_visible?
+    ::Crm::ValorDeVenda.ve?(Current.account_user)
+  end
+
   # Monthly sales target lives in metadata['goals'] and is merged in separately
   # so it never clobbers metadata['ai'] (pipeline AI settings).
   def update_goal!
     goal = params.dig(:pipeline, :goal)
-    return if goal.nil?
+    return if goal.nil? || !goal_visible?
 
     metadata = (@pipeline.metadata || {}).deep_dup
     target = goal[:monthly_target_cents].to_i

@@ -111,7 +111,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def update
-    attributes = update_params.to_h.with_indifferent_access
+    attributes = update_params.to_h.with_indifferent_access.except(*hidden_value_attributes)
     strip_ai_metadata!(attributes)
     promessa = payment_promise_from(attributes)
     return render_unprocessable('crm.invalid_payment_promise') if promessa == PROMESSA_INVALIDA
@@ -260,7 +260,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def upsert_existing_card!(card, permitted_params)
     @card = card
     authorize @card, :update?
-    attributes = permitted_params.slice(*UPSERT_ATTRIBUTES.map(&:to_s)).compact
+    attributes = permitted_params.slice(*(UPSERT_ATTRIBUTES.map(&:to_s) - hidden_value_attributes)).compact
     attributes['contact_id'] = attachable_contact!(attributes['contact_id']).id if attributes['contact_id'].present?
     ensure_move_allowed!(@card, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
     ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: upsert_pipeline_id(attributes) || @card.pipeline_id) if attributes.key?('owner_id')
@@ -274,6 +274,12 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
     render :show, status: :ok
+  end
+
+  # Valor de venda (#2075): quem não vê o valor deste card não o muda. A gaveta manda value_cents em toda edição; com o
+  # valor escondido (nil), gravaria 0 por cima e travaria a IA. Ganhar (#close) segue aceitando o valor digitado.
+  def hidden_value_attributes
+    ::Crm::ValorDeVenda.ve_o_card?(Current.account_user, @card) ? [] : %w[value_cents currency]
   end
 
   # The 'ai' metadata block is server-owned (value_source lock, summary, eval

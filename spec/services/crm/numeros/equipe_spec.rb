@@ -28,10 +28,12 @@ RSpec.describe Crm::Numeros::Equipe do
     Struct.new(:ids) { def apply_to_reports(scope) = scope.where(id: ids) }.new(ids)
   end
 
-  def equipe(user: admin, dono: true, leitura: false, pipelines: nil, chave: nil)
+  # perfil: dono (true), leitura (false) e valor (true, #2075); o custo segue o dono.
+  def equipe(user: admin, pipelines: nil, chave: nil, **perfil)
+    perfil = { dono: true, leitura: false, valor: true }.merge(perfil)
     Current.account = account
     described_class.new(account: account, user: user, mes: Crm::Numeros::Mes.new(account: account, chave: chave),
-                        acesso: acesso(pipelines), perfil: { dono: dono, custo: dono, leitura: leitura }).perform
+                        acesso: acesso(pipelines), perfil: perfil.merge(custo: perfil[:dono])).perform
   end
 
   def card(pipeline_and_stage, owner:, conversation: nil, **attrs)
@@ -338,5 +340,25 @@ RSpec.describe Crm::Numeros::Equipe do
     sale
 
     expect(equipe(pipelines: [])).to include(vazio: true)
+  end
+
+  # #2075: sem `sales_value_view`, todo R$ some (vendido, meta, por pessoa, da IA) e as contagens ficam.
+  it 'sem os valores de venda: contagens ficam, R$ e % da meta vêm vazios' do
+    sale.first.update!(metadata: { 'goals' => { 'monthly_target_cents' => 2_000_000, 'currency' => 'BRL' } })
+    close(card(sale, owner: ana, value_cents: 620_000))
+    chat = conversation(assignee: ana)
+    resposta_do_robo(chat)
+    close(card(sale, owner: bruno, conversation: chat, value_cents: 100_000))
+    card(sale, owner: ana, value_cents: 50_000, entered_stage_at: 30.days.ago)
+
+    result = equipe(user: ana, dono: false, pipelines: [sale], valor: false)
+
+    expect(result).to include(valorOculto: true)
+    expect(result[:topo]).to include(feito: nil, meta: nil, fechadas: 2)
+    expect(result[:topo][:frase]).to include(feito: nil, meta: nil)
+    expect(result[:vendendo][:itens].first).to include(tipo: 'fechadas', n: 2, valor: nil)
+    expect(result[:quemCuidou][:linhas].map { |linha| linha[:venda] }).to all(include(valor: nil, meta: nil, pct: nil))
+    expect(result[:quemCuidou][:ia][:venda]).to eq(participou: 1, valor: nil)
+    expect(result[:quemCuidou][:caminhoCerto]).to eq([])
   end
 end

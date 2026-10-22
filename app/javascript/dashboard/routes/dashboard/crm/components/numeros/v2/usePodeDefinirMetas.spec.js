@@ -30,10 +30,20 @@ const pode = ({ flag = true, papel = 'agent', funcao = null, chaves = [] }) => {
 describe('usePodeDefinirMetas', () => {
   it('administrador e função com a chave ou crm_admin; nunca o agente sem função', () => {
     expect(pode({ papel: 'administrator' })).toBe(true);
+    expect(
+      pode({
+        funcao: 3,
+        chaves: ['crm_view', 'crm_metas_manage', 'sales_value_view'],
+      })
+    ).toBe(true);
+    // #2075: a meta é dinheiro; sem os valores em R$, a gaveta não abre.
     expect(pode({ funcao: 3, chaves: ['crm_view', 'crm_metas_manage'] })).toBe(
+      false
+    );
+    expect(pode({ funcao: 3, chaves: ['crm_admin', 'sales_value_view'] })).toBe(
       true
     );
-    expect(pode({ funcao: 3, chaves: ['crm_admin'] })).toBe(true);
+    expect(pode({ funcao: 3, chaves: ['crm_admin'] })).toBe(false);
     expect(pode({ funcao: 3, chaves: ['crm_metas_manage'] })).toBe(false);
     expect(pode({})).toBe(false);
     expect(pode({ funcao: 3, chaves: ['crm_view', 'crm_view_reports'] })).toBe(

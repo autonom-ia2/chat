@@ -3532,7 +3532,8 @@
       "CRM_MANAGE_PIPELINES": "Manage pipelines",
       "CRM_MANAGE_AI": "Manage AI",
       "CRM_VIEW_REPORTS": "View reports",
-      "CRM_ADMIN": "CRM admin"
+      "CRM_ADMIN": "CRM admin",
+      "SALES_VALUE_VIEW": "Sales values"
     },
     "SCOPES": {
       "CRM_VIEW": "Read pipelines, stages, and cards.",
@@ -3542,7 +3543,8 @@
       "CRM_MANAGE_PIPELINES": "Create and edit pipelines and stages.",
       "CRM_MANAGE_AI": "Manage CRM AI settings.",
       "CRM_VIEW_REPORTS": "Read CRM reports.",
-      "CRM_ADMIN": "Full CRM access, including managing tokens."
+      "CRM_ADMIN": "Full CRM access, except sales values.",
+      "SALES_VALUE_VIEW": "Read and change sales values in money (card value, totals and goals). Without it, values come empty and updates keep the saved value."
     },
     "CREATE": {
       "TITLE": "Create a token",
