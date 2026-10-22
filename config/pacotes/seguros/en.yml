@@ -12,11 +12,6 @@ en:
       statuses:
         won: 'Active policy'
         lost: 'Not closed'
-    # Title of the payment reminder on the card (#2076). Brokerage and insurer inherit; health and benefits has its own.
-    service_reminders:
-      payment_before: 'Installment reminder: 3 days before'
-      payment_due: 'Installment reminder: on the day'
-      payment_after: 'Installment reminder: after the due date'
   # Downloaded Ads report (#1960): the situation of who came from the ad and what each word means.
   meta_ads_report:
     glossary: 'Conversation: someone messaged on WhatsApp after tapping an ad. Quote: the card reached an opportunity or negotiation stage. Sale: the card was marked as policy closed.'

@@ -424,7 +424,7 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
   end
 
   # #2076: o título gravado do lembrete de pagamento fala como a conta (pacote do servidor, #1550): a corretora
-  # "parcela", saúde e benefícios "mensalidade do plano". Conta sem pacote grava o texto base.
+  # diz "parcela". Conta sem pacote, ou de outro perfil, grava o texto base.
   describe 'título do lembrete de pagamento no pacote da conta' do
     let(:nicho) { Autonomia::Agents::Nicho }
     let(:pacote) { 'true' }
@@ -454,13 +454,15 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
                             'payment_after' => 'Lembrar da parcela: depois do vencimento')
     end
 
-    describe 'com saúde e benefícios' do
-      let(:perfil) { 'saude_beneficios' }
+    # Só a corretora diz "parcela", como as telas do painel; os outros perfis do nicho seguem com "pagamento".
+    %w[seguradora insurtech saude_beneficios].each do |outro_perfil|
+      describe "com o perfil #{outro_perfil}" do
+        let(:perfil) { outro_perfil }
 
-      it 'diz "mensalidade do plano"' do
-        expect(titulos).to eq('payment_before' => 'Lembrar da mensalidade do plano: 3 dias antes',
-                              'payment_due' => 'Lembrar da mensalidade do plano: no dia',
-                              'payment_after' => 'Lembrar da mensalidade do plano: depois do vencimento')
+        it 'grava o texto base' do
+          expect(titulos.values).to contain_exactly('Lembrar do pagamento: 3 dias antes', 'Lembrar do pagamento: no dia',
+                                                    'Lembrar do pagamento: depois do vencimento')
+        end
       end
     end
 
