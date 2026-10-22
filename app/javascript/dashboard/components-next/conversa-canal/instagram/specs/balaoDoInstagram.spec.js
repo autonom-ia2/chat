@@ -100,6 +100,14 @@ describe('balaoDoInstagram', () => {
       })
     ).toBeNull();
     expect(
+      balaoDoInstagram({
+        content: 'Escolha',
+        contentType: 'text',
+        contentAttributes: { richMessage: { type: 'options' } },
+        attachments: [],
+      })
+    ).toBeNull();
+    expect(
       balaoDoInstagram({ content: 'Oi', contentType: 'text', attachments: [] })
     ).toBe(BALOES.TEXTO);
   });

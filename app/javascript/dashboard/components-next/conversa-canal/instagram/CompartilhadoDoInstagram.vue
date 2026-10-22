@@ -1,12 +1,19 @@
 <script setup>
 // Post e story compartilhados no Direct (#2079). O story (menção, story e resposta ao
 // story) vem com o rótulo em cima e a barra de citação ao lado da miniatura de 158 px;
-// sem a mídia (expirou), fica "Story indisponível". O post é o cartão de 300 px.
+// sem a mídia (expirou), fica "Story indisponível". O post é o cartão de 300 px, com
+// "Mídia indisponível" quando o link da Meta expirou.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ATTACHMENT_TYPES } from 'dashboard/components-next/message/constants';
 import { BALOES } from './balaoDoInstagram';
-import { BARRA_DE_CITACAO, ELEVADO, ROTULO, TEXTO } from './visualInstagram';
+import {
+  BARRA_DE_CITACAO,
+  ELEVADO,
+  INDISPONIVEL,
+  ROTULO,
+  TEXTO,
+} from './visualInstagram';
 
 const props = defineProps({
   tipo: { type: String, required: true },
@@ -17,7 +24,7 @@ const props = defineProps({
 const { t } = useI18n();
 const anexo = computed(() => props.mensagem.attachments?.[0] || null);
 const quebrou = ref(false);
-// Story em vídeo também chega como ig_story: a foto falhou, tenta o vídeo antes de desistir.
+// Story e post em vídeo também chegam como ig_story/ig_post: a foto falhou, tenta o vídeo antes de desistir.
 const tentarVideo = ref(false);
 const ehVideo = computed(
   () => anexo.value?.fileType === ATTACHMENT_TYPES.VIDEO
@@ -98,12 +105,26 @@ const rotuloDoStory = computed(() => {
       rel="noopener noreferrer"
       class="block"
     >
-      <img
+      <video
+        v-if="ehVideo || tentarVideo"
         :src="anexo.dataUrl"
-        alt=""
+        preload="metadata"
+        muted
+        playsinline
         class="block w-[300px] h-[375px] object-cover"
         @error="quebrou = true"
       />
+      <img
+        v-else
+        :src="anexo.dataUrl"
+        alt=""
+        class="block w-[300px] h-[375px] object-cover"
+        @error="tentarVideo = true"
+      />
     </a>
+    <div v-else class="h-[120px] rounded-none" :class="INDISPONIVEL">
+      <span class="i-ph-image-broken size-4 shrink-0" />
+      {{ t('CONVERSA_CANAL.INSTAGRAM.MIDIA_INDISPONIVEL') }}
+    </div>
   </div>
 </template>

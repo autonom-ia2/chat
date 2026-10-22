@@ -47,6 +47,8 @@ export const balaoDoInstagram = mensagem => {
     return null;
   }
   if (atributos.type === 'dyte') return null;
+  // Mensagem rica (botão, opções…): o balão de sempre mostra o texto que o cliente recebeu.
+  if (atributos.richMessage) return null;
   if (atributos.deleted) return BALOES.APAGADA;
   if (atributos.isUnsupported) return null;
   const compartilhado = COMPARTILHADOS[atributos.imageType];

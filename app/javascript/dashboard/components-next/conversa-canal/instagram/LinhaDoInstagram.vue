@@ -2,10 +2,12 @@
 // Uma mensagem da conversa do Instagram com a cara do Direct (#2079). Recebida à
 // esquerda, com a foto de 28 px só na última do grupo; nossa à direita, sem foto.
 // Ao passar o mouse, "Responder" e "Mais opções" ao lado do balão, como no app.
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'next/avatar/Avatar.vue';
 import { useMessageContext } from 'dashboard/components-next/message/provider.js';
+import { useTranslations } from 'dashboard/composables/useTranslations';
+import TranslationToggle from 'dashboard/components-next/message/TranslationToggle.vue';
 import { ATTACHMENT_TYPES as A } from 'dashboard/components-next/message/constants';
 import {
   useInstagramDaConversa,
@@ -49,7 +51,19 @@ const cantos = computed(() =>
 );
 const tipo = computed(() => balaoDoInstagram(dados.value));
 const anexos = computed(() => dados.value.attachments);
-const texto = computed(() => (dados.value.content || '').trim());
+// "Traduzir" do menu grava a tradução na mensagem: o balão mostra a tradução, com o
+// "Ver original" embaixo, como no balão de sempre.
+const { hasTranslations, translationContent } = useTranslations(
+  mensagem.contentAttributes
+);
+const verOriginal = ref(false);
+const texto = computed(() => {
+  const traduzido =
+    hasTranslations.value && !verOriginal.value
+      ? translationContent.value
+      : null;
+  return (traduzido || dados.value.content || '').trim();
+});
 // O texto que vai junto da mídia (legenda, resposta ao story) vira um balão embaixo.
 // Na menção em story e no story compartilhado o texto é do sistema ("mencionou você"),
 // e o rótulo em cima já diz isso: fica de fora.
@@ -61,6 +75,10 @@ const textoJunto = computed(
     !STORY_SEM_TEXTO_DO_CLIENTE.includes(
       dados.value.contentAttributes.imageType
     )
+);
+const temTraducao = computed(
+  () =>
+    hasTranslations.value && (tipo.value === BALOES.TEXTO || textoJunto.value)
 );
 
 // "Mais opções" pelo teclado não traz posição de mouse: o menu abre no botão.
@@ -175,6 +193,12 @@ const textoCitado = computed(() => {
         :texto="texto"
         :enviada="enviada"
         :cantos="cantos"
+      />
+      <TranslationToggle
+        v-if="temTraducao"
+        class="px-3"
+        :showing-original="verOriginal"
+        @toggle="verOriginal = !verOriginal"
       />
     </div>
     <div

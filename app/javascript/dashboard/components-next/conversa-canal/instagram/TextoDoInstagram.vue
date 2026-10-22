@@ -20,7 +20,7 @@ const formatado = computed(
 <template>
   <div
     v-dompurify-html="formatado"
-    class="!whitespace-normal [&_p]:m-0 [&_a]:underline [&_a]:!text-[inherit]"
+    class="!whitespace-normal [&_p]:m-0 [&_:is(p,li)]:!text-[15px] [&_:is(p,li)]:!leading-5 [&>*+*]:!mt-2 [&_ol]:!list-decimal [&_ol]:ps-5 [&_ul]:ps-5 [&_a]:underline [&_a]:!text-[inherit]"
     :class="[BALAO_DE_TEXTO, cor]"
     :style="cantos"
     dir="auto"
