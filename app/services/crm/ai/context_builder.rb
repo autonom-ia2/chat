@@ -276,7 +276,7 @@ module Crm
 
       # Quem falou: a regra mora no Crm::Ai::PapelDaMensagem (a mesma da IA de assunto, IA entende a conversa F1).
       def role_for(message)
-        Crm::Ai::PapelDaMensagem.de(message, robos: platform_bot_ids)
+        Crm::Ai::PapelDaMensagem.de(message, robos: method(:platform_bot_ids))
       end
 
       def platform_bot_ids

@@ -129,6 +129,22 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
 
       expect(conteudos.last).to include('segue a proposta', '[documento proposta.pdf]: Proposta com valor total de 1500')
     end
+
+    # Pega (revisão adversarial F4): a avaliação de etapa (MediaEnricher) pagar mais fotos de uma mensagem do que o teto
+    # por mensagem da chegada.
+    it 'a avaliação de etapa respeita o teto por mensagem do leitor', :aggregate_failures do
+      allow(Crm::Ai::Config).to receive(:media_enabled?).and_return(true)
+      pipeline = create_crm_pipeline(account: account, user: admin).first
+      card = account.crm_cards.create!(pipeline: pipeline, stage: pipeline.stages.first, title: 'Card', contact: contact,
+                                       primary_conversation: conversation, currency: 'BRL')
+      mensagem = chegada('fotos')
+      fotos = Array.new(described_class::MAX_POR_MENSAGEM[:imagem] + 2) { anexar_imagem(mensagem) }
+
+      Crm::Ai::MediaEnricher.new(card: card).perform
+
+      expect(legendas).to have_received(:caption).exactly(described_class::MAX_POR_MENSAGEM[:imagem]).times
+      expect(fotos.last(2).map { |foto| foto.reload.meta.to_h }).to all(satisfy { |meta| !meta.key?('crm_ai_image_done') })
+    end
   end
 
   describe 'sem a flag' do

@@ -70,7 +70,7 @@ class Crm::Kanban::CardPayloadBuilder
     return unless Crm::Ai::Config.enabled?
 
     suggestion = @pending_suggestion || @card.ai_stage_suggestions.current_pending.includes(:to_stage).first
-    return if suggestion.blank? || suggestion.fechar_desligado?
+    return if suggestion.blank? || suggestion.fechar_fora_da_tela?(@card)
 
     {
       id: suggestion.id,

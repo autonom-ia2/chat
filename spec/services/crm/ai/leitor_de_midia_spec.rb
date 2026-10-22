@@ -117,14 +117,32 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
       expect(legendas).to have_received(:caption).once
     end
 
-    it 'a falha também marca o anexo, para não tentar para sempre', :aggregate_failures do
-      allow(legendas).to receive(:caption).and_raise(StandardError, 'falhou')
+    it 'a falha esperada (a API da IA) também marca o anexo, para não tentar para sempre', :aggregate_failures do
+      allow(legendas).to receive(:caption).and_raise(Crm::Ai::ResponsesClient::Error, 'falhou')
       foto = anexar_imagem(mensagem)
 
       described_class.new(foto.message).perform
 
       expect(meta(foto)['crm_ai_image_done']).to be(true)
       expect(meta(foto)).not_to have_key('ai_caption')
+    end
+
+    it 'a falha de rede na transcrição também marca o anexo' do
+      allow(transcricoes).to receive(:transcribe).and_raise(Faraday::ConnectionFailed, 'sem rede')
+      audio = anexar_audio(mensagem)
+
+      described_class.new(audio.message).perform
+
+      expect(meta(audio)['crm_ai_audio_done']).to be(true)
+    end
+
+    # Pega (revisão adversarial F4): um erro nosso ser engolido e o anexo marcado como lido, sem nunca ser lido.
+    it 'erro interno propaga e não marca o anexo', :aggregate_failures do
+      allow(legendas).to receive(:caption).and_raise(NoMethodError, 'bug')
+      foto = anexar_imagem(mensagem)
+
+      expect { described_class.new(foto.message).perform }.to raise_error(NoMethodError)
+      expect(meta(foto)).not_to have_key('crm_ai_image_done')
     end
 
     it 'sem credencial da conta: não lê foto nem áudio, e o PDF segue', :aggregate_failures do

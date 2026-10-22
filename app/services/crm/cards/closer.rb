@@ -41,6 +41,8 @@ module Crm
         ActiveRecord::Base.transaction do
           @card.update!(close_attributes(@target_status))
           log_activity!
+          # IA entende a conversa F3: card fechado não tem mais o que "Encerrar".
+          Crm::Ai::FecharCard.expirar_ao_fechar(@card) if Crm::Cards::Outcome::CLOSED_STATUSES.include?(@target_status.to_s)
         end
         @card
       end

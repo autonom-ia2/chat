@@ -196,19 +196,34 @@ module Crm
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
         return Result.new(status: :skipped, error: 'unknown_stage') if target_stage.blank?
         return Result.new(status: :skipped, error: 'same_stage') if target_stage.id == @card.stage_id
+        return Result.new(status: :skipped, error: 'etapa_de_fim_sem_fechar') if etapa_de_fim_sem_fechar?(classification, target_stage)
 
+        mover_ou_sugerir(target_stage, classification)
+      end
+
+      def mover_ou_sugerir(target_stage, classification)
         confidence = classification[:confidence].to_f
-        if auto_move_allowed? && confidence >= Config::AUTO_MOVE_THRESHOLD && stage_criteria_present?(target_stage) &&
-           !fim_sem_fechar?(classification, target_stage)
-          suggestion = record_suggestion(target_stage, confidence, classification, :auto_applied)
+        if auto_move_allowed? && confidence >= Config::AUTO_MOVE_THRESHOLD && stage_criteria_present?(target_stage)
+          suggestion = gravar_se_aberto(target_stage, confidence, classification, :auto_applied)
+          return card_fechou if suggestion.nil?
+
           SuggestionApplier.new(card: @card, suggestion: suggestion, actor: nil, auto: true).perform
           Result.new(status: :auto_moved, suggestion: suggestion)
         elsif confidence >= Config::SUGGESTION_THRESHOLD
-          Result.new(status: :suggested, suggestion: record_suggestion(target_stage, confidence, classification, :pending))
+          suggestion = gravar_se_aberto(target_stage, confidence, classification, :pending)
+          suggestion ? Result.new(status: :suggested, suggestion: suggestion) : card_fechou
         else
           Result.new(status: :below_threshold)
         end
       end
+
+      # O card pode ter sido fechado ou arquivado enquanto o modelo pensava (por uma pessoa ou por outro caminho): relido
+      # sob a trava antes de gravar a sugestão. nil quando ele não está mais aberto.
+      def gravar_se_aberto(target_stage, confidence, classification, status)
+        @card.with_lock { record_suggestion(target_stage, confidence, classification, status) if @card.open? }
+      end
+
+      def card_fechou = Result.new(status: :skipped, error: 'card_not_open')
 
       def record_suggestion(target_stage, confidence, classification, status)
         SuggestionRecorder.new(
@@ -261,7 +276,8 @@ module Crm
         return false if HandoffIntent.requested?(classification[:handoff])
 
         teste = classification.dig(:nao_e_negocio, :motivo) == NaoENegocio::MOTIVO_TESTE
-        return false if teste && FatosDaConversa.promessa?(classification[:handoff])
+        # Nem na avaliação do card parado: o silêncio não diz que era teste.
+        return false if teste && (FatosDaConversa.promessa?(classification[:handoff]) || FecharCard::GATILHOS_SEM_FECHAMENTO.include?(@trigger))
         return false unless teste || auto_move_allowed?
 
         NaoENegocio.new(card: @card, decisao: classification[:nao_e_negocio], lido_em: @lido_em, origem: origem(classification)).aplicar!
@@ -308,13 +324,15 @@ module Crm
         result
       end
 
-      # IA entende a conversa F3 (revisão adversarial): o modelo pediu para fechar o card e o fechamento não aconteceu (card
-      # parado, "Avaliar agora", mensagem nova, pessoa no card, pedido de pessoa). A etapa de fim que veio junto não move
-      # sozinha: o card ficaria aberto na coluna de perda (ou de ganho), sem motivo nem retorno. Vira sugestão.
-      def fim_sem_fechar?(classification, target_stage)
-        return false unless target_stage.is_lost_stage || target_stage.is_won_stage
+      # IA entende a conversa F3 (revisões adversariais): com a flag, perder é fechar (Crm::Ai::FecharCard), nunca uma
+      # coluna. A etapa de perda que chega aqui (o fechamento não aconteceu: card parado, "Avaliar agora", mensagem nova,
+      # pessoa no card, pedido de pessoa, ou o modelo nem pediu para fechar) não move nem vira sugestão de etapa: o card
+      # ficaria aberto na coluna de perda, sem motivo nem retorno. A de ganho só quando veio junto de um pedido de fechar
+      # que não aconteceu; sem ele, ganhar pela etapa segue como sempre (o campo de fechar nunca marca Ganho).
+      def etapa_de_fim_sem_fechar?(classification, target_stage)
+        return false unless FecharCard.ligada?(@account)
 
-        classification[:fechar_card].present? && FecharCard.ligada?(@account)
+        target_stage.is_lost_stage || (target_stage.is_won_stage && classification[:fechar_card].present?)
       end
 
       # IA entende a conversa F3, regra h (D1): uma pessoa escolheu a etapa há pouco e a IA quer VOLTAR o card a uma

@@ -21,7 +21,8 @@ module Crm::Ai::PapelDaMensagem
 
   module_function
 
-  # robos: os ids dos AgentBots da plataforma na conta (.robos_da_conta).
+  # robos: os ids dos AgentBots da plataforma na conta (.robos_da_conta), ou quem os lê (`call`), para a consulta só
+  # acontecer quando a mensagem é de um AgentBot (como antes da F1, no Crm::Ai::ContextBuilder).
   def de(message, robos:)
     return 'customer' if message.incoming?
     return 'platform_agent' if envio_da_plataforma?(message)
@@ -29,13 +30,17 @@ module Crm::Ai::PapelDaMensagem
 
     case message.sender_type
     when 'User' then 'human_agent'
-    when 'AgentBot' then robos.include?(message.sender_id) ? 'platform_agent' : 'external_agent'
+    when 'AgentBot' then robo_da_plataforma?(message, robos) ? 'platform_agent' : 'external_agent'
     else 'external_agent'
     end
   end
 
   # Bot da plataforma = AgentBot criado por um agente Autonom.ia (Operate::Responder posta com
   # sender_id = agent_inbox.agent_bot_id). Qualquer outro AgentBot é integração externa.
+  def robo_da_plataforma?(message, robos)
+    (robos.respond_to?(:call) ? robos.call : robos).include?(message.sender_id)
+  end
+
   def robos_da_conta(account_id)
     Autonomia::Agents::AgentInbox.where(account_id: account_id).pluck(:agent_bot_id).compact.to_set
   end

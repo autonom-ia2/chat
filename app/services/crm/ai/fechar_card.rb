@@ -121,14 +121,33 @@ class Crm::Ai::FecharCard
   # A sugestão de fechar que esperava sai da tela quando a conversa é lida de novo. Sob a trava do card, como o aceite
   # (Crm::Ai::FecharCard::Aceite): não passa por cima de uma sugestão que a pessoa aceitou nesse meio tempo.
   def self.expirar_sugestoes(card)
-    card.with_lock do
-      card.account.crm_ai_stage_suggestions.where(card: card, status: :pending).where("metadata ->> 'fechar' IS NOT NULL")
-          .find_each { |sugestao| sugestao.update!(status: :expired) }
-    end
+    card.with_lock { expirar_pendentes(card) }
+  end
+
+  def self.expirar_pendentes(card)
+    card.account.crm_ai_stage_suggestions.where(card: card, status: :pending).where("metadata ->> 'fechar' IS NOT NULL")
+        .find_each { |sugestao| sugestao.update!(status: :expired) }
   end
 
   # A pessoa aceitou a sugestão (Crm::Ai::FecharCard::Aceite). true quando o card fechou.
   def self.aceitar!(sugestao, ator:) = Aceite.new(sugestao, ator).perform
+
+  # Quando a conversa foi lida para a sugestão, no metadata dela (`lido_em`): o aceite confere se o cliente escreveu
+  # depois (Crm::Ai::FecharCard::Aceite). Com microssegundos, como o created_at da mensagem.
+  def self.lido_em_para_gravar(lido_em) = lido_em&.utc&.iso8601(6)
+
+  def self.lido_em_gravado(sugestao)
+    valor = sugestao.metadata.to_h['lido_em']
+    Time.iso8601(valor) if valor.is_a?(String) && valor.present?
+  rescue ArgumentError
+    nil
+  end
+
+  # A sugestão de fechar que esperava sai quando o card fecha por qualquer caminho (Crm::Cards::Closer, dentro da
+  # transação dele). Só com a flag: sem ela, a sugestão de fechar nem aparece (Crm::AiStageSuggestion#fechar_desligado?).
+  def self.expirar_ao_fechar(card)
+    expirar_pendentes(card) if ligada?(card.account)
+  end
 
   # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier). sozinho: a IA pode fechar
   # sem a pessoa (movimento automático do funil); sem isso, no máximo sugere. origem: model_used e trigger da sugestão.
@@ -181,7 +200,8 @@ class Crm::Ai::FecharCard
       Crm::Ai::SuggestionRecorder.new(
         card: @card, from_stage: @card.stage, to_stage: etapa_de_fim || @card.stage, confidence: confianca,
         reasoning: @decisao[:reasoning], model_used: @origem[:model_used], status: :pending,
-        metadata: { trigger: @origem[:trigger], fechar: dados_da_sugestao, pedido_de_retorno: @origem[:pedido_de_retorno] }.compact
+        metadata: { trigger: @origem[:trigger], fechar: dados_da_sugestao, pedido_de_retorno: @origem[:pedido_de_retorno],
+                    lido_em: self.class.lido_em_para_gravar(@lido_em) }.compact
       ).perform
     end
   end
@@ -190,11 +210,16 @@ class Crm::Ai::FecharCard
     { resultado: resultado, motivo: (motivo if perdido?), retorno_em: (@decisao[:retorno_em].presence if motivo == ADIOU) }.compact
   end
 
+  # O agente de cotação atendendo a conversa (Crm::Ai::FatosDaConversa.agente_protegido_atendendo?): a IA do CRM não fecha
+  # nem sugere fechar por cima dele.
   def pode_fechar?
-    @card.open? && !mensagem_nova? && !pessoa_escolheu?
+    @card.open? && !mensagem_nova? && !pessoa_escolheu? && !Crm::Ai::FatosDaConversa.agente_protegido_atendendo?(@card)
   end
 
+  # Sem a hora da leitura não há como saber se a decisão ficou velha: conta como mensagem nova.
   def mensagem_nova?
+    return true if @lido_em.blank?
+
     conversas = [@card.conversation_id, *@card.card_conversations.pluck(:conversation_id)].compact.uniq
     Message.where(account_id: @card.account_id, conversation_id: conversas, message_type: :incoming)
            .exists?(['created_at > ?', @lido_em])

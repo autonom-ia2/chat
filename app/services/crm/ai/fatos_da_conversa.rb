@@ -122,6 +122,15 @@ module Crm::Ai::FatosDaConversa
                                  .any? { |vinculo| vinculo.agent&.instrucao_mantida? }
   end
 
+  # O agente protegido está no nome de uma conversa do card ainda não resolvida (está atendendo). A IA do CRM não fecha o
+  # card, não sugere fechar nem sugere "era teste" por cima dele (F3, Crm::Ai::FecharCard e Crm::Ai::NaoENegocio).
+  def agente_protegido_atendendo?(card)
+    conversas = [card.conversation_id, *card.card_conversations.pluck(:conversation_id)].compact.uniq
+    robos = Conversation.where(account_id: card.account_id, id: conversas, ai_assignee_type: 'AgentBot')
+                        .where.not(status: :resolved).distinct.pluck(:assignee_agent_bot_id)
+    robos.any? { |robo| agente_protegido?(card.account_id, robo) }
+  end
+
   # O teto de avaliações pela fala do robô, no `ai` do metadata do card (lido sob a trava do Crm::Ai::Observer).
   def cota_do_robo_esgotada?(estado)
     contador = estado[CONTADOR].to_h

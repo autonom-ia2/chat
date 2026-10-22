@@ -62,6 +62,19 @@ RSpec.describe Crm::Ai::ContextBuilder do
     end
   end
 
+  # Revisão adversarial (item 5): sem as flags, a conversa só de cliente e pessoa não consulta os robôs da conta (como na
+  # main, a consulta só acontece quando há mensagem de um AgentBot).
+  it 'sem a flag, mensagem de cliente e de pessoa não consulta os robôs da conta' do
+    falar(:incoming, contact, 2.minutes.ago)
+    falar(:outgoing, admin, 1.minute.ago)
+    tabelas = []
+    contador = ->(*, payload) { tabelas << payload[:sql] if payload[:sql].include?('autonomia_agent_inboxes') }
+
+    ActiveSupport::Notifications.subscribed(contador, 'sql.active_record') { contexto }
+
+    expect(tabelas).to be_empty
+  end
+
   it 'sem a flag, nada muda', :aggregate_failures do
     montar_conversa
 

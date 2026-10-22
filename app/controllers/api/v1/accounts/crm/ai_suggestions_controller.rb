@@ -6,6 +6,7 @@ class Api::V1::Accounts::Crm::AiSuggestionsController < Api::V1::Accounts::Crm::
     authorize @suggestion, :accept?
     return render_unprocessable('crm.ai.suggestion_not_pending') unless @suggestion.pending?
 
+    authorize_fechar! if @suggestion.fechar
     ensure_move_allowed!(@suggestion.to_stage.pipeline_id)
     @card = Crm::Ai::SuggestionApplier.new(
       card: @suggestion.card,
@@ -13,6 +14,9 @@ class Api::V1::Accounts::Crm::AiSuggestionsController < Api::V1::Accounts::Crm::
       actor: Current.user,
       auto: false
     ).perform
+    # A sugestão de fechar que o aceite não aplicou (card fechado, mensagem nova, funil mudou): expirou.
+    return render_unprocessable('crm.ai.suggestion_expired') if @suggestion.fechar && !@suggestion.reload.accepted?
+
     render 'api/v1/accounts/crm/cards/show'
   end
 
@@ -36,6 +40,13 @@ class Api::V1::Accounts::Crm::AiSuggestionsController < Api::V1::Accounts::Crm::
 
   def fetch_suggestion
     @suggestion = Current.account.crm_ai_stage_suggestions.find(params[:id])
+  end
+
+  # IA entende a conversa F3: aceitar fechar é fechar (a mesma permissão do fechamento manual, CardPolicy#close?) e
+  # aceitar o "era teste" é arquivar (CardPolicy#destroy?, que no Enterprise tem a chave `crm_delete_cards`).
+  def authorize_fechar!
+    arquivar = @suggestion.fechar['resultado'] == Crm::Ai::FecharCard::ARQUIVADO
+    authorize @suggestion.card, arquivar ? :destroy? : :close?
   end
 
   # Acesso por funil (#1148): aceitar move o card (o mesmo CardGuard do /move, com o funil do card e o de destino) e

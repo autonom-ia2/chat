@@ -272,23 +272,44 @@ RSpec.describe Crm::Ai::FecharCard do
         .tap { |etapa| etapa.update!(is_lost_stage: true, metadata: { 'ai_criteria' => 'O cliente desistiu.' }) }
     end
 
-    it 'card parado: não move sozinho para a perda; vira sugestão', :aggregate_failures do
+    # Revisão adversarial 2 (item 12): nem a sugestão de etapa para a coluna de perda (aceita, deixaria o card aberto lá).
+    it 'card parado: não move para a perda nem sugere a coluna', :aggregate_failures do
       card = novo_card
       ia_responde(fim(motivo: 'adiou'), suggested_stage_id: perda.id)
 
       resultado = avaliar(card, trigger: described_class::TRIGGER_CARD_PARADO)
 
-      expect(resultado.status).to eq(:suggested)
+      expect(resultado).to have_attributes(status: :skipped, error: 'etapa_de_fim_sem_fechar')
       expect(card.reload).to have_attributes(status: 'open', stage_id: stage.id)
+      expect(account.crm_ai_stage_suggestions.where(card: card)).to be_empty
     end
 
-    it 'mensagem nova do cliente: não move sozinho para a perda', :aggregate_failures do
+    it 'mensagem nova do cliente: não move para a perda nem sugere a coluna', :aggregate_failures do
       card = novo_card
       nova = -> { create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming, content: 'Espera') }
       ia_responde(fim, suggested_stage_id: perda.id, durante: nova)
 
-      expect(avaliar(card).status).to eq(:suggested)
+      expect(avaliar(card).status).to eq(:skipped)
       expect(card.reload).to have_attributes(status: 'open', stage_id: stage.id)
+      expect(account.crm_ai_stage_suggestions.where(card: card)).to be_empty
+    end
+
+    it 'etapa de perda sem pedido de fechar: não move nem sugere (perder é fechar, com motivo)', :aggregate_failures do
+      card = novo_card
+      ia_responde(nil, suggested_stage_id: perda.id)
+
+      expect(avaliar(card).status).to eq(:skipped)
+      expect(card.reload.stage_id).to eq(stage.id)
+      expect(account.crm_ai_stage_suggestions.where(card: card)).to be_empty
+    end
+
+    it 'etapa de ganho sem pedido de fechar: move como sempre (o ganho é pela etapa)' do
+      ganho = create_crm_stage(account: account, pipeline: pipeline, name: 'Ganho', position: 8)
+      ganho.update!(is_won_stage: true, metadata: { 'ai_criteria' => 'O cliente fechou.' })
+      card = novo_card
+      ia_responde(nil, suggested_stage_id: ganho.id)
+
+      expect(avaliar(card).status).to eq(:auto_moved)
     end
 
     it 'sem a flag: a etapa de perda move como sempre' do
@@ -402,6 +423,89 @@ RSpec.describe Crm::Ai::FecharCard do
       expect(card.reload).to be_won
       expect(sugestao.reload).to be_expired
     end
+
+    # Revisão adversarial (item 10): o fechamento por qualquer caminho tira o "Encerrar" que esperava.
+    it 'o card fechado por uma pessoa expira a sugestão de fechar na hora' do
+      card = novo_card
+      sugestao = sugerir(card, fim(confidence: 0.8))
+
+      Crm::Cards::Closer.new(card: card, actor: admin, result: 'lost').perform
+
+      expect(sugestao.reload).to be_expired
+    end
+
+    # Revisão adversarial (item 2): aceitar fechar por cima do que o cliente disse depois da leitura.
+    it 'mensagem do cliente depois da leitura: não fecha, e a sugestão expira', :aggregate_failures do
+      card = novo_card
+      sugestao = sugerir(card, fim(confidence: 0.8))
+      expect(sugestao.metadata['lido_em']).to be_present
+      create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming, content: 'Mudei de ideia')
+
+      expect(described_class.aceitar!(sugestao, ator: admin)).to be(false)
+      expect(card.reload).to be_open
+      expect(sugestao.reload).to be_expired
+    end
+
+    it 'mensagem da equipe depois da leitura não impede o aceite' do
+      card = novo_card
+      sugestao = sugerir(card, fim(confidence: 0.8))
+      create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :outgoing, content: 'Tudo bem')
+
+      expect(described_class.aceitar!(sugestao, ator: admin)).to be(true)
+    end
+
+    # Revisão adversarial (item 3, o caso que o Codex simulou): o "resolvido" sugerido num funil de Atender e aceito depois
+    # que o card foi para um funil de venda virava Ganho. O funil muda entre a leitura do aceite e a trava.
+    it '"resolvido" aceito depois de o card ir para um funil de venda: nunca vira Ganho; expira', :aggregate_failures do
+      funil, etapa = funil_de_atender
+      card = novo_card(funil: funil, etapa: etapa)
+      ia_responde(fim(resultado: 'resolvido', motivo: nil, confidence: 0.9), suggested_stage_id: etapa.id)
+      sugestao = avaliar(card).suggestion
+      alvo = sugestao.card
+      alvo.pipeline # o aceite já tinha lido o funil de Atender
+      allow(alvo).to receive(:with_lock).and_wrap_original do |original, *args, &bloco|
+        Crm::Card.where(id: alvo.id).update_all(pipeline_id: pipeline.id, stage_id: stage.id) # rubocop:disable Rails/SkipsModelValidations
+        original.call(*args, &bloco)
+      end
+
+      expect(described_class.aceitar!(sugestao, ator: admin)).to be(false)
+      expect(card.reload).to have_attributes(status: 'open', pipeline_id: pipeline.id)
+      expect(sugestao.reload).to be_expired
+    end
+
+    it 'o card mudou de funil depois da sugestão: o "perdido" também expira' do
+      card = novo_card
+      sugestao = sugerir(card, fim(confidence: 0.8))
+      outro, etapa = funil_de_atender
+      card.update!(pipeline: outro, stage: etapa)
+
+      expect(described_class.aceitar!(sugestao.reload, ator: admin)).to be(false)
+    end
+
+    # Revisão adversarial (item 9): o segundo aceite (com a sugestão velha na memória) apagar o "aceita" do primeiro.
+    it 'dois aceites ao mesmo tempo: o segundo não expira a sugestão que o primeiro aceitou', :aggregate_failures do
+      card = novo_card
+      sugestao = sugerir(card, fim(confidence: 0.8))
+      copia = Crm::AiStageSuggestion.find(sugestao.id)
+
+      expect(described_class.aceitar!(sugestao, ator: admin)).to be(true)
+      expect(described_class.aceitar!(copia, ator: admin)).to be(false)
+      expect(sugestao.reload).to be_accepted
+      expect(card.reload).to be_lost
+    end
+  end
+
+  # Revisão adversarial (item 11): uma pessoa fecha o card enquanto o modelo pensa; a sugestão de etapa não pode nascer
+  # num card fechado.
+  it 'card fechado enquanto o modelo pensava: não grava sugestão de etapa', :aggregate_failures do
+    card = novo_card
+    outra = create_crm_stage(account: account, pipeline: pipeline, name: 'Proposta', position: 1)
+    fechar = -> { Crm::Cards::Closer.new(card: Crm::Card.find(card.id), actor: admin, result: 'lost').perform }
+    ia_responde(nil, suggested_stage_id: outra.id, durante: fechar)
+    pipeline.update!(metadata: { 'ai' => { 'auto_move_enabled' => false } })
+
+    expect(avaliar(card)).to have_attributes(status: :skipped, error: 'card_not_open')
+    expect(account.crm_ai_stage_suggestions.where(card: card)).to be_empty
   end
 
   describe '.fechados_pela_ia' do

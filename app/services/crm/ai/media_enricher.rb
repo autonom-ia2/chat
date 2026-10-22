@@ -39,18 +39,20 @@ module Crm
         conversation = @card.primary_conversation
         return [] if conversation.blank?
 
-        conversation.messages
-                    .where(private: false)
-                    .where.not(message_type: :activity)
-                    .reorder(id: :desc)
-                    .limit(ContextBuilder.janela_da_avaliacao(1))
-                    .flat_map(&:attachments)
-                    .select { |attachment| needs_enrich?(attachment) }
+        mensagens = conversation.messages
+                                .where(private: false)
+                                .where.not(message_type: :activity)
+                                .reorder(id: :desc)
+                                .limit(ContextBuilder.janela_da_avaliacao(1))
+        # Com o leitor, a mesma seleção da chegada (o teto por mensagem e por tipo do Crm::Ai::LeitorDeMidia).
+        return mensagens.flat_map { |mensagem| leitor_de(mensagem).escolhidos } if leitor?
+
+        mensagens.flat_map(&:attachments).select { |attachment| needs_enrich?(attachment) }
       end
 
-      def needs_enrich?(attachment)
-        return Crm::Ai::LeitorDeMidia.pendente?(attachment) if leitor?
+      def leitor_de(mensagem) = Crm::Ai::LeitorDeMidia.new(mensagem, pipeline: @card.pipeline)
 
+      def needs_enrich?(attachment)
         meta = attachment.meta.to_h
         case attachment.file_type.to_s
         when 'audio'
@@ -63,7 +65,7 @@ module Crm
       end
 
       def enrich(attachment, credential)
-        return Crm::Ai::LeitorDeMidia.new(attachment.message, pipeline: @card.pipeline).ler(attachment) if leitor?
+        return leitor_de(attachment.message).ler(attachment) if leitor?
 
         case attachment.file_type.to_s
         when 'audio' then transcribe(attachment, credential)

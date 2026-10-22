@@ -360,7 +360,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def ai_suggestion_payload(suggestion)
-    return if suggestion.blank? || suggestion.fechar_desligado?
+    return if suggestion.blank? || suggestion.fechar_fora_da_tela?(@card)
 
     {
       id: suggestion.id,

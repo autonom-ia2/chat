@@ -61,6 +61,11 @@ class Crm::AiStageSuggestion < ApplicationRecord
     fechar.present? && !Crm::Ai::FecharCard.ligada?(account)
   end
 
+  # A sugestão de fechar não vai à tela com a flag desligada nem num card que já não está aberto (não há o que encerrar).
+  def fechar_fora_da_tela?(card_atual)
+    fechar_desligado? || (fechar.present? && !card_atual.open?)
+  end
+
   private
 
   def stages_must_belong_to_account

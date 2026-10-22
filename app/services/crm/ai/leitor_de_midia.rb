@@ -8,7 +8,8 @@
 #   PDF    → `ai_text`: a camada de texto, pelo mesmo processador dos Agentes IA
 #            (Autonomia::Agents::Knowledge::Processors::Pdf, chamado como está, sem OCR), em NFC, cortada em
 #            MAX_CARACTERES_DO_PDF. PDF escaneado (sem camada de texto) fica sem texto.
-# A falha também marca o anexo como lido (`crm_ai_*_done`, como o MediaEnricher): não tenta de novo para sempre.
+# A falha esperada (FALHAS_DA_LEITURA) também marca o anexo como lido (`crm_ai_*_done`, como o MediaEnricher): não tenta de
+# novo para sempre. Erro interno propaga e não marca.
 #
 # Quem chama: o job da chegada (Crm::Ai::LerMidiaJob, pelo ConversationObserverListener) e, antes de perguntar o
 # assunto, o IdentifyJob em linha (`ler_a_rajada`), porque a espera do assunto na ordem do turno é curta. A trava por
@@ -29,6 +30,14 @@ class Crm::Ai::LeitorDeMidia
   CHAVE = { audio: 'transcribed_text', imagem: 'ai_caption', pdf: 'ai_text' }.freeze
   MARCA = { audio: 'crm_ai_audio_done', imagem: 'crm_ai_image_done', pdf: 'crm_ai_pdf_done' }.freeze
   PAGOS = %i[audio imagem].freeze
+  # As falhas esperadas de uma leitura, que marcam o anexo como lido (sem texto): rede, a API da IA (o cliente da
+  # transcrição e o da visão) e o arquivo ilegível. Qualquer outro erro é nosso: propaga, e o anexo fica para depois.
+  FALHAS_DA_LEITURA = [
+    *Crm::Ai::ResponsesClient::NETWORK_ERRORS, Faraday::Error, OpenAI::Error,
+    Crm::Ai::ResponsesClient::Error, Crm::Ai::TranscriptionClient::Error,
+    ActiveStorage::FileNotFoundError, ActiveStorage::IntegrityError,
+    Autonomia::Agents::Knowledge::Processors::Base::ExtractionError, Autonomia::Agents::Knowledge::Processors::Base::UnsupportedFormat
+  ].freeze
 
   def self.ligada?(account)
     account.present? && account.feature_enabled?(FLAG) && Crm::Ai::Config.media_enabled?
@@ -115,14 +124,15 @@ class Crm::Ai::LeitorDeMidia
     end
   end
 
-  private
-
-  # Os primeiros de cada tipo, até o teto por mensagem, que ainda não foram lidos.
+  # Os primeiros de cada tipo, até o teto por mensagem, que ainda não foram lidos. Todo consumidor (o job da chegada, a
+  # leitura em linha e o Crm::Ai::MediaEnricher da avaliação) lê por esta seleção.
   def escolhidos
     @message.attachments.reorder(:id).group_by { |attachment| self.class.tipo(attachment) }
             .flat_map { |tipo, anexos| tipo ? anexos.first(MAX_POR_MENSAGEM[tipo]) : [] }
             .select { |attachment| self.class.pendente?(attachment) }
   end
+
+  private
 
   def credencial_para?(tipo)
     PAGOS.exclude?(tipo) || credencial.present?
@@ -149,7 +159,7 @@ class Crm::Ai::LeitorDeMidia
     when :imagem then Crm::Ai::VisionCaptioner.new(client: cliente_de_visao).caption(attachment)
     when :pdf then texto_do_pdf(attachment)
     end
-  rescue StandardError => e
+  rescue *FALHAS_DA_LEITURA => e
     Rails.logger.warn("[crm][midia] leitura_falhou tipo=#{tipo} anexo=#{attachment.id} erro=#{e.class}")
     nil
   end

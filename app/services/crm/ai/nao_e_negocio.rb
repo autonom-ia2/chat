@@ -90,12 +90,14 @@ class Crm::Ai::NaoENegocio
   # confiança não separa um do outro. Vira sugestão de fechar (Crm::Ai::FecharCard.aceitar! arquiva).
   def sugerir_teste!
     @card.with_lock do
-      next false unless pode_arquivar?
+      # O agente de cotação atendendo a conversa: a IA do CRM não sugere "era teste" por cima dele.
+      next false unless pode_arquivar? && !Crm::Ai::FatosDaConversa.agente_protegido_atendendo?(@card)
 
       Crm::Ai::SuggestionRecorder.new(
         card: @card, from_stage: @card.stage, to_stage: @card.stage, confidence: confianca, reasoning: @decisao[:reasoning],
         model_used: @origem[:model_used], status: :pending,
-        metadata: { trigger: @origem[:trigger], fechar: { resultado: Crm::Ai::FecharCard::ARQUIVADO, motivo: MOTIVO_TESTE } }.compact
+        metadata: { trigger: @origem[:trigger], fechar: { resultado: Crm::Ai::FecharCard::ARQUIVADO, motivo: MOTIVO_TESTE },
+                    lido_em: Crm::Ai::FecharCard.lido_em_para_gravar(@lido_em) }.compact
       ).perform
     end
   end

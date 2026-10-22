@@ -145,6 +145,15 @@ RSpec.describe Crm::Ai::Evaluator do
       expect(sugestao.reload).to be_accepted
     end
 
+    # Revisão adversarial (item 13): o silêncio do card parado não diz que era teste.
+    it 'avaliação do card parado: não sugere "era teste"' do
+      ia_responde(teste)
+
+      avaliar(trigger: Crm::Ai::FecharCard::TRIGGER_CARD_PARADO)
+
+      expect(Crm::AiStageSuggestion.where(card: card).where("metadata ->> 'fechar' IS NOT NULL")).to be_empty
+    end
+
     it 'funil sem movimento automático: o "era teste" ainda vira sugestão' do
       pipeline.update!(metadata: { 'ai' => { 'auto_move_enabled' => false } })
       ia_responde(teste)
