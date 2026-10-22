@@ -18,6 +18,7 @@ import {
   profilePermissions,
   sensitiveExtrasOn,
 } from '../permissionMatrix';
+import { DELEGATION_KEYS } from 'dashboard/constants/permissions';
 import en from 'dashboard/i18n/locale/en/customRole.json';
 import ptBR from 'dashboard/i18n/locale/pt_BR/customRole.json';
 
@@ -131,6 +132,44 @@ describe('permissionMatrix', () => {
         expect(module.SUGGESTION).toBeTruthy();
         expect(CUSTOM_ROLE.EXTRAS.TOKEN_MANAGE).toBeTruthy();
         expect(CUSTOM_ROLE.PERMISSIONS.TOKEN_MANAGE).toBeTruthy();
+      });
+    });
+  });
+
+  // #2070: Anúncios da Meta ganha "Editar" (meta_ads_manage): conectar, configurar, desconectar e agir sobre o
+  // consultor. Chave protegida: só o administrador entrega, e nenhum perfil pronto a traz.
+  describe('meta ads', () => {
+    const metaAds = moduleByKey('META_ADS');
+
+    it('has view and manage, storing only the highest key', () => {
+      expect(levelSlots(metaAds)).toEqual([
+        LEVELS.NONE,
+        LEVELS.VIEW,
+        LEVELS.MANAGE,
+      ]);
+      expect(setLevel(metaAds, LEVELS.MANAGE, ['meta_ads_view'])).toEqual([
+        'meta_ads_manage',
+      ]);
+      expect(getLevel(metaAds, ['meta_ads_manage'])).toBe(LEVELS.MANAGE);
+      expect(getLevel(metaAds, ['meta_ads_view'])).toBe(LEVELS.VIEW);
+    });
+
+    it('is a delegation key, handed out by no profile', () => {
+      expect(DELEGATION_KEYS).toContain('meta_ads_manage');
+      expect(DELEGATION_KEYS).not.toContain('meta_ads_view');
+      PROFILES.forEach(profile => {
+        expect(profilePermissions(profile.key)).not.toContain(
+          'meta_ads_manage'
+        );
+      });
+    });
+
+    it('has the texts in en and pt_BR', () => {
+      [en, ptBR].forEach(({ CUSTOM_ROLE }) => {
+        const module = CUSTOM_ROLE.MATRIX.MODULES.META_ADS;
+        expect(module.LEVEL_VIEW).toBeTruthy();
+        expect(module.LEVEL_MANAGE).toBeTruthy();
+        expect(CUSTOM_ROLE.PERMISSIONS.META_ADS_MANAGE).toBeTruthy();
       });
     });
   });

@@ -7,6 +7,8 @@ import {
   FINANCIAL_VIEW_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
   INTEGRATION_MANAGE_PERMISSION,
+  META_ADS_MANAGE_PERMISSION,
+  META_ADS_VIEW_PERMISSION,
   PEOPLE_MANAGE_PERMISSION,
   TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
@@ -176,11 +178,14 @@ export const MODULE_GROUPS = [
         },
       },
       {
-        // Anúncios da Meta (#1794): só ver o painel. Conectar e configurar seguem do
-        // administrador até a chave protegida meta_ads_manage.
+        // Anúncios da Meta: ver o painel (#1794); editar conecta, configura e desconecta e age
+        // sobre o consultor (#2070). meta_ads_manage só o administrador entrega (DELEGATION_KEYS).
         key: 'META_ADS',
         icon: 'i-lucide-chart-no-axes-combined',
-        levels: { view: 'meta_ads_view' },
+        levels: {
+          view: META_ADS_VIEW_PERMISSION,
+          manage: META_ADS_MANAGE_PERMISSION,
+        },
       },
     ],
   },

@@ -1,7 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { META_ADS_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 import { useMapGetter } from 'dashboard/composables/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -23,10 +24,10 @@ import { currentStep } from './metaAdsHelpers';
 // card "Nomes das campanhas da Meta" de Links e QR codes e o Pixel digitado no funil.
 const SALES_STEP = 4;
 const DONE = 5;
-// Quem não é administrador chega aqui com meta_ads_view (#1794): vê só o painel. Conectar e configurar seguem
-// do administrador; sem conexão, a tela diz a quem pedir.
-const { isAdmin } = useAdmin();
-const readOnly = computed(() => !isAdmin.value);
+// Conectar, configurar e desconectar: administrador ou meta_ads_manage (#2070). Quem chega só com meta_ads_view
+// (#1794) vê só o painel; sem conexão, a tela diz a quem pedir.
+const canManageMetaAds = usePermissionGranted(META_ADS_MANAGE_PERMISSION);
+const readOnly = computed(() => !canManageMetaAds.value);
 
 const connection = ref(null);
 const loading = ref(true);
