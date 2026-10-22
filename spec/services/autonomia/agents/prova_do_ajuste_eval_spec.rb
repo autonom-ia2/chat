@@ -258,24 +258,30 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     nomes.any? ? lista.select { |caso| nomes.include?(caso[:nome]) } : lista
   end
 
-  def gravar_relatorio
+  # `parcial`: a execução não vale como rodada (PROVA_DO_AJUSTE_EVAL_CENA, ou o rejulgar, que não roda os controles).
+  def gravar_relatorio(parcial: ENV.fetch('PROVA_DO_AJUSTE_EVAL_CENA', '').present?)
     destino = ENV.fetch('PROVA_DO_AJUSTE_EVAL_SAIDA', nil)
     return if destino.blank?
 
     casos, controles = relatorio.partition { |linha| linha[:controle].nil? }
     File.write(destino, JSON.pretty_generate(custo_usd: custo_ate_agora.round(4), rodados: casos.size, controles: controles.size,
-                                             regua: regua(relatorio), execucoes: relatorio))
+                                             regua: regua(relatorio, parcial: parcial), execucoes: relatorio))
   end
 
   # A régua do t6d, sobre o relatório da rodada: casos aprovados acima do piso, o caso da base aprovado e todos os
   # controles aprovados. Rodada parcial (PROVA_DO_AJUSTE_EVAL_CENA) exige todos os escolhidos e não vale como rodada.
   def regua(linhas, parcial: ENV.fetch('PROVA_DO_AJUSTE_EVAL_CENA', '').present?)
     casos, controles = linhas.partition { |linha| linha[:controle].nil? }
-    resultado = { casos_aprovados: casos.count { |linha| linha[:aprovada] }, minimo_de_casos: minimo_de_casos(casos, parcial),
-                  caso_da_base_aprovado: caso_da_base_aprovado(casos, parcial),
-                  controles_aprovados: controles.all? { |linha| linha[:aprovada] } }
+    resultado = { rodada_completa: !parcial, casos_aprovados: casos.count { |linha| linha[:aprovada] },
+                  minimo_de_casos: minimo_de_casos(casos, parcial), caso_da_base_aprovado: caso_da_base_aprovado(casos, parcial),
+                  controles_aprovados: controles_aprovados?(controles, parcial) }
     resultado.merge(aprovada: resultado[:casos_aprovados] >= resultado[:minimo_de_casos] &&
                               resultado[:caso_da_base_aprovado] != false && resultado[:controles_aprovados])
+  end
+
+  # Numa rodada completa, todos os controles rodaram (revisão do t6d, BAIXO a) e foram aprovados.
+  def controles_aprovados?(controles, parcial)
+    (parcial || controles.size == AvaliacaoDaProvaDoAjuste::CONTROLES.size) && controles.all? { |linha| linha[:aprovada] }
   end
 
   def minimo_de_casos(casos, parcial)
@@ -335,6 +341,21 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     it '20 de 21 com o caso da base reprovado falha' do
       expect(regua(rodada([AvaliacaoDaProvaDoAjuste::CASO_DA_BASE]), parcial: false))
         .to include(casos_aprovados: 20, caso_da_base_aprovado: false, aprovada: false)
+    end
+
+    it 'rodada completa sem todos os controles falha; a régua diz se a rodada é completa' do
+      sem_um = rodada([]).reject { |linha| linha[:caso] == AvaliacaoDaProvaDoAjuste::CONTROLES.last[:nome] }
+      expect(regua(sem_um, parcial: false)).to include(rodada_completa: true, controles_aprovados: false, aprovada: false)
+      expect(regua(rodada([]), parcial: false)).to include(rodada_completa: true, aprovada: true)
+      expect(regua(rodada([]).first(2), parcial: true)).to include(rodada_completa: false)
+    end
+
+    it 'o relatório do rejulgar grava a régua como rodada que não vale' do
+      relatorio.concat(rodada([]).reject { |linha| linha[:controle] })
+      saida = Tempfile.new(%w[regua .json])
+      with_modified_env(PROVA_DO_AJUSTE_EVAL_SAIDA: saida.path) { gravar_relatorio(parcial: true) }
+
+      expect(JSON.parse(File.read(saida.path))['regua']).to include('rodada_completa' => false)
     end
 
     it 'um controle reprovado falha, mesmo com 21 de 21' do
@@ -488,7 +509,7 @@ RSpec.describe 'Avaliação paga das perguntas de prova (#1428)', :eval_pago do 
     ligar_a_chave!
     gravadas = rejulgar_arquivo(arquivo)
 
-    gravar_relatorio
+    gravar_relatorio(parcial: true)
     expect(relatorio.size).to eq(gravadas), "teto de custo atingido: #{relatorio.size} de #{gravadas}"
   end
 
