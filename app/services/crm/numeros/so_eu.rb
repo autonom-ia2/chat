@@ -15,13 +15,13 @@ class Crm::Numeros::SoEu
     @valor_da_equipe = valor_da_equipe
     @user = user
     @mes = mes
-    @visiveis = acesso.apply(account.crm_pipelines)
-    @do_painel = acesso.apply_to_reports(account.crm_pipelines)
+    @visiveis = acesso.apply(account.crm_pipelines.active)
+    @do_painel = acesso.apply_to_reports(account.crm_pipelines.active)
     @cards = Crm::Numeros::MeusCards.new(account: account, user: user, visiveis: @visiveis)
   end
 
   def perform
-    return { vazio: true, mes: @mes.info } if @account.crm_pipelines.none?
+    return { vazio: true, mes: @mes.info } if @account.crm_pipelines.active.none?
 
     {
       vazio: false, papel: papel, mes: @mes.info, moeda: moeda, estimado: credito[:estimado],
@@ -62,7 +62,7 @@ class Crm::Numeros::SoEu
   end
 
   def meta_do_funil_padrao
-    @account.crm_pipelines.where(counts_as_sale: true).order(is_default: :desc, position: :asc, id: :asc)
+    @account.crm_pipelines.active.where(counts_as_sale: true).order(is_default: :desc, position: :asc, id: :asc)
             .pick(:metadata)&.dig('goals', 'currency').presence
   end
 

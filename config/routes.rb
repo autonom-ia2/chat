@@ -299,6 +299,7 @@ Rails.application.routes.draw do
             # Arquivados (#2095): a lista e restaurar vários.
             get 'cards/archived', to: 'cards/archived#index'
             post 'cards/restore', to: 'cards/restores#create'
+            get 'cards/upcoming_meetings', to: 'cards/upcoming_meetings#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               resource :contact, only: [:create], controller: 'cards/contacts'
               post :from_conversation, on: :collection

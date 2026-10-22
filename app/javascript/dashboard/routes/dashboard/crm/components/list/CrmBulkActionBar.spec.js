@@ -1,8 +1,13 @@
 import { mount } from '@vue/test-utils';
+import { flushPromises } from '@vue/test-utils';
+import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import CrmBulkActionBar from './CrmBulkActionBar.vue';
 
 vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: key => key }),
+  useI18n: () => ({ t: key => key, locale: { value: 'pt-BR' } }),
+}));
+vi.mock('dashboard/api/crmKanban', () => ({
+  default: { upcomingMeetings: vi.fn() },
 }));
 
 // #1874 — cada botão da ação em massa só aparece para quem pode a ação.
@@ -68,5 +73,46 @@ describe('CrmBulkActionBar', () => {
         montar({ move: true, assign: false, status: false, archive: false })
       )
     ).toEqual(['CRM_KANBAN.BULK.MOVE', 'CRM_KANBAN.BULK.CLEAR']);
+  });
+  // #2091: arquivar em lote avisa que as reuniões marcadas continuam.
+  it('o diálogo de arquivar avisa quantos cards têm reunião marcada', async () => {
+    CrmKanbanAPI.upcomingMeetings.mockResolvedValue({
+      data: {
+        payload: {
+          timezone: 'America/Sao_Paulo',
+          cards: [{ card_id: 4, starts_at: '2026-10-24T10:00:00-03:00' }],
+        },
+      },
+    });
+    const wrapper = mount(CrmBulkActionBar, {
+      props: { count: 2, ids: [4, 5], permissions: { archive: true } },
+      global: {
+        stubs: {
+          SelectMenu: true,
+          ComboBox: true,
+          Button: {
+            props: ['label'],
+            emits: ['click'],
+            template:
+              '<button :data-label="label" @click="$emit(\'click\')" />',
+          },
+          Dialog: {
+            template: '<div data-dialogo><slot /></div>',
+            methods: { open() {}, close() {} },
+          },
+          Transition: false,
+        },
+      },
+    });
+
+    await wrapper
+      .find('[data-label="CRM_KANBAN.BULK.DELETE"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(CrmKanbanAPI.upcomingMeetings).toHaveBeenCalledWith([4, 5]);
+    expect(wrapper.find('[data-aviso-reuniao]').text()).toBe(
+      'CRM_KANBAN.BULK.DELETE_MEETINGS'
+    );
   });
 });

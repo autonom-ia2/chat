@@ -127,9 +127,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def destroy
-    @card.update!(status: :archived, last_activity_at: Time.current)
-    ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'archive', payload: {}).perform
-    broadcast_card(::Events::Types::CRM_CARD_ARCHIVED)
+    broadcast_card(::Events::Types::CRM_CARD_ARCHIVED) if ::Crm::Cards::Archiver.new(card: @card, actor: Current.user).perform
     render :show
   end
 

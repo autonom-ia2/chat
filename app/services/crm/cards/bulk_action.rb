@@ -107,10 +107,8 @@ module Crm
       end
 
       def archive_card!(card)
-        return if card.status == 'archived'
+        return unless Crm::Cards::Archiver.new(card: card, actor: @user).perform
 
-        card.update!(status: :archived, last_activity_at: Time.current)
-        Crm::ActivityLogger.new(card: card, actor: @user, event_type: 'archive', payload: {}).perform
         broadcast(card, ::Events::Types::CRM_CARD_ARCHIVED)
       end
 

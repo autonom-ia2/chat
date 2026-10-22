@@ -39,6 +39,7 @@ import { passosDoCard } from './proximoPasso';
 import { payloadDoNegocio, useCardNegocio } from './useCardNegocio';
 import { useCardRetorno } from './useCardRetorno';
 import { useCardHistorico } from './useCardHistorico';
+import { useAvisoDeReuniao } from '../../composables/useAvisoDeReuniao';
 import { useCardDesfecho } from './useCardDesfecho';
 import { useCardTipo } from './useCardTipo';
 import { useCardConversao } from './useCardConversao';
@@ -379,8 +380,15 @@ const perdeu = () =>
 const reabrir = () =>
   guardar(() => podeGerenciar.value && emit('closeDeal', { result: 'reopen' }));
 const fecharNegocio = dados => podeGerenciar.value && emit('closeDeal', dados);
+// A reunião marcada continua de pé ao arquivar (#2091): o diálogo avisa.
+const { aviso: avisoDeReuniao, consultar: consultarReuniao } =
+  useAvisoDeReuniao();
 const arquivar = () =>
-  guardar(() => podeArquivar.value && dialogoArquivar.value?.open());
+  guardar(() => {
+    if (!podeArquivar.value) return;
+    consultarReuniao(cardId.value ? [cardId.value] : []);
+    dialogoArquivar.value?.open();
+  });
 const confirmarArquivar = () => {
   dialogoArquivar.value?.close();
   if (podeArquivar.value) emit('archive');
@@ -568,7 +576,15 @@ defineExpose({
     :confirm-button-label="t('CRM_CARD.ARQUIVAR.BOTAO')"
     :is-loading="isArchiving"
     @confirm="confirmarArquivar"
-  />
+  >
+    <p
+      v-if="avisoDeReuniao"
+      data-aviso-reuniao
+      class="mb-0 text-sm text-n-amber-11"
+    >
+      {{ avisoDeReuniao }}
+    </p>
+  </Dialog>
   <Dialog
     ref="dialogoCliente"
     :type="cliente.virar.value ? 'edit' : 'alert'"

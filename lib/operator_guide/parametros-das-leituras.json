@@ -1245,6 +1245,12 @@
       "params inteiro repassado a ::Crm::Cards::GroupSummary.new"
     ]
   },
+  "crm/cards/upcoming_meetings": {
+    "controller": "api/v1/accounts/crm/cards/upcoming_meetings#index",
+    "parametros": [
+      "card_ids"
+    ]
+  },
   "crm/companies/:company_id/opportunities": {
     "controller": "api/v1/accounts/crm/company_opportunities#index",
     "parametros": [

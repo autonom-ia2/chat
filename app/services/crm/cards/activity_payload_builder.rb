@@ -47,16 +47,17 @@ class Crm::Cards::ActivityPayloadBuilder
     return {} unless payload.is_a?(Hash)
 
     payload.each_with_object({}) do |(key, value), labels|
-      name = label_name_for(key.to_s, value)
+      name = label_name_for(key.to_s, value, payload)
       labels[key] = name if name.present?
     end
   end
 
-  def label_name_for(key, value)
+  # Etapa apagada some do cache: vale o nome gravado junto na atividade (from_stage_id -> from_stage_name).
+  def label_name_for(key, value, payload)
     return if value.blank?
 
     if STAGE_ID_KEYS.include?(key)
-      @label_cache[:stages][value.to_i]
+      @label_cache[:stages][value.to_i] || payload.stringify_keys["#{key.delete_suffix('_id')}_name"].presence
     elsif OWNER_ID_KEYS.include?(key)
       @label_cache[:users][value.to_i]
     elsif CONTACT_ID_KEYS.include?(key)
