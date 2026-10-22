@@ -270,6 +270,8 @@ Rails.application.routes.draw do
             get 'contacts/:contact_id/opportunities', to: 'contact_opportunities#index'
             get 'companies/:company_id/opportunities', to: 'company_opportunities#index' if ChatwootApp.enterprise?
             resources :pipelines, only: [:index, :create, :show, :update, :destroy] do
+              # Excluir de vez um funil arquivado (#2096), só administrador.
+              post :permanent_delete, on: :member, to: 'pipelines/permanent_deletions#create'
               resources :stages, only: [:index, :create]
               resources :inboxes, controller: 'pipeline_inboxes', only: [:index, :create, :destroy], param: :inbox_id
               resource :ai_settings, only: [:show, :update], controller: 'ai_settings' do
@@ -289,6 +291,8 @@ Rails.application.routes.draw do
               resources :steps, controller: 'stage_automation_steps', only: [:create, :update, :destroy]
             end
             post 'cards/bulk', to: 'cards/bulk#create'
+            # Excluir de vez cards arquivados (#2096), um ou vários, só administrador.
+            post 'cards/permanent_delete', to: 'cards/permanent_deletions#create'
             get 'cards/owner_options', to: 'cards#owner_options'
             get 'cards/summaries', to: 'cards/summaries#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do

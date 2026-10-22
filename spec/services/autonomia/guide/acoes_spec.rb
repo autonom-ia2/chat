@@ -46,6 +46,13 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(para(admin).desfazivel?('PUT conversa_canal/pastas_do_email/:conversation_id')).to be(true)
     end
 
+    # #2096: excluir de vez card e funil arquivados não tem volta; o Guia propõe e a pessoa confirma.
+    it 'excluir de vez card e funil pede confirmação, arquivar não' do
+      expect(para(admin).desfazivel?('POST crm/cards/permanent_delete')).to be(false)
+      expect(para(admin).desfazivel?('POST crm/pipelines/:id/permanent_delete')).to be(false)
+      expect(para(admin).desfazivel?('DELETE crm/cards/:id')).to be(true)
+    end
+
     # Dinheiro da conta na plataforma nunca entra no catálogo do Guia.
     it 'deixa de fora plano, cobrança e créditos', :aggregate_failures do
       catalogo = para(admin).catalogo.join(' ')

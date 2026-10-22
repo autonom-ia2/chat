@@ -1,5 +1,6 @@
 class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   include Sift
+  include Crm::ContactCardsDeletion
   sort_on :email, type: :string
   sort_on :name, internal_name: :order_on_name, type: :scope, scope_params: [:direction]
   sort_on :phone_number, type: :string
@@ -108,6 +109,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
       return render_error({ message: I18n.t('contacts.online.delete', contact_name: @contact.name.capitalize) },
                           :unprocessable_entity)
     end
+    return destroy_with_crm_cards if delete_crm_cards?
 
     @contact.destroy!
     head :ok

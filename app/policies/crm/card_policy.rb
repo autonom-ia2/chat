@@ -70,6 +70,12 @@ class Crm::CardPolicy < ApplicationPolicy
     show?
   end
 
+  # Excluir de vez (#2096): só administrador, também no EE. Não vira chave de função: apaga sem volta o histórico de
+  # clientes, como excluir a conta ou mexer na segurança (CLAUDE.md, "Nunca delegar por função").
+  def permanent_delete?
+    account_user&.administrator? || false
+  end
+
   class Scope < ApplicationPolicy::Scope
     def resolve
       Crm::Cards::VisibleScopeQuery.new(

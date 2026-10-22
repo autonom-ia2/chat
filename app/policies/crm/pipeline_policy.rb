@@ -23,6 +23,11 @@ class Crm::PipelinePolicy < ApplicationPolicy
     administrator? && record.account_id == account.id
   end
 
+  # Excluir de vez (#2096): só administrador, também no EE (ver Crm::CardPolicy#permanent_delete?).
+  def permanent_delete?
+    administrator? && record.account_id == account.id
+  end
+
   class Scope < ApplicationPolicy::Scope
     # Acesso por funil (#1148, PR D): quem tem restrição lista só os funis dela (Kanban, etapas, lista de funis).
     def resolve

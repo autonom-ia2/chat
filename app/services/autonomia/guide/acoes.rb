@@ -95,6 +95,8 @@ class Autonomia::Guide::Acoes
     'PATCH crm/meta_ads_connection/destinations',
     # #1069 — entrar com o Facebook grava uma credencial nova da Meta e troca de onde a plataforma lê.
     'POST crm/meta_ads_connection/facebook_login',
+    # #2096 — excluir de vez card e funil arquivados apaga o histórico inteiro, sem volta: o caderno não traz a cascata.
+    'POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
     # #1809 — "Excluir para sempre" da Lixeira do e-mail apaga a conversa pelo DeleteObjectJob, como o DELETE da conversa.
     'DELETE conversa_canal/pastas_do_email/:conversation_id'
   ].freeze

@@ -5,10 +5,10 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 643 |
-| Sem corpo | 191 |
-| Com corpo | 452 |
-| Com corpo e formato completo | 372 (82,3%) |
+| No catálogo | 645 |
+| Sem corpo | 190 |
+| Com corpo | 455 |
+| Com corpo e formato completo | 375 (82,4%) |
 | Com corpo e formato incompleto | 80 |
 
 ## Por dentro dos campos
@@ -16,7 +16,7 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 206 |
-| Leituras cruas tipadas | 164 de 252 |
+| Leituras cruas tipadas | 170 de 258 |
 
 ## Incompletas por motivo
 
@@ -62,8 +62,8 @@ Uma ação pode ter mais de um motivo.
 - `POST captain/bulk_actions` — leitura crua sem tipo: type (repassada a MODEL_TYPE.include?)
 - `POST captain/tasks/follow_up` — leitura crua sem tipo: follow_up_context, message (repassada a Captain::FollowUpService.new)
 - `POST captain/tasks/rewrite` — leitura crua sem tipo: content (repassada a Captain::RewriteService.new), operation (repassada a Captain::RewriteService.new)
-- `POST contacts/export` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:47); leitura crua sem tipo: column_names
-- `POST contacts/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:63); params inteiro repassado a ::Contacts::FilterService.new
+- `POST contacts/export` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:48); leitura crua sem tipo: column_names
+- `POST contacts/filter` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/contacts_controller.rb:64); params inteiro repassado a ::Contacts::FilterService.new
 - `POST conversa_canal/ditados` — leitura crua sem tipo: audio (repassada a ConversaCanal::Ditado.new)
 - `POST conversations` — params inteiro repassado a ConversationBuilder.new; leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)
 - `POST conversations/:conversation_id/direct_uploads` — termina em código de fora do repositório (super em ActiveStorage::DirectUploadsController)
