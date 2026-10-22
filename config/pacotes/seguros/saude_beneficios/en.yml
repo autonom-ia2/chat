@@ -4,6 +4,11 @@ en:
     export:
       statuses:
         won: 'Active plan'
+    # Title of the payment reminder on the card (#2076).
+    service_reminders:
+      payment_before: 'Plan payment reminder: 3 days before'
+      payment_due: 'Plan payment reminder: on the day'
+      payment_after: 'Plan payment reminder: after the due date'
   # Line of business for the e-mail AI (#2037).
   email_campaigns:
     ai:

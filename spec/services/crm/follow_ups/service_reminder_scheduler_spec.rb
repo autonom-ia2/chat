@@ -423,6 +423,80 @@ RSpec.describe Crm::FollowUps::ServiceReminderScheduler do
     expect(schedule(card)).to eq(0)
   end
 
+  # #2076: o título gravado do lembrete de pagamento fala como a conta (pacote do servidor, #1550): a corretora
+  # "parcela", saúde e benefícios "mensalidade do plano". Conta sem pacote grava o texto base.
+  describe 'título do lembrete de pagamento no pacote da conta' do
+    let(:nicho) { Autonomia::Agents::Nicho }
+    let(:pacote) { 'true' }
+    let(:perfil) { 'corretora' }
+    let(:locale) { 'pt_BR' }
+
+    around do |example|
+      GlobalConfig.clear_cache(nicho::PADRAO_KEY)
+      with_modified_env(AUTONOMIA_PACOTES_ENABLED: pacote) { example.run }
+    ensure
+      GlobalConfig.clear_cache(nicho::PADRAO_KEY)
+    end
+
+    before do
+      account.update!(locale: locale, internal_attributes: { nicho::NICHO_KEY => 'seguros', nicho::PERFIL_KEY => perfil })
+    end
+
+    def titulos
+      card = setup_card(template: 'COBRANCA', category: 'novo', expected_close_at: Date.new(2026, 10, 20))
+      schedule(card)
+      reminders(card).to_h { |lembrete| [lembrete.metadata['kind'], lembrete.title] }
+    end
+
+    it 'corretora: "parcela" nos três avisos' do
+      expect(titulos).to eq('payment_before' => 'Lembrar da parcela: 3 dias antes',
+                            'payment_due' => 'Lembrar da parcela: no dia',
+                            'payment_after' => 'Lembrar da parcela: depois do vencimento')
+    end
+
+    describe 'com saúde e benefícios' do
+      let(:perfil) { 'saude_beneficios' }
+
+      it 'diz "mensalidade do plano"' do
+        expect(titulos).to eq('payment_before' => 'Lembrar da mensalidade do plano: 3 dias antes',
+                              'payment_due' => 'Lembrar da mensalidade do plano: no dia',
+                              'payment_after' => 'Lembrar da mensalidade do plano: depois do vencimento')
+      end
+    end
+
+    describe 'em inglês' do
+      let(:locale) { 'en' }
+
+      it 'corretora: "installment"' do
+        expect(titulos['payment_due']).to eq('Installment reminder: on the day')
+      end
+    end
+
+    describe 'com o interruptor de pacotes desligado' do
+      let(:pacote) { nil }
+
+      it 'grava o texto base' do
+        expect(titulos['payment_before']).to eq('Lembrar do pagamento: 3 dias antes')
+      end
+    end
+
+    describe 'em conta fora do nicho de seguros' do
+      before { account.update!(internal_attributes: {}) }
+
+      it 'grava o texto base' do
+        expect(titulos['payment_before']).to eq('Lembrar do pagamento: 3 dias antes')
+      end
+    end
+
+    it 'andamento segue neutro no pacote' do
+      card = setup_card
+      card.update_columns(entered_stage_at: now - 2.days)
+      schedule(card)
+
+      expect(reminders(card).sole.title).to eq('Avisar o andamento')
+    end
+  end
+
   describe 'no envio (DueProcessor)' do
     around do |example|
       previous = %w[CRM_KANBAN_ENABLED CRM_AI_ENABLED].index_with { |key| ENV.fetch(key, nil) }
