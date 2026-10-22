@@ -1,13 +1,18 @@
 class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::BaseController
   PIXEL_ID_MAX_LENGTH = 20
+  RESTORE_NOT_ARCHIVED = 'crm.pipeline_restore_not_archived'.freeze
 
-  before_action :fetch_pipeline, only: [:show, :update, :destroy]
+  before_action :fetch_pipeline, only: [:show, :update, :destroy, :restore, :archive_preview]
   before_action :ensure_outcome_labels_format, only: [:update]
 
+  # `status=archived` lista os funis arquivados (#2095), com quantos cards abertos cada um guarda. Sem ele, os ativos,
+  # como sempre.
   def index
     authorize ::Crm::Pipeline
-    @pipelines = policy_scope(::Crm::Pipeline).active.order(:position, :id)
+    archived = params[:status].to_s == 'archived'
+    @pipelines = policy_scope(::Crm::Pipeline).where(status: archived ? :archived : :active).order(:position, :id)
     @pipelines_count = @pipelines.count
+    @open_cards_counts = open_cards_counts(@pipelines) if archived
   end
 
   def show; end
@@ -35,9 +40,29 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     render :show
   end
 
+  # Arquivar (#2095): com `move_to_stage_id` (etapa de outro funil ativo que a pessoa vê), os cards abertos vão para lá
+  # antes, na mesma transação (Crm::Pipelines::Archiver). Sem ele, ficam no funil e voltam quando ele for restaurado.
   def destroy
-    @pipeline.archived!
+    moved = ::Crm::Pipelines::Archiver.new(pipeline: @pipeline, actor: Current.user, target_stage: archive_target_stage).perform
+    @moved_cards_count = moved.size
+    @open_cards_count = @pipeline.cards.open.count
     render :show
+  rescue ::Crm::Pipelines::Archiver::InvalidTarget
+    render_unprocessable(::Crm::Pipelines::Archiver::INVALID_TARGET)
+  end
+
+  # Restaurar o funil arquivado (#2095): ele volta ao seletor do Kanban com os cards abertos que ficaram nele.
+  def restore
+    return render_unprocessable(RESTORE_NOT_ARCHIVED) unless @pipeline.archived?
+
+    @pipeline.active!
+    @open_cards_count = @pipeline.cards.open.count
+    render :show
+  end
+
+  # O que a tela mostra antes de arquivar (#2095): quantos cards abertos ficam e quais caixas criam card neste funil.
+  def archive_preview
+    render json: { payload: { open_cards_count: @pipeline.cards.open.count, inboxes: linked_inboxes } }
   end
 
   private
@@ -45,6 +70,30 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   def fetch_pipeline
     @pipeline = policy_scope(::Crm::Pipeline).find(params[:id])
     authorize @pipeline
+  end
+
+  # A etapa para onde vão os cards abertos ao arquivar: de outro funil ativo que a pessoa enxerga. Id que não serve é
+  # recusado, nunca ignorado: arquivar sem mover não pode acontecer por engano.
+  def archive_target_stage
+    stage_id = params[:move_to_stage_id].presence
+    return if stage_id.nil?
+
+    visible_active = policy_scope(::Crm::Pipeline).active.where.not(id: @pipeline.id).select(:id)
+    stage = Current.account.crm_pipeline_stages.where(pipeline_id: visible_active).find_by(id: stage_id)
+    raise ::Crm::Pipelines::Archiver::InvalidTarget, ::Crm::Pipelines::Archiver::INVALID_TARGET if stage.nil?
+
+    stage
+  end
+
+  def open_cards_counts(pipelines)
+    Current.account.crm_cards.open.where(pipeline_id: pipelines.select(:id)).group(:pipeline_id).count
+  end
+
+  # As caixas ligadas ao funil; `auto_create_card` diz se a caixa cria card nele sozinha.
+  def linked_inboxes
+    @pipeline.pipeline_inboxes.includes(:inbox).where.not(inbox_id: nil).order(:id).map do |link|
+      { id: link.inbox_id, name: link.inbox&.name, auto_create_card: link.auto_create_card }
+    end
   end
 
   # #1580: outcome_labels fora de { success:, failure: } em texto é recusado antes de gravar qualquer coisa (o create

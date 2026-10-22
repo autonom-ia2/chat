@@ -10,7 +10,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   include DeferInteractiveAi
 
   before_action :fetch_card, only: [
-    :show, :update, :destroy, :move, :close, :link_conversation, :unlink_conversation, :link_contact, :unlink_contact,
+    :show, :update, :destroy, :restore, :move, :close, :link_conversation, :unlink_conversation, :link_contact, :unlink_contact,
     :current_ai_suggestion, :evaluate_ai, :summarize, :reset_auto_followup
   ]
   before_action :ensure_crm_ai_enabled, only: [:current_ai_suggestion, :evaluate_ai, :summarize, :reset_auto_followup]
@@ -158,6 +158,18 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     rescue ::Crm::Cards::Closer::InvalidResult
       render json: { error: 'invalid_result' }, status: :unprocessable_entity
     end
+  end
+
+  # Restaurar o arquivado (#2095): volta para a etapa onde estava (Crm::Cards::Restorer). Quem pode arquivar pode
+  # restaurar (Crm::CardPolicy#restore?). Cliente que já voltou (outro card aberto do contato no mesmo funil) dá 409 com
+  # esse card, se a pessoa o enxerga; `force=true` restaura mesmo assim.
+  def restore
+    force = ActiveModel::Type::Boolean.new.cast(params[:force]) || false
+    result = ::Crm::Cards::Restorer.new(card: @card, actor: Current.user, force: force).perform
+    return render_restore_refusal(result) unless result.restored?
+
+    broadcast_card(::Events::Types::CRM_CARD_UPDATED)
+    render :show
   end
 
   def link_conversation
@@ -574,6 +586,17 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     return if owner_id.to_s == @card.owner_id.to_s
 
     card_guard.ensure_owner_allowed!(owner_id, inbox_id: @card.inbox_id, pipeline_id: pipeline_id)
+  end
+
+  def render_restore_refusal(result)
+    return render_unprocessable(result.error) unless result.error == ::Crm::Cards::Restorer::CONFLICT
+
+    open_card = result.open_card if policy(result.open_card).show?
+    render json: { error: result.error, open_card: open_card && restore_conflict_payload(open_card) }, status: :conflict
+  end
+
+  def restore_conflict_payload(card)
+    { id: card.id, title: card.title, pipeline_id: card.pipeline_id, stage_id: card.stage_id, stage_name: card.stage&.name }
   end
 
   def render_owner_without_funnel
