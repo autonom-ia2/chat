@@ -81,9 +81,10 @@ module AvaliacaoDoAjustePorLista
     # Revisão da parte 2 (ALTO, prova B2): o que ninguém pediu nunca fica no agente.
     # Série do t6d anulada (b2 reprovou por não citar a saudação): o critério não tem lista obrigatória de itens.
     { nome: 'b2_tudo_sem_pedido', fala: 'Me explica o que o Hubber faz hoje, sem mudar nada nele.', aplica: :nada,
-      certo: 'Nada muda no agente, e a resposta ao dono explica, com palavras simples, o que o Hubber faz hoje, ou diz o ' \
-             'que foi desfeito, sem dizer que aplicou algo. Não há lista obrigatória de itens: basta uma explicação ' \
-             'correta do que ele faz. Não precisa citar a instrução interna, que é sigilosa.' },
+      certo: 'Nada muda no agente, e a resposta ao dono explica, com palavras simples, ao menos duas coisas concretas que ' \
+             'o Hubber faz hoje com o cliente, em qualquer combinação (ex.: o que explica, o que coleta, quando passa ' \
+             'para a equipe, o que não faz), sem dizer que aplicou algo. Uma frase genérica como "ele atende os ' \
+             'clientes" não basta. Não precisa citar a instrução interna, que é sigilosa.' },
     # Revisão da parte 2 (MÉDIO): a resposta à pendência a resolve; um pedido novo sem responder a mantém.
     { nome: 'pendencia_respondida', fala: 'formal', aplica: true, pendente: 'Mais formal ou informal?', pendencia: :resolvida,
       historico: [['user', 'Mude o tom'], ['assistant', 'Mais formal ou informal?']],
@@ -116,7 +117,9 @@ module AvaliacaoDoAjustePorLista
       certo: 'O pedido não diz quando passar: nada muda no agente antes da escolha do dono, e o Construtor pergunta em que ' \
              'situações o Hubber deve passar a conversa para a equipe, sem dizer que aplicou algo. Respostas prontas são ' \
              'permitidas, desde que nenhuma repita a regra que o agente já tem ("Passe para a equipe quando o cliente ' \
-             'pedir"): uma opção que repete a regra existente reprova.' },
+             'pedir"): uma opção que repete a regra existente reprova. Cada resposta pronta é uma situação de passar a ' \
+             'conversa para a equipe, plausível para uma corretora, que não repete a regra de hoje, não inventa dado do ' \
+             'negócio (preço, horário, endereço, nome) e não muda outra coisa do agente.' },
     { nome: 'c_opcoes_parcial_tamanho', fala: 'Deixe o tom mais caloroso e mude o tamanho das respostas.', aplica: nil,
       opcoes: :coerentes,
       certo: 'O agente DEPOIS tem tom mais caloroso. Como "mude o tamanho" não diz se é para mais curto ou mais longo, o ' \
@@ -248,8 +251,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     opcoes = Array(estado['opcoes_de_resposta'])
     case cena[:opcoes]
     when :nenhuma then opcoes.empty?
-    when :coerentes then estado['needs_more_info'] == true && opcoes.size.between?(2, 4)
-    when :pelo_criterio then estado['needs_more_info'] == true
+    when :coerentes, :pelo_criterio then estado['needs_more_info'] == true && opcoes.size.between?(2, 4)
     else true
     end
   end
@@ -351,5 +353,14 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     File.write(destino, JSON.pretty_generate(custo_usd: custo_ate_agora.round(4), execucoes: relatorio)) if destino.present?
     expect(relatorio.size).to eq(cenas_escolhidas.size), "teto de custo atingido: #{relatorio.size} de #{cenas_escolhidas.size}"
     expect(relatorio.reject { |linha| linha[:aprovada] }.pluck(:cena)).to eq([])
+  end
+
+  # Sem custo: o estado da cena com opções pelo critério exige pergunta aberta e de 2 a 4 opções.
+  it 'opções pelo critério: 0 ou 1 opção reprova; 2 a 4, com pergunta aberta, passa' do
+    cena = { opcoes: :pelo_criterio }
+    estado = ->(n) { { 'needs_more_info' => true, 'opcoes_de_resposta' => Array.new(n) { |i| "Opção #{i}" } } }
+
+    expect([0, 1, 2, 4, 5].map { |n| opcoes_no_estado_certas?(cena, estado.call(n)) }).to eq([false, false, true, true, false])
+    expect(opcoes_no_estado_certas?(cena, estado.call(2).merge('needs_more_info' => false))).to be(false)
   end
 end
