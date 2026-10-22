@@ -45,6 +45,7 @@ RSpec.describe Autonomia::Segmentos::Catalogo do
     pacotes.with(saude) do
       expect(I18n.t(won, locale: :pt_BR)).to eq('Implantado')
       expect(I18n.t(won, locale: :en)).to eq('Implemented')
+      expect(I18n.t(lost, locale: :pt_BR)).to eq('Não fechou')
       expect(I18n.t('crm.export.columns.lost_reason', locale: :pt_BR)).to eq('Por que não fechou')
     end
   end

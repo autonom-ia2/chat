@@ -156,7 +156,8 @@ export const MODELOS = [
   },
   // #2083 — a Carteira da saúde: o cliente depois do plano implantado, até o
   // aniversário do contrato. Vem antes dos de todos, como os da corretora.
-  // "Aniversário do contrato" não é espera do cliente: não pausa o prazo.
+  // "Aniversário do contrato" não é espera do cliente: a variante da saúde
+  // (variantes.json) faz da E3 andamento, e o prazo não pausa.
   {
     chave: 'CARTEIRA',
     tipo: 'ATENDER',
@@ -165,7 +166,7 @@ export const MODELOS = [
     venda: false,
     camadas: SAUDE,
     etapas: etapasDo('CARTEIRA', 4),
-    categorias: ['novo', 'andamento', 'andamento', 'resolvido'],
+    categorias: CATEGORIAS,
     // Termina em "Renovado / Cancelado".
     sucesso: true,
     falha: true,

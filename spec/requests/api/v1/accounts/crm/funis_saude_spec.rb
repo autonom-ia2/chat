@@ -67,5 +67,23 @@ RSpec.describe 'CRM funis da saúde (#2083)', type: :request do
     statuses = Autonomia::Segmentos::Catalogo.dados.dig('seguros/saude_beneficios', :pt_BR, :crm, :export, :statuses)
 
     expect(statuses).to eq(won: 'Implantado')
+    Autonomia::Segmentos::Pacotes.with(saude) do
+      expect(I18n.t('crm.export.statuses.lost', locale: :pt_BR)).to eq('Não fechou')
+    end
+  end
+
+  it 'a Carteira nasce sem lembrete de andamento nem de "deu certo?"; o Suporte segue com os dois' do
+    carteira, = create_crm_pipeline(account: saude, user: admin_de(saude))
+    carteira.update!(counts_as_sale: false, metadata: carteira.metadata.merge('template' => 'CARTEIRA'))
+    suporte, = create_crm_pipeline(account: saude, user: admin_de(saude))
+    suporte.update!(counts_as_sale: false, metadata: suporte.metadata.merge('template' => 'ATENDIMENTO'))
+
+    expect(Crm::Ai::Config.service_reminders_settings(carteira)).to include('progress' => false, 'resolved_check' => false)
+    expect(Crm::Ai::Config.service_reminders_settings(suporte)).to include('progress' => true, 'resolved_check' => true)
+  end
+
+  it 'o servidor grava a E3 da Carteira como andamento na saúde' do
+    expect(Crm::PipelineStages::TemplateVariant.category_for(account: saude, template: 'CARTEIRA', position: 3)).to eq('andamento')
+    expect(Crm::PipelineStages::TemplateVariant.category_for(account: geral, template: 'CARTEIRA', position: 3)).to be_nil
   end
 end

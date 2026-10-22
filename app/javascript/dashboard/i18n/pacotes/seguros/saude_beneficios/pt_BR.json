@@ -289,24 +289,73 @@
   "CONTACTS_LAYOUT": {
     "DETAILS": {
       "CUSTOMER": {
-        "DESCRIPTION": "Vira cliente sozinho quando um plano fecha num funil de venda. Marque aqui se ele já comprou de outro jeito."
+        "DESCRIPTION": "Vira cliente sozinho quando um plano é implantado num funil de venda. Marque aqui se a pessoa já tem plano com você fora do funil."
+      }
+    },
+    "HEADER": {
+      "ACTIONS": {
+        "FILTERS": {
+          "CREATE_SEGMENT": {
+            "PLACEHOLDER": "Ex.: Clientes com plano PME"
+          }
+        },
+        "IMPORT_CONTACT": {
+          "DESCRIPTION": "Importe a planilha da sua carteira de clientes (arquivo CSV)."
+        }
+      }
+    },
+    "CARD": {
+      "EDIT_DETAILS_FORM": {
+        "FORM": {
+          "BIO": {
+            "PLACEHOLDER": "Ex.: tem plano de 3 vidas com a gente e quer cotar odonto"
+          }
+        }
+      }
+    },
+    "EMPTY_STATE": {
+      "SUBTITLE": "Adicione seu primeiro cliente no botão abaixo. Para trazer a carteira toda, use Importar contatos."
+    },
+    "FILTER": {
+      "SEGMENT": {
+        "INPUT_PLACEHOLDER": "Ex.: Clientes com plano PME"
+      }
+    },
+    "SIDEBAR": {
+      "ATTRIBUTES": {
+        "EMPTY_STATE": "Esta conta ainda não tem campos do contato. Crie nas configurações campos como Operadora atual, Número de vidas e Aniversário do contrato."
+      },
+      "NOTES": {
+        "EMPTY_STATE": "Ainda não há notas deste contato. Anote na caixa acima o que a equipe precisa lembrar, como o hospital que ele prefere ou o dia do boleto.",
+        "PLACEHOLDER": "Ex.: quer incluir a esposa como dependente"
       }
     }
   },
   "AUTOMATION": {
     "CRM_CARD_STATUS": {
-      "WON": "Plano ativo"
+      "WON": "Implantado"
     },
     "ACTIONS": {
-      "CRM_MARK_CARD_WON": "Marcar card do CRM: fechou o plano"
-    }
+      "CRM_MARK_CARD_WON": "Marcar card do CRM como implantado"
+    },
+    "ADD": {
+      "FORM": {
+        "DESC": {
+          "PLACEHOLDER": "Ex.: põe a etiqueta pendência e passa para o time de pendências"
+        },
+        "NAME": {
+          "PLACEHOLDER": "Ex.: Etiqueta de pendência"
+        }
+      }
+    },
+    "DESCRIPTION": "A automação faz sozinha o trabalho repetido, como pôr a etiqueta certa (empresa, família, pendência) e passar a conversa para quem cuida dela. Assim sobra tempo para a equipe cotar e atender."
   },
   "INTEGRATION_SETTINGS": {
     "WEBHOOK": {
       "FORM": {
         "SUBSCRIPTIONS": {
           "CRM_EVENTS": {
-            "CRM_CARD_WON": "Card do CRM: fechou o plano"
+            "CRM_CARD_WON": "Card do CRM implantado"
           }
         }
       }
@@ -314,7 +363,7 @@
     "CRM_N8N": {
       "EVENTS": {
         "LIST": {
-          "CRM_CARD_WON": "Um card fechou o plano."
+          "CRM_CARD_WON": "Um card foi marcado como implantado."
         }
       }
     }
@@ -342,15 +391,111 @@
         "TEXTO": "Olá, [nome_cliente]. Aviso de [nome_empresa]: o seu plano renova em [data]. Quer revisar a renovação com a gente? Toque em uma das opções abaixo."
       },
       "andamento": {
-        "TITULO": "Andamento do reembolso",
-        "PARA": "Para contar ao beneficiário que o pedido de reembolso andou.",
-        "TEXTO": "Olá, [nome_cliente]. Atualização de [nome_empresa]: o seu pedido de reembolso teve andamento. Quer saber os detalhes? Toque no botão abaixo."
+        "TITULO": "Andamento da proposta",
+        "PARA": "Para contar ao cliente que a proposta dele andou na operadora.",
+        "TEXTO": "Olá, [nome_cliente]. Atualização de [nome_empresa]: a sua proposta teve andamento na operadora. Quer saber os detalhes? Toque no botão abaixo."
+      },
+      "boas_vindas": {
+        "TEXTO": "Olá, [nome_cliente]! Aqui é da [nome_empresa]. Que bom ter você com a gente. Quando precisar de cotação, segunda via do boleto ou ajuda com o seu plano, é só mandar mensagem por aqui."
+      },
+      "cobranca": {
+        "PARA": "Para lembrar o cliente do boleto do plano que vai vencer.",
+        "TEXTO": "Olá, [nome_cliente]. Lembrete da [nome_empresa]: o boleto do seu plano, de [valor], vence em [data]. Se já pagou, pode desconsiderar. Se precisar da segunda via, toque no botão abaixo.",
+        "TITULO": "Boleto a vencer"
+      },
+      "promocao": {
+        "TEXTO": "Oi, [nome_cliente]! Até [data], você tem [desconto] de desconto em planos com a [nome_empresa]. Quer uma cotação? Toque no botão abaixo."
+      },
+      "retomar": {
+        "PARA": "Para voltar a falar com quem pediu cotação e sumiu.",
+        "TEXTO": "Oi, [nome_cliente]! Aqui é da [nome_empresa]. Ficou alguma dúvida sobre a cotação do seu plano? É só responder aqui que a gente continua.",
+        "TITULO": "Retomar a cotação"
+      }
+    },
+    "TEXTO": {
+      "TIPO": {
+        "aviso": {
+          "PARA": "Boleto, documentação, proposta na operadora, pendência. Custa menos por envio."
+        },
+        "divulgacao": {
+          "PARA": "Plano novo, odonto, oferta. Custa mais por envio."
+        }
+      }
+    },
+    "TIPOS_DE_BOTAO": {
+      "site": {
+        "EXEMPLO": "Ex.: Ver os planos"
+      }
+    },
+    "FORMATOS": {
+      "carrossel": {
+        "BOTAO": "Quero cotar",
+        "CARTAO_1": {
+          "TEXTO": "Plano de saúde: a gente cota em várias operadoras."
+        },
+        "CARTAO_2": {
+          "TEXTO": "Plano odonto: cotação sem compromisso."
+        },
+        "NOME_PADRAO": "Nossos planos",
+        "TEXTO": "Oi, [nome_cliente]! Veja alguns planos que a gente cota para você:"
+      },
+      "formulario": {
+        "NOME_PADRAO": "Dados para a cotação",
+        "TEXTO": "Oi, [nome_cliente]! Leva 1 minuto: preencha o formulário e a gente prepara a sua cotação."
+      }
+    },
+    "VAZIO": {
+      "TITULO": "Crie sua primeira mensagem para o WhatsApp aprovar e avise do boleto, da documentação ou do aniversário do contrato."
+    },
+    "EXTRAS": {
+      "TOPO_AJUDA": "Opcional. O mesmo arquivo vai para todas as pessoas que receberem. Use para algo igual para todos (tabela de preços, lista de documentos). Boleto, proposta ou documento de cada cliente não vão aqui."
+    },
+    "CAMPOS": {
+      "link": {
+        "EXEMPLO": "seusite.com.br/b/123"
+      }
+    },
+    "IA": {
+      "OBJETIVO_EXEMPLO": "Ex.: avisar que a proposta foi enviada para a operadora"
+    },
+    "CATALOGO_DE_CAMPOS": {
+      "minha_empresa": {
+        "endereco": "Endereço da minha corretora",
+        "nome": "Nome da minha corretora",
+        "site": "Site da minha corretora",
+        "telefone": "Telefone da minha corretora"
+      },
+      "negocio": {
+        "titulo": "Título do card",
+        "valor": "Valor do card"
+      }
+    },
+    "JANELA": {
+      "GAVETA": {
+        "LINK_DIGITADO": "Link não pode ser digitado no texto. Use o botão do campo (ex.: o link da proposta, vindo do público).",
+        "O_QUE_EXEMPLO": "Ex.: avisar que o aniversário do contrato está chegando e que dá para rever o plano respondendo",
+        "PARECE_LINK": "Parece um link. Para link, use o botão do campo (ex.: o link da proposta)."
+      }
+    },
+    "SITUACOES": {
+      "desativado": {
+        "DICA": "duplique o modelo, reescreva o texto dizendo logo no começo quem está falando, e mande só para quem conhece a sua corretora."
+      },
+      "pausado": {
+        "DICA": "mande só para quem conhece a sua corretora e deixe claro, logo no começo, quem está falando."
+      }
+    },
+    "SAUDE": {
+      "SINAIS": {
+        "bom": {
+          "TEXTO": "Quase ninguém bloqueou ou denunciou esta mensagem. Continue mandando para quem conhece a sua corretora."
+        }
       }
     }
   },
   "AUTONOMIA_GUIDE": {
     "SUGGESTIONS": {
-      "REPORTS": "Quantos planos fechei este mês?"
+      "REPORTS": "Quantos planos foram implantados este mês?"
     }
   },
   "CRM_FUNIL": {
@@ -368,8 +513,6 @@
       }
     },
     "ANUNCIOS": {
-      "EVENTOS": {},
-      "FACEBOOK": {},
       "GOOGLE": {
         "NOME_EXEMPLO": "Ex.: Plano implantado"
       }
@@ -434,6 +577,539 @@
         "NAME": {
           "PLACEHOLDER": "Ex.: Pendência com resposta rápida"
         }
+      }
+    }
+  },
+  "AGENTS": {
+    "JORNADA": {
+      "AJUDANTE": {
+        "QUANDO": {
+          "EXEMPLO": "Ex.: quando a dúvida for sobre carência ou rede do plano"
+        }
+      },
+      "CRIAR": {
+        "BASE": {
+          "SITE_EXEMPLO": "www.suacorretora.com.br",
+          "VAZIO": "Ainda não tem nada aqui. Mande a tabela de preços dos planos, a lista de documentos ou o endereço do seu site."
+        },
+        "CONFIRA": {
+          "PERGUNTAS": {
+            "COMO_RESPONDO": "O cliente achou a cotação cara. Como respondo?",
+            "DESCONTO": "Quanto fica, mais ou menos?",
+            "PEDIDO": "Quero fazer um plano de saúde",
+            "PROXIMO_PASSO": "Mandei as opções da cotação e o cliente sumiu. Qual o próximo passo?",
+            "QUANTO_CUSTA": "Quanto fica um plano de saúde para a minha família?",
+            "RASCUNHO": "Escreva uma mensagem pedindo os documentos do titular e dos dependentes",
+            "TROCAR": "Quero incluir um dependente no plano"
+          }
+        },
+        "CONTE": {
+          "ANEXO_FRASE": "Tem a tabela de preços dos planos, uma lista de perguntas comuns ou o seu site? {acao} Não é obrigatório.",
+          "EXEMPLO_AJUDANTE": "Ex.: tirar as dúvidas sobre carência e rede dos planos para os outros agentes",
+          "EXEMPLO_DO_MEU_JEITO": "Ex.: tirar dúvidas sobre os planos de saúde e passar para a equipe",
+          "IDEIAS": {
+            "DOCES": "Corretora de planos de saúde e odonto",
+            "ESTETICA": "Corretora de planos por adesão",
+            "OFICINA": "Corretora de planos para empresas",
+            "ROUPAS": "Corretora de planos individuais e familiares"
+          }
+        }
+      },
+      "MODELOS": {
+        "SDR": {
+          "AGENTE": "Que bom! Me conta quantas pessoas vão entrar no plano e a idade de cada uma que já chamo alguém da equipe.",
+          "CLIENTE": "Quero fazer um plano de saúde",
+          "TEXTO": "Entende qual plano a pessoa procura e passa para a equipe cotar.",
+          "TITULO": "Atender quem quer um plano"
+        },
+        "SUPPORT": {
+          "AGENTE": "Eu chamo alguém da equipe para te ajudar com a segunda via.",
+          "CLIENTE": "Como peço a segunda via do boleto?",
+          "TEXTO": "Tira dúvidas sobre o plano, o boleto, a segunda via e o que mais perguntarem."
+        }
+      },
+      "PAGINA": {
+        "FERRAMENTAS": {
+          "LISTA": {
+            "CONTEXTO": "Ferramentas deixam {nome} consultar outros sistemas durante a conversa, como a tabela de preços, a agenda ou o cadastro. O agente decide sozinho quando usar cada uma, pelo que está escrito em \"Quando usar\".",
+            "VAZIO": "Este agente ainda não consulta nenhum outro sistema. Adicione uma ferramenta quando ele precisar buscar um dado fora daqui, como a situação da proposta de um cliente."
+          },
+          "PASSOS": {
+            "TRES": {
+              "DESCRICAO_EXEMPLO": "O CPF do titular, do jeito que o cliente mandou."
+            },
+            "UM": {
+              "NOME_AJUDA_VAZIO": "Para você reconhecer na lista. Ex.: Consulta de proposta",
+              "QUANDO_EXEMPLO": "Use quando o cliente perguntar em que pé está a proposta ou se tem pendência na operadora. Traz a operadora, a situação da proposta e as pendências."
+            }
+          },
+          "RASCUNHO_EXEMPLO": {
+            "ENDERECO": "https://api.suacorretora.com.br/propostas/busca",
+            "NOME": "Consulta de proposta"
+          }
+        },
+        "MUDAR_VISTA": {
+          "CHIPS_GERAL": {
+            "B": "Mudar regras ou documentos pedidos"
+          }
+        },
+        "SABE": {
+          "ENVIAR_ARQUIVO_TEXTO": "Tabela de preços dos planos, lista de documentos, perguntas comuns. Até 25 MB.",
+          "SITE_ERRO": "Confira o endereço do site. Ex.: www.suacorretora.com.br"
+        },
+        "TESTE": {
+          "CHIPS": {
+            "RECEPTION": {
+              "B": "Quero incluir um dependente no plano"
+            },
+            "SDR": {
+              "A": "Quero fazer um plano de saúde",
+              "B": "Quanto fica, mais ou menos?"
+            },
+            "SUPPORT": {
+              "A": "Como peço a segunda via do boleto?"
+            }
+          }
+        }
+      }
+    },
+    "OUTRO_SISTEMA": {
+      "DESCRICAO_EXEMPLO": "Ex.: tira dúvidas sobre o plano e passa para a equipe"
+    },
+    "TUNE": {
+      "GREETING_PLACEHOLDER": "Olá! Tudo bem? Como posso ajudar com o seu plano de saúde?"
+    }
+  },
+  "RELATIONSHIPS": {
+    "MEDIA": {
+      "CONTACT_EMPTY_HINT": "Os arquivos das conversas autorizadas deste cliente aparecem aqui."
+    },
+    "CARD_DETAILS": {
+      "ATTRIBUTES": {
+        "BASIC_DESCRIPTION": "Crie os campos que você usa, como Operadora atual e Aniversário do contrato.",
+        "DESCRIPTION": "Crie campos como Operadora atual, Número de vidas e Aniversário do contrato, e escolha onde eles aparecem."
+      },
+      "COMPANIES": {
+        "BASIC_DESCRIPTION": "Organize as empresas que você atende, como PME e MEI, e ligue cada uma às pessoas dela.",
+        "DESCRIPTION": "Organize as empresas que você atende, como PME e MEI, e ligue cada uma às pessoas e aos arquivos dela."
+      },
+      "CONTACTS": {
+        "BASIC_DESCRIPTION": "Cadastre seus clientes e veja o histórico de conversa de cada um.",
+        "DESCRIPTION": "Cadastre seus clientes e veja, de cada um, as conversas, os arquivos (como proposta e boleto) e os campos.",
+        "SUBTITLE": "Cuide da sua carteira"
+      }
+    },
+    "DESCRIPTION_HINT": "Diga para que serve o campo e como preencher. Ex.: data do aniversário do contrato.",
+    "HOME_SUPPORT_DESCRIPTION": "Mantenha em dia dados como operadora e aniversário do contrato, para se preparar antes do reajuste.",
+    "HOME_SUPPORT_TITLE": "Cliente bem cuidado renova e indica",
+    "SUBTITLE": "Seus clientes, as empresas que você atende e os dados de cada um, num lugar só."
+  },
+  "COMPANIES": {
+    "DETAIL": {
+      "ATTRIBUTES": {
+        "EMPTY_STATE": "Esta conta ainda não tem campos da empresa. Crie nas configurações campos como CNPJ, Número de vidas e Aniversário do contrato."
+      },
+      "PROFILE": {
+        "DESCRIPTION_PLACEHOLDER": "Ex.: empresa com 12 funcionários; quer cotar um plano PME com coparticipação"
+      }
+    }
+  },
+  "ATTRIBUTES_MGMT": {
+    "DESCRIPTION": "Campos extras guardam o que a corretora precisa saber de cada cliente ou conversa, como a operadora atual, o número de vidas, a modalidade e o aniversário do contrato. Pode ser texto, lista, número ou data.",
+    "ADD": {
+      "FORM": {
+        "DESC": {
+          "PLACEHOLDER": "Ex.: Mês em que o contrato faz aniversário"
+        },
+        "KEY": {
+          "PLACEHOLDER": "Ex.: aniversario_contrato"
+        },
+        "NAME": {
+          "PLACEHOLDER": "Ex.: Aniversário do contrato"
+        },
+        "TYPE": {
+          "LIST": {
+            "PLACEHOLDER": "Ex.: Individual, Adesão, PME, MEI. Digite cada um e aperte Enter"
+          }
+        }
+      }
+    },
+    "LIST": {
+      "EMPTY_RESULT": {
+        "404": "Nenhum campo extra ainda. Para começar: Operadora, Número de vidas, Modalidade e Aniversário do contrato."
+      }
+    }
+  },
+  "BOOKING": {
+    "TEMPLATE": {
+      "CONSULT": {
+        "NAME": "Atendimento no escritório"
+      },
+      "SALES": {
+        "NAME": "Conversa para cotar"
+      }
+    },
+    "LOOK": {
+      "HEADLINE_PLACEHOLDER": "Escolha o melhor horário para falar do seu plano"
+    }
+  },
+  "CANNED_MGMT": {
+    "DESCRIPTION": "Respostas prontas são as frases que você mais manda, salvas para usar num toque. Na conversa, digite '/' e o atalho. Ex.: se você criar o atalho /cotacao, ele manda \"Segue a cotação com as opções de plano. Qual você prefere?\"",
+    "LIST": {
+      "404": "Nenhuma resposta pronta ainda. Comece pelas frases que você mais manda, como \"Quantas vidas vão entrar no plano?\""
+    },
+    "ADD": {
+      "DESC": "Salve uma frase que você manda sempre. Ex.: \"Pode me mandar o RG e o CPF do titular e dos dependentes?\"",
+      "FORM": {
+        "CONTENT": {
+          "PLACEHOLDER": "Ex.: Segue a cotação com as opções de plano. Qual você prefere?"
+        },
+        "SHORT_CODE": {
+          "PLACEHOLDER": "Ex.: cotacao"
+        }
+      }
+    },
+    "EDIT": {
+      "FORM": {
+        "CONTENT": {
+          "PLACEHOLDER": "Ex.: Segue a cotação com as opções de plano. Qual você prefere?"
+        },
+        "SHORT_CODE": {
+          "PLACEHOLDER": "Ex.: cotacao"
+        }
+      }
+    }
+  },
+  "CONTACT_IMPORT_JOURNEY": {
+    "ATTRIBUTES": {
+      "HINT": "Viram campos do cliente, como operadora e número de vidas"
+    },
+    "SUBTITLE": "Suba a planilha da sua carteira. A gente acha as colunas e as empresas. Cada coluna extra, como operadora ou aniversário do contrato, vira um campo do cliente.",
+    "UPLOAD": {
+      "HINT": "CSV ou Excel · até {size} MB · nome e celular ou e-mail; empresa, operadora, plano e outras colunas são bem-vindas"
+    }
+  },
+  "LABEL_MGMT": {
+    "DESCRIPTION": "As etiquetas separam conversas e clientes por assunto, como PME, adesão, documentação pendente ou odonto. Você põe a etiqueta pelo painel ao lado da conversa ou do cliente.",
+    "LIST": {
+      "404": "Nenhuma etiqueta ainda. Para começar, crie PME, adesão e odonto."
+    },
+    "FORM": {
+      "DESCRIPTION": {
+        "PLACEHOLDER": "Ex.: Falta a declaração de saúde"
+      },
+      "NAME": {
+        "PLACEHOLDER": "Ex.: documentacao-pendente",
+        "VALID_ERROR": "Sem espaço: use hífen. Ex.: segunda-via"
+      }
+    },
+    "ADD": {
+      "DESC": "Etiquetas separam as conversas por assunto, como cotação ou pendência."
+    }
+  },
+  "PROFILE_SETTINGS": {
+    "FORM": {
+      "MESSAGE_SIGNATURE": {
+        "PLACEHOLDER": "Ex.: Ana Souza · Corretora de planos de saúde"
+      }
+    }
+  },
+  "TEAMS_SETTINGS": {
+    "DESCRIPTION": "Times juntam as pessoas por assunto, como Vendas, Pendências e Carteira. Uma pessoa pode estar em vários times, e a conversa pode ir direto para o time certo.",
+    "FORM": {
+      "DESCRIPTION": {
+        "PLACEHOLDER": "Ex.: Cuida das pendências da operadora e da documentação que falta."
+      },
+      "NAME": {
+        "PLACEHOLDER": "Ex.: Vendas, Pendências, Carteira"
+      }
+    }
+  },
+  "AUTOMACOES": {
+    "HEROI": {
+      "EXEMPLO": "Ex.: quando um cliente pedir cotação, avisar o corretor",
+      "IDEIAS": {
+        "ORCAMENTO": "Marcar quem pede cotação"
+      }
+    },
+    "MODELOS": {
+      "ORCAMENTO": {
+        "FAZ": "Coloca a etiqueta cotação",
+        "PEDIDO": "Quero uma automação: quando chegar uma mensagem de cliente pedindo cotação de plano, colocar a etiqueta cotação na conversa.",
+        "QUANDO": "O cliente pede uma cotação",
+        "TEXTO": "Quem pede cotação recebe uma etiqueta e não fica esquecido na fila.",
+        "TITULO": "Marcar quem pede cotação"
+      }
+    }
+  },
+  "NOVA_CONVERSA": {
+    "MENSAGEM": {
+      "ASSUNTO_PLACEHOLDER": "Ex.: Cotação do plano de saúde",
+      "PLACEHOLDER": "Ex.: Oi, tudo bem? Separei as opções da sua cotação."
+    }
+  },
+  "TEAM_REPORTS": {
+    "DESCRIPTION": "Veja como cada time está: conversas, tempo para responder e tempo para resolver. Ex.: vendas, implantação, carteira. Clique num time para ver mais."
+  },
+  "INBOX_MGMT": {
+    "CSAT": {
+      "MESSAGE": {
+        "PLACEHOLDER": "Ex.: Como foi o atendimento do seu corretor hoje?"
+      }
+    },
+    "PRE_CHAT_FORM": {
+      "PRE_CHAT_MESSAGE": {
+        "PLACEHOLDER": "Ex.: Para agilizar a cotação, conte seu nome e quantas pessoas vão entrar no plano."
+      }
+    },
+    "ADD": {
+      "CHANNEL_NAME": {
+        "PLACEHOLDER": "Digite o nome da caixa (ex.: Cotações de planos)"
+      },
+      "EMAIL_CHANNEL": {
+        "EMAIL": {
+          "SUBTITLE": "E-mail para onde as pessoas mandam pedidos de cotação, propostas e documentação"
+        }
+      },
+      "WEBSITE_CHANNEL": {
+        "CHANNEL_GREETING_MESSAGE": {
+          "PLACEHOLDER": "Respondemos em horário comercial."
+        },
+        "CHANNEL_WELCOME_TAGLINE": {
+          "PLACEHOLDER": "Peça sua cotação, a segunda via do boleto ou tire dúvidas do seu plano por aqui."
+        }
+      },
+      "WEBSITE_NAME": {
+        "PLACEHOLDER": "Informe o nome do seu site (ex.: o nome da sua corretora)"
+      },
+      "WHATSAPP": {
+        "EMBEDDED_SIGNUP": {
+          "ACCESS_REQUEST": {
+            "USE_CASE_PLACEHOLDER": "Por exemplo: somos uma corretora de planos de saúde e usamos o WhatsApp para mandar cotações, pedir a documentação e acompanhar a implantação."
+          }
+        }
+      },
+      "WHATSAPP_API": {
+        "CHANNEL_NAME": {
+          "PLACEHOLDER": "Ex.: Vendas ou Carteira"
+        }
+      }
+    }
+  },
+  "CUSTOM_ROLE": {
+    "FORM": {
+      "DESCRIPTION": {
+        "PLACEHOLDER": "Ex.: Quem cuida de pendências e segunda via do boleto, só nas próprias conversas"
+      },
+      "NAME": {
+        "PLACEHOLDER": "Ex.: Atendente de pendências"
+      }
+    },
+    "PROFILES": {
+      "AGENT": {
+        "WHO": "Para quem atende os clientes no dia a dia: dúvidas, boleto e pendências."
+      },
+      "SDR": {
+        "NAME": "Corretor",
+        "SHORT": "Cuida das cotações e dos planos novos",
+        "WHO": "Para quem atende os pedidos de cotação, manda as opções e acompanha até o plano ser implantado."
+      }
+    }
+  },
+  "BRAND_KITS": {
+    "PREVIEW": {
+      "ITEM_1": "Cotação em várias operadoras",
+      "ITEM_2": "Ajuda com a documentação",
+      "ITEM_3": "Aviso antes do aniversário do contrato",
+      "SAMPLE_BUTTON": "Quero uma cotação",
+      "SAMPLE_NOTE": "A cotação é sem compromisso.",
+      "SAMPLE_SUBJECT": "Seu plano de saúde com quem cuida de você",
+      "SAMPLE_TEXT": "A gente cota em várias operadoras e manda as opções pelo WhatsApp.",
+      "SAMPLE_TITLE": "Seu plano de saúde com quem cuida de você"
+    }
+  },
+  "COMPOSE_NEW_CONVERSATION": {
+    "FORM": {
+      "EMAIL_OPTIONS": {
+        "SUBJECT_PLACEHOLDER": "Ex.: Cotação do plano de saúde"
+      }
+    }
+  },
+  "LABEL_REPORTS": {
+    "DESCRIPTION": "Veja, por etiqueta, quantas conversas chegaram e quanto tempo a equipe levou para responder e resolver. Ex.: Cotação, PME, Pendência, Segunda via do boleto. Clique numa etiqueta para ver mais.",
+    "FILTERS": {
+      "INPUT_PLACEHOLDER": {
+        "LABELS": "Buscar etiqueta. Ex.: pendência"
+      }
+    }
+  },
+  "WHATSAPP_TEMPLATES": {
+    "PARSER": {
+      "DOCUMENT_NAME_PLACEHOLDER": "Informe o nome do arquivo do documento (ex.: Proposta_2026.pdf)"
+    }
+  },
+  "SETTINGS_INICIO": {
+    "CARTOES": {
+      "CAMPOS": {
+        "TEXTO": "Informações a mais de cada cliente, como operadora, número de vidas e aniversário do contrato."
+      },
+      "CANAIS": {
+        "TEXTO": "WhatsApp, e-mail, Instagram e site: por onde o cliente pede cotação e fala com você."
+      },
+      "ETIQUETAS": {
+        "TEXTO": "Nomes e cores para separar conversas e clientes, como PME, adesão e pendência."
+      },
+      "RESPOSTAS": {
+        "TEXTO": "Textos que você usa sempre, como pedir a documentação ou mandar a segunda via do boleto, a um clique na conversa."
+      },
+      "TIMES": {
+        "TEXTO": "Grupos de pessoas para dividir o trabalho, como Vendas, Pendências e Carteira."
+      }
+    },
+    "GRUPOS": {
+      "SUA_EMPRESA": "Sua corretora"
+    }
+  },
+  "GENERAL_SETTINGS": {
+    "FORM": {
+      "AUTO_RESOLVE": {
+        "MESSAGE": {
+          "PLACEHOLDER": "Encerramos esta conversa por falta de resposta. Precisa de cotação, segunda via do boleto ou ajuda com o seu plano? É só mandar mensagem."
+        }
+      }
+    }
+  },
+  "CAMPAIGN": {
+    "SMS": {
+      "EMPTY_STATE": {
+        "SUBTITLE": "Mande um SMS para vários clientes de uma vez: aviso de boleto ou de renovação do plano. Clique em 'Criar campanha' para começar."
+      }
+    },
+    "WHATSAPP": {
+      "EMPTY_STATE": {
+        "SUBTITLE": "Mande um modelo aprovado para várias pessoas de uma vez: aniversário do contrato, boleto ou plano novo. Clique em \"Criar campanha\" para começar."
+      }
+    },
+    "EMAIL_CAMPAIGN": {
+      "AI": {
+        "COMPOSER": {
+          "BRIEF_PLACEHOLDER": "Ex.: e-mail para quem pediu cotação e não respondeu, tom amigável, convite para conversar com o corretor",
+          "ROLE_PRODUCT": "Plano"
+        }
+      }
+    }
+  },
+  "CONVERSATION": {
+    "FOOTER": {
+      "PRIVATE_MSG_INPUT": "Só a equipe vê. Ex.: cliente prefere boleto com vencimento no dia 10. Shift + Enter para nova linha."
+    },
+    "NO_MESSAGE_1": "Nenhuma conversa ainda. Quando um cliente pedir uma cotação, a conversa aparece aqui."
+  },
+  "CAMPAIGN_JOURNEY": {
+    "NEW_CAMPAIGN": {
+      "API": {
+        "MESSAGE_PLACEHOLDER": "Ex.: Olá, tudo bem? O aniversário do contrato do seu plano é este mês. Quer que a gente confira as opções?"
+      },
+      "EMAIL": {
+        "FROM_NAME_PLACEHOLDER": "Ex.: Sua Corretora de Planos de Saúde"
+      },
+      "MESSAGE": {
+        "NAME_PLACEHOLDER": "Ex.: Aniversário do contrato em novembro"
+      },
+      "SMS": {
+        "MESSAGE_PLACEHOLDER": "Texto curto, ex.: o boleto do seu plano vence amanhã."
+      },
+      "VARIABLES": {
+        "HINT": "As colunas guardadas no público podem ser usadas aqui, como a operadora ou o número de vidas."
+      }
+    },
+    "NEW_AUDIENCE": {
+      "COLUMNS": {
+        "OTHER_HINT": "Ficam guardadas para usar na mensagem, como o aniversário do contrato"
+      },
+      "FILE_HINT": "CSV ou Excel. Nome e celular ou e-mail. Operadora, vidas e aniversário do contrato também ajudam: dá para usar na mensagem.",
+      "NAME_PLACEHOLDER": "Ex.: Aniversário do contrato em novembro"
+    },
+    "AUDIENCES": {
+      "EMPTY_SUBTITLE": "Público é uma lista de pessoas, como a sua carteira de clientes. Suba uma planilha com os seus clientes para criar o primeiro."
+    }
+  },
+  "MACROS": {
+    "ADD": {
+      "FORM": {
+        "NAME": {
+          "PLACEHOLDER": "Ex.: Pedir a documentação"
+        }
+      }
+    },
+    "DESCRIPTION": "Uma macro faz várias ações de uma vez, com um clique. Ex.: pôr a etiqueta Documentação pendente, mandar a lista de documentos e deixar a conversa pendente."
+  },
+  "ONBOARDING_TRAIL": {
+    "DONE_SUBTITLE": "O essencial está pronto: você recebe, responde e organiza cotações e renovações. O que sobrou é ajuste fino, no seu tempo."
+  },
+  "CONVERSA_CANAL": {
+    "JANELA": {
+      "BOTAO_DE_LINK": {
+        "AJUDA": "O cliente toca no botão e abre o site. Ex.: o link para assinar a proposta."
+      },
+      "CONTATO": {
+        "AJUDA": "O cliente recebe o cartão e pode conversar com esse número. Ex.: a central de atendimento da operadora."
+      },
+      "LOCALIZACAO": {
+        "BUSCAR_EXEMPLO": "Ex.: Av. Paulista, 1000 ou Escritório Exemplo"
+      },
+      "OPCOES": {
+        "AJUDA": "O cliente responde com um toque. Ex.: Plano de saúde, Odonto, Seguro de vida. Até 3 opções viram botões; mais que isso, uma lista."
+      }
+    }
+  },
+  "AGENT_BOTS": {
+    "FORM": {
+      "DESCRIPTION": {
+        "PLACEHOLDER": "Ex.: tira dúvidas sobre os planos e passa para o corretor"
+      }
+    }
+  },
+  "CONVERSATION_SIDEBAR": {
+    "ACCORDION": {
+      "CONTACT_ATTRIBUTES": "Dados do cliente"
+    }
+  },
+  "RESULT_JOURNEY": {
+    "OVERVIEW": {
+      "TOTALS": {
+        "DEALS_NOTE": "cards com marca de campanha · {won} implantados"
+      }
+    }
+  },
+  "AGENT_MGMT": {
+    "ADD": {
+      "DESC": "Convide quem vai atender: vendas, pendências ou clientes da carteira."
+    },
+    "DESCRIPTION": "Aqui ficam as pessoas da corretora que entram na plataforma: os corretores, quem atende e quem cuida da carteira."
+  },
+  "CAMPAIGN_IMPORT": {
+    "FIELDS": {
+      "CAMPAIGN_NAME_PLACEHOLDER": "Ex.: aniversario_contrato_novembro"
+    }
+  },
+  "CONVERSATION_WORKFLOW": {
+    "INDEX": {
+      "HEADER": {
+        "DESCRIPTION": "Escolha o que precisa estar preenchido antes de encerrar uma conversa, como a operadora ou o número de vidas."
+      }
+    },
+    "REQUIRED_ATTRIBUTES": {
+      "DESCRIPTION": "Antes de encerrar a conversa, a equipe preenche estes campos, como a operadora ou o número de vidas."
+    }
+  },
+  "SEARCH": {
+    "EMPTY_STATE_DEFAULT": "Procure pelo nome, telefone ou e-mail do cliente, pelo número da conversa ou por uma palavra de mensagens dos últimos 3 meses, como \"boleto\" ou \"proposta\"."
+  },
+  "CONTACT_FORM": {
+    "FORM": {
+      "BIO": {
+        "PLACEHOLDER": "Ex.: tem plano individual e quer cotar um plano PME para a empresa"
       }
     }
   }

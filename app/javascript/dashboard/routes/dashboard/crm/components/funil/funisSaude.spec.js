@@ -98,19 +98,19 @@ describe('health texts', () => {
   });
 
   // O vocabulário que o Rodrigo aprovou: nada de seguro de carro, apólice ou
-  // "fechou o plano" no que a saúde troca no CRM.
+  // "fechou o plano" em nenhum texto que a saúde troca.
   it.each([
-    ['pt_BR', saudePtBR, ['segurad', 'apólice', 'sinistro', 'fechou o plano']],
-    ['en', saudeEn, ['policyholder', 'claim']],
+    [
+      'pt_BR',
+      saudePtBR,
+      ['segurad', 'apólice', 'sinistro', 'fechou o plano', 'beneficiári'],
+    ],
+    ['en', saudeEn, ['policyholder', 'policy', 'insured', 'closed a plan']],
   ])(
-    '%s health CRM texts avoid the words of other lines',
+    '%s health texts avoid the words of other lines',
     (_, pacote, palavras) => {
-      const crm = Object.entries(pacote)
-        .filter(([area]) => area.startsWith('CRM_'))
-        .map(([, textos]) => JSON.stringify(textos).toLowerCase());
-      crm.forEach(texto =>
-        palavras.forEach(palavra => expect(texto).not.toContain(palavra))
-      );
+      const texto = JSON.stringify(pacote).toLowerCase();
+      palavras.forEach(palavra => expect(texto).not.toContain(palavra));
     }
   );
 });

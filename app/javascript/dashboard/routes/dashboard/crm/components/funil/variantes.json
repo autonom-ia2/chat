@@ -1,5 +1,6 @@
 {
   "seguros/saude_beneficios": {
-    "ATENDIMENTO": ["novo", "andamento", "andamento", "resolvido"]
+    "ATENDIMENTO": ["novo", "andamento", "andamento", "resolvido"],
+    "CARTEIRA": ["novo", "andamento", "andamento", "resolvido"]
   }
 }
