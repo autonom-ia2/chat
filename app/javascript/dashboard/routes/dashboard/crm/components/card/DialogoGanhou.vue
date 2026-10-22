@@ -21,6 +21,8 @@ const { t, te } = useI18n();
 const dialogo = ref(null);
 const valor = ref('');
 const moeda = ref('BRL');
+// #2075 — sem a chave de valores a pessoa não vê o valor: ganha sem mexer nele.
+const oculto = ref(false);
 const moedas = computed(() =>
   [...new Set([...MOEDAS, moeda.value])].map(codigo => ({
     value: codigo,
@@ -31,12 +33,18 @@ const moedas = computed(() =>
 );
 
 const abrir = card => {
+  oculto.value = Boolean(card?.value_hidden);
   valor.value = card?.value_cents ? Number(card.value_cents) / 100 : '';
   moeda.value = card?.currency || 'BRL';
   dialogo.value?.open();
 };
 const fechar = () => dialogo.value?.close();
 const confirmar = () => {
+  if (oculto.value) {
+    emit('confirmar', { result: 'won' });
+    fechar();
+    return;
+  }
   const numero = Number(valor.value);
   emit('confirmar', {
     result: 'won',
@@ -60,12 +68,19 @@ defineExpose({ abrir, fechar });
         ? t('CRM_CARD.DESFECHO.GANHOU_TITULO_PADRAO')
         : t('CRM_CARD.DESFECHO.GANHOU_TITULO', { rotulo: props.rotulo })
     "
-    :description="t('CRM_CARD.DESFECHO.GANHOU_TEXTO')"
+    :description="oculto ? '' : t('CRM_CARD.DESFECHO.GANHOU_TEXTO')"
     width="md"
     @confirm="confirmar"
   >
     <p
-      v-if="achadoNaConversa"
+      v-if="oculto"
+      class="mb-0 rounded-xl bg-n-alpha-2 p-3 text-sm text-n-slate-11"
+      data-ganhou-valor-oculto
+    >
+      {{ t('CRM_CARD.DESFECHO.VALOR_OCULTO') }}
+    </p>
+    <p
+      v-else-if="achadoNaConversa"
       class="mb-0 flex items-center gap-2 rounded-xl bg-n-iris-2 p-3 text-sm text-n-slate-12"
     >
       <span
@@ -74,7 +89,10 @@ defineExpose({ abrir, fechar });
       />
       {{ t('CRM_CARD.DESFECHO.ACHADO') }}
     </p>
-    <div class="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)] gap-2">
+    <div
+      v-if="!oculto"
+      class="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)] gap-2"
+    >
       <ChoiceSelect
         v-model="moeda"
         :options="moedas"

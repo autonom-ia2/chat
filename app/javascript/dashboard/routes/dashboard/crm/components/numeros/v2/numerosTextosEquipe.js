@@ -14,9 +14,19 @@ export const daEquipe = topo => ['equipe', 'empresa'].includes(topo?.escopo);
 
 const cedo = mes => !mes.fechado && mes.dia <= DIAS_CEDO;
 
+// #2075 — sem a chave de valores o servidor manda o R$ do topo vazio (null): o
+// título e a frase falam das vendas fechadas, sem dinheiro e sem meta.
+const semValor = topo => topo.medida === 'valor' && topo.feito === null;
+
 const tituloDaEquipe = topo => {
   const { escopo, medida, feito, meta } = topo;
   const quem = escopo === 'empresa' ? 'EMPRESA' : 'EQUIPE';
+  if (semValor(topo))
+    return {
+      key: `${P}.TOPO.FECHOU_${quem}_SEM_VALOR`,
+      params: { n: topo.fechadas },
+      plural: topo.fechadas,
+    };
   if (medida !== 'valor') {
     if (!meta)
       return {
@@ -44,8 +54,18 @@ const chaveDaEmpresa = (frase, semMeta) => {
   return frase.metaResolvidos ? 'EMPRESA' : 'EMPRESA_RESOLVEU';
 };
 
+const fraseSemValor = frase =>
+  frase.tipo === 'empresa'
+    ? { key: `${P}.TOPO.FRASE.EMPRESA_SEM_VALOR`, params: frase }
+    : {
+        key: `${P}.TOPO.FRASE.EQUIPE_VENDAS_SEM_VALOR`,
+        params: frase,
+        plural: frase.ajuda,
+      };
+
 const fraseDaEquipe = topo => {
   const { frase } = topo;
+  if (semValor(topo)) return fraseSemValor(frase);
   const semMeta = !topo.meta;
   if (frase.tipo === 'empresa')
     return {
@@ -68,11 +88,16 @@ const fraseDaEquipe = topo => {
   };
 };
 
+// Sem valor (#2075), o começo do mês também fala das vendas fechadas: a frase
+// "Até agora: R$ …" não tem o que mostrar.
+const textoDaEquipe = (topo, mes) =>
+  daEquipe(topo) && (semValor(topo) || !cedo(mes));
+
 export const tituloDoTopoDe = (topo, mes) =>
-  daEquipe(topo) && !cedo(mes) ? tituloDaEquipe(topo) : tituloDoTopo(topo, mes);
+  textoDaEquipe(topo, mes) ? tituloDaEquipe(topo) : tituloDoTopo(topo, mes);
 
 export const fraseDoTopoDe = (topo, mes) =>
-  daEquipe(topo) && !cedo(mes) ? fraseDaEquipe(topo) : fraseDoTopo(topo, mes);
+  textoDaEquipe(topo, mes) ? fraseDaEquipe(topo) : fraseDoTopo(topo, mes);
 
 const BOTOES_DA_EQUIPE = {
   parados: 'PARADOS',
@@ -82,10 +107,16 @@ const BOTOES_DA_EQUIPE = {
   casos_equipe: 'CASOS_EQUIPE',
 };
 
+// #2075 — os parados sem o R$ (null) quando a pessoa não vê valores.
+const chaveDoBotao = botao =>
+  botao.tipo === 'parados' && botao.valor === null
+    ? 'PARADOS_SEM_VALOR'
+    : BOTOES_DA_EQUIPE[botao.tipo];
+
 export const botaoDoTopoDe = botao =>
   BOTOES_DA_EQUIPE[botao.tipo]
     ? {
-        key: `${P}.TOPO.BOTAO.${BOTOES_DA_EQUIPE[botao.tipo]}`,
+        key: `${P}.TOPO.BOTAO.${chaveDoBotao(botao)}`,
         params: { n: botao.n, valor: botao.valor },
         plural: botao.n,
       }

@@ -108,6 +108,7 @@ const setPermissions = overrides => {
     canManagePipelines: ref(true),
     canManageAi: ref(true),
     canExportCrm: ref(false),
+    canSeeSalesValues: ref(true),
     ...Object.fromEntries(
       Object.entries(overrides).map(([key, value]) => [key, ref(value)])
     ),

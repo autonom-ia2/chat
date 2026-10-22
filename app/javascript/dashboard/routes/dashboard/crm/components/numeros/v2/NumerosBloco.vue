@@ -32,6 +32,12 @@ const ROTULOS = {
 };
 
 const numero = item => {
+  // #2075 — sem a chave de valores o R$ vem vazio (null): o número grande vira a contagem.
+  if (item.tipo === 'fechadas' && item.valor === null)
+    return {
+      grande: String(item.n),
+      rotulo: t(`${P}.BLOCO.FECHADAS_SEM_VALOR`, { n: item.n }, item.n),
+    };
   if (item.tipo === 'fechadas')
     return {
       grande: dinheiro(item.valor),
