@@ -222,6 +222,50 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
       expect(prova_com(dados.merge('completa' => false, 'perguntas' => sem_testes))).not_to have_key(:pedidos_sem_teste)
     end
 
+    # Cartão (aprovado pelo Rodrigo, 22/10): o ✓ de "mudei" não pode vir junto de "não deu para ver". Cada linha aplicada
+    # diz o que a prova viu dela, e a contagem do título é em mudanças (pedidos), não em perguntas.
+    describe 'o que a prova viu de cada mudança' do
+      before do
+        conferencia['itens'] = [item('tone', 'mais curto', 'Respostas curtas.'), item('greeting', 'saudação nova', 'Oi.', atendido: false),
+                                item('handoff_rule', 'preço com a equipe', 'Preço vai à equipe.'), item('guardrails', 'sem gíria', 'Sem gíria.')]
+      end
+
+      let(:perguntas) do
+        [{ 'pergunta' => 'Oi?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'ok', 'testes' => [{ 'pedido' => 0, 'veredito' => 'ok' }] },
+         { 'pergunta' => 'Preço?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'nao',
+           'testes' => [{ 'pedido' => 1, 'veredito' => 'nao' }, { 'pedido' => 0, 'veredito' => 'ok' }] }]
+      end
+
+      def com_testes(dados, extra = {})
+        resultado(conferencia, { 'prova' => { 'versao_id' => ultimo['versao_id'], 'status' => 'pronta', 'ok' => 1, 'total' => 2,
+                                              'completa' => false, 'perguntas' => perguntas }.merge(dados) }.merge(extra))
+      end
+
+      it 'cada linha aplicada: ok, nao ou sem_teste; a contagem em mudanças' do
+        saida = com_testes({})
+
+        expect(saida[:itens].map { |linha| linha[:prova] }).to eq(['ok', nil, 'nao', 'sem_teste'])
+        expect(saida[:prova]).to include(mudancas: { testadas: 2, total: 3 })
+      end
+
+      it 'prova antiga, sem testes gravados, ou ainda pendente: sem marca nas linhas e sem a contagem' do
+        sem_testes = com_testes('perguntas' => perguntas.map { |pergunta| pergunta.except('testes') })
+        pendente = com_testes('status' => 'pendente', 'desde' => Time.current.iso8601)
+
+        [sem_testes, pendente].each do |saida|
+          expect(saida[:itens]).to all(satisfy { |linha| !linha.key?(:prova) })
+          expect(saida[:prova]).not_to have_key(:mudancas)
+        end
+      end
+
+      it 'cartão de outra conferência que não a da prova: sem marca nas linhas' do
+        outra = { 'itens' => [item('tone', 'mais curto', 'Respostas curtas.')] }
+        saida = com_testes({}, 'ultimo_ajuste' => ultimo.merge('conferencia' => outra))
+
+        expect(saida[:itens]).to all(satisfy { |linha| !linha.key?(:prova) })
+      end
+    end
+
     # A troca para `testes` (revisão do t6d) não mexe na prova já gravada: a tela lê só a `completa` gravada e a
     # pergunta, a resposta e o `veredito` gravado de cada item. Sem campo, com `pedido` ou com `pedidos`, igual a antes.
     it 'prova gravada antes da troca (sem campo, com pedido ou com pedidos) continua igual' do

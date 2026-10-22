@@ -66,7 +66,7 @@ class Autonomia::Agents::ResultadoDoAjuste
   end
 
   def to_h
-    { itens: linhas, faltou_fora: @conferencia['faltou_fora_da_lista'] == true, conferido: conferido?,
+    { itens: linhas_com_a_prova, faltou_fora: @conferencia['faltou_fora_da_lista'] == true, conferido: conferido?,
       desfeito_sozinho: desfeito_sozinho?, desfeito: @thread.state.to_h.dig('ultimo_ajuste', 'desfeito') == true,
       pode_desfazer: @thread.agent.conversa_desfazivel&.id == @thread.id, prova: prova }.merge(pergunta_curta)
   end
@@ -101,7 +101,7 @@ class Autonomia::Agents::ResultadoDoAjuste
     return { status: status, total: perguntas.size } unless status == 'pronta'
 
     { status: status, total: dados['total'], ok: dados['ok'], completa: dados['completa'] != false,
-      perguntas: perguntas.map { |item| pergunta_da_prova(item) } }.merge(pedidos_sem_teste(dados))
+      perguntas: perguntas.map { |item| pergunta_da_prova(item) } }.merge(pedidos_sem_teste(dados)).merge(contagem(dados))
   end
 
   # Os grupos dos pedidos aplicados, na ordem do cartão: a prova numera os pedidos por eles (ProvaDoAjuste).
@@ -190,6 +190,40 @@ class Autonomia::Agents::ResultadoDoAjuste
 
   def incompleta_com_testes?(dados)
     dados['completa'] == false && Array(dados['perguntas']).any? { |item| item.key?('testes') }
+  end
+
+  # Cartão (aprovado pelo Rodrigo em 22/10): o título conta MUDANÇAS (os pedidos aplicados) e não perguntas.
+  def contagem(dados)
+    vistos = vistos_pela_prova(dados)
+    return {} if vistos.nil?
+
+    { mudancas: { testadas: vistos.count { |visto| visto != 'sem_teste' }, total: vistos.size } }
+  end
+
+  # O ✓ de "mudei" não vem junto de "não deu para ver": cada linha aplicada leva o que a prova viu dela. Só quando o
+  # cartão é o da conferência que a prova numerou (a do ultimo_ajuste); senão, as linhas ficam como sempre.
+  def linhas_com_a_prova
+    vistos = vistos_pela_prova(prova_do_cartao.to_h)
+    mesma = @conferencia == @thread.state.to_h.dig('ultimo_ajuste', 'conferencia').to_h
+    return linhas if vistos.nil? || !mesma
+
+    proximo = vistos.each
+    linhas.map { |linha| linha[:estado] == 'aplicado' ? linha.merge(prova: proximo.next) : linha }
+  end
+
+  # Por pedido aplicado, na ordem do cartão: 'nao' (algum teste viu a forma oposta), 'ok' (algum teste viu) ou
+  # 'sem_teste'. nil fora da prova pronta gravada com `testes` (a prova antiga fica como antes).
+  def vistos_pela_prova(dados)
+    perguntas = Array(dados['perguntas'])
+    return if dados['status'] != 'pronta' || perguntas.none? { |item| item.key?('testes') }
+
+    testes = perguntas.flat_map { |item| Array(item['testes']) }
+    Array.new(aplicados_da_prova.size) { |posicao| visto(testes, posicao) }
+  end
+
+  def visto(testes, posicao)
+    vereditos = testes.select { |teste| teste['pedido'] == posicao }.pluck('veredito')
+    %w[nao ok].find { |veredito| vereditos.include?(veredito) } || 'sem_teste'
   end
 
   # Os pedidos que a prova numerou: os do ajuste dela (ultimo_ajuste), não os da conferência do turno mais recente.
