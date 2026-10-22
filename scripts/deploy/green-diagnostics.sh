@@ -19,9 +19,10 @@ DIAG_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Quanto o diagnóstico pode segurar a limpeza (ou, no deploy saudável, a trava) esperando o SSM: 2 s por tentativa.
 DIAG_SSM_ATTEMPTS=30
 BOOT_SSM_ATTEMPTS=6
-# Repositório público: só os campos de estado, nunca ARN (que traz o ID da conta). O sanitizador corta o que sobrar.
-DIAG_TARGET_HEALTH_QUERY='TargetHealthDescriptions[].{Id:Target.Id,Port:Target.Port,State:TargetHealth.State,Reason:TargetHealth.Reason,Description:TargetHealth.Description}'
-DIAG_INSTANCE_STATUS_QUERY='InstanceStatuses[].{Id:InstanceId,State:InstanceState.Name,System:SystemStatus.Status,Instance:InstanceStatus.Status,Ebs:AttachedEbsStatus.Status}'
+# Repositório público: só os campos de estado, nunca ARN (que traz o ID da conta) nem ID de instância (#2032). O
+# sanitizador corta o que sobrar.
+DIAG_TARGET_HEALTH_QUERY='TargetHealthDescriptions[].{Port:Target.Port,State:TargetHealth.State,Reason:TargetHealth.Reason,Description:TargetHealth.Description}'
+DIAG_INSTANCE_STATUS_QUERY='InstanceStatuses[].{State:InstanceState.Name,System:SystemStatus.Status,Instance:InstanceStatus.Status,Ebs:AttachedEbsStatus.Status}'
 # Teto por arquivo no Step Summary (o limite do GitHub é 1 MiB por passo).
 DIAG_SUMMARY_BYTES=20000
 
@@ -118,7 +119,7 @@ diag_ssm_send_logs() {
 diag_summary() {
   local reasons=$1 file
   {
-    echo "### Diagnóstico da green $GREEN_INSTANCE_ID"
+    echo "### Diagnóstico da green"
     echo
     echo "Motivo:"
     printf '%s\n' "$reasons" | sed 's/^/- /'
@@ -180,7 +181,7 @@ collect_green_diagnostics() {
     return 0
   fi
 
-  echo "::warning::Coletando diagnóstico da green $GREEN_INSTANCE_ID: $(printf '%s' "$reasons" | tr '\n' ';')"
+  echo "::warning::Coletando diagnóstico da green: $(printf '%s' "$reasons" | tr '\n' ';')"
   printf '%s\n' "$reasons" > "$DIAG_DIR/00-motivo.txt"
   if [ -n "${GREEN_TG_ARN:-}" ]; then
     diag_capture 10-target-health-green.txt aws elbv2 describe-target-health --target-group-arn "$GREEN_TG_ARN" \
@@ -197,10 +198,9 @@ collect_green_diagnostics() {
   if diag_ssm_send_logs; then
     {
       echo "Logs do web, do worker e do cloud-init da green (podem ter dado de cliente; não saem do SSM)."
-      echo "Instância: $GREEN_INSTANCE_ID"
       echo "CommandId: $DIAG_LOGS_COMMAND_ID"
       echo "Para ler, com acesso à conta AWS desta stack:"
-      echo "aws ssm get-command-invocation --command-id $DIAG_LOGS_COMMAND_ID --instance-id $GREEN_INSTANCE_ID"
+      echo "aws ssm list-command-invocations --command-id $DIAG_LOGS_COMMAND_ID --details"
     } > "$DIAG_DIR/50-logs-no-ssm.txt"
   else
     echo "Comando de logs não foi enviado (SSM fora do ar ou recusado)." > "$DIAG_DIR/50-logs-no-ssm.txt"
