@@ -64,12 +64,17 @@ const prova = computed(() => props.resultado.prova || null);
 const provaCompleta = computed(() => prova.value?.completa !== false);
 // Prova incompleta (texto aprovado pelo Rodrigo, 22/10): os pedidos que não deu para ver, juntos como o idioma
 // junta uma lista ("a, b e c"); sem a lista (prova antiga), o texto geral.
+// Sem o Intl.ListFormat (navegador antigo ou idioma que ele não conhece), vírgulas.
 const pedidosSemTeste = computed(() => {
   const lista = prova.value?.pedidos_sem_teste || [];
   if (!lista.length) return '';
-  return new Intl.ListFormat(locale.value.replace('_', '-'), {
-    type: 'conjunction',
-  }).format(lista);
+  try {
+    return new Intl.ListFormat(locale.value.replace('_', '-'), {
+      type: 'conjunction',
+    }).format(lista);
+  } catch {
+    return lista.join(', ');
+  }
 });
 const textoIncompleta = computed(() =>
   pedidosSemTeste.value
@@ -79,6 +84,33 @@ const textoIncompleta = computed(() =>
 const provaOk = computed(
   () => prova.value?.ok === prova.value?.total && provaCompleta.value
 );
+// Ajuste aprovado pelo Rodrigo (22/10): o título conta mudanças (pedidos), não perguntas. Prova antiga, sem
+// `mudancas`, mantém o placar de perguntas.
+const tituloDaProva = computed(() => {
+  const mudancas = prova.value?.mudancas;
+  if (!mudancas) {
+    return t(
+      `${NS}.PROVA`,
+      { ok: prova.value.ok, total: prova.value.total },
+      prova.value.total
+    );
+  }
+  if (mudancas.testadas === mudancas.total) {
+    return t(`${NS}.PROVA_TESTEI_TODAS`, { n: mudancas.total }, mudancas.total);
+  }
+  return t(`${NS}.PROVA_TESTEI_PARTE`, {
+    x: mudancas.testadas,
+    n: mudancas.total,
+  });
+});
+// O que a prova viu de cada linha aplicada: o ✓ de "mudei" não vem junto de "não deu para ver". O ícone nunca é a
+// única informação: o leitor de tela ouve o rótulo. `nao` (contradição) e a prova antiga ficam como antes.
+const ROTULO_DA_PROVA = {
+  ok: 'APLICADO_TESTADO',
+  sem_teste: 'APLICADO_SEM_TESTE',
+};
+const rotuloAplicado = item =>
+  t(`${NS}.${ROTULO_DA_PROVA[item.prova] || 'APLICADO'}`);
 const verProva = ref(false);
 const listaDaProva = useId();
 
@@ -117,6 +149,7 @@ const podeDesfazer = computed(
         v-for="(item, indice) in pedidos"
         :key="indice"
         :data-item="item.estado"
+        :data-visto="item.prova"
         class="flex items-start gap-3 text-sm text-n-slate-12"
       >
         <template v-if="!conferido">
@@ -128,11 +161,16 @@ const podeDesfazer = computed(
         </template>
         <template v-else-if="item.estado === 'aplicado'">
           <span
-            class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
+            class="size-5 shrink-0"
+            :class="
+              item.prova === 'sem_teste'
+                ? 'i-lucide-circle-dashed text-n-slate-10'
+                : 'i-lucide-circle-check text-n-teal-11'
+            "
             aria-hidden="true"
           />
           <span class="relative">
-            <span class="sr-only">{{ t(`${NS}.APLICADO`) }}</span>
+            <span class="sr-only">{{ rotuloAplicado(item) }}</span>
             {{ item.texto }}
           </span>
         </template>
@@ -202,6 +240,7 @@ const podeDesfazer = computed(
         </p>
         <p
           v-else
+          data-titulo-prova
           class="flex items-center gap-3 m-0 text-sm font-semibold text-n-slate-12"
         >
           <span
@@ -213,9 +252,7 @@ const podeDesfazer = computed(
             "
             aria-hidden="true"
           />
-          {{
-            t(`${NS}.PROVA`, { ok: prova.ok, total: prova.total }, prova.total)
-          }}
+          {{ tituloDaProva }}
         </p>
         <p
           v-if="prova.total && !provaCompleta"

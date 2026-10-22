@@ -294,5 +294,131 @@ describe('ResultadoDoAjuste', () => {
         montar({ desfeito: true, prova: PRONTA }).find('[data-prova]').exists()
       ).toBe(false);
     });
+
+    it('joins the requests with a comma when the browser cannot format the list', () => {
+      const listFormat = vi.spyOn(Intl, 'ListFormat').mockImplementation(() => {
+        throw new RangeError('sem suporte');
+      });
+      try {
+        const prova = montar({
+          prova: {
+            ...PRONTA,
+            completa: false,
+            pedidos_sem_teste: ['preço com a equipe', 'sem gíria'],
+          },
+        }).find('[data-prova-incompleta]');
+
+        expect(prova.text()).toBe(
+          'Não deu para ver nas respostas do teste: preço com a equipe, sem gíria. Converse com o agente no Testar para conferir.'
+        );
+      } finally {
+        listFormat.mockRestore();
+      }
+    });
+  });
+
+  // Ajuste aprovado pelo Rodrigo (22/10): o ✓ de "mudei" não vem junto de "não deu para ver", e o título da prova
+  // conta mudanças (pedidos), não perguntas.
+  describe('what the proof saw of each change', () => {
+    const VISTA = {
+      status: 'pronta',
+      ok: 1,
+      total: 1,
+      completa: false,
+      pedidos_sem_teste: ['nada de gíria'],
+      mudancas: { testadas: 2, total: 3 },
+      perguntas: [
+        { pergunta: 'Oi?', resposta: 'Oi!', equipe: false, ok: true },
+      ],
+    };
+    // A prova antiga: sem `mudancas` nem a marca das linhas.
+    const ANTIGA = {
+      status: 'pronta',
+      ok: 1,
+      total: 1,
+      completa: true,
+      perguntas: [
+        { pergunta: 'Oi?', resposta: 'Oi!', equipe: false, ok: true },
+      ],
+    };
+    const ITENS = [
+      { estado: 'aplicado', texto: 'Trata por você.', prova: 'ok' },
+      { estado: 'aplicado', texto: 'Preço vai para a equipe.', prova: 'nao' },
+      { estado: 'aplicado', texto: 'Sem gíria.', prova: 'sem_teste' },
+    ];
+
+    it("check for the seen change, a gray circle for the unseen one, and today's mark for the contradicted one", () => {
+      const linhas = montar({ itens: ITENS, prova: VISTA }).findAll(
+        '[data-item]'
+      );
+
+      expect(linhas.map(linha => linha.attributes('data-visto'))).toEqual([
+        'ok',
+        'nao',
+        'sem_teste',
+      ]);
+      expect(linhas[0].find('.i-lucide-circle-check').exists()).toBe(true);
+      expect(linhas[0].find('.sr-only').text()).toBe('Aplicado e testado:');
+      expect(linhas[1].find('.i-lucide-circle-check').exists()).toBe(true);
+      expect(linhas[1].find('.sr-only').text()).toBe('Aplicado:');
+      expect(linhas[2].find('.i-lucide-circle-check').exists()).toBe(false);
+      expect(linhas[2].find('.i-lucide-circle-dashed').classes()).toContain(
+        'text-n-slate-10'
+      );
+      expect(linhas[2].find('.sr-only').text()).toBe(
+        'Aplicado, mas não deu para ver no teste:'
+      );
+    });
+
+    it('old proof, without the marks: the lines stay as today', () => {
+      const linha = montar({
+        itens: [{ estado: 'aplicado', texto: 'Sem gíria.' }],
+        prova: ANTIGA,
+      }).find('[data-item]');
+
+      expect(linha.find('.i-lucide-circle-check').exists()).toBe(true);
+      expect(linha.find('.sr-only').text()).toBe('Aplicado:');
+      expect(linha.attributes('data-visto')).toBeUndefined();
+    });
+
+    it('counts changes: some seen', () => {
+      const prova = montar({ itens: ITENS, prova: VISTA }).find('[data-prova]');
+
+      expect(prova.find('[data-titulo-prova]').text()).toBe(
+        'Testei 2 de 3 mudanças.'
+      );
+      expect(prova.text()).not.toContain('pergunta de prova');
+      expect(prova.find('.i-lucide-triangle-alert').exists()).toBe(true);
+    });
+
+    it('counts changes: all seen and ok, plural and singular', () => {
+      const todas = montar({
+        prova: { ...ANTIGA, mudancas: { testadas: 3, total: 3 } },
+      }).find('[data-titulo-prova]');
+      const uma = montar({
+        prova: { ...ANTIGA, mudancas: { testadas: 1, total: 1 } },
+      }).find('[data-titulo-prova]');
+
+      expect(todas.text()).toBe('Testei as 3 mudanças.');
+      expect(todas.find('.i-lucide-circle-check').exists()).toBe(true);
+      expect(uma.text()).toBe('Testei a mudança.');
+    });
+
+    it('none seen: no count title, only the approved text', () => {
+      const prova = montar({
+        itens: ITENS.map(item => ({ ...item, prova: 'sem_teste' })),
+        prova: {
+          ...VISTA,
+          ok: 0,
+          total: 0,
+          mudancas: { testadas: 0, total: 3 },
+        },
+      }).find('[data-prova]');
+
+      expect(prova.find('[data-titulo-prova]').exists()).toBe(false);
+      expect(prova.find('[data-sem-teste]').text()).toBe(
+        'As respostas do teste não deixaram ver a mudança. Converse com o agente no Testar para conferir.'
+      );
+    });
   });
 });
