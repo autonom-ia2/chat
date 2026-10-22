@@ -1,7 +1,6 @@
 import ptBR from 'dashboard/i18n/locale/pt_BR';
 import en from 'dashboard/i18n/locale/en';
 import segurosPtBR from 'dashboard/i18n/pacotes/seguros/pt_BR.json';
-import saudePtBR from 'dashboard/i18n/pacotes/seguros/saude_beneficios/pt_BR.json';
 import corretoraPtBR from 'dashboard/i18n/pacotes/seguros/corretora/pt_BR.json';
 import corretoraEn from 'dashboard/i18n/pacotes/seguros/corretora/en.json';
 import segurosEn from 'dashboard/i18n/pacotes/seguros/en.json';
@@ -10,7 +9,8 @@ import { MODELOS, modeloDoFunil, modelosDoTipo } from './funil';
 
 // #1802 — os funis da corretora: modelos a mais só para a camada
 // seguros/corretora, e a "Venda de seguro" como o próprio modelo Vendas com a
-// fala do corretor. Conta geral (e as outras de seguros) fica como hoje.
+// fala do corretor. Conta geral (e seguradora e insurtech) fica como hoje; a
+// saúde tem os dela (funisSaude.spec.js).
 const chaves = (tipo, pacote) =>
   modelosDoTipo(tipo, pacote).map(modelo => modelo.chave);
 
@@ -32,7 +32,7 @@ describe('modelosDoTipo by account layer', () => {
     ]);
   });
 
-  it.each([null, undefined, '', 'seguros', 'seguros.saude_beneficios'])(
+  it.each([null, undefined, '', 'seguros', 'seguros.insurtech'])(
     'account %j sees exactly the list of today',
     pacote => {
       expect(chaves('VENDER', pacote)).toEqual(HOJE.VENDER);
@@ -82,7 +82,7 @@ describe('texts of the templates', () => {
   const motivosDe = catalogo => catalogo.CRM_CARD.DESFECHO.MOTIVO;
 
   it('general account keeps the Sales texts and the quick reasons of today', () => {
-    [composeMessages(ptBR, []), composeMessages(ptBR, [segurosPtBR, saudePtBR])]
+    [composeMessages(ptBR, []), composeMessages(ptBR, [segurosPtBR])]
       .map(vendasDe)
       .forEach(vendas =>
         expect(vendas).toEqual({

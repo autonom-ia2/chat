@@ -4525,6 +4525,16 @@
         "E3": "Falta documento",
         "E4": "Feito",
         "SUCESSO": "Feito"
+      },
+      "CARTEIRA": {
+        "NOME": "Carteira",
+        "TEXTO": "Do plano implantado até a renovação do contrato.",
+        "E1": "Boas-vindas",
+        "E2": "Em uso",
+        "E3": "Aniversário do contrato",
+        "E4": "Renovado",
+        "SUCESSO": "Renovado",
+        "FALHA": "Cancelado"
       }
     },
     "ETAPAS": {
@@ -4640,7 +4650,10 @@
         "ACIONAR": "quer acionar o seguro",
         "TROCOU_CARRO": "trocou de carro",
         "MUDOU_ENDERECO": "mudou de endereço",
-        "INCLUIR_MOTORISTA": "quer incluir um motorista"
+        "INCLUIR_MOTORISTA": "quer incluir um motorista",
+        "PLANO_NOVO": "acabou de ter o plano implantado",
+        "USAR_PLANO": "tem dúvida de como usar o plano",
+        "ANIVERSARIO_CONTRATO": "está com o contrato perto do aniversário"
       },
       "NOTA": "Anotação da equipe (se quiser)",
       "NOTA_AJUDA": "Só para a sua equipe ler. Não muda nada no funil."

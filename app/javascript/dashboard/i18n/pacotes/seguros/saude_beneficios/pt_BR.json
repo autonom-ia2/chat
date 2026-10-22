@@ -1,105 +1,289 @@
 {
   "CRM_KANBAN": {
     "DRAWER": {
-      "STATUS_WON": "Plano ativo",
-      "ACTIVITY_WON": "Fechou o plano",
-      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Não é venda: ninguém pediu um plano. Para desfazer, reabra o card."
+      "STATUS_WON": "Implantado",
+      "ACTIVITY_WON": "Marcado como implantado",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Não é venda: ninguém pediu um plano. Para desfazer, reabra o card.",
+      "CARD_FIELDS": {
+        "EMPTY_ADMIN": "Ainda não há campos do card. Crie em Configurações → Atributos personalizados → Card. Ex.: Operadora atual, Número de vidas, Aniversário do contrato.",
+        "HELP": "Informações próprias deste plano."
+      }
     },
     "META_SYNC_STATUS": {
-      "EVENT_WON": "Fechou o plano"
+      "EVENT_WON": "Implantado"
     },
     "ALERTS": {
-      "CARD_WON": "Marcado: fechou o plano."
+      "CARD_WON": "Card marcado como implantado."
     },
     "DASHBOARD": {
       "KPI": {
-        "WON": "Planos fechados",
-        "WON_INFO": "Cards que fecharam o plano no período escolhido.",
-        "WIN_RATE_INFO": "De todos os cards que terminaram no período, quantos fecharam o plano (em %).",
-        "WON_VALUE_INFO": "Valor total dos planos fechados no período, por moeda."
+        "WON": "Planos implantados",
+        "WON_INFO": "Cards marcados como implantados no período escolhido.",
+        "WIN_RATE_INFO": "De todos os cards que terminaram no período, quantos foram implantados (em %).",
+        "WON_VALUE_INFO": "Valor total dos planos implantados no período, por moeda.",
+        "GOAL_INFO": "Quanto da meta de vendas do mês já foi implantado. O ritmo compara isso com quanto do mês já passou.",
+        "WIN_RATE": "Taxa de implantação (quantidade)",
+        "WIN_RATE_VALUE": "Taxa de implantação (valor)",
+        "WIN_RATE_VALUE_INFO": "Do valor de tudo que terminou no período, quanto foi implantado (em %).",
+        "WON_VALUE": "Valor implantado"
       },
       "META_SYNC": {
-        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card fechar o plano, os dados aparecem aqui.",
-        "SUBTITLE": "Conversões enviadas de volta à Meta para otimizar seus anúncios: clique para WhatsApp pela conexão do WhatsApp, planos fechados pela landing page pelo Pixel do site."
+        "EMPTY": "Nenhuma conversão enviada ainda. Ligue o envio para a Meta num funil. Quando um card for marcado como implantado, os dados aparecem aqui.",
+        "SUBTITLE": "Conversões enviadas de volta à Meta para otimizar seus anúncios: clique para WhatsApp pela conexão do WhatsApp, planos implantados que vieram da landing page pelo Pixel do site.",
+        "REVENUE": "Valor enviado"
+      },
+      "THROUGHPUT": {
+        "WON": "Implantados"
       }
     },
     "PIPELINE_DRAWER": {
-      "META_SYNC_HELP": "Envie cada resultado de volta para a Meta. Isso acontece quando um card fecha o plano, não fecha ou muda de etapa. Assim a Meta mostra seus anúncios de clique para WhatsApp a quem tem mais chance de comprar."
+      "META_SYNC_HELP": "Envie cada resultado de volta para a Meta. Isso acontece quando o plano de um card é implantado, não fecha ou muda de etapa. Assim a Meta mostra seus anúncios de clique para WhatsApp a quem tem mais chance de comprar.",
+      "NAME_PLACEHOLDER": "Ex.: Vendas, Carteira",
+      "STAGE_NAME_PLACEHOLDER": "Ex.: Na operadora",
+      "WHEN_TO_USE_HELP": "A IA lê este texto para saber quando uma conversa é deste funil. Diga quais planos ou casos entram aqui.",
+      "WHEN_TO_USE_PLACEHOLDER": "Ex.: cotação de plano de saúde, odonto e seguro de vida."
     },
     "PIPELINE_EDITOR": {
-      "AD_RESULTS_HELP": "Mostre quais anúncios viraram vendas. A venda conta quando o card fecha o plano, em qualquer coluna.",
+      "AD_RESULTS_HELP": "Mostre quais anúncios viraram planos implantados. Conta quando o card é marcado como implantado, em qualquer coluna.",
       "META_PROGRESS": {
         "NONE": {
-          "HELP": "Não enviar a entrada nesta etapa. Os planos fechados continuam seguindo os ajustes do funil."
+          "HELP": "Não enviar a entrada nesta etapa. Os planos implantados continuam seguindo os ajustes do funil."
+        },
+        "PROPOSAL": {
+          "HELP": "O cliente recebeu as opções da cotação e está escolhendo.",
+          "TITLE": "Cotação em avaliação"
+        },
+        "QUALIFIED": {
+          "HELP": "Já sabemos o que o cliente procura e temos os dados para cotar, como as idades e o número de vidas."
         }
       }
     },
     "GOOGLE_SYNC": {
-      "CONVERSION_NAME_WON": "Nome da conversão para planos fechados",
-      "CONVERSION_NAME_WON_PLACEHOLDER": "Ex.: CRM - Plano fechado"
+      "CONVERSION_NAME_WON": "Nome da conversão para planos implantados",
+      "CONVERSION_NAME_WON_PLACEHOLDER": "Ex.: CRM - Plano implantado"
     },
     "CALENDAR": {
       "EVENT": {
-        "WIN": "Fechou o plano"
+        "WIN": "Implantado"
+      },
+      "MEETING_SCHEDULER": {
+        "TITLE_PLACEHOLDER": "Ex.: Apresentar as opções da cotação"
       }
     },
     "META_ADS_HUB": {
       "PANEL": {
         "PATH_LIST": {
-          "WON": "Plano ativo"
-        }
+          "WON": "Implantado",
+          "TITLE_QUOTES": "Cotações",
+          "TOTAL_QUOTES": "1 cotação | {count} cotações"
+        },
+        "ACTION": {
+          "STALLED_QUOTES": {
+            "BUTTON": "Ver a cotação | Ver as {count} cotações",
+            "TEXT": "1 cotação de anúncio está parada há mais de {days} dias. Ela veio de \"{ad}\". | {count} cotações de anúncio estão paradas há mais de {days} dias. A maior parte veio de \"{ad}\".",
+            "WHY": "Por quê: somam {value} em negociação. Retomar quem já pediu cotação custa menos que anunciar de novo."
+          }
+        },
+        "AD_QUOTES": "1 cotação aberta | {count} cotações abertas",
+        "OPEN_QUOTES": "Vendas chegando: 1 cotação aberta | Vendas chegando: {count} cotações abertas",
+        "PATH": {
+          "QUOTES": "cotação | cotações"
+        },
+        "STALLED_TITLE": "1 cotação parada | {count} cotações paradas"
       },
       "SUMMARY": {
-        "NEXT_SALES": "Quando um card avança ou fecha o plano, a Meta fica sabendo e aprende quem compra."
+        "NEXT_SALES": "Quando um card avança ou o plano é implantado, a Meta fica sabendo e aprende quem contrata."
       },
       "FUNNEL": {
-        "HINT": "Quando um card avança ou fecha o plano no CRM, contamos para a Meta. Ela aprende a mostrar o anúncio para quem compra."
+        "HINT": "Quando um card avança ou é marcado como implantado no CRM, contamos para a Meta. Ela aprende a mostrar o anúncio para quem contrata."
       },
       "AI": {
         "QUOTE": {
           "REASONS": {
-            "CLOSED": "O cliente já fechou o plano. Não há o que retomar aqui."
+            "CLOSED": "O plano do cliente já foi implantado. Não há o que retomar aqui."
           }
         }
       },
       "SEM_LOGIN": {
         "AD": {
           "STATUS": {
-            "BOUGHT": "Fechou o plano: {value}",
-            "BOUGHT_NO_VALUE": "Fechou o plano"
+            "BOUGHT": "Implantado: {value}",
+            "BOUGHT_NO_VALUE": "Implantado"
           }
         },
         "EXAMPLE": {
           "ADS": {
-            "WINTER": "Plano de saúde para sua empresa"
+            "WINTER": "Plano de saúde para sua empresa",
+            "SHIPPING": "Plano de saúde para toda a família"
           }
         }
+      },
+      "AD_DETAIL": {
+        "MEANWHILE": "1 cotação aberta deste anúncio espera resposta. Retomar essa conversa é o que dá para fazer agora. | {count} cotações abertas deste anúncio esperam resposta. Retomar essas conversas é o que dá para fazer agora.",
+        "MEANWHILE_SEE": "Ver as cotações",
+        "QUOTES_EMPTY": "Nenhuma cotação deste anúncio neste período ainda.",
+        "QUOTES_TITLE": "Cotações deste anúncio",
+        "TILES": {
+          "QUOTES": "Cotações"
+        },
+        "WON": "Implantado"
+      }
+    },
+    "BOOKING": {
+      "ADMIN": {
+        "PIPELINE": "Funil do cliente",
+        "STAGE": "Etapa do cliente",
+        "SUBTITLE": "Deixe o cliente marcar um horário numa caixa de entrada com calendário. Compartilhe o link público, sem precisar de login.",
+        "TITLE_PLACEHOLDER": "Ex.: Conversa sobre o seu plano"
+      }
+    },
+    "COMPANY_OPPORTUNITIES": {
+      "HELP": "Cards dos clientes ligados a esta empresa. Só os cards que você pode acessar."
+    },
+    "CONTACT_OPPORTUNITIES": {
+      "HELP": "Cards deste cliente em todos os funis. Só os cards que você pode acessar.",
+      "SEARCH_HINT": "Nome do card. Ex.: plano da família Souza"
+    },
+    "CONVERSATION": {
+      "SUBJECTS": {
+        "TITLE_PLACEHOLDER": "Ex.: Cotação do plano PME"
+      }
+    },
+    "RELATIONSHIP": {
+      "COMPANY_FORM": {
+        "LINK_HELP": "A empresa será ligada ao cadastro de {name} e usada em todos os cards desse cliente."
+      },
+      "SAME_OPPORTUNITY": "O cliente será ligado a este card. Os dados do card continuam como estão.",
+      "SAVE_CONFLICT": "Não foi possível ligar o cliente. Confira se ele já existe ou se este card tem conversas de outra pessoa."
+    },
+    "AI_SETTINGS": {
+      "ATTRIBUTE_EXTRACTION_HELP": "Extrai dados da conversa (número de vidas, idades, cidade, operadora atual e afins) e preenche qualquer campo customizado vazio do contato ou da conversa. Campo já preenchido nunca é sobrescrito.",
+      "AUTO_FOLLOWUP": {
+        "TONE_PLACEHOLDER": "informal, trate por você, seja breve…"
+      }
+    },
+    "OPPORTUNITY": {
+      "CONTEXT": {
+        "OPEN_NEW_TAB": "Novo card: abre o CRM em outra aba"
+      }
+    },
+    "TRACKED_LINKS": {
+      "EMPTY": "Nenhum link rastreável ainda. Crie o primeiro para atribuir conversas do escritório, de cada corretor ou da bio.",
+      "NAME_PLACEHOLDER": "Ex.: QR do escritório · Centro",
+      "PAGE": {
+        "ATTRIBUTION_HINT": "Use uma origem para cada escritório, corretor, parceiro, divulgação ou página do site. Quando a conversa começa, a origem fica registrada no CRM.",
+        "MESSAGE_PLACEHOLDER": "Olá! Quero fazer uma cotação de plano de saúde.",
+        "NAME_PLACEHOLDER": "Ex.: Escritório Centro · recepção",
+        "USAGE_DIRECT_HINT": "Escritório, corretor, bio e material impresso.",
+        "WEBSITE_NAME_PLACEHOLDER": "Ex.: Página do plano PME",
+        "WON": "Implantados"
+      },
+      "PREFILLED_PLACEHOLDER": "Ex.: Olá! Quero cotar um plano de saúde para minha família",
+      "SUBTITLE": "Crie um link ou QR por campanha, corretor ou escritório. Conversas iniciadas por ele chegam atribuídas no CRM."
+    },
+    "PASSAGEM": {
+      "PREVIA": {
+        "QUANDO_SIM_MSG": "Não entendi o valor da cotação. Quero falar com alguém."
+      },
+      "QUANDO": {
+        "IDEIA_2": "Quando o cliente escolher o plano e quiser seguir com a proposta"
       }
     }
   },
   "CRM_CARD": {
     "DESFECHO": {
-      "GANHOU": "Fechou o plano",
-      "GANHOU_TITULO_PADRAO": "Fechou o plano! Quanto ficou?",
-      "GANHOU_CONFIRMA_PADRAO": "Marcar: fechou o plano"
+      "GANHOU": "Implantado",
+      "GANHOU_TITULO_PADRAO": "Plano implantado! Qual é o valor mensal?",
+      "GANHOU_CONFIRMA_PADRAO": "Marcar como implantado",
+      "GANHOU_TEXTO": "Confira o valor mensal. Ele entra nos relatórios de vendas.",
+      "MOTIVO": {
+        "OUTRO_LUGAR": "Fechou com outro corretor"
+      }
     },
     "ORIGEM": {
       "AVISO_ESTADO": {
         "QUANDO": {
-          "GANHO": "Foi quando o plano fechou."
+          "GANHO": "Foi quando o plano foi implantado."
         }
+      },
+      "AVISO_TEXTO": "Quando o card avança no funil, avisamos os anúncios para trazerem clientes parecidos."
+    },
+    "AGENDA": {
+      "LEMBRETE_EXEMPLO": "Ex.: Cobrar a operadora sobre a proposta · Pedir a declaração de saúde"
+    },
+    "ASSUNTO": {
+      "TITULO_EXEMPLO": "Ex.: Incluir dependente no plano"
+    },
+    "CRIAR": {
+      "TEXTO_2": "Diga qual é o plano e em que etapa ele entra. O resto pode ficar para depois.",
+      "TEXTO_2_COBRANCA": "Diga de qual plano é o boleto, o valor e o vencimento. O resto pode ficar para depois.",
+      "TITULO_2": "Sobre o plano",
+      "TITULO_2_COBRANCA": "Sobre o boleto"
+    },
+    "RETORNO": {
+      "SEU_TEXTO_EXEMPLO": "Oi! Conseguiu ver as opções da cotação?",
+      "TITULO_EXEMPLO": "Ex.: Cobrar a operadora sobre a pendência · Pedir a declaração de saúde"
+    },
+    "RESUMO": {
+      "AVISO_FACEBOOK": "Quando o card muda de etapa, avisamos o Facebook e o Instagram.",
+      "COBRANCA_FRASE": "{titulo}: boleto de {valor}, vence {vencimento}.",
+      "COBRANCA_SEM_DATA": "{titulo}: boleto de {valor}, sem vencimento.",
+      "COBRANCA_VENCEU": "{titulo}: boleto de {valor}, venceu {vencimento}.",
+      "JA_COMPROU": "Já tem plano com você.",
+      "MAIS_DETALHES_DICA": "De onde veio, o que já aconteceu, mais do plano e arquivar",
+      "MAIS_NEGOCIO": "Mais do plano",
+      "NEGOCIO": "Plano",
+      "NEGOCIO_DE": "Plano: {titulo}",
+      "SEM_CONTATO": "Ainda não há um cliente ligado a este card."
+    },
+    "HISTORICO": {
+      "EVENTO": {
+        "ACTIVITY_LINK_CONTACT": "Um cliente foi ligado a este card",
+        "ACTIVITY_UNLINK_CONTACT": "O cliente foi tirado deste card",
+        "ACTIVITY_UPDATE": "Os dados do plano mudaram"
+      },
+      "GRUPO": {
+        "NEGOCIO": "Etapas e plano"
       }
+    },
+    "PASSO": {
+      "FECHADO": "Este card terminou: {status}. Se o cliente voltar, toque em Reabrir."
+    },
+    "NEGOCIO": {
+      "NOME": "Qual plano",
+      "TELA": "Plano",
+      "TEXTO": "Qual plano {nome} quer, o valor mensal e quanta pressa tem.",
+      "TITULO": "Sobre o plano",
+      "TITULO_EXEMPLO": "Ex.: Plano da empresa, 3 vidas",
+      "TITULO_FALTA": "Escreva qual é o plano.",
+      "VALOR": "Valor mensal"
+    },
+    "COBRANCA": {
+      "NOME": "De qual plano é o boleto",
+      "TEXTO": "De quanto é o boleto de {nome}, quando vence e se prometeu pagar.",
+      "TITULO": "Sobre o boleto",
+      "TITULO_EXEMPLO": "Ex.: Boleto de outubro",
+      "VALOR": "Valor do boleto"
+    },
+    "SAIR": {
+      "NEGOCIO": "as mudanças no plano"
     }
   },
   "CRM_DASHBOARD": {
     "ORIGIN": {
-      "SUBTITLE": "Planos fechados e receita, pela origem da campanha.",
-      "EMPTY": "Nenhum plano fechado com origem de campanha neste período."
+      "SUBTITLE": "Planos implantados e receita, pela origem da campanha.",
+      "EMPTY": "Nenhum plano implantado com origem de campanha neste período.",
+      "WON": "Implantados"
     }
   },
   "CRM_CAIXAS": {
     "FUNIS": {
-      "TIPO_SALES": "Vendas: termina quando o plano fecha ou não fecha"
+      "TIPO_SALES": "Vendas: termina quando o plano é implantado ou não fecha"
+    },
+    "SOZINHO": {
+      "AUTO_UM_EXEMPLO": "O cliente pede plano de saúde e odonto: são dois cards em {funil}.",
+      "MENSAGEM": "Oi! Quanto fica um plano de saúde para minha família?",
+      "MENSAGEM_DOIS_PEDIDOS": "Quero cotar o plano de saúde e também o odonto."
     }
   },
   "CONTACTS_LAYOUT": {
@@ -137,17 +321,17 @@
   },
   "CRM_NUMEROS_V2": {
     "IA_AJUDOU": {
-      "VIRARAM": "Nenhuma fechou o plano ainda. | 1 fechou o plano. | {n} fecharam o plano."
+      "VIRARAM": "Nenhuma teve o plano implantado ainda. | 1 teve o plano implantado. | {n} tiveram o plano implantado."
     },
     "TOPO": {
-      "SEM_META_EU": "Seu mês até agora: {n} plano fechado, {valor} | Seu mês até agora: {n} planos fechados, {valor}"
+      "SEM_META_EU": "Seu mês até agora: {n} plano implantado, {valor} | Seu mês até agora: {n} planos implantados, {valor}"
     },
     "BLOCO": {
-      "VENDENDO": "Fechando planos"
+      "VENDENDO": "Cotando"
     },
-    "ESTIMADO": "Alguns planos fechados antes deste registro foram contados para o responsável atual do card.",
+    "ESTIMADO": "Alguns planos implantados antes deste registro foram contados para o responsável atual do card.",
     "COMO_CONTAMOS": {
-      "REGRA_ANTIGAS": "Planos fechados antes deste registro contam para o responsável atual do card."
+      "REGRA_ANTIGAS": "Planos implantados antes deste registro contam para o responsável atual do card."
     }
   },
   "MODELOS_WHATSAPP": {
@@ -167,6 +351,90 @@
   "AUTONOMIA_GUIDE": {
     "SUGGESTIONS": {
       "REPORTS": "Quantos planos fechei este mês?"
+    }
+  },
+  "CRM_FUNIL": {
+    "ATENDER": {
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "MSG": "Oi, {nome}! Seguimos cuidando do seu pedido com a operadora. Assim que tiver novidade, eu te aviso."
+        },
+        "COBRAR": {
+          "MSG_ANTES": "Oi, {nome}! Passando para lembrar que o boleto do seu plano, de {valor}, vence sexta.",
+          "MSG_DEPOIS": "Oi, {nome}! Ainda não vimos o pagamento do boleto de {valor}. Posso te ajudar com alguma coisa?",
+          "MSG_NO_DIA": "Oi, {nome}! O boleto do seu plano, de {valor}, vence hoje. Se já pagou, pode ignorar.",
+          "TITULO": "Lembrar do boleto"
+        }
+      }
+    },
+    "ANUNCIOS": {
+      "EVENTOS": {},
+      "FACEBOOK": {},
+      "GOOGLE": {
+        "NOME_EXEMPLO": "Ex.: Plano implantado"
+      }
+    },
+    "PREVIA": {
+      "ANUNCIO_FECHOU": "O plano da Ana foi implantado: {valor} por mês.",
+      "LEMBRETE_TEXTO": "A Ana não responde desde segunda. Próximo passo: perguntar se ficou alguma dúvida na cotação.",
+      "META_EXEMPLO": "{valor} em planos implantados até agora",
+      "MSG_NOSSA": "Segue a cotação com as opções. Qualquer dúvida, é só chamar.",
+      "MSG_RETORNO": "Oi, Ana! Conseguiu olhar as opções da cotação? Se quiser, cotamos outro plano para você.",
+      "SEM_META": "Sem meta, o painel mostra só o total implantado.",
+      "VENDAS_TEXTO": "Exemplo com 40% da meta já implantada."
+    },
+    "RESUMO": {
+      "COBRAR_LEMBRETES": "Lembramos do boleto antes, no dia e depois do vencimento.",
+      "TIPO_VENDER": "{tipo}: conquistar um cliente novo. Cada plano implantado conta no painel."
+    },
+    "SOBRE": {
+      "EXEMPLO": "Ex.: pede uma cotação de plano de saúde",
+      "IDEIAS": {
+        "ATRASADO": "está com o boleto atrasado",
+        "COMO_FUNCIONA": "quer um plano para a família ou para a empresa",
+        "COMPRAR": "quer saber quanto fica o plano",
+        "PAGAR": "quer pagar o boleto",
+        "PRECO": "pede uma cotação",
+        "SEGUNDA_VIA": "pede a segunda via do boleto"
+      }
+    },
+    "VENDAS": {
+      "META": "Meta de planos implantados por mês",
+      "TEXTO": "Os planos implantados aqui entram no painel, junto da meta do mês.",
+      "TITULO": "Saiba quantos planos deste funil foram implantados"
+    },
+    "MODELOS": {
+      "VENDAS": {
+        "E2": "Cotação",
+        "E3": "Proposta",
+        "TEXTO": "Da cotação até o plano ser implantado.",
+        "NOME": "Venda de plano",
+        "E1": "Novo",
+        "E4": "Na operadora",
+        "E5": "Implantado"
+      }
+    },
+    "ETAPA": {
+      "EXEMPLO": "Ex.: o cliente recebeu as opções da cotação e está pensando."
+    }
+  },
+  "CRM_LEMBRETE": {
+    "LIGAR": {
+      "NADA_TEXTO": "Fica só no calendário. Ex.: conferir os aniversários de contrato da semana."
+    }
+  },
+  "CRM_CALENDARIO": {
+    "EXEMPLO": {
+      "FECHAR": "O dia em que o plano deve ser implantado"
+    }
+  },
+  "CRM_SLA": {
+    "POLICIES": {
+      "DIALOG": {
+        "NAME": {
+          "PLACEHOLDER": "Ex.: Pendência com resposta rápida"
+        }
+      }
     }
   }
 }

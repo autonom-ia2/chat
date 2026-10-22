@@ -1,105 +1,289 @@
 {
   "CRM_KANBAN": {
     "DRAWER": {
-      "STATUS_WON": "Active plan",
-      "ACTIVITY_WON": "Plan closed",
-      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Not a sale: nobody asked for a plan. To undo, reopen the card."
+      "STATUS_WON": "Implemented",
+      "ACTIVITY_WON": "Marked as implemented",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Not a sale: nobody asked for a plan. To undo, reopen the card.",
+      "CARD_FIELDS": {
+        "EMPTY_ADMIN": "No card fields yet. Create them in Settings → Custom attributes → Card. E.g.: Current operator, Number of lives, Contract anniversary.",
+        "HELP": "Details specific to this plan."
+      }
     },
     "META_SYNC_STATUS": {
-      "EVENT_WON": "Plan closed"
+      "EVENT_WON": "Implemented"
     },
     "ALERTS": {
-      "CARD_WON": "Marked: plan closed."
+      "CARD_WON": "Card marked as implemented."
     },
     "DASHBOARD": {
       "KPI": {
-        "WON": "Plans closed",
-        "WON_INFO": "Cards that closed a plan in the selected period.",
-        "WIN_RATE_INFO": "Of all cards that ended in the period, how many closed a plan (in %).",
-        "WON_VALUE_INFO": "Total value of plans closed in the period, by currency."
+        "WON": "Plans implemented",
+        "WON_INFO": "Cards marked as implemented in the selected period.",
+        "WIN_RATE_INFO": "Of all cards that ended in the period, how many were implemented (in %).",
+        "WON_VALUE_INFO": "Total value of plans implemented in the period, by currency.",
+        "GOAL_INFO": "How much of this month's sales target is already implemented. Pace compares it to how much of the month has passed.",
+        "WIN_RATE": "Implementation rate (count)",
+        "WIN_RATE_VALUE": "Implementation rate (value)",
+        "WIN_RATE_VALUE_INFO": "Of the value of everything that ended in the period, how much was implemented (in %).",
+        "WON_VALUE": "Implemented value"
       },
       "META_SYNC": {
-        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a plan, the data shows up here.",
-        "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, plans closed on the landing page through the website Pixel."
+        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card is marked as implemented, the data shows up here.",
+        "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, plans implemented from the landing page through the website Pixel.",
+        "REVENUE": "Value sent"
+      },
+      "THROUGHPUT": {
+        "WON": "Implemented"
       }
     },
     "PIPELINE_DRAWER": {
-      "META_SYNC_HELP": "Send each result back to Meta. This happens when a card closes a plan, does not close or moves stage. Meta then shows your Click-to-WhatsApp ads to people more likely to buy."
+      "META_SYNC_HELP": "Send each result back to Meta. This happens when a card plan is implemented, does not close or moves stage. Meta then shows your Click-to-WhatsApp ads to people more likely to buy.",
+      "NAME_PLACEHOLDER": "E.g. Sales, Client book",
+      "STAGE_NAME_PLACEHOLDER": "E.g. With the carrier",
+      "WHEN_TO_USE_HELP": "The AI reads this to know when a conversation belongs to this pipeline. Name the plans or cases that come here.",
+      "WHEN_TO_USE_PLACEHOLDER": "E.g.: health plan, dental and life insurance quotes."
     },
     "PIPELINE_EDITOR": {
-      "AD_RESULTS_HELP": "Show which ads became sales. A sale is counted when a card closes a plan, regardless of its column.",
+      "AD_RESULTS_HELP": "Show which ads became implemented plans. It counts when a card is marked as implemented, in any column.",
       "META_PROGRESS": {
         "NONE": {
-          "HELP": "Do not send entry into this stage. Closed plans still follow the pipeline settings."
+          "HELP": "Do not send entry into this stage. Implemented plans still follow the pipeline settings."
+        },
+        "PROPOSAL": {
+          "HELP": "The customer got the quote options and is choosing.",
+          "TITLE": "Quote under review"
+        },
+        "QUALIFIED": {
+          "HELP": "We know what the customer is looking for and have the data to quote, such as ages and number of lives."
         }
       }
     },
     "GOOGLE_SYNC": {
-      "CONVERSION_NAME_WON": "Conversion name for closed plans",
-      "CONVERSION_NAME_WON_PLACEHOLDER": "E.g. CRM - Plan closed"
+      "CONVERSION_NAME_WON": "Conversion name for implemented plans",
+      "CONVERSION_NAME_WON_PLACEHOLDER": "E.g. CRM - Plan implemented"
     },
     "CALENDAR": {
       "EVENT": {
-        "WIN": "Plan closed"
+        "WIN": "Implemented"
+      },
+      "MEETING_SCHEDULER": {
+        "TITLE_PLACEHOLDER": "E.g.: Go over the quote options"
       }
     },
     "META_ADS_HUB": {
       "PANEL": {
         "PATH_LIST": {
-          "WON": "Active plan"
-        }
+          "WON": "Implemented",
+          "TITLE_QUOTES": "Quotes",
+          "TOTAL_QUOTES": "1 quote | {count} quotes"
+        },
+        "ACTION": {
+          "STALLED_QUOTES": {
+            "BUTTON": "See the quote | See the {count} quotes",
+            "TEXT": "1 quote from ads has been stalled for more than {days} days. It came from \"{ad}\". | {count} quotes from ads have been stalled for more than {days} days. Most came from \"{ad}\".",
+            "WHY": "Why: they add up to {value} in negotiation. Following up with someone who asked for a quote costs less than advertising again."
+          }
+        },
+        "AD_QUOTES": "1 open quote | {count} open quotes",
+        "OPEN_QUOTES": "Sales on the way: 1 open quote | Sales on the way: {count} open quotes",
+        "PATH": {
+          "QUOTES": "quote | quotes"
+        },
+        "STALLED_TITLE": "1 stalled quote | {count} stalled quotes"
       },
       "SUMMARY": {
-        "NEXT_SALES": "When a card moves forward or closes a plan, Meta is told and learns who buys."
+        "NEXT_SALES": "When a card moves forward or a plan is implemented, Meta is told and learns who signs up."
       },
       "FUNNEL": {
-        "HINT": "When a card moves forward or closes a plan in the CRM, we tell Meta. It learns to show your ad to people who buy."
+        "HINT": "When a card moves forward or is marked as implemented in the CRM, we tell Meta. It learns to show your ad to people who sign up."
       },
       "AI": {
         "QUOTE": {
           "REASONS": {
-            "CLOSED": "The customer already closed the plan. Nothing to resume here."
+            "CLOSED": "The customer's plan is already implemented. Nothing to resume here."
           }
         }
       },
       "SEM_LOGIN": {
         "AD": {
           "STATUS": {
-            "BOUGHT": "Plan closed: {value}",
-            "BOUGHT_NO_VALUE": "Plan closed"
+            "BOUGHT": "Implemented: {value}",
+            "BOUGHT_NO_VALUE": "Implemented"
           }
         },
         "EXAMPLE": {
           "ADS": {
-            "WINTER": "Health plan for your company"
+            "WINTER": "Health plan for your company",
+            "SHIPPING": "Health plan for the whole family"
           }
         }
+      },
+      "AD_DETAIL": {
+        "MEANWHILE": "1 open quote from this ad is waiting for an answer. Picking it up is what you can do now. | {count} open quotes from this ad are waiting for an answer. Picking them up is what you can do now.",
+        "MEANWHILE_SEE": "See the quotes",
+        "QUOTES_EMPTY": "No quote from this ad in this period yet.",
+        "QUOTES_TITLE": "Quotes from this ad",
+        "TILES": {
+          "QUOTES": "Quotes"
+        },
+        "WON": "Implemented"
+      }
+    },
+    "BOOKING": {
+      "ADMIN": {
+        "PIPELINE": "Customer pipeline",
+        "STAGE": "Customer stage",
+        "SUBTITLE": "Let customers book a time on a calendar-enabled inbox. Share the public link, no login needed.",
+        "TITLE_PLACEHOLDER": "E.g.: Talk about your plan"
+      }
+    },
+    "COMPANY_OPPORTUNITIES": {
+      "HELP": "Cards of customers linked to this company. Only the cards you can access."
+    },
+    "CONTACT_OPPORTUNITIES": {
+      "HELP": "This customer's cards across pipelines. Only cards you can access.",
+      "SEARCH_HINT": "Card name. E.g.: Souza family plan"
+    },
+    "CONVERSATION": {
+      "SUBJECTS": {
+        "TITLE_PLACEHOLDER": "E.g.: SME plan quote"
+      }
+    },
+    "RELATIONSHIP": {
+      "COMPANY_FORM": {
+        "LINK_HELP": "The company will be linked to {name} and used on all cards for this client."
+      },
+      "SAME_OPPORTUNITY": "The client will be linked to this card. The card details stay as they are.",
+      "SAVE_CONFLICT": "Unable to link the client. Check whether they already exist or this card has another person's conversations."
+    },
+    "AI_SETTINGS": {
+      "ATTRIBUTE_EXTRACTION_HELP": "Extracts data such as number of lives, ages, city and current operator, then fills any empty custom field of the contact or conversation. A filled field is never overwritten.",
+      "AUTO_FOLLOWUP": {
+        "TONE_PLACEHOLDER": "informal, address as 'você', keep it short…"
+      }
+    },
+    "OPPORTUNITY": {
+      "CONTEXT": {
+        "OPEN_NEW_TAB": "New card: opens the CRM in another tab"
+      }
+    },
+    "TRACKED_LINKS": {
+      "EMPTY": "No trackable links yet. Create the first one to attribute office, broker or bio conversations.",
+      "NAME_PLACEHOLDER": "E.g.: Office QR · Downtown",
+      "PAGE": {
+        "ATTRIBUTION_HINT": "Use one source per office, broker, partner, promotion or website page. When the conversation starts, the source is recorded in your CRM.",
+        "MESSAGE_PLACEHOLDER": "Hello! I would like a health plan quote.",
+        "NAME_PLACEHOLDER": "Example: Downtown office · front desk",
+        "USAGE_DIRECT_HINT": "Office, broker, bio and printed material.",
+        "WEBSITE_NAME_PLACEHOLDER": "Example: Small business health plan page",
+        "WON": "Implemented"
+      },
+      "PREFILLED_PLACEHOLDER": "E.g.: Hi! I want a health plan quote for my family",
+      "SUBTITLE": "Create a link or QR per campaign, broker or office. Conversations started through it arrive attributed in the CRM."
+    },
+    "PASSAGEM": {
+      "PREVIA": {
+        "QUANDO_SIM_MSG": "I did not understand the price in the quote. I want to talk to someone."
+      },
+      "QUANDO": {
+        "IDEIA_2": "When the customer picks a plan and wants to move on with the proposal"
       }
     }
   },
   "CRM_CARD": {
     "DESFECHO": {
-      "GANHOU": "Plan closed",
-      "GANHOU_TITULO_PADRAO": "Plan closed! How much was it?",
-      "GANHOU_CONFIRMA_PADRAO": "Mark as: plan closed"
+      "GANHOU": "Implemented",
+      "GANHOU_TITULO_PADRAO": "Plan implemented! What is the monthly amount?",
+      "GANHOU_CONFIRMA_PADRAO": "Mark as implemented",
+      "GANHOU_TEXTO": "Check the monthly amount. It goes to the sales reports.",
+      "MOTIVO": {
+        "OUTRO_LUGAR": "Went with another broker"
+      }
     },
     "ORIGEM": {
       "AVISO_ESTADO": {
         "QUANDO": {
-          "GANHO": "It was when the plan closed."
+          "GANHO": "It was when the plan was implemented."
         }
+      },
+      "AVISO_TEXTO": "When the card moves forward in the funnel, we tell the ads so they bring similar customers."
+    },
+    "AGENDA": {
+      "LEMBRETE_EXEMPLO": "E.g.: Chase the plan provider about the proposal · Ask for the health declaration"
+    },
+    "ASSUNTO": {
+      "TITULO_EXEMPLO": "E.g.: Add a dependent to the plan"
+    },
+    "CRIAR": {
+      "TEXTO_2": "Say which plan it is and which stage it starts in. The rest can wait.",
+      "TEXTO_2_COBRANCA": "Say which plan the bill is for, the amount and the due date. The rest can wait.",
+      "TITULO_2": "About the plan",
+      "TITULO_2_COBRANCA": "About the bill"
+    },
+    "RETORNO": {
+      "SEU_TEXTO_EXEMPLO": "Hi! Did you see the quote options?",
+      "TITULO_EXEMPLO": "E.g.: Chase the provider about the pending item · Ask for the health declaration"
+    },
+    "RESUMO": {
+      "AVISO_FACEBOOK": "When the card moves to another stage, we let Facebook and Instagram know.",
+      "COBRANCA_FRASE": "{titulo}: {valor} bill, due {vencimento}.",
+      "COBRANCA_SEM_DATA": "{titulo}: {valor} bill, no due date.",
+      "COBRANCA_VENCEU": "{titulo}: {valor} bill, was due {vencimento}.",
+      "JA_COMPROU": "Already has a plan with you.",
+      "MAIS_DETALHES_DICA": "Where they came from, what happened, more about the plan and archive",
+      "MAIS_NEGOCIO": "More about the plan",
+      "NEGOCIO": "Plan",
+      "NEGOCIO_DE": "Plan: {titulo}",
+      "SEM_CONTATO": "No customer is linked to this card yet."
+    },
+    "HISTORICO": {
+      "EVENTO": {
+        "ACTIVITY_LINK_CONTACT": "A customer was added to this card",
+        "ACTIVITY_UNLINK_CONTACT": "The customer was removed from this card",
+        "ACTIVITY_UPDATE": "The plan details changed"
+      },
+      "GRUPO": {
+        "NEGOCIO": "Stages and plan"
       }
+    },
+    "PASSO": {
+      "FECHADO": "This card is over: {status}. If the customer comes back, tap Reopen."
+    },
+    "NEGOCIO": {
+      "NOME": "Which plan",
+      "TELA": "Plan",
+      "TEXTO": "Which plan {nome} wants, the monthly amount and how urgent it is.",
+      "TITULO": "About the plan",
+      "TITULO_EXEMPLO": "E.g.: Company plan, 3 lives",
+      "TITULO_FALTA": "Write which plan it is.",
+      "VALOR": "Monthly amount"
+    },
+    "COBRANCA": {
+      "NOME": "Which plan the bill is for",
+      "TEXTO": "How much {nome}'s bill is, when it is due and whether they promised to pay.",
+      "TITULO": "About the bill",
+      "TITULO_EXEMPLO": "E.g. October bill",
+      "VALOR": "Bill amount"
+    },
+    "SAIR": {
+      "NEGOCIO": "the changes to the plan"
     }
   },
   "CRM_DASHBOARD": {
     "ORIGIN": {
-      "SUBTITLE": "Plans closed and revenue, by campaign source.",
-      "EMPTY": "No plans closed with a campaign source in this period."
+      "SUBTITLE": "Implemented plans and revenue, by campaign source.",
+      "EMPTY": "No plans implemented with a campaign source in this period.",
+      "WON": "Implemented"
     }
   },
   "CRM_CAIXAS": {
     "FUNIS": {
-      "TIPO_SALES": "Sales: ends when the plan closes or does not close"
+      "TIPO_SALES": "Sales: ends when the plan is implemented or does not close"
+    },
+    "SOZINHO": {
+      "AUTO_UM_EXEMPLO": "The customer asks for a health plan and a dental plan: that makes two cards in {funil}.",
+      "MENSAGEM": "Hi! How much is a health plan for my family?",
+      "MENSAGEM_DOIS_PEDIDOS": "I want a quote for a health plan and also for a dental plan."
     }
   },
   "CONTACTS_LAYOUT": {
@@ -137,17 +321,17 @@
   },
   "CRM_NUMEROS_V2": {
     "IA_AJUDOU": {
-      "VIRARAM": "None closed a plan yet. | 1 closed a plan. | {n} closed a plan."
+      "VIRARAM": "None had a plan implemented yet. | 1 had a plan implemented. | {n} had a plan implemented."
     },
     "TOPO": {
-      "SEM_META_EU": "Your month so far: {n} plan closed, {valor} | Your month so far: {n} plans closed, {valor}"
+      "SEM_META_EU": "Your month so far: {n} plan implemented, {valor} | Your month so far: {n} plans implemented, {valor}"
     },
     "BLOCO": {
-      "VENDENDO": "Closing plans"
+      "VENDENDO": "Quoting"
     },
-    "ESTIMADO": "Some plans closed before this record were counted for the card's current responsible person.",
+    "ESTIMADO": "Some plans implemented before this record were counted for the card's current responsible person.",
     "COMO_CONTAMOS": {
-      "REGRA_ANTIGAS": "Plans closed before this record count for the card's current responsible person."
+      "REGRA_ANTIGAS": "Plans implemented before this record count for the card's current responsible person."
     }
   },
   "MODELOS_WHATSAPP": {
@@ -167,6 +351,90 @@
   "AUTONOMIA_GUIDE": {
     "SUGGESTIONS": {
       "REPORTS": "How many plans did I close this month?"
+    }
+  },
+  "CRM_FUNIL": {
+    "ATENDER": {
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "MSG": "Hi, {nome}! We are still handling your request with the plan provider. I will let you know as soon as there is news."
+        },
+        "COBRAR": {
+          "MSG_ANTES": "Hi, {nome}! Just a reminder that your plan's payment slip of {valor} is due on Friday.",
+          "MSG_DEPOIS": "Hi, {nome}! We have not seen the payment of the {valor} payment slip yet. Can I help with anything?",
+          "MSG_NO_DIA": "Hi, {nome}! Your plan's payment slip of {valor} is due today. If you already paid, please ignore this.",
+          "TITULO": "Payment slip reminders"
+        }
+      }
+    },
+    "ANUNCIOS": {
+      "EVENTOS": {},
+      "FACEBOOK": {},
+      "GOOGLE": {
+        "NOME_EXEMPLO": "E.g.: Plan implemented"
+      }
+    },
+    "PREVIA": {
+      "ANUNCIO_FECHOU": "Ana's plan was implemented: {valor} a month.",
+      "LEMBRETE_TEXTO": "Ana hasn't replied since Monday. Next step: ask if anything about the quote is unclear.",
+      "META_EXEMPLO": "{valor} in implemented plans so far",
+      "MSG_NOSSA": "Here is the quote with the options. Any questions, just ask.",
+      "MSG_RETORNO": "Hi, Ana! Did you get a chance to look at the quote options? If you want, we can quote another plan for you.",
+      "SEM_META": "Without a goal, the dashboard shows only the total implemented.",
+      "VENDAS_TEXTO": "Example with 40% of the goal already implemented."
+    },
+    "RESUMO": {
+      "COBRAR_LEMBRETES": "We send bill reminders before, on and after the due date.",
+      "TIPO_VENDER": "{tipo}: get a new customer. Each implemented plan counts on the dashboard."
+    },
+    "SOBRE": {
+      "EXEMPLO": "E.g.: asks for a health plan quote",
+      "IDEIAS": {
+        "ATRASADO": "is late on a bill",
+        "COMO_FUNCIONA": "wants a plan for the family or the company",
+        "COMPRAR": "wants to know how much the plan costs",
+        "PAGAR": "wants to pay the bill",
+        "PRECO": "asks for a quote",
+        "SEGUNDA_VIA": "asks for a copy of the bill"
+      }
+    },
+    "VENDAS": {
+      "META": "Monthly goal of plans implemented",
+      "TEXTO": "Plans implemented here go to the dashboard, next to the monthly goal.",
+      "TITULO": "Know how many plans from this pipeline were implemented"
+    },
+    "MODELOS": {
+      "VENDAS": {
+        "E2": "Quote",
+        "E3": "Proposal",
+        "TEXTO": "From the quote until the plan is implemented.",
+        "NOME": "Plan sale",
+        "E1": "New",
+        "E4": "At the provider",
+        "E5": "Implemented"
+      }
+    },
+    "ETAPA": {
+      "EXEMPLO": "E.g.: the customer got the quote options and is thinking about it."
+    }
+  },
+  "CRM_LEMBRETE": {
+    "LIGAR": {
+      "NADA_TEXTO": "Stays only on the calendar. E.g.: check this week's contract anniversaries."
+    }
+  },
+  "CRM_CALENDARIO": {
+    "EXEMPLO": {
+      "FECHAR": "The day the plan should be implemented"
+    }
+  },
+  "CRM_SLA": {
+    "POLICIES": {
+      "DIALOG": {
+        "NAME": {
+          "PLACEHOLDER": "E.g.: Fast reply for pending items"
+        }
+      }
     }
   }
 }
