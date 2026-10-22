@@ -2949,6 +2949,7 @@ onUnmounted(() => {
       />
       <CrmBulkActionBar
         :count="listSelection.length"
+        :ids="listSelection"
         :permissions="bulkPermissions"
         :stages="stages"
         :owners="agents"

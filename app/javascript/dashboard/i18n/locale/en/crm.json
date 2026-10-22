@@ -1147,7 +1147,8 @@
       "UNDO": "Undo",
       "CLEAR": "Clear",
       "DONE": "{count} card updated | {count} cards updated",
-      "DELETE_CONFIRM": "Archive {count} card? | Archive {count} cards?"
+      "DELETE_CONFIRM": "Archive {count} card? | Archive {count} cards?",
+      "DELETE_MEETINGS": "{count} card has a meeting booked; it stays booked. | {count} cards have meetings booked; they stay booked."
     },
     "EDIT": {
       "SAVED": "Saved",
@@ -5002,7 +5003,8 @@
       "BOTAO": "Archive",
       "DICA": "Archiving takes this customer off the board. Nothing is deleted.",
       "TITULO": "Archive {nome}?",
-      "TEXTO": "It leaves the funnel board. Conversations, follow-ups and history stay saved."
+      "TEXTO": "It leaves the funnel board. Follow-ups still due are canceled; conversations and history stay saved.",
+      "REUNIAO": "This card has a meeting booked for {quando}. It stays booked; cancel it in the calendar if needed."
     },
     "SAIR": {
       "TITULO": "Leave without saving?",

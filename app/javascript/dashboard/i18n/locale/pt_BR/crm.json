@@ -1147,7 +1147,8 @@
       "UNDO": "Desfazer",
       "CLEAR": "Limpar",
       "DONE": "{count} card atualizado | {count} cards atualizados",
-      "DELETE_CONFIRM": "Arquivar {count} card? | Arquivar {count} cards?"
+      "DELETE_CONFIRM": "Arquivar {count} card? | Arquivar {count} cards?",
+      "DELETE_MEETINGS": "{count} card tem reunião marcada; ela continua marcada. | {count} cards têm reunião marcada; elas continuam marcadas."
     },
     "EDIT": {
       "SAVED": "Salvo",
@@ -5003,7 +5004,8 @@
       "BOTAO": "Arquivar",
       "DICA": "Arquivar tira este cliente do quadro. Nada é apagado.",
       "TITULO": "Arquivar {nome}?",
-      "TEXTO": "Ele sai do quadro do funil. As conversas, os retornos e o histórico continuam guardados."
+      "TEXTO": "Ele sai do quadro do funil. Os retornos que ainda iam vencer são cancelados; as conversas e o histórico continuam guardados.",
+      "REUNIAO": "Este card tem reunião marcada para {quando}. Ela continua marcada; cancele pela agenda se precisar."
     },
     "SAIR": {
       "TITULO": "Sair sem salvar?",
