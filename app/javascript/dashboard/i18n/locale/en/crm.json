@@ -5616,7 +5616,11 @@
       "MORE_CONTACT": "More about the person",
       "EDIT_HELP": "What you change here counts for this person everywhere. The card does not change.",
       "SAVED": "Person saved.",
-      "SAVE_ERROR": "Could not save. Check the details and try again.",
+      "SAVE_ERROR_MOTIVO": "Could not save: {motivo}",
+      "SAVE_ERROR_SERVIDOR": "The server did not confirm the save (error {status}). Reopen the person to see if it was saved before trying again.",
+      "SAVE_ERROR_REDE": "Could not reach the server. Check your connection and try again.",
+      "SAVE_ERROR_TELA": "Something went wrong on this screen. Reload the page and check the details before trying again.",
+      "CAMPO_CONFIRA": "Check this field.",
       "COMPANY_FORM": {
         "CHANGE": "Change the company",
         "EDIT_TITLE": "Edit the company",

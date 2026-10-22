@@ -48,12 +48,15 @@ const comecar = pessoa => {
 const salvar = async () => {
   if (!props.podeRegistros) return;
   const id = props.card.id;
-  const salvou = await contato.salvar(rotulo('SAVE_ERROR'));
+  const salvou = await contato.salvar(rotulo);
   if (!salvou || props.card.id !== id) return;
   await painel.value?.reload();
   emit('mudou');
   useAlert(rotulo('SAVED'));
 };
+// O servidor apontou o campo (422): "Confira este campo" embaixo dele.
+const confira = campo =>
+  contato.camposComErro.value.includes(campo) ? rotulo('CAMPO_CONFIRA') : '';
 const desfazer = () => {
   contato.desfazer();
   painel.value?.reset();
@@ -122,9 +125,11 @@ defineExpose({
               :message="
                 !contato.form.name.trim()
                   ? t('CRM_CARD.CLIENTE.NOME_FALTA')
-                  : ''
+                  : confira('name')
               "
-              :message-type="!contato.form.name.trim() ? 'error' : 'info'"
+              :message-type="
+                !contato.form.name.trim() || confira('name') ? 'error' : 'info'
+              "
               class="min-[440px]:col-span-2"
             />
             <Input
@@ -132,14 +137,27 @@ defineExpose({
               type="email"
               :label="rotulo('EMAIL')"
               :disabled="contato.salvando.value"
+              :message="confira('email')"
+              :message-type="confira('email') ? 'error' : 'info'"
             />
-            <label class="grid gap-2 text-sm text-n-slate-12">
-              <span>{{ rotulo('PHONE') }}</span>
+            <!-- Mesmo rótulo, espaço e altura das outras caixas (Input). -->
+            <div class="flex min-w-0 flex-col gap-1" data-campo-telefone>
+              <span class="mb-0.5 text-heading-3 text-n-slate-12">
+                {{ rotulo('PHONE') }}
+              </span>
               <PhoneNumberInput
                 v-model="contato.form.phoneNumber"
+                :aria-label="rotulo('PHONE')"
+                :compact="false"
                 :disabled="contato.salvando.value"
               />
-            </label>
+              <p
+                v-if="confira('phoneNumber')"
+                class="mb-0 mt-1 text-label-small text-n-ruby-9"
+              >
+                {{ confira('phoneNumber') }}
+              </p>
+            </div>
             <Input
               v-model="contato.form.jobTitle"
               :label="rotulo('ROLE')"
