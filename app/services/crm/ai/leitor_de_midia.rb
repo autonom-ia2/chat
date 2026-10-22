@@ -11,6 +11,11 @@
 # A falha esperada (FALHAS_DA_LEITURA) também marca o anexo como lido (`crm_ai_*_done`, como o MediaEnricher): não tenta de
 # novo para sempre. Erro interno propaga e não marca.
 #
+# Arquivo que ainda não chegou ao storage (ActiveStorage::FileNotFoundError) não é falha da leitura: o job da chegada
+# roda no commit da mensagem, e o upload do anexo pode terminar depois (corrida). Esse anexo não é marcado e não gasta
+# o teto do dia; o erro sobe para quem chamou tentar de novo (o LerMidiaJob, com espera). Só na última tentativa
+# (`ultima_tentativa: true`) o anexo é marcado sem texto, com aviso no log.
+#
 # Quem chama: o job da chegada (Crm::Ai::LerMidiaJob, pelo ConversationObserverListener) e, antes de perguntar o
 # assunto, o IdentifyJob em linha (`ler_a_rajada`), porque a espera do assunto na ordem do turno é curta. A trava por
 # anexo (`with_lock`) faz o segundo esperar o primeiro e encontrar o anexo lido: ninguém paga duas vezes. Com a flag,
@@ -35,7 +40,7 @@ class Crm::Ai::LeitorDeMidia
   FALHAS_DA_LEITURA = [
     *Crm::Ai::ResponsesClient::NETWORK_ERRORS, Faraday::Error, OpenAI::Error,
     Crm::Ai::ResponsesClient::Error, Crm::Ai::TranscriptionClient::Error,
-    ActiveStorage::FileNotFoundError, ActiveStorage::IntegrityError,
+    ActiveStorage::IntegrityError,
     Autonomia::Agents::Knowledge::Processors::Base::ExtractionError, Autonomia::Agents::Knowledge::Processors::Base::UnsupportedFormat
   ].freeze
 
@@ -57,13 +62,21 @@ class Crm::Ai::LeitorDeMidia
     return unless ligada?(conversation.account)
 
     conversation.messages.incoming.where(id: ..message.id).where(com_anexo)
-                .reorder(id: :desc).limit(MAX_MENSAGENS_DA_RAJADA).each { |mensagem| new(mensagem).perform }
+                .reorder(id: :desc).limit(MAX_MENSAGENS_DA_RAJADA).each { |mensagem| ler_em_linha(mensagem) }
   rescue StandardError => e
     ChatwootExceptionTracker.new(e).capture_exception
     Rails.logger.error("[crm][midia] leitura_em_linha_falhou conversa=#{conversation.id} mensagem=#{message.id} erro=#{e.class}")
   end
 
-  def self.com_anexo = Attachment.where('attachments.message_id = messages.id').arel.exists
+  # O arquivo de uma mensagem ainda está subindo: os anexos dela ficam pendentes (o job da chegada lê na próxima
+  # tentativa), e as outras mensagens da rajada seguem.
+  def self.ler_em_linha(mensagem)
+    new(mensagem).perform
+  rescue ActiveStorage::FileNotFoundError
+    Rails.logger.warn("[crm][midia] arquivo_ainda_nao_chegou origem=em_linha mensagem=#{mensagem.id}")
+  end
+
+  def self.com_anexo =Attachment.where('attachments.message_id = messages.id').arel.exists
 
   # A mensagem tem anexo com texto lido (transcrição, descrição ou texto do PDF): só essa entra na janela da IA de
   # assunto. Anexo sem leitura (vídeo, PDF escaneado, leitura que falhou) não ocupa a vaga de uma mensagem com texto.
@@ -97,10 +110,11 @@ class Crm::Ai::LeitorDeMidia
     meta[CHAVE[tipo]].to_s.strip.blank? && !meta[MARCA[tipo]]
   end
 
-  def initialize(message, pipeline: nil)
+  def initialize(message, pipeline: nil, ultima_tentativa: false)
     @message = message
     @account = message.account
     @pipeline = pipeline
+    @ultima_tentativa = ultima_tentativa
   end
 
   # -> quantos anexos foram lidos agora.
@@ -144,13 +158,18 @@ class Crm::Ai::LeitorDeMidia
   end
 
   def cabe_no_dia?
-    chave = "crm:leitor_de_midia:#{@account.id}:#{Time.current.utc.to_date.iso8601}"
-    total = Redis::Alfred.incr(chave)
-    Redis::Alfred.expire(chave, 2.days.to_i) if total == 1
+    @chave_do_dia = "crm:leitor_de_midia:#{@account.id}:#{Time.current.utc.to_date.iso8601}"
+    total = Redis::Alfred.incr(@chave_do_dia)
+    Redis::Alfred.expire(@chave_do_dia, 2.days.to_i) if total == 1
     return true if total <= MAX_LEITURAS_POR_DIA
 
     Rails.logger.warn("[crm][midia] teto_do_dia conta=#{@account.id} mensagem=#{@message.id}")
     false
+  end
+
+  # A leitura que não aconteceu (o arquivo não estava no storage) não conta no teto do dia.
+  def devolver_ao_dia
+    Redis::Alfred.with { |conn| conn.decr(@chave_do_dia) }
   end
 
   def ler_texto(attachment, tipo)
@@ -159,6 +178,12 @@ class Crm::Ai::LeitorDeMidia
     when :imagem then Crm::Ai::VisionCaptioner.new(client: cliente_de_visao).caption(attachment)
     when :pdf then texto_do_pdf(attachment)
     end
+  rescue ActiveStorage::FileNotFoundError
+    devolver_ao_dia
+    raise unless @ultima_tentativa
+
+    Rails.logger.warn("[crm][midia] arquivo_nao_chegou tipo=#{tipo} anexo=#{attachment.id} mensagem=#{@message.id}")
+    nil
   rescue *FALHAS_DA_LEITURA => e
     Rails.logger.warn("[crm][midia] leitura_falhou tipo=#{tipo} anexo=#{attachment.id} erro=#{e.class}")
     nil
