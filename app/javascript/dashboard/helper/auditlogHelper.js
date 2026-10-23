@@ -54,6 +54,9 @@ const translationKeys = {
   'account:crm_hard_delete:funil': `AUDIT_LOGS.CRM_EXCLUIR.FUNIL`,
   'account:crm_hard_delete:contato:delete': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_APAGANDO`,
   'account:crm_hard_delete:contato:keep': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO`,
+  // Com reunião cancelada; e, delas, alguma só no sistema (agenda fora de alcance). Sem reunião, a frase não fala dela.
+  'account:crm_hard_delete:contato:keep:reunioes': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO_REUNIOES`,
+  'account:crm_hard_delete:contato:keep:reunioes_so_aqui': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO_REUNIOES_SO_AQUI`,
   'account:crm_hard_delete_failed:funil': `AUDIT_LOGS.CRM_EXCLUIR.FUNIL_FALHOU`,
   'account:crm_hard_delete_failed:contato': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_FALHOU`,
 };
@@ -70,6 +73,12 @@ const crmExcluirMotivos = {
 };
 
 const CRM_EXCLUIR_ACOES = ['crm_hard_delete', 'crm_hard_delete_failed'];
+
+// Exclusão de contato mantendo os cards (#2096): só fala das reuniões quando alguma foi cancelada.
+const sufixoDasReunioes = mudancas => {
+  if (mudancas.modo !== 'keep' || !mudancas.reunioes_canceladas) return '';
+  return mudancas.reunioes_so_aqui ? ':reunioes_so_aqui' : ':reunioes';
+};
 
 function extractAttrChange(attrChange) {
   if (Array.isArray(attrChange)) {
@@ -300,7 +309,7 @@ export const generateLogActionKey = auditLogItem => {
     const mudancas = auditLogItem.audited_changes || {};
     logActionKey += `:${mudancas.alvo}`;
     if (mudancas.alvo === 'contato' && action === 'crm_hard_delete')
-      logActionKey += `:${mudancas.modo}`;
+      logActionKey += `:${mudancas.modo}${sufixoDasReunioes(mudancas)}`;
   }
 
   return translationKeys[logActionKey] || '';

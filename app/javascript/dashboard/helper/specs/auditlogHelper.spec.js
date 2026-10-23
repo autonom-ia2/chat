@@ -411,6 +411,36 @@ describe('excluir de vez no CRM (#2096)', () => {
       )
     ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO');
     expect(
+      generateLogActionKey(
+        item('crm_hard_delete', {
+          alvo: 'contato',
+          modo: 'keep',
+          reunioes_canceladas: 0,
+          reunioes_so_aqui: 0,
+        })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO');
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete', {
+          alvo: 'contato',
+          modo: 'keep',
+          reunioes_canceladas: 2,
+          reunioes_so_aqui: 0,
+        })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO_REUNIOES');
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete', {
+          alvo: 'contato',
+          modo: 'keep',
+          reunioes_canceladas: 2,
+          reunioes_so_aqui: 1,
+        })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO_REUNIOES_SO_AQUI');
+    expect(
       generateLogActionKey(item('crm_hard_delete_failed', { alvo: 'funil' }))
     ).toBe('AUDIT_LOGS.CRM_EXCLUIR.FUNIL_FALHOU');
   });

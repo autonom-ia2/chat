@@ -126,7 +126,9 @@
       "CARDS": "{agentName} permanently deleted archived CRM cards. Cards deleted: {cardsApagados}",
       "FUNIL": "{agentName} permanently deleted archived pipeline #{pipelineId}. Cards deleted: {cardsApagados}. Cards moved to another pipeline: {cardsMovidos}",
       "CONTATO_APAGANDO": "{agentName} deleted contact #{contactId} and their CRM cards. Cards deleted: {cardsApagados}",
-      "CONTATO_MANTENDO": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}. Meetings canceled: {reunioesCanceladas} (only here, calendar unreachable: {reunioesSoAqui})",
+      "CONTATO_MANTENDO": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}",
+      "CONTATO_MANTENDO_REUNIOES": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}. Meetings canceled: {reunioesCanceladas}",
+      "CONTATO_MANTENDO_REUNIOES_SO_AQUI": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}. Meetings canceled: {reunioesCanceladas} ({reunioesSoAqui} only here, calendar unreachable)",
       "CONTATO_FALHOU": "The deletion of contact #{contactId}, requested by {agentName} in a bulk action, was not done; the contact and their CRM cards stayed. Reason: {motivo}",
       "FUNIL_FALHOU": "Deleting archived pipeline #{pipelineId}, requested by {agentName}, didn't happen and nothing was deleted. Reason: {motivo}",
       "MOTIVOS": {
