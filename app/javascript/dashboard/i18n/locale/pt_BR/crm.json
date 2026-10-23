@@ -6472,6 +6472,7 @@
       "RECUSOU": "o sistema recusou o pedido",
       "SEM_PERMISSAO": "você não tem permissão para isso",
       "NAO_ARQUIVADO": "este card não está mais arquivado",
+      "FECHAR_ARQUIVADO": "o card está arquivado; restaure antes de marcar o resultado",
       "FUNIL_ARQUIVADO": "o funil deste card está arquivado; restaure o funil antes",
       "CONFLITO": "o cliente já tem outro card aberto neste funil",
       "FUNIL_NAO_ARQUIVADO": "este funil já está ativo",

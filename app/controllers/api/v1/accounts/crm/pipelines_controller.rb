@@ -47,12 +47,13 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
 
   # Último funil ativo ou único principal ativo não se arquiva. A regra vale para a mudança que vai ser gravada (PATCH
   # com o status em qualquer forma: "archived", 1, "1"; o DELETE confere o mesmo no Crm::Pipelines::Archiver), conferida
-  # e gravada numa trava da conta: dois arquivamentos ao mesmo tempo não zeram os funis ativos. false quando a regra
-  # recusou (nada foi gravado).
+  # e gravada sob a trava de arquivar da conta (Crm::Pipelines::TravaDeArquivar, a mesma do DELETE): dois arquivamentos
+  # ao mesmo tempo não zeram os funis ativos. false quando a regra recusou (nada foi gravado).
   def save_pipeline!
     return @pipeline.save! unless @pipeline.will_save_change_to_status?(to: 'archived')
 
-    Current.account.with_lock do
+    ActiveRecord::Base.transaction do
+      ::Crm::Pipelines::TravaDeArquivar.travar!(Current.account.id)
       @archive_blocked = @pipeline.motivo_para_nao_arquivar
       @archive_blocked.nil? && @pipeline.save!
     end

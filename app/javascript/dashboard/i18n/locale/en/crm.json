@@ -6471,6 +6471,7 @@
       "RECUSOU": "the system refused the request",
       "SEM_PERMISSAO": "you do not have permission for this",
       "NAO_ARQUIVADO": "this card is no longer archived",
+      "FECHAR_ARQUIVADO": "the card is archived; restore it before setting the outcome",
       "FUNIL_ARQUIVADO": "this card's pipeline is archived; restore the pipeline first",
       "CONFLITO": "the customer already has another open card in this pipeline",
       "FUNIL_NAO_ARQUIVADO": "this pipeline is already active",

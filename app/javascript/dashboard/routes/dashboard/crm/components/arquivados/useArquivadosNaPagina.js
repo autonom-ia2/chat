@@ -9,6 +9,7 @@ import { avisoDoRestaurado, ehVenda, nomeDoCliente } from './textosDoArquivado';
 // CrmKanbanPage para ela não crescer mais; a página só liga as peças. As ações da página (abrir card, ir para a
 // Lista, recarregar) chegam por `ligar`, no fim do setup dela, porque são declaradas depois deste ponto.
 export const FUNIS_ARQUIVADOS = '__funis_arquivados__';
+const NAO_ARQUIVADO = 'crm.card_restore_not_archived';
 
 export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
   let pagina = null;
@@ -111,6 +112,13 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
       await pagina.atualizarCardAberto(card.id);
       return { restaurado: true };
     } catch (error) {
+      // Segundo clique (ou outra pessoa restaurou antes): o card já voltou. É o que a pessoa queria; a tela só se
+      // atualiza, sem erro.
+      if (error?.response?.data?.error === NAO_ARQUIVADO) {
+        await depoisDeMudar();
+        await pagina.atualizarCardAberto(alvo.id);
+        return { restaurado: true };
+      }
       if (error?.response?.status === 409 && !forcar) {
         conflito.value = {
           alvo,

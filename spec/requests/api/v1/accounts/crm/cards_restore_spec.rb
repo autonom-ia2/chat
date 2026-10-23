@@ -109,11 +109,12 @@ RSpec.describe 'CRM: restaurar card arquivado', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body['payload']).to eq(
         'restored' => [restored.id],
+        # Em ordem de id (o lote trava os cards sempre na mesma ordem).
         'skipped' => [
+          { 'id' => 0, 'error' => 'forbidden' },
           { 'id' => conflicting.id, 'error' => 'crm.card_restore_conflict', 'open_card_id' => open_card.id,
             'open_card' => { 'id' => open_card.id, 'title' => 'Seguro auto', 'stage_name' => 'Novo Lead' } },
-          { 'id' => not_archived.id, 'error' => 'crm.card_restore_not_archived' },
-          { 'id' => 0, 'error' => 'forbidden' }
+          { 'id' => not_archived.id, 'error' => 'crm.card_restore_not_archived' }
         ]
       )
       expect([restored.reload.status, conflicting.reload.status]).to eq(%w[open archived])

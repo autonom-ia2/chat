@@ -28,6 +28,14 @@ describe('motivoDoErro', () => {
     };
     expect(motivoDoErro(t, error)).toBe('CRM_ARQUIVADOS.ERROS.FUNIL_ARQUIVADO');
   });
+  it('marcar resultado num card arquivado tem frase própria', () => {
+    const error = {
+      response: { status: 422, data: { error: 'crm.card_close_archived' } },
+    };
+    expect(motivoDoErro(t, error)).toBe(
+      'CRM_ARQUIVADOS.ERROS.FECHAR_ARQUIVADO'
+    );
+  });
   it('código desconhecido não mostra o texto cru do servidor', () => {
     const error = {
       response: { status: 500, data: { error: 'boom', exception: 'X' } },

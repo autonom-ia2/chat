@@ -6,8 +6,14 @@
 # A reunião marcada NÃO para, como no arquivar do card (Crm::Cards::Archiver): cancelar avisa o cliente, e isso é decisão
 # de quem atende. Ela e o lembrete dela ficam, e a prévia conta quantas são.
 #
-# Ordem das travas, a mesma do resto do CRM: séries e depois lembretes (Crm::Cards::Archiver). Os cards não são travados:
-# a trava do funil (FOR UPDATE, no Crm::Pipelines::Archiver) impede que um card entre nele durante o arquivamento.
+# A cadência do follow-up de IA dos cards que ficam também para (Crm::Cards::Archiver.metadata_sem_cadencia, sem gastar):
+# sem isto o estado ficava `active: true` e o planner, ao restaurar o funil, tratava o card como em cadência para sempre.
+#
+# Travas e passagens como no arquivar do card (Crm::Cards::Archiver), na ordem do resto do CRM: séries, lembretes, cards.
+# 1. Esperando: as séries e os lembretes ativos dos cards abertos, depois os cards.
+# 2. Com os cards travados, sem esperar (SKIP LOCKED): o que nasceu entre uma coisa e outra (criar série ou lembrete do
+#    card segura o card até terminar, então já terminou). O que estiver travado por outro (DueProcessor,
+#    SeriesMaterializer) não é esperado e fica de fora: nada espera depois dos cards, então não há ciclo.
 class Crm::Pipelines::RetornosDosGuardados
   MOTIVO = 'pipeline_archived'.freeze
 
@@ -26,17 +32,36 @@ class Crm::Pipelines::RetornosDosGuardados
 
   # Devolve quantos lembretes foram cancelados (as séries encerradas não entram: a vez seguinte de cada uma é um lembrete).
   def parar!(now: Time.current)
-    travadas = series.order(:id).lock.to_a
-    cancelados = lembretes.order(:id).lock.to_a
+    travadas, cancelados, cards = travar!
     travadas.each { |serie| serie.update!(status: :ended, ended_at: now) }
     cancelados.each do |lembrete|
       lembrete.update!(status: :canceled, canceled_at: now, metadata: lembrete.metadata.to_h.merge('canceled_reason' => MOTIVO))
     end
+    parar_cadencias!(cards)
     atualizar_proximo_retorno(cancelados)
     cancelados.size
   end
 
   private
+
+  # As duas passagens (ver o topo do arquivo). Devolve [séries, lembretes, cards].
+  def travar!
+    travadas = series.order(:id).lock.to_a
+    cancelados = lembretes.order(:id).lock.to_a
+    cards = @pipeline.cards.open.order(:id).lock(Crm::Pipelines::Archiver::TRAVA_DO_FUNIL).to_a
+    [travadas + sem_esperar(series, travadas), cancelados + sem_esperar(lembretes, cancelados), cards]
+  end
+
+  def sem_esperar(relacao, vistos)
+    relacao.where.not(id: vistos.map(&:id)).order(:id).lock('FOR UPDATE SKIP LOCKED').to_a
+  end
+
+  def parar_cadencias!(cards)
+    cards.each do |card|
+      metadata = Crm::Cards::Archiver.metadata_sem_cadencia(card, motivo: MOTIVO, gasta: false)
+      card.update!(metadata: metadata) unless metadata.equal?(card.metadata)
+    end
+  end
 
   def card_ids
     @pipeline.cards.open.select(:id)

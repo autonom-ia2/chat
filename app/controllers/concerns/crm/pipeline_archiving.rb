@@ -1,6 +1,12 @@
 # Arquivar, restaurar e a prévia do arquivamento do funil (#2095), no Api::V1::Accounts::Crm::PipelinesController. A
 # regra do último funil ativo e do único principal (Parte A) vale no DELETE como no PATCH: o Crm::Pipelines::Archiver a
-# confere sob a mesma trava da conta, e a recusa sai pela mesma resposta (render_archive_blocked).
+# confere sob a mesma trava de arquivar da conta (Crm::Pipelines::TravaDeArquivar), e a recusa sai pela mesma resposta
+# (render_archive_blocked).
+#
+# Contagens: arquivar, restaurar e a prévia contam todos os cards do funil (`@pipeline.cards`, sem o escopo de quem
+# pede), porque só chega a elas quem gerencia o funil (PipelinePolicy#destroy?, #restore? e #archive_preview?) e decide
+# por todos os cards dele. A lista de funis arquivados, que qualquer um com o CRM vê, conta só os cards visíveis
+# (archived_pipeline_counts).
 module Crm::PipelineArchiving
   extend ActiveSupport::Concern
 

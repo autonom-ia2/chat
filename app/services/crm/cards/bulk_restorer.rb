@@ -16,7 +16,8 @@ class Crm::Cards::BulkRestorer
     @account = account
     @user = user
     @account_user = account_user
-    @ids = Array(ids).filter_map { |id| Integer(id.to_s, exception: false) }.uniq.first(MAX_IDS)
+    # Em ordem de id: dois lotes com os mesmos cards travam na mesma ordem (sem ciclo entre eles).
+    @ids = Array(ids).filter_map { |id| Integer(id.to_s, exception: false) }.uniq.first(MAX_IDS).sort
     @force = force
   end
 

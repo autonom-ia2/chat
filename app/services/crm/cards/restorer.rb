@@ -45,6 +45,7 @@ class Crm::Cards::Restorer
   def perform
     result = nil
     ActiveRecord::Base.transaction(requires_new: true) do
+      travar_funil!
       @card.lock!
       result = refused(precondition_refusal) || restore!
       raise ActiveRecord::Rollback unless result.restored?
@@ -54,6 +55,14 @@ class Crm::Cards::Restorer
   end
 
   private
+
+  # O funil antes do card, como no arquivar do funil (Crm::Pipelines::Archiver: funil, depois cards). FOR SHARE espera um
+  # arquivamento em curso deste funil e, depois dele, o status relido decide (PIPELINE_ARCHIVED); sem isto, restaurar
+  # enquanto o "Mover" levava os abertos deixava este card aberto no funil que acabou de ser arquivado.
+  def travar_funil!
+    Crm::Pipeline.where(id: @card.pipeline_id).lock('FOR SHARE').load
+    @card.pipeline&.reload
+  end
 
   def precondition_refusal
     return NOT_ARCHIVED unless @card.archived?
