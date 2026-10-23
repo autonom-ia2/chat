@@ -39,6 +39,14 @@ class Crm::Activity < ApplicationRecord
 
   after_commit :emit_webhook_event, on: :create
 
+  # Quem lê pergunta por 'user'; um SuperAdmin (subclasse STI de User) gravava 'super_admin' e sumia
+  # do histórico e da IA (#2114). A classe-base do STI dá o mesmo tipo para qualquer User.
+  def self.actor_type_for(actor)
+    return 'system' if actor.blank?
+
+    actor.class.base_class.name.underscore
+  end
+
   private
 
   # Bridge CRM lifecycle activities to outbound account webhooks.
