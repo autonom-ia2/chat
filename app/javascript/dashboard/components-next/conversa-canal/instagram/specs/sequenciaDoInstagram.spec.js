@@ -3,6 +3,7 @@ import {
   cantosDoBalao,
   horarioDoInstagram,
   ladoDaMensagem,
+  mensagensDoInstagram,
   sequenciaDoInstagram,
   vistoDaConversa,
 } from '../sequenciaDoInstagram';
@@ -159,5 +160,19 @@ describe('horarioDoInstagram', () => {
     expect(
       horarioDoInstagram({ quando, agora: agoraNoDia, fuso, t, idioma })
     ).toBe('23:30');
+  });
+});
+
+describe('mensagensDoInstagram (#2113)', () => {
+  it('tira a linha da reação que o agente da Autonomia leu; o selo já mostra', () => {
+    const lista = [
+      msg(1, NOSSA, 1000),
+      {
+        ...msg(2, RECEBIDA, 1010),
+        contentAttributes: { autonomiaReaction: { emoji: '❤️' } },
+      },
+      msg(3, RECEBIDA, 1020),
+    ];
+    expect(mensagensDoInstagram(lista).map(m => m.id)).toEqual([1, 3]);
   });
 });

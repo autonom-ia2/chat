@@ -120,4 +120,33 @@ describe('BotaoDeReagir', () => {
     expect(wrapper.element.contains(document.activeElement)).toBe(true);
     wrapper.unmount();
   });
+
+  it('no celular, a barra que passaria da borda da tela anda para dentro (#2113)', async () => {
+    const larguraAntes = window.innerWidth;
+    window.innerWidth = 390;
+    const medida = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ left: 298, right: 620, top: 0, bottom: 0 });
+    const wrapper = montar();
+    await wrapper.find('button[aria-haspopup]').trigger('click');
+    await nextTick();
+
+    expect(barra(wrapper).attributes('style')).toContain('translateX(-238px)');
+    medida.mockRestore();
+    window.innerWidth = larguraAntes;
+    wrapper.unmount();
+  });
+
+  it('a barra que cabe na tela fica onde está', async () => {
+    const medida = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ left: 100, right: 420, top: 0, bottom: 0 });
+    const wrapper = montar();
+    await wrapper.find('button[aria-haspopup]').trigger('click');
+    await nextTick();
+
+    expect(barra(wrapper).attributes('style')).toBeUndefined();
+    medida.mockRestore();
+    wrapper.unmount();
+  });
 });
