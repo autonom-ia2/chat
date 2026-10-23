@@ -3313,6 +3313,7 @@ onUnmounted(() => {
         :erro="arquivados.conflitoErro.value"
         @abrir-aberto="arquivados.abrirOAberto"
         @restaurar-mesmo-assim="arquivados.restaurarMesmoAssim"
+        @close="arquivados.aoFecharConflito"
       />
       <ArquivarFunilDialogo
         ref="arquivarFunilDialogo"

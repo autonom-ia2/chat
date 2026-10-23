@@ -68,7 +68,10 @@ describe('PainelArquivados', () => {
     vi.clearAllMocks();
     limparAvisos();
     CrmArquivadosAPI.listar.mockResolvedValue({
-      data: { payload: [linha(10), linha(9, { desfecho: 'won' })], meta: { count: 2 } },
+      data: {
+        payload: [linha(10), linha(9, { desfecho: 'won' })],
+        meta: { count: 2 },
+      },
     });
   });
 
@@ -96,9 +99,7 @@ describe('PainelArquivados', () => {
   it('sem "Arquivar cards": só leitura, sem Restaurar e sem seleção', async () => {
     const wrapper = montar({ podeArquivar: false });
     await flushPromises();
-    expect(wrapper.find('[data-so-leitura]').text()).toContain(
-      'SEM_PERMISSAO'
-    );
+    expect(wrapper.find('[data-so-leitura]').text()).toContain('SEM_PERMISSAO');
     expect(wrapper.find('[data-arquivado-restaurar]').exists()).toBe(false);
     expect(wrapper.find('[data-arquivados-selecao]').exists()).toBe(false);
   });
@@ -177,12 +178,16 @@ describe('PainelArquivados', () => {
     CrmArquivadosAPI.restaurar.mockResolvedValue({ data: { payload: {} } });
     const wrapper = montar();
     await flushPromises();
-    await wrapper.findAll('[data-arquivado-selecionar] input')[0].trigger('change');
+    await wrapper
+      .findAll('[data-arquivado-selecionar] input')[0]
+      .trigger('change');
     await wrapper.find('[data-arquivados-restaurar-varios]').trigger('click');
     await flushPromises();
     await wrapper.find('[data-conflito-forcar-um]').trigger('click');
     await flushPromises();
-    expect(CrmArquivadosAPI.restaurar).toHaveBeenCalledWith(10, { force: true });
+    expect(CrmArquivadosAPI.restaurar).toHaveBeenCalledWith(10, {
+      force: true,
+    });
     expect(wrapper.find('[data-conflito-linha]').exists()).toBe(false);
   });
 

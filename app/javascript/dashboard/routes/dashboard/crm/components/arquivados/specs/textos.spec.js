@@ -1,6 +1,7 @@
 import { motivoDoErro, motivoDoPulado } from '../motivoDoErro';
 import {
   avisoDoRestaurado,
+  nomeDoCliente,
   quemArquivou,
   valorDaLinha,
 } from '../textosDoArquivado';
@@ -90,5 +91,19 @@ describe('textos do arquivado', () => {
     expect(aviso.retornos).toBe(true);
     expect(aviso.texto).toContain('"etapa":"Proposta"');
     expect(aviso.texto).toContain('RESTAURADO.RETORNOS');
+  });
+});
+
+describe('nomeDoCliente', () => {
+  it('usa o nome do cliente, não o título do card (decisão 6)', () => {
+    expect(
+      nomeDoCliente({ title: 'Plano de Ana', contact: { name: 'Ana Souza' } })
+    ).toBe('Ana Souza');
+  });
+
+  it('sem contato, usa o título do card', () => {
+    expect(nomeDoCliente({ title: 'Plano de Ana', contact: null })).toBe(
+      'Plano de Ana'
+    );
   });
 });

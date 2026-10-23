@@ -29,6 +29,8 @@ class Crm::Cards::ArchivedRows
       title: card.title,
       status: card.status,
       contact_id: card.contact_id,
+      # O nome do cliente, para as frases "o card de {nome}" e "{nome} já tem outro card aberto" (decisão 6).
+      contact: card.contact && { id: card.contact.id, name: card.contact.name },
       stage: { id: card.stage_id, name: card.stage&.name },
       pipeline: { id: card.pipeline_id, name: card.pipeline&.name, status: card.pipeline&.status },
       # Card fechado antes de arquivar guarda a data do fechamento (Parte A, #2091).

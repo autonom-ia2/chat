@@ -306,6 +306,7 @@ RSpec.describe 'CRM: restaurar card arquivado', type: :request do
 
       rows = response.parsed_body['payload'].index_by { |row| row['id'] }
       expect(rows[won.id]).to include('status' => 'archived', 'desfecho' => 'won', 'retornos_parados' => 0, 'contact_id' => contact.id)
+      expect(rows[won.id]['contact']).to eq('id' => contact.id, 'name' => contact.name)
       expect(rows[with_reminder.id]).to include('desfecho' => nil, 'retornos_parados' => 1)
     end
 

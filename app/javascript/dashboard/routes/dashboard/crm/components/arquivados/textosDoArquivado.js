@@ -81,3 +81,7 @@ export const avisoDoRestaurado = (
   );
   return { texto: `${base} ${retornos}`, lista: false, retornos: true };
 };
+
+// O nome que entra em "o card de {nome}" e "{nome} já tem outro card aberto" (decisão 6): o do cliente; sem contato,
+// o título do card.
+export const nomeDoCliente = card => card?.contact?.name || card?.title || '';

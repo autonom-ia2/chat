@@ -6499,8 +6499,8 @@
       "DICA_FUNIL_ARQUIVADO": "It is in an archived pipeline. To bring it back, restore the {funil} pipeline."
     },
     "RESTAURADO": {
-      "QUADRO": "{nome} is back in {etapa}.",
-      "LISTA": "{nome} is back in the List, {aba} tab. It is not on the board because the deal is over.",
+      "QUADRO": "{nome}'s card is back in {etapa}.",
+      "LISTA": "{nome}'s card is back in the List, {aba} tab. It is not on the board because the deal is over.",
       "RETORNOS": "The follow-up that was scheduled does not come back on its own. | The follow-ups that were scheduled do not come back on their own."
     },
     "CONFLITO": {

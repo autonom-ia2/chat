@@ -616,7 +616,7 @@ defineExpose({
   <ArquivarCardDialogo
     v-if="arquivadosLigado"
     ref="dialogoArquivarNovo"
-    :nome="titulo"
+    :nome="nome"
     :retornos="retornosQueParam"
     :aviso-de-reuniao="avisoDeReuniao"
     :venda-que-continua="vendaQueContinua"

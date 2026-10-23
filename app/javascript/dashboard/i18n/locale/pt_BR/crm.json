@@ -6500,8 +6500,8 @@
       "DICA_FUNIL_ARQUIVADO": "Está num funil arquivado. Para trazer, restaure o funil {funil}."
     },
     "RESTAURADO": {
-      "QUADRO": "{nome} voltou para {etapa}.",
-      "LISTA": "{nome} voltou para a Lista, aba {aba}. Não aparece no quadro porque o negócio já terminou.",
+      "QUADRO": "O card de {nome} voltou para {etapa}.",
+      "LISTA": "O card de {nome} voltou para a Lista, aba {aba}. Não aparece no quadro porque o negócio já terminou.",
       "RETORNOS": "O retorno que estava marcado não volta sozinho. | Os retornos que estavam marcados não voltam sozinhos."
     },
     "CONFLITO": {

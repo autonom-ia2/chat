@@ -11,7 +11,10 @@ const pos = { id: 2, name: 'Pós-venda', is_default: false };
 const extra = { id: 3, name: 'Extra', is_default: false };
 const etapas = {
   1: [{ id: 11, name: 'Novo' }],
-  2: [{ id: 21, name: 'Boas-vindas' }, { id: 22, name: 'Acompanhamento' }],
+  2: [
+    { id: 21, name: 'Boas-vindas' },
+    { id: 22, name: 'Acompanhamento' },
+  ],
   3: [{ id: 31, name: 'Entrada' }],
 };
 const montar = () =>

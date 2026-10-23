@@ -2,7 +2,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import CrmArquivadosAPI from 'dashboard/api/crmArquivados';
 import { motivoDoErro } from './motivoDoErro';
 import { avisar } from './useAvisoCrm';
-import { avisoDoRestaurado, ehVenda } from './textosDoArquivado';
+import { avisoDoRestaurado, ehVenda, nomeDoCliente } from './textosDoArquivado';
 
 // O que a página do CRM faz com Arquivados (#2095, flag crm_arquivados): abrir os painéis, restaurar um card (com o
 // cliente que já voltou), avisar onde o card foi parar, arquivar card e funil com o aviso de pronto. Fica fora da
@@ -77,7 +77,7 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
   const avisarRestaurado = (card, alvo) => {
     const funil = pagina.funilPorId(card.pipeline_id || card.pipeline?.id);
     const aviso = avisoDoRestaurado(t, {
-      nome: alvo.title || card.title,
+      nome: nomeDoCliente(alvo) || nomeDoCliente(card),
       card,
       funil,
       retornosParados: Number(alvo.retornos_parados || 0),
@@ -99,6 +99,8 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
   // Restaurar um card (linha de Arquivados, card arquivado aberto ou o "Desfazer"). 409 = o cliente tem outro card
   // aberto no mesmo funil: a janela de conflito decide.
   const restaurar = async (alvo, { forcar = false } = {}) => {
+    // Quem pediu (o botão Restaurar): o foco volta para ele quando a janela de conflito fecha.
+    const origem = document.activeElement;
     try {
       const { data } = await CrmArquivadosAPI.restaurar(alvo.id, {
         force: forcar,
@@ -112,12 +114,13 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
       if (error?.response?.status === 409 && !forcar) {
         conflito.value = {
           alvo,
-          nome: alvo.title,
+          nome: nomeDoCliente(alvo),
           funil:
             alvo.pipeline?.name ||
             pagina.funilPorId(alvo.pipeline_id)?.name ||
             '',
           aberto: error.response.data?.open_card || null,
+          origem,
         };
         conflitoErro.value = '';
         await nextTick();
@@ -139,6 +142,13 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
     const resultado = await restaurar(card);
     restaurandoCard.value = false;
     erroRestaurarCard.value = resultado.erro || '';
+  };
+
+  // A janela de conflito fechou (Esc, ou depois de uma das duas escolhas): o foco volta para quem pediu, se ainda
+  // existe; a linha restaurada já saiu da lista.
+  const aoFecharConflito = () => {
+    const origem = conflito.value?.origem;
+    if (origem?.isConnected) origem.focus();
   };
 
   const abrirOAberto = () => {
@@ -168,7 +178,7 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
     const funil = pagina.funilPorId(card.pipeline_id);
     const venda = ehVenda(card.status, funil);
     const texto = [
-      t('CRM_ARQUIVADOS.ARQUIVADO', { nome: card.title }),
+      t('CRM_ARQUIVADOS.ARQUIVADO', { nome: nomeDoCliente(card) }),
       venda ? t('CRM_ARQUIVADOS.ARQUIVADO_VENDA') : '',
     ]
       .filter(Boolean)
@@ -270,6 +280,7 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
     conflito,
     conflitoOcupado,
     conflitoErro,
+    aoFecharConflito,
     dialogoConflito,
     painel,
     restaurandoCard,

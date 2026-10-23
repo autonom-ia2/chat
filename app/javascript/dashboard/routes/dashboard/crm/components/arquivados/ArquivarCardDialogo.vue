@@ -47,7 +47,7 @@ defineExpose({
     width="md"
     @close="emit('close')"
   >
-    <div class="flex flex-col gap-3">
+    <div class="flex flex-col gap-3 empty:hidden">
       <p
         v-if="vendaQueContinua"
         data-arquivar-venda

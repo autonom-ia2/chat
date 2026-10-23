@@ -68,6 +68,7 @@ defineExpose({
         <Button
           type="button"
           data-conflito-abrir
+          autofocus
           :label="t('CRM_ARQUIVADOS.CONFLITO.ABRIR_ABERTO')"
           icon="i-lucide-square-arrow-out-up-right"
           class="!min-h-11"
