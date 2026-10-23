@@ -80,6 +80,10 @@ export function useCrmPermissions() {
   );
   // #722 — planilha da Lista é dado pessoal em lote: como canAdminCrm, o agente
   // sem função NÃO ganha por padrão (backend: crm_export em PLAIN_AGENT_DENIED_KEYS).
+  // Excluir de vez (#2096): só o administrador da conta, nunca por função personalizada (regra do projeto:
+  // apagar histórico de cliente sem volta não se delega). Espelho de Crm::CardPolicy#permanent_delete?.
+  const canHardDelete = computed(() => isAdmin.value);
+
   const canExportCrm = computed(
     () => canAdminCrm.value || permissions.value.includes(CRM_EXPORT_PERMISSION)
   );
@@ -104,6 +108,7 @@ export function useCrmPermissions() {
     canViewReports,
     canAdminCrm,
     canExportCrm,
+    canHardDelete,
     canSeeSalesValues,
   };
 }

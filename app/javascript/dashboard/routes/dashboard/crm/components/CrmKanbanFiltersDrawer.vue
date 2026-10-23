@@ -34,9 +34,17 @@ const props = defineProps({
   resultChoices: { type: Array, default: () => [] },
   canManageAi: { type: Boolean, default: false },
   companyFilterAvailable: { type: Boolean, default: true },
+  // #2095 (flag crm_arquivados): quantos cards arquivados o funil tem; null = sem o atalho.
+  arquivados: { type: Number, default: null },
 });
 
-const emit = defineEmits(['close', 'apply', 'clear', 'search-company']);
+const emit = defineEmits([
+  'close',
+  'apply',
+  'clear',
+  'search-company',
+  'abrirArquivados',
+]);
 const { t } = useI18n();
 // #2075 — sem a chave de valores o servidor ignora a faixa de valor: a tela nem oferece.
 const { canSeeSalesValues } = useCrmPermissions();
@@ -351,6 +359,18 @@ useFixedPanelPresence(computed(() => props.show));
                   : '!outline-n-weak !bg-n-surface-1'
               "
               @click="applyShortcut('overdue')"
+            />
+            <!-- #2095: não é filtro. Abre o painel de Arquivados (fecha este); por isso não fica marcado. -->
+            <Button
+              v-if="arquivados !== null"
+              data-atalho-arquivados
+              :label="t('CRM_ARQUIVADOS.ATALHO', { count: arquivados })"
+              icon="i-lucide-panel-right-open"
+              trailing-icon
+              outline
+              slate
+              class="!min-h-11 !rounded-lg !outline-n-weak !bg-n-surface-1"
+              @click="emit('abrirArquivados')"
             />
           </div>
         </div>
