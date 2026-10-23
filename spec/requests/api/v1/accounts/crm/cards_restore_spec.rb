@@ -183,7 +183,23 @@ RSpec.describe 'CRM: restaurar card arquivado', type: :request do
   end
 
   # O reabrir antigo (/close result=reopen e o lote com status=open) não pode restaurar sem as regras do restaurar.
+  # Só com a flag crm_arquivados: sem ela, a janela antiga reabre como antes.
   describe 'reabrir o arquivado pelo fechar' do
+    before { account.enable_features!(:crm_arquivados) }
+
+    it 'sem a flag, o /close reabre como antes, sem a conferência do cliente que já voltou' do
+      account.disable_features!(:crm_arquivados)
+      card = card_in(stage: second_stage)
+      archive!(card)
+      card_in(stage: pipeline_and_stage.last, title: 'Voltou')
+
+      post "#{base}/cards/#{card.id}/close", params: { result: 'reopen' }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(card.reload.status).to eq('open')
+      expect(card.activities.where(event_type: 'reopen').last.payload).not_to include('restored' => true)
+    end
+
     it 'no /close, reabrir é restaurar: volta para a etapa e registra como restauração' do
       card = card_in(stage: second_stage)
       archive!(card)

@@ -69,7 +69,7 @@ RSpec.describe Crm::Pipelines::Archiver do
     repete = serie
     reuniao, do_encontro = reuniao_com_lembrete
 
-    result = described_class.new(pipeline: pipeline, actor: host).perform
+    result = described_class.new(pipeline: pipeline, actor: host, stop_follow_ups: true).perform
 
     expect(result.stopped_follow_ups).to eq(1)
     expect(pipeline.reload).to be_archived
@@ -78,6 +78,18 @@ RSpec.describe Crm::Pipelines::Archiver do
     expect(repete.reload).to be_ended
     expect([reuniao.reload.status, do_encontro.reload.status]).to eq(%w[scheduled pending])
     expect(card.reload.next_follow_up_at).to eq(do_encontro.due_at)
+  end
+
+  it 'sem pedir para parar (a janela antiga, flag desligada), arquiva como antes e os retornos seguem' do
+    tarefa = lembrete
+    repete = serie
+
+    result = described_class.new(pipeline: pipeline, actor: host).perform
+
+    expect(result.stopped_follow_ups).to eq(0)
+    expect(pipeline.reload).to be_archived
+    expect(tarefa.reload).to be_pending
+    expect(repete.reload).not_to be_ended
   end
 
   it 'ao mover, os retornos seguem com o card no funil novo' do

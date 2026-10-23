@@ -141,12 +141,13 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     end
   end
 
-  # Card arquivado (#2095): reabrir por aqui é restaurar, com as regras do restaurar (permissão de arquivar, funil
-  # arquivado, cliente que já voltou). Ganhar ou perder um card arquivado é recusado: restaure antes.
+  # Card arquivado (#2095, com a flag crm_arquivados): reabrir por aqui é restaurar, com as regras do restaurar
+  # (permissão de arquivar, funil arquivado, cliente que já voltou). Ganhar ou perder um card arquivado é recusado:
+  # restaure antes. Sem a flag, como antes.
   def close
-    return close_archived if @card.archived?
-
     with_idempotency do
+      next close_archived if ::Crm::Cards::Restorer.reabrir_e_restaurar?(@card)
+
       @card = ::Crm::Cards::Closer.new(
         card: @card,
         actor: Current.user,
@@ -404,7 +405,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
 
   # Reabrir o card arquivado pelo /close é restaurar (#2095): a regra é a do restaurar, não a do fechar.
   def card_policy_query
-    return :restore? if action_name == 'close' && @card.archived?
+    return :restore? if action_name == 'close' && ::Crm::Cards::Restorer.reabrir_e_restaurar?(@card)
 
     "#{action_name}?".to_sym
   end

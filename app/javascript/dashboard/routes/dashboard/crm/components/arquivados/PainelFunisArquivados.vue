@@ -66,16 +66,6 @@ const caixasDe = funil =>
     .filter(caixa => caixa.auto_create_card !== false)
     .map(caixa => caixa.name)
     .filter(Boolean);
-const quandoDe = funil => {
-  if (!funil.archived_at) return '';
-  const dia = formato.diaCurto(new Date(funil.archived_at));
-  return funil.archived_by?.name
-    ? t('CRM_ARQUIVADOS.FUNIS.ARQUIVADO_POR', {
-        dia,
-        nome: funil.archived_by.name,
-      })
-    : t('CRM_ARQUIVADOS.FUNIS.ARQUIVADO_EM', { dia });
-};
 
 const restaurar = async funil => {
   ocupados.value = { ...ocupados.value, [funil.id]: true };
@@ -187,12 +177,6 @@ defineExpose({ recarregar: carregar });
               <span class="block text-sm text-n-slate-11">{{
                 cardsDe(funil)
               }}</span>
-              <span
-                v-if="quandoDe(funil)"
-                class="block text-xs text-n-slate-11"
-              >
-                {{ quandoDe(funil) }}
-              </span>
               <span
                 v-if="caixasDe(funil).length"
                 data-funil-caixas

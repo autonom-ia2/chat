@@ -13,14 +13,17 @@ module Crm::PipelineArchiving
 
   # Arquivar. Parâmetros opcionais, todos de outro funil ativo que a pessoa vê, na mesma transação:
   # - `move_to_stage_id`: os cards abertos vão para essa etapa. Sem ele, ficam no funil e voltam quando ele for
-  #   restaurado; os retornos marcados deles param.
+  #   restaurado.
+  # - `stop_follow_ups`: sem `move_to_stage_id`, os retornos marcados dos cards que ficam param ("Guardar junto").
+  #   Sem ele, ficam como estão, como antes do #2095.
   # - `inboxes_to_pipeline_id`: as caixas ligadas passam a criar card nesse funil. Sem ele, ficam ligadas a este.
   # - `new_default_pipeline_id`: esse funil vira o principal antes da regra do único principal.
   def destroy
     result = ::Crm::Pipelines::Archiver.new(
       pipeline: @pipeline, actor: Current.user, target_stage: archive_target_stage,
       inboxes_target: other_active_pipeline(params[:inboxes_to_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_INBOXES_TARGET),
-      new_default: other_active_pipeline(params[:new_default_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_DEFAULT)
+      new_default: other_active_pipeline(params[:new_default_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_DEFAULT),
+      stop_follow_ups: ActiveModel::Type::Boolean.new.cast(params[:stop_follow_ups]) == true
     ).perform
     assign_archive_result(result)
     render :show
@@ -88,15 +91,20 @@ module Crm::PipelineArchiving
   end
 
   # Funis arquivados (index com `status=archived`): quantos cards abertos voltam ao quadro com cada um, quantos cards
-  # cada um tem ao todo e as caixas que criam card nele.
+  # cada um tem ao todo e as caixas que criam card nele. As contagens são só dos cards que a pessoa vê; as caixas, só
+  # para quem gerencia o funil (quem só vê o CRM não precisa dos nomes das caixas para ler a lista).
   def archived_pipeline_counts(pipelines)
-    cards = Current.account.crm_cards.where(pipeline_id: pipelines.select(:id))
+    cards = policy_scope(::Crm::Card).where(pipeline_id: pipelines.select(:id))
     @open_cards_counts = cards.open.group(:pipeline_id).count
     @cards_counts = cards.group(:pipeline_id).count
-    @auto_create_inboxes = Current.account.crm_pipeline_inboxes.where(pipeline_id: pipelines.select(:id), auto_create_card: true)
-                                  .where.not(inbox_id: nil).includes(:inbox).order(:id)
-                                  .group_by(&:pipeline_id)
-                                  .transform_values { |links| links.map { |link| { id: link.inbox_id, name: link.inbox&.name } } }
+    @auto_create_inboxes = auto_create_inboxes(pipelines.select { |pipeline| policy(pipeline).update? }.map(&:id))
+  end
+
+  def auto_create_inboxes(pipeline_ids)
+    Current.account.crm_pipeline_inboxes.where(pipeline_id: pipeline_ids, auto_create_card: true)
+           .where.not(inbox_id: nil).includes(:inbox).order(:id)
+           .group_by(&:pipeline_id)
+           .transform_values { |links| links.map { |link| { id: link.inbox_id, name: link.inbox&.name } } }
   end
 
   # As caixas ligadas ao funil; `auto_create_card` diz se a caixa cria card nele sozinha. `other_pipelines`: os outros

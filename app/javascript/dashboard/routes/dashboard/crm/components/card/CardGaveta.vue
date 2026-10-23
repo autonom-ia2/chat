@@ -417,7 +417,6 @@ const arquivarNovo = () =>
     consultarReuniao(cardId.value ? [cardId.value] : []);
     dialogoArquivarNovo.value?.open();
   });
-const confirmarArquivarNovo = () => podeArquivar.value && emit('archive');
 // O que o Archiver cancela: lembretes por vencer, menos o da reunião marcada.
 const retornosQueParam = computed(
   () =>
@@ -427,6 +426,8 @@ const retornosQueParam = computed(
         item.follow_up_type !== 'meeting'
     ).length
 );
+const confirmarArquivarNovo = () =>
+  podeArquivar.value && emit('archive', { retornos: retornosQueParam.value });
 const vendaQueContinua = computed(() =>
   status.value === 'won' && venda.value && !card.value.value_hidden
     ? formato.dinheiro(card.value.value_cents, card.value.currency)

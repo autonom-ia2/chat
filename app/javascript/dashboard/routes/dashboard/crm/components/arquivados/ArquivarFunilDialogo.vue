@@ -30,6 +30,7 @@ const {
   previa,
   carregando,
   erroPrevia,
+  erroEtapas,
   passo,
   novoPrincipal,
   destino,
@@ -386,6 +387,18 @@ defineExpose({ abrir, fechar });
         </section>
       </template>
 
+      <p
+        v-if="erroEtapas"
+        role="alert"
+        data-funil-erro-etapas
+        class="mb-0 rounded-lg bg-n-ruby-2 px-3 py-2 text-sm text-n-ruby-11"
+      >
+        {{
+          t('CRM_ARQUIVADOS.FUNIL.ERRO_ETAPAS', {
+            motivo: motivoDoErro(t, erroEtapas),
+          })
+        }}
+      </p>
       <p
         v-if="erro"
         role="alert"

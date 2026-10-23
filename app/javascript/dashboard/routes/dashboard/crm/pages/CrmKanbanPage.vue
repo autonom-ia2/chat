@@ -350,9 +350,17 @@ const arquivados = useArquivadosNaPagina({
   ligado: arquivadosLigado,
   funilAtual: () => selectedPipeline.value,
 });
-// Com a flag, "Funis arquivados" fica no fim da escolha de funil (uma opção à parte, que abre o painel).
+// O erro de arquivar é daquele card: outro card aberto começa sem ele.
+watch(
+  () => selectedCard.value?.id,
+  () => {
+    arquivados.erroArquivarCard.value = '';
+  }
+);
+// Com a flag, "Funis arquivados" fica no fim da escolha de funil (uma opção à parte, que abre o painel). Sem funil
+// arquivado, não aparece.
 const pipelineGroups = computed(() =>
-  arquivadosLigado.value
+  arquivadosLigado.value && arquivados.totalDeFunis.value
     ? [
         { label: '', options: pipelineOptions.value },
         arquivados.opcaoDosFunisArquivados.value,
@@ -1674,13 +1682,15 @@ const cancelFollowUp = async followUp => {
   }
 };
 
-const archiveCard = async () => {
+// `detalhes.retornos` (janela nova, #2095): quantos retornos o arquivar para, para o Desfazer avisar.
+const archiveCard = async (detalhes = {}) => {
   if (!selectedCard.value?.id) return;
   const card = selectedCard.value;
   arquivados.erroArquivarCard.value = '';
   try {
     await store.dispatch('crmKanban/archiveCard', card.id);
-    if (arquivadosLigado.value) arquivados.avisarArquivado(card);
+    if (arquivadosLigado.value)
+      arquivados.avisarArquivado(card, detalhes?.retornos || 0);
     else useAlert(t('CRM_KANBAN.ALERTS.CARD_ARCHIVED'));
     closeDrawer();
     if (arquivadosLigado.value) arquivados.contar();
@@ -2702,7 +2712,7 @@ onUnmounted(() => {
         <div class="flex items-center gap-2">
           <ChoiceSelect
             :model-value="currentPipelineId"
-            :options="arquivadosLigado ? [] : pipelineOptions"
+            :options="pipelineGroups.length ? [] : pipelineOptions"
             :groups="pipelineGroups"
             :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
             :disabled="!hasPipelines"

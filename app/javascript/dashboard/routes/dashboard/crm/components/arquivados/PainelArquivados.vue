@@ -36,7 +36,6 @@ const busca = ref('');
 const todos = ref(false);
 const linhas = ref([]);
 const total = ref(0);
-const pagina = ref(1);
 const carregando = ref(false);
 const erroCarga = ref('');
 const selecionados = ref([]);
@@ -82,10 +81,12 @@ const carregar = async (proxima = 1) => {
       per_page: POR_PAGINA,
     });
     if (este !== pedido) return;
+    const vistas = new Set(linhas.value.map(linha => linha.id));
     linhas.value =
-      proxima === 1 ? data.payload : [...linhas.value, ...data.payload];
+      proxima === 1
+        ? data.payload
+        : [...linhas.value, ...data.payload.filter(l => !vistas.has(l.id))];
     total.value = data.meta?.count ?? linhas.value.length;
-    pagina.value = proxima;
   } catch (error) {
     if (este === pedido)
       erroCarga.value = t('CRM_ARQUIVADOS.ERRO_CARREGAR', {
@@ -95,6 +96,11 @@ const carregar = async (proxima = 1) => {
     if (este === pedido) carregando.value = false;
   }
 };
+
+// "Ver mais" pela quantidade já na tela, não pelo número da página: depois de restaurar k cards, a lista do servidor
+// andou k posições, e a página seguinte pularia k arquivados. Pede a página onde a lista parou e tira os repetidos.
+const carregarMais = () =>
+  carregar(Math.floor(linhas.value.length / POR_PAGINA) + 1);
 
 const recomecar = () => {
   selecionados.value = [];
@@ -534,7 +540,7 @@ defineExpose({ recarregar: recomecar });
               class="!min-h-11"
               :is-loading="carregando"
               :disabled="carregando"
-              @click="carregar(pagina + 1)"
+              @click="carregarMais"
             />
           </div>
         </template>

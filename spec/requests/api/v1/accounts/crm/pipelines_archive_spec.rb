@@ -139,15 +139,26 @@ RSpec.describe 'CRM: arquivar e restaurar funil', type: :request do
       expect([moved.reload.stage_id, moved.owner_id]).to eq([target_stage.id, nil])
     end
 
-    it 'sem destino, diz quantos retornos dos cards que ficaram pararam' do
+    it 'guardar junto (stop_follow_ups), diz quantos retornos dos cards que ficaram pararam' do
+      kept = card
+      Crm::FollowUp.create!(account: account, card: kept, created_by: admin, title: 'Ligar', due_at: 2.days.from_now,
+                            timezone: 'America/Sao_Paulo', status: :pending)
+
+      delete "#{base}/#{pipeline.id}", params: { stop_follow_ups: true }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body['payload']).to include('open_cards_count' => 1, 'stopped_follow_ups_count' => 1)
+      expect(kept.follow_ups.first).to be_canceled
+    end
+
+    it 'sem destino e sem stop_follow_ups (janela antiga), arquiva como antes e os retornos seguem' do
       kept = card
       Crm::FollowUp.create!(account: account, card: kept, created_by: admin, title: 'Ligar', due_at: 2.days.from_now,
                             timezone: 'America/Sao_Paulo', status: :pending)
 
       delete "#{base}/#{pipeline.id}", headers: auth_headers(admin), as: :json
 
-      expect(response.parsed_body['payload']).to include('open_cards_count' => 1, 'stopped_follow_ups_count' => 1)
-      expect(kept.follow_ups.first).to be_canceled
+      expect(response.parsed_body['payload']).to include('open_cards_count' => 1, 'stopped_follow_ups_count' => 0)
+      expect(kept.follow_ups.first).to be_pending
     end
 
     it 'no funil já arquivado, leva os cards que ficaram presos nele' do
@@ -278,6 +289,21 @@ RSpec.describe 'CRM: arquivar e restaurar funil', type: :request do
 
       expect(response.parsed_body['payload'].pluck('id')).to eq([target_pipeline_and_stage.first.id])
       expect(response.parsed_body['payload'].first).not_to have_key('open_cards_count')
+    end
+
+    it 'para quem só vê o CRM, conta só os cards que a pessoa vê e não manda as caixas' do
+      inbox = create_crm_inbox(account: account, name: 'WhatsApp Pós-venda', members: [agent])
+      escondida = create_crm_inbox(account: account, name: 'Outra caixa')
+      account.crm_cards.create!(pipeline: pipeline, stage: pipeline_and_stage.last, inbox: inbox, title: 'Visível')
+      account.crm_cards.create!(pipeline: pipeline, stage: pipeline_and_stage.last, inbox: escondida, title: 'Escondido')
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, auto_create_card: true)
+      target_pipeline_and_stage
+      pipeline.archived!
+
+      get base, params: { status: 'archived' }, headers: auth_headers(agent)
+
+      expect(response.parsed_body['payload'].map { |item| item.slice('open_cards_count', 'cards_count', 'inboxes') })
+        .to eq([{ 'open_cards_count' => 1, 'cards_count' => 1, 'inboxes' => [] }])
     end
 
     it 'restaura o funil e os cards abertos voltam ao quadro com ele' do

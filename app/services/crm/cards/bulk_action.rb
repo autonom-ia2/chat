@@ -104,13 +104,13 @@ module Crm
         # Closer::VERB_ALIASES), so a bulk "set to open" reopens the card instead
         # of silently failing every id with Closer::InvalidResult.
         result = @payload[:result].to_s
-        return restore_card!(card, result) if card.archived?
+        return restore_card!(card, result) if Crm::Cards::Restorer.reabrir_e_restaurar?(card)
 
         closed = Crm::Cards::Closer.new(card: card, actor: @user, result: result).perform
         broadcast(closed, ::Events::Types::CRM_CARD_UPDATED)
       end
 
-      # Card arquivado (#2095): "Aberto" restaura, com as recusas do restaurar (funil arquivado, cliente que já voltou),
+      # Card arquivado (#2095, com a flag crm_arquivados): "Aberto" restaura, com as recusas do restaurar (funil arquivado, cliente que já voltou),
       # sem forçar; ganho ou perdido é recusado, como no card único (restaure antes).
       def restore_card!(card, result)
         raise Refused, Crm::Cards::Restorer::CLOSE_ARCHIVED unless Crm::Cards::Closer.reopen?(result)
@@ -145,8 +145,9 @@ module Crm
       end
 
       # Reabrir o card arquivado é restaurar (#2095): a regra é a do restaurar (Crm::CardPolicy#restore?), não a do fechar.
+      # Só com a flag crm_arquivados; sem ela, como antes.
       def policy_query(card)
-        return :restore? if @action == 'status' && card.archived?
+        return :restore? if @action == 'status' && Crm::Cards::Restorer.reabrir_e_restaurar?(card)
 
         POLICY_BY_ACTION.fetch(@action)
       end

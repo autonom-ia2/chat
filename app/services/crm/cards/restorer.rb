@@ -21,10 +21,19 @@ class Crm::Cards::Restorer
   # Ganhar ou perder um card arquivado pelo fechar (o /close ou o lote): restaure antes. Reabrir por lá é restaurar.
   CLOSE_ARCHIVED = 'crm.card_close_archived'.freeze
 
+  # A flag das telas (config/features.yml). Com ela desligada, o reabrir antigo (/close e o lote) fica como antes do
+  # #2095: a janela antiga não conhece as recusas do restaurar nem a permissão "Arquivar cards".
+  FLAG = 'crm_arquivados'.freeze
+
   Result = Struct.new(:restored, :error, :open_card, keyword_init: true) do
     def restored?
       restored
     end
+  end
+
+  # O reabrir do card arquivado pelo fechar (o /close ou o lote) segue as regras do restaurar?
+  def self.reabrir_e_restaurar?(card)
+    card.archived? && card.account.feature_enabled?(FLAG)
   end
 
   def initialize(card:, actor:, force: false)
@@ -64,11 +73,23 @@ class Crm::Cards::Restorer
       payload[:dono_que_saiu_id] = @card.owner_id
       @card.owner_id = nil
     end
+    travar_contato_no_funil!
     Crm::Cards::Closer.new(card: @card, actor: @actor, result: 'reopen', payload_extra: payload).perform
     conflict = open_sibling if @card.open? && !@force
     return Result.new(restored: false, error: CONFLICT, open_card: conflict) if conflict
 
     Result.new(restored: true)
+  end
+
+  # Dois arquivados do mesmo cliente no mesmo funil restaurados ao mesmo tempo: cada um trava só o próprio card, e
+  # nenhum veria o outro aberto. Esta trava (até o fim da transação) põe um depois do outro; o segundo vê o primeiro.
+  def travar_contato_no_funil!
+    return if @card.contact_id.blank?
+
+    chave = "crm_restore:#{@card.account_id}:#{@card.contact_id}:#{@card.pipeline_id}"
+    Crm::Card.connection.select_value(
+      Crm::Card.sanitize_sql_array(['SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', chave])
+    )
   end
 
   # O card aberto mais antigo do mesmo contato no mesmo funil. Card sem contato não tem como conflitar.

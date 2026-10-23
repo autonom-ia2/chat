@@ -173,8 +173,9 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
     painel.value?.recarregar();
   };
 
-  // Depois de arquivar pela gaveta: o aviso com "Desfazer" e "Ver arquivados".
-  const avisarArquivado = card => {
+  // Depois de arquivar pela gaveta: o aviso com "Desfazer" e "Ver arquivados". `retornos`: quantos o arquivar parou,
+  // para o aviso do restaurado dizer que eles não voltam. Se o Desfazer falhar, o motivo aparece num aviso novo.
+  const avisarArquivado = (card, retornos = 0) => {
     const funil = pagina.funilPorId(card.pipeline_id);
     const venda = ehVenda(card.status, funil);
     const texto = [
@@ -187,7 +188,13 @@ export const useArquivadosNaPagina = ({ t, ligado, funilAtual }) => {
       {
         rotulo: t('CRM_ARQUIVADOS.DESFAZER'),
         desfazer: true,
-        executar: () => restaurar(card),
+        executar: async () => {
+          const resultado = await restaurar({
+            ...card,
+            retornos_parados: retornos,
+          });
+          if (resultado.erro) avisar(resultado.erro);
+        },
       },
       { rotulo: t('CRM_ARQUIVADOS.VER_ARQUIVADOS'), executar: abrirPainel },
     ]);

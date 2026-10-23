@@ -91,7 +91,7 @@ describe('useArquivarFunil', () => {
     expect(estado.etapaDestino.value).toBe(11);
   });
 
-  it('guardar junto e deixar as caixas: só arquiva, sem destino', async () => {
+  it('guardar junto e deixar as caixas: sem destino, pede para parar os retornos', async () => {
     previa();
     CrmArquivadosAPI.arquivarFunil.mockResolvedValue({ data: { payload: {} } });
     const estado = montar();
@@ -99,7 +99,9 @@ describe('useArquivarFunil', () => {
     estado.destino.value = 'guardar';
     estado.caixas.value = 'parar';
     await estado.arquivar();
-    expect(CrmArquivadosAPI.arquivarFunil).toHaveBeenCalledWith(2, {});
+    expect(CrmArquivadosAPI.arquivarFunil).toHaveBeenCalledWith(2, {
+      stop_follow_ups: true,
+    });
     expect(estado.retornos.value).toBe(1);
     expect(estado.reunioes.value).toBe(1);
   });

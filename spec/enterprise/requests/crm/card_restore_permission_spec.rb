@@ -19,6 +19,9 @@ RSpec.describe 'Restaurar arquivados com função personalizada', type: :request
     with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run }
   end
 
+  # O reabrir antigo (/close e o lote) só segue a regra do restaurar com a flag das telas novas.
+  before { account.enable_features!(:crm_arquivados) }
+
   def give_role(permissions)
     role = create(:custom_role, account: account, permissions: permissions)
     agent.account_users.find_by!(account: account).update!(custom_role: role)
@@ -74,6 +77,17 @@ RSpec.describe 'Restaurar arquivados com função personalizada', type: :request
                                headers: agent.create_new_auth_token, as: :json
     expect(response.parsed_body.dig('payload', 'failed')).to eq([{ 'id' => card.id, 'error' => 'forbidden' }])
     expect(card.reload.status).to eq('archived')
+  end
+
+  it 'sem a flag, Pode mexer reabre pelo /close como antes' do
+    account.disable_features!(:crm_arquivados)
+    give_role(%w[crm_view crm_manage_cards conversation_participating_manage])
+    card.update!(status: :archived)
+
+    post "#{base}/cards/#{card.id}/close", params: { result: 'reopen' }, headers: agent.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(card.reload.status).to eq('open')
   end
 
   it 'só com Arquivar cards, restaura pelo reabrir antigo (/close)' do

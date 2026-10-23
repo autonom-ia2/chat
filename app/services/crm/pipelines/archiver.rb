@@ -2,8 +2,9 @@
 # para outro funil ativo e de passar o "principal" para outro funil. Tudo vai numa transação: se algo falhar, nada muda.
 #
 # Sem destino, os cards abertos ficam no funil arquivado e voltam ao quadro quando ele for restaurado
-# (Api::V1::Accounts::Crm::PipelinesController#restore). Os retornos marcados deles param
-# (Crm::Pipelines::RetornosDosGuardados). Fechados e arquivados ficam sempre.
+# (Api::V1::Accounts::Crm::PipelinesController#restore). Com `stop_follow_ups` ("Guardar junto" da janela nova, decisão
+# 2), os retornos marcados deles param (Crm::Pipelines::RetornosDosGuardados); sem ele, arquiva como antes, sem mexer
+# neles (a janela antiga, com a flag crm_arquivados desligada, não avisa que parariam). Fechados e arquivados ficam sempre.
 #
 # Caixas (decisão 7): com `inboxes_target`, as ligações caixa↔funil (Crm::PipelineInbox) vão para o funil de destino.
 # Se o destino já tem a mesma caixa, fica a ligação dele, com `auto_create_card` ligado se qualquer uma das duas criava.
@@ -51,14 +52,19 @@ class Crm::Pipelines::Archiver
     end
   end
 
-  # target_stage, inboxes_target e new_default já vêm resolvidos entre os que a pessoa enxerga (o controller confere).
-  # Precisam ser de outro funil ativo da mesma conta, e são conferidos de novo sob a trava.
-  def initialize(pipeline:, actor:, target_stage: nil, inboxes_target: nil, new_default: nil)
+  ESCOLHAS = %i[target_stage inboxes_target new_default stop_follow_ups].freeze
+
+  # escolhas: target_stage, inboxes_target e new_default já vêm resolvidos entre os que a pessoa enxerga (o controller
+  # confere); precisam ser de outro funil ativo da mesma conta, e são conferidos de novo sob a trava. stop_follow_ups:
+  # true no "Guardar junto".
+  def initialize(pipeline:, actor:, **escolhas)
+    escolhas.assert_valid_keys(*ESCOLHAS)
     @pipeline = pipeline
     @actor = actor
-    @target_stage = target_stage
-    @inboxes_target = inboxes_target
-    @new_default = new_default
+    @target_stage = escolhas[:target_stage]
+    @inboxes_target = escolhas[:inboxes_target]
+    @new_default = escolhas[:new_default]
+    @stop_follow_ups = escolhas[:stop_follow_ups] == true
   end
 
   def perform
@@ -82,9 +88,16 @@ class Crm::Pipelines::Archiver
     inboxes_target = @inboxes_target && lock_active_other!(@inboxes_target.id, INVALID_INBOXES_TARGET)
     moved = target ? move_open_cards!(target) : []
     moved_inboxes = inboxes_target ? move_inboxes!(inboxes_target) : []
-    stopped = target ? 0 : Crm::Pipelines::RetornosDosGuardados.new(@pipeline).parar!
+    stopped = parar_retornos_dos_guardados!(target)
     @pipeline.archived! unless @pipeline.archived?
     Result.new(moved: moved, stopped_follow_ups: stopped, moved_inboxes: moved_inboxes, inboxes_target_pipeline_id: inboxes_target&.id)
+  end
+
+  # "Guardar junto" (sem destino e com stop_follow_ups): os retornos dos cards que ficam param. Devolve quantos.
+  def parar_retornos_dos_guardados!(target)
+    return 0 if target || !@stop_follow_ups
+
+    Crm::Pipelines::RetornosDosGuardados.new(@pipeline).parar!
   end
 
   def promote_new_default!

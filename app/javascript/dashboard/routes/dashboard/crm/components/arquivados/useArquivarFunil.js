@@ -20,16 +20,15 @@ export const useArquivarFunil = ({ carregarEtapas }) => {
   const funilDasCaixas = ref(null);
   const caixasMexidas = ref(false);
   const etapasPorFunil = ref({});
+  // As etapas do funil escolhido não vieram: a janela diz por quê, em vez de travar o botão calada.
+  const erroEtapas = ref(null);
 
   const abertos = computed(() => Number(previa.value?.open_cards_count || 0));
   const caixasQueCriam = computed(() =>
     (previa.value?.inboxes || []).filter(caixa => caixa.auto_create_card)
   );
-  const retornos = computed(
-    () =>
-      Number(previa.value?.follow_ups_count || 0) +
-      Number(previa.value?.follow_up_series_count || 0)
-  );
+  // Só os lembretes: a vez seguinte de cada série que repete já é um lembrete (Crm::Pipelines::RetornosDosGuardados).
+  const retornos = computed(() => Number(previa.value?.follow_ups_count || 0));
   const reunioes = computed(() =>
     Number(previa.value?.upcoming_meetings_count || 0)
   );
@@ -47,7 +46,14 @@ export const useArquivarFunil = ({ carregarEtapas }) => {
   const escolherDestino = async funilId => {
     funilDestino.value = funilId;
     etapaDestino.value = null;
-    etapasDestino.value = await etapas(funilId);
+    erroEtapas.value = null;
+    try {
+      etapasDestino.value = await etapas(funilId);
+    } catch (error) {
+      etapasDestino.value = [];
+      erroEtapas.value = error;
+      return;
+    }
     if (funilDestino.value === funilId)
       etapaDestino.value = etapasDestino.value[0]?.id ?? null;
     if (!caixasMexidas.value) funilDasCaixas.value = funilId;
@@ -55,7 +61,12 @@ export const useArquivarFunil = ({ carregarEtapas }) => {
   const escolherFunilDasCaixas = async funilId => {
     funilDasCaixas.value = funilId;
     caixasMexidas.value = true;
-    await etapas(funilId);
+    erroEtapas.value = null;
+    try {
+      await etapas(funilId);
+    } catch (error) {
+      erroEtapas.value = error;
+    }
   };
 
   const abrir = async ({ alvo, ativos }) => {
@@ -114,6 +125,9 @@ export const useArquivarFunil = ({ carregarEtapas }) => {
     const params = {};
     if (abertos.value && destino.value === 'mover')
       params.move_to_stage_id = etapaDestino.value;
+    // "Guardar junto": os retornos dos cards guardados param (decisão 2). Sem isto, o servidor arquiva como antes.
+    if (abertos.value && destino.value === 'guardar')
+      params.stop_follow_ups = true;
     if (caixasQueCriam.value.length && caixas.value === 'passar')
       params.inboxes_to_pipeline_id = funilDasCaixas.value;
     if (novoPrincipal.value)
@@ -136,6 +150,7 @@ export const useArquivarFunil = ({ carregarEtapas }) => {
     previa,
     carregando,
     erroPrevia,
+    erroEtapas,
     passo,
     novoPrincipal,
     destino,
