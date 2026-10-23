@@ -321,6 +321,15 @@ RSpec.describe 'CRM: arquivar e restaurar funil', type: :request do
       expect(response.body).to include(%("id":#{open_card.id}))
     end
 
+    it 'recusa arquivar de novo um funil já arquivado sem levar os cards (segundo clique)' do
+      pipeline.archived!
+
+      delete "#{base}/#{pipeline.id}", headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('crm.pipeline_archive_already_archived')
+    end
+
     it 'recusa restaurar funil ativo' do
       post "#{base}/#{pipeline.id}/restore", headers: auth_headers(admin), as: :json
 

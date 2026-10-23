@@ -6477,6 +6477,7 @@
       "FUNIL_ARQUIVADO": "o funil deste card está arquivado; restaure o funil antes",
       "CONFLITO": "o cliente já tem outro card aberto neste funil",
       "FUNIL_NAO_ARQUIVADO": "este funil já está ativo",
+      "FUNIL_JA_ARQUIVADO": "este funil já está arquivado",
       "DESTINO_INVALIDO": "o funil escolhido para os cards não está mais disponível",
       "DESTINO_CAIXAS_INVALIDO": "o funil escolhido para as caixas não está mais disponível",
       "PRINCIPAL_INVALIDO": "o funil escolhido para ser o principal não está mais disponível",

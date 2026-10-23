@@ -94,4 +94,36 @@ RSpec.describe Crm::Pipelines::Archiver, :crm_travas, :relationships_committed_f
     expect(resultados_de(resultados, 2)).to eq([true, Crm::Cards::Restorer::PIPELINE_ARCHIVED])
     expect(card.reload).to be_archived
   end
+
+  # Re-revisão do #2097: o lote de restaurar segurava FOR SHARE no funil de cada card até o fim e esperava o funil que o
+  # arquivamento travou; o arquivamento, movendo, esperava o funil de destino que o lote segurava. Um dos dois saía com
+  # ActiveRecord::Deadlocked (e o DELETE respondia 500). A trava compartilhada de arquivar põe o lote atrás.
+  it 'restaurar em lote enquanto o funil é arquivado movendo para o funil de outro card do lote: sem Deadlocked' do
+    proposta = account.crm_pipeline_stages.create!(pipeline: destino.first, name: 'Proposta', position: 1)
+    no_destino = account.crm_cards.create!(pipeline: destino.first, stage: destino.last, title: 'No destino')
+    no_funil = account.crm_cards.create!(pipeline: funil.first, stage: funil.last, title: 'No funil')
+    [no_destino, no_funil].each { |arquivado| Crm::Cards::Archiver.new(card: arquivado, actor: admin).perform }
+    em_outra_conexao(resultados) do
+      ActiveRecord::Base.transaction do
+        Crm::PipelineStage.where(id: proposta.id).lock.load
+        pronto << true
+        soltar.pop
+      end
+      :etapa
+    end
+    pronto.pop
+    arquivar = described_class.new(pipeline: Crm::Pipeline.find(funil.first.id), actor: admin, target_stage: proposta,
+                                   new_default: novo_principal)
+    esperar_na_trava(em_outra_conexao(resultados) { arquivar.perform && :arquivado })
+    lote = Crm::Cards::BulkRestorer.new(account: account, user: admin, account_user: admin.account_users.first,
+                                        ids: [no_destino.id, no_funil.id])
+    esperar_na_trava(em_outra_conexao(resultados) { lote.perform })
+    soltar << true
+    crm_travas_threads.each(&:join)
+
+    fim = resultados_de(resultados, 3)
+    pulado = { id: no_funil.id, error: Crm::Cards::Restorer::PIPELINE_ARCHIVED }
+    expect(fim).to include(:etapa, :arquivado, { restored: [no_destino.id], skipped: [pulado] })
+    expect(fim).not_to include('ActiveRecord::Deadlocked')
+  end
 end

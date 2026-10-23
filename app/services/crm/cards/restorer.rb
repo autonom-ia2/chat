@@ -36,15 +36,27 @@ class Crm::Cards::Restorer
     card.archived? && card.account.feature_enabled?(FLAG)
   end
 
+  # Também o lote (Crm::Cards::BulkRestorer), com todos os cards no início, em ordem: dois lotes cruzados (A depois B e
+  # B depois A) não fecham ciclo. Pegar de novo a mesma chave na mesma transação não espera.
+  def self.travar_contatos_no_funil!(cards)
+    chaves = cards.select { |card| card.contact_id.present? }
+                  .map { |card| "crm_restore:#{card.account_id}:#{card.contact_id}:#{card.pipeline_id}" }.uniq.sort
+    chaves.each do |chave|
+      Crm::Card.connection.execute(Crm::Card.sanitize_sql_array(['SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', chave]))
+    end
+  end
+
   def initialize(card:, actor:, force: false)
     @card = card
     @actor = actor
     @force = force
   end
 
+  # A trava compartilhada de arquivar da conta vem antes de qualquer trava de linha (ver Crm::Pipelines::TravaDeArquivar).
   def perform
     result = nil
     ActiveRecord::Base.transaction(requires_new: true) do
+      Crm::Pipelines::TravaDeArquivar.compartilhar!(@card.account_id)
       travar_funil!
       @card.lock!
       result = refused(precondition_refusal) || restore!
@@ -93,12 +105,7 @@ class Crm::Cards::Restorer
   # Dois arquivados do mesmo cliente no mesmo funil restaurados ao mesmo tempo: cada um trava só o próprio card, e
   # nenhum veria o outro aberto. Esta trava (até o fim da transação) põe um depois do outro; o segundo vê o primeiro.
   def travar_contato_no_funil!
-    return if @card.contact_id.blank?
-
-    chave = "crm_restore:#{@card.account_id}:#{@card.contact_id}:#{@card.pipeline_id}"
-    Crm::Card.connection.select_value(
-      Crm::Card.sanitize_sql_array(['SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', chave])
-    )
+    self.class.travar_contatos_no_funil!([@card])
   end
 
   # O card aberto mais antigo do mesmo contato no mesmo funil. Card sem contato não tem como conflitar.

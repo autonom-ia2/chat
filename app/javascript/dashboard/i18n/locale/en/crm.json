@@ -6476,6 +6476,7 @@
       "FUNIL_ARQUIVADO": "this card's pipeline is archived; restore the pipeline first",
       "CONFLITO": "the customer already has another open card in this pipeline",
       "FUNIL_NAO_ARQUIVADO": "this pipeline is already active",
+      "FUNIL_JA_ARQUIVADO": "this pipeline is already archived",
       "DESTINO_INVALIDO": "the pipeline chosen for the cards is no longer available",
       "DESTINO_CAIXAS_INVALIDO": "the pipeline chosen for the inboxes is no longer available",
       "PRINCIPAL_INVALIDO": "the pipeline chosen as main is no longer available",

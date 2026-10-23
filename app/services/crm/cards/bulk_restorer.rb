@@ -25,6 +25,7 @@ class Crm::Cards::BulkRestorer
     restored = []
     skipped = []
     ActiveRecord::Base.transaction do
+      travar_antes!
       @ids.each do |id|
         outcome = restore(id)
         outcome[:restored] ? restored << id : skipped << outcome.except(:restored)
@@ -35,6 +36,13 @@ class Crm::Cards::BulkRestorer
   end
 
   private
+
+  # Antes de qualquer trava de linha: a trava compartilhada de arquivar da conta (um arquivamento em curso termina antes,
+  # e nenhum começa no meio do lote) e as chaves de cliente e funil de todos os cards, em ordem.
+  def travar_antes!
+    Crm::Pipelines::TravaDeArquivar.compartilhar!(@account.id)
+    Crm::Cards::Restorer.travar_contatos_no_funil!(visible_cards_by_id.values)
+  end
 
   def restore(id)
     card = visible_cards_by_id[id]

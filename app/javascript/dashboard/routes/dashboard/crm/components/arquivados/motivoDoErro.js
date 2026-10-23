@@ -9,6 +9,7 @@ const CODIGOS = {
   'crm.card_restore_conflict': 'CONFLITO',
   'crm.card_close_archived': 'FECHAR_ARQUIVADO',
   'crm.pipeline_restore_not_archived': 'FUNIL_NAO_ARQUIVADO',
+  'crm.pipeline_archive_already_archived': 'FUNIL_JA_ARQUIVADO',
   'crm.pipeline_archive_invalid_target': 'DESTINO_INVALIDO',
   'crm.pipeline_archive_invalid_inboxes_target': 'DESTINO_CAIXAS_INVALIDO',
   'crm.pipeline_archive_invalid_new_default': 'PRINCIPAL_INVALIDO',

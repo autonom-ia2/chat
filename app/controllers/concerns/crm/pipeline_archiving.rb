@@ -11,6 +11,7 @@ module Crm::PipelineArchiving
   extend ActiveSupport::Concern
 
   RESTORE_NOT_ARCHIVED = 'crm.pipeline_restore_not_archived'.freeze
+  ARCHIVE_ALREADY_ARCHIVED = 'crm.pipeline_archive_already_archived'.freeze
 
   # Nome próprio: um segundo before_action :fetch_pipeline com outro `only` substituiria o do controller (show, update).
   included do
@@ -25,6 +26,10 @@ module Crm::PipelineArchiving
   # - `inboxes_to_pipeline_id`: as caixas ligadas passam a criar card nesse funil. Sem ele, ficam ligadas a este.
   # - `new_default_pipeline_id`: esse funil vira o principal antes da regra do único principal.
   def destroy
+    # Funil já arquivado: só serve para levar os abertos que ficaram presos nele (move_to_stage_id). Sem isso (segundo
+    # clique, outra aba), não há o que fazer: 422, em vez de repetir caixas, principal ou "Guardar junto".
+    return render_unprocessable(ARCHIVE_ALREADY_ARCHIVED) if @pipeline.archived? && params[:move_to_stage_id].blank?
+
     result = ::Crm::Pipelines::Archiver.new(
       pipeline: @pipeline, actor: Current.user, target_stage: archive_target_stage,
       inboxes_target: other_active_pipeline(params[:inboxes_to_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_INBOXES_TARGET),
