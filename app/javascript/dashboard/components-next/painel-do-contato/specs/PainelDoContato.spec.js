@@ -136,18 +136,15 @@ describe('PainelDoContato — o que aparece', () => {
       },
     };
     const definicoes = [
-      {
-        id: 1,
-        attribute_key: 'melhor_horario',
-        attribute_display_name: 'Melhor horário',
-      },
-      {
-        id: 2,
-        attribute_key: 'waha_whatsapp_jid',
-        attribute_display_name: 'waha_whatsapp_jid',
-      },
-      { id: 3, attribute_key: 'vazio', attribute_display_name: 'Vazio' },
-    ];
+      [1, 'melhor_horario', 'Melhor horário'],
+      [2, 'waha_whatsapp_jid', 'waha_whatsapp_jid'],
+      [3, 'vazio', 'Vazio'],
+    ].map(([id, chave, nome]) => ({
+      id,
+      attribute_key: chave,
+      attribute_display_name: nome,
+      attribute_model: 'contact_attribute',
+    }));
     const { wrapper } = montar({
       props: { contact: contato },
       estado: { definicoes, anexos: [] },

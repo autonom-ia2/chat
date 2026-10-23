@@ -3,6 +3,7 @@ import { useEventListener } from '@vueuse/core';
 import axios from 'dashboard/api/relationships';
 import { useStore } from './store';
 import { useAccount } from './useAccount';
+import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
 
 // A store belongs to one application session. CLEAR_USER also invalidates pending work.
 const sessions = new WeakMap();
@@ -60,11 +61,17 @@ export function useRelationships() {
       isCloudFeatureEnabled('relationships_company_media')
   );
   const key = computed(() => `${userId.value}:${accountId.value}`);
-  const state = computed(() =>
-    attributesEnabled.value
+  // Fork (#2138): as telas recebem as definições sem os campos internos da WAHA;
+  // a sessão guarda a lista inteira, que é a que vai para o store.
+  const state = computed(() => {
+    const atual = attributesEnabled.value
       ? session.entries[key.value]?.state || emptyState()
-      : emptyState()
-  );
+      : emptyState();
+    return {
+      ...atual,
+      definitions: semAtributosInternosDoWhatsapp(atual.definitions),
+    };
+  });
   const url = id => `/api/v1/accounts/${id}/relationships/configuration`;
   let context = 0;
   let disposed = false;

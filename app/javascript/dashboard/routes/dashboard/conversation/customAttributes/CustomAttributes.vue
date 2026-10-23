@@ -15,7 +15,6 @@ import FieldConfigurator from 'dashboard/components-next/Relationships/FieldConf
 import FieldEditor from 'dashboard/components-next/Relationships/FieldEditor.vue';
 import { selectDefinitions } from 'dashboard/components-next/Relationships/presentation';
 import NextButton from 'dashboard/components-next/button/Button.vue';
-import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
 
 const props = defineProps({
   attributeType: {
@@ -73,23 +72,17 @@ const readOnlyContact = computed(
     (props.attributeType === 'conversation_attribute' &&
       !getters.canOperateConversation.value(currentChat.value))
 );
-// Fork: os atributos internos da WAHA (chat id do WhatsApp) não aparecem na lista;
-// só somem da tela, as definições e os valores ficam como estão.
 const attributes = computed(() => {
   if (relationshipSidebar.value) {
-    return semAtributosInternosDoWhatsapp(
-      selectDefinitions(
-        relationshipState.value.definitions.filter(
-          item => item.attribute_model === 'contact_attribute'
-        ),
-        relationshipState.value.configuration,
-        'contact_sidebar'
-      )
+    return selectDefinitions(
+      relationshipState.value.definitions.filter(
+        item => item.attribute_model === 'contact_attribute'
+      ),
+      relationshipState.value.configuration,
+      'contact_sidebar'
     );
   }
-  return semAtributosInternosDoWhatsapp(
-    getters['attributes/getAttributesByModel'].value(props.attributeType)
-  );
+  return getters['attributes/getAttributesByModel'].value(props.attributeType);
 });
 
 const contactIdentifier = computed(

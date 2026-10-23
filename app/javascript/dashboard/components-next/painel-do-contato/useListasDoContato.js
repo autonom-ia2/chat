@@ -11,7 +11,6 @@ import ContactAPI from 'dashboard/api/contacts';
 import ConversationInboxApi from 'dashboard/api/inbox/conversation';
 import types from 'dashboard/store/mutation-types';
 import { NON_FILE_TYPES } from 'dashboard/components-next/message/constants';
-import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
 import { ESTADO, useParteDoPainel } from './useParteDoPainel';
 
 const temValor = valor =>
@@ -72,9 +71,10 @@ export function useListasDoContato({ contact, conversationId }) {
 
   const informacoes = computed(() => {
     const valores = unref(contact)?.custom_attributes || {};
-    return semAtributosInternosDoWhatsapp(
-      definicoes.value('contact_attribute') || []
-    ).filter(d => temValor(valores[d.attribute_key]));
+    // O getter já deixa de fora os campos internos da WAHA (#2138).
+    return (definicoes.value('contact_attribute') || []).filter(d =>
+      temValor(valores[d.attribute_key])
+    );
   });
 
   // Do store: o ⋯ do topo inclui ou tira a pessoa e a linha acompanha.

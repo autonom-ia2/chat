@@ -1,6 +1,7 @@
 // #2138 — apoio dos specs do painel: um store Vuex só com o que o painel lê e o
 // catálogo pt_BR do painel (as frases são conferidas como a pessoa lê).
 import { createStore } from 'vuex';
+import { getters as gettersDosCampos } from 'dashboard/store/modules/attributes';
 import { createI18n } from 'vue-i18n';
 import painelPtBR from 'dashboard/i18n/locale/pt_BR/painelDoContato.json';
 
@@ -96,7 +97,9 @@ export const criarStore = (estado = {}, maisGetters = {}) => {
       'inboxAssignableAgents/getAssignableAgents': () => () => r.agentes,
       'contacts/getUIFlags': () => r.uiContatos,
       getSelectedChatAttachments: () => r.anexos,
-      'attributes/getAttributesByModel': () => () => r.definicoes,
+      // O getter de verdade: é ele que esconde os campos internos da WAHA.
+      'attributes/getAttributesByModel': () =>
+        gettersDosCampos.getAttributesByModel({ records: r.definicoes }),
       'globalConfig/get': () => ({ crmKanbanEnabled: true }),
       ...maisGetters,
     },

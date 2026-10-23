@@ -2,22 +2,33 @@ import { mount } from '@vue/test-utils';
 import ContactCustomAttributes from '../ContactCustomAttributes.vue';
 
 // #2138 — na página do contato, os campos internos da WAHA não aparecem, nem nos
-// usados (com valor) nem nos sem valor; os campos de verdade continuam.
+// usados (com valor) nem nos sem valor; os campos de verdade continuam. A lista
+// passa pelo getter de verdade (attributes/getContactAttributes), que os esconde.
 const state = vi.hoisted(() => ({ contactAttributes: [] }));
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
-vi.mock('dashboard/composables/store', () => ({
-  useMapGetter: () => ({ value: state.contactAttributes }),
-}));
+vi.mock('dashboard/composables/store', async () => {
+  const { getters } = await import('dashboard/store/modules/attributes');
+  return {
+    useMapGetter: () => ({
+      get value() {
+        return getters.getContactAttributes({
+          records: state.contactAttributes,
+        });
+      },
+    }),
+  };
+});
 vi.mock('dashboard/composables/useUISettings', () => ({
   useUISettings: () => ({ uiSettings: { value: {} } }),
 }));
 
-const definicao = (id, attributeKey) => ({
+const definicao = (id, chave) => ({
   id,
-  attributeKey,
-  attributeDisplayName: attributeKey,
-  attributeDisplayType: 'text',
+  attribute_key: chave,
+  attribute_display_name: chave,
+  attribute_display_type: 'text',
+  attribute_model: 'contact_attribute',
 });
 
 const montar = customAttributes =>

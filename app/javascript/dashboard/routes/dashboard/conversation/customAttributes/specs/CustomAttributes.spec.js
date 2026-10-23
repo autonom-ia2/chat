@@ -1,10 +1,12 @@
 import { ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { createStore } from 'vuex';
+import { getters as gettersDosCampos } from 'dashboard/store/modules/attributes';
 import CustomAttributes from '../CustomAttributes.vue';
 
 // #2138 — os atributos internos da WAHA (chat id do WhatsApp) não aparecem na
-// lista de campos do contato. Só a tela os esconde: definições e valores ficam.
+// lista de campos do contato. Quem os esconde é o getter do store (aqui o de
+// verdade); o lado do Relacionamentos está no spec do useRelationships.
 const relacionamentos = vi.hoisted(() => ({ ligado: false, definicoes: [] }));
 vi.mock('dashboard/composables/useRelationships', () => ({
   useRelationships: () => ({
@@ -52,7 +54,8 @@ const montar = attributeFrom => {
         id: 9,
         custom_attributes: VALORES,
       }),
-      'attributes/getAttributesByModel': () => () => DEFINICOES,
+      'attributes/getAttributesByModel': () =>
+        gettersDosCampos.getAttributesByModel({ records: DEFINICOES }),
       canOperateConversation: () => () => true,
       getCurrentRole: () => 'agent',
       getCurrentCustomRoleId: () => null,
@@ -89,13 +92,6 @@ describe('CustomAttributes — campos internos do WhatsApp', () => {
   it('não mostra as três chaves waha_whatsapp_*, e mostra o resto na mesma ordem', () => {
     relacionamentos.ligado = false;
     const wrapper = montar('contact_panel');
-    expect(campos(wrapper)).toEqual(['melhor_horario', 'cpf']);
-  });
-
-  it('também com os campos do Relacionamentos ligados (painel da conversa)', () => {
-    relacionamentos.ligado = true;
-    relacionamentos.definicoes = DEFINICOES;
-    const wrapper = montar('conversation_contact_panel');
     expect(campos(wrapper)).toEqual(['melhor_horario', 'cpf']);
   });
 });

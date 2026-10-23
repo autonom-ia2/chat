@@ -21,7 +21,6 @@ import {
 } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
-import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
 
 const { t } = useI18n();
 const {
@@ -121,12 +120,8 @@ const attributeModel = computed(
   () => attributeModels[selectedTabIndex.value] || 'conversation_attribute'
 );
 
-// Fork (#2138): os campos internos da WAHA não aparecem aqui. Apagar um deles por
-// engano faz a WAHA deixar de achar o contato; a definição continua existindo.
 const attributes = computed(() =>
-  semAtributosInternosDoWhatsapp(
-    getters['attributes/getAttributesByModel'].value(attributeModel.value)
-  )
+  getters['attributes/getAttributesByModel'].value(attributeModel.value)
 );
 
 const onClickTabChange = tab => {

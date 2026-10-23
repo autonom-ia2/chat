@@ -1,24 +1,35 @@
 import { useContactFilterContext } from '../contactProvider';
 
 // #2138 — os campos internos da WAHA (waha_whatsapp_chat_id/jid/lid) não entram
-// nos filtros de contato; os campos de verdade continuam.
+// nos filtros de contato; os campos de verdade continuam. A lista passa pelo
+// getter de verdade (attributes/getContactAttributes), que os esconde.
 const state = vi.hoisted(() => ({ contactAttributes: [] }));
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
-vi.mock('dashboard/composables/store.js', () => ({
-  useMapGetter: nome =>
-    nome === 'attributes/getContactAttributes'
-      ? { value: state.contactAttributes }
-      : { value: [] },
-}));
+vi.mock('dashboard/composables/store.js', async () => {
+  const { getters } = await import('dashboard/store/modules/attributes');
+  return {
+    useMapGetter: nome =>
+      nome === 'attributes/getContactAttributes'
+        ? {
+            get value() {
+              return getters.getContactAttributes({
+                records: state.contactAttributes,
+              });
+            },
+          }
+        : { value: [] },
+  };
+});
 vi.mock('dashboard/composables/useNomeDaEtiqueta', () => ({
   useNomeDaEtiqueta: () => ({ nomeDe: nome => nome }),
 }));
 
-const definicao = attributeKey => ({
-  attributeKey,
-  attributeDisplayName: attributeKey,
-  attributeDisplayType: 'text',
+const definicao = chave => ({
+  attribute_key: chave,
+  attribute_display_name: chave,
+  attribute_display_type: 'text',
+  attribute_model: 'contact_attribute',
 });
 
 describe('useContactFilterContext — campos internos da WAHA', () => {
