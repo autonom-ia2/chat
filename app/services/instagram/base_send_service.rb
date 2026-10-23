@@ -6,6 +6,7 @@ class Instagram::BaseSendService < Base::SendOnChannelService
   delegate :additional_attributes, to: :contact
 
   def perform_reply
+    @quote_pending = quoted_message_mid.present?
     send_attachments if message.attachments.present?
     send_content if message.content.present?
   rescue StandardError => e
@@ -14,12 +15,27 @@ class Instagram::BaseSendService < Base::SendOnChannelService
 
   def send_attachments
     message.attachments.each do |attachment|
-      send_message(attachment_message_params(attachment))
+      send_message(with_quote(attachment_message_params(attachment)))
     end
   end
 
   def send_content
-    send_message(message_params)
+    send_message(with_quote(message_params))
+  end
+
+  # Responder citando (#2113): a Meta aceita "reply_to": { "mid": ... } no envio. Uma mensagem com anexos e texto
+  # sai em várias partes; a citação vai só na primeira. Sem o mid da citada (ex.: mensagem que nunca chegou à Meta),
+  # o campo não é enviado e a resposta sai como hoje.
+  # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/messaging-api
+  def with_quote(params)
+    return params unless @quote_pending
+
+    @quote_pending = false
+    params.merge(reply_to: { mid: quoted_message_mid })
+  end
+
+  def quoted_message_mid
+    message.content_attributes[:in_reply_to_external_id].presence
   end
 
   def handle_error(error)
