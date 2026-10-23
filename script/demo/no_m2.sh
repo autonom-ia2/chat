@@ -126,7 +126,8 @@ clonar_base() {
   mkdir "$destino"
   /bin/cp -c -R "$base/src" "$destino/src"
   # Logs, pids e caches da outra demo não vêm junto.
-  /bin/rm -rf "$destino/src/log" "$destino/src/tmp"
+  /bin/rm -rf "$destino/src/log" "$destino/src/tmp" "$destino/src/storage" "$destino/src/public/vite-dev" \
+    "$destino/src/public/vite-test"
   mkdir -p "$destino/src/log" "$destino/src/tmp/pids"
 }
 
@@ -144,16 +145,8 @@ iniciar() {
   /usr/bin/openssl rand -hex 64 > "$L/chaves/secret"
   for k in enc_p enc_d enc_s; do /usr/bin/openssl rand -hex 16 > "$L/chaves/$k"; done
   chmod 600 "$L/chaves/"*
-  {
-    echo "SLUG=$slug"
-    echo "SNAP=$snap"
-    echo "BASE_SHA=$base"
-    echo "ORIGEM=$origem"
-    echo "DB=$DB"
-    echo "RAILS_PORT=$rails"
-    echo "VITE_PORT=$vite"
-    echo "REDIS_PORT=$redis"
-  } > "$L/demo.env.tmp"
+  printf '%s=%q\n' SLUG "$slug" SNAP "$snap" BASE_SHA "$base" ORIGEM "$origem" DB "$DB" \
+    RAILS_PORT "$rails" VITE_PORT "$vite" REDIS_PORT "$redis" > "$L/demo.env.tmp"
   mv "$L/demo.env.tmp" "$L/demo.env"
   echo "demo $slug registrada: banco $DB, Rails $rails, Vite $vite, Redis $redis"
 }
@@ -252,6 +245,27 @@ descer() {
   echo "servidores da demo $slug desligados"
 }
 
+reiniciar_vite() {
+  carregar_estado
+  parar_porta "$VITE_PORT"
+  subir
+}
+
+# Descarta um snapshot que o up criou mas não chegou a registrar (sem demo.env).
+descartar_snapshot() {
+  local snapdir=$1
+  [ ! -f "$L/demo.env" ] || falha "a demo está registrada; use bin/demo down $slug --apagar"
+  case "$snapdir" in
+    "$PREFIXO_SNAPSHOT"*/* | *..*) falha "caminho suspeito: $snapdir" ;;
+    "$PREFIXO_SNAPSHOT"?*) ;;
+    *) falha "fora de $PREFIXO_SNAPSHOT: $snapdir" ;;
+  esac
+  [ -d "$snapdir" ] || return 0
+  [ -z "$(/usr/sbin/lsof +D "$snapdir" 2>/dev/null || true)" ] || falha "snapshot em uso: $snapdir"
+  /bin/rm -rf "$snapdir"
+  echo "snapshot não registrado descartado no M2: $snapdir"
+}
+
 reiniciar_rails() {
   carregar_estado
   parar_porta "$RAILS_PORT"
@@ -307,7 +321,19 @@ prints() {
     "$N/bin/node" "$KIT/prints.cjs" "$jornadas" "$saida"
 }
 
-psql_cmd() { carregar_estado; psql_demo -d "$DB" "$@"; }
+# Valores do demo.env, um por linha e sem escape (o bin/demo lê com awk).
+# shellcheck disable=SC2153
+mostrar_estado() {
+  carregar_estado
+  printf '%s=%s\n' SLUG "$SLUG" SNAP "$SNAP" BASE_SHA "$BASE_SHA" ORIGEM "$ORIGEM" DB "$DB" \
+    RAILS_PORT "$RAILS_PORT" VITE_PORT "$VITE_PORT" REDIS_PORT "$REDIS_PORT"
+}
+
+# Só um SQL, sempre no banco da demo: opções do psql (outro -d, -h, -p) não passam.
+psql_cmd() {
+  carregar_estado
+  psql_demo -d "$DB" -c "${1:?uso: bin/demo psql <slug> \"SQL\"}"
+}
 
 apagar() {
   carregar_estado
@@ -343,6 +369,8 @@ case "$cmd" in
   subir) subir ;;
   descer) descer ;;
   reiniciar-rails) reiniciar_rails ;;
+  reiniciar-vite) reiniciar_vite ;;
+  descartar-snapshot) descartar_snapshot "$@" ;;
   migrar) migrar ;;
   pnpm) pnpm_de_novo ;;
   flag) flag "$@" ;;
@@ -350,7 +378,7 @@ case "$cmd" in
   prints) prints ;;
   psql) psql_cmd "$@" ;;
   apagar) apagar ;;
-  estado) carregar_estado; /bin/cat "$L/demo.env" ;;
+  estado) mostrar_estado ;;
   existe) [ -f "$L/demo.env" ] && echo sim || echo nao ;;
   _rails) _rails ;;
   _vite) _vite ;;

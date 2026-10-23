@@ -15,6 +15,7 @@ const PERMITIDOS = 'abcdefghijklmnopqrstuvwxyz0123456789-';
 // O selo do rack-mini-profiler já sai desligado (DISABLE_MINI_PROFILER=1); o CSS cobre demo antiga.
 const SEM_SELO = '.profiler-results{display:none!important}';
 
+const USUARIO_PERMITIDOS = `${PERMITIDOS}._+@`;
 const nomeValido = nome =>
   typeof nome === 'string' && nome.length > 0 && [...nome].every(c => PERMITIDOS.includes(c));
 
@@ -24,6 +25,8 @@ const usuario = config.usuario || 'john@acme.inc';
 const larguras = config.larguras || [1440, 390];
 const temas = config.temas || ['light'];
 const ALTURA = { 1440: 900, 390: 844 };
+
+if (![...usuario].every(c => USUARIO_PERMITIDOS.includes(c))) throw new Error(`usuario inválido: ${usuario}`);
 
 const comConta = url => url.split('{conta}').join(String(conta));
 
@@ -64,7 +67,7 @@ async function estadoDeLogin(browser) {
     await p.waitForURL('**/app/accounts/**', { timeout: 120000 });
   } catch (e) {
     if (statusLogin === 409) {
-      throw new Error('login deu 409 (limite de sessões). Rode: bin/demo psql <slug> -c "DELETE FROM user_sessions"');
+      throw new Error('login deu 409 (limite de sessões). Rode: bin/demo psql <slug> "DELETE FROM user_sessions"');
     }
     throw new Error(`login não entrou (HTTP ${statusLogin}): ${e.message.slice(0, 160)}`);
   }

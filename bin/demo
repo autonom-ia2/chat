@@ -8,7 +8,7 @@
 #   bin/demo seed <slug> <arquivo.rb>        roda um seed próprio (rails runner) no banco da demo
 #   bin/demo tunnel <slug>                   comando de túnel e URL para abrir no M4
 #   bin/demo prints <slug> <jornadas.json>   prints por jornada (1440 e 390) em docs/<pasta>/
-#   bin/demo psql <slug> [args do psql]      psql no banco da demo (só nele)
+#   bin/demo psql <slug> "SQL"               roda um SQL no banco da demo (só nele)
 #   bin/demo status <slug>                   estado gravado da demo
 #   bin/demo down <slug> [--apagar]          desliga; com --apagar, apaga banco, snapshot e pasta da demo
 #
@@ -86,7 +86,11 @@ criar_snapshot() {
     *) falha "snapshot em caminho inesperado: $SNAP" ;;
   esac
   echo "snapshot no M4: $snapdir"
-  no_m2 clonar-base "$slug" "$snapdir" || { apagar_snapshot_local "$SNAP"; falha "não consegui preparar a cópia no $HOST"; }
+  if ! no_m2 clonar-base "$slug" "$snapdir"; then
+    no_m2 descartar-snapshot "$slug" "$snapdir" || true
+    apagar_snapshot_local "$SNAP"
+    falha "não consegui preparar a cópia no $HOST"
+  fi
   echo "rsync da diferença para o $HOST ..."
   /usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" --stats "$snapdir/" "$HOST:$snapdir/" |
     /usr/bin/grep -i 'files transferred\|total transferred\|sent ' || true
@@ -100,13 +104,20 @@ cmd_up() {
   worktree
   portas "$slug"
   if existe_no_m2; then
+    local origem
+    origem=$(valor_do_estado ORIGEM)
+    [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT). Use outro slug."
     echo "demo $slug já existe: religando (sem snapshot nem banco novos)"
     enviar_kit
   else
     enviar_kit
     no_m2 checar "$slug" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"
     criar_snapshot
-    no_m2 iniciar "$slug" "$SNAP" "$(/usr/bin/git -C "$WT" rev-parse HEAD)" "$WT" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"
+    if ! no_m2 iniciar "$slug" "$SNAP" "$(/usr/bin/git -C "$WT" rev-parse HEAD)" "$WT" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"; then
+      no_m2 descartar-snapshot "$slug" "${SNAP%/src}" || true
+      apagar_snapshot_local "$SNAP"
+      falha "não registrei a demo; snapshot descartado"
+    fi
     gravar_sincronizados "$(/usr/bin/git -C "$WT" rev-parse HEAD)"
   fi
   no_m2 preparar "$slug"
@@ -116,7 +127,8 @@ cmd_up() {
 
 sensivel() {
   case "$1" in
-    .env | .env.* | */.env | */.env.* | *.pem | *.key | *credentials* | *secrets* | *.sqlite* | \
+    .env | .env.* | */.env | */.env.* | *.pem | *.key | config/credentials/* | config/credentials.yml.enc | \
+      .secrets/* | */.secrets/* | *.sqlite* | \
       node_modules/* | */node_modules/* | tmp/* | log/* | public/vite*/* | .claude/* | .codex/*) return 0 ;;
   esac
   return 1
@@ -124,7 +136,8 @@ sensivel() {
 
 # Arquivos que diferem do commit base (alterados, novos, apagados) mais os não rastreados.
 candidatos() {
-  { /usr/bin/git -C "$WT" diff --name-only "$1"; /usr/bin/git -C "$WT" ls-files --others --exclude-standard; } | LC_ALL=C /usr/bin/sort -u
+  { /usr/bin/git -C "$WT" -c core.quotePath=false diff --name-only "$1"
+    /usr/bin/git -C "$WT" -c core.quotePath=false ls-files --others --exclude-standard; } | LC_ALL=C /usr/bin/sort -u
 }
 
 # A lista do último sync fica no M2: arquivo não rastreado que sumiu da worktree também some da demo.
@@ -149,13 +162,14 @@ cmd_sync() {
   done < <({ candidatos "$base"; ssh -o BatchMode=yes "$HOST" "/bin/cat '$RAIZ_DEMOS/$slug/sincronizados.txt' 2>/dev/null || true"; } | LC_ALL=C /usr/bin/sort -u)
   echo "desde ${base:0:10}: copiar ${#copiar[@]}, apagar ${#apagar[@]}"
   for f in "${copiar[@]+"${copiar[@]}"}"; do echo "  + $f"; done
-  local migrar=false reiniciar=false pnpm=false
+  local migrar=false reiniciar=false pnpm=false vite=false
   for f in "${copiar[@]+"${copiar[@]}"}" "${apagar[@]+"${apagar[@]}"}"; do
     case "$f" in Gemfile | Gemfile.lock) falha "Gemfile mudou: gem nova precisa existir no Ruby do MacCluster. Faça uma demo nova." ;; esac
     case "$f" in db/migrate/* | db/schema.rb) migrar=true ;; esac
     case "$f" in package.json | pnpm-lock.yaml) pnpm=true ;; esac
     # Em padrão de case, * também casa "/": config/*.yml pega config/locales/x.yml.
     case "$f" in *.rb | config/*.yml | config/*.yml.erb | lib/*) reiniciar=true ;; esac
+    case "$f" in config/vite.json | vite.config.* | tailwind.config.* | postcss.config.*) vite=true ;; esac
   done
   if [ ${#copiar[@]} -gt 0 ]; then
     /usr/bin/tar -C "$WT" -cf - "${copiar[@]}" | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$snap' -xf -"
@@ -167,10 +181,14 @@ cmd_sync() {
   gravar_sincronizados "$base"
   $pnpm && no_m2 pnpm "$slug"
   $migrar && no_m2 migrar "$slug"
+  if $vite; then
+    echo "config do Vite/Tailwind mudou: reiniciando o Vite"
+    no_m2 reiniciar-vite "$slug"
+  fi
   if $migrar || $reiniciar; then
     echo "Ruby/config/migration mudou: reiniciando só o Rails"
     no_m2 reiniciar-rails "$slug"
-  else
+  elif ! $vite; then
     echo "só front: o Vite recarrega sozinho"
   fi
 }
@@ -253,8 +271,8 @@ cmd_down() {
   if [ "${1:-}" = --apagar ]; then
     local snap
     snap=$(valor_do_estado SNAP)
-    no_m2 apagar "$slug"
     apagar_snapshot_local "$snap"
+    no_m2 apagar "$slug"
   else
     no_m2 descer "$slug"
     echo "banco, snapshot e pasta continuam. Para apagar: bin/demo down $slug --apagar"
@@ -274,7 +292,7 @@ case "$cmd" in
   seed) cmd_seed "$@" ;;
   tunnel) exigir_demo; cmd_tunnel ;;
   prints) cmd_prints "$@" ;;
-  psql) exigir_demo; enviar_kit; no_m2 psql "$slug" "$@" ;;
+  psql) exigir_demo; enviar_kit; no_m2 psql "$slug" "${1:-}" ;;
   status) exigir_demo; no_m2 estado "$slug" ;;
   down) cmd_down "$@" ;;
   *) uso ;;

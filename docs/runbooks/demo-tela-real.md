@@ -23,7 +23,7 @@ bin/demo down 2079-instagram        # desliga os servidores (banco e snapshot fi
 bin/demo down 2079-instagram --apagar   # apaga banco, snapshot (M2 e M4) e a pasta da demo
 ```
 
-Outros: `bin/demo status <slug>` (portas, banco, snapshot) e `bin/demo psql <slug> [args]` (psql só no banco da demo).
+Outros: `bin/demo status <slug>` (portas, banco, snapshot) e `bin/demo psql <slug> "SQL"` (roda um SQL só no banco da demo).
 
 O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o número da Issue e um nome curto.
 
@@ -104,7 +104,7 @@ entrada → todas as conversas):
 
 | Tropeço | Por quê | Solução no kit |
 |---|---|---|
-| **Login repetido dá 409** e o `waitForURL` estoura | O fork limita sessões por usuário; cada login novo de navegador abre o seletor de sessões (409). | O `prints` loga **uma vez** e guarda o `storageState` em `estado-<usuario>.json` na pasta da demo; as rodadas seguintes reaproveitam (o log diz "reaproveitando"). Se ainda assim travar: `bin/demo psql <slug> -c "DELETE FROM user_sessions"` (só no banco da demo) e rode de novo. |
+| **Login repetido dá 409** e o `waitForURL` estoura | O fork limita sessões por usuário; cada login novo de navegador abre o seletor de sessões (409). | O `prints` loga **uma vez** e guarda o `storageState` em `estado-<usuario>.json` na pasta da demo; as rodadas seguintes reaproveitam (o log diz "reaproveitando"). Se ainda assim travar: `bin/demo psql <slug> "DELETE FROM user_sessions"` (só no banco da demo) e rode de novo. |
 | **Áudio sem arquivo dá 500** em `audio_metadata` | O recebimento real sempre anexa o arquivo; seed que cria `Attachment` de áudio só com `external_url` quebra a leitura da conversa. | No seed da demo, anexe o arquivo de verdade (`attachment.file.attach(io: File.open(...), filename:, content_type:)`). Ponha a mídia em `ENV['DEMO_PASTA']` no M2. O `prints` acusa o 5xx. |
 | **Miniatura quebra sem vips** | `representations`/variantes do Active Storage precisam do libvips, que o M2 não tem. | Não use `thumbUrl` como fonte principal da imagem no protótipo; use a URL do arquivo e deixe a miniatura como melhoria. Não instale vips só para a demo. |
 | **Selo do rack-mini-profiler nos prints** | Em development o profiler injeta o selo no canto da tela. | A demo sobe com `DISABLE_MINI_PROFILER=1` (o initializer respeita). O `prints` ainda injeta CSS que esconde `.profiler-results`. |
