@@ -4,6 +4,9 @@ pt_BR:
     export:
       statuses:
         won: 'Plano ativo'
+    # Vocabulário nas mensagens que a IA escreve ao cliente (#2034).
+    ai:
+      vocabulario: 'Fale de plano, beneficiário e reembolso; chame de cliente só quem já contratou e nunca diga segurado.'
   # Ramo da conta para a IA de e-mail (#2037).
   email_campaigns:
     ai:
