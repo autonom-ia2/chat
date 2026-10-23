@@ -117,6 +117,20 @@ RSpec.describe DeleteObjectJob do
     expect(sem_account_id.select { |tabela, id| existe?(tabela, id) }).to eq({})
   end
 
+  # Revisão de banco P1-2: whatsapp_api_campaign_recipients.message_id aponta para a mensagem sem cascata. Com o
+  # destinatário ainda lá, o job que apaga as mensagens da conversa falhava e as mensagens ficavam órfãs. Quando o
+  # destinatário guarda a conversa, a cascata dela o leva antes; o caso é o destinatário sem conversa gravada.
+  it 'apaga as mensagens da conta mesmo com destinatário de campanha apontando para elas' do
+    mensagem = create_incoming_message(conversation: conversation, content: 'Quero o orçamento')
+    campanha = linha!('whatsapp_api_campaigns', account_id: account.id, created_by_id: user.id, title: 'Aviso')
+    linha!('whatsapp_api_campaign_recipients', account_id: account.id, whatsapp_api_campaign_id: campanha, contact_id: contact.id,
+                                               message_id: mensagem.id)
+
+    perform_enqueued_jobs(only: ActiveRecord::DestroyAssociationAsyncJob) { described_class.perform_now(account) }
+
+    expect([Message.exists?(mensagem.id), Account.exists?(account.id)]).to eq([false, false])
+  end
+
   # A conexão sai com a caixa (Inbox has_one, dependent: :destroy), no pré-apagar do job, e o callback desliga a sessão.
   it 'desliga a sessão do WhatsApp Híbrido no WAHA, que ficaria conectada ao celular' do
     linha!('whatsapp_hybrid_connections', account_id: account.id, inbox_id: inbox.id, session_name: 'c2y-sessao-2133',
