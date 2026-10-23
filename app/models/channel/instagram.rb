@@ -24,11 +24,20 @@ class Channel::Instagram < ApplicationRecord
   encrypts :access_token if Chatwoot.encryption_configured?
 
   AUTHORIZATION_ERROR_THRESHOLD = 1
+  SUBSCRIPTION_TIMEOUT = 10
+  # ref https://developers.facebook.com/docs/instagram-platform/webhooks#enable-subscriptions
+  # `message_edit` (#2113): a edição do cliente, confirmada no painel do app da Meta (Webhooks > Instagram).
+  SUBSCRIBED_FIELDS = %w[messages message_reactions messaging_seen message_edit].freeze
 
   validates :access_token, presence: true
   validates :instagram_id, uniqueness: true, presence: true
 
   after_create_commit :subscribe
+  # Reconectar troca o token: a inscrição é refeita junto, para a caixa voltar a receber todos os campos. Método
+  # próprio porque after_create_commit e after_update_commit com o mesmo nome deixam só o último valer. A renovação
+  # do token também troca o token e repete a inscrição: é idempotente, e a renovação não se repete em seguida
+  # (RefreshOauthTokenService só renova token com mais de 24h).
+  after_update_commit :resubscribe, if: :saved_change_to_access_token?
   before_destroy :unsubscribe
 
   def name
@@ -44,21 +53,28 @@ class Channel::Instagram < ApplicationRecord
   end
 
   def subscribe
-    # ref https://developers.facebook.com/docs/instagram-platform/webhooks#enable-subscriptions
-    # #2113: a edição do cliente ainda não está aqui. O candidato documentado é `message_edit` (singular, na página de
-    # exemplos de webhook do Instagram); `message_edits` é o nome do Messenger e não vale aqui. Um nome errado derruba a
-    # inscrição de caixas novas: confirmar no painel do app da Meta (Webhooks > Instagram) antes, e entrar junto com a
-    # reinscrição das caixas, com OK do Rodrigo.
-    HTTParty.post(
-      "#{base_uri}/#{instagram_id}/subscribed_apps",
-      query: {
-        subscribed_fields: %w[messages message_reactions messaging_seen],
-        access_token: access_token
-      }
-    )
+    response = renew_subscription
+    Rails.logger.warn("[Channel::Instagram] channel #{id}: Meta recusou a inscrição (HTTP #{response.code})") unless response.success?
+    response
   rescue StandardError => e
     Rails.logger.debug { "Rescued: #{e.inspect}" }
     true
+  end
+
+  def resubscribe
+    subscribe
+  end
+
+  # A resposta da Meta, sem engolir erro: quem chama (Instagram::RenovarInscricaoJob) decide se deu certo.
+  def renew_subscription
+    HTTParty.post(
+      "#{base_uri}/#{instagram_id}/subscribed_apps",
+      query: {
+        subscribed_fields: SUBSCRIBED_FIELDS,
+        access_token: access_token
+      },
+      timeout: SUBSCRIPTION_TIMEOUT
+    )
   end
 
   def unsubscribe

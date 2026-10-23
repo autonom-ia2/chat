@@ -31,7 +31,7 @@ RSpec.describe Instagram::CallbacksController do
     # Stub the exact request format that's being made
     stub_request(:post, 'https://graph.instagram.com/v22.0/12345/subscribed_apps')
       .with(
-        query: { access_token: 'long_lived_test_token', subscribed_fields: %w[messages message_reactions messaging_seen] },
+        query: { access_token: 'long_lived_test_token', subscribed_fields: Channel::Instagram::SUBSCRIBED_FIELDS },
         headers: {
           'Accept' => '*/*',
           'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',

@@ -207,6 +207,12 @@ instagram_refresh_tokens_job:
   class: 'Instagram::RefreshTokensJob'
   queue: scheduled_jobs
 
+# executed daily, after the token refresh; renews each Instagram inbox subscription to the webhook fields (#2113).
+instagram_renovar_inscricao_job:
+  cron: '40 4 * * *'
+  class: 'Instagram::RenovarInscricaoJob'
+  queue: scheduled_jobs
+
 # executed every 5 minutes; re-polls SES for pending domain verifications.
 # feature flag checked inside the job.
 email_campaign_poll_pending_identities_job:

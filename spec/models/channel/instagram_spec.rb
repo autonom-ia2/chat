@@ -16,6 +16,32 @@ RSpec.describe Channel::Instagram do
     expect(channel.name).to eq('Instagram')
   end
 
+  describe 'inscrição nos campos do webhook (#2113)' do
+    let(:url) { "https://graph.instagram.com/v22.0/#{channel.instagram_id}/subscribed_apps" }
+
+    it 'inscreve as mensagens, as reações, o visto e a edição do cliente' do
+      expect(described_class::SUBSCRIBED_FIELDS).to eq(%w[messages message_reactions messaging_seen message_edit])
+    end
+
+    it 'refaz a inscrição quando a caixa é reconectada com um token novo' do
+      stub = stub_request(:post, url).with(query: { access_token: 'token-novo', subscribed_fields: described_class::SUBSCRIBED_FIELDS })
+
+      channel.update!(access_token: 'token-novo')
+
+      expect(stub).to have_been_requested.once
+    end
+
+    it 'não chama a Meta quando o token não muda' do
+      channel
+      WebMock.reset_executed_requests!
+      stub = stub_request(:post, url).with(query: hash_including({}))
+
+      channel.update!(provider_name: 'outro_nome')
+
+      expect(stub).not_to have_been_requested
+    end
+  end
+
   describe 'concerns' do
     it_behaves_like 'reauthorizable'
 
