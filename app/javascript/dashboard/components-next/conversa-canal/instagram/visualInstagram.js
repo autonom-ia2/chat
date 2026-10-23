@@ -24,7 +24,7 @@ export const BARRA_DE_CITACAO =
 // fundo do app, como no Direct.
 export const PILULA_DE_REACAO = `${ELEVADO} ${TEXTO} border-2 border-white dark:border-[#0C1014]`;
 
-// No lugar da foto ou do vídeo cujo endereço da Meta já expirou.
+// No lugar da foto ou do vídeo que não abre (sem a nossa cópia, o endereço da Meta expira).
 export const INDISPONIVEL = `flex items-center justify-center gap-1.5 px-3 text-center text-[13px] leading-4 ${ELEVADO} ${SECUNDARIO}`;
 
 // Rótulos pequenos: horário entre as mensagens, "Visto", "Mencionou você no story".
@@ -61,6 +61,10 @@ export const CAIXA_DO_INSTAGRAM = {
     '!mx-0 !mb-0 !rounded-none !border-0 !bg-transparent !shadow-none',
     'relative isolate flex flex-wrap items-center gap-x-0 px-7 pb-4',
     '[&>*:first-child]:basis-full [&>*:first-child]:!h-9',
+    // Respondendo a uma mensagem (#2113): a citação numa linha própria no topo da pílula,
+    // no cinza dos elementos do app, com o texto na cor da conversa.
+    '[&>[data-resposta-do-instagram]]:basis-full [&>[data-resposta-do-instagram]]:!rounded-xl [&>[data-resposta-do-instagram]]:!bg-[#F3F5F7] dark:[&>[data-resposta-do-instagram]]:!bg-[#262626]',
+    '[&>[data-resposta-do-instagram]]:!text-[#0C1014] dark:[&>[data-resposta-do-instagram]]:!text-[#F5F5F5]',
     "before:content-[''] before:absolute before:-z-10 before:start-4 before:end-4 before:top-9 before:bottom-4 before:rounded-[22px] before:border before:border-[#DBDFE4] dark:before:border-[#363636] before:pointer-events-none",
     // Ordem do app: emoji, campo, microfone, fotos e vídeos; os demais ícones depois.
     '[&_.left-wrap]:!contents [&_.left-wrap>*]:order-5 [&_[data-emoji-da-resposta]]:!order-1',

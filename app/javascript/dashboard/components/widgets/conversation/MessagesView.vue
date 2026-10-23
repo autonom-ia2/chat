@@ -35,6 +35,7 @@ import {
 
 // constants
 import { BUS_EVENTS } from 'shared/constants/busEvents';
+
 import { REPLY_POLICY } from 'shared/constants/links';
 import wootConstants, {
   META_RESTRICTION_STATUS_URL,
@@ -65,6 +66,9 @@ import {
   topoDaFaixa,
 } from 'dashboard/components-next/conversa-canal/rolagemDaPele';
 import { useAlert } from 'dashboard/composables';
+
+// Até quantos px do fim a lista conta como "no fim" quando a caixa de resposta cresce.
+const NO_FIM_DO_PAINEL = 40;
 
 export default {
   components: {
@@ -602,11 +606,24 @@ export default {
       this.conversationPanel = this.$el.querySelector('.conversation-panel');
       this.setScrollParams();
       this.conversationPanel.addEventListener('scroll', this.handleScroll);
+      // A caixa de resposta cresce (citação, texto de várias linhas) e a lista encolhe:
+      // quem estava no fim continua vendo a última mensagem (#2113).
+      this.noFimDoPainel = true;
+      if (window.ResizeObserver) {
+        this.observadorDoPainel = new ResizeObserver(this.manterNoFim);
+        this.observadorDoPainel.observe(this.conversationPanel);
+      }
       this.$nextTick(() => this.scrollToBottom());
       this.isLoadingPrevious = false;
     },
     removeScrollListener() {
       this.conversationPanel.removeEventListener('scroll', this.handleScroll);
+      this.observadorDoPainel?.disconnect();
+    },
+    manterNoFim() {
+      if (this.emailNovo || !this.noFimDoPainel) return;
+      this.isProgrammaticScroll = true;
+      this.conversationPanel.scrollTop = this.conversationPanel.scrollHeight;
     },
     scrollToBottom() {
       this.isProgrammaticScroll = true;
@@ -695,6 +712,7 @@ export default {
       emitter.emit(BUS_EVENTS.ON_MESSAGE_LIST_SCROLL);
       // #1786: no e-mail novo os antigos ficam embaixo: carrega perto do fim.
       const alvo = e.target;
+      this.noFimDoPainel = pertoDoFim(alvo, NO_FIM_DO_PAINEL);
       this.fetchPreviousMessages(
         this.emailNovo
           ? alvo.scrollHeight - alvo.scrollTop - alvo.clientHeight

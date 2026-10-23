@@ -276,6 +276,39 @@ describe('CustomRoleEditor', () => {
       expect(assignOpen).not.toHaveBeenCalled();
       expect(router.push).toHaveBeenCalledWith({ name: 'custom_roles_list' });
     });
+
+    // #2115: a prévia usa o mesmo filtro, e o editor diz em que áreas o modelo ficou incompleto.
+    it('passes its reach to the profile step and names the areas left out', async () => {
+      const { store } = buildStore([], features, builder);
+      const wrapper = await mountEditor(store);
+      const reach = wrapper.findComponent(ProfilePicker).props('reach');
+
+      expect(reach(['crm_view', 'financial_view', 'report_manage'])).toEqual([
+        'crm_view',
+      ]);
+
+      wrapper.findComponent(ProfilePicker).vm.$emit('choose', 'FINANCE');
+      await flushPromises();
+
+      const notice = wrapper.find('[role="status"]');
+      expect(notice.text()).toContain('CUSTOM_ROLE.EDITOR.LEFT_OUT.TITLE');
+      expect(notice.text()).toContain(
+        'CUSTOM_ROLE.MATRIX.MODULES.REPORTS.NAME'
+      );
+      expect(notice.text()).toContain(
+        'CUSTOM_ROLE.MATRIX.MODULES.FINANCE.NAME'
+      );
+      expect(notice.text()).toContain('CUSTOM_ROLE.MATRIX.MODULES.CRM.NAME');
+    });
+  });
+
+  it('shows no left-out notice to an administrator', async () => {
+    const { store } = buildStore();
+    const wrapper = await mountEditor(store);
+    wrapper.findComponent(ProfilePicker).vm.$emit('choose', 'SALES_MANAGER');
+    await flushPromises();
+
+    expect(wrapper.find('[role="status"]').exists()).toBe(false);
   });
 
   it('goes back to the list when the plan has no custom roles', async () => {
