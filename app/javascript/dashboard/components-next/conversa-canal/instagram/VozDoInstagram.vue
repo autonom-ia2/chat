@@ -84,7 +84,8 @@ const aoCarregar = () => {
 
 // A onda: uma vez, quando o balão aparece na tela. O endereço ganha o carimbo de
 // tempo (como no WhatsApp) para o download não reaproveitar a cópia que o <audio>
-// guardou sem a permissão de leitura; endereço que nem é URL fica na reserva.
+// guardou sem a permissão de leitura; endereço que nem é URL fica na reserva. A onda
+// fica guardada pelo endereço sem o carimbo: voltar à conversa não baixa de novo.
 const enderecoDaOnda = () => {
   if (!props.anexo.dataUrl) return null;
   try {
@@ -97,7 +98,10 @@ const cancelar = new AbortController();
 const pedirOnda = async () => {
   const endereco = enderecoDaOnda();
   if (!endereco) return;
-  const resultado = await carregarOnda(endereco, { signal: cancelar.signal });
+  const resultado = await carregarOnda(endereco, {
+    signal: cancelar.signal,
+    chave: props.anexo.dataUrl,
+  });
   if (!resultado?.barras?.length) return;
   barrasDoArquivo.value = nasBarrasDoDirect(resultado.barras);
   if (!duracao.value && Number.isFinite(resultado.duracao)) {

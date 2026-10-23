@@ -624,7 +624,8 @@ const allContextMenuOptions = computed(() => {
     replyTo:
       !props.private &&
       props.inboxSupportsReplyTo.outgoing &&
-      !isFailedOrProcessing,
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
     report:
       isOnChatwootCloud.value &&
       isCaptainMessage.value &&

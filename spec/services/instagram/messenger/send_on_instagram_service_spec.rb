@@ -144,6 +144,27 @@ describe Instagram::Messenger::SendOnInstagramService do
 
           expect(HTTParty).to have_received(:post).with(anything, hash_including(body: hash_excluding(:reply_to)))
         end
+
+        it 'does not quote a message the contact unsent' do
+          quoted.update!(content: 'deleted', deleted: true)
+          message = create(:message, message_type: 'outgoing', inbox: instagram_messenger_inbox, account: account,
+                                     conversation: conversation, content_attributes: { in_reply_to: quoted.id })
+
+          described_class.new(message: message).perform
+
+          expect(HTTParty).to have_received(:post).with(anything, hash_including(body: hash_excluding(:reply_to))).once
+        end
+
+        it 'resends once without the quote when Meta refuses the reply_to' do
+          allow(HTTParty).to receive(:post).with(anything, hash_including(body: hash_including(:reply_to))).and_return(error_response)
+          message = create(:message, message_type: 'outgoing', inbox: instagram_messenger_inbox, account: account,
+                                     conversation: conversation, content_attributes: { in_reply_to: quoted.id })
+
+          described_class.new(message: message).perform
+
+          expect(HTTParty).to have_received(:post).twice
+          expect(message.reload.status).not_to eq('failed')
+        end
       end
 
       context 'with message_tag HUMAN_AGENT' do

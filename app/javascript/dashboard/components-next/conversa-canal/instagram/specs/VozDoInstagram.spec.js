@@ -54,6 +54,8 @@ describe('Onda da voz do Instagram', () => {
     expect(carregarOnda.mock.calls[0][0]).toContain(
       'rails/active_storage/voz.ogg'
     );
+    // A onda fica guardada pelo endereço sem o carimbo de tempo: volta à conversa sem baixar de novo.
+    expect(carregarOnda.mock.calls[0][1].chave).toBe(ARQUIVO);
   });
 
   it('desenha a onda calculada do arquivo nas 32 barras do Direct', async () => {

@@ -6,6 +6,8 @@ class Instagram::Messenger::SendOnInstagramService < Instagram::BaseSendService
   end
 
   # Deliver a message with the given payload.
+  # A citação (reply_to, #2113) nesta caixa só chega pela API ou por um AgentBot: o painel não mostra "Responder"
+  # na caixa da página do Facebook (o tipo FB fica fora de REPLY_TO_OUTGOING).
   # @see https://developers.facebook.com/docs/messenger-platform/instagram/features/send-message
   def send_message(message_content)
     access_token = channel.page_access_token
