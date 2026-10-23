@@ -51,7 +51,18 @@ export function useCrmPermissions() {
     getUserPermissions(currentUser.value, accountId.value)
   );
 
+  // #2075 — valores de venda em R$: chave protegida, o crm_admin NÃO liga (espelho de Crm::ValorDeVenda.ve?).
+  // Sem ela o servidor já manda o valor vazio; aqui a tela só some com o que não faria sentido (soma, filtro, ordem).
+  const canSeeSalesValues = computed(
+    () =>
+      isUngatedSeat.value ||
+      permissions.value.includes('administrator') ||
+      permissions.value.includes(SALES_VALUE_VIEW_KEY)
+  );
+
   const hasCrmPermission = key => {
+    // sales_value_view não é chave do CRM: segue Crm::ValorDeVenda.ve? (ex.: escopos do token de integração).
+    if (key === SALES_VALUE_VIEW_KEY) return canSeeSalesValues.value;
     if (isAdmin.value) return true;
     if (!customRoleId.value) return !PLAIN_AGENT_DENIED_KEYS.includes(key);
     return (
@@ -88,15 +99,6 @@ export function useCrmPermissions() {
   // #722 — planilha da Lista é dado pessoal em lote: como canAdminCrm, o agente
   // sem função NÃO ganha por padrão (backend: crm_export em PLAIN_AGENT_DENIED_KEYS).
   const canExportCrm = computed(() => hasCrmPermission(CRM_EXPORT_PERMISSION));
-
-  // #2075 — valores de venda em R$: chave protegida, o crm_admin NÃO liga (espelho de Crm::ValorDeVenda.ve?).
-  // Sem ela o servidor já manda o valor vazio; aqui a tela só some com o que não faria sentido (soma, filtro, ordem).
-  const canSeeSalesValues = computed(
-    () =>
-      isUngatedSeat.value ||
-      permissions.value.includes('administrator') ||
-      permissions.value.includes(SALES_VALUE_VIEW_KEY)
-  );
 
   return {
     hasCrmPermission,

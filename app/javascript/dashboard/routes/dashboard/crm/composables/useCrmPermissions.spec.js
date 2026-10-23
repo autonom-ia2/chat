@@ -106,6 +106,24 @@ describe('useCrmPermissions — canSeeSalesValues', () => {
       seat({ funcao: 3, chaves: ['crm_view'] }).canSeeSalesValues.value
     ).toBe(false);
   });
+
+  // #2142 — o escopo sales_value_view do token segue a mesma regra, não o crm_admin.
+  it('hasCrmPermission de sales_value_view segue a mesma regra', () => {
+    expect(
+      seat({ funcao: 3, chaves: ['crm_admin'] }).hasCrmPermission(
+        'sales_value_view'
+      )
+    ).toBe(false);
+    expect(
+      seat({ funcao: 3, chaves: ['sales_value_view'] }).hasCrmPermission(
+        'sales_value_view'
+      )
+    ).toBe(true);
+    expect(seat().hasCrmPermission('sales_value_view')).toBe(true);
+    expect(
+      seat({ papel: 'administrator' }).hasCrmPermission('sales_value_view')
+    ).toBe(true);
+  });
 });
 
 // #2142 — o agente sem função perde no servidor as mesmas chaves; a tela não
