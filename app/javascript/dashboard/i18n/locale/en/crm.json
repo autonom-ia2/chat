@@ -6275,6 +6275,7 @@
       "ERRO": {
         "PASSADO": "That time has passed. Go back and choose another one.",
         "PRONTA": "At that time only an approved message can go out. Go back and choose one.",
+        "ARQUIVADO": "This card is archived. Restore it before scheduling a message.",
         "GERAL": "Could not schedule right now. Try again."
       }
     },

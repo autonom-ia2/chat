@@ -6276,6 +6276,7 @@
       "ERRO": {
         "PASSADO": "Esse horário já passou. Volte e escolha outro.",
         "PRONTA": "Nesse horário só dá para mandar mensagem aprovada. Volte e escolha uma.",
+        "ARQUIVADO": "Este card está arquivado. Restaure o card antes de marcar uma mensagem.",
         "GERAL": "Não deu para marcar agora. Tente de novo."
       }
     },

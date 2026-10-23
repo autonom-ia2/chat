@@ -557,8 +557,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:69",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:71",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:106"
     ],
     "sem_corpo": true
   },
@@ -5310,9 +5310,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:61",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:63",
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:204",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:106"
     ],
     "sem_corpo": false
   },
@@ -10686,9 +10686,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#atualizar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:44",
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:45",
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:75"
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:69"
     ],
     "sem_corpo": false
   },
@@ -10696,8 +10696,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#comparar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:75"
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -10705,8 +10705,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#desfazer",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:52",
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:75"
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:48",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -13668,8 +13668,8 @@
     "completo": true,
     "controller": "api/v1/accounts/conversa_canal/reacoes#create",
     "origem": [
-      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:9",
-      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:25"
+      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:12",
+      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -15181,8 +15181,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#cancel",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:77",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:79",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:106"
     ],
     "sem_corpo": true
   },
@@ -15190,8 +15190,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#complete",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:73",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:75",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:106"
     ],
     "sem_corpo": true
   },
@@ -15199,8 +15199,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#dismiss_reminder",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:81",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:83",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:106"
     ],
     "sem_corpo": true
   },
@@ -15217,10 +15217,10 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/follow_ups#reschedule",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:89",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:94",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:93",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:91",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:96",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:95",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:106"
     ],
     "sem_corpo": false
   },
@@ -23906,9 +23906,9 @@
     "envelope": "follow_up",
     "modelo": "Crm::FollowUp",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:61",
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:63",
       "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:204",
-      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:104"
+      "app/controllers/api/v1/accounts/crm/follow_ups_controller.rb:106"
     ],
     "sem_corpo": false
   },

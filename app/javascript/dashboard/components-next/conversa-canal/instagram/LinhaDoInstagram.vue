@@ -1,7 +1,8 @@
 <script setup>
 // Uma mensagem da conversa do Instagram com a cara do Direct (#2079). Recebida à
 // esquerda, com a foto de 28 px só na última do grupo; nossa à direita, sem foto.
-// Ao passar o mouse, "Responder" e "Mais opções" ao lado do balão, como no app.
+// Ao passar o mouse, "Responder", "Reagir" e "Mais opções" ao lado do balão, como no
+// app; a reação fica no selo do canto de baixo do balão (#2113).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'next/avatar/Avatar.vue';
@@ -21,16 +22,30 @@ import MidiaDoInstagram from './MidiaDoInstagram.vue';
 import AlbumDoInstagram from './AlbumDoInstagram.vue';
 import VozDoInstagram from './VozDoInstagram.vue';
 import CompartilhadoDoInstagram from './CompartilhadoDoInstagram.vue';
+import ReacoesDoInstagram from './ReacoesDoInstagram.vue';
+import BotaoDeReagir from '../BotaoDeReagir.vue';
+import { reacoesDaMensagem } from '../reacoes';
+import RotuloEditada from '../RotuloEditada.vue';
+import { foiEditada } from '../marcasDaMensagem';
+import { fornecerFuso } from '../pele';
 
 // "Responder" segue a mesma regra do menu (quem só lê, nota, falha, caixa sem resposta).
+// "Reagir" é o mesmo fluxo da reação do atendente do WhatsApp (useReacaoDoAtendente, no
+// Message.vue): a linha só mostra o botão e devolve o emoji escolhido.
 defineProps({
   podeResponder: { type: Boolean, default: false },
+  podeReagir: { type: Boolean, default: false },
+  reacaoAtual: { type: String, default: '' },
+  reacaoBloqueada: { type: Boolean, default: false },
+  reagindo: { type: Boolean, default: false },
 });
-const emit = defineEmits(['responder', 'menu']);
+const emit = defineEmits(['responder', 'menu', 'reagir']);
 
 const { t } = useI18n();
 const mensagem = useMessageContext();
-const { contato } = useInstagramDaConversa();
+const { contato, fuso } = useInstagramDaConversa();
+// O "Editada" mostra a hora das versões anteriores no fuso da conta, como o horário da conversa.
+fornecerFuso(fuso);
 const sequencia = useSequenciaDoInstagram();
 
 const dados = computed(() => ({
@@ -81,6 +96,12 @@ const textoJunto = computed(
       dados.value.contentAttributes.imageType
     )
 );
+// O cliente editou a mensagem no Instagram (#2113): o texto já é o novo; "Editada" embaixo,
+// como no app. Apagada não mostra (o texto que sai é o aviso).
+const editada = computed(
+  () =>
+    tipo.value !== BALOES.APAGADA && foiEditada(dados.value.contentAttributes)
+);
 const temTraducao = computed(
   () =>
     hasTranslations.value && (tipo.value === BALOES.TEXTO || textoJunto.value)
@@ -104,6 +125,9 @@ const abrirMenu = evento => {
 const fotoDoContato = computed(
   () => !enviada.value && !posicao.value.comProxima
 );
+const reacoes = computed(() =>
+  reacoesDaMensagem(dados.value.contentAttributes)
+);
 
 // A citação de quem respondeu: rótulo em cima e a mensagem citada esmaecida.
 const citada = computed(() => mensagem.inReplyTo?.value || null);
@@ -124,7 +148,7 @@ const textoCitado = computed(() => {
 
 <template>
   <div
-    class="group/instagram flex w-full items-end gap-2"
+    class="group/instagram group/linha flex w-full items-end gap-2"
     :class="[
       enviada ? 'flex-row-reverse' : 'flex-row',
       posicao.comProxima ? 'mb-0.5' : 'mb-2',
@@ -144,61 +168,87 @@ const textoCitado = computed(() => {
       :class="enviada ? 'items-end' : 'items-start'"
       @contextmenu="emit('menu', $event)"
     >
-      <template v-if="citada">
-        <span :class="ROTULO" class="mt-1">{{ rotuloDaCitacao }}</span>
-        <div
-          class="max-w-[300px] truncate rounded-[18px] px-3 py-2 text-[13px] leading-4 opacity-60"
-          :class="[RECEBIDO]"
-        >
-          {{ textoCitado }}
-        </div>
-      </template>
-      <TextoDoInstagram
-        v-if="tipo === BALOES.TEXTO"
-        :texto="texto"
-        :enviada="enviada"
-        :cantos="cantos"
-      />
+      <!-- O selo encosta no último balão: o "Ver original" fica fora, embaixo dele. -->
       <div
-        v-else-if="tipo === BALOES.APAGADA"
-        class="rounded-[18px] border border-[#DBDFE4] dark:border-[#363636] px-3 py-2 text-[15px] leading-5 italic"
-        :class="SECUNDARIO"
+        class="relative flex min-w-0 flex-col gap-0.5"
+        :class="[
+          enviada ? 'items-end' : 'items-start',
+          { 'pb-[18px]': reacoes.length },
+        ]"
+        data-baloes-do-instagram
       >
-        {{ texto }}
+        <template v-if="citada">
+          <span :class="ROTULO" class="mt-1">{{ rotuloDaCitacao }}</span>
+          <div
+            class="max-w-[300px] truncate rounded-[18px] px-3 py-2 text-[13px] leading-4 opacity-60"
+            :class="[RECEBIDO]"
+          >
+            {{ textoCitado }}
+          </div>
+        </template>
+        <TextoDoInstagram
+          v-if="tipo === BALOES.TEXTO"
+          :texto="texto"
+          :enviada="enviada"
+          :cantos="cantos"
+        />
+        <div
+          v-else-if="tipo === BALOES.APAGADA"
+          class="rounded-[18px] border border-[#DBDFE4] dark:border-[#363636] px-3 py-2 text-[15px] leading-5 italic"
+          :class="SECUNDARIO"
+        >
+          {{ texto }}
+        </div>
+        <MidiaDoInstagram
+          v-else-if="
+            tipo === BALOES.MIDIA ||
+            tipo === BALOES.REEL ||
+            tipo === BALOES.FIGURINHA
+          "
+          :anexo="anexos[0]"
+          :cantos="cantos"
+          :figurinha="tipo === BALOES.FIGURINHA"
+        />
+        <AlbumDoInstagram
+          v-else-if="tipo === BALOES.ALBUM"
+          :anexos="anexos"
+          :cantos="cantos"
+        />
+        <VozDoInstagram
+          v-else-if="tipo === BALOES.VOZ"
+          :anexo="anexos[0]"
+          :enviada="enviada"
+          :cantos="cantos"
+        />
+        <CompartilhadoDoInstagram
+          v-else-if="tipo === BALOES.POST || tipo === BALOES.STORY"
+          :tipo="tipo"
+          :mensagem="dados"
+          :enviada="enviada"
+        />
+        <TextoDoInstagram
+          v-if="textoJunto"
+          :texto="texto"
+          :enviada="enviada"
+          :cantos="cantos"
+        />
+        <ReacoesDoInstagram
+          v-if="reacoes.length"
+          :reacoes="reacoes"
+          :enviada="enviada"
+        />
       </div>
-      <MidiaDoInstagram
-        v-else-if="
-          tipo === BALOES.MIDIA ||
-          tipo === BALOES.REEL ||
-          tipo === BALOES.FIGURINHA
-        "
-        :anexo="anexos[0]"
-        :cantos="cantos"
-        :figurinha="tipo === BALOES.FIGURINHA"
-      />
-      <AlbumDoInstagram
-        v-else-if="tipo === BALOES.ALBUM"
-        :anexos="anexos"
-        :cantos="cantos"
-      />
-      <VozDoInstagram
-        v-else-if="tipo === BALOES.VOZ"
-        :anexo="anexos[0]"
-        :enviada="enviada"
-        :cantos="cantos"
-      />
-      <CompartilhadoDoInstagram
-        v-else-if="tipo === BALOES.POST || tipo === BALOES.STORY"
-        :tipo="tipo"
-        :mensagem="dados"
-        :enviada="enviada"
-      />
-      <TextoDoInstagram
-        v-if="textoJunto"
-        :texto="texto"
-        :enviada="enviada"
-        :cantos="cantos"
-      />
+      <span
+        v-if="editada"
+        :class="ROTULO"
+        class="px-3"
+        data-editada-do-instagram
+      >
+        <RotuloEditada
+          :atributos="dados.contentAttributes"
+          :abrir-no-inicio="!enviada"
+        />
+      </span>
       <TranslationToggle
         v-if="temTraducao"
         class="px-3"
@@ -219,6 +269,16 @@ const textoCitado = computed(() => {
       >
         <span class="i-ph-arrow-bend-up-left size-4" />
       </button>
+      <BotaoDeReagir
+        v-if="podeReagir"
+        class="-my-2"
+        :mensagem-id="dados.id"
+        :atual="reacaoAtual"
+        :bloqueado="reacaoBloqueada"
+        :enviando="reagindo"
+        :dica-bloqueado="t('CONVERSA_CANAL.INSTAGRAM.REAGIR_FORA_DA_JANELA')"
+        @reagir="emit('reagir', $event)"
+      />
       <button
         type="button"
         class="flex size-6 shrink-0 items-center justify-center p-0"

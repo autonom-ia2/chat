@@ -17,6 +17,11 @@ module Waha::RichNative::Edits
   HISTORY_LIMIT = 10
   # Na entrada do histórico: a hora do WhatsApp da edição que a criou (conector c2y-rich-5), só para a ordem.
   SOURCE_AT_KEY = 'source_at'.freeze
+  # Na entrada do histórico: o número da edição no canal (o `num_edit` do Instagram, #2113), só para a ordem. O WAHA não
+  # manda; sem ele, nada muda.
+  SEQUENCE_KEY = 'sequence'.freeze
+  # A tradução do texto ("Traduzir" do menu), que a edição descarta.
+  TRANSLATIONS_KEY = 'translations'.freeze
 
   module_function
 
@@ -34,20 +39,32 @@ module Waha::RichNative::Edits
   end
 
   # author: contact_author ou user_author. timestamp: a hora da edição no WhatsApp (segundos, `waha_edit.timestamp` do
-  # conector c2y-rich-5), quando veio. Devolve false quando o texto é o mesmo ou a edição chegou fora de ordem (mais velha
-  # que a última com hora do WhatsApp, Waha::RichNative::EventTime.replaces?): nada a gravar.
-  def apply!(message, content:, author:, timestamp: nil)
+  # conector c2y-rich-5), quando veio. sequence: o número da edição no canal (`num_edit` do Instagram), quando veio.
+  # Devolve false quando o texto é o mesmo ou a edição chegou fora de ordem (mais velha que a última com hora do
+  # WhatsApp, Waha::RichNative::EventTime.replaces?, ou com número igual ou menor que o maior guardado): nada a gravar.
+  # Mensagem apagada não volta: a conferência fica dentro da trava (o with_lock recarrega a linha), porque o apagar pode
+  # ter gravado depois de quem chamou olhar. A tradução guardada (`translations`) sai junto: era do texto que saiu, e a
+  # tela a mostraria no lugar do texto novo.
+  def apply!(message, content:, author:, timestamp: nil, sequence: nil)
     message.with_lock do
-      next false if message.content.to_s == content || out_of_order?(message, timestamp)
+      next false if message.deleted.present? || message.content.to_s == content
+      next false if out_of_order?(message, timestamp) || stale_sequence?(message, sequence)
 
       edited_at = Time.current.iso8601
       history = Array(message.content_attributes.to_h[HISTORY_KEY])
-      entry = { 'content' => message.content.to_s, 'edited_at' => edited_at }.merge(author).merge(source_at(timestamp))
+      entry = history_entry(message, edited_at, author, timestamp, sequence)
       history = (history + [entry]).last(HISTORY_LIMIT)
       message.content = content
-      message.content_attributes = message.content_attributes.to_h.merge(HISTORY_KEY => history, EDITED_AT_KEY => edited_at)
+      attributes = message.content_attributes.to_h.except(TRANSLATIONS_KEY)
+      message.content_attributes = attributes.merge(HISTORY_KEY => history, EDITED_AT_KEY => edited_at)
       message.save!(validate: false)
     end
+  end
+
+  # O texto que sai, com quem trocou e quando; a hora e o número do canal só quando vieram.
+  def history_entry(message, edited_at, author, timestamp, sequence)
+    entry = { 'content' => message.content.to_s, 'edited_at' => edited_at }.merge(author).merge(source_at(timestamp))
+    sequence.is_a?(Integer) ? entry.merge(SEQUENCE_KEY => sequence) : entry
   end
 
   # A hora do WhatsApp da edição, guardada na própria entrada do histórico (`source_at`), separada do `edited_at` (o
@@ -63,5 +80,16 @@ module Waha::RichNative::Edits
 
     latest = Array(message.content_attributes.to_h[HISTORY_KEY]).filter_map { |entry| entry.is_a?(Hash) && entry[SOURCE_AT_KEY] }.max
     !Waha::RichNative::EventTime.replaces?(Waha::RichNative::EventTime.iso8601(timestamp), latest)
+  end
+
+  # Edição com número (o `num_edit` do Instagram) só vale se for maior que o maior já guardado: um retry ou uma edição
+  # velha que chega depois não volta o texto. Sem número, nada muda.
+  def stale_sequence?(message, sequence)
+    return false unless sequence.is_a?(Integer)
+
+    latest = Array(message.content_attributes.to_h[HISTORY_KEY]).filter_map do |entry|
+      entry[SEQUENCE_KEY] if entry.is_a?(Hash) && entry[SEQUENCE_KEY].is_a?(Integer)
+    end.max
+    latest.present? && sequence <= latest
   end
 end

@@ -79,6 +79,51 @@ RSpec.describe 'CRM reminders that repeat, without card and with chosen recipien
     end
   end
 
+  # #2130: antes, o lembrete de uma vez era criado (201) e o DueProcessor o cancelava em silêncio.
+  describe 'one-time reminder on an archived card' do
+    before { card.update!(status: :archived) }
+
+    it 'refuses it, saying why, in the account language' do
+      account.update!(locale: 'pt_BR')
+
+      create_reminder(agent, card_id: card.id, title: 'Ligar', due_at: 1.day.from_now.iso8601)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('message' => 'Este card está arquivado. Restaure o card antes de criar um lembrete.',
+                                         'code' => 'card_archived')
+      expect(account.crm_follow_ups.count).to eq(0)
+    end
+
+    it 'refuses a scheduled message to the customer too' do
+      create_reminder(agent, card_id: card.id, title: 'Mensagem', automation_mode: 'auto_send_message', due_at: 1.day.from_now.iso8601)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('card_archived')
+      expect(account.crm_follow_ups.count).to eq(0)
+    end
+
+    it 'refuses it when only the archive barrier sees the card archived' do
+      card.update!(status: :open)
+      allow(Crm::Cards::Archiver).to receive(:arquivado_sob_trava?).and_wrap_original do |original, card_id|
+        Crm::Card.where(id: card_id).update_all(status: Crm::Card.statuses[:archived]) # rubocop:disable Rails/SkipsModelValidations
+        original.call(card_id)
+      end
+
+      create_reminder(agent, card_id: card.id, title: 'Ligar', due_at: 1.day.from_now.iso8601)
+
+      expect(response.parsed_body['code']).to eq('card_archived')
+      expect(account.crm_follow_ups.count).to eq(0)
+    end
+
+    it 'still creates the reminder on an open card' do
+      card.update!(status: :open)
+
+      create_reminder(agent, card_id: card.id, title: 'Ligar', due_at: 1.day.from_now.iso8601)
+
+      expect(response).to have_http_status(:created)
+    end
+  end
+
   describe 'who receives (#1462)' do
     it 'keeps the old behaviour when the panel does not send recipients' do
       create_reminder(agent, card_id: card.id, title: 'Ligar', due_at: 1.day.from_now.iso8601)
@@ -131,6 +176,42 @@ RSpec.describe 'CRM reminders that repeat, without card and with chosen recipien
       series = response.parsed_body['payload']
       expect(series['next_occurrences'].size).to eq(5)
       expect(series['recipient_names']).to eq(['Paula'])
+    end
+
+    # #2101: antes, o 422 dizia "Ends on leaves no date to remind".
+    it 'refuses a series on an archived card, saying why, in the account language' do
+      account.update!(locale: 'pt_BR')
+      card.update!(status: :archived)
+
+      create_reminder(agent, card_id: card.id, title: 'Ligar', due_at: next_monday.iso8601, recurrence: { frequency: 'weekly', weekdays: [1] })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('message' => 'Este card está arquivado. Restaure o card antes de criar um lembrete.',
+                                         'code' => 'card_archived')
+      expect(account.crm_follow_up_series.count).to eq(0)
+      expect(account.crm_follow_ups.count).to eq(0)
+    end
+
+    it 'says it in English for an English account' do
+      card.update!(status: :archived)
+
+      create_reminder(agent, card_id: card.id, title: 'Ligar', due_at: next_monday.iso8601, recurrence: { frequency: 'weekly', weekdays: [1] })
+
+      expect(response.parsed_body['message']).to eq('This card is archived. Restore it before creating a reminder.')
+    end
+
+    # A barreira do SeriesMaterializer (arquivado_sob_trava?) vê o card arquivado depois da conferência do Creator.
+    it 'gives the same answer when only the materializer barrier sees the card archived' do
+      allow(Crm::Cards::Archiver).to receive(:arquivado_sob_trava?).and_wrap_original do |original, card_id|
+        Crm::Card.where(id: card_id).update_all(status: Crm::Card.statuses[:archived]) # rubocop:disable Rails/SkipsModelValidations
+        original.call(card_id)
+      end
+
+      create_reminder(agent, card_id: card.id, title: 'Ligar', due_at: next_monday.iso8601, recurrence: { frequency: 'weekly', weekdays: [1] })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('card_archived')
+      expect(account.crm_follow_up_series.count).to eq(0)
     end
 
     it 'refuses repeating a message to the customer (phase 2)' do

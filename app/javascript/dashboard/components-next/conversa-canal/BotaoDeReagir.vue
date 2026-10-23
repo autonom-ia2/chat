@@ -2,17 +2,12 @@
 // O botão de reagir ao lado do balão (#1702), como no WhatsApp Web: aparece ao
 // passar o mouse, abre a barra com 6 emojis e o "+" do seletor completo. Também
 // abre pelo "Reagir" do menu da mensagem. Teclado: setas andam na barra, Esc fecha
-// e o foco volta para o botão.
-import {
-  defineAsyncComponent,
-  nextTick,
-  onBeforeUnmount,
-  ref,
-  watch,
-} from 'vue';
+// e o foco volta para o botão. O "+" abre a mesma janela de emojis da caixa de resposta.
+import { nextTick, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
 import Icon from 'next/icon/Icon.vue';
+import JanelaDeEmojis from 'dashboard/components-next/emoji/JanelaDeEmojis.vue';
 import { emitter } from 'shared/helpers/mitt';
 import { ORIENTATION } from '../message/constants';
 import {
@@ -27,24 +22,35 @@ const props = defineProps({
   atual: { type: String, default: '' },
   bloqueado: { type: Boolean, default: false },
   enviando: { type: Boolean, default: false },
+  // A frase do bloqueio quando não é a das 24 h do WhatsApp (a do Instagram, #2113).
+  dicaBloqueado: { type: String, default: '' },
 });
 
 const emit = defineEmits(['reagir']);
-
-const EmojiIconPicker = defineAsyncComponent(
-  () =>
-    import('dashboard/components-next/emoji-icon-picker/EmojiIconPicker.vue')
-);
 
 const { t } = useI18n();
 const aberta = ref(false);
 const seletor = ref(false);
 const gatilho = ref(null);
+// A janela de emojis abre junto do balão. A referência é este contêiner, e não o botão: no
+// celular o botão fica escondido (abre pelo "Reagir" do menu) e não teria posição.
+const raiz = ref(null);
+// Sem mouse (celular), a busca da janela não ganha foco: o teclado cobriria os emojis.
+const temMouse = !window.matchMedia?.('(hover: none)').matches;
 const barra = ref(null);
-const seletorCompleto = ref(null);
+// Quanto a barra anda para caber na tela: o botão fica perto da borda no celular (#2113).
+const desvio = ref(0);
+const MARGEM_DA_TELA = 8;
 
-// Primeiro controle do seletor completo (a busca de emoji).
-const FOCAVEL_DO_SELETOR = 'input, button';
+const encaixarNaTela = elemento => {
+  desvio.value = 0;
+  const caixa = elemento?.getBoundingClientRect?.();
+  if (!caixa) return;
+  const limite = window.innerWidth - MARGEM_DA_TELA;
+  if (caixa.right > limite) desvio.value = limite - caixa.right;
+  else if (caixa.left < MARGEM_DA_TELA)
+    desvio.value = MARGEM_DA_TELA - caixa.left;
+};
 
 const botoesDaBarra = () =>
   Array.from(barra.value?.querySelectorAll('button') || []);
@@ -54,6 +60,7 @@ const abrir = async () => {
   aberta.value = true;
   seletor.value = false;
   await nextTick();
+  encaixarNaTela(barra.value);
   const botoes = botoesDaBarra();
   const indice = Math.max(REACOES_RAPIDAS.indexOf(props.atual), 0);
   botoes[indice]?.focus();
@@ -68,19 +75,19 @@ const fechar = ({ devolverFoco = true } = {}) => {
 
 const alternar = () => (aberta.value ? fechar() : abrir());
 
-// O "+" troca a barra pelo seletor completo. A barra some com o foco dentro, então o
-// foco espera no botão de reagir e vai para o seletor assim que ele montar (o seletor
-// é carregado na hora, por isso o watch na referência, e não um nextTick só).
+// A janela de emojis flutua no body: o clique dentro dela fica fora deste botão, e é
+// ela que fecha a si mesma (clique fora dela, Esc).
+const fecharPorFora = () => {
+  if (!seletor.value) fechar({ devolverFoco: false });
+};
+
+// O "+" troca a barra pela janela de emojis, que abre junto do botão de reagir e cabe
+// sempre na tela. A barra some com o foco dentro: o foco passa pelo botão, a janela
+// leva para a busca e o devolve ao fechar.
 const abrirSeletor = () => {
   gatilho.value?.focus();
   seletor.value = true;
 };
-
-watch(seletorCompleto, async instancia => {
-  if (!instancia) return;
-  await nextTick();
-  instancia.$el?.querySelector?.(FOCAVEL_DO_SELETOR)?.focus();
-});
 
 const escolher = emoji => {
   emit('reagir', emoji);
@@ -105,7 +112,8 @@ onBeforeUnmount(() => emitter.off(ABRIR_REACOES, abrirPeloMenu));
 
 <template>
   <div
-    v-on-click-outside="() => fechar({ devolverFoco: false })"
+    ref="raiz"
+    v-on-click-outside="fecharPorFora"
     class="relative self-center shrink-0"
     :class="lado === ORIENTATION.RIGHT ? 'order-first' : ''"
     data-reagir-do-balao
@@ -114,7 +122,9 @@ onBeforeUnmount(() => emitter.off(ABRIR_REACOES, abrirPeloMenu));
     <button
       ref="gatilho"
       v-tooltip.top="
-        bloqueado ? t('CONVERSA_CANAL.REAGIR.FORA_DA_JANELA') : null
+        bloqueado
+          ? dicaBloqueado || t('CONVERSA_CANAL.REAGIR.FORA_DA_JANELA')
+          : null
       "
       type="button"
       class="grid place-content-center size-11 rounded-full text-[#8C8C8C] dark:text-[#A7A8A8] transition-opacity opacity-0 group-hover/linha:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:hidden"
@@ -141,6 +151,7 @@ onBeforeUnmount(() => emitter.off(ABRIR_REACOES, abrirPeloMenu));
       role="toolbar"
       :aria-label="t('CONVERSA_CANAL.REAGIR.BARRA')"
       class="absolute bottom-full mb-1 z-20 flex items-center gap-0.5 p-1 rounded-full bg-white dark:bg-[#242626] shadow-[0_2px_5px_rgba(11,20,26,0.26)]"
+      :style="desvio ? { transform: `translateX(${desvio}px)` } : null"
       :class="
         lado === ORIENTATION.RIGHT
           ? 'ltr:right-0 rtl:left-0'
@@ -175,17 +186,13 @@ onBeforeUnmount(() => emitter.off(ABRIR_REACOES, abrirPeloMenu));
         <Icon icon="i-ph-plus" class="size-5" />
       </button>
     </div>
-    <EmojiIconPicker
+    <JanelaDeEmojis
       v-if="aberta && seletor"
-      ref="seletorCompleto"
-      mode="emoji"
-      class="bottom-full mb-1"
-      :class="
-        lado === ORIENTATION.RIGHT
-          ? 'ltr:right-0 rtl:left-0'
-          : 'ltr:left-0 rtl:right-0'
-      "
-      @select="escolher($event.value)"
+      :ancora="raiz"
+      :alinhar="lado === ORIENTATION.RIGHT ? 'fim' : 'inicio'"
+      :focar-busca="temMouse"
+      @escolher="escolher"
+      @fechar="fechar({ devolverFoco: false })"
     />
   </div>
 </template>

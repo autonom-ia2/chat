@@ -72,6 +72,40 @@ describe ConversaCanal::AtualizacaoDaPele do
     end
   end
 
+  # #2113: a reação do Instagram é gravada com a chave `conversa_instagram`, sem a pele do WhatsApp.
+  describe 'robô na caixa do Instagram' do
+    let(:conta_instagram) { create(:account) }
+    let(:caixa_instagram) { create(:channel_instagram, account: conta_instagram).inbox }
+    let(:conversa_instagram) { create(:conversation, account: conta_instagram, inbox: caixa_instagram) }
+    let!(:mensagem_instagram) do
+      create(:message, account: conta_instagram, inbox: caixa_instagram, conversation: conversa_instagram,
+                       message_type: :outgoing, content: 'Proposta', source_id: 'mid.A')
+    end
+
+    def evento_instagram(mudancas)
+      Events::Base.new('message.updated', Time.zone.now, message: mensagem_instagram, previous_changes: mudancas)
+    end
+
+    before do
+      create(:agent_bot_inbox, inbox: caixa_instagram, agent_bot: agent_bot)
+      conta_instagram.disable_features!('conversa_cara_do_canal')
+    end
+
+    it 'só com a conversa do Instagram ligada, a reação não vai ao robô' do
+      conta_instagram.enable_features!('conversa_instagram')
+      expect(AgentBots::WebhookJob).not_to receive(:perform_later)
+
+      AgentBotListener.instance.message_updated(evento_instagram(reacao))
+    end
+
+    it 'sem a chave do Instagram, vai ao robô como na main' do
+      conta_instagram.disable_features!('conversa_instagram')
+      expect(AgentBots::WebhookJob).to receive(:perform_later).once
+
+      AgentBotListener.instance.message_updated(evento_instagram(reacao))
+    end
+  end
+
   describe 'webhooks (WebhookListener)' do
     it 'não manda ao webhook da caixa API, mas manda ao da conta' do
       webhook = create(:webhook, account: account, subscriptions: ['message_updated'], url: 'https://conta.test/hook')

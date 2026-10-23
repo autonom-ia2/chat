@@ -107,6 +107,103 @@ describe Instagram::SendOnInstagramService do
         end
       end
 
+      context 'when replying with a quote' do
+        let(:quoted) do
+          create(:message, message_type: 'incoming', inbox: instagram_inbox, account: account, conversation: conversation,
+                           source_id: 'mid-da-citada')
+        end
+
+        it 'sends reply_to with the mid of the quoted message' do
+          message = create(:message, message_type: 'outgoing', inbox: instagram_inbox, account: account, conversation: conversation,
+                                     content_attributes: { in_reply_to: quoted.id })
+
+          described_class.new(message: message).perform
+
+          expect(HTTParty).to have_received(:post).with(
+            anything, hash_including(body: hash_including(reply_to: { mid: 'mid-da-citada' }, message: { text: message.content }))
+          )
+        end
+
+        it 'quotes only the first part when the message has attachment and text' do
+          message = build(:message, content: 'Segue a foto', message_type: 'outgoing', inbox: instagram_inbox, account: account,
+                                    conversation: conversation, content_attributes: { in_reply_to: quoted.id })
+          attachment = message.attachments.new(account_id: message.account_id, file_type: :image)
+          attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
+          message.save!
+          service = described_class.new(message: message)
+          allow(service).to receive(:send_message)
+
+          service.perform
+
+          expect(service).to have_received(:send_message).twice
+          expect(service).to have_received(:send_message)
+            .with(hash_including(reply_to: { mid: 'mid-da-citada' }, message: hash_including(:attachment))).once
+          expect(service).to have_received(:send_message)
+            .with(hash_including(message: { text: 'Segue a foto' })).once
+          expect(service).not_to have_received(:send_message).with(hash_including(reply_to: anything, message: { text: 'Segue a foto' }))
+        end
+
+        it 'does not send reply_to when the quoted message has no mid' do
+          quoted.update!(source_id: nil)
+          message = create(:message, message_type: 'outgoing', inbox: instagram_inbox, account: account, conversation: conversation,
+                                     content_attributes: { in_reply_to: quoted.id })
+
+          described_class.new(message: message).perform
+
+          expect(HTTParty).to have_received(:post).with(anything, hash_including(body: hash_excluding(:reply_to)))
+        end
+
+        it 'does not quote a message the contact unsent' do
+          quoted.update!(content: 'deleted', deleted: true)
+          message = create(:message, message_type: 'outgoing', inbox: instagram_inbox, account: account, conversation: conversation,
+                                     content_attributes: { in_reply_to: quoted.id })
+
+          described_class.new(message: message).perform
+
+          expect(HTTParty).to have_received(:post).once
+          expect(HTTParty).to have_received(:post).with(anything, hash_including(body: hash_excluding(:reply_to)))
+          expect(message.reload.status).not_to eq('failed')
+        end
+
+        it 'resends once without the quote when Meta refuses the reply_to' do
+          allow(HTTParty).to receive(:post).with(anything, hash_including(body: hash_including(:reply_to))).and_return(error_response)
+          message = create(:message, message_type: 'outgoing', inbox: instagram_inbox, account: account, conversation: conversation,
+                                     content_attributes: { in_reply_to: quoted.id })
+
+          described_class.new(message: message).perform
+
+          expect(HTTParty).to have_received(:post).twice
+          expect(HTTParty).to have_received(:post).with(anything, hash_including(body: hash_excluding(:reply_to))).once
+          expect(message.reload.status).not_to eq('failed')
+          expect(message.source_id).to eq('random_message_id')
+        end
+
+        it 'marks failed when the resend without the quote also fails' do
+          allow(HTTParty).to receive(:post).and_return(error_response)
+          message = create(:message, message_type: 'outgoing', inbox: instagram_inbox, account: account, conversation: conversation,
+                                     content_attributes: { in_reply_to: quoted.id })
+
+          described_class.new(message: message).perform
+
+          expect(HTTParty).to have_received(:post).twice
+          expect(message.reload.status).to eq('failed')
+        end
+
+        it 'does not resend when the token is invalid' do
+          token_error = { 'error' => { 'message' => 'Access token has expired', 'code' => 190 } }
+          allow(HTTParty).to receive(:post).and_return(
+            instance_double(HTTParty::Response, success?: false, body: token_error.to_json, parsed_response: token_error)
+          )
+          message = create(:message, message_type: 'outgoing', inbox: instagram_inbox, account: account, conversation: conversation,
+                                     content_attributes: { in_reply_to: quoted.id })
+
+          described_class.new(message: message).perform
+
+          expect(HTTParty).to have_received(:post).once
+          expect(message.reload.status).to eq('failed')
+        end
+      end
+
       context 'with message_tag HUMAN_AGENT' do
         before do
           InstallationConfig.where(name: 'ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT').first_or_create(value: true)

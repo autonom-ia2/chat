@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useEventListener } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import { formatTime } from '@chatwoot/utils';
+import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
@@ -25,6 +26,8 @@ const props = defineProps({
   isAverageMetric: { type: Boolean, default: false },
   canPrev: { type: Boolean, default: false },
   canNext: { type: Boolean, default: false },
+  // Non-administrators only get the conversations they can see, so the list may be shorter than the bar (#2123).
+  showScopedNotice: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['close', 'navigate']);
@@ -201,6 +204,15 @@ watch(
         @click="navigate(1)"
       />
     </template>
+    <Banner
+      v-if="showScopedNotice"
+      color="slate"
+      class="mb-3"
+      data-testid="drilldown-scoped-notice"
+    >
+      {{ $t('REPORT.DRILLDOWN.SCOPED_NOTICE') }}
+    </Banner>
+
     <div v-if="isFetching" class="flex h-40 items-center justify-center">
       <Spinner />
     </div>

@@ -1,0 +1,47 @@
+# Mensagens de validação do Rails em pt_BR (#2110). A gem rails-i18n traz o português do Brasil como `pt-BR` (hífen) e
+# o app usa `pt_BR`; além disso, o módulo de locales da gem está desligado (config/application.rb). Sem este arquivo,
+# "não pode ficar em branco" não existia em pt_BR e o 422 saía em inglês. Só as mensagens de erro, copiadas de
+# rails-i18n 7.0.10 (rails/locale/pt-BR.yml), sem `errors.template` (cabeçalho de formulário HTML, que o painel não
+# usa): datas, números e moeda continuam como estavam.
+pt_BR:
+  activerecord:
+    errors:
+      messages:
+        record_invalid: 'A validação falhou: %{errors}'
+        restrict_dependent_destroy:
+          has_one: Não é possível excluir o registro pois existe um %{record} dependente
+          has_many: Não é possível excluir o registro pois existem %{record} dependentes
+  errors:
+    format: '%{attribute} %{message}'
+    messages:
+      accepted: deve ser aceito
+      blank: não pode ficar em branco
+      confirmation: não é igual a %{attribute}
+      empty: não pode ficar vazio
+      equal_to: deve ser igual a %{count}
+      even: deve ser par
+      exclusion: não está disponível
+      greater_than: deve ser maior que %{count}
+      greater_than_or_equal_to: deve ser maior ou igual a %{count}
+      in: deve estar em %{count}
+      inclusion: não está incluído na lista
+      invalid: não é válido
+      less_than: deve ser menor que %{count}
+      less_than_or_equal_to: deve ser menor ou igual a %{count}
+      model_invalid: 'A validação falhou: %{errors}'
+      not_a_number: não é um número
+      not_an_integer: não é um número inteiro
+      odd: deve ser ímpar
+      other_than: deve ser diferente de %{count}
+      present: deve ficar em branco
+      required: é obrigatório(a)
+      taken: já está em uso
+      too_long:
+        one: 'é muito longo (máximo: %{count} caracter)'
+        other: 'é muito longo (máximo: %{count} caracteres)'
+      too_short:
+        one: 'é muito curto (mínimo: %{count} caracter)'
+        other: 'é muito curto (mínimo: %{count} caracteres)'
+      wrong_length:
+        one: não possui o tamanho esperado (%{count} caracter)
+        other: não possui o tamanho esperado (%{count} caracteres)
