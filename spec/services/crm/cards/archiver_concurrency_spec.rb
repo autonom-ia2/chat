@@ -179,4 +179,54 @@ RSpec.describe Crm::Cards::Archiver, :crm_travas, :relationships_committed_fixtu
     expect(Crm::FollowUps::SeriesMaterializer.new(serie).perform).to be_nil
     expect(serie.reload).to be_ended
   end
+
+  # Lembrete vencido criado entre as travas dos lembretes e do card; o arquivamento segue até ficar com o card travado e
+  # para de novo antes de gravar. O DueProcessor real roda nesse meio (due_processor.rb:19–23 lia o card sem trava e
+  # o via aberto).
+  it 'DueProcessor durante o arquivamento não dispara o lembrete tardio: ele termina cancelado (card_archived)' do
+    arquivador = described_class.new(card: Crm::Card.find(card.id), actor: admin)
+    no_card = Queue.new
+    segue = Queue.new
+    allow(arquivador).to receive(:arquivar!).and_wrap_original do |original, *args|
+      no_card << true
+      segue.pop
+      original.call(*args)
+    end
+    aviso = pronto
+    espera = soltar
+    allow(arquivador).to receive(:travar_lembretes).and_wrap_original do |original, *args|
+      original.call(*args).tap do
+        aviso << true
+        espera.pop
+      end
+    end
+    em_outra_conexao(resultados) { arquivador.perform }
+    pronto.pop
+    tardio = lembrete(due_at: 1.minute.ago)
+    soltar << true
+    no_card.pop
+
+    esperar_na_trava(em_outra_conexao(resultados) { Crm::FollowUps::DueProcessor.new.perform })
+    segue << true
+    crm_travas_threads.each(&:join)
+
+    expect(card.reload).to be_archived
+    expect(tardio.reload).to have_attributes(status: 'canceled')
+    expect(tardio.metadata['canceled_reason']).to eq('card_archived')
+  end
+
+  # follow_up_series_materializer_job.rb / creator.rb: série e a 1ª vez criadas entre as travas e o card.
+  it 'série e a primeira vez criadas entre as travas e o card são encerrada e cancelada pelo arquivamento' do
+    arquivamento_parado_antes_do_card
+    serie = Crm::FollowUpSeries.create!(account: account, card: card, created_by: admin, title: 'Toda segunda', frequency: :weekly,
+                                        starts_at: 1.day.from_now, timezone: 'America/Sao_Paulo', weekdays: [1])
+    primeira = Crm::FollowUps::SeriesMaterializer.new(serie).perform
+
+    soltar << true
+    crm_travas_threads.each(&:join)
+
+    expect(resultados_de(resultados, 1)).to eq([true])
+    expect(serie.reload).to be_ended
+    expect(primeira.reload).to be_canceled
+  end
 end
