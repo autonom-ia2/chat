@@ -146,12 +146,18 @@ class Crm::Ai::LeitorDeMidia
     end
   end
 
-  def initialize(message, pipeline: nil, ultima_tentativa: false, releitura: false)
+  # Segundos por chamada à API com `chamada_curta:` (a releitura do LerMidiaJob), sem nova tentativa interna.
+  TEMPO_DA_RELEITURA = 60
+
+  # `releitura:` decide O QUE ler (pendente?); `chamada_curta:`, COMO chamar a API. A chegada lê no modo :mensagem_nova
+  # com as novas tentativas de sempre; a releitura enfileirada, com uma chamada só e tempo curto.
+  def initialize(message, pipeline: nil, ultima_tentativa: false, releitura: false, chamada_curta: false)
     @message = message
     @account = message.account
     @pipeline = pipeline
     @ultima_tentativa = ultima_tentativa
     @releitura = releitura
+    @chamada_curta = chamada_curta
     @passageiras = []
   end
 
@@ -226,8 +232,8 @@ class Crm::Ai::LeitorDeMidia
 
   def ler_texto(attachment, tipo)
     case tipo
-    when :audio then Crm::Ai::TranscriptionClient.new(credential: credencial).transcribe(attachment)
-    when :imagem then Crm::Ai::VisionCaptioner.new(client: cliente_de_visao).caption(attachment)
+    when :audio then Crm::Ai::TranscriptionClient.new(credential: credencial, timeout: tempo_da_releitura).transcribe(attachment)
+    when :imagem then Crm::Ai::VisionCaptioner.new(client: cliente_de_visao, **{ timeout: tempo_da_releitura }.compact).caption(attachment)
     when :pdf then texto_do_pdf(attachment)
     end
   end
@@ -257,8 +263,14 @@ class Crm::Ai::LeitorDeMidia
   end
 
   def cliente_de_visao
-    Crm::Ai::ResponsesClient.new(credential: credencial, feature: 'midia', account: @account, pipeline: @pipeline)
+    novas_tentativas = @chamada_curta ? 0 : Crm::Ai::ResponsesClient::MAX_RETRIES
+    Crm::Ai::ResponsesClient.new(credential: credencial, feature: 'midia', account: @account, pipeline: @pipeline,
+                                 max_retries: novas_tentativas)
   end
+
+  # A releitura faz uma chamada só, com tempo curto: a nova tentativa é a próxima releitura. Numa queda da API, ela não
+  # segura por minutos uma thread do Sidekiq, que é a mesma da entrega de mensagens. A leitura da chegada fica como era.
+  def tempo_da_releitura = (TEMPO_DA_RELEITURA if @chamada_curta)
 
   def texto_do_pdf(attachment)
     fonte = Autonomia::Agents::Operate::MessageMedia::SourceLike.new(attachment.file, attachment.file.blob.filename.to_s, 'pdf')

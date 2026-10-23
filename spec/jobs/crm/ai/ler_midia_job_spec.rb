@@ -12,7 +12,7 @@ RSpec.describe Crm::Ai::LerMidiaJob do
     it 'lê os anexos da mensagem', :aggregate_failures do
       described_class.perform_now(message.id)
 
-      expect(Crm::Ai::LeitorDeMidia).to have_received(:new).with(message, ultima_tentativa: false, releitura: :mensagem_nova)
+      expect(Crm::Ai::LeitorDeMidia).to have_received(:new).with(message, ultima_tentativa: false, releitura: :mensagem_nova, chamada_curta: false)
       expect(leitor).to have_received(:perform)
     end
 
@@ -122,6 +122,88 @@ RSpec.describe Crm::Ai::LerMidiaJob do
       expect(meta).not_to have_key('crm_ai_image_done')
       expect(legendas).not_to have_received(:caption)
       expect(described_class).not_to have_been_enqueued
+    end
+  end
+
+  # #2109, revisão adversarial: numa queda da API (ReadTimeout), a releitura segurava uma thread do Sidekiq por ~9 min
+  # (3 chamadas de 180 s mais as esperas), e as threads são as mesmas da entrega de mensagens. Pega: a releitura voltar a
+  # tentar de novo dentro do job ou a usar o tempo longo; a chegada perder as novas tentativas dela.
+  describe 'API da IA fora do ar (tempo esgotado)' do
+    let(:account) { create(:account) }
+    let(:inbox) { create_crm_inbox(account: account) }
+    let(:conversation) { create_crm_conversation(account: account, inbox: inbox, contact: create(:contact, account: account)) }
+    let(:mensagem) { create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming) }
+    let(:png) { Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/avatar.png'), 'image/png') }
+    let(:ogg) { Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/sample.ogg'), 'audio/ogg') }
+
+    def meta(anexo) = anexo.reload.meta.to_h
+
+    before do
+      limpar_redis_do_leitor
+      account.enable_features!(Crm::Ai::LeitorDeMidia::FLAG)
+      allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', source: 'teste' }))
+      allow(HTTParty).to receive(:post).and_raise(Net::ReadTimeout)
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_wrap_original do |original, **opcoes|
+        original.call(**opcoes).tap { |cliente| allow(cliente).to receive(:sleep) }
+      end
+      clear_enqueued_jobs
+    end
+
+    it 'releitura da foto: uma chamada só, com tempo curto, sem novo job; fica para a próxima releitura', :aggregate_failures do
+      foto = mensagem.attachments.create!(account: account, file_type: :image, file: png)
+
+      described_class.perform_now(mensagem.id, 'varredura')
+
+      expect(HTTParty).to have_received(:post).once
+      expect(HTTParty).to have_received(:post).with(anything, hash_including(timeout: Crm::Ai::LeitorDeMidia::TEMPO_DA_RELEITURA))
+      expect(described_class).not_to have_been_enqueued
+      expect(meta(foto)).to include('crm_ai_midia_tentativas' => 1).and(have_key('crm_ai_midia_proxima_em'))
+      expect(meta(foto)).not_to have_key('crm_ai_image_done')
+    end
+
+    it 'chegada da foto: mantém as novas tentativas do cliente, o tempo longo e o novo job', :aggregate_failures do
+      mensagem.attachments.create!(account: account, file_type: :image, file: png)
+
+      described_class.perform_now(mensagem.id)
+
+      longo = hash_including(timeout: Crm::Ai::ResponsesClient::REQUEST_TIMEOUT)
+      expect(HTTParty).to have_received(:post).with(anything, longo).exactly(Crm::Ai::ResponsesClient::MAX_RETRIES + 1).times
+      expect(described_class).to have_been_enqueued.with(mensagem.id).on_queue('high')
+    end
+
+    it 'releitura do áudio: cliente da transcrição com tempo curto; a chegada fica com o padrão', :aggregate_failures do
+      mensagem.attachments.create!(account: account, file_type: :audio, file: ogg)
+      cliente = instance_double(OpenAI::Client, audio: instance_double(OpenAI::Audio))
+      allow(cliente.audio).to receive(:transcribe).and_raise(Faraday::TimeoutError)
+      allow(OpenAI::Client).to receive(:new).and_return(cliente)
+
+      described_class.perform_now(mensagem.id, 'varredura')
+      expect(cliente.audio).to have_received(:transcribe).once
+      expect(OpenAI::Client).to have_received(:new).with(hash_including(request_timeout: Crm::Ai::LeitorDeMidia::TEMPO_DA_RELEITURA)).once
+
+      travel(2.minutes) { described_class.perform_now(mensagem.id) }
+      expect(OpenAI::Client).to have_received(:new).with(hash_excluding(:request_timeout)).once
+    end
+  end
+
+  # #2109: a varredura só relê mensagem do cliente. Pega: o log prometer a varredura para a mídia que a equipe mandou.
+  describe 'aviso quando as tentativas da chegada acabam' do
+    let(:erro) { Crm::Ai::LeitorDeMidia::FalhaPassageira.new('mensagem=1 anexos=2') }
+
+    before { allow(Rails.logger).to receive(:warn) }
+
+    it 'mensagem do cliente: fica para a varredura' do
+      described_class.new(create(:message, message_type: :incoming).id).avisar_desistencia(erro)
+
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('falha_passageira_fica_para_a_varredura'))
+    end
+
+    it 'mensagem da equipe: diz que a varredura não relê' do
+      described_class.new(create(:message, message_type: :outgoing).id).avisar_desistencia(erro)
+
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('falha_passageira_sem_varredura mensagem_de_saida'))
     end
   end
 end

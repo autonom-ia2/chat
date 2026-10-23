@@ -8,8 +8,11 @@ module Crm
     class TranscriptionClient
       class Error < StandardError; end
 
-      def initialize(credential:)
+      # `timeout:` (segundos) é para quem precisa de tempo curto (a releitura do leitor de mídia, #2109). Ausente, é o
+      # padrão da gem, como antes.
+      def initialize(credential:, timeout: nil)
         @credential = credential
+        @timeout = timeout
       end
 
       def transcribe(attachment)
@@ -42,7 +45,8 @@ module Crm
       def client
         @client ||= OpenAI::Client.new(
           access_token: @credential[:api_key],
-          uri_base: safe_uri_base
+          uri_base: safe_uri_base,
+          **{ request_timeout: @timeout }.compact
         )
       end
 

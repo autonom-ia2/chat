@@ -8,7 +8,11 @@
 #
 # Falha passageira da API da IA (rede, tempo esgotado, 429, 5xx, credencial recusada; #2109): o leitor deixa o anexo
 # pendente e agenda a próxima tentativa nele; aqui, tenta de novo com as duas primeiras esperas do leitor (1 e 5 min).
-# Depois disso, quem tenta é a varredura, enquanto a mensagem tiver até Crm::Ai::FalhaDaMidia::JANELA_DE_RELEITURA.
+# Depois disso, quem tenta é a varredura, enquanto a mensagem tiver até Crm::Ai::FalhaDaMidia::JANELA_DE_RELEITURA (só a
+# mensagem do cliente; a da equipe a varredura não relê, e o log diz isso).
+#
+# A releitura (`releitura` 'mensagem_nova' ou 'varredura') não tenta de novo aqui: faz uma chamada só, com tempo curto
+# (Crm::Ai::LeitorDeMidia::TEMPO_DA_RELEITURA), e a nova tentativa é a próxima releitura.
 class Crm::Ai::LerMidiaJob < ApplicationJob
   TENTATIVAS = 8
   TENTATIVAS_DA_FALHA_PASSAGEIRA = 3
@@ -23,10 +27,10 @@ class Crm::Ai::LerMidiaJob < ApplicationJob
   retry_on Crm::Ai::LeitorDeMidia::FalhaPassageira,
            attempts: TENTATIVAS_DA_FALHA_PASSAGEIRA,
            wait: ->(executions) { Crm::Ai::FalhaDaMidia::ESPERAS.fetch(executions - 1) } do |job, erro|
-    Rails.logger.warn("[crm][midia] falha_passageira_fica_para_a_varredura #{erro.message} job=#{job.job_id}")
+    job.avisar_desistencia(erro)
   end
 
-  # `releitura`: 'mensagem_nova' (a chegada e a leitura em linha) ou 'varredura' (Crm::Ai::RelerMidiaPendenteJob).
+  # `releitura`: 'mensagem_nova' (a leitura em linha) ou 'varredura' (Crm::Ai::RelerMidiaPendenteJob).
   # -> true quando enfileirou.
   def self.reler(message_id, releitura)
     return false unless Redis::Alfred.set("crm:leitor_de_midia:releitura:#{message_id}", 1, nx: true, ex: DEDUP_DA_RELEITURA.to_i)
@@ -35,10 +39,25 @@ class Crm::Ai::LerMidiaJob < ApplicationJob
     true
   end
 
-  def perform(message_id, releitura = 'mensagem_nova')
+  # Sem `releitura`: a leitura da chegada (seleção do modo mensagem nova, com as novas tentativas de sempre).
+  def perform(message_id, releitura = nil)
     message = Message.find_by(id: message_id)
     return if message.blank?
 
-    Crm::Ai::LeitorDeMidia.new(message, ultima_tentativa: executions >= TENTATIVAS, releitura: releitura.to_sym).perform
+    Crm::Ai::LeitorDeMidia.new(message, ultima_tentativa: executions >= TENTATIVAS, releitura: (releitura || 'mensagem_nova').to_sym,
+                                        chamada_curta: releitura.present?).perform
+  rescue Crm::Ai::LeitorDeMidia::FalhaPassageira => e
+    raise if releitura.blank?
+
+    Rails.logger.info("[crm][midia] releitura_falhou_fica_para_a_proxima releitura=#{releitura} #{e.message}")
+  end
+
+  # As tentativas da chegada acabaram. A varredura só relê mensagem do cliente; a da equipe ela não relê.
+  def avisar_desistencia(erro)
+    if Message.find_by(id: arguments.first)&.incoming?
+      Rails.logger.warn("[crm][midia] falha_passageira_fica_para_a_varredura #{erro.message} job=#{job_id}")
+    else
+      Rails.logger.warn("[crm][midia] falha_passageira_sem_varredura mensagem_de_saida #{erro.message} job=#{job_id}")
+    end
   end
 end
