@@ -1036,6 +1036,9 @@ en:
         recusou: 'Declined'
         fechou_com_outra: 'Went with someone else'
       retorno: 'Get back in touch: the customer postponed'
+    # #2101, #2130: a person does not create a reminder on an archived card.
+    follow_ups:
+      card_archived: 'This card is archived. Restore it before creating a reminder.'
     # #1498: titles of the Serve reminders (shown in the card agenda).
     service_reminders:
       progress: 'Share progress'

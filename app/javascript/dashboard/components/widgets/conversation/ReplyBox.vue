@@ -1952,6 +1952,13 @@ export default {
       @toggle-copilot="copilot.toggleEditor"
       @execute-copilot-action="executeCopilotAction"
     />
+    <!-- #2113: no Instagram, a citação numa linha própria no topo da pílula; dentro do campo, ela desalinhava o emoji. -->
+    <ReplyToMessage
+      v-if="shouldShowReplyToMessage && instagram"
+      :message="inReplyTo"
+      data-resposta-do-instagram
+      @dismiss="resetReplyToMessage"
+    />
     <ArticleSearchPopover
       v-if="showArticleSearchPopover && connectedPortalSlug"
       :selected-portal-slug="connectedPortalSlug"
@@ -1984,7 +1991,7 @@ export default {
           @dismiss="resetReplyToMessage"
         />
         <ReplyToMessage
-          v-else-if="shouldShowReplyToMessage"
+          v-else-if="shouldShowReplyToMessage && !instagram"
           :message="inReplyTo"
           @dismiss="resetReplyToMessage"
         />

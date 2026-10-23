@@ -32,7 +32,8 @@ class CustomRoles::GrantGuard
   def reach?(permissions)
     return true if @actor.permission_granted?('grant_above_own')
 
-    keys = Array(permissions).map(&:to_s)
+    # The keys the role will store (#2124: an editing CRM key brings crm_view), not only the ones asked for.
+    keys = CustomRole.with_implied_permissions(permissions)
     keys.none? { |key| CustomRole::DELEGATION_KEYS.include?(key) } && keys.all? { |key| @actor.permission_granted?(key) }
   end
 

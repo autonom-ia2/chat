@@ -613,6 +613,9 @@ pt_BR:
         recusou: 'Recusou'
         fechou_com_outra: 'Fechou com outra empresa'
       retorno: 'Retomar o contato: o cliente adiou'
+    # #2101, #2130: pessoa não cria lembrete em card arquivado.
+    follow_ups:
+      card_archived: 'Este card está arquivado. Restaure o card antes de criar um lembrete.'
     # #1498: título dos lembretes de Atender (aparecem na agenda do card).
     service_reminders:
       progress: 'Avisar o andamento'

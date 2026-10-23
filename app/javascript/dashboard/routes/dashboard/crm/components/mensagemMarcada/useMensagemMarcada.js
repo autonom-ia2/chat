@@ -36,6 +36,7 @@ const primeiroNome = nome => String(nome || '').split(' ')[0];
 const ERRO_DO_CODIGO = {
   due_at_in_the_past: 'PASSADO',
   template_fallback_required: 'PRONTA',
+  card_archived: 'ARQUIVADO',
 };
 
 export const useMensagemMarcada = ({ store, fuso, caixasDaTela }) => {
