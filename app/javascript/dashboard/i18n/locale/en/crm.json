@@ -6514,6 +6514,7 @@
       "RESTAURADOS": "{count} card restored. | {count} cards restored.",
       "FECHADOS": "1 had already ended and went to the List. | {count} had already ended and went to the List.",
       "NAO_VOLTARAM": "1 did not come back; see below. | {count} did not come back; see below.",
+      "NENHUM_VOLTOU_CONFLITOS": "No card came back: 1 customer already has an open card in this pipeline. | No card came back: {count} customers already have an open card in this pipeline.",
       "ERRO": "Could not restore: {motivo}. No card came back. Try again.",
       "CONFLITOS_TITULO": "1 customer already has an open card in this pipeline | {count} customers already have an open card in this pipeline",
       "CONFLITOS_TEXTO": "These did not come back. Check each one: the archived card is on the left, the open one on the right.",

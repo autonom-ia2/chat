@@ -6515,6 +6515,7 @@
       "RESTAURADOS": "{count} card restaurado. | {count} cards restaurados.",
       "FECHADOS": "1 já tinha terminado e foi para a Lista. | {count} já tinham terminado e foram para a Lista.",
       "NAO_VOLTARAM": "1 não voltou; veja abaixo. | {count} não voltaram; veja abaixo.",
+      "NENHUM_VOLTOU_CONFLITOS": "Nenhum card voltou: 1 cliente já tem card aberto neste funil. | Nenhum card voltou: {count} clientes já têm card aberto neste funil.",
       "ERRO": "Não deu para restaurar: {motivo}. Nenhum card voltou. Tente de novo.",
       "CONFLITOS_TITULO": "1 cliente já tem card aberto neste funil | {count} clientes já têm card aberto neste funil",
       "CONFLITOS_TEXTO": "Estes não voltaram. Confira cada um: o arquivado está à esquerda, o aberto à direita.",

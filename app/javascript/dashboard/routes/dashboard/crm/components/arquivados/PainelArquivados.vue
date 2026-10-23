@@ -188,7 +188,17 @@ const comArquivado = item => {
   };
 };
 
+const CONFLITO = 'crm.card_restore_conflict';
+
+// Nenhum voltou e todos os pulados são do cliente que já voltou: uma frase só, sem "0 cards restaurados".
 const avisoDoLote = (restaurados, puladosAgora) => {
+  const conflitos = puladosAgora.filter(item => item.error === CONFLITO).length;
+  if (!restaurados.length && conflitos && conflitos === puladosAgora.length)
+    return t(
+      'CRM_ARQUIVADOS.LOTE.NENHUM_VOLTOU_CONFLITOS',
+      { count: conflitos },
+      conflitos
+    );
   const fechados = linhas.value.filter(
     linha => restaurados.includes(linha.id) && outcomeGroup(linha.desfecho)
   ).length;
@@ -203,12 +213,12 @@ const avisoDoLote = (restaurados, puladosAgora) => {
     partes.push(
       t('CRM_ARQUIVADOS.LOTE.FECHADOS', { count: fechados }, fechados)
     );
-  if (puladosAgora)
+  if (puladosAgora.length)
     partes.push(
       t(
         'CRM_ARQUIVADOS.LOTE.NAO_VOLTARAM',
-        { count: puladosAgora },
-        puladosAgora
+        { count: puladosAgora.length },
+        puladosAgora.length
       )
     );
   return partes.join(' ');
@@ -223,7 +233,7 @@ const restaurarSelecionados = async () => {
     const { data } = await CrmArquivadosAPI.restaurarVarios(ids);
     const { restored = [], skipped = [] } = data.payload || {};
     pulados.value = skipped.map(comArquivado);
-    avisar(avisoDoLote(restored, skipped.length));
+    avisar(avisoDoLote(restored, skipped));
     tirar(restored);
     selecionados.value = [];
     if (restored.length) emit('mudou');
@@ -275,7 +285,7 @@ const forcarTodos = async ids => {
       ...pulados.value.filter(item => !ids.includes(item.id)),
       ...skipped.map(comArquivado),
     ];
-    avisar(avisoDoLote(restored, skipped.length));
+    avisar(avisoDoLote(restored, skipped));
     if (restored.length) emit('mudou');
   } catch (error) {
     loteErro.value = t('CRM_ARQUIVADOS.LOTE.ERRO', {

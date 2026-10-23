@@ -160,6 +160,55 @@ describe('PainelArquivados', () => {
     expect(avisos.value[0].mensagem).toContain('FECHADOS');
   });
 
+  it('lote em que todos dão conflito: uma frase só, sem "0 cards restaurados"', async () => {
+    CrmArquivadosAPI.restaurarVarios.mockResolvedValue({
+      data: {
+        payload: {
+          restored: [],
+          skipped: [
+            { id: 10, error: 'crm.card_restore_conflict', open_card_id: 40 },
+            { id: 9, error: 'crm.card_restore_conflict', open_card_id: 41 },
+          ],
+        },
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    await wrapper
+      .find('[data-arquivados-selecionar-todos] input')
+      .trigger('change');
+    await wrapper.find('[data-arquivados-restaurar-varios]').trigger('click');
+    await flushPromises();
+    const { avisos } = useAvisoCrm();
+    expect(avisos.value[0].mensagem).toBe(
+      'CRM_ARQUIVADOS.LOTE.NENHUM_VOLTOU_CONFLITOS{"count":2}'
+    );
+  });
+
+  it('lote sem nenhum restaurado mas com outro motivo mantém a frase de sempre', async () => {
+    CrmArquivadosAPI.restaurarVarios.mockResolvedValue({
+      data: {
+        payload: {
+          restored: [],
+          skipped: [
+            { id: 10, error: 'crm.card_restore_conflict', open_card_id: 40 },
+            { id: 9, error: 'forbidden' },
+          ],
+        },
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    await wrapper
+      .find('[data-arquivados-selecionar-todos] input')
+      .trigger('change');
+    await wrapper.find('[data-arquivados-restaurar-varios]').trigger('click');
+    await flushPromises();
+    const { avisos } = useAvisoCrm();
+    expect(avisos.value[0].mensagem).toContain('RESTAURADOS');
+    expect(avisos.value[0].mensagem).toContain('NAO_VOLTARAM');
+  });
+
   it('"Restaurar mesmo assim" na linha do conflito força só aquele card', async () => {
     CrmArquivadosAPI.restaurarVarios.mockResolvedValue({
       data: {
