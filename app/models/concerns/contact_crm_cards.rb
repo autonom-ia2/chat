@@ -8,9 +8,9 @@
 # callback não faz nada e o `dependent: :nullify` do Contact solta os cards, como na main.
 #
 # Roda antes das outras dependências e dentro da transação do destroy: se algo falhar, o contato não sai. A exclusão em
-# lote e o modo 'keep' cancelam as reuniões futuras antes, fora da transação (Crm::Cards::Anonimizador#cancelar_reunioes!),
-# e contam aqui as que cancelaram (crm_reunioes_canceladas); o DELETE contacts/:id cancela aqui (ContactsControllerCrmCards
-# responde 422 se falhar).
+# lote e o modo 'keep' cancelam as reuniões futuras antes, fora da transação (Crm::Cards::Anonimizador#cancelar_reunioes!);
+# o lote passa o mesmo anonimizador (crm_anonimizador), que soma as reuniões para a Auditoria. O DELETE contacts/:id
+# cancela aqui (ContactsControllerCrmCards responde 422 se falhar).
 #
 # Auditoria (decisão do Rodrigo, 23/10): quem exclui o contato pode não ver os cards dele (uma função personalizada só com
 # contact_delete, ou um agente fora do funil). A exclusão é permitida, e cada contato que tinha card anonimizado ou
@@ -24,9 +24,9 @@ module ContactCrmCards
 
   included do
     before_destroy :anonimizar_cards_do_crm
-    # Da exclusão em lote, que roda num job sem Current.user: as reuniões que ela já cancelou antes do destroy, fora da
-    # transação, e quem pediu a exclusão.
-    attr_accessor :crm_reunioes_canceladas, :crm_excluido_por
+    # Da exclusão em lote, que roda num job sem Current.user: o anonimizador que já cancelou as reuniões antes do
+    # destroy, fora da transação, e quem pediu a exclusão.
+    attr_accessor :crm_anonimizador, :crm_excluido_por
   end
 
   private
@@ -34,13 +34,12 @@ module ContactCrmCards
   def anonimizar_cards_do_crm
     return if Crm::Cards::Anonimizador.conta_saindo? || !Crm::Cards::Anonimizador.ligado?(account)
 
-    anonimizador = Crm::Cards::Anonimizador.new(contact: self)
+    anonimizador = crm_anonimizador || Crm::Cards::Anonimizador.new(contact: self)
     ids = anonimizador.perform
-    reunioes = Array(crm_reunioes_canceladas) | anonimizador.reunioes_canceladas
-    return if ids.empty? && reunioes.empty?
+    return if ids.empty? && anonimizador.reunioes_canceladas.empty?
 
     Crm::ExclusaoDefinitiva.auditar_contato_excluido!(
-      contact: self, user: crm_excluido_por || Current.user, card_ids: ids, reunioes: reunioes
+      contact: self, user: crm_excluido_por || Current.user, card_ids: ids, anonimizador: anonimizador
     )
   end
 end

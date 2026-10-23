@@ -50,7 +50,8 @@ RSpec.describe 'CRM excluir contato: calendário fora de alcance e flag', type: 
       expect(response).to have_http_status(:ok)
       expect([Contact.exists?(contact.id), reuniao.reload.status, card.reload.title])
         .to eq([false, 'canceled', "Removed customer ##{card.id}"])
-      expect(auditorias.sole.audited_changes).to include('reunioes_canceladas' => 1, 'canceled_meeting_ids' => [reuniao.id])
+      expect(auditorias.sole.audited_changes)
+        .to include('reunioes_canceladas' => 1, 'reunioes_so_aqui' => 1, 'canceled_meeting_ids' => [reuniao.id])
     end
 
     it 'lote: reunião sem caixa é cancelada só aqui e o contato sai' do
@@ -79,6 +80,42 @@ RSpec.describe 'CRM excluir contato: calendário fora de alcance e flag', type: 
 
       expect(response).to have_http_status(:ok)
       expect([Contact.exists?(outro.id), Crm::Card.exists?(card.id), Crm::Meeting.exists?(reuniao_do_outro.id)]).to eq([false, false, false])
+    end
+
+    # Dono do card que saiu da conta (comum): o card e o lembrete da reunião não passam mais na validação. O cancelamento
+    # não pode depender deles, ou o Google apaga o evento e a reunião volta a "marcada".
+    context 'when the card owner left the account' do
+      let(:quem_saiu) { create(:user) }
+
+      before { card.update_columns(owner_id: quem_saiu.id) } # rubocop:disable Rails/SkipsModelValidations
+
+      def com_lembrete(reuniao)
+        Crm::FollowUp.new(account: account, card: card, created_by: quem_saiu, title: 'Lembrete', due_at: 1.day.from_now,
+                          timezone: 'America/Sao_Paulo', status: :pending).tap { |lembrete| lembrete.save!(validate: false) }
+                     .tap { |lembrete| reuniao.update_columns(reminder_id: lembrete.id) } # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      it 'DELETE, lote e rota nova cancelam e excluem', :aggregate_failures do
+        reuniao = reuniao_google(inbox: nil)
+        lembrete = com_lembrete(reuniao)
+        delete "#{base}/contacts/#{contact.id}", headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:ok)
+        expect([reuniao.reload.status, lembrete.reload.status, Contact.exists?(contact.id)]).to eq(['canceled', 'canceled', false])
+
+        segundo = account.contacts.create!(name: 'Segundo', phone_number: '+5511999990053')
+        card.update_columns(contact_id: segundo.id) # rubocop:disable Rails/SkipsModelValidations
+        reuniao = reuniao_google(inbox: nil)
+        Contacts::BulkDeleteService.new(account: account, contact_ids: [segundo.id], user: admin).perform
+        expect([reuniao.reload.status, Contact.exists?(segundo.id)]).to eq(['canceled', false])
+
+        terceiro = account.contacts.create!(name: 'Terceiro', phone_number: '+5511999990054')
+        card.update_columns(contact_id: terceiro.id) # rubocop:disable Rails/SkipsModelValidations
+        reuniao = reuniao_google(inbox: nil)
+        post "#{base}/crm/contacts/#{terceiro.id}/permanent_delete",
+             params: { confirmation: 'EXCLUIR', cards: 'keep' }, headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:ok)
+        expect([reuniao.reload.status, Contact.exists?(terceiro.id)]).to eq(['canceled', false])
+      end
     end
 
     it 'calendário desligado na caixa: cancela só aqui' do

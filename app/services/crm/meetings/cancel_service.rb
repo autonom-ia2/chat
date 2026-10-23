@@ -3,10 +3,11 @@ class Crm::Meetings::CancelService
   # 2-way sync (S7) when the event was already deleted/cancelled IN the provider
   # calendar (no echo-back). Default true = unchanged behavior.
   #
-  # validar:false — grava só o status, sem as validações da reunião marcada (#2096). A exclusão do contato e o excluir de
-  # vez usam: a reunião de uma caixa removida (inbox_id nulo) ou cujo convidado já saiu não passa mais na validação, e o
-  # update! falharia DEPOIS de o Google ou a Microsoft já terem apagado o evento, deixando a reunião "marcada" aqui.
-  # Cancelar não depende de a reunião continuar válida. Padrão true = como sempre.
+  # validar:false — grava sem as validações a reunião, o lembrete dela e a próxima data do card (#2096). A exclusão do
+  # contato e o excluir de vez usam: a reunião de uma caixa removida (inbox_id nulo), o card ou o lembrete com dono que
+  # saiu da conta não passam mais na validação, e o update! falharia DEPOIS de o Google ou a Microsoft já terem apagado
+  # o evento, deixando a reunião "marcada" aqui. Cancelar não depende de nada disso continuar válido. Padrão true = como
+  # sempre.
   def initialize(meeting:, propagate: true, validar: true)
     @meeting = meeting
     @propagate = propagate
@@ -27,7 +28,7 @@ class Crm::Meetings::CancelService
 
       marcar_cancelada!
       cancel_reminder!
-      Crm::FollowUps::CardNextDueUpdater.update(@meeting.card)
+      Crm::FollowUps::CardNextDueUpdater.update(@meeting.card, validar: @validar)
       canceled_now = true
     end
 
@@ -52,10 +53,8 @@ class Crm::Meetings::CancelService
   end
 
   def marcar_cancelada!
-    return @meeting.update!(status: :canceled) if @validar
-
     @meeting.status = :canceled
-    @meeting.save!(validate: false)
+    @meeting.save!(validate: @validar)
   end
 
   def skip_provider_call?
@@ -80,7 +79,8 @@ class Crm::Meetings::CancelService
     reminder = @meeting.reminder
     return if reminder.blank? || reminder.canceled? || reminder.done?
 
-    reminder.update!(status: :canceled)
+    reminder.status = :canceled
+    reminder.save!(validate: @validar)
   end
 
   def log_activity

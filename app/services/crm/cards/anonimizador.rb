@@ -50,14 +50,16 @@ class Crm::Cards::Anonimizador
     account.present? && account.feature_enabled?(FLAG)
   end
 
-  # As reuniões canceladas por esta instância (no cancelar_reunioes! e no perform), para a Auditoria.
-  attr_reader :reunioes_canceladas
+  # As reuniões canceladas por esta instância (no cancelar_reunioes! e no perform), para a Auditoria; e, delas, as
+  # canceladas só aqui porque o calendário não se alcança (o evento pode continuar vivo no Google ou na Microsoft).
+  attr_reader :reunioes_canceladas, :reunioes_so_aqui
 
   def initialize(contact:)
     @contact = contact
     @account = contact.account
     @agora = Time.current
     @reunioes_canceladas = []
+    @reunioes_so_aqui = []
   end
 
   def cancelar_reunioes!
@@ -81,8 +83,10 @@ class Crm::Cards::Anonimizador
   private
 
   def cancelar_futuras!
-    canceladas = Crm::Meetings::CancelarFuturas.new(account: @account, card_ids: card_ids_do_contato).perform
+    cancelador = Crm::Meetings::CancelarFuturas.new(account: @account, card_ids: card_ids_do_contato)
+    canceladas = cancelador.perform
     @reunioes_canceladas |= canceladas
+    @reunioes_so_aqui |= cancelador.so_aqui
     canceladas
   end
 

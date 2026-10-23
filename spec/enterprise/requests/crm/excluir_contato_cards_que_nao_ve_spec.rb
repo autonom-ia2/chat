@@ -46,7 +46,7 @@ RSpec.describe 'Excluir contato com cards que a função não vê', type: :reque
     expect(auditoria.audited_changes)
       .to eq('alvo' => 'contato', 'cards_apagados' => 0, 'card_ids' => [], 'contact_id' => contact.id, 'modo' => 'keep',
              'cards_mantidos' => 1, 'card_ids_mantidos' => [card.id], 'reunioes_canceladas' => 1,
-             'canceled_meeting_ids' => [reuniao.id])
+             'reunioes_so_aqui' => 0, 'canceled_meeting_ids' => [reuniao.id])
     expect(auditoria.audited_changes.to_json).not_to include('Sigiloso')
   end
 

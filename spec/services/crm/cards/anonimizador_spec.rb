@@ -242,14 +242,14 @@ RSpec.describe Crm::Cards::Anonimizador do
   it 'não limpa nada quando, sob a trava, ainda há reunião futura marcada' do
     card = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Pedido', status: :open)
     reuniao = create_reuniao(account: account, card: card, user: admin, contact: contact, starts_at: 2.days.from_now)
-    allow(Crm::Meetings::CancelarFuturas).to receive(:new).and_return(instance_double(Crm::Meetings::CancelarFuturas, perform: []))
+    allow(Crm::Meetings::CancelarFuturas).to receive(:new).and_return(instance_double(Crm::Meetings::CancelarFuturas, perform: [], so_aqui: []))
 
     expect { contact.destroy! }.to raise_error(Crm::ExclusaoDefinitiva::Mudou) { |erro| expect(erro.motivo).to eq('cards_changed') }
 
     expect([Contact.exists?(contact.id), card.reload.title, reuniao.reload.status]).to eq([true, 'Pedido', 'scheduled'])
   end
 
-  it 'na exclusão em lote, um contato que falha por qualquer motivo não derruba o lote' do
+  it 'na exclusão em lote, um contato que falha por qualquer motivo não derruba o lote, e a falha fica registrada' do
     preso = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Preso', status: :open)
     outro = account.contacts.create!(name: 'Outro', phone_number: '+5511999990035')
     falho = instance_double(described_class, cancelar_reunioes!: [], reunioes_canceladas: [])
@@ -257,8 +257,15 @@ RSpec.describe Crm::Cards::Anonimizador do
     allow(described_class).to receive(:new).and_call_original
     allow(described_class).to receive(:new).with(contact: contact).and_return(falho)
 
-    Contacts::BulkDeleteService.new(account: account, contact_ids: [contact.id, outro.id]).perform
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+    Contacts::BulkDeleteService.new(account: account, contact_ids: [contact.id, outro.id], user: admin).perform
 
     expect([Contact.exists?(contact.id), Contact.exists?(outro.id), preso.reload.title]).to eq([true, false, 'Preso'])
+    expect(tracker).to have_received(:capture_exception)
+    falha = Audited.audit_class.find_by!(auditable: account, action: Crm::ExclusaoDefinitiva::FALHOU)
+    expect([falha.user, falha.audited_changes]).to eq([admin, { 'alvo' => 'contato', 'motivo' => 'internal_error',
+                                                                'contact_id' => contact.id, 'error_class' => 'ActiveRecord::Deadlocked' }])
   end
 end

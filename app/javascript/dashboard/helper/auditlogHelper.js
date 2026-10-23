@@ -55,6 +55,7 @@ const translationKeys = {
   'account:crm_hard_delete:contato:delete': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_APAGANDO`,
   'account:crm_hard_delete:contato:keep': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO`,
   'account:crm_hard_delete_failed:funil': `AUDIT_LOGS.CRM_EXCLUIR.FUNIL_FALHOU`,
+  'account:crm_hard_delete_failed:contato': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_FALHOU`,
 };
 
 // Por que o job do funil desistiu (Crm::ExclusaoDefinitiva::Mudou e o job): o código vira frase; código novo cai na
@@ -224,6 +225,7 @@ export function generateTranslationPayload(auditLogItem, agentList) {
     translationPayload.cardsMovidos = mudancas.cards_movidos ?? 0;
     translationPayload.cardsMantidos = mudancas.cards_mantidos ?? 0;
     translationPayload.reunioesCanceladas = mudancas.reunioes_canceladas ?? 0;
+    translationPayload.reunioesSoAqui = mudancas.reunioes_so_aqui ?? 0;
     translationPayload.pipelineId = mudancas.pipeline_id ?? '';
     translationPayload.contactId = mudancas.contact_id ?? '';
     if (action === 'crm_hard_delete_failed')
@@ -297,7 +299,8 @@ export const generateLogActionKey = auditLogItem => {
   if (auditableType === 'account' && CRM_EXCLUIR_ACOES.includes(action)) {
     const mudancas = auditLogItem.audited_changes || {};
     logActionKey += `:${mudancas.alvo}`;
-    if (mudancas.alvo === 'contato') logActionKey += `:${mudancas.modo}`;
+    if (mudancas.alvo === 'contato' && action === 'crm_hard_delete')
+      logActionKey += `:${mudancas.modo}`;
   }
 
   return translationKeys[logActionKey] || '';

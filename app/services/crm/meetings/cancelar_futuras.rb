@@ -16,7 +16,11 @@ class Crm::Meetings::CancelarFuturas
     @account = account
     @card_ids = Array(card_ids)
     @canceladas = []
+    @so_aqui = []
   end
+
+  # As canceladas só aqui (calendário fora de alcance): o evento pode continuar vivo no Google ou na Microsoft.
+  attr_reader :so_aqui
 
   # Devolve os ids das reuniões canceladas agora.
   def perform
@@ -42,6 +46,7 @@ class Crm::Meetings::CancelarFuturas
     alcancavel = self.class.calendario_alcancavel?(meeting)
     Crm::Meetings::CancelService.new(meeting: meeting, propagate: alcancavel, validar: false).perform
     avisar_so_aqui(meeting) unless alcancavel
+    @so_aqui << meeting.id unless alcancavel
   rescue ActiveRecord::ActiveRecordError
     raise
   rescue StandardError => e

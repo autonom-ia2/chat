@@ -444,6 +444,7 @@ describe('excluir de vez no CRM (#2096)', () => {
         contact_id: 7,
         cards_mantidos: 1,
         reunioes_canceladas: 2,
+        reunioes_so_aqui: 1,
       }),
       agentes
     );
@@ -451,7 +452,19 @@ describe('excluir de vez no CRM (#2096)', () => {
       contactId: 7,
       cardsMantidos: 1,
       reunioesCanceladas: 2,
+      reunioesSoAqui: 1,
     });
+  });
+
+  it('o contato que a ação em massa não excluiu tem frase própria', () => {
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete_failed', {
+          alvo: 'contato',
+          motivo: 'meeting_cancel_failed',
+        })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_FALHOU');
   });
 
   it('traduz o motivo da desistência, e o código novo cai na frase geral', () => {

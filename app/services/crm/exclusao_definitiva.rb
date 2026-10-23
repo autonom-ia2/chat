@@ -84,7 +84,8 @@ module Crm::ExclusaoDefinitiva
       anonimizador.perform.tap do |ids|
         auditar!(account: contact.account, user: user, alvo: 'contato', card_ids: [], contact_id: contact.id,
                  modo: CARDS_MANTER, cards_mantidos: ids.size, card_ids_mantidos: ids,
-                 reunioes_canceladas: anonimizador.reunioes_canceladas.size)
+                 reunioes_canceladas: anonimizador.reunioes_canceladas.size,
+                 reunioes_so_aqui: anonimizador.reunioes_so_aqui.size)
         contact.destroy!
       end
     end
@@ -105,10 +106,19 @@ module Crm::ExclusaoDefinitiva
 
   # Contato excluído por qualquer caminho, com a flag crm_arquivados (ContactCrmCards): quem excluiu pode não ver os
   # cards. Só ids e contagens.
-  def auditar_contato_excluido!(contact:, user:, card_ids:, reunioes:)
+  # reunioes_so_aqui: canceladas só no sistema porque o calendário não se alcança (o evento pode seguir no provedor).
+  def auditar_contato_excluido!(contact:, user:, card_ids:, anonimizador:)
+    reunioes = anonimizador.reunioes_canceladas
     auditar!(account: contact.account, user: user, alvo: 'contato', card_ids: [], contact_id: contact.id,
              modo: CARDS_MANTER, cards_mantidos: card_ids.size, card_ids_mantidos: card_ids,
-             reunioes_canceladas: reunioes.size, canceled_meeting_ids: reunioes.presence)
+             reunioes_canceladas: reunioes.size, reunioes_so_aqui: anonimizador.reunioes_so_aqui.size,
+             canceled_meeting_ids: reunioes.presence)
+  end
+
+  # Contato que a exclusão em lote não conseguiu excluir (Contacts::BulkDeleteService): ficou inteiro. Só ids e o
+  # motivo em código.
+  def contato_falhou!(contact:, user:, motivo:, **extras)
+    falhou!(account: contact.account, user: user, alvo: 'contato', motivo: motivo, contact_id: contact.id, **extras)
   end
 
   # alvo: 'cards' (Arquivados), 'funil' (Funis arquivados) ou 'contato' (excluir contato com os cards, LGPD).

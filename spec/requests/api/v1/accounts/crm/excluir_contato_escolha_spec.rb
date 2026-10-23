@@ -88,7 +88,8 @@ RSpec.describe 'CRM excluir contato com escolha dos cards e prévias', type: :re
       expect(reuniao.reload).to be_canceled
       expect(auditorias.sole.audited_changes)
         .to eq('alvo' => 'contato', 'cards_apagados' => 0, 'card_ids' => [], 'contact_id' => contact.id, 'modo' => 'keep',
-               'cards_mantidos' => 2, 'card_ids_mantidos' => ids, 'reunioes_canceladas' => 1)
+               'cards_mantidos' => 2, 'card_ids_mantidos' => ids, 'reunioes_canceladas' => 1,
+               'reunioes_so_aqui' => 0)
     end
 
     it 'keep: não exclui nem limpa nada quando a reunião futura não cancela no calendário (422)' do
