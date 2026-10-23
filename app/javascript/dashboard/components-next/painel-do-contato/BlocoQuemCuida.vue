@@ -113,6 +113,13 @@ const abrirEscolha = async () => {
   caixaDaEscolha.value?.querySelector('button')?.click();
 };
 
+// Fechou a lista sem escolher (clique fora ou foco saiu): volta o botão.
+const saiuDaEscolha = evento => {
+  if (!caixaDaEscolha.value?.contains(evento.relatedTarget)) {
+    escolhendo.value = false;
+  }
+};
+
 const trocar = async () => {
   escolhendo.value = false;
   if (escolha.value === escolhaAtual.value) return;
@@ -140,7 +147,7 @@ const trocar = async () => {
     <p v-if="fraseDeTime" class="m-0 text-sm text-n-slate-12">
       {{ fraseDeTime }}
     </p>
-    <div v-if="temAcao" ref="caixaDaEscolha">
+    <div v-if="temAcao" ref="caixaDaEscolha" @focusout="saiuDaEscolha">
       <ChoiceSelect
         v-if="escolhendo"
         v-model="escolha"

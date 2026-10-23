@@ -87,10 +87,13 @@ const copiar = async () => {
         {{ empresa }}
       </span>
     </div>
+    <!-- A lista de etiquetas abre embaixo do bloco, alinhada ao texto, e não para fora
+         do painel de 320 px quando o botão fica no fim da linha. -->
     <div
       v-if="mostraEtiquetas"
       :aria-label="t('PAINEL_DO_CONTATO.NOME.ETIQUETAS')"
       role="group"
+      class="relative [&_.relative]:static"
     >
       <ContactLabels :contact-id="contact.id" :read-only="!podeEditar" />
     </div>
