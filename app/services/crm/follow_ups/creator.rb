@@ -6,6 +6,11 @@ class Crm::FollowUps::Creator
   # #1590: folga para o relógio de quem marca "agora" e para a ida e volta da requisição.
   PAST_GRACE = 1.minute
 
+  # #2101: card arquivado não ganha série. O SeriesMaterializer a encerraria na hora, sem nenhuma vez, e a pessoa
+  # veria "Ends on leaves no date to remind". O controller responde 422 dizendo o motivo, dentro da ação (não num
+  # rescue_from), para a mensagem sair no idioma da pessoa.
+  class CardArchived < StandardError; end
+
   def initialize(account:, user:, card:, conversation:, attributes:)
     @account = account
     @user = user
@@ -77,19 +82,25 @@ class Crm::FollowUps::Creator
   end
 
   def create_series(attributes)
+    raise CardArchived if @card&.archived?
+
     series = @account.crm_follow_up_series.new(series_attributes(attributes))
     series.errors.add(:automation_mode, :inclusion) unless attributes[:automation_mode].to_s == 'reminder_only'
     raise ActiveRecord::RecordInvalid, series if series.errors.any?
 
     series.transaction do
       series.save!
-      first = Crm::FollowUps::SeriesMaterializer.new(series).perform
-      if first.nil?
-        series.errors.add(:ends_on, 'leaves no date to remind')
-        raise ActiveRecord::RecordInvalid, series
-      end
-      first
+      Crm::FollowUps::SeriesMaterializer.new(series).perform || without_first_time!(series)
     end
+  end
+
+  # A série nasceu sem nenhuma vez: o card foi arquivado entre a conferência de cima e a trava do SeriesMaterializer,
+  # ou o fim escolhido não deixa nenhuma data.
+  def without_first_time!(series)
+    raise CardArchived if @card&.reload&.archived?
+
+    series.errors.add(:ends_on, 'leaves no date to remind')
+    raise ActiveRecord::RecordInvalid, series
   end
 
   def series_attributes(attributes)

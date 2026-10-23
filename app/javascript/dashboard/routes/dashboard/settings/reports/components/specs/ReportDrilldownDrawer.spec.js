@@ -142,6 +142,24 @@ describe('ReportDrilldownDrawer.vue', () => {
     expect(wrapper.find('[data-testid="drilldown-card"]').text()).toBe('#42');
   });
 
+  it('shows the scoped notice when the viewer only sees their conversations', async () => {
+    const wrapper = await mountDrawer({ props: { showScopedNotice: true } });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="drilldown-scoped-notice"]').text()).toBe(
+      'REPORT.DRILLDOWN.SCOPED_NOTICE'
+    );
+  });
+
+  it('hides the scoped notice by default (administrators)', async () => {
+    const wrapper = await mountDrawer();
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="drilldown-scoped-notice"]').exists()
+    ).toBe(false);
+  });
+
   it('shows the bucket aggregate value for average metrics', async () => {
     const wrapper = await mountDrawer({
       props: {

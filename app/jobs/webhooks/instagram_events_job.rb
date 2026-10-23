@@ -11,9 +11,11 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   retry_on_lock_conflict wait: ->(executions) { executions.seconds }, attempts: 3, on_exhaustion: :process_without_lock
 
   # @return [Array] We will support further events like reaction or seen in future
-  # `:reaction` é tratado pela Autonom.ia (operate): #reaction só materializa em inbox com agente ativo +
-  # flag on; demais inboxes seguem ignorando reações (zero regressão).
-  SUPPORTED_EVENTS = [:message, :read, :postback, :reaction].freeze
+  # `:reaction`: o selo na mensagem reagida (Instagram::ReacaoDoCliente, chave `conversa_instagram`, #2113) e o agente da
+  # Autonom.ia (operate), que só materializa em inbox com agente ativo + flag on.
+  # `:message_edit`: o cliente editou a mensagem (#2113, Instagram::MessageEditService). Só chega com o campo de edição
+  # inscrito no app da Meta (ver Channel::Instagram#subscribe).
+  SUPPORTED_EVENTS = [:message, :read, :postback, :reaction, :message_edit].freeze
 
   def perform(entries)
     @entries = entries
@@ -155,18 +157,24 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
     message(messaging.merge(message: postback_message), channel)
   end
 
-  # AUTONOMIA (Onda 2b): reação no Instagram. Payload Meta: reaction={mid,action,reaction,emoji}.
-  # Só 'react' (ignora 'unreact'). Materializa via ReactionMaterializer (channel-agnóstico): só em inbox
-  # com agente ativo + flag on; senão no-op. Fail-safe. Dedup pelo event_source_id (mid+timestamp), já
-  # que o evento de reação do IG não tem id próprio.
+  # Reação no Instagram. Payload Meta: reaction={mid,action,reaction,emoji}. Dois caminhos independentes:
+  # o selo na mensagem reagida (#2113, react e unreact) e o agente da Autonomia (abaixo).
   def reaction(messaging, channel)
+    inbox = ::Inbox.find_by(channel: channel)
+    return if inbox.nil?
+
+    ::Instagram::ReacaoDoCliente.new(messaging: messaging, inbox: inbox).perform
+    materialize_reaction_for_agent(messaging, inbox)
+  end
+
+  # AUTONOMIA (Onda 2b): só 'react' (ignora 'unreact'). Materializa via ReactionMaterializer (channel-agnóstico): só em
+  # inbox com agente ativo + flag on; senão no-op. Fail-safe. Dedup pelo event_source_id (mid+timestamp), já
+  # que o evento de reação do IG não tem id próprio.
+  def materialize_reaction_for_agent(messaging, inbox)
     return unless ::Autonomia::Agents::Config.operate_reactions_enabled?
 
     data = messaging[:reaction] || {}
     return unless data[:action].to_s == 'react'
-
-    inbox = ::Inbox.find_by(channel: channel)
-    return if inbox.nil?
 
     ::Autonomia::Agents::Operate::ReactionMaterializer.call(
       inbox: inbox,
@@ -177,6 +185,10 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   rescue StandardError => e
     Rails.logger.warn("[autonomia][operate] ig_reaction_failed #{e.class}")
     nil
+  end
+
+  def message_edit(messaging, channel)
+    ::Instagram::MessageEditService.new(messaging: messaging, channel: channel).perform
   end
 
   def messages(entry)

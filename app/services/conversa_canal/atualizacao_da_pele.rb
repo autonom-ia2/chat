@@ -17,8 +17,18 @@ module ConversaCanal::AtualizacaoDaPele
 
   # Só com a pele ligada na conta: sem ela, robô e webhooks recebem tudo como na main (inclusive as marcas gravadas
   # pelo WhatsApp Híbrido, que tem o próprio silêncio, Waha::RichNative::SilentUpdate).
+  # Na caixa do Instagram vale a chave da conversa do Instagram (#2113), que grava as mesmas marcas (reação) sem
+  # depender da pele do WhatsApp.
   def silenciar?(message, mudancas)
-    message.present? && ConversaCanal::Pele.ligada?(message.account) && so_da_pele?(mudancas)
+    message.present? && marcas_ligadas?(message) && so_da_pele?(mudancas)
+  end
+
+  def marcas_ligadas?(message)
+    ConversaCanal::Pele.ligada?(message.account) || instagram_ligado?(message)
+  end
+
+  def instagram_ligado?(message)
+    message.inbox.present? && message.inbox.instagram? && message.account.feature_enabled?(Instagram::ReacaoDoCliente::FLAG)
   end
 
   # `previous_changes` do evento: { 'coluna' => [antes, depois] }.

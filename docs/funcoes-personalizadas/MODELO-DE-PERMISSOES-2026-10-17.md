@@ -1366,9 +1366,9 @@ Os atalhos abaixo combinam **área + nível**. Também cabem atalhos de empresa 
 | Supervisor | Pode mexer + reatribuir | Meu time | desligadas |
 | Analista / Comercial | Pode mexer | Só os meus + fila | desligadas |
 
-Exemplo: área Vendas + nível Gerente = "Gerente de Vendas": CRM, Conversas e Contatos "Pode mexer", relatórios do CRM "Só olha", alcance Times abaixo de mim, sem valor de vendas até o dono ligar.
+Exemplo: área Vendas + nível Gerente = "Gerente de Vendas": CRM, Conversas e Contatos "Pode mexer", relatórios do CRM "Só olha", alcance Times abaixo de mim, com os valores de venda e as metas da equipe (decisão do Rodrigo em 23/10, #2115: sem eles o gerente não acompanha quanto o time vende nem a meta). As duas chaves são protegidas: só quem pode entregá-las aplica o perfil completo; para os outros, a tela avisa que ficaram de fora.
 
-Os 8 perfis de hoje (`permissionMatrix.js:436-507`) viram atalhos, já corrigidos (Atendente com fila; SDR sem "Liberar Campanhas").
+Os 8 perfis de hoje (`permissionMatrix.js:436-507`) viram atalhos, já corrigidos (Atendente com fila; SDR sem "Liberar Campanhas"). Em 23/10 (#2115) cada atalho passou a entregar o que a frase dele promete: Marketing dispara campanhas e exporta contatos, Atendente pega da fila, Gestor comercial vê valores e define metas, Somente leitura vê também Anúncios, Agendamento e Cotação, e Operações deixa de prometer reconectar o WhatsApp (credencial fica com o administrador). Chave protegida que quem aplica não pode entregar sai do atalho com aviso, na prévia e no editor.
 
 ### 5.10 Mapa das 38 chaves atuais
 

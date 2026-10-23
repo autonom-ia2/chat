@@ -1,8 +1,8 @@
 <script setup>
 // Post e story compartilhados no Direct (#2079). O story (menção, story e resposta ao
 // story) vem com o rótulo em cima e a barra de citação ao lado da miniatura de 158 px;
-// sem a mídia (expirou), fica "Story indisponível". O post é o cartão de 300 px, com
-// "Mídia indisponível" quando o link da Meta expirou.
+// sem a mídia, fica "Story indisponível". O post é o cartão de 300 px, com "Mídia
+// indisponível" quando a mídia não abre (sem a nossa cópia, o link da Meta expira).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ATTACHMENT_TYPES } from 'dashboard/components-next/message/constants';

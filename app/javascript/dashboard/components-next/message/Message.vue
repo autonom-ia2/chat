@@ -624,7 +624,8 @@ const allContextMenuOptions = computed(() => {
     replyTo:
       !props.private &&
       props.inboxSupportsReplyTo.outgoing &&
-      !isFailedOrProcessing,
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
     report:
       isOnChatwootCloud.value &&
       isCaptainMessage.value &&
@@ -846,7 +847,12 @@ provideMessageContext({
     <LinhaDoInstagram
       v-else-if="linhaDoInstagram"
       :pode-responder="contextMenuEnabledOptions.replyTo"
+      :pode-reagir="reacaoDoAtendente.visivel.value && !isReadOnly"
+      :reacao-atual="reacaoDoAtendente.atual.value"
+      :reacao-bloqueada="reacaoDoAtendente.bloqueado.value"
+      :reagindo="reacaoDoAtendente.enviando.value"
       @responder="handleReplyTo"
+      @reagir="reacaoDoAtendente.reagir"
       @menu="openContextMenu($event)"
     />
     <div

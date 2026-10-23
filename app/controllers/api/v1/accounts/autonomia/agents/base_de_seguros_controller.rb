@@ -10,12 +10,8 @@ class Api::V1::Accounts::Autonomia::Agents::BaseDeSegurosController < Api::V1::A
   before_action :ensure_fase2
   before_action :fetch_agent
 
-  # Os avisos abaixo respondem pelo `rescue_from`, que o Rails roda fora do `around_action` do idioma (#1419): cada um
-  # reabre o idioma da pessoa (ou da conta) antes de montar a mensagem.
   # A mesma ordem de travas do Construtor e da volta por Versões (as conversas, depois o agente).
-  rescue_from ActiveRecord::Deadlocked do
-    switch_locale_using_account_locale { render_conflito_de_trava }
-  end
+  rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
   rescue_from(BASE::SemBaseNova) { aviso('sem_base_nova', :unprocessable_entity) }
   rescue_from(::Autonomia::Agents::TrocaDaBase::TrocaIndisponivel) { aviso('sem_instrucao', :unprocessable_entity) }
   rescue_from(BASE::NaoComparou, ::Autonomia::Agents::TrocaDaBase::RetratoMudou) { aviso('comparar_antes', :unprocessable_entity) }
@@ -57,9 +53,7 @@ class Api::V1::Accounts::Autonomia::Agents::BaseDeSegurosController < Api::V1::A
   private
 
   def aviso(codigo, status)
-    switch_locale_using_account_locale do
-      render json: { error: I18n.t("autonomia.base_de_seguros.#{codigo}"), code: codigo }, status: status
-    end
+    render json: { error: I18n.t("autonomia.base_de_seguros.#{codigo}"), code: codigo }, status: status
   end
 
   def mostrar_comparacao_pronta(versao, pronta)

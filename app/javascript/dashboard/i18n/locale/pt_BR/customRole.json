@@ -360,6 +360,10 @@
         "DONE": "Modelo {name} aplicado."
       },
       "INCLUDED_IN_ADMIN": "Incluído no acesso total ao CRM.",
+      "LEFT_OUT": {
+        "TITLE": "Parte deste modelo ficou de fora",
+        "DESCRIPTION": "Você não pode entregar algumas das permissões dele, então elas ficam desligadas nestas áreas. Um administrador pode liberá-las."
+      },
       "LOCK": {
         "MISSING": "Você não tem esta chave",
         "DELEGATION": "Só quem pode entregar acima do próprio acesso"
@@ -383,6 +387,7 @@
       "BLANK_META": "Em branco",
       "CAN": "Pode",
       "CANNOT": "Não pode",
+      "LEFT_OUT": "Você não pode entregar parte destas permissões, então elas ficam desligadas.",
       "ADJUST_LATER": "Você ajusta qualquer área no próximo passo.",
       "CONTINUE": "Continuar com {name}",
       "APPLY": "Aplicar {name}"
@@ -448,6 +453,7 @@
         "SETTINGS": "Mexer em configurações",
         "ALL_CONVERSATIONS": "Ver e atender todas as conversas",
         "EDIT_CONTACTS": "Editar, importar e exportar contatos",
+        "EDIT_IMPORT_CONTACTS": "Editar e importar contatos",
         "TEAM_SETUP": "Organizar etiquetas e macros da equipe",
         "DELETE_DATA": "Excluir conversas ou contatos",
         "BILLING_INTEGRATIONS": "Mexer em integrações e cobrança",
@@ -456,11 +462,12 @@
         "EDIT_PIPELINES": "Criar e editar funis do CRM",
         "EXPORT_CRM": "Exportar a lista do CRM",
         "ALL_SEARCHES": "Ver as buscas de prospecção de todos",
+        "SET_GOALS": "Ver os valores em R$ e definir as metas da equipe",
         "ANSWER_CONVERSATIONS": "Atender conversas",
         "EDIT_DEALS": "Editar cards no CRM",
         "CRM_DASHBOARD": "Ver o painel do CRM e o custo de IA",
         "CHANGE_ANYTHING": "Alterar qualquer coisa",
-        "SETUP_INBOXES": "Configurar caixas e reconectar o WhatsApp",
+        "SETUP_INBOXES": "Criar e configurar caixas",
         "SETUP_RULES": "Configurar automações, etiquetas, macros e SLA",
         "PUBLISH_AGENTS": "Criar e publicar agentes Autonom.ia",
         "SEE_EVERYTHING": "Ver contatos, CRM, campanhas e agentes"

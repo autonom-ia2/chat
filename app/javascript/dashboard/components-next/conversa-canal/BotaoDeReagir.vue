@@ -27,6 +27,8 @@ const props = defineProps({
   atual: { type: String, default: '' },
   bloqueado: { type: Boolean, default: false },
   enviando: { type: Boolean, default: false },
+  // A frase do bloqueio quando não é a das 24 h do WhatsApp (a do Instagram, #2113).
+  dicaBloqueado: { type: String, default: '' },
 });
 
 const emit = defineEmits(['reagir']);
@@ -42,6 +44,19 @@ const seletor = ref(false);
 const gatilho = ref(null);
 const barra = ref(null);
 const seletorCompleto = ref(null);
+// Quanto a barra anda para caber na tela: o botão fica perto da borda no celular (#2113).
+const desvio = ref(0);
+const MARGEM_DA_TELA = 8;
+
+const encaixarNaTela = elemento => {
+  desvio.value = 0;
+  const caixa = elemento?.getBoundingClientRect?.();
+  if (!caixa) return;
+  const limite = window.innerWidth - MARGEM_DA_TELA;
+  if (caixa.right > limite) desvio.value = limite - caixa.right;
+  else if (caixa.left < MARGEM_DA_TELA)
+    desvio.value = MARGEM_DA_TELA - caixa.left;
+};
 
 // Primeiro controle do seletor completo (a busca de emoji).
 const FOCAVEL_DO_SELETOR = 'input, button';
@@ -54,6 +69,7 @@ const abrir = async () => {
   aberta.value = true;
   seletor.value = false;
   await nextTick();
+  encaixarNaTela(barra.value);
   const botoes = botoesDaBarra();
   const indice = Math.max(REACOES_RAPIDAS.indexOf(props.atual), 0);
   botoes[indice]?.focus();
@@ -79,6 +95,7 @@ const abrirSeletor = () => {
 watch(seletorCompleto, async instancia => {
   if (!instancia) return;
   await nextTick();
+  encaixarNaTela(instancia.$el);
   instancia.$el?.querySelector?.(FOCAVEL_DO_SELETOR)?.focus();
 });
 
@@ -114,7 +131,9 @@ onBeforeUnmount(() => emitter.off(ABRIR_REACOES, abrirPeloMenu));
     <button
       ref="gatilho"
       v-tooltip.top="
-        bloqueado ? t('CONVERSA_CANAL.REAGIR.FORA_DA_JANELA') : null
+        bloqueado
+          ? dicaBloqueado || t('CONVERSA_CANAL.REAGIR.FORA_DA_JANELA')
+          : null
       "
       type="button"
       class="grid place-content-center size-11 rounded-full text-[#8C8C8C] dark:text-[#A7A8A8] transition-opacity opacity-0 group-hover/linha:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:hidden"
@@ -141,6 +160,7 @@ onBeforeUnmount(() => emitter.off(ABRIR_REACOES, abrirPeloMenu));
       role="toolbar"
       :aria-label="t('CONVERSA_CANAL.REAGIR.BARRA')"
       class="absolute bottom-full mb-1 z-20 flex items-center gap-0.5 p-1 rounded-full bg-white dark:bg-[#242626] shadow-[0_2px_5px_rgba(11,20,26,0.26)]"
+      :style="desvio ? { transform: `translateX(${desvio}px)` } : null"
       :class="
         lado === ORIENTATION.RIGHT
           ? 'ltr:right-0 rtl:left-0'
@@ -180,6 +200,7 @@ onBeforeUnmount(() => emitter.off(ABRIR_REACOES, abrirPeloMenu));
       ref="seletorCompleto"
       mode="emoji"
       class="bottom-full mb-1"
+      :style="desvio ? { transform: `translateX(${desvio}px)` } : null"
       :class="
         lado === ORIENTATION.RIGHT
           ? 'ltr:right-0 rtl:left-0'

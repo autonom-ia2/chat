@@ -360,6 +360,10 @@
         "DONE": "{name} profile applied."
       },
       "INCLUDED_IN_ADMIN": "Included in full CRM access.",
+      "LEFT_OUT": {
+        "TITLE": "Part of this profile was left out",
+        "DESCRIPTION": "You cannot hand out some of its permissions, so they stay off in these areas. An administrator can grant them."
+      },
       "LOCK": {
         "MISSING": "You do not have this key",
         "DELEGATION": "Only someone who can grant access above their own"
@@ -383,6 +387,7 @@
       "BLANK_META": "Blank",
       "CAN": "Can",
       "CANNOT": "Cannot",
+      "LEFT_OUT": "You cannot hand out some of these permissions, so they will stay off.",
       "ADJUST_LATER": "You can adjust any area in the next step.",
       "CONTINUE": "Continue with {name}",
       "APPLY": "Apply {name}"
@@ -448,6 +453,7 @@
         "SETTINGS": "Change settings",
         "ALL_CONVERSATIONS": "See and answer every conversation",
         "EDIT_CONTACTS": "Edit, import and export contacts",
+        "EDIT_IMPORT_CONTACTS": "Edit and import contacts",
         "TEAM_SETUP": "Organise labels and team macros",
         "DELETE_DATA": "Delete conversations or contacts",
         "BILLING_INTEGRATIONS": "Touch integrations and billing",
@@ -456,11 +462,12 @@
         "EDIT_PIPELINES": "Create and edit CRM pipelines",
         "EXPORT_CRM": "Export the CRM list",
         "ALL_SEARCHES": "See everyone's prospecting searches",
+        "SET_GOALS": "See sales values and set the team's goals",
         "ANSWER_CONVERSATIONS": "Answer conversations",
         "EDIT_DEALS": "Edit cards in the CRM",
         "CRM_DASHBOARD": "See the CRM dashboard and AI cost",
         "CHANGE_ANYTHING": "Change anything",
-        "SETUP_INBOXES": "Set up inboxes and reconnect WhatsApp",
+        "SETUP_INBOXES": "Create and set up inboxes",
         "SETUP_RULES": "Set up automations, labels, macros and SLA",
         "PUBLISH_AGENTS": "Create and publish Autonom.ia agents",
         "SEE_EVERYTHING": "See contacts, CRM, campaigns and agents"
