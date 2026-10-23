@@ -51,14 +51,19 @@ RSpec.describe Crm::Conversations::CardEmFoco do
     expect(avaliacoes.size).to eq(1)
   end
 
+  # O teto é por dia (Date.current) e o laço anda ~18 min: começando depois das 23:42, virava o dia no meio e o
+  # contador zerava (#2102). O meio-dia de amanhã deixa o laço inteiro no mesmo dia, a qualquer hora em que a suíte
+  # rode, e o relógio só anda para a frente. O bloco devolve o relógio no fim.
   it 'para no teto do dia' do
-    Crm::Ai::FatosDaConversa::MAX_AVALIACOES_DO_ROBO_POR_DIA.times do
+    travel_to(Time.current.tomorrow.noon) do
+      Crm::Ai::FatosDaConversa::MAX_AVALIACOES_DO_ROBO_POR_DIA.times do
+        perform(fala)
+        travel(3.minutes)
+      end
       perform(fala)
-      travel(3.minutes)
-    end
-    perform(fala)
 
-    expect(avaliacoes.size).to eq(Crm::Ai::FatosDaConversa::MAX_AVALIACOES_DO_ROBO_POR_DIA)
+      expect(avaliacoes.size).to eq(Crm::Ai::FatosDaConversa::MAX_AVALIACOES_DO_ROBO_POR_DIA)
+    end
   end
 
   it 'fora: follow-up em nome de uma pessoa, robô de fora, nota privada, envio que falhou', :aggregate_failures do
