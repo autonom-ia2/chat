@@ -27,6 +27,9 @@ BASE_REDIS=57400
 
 uso() { /usr/bin/sed -n '2,15p' "${BASH_SOURCE[0]}" | /usr/bin/cut -c3-; exit 2; }
 falha() { echo "bin/demo: $*" >&2; exit 1; }
+# em_uso (mesmo arquivo que o no_m2.sh usa no M2)
+# shellcheck source=script/demo/comum.sh
+source "$KIT/comum.sh"
 
 validar_slug() {
   local s=$1
@@ -102,7 +105,8 @@ ok = m["snapshot_id"] == os.path.basename(sys.argv[1]) and m["source_path"] == s
 sys.exit(0 if ok else 1)' "$snapdir" "$WT" || falha "o snapshot $snapdir não é desta worktree"
   echo "snapshot no M4: $snapdir"
   if ! no_m2 clonar-base "$slug" "$snapdir"; then
-    no_m2 descartar-snapshot "$slug" "$snapdir" || true
+    no_m2 descartar-snapshot "$slug" "$snapdir" ||
+      falha "clone no $HOST falhou e não consegui descartar lá: $HOST:$snapdir (o do M4 ficou: $snapdir)"
     apagar_snapshot_local "$SNAP"
     falha "não consegui preparar a cópia no $HOST"
   fi
@@ -131,7 +135,8 @@ cmd_up() {
     no_m2 checar "$slug" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"
     criar_snapshot
     if ! no_m2 iniciar "$slug" "$SNAP" "$(/usr/bin/git -C "$WT" rev-parse HEAD)" "$WT" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"; then
-      no_m2 descartar-snapshot "$slug" "${SNAP%/src}" || true
+      no_m2 descartar-snapshot "$slug" "${SNAP%/src}" ||
+        falha "não registrei a demo e não consegui descartar o snapshot no $HOST: $HOST:${SNAP%/src} (o do M4 ficou)"
       apagar_snapshot_local "$SNAP"
       falha "não registrei a demo; snapshot descartado"
     fi
@@ -179,6 +184,8 @@ cmd_sync() {
   [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT)"
   local copiar=() apagar=() f lista
   lista=$(/usr/bin/mktemp "${TMPDIR:-/tmp}/demo-sync.XXXXXX")
+  # shellcheck disable=SC2064
+  trap "/bin/rm -f '$lista'" EXIT
   { candidatos "$base"; sincronizados_antes; } | LC_ALL=C /usr/bin/sort -z -u > "$lista"
   while IFS= read -r -d '' f; do
     [ -n "$f" ] || continue
@@ -275,19 +282,6 @@ cmd_prints() {
   return "$codigo"
 }
 
-# Quem está com arquivo aberto no diretório. Indexador (Spotlight) e buscas de disco abrem arquivo de passagem:
-# só conta como "em uso" se continuar aberto em 5 leituras seguidas, com 3 s entre elas.
-em_uso() {
-  local tentativa usando=''
-  for tentativa in 1 2 3 4 5; do
-    usando=$(/usr/sbin/lsof +D "$1" 2>/dev/null || true)
-    [ -n "$usando" ] || return 1
-    [ "$tentativa" -eq 5 ] || sleep 3
-  done
-  echo "$usando" | /usr/bin/head -5
-  return 0
-}
-
 # Confere, sem apagar, que o snapshot deste Mac pode sair (caminho, marcador, ninguém usando).
 conferir_snapshot_local() {
   local snapdir=${1%/src}
@@ -321,7 +315,9 @@ cmd_down() {
     snap=$(valor_do_estado SNAP)
     conferir_snapshot_local "$snap"
     no_m2 apagar "$slug" || falha "o $HOST recusou o apagar; nada foi apagado no M4 ($snap)"
+    # O demo.env do M2 só some no `fechar`: se o M4 recusar aqui, repetir o down --apagar termina o serviço.
     apagar_snapshot_local "$snap"
+    no_m2 fechar "$slug"
   else
     no_m2 descer "$slug"
     echo "banco, snapshot e pasta continuam. Para apagar: bin/demo down $slug --apagar"

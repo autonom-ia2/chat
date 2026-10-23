@@ -28,6 +28,9 @@ case "$slug" in
   '' | *[!a-z0-9-]* | -* | *-) falha "slug inválido" ;;
 esac
 [ ${#slug} -le 30 ] || falha "slug longo demais"
+# em_uso (mesmo arquivo que o bin/demo usa no M4)
+# shellcheck source=script/demo/comum.sh
+source "$(dirname "${BASH_SOURCE[0]}")/comum.sh"
 
 carregar_estado() {
   [ -f "$L/demo.env" ] || falha "demo não existe no M2 ($L/demo.env). Rode: bin/demo up $slug"
@@ -119,7 +122,8 @@ checar() {
 # Confere que o snapshot não tem .env nem credencial (no M4 o MacCluster já exclui ignorados e sensíveis).
 sem_segredo() {
   local achados
-  achados=$(/usr/bin/find "$1" -maxdepth 1 -name '.env*' ! -name '*.example' ! -name '*.sample' ! -name '*.template'
+  achados=$(
+    /usr/bin/find "$1" -maxdepth 1 -name '.env*' ! -name '*.example' ! -name '*.sample' ! -name '*.template'
     /usr/bin/find "$1/config" -maxdepth 1 \( -name 'master.key' -o -name 'credentials*' \))
   [ -z "$achados" ] || { echo "$achados"; falha "snapshot com arquivo de segredo; não sobe"; }
 }
@@ -197,6 +201,7 @@ subir_redis() {
 
 preparar() {
   carregar_estado
+  [ ! -f "$L/apagado-no-m2" ] || falha "demo em remoção: termine com bin/demo down $slug --apagar"
   [ ! -f "$L/preparado" ] || return 0
   sem_segredo "$SNAP"
   subir_redis
@@ -369,22 +374,36 @@ psql_cmd() {
   psql_demo -d "$DB" -c "$sql"
 }
 
-# Quem está com arquivo aberto no diretório. Indexador (Spotlight) e buscas de disco abrem arquivo de passagem:
-# só conta como "em uso" se continuar aberto em 5 leituras seguidas, com 3 s entre elas.
-em_uso() {
-  local tentativa usando=''
-  for tentativa in 1 2 3 4 5; do
-    usando=$(/usr/sbin/lsof +D "$1" 2>/dev/null || true)
-    [ -n "$usando" ] || return 1
-    [ "$tentativa" -eq 5 ] || sleep 3
+# PIDs dos servidores desta demo, que o descer cuida: quem escuta nas portas dela, os processos pais com cwd no
+# snapshot (os wrappers do nohup) e todos os descendentes deles (esbuild do Vite, fsevent_watch do Rails...).
+pids_da_demo() {
+  local porta pid raizes=''
+  for porta in "$RAILS_PORT" "$VITE_PORT"; do
+    for pid in $(escutando "$porta"); do
+      while [ -n "$pid" ] && [ "$pid" -gt 1 ]; do
+        case "$(cwd_do_pid "$pid")" in "$SNAP"*) raizes="$raizes $pid" ;; *) break ;; esac
+        pid=$(/bin/ps -o ppid= -p "$pid" | /usr/bin/tr -d ' ')
+      done
+    done
   done
-  echo "$usando" | /usr/bin/head -5
-  return 0
+  [ -n "$raizes" ] || return 0
+  /bin/ps -axo pid=,ppid= | /usr/bin/awk -v raizes="$raizes" '
+    { pai[$1] = $2 }
+    END {
+      n = split(raizes, r, " "); for (i = 1; i <= n; i++) dentro[r[i]] = 1
+      for (pid in pai) { p = pid; while (p > 1 && !(p in dentro) && (p in pai)) p = pai[p]; if (p in dentro) print pid }
+    }'
 }
 
-# Confere tudo antes de apagar qualquer coisa: se algo recusar, banco, snapshot e pasta ficam como estavam.
+# Confere tudo antes de apagar ou desligar qualquer coisa: se algo recusar, servidores, banco, snapshot e pasta
+# ficam como estavam. No fim deixa o marcador `apagado-no-m2` e o demo.env: o bin/demo apaga o snapshot do M4 e só
+# depois chama `fechar`, que apaga a pasta. Se o M4 falhar, repetir `bin/demo down <slug> --apagar` termina.
 apagar() {
   carregar_estado
+  if [ -f "$L/apagado-no-m2" ]; then
+    echo "M2 já apagado antes; falta só o M4"
+    return 0
+  fi
   case "$DB" in "$PREFIXO_BANCO"*) ;; *) falha "banco fora do kit: $DB" ;; esac
   local snapdir=${SNAP%/src}
   case "$snapdir" in
@@ -395,10 +414,11 @@ apagar() {
   if [ -d "$snapdir" ]; then
     [ -f "$snapdir/.maccluster-workspace.json" ] || falha "$snapdir não tem o marcador do MacCluster; não apago"
   fi
-  descer
   if [ -d "$snapdir" ]; then
-    if em_uso "$snapdir"; then falha "snapshot em uso; nada foi apagado: $snapdir"; fi
+    # shellcheck disable=SC2046
+    if em_uso "$snapdir" $(pids_da_demo); then falha "snapshot em uso por outro processo; nada foi apagado nem desligado: $snapdir"; fi
   fi
+  descer
   if banco_existe "$DB"; then
     "$PGBIN/dropdb" -h "$PG_HOST" -p "$PG_PORT" -U postgres --force "$DB"
     echo "banco $DB apagado"
@@ -407,6 +427,12 @@ apagar() {
     /bin/rm -rf "$snapdir"
     echo "snapshot apagado no M2: $snapdir"
   fi
+  /usr/bin/touch "$L/apagado-no-m2"
+}
+
+fechar() {
+  [ -f "$L/apagado-no-m2" ] || falha "fechar só depois do apagar"
+  case "$L" in "$RAIZ"/?*) ;; *) falha "pasta suspeita: $L" ;; esac
   /bin/rm -rf "$L"
   echo "pasta da demo apagada no M2: $L"
 }
@@ -421,6 +447,7 @@ case "$cmd" in
   reiniciar-rails) reiniciar_rails ;;
   reiniciar-vite) reiniciar_vite ;;
   descartar-snapshot) descartar_snapshot "$@" ;;
+  fechar) fechar ;;
   migrar) migrar ;;
   pnpm) pnpm_de_novo ;;
   flag) flag "$@" ;;

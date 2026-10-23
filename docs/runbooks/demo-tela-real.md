@@ -37,7 +37,7 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
 | `seed` | M2 | Copia o `.rb` para a pasta da demo e roda com `rails runner`. `ENV['DEMO_PASTA']` aponta a pasta da demo no M2 (para mídia, por exemplo). |
 | `tunnel` | — | Imprime o `ssh -L` das duas portas (Rails e Vite) e a URL. |
 | `prints` | M2 → M4 | Roda `script/demo/prints.cjs` com o Playwright do snapshot e o Chrome do M2, contra o painel local. Traz só os PNGs para `docs/<pasta>/` da worktree; o `relato.json` (URLs locais e erros) fica no M2, na pasta da demo. Recusa `pasta` que já tenha arquivo versionado. |
-| `down` | M2 (e M4) | Desliga Rails, Vite e Redis da demo, conferindo que o processo roda dentro do snapshot dela. Com `--apagar`: confere o snapshot do M4 (caminho, marcador, `lsof +D`) sem apagar; no M2 faz `dropdb` do banco da demo e apaga o snapshot e a pasta da demo; só se o M2 concluir, apaga o snapshot do M4. Se o M2 recusar, o M4 fica intacto. |
+| `down` | M2 (e M4) | Desliga Rails, Vite e Redis da demo, conferindo que o processo roda dentro do snapshot dela. Com `--apagar`: confere o snapshot do M4 (caminho, marcador, `lsof +D`) sem apagar. No M2 confere que só os servidores da demo usam o snapshot **antes** de desligá-los; então desliga, faz `dropdb` do banco e apaga o snapshot, deixando o marcador `apagado-no-m2` e o `demo.env`. Depois apaga o snapshot do M4 e, por último, a pasta da demo no M2. Se o M2 recusar, nada é desligado nem apagado. Se o M4 recusar depois do M2, repetir `down --apagar` termina. |
 
 ## Isolamento: o que é de cada demo
 
@@ -127,6 +127,14 @@ entrada → todas as conversas):
 | **Vite demora na 1a página** | A primeira visita compila o painel. | O `up` espera até 15 min pelo login; o `prints` dá até 5 min por página (`DEMO_TIMEOUT_MS`). |
 | **Gem nova** | O Ruby do MacCluster tem as gems do `Gemfile.lock` da `main`. | O `sync` recusa mudança de `Gemfile`; demo que precisa de gem nova não é caso deste kit. |
 
+## Checagem de uso (`lsof +D`)
+
+Antes de apagar um snapshot, o kit confere com `lsof -w -t +D` quem tem arquivo aberto nele (`script/demo/comum.sh`,
+o mesmo arquivo nos dois Macs). Indexador do Spotlight e buscas de disco abrem arquivo de passagem: só conta como
+em uso se continuar assim em 5 leituras, com 3 s entre elas. Erro do `lsof` (stderr ou saída diferente de 0/1)
+para tudo sem apagar; o `lsof` 4.91 do macOS sai com 1 tanto sem nada aberto quanto achando processos.
+Medido em 23/10: ~3 s por leitura num snapshot com `node_modules` (89 mil arquivos) no M2, ~2 s no M4.
+
 ## Limpeza (obrigatória)
 
 Ao fim da aprovação, na mesma etapa da limpeza da entrega:
@@ -143,6 +151,7 @@ Apaga só o que é da demo, pelo nome exato: o banco `chatwoot_kitdemo_<slug>`, 
 
 - `bin/demo` — comando (M4).
 - `script/demo/no_m2.sh` — lado M2; o `bin/demo` copia `script/demo/` para a pasta da demo a cada comando.
+- `script/demo/comum.sh` — `em_uso` (checagem com `lsof +D`), carregado pelos dois lados.
 - `script/demo/preparar_conta.rb`, `ligar_flag.rb` — `rails runner` no banco da demo.
 - `script/demo/senha_do_seed.rb` — lê a senha do John no `db/seeds.rb` (parser Prism) para o login dos prints.
 - `script/demo/prints.cjs` — prints com Playwright; `exemplo-jornadas.json` — jornada de exemplo.
