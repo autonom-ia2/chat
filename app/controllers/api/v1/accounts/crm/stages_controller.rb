@@ -36,11 +36,13 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
   end
 
   def destroy
-    case Crm::PipelineStages::Destroyer.new(stage: @stage, target_stage_id: params[:target_stage_id]).perform
+    case Crm::PipelineStages::Destroyer.new(stage: @stage, target_stage_id: params[:target_stage_id], actor: Current.user).perform
     when Crm::PipelineStages::Destroyer::HAS_CARDS
       render_unprocessable('crm.stage_has_cards')
     when Crm::PipelineStages::Destroyer::LAST_STAGE
       render_unprocessable('crm.stage_is_last')
+    when Crm::PipelineStages::Destroyer::IN_USE
+      render_unprocessable('crm.stage_in_use')
     else
       head :no_content
     end

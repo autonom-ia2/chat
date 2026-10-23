@@ -74,7 +74,7 @@ class Crm::Ai::NaoENegocio
     return false unless decisao_valida?
     return sugerir_teste! if motivo == MOTIVO_TESTE
 
-    arquivado = @card.with_lock { pode_arquivar? && arquivar! }
+    arquivado = arquivar!
     Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_ARCHIVED) if arquivado
     arquivado
   end
@@ -139,11 +139,9 @@ class Crm::Ai::NaoENegocio
     abertos.where(conversation_id: conversas).or(abertos.where(id: vinculados)).exists?(id: id)
   end
 
+  # As guardas são relidas sob as travas do Crm::Cards::Archiver (lembretes antes do card, a ordem do DueProcessor).
   def arquivar!
-    @card.update!(status: :archived, last_activity_at: Time.current)
-    @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).find_each { |sugestao| sugestao.update!(status: :expired) }
-    Crm::ActivityLogger.new(card: @card, actor: nil, event_type: 'archive', payload: payload).perform
-    true
+    Crm::Cards::Archiver.new(card: @card, actor: nil, payload: payload).perform { pode_arquivar? }
   end
 
   def payload

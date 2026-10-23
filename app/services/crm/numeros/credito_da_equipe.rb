@@ -27,9 +27,6 @@ class Crm::Numeros::CreditoDaEquipe < Crm::Numeros::Credito
   end
 
   def fechados
-    @fechados ||= @account.crm_cards.where(pipeline_id: @pipeline_ids, closed_at: @range,
-                                           status: STATUSES.map { |status| Crm::Card.statuses[status] })
-                          .order(:id).limit(MAX_CARDS)
-                          .pluck(*CAMPOS).map { |linha| CAMPOS.zip(linha).to_h }
+    @fechados ||= linhas(@account.crm_cards.where(pipeline_id: @pipeline_ids, closed_at: @range))
   end
 end

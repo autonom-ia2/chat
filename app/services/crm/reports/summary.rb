@@ -84,7 +84,7 @@ module Crm
       def closed_with(status)
         return pipeline_cards.none if status.nil?
 
-        pipeline_cards.where(closed_at: range, status: Crm::Card.statuses[status])
+        pipeline_cards.where(closed_at: range).com_desfecho(status)
       end
 
       def win_rate(won_count, lost_count)
@@ -136,7 +136,7 @@ module Crm
       end
 
       def won_in(period, currency)
-        pipeline_cards.where(status: Crm::Card.statuses[:won], currency: currency, closed_at: period).sum(:value_cents)
+        pipeline_cards.where(currency: currency, closed_at: period).com_desfecho(:won).sum(:value_cents)
       end
     end
   end

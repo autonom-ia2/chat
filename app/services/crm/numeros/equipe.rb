@@ -22,7 +22,7 @@ class Crm::Numeros::Equipe
     @custo = perfil[:custo]
     @leitura = perfil[:leitura]
     @valor = perfil.fetch(:valor, true)
-    @cards = Crm::Numeros::CardsDaEquipe.new(account: account, pipelines: acesso.apply_to_reports(account.crm_pipelines))
+    @cards = Crm::Numeros::CardsDaEquipe.new(account: account, pipelines: acesso.apply_to_reports(account.crm_pipelines.active))
   end
 
   def perform
@@ -75,7 +75,7 @@ class Crm::Numeros::Equipe
   end
 
   def moeda_da_meta
-    @account.crm_pipelines.where(id: @cards.ids(:venda)).order(is_default: :desc, position: :asc, id: :asc)
+    @account.crm_pipelines.active.where(id: @cards.ids(:venda)).order(is_default: :desc, position: :asc, id: :asc)
             .pick(:metadata)&.dig('goals', 'currency').presence
   end
 
@@ -90,7 +90,7 @@ class Crm::Numeros::Equipe
   end
 
   def soma_das_metas
-    metas = @account.crm_pipelines.where(id: @cards.ids(:venda)).pluck(:metadata).filter_map do |metadata|
+    metas = @account.crm_pipelines.active.where(id: @cards.ids(:venda)).pluck(:metadata).filter_map do |metadata|
       goals = (metadata || {})['goals'] || {}
       goals['monthly_target_cents'].to_i if (goals['currency'].presence || 'BRL') == moeda
     end

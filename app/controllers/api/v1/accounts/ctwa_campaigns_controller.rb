@@ -84,11 +84,11 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
   def origin_metric_card_filters
     filters = [
       'crm_cards.account_id = ?',
-      'crm_cards.status = ?',
+      "(crm_cards.status = ? OR #{Crm::Card.desfecho_sql})",
       'crm_cards.closed_at BETWEEN ? AND ?',
       'crm_cards.pipeline_id IN (SELECT id FROM crm_pipelines WHERE crm_pipelines.account_id = ? AND crm_pipelines.counts_as_sale)'
     ]
-    binds = [Current.account.id, Crm::Card.statuses[:won], since_time, until_time, Current.account.id]
+    binds = [Current.account.id, Crm::Card.statuses[:won], 'won', since_time, until_time, Current.account.id]
 
     if params[:pipeline_id].present?
       filters << 'crm_cards.pipeline_id = ?'

@@ -11,12 +11,13 @@ module Crm
       DEFAULT_RANGE_DAYS = 30
       MAX_RANGE_DAYS = 366
 
-      # pipelines: os funis que a pessoa enxerga (acesso por funil, #1148, PR D); sem restrição, todos os da conta.
+      # pipelines: os funis que a pessoa enxerga (acesso por funil, #1148, PR D); sem restrição, os ativos da conta (funil
+      # arquivado sai dos relatórios, como das Metas).
       # value_visible: false tira os valores de venda em R$ de quem não tem `sales_value_view` (#2075); contagens ficam.
       def initialize(account:, params: {}, pipelines: nil, value_visible: true)
         @account = account
         @params = params || {}
-        @pipelines = pipelines || account.crm_pipelines
+        @pipelines = pipelines || account.crm_pipelines.active
         @value_visible = value_visible
       end
 
