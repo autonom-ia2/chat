@@ -32,7 +32,6 @@ const props = defineProps({
   staleChoices: { type: Array, default: () => [] },
   linkedChoices: { type: Array, default: () => [] },
   resultChoices: { type: Array, default: () => [] },
-  canManageAi: { type: Boolean, default: false },
   companyFilterAvailable: { type: Boolean, default: true },
   // #2095 (flag crm_arquivados): quantos cards arquivados o funil tem; null = sem o atalho.
   arquivados: { type: Number, default: null },
@@ -47,7 +46,8 @@ const emit = defineEmits([
 ]);
 const { t } = useI18n();
 // #2075 — sem a chave de valores o servidor ignora a faixa de valor: a tela nem oferece.
-const { canSeeSalesValues } = useCrmPermissions();
+// #2142 — "Pendente de IA" só lê: o servidor aplica ai_pending a quem vê o quadro, sem crm_manage_ai.
+const { canSeeSalesValues, canViewCrm } = useCrmPermissions();
 const drawerElement = ref(null);
 const draft = reactive(defaultFilters());
 const selectedCompanyOption = ref(null);
@@ -627,7 +627,7 @@ useFixedPanelPresence(computed(() => props.show));
               </div>
 
               <label
-                v-if="canManageAi"
+                v-if="canViewCrm"
                 class="flex min-h-11 items-center gap-3 text-sm text-n-slate-12"
               >
                 <input

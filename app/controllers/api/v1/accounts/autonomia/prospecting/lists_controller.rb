@@ -2,6 +2,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
   include ::Autonomia::Prospecting::LeadExport
 
   before_action -> { authorize_campaign_update!(campaign_segment_params[:campaign_id]) }, only: [:campaign_segment]
+  # Baixar a planilha de leads é exportar: pede prospecting_manage, não só ver (#2147).
+  before_action -> { check_permission_granted!('prospecting_manage') }, only: [:export]
 
   def index
     render json: { payload: lists_scope.order(created_at: :desc).limit(100).map { |list| list_payload(list) } }

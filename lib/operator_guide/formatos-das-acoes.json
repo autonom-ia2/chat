@@ -189,9 +189,9 @@
     "controller": "api/v1/accounts/autonomia/prospecting/lists#remove_lead",
     "modelo": "Autonomia::Prospecting::List",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:45",
       "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:47",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:46"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:49",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:48"
     ],
     "sem_corpo": true
   },
@@ -209,8 +209,8 @@
     "controller": "api/v1/accounts/autonomia/prospecting/searches#destroy",
     "modelo": "Autonomia::Prospecting::Search",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:90",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:91"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:93",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -3734,9 +3734,9 @@
     "envelope": "search",
     "modelo": "Autonomia::Prospecting::Search",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:136",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:73"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:75",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:139",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -11700,8 +11700,8 @@
     "envelope": "list",
     "modelo": "Autonomia::Prospecting::List",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:15",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:82"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:17",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:84"
     ],
     "sem_corpo": false
   },
@@ -11717,10 +11717,10 @@
     "envelope": "campaign_segment",
     "modelo": "Autonomia::Prospecting::List",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:54",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:90",
       "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:88",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:86",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:54"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:56"
     ],
     "sem_corpo": false
   },
@@ -11736,9 +11736,9 @@
     "controller": "api/v1/accounts/autonomia/prospecting/lists#add_lead",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:29",
       "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:30"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:33",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/lists_controller.rb:32"
     ],
     "sem_corpo": false
   },
@@ -11812,8 +11812,8 @@
     "envelope": "search",
     "modelo": "Autonomia::Prospecting::Lead",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:48",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:107"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:51",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:110"
     ],
     "sem_corpo": false
   },
@@ -13790,7 +13790,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/conversations/direct_uploads_controller.rb:17",
-      "app/controllers/api/v1/accounts/conversations/direct_uploads_controller.rb:36"
+      "app/controllers/api/v1/accounts/conversations/direct_uploads_controller.rb:37"
     ],
     "sem_corpo": false
   },
@@ -22416,9 +22416,9 @@
     "envelope": "search",
     "modelo": "Autonomia::Prospecting::Search",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:72",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:136",
-      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:73"
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:75",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:139",
+      "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:76"
     ],
     "sem_corpo": false
   },

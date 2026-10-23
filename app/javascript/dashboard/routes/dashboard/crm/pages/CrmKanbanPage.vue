@@ -2821,7 +2821,6 @@ onUnmounted(() => {
       :stale-choices="staleChoices"
       :linked-choices="linkedChoices"
       :result-choices="resultChoices"
-      :can-manage-ai="canManageAi"
       :arquivados="
         arquivadosLigado && viewMode !== 'calendar'
           ? (arquivados.totalDoFunil.value ?? 0)
