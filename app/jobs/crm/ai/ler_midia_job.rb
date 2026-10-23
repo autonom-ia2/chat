@@ -11,8 +11,8 @@
 # Depois disso, quem tenta é a varredura, enquanto a mensagem tiver até Crm::Ai::FalhaDaMidia::JANELA_DE_RELEITURA (só a
 # mensagem do cliente; a da equipe a varredura não relê, e o log diz isso).
 #
-# A releitura (`releitura` 'mensagem_nova' ou 'varredura') não tenta de novo aqui: faz uma chamada só, com tempo curto
-# (Crm::Ai::LeitorDeMidia::TEMPO_DA_RELEITURA), e a nova tentativa é a próxima releitura.
+# A releitura (`releitura` 'mensagem_nova' ou 'varredura') não tenta de novo aqui: faz uma chamada só por anexo, com o
+# tempo da chegada, para no primeiro erro passageiro, e a nova tentativa é a próxima releitura.
 class Crm::Ai::LerMidiaJob < ApplicationJob
   TENTATIVAS = 8
   TENTATIVAS_DA_FALHA_PASSAGEIRA = 3
@@ -45,7 +45,7 @@ class Crm::Ai::LerMidiaJob < ApplicationJob
     return if message.blank?
 
     Crm::Ai::LeitorDeMidia.new(message, ultima_tentativa: executions >= TENTATIVAS, releitura: (releitura || 'mensagem_nova').to_sym,
-                                        chamada_curta: releitura.present?).perform
+                                        uma_chamada: releitura.present?).perform
   rescue Crm::Ai::LeitorDeMidia::FalhaPassageira => e
     raise if releitura.blank?
 
@@ -54,10 +54,14 @@ class Crm::Ai::LerMidiaJob < ApplicationJob
 
   # As tentativas da chegada acabaram. A varredura só relê mensagem do cliente; a da equipe ela não relê.
   def avisar_desistencia(erro)
-    if Message.find_by(id: arguments.first)&.incoming?
-      Rails.logger.warn("[crm][midia] falha_passageira_fica_para_a_varredura #{erro.message} job=#{job_id}")
-    else
-      Rails.logger.warn("[crm][midia] falha_passageira_sem_varredura mensagem_de_saida #{erro.message} job=#{job_id}")
-    end
+    mensagem = Message.find_by(id: arguments.first)
+    destino = if mensagem.nil?
+                'falha_passageira_sem_varredura mensagem_apagada'
+              elsif mensagem.incoming?
+                'falha_passageira_fica_para_a_varredura'
+              else
+                'falha_passageira_sem_varredura mensagem_de_saida'
+              end
+    Rails.logger.warn("[crm][midia] #{destino} #{erro.message} job=#{job_id}")
   end
 end

@@ -13,7 +13,8 @@
 # passageira não marca, agenda a próxima tentativa no anexo e sobe FalhaPassageira para o LerMidiaJob tentar de novo.
 # Até a próxima tentativa vencer, ninguém lê (a leitura em linha e a da avaliação não gastam tentativa). Depois das
 # duas do job, quem tenta é a varredura (Crm::Ai::RelerMidiaPendenteJob), enquanto a mensagem tiver até 48 h; mais
-# velha que isso, a falha passageira marca `expirado`. Erro interno propaga e não marca.
+# velha que isso, a falha passageira marca `expirado`; o `expirado` que falha de novo em MAX_RELEITURAS_DO_EXPIRADO
+# releituras vira `expirado_esgotado` (definitiva). Erro interno propaga e não marca.
 #
 # Releitura (`releitura:`), decisão do Rodrigo (23/10/2026):
 #   :mensagem_nova chegou mensagem na conversa: o job da chegada relê também o anexo marcado sem texto que não tem falha
@@ -146,27 +147,30 @@ class Crm::Ai::LeitorDeMidia
     end
   end
 
-  # Segundos por chamada à API com `chamada_curta:` (a releitura do LerMidiaJob), sem nova tentativa interna.
-  TEMPO_DA_RELEITURA = 60
-
-  # `releitura:` decide O QUE ler (pendente?); `chamada_curta:`, COMO chamar a API. A chegada lê no modo :mensagem_nova
-  # com as novas tentativas de sempre; a releitura enfileirada, com uma chamada só e tempo curto.
-  def initialize(message, pipeline: nil, ultima_tentativa: false, releitura: false, chamada_curta: false)
+  # `releitura:` decide O QUE ler (pendente?); `uma_chamada:`, COMO chamar a API. A chegada lê no modo :mensagem_nova
+  # com as novas tentativas de sempre. A releitura enfileirada faz uma chamada só por anexo, com o mesmo tempo da
+  # chegada (leitura longa termina), e para no primeiro erro passageiro: os outros anexos ficam pendentes para a próxima
+  # releitura. Numa queda da API, ela não segura por minutos uma thread do Sidekiq, a mesma da entrega de mensagens.
+  def initialize(message, pipeline: nil, ultima_tentativa: false, releitura: false, uma_chamada: false)
     @message = message
     @account = message.account
     @pipeline = pipeline
     @ultima_tentativa = ultima_tentativa
     @releitura = releitura
-    @chamada_curta = chamada_curta
+    @uma_chamada = uma_chamada
     @passageiras = []
   end
 
-  # -> quantos anexos foram lidos agora. Lê todos os escolhidos; se algum teve falha passageira e segue pendente, sobe
-  # FalhaPassageira no fim (os outros já ficaram gravados).
+  # -> quantos anexos foram lidos agora. Lê os escolhidos (com `uma_chamada:`, até o primeiro erro passageiro); se algum
+  # teve falha passageira e segue pendente, sobe FalhaPassageira no fim (os outros já ficaram gravados).
   def perform
     return 0 unless self.class.ligada?(@account)
 
-    lidos = escolhidos.count { |attachment| ler(attachment) }
+    lidos = 0
+    escolhidos.each do |attachment|
+      lidos += 1 if ler(attachment)
+      break if @uma_chamada && @api_fora
+    end
     raise FalhaPassageira, "mensagem=#{@message.id} anexos=#{@passageiras.join(',')}" if @passageiras.any?
 
     lidos
@@ -232,8 +236,8 @@ class Crm::Ai::LeitorDeMidia
 
   def ler_texto(attachment, tipo)
     case tipo
-    when :audio then Crm::Ai::TranscriptionClient.new(credential: credencial, timeout: tempo_da_releitura).transcribe(attachment)
-    when :imagem then Crm::Ai::VisionCaptioner.new(client: cliente_de_visao, **{ timeout: tempo_da_releitura }.compact).caption(attachment)
+    when :audio then Crm::Ai::TranscriptionClient.new(credential: credencial).transcribe(attachment)
+    when :imagem then Crm::Ai::VisionCaptioner.new(client: cliente_de_visao).caption(attachment)
     when :pdf then texto_do_pdf(attachment)
     end
   end
@@ -255,6 +259,7 @@ class Crm::Ai::LeitorDeMidia
   def falhou(attachment, tipo, erro)
     falha = Crm::Ai::FalhaDaMidia.new(erro, meta: attachment.reload.meta.to_h, mensagem: @message)
     Rails.logger.warn("[crm][midia] leitura_falhou tipo=#{tipo} conta=#{@account.id} anexo=#{attachment.id} #{falha.para_o_log}")
+    @api_fora ||= falha.passageira?
     return guardar(attachment, tipo, nil, falha.motivo) if falha.marca?
 
     Crm::Ai::ReservaDaMidia.gravar(attachment) { |meta| meta.merge(falha.espera) }
@@ -263,14 +268,10 @@ class Crm::Ai::LeitorDeMidia
   end
 
   def cliente_de_visao
-    novas_tentativas = @chamada_curta ? 0 : Crm::Ai::ResponsesClient::MAX_RETRIES
+    novas_tentativas = @uma_chamada ? 0 : Crm::Ai::ResponsesClient::MAX_RETRIES
     Crm::Ai::ResponsesClient.new(credential: credencial, feature: 'midia', account: @account, pipeline: @pipeline,
                                  max_retries: novas_tentativas)
   end
-
-  # A releitura faz uma chamada só, com tempo curto: a nova tentativa é a próxima releitura. Numa queda da API, ela não
-  # segura por minutos uma thread do Sidekiq, que é a mesma da entrega de mensagens. A leitura da chegada fica como era.
-  def tempo_da_releitura = (TEMPO_DA_RELEITURA if @chamada_curta)
 
   def texto_do_pdf(attachment)
     fonte = Autonomia::Agents::Operate::MessageMedia::SourceLike.new(attachment.file, attachment.file.blob.filename.to_s, 'pdf')
@@ -283,7 +284,9 @@ class Crm::Ai::LeitorDeMidia
   def guardar(attachment, tipo, texto, motivo = {})
     Crm::Ai::ReservaDaMidia.gravar(attachment) do |atual|
       meta = atual.except(Crm::Ai::FalhaDaMidia::PROXIMA).merge(motivo)
-      meta = meta.except(Crm::Ai::FalhaDaMidia::FALHA).merge(CHAVE[tipo] => texto.to_s) if texto.present?
+      if texto.present?
+        meta = meta.except(Crm::Ai::FalhaDaMidia::FALHA, Crm::Ai::FalhaDaMidia::RELEITURAS_DO_EXPIRADO).merge(CHAVE[tipo] => texto.to_s)
+      end
       meta.merge(MARCA[tipo] => true, 'crm_ai_enriched_at' => Time.current.iso8601)
     end
     true

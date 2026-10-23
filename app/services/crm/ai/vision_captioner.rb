@@ -8,10 +8,8 @@ module Crm
       PROMPT = 'Descreva em uma frase curta, em português, o que aparece nesta imagem. ' \
                'Inclua texto visível relevante. Não invente conteúdo que não esteja na imagem.'.freeze
 
-      # `timeout:` (segundos) por chamada; a releitura do leitor de mídia usa um curto (#2109).
-      def initialize(client:, timeout: ResponsesClient::REQUEST_TIMEOUT)
+      def initialize(client:)
         @client = client
-        @timeout = timeout
       end
 
       def caption(attachment)
@@ -30,8 +28,7 @@ module Crm
               ]
             }
           ],
-          reasoning_effort: Config::VISION_REASONING_EFFORT,
-          timeout: @timeout
+          reasoning_effort: Config::VISION_REASONING_EFFORT
         )
         response[:text].to_s.strip
       end

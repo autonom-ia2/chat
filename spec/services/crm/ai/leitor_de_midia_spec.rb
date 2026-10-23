@@ -318,6 +318,27 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
         expect(transcricoes).to have_received(:transcribe).once
       end
 
+      # Pega: o expirado (ex.: chave recusada, 401) ser relido uma vez por hora sem fim enquanto a conversa tem mensagem.
+      it 'o expirado para de vez depois de MAX_RELEITURAS_DO_EXPIRADO falhas, com aviso', :aggregate_failures do
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::UnauthorizedError)
+        allow(Rails.logger).to receive(:warn)
+        anexo = antiga('crm_ai_audio_done' => true, 'crm_ai_midia_falha' => 'expirado')
+        maximo = Crm::Ai::FalhaDaMidia::MAX_RELEITURAS_DO_EXPIRADO
+
+        maximo.times do |vez|
+          travel((vez + 1) * (Crm::Ai::FalhaDaMidia::ESPERA_DO_EXPIRADO + 1.minute)) do
+            described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).perform
+          end
+        end
+
+        expect(meta(anexo)).to include('crm_ai_midia_falha' => 'expirado_esgotado', 'crm_ai_midia_releituras_do_expirado' => maximo)
+        expect(Rails.logger).to have_received(:warn).with(a_string_including('esgotou=true'))
+        travel(1.day) do
+          expect(described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).escolhidos).to be_empty
+        end
+        expect(transcricoes).to have_received(:transcribe).exactly(maximo).times
+      end
+
       it 'a avaliação do card (sem mensagem nova) não relê o marcado sem texto' do
         anexo = antiga('crm_ai_audio_done' => true)
 
