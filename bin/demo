@@ -18,7 +18,7 @@ set -euo pipefail
 HOST=m2
 RAIZ_DEMOS=/Users/Shared/chat2you-demos
 PREFIXO_SNAPSHOT=/Users/Shared/maccluster-workspaces/chat2you/
-KIT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../script/demo" && pwd -P)
+KIT=$(cd "${BASH_SOURCE[0]%/*}/../script/demo" && pwd -P) || { echo "bin/demo: não achei script/demo" >&2; exit 1; }
 # Portas: Rails 4400-5196 (passo 4), Vite = Rails + 2, Redis 57400-57599. Longe das de teste (55432, 56379)
 # e das demos feitas à mão (3301-4025, 56xxx).
 FAIXAS=200
@@ -41,7 +41,8 @@ validar_slug() {
 
 portas() {
   local n
-  n=$(printf %s "$1" | /usr/bin/cksum | /usr/bin/awk -v f="$FAIXAS" '{print $1 % f}')
+  n=$(printf %s "$1" | /usr/bin/cksum | /usr/bin/awk -v f="$FAIXAS" '{print $1 % f}') || falha "cksum falhou; não sei as portas"
+  case "$n" in '' | *[!0-9]*) falha "cksum devolveu '$n'; não sei as portas" ;; esac
   RAILS_PORT=$((BASE_RAILS + n * 4))
   VITE_PORT=$((RAILS_PORT + 2))
   REDIS_PORT=$((BASE_REDIS + n))
@@ -52,8 +53,9 @@ no_m2() { ssh -o BatchMode=yes "$HOST" "$(printf '%q ' /bin/bash "$RAIZ_DEMOS/$s
 
 # Leva o script/demo desta worktree para a pasta da demo no M2 (o kit roda de lá, não do snapshot).
 enviar_kit() {
-  ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/kit'"
-  /usr/bin/tar -C "$KIT" -cf - . | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/kit' -xf -"
+  ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/kit'" || falha "ssh para o $HOST falhou"
+  /usr/bin/tar -C "$KIT" -cf - . | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/kit' -xf -" ||
+    falha "não levei o kit ao $HOST"
 }
 
 # Erro de ssh (rede, M2 fora) para o comando; só "arquivo ausente" responde "não existe".
@@ -161,14 +163,16 @@ cmd_up() {
   else
     enviar_kit
     no_m2 checar "$slug" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"
+    local cabeca
+    cabeca=$(/usr/bin/git -C "$WT" rev-parse HEAD) || falha "git rev-parse falhou"
     criar_snapshot
-    if ! no_m2 iniciar "$slug" "$SNAP" "$(/usr/bin/git -C "$WT" rev-parse HEAD)" "$WT" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"; then
+    if ! no_m2 iniciar "$slug" "$SNAP" "$cabeca" "$WT" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"; then
       no_m2 descartar-snapshot "$slug" "${SNAP%/src}" ||
         falha "não registrei a demo e não consegui descartar o snapshot no $HOST: $HOST:${SNAP%/src} (o do M4 ficou)"
       apagar_snapshot_local "$SNAP"
       falha "não registrei a demo; snapshot descartado"
     fi
-    gravar_sincronizados "$(/usr/bin/git -C "$WT" rev-parse HEAD)"
+    gravar_sincronizados "$cabeca"
   fi
   no_m2 preparar "$slug"
   no_m2 subir "$slug"
@@ -184,15 +188,27 @@ sensivel() {
   return 1
 }
 
-# Arquivos que diferem do commit base (alterados, novos, apagados) mais os não rastreados, separados por NUL.
+# Acrescenta em $2 (NUL) os arquivos que diferem do commit base $1 (alterados, novos, apagados) mais os não
+# rastreados. Cada git é conferido à parte (num `{ a; b; }` a falha do primeiro sumiria).
 candidatos() {
-  { /usr/bin/git -C "$WT" diff -z --name-only "$1"
-    /usr/bin/git -C "$WT" ls-files -z --others --exclude-standard; } | LC_ALL=C /usr/bin/sort -z -u
+  /usr/bin/git -C "$WT" diff -z --name-only "$1" >> "$2" || falha "git diff falhou; não sei o que mudou"
+  /usr/bin/git -C "$WT" ls-files -z --others --exclude-standard >> "$2" || falha "git ls-files falhou; não sei o que mudou"
+}
+
+temporario() {
+  TEMPORARIO=$(/usr/bin/mktemp "${TMPDIR:-/tmp}/demo-$1.XXXXXX") || falha "mktemp falhou"
+  [ -n "$TEMPORARIO" ] && [ -f "$TEMPORARIO" ] || falha "mktemp não criou o arquivo"
 }
 
 # A lista do último sync fica no M2 (NUL): arquivo não rastreado que sumiu da worktree também some da demo.
 gravar_sincronizados() {
-  candidatos "$1" | ssh -o BatchMode=yes "$HOST" "/bin/cat > '$RAIZ_DEMOS/$slug/sincronizados.z'"
+  local lista
+  temporario sincronizados
+  lista=$TEMPORARIO
+  candidatos "$1" "$lista"
+  LC_ALL=C /usr/bin/sort -z -u "$lista" | ssh -o BatchMode=yes "$HOST" "/bin/cat > '$RAIZ_DEMOS/$slug/sincronizados.z'" ||
+    { /bin/rm -f "$lista"; falha "não gravei a lista do sync no $HOST"; }
+  /bin/rm -f "$lista"
 }
 
 # Lista anterior. Ausente (1o sync) = vazia; erro de ssh para o comando.
@@ -211,10 +227,13 @@ cmd_sync() {
   origem=$(valor_do_estado ORIGEM) || falha "não li a origem da demo"
   [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT)"
   local copiar=() apagar=() f lista
-  lista=$(/usr/bin/mktemp "${TMPDIR:-/tmp}/demo-sync.XXXXXX")
+  temporario sync
+  lista=$TEMPORARIO
   # shellcheck disable=SC2064
   trap "/bin/rm -f '$lista'" EXIT
-  { candidatos "$base"; sincronizados_antes; } | LC_ALL=C /usr/bin/sort -z -u > "$lista"
+  candidatos "$base" "$lista"
+  sincronizados_antes >> "$lista"
+  LC_ALL=C /usr/bin/sort -z -u -o "$lista" "$lista" || falha "sort falhou na lista do sync"
   while IFS= read -r -d '' f; do
     [ -n "$f" ] || continue
     if sensivel "$f"; then echo "ignorado (sensível/cache): $f"; continue; fi
@@ -233,10 +252,11 @@ cmd_sync() {
     case "$f" in config/vite.json | vite.config.* | tailwind.config.* | postcss.config.*) vite=true ;; esac
   done
   if [ ${#copiar[@]} -gt 0 ]; then
-    /usr/bin/tar -C "$WT" -cf - -- "${copiar[@]}" | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$snap' -xf -"
+    /usr/bin/tar -C "$WT" -cf - -- "${copiar[@]}" | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$snap' -xf -" ||
+      falha "não copiei os arquivos para o snapshot no $HOST"
   fi
   for f in "${apagar[@]+"${apagar[@]}"}"; do
-    ssh -o BatchMode=yes "$HOST" "$(printf '/bin/rm -f %q' "$snap/$f")"
+    ssh -o BatchMode=yes "$HOST" "$(printf '/bin/rm -f %q' "$snap/$f")" || falha "não apaguei $f no $HOST"
     echo "  - $f"
   done
   gravar_sincronizados "$base"
@@ -265,10 +285,12 @@ cmd_seed() {
   [ -f "$arquivo" ] || falha "arquivo não existe: $arquivo"
   exigir_demo
   enviar_kit
-  ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/seeds'"
-  /usr/bin/tar -C "$(dirname "$arquivo")" -cf - "$(basename "$arquivo")" |
-    ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/seeds' -xf -"
-  no_m2 semear "$slug" "$(basename "$arquivo")"
+  ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/seeds'" || falha "ssh para o $HOST falhou"
+  local pasta=. nome=${arquivo##*/}
+  case "$arquivo" in */*) pasta=${arquivo%/*} ;; esac
+  /usr/bin/tar -C "$pasta" -cf - -- "$nome" |
+    ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/seeds' -xf -" || falha "não levei o seed ao $HOST"
+  no_m2 semear "$slug" "$nome"
 }
 
 cmd_tunnel() {
@@ -282,6 +304,26 @@ Painel da demo $slug no ar no $HOST. Para abrir no M4:
   http://localhost:$rails/app/login   (usuário do seed: john@acme.inc, senha em db/seeds.rb)
 Fechar o túnel: pkill -f 'ssh -f -N -L $rails:'
 TXT
+}
+
+# A pasta dos prints (relativa à worktree) não pode passar por link simbólico, nem ela nem nenhum ancestral até a
+# worktree, e o caminho real (pwd -P) do que já existe tem de ficar dentro do caminho real da worktree.
+pasta_segura() {
+  local relativa=$1 parte=$1 real raiz existente
+  while :; do
+    [ ! -L "$WT/$parte" ] || falha "\"pasta\" passa por link simbólico: $WT/$parte"
+    case "$parte" in */*) parte=${parte%/*} ;; *) break ;; esac
+  done
+  raiz=$(cd "$WT" && pwd -P) || falha "não li o caminho real da worktree"
+  existente=$relativa
+  while [ ! -d "$WT/$existente" ]; do
+    case "$existente" in */*) existente=${existente%/*} ;; *) existente=. ; break ;; esac
+  done
+  real=$(cd "$WT/$existente" && pwd -P) || falha "não li o caminho real de $WT/$existente"
+  case "$real" in
+    "$raiz" | "$raiz"/*) ;;
+    *) falha "\"pasta\" sai da worktree: $real" ;;
+  esac
 }
 
 cmd_prints() {
@@ -299,14 +341,18 @@ cmd_prints() {
   local versionados
   versionados=$(/usr/bin/git -C "$WT" ls-files -- "$pasta") || falha "git ls-files falhou; não sei se $pasta é versionada"
   [ -z "$versionados" ] || falha "\"pasta\" $pasta tem arquivo versionado; use uma pasta nova (ex.: $pasta-v2)"
+  pasta_segura "$pasta"
   exigir_demo
   enviar_kit
-  ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/prints-entrada'"
-  ssh -o BatchMode=yes "$HOST" "/bin/cat > '$RAIZ_DEMOS/$slug/prints-entrada/jornadas.json'" < "$jornadas"
+  ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/prints-entrada'" || falha "ssh para o $HOST falhou"
+  ssh -o BatchMode=yes "$HOST" "/bin/cat > '$RAIZ_DEMOS/$slug/prints-entrada/jornadas.json'" < "$jornadas" ||
+    falha "não levei as jornadas ao $HOST"
   local codigo=0
   no_m2 prints "$slug" || codigo=$?
-  /bin/mkdir -p "$WT/$pasta"
-  ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/prints-saida' -cf - ." | /usr/bin/tar -C "$WT/$pasta" -xf -
+  /bin/mkdir -p "$WT/$pasta" || falha "não criei $WT/$pasta"
+  pasta_segura "$pasta"
+  ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/prints-saida' -cf - ." | /usr/bin/tar -C "$WT/$pasta" -xf - ||
+    falha "não trouxe os prints do $HOST"
   [ "$codigo" -eq 0 ] || echo "bin/demo: prints com FALHA (saída $codigo); veja as linhas acima" >&2
   echo "prints em $WT/$pasta (o relato com URLs e erros fica no $HOST: $RAIZ_DEMOS/$slug/relato.json)"
   return "$codigo"
@@ -330,10 +376,10 @@ apagar_snapshot_local() {
   conferir_snapshot_local "$1"
   [ -d "$snapdir" ] || return 0
   /bin/rm -rf "$snapdir"
-  echo "snapshot apagado no $(maccluster node): $snapdir"
+  echo "snapshot apagado neste Mac (M4): $snapdir"
   # O MacCluster deixa um lock vazio ao lado de cada snapshot que ele cria.
   local trava
-  trava="$(dirname "$snapdir")/.$(basename "$snapdir").maccluster-lock"
+  trava="${snapdir%/*}/.${snapdir##*/}.maccluster-lock"
   [ ! -f "$trava" ] || [ -s "$trava" ] || /bin/rm -f "$trava"
 }
 

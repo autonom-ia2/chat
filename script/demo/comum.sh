@@ -3,21 +3,25 @@
 # Quem carrega precisa ter definido `falha`.
 
 # em_uso <diretório>
-# Imprime os PIDs com arquivo aberto no diretório e devolve 0 quando há algum; devolve 1 só quando o lsof confirmou
-# que está livre (saída vazia E stderr vazio). Falha do mktemp ou código do lsof acima de 1 chama `falha`, que
-# encerra o script. Qualquer linha no stderr do lsof (aviso de permissão, de sistema de arquivos etc.) conta como
-# "em uso": o lsof roda sem -w para que nenhum aviso fique escondido. Medido em 23/10 no lsof 4.91: em operação
-# normal (snapshot com node_modules no M2 e no M4, portas livres e ocupadas) o stderr sai vazio, então não há aviso
-# benigno a tolerar. O código de saída não separa "nada" de "erro" (sai 1 nos dois casos), por isso o stderr decide.
+# Devolve 1 ("livre") só depois de LEITURAS_LIVRE leituras vazias SEGUIDAS do lsof; qualquer leitura com PID zera a
+# contagem. Passando de TETO_LEITURAS leituras sem chegar lá, é "em uso" (devolve 0 e imprime os PIDs da última
+# leitura com PID). Indexador (Spotlight) e buscas de disco abrem arquivo de passagem: por isso a tolerância a
+# leitura com PID, e por isso "livre" exige uma sequência limpa, não uma leitura vazia isolada.
+# O lsof roda sem -w (nenhum aviso escondido): qualquer linha no stderr conta como "em uso" na hora. Código acima de
+# 1 ou falha do mktemp chama `falha`, que encerra o script. O lsof 4.91 do macOS sai com 1 tanto sem nada aberto
+# quanto achando processos, então quem decide é saída vazia com stderr vazio. Medição dos avisos com os mounts de
+# cada Mac e passo manual: docs/runbooks/demo-tela-real.md, "Checagem de uso".
 # Quem chama costuma estar num `if`, onde o set -e não vale, por isso cada passo é conferido à mão.
-# Indexador (Spotlight) e buscas de disco abrem arquivo de passagem: só é "em uso" se continuar assim em 5 leituras
-# seguidas, com 3 s entre elas. Sem exceção de PID: os servidores da demo já foram parados e conferidos antes.
-# Tempo medido do lsof +D: ~3 s num snapshot com node_modules (89 mil arquivos, 602 MB de node_modules) no M2.
+# Sem exceção de PID: os servidores da demo já foram parados e conferidos antes.
+# Tempo medido do lsof +D: ~3 s num snapshot com node_modules (89 mil arquivos) no M2, ~2 s no M4.
+LEITURAS_LIVRE=5
+TETO_LEITURAS=20
 em_uso() {
-  local dir=$1 tentativa saida erro codigo pid
+  local dir=$1 leitura=0 seguidas=0 saida ultima='' erro codigo pid
   erro=$(/usr/bin/mktemp "${TMPDIR:-/tmp}/demo-lsof.XXXXXX") || falha "mktemp falhou; não sei se $dir está em uso, não apago"
   [ -n "$erro" ] && [ -f "$erro" ] || falha "mktemp não criou o arquivo; não sei se $dir está em uso, não apago"
-  for tentativa in 1 2 3 4 5; do
+  while [ "$leitura" -lt "$TETO_LEITURAS" ]; do
+    leitura=$((leitura + 1))
     codigo=0
     saida=$(/usr/sbin/lsof -t +D "$dir" 2> "$erro") || codigo=$?
     if [ "$codigo" -gt 1 ]; then
@@ -32,12 +36,19 @@ em_uso() {
       return 0
     fi
     if [ -z "$saida" ]; then
-      /bin/rm -f "$erro"
-      return 1
+      seguidas=$((seguidas + 1))
+      if [ "$seguidas" -ge "$LEITURAS_LIVRE" ]; then
+        /bin/rm -f "$erro"
+        return 1
+      fi
+    else
+      seguidas=0
+      ultima=$saida
     fi
-    [ "$tentativa" -eq 5 ] || sleep 3
+    sleep 1
   done
   /bin/rm -f "$erro"
-  for pid in $saida; do /bin/ps -p "$pid" -o pid=,comm= || echo "$pid (já saiu)"; done
+  echo "$dir em uso: $TETO_LEITURAS leituras sem $LEITURAS_LIVRE vazias seguidas; última leitura com PID:" >&2
+  for pid in $ultima; do /bin/ps -p "$pid" -o pid=,comm= >&2 || echo "$pid (já saiu)" >&2; done
   return 0
 }

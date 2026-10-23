@@ -31,7 +31,7 @@ esac
 [ ${#slug} -le 30 ] || falha "slug longo demais"
 # em_uso (mesmo arquivo que o bin/demo usa no M4)
 # shellcheck source=script/demo/comum.sh
-source "$(dirname "${BASH_SOURCE[0]}")/comum.sh"
+source "${BASH_SOURCE[0]%/*}/comum.sh" || falha "não carreguei comum.sh"
 
 carregar_estado() {
   [ -f "$L/demo.env" ] || falha "demo não existe no M2 ($L/demo.env). Rode: bin/demo up $slug"
@@ -51,6 +51,12 @@ carregar_estado() {
       '' | *[!0-9]*) falha "porta inválida no demo.env ('$porta'); confira $L/demo.env" ;;
     esac
   done
+  # SNAP decide o que o apagar remove: tem de ser <prefixo>/<id>/src, sem "..".
+  case "${SNAP:-}" in
+    *..* | "$PREFIXO_SNAPSHOT"*/*/*) falha "SNAP suspeito no demo.env ('${SNAP:-}')" ;;
+    "$PREFIXO_SNAPSHOT"?*/src) ;;
+    *) falha "SNAP vazio ou fora de $PREFIXO_SNAPSHOT no demo.env ('${SNAP:-}')" ;;
+  esac
   [ "$SLUG" = "$slug" ] || falha "demo.env é de outra demo ($SLUG)"
   [ "$DB" = "${PREFIXO_BANCO}${slug//-/_}" ] || falha "demo.env aponta para outro banco ($DB)"
   # Demo em remoção (o M2 já apagou banco e snapshot): só deixa terminar.
@@ -75,6 +81,20 @@ banco_existe() {
 # SNAP, DB e as portas vêm do demo.env (carregar_estado). Ambiente limpo (env -i): nenhuma variável do shell
 # entra. E-mail vai para uma porta morta (sem SMTP_ADDRESS o Rails usaria sendmail, que entrega de verdade) e a
 # Cloud API do WhatsApp também. O Sidekiq não roda na demo: job enfileirado não executa.
+# As chaves (SECRET_KEY_BASE e as do Active Record) nunca passam pelo argv, que qualquer usuário vê no `ps`: o
+# bash abaixo lê cada uma do arquivo 0600 em $L/chaves e exporta no próprio ambiente, que o processo herda.
+# Arquivo ausente ou vazio para tudo. O `env` final aceita VAR=valor antes do comando (DEMO_FLAG=... no flag).
+# shellcheck disable=SC2016
+CARREGAR_CHAVES='set -euo pipefail
+ler() { local v; v=$(< "$DEMO_CHAVES/$1") || exit 1; [ -n "$v" ] || { echo "chave vazia: $1" >&2; exit 1; }; printf %s "$v"; }
+SECRET_KEY_BASE=$(ler secret) || exit 1
+ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=$(ler enc_p) || exit 1
+ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=$(ler enc_d) || exit 1
+ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=$(ler enc_s) || exit 1
+export SECRET_KEY_BASE ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+export ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+unset DEMO_CHAVES
+exec /usr/bin/env "$@"'
 # shellcheck disable=SC2153
 demo_env() {
   /usr/bin/env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" \
@@ -87,16 +107,13 @@ demo_env() {
     POSTGRES_HOST="$PG_HOST" POSTGRES_PORT="$PG_PORT" POSTGRES_DATABASE="$DB" \
     POSTGRES_USERNAME=postgres POSTGRES_PASSWORD= \
     REDIS_URL="redis://127.0.0.1:$REDIS_PORT/0" REDIS_PASSWORD= \
-    SECRET_KEY_BASE="$(/bin/cat "$L/chaves/secret")" \
-    ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY="$(/bin/cat "$L/chaves/enc_p")" \
-    ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY="$(/bin/cat "$L/chaves/enc_d")" \
-    ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT="$(/bin/cat "$L/chaves/enc_s")" \
+    DEMO_CHAVES="$L/chaves" \
     FRONTEND_URL="http://localhost:$RAILS_PORT" ENABLE_ACCOUNT_SIGNUP=false \
     VITE_RUBY_PORT="$VITE_PORT" VITE_RUBY_HOST=localhost VITE_RUBY_AUTO_BUILD=false \
     VITE_RUBY_DEV_SERVER_CONNECT_TIMEOUT=2 NODE_OPTIONS=--max-old-space-size=4096 \
     WHATSAPP_CLOUD_BASE_URL=http://127.0.0.1:9 CRM_KANBAN_ENABLED=true \
     SMTP_ADDRESS=127.0.0.1 SMTP_PORT=9 SMTP_USERNAME= SMTP_PASSWORD= MAILER_SENDER_EMAIL=demo@demo.invalid \
-    "$@"
+    /bin/bash -c "$CARREGAR_CHAVES" demo_env "$@"
 }
 
 # PIDs que escutam na porta, em ESCUTA. O lsof roda sem -w: código acima de 1 OU qualquer linha no stderr conta como
@@ -122,7 +139,8 @@ escuta() { escutando "$1"; [ -n "$ESCUTA" ]; }
 # Erro do ps ou do awk para tudo (nunca vira "processo não existe").
 ler_processo() {
   local tabela linha pid d1 d2 d3 d4 d5
-  tabela=$(/bin/ps -ww -axo pid=,pgid=,lstart=,command=) || falha "ps falhou; não sei quem é o processo $1"
+  # Formato fixo do lstart: o mesmo locale e fuso ao gravar (lancar) e ao conferir (grupo_da_demo).
+  tabela=$(LC_ALL=C TZ=UTC /bin/ps -ww -axo pid=,pgid=,lstart=,command=) || falha "ps falhou; não sei quem é o processo $1"
   linha=$(printf '%s\n' "$tabela" | /usr/bin/awk -v p="$1" '$1 == p') || falha "awk falhou lendo o ps"
   PROC_GRUPO='' PROC_INICIO='' PROC_COMANDO=''
   [ -n "$linha" ] || return 0
@@ -134,10 +152,11 @@ ler_processo() {
 # em que o líder nasceu (pids/<nome>.inicio). O grupo só é "da demo" se o líder ainda existe, nasceu nesse instante
 # e o comando dele é exatamente o que o lancar executou (comparação de texto, sem regex). PGID solto por reboot ou
 # morte e depois reaproveitado por outro processo não confere: GRUPO fica vazio, ninguém recebe sinal e a porta
-# decide. GRUPO_SITUACAO: sem-registro | confere | nao-confere.
+# decide. GRUPO_SITUACAO: sem-registro | confere | nao-confere. GRUPO_GRAVADO: o PGID do arquivo (ou vazio).
 grupo_da_demo() {
   local nome=$1 pgid inicio
   GRUPO=''
+  GRUPO_GRAVADO=''
   if [ ! -f "$L/pids/$nome.pgid" ]; then
     GRUPO_SITUACAO=sem-registro
     return 0
@@ -149,6 +168,7 @@ grupo_da_demo() {
   pgid=$(/bin/cat "$L/pids/$nome.pgid") || falha "não li pids/$nome.pgid"
   inicio=$(/bin/cat "$L/pids/$nome.inicio") || falha "não li pids/$nome.inicio"
   case "$pgid" in '' | *[!0-9]*) falha "pids/$nome.pgid inválido ('$pgid')" ;; esac
+  GRUPO_GRAVADO=$pgid
   ler_processo "$pgid"
   if [ "$PROC_GRUPO" = "$pgid" ] && [ "$PROC_INICIO" = "$inicio" ] &&
     [ "$PROC_COMANDO" = "/bin/bash $KIT/no_m2.sh _$nome $slug" ]; then
@@ -206,7 +226,7 @@ checar() {
   for outro in "$RAIZ"/*/demo.env; do
     [ -f "$outro" ] || continue
     if /usr/bin/grep -qxF "RAILS_PORT=$rails" "$outro" || /usr/bin/grep -qxF "REDIS_PORT=$redis" "$outro"; then
-      falha "portas $rails/$redis já usadas por $(dirname "$outro"). Use outro slug."
+      falha "portas $rails/$redis já usadas por ${outro%/*}. Use outro slug."
     fi
   done
   for porta in "$rails" "$vite" "$redis"; do
@@ -217,11 +237,12 @@ checar() {
 
 # Confere que o snapshot não tem .env nem credencial (no M4 o MacCluster já exclui ignorados e sensíveis).
 sem_segredo() {
-  local achados
-  achados=$(
-    /usr/bin/find "$1" -maxdepth 1 -name '.env*' ! -name '*.example' ! -name '*.sample' ! -name '*.template'
-    /usr/bin/find "$1/config" -maxdepth 1 \( -name 'master.key' -o -name 'credentials*' \))
-  [ -z "$achados" ] || { echo "$achados"; falha "snapshot com arquivo de segredo; não sobe"; }
+  local na_raiz em_config
+  na_raiz=$(/usr/bin/find "$1" -maxdepth 1 -name '.env*' ! -name '*.example' ! -name '*.sample' ! -name '*.template') ||
+    falha "find falhou em $1; não sei se há .env no snapshot"
+  em_config=$(/usr/bin/find "$1/config" -maxdepth 1 \( -name 'master.key' -o -name 'credentials*' \)) ||
+    falha "find falhou em $1/config; não sei se há credencial no snapshot"
+  [ -z "$na_raiz$em_config" ] || { printf '%s\n' "$na_raiz" "$em_config"; falha "snapshot com arquivo de segredo; não sobe"; }
 }
 
 # --- clonar-base: cria no M2 o diretório do snapshot novo como clone APFS do snapshot chat2you mais recente ---
@@ -234,15 +255,19 @@ clonar_base() {
     *) falha "destino fora de $PREFIXO_SNAPSHOT: $destino" ;;
   esac
   [ ! -e "$destino" ] || falha "destino já existe: $destino"
-  for d in $(/bin/ls -td "$PREFIXO_SNAPSHOT"*/); do
+  local candidatos
+  candidatos=$(/bin/ls -td "$PREFIXO_SNAPSHOT"*/) || falha "não consegui listar os snapshots em $PREFIXO_SNAPSHOT"
+  while IFS= read -r d; do
     d=${d%/}
     if [ -f "$d/.maccluster-workspace.json" ] && [ -f "$d/src/Gemfile" ] && [ -d "$d/src/node_modules" ]; then
       base=$d
       break
     fi
-  done
+  done <<< "$candidatos"
   [ -n "$base" ] || falha "nenhum snapshot chat2you com node_modules no M2 para servir de base"
   echo "base no M2: $base (clone APFS)"
+  # Registro do clone ainda não registrado: só o descartar-snapshot com este mesmo caminho pode apagá-lo.
+  printf '%s\n' "$destino" > "$L/clone-pendente"
   mkdir "$destino"
   /bin/cp -c -R "$base/src" "$destino/src"
   # Logs, pids, caches e uploads da outra demo não vêm junto.
@@ -276,6 +301,7 @@ iniciar() {
   printf '%s=%s\n' SLUG "$slug" SNAP "$snap" BASE_SHA "$base" ORIGEM "$origem" DB "$DB" \
     RAILS_PORT "$rails" VITE_PORT "$vite" REDIS_PORT "$redis" > "$L/demo.env.tmp"
   mv "$L/demo.env.tmp" "$L/demo.env"
+  /bin/rm -f "$L/clone-pendente"
   echo "demo $slug registrada: banco $DB, Rails $rails, Vite $vite, Redis $redis"
 }
 
@@ -377,12 +403,20 @@ subir() {
 }
 
 # Para um servidor da demo pelo grupo gravado, só se o grupo_da_demo o confirmou (líder com o mesmo início e o
-# mesmo comando). Grupo que não confere não recebe sinal: a porta decide (livre segue, ocupada falha).
+# mesmo comando). Registro que não confere nunca dá OK sozinho: sem mandar sinal, conta os processos vivos do PGID
+# gravado; só com zero o registro sai (e a porta decide), senão falha.
 # Devolve 1 (sem matar mais nada) se a porta continuar escutando ou sobrar processo do grupo depois de 30 s.
 parar_servico() {
   local nome=$1 porta=$2 grupo n=0 vivos
   porta_nossa_ou_livre "$nome" "$porta"
   grupo=$GRUPO
+  if [ "$GRUPO_SITUACAO" = nao-confere ]; then
+    membros_do_grupo "$GRUPO_GRAVADO"
+    [ -z "$MEMBROS" ] ||
+      falha "pids/$nome.pgid ($GRUPO_GRAVADO) não confere com o processo vivo (início ou comando diferente) e o" \
+        "grupo tem processos vivos: ${MEMBROS//$'\n'/ }. Não mandei sinal; confira à mão" \
+        "(docs/runbooks/demo-tela-real.md, 'Demo de kit antigo')"
+  fi
   MEMBROS=''
   [ -z "$grupo" ] || membros_do_grupo "$grupo"
   [ -z "$MEMBROS" ] || kill -TERM -- "-$grupo" || true
@@ -393,8 +427,8 @@ parar_servico() {
     escutando "$porta"
     [ -n "$vivos" ] || [ -n "$ESCUTA" ] || break
     if [ $n -ge 30 ]; then
-      echo "$nome: depois de 30 s, porta $porta escutando=[$(echo "$ESCUTA" | /usr/bin/tr '\n' ' ')]" \
-        "processos do grupo $grupo vivos=[$(echo "$vivos" | /usr/bin/tr '\n' ' ')]" >&2
+      echo "$nome: depois de 30 s, porta $porta escutando=[${ESCUTA//$'\n'/ }]" \
+        "processos do grupo $grupo vivos=[${vivos//$'\n'/ }]" >&2
       return 1
     fi
     sleep 1
@@ -435,10 +469,28 @@ descartar_snapshot() {
     "$PREFIXO_SNAPSHOT"?*) ;;
     *) falha "fora de $PREFIXO_SNAPSHOT: $snapdir" ;;
   esac
-  [ -d "$snapdir" ] || return 0
+  local pendente
+  [ -f "$L/clone-pendente" ] || falha "sem registro de clone pendente em $L; não apago $snapdir"
+  pendente=$(/bin/cat "$L/clone-pendente") || falha "não li $L/clone-pendente"
+  [ "$pendente" = "$snapdir" ] || falha "o clone pendente é $pendente, não $snapdir; não apago"
+  if [ ! -d "$snapdir" ]; then
+    /bin/rm -f "$L/clone-pendente"
+    return 0
+  fi
+  marcador_confere "$snapdir"
   if em_uso "$snapdir"; then falha "snapshot em uso: $snapdir"; fi
   /bin/rm -rf "$snapdir"
+  /bin/rm -f "$L/clone-pendente"
   echo "snapshot não registrado descartado no M2: $snapdir"
+}
+
+# O snapshot só sai se o marcador do MacCluster disser que ele é este: snapshot_id igual ao nome do diretório.
+marcador_confere() {
+  local dir=$1
+  [ -f "$dir/.maccluster-workspace.json" ] || falha "$dir não tem o marcador do MacCluster; não apago"
+  "$R/bin/ruby" -rjson -e 'exit(JSON.parse(File.read(ARGV[0]))["snapshot_id"] == ARGV[1] ? 0 : 1)' \
+    "$dir/.maccluster-workspace.json" "${dir##*/}" ||
+    falha "o marcador de $dir não é deste snapshot (snapshot_id diferente do nome) ou não pôde ser lido; não apago"
 }
 
 reiniciar_rails() {
@@ -489,7 +541,11 @@ prints() {
   /bin/rm -rf "$saida"
   mkdir -p "$saida"
   local senha=${DEMO_SENHA:-}
-  [ -n "$senha" ] || senha=$("$R/bin/ruby" "$KIT/senha_do_seed.rb" "$SNAP/db/seeds.rb" john@acme.inc)
+  if [ -z "$senha" ]; then
+    senha=$("$R/bin/ruby" "$KIT/senha_do_seed.rb" "$SNAP/db/seeds.rb" john@acme.inc) ||
+      falha "não li a senha do seed em $SNAP/db/seeds.rb"
+    [ -n "$senha" ] || falha "senha do seed vazia em $SNAP/db/seeds.rb"
+  fi
   /usr/bin/env -i HOME="$HOME" PATH="$N/bin:/usr/bin:/bin" LANG=en_US.UTF-8 \
     PW="$SNAP/tests/playwright/node_modules/playwright" BASE="http://localhost:$RAILS_PORT" \
     DEMO_SENHA="$senha" DEMO_ESTADO_DIR="$L" DEMO_RELATO="$L/relato.json" \
@@ -535,7 +591,7 @@ apagar() {
     *) falha "snapshot fora de $PREFIXO_SNAPSHOT: $snapdir" ;;
   esac
   if [ -d "$snapdir" ]; then
-    [ -f "$snapdir/.maccluster-workspace.json" ] || falha "$snapdir não tem o marcador do MacCluster; não apago"
+    marcador_confere "$snapdir"
   fi
   descer
   if [ -d "$snapdir" ] && em_uso "$snapdir"; then
