@@ -2122,7 +2122,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Barra lateral > Prospeccao > Buscar leads > abrir uma busca > icone Exportar leads no topo dos resultados
 - rota: `autonomia_prospecting_search` - `/app/accounts/:accountId/autonomia/prospecting/search`
 - gate: papel `administrator` ou `prospecting_view` ou `prospecting_manage`
-- perfil: administrador ou funcao com Ver prospeccao ou Editar prospeccao, so nas buscas que a pessoa enxerga (as proprias, ou todas com Ver buscas de todos).
+- perfil: administrador ou funcao com Editar prospeccao (so Ver prospeccao nao exporta, e o botao nem aparece), so nas buscas que a pessoa enxerga (as proprias, ou todas com Ver buscas de todos).
 - pre_requisitos: uma busca aberta com pelo menos um lead na tela
 - passos: 1. Abra a busca; 2. Se quiser so alguns, selecione os leads; 3. Clique no icone Exportar leads; 4. Escolha CSV ou Excel (.xlsx); 5. Abra o arquivo baixado.
 - gotchas: com leads selecionados o arquivo leva so eles; sem selecao leva os visiveis, entao o refino do icone Filtros reduz o arquivo; o arquivo segue a ordem da tela (na ordem padrao, a de prioridade); o botao fica travado sem leads na tela; as Listas nao tem botao de exportar; o arquivo sai com o numero da busca no nome.
