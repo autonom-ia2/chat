@@ -133,7 +133,10 @@ class Attachment < ApplicationRecord
       height: file.metadata[:height]
     }
 
-    metadata[:data_url] = metadata[:thumb_url] = external_url if instagram_incoming_message?
+    # Instagram: serve our stored copy, since the Meta URL expires (#2113). The Meta URL is only
+    # the fallback when the download failed (see metadata_for_file_type); it is kept here as the
+    # origin, which the Direct view reads to tell stickers (Giphy) apart.
+    metadata[:external_url] = external_url if instagram_incoming_message? && external_url.present?
     metadata
   end
 

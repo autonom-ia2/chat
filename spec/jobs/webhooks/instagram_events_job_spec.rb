@@ -132,7 +132,10 @@ describe Webhooks::InstagramEventsJob do
         expect(instagram_messenger_inbox.messages.last.attachments.count).to be 1
 
         attachment = instagram_messenger_inbox.messages.last.attachments.last
-        expect(attachment.push_event_data[:data_url]).to eq(attachment.external_url)
+        # The downloaded copy is served, not the Meta URL that expires (#2113).
+        expect(attachment.file).to be_attached
+        expect(attachment.push_event_data[:data_url]).to eq(attachment.file_url)
+        expect(attachment.push_event_data[:external_url]).to eq(attachment.external_url)
       end
 
       it 'creates incoming message with ig_story attachment in the instagram inbox' do
