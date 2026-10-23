@@ -1,0 +1,7 @@
+# Vocabulário da conta nas mensagens que a IA escreve ao cliente no follow-up, no retorno combinado, no lembrete de
+# Atender e no modelo fora das 24 h (#2034). Vazio aqui: conta fora de um pacote recebe o pedido de sempre; as camadas
+# de seguros (config/pacotes/seguros/**) preenchem.
+pt_BR:
+  crm:
+    ai:
+      vocabulario: ''
