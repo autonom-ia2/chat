@@ -21,6 +21,7 @@ PG_PORT=55432
 PREFIXO_BANCO=chatwoot_kitdemo_
 PREFIXO_SNAPSHOT=/Users/Shared/maccluster-workspaces/chat2you/
 ESPERA_RAILS_SEGUNDOS=900
+ESPERA_VITE_SEGUNDOS=120
 
 falha() { echo "demo[$slug]: $*" >&2; exit 1; }
 
@@ -43,6 +44,13 @@ carregar_estado() {
       *) falha "chave desconhecida no demo.env: $chave" ;;
     esac
   done < "$L/demo.env"
+  # Porta vazia ou com letra chegaria ao lsof e ao redis-cli com efeito não verificado: recusa antes.
+  local porta
+  for porta in "${RAILS_PORT:-}" "${VITE_PORT:-}" "${REDIS_PORT:-}"; do
+    case "$porta" in
+      '' | *[!0-9]*) falha "porta inválida no demo.env ('$porta'); confira $L/demo.env" ;;
+    esac
+  done
   [ "$SLUG" = "$slug" ] || falha "demo.env é de outra demo ($SLUG)"
   [ "$DB" = "${PREFIXO_BANCO}${slug//-/_}" ] || falha "demo.env aponta para outro banco ($DB)"
   # Demo em remoção (o M2 já apagou banco e snapshot): só deixa terminar.
@@ -56,8 +64,12 @@ carregar_estado() {
 
 psql_demo() { "$PGBIN/psql" -X -h "$PG_HOST" -p "$PG_PORT" -U postgres -v ON_ERROR_STOP=1 "$@"; }
 
+# Erro do psql (Postgres fora, autenticação) para tudo: nunca vira "banco não existe".
 banco_existe() {
-  [ "$(psql_demo -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname = '$1'")" = "1" ]
+  local saida
+  saida=$(psql_demo -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname = '$1'") ||
+    falha "não consegui consultar o Postgres ($PG_HOST:$PG_PORT); não sei se o banco $1 existe"
+  [ "$saida" = "1" ]
 }
 
 # SNAP, DB e as portas vêm do demo.env (carregar_estado). Ambiente limpo (env -i): nenhuma variável do shell
@@ -87,17 +99,18 @@ demo_env() {
     "$@"
 }
 
-# PIDs que escutam na porta, em ESCUTA. Erro do lsof (stderr ou saída fora de 0/1) para tudo: nunca vira "porta
-# livre". O resultado vai em variável, não em $(...): falha dentro de um subshell não pararia o script.
+# PIDs que escutam na porta, em ESCUTA. O lsof roda sem -w: código acima de 1 OU qualquer linha no stderr conta como
+# "porta ocupada" e para tudo (medido em 23/10: em operação normal o stderr sai vazio). Nunca vira "porta livre".
+# O resultado vai em variável, não em $(...): falha dentro de um subshell não pararia o script.
 escutando() {
   local saida codigo=0 erro
   erro=$(/usr/bin/mktemp "${TMPDIR:-/tmp}/demo-porta.XXXXXX") || falha "mktemp falhou; não sei quem escuta na porta $1"
-  [ -n "$erro" ] || falha "mktemp falhou; não sei quem escuta na porta $1"
-  saida=$(/usr/sbin/lsof -w -t -iTCP:"$1" -sTCP:LISTEN 2> "$erro") || codigo=$?
+  [ -n "$erro" ] && [ -f "$erro" ] || falha "mktemp falhou; não sei quem escuta na porta $1"
+  saida=$(/usr/sbin/lsof -t -iTCP:"$1" -sTCP:LISTEN 2> "$erro") || codigo=$?
   if [ "$codigo" -gt 1 ] || [ -s "$erro" ]; then
     /usr/bin/head -3 "$erro" >&2
     /bin/rm -f "$erro"
-    falha "lsof falhou na porta $1 (saída $codigo)"
+    falha "lsof falhou ou avisou na porta $1 (saída $codigo); conto como porta ocupada e não sigo"
   fi
   /bin/rm -f "$erro"
   ESCUTA=$saida
@@ -105,25 +118,81 @@ escutando() {
 
 escuta() { escutando "$1"; [ -n "$ESCUTA" ]; }
 
-# Cada servidor da demo roda num grupo de processos próprio (o subir grava o PGID em pids/<nome>.pgid).
-# "É nosso" = quem escuta na porta está nesse grupo. cwd no snapshot não basta: outro processo pode ter o mesmo.
-pgid_gravado() { [ -f "$L/pids/$1.pgid" ] && /bin/cat "$L/pids/$1.pgid"; }
-# Processos vivos do grupo, em MEMBROS. Se o ps falhar, para tudo (nunca vira "grupo morto").
+# Um processo pelo PID: PROC_GRUPO, PROC_INICIO (lstart) e PROC_COMANDO; tudo vazio se ele não existe.
+# Erro do ps ou do awk para tudo (nunca vira "processo não existe").
+ler_processo() {
+  local tabela linha pid d1 d2 d3 d4 d5
+  tabela=$(/bin/ps -ww -axo pid=,pgid=,lstart=,command=) || falha "ps falhou; não sei quem é o processo $1"
+  linha=$(printf '%s\n' "$tabela" | /usr/bin/awk -v p="$1" '$1 == p') || falha "awk falhou lendo o ps"
+  PROC_GRUPO='' PROC_INICIO='' PROC_COMANDO=''
+  [ -n "$linha" ] || return 0
+  read -r pid PROC_GRUPO d1 d2 d3 d4 d5 PROC_COMANDO <<< "$linha"
+  PROC_INICIO="$d1 $d2 $d3 $d4 $d5"
+}
+
+# Cada servidor da demo roda num grupo de processos próprio. O lancar grava o PGID (pids/<nome>.pgid) e o instante
+# em que o líder nasceu (pids/<nome>.inicio). O grupo só é "da demo" se o líder ainda existe, nasceu nesse instante
+# e o comando dele é exatamente o que o lancar executou (comparação de texto, sem regex). PGID solto por reboot ou
+# morte e depois reaproveitado por outro processo não confere: GRUPO fica vazio, ninguém recebe sinal e a porta
+# decide. GRUPO_SITUACAO: sem-registro | confere | nao-confere.
+grupo_da_demo() {
+  local nome=$1 pgid inicio
+  GRUPO=''
+  if [ ! -f "$L/pids/$nome.pgid" ]; then
+    GRUPO_SITUACAO=sem-registro
+    return 0
+  fi
+  [ -f "$L/pids/$nome.inicio" ] ||
+    falha "pids/$nome.pgid sem pids/$nome.inicio: o $nome subiu por uma versão anterior do kit, que não grava o" \
+      "início do processo. Pare à mão (passo a passo em docs/runbooks/demo-tela-real.md, 'Demo de kit antigo')" \
+      "e depois apague $L/pids/$nome.pgid"
+  pgid=$(/bin/cat "$L/pids/$nome.pgid") || falha "não li pids/$nome.pgid"
+  inicio=$(/bin/cat "$L/pids/$nome.inicio") || falha "não li pids/$nome.inicio"
+  case "$pgid" in '' | *[!0-9]*) falha "pids/$nome.pgid inválido ('$pgid')" ;; esac
+  ler_processo "$pgid"
+  if [ "$PROC_GRUPO" = "$pgid" ] && [ "$PROC_INICIO" = "$inicio" ] &&
+    [ "$PROC_COMANDO" = "/bin/bash $KIT/no_m2.sh _$nome $slug" ]; then
+    GRUPO=$pgid
+    GRUPO_SITUACAO=confere
+  else
+    GRUPO_SITUACAO=nao-confere
+  fi
+}
+
+# Processos vivos do grupo, em MEMBROS. Se o ps ou o awk falhar, para tudo (nunca vira "grupo morto").
 membros_do_grupo() {
   local tabela
   tabela=$(/bin/ps -axo pid=,pgid=) || falha "ps falhou; não sei se o grupo $1 morreu"
-  MEMBROS=$(printf '%s\n' "$tabela" | /usr/bin/awk -v g="$1" '$2 == g { print $1 }')
+  MEMBROS=$(printf '%s\n' "$tabela" | /usr/bin/awk -v g="$1" '$2 == g { print $1 }') ||
+    falha "awk falhou; não sei se o grupo $1 morreu"
 }
 
+# Confere a porta e deixa GRUPO/GRUPO_SITUACAO prontos para quem chama. Porta livre: ok. Porta ocupada: só segue se
+# todos os que escutam estão no grupo confirmado da demo.
 porta_nossa_ou_livre() {
-  local nome=$1 porta=$2 pid grupo esperado
-  esperado=$(pgid_gravado "$nome" || true)
+  local nome=$1 porta=$2 pid
+  grupo_da_demo "$nome"
   escutando "$porta"
+  [ -n "$ESCUTA" ] || return 0
+  if [ "$GRUPO_SITUACAO" = sem-registro ]; then
+    falha "porta $porta ($nome) escutando e a demo não tem pids/$nome.pgid: é processo de fora ou o $nome subiu" \
+      "por uma versão anterior do kit. Pare à mão (docs/runbooks/demo-tela-real.md, 'Demo de kit antigo')"
+  fi
   for pid in $ESCUTA; do
-    grupo=$(/bin/ps -o pgid= -p "$pid" | /usr/bin/tr -d ' ')
-    [ -n "$esperado" ] && [ "$grupo" = "$esperado" ] ||
-      falha "porta $porta ($nome) ocupada por processo que não é desta demo (pid $pid, grupo $grupo)"
+    ler_processo "$pid"
+    [ -n "$GRUPO" ] && [ "$PROC_GRUPO" = "$GRUPO" ] ||
+      falha "porta $porta ($nome) ocupada por processo que não é desta demo (pid $pid, grupo ${PROC_GRUPO:-?}," \
+        "registro $GRUPO_SITUACAO); não mandei sinal"
   done
+}
+
+# Confere que o Redis na porta é o desta demo (dir = $L/redis). Erro do redis-cli para tudo.
+redis_da_demo() {
+  local saida dir
+  saida=$("$REDISBIN/redis-cli" -p "$REDIS_PORT" config get dir) ||
+    falha "redis-cli falhou na porta $REDIS_PORT; não sei de quem é esse Redis"
+  dir=$(printf '%s\n' "$saida" | /usr/bin/tail -1) || falha "tail falhou lendo o Redis"
+  [ "$dir" = "$L/redis" ]
 }
 
 # --- checar: antes do snapshot, confirma que banco e portas desta demo estão livres ---
@@ -212,8 +281,7 @@ iniciar() {
 
 subir_redis() {
   if "$REDISBIN/redis-cli" -p "$REDIS_PORT" ping >/dev/null 2>&1; then
-    [ "$("$REDISBIN/redis-cli" -p "$REDIS_PORT" config get dir | /usr/bin/tail -1)" = "$L/redis" ] ||
-      falha "Redis na porta $REDIS_PORT não é desta demo"
+    redis_da_demo || falha "Redis na porta $REDIS_PORT não é desta demo"
     return
   fi
   "$REDISBIN/redis-server" --port "$REDIS_PORT" --bind 127.0.0.1 --save "" --appendonly no \
@@ -254,23 +322,33 @@ _vite() { carregar_estado; cd "$SNAP"; demo_env bundle exec vite dev; }
 
 # Sobe o servidor num grupo de processos novo (setpgrp + exec): o PID lançado é o PGID, e o descer derruba o
 # grupo inteiro (wrapper, Rails/Vite e filhos como esbuild e fsevent_watch) e confere que todos morreram.
+# Grava o instante em que o líder nasceu (lstart, que não muda no exec) antes do PGID: o grupo_da_demo só aceita o
+# grupo se o líder vivo tiver esse mesmo início e o comando "/bin/bash $KIT/no_m2.sh _<nome> <slug>".
 lancar() {
-  local nome=$1 log=$2
+  local nome=$1 log=$2 pid
   nohup /usr/bin/perl -e 'setpgrp(0, 0) or die "setpgrp: $!"; exec @ARGV or die "exec: $!"' \
     /bin/bash "$KIT/no_m2.sh" "_$nome" "$slug" > "$log" 2>&1 < /dev/null &
-  echo "$!" > "$L/pids/$nome.pgid"
+  pid=$!
+  ler_processo "$pid"
+  [ -n "$PROC_INICIO" ] || falha "o $nome saiu assim que nasceu (log $log)"
+  printf '%s\n' "$PROC_INICIO" > "$L/pids/$nome.inicio"
+  echo "$pid" > "$L/pids/$nome.pgid"
 }
 
 subir() {
   carregar_estado
   subir_redis
+  mkdir -p "$L/pids"
   porta_nossa_ou_livre rails "$RAILS_PORT"
   porta_nossa_ou_livre vite "$VITE_PORT"
-  mkdir -p "$L/pids"
+  # Porta livre não quer dizer grupo morto: o anterior pode estar subindo ou travado sem escutar. O parar_servico
+  # derruba o grupo confirmado e espera; só então sobe outro (senão o antigo ficaria órfão, fora do down).
   if ! escuta "$VITE_PORT"; then
+    parar_servico vite "$VITE_PORT" || falha "o Vite anterior não parou; não subi outro por cima"
     lancar vite "$L/vite.log"
   fi
   if ! escuta "$RAILS_PORT"; then
+    parar_servico rails "$RAILS_PORT" || falha "o Rails anterior não parou; não subi outro por cima"
     /bin/rm -f "$SNAP/tmp/pids/server.pid"
     lancar rails "$L/rails.log"
   fi
@@ -285,16 +363,26 @@ subir() {
     fi
     sleep 5
   done
-  escuta "$VITE_PORT" || { /usr/bin/tail -20 "$L/vite.log"; falha "Vite não subiu (log $L/vite.log)"; }
+  # Com o Rails já no ar (reiniciar-vite, ou só o Vite relançado), o login responde antes de o Vite escutar.
+  local n=0
+  until escuta "$VITE_PORT"; do
+    if [ $n -ge "$ESPERA_VITE_SEGUNDOS" ]; then
+      /usr/bin/tail -20 "$L/vite.log"
+      falha "Vite não subiu em ${ESPERA_VITE_SEGUNDOS}s (log $L/vite.log)"
+    fi
+    sleep 1
+    n=$((n + 1))
+  done
   echo "painel no ar em $((SECONDS - inicio))s"
 }
 
-# Para um servidor da demo pelo grupo gravado. Devolve 1 (sem matar mais nada) se a porta continuar escutando ou
-# sobrar processo do grupo depois de 30 s. Quem escuta na porta fora do grupo: falha sem mexer.
+# Para um servidor da demo pelo grupo gravado, só se o grupo_da_demo o confirmou (líder com o mesmo início e o
+# mesmo comando). Grupo que não confere não recebe sinal: a porta decide (livre segue, ocupada falha).
+# Devolve 1 (sem matar mais nada) se a porta continuar escutando ou sobrar processo do grupo depois de 30 s.
 parar_servico() {
   local nome=$1 porta=$2 grupo n=0 vivos
-  grupo=$(pgid_gravado "$nome" || true)
   porta_nossa_ou_livre "$nome" "$porta"
+  grupo=$GRUPO
   MEMBROS=''
   [ -z "$grupo" ] || membros_do_grupo "$grupo"
   [ -z "$MEMBROS" ] || kill -TERM -- "-$grupo" || true
@@ -312,7 +400,7 @@ parar_servico() {
     sleep 1
     n=$((n + 1))
   done
-  /bin/rm -f "$L/pids/$nome.pgid"
+  /bin/rm -f "$L/pids/$nome.pgid" "$L/pids/$nome.inicio"
   return 0
 }
 
@@ -322,8 +410,7 @@ descer() {
   parar_servico rails "$RAILS_PORT" || ok=false
   parar_servico vite "$VITE_PORT" || ok=false
   if escuta "$REDIS_PORT"; then
-    [ "$("$REDISBIN/redis-cli" -p "$REDIS_PORT" config get dir | /usr/bin/tail -1)" = "$L/redis" ] ||
-      falha "Redis na porta $REDIS_PORT não é desta demo; não mexi"
+    redis_da_demo || falha "Redis na porta $REDIS_PORT não é desta demo; não mexi"
     "$REDISBIN/redis-cli" -p "$REDIS_PORT" shutdown nosave >/dev/null 2>&1 || true
     local n=0
     while escuta "$REDIS_PORT" && [ $n -lt 20 ]; do sleep 0.5; n=$((n + 1)); done

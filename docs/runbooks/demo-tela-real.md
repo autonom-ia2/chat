@@ -37,7 +37,7 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
 | `seed` | M2 | Copia o `.rb` para a pasta da demo e roda com `rails runner`. `ENV['DEMO_PASTA']` aponta a pasta da demo no M2 (para mídia, por exemplo). |
 | `tunnel` | — | Imprime o `ssh -L` das duas portas (Rails e Vite) e a URL. |
 | `prints` | M2 → M4 | Roda `script/demo/prints.cjs` com o Playwright do snapshot e o Chrome do M2, contra o painel local. Traz só os PNGs para `docs/<pasta>/` da worktree; o `relato.json` (URLs locais e erros) fica no M2, na pasta da demo. Recusa `pasta` que já tenha arquivo versionado. |
-| `down` | M2 (e M4) | Desliga Rails, Vite e Redis da demo **pela identidade**: cada servidor sobe num grupo de processos próprio e o PGID fica em `pids/<nome>.pgid`; quem escuta na porta fora desse grupo faz o comando falhar sem mexer. Derruba o grupo inteiro e confere, com 30 s de prazo, que a porta parou de escutar e que nenhum processo do grupo sobrou; se não, falha. Com `--apagar`: confere o snapshot do M4 sem apagar; no M2 (a) desce de forma verificada, (b) roda a checagem de uso no snapshot **sem exceção nenhuma** e, se algo ainda o segura, para com "demo parada, nada apagado" (reversível: `up` de novo); (c) só então faz `dropdb` e apaga o snapshot, deixando o marcador `apagado-no-m2` e o `demo.env`. Depois apaga o snapshot do M4 e, por último, a pasta da demo no M2. Com o marcador, todo comando que não seja `down --apagar` ou `status` responde "demo em remoção: rode down --apagar"; repetir `down --apagar` termina. |
+| `down` | M2 (e M4) | Desliga Rails, Vite e Redis da demo **pela identidade**: cada servidor sobe num grupo de processos próprio; o PGID fica em `pids/<nome>.pgid` e o instante em que o líder nasceu (`ps -o lstart`) em `pids/<nome>.inicio`. O grupo só recebe sinal se o líder ainda existe, nasceu nesse instante e o comando dele é exatamente `/bin/bash <kit>/no_m2.sh _<nome> <slug>` (PGID reaproveitado depois de reboot ou morte não confere: ninguém recebe sinal e a porta decide). Quem escuta na porta fora desse grupo faz o comando falhar sem mexer. Derruba o grupo inteiro e confere, com 30 s de prazo, que a porta parou de escutar e que nenhum processo do grupo sobrou; se não, falha. Com `--apagar`: confere o snapshot do M4 sem apagar; no M2 (a) desce de forma verificada, (b) roda a checagem de uso no snapshot **sem exceção nenhuma** e, se algo ainda o segura, para com "demo parada, nada apagado" (reversível: `up` de novo); (c) só então faz `dropdb` e apaga o snapshot, deixando o marcador `apagado-no-m2` e o `demo.env`. Depois apaga o snapshot do M4 e, por último, a pasta da demo no M2. Com o marcador, todo comando que não seja `down --apagar` ou `status` responde "demo em remoção: rode down --apagar"; repetir `down --apagar` termina. |
 
 ## Isolamento: o que é de cada demo
 
@@ -129,11 +129,31 @@ entrada → todas as conversas):
 
 ## Checagem de uso (`lsof +D`)
 
-Antes de apagar um snapshot, o kit confere com `lsof -w -t +D` quem tem arquivo aberto nele (`script/demo/comum.sh`,
+Antes de apagar um snapshot, o kit confere com `lsof -t +D` quem tem arquivo aberto nele (`script/demo/comum.sh`,
 o mesmo arquivo nos dois Macs). Indexador do Spotlight e buscas de disco abrem arquivo de passagem: só conta como
-em uso se continuar assim em 5 leituras, com 3 s entre elas. Qualquer falha na checagem (`mktemp`, `lsof` com
-stderr ou saída diferente de 0/1) para tudo sem apagar: nunca vira "livre"; o `lsof` 4.91 do macOS sai com 1 tanto sem nada aberto quanto achando processos.
-Medido em 23/10: ~3 s por leitura num snapshot com `node_modules` (89 mil arquivos) no M2, ~2 s no M4.
+em uso se continuar assim em 5 leituras, com 3 s entre elas. O `lsof` roda **sem `-w`** (nenhum aviso escondido):
+qualquer linha no stderr conta como "em uso" (e, na checagem de porta, como "porta ocupada"); saída acima de 1 ou
+falha do `mktemp` para tudo. Nunca vira "livre". O `lsof` 4.91 do macOS sai com 1 tanto sem nada aberto quanto
+achando processos, por isso quem decide é o stderr vazio.
+Medido em 23/10 no M2 e no M4: em operação normal (snapshot com `node_modules`, porta livre, porta ocupada) o stderr
+sai vazio, então não há aviso benigno a tolerar. ~3 s por leitura num snapshot com `node_modules` (89 mil arquivos)
+no M2, ~2 s no M4.
+
+## Demo de kit antigo
+
+Demo subida por uma versão anterior do kit não tem `pids/<nome>.pgid` (kit antes do grupo de processos) ou tem o
+`.pgid` sem `pids/<nome>.inicio` (kit antes da conferência do início). O kit não tem como provar que o processo é
+dela e **recusa** `down`, `up` e `reiniciar-*` com a mensagem "versão anterior do kit". Para parar à mão, no M2
+(`ssh m2`), com as portas do `demo.env` (`/Users/Shared/chat2you-demos/<slug>/demo.env`):
+
+```sh
+lsof -nP -iTCP:<RAILS_PORT> -sTCP:LISTEN    # PID do Rails; repita com VITE_PORT
+ps -o pid,pgid,lstart,command -p <pid>      # confira que o comando roda dentro do snapshot da demo (SNAP)
+kill -TERM <pid>                            # e espere a porta parar de escutar (lsof sem saída)
+rm /Users/Shared/chat2you-demos/<slug>/pids/<nome>.pgid   # se existir
+```
+
+Depois, `bin/demo up <slug>` religa já no formato novo, e `bin/demo down <slug> --apagar` apaga normalmente.
 
 ## Limpeza (obrigatória)
 

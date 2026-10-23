@@ -87,7 +87,16 @@ exigir_demo() {
   recusar_em_remocao
 }
 
-valor_do_estado() { no_m2 estado "$slug" | /usr/bin/awk -F= -v k="$1" '$1 == k {print substr($0, length(k) + 2)}'; }
+# Um valor do demo.env do M2. Erro de ssh/awk ou chave ausente sai com 1 (quem chama usa `|| falha`): nunca vira
+# valor vazio aceito em silêncio.
+valor_do_estado() {
+  local saida valor
+  saida=$(no_m2 estado "$slug") || falha "não consegui ler o estado da demo no $HOST"
+  valor=$(printf '%s\n' "$saida" | /usr/bin/awk -F= -v k="$1" '$1 == k {print substr($0, length(k) + 2)}') ||
+    falha "awk falhou lendo o estado da demo"
+  [ -n "$valor" ] || falha "estado da demo sem $1"
+  printf '%s\n' "$valor"
+}
 
 worktree() {
   WT=$(/usr/bin/git rev-parse --show-toplevel) || falha "rode de dentro da worktree"
@@ -108,7 +117,7 @@ criar_snapshot() {
   local saida snapdir
   echo "snapshot da worktree $WT (só no M4) ..."
   saida=$(maccluster workspace snapshot --cwd "$WT" --name chat2you --local-only --json) || falha "snapshot falhou"
-  SNAP=$(printf %s "$saida" | json_campo src)
+  SNAP=$(printf %s "$saida" | json_campo src) || falha "não li o caminho do snapshot na saída do MacCluster"
   snapdir=${SNAP%/src}
   case "$snapdir" in
     "$PREFIXO_SNAPSHOT"*/* | *..*) falha "snapshot em caminho inesperado: $SNAP" ;;
@@ -133,7 +142,8 @@ sys.exit(0 if ok else 1)' "$snapdir" "$WT" || falha "o snapshot $snapdir não é
     falha "rsync para o $HOST falhou"
   printf '%s\n' "$estatisticas" | /usr/bin/grep -i 'files transferred\|total transferred\|sent ' || :
   local resto
-  resto=$(/usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" -n -i "$snapdir/" "$HOST:$snapdir/")
+  resto=$(/usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" -n -i "$snapdir/" "$HOST:$snapdir/") ||
+    falha "não consegui conferir a cópia no $HOST"
   [ -z "$resto" ] || { echo "$resto" | /usr/bin/head -10; falha "cópia no $HOST diverge do snapshot depois do rsync"; }
   echo "snapshot no $HOST igual ao do M4: $SNAP"
 }
@@ -144,7 +154,7 @@ cmd_up() {
   if existe_no_m2; then
     recusar_em_remocao
     local origem
-    origem=$(valor_do_estado ORIGEM)
+    origem=$(valor_do_estado ORIGEM) || falha "não li a origem da demo"
     [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT). Use outro slug."
     echo "demo $slug já existe: religando (sem snapshot nem banco novos)"
     enviar_kit
@@ -196,9 +206,9 @@ cmd_sync() {
   worktree
   enviar_kit
   local snap base origem
-  snap=$(valor_do_estado SNAP)
-  base=$(valor_do_estado BASE_SHA)
-  origem=$(valor_do_estado ORIGEM)
+  snap=$(valor_do_estado SNAP) || falha "não li o snapshot da demo"
+  base=$(valor_do_estado BASE_SHA) || falha "não li o commit base da demo"
+  origem=$(valor_do_estado ORIGEM) || falha "não li a origem da demo"
   [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT)"
   local copiar=() apagar=() f lista
   lista=$(/usr/bin/mktemp "${TMPDIR:-/tmp}/demo-sync.XXXXXX")
@@ -263,8 +273,8 @@ cmd_seed() {
 
 cmd_tunnel() {
   local rails vite
-  rails=$(valor_do_estado RAILS_PORT)
-  vite=$(valor_do_estado VITE_PORT)
+  rails=$(valor_do_estado RAILS_PORT) || falha "não li a porta do Rails"
+  vite=$(valor_do_estado VITE_PORT) || falha "não li a porta do Vite"
   cat <<TXT
 
 Painel da demo $slug no ar no $HOST. Para abrir no M4:
@@ -278,15 +288,17 @@ cmd_prints() {
   worktree
   local jornadas=${1:?uso: bin/demo prints <slug> <jornadas.json>} pasta
   [ -f "$jornadas" ] || falha "arquivo não existe: $jornadas"
-  pasta=$(/usr/bin/python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1])).get("pasta",""))' "$jornadas")
+  pasta=$(/usr/bin/python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1])).get("pasta",""))' "$jornadas") ||
+    falha "não li \"pasta\" em $jornadas"
   case "$pasta" in
     docs/?* ) ;;
     *) falha "\"pasta\" do jornadas.json precisa começar com docs/ (veio '$pasta')" ;;
   esac
   case "$pasta" in *..*) falha "\"pasta\" não pode ter '..'" ;; esac
   # Prints regravam a pasta inteira: nunca por cima de arquivo versionado.
-  [ -z "$(/usr/bin/git -C "$WT" ls-files -- "$pasta")" ] ||
-    falha "\"pasta\" $pasta tem arquivo versionado; use uma pasta nova (ex.: $pasta-v2)"
+  local versionados
+  versionados=$(/usr/bin/git -C "$WT" ls-files -- "$pasta") || falha "git ls-files falhou; não sei se $pasta é versionada"
+  [ -z "$versionados" ] || falha "\"pasta\" $pasta tem arquivo versionado; use uma pasta nova (ex.: $pasta-v2)"
   exigir_demo
   enviar_kit
   ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/prints-entrada'"
@@ -331,7 +343,7 @@ cmd_down() {
   if [ "${1:-}" != --apagar ]; then recusar_em_remocao; fi
   if [ "${1:-}" = --apagar ]; then
     local snap
-    snap=$(valor_do_estado SNAP)
+    snap=$(valor_do_estado SNAP) || falha "não li o snapshot da demo; nada apagado"
     conferir_snapshot_local "$snap"
     no_m2 apagar "$slug" || falha "o $HOST recusou o apagar; nada foi apagado no M4 ($snap)"
     # O demo.env do M2 só some no `fechar`: se o M4 recusar aqui, repetir o down --apagar termina o serviço.
