@@ -522,6 +522,15 @@ export const unmetSuggestion = (module, permissions) => {
 export const sensitiveExtrasOn = permissions =>
   SENSITIVE_EXTRAS.filter(key => permissions.includes(key));
 
+// As áreas que guardam alguma destas chaves (#2115): diz à pessoa onde um modelo ficou incompleto.
+export const modulesWithKeys = keys =>
+  MODULES.filter(module =>
+    [
+      ...keysOf(module),
+      ...(module.type === 'conversations' ? CONVERSATION_KEYS : []),
+    ].some(key => keys.includes(key))
+  );
+
 const build = levels =>
   Object.entries(levels).reduce(
     (permissions, [moduleKey, level]) =>
@@ -529,14 +538,18 @@ const build = levels =>
     []
   );
 
+// build() só guarda o nível de cada área; os ajustes finos que a frase do perfil promete entram à mão (#2115).
 export const PRESETS = {
-  AGENT: () =>
-    build({
+  AGENT: () => [
+    ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.LIMITED,
       CONTACTS: LEVELS.VIEW,
       KNOWLEDGE_BASE: LEVELS.VIEW,
       CRM: LEVELS.MANAGE,
     }),
+    // "Pegar da fila".
+    CONVERSATION_UNASSIGNED,
+  ],
   SUPERVISOR: () => [
     ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.ALL,
@@ -576,6 +589,9 @@ export const PRESETS = {
     'crm_manage_pipelines',
     'crm_export',
     'prospecting_view_all_searches',
+    // Dono da meta (#2115): valores em R$ e as metas do mês da equipe. Chaves protegidas, saem para quem não as entrega.
+    SALES_VALUE_VIEW_PERMISSION,
+    'crm_metas_manage',
   ],
   MARKETING: () => [
     ...build({
@@ -588,6 +604,8 @@ export const PRESETS = {
       WHATSAPP_TEMPLATES: LEVELS.MANAGE,
     }),
     'crm_view_reports',
+    'campaign_send',
+    'contact_export',
   ],
   FINANCE: () => [
     ...build({ REPORTS: LEVELS.VIEW, CRM: LEVELS.VIEW, FINANCE: LEVELS.VIEW }),
@@ -618,6 +636,9 @@ export const PRESETS = {
       INBOXES: LEVELS.VIEW,
       AUTOMATIONS: LEVELS.VIEW,
       WHATSAPP_TEMPLATES: LEVELS.VIEW,
+      META_ADS: LEVELS.VIEW,
+      SCHEDULING: LEVELS.VIEW,
+      INSURANCE: LEVELS.VIEW,
     }),
     'crm_view_reports',
   ],
@@ -636,7 +657,12 @@ export const PROFILE_GROUPS = [
       },
       {
         key: 'SUPERVISOR',
-        can: ['ALL_CONVERSATIONS', 'EDIT_CONTACTS', 'REPORTS', 'TEAM_SETUP'],
+        can: [
+          'ALL_CONVERSATIONS',
+          'EDIT_IMPORT_CONTACTS',
+          'REPORTS',
+          'TEAM_SETUP',
+        ],
         cannot: ['DELETE_DATA', 'BILLING_INTEGRATIONS'],
       },
     ],
@@ -656,6 +682,7 @@ export const PROFILE_GROUPS = [
           'EDIT_PIPELINES',
           'EXPORT_CRM',
           'ALL_SEARCHES',
+          'SET_GOALS',
         ],
         cannot: ['SEND_CAMPAIGNS', 'SETTINGS'],
       },

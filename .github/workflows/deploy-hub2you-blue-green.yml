@@ -415,6 +415,11 @@ jobs:
 
           dnf update -y
           dnf install -y docker awscli openssh-clients python3 iproute
+          # Logs dos containers no CloudWatch (#2103); `docker logs` segue pelo cache local do Docker 25.
+          mkdir -p /etc/docker
+          cat > /etc/docker/daemon.json <<EOF
+          {"log-driver":"awslogs","log-opts":{"awslogs-region":"$AWS_REGION","awslogs-group":"/chatwoot/prod/app","tag":"{{.Name}}/{{.ID}}","mode":"non-blocking","max-buffer-size":"4m"}}
+          EOF
           systemctl enable --now docker
 
           mkdir -p "$APP_DIR"

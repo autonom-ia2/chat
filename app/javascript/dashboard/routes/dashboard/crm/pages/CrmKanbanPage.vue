@@ -2753,16 +2753,6 @@ onUnmounted(() => {
           :aria-expanded="showFiltersDrawer"
           @click="showFiltersDrawer = true"
         />
-        <Button
-          :label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI')"
-          icon="i-lucide-sparkles"
-          slate
-          outline
-          class="!rounded-lg min-h-11 !outline-n-weak bg-n-surface-1"
-          disabled
-          :title="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
-          :aria-label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
-        />
         <CrmKanbanZoom
           v-if="viewMode === 'kanban'"
           :model-value="zoom"

@@ -20,6 +20,7 @@ import {
   MODULE_GROUPS,
   SENSITIVE_EXTRAS,
   hasAccess,
+  modulesWithKeys,
   profilePermissions,
   setLevel,
   toggleExtra,
@@ -51,6 +52,8 @@ const search = ref('');
 const openGroups = ref([]);
 const openRows = ref([]);
 const nameError = ref('');
+// Chaves do modelo que a pessoa não pode entregar e que ficaram de fora ao aplicá-lo (#2115).
+const leftOut = ref([]);
 
 const confirmRef = ref(null);
 const confirmation = ref({ title: '', description: '', label: '' });
@@ -116,7 +119,9 @@ const backToList = () => router.push({ name: 'custom_roles_list' });
 
 // Step 1 -----------------------------------------------------------------
 const applyProfile = key => {
-  permissions.value = withinReach(profilePermissions(key));
+  const full = profilePermissions(key);
+  permissions.value = withinReach(full);
+  leftOut.value = full.filter(item => !permissions.value.includes(item));
   baseProfile.value = key === BLANK_PROFILE ? null : key;
   openRows.value = [];
   openGroups.value = key === BLANK_PROFILE ? [MODULE_GROUPS[0].key] : [];
@@ -237,6 +242,8 @@ const clearGroup = group => {
   );
 };
 
+const leftOutModules = computed(() => modulesWithKeys(leftOut.value));
+
 const areaCount = computed(
   () => MODULES.filter(module => hasAccess(module, permissions.value)).length
 );
@@ -287,6 +294,7 @@ const save = async () => {
       v-if="step === 'pick'"
       :is-new-role="isNewRole"
       :initial-profile="baseProfile || 'AGENT'"
+      :reach="withinReach"
       @choose="chooseProfile"
       @back="isNewRole ? backToList() : (step = 'edit')"
     />
@@ -350,6 +358,31 @@ const save = async () => {
           class="shrink-0"
           @click="step = 'pick'"
         />
+      </div>
+
+      <div
+        v-if="leftOutModules.length"
+        role="status"
+        class="flex items-start gap-3 px-4 py-3 text-sm rounded-xl bg-n-amber-3"
+      >
+        <span class="i-lucide-lock size-4 mt-0.5 shrink-0 text-n-amber-11" />
+        <div class="flex flex-col flex-1 min-w-0 gap-1">
+          <span class="font-medium text-n-slate-12">
+            {{ $t('CUSTOM_ROLE.EDITOR.LEFT_OUT.TITLE') }}
+          </span>
+          <span class="text-n-slate-11">
+            {{ $t('CUSTOM_ROLE.EDITOR.LEFT_OUT.DESCRIPTION') }}
+          </span>
+          <ul class="flex flex-wrap p-0 m-0 list-none gap-x-3 gap-y-1">
+            <li
+              v-for="module in leftOutModules"
+              :key="module.key"
+              class="font-medium text-n-amber-12"
+            >
+              {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${module.key}.NAME`) }}
+            </li>
+          </ul>
+        </div>
       </div>
 
       <section
