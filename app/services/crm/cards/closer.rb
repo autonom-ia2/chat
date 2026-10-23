@@ -20,6 +20,11 @@ module Crm
 
       class InvalidResult < StandardError; end
 
+      # O pedido é de reabrir ('reopen' ou o 'open' da tela)? No card arquivado, reabrir é restaurar (#2095).
+      def self.reopen?(result)
+        VERB_ALIASES.fetch(result.to_s, result.to_s) == 'reopen'
+      end
+
       # payload_extra: o que mais vai na atividade do fechamento (IA entende a conversa F3: o fechamento da IA leva
       # `by: 'ai'`, o motivo e a confiança, Crm::Ai::FecharCard). Sem ele, a atividade é a de sempre.
       def initialize(card:, actor:, result:, value_cents: nil, currency: nil, lost_reason: nil, payload_extra: {})

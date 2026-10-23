@@ -798,3 +798,16 @@
   display_name: Conversa do Instagram com a cara do Direct
   enabled: true
   column: feature_flags_ext_1
+
+# Arquivados, restaurar e excluir de vez no CRM (#2095 / #2096, PRs #2097 e #2098). Ligada: o funil ganha "Arquivados"
+# (restaurar um ou vários, com o aviso do cliente que já voltou), "Funis arquivados" (restaurar o funil), a janela nova
+# de arquivar card e funil (o que para, o que continua, para onde vão os cards e as caixas de entrada) e, para o
+# administrador, "Excluir de vez" (card, vários, funil e os cards ao excluir um contato). Também só com ela ligada
+# (decisão do Rodrigo, 23/10): tirar um agente da conta solta os cards dele (Agents::DestroyJob, #2097) e excluir um contato
+# anonimiza os cards e cancela as reuniões futuras. Desligada: as telas e o servidor de sempre, como na main; as rotas
+# novas das Partes B e C respondem nos dois casos. Posição 58 na feature_flags_ext_1 (1 << 57), confirmada pela
+# Orquestração (23/10). Piloto por psql na hub (1/16/18) e conta 6 da hub depois do teste do Rodrigo, sem migration.
+- name: crm_arquivados
+  display_name: CRM › Arquivados, restaurar e excluir de vez
+  enabled: false
+  column: feature_flags_ext_1

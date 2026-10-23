@@ -152,6 +152,20 @@ class Crm::Card < ApplicationRecord
     archived? ? metadata.to_h[DESFECHO_ARQUIVADO] : nil
   end
 
+  # Donos que saíram da conta (#2095), entre os ids dados. O validate_owner_account recusa gravar o card com um deles.
+  # Quem sai passa a ter os cards soltos (Agents::DestroyJob); os de antes disso ainda guardam o id, e o restaurar e o
+  # arquivar do funil soltam o dono ao gravar, em vez de travar.
+  def self.donos_fora_da_conta(account_id, owner_ids)
+    ids = owner_ids.compact.uniq
+    return Set.new if ids.empty?
+
+    Set.new(ids) - AccountUser.where(account_id: account_id, user_id: ids).pluck(:user_id)
+  end
+
+  def dono_saiu_da_conta?
+    self.class.donos_fora_da_conta(account_id, [owner_id]).any?
+  end
+
   def standalone?
     contact_id.blank? && conversation_id.blank? && inbox_id.blank?
   end

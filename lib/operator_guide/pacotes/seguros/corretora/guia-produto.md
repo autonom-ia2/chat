@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (235 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (237 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -527,6 +527,28 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: card existente em funil ativo.
 - passos: Arraste o card entre colunas no Kanban, ou abra o card e toque na coluna certa em **Onde está no funil** (à direita) e confirme em **Mover**; a etapa também muda pela linha "Etapa X, a Nª de N" do cartão **Seguro** (num funil de Atender, cartão **Assunto**); quem cuida muda na mesma linha "Fulano cuida deste cliente", com **Salvar** no rodapé. Para fechar, use os botões da faixa do topo do card. Num funil de Vender: **Fechou o seguro** (confira quanto ficou e clique em **Marcar: fechou o seguro**) ou **Não fechou** (o motivo é opcional; clique em **Marcar: não fechou**). Num funil de Atender: **Resolvido** ou **Cancelado** (com motivo de cancelamento de atendimento); não pede valor. No modelo Cobrança, os botões são **Pago** e **Cancelado**. Para reabrir, use o botão azul **Reabrir** em **Próximo passo**; para arquivar, **Mais detalhes > Arquivar** e confirme.
 - gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; marcar que não fechou, cancelar e arquivar não deletam contato nem conversa; Resolvido e Cancelado não somam em vendas nem avisam anúncios; card Resolvido ou Cancelado movido para um funil de Vender entra lá Aberto (não vira Seguro ativo e não faz o contato virar cliente); o tipo do funil (Vender ou Atender) muda em Editar funil > Para que serve > Alterar.
+- nav_target: `crm_kanban_index`
+
+### Ver e restaurar cards arquivados
+- intent: "Onde ficam os cards arquivados?"; "Como trago de volta um card que arquivei?"; "Arquivei sem querer, como desfaço?"; "Como restauro vários cards de uma vez?"; "Por que não consigo restaurar?"
+- onde_fica: Sidebar > CRM > CRM Kanban > Mais filtros > Atalhos > **Arquivados (N)**; logo depois de arquivar, o aviso no rodapé tem **Desfazer** e **Ver arquivados**; o card arquivado aberto mostra **Restaurar** em **Próximo passo**. Só aparece com a flag da conta `crm_arquivados` ligada.
+- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
+- gate: papel `administrator` ou `agent` ou `crm_view`
+- perfil: restaurar exige administrador ou função com Arquivar cards do CRM; quem só vê o CRM abre a lista e o card arquivado, mas não restaura.
+- pre_requisitos: flag `crm_arquivados` ligada na conta; permissão de ver o CRM.
+- passos: Em **Mais filtros**, clique em **Arquivados (N)**: o painel abre à direita com os cards arquivados do funil escolhido, mais novos primeiro, com quem arquivou, quando e onde o card estava. Procure pelo nome; se não achar, ligue **Procurar em todos os funis**. Para trazer um card de volta, clique em **Restaurar** na linha; ele volta para a mesma etapa, com o mesmo resultado. Para vários, marque as linhas e clique em **Restaurar (N)**. Se o cliente já tem outro card aberto no mesmo funil, a tela mostra os dois lado a lado: **Abrir o card aberto** ou **Restaurar mesmo assim**. No lote, os outros voltam na hora e os que esbarram nisso aparecem no fim, com **Restaurar mesmo assim** por linha ou **Restaurar todos estes mesmo assim**.
+- gotchas: arquivar não apaga nada: o card sai do quadro, a venda ganha continua contando, e os retornos marcados param (restaurar não religa; marque de novo em Agenda, o aviso de restaurado oferece **Agendar retorno**); reuniões marcadas continuam; card de funil arquivado aparece na busca em todos os funis, mas só volta restaurando o funil; o card ganho, perdido, resolvido ou cancelado volta para a aba do resultado na Lista, não para o quadro; o sistema não adivinha se o card aberto é o mesmo assunto: só avisa quando é o mesmo cliente no mesmo funil; quem não tem Arquivar cards vê "Para restaurar, peça ao administrador a permissão Arquivar cards"; o filtro **Resultado: Arquivado** da Lista continua funcionando.
+- nav_target: `crm_kanban_index`
+
+### Arquivar um funil e trazer de volta
+- intent: "Como arquivo um funil?"; "O que acontece com os cards quando arquivo o funil?"; "Para onde vão as caixas do funil arquivado?"; "Como trago de volta um funil arquivado?"; "Onde ficam os funis arquivados?"
+- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Arquivar funil; para ver e restaurar, Configurar > **Funis arquivados (N)** ou o fim da escolha de funil. Só aparece com a flag da conta `crm_arquivados` ligada.
+- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
+- gate: papel `administrator` ou `agent` ou `crm_view`
+- perfil: arquivar e restaurar funil exige administrador ou função com Gerenciar funis; quem não tem vê a lista só para ler.
+- pre_requisitos: flag `crm_arquivados` ligada na conta; para arquivar, ter outro funil ativo (o único funil não se arquiva).
+- passos: Em **Configurar**, clique em **Arquivar funil**. Se for o funil principal, escolha antes qual passa a ser o principal. Se há cards abertos, escolha **Mover para outro funil** (já vem marcado; escolha o funil e a etapa) ou **Guardar junto** (os cards ficam no funil arquivado e os retornos deles param). Se alguma caixa cria card neste funil, escolha **Passar para outro funil** (já vem marcado, com o funil de destino à vista) ou **Deixar sem funil**. Confirme em **Arquivar funil**. Para trazer de volta, abra **Funis arquivados** e clique em **Restaurar**: o funil volta com os cards guardados nele.
+- gotchas: arquivar funil não apaga cards; **Deixar sem funil** só para de criar card quando a caixa não alimenta outro funil ativo: se alimenta, o card novo vai para esse outro funil, e a tela diz qual; passar a caixa para outro funil leva junto a criação automática; restaurar o funil não devolve as caixas que foram passadas para outro funil; uma regra de automação que cria card numa etapa do funil arquivado continua criando lá, então revise as automações; a escolha de etapa por agendamento para de mover cards de funil arquivado.
 - nav_target: `crm_kanban_index`
 
 ### Escolher se o funil é de Vender ou de Atender
