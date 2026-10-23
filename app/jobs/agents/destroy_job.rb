@@ -7,7 +7,7 @@ class Agents::DestroyJob < ApplicationJob
       remove_user_from_teams(account, user)
       remove_user_from_inboxes(account, user)
       unassign_conversations(account, user)
-      release_crm_cards(account, user)
+      release_crm_cards(account, user) if account.feature_enabled?(::Crm::Cards::Restorer::FLAG)
     end
   end
 
@@ -44,6 +44,8 @@ class Agents::DestroyJob < ApplicationJob
   # (Crm::Card#validate_owner_account): restaurar, mover ou editar dava erro. update_all de propósito: a validação
   # recusaria gravar o próprio card que se quer soltar. Quem vê o card pelo dono ("Só as suas") muda, então os
   # contadores e a visibilidade das conversas dele são refeitos.
+  # Só com a flag crm_arquivados ligada na conta (decisão do Rodrigo, 23/10): desligada, o job fica como na main e o
+  # card mantém o id de quem saiu.
   def release_crm_cards(account, user)
     cards = account.crm_cards.where(owner_id: user.id)
     conversation_ids = cards.where.not(conversation_id: nil).pluck(:conversation_id) +

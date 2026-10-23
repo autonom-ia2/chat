@@ -80,7 +80,6 @@ export function useCrmPermissions() {
   );
   // #722 — planilha da Lista é dado pessoal em lote: como canAdminCrm, o agente
   // sem função NÃO ganha por padrão (backend: crm_export em PLAIN_AGENT_DENIED_KEYS).
-
   const canExportCrm = computed(
     () => canAdminCrm.value || permissions.value.includes(CRM_EXPORT_PERMISSION)
   );
