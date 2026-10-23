@@ -1,11 +1,6 @@
 import { shallowMount } from '@vue/test-utils';
 import { formatTime } from '@chatwoot/utils';
-import { useAlert } from 'dashboard/composables';
 import ReportContainer from '../ReportContainer.vue';
-
-vi.mock('dashboard/composables', () => ({
-  useAlert: vi.fn(),
-}));
 
 vi.mock('dashboard/composables/useReportMetrics', () => ({
   useReportMetrics: () => ({
@@ -74,6 +69,7 @@ describe('ReportContainer.vue', () => {
               'businessHours',
               'canPrev',
               'canNext',
+              'showScopedNotice',
             ],
             emits: ['navigate', 'close'],
             template: '<div />',
@@ -120,14 +116,25 @@ describe('ReportContainer.vue', () => {
     });
   });
 
-  it('shows an alert and does not open drilldown for non-admin users', async () => {
+  it('opens the drilldown for non-admin report viewers with the scoped notice', async () => {
     const wrapper = mountComponent({ role: 'agent' });
 
     await wrapper.find('[data-test-id="bar-chart"]').trigger('click');
 
-    expect(useAlert).toHaveBeenCalledWith('REPORT.DRILLDOWN.ADMIN_ONLY');
+    const drawer = wrapper.findComponent({ name: 'ReportDrilldownDrawer' });
+    expect(drawer.props('open')).toBe(true);
+    expect(drawer.props('showScopedNotice')).toBe(true);
+  });
+
+  it('does not ask for the scoped notice for administrators', async () => {
+    const wrapper = mountComponent();
+
+    await wrapper.find('[data-test-id="bar-chart"]').trigger('click');
+
     expect(
-      wrapper.findComponent({ name: 'ReportDrilldownDrawer' }).props('open')
+      wrapper
+        .findComponent({ name: 'ReportDrilldownDrawer' })
+        .props('showScopedNotice')
     ).toBe(false);
   });
 
