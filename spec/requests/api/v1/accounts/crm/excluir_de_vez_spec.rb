@@ -382,7 +382,9 @@ RSpec.describe 'CRM excluir de vez', type: :request do
       expect(Contact.exists?(alheio.id)).to be(true)
     end
 
+    # Com a flag crm_arquivados (sem ela, como na main: ver excluir_contato_calendario_e_flag_spec).
     it 'o DELETE do contato de sempre mantém os cards sem dado pessoal, e o parâmetro antigo não apaga card' do
+      account.enable_features!(:crm_arquivados)
       card = card_arquivado(status: :open, description: 'detalhe')
 
       delete "#{base}/contacts/#{contact.id}", params: { delete_crm_cards: true }, headers: admin.create_new_auth_token, as: :json
@@ -390,7 +392,7 @@ RSpec.describe 'CRM excluir de vez', type: :request do
       expect(response).to have_http_status(:ok)
       expect(card.reload.attributes.slice('contact_id', 'title', 'description'))
         .to eq('contact_id' => nil, 'title' => "Removed customer ##{card.id}", 'description' => nil)
-      expect(auditorias).to be_empty
+      expect(auditorias.sole.audited_changes).to include('modo' => 'keep', 'cards_apagados' => 0, 'cards_mantidos' => 1)
     end
 
     it 'não apaga o contato quando a reunião futura de um card não cancela' do
