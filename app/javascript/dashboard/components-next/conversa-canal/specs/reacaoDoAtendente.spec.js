@@ -112,6 +112,47 @@ describe('reacaoDoAtendente', () => {
       );
     });
 
+    it('Instagram (#2113): com o texto em 7 dias (HUMAN_AGENT), a reação fica nas 24 h', () => {
+      const INSTAGRAM = { channel_type: 'Channel::Instagram' };
+      const doCliente = { ...recebida, sourceId: 'mid.A' };
+      const agora = 1_800_000_000;
+      const conversa = horas => ({
+        ...JANELA_ABERTA,
+        messages: [
+          { message_type: 0, created_at: agora - horas * 3600 },
+          { message_type: 1, created_at: agora - 60 },
+        ],
+      });
+      const bloqueado = horas =>
+        estadoDaReacao({
+          caixa: INSTAGRAM,
+          conversa: conversa(horas),
+          mensagem: doCliente,
+          agora,
+        }).bloqueado;
+
+      expect(bloqueado(23)).toBe(false);
+      expect(bloqueado(30)).toBe(true);
+      expect(
+        estadoDaReacao({
+          caixa: CLOUD,
+          conversa: conversa(30),
+          mensagem: recebida,
+          agora,
+        }).bloqueado
+      ).toBe(false);
+    });
+
+    it('a linha da reação que o agente da Autonomia leu não reage', () => {
+      const INSTAGRAM = { channel_type: 'Channel::Instagram' };
+      const sintetica = {
+        ...recebida,
+        sourceId: 'ig_reaction:mid.A:1792000000000',
+        contentAttributes: { autonomiaReaction: { emoji: '❤️' } },
+      };
+      expect(estado(INSTAGRAM, sintetica).visivel).toBe(false);
+    });
+
     it('Instagram por página do Facebook não reage pelo painel', () => {
       const pagina = { channel_type: 'Channel::FacebookPage' };
       expect(estado(pagina, recebida).visivel).toBe(false);

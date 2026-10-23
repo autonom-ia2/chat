@@ -3,6 +3,7 @@
 // Funções puras sobre a lista já em camelCase (a mesma que a MessageList desenha).
 import { MESSAGE_TYPES } from 'dashboard/components-next/message/constants';
 import { diaDaMensagem, horaDaMensagem } from '../dataDaConversa';
+import { ehReacaoDoAgente } from '../reacoes';
 
 // Pausa entre duas mensagens que abre um horário novo no meio da conversa. O app não
 // publica a regra; medido na conversa de teste: 28 min de pausa já abriram um horário.
@@ -97,3 +98,9 @@ export const horarioDoInstagram = ({ quando, agora, fuso, t, idioma }) => {
   const mes = month.endsWith('.') ? month.slice(0, -1) : month;
   return t('CONVERSA_CANAL.INSTAGRAM.HORARIO', { dia: day, mes, ano, hora });
 };
+
+// A linha que o agente da Autonomia cria para a reação do cliente ("[O cliente reagiu
+// com …]") fica fora da lista: o selo da mensagem reagida já mostra a reação (#2113),
+// como na pele do WhatsApp (ocultaNaPele).
+export const mensagensDoInstagram = mensagens =>
+  mensagens.filter(mensagem => !ehReacaoDoAgente(mensagem));

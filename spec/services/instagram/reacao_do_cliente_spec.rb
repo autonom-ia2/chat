@@ -32,6 +32,30 @@ describe Instagram::ReacaoDoCliente do
     expect(reactions.pluck('emoji')).to eq(['👍'])
   end
 
+  it "react só com o tipo ('reaction') e sem emoji fica no log, sem gravar" do
+    allow(Rails.logger).to receive(:info)
+
+    receber({ mid: 'mid.A', action: 'react', reaction: 'love' })
+
+    expect(reactions).to be_nil
+    expect(Rails.logger).to have_received(:info).with(include('[instagram][reaction] discarded').and(include('type=love')))
+  end
+
+  it 'tirar e reagir no mesmo segundo, entregues fora de ordem: a reação tirada não volta' do
+    receber({ mid: 'mid.A', action: 'unreact' }, timestamp: 1_792_000_000_900)
+    receber({ mid: 'mid.A', action: 'react', emoji: '❤️' }, timestamp: 1_792_000_000_200)
+
+    expect(reactions).to be_nil
+  end
+
+  it 'troca no mesmo segundo entregue fora de ordem: fica a mais nova' do
+    receber({ mid: 'mid.A', action: 'react', emoji: '😂' }, timestamp: 1_792_000_000_900)
+    receber({ mid: 'mid.A', action: 'react', emoji: '❤️' }, timestamp: 1_792_000_000_200)
+
+    expect(reactions.pluck('emoji')).to eq(['😂'])
+    expect(reactions.first['at']).to eq(Time.zone.at(1_792_000_000.9).iso8601(3))
+  end
+
   it 'ação desconhecida é ignorada' do
     receber({ mid: 'mid.A', action: 'other', emoji: '👍' })
 

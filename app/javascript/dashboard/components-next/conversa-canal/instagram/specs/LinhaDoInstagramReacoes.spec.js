@@ -105,6 +105,23 @@ describe('Reações na linha do Instagram', () => {
     expect(selo(wrapper).classes()).toContain('start-2');
   });
 
+  it('mensagem traduzida: o selo fica no balão e o "Ver original" embaixo, fora dele', () => {
+    const wrapper = montar({
+      contentAttributes: {
+        translations: { pt_BR: 'Você tem a bolsa em preto?' },
+        reactions: [{ emoji: '❤️', senderType: 'User', senderId: 1 }],
+      },
+    });
+    const baloes = wrapper.find('[data-baloes-do-instagram]');
+
+    expect(baloes.classes()).toContain('relative');
+    expect(baloes.find('[data-reacoes-do-instagram]').exists()).toBe(true);
+    expect(baloes.text()).not.toContain('VIEW_ORIGINAL');
+    expect(baloes.element.nextElementSibling.textContent).toContain(
+      'VIEW_ORIGINAL'
+    );
+  });
+
   it('sem reação, sem selo', () => {
     expect(selo(montar()).exists()).toBe(false);
   });

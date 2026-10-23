@@ -154,77 +154,84 @@ const textoCitado = computed(() => {
     </div>
     <div
       class="flex min-w-0 flex-col gap-0.5"
-      :class="[
-        enviada ? 'items-end' : 'items-start',
-        { 'relative pb-[18px]': reacoes.length },
-      ]"
+      :class="enviada ? 'items-end' : 'items-start'"
       @contextmenu="emit('menu', $event)"
     >
-      <template v-if="citada">
-        <span :class="ROTULO" class="mt-1">{{ rotuloDaCitacao }}</span>
-        <div
-          class="max-w-[300px] truncate rounded-[18px] px-3 py-2 text-[13px] leading-4 opacity-60"
-          :class="[RECEBIDO]"
-        >
-          {{ textoCitado }}
-        </div>
-      </template>
-      <TextoDoInstagram
-        v-if="tipo === BALOES.TEXTO"
-        :texto="texto"
-        :enviada="enviada"
-        :cantos="cantos"
-      />
+      <!-- O selo encosta no último balão: o "Ver original" fica fora, embaixo dele. -->
       <div
-        v-else-if="tipo === BALOES.APAGADA"
-        class="rounded-[18px] border border-[#DBDFE4] dark:border-[#363636] px-3 py-2 text-[15px] leading-5 italic"
-        :class="SECUNDARIO"
+        class="relative flex min-w-0 flex-col gap-0.5"
+        :class="[
+          enviada ? 'items-end' : 'items-start',
+          { 'pb-[18px]': reacoes.length },
+        ]"
+        data-baloes-do-instagram
       >
-        {{ texto }}
+        <template v-if="citada">
+          <span :class="ROTULO" class="mt-1">{{ rotuloDaCitacao }}</span>
+          <div
+            class="max-w-[300px] truncate rounded-[18px] px-3 py-2 text-[13px] leading-4 opacity-60"
+            :class="[RECEBIDO]"
+          >
+            {{ textoCitado }}
+          </div>
+        </template>
+        <TextoDoInstagram
+          v-if="tipo === BALOES.TEXTO"
+          :texto="texto"
+          :enviada="enviada"
+          :cantos="cantos"
+        />
+        <div
+          v-else-if="tipo === BALOES.APAGADA"
+          class="rounded-[18px] border border-[#DBDFE4] dark:border-[#363636] px-3 py-2 text-[15px] leading-5 italic"
+          :class="SECUNDARIO"
+        >
+          {{ texto }}
+        </div>
+        <MidiaDoInstagram
+          v-else-if="
+            tipo === BALOES.MIDIA ||
+            tipo === BALOES.REEL ||
+            tipo === BALOES.FIGURINHA
+          "
+          :anexo="anexos[0]"
+          :cantos="cantos"
+          :figurinha="tipo === BALOES.FIGURINHA"
+        />
+        <AlbumDoInstagram
+          v-else-if="tipo === BALOES.ALBUM"
+          :anexos="anexos"
+          :cantos="cantos"
+        />
+        <VozDoInstagram
+          v-else-if="tipo === BALOES.VOZ"
+          :anexo="anexos[0]"
+          :enviada="enviada"
+          :cantos="cantos"
+        />
+        <CompartilhadoDoInstagram
+          v-else-if="tipo === BALOES.POST || tipo === BALOES.STORY"
+          :tipo="tipo"
+          :mensagem="dados"
+          :enviada="enviada"
+        />
+        <TextoDoInstagram
+          v-if="textoJunto"
+          :texto="texto"
+          :enviada="enviada"
+          :cantos="cantos"
+        />
+        <ReacoesDoInstagram
+          v-if="reacoes.length"
+          :reacoes="reacoes"
+          :enviada="enviada"
+        />
       </div>
-      <MidiaDoInstagram
-        v-else-if="
-          tipo === BALOES.MIDIA ||
-          tipo === BALOES.REEL ||
-          tipo === BALOES.FIGURINHA
-        "
-        :anexo="anexos[0]"
-        :cantos="cantos"
-        :figurinha="tipo === BALOES.FIGURINHA"
-      />
-      <AlbumDoInstagram
-        v-else-if="tipo === BALOES.ALBUM"
-        :anexos="anexos"
-        :cantos="cantos"
-      />
-      <VozDoInstagram
-        v-else-if="tipo === BALOES.VOZ"
-        :anexo="anexos[0]"
-        :enviada="enviada"
-        :cantos="cantos"
-      />
-      <CompartilhadoDoInstagram
-        v-else-if="tipo === BALOES.POST || tipo === BALOES.STORY"
-        :tipo="tipo"
-        :mensagem="dados"
-        :enviada="enviada"
-      />
-      <TextoDoInstagram
-        v-if="textoJunto"
-        :texto="texto"
-        :enviada="enviada"
-        :cantos="cantos"
-      />
       <TranslationToggle
         v-if="temTraducao"
         class="px-3"
         :showing-original="verOriginal"
         @toggle="verOriginal = !verOriginal"
-      />
-      <ReacoesDoInstagram
-        v-if="reacoes.length"
-        :reacoes="reacoes"
-        :enviada="enviada"
       />
     </div>
     <div

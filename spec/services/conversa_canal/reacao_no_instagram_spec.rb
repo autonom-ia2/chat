@@ -92,6 +92,35 @@ describe ConversaCanal::ReacaoNoInstagram do
     expect(a_request(:post, url).with(query: hash_including({}))).not_to have_been_made
   end
 
+  it 'com a janela de 7 dias do HUMAN_AGENT ligada, a reação fica nas 24 h (o pedido vai sem a tag)' do
+    recebida.update!(created_at: 30.hours.ago)
+
+    with_modified_env ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT: 'true' do
+      expect(Conversations::MessageWindowService.new(conversa).can_reply?).to be(true)
+      expect { reagir(recebida, '❤️') }
+        .to raise_error(ConversaCanal::ReacaoDoAtendente::Recusa, I18n.t('conversa_canal.reacoes.instagram.fora_da_janela'))
+    end
+    expect(a_request(:post, url).with(query: hash_including({}))).not_to have_been_made
+  end
+
+  it 'recusa a linha que o agente da Autonomia criou para a reação do cliente, sem pedir à Meta' do
+    sintetica = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :incoming,
+                                 source_id: 'ig_reaction:mid.NOSSA:1792000000000',
+                                 content_attributes: { autonomia_reaction: { emoji: '❤️', reacted_source_id: 'mid.NOSSA' } })
+
+    expect { reagir(sintetica, '👍') }
+      .to raise_error(ConversaCanal::ReacaoDoAtendente::Recusa, I18n.t('conversa_canal.reacoes.mensagem_invalida'))
+    expect(a_request(:post, url).with(query: hash_including({}))).not_to have_been_made
+  end
+
+  it 'conexão derrubada pela Meta: recusa legível, nada gravado' do
+    stub_request(:post, url).with(query: hash_including({})).to_raise(Errno::ECONNRESET)
+
+    expect { reagir(recebida, '❤️') }
+      .to raise_error(ConversaCanal::ReacaoDoAtendente::Recusa, I18n.t('conversa_canal.reacoes.instagram.provedor_fora'))
+    expect(recebida.reload.content_attributes).not_to have_key('reactions')
+  end
+
   it 'recusa emoji inválido e nota privada (as regras de sempre)' do
     nota = create(:message, account: account, inbox: caixa, conversation: conversa, message_type: :outgoing, private: true,
                             source_id: 'mid.NOTA')

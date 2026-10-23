@@ -5,6 +5,9 @@
 #   { sender:, recipient:, timestamp:, reaction: { mid:, action: 'react' | 'unreact', reaction: 'love', emoji: '❤️' } }
 #   https://developers.facebook.com/docs/messenger-platform/instagram/features/webhook
 # - 'react' traz o emoji; 'unreact' não traz: tira a reação do cliente.
+# - 'react' só com o tipo ('reaction': love, like…) e sem 'emoji' (a doc marca os dois como opcionais): a doc não diz
+#   que desenho cada tipo é, então não se grava emoji adivinhado; o descarte vai para o log (#2113, a confirmar em
+#   conta real).
 # - A mensagem reagida é achada pelo mid na caixa (o source_id das mensagens do Instagram); não achada, nada a fazer.
 # - Vale para a caixa Instagram e para o Instagram ligado por página do Facebook, que chegam pelo mesmo
 #   Webhooks::InstagramEventsJob. Só com a chave `conversa_instagram` da conta; desligada, a reação segue ignorada.
@@ -25,7 +28,7 @@ class Instagram::ReacaoDoCliente
   # -> a mensagem reagida, ou nil.
   def perform
     return unless @inbox.account&.feature_enabled?(FLAG)
-    return if emoji.nil?
+    return descartar if emoji.nil?
 
     Whatsapp::ReactionRecorder.new(inbox: @inbox, reacted_source_id: @dados[:mid], emoji: emoji, reacted_at: reagida_em).perform
   rescue StandardError => e
@@ -35,6 +38,11 @@ class Instagram::ReacaoDoCliente
   end
 
   private
+
+  def descartar
+    Rails.logger.info("[instagram][reaction] discarded inbox=#{@inbox.id} action=#{@dados[:action]} type=#{@dados[:reaction]}")
+    nil
+  end
 
   # nil = não é reação que se grave: ação desconhecida ou 'react' sem emoji (nunca vira "tirar").
   def emoji
