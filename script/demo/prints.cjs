@@ -1,6 +1,7 @@
 // Kit de demo (#2140): prints por jornada no painel local, com o Playwright do snapshot.
 // Uso (o bin/demo chama no M2): node prints.cjs <jornadas.json> <saida>
-// Ambiente: PW (módulo playwright), BASE (http://localhost:<porta>), DEMO_SENHA, DEMO_ESTADO_DIR.
+// Ambiente: PW (módulo playwright), BASE (http://localhost:<porta>), DEMO_SENHA, DEMO_ESTADO_DIR, DEMO_RELATO.
+// O relato.json (URLs locais e erros) fica no M2, em DEMO_RELATO; só os PNGs vão para a worktree.
 // Formato do jornadas.json: docs/runbooks/demo-tela-real.md.
 /* eslint-disable no-console, no-await-in-loop, no-restricted-syntax */
 const fs = require('fs');
@@ -24,7 +25,15 @@ const conta = config.conta || 1;
 const usuario = config.usuario || 'john@acme.inc';
 const larguras = config.larguras || [1440, 390];
 const temas = config.temas || ['light'];
+// Só estes valores entram no nome do arquivo e no navegador.
 const ALTURA = { 1440: 900, 390: 844 };
+const TEMAS = ['light', 'dark'];
+larguras.forEach(l => {
+  if (!Object.hasOwn(ALTURA, String(l))) throw new Error(`largura não aceita: ${l} (use 1440 ou 390)`);
+});
+temas.forEach(t => {
+  if (!TEMAS.includes(t)) throw new Error(`tema não aceito: ${t} (use light ou dark)`);
+});
 
 if (![...usuario].every(c => USUARIO_PERMITIDOS.includes(c))) throw new Error(`usuario inválido: ${usuario}`);
 
@@ -96,7 +105,7 @@ async function rodarJornada(browser, estado, jornada, tema, largura) {
     const tipo = semLogin ? 'anonima' : 'logada';
     if (abas[tipo]) return abas[tipo].p;
     const ctx = await browser.newContext({
-      viewport: { width: largura, height: ALTURA[largura] || 900 },
+      viewport: { width: largura, height: ALTURA[largura] },
       locale: 'pt-BR',
       timezoneId: 'America/Sao_Paulo',
       colorScheme: tema,
@@ -158,7 +167,7 @@ async function rodarJornada(browser, estado, jornada, tema, largura) {
   } finally {
     await browser.close();
   }
-  fs.writeFileSync(path.join(saida, 'relato.json'), `${JSON.stringify(relato, null, 1)}\n`);
+  fs.writeFileSync(process.env.DEMO_RELATO, `${JSON.stringify(relato, null, 1)}\n`);
   for (const item of relato) {
     const situacao = item.falhou ? `FALHOU ${item.falhou}` : item.png;
     const extras = [

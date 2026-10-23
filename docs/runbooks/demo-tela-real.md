@@ -23,7 +23,7 @@ bin/demo down 2079-instagram        # desliga os servidores (banco e snapshot fi
 bin/demo down 2079-instagram --apagar   # apaga banco, snapshot (M2 e M4) e a pasta da demo
 ```
 
-Outros: `bin/demo status <slug>` (portas, banco, snapshot) e `bin/demo psql <slug> "SQL"` (roda um SQL só no banco da demo).
+Outros: `bin/demo status <slug>` (portas, banco, snapshot) e `bin/demo psql <slug> "SQL"` (roda um SQL só no banco da demo, sem `psqlrc`; meta-comando como `\c` ou `\!` é recusado).
 
 O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o número da Issue e um nome curto.
 
@@ -36,8 +36,8 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
 | `flag` | M2 | `Account#enable_features!` na conta (1 por padrão). Flag que não existe falha. |
 | `seed` | M2 | Copia o `.rb` para a pasta da demo e roda com `rails runner`. `ENV['DEMO_PASTA']` aponta a pasta da demo no M2 (para mídia, por exemplo). |
 | `tunnel` | — | Imprime o `ssh -L` das duas portas (Rails e Vite) e a URL. |
-| `prints` | M2 → M4 | Roda `script/demo/prints.cjs` com o Playwright do snapshot e o Chrome do M2, contra o painel local. Traz os PNGs e o `relato.json` para `docs/<pasta>/` da worktree. |
-| `down` | M2 (e M4) | Desliga Rails, Vite e Redis da demo, conferindo que o processo roda dentro do snapshot dela. Com `--apagar`: `dropdb` do banco da demo, apaga o snapshot no M2 e no M4 pelo caminho exato (com `lsof +D` antes) e a pasta da demo. |
+| `prints` | M2 → M4 | Roda `script/demo/prints.cjs` com o Playwright do snapshot e o Chrome do M2, contra o painel local. Traz só os PNGs para `docs/<pasta>/` da worktree; o `relato.json` (URLs locais e erros) fica no M2, na pasta da demo. Recusa `pasta` que já tenha arquivo versionado. |
+| `down` | M2 (e M4) | Desliga Rails, Vite e Redis da demo, conferindo que o processo roda dentro do snapshot dela. Com `--apagar`: confere o snapshot do M4 (caminho, marcador, `lsof +D`) sem apagar; no M2 faz `dropdb` do banco da demo e apaga o snapshot e a pasta da demo; só se o M2 concluir, apaga o snapshot do M4. Se o M2 recusar, o M4 fica intacto. |
 
 ## Isolamento: o que é de cada demo
 
@@ -49,9 +49,21 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
   de teste (55432, 56379) e das demos feitas à mão (3301–4025, 56xxx). Se dois slugs caírem na mesma porta, o `up`
   avisa: troque o slug.
 - **Snapshot**: um por demo, em `/Users/Shared/maccluster-workspaces/chat2you/<id>/src`, com o mesmo caminho no M2 e
-  no M4. O `sync` reaproveita; snapshot novo só com outro `up` (outra demo).
+  no M4. O `sync` reaproveita; snapshot novo só com outro `up` (outra demo). Cada `maccluster workspace snapshot` cria
+  um diretório novo (o id leva data, hora, HEAD, hash do conteúdo e um uuid); o `up` confere no manifesto que o
+  snapshot é desta worktree, e o `down --apagar` só apaga o caminho gravado no `demo.env`.
+- **Sem segredo no snapshot**: o snapshot do MacCluster leva os arquivos versionados e os não rastreados que o
+  `.gitignore` não ignora (`git ls-files` + `git ls-files -o --exclude-standard`), e tira os sensíveis (`.env`,
+  `.env.*`, pastas `secrets`/`credentials`, chaves). Ignorados não entram. O clone base do M2 perde `.env*`,
+  `config/credentials*` e `config/master.key` antes de qualquer boot (o `dotenv-rails` leria um `.env` herdado), e
+  o `preparar` confere de novo e recusa subir se achar um.
 - **Ambiente**: `env -i` com Ruby e Node de `/Users/Shared/maccluster-tools`, `RAILS_ENV=development`,
-  `DISABLE_MINI_PROFILER=1`, `WHATSAPP_CLOUD_BASE_URL` apontando para uma porta morta (nada sai para a Meta).
+  `DISABLE_MINI_PROFILER=1`. Nada sai para fora: `WHATSAPP_CLOUD_BASE_URL` e o SMTP (`SMTP_ADDRESS=127.0.0.1`,
+  `SMTP_PORT=9`) apontam para uma porta morta. Sem `SMTP_ADDRESS` o Rails usaria `sendmail`, que entrega de verdade.
+  O Sidekiq não roda na demo: job enfileirado não executa.
+- **Postgres**: o `127.0.0.1:55432` do M2 é o cluster de teste do MacCluster
+  (`/Users/Shared/maccluster-test-services/postgres-chat2you`, com `fsync=off`). Só tem bancos de teste e de demo.
+- **`demo.env`**: lido como dado (chave=valor, só chaves conhecidas), nunca executado com `source`.
 
 ## Abrir no M4 (túnel)
 
@@ -89,8 +101,10 @@ entrada → todas as conversas):
 }
 ```
 
-- `pasta` precisa começar com `docs/`. Os PNGs saem em `docs/<pasta>/<jornada>/<NN>-<etapa>-<tema>-<largura>.png`,
-  mais um `relato.json`.
+- `pasta` precisa começar com `docs/` e não pode ter arquivo versionado. Os PNGs saem em
+  `docs/<pasta>/<jornada>/<NN>-<etapa>-<tema>-<largura>.png`. O `relato.json` fica no M2
+  (`/Users/Shared/chat2you-demos/<slug>/relato.json`): tem URL local e erro, não vai para o repositório público.
+- `larguras`: só `1440` e `390`. `temas`: só `light` e `dark`.
 - Etapa: `url` (opcional; `{conta}` é trocado), `passos` (`clicar`, `preencher: [seletor, texto]`, `tecla`,
   `esperar`, `pausa`), `esperar` (seletor que precisa aparecer), `pausa` (ms, padrão 1500), `sem_login` (aba
   anônima, para a tela de login ou página pública) e `pagina_inteira`.

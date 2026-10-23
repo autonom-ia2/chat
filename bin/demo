@@ -53,7 +53,17 @@ enviar_kit() {
   /usr/bin/tar -C "$KIT" -cf - . | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/kit' -xf -"
 }
 
-existe_no_m2() { [ "$(ssh -o BatchMode=yes "$HOST" "test -f '$RAIZ_DEMOS/$slug/demo.env' && echo sim || echo nao")" = sim ]; }
+# Erro de ssh (rede, M2 fora) para o comando; só "arquivo ausente" responde "não existe".
+existe_no_m2() {
+  local resposta
+  resposta=$(ssh -o BatchMode=yes "$HOST" "if test -f '$RAIZ_DEMOS/$slug/demo.env'; then echo sim; else echo nao; fi") ||
+    falha "ssh para o $HOST falhou; não sei se a demo existe"
+  case "$resposta" in
+    sim) return 0 ;;
+    nao) return 1 ;;
+    *) falha "resposta inesperada do $HOST: $resposta" ;;
+  esac
+}
 
 exigir_demo() { existe_no_m2 || falha "a demo $slug não existe no $HOST. Rode: bin/demo up $slug"; }
 
@@ -85,6 +95,11 @@ criar_snapshot() {
     "$PREFIXO_SNAPSHOT"?*) ;;
     *) falha "snapshot em caminho inesperado: $SNAP" ;;
   esac
+  # O id do snapshot leva data, hora, HEAD, hash e um uuid: cada chamada cria um diretório novo. Confere que é este.
+  /usr/bin/python3 -I -c 'import json,os,sys
+m = json.load(open(os.path.join(sys.argv[1], ".maccluster-workspace.json")))
+ok = m["snapshot_id"] == os.path.basename(sys.argv[1]) and m["source_path"] == sys.argv[2]
+sys.exit(0 if ok else 1)' "$snapdir" "$WT" || falha "o snapshot $snapdir não é desta worktree"
   echo "snapshot no M4: $snapdir"
   if ! no_m2 clonar-base "$slug" "$snapdir"; then
     no_m2 descartar-snapshot "$slug" "$snapdir" || true
@@ -92,8 +107,10 @@ criar_snapshot() {
     falha "não consegui preparar a cópia no $HOST"
   fi
   echo "rsync da diferença para o $HOST ..."
-  /usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" --stats "$snapdir/" "$HOST:$snapdir/" |
-    /usr/bin/grep -i 'files transferred\|total transferred\|sent ' || true
+  local estatisticas
+  estatisticas=$(/usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" --stats "$snapdir/" "$HOST:$snapdir/") ||
+    falha "rsync para o $HOST falhou"
+  printf '%s\n' "$estatisticas" | /usr/bin/grep -i 'files transferred\|total transferred\|sent ' || :
   local resto
   resto=$(/usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" -n -i "$snapdir/" "$HOST:$snapdir/")
   [ -z "$resto" ] || { echo "$resto" | /usr/bin/head -10; falha "cópia no $HOST diverge do snapshot depois do rsync"; }
@@ -134,15 +151,21 @@ sensivel() {
   return 1
 }
 
-# Arquivos que diferem do commit base (alterados, novos, apagados) mais os não rastreados.
+# Arquivos que diferem do commit base (alterados, novos, apagados) mais os não rastreados, separados por NUL.
 candidatos() {
-  { /usr/bin/git -C "$WT" -c core.quotePath=false diff --name-only "$1"
-    /usr/bin/git -C "$WT" -c core.quotePath=false ls-files --others --exclude-standard; } | LC_ALL=C /usr/bin/sort -u
+  { /usr/bin/git -C "$WT" diff -z --name-only "$1"
+    /usr/bin/git -C "$WT" ls-files -z --others --exclude-standard; } | LC_ALL=C /usr/bin/sort -z -u
 }
 
-# A lista do último sync fica no M2: arquivo não rastreado que sumiu da worktree também some da demo.
+# A lista do último sync fica no M2 (NUL): arquivo não rastreado que sumiu da worktree também some da demo.
 gravar_sincronizados() {
-  candidatos "$1" | ssh -o BatchMode=yes "$HOST" "/bin/cat > '$RAIZ_DEMOS/$slug/sincronizados.txt'"
+  candidatos "$1" | ssh -o BatchMode=yes "$HOST" "/bin/cat > '$RAIZ_DEMOS/$slug/sincronizados.z'"
+}
+
+# Lista anterior. Ausente (1o sync) = vazia; erro de ssh para o comando.
+sincronizados_antes() {
+  ssh -o BatchMode=yes "$HOST" "if test -f '$RAIZ_DEMOS/$slug/sincronizados.z'; then /bin/cat '$RAIZ_DEMOS/$slug/sincronizados.z'; fi" ||
+    falha "ssh para o $HOST falhou ao ler a lista do último sync"
 }
 
 cmd_sync() {
@@ -154,12 +177,15 @@ cmd_sync() {
   base=$(valor_do_estado BASE_SHA)
   origem=$(valor_do_estado ORIGEM)
   [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT)"
-  local copiar=() apagar=() f
-  while IFS= read -r f; do
+  local copiar=() apagar=() f lista
+  lista=$(/usr/bin/mktemp "${TMPDIR:-/tmp}/demo-sync.XXXXXX")
+  { candidatos "$base"; sincronizados_antes; } | LC_ALL=C /usr/bin/sort -z -u > "$lista"
+  while IFS= read -r -d '' f; do
     [ -n "$f" ] || continue
     if sensivel "$f"; then echo "ignorado (sensível/cache): $f"; continue; fi
     if [ -e "$WT/$f" ]; then copiar+=("$f"); else apagar+=("$f"); fi
-  done < <({ candidatos "$base"; ssh -o BatchMode=yes "$HOST" "/bin/cat '$RAIZ_DEMOS/$slug/sincronizados.txt' 2>/dev/null || true"; } | LC_ALL=C /usr/bin/sort -u)
+  done < "$lista"
+  /bin/rm -f "$lista"
   echo "desde ${base:0:10}: copiar ${#copiar[@]}, apagar ${#apagar[@]}"
   for f in "${copiar[@]+"${copiar[@]}"}"; do echo "  + $f"; done
   local migrar=false reiniciar=false pnpm=false vite=false
@@ -172,7 +198,7 @@ cmd_sync() {
     case "$f" in config/vite.json | vite.config.* | tailwind.config.* | postcss.config.*) vite=true ;; esac
   done
   if [ ${#copiar[@]} -gt 0 ]; then
-    /usr/bin/tar -C "$WT" -cf - "${copiar[@]}" | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$snap' -xf -"
+    /usr/bin/tar -C "$WT" -cf - -- "${copiar[@]}" | ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$snap' -xf -"
   fi
   for f in "${apagar[@]+"${apagar[@]}"}"; do
     ssh -o BatchMode=yes "$HOST" "$(printf '/bin/rm -f %q' "$snap/$f")"
@@ -233,6 +259,9 @@ cmd_prints() {
     *) falha "\"pasta\" do jornadas.json precisa começar com docs/ (veio '$pasta')" ;;
   esac
   case "$pasta" in *..*) falha "\"pasta\" não pode ter '..'" ;; esac
+  # Prints regravam a pasta inteira: nunca por cima de arquivo versionado.
+  [ -z "$(/usr/bin/git -C "$WT" ls-files -- "$pasta")" ] ||
+    falha "\"pasta\" $pasta tem arquivo versionado; use uma pasta nova (ex.: $pasta-v2)"
   exigir_demo
   enviar_kit
   ssh -o BatchMode=yes "$HOST" "/bin/mkdir -p '$RAIZ_DEMOS/$slug/prints-entrada'"
@@ -241,11 +270,26 @@ cmd_prints() {
   no_m2 prints "$slug" || codigo=$?
   /bin/mkdir -p "$WT/$pasta"
   ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/prints-saida' -cf - ." | /usr/bin/tar -C "$WT/$pasta" -xf -
-  echo "prints em $WT/$pasta"
+  [ "$codigo" -eq 0 ] || echo "bin/demo: prints com FALHA (saída $codigo); veja as linhas acima" >&2
+  echo "prints em $WT/$pasta (o relato com URLs e erros fica no $HOST: $RAIZ_DEMOS/$slug/relato.json)"
   return "$codigo"
 }
 
-apagar_snapshot_local() {
+# Quem está com arquivo aberto no diretório. Indexador (Spotlight) e buscas de disco abrem arquivo de passagem:
+# só conta como "em uso" se continuar aberto em 5 leituras seguidas, com 3 s entre elas.
+em_uso() {
+  local tentativa usando=''
+  for tentativa in 1 2 3 4 5; do
+    usando=$(/usr/sbin/lsof +D "$1" 2>/dev/null || true)
+    [ -n "$usando" ] || return 1
+    [ "$tentativa" -eq 5 ] || sleep 3
+  done
+  echo "$usando" | /usr/bin/head -5
+  return 0
+}
+
+# Confere, sem apagar, que o snapshot deste Mac pode sair (caminho, marcador, ninguém usando).
+conferir_snapshot_local() {
   local snapdir=${1%/src}
   case "$snapdir" in
     "$PREFIXO_SNAPSHOT"*/* | *..*) falha "caminho de snapshot suspeito: $snapdir" ;;
@@ -254,9 +298,13 @@ apagar_snapshot_local() {
   esac
   [ -d "$snapdir" ] || { echo "snapshot não existe neste Mac: $snapdir"; return; }
   [ -f "$snapdir/.maccluster-workspace.json" ] || falha "$snapdir sem o marcador do MacCluster; não apago"
-  local usando
-  usando=$(/usr/sbin/lsof +D "$snapdir" 2>/dev/null || true)
-  [ -z "$usando" ] || { echo "$usando" | /usr/bin/head -5; falha "snapshot em uso neste Mac; não apaguei: $snapdir"; }
+  if em_uso "$snapdir"; then falha "snapshot em uso neste Mac; não apaguei: $snapdir (repita, ou apague à mão pelo caminho exato com lsof +D vazio)"; fi
+}
+
+apagar_snapshot_local() {
+  local snapdir=${1%/src}
+  conferir_snapshot_local "$1"
+  [ -d "$snapdir" ] || return 0
   /bin/rm -rf "$snapdir"
   echo "snapshot apagado no $(maccluster node): $snapdir"
   # O MacCluster deixa um lock vazio ao lado de cada snapshot que ele cria.
@@ -271,8 +319,9 @@ cmd_down() {
   if [ "${1:-}" = --apagar ]; then
     local snap
     snap=$(valor_do_estado SNAP)
+    conferir_snapshot_local "$snap"
+    no_m2 apagar "$slug" || falha "o $HOST recusou o apagar; nada foi apagado no M4 ($snap)"
     apagar_snapshot_local "$snap"
-    no_m2 apagar "$slug"
   else
     no_m2 descer "$slug"
     echo "banco, snapshot e pasta continuam. Para apagar: bin/demo down $slug --apagar"

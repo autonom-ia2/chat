@@ -25,23 +25,34 @@ ESPERA_RAILS_SEGUNDOS=900
 falha() { echo "demo[$slug]: $*" >&2; exit 1; }
 
 case "$slug" in
-  '' | *[!a-z0-9-]* | -*) falha "slug inválido" ;;
+  '' | *[!a-z0-9-]* | -* | *-) falha "slug inválido" ;;
 esac
+[ ${#slug} -le 30 ] || falha "slug longo demais"
 
 carregar_estado() {
   [ -f "$L/demo.env" ] || falha "demo não existe no M2 ($L/demo.env). Rode: bin/demo up $slug"
-  # shellcheck source=/dev/null
-  source "$L/demo.env"
+  # Sem `source`: o arquivo é lido como dado (chave=valor), nunca executado.
+  local chave valor
+  while IFS='=' read -r chave valor; do
+    case "$chave" in
+      SLUG) SLUG=$valor ;; SNAP) SNAP=$valor ;; BASE_SHA) BASE_SHA=$valor ;; ORIGEM) ORIGEM=$valor ;;
+      DB) DB=$valor ;; RAILS_PORT) RAILS_PORT=$valor ;; VITE_PORT) VITE_PORT=$valor ;; REDIS_PORT) REDIS_PORT=$valor ;;
+      *) falha "chave desconhecida no demo.env: $chave" ;;
+    esac
+  done < "$L/demo.env"
+  [ "$SLUG" = "$slug" ] || falha "demo.env é de outra demo ($SLUG)"
   [ "$DB" = "${PREFIXO_BANCO}${slug//-/_}" ] || falha "demo.env aponta para outro banco ($DB)"
 }
 
-psql_demo() { "$PGBIN/psql" -h "$PG_HOST" -p "$PG_PORT" -U postgres -v ON_ERROR_STOP=1 "$@"; }
+psql_demo() { "$PGBIN/psql" -X -h "$PG_HOST" -p "$PG_PORT" -U postgres -v ON_ERROR_STOP=1 "$@"; }
 
 banco_existe() {
   [ "$(psql_demo -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname = '$1'")" = "1" ]
 }
 
-# SNAP, DB e as portas vêm do demo.env (carregar_estado).
+# SNAP, DB e as portas vêm do demo.env (carregar_estado). Ambiente limpo (env -i): nenhuma variável do shell
+# entra. E-mail vai para uma porta morta (sem SMTP_ADDRESS o Rails usaria sendmail, que entrega de verdade) e a
+# Cloud API do WhatsApp também. O Sidekiq não roda na demo: job enfileirado não executa.
 # shellcheck disable=SC2153
 demo_env() {
   /usr/bin/env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" \
@@ -62,6 +73,7 @@ demo_env() {
     VITE_RUBY_PORT="$VITE_PORT" VITE_RUBY_HOST=localhost VITE_RUBY_AUTO_BUILD=false \
     VITE_RUBY_DEV_SERVER_CONNECT_TIMEOUT=2 NODE_OPTIONS=--max-old-space-size=4096 \
     WHATSAPP_CLOUD_BASE_URL=http://127.0.0.1:9 CRM_KANBAN_ENABLED=true \
+    SMTP_ADDRESS=127.0.0.1 SMTP_PORT=9 SMTP_USERNAME= SMTP_PASSWORD= MAILER_SENDER_EMAIL=demo@demo.invalid \
     "$@"
 }
 
@@ -104,6 +116,14 @@ checar() {
   echo "banco $DB e portas $rails/$vite/$redis livres"
 }
 
+# Confere que o snapshot não tem .env nem credencial (no M4 o MacCluster já exclui ignorados e sensíveis).
+sem_segredo() {
+  local achados
+  achados=$(/usr/bin/find "$1" -maxdepth 1 -name '.env*' ! -name '*.example' ! -name '*.sample' ! -name '*.template'
+    /usr/bin/find "$1/config" -maxdepth 1 \( -name 'master.key' -o -name 'credentials*' \))
+  [ -z "$achados" ] || { echo "$achados"; falha "snapshot com arquivo de segredo; não sobe"; }
+}
+
 # --- clonar-base: cria no M2 o diretório do snapshot novo como clone APFS do snapshot chat2you mais recente ---
 # O bin/demo completa a cópia com rsync (só a diferença). node_modules vem junto no clone e o pnpm acerta.
 clonar_base() {
@@ -125,9 +145,13 @@ clonar_base() {
   echo "base no M2: $base (clone APFS)"
   mkdir "$destino"
   /bin/cp -c -R "$base/src" "$destino/src"
-  # Logs, pids e caches da outra demo não vêm junto.
+  # Logs, pids, caches e uploads da outra demo não vêm junto.
   /bin/rm -rf "$destino/src/log" "$destino/src/tmp" "$destino/src/storage" "$destino/src/public/vite-dev" \
     "$destino/src/public/vite-test"
+  # Nem segredo: o dotenv-rails leria um .env herdado no 1o boot. Some antes de qualquer boot.
+  /bin/rm -rf "$destino/src/config/credentials" "$destino/src/config/master.key"
+  /bin/rm -f "$destino/src/config/credentials.yml.enc" "$destino/src"/.env "$destino/src"/.env.*
+  sem_segredo "$destino/src"
   mkdir -p "$destino/src/log" "$destino/src/tmp/pids"
 }
 
@@ -145,7 +169,11 @@ iniciar() {
   /usr/bin/openssl rand -hex 64 > "$L/chaves/secret"
   for k in enc_p enc_d enc_s; do /usr/bin/openssl rand -hex 16 > "$L/chaves/$k"; done
   chmod 600 "$L/chaves/"*
-  printf '%s=%q\n' SLUG "$slug" SNAP "$snap" BASE_SHA "$base" ORIGEM "$origem" DB "$DB" \
+  local v
+  for v in "$snap" "$base" "$origem"; do
+    case "$v" in *$'\n'* | *$'\r'*) falha "valor com quebra de linha não entra no demo.env" ;; esac
+  done
+  printf '%s=%s\n' SLUG "$slug" SNAP "$snap" BASE_SHA "$base" ORIGEM "$origem" DB "$DB" \
     RAILS_PORT "$rails" VITE_PORT "$vite" REDIS_PORT "$redis" > "$L/demo.env.tmp"
   mv "$L/demo.env.tmp" "$L/demo.env"
   echo "demo $slug registrada: banco $DB, Rails $rails, Vite $vite, Redis $redis"
@@ -170,6 +198,7 @@ subir_redis() {
 preparar() {
   carregar_estado
   [ ! -f "$L/preparado" ] || return 0
+  sem_segredo "$SNAP"
   subir_redis
   cd "$SNAP"
   echo "pnpm install (painel)..."
@@ -261,7 +290,7 @@ descartar_snapshot() {
     *) falha "fora de $PREFIXO_SNAPSHOT: $snapdir" ;;
   esac
   [ -d "$snapdir" ] || return 0
-  [ -z "$(/usr/sbin/lsof +D "$snapdir" 2>/dev/null || true)" ] || falha "snapshot em uso: $snapdir"
+  if em_uso "$snapdir"; then falha "snapshot em uso: $snapdir"; fi
   /bin/rm -rf "$snapdir"
   echo "snapshot não registrado descartado no M2: $snapdir"
 }
@@ -317,7 +346,7 @@ prints() {
   [ -n "$senha" ] || senha=$("$R/bin/ruby" "$KIT/senha_do_seed.rb" "$SNAP/db/seeds.rb" john@acme.inc)
   /usr/bin/env -i HOME="$HOME" PATH="$N/bin:/usr/bin:/bin" LANG=en_US.UTF-8 \
     PW="$SNAP/tests/playwright/node_modules/playwright" BASE="http://localhost:$RAILS_PORT" \
-    DEMO_SENHA="$senha" DEMO_ESTADO_DIR="$L" \
+    DEMO_SENHA="$senha" DEMO_ESTADO_DIR="$L" DEMO_RELATO="$L/relato.json" \
     "$N/bin/node" "$KIT/prints.cjs" "$jornadas" "$saida"
 }
 
@@ -329,31 +358,52 @@ mostrar_estado() {
     RAILS_PORT "$RAILS_PORT" VITE_PORT "$VITE_PORT" REDIS_PORT "$REDIS_PORT"
 }
 
-# Só um SQL, sempre no banco da demo: opções do psql (outro -d, -h, -p) não passam.
+# Um SQL no banco da demo. Opções do psql não passam (o argumento vai inteiro no -c), o psqlrc não é lido (-X)
+# e meta-comando (\c outro_banco, \! comando) é recusado.
 psql_cmd() {
   carregar_estado
-  psql_demo -d "$DB" -c "${1:?uso: bin/demo psql <slug> \"SQL\"}"
+  local sql=${1:?uso: bin/demo psql <slug> \"SQL\"}
+  # Com -c, o psql roda SQL puro OU um único meta-comando, que é sempre o texto começando com "\".
+  local inicio=${sql#"${sql%%[![:space:]]*}"}
+  case "$inicio" in "\\"*) falha 'meta-comando do psql (começa com \) não é aceito; mande só SQL' ;; esac
+  psql_demo -d "$DB" -c "$sql"
 }
 
+# Quem está com arquivo aberto no diretório. Indexador (Spotlight) e buscas de disco abrem arquivo de passagem:
+# só conta como "em uso" se continuar aberto em 5 leituras seguidas, com 3 s entre elas.
+em_uso() {
+  local tentativa usando=''
+  for tentativa in 1 2 3 4 5; do
+    usando=$(/usr/sbin/lsof +D "$1" 2>/dev/null || true)
+    [ -n "$usando" ] || return 1
+    [ "$tentativa" -eq 5 ] || sleep 3
+  done
+  echo "$usando" | /usr/bin/head -5
+  return 0
+}
+
+# Confere tudo antes de apagar qualquer coisa: se algo recusar, banco, snapshot e pasta ficam como estavam.
 apagar() {
   carregar_estado
-  descer
   case "$DB" in "$PREFIXO_BANCO"*) ;; *) falha "banco fora do kit: $DB" ;; esac
-  if banco_existe "$DB"; then
-    "$PGBIN/dropdb" -h "$PG_HOST" -p "$PG_PORT" -U postgres --force "$DB"
-    echo "banco $DB apagado"
-  fi
   local snapdir=${SNAP%/src}
   case "$snapdir" in
-    "$PREFIXO_SNAPSHOT"*/*|*..*) falha "caminho de snapshot suspeito: $snapdir" ;;
+    "$PREFIXO_SNAPSHOT"*/* | *..*) falha "caminho de snapshot suspeito: $snapdir" ;;
     "$PREFIXO_SNAPSHOT"?*) ;;
     *) falha "snapshot fora de $PREFIXO_SNAPSHOT: $snapdir" ;;
   esac
   if [ -d "$snapdir" ]; then
     [ -f "$snapdir/.maccluster-workspace.json" ] || falha "$snapdir não tem o marcador do MacCluster; não apago"
-    local usando
-    usando=$(/usr/sbin/lsof +D "$snapdir" 2>/dev/null || true)
-    [ -z "$usando" ] || { echo "$usando" | /usr/bin/head -5; falha "snapshot em uso; não apaguei: $snapdir"; }
+  fi
+  descer
+  if [ -d "$snapdir" ]; then
+    if em_uso "$snapdir"; then falha "snapshot em uso; nada foi apagado: $snapdir"; fi
+  fi
+  if banco_existe "$DB"; then
+    "$PGBIN/dropdb" -h "$PG_HOST" -p "$PG_PORT" -U postgres --force "$DB"
+    echo "banco $DB apagado"
+  fi
+  if [ -d "$snapdir" ]; then
     /bin/rm -rf "$snapdir"
     echo "snapshot apagado no M2: $snapdir"
   fi
