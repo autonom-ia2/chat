@@ -103,6 +103,16 @@ RSpec.describe Crm::Ai::RelerMidiaPendenteJob do
     expect(enfileiradas).to eq([pendente.id])
   end
 
+  it 'dentro do lote, também as mais novas primeiro (o default_scope de Message ordena crescente)' do
+    stub_const("#{described_class}::MAX_MENSAGENS_POR_CONTA", 1)
+    anexar_audio(mensagem(idade: 3.hours))
+    nova = anexar_audio(mensagem(idade: 1.hour)).message
+
+    described_class.perform_now
+
+    expect(enfileiradas).to eq([nova.id])
+  end
+
   it 'respeita o teto de mensagens por conta em cada rodada' do
     stub_const("#{described_class}::MAX_MENSAGENS_POR_CONTA", 2)
     Array.new(3) { anexar_audio(mensagem) }

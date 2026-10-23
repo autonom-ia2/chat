@@ -42,7 +42,8 @@ class Crm::Ai::RelerMidiaPendenteJob < ApplicationJob
   def pendentes(account)
     ids = []
     candidatas(account).in_batches(of: LOTE, order: :desc).each_with_index do |lote, indice|
-      lote.each { |mensagem| ids << mensagem.id if Crm::Ai::LeitorDeMidia.new(mensagem, releitura: :varredura).escolhidos.any? }
+      # O default_scope de Message ordena por created_at crescente: sem o reorder, o lote volta das mais velhas.
+      lote.reorder(id: :desc).each { |mensagem| ids << mensagem.id if Crm::Ai::LeitorDeMidia.new(mensagem, releitura: :varredura).escolhidos.any? }
       break if ids.size >= MAX_MENSAGENS_POR_CONTA || indice + 1 >= MAX_LOTES
     end
     ids.first(MAX_MENSAGENS_POR_CONTA)
