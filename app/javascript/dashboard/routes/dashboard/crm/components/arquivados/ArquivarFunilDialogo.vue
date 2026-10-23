@@ -123,6 +123,13 @@ const opcoesDosCards = computed(() => {
     },
   ];
 });
+// "Deixar sem funil": o texto diz o que acontece com as caixas que já criam card em outro funil, ou com a única.
+const textoDoParar = computed(() => {
+  if (comOutroFunil.value.length)
+    return t('CRM_ARQUIVADOS.FUNIL.CAIXAS_PARAR_TEXTO_LIGADAS');
+  if (umaCaixa.value) return t('CRM_ARQUIVADOS.FUNIL.CAIXAS_PARAR_TEXTO_UMA');
+  return t('CRM_ARQUIVADOS.FUNIL.CAIXAS_PARAR_TEXTO');
+});
 const opcoesDasCaixas = computed(() => [
   {
     valor: 'passar',
@@ -132,13 +139,7 @@ const opcoesDasCaixas = computed(() => [
   {
     valor: 'parar',
     titulo: t('CRM_ARQUIVADOS.FUNIL.CAIXAS_PARAR'),
-    texto: t(
-      comOutroFunil.value.length
-        ? 'CRM_ARQUIVADOS.FUNIL.CAIXAS_PARAR_TEXTO_LIGADAS'
-        : umaCaixa.value
-          ? 'CRM_ARQUIVADOS.FUNIL.CAIXAS_PARAR_TEXTO_UMA'
-          : 'CRM_ARQUIVADOS.FUNIL.CAIXAS_PARAR_TEXTO'
-    ),
+    texto: textoDoParar.value,
   },
 ]);
 const resumoDosCards = computed(() => {

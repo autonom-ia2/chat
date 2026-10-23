@@ -2716,8 +2716,8 @@ onUnmounted(() => {
             :groups="pipelineGroups"
             :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
             :disabled="!hasPipelines"
-            @update:model-value="escolherFunil"
             class="w-44 sm:w-52 [&>button]:!min-h-11 [&>button]:!rounded-lg [&>button]:!bg-n-surface-1 [&>button]:!font-bold"
+            @update:model-value="escolherFunil"
           />
           <Button
             v-if="canManagePipelines"
