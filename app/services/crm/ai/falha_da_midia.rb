@@ -15,6 +15,9 @@ class Crm::Ai::FalhaDaMidia
   # A espera antes de cada nova tentativa (a 1ª e a 2ª no próprio Crm::Ai::LerMidiaJob; as outras pela varredura,
   # Crm::Ai::RelerMidiaPendenteJob). Depois da última, repete a última.
   ESPERAS = [1.minute, 5.minutes, 15.minutes, 1.hour, 3.hours, 6.hours].freeze
+  # O `expirado` só a mensagem nova relê; com a API fora por muito tempo, no máximo uma vez neste intervalo, por mais
+  # mensagens que cheguem.
+  ESPERA_DO_EXPIRADO = 1.hour
   # As que passam sozinhas: rede, tempo esgotado, TLS, a API ocupada ou fora (408, 429, 5xx; o ServerError do Faraday
   # inclui o TimeoutError) e a chave recusada (401: a conta troca a chave e a mídia ainda é lida; 403 é permanente). O cliente
   # da transcrição (ruby-openai) levanta o erro do Faraday pelo status; o da visão (ResponsesClient) diz o status no erro.
@@ -70,7 +73,7 @@ class Crm::Ai::FalhaDaMidia
   def motivo
     return { FALHA => 'permanente', ERRO => @erro.class.name } unless @passageira
 
-    { FALHA => 'expirado', ERRO => @erro.class.name, TENTATIVAS => tentativa }
+    { FALHA => 'expirado', ERRO => @erro.class.name, TENTATIVAS => tentativa, PROXIMA => ESPERA_DO_EXPIRADO.from_now.iso8601 }
   end
 
   # O que vai para o meta do anexo que segue pendente.

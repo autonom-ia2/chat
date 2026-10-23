@@ -303,6 +303,18 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
         expect(Crm::Ai::LerMidiaJob).to have_been_enqueued.once
       end
 
+      it 'o expirado que falha de novo só volta a ser relido depois de ESPERA_DO_EXPIRADO', :aggregate_failures do
+        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::TimeoutError)
+        anexo = antiga('crm_ai_audio_done' => true, 'crm_ai_midia_falha' => 'expirado')
+
+        described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).perform
+        expect(described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).escolhidos).to be_empty
+        travel(Crm::Ai::FalhaDaMidia::ESPERA_DO_EXPIRADO + 1.minute) do
+          expect(described_class.new(Message.find(anexo.message_id), releitura: :mensagem_nova).escolhidos).to eq([anexo])
+        end
+        expect(transcricoes).to have_received(:transcribe).once
+      end
+
       it 'a avaliação do card (sem mensagem nova) não relê o marcado sem texto' do
         anexo = antiga('crm_ai_audio_done' => true)
 

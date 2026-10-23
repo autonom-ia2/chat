@@ -18,6 +18,9 @@ class Crm::Ai::RelerMidiaPendenteJob < ApplicationJob
   MARGEM = 1.hour
   MAX_MENSAGENS_POR_CONTA = 50
   LOTE = 200
+  # Teto de mensagens olhadas por conta numa rodada (a mensagem com mídia além do teto por mensagem nunca é lida e
+  # continua candidata até sair da janela).
+  MAX_LOTES = 5
 
   queue_as :scheduled_jobs
 
@@ -38,9 +41,9 @@ class Crm::Ai::RelerMidiaPendenteJob < ApplicationJob
   # dele, lote a lote.
   def pendentes(account)
     ids = []
-    candidatas(account).in_batches(of: LOTE, order: :desc) do |lote|
+    candidatas(account).in_batches(of: LOTE, order: :desc).each_with_index do |lote, indice|
       lote.each { |mensagem| ids << mensagem.id if Crm::Ai::LeitorDeMidia.new(mensagem, releitura: :varredura).escolhidos.any? }
-      break if ids.size >= MAX_MENSAGENS_POR_CONTA
+      break if ids.size >= MAX_MENSAGENS_POR_CONTA || indice + 1 >= MAX_LOTES
     end
     ids.first(MAX_MENSAGENS_POR_CONTA)
   end
