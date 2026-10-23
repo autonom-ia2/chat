@@ -55,6 +55,8 @@ it('expõe as definições sem os internos e manda a lista inteira para o store'
     'attributes/SET_CUSTOM_ATTRIBUTE',
     DEFINICOES
   );
+  // A lista inteira fica à mão de quem grava a configuração das áreas.
+  expect(wrapper.vm.allDefinitions).toEqual(DEFINICOES);
   // O resto do estado continua chegando.
   expect(wrapper.vm.state.can_manage).toBe(true);
   expect(wrapper.vm.state.configuration).toEqual({ revision: 0, surfaces: {} });
