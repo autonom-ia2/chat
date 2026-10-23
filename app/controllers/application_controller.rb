@@ -13,6 +13,13 @@ class ApplicationController < ActionController::Base
 
   private
 
+  # O Rails trata o `rescue_from` por fora dos `around_action` (ActionController::Rescue#process_action): quando o
+  # handler roda, o `I18n.with_locale` do idioma já terminou, e a mensagem sairia no idioma padrão (#2110). Aqui o
+  # handler roda no último idioma que o pedido abriu (SwitchLocale#set_locale), sem consultar nada de novo.
+  def rescue_with_handler(exception)
+    I18n.with_locale(@request_locale) { super }
+  end
+
   def set_current_user
     @user ||= current_user
     Current.user = @user

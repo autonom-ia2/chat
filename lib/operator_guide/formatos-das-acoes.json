@@ -10696,9 +10696,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#atualizar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:44",
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:45",
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:75"
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:69"
     ],
     "sem_corpo": false
   },
@@ -10706,8 +10706,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#comparar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:33",
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:75"
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:69"
     ],
     "sem_corpo": true
   },
@@ -10715,8 +10715,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/base_de_seguros#desfazer",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:52",
-      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:75"
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:48",
+      "app/controllers/api/v1/accounts/autonomia/agents/base_de_seguros_controller.rb:69"
     ],
     "sem_corpo": true
   },
