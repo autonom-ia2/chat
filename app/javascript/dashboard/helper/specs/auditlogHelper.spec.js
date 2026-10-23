@@ -435,6 +435,25 @@ describe('excluir de vez no CRM (#2096)', () => {
     expect(payload.motivo).toBeUndefined();
   });
 
+  // #2096 (23/10): a exclusão de contato por qualquer caminho conta as reuniões canceladas.
+  it('leva quantas reuniões o contato excluído teve canceladas', () => {
+    const payload = generateTranslationPayload(
+      item('crm_hard_delete', {
+        alvo: 'contato',
+        modo: 'keep',
+        contact_id: 7,
+        cards_mantidos: 1,
+        reunioes_canceladas: 2,
+      }),
+      agentes
+    );
+    expect(payload).toMatchObject({
+      contactId: 7,
+      cardsMantidos: 1,
+      reunioesCanceladas: 2,
+    });
+  });
+
   it('traduz o motivo da desistência, e o código novo cai na frase geral', () => {
     const t = chave => `t(${chave})`;
     const conhecido = generateTranslationPayload(

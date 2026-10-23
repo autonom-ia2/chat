@@ -1,6 +1,10 @@
 # Prévia do "excluir funil de vez" (#2096, Parte B): quantos cards, quantos abertos, quanto em vendas some com ele e
 # quais reuniões futuras serão canceladas. Só números, ids e datas: nada do cliente.
 #
+# O valor em vendas sai sem o Crm::ValorDeVenda.ve? (quem não vê valor de venda na tela) e sem ve_o_card? por card:
+# a prévia e a exclusão são só de administrador (Crm::CardPolicy#permanent_delete?), que vê todo card e todo valor. Se
+# um dia outra função puder excluir de vez, esta soma precisa passar pelos dois.
+#
 # Vendas: os cards ganhos, inclusive os arquivados que eram ganhos (o desfecho guardado da Parte A, #2094,
 # Crm::Card::DESFECHO_ARQUIVADO), e só se o funil conta como venda. Somadas por moeda: cards em moedas diferentes não se
 # somam. `won_value_cents` e `currency` trazem a soma quando há uma moeda só (o caso comum); com mais de uma, os dois vêm

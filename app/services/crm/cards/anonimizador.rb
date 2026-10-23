@@ -7,14 +7,22 @@
 # funil, etapa, status (e o desfecho do arquivado), datas, dono, equipe, caixa, prioridade e pontuação: números, metas
 # e relatórios continuam contando. A lista do que sai e do que fica, coluna a coluna, está no PR #2098.
 #
+# Só com a flag crm_arquivados ligada na conta (decisão do Rodrigo, 23/10; ver ContactCrmCards). Desligada, excluir o
+# contato só solta os cards, como na main.
+#
 # Ordem:
 # 1. cancelar_reunioes!: reunião futura cancelada no calendário (decisão 10: no Google e na Microsoft o cliente recebe
 #    o cancelamento; a só do WhatsApp cancela aqui). Fora da transação, por quem pode (modo 'keep' da rota nova e
 #    exclusão em lote). Se uma falhar, Crm::ExclusaoDefinitiva::ReuniaoNaoCancelada e nada é limpo.
 # 2. perform: dentro da transação de quem chama, com as travas na ordem do resto do CRM (série, reunião, lembrete,
 #    card). Cancela o que ainda for futuro, para o caminho que não passou pelo 1 (DELETE contacts/:id, que só sabe do
-#    contato online dentro da ação, e exclusão da conta); a falha ali desfaz o destroy inteiro.
+#    contato online dentro da ação, e exclusão da conta); a falha ali desfaz o destroy inteiro. Sob a trava, nenhuma
+#    reunião do contato pode continuar marcada (uma marcada entre o cancelamento e a trava ficaria com o convite num
+#    card sem cliente): se houver, Crm::ExclusaoDefinitiva::Mudou ('cards_changed') e nada é limpo, como no
+#    Crm::Cards::Excluidor.
 class Crm::Cards::Anonimizador
+  FLAG = 'crm_arquivados'.freeze
+
   # Chaves de crm_cards.metadata que ficam: o desfecho do arquivado (Parte A, #2094, Crm::Card::DESFECHO_ARQUIVADO)
   # conta em números, metas e relatórios. O resto (resumo e campos da IA, prospecção, cadência, hash livre da API) sai.
   METADATA_DO_CARD = %w[desfecho_arquivado].freeze
@@ -23,9 +31,9 @@ class Crm::Cards::Anonimizador
 
   CHAVE_DA_CONTA_SAINDO = :crm_anonimizador_conta_saindo
 
-  # A conta inteira está sendo apagada (DeleteObjectJob, via Crm::ExclusaoDaConta): os cards saem com ela. Não há o que
-  # anonimizar, e cancelar as reuniões mandaria aviso de cancelamento a cada cliente da conta. Nesse bloco, o contato
-  # só solta os cards, como o antigo `dependent: :nullify` (ContactCrmCards).
+  # A conta inteira está sendo apagada (DeleteObjectJob, via Crm::ContatosSoltamCardsNaExclusaoDaConta): os cards saem
+  # com ela. Não há o que anonimizar, e cancelar as reuniões mandaria aviso de cancelamento a cada cliente da conta. Nesse
+  # bloco, o ContactCrmCards não faz nada e o contato só solta os cards (`dependent: :nullify`), como na main.
   def self.durante_exclusao_da_conta
     anterior = ActiveSupport::IsolatedExecutionState[CHAVE_DA_CONTA_SAINDO]
     ActiveSupport::IsolatedExecutionState[CHAVE_DA_CONTA_SAINDO] = true
@@ -38,28 +46,51 @@ class Crm::Cards::Anonimizador
     ActiveSupport::IsolatedExecutionState[CHAVE_DA_CONTA_SAINDO] == true
   end
 
+  def self.ligado?(account)
+    account.present? && account.feature_enabled?(FLAG)
+  end
+
+  # As reuniões canceladas por esta instância (no cancelar_reunioes! e no perform), para a Auditoria.
+  attr_reader :reunioes_canceladas
+
   def initialize(contact:)
     @contact = contact
     @account = contact.account
     @agora = Time.current
+    @reunioes_canceladas = []
   end
 
   def cancelar_reunioes!
-    Crm::Meetings::CancelarFuturas.new(account: @account, card_ids: card_ids_do_contato).perform
+    cancelar_futuras!
   end
 
   # Devolve os ids dos cards anonimizados.
   def perform
     ids = ActiveRecord::Base.transaction do
-      Crm::Meetings::CancelarFuturas.new(account: @account, card_ids: card_ids_do_contato).perform
+      cancelar_futuras!
       soltar_cards_de_outra_conta!
-      travar!.tap { |travados| anonimizar!(travados) }
+      travar!.tap do |travados|
+        conferir_reunioes_canceladas!(travados)
+        anonimizar!(travados)
+      end
     end
     avisar_depois_do_commit(ids)
     ids
   end
 
   private
+
+  def cancelar_futuras!
+    canceladas = Crm::Meetings::CancelarFuturas.new(account: @account, card_ids: card_ids_do_contato).perform
+    @reunioes_canceladas |= canceladas
+    canceladas
+  end
+
+  def conferir_reunioes_canceladas!(ids)
+    return unless Crm::Meeting.where(account_id: @account.id, card_id: ids).upcoming.exists?
+
+    raise Crm::ExclusaoDefinitiva::Mudou.new('cards_changed', canceladas: @reunioes_canceladas)
+  end
 
   def card_ids_do_contato
     @account.crm_cards.where(contact_id: @contact.id).order(:id).pluck(:id)

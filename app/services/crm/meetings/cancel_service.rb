@@ -2,9 +2,15 @@ class Crm::Meetings::CancelService
   # propagate:false — cancel LOCALLY only, skipping the provider delete. Used by the
   # 2-way sync (S7) when the event was already deleted/cancelled IN the provider
   # calendar (no echo-back). Default true = unchanged behavior.
-  def initialize(meeting:, propagate: true)
+  #
+  # validar:false — grava só o status, sem as validações da reunião marcada (#2096). A exclusão do contato e o excluir de
+  # vez usam: a reunião de uma caixa removida (inbox_id nulo) ou cujo convidado já saiu não passa mais na validação, e o
+  # update! falharia DEPOIS de o Google ou a Microsoft já terem apagado o evento, deixando a reunião "marcada" aqui.
+  # Cancelar não depende de a reunião continuar válida. Padrão true = como sempre.
+  def initialize(meeting:, propagate: true, validar: true)
     @meeting = meeting
     @propagate = propagate
+    @validar = validar
   end
 
   def perform
@@ -19,7 +25,7 @@ class Crm::Meetings::CancelService
       # a double-cancel idempotent (the second request hits the guard above).
       delete_provider_event unless skip_provider_call?
 
-      @meeting.update!(status: :canceled)
+      marcar_cancelada!
       cancel_reminder!
       Crm::FollowUps::CardNextDueUpdater.update(@meeting.card)
       canceled_now = true
@@ -43,6 +49,13 @@ class Crm::Meetings::CancelService
     Crm::Meetings::AvailabilityService.invalidate(
       inbox_id: @meeting.inbox_id, date: day, timezone: @meeting.timezone
     )
+  end
+
+  def marcar_cancelada!
+    return @meeting.update!(status: :canceled) if @validar
+
+    @meeting.status = :canceled
+    @meeting.save!(validate: false)
   end
 
   def skip_provider_call?

@@ -18,6 +18,8 @@ RSpec.describe 'Excluir de vez com função personalizada', type: :request do
     with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run }
   end
 
+  before { account.enable_features!(:crm_arquivados) }
+
   def give_role(permissions)
     role = create(:custom_role, account: account, permissions: permissions)
     agent.account_users.find_by!(account: account).update!(custom_role: role)

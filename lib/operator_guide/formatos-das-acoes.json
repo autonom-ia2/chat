@@ -416,16 +416,6 @@
     ],
     "sem_corpo": true
   },
-  "DELETE contacts/:id": {
-    "completo": true,
-    "controller": "api/v1/accounts/contacts#destroy",
-    "modelo": "Contact",
-    "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:104",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:218"
-    ],
-    "sem_corpo": true
-  },
   "DELETE contacts/:id/avatar": {
     "completo": true,
     "controller": "api/v1/accounts/contacts#avatar",

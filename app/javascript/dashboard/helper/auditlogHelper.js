@@ -223,6 +223,7 @@ export function generateTranslationPayload(auditLogItem, agentList) {
     translationPayload.cardsApagados = mudancas.cards_apagados ?? 0;
     translationPayload.cardsMovidos = mudancas.cards_movidos ?? 0;
     translationPayload.cardsMantidos = mudancas.cards_mantidos ?? 0;
+    translationPayload.reunioesCanceladas = mudancas.reunioes_canceladas ?? 0;
     translationPayload.pipelineId = mudancas.pipeline_id ?? '';
     translationPayload.contactId = mudancas.contact_id ?? '';
     if (action === 'crm_hard_delete_failed')

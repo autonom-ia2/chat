@@ -3,9 +3,14 @@
 # cancelamento e o card ganha a atividade "reunião cancelada"; a reunião só do WhatsApp (interna) é cancelada só aqui,
 # como no "Cancelar" da agenda.
 #
-# Fora de transação, de preferência: a chamada ao calendário leva segundos e não volta atrás. Se uma reunião não
-# cancela, para e levanta Crm::ExclusaoDefinitiva::ReuniaoNaoCancelada com as que já foram canceladas antes dela (essas
-# ficam canceladas: o cliente já foi avisado).
+# Reunião do Google ou da Microsoft cujo calendário não se alcança mais (a caixa foi removida e o inbox_id ficou nulo, a
+# caixa não é mais de e-mail ou o calendário foi desligado nela) não tem a quem pedir o cancelamento: é cancelada só
+# aqui, com aviso no log. Esperar por ela travaria a exclusão para sempre.
+#
+# Fora de transação, de preferência: a chamada ao calendário leva segundos e não volta atrás. Qualquer outra falha ao
+# cancelar (erro do provedor, rede, token que não renova) para e levanta Crm::ExclusaoDefinitiva::ReuniaoNaoCancelada,
+# com as que já foram canceladas antes dela (essas ficam canceladas: o cliente já foi avisado). Erro do banco não é
+# falha do calendário e sobe como veio.
 class Crm::Meetings::CancelarFuturas
   def initialize(account:, card_ids:)
     @account = account
@@ -18,20 +23,34 @@ class Crm::Meetings::CancelarFuturas
     return @canceladas if @card_ids.empty?
 
     Crm::Meeting.where(account_id: @account.id, card_id: @card_ids).upcoming.order(:id).each do |meeting|
-      Crm::Meetings::CancelService.new(meeting: meeting).perform
+      cancelar!(meeting)
       @canceladas << meeting.id
-    rescue *erros_do_calendario
-      raise Crm::ExclusaoDefinitiva::ReuniaoNaoCancelada.new(meeting.id, @canceladas.dup)
     end
     @canceladas
   end
 
+  def self.calendario_alcancavel?(meeting)
+    return true if meeting.internal?
+
+    canal = meeting.email_channel
+    canal.is_a?(Channel::Email) && canal.calendar_enabled?
+  end
+
   private
 
-  # Os mesmos erros de calendário que o "Cancelar" da agenda trata (MeetingsController#calendar_provider_error?).
-  # Google::CalendarError e Microsoft::CalendarError moram no arquivo do serviço de cada um: carregar o serviço os define.
-  def erros_do_calendario
-    [Google::CalendarEventService, Microsoft::CalendarEventService].map { |servico| servico.module_parent::CalendarError } +
-      [Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED]
+  def cancelar!(meeting)
+    alcancavel = self.class.calendario_alcancavel?(meeting)
+    Crm::Meetings::CancelService.new(meeting: meeting, propagate: alcancavel, validar: false).perform
+    avisar_so_aqui(meeting) unless alcancavel
+  rescue ActiveRecord::ActiveRecordError
+    raise
+  rescue StandardError => e
+    Rails.logger.warn("[crm][cancelar_futuras] meeting=#{meeting.id} provider=#{meeting.provider} not canceled: #{e.class.name}")
+    raise Crm::ExclusaoDefinitiva::ReuniaoNaoCancelada.new(meeting.id, @canceladas.dup)
+  end
+
+  def avisar_so_aqui(meeting)
+    Rails.logger.warn("[crm][cancelar_futuras] meeting=#{meeting.id} provider=#{meeting.provider} " \
+                      "inbox=#{meeting.inbox_id.inspect} canceled only here: calendar unreachable")
   end
 end

@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #2096: apagar a conta não cancela reunião de cliente nem anonimiza card um a um; os contatos só soltam os cards.
-RSpec.describe Crm::ExclusaoDaConta do
+RSpec.describe Crm::ContatosSoltamCardsNaExclusaoDaConta do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:pipeline_and_stage) { create_crm_pipeline(account: account, user: admin) }
@@ -10,6 +10,9 @@ RSpec.describe Crm::ExclusaoDaConta do
     pipeline, stage = pipeline_and_stage
     account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Pedido', status: :open)
   end
+
+  # Com a flag, o contato excluído fora daqui anonimiza os cards e cancela as reuniões (ContactCrmCards).
+  before { account.enable_features!(:crm_arquivados) }
 
   it 'na exclusão da conta, o contato sai sem chamar o calendário e só solta o card' do
     create_reuniao(account: account, card: card, user: admin, contact: contact, starts_at: 2.days.from_now)

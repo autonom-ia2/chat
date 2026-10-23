@@ -54,7 +54,8 @@ class Contact < ApplicationRecord
   include ContactOptOut
   include ContactCustomer
   include ContactMemoria
-  # Antes das associações: os cards perdem o dado pessoal antes de qualquer outra dependência do destroy.
+  # Antes das associações: com a flag crm_arquivados, os cards perdem o dado pessoal antes de qualquer outra dependência
+  # do destroy; o `dependent: :nullify` de crm_cards só acha o que sobrou (sem a flag, todos, como na main).
   include ContactCrmCards
 
   validates :account_id, presence: true
@@ -68,8 +69,7 @@ class Contact < ApplicationRecord
   belongs_to :account
   has_many :conversations, dependent: :destroy_async
   has_many :contact_inboxes, dependent: :destroy_async
-  # Sem `dependent`: quem limpa os cards ao excluir o contato é ContactCrmCards (LGPD, #2096).
-  has_many :crm_cards, class_name: 'Crm::Card', dependent: nil
+  has_many :crm_cards, class_name: 'Crm::Card', dependent: :nullify
   has_many :csat_survey_responses, dependent: :destroy_async
   has_many :inboxes, through: :contact_inboxes
   has_many :messages, as: :sender, dependent: :destroy_async

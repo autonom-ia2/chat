@@ -63,6 +63,18 @@ RSpec.describe Autonomia::Guide::Acoes do
       end
     end
 
+    # #2096 (decisão do Rodrigo, 23/10): excluir contato só na tela; com a flag crm_arquivados, anonimiza os cards e
+    # cancela as reuniões futuras, com aviso ao cliente.
+    it 'deixa excluir contato só na tela', :aggregate_failures do
+      expect(described_class::SO_NA_TELA).to include('DELETE contacts/:id' => 'contact_delete')
+      expect(para(admin).catalogo).not_to include('DELETE contacts/:id')
+      expect(Autonomia::Guide::Formatos::RotasDeEscrita.todas.map(&:acao)).not_to include('DELETE contacts/:id')
+      I18n.with_locale(:pt_BR) do
+        expect { para(admin).conferir!('DELETE contacts/:id', {}) }
+          .to raise_error(described_class::Recusada, 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.')
+      end
+    end
+
     # Dinheiro da conta na plataforma nunca entra no catálogo do Guia.
     it 'deixa de fora plano, cobrança e créditos', :aggregate_failures do
       catalogo = para(admin).catalogo.join(' ')

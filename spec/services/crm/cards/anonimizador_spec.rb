@@ -21,6 +21,8 @@ RSpec.describe Crm::Cards::Anonimizador do
   let(:conversation) { create_crm_conversation(account: account, inbox: inbox, contact: contact) }
   let(:closed_at) { 3.days.ago.change(usec: 0) }
 
+  before { account.enable_features!(:crm_arquivados) }
+
   # Onde o marcador ainda aparece: toda tabela do banco, linha inteira como texto.
   def onde_o_marcador_aparece
     conexao = ActiveRecord::Base.connection
@@ -234,5 +236,29 @@ RSpec.describe Crm::Cards::Anonimizador do
 
     expect([Contact.exists?(contact.id), Contact.exists?(outro.id)]).to eq([true, false])
     expect([preso.reload.title, livre.reload.title]).to eq(['Preso', "Cliente removido ##{livre.id}"])
+  end
+
+  # Uma reunião marcada entre o cancelamento e a trava ficaria com o convite num card sem cliente.
+  it 'não limpa nada quando, sob a trava, ainda há reunião futura marcada' do
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Pedido', status: :open)
+    reuniao = create_reuniao(account: account, card: card, user: admin, contact: contact, starts_at: 2.days.from_now)
+    allow(Crm::Meetings::CancelarFuturas).to receive(:new).and_return(instance_double(Crm::Meetings::CancelarFuturas, perform: []))
+
+    expect { contact.destroy! }.to raise_error(Crm::ExclusaoDefinitiva::Mudou) { |erro| expect(erro.motivo).to eq('cards_changed') }
+
+    expect([Contact.exists?(contact.id), card.reload.title, reuniao.reload.status]).to eq([true, 'Pedido', 'scheduled'])
+  end
+
+  it 'na exclusão em lote, um contato que falha por qualquer motivo não derruba o lote' do
+    preso = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Preso', status: :open)
+    outro = account.contacts.create!(name: 'Outro', phone_number: '+5511999990035')
+    falho = instance_double(described_class, cancelar_reunioes!: [], reunioes_canceladas: [])
+    allow(falho).to receive(:perform).and_raise(ActiveRecord::Deadlocked)
+    allow(described_class).to receive(:new).and_call_original
+    allow(described_class).to receive(:new).with(contact: contact).and_return(falho)
+
+    Contacts::BulkDeleteService.new(account: account, contact_ids: [contact.id, outro.id]).perform
+
+    expect([Contact.exists?(contact.id), Contact.exists?(outro.id), preso.reload.title]).to eq([true, false, 'Preso'])
   end
 end

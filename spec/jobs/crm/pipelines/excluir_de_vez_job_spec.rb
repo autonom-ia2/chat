@@ -36,10 +36,16 @@ RSpec.describe Crm::Pipelines::ExcluirDeVezJob do
     expect(Audited.audit_class.where(auditable: account, action: Crm::ExclusaoDefinitiva::FALHOU)).to be_empty
   end
 
-  it 'erro inesperado: nada é apagado, o motivo fica na Auditoria e o job falha para o monitoramento' do
+  # Sem nova tentativa: uma tentativa horas depois apagaria o funil que a Auditoria já disse que ficou.
+  it 'erro inesperado: nada é apagado, o motivo fica na Auditoria, vai ao monitoramento e o job não tenta de novo' do
     allow(Crm::Pipelines::Excluidor).to receive(:new).and_raise(NoMethodError, 'falhou')
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
 
-    expect { described_class.perform_now(pipeline.id, admin.id, 'delete') }.to raise_error(NoMethodError)
+    expect { described_class.perform_now(pipeline.id, admin.id, 'delete') }.not_to raise_error
+
+    expect(tracker).to have_received(:capture_exception)
+    expect(described_class.get_sidekiq_options['retry']).to be(false)
 
     expect(nada_apagado?).to be(true)
     expect(falha).to eq('alvo' => 'funil', 'motivo' => 'internal_error', 'pipeline_id' => pipeline.id, 'error_class' => 'NoMethodError')

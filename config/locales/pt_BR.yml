@@ -404,6 +404,7 @@ pt_BR:
       delete: '%{contact_name} está Online, por favor, tente novamente mais tarde'
     # #2096: excluir o contato cancela antes as reuniões futuras dos cards; se uma falhar, nada é apagado.
     meeting_cancel_failed: 'Uma reunião futura deste contato não foi cancelada na agenda, então nada foi apagado. Tente de novo.'
+    crm_cards_changed: 'Um card do CRM deste contato mudou durante a exclusão (uma reunião acabou de ser marcada), então nada foi apagado. Tente de novo.'
     opt_out:
       undo_only_manual: 'Aqui só se desfaz a recusa marcada pela equipe ou o pedido de parar reconhecido na resposta a uma campanha. A da Prospecção sai no lead, pelo "Desfazer: pode ser contatado"; o pedido de parar no follow-up sai quando o "Reativar retorno automático" é usado em todos os cards do CRM em que a pessoa pediu para parar; o descadastro de e-mail não se desfaz por aqui.'
   integration_apps:
@@ -970,6 +971,7 @@ pt_BR:
       only_on_screen:
         whatsapp_template_consent: 'Isto só se faz na tela: Modelos › Autorização.'
         crm_permanent_delete: 'Excluir de vez só se faz na tela, digitando a confirmação: no CRM, em Arquivados, ou ao excluir o contato.'
+        contact_delete: 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'

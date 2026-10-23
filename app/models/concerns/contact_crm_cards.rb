@@ -1,31 +1,46 @@
-# LGPD (#2096): todo contato excluído deixa os cards do CRM sem dado pessoal (Crm::Cards::Anonimizador), em vez de só
-# soltá-los com título, descrição, campos, memória e textos da IA dentro (o antigo `dependent: :nullify`). Vale para
-# todo caminho que destrói o contato com callbacks: o DELETE contacts/:id, a exclusão em lote, a exclusão da conta e o
-# modo 'keep' da exclusão definitiva. Na mesclagem, os cards já foram para o contato que fica e não há o que limpar.
+# LGPD (#2096): com a flag crm_arquivados ligada na conta, todo contato excluído deixa os cards do CRM sem dado pessoal
+# (Crm::Cards::Anonimizador) e cancela as reuniões futuras deles, em vez de só soltá-los com título, descrição, campos,
+# memória e textos da IA dentro. Vale para todo caminho que destrói o contato com callbacks: o DELETE contacts/:id, a
+# exclusão em lote e o modo 'keep' da exclusão definitiva. Na mesclagem, os cards já foram para o contato que fica e não
+# há o que limpar.
+#
+# Desligada (decisão do Rodrigo, 23/10), e na exclusão da conta inteira (Crm::ContatosSoltamCardsNaExclusaoDaConta), o
+# callback não faz nada e o `dependent: :nullify` do Contact solta os cards, como na main.
 #
 # Roda antes das outras dependências e dentro da transação do destroy: se algo falhar, o contato não sai. A exclusão em
-# lote e o modo 'keep' cancelam as reuniões futuras antes, fora da transação (Crm::Cards::Anonimizador#cancelar_reunioes!);
-# o DELETE contacts/:id e a exclusão da conta cancelam aqui (ContactsControllerCrmCards responde 422 se falhar).
+# lote e o modo 'keep' cancelam as reuniões futuras antes, fora da transação (Crm::Cards::Anonimizador#cancelar_reunioes!),
+# e contam aqui as que cancelaram (crm_reunioes_canceladas); o DELETE contacts/:id cancela aqui (ContactsControllerCrmCards
+# responde 422 se falhar).
+#
+# Auditoria (decisão do Rodrigo, 23/10): quem exclui o contato pode não ver os cards dele (uma função personalizada só com
+# contact_delete, ou um agente fora do funil). A exclusão é permitida, e cada contato que tinha card anonimizado ou
+# reunião cancelada grava uma linha na Auditoria da conta: quem fez, quantos cards e quantas reuniões, só ids e contagens
+# (Crm::ExclusaoDefinitiva.auditar_contato_excluido!). O modo 'keep' já auditou antes e chega aqui sem card.
 #
 # A FK crm_cards.contact_id é ON DELETE CASCADE: um DELETE em SQL, sem callbacks (Internal::RemoveStaleContactsService,
-# que só pega contato sem card), apagaria os cards em vez de deixá-los com o dado pessoal.
+# que só pega contato sem card), apagaria os cards em vez de soltá-los.
 module ContactCrmCards
   extend ActiveSupport::Concern
 
   included do
     before_destroy :anonimizar_cards_do_crm
+    # Da exclusão em lote, que roda num job sem Current.user: as reuniões que ela já cancelou antes do destroy, fora da
+    # transação, e quem pediu a exclusão.
+    attr_accessor :crm_reunioes_canceladas, :crm_excluido_por
   end
 
   private
 
   def anonimizar_cards_do_crm
-    return soltar_cards_do_crm if Crm::Cards::Anonimizador.conta_saindo?
+    return if Crm::Cards::Anonimizador.conta_saindo? || !Crm::Cards::Anonimizador.ligado?(account)
 
-    Crm::Cards::Anonimizador.new(contact: self).perform
-  end
+    anonimizador = Crm::Cards::Anonimizador.new(contact: self)
+    ids = anonimizador.perform
+    reunioes = Array(crm_reunioes_canceladas) | anonimizador.reunioes_canceladas
+    return if ids.empty? && reunioes.empty?
 
-  # Exclusão da conta: os cards saem com ela, sem cancelar reunião nem avisar cliente.
-  def soltar_cards_do_crm
-    Crm::Card.where(contact_id: id).update_all(contact_id: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    Crm::ExclusaoDefinitiva.auditar_contato_excluido!(
+      contact: self, user: crm_excluido_por || Current.user, card_ids: ids, reunioes: reunioes
+    )
   end
 end

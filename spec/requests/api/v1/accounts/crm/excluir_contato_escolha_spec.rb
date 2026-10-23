@@ -17,6 +17,8 @@ RSpec.describe 'CRM excluir contato com escolha dos cards e prévias', type: :re
     with_modified_env('CRM_KANBAN_ENABLED' => 'true') { example.run }
   end
 
+  before { account.enable_features!(:crm_arquivados) }
+
   def card(status: :open, **attrs)
     account.crm_cards.create!({ pipeline: pipeline, stage: stage, contact: contact, title: 'Pedido', status: status }.merge(attrs))
   end
@@ -86,7 +88,7 @@ RSpec.describe 'CRM excluir contato com escolha dos cards e prévias', type: :re
       expect(reuniao.reload).to be_canceled
       expect(auditorias.sole.audited_changes)
         .to eq('alvo' => 'contato', 'cards_apagados' => 0, 'card_ids' => [], 'contact_id' => contact.id, 'modo' => 'keep',
-               'cards_mantidos' => 2, 'card_ids_mantidos' => ids)
+               'cards_mantidos' => 2, 'card_ids_mantidos' => ids, 'reunioes_canceladas' => 1)
     end
 
     it 'keep: não exclui nem limpa nada quando a reunião futura não cancela no calendário (422)' do

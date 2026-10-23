@@ -74,6 +74,8 @@ class Api::V1::Accounts::Crm::Contacts::PermanentDeletionsController < Api::V1::
         id: card.id,
         pipeline: card.pipeline.slice(:id, :name, :status, :counts_as_sale),
         stage_name: card.stage.name,
+        # Sem o Crm::ValorDeVenda.ve? e sem ve_o_card?: esta rota é só de administrador (ensure_admin!), que vê todo card
+        # e todo valor. Outra função aqui exigiria os dois.
         value_cents: card.value_cents,
         currency: card.currency,
         status: card.status,

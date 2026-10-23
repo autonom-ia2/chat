@@ -4,9 +4,12 @@
 # O serviço confere de novo sob a trava do funil (Crm::Pipelines::Excluidor). Quando algo barra (funil restaurado,
 # destino arquivado, reunião que o calendário não cancela, card que o destino recusa), nada é apagado e o desfecho fica
 # na Auditoria da conta (Crm::ExclusaoDefinitiva::FALHOU, motivo em código e só ids), além do log. Dois cliques geram
-# dois jobs: o segundo espera a trava do primeiro, encontra o funil já apagado e sai sem registrar nada.
+# dois jobs: o segundo espera a trava do primeiro, encontra o funil já apagado e sai sem registrar nada. Nenhum desfecho
+# levanta erro para fora do job: sem nova tentativa automática, o que a Auditoria registrou é o que aconteceu.
 class Crm::Pipelines::ExcluirDeVezJob < ApplicationJob
   queue_as :low
+  # Nem o Sidekiq tenta de novo (ex.: a própria Auditoria do desfecho falhou): ver com_desfecho.
+  sidekiq_options retry: false
 
   def perform(pipeline_id, actor_id, modo, target_stage_id = nil)
     pipeline = Crm::Pipeline.find_by(id: pipeline_id)
@@ -38,10 +41,15 @@ class Crm::Pipelines::ExcluirDeVezJob < ApplicationJob
     # erro: registra quem barrou, sem dado do card, e para.
     falhou('card_rejected', record_type: e.record.class.name, record_id: e.record.id, fields: e.record.errors.attribute_names.map(&:to_s))
   rescue StandardError => e
-    # Erro inesperado: a transação desfez tudo, e a janela prometeu o motivo na Auditoria. Registra só a classe do erro e
-    # deixa o job falhar, para aparecer no monitoramento.
-    falhou('internal_error', error_class: e.class.name)
-    raise
+    erro_inesperado(e)
+  end
+
+  # A transação desfez tudo, e a janela prometeu o motivo na Auditoria. Registra só a classe do erro, manda ao
+  # monitoramento e para aqui: o job não volta a rodar sozinho. Uma nova tentativa horas depois apagaria o funil que a
+  # Auditoria já disse que ficou ("nada foi apagado"); quem decide tentar de novo é a pessoa, pela tela.
+  def erro_inesperado(error)
+    falhou('internal_error', error_class: error.class.name)
+    ChatwootExceptionTracker.new(error, account: @pipeline.account).capture_exception
   end
 
   def falhou(motivo, **extras)
