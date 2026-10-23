@@ -229,4 +229,60 @@ RSpec.describe Crm::Cards::Archiver, :crm_travas, :relationships_committed_fixtu
     expect(serie.reload).to be_ended
     expect(primeira.reload).to be_canceled
   end
+
+  # #2101/#2130: a pessoa pede o lembrete com o card ainda aberto (o Creator conferiu), e o arquivamento já segura o
+  # card FOR UPDATE. A criação espera na trava do card e, quando o arquivamento confirma, recusa sem gravar nada.
+  describe 'lembrete pedido por pessoa enquanto o arquivamento segura o card' do
+    def arquivamento_parado_com_o_card_travado
+      arquivador = described_class.new(card: Crm::Card.find(card.id), actor: admin)
+      aviso = pronto
+      espera = soltar
+      allow(arquivador).to receive(:arquivar!).and_wrap_original do |original, *args|
+        original.call(*args).tap do
+          aviso << true
+          espera.pop
+        end
+      end
+      em_outra_conexao(resultados) { arquivador.perform }
+      pronto.pop
+    end
+
+    def criar_noutra_conexao(card_aberto, **extra)
+      atributos = { title: 'Ligar', due_at: 2.days.from_now.iso8601, timezone: 'America/Sao_Paulo',
+                    automation_mode: 'reminder_only', follow_up_type: 'task' }.merge(extra).with_indifferent_access
+      criador = Crm::FollowUps::Creator.new(account: account, user: admin, card: card_aberto, conversation: nil, attributes: atributos)
+      esperar_na_trava(em_outra_conexao(resultados) { criador.perform })
+    end
+
+    # Solta o arquivamento e devolve o que as duas conexões responderam.
+    def soltar_e_ler_respostas
+      soltar << true
+      crm_travas_threads.each(&:join)
+      resultados_de(resultados, 2)
+    end
+
+    def gravados = { series: Crm::FollowUpSeries.where(card_id: card.id).count, lembretes: Crm::FollowUp.where(card_id: card.id).count }
+
+    it 'o lembrete de uma vez espera e é recusado (CardArchived), sem lembrete gravado' do
+      card_aberto = Crm::Card.find(card.id)
+      arquivamento_parado_com_o_card_travado
+
+      criar_noutra_conexao(card_aberto)
+
+      expect(soltar_e_ler_respostas).to contain_exactly(true, 'Crm::FollowUps::Creator::CardArchived')
+      expect(card.reload).to be_archived
+      expect(gravados).to eq(series: 0, lembretes: 0)
+    end
+
+    it 'a série espera e é recusada (CardArchived), sem série nem vez gravadas' do
+      card_aberto = Crm::Card.find(card.id)
+      arquivamento_parado_com_o_card_travado
+
+      criar_noutra_conexao(card_aberto, recurrence: { frequency: 'weekly', weekdays: [1] })
+
+      expect(soltar_e_ler_respostas).to contain_exactly(true, 'Crm::FollowUps::Creator::CardArchived')
+      expect(card.reload).to be_archived
+      expect(gravados).to eq(series: 0, lembretes: 0)
+    end
+  end
 end
