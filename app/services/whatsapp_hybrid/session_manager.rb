@@ -78,14 +78,15 @@ class WhatsappHybrid::SessionManager
     Rails.logger.warn("[whatsapp_hybrid] timelock refresh failed inbox=#{connection.inbox_id}: #{e.class}")
   end
 
-  # Grava o estado vindo do motor (consulta ou webhook) e avisa os administradores uma vez por queda.
+  # Grava o estado vindo do motor (consulta ou webhook). A queda só vira aviso aos administradores se durar a carência
+  # (WhatsappHybrid::DownAlert::CARENCIA, #2112): o WhatsApp fecha o websocket e o motor reconecta em segundos.
   def apply_status!(status, phone: nil)
     was_connected = connection.status == 'connected'
     WhatsappProxy::Health.record_drop!(connection.session_name) if proxy_drop?(was_connected, status)
     paired = status == 'connected' && fresh_pairing?
     connection.update!(status: status, connected_phone: phone || connection.connected_phone, status_checked_at: Time.current)
     WhatsappHybrid::ReachOut.paired!(connection) if paired
-    status == 'connected' ? clear_down_alert! : alert_down!(was_connected)
+    status == 'connected' ? clear_down_alert! : schedule_down_alert!(was_connected)
   end
 
   # A sessão como o motor a vê ({} quando não existe ou o motor não respondeu).
@@ -149,14 +150,14 @@ class WhatsappHybrid::SessionManager
   def proxy_drop?(was_connected, status) = was_connected && !connection.paused? && %w[connecting failed].include?(status)
 
   def clear_down_alert!
+    WhatsappHybrid::DownAlert.new(connection).voltou!
     connection.update!(down_alerted_at: nil) if connection.down_alerted_at
   end
 
-  def alert_down!(was_connected)
+  def schedule_down_alert!(was_connected)
     return unless was_connected && connection.routable_when_connected? && connection.down_alerted_at.nil?
 
-    connection.update!(down_alerted_at: Time.current)
-    WhatsappHybrid::DownAlert.new(connection).deliver!
+    WhatsappHybrid::DownAlert.new(connection).agendar!
   end
 
   # Pareamento novo (chat#1486): saiu da leitura do QR, ou ainda não havia aparelho (primeira vez ou depois de
