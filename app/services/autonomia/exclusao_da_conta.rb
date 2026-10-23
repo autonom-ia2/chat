@@ -152,9 +152,11 @@ class Autonomia::ExclusaoDaConta
 
   # Ficam para a cascata do DELETE da conta, com o motivo.
   SAEM_COM_A_CONTA = {
-    # O IP da Webshare volta ao pool quando o TeardownSessionJob desliga a sessão da caixa (#1516). Apagar a atribuição
-    # antes soltaria o IP para outra conta com a sessão ainda ligada nele.
-    'WhatsappProxy::Assignment' => 'o TeardownSessionJob libera o IP depois de desligar a sessão'
+    # Atribuição de IP da Webshare (#1516). Ela não sai na limpeza, mas a cascata do `destroy!` da conta a apaga antes do
+    # TeardownSessionJob (que roda depois do commit, na fila low) desligar a sessão; o `release!` dele então não acha
+    # nada. O que impede outra conta de pegar o IP de uma sessão ainda ligada é o WhatsappProxy::Assigner#free_ip:
+    # ele descarta todo IP que alguma sessão do motor ainda usa, com ou sem atribuição no banco.
+    'WhatsappProxy::Assignment' => 'sai na cascata da conta; o Assigner#free_ip não entrega IP de sessão viva no motor'
   }.freeze
 
   def self.tabelas

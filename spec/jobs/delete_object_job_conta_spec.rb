@@ -149,15 +149,24 @@ RSpec.describe DeleteObjectJob do
     expect(Account.exists?(account.id)).to be(false)
   end
 
-  # Revisão de banco P3: o IP da Webshare volta ao pool pelo TeardownSessionJob, depois de desligar a sessão (#1516).
-  it 'deixa a atribuição de proxy para o teardown da sessão, sem apagá-la na limpeza do fork' do
+  # Revisão de banco P3 (#1516): a limpeza do fork não apaga a atribuição de IP; ela sai na cascata do destroy! da conta,
+  # antes do TeardownSessionJob rodar. O teardown sem a linha (release! vazio) termina normalmente. Quem impede outra conta
+  # de pegar o IP de uma sessão ainda ligada é o Assigner#free_ip, que descarta IP em uso no motor.
+  it 'deixa a atribuição de proxy para a cascata da conta, e o teardown depois dela não quebra' do
     atribuicao = WhatsappProxy::Assignment.create!(session_name: 'c2y-sessao-2133', account_id: account.id, pool: 'isp',
                                                    webshare_proxy_id: '1', proxy_address: '10.0.0.1', proxy_port: 6000,
                                                    assigned_at: Time.current)
 
     Autonomia::ExclusaoDaConta.new(account).perform
-
     expect(WhatsappProxy::Assignment.exists?(atribuicao.id)).to be(true)
+
+    described_class.new.perform(account)
+    expect(WhatsappProxy::Assignment.exists?(atribuicao.id)).to be(false)
+
+    waha = instance_double(Waha::Client, get_session: { 'status' => 'WORKING' }, logout_session: nil, delete_session: nil)
+    allow(Waha::Client).to receive(:new).and_return(waha)
+    expect { WhatsappHybrid::TeardownSessionJob.perform_now('c2y-sessao-2133') }.not_to raise_error
+    expect(waha).to have_received(:delete_session).with('c2y-sessao-2133')
   end
 
   # A conexão sai com a caixa (Inbox has_one, dependent: :destroy), no pré-apagar do job, e o callback desliga a sessão.
