@@ -4,9 +4,11 @@ class DeleteObjectJob < ApplicationJob
   BATCH_SIZE = 5_000
 
   def perform(object, user = nil, ip = nil)
-    # Fork (#2133): antes do pré-apagar saem só as tabelas que o barrariam (chave sem cascata para mensagem); o resto
-    # do fork sai depois dele, logo antes do destroy!. Ver Autonomia::ExclusaoDaConta.
+    # Fork (#2133): a conta é suspensa e as campanhas agendadas param; antes do pré-apagar saem só as tabelas que o
+    # barrariam (chave sem cascata para mensagem); o resto do fork sai depois dele, logo antes do destroy!.
+    # Ver Autonomia::ExclusaoDaConta.
     exclusao_do_fork = Autonomia::ExclusaoDaConta.new(object) if object.is_a?(Account)
+    exclusao_do_fork&.parar_a_conta
     exclusao_do_fork&.antes_do_pre_apagar
     # Pre-purge heavy associations for large objects to avoid
     # timeouts & race conditions due to destroy_async fan-out.

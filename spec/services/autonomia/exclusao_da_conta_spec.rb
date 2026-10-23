@@ -78,7 +78,7 @@ RSpec.describe Autonomia::ExclusaoDaConta do
   it 'apaga toda tabela que aponta para a conta, com ou sem cascata, para o DELETE da conta não levar nada junto' do
     filhas_da_conta = chaves.filter_map { |filha, _coluna, mae, acao| filha if mae == 'accounts' && %w[a r c].include?(acao) }
 
-    expect(filhas_da_conta.uniq - described_class.tabelas).to eq([])
+    expect(filhas_da_conta.uniq - described_class.tabelas - described_class.tabelas_que_saem_com_a_conta).to eq([])
   end
 
   it 'apaga cada tabela antes das que ela referencia sem cascata, inclusive as do pré-apagar' do
@@ -149,6 +149,22 @@ RSpec.describe Autonomia::ExclusaoDaConta do
     expect(ActiveStorage::Attachment.where(record_type: 'Autonomia::Agents::Source')).to be_empty
     expect(Autonomia::Agents::Source.unscoped.where(id: fontes)).to be_empty
     expect(compartilhado.reload.attachments.count).to eq(1)
+  end
+
+  it 'para a conta: suspende e cancela as campanhas agendadas dela, sem tocar as de outra conta' do
+    account = create(:account)
+    outra = create(:account)
+    remetente = EmailSenderIdentity.insert!({ account_id: account.id, domain: 'exemplo.invalid', created_at: Time.current, # rubocop:disable Rails/SkipsModelValidations
+                                              updated_at: Time.current }, returning: :id).rows.first.first
+    campanhas = [account, outra].map do |dona|
+      EmailCampaign.insert!({ account_id: dona.id, name: 'Novidades', sender_identity_id: remetente, status: EmailCampaign.statuses[:scheduled], # rubocop:disable Rails/SkipsModelValidations
+                              created_at: Time.current, updated_at: Time.current }, returning: :id).rows.first.first
+    end
+
+    described_class.new(account).parar_a_conta
+
+    expect([account.reload.status, outra.reload.status]).to eq(%w[suspended active])
+    expect(EmailCampaign.where(id: campanhas).order(:account_id).pluck(:status)).to eq(%w[canceled scheduled])
   end
 
   it 'registra no log a etapa que falhou, sem dado da linha, e deixa o erro subir' do

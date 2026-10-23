@@ -69,7 +69,8 @@ RSpec.describe DeleteObjectJob do
     bearer = linha!('access_tokens', owner_type: 'Crm::IntegrationToken', owner_id: token, token: SecureRandom.hex(12))
     linha!('crm_service_schedules', account_id: account.id, owner_type: 'Inbox', owner_id: inbox.id, timezone: 'America/Sao_Paulo')
     linha!('email_templates', account_id: account.id, name: 'Resposta', body: 'Olá')
-    linha!('mcp_integration_tokens', account_id: account.id, name: 'mcp', identity_subject: SecureRandom.hex(4))
+    mcp = Mcp::IntegrationToken.create!(account: account, created_by: user, identity_subject: 'auth-2133', name: 'Connect',
+                                        scopes: Mcp::IntegrationToken::DEFAULT_SCOPES)
     linha!('account_email_oauth_apps', account_id: account.id, provider: 'google')
     linha!('idempotency_keys', account_id: account.id, key: SecureRandom.hex(4), request_fingerprint: 'x')
     remetente = linha!('email_sender_identities', account_id: account.id, domain: 'exemplo.invalid')
@@ -81,8 +82,8 @@ RSpec.describe DeleteObjectJob do
     modelo = create_whatsapp_api_template(account: account, inbox: create_crm_whatsapp_api_inbox(account: account), user: user)
     linha!('whatsapp_api_campaigns', account_id: account.id, created_by_id: user.id, title: 'Aviso',
                                      whatsapp_api_message_template_id: modelo.id)
-    # Linhas sem account_id: achadas pela campanha e pelo dono do token.
-    { 'email_campaign_recipients' => destinatario, 'email_events' => evento, 'access_tokens' => bearer }
+    # Linhas sem account_id: achadas pela campanha e pelo dono do token. O usuário técnico do MCP sai pelo revoke!.
+    { 'email_campaign_recipients' => destinatario, 'email_events' => evento, 'access_tokens' => bearer, 'users' => mcp.account_user.user_id }
   end
   # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
@@ -129,6 +130,34 @@ RSpec.describe DeleteObjectJob do
     perform_enqueued_jobs(only: ActiveRecord::DestroyAssociationAsyncJob) { described_class.perform_now(account) }
 
     expect([Message.exists?(mensagem.id), Account.exists?(account.id)]).to eq([false, false])
+  end
+
+  # Revisão de banco P2: a conta seguia ativa durante a exclusão (campanha agendada disparava, a IA respondia).
+  it 'suspende a conta e cancela as campanhas agendadas antes do pré-apagar' do
+    campanha = linha!('whatsapp_api_campaigns', account_id: account.id, created_by_id: user.id, title: 'Aviso',
+                                                scheduled_at: 1.minute.ago, status: WhatsappApiCampaign.statuses[:scheduled])
+    job = described_class.new
+    no_pre_apagar = nil
+    allow(job).to receive(:purge_heavy_associations).and_wrap_original do |original, objeto|
+      no_pre_apagar = [Account.find(account.id).status, WhatsappApiCampaign.find(campanha).status]
+      original.call(objeto)
+    end
+
+    job.perform(account)
+
+    expect(no_pre_apagar).to eq(%w[suspended cancelled])
+    expect(Account.exists?(account.id)).to be(false)
+  end
+
+  # Revisão de banco P3: o IP da Webshare volta ao pool pelo TeardownSessionJob, depois de desligar a sessão (#1516).
+  it 'deixa a atribuição de proxy para o teardown da sessão, sem apagá-la na limpeza do fork' do
+    atribuicao = WhatsappProxy::Assignment.create!(session_name: 'c2y-sessao-2133', account_id: account.id, pool: 'isp',
+                                                   webshare_proxy_id: '1', proxy_address: '10.0.0.1', proxy_port: 6000,
+                                                   assigned_at: Time.current)
+
+    Autonomia::ExclusaoDaConta.new(account).perform
+
+    expect(WhatsappProxy::Assignment.exists?(atribuicao.id)).to be(true)
   end
 
   # A conexão sai com a caixa (Inbox has_one, dependent: :destroy), no pré-apagar do job, e o callback desliga a sessão.

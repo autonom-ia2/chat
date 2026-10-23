@@ -6,7 +6,8 @@
 # cada tabela vem antes das que ela referencia. Entram também:
 # - as tabelas com cascata a partir da conta, para o DELETE final da conta não apagar dezenas de tabelas num comando só;
 # - as tabelas da conta sem chave estrangeira (uso de IA, conversões da Meta, horários), que ninguém mais apagaria.
-# O job chama `antes_do_pre_apagar` antes do pré-apagar do upstream (conversas, contatos, caixas): ali saem só as
+# O job começa por `parar_a_conta` (suspende e cancela campanhas agendadas). Depois chama `antes_do_pre_apagar` antes
+# do pré-apagar do upstream (conversas, contatos, caixas): ali saem só as
 # tabelas com chave sem cascata para o que o pré-apagar apaga (whatsapp_api_campaign_recipients.message_id faria o job
 # das mensagens desistir). O resto sai em `perform`, depois do pré-apagar e logo antes do `destroy!`, para os callbacks
 # das caixas (vínculo do agente, conexão do Híbrido) rodarem como antes. Linha criada entre o `perform` e o `destroy!`
@@ -17,7 +18,8 @@
 # `delete_all` não roda callbacks. Dos efeitos deles, ficam os que importam:
 # - anexos (Active Storage): as linhas saem junto do lote e o arquivo vai para o PurgeJob quando nenhum outro anexo
 #   usa o mesmo blob;
-# - tokens de integração: o `access_token` (o bearer) sai junto, para não sobrar credencial de dono apagado.
+# - tokens de integração do CRM: o `access_token` (o bearer) sai junto, para não sobrar credencial de dono apagado;
+#   os do MCP saem pelo `revoke!`, que apaga também o usuário técnico deles.
 # A conexão do WhatsApp Híbrido não está aqui: ela sai com a caixa (`Inbox has_one ..., dependent: :destroy`), e o
 # callback dela desliga a sessão no WAHA.
 # Reunião marcada no Google ou na Microsoft não é cancelada: a conta está saindo, e o evento continua no calendário de
@@ -85,7 +87,8 @@ class Autonomia::ExclusaoDaConta
     ['Ctwa::TrackedLink', :por_conta],
     # Integrações.
     ['Crm::IntegrationToken', :por_conta],
-    ['Mcp::IntegrationToken', :por_conta],
+    # O token MCP tem usuário, vínculo e função técnicos próprios: o revoke! apaga os quatro.
+    ['Mcp::IntegrationToken', :revogar],
     # Agentes de IA.
     ['Autonomia::Agents::ToolRun', :por_conta],
     ['Autonomia::Agents::AgentEvent', :por_conta],
@@ -112,7 +115,6 @@ class Autonomia::ExclusaoDaConta
     ['WhatsappApiCampaign', :por_conta],
     ['WhatsappApiMessageTemplate', :por_conta],
     ['WhatsappTemplateProfile', :por_conta],
-    ['WhatsappProxy::Assignment', :por_conta],
     ['CampaignRecipient', :por_conta],
     ['CampaignFreeTextDelivery', :por_conta],
     ['CampaignFreeText', :por_conta],
@@ -148,6 +150,13 @@ class Autonomia::ExclusaoDaConta
   # Das ETAPAS, as que têm chave sem cascata para o que o pré-apagar do upstream apaga.
   ANTES_DO_PRE_APAGAR = ['WhatsappApiCampaignRecipient'].freeze
 
+  # Ficam para a cascata do DELETE da conta, com o motivo.
+  SAEM_COM_A_CONTA = {
+    # O IP da Webshare volta ao pool quando o TeardownSessionJob desliga a sessão da caixa (#1516). Apagar a atribuição
+    # antes soltaria o IP para outra conta com a sessão ainda ligada nele.
+    'WhatsappProxy::Assignment' => 'o TeardownSessionJob libera o IP depois de desligar a sessão'
+  }.freeze
+
   def self.tabelas
     ETAPAS.map { |modelo, _| modelo.constantize.table_name }
   end
@@ -156,8 +165,28 @@ class Autonomia::ExclusaoDaConta
     ANTES_DO_PRE_APAGAR.map { |modelo| modelo.constantize.table_name }
   end
 
+  def self.tabelas_que_saem_com_a_conta
+    SAEM_COM_A_CONTA.keys.map { |modelo| modelo.constantize.table_name }
+  end
+
   def initialize(account)
     @account = account
+  end
+
+  # Primeiro passo da exclusão: a conta para de funcionar. Suspensa, ela recusa API, widget, e-mail e webhooks dos
+  # canais (como a suspensão do Super Admin), e as campanhas agendadas ou em andamento são canceladas. Assim nada novo
+  # entra enquanto as tabelas saem.
+  def parar_a_conta
+    agora = Time.current
+    # rubocop:disable Rails/SkipsModelValidations -- a conta sai mesmo que alguma validação dela não passe mais.
+    account.update_columns(status: Account.statuses[:suspended], updated_at: agora)
+    WhatsappApiCampaign.where(account_id: account.id, status: %i[scheduled running paused])
+                       .update_all(status: WhatsappApiCampaign.statuses[:cancelled], updated_at: agora)
+    EmailCampaign.where(account_id: account.id, status: %i[scheduled sending paused])
+                 .update_all(status: EmailCampaign.statuses[:canceled], updated_at: agora)
+    Campaign.where(account_id: account.id, campaign_type: :one_off, campaign_status: :active)
+            .update_all(campaign_status: Campaign.campaign_statuses[:completed], updated_at: agora)
+    # rubocop:enable Rails/SkipsModelValidations
   end
 
   def antes_do_pre_apagar
@@ -173,7 +202,7 @@ class Autonomia::ExclusaoDaConta
   def executar(etapas)
     etapas.each do |modelo, escopo|
       classe = modelo.constantize
-      apagar(classe, send(escopo, classe))
+      escopo == :revogar ? por_conta(classe).find_each(&:revoke!) : apagar(classe, send(escopo, classe))
     rescue StandardError => e
       # Só a conta, a etapa e a classe do erro: a mensagem do Postgres pode trazer valores da linha.
       Rails.logger.error("[ExclusaoDaConta] conta=#{account.id} etapa=#{modelo} falhou: #{e.class}")
