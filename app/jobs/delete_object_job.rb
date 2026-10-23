@@ -7,6 +7,8 @@ class DeleteObjectJob < ApplicationJob
     # Pre-purge heavy associations for large objects to avoid
     # timeouts & race conditions due to destroy_async fan-out.
     purge_heavy_associations(object)
+    # Fork (#2133): as tabelas do fork apontam para a conta sem cascata e barrariam o DELETE da conta.
+    Autonomia::ExclusaoDaConta.new(object).perform if object.is_a?(Account)
     object.destroy!
     process_post_deletion_tasks(object, user, ip)
   end
