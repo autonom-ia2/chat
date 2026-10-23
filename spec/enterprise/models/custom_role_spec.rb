@@ -31,6 +31,36 @@ RSpec.describe CustomRole, type: :model do
     end
   end
 
+  describe 'CRM editing keys imply crm_view (#2124)' do
+    CustomRole::CRM_EDITING_KEYS.each do |key|
+      it "stores crm_view with #{key}" do
+        role = create(:custom_role, permissions: [key])
+
+        expect(role.reload.permissions).to contain_exactly(key, 'crm_view')
+      end
+    end
+
+    it 'keeps a single crm_view' do
+      role = create(:custom_role, permissions: %w[crm_view crm_manage_cards])
+
+      expect(role.reload.permissions).to contain_exactly('crm_view', 'crm_manage_cards')
+    end
+
+    it 'adds nothing for reports only, sales values or roles without a CRM key' do
+      [%w[crm_view_reports], %w[sales_value_view], %w[crm_admin], %w[contact_view], []].each do |keys|
+        expect(create(:custom_role, permissions: keys).reload.permissions).to eq(keys)
+      end
+    end
+
+    it 'adds crm_view when an editing key arrives on update' do
+      role = create(:custom_role, permissions: %w[crm_view_reports])
+
+      role.update!(permissions: %w[crm_view_reports crm_export])
+
+      expect(role.reload.permissions).to contain_exactly('crm_view_reports', 'crm_export', 'crm_view')
+    end
+  end
+
   describe 'filtered unread count invalidation' do
     let(:account) { create(:account) }
     let(:custom_role) { create(:custom_role, account: account, permissions: ['conversation_manage']) }
