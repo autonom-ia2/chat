@@ -12,7 +12,7 @@ RSpec.describe Crm::Ai::LerMidiaJob do
     it 'lê os anexos da mensagem', :aggregate_failures do
       described_class.perform_now(message.id)
 
-      expect(Crm::Ai::LeitorDeMidia).to have_received(:new).with(message, ultima_tentativa: false)
+      expect(Crm::Ai::LeitorDeMidia).to have_received(:new).with(message, ultima_tentativa: false, releitura: :mensagem_nova)
       expect(leitor).to have_received(:perform)
     end
 
@@ -78,6 +78,31 @@ RSpec.describe Crm::Ai::LerMidiaJob do
       expect(meta['crm_ai_image_done']).to be(true)
       expect(meta).not_to have_key('ai_caption')
       expect(legendas).to have_received(:caption).exactly(described_class::TENTATIVAS).times
+    end
+
+    it 'falha passageira da API: não marca e reagenda com espera', :aggregate_failures do
+      allow(legendas).to receive(:caption).and_raise(Faraday::TooManyRequestsError)
+
+      described_class.perform_now(foto.message_id)
+
+      expect(meta).not_to have_key('crm_ai_image_done')
+      expect(described_class).to have_been_enqueued.with(foto.message_id).on_queue('high')
+    end
+
+    it 'falha passageira: vencida a espera, a nova tentativa lê', :aggregate_failures do
+      tentativas = 0
+      allow(legendas).to receive(:caption) do
+        tentativas += 1
+        raise Faraday::ServerError if tentativas == 1
+
+        'descrição da foto'
+      end
+
+      described_class.perform_now(foto.message_id)
+      travel(2.minutes) { described_class.perform_now(foto.message_id) }
+
+      expect(meta).to include('ai_caption' => 'descrição da foto', 'crm_ai_image_done' => true, 'crm_ai_midia_tentativas' => 1)
+      expect(legendas).to have_received(:caption).twice
     end
 
     it 'com a flag desligada, nada muda: não lê, não marca e não reagenda', :aggregate_failures do
