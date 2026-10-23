@@ -39,6 +39,26 @@ describe('ChoiceSelect', () => {
     expect(trigger.attributes('aria-label')).toBe('Idioma preferido');
   });
 
+  it('abre pela API abrir, focada e na opção escolhida, sem clique simulado', async () => {
+    wrapper = mountSelect();
+    const trigger = wrapper.get('[role="combobox"]');
+    wrapper.vm.abrir();
+    await wrapper.vm.$nextTick();
+    expect(trigger.attributes('aria-expanded')).toBe('true');
+    expect(trigger.attributes('aria-activedescendant')).toMatch(/option-1$/);
+    expect(document.activeElement).toBe(trigger.element);
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
+
+  it('abrir não faz nada desabilitado', async () => {
+    wrapper = mountSelect('pt_BR', { disabled: true });
+    wrapper.vm.abrir();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.get('[role="combobox"]').attributes('aria-expanded')).toBe(
+      'false'
+    );
+  });
+
   it('dá ao botão o id pedido, para um <label for> visível', () => {
     wrapper = mountSelect('pt_BR', { triggerId: 'campo-idioma' });
     expect(wrapper.get('[role="combobox"]').attributes('id')).toBe(

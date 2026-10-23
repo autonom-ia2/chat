@@ -2,6 +2,8 @@
 // #2138 — bloco 1: o nome é o título. Foto, nome como foi escrito, telefone com
 // "Copiar", e-mail e empresa só quando há, etiquetas do contato e a recusa de
 // mensagens automáticas. "Editar dados" só para quem cuida dos contatos.
+// Enquanto o contato carrega, vale o que veio com a conversa (nome e telefone);
+// as etiquetas e o resto esperam o contato. Se ele não vier, o erro fica aqui.
 import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -10,12 +12,15 @@ import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
+import EsqueletoOuErro from './EsqueletoOuErro.vue';
+import { ESTADO } from './useParteDoPainel';
 
 const props = defineProps({
   contact: { type: Object, required: true },
   podeEditar: { type: Boolean, default: false },
+  estado: { type: String, default: ESTADO.PRONTO },
 });
-const emit = defineEmits(['editar']);
+const emit = defineEmits(['editar', 'tentar']);
 
 const { t } = useI18n();
 const store = useStore();
@@ -32,12 +37,15 @@ const empresa = computed(
 const temEtiqueta = computed(
   () => (etiquetasDoContato.value(props.contact.id) || []).length > 0
 );
-const mostraEtiquetas = computed(() => temEtiqueta.value || props.podeEditar);
+const carregado = computed(() => props.estado === ESTADO.PRONTO);
+const mostraEtiquetas = computed(
+  () => carregado.value && (temEtiqueta.value || props.podeEditar)
+);
 
 watch(
-  () => props.contact.id,
-  id => {
-    if (id) store.dispatch('contactLabels/get', id);
+  () => [props.contact.id, carregado.value],
+  ([id]) => {
+    if (id && carregado.value) store.dispatch('contactLabels/get', id);
   },
   { immediate: true }
 );
@@ -87,18 +95,29 @@ const copiar = async () => {
         {{ empresa }}
       </span>
     </div>
-    <!-- A lista de etiquetas abre embaixo do bloco, alinhada ao texto, e não para fora
-         do painel de 320 px quando o botão fica no fim da linha. -->
+    <EsqueletoOuErro
+      v-if="estado !== ESTADO.PRONTO"
+      :estado="estado"
+      :linhas="1"
+      @tentar="emit('tentar')"
+    />
+    <!-- A lista de etiquetas abre presa a este grupo (relative), embaixo dele e
+         alinhada ao texto: não sai do painel de 320 px quando o botão fica no fim
+         da linha. -->
     <div
       v-if="mostraEtiquetas"
       :aria-label="t('PAINEL_DO_CONTATO.NOME.ETIQUETAS')"
       role="group"
-      class="relative [&_.relative]:static"
+      class="relative"
     >
-      <ContactLabels :contact-id="contact.id" :read-only="!podeEditar" />
+      <ContactLabels
+        :contact-id="contact.id"
+        :read-only="!podeEditar"
+        anchor-menu-to-parent
+      />
     </div>
     <p
-      v-if="contact.opted_out_at"
+      v-if="carregado && contact.opted_out_at"
       class="flex gap-2 px-3 py-2 m-0 text-sm rounded-lg bg-n-amber-2 text-n-slate-12"
     >
       <span
@@ -106,7 +125,7 @@ const copiar = async () => {
       />
       <span>{{ t('PAINEL_DO_CONTATO.NOME.RECUSA') }}</span>
     </p>
-    <div v-if="podeEditar">
+    <div v-if="podeEditar && carregado">
       <Button
         :label="t('PAINEL_DO_CONTATO.NOME.EDITAR')"
         variant="link"

@@ -798,3 +798,13 @@
   display_name: Conversa do Instagram com a cara do Direct
   enabled: true
   column: feature_flags_ext_1
+
+# Painel do contato enxuto na conversa (#2138). Ligada: o painel da direita vira "Sobre esta pessoa" (nome, quem
+# cuida, o combinado, de onde veio e "Mais" só com conteúdo; tela inteira no celular) e o ⋯ do topo da conversa ganha
+# "Mudar time ou prioridade" e "Acompanhar esta conversa". Desligada: o painel e o ⋯ de sempre. Só frontend, sem
+# migration. Posição provisória 59 na feature_flags_ext_1 (1 << 58), da Orquestração (23/10), depois da 58 reservada
+# para o Multifunnel; nesta branch é a 58 até a reserva do Multifunnel entrar na main. Piloto 1, 16 e 18 por psql.
+- name: painel_contato_enxuto
+  display_name: Painel do contato enxuto na conversa
+  enabled: false
+  column: feature_flags_ext_1

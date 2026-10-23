@@ -82,12 +82,12 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Atribuir conversa
 - intent: Como atribuo uma conversa a alguem?; Onde passo atendimento para outro agente?; Como atribuo a conversa a um time?
-- onde_fica: Conversas > abrir conversa > painel de acoes/atribuicao
+- onde_fica: Conversas > abrir conversa > painel de acoes/atribuicao. Com o painel do contato enxuto ligado na conta (chave painel_contato_enxuto): painel "Sobre este contato" > bloco **Quem cuida** > **Trocar** (ou **Escolher quem cuida**); o time vai pelo menu ⋯ do alto da conversa > **Mudar time ou prioridade**.
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: conversa existente; agente/time disponivel e com acesso a caixa de entrada
 - passos: 1. Abra a conversa; 2. Localize o bloco de atribuicao no painel lateral; 3. Escolha agente ou time; 4. Confirme a mudanca; 5. Verifique se o nome aparece na conversa.
-- gotchas: agentes sem acesso a caixa de entrada podem nao aparecer; usuarios com permissao restrita podem nao conseguir atuar em conversas de terceiros.
+- gotchas: agentes sem acesso a caixa de entrada podem nao aparecer; usuarios com permissao restrita podem nao conseguir atuar em conversas de terceiros; no painel enxuto, nas contas com a Fase 2 dos Agentes o bloco **Quem cuida** nao tem botao: quem passa a conversa e o **Passar para…** do alto, e responder ja deixa a conversa com quem respondeu.
 - nav_target: `inbox_conversation`
 
 ### Resolver conversa
@@ -112,7 +112,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Alterar prioridade da conversa
 - intent: Como marco uma conversa como urgente?; Onde altero prioridade?; Como tiro prioridade alta de uma conversa?
-- onde_fica: Conversas > abrir conversa > painel de acoes > prioridade
+- onde_fica: Conversas > abrir conversa > painel de acoes > prioridade. Com o painel do contato enxuto ligado na conta (chave painel_contato_enxuto): menu ⋯ do alto da conversa > **Mudar time ou prioridade** (ou **Mudar prioridade**, quando a conta nao tem time) > **Salvar**; funciona tambem no toque do celular.
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `conversation_view`
 - pre_requisitos: conversa existente

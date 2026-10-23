@@ -31,7 +31,8 @@
       "GRUPO_IA": "IA",
       "NINGUEM_OPCAO": "Ninguém",
       "AGORA_COM": "Agora está com {nome}.",
-      "AGORA_NINGUEM": "Agora ninguém está cuidando desta conversa."
+      "AGORA_NINGUEM": "Agora ninguém está cuidando desta conversa.",
+      "ERRO": "Não deu para trocar agora. Tente de novo."
     },
     "COMBINADO": {
       "TITULO": "Combinado",
@@ -109,7 +110,29 @@
       "DEIXAR": "Deixar de acompanhar",
       "ACOMPANHANDO": "Pronto. Você recebe aviso de cada mensagem nova.",
       "DEIXOU": "Você deixou de acompanhar esta conversa.",
-      "AINDA_NAO_FEITO": "No protótipo, este diálogo ainda não abre."
+      "ERRO": "Não deu para mudar agora. Tente de novo."
+    },
+    "CARREGANDO": "Carregando",
+    "INFORMACOES": {
+      "SALVO": "Pronto.",
+      "ERRO": "Não deu para salvar agora. Tente de novo.",
+      "COPIADO": "Copiado."
+    },
+    "TIME_E_PRIORIDADE": {
+      "TITULO": "Time e prioridade",
+      "TITULO_SO_PRIORIDADE": "Prioridade",
+      "TIME": "Time",
+      "PRIORIDADE": "Prioridade",
+      "SEM_TIME": "Sem time",
+      "SEM_PRIORIDADE": "Sem prioridade",
+      "BAIXA": "Baixa",
+      "MEDIA": "Média",
+      "ALTA": "Alta",
+      "URGENTE": "Urgente",
+      "SALVAR": "Salvar",
+      "CANCELAR": "Cancelar",
+      "PRONTO": "Pronto.",
+      "ERRO": "Não deu para salvar agora. Tente de novo."
     }
   }
 }

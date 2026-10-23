@@ -9,6 +9,13 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  // Fork (#2138): a lista abre presa a quem está em volta (que é `relative`), e
+  // não ao botão. Num painel estreito, o botão no fim da linha não leva a lista
+  // para fora dele.
+  anchorMenuToParent: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['updateLabel']);
@@ -19,9 +26,10 @@ const showDropdown = ref(false);
 </script>
 
 <template>
-  <div class="relative">
+  <div :class="{ relative: !anchorMenuToParent }">
+    <!-- Fork (#2138): o pseudo-elemento leva a área de toque a 44 px sem mudar o desenho. -->
     <button
-      class="flex items-center gap-1 px-2 py-1 rounded-md outline-dashed h-6 outline-1 outline-n-slate-6 hover:bg-n-alpha-2"
+      class="relative flex items-center gap-1 px-2 py-1 rounded-md outline-dashed h-6 before:absolute before:inset-x-0 before:-inset-y-2.5 outline-1 outline-n-slate-6 hover:bg-n-alpha-2"
       :class="{ 'bg-n-alpha-2': showDropdown }"
       @click="showDropdown = !showDropdown"
     >

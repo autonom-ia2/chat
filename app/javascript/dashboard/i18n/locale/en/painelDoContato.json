@@ -31,7 +31,8 @@
       "GRUPO_IA": "AI",
       "NINGUEM_OPCAO": "Nobody",
       "AGORA_COM": "Now it is with {nome}.",
-      "AGORA_NINGUEM": "Now nobody is taking care of this conversation."
+      "AGORA_NINGUEM": "Now nobody is taking care of this conversation.",
+      "ERRO": "Could not change it now. Try again."
     },
     "COMBINADO": {
       "TITULO": "Agreed",
@@ -109,7 +110,29 @@
       "DEIXAR": "Stop following",
       "ACOMPANHANDO": "Done. You get notified of every new message.",
       "DEIXOU": "You stopped following this conversation.",
-      "AINDA_NAO_FEITO": "In the prototype, this dialog does not open yet."
+      "ERRO": "Could not change it now. Try again."
+    },
+    "CARREGANDO": "Loading",
+    "INFORMACOES": {
+      "SALVO": "Done.",
+      "ERRO": "Could not save it now. Try again.",
+      "COPIADO": "Copied."
+    },
+    "TIME_E_PRIORIDADE": {
+      "TITULO": "Team and priority",
+      "TITULO_SO_PRIORIDADE": "Priority",
+      "TIME": "Team",
+      "PRIORIDADE": "Priority",
+      "SEM_TIME": "No team",
+      "SEM_PRIORIDADE": "No priority",
+      "BAIXA": "Low",
+      "MEDIA": "Medium",
+      "ALTA": "High",
+      "URGENTE": "Urgent",
+      "SALVAR": "Save",
+      "CANCELAR": "Cancel",
+      "PRONTO": "Done.",
+      "ERRO": "Could not save it now. Try again."
     }
   }
 }

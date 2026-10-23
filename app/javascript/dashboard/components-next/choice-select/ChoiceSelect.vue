@@ -320,6 +320,16 @@ onClickOutside(
   },
   { ignore: [list, ownLabel] }
 );
+
+// Abre a lista por quem usa (ex.: um botão de texto que vira a escolha, #2138),
+// sem simular clique: foca o botão e abre na opção escolhida, como o teclado.
+const abrir = () => {
+  if (props.disabled || isOpen.value) return;
+  trigger.value?.focus({ preventScroll: true });
+  show(selected.value >= 0 ? selected.value : 0);
+};
+
+defineExpose({ abrir });
 </script>
 
 <template>

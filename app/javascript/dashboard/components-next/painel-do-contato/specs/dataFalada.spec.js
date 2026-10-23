@@ -15,7 +15,7 @@ const nomes = {
   ],
 };
 const fuso = 'America/Sao_Paulo';
-// Quinta, 23/10/2026, 22h30 em São Paulo (sexta 01h30 em UTC).
+// Sexta, 23/10/2026, 22h30 em São Paulo (sábado 01h30 em UTC).
 const agora = new Date('2026-10-24T01:30:00Z');
 const falar = iso => diaFalado({ quando: new Date(iso), agora, fuso, nomes });
 
@@ -38,5 +38,37 @@ describe('horaFalada', () => {
   it('fala a hora cheia e a quebrada', () => {
     expect(horaFalada(new Date('2026-10-23T13:00:00Z'), fuso)).toBe('10h');
     expect(horaFalada(new Date('2026-10-23T12:30:00Z'), fuso)).toBe('9h30');
+  });
+});
+
+// A virada do dia: o navegador em UTC (TZ=UTC no vitest) e a conta em São Paulo.
+// Pelo relógio do navegador, os dois momentos de cada caso caem no mesmo dia; no
+// fuso da conta, não.
+describe('diaFalado na virada da meia-noite', () => {
+  it('roda com o navegador em UTC', () => {
+    expect(new Date('2026-10-24T03:00:00Z').getTimezoneOffset()).toBe(0);
+  });
+
+  it('23h59 em São Paulo: 0h30 de lá é amanhã, mesmo sendo o mesmo dia em UTC', () => {
+    const quase = new Date('2026-10-24T02:59:00Z'); // 23/10, 23h59 em SP
+    const depois = new Date('2026-10-24T03:30:00Z'); // 24/10, 0h30 em SP
+    expect(diaFalado({ quando: depois, agora: quase, fuso, nomes })).toBe(
+      'amanhã'
+    );
+    expect(horaFalada(depois, fuso)).toBe('0h30');
+  });
+
+  it('0h01 em São Paulo: 23h30 de lá é ontem, mesmo sendo o mesmo dia em UTC', () => {
+    const agoraCedo = new Date('2026-10-24T03:01:00Z'); // 24/10, 0h01 em SP
+    const antes = new Date('2026-10-24T02:30:00Z'); // 23/10, 23h30 em SP
+    expect(diaFalado({ quando: antes, agora: agoraCedo, fuso, nomes })).toBe(
+      'ontem'
+    );
+  });
+
+  it('hoje vale até 23h59 do fuso da conta', () => {
+    const cedo = new Date('2026-10-23T03:00:00Z'); // 23/10, 0h em SP
+    const tarde = new Date('2026-10-24T02:59:00Z'); // 23/10, 23h59 em SP
+    expect(diaFalado({ quando: tarde, agora: cedo, fuso, nomes })).toBe('hoje');
   });
 });

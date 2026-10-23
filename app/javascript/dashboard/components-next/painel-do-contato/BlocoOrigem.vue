@@ -1,11 +1,13 @@
 <script setup>
 // #2138 — "De onde veio": a origem do primeiro toque, escrita por inteiro (o topo
-// só mostra a marca curta). Sem origem, some.
-import { computed, ref, watch } from 'vue';
+// só mostra a marca curta). Sem origem, some; um 403 também esconde, sem aviso.
+import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CampaignJourneyAPI from 'dashboard/api/campaignJourney';
 import { buildCrmOrigin } from 'dashboard/routes/dashboard/crm/composables/useCrmOrigin';
 import BlocoDoPainel from './BlocoDoPainel.vue';
+import EsqueletoOuErro from './EsqueletoOuErro.vue';
+import { ESTADO, useParteDoPainel } from './useParteDoPainel';
 
 const props = defineProps({
   contactId: { type: [Number, String], default: null },
@@ -13,22 +15,21 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const marcas = ref(null);
-let pedido = 0;
-
-const carregar = async id => {
-  pedido += 1;
-  const meu = pedido;
-  marcas.value = null;
-  if (!id) return;
-  try {
-    const { data } = await CampaignJourneyAPI.getContactOrigins(id);
-    if (meu === pedido) marcas.value = data.payload?.marks || [];
-  } catch {
-    // Fica com as marcas da conversa aberta.
-  }
-};
-watch(() => props.contactId, carregar, { immediate: true });
+// As marcas do contato; sem elas (vazio), valem as da conversa aberta.
+const { estado, dados, carregar, esconder } = useParteDoPainel(
+  async () => {
+    const { data } = await CampaignJourneyAPI.getContactOrigins(
+      props.contactId
+    );
+    return data.payload?.marks || [];
+  },
+  () => true
+);
+watch(
+  () => props.contactId,
+  id => (id ? carregar() : esconder()),
+  { immediate: true }
+);
 
 const daConversa = computed(() => {
   const { campaign_touches: toques, campaign } = props.conversationAttributes;
@@ -38,7 +39,9 @@ const daConversa = computed(() => {
 
 const origem = computed(
   () =>
-    (marcas.value ?? daConversa.value).map(buildCrmOrigin).filter(Boolean)[0]
+    (dados.value?.length ? dados.value : daConversa.value)
+      .map(buildCrmOrigin)
+      .filter(Boolean)[0]
 );
 
 const CANAL = {
@@ -77,7 +80,22 @@ const frase = computed(() => {
 
 <!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
-  <BlocoDoPainel v-if="frase" :titulo="t('PAINEL_DO_CONTATO.ORIGEM.TITULO')">
-    <p class="m-0 text-sm text-n-slate-12">{{ frase }}</p>
+  <BlocoDoPainel
+    v-if="estado === ESTADO.CARREGANDO"
+    data-test-id="bloco-origem-carregando"
+  >
+    <EsqueletoOuErro :estado="estado" :linhas="1" />
+  </BlocoDoPainel>
+  <BlocoDoPainel
+    v-else-if="estado === ESTADO.ERRO || (estado !== ESTADO.ESCONDIDO && frase)"
+    :titulo="t('PAINEL_DO_CONTATO.ORIGEM.TITULO')"
+    data-test-id="bloco-origem"
+  >
+    <EsqueletoOuErro
+      v-if="estado === ESTADO.ERRO"
+      :estado="estado"
+      @tentar="carregar"
+    />
+    <p v-else class="m-0 text-sm text-n-slate-12">{{ frase }}</p>
   </BlocoDoPainel>
 </template>

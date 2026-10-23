@@ -8,16 +8,16 @@ import { useRouter } from 'vue-router';
 import { useWindowSize } from '@vueuse/core';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useConversationRoutePath } from 'dashboard/composables/useConversationRoutePath';
-import { MEDIA_TYPES } from 'dashboard/components-next/message/constants';
 import wootConstants from 'dashboard/constants/globals';
 import Button from 'dashboard/components-next/button/Button.vue';
-import CustomAttributes from 'dashboard/routes/dashboard/conversation/customAttributes/CustomAttributes.vue';
+import InformacoesDoContato from './InformacoesDoContato.vue';
 import { useDataFalada } from './useDataFalada';
 
 const props = defineProps({
   tipo: { type: String, required: true },
   listas: { type: Object, required: true },
-  contactId: { type: [Number, String], default: null },
+  contact: { type: Object, required: true },
+  podeEditar: { type: Boolean, default: false },
 });
 const emit = defineEmits(['voltar']);
 
@@ -77,8 +77,7 @@ const nomeDoArquivo = anexo => {
     .pop();
   return nome ? decodeURIComponent(nome) : '';
 };
-const ehImagem = anexo =>
-  MEDIA_TYPES.includes(anexo.file_type) && anexo.file_type === 'image';
+const ehImagem = anexo => anexo.file_type === 'image';
 const abrirArquivo = anexo =>
   window.open(anexo.data_url, '_blank', 'noopener,noreferrer');
 </script>
@@ -152,14 +151,12 @@ const abrirArquivo = anexo =>
       </li>
     </ul>
 
-    <div v-else-if="tipo === 'informacoes'" class="px-2 pb-4">
-      <CustomAttributes
-        attribute-type="contact_attribute"
-        attribute-from="conversation_contact_panel"
-        :contact-id="contactId"
-        empty-state-message=""
-      />
-    </div>
+    <InformacoesDoContato
+      v-else-if="tipo === 'informacoes'"
+      :definicoes="listas.informacoes"
+      :contact="contact"
+      :pode-editar="podeEditar"
+    />
 
     <div
       v-else-if="tipo === 'acompanham'"

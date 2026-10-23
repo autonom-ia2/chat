@@ -5,7 +5,7 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useWindowSize } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
-import { painelNovoLigado } from 'dashboard/components-next/painel-do-contato/painelNovo';
+import { usePainelNovo } from 'dashboard/components-next/painel-do-contato/usePainelNovo';
 
 defineProps({
   currentChat: {
@@ -30,7 +30,10 @@ const isSmallScreen = computed(
   () => windowWidth.value < wootConstants.SMALL_SCREEN_BREAKPOINT
 );
 
-const closeContactPanel = () => {
+// #2138: com o painel novo, um clique dentro de um Dialog aberto não fecha o painel.
+const painelNovo = usePainelNovo();
+const closeContactPanel = event => {
+  if (painelNovo.value && event?.target?.closest?.('dialog[open]')) return;
   if (isSmallScreen.value && uiSettings.value?.is_contact_sidebar_open) {
     updateUISettings({
       is_contact_sidebar_open: false,
@@ -43,14 +46,12 @@ const closeContactPanel = () => {
 <template>
   <div
     v-on-click-outside="[
-      () => closeContactPanel(),
+      event => closeContactPanel(event),
       {
         ignore: [
           'dialog.ProseMirror-prompt-backdrop',
           '[data-popover-content]',
           '[data-popover-backdrop]',
-          // #2138 PROTÓTIPO: um Dialog aberto com o painel não fecha o painel.
-          ...(painelNovoLigado ? ['dialog[open]'] : []),
         ],
       },
     ]"
@@ -59,8 +60,8 @@ const closeContactPanel = () => {
       {
         'md:flex': activeTab === 0,
         'md:hidden': activeTab !== 0,
-        // #2138 PROTÓTIPO: no celular, o painel novo ocupa a tela inteira.
-        'max-w-sm': !painelNovoLigado,
+        // #2138: no celular, o painel novo ocupa a tela inteira.
+        'max-w-sm': !painelNovo,
       },
     ]"
   >

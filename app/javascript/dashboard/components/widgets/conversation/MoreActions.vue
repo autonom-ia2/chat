@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onUnmounted } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import { useToggle } from '@vueuse/core';
 import { useStore } from 'vuex';
 import { useAlert } from 'dashboard/composables';
@@ -9,7 +9,7 @@ import EmailTranscriptModal from './EmailTranscriptModal.vue';
 import ResolveAction from '../../buttons/ResolveAction.vue';
 import ButtonV4 from 'dashboard/components-next/button/Button.vue';
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
-import { useItensDoPainelNovo } from 'dashboard/components-next/painel-do-contato/useItensDoPainelNovo';
+import ItensDoTopo from 'dashboard/components-next/painel-do-contato/topo/ItensDoTopo.vue';
 
 import {
   CMD_MUTE_CONVERSATION,
@@ -25,8 +25,8 @@ const [showEmailActionsModal, toggleEmailModal] = useToggle(false);
 const [showActionsDropdown, toggleDropdown] = useToggle(false);
 
 const currentChat = computed(() => store.getters.getSelectedChat);
-// #2138 PROTÓTIPO: time, prioridade e acompanhar saem do painel e vêm para cá.
-const painelNovo = useItensDoPainelNovo(currentChat);
+// Fork (#2138): itens do painel novo do contato, de um componente ao lado.
+const itensDoFork = ref(null);
 
 const actionMenuItems = computed(() => {
   const items = [];
@@ -54,12 +54,12 @@ const actionMenuItems = computed(() => {
     value: 'send_transcript',
   });
 
-  return [...items, ...painelNovo.itens.value];
+  return [...items, ...(itensDoFork.value?.itens || [])];
 });
 
 const handleActionClick = ({ action }) => {
   toggleDropdown(false);
-  if (painelNovo.agir(action)) return;
+  if (itensDoFork.value?.agir(action)) return;
 
   if (action === 'mute') {
     store.dispatch('muteConversation', currentChat.value.id);
@@ -120,6 +120,7 @@ onUnmounted(() => {
         @action="handleActionClick"
       />
     </div>
+    <ItensDoTopo ref="itensDoFork" :conversa="currentChat" />
     <EmailTranscriptModal
       v-if="showEmailActionsModal"
       :show="showEmailActionsModal"

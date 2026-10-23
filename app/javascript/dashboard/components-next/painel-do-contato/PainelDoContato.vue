@@ -1,5 +1,6 @@
 <script setup>
-// #2138 — PROTÓTIPO do painel do contato na conversa (Proposta 1, versão 4).
+// #2138 — o painel do contato na conversa (Proposta 1, versão 4), atrás da chave
+// `painel_contato_enxuto` da conta (o ContactPanel escolhe entre este e o antigo).
 // Responde três perguntas: quem é a pessoa, quem cuida da conversa e o que foi
 // combinado. Cada bloco só aparece quando tem conteúdo. As linhas que abrem
 // ocupam o lugar do painel, com "Voltar" no alto.
@@ -23,6 +24,8 @@ import BlocoOrigem from './BlocoOrigem.vue';
 import BlocoDoPainel from './BlocoDoPainel.vue';
 import LinhaQueAbre from './LinhaQueAbre.vue';
 import TelaDaLista from './TelaDaLista.vue';
+import EsqueletoOuErro from './EsqueletoOuErro.vue';
+import { ESTADO } from './useParteDoPainel';
 import { useListasDoContato } from './useListasDoContato';
 
 const props = defineProps({
@@ -62,8 +65,40 @@ watch(
   }
 );
 
+// O contato vem do ContactPanel (contacts/show). Enquanto não chega, o nome e o
+// telefone vêm da conversa; se a leitura terminar sem ele, o bloco do nome
+// mostra o erro e "Tentar de novo".
+const uiDosContatos = useMapGetter('contacts/getUIFlags');
+const contatoCarregado = computed(() => Boolean(props.contact?.id));
+const contatoTentado = ref(false);
+watch(
+  () => uiDosContatos.value?.isFetchingItem,
+  (agora, antes) => {
+    if (antes && !agora) contatoTentado.value = true;
+  }
+);
+watch(
+  () => props.conversation.meta?.sender?.id,
+  () => {
+    contatoTentado.value = false;
+  }
+);
+const estadoDoContato = computed(() => {
+  if (contatoCarregado.value) return ESTADO.PRONTO;
+  return contatoTentado.value ? ESTADO.ERRO : ESTADO.CARREGANDO;
+});
+const contato = computed(() =>
+  contatoCarregado.value ? props.contact : props.conversation.meta?.sender || {}
+);
+const lerContatoDeNovo = () => {
+  const id = props.conversation.meta?.sender?.id;
+  if (id) store.dispatch('contacts/show', { id });
+};
+
 const listas = useListasDoContato({
-  contact: computed(() => props.contact),
+  contact: computed(() =>
+    props.podeVerContatos && contatoCarregado.value ? props.contact : null
+  ),
   conversationId: computed(() => props.conversation.id),
 });
 
@@ -114,7 +149,8 @@ const verPagina = () =>
         informacoes: listas.informacoes.value,
         quemAcompanha: listas.quemAcompanha.value,
       }"
-      :contact-id="contact.id"
+      :contact="contact"
+      :pode-editar="canManageRelationshipRecords"
       @voltar="aberta = null"
     />
     <template v-else>
@@ -142,6 +178,7 @@ const verPagina = () =>
             variant="ghost"
             color="slate"
             size="sm"
+            class="min-h-11 min-w-11"
             @click="emit('fechar')"
           />
         </template>
@@ -157,9 +194,11 @@ const verPagina = () =>
 
       <BlocoNome
         v-if="podeVerContatos"
-        :contact="contact"
+        :contact="contato"
+        :estado="estadoDoContato"
         :pode-editar="canManageRelationshipRecords"
         @editar="editando = true"
+        @tentar="lerContatoDeNovo"
       />
       <ContatoBasico
         v-else
@@ -181,7 +220,16 @@ const verPagina = () =>
           :contact-id="contact.id"
           :conversation-attributes="conversationAttributes"
         />
-        <BlocoDoPainel v-if="linhas.length">
+        <BlocoDoPainel
+          v-if="listas.carregando.value && !linhas.length"
+          data-test-id="bloco-mais-carregando"
+        >
+          <EsqueletoOuErro :estado="ESTADO.CARREGANDO" />
+        </BlocoDoPainel>
+        <BlocoDoPainel
+          v-else-if="linhas.length || listas.comErro.value"
+          data-test-id="bloco-mais"
+        >
           <div class="flex flex-col">
             <LinhaQueAbre
               v-for="linha in linhas"
@@ -190,6 +238,11 @@ const verPagina = () =>
               @abrir="aberta = linha.tipo"
             />
           </div>
+          <EsqueletoOuErro
+            v-if="listas.comErro.value"
+            :estado="ESTADO.ERRO"
+            @tentar="listas.tentarDeNovo"
+          />
         </BlocoDoPainel>
         <BlocoDoPainel v-if="podeVerContatos">
           <div class="flex flex-col gap-1">
@@ -205,7 +258,7 @@ const verPagina = () =>
       </div>
     </template>
     <EditContact
-      v-if="canManageRelationshipRecords && podeVerContatos"
+      v-if="canManageRelationshipRecords && podeVerContatos && contatoCarregado"
       :show="editando"
       :contact="contact"
       @cancel="editando = false"

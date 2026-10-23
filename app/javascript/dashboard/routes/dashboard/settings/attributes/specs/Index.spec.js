@@ -53,6 +53,17 @@ vi.mock('dashboard/composables/store', () => ({
             attribute_model: 'contact_attribute',
             attribute_display_name: 'Contact field',
           },
+          // #2138: os internos da WAHA existem, mas a lista não os mostra.
+          ...[
+            'waha_whatsapp_chat_id',
+            'waha_whatsapp_jid',
+            'waha_whatsapp_lid',
+          ].map((key, index) => ({
+            id: 10 + index,
+            attribute_model: 'contact_attribute',
+            attribute_key: key,
+            attribute_display_name: key,
+          })),
           {
             id: 3,
             attribute_model: 'company_attribute',
@@ -121,6 +132,18 @@ const mountIndex = async () => {
   await flushPromises();
   return wrapper;
 };
+
+describe('Custom attributes settings - campos internos do WhatsApp (#2138)', () => {
+  it('não lista os campos waha_whatsapp_* na aba Contato, e lista o resto', async () => {
+    const wrapper = await mountIndex();
+    await wrapper.find('[data-tab="1"]').trigger('click');
+    await nextTick();
+
+    const itens = wrapper.findAll('.attribute-item');
+    expect(itens.map(item => item.text())).toEqual(['contact_attribute']);
+    expect(wrapper.text()).not.toContain('waha_whatsapp');
+  });
+});
 
 describe('Custom attributes settings - company model', () => {
   beforeEach(() => {

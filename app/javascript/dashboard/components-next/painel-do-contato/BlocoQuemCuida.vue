@@ -78,6 +78,7 @@ const escolhaAtual = computed(() =>
 const escolha = ref(NINGUEM);
 const escolhendo = ref(false);
 const caixaDaEscolha = ref(null);
+const escolhaRef = ref(null);
 
 const grupos = computed(() => {
   const lista = agentsList.value || [];
@@ -110,11 +111,14 @@ const abrirEscolha = async () => {
   escolha.value = escolhaAtual.value;
   escolhendo.value = true;
   await nextTick();
-  caixaDaEscolha.value?.querySelector('button')?.click();
+  escolhaRef.value?.abrir();
 };
 
-// Fechou a lista sem escolher (clique fora ou foco saiu): volta o botão.
+// Fechou a lista sem escolher (clique fora ou foco saiu): volta o botão. O foco
+// que sai do próprio botão ao abrir a lista (ele some da tela) não conta: o
+// Chrome avisa essa saída, e sem a conferência a lista fechava na hora.
 const saiuDaEscolha = evento => {
+  if (!evento.target?.closest?.('[data-escolha-de-quem-cuida]')) return;
   if (!caixaDaEscolha.value?.contains(evento.relatedTarget)) {
     escolhendo.value = false;
   }
@@ -126,11 +130,17 @@ const trocar = async () => {
   const agente = (agentsList.value || []).find(
     a => chaveDe(a.assignee_type, a.id) === escolha.value
   );
+  const pedido = escolha.value;
   await store.dispatch('assignAgent', {
     conversationId: props.conversation.id,
     agentId: agente ? agente.id : null,
     assigneeType: agente ? agente.assignee_type || 'User' : null,
   });
+  // A action de hoje não devolve erro: o que não mudou na conversa não foi salvo.
+  if (escolhaAtual.value !== pedido) {
+    useAlert(t('PAINEL_DO_CONTATO.QUEM_CUIDA.ERRO'));
+    return;
+  }
   useAlert(
     agente
       ? t('PAINEL_DO_CONTATO.QUEM_CUIDA.AGORA_COM', { nome: agente.name })
@@ -150,7 +160,9 @@ const trocar = async () => {
     <div v-if="temAcao" ref="caixaDaEscolha" @focusout="saiuDaEscolha">
       <ChoiceSelect
         v-if="escolhendo"
+        ref="escolhaRef"
         v-model="escolha"
+        data-escolha-de-quem-cuida
         :groups="grupos"
         :aria-label="t('PAINEL_DO_CONTATO.QUEM_CUIDA.ESCOLHA_TITULO')"
         class="w-full"

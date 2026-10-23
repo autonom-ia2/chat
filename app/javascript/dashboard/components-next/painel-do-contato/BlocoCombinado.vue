@@ -2,13 +2,22 @@
 // #2138 — "Combinado": os lembretes abertos do contato, o atrasado primeiro, com a
 // data falada no fuso da conta. Até 3; "Ver os outros {n}" abre o resto ali mesmo.
 // Sem lembrete, o bloco não aparece; 403 (sem acesso ao CRM) também esconde, sem erro.
+//
+// Lê de novo quando: o contato muda; um assunto da conversa muda (crmSubjectsChange);
+// e o aviso do lembrete (CrmFollowUpReminderModal) entra ou sai da fila — ele entra
+// quando um lembrete vence (evento crm.follow_up.due do ActionCable) e sai quando a
+// pessoa conclui, adia ou dispensa. Limite: concluir ou editar pelo card, pelo
+// calendário ou em outra aba não chega aqui até a próxima leitura.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { crmSubjectsChange } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
+import { useCrmFollowUpReminders } from 'dashboard/composables/useCrmFollowUpReminders';
 import { atrasado } from 'dashboard/routes/dashboard/crm/components/card/proximoPasso';
 import Button from 'dashboard/components-next/button/Button.vue';
 import BlocoDoPainel from './BlocoDoPainel.vue';
+import EsqueletoOuErro from './EsqueletoOuErro.vue';
+import { ESTADO, useParteDoPainel } from './useParteDoPainel';
 import { useDataFalada } from './useDataFalada';
 import { primeiraMaiuscula } from './dataFalada';
 
@@ -21,41 +30,39 @@ const LIMITE = 20;
 
 const { t } = useI18n();
 const { quandoFalado } = useDataFalada();
-
-const estado = ref('carregando');
-const lembretes = ref([]);
-const total = ref(0);
+const { activeReminder } = useCrmFollowUpReminders();
 const abertoTudo = ref(false);
-let pedido = 0;
 
-const carregar = async () => {
-  pedido += 1;
-  const meu = pedido;
-  abertoTudo.value = false;
-  if (!props.contactId) {
-    estado.value = 'escondido';
-    return;
-  }
-  estado.value = 'carregando';
-  try {
+const { estado, dados, carregar, esconder } = useParteDoPainel(
+  async () => {
     const { data } = await CrmKanbanAPI.getFollowUps({
       contact_id: props.contactId,
       status: ['pending', 'overdue'],
       per_page: LIMITE,
     });
-    if (meu !== pedido) return;
-    lembretes.value = data.payload || [];
-    total.value = data.meta?.count ?? lembretes.value.length;
-    estado.value = lembretes.value.length ? 'pronto' : 'escondido';
-  } catch (erro) {
-    if (meu !== pedido) return;
-    estado.value = erro?.response?.status === 403 ? 'escondido' : 'erro';
-  }
+    const lembretes = data.payload || [];
+    return { lembretes, total: data.meta?.count ?? lembretes.length };
+  },
+  resposta => resposta.lembretes.length > 0
+);
+
+const ler = () => {
+  abertoTudo.value = false;
+  if (props.contactId) carregar();
+  else esconder();
 };
 
-watch(() => props.contactId, carregar, { immediate: true });
-// Assunto criado ou trocado (aqui ou em tempo real): lê de novo.
-watch(() => crmSubjectsChange.value.version, carregar);
+watch(() => props.contactId, ler, { immediate: true });
+watch(() => crmSubjectsChange.value.version, ler);
+// O aviso do lembrete deste contato (ou um aviso sem contato) entrou ou saiu.
+const doContato = lembrete =>
+  lembrete &&
+  (lembrete.contact_id == null ||
+    String(lembrete.contact_id) === String(props.contactId));
+watch(activeReminder, (novo, velho) => {
+  if (novo?.id === velho?.id) return;
+  if (doContato(novo) || doContato(velho)) ler();
+});
 
 const TIPOS = {
   task: () => t('PAINEL_DO_CONTATO.COMBINADO.TIPO.TASK'),
@@ -68,10 +75,9 @@ const TIPOS = {
 const semPontoFinal = texto =>
   texto.endsWith('.') ? texto.slice(0, -1) : texto;
 
-const agora = () => new Date();
 const ordenados = computed(() => {
-  const momento = agora();
-  return [...lembretes.value]
+  const momento = new Date();
+  return [...(dados.value?.lembretes || [])]
     .map(item => ({ item, atrasado: atrasado(item, momento) }))
     .sort(
       (a, b) =>
@@ -101,33 +107,29 @@ const mostrados = computed(() =>
   abertoTudo.value ? ordenados.value : ordenados.value.slice(0, VISIVEIS)
 );
 const outros = computed(() =>
-  Math.max(Math.min(total.value, LIMITE) - VISIVEIS, 0)
+  Math.max(Math.min(dados.value?.total ?? 0, LIMITE) - VISIVEIS, 0)
+);
+const visivel = computed(() =>
+  [ESTADO.CARREGANDO, ESTADO.PRONTO, ESTADO.ERRO].includes(estado.value)
 );
 </script>
 
 <!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <BlocoDoPainel
-    v-if="estado !== 'escondido'"
-    :titulo="t('PAINEL_DO_CONTATO.COMBINADO.TITULO')"
+    v-if="visivel"
+    :titulo="
+      estado === ESTADO.CARREGANDO
+        ? ''
+        : t('PAINEL_DO_CONTATO.COMBINADO.TITULO')
+    "
+    data-test-id="bloco-combinado"
   >
-    <div v-if="estado === 'carregando'" class="flex flex-col gap-2">
-      <span class="h-4 rounded w-4/5 bg-n-alpha-2 animate-pulse" />
-      <span class="h-4 rounded w-3/5 bg-n-alpha-2 animate-pulse" />
-    </div>
-    <div v-else-if="estado === 'erro'" class="flex flex-col items-start">
-      <p class="m-0 text-sm text-n-slate-12">
-        {{ t('PAINEL_DO_CONTATO.ERRO') }}
-      </p>
-      <Button
-        :label="t('PAINEL_DO_CONTATO.TENTAR_DE_NOVO')"
-        variant="link"
-        color="blue"
-        size="sm"
-        class="min-h-11"
-        @click="carregar"
-      />
-    </div>
+    <EsqueletoOuErro
+      v-if="estado !== ESTADO.PRONTO"
+      :estado="estado"
+      @tentar="ler"
+    />
     <template v-else>
       <ul class="flex flex-col gap-2 p-0 m-0 list-none">
         <li
@@ -135,10 +137,12 @@ const outros = computed(() =>
           :key="linha.item.id"
           class="flex gap-2 text-sm"
           :class="linha.atrasado ? 'text-n-amber-11' : 'text-n-slate-12'"
+          :data-atrasado="linha.atrasado || undefined"
         >
           <span
             v-if="linha.atrasado"
             class="i-lucide-clock flex-shrink-0 mt-0.5 size-4"
+            role="img"
             :aria-label="t('PAINEL_DO_CONTATO.COMBINADO.ATRASADO')"
           />
           <span class="line-clamp-2">{{ frase(linha) }}</span>
