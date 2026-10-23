@@ -1,18 +1,27 @@
-# Arquivar um funil (#2095), com a opção de levar antes os cards abertos para uma etapa de outro funil ativo. Tudo vai
-# numa transação: se algo falhar, nada muda.
+# Arquivar um funil (#2095), com a opção de levar antes os cards abertos para uma etapa de outro funil ativo, as caixas
+# para outro funil ativo e de passar o "principal" para outro funil. Tudo vai numa transação: se algo falhar, nada muda.
 #
 # Sem destino, os cards abertos ficam no funil arquivado e voltam ao quadro quando ele for restaurado
 # (Api::V1::Accounts::Crm::PipelinesController#restore). Os retornos marcados deles param
 # (Crm::Pipelines::RetornosDosGuardados). Fechados e arquivados ficam sempre.
 #
+# Caixas (decisão 7): com `inboxes_target`, as ligações caixa↔funil (Crm::PipelineInbox) vão para o funil de destino.
+# Se o destino já tem a mesma caixa, fica a ligação dele, com `auto_create_card` ligado se qualquer uma das duas criava.
+# O funil padrão da caixa (Crm::InboxSetting#default_pipeline_id) que apontava para o arquivado passa ao destino, na
+# primeira etapa dele. Isso é tudo o que faz a caixa criar card no funil (Crm::Conversations::CardSyncer e
+# Crm::Cards::ConversationDefaultsResolver). Sem `inboxes_target`, as ligações ficam: o CardSyncer só usa funil ativo,
+# então a caixa para de criar card neste funil e volta a criar quando ele for restaurado.
+#
+# `new_default`: outro funil ativo vira o principal (e este deixa de ser), antes da regra do único principal.
+#
 # Travas, nesta ordem:
 # 1. a da conta, a mesma do PATCH de status (PipelinesController#save_pipeline!): dois arquivamentos ao mesmo tempo
 #    se enfileiram, então não zeram os funis ativos nem se cruzam (arquivar P1 levando para P2 e P2 levando para P1);
-# 2. o funil, relido: a regra do último funil ativo e do único principal (Crm::Pipeline#motivo_para_nao_arquivar)
-#    vale para o estado de agora;
-# 3. a etapa de destino e o funil dela, relidos: o destino arquivado, ou a etapa apagada, entre a escolha na tela e este
-#    momento é recusado, sem prender os cards de novo;
-# 4. os cards abertos que vão mudar.
+# 2. o funil, relido; o novo principal, relido e promovido; e então a regra do último funil ativo e do único principal
+#    (Crm::Pipeline#motivo_para_nao_arquivar) vale para o estado de agora;
+# 3. a etapa de destino e o funil dela, e o funil de destino das caixas, relidos: o destino arquivado, ou a etapa
+#    apagada, entre a escolha na tela e este momento é recusado, sem prender os cards de novo;
+# 4. os cards abertos que vão mudar, e as ligações das caixas.
 #
 # O card movido muda de funil pelo modelo (Crm::Card#update!), para valer o que a troca de funil dispara: a contagem do
 # acesso por funil, o agente de IA responsável da caixa e a sugestão de repasse. A atividade 'move' de cada um sai em
@@ -21,12 +30,15 @@
 # O card cujo dono já saiu da conta vai sem dono (Crm::Card.donos_fora_da_conta): o modelo recusaria gravá-lo com ele.
 class Crm::Pipelines::Archiver
   INVALID_TARGET = 'crm.pipeline_archive_invalid_target'.freeze
+  INVALID_INBOXES_TARGET = 'crm.pipeline_archive_invalid_inboxes_target'.freeze
+  INVALID_DEFAULT = 'crm.pipeline_archive_invalid_new_default'.freeze
   MOTIVO = 'funil_arquivado'.freeze
   # O que o update! do card valida e lê: pré-carregado uma vez para o lote, não uma consulta por card.
   CARD_PRELOAD = %i[contact inbox team primary_conversation owner].freeze
 
-  Result = Struct.new(:moved, :stopped_follow_ups, keyword_init: true)
+  Result = Struct.new(:moved, :stopped_follow_ups, :moved_inboxes, :inboxes_target_pipeline_id, keyword_init: true)
 
+  # O destino não serve; a mensagem é o código da recusa (INVALID_TARGET, INVALID_INBOXES_TARGET ou INVALID_DEFAULT).
   class InvalidTarget < StandardError; end
 
   # A regra do último funil ativo ou do único principal recusou (Crm::Pipeline#motivo_para_nao_arquivar).
@@ -39,26 +51,25 @@ class Crm::Pipelines::Archiver
     end
   end
 
-  # target_stage: a etapa de destino, já resolvida entre as que a pessoa enxerga (o controller confere). Precisa ser de
-  # outro funil ativo da mesma conta, e é conferida de novo sob a trava.
-  def initialize(pipeline:, actor:, target_stage: nil)
+  # target_stage, inboxes_target e new_default já vêm resolvidos entre os que a pessoa enxerga (o controller confere).
+  # Precisam ser de outro funil ativo da mesma conta, e são conferidos de novo sob a trava.
+  def initialize(pipeline:, actor:, target_stage: nil, inboxes_target: nil, new_default: nil)
     @pipeline = pipeline
     @actor = actor
     @target_stage = target_stage
+    @inboxes_target = inboxes_target
+    @new_default = new_default
   end
 
   def perform
     result = nil
     @pipeline.account.with_lock do
       @pipeline.lock!
+      promote_new_default!
       motivo = @pipeline.motivo_para_nao_arquivar
       raise Blocked, motivo if motivo
 
-      target = lock_target!
-      moved = target ? move_open_cards!(target) : []
-      stopped = target ? 0 : Crm::Pipelines::RetornosDosGuardados.new(@pipeline).parar!
-      @pipeline.archived! unless @pipeline.archived?
-      result = Result.new(moved: moved, stopped_follow_ups: stopped)
+      result = archive!
     end
     result.moved.each { |card| Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_MOVED) }
     result
@@ -66,14 +77,40 @@ class Crm::Pipelines::Archiver
 
   private
 
+  def archive!
+    target = lock_target!
+    inboxes_target = @inboxes_target && lock_active_other!(@inboxes_target.id, INVALID_INBOXES_TARGET)
+    moved = target ? move_open_cards!(target) : []
+    moved_inboxes = inboxes_target ? move_inboxes!(inboxes_target) : []
+    stopped = target ? 0 : Crm::Pipelines::RetornosDosGuardados.new(@pipeline).parar!
+    @pipeline.archived! unless @pipeline.archived?
+    Result.new(moved: moved, stopped_follow_ups: stopped, moved_inboxes: moved_inboxes, inboxes_target_pipeline_id: inboxes_target&.id)
+  end
+
+  def promote_new_default!
+    return if @new_default.nil?
+
+    pipeline = lock_active_other!(@new_default.id, INVALID_DEFAULT)
+    pipeline.update!(is_default: true) unless pipeline.is_default?
+    @pipeline.update!(is_default: false) if @pipeline.is_default?
+  end
+
   def lock_target!
     return if @target_stage.nil?
 
     stage = Crm::PipelineStage.lock.find_by(id: @target_stage.id, account_id: @pipeline.account_id)
-    target_pipeline = stage && Crm::Pipeline.lock.find_by(id: stage.pipeline_id)
-    raise InvalidTarget, INVALID_TARGET unless target_pipeline&.active? && target_pipeline.id != @pipeline.id
+    raise InvalidTarget, INVALID_TARGET if stage.nil?
 
+    lock_active_other!(stage.pipeline_id, INVALID_TARGET)
     stage
+  end
+
+  # Outro funil ativo da mesma conta, relido sob a trava.
+  def lock_active_other!(pipeline_id, code)
+    pipeline = Crm::Pipeline.lock.find_by(id: pipeline_id, account_id: @pipeline.account_id)
+    raise InvalidTarget, code unless pipeline&.active? && pipeline.id != @pipeline.id
+
+    pipeline
   end
 
   def move_open_cards!(target)
@@ -89,6 +126,32 @@ class Crm::Pipelines::Archiver
     Crm::Activity.insert_all!(cards.map { |card| move_activity(card, target, now) }) if cards.any?
     # rubocop:enable Rails/SkipsModelValidations
     cards
+  end
+
+  # As ligações das caixas vão para o destino. A etapa padrão da ligação era deste funil: no destino, fica vazia (o card
+  # nasce na primeira etapa, Crm::Conversations::CardSyncer#default_stage_for).
+  def move_inboxes!(target)
+    links = @pipeline.pipeline_inboxes.where.not(inbox_id: nil).order(:id).lock.includes(:inbox).to_a
+    kept = target.pipeline_inboxes.where(inbox_id: links.map(&:inbox_id)).lock.index_by(&:inbox_id)
+    links.each { |link| move_inbox_link!(link, kept[link.inbox_id], target) }
+    move_inbox_settings!(target)
+    links.map { |link| { id: link.inbox_id, name: link.inbox&.name } }
+  end
+
+  # Sem ligação da mesma caixa no destino, a ligação muda de funil. Com ela, fica a do destino, criando card se
+  # qualquer uma das duas criava, e a deste funil sai.
+  def move_inbox_link!(link, existing, target)
+    return link.update!(pipeline: target, default_stage: nil) if existing.nil?
+
+    existing.update!(auto_create_card: true) if link.auto_create_card? && !existing.auto_create_card?
+    link.destroy!
+  end
+
+  def move_inbox_settings!(target)
+    first_stage = target.stages.order(:position, :id).first
+    @pipeline.account.crm_inbox_settings.where(default_pipeline_id: @pipeline.id).order(:id).lock.each do |setting|
+      setting.update!(default_pipeline: target, default_stage: first_stage)
+    end
   end
 
   def move_activity(card, target, now)

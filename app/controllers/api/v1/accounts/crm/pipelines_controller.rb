@@ -6,14 +6,14 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   before_action :fetch_pipeline, only: [:show, :update]
   before_action :ensure_outcome_labels_format, only: [:update]
 
-  # `status=archived` lista os funis arquivados (#2095), com quantos cards abertos cada um guarda. Sem ele, os ativos,
-  # como sempre.
+  # `status=archived` lista os funis arquivados (#2095), com quantos cards abertos cada um guarda, quantos cards tem ao
+  # todo e as caixas que criam card nele. Sem ele, os ativos, como sempre.
   def index
     authorize ::Crm::Pipeline
     archived = params[:status].to_s == 'archived'
     @pipelines = policy_scope(::Crm::Pipeline).where(status: archived ? :archived : :active).order(:position, :id)
     @pipelines_count = @pipelines.count
-    @open_cards_counts = open_cards_counts(@pipelines) if archived
+    archived_pipeline_counts(@pipelines) if archived
   end
 
   def show; end

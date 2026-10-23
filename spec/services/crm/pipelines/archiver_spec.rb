@@ -90,6 +90,59 @@ RSpec.describe Crm::Pipelines::Archiver do
     expect(tarefa.reload).to be_pending
   end
 
+  describe 'caixas e funil principal (decisão 7)' do
+    let(:target_pipeline) { other_pipeline_and_stage.first }
+    let(:inbox) { create_crm_inbox(account: account, name: 'Caixa A') }
+    let(:other_inbox) { create_crm_inbox(account: account, name: 'Caixa B') }
+
+    def link(pipeline, inbox, auto:)
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, auto_create_card: auto)
+    end
+
+    it 'move a ligação que o destino não tem, mescla a que ele tem e leva o funil padrão da caixa' do
+      moved = link(pipeline, inbox, auto: true)
+      link(pipeline, other_inbox, auto: true)
+      kept = link(target_pipeline, other_inbox, auto: false)
+      setting = account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, default_pipeline: pipeline)
+
+      result = described_class.new(pipeline: pipeline, actor: host, inboxes_target: target_pipeline).perform
+
+      expect(result.moved_inboxes).to eq([{ id: inbox.id, name: 'Caixa A' }, { id: other_inbox.id, name: 'Caixa B' }])
+      expect(result.inboxes_target_pipeline_id).to eq(target_pipeline.id)
+      expect(moved.reload.pipeline_id).to eq(target_pipeline.id)
+      expect(account.crm_pipeline_inboxes.where(inbox: other_inbox).pluck(:id, :auto_create_card)).to eq([[kept.id, true]])
+      expect([setting.reload.default_pipeline_id, setting.default_stage_id]).to eq([target_pipeline.id, target_stage.id])
+    end
+
+    it 'destino das caixas arquivado depois da escolha: recusa e nada muda' do
+      moved = link(pipeline, inbox, auto: true)
+      create_crm_pipeline(account: account, user: host, name: 'Terceiro')
+      target_pipeline.archived!
+
+      expect { described_class.new(pipeline: pipeline, actor: host, inboxes_target: target_pipeline).perform }
+        .to raise_error(described_class::InvalidTarget, described_class::INVALID_INBOXES_TARGET)
+      expect([pipeline.reload.status, moved.reload.pipeline_id]).to eq(['active', pipeline.id])
+    end
+
+    it 'o novo principal vale antes da regra do único principal, e este deixa de ser o principal' do
+      pipeline.update!(is_default: true)
+
+      described_class.new(pipeline: pipeline, actor: host, new_default: target_pipeline).perform
+
+      expect([pipeline.reload.status, pipeline.is_default, target_pipeline.reload.is_default]).to eq(['archived', false, true])
+    end
+
+    it 'novo principal inválido: recusa e nada muda' do
+      pipeline.update!(is_default: true)
+      target_pipeline.archived!
+      create_crm_pipeline(account: account, user: host, name: 'Terceiro')
+
+      expect { described_class.new(pipeline: pipeline, actor: host, new_default: target_pipeline).perform }
+        .to raise_error(described_class::InvalidTarget, described_class::INVALID_DEFAULT)
+      expect([pipeline.reload.status, pipeline.is_default]).to eq(['active', true])
+    end
+  end
+
   it 'card de dono que saiu da conta vai sem dono, e o histórico diz quem era' do
     dono_sai_da_conta!(host)
 

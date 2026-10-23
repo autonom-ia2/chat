@@ -37,6 +37,17 @@ RSpec.describe Crm::Cards::BulkRestorer do
     expect(Crm::Cards::Broadcaster).to have_received(:broadcast).once.with(first, Events::Types::CRM_CARD_UPDATED)
   end
 
+  it 'no conflito, o card aberto só vai se a pessoa o enxerga' do
+    contact = create(:contact, account: account)
+    archived = account.crm_cards.create!(pipeline: stage.pipeline, stage: stage, contact: contact, title: 'Arquivado', status: :archived)
+    open = account.crm_cards.create!(pipeline: stage.pipeline, stage: stage, contact: contact, title: 'Aberto')
+    allow(Pundit).to receive(:policy!).and_wrap_original do |original, context, record|
+      original.call(context, record).tap { |policy| allow(policy).to receive(:show?).and_return(false) if record == open }
+    end
+
+    expect(restore([archived.id])).to eq(restored: [], skipped: [{ id: archived.id, error: Crm::Cards::Restorer::CONFLICT }])
+  end
+
   it 'aceita no máximo o mesmo lote da ação em massa' do
     ids = (1..(Crm::Cards::BulkAction::MAX_IDS + 5)).to_a
 

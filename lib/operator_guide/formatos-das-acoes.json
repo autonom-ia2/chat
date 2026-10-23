@@ -603,17 +603,27 @@
   },
   "DELETE crm/pipelines/:id": {
     "campos": {
+      "inboxes_to_pipeline_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
       "move_to_stage_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "new_default_pipeline_id": {
         "tipo": "id",
         "tipo_pela_leitura": "nome"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/pipelines#destroy",
-    "modelo": "Crm::PipelineStage",
+    "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/concerns/crm/pipeline_archiving.rb:16",
-      "app/controllers/concerns/crm/pipeline_archiving.rb:56",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:19",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:23",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:22",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:69",
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:67"
     ],
     "sem_corpo": false
@@ -15743,7 +15753,7 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/pipelines#restore",
     "origem": [
-      "app/controllers/concerns/crm/pipeline_archiving.rb:30",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:35",
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:67"
     ],
     "sem_corpo": true

@@ -3,8 +3,9 @@
 #   GET .../crm/cards/archived?pipeline_id=&search=&page=&per_page=
 #   => { payload: [Crm::Cards::ArchivedRows], meta: { count:, page:, per_page: } }
 #
-# Com `pipeline_id`, só os daquele funil (inclusive funil arquivado). Sem ele, os de todos os funis que a pessoa vê,
-# arquivados ou não ("Procurar em todos os funis"). A busca é a mesma da Lista (título, contato e empresa), pelo
+# Com `pipeline_id`, só os arquivados daquele funil (inclusive funil arquivado). Sem ele ("Procurar em todos os funis"),
+# os arquivados de todos os funis que a pessoa vê e também os cards guardados com um funil arquivado, de qualquer
+# status, para a tela apontar "Ver funis arquivados". A busca é a mesma da Lista (título, contato e empresa), pelo
 # Crm::Cards::FilterQuery.
 class Api::V1::Accounts::Crm::Cards::ArchivedController < Api::V1::Accounts::Crm::BaseController
   RESULTS_PER_PAGE = 25
@@ -19,7 +20,7 @@ class Api::V1::Accounts::Crm::Cards::ArchivedController < Api::V1::Accounts::Crm
   def index
     authorize ::Crm::Card, :index?
     pipeline = policy_scope(::Crm::Pipeline).find(params[:pipeline_id]) if params[:pipeline_id].present?
-    cards = archived_cards(pipeline)
+    cards = pipeline ? archived_cards(pipeline) : archived_or_kept_cards
     page = cards.reorder(Arel.sql("#{ARCHIVED_AT_SQL} DESC NULLS LAST, crm_cards.id DESC")).page(current_page).per(per_page)
 
     render json: {
@@ -31,9 +32,20 @@ class Api::V1::Accounts::Crm::Cards::ArchivedController < Api::V1::Accounts::Crm
   private
 
   def archived_cards(pipeline)
-    filters = { result: 'archived', pipeline_id: pipeline&.id, search: params[:search].presence }.compact
+    filtered_cards(result: 'archived', pipeline_id: pipeline.id)
+  end
+
+  # Os arquivados de qualquer funil, mais os cards (qualquer status) que ficaram num funil arquivado.
+  def archived_or_kept_cards
+    table = ::Crm::Card.arel_table
+    in_archived_pipeline = table[:pipeline_id].in(Current.account.crm_pipelines.archived.select(:id).arel)
+    filtered_cards.where(table[:status].eq(::Crm::Card.statuses[:archived]).or(in_archived_pipeline))
+  end
+
+  def filtered_cards(filters = {})
     ::Crm::Cards::FilterQuery.new(
-      scope: policy_scope(::Crm::Card), params: filters.with_indifferent_access, conversation_visibility: crm_visibility
+      scope: policy_scope(::Crm::Card), params: filters.merge(search: params[:search].presence).compact.with_indifferent_access,
+      conversation_visibility: crm_visibility
     ).perform
   end
 

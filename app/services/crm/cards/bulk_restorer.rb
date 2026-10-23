@@ -6,7 +6,8 @@
 # card aberto do contato no mesmo funil; decisão 9 do protótipo: pular e avisar no fim) voltam em `skipped` com o motivo.
 # Com `force: true`, o do cliente que voltou também é restaurado, como no card único.
 #
-# Result: `{ restored: [card_id, ...], skipped: [{ id:, error:, open_card_id: }, ...] }`.
+# Result: `{ restored: [card_id, ...], skipped: [{ id:, error:, open_card_id:, open_card: { id:, title:, stage_name: } }] }`.
+# `open_card_id` e `open_card` só no conflito, e só se a pessoa enxerga o card aberto: a tela mostra os dois lado a lado.
 class Crm::Cards::BulkRestorer
   MAX_IDS = Crm::Cards::BulkAction::MAX_IDS
   FORBIDDEN = 'forbidden'.freeze
@@ -41,12 +42,17 @@ class Crm::Cards::BulkRestorer
     result = Crm::Cards::Restorer.new(card: card, actor: @user, force: @force).perform
     return { restored: true } if result.restored?
 
-    { id: id, error: result.error, open_card_id: visible_id(result.open_card) }.compact
+    open_card = visible(result.open_card)
+    { id: id, error: result.error, open_card_id: open_card&.id, open_card: open_card && open_card_payload(open_card) }.compact
   end
 
   # O card aberto do conflito só vai na resposta se a pessoa o enxerga (como no card único).
-  def visible_id(card)
-    card.id if card && Pundit.policy!(user_context, card).show?
+  def visible(card)
+    card if card && Pundit.policy!(user_context, card).show?
+  end
+
+  def open_card_payload(card)
+    { id: card.id, title: card.title, stage_name: card.stage&.name }
   end
 
   def user_context

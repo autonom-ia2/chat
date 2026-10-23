@@ -110,7 +110,8 @@ RSpec.describe 'CRM: restaurar card arquivado', type: :request do
       expect(response.parsed_body['payload']).to eq(
         'restored' => [restored.id],
         'skipped' => [
-          { 'id' => conflicting.id, 'error' => 'crm.card_restore_conflict', 'open_card_id' => open_card.id },
+          { 'id' => conflicting.id, 'error' => 'crm.card_restore_conflict', 'open_card_id' => open_card.id,
+            'open_card' => { 'id' => open_card.id, 'title' => 'Seguro auto', 'stage_name' => 'Novo Lead' } },
           { 'id' => not_archived.id, 'error' => 'crm.card_restore_not_archived' },
           { 'id' => 0, 'error' => 'forbidden' }
         ]
@@ -127,7 +128,8 @@ RSpec.describe 'CRM: restaurar card arquivado', type: :request do
 
       expect(response.parsed_body['payload']).to eq(
         'restored' => [first.id],
-        'skipped' => [{ 'id' => second.id, 'error' => 'crm.card_restore_conflict', 'open_card_id' => first.id }]
+        'skipped' => [{ 'id' => second.id, 'error' => 'crm.card_restore_conflict', 'open_card_id' => first.id,
+                        'open_card' => { 'id' => first.id, 'title' => 'Seguro auto', 'stage_name' => 'Proposta' } }]
       )
     end
 
@@ -289,6 +291,44 @@ RSpec.describe 'CRM: restaurar card arquivado', type: :request do
       expect(response.parsed_body['meta']['count']).to eq(2)
       row = response.parsed_body['payload'].find { |item| item['id'] == old.id }
       expect(row['pipeline']['status']).to eq('archived')
+    end
+
+    it 'traz o desfecho guardado, os retornos que pararam, o status e o contato' do
+      won = card_in(stage: second_stage, title: 'Ganho e arquivado')
+      won.update!(status: :won)
+      archive!(won)
+      with_reminder = card_in(stage: second_stage, contact: create(:contact, account: account), title: 'Com retorno')
+      Crm::FollowUp.create!(account: account, card: with_reminder, created_by: admin, title: 'Ligar', due_at: 2.days.from_now,
+                            timezone: 'America/Sao_Paulo', status: :pending)
+      archive!(with_reminder)
+
+      get "#{base}/cards/archived", params: { pipeline_id: pipeline.id }, headers: auth_headers(admin)
+
+      rows = response.parsed_body['payload'].index_by { |row| row['id'] }
+      expect(rows[won.id]).to include('status' => 'archived', 'desfecho' => 'won', 'retornos_parados' => 0, 'contact_id' => contact.id)
+      expect(rows[with_reminder.id]).to include('desfecho' => nil, 'retornos_parados' => 1)
+    end
+
+    it 'sem funil, traz também os cards guardados com um funil arquivado; com funil, só os arquivados' do
+      other_pipeline, other_stage = create_crm_pipeline(account: account, user: admin, name: 'Antigo')
+      kept_open = card_in(stage: other_stage, contact: create(:contact, account: account), title: 'Ficou aberto')
+      kept_won = card_in(stage: other_stage, contact: create(:contact, account: account), title: 'Ficou ganho', status: :won)
+      archived = card_in(stage: second_stage, title: 'Arquivado')
+      archive!(archived)
+      card_in(stage: second_stage, contact: create(:contact, account: account), title: 'Aberto em funil ativo')
+      other_pipeline.archived!
+
+      get "#{base}/cards/archived", headers: auth_headers(admin)
+
+      rows = response.parsed_body['payload'].index_by { |row| row['id'] }
+      expect(rows.keys).to contain_exactly(archived.id, kept_open.id, kept_won.id)
+      expect(rows[kept_open.id]).to include('status' => 'open', 'archived_at' => nil, 'archived_by' => nil, 'can_restore' => false,
+                                            'pipeline' => { 'id' => other_pipeline.id, 'name' => 'Antigo', 'status' => 'archived' })
+      expect(response.parsed_body['meta']['count']).to eq(3)
+
+      get "#{base}/cards/archived", params: { pipeline_id: other_pipeline.id }, headers: auth_headers(admin)
+
+      expect(response.parsed_body['payload']).to be_empty
     end
 
     it 'agente vê só os arquivados das caixas dele' do

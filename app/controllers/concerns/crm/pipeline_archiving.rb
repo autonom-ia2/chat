@@ -11,16 +11,21 @@ module Crm::PipelineArchiving
     before_action :fetch_pipeline_to_archive, only: [:destroy, :restore, :archive_preview]
   end
 
-  # Arquivar: com `move_to_stage_id` (etapa de outro funil ativo que a pessoa vê), os cards abertos vão para lá antes,
-  # na mesma transação. Sem ele, ficam no funil e voltam quando ele for restaurado; os retornos marcados deles param.
+  # Arquivar. Parâmetros opcionais, todos de outro funil ativo que a pessoa vê, na mesma transação:
+  # - `move_to_stage_id`: os cards abertos vão para essa etapa. Sem ele, ficam no funil e voltam quando ele for
+  #   restaurado; os retornos marcados deles param.
+  # - `inboxes_to_pipeline_id`: as caixas ligadas passam a criar card nesse funil. Sem ele, ficam ligadas a este.
+  # - `new_default_pipeline_id`: esse funil vira o principal antes da regra do único principal.
   def destroy
-    result = ::Crm::Pipelines::Archiver.new(pipeline: @pipeline, actor: Current.user, target_stage: archive_target_stage).perform
-    @moved_cards_count = result.moved.size
-    @stopped_follow_ups_count = result.stopped_follow_ups
-    @open_cards_count = @pipeline.cards.open.count
+    result = ::Crm::Pipelines::Archiver.new(
+      pipeline: @pipeline, actor: Current.user, target_stage: archive_target_stage,
+      inboxes_target: other_active_pipeline(params[:inboxes_to_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_INBOXES_TARGET),
+      new_default: other_active_pipeline(params[:new_default_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_DEFAULT)
+    ).perform
+    assign_archive_result(result)
     render :show
-  rescue ::Crm::Pipelines::Archiver::InvalidTarget
-    render_unprocessable(::Crm::Pipelines::Archiver::INVALID_TARGET)
+  rescue ::Crm::Pipelines::Archiver::InvalidTarget => e
+    render_unprocessable(e.message)
   rescue ::Crm::Pipelines::Archiver::Blocked => e
     @archive_blocked = e.motivo
     render_archive_blocked
@@ -50,28 +55,66 @@ module Crm::PipelineArchiving
     fetch_pipeline
   end
 
+  def assign_archive_result(result)
+    @moved_cards_count = result.moved.size
+    @stopped_follow_ups_count = result.stopped_follow_ups
+    @moved_inboxes = result.moved_inboxes
+    @inboxes_target_pipeline_id = result.inboxes_target_pipeline_id
+    @open_cards_count = @pipeline.cards.open.count
+  end
+
   # A etapa para onde vão os cards abertos ao arquivar: de outro funil ativo que a pessoa enxerga. Id que não serve é
   # recusado, nunca ignorado: arquivar sem mover não pode acontecer por engano.
   def archive_target_stage
     stage_id = params[:move_to_stage_id].presence
     return if stage_id.nil?
 
-    visible_active = policy_scope(::Crm::Pipeline).active.where.not(id: @pipeline.id).select(:id)
-    stage = Current.account.crm_pipeline_stages.where(pipeline_id: visible_active).find_by(id: stage_id)
+    stage = Current.account.crm_pipeline_stages.where(pipeline_id: other_active_pipelines.select(:id)).find_by(id: stage_id)
     raise ::Crm::Pipelines::Archiver::InvalidTarget, ::Crm::Pipelines::Archiver::INVALID_TARGET if stage.nil?
 
     stage
   end
 
-  # Funis arquivados (index com `status=archived`): quantos cards abertos voltam ao quadro com cada um.
-  def open_cards_counts(pipelines)
-    Current.account.crm_cards.open.where(pipeline_id: pipelines.select(:id)).group(:pipeline_id).count
+  # O funil do parâmetro, entre os outros funis ativos que a pessoa enxerga; id que não serve é recusado com `code`. Lido
+  # como params[...] no destroy para o Guia da Plataforma reconhecer o parâmetro.
+  def other_active_pipeline(pipeline_id, code)
+    return if pipeline_id.blank?
+
+    other_active_pipelines.find_by(id: pipeline_id) || raise(::Crm::Pipelines::Archiver::InvalidTarget, code)
   end
 
-  # As caixas ligadas ao funil; `auto_create_card` diz se a caixa cria card nele sozinha.
+  def other_active_pipelines
+    policy_scope(::Crm::Pipeline).active.where.not(id: @pipeline.id)
+  end
+
+  # Funis arquivados (index com `status=archived`): quantos cards abertos voltam ao quadro com cada um, quantos cards
+  # cada um tem ao todo e as caixas que criam card nele.
+  def archived_pipeline_counts(pipelines)
+    cards = Current.account.crm_cards.where(pipeline_id: pipelines.select(:id))
+    @open_cards_counts = cards.open.group(:pipeline_id).count
+    @cards_counts = cards.group(:pipeline_id).count
+    @auto_create_inboxes = Current.account.crm_pipeline_inboxes.where(pipeline_id: pipelines.select(:id), auto_create_card: true)
+                                  .where.not(inbox_id: nil).includes(:inbox).order(:id)
+                                  .group_by(&:pipeline_id)
+                                  .transform_values { |links| links.map { |link| { id: link.inbox_id, name: link.inbox&.name } } }
+  end
+
+  # As caixas ligadas ao funil; `auto_create_card` diz se a caixa cria card nele sozinha. `other_pipelines`: os outros
+  # funis ativos em que a mesma caixa também cria card (Crm::Conversations::CardSyncer só usa funil ativo, então, com
+  # este arquivado e as caixas deixadas aqui, o cliente novo vira card no primeiro deles; sem nenhum, em nenhum).
   def linked_inboxes
-    @pipeline.pipeline_inboxes.includes(:inbox).where.not(inbox_id: nil).order(:id).map do |link|
-      { id: link.inbox_id, name: link.inbox&.name, auto_create_card: link.auto_create_card }
+    links = @pipeline.pipeline_inboxes.includes(:inbox).where.not(inbox_id: nil).order(:id).to_a
+    others = other_auto_create_pipelines(links.map(&:inbox_id))
+    links.map do |link|
+      { id: link.inbox_id, name: link.inbox&.name, auto_create_card: link.auto_create_card, other_pipelines: others.fetch(link.inbox_id, []) }
     end
+  end
+
+  def other_auto_create_pipelines(inbox_ids)
+    Current.account.crm_pipeline_inboxes.joins(:pipeline).merge(::Crm::Pipeline.active)
+           .where(inbox_id: inbox_ids, auto_create_card: true).where.not(pipeline_id: @pipeline.id)
+           .order('crm_pipelines.position ASC, crm_pipeline_inboxes.id ASC')
+           .pluck(:inbox_id, 'crm_pipelines.id', 'crm_pipelines.name')
+           .group_by(&:first).transform_values { |rows| rows.map { |_, id, name| { id: id, name: name } } }
   end
 end

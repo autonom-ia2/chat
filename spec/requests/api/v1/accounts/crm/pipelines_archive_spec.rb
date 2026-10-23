@@ -37,7 +37,7 @@ RSpec.describe 'CRM: arquivar e restaurar funil', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body['payload']).to eq(
         'open_cards_count' => 2,
-        'inboxes' => [{ 'id' => inbox.id, 'name' => 'WhatsApp Pós-venda', 'auto_create_card' => true }],
+        'inboxes' => [{ 'id' => inbox.id, 'name' => 'WhatsApp Pós-venda', 'auto_create_card' => true, 'other_pipelines' => [] }],
         'follow_ups_count' => 0, 'follow_up_series_count' => 0, 'upcoming_meetings_count' => 0
       )
     end
@@ -161,17 +161,118 @@ RSpec.describe 'CRM: arquivar e restaurar funil', type: :request do
     end
   end
 
+  describe 'DELETE /crm/pipelines/:id: caixas e funil principal (decisão 7)' do
+    let(:target_pipeline) { target_pipeline_and_stage.first }
+    let(:inbox) { create_crm_inbox(account: account, name: 'WhatsApp') }
+
+    def link(pipeline, inbox, auto: true, default_stage: nil)
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, auto_create_card: auto, default_stage: default_stage)
+    end
+
+    it 'leva as ligações e o funil padrão da caixa para o destino, e diz quais caixas foram' do
+      moved = link(pipeline, inbox, default_stage: stage)
+      setting = account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, auto_create_card: true,
+                                                   default_pipeline: pipeline, default_stage: stage)
+      first_target_stage = target_pipeline_and_stage.last
+      target_stage
+
+      delete "#{base}/#{pipeline.id}", params: { inboxes_to_pipeline_id: target_pipeline.id }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']).to include(
+        'status' => 'archived', 'moved_inboxes' => [{ 'id' => inbox.id, 'name' => 'WhatsApp' }], 'inboxes_target_pipeline_id' => target_pipeline.id
+      )
+      expect([moved.reload.pipeline_id, moved.default_stage_id, moved.auto_create_card]).to eq([target_pipeline.id, nil, true])
+      expect([setting.reload.default_pipeline_id, setting.default_stage_id]).to eq([target_pipeline.id, first_target_stage.id])
+    end
+
+    it 'caixa já ligada ao destino: fica a ligação do destino, criando se qualquer uma criava' do
+      link(pipeline, inbox, auto: true)
+      kept = link(target_pipeline, inbox, auto: false)
+
+      delete "#{base}/#{pipeline.id}", params: { inboxes_to_pipeline_id: target_pipeline.id }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(account.crm_pipeline_inboxes.where(inbox: inbox).pluck(:id)).to eq([kept.id])
+      expect(kept.reload.auto_create_card).to be(true)
+    end
+
+    it 'sem destino das caixas, as ligações ficam no funil arquivado e a resposta diz que nada foi' do
+      kept = link(pipeline, inbox)
+
+      delete "#{base}/#{pipeline.id}", headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body['payload']).to include('moved_inboxes' => [], 'inboxes_target_pipeline_id' => nil)
+      expect(kept.reload.pipeline_id).to eq(pipeline.id)
+    end
+
+    it 'recusa destino das caixas que não serve e não muda nada' do
+      open_card = card
+      moved = link(pipeline, inbox)
+      archived_pipeline = create_crm_pipeline(account: account, user: admin, name: 'Velho').first
+      archived_pipeline.archived!
+      other_account = create(:account)
+      foreign = create_crm_pipeline(account: other_account, user: create(:user, account: other_account, role: :administrator)).first
+
+      [pipeline.id, archived_pipeline.id, foreign.id, 0].each do |pipeline_id|
+        delete "#{base}/#{pipeline.id}", params: { inboxes_to_pipeline_id: pipeline_id, move_to_stage_id: target_stage.id },
+                                         headers: auth_headers(admin), as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('crm.pipeline_archive_invalid_inboxes_target')
+      end
+      expect(pipeline.reload).to be_active
+      expect(moved.reload.pipeline_id).to eq(pipeline.id)
+      expect(open_card.reload.pipeline_id).to eq(pipeline.id)
+    end
+
+    it 'arquiva o único principal passando o principal para outro funil na mesma operação' do
+      pipeline.update!(is_default: true)
+
+      delete "#{base}/#{pipeline.id}", headers: auth_headers(admin), as: :json
+      expect(response.parsed_body['error']).to eq('crm.pipeline_archive_only_default')
+
+      delete "#{base}/#{pipeline.id}", params: { new_default_pipeline_id: target_pipeline.id }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect([pipeline.reload.status, pipeline.is_default, target_pipeline.reload.is_default]).to eq(['archived', false, true])
+    end
+
+    it 'recusa novo principal que não serve e não muda nada' do
+      pipeline.update!(is_default: true)
+
+      delete "#{base}/#{pipeline.id}", params: { new_default_pipeline_id: pipeline.id }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('crm.pipeline_archive_invalid_new_default')
+      expect([pipeline.reload.status, pipeline.is_default, target_pipeline.reload.is_default]).to eq(['active', true, false])
+    end
+
+    it 'a prévia diz em que outro funil ativo a caixa continua criando card' do
+      link(pipeline, inbox)
+      link(target_pipeline, inbox)
+
+      get "#{base}/#{pipeline.id}/archive_preview", headers: auth_headers(admin)
+
+      expect(response.parsed_body.dig('payload', 'inboxes', 0, 'other_pipelines')).to eq([{ 'id' => target_pipeline.id, 'name' => 'Vendas' }])
+    end
+  end
+
   describe 'funis arquivados e restaurar' do
     it 'lista os arquivados com os cards abertos que voltam, e a lista normal segue só com os ativos' do
       2.times { card }
       card(status: :won)
       target_pipeline_and_stage
+      inbox = create_crm_inbox(account: account, name: 'WhatsApp Pós-venda')
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, auto_create_card: true)
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: create_crm_inbox(account: account, name: 'Sem criar'))
       pipeline.archived!
 
       get base, params: { status: 'archived' }, headers: auth_headers(admin)
 
-      expect(response.parsed_body['payload'].map { |item| item.slice('id', 'open_cards_count') })
-        .to eq([{ 'id' => pipeline.id, 'open_cards_count' => 2 }])
+      expect(response.parsed_body['payload'].map { |item| item.slice('id', 'open_cards_count', 'cards_count', 'inboxes') })
+        .to eq([{ 'id' => pipeline.id, 'open_cards_count' => 2, 'cards_count' => 3,
+                  'inboxes' => [{ 'id' => inbox.id, 'name' => 'WhatsApp Pós-venda' }] }])
 
       get base, headers: auth_headers(admin)
 

@@ -3,6 +3,13 @@
 # (`ai`, atividade com `by: 'ai'`, Crm::Ai::NaoENegocio) ou o sistema (`system`). O motivo é só o código que a IA grava
 # (`motivo`, ex.: nao_e_negocio); o raciocínio da IA não sai daqui.
 #
+# `desfecho` é o desfecho guardado ao arquivar um card fechado (Parte A, Crm::Card#desfecho_arquivado: won, lost,
+# resolved, cancelled), para a tela avisar para onde o card vai ao restaurar; nil no que estava aberto. `retornos_parados`
+# são os lembretes que o arquivar cancelou (`lembretes_cancelados` da mesma atividade).
+#
+# Na busca em todos os funis entram também os cards guardados com um funil arquivado, de qualquer status
+# (ArchivedController): `status` diz qual é, e só o arquivado tem data, autor e `can_restore`.
+#
 # O valor segue o Valor de venda (#2075): sem ver o valor do card, `value_cents` vem nil e `value_hidden` true.
 class Crm::Cards::ArchivedRows
   def initialize(cards:, user_context:)
@@ -17,19 +24,32 @@ class Crm::Cards::ArchivedRows
   private
 
   def row(card)
-    activity = last_archive_by_card[card.id]
     {
       id: card.id,
       title: card.title,
+      status: card.status,
+      contact_id: card.contact_id,
       stage: { id: card.stage_id, name: card.stage&.name },
       pipeline: { id: card.pipeline_id, name: card.pipeline&.name, status: card.pipeline&.status },
       # Card fechado antes de arquivar guarda a data do fechamento (Parte A, #2091).
       closed_at: card.closed_at,
+      desfecho: card.desfecho_arquivado
+    }.merge(archive_fields(card)).merge(value(card))
+  end
+
+  # Só o card arquivado tem quando, por quem e por que saiu do quadro; o guardado com o funil vem sem.
+  def archive_fields(card)
+    return { retornos_parados: 0, archived_at: nil, archived_by: nil, archive_reason: nil, can_restore: false } unless card.archived?
+
+    activity = last_archive_by_card[card.id]
+    payload = activity&.payload.to_h
+    {
+      retornos_parados: payload['lembretes_cancelados'].to_i,
       archived_at: activity&.created_at || card.last_activity_at,
       archived_by: archived_by(activity),
-      archive_reason: activity&.payload.to_h['motivo'],
+      archive_reason: payload['motivo'],
       can_restore: Pundit.policy!(@user_context, card).restore?
-    }.merge(value(card))
+    }
   end
 
   def value(card)
@@ -48,10 +68,14 @@ class Crm::Cards::ArchivedRows
   end
 
   def last_archive_by_card
-    @last_archive_by_card ||= Crm::Activity.where(account_id: @user_context[:account].id, card_id: @cards.map(&:id), event_type: 'archive')
+    @last_archive_by_card ||= Crm::Activity.where(account_id: @user_context[:account].id, card_id: archived_ids, event_type: 'archive')
                                            .select('DISTINCT ON (crm_activities.card_id) crm_activities.*')
                                            .order(:card_id, created_at: :desc, id: :desc)
                                            .index_by(&:card_id)
+  end
+
+  def archived_ids
+    @cards.select(&:archived?).map(&:id)
   end
 
   def users_by_id
