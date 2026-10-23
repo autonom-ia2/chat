@@ -20,7 +20,7 @@ module RestrictIntegrationTokenToCrm
     'api/v1/accounts/ai_requests' => { 'show' => 'crm_manage_ai' },
     'api/v1/accounts/crm/cards' => {
       'index' => 'crm_view', 'show' => 'crm_view', 'by_conversation' => 'crm_view',
-      'card_stages' => 'crm_view', 'current_ai_suggestion' => 'crm_view',
+      'card_stages' => 'crm_view', 'current_ai_suggestion' => 'crm_manage_ai',
       'create' => 'crm_manage_cards', 'from_conversation' => 'crm_manage_cards',
       'update' => 'crm_manage_cards', 'destroy' => 'crm_delete_cards',
       'link_conversation' => 'crm_manage_cards', 'unlink_conversation' => 'crm_manage_cards',

@@ -523,7 +523,7 @@ O reenvio do modelo (#1768) não tem rota própria: herda o responder da convers
 | ligar ou desligar contato do card | editar | POST .../link_contact, /unlink_contact | chave | crm_manage_cards | ep/enterprise/crm/card_policy.rb:45,49 |
 | criar contato a partir do card | criar | POST /crm/cards/:id/contact | chave | crm_manage_cards + criar contato | crm/cards/contacts_controller.rb:13-15 |
 | ação em massa: mover, atribuir, status, excluir (o "excluir" em massa arquiva o card, `archive_card!`) | executar | POST /crm/cards/bulk | chave | crm_view (só "ver") | crm/cards/bulk_controller.rb:7; app/services/crm/cards/bulk_action.rb:45-49 |
-| ver sugestão de etapa da IA | ver | GET /crm/cards/:id/current_ai_suggestion | chave | crm_view | ep/enterprise/crm/card_policy.rb:65 |
+| ver sugestão de etapa da IA (também o `ai_suggestion` do quadro e o filtro `ai_pending`; #2150, 23/10) | ver | GET /crm/cards/:id/current_ai_suggestion | chave | crm_manage_ai | ep/enterprise/crm/card_policy.rb:73 |
 | IA avalia o card | executar | POST /crm/cards/:id/evaluate_ai | chave | crm_manage_ai | ep/enterprise/crm/card_policy.rb:53 |
 | IA resume o card | executar | POST /crm/cards/:id/summarize | chave | crm_manage_ai | ep/enterprise/crm/card_policy.rb:57 |
 | reiniciar follow-up automático | executar | POST /crm/cards/:id/reset_auto_followup | chave | crm_manage_ai | ep/enterprise/crm/card_policy.rb:61 |

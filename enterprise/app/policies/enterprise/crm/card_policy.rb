@@ -69,7 +69,8 @@ module Enterprise::Crm::CardPolicy
     crm_permission?('crm_manage_ai') && show? && funnel_member?
   end
 
+  # A sugestão de etapa da IA (#2150): só quem tem crm_manage_ai a lê (Crm::SugestaoDeEtapa).
   def current_ai_suggestion?
-    crm_permission?('crm_view') && show?
+    crm_permission?('crm_manage_ai') && show?
   end
 end

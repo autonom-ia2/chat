@@ -125,6 +125,9 @@ const iaLigada = computed(
 const podeIa = computed(
   () => props.canManageAi && (!editando.value || card.value.can_edit === true)
 );
+// #2150 — a sugestão de etapa da IA é de quem tem crm_manage_ai: sem a chave, a
+// gaveta nem pede ao servidor (que recusaria) e não mostra a leitura da IA.
+const leSugestao = computed(() => iaLigada.value && props.canManageAi);
 const podeGerenciar = computed(() => props.canManageCards);
 const podeMover = computed(() => props.canMoveCards);
 const podeArquivar = computed(() => props.canDeleteCards);
@@ -172,8 +175,10 @@ const { porDia } = useCardHistorico({
 const sugestao = useSugestaoEtapa({
   t,
   cardId,
-  inicial: computed(() => props.card?.ai_suggestion || null),
-  ligada: computed(() => iaLigada.value && editando.value && props.show),
+  inicial: computed(() =>
+    props.canManageAi ? props.card?.ai_suggestion || null : null
+  ),
+  ligada: computed(() => leSugestao.value && editando.value && props.show),
   aoMudar: () => emit('refreshCard'),
 });
 const reuniao = useProximaReuniao({
@@ -198,7 +203,7 @@ const passos = computed(() =>
     reuniao: reuniao.reuniao.value,
     retornos: props.followUps,
     esperaDesde: card.value.conversation?.waiting_since || null,
-    sugestao: iaLigada.value ? sugestao.sugestao.value : null,
+    sugestao: leSugestao.value ? sugestao.sugestao.value : null,
     status: status.value,
   })
 );
@@ -805,7 +810,7 @@ defineExpose({
               :atual="card.stage_id"
               :pode-mover="podeMover"
               :movendo="isMovingCard"
-              :leitura="iaLigada"
+              :leitura="leSugestao"
               :pode-ia="podeIa"
               :sugestao="sugestao.sugestao.value"
               :carregando="sugestao.carregando.value"

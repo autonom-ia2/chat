@@ -69,8 +69,9 @@ class Crm::Kanban::CardPayloadBuilder
     (@card.metadata || {}).dig('ai', 'score', 'source').presence
   end
 
+  # Sugestão de etapa (#2150): só quem tem crm_manage_ai a lê; sem a chave, o card sai sem ai_suggestion.
   def ai_suggestion_payload
-    return unless Crm::Ai::Config.enabled?
+    return unless Crm::Ai::Config.enabled? && Crm::SugestaoDeEtapa.le?(@account_user)
 
     suggestion = @pending_suggestion || @card.ai_stage_suggestions.current_pending.includes(:to_stage).first
     return if suggestion.blank? || suggestion.fechar_fora_da_tela?(@card)
