@@ -2697,7 +2697,6 @@ onUnmounted(() => {
       :stale-choices="staleChoices"
       :linked-choices="linkedChoices"
       :result-choices="resultChoices"
-      :can-manage-ai="canManageAi"
       @close="showFiltersDrawer = false"
       @apply="applyFiltersFromDrawer"
       @clear="clearFiltersFromDrawer"
