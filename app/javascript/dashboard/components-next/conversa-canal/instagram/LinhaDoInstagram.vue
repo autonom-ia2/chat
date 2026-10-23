@@ -1,7 +1,8 @@
 <script setup>
 // Uma mensagem da conversa do Instagram com a cara do Direct (#2079). Recebida à
 // esquerda, com a foto de 28 px só na última do grupo; nossa à direita, sem foto.
-// Ao passar o mouse, "Responder" e "Mais opções" ao lado do balão, como no app.
+// Ao passar o mouse, "Responder", "Reagir" e "Mais opções" ao lado do balão, como no
+// app; a reação fica no selo do canto de baixo do balão (#2113).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'next/avatar/Avatar.vue';
@@ -21,12 +22,21 @@ import MidiaDoInstagram from './MidiaDoInstagram.vue';
 import AlbumDoInstagram from './AlbumDoInstagram.vue';
 import VozDoInstagram from './VozDoInstagram.vue';
 import CompartilhadoDoInstagram from './CompartilhadoDoInstagram.vue';
+import ReacoesDoInstagram from './ReacoesDoInstagram.vue';
+import BotaoDeReagir from '../BotaoDeReagir.vue';
+import { reacoesDaMensagem } from '../reacoes';
 
 // "Responder" segue a mesma regra do menu (quem só lê, nota, falha, caixa sem resposta).
+// "Reagir" é o mesmo fluxo da reação do atendente do WhatsApp (useReacaoDoAtendente, no
+// Message.vue): a linha só mostra o botão e devolve o emoji escolhido.
 defineProps({
   podeResponder: { type: Boolean, default: false },
+  podeReagir: { type: Boolean, default: false },
+  reacaoAtual: { type: String, default: '' },
+  reacaoBloqueada: { type: Boolean, default: false },
+  reagindo: { type: Boolean, default: false },
 });
-const emit = defineEmits(['responder', 'menu']);
+const emit = defineEmits(['responder', 'menu', 'reagir']);
 
 const { t } = useI18n();
 const mensagem = useMessageContext();
@@ -104,6 +114,9 @@ const abrirMenu = evento => {
 const fotoDoContato = computed(
   () => !enviada.value && !posicao.value.comProxima
 );
+const reacoes = computed(() =>
+  reacoesDaMensagem(dados.value.contentAttributes)
+);
 
 // A citação de quem respondeu: rótulo em cima e a mensagem citada esmaecida.
 const citada = computed(() => mensagem.inReplyTo?.value || null);
@@ -124,7 +137,7 @@ const textoCitado = computed(() => {
 
 <template>
   <div
-    class="group/instagram flex w-full items-end gap-2"
+    class="group/instagram group/linha flex w-full items-end gap-2"
     :class="[
       enviada ? 'flex-row-reverse' : 'flex-row',
       posicao.comProxima ? 'mb-0.5' : 'mb-2',
@@ -141,7 +154,10 @@ const textoCitado = computed(() => {
     </div>
     <div
       class="flex min-w-0 flex-col gap-0.5"
-      :class="enviada ? 'items-end' : 'items-start'"
+      :class="[
+        enviada ? 'items-end' : 'items-start',
+        { 'relative pb-[18px]': reacoes.length },
+      ]"
       @contextmenu="emit('menu', $event)"
     >
       <template v-if="citada">
@@ -205,6 +221,11 @@ const textoCitado = computed(() => {
         :showing-original="verOriginal"
         @toggle="verOriginal = !verOriginal"
       />
+      <ReacoesDoInstagram
+        v-if="reacoes.length"
+        :reacoes="reacoes"
+        :enviada="enviada"
+      />
     </div>
     <div
       class="flex shrink-0 items-center gap-2 self-center opacity-0 transition-opacity group-hover/instagram:opacity-100 focus-within:opacity-100"
@@ -219,6 +240,16 @@ const textoCitado = computed(() => {
       >
         <span class="i-ph-arrow-bend-up-left size-4" />
       </button>
+      <BotaoDeReagir
+        v-if="podeReagir"
+        class="-my-2"
+        :mensagem-id="dados.id"
+        :atual="reacaoAtual"
+        :bloqueado="reacaoBloqueada"
+        :enviando="reagindo"
+        :dica-bloqueado="t('CONVERSA_CANAL.INSTAGRAM.REAGIR_FORA_DA_JANELA')"
+        @reagir="emit('reagir', $event)"
+      />
       <button
         type="button"
         class="flex size-6 shrink-0 items-center justify-center p-0"

@@ -13678,8 +13678,8 @@
     "completo": true,
     "controller": "api/v1/accounts/conversa_canal/reacoes#create",
     "origem": [
-      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:9",
-      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:25"
+      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:12",
+      "app/controllers/api/v1/accounts/conversa_canal/reacoes_controller.rb:39"
     ],
     "sem_corpo": false
   },

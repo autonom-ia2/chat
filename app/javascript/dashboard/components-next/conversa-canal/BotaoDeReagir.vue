@@ -27,6 +27,8 @@ const props = defineProps({
   atual: { type: String, default: '' },
   bloqueado: { type: Boolean, default: false },
   enviando: { type: Boolean, default: false },
+  // A frase do bloqueio quando não é a das 24 h do WhatsApp (a do Instagram, #2113).
+  dicaBloqueado: { type: String, default: '' },
 });
 
 const emit = defineEmits(['reagir']);
@@ -114,7 +116,9 @@ onBeforeUnmount(() => emitter.off(ABRIR_REACOES, abrirPeloMenu));
     <button
       ref="gatilho"
       v-tooltip.top="
-        bloqueado ? t('CONVERSA_CANAL.REAGIR.FORA_DA_JANELA') : null
+        bloqueado
+          ? dicaBloqueado || t('CONVERSA_CANAL.REAGIR.FORA_DA_JANELA')
+          : null
       "
       type="button"
       class="grid place-content-center size-11 rounded-full text-[#8C8C8C] dark:text-[#A7A8A8] transition-opacity opacity-0 group-hover/linha:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:hidden"

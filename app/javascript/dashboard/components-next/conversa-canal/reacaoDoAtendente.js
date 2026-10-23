@@ -28,6 +28,10 @@ const ehCloud = caixa =>
 const ehWaha = caixa =>
   caixa?.channel_type === INBOX_TYPES.API && Boolean(caixa?.waha_provider);
 
+// Instagram (#2113): a caixa do login do Instagram. A ligada por página do Facebook
+// não reage pelo painel.
+const ehInstagram = caixa => caixa?.channel_type === INBOX_TYPES.INSTAGRAM;
+
 const NAO_REAGE = { visivel: false, bloqueado: false };
 const PENDENTES = [MESSAGE_STATUS.FAILED, MESSAGE_STATUS.PROGRESS];
 
@@ -58,11 +62,12 @@ const comIdProvisorio = mensagem =>
 // de 24 h aberta; o híbrido fora da janela (whatsapp_api_reply) também não reage.
 // WAHA: recebida ou enviada, sem janela. Com 'react' nas ações da conversa, vale a
 // regra do conector (estadoPelasAcoes).
+// Instagram (#2113): como o oficial, só mensagem do cliente e com a janela aberta.
 export const estadoDaReacao = ({ caixa, conversa, mensagem }) => {
   if (comIdProvisorio(mensagem)) return NAO_REAGE;
   if (reagePelaCaixa(conversa)) return estadoPelasAcoes(conversa, mensagem);
-  const cloud = ehCloud(caixa);
-  if (!cloud && !ehWaha(caixa)) return NAO_REAGE;
+  const soDoCliente = ehCloud(caixa) || ehInstagram(caixa);
+  if (!soDoCliente && !ehWaha(caixa)) return NAO_REAGE;
   if (mensagem.isPrivate || !mensagem.sourceId) return NAO_REAGE;
   if (mensagem.deleted || PENDENTES.includes(mensagem.status)) return NAO_REAGE;
   // Apagada pelo cliente: o servidor recusa (ConversaCanal::ReacaoDoAtendente).
@@ -70,10 +75,11 @@ export const estadoDaReacao = ({ caixa, conversa, mensagem }) => {
 
   const recebida = mensagem.messageType === MESSAGE_TYPES.INCOMING;
   const enviada = mensagem.messageType === MESSAGE_TYPES.OUTGOING;
-  if (cloud ? !recebida : !(recebida || enviada)) return NAO_REAGE;
+  if (soDoCliente ? !recebida : !(recebida || enviada)) return NAO_REAGE;
 
   const bloqueado =
-    cloud && (!conversa?.can_reply || Boolean(conversa?.whatsapp_api_reply));
+    soDoCliente &&
+    (!conversa?.can_reply || Boolean(conversa?.whatsapp_api_reply));
   return { visivel: true, bloqueado };
 };
 

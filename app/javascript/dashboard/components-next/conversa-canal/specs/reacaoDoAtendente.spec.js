@@ -94,6 +94,29 @@ describe('reacaoDoAtendente', () => {
       );
     });
 
+    it('Instagram (#2113): só a mensagem do cliente, bloqueado fora da janela', () => {
+      const INSTAGRAM = { channel_type: 'Channel::Instagram' };
+      const doCliente = { ...recebida, sourceId: 'mid.A' };
+      expect(estado(INSTAGRAM, doCliente)).toEqual({
+        visivel: true,
+        bloqueado: false,
+      });
+      expect(estado(INSTAGRAM, { ...doCliente, messageType: 1 }).visivel).toBe(
+        false
+      );
+      expect(estado(INSTAGRAM, { ...doCliente, sourceId: '' }).visivel).toBe(
+        false
+      );
+      expect(estado(INSTAGRAM, doCliente, { can_reply: false }).bloqueado).toBe(
+        true
+      );
+    });
+
+    it('Instagram por página do Facebook não reage pelo painel', () => {
+      const pagina = { channel_type: 'Channel::FacebookPage' };
+      expect(estado(pagina, recebida).visivel).toBe(false);
+    });
+
     it('caixa que não é WhatsApp (nem 360dialog): some', () => {
       const dialog = { channel_type: 'Channel::Whatsapp', provider: 'default' };
       expect(estado(dialog, recebida).visivel).toBe(false);

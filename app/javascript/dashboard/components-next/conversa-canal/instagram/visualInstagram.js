@@ -20,6 +20,10 @@ export const ELEVADO = 'bg-[#F3F5F7] dark:bg-[#262626]';
 export const BARRA_DE_CITACAO =
   'w-1 shrink-0 rounded-sm bg-[#F3F5F7] dark:bg-[#262626]';
 
+// Selo de reação (#2113): a pílula no canto de baixo do balão, com a borda na cor do
+// fundo do app, como no Direct.
+export const PILULA_DE_REACAO = `${ELEVADO} ${TEXTO} border-2 border-white dark:border-[#0C1014]`;
+
 // No lugar da foto ou do vídeo cujo endereço da Meta já expirou.
 export const INDISPONIVEL = `flex items-center justify-center gap-1.5 px-3 text-center text-[13px] leading-4 ${ELEVADO} ${SECUNDARIO}`;
 
