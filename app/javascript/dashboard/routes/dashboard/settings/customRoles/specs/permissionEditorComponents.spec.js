@@ -235,4 +235,41 @@ describe('ProfilePicker', () => {
 
     expect(checked(wrapper).attributes('data-profile')).toBe('SUPERVISOR');
   });
+
+  // #2115: a prévia conta só o que o modelo vai aplicar para quem está montando.
+  it('counts only the areas and sensitive keys within reach', () => {
+    const counted = {
+      mocks: {
+        $t: (key, count) =>
+          typeof count === 'number' ? `${key}#${count}` : key,
+      },
+    };
+    const full = mount(ProfilePicker, {
+      props: { initialProfile: 'SALES_MANAGER' },
+      global: counted,
+    });
+    const reduced = mount(ProfilePicker, {
+      props: {
+        initialProfile: 'SALES_MANAGER',
+        reach: keys =>
+          keys.filter(
+            key => !['sales_value_view', 'crm_metas_manage'].includes(key)
+          ),
+      },
+      global: counted,
+    });
+    const finance = mount(ProfilePicker, {
+      props: {
+        initialProfile: 'FINANCE',
+        reach: keys => keys.filter(key => key !== 'financial_view'),
+      },
+      global: counted,
+    });
+
+    expect(full.text()).toContain('CUSTOM_ROLE.SUMMARY.SENSITIVE#3');
+    expect(reduced.text()).toContain('CUSTOM_ROLE.SUMMARY.SENSITIVE#1');
+    expect(finance.text()).toContain('CUSTOM_ROLE.PICKER.AREAS#2');
+    expect(full.text()).not.toContain('CUSTOM_ROLE.PICKER.LEFT_OUT');
+    expect(reduced.text()).toContain('CUSTOM_ROLE.PICKER.LEFT_OUT');
+  });
 });
