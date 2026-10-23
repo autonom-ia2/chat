@@ -1,6 +1,10 @@
 import { flushPromises } from '@vue/test-utils';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
-import { dataDaReuniao, useAvisoDeReuniao } from './useAvisoDeReuniao';
+import {
+  ESPERA_MAXIMA_MS,
+  dataDaReuniao,
+  useAvisoDeReuniao,
+} from './useAvisoDeReuniao';
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -63,5 +67,37 @@ describe('useAvisoDeReuniao', () => {
     await consultar([1]);
     await flushPromises();
     expect(aviso.value).toBe('');
+  });
+
+  it('carrega até a resposta chegar; se falhar, libera sem aviso', async () => {
+    let responder;
+    CrmKanbanAPI.upcomingMeetings.mockReturnValueOnce(
+      new Promise(resolve => {
+        responder = resolve;
+      })
+    );
+    const { aviso, carregando, consultar } = useAvisoDeReuniao();
+
+    const consulta = consultar([7]);
+    expect(carregando.value).toBe(true);
+    responder(resposta([]));
+    await consulta;
+    expect(carregando.value).toBe(false);
+
+    CrmKanbanAPI.upcomingMeetings.mockRejectedValueOnce(new Error('falhou'));
+    await consultar([7]);
+    expect([carregando.value, aviso.value]).toEqual([false, '']);
+  });
+
+  it('a consulta que não responde libera o botão depois do teto', async () => {
+    vi.useFakeTimers();
+    CrmKanbanAPI.upcomingMeetings.mockReturnValueOnce(new Promise(() => {}));
+    const { carregando, consultar } = useAvisoDeReuniao();
+
+    consultar([7]);
+    expect(carregando.value).toBe(true);
+    vi.advanceTimersByTime(ESPERA_MAXIMA_MS);
+    expect(carregando.value).toBe(false);
+    vi.useRealTimers();
   });
 });

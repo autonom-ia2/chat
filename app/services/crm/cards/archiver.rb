@@ -9,11 +9,17 @@
 # é decisão de quem atende, pela tela da reunião. Ela fica, com o lembrete dela, e a atividade do arquivamento registra
 # quais ficaram (`reunioes_mantidas`).
 #
-# Ordem das travas, a mesma do resto do CRM: série, lembretes, card. O SeriesMaterializer trava a série antes de criar a
-# vez; o DueProcessor trava o lembrete e depois o card (Crm::FollowUps::AutoFollowupRunner); o reset do follow-up da IA
-# também (CardsController#reset_auto_followup). Travar o card primeiro e o lembrete depois cruzaria com eles
-# (ActiveRecord::Deadlocked). O card é relido sob a trava: o status de agora decide o desfecho guardado, não o do objeto
-# carregado antes (outro pedido pode ter fechado o card como Ganho nesse meio tempo).
+# Ordem das travas, a do resto do CRM: série, lembrete, card. O SeriesMaterializer trava a série antes de criar a vez; o
+# DueProcessor trava o lembrete e só no fim o card (a chamada lenta à IA ou o envio acontecem com o lembrete travado e o
+# card livre, Crm::FollowUps::AutoFollowupRunner); o cancelamento de reunião e o reset do follow-up da IA também. Por
+# isso o card não vem primeiro aqui. O card é relido sob a trava: o status de agora decide o desfecho guardado.
+#
+# Duas passagens, e a segunda nunca espera:
+# 1. Antes do card, trava (esperando) as séries e os lembretes ativos.
+# 2. Com o card travado, pega o que nasceu entre uma coisa e outra (criar série ou lembrete do card segura o card até
+#    terminar, então já terminou) com SKIP LOCKED. O que estiver travado por outro é do DueProcessor ou do
+#    SeriesMaterializer, que leem o status do card na barreira (Crm::Cards::Archiver.arquivado_sob_trava?), esperam este arquivamento e
+#    o encontram arquivado: cancelam o lembrete ou encerram a série. Nada espera depois do card, então não há ciclo.
 class Crm::Cards::Archiver
   MOTIVO = 'card_archived'.freeze
 
@@ -28,37 +34,57 @@ class Crm::Cards::Archiver
   # roda sob as travas, com o card relido, e decide se ainda arquiva (as guardas da IA); false desiste sem arquivar.
   def perform
     ActiveRecord::Base.transaction do
-      travar_series
-      travar_lembretes
+      series = travar_series
+      lembretes = travar_lembretes
       @card.lock!
       next false if (block_given? && !yield) || @card.archived?
 
-      # Relidos sob a trava do card: entra o que foi criado entre uma trava e outra (criar série ou lembrete do card
-      # espera a trava do card até o fim desta transação).
-      arquivar!(travar_series, travar_lembretes)
+      arquivar!(series + series_novas(series), lembretes + lembretes_novos(lembretes))
       true
     end
   end
 
+  # A barreira de quem age sobre um lembrete ou série do card (DueProcessor, SeriesMaterializer), já com a trava deles:
+  # FOR KEY SHARE espera um arquivamento em curso (o card FOR UPDATE) e, lido aberto, segura até o fim da transação de
+  # quem leu, então o arquivamento espera por ela. Não bloqueia o UPDATE comum do card (FOR NO KEY UPDATE).
+  def self.arquivado_sob_trava?(card_id)
+    Crm::Card.where(id: card_id).lock('FOR KEY SHARE').pick(:status) == 'archived'
+  end
+
+  # A cadência do follow-up de IA acaba com o card arquivado (as tarefas dela foram canceladas): sem isto o estado
+  # ficava `active: true` e o planner tratava o card como em cadência. Terminal, como o fechamento no Runner.
+  def self.metadata_sem_cadencia(card)
+    estado = card.metadata.to_h.dig('ai', 'auto_followup_state').to_h
+    return card.metadata unless estado['active'] == true
+
+    fim = estado.merge('active' => false, 'spent' => true, 'stopped_reason' => MOTIVO, 'next_due_at' => nil)
+    card.metadata.to_h.deep_merge('ai' => { 'auto_followup_state' => fim })
+  end
+
   private
 
-  def travar_series
-    Crm::FollowUpSeries.where(account_id: @card.account_id, card_id: @card.id, status: %i[active paused]).order(:id).lock.to_a
+  def series_ativas
+    Crm::FollowUpSeries.where(account_id: @card.account_id, card_id: @card.id, status: %i[active paused]).order(:id)
   end
 
-  def travar_lembretes
-    @card.follow_ups.active.where.not(id: reunioes_mantidas.filter_map(&:reminder_id)).order(:id).lock.to_a
-  end
+  def travar_series = series_ativas.lock.to_a
 
-  # A série encerra antes de as vezes serem canceladas, e travada desde o começo: o SeriesMaterializer, que trava a série
-  # para criar a vez seguinte, espera e a encontra encerrada. Nenhuma vez nova nasce depois do cancelamento.
+  def travar_lembretes = @card.follow_ups.active.order(:id).lock.to_a
+
+  def series_novas(vistas) = series_ativas.where.not(id: vistas.map(&:id)).lock('FOR UPDATE SKIP LOCKED').to_a
+
+  def lembretes_novos(vistos) = @card.follow_ups.active.where.not(id: vistos.map(&:id)).order(:id).lock('FOR UPDATE SKIP LOCKED').to_a
+
+  # A série encerra antes de as vezes serem canceladas: nenhuma vez nova nasce depois do cancelamento.
   def arquivar!(series, lembretes)
-    @card.update!(status: :archived, last_activity_at: @now)
+    @card.update!(status: :archived, last_activity_at: @now, metadata: self.class.metadata_sem_cadencia(@card))
     expirar_sugestoes!
     encerrar_series!(series)
-    cancelar_lembretes!(lembretes)
+    da_reuniao = reunioes_mantidas.filter_map(&:reminder_id)
+    cancelados = lembretes.reject { |lembrete| da_reuniao.include?(lembrete.id) }
+    cancelar_lembretes!(cancelados)
     Crm::FollowUps::CardNextDueUpdater.update(@card)
-    Crm::ActivityLogger.new(card: @card, actor: @actor, event_type: 'archive', payload: registro(lembretes.size)).perform
+    Crm::ActivityLogger.new(card: @card, actor: @actor, event_type: 'archive', payload: registro(cancelados.size)).perform
   end
 
   def expirar_sugestoes!
@@ -75,6 +101,7 @@ class Crm::Cards::Archiver
     end
   end
 
+  # Lidas com o card travado, depois de todas as travas.
   def reunioes_mantidas
     @reunioes_mantidas ||= Crm::Meeting.where(account_id: @card.account_id, card_id: @card.id).upcoming.to_a
   end

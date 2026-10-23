@@ -389,8 +389,12 @@ const reabrir = () =>
   guardar(() => podeGerenciar.value && emit('closeDeal', { result: 'reopen' }));
 const fecharNegocio = dados => podeGerenciar.value && emit('closeDeal', dados);
 // A reunião marcada continua de pé ao arquivar (#2091): o diálogo avisa.
-const { aviso: avisoDeReuniao, consultar: consultarReuniao } =
-  useAvisoDeReuniao();
+// Arquivar espera o aviso chegar (carregando, com teto em useAvisoDeReuniao).
+const {
+  aviso: avisoDeReuniao,
+  carregando: carregandoAviso,
+  consultar: consultarReuniao,
+} = useAvisoDeReuniao();
 const arquivar = () =>
   guardar(() => {
     if (!podeArquivar.value) return;
@@ -398,6 +402,7 @@ const arquivar = () =>
     dialogoArquivar.value?.open();
   });
 const confirmarArquivar = () => {
+  if (carregandoAviso.value) return;
   dialogoArquivar.value?.close();
   if (podeArquivar.value) emit('archive');
 };
@@ -626,7 +631,7 @@ defineExpose({
     :title="t('CRM_CARD.ARQUIVAR.TITULO', { nome: titulo })"
     :description="t('CRM_CARD.ARQUIVAR.TEXTO')"
     :confirm-button-label="t('CRM_CARD.ARQUIVAR.BOTAO')"
-    :is-loading="isArchiving"
+    :is-loading="isArchiving || carregandoAviso"
     @confirm="confirmarArquivar"
   >
     <p

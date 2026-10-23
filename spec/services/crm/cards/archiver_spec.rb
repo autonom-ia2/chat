@@ -65,4 +65,15 @@ RSpec.describe Crm::Cards::Archiver do
     expect(described_class.new(card: card, actor: host).perform).to be(false)
     expect(card.activities.where(event_type: 'archive').count).to eq(1)
   end
+
+  it 'encerra a cadência do follow-up de IA, que ficava active: true com as tarefas canceladas' do
+    card.update!(metadata: card.metadata.to_h.merge('ai' => { 'auto_followup_state' => { 'active' => true, 'touch' => 1 } }))
+    tarefa = lembrete(metadata: { 'source' => 'ai_followup' })
+
+    described_class.new(card: card, actor: host).perform
+
+    expect(tarefa.reload).to be_canceled
+    expect(card.reload.metadata.dig('ai', 'auto_followup_state'))
+      .to include('active' => false, 'spent' => true, 'stopped_reason' => 'card_archived', 'touch' => 1)
+  end
 end
