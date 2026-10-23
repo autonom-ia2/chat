@@ -133,20 +133,84 @@ RSpec.describe Crm::Ai::RelerMidiaPendenteJob do
     expect(enfileiradas).to be_empty
   end
 
-  it 'conta cuja consulta estoura o tempo é pulada e a rodada segue nas outras', :aggregate_failures do
-    outra = create(:account)
-    outra.enable_features!(Crm::Ai::LeitorDeMidia::FLAG)
-    caixa = create_crm_inbox(account: outra)
-    outra.crm_inbox_settings.find_or_initialize_by(inbox: caixa).update!(crm_enabled: true)
-    conversa = create_crm_conversation(account: outra, inbox: caixa, contact: create(:contact, account: outra))
-    anexar_audio(mensagem)
-    da_outra = anexar_audio(create(:message, account: outra, inbox: caixa, conversation: conversa, message_type: :incoming,
-                                             created_at: 1.hour.ago)).message
-    allow(Crm::Ai::TetoDaMidia).to receive(:new).and_call_original
-    allow(Crm::Ai::TetoDaMidia).to receive(:new).with(account).and_raise(ActiveRecord::QueryCanceled, 'statement timeout')
+  it 'só a mensagem de entrada: a mídia que a equipe mandou não é relida' do
+    anexar_audio(create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                                  created_at: 1.hour.ago))
 
-    expect { described_class.perform_now }.not_to raise_error
-    expect(enfileiradas).to eq([da_outra.id])
+    described_class.perform_now
+
+    expect(enfileiradas).to be_empty
+  end
+
+  # Pega: conta grande cuja janela não cabe nos MAX_LOTES lotes ficar sem leitura sem ninguém saber.
+  describe 'quando os lotes acabam' do
+    before do
+      stub_const("#{described_class}::LOTE", 2)
+      stub_const("#{described_class}::MAX_LOTES", 2)
+      allow(Rails.logger).to receive(:warn)
+    end
+
+    it 'antes do fim da janela: avisa no log com a conta e a data até onde chegou' do
+      Array.new(5) { |i| mensagem(idade: (i + 1).hours) }
+
+      described_class.perform_now
+
+      expect(Rails.logger).to have_received(:warn).with(a_string_including("varredura_cortada conta=#{account.id} lotes=2 ate="))
+    end
+
+    # 4 = LOTE x MAX_LOTES: a última página vem cheia, mas a janela acabou junto (pega o falso aviso na borda).
+    [3, 4].each do |total|
+      it "com o fim da janela (#{total} mensagens): não avisa" do
+        Array.new(total) { |i| mensagem(idade: (i + 1).hours) }
+
+        described_class.perform_now
+
+        expect(Rails.logger).not_to have_received(:warn).with(a_string_including('varredura_cortada'))
+      end
+    end
+  end
+
+  # Pega: uma conta com erro derrubar a rodada inteira (as outras ficariam sem releitura) ou o erro sumir sem log.
+  describe 'quando uma conta falha' do
+    let(:outra) { create(:account) }
+    let(:da_outra) do
+      caixa = create_crm_inbox(account: outra)
+      outra.crm_inbox_settings.find_or_initialize_by(inbox: caixa).update!(crm_enabled: true)
+      conversa = create_crm_conversation(account: outra, inbox: caixa, contact: create(:contact, account: outra))
+      anexar_audio(create(:message, account: outra, inbox: caixa, conversation: conversa, message_type: :incoming,
+                                    created_at: 1.hour.ago)).message
+    end
+    let!(:minha) { anexar_audio(mensagem).message }
+
+    before do
+      outra.enable_features!(Crm::Ai::LeitorDeMidia::FLAG)
+      da_outra
+      allow(Rails.logger).to receive(:warn)
+    end
+
+    it 'consulta que estoura o tempo: pula a conta, avisa e segue nas outras', :aggregate_failures do
+      allow(Crm::Ai::TetoDaMidia).to receive(:new).and_call_original
+      allow(Crm::Ai::TetoDaMidia).to receive(:new).with(account).and_raise(ActiveRecord::QueryCanceled, 'statement timeout')
+
+      expect { described_class.perform_now }.not_to raise_error
+      expect(enfileiradas).to eq([da_outra.id])
+      expect(Rails.logger).to have_received(:warn).with("[crm][midia] varredura_pulou conta=#{account.id} erro=ActiveRecord::QueryCanceled")
+    end
+
+    it 'Redis fora: pula a conta, avisa e segue nas outras', :aggregate_failures do
+      allow(Crm::Ai::LerMidiaJob).to receive(:reler).and_call_original
+      allow(Crm::Ai::LerMidiaJob).to receive(:reler).with(minha.id, 'varredura').and_raise(Redis::CannotConnectError)
+
+      expect { described_class.perform_now }.not_to raise_error
+      expect(enfileiradas).to eq([da_outra.id])
+      expect(Rails.logger).to have_received(:warn).with("[crm][midia] varredura_pulou conta=#{account.id} erro=Redis::CannotConnectError")
+    end
+
+    it 'erro fora da lista (de programação) sobe: não é engolido' do
+      allow(Crm::Ai::TetoDaMidia).to receive(:new).and_raise(NoMethodError)
+
+      expect { described_class.perform_now }.to raise_error(NoMethodError)
+    end
   end
 
   it 'respeita o teto de mensagens por conta em cada rodada' do

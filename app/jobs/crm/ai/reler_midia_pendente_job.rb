@@ -16,7 +16,11 @@
 #   - até MAX_MENSAGENS_POR_CONTA por rodada, e só enquanto a conta gastou menos que FRACAO_DO_TETO do teto do dia: a
 #     releitura de mídia antiga não tira a vez da mídia nova;
 #   - a mesma mensagem não é enfileirada de novo enquanto a anterior pode estar na fila (LerMidiaJob.reler);
-#   - uma conta cuja consulta estoura o statement_timeout é pulada com aviso no log, e a rodada segue nas outras.
+#   - só as mensagens de entrada (as do cliente): o índice (account_id, created_at, message_type) já cobre o filtro;
+#   - os MAX_LOTES lotes acabaram antes do fim da janela (conta com muita mensagem): aviso no log com a data até onde
+#     chegou, para medir; a mídia mais velha fica para a mensagem nova da conversa;
+#   - uma conta que falha (consulta que estoura o statement_timeout, banco ou Redis fora do ar) é pulada com
+#     aviso no log (classe do erro e id da conta, sem dado de cliente) e no rastreador de erros; a rodada segue nas outras.
 # CARENCIA: o job da chegada ainda pode estar tentando (arquivo subindo, ~4 min; falha passageira, 1 + 5 min). MARGEM:
 # a última tentativa de quem teve a próxima agendada para o fim da janela (falhou de novo: o leitor marca `expirado`).
 class Crm::Ai::RelerMidiaPendenteJob < ApplicationJob
@@ -26,6 +30,10 @@ class Crm::Ai::RelerMidiaPendenteJob < ApplicationJob
   FRACAO_DO_TETO = 0.5
   LOTE = 500
   MAX_LOTES = 10
+  # O que derruba a varredura de UMA conta: tempo esgotado e infraestrutura fora do ar. Lista fechada: erro de programação
+  # (SQL inválido, registro que sumiu, NoMethodError) sobe e aparece.
+  FALHAS_DA_CONTA = [ActiveRecord::QueryCanceled, ActiveRecord::ConnectionNotEstablished, ActiveRecord::ConnectionTimeoutError,
+                     Redis::BaseError, RedisClient::Error, ConnectionPool::TimeoutError].freeze
 
   queue_as :scheduled_jobs
 
@@ -43,7 +51,8 @@ class Crm::Ai::RelerMidiaPendenteJob < ApplicationJob
 
     ids = pendentes(account, vagas).select { |id| Crm::Ai::LerMidiaJob.reler(id, 'varredura') }
     Rails.logger.info("[crm][midia] varredura conta=#{account.id} mensagens=#{ids.size}") if ids.any?
-  rescue ActiveRecord::QueryCanceled => e
+  rescue *FALHAS_DA_CONTA => e
+    ChatwootExceptionTracker.new(e, account: account).capture_exception
     Rails.logger.warn("[crm][midia] varredura_pulou conta=#{account.id} erro=#{e.class}")
   end
 
@@ -71,16 +80,19 @@ class Crm::Ai::RelerMidiaPendenteJob < ApplicationJob
     cursor = nil
     MAX_LOTES.times do
       pagina = candidatas(account, cursor).limit(LOTE).pluck(:id, :created_at)
-      break if pagina.empty? || yield(pagina.map(&:first))
+      return if pagina.empty? || yield(pagina.map(&:first)) || pagina.size < LOTE
 
       cursor = pagina.last.reverse
     end
+    return unless candidatas(account, cursor).exists?
+
+    Rails.logger.warn("[crm][midia] varredura_cortada conta=#{account.id} lotes=#{MAX_LOTES} ate=#{cursor.first.utc.iso8601}")
   end
 
   def candidatas(account, cursor)
     caixas = Crm::InboxSetting.where(account_id: account.id, crm_enabled: true).select(:inbox_id)
-    escopo = account.messages.where(private: false, inbox_id: caixas,
-                                    created_at: (Crm::Ai::FalhaDaMidia::JANELA_DE_RELEITURA + MARGEM).ago..CARENCIA.ago)
+    janela = (Crm::Ai::FalhaDaMidia::JANELA_DE_RELEITURA + MARGEM).ago..CARENCIA.ago
+    escopo = account.messages.incoming.where(private: false, inbox_id: caixas, created_at: janela)
                     .reorder(created_at: :desc, id: :desc)
     cursor ? escopo.where('(messages.created_at, messages.id) < (?, ?)', *cursor) : escopo
   end
