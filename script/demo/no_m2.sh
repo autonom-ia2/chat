@@ -45,6 +45,13 @@ carregar_estado() {
   done < "$L/demo.env"
   [ "$SLUG" = "$slug" ] || falha "demo.env é de outra demo ($SLUG)"
   [ "$DB" = "${PREFIXO_BANCO}${slug//-/_}" ] || falha "demo.env aponta para outro banco ($DB)"
+  # Demo em remoção (o M2 já apagou banco e snapshot): só deixa terminar.
+  if [ -f "$L/apagado-no-m2" ]; then
+    case "$cmd" in
+      apagar | fechar | descer | estado) ;;
+      *) falha "demo em remoção: rode bin/demo down $slug --apagar" ;;
+    esac
+  fi
 }
 
 psql_demo() { "$PGBIN/psql" -X -h "$PG_HOST" -p "$PG_PORT" -U postgres -v ON_ERROR_STOP=1 "$@"; }
@@ -80,22 +87,42 @@ demo_env() {
     "$@"
 }
 
-escutando() { /usr/sbin/lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null || true; }
-
-cwd_do_pid() {
-  local linha
-  linha=$(/usr/sbin/lsof -a -p "$1" -d cwd -Fn 2>/dev/null | /usr/bin/tail -1)
-  echo "${linha#n}"
+# PIDs que escutam na porta, em ESCUTA. Erro do lsof (stderr ou saída fora de 0/1) para tudo: nunca vira "porta
+# livre". O resultado vai em variável, não em $(...): falha dentro de um subshell não pararia o script.
+escutando() {
+  local saida codigo=0 erro
+  erro=$(/usr/bin/mktemp "${TMPDIR:-/tmp}/demo-porta.XXXXXX") || falha "mktemp falhou; não sei quem escuta na porta $1"
+  [ -n "$erro" ] || falha "mktemp falhou; não sei quem escuta na porta $1"
+  saida=$(/usr/sbin/lsof -w -t -iTCP:"$1" -sTCP:LISTEN 2> "$erro") || codigo=$?
+  if [ "$codigo" -gt 1 ] || [ -s "$erro" ]; then
+    /usr/bin/head -3 "$erro" >&2
+    /bin/rm -f "$erro"
+    falha "lsof falhou na porta $1 (saída $codigo)"
+  fi
+  /bin/rm -f "$erro"
+  ESCUTA=$saida
 }
 
-# Uma porta "é nossa" quando quem escuta nela roda dentro do snapshot desta demo.
-porta_livre_ou_nossa() {
-  local porta=$1 pid
-  for pid in $(escutando "$porta"); do
-    case "$(cwd_do_pid "$pid")" in
-      "$SNAP"*) ;;
-      *) falha "porta $porta ocupada por outro processo (pid $pid). Use outro slug." ;;
-    esac
+escuta() { escutando "$1"; [ -n "$ESCUTA" ]; }
+
+# Cada servidor da demo roda num grupo de processos próprio (o subir grava o PGID em pids/<nome>.pgid).
+# "É nosso" = quem escuta na porta está nesse grupo. cwd no snapshot não basta: outro processo pode ter o mesmo.
+pgid_gravado() { [ -f "$L/pids/$1.pgid" ] && /bin/cat "$L/pids/$1.pgid"; }
+# Processos vivos do grupo, em MEMBROS. Se o ps falhar, para tudo (nunca vira "grupo morto").
+membros_do_grupo() {
+  local tabela
+  tabela=$(/bin/ps -axo pid=,pgid=) || falha "ps falhou; não sei se o grupo $1 morreu"
+  MEMBROS=$(printf '%s\n' "$tabela" | /usr/bin/awk -v g="$1" '$2 == g { print $1 }')
+}
+
+porta_nossa_ou_livre() {
+  local nome=$1 porta=$2 pid grupo esperado
+  esperado=$(pgid_gravado "$nome" || true)
+  escutando "$porta"
+  for pid in $ESCUTA; do
+    grupo=$(/bin/ps -o pgid= -p "$pid" | /usr/bin/tr -d ' ')
+    [ -n "$esperado" ] && [ "$grupo" = "$esperado" ] ||
+      falha "porta $porta ($nome) ocupada por processo que não é desta demo (pid $pid, grupo $grupo)"
   done
 }
 
@@ -114,7 +141,7 @@ checar() {
     fi
   done
   for porta in "$rails" "$vite" "$redis"; do
-    [ -z "$(escutando "$porta")" ] || falha "porta $porta ocupada por outro processo. Use outro slug."
+    ! escuta "$porta" || falha "porta $porta ocupada por outro processo. Use outro slug."
   done
   echo "banco $DB e portas $rails/$vite/$redis livres"
 }
@@ -201,7 +228,6 @@ subir_redis() {
 
 preparar() {
   carregar_estado
-  [ ! -f "$L/apagado-no-m2" ] || falha "demo em remoção: termine com bin/demo down $slug --apagar"
   [ ! -f "$L/preparado" ] || return 0
   sem_segredo "$SNAP"
   subir_redis
@@ -222,21 +248,31 @@ preparar() {
   /usr/bin/touch "$L/preparado"
 }
 
-# Processos de longa duração: o subir chama estes por nohup, com cwd no snapshot (o descer confere o cwd).
+# Processos de longa duração: o subir chama estes por nohup, cada um num grupo de processos próprio.
 _rails() { carregar_estado; cd "$SNAP"; demo_env bundle exec rails s -p "$RAILS_PORT" -b 127.0.0.1; }
 _vite() { carregar_estado; cd "$SNAP"; demo_env bundle exec vite dev; }
+
+# Sobe o servidor num grupo de processos novo (setpgrp + exec): o PID lançado é o PGID, e o descer derruba o
+# grupo inteiro (wrapper, Rails/Vite e filhos como esbuild e fsevent_watch) e confere que todos morreram.
+lancar() {
+  local nome=$1 log=$2
+  nohup /usr/bin/perl -e 'setpgrp(0, 0) or die "setpgrp: $!"; exec @ARGV or die "exec: $!"' \
+    /bin/bash "$KIT/no_m2.sh" "_$nome" "$slug" > "$log" 2>&1 < /dev/null &
+  echo "$!" > "$L/pids/$nome.pgid"
+}
 
 subir() {
   carregar_estado
   subir_redis
-  porta_livre_ou_nossa "$RAILS_PORT"
-  porta_livre_ou_nossa "$VITE_PORT"
-  if [ -z "$(escutando "$VITE_PORT")" ]; then
-    nohup /bin/bash "$KIT/no_m2.sh" _vite "$slug" > "$L/vite.log" 2>&1 < /dev/null &
+  porta_nossa_ou_livre rails "$RAILS_PORT"
+  porta_nossa_ou_livre vite "$VITE_PORT"
+  mkdir -p "$L/pids"
+  if ! escuta "$VITE_PORT"; then
+    lancar vite "$L/vite.log"
   fi
-  if [ -z "$(escutando "$RAILS_PORT")" ]; then
+  if ! escuta "$RAILS_PORT"; then
     /bin/rm -f "$SNAP/tmp/pids/server.pid"
-    nohup /bin/bash "$KIT/no_m2.sh" _rails "$slug" > "$L/rails.log" 2>&1 < /dev/null &
+    lancar rails "$L/rails.log"
   fi
   echo "esperando o login responder em http://127.0.0.1:$RAILS_PORT/app/login (a 1a vez compila, leva minutos)..."
   local inicio=$SECONDS codigo
@@ -249,39 +285,57 @@ subir() {
     fi
     sleep 5
   done
-  [ -n "$(escutando "$VITE_PORT")" ] || { /usr/bin/tail -20 "$L/vite.log"; falha "Vite não subiu (log $L/vite.log)"; }
+  escuta "$VITE_PORT" || { /usr/bin/tail -20 "$L/vite.log"; falha "Vite não subiu (log $L/vite.log)"; }
   echo "painel no ar em $((SECONDS - inicio))s"
 }
 
-parar_porta() {
-  local porta=$1 pid n=0
-  for pid in $(escutando "$porta"); do
-    case "$(cwd_do_pid "$pid")" in
-      "$SNAP"*) kill "$pid" ;;
-      *) echo "porta $porta: pid $pid não é desta demo, não mexi" >&2 ;;
-    esac
+# Para um servidor da demo pelo grupo gravado. Devolve 1 (sem matar mais nada) se a porta continuar escutando ou
+# sobrar processo do grupo depois de 30 s. Quem escuta na porta fora do grupo: falha sem mexer.
+parar_servico() {
+  local nome=$1 porta=$2 grupo n=0 vivos
+  grupo=$(pgid_gravado "$nome" || true)
+  porta_nossa_ou_livre "$nome" "$porta"
+  MEMBROS=''
+  [ -z "$grupo" ] || membros_do_grupo "$grupo"
+  [ -z "$MEMBROS" ] || kill -TERM -- "-$grupo" || true
+  while :; do
+    MEMBROS=''
+    [ -z "$grupo" ] || membros_do_grupo "$grupo"
+    vivos=$MEMBROS
+    escutando "$porta"
+    [ -n "$vivos" ] || [ -n "$ESCUTA" ] || break
+    if [ $n -ge 30 ]; then
+      echo "$nome: depois de 30 s, porta $porta escutando=[$(echo "$ESCUTA" | /usr/bin/tr '\n' ' ')]" \
+        "processos do grupo $grupo vivos=[$(echo "$vivos" | /usr/bin/tr '\n' ' ')]" >&2
+      return 1
+    fi
+    sleep 1
+    n=$((n + 1))
   done
-  while [ -n "$(escutando "$porta")" ] && [ $n -lt 30 ]; do sleep 1; n=$((n + 1)); done
-  [ -z "$(escutando "$porta")" ] || echo "porta $porta ainda escutando depois de 30s" >&2
+  /bin/rm -f "$L/pids/$nome.pgid"
+  return 0
 }
 
 descer() {
   carregar_estado
-  parar_porta "$RAILS_PORT"
-  parar_porta "$VITE_PORT"
-  if "$REDISBIN/redis-cli" -p "$REDIS_PORT" ping >/dev/null 2>&1; then
-    if [ "$("$REDISBIN/redis-cli" -p "$REDIS_PORT" config get dir | /usr/bin/tail -1)" = "$L/redis" ]; then
-      "$REDISBIN/redis-cli" -p "$REDIS_PORT" shutdown nosave >/dev/null 2>&1 || true
-    else
-      echo "Redis na porta $REDIS_PORT não é desta demo, não mexi" >&2
-    fi
+  local ok=true
+  parar_servico rails "$RAILS_PORT" || ok=false
+  parar_servico vite "$VITE_PORT" || ok=false
+  if escuta "$REDIS_PORT"; then
+    [ "$("$REDISBIN/redis-cli" -p "$REDIS_PORT" config get dir | /usr/bin/tail -1)" = "$L/redis" ] ||
+      falha "Redis na porta $REDIS_PORT não é desta demo; não mexi"
+    "$REDISBIN/redis-cli" -p "$REDIS_PORT" shutdown nosave >/dev/null 2>&1 || true
+    local n=0
+    while escuta "$REDIS_PORT" && [ $n -lt 20 ]; do sleep 0.5; n=$((n + 1)); done
+    ! escuta "$REDIS_PORT" || { echo "Redis ainda escutando na porta $REDIS_PORT" >&2; ok=false; }
   fi
+  $ok || falha "não consegui parar todos os servidores da demo; nada foi apagado"
   echo "servidores da demo $slug desligados"
 }
 
 reiniciar_vite() {
   carregar_estado
-  parar_porta "$VITE_PORT"
+  parar_servico vite "$VITE_PORT" || falha "o Vite não parou"
   subir
 }
 
@@ -302,7 +356,7 @@ descartar_snapshot() {
 
 reiniciar_rails() {
   carregar_estado
-  parar_porta "$RAILS_PORT"
+  parar_servico rails "$RAILS_PORT" || falha "o Rails não parou"
   subir
 }
 
@@ -344,7 +398,7 @@ prints() {
   carregar_estado
   local jornadas=$L/prints-entrada/jornadas.json saida=$L/prints-saida
   [ -f "$jornadas" ] || falha "jornadas não chegaram: $jornadas"
-  [ -n "$(escutando "$RAILS_PORT")" ] || falha "painel desligado. Rode: bin/demo up $slug"
+  escuta "$RAILS_PORT" || falha "painel desligado. Rode: bin/demo up $slug"
   /bin/rm -rf "$saida"
   mkdir -p "$saida"
   local senha=${DEMO_SENHA:-}
@@ -361,6 +415,7 @@ mostrar_estado() {
   carregar_estado
   printf '%s=%s\n' SLUG "$SLUG" SNAP "$SNAP" BASE_SHA "$BASE_SHA" ORIGEM "$ORIGEM" DB "$DB" \
     RAILS_PORT "$RAILS_PORT" VITE_PORT "$VITE_PORT" REDIS_PORT "$REDIS_PORT"
+  if [ -f "$L/apagado-no-m2" ]; then echo "EM_REMOCAO=sim"; else echo "EM_REMOCAO=nao"; fi
 }
 
 # Um SQL no banco da demo. Opções do psql não passam (o argumento vai inteiro no -c), o psqlrc não é lido (-X)
@@ -374,30 +429,11 @@ psql_cmd() {
   psql_demo -d "$DB" -c "$sql"
 }
 
-# PIDs dos servidores desta demo, que o descer cuida: quem escuta nas portas dela, os processos pais com cwd no
-# snapshot (os wrappers do nohup) e todos os descendentes deles (esbuild do Vite, fsevent_watch do Rails...).
-pids_da_demo() {
-  local porta pid raizes=''
-  for porta in "$RAILS_PORT" "$VITE_PORT"; do
-    for pid in $(escutando "$porta"); do
-      while [ -n "$pid" ] && [ "$pid" -gt 1 ]; do
-        case "$(cwd_do_pid "$pid")" in "$SNAP"*) raizes="$raizes $pid" ;; *) break ;; esac
-        pid=$(/bin/ps -o ppid= -p "$pid" | /usr/bin/tr -d ' ')
-      done
-    done
-  done
-  [ -n "$raizes" ] || return 0
-  /bin/ps -axo pid=,ppid= | /usr/bin/awk -v raizes="$raizes" '
-    { pai[$1] = $2 }
-    END {
-      n = split(raizes, r, " "); for (i = 1; i <= n; i++) dentro[r[i]] = 1
-      for (pid in pai) { p = pid; while (p > 1 && !(p in dentro) && (p in pai)) p = pai[p]; if (p in dentro) print pid }
-    }'
-}
 
-# Confere tudo antes de apagar ou desligar qualquer coisa: se algo recusar, servidores, banco, snapshot e pasta
-# ficam como estavam. No fim deixa o marcador `apagado-no-m2` e o demo.env: o bin/demo apaga o snapshot do M4 e só
-# depois chama `fechar`, que apaga a pasta. Se o M4 falhar, repetir `bin/demo down <slug> --apagar` termina.
+# Ordem: (a) confere caminho e marcador; (b) desce os servidores da demo pelo grupo gravado e confere que portas e
+# processos pararam (senão falha antes de qualquer dropdb ou rm); (c) em_uso no snapshot, sem exceção nenhuma: se
+# algo ainda o segura, recusa com a demo parada (reversível: up de novo). Só então apaga. No fim deixa o marcador
+# `apagado-no-m2` e o demo.env: o bin/demo apaga o snapshot do M4 e só depois chama `fechar`, que apaga a pasta. Se o M4 falhar, repetir `bin/demo down <slug> --apagar` termina.
 apagar() {
   carregar_estado
   if [ -f "$L/apagado-no-m2" ]; then
@@ -414,11 +450,10 @@ apagar() {
   if [ -d "$snapdir" ]; then
     [ -f "$snapdir/.maccluster-workspace.json" ] || falha "$snapdir não tem o marcador do MacCluster; não apago"
   fi
-  if [ -d "$snapdir" ]; then
-    # shellcheck disable=SC2046
-    if em_uso "$snapdir" $(pids_da_demo); then falha "snapshot em uso por outro processo; nada foi apagado nem desligado: $snapdir"; fi
-  fi
   descer
+  if [ -d "$snapdir" ] && em_uso "$snapdir"; then
+    falha "demo parada, nada apagado: algo ainda segura $snapdir. Suba de novo com bin/demo up $slug ou repita o down"
+  fi
   if banco_existe "$DB"; then
     "$PGBIN/dropdb" -h "$PG_HOST" -p "$PG_PORT" -U postgres --force "$DB"
     echo "banco $DB apagado"

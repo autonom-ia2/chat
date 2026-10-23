@@ -68,7 +68,24 @@ existe_no_m2() {
   esac
 }
 
-exigir_demo() { existe_no_m2 || falha "a demo $slug não existe no $HOST. Rode: bin/demo up $slug"; }
+exigir_demo_registrada() { existe_no_m2 || falha "a demo $slug não existe no $HOST. Rode: bin/demo up $slug"; }
+
+# Demo em remoção (o M2 já apagou banco e snapshot, falta o M4): só o down --apagar e o status seguem.
+em_remocao() {
+  local valor
+  valor=$(valor_do_estado EM_REMOCAO) || falha "não consegui ler o estado da demo no $HOST"
+  case "$valor" in
+    sim) return 0 ;;
+    nao) return 1 ;;
+    *) falha "estado da demo sem EM_REMOCAO (veio '$valor')" ;;
+  esac
+}
+recusar_em_remocao() { if em_remocao; then falha "demo em remoção: rode bin/demo down $slug --apagar"; fi; }
+
+exigir_demo() {
+  exigir_demo_registrada
+  recusar_em_remocao
+}
 
 valor_do_estado() { no_m2 estado "$slug" | /usr/bin/awk -F= -v k="$1" '$1 == k {print substr($0, length(k) + 2)}'; }
 
@@ -125,6 +142,7 @@ cmd_up() {
   worktree
   portas "$slug"
   if existe_no_m2; then
+    recusar_em_remocao
     local origem
     origem=$(valor_do_estado ORIGEM)
     [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT). Use outro slug."
@@ -308,8 +326,9 @@ apagar_snapshot_local() {
 }
 
 cmd_down() {
-  exigir_demo
+  exigir_demo_registrada
   enviar_kit
+  if [ "${1:-}" != --apagar ]; then recusar_em_remocao; fi
   if [ "${1:-}" = --apagar ]; then
     local snap
     snap=$(valor_do_estado SNAP)
@@ -338,7 +357,7 @@ case "$cmd" in
   tunnel) exigir_demo; cmd_tunnel ;;
   prints) cmd_prints "$@" ;;
   psql) exigir_demo; enviar_kit; no_m2 psql "$slug" "${1:-}" ;;
-  status) exigir_demo; no_m2 estado "$slug" ;;
+  status) exigir_demo_registrada; no_m2 estado "$slug" ;;
   down) cmd_down "$@" ;;
   *) uso ;;
 esac

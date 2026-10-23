@@ -37,7 +37,7 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
 | `seed` | M2 | Copia o `.rb` para a pasta da demo e roda com `rails runner`. `ENV['DEMO_PASTA']` aponta a pasta da demo no M2 (para mídia, por exemplo). |
 | `tunnel` | — | Imprime o `ssh -L` das duas portas (Rails e Vite) e a URL. |
 | `prints` | M2 → M4 | Roda `script/demo/prints.cjs` com o Playwright do snapshot e o Chrome do M2, contra o painel local. Traz só os PNGs para `docs/<pasta>/` da worktree; o `relato.json` (URLs locais e erros) fica no M2, na pasta da demo. Recusa `pasta` que já tenha arquivo versionado. |
-| `down` | M2 (e M4) | Desliga Rails, Vite e Redis da demo, conferindo que o processo roda dentro do snapshot dela. Com `--apagar`: confere o snapshot do M4 (caminho, marcador, `lsof +D`) sem apagar. No M2 confere que só os servidores da demo usam o snapshot **antes** de desligá-los; então desliga, faz `dropdb` do banco e apaga o snapshot, deixando o marcador `apagado-no-m2` e o `demo.env`. Depois apaga o snapshot do M4 e, por último, a pasta da demo no M2. Se o M2 recusar, nada é desligado nem apagado. Se o M4 recusar depois do M2, repetir `down --apagar` termina. |
+| `down` | M2 (e M4) | Desliga Rails, Vite e Redis da demo **pela identidade**: cada servidor sobe num grupo de processos próprio e o PGID fica em `pids/<nome>.pgid`; quem escuta na porta fora desse grupo faz o comando falhar sem mexer. Derruba o grupo inteiro e confere, com 30 s de prazo, que a porta parou de escutar e que nenhum processo do grupo sobrou; se não, falha. Com `--apagar`: confere o snapshot do M4 sem apagar; no M2 (a) desce de forma verificada, (b) roda a checagem de uso no snapshot **sem exceção nenhuma** e, se algo ainda o segura, para com "demo parada, nada apagado" (reversível: `up` de novo); (c) só então faz `dropdb` e apaga o snapshot, deixando o marcador `apagado-no-m2` e o `demo.env`. Depois apaga o snapshot do M4 e, por último, a pasta da demo no M2. Com o marcador, todo comando que não seja `down --apagar` ou `status` responde "demo em remoção: rode down --apagar"; repetir `down --apagar` termina. |
 
 ## Isolamento: o que é de cada demo
 
@@ -131,8 +131,8 @@ entrada → todas as conversas):
 
 Antes de apagar um snapshot, o kit confere com `lsof -w -t +D` quem tem arquivo aberto nele (`script/demo/comum.sh`,
 o mesmo arquivo nos dois Macs). Indexador do Spotlight e buscas de disco abrem arquivo de passagem: só conta como
-em uso se continuar assim em 5 leituras, com 3 s entre elas. Erro do `lsof` (stderr ou saída diferente de 0/1)
-para tudo sem apagar; o `lsof` 4.91 do macOS sai com 1 tanto sem nada aberto quanto achando processos.
+em uso se continuar assim em 5 leituras, com 3 s entre elas. Qualquer falha na checagem (`mktemp`, `lsof` com
+stderr ou saída diferente de 0/1) para tudo sem apagar: nunca vira "livre"; o `lsof` 4.91 do macOS sai com 1 tanto sem nada aberto quanto achando processos.
 Medido em 23/10: ~3 s por leitura num snapshot com `node_modules` (89 mil arquivos) no M2, ~2 s no M4.
 
 ## Limpeza (obrigatória)
