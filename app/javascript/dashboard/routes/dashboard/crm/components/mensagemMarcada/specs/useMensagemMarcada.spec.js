@@ -202,6 +202,21 @@ describe('useMensagemMarcada', () => {
     expect(m.erro.value).toBe('GERAL');
   });
 
+  // #2130: card arquivado não recebe mensagem marcada; a tela diz o motivo.
+  it('o 422 de card arquivado vira a frase de restaurar o card', async () => {
+    const { store, dispatch } = novaLoja();
+    dispatch.mockRejectedValue({
+      response: { status: 422, data: { code: 'card_archived' } },
+    });
+    const m = useMensagemMarcada({ store, fuso: ref('America/Sao_Paulo') });
+    m.escolherAlvo(card());
+    marcarAmanha(m);
+    m.mensagem.value = { texto: 'Oi!', modelo: null };
+
+    expect(await m.criar({ titulo: 'x' })).toBe(false);
+    expect(m.erro.value).toBe('ARQUIVADO');
+  });
+
   it('clique duplo em "Marcar mensagem" faz uma ida só ao servidor', async () => {
     const { store, dispatch } = novaLoja();
     const m = useMensagemMarcada({ store, fuso: ref('America/Sao_Paulo') });
