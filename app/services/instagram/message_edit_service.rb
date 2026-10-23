@@ -3,8 +3,8 @@
 # vale para os dois logins (Instagram e página do Facebook). O texto novo substitui o `content` da mensagem do cliente
 # com o mesmo `mid` na caixa; o anterior fica no `edit_history` (Waha::RichNative::Edits, o mesmo do WhatsApp), e a
 # tela mostra "Editada". A ordem vem do `num_edit` (e da hora do evento): edição velha ou repetida não volta o texto.
-# Fica de fora, sem erro: mid desconhecido, mensagem que não é do cliente que editou, mensagem apagada e texto vazio
-# ou acima do teto.
+# Fica de fora, sem erro: mid desconhecido (com log), mensagem que não é do cliente que editou, mensagem apagada (o
+# Edits.apply! confere de novo sob a trava) e texto vazio ou acima do teto. A tradução do texto antigo sai junto.
 class Instagram::MessageEditService
   def initialize(messaging:, channel:)
     @messaging = messaging
@@ -44,7 +44,12 @@ class Instagram::MessageEditService
     return if inbox.nil?
 
     message = inbox.messages.incoming.find_by(source_id: edit[:mid])
-    return if message.nil? || message.deleted.present?
+    # Sem a original (ainda não gravada ou de fora do painel), a edição fica de fora; o log dá o diagnóstico.
+    if message.nil?
+      Rails.logger.info("[instagram] message_edit sem mensagem original inbox=#{inbox.id} mid=#{edit[:mid]}")
+      return
+    end
+    return if message.deleted.present?
     return unless message.conversation.contact_inbox&.source_id == @messaging.dig(:sender, :id).to_s
 
     message

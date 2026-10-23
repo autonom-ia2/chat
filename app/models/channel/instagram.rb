@@ -45,9 +45,10 @@ class Channel::Instagram < ApplicationRecord
 
   def subscribe
     # ref https://developers.facebook.com/docs/instagram-platform/webhooks#enable-subscriptions
-    # #2113: a edição do cliente (`message_edit`) ainda não está aqui. O nome do campo no Instagram não está confirmado na
-    # doc da Meta (no Messenger é `message_edits`); um nome errado derruba a inscrição de caixas novas. Entra junto com o
-    # campo no app da Meta e a reinscrição das caixas, com OK do Rodrigo.
+    # #2113: a edição do cliente ainda não está aqui. O candidato documentado é `message_edit` (singular, na página de
+    # exemplos de webhook do Instagram); `message_edits` é o nome do Messenger e não vale aqui. Um nome errado derruba a
+    # inscrição de caixas novas: confirmar no painel do app da Meta (Webhooks > Instagram) antes, e entrar junto com a
+    # reinscrição das caixas, com OK do Rodrigo.
     HTTParty.post(
       "#{base_uri}/#{instagram_id}/subscribed_apps",
       query: {

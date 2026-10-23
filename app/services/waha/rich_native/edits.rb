@@ -20,6 +20,8 @@ module Waha::RichNative::Edits
   # Na entrada do histórico: o número da edição no canal (o `num_edit` do Instagram, #2113), só para a ordem. O WAHA não
   # manda; sem ele, nada muda.
   SEQUENCE_KEY = 'sequence'.freeze
+  # A tradução do texto ("Traduzir" do menu), que a edição descarta.
+  TRANSLATIONS_KEY = 'translations'.freeze
 
   module_function
 
@@ -40,16 +42,21 @@ module Waha::RichNative::Edits
   # conector c2y-rich-5), quando veio. sequence: o número da edição no canal (`num_edit` do Instagram), quando veio.
   # Devolve false quando o texto é o mesmo ou a edição chegou fora de ordem (mais velha que a última com hora do
   # WhatsApp, Waha::RichNative::EventTime.replaces?, ou com número igual ou menor que o maior guardado): nada a gravar.
+  # Mensagem apagada não volta: a conferência fica dentro da trava (o with_lock recarrega a linha), porque o apagar pode
+  # ter gravado depois de quem chamou olhar. A tradução guardada (`translations`) sai junto: era do texto que saiu, e a
+  # tela a mostraria no lugar do texto novo.
   def apply!(message, content:, author:, timestamp: nil, sequence: nil)
     message.with_lock do
-      next false if message.content.to_s == content || out_of_order?(message, timestamp) || stale_sequence?(message, sequence)
+      next false if message.deleted.present? || message.content.to_s == content
+      next false if out_of_order?(message, timestamp) || stale_sequence?(message, sequence)
 
       edited_at = Time.current.iso8601
       history = Array(message.content_attributes.to_h[HISTORY_KEY])
       entry = history_entry(message, edited_at, author, timestamp, sequence)
       history = (history + [entry]).last(HISTORY_LIMIT)
       message.content = content
-      message.content_attributes = message.content_attributes.to_h.merge(HISTORY_KEY => history, EDITED_AT_KEY => edited_at)
+      attributes = message.content_attributes.to_h.except(TRANSLATIONS_KEY)
+      message.content_attributes = attributes.merge(HISTORY_KEY => history, EDITED_AT_KEY => edited_at)
       message.save!(validate: false)
     end
   end

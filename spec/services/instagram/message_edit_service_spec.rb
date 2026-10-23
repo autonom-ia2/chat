@@ -55,10 +55,38 @@ describe Instagram::MessageEditService do
     expect(message.content_attributes['edit_history'].pluck('content')).to eq(['Tem a bolsa em preto?', 'primeira versão'])
   end
 
-  it 'mid desconhecido não quebra nem muda nada' do
+  it 'mid desconhecido não quebra nem muda nada, e deixa o diagnóstico no log' do
+    allow(Rails.logger).to receive(:info)
+
     expect { perform(mid: 'mid-que-nao-existe') }.not_to raise_error
 
     expect(message.reload.content).to eq('Tem a bolsa em preto?')
+    expect(Rails.logger).to have_received(:info).with(a_string_including('message_edit sem mensagem original', 'mid=mid-que-nao-existe'))
+  end
+
+  # A tradução era do texto que saiu: a tela mostra a tradução no lugar do texto, e o "Traduzir" não traduz de novo
+  # quando ela existe.
+  it 'tira a tradução do texto antigo' do
+    message.update!(content_attributes: { 'translations' => { 'en' => 'Do you have the bag in black?' } })
+
+    perform
+
+    message.reload
+    expect(message.content).to eq('Tem a bolsa em marrom?')
+    expect(message.content_attributes).not_to have_key('translations')
+  end
+
+  # O apagar pode gravar entre a leitura do serviço e a trava do Edits.apply!: a conferência fica sob a trava.
+  it 'mensagem apagada depois de lida não volta com o texto editado' do
+    stale = Message.find(message.id)
+    Message.find(message.id).update!(content: 'Esta mensagem foi apagada', deleted: true)
+
+    result = Waha::RichNative::Edits.apply!(stale, content: 'Tem a bolsa em marrom?', author: Waha::RichNative::Edits.contact_author(contact.id))
+
+    expect(result).to be(false)
+    message.reload
+    expect(message.content).to eq('Esta mensagem foi apagada')
+    expect(message.content_attributes['edit_history']).to be_nil
   end
 
   it 'mensagem apagada pelo cliente não volta' do
