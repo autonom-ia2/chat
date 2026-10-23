@@ -106,8 +106,9 @@ class Crm::Cards::Anonimizador::Historico
     meta.update_all(ctwa_clid: nil, error_message: nil, updated_at: @agora)
   end
 
-  # Vínculos com a conversa e com quem a pessoa era: saem. O que é da conversa (passagens, decisões de assunto, convites,
-  # execuções de ferramenta) fica com ela, que sai com o contato.
+  # Vínculos com a conversa e com quem a pessoa era: saem. Passagens, decisões de assunto e convites são da conversa e
+  # saem com ela, que sai com o contato. As execuções de ferramenta do agente (autonomia_agent_tool_runs) e os leads de
+  # prospecção não têm chave para a conversa nem para o contato e ficam: só perdem o card (ver o PR #2098).
   def soltar_vinculos!
     dos_cards(Crm::CardConversation).delete_all
     dos_cards(Crm::Passagem).update_all(card_id: nil, updated_at: @agora)

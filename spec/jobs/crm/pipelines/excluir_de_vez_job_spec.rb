@@ -36,6 +36,15 @@ RSpec.describe Crm::Pipelines::ExcluirDeVezJob do
     expect(Audited.audit_class.where(auditable: account, action: Crm::ExclusaoDefinitiva::FALHOU)).to be_empty
   end
 
+  it 'erro inesperado: nada é apagado, o motivo fica na Auditoria e o job falha para o monitoramento' do
+    allow(Crm::Pipelines::Excluidor).to receive(:new).and_raise(NoMethodError, 'falhou')
+
+    expect { described_class.perform_now(pipeline.id, admin.id, 'delete') }.to raise_error(NoMethodError)
+
+    expect(nada_apagado?).to be(true)
+    expect(falha).to eq('alvo' => 'funil', 'motivo' => 'internal_error', 'pipeline_id' => pipeline.id, 'error_class' => 'NoMethodError')
+  end
+
   it 'não faz nada quando o destino foi arquivado enquanto esperava, e registra o motivo' do
     destino.first.archived!
 

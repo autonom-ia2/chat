@@ -82,6 +82,20 @@ RSpec.describe Crm::Cards::Excluidor do
     expect(onde_o_card_ainda_aparece(card.id)).to include('crm_activities.card_id', 'crm_ai_usage_events.card_id')
   end
 
+  it 'desiste quando uma reunião é marcada depois do cancelamento, em vez de apagá-la sem cancelar no calendário' do
+    allow(Crm::Meetings::CancelarFuturas).to receive(:new).and_wrap_original do |original, **args|
+      original.call(**args).tap do |cancelamento|
+        allow(cancelamento).to receive(:perform).and_wrap_original do |perform|
+          perform.call.tap { create_reuniao(account: account, card: card, user: user, contact: contact, starts_at: 3.days.from_now) }
+        end
+      end
+    end
+
+    expect { excluir }.to raise_error(Crm::ExclusaoDefinitiva::Mudou) { |erro| expect(erro.motivo).to eq('cards_changed') }
+    expect(Crm::Card.exists?(card.id)).to be(true)
+    expect(Crm::Meeting.where(card_id: card.id).upcoming.count).to eq(1)
+  end
+
   it 'roda o bloco na mesma transação: se ele falhar, nada é apagado' do
     expect { excluir { raise ActiveRecord::RecordInvalid } }.to raise_error(ActiveRecord::RecordInvalid)
 

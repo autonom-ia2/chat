@@ -90,7 +90,8 @@
       "JA_EXCLUIDO": "it was already deleted.",
       "DESTINO": "the target pipeline or stage is no longer available. Choose another one.",
       "MUITOS": "too many cards at once. Delete them in parts.",
-      "ESCOLHA": "choose what happens to the cards."
+      "ESCOLHA": "choose what happens to the cards.",
+      "JA_CANCELADAS": "One meeting had already been canceled and stays canceled. | {count} meetings had already been canceled and stay canceled."
     }
   },
   "CAMPAIGN_MANAGEMENT": {

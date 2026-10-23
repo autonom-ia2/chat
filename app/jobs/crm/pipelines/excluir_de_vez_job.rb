@@ -14,7 +14,7 @@ class Crm::Pipelines::ExcluirDeVezJob < ApplicationJob
 
     @pipeline = pipeline
     @actor = User.find_by(id: actor_id)
-    excluir(modo, target_stage_id)
+    com_desfecho { excluir(modo, target_stage_id) }
   end
 
   private
@@ -24,6 +24,11 @@ class Crm::Pipelines::ExcluirDeVezJob < ApplicationJob
     return falhou('target_unavailable', target_stage_id: target_stage_id) if modo == Crm::Pipelines::Excluidor::MOVER && target_stage.blank?
 
     Crm::Pipelines::Excluidor.new(pipeline: @pipeline, actor: @actor, modo: modo, target_stage: target_stage).perform
+  end
+
+  # Quando algo barra, nada foi apagado (a transação desfez): o motivo vai para a Auditoria.
+  def com_desfecho
+    yield
   rescue Crm::ExclusaoDefinitiva::Mudou => e
     falhou(e.motivo, canceled_meeting_ids: e.canceladas.presence) unless e.motivo == 'already_deleted'
   rescue Crm::Cards::Excluidor::ReuniaoNaoCancelada => e
@@ -32,6 +37,11 @@ class Crm::Pipelines::ExcluirDeVezJob < ApplicationJob
     # Um card que o destino não aceita (ex.: dono que saiu da conta) desfaz a transação inteira. Tentar de novo dá o mesmo
     # erro: registra quem barrou, sem dado do card, e para.
     falhou('card_rejected', record_type: e.record.class.name, record_id: e.record.id, fields: e.record.errors.attribute_names.map(&:to_s))
+  rescue StandardError => e
+    # Erro inesperado: a transação desfez tudo, e a janela prometeu o motivo na Auditoria. Registra só a classe do erro e
+    # deixa o job falhar, para aparecer no monitoramento.
+    falhou('internal_error', error_class: e.class.name)
+    raise
   end
 
   def falhou(motivo, **extras)

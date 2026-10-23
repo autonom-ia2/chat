@@ -85,6 +85,15 @@ class Crm::Cards::Excluidor
     raise Crm::ExclusaoDefinitiva::Mudou.new('cards_changed', canceladas: @canceladas) if travados.size != ids.size
 
     conferir_arquivados!(travados, ids.size)
+    conferir_reunioes_canceladas!(da_conta)
+  end
+
+  # Uma reunião marcada entre o cancelamento no calendário e a trava seria apagada daqui sem cancelar lá, e o cliente
+  # ficaria com o convite. Sob a trava, nenhuma pode estar marcada: se estiver, nada é apagado.
+  def conferir_reunioes_canceladas!(da_conta)
+    return unless Crm::Meeting.where(da_conta).upcoming.exists?
+
+    raise Crm::ExclusaoDefinitiva::Mudou.new('cards_changed', canceladas: @canceladas)
   end
 
   # Tudo isto tem cascata no banco e nenhum callback que importe ao apagar (o aviso do acesso por funil que o vínculo de

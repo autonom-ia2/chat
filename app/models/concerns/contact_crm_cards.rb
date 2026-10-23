@@ -19,6 +19,13 @@ module ContactCrmCards
   private
 
   def anonimizar_cards_do_crm
+    return soltar_cards_do_crm if Crm::Cards::Anonimizador.conta_saindo?
+
     Crm::Cards::Anonimizador.new(contact: self).perform
+  end
+
+  # Exclusão da conta: os cards saem com ela, sem cancelar reunião nem avisar cliente.
+  def soltar_cards_do_crm
+    Crm::Card.where(contact_id: id).update_all(contact_id: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 end

@@ -21,6 +21,23 @@ class Crm::Cards::Anonimizador
   # Marca do card anonimizado, com a data: a tela e a auditoria sabem que o cliente foi removido.
   MARCA = 'contato_removido_em'.freeze
 
+  CHAVE_DA_CONTA_SAINDO = :crm_anonimizador_conta_saindo
+
+  # A conta inteira está sendo apagada (DeleteObjectJob, via Crm::ExclusaoDaConta): os cards saem com ela. Não há o que
+  # anonimizar, e cancelar as reuniões mandaria aviso de cancelamento a cada cliente da conta. Nesse bloco, o contato
+  # só solta os cards, como o antigo `dependent: :nullify` (ContactCrmCards).
+  def self.durante_exclusao_da_conta
+    anterior = ActiveSupport::IsolatedExecutionState[CHAVE_DA_CONTA_SAINDO]
+    ActiveSupport::IsolatedExecutionState[CHAVE_DA_CONTA_SAINDO] = true
+    yield
+  ensure
+    ActiveSupport::IsolatedExecutionState[CHAVE_DA_CONTA_SAINDO] = anterior
+  end
+
+  def self.conta_saindo?
+    ActiveSupport::IsolatedExecutionState[CHAVE_DA_CONTA_SAINDO] == true
+  end
+
   def initialize(contact:)
     @contact = contact
     @account = contact.account

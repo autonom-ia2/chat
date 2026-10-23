@@ -93,14 +93,22 @@ const MOTIVOS = {
   'crm.permanent_delete.contact_cards_choice_required': 'ESCOLHA',
 };
 
-export const motivoDoExcluir = (t, error) => {
-  if (!error?.response) return t('CRM_EXCLUIR.ERROS.SEM_CONEXAO');
+const motivoDoCodigo = (t, error) => {
   const codigo = error.response.data?.error;
   const chave = MOTIVOS[codigo];
   if (chave) return t(`CRM_EXCLUIR.ERROS.${chave}`);
   return t('CRM_EXCLUIR.ERROS.RECUSOU', {
     codigo: codigo || error.response.status,
   });
+};
+
+// A reunião que o calendário já tinha cancelado antes da recusa fica cancelada (o cliente já foi avisado): a frase diz.
+export const motivoDoExcluir = (t, error) => {
+  if (!error?.response) return t('CRM_EXCLUIR.ERROS.SEM_CONEXAO');
+  const motivo = motivoDoCodigo(t, error);
+  const canceladas = (error.response.data?.canceled_meeting_ids || []).length;
+  if (!canceladas) return motivo;
+  return `${motivo} ${t('CRM_EXCLUIR.ERROS.JA_CANCELADAS', { count: canceladas }, canceladas)}`;
 };
 
 // A palavra digitada confere? EXCLUIR aceita minúsculas (quem digita "excluir" quis dizer isso); o nome do funil

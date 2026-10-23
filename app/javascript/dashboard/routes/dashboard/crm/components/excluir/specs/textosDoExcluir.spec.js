@@ -106,3 +106,20 @@ describe('textosDoExcluir', () => {
     expect(confere('', '')).toBe(false);
   });
 });
+
+describe('motivoDoExcluir com reuniões já canceladas', () => {
+  it('diz quantas reuniões o calendário já tinha cancelado antes da recusa', () => {
+    const erro = {
+      response: {
+        status: 422,
+        data: {
+          error: 'crm.permanent_delete.meeting_cancel_failed',
+          canceled_meeting_ids: [3, 4],
+        },
+      },
+    };
+    expect(motivoDoExcluir(t, erro)).toBe(
+      'CRM_EXCLUIR.ERROS.REUNIAO CRM_EXCLUIR.ERROS.JA_CANCELADAS{"count":2}'
+    );
+  });
+});

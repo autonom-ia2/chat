@@ -90,7 +90,8 @@
       "JA_EXCLUIDO": "já foi excluído.",
       "DESTINO": "o funil ou a etapa de destino não está mais disponível. Escolha outro.",
       "MUITOS": "são cards demais de uma vez. Exclua em partes.",
-      "ESCOLHA": "escolha o que fazer com os cards."
+      "ESCOLHA": "escolha o que fazer com os cards.",
+      "JA_CANCELADAS": "Uma reunião já tinha sido cancelada e continua cancelada. | {count} reuniões já tinham sido canceladas e continuam canceladas."
     }
   },
   "CAMPAIGN_MANAGEMENT": {

@@ -60,8 +60,9 @@ module Crm::ExclusaoDefinitiva
     account = contact.account
     card_ids = account.crm_cards.where(contact_id: contact.id).pluck(:id)
     apagados = Crm::Cards::Excluidor.new(account: account, card_ids: card_ids, somente_arquivados: false).perform do |ids|
-      contact.destroy!
       auditar!(account: account, user: user, alvo: 'contato', card_ids: ids, contact_id: contact.id, modo: modo)
+      # Por último: o destroy enfileira a exclusão das conversas, que não volta atrás se algo depois dele falhar.
+      contact.destroy!
     end
     { deleted_card_ids: apagados, anonymized_card_ids: [] }
   end
@@ -73,9 +74,9 @@ module Crm::ExclusaoDefinitiva
     anonimizador.cancelar_reunioes!
     mantidos = ActiveRecord::Base.transaction do
       anonimizador.perform.tap do |ids|
-        contact.destroy!
         auditar!(account: contact.account, user: user, alvo: 'contato', card_ids: [], contact_id: contact.id,
                  modo: CARDS_MANTER, cards_mantidos: ids.size, card_ids_mantidos: ids)
+        contact.destroy!
       end
     end
     { deleted_card_ids: [], anonymized_card_ids: mantidos }
