@@ -6,8 +6,9 @@ class Crm::FollowUps::Creator
   # #1590: folga para o relógio de quem marca "agora" e para a ida e volta da requisição.
   PAST_GRACE = 1.minute
 
-  # #2101: card arquivado não ganha série. O SeriesMaterializer a encerraria na hora, sem nenhuma vez, e a pessoa
-  # veria "Ends on leaves no date to remind". O controller responde 422 dizendo o motivo, dentro da ação (não num
+  # Card arquivado não ganha lembrete pedido por pessoa. A série nasceria encerrada, sem nenhuma vez ("Ends on leaves
+  # no date to remind", #2101), e o lembrete de uma vez seria cancelado pelo DueProcessor em silêncio (#2130). Os
+  # lembretes automáticos não passam por aqui. O controller responde 422 dizendo o motivo, dentro da ação (não num
   # rescue_from), para a mensagem sair no idioma da pessoa.
   class CardArchived < StandardError; end
 
@@ -20,6 +21,8 @@ class Crm::FollowUps::Creator
   end
 
   def perform
+    raise CardArchived if @card&.archived?
+
     attributes = base_attributes
     return create_single(attributes) if recurrence.blank?
 
@@ -40,7 +43,14 @@ class Crm::FollowUps::Creator
   def create_single(attributes)
     follow_up = @account.crm_follow_ups.new(attributes)
     reject_past_auto_send!(follow_up)
-    follow_up.save!
+    follow_up.transaction do
+      # A barreira do arquivamento (a mesma do SeriesMaterializer): espera um arquivamento em curso e, com o card
+      # aberto, o segura até gravar. Sem ela, o card arquivado entre a conferência de `perform` e o save ficaria com um
+      # lembrete que o DueProcessor cancela em silêncio.
+      raise CardArchived if @card && Crm::Cards::Archiver.arquivado_sob_trava?(@card.id)
+
+      follow_up.save!
+    end
     follow_up
   end
 
@@ -82,8 +92,6 @@ class Crm::FollowUps::Creator
   end
 
   def create_series(attributes)
-    raise CardArchived if @card&.archived?
-
     series = @account.crm_follow_up_series.new(series_attributes(attributes))
     series.errors.add(:automation_mode, :inclusion) unless attributes[:automation_mode].to_s == 'reminder_only'
     raise ActiveRecord::RecordInvalid, series if series.errors.any?
