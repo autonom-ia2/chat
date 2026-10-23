@@ -84,7 +84,7 @@ class Ctwa::TrackedLinkCampaigns
   def won_cards_by_conversation(conversation_ids)
     return {} if conversation_ids.empty?
 
-    Crm::Card.where(account_id: @account.id, status: :won, conversation_id: conversation_ids)
+    Crm::Card.where(account_id: @account.id, conversation_id: conversation_ids).com_desfecho(:won)
              .pluck(:id, :conversation_id, :currency, :value_cents)
              .group_by { |row| row[1] }
              .transform_values { |rows| rows.map { |id, _conv, currency, cents| { id: id, currency: currency, value_cents: cents } } }

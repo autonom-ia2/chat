@@ -49,7 +49,7 @@ module Crm
       end
 
       def bucketed(outcome)
-        closed_in_range.where(status: Crm::Card.statuses[outcome])
+        closed_in_range.com_desfecho(outcome)
                        .group(Arel.sql(bucket_sql)).count
       end
 

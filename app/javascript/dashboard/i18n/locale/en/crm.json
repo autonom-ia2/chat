@@ -1147,7 +1147,8 @@
       "UNDO": "Undo",
       "CLEAR": "Clear",
       "DONE": "{count} card updated | {count} cards updated",
-      "DELETE_CONFIRM": "Archive {count} card? | Archive {count} cards?"
+      "DELETE_CONFIRM": "Archive {count} card? | Archive {count} cards?",
+      "DELETE_MEETINGS": "{count} card has a meeting booked; it stays booked. | {count} cards have meetings booked; they stay booked."
     },
     "EDIT": {
       "SAVED": "Saved",
@@ -1184,6 +1185,7 @@
       "STAGE_DELETE_ERROR": "Could not remove the stage.",
       "STAGE_DELETE_ERROR_HAS_CARDS": "This stage still has cards linked to it — move them to another stage first.",
       "STAGE_DELETE_ERROR_LAST_STAGE": "Could not remove the stage — a pipeline needs at least one stage.",
+      "STAGE_DELETE_ERROR_IN_USE": "Could not remove the stage — another record in the system still points to it. Nothing was deleted.",
       "CARD_CREATED": "Card created.",
       "CARD_UPDATED": "Card updated.",
       "CARD_LOAD_ERROR": "Could not load card details.",
@@ -5001,7 +5003,8 @@
       "BOTAO": "Archive",
       "DICA": "Archiving takes this customer off the board. Nothing is deleted.",
       "TITULO": "Archive {nome}?",
-      "TEXTO": "It leaves the funnel board. Conversations, follow-ups and history stay saved."
+      "TEXTO": "It leaves the funnel board. Follow-ups still due are canceled; conversations and history stay saved.",
+      "REUNIAO": "This card has a meeting booked for {quando}. It stays booked; cancel it in the calendar if needed."
     },
     "SAIR": {
       "TITULO": "Leave without saving?",
@@ -5624,7 +5627,11 @@
       "MORE_CONTACT": "More about the person",
       "EDIT_HELP": "What you change here counts for this person everywhere. The card does not change.",
       "SAVED": "Person saved.",
-      "SAVE_ERROR": "Could not save. Check the details and try again.",
+      "SAVE_ERROR_MOTIVO": "Could not save: {motivo}",
+      "SAVE_ERROR_SERVIDOR": "The server did not confirm the save (error {status}). Reopen the person to see if it was saved before trying again.",
+      "SAVE_ERROR_REDE": "Could not reach the server. Check your connection and try again.",
+      "SAVE_ERROR_TELA": "Something went wrong on this screen. Reload the page and check the details before trying again.",
+      "CAMPO_CONFIRA": "Check this field.",
       "COMPANY_FORM": {
         "CHANGE": "Change the company",
         "EDIT_TITLE": "Edit the company",

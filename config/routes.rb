@@ -300,6 +300,7 @@ Rails.application.routes.draw do
             post 'cards/permanent_delete', to: 'cards/permanent_deletions#create'
             get 'cards/owner_options', to: 'cards#owner_options'
             get 'cards/summaries', to: 'cards/summaries#index'
+            get 'cards/upcoming_meetings', to: 'cards/upcoming_meetings#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               resource :contact, only: [:create], controller: 'cards/contacts'
               post :from_conversation, on: :collection

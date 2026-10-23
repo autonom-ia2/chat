@@ -31,6 +31,8 @@ RSpec.describe 'CRM pipelines and stages API', type: :request do
     expect(response.parsed_body.dig('payload', 'name')).to eq('Renovações 2026')
     expect(response.parsed_body.dig('payload', 'when_to_use')).to eq('Cliente que quer renovar o seguro.')
 
+    # O último funil ativo não se arquiva: a conta tem outro.
+    create_crm_pipeline(account: account, user: user, name: 'Vendas')
     delete "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline_id}", headers: auth_headers(user)
 
     expect(response).to have_http_status(:ok)
