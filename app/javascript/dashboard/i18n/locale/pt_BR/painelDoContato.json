@@ -1,0 +1,115 @@
+{
+  "PAINEL_DO_CONTATO": {
+    "TITULO": "Sobre este contato",
+    "FECHAR": "Fechar",
+    "VOLTAR_PARA_CONVERSA": "Voltar para a conversa",
+    "VOLTAR": "Voltar",
+    "SO_LEITURA": "Você pode ver esta conversa, mas não mudar.",
+    "ERRO": "Não deu para carregar esta parte agora.",
+    "TENTAR_DE_NOVO": "Tentar de novo",
+    "NOME": {
+      "COPIAR": "Copiar",
+      "NUMERO_COPIADO": "Número copiado",
+      "EDITAR": "Editar dados",
+      "RECUSA": "Pediu para não receber mensagens automáticas. Você pode responder normalmente.",
+      "ETIQUETAS": "Etiquetas do contato"
+    },
+    "QUEM_CUIDA": {
+      "TITULO": "Quem cuida",
+      "VOCE": "Está com você.",
+      "COLEGA": "Está com {nome}.",
+      "IA": "Está com a IA {nome}.",
+      "NINGUEM": "Ninguém está cuidando desta conversa.",
+      "NINGUEM_AO_RESPONDER": "Ninguém está cuidando desta conversa. Ao responder, ela fica com você.",
+      "TIME_E_PRIORIDADE": "Está no time {time}, com prioridade {nivel}.",
+      "SO_TIME": "Está no time {time}.",
+      "SO_PRIORIDADE": "Prioridade {nivel}.",
+      "TROCAR": "Trocar",
+      "ESCOLHER": "Escolher quem cuida",
+      "ESCOLHA_TITULO": "Quem cuida desta conversa",
+      "PESSOAS": "Pessoas",
+      "GRUPO_IA": "IA",
+      "NINGUEM_OPCAO": "Ninguém",
+      "AGORA_COM": "Agora está com {nome}.",
+      "AGORA_NINGUEM": "Agora ninguém está cuidando desta conversa."
+    },
+    "COMBINADO": {
+      "TITULO": "Combinado",
+      "ERA_PARA": "Era para {quando}: {oQue}.",
+      "QUANDO": "{quando}: {oQue}.",
+      "AUTOMATICA": "{quando} vai uma mensagem automática.",
+      "VER_OS_OUTROS": "Ver o outro | Ver os outros {count}",
+      "MOSTRAR_MENOS": "Mostrar menos",
+      "ATRASADO": "Atrasado",
+      "TIPO": {
+        "TASK": "Tarefa",
+        "MESSAGE": "Mandar mensagem",
+        "CALL": "Ligar",
+        "MEETING": "Reunião",
+        "NOTE": "Anotação"
+      }
+    },
+    "DATA": {
+      "QUANDO": "{dia} às {hora}",
+      "HOJE": "hoje",
+      "AMANHA": "amanhã",
+      "ONTEM": "ontem",
+      "SEMANA": {
+        "DOMINGO": "domingo",
+        "SEGUNDA": "segunda",
+        "TERCA": "terça",
+        "QUARTA": "quarta",
+        "QUINTA": "quinta",
+        "SEXTA": "sexta",
+        "SABADO": "sábado"
+      }
+    },
+    "ASSUNTO": {
+      "TITULO": "Assunto",
+      "FRASE": "{assunto} está em {etapa}.",
+      "SEM_NOME": "O assunto desta conversa está em {etapa}."
+    },
+    "ORIGEM": {
+      "TITULO": "De onde veio",
+      "ANUNCIO": "Chegou por um anúncio: {nome}.",
+      "ANUNCIO_SEM_NOME": "Chegou por um anúncio.",
+      "ANUNCIO_NO": "Chegou por um anúncio no {canal}: {nome}.",
+      "ANUNCIO_NO_SEM_NOME": "Chegou por um anúncio no {canal}.",
+      "LINK": "Chegou pelo link {nome}.",
+      "LINK_SEM_NOME": "Chegou por um link.",
+      "PUBLICACAO": "Chegou por uma publicação: {nome}.",
+      "PUBLICACAO_SEM_NOME": "Chegou por uma publicação.",
+      "CAMPANHA": "Chegou por uma campanha: {nome}.",
+      "CAMPANHA_SEM_NOME": "Chegou por uma campanha."
+    },
+    "LISTAS": {
+      "CONVERSAS": "Conversas anteriores ({count})",
+      "ARQUIVOS": "Arquivos desta conversa ({count})",
+      "INFORMACOES": "Outras informações ({count})",
+      "ACOMPANHAM": "Quem acompanha esta conversa ({count})",
+      "TITULO_CONVERSAS": "Conversas anteriores",
+      "TITULO_ARQUIVOS": "Arquivos desta conversa",
+      "TITULO_INFORMACOES": "Outras informações",
+      "TITULO_ACOMPANHAM": "Quem acompanha esta conversa",
+      "CONVERSA_COM": "Conversa de {dia}, com {nome}.",
+      "CONVERSA_COM_IA": "Conversa de {dia}, com a IA {nome}.",
+      "CONVERSA_SEM_NINGUEM": "Conversa de {dia}, sem ninguém.",
+      "AINDA_ABERTA": "Ainda aberta.",
+      "ABRIR_ARQUIVO": "Abrir {nome}",
+      "ACOMPANHAR_NO_MENU": "Para acompanhar ou deixar de acompanhar, use o menu ⋯ no alto da conversa."
+    },
+    "PE": {
+      "VER_PAGINA": "Ver página do contato",
+      "FRASE": "Lá você junta cadastros repetidos e começa outra conversa."
+    },
+    "MENU_DO_TOPO": {
+      "TIME_E_PRIORIDADE": "Mudar time ou prioridade",
+      "SO_PRIORIDADE": "Mudar prioridade",
+      "ACOMPANHAR": "Acompanhar esta conversa",
+      "DEIXAR": "Deixar de acompanhar",
+      "ACOMPANHANDO": "Pronto. Você recebe aviso de cada mensagem nova.",
+      "DEIXOU": "Você deixou de acompanhar esta conversa.",
+      "AINDA_NAO_FEITO": "No protótipo, este diálogo ainda não abre."
+    }
+  }
+}

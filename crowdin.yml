@@ -21,6 +21,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/horarioDoCanal.json
       - /app/javascript/dashboard/i18n/locale/en/novaConversa.json
       - /app/javascript/dashboard/i18n/locale/en/onboardingTrail.json
+      - /app/javascript/dashboard/i18n/locale/en/painelDoContato.json
       - /app/javascript/dashboard/i18n/locale/en/prospecting.json
       - /app/javascript/dashboard/i18n/locale/en/relationships.json
       - /app/javascript/dashboard/i18n/locale/en/resultJourney.json

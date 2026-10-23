@@ -5,6 +5,7 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useWindowSize } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
+import { painelNovoLigado } from 'dashboard/components-next/painel-do-contato/painelNovo';
 
 defineProps({
   currentChat: {
@@ -48,14 +49,18 @@ const closeContactPanel = () => {
           'dialog.ProseMirror-prompt-backdrop',
           '[data-popover-content]',
           '[data-popover-backdrop]',
+          // #2138 PROTÓTIPO: um Dialog aberto com o painel não fecha o painel.
+          ...(painelNovoLigado ? ['dialog[open]'] : []),
         ],
       },
     ]"
-    class="bg-n-surface-2 h-full overflow-hidden flex flex-col fixed top-0 z-40 w-full max-w-sm transition-transform duration-300 ease-in-out ltr:right-0 rtl:left-0 md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none"
+    class="bg-n-surface-2 h-full overflow-hidden flex flex-col fixed top-0 z-40 w-full transition-transform duration-300 ease-in-out ltr:right-0 rtl:left-0 md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none"
     :class="[
       {
         'md:flex': activeTab === 0,
         'md:hidden': activeTab !== 0,
+        // #2138 PROTÓTIPO: no celular, o painel novo ocupa a tela inteira.
+        'max-w-sm': !painelNovoLigado,
       },
     ]"
   >
