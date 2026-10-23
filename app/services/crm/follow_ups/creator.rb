@@ -43,7 +43,14 @@ class Crm::FollowUps::Creator
   def create_single(attributes)
     follow_up = @account.crm_follow_ups.new(attributes)
     reject_past_auto_send!(follow_up)
-    follow_up.save!
+    follow_up.transaction do
+      # A barreira do arquivamento (a mesma do SeriesMaterializer): espera um arquivamento em curso e, com o card
+      # aberto, o segura até gravar. Sem ela, o card arquivado entre a conferência de `perform` e o save ficaria com um
+      # lembrete que o DueProcessor cancela em silêncio.
+      raise CardArchived if @card && Crm::Cards::Archiver.arquivado_sob_trava?(@card.id)
+
+      follow_up.save!
+    end
     follow_up
   end
 

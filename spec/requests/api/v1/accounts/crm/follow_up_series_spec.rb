@@ -102,6 +102,19 @@ RSpec.describe 'CRM reminders that repeat, without card and with chosen recipien
       expect(account.crm_follow_ups.count).to eq(0)
     end
 
+    it 'refuses it when only the archive barrier sees the card archived' do
+      card.update!(status: :open)
+      allow(Crm::Cards::Archiver).to receive(:arquivado_sob_trava?).and_wrap_original do |original, card_id|
+        Crm::Card.where(id: card_id).update_all(status: Crm::Card.statuses[:archived]) # rubocop:disable Rails/SkipsModelValidations
+        original.call(card_id)
+      end
+
+      create_reminder(agent, card_id: card.id, title: 'Ligar', due_at: 1.day.from_now.iso8601)
+
+      expect(response.parsed_body['code']).to eq('card_archived')
+      expect(account.crm_follow_ups.count).to eq(0)
+    end
+
     it 'still creates the reminder on an open card' do
       card.update!(status: :open)
 
