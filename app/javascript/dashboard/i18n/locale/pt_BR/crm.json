@@ -5625,7 +5625,11 @@
       "MORE_CONTACT": "Mais dados da pessoa",
       "EDIT_HELP": "O que você muda aqui vale para esta pessoa em todo lugar. O card não muda.",
       "SAVED": "Dados da pessoa salvos.",
-      "SAVE_ERROR": "Não deu para salvar. Confira os dados e tente de novo.",
+      "SAVE_ERROR_MOTIVO": "Não deu para salvar: {motivo}",
+      "SAVE_ERROR_SERVIDOR": "O servidor não confirmou a gravação (erro {status}). Abra a pessoa de novo para ver se salvou antes de tentar outra vez.",
+      "SAVE_ERROR_REDE": "Não deu para falar com o servidor. Confira a internet e tente de novo.",
+      "SAVE_ERROR_TELA": "Algo deu errado nesta tela. Recarregue a página e confira os dados antes de tentar de novo.",
+      "CAMPO_CONFIRA": "Confira este campo.",
       "COMPANY_FORM": {
         "CHANGE": "Trocar a empresa",
         "EDIT_TITLE": "Editar a empresa",
