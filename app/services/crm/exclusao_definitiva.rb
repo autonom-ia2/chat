@@ -30,17 +30,55 @@ module Crm::ExclusaoDefinitiva
     end
   end
 
+  # Uma reunião futura não cancelou no calendário (Crm::Meetings::CancelarFuturas), e nada foi apagado. `canceladas`: as
+  # que já tinham sido canceladas antes dela.
+  class ReuniaoNaoCancelada < StandardError
+    attr_reader :meeting_id, :canceladas
+
+    def initialize(meeting_id, canceladas = [])
+      @meeting_id = meeting_id
+      @canceladas = canceladas
+      super("meeting #{meeting_id} could not be canceled at the calendar provider")
+    end
+  end
+
+  # O que fazer com os cards ao excluir o contato (decisão 1 do protótipo, sem padrão: quem exclui escolhe).
+  CARDS_APAGAR = 'delete'.freeze
+  CARDS_MANTER = 'keep'.freeze
+  MODOS_DO_CONTATO = [CARDS_APAGAR, CARDS_MANTER].freeze
+
   module_function
 
-  # Excluir o contato apagando de vez os cards dele (LGPD): os cards (abertos, ganhos ou arquivados), o contato e o
-  # rastro saem juntos ou nada sai.
-  def contato!(contact:, user:)
+  # Excluir o contato (LGPD). modo:
+  # - 'delete': apaga de vez os cards dele (abertos, ganhos ou arquivados);
+  # - 'keep': mantém os cards sem dado pessoal (Crm::Cards::Anonimizador): valor, funil, etapa, datas e desfecho ficam.
+  # Os cards, o contato e o rastro saem juntos ou nada sai. Devolve { deleted_card_ids:, anonymized_card_ids: }.
+  def contato!(contact:, user:, modo:)
+    raise ArgumentError, "modo desconhecido: #{modo}" unless MODOS_DO_CONTATO.include?(modo)
+    return contato_mantendo_cards!(contact: contact, user: user) if modo == CARDS_MANTER
+
     account = contact.account
     card_ids = account.crm_cards.where(contact_id: contact.id).pluck(:id)
-    Crm::Cards::Excluidor.new(account: account, card_ids: card_ids, somente_arquivados: false).perform do |ids|
+    apagados = Crm::Cards::Excluidor.new(account: account, card_ids: card_ids, somente_arquivados: false).perform do |ids|
       contact.destroy!
-      auditar!(account: account, user: user, alvo: 'contato', card_ids: ids, contact_id: contact.id)
+      auditar!(account: account, user: user, alvo: 'contato', card_ids: ids, contact_id: contact.id, modo: modo)
     end
+    { deleted_card_ids: apagados, anonymized_card_ids: [] }
+  end
+
+  # As reuniões futuras são canceladas antes, fora da transação (o calendário não volta atrás). Dentro dela, os cards
+  # perdem o dado pessoal sob a trava e o contato sai; o Contact#destroy! não acha mais card dele para limpar.
+  def contato_mantendo_cards!(contact:, user:)
+    anonimizador = Crm::Cards::Anonimizador.new(contact: contact)
+    anonimizador.cancelar_reunioes!
+    mantidos = ActiveRecord::Base.transaction do
+      anonimizador.perform.tap do |ids|
+        contact.destroy!
+        auditar!(account: contact.account, user: user, alvo: 'contato', card_ids: [], contact_id: contact.id,
+                 modo: CARDS_MANTER, cards_mantidos: ids.size, card_ids_mantidos: ids)
+      end
+    end
+    { deleted_card_ids: [], anonymized_card_ids: mantidos }
   end
 
   # alvo: 'cards' (Arquivados), 'funil' (Funis arquivados) ou 'contato' (excluir contato com os cards, LGPD).

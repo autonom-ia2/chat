@@ -48,13 +48,26 @@ RSpec.describe 'Excluir de vez com função personalizada', type: :request do
     give_role(%w[contact_view contact_delete crm_admin])
     card
 
-    post "#{base}/crm/contacts/#{contact.id}/permanent_delete",
-         params: { confirmation: 'EXCLUIR' }, headers: agent.create_new_auth_token, as: :json
+    %w[delete keep].each do |modo|
+      post "#{base}/crm/contacts/#{contact.id}/permanent_delete",
+           params: { confirmation: 'EXCLUIR', cards: modo }, headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:forbidden)
+    end
+    get "#{base}/crm/contacts/#{contact.id}/permanent_delete_preview", headers: agent.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)
     expect([Contact.exists?(contact.id), Crm::Card.exists?(card.id)]).to eq([true, true])
 
+    # O DELETE de sempre, aberto pela chave, mantém o card sem dado pessoal (LGPD).
     delete "#{base}/contacts/#{contact.id}", headers: agent.create_new_auth_token, as: :json
     expect(response).to have_http_status(:ok)
-    expect(card.reload.contact_id).to be_nil
+    expect(card.reload.attributes.slice('contact_id', 'title')).to eq('contact_id' => nil, 'title' => "Removed customer ##{card.id}")
+  end
+
+  it 'recusa a prévia do funil com crm_admin e crm_manage_pipelines' do
+    give_role(%w[crm_view crm_admin crm_manage_pipelines])
+
+    get "#{base}/crm/pipelines/#{pipeline.id}/permanent_delete_preview", headers: agent.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:forbidden)
   end
 end

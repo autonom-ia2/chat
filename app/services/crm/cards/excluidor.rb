@@ -25,15 +25,8 @@
 #    memória do card, execuções de automação e decisões do agente, e solta passagens, decisões de assunto, convites e
 #    leads de prospecção) e o bloco do chamador.
 class Crm::Cards::Excluidor
-  class ReuniaoNaoCancelada < StandardError
-    attr_reader :meeting_id, :canceladas
-
-    def initialize(meeting_id, canceladas = [])
-      @meeting_id = meeting_id
-      @canceladas = canceladas
-      super("meeting #{meeting_id} could not be canceled at the calendar provider")
-    end
-  end
+  # O erro mora em Crm::ExclusaoDefinitiva: o contato excluído com os cards mantidos também cancela as reuniões.
+  ReuniaoNaoCancelada = Crm::ExclusaoDefinitiva::ReuniaoNaoCancelada
 
   def initialize(account:, card_ids:, somente_arquivados: true)
     @account = account
@@ -107,19 +100,7 @@ class Crm::Cards::Excluidor
   end
 
   def cancelar_reunioes_futuras!(ids)
-    Crm::Meeting.where(account_id: @account.id, card_id: ids).upcoming.order(:id).each do |meeting|
-      Crm::Meetings::CancelService.new(meeting: meeting).perform
-      @canceladas << meeting.id
-    rescue *erros_do_calendario
-      raise ReuniaoNaoCancelada.new(meeting.id, @canceladas.dup)
-    end
-  end
-
-  # Os mesmos erros de calendário que o "Cancelar" da agenda trata (MeetingsController#calendar_provider_error?).
-  # Google::CalendarError e Microsoft::CalendarError moram no arquivo do serviço de cada um: carregar o serviço os define.
-  def erros_do_calendario
-    [Google::CalendarEventService, Microsoft::CalendarEventService].map { |servico| servico.module_parent::CalendarError } +
-      [Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED]
+    @canceladas = Crm::Meetings::CancelarFuturas.new(account: @account, card_ids: ids).perform
   end
 
   # Tabelas que guardam o id do card sem chave estrangeira. Sem isto, sobrariam linhas apontando para um card que não

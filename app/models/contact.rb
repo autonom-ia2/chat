@@ -54,6 +54,8 @@ class Contact < ApplicationRecord
   include ContactOptOut
   include ContactCustomer
   include ContactMemoria
+  # Antes das associações: os cards perdem o dado pessoal antes de qualquer outra dependência do destroy.
+  include ContactCrmCards
 
   validates :account_id, presence: true
   validates :email, allow_blank: true, uniqueness: { scope: [:account_id], case_sensitive: false },
@@ -66,7 +68,8 @@ class Contact < ApplicationRecord
   belongs_to :account
   has_many :conversations, dependent: :destroy_async
   has_many :contact_inboxes, dependent: :destroy_async
-  has_many :crm_cards, class_name: 'Crm::Card', dependent: :nullify
+  # Sem `dependent`: quem limpa os cards ao excluir o contato é ContactCrmCards (LGPD, #2096).
+  has_many :crm_cards, class_name: 'Crm::Card', dependent: nil
   has_many :csat_survey_responses, dependent: :destroy_async
   has_many :inboxes, through: :contact_inboxes
   has_many :messages, as: :sender, dependent: :destroy_async

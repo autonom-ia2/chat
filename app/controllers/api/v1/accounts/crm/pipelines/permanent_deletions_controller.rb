@@ -2,9 +2,16 @@
 # Funil com cards exige a escolha explícita em `cards`: 'move' (com `target_stage_id`, etapa de outro funil ativo) ou
 # 'delete' (apaga os cards de vez junto). Sem cards, apaga na hora (200); com cards, vai para um job (202), que grava o
 # desfecho na Auditoria da conta quando desiste (Crm::ExclusaoDefinitiva::FALHOU).
+#
+# GET preview: o que a janela de "excluir funil de vez" mostra antes de pedir o nome (Crm::Pipelines::PreviaDaExclusao).
 class Api::V1::Accounts::Crm::Pipelines::PermanentDeletionsController < Api::V1::Accounts::Crm::BaseController
   before_action :fetch_pipeline
-  before_action :ensure_deletable!
+  before_action :ensure_admin!
+  before_action :ensure_deletable!, only: :create
+
+  def preview
+    render json: { payload: ::Crm::Pipelines::PreviaDaExclusao.new(@pipeline).perform }
+  end
 
   def create
     cards_count = @pipeline.cards.count
@@ -23,8 +30,11 @@ class Api::V1::Accounts::Crm::Pipelines::PermanentDeletionsController < Api::V1:
     @pipeline = policy_scope(::Crm::Pipeline).find(params[:id])
   end
 
+  def ensure_admin!
+    render_error('crm.permanent_delete.admin_only', status: :forbidden) unless policy(@pipeline).permanent_delete?
+  end
+
   def ensure_deletable!
-    return render_error('crm.permanent_delete.admin_only', status: :forbidden) unless policy(@pipeline).permanent_delete?
     return render_error('crm.permanent_delete.not_archived') unless @pipeline.archived?
 
     render_error('crm.permanent_delete.confirmation_mismatch') unless params[:confirmation].to_s.strip == @pipeline.name.strip

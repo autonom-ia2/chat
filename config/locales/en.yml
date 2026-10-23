@@ -415,6 +415,8 @@ en:
   contacts:
     online:
       delete: '%{contact_name} is Online, please try again later'
+    # #2096: deleting the contact cancels the future meetings of its CRM cards first; nothing is deleted if one fails.
+    meeting_cancel_failed: 'A future meeting of this contact could not be canceled in the calendar, so nothing was deleted. Please try again.'
     opt_out:
       undo_only_manual: 'Only an opt-out marked by the team, or a request to stop recognized in a reply to a campaign, can be undone here. Opt-outs from Prospecting are undone on the lead in Prospecting; a request to stop in a follow-up reply ends when the follow-up is reactivated on every CRM card where the contact asked to stop; email unsubscribes are not undone here.'
   integration_apps:
@@ -1030,6 +1032,11 @@ en:
   automation:
     system_name: 'Automation System'
   crm:
+    # #2096: the card kept without personal data after its contact was deleted (LGPD), and its reminders and meetings.
+    cards:
+      anonimizado:
+        title: 'Removed customer #%{id}'
+        history_title: 'Removed customer'
     # IA entende a conversa F3: o motivo que a IA grava ao marcar Perdido (lost_reason) e o título do retorno do "adiou".
     ai_fechar_card:
       motivos:
