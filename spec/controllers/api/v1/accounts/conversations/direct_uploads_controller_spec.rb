@@ -56,6 +56,13 @@ RSpec.describe '/api/v1/accounts/:account_id/conversations/:conversation_id/dire
         expect(response.parsed_body['content_type']).to eq('image/png')
       end
 
+      it 'returns not found for a conversation that does not exist, like the other conversation endpoints' do
+        post api_v1_account_conversation_direct_uploads_path(account_id: account.id, conversation_id: 0),
+             params: blob_params, headers: { api_access_token: agent.access_token.token }, as: :json
+
+        expect(response).to have_http_status(:not_found)
+      end
+
       it 'returns unauthorized for an agent of another account' do
         other_agent = create(:user, account: create(:account), role: :agent)
 

@@ -15,7 +15,7 @@ class Api::V1::Accounts::Conversations::DirectUploadsController < ActiveStorage:
   before_action :conversation
 
   def create
-    return if @conversation.nil? || @current_account.nil?
+    return if @current_account.nil?
 
     super
   end
@@ -33,8 +33,9 @@ class Api::V1::Accounts::Conversations::DirectUploadsController < ActiveStorage:
   end
 
   def conversation
-    @conversation ||= Current.account.conversations.find_by(display_id: params[:conversation_id])
-    authorize_conversation if @conversation
+    # Conversa que não existe responde 404, como as outras rotas da conversa (find_by!).
+    @conversation ||= Current.account.conversations.find_by!(display_id: params[:conversation_id])
+    authorize_conversation
   end
 
   # Mesma regra das outras rotas da conversa (Conversations::BaseController): subir arquivo é escrita, segue em show?, e a
