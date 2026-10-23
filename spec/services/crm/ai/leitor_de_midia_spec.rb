@@ -20,6 +20,7 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
   def meta(anexo) = anexo.reload.meta.to_h
 
   before do
+    limpar_redis_do_leitor
     allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
     allow(Crm::Ai::CredentialResolver).to receive(:new)
       .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', source: 'teste' }))
@@ -171,14 +172,6 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
         expect(meta(foto)['crm_ai_midia_falha']).to eq('permanente')
       end
 
-      it 'a falha passageira de mensagem fora da janela (expirado) também não conta no teto do dia' do
-        stub_const("#{described_class}::MAX_LEITURAS_POR_DIA", 1)
-        allow(transcricoes).to receive(:transcribe).and_raise(Faraday::TimeoutError)
-        described_class.new(anexar_audio(mensagem(criada_em: 3.days.ago)).message).perform
-
-        expect(described_class.new(anexar_imagem(mensagem).message).perform).to eq(1)
-      end
-
       it 'a API da foto ocupada (429) ou recusando a chave (401) é passageira', :aggregate_failures do
         [429, 401].each do |status|
           allow(legendas).to receive(:caption).and_raise(Crm::Ai::ResponsesClient::Error.new('x', status: status))
@@ -247,7 +240,7 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
         expect(meta(audio)).not_to have_key('crm_ai_audio_done')
       end
 
-      it 'a tentativa passageira não conta no teto do dia' do
+      it 'a tentativa com falha passageira conta no teto do dia (em dia de API lenta, o gasto tem limite)', :aggregate_failures do
         stub_const("#{described_class}::MAX_LEITURAS_POR_DIA", 1)
         allow(transcricoes).to receive(:transcribe).and_raise(Faraday::TimeoutError)
         audio = anexar_audio(mensagem)
@@ -255,7 +248,17 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
 
         foto = anexar_imagem(mensagem)
 
-        expect(described_class.new(foto.message).perform).to eq(1)
+        expect(described_class.new(foto.message).perform).to eq(0)
+        expect(Crm::Ai::TetoDaMidia.new(account).usado).to eq(2)
+      end
+
+      it 'anexo em leitura por outro processo (marca vigente) não é lido de novo; marca vencida é', :aggregate_failures do
+        foto = anexar_imagem(mensagem, meta: { Crm::Ai::ReservaDaMidia::LENDO => 5.minutes.from_now.iso8601 })
+        expect(described_class.new(foto.message).perform).to eq(0)
+
+        foto.update!(meta: { Crm::Ai::ReservaDaMidia::LENDO => 1.second.ago.iso8601 })
+        expect(described_class.new(foto.message.reload).perform).to eq(1)
+        expect(meta(foto)).not_to have_key(Crm::Ai::ReservaDaMidia::LENDO)
       end
 
       it 'na leitura em linha, a falha passageira não sobe e o anexo fica pendente', :aggregate_failures do
@@ -300,7 +303,7 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
         described_class.ler_a_rajada(conversation, mensagem(:incoming, 'e aí?'))
 
         expect(transcricoes).not_to have_received(:transcribe)
-        expect(Crm::Ai::LerMidiaJob).to have_been_enqueued.once
+        expect(Crm::Ai::LerMidiaJob).to have_been_enqueued.with(anything, 'mensagem_nova').on_queue('low').once
       end
 
       it 'o expirado que falha de novo só volta a ser relido depois de ESPERA_DO_EXPIRADO', :aggregate_failures do
@@ -329,6 +332,7 @@ RSpec.describe Crm::Ai::LeitorDeMidia do
 
       expect { described_class.new(foto.message).perform }.to raise_error(NoMethodError)
       expect(meta(foto)).not_to have_key('crm_ai_image_done')
+      expect(meta(foto)).not_to have_key(Crm::Ai::ReservaDaMidia::LENDO)
     end
 
     describe 'arquivo que ainda não chegou ao storage (corrida com o upload)' do

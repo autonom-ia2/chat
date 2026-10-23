@@ -13,6 +13,11 @@ class Crm::Ai::LerMidiaJob < ApplicationJob
   TENTATIVAS = 8
   TENTATIVAS_DA_FALHA_PASSAGEIRA = 3
 
+  # A releitura (mensagem nova ou varredura) não disputa a fila high com a entrega de mensagens: a leitura paga pode levar
+  # minutos. E uma mensagem entra no máximo uma vez a cada DEDUP_DA_RELEITURA: fila atrasada não empilha a mesma.
+  FILA_DA_RELEITURA = :low
+  DEDUP_DA_RELEITURA = 30.minutes
+
   queue_as :high
   retry_on ActiveStorage::FileNotFoundError, attempts: TENTATIVAS, wait: ->(executions) { 2**executions }
   retry_on Crm::Ai::LeitorDeMidia::FalhaPassageira,
@@ -22,6 +27,14 @@ class Crm::Ai::LerMidiaJob < ApplicationJob
   end
 
   # `releitura`: 'mensagem_nova' (a chegada e a leitura em linha) ou 'varredura' (Crm::Ai::RelerMidiaPendenteJob).
+  # -> true quando enfileirou.
+  def self.reler(message_id, releitura)
+    return false unless Redis::Alfred.set("crm:leitor_de_midia:releitura:#{message_id}", 1, nx: true, ex: DEDUP_DA_RELEITURA.to_i)
+
+    set(queue: FILA_DA_RELEITURA).perform_later(message_id, releitura)
+    true
+  end
+
   def perform(message_id, releitura = 'mensagem_nova')
     message = Message.find_by(id: message_id)
     return if message.blank?

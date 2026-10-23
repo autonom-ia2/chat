@@ -17,6 +17,7 @@ RSpec.describe Crm::Ai::RelerMidiaPendenteJob do
   def enfileiradas = enqueued_jobs.select { |job| job['job_class'] == 'Crm::Ai::LerMidiaJob' }.map { |job| job['arguments'].first }
 
   before do
+    limpar_redis_do_leitor
     allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, configured?: true,
                                                                                                                 resolve: credencial))
@@ -111,6 +112,41 @@ RSpec.describe Crm::Ai::RelerMidiaPendenteJob do
     described_class.perform_now
 
     expect(enfileiradas).to eq([nova.id])
+  end
+
+  it 'enfileira na fila low e não enfileira de novo a mesma mensagem enquanto a anterior pode estar na fila', :aggregate_failures do
+    pendente = anexar_audio(mensagem).message
+
+    described_class.perform_now
+    described_class.perform_now
+
+    expect(Crm::Ai::LerMidiaJob).to have_been_enqueued.with(pendente.id, 'varredura').on_queue('low').once
+  end
+
+  it 'conta que já gastou a fração do teto do dia reservada à releitura: não enfileira' do
+    anexar_audio(mensagem)
+    usado = (Crm::Ai::LeitorDeMidia::MAX_LEITURAS_POR_DIA * described_class::FRACAO_DO_TETO).floor
+    usado.times { Crm::Ai::TetoDaMidia.new(account).somar }
+
+    described_class.perform_now
+
+    expect(enfileiradas).to be_empty
+  end
+
+  it 'conta cuja consulta estoura o tempo é pulada e a rodada segue nas outras', :aggregate_failures do
+    outra = create(:account)
+    outra.enable_features!(Crm::Ai::LeitorDeMidia::FLAG)
+    caixa = create_crm_inbox(account: outra)
+    outra.crm_inbox_settings.find_or_initialize_by(inbox: caixa).update!(crm_enabled: true)
+    conversa = create_crm_conversation(account: outra, inbox: caixa, contact: create(:contact, account: outra))
+    anexar_audio(mensagem)
+    da_outra = anexar_audio(create(:message, account: outra, inbox: caixa, conversation: conversa, message_type: :incoming,
+                                             created_at: 1.hour.ago)).message
+    allow(Crm::Ai::TetoDaMidia).to receive(:new).and_call_original
+    allow(Crm::Ai::TetoDaMidia).to receive(:new).with(account).and_raise(ActiveRecord::QueryCanceled, 'statement timeout')
+
+    expect { described_class.perform_now }.not_to raise_error
+    expect(enfileiradas).to eq([da_outra.id])
   end
 
   it 'respeita o teto de mensagens por conta em cada rodada' do

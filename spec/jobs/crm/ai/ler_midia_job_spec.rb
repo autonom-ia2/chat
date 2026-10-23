@@ -22,6 +22,14 @@ RSpec.describe Crm::Ai::LerMidiaJob do
       expect(Crm::Ai::LeitorDeMidia).not_to have_received(:new)
     end
 
+    it 'a releitura vai na fila low, uma vez por mensagem dentro do prazo', :aggregate_failures do
+      Redis::Alfred.delete("crm:leitor_de_midia:releitura:#{message.id}")
+
+      expect(described_class.reler(message.id, 'varredura')).to be(true)
+      expect(described_class.reler(message.id, 'mensagem_nova')).to be(false)
+      expect(described_class).to have_been_enqueued.with(message.id, 'varredura').on_queue('low').once
+    end
+
     it 'vai na fila high' do
       expect(described_class.new.queue_name).to eq('high')
     end

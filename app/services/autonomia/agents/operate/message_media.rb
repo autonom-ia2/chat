@@ -154,8 +154,10 @@ module Autonomia
           cached = attachment.meta.to_h['transcribed_text'].to_s
           return cached if cached.present?
 
-          # A mesma trava do anexo que o leitor de mídia do CRM usa (Crm::Ai::LeitorDeMidia#ler): quem chega depois espera
-          # e relê o cache antes de pagar a transcrição de novo.
+          lido_pelo_crm = texto_do_leitor_do_crm(attachment)
+          return lido_pelo_crm if lido_pelo_crm.present?
+
+          # A trava do anexo e o cache relido sob ela: quem chega depois relê antes de pagar a transcrição de novo.
           attachment.with_lock do
             cached = attachment.meta.to_h['transcribed_text'].to_s
             next cached if cached.present?
@@ -167,6 +169,14 @@ module Autonomia
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] transcription_failed attachment=#{attachment.id} #{e.class}")
           nil
+        end
+
+        # O leitor de mídia do CRM lê fora da trava (#2109) e marca o anexo "em leitura" (Crm::Ai::ReservaDaMidia): o turno
+        # espera um pouco o texto dele antes de pagar a transcrição de novo. -> o texto, ou nil.
+        def texto_do_leitor_do_crm(attachment)
+          return unless Crm::Ai::ReservaDaMidia.lendo?(attachment.meta.to_h)
+
+          Crm::Ai::ReservaDaMidia.esperar(attachment).meta.to_h['transcribed_text'].to_s.presence
         end
 
         # Cache compartilhado (attachment.meta['transcribed_text']). Recarrega antes do merge p/ reduzir
