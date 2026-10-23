@@ -52,3 +52,23 @@ em_uso() {
   for pid in $ultima; do /bin/ps -p "$pid" -o pid=,comm= >&2 || echo "$pid (já saiu)" >&2; done
   return 0
 }
+
+# snapshot_valido <diretório>: aceita só "$PREFIXO_SNAPSHOT<id>" (quem carrega define PREFIXO_SNAPSHOT), com id não
+# vazio, sem "/" e sem começar por "." (o que recusa "." e ".." e qualquer nome oculto). Falha em qualquer outro caso.
+snapshot_valido() {
+  local id=${1#"$PREFIXO_SNAPSHOT"}
+  [ "$id" != "$1" ] || falha "snapshot fora de $PREFIXO_SNAPSHOT: $1"
+  case "$id" in
+    '' | */* | .*) falha "caminho de snapshot suspeito: $1" ;;
+  esac
+}
+
+# snapshot_so_meu <diretório>: o lsof sem root só enxerga processos do próprio uid. Por isso o snapshot só sai se
+# for deste usuário e tiver modo 700: assim nenhum outro uid comum abre arquivo lá dentro. Root (que o lsof sem
+# sudo não vê) fica de fora: documentado no runbook, "Checagem de uso".
+snapshot_so_meu() {
+  local eu info
+  eu=$(/usr/bin/id -u) || falha "id falhou; não sei quem sou"
+  info=$(/usr/bin/stat -f '%u %Lp' "$1") || falha "stat falhou em $1; não apago"
+  [ "$info" = "$eu 700" ] || falha "$1 não é só deste usuário (dono e modo: $info; esperado $eu 700); não apago"
+}

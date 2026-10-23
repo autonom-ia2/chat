@@ -19,6 +19,9 @@ REDISBIN=$T/deps/redis-8.10.2/bin
 PG_HOST=127.0.0.1
 PG_PORT=55432
 PREFIXO_BANCO=chatwoot_kitdemo_
+# Role própria da demo: dona do banco, sem superuser, sem CREATEDB e sem CREATEROLE. O Rails e o `bin/demo psql`
+# entram com ela; só o kit (criar e apagar banco e role, extensões) usa o postgres.
+PREFIXO_ROLE=kitdemo_
 PREFIXO_SNAPSHOT=/Users/Shared/maccluster-workspaces/chat2you/
 ESPERA_RAILS_SEGUNDOS=900
 ESPERA_VITE_SEGUNDOS=120
@@ -29,6 +32,7 @@ case "$slug" in
   '' | *[!a-z0-9-]* | -* | *-) falha "slug inválido" ;;
 esac
 [ ${#slug} -le 30 ] || falha "slug longo demais"
+ROLE=${PREFIXO_ROLE}${slug//-/_}
 # em_uso (mesmo arquivo que o bin/demo usa no M4)
 # shellcheck source=script/demo/comum.sh
 source "${BASH_SOURCE[0]%/*}/comum.sh" || falha "não carreguei comum.sh"
@@ -51,12 +55,9 @@ carregar_estado() {
       '' | *[!0-9]*) falha "porta inválida no demo.env ('$porta'); confira $L/demo.env" ;;
     esac
   done
-  # SNAP decide o que o apagar remove: tem de ser <prefixo>/<id>/src, sem "..".
-  case "${SNAP:-}" in
-    *..* | "$PREFIXO_SNAPSHOT"*/*/*) falha "SNAP suspeito no demo.env ('${SNAP:-}')" ;;
-    "$PREFIXO_SNAPSHOT"?*/src) ;;
-    *) falha "SNAP vazio ou fora de $PREFIXO_SNAPSHOT no demo.env ('${SNAP:-}')" ;;
-  esac
+  # SNAP decide o que o apagar remove: tem de ser <prefixo><id>/src, com id sem "/" e sem começar por ".".
+  case "${SNAP:-}" in */src) ;; *) falha "SNAP vazio ou sem /src no demo.env ('${SNAP:-}')" ;; esac
+  snapshot_valido "${SNAP%/src}"
   [ "$SLUG" = "$slug" ] || falha "demo.env é de outra demo ($SLUG)"
   [ "$DB" = "${PREFIXO_BANCO}${slug//-/_}" ] || falha "demo.env aponta para outro banco ($DB)"
   # Demo em remoção (o M2 já apagou banco e snapshot): só deixa terminar.
@@ -69,6 +70,34 @@ carregar_estado() {
 }
 
 psql_demo() { "$PGBIN/psql" -X -h "$PG_HOST" -p "$PG_PORT" -U postgres -v ON_ERROR_STOP=1 "$@"; }
+psql_da_role() { "$PGBIN/psql" -X -h "$PG_HOST" -p "$PG_PORT" -U "$ROLE" -v ON_ERROR_STOP=1 "$@"; }
+
+# Erro do psql para tudo: nunca vira "role não existe".
+role_existe() {
+  local saida
+  saida=$(psql_demo -d postgres -Atc "SELECT 1 FROM pg_roles WHERE rolname = '$ROLE'") ||
+    falha "não consegui consultar o Postgres ($PG_HOST:$PG_PORT); não sei se a role $ROLE existe"
+  [ "$saida" = "1" ]
+}
+
+# Cria (se faltar) a role sem privilégio e o banco dono dela, e as extensões do db/schema.rb como postgres
+# (CREATE EXTENSION de algumas exige superuser; o schema:load depois só encontra "já existe").
+criar_banco_e_role() {
+  local ext lista
+  if ! role_existe; then
+    psql_demo -d postgres -c "CREATE ROLE \"$ROLE\" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS" \
+      > /dev/null || falha "não criei a role $ROLE"
+  fi
+  if ! banco_existe "$DB"; then
+    "$PGBIN/createdb" -h "$PG_HOST" -p "$PG_PORT" -U postgres -O "$ROLE" "$DB" || falha "não criei o banco $DB"
+  fi
+  lista=$("$R/bin/ruby" "$KIT/extensoes.rb" "$SNAP/db/schema.rb") || falha "não li as extensões do db/schema.rb"
+  while IFS= read -r ext; do
+    [ -n "$ext" ] || continue
+    case "$ext" in *[!a-z0-9_]*) falha "extensão com nome inesperado: $ext" ;; esac
+    psql_demo -d "$DB" -c "CREATE EXTENSION IF NOT EXISTS \"$ext\"" > /dev/null || falha "não criei a extensão $ext"
+  done <<< "$lista"
+}
 
 # Erro do psql (Postgres fora, autenticação) para tudo: nunca vira "banco não existe".
 banco_existe() {
@@ -105,7 +134,7 @@ demo_env() {
     RAILS_ENV=development RACK_ENV=development NODE_ENV=development DISABLE_SPRING=1 \
     DISABLE_MINI_PROFILER=1 AWS_EC2_METADATA_DISABLED=true \
     POSTGRES_HOST="$PG_HOST" POSTGRES_PORT="$PG_PORT" POSTGRES_DATABASE="$DB" \
-    POSTGRES_USERNAME=postgres POSTGRES_PASSWORD= \
+    POSTGRES_USERNAME="$ROLE" POSTGRES_PASSWORD= \
     REDIS_URL="redis://127.0.0.1:$REDIS_PORT/0" REDIS_PASSWORD= \
     DEMO_CHAVES="$L/chaves" \
     FRONTEND_URL="http://localhost:$RAILS_PORT" ENABLE_ACCOUNT_SIGNUP=false \
@@ -223,11 +252,21 @@ checar() {
   if banco_existe "$DB"; then
     falha "o banco $DB já existe sem demo registrada. Confira com o dono antes de apagar."
   fi
+  if role_existe; then
+    falha "a role $ROLE já existe sem demo registrada. Confira com o dono antes de apagar."
+  fi
+  local linha codigo
   for outro in "$RAIZ"/*/demo.env; do
     [ -f "$outro" ] || continue
-    if /usr/bin/grep -qxF "RAILS_PORT=$rails" "$outro" || /usr/bin/grep -qxF "REDIS_PORT=$redis" "$outro"; then
-      falha "portas $rails/$redis já usadas por ${outro%/*}. Use outro slug."
-    fi
+    for linha in "RAILS_PORT=$rails" "REDIS_PORT=$redis"; do
+      codigo=0
+      /usr/bin/grep -qxF -- "$linha" "$outro" || codigo=$?
+      case "$codigo" in
+        0) falha "portas $rails/$redis já usadas por ${outro%/*}. Use outro slug." ;;
+        1) ;;
+        *) falha "grep falhou lendo $outro (saída $codigo); não sei se as portas estão livres" ;;
+      esac
+    done
   done
   for porta in "$rails" "$vite" "$redis"; do
     ! escuta "$porta" || falha "porta $porta ocupada por outro processo. Use outro slug."
@@ -249,12 +288,11 @@ sem_segredo() {
 # O bin/demo completa a cópia com rsync (só a diferença). node_modules vem junto no clone e o pnpm acerta.
 clonar_base() {
   local destino=$1 base='' d
-  case "$destino" in
-    "$PREFIXO_SNAPSHOT"*/* | *..*) falha "destino suspeito: $destino" ;;
-    "$PREFIXO_SNAPSHOT"?*) ;;
-    *) falha "destino fora de $PREFIXO_SNAPSHOT: $destino" ;;
-  esac
+  snapshot_valido "$destino"
   [ ! -e "$destino" ] || falha "destino já existe: $destino"
+  # Um clone pendente por demo: o anterior tem de ser descartado (ou registrado) antes de outro.
+  [ ! -e "$L/clone-pendente" ] ||
+    falha "já há um clone pendente desta demo (caminho em $L/clone-pendente); descarte-o antes (o up falho deveria ter feito)"
   local candidatos
   candidatos=$(/bin/ls -td "$PREFIXO_SNAPSHOT"*/) || falha "não consegui listar os snapshots em $PREFIXO_SNAPSHOT"
   while IFS= read -r d; do
@@ -268,7 +306,7 @@ clonar_base() {
   echo "base no M2: $base (clone APFS)"
   # Registro do clone ainda não registrado: só o descartar-snapshot com este mesmo caminho pode apagá-lo.
   printf '%s\n' "$destino" > "$L/clone-pendente"
-  mkdir "$destino"
+  mkdir -m 700 "$destino"
   /bin/cp -c -R "$base/src" "$destino/src"
   # Logs, pids, caches e uploads da outra demo não vêm junto.
   /bin/rm -rf "$destino/src/log" "$destino/src/tmp" "$destino/src/storage" "$destino/src/public/vite-dev" \
@@ -285,12 +323,13 @@ iniciar() {
   local snap=$1 base=$2 origem=$3 rails=$4 vite=$5 redis=$6
   checar "$rails" "$vite" "$redis" > /dev/null
   [ -d "$snap" ] || falha "snapshot não chegou ao M2: $snap"
-  case "$snap" in
-    "$PREFIXO_SNAPSHOT"*/src) ;;
-    *) falha "snapshot fora de $PREFIXO_SNAPSHOT: $snap" ;;
-  esac
-  mkdir -p "$L/chaves" "$L/redis"
+  case "$snap" in */src) ;; *) falha "snapshot sem /src: $snap" ;; esac
+  snapshot_valido "${snap%/src}"
+  mkdir -p "$L/redis"
+  # Chaves nascem 0600 numa pasta 0700 (umask antes do openssl, não chmod depois).
+  (umask 077 && mkdir -p "$L/chaves") || falha "não criei $L/chaves"
   chmod 700 "$L/chaves"
+  umask 077
   /usr/bin/openssl rand -hex 64 > "$L/chaves/secret"
   for k in enc_p enc_d enc_s; do /usr/bin/openssl rand -hex 16 > "$L/chaves/$k"; done
   chmod 600 "$L/chaves/"*
@@ -332,8 +371,10 @@ preparar() {
   echo "pnpm install (playwright, para os prints)..."
   (cd tests/playwright && demo_env pnpm install --frozen-lockfile --prefer-offline --ignore-scripts) > "$L/pnpm-pw.log" 2>&1 ||
     { /usr/bin/tail -30 "$L/pnpm-pw.log"; falha "pnpm install do playwright falhou (log: $L/pnpm-pw.log)"; }
-  echo "banco $DB: create + schema:load + seed..."
-  demo_env bundle exec rails db:create db:schema:load db:seed > "$L/banco.log" 2>&1 ||
+  echo "role $ROLE e banco $DB (dono: $ROLE) + extensões..."
+  criar_banco_e_role
+  echo "banco $DB: schema:load + seed (como $ROLE)..."
+  demo_env bundle exec rails db:schema:load db:seed > "$L/banco.log" 2>&1 ||
     { /usr/bin/tail -30 "$L/banco.log"; falha "preparo do banco falhou (log: $L/banco.log)"; }
   echo "dados de exemplo da conta + idioma pt-BR..."
   demo_env bundle exec rails runner "$KIT/preparar_conta.rb" > "$L/conta.log" 2>&1 ||
@@ -464,20 +505,21 @@ reiniciar_vite() {
 descartar_snapshot() {
   local snapdir=$1
   [ ! -f "$L/demo.env" ] || falha "a demo está registrada; use bin/demo down $slug --apagar"
-  case "$snapdir" in
-    "$PREFIXO_SNAPSHOT"*/* | *..*) falha "caminho suspeito: $snapdir" ;;
-    "$PREFIXO_SNAPSHOT"?*) ;;
-    *) falha "fora de $PREFIXO_SNAPSHOT: $snapdir" ;;
-  esac
+  snapshot_valido "$snapdir"
   local pendente
+  if [ ! -e "$snapdir" ]; then
+    # Nada no M2 (o clone nem começou): só limpa o registro, se for deste caminho.
+    if [ -f "$L/clone-pendente" ]; then
+      pendente=$(/bin/cat "$L/clone-pendente") || falha "não li $L/clone-pendente"
+      [ "$pendente" != "$snapdir" ] || /bin/rm -f "$L/clone-pendente"
+    fi
+    return 0
+  fi
   [ -f "$L/clone-pendente" ] || falha "sem registro de clone pendente em $L; não apago $snapdir"
   pendente=$(/bin/cat "$L/clone-pendente") || falha "não li $L/clone-pendente"
   [ "$pendente" = "$snapdir" ] || falha "o clone pendente é $pendente, não $snapdir; não apago"
-  if [ ! -d "$snapdir" ]; then
-    /bin/rm -f "$L/clone-pendente"
-    return 0
-  fi
   marcador_confere "$snapdir"
+  snapshot_so_meu "$snapdir"
   if em_uso "$snapdir"; then falha "snapshot em uso: $snapdir"; fi
   /bin/rm -rf "$snapdir"
   /bin/rm -f "$L/clone-pendente"
@@ -530,7 +572,8 @@ semear() {
   cd "$SNAP"
   demo_env DEMO_PASTA="$L" bundle exec rails runner "$arquivo" > "$L/seed.log" 2>&1 ||
     { /usr/bin/tail -30 "$L/seed.log"; falha "seed falhou (log $L/seed.log)"; }
-  /usr/bin/grep -v 'INFO\|DEBUG' "$L/seed.log" | /usr/bin/tail -15
+  # Só exibição: linha nenhuma depois do filtro não é erro (o erro do seed já parou acima).
+  /usr/bin/grep -v 'INFO\|DEBUG' "$L/seed.log" | /usr/bin/tail -15 || :
 }
 
 prints() {
@@ -540,15 +583,15 @@ prints() {
   escuta "$RAILS_PORT" || falha "painel desligado. Rode: bin/demo up $slug"
   /bin/rm -rf "$saida"
   mkdir -p "$saida"
-  local senha=${DEMO_SENHA:-}
-  if [ -z "$senha" ]; then
-    senha=$("$R/bin/ruby" "$KIT/senha_do_seed.rb" "$SNAP/db/seeds.rb" john@acme.inc) ||
-      falha "não li a senha do seed em $SNAP/db/seeds.rb"
-    [ -n "$senha" ] || falha "senha do seed vazia em $SNAP/db/seeds.rb"
-  fi
+  # A senha vai para um arquivo 0600 (umask antes de criar) e o prints.cjs lê de lá: nunca pelo argv nem ambiente.
+  local senha
+  senha=$("$R/bin/ruby" "$KIT/senha_do_seed.rb" "$SNAP/db/seeds.rb" john@acme.inc) ||
+    falha "não li a senha do seed em $SNAP/db/seeds.rb"
+  [ -n "$senha" ] || falha "senha do seed vazia em $SNAP/db/seeds.rb"
+  (umask 077 && printf '%s\n' "$senha" > "$L/chaves/senha_seed") || falha "não gravei a senha do seed"
   /usr/bin/env -i HOME="$HOME" PATH="$N/bin:/usr/bin:/bin" LANG=en_US.UTF-8 \
     PW="$SNAP/tests/playwright/node_modules/playwright" BASE="http://localhost:$RAILS_PORT" \
-    DEMO_SENHA="$senha" DEMO_ESTADO_DIR="$L" DEMO_RELATO="$L/relato.json" \
+    DEMO_SENHA_ARQUIVO="$L/chaves/senha_seed" DEMO_ESTADO_DIR="$L" DEMO_RELATO="$L/relato.json" \
     "$N/bin/node" "$KIT/prints.cjs" "$jornadas" "$saida"
 }
 
@@ -561,15 +604,16 @@ mostrar_estado() {
   if [ -f "$L/apagado-no-m2" ]; then echo "EM_REMOCAO=sim"; else echo "EM_REMOCAO=nao"; fi
 }
 
-# Um SQL no banco da demo. Opções do psql não passam (o argumento vai inteiro no -c), o psqlrc não é lido (-X)
-# e meta-comando (\c outro_banco, \! comando) é recusado.
+# Um SQL no banco da demo, como a role da demo (sem superuser, sem CREATEDB): ela não cria nem apaga outro banco
+# e não lê banco de que não é dona. Opções do psql não passam (o argumento vai inteiro no -c), o psqlrc não é lido
+# (-X) e meta-comando (\c outro_banco, \! comando) é recusado.
 psql_cmd() {
   carregar_estado
   local sql=${1:?uso: bin/demo psql <slug> \"SQL\"}
   # Com -c, o psql roda SQL puro OU um único meta-comando, que é sempre o texto começando com "\".
   local inicio=${sql#"${sql%%[![:space:]]*}"}
   case "$inicio" in "\\"*) falha 'meta-comando do psql (começa com \) não é aceito; mande só SQL' ;; esac
-  psql_demo -d "$DB" -c "$sql"
+  psql_da_role -d "$DB" -c "$sql"
 }
 
 
@@ -584,14 +628,19 @@ apagar() {
     return 0
   fi
   case "$DB" in "$PREFIXO_BANCO"*) ;; *) falha "banco fora do kit: $DB" ;; esac
+  case "$ROLE" in "$PREFIXO_ROLE"?*) ;; *) falha "role fora do kit: $ROLE" ;; esac
+  # Prova positiva da role antes de mexer em qualquer coisa: se existir, tem de ser sem privilégio.
+  if role_existe; then
+    local super
+    super=$(psql_demo -d postgres -Atc "SELECT rolsuper::text || rolcreatedb::text || rolcreaterole::text FROM pg_roles WHERE rolname = '$ROLE'") ||
+      falha "não li a role $ROLE"
+    [ "$super" = "falsefalsefalse" ] || falha "a role $ROLE tem privilégio (super/createdb/createrole: $super); não é do kit, nada apagado"
+  fi
   local snapdir=${SNAP%/src}
-  case "$snapdir" in
-    "$PREFIXO_SNAPSHOT"*/* | *..*) falha "caminho de snapshot suspeito: $snapdir" ;;
-    "$PREFIXO_SNAPSHOT"?*) ;;
-    *) falha "snapshot fora de $PREFIXO_SNAPSHOT: $snapdir" ;;
-  esac
+  snapshot_valido "$snapdir"
   if [ -d "$snapdir" ]; then
     marcador_confere "$snapdir"
+    snapshot_so_meu "$snapdir"
   fi
   descer
   if [ -d "$snapdir" ] && em_uso "$snapdir"; then
@@ -604,6 +653,10 @@ apagar() {
   if [ -d "$snapdir" ]; then
     /bin/rm -rf "$snapdir"
     echo "snapshot apagado no M2: $snapdir"
+  fi
+  if role_existe; then
+    psql_demo -d postgres -c "DROP ROLE \"$ROLE\"" > /dev/null || falha "não apaguei a role $ROLE (ainda é dona de algo?)"
+    echo "role $ROLE apagada"
   fi
   /usr/bin/touch "$L/apagado-no-m2"
 }

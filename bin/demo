@@ -8,7 +8,7 @@
 #   bin/demo seed <slug> <arquivo.rb>        roda um seed próprio (rails runner) no banco da demo
 #   bin/demo tunnel <slug>                   comando de túnel e URL para abrir no M4
 #   bin/demo prints <slug> <jornadas.json>   prints por jornada (1440 e 390) em docs/<pasta>/
-#   bin/demo psql <slug> "SQL"               roda um SQL no banco da demo (só nele)
+#   bin/demo psql <slug> "SQL"               roda um SQL no banco da demo, como a role da demo (sem superuser)
 #   bin/demo status <slug>                   estado gravado da demo
 #   bin/demo down <slug> [--apagar]          desliga; com --apagar, apaga banco, snapshot e pasta da demo
 #
@@ -49,7 +49,11 @@ portas() {
 }
 
 # ssh junta os argumentos numa linha só: cada um vai escapado com %q para chegar inteiro no M2.
-no_m2() { ssh -o BatchMode=yes "$HOST" "$(printf '%q ' /bin/bash "$RAIZ_DEMOS/$slug/kit/no_m2.sh" "$@")"; }
+no_m2() {
+  local comando
+  printf -v comando '%q ' /bin/bash "$RAIZ_DEMOS/$slug/kit/no_m2.sh" "$@" || falha "não montei o comando para o $HOST"
+  ssh -o BatchMode=yes "$HOST" "$comando"
+}
 
 # Leva o script/demo desta worktree para a pasta da demo no M2 (o kit roda de lá, não do snapshot).
 enviar_kit() {
@@ -115,29 +119,40 @@ EXCLUIR_RSYNC=(--exclude=/src/node_modules --exclude=/src/tests/playwright/node_
 # A cópia do M2 nasce de um clone APFS (cp -c, custo ~0) do snapshot chat2you mais recente que já está lá,
 # e o rsync --checksum --delete leva só a diferença. Funciona com o M2 em "modo remoto", em que o MacCluster
 # não replica snapshot (transferência grande); só a diferença trafega.
+# Snapshot criado pelo up e ainda não registrado (demo.env): qualquer saída com erro até o registro o descarta nos
+# dois Macs (trap EXIT do cmd_up). Vazio = nada a descartar.
+SNAPSHOT_NOVO=''
+descartar_snapshot_novo() {
+  local codigo=$? snapdir=$SNAPSHOT_NOVO
+  SNAPSHOT_NOVO=''
+  [ -n "$snapdir" ] && [ "$codigo" -ne 0 ] || return 0
+  echo "bin/demo: o up falhou depois do snapshot; descartando $snapdir no $HOST e neste Mac" >&2
+  if no_m2 descartar-snapshot "$slug" "$snapdir"; then
+    apagar_snapshot_local "$snapdir/src"
+  else
+    echo "bin/demo: não consegui descartar no $HOST: $HOST:$snapdir (o deste Mac ficou: $snapdir)" >&2
+  fi
+}
+
 criar_snapshot() {
   local saida snapdir
   echo "snapshot da worktree $WT (só no M4) ..."
   saida=$(maccluster workspace snapshot --cwd "$WT" --name chat2you --local-only --json) || falha "snapshot falhou"
   SNAP=$(printf %s "$saida" | json_campo src) || falha "não li o caminho do snapshot na saída do MacCluster"
+  case "$SNAP" in */src) ;; *) falha "snapshot em caminho inesperado: $SNAP" ;; esac
   snapdir=${SNAP%/src}
-  case "$snapdir" in
-    "$PREFIXO_SNAPSHOT"*/* | *..*) falha "snapshot em caminho inesperado: $SNAP" ;;
-    "$PREFIXO_SNAPSHOT"?*) ;;
-    *) falha "snapshot em caminho inesperado: $SNAP" ;;
-  esac
+  snapshot_valido "$snapdir"
   # O id do snapshot leva data, hora, HEAD, hash e um uuid: cada chamada cria um diretório novo. Confere que é este.
   /usr/bin/python3 -I -c 'import json,os,sys
 m = json.load(open(os.path.join(sys.argv[1], ".maccluster-workspace.json")))
 ok = m["snapshot_id"] == os.path.basename(sys.argv[1]) and m["source_path"] == sys.argv[2]
 sys.exit(0 if ok else 1)' "$snapdir" "$WT" || falha "o snapshot $snapdir não é desta worktree"
+  # Daqui em diante, qualquer falha descarta este snapshot nos dois Macs (descartar_snapshot_novo).
+  SNAPSHOT_NOVO=$snapdir
+  # Só este usuário abre o snapshot (o rsync -a leva o modo 700 para a cópia do M2).
+  /bin/chmod 700 "$snapdir" || falha "não consegui fechar o snapshot em 700: $snapdir"
   echo "snapshot no M4: $snapdir"
-  if ! no_m2 clonar-base "$slug" "$snapdir"; then
-    no_m2 descartar-snapshot "$slug" "$snapdir" ||
-      falha "clone no $HOST falhou e não consegui descartar lá: $HOST:$snapdir (o do M4 ficou: $snapdir)"
-    apagar_snapshot_local "$SNAP"
-    falha "não consegui preparar a cópia no $HOST"
-  fi
+  no_m2 clonar-base "$slug" "$snapdir" || falha "não consegui preparar a cópia no $HOST"
   echo "rsync da diferença para o $HOST ..."
   local estatisticas
   estatisticas=$(/usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" --stats "$snapdir/" "$HOST:$snapdir/") ||
@@ -165,14 +180,13 @@ cmd_up() {
     no_m2 checar "$slug" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"
     local cabeca
     cabeca=$(/usr/bin/git -C "$WT" rev-parse HEAD) || falha "git rev-parse falhou"
+    trap descartar_snapshot_novo EXIT
     criar_snapshot
-    if ! no_m2 iniciar "$slug" "$SNAP" "$cabeca" "$WT" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT"; then
-      no_m2 descartar-snapshot "$slug" "${SNAP%/src}" ||
-        falha "não registrei a demo e não consegui descartar o snapshot no $HOST: $HOST:${SNAP%/src} (o do M4 ficou)"
-      apagar_snapshot_local "$SNAP"
-      falha "não registrei a demo; snapshot descartado"
-    fi
     gravar_sincronizados "$cabeca"
+    no_m2 iniciar "$slug" "$SNAP" "$cabeca" "$WT" "$RAILS_PORT" "$VITE_PORT" "$REDIS_PORT" || falha "não registrei a demo"
+    # Registrada: daqui em diante quem apaga é o down --apagar.
+    SNAPSHOT_NOVO=''
+    trap - EXIT
   fi
   no_m2 preparar "$slug"
   no_m2 subir "$slug"
@@ -181,7 +195,8 @@ cmd_up() {
 
 sensivel() {
   case "$1" in
-    .env | .env.* | */.env | */.env.* | *.pem | *.key | config/credentials/* | config/credentials.yml.enc | \
+    .env | .env.* | */.env | */.env.* | *.pem | *.key | *.p12 | *.pfx | .npmrc | */.npmrc | id_* | */id_* | \
+      config/credentials/* | config/credentials.yml.enc | \
       .secrets/* | */.secrets/* | *.sqlite* | \
       node_modules/* | */node_modules/* | tmp/* | log/* | public/vite*/* | .claude/* | .codex/*) return 0 ;;
   esac
@@ -226,7 +241,7 @@ cmd_sync() {
   base=$(valor_do_estado BASE_SHA) || falha "não li o commit base da demo"
   origem=$(valor_do_estado ORIGEM) || falha "não li a origem da demo"
   [ "$origem" = "$WT" ] || falha "a demo $slug nasceu de $origem, não desta worktree ($WT)"
-  local copiar=() apagar=() f lista
+  local copiar=() apagar=() f lista remoto
   temporario sync
   lista=$TEMPORARIO
   # shellcheck disable=SC2064
@@ -256,7 +271,8 @@ cmd_sync() {
       falha "não copiei os arquivos para o snapshot no $HOST"
   fi
   for f in "${apagar[@]+"${apagar[@]}"}"; do
-    ssh -o BatchMode=yes "$HOST" "$(printf '/bin/rm -f %q' "$snap/$f")" || falha "não apaguei $f no $HOST"
+    printf -v remoto '/bin/rm -f %q' "$snap/$f" || falha "não montei o rm de $f"
+    ssh -o BatchMode=yes "$HOST" "$remoto" || falha "não apaguei $f no $HOST"
     echo "  - $f"
   done
   gravar_sincronizados "$base"
@@ -336,7 +352,7 @@ cmd_prints() {
     docs/?* ) ;;
     *) falha "\"pasta\" do jornadas.json precisa começar com docs/ (veio '$pasta')" ;;
   esac
-  case "$pasta" in *..*) falha "\"pasta\" não pode ter '..'" ;; esac
+  case "$pasta" in *..* | */.* | *//*) falha "\"pasta\" não pode ter componente começando com '.' nem '//' ('$pasta')" ;; esac
   # Prints regravam a pasta inteira: nunca por cima de arquivo versionado.
   local versionados
   versionados=$(/usr/bin/git -C "$WT" ls-files -- "$pasta") || falha "git ls-files falhou; não sei se $pasta é versionada"
@@ -349,10 +365,21 @@ cmd_prints() {
     falha "não levei as jornadas ao $HOST"
   local codigo=0
   no_m2 prints "$slug" || codigo=$?
+  # Os prints chegam num temporário fora da worktree; só arquivo comum e pasta passam, e só para uma pasta sem link.
+  local recebidos estranhos links
+  recebidos=$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/demo-prints.XXXXXX") || falha "mktemp falhou"
+  [ -n "$recebidos" ] && [ -d "$recebidos" ] || falha "mktemp não criou a pasta"
+  # shellcheck disable=SC2064
+  trap "/bin/rm -rf '$recebidos'" EXIT
+  ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/prints-saida' -cf - ." | /usr/bin/tar -C "$recebidos" -xf - ||
+    falha "não trouxe os prints do $HOST"
+  estranhos=$(/usr/bin/find "$recebidos" ! -type f ! -type d) || falha "find falhou nos prints recebidos"
+  [ -z "$estranhos" ] || falha "os prints trouxeram algo que não é arquivo nem pasta (link?): $estranhos"
   /bin/mkdir -p "$WT/$pasta" || falha "não criei $WT/$pasta"
   pasta_segura "$pasta"
-  ssh -o BatchMode=yes "$HOST" "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/prints-saida' -cf - ." | /usr/bin/tar -C "$WT/$pasta" -xf - ||
-    falha "não trouxe os prints do $HOST"
+  links=$(/usr/bin/find "$WT/$pasta" -type l) || falha "find falhou em $WT/$pasta"
+  [ -z "$links" ] || falha "há link simbólico dentro de $WT/$pasta: $links"
+  /bin/cp -R "$recebidos/." "$WT/$pasta/" || falha "não copiei os prints para $WT/$pasta"
   [ "$codigo" -eq 0 ] || echo "bin/demo: prints com FALHA (saída $codigo); veja as linhas acima" >&2
   echo "prints em $WT/$pasta (o relato com URLs e erros fica no $HOST: $RAIZ_DEMOS/$slug/relato.json)"
   return "$codigo"
@@ -361,13 +388,15 @@ cmd_prints() {
 # Confere, sem apagar, que o snapshot deste Mac pode sair (caminho, marcador, ninguém usando).
 conferir_snapshot_local() {
   local snapdir=${1%/src}
-  case "$snapdir" in
-    "$PREFIXO_SNAPSHOT"*/* | *..*) falha "caminho de snapshot suspeito: $snapdir" ;;
-    "$PREFIXO_SNAPSHOT"?*) ;;
-    *) falha "snapshot fora de $PREFIXO_SNAPSHOT: $snapdir" ;;
-  esac
+  snapshot_valido "$snapdir"
   [ -d "$snapdir" ] || { echo "snapshot não existe neste Mac: $snapdir"; return; }
   [ -f "$snapdir/.maccluster-workspace.json" ] || falha "$snapdir sem o marcador do MacCluster; não apago"
+  # Mesma conferência do M2: o marcador tem de dizer que o snapshot é este (snapshot_id igual ao nome).
+  /usr/bin/python3 -I -c 'import json,os,sys
+m = json.load(open(os.path.join(sys.argv[1], ".maccluster-workspace.json")))
+sys.exit(0 if m.get("snapshot_id") == os.path.basename(sys.argv[1]) else 1)' "$snapdir" ||
+    falha "o marcador de $snapdir não é deste snapshot (snapshot_id diferente do nome); não apago"
+  snapshot_so_meu "$snapdir"
   if em_uso "$snapdir"; then falha "snapshot em uso neste Mac; não apaguei: $snapdir (repita, ou apague à mão pelo caminho exato com lsof +D vazio)"; fi
 }
 

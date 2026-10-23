@@ -23,7 +23,7 @@ bin/demo down 2079-instagram        # desliga os servidores (banco e snapshot fi
 bin/demo down 2079-instagram --apagar   # apaga banco, snapshot (M2 e M4) e a pasta da demo
 ```
 
-Outros: `bin/demo status <slug>` (portas, banco, snapshot) e `bin/demo psql <slug> "SQL"` (roda um SQL só no banco da demo, sem `psqlrc`; meta-comando como `\c` ou `\!` é recusado).
+Outros: `bin/demo status <slug>` (portas, banco, snapshot) e `bin/demo psql <slug> "SQL"` (roda um SQL no banco da demo **como a role da demo**, sem superuser e sem `CREATEDB`: ela não cria nem apaga outro banco e não altera role; sem `psqlrc`; meta-comando como `\c` ou `\!` é recusado).
 
 O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o número da Issue e um nome curto.
 
@@ -45,6 +45,12 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
 - **Banco**: `chatwoot_kitdemo_<slug>` (hífen vira `_`) no Postgres de teste do M2 (`127.0.0.1:55432`). O `up` recusa
   se o banco já existir sem demo registrada: nunca reaproveita banco de outra demo. Os scripts Ruby do kit recusam
   qualquer banco fora do prefixo `chatwoot_kitdemo_`.
+- **Role**: `kitdemo_<slug>` (hífen vira `_`), `LOGIN` sem `SUPERUSER`, `CREATEDB` nem `CREATEROLE`, dona do banco da
+  demo. O Rails, os `rails runner` e o `bin/demo psql` entram com ela. Só o kit usa o `postgres`: cria a role, o banco
+  (`createdb -O`) e as extensões do `db/schema.rb` (algumas exigem superuser; o `schema:load` depois só acha "já
+  existe"), e no `down --apagar` faz `dropdb` e `DROP ROLE`. Antes de apagar qualquer coisa, o `apagar` confere que a
+  role, se existir, não tem superuser, `CREATEDB` nem `CREATEROLE`; senão para sem apagar nada. O `up` recusa se a
+  role já existir sem demo registrada.
 - **Portas**: derivadas do slug (`cksum`): Rails `4400–5196`, Vite = Rails + 2, Redis `57400–57599`. Ficam longe das
   de teste (55432, 56379) e das demos feitas à mão (3301–4025, 56xxx). Se dois slugs caírem na mesma porta, o `up`
   avisa: troque o slug.
@@ -70,7 +76,16 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
   o Rails herda. Arquivo ausente ou vazio para tudo.
 - **Clone pendente**: o `clonar-base` grava `clone-pendente` com o caminho do snapshot que está criando no M2. Se o
   `up` falhar antes de registrar a demo, o `descartar-snapshot` só apaga esse mesmo caminho, e só se o marcador do
-  MacCluster dele tiver `snapshot_id` igual ao nome do diretório (o `apagar` confere o mesmo marcador).
+  MacCluster dele tiver `snapshot_id` igual ao nome do diretório (o `apagar` e o M4 conferem o mesmo marcador). Um
+  clone pendente por demo: o `clonar-base` recusa se já houver outro.
+- **Up que falha no meio**: qualquer falha depois de o snapshot ser criado e antes de a demo ficar registrada
+  (clone, `rsync`, conferência, lista do sync, `iniciar`) descarta o snapshot nos dois Macs, pelo mesmo caminho.
+- **Senha do login**: lida do `db/seeds.rb`, gravada em `chaves/senha_seed` (0600) e lida pelo `prints.cjs` desse
+  arquivo; nunca vai no argv nem no ambiente.
+- **Caminhos**: todo caminho de snapshot tem de ser `/Users/Shared/maccluster-workspaces/chat2you/<id>`, com `<id>`
+  sem `/` e sem começar por `.` (nem `.` nem `..`); a `pasta` dos prints não pode ter componente começando por `.`.
+- **Prints**: chegam do M2 num temporário; só arquivo comum e pasta passam (link, socket etc. param o comando), e
+  só são copiados para `docs/<pasta>` se não houver link simbólico nela, nos ancestrais nem dentro dela.
 
 ## Abrir no M4 (túnel)
 
@@ -166,6 +181,14 @@ diskutil unmount force <volume>                   # só volume externo/de rede q
 
 Repita o comando do kit depois que o `lsof` sair sem stderr. Não contorne com `-w`.
 
+**Outros usuários.** O `lsof` sem root só enxerga processos do próprio uid. Levantamento de 23/10: no M2 e no M4 há
+um único usuário humano (uid 501: `rodrigovictor` no M2, `rodrigosilva` no M4); os outros uids com processo são
+contas de sistema (`_spotlight`, `_mdnsresponder` etc.) e root. Em `/Users/Shared`, os processos com caminho no
+comando são do uid 501, mais 3 `login` de root no M2 que só abrem sessão para o mesmo usuário (demos feitas à mão).
+Por isso o kit exige, antes de apagar, que o snapshot seja **do usuário atual e com modo 700** (o `up` fecha o do M4
+em 700 e o `rsync -a` leva o modo ao M2): nenhum outro uid comum abre arquivo lá dentro. Root não é provável sem
+`sudo` e fica fora da checagem; se houver dúvida (Time Machine, antivírus), espere o processo de root terminar.
+
 ## Demo de kit antigo
 
 Demo subida por uma versão anterior do kit não tem `pids/<nome>.pgid` (kit antes do grupo de processos) ou tem o
@@ -201,4 +224,5 @@ Apaga só o que é da demo, pelo nome exato: o banco `chatwoot_kitdemo_<slug>`, 
 - `script/demo/comum.sh` — `em_uso` (checagem com `lsof +D`), carregado pelos dois lados.
 - `script/demo/preparar_conta.rb`, `ligar_flag.rb` — `rails runner` no banco da demo.
 - `script/demo/senha_do_seed.rb` — lê a senha do John no `db/seeds.rb` (parser Prism) para o login dos prints.
+- `script/demo/extensoes.rb` — lista as extensões do `db/schema.rb`, que o kit cria como `postgres`.
 - `script/demo/prints.cjs` — prints com Playwright; `exemplo-jornadas.json` — jornada de exemplo.

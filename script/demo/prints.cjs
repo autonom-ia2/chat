@@ -1,6 +1,7 @@
 // Kit de demo (#2140): prints por jornada no painel local, com o Playwright do snapshot.
 // Uso (o bin/demo chama no M2): node prints.cjs <jornadas.json> <saida>
-// Ambiente: PW (módulo playwright), BASE (http://localhost:<porta>), DEMO_SENHA, DEMO_ESTADO_DIR, DEMO_RELATO.
+// Ambiente: PW (módulo playwright), BASE (http://localhost:<porta>), DEMO_SENHA_ARQUIVO (arquivo 0600 com a
+// senha: ela não passa pelo argv nem pelo ambiente), DEMO_ESTADO_DIR, DEMO_RELATO.
 // O relato.json (URLs locais e erros) fica no M2, em DEMO_RELATO; só os PNGs vão para a worktree.
 // Formato do jornadas.json: docs/runbooks/demo-tela-real.md.
 /* eslint-disable no-console, no-await-in-loop, no-restricted-syntax */
@@ -70,7 +71,7 @@ async function estadoDeLogin(browser) {
   });
   await p.goto(`${BASE}/app/login`, { timeout: TEMPO });
   await p.fill('input[type="email"], input[name="email_address"]', usuario, { timeout: TEMPO });
-  await p.fill('input[type="password"]', process.env.DEMO_SENHA);
+  await p.fill('input[type="password"]', fs.readFileSync(process.env.DEMO_SENHA_ARQUIVO, 'utf8').trim());
   await p.click('button[type="submit"]');
   try {
     await p.waitForURL('**/app/accounts/**', { timeout: 120000 });
