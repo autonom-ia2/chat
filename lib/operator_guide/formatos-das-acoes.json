@@ -624,11 +624,12 @@
     "controller": "api/v1/accounts/crm/pipelines#destroy",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/concerns/crm/pipeline_archiving.rb:27",
-      "app/controllers/concerns/crm/pipeline_archiving.rb:32",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:28",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:37",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:36",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:35",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:83",
       "app/controllers/concerns/crm/pipeline_archiving.rb:31",
-      "app/controllers/concerns/crm/pipeline_archiving.rb:30",
-      "app/controllers/concerns/crm/pipeline_archiving.rb:78",
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:68"
     ],
     "sem_corpo": false
@@ -15758,7 +15759,7 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/pipelines#restore",
     "origem": [
-      "app/controllers/concerns/crm/pipeline_archiving.rb:44",
+      "app/controllers/concerns/crm/pipeline_archiving.rb:49",
       "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:68"
     ],
     "sem_corpo": true
