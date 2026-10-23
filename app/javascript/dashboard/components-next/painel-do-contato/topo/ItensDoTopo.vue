@@ -77,21 +77,21 @@ const alternarAcompanhar = async () => {
   const acompanhar = !acompanho.value;
   const conversationId = props.conversa.id;
   try {
-    await mudarAcompanhar({
+    const ficou = await mudarAcompanhar({
       conversationId,
       euId: eu.value.id,
       acompanhar,
-      gravar: dados => store.dispatch('conversationWatchers/update', dados),
     });
+    if (!ficou) throw new Error('não ficou como pedido');
     useAlert(
       acompanhar
         ? t('PAINEL_DO_CONTATO.MENU_DO_TOPO.ACOMPANHANDO')
         : t('PAINEL_DO_CONTATO.MENU_DO_TOPO.DEIXOU')
     );
   } catch (erro) {
+    const codigo = erro?.response?.data?.code;
     useAlert(
-      MENSAGENS_DE_ERRO[erro?.code]?.() ||
-        t('PAINEL_DO_CONTATO.MENU_DO_TOPO.ERRO')
+      MENSAGENS_DE_ERRO[codigo]?.() || t('PAINEL_DO_CONTATO.MENU_DO_TOPO.ERRO')
     );
   }
   store
@@ -149,10 +149,12 @@ defineExpose({ itens, agir });
 </script>
 
 <template>
-  <TimeEPrioridadeDialog
-    v-if="ligado"
-    ref="dialogo"
-    :conversa="conversa"
-    :times="times || []"
-  />
+  <div class="contents">
+    <TimeEPrioridadeDialog
+      v-if="ligado"
+      ref="dialogo"
+      :conversa="conversa"
+      :times="times || []"
+    />
+  </div>
 </template>

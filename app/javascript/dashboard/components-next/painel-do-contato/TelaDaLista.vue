@@ -12,6 +12,7 @@ import wootConstants from 'dashboard/constants/globals';
 import Button from 'dashboard/components-next/button/Button.vue';
 import InformacoesDoContato from './InformacoesDoContato.vue';
 import { useDataFalada } from './useDataFalada';
+import { nomeDoArquivo } from './nomeDoArquivo';
 
 const props = defineProps({
   tipo: { type: String, required: true },
@@ -70,13 +71,6 @@ const abrirConversa = conversa => {
   router.push({ path: caminho });
 };
 
-const nomeDoArquivo = anexo => {
-  const nome = String(anexo.data_url || '')
-    .split('?')[0]
-    .split('/')
-    .pop();
-  return nome ? decodeURIComponent(nome) : '';
-};
 const ehImagem = anexo => anexo.file_type === 'image';
 const abrirArquivo = anexo =>
   window.open(anexo.data_url, '_blank', 'noopener,noreferrer');

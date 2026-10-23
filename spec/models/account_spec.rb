@@ -262,7 +262,7 @@ RSpec.describe Account do
         feature_crm_ia_leitor_de_midia: 1 << 55,
         # #2079: posição 57 (1 << 56), definitiva da Orquestração (22/10).
         feature_conversa_instagram: 1 << 56,
-        # #2138: posição provisória 59 (1 << 58) da Orquestração; nesta branch é a 58 (1 << 57) até a 58 do Multifunnel entrar.
+        # #2138: posição 58 (1 << 57) pela ordem de chegada (Orquestração, 23/10); se outro PR ocupar a 58 antes, rebase para 59.
         feature_painel_contato_enxuto: 1 << 57
       }
     end

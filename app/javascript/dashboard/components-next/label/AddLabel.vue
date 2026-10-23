@@ -27,10 +27,15 @@ const showDropdown = ref(false);
 
 <template>
   <div :class="{ relative: !anchorMenuToParent }">
-    <!-- Fork (#2138): o pseudo-elemento leva a área de toque a 44 px sem mudar o desenho. -->
+    <!-- Fork (#2138): só no painel do contato, o pseudo-elemento leva a área de
+    toque a 44 px sem mudar o desenho. Fora dele, o botão fica como no Chatwoot. -->
     <button
-      class="relative flex items-center gap-1 px-2 py-1 rounded-md outline-dashed h-6 before:absolute before:inset-x-0 before:-inset-y-2.5 outline-1 outline-n-slate-6 hover:bg-n-alpha-2"
-      :class="{ 'bg-n-alpha-2': showDropdown }"
+      class="flex items-center gap-1 px-2 py-1 rounded-md outline-dashed h-6 outline-1 outline-n-slate-6 hover:bg-n-alpha-2"
+      :class="{
+        'bg-n-alpha-2': showDropdown,
+        'relative before:absolute before:inset-x-0 before:-inset-y-2.5':
+          anchorMenuToParent,
+      }"
       @click="showDropdown = !showDropdown"
     >
       <span class="i-lucide-plus" />

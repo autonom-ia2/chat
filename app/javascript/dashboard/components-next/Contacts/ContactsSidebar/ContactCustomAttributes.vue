@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
 
 import ContactCustomAttributeItem from 'dashboard/components-next/Contacts/ContactsSidebar/ContactCustomAttributeItem.vue';
 
@@ -20,7 +21,11 @@ const { uiSettings } = useUISettings();
 
 const searchQuery = ref('');
 
-const contactAttributes = useMapGetter('attributes/getContactAttributes') || [];
+// Fork (#2138): os campos internos da WAHA não aparecem na página do contato.
+const definicoesDoContato = useMapGetter('attributes/getContactAttributes');
+const contactAttributes = computed(() =>
+  semAtributosInternosDoWhatsapp(definicoesDoContato.value || [])
+);
 
 const hasContactAttributes = computed(
   () => contactAttributes.value?.length > 0

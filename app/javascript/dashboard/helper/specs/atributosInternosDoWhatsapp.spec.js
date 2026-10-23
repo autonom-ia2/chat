@@ -39,4 +39,12 @@ describe('atributos internos do WhatsApp', () => {
     expect(definicoes).toEqual(copia);
     expect(semAtributosInternosDoWhatsapp()).toEqual([]);
   });
+
+  it('aceita a definição em camelCase (attributeKey), como sai do getter', () => {
+    const definicoes = [
+      { id: 1, attributeKey: 'melhor_horario' },
+      { id: 2, attributeKey: 'waha_whatsapp_lid' },
+    ];
+    expect(semAtributosInternosDoWhatsapp(definicoes)).toEqual([definicoes[0]]);
+  });
 });

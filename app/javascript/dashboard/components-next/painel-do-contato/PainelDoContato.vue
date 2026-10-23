@@ -244,7 +244,10 @@ const verPagina = () =>
             @tentar="listas.tentarDeNovo"
           />
         </BlocoDoPainel>
-        <BlocoDoPainel v-if="podeVerContatos">
+        <BlocoDoPainel
+          v-if="podeVerContatos && contatoCarregado"
+          data-test-id="ver-pagina"
+        >
           <div class="flex flex-col gap-1">
             <LinhaQueAbre
               :texto="t('PAINEL_DO_CONTATO.PE.VER_PAGINA')"

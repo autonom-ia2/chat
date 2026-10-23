@@ -14,8 +14,13 @@ export const ATRIBUTOS_INTERNOS_DO_WHATSAPP = Object.freeze([
 export const ehAtributoInternoDoWhatsapp = chave =>
   ATRIBUTOS_INTERNOS_DO_WHATSAPP.includes(chave);
 
-// As definições sem as internas do WhatsApp, na mesma ordem.
+// As definições sem as internas do WhatsApp, na mesma ordem. Aceita a definição
+// como vem da API (attribute_key) ou já em camelCase (attributeKey), como sai do
+// getter attributes/getContactAttributes.
 export const semAtributosInternosDoWhatsapp = (definicoes = []) =>
   definicoes.filter(
-    definicao => !ehAtributoInternoDoWhatsapp(definicao?.attribute_key)
+    definicao =>
+      !ehAtributoInternoDoWhatsapp(
+        definicao?.attribute_key ?? definicao?.attributeKey
+      )
   );

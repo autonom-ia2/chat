@@ -3,6 +3,7 @@ import ContactAPI from 'dashboard/api/contacts';
 import ConversationInboxApi from 'dashboard/api/inbox/conversation';
 import CampaignJourneyAPI from 'dashboard/api/campaignJourney';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import { refreshCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
 import PainelDoContato from '../PainelDoContato.vue';
 import { criarI18n, criarStore } from './apoio';
 
@@ -224,6 +225,9 @@ describe('PainelDoContato — o que aparece', () => {
     expect(texto(wrapper)).not.toContain('Editar dados');
     // Sem contato, as listas de "Mais" nem são pedidas.
     expect(ContactAPI.getConversations).not.toHaveBeenCalled();
+    // E "Ver página do contato" só aparece com o contato (o id) carregado.
+    expect(wrapper.find('[data-test-id="ver-pagina"]').exists()).toBe(false);
+    expect(texto(wrapper)).not.toContain('Ver página do contato');
   });
 
   it('a leitura do contato terminou sem ele: erro e "Tentar de novo" pede de novo', async () => {
@@ -313,7 +317,10 @@ describe('PainelDoContato — travas de permissão', () => {
         },
       },
     });
-    // O selo vem de um cache em lote com espera de 50 ms (useCrmConversationStages).
+    // O selo vem de um cache em lote do módulo, com espera de 50 ms
+    // (useCrmConversationStages). Outros testes deste arquivo já guardaram "sem
+    // assunto" para a conversa 42: pede de novo, como faz a tela ao mudar o assunto.
+    refreshCrmConversationStage(42);
     const soLe = montar({ props: { podeOperar: false } });
     await vi.waitFor(() =>
       expect(texto(soLe.wrapper)).toContain(

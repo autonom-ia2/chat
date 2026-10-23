@@ -1,5 +1,5 @@
 import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils';
-import ConversationInboxApi from 'dashboard/api/inbox/conversation';
+import AcompanharConversaAPI from 'dashboard/api/acompanharConversa';
 import CrmMeuAcessoAPI from 'dashboard/api/crmMeuAcesso';
 import { useAlert } from 'dashboard/composables';
 import MoreActions from 'dashboard/components/widgets/conversation/MoreActions.vue';
@@ -9,8 +9,8 @@ import { criarI18n, criarStore } from './apoio';
 // #2138 — os itens novos do ⋯ do topo: só com a chave, "Mudar prioridade" sem
 // time na conta, "Acompanhar" some com a trava de funil, e incluir ou tirar a
 // própria pessoa preserva os outros.
-vi.mock('dashboard/api/inbox/conversation', () => ({
-  default: { fetchParticipants: vi.fn() },
+vi.mock('dashboard/api/acompanharConversa', () => ({
+  default: { incluir: vi.fn(), tirar: vi.fn(), quemAcompanha: vi.fn() },
 }));
 vi.mock('dashboard/api/crmMeuAcesso', () => ({ default: { get: vi.fn() } }));
 vi.mock('dashboard/composables', async importOriginal => ({
@@ -95,10 +95,10 @@ describe('ItensDoTopo', () => {
     expect(rotulos(jaAcompanha.wrapper)).toContain('Deixar de acompanhar');
   });
 
-  it('acompanhar lê a lista do servidor e inclui só a pessoa, preservando os outros', async () => {
-    // A tela sabe da Ana; no servidor, uma colega já incluiu o Caio também.
-    ConversationInboxApi.fetchParticipants.mockResolvedValue({
-      data: [{ id: 3 }, { id: 11 }],
+  it('acompanhar manda só a própria pessoa e avisa quando ela ficou na lista', async () => {
+    AcompanharConversaAPI.incluir.mockResolvedValue({ data: [] });
+    AcompanharConversaAPI.quemAcompanha.mockResolvedValue({
+      data: [{ id: 3 }, { id: 11 }, { id: 7 }],
     });
     const { wrapper, acoes } = montar({ acompanhantes: { 42: [{ id: 3 }] } });
     await flushPromises();
@@ -106,20 +106,23 @@ describe('ItensDoTopo', () => {
     expect(wrapper.vm.agir('painel_novo_acompanhar')).toBe(true);
     await flushPromises();
 
-    expect(acoes).toContainEqual([
-      'conversationWatchers/update',
-      { conversationId: 42, userIds: [3, 11, 7] },
-    ]);
+    expect(AcompanharConversaAPI.incluir).toHaveBeenCalledWith(42, 7);
+    expect(AcompanharConversaAPI.tirar).not.toHaveBeenCalled();
+    // A lista inteira (PATCH) não é mais usada.
+    expect(
+      acoes.filter(([nome]) => nome === 'conversationWatchers/update')
+    ).toEqual([]);
     expect(useAlert).toHaveBeenCalledWith(
       'Pronto. Você recebe aviso de cada mensagem nova.'
     );
   });
 
-  it('deixar de acompanhar tira só a pessoa', async () => {
-    ConversationInboxApi.fetchParticipants.mockResolvedValue({
-      data: [{ id: 3 }, { id: 7 }, { id: 11 }],
+  it('deixar de acompanhar manda só a própria pessoa', async () => {
+    AcompanharConversaAPI.tirar.mockResolvedValue({});
+    AcompanharConversaAPI.quemAcompanha.mockResolvedValue({
+      data: [{ id: 3 }, { id: 11 }],
     });
-    const { wrapper, acoes } = montar({
+    const { wrapper } = montar({
       acompanhantes: { 42: [{ id: 3 }, { id: 7 }] },
     });
     await flushPromises();
@@ -127,26 +130,55 @@ describe('ItensDoTopo', () => {
     wrapper.vm.agir('painel_novo_acompanhar');
     await flushPromises();
 
-    expect(acoes).toContainEqual([
-      'conversationWatchers/update',
-      { conversationId: 42, userIds: [3, 11] },
-    ]);
+    expect(AcompanharConversaAPI.tirar).toHaveBeenCalledWith(42, 7);
     expect(useAlert).toHaveBeenCalledWith(
       'Você deixou de acompanhar esta conversa.'
     );
   });
 
-  it('sem ler a lista, não grava e avisa', async () => {
-    ConversationInboxApi.fetchParticipants.mockRejectedValue(new Error('rede'));
-    const { wrapper, acoes } = montar({ acompanhantes: { 42: [{ id: 7 }] } });
+  it('o aviso segue o resultado real: gravou, mas a pessoa não ficou na lista', async () => {
+    AcompanharConversaAPI.incluir.mockResolvedValue({ data: [] });
+    AcompanharConversaAPI.quemAcompanha.mockResolvedValue({
+      data: [{ id: 3 }],
+    });
+    const { wrapper } = montar();
     await flushPromises();
 
     wrapper.vm.agir('painel_novo_acompanhar');
     await flushPromises();
 
-    expect(
-      acoes.filter(([nome]) => nome === 'conversationWatchers/update')
-    ).toEqual([]);
+    expect(useAlert).toHaveBeenCalledWith(
+      'Não deu para mudar agora. Tente de novo.'
+    );
+    expect(useAlert).not.toHaveBeenCalledWith(
+      'Pronto. Você recebe aviso de cada mensagem nova.'
+    );
+  });
+
+  it('recusa do servidor: avisa e diz o motivo quando é a trava de funil', async () => {
+    AcompanharConversaAPI.incluir.mockRejectedValue(
+      Object.assign(new Error('403'), {
+        response: { data: { code: 'participants.self_add_restricted' } },
+      })
+    );
+    const { wrapper } = montar();
+    await flushPromises();
+
+    wrapper.vm.agir('painel_novo_acompanhar');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledTimes(1);
+    expect(useAlert).toHaveBeenCalledWith('Você não pode se incluir aqui.');
+  });
+
+  it('erro de rede: avisa que não deu', async () => {
+    AcompanharConversaAPI.tirar.mockRejectedValue(new Error('rede'));
+    const { wrapper } = montar({ acompanhantes: { 42: [{ id: 7 }] } });
+    await flushPromises();
+
+    wrapper.vm.agir('painel_novo_acompanhar');
+    await flushPromises();
+
     expect(useAlert).toHaveBeenCalledWith(
       'Não deu para mudar agora. Tente de novo.'
     );

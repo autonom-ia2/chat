@@ -1,136 +1,94 @@
-import ConversationInboxApi from 'dashboard/api/inbox/conversation';
-import { listaAoAcompanhar, mudarAcompanhar } from '../topo/acompanhar';
+import AcompanharConversaAPI from 'dashboard/api/acompanharConversa';
+import { lerQuemAcompanha, mudarAcompanhar } from '../topo/acompanhar';
 
-// #2138 — a API grava a LISTA INTEIRA de quem acompanha: a lista é lida na hora
-// e só a própria pessoa entra ou sai.
-vi.mock('dashboard/api/inbox/conversation', () => ({
-  default: { fetchParticipants: vi.fn() },
+// #2138 — entrar ou sair de quem acompanha manda SÓ o id da própria pessoa (POST
+// ou DELETE de participants). A lista das outras pessoas nunca vai na chamada.
+vi.mock('dashboard/api/acompanharConversa', () => ({
+  default: { incluir: vi.fn(), tirar: vi.fn(), quemAcompanha: vi.fn() },
 }));
 
 const EU = 7;
 const pessoas = (...ids) => ids.map(id => ({ id, name: `Pessoa ${id}` }));
-
-describe('listaAoAcompanhar', () => {
-  it('incluir põe só a pessoa e mantém os outros', () => {
-    expect(
-      listaAoAcompanhar({ atuais: [3, 5], euId: EU, acompanhar: true })
-    ).toEqual([3, 5, EU]);
+const depois = (...ids) =>
+  AcompanharConversaAPI.quemAcompanha.mockResolvedValue({
+    data: pessoas(...ids),
   });
 
-  it('tirar tira só a pessoa e mantém os outros', () => {
-    expect(
-      listaAoAcompanhar({ atuais: [3, EU, 5], euId: EU, acompanhar: false })
-    ).toEqual([3, 5]);
-  });
-
-  it('incluir de novo não duplica', () => {
-    expect(
-      listaAoAcompanhar({ atuais: [EU, 3], euId: EU, acompanhar: true })
-    ).toEqual([3, EU]);
-  });
+beforeEach(() => {
+  vi.clearAllMocks();
+  AcompanharConversaAPI.incluir.mockResolvedValue({ data: [] });
+  AcompanharConversaAPI.tirar.mockResolvedValue({});
 });
 
 describe('mudarAcompanhar', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('lê a lista do servidor antes de gravar: quem uma colega incluiu há pouco continua', async () => {
-    // A tela ainda acha que só a 3 acompanha; no servidor já há a 3 e a 9.
-    ConversationInboxApi.fetchParticipants.mockResolvedValue({
-      data: pessoas(3, 9),
-    });
-    const gravar = vi.fn();
-
-    const gravada = await mudarAcompanhar({
+  it('acompanhar faz o POST só com a própria pessoa, sem a lista dos outros', async () => {
+    depois(3, 9, EU);
+    const ficou = await mudarAcompanhar({
       conversationId: 42,
       euId: EU,
       acompanhar: true,
-      gravar,
     });
 
-    expect(ConversationInboxApi.fetchParticipants).toHaveBeenCalledWith(42);
-    expect(gravar).toHaveBeenCalledWith({
-      conversationId: 42,
-      userIds: [3, 9, EU],
-    });
-    expect(gravada).toEqual([3, 9, EU]);
+    expect(AcompanharConversaAPI.incluir).toHaveBeenCalledTimes(1);
+    expect(AcompanharConversaAPI.incluir).toHaveBeenCalledWith(42, EU);
+    expect(AcompanharConversaAPI.tirar).not.toHaveBeenCalled();
+    expect(ficou).toBe(true);
   });
 
-  it('ao deixar de acompanhar, os outros continuam', async () => {
-    ConversationInboxApi.fetchParticipants.mockResolvedValue({
-      data: pessoas(3, EU, 9),
-    });
-    const gravar = vi.fn();
-
-    await mudarAcompanhar({
+  it('deixar de acompanhar faz o DELETE só com a própria pessoa', async () => {
+    depois(3, 9);
+    const ficou = await mudarAcompanhar({
       conversationId: 42,
       euId: EU,
       acompanhar: false,
-      gravar,
     });
 
-    expect(gravar).toHaveBeenCalledWith({
-      conversationId: 42,
-      userIds: [3, 9],
-    });
+    expect(AcompanharConversaAPI.tirar).toHaveBeenCalledTimes(1);
+    expect(AcompanharConversaAPI.tirar).toHaveBeenCalledWith(42, EU);
+    expect(AcompanharConversaAPI.incluir).not.toHaveBeenCalled();
+    expect(ficou).toBe(true);
   });
 
-  it('sem conseguir ler a lista, não grava nada (nunca sobrescreve vazia)', async () => {
-    ConversationInboxApi.fetchParticipants.mockRejectedValue(new Error('rede'));
-    const gravar = vi.fn();
+  it('o resultado vem da lista relida: se a pessoa não ficou, devolve false', async () => {
+    depois(3);
+    expect(
+      await mudarAcompanhar({ conversationId: 42, euId: EU, acompanhar: true })
+    ).toBe(false);
+
+    depois(3, EU);
+    expect(
+      await mudarAcompanhar({ conversationId: 42, euId: EU, acompanhar: false })
+    ).toBe(false);
+  });
+
+  it('gravação recusada (ex.: trava de funil) chega a quem chamou', async () => {
+    const recusa = Object.assign(new Error('403'), {
+      response: { data: { code: 'participants.self_add_restricted' } },
+    });
+    AcompanharConversaAPI.incluir.mockRejectedValue(recusa);
 
     await expect(
-      mudarAcompanhar({
-        conversationId: 42,
-        euId: EU,
-        acompanhar: false,
-        gravar,
-      })
-    ).rejects.toThrow('rede');
-    expect(gravar).not.toHaveBeenCalled();
+      mudarAcompanhar({ conversationId: 42, euId: EU, acompanhar: true })
+    ).rejects.toBe(recusa);
+    expect(AcompanharConversaAPI.quemAcompanha).not.toHaveBeenCalled();
   });
 
-  it('resposta ilegível também não grava', async () => {
-    ConversationInboxApi.fetchParticipants.mockResolvedValue({ data: null });
-    const gravar = vi.fn();
+  it('gravou, mas a releitura falhou: vale a resposta da gravação', async () => {
+    AcompanharConversaAPI.quemAcompanha.mockRejectedValue(new Error('rede'));
+    expect(
+      await mudarAcompanhar({ conversationId: 42, euId: EU, acompanhar: true })
+    ).toBe(true);
+  });
+});
 
-    await expect(
-      mudarAcompanhar({
-        conversationId: 42,
-        euId: EU,
-        acompanhar: true,
-        gravar,
-      })
-    ).rejects.toThrow();
-    expect(gravar).not.toHaveBeenCalled();
+describe('lerQuemAcompanha', () => {
+  it('devolve os ids', async () => {
+    depois(3, EU);
+    expect(await lerQuemAcompanha(42)).toEqual([3, EU]);
   });
 
-  it('tirar quem não está na lista não grava (não manda lista vazia por engano)', async () => {
-    ConversationInboxApi.fetchParticipants.mockResolvedValue({ data: [] });
-    const gravar = vi.fn();
-
-    await mudarAcompanhar({
-      conversationId: 42,
-      euId: EU,
-      acompanhar: false,
-      gravar,
-    });
-
-    expect(gravar).not.toHaveBeenCalled();
-  });
-
-  it('a lista só fica vazia quando a pessoa era a única e saiu', async () => {
-    ConversationInboxApi.fetchParticipants.mockResolvedValue({
-      data: pessoas(EU),
-    });
-    const gravar = vi.fn();
-
-    await mudarAcompanhar({
-      conversationId: 42,
-      euId: EU,
-      acompanhar: false,
-      gravar,
-    });
-
-    expect(gravar).toHaveBeenCalledWith({ conversationId: 42, userIds: [] });
+  it('resposta ilegível lança', async () => {
+    AcompanharConversaAPI.quemAcompanha.mockResolvedValue({ data: null });
+    await expect(lerQuemAcompanha(42)).rejects.toThrow();
   });
 });

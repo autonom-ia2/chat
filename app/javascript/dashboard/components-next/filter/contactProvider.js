@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { useOperators } from './operators';
 import { useMapGetter } from 'dashboard/composables/store.js';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
+import { semAtributosInternosDoWhatsapp } from 'dashboard/helper/atributosInternosDoWhatsapp';
 import {
   buildAttributesFilterTypes,
   CONTACT_ATTRIBUTES,
@@ -67,7 +68,8 @@ export function useContactFilterContext() {
    */
   const customFilterTypes = computed(() =>
     buildAttributesFilterTypes(
-      contactAttributes.value,
+      // Fork (#2138): os campos internos da WAHA não entram nos filtros.
+      semAtributosInternosDoWhatsapp(contactAttributes.value || []),
       getOperatorTypes,
       'contact'
     )
