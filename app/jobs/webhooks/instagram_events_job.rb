@@ -13,7 +13,9 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   # @return [Array] We will support further events like reaction or seen in future
   # `:reaction` é tratado pela Autonom.ia (operate): #reaction só materializa em inbox com agente ativo +
   # flag on; demais inboxes seguem ignorando reações (zero regressão).
-  SUPPORTED_EVENTS = [:message, :read, :postback, :reaction].freeze
+  # `:message_edit`: o cliente editou a mensagem (#2113, Instagram::MessageEditService). Só chega com o campo de edição
+  # inscrito no app da Meta (ver Channel::Instagram#subscribe).
+  SUPPORTED_EVENTS = [:message, :read, :postback, :reaction, :message_edit].freeze
 
   def perform(entries)
     @entries = entries
@@ -177,6 +179,10 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   rescue StandardError => e
     Rails.logger.warn("[autonomia][operate] ig_reaction_failed #{e.class}")
     nil
+  end
+
+  def message_edit(messaging, channel)
+    ::Instagram::MessageEditService.new(messaging: messaging, channel: channel).perform
   end
 
   def messages(entry)

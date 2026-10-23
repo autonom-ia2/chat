@@ -310,6 +310,24 @@ describe Webhooks::InstagramEventsJob do
         expect(message.attachments.count).to be 0
       end
 
+      # #2113: o cliente editou a mensagem no Instagram; o texto troca na mesma mensagem.
+      it 'applies the customer edit (message_edit) to the existing message' do
+        dm_event = build(:instagram_message_create_event, sender_id: 'Sender-id-edit').with_indifferent_access
+        instagram_webhook.perform_now(dm_event[:entry])
+        edit_entry = [{
+          id: 'ig-entry', time: 1_760_000_000,
+          messaging: [{ sender: { id: 'Sender-id-edit' }, recipient: { id: 'chatwoot-app-user-id-1' }, timestamp: 1_760_000_000_000,
+                        message_edit: { mid: 'message-id-1', text: 'Edited by the customer', num_edit: 1 } }]
+        }.with_indifferent_access]
+
+        instagram_webhook.perform_now(edit_entry)
+
+        message = instagram_inbox.messages.last
+        expect(instagram_inbox.messages.count).to be 1
+        expect(message.content).to eq 'Edited by the customer'
+        expect(message.content_attributes['edit_history'].last['content']).to eq 'This is the first message from the customer'
+      end
+
       it 'creates incoming message with attachments in the instagram direct inbox' do
         attachment_event = build(:instagram_message_attachment_event).with_indifferent_access
         instagram_webhook.perform_now(attachment_event[:entry])

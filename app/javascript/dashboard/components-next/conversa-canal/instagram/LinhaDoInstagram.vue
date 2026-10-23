@@ -21,6 +21,9 @@ import MidiaDoInstagram from './MidiaDoInstagram.vue';
 import AlbumDoInstagram from './AlbumDoInstagram.vue';
 import VozDoInstagram from './VozDoInstagram.vue';
 import CompartilhadoDoInstagram from './CompartilhadoDoInstagram.vue';
+import RotuloEditada from '../RotuloEditada.vue';
+import { foiEditada } from '../marcasDaMensagem';
+import { fornecerFuso } from '../pele';
 
 // "Responder" segue a mesma regra do menu (quem só lê, nota, falha, caixa sem resposta).
 defineProps({
@@ -30,7 +33,9 @@ const emit = defineEmits(['responder', 'menu']);
 
 const { t } = useI18n();
 const mensagem = useMessageContext();
-const { contato } = useInstagramDaConversa();
+const { contato, fuso } = useInstagramDaConversa();
+// O "Editada" mostra a hora das versões anteriores no fuso da conta, como o horário da conversa.
+fornecerFuso(fuso);
 const sequencia = useSequenciaDoInstagram();
 
 const dados = computed(() => ({
@@ -80,6 +85,12 @@ const textoJunto = computed(
     !STORY_SEM_TEXTO_DO_CLIENTE.includes(
       dados.value.contentAttributes.imageType
     )
+);
+// O cliente editou a mensagem no Instagram (#2113): o texto já é o novo; "Editada" embaixo,
+// como no app. Apagada não mostra (o texto que sai é o aviso).
+const editada = computed(
+  () =>
+    tipo.value !== BALOES.APAGADA && foiEditada(dados.value.contentAttributes)
 );
 const temTraducao = computed(
   () =>
@@ -199,6 +210,17 @@ const textoCitado = computed(() => {
         :enviada="enviada"
         :cantos="cantos"
       />
+      <span
+        v-if="editada"
+        :class="ROTULO"
+        class="px-3"
+        data-editada-do-instagram
+      >
+        <RotuloEditada
+          :atributos="dados.contentAttributes"
+          :abrir-no-inicio="!enviada"
+        />
+      </span>
       <TranslationToggle
         v-if="temTraducao"
         class="px-3"
