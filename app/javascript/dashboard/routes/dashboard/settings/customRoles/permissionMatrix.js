@@ -421,7 +421,7 @@ const setConversationLevel = (level, permissions) => {
 const setCrmLevel = (module, level, permissions) => {
   if (level === LEVELS.NONE) return withoutKeys(permissions, keysOf(module));
   const base = withoutKeys(permissions, [CRM_VIEW, CRM_MANAGE_CARDS]);
-  // The CRM backend checks each key on its own, so crm_view is always stored. Voltar para ver tira o que é só de quem mexe.
+  // Any CRM level stores crm_view; the backend adds it too for every editing key (#2124). Voltar para ver tira o que é só de quem mexe.
   if (level === LEVELS.VIEW)
     return unique([
       ...withoutKeys(base, module.manageOnlyExtras || []),

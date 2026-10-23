@@ -39,6 +39,9 @@
 #   had crm_manage_cards kept it).
 # - 'crm_metas_manage': Can see and set every person's monthly goal in CRM › Números (Metas do mês, #1991). crm_admin
 #   implies it; agents without a custom role never get it.
+# Every CRM editing key (CRM_EDITING_KEYS) implies crm_view: the role is saved with crm_view added (#2124), so the
+# policies, booking host eligibility, live updates, integration token scopes and the panel all read the same keys.
+# crm_view_reports (reports only) and sales_value_view (money) do not imply it.
 #
 # Module keys: '<module>_manage' implies '<module>_view' (see Enterprise::AccountUser#permission_granted?).
 # - 'contact_view' / 'knowledge_base_view': read-only access to contacts / help center.
@@ -94,6 +97,7 @@ class CustomRole < ApplicationRecord
     where.not(id: AccountUser.where(integration: true).where.not(custom_role_id: nil).select(:custom_role_id))
   }
 
+  before_validation :add_implied_permissions
   before_destroy :capture_filtered_unread_count_user_ids, prepend: true
   after_update_commit :invalidate_filtered_unread_count_visibility_update, if: :filtered_unread_count_permissions_changed?
   after_destroy_commit :invalidate_filtered_unread_count_visibility_destroy
@@ -161,6 +165,19 @@ class CustomRole < ApplicationRecord
   DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage integration_manage
                        token_manage meta_ads_manage sales_value_view].freeze
 
+  # Editing the CRM needs seeing it (#2124). crm_view_reports and sales_value_view stay apart.
+  CRM_EDITING_KEYS = %w[crm_manage_cards crm_move_cards crm_manage_pipelines crm_manage_ai crm_delete_cards crm_metas_manage
+                        crm_export].freeze
+
+  # The keys as the role stores them: an editing key brings crm_view along. Readers check the stored keys, and the grant
+  # guard checks these, so nobody hands out a crm_view they do not hold.
+  def self.with_implied_permissions(permissions)
+    keys = Array(permissions).map(&:to_s)
+    return keys if keys.include?('crm_view') || !keys.intersect?(CRM_EDITING_KEYS)
+
+    keys + ['crm_view']
+  end
+
   validates :name, presence: true
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message
   # names the rejected keys and the accepted ones, so a person or the Guide can fix the
@@ -173,6 +190,10 @@ class CustomRole < ApplicationRecord
   end
 
   private
+
+  def add_implied_permissions
+    self.permissions = self.class.with_implied_permissions(permissions)
+  end
 
   def filtered_unread_count_permissions_changed?
     previous_changes.key?('permissions')
