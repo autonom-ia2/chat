@@ -4,6 +4,9 @@ en:
     export:
       statuses:
         won: 'Active plan'
+    # Vocabulary in the messages the AI writes to the customer (#2034).
+    ai:
+      vocabulario: 'Talk about plan, member and reimbursement; call someone a client only after they sign up and never say insured.'
   # Line of business for the e-mail AI (#2037).
   email_campaigns:
     ai:

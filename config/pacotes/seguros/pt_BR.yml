@@ -12,6 +12,10 @@ pt_BR:
       statuses:
         won: 'Seguro ativo'
         lost: 'Não fechou'
+    # Vocabulário nas mensagens que a IA escreve ao cliente (#2034). Seguradora, insurtech e corretora herdam esta linha;
+    # a corretora e a saúde têm a sua.
+    ai:
+      vocabulario: 'Fale de seguro, apólice e sinistro; chame de cliente só quem já contratou e de segurado só quem tem apólice.'
   # Relatório baixado de Anúncios (#1960): a situação de quem veio do anúncio e o que cada palavra quer dizer.
   meta_ads_report:
     glossary: 'Conversa: alguém chamou no WhatsApp depois de tocar num anúncio. Proposta: o card chegou a uma etapa de oportunidade ou negociação. Venda: o card foi marcado como seguro fechado.'
