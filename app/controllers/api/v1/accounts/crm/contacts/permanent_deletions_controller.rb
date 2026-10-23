@@ -18,7 +18,7 @@ class Api::V1::Accounts::Crm::Contacts::PermanentDeletionsController < Api::V1::
 
   def preview
     cards = Current.account.crm_cards.where(contact_id: @contact.id).includes(:pipeline, :stage).order(:id).to_a
-    render json: { payload: { contact_id: @contact.id, cards_count: cards.size, cards: cards_da_previa(cards) } }
+    render json: { payload: { contact_id: @contact.id, cards_count: cards.size, cards: cards_da_previa(cards), timezone: fuso_da_conta } }
   end
 
   def create
@@ -31,6 +31,11 @@ class Api::V1::Accounts::Crm::Contacts::PermanentDeletionsController < Api::V1::
   end
 
   private
+
+  # O fuso da conta, para a janela escrever a data da reunião como a conta vê (e não o fuso do navegador).
+  def fuso_da_conta
+    ::Crm::Timezone::Resolver.new(account: Current.account).zone_or_default.tzinfo.name
+  end
 
   def fetch_contact
     @contact = Current.account.contacts.find(params[:contact_id])

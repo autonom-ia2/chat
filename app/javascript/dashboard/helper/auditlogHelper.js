@@ -49,7 +49,26 @@ const translationKeys = {
   // Ação feita pelo Guia da Plataforma, depois da confirmação na tela (#536).
   'account:guide_action': `AUDIT_LOGS.GUIDE.ACTION`,
   'message:destroy': `AUDIT_LOGS.MESSAGE.DELETE`,
+  // Excluir de vez no CRM (#2096): uma frase por alvo; o contato tem uma para cada escolha dos cards.
+  'account:crm_hard_delete:cards': `AUDIT_LOGS.CRM_EXCLUIR.CARDS`,
+  'account:crm_hard_delete:funil': `AUDIT_LOGS.CRM_EXCLUIR.FUNIL`,
+  'account:crm_hard_delete:contato:delete': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_APAGANDO`,
+  'account:crm_hard_delete:contato:keep': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO`,
+  'account:crm_hard_delete_failed:funil': `AUDIT_LOGS.CRM_EXCLUIR.FUNIL_FALHOU`,
 };
+
+// Por que o job do funil desistiu (Crm::ExclusaoDefinitiva::Mudou e o job): o código vira frase; código novo cai na
+// frase geral, em vez de aparecer cru.
+const crmExcluirMotivos = {
+  not_archived: 'AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.NOT_ARCHIVED',
+  cards_changed: 'AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.CARDS_CHANGED',
+  pipeline_has_cards: 'AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.CARDS_CHANGED',
+  target_unavailable: 'AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.TARGET_UNAVAILABLE',
+  already_deleted: 'AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.ALREADY_DELETED',
+  meeting_cancel_failed: 'AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.MEETING_CANCEL_FAILED',
+};
+
+const CRM_EXCLUIR_ACOES = ['crm_hard_delete', 'crm_hard_delete_failed'];
 
 function extractAttrChange(attrChange) {
   if (Array.isArray(attrChange)) {
@@ -198,6 +217,20 @@ export function generateTranslationPayload(auditLogItem, agentList) {
     translationPayload.frase = auditLogItem.audited_changes?.frase || '';
   }
 
+  // Só ids e contagens: o que foi apagado não volta pela Auditoria (#2096).
+  if (auditableType === 'account' && CRM_EXCLUIR_ACOES.includes(action)) {
+    const mudancas = auditLogItem.audited_changes || {};
+    translationPayload.cardsApagados = mudancas.cards_apagados ?? 0;
+    translationPayload.cardsMovidos = mudancas.cards_movidos ?? 0;
+    translationPayload.cardsMantidos = mudancas.cards_mantidos ?? 0;
+    translationPayload.pipelineId = mudancas.pipeline_id ?? '';
+    translationPayload.contactId = mudancas.contact_id ?? '';
+    if (action === 'crm_hard_delete_failed')
+      translationPayload.motivo =
+        crmExcluirMotivos[mudancas.motivo] ||
+        'AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.OUTRO';
+  }
+
   if (auditableType === 'accountuser') {
     translationPayload = handleAccountUser(
       auditLogItem,
@@ -247,6 +280,7 @@ export const translateLogPayload = (payload, t) => {
     role: translateKey(payload.role),
     attributes: translateAndJoin(payload.attributes),
     values: translateAndJoin(payload.values),
+    motivo: translateKey(payload.motivo),
   };
 };
 
@@ -257,6 +291,12 @@ export const generateLogActionKey = auditLogItem => {
 
   if (auditableType === 'accountuser' && action === 'update') {
     logActionKey += getAccountUserUpdateSuffix(auditLogItem);
+  }
+
+  if (auditableType === 'account' && CRM_EXCLUIR_ACOES.includes(action)) {
+    const mudancas = auditLogItem.audited_changes || {};
+    logActionKey += `:${mudancas.alvo}`;
+    if (mudancas.alvo === 'contato') logActionKey += `:${mudancas.modo}`;
   }
 
   return translationKeys[logActionKey] || '';

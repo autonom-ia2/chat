@@ -10,7 +10,7 @@ class Api::V1::Accounts::Crm::Pipelines::PermanentDeletionsController < Api::V1:
   before_action :ensure_deletable!, only: :create
 
   def preview
-    render json: { payload: ::Crm::Pipelines::PreviaDaExclusao.new(@pipeline).perform }
+    render json: { payload: ::Crm::Pipelines::PreviaDaExclusao.new(@pipeline).perform.merge(timezone: fuso_da_conta) }
   end
 
   def create
@@ -25,6 +25,11 @@ class Api::V1::Accounts::Crm::Pipelines::PermanentDeletionsController < Api::V1:
   end
 
   private
+
+  # O fuso da conta, para a janela escrever a data da reunião como a conta vê (e não o fuso do navegador).
+  def fuso_da_conta
+    ::Crm::Timezone::Resolver.new(account: Current.account).zone_or_default.tzinfo.name
+  end
 
   def fetch_pipeline
     @pipeline = policy_scope(::Crm::Pipeline).find(params[:id])

@@ -382,3 +382,80 @@ describe('Helper functions', () => {
     });
   });
 });
+
+describe('excluir de vez no CRM (#2096)', () => {
+  const item = (action, audited_changes) => ({
+    auditable_type: 'Account',
+    action,
+    user_id: 1,
+    auditable_id: 7,
+    audited_changes,
+  });
+  const agentes = [{ id: 1, name: 'Marta' }];
+
+  it('uma frase por alvo, e o contato pela escolha dos cards', () => {
+    expect(
+      generateLogActionKey(item('crm_hard_delete', { alvo: 'cards' }))
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CARDS');
+    expect(
+      generateLogActionKey(item('crm_hard_delete', { alvo: 'funil' }))
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.FUNIL');
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete', { alvo: 'contato', modo: 'delete' })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_APAGANDO');
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete', { alvo: 'contato', modo: 'keep' })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO');
+    expect(
+      generateLogActionKey(item('crm_hard_delete_failed', { alvo: 'funil' }))
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.FUNIL_FALHOU');
+  });
+
+  it('leva só ids e contagens para a frase', () => {
+    const payload = generateTranslationPayload(
+      item('crm_hard_delete', {
+        alvo: 'funil',
+        cards_apagados: 2,
+        card_ids: [4, 5],
+        pipeline_id: 9,
+        cards_movidos: 3,
+      }),
+      agentes
+    );
+    expect(payload).toMatchObject({
+      agentName: 'Marta',
+      cardsApagados: 2,
+      cardsMovidos: 3,
+      pipelineId: 9,
+    });
+    expect(payload.motivo).toBeUndefined();
+  });
+
+  it('traduz o motivo da desistência, e o código novo cai na frase geral', () => {
+    const t = chave => `t(${chave})`;
+    const conhecido = generateTranslationPayload(
+      item('crm_hard_delete_failed', {
+        alvo: 'funil',
+        motivo: 'target_unavailable',
+      }),
+      agentes
+    );
+    expect(translateLogPayload(conhecido, t).motivo).toBe(
+      't(AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.TARGET_UNAVAILABLE)'
+    );
+    const novo = generateTranslationPayload(
+      item('crm_hard_delete_failed', {
+        alvo: 'funil',
+        motivo: 'card_rejected',
+      }),
+      agentes
+    );
+    expect(translateLogPayload(novo, t).motivo).toBe(
+      't(AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.OUTRO)'
+    );
+  });
+});

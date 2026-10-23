@@ -122,6 +122,21 @@
     "GUIDE": {
       "ACTION": "{agentName} fez pelo Guia da Plataforma: {frase}"
     },
+    "CRM_EXCLUIR": {
+      "CARDS": "{agentName} excluiu de vez cards arquivados do CRM. Cards apagados: {cardsApagados}",
+      "FUNIL": "{agentName} excluiu de vez o funil arquivado #{pipelineId}. Cards apagados: {cardsApagados}. Cards movidos para outro funil: {cardsMovidos}",
+      "CONTATO_APAGANDO": "{agentName} excluiu o contato #{contactId} e apagou os cards dele no CRM. Cards apagados: {cardsApagados}",
+      "CONTATO_MANTENDO": "{agentName} excluiu o contato #{contactId}; os cards dele ficaram no CRM sem dado pessoal. Cards mantidos: {cardsMantidos}",
+      "FUNIL_FALHOU": "A exclusão do funil arquivado #{pipelineId}, pedida por {agentName}, não foi feita, e nada foi apagado. Motivo: {motivo}",
+      "MOTIVOS": {
+        "NOT_ARCHIVED": "o funil não estava mais arquivado",
+        "CARDS_CHANGED": "os cards do funil mudaram depois do pedido",
+        "TARGET_UNAVAILABLE": "o funil de destino dos cards não estava mais disponível",
+        "ALREADY_DELETED": "o funil já tinha sido excluído",
+        "MEETING_CANCEL_FAILED": "uma reunião não foi cancelada no calendário",
+        "OUTRO": "o sistema recusou a exclusão"
+      }
+    },
     "MESSAGE": {
       "DELETE": "{agentName} excluiu uma mensagem na conversa #{conversationId}"
     }

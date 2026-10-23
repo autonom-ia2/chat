@@ -152,6 +152,7 @@ RSpec.describe 'CRM excluir contato com escolha dos cards e prévias', type: :re
       expect(response).to have_http_status(:ok)
       payload = response.parsed_body['payload']
       expect(payload.slice('contact_id', 'cards_count')).to eq('contact_id' => contact.id, 'cards_count' => 2)
+      expect(payload['timezone']).to eq(Crm::Timezone::Resolver.new(account: account).zone_or_default.tzinfo.name)
       funil = { 'id' => pipeline.id, 'name' => pipeline.name, 'status' => 'active', 'counts_as_sale' => pipeline.counts_as_sale }
       expect(payload['cards'].first).to eq('id' => arquivado.id, 'pipeline' => funil, 'stage_name' => stage.name, 'value_cents' => 5_000,
                                            'currency' => 'BRL', 'status' => 'archived', 'desfecho' => 'won', 'upcoming_meeting' => nil)
@@ -186,7 +187,8 @@ RSpec.describe 'CRM excluir contato com escolha dos cards e prévias', type: :re
         'pipeline_id' => pipeline.id, 'cards_count' => 5, 'open_cards_count' => 1, 'closed_or_archived_count' => 4,
         'won_value_cents' => 50_000, 'currency' => 'BRL', 'won_values' => [{ 'currency' => 'BRL', 'value_cents' => 50_000 }],
         'upcoming_meetings_count' => 1,
-        'upcoming_meetings' => [{ 'card_id' => perdido.id, 'starts_at' => reuniao.starts_at.as_json, 'provider' => 'internal' }]
+        'upcoming_meetings' => [{ 'card_id' => perdido.id, 'starts_at' => reuniao.starts_at.as_json, 'provider' => 'internal' }],
+        'timezone' => Crm::Timezone::Resolver.new(account: account).zone_or_default.tzinfo.name
       )
     end
 
