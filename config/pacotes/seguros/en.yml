@@ -12,6 +12,10 @@ en:
       statuses:
         won: 'Active policy'
         lost: 'Not closed'
+    # Vocabulary in the messages the AI writes to the customer (#2034). Insurer, insurtech and brokerage inherit this
+    # line; the brokerage and health have their own.
+    ai:
+      vocabulario: 'Talk about insurance, policy and claim; call someone a client only after they sign up and an insured only if they hold a policy.'
   # Downloaded Ads report (#1960): the situation of who came from the ad and what each word means.
   meta_ads_report:
     glossary: 'Conversation: someone messaged on WhatsApp after tapping an ad. Quote: the card reached an opportunity or negotiation stage. Sale: the card was marked as policy closed.'
