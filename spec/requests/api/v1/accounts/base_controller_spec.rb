@@ -89,14 +89,16 @@ RSpec.describe 'Api::V1::Accounts::BaseController', type: :request do
       expect(response.parsed_body['message']).to eq('Content não pode ficar em branco')
     end
 
-    it 'cada pedido no seu idioma: o português de um não passa para o seguinte' do
+    it 'cada pedido no seu idioma, e o idioma do processo volta ao padrão depois de cada um' do
       account.update!(locale: 'pt_BR')
       criar_resposta_pronta_vazia
       expect(response.parsed_body['message']).to eq('Content não pode ficar em branco')
+      expect(I18n.locale).to eq(I18n.default_locale)
 
       account.update!(locale: 'en')
       criar_resposta_pronta_vazia
       expect(response.parsed_body['message']).to eq("Content can't be blank")
+      expect(I18n.locale).to eq(I18n.default_locale)
     end
   end
 end
