@@ -90,4 +90,101 @@ describe('JanelaDeEmojis', () => {
     wrapper.unmount();
     ancora.remove();
   });
+
+  describe('posição na tela (#2113: a âncora pode ser um balão no meio da lista)', () => {
+    let alturaAntes;
+    let larguraAntes;
+    beforeEach(() => {
+      idioma.atual = 'en';
+      alturaAntes = window.innerHeight;
+      larguraAntes = window.innerWidth;
+      window.innerHeight = 650;
+      window.innerWidth = 1200;
+    });
+    afterEach(() => {
+      window.innerHeight = alturaAntes;
+      window.innerWidth = larguraAntes;
+    });
+
+    const comAncora = async (caixa, props = {}) => {
+      const ancora = document.createElement('div');
+      document.body.appendChild(ancora);
+      ancora.getBoundingClientRect = () => ({
+        ...caixa,
+        width: caixa.right - caixa.left,
+        height: caixa.bottom - caixa.top,
+        x: caixa.left,
+        y: caixa.top,
+      });
+      const wrapper = mount(JanelaDeEmojis, {
+        props: { ancora, ...props },
+        global: {
+          stubs: {
+            Icon: true,
+            TeleportWithDirection: { template: '<slot />' },
+          },
+        },
+      });
+      await flushPromises();
+      const estilo = wrapper.find('[data-janela-de-emojis]').element.style;
+      return { wrapper, ancora, estilo };
+    };
+
+    it('com o balão no meio de uma tela baixa, abre do lado com mais espaço e cabe inteira', async () => {
+      const { wrapper, ancora, estilo } = await comAncora({
+        left: 100,
+        right: 140,
+        top: 300,
+        bottom: 340,
+      });
+
+      // Em cima há 280 px livres e embaixo 290: abre embaixo, com a altura que cabe.
+      const topo = Number.parseFloat(estilo.top);
+      const altura = Number.parseFloat(estilo.height);
+      expect(topo).toBe(348);
+      expect(topo + altura).toBeLessThanOrEqual(650 - 12);
+      wrapper.unmount();
+      ancora.remove();
+    });
+
+    it('com espaço em cima, mantém a altura cheia (caixa de resposta)', async () => {
+      const { wrapper, ancora, estilo } = await comAncora({
+        left: 100,
+        right: 500,
+        top: 600,
+        bottom: 640,
+      });
+
+      expect(estilo.height).toBe('420px');
+      expect(estilo.bottom).toBe('58px');
+      wrapper.unmount();
+      ancora.remove();
+    });
+
+    it('alinhada ao fim, termina na borda direita da âncora (mensagem enviada)', async () => {
+      const { wrapper, ancora, estilo } = await comAncora(
+        { left: 900, right: 940, top: 600, bottom: 640 },
+        { alinhar: 'fim' }
+      );
+
+      expect(
+        Number.parseFloat(estilo.left) + Number.parseFloat(estilo.width)
+      ).toBe(940);
+      wrapper.unmount();
+      ancora.remove();
+    });
+
+    it('sem focar a busca, o foco fica na própria janela (celular)', async () => {
+      const { wrapper, ancora } = await comAncora(
+        { left: 100, right: 140, top: 600, bottom: 640 },
+        { focarBusca: false }
+      );
+
+      expect(document.activeElement).not.toBe(
+        wrapper.find('[data-buscar-emoji]').element
+      );
+      wrapper.unmount();
+      ancora.remove();
+    });
+  });
 });
