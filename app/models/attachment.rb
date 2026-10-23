@@ -38,6 +38,7 @@ class Attachment < ApplicationRecord
   ].freeze
   ACCEPTABLE_FILE_EXTENSIONS = %w[pfx xml].freeze
   GENERIC_FILE_CONTENT_TYPES = %w[application/octet-stream].freeze
+  INSTAGRAM_STORY_IMAGE_TYPES = %w[story_mention ig_story ig_story_reply].freeze
   belongs_to :account
   belongs_to :message
   has_one_attached :file
@@ -133,11 +134,30 @@ class Attachment < ApplicationRecord
       height: file.metadata[:height]
     }
 
-    # Instagram: serve our stored copy, since the Meta URL expires (#2113). The Meta URL is only
-    # the fallback when the download failed (see metadata_for_file_type); it is kept here as the
-    # origin, which the Direct view reads to tell stickers (Giphy) apart.
-    metadata[:external_url] = external_url if instagram_incoming_message? && external_url.present?
-    metadata
+    return metadata unless instagram_incoming_message?
+
+    instagram_media_urls(metadata)
+  end
+
+  # Instagram incoming media (#2113). Regular Direct photos and videos are served from our stored
+  # copy, since the Meta URL expires; the Meta URL goes along as `external_url`, the origin the
+  # Direct view reads to tell stickers (Giphy) apart. Stories keep the Meta URL: Meta forbids
+  # serving stored story media and asks for a placeholder once the story expires or is deleted.
+  # With the conversa_instagram key off, every Instagram attachment keeps the Meta URL.
+  def instagram_media_urls(metadata)
+    if instagram_story_media? || !account.feature_enabled?('conversa_instagram')
+      metadata.merge(data_url: external_url, thumb_url: external_url)
+    else
+      external_url.present? ? metadata.merge(external_url: external_url) : metadata
+    end
+  end
+
+  # A story mention is retyped to image/video after the download, so the message's image_type is
+  # what still marks it as a story.
+  def instagram_story_media?
+    return true if %w[ig_story story_mention].include?(file_type)
+
+    INSTAGRAM_STORY_IMAGE_TYPES.include?(message.content_attributes&.dig('image_type'))
   end
 
   def location_metadata

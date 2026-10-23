@@ -158,6 +158,8 @@ RSpec.describe Attachment do
                      channel: create(:channel_instagram_fb_page, account: account, instagram_id: 'instagram-dm-test'))
     end
 
+    before { account.enable_features!('conversa_instagram') }
+
     def build_attachment(message, file_type: :image, with_file: true)
       attachment = message.attachments.new(account_id: account.id, file_type: file_type, external_url: meta_url)
       attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png') if with_file
@@ -183,12 +185,40 @@ RSpec.describe Attachment do
         expect(attachment.push_event_data[:data_url]).to eq(attachment.file_url)
       end
 
-      it 'falls back to the Meta URL when the download failed' do
+      it 'uses the Meta URL when there is no stored file' do
         attachment = build_attachment(incoming_message, with_file: false)
 
         event_data = attachment.push_event_data
         expect(event_data[:data_url]).to eq(meta_url)
         expect(event_data[:thumb_url]).to eq('')
+      end
+
+      # Meta forbids serving stored story media: the Meta URL stops opening once the story expires
+      # or is deleted, and the view shows its placeholder.
+      %w[story_mention ig_story ig_story_reply].each do |image_type|
+        it "keeps the Meta URL for #{image_type} media even with a stored file" do
+          incoming_message.update!(content_attributes: { image_type: image_type })
+          attachment = build_attachment(incoming_message)
+
+          event_data = attachment.push_event_data
+          expect(event_data[:data_url]).to eq(meta_url)
+          expect(event_data[:thumb_url]).to eq(meta_url)
+        end
+      end
+
+      it 'keeps the Meta URL for an ig_story attachment even with a stored file' do
+        attachment = build_attachment(incoming_message, file_type: :ig_story)
+
+        expect(attachment.push_event_data[:data_url]).to eq(meta_url)
+      end
+
+      it 'keeps the Meta URL when the conversa_instagram key is off' do
+        account.disable_features!('conversa_instagram')
+        attachment = build_attachment(incoming_message)
+
+        event_data = attachment.push_event_data
+        expect(event_data[:data_url]).to eq(meta_url)
+        expect(event_data[:thumb_url]).to eq(meta_url)
       end
     end
 
