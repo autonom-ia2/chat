@@ -5,6 +5,7 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useWindowSize } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
+import { usePainelNovo } from 'dashboard/components-next/painel-do-contato/usePainelNovo';
 
 defineProps({
   currentChat: {
@@ -29,7 +30,10 @@ const isSmallScreen = computed(
   () => windowWidth.value < wootConstants.SMALL_SCREEN_BREAKPOINT
 );
 
-const closeContactPanel = () => {
+// #2138: com o painel novo, um clique dentro de um Dialog aberto não fecha o painel.
+const painelNovo = usePainelNovo();
+const closeContactPanel = event => {
+  if (painelNovo.value && event?.target?.closest?.('dialog[open]')) return;
   if (isSmallScreen.value && uiSettings.value?.is_contact_sidebar_open) {
     updateUISettings({
       is_contact_sidebar_open: false,
@@ -42,7 +46,7 @@ const closeContactPanel = () => {
 <template>
   <div
     v-on-click-outside="[
-      () => closeContactPanel(),
+      event => closeContactPanel(event),
       {
         ignore: [
           'dialog.ProseMirror-prompt-backdrop',
@@ -51,11 +55,13 @@ const closeContactPanel = () => {
         ],
       },
     ]"
-    class="bg-n-surface-2 h-full overflow-hidden flex flex-col fixed top-0 z-40 w-full max-w-sm transition-transform duration-300 ease-in-out ltr:right-0 rtl:left-0 md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none"
+    class="bg-n-surface-2 h-full overflow-hidden flex flex-col fixed top-0 z-40 w-full transition-transform duration-300 ease-in-out ltr:right-0 rtl:left-0 md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none"
     :class="[
       {
         'md:flex': activeTab === 0,
         'md:hidden': activeTab !== 0,
+        // #2138: no celular, o painel novo ocupa a tela inteira.
+        'max-w-sm': !painelNovo,
       },
     ]"
   >

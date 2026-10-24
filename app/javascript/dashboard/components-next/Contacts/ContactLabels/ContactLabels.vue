@@ -13,6 +13,8 @@ const props = defineProps({
     type: [String, Number],
     default: null,
   },
+  // Fork (#2138): repassado ao AddLabel (a lista abre presa a quem está em volta).
+  anchorMenuToParent: { type: Boolean, default: false },
 });
 
 const store = useStore();
@@ -137,6 +139,7 @@ const handleLabelHover = labelId => {
     <AddLabel
       v-if="!readOnly"
       :label-menu-items="labelMenuItems"
+      :anchor-menu-to-parent="anchorMenuToParent"
       @update-label="handleLabelAction"
     />
   </div>

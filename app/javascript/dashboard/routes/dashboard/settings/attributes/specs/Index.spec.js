@@ -23,50 +23,67 @@ vi.mock('dashboard/composables/useAccount', () => ({
 // #1146: a aba Card depende do CRM ligado na instalação.
 const globalConfigRef = { value: { crmKanbanEnabled: true } };
 
-vi.mock('dashboard/composables/store', () => ({
-  useStore: () => ({
-    dispatch: vi.fn(),
-    subscribe: vi.fn(),
-    getters: { getCurrentUserID: 1 },
-  }),
-  useMapGetter: name =>
-    name === 'globalConfig/get' ? globalConfigRef : { value: [] },
-  useStoreGetters: () => ({
-    'attributes/getUIFlags': {
-      value: {
-        isFetching: false,
-        isCreating: false,
-        isUpdating: false,
-        isDeleting: false,
+// #2138: a lista vem do getter de verdade, que é quem esconde os internos da WAHA.
+vi.mock('dashboard/composables/store', async () => {
+  const { getters } = await import('dashboard/store/modules/attributes');
+  return {
+    useStore: () => ({
+      dispatch: vi.fn(),
+      subscribe: vi.fn(),
+      getters: { getCurrentUserID: 1 },
+    }),
+    useMapGetter: name =>
+      name === 'globalConfig/get' ? globalConfigRef : { value: [] },
+    useStoreGetters: () => ({
+      'attributes/getUIFlags': {
+        value: {
+          isFetching: false,
+          isCreating: false,
+          isUpdating: false,
+          isDeleting: false,
+        },
       },
-    },
-    'attributes/getAttributesByModel': {
-      value: model =>
-        [
-          {
-            id: 1,
-            attribute_model: 'conversation_attribute',
-            attribute_display_name: 'Conversation field',
-          },
-          {
-            id: 2,
-            attribute_model: 'contact_attribute',
-            attribute_display_name: 'Contact field',
-          },
-          {
-            id: 3,
-            attribute_model: 'company_attribute',
-            attribute_display_name: 'Company field',
-          },
-          {
-            id: 4,
-            attribute_model: 'card_attribute',
-            attribute_display_name: 'Card field',
-          },
-        ].filter(item => item.attribute_model === model),
-    },
-  }),
-}));
+      'attributes/getAttributesByModel': {
+        value: model =>
+          getters.getAttributesByModel({
+            records: [
+              {
+                id: 1,
+                attribute_model: 'conversation_attribute',
+                attribute_display_name: 'Conversation field',
+              },
+              {
+                id: 2,
+                attribute_model: 'contact_attribute',
+                attribute_display_name: 'Contact field',
+              },
+              // #2138: os internos da WAHA existem, mas a lista não os mostra.
+              ...[
+                'waha_whatsapp_chat_id',
+                'waha_whatsapp_jid',
+                'waha_whatsapp_lid',
+              ].map((key, index) => ({
+                id: 10 + index,
+                attribute_model: 'contact_attribute',
+                attribute_key: key,
+                attribute_display_name: key,
+              })),
+              {
+                id: 3,
+                attribute_model: 'company_attribute',
+                attribute_display_name: 'Company field',
+              },
+              {
+                id: 4,
+                attribute_model: 'card_attribute',
+                attribute_display_name: 'Card field',
+              },
+            ],
+          })(model),
+      },
+    }),
+  };
+});
 
 const mountIndex = async () => {
   const wrapper = mount(Index, {
@@ -121,6 +138,18 @@ const mountIndex = async () => {
   await flushPromises();
   return wrapper;
 };
+
+describe('Custom attributes settings - campos internos do WhatsApp (#2138)', () => {
+  it('não lista os campos waha_whatsapp_* na aba Contato, e lista o resto', async () => {
+    const wrapper = await mountIndex();
+    await wrapper.find('[data-tab="1"]').trigger('click');
+    await nextTick();
+
+    const itens = wrapper.findAll('.attribute-item');
+    expect(itens.map(item => item.text())).toEqual(['contact_attribute']);
+    expect(wrapper.text()).not.toContain('waha_whatsapp');
+  });
+});
 
 describe('Custom attributes settings - company model', () => {
   beforeEach(() => {

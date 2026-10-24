@@ -30,6 +30,9 @@ import SidebarActionsHeader from 'dashboard/components-next/SidebarActionsHeader
 import LinearIssuesList from 'dashboard/components/widgets/conversation/linear/IssuesList.vue';
 import LinearSetupCTA from 'dashboard/components/widgets/conversation/linear/LinearSetupCTA.vue';
 import ContactOriginsPanel from 'dashboard/components-next/CampaignJourney/ContactOriginsPanel.vue';
+// #2138: o painel novo do contato, com a chave painel_contato_enxuto da conta.
+import PainelDoContato from 'dashboard/components-next/painel-do-contato/PainelDoContato.vue';
+import { usePainelNovo } from 'dashboard/components-next/painel-do-contato/usePainelNovo';
 
 const props = defineProps({
   conversationId: {
@@ -63,6 +66,7 @@ const isShopifyFeatureEnabled = computed(
 );
 
 const { isCloudFeatureEnabled } = useAccount();
+const painelNovo = usePainelNovo();
 
 const isLinearFeatureEnabled = computed(() =>
   isCloudFeatureEnabled(FEATURE_FLAGS.LINEAR)
@@ -156,7 +160,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-full">
+  <!-- #2138: com a chave painel_contato_enxuto, o painel novo; sem ela, o de sempre. -->
+  <PainelDoContato
+    v-if="painelNovo"
+    class="w-full"
+    :conversation="currentChat"
+    :contact="contact"
+    :pode-ver-contatos="podeVerContatos"
+    :pode-operar="canOperate"
+    :conversation-attributes="conversationAdditionalAttributes"
+    @fechar="closeContactPanel"
+  />
+  <div v-else class="w-full">
     <SidebarActionsHeader
       :title="$t('CONVERSATION.SIDEBAR.CONTACT')"
       @close="closeContactPanel"

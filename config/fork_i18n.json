@@ -74,6 +74,9 @@
     },
     {
       "file": "telaInicial.json"
+    },
+    {
+      "file": "painelDoContato.json"
     }
   ],
   "pacotes": {
