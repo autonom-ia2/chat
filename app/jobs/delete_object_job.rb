@@ -47,4 +47,6 @@ class DeleteObjectJob < ApplicationJob
   end
 end
 
+# Exclusão da conta: os contatos não cancelam reunião nem anonimizam cards um a um (#2096, Crm::ContatosSoltamCardsNaExclusaoDaConta).
+DeleteObjectJob.prepend(Crm::ContatosSoltamCardsNaExclusaoDaConta)
 DeleteObjectJob.prepend_mod_with('DeleteObjectJob')

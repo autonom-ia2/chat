@@ -227,4 +227,6 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   end
 end
 
+# LGPD (#2096): a reunião do card que não cancela no calendário responde 422 (ContactsControllerCrmCards).
+Api::V1::Accounts::ContactsController.include(ContactsControllerCrmCards)
 Api::V1::Accounts::ContactsController.prepend_mod_with('Api::V1::Accounts::ContactsController')

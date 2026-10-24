@@ -96,6 +96,10 @@ export function useCrmPermissions() {
   // Admin-equivalent CRM actions (e.g. minting integration tokens) require the
   // account administrator or the explicit crm_admin key (PLAIN_AGENT_DENIED_KEYS).
   const canAdminCrm = computed(() => hasCrmPermission(CRM_ADMIN_PERMISSION));
+  // Excluir de vez (#2096): só o administrador da conta, nunca por função personalizada (regra do projeto:
+  // apagar histórico de cliente sem volta não se delega). Espelho de Crm::CardPolicy#permanent_delete?.
+  const canHardDelete = computed(() => isAdmin.value);
+
   // #722 — planilha da Lista é dado pessoal em lote: como canAdminCrm, o agente
   // sem função NÃO ganha por padrão (backend: crm_export em PLAIN_AGENT_DENIED_KEYS).
   const canExportCrm = computed(() => hasCrmPermission(CRM_EXPORT_PERMISSION));
@@ -111,6 +115,7 @@ export function useCrmPermissions() {
     canViewReports,
     canAdminCrm,
     canExportCrm,
+    canHardDelete,
     canSeeSalesValues,
   };
 }

@@ -54,6 +54,9 @@ class Contact < ApplicationRecord
   include ContactOptOut
   include ContactCustomer
   include ContactMemoria
+  # Antes das associações: com a flag crm_arquivados, os cards perdem o dado pessoal antes de qualquer outra dependência
+  # do destroy; o `dependent: :nullify` de crm_cards só acha o que sobrou (sem a flag, todos, como na main).
+  include ContactCrmCards
 
   validates :account_id, presence: true
   validates :email, allow_blank: true, uniqueness: { scope: [:account_id], case_sensitive: false },

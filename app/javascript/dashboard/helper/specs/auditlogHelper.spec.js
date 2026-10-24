@@ -382,3 +382,142 @@ describe('Helper functions', () => {
     });
   });
 });
+
+describe('excluir de vez no CRM (#2096)', () => {
+  const item = (action, audited_changes) => ({
+    auditable_type: 'Account',
+    action,
+    user_id: 1,
+    auditable_id: 7,
+    audited_changes,
+  });
+  const agentes = [{ id: 1, name: 'Marta' }];
+
+  it('uma frase por alvo, e o contato pela escolha dos cards', () => {
+    expect(
+      generateLogActionKey(item('crm_hard_delete', { alvo: 'cards' }))
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CARDS');
+    expect(
+      generateLogActionKey(item('crm_hard_delete', { alvo: 'funil' }))
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.FUNIL');
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete', { alvo: 'contato', modo: 'delete' })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_APAGANDO');
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete', { alvo: 'contato', modo: 'keep' })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO');
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete', {
+          alvo: 'contato',
+          modo: 'keep',
+          reunioes_canceladas: 0,
+          reunioes_so_aqui: 0,
+        })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO');
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete', {
+          alvo: 'contato',
+          modo: 'keep',
+          reunioes_canceladas: 2,
+          reunioes_so_aqui: 0,
+        })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO_REUNIOES');
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete', {
+          alvo: 'contato',
+          modo: 'keep',
+          reunioes_canceladas: 2,
+          reunioes_so_aqui: 1,
+        })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO_REUNIOES_SO_AQUI');
+    expect(
+      generateLogActionKey(item('crm_hard_delete_failed', { alvo: 'funil' }))
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.FUNIL_FALHOU');
+  });
+
+  it('leva só ids e contagens para a frase', () => {
+    const payload = generateTranslationPayload(
+      item('crm_hard_delete', {
+        alvo: 'funil',
+        cards_apagados: 2,
+        card_ids: [4, 5],
+        pipeline_id: 9,
+        cards_movidos: 3,
+      }),
+      agentes
+    );
+    expect(payload).toMatchObject({
+      agentName: 'Marta',
+      cardsApagados: 2,
+      cardsMovidos: 3,
+      pipelineId: 9,
+    });
+    expect(payload.motivo).toBeUndefined();
+  });
+
+  // #2096 (23/10): a exclusão de contato por qualquer caminho conta as reuniões canceladas.
+  it('leva quantas reuniões o contato excluído teve canceladas', () => {
+    const payload = generateTranslationPayload(
+      item('crm_hard_delete', {
+        alvo: 'contato',
+        modo: 'keep',
+        contact_id: 7,
+        cards_mantidos: 1,
+        reunioes_canceladas: 2,
+        reunioes_so_aqui: 1,
+      }),
+      agentes
+    );
+    expect(payload).toMatchObject({
+      contactId: 7,
+      cardsMantidos: 1,
+      reunioesCanceladas: 2,
+      reunioesSoAqui: 1,
+    });
+  });
+
+  it('o contato que a ação em massa não excluiu tem frase própria', () => {
+    expect(
+      generateLogActionKey(
+        item('crm_hard_delete_failed', {
+          alvo: 'contato',
+          motivo: 'meeting_cancel_failed',
+        })
+      )
+    ).toBe('AUDIT_LOGS.CRM_EXCLUIR.CONTATO_FALHOU');
+  });
+
+  it('traduz o motivo da desistência, e o código novo cai na frase geral', () => {
+    const t = chave => `t(${chave})`;
+    const conhecido = generateTranslationPayload(
+      item('crm_hard_delete_failed', {
+        alvo: 'funil',
+        motivo: 'target_unavailable',
+      }),
+      agentes
+    );
+    expect(translateLogPayload(conhecido, t).motivo).toBe(
+      't(AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.TARGET_UNAVAILABLE)'
+    );
+    const novo = generateTranslationPayload(
+      item('crm_hard_delete_failed', {
+        alvo: 'funil',
+        motivo: 'card_rejected',
+      }),
+      agentes
+    );
+    expect(translateLogPayload(novo, t).motivo).toBe(
+      't(AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.OUTRO)'
+    );
+  });
+});

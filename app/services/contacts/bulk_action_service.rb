@@ -35,7 +35,8 @@ class Contacts::BulkActionService
   def delete_contacts
     Contacts::BulkDeleteService.new(
       account: @account,
-      contact_ids: ids
+      contact_ids: ids,
+      user: @user
     ).perform
   end
 

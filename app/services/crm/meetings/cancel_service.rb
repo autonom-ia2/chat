@@ -2,9 +2,16 @@ class Crm::Meetings::CancelService
   # propagate:false — cancel LOCALLY only, skipping the provider delete. Used by the
   # 2-way sync (S7) when the event was already deleted/cancelled IN the provider
   # calendar (no echo-back). Default true = unchanged behavior.
-  def initialize(meeting:, propagate: true)
+  #
+  # validar:false — grava sem as validações a reunião, o lembrete dela e a próxima data do card (#2096). A exclusão do
+  # contato e o excluir de vez usam: a reunião de uma caixa removida (inbox_id nulo), o card ou o lembrete com dono que
+  # saiu da conta não passam mais na validação, e o update! falharia DEPOIS de o Google ou a Microsoft já terem apagado
+  # o evento, deixando a reunião "marcada" aqui. Cancelar não depende de nada disso continuar válido. Padrão true = como
+  # sempre.
+  def initialize(meeting:, propagate: true, validar: true)
     @meeting = meeting
     @propagate = propagate
+    @validar = validar
   end
 
   def perform
@@ -19,9 +26,9 @@ class Crm::Meetings::CancelService
       # a double-cancel idempotent (the second request hits the guard above).
       delete_provider_event unless skip_provider_call?
 
-      @meeting.update!(status: :canceled)
+      marcar_cancelada!
       cancel_reminder!
-      Crm::FollowUps::CardNextDueUpdater.update(@meeting.card)
+      Crm::FollowUps::CardNextDueUpdater.update(@meeting.card, validar: @validar)
       canceled_now = true
     end
 
@@ -43,6 +50,11 @@ class Crm::Meetings::CancelService
     Crm::Meetings::AvailabilityService.invalidate(
       inbox_id: @meeting.inbox_id, date: day, timezone: @meeting.timezone
     )
+  end
+
+  def marcar_cancelada!
+    @meeting.status = :canceled
+    @meeting.save!(validate: @validar)
   end
 
   def skip_provider_call?
@@ -67,7 +79,8 @@ class Crm::Meetings::CancelService
     reminder = @meeting.reminder
     return if reminder.blank? || reminder.canceled? || reminder.done?
 
-    reminder.update!(status: :canceled)
+    reminder.status = :canceled
+    reminder.save!(validate: @validar)
   end
 
   def log_activity
