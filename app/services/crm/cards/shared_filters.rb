@@ -172,7 +172,11 @@ module Crm::Cards::SharedFilters
       .uniq
   end
 
+  # Valor de venda (#2075): sem `sales_value_view` o filtro por valor é ignorado, porque revelaria o valor. Também vale
+  # para a visão salva, que manda os mesmos parâmetros. @account_user vem do quadro e da lista.
   def value_cents_param(key)
+    return unless Crm::ValorDeVenda.ve?(@account_user)
+
     raw = @params[key]
     return if raw.blank?
 

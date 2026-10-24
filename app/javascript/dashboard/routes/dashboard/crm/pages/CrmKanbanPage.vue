@@ -67,6 +67,16 @@ import LembreteGaveta from '../components/lembrete/LembreteGaveta.vue';
 import MensagemMarcadaGaveta from '../components/mensagemMarcada/MensagemMarcadaGaveta.vue';
 import CrmCalendarMeetingScheduler from '../components/calendar/CrmCalendarMeetingScheduler.vue';
 import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
+// #2095 (flag crm_arquivados): Arquivados, Funis arquivados e as janelas novas de arquivar e restaurar.
+import PainelArquivados from '../components/arquivados/PainelArquivados.vue';
+import PainelFunisArquivados from '../components/arquivados/PainelFunisArquivados.vue';
+import RestaurarConflito from '../components/arquivados/RestaurarConflito.vue';
+import ArquivarFunilDialogo from '../components/arquivados/ArquivarFunilDialogo.vue';
+import CrmAviso from '../components/arquivados/CrmAviso.vue';
+import {
+  FUNIS_ARQUIVADOS,
+  useArquivadosNaPagina,
+} from '../components/arquivados/useArquivadosNaPagina';
 import {
   FAILURE_STATUSES,
   SUCCESS_STATUSES,
@@ -84,7 +94,7 @@ import {
 } from '../components/list/cardColumns.js';
 
 const store = useStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { zoom, zoomClass, setZoom, persistenceFailed } = useCrmKanbanZoom();
 const kanbanBoard = ref(null);
 const isRTL = useMapGetter('accounts/isRTL');
@@ -146,7 +156,16 @@ const {
   canManageAi,
   canExportCrm,
   canAdminCrm,
+  canSeeSalesValues,
 } = useCrmPermissions();
+
+// #2075 — sem a chave de valores o servidor ignora filtro e ordem por valor; a tela também larga os dois.
+const temFiltroDeValor = f =>
+  Boolean(f) && (`${f.valueMin ?? ''}` !== '' || `${f.valueMax ?? ''}` !== '');
+const semFiltroDeValor = f =>
+  canSeeSalesValues.value ? f : { ...f, valueMin: '', valueMax: '' };
+const ordemPermitida = sort =>
+  !canSeeSalesValues.value && sort?.id === 'value' ? null : sort;
 
 // Ação em massa (#1874): cada botão só para quem pode a ação; sem nenhuma, a lista não tem seleção.
 const bulkPermissions = computed(() => ({
@@ -238,7 +257,7 @@ watch(
   },
   { immediate: true }
 );
-const filters = ref({ ...storedFilters.value });
+const filters = ref(semFiltroDeValor({ ...storedFilters.value }));
 const drawerMode = ref('create');
 const selectedCard = ref(null);
 // Acesso por funil (#1149): o card aberto diz se a pessoa pode mexer nele.
@@ -320,6 +339,41 @@ const pipelineOptions = computed(() =>
     label: pipeline.name,
   }))
 );
+const arquivadosLigado = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_ARQUIVADOS
+    ] === true
+);
+const arquivados = useArquivadosNaPagina({
+  t,
+  ligado: arquivadosLigado,
+  funilAtual: () => selectedPipeline.value,
+});
+// O erro de arquivar é daquele card: outro card aberto começa sem ele.
+watch(
+  () => selectedCard.value?.id,
+  () => {
+    arquivados.erroArquivarCard.value = '';
+  }
+);
+// Com a flag, "Funis arquivados" fica no fim da escolha de funil (uma opção à parte, que abre o painel). Sem funil
+// arquivado, não aparece.
+const pipelineGroups = computed(() =>
+  arquivadosLigado.value && arquivados.totalDeFunis.value
+    ? [
+        { label: '', options: pipelineOptions.value },
+        arquivados.opcaoDosFunisArquivados.value,
+      ]
+    : []
+);
+const escolherFunil = valor => {
+  if (valor === FUNIS_ARQUIVADOS) {
+    arquivados.abrirFunis();
+    return;
+  }
+  currentPipelineId.value = valor;
+};
 const inboxOptions = computed(() =>
   inboxes.value.map(inbox => ({ value: inbox.id, label: inbox.name }))
 );
@@ -828,7 +882,7 @@ const hasMoreCards = computed(
 // FilterQuery whitelists (e.g. `value_cents`). Empty when no sort is active.
 // Shared by the list fetch and the Excel export (#722), so both use the same order.
 const listSortParams = computed(() => {
-  const activeSort = listSort.value;
+  const activeSort = ordemPermitida(listSort.value);
   const sortParam = activeSort?.id
     ? COLUMN_TO_SORT_PARAM[activeSort.id]
     : undefined;
@@ -1304,8 +1358,16 @@ const saveInboxSetting = async payload => {
   }
 };
 
+const arquivarFunilDialogo = ref(null);
 const archivePipeline = async () => {
   if (!selectedPipeline.value?.id) return;
+  if (arquivadosLigado.value) {
+    arquivarFunilDialogo.value?.abrir({
+      alvo: selectedPipeline.value,
+      ativos: pipelines.value,
+    });
+    return;
+  }
   const confirmed = await askConfirmation({
     title: t('CRM_KANBAN.CONFIRM.ARCHIVE_PIPELINE_TITLE'),
     description: t('CRM_KANBAN.CONFIRM.ARCHIVE_PIPELINE_DESCRIPTION'),
@@ -1321,8 +1383,12 @@ const archivePipeline = async () => {
     currentPipelineId.value = nextPipeline?.id || '';
     closePipelineDrawer();
     useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_ARCHIVED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_ARCHIVE_ERROR'));
+  } catch (error) {
+    // O último funil ativo e o único principal não se arquivam: a API diz por quê, na língua de quem usa.
+    useAlert(
+      error?.response?.data?.message ||
+        t('CRM_KANBAN.ALERTS.PIPELINE_ARCHIVE_ERROR')
+    );
   }
 };
 
@@ -1347,6 +1413,7 @@ const deleteStageHasCards = computed(() =>
 const STAGE_DELETE_ERROR_KEYS = {
   'crm.stage_has_cards': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_HAS_CARDS',
   'crm.stage_is_last': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_LAST_STAGE',
+  'crm.stage_in_use': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_IN_USE',
 };
 
 const deleteStageErrorMessage = error => {
@@ -1615,14 +1682,22 @@ const cancelFollowUp = async followUp => {
   }
 };
 
-const archiveCard = async () => {
+// `detalhes.retornos` (janela nova, #2095): quantos retornos o arquivar para, para o Desfazer avisar.
+const archiveCard = async (detalhes = {}) => {
   if (!selectedCard.value?.id) return;
+  const card = selectedCard.value;
+  arquivados.erroArquivarCard.value = '';
   try {
-    await store.dispatch('crmKanban/archiveCard', selectedCard.value.id);
-    useAlert(t('CRM_KANBAN.ALERTS.CARD_ARCHIVED'));
+    await store.dispatch('crmKanban/archiveCard', card.id);
+    if (arquivadosLigado.value)
+      arquivados.avisarArquivado(card, detalhes?.retornos || 0);
+    else useAlert(t('CRM_KANBAN.ALERTS.CARD_ARCHIVED'));
     closeDrawer();
+    if (arquivadosLigado.value) arquivados.contar();
   } catch (error) {
-    avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_ARCHIVE_ERROR');
+    // #2095: com a flag, o erro fica na janela de arquivar, com o motivo; nada mudou.
+    if (arquivadosLigado.value) arquivados.erroAoArquivar(error);
+    else avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_ARCHIVE_ERROR');
   }
 };
 
@@ -1850,13 +1925,20 @@ const onSavedViewApply = async ({ view }) => {
       ...(config.density ? { density: config.density } : {}),
     });
   }
-  store.dispatch('crmKanban/setListSort', config.sort || null);
+  const valorIgnorado =
+    !canSeeSalesValues.value &&
+    (temFiltroDeValor(config.filters) || config.sort?.id === 'value');
+  store.dispatch('crmKanban/setListSort', ordemPermitida(config.sort || null));
   store.dispatch('crmKanban/setListGroupBy', config.group_by || 'none');
   if (config.filters) {
-    filters.value = { ...defaultFilters(), ...config.filters };
+    filters.value = semFiltroDeValor({
+      ...defaultFilters(),
+      ...config.filters,
+    });
     await store.dispatch('crmKanban/setFilters', filters.value);
   }
   await loadCurrentList();
+  if (valorIgnorado) useAlert(t('CRM_KANBAN.LIST.SAVED_VIEWS.VALUE_IGNORED'));
 };
 
 const onSavedViewCreate = async payload => {
@@ -2369,6 +2451,49 @@ const setViewMode = mode => {
   });
 };
 
+// #2095: as ações da página que Arquivados usa (declaradas acima deste ponto).
+arquivados.ligar({
+  recarregarVista: () => loadActiveView(true),
+  fecharCard: closeDrawer,
+  abrirCard: (card, aba = null) =>
+    openCardDrawer({ id: card.id }, { initialTab: aba }),
+  atualizarCardAberto: async id => {
+    if (showDrawer.value && selectedCard.value?.id === id)
+      await refreshSelectedCard();
+  },
+  funilPorId: id => pipelines.value.find(item => item.id === Number(id)),
+  irParaALista: async (pipelineId, status) => {
+    if (pipelineId && pipelines.value.some(p => p.id === Number(pipelineId)))
+      currentPipelineId.value = Number(pipelineId);
+    setViewMode('list');
+    await selectResult(status);
+  },
+  recarregarFunis: async preferido => {
+    const lista = await store.dispatch('crmKanban/fetchPipelines');
+    const proximo =
+      lista.find(item => item.id === Number(preferido)) ||
+      lista.find(item => item.is_default) ||
+      lista[0];
+    currentPipelineId.value = proximo?.id || '';
+    closePipelineDrawer();
+  },
+  juntar: nomes =>
+    new Intl.ListFormat(String(locale.value).replace('_', '-'), {
+      style: 'long',
+      type: 'conjunction',
+    }).format(nomes),
+});
+const abrirArquivadosDosFiltros = () => {
+  showFiltersDrawer.value = false;
+  arquivados.abrirPainel();
+};
+const abrirCardArquivado = linha => {
+  arquivados.painelAberto.value = false;
+  openCardFromBoard({ id: linha.id });
+};
+const carregarEtapasDoFunil = id =>
+  store.dispatch('crmKanban/fetchPipelineStages', id);
+
 useEmitter(BUS_EVENTS.WEBSOCKET_RECONNECT_COMPLETED, handleRealtimeConnected);
 useEmitter(BUS_EVENTS.CRM_BOARD_REFETCH, handleServerFilterRefetch);
 // Com o quadro já aberto, a URL com `card_id` não reabre um card que já passou
@@ -2494,7 +2619,8 @@ onUnmounted(() => {
           v-if="
             canManagePipelines ||
             canOpenInboxSettings ||
-            (!isCalendarOnly && canManageAi)
+            (!isCalendarOnly && canManageAi) ||
+            (!isCalendarOnly && arquivadosLigado)
           "
           ref="configurationPopover"
           align="end"
@@ -2555,6 +2681,23 @@ onUnmounted(() => {
                 class="w-full"
                 @click="runConfigurationAction(openInboxSettingsDrawer)"
               />
+              <template v-if="!isCalendarOnly && arquivadosLigado">
+                <hr class="my-1 border-n-weak" />
+                <Button
+                  data-config-funis-arquivados
+                  :label="
+                    t('CRM_ARQUIVADOS.FUNIS.TITULO_N', {
+                      count: arquivados.totalDeFunis.value,
+                    })
+                  "
+                  icon="i-lucide-archive"
+                  slate
+                  ghost
+                  start
+                  class="w-full"
+                  @click="runConfigurationAction(arquivados.abrirFunis)"
+                />
+              </template>
             </div>
           </template>
         </Popover>
@@ -2568,11 +2711,13 @@ onUnmounted(() => {
       <div class="flex flex-wrap items-end gap-3">
         <div class="flex items-center gap-2">
           <ChoiceSelect
-            v-model="currentPipelineId"
-            :options="pipelineOptions"
+            :model-value="currentPipelineId"
+            :options="pipelineGroups.length ? [] : pipelineOptions"
+            :groups="pipelineGroups"
             :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
             :disabled="!hasPipelines"
             class="w-44 sm:w-52 [&>button]:!min-h-11 [&>button]:!rounded-lg [&>button]:!bg-n-surface-1 [&>button]:!font-bold"
+            @update:model-value="escolherFunil"
           />
           <Button
             v-if="canManagePipelines"
@@ -2607,16 +2752,6 @@ onUnmounted(() => {
           class="!rounded-lg min-h-11 !font-bold !outline-n-weak bg-n-surface-1"
           :aria-expanded="showFiltersDrawer"
           @click="showFiltersDrawer = true"
-        />
-        <Button
-          :label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI')"
-          icon="i-lucide-sparkles"
-          slate
-          outline
-          class="!rounded-lg min-h-11 !outline-n-weak bg-n-surface-1"
-          disabled
-          :title="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
-          :aria-label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
         />
         <CrmKanbanZoom
           v-if="viewMode === 'kanban'"
@@ -2686,7 +2821,12 @@ onUnmounted(() => {
       :stale-choices="staleChoices"
       :linked-choices="linkedChoices"
       :result-choices="resultChoices"
-      :can-manage-ai="canManageAi"
+      :arquivados="
+        arquivadosLigado && viewMode !== 'calendar'
+          ? (arquivados.totalDoFunil.value ?? 0)
+          : null
+      "
+      @abrir-arquivados="abrirArquivadosDosFiltros"
       @close="showFiltersDrawer = false"
       @apply="applyFiltersFromDrawer"
       @clear="clearFiltersFromDrawer"
@@ -2907,7 +3047,7 @@ onUnmounted(() => {
         :show-meta-column="isMetaSyncActive"
         :loading="uiFlags.isFetchingCardsList"
         :error="!!loadError"
-        :sort="listSort"
+        :sort="ordemPermitida(listSort)"
         :group-by="listGroupBy"
         :column-state="listColumnState"
         :selected-ids="listSelection"
@@ -2928,6 +3068,7 @@ onUnmounted(() => {
       />
       <CrmBulkActionBar
         :count="listSelection.length"
+        :ids="listSelection"
         :permissions="bulkPermissions"
         :stages="stages"
         :owners="agents"
@@ -3089,6 +3230,11 @@ onUnmounted(() => {
       :is-fetching-follow-ups="uiFlags.isFetchingFollowUps"
       :is-saving-follow-up="uiFlags.isSavingFollowUp"
       :meetings-enabled="isMeetingFeatureEnabled"
+      :arquivados-ligado="arquivadosLigado"
+      :erro-arquivar="arquivados.erroArquivarCard.value"
+      :restaurando="arquivados.restaurandoCard.value"
+      :erro-restaurar="arquivados.erroRestaurarCard.value"
+      @restaurar="arquivados.restaurarCardAberto(selectedCard)"
       @save="saveCard"
       @move="moveCardFromDetails"
       @archive="archiveCard"
@@ -3139,6 +3285,43 @@ onUnmounted(() => {
       :agents="agents"
       @close="closeBookingProfilesDrawer"
     />
+
+    <template v-if="arquivadosLigado">
+      <PainelArquivados
+        :ref="el => (arquivados.painel.value = el)"
+        :show="arquivados.painelAberto.value"
+        :funil="selectedPipeline"
+        :funis="pipelines"
+        :pode-arquivar="canDeleteCards"
+        :restaurar="arquivados.restaurar"
+        @close="arquivados.painelAberto.value = false"
+        @abrir-card="abrirCardArquivado"
+        @ver-funis-arquivados="arquivados.abrirFunis"
+        @mudou="arquivados.depoisDeMudar"
+      />
+      <PainelFunisArquivados
+        :show="arquivados.funisAbertos.value"
+        :pode-gerenciar="canManagePipelines"
+        @close="arquivados.funisAbertos.value = false"
+        @restaurado="arquivados.funilRestaurado"
+      />
+      <RestaurarConflito
+        :ref="el => (arquivados.dialogoConflito.value = el)"
+        :conflito="arquivados.conflito.value"
+        :ocupado="arquivados.conflitoOcupado.value"
+        :erro="arquivados.conflitoErro.value"
+        @abrir-aberto="arquivados.abrirOAberto"
+        @restaurar-mesmo-assim="arquivados.restaurarMesmoAssim"
+        @close="arquivados.aoFecharConflito"
+      />
+      <ArquivarFunilDialogo
+        ref="arquivarFunilDialogo"
+        :carregar-etapas="carregarEtapasDoFunil"
+        @arquivado="arquivados.funilArquivado"
+        @criar-funil="openCreatePipelineDrawer"
+      />
+      <CrmAviso />
+    </template>
 
     <ConfirmModal
       ref="confirmModal"

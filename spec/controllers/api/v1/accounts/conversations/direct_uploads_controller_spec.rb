@@ -18,6 +18,8 @@ RSpec.describe '/api/v1/accounts/:account_id/conversations/:conversation_id/dire
     }
   end
 
+  before { create(:inbox_member, user: agent, inbox: web_widget.inbox) }
+
   def create_direct_upload(headers)
     post api_v1_account_conversation_direct_uploads_path(account_id: account.id, conversation_id: conversation.display_id),
          params: blob_params,
@@ -54,6 +56,13 @@ RSpec.describe '/api/v1/accounts/:account_id/conversations/:conversation_id/dire
         expect(response.parsed_body['content_type']).to eq('image/png')
       end
 
+      it 'returns not found for a conversation that does not exist, like the other conversation endpoints' do
+        post api_v1_account_conversation_direct_uploads_path(account_id: account.id, conversation_id: 0),
+             params: blob_params, headers: { api_access_token: agent.access_token.token }, as: :json
+
+        expect(response).to have_http_status(:not_found)
+      end
+
       it 'returns unauthorized for an agent of another account' do
         other_agent = create(:user, account: create(:account), role: :agent)
 
@@ -68,6 +77,40 @@ RSpec.describe '/api/v1/accounts/:account_id/conversations/:conversation_id/dire
         create_direct_upload({ api_access_token: agent_bot.access_token.token })
 
         expect(response).to have_http_status(:unauthorized)
+      end
+
+      # Bots are not in AccessTokenAuthHelper::BOT_ACCESSIBLE_ENDPOINTS for direct uploads: serving the inbox does not change it.
+      it 'returns unauthorized for an agent bot token even when the bot serves the inbox' do
+        agent_bot = create(:agent_bot, account: account)
+        create(:agent_bot_inbox, agent_bot: agent_bot, inbox: web_widget.inbox)
+
+        expect { create_direct_upload({ api_access_token: agent_bot.access_token.token }) }.not_to change(ActiveStorage::Blob, :count)
+
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    # Same rule as the other conversation endpoints (#2147): uploading is a write and goes through ConversationPolicy#show?.
+    context 'when the user cannot operate the conversation' do
+      let(:outsider) { create(:user, account: account, role: :agent) }
+
+      it 'refuses a session from an agent outside the inbox, without creating a blob' do
+        expect { create_direct_upload(outsider.create_new_auth_token) }.not_to change(ActiveStorage::Blob, :count)
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(response.parsed_body['error']).to eq('You are not authorized to do this action')
+      end
+
+      it 'refuses an api access token from an agent outside the inbox' do
+        expect { create_direct_upload({ api_access_token: outsider.access_token.token }) }.not_to change(ActiveStorage::Blob, :count)
+
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it 'lets an administrator outside the inbox upload' do
+        create_direct_upload(create(:user, account: account, role: :administrator).create_new_auth_token)
+
+        expect(response).to have_http_status(:success)
       end
     end
 

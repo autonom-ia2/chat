@@ -8,16 +8,35 @@
 #   PDF    → `ai_text`: a camada de texto, pelo mesmo processador dos Agentes IA
 #            (Autonomia::Agents::Knowledge::Processors::Pdf, chamado como está, sem OCR), em NFC, cortada em
 #            MAX_CARACTERES_DO_PDF. PDF escaneado (sem camada de texto) fica sem texto.
-# A falha esperada (FALHAS_DA_LEITURA) também marca o anexo como lido (`crm_ai_*_done`, como o MediaEnricher): não tenta de
-# novo para sempre. Erro interno propaga e não marca.
+#
+# Falha da leitura (#2109), ver Crm::Ai::FalhaDaMidia: a definitiva marca o anexo como lido sem texto, com o motivo; a
+# passageira não marca, agenda a próxima tentativa no anexo e sobe FalhaPassageira para o LerMidiaJob tentar de novo.
+# Até a próxima tentativa vencer, ninguém lê (a leitura em linha e a da avaliação não gastam tentativa). Depois das
+# duas do job, quem tenta é a varredura (Crm::Ai::RelerMidiaPendenteJob), enquanto a mensagem tiver até 48 h; mais
+# velha que isso, a falha passageira marca `expirado`; o `expirado` que falha de novo em MAX_RELEITURAS_DO_EXPIRADO
+# releituras vira `expirado_esgotado` (definitiva). Erro interno propaga e não marca.
+#
+# Releitura (`releitura:`), decisão do Rodrigo (23/10/2026):
+#   :mensagem_nova chegou mensagem na conversa: o job da chegada relê também o anexo marcado sem texto que não tem falha
+#                  definitiva, de qualquer idade — o `expirado` e o marcado antes do #2109, quando toda falha marcava. A
+#                  leitura em linha da IA de assunto não espera por isso: lê só o nunca lido e enfileira a releitura
+#                  na fila low.
+#   :varredura     a varredura dos últimos 2 dias relê só o marcado sem motivo (antes do #2109); o `expirado` não.
+# A avaliação do card (MediaEnricher, também a do card parado) não relê: só lê o que nunca foi lido.
+#
+# Arquivo que ainda não chegou ao storage (ActiveStorage::FileNotFoundError) não é falha da leitura: o job da chegada
+# roda no commit da mensagem, e o upload do anexo pode terminar depois (corrida). Esse anexo não é marcado e não gasta
+# o teto do dia; o erro sobe para quem chamou tentar de novo (o LerMidiaJob, com espera). Só na última tentativa
+# (`ultima_tentativa: true`) o anexo é marcado sem texto, com aviso no log.
 #
 # Quem chama: o job da chegada (Crm::Ai::LerMidiaJob, pelo ConversationObserverListener) e, antes de perguntar o
-# assunto, o IdentifyJob em linha (`ler_a_rajada`), porque a espera do assunto na ordem do turno é curta. A trava por
-# anexo (`with_lock`) faz o segundo esperar o primeiro e encontrar o anexo lido: ninguém paga duas vezes. Com a flag,
-# o MediaEnricher da avaliação usa este leitor para as mensagens antigas da janela.
+# assunto, o IdentifyJob em linha (`ler_a_rajada`), porque a espera do assunto na ordem do turno é curta. A reserva do
+# anexo (Crm::Ai::ReservaDaMidia: trava curta, leitura fora de transação) impede que dois paguem a mesma leitura; a
+# leitura em linha espera um pouco o anexo que o job da chegada está lendo. Com a flag, o MediaEnricher da avaliação usa
+# este leitor para as mensagens antigas da janela.
 #
-# Tetos: MAX_POR_MENSAGEM por tipo e MAX_LEITURAS_POR_DIA por conta (contador no Redis, conta todas as leituras, as
-# pagas e as de PDF). Passou do teto do dia: não lê, não marca e registra no log.
+# Tetos: MAX_POR_MENSAGEM por tipo e MAX_LEITURAS_POR_DIA por conta (Crm::Ai::TetoDaMidia; conta todas as tentativas,
+# as pagas, as de PDF e as que falharam). Passou do teto do dia: não lê, não marca e registra no log.
 #
 # Sem a flag (ou com a mídia desligada na instalação): nada muda. Nunca loga o conteúdo do anexo.
 class Crm::Ai::LeitorDeMidia
@@ -30,14 +49,9 @@ class Crm::Ai::LeitorDeMidia
   CHAVE = { audio: 'transcribed_text', imagem: 'ai_caption', pdf: 'ai_text' }.freeze
   MARCA = { audio: 'crm_ai_audio_done', imagem: 'crm_ai_image_done', pdf: 'crm_ai_pdf_done' }.freeze
   PAGOS = %i[audio imagem].freeze
-  # As falhas esperadas de uma leitura, que marcam o anexo como lido (sem texto): rede, a API da IA (o cliente da
-  # transcrição e o da visão) e o arquivo ilegível. Qualquer outro erro é nosso: propaga, e o anexo fica para depois.
-  FALHAS_DA_LEITURA = [
-    *Crm::Ai::ResponsesClient::NETWORK_ERRORS, Faraday::Error, OpenAI::Error,
-    Crm::Ai::ResponsesClient::Error, Crm::Ai::TranscriptionClient::Error,
-    ActiveStorage::FileNotFoundError, ActiveStorage::IntegrityError,
-    Autonomia::Agents::Knowledge::Processors::Base::ExtractionError, Autonomia::Agents::Knowledge::Processors::Base::UnsupportedFormat
-  ].freeze
+
+  # Um ou mais anexos da mensagem tiveram falha passageira e seguem pendentes: o LerMidiaJob tenta de novo.
+  class FalhaPassageira < StandardError; end
 
   def self.ligada?(account)
     account.present? && account.feature_enabled?(FLAG) && Crm::Ai::Config.media_enabled?
@@ -51,19 +65,46 @@ class Crm::Ai::LeitorDeMidia
     Crm::Ai::LerMidiaJob.perform_later(message.id)
   end
 
-  # Em linha, antes de a IA de assunto perguntar: as mensagens do cliente até `message` que têm anexo. Uma falha aqui
-  # não impede a pergunta do assunto (ela segue com o que já foi lido).
+  # Em linha, antes de a IA de assunto perguntar: as mensagens do cliente até `message` que têm anexo. Lê aqui o que
+  # nunca foi lido; o que ficou marcado sem texto por falha que não é definitiva (de qualquer idade: é a conversa ativa)
+  # vai para o job, para a releitura não segurar a pergunta. Uma falha aqui não impede a pergunta do assunto.
   def self.ler_a_rajada(conversation, message)
     return unless ligada?(conversation.account)
 
+    ate_em = Crm::Ai::ReservaDaMidia::ESPERA_EM_LINHA.from_now
     conversation.messages.incoming.where(id: ..message.id).where(com_anexo)
-                .reorder(id: :desc).limit(MAX_MENSAGENS_DA_RAJADA).each { |mensagem| new(mensagem).perform }
+                .reorder(id: :desc).limit(MAX_MENSAGENS_DA_RAJADA).each { |mensagem| ler_em_linha(mensagem, ate_em) }
   rescue StandardError => e
     ChatwootExceptionTracker.new(e).capture_exception
     Rails.logger.error("[crm][midia] leitura_em_linha_falhou conversa=#{conversation.id} mensagem=#{message.id} erro=#{e.class}")
   end
 
-  def self.com_anexo = Attachment.where('attachments.message_id = messages.id').arel.exists
+  # O anexo que outro processo está lendo (o job da chegada): espera o texto até `ate_em`, como a trava longa fazia antes.
+  # O arquivo ainda está subindo, ou a API teve falha passageira: os anexos ficam pendentes (o job da chegada ou a
+  # varredura leem depois), e as outras mensagens da rajada seguem. A releitura do que ficou marcado sem texto vai para
+  # a fila low (Crm::Ai::LerMidiaJob.reler), para não disputar com a entrega de mensagens.
+  def self.ler_em_linha(mensagem, ate_em = Crm::Ai::ReservaDaMidia::ESPERA_EM_LINHA.from_now)
+    mensagem.attachments.each { |anexo| Crm::Ai::ReservaDaMidia.esperar(anexo, ate_em: ate_em) if Crm::Ai::ReservaDaMidia.lendo?(anexo.meta.to_h) }
+    new(mensagem).perform
+    Crm::Ai::LerMidiaJob.reler(mensagem.id, 'mensagem_nova') if new(mensagem, releitura: :mensagem_nova).escolhidos.any?
+  rescue ActiveStorage::FileNotFoundError
+    Rails.logger.warn("[crm][midia] arquivo_ainda_nao_chegou origem=em_linha mensagem=#{mensagem.id}")
+  rescue FalhaPassageira
+    Rails.logger.warn("[crm][midia] falha_passageira_pendente origem=em_linha mensagem=#{mensagem.id}")
+  end
+
+  def self.com_anexo =Attachment.where('attachments.message_id = messages.id').arel.exists
+
+  # Para a varredura (Crm::Ai::RelerMidiaPendenteJob): áudio ou foto sem texto, sem motivo de falha (nunca lido, à
+  # espera de nova tentativa, ou marcado antes do #2109) e com a nova tentativa já vencida. O PDF fica de fora: é lido
+  # aqui mesmo, sem API, e não tem falha passageira. A varredura aplica isto só aos ids de mensagem que já escolheu pelo
+  # índice; cada mensagem ainda passa por `escolhidos`.
+  def self.midia_para_reler
+    sem_texto = CHAVE.values.map { |chave| Attachment.where("NULLIF(BTRIM(attachments.meta ->> ?), '') IS NULL", chave) }.reduce(:merge)
+    sem_texto.where(file_type: %i[image audio])
+             .where("NOT (COALESCE(attachments.meta, '{}'::jsonb) ? :falha)", falha: Crm::Ai::FalhaDaMidia::FALHA)
+             .where("COALESCE((attachments.meta ->> :proxima)::timestamptz, '-infinity') <= now()", proxima: Crm::Ai::FalhaDaMidia::PROXIMA)
+  end
 
   # A mensagem tem anexo com texto lido (transcrição, descrição ou texto do PDF): só essa entra na janela da IA de
   # assunto. Anexo sem leitura (vídeo, PDF escaneado, leitura que falhou) não ocupa a vaga de uma mensagem com texto.
@@ -89,50 +130,83 @@ class Crm::Ai::LeitorDeMidia
     Autonomia::Agents::Config::DOCUMENT_CONTENT_TYPES.include?(tipo) && blob.byte_size <= Autonomia::Agents::Config::MAX_DOCUMENT_BYTES
   end
 
-  def self.pendente?(attachment)
+  # Sem texto e ainda por ler: sem a marca de lido; ou, na releitura, marcado sem falha definitiva (mensagem nova) ou
+  # sem motivo nenhum (varredura).
+  def self.pendente?(attachment, releitura: false)
     tipo = tipo(attachment)
     return false if tipo.nil?
 
     meta = attachment.meta.to_h
-    meta[CHAVE[tipo]].to_s.strip.blank? && !meta[MARCA[tipo]]
+    return false if meta[CHAVE[tipo]].to_s.strip.present?
+    return true unless meta[MARCA[tipo]]
+
+    case releitura
+    when :mensagem_nova then Crm::Ai::FalhaDaMidia::FALHAS_DEFINITIVAS.exclude?(meta[Crm::Ai::FalhaDaMidia::FALHA])
+    when :varredura then meta[Crm::Ai::FalhaDaMidia::FALHA].nil?
+    else false
+    end
   end
 
-  def initialize(message, pipeline: nil)
+  # `releitura:` decide O QUE ler (pendente?); `uma_chamada:`, COMO chamar a API. A chegada lê no modo :mensagem_nova
+  # com as novas tentativas de sempre. A releitura enfileirada faz uma chamada só por anexo, com o mesmo tempo da
+  # chegada (leitura longa termina), e para no primeiro erro passageiro: os outros anexos ficam pendentes para a próxima
+  # releitura. Numa queda da API, ela não segura por minutos uma thread do Sidekiq, a mesma da entrega de mensagens.
+  def initialize(message, pipeline: nil, ultima_tentativa: false, releitura: false, uma_chamada: false)
     @message = message
     @account = message.account
     @pipeline = pipeline
+    @ultima_tentativa = ultima_tentativa
+    @releitura = releitura
+    @uma_chamada = uma_chamada
+    @passageiras = []
   end
 
-  # -> quantos anexos foram lidos agora.
+  # -> quantos anexos foram lidos agora. Lê os escolhidos (com `uma_chamada:`, até o primeiro erro passageiro); se algum
+  # teve falha passageira e segue pendente, sobe FalhaPassageira no fim (os outros já ficaram gravados).
   def perform
     return 0 unless self.class.ligada?(@account)
 
-    escolhidos.count { |attachment| ler(attachment) }
+    lidos = 0
+    escolhidos.each do |attachment|
+      lidos += 1 if ler(attachment)
+      break if @uma_chamada && @api_fora
+    end
+    raise FalhaPassageira, "mensagem=#{@message.id} anexos=#{@passageiras.join(',')}" if @passageiras.any?
+
+    lidos
   end
 
-  # Um anexo, sob a trava dele. true quando leu agora; false quando já estava lido, não é de um tipo lido, falta a
-  # credencial da conta ou passou do teto do dia.
+  # Um anexo, reservado por uma trava curta e lido fora de transação (Crm::Ai::ReservaDaMidia). true quando leu agora (ou marcou a
+  # falha); false quando já estava lido ou em leitura, não é de um tipo lido, está à espera da nova tentativa, falta a
+  # credencial da conta, passou do teto do dia ou a falha foi passageira (fica pendente).
   def ler(attachment)
     tipo = self.class.tipo(attachment)
-    return false if tipo.nil?
+    return false if tipo.nil? || !Crm::Ai::ReservaDaMidia.reservar(attachment) { a_ler?(attachment) && credencial_para?(tipo) && cabe_no_dia? }
 
-    attachment.with_lock do
-      next false unless self.class.pendente?(attachment) && credencial_para?(tipo) && cabe_no_dia?
-
-      guardar(attachment, tipo, ler_texto(attachment, tipo))
-      true
+    gravado = false
+    begin
+      gravado = ler_reservado(attachment, tipo)
+    rescue *Crm::Ai::FalhaDaMidia::FALHAS_DA_LEITURA => e
+      gravado = true
+      falhou(attachment, tipo, e)
+    ensure
+      Crm::Ai::ReservaDaMidia.liberar(attachment) unless gravado
     end
   end
 
   # Os primeiros de cada tipo, até o teto por mensagem, que ainda não foram lidos. Todo consumidor (o job da chegada, a
-  # leitura em linha e o Crm::Ai::MediaEnricher da avaliação) lê por esta seleção.
+  # leitura em linha, a varredura e o Crm::Ai::MediaEnricher da avaliação) lê por esta seleção.
   def escolhidos
     @message.attachments.reorder(:id).group_by { |attachment| self.class.tipo(attachment) }
             .flat_map { |tipo, anexos| tipo ? anexos.first(MAX_POR_MENSAGEM[tipo]) : [] }
-            .select { |attachment| self.class.pendente?(attachment) }
+            .select { |attachment| a_ler?(attachment) }
   end
 
   private
+
+  def a_ler?(attachment)
+    self.class.pendente?(attachment, releitura: @releitura) && !Crm::Ai::FalhaDaMidia.na_espera?(attachment.meta.to_h)
+  end
 
   def credencial_para?(tipo)
     PAGOS.exclude?(tipo) || credencial.present?
@@ -143,14 +217,21 @@ class Crm::Ai::LeitorDeMidia
     @credencial
   end
 
+  def teto = @teto ||= Crm::Ai::TetoDaMidia.new(@account)
+
   def cabe_no_dia?
-    chave = "crm:leitor_de_midia:#{@account.id}:#{Time.current.utc.to_date.iso8601}"
-    total = Redis::Alfred.incr(chave)
-    Redis::Alfred.expire(chave, 2.days.to_i) if total == 1
-    return true if total <= MAX_LEITURAS_POR_DIA
+    return true if teto.somar <= MAX_LEITURAS_POR_DIA
 
     Rails.logger.warn("[crm][midia] teto_do_dia conta=#{@account.id} mensagem=#{@message.id}")
     false
+  end
+
+  # A leitura reservada: o texto, ou a falha do arquivo que não chegou. -> true (gravou).
+  def ler_reservado(attachment, tipo)
+    texto = ler_texto(attachment, tipo)
+    guardar(attachment, tipo, texto, texto.present? ? {} : { Crm::Ai::FalhaDaMidia::FALHA => 'sem_texto' })
+  rescue ActiveStorage::FileNotFoundError
+    arquivo_nao_chegou(attachment, tipo)
   end
 
   def ler_texto(attachment, tipo)
@@ -159,13 +240,37 @@ class Crm::Ai::LeitorDeMidia
     when :imagem then Crm::Ai::VisionCaptioner.new(client: cliente_de_visao).caption(attachment)
     when :pdf then texto_do_pdf(attachment)
     end
-  rescue *FALHAS_DA_LEITURA => e
-    Rails.logger.warn("[crm][midia] leitura_falhou tipo=#{tipo} anexo=#{attachment.id} erro=#{e.class}")
-    nil
+  end
+
+  # Fora da última tentativa do job, sobe (sem marcar) para quem chamou tentar de novo. Na última, marca. Não leu: não
+  # conta no teto do dia.
+  def arquivo_nao_chegou(attachment, tipo)
+    teto.devolver
+    raise ActiveStorage::FileNotFoundError unless @ultima_tentativa
+
+    Rails.logger.warn("[crm][midia] arquivo_nao_chegou tipo=#{tipo} anexo=#{attachment.id} mensagem=#{@message.id}")
+    guardar(attachment, tipo, nil, { Crm::Ai::FalhaDaMidia::FALHA => 'arquivo_ausente' })
+    true
+  end
+
+  # Definitiva, ou passageira com a mensagem fora da janela: marca como lido, sem texto, com o motivo (true). Passageira:
+  # agenda a próxima tentativa e deixa pendente (false). A tentativa conta no teto do dia (em dia de API lenta, o gasto
+  # tem limite).
+  def falhou(attachment, tipo, erro)
+    falha = Crm::Ai::FalhaDaMidia.new(erro, meta: attachment.reload.meta.to_h, mensagem: @message)
+    Rails.logger.warn("[crm][midia] leitura_falhou tipo=#{tipo} conta=#{@account.id} anexo=#{attachment.id} #{falha.para_o_log}")
+    @api_fora ||= falha.passageira?
+    return guardar(attachment, tipo, nil, falha.motivo) if falha.marca?
+
+    Crm::Ai::ReservaDaMidia.gravar(attachment) { |meta| meta.merge(falha.espera) }
+    @passageiras << attachment.id
+    false
   end
 
   def cliente_de_visao
-    Crm::Ai::ResponsesClient.new(credential: credencial, feature: 'midia', account: @account, pipeline: @pipeline)
+    novas_tentativas = @uma_chamada ? 0 : Crm::Ai::ResponsesClient::MAX_RETRIES
+    Crm::Ai::ResponsesClient.new(credential: credencial, feature: 'midia', account: @account, pipeline: @pipeline,
+                                 max_retries: novas_tentativas)
   end
 
   def texto_do_pdf(attachment)
@@ -174,9 +279,16 @@ class Crm::Ai::LeitorDeMidia
     texto.unicode_normalize(:nfc).strip.first(MAX_CARACTERES_DO_PDF)
   end
 
-  def guardar(attachment, tipo, texto)
-    meta = attachment.meta.to_h
-    meta = meta.merge(CHAVE[tipo] => texto.to_s) if texto.present?
-    attachment.update!(meta: meta.merge(MARCA[tipo] => true, 'crm_ai_enriched_at' => Time.current.iso8601))
+  # Com texto, sai o motivo de uma falha anterior (a releitura deu certo) e a espera; a classe do erro e as tentativas
+  # ficam, para medir.
+  def guardar(attachment, tipo, texto, motivo = {})
+    Crm::Ai::ReservaDaMidia.gravar(attachment) do |atual|
+      meta = atual.except(Crm::Ai::FalhaDaMidia::PROXIMA).merge(motivo)
+      if texto.present?
+        meta = meta.except(Crm::Ai::FalhaDaMidia::FALHA, Crm::Ai::FalhaDaMidia::RELEITURAS_DO_EXPIRADO).merge(CHAVE[tipo] => texto.to_s)
+      end
+      meta.merge(MARCA[tipo] => true, 'crm_ai_enriched_at' => Time.current.iso8601)
+    end
+    true
   end
 end

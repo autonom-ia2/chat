@@ -54,7 +54,8 @@ class Api::V1::Accounts::Crm::ReportsController < Api::V1::Accounts::Crm::BaseCo
   def render_report(builder_class, extras = {})
     return render json: { payload: nil } if visible_pipelines.restricted? && report_pipelines.none?
 
-    payload = builder_class.new(account: Current.account, params: report_params.merge(extras), pipelines: report_pipelines).perform
+    payload = builder_class.new(account: Current.account, params: report_params.merge(extras), pipelines: report_pipelines,
+                                value_visible: ::Crm::ValorDeVenda.ve?(Current.account_user)).perform
     render json: { payload: payload }
   end
 
@@ -66,7 +67,7 @@ class Api::V1::Accounts::Crm::ReportsController < Api::V1::Accounts::Crm::BaseCo
   end
 
   def report_pipelines
-    @report_pipelines ||= visible_pipelines.apply_to_reports(Current.account.crm_pipelines)
+    @report_pipelines ||= visible_pipelines.apply_to_reports(Current.account.crm_pipelines.active)
   end
 
   def visible_pipelines

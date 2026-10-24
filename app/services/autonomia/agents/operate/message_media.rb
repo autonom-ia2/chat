@@ -26,6 +26,9 @@ module Autonomia
         # o mesmo código, exercitado todo dia pelo outro consumidor.
         SourceLike = Struct.new(:file, :reference, :source_type)
 
+        # O anexo está "em leitura" pelo leitor de mídia do CRM: transcrever aqui seria pagar duas vezes (#2109).
+        EM_LEITURA = :em_leitura
+
         # `messages:` é o caminho do turno (os anexos das mensagens); `attachments:` é o do especialista,
         # que já escolheu os anexos (entrega 1). Um ou outro.
         def initialize(agent:, messages: [], attachments: nil)
@@ -145,28 +148,49 @@ module Autonomia
           credential = Crm::Ai::CredentialResolver.new(account: @agent.account).resolve
           return [] if credential.blank?
 
-          audios.filter_map { |attachment| transcript_for(attachment, credential) }
+          # Um só prazo no turno para esperar o leitor do CRM, em todos os áudios: no máximo ESPERA_EM_LINHA.
+          ate_em = Crm::Ai::ReservaDaMidia::ESPERA_EM_LINHA.from_now
+          audios.filter_map { |attachment| transcript_for(attachment, credential, ate_em) }
         end
 
         # Transcreve (ou reusa o cache compartilhado). NUNCA loga o texto. Falha de transcrição -> nil (o
         # prompt v2 manda pedir o texto/resumo quando não há transcrição).
-        def transcript_for(attachment, credential)
+        def transcript_for(attachment, credential, ate_em)
           cached = attachment.meta.to_h['transcribed_text'].to_s
           return cached if cached.present?
 
-          # A mesma trava do anexo que o leitor de mídia do CRM usa (Crm::Ai::LeitorDeMidia#ler): quem chega depois espera
-          # e relê o cache antes de pagar a transcrição de novo.
+          lido_pelo_crm = texto_do_leitor_do_crm(attachment, ate_em)
+          return lido_pelo_crm if lido_pelo_crm.present?
+
+          texto = transcrever_uma_vez(attachment, credential)
+          texto == EM_LEITURA ? texto_do_leitor_do_crm(attachment, ate_em) : texto.presence
+        rescue StandardError => e
+          Rails.logger.warn("[autonomia][operate] transcription_failed attachment=#{attachment.id} #{e.class}")
+          nil
+        end
+
+        # A trava do anexo e o cache relido sob ela: quem chega depois relê antes de pagar a transcrição de novo. O leitor
+        # do CRM que reservou o anexo depois da primeira olhada (marca "em leitura" válida) já está pagando: aqui não se
+        # transcreve, devolve EM_LEITURA e o turno espera o texto dele fora da trava (#2109, revisão de banco).
+        def transcrever_uma_vez(attachment, credential)
           attachment.with_lock do
-            cached = attachment.meta.to_h['transcribed_text'].to_s
-            next cached if cached.present?
+            meta = attachment.meta.to_h
+            next meta['transcribed_text'].to_s if meta['transcribed_text'].present?
+            next EM_LEITURA if Crm::Ai::ReservaDaMidia.lendo?(meta)
 
             text = Crm::Ai::TranscriptionClient.new(credential: credential).transcribe(attachment).to_s.strip
             cache_transcript(attachment, text) if text.present? # best-effort: alimenta ESTE turno mesmo se o cache falhar
             text
-          end.presence
-        rescue StandardError => e
-          Rails.logger.warn("[autonomia][operate] transcription_failed attachment=#{attachment.id} #{e.class}")
-          nil
+          end
+        end
+
+        # O leitor de mídia do CRM lê fora da trava (#2109) e marca o anexo "em leitura" (Crm::Ai::ReservaDaMidia): o turno
+        # espera o texto dele até `ate_em` antes de pagar a transcrição de novo. -> o texto, ou nil (a marca seguiu válida:
+        # o turno vai sem a transcrição, e o leitor grava o texto para o próximo).
+        def texto_do_leitor_do_crm(attachment, ate_em)
+          return unless Crm::Ai::ReservaDaMidia.lendo?(attachment.meta.to_h)
+
+          Crm::Ai::ReservaDaMidia.esperar(attachment, ate_em: ate_em).meta.to_h['transcribed_text'].to_s.presence
         end
 
         # Cache compartilhado (attachment.meta['transcribed_text']). Recarrega antes do merge p/ reduzir

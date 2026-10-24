@@ -14,13 +14,15 @@ class Crm::Numeros::IaNoTime
   FEATURE_RESPOSTA = 'agente_resposta'.freeze
   MAX_ROBOS = 50
 
-  # ganhos: { ids: os cards ganhos no mês, moeda: a da tela }; custo: true só com financial_view.
+  # ganhos: { ids: os cards ganhos no mês, moeda: a da tela, valor: false sem sales_value_view (#2075) };
+  # custo: true só com financial_view.
   def initialize(account:, range:, cards:, ganhos:, custo:)
     @account = account
     @range = range
     @cards = cards
     @moeda = ganhos[:moeda]
     @ganhos = ganhos[:ids]
+    @valor = ganhos.fetch(:valor, true)
     @custo = custo
   end
 
@@ -43,7 +45,7 @@ class Crm::Numeros::IaNoTime
 
   def venda
     vendas = @account.crm_cards.where(id: @ganhos, pipeline_id: @cards.ids(:venda)).where(card_com_robo_sql)
-    { participou: vendas.count, valor: (vendas.where(currency: @moeda).sum(:value_cents) / 100.0).round(2) }
+    { participou: vendas.count, valor: @valor ? (vendas.where(currency: @moeda).sum(:value_cents) / 100.0).round(2) : nil }
   end
 
   def atende

@@ -60,4 +60,45 @@ RSpec.describe 'Api::V1::Accounts::BaseController', type: :request do
       expect(response).to have_http_status(:success)
     end
   end
+
+  # #2110: o `rescue_from` roda por fora do `around_action` do idioma; sem reabrir o idioma, o 422 saía em inglês.
+  describe 'idioma do erro que sai por rescue_from' do
+    let(:admin) { create(:user, account: account, role: :administrator) }
+
+    def criar_resposta_pronta_vazia
+      post "/api/v1/accounts/#{account.id}/canned_responses",
+           params: { canned_response: { short_code: 'oi', content: '' } },
+           headers: admin.create_new_auth_token, as: :json
+    end
+
+    it 'sai no idioma da conta' do
+      account.update!(locale: 'pt_BR')
+
+      criar_resposta_pronta_vazia
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['message']).to eq('Content não pode ficar em branco')
+    end
+
+    it 'sai no idioma da pessoa, mesmo com a conta em inglês' do
+      account.update!(locale: 'en')
+      admin.update!(ui_settings: { 'locale' => 'pt_BR' })
+
+      criar_resposta_pronta_vazia
+
+      expect(response.parsed_body['message']).to eq('Content não pode ficar em branco')
+    end
+
+    it 'cada pedido no seu idioma, e o idioma do processo volta ao padrão depois de cada um' do
+      account.update!(locale: 'pt_BR')
+      criar_resposta_pronta_vazia
+      expect(response.parsed_body['message']).to eq('Content não pode ficar em branco')
+      expect(I18n.locale).to eq(I18n.default_locale)
+
+      account.update!(locale: 'en')
+      criar_resposta_pronta_vazia
+      expect(response.parsed_body['message']).to eq("Content can't be blank")
+      expect(I18n.locale).to eq(I18n.default_locale)
+    end
+  end
 end

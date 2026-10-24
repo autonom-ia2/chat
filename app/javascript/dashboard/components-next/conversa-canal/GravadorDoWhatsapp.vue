@@ -3,6 +3,7 @@
 // vermelho com o tempo, a onda ao vivo, pausar/continuar e a seta que para e envia
 // num toque. Por dentro é o gravador de sempre (AudioRecorder): mesma conversão para o
 // formato que o WhatsApp aceita e o mesmo anexo de mensagem de voz.
+// A conversa do Instagram (#2079) usa os mesmos controles com as cores do Direct (`visual`).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
@@ -11,6 +12,8 @@ import AudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder
 const props = defineProps({
   audioRecordFormat: { type: String, required: true },
   duracao: { type: String, default: '' },
+  // Classes que mudam de um canal para o outro; sem nada, as do WhatsApp.
+  visual: { type: Object, default: null },
 });
 
 const emit = defineEmits([
@@ -51,8 +54,20 @@ const playPause = () => gravador.value?.playPause();
 
 defineExpose({ stopRecording, playPause });
 
-const BOTAO =
-  'grid place-content-center size-10 rounded-full flex-shrink-0 text-[#3B3B3B] dark:text-[#FAFAFA] hover:bg-[#0A0A0A]/5 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0A0A0A]';
+const WHATSAPP = {
+  barra: 'min-h-[52px]',
+  botao:
+    'grid place-content-center size-10 rounded-full flex-shrink-0 text-[#3B3B3B] dark:text-[#FAFAFA] hover:bg-[#0A0A0A]/5 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0A0A0A]',
+  tempo: 'text-[20px] leading-6 text-[#0A0A0A] dark:text-[#FAFAFA]',
+  onda: 'grayscale',
+  pausa:
+    'grid place-content-center size-9 rounded-full flex-shrink-0 text-[#C3002F] dark:text-[#F15C6D] hover:bg-[#FDE7EB] dark:hover:bg-[#F15C6D]/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C3002F]',
+  pausado: 'bg-[#FDE7EB] dark:bg-[#F15C6D]/15',
+  enviar:
+    'grid place-content-center size-10 rounded-full flex-shrink-0 bg-[#0A0A0A] hover:bg-[#2B2B2B] text-white dark:bg-[#21C063] dark:hover:bg-[#1DA855] dark:text-[#0A0A0A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A0A0A]',
+  iconeEnviar: 'i-ph-paper-plane-right-fill',
+};
+const classes = computed(() => props.visual || WHATSAPP);
 </script>
 
 <template>
@@ -61,14 +76,15 @@ const BOTAO =
        fica cinza e a pausa vira o microfone vermelho para continuar. Ouvir antes de
        terminar não existe aqui: o gravador só entrega o áudio quando para. -->
   <div
-    class="flex items-center justify-end gap-3 w-full min-h-[52px] pe-0"
+    class="flex items-center justify-end gap-3 w-full pe-0"
+    :class="classes.barra"
     role="group"
     :aria-label="t('CONVERSA_CANAL.GRAVACAO.GRAVANDO')"
     data-gravador-do-whatsapp
   >
     <button
       type="button"
-      :class="BOTAO"
+      :class="classes.botao"
       :aria-label="t('CONVERSA_CANAL.GRAVACAO.CANCELAR')"
       :title="t('CONVERSA_CANAL.GRAVACAO.CANCELAR')"
       data-cancelar-gravacao
@@ -82,17 +98,14 @@ const BOTAO =
         :class="pausado ? 'bg-[#A7A8A8]' : 'bg-[#EA0038] animate-pulse'"
         aria-hidden="true"
       />
-      <span
-        class="text-[20px] leading-6 tabular-nums text-[#0A0A0A] dark:text-[#FAFAFA]"
-        aria-live="off"
-      >
+      <span class="tabular-nums" :class="classes.tempo" aria-live="off">
         {{ tempo }}
       </span>
     </span>
     <!-- A onda do gravador de sempre, em cinza como a do app. -->
     <div
-      class="w-[140px] max-md:w-[90px] flex-shrink min-w-0 h-10 overflow-hidden grayscale"
-      :class="pausado ? 'opacity-40' : 'opacity-60'"
+      class="w-[140px] max-md:w-[90px] flex-shrink min-w-0 h-10 overflow-hidden"
+      :class="[classes.onda, pausado ? 'opacity-40' : 'opacity-60']"
     >
       <AudioRecorder
         ref="gravador"
@@ -108,8 +121,7 @@ const BOTAO =
     </div>
     <button
       type="button"
-      class="grid place-content-center size-9 rounded-full flex-shrink-0 text-[#C3002F] dark:text-[#F15C6D] hover:bg-[#FDE7EB] dark:hover:bg-[#F15C6D]/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#C3002F]"
-      :class="{ 'bg-[#FDE7EB] dark:bg-[#F15C6D]/15': pausado }"
+      :class="[classes.pausa, pausado ? classes.pausado : '']"
       :aria-label="
         pausado
           ? t('CONVERSA_CANAL.GRAVACAO.CONTINUAR')
@@ -130,13 +142,13 @@ const BOTAO =
     </button>
     <button
       type="button"
-      class="grid place-content-center size-10 rounded-full flex-shrink-0 bg-[#0A0A0A] hover:bg-[#2B2B2B] text-white dark:bg-[#21C063] dark:hover:bg-[#1DA855] dark:text-[#0A0A0A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0A0A0A]"
+      :class="classes.enviar"
       :aria-label="t('CONVERSA_CANAL.GRAVACAO.ENVIAR')"
       :title="t('CONVERSA_CANAL.GRAVACAO.ENVIAR')"
       data-enviar-gravacao
       @click="emit('enviar')"
     >
-      <Icon icon="i-ph-paper-plane-right-fill" class="size-5" />
+      <Icon :icon="classes.iconeEnviar" class="size-5" />
     </button>
   </div>
 </template>

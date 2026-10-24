@@ -657,6 +657,30 @@
     },
     "NOTA_DO_CONECTOR": {
       "AVISO": "⚠️ A WhatsApp message did not reach this conversation. Check the inbox phone."
+    },
+    "INSTAGRAM": {
+      "HORARIO": "{mes} {dia}, {ano} {hora}",
+      "VISTO": "Seen",
+      "RESPONDER": "Reply",
+      "MAIS_OPCOES": "More options",
+      "REAGIR_FORA_DA_JANELA": "The customer has not written within the allowed time. Instagram only accepts reactions while the conversation is open.",
+      "VOCE_RESPONDEU": "You replied",
+      "RESPONDEU_A_VOCE": "Replied to you",
+      "RESPONDEU_AO_STORY": "Replied to your story",
+      "VOCE_RESPONDEU_AO_STORY": "You replied to their story",
+      "MENCIONOU_NO_STORY": "Mentioned you in their story",
+      "VOCE_MENCIONOU_NO_STORY": "You mentioned them in your story",
+      "STORY_INDISPONIVEL": "Story unavailable",
+      "POST": "Shared post",
+      "CLIPE": "Reel",
+      "ABRIR_FOTO": "Open photo",
+      "ABRIR_VIDEO": "Open video",
+      "REPRODUZIR": "Play",
+      "PAUSAR": "Pause",
+      "MENSAGEM_VAZIA": "Message",
+      "CAMPO": "Message...",
+      "VER_TRANSCRICAO": "See transcription",
+      "MIDIA_INDISPONIVEL": "Media unavailable"
     }
   }
 }

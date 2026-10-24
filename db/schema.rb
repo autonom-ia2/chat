@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_340000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_360000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -424,6 +424,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_340000) do
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_inboxes_on_autonomia_agent_id"
     t.index ["inbox_id", "autonomia_agent_id"], name: "idx_autonomia_agent_inboxes_on_live_inbox_agent_uniq", unique: true, where: "(deleted_at IS NULL)"
     t.index ["inbox_id"], name: "idx_autonomia_agent_inboxes_on_live_porta_uniq", unique: true, where: "(((papel)::text = 'porta'::text) AND (deleted_at IS NULL))"
+    t.index ["inbox_id"], name: "index_autonomia_agent_inboxes_on_inbox_id"
   end
 
   create_table "autonomia_agent_instruction_versions", force: :cascade do |t|
@@ -2551,6 +2552,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_340000) do
     t.index "account_id, escopo, COALESCE(card_id, (0)::bigint), COALESCE(conversation_id, (0)::bigint), contact_id, chave, item_ref", name: "idx_crm_memoria_fatos_vigente", unique: true, where: "(((situacao)::text = 'vigente'::text) AND (expirado_em IS NULL) AND ((tipo)::text <> 'decisao'::text))"
     t.index ["account_id", "card_id"], name: "idx_crm_memoria_fatos_card", where: "(expirado_em IS NULL)"
     t.index ["account_id", "contact_id", "escopo"], name: "idx_crm_memoria_fatos_contato"
+    t.index ["card_id"], name: "index_crm_memoria_fatos_on_card_id"
+    t.index ["contact_id"], name: "index_crm_memoria_fatos_on_contact_id"
     t.index ["idempotency_key"], name: "index_crm_memoria_fatos_on_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
     t.index ["prova_message_ids"], name: "idx_crm_memoria_fatos_provas", using: :gin
     t.check_constraint "cardinality(prova_message_ids) > 0 OR (fonte::text = ANY ('{pessoa_corrigiu,sistema,ferramenta_resultado}'::text[]))", name: "crm_memoria_fatos_prova"

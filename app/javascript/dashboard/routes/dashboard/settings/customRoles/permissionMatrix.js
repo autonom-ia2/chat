@@ -7,9 +7,11 @@ import {
   FINANCIAL_VIEW_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
   INTEGRATION_MANAGE_PERMISSION,
+  KEY_DEPENDENCIES,
   META_ADS_MANAGE_PERMISSION,
   META_ADS_VIEW_PERMISSION,
   PEOPLE_MANAGE_PERMISSION,
+  SALES_VALUE_VIEW_PERMISSION,
   TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
 
@@ -55,6 +57,8 @@ export const SENSITIVE_EXTRAS = [
   'crm_export',
   // #1991: abre o R$ de cada pessoa da equipe e grava a meta de todos.
   'crm_metas_manage',
+  // #2075: abre o R$ das vendas de toda a equipe.
+  SALES_VALUE_VIEW_PERMISSION,
   CRM_ADMIN,
   'contact_export',
   'contact_delete',
@@ -120,6 +124,8 @@ export const MODULE_GROUPS = [
         extras: [
           CRM_MOVE_CARDS,
           'crm_delete_cards',
+          // Valores de venda em R$ (#2075); as metas do mês (#1991) precisam dela.
+          SALES_VALUE_VIEW_PERMISSION,
           // Metas do mês de cada pessoa (#1991): o R$ dos colegas é número comercial (Decisão 1 do #1871).
           'crm_metas_manage',
           'crm_view_reports',
@@ -415,7 +421,7 @@ const setConversationLevel = (level, permissions) => {
 const setCrmLevel = (module, level, permissions) => {
   if (level === LEVELS.NONE) return withoutKeys(permissions, keysOf(module));
   const base = withoutKeys(permissions, [CRM_VIEW, CRM_MANAGE_CARDS]);
-  // The CRM backend checks each key on its own, so crm_view is always stored. Voltar para ver tira o que é só de quem mexe.
+  // Any CRM level stores crm_view; the backend adds it too for every editing key (#2124). Voltar para ver tira o que é só de quem mexe.
   if (level === LEVELS.VIEW)
     return unique([
       ...withoutKeys(base, module.manageOnlyExtras || []),
@@ -473,9 +479,17 @@ export const toggleExtra = (module, key, permissions) => {
   if (!permissions.includes(key)) {
     // Full CRM access switches every CRM option on, so the screen matches the backend.
     const implied = key === CRM_ADMIN ? CRM_EXTRAS_IMPLIED_BY_ADMIN : [];
-    return unique([...permissions, key, ...implied]);
+    // #2075: a meta do mês é dinheiro. Ligar as metas liga os valores em R$; desligar os valores desliga as metas.
+    const needed = KEY_DEPENDENCIES[key] ? [KEY_DEPENDENCIES[key]] : [];
+    return unique([...permissions, key, ...implied, ...needed]);
   }
-  const next = withoutKeys(permissions, [key]);
+  // Um dependente que o crm_admin trava continua ligado.
+  const dependents = Object.keys(KEY_DEPENDENCIES).filter(
+    dependent =>
+      KEY_DEPENDENCIES[dependent] === key &&
+      !isExtraLocked(dependent, permissions)
+  );
+  const next = withoutKeys(permissions, [key, ...dependents]);
   // A limited conversation level needs at least one scope. Só os dois alcances contam: desligar outro ajuste
   // (ler as outras, apagar mensagens) nunca é barrado por isso.
   const isScopeKey =
@@ -508,6 +522,15 @@ export const unmetSuggestion = (module, permissions) => {
 export const sensitiveExtrasOn = permissions =>
   SENSITIVE_EXTRAS.filter(key => permissions.includes(key));
 
+// As áreas que guardam alguma destas chaves (#2115): diz à pessoa onde um modelo ficou incompleto.
+export const modulesWithKeys = keys =>
+  MODULES.filter(module =>
+    [
+      ...keysOf(module),
+      ...(module.type === 'conversations' ? CONVERSATION_KEYS : []),
+    ].some(key => keys.includes(key))
+  );
+
 const build = levels =>
   Object.entries(levels).reduce(
     (permissions, [moduleKey, level]) =>
@@ -515,14 +538,18 @@ const build = levels =>
     []
   );
 
+// build() só guarda o nível de cada área; os ajustes finos que a frase do perfil promete entram à mão (#2115).
 export const PRESETS = {
-  AGENT: () =>
-    build({
+  AGENT: () => [
+    ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.LIMITED,
       CONTACTS: LEVELS.VIEW,
       KNOWLEDGE_BASE: LEVELS.VIEW,
       CRM: LEVELS.MANAGE,
     }),
+    // "Pegar da fila".
+    CONVERSATION_UNASSIGNED,
+  ],
   SUPERVISOR: () => [
     ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.ALL,
@@ -562,6 +589,9 @@ export const PRESETS = {
     'crm_manage_pipelines',
     'crm_export',
     'prospecting_view_all_searches',
+    // Dono da meta (#2115): valores em R$ e as metas do mês da equipe. Chaves protegidas, saem para quem não as entrega.
+    SALES_VALUE_VIEW_PERMISSION,
+    'crm_metas_manage',
   ],
   MARKETING: () => [
     ...build({
@@ -574,6 +604,8 @@ export const PRESETS = {
       WHATSAPP_TEMPLATES: LEVELS.MANAGE,
     }),
     'crm_view_reports',
+    'campaign_send',
+    'contact_export',
   ],
   FINANCE: () => [
     ...build({ REPORTS: LEVELS.VIEW, CRM: LEVELS.VIEW, FINANCE: LEVELS.VIEW }),
@@ -604,6 +636,9 @@ export const PRESETS = {
       INBOXES: LEVELS.VIEW,
       AUTOMATIONS: LEVELS.VIEW,
       WHATSAPP_TEMPLATES: LEVELS.VIEW,
+      META_ADS: LEVELS.VIEW,
+      SCHEDULING: LEVELS.VIEW,
+      INSURANCE: LEVELS.VIEW,
     }),
     'crm_view_reports',
   ],
@@ -622,7 +657,12 @@ export const PROFILE_GROUPS = [
       },
       {
         key: 'SUPERVISOR',
-        can: ['ALL_CONVERSATIONS', 'EDIT_CONTACTS', 'REPORTS', 'TEAM_SETUP'],
+        can: [
+          'ALL_CONVERSATIONS',
+          'EDIT_IMPORT_CONTACTS',
+          'REPORTS',
+          'TEAM_SETUP',
+        ],
         cannot: ['DELETE_DATA', 'BILLING_INTEGRATIONS'],
       },
     ],
@@ -642,6 +682,7 @@ export const PROFILE_GROUPS = [
           'EDIT_PIPELINES',
           'EXPORT_CRM',
           'ALL_SEARCHES',
+          'SET_GOALS',
         ],
         cannot: ['SEND_CAMPAIGNS', 'SETTINGS'],
       },

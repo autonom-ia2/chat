@@ -35,6 +35,7 @@ import {
 
 // constants
 import { BUS_EVENTS } from 'shared/constants/busEvents';
+
 import { REPLY_POLICY } from 'shared/constants/links';
 import wootConstants, {
   META_RESTRICTION_STATUS_URL,
@@ -46,6 +47,7 @@ import {
   CONVERSAS_DO_CONTATO,
   useConversaDeEmail,
 } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
+import { useConversaDoInstagram } from 'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
 import AvisoJanelaFechada from 'dashboard/components-next/conversa-canal/AvisoJanelaFechada.vue';
 import EncaminharDaConversa from 'dashboard/components-next/conversa-canal/encaminhar/EncaminharDaConversa.vue';
@@ -64,6 +66,9 @@ import {
   topoDaFaixa,
 } from 'dashboard/components-next/conversa-canal/rolagemDaPele';
 import { useAlert } from 'dashboard/composables';
+
+// Até quantos px do fim a lista conta como "no fim" quando a caixa de resposta cresce.
+const NO_FIM_DO_PAINEL = 40;
 
 export default {
   components: {
@@ -112,6 +117,11 @@ export default {
       classesDaLista: classesDoEmail,
       classesDaBarra: classesDaRespostaDoEmail,
     } = useConversaDeEmail();
+    // #2079: conversa do Instagram com a cara do Direct, atrás da chave própria.
+    const {
+      classesDaLista: classesDoInstagram,
+      classesDaBarra: classesDaRespostaDoInstagram,
+    } = useConversaDoInstagram();
     // #1702: superadmin entrando como o usuário não marca a mensagem como lida no WhatsApp do cliente.
     const { isImpersonating } = useImpersonation();
 
@@ -134,6 +144,8 @@ export default {
       emailNovo,
       classesDoEmail,
       classesDaRespostaDoEmail,
+      classesDoInstagram,
+      classesDaRespostaDoInstagram,
       isImpersonating,
       selecaoParaEncaminhar,
     };
@@ -594,11 +606,24 @@ export default {
       this.conversationPanel = this.$el.querySelector('.conversation-panel');
       this.setScrollParams();
       this.conversationPanel.addEventListener('scroll', this.handleScroll);
+      // A caixa de resposta cresce (citação, texto de várias linhas) e a lista encolhe:
+      // quem estava no fim continua vendo a última mensagem (#2113).
+      this.noFimDoPainel = true;
+      if (window.ResizeObserver) {
+        this.observadorDoPainel = new ResizeObserver(this.manterNoFim);
+        this.observadorDoPainel.observe(this.conversationPanel);
+      }
       this.$nextTick(() => this.scrollToBottom());
       this.isLoadingPrevious = false;
     },
     removeScrollListener() {
       this.conversationPanel.removeEventListener('scroll', this.handleScroll);
+      this.observadorDoPainel?.disconnect();
+    },
+    manterNoFim() {
+      if (this.emailNovo || !this.noFimDoPainel) return;
+      this.isProgrammaticScroll = true;
+      this.conversationPanel.scrollTop = this.conversationPanel.scrollHeight;
     },
     scrollToBottom() {
       this.isProgrammaticScroll = true;
@@ -687,6 +712,7 @@ export default {
       emitter.emit(BUS_EVENTS.ON_MESSAGE_LIST_SCROLL);
       // #1786: no e-mail novo os antigos ficam embaixo: carrega perto do fim.
       const alvo = e.target;
+      this.noFimDoPainel = pertoDoFim(alvo, NO_FIM_DO_PAINEL);
       this.fetchPreviousMessages(
         this.emailNovo
           ? alvo.scrollHeight - alvo.scrollTop - alvo.clientHeight
@@ -767,7 +793,7 @@ export default {
     <MessageList
       ref="conversationPanelRef"
       class="conversation-panel flex-shrink flex-grow basis-px flex flex-col overflow-y-auto relative h-full m-0 pb-4"
-      :class="[classesDaLista, classesDoEmail]"
+      :class="[classesDaLista, classesDoEmail, classesDoInstagram]"
       :current-user-id="currentUserId"
       :first-unread-id="primeiraNaoLidaDaLista"
       :is-an-email-channel="isAnEmailChannel"
@@ -832,7 +858,11 @@ export default {
     </MessageList>
     <div
       class="flex relative flex-col bg-n-surface-1"
-      :class="[classesDaBarra, classesDaRespostaDoEmail]"
+      :class="[
+        classesDaBarra,
+        classesDaRespostaDoEmail,
+        classesDaRespostaDoInstagram,
+      ]"
     >
       <div
         v-if="isAnyoneTyping"

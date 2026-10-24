@@ -13,6 +13,9 @@ en:
         e3: 'The team sent the quote options, or asked for the documents and the health statement to make the proposal. The proposal has not gone to the provider yet.'
         e4: 'The team told the customer it sent the proposal to the provider and is waiting for the answer. A pending item from the provider also stays here.'
         e5: 'The team told the customer the provider approved and the plan was implemented: sent the member card, the contract number or the start date.'
+    # Vocabulary in the messages the AI writes to the customer (#2034).
+    ai:
+      vocabulario: 'Talk about plan, members, main member and dependents, provider, bill and reimbursement; call anyone looking for or holding a plan a client and never say insured or policy.'
   # Line of business for the e-mail AI (#2037).
   email_campaigns:
     ai:

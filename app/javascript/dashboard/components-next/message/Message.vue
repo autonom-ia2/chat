@@ -81,6 +81,9 @@ import { useBranding } from 'shared/composables/useBranding';
 import { ehNotaDoConector } from 'dashboard/components-next/conversa-canal/notaDoConector';
 import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
 import { useEcoDoCelular } from 'dashboard/components-next/conversa-canal/useEcoDoCelular';
+import LinhaDoInstagram from 'dashboard/components-next/conversa-canal/instagram/LinhaDoInstagram.vue';
+import { useInstagramDaConversa } from 'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram';
+import { balaoDoInstagram } from 'dashboard/components-next/conversa-canal/instagram/balaoDoInstagram';
 
 /**
  * @typedef {Object} Attachment
@@ -390,6 +393,20 @@ const pele = usePele();
 const balaoDoWhatsapp = computed(() =>
   pele.value ? balaoDaPele(props) : null
 );
+// #2079: na conversa do Instagram com a cara do Direct, a linha inteira é a do app.
+// Tipo sem balão do Direct (arquivo, não suportada) segue no balão de sempre, e a
+// mensagem que falhou também: lá fica o erro e o "Tentar de novo".
+const instagram = useInstagramDaConversa();
+const linhaDoInstagram = computed(
+  () =>
+    instagram.ligado.value &&
+    !props.private &&
+    ![MESSAGE_VARIANTS.ACTIVITY, MESSAGE_VARIANTS.ERROR].includes(
+      variant.value
+    ) &&
+    !props.contentAttributes?.externalError &&
+    balaoDoInstagram(props) !== null
+);
 // #1702: a citação levou até aqui: a linha pisca por um instante (só com a pele).
 const destacadaPelaCitacao = computed(
   () => !!pele.value && mensagemDestacada.value === props.id
@@ -607,7 +624,8 @@ const allContextMenuOptions = computed(() => {
     replyTo:
       !props.private &&
       props.inboxSupportsReplyTo.outgoing &&
-      !isFailedOrProcessing,
+      !isFailedOrProcessing &&
+      !isMessageDeleted.value,
     report:
       isOnChatwootCloud.value &&
       isCaptainMessage.value &&
@@ -826,6 +844,17 @@ provideMessageContext({
       <!-- O texto vem do contexto da mensagem (o da nota do conector é o aviso curto, #1941). -->
       <ActivityBubble v-else />
     </div>
+    <LinhaDoInstagram
+      v-else-if="linhaDoInstagram"
+      :pode-responder="contextMenuEnabledOptions.replyTo"
+      :pode-reagir="reacaoDoAtendente.visivel.value && !isReadOnly"
+      :reacao-atual="reacaoDoAtendente.atual.value"
+      :reacao-bloqueada="reacaoDoAtendente.bloqueado.value"
+      :reagindo="reacaoDoAtendente.enviando.value"
+      @responder="handleReplyTo"
+      @reagir="reacaoDoAtendente.reagir"
+      @menu="openContextMenu($event)"
+    />
     <div
       v-else
       :class="[

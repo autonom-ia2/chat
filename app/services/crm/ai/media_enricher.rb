@@ -65,7 +65,7 @@ module Crm
       end
 
       def enrich(attachment, credential)
-        return leitor_de(attachment.message).ler(attachment) if leitor?
+        return ler_pelo_leitor(attachment) if leitor?
 
         case attachment.file_type.to_s
         when 'audio' then transcribe(attachment, credential)
@@ -91,6 +91,14 @@ module Crm
       rescue StandardError => e
         Rails.logger.warn("[CRM AI] caption failed attachment=#{attachment.id}: #{e.message}")
         store(attachment, 'ai_caption', nil, done_key: 'crm_ai_image_done')
+      end
+
+      # Arquivo que ainda não chegou ao storage fica pendente (o job da chegada tenta de novo), e a avaliação segue.
+      def ler_pelo_leitor(attachment)
+        leitor_de(attachment.message).ler(attachment)
+      rescue ActiveStorage::FileNotFoundError
+        Rails.logger.warn("[crm][midia] arquivo_ainda_nao_chegou origem=avaliacao anexo=#{attachment.id}")
+        false
       end
 
       def leitor?

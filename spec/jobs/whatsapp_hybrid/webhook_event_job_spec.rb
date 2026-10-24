@@ -3,23 +3,26 @@ require 'rails_helper'
 RSpec.describe WhatsappHybrid::WebhookEventJob do
   let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
   let(:inbox) { channel.inbox }
-  let!(:admin) { create(:user, account: inbox.account, role: :administrator) }
   let(:connection) do
     WhatsappHybrid::Connection.create!(account: inbox.account, inbox: inbox, session_name: 'hybrid-test', status: 'connected',
                                        connected_phone: channel.phone_number.delete('^0-9'), risk_accepted_at: Time.current)
   end
 
   describe 'session.status' do
-    it 'marks the connection down and warns the administrators once per drop' do
-      described_class.perform_now(connection.id, 'session.status', { 'status' => 'FAILED' })
-      described_class.perform_now(connection.id, 'session.status', { 'status' => 'STOPPED' })
+    before do
+      create(:user, account: inbox.account, role: :administrator)
+      Redis::Alfred.delete(WhatsappHybrid::DownAlert.chave_da_queda(connection))
+    end
+
+    it 'marks the connection down at once and leaves the warning for after the grace period (#2112)' do
+      expect do
+        described_class.perform_now(connection.id, 'session.status', { 'status' => 'FAILED' })
+        described_class.perform_now(connection.id, 'session.status', { 'status' => 'STOPPED' })
+      end.to have_enqueued_job(WhatsappHybrid::DownAlertJob).exactly(:once)
 
       expect(connection.reload.status).to eq('disconnected')
       expect(connection.routable?).to be(false)
-      avisos = Autonomia::Guide::Aviso.where(account: inbox.account, user: admin)
-      expect(avisos.count).to eq(1)
-      expect(avisos.first.texto).to include(inbox.name)
-      expect(avisos.first.gravidade).to eq('urgente')
+      expect(Autonomia::Guide::Aviso.count).to eq(0)
     end
 
     it 'clears the drop when the session works again, so the next drop warns again' do
@@ -28,6 +31,7 @@ RSpec.describe WhatsappHybrid::WebhookEventJob do
 
       expect(connection.reload.status).to eq('connected')
       expect(connection.down_alerted_at).to be_nil
+      expect(Redis::Alfred.exists?(WhatsappHybrid::DownAlert.chave_da_queda(connection))).to be(false)
     end
 
     it 'keeps the WhatsApp limit sent with the status' do
@@ -62,8 +66,8 @@ RSpec.describe WhatsappHybrid::WebhookEventJob do
     it 'does not warn when the connection was never in use' do
       connection.update!(risk_accepted_at: nil)
 
-      described_class.perform_now(connection.id, 'session.status', { 'status' => 'FAILED' })
-
+      expect { described_class.perform_now(connection.id, 'session.status', { 'status' => 'FAILED' }) }
+        .not_to have_enqueued_job(WhatsappHybrid::DownAlertJob)
       expect(Autonomia::Guide::Aviso.count).to eq(0)
     end
   end

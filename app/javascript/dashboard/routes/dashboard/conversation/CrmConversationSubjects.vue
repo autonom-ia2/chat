@@ -162,9 +162,10 @@ watch(
 </script>
 
 <template>
-  <div class="grid gap-2" data-crm-conversation-subjects>
-    <div class="flex items-center justify-between gap-2">
-      <span class="text-xs font-medium text-n-slate-11">
+  <!-- grid-cols-1 = minmax(0, 1fr): a coluna não cresce com o texto, e o bloco cabe na coluna da conversa. -->
+  <div class="grid min-w-0 grid-cols-1 gap-2" data-crm-conversation-subjects>
+    <div class="flex min-w-0 items-center justify-between gap-2">
+      <span class="min-w-0 truncate text-xs font-medium text-n-slate-11">
         {{ t('CRM_KANBAN.CONVERSATION.SUBJECTS.LABEL') }}
       </span>
       <NextButton
@@ -174,13 +175,14 @@ watch(
         xs
         slate
         faded
+        class="shrink-0"
         @click="openNewSubject"
       />
     </div>
 
     <div
       v-if="suggestionView"
-      class="grid gap-2 rounded-lg border border-n-amber-6 bg-n-amber-2 px-2.5 py-2"
+      class="grid grid-cols-1 gap-2 rounded-lg border border-n-amber-6 bg-n-amber-2 px-2.5 py-2"
       data-crm-subject-suggestion
     >
       <p
@@ -190,7 +192,7 @@ watch(
         <span
           class="i-lucide-sparkles mt-0.5 size-4 shrink-0 text-n-amber-11"
         />
-        <span>{{ suggestionView.text }}</span>
+        <span class="min-w-0 break-words">{{ suggestionView.text }}</span>
       </p>
       <div class="flex flex-wrap gap-2">
         <NextButton
@@ -223,7 +225,9 @@ watch(
       v-else-if="hasError"
       class="flex items-center justify-between gap-2 text-xs leading-5 text-n-slate-11"
     >
-      <span>{{ t('CRM_KANBAN.CONVERSATION.SUBJECTS.LOAD_ERROR') }}</span>
+      <span class="min-w-0">
+        {{ t('CRM_KANBAN.CONVERSATION.SUBJECTS.LOAD_ERROR') }}
+      </span>
       <NextButton
         :label="t('CRM_KANBAN.CONVERSATION.SUBJECTS.RETRY')"
         xs
@@ -239,8 +243,8 @@ watch(
       }}
     </p>
 
-    <ul v-else class="mb-0 grid list-none gap-1.5 p-0">
-      <li v-for="subject in subjects" :key="subject.id">
+    <ul v-else class="mb-0 grid min-w-0 list-none grid-cols-1 gap-1.5 p-0">
+      <li v-for="subject in subjects" :key="subject.id" class="min-w-0">
         <component
           :is="canSwitch(subject) ? 'button' : 'div'"
           :type="canSwitch(subject) ? 'button' : undefined"

@@ -167,3 +167,61 @@ describe('destinoDaEquipe', () => {
     ).toBeNull();
   });
 });
+
+// #2075 — sem a chave de valores o servidor manda o R$ vazio (null): os textos
+// da Equipe falam das vendas fechadas, sem dinheiro e sem meta.
+describe('numerosTextosEquipe sem valores de venda', () => {
+  const equipe = {
+    escopo: 'equipe',
+    medida: 'valor',
+    feito: null,
+    meta: null,
+    fechadas: 7,
+    frase: { tipo: 'equipe_vendas', feito: null, meta: null, ajuda: 2 },
+  };
+
+  it('counts the closed sales in the title and keeps the help sentence', () => {
+    expect(tituloDoTopoDe(equipe, OUTUBRO)).toEqual({
+      key: `${P}.TOPO.FECHOU_EQUIPE_SEM_VALOR`,
+      params: { n: 7 },
+      plural: 7,
+    });
+    expect(fraseDoTopoDe(equipe, OUTUBRO)).toMatchObject({
+      key: `${P}.TOPO.FRASE.EQUIPE_VENDAS_SEM_VALOR`,
+      plural: 2,
+    });
+  });
+
+  it('uses the same texts early in the month, where the money sentence would be empty', () => {
+    const cedo = { dia: 2, diasNoMes: 31, fechado: false };
+    expect(tituloDoTopoDe(equipe, cedo).key).toBe(
+      `${P}.TOPO.FECHOU_EQUIPE_SEM_VALOR`
+    );
+    expect(fraseDoTopoDe(equipe, cedo).key).toBe(
+      `${P}.TOPO.FRASE.EQUIPE_VENDAS_SEM_VALOR`
+    );
+  });
+
+  it('talks about the company sales and support without money', () => {
+    const empresa = {
+      ...equipe,
+      escopo: 'empresa',
+      frase: { tipo: 'empresa', feito: null, meta: null, resolvidos: 40 },
+    };
+    expect(tituloDoTopoDe(empresa, OUTUBRO).key).toBe(
+      `${P}.TOPO.FECHOU_EMPRESA_SEM_VALOR`
+    );
+    expect(fraseDoTopoDe(empresa, OUTUBRO).key).toBe(
+      `${P}.TOPO.FRASE.EMPRESA_SEM_VALOR`
+    );
+  });
+
+  it('opens the stalled deals without the amount', () => {
+    expect(botaoDoTopoDe({ tipo: 'parados', n: 3, valor: null }).key).toBe(
+      `${P}.TOPO.BOTAO.PARADOS_SEM_VALOR`
+    );
+    expect(botaoDoTopoDe({ tipo: 'parados', n: 3, valor: 900 }).key).toBe(
+      `${P}.TOPO.BOTAO.PARADOS`
+    );
+  });
+});

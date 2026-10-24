@@ -13,6 +13,9 @@ pt_BR:
         e3: 'A equipe mandou as opções da cotação, ou pediu a documentação e a declaração de saúde para fazer a proposta. A proposta ainda não foi para a operadora.'
         e4: 'A equipe disse ao cliente que mandou a proposta para a operadora e está esperando a resposta. Pendência da operadora também fica aqui.'
         e5: 'A equipe contou ao cliente que a operadora aprovou e o plano foi implantado: mandou a carteirinha, o número do contrato ou a data de início.'
+    # Vocabulário nas mensagens que a IA escreve ao cliente (#2034).
+    ai:
+      vocabulario: 'Fale de plano, vidas, titular e dependentes, operadora, boleto e reembolso; chame de cliente quem procura ou já tem o plano e nunca diga segurado nem apólice.'
   # Ramo da conta para a IA de e-mail (#2037).
   email_campaigns:
     ai:

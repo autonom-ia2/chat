@@ -3,6 +3,11 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { withFullI18n } from 'test-i18n';
 import CrmDashboardPage from './CrmDashboardPage.vue';
 
+// #2075 — quem vê os valores de venda (o padrão das telas sem função personalizada).
+vi.mock('../composables/useCrmPermissions', () => ({
+  useCrmPermissions: () => ({ canSeeSalesValues: { value: true } }),
+}));
+
 // #2000 — o bloco "IA vs humano" saiu do painel de Números (virou uma frase na Gestão de IA): a página
 // não lê mais o relatório e não mostra o bloco; o resto (retornos) fica.
 withFullI18n();

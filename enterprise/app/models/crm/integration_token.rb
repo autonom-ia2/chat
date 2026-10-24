@@ -53,6 +53,7 @@ class Crm::IntegrationToken < ApplicationRecord
     crm_manage_ai
     crm_view_reports
     crm_admin
+    sales_value_view
   ].freeze
 
   belongs_to :account
@@ -75,7 +76,8 @@ class Crm::IntegrationToken < ApplicationRecord
     name
   end
 
-  # Permissions currently granted to this token (via its managed CustomRole).
+  # Permissions currently granted to this token (via its managed CustomRole). A CRM editing scope brings crm_view along
+  # (CustomRole::CRM_EDITING_KEYS, #2124): the card policies already needed it to edit. Nothing else is added.
   def granted_scopes
     custom_role&.permissions || []
   end

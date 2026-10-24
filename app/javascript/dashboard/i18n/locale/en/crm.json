@@ -573,8 +573,6 @@
       "FILTER": "Filter",
       "FILTERS": "Filters",
       "MORE_FILTERS": "More filters",
-      "FIND_WITH_AI": "Find with AI",
-      "FIND_WITH_AI_UNAVAILABLE": "Find with AI is not available yet",
       "CONFIGURE": "Configure",
       "CLOSE": "Close",
       "CANCEL": "Cancel",
@@ -761,8 +759,10 @@
         "NEW": "New view",
         "RENAME": "Rename",
         "DELETE": "Delete view",
-        "SAVE": "Save view"
-      }
+        "SAVE": "Save view",
+        "VALUE_IGNORED": "This view filters or sorts by value. Without access to sales values, that part was left out."
+      },
+      "VALUE_HIDDEN": "You can't see sales values"
     },
     "CALENDAR": {
       "FOLLOW_UP": "Follow-up",
@@ -1145,7 +1145,8 @@
       "UNDO": "Undo",
       "CLEAR": "Clear",
       "DONE": "{count} card updated | {count} cards updated",
-      "DELETE_CONFIRM": "Archive {count} card? | Archive {count} cards?"
+      "DELETE_CONFIRM": "Archive {count} card? | Archive {count} cards?",
+      "DELETE_MEETINGS": "{count} card has a meeting booked; it stays booked. | {count} cards have meetings booked; they stay booked."
     },
     "EDIT": {
       "SAVED": "Saved",
@@ -1182,6 +1183,7 @@
       "STAGE_DELETE_ERROR": "Could not remove the stage.",
       "STAGE_DELETE_ERROR_HAS_CARDS": "This stage still has cards linked to it — move them to another stage first.",
       "STAGE_DELETE_ERROR_LAST_STAGE": "Could not remove the stage — a pipeline needs at least one stage.",
+      "STAGE_DELETE_ERROR_IN_USE": "Could not remove the stage — another record in the system still points to it. Nothing was deleted.",
       "CARD_CREATED": "Card created.",
       "CARD_UPDATED": "Card updated.",
       "CARD_LOAD_ERROR": "Could not load card details.",
@@ -3532,7 +3534,8 @@
       "CRM_MANAGE_PIPELINES": "Manage pipelines",
       "CRM_MANAGE_AI": "Manage AI",
       "CRM_VIEW_REPORTS": "View reports",
-      "CRM_ADMIN": "CRM admin"
+      "CRM_ADMIN": "CRM admin",
+      "SALES_VALUE_VIEW": "Sales values"
     },
     "SCOPES": {
       "CRM_VIEW": "Read pipelines, stages, and cards.",
@@ -3542,7 +3545,8 @@
       "CRM_MANAGE_PIPELINES": "Create and edit pipelines and stages.",
       "CRM_MANAGE_AI": "Manage CRM AI settings.",
       "CRM_VIEW_REPORTS": "Read CRM reports.",
-      "CRM_ADMIN": "Full CRM access, including managing tokens."
+      "CRM_ADMIN": "Full CRM access, except sales values.",
+      "SALES_VALUE_VIEW": "Read and change sales values in money (card value, totals and goals). Without it, values come empty and updates keep the saved value."
     },
     "CREATE": {
       "TITLE": "Create a token",
@@ -5003,13 +5007,15 @@
       },
       "CANCELAR_EXEMPLO": "Why was it cancelled?",
       "PERDEU_TITULO_ROTULO": "{rotulo}: what happened?",
-      "PERDEU_CONFIRMA_ROTULO": "Mark as: {rotulo}"
+      "PERDEU_CONFIRMA_ROTULO": "Mark as: {rotulo}",
+      "VALOR_OCULTO": "The deal's amount stays as it is."
     },
     "ARQUIVAR": {
       "BOTAO": "Archive",
       "DICA": "Archiving takes this customer off the board. Nothing is deleted.",
       "TITULO": "Archive {nome}?",
-      "TEXTO": "It leaves the funnel board. Conversations, follow-ups and history stay saved."
+      "TEXTO": "It leaves the funnel board. Follow-ups still due are canceled; conversations and history stay saved.",
+      "REUNIAO": "This card has a meeting booked for {quando}. It stays booked; cancel it in the calendar if needed."
     },
     "SAIR": {
       "TITULO": "Leave without saving?",
@@ -5137,7 +5143,9 @@
       "EM_DIA": "on {dia}",
       "ASSUNTO_FRASE": "{titulo}. Priority: {prioridade}, open for {tempo}.",
       "ASSUNTO_SEM_TEMPO": "{titulo}. Priority: {prioridade}.",
-      "SEM_CONTATO_ATENDER": "No person is linked to this request yet."
+      "SEM_CONTATO_ATENDER": "No person is linked to this request yet.",
+      "NEGOCIO_VALOR_OCULTO": "{titulo}. Urgency: {urgencia}.",
+      "VALOR_OCULTO": "hidden amount"
     },
     "ETAPA": {
       "TELA": "Stage",
@@ -5182,7 +5190,8 @@
       "FECHAR_ATE": "Should close by",
       "ATALHO_MES": "End of month",
       "ATALHO_15": "In 15 days",
-      "ATALHO_30": "In 30 days"
+      "ATALHO_30": "In 30 days",
+      "VALOR_OCULTO": "Only people with access to sales values see this deal's amount."
     },
     "DONO": {
       "TELA": "Who handles it",
@@ -5629,7 +5638,11 @@
       "MORE_CONTACT": "More about the person",
       "EDIT_HELP": "What you change here counts for this person everywhere. The card does not change.",
       "SAVED": "Person saved.",
-      "SAVE_ERROR": "Could not save. Check the details and try again.",
+      "SAVE_ERROR_MOTIVO": "Could not save: {motivo}",
+      "SAVE_ERROR_SERVIDOR": "The server did not confirm the save (error {status}). Reopen the person to see if it was saved before trying again.",
+      "SAVE_ERROR_REDE": "Could not reach the server. Check your connection and try again.",
+      "SAVE_ERROR_TELA": "Something went wrong on this screen. Reload the page and check the details before trying again.",
+      "CAMPO_CONFIRA": "Check this field.",
       "COMPANY_FORM": {
         "CHANGE": "Change the company",
         "EDIT_TITLE": "Edit the company",
@@ -6180,6 +6193,7 @@
       "ERRO": {
         "PASSADO": "That time has passed. Go back and choose another one.",
         "PRONTA": "At that time only an approved message can go out. Go back and choose one.",
+        "ARQUIVADO": "This card is archived. Restore it before scheduling a message.",
         "GERAL": "Could not schedule right now. Try again."
       }
     },
@@ -6271,7 +6285,9 @@
         "EMPRESA_SEM_META": "There is no goal for this month yet. Support resolved {resolvidos}.",
         "EQUIPE_VENDAS": "The team closed {feito} of {meta}. Nobody needs help. | The team closed {feito} of {meta}. {ajuda} person needs help. | The team closed {feito} of {meta}. {ajuda} people need help.",
         "EQUIPE_VENDAS_SEM_META": "There is no goal for this month yet.",
-        "EQUIPE_ATENDE_SEM_PRAZO": "No reminder fell behind. | {lembretes} reminder fell behind. | {lembretes} reminders fell behind."
+        "EQUIPE_ATENDE_SEM_PRAZO": "No reminder fell behind. | {lembretes} reminder fell behind. | {lembretes} reminders fell behind.",
+        "EQUIPE_VENDAS_SEM_VALOR": "Nobody needs help. | {ajuda} person needs help. | {ajuda} people need help.",
+        "EMPRESA_SEM_VALOR": "Support resolved {resolvidos}."
       },
       "BOTAO": {
         "MEUS_ATRASADOS": "Open my overdue follow-up | Open my {n} overdue follow-ups",
@@ -6283,7 +6299,8 @@
         "ATRASADOS_EQUIPE": "Open the team's overdue follow-up | Open the team's {n} overdue follow-ups",
         "CARDS_EQUIPE": "Open the team's cards",
         "LEMBRETES_EQUIPE": "Open the overdue reminder | Open the {n} overdue reminders",
-        "CASOS_EQUIPE": "Open the team's cases"
+        "CASOS_EQUIPE": "Open the team's cases",
+        "PARADOS_SEM_VALOR": "Open {n} stalled deal | Open {n} stalled deals"
       },
       "SEM_META_EMPRESA": "You closed {valor} in {mes}",
       "SEM_META_EQUIPE": "The team closed {valor} in {mes}",
@@ -6294,7 +6311,9 @@
       "BATIDA_EMPRESA": "You hit the {mes} goal",
       "BATIDA_EQUIPE": "The team hit the {mes} goal",
       "LEITURA": "You are viewing in read-only mode.",
-      "METAS_LINK": "{mes} goals"
+      "METAS_LINK": "{mes} goals",
+      "FECHOU_EQUIPE_SEM_VALOR": "The team closed {n} sale | The team closed {n} sales",
+      "FECHOU_EMPRESA_SEM_VALOR": "You closed {n} sale | You closed {n} sales"
     },
     "PROXIMO": {
       "TITULO": "Next step",
@@ -6315,7 +6334,8 @@
       "VENDENDO_EQUIPE": "Selling (team)",
       "ATENDENDO_EQUIPE": "Support (team)",
       "LEMBRETES": "overdue reminder | overdue reminders",
-      "PARADOS_ATENDE": "stalled for 7+ days | stalled for 7+ days"
+      "PARADOS_ATENDE": "stalled for 7+ days | stalled for 7+ days",
+      "FECHADAS_SEM_VALOR": "sale closed | sales closed"
     },
     "ESTIMADO": "Some older sales were counted for the card's current responsible person.",
     "IA_AJUDOU": {
@@ -6386,7 +6406,10 @@
       "IA_CUSTO_AGENTES": "AI agents cost: {valor} this month, about {porConversa} per conversation.",
       "IA_CUSTO_AGENTES_SEM_CONVERSA": "AI agents cost: {valor} this month.",
       "IA_CUSTO_FALTA": "Estimate: AI usage is not split by agent.",
-      "RODAPE": "We only count customers who entered the pipeline."
+      "RODAPE": "We only count customers who entered the pipeline.",
+      "PLATAFORMA_SEM_VALOR": "This month {ia} answered {atendeu} conversations and took part in {participou} sale. | This month {ia} answered {atendeu} conversations and took part in {participou} sales.",
+      "IA_PARTICIPOU_SEM_VALOR": "took part in {n} sale | took part in {n} sales",
+      "FORA_VENDA_SEM_VALOR": "closed {fechou}"
     },
     "METAS": {
       "TITULO": "{mes} goals",
@@ -6413,6 +6436,186 @@
       "ERRO_SALVAR": "Could not save the goals. Try again.",
       "MES_MUDOU": "The month changed. Check the {mes} goals and save again.",
       "INVALIDO": "Use numbers only, without dots."
+    }
+  },
+  "CRM_ARQUIVADOS": {
+    "TITULO": "Archived",
+    "ATALHO": "Archived ({count})",
+    "SUB_FUNIL": "Pipeline {funil} · {cards}",
+    "SUB_TODOS": "All pipelines · {cards}",
+    "CARDS": "{count} card | {count} cards",
+    "BUSCA": "Search by name",
+    "BUSCA_ROTULO": "Search archived cards by name",
+    "TODOS_OS_FUNIS": "Search all pipelines",
+    "CARREGANDO": "Loading",
+    "TENTAR_DE_NOVO": "Try again",
+    "VAZIO": "No archived cards in this pipeline.",
+    "VAZIO_TODOS": "No archived cards in any pipeline.",
+    "VOLTAR_AO_QUADRO": "Back to the board",
+    "NADA_ACHADO": "Nothing found for \"{termo}\" in this pipeline.",
+    "NADA_ACHADO_TODOS": "Nothing found for \"{termo}\".",
+    "LIMPAR_BUSCA": "Clear search",
+    "VER_MAIS": "Show more",
+    "SEM_VALOR": "No value",
+    "SEM_PERMISSAO": "To restore, ask the administrator for the \"Archive cards\" permission.",
+    "RESTAURAR": "Restore",
+    "RESTAURAR_N": "Restore ({count})",
+    "SELECIONAR_VARIOS": "Select several",
+    "SELECIONAR_UM": "Select {nome}",
+    "SELECIONADOS": "{count} selected | {count} selected",
+    "VER": "View",
+    "VER_ARQUIVADOS": "View archived",
+    "VER_FUNIS_ARQUIVADOS": "View archived pipelines",
+    "AGENDAR_RETORNO": "Schedule a follow-up",
+    "DESFAZER": "Undo",
+    "CANCELAR": "Cancel",
+    "FECHAR": "Close",
+    "ESCOLHA": "Choose",
+    "ARQUIVADO": "{nome}'s card was archived. It stays in Archived.",
+    "ARQUIVADO_VENDA": "The sale still counts.",
+    "ERRO_ARQUIVAR": "Could not archive: {motivo}. Nothing changed. Try again.",
+    "ERRO_CARREGAR": "Could not load the archived cards: {motivo}.",
+    "ERRO_RESTAURAR": "Could not restore: {motivo}. Nothing changed.",
+    "AVISO": {
+      "ATALHO": "Ctrl+Z also undoes",
+      "FECHAR": "Close notice"
+    },
+    "ERROS": {
+      "SEM_CONEXAO": "no internet connection",
+      "RECUSOU": "the system refused the request",
+      "SEM_PERMISSAO": "you do not have permission for this",
+      "NAO_ARQUIVADO": "this card is no longer archived",
+      "FECHAR_ARQUIVADO": "the card is archived; restore it before setting the outcome",
+      "FUNIL_ARQUIVADO": "this card's pipeline is archived; restore the pipeline first",
+      "CONFLITO": "the customer already has another open card in this pipeline",
+      "FUNIL_NAO_ARQUIVADO": "this pipeline is already active",
+      "FUNIL_JA_ARQUIVADO": "this pipeline is already archived",
+      "DESTINO_INVALIDO": "the pipeline chosen for the cards is no longer available",
+      "DESTINO_CAIXAS_INVALIDO": "the pipeline chosen for the inboxes is no longer available",
+      "PRINCIPAL_INVALIDO": "the pipeline chosen as main is no longer available",
+      "ULTIMO_FUNIL": "it is the only active pipeline; create another one first",
+      "UNICO_PRINCIPAL": "it is the main pipeline; choose another main pipeline first"
+    },
+    "MOTIVO_IA": {
+      "FORA_DO_NEGOCIO": "it was not a deal",
+      "DUPLICADO": "it was a duplicate",
+      "TESTE": "it was a test"
+    },
+    "LINHA": {
+      "POR": "Archived on {dia} by {nome}",
+      "EM": "Archived on {dia}",
+      "PELA_IA": "Archived by the AI on {dia}",
+      "PELA_IA_MOTIVO": "Archived by the AI on {dia}: {motivo}",
+      "GUARDADO_COM_O_FUNIL": "Kept with the pipeline",
+      "ESTAVA_EM": "was in {etapa}",
+      "FUNIL_ARQUIVADO": "{funil} (archived pipeline)",
+      "DICA_FECHADO": "When restored, it goes to the List, {aba} tab. It does not return to the board because the deal is over.",
+      "DICA_FUNIL_ARQUIVADO": "It is in an archived pipeline. To bring it back, restore the {funil} pipeline."
+    },
+    "RESTAURADO": {
+      "QUADRO": "{nome}'s card is back in {etapa}.",
+      "LISTA": "{nome}'s card is back in the List, {aba} tab. It is not on the board because the deal is over.",
+      "RETORNOS": "The follow-up that was scheduled does not come back on its own. | The follow-ups that were scheduled do not come back on their own."
+    },
+    "CONFLITO": {
+      "TITULO": "{nome} already has another open card",
+      "TEXTO": "The open card is \"{titulo}\", in {funil} · {etapa}. Restoring this one leaves two open cards for the same customer in this pipeline.",
+      "MESMO_ASSIM": "Restore anyway",
+      "ABRIR_ABERTO": "Open the open card"
+    },
+    "LOTE": {
+      "RESTAURADOS": "{count} card restored. | {count} cards restored.",
+      "FECHADOS": "1 had already ended and went to the List. | {count} had already ended and went to the List.",
+      "NAO_VOLTARAM": "1 did not come back; see below. | {count} did not come back; see below.",
+      "NENHUM_VOLTOU_CONFLITOS": "No card came back: 1 customer already has an open card in this pipeline. | No card came back: {count} customers already have an open card in this pipeline.",
+      "ERRO": "Could not restore: {motivo}. No card came back. Try again.",
+      "CONFLITOS_TITULO": "1 customer already has an open card in this pipeline | {count} customers already have an open card in this pipeline",
+      "CONFLITOS_TEXTO": "These did not come back. Check each one: the archived card is on the left, the open one on the right.",
+      "ARQUIVADO": "Archived",
+      "ABERTO": "Open",
+      "ABERTO_SEM_ACESSO": "You do not have access to this card.",
+      "TODOS_MESMO_ASSIM": "Restore all of these anyway",
+      "OUTROS_TITULO": "1 card did not come back for another reason | {count} cards did not come back for another reason",
+      "PULADO": "{nome}: {motivo}.",
+      "ENTENDI": "Got it"
+    },
+    "ARQUIVAR": {
+      "TITULO": "Archive {nome}'s card?",
+      "TEXTO": "It leaves the board. You can restore it later.",
+      "BOTAO": "Archive",
+      "VENDA": "The {valor} sale still counts in Numbers.",
+      "RETORNOS": "The follow-up scheduled for the customer stops. If you restore, it does not come back on its own. | The {count} follow-ups scheduled for the customer stop. If you restore, they do not come back on their own."
+    },
+    "CARD": {
+      "ROTULO": "Next step",
+      "FRASE": "This card is archived. It does not show on the board.",
+      "ESTAVA_EM": "It was in {etapa}",
+      "VAI_PARA_A_LISTA": "When restored, it goes to the List, {aba} tab, because the deal is over.",
+      "RETORNOS_PARARAM": "The scheduled follow-up stopped when it was archived and does not come back on its own. | The {count} scheduled follow-ups stopped when it was archived and do not come back on their own."
+    },
+    "FUNIL": {
+      "TITULO": "Archive the {funil} pipeline?",
+      "TEXTO_COM_CARDS": "It has 1 open card. Choose what to do with it. | It has {count} open cards. Choose what to do with them.",
+      "TEXTO_SEM_CARDS": "It leaves the pipeline list. You can restore it later, in Archived pipelines.",
+      "UNICO_TITULO": "{funil} cannot be archived",
+      "UNICO_TEXTO": "It is the only active pipeline, and the CRM needs at least one. Create another pipeline first.",
+      "CRIAR_FUNIL": "Create pipeline",
+      "PRINCIPAL_TITULO": "{funil} is the main pipeline",
+      "PRINCIPAL_TEXTO": "New cards go into it. Choose another pipeline to be the main one before archiving.",
+      "NOVO_PRINCIPAL": "New main pipeline",
+      "CONTINUAR": "Continue",
+      "VIRA_PRINCIPAL": "{funil} becomes the main pipeline.",
+      "O_QUE_FAZER": "What to do with the open cards",
+      "MOVER": "Move to another pipeline",
+      "MOVER_TEXTO": "They stay on the board, in the pipeline and stage you choose. Follow-ups and meetings continue.",
+      "GUARDAR": "Keep them with the pipeline",
+      "GUARDAR_TEXTO": "They leave the board and come back if you restore the pipeline.",
+      "PARAM": "Stops: 1 scheduled follow-up. It does not come back on its own. | Stops: {count} scheduled follow-ups. They do not come back on their own.",
+      "FUNIL": "Pipeline",
+      "ETAPA": "Stage",
+      "VAO_PARA": "1 card goes to {funil} · {etapa}. | {count} cards go to {funil} · {etapa}.",
+      "REUNIOES": "1 card has a scheduled meeting. It stays scheduled. If it will not happen, cancel it in the card's calendar. | {count} cards have scheduled meetings. They stay scheduled. If one will not happen, cancel it in the card's calendar.",
+      "JA_ARQUIVADOS": "Cards already archived stay with the pipeline.",
+      "CAIXAS_UMA": "The {caixas} inbox creates cards in this pipeline. Once archived, it stops receiving new customers.",
+      "CAIXAS_VARIAS": "The {caixas} inboxes create cards in this pipeline. Once archived, it stops receiving new customers.",
+      "CAIXAS_ROTULO": "What to do with the inboxes",
+      "CAIXAS_PASSAR": "Hand them to another pipeline",
+      "CAIXAS_PASSAR_TEXTO": "New customers keep becoming cards, in the pipeline you choose.",
+      "CAIXAS_PARAR": "Leave them without a pipeline",
+      "CAIXAS_PARAR_TEXTO_UMA": "New customers from this inbox do not become cards until you link another pipeline.",
+      "CAIXAS_PARAR_TEXTO": "New customers from these inboxes do not become cards until you link another pipeline.",
+      "CAIXAS_PARAR_TEXTO_LIGADAS": "The link to this pipeline is kept and works again if you restore the pipeline.",
+      "CAIXAS_DESTINO": "Pipeline that starts receiving",
+      "CAIXAS_ENTRAM": "New customers from {caixas} go into {funil} · {etapa}.",
+      "CAIXAS_SEM_FUNIL_UMA": "New customers from {caixas} do not become cards. If you restore the pipeline, it creates them again.",
+      "CAIXAS_SEM_FUNIL": "New customers from {caixas} do not become cards. If you restore the pipeline, they create them again.",
+      "CAIXA_VAI_PARA_OUTRO": "New customers from {caixa} become cards in {funil}, another pipeline linked to it.",
+      "BOTAO": "Archive pipeline",
+      "ERRO": "Could not archive the pipeline: {motivo}. Nothing changed.",
+      "ERRO_PREVIA": "Could not check the pipeline: {motivo}. Close and try again.",
+      "ERRO_ETAPAS": "Could not load the stages of that pipeline: {motivo}. Choose it again.",
+      "ARQUIVADO": "Pipeline {funil} archived.",
+      "FORAM_PARA": "1 card went to {funil}. | {count} cards went to {funil}.",
+      "FICARAM_GUARDADOS": "1 open card was kept with it. | {count} open cards were kept with it.",
+      "CAIXAS_AGORA": "New customers from {caixas} now go into {funil}.",
+      "CAIXAS_PARARAM": "New customers from {caixas} no longer go into this pipeline."
+    },
+    "FUNIS": {
+      "TITULO": "Archived pipelines",
+      "TITULO_N": "Archived pipelines ({count})",
+      "OPCAO": "Archive",
+      "SUB": "Restoring brings the pipeline back, with the cards kept in it.",
+      "SEM_CARDS": "No cards",
+      "GUARDADOS": "1 card kept | {count} cards kept",
+      "ABERTOS": "1 was open | {count} were open",
+      "CAIXAS_VOLTAM": "Creates cards from {caixas} again when restored.",
+      "SEM_PERMISSAO": "To restore a pipeline, ask the administrator for the \"Manage pipelines\" permission.",
+      "VAZIO": "No archived pipelines.",
+      "ERRO_CARREGAR": "Could not load the archived pipelines: {motivo}.",
+      "ERRO_RESTAURAR": "Could not restore the pipeline: {motivo}. Nothing changed.",
+      "VOLTOU": "Pipeline {funil} is back.",
+      "ABERTOS_VOLTARAM": "1 open card is back on the board. | {count} open cards are back on the board.",
+      "CAIXAS_VOLTARAM": "New customers from {caixas} go into it again."
     }
   }
 }

@@ -87,6 +87,9 @@ vi.mock('dashboard/api/crmKanban', () => ({
     dismissAiSuggestion: vi.fn().mockResolvedValue({}),
     summarizeCardConversation: vi.fn().mockResolvedValue({ data: {} }),
     getOwnerOptions: vi.fn(),
+    upcomingMeetings: vi
+      .fn()
+      .mockResolvedValue({ data: { payload: { cards: [] } } }),
   },
 }));
 vi.mock('dashboard/api/metaConversions', () => ({
@@ -434,6 +437,31 @@ describe('CardGaveta (#1423)', () => {
       .find(dialogo => dialogo.props('title') === 'CRM_CARD.ARQUIVAR.TITULO')
       .vm.$emit('confirm');
     expect(wrapper.emitted('archive')).toHaveLength(1);
+  });
+
+  it('Arquivar avisa a reunião marcada, que continua marcada (#2091)', async () => {
+    const api = (await import('dashboard/api/crmKanban')).default;
+    api.upcomingMeetings.mockResolvedValueOnce({
+      data: {
+        payload: {
+          timezone: 'America/Sao_Paulo',
+          cards: [{ card_id: 5, starts_at: '2026-10-24T10:00:00-03:00' }],
+        },
+      },
+    });
+    const wrapper = montar({ canDeleteCards: true });
+    await flushPromises();
+    await botaoComTexto(
+      wrapper.find('[data-card-arquivar]'),
+      'CRM_CARD.ARQUIVAR.BOTAO'
+    ).trigger('click');
+    await flushPromises();
+
+    expect(api.upcomingMeetings).toHaveBeenCalledWith([5]);
+    expect(wrapper.find('[data-aviso-reuniao]').text()).toContain(
+      'CRM_CARD.ARQUIVAR.REUNIAO'
+    );
+    expect(wrapper.emitted('archive')).toBeUndefined();
   });
 
   // #1874 — arquivar tem chave própria: quem mexe no card sem ela não vê o Arquivar.

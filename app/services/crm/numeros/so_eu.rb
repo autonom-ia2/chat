@@ -8,24 +8,27 @@ class Crm::Numeros::SoEu
   MAX_PROXIMO = 2
 
   # acesso: Crm::Access::VisiblePipelines da pessoa (o Kanban e o painel enxergam funis diferentes em "Só as suas").
-  def initialize(account:, user:, mes:, acesso:)
+  # valor_da_equipe: false tira a barra da equipe (% da meta em R$) de quem não tem `sales_value_view` (#2075). Os
+  # números da própria pessoa, inclusive o R$ que ela vendeu e a meta dela, ficam.
+  def initialize(account:, user:, mes:, acesso:, valor_da_equipe: true)
     @account = account
+    @valor_da_equipe = valor_da_equipe
     @user = user
     @mes = mes
-    @visiveis = acesso.apply(account.crm_pipelines)
-    @do_painel = acesso.apply_to_reports(account.crm_pipelines)
+    @visiveis = acesso.apply(account.crm_pipelines.active)
+    @do_painel = acesso.apply_to_reports(account.crm_pipelines.active)
     @cards = Crm::Numeros::MeusCards.new(account: account, user: user, visiveis: @visiveis)
   end
 
   def perform
-    return { vazio: true, mes: @mes.info } if @account.crm_pipelines.none?
+    return { vazio: true, mes: @mes.info } if @account.crm_pipelines.active.none?
 
     {
       vazio: false, papel: papel, mes: @mes.info, moeda: moeda, estimado: credito[:estimado],
       funis: { vendas: @cards.funil(:venda), suporte: @cards.funil(:atende) },
       topo: vende? ? topo_de_venda : topo_de_atendimento,
       proximo: proximo, vendendo: vende? ? vendendo : nil, atendendo: atende? ? atendendo : nil,
-      iaAjudou: ia_ajudou, equipePct: vende? ? Crm::Numeros::EquipePct.new(**equipe_args).perform : nil
+      iaAjudou: ia_ajudou, equipePct: vende? && @valor_da_equipe ? Crm::Numeros::EquipePct.new(**equipe_args).perform : nil
     }
   end
 
@@ -59,7 +62,7 @@ class Crm::Numeros::SoEu
   end
 
   def meta_do_funil_padrao
-    @account.crm_pipelines.where(counts_as_sale: true).order(is_default: :desc, position: :asc, id: :asc)
+    @account.crm_pipelines.active.where(counts_as_sale: true).order(is_default: :desc, position: :asc, id: :asc)
             .pick(:metadata)&.dig('goals', 'currency').presence
   end
 

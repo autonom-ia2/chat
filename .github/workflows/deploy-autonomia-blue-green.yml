@@ -108,7 +108,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'deploy'))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     environment: production
     permissions:
@@ -155,7 +155,7 @@ jobs:
       id-token: write
       # Só para o passo que pede um deploy novo quando o push mais novo perdeu a vez.
       actions: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     environment: production
     # Lidos pelo job desligar-blue. Só saem preenchidos quando o deploy chega ao fim com o tráfego na green.
@@ -407,6 +407,11 @@ jobs:
 
           dnf update -y
           dnf install -y docker awscli openssh-clients python3 iproute
+          # Logs dos containers no CloudWatch (#2103); `docker logs` segue pelo cache local do Docker 25.
+          mkdir -p /etc/docker
+          cat > /etc/docker/daemon.json <<EOF
+          {"log-driver":"awslogs","log-opts":{"awslogs-region":"$AWS_REGION","awslogs-group":"/chatwoot/prod/app","tag":"{{.Name}}/{{.ID}}","mode":"non-blocking","max-buffer-size":"4m"}}
+          EOF
           systemctl enable --now docker
 
           mkdir -p "$APP_DIR"
@@ -1474,7 +1479,7 @@ jobs:
     concurrency:
       group: desligar-blue-autonomia
       cancel-in-progress: false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: production
     permissions:
@@ -1647,7 +1652,7 @@ jobs:
     if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'failure')
     # Falha aqui (checkout, API) nunca pinta de vermelho um deploy que deu certo.
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -1694,7 +1699,7 @@ jobs:
   congelar:
     name: Congelar a produção
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'rollback'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: production
     permissions:
@@ -1789,7 +1794,7 @@ jobs:
       group: deploy-autonomia-blue-green
       cancel-in-progress: false
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'rollback'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: production
     permissions:
@@ -1954,7 +1959,7 @@ jobs:
     name: Avisar descongelar que falhou
     needs: deploy
     if: always() && needs.deploy.outputs.unfreeze_outcome == 'failure'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - name: Unfreeze failed
@@ -1966,7 +1971,7 @@ jobs:
     name: Avisar rollback cancelado
     needs: [congelar, rollback]
     if: always() && needs.congelar.result == 'success' && needs.rollback.result == 'cancelled'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - name: Rollback cancelled before switching traffic
