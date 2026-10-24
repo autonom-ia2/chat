@@ -4623,6 +4623,16 @@
         "E3": "Missing document",
         "E4": "Done",
         "SUCESSO": "Done"
+      },
+      "CARTEIRA": {
+        "NOME": "Portfolio",
+        "TEXTO": "From the implemented plan to the contract renewal.",
+        "E1": "Welcome",
+        "E2": "Using the plan",
+        "E3": "Contract anniversary",
+        "E4": "Renewed",
+        "SUCESSO": "Renewed",
+        "FALHA": "Cancelled"
       }
     },
     "ETAPAS": {
@@ -4738,7 +4748,10 @@
         "ACIONAR": "wants to file a claim",
         "TROCOU_CARRO": "changed cars",
         "MUDOU_ENDERECO": "moved to a new address",
-        "INCLUIR_MOTORISTA": "wants to add a driver"
+        "INCLUIR_MOTORISTA": "wants to add a driver",
+        "PLANO_NOVO": "just had the plan implemented",
+        "USAR_PLANO": "has a question about using the plan",
+        "ANIVERSARIO_CONTRATO": "has a contract anniversary coming up"
       },
       "NOTA": "Team note (optional)",
       "NOTA_AJUDA": "Only your team reads it. It changes nothing in the pipeline."

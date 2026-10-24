@@ -65,7 +65,7 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     end
     expect(previas).to eq(
       'corretora' => ['Seguro ativo', 'Não fechou'], 'seguradora' => ['Seguro ativo', 'Não fechou'],
-      'insurtech' => ['Seguro ativo', 'Não fechou'], 'saude_beneficios' => ['Plano ativo', 'Não fechou'],
+      'insurtech' => ['Seguro ativo', 'Não fechou'], 'saude_beneficios' => ['Implantado', 'Não fechou'],
       'geral' => %w[Ganho Perdido]
     )
     expect(document.css('[data-agents-niche-profile] [data-agents-niche-preview]').size).to eq(4)
