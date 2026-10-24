@@ -27,6 +27,12 @@ module Enterprise::Crm::CardPolicy
     crm_permission?('crm_delete_cards') && show? && funnel_member?
   end
 
+  # Restaurar o arquivado (#2095): a mesma chave de arquivar. Antes, desfazer passava pelo reabrir (`close?`), que pede
+  # `crm_manage_cards`, e a função só com "Arquivar cards" arquivava sem conseguir desfazer.
+  def restore?
+    destroy?
+  end
+
   def move?
     (crm_permission?('crm_move_cards') || crm_permission?('crm_manage_cards')) && show? && funnel_member?
   end

@@ -262,8 +262,10 @@ RSpec.describe Account do
         feature_crm_ia_leitor_de_midia: 1 << 55,
         # #2079: posição 57 (1 << 56), definitiva da Orquestração (22/10).
         feature_conversa_instagram: 1 << 56,
-        # #2138: posição 59 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10); 58 até o rebase.
-        feature_painel_contato_enxuto: 1 << 57
+        # #2097/#2098: posição 58 (1 << 57), PROVISÓRIA da Orquestração (23/10); definitiva no fim da main na vez do PR.
+        feature_crm_arquivados: 1 << 57,
+        # #2138: posição 59 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10).
+        feature_painel_contato_enxuto: 1 << 58
       }
     end
 

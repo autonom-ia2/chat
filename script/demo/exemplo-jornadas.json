@@ -1,0 +1,16 @@
+{
+  "pasta": "docs/demo-tela-real/prints-exemplo",
+  "conta": 1,
+  "larguras": [1440, 390],
+  "temas": ["light"],
+  "jornadas": [
+    {
+      "nome": "entrar-e-caixa",
+      "etapas": [
+        { "nome": "login", "url": "/app/login", "sem_login": true, "esperar": "input[type=\"password\"]" },
+        { "nome": "caixa-de-entrada", "url": "/app/accounts/{conta}/dashboard", "esperar": ".conversations-list-wrap", "pausa": 4000 },
+        { "nome": "todas-as-conversas", "passos": [{ "clicar": "a:has-text(\"Todos\")" }], "pausa": 3000 }
+      ]
+    }
+  ]
+}

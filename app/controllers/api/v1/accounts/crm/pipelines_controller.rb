@@ -1,13 +1,19 @@
 class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::BaseController
+  include Crm::PipelineArchiving
+
   PIXEL_ID_MAX_LENGTH = 20
 
-  before_action :fetch_pipeline, only: [:show, :update, :destroy]
+  before_action :fetch_pipeline, only: [:show, :update]
   before_action :ensure_outcome_labels_format, only: [:update]
 
+  # `status=archived` lista os funis arquivados (#2095), com quantos cards abertos cada um guarda, quantos cards tem ao
+  # todo e as caixas que criam card nele. Sem ele, os ativos, como sempre.
   def index
     authorize ::Crm::Pipeline
-    @pipelines = policy_scope(::Crm::Pipeline).active.order(:position, :id)
+    archived = params[:status].to_s == 'archived'
+    @pipelines = policy_scope(::Crm::Pipeline).where(status: archived ? :archived : :active).order(:position, :id)
     @pipelines_count = @pipelines.count
+    archived_pipeline_counts(@pipelines) if archived
   end
 
   def show; end
@@ -37,22 +43,17 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     render :show
   end
 
-  def destroy
-    @pipeline.status = :archived
-    return render_archive_blocked unless save_pipeline!
-
-    render :show
-  end
-
   private
 
-  # Último funil ativo ou único principal ativo não se arquiva. A regra vale para a mudança que vai ser gravada (DELETE,
-  # ou PATCH com o status em qualquer forma: "archived", 1, "1"), conferida e gravada numa trava da conta: dois
-  # arquivamentos ao mesmo tempo não zeram os funis ativos. false quando a regra recusou (nada foi gravado).
+  # Último funil ativo ou único principal ativo não se arquiva. A regra vale para a mudança que vai ser gravada (PATCH
+  # com o status em qualquer forma: "archived", 1, "1"; o DELETE confere o mesmo no Crm::Pipelines::Archiver), conferida
+  # e gravada sob a trava de arquivar da conta (Crm::Pipelines::TravaDeArquivar, a mesma do DELETE): dois arquivamentos
+  # ao mesmo tempo não zeram os funis ativos. false quando a regra recusou (nada foi gravado).
   def save_pipeline!
     return @pipeline.save! unless @pipeline.will_save_change_to_status?(to: 'archived')
 
-    Current.account.with_lock do
+    ActiveRecord::Base.transaction do
+      ::Crm::Pipelines::TravaDeArquivar.travar!(Current.account.id)
       @archive_blocked = @pipeline.motivo_para_nao_arquivar
       @archive_blocked.nil? && @pipeline.save!
     end
