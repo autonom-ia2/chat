@@ -814,10 +814,10 @@
 
 # Painel do contato enxuto na conversa (#2138). Ligada: o painel da direita vira "Sobre este contato" (nome, quem
 # cuida, o combinado, de onde veio e "Mais" só com conteúdo; tela inteira no celular) e o ⋯ do topo da conversa ganha
-# "Mudar time ou prioridade" e "Acompanhar esta conversa". Desligada: o painel e o ⋯ de sempre. Só frontend, sem
-# migration. Posição 59 na feature_flags_ext_1 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10).
-# Piloto 1, 16 e 18 por psql.
+# "Mudar time ou prioridade" e "Acompanhar esta conversa". Desligada: o painel e o ⋯ de sempre. Só frontend.
+# Posição 59 na feature_flags_ext_1 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10).
+# Piloto 1, 16 e 18 por psql. Conta nova nasce ligada pela migration 20261108370000 (Rodrigo, 24/10).
 - name: painel_contato_enxuto
   display_name: Painel do contato enxuto na conversa
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
