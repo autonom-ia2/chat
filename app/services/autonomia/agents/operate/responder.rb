@@ -55,8 +55,15 @@ module Autonomia
           @posse = posse
         end
 
-        # -> Result
+        # -> Result. #2154 (flag `agente_so_informa`): o turno acabou aqui, por qualquer caminho (clássico, voz, silêncio,
+        # falha), e solta a marca dele (Operate::TurnoEmCurso, compare-and-delete).
         def perform
+          responder_o_turno
+        ensure
+          soltar_o_turno
+        end
+
+        def responder_o_turno
           # C4 (custo): recheck BARATO de elegibilidade ANTES da chamada cara de IA (LLM + embedding).
           # Entre o debounce e este ponto um humano pode ter assumido a conversa (ou o agente foi
           # desligado/movido de caixa) — sem esta guarda o custo da geração já teria sido pago à toa.
@@ -99,6 +106,14 @@ module Autonomia
           falha_no_turno(e)
         rescue StandardError => e
           falha_no_turno(e)
+        end
+
+        # Não solta quando a cadeia de pedaços assumiu o turno, nem quando ele foi refeito pelo dono novo (o mesmo turno
+        # segue).
+        def soltar_o_turno
+          return if @turno_segue || !agente_so_informa?
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(@conversation.id, @reply_to_message_id)
         end
 
         # A resposta do agente é o sinal de silêncio? (compara o texto inteiro, normalizado, com o(s)
@@ -368,19 +383,21 @@ module Autonomia
           # nunca engole a resposta silenciosamente.
           return classic_deliver(result) if chunks.empty?
 
+          passar_o_turno_a_cadeia
           ::Autonomia::Agents::Operate::TypingIndicator.new(conversation: @conversation, agent_inbox: @agent_inbox).on
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
             .set(wait: (chunks.first['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0).seconds)
             .perform_later(@conversation.id, @agent_inbox.id, @reply_to_message_id, chunks, 0, meta_dos_pedacos(result))
-          marcar_cadeia_em_curso
           Result.replied(nil)
         end
 
-        # #2154: a cadeia deste turno está saindo (Operate::CadeiaEmCurso). Só com a flag.
-        def marcar_cadeia_em_curso
+        # #2154: a cadeia de pedaços assume a marca do turno (Operate::TurnoEmCurso), ANTES de ser agendada: renova com o
+        # TTL da cadeia, só se a marca ainda é deste turno. Só com a flag.
+        def passar_o_turno_a_cadeia
           return unless agente_so_informa?
 
-          ::Autonomia::Agents::Operate::CadeiaEmCurso.marcar(@conversation.id, @reply_to_message_id, @agent_inbox.id)
+          ::Autonomia::Agents::Operate::TurnoEmCurso.renovar(@conversation.id, @reply_to_message_id)
+          @turno_segue = true
         end
 
         # `used_entry_ids` viaja no meta (só ids) para o job registrar as fontes no evento replied. #2154: a marca do aviso.
@@ -480,6 +497,7 @@ module Autonomia
           ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: @conversation, message_id: @reply_to_message_id,
                                                                origem: :responder, quem_perdeu: @agent_inbox,
                                                                posse_de_quem_perdeu: @posse)
+          @turno_segue = true # #2154: o mesmo turno segue com o dono novo
         end
 
         # #1606: uma mensagem mais nova do cliente abriu outro turno durante a IA (a marca do debounce aponta para ela).
@@ -574,6 +592,7 @@ module Autonomia
           ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: @conversation, message_id: @reply_to_message_id,
                                                                origem: :responder, quem_perdeu: @agent_inbox,
                                                                posse_de_quem_perdeu: @posse)
+          @turno_segue = true # #2154: o mesmo turno segue com o dono novo
           Result.silenced
         end
 

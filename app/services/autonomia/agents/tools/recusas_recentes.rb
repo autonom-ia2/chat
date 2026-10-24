@@ -41,13 +41,21 @@ module Autonomia::Agents::Tools::RecusasRecentes
 
   def guardar(conversa_id, valor)
     chave = format(CHAVE, conversa: conversa_id)
+    validade = validade_de(chave)
     Redis::Alfred.lpush(chave, valor)
     Redis::Alfred.with { |redis| redis.ltrim(chave, 0, TETO - 1) }
-    # #2154: nunca encurta a validade que o aviso do agente estendeu (guardar_ate_a_passagem).
-    Redis::Alfred.expire(chave, [VALIDADE.to_i, Redis::Alfred.ttl(chave).to_i].max)
+    Redis::Alfred.expire(chave, validade)
     nil
   rescue StandardError
     nil
+  end
+
+  # #2154: nunca encurta a validade que o aviso do agente estendeu (guardar_ate_a_passagem). Lida ANTES de escrever:
+  # se a leitura falhar, a lista ainda ganha a validade padrão (nunca fica sem expirar).
+  def validade_de(chave)
+    [VALIDADE.to_i, Redis::Alfred.ttl(chave).to_i].max
+  rescue StandardError
+    VALIDADE.to_i
   end
 
   # #2154 (flag `agente_so_informa`): o agente avisou que vai chamar alguém e não encaminha mais; quem entrega é a IA de

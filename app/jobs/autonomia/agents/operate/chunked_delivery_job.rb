@@ -27,9 +27,9 @@ module Autonomia
           agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(id: agent_inbox_id)
           return if agent_inbox.blank? || agent_inbox.agent.blank?
 
-          @proximo_agendado = false
+          @turno_segue = false
           deliver(conversation, agent_inbox, reply_to_message_id, Array(chunks), index.to_i, meta || {})
-          cadeia_em_curso(conversation, agent_inbox, reply_to_message_id)
+          soltar_o_turno(conversation, reply_to_message_id) unless @turno_segue
         end
 
         private
@@ -78,6 +78,7 @@ module Autonomia
           ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: conversation, message_id: reply_to_message_id,
                                                                origem: :responder, quem_perdeu: agent_inbox,
                                                                posse_de_quem_perdeu: meta['posse'])
+          @turno_segue = true # #2154: o mesmo turno segue com o dono novo, com a marca dele
         end
 
         # -> nil para seguir; senão o motivo de parar (:turno_mudou, :dono_mudou, :ja_postado, :pessoa_respondeu).
@@ -120,9 +121,9 @@ module Autonomia
 
           typing.on
           wait_seconds = (next_chunk['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0)
+          renovar_o_turno(conversation, reply_to_message_id)
           self.class.set(wait: wait_seconds.seconds)
               .perform_later(conversation.id, agent_inbox.id, reply_to_message_id, chunks, nxt, meta)
-          @proximo_agendado = true
         end
 
         # O 1º pedaço entrou: o "respondido" de sempre e, se o turno avisou que vai chamar alguém (#2154, marca no meta), o
@@ -145,16 +146,20 @@ module Autonomia
           ::Autonomia::Agents::AgenteSoInforma.fala_terminou!(conversation)
         end
 
-        # #2154: a cadeia segue (renova a marca) ou terminou, por qualquer motivo (solta a dela). Só com a flag.
-        def cadeia_em_curso(conversation, agent_inbox, reply_to_message_id)
+        # #2154 (flag `agente_so_informa`, Operate::TurnoEmCurso): o próximo pedaço vai sair; a marca do turno é renovada
+        # ANTES de agendá-lo, só se ainda é deste turno (compare-and-expire), e o turno segue na cadeia.
+        def renovar_o_turno(conversation, reply_to_message_id)
+          @turno_segue = true
           return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
 
-          cadeia = ::Autonomia::Agents::Operate::CadeiaEmCurso
-          if @proximo_agendado
-            cadeia.marcar(conversation.id, reply_to_message_id, agent_inbox.id)
-          else
-            cadeia.soltar(conversation.id, reply_to_message_id, agent_inbox.id)
-          end
+          ::Autonomia::Agents::Operate::TurnoEmCurso.renovar(conversation.id, reply_to_message_id)
+        end
+
+        # A cadeia terminou, por qualquer motivo: solta a marca, só se ainda é deste turno (compare-and-delete).
+        def soltar_o_turno(conversation, reply_to_message_id)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, reply_to_message_id)
         end
 
         # Posta UM pedaço como outgoing do AgentBot-espelho. Idempotente por token composto, dentro do

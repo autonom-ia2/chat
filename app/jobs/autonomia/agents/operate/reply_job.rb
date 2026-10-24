@@ -43,7 +43,7 @@ module Autonomia
           return unless ::Autonomia::Agents::Config.enabled?(conversation.account)
 
           agent_inbox = eligible_agent_inbox(conversation)
-          return if agent_inbox.blank?
+          return sem_quem_responda(conversation, message_id, phase) if agent_inbox.blank?
 
           return passagem(conversation, agent_inbox, message_id, posse) if phase == ::Autonomia::Agents::Operate::AoReceberPassagem::FASE
           return trigger(conversation, agent_inbox, message_id) unless phase == 'settle'
@@ -65,6 +65,7 @@ module Autonomia
         # Janela CONFIGURÁVEL por agente (config['debounce_seconds']), default OPERATE_DEBOUNCE_SECONDS.
         def trigger(conversation, agent_inbox, message_id)
           stamp_debounce(conversation, message_id)
+          abrir_turno(conversation, message_id)
           self.class.set(wait: ::Autonomia::Agents::Config.debounce_seconds_for(agent_inbox.agent))
               .perform_later(conversation.id, message_id, 'settle')
         end
@@ -75,10 +76,12 @@ module Autonomia
         def settle(conversation, agent_inbox, message_id, posse)
           return unless current_token?(conversation, message_id)
           return esperar_o_assunto(conversation, message_id, posse) if esperar_o_assunto?(conversation, agent_inbox, message_id)
+          # Outro settle já responde este turno: a marca é dele (#2154), fica.
           return unless ::Autonomia::Agents::Operate::PosseDoTurno.assumir?(conversation: conversation, agent_inbox: agent_inbox,
                                                                             message_id: message_id, job_id: job_id,
                                                                             posse: posse)
 
+          # O Responder solta a marca do turno (#2154) num ensure, ou a passa à cadeia de pedaços.
           ::Autonomia::Agents::Operate::Responder.new(
             conversation: conversation,
             agent_inbox: agent_inbox,
@@ -118,6 +121,23 @@ module Autonomia
               DEBOUNCE_KEY, stamp.to_json
             ]
           )
+        end
+
+        # #2154 (flag `agente_so_informa`): o turno começa na mensagem do cliente, para a IA de Atribuição não entregar a
+        # conversa enquanto o agente responde (Operate::TurnoEmCurso). A mensagem mais nova toma a marca.
+        def abrir_turno(conversation, message_id)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.abrir(conversation.id, message_id)
+        end
+
+        # O settle de um turno que já não tem quem responda (uma pessoa assumiu, o agente saiu) solta a marca dele.
+        def sem_quem_responda(conversation, message_id, phase)
+          soltar_turno(conversation, message_id) if phase == 'settle'
+        end
+
+        def soltar_turno(conversation, message_id)
+          ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, message_id)
         end
 
         # Relê o stamp do banco e compara o token. Mensagem mais nova => token diferente => aborta.

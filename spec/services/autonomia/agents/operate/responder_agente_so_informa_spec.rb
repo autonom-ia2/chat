@@ -16,6 +16,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   end
   let(:agent_inbox) { Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: agent_bot) }
   let(:contrato) { Autonomia::Agents::ContratoDoFunil }
+  let(:turno) { Autonomia::Agents::Operate::TurnoEmCurso }
   # A fala da conversa 6987: a instrução manda passar, e o agente avisa em mais de uma frase.
   # Dois parágrafos longos: a entrega em pedaços (ReplyChunker, soft_max de 260) manda em mais de uma mensagem.
   let(:fala) do
@@ -50,6 +51,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   end
 
   def responder = described_class.new(conversation: conversation, agent_inbox: agent_inbox, reply_to_message_id: pergunta.id)
+
+  # O ReplyJob#trigger abriu o turno desta pergunta (#2154).
+  def turno_aberto! = turno.abrir(conversation.id, pergunta.id)
 
   def respostas = conversation.messages.outgoing.where(sender_type: 'AgentBot', private: false)
 
@@ -103,6 +107,27 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(Redis::Alfred.ttl(chave)).to be > Autonomia::Agents::Tools::RecusasRecentes::VALIDADE.to_i
     end
 
+    it 'solta a marca do turno ao terminar, só a deste turno', :aggregate_failures do
+      turno_aberto!
+      ia_responde
+
+      responder.perform
+
+      expect(turno.em_curso?(conversation.id)).to be(false)
+      turno.abrir(conversation.id, pergunta.id + 1)
+      responder.perform
+      expect(Redis::Alfred.get(turno.chave(conversation.id))).to eq((pergunta.id + 1).to_s)
+    end
+
+    it 'solta a marca do turno também quando a IA falha' do
+      turno_aberto!
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_raise(StandardError, 'caiu')
+
+      responder.perform
+
+      expect(turno.em_curso?(conversation.id)).to be(false)
+    end
+
     it 'sem o sinal da instrução, não registra nem chama a Atribuição' do
       ia_responde('Claro, te ajudo.', should: false)
 
@@ -139,15 +164,16 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     before { allow_any_instance_of(Autonomia::Agents::Operate::TypingIndicator).to receive(:on) } # rubocop:disable RSpec/AnyInstance
 
     it 'conversa 6987: a fala sai inteira, o agente segue e a Atribuição só é chamada depois do último pedaço', :aggregate_failures do
+      turno_aberto!
       ia_responde
 
       expect(responder.perform.status).to eq(:replied)
       expect(respostas.count).to eq(0)
       expect(contrato).not_to have_received(:avaliar_depois_da_fala)
       expect(pedacos_na_fila.size).to eq(1)
-      # A fala ainda não saiu: nem o registro do aviso. A cadeia está marcada em curso.
+      # A fala ainda não saiu: nem o registro do aviso. A cadeia assumiu o turno, com o TTL dela.
       expect(Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.count).to eq(0)
-      expect(Autonomia::Agents::Operate::CadeiaEmCurso.em_curso?(conversation.id)).to be(true)
+      expect(Redis::Alfred.ttl(turno.chave(conversation.id))).to be_between(1, turno::TTL_DA_CADEIA.to_i)
 
       entregar_os_pedacos!
 
@@ -157,10 +183,12 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(contrato).to have_received(:avaliar_depois_da_fala).with(conversation).once
       evento = Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.sole
       expect(evento).to have_attributes(message_id: respostas.reorder(:id).first.id, handoff_reason: 'human_requested')
-      expect(Autonomia::Agents::Operate::CadeiaEmCurso.em_curso?(conversation.id)).to be(false)
+      expect(turno.em_curso?(conversation.id)).to be(false)
     end
 
-    it 'o cliente escreveu no meio da fala (turno mudou depois do 1º pedaço): a Atribuição avalia assim mesmo' do
+    it 'o cliente escreveu no meio da fala (turno mudou depois do 1º pedaço): a Atribuição avalia; a marca é do turno novo',
+       :aggregate_failures do
+      turno_aberto!
       ia_responde
 
       responder.perform
@@ -169,14 +197,15 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
       nova = create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'e aí?')
       conversation.update!(additional_attributes: { Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY => { 'pending_message_id' => nova.id } })
+      turno.abrir(conversation.id, nova.id)
       entregar_os_pedacos!
 
       expect(respostas.count).to eq(1)
       expect(contrato).to have_received(:avaliar_depois_da_fala).with(conversation).once
-      expect(Autonomia::Agents::Operate::CadeiaEmCurso.em_curso?(conversation.id)).to be(false)
+      expect(Redis::Alfred.get(turno.chave(conversation.id))).to eq(nova.id.to_s)
     end
 
-    it 'sem a flag, a cadeia não leva a marca do aviso nem marca a cadeia em curso', :aggregate_failures do
+    it 'sem a flag, a cadeia não leva a marca do aviso nem mexe na marca do turno', :aggregate_failures do
       account.disable_features!(Autonomia::Agents::AgenteSoInforma::FLAG)
       ia_responde
 
@@ -184,7 +213,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       meta = ActiveJob::Arguments.deserialize(pedacos_na_fila.first[:args]).last
       expect(meta).not_to have_key(Autonomia::Agents::AgenteSoInforma::META)
-      expect(Autonomia::Agents::Operate::CadeiaEmCurso.em_curso?(conversation.id)).to be(false)
+      expect(turno.em_curso?(conversation.id)).to be(false)
     end
 
     it 'sem o sinal, a cadeia termina sem chamar a Atribuição' do
