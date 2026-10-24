@@ -3,7 +3,7 @@
 # cada cliente. Os cards saem junto com a conta: aqui os contatos só soltam os cards, como na main
 # (Crm::Cards::Anonimizador.durante_exclusao_da_conta). Excluir uma caixa ou outro objeto segue igual.
 #
-# Só cuida dos contatos. Apagar a conta com cards do CRM ainda esbarra em chave estrangeira na main; isso é o #2134.
+# Só cuida dos contatos. Os cards e o resto do que o fork guarda da conta saem pelo Autonomia::ExclusaoDaConta (#2134).
 module Crm::ContatosSoltamCardsNaExclusaoDaConta
   def perform(object, *)
     return super unless object.is_a?(Account)

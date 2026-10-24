@@ -1216,6 +1216,15 @@
     "controller": "api/v1/accounts/crm/cards#current_ai_suggestion",
     "parametros": []
   },
+  "crm/cards/archived": {
+    "controller": "api/v1/accounts/crm/cards/archived#index",
+    "parametros": [
+      "page",
+      "per_page",
+      "pipeline_id",
+      "search"
+    ]
+  },
   "crm/cards/export": {
     "controller": "api/v1/accounts/crm/cards#export",
     "motivos": [
@@ -1429,10 +1438,16 @@
   },
   "crm/pipelines": {
     "controller": "api/v1/accounts/crm/pipelines#index",
-    "parametros": []
+    "parametros": [
+      "status"
+    ]
   },
   "crm/pipelines/:id": {
     "controller": "api/v1/accounts/crm/pipelines#show",
+    "parametros": []
+  },
+  "crm/pipelines/:id/archive_preview": {
+    "controller": "api/v1/accounts/crm/pipelines#archive_preview",
     "parametros": []
   },
   "crm/pipelines/:id/permanent_delete_preview": {

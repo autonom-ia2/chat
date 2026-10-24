@@ -14,6 +14,11 @@ module LeitorDeMidiaHelpers
     mensagem.attachments.create!(account: mensagem.account, file_type: :image, external_url: 'https://exemplo.invalid/foto.jpg', meta: meta)
   end
 
+  # O contador do teto do dia e a marca de releitura enfileirada ficam no Redis, que não volta entre os exemplos.
+  def limpar_redis_do_leitor
+    Redis::Alfred.scan_each(match: 'crm:leitor_de_midia:*') { |chave| Redis::Alfred.delete(chave) }
+  end
+
   def anexar_audio(mensagem, meta: {})
     mensagem.attachments.create!(account: mensagem.account, file_type: :audio, external_url: 'https://exemplo.invalid/audio.ogg', meta: meta)
   end

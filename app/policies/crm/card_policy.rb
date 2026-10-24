@@ -25,6 +25,11 @@ class Crm::CardPolicy < ApplicationPolicy
     update?
   end
 
+  # Restaurar o arquivado (#2095): quem arquiva desfaz.
+  def restore?
+    destroy?
+  end
+
   def move?
     update?
   end

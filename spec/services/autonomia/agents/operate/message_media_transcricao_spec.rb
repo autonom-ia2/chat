@@ -33,6 +33,45 @@ RSpec.describe Autonomia::Agents::Operate::MessageMedia do
     expect(transcricoes).not_to have_received(:transcribe)
   end
 
+  # #2109 (revisão de banco): o leitor do CRM reserva o anexo depois de o turno olhar o meta e antes de o turno pegar a
+  # trava. Pega: o turno ver a marca "em leitura" sob a trava e transcrever mesmo assim (pagamento duplo).
+  describe 'quando o leitor do CRM reserva o anexo depois da primeira olhada do turno' do
+    let(:leitura) { Crm::Ai::ReservaDaMidia::LENDO }
+
+    before do
+      mensagem.attachments.load
+      Attachment.find(audio.id).update!(meta: { leitura => 5.minutes.from_now.iso8601 })
+    end
+
+    it 'não transcreve e espera o texto do leitor', :aggregate_failures do
+      allow(Crm::Ai::ReservaDaMidia).to receive(:sleep) do
+        Crm::Ai::ReservaDaMidia.gravar(Attachment.find(audio.id)) { |meta| meta.merge('transcribed_text' => 'texto do leitor do CRM') }
+      end
+
+      resultado = described_class.new(messages: [mensagem], agent: agent).extract
+
+      expect(resultado.transcripts).to eq(['texto do leitor do CRM'])
+      expect(transcricoes).not_to have_received(:transcribe)
+    end
+
+    it 'acabou a espera do turno com a marca válida: vai sem transcrição e não paga', :aggregate_failures do
+      stub_const('Crm::Ai::ReservaDaMidia::ESPERA_EM_LINHA', 0.seconds)
+
+      resultado = described_class.new(messages: [mensagem], agent: agent).extract
+
+      expect(resultado.transcripts).to eq([])
+      expect(transcricoes).not_to have_received(:transcribe)
+      expect(audio.reload.meta.to_h).not_to have_key('transcribed_text')
+    end
+  end
+
+  it 'marca do leitor vencida (processo morto): transcreve' do
+    mensagem.attachments.load
+    Attachment.find(audio.id).update!(meta: { Crm::Ai::ReservaDaMidia::LENDO => 1.minute.ago.iso8601 })
+
+    expect(described_class.new(messages: [mensagem], agent: agent).extract.transcripts).to eq(['texto pago'])
+  end
+
   it 'sem cache, transcreve uma vez e guarda para o próximo', :aggregate_failures do
     described_class.new(messages: [mensagem], agent: agent).extract
     segunda = described_class.new(messages: [mensagem.reload], agent: agent).extract

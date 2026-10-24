@@ -6,6 +6,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
 
   rescue_from ::Autonomia::Prospecting::SearchRunner::ScoreEngineError, with: :render_score_unavailable
 
+  # Baixar a planilha de leads é exportar: pede prospecting_manage, não só ver (#2147).
+  before_action -> { check_permission_granted!('prospecting_manage') }, only: [:export]
+
   def index
     ordered_scope = visible_searches_scope.order(created_at: :desc)
     total_count = ordered_scope.count

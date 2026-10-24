@@ -53,11 +53,14 @@ class Crm::Cards::Archiver
 
   # A cadência do follow-up de IA acaba com o card arquivado (as tarefas dela foram canceladas): sem isto o estado
   # ficava `active: true` e o planner tratava o card como em cadência. Terminal, como o fechamento no Runner.
-  def self.metadata_sem_cadencia(card)
+  # `gasta: false` (funil arquivado com o card dentro, Crm::Pipelines::RetornosDosGuardados): para sem gastar, e o
+  # planner volta a armar quando o funil for restaurado (ele só varre funil ativo).
+  def self.metadata_sem_cadencia(card, motivo: MOTIVO, gasta: true)
     estado = card.metadata.to_h.dig('ai', 'auto_followup_state').to_h
     return card.metadata unless estado['active'] == true
 
-    fim = estado.merge('active' => false, 'spent' => true, 'stopped_reason' => MOTIVO, 'next_due_at' => nil)
+    fim = estado.merge('active' => false, 'stopped_reason' => motivo, 'next_due_at' => nil)
+    fim['spent'] = true if gasta
     card.metadata.to_h.deep_merge('ai' => { 'auto_followup_state' => fim })
   end
 

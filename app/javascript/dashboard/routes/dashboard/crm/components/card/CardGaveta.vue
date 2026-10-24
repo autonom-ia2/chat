@@ -1,5 +1,5 @@
 <script setup>
-import { computed, provide, ref, useId } from 'vue';
+import { computed, provide, ref, useId, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
@@ -52,6 +52,8 @@ import { useResumoConversa } from './useResumoConversa';
 import { useCardMoldura } from './useCardMoldura';
 import { useFormato } from './useFormato';
 import { useFocoPreso } from './useFocoPreso';
+import ArquivarCardDialogo from '../arquivados/ArquivarCardDialogo.vue';
+import CardArquivado from '../arquivados/CardArquivado.vue';
 
 // #1423 — o card do funil ("Resumo primeiro"), no lugar da gaveta antiga
 // com abas. A página fala com ele por props, eventos e guardNavigation (o
@@ -81,6 +83,11 @@ const props = defineProps({
   isFetchingFollowUps: { type: Boolean, default: false },
   isSavingFollowUp: { type: Boolean, default: false },
   meetingsEnabled: { type: Boolean, default: false },
+  // #2095 (flag crm_arquivados): a janela nova de arquivar e o card arquivado com Restaurar.
+  arquivadosLigado: { type: Boolean, default: false },
+  erroArquivar: { type: String, default: '' },
+  restaurando: { type: Boolean, default: false },
+  erroRestaurar: { type: String, default: '' },
 });
 
 const emit = defineEmits([
@@ -93,6 +100,7 @@ const emit = defineEmits([
   'completeFollowUp',
   'cancelFollowUp',
   'refreshCard',
+  'restaurar',
 ]);
 
 const { t, te, locale } = useI18n();
@@ -398,6 +406,39 @@ const confirmarArquivar = () => {
   dialogoArquivar.value?.close();
   if (podeArquivar.value) emit('archive');
 };
+// #2095: com a flag, a janela nova fica aberta até a página responder (erro aparece nela; o sucesso fecha o card).
+const arquivado = computed(
+  () => props.arquivadosLigado && status.value === 'archived'
+);
+const dialogoArquivarNovo = ref(null);
+const arquivarNovo = () =>
+  guardar(() => {
+    if (!podeArquivar.value) return;
+    consultarReuniao(cardId.value ? [cardId.value] : []);
+    dialogoArquivarNovo.value?.open();
+  });
+// O que o Archiver cancela: lembretes por vencer, menos o da reunião marcada.
+const retornosQueParam = computed(
+  () =>
+    props.followUps.filter(
+      item =>
+        ['pending', 'overdue'].includes(item.status) &&
+        item.follow_up_type !== 'meeting'
+    ).length
+);
+const confirmarArquivarNovo = () =>
+  podeArquivar.value && emit('archive', { retornos: retornosQueParam.value });
+const vendaQueContinua = computed(() =>
+  status.value === 'won' && venda.value && !card.value.value_hidden
+    ? formato.dinheiro(card.value.value_cents, card.value.currency)
+    : ''
+);
+watch(
+  () => props.show,
+  aberta => {
+    if (!aberta) dialogoArquivarNovo.value?.close();
+  }
+);
 const {
   dialogo: dialogoMover,
   pedida: etapaPedida,
@@ -573,7 +614,19 @@ defineExpose({
     @confirm="descarte.confirmar"
     @close="descarte.aberto.value = false"
   />
+  <ArquivarCardDialogo
+    v-if="arquivadosLigado"
+    ref="dialogoArquivarNovo"
+    :nome="nome"
+    :retornos="retornosQueParam"
+    :aviso-de-reuniao="avisoDeReuniao"
+    :venda-que-continua="vendaQueContinua"
+    :ocupado="isArchiving"
+    :erro="erroArquivar"
+    @confirmar="confirmarArquivarNovo"
+  />
   <Dialog
+    v-else
     ref="dialogoArquivar"
     type="alert"
     :title="t('CRM_CARD.ARQUIVAR.TITULO', { nome: titulo })"
@@ -687,7 +740,18 @@ defineExpose({
             </template>
 
             <template v-else-if="tela === 'resumo'">
+              <CardArquivado
+                v-if="arquivado"
+                :card="card"
+                :funil="funil"
+                :formato="formato"
+                :pode-arquivar="podeArquivar"
+                :ocupado="restaurando"
+                :erro="erroRestaurar"
+                @restaurar="emit('restaurar')"
+              />
               <CardProximoPasso
+                v-else
                 :passos="passos"
                 :nome="nome"
                 :formato="formato"
@@ -722,14 +786,14 @@ defineExpose({
                 :formato="formato"
                 :nome="nome"
                 :pode-gerenciar="podeGerenciar"
-                :pode-arquivar="podeArquivar"
+                :pode-arquivar="podeArquivar && !arquivado"
                 :pode-registros="canManageRelationshipRecords"
                 :pode-ver-contatos="canViewRelationshipRecords"
                 :arquivando="isArchiving"
                 :empresas="empresasLigadas"
                 :jeito="jeito"
                 @abrir="abrir"
-                @arquivar="arquivar"
+                @arquivar="arquivadosLigado ? arquivarNovo() : arquivar()"
                 @conversa="abrirConversa()"
                 @cliente="cliente.pedir"
               />

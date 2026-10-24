@@ -4,7 +4,22 @@ require 'resolv'
 module Crm
   module Ai
     class ResponsesClient
-      class Error < StandardError; end
+      # `status`: o HTTP da resposta, quando houve resposta. `passageira?`: a falha que pode passar sozinha, depois das
+      # novas tentativas daqui (rede, tempo esgotado, 408, 429 e 5xx); quem chama decide se tenta de novo mais tarde
+      # (o leitor de mídia do CRM, #2109). Sem `status:` nem `rede:`, como antes: não é passageira.
+      class Error < StandardError
+        attr_reader :status
+
+        def initialize(message = nil, status: nil, rede: false)
+          super(message)
+          @status = status
+          @rede = rede
+        end
+
+        def passageira?
+          @rede || [408, 429].include?(@status.to_i) || @status.to_i >= 500
+        end
+      end
 
       REQUEST_TIMEOUT = 180
       MAX_RETRIES = 2
@@ -243,7 +258,7 @@ module Crm
           rescue *NETWORK_ERRORS => e
             if retries >= @max_retries
               log_exception(operation || 'openai.request', e, model: model, response_id: response_id, started_at: started_at)
-              raise Error, "network_timeout: #{e.class.name.demodulize.underscore}"
+              raise Error.new("network_timeout: #{e.class.name.demodulize.underscore}", rede: true)
             end
           end
 
@@ -255,7 +270,7 @@ module Crm
       def parse_raw(response, operation: 'openai.request', model: nil, response_id: nil, started_at: nil)
         unless response.success?
           log_http_error(response, operation: operation, model: model, response_id: response_id, started_at: started_at)
-          raise Error, extract_error_message(response)
+          raise Error.new(extract_error_message(response), status: response.code.to_i)
         end
 
         response.parsed_response
@@ -298,7 +313,7 @@ module Crm
       def parse_response(response, model: nil, requested_tools: nil, started_at: nil, reasoning_effort: nil)
         unless response.success?
           log_http_error(response, operation: 'responses.create', model: model, started_at: started_at)
-          raise Error, extract_error_message(response)
+          raise Error.new(extract_error_message(response), status: response.code.to_i)
         end
 
         parse_response_payload(response.parsed_response, model: model, requested_tools: requested_tools,

@@ -282,6 +282,11 @@ Rails.application.routes.draw do
               resource :ai_settings, only: [:show, :update], controller: 'ai_settings' do
                 post :improve_criteria
               end
+              # Funil arquivado (#2095): restaurar e a prévia do arquivamento.
+              member do
+                post :restore
+                get :archive_preview
+              end
             end
             # Funil ainda não salvo (#1384): critério padrão e IA das etapas.
             resource :stage_criteria, only: [], controller: 'stage_criteria' do
@@ -300,6 +305,9 @@ Rails.application.routes.draw do
             post 'cards/permanent_delete', to: 'cards/permanent_deletions#create'
             get 'cards/owner_options', to: 'cards#owner_options'
             get 'cards/summaries', to: 'cards/summaries#index'
+            # Arquivados (#2095): a lista e restaurar vários.
+            get 'cards/archived', to: 'cards/archived#index'
+            post 'cards/restore', to: 'cards/restores#create'
             get 'cards/upcoming_meetings', to: 'cards/upcoming_meetings#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               resource :contact, only: [:create], controller: 'cards/contacts'
@@ -308,6 +316,7 @@ Rails.application.routes.draw do
               member do
                 post :move
                 post :close
+                post :restore
                 post :link_conversation
                 post :unlink_conversation
                 post :link_contact
