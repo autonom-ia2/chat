@@ -107,27 +107,6 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(Redis::Alfred.ttl(chave)).to be > Autonomia::Agents::Tools::RecusasRecentes::VALIDADE.to_i
     end
 
-    it 'solta a marca do turno ao terminar, só a deste turno', :aggregate_failures do
-      turno_aberto!
-      ia_responde
-
-      responder.perform
-
-      expect(turno.em_curso?(conversation.id)).to be(false)
-      turno.abrir(conversation.id, pergunta.id + 1)
-      responder.perform
-      expect(Redis::Alfred.get(turno.chave(conversation.id))).to eq((pergunta.id + 1).to_s)
-    end
-
-    it 'solta a marca do turno também quando a IA falha' do
-      turno_aberto!
-      allow(Autonomia::Agents::Answerer).to receive(:new).and_raise(StandardError, 'caiu')
-
-      responder.perform
-
-      expect(turno.em_curso?(conversation.id)).to be(false)
-    end
-
     it 'sem o sinal da instrução, não registra nem chama a Atribuição' do
       ia_responde('Claro, te ajudo.', should: false)
 
@@ -166,14 +145,15 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     it 'conversa 6987: a fala sai inteira, o agente segue e a Atribuição só é chamada depois do último pedaço', :aggregate_failures do
       turno_aberto!
       ia_responde
-
-      expect(responder.perform.status).to eq(:replied)
+      responder_do_turno = responder
+      expect(responder_do_turno.perform.status).to eq(:replied)
       expect(respostas.count).to eq(0)
       expect(contrato).not_to have_received(:avaliar_depois_da_fala)
       expect(pedacos_na_fila.size).to eq(1)
       # A fala ainda não saiu: nem o registro do aviso. A cadeia assumiu o turno, com o TTL dela.
       expect(Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.count).to eq(0)
       expect(Redis::Alfred.ttl(turno.chave(conversation.id))).to be_between(1, turno::TTL_DA_CADEIA.to_i)
+      expect(responder_do_turno.turno_segue?).to be(true)
 
       entregar_os_pedacos!
 

@@ -55,15 +55,8 @@ module Autonomia
           @posse = posse
         end
 
-        # -> Result. #2154 (flag `agente_so_informa`): o turno acabou aqui, por qualquer caminho (clássico, voz, silêncio,
-        # falha), e solta a marca dele (Operate::TurnoEmCurso, compare-and-delete).
+        # -> Result
         def perform
-          responder_o_turno
-        ensure
-          soltar_o_turno
-        end
-
-        def responder_o_turno
           # C4 (custo): recheck BARATO de elegibilidade ANTES da chamada cara de IA (LLM + embedding).
           # Entre o debounce e este ponto um humano pode ter assumido a conversa (ou o agente foi
           # desligado/movido de caixa) — sem esta guarda o custo da geração já teria sido pago à toa.
@@ -108,13 +101,9 @@ module Autonomia
           falha_no_turno(e)
         end
 
-        # Não solta quando a cadeia de pedaços assumiu o turno, nem quando ele foi refeito pelo dono novo (o mesmo turno
-        # segue).
-        def soltar_o_turno
-          return if @turno_segue || !agente_so_informa?
-
-          ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(@conversation.id, @reply_to_message_id)
-        end
+        # #2154: o turno segue depois deste Responder (a cadeia de pedaços assumiu a marca, ou o dono novo refaz o turno).
+        # Quem abriu a marca (ReplyJob#settle) só a solta quando não segue.
+        def turno_segue? = @turno_segue == true
 
         # A resposta do agente é o sinal de silêncio? (compara o texto inteiro, normalizado, com o(s)
         # token(s) de silêncio). A instrução é quem decide emitir o sinal; aqui o sistema só HONRA.

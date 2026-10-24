@@ -76,18 +76,38 @@ module Autonomia
         def settle(conversation, agent_inbox, message_id, posse)
           return unless current_token?(conversation, message_id)
           return esperar_o_assunto(conversation, message_id, posse) if esperar_o_assunto?(conversation, agent_inbox, message_id)
-          # Outro settle já responde este turno: a marca é dele (#2154), fica.
-          return unless ::Autonomia::Agents::Operate::PosseDoTurno.assumir?(conversation: conversation, agent_inbox: agent_inbox,
-                                                                            message_id: message_id, job_id: job_id,
-                                                                            posse: posse)
+          # #2154: o turno já foi respondido (por este dono, noutro settle): a marca deste turno sai.
+          return soltar_turno(conversation, message_id) unless assumir_o_turno?(conversation, agent_inbox, message_id, posse)
 
-          # O Responder solta a marca do turno (#2154) num ensure, ou a passa à cadeia de pedaços.
-          ::Autonomia::Agents::Operate::Responder.new(
+          responder(conversation, agent_inbox, message_id, posse)
+        end
+
+        def assumir_o_turno?(conversation, agent_inbox, message_id, posse)
+          ::Autonomia::Agents::Operate::PosseDoTurno.assumir?(conversation: conversation, agent_inbox: agent_inbox,
+                                                              message_id: message_id, job_id: job_id, posse: posse)
+        end
+
+        # #2154: o turno acaba aqui, por qualquer caminho (resposta, silêncio, falha, ou um prepend do Responder que pula o
+        # turno sem chegar ao corpo dele, como o Waha::RichNative::AgentTurnGuard), e a marca dele sai. Fica só quando o
+        # turno segue: a cadeia de pedaços assumiu a marca, ou o dono novo refaz o turno.
+        def responder(conversation, agent_inbox, message_id, posse)
+          responder = ::Autonomia::Agents::Operate::Responder.new(
             conversation: conversation,
             agent_inbox: agent_inbox,
             reply_to_message_id: message_id,
             posse: ::Autonomia::Agents::Operate::PosseDoTurno.valor(job_id: job_id, posse: posse, agent_inbox: agent_inbox)
-          ).perform
+          )
+          responder.perform
+        ensure
+          fim_do_turno(conversation, message_id, responder)
+        end
+
+        # Sem a flag, nada (nem pergunta ao Responder).
+        def fim_do_turno(conversation, message_id, responder)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return if responder&.turno_segue?
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, message_id)
         end
 
         # Fase 'passagem' (#1630): o turno sem mensagem nova do cliente. O segundo argumento do job é o id da PASSAGEM, não
@@ -137,6 +157,8 @@ module Autonomia
         end
 
         def soltar_turno(conversation, message_id)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+
           ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, message_id)
         end
 
