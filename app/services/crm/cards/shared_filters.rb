@@ -52,8 +52,10 @@ module Crm::Cards::SharedFilters
     cards.where(team_id: @params[:team_id])
   end
 
+  # Sugestão de etapa (#2150): sem crm_manage_ai o filtro é ignorado, porque revelaria quais cards têm sugestão.
   def apply_ai_pending_filter(cards)
     return cards unless ActiveModel::Type::Boolean.new.cast(@params[:ai_pending])
+    return cards unless Crm::SugestaoDeEtapa.le?(@account_user)
 
     cards.where(id: Crm::AiStageSuggestion.where(status: :pending).select(:card_id))
   end

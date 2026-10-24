@@ -142,7 +142,7 @@ class Crm::Kanban::BoardPayloadBuilder
   end
 
   def board_pending_suggestions
-    return {} unless Crm::Ai::Config.enabled?
+    return {} unless Crm::Ai::Config.enabled? && Crm::SugestaoDeEtapa.le?(@account_user)
 
     card_ids = filtered_cards.pluck(:id)
     return {} if card_ids.blank?

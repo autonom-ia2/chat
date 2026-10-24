@@ -818,7 +818,8 @@ const activeFilterChips = computed(() => {
       label: `${t('CRM_KANBAN.FILTERS.LINKED')}: ${labelForOption(linkedOptions, f.standalone)}`,
     });
   }
-  if (f.aiPending) {
+  // #2150 — sem crm_manage_ai o servidor ignora o filtro: a etiqueta não finge que ele vale.
+  if (f.aiPending && canManageAi.value) {
     chips.push({ key: 'aiPending', label: t('CRM_KANBAN.FILTERS.AI_PENDING') });
   }
   return chips;

@@ -46,8 +46,8 @@ const emit = defineEmits([
 ]);
 const { t } = useI18n();
 // #2075 — sem a chave de valores o servidor ignora a faixa de valor: a tela nem oferece.
-// #2142 — "Pendente de IA" só lê: o servidor aplica ai_pending a quem vê o quadro, sem crm_manage_ai.
-const { canSeeSalesValues, canViewCrm } = useCrmPermissions();
+// #2150 — "Pendente de IA" revela quais cards têm sugestão de etapa: só com crm_manage_ai (o servidor ignora sem a chave).
+const { canSeeSalesValues, canManageAi } = useCrmPermissions();
 const drawerElement = ref(null);
 const draft = reactive(defaultFilters());
 const selectedCompanyOption = ref(null);
@@ -627,7 +627,7 @@ useFixedPanelPresence(computed(() => props.show));
               </div>
 
               <label
-                v-if="canViewCrm"
+                v-if="canManageAi"
                 class="flex min-h-11 items-center gap-3 text-sm text-n-slate-12"
               >
                 <input

@@ -3,13 +3,17 @@ import { defaultFilters } from 'dashboard/store/modules/crmKanban';
 import CrmKanbanFiltersDrawer from './CrmKanbanFiltersDrawer.vue';
 
 // #2075 — quem vê os valores de venda (o padrão das telas sem função personalizada).
-// #2142 — quem vê o quadro (o agente sem função também), sem crm_manage_ai.
-vi.mock('../composables/useCrmPermissions', () => ({
-  useCrmPermissions: () => ({
-    canSeeSalesValues: { value: true },
-    canViewCrm: { value: true },
-  }),
-}));
+// #2150 — com crm_manage_ai, a chave que lê a sugestão de etapa da IA.
+const permissoes = vi.hoisted(() => ({ ia: true }));
+vi.mock('../composables/useCrmPermissions', async () => {
+  const { ref } = await import('vue');
+  return {
+    useCrmPermissions: () => ({
+      canSeeSalesValues: ref(true),
+      canManageAi: ref(permissoes.ia),
+    }),
+  };
+});
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -222,17 +226,30 @@ describe('CrmKanbanFiltersDrawer', () => {
     expect(wrapper.text()).toContain('CRM_KANBAN.FILTERS.SHORTCUTS');
   });
 
-  // #2142 — o filtro só lê: o servidor aplica ai_pending a quem vê o quadro, sem crm_manage_ai.
-  it('offers the AI pending filter to whoever sees the board', async () => {
-    wrapper = await mountOpen();
-
-    const label = wrapper
+  const aiPendingLabel = drawer =>
+    drawer
       .findAll('label')
       .find(item => item.text() === 'CRM_KANBAN.FILTERS.AI_PENDING');
-    await label.find('input[type="checkbox"]').setValue(true);
+
+  // #2150 — "Pendente de IA" revela quais cards têm sugestão: só com crm_manage_ai.
+  it('offers the AI pending filter with crm_manage_ai', async () => {
+    wrapper = await mountOpen();
+
+    await aiPendingLabel(wrapper).find('input[type="checkbox"]').setValue(true);
     const applied = await apply(wrapper);
 
     expect(applied.aiPending).toBe(true);
+  });
+
+  it('hides the AI pending filter without crm_manage_ai', async () => {
+    permissoes.ia = false;
+    try {
+      wrapper = await mountOpen();
+
+      expect(aiPendingLabel(wrapper)).toBeUndefined();
+    } finally {
+      permissoes.ia = true;
+    }
   });
 
   it('applies the owner and overdue shortcuts to the draft', async () => {
