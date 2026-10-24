@@ -49,21 +49,21 @@ RSpec.describe 'CRM meta_ads_connection ad management (#2161)', type: :request d
     expect(response.parsed_body['management']).to include('status' => 'ACTIVE', 'can_change' => true, 'post' => nil)
   end
 
-  it 'pausa e registra no log quem pausou, sem o token' do
+  it 'pausa e grava na Auditoria da conta quem pausou, sem o token' do
     stub_meta
+    Crm::MetaAdObject.create!(account: account, meta_object_id: ad_id, object_type: 'ad', name: 'Capa')
     update = stub_request(:post, meta_graph_url(ad_id)).with(body: { status: 'PAUSED' })
                                                        .to_return(status: 200, body: { success: true }.to_json, headers: json)
-    logged = []
-    allow(Rails.logger).to receive(:info) { |message| logged << message.to_s }
 
     post "#{path}/ads/#{ad_id}/status", params: { status: 'PAUSED' }, headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to eq('status' => 'PAUSED')
     expect(update).to have_been_requested.once
-    line = logged.find { |message| message.include?('[MetaAdsManagement]') }
-    expect(line).to include("account=#{account.id}", "user=#{admin.id}", "ad=#{ad_id}", 'status=PAUSED')
-    expect(line).not_to include(MetaAdsHelpers::TEST_TOKEN)
+    audit = Audited.audit_class.where(auditable: account, action: 'meta_ads_ad_status').last
+    expect(audit).to have_attributes(user_id: admin.id)
+    expect(audit.audited_changes).to eq('ad_id' => ad_id, 'ad_name' => 'Capa', 'status' => 'PAUSED')
+    expect(audit.audited_changes.to_json).not_to include(MetaAdsHelpers::TEST_TOKEN)
   end
 
   it 'agente comum não vê nem muda' do

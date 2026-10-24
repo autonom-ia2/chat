@@ -50,6 +50,11 @@ class Crm::MetaAds::AdManagement
     raise Error, result.transient? ? 'meta_unavailable' : 'meta_refused'
   end
 
+  # Nome do anúncio pelo cache de nomes (para a Auditoria); nil se ainda não foi lido.
+  def ad_name(ad_id)
+    Crm::MetaAdObject.where(account_id: @connection.account_id, meta_object_id: ad_id.to_s).pick(:name)
+  end
+
   # Só com o token do próprio cliente: no modo `partner` o token é o da plataforma, e `me/accounts` traria Páginas
   # da plataforma (ou de outros clientes) para esta conta.
   def pages
