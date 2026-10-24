@@ -35,7 +35,9 @@ module Crm
 
       # pelo_card (#1693, decisão 1a do Rodrigo, 16/10): numa mensagem de vários assuntos, o pedido vai pela regra do card
       # a que o cliente o ligou, mesmo fora do foco, enquanto ele seguir aberto nesta conversa; senão, pela regra do foco.
-      def initialize(card:, handoff:, trigger: 'message', pelo_card: false)
+      # tentativa (#2154): a da avaliação depois da fala do agente, para o teto do reagendamento.
+      def initialize(card:, handoff:, trigger: 'message', pelo_card: false, tentativa: 0)
+        @tentativa = tentativa
         @card = card
         @handoff = normalize(handoff)
         @trigger = trigger
@@ -120,15 +122,16 @@ module Crm
                                     ::Autonomia::Agents::AgenteSoInforma.ligada?(@card.account)
       end
 
-      # #2154 (revisão): o modelo leva de 15 a 25 s, e nesse meio tempo o cliente pode ter escrito e o agente estar
-      # "digitando" a resposta em pedaços (Autonomia::Agents::Operate::CadeiaEmCurso). Entregar agora cortaria essa fala
-      # no meio: a avaliação volta depois (AvaliacaoDepoisDaFala.reagendar), sem mexer na espera.
+      # #2154 (revisões): o modelo leva de 15 a 25 s, e nesse meio tempo o cliente pode ter escrito e o agente estar
+      # respondendo o turno seguinte (debounce, IA ou pedaços: Autonomia::Agents::Operate::TurnoEmCurso). Entregar agora
+      # faria a resposta se perder ou cortaria a fala no meio: a avaliação volta depois, com teto de tentativas
+      # (AvaliacaoDepoisDaFala.reagendar), sem mexer na espera.
       def fala_em_curso?
         depois_da_fala_do_agente? && AvaliacaoDepoisDaFala.fala_em_curso?(@conversation)
       end
 
       def fala_em_curso
-        AvaliacaoDepoisDaFala.reagendar(@card)
+        AvaliacaoDepoisDaFala.reagendar(@card, @conversation, @tentativa)
         skip('fala_em_curso')
       end
 

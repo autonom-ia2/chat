@@ -46,7 +46,8 @@ RSpec.describe 'Agente só informa: conversa 6987' do # rubocop:disable RSpec/De
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(instance_double(Crm::Ai::ResponsesClient))
     allow(Crm::Ai::StageClassifier).to receive(:new).and_return(instance_double(Crm::Ai::StageClassifier, perform: classificacao))
     allow_any_instance_of(Autonomia::Agents::Operate::TypingIndicator).to receive(:on) # rubocop:disable RSpec/AnyInstance
-    [Crm::Ai::AvaliacaoDepoisDaFala::CHAVE_DO_INTERVALO, Autonomia::Agents::Operate::CadeiaEmCurso::CHAVE].each do |chave|
+    [Crm::Ai::AvaliacaoDepoisDaFala::CHAVE_DO_INTERVALO, Crm::Ai::AvaliacaoDepoisDaFala::CHAVE_DA_ADIADA,
+     Autonomia::Agents::Operate::TurnoEmCurso::CHAVE].each do |chave|
       Redis::Alfred.delete(format(chave, conversa: conversation.id))
     end
     ia_avisa!
@@ -57,8 +58,8 @@ RSpec.describe 'Agente só informa: conversa 6987' do # rubocop:disable RSpec/De
     end
   end
 
-  def ia_avisa!
-    answer = Autonomia::Agents::AnswerResult.new(reply: fala, confidence: 0.9, handoff: { should: true, reason: 'human_requested' },
+  def ia_avisa!(texto = fala, should: true)
+    answer = Autonomia::Agents::AnswerResult.new(reply: texto, confidence: 0.9, handoff: { should: should, reason: 'human_requested' },
                                                  used_knowledge: [], answered_from_knowledge: false)
     allow(Autonomia::Agents::Answerer).to receive(:new).and_return(instance_double(Autonomia::Agents::Answerer, answer: answer))
   end
@@ -69,12 +70,23 @@ RSpec.describe 'Agente só informa: conversa 6987' do # rubocop:disable RSpec/De
 
   # Roda os jobs da classe, um de cada vez, como o Sidekiq faria (os que eles enfileiram também).
   def rodar!(classe)
-    10.times do
-      job = jobs(classe).first
-      break if job.nil?
+    10.times { break unless rodar_um!(classe) }
+  end
 
-      ActiveJob::Base.queue_adapter.enqueued_jobs.delete(job)
-      job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
+  # Só o primeiro da fila: o que ele reagenda fica esperando a vez.
+  def rodar_um!(classe)
+    job = jobs(classe).first
+    return false if job.nil?
+
+    ActiveJob::Base.queue_adapter.enqueued_jobs.delete(job)
+    job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
+    true
+  end
+
+  # A mensagem do cliente pelo caminho real: o MessageListener enfileira o ReplyJob na fase 'trigger'.
+  def cliente_escreve!(texto)
+    create(:message, account: account, conversation: conversation, message_type: :incoming, content: texto).tap do |mensagem|
+      Autonomia::Agents::Operate::ReplyJob.perform_now(conversation.id, mensagem.id, 'trigger')
     end
   end
 
@@ -95,6 +107,40 @@ RSpec.describe 'Agente só informa: conversa 6987' do # rubocop:disable RSpec/De
     expect(conversation.reload).to have_attributes(assignee_id: pessoa.id, ai_assignee: nil)
     expect(Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.where(conversation_id: conversation.id).count).to eq(1)
     expect(Autonomia::Agents::AgentEvent.handed_off.where(conversation_id: conversation.id).count).to eq(1)
+  end
+
+  # Revisão do 7a8f5cb070, ponto 1: a avaliação da fala do turno N estava pendente quando o cliente escreveu de novo. Ela
+  # rodou na janela do debounce do turno N+1 (ou durante a IA dele) e entregou: o Responder caía em `nao_elegivel` e a
+  # resposta do turno N+1 se perdia. Agora o turno N+1 está marcado desde o ReplyJob#trigger e a avaliação espera.
+  it 'o cliente escreve com a avaliação pendente: a resposta do turno seguinte sai antes de qualquer entrega', :aggregate_failures do
+    turno = Autonomia::Agents::Operate::TurnoEmCurso
+    Autonomia::Agents::Operate::ReplyJob.perform_now(conversation.id, pergunta.id, 'trigger')
+    rodar!(Autonomia::Agents::Operate::ReplyJob)
+    rodar!(Autonomia::Agents::Operate::ChunkedDeliveryJob)
+    expect(turno.em_curso?(conversation.id)).to be(false)
+    expect(jobs(Crm::Ai::EvaluateCardJob).size).to eq(1)
+
+    nova = cliente_escreve!('e o valor da parcela, você consegue me dizer?')
+    expect(Redis::Alfred.get(turno.chave(conversation.id))).to eq(nova.id.to_s)
+
+    # A avaliação pendente roda na janela do debounce do turno seguinte: não entrega, volta depois.
+    rodar_um!(Crm::Ai::EvaluateCardJob)
+    expect(Crm::Entrega).not_to have_received(:new)
+    expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: porta)
+    expect(jobs(Crm::Ai::EvaluateCardJob).size).to eq(1)
+
+    ia_avisa!('A parcela nova está no seu contrato; a equipe confirma com você o valor certo.', should: false)
+    respostas_antes = respostas.count
+    rodar!(Autonomia::Agents::Operate::ReplyJob)
+    rodar!(Autonomia::Agents::Operate::ChunkedDeliveryJob)
+    expect(respostas.count).to be > respostas_antes
+    expect(respostas.reorder(:id).last.content).to include('equipe confirma')
+    expect(turno.em_curso?(conversation.id)).to be(false)
+
+    rodar_um!(Crm::Ai::EvaluateCardJob)
+
+    expect(pedacos_quando_entregou).to eq([respostas.count])
+    expect(conversation.reload).to have_attributes(assignee_id: pessoa.id, ai_assignee: nil)
   end
 
   it 'com o funil sem a IA, a conversa fica com o agente e o motivo aparece como evento dele', :aggregate_failures do

@@ -8,14 +8,15 @@ RSpec.describe Crm::Ai::AvaliacaoDepoisDaFala do
 
   let(:card) { create_card(pipeline: comercial) }
   let(:chave_do_intervalo) { format(described_class::CHAVE_DO_INTERVALO, conversa: conversation.id) }
+  let(:chave_da_adiada) { format(described_class::CHAVE_DA_ADIADA, conversa: conversation.id) }
+  let(:turno) { Autonomia::Agents::Operate::TurnoEmCurso }
 
   before do
     allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
     allow_any_instance_of(Crm::Ai::CredentialResolver).to receive(:configured?).and_return(true) # rubocop:disable RSpec/AnyInstance
     allow(Rails.logger).to receive(:info).and_call_original
     account.enable_features!(Autonomia::Agents::AgenteSoInforma::FLAG)
-    Redis::Alfred.delete(chave_do_intervalo)
-    Redis::Alfred.delete(Autonomia::Agents::Operate::CadeiaEmCurso.chave(conversation.id))
+    [chave_do_intervalo, chave_da_adiada, turno.chave(conversation.id)].each { |chave| Redis::Alfred.delete(chave) }
   end
 
   def com_passagem!(enabled: true)
@@ -33,7 +34,7 @@ RSpec.describe Crm::Ai::AvaliacaoDepoisDaFala do
     it 'agenda a avaliação do card em foco com o gatilho da fala do agente, sem token', :aggregate_failures do
       com_passagem!
 
-      expect { agendar }.to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, described_class::TRIGGER)
+      expect { agendar }.to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, described_class::TRIGGER, 0)
       expect(Rails.logger).to have_received(:info).with(a_string_including("conversa=#{conversation.id}", 'desfecho=agendada'))
       expect(Autonomia::Agents::AgentEvent.atribuicao_nao_avaliou.count).to eq(0)
     end
@@ -47,12 +48,25 @@ RSpec.describe Crm::Ai::AvaliacaoDepoisDaFala do
       expect(card.reload.metadata.dig('ai', 'evaluate_token')).to eq(123.0)
     end
 
-    it 'no máximo uma por conversa no intervalo: o aviso repetido não paga outra leitura', :aggregate_failures do
+    it 'o aviso repetido dentro do intervalo não é descartado: uma avaliação fica para quando o intervalo vence', :aggregate_failures do
       com_passagem!
       agendar
+      resto = Redis::Alfred.ttl(chave_do_intervalo)
+
+      freeze_time do
+        expect { agendar }.to have_enqueued_job(Crm::Ai::EvaluateCardJob)
+          .with(card.id, nil, described_class::TRIGGER, 0)
+          .at(be_within(2.seconds).of((resto + Crm::Ai::Config::DEBOUNCE_SECONDS).seconds.from_now))
+      end
+      expect(Rails.logger).to have_received(:info).with(a_string_including('desfecho=adiada_pelo_intervalo'))
+    end
+
+    it 'no máximo uma adiada: o terceiro aviso no intervalo é lido por ela, sem pagar outra', :aggregate_failures do
+      com_passagem!
+      2.times { agendar }
 
       expect { agendar }.not_to have_enqueued_job(Crm::Ai::EvaluateCardJob)
-      expect(Rails.logger).to have_received(:info).with(a_string_including('desfecho=intervalo'))
+      expect(Rails.logger).to have_received(:info).with(a_string_including('desfecho=ja_adiada'))
       expect(Redis::Alfred.ttl(chave_do_intervalo)).to be_between(1, described_class::INTERVALO.to_i)
     end
 
@@ -129,12 +143,38 @@ RSpec.describe Crm::Ai::AvaliacaoDepoisDaFala do
       expect(Crm::Ai::Evaluator.new(card: card, trigger: 'message').motivo_para_pular).to eq('debounced')
     end
 
-    it 'com a fala do turno seguinte saindo, nem chama o modelo e volta depois', :aggregate_failures do
-      Autonomia::Agents::Operate::CadeiaEmCurso.marcar(conversation.id, 99, vinculo_da_porta.id)
+    it 'com o turno seguinte em curso, nem chama o modelo e volta depois, com a tentativa seguinte', :aggregate_failures do
+      turno.abrir(conversation.id, 99)
 
       expect { expect(avaliar.error).to eq('fala_em_curso') }
-        .to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, described_class::TRIGGER)
+        .to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, described_class::TRIGGER, 1)
       expect(classificador).not_to have_received(:perform)
+    end
+  end
+
+  # O turno seguinte em curso: a avaliação volta depois, respeitando o intervalo, e desiste no teto.
+  describe '.reagendar' do
+    before { com_passagem! }
+
+    it 'volta com a espera crescendo pela tentativa e segura o intervalo até lá', :aggregate_failures do
+      freeze_time do
+        expect { described_class.reagendar(card, conversation, 2) }
+          .to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, described_class::TRIGGER, 3)
+          .at(be_within(1.second).of((described_class::ESPERA_DA_FALA_EM_CURSO * 3).from_now))
+      end
+      expect(Redis::Alfred.ttl(chave_do_intervalo)).to be >= (described_class::ESPERA_DA_FALA_EM_CURSO * 3).to_i
+    end
+
+    it 'no teto de tentativas, desiste e deixa o evento fala_em_curso', :aggregate_failures do
+      expect { described_class.reagendar(card, conversation, described_class::MAX_TENTATIVAS) }
+        .not_to have_enqueued_job(Crm::Ai::EvaluateCardJob)
+      expect(nao_avaliou('fala_em_curso').sole.autonomia_agent_id).to eq(agente_da_porta.id)
+    end
+
+    it 'um aviso novo enquanto ela espera é adiado, não vira outra avaliação imediata' do
+      described_class.reagendar(card, conversation, 0)
+
+      expect(agendar).to eq('adiada_pelo_intervalo')
     end
   end
 end

@@ -20,7 +20,7 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     inbox.add_members([pessoa.id])
     allow(Rails.configuration.dispatcher).to receive(:dispatch)
     allow(OnlineStatusTracker).to receive(:get_available_users).with(account.id).and_return({ pessoa.id => 'online' })
-    Redis::Alfred.delete(Autonomia::Agents::Operate::CadeiaEmCurso.chave(conversation.id))
+    Redis::Alfred.delete(Autonomia::Agents::Operate::TurnoEmCurso.chave(conversation.id))
   end
 
   def entregar(trigger:, handoff: pedido) = described_class.new(card: card, handoff: handoff, trigger: trigger).perform
@@ -72,14 +72,14 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     end
 
     # Corrida com o turno seguinte: o modelo levou 20 s, o cliente escreveu e o agente está "digitando" em pedaços.
-    it 'com a fala do turno seguinte saindo, não entrega no meio dela: volta depois', :aggregate_failures do
-      Autonomia::Agents::Operate::CadeiaEmCurso.marcar(conversation.id, 77, vinculo_da_porta.id)
+    it 'com o turno seguinte em curso, não entrega no meio dele: volta depois', :aggregate_failures do
+      Autonomia::Agents::Operate::TurnoEmCurso.abrir(conversation.id, 77)
 
       expect { expect(entregar(trigger: depois_da_fala)).to have_attributes(status: :skipped, error: 'fala_em_curso') }
-        .to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, depois_da_fala)
+        .to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, depois_da_fala, 1)
       expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: porta)
 
-      Autonomia::Agents::Operate::CadeiaEmCurso.soltar(conversation.id, 77, vinculo_da_porta.id)
+      Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, 77)
       expect(entregar(trigger: depois_da_fala)).to have_attributes(status: :handed_off, assignee: pessoa)
     end
 

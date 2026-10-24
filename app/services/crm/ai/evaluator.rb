@@ -10,11 +10,13 @@ module Crm
       ESCOLHAS_DE_ETAPA = %w[move reopen].freeze
 
       # tocado (#1693): a IA de assunto disse que a mensagem é sobre este card; ele é avaliado mesmo fora do foco.
-      def initialize(card:, trigger: 'message', tocado: false)
+      # tentativa (#2154): a da avaliação depois da fala do agente (Crm::Ai::AvaliacaoDepoisDaFala#reagendar).
+      def initialize(card:, trigger: 'message', tocado: false, tentativa: 0)
         @card = card
         @account = card.account
         @trigger = trigger
         @tocado = tocado
+        @tentativa = tentativa
       end
 
       def perform
@@ -166,11 +168,11 @@ module Crm
 
       # #2154: a avaliação depois da fala do agente (Crm::Ai::AvaliacaoDepoisDaFala) só decide a passagem. Não move
       # etapa nem grava campo, memória, pontuação ou o carimbo da última avaliação: não derruba a avaliação da mensagem
-      # do cliente pelo intervalo. Com a fala do turno seguinte ainda saindo, nem chama o modelo: volta depois.
+      # do cliente pelo intervalo. Com o turno seguinte do agente em curso, nem chama o modelo: volta depois.
       def so_a_passagem
         conversa = @card.conversa_em_atendimento
         if conversa && AvaliacaoDepoisDaFala.fala_em_curso?(conversa)
-          AvaliacaoDepoisDaFala.reagendar(@card)
+          AvaliacaoDepoisDaFala.reagendar(@card, conversa, @tentativa)
           return Result.new(status: :skipped, error: 'fala_em_curso')
         end
 
@@ -184,7 +186,8 @@ module Crm
       def run_handoff(classification)
         return unless @passar && handoff_config[:enabled]
 
-        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger, pelo_card: @pelo_card).perform
+        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger, pelo_card: @pelo_card,
+                            tentativa: @tentativa).perform
       rescue StandardError => e
         Rails.logger.error("[CRM AI handoff] #{e.class}: #{e.message}")
       end
