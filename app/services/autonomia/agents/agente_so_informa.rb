@@ -21,4 +21,21 @@ module Autonomia::Agents::AgenteSoInforma
   def ligada?(account)
     account.present? && account.feature_enabled?(FLAG)
   end
+
+  # A fala que avisou começou a sair (a mensagem única, ou o 1º pedaço): o registro do turno. `reason`: o código do
+  # motivo (a allowlist do EventLogger). O EventLogger nunca levanta.
+  def fala_comecou!(agent:, conversation:, reason:, message:)
+    ::Autonomia::Agents::Operate::EventLogger.avisou_que_chama_alguem(agent: agent, conversation: conversation, reason: reason,
+                                                                      message: message)
+  end
+
+  # A fala que avisou terminou de sair: a IA de Atribuição avalia (pelo ContratoDoFunil). Nunca derruba a entrega: a
+  # falha vai ao log e ao rastreador de erros.
+  def fala_terminou!(conversation)
+    ::Autonomia::Agents::ContratoDoFunil.avaliar_depois_da_fala(conversation)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][operate] aviso_de_passagem_falhou conv=#{conversation&.id} #{e.class}")
+    ChatwootExceptionTracker.new(e, account: conversation&.account).capture_exception
+    nil
+  end
 end

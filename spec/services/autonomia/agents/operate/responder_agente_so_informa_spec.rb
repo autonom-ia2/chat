@@ -90,12 +90,17 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(evento).to have_attributes(conversation_id: conversation.id, message_id: result.message.id, handoff_reason: 'human_requested')
     end
 
-    it 'não posta a nota "antes de encaminhar": a conversa não foi encaminhada' do
+    it 'não posta a nota "antes de encaminhar" (a conversa não foi encaminhada) e guarda as recusas até a passagem' do
+      Autonomia::Agents::Tools::RecusasRecentes.anotar(conversation.id, 'especialista_falhou')
       ia_responde
 
       responder.perform
 
       expect(Autonomia::Agents::NotaDoEncaminhamento).not_to have_received(:postar)
+      chave = format(Autonomia::Agents::Tools::RecusasRecentes::CHAVE, conversa: conversation.id)
+      expect(Redis::Alfred.ttl(chave)).to be > Autonomia::Agents::Tools::RecusasRecentes::VALIDADE.to_i
+      Autonomia::Agents::Tools::RecusasRecentes.anotar(conversation.id, 'especialista_falhou')
+      expect(Redis::Alfred.ttl(chave)).to be > Autonomia::Agents::Tools::RecusasRecentes::VALIDADE.to_i
     end
 
     it 'sem o sinal da instrução, não registra nem chama a Atribuição' do
@@ -140,6 +145,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(respostas.count).to eq(0)
       expect(contrato).not_to have_received(:avaliar_depois_da_fala)
       expect(pedacos_na_fila.size).to eq(1)
+      # A fala ainda não saiu: nem o registro do aviso. A cadeia está marcada em curso.
+      expect(Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.count).to eq(0)
+      expect(Autonomia::Agents::Operate::CadeiaEmCurso.em_curso?(conversation.id)).to be(true)
 
       entregar_os_pedacos!
 
@@ -147,7 +155,36 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(respostas.count).to be > 1
       segue_com_o_agente!
       expect(contrato).to have_received(:avaliar_depois_da_fala).with(conversation).once
-      expect(Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.count).to eq(1)
+      evento = Autonomia::Agents::AgentEvent.avisou_que_chama_alguem.sole
+      expect(evento).to have_attributes(message_id: respostas.reorder(:id).first.id, handoff_reason: 'human_requested')
+      expect(Autonomia::Agents::Operate::CadeiaEmCurso.em_curso?(conversation.id)).to be(false)
+    end
+
+    it 'o cliente escreveu no meio da fala (turno mudou depois do 1º pedaço): a Atribuição avalia assim mesmo' do
+      ia_responde
+
+      responder.perform
+      job = pedacos_na_fila.first
+      ActiveJob::Base.queue_adapter.enqueued_jobs.delete(job)
+      job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
+      nova = create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'e aí?')
+      conversation.update!(additional_attributes: { Autonomia::Agents::Operate::ReplyJob::DEBOUNCE_KEY => { 'pending_message_id' => nova.id } })
+      entregar_os_pedacos!
+
+      expect(respostas.count).to eq(1)
+      expect(contrato).to have_received(:avaliar_depois_da_fala).with(conversation).once
+      expect(Autonomia::Agents::Operate::CadeiaEmCurso.em_curso?(conversation.id)).to be(false)
+    end
+
+    it 'sem a flag, a cadeia não leva a marca do aviso nem marca a cadeia em curso', :aggregate_failures do
+      account.disable_features!(Autonomia::Agents::AgenteSoInforma::FLAG)
+      ia_responde
+
+      responder.perform
+
+      meta = ActiveJob::Arguments.deserialize(pedacos_na_fila.first[:args]).last
+      expect(meta).not_to have_key(Autonomia::Agents::AgenteSoInforma::META)
+      expect(Autonomia::Agents::Operate::CadeiaEmCurso.em_curso?(conversation.id)).to be(false)
     end
 
     it 'sem o sinal, a cadeia termina sem chamar a Atribuição' do

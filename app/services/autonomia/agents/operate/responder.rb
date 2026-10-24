@@ -179,20 +179,18 @@ module Autonomia
 
         # #2154 (flag `agente_so_informa`, regra do Rodrigo de 24/10): nenhum agente nosso passa a conversa. O sinal da
         # instrução vira o registro do turno, e o agente segue atendendo. Quem decide passar é a IA de Atribuição, DEPOIS
-        # que a fala saiu: na entrega de uma mensagem só (e na de voz), já saiu, e a avaliação é pedida aqui; na entrega
-        # em pedaços, o último pedaço é que pede (ChunkedDeliveryJob, pela marca no meta). Sem fala (silêncio, já
-        # respondido, a cadeia parou), nada. Sem a NotaDoEncaminhamento: a conversa não foi encaminhada; as recusas ficam
-        # para a nota que o HandoffExecutor posta quando a Atribuição de fato entrega.
+        # que a fala saiu: na entrega de uma mensagem só (e na de voz), já saiu, e o registro e a avaliação são daqui; na
+        # entrega em pedaços, é o ChunkedDeliveryJob (pela marca no meta): o registro no 1º pedaço postado, a avaliação no
+        # último. Sem fala (silêncio, já respondido), nada. Sem a NotaDoEncaminhamento: a conversa não foi encaminhada; as
+        # recusas ficam guardadas até a passagem, para a nota que sai quando a Atribuição de fato entrega.
         def avisou_que_chama_alguem(result)
+          ::Autonomia::Agents::Tools::RecusasRecentes.guardar_ate_a_passagem(@conversation.id)
           mensagem = @entrega&.message
-          return unless mensagem.present? || @pedacos_agendados
+          return if mensagem.blank?
 
-          ::Autonomia::Agents::Operate::EventLogger.avisou_que_chama_alguem(agent: @agent, conversation: @conversation, result: result,
-                                                                            message: mensagem)
-          ::Autonomia::Agents::ContratoDoFunil.avaliar_depois_da_fala(@conversation) if mensagem.present?
-        rescue StandardError => e
-          Rails.logger.warn("[autonomia][operate] aviso_de_passagem_falhou agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
-          nil
+          aviso = ::Autonomia::Agents::AgenteSoInforma
+          aviso.fala_comecou!(agent: @agent, conversation: @conversation, reason: result.handoff[:reason], message: mensagem)
+          aviso.fala_terminou!(@conversation)
         end
 
         # Lido pelo ResponderAoEvento, que fica fora do #2154.
@@ -200,11 +198,13 @@ module Autonomia
           ::Autonomia::Agents::AgenteSoInforma.ligada?(@conversation.account)
         end
 
-        # A marca que faz o último pedaço pedir a avaliação (#2154). Vazia quando o turno não avisou ou sem a flag.
+        # A marca que faz o 1º pedaço registrar o aviso e o último pedir a avaliação (#2154), com o motivo já curado (só o
+        # código da allowlist viaja no job). Vazia quando o turno não avisou ou sem a flag.
         def marca_do_aviso(result)
           return {} unless result&.handoff&.dig(:should) && agente_so_informa?
 
-          { ::Autonomia::Agents::AgenteSoInforma::META => true }
+          motivo = ::Autonomia::Agents::Operate::EventLogger.curated_reason(result)
+          { ::Autonomia::Agents::AgenteSoInforma::META => { 'motivo' => motivo } }
         end
 
         # A porta bloqueou (fora do público-alvo / fora do horário): o agente NÃO responde e passa a
@@ -372,8 +372,15 @@ module Autonomia
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
             .set(wait: (chunks.first['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0).seconds)
             .perform_later(@conversation.id, @agent_inbox.id, @reply_to_message_id, chunks, 0, meta_dos_pedacos(result))
-          @pedacos_agendados = true
+          marcar_cadeia_em_curso
           Result.replied(nil)
+        end
+
+        # #2154: a cadeia deste turno está saindo (Operate::CadeiaEmCurso). Só com a flag.
+        def marcar_cadeia_em_curso
+          return unless agente_so_informa?
+
+          ::Autonomia::Agents::Operate::CadeiaEmCurso.marcar(@conversation.id, @reply_to_message_id, @agent_inbox.id)
         end
 
         # `used_entry_ids` viaja no meta (só ids) para o job registrar as fontes no evento replied. #2154: a marca do aviso.

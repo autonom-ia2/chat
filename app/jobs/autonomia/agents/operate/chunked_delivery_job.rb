@@ -27,7 +27,9 @@ module Autonomia
           agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(id: agent_inbox_id)
           return if agent_inbox.blank? || agent_inbox.agent.blank?
 
+          @proximo_agendado = false
           deliver(conversation, agent_inbox, reply_to_message_id, Array(chunks), index.to_i, meta || {})
+          cadeia_em_curso(conversation, agent_inbox, reply_to_message_id)
         end
 
         private
@@ -44,14 +46,23 @@ module Autonomia
           # Não postou (re-check no lock reprovou: humano assumiu / agente desligado / turno mudou / já
           # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado. Só a troca de
           # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
-          return refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta) if motivo == :dono_mudou
-          return avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index) if motivo == :pessoa_respondeu
-          return unless posted
+          return parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo) if motivo
 
           # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
-          log_replied(agent_inbox.agent, conversation, meta, posted) if index.zero?
+          primeiro_pedaco(agent_inbox.agent, conversation, meta, posted) if index.zero?
 
           schedule_next(conversation, agent_inbox, reply_to_message_id, chunks, index, meta, typing)
+        end
+
+        # A cadeia parou (o pedaço não foi postado; `posted` só vem sem motivo). A troca de dono pode refazer o turno, a
+        # pessoa que respondeu deixa o rastro e (#2154) o cliente que escreveu depois de algum pedaço de uma fala que
+        # avisou que vai chamar alguém não impede a avaliação da Atribuição. Os outros motivos só encerram.
+        def parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo)
+          case motivo
+          when :dono_mudou then refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta)
+          when :pessoa_respondeu then avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index)
+          when :turno_mudou then pedir_avaliacao(conversation, meta) if index.positive?
+          end
         end
 
         # #1606: a cadeia parou antes do 1º pedaço porque OUTRO vínculo ativo da caixa virou o dono depois da IA (troca sem
@@ -111,18 +122,39 @@ module Autonomia
           wait_seconds = (next_chunk['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0)
           self.class.set(wait: wait_seconds.seconds)
               .perform_later(conversation.id, agent_inbox.id, reply_to_message_id, chunks, nxt, meta)
+          @proximo_agendado = true
         end
 
-        # #2154 (flag `agente_so_informa`): o turno avisou que vai chamar alguém (marca no meta, posta pelo Responder) e o
-        # ÚLTIMO pedaço acabou de sair: agora a IA de Atribuição lê a fala inteira e decide. A cadeia que parou no meio não
-        # chega aqui. Nunca derruba a entrega.
+        # O 1º pedaço entrou: o "respondido" de sempre e, se o turno avisou que vai chamar alguém (#2154, marca no meta), o
+        # registro do aviso, agora que a fala de fato começou a sair.
+        def primeiro_pedaco(agent, conversation, meta, posted)
+          log_replied(agent, conversation, meta, posted)
+          aviso = meta[::Autonomia::Agents::AgenteSoInforma::META]
+          return unless aviso
+
+          ::Autonomia::Agents::AgenteSoInforma.fala_comecou!(agent: agent, conversation: conversation, reason: aviso.to_h['motivo'],
+                                                             message: posted)
+        end
+
+        # #2154 (flag `agente_so_informa`): o turno avisou que vai chamar alguém (marca no meta, posta pelo Responder) e a fala
+        # terminou de sair (o último pedaço, ou o cliente escreveu depois de algum pedaço): a IA de Atribuição lê e decide.
+        # Nunca derruba a entrega (AgenteSoInforma.fala_terminou!).
         def pedir_avaliacao(conversation, meta)
           return unless meta[::Autonomia::Agents::AgenteSoInforma::META]
 
-          ::Autonomia::Agents::ContratoDoFunil.avaliar_depois_da_fala(conversation)
-        rescue StandardError => e
-          Rails.logger.warn("[autonomia][operate] aviso_de_passagem_falhou conv=#{conversation.id} #{e.class}")
-          nil
+          ::Autonomia::Agents::AgenteSoInforma.fala_terminou!(conversation)
+        end
+
+        # #2154: a cadeia segue (renova a marca) ou terminou, por qualquer motivo (solta a dela). Só com a flag.
+        def cadeia_em_curso(conversation, agent_inbox, reply_to_message_id)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+
+          cadeia = ::Autonomia::Agents::Operate::CadeiaEmCurso
+          if @proximo_agendado
+            cadeia.marcar(conversation.id, reply_to_message_id, agent_inbox.id)
+          else
+            cadeia.soltar(conversation.id, reply_to_message_id, agent_inbox.id)
+          end
         end
 
         # Posta UM pedaço como outgoing do AgentBot-espelho. Idempotente por token composto, dentro do

@@ -43,7 +43,21 @@ module Autonomia::Agents::Tools::RecusasRecentes
     chave = format(CHAVE, conversa: conversa_id)
     Redis::Alfred.lpush(chave, valor)
     Redis::Alfred.with { |redis| redis.ltrim(chave, 0, TETO - 1) }
-    Redis::Alfred.expire(chave, VALIDADE.to_i)
+    # #2154: nunca encurta a validade que o aviso do agente estendeu (guardar_ate_a_passagem).
+    Redis::Alfred.expire(chave, [VALIDADE.to_i, Redis::Alfred.ttl(chave).to_i].max)
+    nil
+  rescue StandardError
+    nil
+  end
+
+  # #2154 (flag `agente_so_informa`): o agente avisou que vai chamar alguém e não encaminha mais; quem entrega é a IA de
+  # Atribuição, talvez bem depois (a espera de alguém online, HandoffDrainJob). A lista fica até lá, para a nota sair
+  # com ela. Sem lista, nada.
+  VALIDADE_ATE_A_PASSAGEM = 1.day
+
+  def guardar_ate_a_passagem(conversa_id)
+    chave = format(CHAVE, conversa: conversa_id)
+    Redis::Alfred.expire(chave, VALIDADE_ATE_A_PASSAGEM.to_i) if Redis::Alfred.exists?(chave)
     nil
   rescue StandardError
     nil
