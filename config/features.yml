@@ -806,10 +806,11 @@
 # (decisão do Rodrigo, 23/10): tirar um agente da conta solta os cards dele (Agents::DestroyJob, #2097) e excluir um contato
 # anonimiza os cards e cancela as reuniões futuras. Desligada: as telas e o servidor de sempre, como na main; as rotas
 # novas das Partes B e C respondem nos dois casos. Posição 58 na feature_flags_ext_1 (1 << 57), confirmada pela
-# Orquestração (23/10). Piloto por psql na hub (1/16/18) e conta 6 da hub depois do teste do Rodrigo, sem migration.
+# Orquestração (23/10). Ligada nas contas existentes das duas stacks. Padrão das contas novas: ligada desde o #2159
+# (Rodrigo, 24/10; migration 20261108380000).
 - name: crm_arquivados
   display_name: CRM › Arquivados, restaurar e excluir de vez
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Painel do contato enxuto na conversa (#2138). Ligada: o painel da direita vira "Sobre este contato" (nome, quem
