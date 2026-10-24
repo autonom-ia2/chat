@@ -471,8 +471,9 @@ defineExpose({ open });
             <label
               :for="`${inputId}-search`"
               class="text-sm font-medium text-n-slate-12"
-              >{{ t('RELATIONSHIPS.SEARCH') }}</label
             >
+              {{ t('RELATIONSHIPS.SEARCH') }}
+            </label>
             <Input
               :id="`${inputId}-search`"
               v-model="query"
