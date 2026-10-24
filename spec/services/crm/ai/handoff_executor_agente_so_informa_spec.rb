@@ -20,6 +20,7 @@ RSpec.describe Crm::Ai::HandoffExecutor do
     inbox.add_members([pessoa.id])
     allow(Rails.configuration.dispatcher).to receive(:dispatch)
     allow(OnlineStatusTracker).to receive(:get_available_users).with(account.id).and_return({ pessoa.id => 'online' })
+    Redis::Alfred.delete(Autonomia::Agents::Operate::CadeiaEmCurso.chave(conversation.id))
   end
 
   def entregar(trigger:, handoff: pedido) = described_class.new(card: card, handoff: handoff, trigger: trigger).perform
@@ -52,6 +53,34 @@ RSpec.describe Crm::Ai::HandoffExecutor do
       expect(Crm::Entrega::Marca.dados(conversation.reload)['motivo']).to eq(Crm::Ai::HandoffExecutor::MOTIVO_DA_PROMESSA)
       expect(Crm::Ai::HandoffDrainJob.new.send(:da_ia_do_crm_com_agente_nosso?, conversation, Crm::Entrega::Marca.dados(conversation)))
         .to be(false)
+    end
+
+    it 'a fila entrega quando alguém fica online, e a nota "Antes de encaminhar" sai com as recusas guardadas', :aggregate_failures do
+      allow(OnlineStatusTracker).to receive(:get_available_users).with(account.id).and_return({})
+      card.stage.update!(metadata: { 'ai_handoff' => { 'enabled' => true, 'handoff_mode' => 'r2_direct', 'prefer_online' => true } })
+      Autonomia::Agents::Tools::RecusasRecentes.anotar(conversation.id, 'especialista_falhou')
+      Autonomia::Agents::Tools::RecusasRecentes.guardar_ate_a_passagem(conversation.id)
+      entregar(trigger: depois_da_fala)
+
+      allow(OnlineStatusTracker).to receive(:get_available_users).with(account.id).and_return({ pessoa.id => 'online' })
+      Crm::Ai::HandoffDrainJob.new.send(:drain_conversation, conversation.reload)
+
+      expect(conversation.reload.assignee_id).to eq(pessoa.id)
+      nota = conversation.messages.where(private: true).last
+      expect(nota.content_attributes[Autonomia::Agents::NotaDoEncaminhamento::CHAVE]).to be(true)
+      expect(nota.content).to include(Autonomia::Agents::Tools::Recusa::MOTIVOS.fetch('especialista_falhou'))
+    end
+
+    # Corrida com o turno seguinte: o modelo levou 20 s, o cliente escreveu e o agente está "digitando" em pedaços.
+    it 'com a fala do turno seguinte saindo, não entrega no meio dela: volta depois', :aggregate_failures do
+      Autonomia::Agents::Operate::CadeiaEmCurso.marcar(conversation.id, 77, vinculo_da_porta.id)
+
+      expect { expect(entregar(trigger: depois_da_fala)).to have_attributes(status: :skipped, error: 'fala_em_curso') }
+        .to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, depois_da_fala)
+      expect(conversation.reload).to have_attributes(assignee_id: nil, ai_assignee: porta)
+
+      Autonomia::Agents::Operate::CadeiaEmCurso.soltar(conversation.id, 77, vinculo_da_porta.id)
+      expect(entregar(trigger: depois_da_fala)).to have_attributes(status: :handed_off, assignee: pessoa)
     end
 
     it 'a IA de Atribuição decide: sem pedido ("continuar"), o agente segue com a conversa' do

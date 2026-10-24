@@ -20,6 +20,7 @@ module Crm
       def perform
         pular = motivo_para_pular
         return Result.new(status: :skipped, error: pular) if pular
+        return so_a_passagem if @trigger == AvaliacaoDepoisDaFala::TRIGGER
 
         aplicar(classify_stage)
       rescue ResponsesClient::Error => e
@@ -161,6 +162,21 @@ module Crm
         # Acesso por funil (#1148, parte C): o modelo só conhece quem pode receber a conversa.
         # #1593: com o pedido pelo nome, os agentes de IA que podem receber entram com o rótulo; o modelo decide.
         Crm::Access::Recipients.inbox_members(conversation).pluck(:name) + Crm::AgentesIa.rotulos_pelo_nome(conversation, handoff_config)
+      end
+
+      # #2154: a avaliação depois da fala do agente (Crm::Ai::AvaliacaoDepoisDaFala) só decide a passagem. Não move
+      # etapa nem grava campo, memória, pontuação ou o carimbo da última avaliação: não derruba a avaliação da mensagem
+      # do cliente pelo intervalo. Com a fala do turno seguinte ainda saindo, nem chama o modelo: volta depois.
+      def so_a_passagem
+        conversa = @card.conversa_em_atendimento
+        if conversa && AvaliacaoDepoisDaFala.fala_em_curso?(conversa)
+          AvaliacaoDepoisDaFala.reagendar(@card)
+          return Result.new(status: :skipped, error: 'fala_em_curso')
+        end
+
+        @passar = true
+        run_handoff(classify_stage)
+        Result.new(status: :so_passagem)
       end
 
       # Independent of the stage move. Guarded inside the executor; never let a

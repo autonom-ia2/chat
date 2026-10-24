@@ -48,6 +48,7 @@ module Crm
       def perform
         blocked = blocked_reason
         return skip_blocked(blocked) if blocked
+        return fala_em_curso if fala_em_curso?
 
         # Decisão do Rodrigo (16/10, opção a): o card do pedido saiu da conversa (fechou) e o cliente pediu gente;
         # alguém recebe, pela regra do foco. A linha deixa contar quantas vezes isso acontece.
@@ -117,6 +118,18 @@ module Crm
 
         @depois_da_fala_do_agente = @trigger == AvaliacaoDepoisDaFala::TRIGGER && dono_ativo.present? &&
                                     ::Autonomia::Agents::AgenteSoInforma.ligada?(@card.account)
+      end
+
+      # #2154 (revisão): o modelo leva de 15 a 25 s, e nesse meio tempo o cliente pode ter escrito e o agente estar
+      # "digitando" a resposta em pedaços (Autonomia::Agents::Operate::CadeiaEmCurso). Entregar agora cortaria essa fala
+      # no meio: a avaliação volta depois (AvaliacaoDepoisDaFala.reagendar), sem mexer na espera.
+      def fala_em_curso?
+        depois_da_fala_do_agente? && AvaliacaoDepoisDaFala.fala_em_curso?(@conversation)
+      end
+
+      def fala_em_curso
+        AvaliacaoDepoisDaFala.reagendar(@card)
+        skip('fala_em_curso')
       end
 
       def depois_da_entrega(entrega)
