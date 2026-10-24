@@ -122,6 +122,10 @@
     "GUIDE": {
       "ACTION": "{agentName} fez pelo Guia da Plataforma: {frase}"
     },
+    "META_ADS": {
+      "PAUSED": "{agentName} pausou o anúncio {adName} (#{adId}) na Meta",
+      "ACTIVE": "{agentName} ativou o anúncio {adName} (#{adId}) na Meta"
+    },
     "CRM_EXCLUIR": {
       "CARDS": "{agentName} excluiu de vez cards arquivados do CRM. Cards apagados: {cardsApagados}",
       "FUNIL": "{agentName} excluiu de vez o funil arquivado #{pipelineId}. Cards apagados: {cardsApagados}. Cards movidos para outro funil: {cardsMovidos}",

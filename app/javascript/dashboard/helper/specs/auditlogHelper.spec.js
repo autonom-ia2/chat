@@ -521,3 +521,31 @@ describe('excluir de vez no CRM (#2096)', () => {
     );
   });
 });
+
+describe('pausar ou ativar anúncio da Meta (#2161)', () => {
+  const item = audited_changes => ({
+    auditable_type: 'Account',
+    action: 'meta_ads_ad_status',
+    user_id: 1,
+    auditable_id: 7,
+    audited_changes,
+  });
+
+  it('uma frase para pausar e outra para ativar, com o nome do anúncio', () => {
+    const pausou = item({ ad_id: '123', ad_name: 'Capa', status: 'PAUSED' });
+
+    expect(generateLogActionKey(pausou)).toBe('AUDIT_LOGS.META_ADS.PAUSED');
+    expect(generateLogActionKey(item({ ad_id: '123', status: 'ACTIVE' }))).toBe(
+      'AUDIT_LOGS.META_ADS.ACTIVE'
+    );
+    expect(
+      generateTranslationPayload(pausou, [{ id: 1, name: 'Marta' }])
+    ).toMatchObject({ agentName: 'Marta', adId: '123', adName: 'Capa' });
+  });
+
+  it('sem nome no cache, mostra o id', () => {
+    expect(
+      generateTranslationPayload(item({ ad_id: '123', status: 'PAUSED' }), [])
+    ).toMatchObject({ adName: '123' });
+  });
+});
