@@ -2,6 +2,8 @@ class Instagram::Automation::OperatorBrowserTicket
   STACKS = %w[hub2you autonomia].freeze
   ACTIVE_STATES = %w[queued running].freeze
   TICKET_TTL = 60
+  # Port 443 of the VPS belongs to the Easypanel Traefik; the operator Serve lives on 8443 (issue #1751).
+  OPERATOR_SERVE_PORT = 8443
 
   class Unavailable < StandardError
     def initialize
@@ -27,7 +29,7 @@ class Instagram::Automation::OperatorBrowserTicket
     raise Unavailable unless STACKS.include?(@stack)
 
     @url = https_url(ENV.fetch('INSTAGRAM_TESTER_OPERATOR_BROWSER_URL', ''))
-    raise Unavailable unless @url.path == "/#{@stack}/"
+    raise Unavailable unless @url.port == OPERATOR_SERVE_PORT && @url.path == "/#{@stack}/"
 
     @issuer = https_url(ENV.fetch('FRONTEND_URL', '')).origin
     @key = signing_key
