@@ -64,6 +64,13 @@ module Autonomia
           )
         end
 
+        # #2154 (flag `agente_so_informa`): o agente avisou o cliente que vai chamar alguém e seguiu atendendo; quem decide
+        # passar é a IA de Atribuição. Registro do turno, não passagem. O motivo passa pela mesma allowlist do handed_off.
+        def self.avisou_que_chama_alguem(agent:, conversation:, result:, message: nil)
+          create!(agent: agent, conversation: conversation, event_type: :avisou_que_chama_alguem,
+                  handoff_reason: curated_reason(result), message_id: message&.id)
+        end
+
         # Handoff operacional (ex.: Crm::Ai::HandoffExecutor) numa caixa que pode ou não ter agente
         # Autonom.ia: resolve o vínculo pela caixa/conta da conversa e registra só se houver. nil se não.
         def self.handed_off_by_inbox(conversation:, reason:)

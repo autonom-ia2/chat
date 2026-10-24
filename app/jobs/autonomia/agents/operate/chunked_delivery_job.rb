@@ -104,13 +104,25 @@ module Autonomia
           next_chunk = chunks[nxt]
           if next_chunk.blank?
             typing.off
-            return
+            return pedir_avaliacao(conversation, meta)
           end
 
           typing.on
           wait_seconds = (next_chunk['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0)
           self.class.set(wait: wait_seconds.seconds)
               .perform_later(conversation.id, agent_inbox.id, reply_to_message_id, chunks, nxt, meta)
+        end
+
+        # #2154 (flag `agente_so_informa`): o turno avisou que vai chamar alguém (marca no meta, posta pelo Responder) e o
+        # ÚLTIMO pedaço acabou de sair: agora a IA de Atribuição lê a fala inteira e decide. A cadeia que parou no meio não
+        # chega aqui. Nunca derruba a entrega.
+        def pedir_avaliacao(conversation, meta)
+          return unless meta[::Autonomia::Agents::AgenteSoInforma::META]
+
+          ::Autonomia::Agents::ContratoDoFunil.avaliar_depois_da_fala(conversation)
+        rescue StandardError => e
+          Rails.logger.warn("[autonomia][operate] aviso_de_passagem_falhou conv=#{conversation.id} #{e.class}")
+          nil
         end
 
         # Posta UM pedaço como outgoing do AgentBot-espelho. Idempotente por token composto, dentro do
