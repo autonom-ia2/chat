@@ -1,17 +1,21 @@
 class Crm::FollowUps::CardNextDueUpdater
   # Lembrete sem card (#1461): nada a atualizar.
-  def self.update(card)
+  # validar: false (#2096, Crm::Meetings::CancelService ao excluir o contato): grava só a data, mesmo com o card que não
+  # passa mais na validação (dono que saiu da conta).
+  def self.update(card, validar: true)
     return if card.nil?
 
-    new(card).perform
+    new(card, validar: validar).perform
   end
 
-  def initialize(card)
+  def initialize(card, validar: true)
     @card = card
+    @validar = validar
   end
 
   def perform
-    @card.update!(next_follow_up_at: next_due_at)
+    @card.next_follow_up_at = next_due_at
+    @card.save!(validate: @validar)
   end
 
   private

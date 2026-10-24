@@ -1267,6 +1267,10 @@
       "search"
     ]
   },
+  "crm/contacts/:contact_id/permanent_delete_preview": {
+    "controller": "api/v1/accounts/crm/contacts/permanent_deletions#preview",
+    "parametros": []
+  },
   "crm/conversations/:conversation_id/card": {
     "controller": "api/v1/accounts/crm/cards#by_conversation",
     "parametros": []
@@ -1444,6 +1448,10 @@
   },
   "crm/pipelines/:id/archive_preview": {
     "controller": "api/v1/accounts/crm/pipelines#archive_preview",
+    "parametros": []
+  },
+  "crm/pipelines/:id/permanent_delete_preview": {
+    "controller": "api/v1/accounts/crm/pipelines/permanent_deletions#preview",
     "parametros": []
   },
   "crm/pipelines/:pipeline_id/ai_settings": {

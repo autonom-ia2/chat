@@ -522,6 +522,38 @@ describe('CardGaveta (#1423)', () => {
     delete window.globalConfig;
   });
 
+  // #2150 — a sugestão de etapa é de quem tem crm_manage_ai: sem a chave, nada
+  // dela aparece e a gaveta nem pede ao servidor.
+  it('sem crm_manage_ai, não mostra nem pede a sugestão de etapa', async () => {
+    const api = (await import('dashboard/api/crmKanban')).default;
+    api.getCurrentAiSuggestion.mockClear();
+    const sugestao = { id: 4, to_stage_id: 11, to_stage_name: 'Em conversa' };
+    window.globalConfig = { CRM_AI_ENABLED: 'true' };
+    const comSugestao = montar({
+      card: { ...cardBase, ai_suggestion: sugestao },
+    });
+    await flushPromises();
+    expect(
+      comSugestao.find('[data-card-proximo]').attributes('data-passo')
+    ).toBe('sugestao');
+
+    const wrapper = montar({
+      canManageAi: false,
+      card: { ...cardBase, ai_suggestion: sugestao },
+    });
+    await flushPromises();
+    expect(
+      wrapper.find('[data-card-proximo]').attributes('data-passo')
+    ).not.toBe('sugestao');
+    expect(wrapper.find('[data-resumo-sugestao]').exists()).toBe(false);
+
+    const semInicial = montar({ canManageAi: false });
+    await flushPromises();
+    expect(semInicial.find('[data-card-proximo]').exists()).toBe(true);
+    expect(api.getCurrentAiSuggestion).not.toHaveBeenCalled();
+    delete window.globalConfig;
+  });
+
   // IA entende a conversa F3: a sugestão de fechar usa o mesmo cartão, com o
   // texto dela (o que acabou e por quê) e o botão Encerrar, em vez de "Mover".
   it('sugestão de fechar: frase do fim, aviso do retorno e Encerrar', async () => {

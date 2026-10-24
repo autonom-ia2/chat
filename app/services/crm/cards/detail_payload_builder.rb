@@ -113,9 +113,17 @@ class Crm::Cards::DetailPayloadBuilder
       account: @account,
       user: @user,
       account_user: @account_user,
-      activities: @card.activities.order(created_at: :desc).limit(ACTIVITY_LIMIT).to_a
+      activities: visible_activities.order(created_at: :desc).limit(ACTIVITY_LIMIT).to_a
     ).perform
     Crm::ValorDeVenda.ve_o_card?(@account_user, @card) ? activities : activities.map { |activity| without_value(activity) }
+  end
+
+  # Sugestão de etapa da IA (#2150): o 'ai_suggested' grava a etapa sugerida e a confiança; sem crm_manage_ai, o
+  # histórico não o traz. O 'ai_dismissed' (só o id) e o 'ai_auto_moved' (o card mudou mesmo de etapa) ficam.
+  def visible_activities
+    return @card.activities if Crm::SugestaoDeEtapa.le?(@account_user)
+
+    @card.activities.where.not(event_type: 'ai_suggested')
   end
 
   # Valor de venda (#2075): o ganho grava value_cents na atividade, e a edição grava os campos que o pedido mandou.
