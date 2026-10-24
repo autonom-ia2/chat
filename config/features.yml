@@ -821,3 +821,16 @@
   display_name: Painel do contato enxuto na conversa
   enabled: true
   column: feature_flags_ext_1
+
+# O agente só informa; a IA de Atribuição passa a conversa (#2154, regra do Rodrigo de 24/10). Ligada: quando a instrução
+# do agente de IA manda passar (`should_handoff`), ele responde o que a instrução diz e continua atendendo; não chama mais
+# o `bot_handoff!` (Autonomia::Agents::Operate::Responder). Depois que a fala sai (no último pedaço, na entrega em pedaços),
+# a IA de Atribuição do CRM avalia o card em foco (gatilho `fala_do_agente`) e, se decidir passar, entrega pelo
+# Crm::Entrega com as regras de sempre, mesmo com o agente no nome (Crm::Ai::HandoffExecutor). O evento da cotação
+# (ResponderAoEvento) não muda. Desligada: tudo como antes. Sem migration, sem tela. Posição 60 na feature_flags_ext_1
+# (1 << 59), PROVISÓRIA da Orquestração (24/10); definitiva na vez do PR. Piloto 1, 16 e 18 da hub por psql, pela
+# Orquestração, depois do NO AR.
+- name: agente_so_informa
+  display_name: Agentes IA › o agente avisa, a Atribuição passa a conversa
+  enabled: false
+  column: feature_flags_ext_1
