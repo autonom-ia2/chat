@@ -72,7 +72,7 @@ RSpec.describe Autonomia::Guide::Seed do
       with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'true') do
         caminho = described_class.kb_path_for(saude)
         expect(caminho).to eq(Autonomia::Guide::BaseDoPacote::PASTA.join('seguros/saude_beneficios/guia-produto.md'))
-        expect(File.read(caminho)).to include('**Fechou o plano**')
+        expect(File.read(caminho)).to include('**Marcar como implantado**')
         expect(File.read(caminho)).not_to include('**Fechou o seguro**')
       end
     end
