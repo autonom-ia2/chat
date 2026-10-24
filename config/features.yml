@@ -821,3 +821,13 @@
   display_name: Painel do contato enxuto na conversa
   enabled: false
   column: feature_flags_ext_1
+
+# Anúncios da Meta: gestão mínima do anúncio (#2161). Ligada: o detalhe do anúncio mostra se ele está ativo ou
+# pausado, com o botão para pausar ou ativar (quem tem meta_ads_manage), e o post da Página por trás do anúncio; a
+# Conexão mostra a Página. Desligada: o painel de sempre. Posição 61 PROVISÓRIA na feature_flags_ext_1 (1 << 60),
+# depois da 60 reservada ao agente_so_informa (#2154); a definitiva é o fim da main na vez da fila (Orquestração,
+# 24/10). Piloto 1, 16 e 18 por psql.
+- name: meta_ads_gestao
+  display_name: Anúncios da Meta - pausar anúncio e post da Página
+  enabled: false
+  column: feature_flags_ext_1

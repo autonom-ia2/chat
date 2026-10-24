@@ -29,6 +29,15 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// O anúncio por dentro lê a flag meta_ads_gestao (#2161): desligada aqui.
+vi.mock('dashboard/composables/store', async () => {
+  const { computed } = await import('vue');
+  return { useMapGetter: () => computed(() => () => false) };
+});
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { computed } = await import('vue');
+  return { usePermissionGranted: () => computed(() => true) };
+});
 vi.mock('vue-router', () => ({
   useRoute: () => routing.route,
   useRouter: () => ({ replace: routing.replace }),
