@@ -17,7 +17,8 @@ RSpec.describe Crm::Ai::FollowUpComposer, '#instructions' do
     'Fale como a corretora: diga corretor, cotação e apólice; chame de cliente só quem já contratou e de segurado só quem tem apólice.'
   end
   let(:linha_saude) do
-    'Fale de plano, vidas, titular e dependentes, operadora, boleto e reembolso; chame de cliente quem procura ou já tem o plano e nunca diga segurado nem apólice.'
+    'Fale de plano, vidas, titular e dependentes, operadora, boleto e reembolso; ' \
+      'chame de cliente quem procura ou já tem o plano e nunca diga segurado nem apólice.'
   end
 
   around do |example|
