@@ -63,6 +63,13 @@ describe('Anúncios da Meta · situação do anúncio (#2161)', () => {
     expect(wrapper.find('[data-ad-status-toggle]').text()).toBe(`${KEY}.PAUSE`);
   });
 
+  it('an archived ad is Not running and has no button', () => {
+    const wrapper = mountStatus({ gestao: { ...GESTAO, status: 'ARCHIVED' } });
+
+    expect(wrapper.find('[data-status]').attributes('data-status')).toBe('OFF');
+    expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(false);
+  });
+
   it('a paused ad offers to turn on', () => {
     const wrapper = mountStatus({ gestao: { ...GESTAO, status: 'PAUSED' } });
 

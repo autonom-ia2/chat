@@ -87,6 +87,29 @@ RSpec.describe 'CRM meta_ads_connection ad management (#2161)', type: :request d
     expect(response).to have_http_status(:not_found)
   end
 
+  it 'POST em anúncio de outra conta dá 404; Meta fora do ar dá 422 meta_unavailable' do
+    stub_request(:get, meta_graph_url('me/permissions'))
+      .to_return(status: 200, body: { data: [{ permission: 'ads_management', status: 'granted' }] }.to_json, headers: json)
+    stub_request(:get, meta_graph_url('999')).with(query: hash_including({}))
+                                             .to_return(status: 200, headers: json, body: { id: '999', account_id: '1' }.to_json)
+    post "#{path}/ads/999/status", params: { status: 'PAUSED' }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+    expect(response.parsed_body).to eq('error' => 'ad_not_found')
+
+    stub_request(:get, meta_graph_url(ad_id)).with(query: hash_including({})).to_return(status: 503, body: '{}', headers: json)
+    allow(Rails.logger).to receive(:warn)
+    get "#{path}/ads/#{ad_id}/management", headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error' => 'meta_unavailable')
+  end
+
+  it 'id com parâmetros escondidos (%3F) não chega à Meta' do
+    post "#{path}/ads/#{ad_id}%3Fmethod%3Ddelete/status", params: { status: 'PAUSED' }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:not_found)
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
   it 'sem conexão com conta de anúncios dá 404 not_connected' do
     Crm::MetaAdsConnection.find_by(account_id: account.id).destroy!
 

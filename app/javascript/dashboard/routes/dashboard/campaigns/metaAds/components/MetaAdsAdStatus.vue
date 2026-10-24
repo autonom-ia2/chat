@@ -26,9 +26,12 @@ const KEY = 'CRM_KANBAN.META_ADS_HUB.GESTAO.STATUS';
 // O botão mexe na situação do próprio anúncio. "No ar" só quando a entrega também está ativa: anúncio ativo com a
 // campanha ou o conjunto pausado (ou em análise, recusado…) fica "Fora do ar", e pausar continua valendo.
 const active = computed(() => props.gestao.status === 'ACTIVE');
+// Arquivado ou apagado também é "Fora do ar" (e sem botão: só ACTIVE e PAUSED mudam por aqui).
 const badge = computed(() => {
-  if (!active.value) return 'PAUSED';
-  return props.gestao.effective_status === 'ACTIVE' ? 'ACTIVE' : 'OFF';
+  if (props.gestao.status === 'PAUSED') return 'PAUSED';
+  return active.value && props.gestao.effective_status === 'ACTIVE'
+    ? 'ACTIVE'
+    : 'OFF';
 });
 const action = computed(() => (active.value ? 'PAUSE' : 'ACTIVATE'));
 const showButton = computed(

@@ -303,8 +303,12 @@ const loadGestao = async () => {
 
 watch(() => props.adId, loadGestao);
 
-const statusChanged = status => {
+// A entrega (`effective_status`) é a Meta quem diz: depois de mudar, a situação é lida de novo, sem tirar o selo.
+const statusChanged = async status => {
   gestao.value = { ...gestao.value, status };
+  const asked = props.adId;
+  const data = await lerGestao(asked);
+  if (data && asked === props.adId) gestao.value = data;
 };
 
 onMounted(() => {
@@ -398,7 +402,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           </span>
         </p>
         <MetaAdsAdStatus
-          v-if="gestao && !withoutSpend"
+          v-if="gestao"
           :ad-id="adId"
           :ad-name="ad.name || ''"
           :gestao="gestao"

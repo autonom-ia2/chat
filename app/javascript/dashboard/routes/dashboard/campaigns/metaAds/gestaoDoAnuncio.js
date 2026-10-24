@@ -20,11 +20,15 @@ export const mudarStatus = async (adId, status) => {
   return data;
 };
 
+// Até três nomes: com token colado de usuário do sistema a lista pode ser longa, e a linha é só para conferir.
+const PAGINAS_NA_LINHA = 3;
+
 export const lerPagina = async () => {
   try {
     const { data } = await CrmMetaAdsConnectionAPI.pages();
-    return data.pages?.length
-      ? { name: data.pages.map(page => page.name).join(', ') }
+    const names = (data.pages || []).map(page => page.name);
+    return names.length
+      ? { name: names.slice(0, PAGINAS_NA_LINHA).join(', ') }
       : null;
   } catch {
     return null;

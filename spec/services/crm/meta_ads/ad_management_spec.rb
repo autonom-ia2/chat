@@ -84,6 +84,38 @@ RSpec.describe Crm::MetaAds::AdManagement do
       expect(described_class.new(connection).payload(ad_id)[:post]).to include(page_name: 'Loja Exemplo', reactions: 128)
     end
 
+    it 'id que não é só dígitos não chega à Meta (sem parâmetro nem caminho extra)' do
+      management = described_class.new(connection)
+
+      ['123?method=post&status=PAUSED', '123/insights', 'me', '', nil].each do |bad|
+        expect(management.payload(bad)).to be_nil
+        expect { management.change!(bad, 'PAUSED') }.to raise_error(described_class::Error, 'ad_not_found')
+      end
+      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'a Meta devolvendo outro id (campanha, conjunto) não vale como o anúncio pedido' do
+      stub_request(:get, meta_graph_url(ad_id)).with(query: hash_including({}))
+                                               .to_return(status: 200, headers: json,
+                                                          body: { id: '777', account_id: connection.ad_account_id }.to_json)
+
+      expect(described_class.new(connection).payload(ad_id)).to be_nil
+    end
+
+    it 'post que volta como "não pode ser lido" (100) também tenta com o token da Página' do
+      stub_permissions('ads_management')
+      stub_ad
+      stub_request(:get, meta_graph_url(post_id)).with(query: { fields: Meta::AdsGraphClient::PAGE_POST_FIELDS },
+                                                       headers: { 'Authorization' => "Bearer #{MetaAdsHelpers::TEST_TOKEN}" })
+                                                 .to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
+      stub_request(:get, meta_graph_url('100000000000001')).with(query: { fields: 'access_token' })
+                                                           .to_return(status: 200, body: { access_token: 'PAGETOKEN123' }.to_json, headers: json)
+      stub_post(token: 'PAGETOKEN123')
+      allow(Rails.logger).to receive(:warn)
+
+      expect(described_class.new(connection).payload(ad_id)[:post]).to include(comments: 14)
+    end
+
     it 'falha passageira da Meta vira meta_unavailable, não anúncio sumido' do
       stub_ad(http: 500)
 
@@ -142,6 +174,13 @@ RSpec.describe Crm::MetaAds::AdManagement do
                                                        .to_return(status: 403, body: meta_graph_error(10).to_json, headers: json)
       allow(Rails.logger).to receive(:warn)
       expect(described_class.new(connection).pages).to eq([])
+    end
+
+    it 'modo parceiro não lista Páginas (o token é o da plataforma)' do
+      connection.update!(mode: 'partner', access_token: nil)
+
+      expect(described_class.new(connection).pages).to eq([])
+      expect(a_request(:get, meta_graph_url('me/accounts'))).not_to have_been_made
     end
   end
 end

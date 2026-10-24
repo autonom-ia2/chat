@@ -40,6 +40,7 @@ class Crm::MetaAds::AdManagement
 
   def change!(ad_id, status)
     raise Error, 'invalid_status' unless STATUSES.include?(status)
+    raise Error, 'ad_not_found' unless numeric_id?(ad_id)
     raise Error, 'cannot_change' unless can_change?
     raise Error, 'ad_not_found' if read_ad(ad_id).nil?
 
@@ -49,7 +50,11 @@ class Crm::MetaAds::AdManagement
     raise Error, result.transient? ? 'meta_unavailable' : 'meta_refused'
   end
 
+  # Só com o token do próprio cliente: no modo `partner` o token é o da plataforma, e `me/accounts` traria Páginas
+  # da plataforma (ou de outros clientes) para esta conta.
   def pages
+    return [] unless @connection.own_token?
+
     result = client.pages
     return [] unless result.ok
 
@@ -75,16 +80,29 @@ class Crm::MetaAds::AdManagement
     end
   end
 
-  # O anúncio só vale se for da conta de anúncios da conexão. Recusa por objeto, por permissão ou de outra conta: nil.
-  # Falha passageira vira `meta_unavailable`, para a tela dizer "tente de novo" em vez de sumir com o anúncio.
+  # O anúncio só vale se for da conta de anúncios da conexão e se a Meta devolver o mesmo id. Recusa por objeto, por
+  # permissão ou de outra conta: nil. Falha passageira vira `meta_unavailable`, para a tela dizer "tente de novo" em
+  # vez de sumir com o anúncio.
   def read_ad(ad_id)
+    return unless numeric_id?(ad_id)
+
     @ads ||= {}
     return @ads[ad_id] if @ads.key?(ad_id)
 
     result = client.ad_management(ad_id)
     raise Error, 'meta_unavailable' if result.transient?
 
-    @ads[ad_id] = result.ok && result.data['account_id'].to_s == @connection.ad_account_id.to_s ? result.data : nil
+    @ads[ad_id] = own_ad?(result, ad_id) ? result.data : nil
+  end
+
+  # O id entra no caminho da Graph: só dígitos, para que `?`, `/` ou `&` (o Rails decodifica %3F, %2F…) não virem
+  # outro caminho ou parâmetros extras na chamada à Meta.
+  def numeric_id?(ad_id)
+    ad_id.is_a?(String) && ad_id.present? && ad_id.each_char.all? { |char| char.between?('0', '9') }
+  end
+
+  def own_ad?(result, ad_id)
+    result.ok && result.data['id'].to_s == ad_id && result.data['account_id'].to_s == @connection.ad_account_id.to_s
   end
 
   def post_payload(post_id)
@@ -100,10 +118,12 @@ class Crm::MetaAds::AdManagement
     }
   end
 
+  # Ler post de Página com token de usuário costuma voltar por permissão (10, 200–299) ou como "não pode ser lido"
+  # (100): nos dois casos, segunda tentativa com o token da Página.
   def read_post(post_id)
     result = client.page_post(post_id)
     return result.data if result.ok
-    return unless result.scope_error?
+    return unless result.scope_error? || result.object_error?
 
     page_token = client.page_access_token(post_id.to_s.split('_').first)
     token = page_token.data.to_h['access_token'] if page_token.ok
