@@ -76,10 +76,19 @@ module Autonomia
         def settle(conversation, agent_inbox, message_id, posse)
           return unless current_token?(conversation, message_id)
           return esperar_o_assunto(conversation, message_id, posse) if esperar_o_assunto?(conversation, agent_inbox, message_id)
-          # #2154: o turno já foi respondido (por este dono, noutro settle): a marca deste turno sai.
-          return soltar_turno(conversation, message_id) unless assumir_o_turno?(conversation, agent_inbox, message_id, posse)
+          return posse_ja_tomada(conversation, agent_inbox, message_id) unless assumir_o_turno?(conversation, agent_inbox, message_id, posse)
 
           responder(conversation, agent_inbox, message_id, posse)
+        end
+
+        # #2154: outro settle tem a posse deste turno. A marca só sai se o turno já foi respondido (há resposta do robô a
+        # esta mensagem); se o outro settle ainda está na IA, a marca é dele e fica.
+        def posse_ja_tomada(conversation, agent_inbox, message_id)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+          return unless ::Autonomia::Agents::Operate::Responder.new(conversation: conversation, agent_inbox: agent_inbox,
+                                                                    reply_to_message_id: message_id).respondida?
+
+          soltar_turno(conversation, message_id)
         end
 
         def assumir_o_turno?(conversation, agent_inbox, message_id, posse)

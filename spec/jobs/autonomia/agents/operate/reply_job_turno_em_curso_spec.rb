@@ -92,6 +92,28 @@ RSpec.describe Autonomia::Agents::Operate::ReplyJob do
     expect(turno.em_curso?(conversation.id)).to be(false)
   end
 
+  # Dois settles do mesmo turno: o primeiro tem a posse e está na IA quando o segundo roda. O segundo não pode soltar a
+  # marca do primeiro (a avaliação pendente entregaria a conversa no meio da resposta).
+  it 'dois settles concorrentes: o segundo não solta a marca do primeiro, que solta ao terminar', :aggregate_failures do
+    gatilho!
+    marca_durante_a_ia = nil
+    answer = Autonomia::Agents::AnswerResult.new(reply: 'Claro, te ajudo.', confidence: 0.9, handoff: { should: false, reason: nil },
+                                                 used_knowledge: [], answered_from_knowledge: false)
+    answerer = instance_double(Autonomia::Agents::Answerer)
+    allow(answerer).to receive(:answer) do
+      settle! # o segundo settle, com outro job_id, enquanto o primeiro está na IA
+      marca_durante_a_ia = Redis::Alfred.get(turno.chave(conversation.id))
+      answer
+    end
+    allow(Autonomia::Agents::Answerer).to receive(:new).and_return(answerer)
+
+    settle!
+
+    expect(marca_durante_a_ia).to eq(mensagem.id.to_s)
+    expect(respostas.count).to eq(1)
+    expect(turno.em_curso?(conversation.id)).to be(false)
+  end
+
   it 'a entrega em pedaços assumiu o turno: a marca fica com a cadeia', :aggregate_failures do
     allow_any_instance_of(Autonomia::Agents::Operate::TypingIndicator).to receive(:on) # rubocop:disable RSpec/AnyInstance
     ia_responde("#{'Primeira parte da resposta, longa o bastante para virar um pedaço. ' * 4}\n\n#{'E a segunda parte. ' * 12}")

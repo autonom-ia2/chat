@@ -105,6 +105,10 @@ module Autonomia
         # Quem abriu a marca (ReplyJob#settle) só a solta quando não segue.
         def turno_segue? = @turno_segue == true
 
+        # #2154: o turno desta mensagem já tem resposta do robô (a consulta de idempotência, already_replied?). O
+        # ReplyJob#settle pergunta quando a posse do turno já foi tomada.
+        def respondida? = already_replied?
+
         # A resposta do agente é o sinal de silêncio? (compara o texto inteiro, normalizado, com o(s)
         # token(s) de silêncio). A instrução é quem decide emitir o sinal; aqui o sistema só HONRA.
         def silence_signal?(result)
