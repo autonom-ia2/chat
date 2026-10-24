@@ -52,7 +52,7 @@ module Crm
         # Decisão do Rodrigo (16/10, opção a): o card do pedido saiu da conversa (fechou) e o cliente pediu gente;
         # alguém recebe, pela regra do foco. A linha deixa contar quantas vezes isso acontece.
         registrar('desvio', motivo: 'pedido_card_fechado_foco') if @pelo_card && !Crm::Assunto.da_conversa?(@card, @conversation)
-        motivo = promessa_a_cumprir? ? MOTIVO_DA_PROMESSA : MOTIVO_DA_ENTREGA
+        motivo = promessa_a_cumprir? || depois_da_fala_do_agente? ? MOTIVO_DA_PROMESSA : MOTIVO_DA_ENTREGA
         entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: motivo, origem: @trigger, pelo_card: @pelo_card,
                                    pedido: { sugestao: @handoff[:suggested_agent], razao: @handoff[:reason] }).call
         depois_da_entrega(entrega)
@@ -87,9 +87,9 @@ module Crm
 
       def agente_nosso_segura?
         return false if dono_ativo.nil?
-        return true unless promessa_a_cumprir?
+        return true unless promessa_a_cumprir? || depois_da_fala_do_agente?
 
-        registrar('promessa_do_robo', motivo: OWNED_BY_OUR_AGENT)
+        registrar(promessa_a_cumprir? ? 'promessa_do_robo' : 'depois_da_fala_do_agente', motivo: OWNED_BY_OUR_AGENT)
         false
       end
 
@@ -105,6 +105,18 @@ module Crm
 
         @promessa_a_cumprir = FatosDaConversa.ligada?(@card.account) && FatosDaConversa.promessa?(@handoff) &&
                               dono_ativo.present? && !dono_ativo.agent&.instrucao_mantida?
+      end
+
+      # #2154 (flag `agente_so_informa`, regra do Rodrigo de 24/10): o agente nosso não passa mais a conversa; avisou o
+      # cliente e a fala já saiu (Crm::Ai::AvaliacaoDepoisDaFala). Nesta avaliação a IA de Atribuição decide com o agente
+      # no nome. Como na promessa, a espera vai com o motivo do pedido do robô (MOTIVO_DA_PROMESSA): a fila
+      # (HandoffDrainJob) não a larga de volta para o agente, que segue no nome até alguém receber. Os outros gatilhos
+      # (a mensagem do cliente, que roda antes da fala) seguem com o bloqueio do #1673.
+      def depois_da_fala_do_agente?
+        return @depois_da_fala_do_agente if defined?(@depois_da_fala_do_agente)
+
+        @depois_da_fala_do_agente = @trigger == AvaliacaoDepoisDaFala::TRIGGER && dono_ativo.present? &&
+                                    ::Autonomia::Agents::AgenteSoInforma.ligada?(@card.account)
       end
 
       def depois_da_entrega(entrega)

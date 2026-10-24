@@ -33,7 +33,8 @@ module Crm
         return 'ai_disabled' unless Config.enabled?
         return 'credentials_missing' unless credential_resolver.configured?
         return 'pipeline_ai_disabled' unless pipeline_ai_enabled?
-        return 'debounced' if debounced? && @trigger != 'manual'
+        # #2154: a avaliação depois da fala do agente também não espera o intervalo (a do cliente pode ter acabado de rodar).
+        return 'debounced' if debounced? && ['manual', AvaliacaoDepoisDaFala::TRIGGER].exclude?(@trigger)
         return 'card_not_open' unless @card.open?
         # Multifunil (#1147): só o assunto atual da conversa é avaliado; "Avaliar agora" é escolha da pessoa e o card
         # tocado pela mensagem (#1693) é escolha da IA de assunto.
