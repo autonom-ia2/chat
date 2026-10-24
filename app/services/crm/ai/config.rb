@@ -285,15 +285,15 @@ module Crm
         opcoes.find { |horas| horas.eql?(valor) || horas.to_s.eql?(valor) }
       end
 
+      # Modelos sem pedido aberto: sem aviso de andamento nem "deu certo?". Cobrança tem o lembrete de pagamento; a
+      # Carteira (#2083) acompanha quem já tem plano, e o card fica meses em "Em uso" (a pessoa pode ligar depois).
+      SEM_PEDIDO_TEMPLATES = %w[COBRANCA CARTEIRA].freeze
+
       def self.default_service_reminders(pipeline)
         template = (pipeline.metadata || {})['template'].to_s
         novo_de_atender = !pipeline.counts_as_sale? && template.present? && template != 'VENDAS'
-        cobranca = template == 'COBRANCA'
-        {
-          'progress' => novo_de_atender && !cobranca,
-          'resolved_check' => novo_de_atender && !cobranca,
-          'payment' => novo_de_atender && cobranca
-        }
+        acompanha = novo_de_atender && SEM_PEDIDO_TEMPLATES.exclude?(template)
+        { 'progress' => acompanha, 'resolved_check' => acompanha, 'payment' => novo_de_atender && template == 'COBRANCA' }
       end
 
       # Don't re-hand-off the same conversation within this window (loop/spam guard).

@@ -22,9 +22,9 @@ describe('dashboard locale with the account translation pack (#1550)', () => {
     await setDashboardLocale(i18n.global, 'pt_BR');
 
     expect(i18n.global.locale.value).toBe('pt_BR');
-    expect(i18n.global.t('CRM_KANBAN.DRAWER.STATUS_WON')).toBe('Plano ativo');
+    expect(i18n.global.t('CRM_KANBAN.DRAWER.STATUS_WON')).toBe('Implantado');
     expect(i18n.global.t('CRM_KANBAN.DRAWER.STATUS_LOST')).toBe('Não fechou');
-    expect(i18n.global.t('CRM_CARD.DESFECHO.GANHOU')).toBe('Fechou o plano');
+    expect(i18n.global.t('CRM_CARD.DESFECHO.GANHOU')).toBe('Implantado');
     // Texto fora do pacote segue o geral.
     expect(i18n.global.t('CANNED_MGMT.SEARCH_PLACEHOLDER')).toBe(
       'Pesquisar respostas prontas...'
@@ -36,7 +36,7 @@ describe('dashboard locale with the account translation pack (#1550)', () => {
     const i18n = await novoI18n('en');
     await setDashboardLocale(i18n.global, 'en');
 
-    expect(i18n.global.t('CRM_KANBAN.DRAWER.STATUS_WON')).toBe('Active plan');
+    expect(i18n.global.t('CRM_KANBAN.DRAWER.STATUS_WON')).toBe('Implemented');
     expect(i18n.global.t('CRM_KANBAN.DRAWER.STATUS_LOST')).toBe('Not closed');
   });
 

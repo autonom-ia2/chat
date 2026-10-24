@@ -623,7 +623,37 @@ describe('CrmPipelineDrawer Atender', () => {
       ]);
     });
 
-    it.each([null, 'seguros', 'seguros.saude_beneficios'])(
+    // #2083 — a saúde tem a Carteira primeiro no Atender e salva os nomes
+    // "Renovado" / "Cancelado" do modelo.
+    it('health: Serve starts at the Portfolio and saves its outcome names', async () => {
+      conta.autonomia_pacote = 'seguros.saude_beneficios';
+      const wrapper = criar();
+      await wrapper.get('[data-tipo="VENDER"]').trigger('click');
+      expect(wrapper.find('[data-modelo]').exists()).toBe(false);
+      await wrapper.get('[data-tipo="ATENDER"]').trigger('click');
+      expect(modelos(wrapper)).toEqual([
+        'CARTEIRA',
+        'ATENDIMENTO',
+        'POS_VENDA',
+        'COBRANCA',
+        'AGENDAMENTOS',
+      ]);
+      expect(wrapper.vm.modelo).toBe('CARTEIRA');
+      const payload = await salvar(wrapper);
+      expect(payload.pipeline.template).toBe('CARTEIRA');
+      expect(payload.pipeline.outcome_labels).toEqual({
+        success: 'CRM_FUNIL.MODELOS.CARTEIRA.SUCESSO',
+        failure: 'CRM_FUNIL.MODELOS.CARTEIRA.FALHA',
+      });
+      expect(payload.stages.map(stage => stage.category)).toEqual([
+        'novo',
+        'andamento',
+        'andamento',
+        'resolvido',
+      ]);
+    });
+
+    it.each([null, 'seguros', 'seguros.insurtech'])(
       'account %j: same journey as today, no broker template anywhere',
       async pacote => {
         conta.autonomia_pacote = pacote;
