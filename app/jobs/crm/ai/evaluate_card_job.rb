@@ -18,7 +18,8 @@ class Crm::Ai::EvaluateCardJob < ApplicationJob
 
     wait_seconds = evaluate_wait_seconds(card)
     if wait_seconds.positive?
-      self.class.set(wait: wait_seconds.seconds).perform_later(card.id, debounce_token, trigger, tentativa)
+      # O 4º argumento só quando há tentativa: o worker antigo, no meio do deploy, recebe o job de sempre.
+      self.class.set(wait: wait_seconds.seconds).perform_later(card.id, debounce_token, trigger, *tentativa_extra(tentativa))
       return
     end
 
@@ -28,6 +29,8 @@ class Crm::Ai::EvaluateCardJob < ApplicationJob
   end
 
   private
+
+  def tentativa_extra(tentativa) = tentativa.to_i.positive? ? [tentativa.to_i] : []
 
   def debounce_stale?(card, debounce_token)
     return false if debounce_token.blank?

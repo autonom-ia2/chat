@@ -34,7 +34,7 @@ RSpec.describe Crm::Ai::AvaliacaoDepoisDaFala do
     it 'agenda a avaliação do card em foco com o gatilho da fala do agente, sem token', :aggregate_failures do
       com_passagem!
 
-      expect { agendar }.to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, described_class::TRIGGER, 0)
+      expect { agendar }.to have_enqueued_job(Crm::Ai::EvaluateCardJob).with(card.id, nil, described_class::TRIGGER)
       expect(Rails.logger).to have_received(:info).with(a_string_including("conversa=#{conversation.id}", 'desfecho=agendada'))
       expect(Autonomia::Agents::AgentEvent.atribuicao_nao_avaliou.count).to eq(0)
     end
@@ -55,7 +55,7 @@ RSpec.describe Crm::Ai::AvaliacaoDepoisDaFala do
 
       freeze_time do
         expect { agendar }.to have_enqueued_job(Crm::Ai::EvaluateCardJob)
-          .with(card.id, nil, described_class::TRIGGER, 0)
+          .with(card.id, nil, described_class::TRIGGER)
           .at(be_within(2.seconds).of((resto + Crm::Ai::Config::DEBOUNCE_SECONDS).seconds.from_now))
       end
       expect(Rails.logger).to have_received(:info).with(a_string_including('desfecho=adiada_pelo_intervalo'))

@@ -46,7 +46,7 @@ module Crm::Ai::AvaliacaoDepoisDaFala
     espera = vez_no_intervalo(conversation)
     return registrar(conversation, card, 'ja_adiada') if espera.nil?
 
-    Crm::Ai::EvaluateCardJob.set(wait: espera).perform_later(card.id, nil, TRIGGER, 0)
+    Crm::Ai::EvaluateCardJob.set(wait: espera).perform_later(card.id, nil, TRIGGER)
     registrar(conversation, card, espera > debounce ? 'adiada_pelo_intervalo' : 'agendada')
   end
 
