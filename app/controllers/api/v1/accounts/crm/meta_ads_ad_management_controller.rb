@@ -70,11 +70,15 @@ class Api::V1::Accounts::Crm::MetaAdsAdManagementController < Api::V1::Accounts:
   end
 
   # Pausar ou ativar mexe no dinheiro do cliente: fica na Auditoria da conta (o log da aplicação não sobrevive ao
-  # deploy). Só id, nome do anúncio e situação nova; nunca o token.
+  # deploy). Só id, nome do anúncio e situação nova; nunca o token. A Meta já mudou o anúncio quando isto roda: falha
+  # ao gravar vai para o rastreador de erros e a resposta continua dizendo a verdade (a situação nova), em vez de um 500
+  # que faria a pessoa repetir achando que não foi.
   def audit!(ad_id, status)
     Audited.audit_class.create!(
       auditable: Current.account, user: Current.user, action: AUDIT_ACTION,
       audited_changes: { 'ad_id' => ad_id, 'ad_name' => management.ad_name(ad_id), 'status' => status }.compact
     )
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: Current.account).capture_exception
   end
 end

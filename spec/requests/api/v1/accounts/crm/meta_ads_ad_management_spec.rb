@@ -66,6 +66,20 @@ RSpec.describe 'CRM meta_ads_connection ad management (#2161)', type: :request d
     expect(audit.audited_changes.to_json).not_to include(MetaAdsHelpers::TEST_TOKEN)
   end
 
+  it 'falha ao gravar a Auditoria não vira 500: a Meta já mudou, a resposta diz a situação nova e o erro vai ao rastreador' do
+    stub_meta
+    stub_request(:post, meta_graph_url(ad_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)
+    allow(Audited.audit_class).to receive(:create!).and_raise(ActiveRecord::RecordInvalid)
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+    post "#{path}/ads/#{ad_id}/status", params: { status: 'PAUSED' }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to eq('status' => 'PAUSED')
+    expect(tracker).to have_received(:capture_exception)
+  end
+
   it 'agente comum não vê nem muda' do
     get "#{path}/ads/#{ad_id}/management", headers: agent.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)
