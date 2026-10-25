@@ -41,7 +41,7 @@ class Autonomia::Agents::RegistroDaConversaExcluida
   end
   # Ainda tem chave fora da lista (ou não é objeto): a linha tem o que limpar.
   SOBRA_CHAVE = lambda do |coluna|
-    "(jsonb_typeof(#{coluna}) IS DISTINCT FROM 'object' OR (#{coluna} - ARRAY[?]::text[]) <> '{}'::jsonb)"
+    "(CASE WHEN jsonb_typeof(#{coluna}) = 'object' THEN (#{coluna} - ARRAY[?]::text[]) <> '{}'::jsonb ELSE TRUE END)"
   end
   # A marca do ToolRun#finish!: intenção anotada e número ausente.
   DUPLICADA = 'CASE WHEN COALESCE((handle->>?)::int, 0) > 0 AND (handle->>?) IS NULL THEN ?::jsonb ELSE ?::jsonb END'.freeze

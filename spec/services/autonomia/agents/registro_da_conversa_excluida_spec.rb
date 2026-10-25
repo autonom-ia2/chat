@@ -98,7 +98,7 @@ RSpec.describe Autonomia::Agents::RegistroDaConversaExcluida do
     expect([run.reload.updated_at, evento.reload.attributes]).to eq(antes)
   end
 
-  # Fica para a Issue de seguimento: um turno em andamento que abre uma execução depois da limpeza grava os argumentos
+  # Fica para a Issue de seguimento (#2175): um turno em andamento que abre uma execução depois da limpeza grava os argumentos
   # numa conversa que não existe mais. Este exemplo registra o limite de hoje.
   it 'limite conhecido: execução aberta depois do destroy não é limpa por este serviço' do
     conversation.destroy!
