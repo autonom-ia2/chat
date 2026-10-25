@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_440000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_470000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3072,6 +3072,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_440000) do
     t.text "permissions", default: [], array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index "account_id, lower(TRIM(BOTH FROM name))", name: "index_custom_roles_on_account_id_and_normalized_name", unique: true
     t.index ["account_id"], name: "index_custom_roles_on_account_id"
   end
 
@@ -4248,6 +4249,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_440000) do
   end
 
   add_foreign_key "account_email_oauth_apps", "accounts"
+  add_foreign_key "account_users", "custom_roles", validate: false
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "autonomia_account_links", "accounts", on_delete: :cascade

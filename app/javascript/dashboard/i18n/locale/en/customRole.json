@@ -257,7 +257,8 @@
       "NAME": {
         "LABEL": "Name",
         "PLACEHOLDER": "E.g. Night shift agent",
-        "ERROR": "Give the role a name with at least 2 characters."
+        "ERROR": "Give the role a name with at least 2 characters.",
+        "TAKEN": "There is already a role with this name. Choose another one."
       },
       "DESCRIPTION": {
         "LABEL": "Who it is for (optional)",
@@ -301,6 +302,16 @@
         "MESSAGE": "Are you sure to delete ",
         "YES": "Yes, delete ",
         "NO": "No, keep "
+      },
+      "MOVE": {
+        "TITLE": "Where do the people go? | Where does the 1 person go? | Where do the {n} people go?",
+        "DESCRIPTION": "“{name}” will be deleted. Choose the role these people will have from now on.",
+        "LABEL": "New role for these people",
+        "PLACEHOLDER": "Choose a role",
+        "NO_ROLE": "No role (plain agent)",
+        "NO_ROLE_HINT": "Sees the CRM like any plain agent",
+        "NO_ROLE_WARNING": "Without a role, they get the access of a plain agent, which sees almost all of the CRM.",
+        "CONFIRM": "Move and delete"
       }
     },
     "EXTRAS": {
@@ -367,6 +378,12 @@
       "LOCK": {
         "MISSING": "You do not have this key",
         "DELEGATION": "Only someone who can grant access above their own"
+      },
+      "LOST_ACCESS": {
+        "TITLE": "Nobody loses access | 1 person will lose access | {n} people will lose access",
+        "DESCRIPTION": "They lose all or part of: {areas}.",
+        "CONFIRM": "Save anyway",
+        "BACK": "Back"
       }
     },
     "SUMMARY": {
