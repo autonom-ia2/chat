@@ -1,5 +1,25 @@
 # Arquivar um funil (#2095), com a opção de levar antes os cards abertos para uma etapa de outro funil ativo, as caixas
-# para outro funil ativo e de passar o "principal" para outro funil. Tudo vai numa transação: se algo falhar, nada muda.
+# para outro funil ativo e de passar o "principal" para outro funil. O arquivamento vai numa transação: se algo falhar,
+# o funil, as caixas e o principal não mudam.
+#
+# Mover (#2145): num lote só, o card de cada cliente ficava travado até o fim (1.000 cards seguravam 2,3 s a 3,6 s quem
+# fosse criar ou mexer em card desses clientes). Com mais de LOTE cards abertos, os ids deles são lidos uma vez, no
+# começo, e vão em lotes de LOTE, cada um na sua transação; a transação final leva o último lote, o que nasceu ou voltou
+# ao funil no meio, e arquiva. Até LOTE cards, tudo vai na transação final, como antes. Ler os ids uma vez é o que faz o
+# laço terminar: dois arquivamentos cruzados (P1 para P2 e P2 para P1) não ficam devolvendo cards um ao outro.
+# Cada lote confere de novo, sob as travas, o que a transação final confere (o funil não mudou de status desde o
+# começo, o novo principal, a regra do único principal, o destino dos cards e o das caixas): o que seria recusado no
+# fim é recusado antes do lote. Se um lote for recusado no meio (o destino arquivado, ou este funil arquivado por outro
+# pedido, entre dois lotes), os lotes já levados ficam no destino e o funil continua como estava, com o resto; a recusa
+# leva quantos foram (`moved_before_failure`, que o controller devolve como `moved_count`). Se o destino foi arquivado
+# no meio, os levados seguem a escolha daquele arquivamento (no cruzado P1 para P2 e P2 para P1, podem ter voltado à
+# origem): a contagem é de quantos saíram, não de onde estão agora. Arquivar de novo leva o que sobrou.
+# Cliente que já tinha card aberto no funil de destino (#2145, decisão do Rodrigo, opção 1): o card movido vai mesmo
+# assim. O PLANO do multifunil (R1) aceita vários cards abertos do mesmo cliente no mesmo funil. O resultado lista esses
+# clientes (`clientes_com_dois_abertos`), para o resumo dizer "N clientes ficaram com mais de um card aberto em <funil>".
+#
+# Entre os lotes, as caixas ainda apontam para este funil: o cliente sem card aberto que escrever nesse meio ganha card
+# aqui, e ele vai no último lote.
 #
 # Sem destino, os cards abertos ficam no funil arquivado e voltam ao quadro quando ele for restaurado
 # (Api::V1::Accounts::Crm::PipelinesController#restore). Com `stop_follow_ups` ("Guardar junto" da janela nova, decisão
@@ -43,10 +63,17 @@ class Crm::Pipelines::Archiver
   TRAVA_DO_FUNIL = 'FOR NO KEY UPDATE'.freeze
   # O que o update! do card valida e lê: pré-carregado uma vez para o lote, não uma consulta por card.
   CARD_PRELOAD = %i[contact inbox team primary_conversation owner].freeze
+  # Cards por transação ao mover (#2145): ~0,3 s de trava por lote, pela medida da revisão do #2097.
+  LOTE = 100
 
-  Result = Struct.new(:moved, :stopped_follow_ups, :moved_inboxes, :inboxes_target_pipeline_id, keyword_init: true)
+  Result = Struct.new(:moved, :stopped_follow_ups, :moved_inboxes, :inboxes_target_pipeline_id, :clientes_com_dois_abertos,
+                      keyword_init: true)
 
-  # O destino não serve; a mensagem é o código da recusa (INVALID_TARGET, INVALID_INBOXES_TARGET ou INVALID_DEFAULT).
+  # Outro pedido arquivou ou restaurou este funil enquanto os lotes saíam: as escolhas eram para o funil de antes.
+  CHANGED = 'crm.pipeline_archive_changed'.freeze
+
+  # O destino não serve; a mensagem é o código da recusa (INVALID_TARGET, INVALID_INBOXES_TARGET, INVALID_DEFAULT ou
+  # CHANGED).
   class InvalidTarget < StandardError; end
 
   # A regra do último funil ativo ou do único principal recusou (Crm::Pipeline#motivo_para_nao_arquivar).
@@ -72,24 +99,105 @@ class Crm::Pipelines::Archiver
     @inboxes_target = escolhas[:inboxes_target]
     @new_default = escolhas[:new_default]
     @stop_follow_ups = escolhas[:stop_follow_ups] == true
+    @status_inicial = pipeline.status
+    @moved_before_failure = 0
   end
 
+  # Quantos cards os lotes já confirmados levaram, quando o arquivamento é recusado ou falha depois deles.
+  attr_reader :moved_before_failure
+
   def perform
+    result = arquivar!
+    Result.new(**result.to_h, clientes_com_dois_abertos: resumo_dos_dois_abertos(result.moved))
+  end
+
+  private
+
+  def arquivar!
+    movidos = @target_stage ? mover_em_lotes! : []
     result = nil
     ActiveRecord::Base.transaction do
-      Crm::Pipelines::TravaDeArquivar.travar!(@pipeline.account_id)
-      @pipeline.lock!(TRAVA_DO_FUNIL)
+      travar_funil!
+      recusar_se_o_funil_mudou!
       promote_new_default!
       motivo = @pipeline.motivo_para_nao_arquivar
       raise Blocked, motivo if motivo
 
       result = archive!
     end
-    result.moved.each { |card| Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_MOVED) }
-    result
+    avisar_movidos(result.moved)
+    Result.new(**result.to_h, moved: movidos + result.moved)
+  rescue StandardError
+    # Falhou na transação final: os lotes já tinham saído (se falhou num lote, mover_em_lotes! já contou).
+    @moved_before_failure = movidos.size if movidos
+    raise
   end
 
-  private
+  def travar_funil!
+    Crm::Pipelines::TravaDeArquivar.travar!(@pipeline.account_id)
+    @pipeline.lock!(TRAVA_DO_FUNIL)
+  end
+
+  # Os lotes antes da transação final (ver o cabeçalho), dos ids lidos uma vez; o último lote fica para ela.
+  def mover_em_lotes!
+    lotes = @pipeline.cards.open.order(:id).pluck(:id).each_slice(LOTE).to_a
+    lotes[0...-1].each_with_object([]) do |ids, movidos|
+      lote = ActiveRecord::Base.transaction do
+        travar_funil!
+        move_open_cards!(conferir_escolhas!, ids: ids)
+      end
+      movidos.concat(lote)
+      @moved_before_failure = movidos.size
+      avisar_movidos(lote)
+    end
+  end
+
+  def recusar_se_o_funil_mudou!
+    raise InvalidTarget, CHANGED if @pipeline.status != @status_inicial
+  end
+
+  # O que a transação final confere, sem mexer em nada e na mesma ordem de travas dela (novo principal, destino dos
+  # cards, destino das caixas): o lote só sai se o fim não fosse recusar. A regra do funil
+  # (Crm::Pipeline#motivo_para_nao_arquivar) com o novo principal, quando veio, já resolvendo o "único principal"; o
+  # "último funil ativo" não acontece com destino, que é de outro funil ativo. Devolve a etapa de destino.
+  def conferir_escolhas!
+    recusar_se_o_funil_mudou!
+    lock_active_other!(@new_default.id, INVALID_DEFAULT) if @new_default
+    motivo = @pipeline.motivo_para_nao_arquivar
+    raise Blocked, motivo if motivo && !(motivo == 'only_default' && @new_default)
+
+    target = lock_target!
+    lock_active_other!(@inboxes_target.id, INVALID_INBOXES_TARGET) if @inboxes_target
+    target
+  end
+
+  # O arquivamento já está confirmado: se a leitura do resumo falhar, ele sai sem a lista (com o erro no log), em vez de
+  # a resposta virar erro.
+  def resumo_dos_dois_abertos(movidos)
+    clientes_com_dois_abertos(movidos)
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.error("[crm][pipelines][archiver] pipeline_id=#{@pipeline.id} resumo_dois_abertos #{e.class.name}: #{e.message.to_s[0, 160]}")
+    []
+  end
+
+  # Lido depois de confirmar, só para o resumo: os clientes dos cards movidos que já tinham outro card aberto no funil
+  # de destino (um card que não veio deste funil). Um por cliente, com o card movido.
+  def clientes_com_dois_abertos(movidos)
+    contatos = movidos.filter_map(&:contact_id).uniq
+    return [] if contatos.empty?
+
+    ja_abertos = contatos_ja_abertos_no_destino(contatos, movidos.map(&:id))
+    movidos.select { |card| ja_abertos.include?(card.contact_id) }.uniq(&:contact_id).map { |card| cliente_do_resumo(card) }
+  end
+
+  def contatos_ja_abertos_no_destino(contatos, movidos_ids)
+    Crm::Card.open.where(account_id: @pipeline.account_id, pipeline_id: @target_stage.pipeline_id, contact_id: contatos)
+             .where.not(id: movidos_ids).distinct.pluck(:contact_id).to_set
+  end
+
+  def cliente_do_resumo(card) = { contact_id: card.contact_id, name: card.contact&.name, card_id: card.id }
+
+  def avisar_movidos(cards) = cards.each { |card| Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_MOVED) }
 
   def archive!
     target = lock_target!
@@ -134,9 +242,13 @@ class Crm::Pipelines::Archiver
     pipeline
   end
 
-  def move_open_cards!(target)
+  # ids: o lote; sem ele, todos os abertos (a transação final).
+  def move_open_cards!(target, ids: nil)
     now = Time.current
-    cards = @pipeline.cards.open.order(:id).lock(TRAVA_DO_FUNIL).includes(*CARD_PRELOAD).to_a
+    @stage_names = nil
+    abertos = @pipeline.cards.open
+    abertos = abertos.where(id: ids) if ids
+    cards = abertos.order(:id).lock(TRAVA_DO_FUNIL).includes(*CARD_PRELOAD).to_a
     sem_dono = Crm::Card.donos_fora_da_conta(@pipeline.account_id, cards.map(&:owner_id))
     cards.each do |card|
       attributes = { pipeline: target.pipeline, stage: target, entered_stage_at: now, last_activity_at: now }

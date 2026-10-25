@@ -15,6 +15,7 @@ const CODIGOS = {
   'crm.pipeline_archive_invalid_new_default': 'PRINCIPAL_INVALIDO',
   'crm.pipeline_archive_last_active': 'ULTIMO_FUNIL',
   'crm.pipeline_archive_only_default': 'UNICO_PRINCIPAL',
+  'crm.pipeline_archive_changed': 'FUNIL_MUDOU',
   forbidden: 'SEM_PERMISSAO',
 };
 

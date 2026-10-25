@@ -10,7 +10,7 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
     authorize ::Inbox, :campaigns?
 
     links = tracked_links.to_a
-    @campaigns = Ctwa::TrackedLinkCampaigns.for_links(Current.account, links.select(&:website?), include_revenue: revenue_visible?)
+    @campaigns = Ctwa::TrackedLinkCampaigns.for_links(Current.account, links.select(&:website?), account_user: Current.account_user)
     render json: { payload: links.map { |tracked_link| tracked_link_payload(tracked_link) } }
   end
 
@@ -27,7 +27,7 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
     authorize ::Campaign, :update?
 
     @tracked_link.update!(update_attributes)
-    @campaigns = Ctwa::TrackedLinkCampaigns.for_links(Current.account, [@tracked_link].select(&:website?), include_revenue: revenue_visible?)
+    @campaigns = Ctwa::TrackedLinkCampaigns.for_links(Current.account, [@tracked_link].select(&:website?), account_user: Current.account_user)
     render json: { payload: tracked_link_payload(@tracked_link) }
   end
 
@@ -105,11 +105,6 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
       ad_url_params: AD_URL_PARAMS,
       campaigns: (@campaigns || {}).fetch(tracked_link.id, [])
     }
-  end
-
-  # Valor de vendas por campanha é financeiro: só administrador vê (nunca por função).
-  def revenue_visible?
-    Current.account_user&.administrator? || false
   end
 
   def short_url_for(tracked_link)

@@ -78,7 +78,6 @@ const quadro = computed(() => {
     quemCuida: props.dono || props.card?.owner?.name || '',
   };
 });
-const naoInformado = t('CRM_CARD.NAO_INFORMADO');
 // Reunião marcada: quem participa e quem marcou. A esquerda já mostra quando,
 // o assunto e o telefone; aqui vem o que ela não mostra.
 const MARCOU_PELO_CLIENTE = ['public_link', 'invite'];
@@ -86,7 +85,8 @@ const quemMarcou = reuniao => {
   if (MARCOU_PELO_CLIENTE.includes(reuniao.source))
     return t(`${L}.MARCOU_CLIENTE`);
   if (reuniao.source === 'ai') return t(`${L}.MARCOU_ASSISTENTE`);
-  return reuniao.scheduled_by?.name || naoInformado;
+  // Sem quem marcou só quando a pessoa foi excluída da plataforma (#2135).
+  return reuniao.scheduled_by?.name || t(`${L}.PESSOA_REMOVIDA`);
 };
 const fichaReuniao = computed(() => {
   const reuniao = props.reuniao;

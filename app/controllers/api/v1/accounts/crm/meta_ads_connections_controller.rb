@@ -37,7 +37,8 @@
 # (Panel::WhatsappCohort).
 #
 # Sem a permissão, 403 (não 401: a sessão é válida, só falta a permissão). As listas que levam a uma conversa
-# mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794).
+# mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794). Os valores de venda em R$ do painel,
+# do anúncio, das listas e do consultor seguem a mesma pessoa (#2075, Crm::MetaAds::Panel::SalesValue).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
   include Crm::MetaAdsPanelSource
@@ -107,7 +108,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     connection = current_connection
     refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
-    report = ::Crm::MetaAds::Panel::Report.new(connection, period: panel_period)
+    report = ::Crm::MetaAds::Panel::Report.new(connection, period: panel_period, visible: viewer)
     render json: { panel: panel_payload(connection, report).merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
   end
 
@@ -224,8 +225,9 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     report.payload.merge(
       meta_comparison: ::Crm::MetaAds::Panel::MetaComparison.new(connection, report).payload,
       response_time: response_time(connection, report),
-      advice: ::Crm::MetaAds::VisibleConversations.current.advice(
-        ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report, shown: !authenticate_by_access_token?)
+      advice: viewer.advice(
+        ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report, shown: !authenticate_by_access_token?,
+                                                              visible: viewer)
       )
     )
   end

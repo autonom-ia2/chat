@@ -2840,6 +2840,7 @@
           "STALLED_QUOTES": {
             "TEXT": "1 quote from ads has been stalled for more than {days} days. It came from \"{ad}\". | {count} quotes from ads have been stalled for more than {days} days. Most came from \"{ad}\".",
             "WHY": "Why: they add up to {value} in negotiation. Following up with someone who asked for a quote costs less than advertising again.",
+            "WHY_NO_VALUE": "Why: following up with someone who asked for a quote costs less than advertising again.",
             "BUTTON": "See the quote | See the {count} quotes"
           },
           "FIX_TRACKING": {
@@ -3157,6 +3158,7 @@
         "DISCARD": "Discard changes",
         "TEST": "Send test",
         "TEST_HINT": "Sends yesterday's summary now, marked as a test.",
+        "NEEDS_SALES_VALUE": "The summary shows how much was sold. Turning it on, changing it and testing it need permission to see sales values.",
         "TEST_NEEDS_SAVE": "Save the sending number and the receiving number before testing.",
         "TEST_NEEDS_SAVE_CHANGES": "Save or discard your changes before testing.",
         "TEST_NEEDS_ORIGIN": "The sending number is not connected now. Choose another one and save before testing.",
@@ -3180,6 +3182,7 @@
           "SEND_FAILED": "WhatsApp did not accept the message. Check the connection of the sending number.",
           "SEND_UNCERTAIN": "We could not confirm it arrived. Check your WhatsApp before trying again.",
           "WHATSAPP_NUMBER_NOT_FOUND": "This number has no WhatsApp.",
+          "SALES_VALUE_FORBIDDEN": "You need permission to see sales values to change or test the summary.",
           "GENERIC": "It did not work this time. Try again."
         }
       }
@@ -5715,6 +5718,7 @@
       "QUEM_MARCOU": "Who set it",
       "MARCOU_CLIENTE": "The customer, through the link",
       "MARCOU_ASSISTENTE": "The assistant",
+      "PESSOA_REMOVIDA": "Person removed",
       "CONVIDADOS": "Other guests",
       "N_CONVIDADOS": "{n} person | {n} people",
       "ESTA_AQUI": "It is here",
@@ -6616,7 +6620,8 @@
       "DESTINO_CAIXAS_INVALIDO": "the pipeline chosen for the inboxes is no longer available",
       "PRINCIPAL_INVALIDO": "the pipeline chosen as main is no longer available",
       "ULTIMO_FUNIL": "it is the only active pipeline; create another one first",
-      "UNICO_PRINCIPAL": "it is the main pipeline; choose another main pipeline first"
+      "UNICO_PRINCIPAL": "it is the main pipeline; choose another main pipeline first",
+      "FUNIL_MUDOU": "someone else archived or restored this pipeline in the meantime; close the window and open it again"
     },
     "MOTIVO_IA": {
       "FORA_DO_NEGOCIO": "it was not a deal",
@@ -6714,10 +6719,14 @@
       "CAIXA_VAI_PARA_OUTRO": "New customers from {caixa} become cards in {funil}, another pipeline linked to it.",
       "BOTAO": "Archive pipeline",
       "ERRO": "Could not archive the pipeline: {motivo}. Nothing changed.",
+      "ERRO_PARCIAL": "Could not finish archiving the pipeline: {motivo}. Before that, 1 card had already left for the chosen stage. Check the board before trying again. | Could not finish archiving the pipeline: {motivo}. Before that, {count} cards had already left for the chosen stage. Check the board before trying again.",
       "ERRO_PREVIA": "Could not check the pipeline: {motivo}. Close and try again.",
       "ERRO_ETAPAS": "Could not load the stages of that pipeline: {motivo}. Choose it again.",
       "ARQUIVADO": "Pipeline {funil} archived.",
       "FORAM_PARA": "1 card went to {funil}. | {count} cards went to {funil}.",
+      "MAIS_DE_UM_ABERTO": "1 customer now has more than one open card in {funil}. | {count} customers now have more than one open card in {funil}.",
+      "MAIS_DE_UM_ABERTO_QUEM": "1 customer now has more than one open card in {funil}: {nomes}. | {count} customers now have more than one open card in {funil}: {nomes}.",
+      "MAIS_N": "1 more | {count} more",
       "FICARAM_GUARDADOS": "1 open card was kept with it. | {count} open cards were kept with it.",
       "CAIXAS_AGORA": "New customers from {caixas} now go into {funil}.",
       "CAIXAS_PARARAM": "New customers from {caixas} no longer go into this pipeline."
