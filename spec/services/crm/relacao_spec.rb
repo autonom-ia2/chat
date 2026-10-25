@@ -48,13 +48,16 @@ RSpec.describe Crm::Relacao do
       expect(described_class.cards_do_funil(account)).to contain_exactly(do_interessado, sem_contato)
     end
 
-    it 'não mistura contas: o contato de outra conta não tira card desta' do
+    # O Crm::Card já recusa contato de outra conta; a conta no NOT EXISTS segura dado antigo que escapou disso.
+    it 'não mistura contas: só o contato desta conta tira card dos Números desta' do
       outra = create(:account)
       outra.enable_features!('contato_relacao')
-      create(:contact, account: outra, relacao: :parceiro)
+      parceiro_da_outra = create(:contact, account: outra, relacao: :parceiro)
       do_interessado = card(interessado)
+      com_contato_de_fora = card(interessado)
+      com_contato_de_fora.update_columns(contact_id: parceiro_da_outra.id) # rubocop:disable Rails/SkipsModelValidations
 
-      expect(described_class.cards_do_funil(account)).to contain_exactly(do_interessado)
+      expect(described_class.cards_do_funil(account)).to contain_exactly(do_interessado, com_contato_de_fora)
       expect(described_class.cards_do_funil(outra)).to be_empty
     end
   end

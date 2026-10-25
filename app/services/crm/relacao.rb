@@ -19,13 +19,17 @@ module Crm::Relacao
     contact.present? && !contact.relacao_interessado? && ligada?(contact.account)
   end
 
-  # NOT EXISTS, e não NOT IN: card sem contato continua contando.
+  # NOT EXISTS, e não NOT IN: card sem contato continua contando. A conta no filtro usa o índice parcial
+  # idx_contacts_relacao_fora_do_funil e não deixa contato de outra conta tirar card desta.
   def cards_do_funil(account)
     cards = account.crm_cards
     return cards unless ligada?(account)
 
     cards.where(<<~SQL.squish, Contact.defined_enums.fetch('relacao').fetch('interessado'))
-      NOT EXISTS (SELECT 1 FROM contacts fora WHERE fora.id = crm_cards.contact_id AND fora.relacao <> ?)
+      NOT EXISTS (
+        SELECT 1 FROM contacts fora
+        WHERE fora.account_id = crm_cards.account_id AND fora.id = crm_cards.contact_id AND fora.relacao <> ?
+      )
     SQL
   end
 end
