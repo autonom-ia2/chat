@@ -22,6 +22,11 @@ import {
   thumbClass,
 } from '../metaAdsHelpers';
 import { useMetaAdsLive } from '../useMetaAdsLive';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { lerGestao } from '../gestaoDoAnuncio';
+import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
+import MetaAdsAdPost from './MetaAdsAdPost.vue';
 
 // Anúncios da Meta (#1088, F3b): o anúncio por dentro, passos 3 e 4 da jornada "O painel do dia a dia". A
 // imagem no formato dela, o veredito com o porquê em números, o custo por venda ao lado da média da conta, o
@@ -274,7 +279,42 @@ const axis = computed(() => {
   return [...new Set(picks)].map(index => dayLabel(daily[index].date));
 });
 
-onMounted(() => live.start());
+// Gestão mínima (#2161, flag meta_ads_gestao): situação do anúncio, botão de pausar e o post da Página. Só com
+// conexão (sem login não há token para ler nem mudar o anúncio).
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const gestaoOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_GESTAO
+  )
+);
+const canManage = usePermissionGranted('meta_ads_manage');
+const gestao = ref(null);
+
+const loadGestao = async () => {
+  gestao.value = null;
+  if (!gestaoOn.value) return;
+  const asked = props.adId;
+  const data = await lerGestao(asked);
+  if (asked === props.adId) gestao.value = data;
+};
+
+watch(() => props.adId, loadGestao);
+
+// A entrega (`effective_status`) é a Meta quem diz: depois de mudar, a situação é lida de novo, sem tirar o selo.
+const statusChanged = async status => {
+  gestao.value = { ...gestao.value, status };
+  const asked = props.adId;
+  const data = await lerGestao(asked);
+  if (data && asked === props.adId) gestao.value = data;
+};
+
+onMounted(() => {
+  live.start();
+  loadGestao();
+});
 
 // Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
 // a tentar).
@@ -361,51 +401,62 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             <span class="min-w-0">{{ part.name }}</span>
           </span>
         </p>
+        <MetaAdsAdStatus
+          v-if="gestao"
+          :ad-id="adId"
+          :ad-name="ad.name || ''"
+          :gestao="gestao"
+          :can-manage="canManage"
+          @changed="statusChanged"
+        />
       </header>
 
       <div
         class="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
       >
-        <figure
-          class="m-0 flex flex-col gap-2 overflow-hidden rounded-2xl bg-n-solid-1 ring-1 ring-n-weak"
-        >
-          <div class="flex justify-center bg-n-alpha-1">
-            <img
-              v-if="image"
-              :src="image"
-              :alt="ad.name || ''"
-              data-ad-detail-image
-              class="block object-contain w-full h-auto max-h-[40rem]"
-              @error="brokenImages = [...brokenImages, image]"
-            />
-            <div
-              v-else
-              data-ad-detail-placeholder
-              class="grid w-full aspect-[4/3] lg:aspect-square place-items-center bg-gradient-to-br"
-              :class="thumbClass(ad.ad_id)"
-            >
-              <span
-                class="i-lucide-image size-10 text-white/50"
-                aria-hidden="true"
+        <div class="flex flex-col gap-5">
+          <figure
+            class="m-0 flex flex-col gap-2 overflow-hidden rounded-2xl bg-n-solid-1 ring-1 ring-n-weak"
+          >
+            <div class="flex justify-center bg-n-alpha-1">
+              <img
+                v-if="image"
+                :src="image"
+                :alt="ad.name || ''"
+                data-ad-detail-image
+                class="block object-contain w-full h-auto max-h-[40rem]"
+                @error="brokenImages = [...brokenImages, image]"
               />
+              <div
+                v-else
+                data-ad-detail-placeholder
+                class="grid w-full aspect-[4/3] lg:aspect-square place-items-center bg-gradient-to-br"
+                :class="thumbClass(ad.ad_id)"
+              >
+                <span
+                  class="i-lucide-image size-10 text-white/50"
+                  aria-hidden="true"
+                />
+              </div>
             </div>
-          </div>
-          <figcaption v-if="ad.preview_url" class="px-4 pb-3">
-            <a
-              :href="ad.preview_url"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-ad-detail-preview
-              class="inline-flex min-h-11 items-center gap-1.5 rounded-xl text-sm font-medium text-n-blue-11 no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-            >
-              {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PREVIEW') }}
-              <span
-                class="i-lucide-external-link size-3.5"
-                aria-hidden="true"
-              />
-            </a>
-          </figcaption>
-        </figure>
+            <figcaption v-if="ad.preview_url" class="px-4 pb-3">
+              <a
+                :href="ad.preview_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-ad-detail-preview
+                class="inline-flex min-h-11 items-center gap-1.5 rounded-xl text-sm font-medium text-n-blue-11 no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+              >
+                {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PREVIEW') }}
+                <span
+                  class="i-lucide-external-link size-3.5"
+                  aria-hidden="true"
+                />
+              </a>
+            </figcaption>
+          </figure>
+          <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
+        </div>
 
         <div class="flex flex-col gap-5">
           <span
@@ -754,7 +805,10 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
                 </span>
               </span>
             </span>
-            <span class="text-base font-semibold tabular-nums text-n-slate-12">
+            <span
+              v-if="card.value != null"
+              class="text-base font-semibold tabular-nums text-n-slate-12"
+            >
               {{ fmt(card.value) }}
             </span>
             <router-link

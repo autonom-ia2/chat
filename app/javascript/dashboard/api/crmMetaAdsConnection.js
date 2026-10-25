@@ -153,6 +153,27 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.post(`${this.url}/advisor_actions/${id}/dismiss`);
   }
 
+  // Ad management (#2161, flag meta_ads_gestao), live from Meta →
+  // { management: { status, effective_status, mode, can_change, needs_login,
+  //   post: { message, created_time, permalink_url, page_name, reactions,
+  //   comments, shares } | null } }. 404 ad_not_found / not_connected.
+  adManagement(adId) {
+    return axios.get(`${this.url}/ads/${encodeURIComponent(adId)}/management`);
+  }
+
+  // status = 'ACTIVE' | 'PAUSED'. 422 cannot_change, meta_refused,
+  // meta_unavailable.
+  setAdStatus(adId, status) {
+    return axios.post(`${this.url}/ads/${encodeURIComponent(adId)}/status`, {
+      status,
+    });
+  }
+
+  // Pages granted at Facebook login → { pages: [{ id, name }] }.
+  pages() {
+    return axios.get(`${this.url}/pages`);
+  }
+
   // Suggested message to resume a stalled quote. Never sent by the server →
   // { quote_message: { card_id, conversation_id, applies, reason, message,
   //   source_quote } }.

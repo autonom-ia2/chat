@@ -244,7 +244,8 @@ RSpec.describe 'CTWA tracked links API', type: :request do
       )
     end
 
-    it 'agente com função de campanhas vê cliques e conversas, mas não a receita' do
+    # #2075: as vendas contam só os cards que a pessoa vê no CRM; o valor segue `sales_value_view`.
+    it 'agente com função de campanhas vê cliques, conversas e as vendas que vê no CRM, mas não o valor' do
       tracked_link = create_website_link
       pipeline, stage = create_crm_pipeline(account: account, user: admin)
       conversation = create(:conversation, account: account, inbox: inbox)
@@ -255,12 +256,14 @@ RSpec.describe 'CTWA tracked links API', type: :request do
       agent = create(:user, account: account, role: :agent)
       role = create(:custom_role, account: account, permissions: %w[campaign_view])
       AccountUser.find_by!(account: account, user: agent).update!(custom_role: role)
+      inbox.add_members([agent.id])
 
       get base_url, headers: auth_headers(agent)
 
       expect(response).to have_http_status(:ok)
       campaign = response.parsed_body['payload'].find { |link| link['id'] == tracked_link.id }['campaigns'].sole
-      expect(campaign.except('last_clicked_at')).to eq('campaign_key' => '120211', 'name' => nil, 'clicks' => 1, 'conversations' => 1)
+      expect(campaign.except('last_clicked_at')).to eq('campaign_key' => '120211', 'name' => nil, 'clicks' => 1, 'conversations' => 1,
+                                                       'won_cards' => 1)
       expect(response.body).not_to include('won_value_by_currency', '37780')
     end
 

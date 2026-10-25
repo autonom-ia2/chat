@@ -107,8 +107,9 @@ class Crm::Cards::Anonimizador::Historico
   end
 
   # Vínculos com a conversa e com quem a pessoa era: saem. Passagens, decisões de assunto e convites são da conversa e
-  # saem com ela, que sai com o contato. As execuções de ferramenta do agente (autonomia_agent_tool_runs) e os leads de
-  # prospecção não têm chave para a conversa nem para o contato e ficam: só perdem o card (ver o PR #2098).
+  # saem com ela, que sai com o contato. As execuções de ferramenta do agente (autonomia_agent_tool_runs) não têm chave
+  # para a conversa e ficam: só perdem o card (ver o PR #2098). Os leads de prospecção aqui só perdem o card; os ligados
+  # ao contato excluído saem depois, com ele (Autonomia::Prospecting::LeadsDoContatoExcluido, #2143).
   def soltar_vinculos!
     dos_cards(Crm::CardConversation).delete_all
     dos_cards(Crm::Passagem).update_all(card_id: nil, updated_at: @agora)

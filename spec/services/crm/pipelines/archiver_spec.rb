@@ -47,6 +47,77 @@ RSpec.describe Crm::Pipelines::Archiver do
     expect(card.reload.pipeline_id).to eq(pipeline.id)
   end
 
+  # #2145: em lotes, o que a transação final recusaria é recusado antes de o primeiro card sair.
+  it 'mover em lotes: a regra do único principal recusa antes de mover qualquer card' do
+    stub_const("#{described_class}::LOTE", 1)
+    pipeline.update!(is_default: true)
+    target_stage.pipeline.update!(is_default: false)
+    account.crm_cards.create!(pipeline: pipeline, stage: card.stage, title: 'Segundo')
+
+    expect { described_class.new(pipeline: pipeline, actor: host, target_stage: target_stage).perform }
+      .to raise_error(described_class::Blocked) { |error| expect(error.motivo).to eq('only_default') }
+    expect(pipeline.reload).to be_active
+    expect(card.reload.pipeline_id).to eq(pipeline.id)
+  end
+
+  # Outro pedido arquivou este funil entre dois lotes ("Guardar junto"): os cards que ele guardou não vão para o destino.
+  it 'mover em lotes: funil arquivado por outro pedido no meio recusa (CHANGED) e conta os já levados' do
+    stub_const("#{described_class}::LOTE", 1)
+    segundo = account.crm_cards.create!(pipeline: pipeline, stage: card.stage, title: 'Segundo')
+    account.crm_cards.create!(pipeline: pipeline, stage: card.stage, title: 'Terceiro')
+    allow(Crm::Activity).to receive(:insert_all!).and_wrap_original do |original, *args|
+      original.call(*args).tap { Crm::Pipeline.where(id: pipeline.id).update_all(status: Crm::Pipeline.statuses[:archived]) } # rubocop:disable Rails/SkipsModelValidations
+    end
+    arquivador = described_class.new(pipeline: pipeline, actor: host, target_stage: target_stage, new_default: target_stage.pipeline)
+
+    expect { arquivador.perform }.to raise_error(described_class::InvalidTarget, described_class::CHANGED)
+    expect(arquivador.moved_before_failure).to eq(1)
+    expect(card.reload.pipeline_id).to eq(target_stage.pipeline_id)
+    expect(segundo.reload.pipeline_id).to eq(pipeline.id)
+  end
+
+  # #2145, opção 1 do Rodrigo: o cliente que já tinha card aberto no destino recebe o card movido mesmo assim (R1 do
+  # multifunil), e o resultado o lista para o resumo. Também em lotes; cliente sem card no destino não entra.
+  it 'cliente que já tinha card aberto no destino: move mesmo assim e lista o cliente, uma vez' do
+    stub_const("#{described_class}::LOTE", 1)
+    ana = account.contacts.create!(name: 'Ana')
+    bia = account.contacts.create!(name: 'Bia')
+    ja_no_destino = account.crm_cards.create!(pipeline: target_stage.pipeline, stage: target_stage, title: 'Outro assunto', contact: ana)
+    da_ana = [1, 2].map { |i| account.crm_cards.create!(pipeline: pipeline, stage: card.stage, title: "Ana #{i}", contact: ana) }
+    da_bia = account.crm_cards.create!(pipeline: pipeline, stage: card.stage, title: 'Bia', contact: bia)
+
+    result = described_class.new(pipeline: pipeline, actor: host, target_stage: target_stage).perform
+
+    expect([*da_ana, da_bia].map { |movido| movido.reload.pipeline_id }.uniq).to eq([target_stage.pipeline_id])
+    expect(ja_no_destino.reload).to have_attributes(status: 'open', pipeline_id: target_stage.pipeline_id)
+    expect(result.clientes_com_dois_abertos).to eq([{ contact_id: ana.id, name: 'Ana', card_id: da_ana.first.id }])
+  end
+
+  it 'resumo que falha depois de arquivar não vira erro: arquiva e devolve a lista vazia' do
+    arquivador = described_class.new(pipeline: pipeline, actor: host, target_stage: target_stage)
+    allow(arquivador).to receive(:clientes_com_dois_abertos).and_raise(ActiveRecord::StatementInvalid, 'tempo esgotado')
+
+    result = arquivador.perform
+
+    expect(pipeline.reload).to be_archived
+    expect(result.clientes_com_dois_abertos).to eq([])
+    expect(arquivador.moved_before_failure).to eq(0)
+  end
+
+  # Com o novo principal, os lotes saem e a transação final promove o novo principal e arquiva.
+  it 'mover em lotes: leva todos os cards abertos e devolve todos em moved' do
+    stub_const("#{described_class}::LOTE", 1)
+    segundo = account.crm_cards.create!(pipeline: pipeline, stage: card.stage, title: 'Segundo')
+    pipeline.update!(is_default: true)
+
+    result = described_class.new(pipeline: pipeline, actor: host, target_stage: target_stage, new_default: target_stage.pipeline).perform
+
+    expect(result.moved.map(&:id)).to eq([card.id, segundo.id])
+    expect(pipeline.reload).to have_attributes(status: 'archived', is_default: false)
+    expect(target_stage.pipeline.reload).to be_is_default
+    expect(Crm::Activity.where(card_id: [card.id, segundo.id], event_type: 'move').count).to eq(2)
+  end
+
   def reuniao_com_lembrete
     reuniao = create_internal_meeting(world: world, starts_at: 3.days.from_now)
     do_encontro = lembrete(follow_up_type: :meeting)

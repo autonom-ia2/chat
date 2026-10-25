@@ -29,6 +29,15 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// O anúncio por dentro lê a flag meta_ads_gestao (#2161): desligada aqui.
+vi.mock('dashboard/composables/store', async () => {
+  const { computed } = await import('vue');
+  return { useMapGetter: () => computed(() => () => false) };
+});
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { computed } = await import('vue');
+  return { usePermissionGranted: () => computed(() => true) };
+});
 vi.mock('vue-router', () => ({
   useRoute: () => routing.route,
   useRouter: () => ({ replace: routing.replace }),
@@ -223,6 +232,66 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(card.find('a').attributes('href')).toContain(
       '/app/accounts/18/conversations/99'
     );
+  });
+
+  // #2075 — sem a chave de valores de venda o servidor manda o valor vazio, com value_hidden.
+  it('without sales values: the sales step and the stalled quote show no money, the counts stay', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          totals: {
+            ...PANEL.totals,
+            sales: 2,
+            sales_value: null,
+            return_per_real: null,
+            value_hidden: true,
+          },
+          advice: {
+            ...PANEL.advice,
+            actions: [
+              {
+                ...STALLED_ACTION,
+                cards: STALLED_ACTION.cards.map(card => ({
+                  ...card,
+                  value: null,
+                  value_hidden: true,
+                })),
+              },
+            ],
+          },
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    const sales = wrapper.find('[data-panel-path="SALES"]').text();
+    expect(sales).toContain('2');
+    expect(sales).not.toContain('PANEL.SALES_VALUE');
+    expect(wrapper.text()).not.toContain('PANEL.RETURN');
+    await wrapper.find('[data-panel-action-button]').trigger('click');
+    const card = wrapper.find('[data-panel-stalled-card]');
+    expect(card.text()).toContain('Virgínia');
+    expect(card.text()).not.toContain('842');
+    expect(card.text()).not.toContain('R$');
+  });
+
+  it('with sales values: the sales step and the stalled quote show the money', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          totals: { ...PANEL.totals, sales: 2, sales_value: 1500 },
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-path="SALES"]').text()).toContain(
+      'PANEL.SALES_VALUE'
+    );
+    await wrapper.find('[data-panel-action-button]').trigger('click');
+    expect(wrapper.find('[data-panel-stalled-card]').text()).toContain('842');
   });
 
   it('an ad to review opens that ad and records the opening', async () => {
