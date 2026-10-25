@@ -136,7 +136,7 @@
     }
   },
   "APAGAR_CONTATO": {
-    "UM": "As conversas e mensagens deste contato também serão apagadas. Não dá para desfazer.",
-    "VARIOS": "As conversas e mensagens desses {count} contatos também serão apagadas. Não dá para desfazer."
+    "UM": "O contato, as conversas e as mensagens dele serão apagados. Não dá para desfazer.",
+    "VARIOS": "Os {count} contatos, as conversas e as mensagens deles serão apagados. Não dá para desfazer."
   }
 }

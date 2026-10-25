@@ -136,7 +136,7 @@
     }
   },
   "APAGAR_CONTATO": {
-    "UM": "This contact's conversations and messages will be deleted too. This can't be undone.",
-    "VARIOS": "The conversations and messages of these {count} contacts will be deleted too. This can't be undone."
+    "UM": "The contact, its conversations and its messages will be deleted. This can't be undone.",
+    "VARIOS": "These {count} contacts, their conversations and their messages will be deleted. This can't be undone."
   }
 }
