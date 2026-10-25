@@ -188,12 +188,12 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
     end
   end
 
-  # #2162, dentro da trava: outra sugestão espera uma pessoa, ou ela ignorou há pouco a de criar card neste funil.
+  # #2162, dentro da trava: outra sugestão espera uma pessoa, ou ela ignorou há pouco a de criar card neste funil. Como
+  # no #1260, só por RESPEITO_AO_FECHAMENTO: uma sugestão esquecida não prende a conversa para sempre.
   def sugestao_bloqueada?(pipeline)
-    decisoes = Crm::SubjectDecision.where(conversation_id: @conversation.id).where.not(id: @decisao.id)
-    decisoes.suggested.exists? ||
-      decisoes.exists?(state: 'dismissed', action: %w[create rename], pipeline_id: pipeline.id,
-                       updated_at: Crm::Subjects::RESPEITO_AO_FECHAMENTO.ago..)
+    recentes = Crm::SubjectDecision.where(conversation_id: @conversation.id, updated_at: Crm::Subjects::RESPEITO_AO_FECHAMENTO.ago..)
+                                   .where.not(id: @decisao.id)
+    recentes.suggested.exists? || recentes.exists?(state: 'dismissed', action: %w[create rename], pipeline_id: pipeline.id)
   end
 
   # Marca já dentro do lock: duas sugestões da mesma conversa nunca ficam esperando ao mesmo tempo.
