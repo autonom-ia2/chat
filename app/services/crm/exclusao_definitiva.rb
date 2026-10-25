@@ -52,7 +52,9 @@ module Crm::ExclusaoDefinitiva
   # Excluir o contato (LGPD). modo:
   # - 'delete': apaga de vez os cards dele (abertos, ganhos ou arquivados);
   # - 'keep': mantém os cards sem dado pessoal (Crm::Cards::Anonimizador): valor, funil, etapa, datas e desfecho ficam.
-  # Os cards, o contato e o rastro saem juntos ou nada sai. Devolve { deleted_card_ids:, anonymized_card_ids: }.
+  # Nos dois modos, os leads da Prospecção ligados ao contato saem de vez, menos o que recusou contato
+  # (Autonomia::Prospecting::LeadsDoContatoExcluido, #2143).
+  # Os cards, os leads, o contato e o rastro saem juntos ou nada sai. Devolve { deleted_card_ids:, anonymized_card_ids: }.
   #
   # Nos dois modos, o contato é travado primeiro dentro da transação: dois cliques (ou duas abas) não gravam duas linhas
   # na Auditoria, o segundo espera o primeiro e encontra o contato já excluído (Mudou 'already_deleted').
@@ -63,9 +65,11 @@ module Crm::ExclusaoDefinitiva
     account = contact.account
     card_ids = account.crm_cards.where(contact_id: contact.id).order(:id).pluck(:id)
     conferir = ->(ids) { conferir_cards_do_contato!(contact, ids) }
+    leads = Autonomia::Prospecting::LeadsDoContatoExcluido.new(contact: contact)
     apagados = Crm::Cards::Excluidor.new(account: account, card_ids: card_ids, somente_arquivados: false)
                                     .perform(conferir: conferir) do |ids|
-      auditar!(account: account, user: user, alvo: 'contato', card_ids: ids, contact_id: contact.id, modo: modo)
+      leads.perform
+      auditar!(account: account, user: user, alvo: 'contato', card_ids: ids, contact_id: contact.id, modo: modo, **dos_leads(leads))
       # Por último, dentro da transação: as conversas do contato saem num job que só é enfileirado depois do commit
       # (dependent: :destroy_async), então uma falha aqui desfaz tudo, sem job solto.
       contact.destroy!
@@ -81,11 +85,13 @@ module Crm::ExclusaoDefinitiva
     anonimizador.cancelar_reunioes!
     mantidos = ActiveRecord::Base.transaction do
       travar_contato!(contact)
+      leads = Autonomia::Prospecting::LeadsDoContatoExcluido.new(contact: contact)
       anonimizador.perform.tap do |ids|
+        leads.perform
         auditar!(account: contact.account, user: user, alvo: 'contato', card_ids: [], contact_id: contact.id,
                  modo: CARDS_MANTER, cards_mantidos: ids.size, card_ids_mantidos: ids,
                  reunioes_canceladas: anonimizador.reunioes_canceladas.size,
-                 reunioes_so_aqui: anonimizador.reunioes_so_aqui.size)
+                 reunioes_so_aqui: anonimizador.reunioes_so_aqui.size, **dos_leads(leads))
         contact.destroy!
       end
     end
@@ -107,12 +113,21 @@ module Crm::ExclusaoDefinitiva
   # Contato excluído por qualquer caminho, com a flag crm_arquivados (ContactCrmCards): quem excluiu pode não ver os
   # cards. Só ids e contagens.
   # reunioes_so_aqui: canceladas só no sistema porque o calendário não se alcança (o evento pode seguir no provedor).
-  def auditar_contato_excluido!(contact:, user:, card_ids:, anonimizador:)
+  def auditar_contato_excluido!(contact:, user:, card_ids:, anonimizador:, leads:)
     reunioes = anonimizador.reunioes_canceladas
     auditar!(account: contact.account, user: user, alvo: 'contato', card_ids: [], contact_id: contact.id,
              modo: CARDS_MANTER, cards_mantidos: card_ids.size, card_ids_mantidos: card_ids,
              reunioes_canceladas: reunioes.size, reunioes_so_aqui: anonimizador.reunioes_so_aqui.size,
-             canceled_meeting_ids: reunioes.presence)
+             canceled_meeting_ids: reunioes.presence, **dos_leads(leads))
+  end
+
+  # Os leads da Prospecção que saíram com o contato e os que ficaram por terem recusado contato: só ids e contagens. Sem
+  # lead nenhum, a linha fica como era antes do #2143.
+  def dos_leads(leads)
+    return {} if leads.apagados.empty? && leads.mantidos_por_recusa.empty?
+
+    { leads_apagados: leads.apagados.size, lead_ids_apagados: leads.apagados.presence,
+      leads_mantidos_por_recusa: leads.mantidos_por_recusa.size, lead_ids_mantidos_por_recusa: leads.mantidos_por_recusa.presence }
   end
 
   # Contato que a exclusão em lote não conseguiu excluir (Contacts::BulkDeleteService): ficou inteiro. Só ids e o
