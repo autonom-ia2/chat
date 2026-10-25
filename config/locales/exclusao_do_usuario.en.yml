@@ -1,0 +1,4 @@
+en:
+  autonomia:
+    exclusao_do_usuario:
+      pendente: "This user cannot be deleted yet: records in %{tabelas} still need to be handed over."
