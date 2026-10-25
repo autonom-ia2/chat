@@ -4,14 +4,16 @@
 # display_name:       the name to be used in the UI
 # enabled:            whether the feature is enabled by default
 # column:             the account bitset column used to store the flag. Defaults to feature_flags. 
-#                     Use feature_flags_ext_1 for extension flags. Each bigint column supports 63 flags.
+#                     Extension columns: feature_flags_ext_1, feature_flags_ext_2. Each bigint column supports 63 flags.
 # help_url:           the url to the help center article
 # chatwoot_internal:  whether the feature is internal to Chatwoot and should not be shown in the UI for other self hosted installations
 # deprecated:         purpose of feature flag is done, no need to show it in the UI anymore
 #
 # ADDING A NEW FEATURE FLAG:
 #   - The `feature_flags` column is FULL (63/63 slots used). Do NOT add to it.
-#   - New flags MUST set `column: feature_flags_ext_1` and be appended at the end.
+#   - `feature_flags_ext_1` has no free slot either: positions 1-61 are in use (61 = meta_ads_gestao, #2164) and
+#     62/63 are provisionally reserved for #2182/#2183 (Orquestração, 25/10). Do NOT add to it (#2186).
+#   - New flags MUST set `column: feature_flags_ext_2` and be appended at the end.
 #   - Bit positions are persisted per column; never reorder or remove existing
 #     entries, and never change an existing feature's `column` after release.
 - name: inbound_emails
