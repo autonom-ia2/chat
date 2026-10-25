@@ -106,6 +106,7 @@ Rode `pnpm guia:build` depois de mexer aqui.
 
 
 ### lembrete_que_repete_sem_card_e_quem_recebe
+- pre_requisitos: flag `crm_lembretes_v2` ligada na conta; para "quem cuida do cliente", o lembrete precisa ser de um card do funil.
 - intent: "Como faço um lembrete toda semana?"; "Como lembro do aniversário todo ano?"; "Dá para criar lembrete sem card?"; "Como mando o lembrete para outra pessoa ou para um time?"; "Como pauso um lembrete que repete?"
 
 
@@ -122,8 +123,31 @@ Rode `pnpm guia:build` depois de mexer aqui.
 
 
 ### abrir_a_pagina_de_configuracoes
-- gotchas: os cartões ficam em grupos (Sua corretora, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Plano e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua corretora, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
+- intent: Onde ficam as configurações?; Onde mudo os dados da empresa?; Onde vejo minha assinatura e as faturas?; Onde cadastro usuários?; O que falta configurar?; Onde fica o horário de atendimento?; Cadê a Atribuição?
+- gotchas: os cartões ficam em grupos (Sua corretora, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Assinatura e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua corretora, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
 
 
 ### usar_modelo_do_whatsapp_em_campanha
 - gotchas: Nome do cliente e Nome da corretora já vêm ligados ao cadastro (primeiro nome do contato e nome da sua empresa no Chat2You); os outros campos você liga a uma coluna do público ou escreve um texto fixo; havendo um rascunho de campanha guardado, a tela pergunta se continua ele ou começa de novo; carrossel, oferta, código de verificação e botão de copiar código ainda não vão em campanha.
+
+
+### ver_plano_e_cobranca
+- gotchas: no fork self-hosted/white-label, considerar nao-aplicavel se `isOnChatwootCloud` for falso; quando nao ha billing plan, a tela tenta atualizar uma vez e pode mostrar mensagem de ausencia de billing; compra de creditos nao aparece na assinatura Hacker.
+- passos: 1. Abra Configuracoes > Billing; 2. Revise a assinatura atual, quantidade de assentos e renovacao; 3. Use Gerenciar assinatura para abrir o portal de cobranca; 4. Revise creditos/limites do Captain quando aparecerem; 5. Use comprar creditos se a assinatura permitir.
+- pre_requisitos: conta Cloud com dados de assinatura em `custom_attributes`; para comprar creditos, assinatura diferente de Hacker
+- perfil: somente `administrator`. Se o perfil nao puder, diga que assinatura e cobrança são restritas a administradores.
+- intent: Onde vejo minha assinatura?; Como abro cobranca?; Onde compro creditos?; Esta instalacao tem billing?
+- titulo: Ver assinatura e cobrança
+- onde_fica: Só no Chatwoot Cloud: Sidebar > Configuracoes > Billing/Cobranca. Nesta plataforma a assinatura e as faturas ficam em Configurações > Assinatura e faturas (fluxo assinatura_e_cobranca).
+
+
+### assinatura_e_cobranca
+- gotchas: a tela é só de leitura, não existe botão para cancelar, mudar a assinatura ou pagar por aqui; o menu Financeiro só aparece para administrador, e ter Financeiro na função personalizada não abre assinatura nem faturas (só os custos do uso de IA e a autorização de cobranças da Meta); sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
+- passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira a assinatura, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
+- intent: Qual assinatura eu contratei?; Quanto eu pago por mês?; Quando vence a próxima cobrança?; O que compõe o valor da minha assinatura?; Minha assinatura está ativa?
+- titulo: Ver a assinatura contratada e quanto está sendo cobrado
+- onde_fica: No menu novo: Configurações > Assinatura e faturas. No menu antigo: Financeiro > Assinatura
+
+
+### faturas_e_pagamentos
+- onde_fica: No menu novo: Configurações > Assinatura e faturas. No menu antigo: Financeiro > Faturas

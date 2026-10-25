@@ -17,13 +17,13 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `first_steps`
 
 ### Abrir a página inicial de Configurações (cartões)
-- intent: Onde ficam as configurações?; Onde mudo os dados da empresa?; Onde vejo meu plano e as faturas?; Onde cadastro usuários?; O que falta configurar?; Onde fica o horário de atendimento?; Cadê a Atribuição?
+- intent: Onde ficam as configurações?; Onde mudo os dados da empresa?; Onde vejo minha assinatura e as faturas?; Onde cadastro usuários?; O que falta configurar?; Onde fica o horário de atendimento?; Cadê a Atribuição?
 - onde_fica: Menu lateral > Configurações (no rodapé do menu, com o menu novo ligado na conta; no menu antigo esta página não existe). O endereço antigo de Configurações também abre esta página quando o menu novo está ligado.
 - rota: `settings_inicio` - `/app/accounts/:accountId/settings/inicio`
 - gate: feature flag `menu_lateral_novo`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `canned_response_manage` ou `inbox_view` ou `inbox_manage` ou `label_manage` ou `attribute_manage` ou `macro_manage` ou `automation_view` ou `automation_manage` ou `sla_manage` ou `people_manage` ou `custom_role_manage` ou `crm_manage_ai` ou `crm_admin` ou `financial_view` ou `financial_manage`
 - pre_requisitos: menu novo ligado na conta (flag menu_lateral_novo); cada cartão só aparece para quem pode abrir a tela dele
 - passos: 1. Clique em Configurações no rodapé do menu; 2. Leia o Comece por aqui, que mostra a primeira coisa que ainda falta; 3. Ou procure um assunto na busca (por exemplo horário, usuário ou WhatsApp); 4. Clique no cartão para abrir a tela daquele assunto.
-- gotchas: os cartões ficam em grupos (Sua corretora, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Plano e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua corretora, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
+- gotchas: os cartões ficam em grupos (Sua corretora, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Assinatura e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua corretora, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
 - nav_target: `settings_inicio`
 
 ### Criar caixa de entrada
@@ -241,7 +241,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Configurações > Usuários. No menu antigo: Configuracoes > Agentes
 - rota: `agent_list` - `/app/accounts/:accountId/settings/agents/list`
 - gate: feature flag `agent_management`; papel `administrator` ou `people_manage`
-- pre_requisitos: email do agente; limite/plano permitir novo usuario quando aplicavel
+- pre_requisitos: email do agente; limite/assinatura permitir novo usuario quando aplicavel
 - passos: 1. Abra Configuracoes; 2. Entre em Agentes; 3. Clique para adicionar/editar agente; 4. Informe dados e papel; 5. Salve e acompanhe convite/status.
 - gotchas: agente convidado pode precisar aceitar convite antes de operar; o acesso a uma caixa de entrada tambem depende de estar associado a ela; alem do administrador, quem tem a funcao com Pessoas (people_manage) convida, edita e remove agentes, mas nunca mexe em administradores nem em si mesmo; escolher caixas no convite pede tambem Caixas de entrada em Editar (inbox_manage), e sem isso essa parte nao aparece.
 - nav_target: `agent_list`
@@ -576,7 +576,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: CRM > Agendamento > Calendário > **Novo** (ou clique no dia); no card, cartão **Agenda** > **Lembrete**; na ficha do cliente ou da empresa (Relacionamento) > **Novo lembrete**. Só aparece com a flag da conta `crm_lembretes_v2` ligada.
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
-- pre_requisitos: flag `crm_lembretes_v2` ligada na conta; para "quem cuida do cliente", o lembrete precisa ser de um negócio do funil.
+- pre_requisitos: flag `crm_lembretes_v2` ligada na conta; para "quem cuida do cliente", o lembrete precisa ser de um card do funil.
 - passos: Em **É sobre quem?** escolha **Ninguém** (fica só no calendário), **Um cliente** ou **Um card do funil**; escreva **O que é** e escolha **Quando?** (a hora é no fuso da conta). Em **Repetir?** escolha **Uma vez só**, **Todo dia** (ou só de segunda a sexta), **Toda semana** (marque os dias), **Todo mês** ou **Todo ano**, e em **Até quando?** escolha sem data, até um dia ou um número de vezes; as **Próximas datas** aparecem logo abaixo. Em **Quem recebe o aviso?** escolha **Quem cuida do cliente**, **Só eu**, **Escolher pessoas** ou **Um time inteiro**; clique em **Salvar**. Para ver a repetição, no card use **Ver** em **Repetem**, ou clique numa data com o ícone de repetir no calendário: lá estão **Feito desta vez**, **Pausar**/**Retomar**, **Encerrar** e **Mudar** (só a próxima ou esta e as próximas).
 - gotchas: só o lembrete para a equipe repete; mensagem ao cliente que repete ainda não existe (#1528); "Quem cuida do cliente" segue o dono do card no momento do aviso; pausar não apaga as datas, elas ficam marcadas **Pausado** e ninguém é avisado até retomar; encerrar para de repetir e o que já passou fica no histórico; quem não vê o funil do card aparece desligado em **Escolher pessoas**; se ninguém sobrar para receber (time vazio, pessoa que saiu), o aviso vai para quem marcou; lembrete sem card só é visto por quem marcou, por quem recebe e pelo administrador; "Todo dia 31" cai no último dia nos meses mais curtos.
 - nav_target: `crm_calendar_index`
@@ -1330,7 +1330,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `auditlogs_list` - `/app/accounts/:accountId/settings/audit-logs/list`
 - gate: feature flag `audit_logs`; papel `administrator`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que logs de auditoria sao restritos a administradores.
-- pre_requisitos: feature habilitada na conta/plano; haver eventos auditaveis
+- pre_requisitos: feature habilitada na conta/assinatura; haver eventos auditaveis
 - passos: 1. Abra Configuracoes; 2. Entre em Logs de auditoria; 3. Revise atividade, horario e IP; 4. Navegue pelas paginas no rodape; 5. Use o texto do evento para identificar agente, recurso e alteracao.
 - gotchas: a tela nao tem busca/filtro avancado neste componente; os textos sao gerados por chaves de traducao a partir do payload; se a feature estiver desativada, pode aparecer paywall/bloqueio ou a entrada sumir.
 - nav_target: `auditlogs_list`
@@ -1346,15 +1346,15 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: Dashboard App usa conteudo do tipo `frame` com URL valida; Dialogflow e uma integracao por caixa de entrada, nao um `agent_bot`; algumas integracoes so aparecem como ativas se houver credencial global ou feature habilitada; remover hook desconecta a integracao.
 - nav_target: `settings_applications`
 
-### Ver plano e cobranca
-- intent: Onde vejo meu plano?; Como abro cobranca?; Onde compro creditos?; Esta instalacao tem billing?
-- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Sidebar > Configuracoes > Billing/Cobranca
+### Ver assinatura e cobrança
+- intent: Onde vejo minha assinatura?; Como abro cobranca?; Onde compro creditos?; Esta instalacao tem billing?
+- onde_fica: Só no Chatwoot Cloud: Sidebar > Configuracoes > Billing/Cobranca. Nesta plataforma a assinatura e as faturas ficam em Configurações > Assinatura e faturas (fluxo assinatura_e_cobranca).
 - rota: `billing_settings_index` - `/app/accounts/:accountId/settings/billing`
 - gate: papel `administrator`
-- perfil: somente `administrator`. Se o perfil nao puder, diga que plano e cobranca sao restritos a administradores.
-- pre_requisitos: conta Cloud com dados de assinatura em `custom_attributes`; para comprar creditos, plano diferente de Hacker
-- passos: 1. Abra Configuracoes > Billing; 2. Revise plano atual, quantidade de assentos e renovacao; 3. Use Gerenciar assinatura para abrir o portal de cobranca; 4. Revise creditos/limites do Captain quando aparecerem; 5. Use comprar creditos se o plano permitir.
-- gotchas: no fork self-hosted/white-label, considerar nao-aplicavel se `isOnChatwootCloud` for falso; quando nao ha billing plan, a tela tenta atualizar uma vez e pode mostrar mensagem de ausencia de billing; compra de creditos nao aparece no plano Hacker.
+- perfil: somente `administrator`. Se o perfil nao puder, diga que assinatura e cobrança são restritas a administradores.
+- pre_requisitos: conta Cloud com dados de assinatura em `custom_attributes`; para comprar creditos, assinatura diferente de Hacker
+- passos: 1. Abra Configuracoes > Billing; 2. Revise a assinatura atual, quantidade de assentos e renovacao; 3. Use Gerenciar assinatura para abrir o portal de cobranca; 4. Revise creditos/limites do Captain quando aparecerem; 5. Use comprar creditos se a assinatura permitir.
+- gotchas: no fork self-hosted/white-label, considerar nao-aplicavel se `isOnChatwootCloud` for falso; quando nao ha billing plan, a tela tenta atualizar uma vez e pode mostrar mensagem de ausencia de billing; compra de creditos nao aparece na assinatura Hacker.
 - nav_target: `billing_settings_index`
 
 ### Configurar IA do CRM por funil
@@ -1699,7 +1699,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
 - pre_requisitos: perfil profissional do Instagram; acesso ao perfil para autorizar no Instagram Login; permissão de gerenciar caixas de entrada. Este fluxo de Instagram Login não exige Página do Facebook.
 - passos: Vá em Configurações > Caixas de entrada > Nova caixa e escolha Instagram. Com preparação assistida habilitada na conta, informe o @, busque e selecione o perfil conferindo foto, @ e nome; envie convite somente quando a tela oferecer essa ação. Se estiver pendente, no navegador de um computador entre com o @ exato, abra Apps e sites > Convites do testador, localize o nome do aplicativo exibido e clique em Aceitar; o link Abrir Apps e sites leva a https://www.instagram.com/accounts/manage_access/. Volte e clique em Já aceitei — verificar. Com Convite aceito, clique em Continuar com Instagram e autorize o mesmo perfil. Com preparação assistida desligada na conta, siga diretamente o Instagram Login. Atribua agentes e finalize o assistente.
-- gotchas: Preparação assistida ligada depende da disponibilidade da instalação; se indisponível, peça suporte e nova verificação, sem pular para OAuth direto. A habilitação não concede canal, plano, limite de caixas ou permissões. Convite aceito não comprova propriedade do perfil, não conclui a conexão e não substitui OAuth ou App Review. Não detectamos qual perfil está aberto no Instagram: confira o @ na outra aba. Nunca peça senha, cookie ou token ao usuário. Erro ou timeout não significa convite ausente; após envio incerto, verifique antes de tentar novamente. O gestor de sessão usa uma máquina dedicada da operação; não abre Chrome no computador do cliente. Trocar perfil ou voltar não remove testador. Reautorizar uma caixa existente preserva a mesma caixa e perfil e continua disponível, respeitando suas permissões; não serve para criar outra caixa ou trocar de perfil. Mensagens dependem das permissões concedidas e do funcionamento da integração.
+- gotchas: Preparação assistida ligada depende da disponibilidade da instalação; se indisponível, peça suporte e nova verificação, sem pular para OAuth direto. A habilitação não concede canal, assinatura, limite de caixas ou permissões. Convite aceito não comprova propriedade do perfil, não conclui a conexão e não substitui OAuth ou App Review. Não detectamos qual perfil está aberto no Instagram: confira o @ na outra aba. Nunca peça senha, cookie ou token ao usuário. Erro ou timeout não significa convite ausente; após envio incerto, verifique antes de tentar novamente. O gestor de sessão usa uma máquina dedicada da operação; não abre Chrome no computador do cliente. Trocar perfil ou voltar não remove testador. Reautorizar uma caixa existente preserva a mesma caixa e perfil e continua disponível, respeitando suas permissões; não serve para criar outra caixa ou trocar de perfil. Mensagens dependem das permissões concedidas e do funcionamento da integração.
 - nav_target: `settings_inbox_new`
 - highlight: `channel-instagram`
 
@@ -1904,7 +1904,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `assignment_v2`; papel `administrator` ou `assignment_manage`
 - pre_requisitos: ser administrador da conta, ou ter um cargo com Atribuição de agentes
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Escolha a ordem de atribuição e a prioridade; 4. Ajuste a distribuição justa e o descarte de conversas inativas; 5. Clique em Criar política.
-- gotchas: nome e descrição são obrigatórios e o botão fica travado sem os dois; a política nasce com rodízio, 100 conversas por hora por agente e descarte de conversas paradas há mais de 7 dias; Equilibrado exige o plano com atribuição avançada; não dá para escolher as caixas de entrada aqui, só depois de salvar, na tela de edição, para onde o sistema leva sozinho.
+- gotchas: nome e descrição são obrigatórios e o botão fica travado sem os dois; a política nasce com rodízio, 100 conversas por hora por agente e descarte de conversas paradas há mais de 7 dias; Equilibrado exige a assinatura com atribuição avançada; não dá para escolher as caixas de entrada aqui, só depois de salvar, na tela de edição, para onde o sistema leva sozinho.
 - nav_target: `agent_assignment_policy_create`
 
 ### Ajustar uma política existente e ligar as caixas de entrada
@@ -1922,9 +1922,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente
 - rota: `agent_capacity_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/capacity`
 - gate: feature flag `advanced_assignment`; papel `administrator` ou `assignment_manage`
-- pre_requisitos: ter atribuição avançada liberada no plano e ser administrador, ou ter um cargo com Atribuição de agentes
+- pre_requisitos: ter atribuição avançada liberada na assinatura e ser administrador, ou ter um cargo com Atribuição de agentes
 - passos: 1. Abra Configurações > Atribuição de Agentes e clique em Capacidade do agente; 2. Confira os agentes e os limites de cada política; 3. Use Nova política para criar, Alterar para editar ou o botão de excluir para remover.
-- gotchas: a capacidade só muda a distribuição de verdade quando a política de atribuição da caixa está no modo Equilibrado, que também depende do plano; cada agente pertence a uma única política de capacidade; excluir pede confirmação e não tem volta.
+- gotchas: a capacidade só muda a distribuição de verdade quando a política de atribuição da caixa está no modo Equilibrado, que também depende da assinatura; cada agente pertence a uma única política de capacidade; excluir pede confirmação e não tem volta.
 - nav_target: `agent_capacity_policy_index`
 
 ### Criar uma regra de limite de conversas
@@ -1932,7 +1932,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Configurações > Atribuição. No menu antigo: Configurações > Atribuição de Agentes > Capacidade do agente > Nova política
 - rota: `agent_capacity_policy_create` - `/app/accounts/:accountId/settings/assignment-policy/capacity/create`
 - gate: feature flag `advanced_assignment`; papel `administrator` ou `assignment_manage`
-- pre_requisitos: ter atribuição avançada liberada no plano
+- pre_requisitos: ter atribuição avançada liberada na assinatura
 - passos: 1. Clique em Nova política; 2. Preencha nome e descrição; 3. Defina as regras de exclusão, escolhendo as etiquetas e o tempo que não contam na capacidade; 4. Clique em Criar política.
 - gotchas: a política nasce sem ninguém dentro, porque as seções de limite por caixa e de agentes só existem na tela de edição, para onde o sistema leva ao salvar; as etiquetas de exclusão precisam já existir na conta para poderem ser escolhidas.
 - nav_target: `agent_capacity_policy_create`
@@ -1987,19 +1987,19 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo; quem vê relatórios do CRM mas não tem Financeiro (Ver ou Editar) na função vê só quantos usos houve, por recurso e no tempo, sem gasto, economia, custo médio nem as colunas de custo no relatório baixado, e a tela avisa isso.
 - nav_target: `crm_ai_usage_index`
 
-### Ver o plano contratado e quanto está sendo cobrado
-- intent: Qual plano eu contratei?; Quanto eu pago por mês?; Quando vence a próxima cobrança?; O que compõe o valor da minha assinatura?; Minha assinatura está ativa?
-- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Assinatura
+### Ver a assinatura contratada e quanto está sendo cobrado
+- intent: Qual assinatura eu contratei?; Quanto eu pago por mês?; Quando vence a próxima cobrança?; O que compõe o valor da minha assinatura?; Minha assinatura está ativa?
+- onde_fica: No menu novo: Configurações > Assinatura e faturas. No menu antigo: Financeiro > Assinatura
 - rota: `autonomia_financial_subscription` - `/app/accounts/:accountId/financial/subscription`
 - gate: papel `administrator`
 - pre_requisitos: ser administrador da conta e ter um checkout já concluído
-- passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira o plano, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
-- gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador, e ter Financeiro na função personalizada não abre plano nem faturas (só os custos do uso de IA e a autorização de cobranças da Meta); sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
+- passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira a assinatura, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
+- gotchas: a tela é só de leitura, não existe botão para cancelar, mudar a assinatura ou pagar por aqui; o menu Financeiro só aparece para administrador, e ter Financeiro na função personalizada não abre assinatura nem faturas (só os custos do uso de IA e a autorização de cobranças da Meta); sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
 - nav_target: `autonomia_financial_subscription`
 
 ### Conferir faturas emitidas e o que já foi pago
 - intent: Tenho alguma fatura em aberto?; Onde baixo o documento da fatura?; Quando essa fatura venceu?; Meu pagamento foi registrado?; Quanto eu já paguei até agora?
-- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Faturas
+- onde_fica: No menu novo: Configurações > Assinatura e faturas. No menu antigo: Financeiro > Faturas
 - rota: `autonomia_financial_invoices` - `/app/accounts/:accountId/financial/invoices`
 - gate: papel `administrator`
 - pre_requisitos: ser administrador da conta (Financeiro na função personalizada não dá acesso às faturas)
