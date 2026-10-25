@@ -19,6 +19,7 @@ import ContactsBulkActionBar from '../components/ContactsBulkActionBar.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import BulkActionsAPI from 'dashboard/api/bulkActions';
 import { declararContexto } from 'dashboard/composables/useContextoDaTela';
+import { avisoDeApagarContatos } from '../helpers/avisoDeApagarContatos';
 
 // Only order backed by index_contacts_on_account_id_and_last_activity_at
 const DEFAULT_SORT = '-last_activity_at';
@@ -88,11 +89,7 @@ const bulkDeleteDialogTitle = computed(() =>
     : t('CONTACTS_BULK_ACTIONS.DELETE_DIALOG.SINGULAR_TITLE')
 );
 const bulkDeleteDialogDescription = computed(() =>
-  selectedCount.value > 1
-    ? t('CONTACTS_BULK_ACTIONS.DELETE_DIALOG.DESCRIPTION', {
-        count: selectedCount.value,
-      })
-    : t('CONTACTS_BULK_ACTIONS.DELETE_DIALOG.SINGULAR_DESCRIPTION')
+  avisoDeApagarContatos(t, selectedCount.value)
 );
 const bulkDeleteDialogConfirmLabel = computed(() =>
   selectedCount.value > 1

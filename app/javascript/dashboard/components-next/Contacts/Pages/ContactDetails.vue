@@ -265,7 +265,7 @@ const handleAvatarDelete = async () => {
             {{ t('CONTACTS_LAYOUT.DETAILS.DELETE_CONTACT') }}
           </h6>
           <span class="text-sm text-n-slate-11">
-            {{ t('CONTACTS_LAYOUT.DETAILS.DELETE_CONTACT_DESCRIPTION') }}
+            {{ t('APAGAR_CONTATO.UM') }}
           </span>
         </div>
         <Button
