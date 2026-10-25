@@ -267,7 +267,9 @@ RSpec.describe Account do
         # #2138: posição 59 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10).
         feature_painel_contato_enxuto: 1 << 58,
         # #2154: posição 60 (1 << 59), PROVISÓRIA da Orquestração (24/10); definitiva na vez do PR.
-        feature_agente_so_informa: 1 << 59
+        feature_agente_so_informa: 1 << 59,
+        # #2161: posição 61 (1 << 60), depois da 60 do agente_so_informa #2166 (Orquestração, 25/10).
+        feature_meta_ads_gestao: 1 << 60
       }
     end
 

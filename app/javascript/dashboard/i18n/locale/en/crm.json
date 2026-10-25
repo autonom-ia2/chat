@@ -2677,7 +2677,7 @@
         "NEXT_TITLE": "What happens now",
         "NEXT_NAMES": "Each conversation from an ad shows the campaign name and See ad in the CRM card.",
         "NEXT_SALES": "When a card moves forward or is won, Meta is told and learns who buys.",
-        "NEXT_PANEL": "Next step: a dashboard with what each sale cost, ad by ad.",
+        "NEXT_PANEL": "In Results you see what each sale cost, ad by ad.",
         "SPEND_TODAY": "Spent today",
         "SPEND_ON": "Spent on {date}",
         "SPEND_CONVERSATIONS": "1 conversation from ads today | {count} conversations from ads today",
@@ -3000,6 +3000,33 @@
           "CLICKS": "Clicks",
           "SHOWN": "Shown"
         }
+      },
+      "GESTAO": {
+        "STATUS": {
+          "ACTIVE": "Running",
+          "PAUSED": "Paused",
+          "OFF": "Not running",
+          "PAUSE": "Pause ad",
+          "ACTIVATE": "Turn ad on",
+          "PAUSE_TITLE": "Pause the ad \"{name}\"?",
+          "PAUSE_HINT": "It stops showing to people and stops spending. You can turn it on again at any time. The change also shows in Meta Ads Manager.",
+          "ACTIVATE_TITLE": "Turn on the ad \"{name}\"?",
+          "ACTIVATE_HINT": "It shows to people again and spends from its ad set budget. The change also shows in Meta Ads Manager.",
+          "PAUSE_DONE": "Ad paused.",
+          "ACTIVATE_DONE": "Ad turned on.",
+          "CANCEL": "Cancel",
+          "ERROR": "Meta did not accept the change now. Try again in a moment.",
+          "NEEDS_LOGIN": "To pause from here, sign in with Facebook again in Connection."
+        },
+        "POST": {
+          "TITLE": "Ad post",
+          "WHERE": "On the {page} Page · {date}",
+          "REACTIONS": "1 reaction | {count} reactions",
+          "COMMENTS": "1 comment | {count} comments",
+          "SHARES": "1 share | {count} shares",
+          "OPEN": "See on Facebook"
+        },
+        "PAGE": "Page: {page}"
       },
       "AD_DETAIL": {
         "BACK": "Back to the panel",

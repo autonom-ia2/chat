@@ -122,6 +122,10 @@
     "GUIDE": {
       "ACTION": "{agentName} did through the Platform Guide: {frase}"
     },
+    "META_ADS": {
+      "PAUSED": "{agentName} paused the ad {adName} (#{adId}) on Meta",
+      "ACTIVE": "{agentName} turned on the ad {adName} (#{adId}) on Meta"
+    },
     "CRM_EXCLUIR": {
       "CARDS": "{agentName} permanently deleted archived CRM cards. Cards deleted: {cardsApagados}",
       "FUNIL": "{agentName} permanently deleted archived pipeline #{pipelineId}. Cards deleted: {cardsApagados}. Cards moved to another pipeline: {cardsMovidos}",

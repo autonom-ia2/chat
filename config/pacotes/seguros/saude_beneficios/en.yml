@@ -42,6 +42,10 @@ en:
       payment_after: 'Bill reminder: after the due date'
       payment_before: 'Bill reminder: 3 days before'
       payment_due: 'Bill reminder: on the day'
+  # Error when importing the brand kit from the website (#2083, lote 3).
+  brand_kits:
+    import_errors:
+      invalid_url: 'Enter the full website address, for example https://yourbrokerage.com.'
   # Line of business for the e-mail AI (#2037).
   email_campaigns:
     ai:
