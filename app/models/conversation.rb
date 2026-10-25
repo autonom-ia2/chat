@@ -64,6 +64,7 @@ class Conversation < ApplicationRecord
   include AutoAssignmentHandler
   include ConversationBotHandoff
   include ConversationPassagem
+  include ConversationRegistroDoAgente
   include ActivityMessageHandler
   include UrlHelper
   include SortHandler
