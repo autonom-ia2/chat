@@ -2374,7 +2374,9 @@
           "TEXT_PHONE": "Seu WhatsApp {phone} está pronto: quem vier de anúncio aparece aqui.",
           "TEXT": "Seu WhatsApp está pronto: quem vier de anúncio aparece aqui.",
           "TEXT_MANY": "Seus WhatsApp estão prontos: quem vier de anúncio aparece aqui.",
-          "EXAMPLE": "Ver um exemplo"
+          "EXAMPLE": "Ver um exemplo",
+          "CONNECT_TEXT": "Já anuncia no Facebook ou no Instagram, ou vai começar? Conecte a sua conta de anúncios para ver quanto investiu.",
+          "CONNECT_CTA": "Conectar minha conta de anúncios"
         },
         "EXAMPLE": {
           "BADGE": "Exemplo",

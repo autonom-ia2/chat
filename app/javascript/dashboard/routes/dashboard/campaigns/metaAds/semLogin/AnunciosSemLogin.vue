@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { SEM_LOGIN } from './anunciosSemLogin';
 import { examplePanel } from './anunciosExemplo';
@@ -21,6 +21,18 @@ const props = defineProps({
 });
 const emit = defineEmits(['connected']);
 const connecting = ref(false);
+const root = ref(null);
+
+// Voltar da conexão devolve o foco ao botão que a abriu (o da tela "pronto" ou o "Ver quanto gastei").
+const closeConnect = async () => {
+  connecting.value = false;
+  await nextTick();
+  root.value
+    ?.querySelector(
+      '[data-anuncios-vazio-conectar-botao], [data-panel-connect]'
+    )
+    ?.focus();
+};
 
 const { t } = useI18n();
 const example = ref(false);
@@ -46,6 +58,7 @@ const resume = computed(() =>
 
 <template>
   <div
+    ref="root"
     data-anuncios-sem-login
     :data-screen="screen"
     class="flex flex-col gap-5"
@@ -86,7 +99,9 @@ const resume = computed(() =>
     <AnunciosVazio
       v-if="screen === 'ready'"
       :inboxes="result.official_inboxes || []"
+      :can-connect="!readOnly && !pending"
       @example="example = true"
+      @connect="connecting = true"
     />
 
     <template v-else-if="screen === 'example'">
@@ -122,7 +137,7 @@ const resume = computed(() =>
       v-else-if="screen === 'connect'"
       :connection="connection"
       :resume="resume"
-      @back="connecting = false"
+      @back="closeConnect"
       @connected="emit('connected')"
     />
 

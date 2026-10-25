@@ -322,6 +322,56 @@ describe('Anúncios sem login (#1960, degrau 0)', () => {
       });
     });
 
+    it('with nobody from an ad yet, the "ready" screen also connects (#2190)', async () => {
+      const wrapper = mountWithConnect({ result: result({ ad_touch: false }) });
+      await flushPromises();
+
+      expect(wrapper.find('[data-see-example]').exists()).toBe(true);
+      await wrapper
+        .find('[data-anuncios-vazio-conectar-botao]')
+        .trigger('click');
+
+      expect(wrapper.findComponent(ConectarStub).exists()).toBe(true);
+      expect(wrapper.find('[data-anuncios-vazio]').exists()).toBe(false);
+
+      wrapper.findComponent(ConectarStub).vm.$emit('back');
+      await flushPromises();
+      expect(
+        wrapper.find('[data-anuncios-vazio-conectar-botao]').exists()
+      ).toBe(true);
+    });
+
+    it('with a connection stopped in the middle, the "ready" screen keeps only the notice (#2190)', async () => {
+      const wrapper = mountWithConnect({
+        result: result({
+          ad_touch: false,
+          connection_state: 'choosing',
+          connection_mode: 'facebook_login',
+        }),
+      });
+      await flushPromises();
+
+      expect(wrapper.find('[data-anuncios-conexao="choosing"]').exists()).toBe(
+        true
+      );
+      expect(wrapper.find('[data-anuncios-vazio-conectar]').exists()).toBe(
+        false
+      );
+    });
+
+    it('read-only on the "ready" screen does not see the way to connect (#2190)', async () => {
+      const wrapper = mountWithConnect({
+        readOnly: true,
+        result: result({ ad_touch: false }),
+      });
+      await flushPromises();
+
+      expect(wrapper.find('[data-see-example]').exists()).toBe(true);
+      expect(wrapper.find('[data-anuncios-vazio-conectar]').exists()).toBe(
+        false
+      );
+    });
+
     it('read-only sees neither the notice nor the way to connect', async () => {
       const wrapper = mountWithConnect({
         readOnly: true,
