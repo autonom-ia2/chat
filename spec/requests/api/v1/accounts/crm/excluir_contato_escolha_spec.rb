@@ -119,6 +119,16 @@ RSpec.describe 'CRM excluir contato com escolha dos cards e prévias', type: :re
       expect(auditorias).to be_empty
     end
 
+    # #2143: impasse com a conversão de um lead que se repetiu nas retentativas.
+    it 'impasse no banco responde 409 contact_busy, e não 500' do
+      allow(Crm::ExclusaoDefinitiva).to receive(:contato!).and_raise(ActiveRecord::Deadlocked)
+
+      call(admin, confirmation: 'EXCLUIR')
+
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body['error']).to eq('contact_busy')
+    end
+
     it 'recusa agente (403) nos dois modos' do
       aberto = card
 
@@ -132,6 +142,17 @@ RSpec.describe 'CRM excluir contato com escolha dos cards e prévias', type: :re
   end
 
   describe 'DELETE contacts/:id' do
+    # #2143: impasse com a conversão de um lead do mesmo contato; nada sai e a pessoa tenta de novo.
+    it 'impasse no banco responde 409 contact_busy e o contato fica' do
+      allow(Autonomia::Prospecting::LeadsDoContatoExcluido).to receive(:new).and_raise(ActiveRecord::Deadlocked)
+
+      delete "#{base}/contacts/#{contact.id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body['error']).to eq('contact_busy')
+      expect(Contact.exists?(contact.id)).to be(true)
+    end
+
     it 'não exclui o contato quando a reunião futura de um card não cancela no calendário (422)' do
       aberto = card
       reuniao = create_reuniao(account: account, card: aberto, user: admin, contact: contact, starts_at: 2.days.from_now)

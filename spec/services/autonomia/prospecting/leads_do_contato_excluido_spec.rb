@@ -90,6 +90,25 @@ RSpec.describe Autonomia::Prospecting::LeadsDoContatoExcluido do
       expect(auditoria).to include('modo' => 'keep', 'leads_apagados' => 1, 'cards_mantidos' => 2)
     end
 
+    it 'lead de card religado a outro contato vivo (ContactLinker) é daquela pessoa e fica' do
+      card = create_card(contact)
+      outra_pessoa = account.contacts.create!(name: 'Outra', phone_number: '+5511944442143')
+      religado = create_lead('religado', crm_card: card, contact: outra_pessoa)
+
+      contact.destroy!
+
+      expect(religado.reload).to have_attributes(contact_id: outra_pessoa.id, name: 'Clinica Sorriso Maria')
+    end
+
+    it 'o recusado sem lugar no Google perde também a chave de duplicidade, que era o nome do negócio' do
+      sem_lugar = create_dono('x', provider_place_id: nil, status: :no_consent)
+      expect(sem_lugar.dedupe_key).to eq('mock:clinica sorriso maria')
+
+      contact.destroy!
+
+      expect(sem_lugar.reload.dedupe_key).to eq("mock:removido-#{sem_lugar.id}")
+    end
+
     it 'o dono que recusou contato fica só com a prova da recusa, e o veto da campanha ao mesmo número continua' do
       recusou = create_dono('recusou', consent_refused_at: 1.day.ago, consent_refused_by: admin)
 

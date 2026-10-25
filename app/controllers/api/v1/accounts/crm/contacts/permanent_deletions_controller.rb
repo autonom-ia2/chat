@@ -29,6 +29,9 @@ class Api::V1::Accounts::Crm::Contacts::PermanentDeletionsController < Api::V1::
     render_error('crm.permanent_delete.meeting_cancel_failed', meeting_id: e.meeting_id, canceled_meeting_ids: e.canceladas)
   rescue ::Crm::ExclusaoDefinitiva::Mudou => e
     render_error("crm.permanent_delete.#{e.motivo}", canceled_meeting_ids: e.canceladas)
+  rescue ActiveRecord::Deadlocked
+    # Impasse que se repetiu nas retentativas (#2143): nada saiu, e a pessoa tenta de novo, como no DELETE do contato.
+    render json: { message: I18n.t('contacts.busy_try_again'), error: 'contact_busy' }, status: :conflict
   end
 
   private
