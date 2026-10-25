@@ -106,6 +106,19 @@ RSpec.describe 'CRM excluir contato com escolha dos cards e prévias', type: :re
       expect(auditorias).to be_empty
     end
 
+    # #2143: o servidor confere a flag, e não só a tela.
+    it 'sem a flag crm_arquivados a rota não existe (404) e nada sai' do
+      account.disable_features!(:crm_arquivados)
+      card
+
+      call(admin, confirmation: 'EXCLUIR', cards: 'delete')
+      expect(response).to have_http_status(:not_found)
+      get "#{path}_preview", headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:not_found)
+      expect(Contact.exists?(contact.id)).to be(true)
+      expect(auditorias).to be_empty
+    end
+
     it 'recusa agente (403) nos dois modos' do
       aberto = card
 

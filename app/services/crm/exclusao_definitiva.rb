@@ -46,26 +46,39 @@ module Crm::ExclusaoDefinitiva
   CARDS_APAGAR = 'delete'.freeze
   CARDS_MANTER = 'keep'.freeze
   MODOS_DO_CONTATO = [CARDS_APAGAR, CARDS_MANTER].freeze
+  # Só na Auditoria: o contato excluído pelo DELETE de sempre, sem card nem reunião, levou só leads da Prospecção (#2143).
+  LEADS = 'leads'.freeze
 
   module_function
 
   # Excluir o contato (LGPD). modo:
   # - 'delete': apaga de vez os cards dele (abertos, ganhos ou arquivados);
   # - 'keep': mantém os cards sem dado pessoal (Crm::Cards::Anonimizador): valor, funil, etapa, datas e desfecho ficam.
-  # Nos dois modos, os leads da Prospecção ligados ao contato saem de vez, menos o que recusou contato
-  # (Autonomia::Prospecting::LeadsDoContatoExcluido, #2143).
+  # Nos dois modos, o lead da Prospecção que é desta pessoa sai de vez, e o que recusou contato fica só com a prova da
+  # recusa (Autonomia::Prospecting::LeadsDoContatoExcluido, #2143).
   # Os cards, os leads, o contato e o rastro saem juntos ou nada sai. Devolve { deleted_card_ids:, anonymized_card_ids: }.
   #
   # Nos dois modos, o contato é travado primeiro dentro da transação: dois cliques (ou duas abas) não gravam duas linhas
   # na Auditoria, o segundo espera o primeiro e encontra o contato já excluído (Mudou 'already_deleted').
+  #
+  # Trava longa não há, mas a ordem das travas cruza com a conversão de lead (lead, depois contato): um impasse
+  # (ActiveRecord::Deadlocked) desfaz tudo, e o pedido é refeito do começo, até TENTATIVAS vezes (com_retentativa).
   def contato!(contact:, user:, modo:)
     raise ArgumentError, "modo desconhecido: #{modo}" unless MODOS_DO_CONTATO.include?(modo)
     return contato_mantendo_cards!(contact: contact, user: user) if modo == CARDS_MANTER
 
+    com_retentativa { contato_apagando_cards!(contact: contact, user: user, modo: modo) }
+  end
+
+  def contato_apagando_cards!(contact:, user:, modo:)
     account = contact.account
     card_ids = account.crm_cards.where(contact_id: contact.id).order(:id).pluck(:id)
-    conferir = ->(ids) { conferir_cards_do_contato!(contact, ids) }
-    leads = Autonomia::Prospecting::LeadsDoContatoExcluido.new(contact: contact)
+    leads = nil
+    # Sob a trava do contato e antes de os cards saírem (o que soltaria o lead deles): os leads desta pessoa.
+    conferir = lambda do |ids|
+      conferir_cards_do_contato!(contact, ids)
+      leads = Autonomia::Prospecting::LeadsDoContatoExcluido.new(contact: contact)
+    end
     apagados = Crm::Cards::Excluidor.new(account: account, card_ids: card_ids, somente_arquivados: false)
                                     .perform(conferir: conferir) do |ids|
       leads.perform
@@ -83,7 +96,12 @@ module Crm::ExclusaoDefinitiva
   def contato_mantendo_cards!(contact:, user:)
     anonimizador = Crm::Cards::Anonimizador.new(contact: contact)
     anonimizador.cancelar_reunioes!
-    mantidos = ActiveRecord::Base.transaction do
+    mantidos = com_retentativa { anonimizar_e_excluir!(contact, user, anonimizador) }
+    { deleted_card_ids: [], anonymized_card_ids: mantidos }
+  end
+
+  def anonimizar_e_excluir!(contact, user, anonimizador)
+    ActiveRecord::Base.transaction do
       travar_contato!(contact)
       leads = Autonomia::Prospecting::LeadsDoContatoExcluido.new(contact: contact)
       anonimizador.perform.tap do |ids|
@@ -95,7 +113,27 @@ module Crm::ExclusaoDefinitiva
         contact.destroy!
       end
     end
-    { deleted_card_ids: [], anonymized_card_ids: mantidos }
+  end
+
+  # Impasse com outra transação (a conversão de um lead trava o lead e depois o contato; a exclusão, o contato e depois
+  # os leads): o Postgres desfaz uma das duas. Se foi esta, ela é refeita do começo, com uma pausa curta, até TENTATIVAS
+  # vezes. Dentro de uma transação de quem chama não dá para refazer só este pedaço: o erro sobe.
+  TENTATIVAS = 3
+  PAUSA_ENTRE_TENTATIVAS = 0.1
+
+  def com_retentativa
+    return yield if ActiveRecord::Base.connection.transaction_open?
+
+    tentativa = 0
+    begin
+      tentativa += 1
+      yield
+    rescue ActiveRecord::Deadlocked
+      raise if tentativa >= TENTATIVAS
+
+      sleep(PAUSA_ENTRE_TENTATIVAS * tentativa)
+      retry
+    end
   end
 
   # Sob a trava do contato, os cards dele são relidos: card criado ou movido para outro contato entre a conferência e a
@@ -113,21 +151,23 @@ module Crm::ExclusaoDefinitiva
   # Contato excluído por qualquer caminho, com a flag crm_arquivados (ContactCrmCards): quem excluiu pode não ver os
   # cards. Só ids e contagens.
   # reunioes_so_aqui: canceladas só no sistema porque o calendário não se alcança (o evento pode seguir no provedor).
+  # Sem card nem reunião, só com leads, a linha tem frase própria (modo LEADS): não houve card para manter.
   def auditar_contato_excluido!(contact:, user:, card_ids:, anonimizador:, leads:)
     reunioes = anonimizador.reunioes_canceladas
+    so_leads = card_ids.empty? && reunioes.empty?
     auditar!(account: contact.account, user: user, alvo: 'contato', card_ids: [], contact_id: contact.id,
-             modo: CARDS_MANTER, cards_mantidos: card_ids.size, card_ids_mantidos: card_ids,
+             modo: so_leads ? LEADS : CARDS_MANTER, cards_mantidos: card_ids.size, card_ids_mantidos: card_ids,
              reunioes_canceladas: reunioes.size, reunioes_so_aqui: anonimizador.reunioes_so_aqui.size,
              canceled_meeting_ids: reunioes.presence, **dos_leads(leads))
   end
 
-  # Os leads da Prospecção que saíram com o contato e os que ficaram por terem recusado contato: só ids e contagens. Sem
+  # Os leads da Prospecção que saíram com o contato e os que ficaram só com a prova da recusa: só ids e contagens. Sem
   # lead nenhum, a linha fica como era antes do #2143.
   def dos_leads(leads)
-    return {} if leads.apagados.empty? && leads.mantidos_por_recusa.empty?
+    return {} if leads.apagados.empty? && leads.minimizados.empty?
 
     { leads_apagados: leads.apagados.size, lead_ids_apagados: leads.apagados.presence,
-      leads_mantidos_por_recusa: leads.mantidos_por_recusa.size, lead_ids_mantidos_por_recusa: leads.mantidos_por_recusa.presence }
+      leads_minimizados: leads.minimizados.size, lead_ids_minimizados: leads.minimizados.presence }
   end
 
   # Contato que a exclusão em lote não conseguiu excluir (Contacts::BulkDeleteService): ficou inteiro. Só ids e o

@@ -129,6 +129,7 @@
       "CONTATO_MANTENDO": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}",
       "CONTATO_MANTENDO_REUNIOES": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}. Meetings canceled: {reunioesCanceladas}",
       "CONTATO_MANTENDO_REUNIOES_SO_AQUI": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}. Meetings canceled: {reunioesCanceladas} ({reunioesSoAqui} only here, calendar unreachable)",
+      "CONTATO_LEADS": "{agentName} deleted contact #{contactId}; their Prospecting leads were deleted. Leads deleted: {leadsApagados}. Leads kept only as proof that the person refused contact: {leadsMinimizados}",
       "CONTATO_FALHOU": "The deletion of contact #{contactId}, requested by {agentName} in a bulk action, was not done; the contact and their CRM cards stayed. Reason: {motivo}",
       "FUNIL_FALHOU": "Deleting archived pipeline #{pipelineId}, requested by {agentName}, didn't happen and nothing was deleted. Reason: {motivo}",
       "MOTIVOS": {

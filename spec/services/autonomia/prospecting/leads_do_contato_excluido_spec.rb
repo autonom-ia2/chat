@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# #2143 (LGPD): excluir o contato apaga de vez os leads da Prospecção ligados a ele, por todo caminho de exclusão, com a
-# flag crm_arquivados. O lead que recusou contato fica: é a prova da recusa e o que veta a campanha ao mesmo número.
+# #2143 (LGPD): excluir o contato apaga de vez o lead da Prospecção que é desta pessoa (o dono do contato e o que chega
+# a ela só pelo card), por todo caminho de exclusão, com a flag crm_arquivados. O lead de outra empresa que divide o
+# número só perde o vínculo. O que recusou contato fica só com a prova da recusa, que veta a campanha ao mesmo número.
 RSpec.describe Autonomia::Prospecting::LeadsDoContatoExcluido do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -16,12 +17,21 @@ RSpec.describe Autonomia::Prospecting::LeadsDoContatoExcluido do
         account: account, provider: 'mock', provider_place_id: "places/#{place}", name: 'Clinica Sorriso Maria',
         phone: '+5511999992143', website: 'https://clinica.test', address: 'Rua das Flores, 10', country: 'BR',
         enriched_email: 'maria@clinica.test', enriched_whatsapp: '+5511999992143', decision_name: 'Maria Decisora',
-        decision_linkedin: 'https://linkedin.test/maria', enrichment_summary: 'Dona da clinica',
-        raw_payload: { 'displayName' => 'Clinica Sorriso Maria' }, enriched_data: { 'email' => 'maria@clinica.test' }
+        decision_linkedin: 'https://linkedin.test/maria', enrichment_summary: 'Dona da clinica', score: 80,
+        raw_payload: { 'displayName' => 'Clinica Sorriso Maria' }, enriched_data: { 'email' => 'maria@clinica.test' },
+        metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+5511999992143' },
+                    'research' => { 'owners' => [{ 'name' => 'Maria Decisora' }] } }
       }.merge(attributes)
     )
     list.list_leads.create!(account: account, lead: lead)
     lead
+  end
+
+  # O lead que gravou o contato (ContactConverter): a marca fica no contato.
+  def create_dono(place, **attributes)
+    create_lead(place, contact: contact, **attributes).tap do |lead|
+      contact.update!(custom_attributes: { 'autonomia_prospecting_lead_id' => lead.id })
+    end
   end
 
   def create_card(contact)
@@ -31,8 +41,8 @@ RSpec.describe Autonomia::Prospecting::LeadsDoContatoExcluido do
 
   def leads_com_dado_pessoal
     Autonomia::Prospecting::Lead.where(account_id: account.id)
-                                .where('phone = :p OR enriched_email = :e OR decision_name = :d',
-                                       p: '+5511999992143', e: 'maria@clinica.test', d: 'Maria Decisora')
+                                .where('decision_name = :d OR website = :w OR enrichment_summary IS NOT NULL OR raw_payload <> :v',
+                                       d: 'Maria Decisora', w: 'https://clinica.test', v: '{}')
   end
 
   def auditoria
@@ -42,8 +52,8 @@ RSpec.describe Autonomia::Prospecting::LeadsDoContatoExcluido do
   context 'with the crm_arquivados flag' do
     before { account.enable_features!(:crm_arquivados) }
 
-    it 'DELETE do contato (destroy!): o lead ligado sai inteiro, sem sobrar dado pessoal, e entra na Auditoria' do
-      lead = create_lead('ligado', contact: contact)
+    it 'DELETE do contato (destroy!): o lead dono sai inteiro, sem sobrar dado pessoal, com frase própria na Auditoria' do
+      lead = create_dono('dono')
       Current.user = admin
 
       contact.destroy!
@@ -51,48 +61,75 @@ RSpec.describe Autonomia::Prospecting::LeadsDoContatoExcluido do
       expect(Autonomia::Prospecting::Lead.exists?(lead.id)).to be(false)
       expect(Autonomia::Prospecting::ListLead.where(prospect_lead_id: lead.id)).to be_empty
       expect(leads_com_dado_pessoal).to be_empty
-      expect(auditoria).to include('alvo' => 'contato', 'contact_id' => contact.id, 'leads_apagados' => 1,
-                                   'lead_ids_apagados' => [lead.id], 'leads_mantidos_por_recusa' => 0)
+      expect(auditoria).to include('alvo' => 'contato', 'contact_id' => contact.id, 'modo' => 'leads', 'leads_apagados' => 1,
+                                   'lead_ids_apagados' => [lead.id], 'leads_minimizados' => 0)
     ensure
       Current.reset
     end
 
-    it 'o lead ligado só pelo card do contato também sai' do
+    it 'lead de outra empresa que divide o número com o contato só perde o vínculo' do
+      dono = create_dono('dono')
+      outra_empresa = create_lead('central-unica', contact: contact, name: 'Clinica Vizinha', decision_name: 'Joao Vizinho')
+
+      contact.destroy!
+
+      expect(Autonomia::Prospecting::Lead.exists?(dono.id)).to be(false)
+      expect(outra_empresa.reload).to have_attributes(contact_id: nil, name: 'Clinica Vizinha', decision_name: 'Joao Vizinho')
+      expect(auditoria).to include('lead_ids_apagados' => [dono.id])
+    end
+
+    it 'o lead que chega à pessoa só pelo card também sai; o da outra empresa com card do contato só perde o vínculo' do
       card = create_card(contact)
-      lead = create_lead('pelo-card', crm_card: card)
+      pelo_card = create_lead('pelo-card', crm_card: card)
+      outra_empresa = create_lead('outra', contact: contact, crm_card: create_card(contact))
 
       contact.destroy!
 
-      expect(Autonomia::Prospecting::Lead.exists?(lead.id)).to be(false)
-      expect(auditoria).to include('leads_apagados' => 1, 'cards_mantidos' => 1)
+      expect(Autonomia::Prospecting::Lead.exists?(pelo_card.id)).to be(false)
+      expect(outra_empresa.reload).to have_attributes(contact_id: nil, crm_card_id: nil, name: 'Clinica Sorriso Maria')
+      expect(auditoria).to include('modo' => 'keep', 'leads_apagados' => 1, 'cards_mantidos' => 2)
     end
 
-    it 'o lead que recusou contato fica com o telefone (prova da recusa e veto da campanha), só sem o contato' do
-      recusou = create_lead('recusou', contact: contact, consent_refused_at: 1.day.ago)
-      no_consent = create_lead('no-consent', contact: contact, status: :no_consent, phone: '+5511988882143')
-      apagado = create_lead('apagado', contact: contact, phone: '+5511977772143')
+    it 'o dono que recusou contato fica só com a prova da recusa, e o veto da campanha ao mesmo número continua' do
+      recusou = create_dono('recusou', consent_refused_at: 1.day.ago, consent_refused_by: admin)
 
       contact.destroy!
 
-      expect(recusou.reload).to have_attributes(contact_id: nil, phone: '+5511999992143')
+      recusou.reload
+      expect(recusou).to have_attributes(
+        contact_id: nil, phone: '+5511999992143', enriched_whatsapp: '+5511999992143', enriched_email: 'maria@clinica.test',
+        consent_refused_by_id: admin.id, name: "Lead removido ##{recusou.id}", decision_name: nil, decision_linkedin: nil,
+        website: nil, address: nil, provider_place_id: nil, enrichment_summary: nil, score: nil, raw_payload: {},
+        enriched_data: {}, enrichment_status: 'skipped', prospect_search_id: nil
+      )
       expect(recusou.consent_refused_at).to be_present
-      expect(no_consent.reload).to have_attributes(contact_id: nil, status: 'no_consent')
-      expect(Autonomia::Prospecting::Lead.exists?(apagado.id)).to be(false)
-      expect(auditoria).to include('leads_apagados' => 1, 'lead_ids_mantidos_por_recusa' => [recusou.id, no_consent.id])
+      expect(recusou.metadata).to eq('whatsapp_verification' => { 'status' => 'verified', 'phone' => '+5511999992143' })
+      expect(Autonomia::Prospecting::ListLead.where(prospect_lead_id: recusou.id)).to be_empty
+      expect(leads_com_dado_pessoal).to be_empty
+      novo = create_lead('reimportado', phone: '+5511999992143', provider_place_id: 'places/outro')
+      expect(Autonomia::Prospecting::ConsentVeto.new(account: account).vetoed?(lead: novo, contact: nil)).to be(true)
+      expect(auditoria).to include('modo' => 'leads', 'leads_apagados' => 0, 'lead_ids_minimizados' => [recusou.id])
     end
 
-    it 'lead nunca ligado ao contato, mesmo com o mesmo telefone, e lead de outro contato não são tocados' do
-      solto = create_lead('solto')
-      outro = create_lead('outro', contact: account.contacts.create!(name: 'Outro', phone_number: '+5511966662143'))
+    it 'o lead no_consent também fica só com a prova, mesmo sem data de recusa gravada antes' do
+      no_consent = create_dono('no-consent', status: :no_consent)
 
       contact.destroy!
 
-      expect(Autonomia::Prospecting::Lead.where(id: [solto.id, outro.id]).count).to eq(2)
+      expect(no_consent.reload).to have_attributes(status: 'no_consent', decision_name: nil, phone: '+5511999992143')
+    end
+
+    it 'lead nunca ligado ao contato, mesmo com o mesmo telefone, não é tocado e não há Auditoria' do
+      solto = create_lead('solto')
+
+      contact.destroy!
+
+      expect(solto.reload.decision_name).to eq('Maria Decisora')
       expect(Audited.audit_class.where(auditable: account, action: Crm::ExclusaoDefinitiva::ACAO)).to be_empty
     end
 
-    it 'exclusão em lote: o lead sai com o contato' do
-      lead = create_lead('lote', contact: contact)
+    it 'exclusão em lote: o lead dono sai com o contato' do
+      lead = create_dono('lote')
 
       Contacts::BulkDeleteService.new(account: account, contact_ids: [contact.id], user: admin).perform
 
@@ -102,7 +139,7 @@ RSpec.describe Autonomia::Prospecting::LeadsDoContatoExcluido do
 
     it "excluir de vez com 'delete': os cards e o lead saem, numa linha só da Auditoria" do
       card = create_card(contact)
-      lead = create_lead('delete', contact: contact, crm_card: card)
+      lead = create_dono('delete', crm_card: card)
 
       Crm::ExclusaoDefinitiva.contato!(contact: contact, user: admin, modo: 'delete')
 
@@ -122,7 +159,7 @@ RSpec.describe Autonomia::Prospecting::LeadsDoContatoExcluido do
     end
 
     it 'mesclar contatos não apaga o lead: ele passa para o contato que fica' do
-      lead = create_lead('mescla', contact: contact)
+      lead = create_dono('mescla')
       base = account.contacts.create!(name: 'Base', phone_number: '+5511955552143')
 
       ContactMergeAction.new(account: account, base_contact: base, mergee_contact: contact).perform
@@ -132,10 +169,31 @@ RSpec.describe Autonomia::Prospecting::LeadsDoContatoExcluido do
   end
 
   it 'sem a flag, como na main: o lead só perde o contato' do
-    lead = create_lead('sem-flag', contact: contact)
+    lead = create_dono('sem-flag')
 
     contact.destroy!
 
     expect(lead.reload).to have_attributes(contact_id: nil, decision_name: 'Maria Decisora')
+  end
+
+  describe 'com_retentativa (impasse com a conversão de um lead)' do
+    before do
+      allow(ActiveRecord::Base.connection).to receive(:transaction_open?).and_return(false)
+      allow(Crm::ExclusaoDefinitiva).to receive(:sleep)
+    end
+
+    it 'refaz o pedido depois de um impasse e desiste depois de TENTATIVAS' do
+      tentativas = 0
+      resultado = Crm::ExclusaoDefinitiva.com_retentativa do
+        tentativas += 1
+        raise ActiveRecord::Deadlocked if tentativas == 1
+
+        :feito
+      end
+      expect([resultado, tentativas]).to eq([:feito, 2])
+
+      expect { Crm::ExclusaoDefinitiva.com_retentativa { raise ActiveRecord::Deadlocked } }.to raise_error(ActiveRecord::Deadlocked)
+      expect(Crm::ExclusaoDefinitiva).to have_received(:sleep).exactly(3).times
+    end
   end
 end

@@ -12,6 +12,7 @@
 class Api::V1::Accounts::Crm::Contacts::PermanentDeletionsController < Api::V1::Accounts::Crm::BaseController
   CONFIRMACAO = 'EXCLUIR'.freeze
 
+  before_action :ensure_feature!
   before_action :fetch_contact
   before_action :ensure_admin!
   before_action :ensure_deletable!, only: :create
@@ -35,6 +36,11 @@ class Api::V1::Accounts::Crm::Contacts::PermanentDeletionsController < Api::V1::
   # O fuso da conta, para a janela escrever a data da reunião como a conta vê (e não o fuso do navegador).
   def fuso_da_conta
     ::Crm::Timezone::Resolver.new(account: Current.account).zone_or_default.tzinfo.name
+  end
+
+  # A rota só existe para a conta com a flag crm_arquivados (#2143): a tela nem aparece sem ela, e o servidor confere.
+  def ensure_feature!
+    head :not_found unless ::Crm::Cards::Anonimizador.ligado?(Current.account)
   end
 
   def fetch_contact

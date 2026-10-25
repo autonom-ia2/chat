@@ -1,49 +1,95 @@
-# Contato excluído (#2143, LGPD): os leads da Prospecção ligados a ele saem de vez. Sem isto, a chave estrangeira só
+# Contato excluído (#2143, LGPD): o lead da Prospecção que é desta pessoa sai de vez. Sem isto, a chave estrangeira só
 # soltava o lead do contato e do card, e ficavam nome, telefone, e-mail e WhatsApp achados, o decisor e as redes dele.
 #
-# Ligado ao contato é o lead que aponta para ele (contact_id) ou para um card dele (crm_card_id). O lead pode ter sido
-# importado antes de o contato existir: a busca o achou no Google, e a conversão o ligou a um contato novo ou a um
-# que já existia pelo telefone ou e-mail. Ligado, ele é a mesma pessoa, e sai junto. Lead que nunca foi ligado ao
-# contato (só tem o mesmo telefone) não é tocado: é um resultado de busca, não o registro desta pessoa.
+# O lead é desta pessoa quando:
+# - é o dono do contato: o lead que gravou o contato (ContactConverter.owner_lead_id) e continua ligado a ele;
+# - ou chega a ela só pelo card: aponta para um card do contato (crm_card_id) e não para o contato.
+# O mesmo telefone ou e-mail pode ser de mais de um negócio (central única, franquia, escritório): a conversão liga o
+# lead de outra empresa ao contato que já existia, sem renomeá-lo (ContactConverter). Esse lead não é desta pessoa e só
+# perde o vínculo, pela chave estrangeira, como na main. O lead importado antes de o contato existir é o caso comum: a
+# busca o achou no Google e a conversão gravou o contato a partir dele.
 #
 # A linha inteira sai, e não só as colunas com dado pessoal: o lead não entra em número de venda nem de meta (o total de
 # cada busca fica gravado nela, em results_count), e uma coluna nova não escapa da limpeza por esquecimento. As
 # listas perdem o lead pela cascata do banco. Enriquecimento, pesquisa e verificação de WhatsApp que estejam rodando
-# já tratam o lead apagado no meio: gravam em zero linhas.
+# relêem o lead antes de gravar e param ao não achá-lo.
 #
-# Fica o lead que recusou contato (consent_refused): a recusa é a prova de que a pessoa pediu para não receber
-# mensagem, e o telefone, o WhatsApp e o e-mail dele são o que veta a campanha a quem tem o mesmo número
-# (Autonomia::Prospecting::ConsentVeto). Ele só perde o contato e o card, pela chave estrangeira, como na main.
+# O lead que recusou contato (consent_refused) não sai: a recusa é a prova de que a pessoa pediu para não receber
+# mensagem, e o telefone, o WhatsApp e o e-mail dele vetam a campanha a quem tem o mesmo número
+# (Autonomia::Prospecting::ConsentVeto). Ele fica só com isso (PROVA_DA_RECUSA e METADATA_DA_RECUSA, as verificações de
+# WhatsApp que o veto lê), mais o que a linha precisa para existir. O resto é zerado: cada coluna volta ao padrão do
+# banco (nula, quando pode), o nome vira "Lead removido #id", e o lead sai das listas.
 #
-# Roda dentro da transação de quem exclui o contato, com as linhas travadas: um lead que recusa no mesmo instante
-# (Autonomia::Prospecting::ContactOptOutSync) ou é lido já recusado e fica, ou espera esta exclusão terminar.
+# Roda dentro da transação de quem exclui o contato, depois da trava do contato e dos cards, com as linhas dos leads
+# travadas: um lead que recusa no mesmo instante (Autonomia::Prospecting::ContactOptOutSync) ou é lido já recusado e
+# fica, ou espera esta exclusão terminar.
 class Autonomia::Prospecting::LeadsDoContatoExcluido
+  LEAD = Autonomia::Prospecting::Lead
   # pluck devolve o status como o nome do enum.
   RECUSA = 'no_consent'.freeze
+  PROVA_DA_RECUSA = %w[phone enriched_whatsapp enriched_email consent_refused_at consent_refused_by_id status].freeze
+  METADATA_DA_RECUSA = %w[whatsapp_verification site_whatsapp_verification].freeze
+  # O que a linha precisa para existir. dedupe_key fica: sem ela, o índice único da conta não aceitaria a linha.
+  ESTRUTURA = %w[id account_id provider dedupe_key created_at updated_at].freeze
+  # Escritas à parte, no mesmo UPDATE: o nome e o metadata reduzido.
+  A_PARTE = %w[name metadata].freeze
+  FICAM = (PROVA_DA_RECUSA + ESTRUTURA + A_PARTE).freeze
+  # Pesquisa e enriquecimento encerrados: nada volta à fila para um lead que só existe como prova.
+  ENCERRADO = { 'enrichment_status' => 'skipped' }.freeze
 
-  attr_reader :apagados, :mantidos_por_recusa
+  attr_reader :apagados, :minimizados
 
-  # Criado antes de os cards do contato saírem ou serem anonimizados, que soltam o lead deles (crm_card_id). O perform
-  # roda depois, já com os cards travados: a mesma ordem de travas do resto do CRM (card, depois lead).
+  # Criado antes de os cards do contato saírem ou serem anonimizados (que soltam o lead deles), e já dentro da transação
+  # de quem exclui. O perform roda depois, com os cards travados: a mesma ordem de travas do resto do CRM.
   def initialize(contact:)
     @contact = contact
-    @pelos_cards = Autonomia::Prospecting::Lead.where(account_id: contact.account_id, crm_card_id: contact.crm_cards.select(:id)).pluck(:id)
+    # Relido do banco, sob a trava do contato: a conversão que terminou enquanto a exclusão esperava já gravou o dono.
+    @dono = Autonomia::Prospecting::ContactConverter.owner_lead_id(Contact.select(:id, :custom_attributes).find(contact.id))
+    @pelos_cards = LEAD.where(account_id: contact.account_id, crm_card_id: contact.crm_cards.select(:id))
+                       .where('contact_id IS DISTINCT FROM ?', contact.id).pluck(:id)
     @apagados = []
-    @mantidos_por_recusa = []
+    @minimizados = []
   end
 
   def perform
-    leads = ligados.order(:id).lock.pluck(:id, :consent_refused_at, :status)
-    @mantidos_por_recusa = leads.select { |_id, recusado_em, status| recusado_em.present? || status == RECUSA }.map(&:first)
-    @apagados = leads.map(&:first) - @mantidos_por_recusa
-    Autonomia::Prospecting::Lead.where(id: @apagados).delete_all if @apagados.any?
+    leads = desta_pessoa.order(:id).lock.pluck(:id, :consent_refused_at, :status)
+    @minimizados = leads.select { |_id, recusado_em, status| recusado_em.present? || status == RECUSA }.map(&:first)
+    @apagados = leads.map(&:first) - @minimizados
+    LEAD.where(id: @apagados).delete_all if @apagados.any?
+    minimizar! if @minimizados.any?
     self
   end
 
   private
 
-  def ligados
-    da_conta = Autonomia::Prospecting::Lead.where(account_id: @contact.account_id)
-    da_conta.where(contact_id: @contact.id).or(da_conta.where(id: @pelos_cards))
+  def desta_pessoa
+    da_conta = LEAD.where(account_id: @contact.account_id)
+    dono = @dono ? da_conta.where(id: @dono, contact_id: @contact.id) : da_conta.none
+    dono.or(da_conta.where(id: @pelos_cards))
+  end
+
+  def minimizar!
+    Autonomia::Prospecting::ListLead.where(prospect_lead_id: @minimizados).delete_all
+    LEAD.where(id: @minimizados).update_all(zerados.merge(nome_e_metadata)) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Cada coluna fora de FICAM volta ao padrão do banco: nula quando pode, senão o valor padrão dela.
+  def zerados
+    LEAD.columns.each_with_object({}) do |coluna, valores|
+      next if FICAM.include?(coluna.name)
+
+      valores[coluna.name] = coluna.null ? nil : LEAD.column_defaults[coluna.name]
+    end.merge(ENCERRADO).merge('updated_at' => Time.current)
+  end
+
+  def nome_e_metadata
+    prefixo = LEAD.connection.quote(I18n.t('autonomia.prospecting.lead_removido'))
+    chaves = METADATA_DA_RECUSA.map { |chave| LEAD.connection.quote(chave) }.join(', ')
+    {
+      'name' => Arel.sql("#{prefixo} || id::text"),
+      'metadata' => Arel.sql("(SELECT COALESCE(jsonb_object_agg(chave, valor), '{}'::jsonb) FROM jsonb_each(" \
+                             "CASE WHEN jsonb_typeof(metadata) = 'object' THEN metadata ELSE '{}'::jsonb END) " \
+                             "AS item(chave, valor) WHERE chave IN (#{chaves}))")
+    }
   end
 end
