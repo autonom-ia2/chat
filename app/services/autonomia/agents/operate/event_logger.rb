@@ -64,6 +64,25 @@ module Autonomia
           )
         end
 
+        # #2154 (flag `agente_so_informa`): o agente avisou o cliente que vai chamar alguém e seguiu atendendo; quem decide
+        # passar é a IA de Atribuição. Registro do turno, não passagem, gravado quando a fala sai de fato (a mensagem única,
+        # ou o 1º pedaço). `reason`: o código já curado que a entrega em pedaços leva no meta; senão, o do result. O motivo
+        # passa pela mesma allowlist do handed_off.
+        def self.avisou_que_chama_alguem(agent:, conversation:, result: nil, reason: nil, message: nil)
+          create!(agent: agent, conversation: conversation, event_type: :avisou_que_chama_alguem,
+                  handoff_reason: reason.present? ? curate_code(reason) : curated_reason(result), message_id: message&.id)
+        end
+
+        # #2154: a fala do agente que avisou saiu, mas a IA de Atribuição não vai avaliar (sem card, funil sem passagem,
+        # IA do funil desligada, sem credencial...). Sem isto, o cliente ouviria "vou chamar alguém" e ninguém viria, em
+        # silêncio. `motivo`: rótulo de lista fechada do CRM (Crm::Ai::AvaliacaoDepoisDaFala), nunca texto.
+        def self.atribuicao_nao_avaliou(conversation:, motivo:)
+          agent = ::Autonomia::Agents::QuemResponde.agent_inbox(conversation)&.agent
+          return if agent.blank?
+
+          create!(agent: agent, conversation: conversation, event_type: :atribuicao_nao_avaliou, metadata: { 'motivo' => motivo.to_s })
+        end
+
         # Handoff operacional (ex.: Crm::Ai::HandoffExecutor) numa caixa que pode ou não ter agente
         # Autonom.ia: resolve o vínculo pela caixa/conta da conversa e registra só se houver. nil se não.
         def self.handed_off_by_inbox(conversation:, reason:)
