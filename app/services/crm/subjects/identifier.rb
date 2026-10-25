@@ -11,6 +11,9 @@
 #
 # Coluna do card novo (#1910, flag `crm_assunto_na_etapa`): o modelo maior devolve também a etapa de cada pedido novo
 # (Crm::Subjects::Etapa), que vai na Escolha até o Applier.
+#
+# Dúvida com sinal de pedido novo (#2162, flag `crm_ia_duvida_vira_sugestao`, Crm::Subjects::DuvidaSugerida): a dúvida
+# em que o Jev ou o modelo maior viu um pedido novo vira sugestão de criar o card, que a equipe aceita ou ignora.
 class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou do teto (175) com o motivo da revisão (#2018), que mora junto dos gatilhos
   # outros (#1693): os outros assuntos da mensagem, cada um uma Escolha sem decided_by. duvida: os atributos da decisão
   # quando o principal ficou em dúvida e os outros, claros, seguem (sem opcao). etapa (#1910): a chave da etapa do pedido
@@ -89,6 +92,7 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
   def perguntar
     @jev = TypesafeAi::Decisor.new(feature: Crm::Subjects::FEATURE).decidir(decisor: question, estado: estado)
     opcao = question.opcao(@jev.resposta)
+    @opcao_do_jev = opcao
     @jev_answer = opcao.tipo.to_s
     repetida = sugestao_repetida(opcao)
     return concluir(state: 'kept', **alvo(opcao), reason: repetida, **tocados_da_repetida(opcao)) if repetida
@@ -98,10 +102,15 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
     return if escolha.nil?
 
     resultado = aplicar(escolha)
-    @aplicado = true
+    @aplicado = gravou?(escolha, resultado)
     @evento = resultado.delete(:evento)
     tocados = lista_de_tocados(resultado)
     concluir(**resultado, decided_by: escolha.decided_by, **tocados)
+  end
+
+  # A dúvida que não virou nada (#2162) não gravou card nem sugestão: um erro depois dela desfaz a reserva, como antes.
+  def gravou?(escolha, resultado)
+    !(escolha.opcao.nil? && escolha.outros.blank? && resultado[:state] == 'doubt')
   end
 
   # A lista de cards tocados (#1693), tirada do resultado. Dúvida sem nenhum outro assunto aplicado fica sem lista: a
@@ -116,7 +125,12 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
   def aplicar(escolha)
     applier = Crm::Subjects::Applier.new(conversation: @conversation, question: question, mode: @mode, decisao: @decisao,
                                          anterior: @retrato)
-    return applier.aplicar(escolha.opcao, escolha.titulo, escolha.etapa, generico: escolha.generico == true) unless question.varios?
+    unless question.varios?
+      # A dúvida que virou sugestão (#2162) não tem opção aplicada: só a dúvida, com a sugestão dentro.
+      return applier.duvida(escolha.duvida) if escolha.opcao.nil?
+
+      return applier.aplicar(escolha.opcao, escolha.titulo, escolha.etapa, generico: escolha.generico == true)
+    end
 
     applier.aplicar_varios((escolha if escolha.opcao), Array(escolha.outros), duvida: escolha.duvida)
   end
@@ -216,12 +230,31 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
                          generico: veredito.generico)
     end
 
-    em_duvida = { state: 'doubt', action: 'none', title: veredito.titulo.presence, pipeline: opcao.pipeline, reason: veredito.motivo }
-    # O principal em dúvida não segura os outros assuntos, claros, da mesma mensagem (#1693, C27).
-    return Escolha.new(decided_by: 'review', outros: outros, duvida: em_duvida) if outros.any?
+    em_duvida = em_duvida(opcao, veredito)
+    # O principal em dúvida não segura os outros assuntos, claros, da mesma mensagem (#1693, C27). A dúvida com sinal de
+    # pedido novo (#2162) vai ao Applier, que a sugere dentro da trava.
+    return Escolha.new(decided_by: 'review', outros: outros, duvida: em_duvida) if outros.any? || em_duvida.key?(:sugestao)
 
     concluir(**em_duvida, decided_by: 'review')
     nil
+  end
+
+  # Os atributos da decisão em dúvida, com a sugestão de pedido novo quando há sinal (#2162).
+  def em_duvida(opcao, veredito)
+    { state: 'doubt', action: 'none', title: veredito.titulo.presence, pipeline: opcao.pipeline, reason: veredito.motivo,
+      **sugestao_da_duvida(opcao, veredito) }
+  end
+
+  # #2162: o sinal de pedido novo na dúvida, pela resposta do modelo maior ou, sem ela, pela do Jev. O funil e o nome do
+  # modelo maior valem primeiro; o do Jev vem sem nome. Sem sinal, ou com a mesma sugestão esperando ou ignorada (#1260),
+  # nada (a dúvida fica como antes).
+  def sugestao_da_duvida(opcao, veredito)
+    return {} unless Crm::Subjects::DuvidaSugerida.ligada?(@account)
+
+    novo = [opcao, @opcao_do_jev].find { |candidata| candidata&.tipo == :novo }
+    return {} if novo.nil? || sugestao_repetida(novo)
+
+    { sugestao: { pipeline: novo.pipeline, title: (veredito.titulo.presence if novo == opcao) } }
   end
 
   # Os outros assuntos da lista (#1693), sem o principal: o mesmo assunto repetido sai (o card aberto, ou o pedido novo

@@ -257,7 +257,8 @@
       "NAME": {
         "LABEL": "Nome",
         "PLACEHOLDER": "Ex.: Atendente noturno",
-        "ERROR": "Dê um nome com pelo menos 2 letras."
+        "ERROR": "Dê um nome com pelo menos 2 letras.",
+        "TAKEN": "Já existe uma função com esse nome. Escolha outro."
       },
       "DESCRIPTION": {
         "LABEL": "Para quem é (opcional)",
@@ -301,6 +302,16 @@
         "MESSAGE": "Você tem certeza que deseja excluir ",
         "YES": "Sim, excluir ",
         "NO": "Não, manter "
+      },
+      "MOVE": {
+        "TITLE": "Para qual função vão as pessoas? | Para qual função vai 1 pessoa? | Para qual função vão as {n} pessoas?",
+        "DESCRIPTION": "“{name}” vai ser excluída. Escolha a função que essas pessoas terão daqui para frente.",
+        "LABEL": "Nova função dessas pessoas",
+        "PLACEHOLDER": "Escolha uma função",
+        "NO_ROLE": "Sem função (agente comum)",
+        "NO_ROLE_HINT": "Vê o CRM como qualquer agente comum",
+        "NO_ROLE_WARNING": "Sem função, elas ficam com o acesso de agente comum, que vê quase todo o CRM.",
+        "CONFIRM": "Mover e excluir"
       }
     },
     "EXTRAS": {
@@ -367,6 +378,12 @@
       "LOCK": {
         "MISSING": "Você não tem esta chave",
         "DELEGATION": "Só quem pode entregar acima do próprio acesso"
+      },
+      "LOST_ACCESS": {
+        "TITLE": "Ninguém perde acesso | 1 pessoa vai perder acesso | {n} pessoas vão perder acesso",
+        "DESCRIPTION": "Perdem tudo ou parte de: {areas}.",
+        "CONFIRM": "Salvar assim mesmo",
+        "BACK": "Voltar"
       }
     },
     "SUMMARY": {

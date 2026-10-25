@@ -362,7 +362,8 @@ RSpec.describe 'People permissions (#1931)', :aggregate_failures, type: :request
     it 'records each holder when a role is deleted' do
       holder_membership = membership(member_with([], role: small_role))
 
-      delete "/api/v1/accounts/#{account.id}/custom_roles/#{small_role.id}", headers: admin.create_new_auth_token, as: :json
+      delete "/api/v1/accounts/#{account.id}/custom_roles/#{small_role.id}",
+             params: { destination_role_id: 'none' }, headers: admin.create_new_auth_token, as: :json
 
       expect(holder_membership.reload.custom_role_id).to be_nil
       change = Enterprise::AuditLog.where(auditable_type: 'AccountUser', auditable_id: holder_membership.id, action: 'update').order(:id).last

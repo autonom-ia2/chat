@@ -98,6 +98,7 @@ class CustomRole < ApplicationRecord
   }
 
   before_validation :add_implied_permissions
+  before_validation :strip_name
   before_destroy :capture_filtered_unread_count_user_ids, prepend: true
   after_update_commit :invalidate_filtered_unread_count_visibility_update, if: :filtered_unread_count_permissions_changed?
   after_destroy_commit :invalidate_filtered_unread_count_visibility_destroy
@@ -178,7 +179,11 @@ class CustomRole < ApplicationRecord
     keys + ['crm_view']
   end
 
+  # Um nome por conta, sem diferenciar maiúsculas nem espaços nas pontas (#2185): duas "Vendas" confundem quem dá a
+  # função. O índice único em lower(trim(name)) segura duas gravações ao mesmo tempo.
+  # Só confere quando o nome muda, para não consultar o banco a cada troca de chaves.
   validates :name, presence: true
+  validate :name_not_taken, if: :will_save_change_to_name?
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message
   # names the rejected keys and the accepted ones, so a person or the Guide can fix the
   # request instead of guessing (#894).
@@ -190,6 +195,18 @@ class CustomRole < ApplicationRecord
   end
 
   private
+
+  # A mesma conta que o índice faz (lower(trim(name))): um nome antigo salvo com espaço nas pontas também conta.
+  def name_not_taken
+    return if name.blank?
+
+    taken = self.class.where(account_id: account_id).where.not(id: id).exists?(['lower(trim(name)) = ?', name.downcase])
+    errors.add(:name, :taken) if taken
+  end
+
+  def strip_name
+    self.name = name.strip if name.is_a?(String)
+  end
 
   def add_implied_permissions
     self.permissions = self.class.with_implied_permissions(permissions)

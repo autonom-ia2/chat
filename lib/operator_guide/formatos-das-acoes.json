@@ -743,14 +743,21 @@
     "sem_corpo": false
   },
   "DELETE custom_roles/:id": {
+    "campos": {
+      "destination_role_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
     "completo": true,
     "controller": "api/v1/accounts/custom_roles#destroy",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:22",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:33"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:30",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:68",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:95"
     ],
-    "sem_corpo": true
+    "sem_corpo": false
   },
   "DELETE dashboard_apps/:id": {
     "completo": true,
@@ -6466,9 +6473,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:17",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:33"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:21",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:62",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:95"
     ],
     "sem_corpo": false
   },
@@ -16643,8 +16650,8 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:12",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:14",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:62"
     ],
     "sem_corpo": false
   },
@@ -25020,9 +25027,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:17",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:33"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:21",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:62",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:95"
     ],
     "sem_corpo": false
   },

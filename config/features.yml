@@ -860,12 +860,22 @@
   enabled: false
   column: feature_flags_ext_1
 
+# IA de assunto: dúvida com sinal de pedido novo vira sugestão (#2162). Ligada: quando a IA de assunto fica em dúvida e
+# alguém (o Jev ou o modelo maior) viu um pedido novo, a equipe vê a sugestão "Parece um pedido novo: criar card?" no
+# painel Assuntos da conversa, em Sugerir e em Automática, e aceita ou ignora. Nada é criado sozinho. Sugestão ignorada
+# não volta por 24 h (#1260). Dúvida sem sinal de pedido novo fica como antes. Desligada: a dúvida não muda nada, como
+# antes. Sem migration. Posição 63 na feature_flags_ext_1 (1 << 62), definitiva da Orquestração (25/10), depois da 62
+# do crm_ia_nome_provisorio #2163; é a última posição da coluna. Piloto 1, 16 e 18 da hub por psql, depois do NO AR.
+- name: crm_ia_duvida_vira_sugestao
+  display_name: CRM › Dúvida da IA de assunto vira sugestão
+  enabled: false
+  column: feature_flags_ext_1
+
 # Este contato é (#2084/#2085): interessado (o padrão), parceiro do mercado ou não é negócio, na coluna contacts.relacao.
 # Ligada: parceiro e não é negócio não viram card sozinhos e ficam fora dos Números (Crm::Relacao). Card criado à mão
 # continua valendo. Desligada: todo contato é do funil, como antes. Este PR só traz a coluna, a regra e a flag; as
-# travas, os Números, a API e as telas vêm nos PRs seguintes do #2084. Posição na feature_flags_ext_2: a Orquestração
-# reservou a 3 (1 << 2, 25/10), depois das 1 e 2 do #2195 e do #2199; nesta branch é a 1 (1 << 0), a primeira da
-# coluna. A definitiva é o fim da coluna na main quando chegar a vez.
+# travas, os Números, a API e as telas vêm nos PRs seguintes do #2084. Posição 1 na feature_flags_ext_2 (1 << 0), a
+# primeira da coluna, confirmada pela Orquestração (25/10): chega à main antes das flags de anúncio (#2195, #2199, #2212).
 - name: contato_relacao
   display_name: Contatos › este contato é interessado, parceiro ou não é negócio
   enabled: false
