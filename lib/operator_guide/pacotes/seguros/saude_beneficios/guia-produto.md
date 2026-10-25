@@ -572,7 +572,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `crm_kanban_index`
 
 ### Lembrete que repete, lembrete sem card e quem recebe o aviso
-- intent: "Como faço um lembrete toda semana?"; "Como lembro do aniversário todo ano?"; "Dá para criar lembrete sem negócio?"; "Como mando o lembrete para outra pessoa ou para um time?"; "Como pauso um lembrete que repete?"
+- intent: "Como faço um lembrete toda semana?"; "Como lembro do aniversário todo ano?"; "Dá para criar lembrete sem card?"; "Como mando o lembrete para outra pessoa ou para um time?"; "Como pauso um lembrete que repete?"
 - onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: CRM > Agendamento > Calendário > **Novo** (ou clique no dia); no card, cartão **Agenda** > **Lembrete**; na ficha do cliente ou da empresa (Relacionamento) > **Novo lembrete**. Só aparece com a flag da conta `crm_lembretes_v2` ligada.
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
@@ -922,7 +922,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `campaigns_email_index`
 
 ### Ver a gestão de campanhas
-- intent: Como vão as campanhas no geral?; Quantas campanhas enviei no mês?; Quantas pessoas responderam às campanhas?; Quantas campanhas viraram negócio no CRM?; Quantas campanhas viraram cards no CRM?; Como comparo campanhas de canais diferentes?; "Onde vejo a taxa de abertura e de clique das campanhas de e-mail?"; "Onde fica o relatório / métricas das campanhas de e-mail (open rate, click rate)?"; "Como exporto o relatório (CSV) de uma campanha de e-mail?"; "Como comparo o desempenho de campanhas de e-mail?"
+- intent: Como vão as campanhas no geral?; Quantas campanhas enviei no mês?; Quantas pessoas responderam às campanhas?; Quantas campanhas viraram plano implantado?; Quantas campanhas viraram cards no CRM?; Como comparo campanhas de canais diferentes?; "Onde vejo a taxa de abertura e de clique das campanhas de e-mail?"; "Onde fica o relatório / métricas das campanhas de e-mail (open rate, click rate)?"; "Como exporto o relatório (CSV) de uma campanha de e-mail?"; "Como comparo o desempenho de campanhas de e-mail?"
 - onde_fica: Sidebar > Campanhas > Gestão de campanhas (último item do grupo, depois de SMS)
 - rota: `crm_campaign_management_index` - `/app/accounts/:accountId/campaigns/management`
 - gate: papel `administrator` ou `campaign_view` ou `campaign_manage`

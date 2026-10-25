@@ -64,6 +64,7 @@ Rode `pnpm guia:build` depois de mexer aqui.
 
 
 ### ver_gestao_e_relatorio_de_campanhas_de_e_mail
+- intent: Como vão as campanhas no geral?; Quantas campanhas enviei no mês?; Quantas pessoas responderam às campanhas?; Quantas campanhas viraram plano implantado?; Quantas campanhas viraram cards no CRM?; Como comparo campanhas de canais diferentes?; "Onde vejo a taxa de abertura e de clique das campanhas de e-mail?"; "Onde fica o relatório / métricas das campanhas de e-mail (open rate, click rate)?"; "Como exporto o relatório (CSV) de uma campanha de e-mail?"; "Como comparo o desempenho de campanhas de e-mail?"
 - gotchas: com a jornada ligada, o detalhe de uma campanha (gráfico, cliques por link, tabela por pessoa, exportação, saúde) fica no Resultado dela, e links antigos com uma campanha de e-mail escolhida abrem esse Resultado; **Viraram cards no CRM** conta os cards ligados a uma conversa marcada pela campanha, e implantados é a parte que já teve o plano implantado; pessoas alcançadas soma as entregues, e no WhatsApp API, que não confirma entrega, as enviadas; abertura é aproximada por limitação de tracking; exportar CSV só aparece com campanha específica; esta tela é relatório, não o lugar de editar campanha.
 
 
@@ -102,3 +103,7 @@ Rode `pnpm guia:build` depois de mexer aqui.
 
 ### criar_app_embutido_na_conversa
 - intent: Como mostro os dados do meu sistema dentro da conversa?; Onde cadastro um aplicativo no painel?; Dá para ver a carteirinha do cliente sem sair do atendimento?; Cadastrei o aplicativo e ele abre em branco, por quê?
+
+
+### lembrete_que_repete_sem_card_e_quem_recebe
+- intent: "Como faço um lembrete toda semana?"; "Como lembro do aniversário todo ano?"; "Dá para criar lembrete sem card?"; "Como mando o lembrete para outra pessoa ou para um time?"; "Como pauso um lembrete que repete?"

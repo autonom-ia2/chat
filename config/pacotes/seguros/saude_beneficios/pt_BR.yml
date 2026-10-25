@@ -42,6 +42,10 @@ pt_BR:
       payment_after: 'Lembrar do boleto: depois do vencimento'
       payment_before: 'Lembrar do boleto: 3 dias antes'
       payment_due: 'Lembrar do boleto: no dia'
+  # Erro ao trazer a identidade visual do site (lote 3 do #2083).
+  brand_kits:
+    import_errors:
+      invalid_url: 'Digite o endereço completo do site, por exemplo https://suacorretora.com.br.'
   # Ramo da conta para a IA de e-mail (#2037).
   email_campaigns:
     ai:
