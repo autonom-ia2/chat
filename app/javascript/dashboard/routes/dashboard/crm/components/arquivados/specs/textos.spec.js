@@ -145,7 +145,7 @@ describe('avisoDosDoisAbertos (#2145)', () => {
       },
     };
     expect(avisoDosDoisAbertos(tp, juntar, resposta, 'Vendas')).toBe(
-      'CRM_ARQUIVADOS.FUNIL.DOIS_ABERTOS_QUEM{"count":5,"funil":"Vendas","nomes":"Ana, Bia, Caio, CRM_ARQUIVADOS.FUNIL.MAIS_N{\\"count\\":2}2"}5'
+      'CRM_ARQUIVADOS.FUNIL.MAIS_DE_UM_ABERTO_QUEM{"count":5,"funil":"Vendas","nomes":"Ana, Bia, Caio, CRM_ARQUIVADOS.FUNIL.MAIS_N{\\"count\\":2}2"}5'
     );
   });
 
@@ -154,7 +154,7 @@ describe('avisoDosDoisAbertos (#2145)', () => {
       clients_with_two_open: { count: 1, items: [{ name: null, card_id: 1 }] },
     };
     expect(avisoDosDoisAbertos(tp, juntar, resposta, 'Vendas')).toBe(
-      'CRM_ARQUIVADOS.FUNIL.DOIS_ABERTOS{"count":1,"funil":"Vendas"}1'
+      'CRM_ARQUIVADOS.FUNIL.MAIS_DE_UM_ABERTO{"count":1,"funil":"Vendas"}1'
     );
   });
 });

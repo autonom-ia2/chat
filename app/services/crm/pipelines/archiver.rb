@@ -16,7 +16,7 @@
 # origem): a contagem é de quantos saíram, não de onde estão agora. Arquivar de novo leva o que sobrou.
 # Cliente que já tinha card aberto no funil de destino (#2145, decisão do Rodrigo, opção 1): o card movido vai mesmo
 # assim. O PLANO do multifunil (R1) aceita vários cards abertos do mesmo cliente no mesmo funil. O resultado lista esses
-# clientes (`clientes_com_dois_abertos`), para o resumo dizer "N clientes ficaram com 2 cards abertos em <funil>".
+# clientes (`clientes_com_dois_abertos`), para o resumo dizer "N clientes ficaram com mais de um card aberto em <funil>".
 #
 # Entre os lotes, as caixas ainda apontam para este funil: o cliente sem card aberto que escrever nesse meio ganha card
 # aqui, e ele vai no último lote.
