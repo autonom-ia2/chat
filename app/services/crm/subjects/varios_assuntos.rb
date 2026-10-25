@@ -51,9 +51,10 @@ module Crm::Subjects::VariosAssuntos
     resultado.merge(tocados: [do_principal, *tocados].compact.uniq(&:id))
   end
 
-  # O principal, ou a dúvida dele. Aplicado, o card dele já está gravado (conta para a falha depois de gravar).
-  def aplicar_principal(principal, duvida)
-    return duvida.dup unless principal
+  # O principal, ou a dúvida dele (que pode virar sugestão, #2162). Aplicado, o card dele já está gravado (conta para a
+  # falha depois de gravar).
+  def aplicar_principal(principal, em_duvida)
+    return duvida(em_duvida) unless principal
 
     aplicar(principal.opcao, principal.titulo, principal.etapa, generico: principal.generico == true).tap do |resultado|
       next unless resultado[:state] == 'applied'

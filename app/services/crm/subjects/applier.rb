@@ -40,6 +40,32 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
     end
   end
 
+  # A dúvida do modelo maior: nada muda, a menos que traga a sugestão de pedido novo (#2162, Crm::Subjects::DuvidaSugerida).
+  # Aí vira sugestão de criar o card, em qualquer modo: só uma pessoa cria. Fica a dúvida quando a conversa já tem um
+  # card sem nome e sem pedido (ele recebe o pedido quando ficar claro) e, conferido dentro da trava, quando outra
+  # sugestão espera uma pessoa (a dúvida, sinal mais fraco, não derruba a sugestão clara) ou a pessoa ignorou há pouco a
+  # mesma (#1260). Uma mensagem mais nova passa na frente.
+  def duvida(em_duvida)
+    sugestao = em_duvida[:sugestao]
+    base = em_duvida.except(:sugestao)
+    return base if sugestao.nil? || (@question.atual_sem_nome? && !@question.atual_carrega_pedido?)
+
+    resultado = nil
+    Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
+      resultado = if mensagem_mais_nova?
+                    { state: 'superseded' }
+                  elsif sugestao_bloqueada?(sugestao[:pipeline])
+                    {}
+                  else
+                    sugerir
+                  end
+    end
+    return base if resultado.empty?
+
+    base.merge(action: 'create', card: nil, pipeline: sugestao[:pipeline], title: sugestao[:title],
+               reason: Crm::Subjects::DuvidaSugerida::MOTIVO).merge(resultado)
+  end
+
   private
 
   # "O mesmo assunto" (#2163, com a flag): marca que o card carrega um pedido (em qualquer modo: o pedido novo do mesmo
@@ -160,6 +186,14 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
     when 'focus' then focar(atributos[:card].reload)
     when 'create' then criar(atributos[:pipeline], atributos[:title], atributos[:etapa], generico: generico)
     end
+  end
+
+  # #2162, dentro da trava: outra sugestão espera uma pessoa, ou ela ignorou há pouco a de criar card neste funil. Como
+  # no #1260, só por RESPEITO_AO_FECHAMENTO: uma sugestão esquecida não prende a conversa para sempre.
+  def sugestao_bloqueada?(pipeline)
+    recentes = Crm::SubjectDecision.where(conversation_id: @conversation.id, updated_at: Crm::Subjects::RESPEITO_AO_FECHAMENTO.ago..)
+                                   .where.not(id: @decisao.id)
+    recentes.suggested.exists? || recentes.exists?(state: 'dismissed', action: %w[create rename], pipeline_id: pipeline.id)
   end
 
   # Marca já dentro do lock: duas sugestões da mesma conversa nunca ficam esperando ao mesmo tempo.

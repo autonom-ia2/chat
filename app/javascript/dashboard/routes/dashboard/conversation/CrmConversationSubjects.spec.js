@@ -215,6 +215,36 @@ describe('sugestão da IA (#1145, 5b)', () => {
     expect(CrmKanbanAPI.acceptSubjectSuggestion).not.toHaveBeenCalled();
   });
 
+  it('#2162: a sugestão que veio de uma dúvida pergunta "criar card?", com e sem nome', async () => {
+    CrmKanbanAPI.getConversationSubjects.mockResolvedValueOnce({
+      data: {
+        payload: SUBJECTS,
+        suggestion: { ...SUGGESTION, title: null, duvida: true },
+      },
+    });
+    const semNome = mountPanel();
+    await flushPromises();
+
+    const textoSemNome = semNome.find('[data-crm-subject-suggestion]').text();
+    expect(textoSemNome).toContain(
+      'CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_DOUBT_CREATE'
+    );
+    expect(textoSemNome).not.toContain('SUGGESTION_DOUBT_CREATE_TITLE');
+    expect(
+      button(semNome, 'data-crm-subject-suggestion-accept').attributes('label')
+    ).toBe('CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_DOUBT_CREATE_ACCEPT');
+
+    CrmKanbanAPI.getConversationSubjects.mockResolvedValueOnce({
+      data: { payload: SUBJECTS, suggestion: { ...SUGGESTION, duvida: true } },
+    });
+    const comNome = mountPanel();
+    await flushPromises();
+
+    expect(comNome.find('[data-crm-subject-suggestion]').text()).toContain(
+      'CRM_KANBAN.CONVERSATION.SUBJECTS.SUGGESTION_DOUBT_CREATE_TITLE'
+    );
+  });
+
   it('quem só vê a conversa não recebe a sugestão', async () => {
     const wrapper = mountPanel({ canManage: false });
     await flushPromises();
