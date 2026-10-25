@@ -173,7 +173,7 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
   # #2163: o modelo maior diz se o detalhe chegou, até TENTATIVAS vezes por card (o custo não cresce sem fim quando o
   # detalhe nunca chega).
   def nome_provisorio?(opcao)
-    opcao.tipo == :mesmo && question.atual_nomeavel? && Crm::Subjects::NomeProvisorio.tentativa_livre?(question.atual)
+    opcao.tipo == :mesmo && question.atual_nomeavel? && Crm::Subjects::NomeProvisorio.tentativa_livre?(question.atual, @conversation)
   end
 
   # O Jev sozinho não deixa o primeiro pedido sem nome (#1918): quem escolhe entre continuar o card sem nome e dar nome

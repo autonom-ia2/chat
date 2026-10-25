@@ -51,9 +51,12 @@ module Crm::Subjects::NomeProvisorio
     Crm::SubjectDecision.exists?(card_id: card.id, reason: MESMO_ASSUNTO)
   end
 
-  # Ainda cabe perguntar o nome ao modelo maior pelo "mesmo assunto" deste card (TENTATIVAS).
-  def tentativa_livre?(card)
-    Crm::SubjectDecision.where(card_id: card.id, review_reason: 'nome_provisorio').count < TENTATIVAS
+  # Ainda cabe perguntar o nome ao modelo maior pelo "mesmo assunto" deste card (TENTATIVAS). Conta as perguntas da
+  # conversa desde que o card ganhou o nome, inclusive as que falharam (sem card na decisão): todas custaram.
+  def tentativa_livre?(card, conversation)
+    desde = Time.zone.parse(card.metadata.to_h.dig('subject', 'named_at').to_s) || card.created_at
+    Crm::SubjectDecision.where(conversation_id: conversation.id, review_reason: 'nome_provisorio', created_at: desde..)
+                        .count < TENTATIVAS
   end
 
   # O assunto atual pode ganhar nome (ou o nome específico) pela resposta "o mesmo assunto".
