@@ -823,13 +823,26 @@
   enabled: true
   column: feature_flags_ext_1
 
+# O agente só informa; a IA de Atribuição passa a conversa (#2154, regra do Rodrigo de 24/10). Ligada: quando a instrução
+# do agente de IA manda passar (`should_handoff`), ele responde o que a instrução diz e continua atendendo; não chama mais
+# o `bot_handoff!` (Autonomia::Agents::Operate::Responder). Depois que a fala sai (no último pedaço, na entrega em pedaços),
+# a IA de Atribuição do CRM avalia o card em foco (gatilho `fala_do_agente`) e, se decidir passar, entrega pelo
+# Crm::Entrega com as regras de sempre, mesmo com o agente no nome (Crm::Ai::HandoffExecutor). O evento da cotação
+# (ResponderAoEvento) não muda. Desligada: tudo como antes. Sem migration, sem tela. Posição 60 na feature_flags_ext_1
+# (1 << 59), PROVISÓRIA da Orquestração (24/10); definitiva na vez do PR. Piloto 1, 16 e 18 da hub por psql, pela
+# Orquestração, depois do NO AR.
+- name: agente_so_informa
+  display_name: Agentes IA › o agente avisa, a Atribuição passa a conversa
+  enabled: false
+  column: feature_flags_ext_1
+
 # IA de assunto: nome genérico refinado uma vez (#2163). Ligada: o modelo maior diz se o nome que deu ao pedido é
 # genérico por falta de informação ("Nova cotação"); o card guarda essa marca. Quando o detalhe chega no mesmo pedido,
 # o nome é trocado UMA vez pelo específico, no mesmo card, sem criar outro. Nome dado ou editado por pessoa nunca é
 # trocado. O card sem nome que já carregava um pedido (houve "o mesmo assunto" nele) ganha nome pelo mesmo assunto, e o
 # pedido novo no mesmo funil vira card novo em vez de apagar o primeiro. Desligada: prompt, schema e comportamento iguais
-# aos de antes. Sem migration. Posição PROVISÓRIA (60 nesta branch, 1 << 59); a definitiva é da Orquestração, no fim da
-# main na vez do PR.
+# aos de antes. Sem migration. Posição PROVISÓRIA (61 nesta branch, 1 << 60, depois do agente_so_informa); a
+# definitiva é da Orquestração, no fim da main na vez do PR.
 - name: crm_ia_nome_provisorio
   display_name: CRM › IA refina o nome genérico do pedido
   enabled: false
