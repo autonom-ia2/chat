@@ -71,6 +71,76 @@ RSpec.describe Crm::Pipelines::Archiver, :crm_travas, :relationships_committed_f
     expect(resultados_de(resultados, 1)).to eq([true])
   end
 
+  # #2145: num lote só, o card de cada cliente ficava travado até o fim do arquivamento. Em lotes, o card do lote que já
+  # saiu fica livre enquanto o arquivamento ainda leva os outros.
+  it 'mover em lotes: o card já levado pode ser mexido enquanto o arquivamento leva os outros' do
+    stub_const("#{described_class}::LOTE", 1)
+    segundo = account.crm_cards.create!(pipeline: funil.first, stage: funil.last, title: 'Segundo')
+    terceiro = account.crm_cards.create!(pipeline: funil.first, stage: funil.last, title: 'Terceiro')
+    aviso = pronto
+    espera = soltar
+    # Para no lote do segundo card, já movido e ainda não confirmado (as atividades do lote saem no fim dele). Num lote
+    # só, essa vez não existia: o primeiro card estava no mesmo lote.
+    allow(Crm::Activity).to receive(:insert_all!).and_wrap_original do |original, linhas, *resto|
+      if linhas.map { |linha| linha[:card_id] } == [segundo.id]
+        aviso << true
+        espera.pop
+      end
+      original.call(linhas, *resto)
+    end
+    arquivador = described_class.new(pipeline: Crm::Pipeline.find(funil.first.id), actor: admin, target_stage: destino.last,
+                                     new_default: novo_principal)
+    em_outra_conexao(resultados) { arquivador.perform.moved.map(&:id) }
+    Timeout.timeout(5) { pronto.pop }
+
+    mexer = em_outra_conexao(resultados) { Crm::Card.find(card.id).update!(title: 'Mexido no meio') }
+    esperar_fim_ou_trava(mexer, resultados, 0)
+    expect(resultados.size).to eq(1)
+    soltar << true
+    crm_travas_threads.each(&:join)
+
+    expect(resultados_de(resultados, 2)).to eq([true, [card.id, segundo.id, terceiro.id]])
+    expect(funil.first.reload).to be_archived
+    expect(account.crm_cards.where(id: [card.id, segundo.id, terceiro.id]).pluck(:pipeline_id).uniq).to eq([destino.first.id])
+    expect(card.reload.title).to eq('Mexido no meio')
+  end
+
+  # Revisão do #2145: arquivar P1 levando para P2 e P2 levando para P1 ao mesmo tempo. Com a trava solta a cada lote e
+  # os abertos relidos a cada lote, um devolvia cards ao outro sem fim. Lidos uma vez, cada um leva só os seus.
+  it 'mover em lotes: dois arquivamentos cruzados terminam' do
+    stub_const("#{described_class}::LOTE", 1)
+    account.crm_pipelines.update_all(is_default: false) # rubocop:disable Rails/SkipsModelValidations
+    create_crm_pipeline(account: account, user: admin, name: 'Principal').first.update_columns(is_default: true) # rubocop:disable Rails/SkipsModelValidations
+    account.crm_cards.create!(pipeline: funil.first, stage: funil.last, title: 'Outro de P1')
+    2.times { |i| account.crm_cards.create!(pipeline: destino.first, stage: destino.last, title: "De P2 #{i}") }
+    lotes = Concurrent::AtomicFixnum.new(0)
+    primeiro = Queue.new
+    espera = soltar
+    allow(Crm::Activity).to receive(:insert_all!).and_wrap_original do |original, linhas, *resto|
+      vez = lotes.increment
+      raise 'lotes sem fim' if vez > 40
+
+      if vez == 1
+        primeiro << true
+        espera.pop
+      end
+      original.call(linhas, *resto)
+    end
+    de_p1 = described_class.new(pipeline: Crm::Pipeline.find(funil.first.id), actor: admin, target_stage: destino.last)
+    de_p2 = described_class.new(pipeline: Crm::Pipeline.find(destino.first.id), actor: admin, target_stage: funil.last)
+    em_outra_conexao(resultados) { de_p1.perform.moved.size }
+    Timeout.timeout(5) { primeiro.pop }
+    esperar_na_trava(em_outra_conexao(resultados) { de_p2.perform.moved.size })
+    soltar << true
+    crm_travas_threads.each { |thread| thread.join(20) }
+
+    # Um termina arquivando; o outro termina também, arquivando ou recusando o destino que o primeiro arquivou.
+    fim = resultados_de(resultados, 2)
+    expect(lotes.value).to be <= 6
+    expect(fim.grep(Integer)).not_to be_empty
+    expect(fim - fim.grep(Integer)).to all(eq('Crm::Pipelines::Archiver::InvalidTarget'))
+  end
+
   it 'restaurar um card enquanto o funil dele é arquivado: espera e recusa, em vez de deixá-lo aberto no funil arquivado' do
     Crm::Cards::Archiver.new(card: card, actor: admin).perform
     em_outra_conexao(resultados) do

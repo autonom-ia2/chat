@@ -123,4 +123,18 @@ describe('useArquivarFunil', () => {
     expect(estado.erroPrevia.value).toBeTruthy();
     expect(estado.pronto.value).toBe(false);
   });
+
+  it('recusa depois de parte dos cards levada (#2145): a prévia volta com os abertos de agora', async () => {
+    previa();
+    const estado = montar();
+    await estado.abrir({ alvo: pos, ativos: [vendas, pos, extra] });
+    expect(estado.abertos.value).toBe(2);
+
+    previa({ open_cards_count: 1 });
+    await estado.recarregarPrevia();
+    await flushPromises();
+
+    expect(CrmArquivadosAPI.previaDoArquivarFunil).toHaveBeenLastCalledWith(2);
+    expect(estado.abertos.value).toBe(1);
+  });
 });

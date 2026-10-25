@@ -307,4 +307,37 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
       expect(described_class.new(pipeline: pipeline).perform).to eq(1)
     end
   end
+
+  # #2100: a varredura lê o card sem trava; o que muda entre as guardas e a criação da 1ª vez vale (o card é relido sob
+  # trava). O write_state regrava o estado inteiro: com o card lido antes, apagava o opted_out gravado no meio.
+  describe 'o que muda depois da leitura da varredura' do
+    def mudar_no_meio
+      allow(Crm::FollowUps::CadenceAnchor).to receive(:new).and_wrap_original do |original, *args|
+        yield
+        original.call(*args)
+      end
+    end
+
+    it 'cliente que pediu para sair no meio: nada de 1ª vez, e o opted_out fica' do
+      account, user = create_account_and_user
+      pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+      card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
+      saiu = { 'ai' => { 'auto_followup_state' => { 'active' => false, 'opted_out' => true } } }
+      mudar_no_meio { Crm::Card.where(id: card.id).update_all(metadata: saiu) } # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+      expect(Crm::FollowUp.where(card: card)).to be_empty
+      expect(card.reload.metadata.dig('ai', 'auto_followup_state', 'opted_out')).to be(true)
+    end
+
+    it 'funil arquivado no meio ("Guardar junto"): nada de 1ª vez' do
+      account, user = create_account_and_user
+      pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+      card, = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
+      mudar_no_meio { Crm::Pipeline.where(id: pipeline.id).update_all(status: Crm::Pipeline.statuses[:archived]) } # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+      expect(Crm::FollowUp.where(card: card)).to be_empty
+    end
+  end
 end

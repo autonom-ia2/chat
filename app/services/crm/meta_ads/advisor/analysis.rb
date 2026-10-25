@@ -32,9 +32,10 @@ class Crm::MetaAds::Advisor::Analysis
 
   class << self
     # → Advice. Com trigger 'panel', marca `shown_at` nas ações mostradas, salvo `shown: false` (o pedido veio pelo
-    # token de API, como o Guia chama: a métrica de aceite conta só o que o painel mostrou, D5.11).
-    def current(connection, locale:, trigger: 'panel', report: nil, shown: true)
-      new(connection, locale: locale, report: report).current(trigger, shown: shown)
+    # token de API, como o Guia chama: a métrica de aceite conta só o que o painel mostrou, D5.11). `visible`: a pessoa
+    # do pedido (Crm::MetaAds::VisibleConversations), para os valores de venda do Advice (#2075). context: report:, visible:.
+    def current(connection, locale:, trigger: 'panel', shown: true, **context)
+      new(connection, locale: locale, **context).current(trigger, shown: shown)
     end
 
     # O resumo das 8h: escreve na hora se o run está livre e há vaga no teto.
@@ -60,9 +61,9 @@ class Crm::MetaAds::Advisor::Analysis
 
     # O Advice de um run já existente (o job da ação do dia, depois de escrever). Valores atuais quando a decisão
     # de agora é a mesma do run; senão, os guardados nele.
-    def serialize(run, locale)
+    def serialize(run, locale, visible: nil)
       connection = Crm::MetaAdsConnection.find_by(account_id: run.account_id, ad_account_id: run.ad_account_id)
-      new(connection, locale: locale).advice(run)
+      new(connection, locale: locale, visible: visible).advice(run)
     end
 
     # O envio real do resumo das 8h marca a ação que o WhatsApp mostrou.
@@ -135,10 +136,11 @@ class Crm::MetaAds::Advisor::Analysis
 
   attr_reader :run
 
-  def initialize(connection, locale:, report: nil)
+  def initialize(connection, locale:, report: nil, visible: nil)
     @connection = connection
     @locale = locale.to_s
     @report = report
+    @visible = visible
   end
 
   def current(trigger, shown: true)
@@ -150,7 +152,7 @@ class Crm::MetaAds::Advisor::Analysis
 
   def advice(run)
     actions = fresh?(run) ? evaluation[:actions] : run.decision.map(&:deep_symbolize_keys)
-    Crm::MetaAds::Advisor::Advice.new(run, actions, today: today_rows(run), locale: @locale).payload
+    Crm::MetaAds::Advisor::Advice.new(run, actions, today: today_rows(run), locale: @locale, visible: @visible).payload
   end
 
   private

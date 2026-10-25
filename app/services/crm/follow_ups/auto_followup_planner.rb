@@ -127,7 +127,24 @@ module Crm
         decision.present? && Crm::FollowUps::OptOutDecision::CLEARED.exclude?(decision)
       end
 
+      # Com o card travado e relido (#2100): a varredura leu o card sem trava, e um arquivamento (Crm::Cards::Archiver)
+      # que terminasse no meio deixava a 1ª vez criada e o estado `active: true` gravado num card arquivado. Relido, o
+      # card que não está mais aberto, que mudou de funil, cujo funil foi arquivado ("Guardar junto", que segura o card até confirmar), que
+      # outra varredura já armou ou cujo cliente pediu para sair fica como está (o write_state regrava o estado inteiro:
+      # com o card lido antes, apagava um opted_out gravado no meio). Criar a vez com o card travado é o que o
+      # arquivamento espera (2ª passagem dele). Nenhum lembrete é travado antes: sem ciclo com o DueProcessor.
+      # FOR NO KEY UPDATE: só colunas comuns mudam, e o INSERT com chave para o card (atividade, lembrete) não espera.
       def create_first_touch(card, anchor_at)
+        Crm::Card.transaction do
+          card.lock!('FOR NO KEY UPDATE')
+          next unless card.open? && card.pipeline_id == @pipeline.id && card.pipeline.active?
+          next if cadence_active?(card) || cadence_spent?(card) || opted_out?(card) || opt_out_undecided?(card)
+
+          arm_first_touch(card, anchor_at)
+        end
+      end
+
+      def arm_first_touch(card, anchor_at)
         timezone = resolved_timezone(card)
         due_at = compute_first_due(anchor_at, timezone)
 

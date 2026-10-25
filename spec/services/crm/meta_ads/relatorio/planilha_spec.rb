@@ -49,6 +49,20 @@ RSpec.describe Crm::MetaAds::Relatorio::Planilha do
     expect(linhas.call(3).size).to eq(Relatorios::Planilha::HEADER_ROW + 30) # um dia por linha, 30 dias contando hoje
   end
 
+  # #2075: sem `sales_value_view`, nada de valor: nem a linha do resumo, nem a coluna (vazia ou "R$ 0").
+  it 'sem os valores de venda, tira o valor vendido do resumo e a coluna de valor dos anúncios e das conversas' do
+    from_ad('Paulo Lima', 2.days.ago, status: :won, value: 950)
+    olhar = instance_double(Crm::MetaAds::VisibleConversations, sales_values?: false, card_value?: false)
+    allow(olhar).to receive(:ids) { |ids| Set.new(ids) }
+
+    dados = Crm::MetaAds::Relatorio::Dados.new(nil, period: '30d', account: account, visible: olhar)
+    planilha = Roo::Excelx.new(StringIO.new(described_class.new(dados).gerar))
+    celulas = (0..3).flat_map { |aba| (1..planilha.sheet(aba).last_row).flat_map { |linha| planilha.sheet(aba).row(linha) } }
+
+    expect(celulas).to include('Vendas', 'Paulo Lima', 'Comprou')
+    expect(celulas).not_to include('Valor vendido', 'Valor', 950)
+  end
+
   it 'com conexão, o gasto dos anúncios que levam ao site sai numa linha própria, fora do investido (#2054)' do
     connection = create_meta_ads_insights_connection(account)
     Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-site', object_type: 'adset', destination_type: 'WEBSITE', fetched_at: now)
