@@ -63,6 +63,9 @@ pt_BR:
   errors:
     custom_role:
       unknown_permissions: 'tem chaves desconhecidas: %{unknown}. Chaves válidas: %{valid}'
+      destination_required: 'Esta função tem pessoas. Escolha para onde elas vão: outra função ou sem função (agente comum).'
+      destination_invalid: 'As pessoas desta função não podem ir para essa função. Escolha outra função desta conta ou sem função.'
+      changed_meanwhile: 'Alguém mudou esta função ou as pessoas dela enquanto você excluía. Nada foi alterado. Tente de novo.'
     account:
       not_authorized: Você não está autorizado a acessar esta conta
       email_limit_exceeded: O limite diário de envio de e-mails desta conta foi atingido

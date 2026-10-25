@@ -21,6 +21,37 @@ RSpec.describe CustomRole, type: :model do
       expect(inclusion.options[:in]).to eq(CustomRole::PERMISSIONS)
     end
 
+    # #2185: um nome por conta, sem diferenciar maiúsculas nem espaços nas pontas.
+    it 'refuses a name already used in the account, ignoring case and surrounding spaces' do
+      existing = create(:custom_role, name: 'Vendas')
+      role = build(:custom_role, account: existing.account, name: '  vENDAS ')
+
+      expect(role).not_to be_valid
+      expect(role.errors.details[:name]).to include(a_hash_including(error: :taken))
+      expect(role.name).to eq('vENDAS')
+    end
+
+    it 'accepts the same name in another account and keeps a role valid against itself' do
+      existing = create(:custom_role, name: 'Vendas')
+
+      expect(build(:custom_role, name: 'Vendas')).to be_valid
+      expect(existing.reload).to be_valid
+    end
+
+    # Repetidos de antes do #2185 continuam mudando de chaves; só o nome novo é conferido.
+    it 'lets an old duplicate change its keys and refuses renaming onto a taken name' do
+      existing = create(:custom_role, name: 'Vendas')
+      old_copy = create(:custom_role, account: existing.account, name: 'Outra')
+      old_copy.update_column(:name, 'vendas') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(old_copy.reload.update(permissions: %w[contact_view])).to be(true)
+      expect(create(:custom_role, account: existing.account, name: 'Suporte').update(name: 'VENDAS ')).to be(false)
+    end
+
+    it 'saves the name without the surrounding spaces' do
+      expect(create(:custom_role, name: '  Suporte  ').reload.name).to eq('Suporte')
+    end
+
     it 'lists the unknown keys and the valid ones' do
       role = build(:custom_role, permissions: %w[contact_view conversation_read_only inbox_38])
 

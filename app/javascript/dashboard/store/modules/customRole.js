@@ -1,7 +1,16 @@
-import { throwErrorMessage } from 'dashboard/store/utils/api';
+import { parseAPIErrorResponse } from 'dashboard/store/utils/api';
 import * as MutationHelpers from 'shared/helpers/vuex/mutationHelpers';
 import * as types from '../mutation-types';
 import CustomRoleAPI from '../../api/customRole';
+
+// Guarda os campos recusados e o código do erro (#2185): o editor mostra o nome repetido ao lado do campo, e a
+// lista abre a pergunta do destino quando o servidor diz que a função tem gente.
+const throwWithAttributes = error => {
+  const failure = new Error(parseAPIErrorResponse(error));
+  failure.attributes = error?.response?.data?.attributes || [];
+  failure.code = error?.response?.data?.error;
+  throw failure;
+};
 
 export const state = {
   records: [],
@@ -43,7 +52,7 @@ export const actions = {
       return response.data;
     } catch (error) {
       commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, { creatingItem: false });
-      return throwErrorMessage(error);
+      return throwWithAttributes(error);
     }
   },
 
@@ -59,20 +68,23 @@ export const actions = {
       return response.data;
     } catch (error) {
       commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, { updatingItem: false });
-      return throwErrorMessage(error);
+      return throwWithAttributes(error);
     }
   },
 
-  deleteCustomRole: async function deleteCustomRole({ commit }, id) {
+  deleteCustomRole: async function deleteCustomRole(
+    { commit },
+    { id, destinationRoleId }
+  ) {
     commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, { deletingItem: true });
     try {
-      await CustomRoleAPI.delete(id);
+      await CustomRoleAPI.delete(id, destinationRoleId);
       commit(types.default.DELETE_CUSTOM_ROLE, id);
       commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, { deletingItem: true });
       return id;
     } catch (error) {
       commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, { deletingItem: true });
-      return throwErrorMessage(error);
+      return throwWithAttributes(error);
     }
   },
 };

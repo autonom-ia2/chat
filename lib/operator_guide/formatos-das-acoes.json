@@ -743,14 +743,21 @@
     "sem_corpo": false
   },
   "DELETE custom_roles/:id": {
+    "campos": {
+      "destination_role_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      }
+    },
     "completo": true,
     "controller": "api/v1/accounts/custom_roles#destroy",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:22",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:33"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:26",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:61",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:81"
     ],
-    "sem_corpo": true
+    "sem_corpo": false
   },
   "DELETE dashboard_apps/:id": {
     "completo": true,
@@ -6396,7 +6403,8 @@
       },
       "name": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "permissions": {
         "tipo": "lista",
@@ -6466,9 +6474,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:17",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:33"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:19",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:55",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:81"
     ],
     "sem_corpo": false
   },
@@ -16558,7 +16566,8 @@
       },
       "name": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "permissions": {
         "tipo": "lista",
@@ -16628,8 +16637,8 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:12",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:14",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:55"
     ],
     "sem_corpo": false
   },
@@ -24935,7 +24944,8 @@
       },
       "name": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "permissions": {
         "tipo": "lista",
@@ -25005,9 +25015,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:17",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:33"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:19",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:55",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:81"
     ],
     "sem_corpo": false
   },

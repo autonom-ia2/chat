@@ -12,7 +12,7 @@ import PermissionGroup from './component/PermissionGroup.vue';
 import RoleSummary from './component/RoleSummary.vue';
 import AssignAgentsDialog from './component/AssignAgentsDialog.vue';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
-import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
+import { LOCK_REASONS, holdsKey } from 'dashboard/helper/peopleAccess';
 import {
   BLANK_PROFILE,
   LEVELS,
@@ -34,6 +34,7 @@ const { t } = useI18n();
 
 const roles = useMapGetter('customRole/getCustomRoles');
 const uiFlags = useMapGetter('customRole/getUIFlags');
+const agents = useMapGetter('agents/getAgents');
 
 // Fora do administrador (#1931): só monta com as próprias chaves, sem chave de delegação (a menos que
 // possa entregar acima do próprio acesso), e não abre a própria função nem uma acima do alcance.
@@ -56,7 +57,12 @@ const nameError = ref('');
 const leftOut = ref([]);
 
 const confirmRef = ref(null);
-const confirmation = ref({ title: '', description: '', label: '' });
+const confirmation = ref({
+  title: '',
+  description: '',
+  label: '',
+  cancel: '',
+});
 let pendingAction = null;
 const assignRef = ref(null);
 
@@ -251,20 +257,30 @@ const isSaving = computed(
   () => uiFlags.value.creatingItem || uiFlags.value.updatingItem
 );
 
-const save = async () => {
-  if (name.value.trim().length < 2) {
-    nameError.value = t('CUSTOM_ROLE.FORM.NAME.ERROR');
-    return;
-  }
-  if (!permissions.value.length) {
-    useAlert(t('CUSTOM_ROLE.FORM.PERMISSIONS.ERROR'));
-    return;
-  }
-  const payload = {
-    name: name.value.trim(),
-    description: description.value.trim(),
-    permissions: permissions.value,
+// Um nome por conta, sem diferenciar maiúsculas nem espaços (#2185). O servidor confere de novo, e só quando o nome
+// muda: um repetido antigo continua mudando de chaves sem pedir nome novo.
+const isNameTaken = value =>
+  value !== findRole(roleId.value)?.name &&
+  roles.value.some(
+    role =>
+      role.id !== roleId.value &&
+      role.name.trim().toLowerCase() === value.toLowerCase()
+  );
+
+// Quem tem a função e as áreas em que ela perde chaves ao salvar (#2185): o administrador confirma antes.
+// Passar de ver para editar não é perda: editar inclui ver, como no servidor (holdsKey).
+const lostAccess = () => {
+  const saved = findRole(roleId.value)?.permissions || [];
+  const next = { permissions: permissions.value };
+  const removed = saved.filter(key => !holdsKey(next, key));
+  return {
+    people: agents.value.filter(agent => agent.custom_role_id === roleId.value)
+      .length,
+    areas: modulesWithKeys(removed),
   };
+};
+
+const persist = async payload => {
   try {
     if (isNewRole.value) {
       const role = await store.dispatch('customRole/createCustomRole', payload);
@@ -283,8 +299,50 @@ const save = async () => {
     useAlert(t('CUSTOM_ROLE.EDIT.API.SUCCESS_MESSAGE'));
     backToList();
   } catch (error) {
+    // O nome é a única recusa de campo que chega aqui: o tamanho é conferido em save, antes de chegar aqui.
+    if (error?.attributes?.includes('name')) {
+      nameError.value = t('CUSTOM_ROLE.FORM.NAME.TAKEN');
+      return;
+    }
     useAlert(error?.message || t('CUSTOM_ROLE.FORM.API.ERROR_MESSAGE'));
   }
+};
+
+const save = () => {
+  const typedName = name.value.trim();
+  if (typedName.length < 2) {
+    nameError.value = t('CUSTOM_ROLE.FORM.NAME.ERROR');
+    return null;
+  }
+  if (isNameTaken(typedName)) {
+    nameError.value = t('CUSTOM_ROLE.FORM.NAME.TAKEN');
+    return null;
+  }
+  if (!permissions.value.length) {
+    useAlert(t('CUSTOM_ROLE.FORM.PERMISSIONS.ERROR'));
+    return null;
+  }
+  const payload = {
+    name: typedName,
+    description: description.value.trim(),
+    permissions: permissions.value,
+  };
+  if (isNewRole.value) return persist(payload);
+  const { people, areas } = lostAccess();
+  if (!people || !areas.length) return persist(payload);
+  return askConfirmation(
+    {
+      title: t('CUSTOM_ROLE.EDITOR.LOST_ACCESS.TITLE', people),
+      description: t('CUSTOM_ROLE.EDITOR.LOST_ACCESS.DESCRIPTION', {
+        areas: areas
+          .map(module => t(`CUSTOM_ROLE.MATRIX.MODULES.${module.key}.NAME`))
+          .join(', '),
+      }),
+      label: t('CUSTOM_ROLE.EDITOR.LOST_ACCESS.CONFIRM'),
+      cancel: t('CUSTOM_ROLE.EDITOR.LOST_ACCESS.BACK'),
+    },
+    () => persist(payload)
+  );
 };
 </script>
 
@@ -513,6 +571,7 @@ const save = async () => {
       :title="confirmation.title"
       :description="confirmation.description"
       :confirm-button-label="confirmation.label"
+      :cancel-button-label="confirmation.cancel || ''"
       @confirm="onConfirm"
     />
     <AssignAgentsDialog ref="assignRef" @done="backToList" />
