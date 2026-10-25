@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_390000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_400000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2466,7 +2466,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_390000) do
     t.bigint "account_id", null: false
     t.bigint "card_id", null: false
     t.bigint "inbox_id"
-    t.bigint "created_by_id", null: false
+    t.bigint "created_by_id"
     t.bigint "reminder_id"
     t.string "title", null: false
     t.text "description"
@@ -4064,7 +4064,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_390000) do
   create_table "whatsapp_api_campaigns", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
-    t.bigint "created_by_id", null: false
+    t.bigint "created_by_id"
     t.bigint "whatsapp_api_message_template_id"
     t.string "title", null: false
     t.integer "status", default: 0, null: false
@@ -4096,7 +4096,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_390000) do
   create_table "whatsapp_api_message_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
-    t.bigint "created_by_id", null: false
+    t.bigint "created_by_id"
     t.bigint "updated_by_id"
     t.string "name", null: false
     t.text "body", null: false
