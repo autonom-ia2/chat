@@ -180,8 +180,8 @@ class CustomRole < ApplicationRecord
   end
 
   # Um nome por conta, sem diferenciar maiúsculas nem espaços nas pontas (#2185): duas "Vendas" confundem quem dá a
-  # função. Sem índice no banco por enquanto: a produção ainda pode ter repetidos, e o índice vem depois dessa conferência.
-  # Só confere quando o nome muda: um repetido antigo continua mudando de chaves sem pedir nome novo.
+  # função. O índice único em lower(trim(name)) segura duas gravações ao mesmo tempo.
+  # Só confere quando o nome muda, para não consultar o banco a cada troca de chaves.
   validates :name, presence: true
   validates :name, uniqueness: { scope: :account_id, case_sensitive: false }, if: :will_save_change_to_name?
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message

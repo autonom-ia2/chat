@@ -38,13 +38,17 @@ RSpec.describe CustomRole, type: :model do
       expect(existing.reload).to be_valid
     end
 
-    # Repetidos de antes do #2185 continuam mudando de chaves; só o nome novo é conferido.
-    it 'lets an old duplicate change its keys and refuses renaming onto a taken name' do
+    # O índice segura o que a validação não vê: duas gravações ao mesmo tempo.
+    it 'refuses a duplicate in the database even when the validation is skipped' do
       existing = create(:custom_role, name: 'Vendas')
-      old_copy = create(:custom_role, account: existing.account, name: 'Outra')
-      old_copy.update_column(:name, 'vendas') # rubocop:disable Rails/SkipsModelValidations
+      other = create(:custom_role, account: existing.account, name: 'Outra')
 
-      expect(old_copy.reload.update(permissions: %w[contact_view])).to be(true)
+      expect { other.update_column(:name, ' vendas ') }.to raise_error(ActiveRecord::RecordNotUnique) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it 'refuses renaming onto a taken name' do
+      existing = create(:custom_role, name: 'Vendas')
+
       expect(create(:custom_role, account: existing.account, name: 'Suporte').update(name: 'VENDAS ')).to be(false)
     end
 

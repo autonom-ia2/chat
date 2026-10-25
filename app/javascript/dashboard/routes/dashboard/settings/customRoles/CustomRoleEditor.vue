@@ -257,8 +257,8 @@ const isSaving = computed(
   () => uiFlags.value.creatingItem || uiFlags.value.updatingItem
 );
 
-// Um nome por conta, sem diferenciar maiúsculas nem espaços (#2185). O servidor confere de novo, e só quando o nome
-// muda: um repetido antigo continua mudando de chaves sem pedir nome novo.
+// Um nome por conta, sem diferenciar maiúsculas nem espaços (#2185). O servidor confere de novo, e o banco tem
+// índice único.
 const isNameTaken = value =>
   value !== findRole(roleId.value)?.name &&
   roles.value.some(
