@@ -8,7 +8,7 @@ Até aqui o painel falava a língua da conta, mas o Guia e a Central de Ajuda ai
 
 ### Guia da Plataforma por pacote
 
-- Cada camada tem `lib/operator_guide/pacotes/<camada>/porques.md`, com os fluxos do `porques.md` geral, pelo mesmo cabeçalho, e só os campos de texto que mudam: `titulo`, `intent`, `onde_fica`, `pre_requisitos` (desde o lote 4 do #2083), `passos` e `gotchas`. Rota, gate, `nav_target` e `cobre` vêm sempre do geral; o build recusa fluxo desconhecido e campo proibido.
+- Cada camada tem `lib/operator_guide/pacotes/<camada>/porques.md`, com os fluxos do `porques.md` geral, pelo mesmo cabeçalho, e só os campos de texto que mudam: `titulo`, `intent`, `onde_fica`, `perfil` e `pre_requisitos` (desde o lote 4 do #2083), `passos` e `gotchas`. Rota, gate, `nav_target` e `cobre` vêm sempre do geral; o build recusa fluxo desconhecido e campo proibido.
 - O `pnpm guia:build` gera `lib/operator_guide/pacotes/<camada>/guia-produto.md` compondo as camadas (geral ← seguros ← tipo). O `pnpm guia:check` reprova arquivo de pacote fora de dia e arquivo gerado sem `porques.md`.
 - Hoje: `seguros` (11 fluxos), `seguros/corretora` (10) e `seguros/saude_beneficios` (8).
 - O Seed escolhe a base pela conta (`Autonomia::Guide::Seed.kb_path_for`, `Autonomia::Guide::BaseDoPacote`): a camada mais específica que tiver arquivo. Sem arquivo, ou com o interruptor desligado, fica a base geral. O `kb_version` é o da base escolhida, então a conta geral não é re-semeada e a conta de pacote é re-semeada uma vez quando o interruptor liga ou o texto do pacote muda.

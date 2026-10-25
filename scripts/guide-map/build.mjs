@@ -34,6 +34,7 @@ const CAMPOS_DO_PACOTE = [
   'titulo',
   'intent',
   'onde_fica',
+  'perfil',
   'pre_requisitos',
   'passos',
   'gotchas',

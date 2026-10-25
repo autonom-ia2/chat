@@ -17,7 +17,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `first_steps`
 
 ### Abrir a página inicial de Configurações (cartões)
-- intent: Onde ficam as configurações?; Onde mudo os dados da empresa?; Onde vejo meu plano e as faturas?; Onde cadastro usuários?; O que falta configurar?; Onde fica o horário de atendimento?; Cadê a Atribuição?
+- intent: Onde ficam as configurações?; Onde mudo os dados da empresa?; Onde vejo minha assinatura e as faturas?; Onde cadastro usuários?; O que falta configurar?; Onde fica o horário de atendimento?; Cadê a Atribuição?
 - onde_fica: Menu lateral > Configurações (no rodapé do menu, com o menu novo ligado na conta; no menu antigo esta página não existe). O endereço antigo de Configurações também abre esta página quando o menu novo está ligado.
 - rota: `settings_inicio` - `/app/accounts/:accountId/settings/inicio`
 - gate: feature flag `menu_lateral_novo`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `canned_response_manage` ou `inbox_view` ou `inbox_manage` ou `label_manage` ou `attribute_manage` ou `macro_manage` ou `automation_view` ou `automation_manage` ou `sla_manage` ou `people_manage` ou `custom_role_manage` ou `crm_manage_ai` ou `crm_admin` ou `financial_view` ou `financial_manage`
@@ -1351,10 +1351,10 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Configurações > Assinatura e faturas. No menu antigo: Sidebar > Configuracoes > Billing/Cobranca
 - rota: `billing_settings_index` - `/app/accounts/:accountId/settings/billing`
 - gate: papel `administrator`
-- perfil: somente `administrator`. Se o perfil nao puder, diga que plano e cobranca sao restritos a administradores.
-- pre_requisitos: conta Cloud com dados de assinatura em `custom_attributes`; para comprar creditos, plano diferente de Hacker
-- passos: 1. Abra Configuracoes > Billing; 2. Revise plano atual, quantidade de assentos e renovacao; 3. Use Gerenciar assinatura para abrir o portal de cobranca; 4. Revise creditos/limites do Captain quando aparecerem; 5. Use comprar creditos se o plano permitir.
-- gotchas: no fork self-hosted/white-label, considerar nao-aplicavel se `isOnChatwootCloud` for falso; quando nao ha billing plan, a tela tenta atualizar uma vez e pode mostrar mensagem de ausencia de billing; compra de creditos nao aparece no plano Hacker.
+- perfil: somente `administrator`. Se o perfil nao puder, diga que assinatura e cobrança são restritas a administradores.
+- pre_requisitos: conta Cloud com dados de assinatura em `custom_attributes`; para comprar creditos, assinatura diferente de Hacker
+- passos: 1. Abra Configuracoes > Billing; 2. Revise a assinatura atual, quantidade de assentos e renovacao; 3. Use Gerenciar assinatura para abrir o portal de cobranca; 4. Revise creditos/limites do Captain quando aparecerem; 5. Use comprar creditos se a assinatura permitir.
+- gotchas: no fork self-hosted/white-label, considerar nao-aplicavel se `isOnChatwootCloud` for falso; quando nao ha billing plan, a tela tenta atualizar uma vez e pode mostrar mensagem de ausencia de billing; compra de creditos nao aparece na assinatura Hacker.
 - nav_target: `billing_settings_index`
 
 ### Configurar IA do CRM por funil
@@ -1993,8 +1993,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `autonomia_financial_subscription` - `/app/accounts/:accountId/financial/subscription`
 - gate: papel `administrator`
 - pre_requisitos: ser administrador da conta e ter um checkout já concluído
-- passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira o plano, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
-- gotchas: a tela é só de leitura, não existe botão para cancelar, trocar de plano ou pagar por aqui; o menu Financeiro só aparece para administrador, e ter Financeiro na função personalizada não abre plano nem faturas (só os custos do uso de IA e a autorização de cobranças da Meta); sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
+- passos: 1. Abra Financeiro > Assinatura; 2. Leia os cartões de status, total mensal, total anual e próximo vencimento; 3. Confira a assinatura, o ciclo e a quantidade no resumo; 4. Desça até a composição da cobrança para ver item a item o que soma no total.
+- gotchas: a tela é só de leitura, não existe botão para cancelar, mudar a assinatura ou pagar por aqui; o menu Financeiro só aparece para administrador, e ter Financeiro na função personalizada não abre assinatura nem faturas (só os custos do uso de IA e a autorização de cobranças da Meta); sem assinatura a tela diz que nenhuma foi encontrada; o próximo vencimento vem do fim do período atual ou do fim do teste, e não é data de boleto.
 - nav_target: `autonomia_financial_subscription`
 
 ### Conferir faturas emitidas e o que já foi pago

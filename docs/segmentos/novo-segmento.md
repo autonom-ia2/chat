@@ -35,7 +35,9 @@ A conta passa a usar o tipo quando o super admin escolhe nicho e perfil (`accoun
 Um PR por lote, todos com `Refs #<épico>`.
 
 1. **Painel e funis.** Chaves do painel em `app/javascript/dashboard/i18n/pacotes/<camada>/{pt_BR,en}.json`. Modelos
-   de funil e variantes (`funil/variantes.json`). Critérios das etapas em `config/pacotes/<camada>/*.yml`.
+   de funil por camada (`camadas` do modelo) e, quando o tipo muda o comportamento de uma etapa, a entrada dele em
+   `app/javascript/dashboard/routes/dashboard/crm/components/funil/variantes.json` (um arquivo só, lido pelo painel
+   e pelo servidor). Critérios das etapas em `config/pacotes/<camada>/*.yml`.
 2. **Guia, Central, agentes e servidor.**
    - Guia: `lib/operator_guide/pacotes/<camada>/porques.md`.
    - Central: `lib/central_de_ajuda_pacotes/<camada>/<cap>/<id>-<slug>.md`.
@@ -85,18 +87,21 @@ Tipo novo entra na lista `perfis` da spec.
 1. Conferir o perfil da conta no banco, só leitura (psql via SSM, nunca `rails runner`).
 2. Olhar sem clicar em ação: o painel (Configurações, exemplos da busca da Central), a Central pela própria busca e o
    bundle do painel publicado (`/vite/.vite/manifest.json` → arquivo do pacote).
-3. O Guia e a Central não aparecem em página pública. A conferência deles é pela tela da conta.
+3. O Guia não tem página pública. A Central base vai ao portal público "plataforma" (`Publicador`), mas as
+   variantes por camada não vão: a Central da camada só se confere pela tela da conta.
 4. Conta de cliente real é só leitura: nada de enviar, mover, atribuir ou editar.
 
 ## 7. Tropeços já vistos
 
 - **Seção da Central é trocada inteira.** A variante copia a seção da camada de cima. Se a base mudar depois, a
   variante não acompanha: mudança no texto geral de um trecho sobreposto precisa ser repetida na camada.
-- **O Guia do pacote troca `titulo`, `intent`, `onde_fica`, `pre_requisitos`, `passos` e `gotchas`.** Rota e gate
+- **O Guia do pacote troca `titulo`, `intent`, `onde_fica`, `perfil`, `pre_requisitos`, `passos` e `gotchas`.** Rota e gate
   saem do roteador. No `guia-produto.md` gerado, o `titulo` vira o cabeçalho do fluxo, e não um campo.
 - **Trocar o título de um modelo pronto de WhatsApp** (`MODELOS_WHATSAPP.OBJETIVOS.*.TITULO`) muda o nome sugerido
-  do modelo e o fixture `spec/fixtures/whatsapp_templates/prontos.json`. Regere o fixture com o Vitest
-  (`prontos.spec.js -u`) e leia o diff.
+  do modelo e o fixture `spec/fixtures/whatsapp_templates/prontos.json`. Regere o fixture com
+  `pnpm test prontos -- -u` e leia o diff.
+- **Título trocado na variante da Central** vale no artigo, mas os links "Veja também" dos outros artigos mostram o
+  título da base, que vem do mapa geral.
 - **Nome de botão citado em texto comum** passa pelo olho. Foi o que a primeira trava, só de negrito, deixou passar.
 - **Perguntas do Guia (`intent`)** também decidem para onde o Guia leva. "Qual plano eu contratei?" levaria quem fala
   do plano de saúde para a tela da assinatura.
