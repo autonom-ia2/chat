@@ -486,6 +486,25 @@ describe('excluir de vez no CRM (#2096)', () => {
     });
   });
 
+  // #2143: o contato sem card nem reunião que levou só leads da Prospecção tem frase própria, com as duas contagens.
+  it('o contato que levou só leads tem frase própria', () => {
+    const leads = item('crm_hard_delete', {
+      alvo: 'contato',
+      modo: 'leads',
+      contact_id: 7,
+      leads_apagados: 2,
+      leads_minimizados: 1,
+    });
+    expect(generateLogActionKey(leads)).toBe(
+      'AUDIT_LOGS.CRM_EXCLUIR.CONTATO_LEADS'
+    );
+    expect(generateTranslationPayload(leads, agentes)).toMatchObject({
+      contactId: 7,
+      leadsApagados: 2,
+      leadsMinimizados: 1,
+    });
+  });
+
   it('o contato que a ação em massa não excluiu tem frase própria', () => {
     expect(
       generateLogActionKey(
