@@ -23,7 +23,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `menu_lateral_novo`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `canned_response_manage` ou `inbox_view` ou `inbox_manage` ou `label_manage` ou `attribute_manage` ou `macro_manage` ou `automation_view` ou `automation_manage` ou `sla_manage` ou `people_manage` ou `custom_role_manage` ou `crm_manage_ai` ou `crm_admin` ou `financial_view` ou `financial_manage`
 - pre_requisitos: menu novo ligado na conta (flag menu_lateral_novo); cada cartão só aparece para quem pode abrir a tela dele
 - passos: 1. Clique em Configurações no rodapé do menu; 2. Leia o Comece por aqui, que mostra a primeira coisa que ainda falta; 3. Ou procure um assunto na busca (por exemplo horário, usuário ou WhatsApp); 4. Clique no cartão para abrir a tela daquele assunto.
-- gotchas: os cartões ficam em grupos (Sua corretora, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Plano e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua corretora, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
+- gotchas: os cartões ficam em grupos (Sua corretora, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Assinatura e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua corretora, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
 - nav_target: `settings_inicio`
 
 ### Criar caixa de entrada
@@ -576,7 +576,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: No menu novo: Acompanhar > Agenda > Calendário. No menu antigo: CRM > Agendamento > Calendário > **Novo** (ou clique no dia); no card, cartão **Agenda** > **Lembrete**; na ficha do cliente ou da empresa (Relacionamento) > **Novo lembrete**. Só aparece com a flag da conta `crm_lembretes_v2` ligada.
 - rota: `crm_calendar_index` - `/app/accounts/:accountId/crm/calendar`
 - gate: papel `administrator` ou `agent` ou `crm_view`
-- pre_requisitos: flag `crm_lembretes_v2` ligada na conta; para "quem cuida do cliente", o lembrete precisa ser de um negócio do funil.
+- pre_requisitos: flag `crm_lembretes_v2` ligada na conta; para "quem cuida do cliente", o lembrete precisa ser de um card do funil.
 - passos: Em **É sobre quem?** escolha **Ninguém** (fica só no calendário), **Um cliente** ou **Um card do funil**; escreva **O que é** e escolha **Quando?** (a hora é no fuso da conta). Em **Repetir?** escolha **Uma vez só**, **Todo dia** (ou só de segunda a sexta), **Toda semana** (marque os dias), **Todo mês** ou **Todo ano**, e em **Até quando?** escolha sem data, até um dia ou um número de vezes; as **Próximas datas** aparecem logo abaixo. Em **Quem recebe o aviso?** escolha **Quem cuida do cliente**, **Só eu**, **Escolher pessoas** ou **Um time inteiro**; clique em **Salvar**. Para ver a repetição, no card use **Ver** em **Repetem**, ou clique numa data com o ícone de repetir no calendário: lá estão **Feito desta vez**, **Pausar**/**Retomar**, **Encerrar** e **Mudar** (só a próxima ou esta e as próximas).
 - gotchas: só o lembrete para a equipe repete; mensagem ao cliente que repete ainda não existe (#1528); "Quem cuida do cliente" segue o dono do card no momento do aviso; pausar não apaga as datas, elas ficam marcadas **Pausado** e ninguém é avisado até retomar; encerrar para de repetir e o que já passou fica no histórico; quem não vê o funil do card aparece desligado em **Escolher pessoas**; se ninguém sobrar para receber (time vazio, pessoa que saiu), o aviso vai para quem marcou; lembrete sem card só é visto por quem marcou, por quem recebe e pelo administrador; "Todo dia 31" cai no último dia nos meses mais curtos.
 - nav_target: `crm_calendar_index`
@@ -1346,9 +1346,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: Dashboard App usa conteudo do tipo `frame` com URL valida; Dialogflow e uma integracao por caixa de entrada, nao um `agent_bot`; algumas integracoes so aparecem como ativas se houver credencial global ou feature habilitada; remover hook desconecta a integracao.
 - nav_target: `settings_applications`
 
-### Ver plano e cobranca
-- intent: Onde vejo meu plano?; Como abro cobranca?; Onde compro creditos?; Esta instalacao tem billing?
-- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Sidebar > Configuracoes > Billing/Cobranca
+### Ver assinatura e cobrança
+- intent: Onde vejo minha assinatura?; Como abro cobranca?; Onde compro creditos?; Esta instalacao tem billing?
+- onde_fica: No menu novo: Configurações > Assinatura e faturas. No menu antigo: Sidebar > Configuracoes > Billing/Cobranca
 - rota: `billing_settings_index` - `/app/accounts/:accountId/settings/billing`
 - gate: papel `administrator`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que plano e cobranca sao restritos a administradores.
@@ -1987,9 +1987,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: a tela é só de leitura, não limita gasto nem desliga IA; só existem os três períodos fixos, sem intervalo personalizado; os valores vêm em dólar e são convertidos, e quando a cotação está indisponível a tela avisa e mostra em dólar; o conteúdo das conversas com a IA nunca aparece aqui, só quantidade e custo; quem vê relatórios do CRM mas não tem Financeiro (Ver ou Editar) na função vê só quantos usos houve, por recurso e no tempo, sem gasto, economia, custo médio nem as colunas de custo no relatório baixado, e a tela avisa isso.
 - nav_target: `crm_ai_usage_index`
 
-### Ver o plano contratado e quanto está sendo cobrado
-- intent: Qual plano eu contratei?; Quanto eu pago por mês?; Quando vence a próxima cobrança?; O que compõe o valor da minha assinatura?; Minha assinatura está ativa?
-- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Assinatura
+### Ver a assinatura contratada e quanto está sendo cobrado
+- intent: Qual assinatura eu contratei?; Quanto eu pago por mês?; Quando vence a próxima cobrança?; O que compõe o valor da minha assinatura?; Minha assinatura está ativa?
+- onde_fica: No menu novo: Configurações > Assinatura e faturas. No menu antigo: Financeiro > Assinatura
 - rota: `autonomia_financial_subscription` - `/app/accounts/:accountId/financial/subscription`
 - gate: papel `administrator`
 - pre_requisitos: ser administrador da conta e ter um checkout já concluído
@@ -1999,7 +1999,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conferir faturas emitidas e o que já foi pago
 - intent: Tenho alguma fatura em aberto?; Onde baixo o documento da fatura?; Quando essa fatura venceu?; Meu pagamento foi registrado?; Quanto eu já paguei até agora?
-- onde_fica: No menu novo: Configurações > Plano e faturas. No menu antigo: Financeiro > Faturas
+- onde_fica: No menu novo: Configurações > Assinatura e faturas. No menu antigo: Financeiro > Faturas
 - rota: `autonomia_financial_invoices` - `/app/accounts/:accountId/financial/invoices`
 - gate: papel `administrator`
 - pre_requisitos: ser administrador da conta (Financeiro na função personalizada não dá acesso às faturas)
