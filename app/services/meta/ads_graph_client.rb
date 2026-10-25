@@ -158,6 +158,8 @@ class Meta::AdsGraphClient
     paged("act_#{ad_account_id}/adsets", fields: 'id,destination_type')
   end
 
+  include Meta::AdsGraphClient::Management
+
   private
 
   def get(path, query = {})

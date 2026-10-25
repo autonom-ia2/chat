@@ -64,6 +64,7 @@ Rode `pnpm guia:build` depois de mexer aqui.
 
 
 ### ver_gestao_e_relatorio_de_campanhas_de_e_mail
+- intent: Como vão as campanhas no geral?; Quantas campanhas enviei no mês?; Quantas pessoas responderam às campanhas?; Quantas campanhas viraram plano implantado?; Quantas campanhas viraram cards no CRM?; Como comparo campanhas de canais diferentes?; "Onde vejo a taxa de abertura e de clique das campanhas de e-mail?"; "Onde fica o relatório / métricas das campanhas de e-mail (open rate, click rate)?"; "Como exporto o relatório (CSV) de uma campanha de e-mail?"; "Como comparo o desempenho de campanhas de e-mail?"
 - gotchas: com a jornada ligada, o detalhe de uma campanha (gráfico, cliques por link, tabela por pessoa, exportação, saúde) fica no Resultado dela, e links antigos com uma campanha de e-mail escolhida abrem esse Resultado; **Viraram cards no CRM** conta os cards ligados a uma conversa marcada pela campanha, e implantados é a parte que já teve o plano implantado; pessoas alcançadas soma as entregues, e no WhatsApp API, que não confirma entrega, as enviadas; abertura é aproximada por limitação de tracking; exportar CSV só aparece com campanha específica; esta tela é relatório, não o lugar de editar campanha.
 
 
@@ -102,3 +103,27 @@ Rode `pnpm guia:build` depois de mexer aqui.
 
 ### criar_app_embutido_na_conversa
 - intent: Como mostro os dados do meu sistema dentro da conversa?; Onde cadastro um aplicativo no painel?; Dá para ver a carteirinha do cliente sem sair do atendimento?; Cadastrei o aplicativo e ele abre em branco, por quê?
+
+
+### lembrete_que_repete_sem_card_e_quem_recebe
+- intent: "Como faço um lembrete toda semana?"; "Como lembro do aniversário todo ano?"; "Dá para criar lembrete sem card?"; "Como mando o lembrete para outra pessoa ou para um time?"; "Como pauso um lembrete que repete?"
+
+
+### criar_pagina_de_agendamento
+- passos: 1. Abra CRM > Agendamento > Páginas e links e clique em Criar página; 2. Escolha um modelo (Conversa para cotar, Atendimento no escritório, Reunião com empresa ou Começar do zero); 3. Em Conte, confira o nome que o cliente vê, o link em Endereço da página (já vem pronto; Mudar endereço abre o campo para trocar o final), quanto tempo dura e toque em quem atende; 4. Em Onde acontece, escolha um ou mais locais (Vídeo no WhatsApp, Ligação no WhatsApp, Meu link com o endereço completo, No local com o endereço); 5. Em Dias e horas, toque nos dias, escolha Das, Até, Avisar com e Intervalo, e deixe ligado ou desligue Fechar nos feriados nacionais; 6. Em Sua marca, envie logo e foto, escolha de que lado a logo fica (À esquerda, No centro ou À direita), a cor (uma das prontas ou Outra cor) e escreva a frase de boas-vindas, confira em Assim fica na página (Claro e Escuro mostram os dois temas) e clique em Continuar; a logo de fundo escuro é criada sozinha, e Trocar imagem em Em fundo escuro envia outra; para não repetir isso a cada página, o administrador clica em Salvar como identidade da conta, e numa página que já existe quem gerencia páginas usa Usar a identidade salva e confirma em Sim, usar; 7. Em Avisos, escolha por qual WhatsApp sai o aviso ao cliente (ou Sem avisos), quando avisar e até quando o cliente pode mudar, e clique em Ver como fica; 8. Na prévia, confira a frase do funil e a dos avisos e use Alterar se quiser mudar; 9. Clique em Publicar e use Copiar link, QR code ou Abrir.
+
+
+### escolher_o_tipo_ao_criar_agente
+- passos: 1. Abra Agentes e clique em Criar agente; 2. Na página Criar agente, escolha um dos modelos prontos (Tirar dúvidas dos clientes, Atender quem quer um plano ou Receber quem chega) e clique em Usar este, ou clique em Do meu jeito para contar com suas palavras; 3. Se o agente deve só ajudar as pessoas da equipe dentro das conversas, desça até Precisa de outro tipo? e escolha Copiloto da equipe; 4. Siga a conversa de criação (Conte, Confira, Comece); o canal do agente normal é escolhido no fim.
+
+
+### ver_os_primeiros_passos
+- gotchas: cada passo so fica Feito quando o estado real da conta muda, nunca por clique; os passos ficam em tres etapas (Ligar a plataforma, Organizar vendas e carteira, Crescer); passos opcionais trazem Pular por enquanto; o painel mostra os pre-requisitos externos (por exemplo, conta na OpenAI com credito) e o tempo estimado; passo que depende de outro mostra Precisa antes, sem bloquear; clicar num passo da lista abre ele no painel; Preciso de ajuda abre o Guia; a lista some do centro da tela quando o essencial termina, mas continua no menu.
+
+
+### abrir_a_pagina_de_configuracoes
+- gotchas: os cartões ficam em grupos (Sua corretora, Canais, Pessoas e acesso, Atendimento, Conexões, Segurança); cada cartão diz o estado real quando há (quantos canais, usuários, times e etiquetas) ou o que falta, com o mesmo dado dos Primeiros passos; Prospecção não está aqui (fica em Prospecção > Configurações), Modelos também não (Campanhas > Modelos WhatsApp) e Cobrança virou Plano e faturas; Atribuição é a dona de política, capacidade e passagem do robô para a pessoa; Canais de cada funil (caixas e funis do CRM) fica ao lado da Atribuição; Custos do WhatsApp (a autorização para criar modelos que a Meta cobra) fica em Sua corretora, junto do Plano; E-mail de envio das campanhas fica em Canais; Agentes externos são robôs de outros sistemas (os Agentes da plataforma ficam em No automático); o cartão Canais de atendimento fica vermelho quando alguma caixa precisa reconectar; quem não administra mas cuida da IA do CRM vê o cartão Passar para uma pessoa; o horário hoje mora dentro de cada canal (aba Horário de funcionamento), e os Prazos de resposta usam outro calendário; configuração nova da plataforma que ainda não tem cartão aparece no grupo Outros; com o menu novo desligado, Configurações continua sendo a lista de sempre no menu.
+
+
+### usar_modelo_do_whatsapp_em_campanha
+- gotchas: Nome do cliente e Nome da corretora já vêm ligados ao cadastro (primeiro nome do contato e nome da sua empresa no Chat2You); os outros campos você liga a uma coluna do público ou escreve um texto fixo; havendo um rascunho de campanha guardado, a tela pergunta se continua ele ou começa de novo; carrossel, oferta, código de verificação e botão de copiar código ainda não vão em campanha.
