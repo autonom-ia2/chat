@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_420000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_460000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1779,6 +1779,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_420000) do
     t.string "opt_out_source"
     t.bigint "opted_out_by_id"
     t.datetime "customer_since"
+    t.integer "relacao", limit: 2, default: 0, null: false
     t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_chat_id'::text))", name: "idx_contacts_account_lower_waha_whatsapp_chat_id"
     t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_jid'::text))", name: "idx_contacts_account_lower_waha_whatsapp_jid"
     t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_lid'::text))", name: "idx_contacts_account_lower_waha_whatsapp_lid"
@@ -1787,6 +1788,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_420000) do
     t.index ["account_id", "contact_type"], name: "index_contacts_on_account_id_and_contact_type"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["account_id", "last_activity_at"], name: "index_contacts_on_account_id_and_last_activity_at", order: { last_activity_at: "DESC NULLS LAST" }
+    t.index ["account_id"], name: "idx_contacts_relacao_fora_do_funil", where: "(relacao <> 0)"
     t.index ["account_id"], name: "index_contacts_on_account_id"
     t.index ["account_id"], name: "index_contacts_on_account_id_opted_out", where: "(opted_out_at IS NOT NULL)"
     t.index ["account_id"], name: "index_resolved_contact_account_id", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"

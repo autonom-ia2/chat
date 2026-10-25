@@ -846,3 +846,13 @@
   display_name: Anúncios da Meta - pausar anúncio e post da Página
   enabled: false
   column: feature_flags_ext_1
+
+# Este contato é (#2084/#2085): interessado (o padrão), parceiro do mercado ou não é negócio, na coluna contacts.relacao.
+# Ligada: parceiro e não é negócio não viram card sozinhos e ficam fora dos Números (Crm::Relacao). Card criado à mão
+# continua valendo. Desligada: todo contato é do funil, como antes. Este PR só traz a coluna, a regra e a flag; as
+# travas, os Números, a API e as telas vêm nos PRs seguintes do #2084. Posição na feature_flags_ext_2: 3 (1 << 2),
+# PROVISÓRIA da Orquestração (25/10); definitiva no fim da coluna na main quando chegar a vez.
+- name: contato_relacao
+  display_name: Contatos › este contato é interessado, parceiro ou não é negócio
+  enabled: false
+  column: feature_flags_ext_2
