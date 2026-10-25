@@ -11,7 +11,8 @@
 #
 # ADDING A NEW FEATURE FLAG:
 #   - The `feature_flags` column is FULL (63/63 slots used). Do NOT add to it.
-#   - `feature_flags_ext_1` is FULL too (positions 62 and 63 are reserved, #2186). Do NOT add to it.
+#   - `feature_flags_ext_1` has no free slot either: positions 1-61 are in use (61 = meta_ads_gestao, #2164) and
+#     62/63 are provisionally reserved for #2182/#2183 (Orquestração, 25/10). Do NOT add to it (#2186).
 #   - New flags MUST set `column: feature_flags_ext_2` and be appended at the end.
 #   - Bit positions are persisted per column; never reorder or remove existing
 #     entries, and never change an existing feature's `column` after release.

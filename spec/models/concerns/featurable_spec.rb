@@ -154,6 +154,35 @@ RSpec.describe Featurable do
       expect(model.feature_ext2_two.pluck(:id)).to be_empty
     end
 
+    context 'with the real Account and feature_flags_ext_2 still empty, as in production' do
+      let(:account) { create(:account) }
+      let(:flags_das_outras_colunas) do
+        described_class::FEATURES_BY_COLUMN.slice('feature_flags', 'feature_flags_ext_1').values.flat_map(&:values)
+      end
+
+      it 'lists all and selected feature flags without anything from feature_flags_ext_2' do
+        account.enable_features!('data_import')
+
+        expect(described_class::FEATURES_BY_COLUMN['feature_flags_ext_2']).to eq({})
+        expect(account.all_feature_flags).to match_array(flags_das_outras_colunas)
+        expect(account.reload.selected_feature_flags).to include(:feature_data_import)
+        expect(account.selected_feature_flags - flags_das_outras_colunas).to be_empty
+        expect(account.feature_flags_ext_2).to eq(0)
+      end
+
+      it 'sets selected_feature_flags (the Super Admin path) with ext_1 flags without touching feature_flags_ext_2' do
+        account.update_columns(feature_flags_ext_2: 4) # rubocop:disable Rails/SkipsModelValidations
+        account.reload
+
+        account.selected_feature_flags = [:feature_data_import, :feature_audit_log_ip_address]
+        account.save!
+        account.reload
+
+        expect(account.selected_feature_flags).to contain_exactly(:feature_data_import, :feature_audit_log_ip_address)
+        expect(account.feature_flags_ext_2).to eq(4)
+      end
+    end
+
     it 'keeps the same bit position in another column isolated from feature_flags_ext_2' do
       conta.update_columns(feature_flags_ext_1: 0, feature_flags_ext_2: 0) # rubocop:disable Rails/SkipsModelValidations
       conta.update!(feature_ext1_one: true)
