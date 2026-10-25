@@ -42,9 +42,10 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
 
   private
 
-  # "O mesmo assunto" (#2163, com a flag): marca que o card carrega um pedido e, com nome do modelo, refina o nome
-  # genérico ou dá nome ao card sem nome que já carregava o pedido. Só na Automática: no Sugerir o nome que a pessoa
-  # aceitou é dela. Sem a flag, nada muda.
+  # "O mesmo assunto" (#2163, com a flag): marca que o card carrega um pedido (em qualquer modo: o pedido novo do mesmo
+  # funil não apaga o primeiro, nem como sugestão) e, com nome do modelo, refina o nome genérico ou dá nome ao card sem
+  # nome que já carregava o pedido. Dar o nome, só na Automática (Question#atual_nomeavel?): no Sugerir o nome que a
+  # pessoa aceitou é dela. Sem a flag, nada muda.
   def mesmo(titulo, generico)
     atual = @question.atual
     return { action: 'none', state: 'kept', card: atual } unless Crm::Subjects::NomeProvisorio.ligada?(@account)
@@ -56,7 +57,7 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
   end
 
   def novo(pipeline, titulo, etapa, generico: false)
-    return no_card_do_aviso(pipeline, titulo) if card_do_aviso
+    return no_card_do_aviso(pipeline, titulo, generico) if card_do_aviso
 
     atributos = { pipeline: pipeline, title: titulo, etapa: etapa, generico: generico }
     if mesmo_funil_sem_nome?(pipeline)
@@ -185,7 +186,7 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
 
   # Mexido por uma pessoa, funil fora do acesso ou troca de funil com a caixa em Sugerir: o card fica como está e nada
   # novo nasce; só o log registra. Mesmo assunto: nada muda.
-  def no_card_do_aviso(pipeline, titulo)
+  def no_card_do_aviso(pipeline, titulo, generico = nil)
     aviso = card_do_aviso
     if aviso.pessoa_mexeu? || !aviso.pode_ir_para?(pipeline) || (aviso.card.pipeline_id != pipeline.id && @mode != 'auto')
       Rails.logger.info("[crm][assunto] card do aviso mantido decisao=#{@decisao.id} card=#{aviso.card.id}")
@@ -193,11 +194,11 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
     end
     return { action: 'none', state: 'kept', card: aviso.card } if aviso.mesmo_assunto?(pipeline, titulo)
 
-    decidir('rename', card: aviso.card, pipeline: pipeline, title: titulo)
+    decidir('rename', card: aviso.card, pipeline: pipeline, title: titulo, generico: generico)
   end
 
   def renomear(card, titulo, pipeline, etapa = nil, generico: false)
-    return renomear_o_do_aviso(card, titulo, pipeline) if card_do_aviso&.card&.id == card.id
+    return renomear_o_do_aviso(card, titulo, pipeline, generico: generico) if card_do_aviso&.card&.id == card.id
     return adotar_a_chegada(card, titulo, pipeline, etapa, generico: generico) if @chegada&.card&.id == card.id
 
     dar_nome_e_levar(card, titulo, etapa, generico: generico)
@@ -243,13 +244,13 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
 
   # Leva ao funil do assunto real (se for outro), dá o nome novo e o card volta a ser o assunto atual, a menos que a
   # pessoa tenha escolhido outro há pouco.
-  def renomear_o_do_aviso(card, titulo, pipeline)
+  def renomear_o_do_aviso(card, titulo, pipeline, generico: false)
     return { state: 'kept', reason: 'card_mudou' } unless card.open?
     # De novo dentro do lock: a pessoa pode ter mexido no card enquanto a IA pensava.
     return { state: 'kept', reason: 'card_do_aviso_mantido' } if card_do_aviso.recarregar.pessoa_mexeu?
 
     card_do_aviso.mover_para(pipeline)
-    resultado = dar_nome_da_ia(card.reload, titulo)
+    resultado = dar_nome_da_ia(card.reload, titulo, generico: generico)
     Crm::Subjects::Acoes.focar(conversation: @conversation, card: card) unless card == @question.atual || pessoa_escolheu_assunto?
     resultado
   end
