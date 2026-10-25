@@ -149,6 +149,13 @@ describe('avisoDosDoisAbertos (#2145)', () => {
     );
   });
 
+  it('nenhum nome visível para quem arquivou: só a contagem, sem lista vazia', () => {
+    const resposta = { clients_with_two_open: { count: 3, items: [] } };
+    expect(avisoDosDoisAbertos(tp, juntar, resposta, 'Vendas')).toBe(
+      'CRM_ARQUIVADOS.FUNIL.MAIS_DE_UM_ABERTO{"count":3,"funil":"Vendas"}3'
+    );
+  });
+
   it('sem nomes, só a contagem', () => {
     const resposta = {
       clients_with_two_open: { count: 1, items: [{ name: null, card_id: 1 }] },
