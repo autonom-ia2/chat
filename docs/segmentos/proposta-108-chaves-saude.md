@@ -99,5 +99,5 @@ Cotação, segunda via e reunião com empresa, palavras que a saúde também usa
   - A corretora usa "Seu plano e faturas", mas na saúde "plano" quer dizer plano de saúde e confundiria.
 - **Já sem apólice:** MODELOS_WHATSAPP.TOPOS.documento.AJUDA. A base já não fala em apólice.
 
-Total: 41 + 30 + 37 = 108. A lista completa, com o texto de cada perfil, está em
-`painel_so_corretora.txt`.
+Total: 41 + 30 + 37 = 108. Aprovada pelo Rodrigo em 25/10/2026, com o chip do dermatologista trocado pela pergunta
+de reembolso.

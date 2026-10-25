@@ -1,27 +1,35 @@
 require 'rails_helper'
 
 # #2083 — quando o pacote do perfil troca um rótulo do painel, o Guia e a Central daquele perfil não podem citar o
-# nome antigo em negrito: o negrito diz "procure este botão na tela", e na tela da conta o botão tem o nome novo.
-# Rótulo curto em negrito que coincide com outra coisa da tela (um campo, um menu, um título) entra em excecoes,
-# com o motivo. Exceção que não acontece mais também falha, para a lista não guardar casos mortos.
+# nome antigo: na tela da conta o botão tem o nome novo. Rótulo de uma palavra só conta em negrito ("Vendas" solto é
+# palavra comum); rótulo de duas ou mais palavras conta também em texto comum. No Guia o lugar é o fluxo.
+# Coincidência com outra coisa (um campo, um menu, uma frase) entra em excecoes, com o motivo. Exceção que não
+# acontece mais também falha, para a lista não guardar casos mortos.
 # rubocop:disable RSpec/DescribeClass -- é o conteúdo dos pacotes, não uma classe (mesmo padrão de spec/config)
 RSpec.describe 'rótulos trocados pelo pacote no Guia e na Central' do
   # rubocop:enable RSpec/DescribeClass
   perfis = %w[corretora saude_beneficios]
 
-  # [perfil, rótulo da base, onde aparece ('guia' ou id do artigo)] => motivo
+  # [perfil, rótulo da base, onde aparece ('guia: <fluxo>' ou id do artigo)] => motivo
   excecoes = {
     ['corretora', 'Quanto custa?', '13.29'] => 'título de pergunta frequente do artigo, não o chip do teste',
     ['saude_beneficios', 'Quanto custa?', '13.29'] => 'título de pergunta frequente do artigo, não o chip do teste',
     ['corretora', 'Nome da empresa', '09.10'] => 'campo company_name do contato, que o pacote não troca',
     ['saude_beneficios', 'Nome da empresa', '09.10'] => 'campo company_name do contato, que o pacote não troca',
+    ['corretora', 'Nome da empresa', '09.03'] => 'campo company_name do contato, que o pacote não troca',
+    ['saude_beneficios', 'Nome da empresa', '09.03'] => 'campo company_name do contato, que o pacote não troca',
+    ['corretora', 'Em conversa', '08.09'] => 'frase "em conversa resolvida", não a etapa do funil',
+    ['saude_beneficios', 'Em conversa', '08.09'] => 'frase "em conversa resolvida", não a etapa do funil',
+    ['corretora', 'quer comprar', '10.12'] => 'frase "quem já quer comprar", não a ideia do funil',
+    ['saude_beneficios', 'quer comprar', '10.12'] => 'frase "quem já quer comprar", não a ideia do funil',
     %w[corretora Vendas 13.20] => 'etapa Vendas do caminho do dinheiro (META_ADS_HUB TITLE_SALES), que o pacote não troca',
     %w[saude_beneficios Vendas 13.20] => 'etapa Vendas do caminho do dinheiro (META_ADS_HUB TITLE_SALES), que o pacote não troca',
     %w[corretora Cards 10.13] => 'contadores de cards do dashboard do CRM, não a aba da ficha do contato',
     %w[corretora Financeiro 01.01] => 'item Financeiro do menu lateral, não a família da Central',
     %w[corretora Financeiro 04.06] => 'perfil de função Financeiro, não a família da Central',
     %w[corretora Financeiro 17.01] => 'item Financeiro do menu lateral, não a família da Central',
-    ['corretora', 'Novo card', 'guia'] => 'botão Novo card da ficha do contato, que não é CRM_KANBAN.ACTIONS.NEW_CARD'
+    ['corretora', 'Novo card', 'guia: Criar um card pela ficha do contato'] =>
+      'botão Novo card da ficha do contato, que não é CRM_KANBAN.ACTIONS.NEW_CARD'
   }
 
   folhas = lambda do |no, caminho = nil, saida = {}|
@@ -49,14 +57,15 @@ RSpec.describe 'rótulos trocados pelo pacote no Guia e na Central' do
   seguros = folhas.call(ler_json.call(painel.join('pacotes/seguros/pt_BR.json')))
 
   perfis.each do |perfil|
-    it "#{perfil}: o Guia e a Central não citam em negrito o rótulo antigo de um botão que o pacote renomeou" do
+    it "#{perfil}: o Guia e a Central não citam o rótulo antigo de um botão que o pacote renomeou" do
       camada = folhas.call(ler_json.call(painel.join("pacotes/seguros/#{perfil}/pt_BR.json")))
       trocados = base.filter_map do |chave, antigo|
         novo = camada[chave] || seguros[chave]
         antigo if novo && antigo.is_a?(String) && antigo != novo && antigo.size.between?(4, 40) && antigo.exclude?('{')
       end.uniq
 
-      lugares = { 'guia' => plano.call(Rails.root.join("lib/operator_guide/pacotes/seguros/#{perfil}/guia-produto.md").read) }
+      guia = Rails.root.join("lib/operator_guide/pacotes/seguros/#{perfil}/guia-produto.md").read
+      lugares = guia.split("\n### ").drop(1).to_h { |fluxo| ["guia: #{fluxo.lines.first.strip}", plano.call(fluxo)] }
       Rails.root.glob('lib/central_de_ajuda/[0-9]*/*.md').each do |arquivo|
         id = arquivo.basename.to_s.split('-').first
         titulo, partes = secoes.call(arquivo)
@@ -71,11 +80,12 @@ RSpec.describe 'rótulos trocados pelo pacote no Guia e na Central' do
       end
 
       achados = trocados.flat_map do |rotulo|
-        lugares.filter_map { |lugar, texto| [perfil, rotulo, lugar] if texto.include?("**#{rotulo}**") }
+        citado = ->(texto) { texto.include?("**#{rotulo}**") || (rotulo.include?(' ') && texto.include?(rotulo)) }
+        lugares.filter_map { |lugar, texto| [perfil, rotulo, lugar] if citado.call(texto) }
       end
       esperadas = excecoes.keys.select { |dono, _, _| dono == perfil }
 
-      expect(achados - esperadas).to be_empty, "rótulo antigo em negrito (perfil, rótulo, lugar): #{(achados - esperadas).inspect}"
+      expect(achados - esperadas).to be_empty, "rótulo antigo (perfil, rótulo, lugar): #{(achados - esperadas).inspect}"
       expect(esperadas - achados).to be_empty, "exceção que não acontece mais, tire de excecoes: #{(esperadas - achados).inspect}"
     end
   end

@@ -87,8 +87,13 @@ Lista completa, com o texto de cada perfil e a decisão de cada chave: `proposta
 ## O que o lote 3 fez
 
 - **Trava:** `spec/config/pacotes_rotulos_no_guia_e_central_spec.rb`. Para cada perfil, pega todo rótulo da base que o
-  pacote troca e procura o nome antigo em negrito no Guia e na Central daquele perfil. Os falsos positivos ficam numa
-  lista com o motivo, e exceção que deixa de acontecer também falha.
+  pacote troca e procura o nome antigo no Guia (fluxo por fluxo) e na Central daquele perfil: em negrito sempre, e em
+  texto comum quando o rótulo tem duas ou mais palavras. Os falsos positivos ficam numa lista com o motivo, e exceção
+  que deixa de acontecer também falha.
+- **Texto comum:** a revisão do PR achou rótulo velho fora do negrito, e a trava estendida pegou mais casos no Guia
+  dos dois perfis: modelos da página de agendamento, modelo de agente "Atender quem quer comprar", etapa "Organizar as
+  vendas" dos Primeiros passos, grupo "Sua empresa" das Configurações, campo "Nome da empresa" do modelo de WhatsApp
+  e, só na corretora, "ao lado de Novo card" na exportação e "Meta do mês" nas perguntas do 10.13. Todos corrigidos.
 - **Achado 1:** corrigido nos dois perfis, artigo por artigo, só nas variantes do perfil (a camada seguros serve
   seguradora e insurtech, que mantêm o rótulo da base). Conferidos e descartados como falso positivo: 13.29
   **Quanto custa?** (título do FAQ), 09.10 **Nome da empresa** (campo do contato), 13.20 **Vendas** (etapa do caminho
