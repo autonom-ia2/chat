@@ -152,6 +152,18 @@ RSpec.describe 'IA de assunto: nome genérico refinado uma vez' do # rubocop:dis
       expect(card.reload.title).to eq('Nova cotação')
     end
 
+    it 'o detalhe que nunca chega não custa sem fim: o "mesmo assunto" pede o nome ao modelo maior no máximo 3 vezes' do
+      card = pedido_generico
+      stub_jev('mesmo_assunto')
+      stub_review(resposta: 'mesmo_assunto', titulo: '')
+
+      motivos = Array.new(4) { |indice| identify(incoming("mensagem #{indice}")).review_reason }
+
+      expect(motivos).to eq(['nome_provisorio', 'nome_provisorio', 'nome_provisorio', nil])
+      expect(chamadas.size).to eq(4)
+      expect(card.reload.title).to eq('Nova cotação')
+    end
+
     it 'um pedido diferente de verdade (o modelo diz pedido novo) segue criando outro card' do
       pedido_generico
       stub_jev(novo)

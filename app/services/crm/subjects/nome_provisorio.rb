@@ -19,6 +19,9 @@ module Crm::Subjects::NomeProvisorio
   # O reason do nome refinado e do card novo no lugar da troca de nome, para medir.
   REFINADO = 'nome_refinado'.freeze
   JA_TINHA_PEDIDO = 'card_ja_tinha_pedido'.freeze
+  # O "mesmo assunto" do Jev vai ao modelo maior para pedir o nome (review_reason `nome_provisorio`) no máximo estas
+  # vezes por card: se o detalhe não chega, o custo para. O pedido novo e a certeza baixa seguem indo ao modelo maior.
+  TENTATIVAS = 3
 
   module_function
 
@@ -46,6 +49,11 @@ module Crm::Subjects::NomeProvisorio
     return false if card.nil? || !ligada?(card.account) || Crm::Subjects::Naming.named?(card)
 
     Crm::SubjectDecision.exists?(card_id: card.id, reason: MESMO_ASSUNTO)
+  end
+
+  # Ainda cabe perguntar o nome ao modelo maior pelo "mesmo assunto" deste card (TENTATIVAS).
+  def tentativa_livre?(card)
+    Crm::SubjectDecision.where(card_id: card.id, review_reason: 'nome_provisorio').count < TENTATIVAS
   end
 
   # O assunto atual pode ganhar nome (ou o nome específico) pela resposta "o mesmo assunto".
