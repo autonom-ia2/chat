@@ -839,8 +839,9 @@
 # Anúncios da Meta: gestão mínima do anúncio (#2161). Ligada: o detalhe do anúncio mostra se ele está ativo ou
 # pausado, com o botão para pausar ou ativar (quem tem meta_ads_manage), e o post da Página por trás do anúncio; a
 # Conexão mostra a Página. Desligada: o painel de sempre. Posição 61 na feature_flags_ext_1 (1 << 60), depois da 60
-# do agente_so_informa #2166 (Orquestração, 25/10). Piloto 1, 16 e 18 por psql.
+# do agente_so_informa #2166 (Orquestração, 25/10). Ligada em todas as contas existentes das duas stacks por decisão
+# do Rodrigo (25/10). Padrão das contas novas: ligada desde o #2191 (migration 20261108440000).
 - name: meta_ads_gestao
   display_name: Anúncios da Meta - pausar anúncio e post da Página
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
