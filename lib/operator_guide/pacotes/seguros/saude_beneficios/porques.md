@@ -138,7 +138,7 @@ Rode `pnpm guia:build` depois de mexer aqui.
 - perfil: somente `administrator`. Se o perfil nao puder, diga que assinatura e cobrança são restritas a administradores.
 - intent: Onde vejo minha assinatura?; Como abro cobranca?; Onde compro creditos?; Esta instalacao tem billing?
 - titulo: Ver assinatura e cobrança
-- onde_fica: No menu novo: Configurações > Assinatura e faturas. No menu antigo: Sidebar > Configuracoes > Billing/Cobranca
+- onde_fica: Só no Chatwoot Cloud: Sidebar > Configuracoes > Billing/Cobranca. Nesta plataforma a assinatura e as faturas ficam em Configurações > Assinatura e faturas (fluxo assinatura_e_cobranca).
 
 
 ### assinatura_e_cobranca
