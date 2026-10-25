@@ -40,6 +40,22 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
     end
   end
 
+  # A dúvida do modelo maior: nada muda, a menos que traga a sugestão de pedido novo (#2162, Crm::Subjects::DuvidaSugerida).
+  # Aí vira sugestão de criar o card, em qualquer modo: só uma pessoa cria. O card sem nome da conversa, ainda sem pedido,
+  # recebe o pedido quando ele ficar claro: com ele, fica a dúvida. Uma mensagem mais nova passa na frente.
+  def duvida(em_duvida)
+    sugestao = em_duvida[:sugestao]
+    base = em_duvida.except(:sugestao)
+    return base if sugestao.nil? || (@question.atual_sem_nome? && !@question.atual_carrega_pedido?)
+
+    resultado = nil
+    Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
+      resultado = mensagem_mais_nova? ? { state: 'superseded' } : sugerir
+    end
+    base.merge(action: 'create', card: nil, pipeline: sugestao[:pipeline], title: sugestao[:title],
+               reason: Crm::Subjects::DuvidaSugerida::MOTIVO).merge(resultado)
+  end
+
   private
 
   # "O mesmo assunto" (#2163, com a flag): marca que o card carrega um pedido e, com nome do modelo, refina o nome
