@@ -10,16 +10,19 @@ module Crm
       ESCOLHAS_DE_ETAPA = %w[move reopen].freeze
 
       # tocado (#1693): a IA de assunto disse que a mensagem é sobre este card; ele é avaliado mesmo fora do foco.
-      def initialize(card:, trigger: 'message', tocado: false)
+      # tentativa (#2154): a da avaliação depois da fala do agente (Crm::Ai::AvaliacaoDepoisDaFala#reagendar).
+      def initialize(card:, trigger: 'message', tocado: false, tentativa: 0)
         @card = card
         @account = card.account
         @trigger = trigger
         @tocado = tocado
+        @tentativa = tentativa
       end
 
       def perform
         pular = motivo_para_pular
         return Result.new(status: :skipped, error: pular) if pular
+        return so_a_passagem if @trigger == AvaliacaoDepoisDaFala::TRIGGER
 
         aplicar(classify_stage)
       rescue ResponsesClient::Error => e
@@ -33,7 +36,8 @@ module Crm
         return 'ai_disabled' unless Config.enabled?
         return 'credentials_missing' unless credential_resolver.configured?
         return 'pipeline_ai_disabled' unless pipeline_ai_enabled?
-        return 'debounced' if debounced? && @trigger != 'manual'
+        # #2154: a avaliação depois da fala do agente também não espera o intervalo (a do cliente pode ter acabado de rodar).
+        return 'debounced' if debounced? && ['manual', AvaliacaoDepoisDaFala::TRIGGER].exclude?(@trigger)
         return 'card_not_open' unless @card.open?
         # Multifunil (#1147): só o assunto atual da conversa é avaliado; "Avaliar agora" é escolha da pessoa e o card
         # tocado pela mensagem (#1693) é escolha da IA de assunto.
@@ -162,12 +166,28 @@ module Crm
         Crm::Access::Recipients.inbox_members(conversation).pluck(:name) + Crm::AgentesIa.rotulos_pelo_nome(conversation, handoff_config)
       end
 
+      # #2154: a avaliação depois da fala do agente (Crm::Ai::AvaliacaoDepoisDaFala) só decide a passagem. Não move
+      # etapa nem grava campo, memória, pontuação ou o carimbo da última avaliação: não derruba a avaliação da mensagem
+      # do cliente pelo intervalo. Com o turno seguinte do agente em curso, nem chama o modelo: volta depois.
+      def so_a_passagem
+        conversa = @card.conversa_em_atendimento
+        if conversa && AvaliacaoDepoisDaFala.fala_em_curso?(conversa)
+          AvaliacaoDepoisDaFala.reagendar(@card, conversa, @tentativa)
+          return Result.new(status: :skipped, error: 'fala_em_curso')
+        end
+
+        @passar = true
+        run_handoff(classify_stage)
+        Result.new(status: :so_passagem)
+      end
+
       # Independent of the stage move. Guarded inside the executor; never let a
       # handoff failure break the evaluation result.
       def run_handoff(classification)
         return unless @passar && handoff_config[:enabled]
 
-        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger, pelo_card: @pelo_card).perform
+        HandoffExecutor.new(card: @card, handoff: classification[:handoff], trigger: @trigger, pelo_card: @pelo_card,
+                            tentativa: @tentativa).perform
       rescue StandardError => e
         Rails.logger.error("[CRM AI handoff] #{e.class}: #{e.message}")
       end
