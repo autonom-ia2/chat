@@ -66,7 +66,7 @@ class Crm::Ai::RelerMidiaPendenteJob < ApplicationJob
     ids = []
     lotes(account) do |lote|
       com_midia = Attachment.where(message_id: lote).merge(Crm::Ai::LeitorDeMidia.midia_para_reler).distinct.pluck(:message_id)
-      Message.where(id: com_midia).reorder(id: :desc).each do |mensagem|
+      Message.where(id: com_midia).includes(attachments: { file_attachment: :blob }).reorder(id: :desc).each do |mensagem|
         ids << mensagem.id if Crm::Ai::LeitorDeMidia.new(mensagem, releitura: :varredura).escolhidos.any?
       end
       ids.size >= vagas
