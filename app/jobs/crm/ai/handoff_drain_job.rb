@@ -171,7 +171,20 @@ class Crm::Ai::HandoffDrainJob < ApplicationJob
 
     card = Crm::Entrega::Marca.card(conversation)
     Crm::Entrega.new(conversation: conversation, motivo: marca['motivo'], origem: 'fila', pedido: { sugestao: marca['sugestao'] },
-                     dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?, excluir: marca['venceram']).call
+                     dono: dono_da_marca(conversation, marca), card: card, pelo_card: card.present?, excluir: marca['venceram'])
+                .call.tap { |resultado| nota_do_aviso(conversation, marca, resultado) }
+  end
+
+  # #2154 (flag `agente_so_informa`): o agente avisou que ia chamar alguém, a IA de Atribuição decidiu passar e ninguém
+  # estava online (a espera com o motivo do pedido do robô). Quando a fila entrega agora, sai a nota "Antes de encaminhar"
+  # que o agente não postou, com as recusas guardadas desde o aviso (RecusasRecentes.guardar_ate_a_passagem). Sem a
+  # flag, a nota já saiu no bot_handoff! do agente, e nada muda.
+  def nota_do_aviso(conversation, marca, resultado)
+    return unless %i[entregue convidado].include?(resultado&.status)
+    return unless marca['motivo'] == Crm::Ai::HandoffExecutor::MOTIVO_DA_PROMESSA
+    return unless Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+
+    Autonomia::Agents::NotaDoEncaminhamento.postar(conversation)
   end
 
   # #1673: a IA do CRM segurou a conversa sem robô e, na espera, um agente nosso passou a atender (claim da resposta).
