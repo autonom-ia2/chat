@@ -9,12 +9,13 @@ module Crm::Subjects::Acoes
   end
 
   # source: quem deu nome ao assunto ('ai' para a IA de assunto, 'agente' para o agente de IA). etapa: a coluna escolhida
-  # pela IA de assunto (#1910); sem ela, a 1ª etapa.
-  def criar(conversation:, pipeline:, titulo:, source:, etapa: nil)
+  # pela IA de assunto (#1910); sem ela, a 1ª etapa. provisorio (#2163): o nome é genérico e pode ser refinado uma vez.
+  def criar(conversation:, pipeline:, titulo:, source:, etapa: nil, provisorio: false) # rubocop:disable Metrics/ParameterLists
+    subject = Crm::Subjects::NomeProvisorio.subject(source, titulo: titulo, provisorio: provisorio)
     Crm::Cards::Creator.new(
       account: conversation.account, user: nil, conversation: conversation,
       params: { pipeline_id: pipeline.id, stage_id: (etapa || Crm::Subjects::Etapa.primeira(pipeline)).id, title: titulo,
-                metadata: { 'subject' => { 'source' => source, 'named_at' => Time.current.iso8601 } } }
+                metadata: { 'subject' => subject } }
     ).perform
   end
 end
