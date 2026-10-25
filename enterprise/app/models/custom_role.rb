@@ -183,7 +183,7 @@ class CustomRole < ApplicationRecord
   # função. O índice único em lower(trim(name)) segura duas gravações ao mesmo tempo.
   # Só confere quando o nome muda, para não consultar o banco a cada troca de chaves.
   validates :name, presence: true
-  validates :name, uniqueness: { scope: :account_id, case_sensitive: false }, if: :will_save_change_to_name?
+  validate :name_not_taken, if: :will_save_change_to_name?
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message
   # names the rejected keys and the accepted ones, so a person or the Guide can fix the
   # request instead of guessing (#894).
@@ -195,6 +195,14 @@ class CustomRole < ApplicationRecord
   end
 
   private
+
+  # A mesma conta que o índice faz (lower(trim(name))): um nome antigo salvo com espaço nas pontas também conta.
+  def name_not_taken
+    return if name.blank?
+
+    taken = self.class.where(account_id: account_id).where.not(id: id).exists?(['lower(trim(name)) = ?', name.downcase])
+    errors.add(:name, :taken) if taken
+  end
 
   def strip_name
     self.name = name.strip if name.is_a?(String)

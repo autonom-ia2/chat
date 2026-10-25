@@ -4249,6 +4249,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_430000) do
   end
 
   add_foreign_key "account_email_oauth_apps", "accounts"
+  add_foreign_key "account_users", "custom_roles", validate: false
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "autonomia_account_links", "accounts", on_delete: :cascade

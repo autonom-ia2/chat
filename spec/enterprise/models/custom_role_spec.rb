@@ -52,6 +52,22 @@ RSpec.describe CustomRole, type: :model do
       expect(create(:custom_role, account: existing.account, name: 'Suporte').update(name: 'VENDAS ')).to be(false)
     end
 
+    # Nome antigo salvo com espaço nas pontas conta como o mesmo nome, como no índice.
+    it 'refuses a name taken by an old row saved with surrounding spaces' do
+      existing = create(:custom_role, name: 'Outra')
+      existing.update_column(:name, 'Vendas ') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(build(:custom_role, account: existing.account, name: 'vendas')).not_to be_valid
+    end
+
+    # A pessoa só aponta para uma função que existe: sem isso, ganhar a função durante a exclusão deixava um id solto.
+    it 'keeps account users from pointing to a missing role' do
+      account_user = create(:account_user, account: create(:custom_role).account)
+
+      expect { account_user.update_column(:custom_role_id, described_class.maximum(:id).to_i + 1) } # rubocop:disable Rails/SkipsModelValidations
+        .to raise_error(ActiveRecord::InvalidForeignKey)
+    end
+
     it 'saves the name without the surrounding spaces' do
       expect(create(:custom_role, name: '  Suporte  ').reload.name).to eq('Suporte')
     end

@@ -14,11 +14,15 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
   def create
     grant_guard.write!(nil, permitted_params[:permissions])
     @custom_role = Current.account.custom_roles.create!(permitted_params)
+  rescue ActiveRecord::RecordNotUnique
+    render_name_taken
   end
 
   def update
     grant_guard.write!(@custom_role, permitted_params.fetch(:permissions, @custom_role.permissions))
     @custom_role.update!(permitted_params)
+  rescue ActiveRecord::RecordNotUnique
+    render_name_taken
   end
 
   # Quem tem a função vai para o destino escolhido e a função some, tudo junto ou nada (#2185). Antes, quem tinha a
@@ -30,6 +34,9 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
     return if performed?
     return head :ok if move_holders_and_destroy(destination_id, needs_destination)
 
+    refuse_destination('changed_meanwhile', :conflict)
+  rescue ActiveRecord::InvalidForeignKey
+    # Alguém ganhou a função depois da trava: a chave estrangeira recusa a exclusão e a transação já foi desfeita.
     refuse_destination('changed_meanwhile', :conflict)
   end
 
@@ -63,13 +70,20 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
     return if value == NO_ROLE_DESTINATION
 
     role = destination_candidates.find_by(id: value) if value.is_a?(String) || value.is_a?(Integer)
-    return refuse_destination('destination_invalid') if role.nil?
+    # Fora do alcance de quem exclui também é destino inválido (422), como na Issue: a tela só oferece os que alcança.
+    return refuse_destination('destination_invalid') if role.nil? || !grant_guard.reach?(role.permissions)
 
-    grant_guard.role_to_grant!(role.id).id
+    role.id
   end
 
   def destination_candidates
     Current.account.custom_roles.for_people.where.not(id: @custom_role.id)
+  end
+
+  # Duas gravações do mesmo nome ao mesmo tempo: a segunda bate no índice e recebe o mesmo erro da validação.
+  def render_name_taken
+    render json: { message: "#{CustomRole.human_attribute_name(:name)} #{I18n.t('errors.messages.taken')}", attributes: ['name'] },
+           status: :unprocessable_entity
   end
 
   def refuse_destination(code, status = :unprocessable_entity)

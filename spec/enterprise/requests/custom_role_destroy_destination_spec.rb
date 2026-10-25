@@ -73,7 +73,8 @@ RSpec.describe 'Deleting a custom role with people (#2185)', :aggregate_failures
 
     delete_role(as: builder, destination_role_id: destination.id)
 
-    expect(response).to have_http_status(:unauthorized)
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('destination_invalid')
     expect(CustomRole.exists?(role.id)).to be(true)
     expect(holder.reload.custom_role_id).to eq(role.id)
 
@@ -99,6 +100,33 @@ RSpec.describe 'Deleting a custom role with people (#2185)', :aggregate_failures
     expect(response.parsed_body['error']).to eq('changed_meanwhile')
     expect(CustomRole.exists?(role.id)).to be(true)
     expect(holder.reload.custom_role_id).to eq(role.id)
+  end
+
+  # Quem ganha a função depois da trava é barrado pela chave estrangeira: a exclusão volta e pede para tentar de novo.
+  it 'answers 409 when the foreign key refuses the deletion' do
+    # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(CustomRole).to receive(:destroy!).and_raise(ActiveRecord::InvalidForeignKey)
+    # rubocop:enable RSpec/AnyInstance
+
+    delete_role(as: admin, destination_role_id: destination.id)
+
+    expect(response).to have_http_status(:conflict)
+    expect(response.parsed_body['error']).to eq('changed_meanwhile')
+    expect(holder.reload.custom_role_id).to eq(role.id)
+  end
+
+  # Duas gravações do mesmo nome ao mesmo tempo: a segunda bate no índice e recebe o erro do campo nome, não 500.
+  it 'answers 422 on the name field when the unique index refuses the name' do
+    # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(CustomRole).to receive(:save!).and_raise(ActiveRecord::RecordNotUnique)
+    # rubocop:enable RSpec/AnyInstance
+
+    post "/api/v1/accounts/#{account.id}/custom_roles",
+         params: { custom_role: { name: 'Vendas', permissions: %w[conversation_view] } },
+         headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['attributes']).to eq(['name'])
   end
 
   it 'deletes a role nobody has without a destination' do

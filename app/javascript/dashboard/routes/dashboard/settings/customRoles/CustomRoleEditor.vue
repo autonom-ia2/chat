@@ -308,7 +308,7 @@ const persist = async payload => {
   }
 };
 
-const save = () => {
+const save = async () => {
   const typedName = name.value.trim();
   if (typedName.length < 2) {
     nameError.value = t('CUSTOM_ROLE.FORM.NAME.ERROR');
@@ -328,6 +328,13 @@ const save = () => {
     permissions: permissions.value,
   };
   if (isNewRole.value) return persist(payload);
+  // Conta sobre a lista de agentes de agora: velha ou vazia, ela esconderia quem perde acesso.
+  try {
+    await store.dispatch('agents/get');
+  } catch {
+    useAlert(t('CUSTOM_ROLE.FORM.API.ERROR_MESSAGE'));
+    return null;
+  }
   const { people, areas } = lostAccess();
   if (!people || !areas.length) return persist(payload);
   return askConfirmation(
