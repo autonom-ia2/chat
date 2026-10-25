@@ -204,7 +204,7 @@ RSpec.describe 'IA de assunto: dúvida com sinal de pedido novo vira sugestão' 
       expect(account.crm_cards.count).to eq(0)
     end
 
-    it 'a sugestão de outro funil troca a anterior: só uma espera a pessoa' do
+    it 'com uma sugestão esperando a pessoa, a dúvida de outro funil não a derruba' do
       stub_jev('sem_assunto', confidence: 0.2)
       stub_review(resposta: novo, titulo: 'Seguro residencial')
       primeira = identify(incoming('e pra casa?'))
@@ -212,8 +212,18 @@ RSpec.describe 'IA de assunto: dúvida com sinal de pedido novo vira sugestão' 
 
       segunda = identify(incoming('e o boleto venceu'))
 
-      expect(primeira.reload.state).to eq('expired')
-      expect(segunda).to have_attributes(state: 'suggested', pipeline_id: pos_venda.id)
+      expect(primeira.reload.state).to eq('suggested')
+      expect(segunda).to have_attributes(state: 'doubt', action: 'none')
+    end
+
+    it 'respondida a sugestão, a próxima dúvida de outro funil pode sugerir' do
+      stub_jev('sem_assunto', confidence: 0.2)
+      stub_review(resposta: novo, titulo: 'Seguro residencial')
+      primeira = identify(incoming('e pra casa?'))
+      Crm::Subjects::SuggestionResponder.new(decision: primeira, user: admin).accept
+      stub_review(resposta: novo(pos_venda), titulo: 'Segunda via do boleto')
+
+      expect(identify(incoming('e o boleto venceu'))).to have_attributes(state: 'suggested', pipeline_id: pos_venda.id)
     end
 
     it 'uma mensagem mais nova já decidida passa na frente: nada é sugerido' do
@@ -242,7 +252,7 @@ RSpec.describe 'IA de assunto: dúvida com sinal de pedido novo vira sugestão' 
       identify(incoming('ok'))
 
       expect(Crm::Subjects::DuvidaSugerida.medicao(account: account, desde: 1.day.ago))
-        .to eq(duvidas_sem_sugestao: 1, sugeridas: 2, aceitas: 1, ignoradas: 1, esperando: 0, vencidas: 0)
+        .to eq(duvidas_sem_sugestao: 1, sugeridas: 2, aceitas: 1, ignoradas: 1, esperando: 0, vencidas: 0, superadas: 0)
     end
   end
 end

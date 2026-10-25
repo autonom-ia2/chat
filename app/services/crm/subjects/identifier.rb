@@ -102,10 +102,15 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
     return if escolha.nil?
 
     resultado = aplicar(escolha)
-    @aplicado = true
+    @aplicado = gravou?(escolha, resultado)
     @evento = resultado.delete(:evento)
     tocados = lista_de_tocados(resultado)
     concluir(**resultado, decided_by: escolha.decided_by, **tocados)
+  end
+
+  # A dúvida que não virou nada (#2162) não gravou card nem sugestão: um erro depois dela desfaz a reserva, como antes.
+  def gravou?(escolha, resultado)
+    !(escolha.opcao.nil? && escolha.outros.blank? && resultado[:state] == 'doubt')
   end
 
   # A lista de cards tocados (#1693), tirada do resultado. Dúvida sem nenhum outro assunto aplicado fica sem lista: a

@@ -9,11 +9,11 @@
 #   card nasce sem nome, e a IA de assunto dá o nome na próxima mensagem, #1918).
 # - Respeita o #1260: a mesma sugestão (criar card naquele funil) que espera uma pessoa ou que ela ignorou há menos de
 #   RESPEITO_AO_FECHAMENTO não volta.
-# - O card sem nome da conversa, aberto e sem pedido, recebe o pedido quando ele ficar claro: com ele, a dúvida fica
-#   como está (o lead não está sumido).
+# - Fica a dúvida (o lead não está sumido, ou a equipe já tem o que responder) quando a conversa tem um card aberto sem
+#   nome e sem pedido (ele recebe o pedido quando ficar claro, #1918) ou quando outra sugestão já espera uma pessoa.
 #
 # Medição: a decisão sugerida leva `reason = MOTIVO`; o estado dela diz o que a equipe fez (suggested, accepted,
-# dismissed, expired). Ver .medicao.
+# dismissed, expired; superseded quando uma mensagem mais nova passou na frente antes de sugerir). Ver .medicao.
 module Crm::Subjects::DuvidaSugerida
   FLAG = 'crm_ia_duvida_vira_sugestao'.freeze
   MOTIVO = 'duvida_pedido_novo'.freeze
@@ -31,6 +31,7 @@ module Crm::Subjects::DuvidaSugerida
     sugeridas = decisoes.where(reason: MOTIVO).group(:state).count
     { duvidas_sem_sugestao: decisoes.where(state: 'doubt').count, sugeridas: sugeridas.values.sum,
       aceitas: sugeridas.fetch('accepted', 0), ignoradas: sugeridas.fetch('dismissed', 0),
-      esperando: sugeridas.fetch('suggested', 0), vencidas: sugeridas.fetch('expired', 0) }
+      esperando: sugeridas.fetch('suggested', 0), vencidas: sugeridas.fetch('expired', 0),
+      superadas: sugeridas.fetch('superseded', 0) }
   end
 end

@@ -41,8 +41,10 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
   end
 
   # A dúvida do modelo maior: nada muda, a menos que traga a sugestão de pedido novo (#2162, Crm::Subjects::DuvidaSugerida).
-  # Aí vira sugestão de criar o card, em qualquer modo: só uma pessoa cria. O card sem nome da conversa, ainda sem pedido,
-  # recebe o pedido quando ele ficar claro: com ele, fica a dúvida. Uma mensagem mais nova passa na frente.
+  # Aí vira sugestão de criar o card, em qualquer modo: só uma pessoa cria. Fica a dúvida quando a conversa já tem um
+  # card sem nome e sem pedido (ele recebe o pedido quando ficar claro) e, conferido dentro da trava, quando outra
+  # sugestão espera uma pessoa (a dúvida, sinal mais fraco, não derruba a sugestão clara) ou a pessoa ignorou há pouco a
+  # mesma (#1260). Uma mensagem mais nova passa na frente.
   def duvida(em_duvida)
     sugestao = em_duvida[:sugestao]
     base = em_duvida.except(:sugestao)
@@ -50,8 +52,16 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
 
     resultado = nil
     Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
-      resultado = mensagem_mais_nova? ? { state: 'superseded' } : sugerir
+      resultado = if mensagem_mais_nova?
+                    { state: 'superseded' }
+                  elsif sugestao_bloqueada?(sugestao[:pipeline])
+                    {}
+                  else
+                    sugerir
+                  end
     end
+    return base if resultado.empty?
+
     base.merge(action: 'create', card: nil, pipeline: sugestao[:pipeline], title: sugestao[:title],
                reason: Crm::Subjects::DuvidaSugerida::MOTIVO).merge(resultado)
   end
@@ -176,6 +186,14 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
     when 'focus' then focar(atributos[:card].reload)
     when 'create' then criar(atributos[:pipeline], atributos[:title], atributos[:etapa], generico: generico)
     end
+  end
+
+  # #2162, dentro da trava: outra sugestão espera uma pessoa, ou ela ignorou há pouco a de criar card neste funil.
+  def sugestao_bloqueada?(pipeline)
+    decisoes = Crm::SubjectDecision.where(conversation_id: @conversation.id).where.not(id: @decisao.id)
+    decisoes.suggested.exists? ||
+      decisoes.exists?(state: 'dismissed', action: %w[create rename], pipeline_id: pipeline.id,
+                       updated_at: Crm::Subjects::RESPEITO_AO_FECHAMENTO.ago..)
   end
 
   # Marca já dentro do lock: duas sugestões da mesma conversa nunca ficam esperando ao mesmo tempo.
