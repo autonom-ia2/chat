@@ -8,6 +8,10 @@
 # - Dispensada não vem. O título dos cards das propostas paradas só entra aqui, lido na hora, por id (os fatos
 #   nunca guardam título).
 # - O botão do Gerenciador da Meta é montado aqui, com a conta sem o prefixo `act_` e o id do anúncio.
+# - Valores de venda em R$ (#2075): o run é da conta, então a pessoa (`visible`, Crm::MetaAds::VisibleConversations) só
+#   entra aqui, na resposta. Sem `sales_value_view`, a soma das propostas paradas (`value`) sai dos fatos antes do
+#   texto (o texto da IA que a usa volta ao da regra) e cada card vem sem valor, menos o de que a pessoa é dona.
+#   Sem `visible` (o resumo no WhatsApp), tudo.
 class Crm::MetaAds::Advisor::Advice
   BUTTONS = {
     'stalled_quotes' => 'stalled_list', 'slow_response' => 'slow_replies', 'fix_tracking' => 'connection_step',
@@ -19,11 +23,12 @@ class Crm::MetaAds::Advisor::Advice
   NO_TEXT = { source: 'rule', headline: nil, body: nil, why: nil }.freeze
 
   # actions: as da Decision (atuais) ou as guardadas no run; today: History.today (id, status, opened_at).
-  def initialize(run, actions, today:, locale:)
+  def initialize(run, actions, today:, locale:, visible: nil)
     @run = run
     @actions = actions
     @today = today
     @locale = locale
+    @visible = visible
   end
 
   def payload
@@ -51,11 +56,16 @@ class Crm::MetaAds::Advisor::Advice
   end
 
   def action_payload(action, position)
-    facts = action[:facts].to_h.deep_stringify_keys
+    facts = shown_facts(action[:facts])
     {
       position: position, kind: action[:kind], variant: action[:variant], ad_id: action[:ad_id], ad_name: facts['ad_name'],
       facts: facts.except('cards'), button: button(action), cards: action[:kind] == 'stalled_quotes' ? cards(facts['cards']) : []
     }.merge(gesture(action), text(action, facts))
+  end
+
+  def shown_facts(facts)
+    facts = facts.to_h.deep_stringify_keys
+    Crm::MetaAds::Panel::SalesValue.visible?(@visible) ? facts : facts.except('value')
   end
 
   # O que a pessoa já fez com a ação (fillers não têm linha: id nil).
@@ -86,10 +96,16 @@ class Crm::MetaAds::Advisor::Advice
 
   def cards(list)
     list = Array(list)
-    titles = Crm::Card.where(account_id: @run.account_id, id: list.pluck('id')).pluck(:id, :title).to_h
+    found = Crm::Card.where(account_id: @run.account_id, id: list.pluck('id')).select(:id, :title, :owner_id).index_by(&:id)
     list.map do |card|
-      { id: card['id'], title: titles[card['id']], value: card['value'], conversation_id: card['conversation_id'],
-        waiting_since: card['waiting_since'] }
+      row = { id: card['id'], title: found[card['id']]&.title, value: card['value'], conversation_id: card['conversation_id'],
+              waiting_since: card['waiting_since'] }
+      card_value?(found[card['id']]) ? row : row.merge(value: nil, value_hidden: true)
     end
+  end
+
+  # Card apagado depois do run não tem dono: o valor dele fica só com quem vê os valores.
+  def card_value?(card)
+    card.nil? ? Crm::MetaAds::Panel::SalesValue.visible?(@visible) : Crm::MetaAds::Panel::SalesValue.card?(@visible, card)
   end
 end

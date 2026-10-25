@@ -21,12 +21,17 @@
 #
 # O anúncio por dentro (F3b, Panel::AdDetail) lê daqui o período, a coorte, a linha do anúncio e a média da conta,
 # para que o número da lista e o da tela do anúncio nunca divirjam.
+#
+# Com `visible` (Crm::MetaAds::VisibleConversations da pessoa do pedido), o `payload` segue os valores de venda em R$
+# (#2075, Panel::SalesValue): sem `sales_value_view`, os totais e cada anúncio saem sem o dinheiro dos cards. O resto
+# (as linhas, a coorte, a média) fica inteiro: o consultor e a tela do anúncio fazem as contas com elas.
 class Crm::MetaAds::Panel::Report
   attr_reader :zone, :account_id, :period
 
   # period: nome do Panel::Period; days: o pedido antigo (7 ou 30), para quem ainda chama assim.
-  def initialize(connection, period: nil, days: nil, account: nil)
+  def initialize(connection, period: nil, days: nil, account: nil, visible: nil)
     @connection = connection
+    @visible = visible
     @account_id = connection&.account_id || account.id
     @zone = zone_for(connection, account)
     @period = Crm::MetaAds::Panel::Period.new(Crm::MetaAds::Panel::Period.key_for(period: period, days: days),
@@ -36,9 +41,8 @@ class Crm::MetaAds::Panel::Report
   def payload
     base = { period: period.key, days: days, from: first_day, to: last_day, open: period.open?, currency: currency,
              totals: totals.merge(other_spend: other_ads.sum { |row| row[:spend] }.round(2)), ads: ads, other_ads: other_ads }
-    return base.merge(confidence: confidence) unless whatsapp_only?
-
-    base.merge(source: 'whatsapp', totals: totals.merge(spend: nil, other_spend: nil), ads: ads.map { |ad| ad.merge(spend: nil) })
+    shown = whatsapp_only? ? whatsapp_payload(base) : base.merge(confidence: confidence)
+    Crm::MetaAds::Panel::SalesValue.visible?(@visible) ? shown : without_sales_values(shown)
   end
 
   # Sem conexão: o painel só com o que o WhatsApp contou (#1960).
@@ -108,6 +112,16 @@ class Crm::MetaAds::Panel::Report
   end
 
   private
+
+  def whatsapp_payload(base)
+    base.merge(source: 'whatsapp', totals: totals.merge(spend: nil, other_spend: nil), ads: ads.map { |ad| ad.merge(spend: nil) })
+  end
+
+  # Sem `sales_value_view` (#2075): os outros anúncios (`other_ads`) só têm gasto e ficam como estão.
+  def without_sales_values(shown)
+    shown.merge(totals: Crm::MetaAds::Panel::SalesValue.hide(shown[:totals]),
+                ads: shown[:ads].map { |ad| Crm::MetaAds::Panel::SalesValue.hide(ad) })
+  end
 
   # Dia do primeiro toque de anúncio da conta (e, com conexão, do primeiro gasto guardado), para "desde o primeiro
   # anúncio". Lido só quando esse é o período pedido.

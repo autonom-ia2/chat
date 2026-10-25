@@ -55,6 +55,18 @@ RSpec.describe Crm::MetaAds::Relatorio::Pdf do
     expect(paginas).to all(include('Página'))
   end
 
+  # #2075: sem `sales_value_view`, as vendas saem sem o valor, e o valor escondido nunca vira "R$ 0".
+  it 'sem os valores de venda, mostra as vendas sem o valor' do
+    from_ad('Paulo Lima', 2.days.ago, status: :won, value: 950)
+    olhar = instance_double(Crm::MetaAds::VisibleConversations, sales_values?: false, card_value?: false)
+    allow(olhar).to receive(:ids) { |ids| Set.new(ids) }
+
+    paginas = texto(described_class.new(Crm::MetaAds::Relatorio::Dados.new(nil, period: '30d', account: account, visible: olhar)).gerar)
+
+    expect(paginas.join).to include('Paulo Lima', 'Comprou')
+    expect(paginas.join).not_to include('R$')
+  end
+
   it 'sem as pessoas (quem não pode exportar o CRM), sai só com os números' do
     from_ad('Paulo Lima', 2.days.ago, status: :won, value: 950)
     esperando('Joana Dias', 1.day.ago)

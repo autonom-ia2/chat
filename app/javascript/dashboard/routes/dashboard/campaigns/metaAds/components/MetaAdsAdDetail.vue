@@ -754,7 +754,10 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
                 </span>
               </span>
             </span>
-            <span class="text-base font-semibold tabular-nums text-n-slate-12">
+            <span
+              v-if="card.value != null"
+              class="text-base font-semibold tabular-nums text-n-slate-12"
+            >
               {{ fmt(card.value) }}
             </span>
             <router-link

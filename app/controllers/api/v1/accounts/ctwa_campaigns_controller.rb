@@ -75,7 +75,9 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
     Crm::Reports::OriginMetrics.new(
       visible_ids_sql: visible_conversations.reorder(nil).select(:id).to_sql,
       card_filters: card_filters.join(' AND '),
-      binds: binds
+      binds: binds,
+      # Valor de venda (#2075): o R$ segue o Crm::ValorDeVenda; a contagem fica.
+      value_visible: Crm::ValorDeVenda.ve?(Current.account_user)
     ).perform
   end
 

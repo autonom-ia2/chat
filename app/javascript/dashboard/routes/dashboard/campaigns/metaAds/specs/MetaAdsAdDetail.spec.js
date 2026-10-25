@@ -177,6 +177,25 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     expect(won.find('a').exists()).toBe(false);
   });
 
+  // #2075 — sem a chave de valores de venda, a proposta de outra pessoa vem sem valor; a da própria pessoa, com.
+  it('shows the value only on the quotes that come with one', async () => {
+    const [stalled, won] = AD.quotes_list;
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({
+        ...AD,
+        sales_value: null,
+        value_hidden: true,
+        quotes_list: [{ ...stalled, value: null, value_hidden: true }, won],
+      })
+    );
+    const wrapper = await mountDetail();
+
+    const hidden = wrapper.find('[data-ad-detail-quote="7"]');
+    expect(hidden.text()).toContain('Virgínia');
+    expect(hidden.text()).not.toMatch(/R\$|842/);
+    expect(wrapper.find('[data-ad-detail-quote="8"]').text()).toContain('500');
+  });
+
   it('draws one bar per day and a dot only on days with conversations', async () => {
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
       answer({ ...AD, daily: daily(30) })

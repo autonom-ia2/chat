@@ -2841,6 +2841,7 @@
           "STALLED_QUOTES": {
             "TEXT": "1 proposta de anúncio está parada há mais de {days} dias. Ela veio de \"{ad}\". | {count} propostas de anúncio estão paradas há mais de {days} dias. A maior parte veio de \"{ad}\".",
             "WHY": "Por quê: somam {value} em negociação. Retomar quem já pediu proposta custa menos que anunciar de novo.",
+            "WHY_NO_VALUE": "Por quê: retomar quem já pediu proposta custa menos que anunciar de novo.",
             "BUTTON": "Ver a proposta | Ver as {count} propostas"
           },
           "FIX_TRACKING": {
@@ -3131,6 +3132,7 @@
         "DISCARD": "Descartar mudanças",
         "TEST": "Enviar teste",
         "TEST_HINT": "Envia agora o resumo de ontem, marcado como teste.",
+        "NEEDS_SALES_VALUE": "O resumo mostra quanto foi vendido. Para ligar, mudar e testar, é preciso ter permissão para ver os valores de venda.",
         "TEST_NEEDS_SAVE": "Salve o número que envia e o número que recebe antes de testar.",
         "TEST_NEEDS_SAVE_CHANGES": "Salve ou descarte as mudanças antes de testar.",
         "TEST_NEEDS_ORIGIN": "O número que envia não está conectado agora. Escolha outro e salve antes de testar.",
@@ -3154,6 +3156,7 @@
           "SEND_FAILED": "O WhatsApp não aceitou o envio. Confira a conexão do número que envia.",
           "SEND_UNCERTAIN": "Não deu para confirmar se chegou. Confira o seu WhatsApp antes de tentar de novo.",
           "WHATSAPP_NUMBER_NOT_FOUND": "Este número não tem WhatsApp.",
+          "SALES_VALUE_FORBIDDEN": "Para mudar ou testar o resumo, é preciso ter permissão para ver os valores de venda.",
           "GENERIC": "Não deu certo agora. Tente de novo."
         }
       }
