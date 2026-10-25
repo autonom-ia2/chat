@@ -115,6 +115,19 @@ RSpec.describe 'CRM: arquivar e restaurar funil', type: :request do
       expect([first.reload.pipeline_id, second.reload.pipeline_id]).to eq([pipeline.id, pipeline.id])
     end
 
+    it 'com destino, diz quais clientes ficaram com dois cards abertos no destino (#2145)' do
+      ana = account.contacts.create!(name: 'Ana')
+      account.crm_cards.create!(pipeline: target_stage.pipeline, stage: target_stage, title: 'Outro assunto', contact: ana)
+      movido = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Ana', contact: ana)
+      card(title: 'Sem contato')
+
+      delete "#{base}/#{pipeline.id}", params: { move_to_stage_id: target_stage.id }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.dig('payload', 'clients_with_two_open'))
+        .to eq('count' => 1, 'items' => [{ 'contact_id' => ana.id, 'name' => 'Ana', 'card_id' => movido.id }])
+    end
+
     # #2145: em lotes, a recusa pode vir depois de um lote confirmado; a resposta diz quantos cards já foram.
     it 'destino arquivado entre dois lotes: recusa com quantos cards já foram (moved_count)' do
       stub_const('Crm::Pipelines::Archiver::LOTE', 1)

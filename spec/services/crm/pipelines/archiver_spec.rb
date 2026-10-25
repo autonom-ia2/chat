@@ -76,6 +76,34 @@ RSpec.describe Crm::Pipelines::Archiver do
     expect(segundo.reload.pipeline_id).to eq(pipeline.id)
   end
 
+  # #2145, opção 1 do Rodrigo: o cliente que já tinha card aberto no destino recebe o card movido mesmo assim (R1 do
+  # multifunil), e o resultado o lista para o resumo. Também em lotes; cliente sem card no destino não entra.
+  it 'cliente que já tinha card aberto no destino: move mesmo assim e lista o cliente, uma vez' do
+    stub_const("#{described_class}::LOTE", 1)
+    ana = account.contacts.create!(name: 'Ana')
+    bia = account.contacts.create!(name: 'Bia')
+    ja_no_destino = account.crm_cards.create!(pipeline: target_stage.pipeline, stage: target_stage, title: 'Outro assunto', contact: ana)
+    da_ana = [1, 2].map { |i| account.crm_cards.create!(pipeline: pipeline, stage: card.stage, title: "Ana #{i}", contact: ana) }
+    da_bia = account.crm_cards.create!(pipeline: pipeline, stage: card.stage, title: 'Bia', contact: bia)
+
+    result = described_class.new(pipeline: pipeline, actor: host, target_stage: target_stage).perform
+
+    expect([*da_ana, da_bia].map { |movido| movido.reload.pipeline_id }.uniq).to eq([target_stage.pipeline_id])
+    expect(ja_no_destino.reload).to have_attributes(status: 'open', pipeline_id: target_stage.pipeline_id)
+    expect(result.clientes_com_dois_abertos).to eq([{ contact_id: ana.id, name: 'Ana', card_id: da_ana.first.id }])
+  end
+
+  it 'resumo que falha depois de arquivar não vira erro: arquiva e devolve a lista vazia' do
+    arquivador = described_class.new(pipeline: pipeline, actor: host, target_stage: target_stage)
+    allow(arquivador).to receive(:clientes_com_dois_abertos).and_raise(ActiveRecord::StatementInvalid, 'tempo esgotado')
+
+    result = arquivador.perform
+
+    expect(pipeline.reload).to be_archived
+    expect(result.clientes_com_dois_abertos).to eq([])
+    expect(arquivador.moved_before_failure).to eq(0)
+  end
+
   # Com o novo principal, os lotes saem e a transação final promove o novo principal e arquiva.
   it 'mover em lotes: leva todos os cards abertos e devolve todos em moved' do
     stub_const("#{described_class}::LOTE", 1)

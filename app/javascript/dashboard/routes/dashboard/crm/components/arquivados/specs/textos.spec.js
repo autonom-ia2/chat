@@ -1,6 +1,7 @@
 import { motivoDoErro, motivoDoPulado } from '../motivoDoErro';
 import {
   avisoDoRestaurado,
+  avisoDosDoisAbertos,
   nomeDoCliente,
   quemArquivou,
   valorDaLinha,
@@ -112,6 +113,48 @@ describe('nomeDoCliente', () => {
   it('sem contato, usa o título do card', () => {
     expect(nomeDoCliente({ title: 'Plano de Ana', contact: null })).toBe(
       'Plano de Ana'
+    );
+  });
+});
+
+describe('avisoDosDoisAbertos (#2145)', () => {
+  const tp = (chave, params, n) =>
+    `${chave}${JSON.stringify(params)}${n ?? ''}`;
+  const juntar = nomes => nomes.join(', ');
+
+  it('sem cliente com dois abertos, nada', () => {
+    expect(avisoDosDoisAbertos(tp, juntar, {}, 'Vendas')).toBeNull();
+    expect(
+      avisoDosDoisAbertos(
+        tp,
+        juntar,
+        { clients_with_two_open: { count: 0, items: [] } },
+        'Vendas'
+      )
+    ).toBeNull();
+  });
+
+  it('lista até 3 nomes e conta o resto', () => {
+    const resposta = {
+      clients_with_two_open: {
+        count: 5,
+        items: ['Ana', 'Bia', 'Caio', 'Duda'].map((name, i) => ({
+          name,
+          card_id: i,
+        })),
+      },
+    };
+    expect(avisoDosDoisAbertos(tp, juntar, resposta, 'Vendas')).toBe(
+      'CRM_ARQUIVADOS.FUNIL.DOIS_ABERTOS_QUEM{"count":5,"funil":"Vendas","nomes":"Ana, Bia, Caio, CRM_ARQUIVADOS.FUNIL.MAIS_N{\\"count\\":2}2"}5'
+    );
+  });
+
+  it('sem nomes, só a contagem', () => {
+    const resposta = {
+      clients_with_two_open: { count: 1, items: [{ name: null, card_id: 1 }] },
+    };
+    expect(avisoDosDoisAbertos(tp, juntar, resposta, 'Vendas')).toBe(
+      'CRM_ARQUIVADOS.FUNIL.DOIS_ABERTOS{"count":1,"funil":"Vendas"}1'
     );
   });
 });

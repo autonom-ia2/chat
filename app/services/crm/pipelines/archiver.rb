@@ -14,6 +14,10 @@
 # leva quantos foram (`moved_before_failure`, que o controller devolve como `moved_count`). Se o destino foi arquivado
 # no meio, os levados seguem a escolha daquele arquivamento (no cruzado P1 para P2 e P2 para P1, podem ter voltado à
 # origem): a contagem é de quantos saíram, não de onde estão agora. Arquivar de novo leva o que sobrou.
+# Cliente que já tinha card aberto no funil de destino (#2145, decisão do Rodrigo, opção 1): o card movido vai mesmo
+# assim. O PLANO do multifunil (R1) aceita vários cards abertos do mesmo cliente no mesmo funil. O resultado lista esses
+# clientes (`clientes_com_dois_abertos`), para o resumo dizer "N clientes ficaram com 2 cards abertos em <funil>".
+#
 # Entre os lotes, as caixas ainda apontam para este funil: o cliente sem card aberto que escrever nesse meio ganha card
 # aqui, e ele vai no último lote.
 #
@@ -62,7 +66,8 @@ class Crm::Pipelines::Archiver
   # Cards por transação ao mover (#2145): ~0,3 s de trava por lote, pela medida da revisão do #2097.
   LOTE = 100
 
-  Result = Struct.new(:moved, :stopped_follow_ups, :moved_inboxes, :inboxes_target_pipeline_id, keyword_init: true)
+  Result = Struct.new(:moved, :stopped_follow_ups, :moved_inboxes, :inboxes_target_pipeline_id, :clientes_com_dois_abertos,
+                      keyword_init: true)
 
   # Outro pedido arquivou ou restaurou este funil enquanto os lotes saíam: as escolhas eram para o funil de antes.
   CHANGED = 'crm.pipeline_archive_changed'.freeze
@@ -102,6 +107,13 @@ class Crm::Pipelines::Archiver
   attr_reader :moved_before_failure
 
   def perform
+    result = arquivar!
+    Result.new(**result.to_h, clientes_com_dois_abertos: resumo_dos_dois_abertos(result.moved))
+  end
+
+  private
+
+  def arquivar!
     movidos = @target_stage ? mover_em_lotes! : []
     result = nil
     ActiveRecord::Base.transaction do
@@ -120,8 +132,6 @@ class Crm::Pipelines::Archiver
     @moved_before_failure = movidos.size if movidos
     raise
   end
-
-  private
 
   def travar_funil!
     Crm::Pipelines::TravaDeArquivar.travar!(@pipeline.account_id)
@@ -161,9 +171,33 @@ class Crm::Pipelines::Archiver
     target
   end
 
-  def avisar_movidos(cards)
-    cards.each { |card| Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_MOVED) }
+  # O arquivamento já está confirmado: se a leitura do resumo falhar, ele sai sem a lista (com o erro no log), em vez de
+  # a resposta virar erro.
+  def resumo_dos_dois_abertos(movidos)
+    clientes_com_dois_abertos(movidos)
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.error("[crm][pipelines][archiver] pipeline_id=#{@pipeline.id} resumo_dois_abertos #{e.class.name}: #{e.message.to_s[0, 160]}")
+    []
   end
+
+  # Lido depois de confirmar, só para o resumo: os clientes dos cards movidos que já tinham outro card aberto no funil
+  # de destino (um card que não veio deste funil). Um por cliente, com o card movido.
+  def clientes_com_dois_abertos(movidos)
+    contatos = movidos.filter_map(&:contact_id).uniq
+    return [] if contatos.empty?
+
+    ja_abertos = contatos_ja_abertos_no_destino(contatos, movidos.map(&:id))
+    movidos.select { |card| ja_abertos.include?(card.contact_id) }.uniq(&:contact_id).map { |card| cliente_do_resumo(card) }
+  end
+
+  def contatos_ja_abertos_no_destino(contatos, movidos_ids)
+    Crm::Card.open.where(account_id: @pipeline.account_id, pipeline_id: @target_stage.pipeline_id, contact_id: contatos)
+             .where.not(id: movidos_ids).distinct.pluck(:contact_id).to_set
+  end
+
+  def cliente_do_resumo(card) = { contact_id: card.contact_id, name: card.contact&.name, card_id: card.id }
+
+  def avisar_movidos(cards) = cards.each { |card| Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_MOVED) }
 
   def archive!
     target = lock_target!

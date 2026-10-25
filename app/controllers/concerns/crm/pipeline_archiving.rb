@@ -83,6 +83,7 @@ module Crm::PipelineArchiving
     @stopped_follow_ups_count = result.stopped_follow_ups
     @moved_inboxes = result.moved_inboxes
     @inboxes_target_pipeline_id = result.inboxes_target_pipeline_id
+    @clients_with_two_open = result.clientes_com_dois_abertos
     @open_cards_count = @pipeline.cards.open.count
   end
 

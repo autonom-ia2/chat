@@ -6693,6 +6693,9 @@
       "ERRO_ETAPAS": "Could not load the stages of that pipeline: {motivo}. Choose it again.",
       "ARQUIVADO": "Pipeline {funil} archived.",
       "FORAM_PARA": "1 card went to {funil}. | {count} cards went to {funil}.",
+      "DOIS_ABERTOS": "1 customer now has 2 open cards in {funil}. | {count} customers now have 2 open cards in {funil}.",
+      "DOIS_ABERTOS_QUEM": "1 customer now has 2 open cards in {funil}: {nomes}. | {count} customers now have 2 open cards in {funil}: {nomes}.",
+      "MAIS_N": "1 more | {count} more",
       "FICARAM_GUARDADOS": "1 open card was kept with it. | {count} open cards were kept with it.",
       "CAIXAS_AGORA": "New customers from {caixas} now go into {funil}.",
       "CAIXAS_PARARAM": "New customers from {caixas} no longer go into this pipeline."
