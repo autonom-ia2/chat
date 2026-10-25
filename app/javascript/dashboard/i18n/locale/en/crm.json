@@ -5688,6 +5688,7 @@
       "QUEM_MARCOU": "Who set it",
       "MARCOU_CLIENTE": "The customer, through the link",
       "MARCOU_ASSISTENTE": "The assistant",
+      "PESSOA_REMOVIDA": "Person removed",
       "CONVIDADOS": "Other guests",
       "N_CONVIDADOS": "{n} person | {n} people",
       "ESTA_AQUI": "It is here",

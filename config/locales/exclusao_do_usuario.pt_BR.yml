@@ -1,4 +1,0 @@
-pt_BR:
-  autonomia:
-    exclusao_do_usuario:
-      pendente: "Esta pessoa ainda não pode ser excluída: registros em %{tabelas} precisam ser passados para alguém antes."
