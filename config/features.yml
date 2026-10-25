@@ -822,3 +822,15 @@
   display_name: Painel do contato enxuto na conversa
   enabled: true
   column: feature_flags_ext_1
+
+# IA de assunto: nome genérico refinado uma vez (#2163). Ligada: o modelo maior diz se o nome que deu ao pedido é
+# genérico por falta de informação ("Nova cotação"); o card guarda essa marca. Quando o detalhe chega no mesmo pedido,
+# o nome é trocado UMA vez pelo específico, no mesmo card, sem criar outro. Nome dado ou editado por pessoa nunca é
+# trocado. O card sem nome que já carregava um pedido (houve "o mesmo assunto" nele) ganha nome pelo mesmo assunto, e o
+# pedido novo no mesmo funil vira card novo em vez de apagar o primeiro. Desligada: prompt, schema e comportamento iguais
+# aos de antes. Sem migration. Posição PROVISÓRIA (60 nesta branch, 1 << 59); a definitiva é da Orquestração, no fim da
+# main na vez do PR.
+- name: crm_ia_nome_provisorio
+  display_name: CRM › IA refina o nome genérico do pedido
+  enabled: false
+  column: feature_flags_ext_1

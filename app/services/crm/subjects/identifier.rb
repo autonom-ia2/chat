@@ -15,7 +15,8 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
   # outros (#1693): os outros assuntos da mensagem, cada um uma Escolha sem decided_by. duvida: os atributos da decisão
   # quando o principal ficou em dúvida e os outros, claros, seguem (sem opcao). etapa (#1910): a chave da etapa do pedido
   # novo, ou nil (1ª etapa).
-  Escolha = Struct.new(:opcao, :titulo, :decided_by, :outros, :duvida, :etapa, keyword_init: true)
+  # generico (#2163): o modelo disse que o nome é genérico.
+  Escolha = Struct.new(:opcao, :titulo, :decided_by, :outros, :duvida, :etapa, :generico, keyword_init: true)
   LEITURAS = %w[mensagens_com_respostas].freeze
   SEM_MUDANCA = (Crm::Subjects::Applier::SEM_EFEITO + %w[kept doubt superseded]).freeze
 
@@ -115,7 +116,7 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
   def aplicar(escolha)
     applier = Crm::Subjects::Applier.new(conversation: @conversation, question: question, mode: @mode, decisao: @decisao,
                                          anterior: @retrato)
-    return applier.aplicar(escolha.opcao, escolha.titulo, escolha.etapa) unless question.varios?
+    return applier.aplicar(escolha.opcao, escolha.titulo, escolha.etapa, generico: escolha.generico == true) unless question.varios?
 
     applier.aplicar_varios((escolha if escolha.opcao), Array(escolha.outros), duvida: escolha.duvida)
   end
@@ -156,15 +157,17 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
   end
 
   # Jev inseguro, pedido novo (precisa de nome) ou vários assuntos (precisa da lista): o modelo maior decide. Inseguro
-  # também, nada muda. "O mesmo assunto" num card ainda sem nome (#1918) também, quando dar nome a ele é possível.
+  # também, nada muda. "O mesmo assunto" num card ainda sem nome (#1918) também, quando dar nome a ele é possível. E
+  # "o mesmo assunto" num card de nome genérico (#2163): o modelo maior diz se o detalhe chegou e qual o nome.
   # Devolve o motivo, gravado na decisão para medir o revisor (#2018), ou nil (o Jev decide sozinho). Com mais de um
   # valendo, fica o primeiro desta ordem; só a certeza baixa soma com outro.
   def motivo_da_revisao(opcao)
     return 'certeza_baixa' if @jev.certeza < Crm::Subjects::CERTEZA_MINIMA
     return 'pedido_novo' if opcao.tipo == :novo
     return 'varios' if opcao.tipo == :varios
+    return 'nome_do_atual' if nome_do_atual?(opcao)
 
-    'nome_do_atual' if nome_do_atual?(opcao)
+    'nome_provisorio' if opcao.tipo == :mesmo && question.atual_nomeavel?
   end
 
   # O Jev sozinho não deixa o primeiro pedido sem nome (#1918): quem escolhe entre continuar o card sem nome e dar nome
@@ -202,7 +205,10 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
     opcao = question.opcao(veredito.resposta)
     duvida = !veredito.seguro || (opcao.tipo == :novo && veredito.titulo.blank?)
     outros = outros(veredito)
-    return Escolha.new(opcao: opcao, titulo: veredito.titulo, decided_by: 'review', outros: outros, etapa: veredito.etapa) unless duvida
+    unless duvida
+      return Escolha.new(opcao: opcao, titulo: veredito.titulo, decided_by: 'review', outros: outros, etapa: veredito.etapa,
+                         generico: veredito.generico)
+    end
 
     em_duvida = { state: 'doubt', action: 'none', title: veredito.titulo.presence, pipeline: opcao.pipeline, reason: veredito.motivo }
     # O principal em dúvida não segura os outros assuntos, claros, da mesma mensagem (#1693, C27).
@@ -224,9 +230,13 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
       next if !assunto.seguro || vistos.include?(identidade) || (identidade.is_a?(Array) && assunto.titulo.blank?)
 
       vistos << identidade
-      Escolha.new(opcao: question.opcao(assunto.resposta), titulo: assunto.titulo, etapa: assunto.etapa)
+      escolha_de(assunto)
     end
     escolhas.first(Crm::Subjects::MAX_ASSUNTOS - 1)
+  end
+
+  def escolha_de(assunto)
+    Escolha.new(opcao: question.opcao(assunto.resposta), titulo: assunto.titulo, etapa: assunto.etapa, generico: assunto.generico)
   end
 
   # O card do assunto aberto, ou [funil, nome] do pedido novo.
@@ -247,7 +257,8 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
       # O card da chegada intocado não é "o mesmo assunto" (#1918, só com vários assuntos).
       chegada = varios? && Crm::Subjects::CardDaChegada.intacta?(conversation: @conversation, card: abertos.first, mode: @mode)
       Crm::Subjects::Question.new(account: @account, pipelines: pipelines, cards: cards, atual: abertos.first, varios: varios?,
-                                  etapas: etapas?, chegada: chegada, encerrados: Crm::Subjects::Encerrado.da_conversa(@account, todos))
+                                  etapas: etapas?, chegada: chegada, encerrados: Crm::Subjects::Encerrado.da_conversa(@account, todos),
+                                  automatica: @mode == 'auto')
     end
   end
 

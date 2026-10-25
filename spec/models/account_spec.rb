@@ -265,7 +265,9 @@ RSpec.describe Account do
         # #2097/#2098: posição 58 (1 << 57), PROVISÓRIA da Orquestração (23/10); definitiva no fim da main na vez do PR.
         feature_crm_arquivados: 1 << 57,
         # #2138: posição 59 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10).
-        feature_painel_contato_enxuto: 1 << 58
+        feature_painel_contato_enxuto: 1 << 58,
+        # #2163: posição 60 (1 << 59), PROVISÓRIA; a definitiva é da Orquestração, no fim da main na vez do PR.
+        feature_crm_ia_nome_provisorio: 1 << 59
       }
     end
 
