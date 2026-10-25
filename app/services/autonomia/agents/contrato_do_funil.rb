@@ -9,6 +9,8 @@
 # - `com_motivo_da_passagem(motivo, card:)` -> roda o bloco com motivo e card guardados no contexto do CRM
 #                                      (Crm::Passagens.com_motivo(motivo, card: nil) { ... }, devolve o valor do bloco),
 #                                      para o listener dele saber que a passagem já é gravada por quem chama
+# - `avaliar_depois_da_fala(conversation)` -> pede a avaliação da IA de Atribuição depois que saiu a fala do agente que
+#                                      avisou que vai chamar alguém (#2154, Crm::Ai::AvaliacaoDepoisDaFala.agendar)
 #
 # Nos specs, duble ESTE módulo (`allow(described_class)...`), nunca a presença ou a ausência da constante do CRM.
 module Autonomia::Agents::ContratoDoFunil
@@ -17,7 +19,8 @@ module Autonomia::Agents::ContratoDoFunil
     decidido_ate: ['Crm::Subjects::Marco', :decidido_ate],
     robo_do_funil: ['Crm::Ai::Config', :robo_do_funil],
     registrar_passagem!: ['Crm::Passagens', :registrar!],
-    com_motivo_da_passagem: ['Crm::Passagens', :com_motivo]
+    com_motivo_da_passagem: ['Crm::Passagens', :com_motivo],
+    avaliar_depois_da_fala: ['Crm::Ai::AvaliacaoDepoisDaFala', :agendar]
   }.freeze
 
   module_function
@@ -51,6 +54,11 @@ module Autonomia::Agents::ContratoDoFunil
   def com_motivo_da_passagem(motivo, card: nil, &)
     leitor = leitor_do(:com_motivo_da_passagem)
     leitor ? leitor.com_motivo(motivo, card: card, &) : yield
+  end
+
+  # #2154: sem o leitor do CRM, ninguém avalia (nil) e o agente segue atendendo.
+  def avaliar_depois_da_fala(conversation)
+    leitor_do(:avaliar_depois_da_fala)&.agendar(conversation)
   end
 
   # PADRÃO SEGURO, num lugar só. Enquanto a metade Multifunnel não está na main, o leitor não existe e a resposta é a

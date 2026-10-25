@@ -266,10 +266,12 @@ RSpec.describe Account do
         feature_crm_arquivados: 1 << 57,
         # #2138: posição 59 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10).
         feature_painel_contato_enxuto: 1 << 58,
-        # #2163: posição 60 (1 << 59), PROVISÓRIA; a definitiva é da Orquestração, no fim da main na vez do PR.
-        feature_crm_ia_nome_provisorio: 1 << 59,
-        # #2162: posição 61 (1 << 60), PROVISÓRIA, depois da 60 do #2163; a definitiva é da Orquestração.
-        feature_crm_ia_duvida_vira_sugestao: 1 << 60
+        # #2154: posição 60 (1 << 59), PROVISÓRIA da Orquestração (24/10); definitiva na vez do PR.
+        feature_agente_so_informa: 1 << 59,
+        # #2163: posição 61 (1 << 60), PROVISÓRIA; a definitiva é da Orquestração, no fim da main na vez do PR.
+        feature_crm_ia_nome_provisorio: 1 << 60,
+        # #2162: posição 62 (1 << 61), PROVISÓRIA, depois da 61 do #2163; a definitiva é da Orquestração.
+        feature_crm_ia_duvida_vira_sugestao: 1 << 61
       }
     end
 
