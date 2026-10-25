@@ -2840,6 +2840,7 @@
           "STALLED_QUOTES": {
             "TEXT": "1 quote from ads has been stalled for more than {days} days. It came from \"{ad}\". | {count} quotes from ads have been stalled for more than {days} days. Most came from \"{ad}\".",
             "WHY": "Why: they add up to {value} in negotiation. Following up with someone who asked for a quote costs less than advertising again.",
+            "WHY_NO_VALUE": "Why: following up with someone who asked for a quote costs less than advertising again.",
             "BUTTON": "See the quote | See the {count} quotes"
           },
           "FIX_TRACKING": {
@@ -3157,6 +3158,7 @@
         "DISCARD": "Discard changes",
         "TEST": "Send test",
         "TEST_HINT": "Sends yesterday's summary now, marked as a test.",
+        "NEEDS_SALES_VALUE": "The summary shows how much was sold. Turning it on, changing it and testing it need permission to see sales values.",
         "TEST_NEEDS_SAVE": "Save the sending number and the receiving number before testing.",
         "TEST_NEEDS_SAVE_CHANGES": "Save or discard your changes before testing.",
         "TEST_NEEDS_ORIGIN": "The sending number is not connected now. Choose another one and save before testing.",
@@ -3180,6 +3182,7 @@
           "SEND_FAILED": "WhatsApp did not accept the message. Check the connection of the sending number.",
           "SEND_UNCERTAIN": "We could not confirm it arrived. Check your WhatsApp before trying again.",
           "WHATSAPP_NUMBER_NOT_FOUND": "This number has no WhatsApp.",
+          "SALES_VALUE_FORBIDDEN": "You need permission to see sales values to change or test the summary.",
           "GENERIC": "It did not work this time. Try again."
         }
       }

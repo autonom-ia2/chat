@@ -272,7 +272,11 @@ const path = computed(() => [
     value: totals.value.sales || 0,
     plural: totals.value.sales || 0,
     win: true,
-    extra: totals.value.sales ? fmt(totals.value.sales_value) : null,
+    // #2075 — sem a chave de valores de venda o servidor manda o valor vazio: a venda fica sem o "somando R$".
+    extra:
+      totals.value.sales && totals.value.sales_value != null
+        ? fmt(totals.value.sales_value)
+        : null,
     note:
       totals.value.cost_per_sale != null
         ? t('CRM_KANBAN.META_ADS_HUB.PANEL.PER_SALE', {
@@ -576,6 +580,7 @@ onMounted(() => {
                 </span>
               </span>
               <span
+                v-if="card.value != null"
                 class="text-base font-semibold tabular-nums text-n-slate-12"
               >
                 {{ fmt(card.value) }}
