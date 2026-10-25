@@ -84,7 +84,9 @@ class Crm::Ai::LeitorDeMidia
   # varredura leem depois), e as outras mensagens da rajada seguem. A releitura do que ficou marcado sem texto vai para
   # a fila low (Crm::Ai::LerMidiaJob.reler), para não disputar com a entrega de mensagens.
   def self.ler_em_linha(mensagem, ate_em = Crm::Ai::ReservaDaMidia::ESPERA_EM_LINHA.from_now)
-    mensagem.attachments.each { |anexo| Crm::Ai::ReservaDaMidia.esperar(anexo, ate_em: ate_em) if Crm::Ai::ReservaDaMidia.lendo?(anexo.meta.to_h) }
+    mensagem.attachments.reorder(:id).each do |anexo|
+      Crm::Ai::ReservaDaMidia.esperar(anexo, ate_em: ate_em) if Crm::Ai::ReservaDaMidia.lendo?(anexo.meta.to_h)
+    end
     new(mensagem).perform
     Crm::Ai::LerMidiaJob.reler(mensagem.id, 'mensagem_nova') if new(mensagem, releitura: :mensagem_nova).escolhidos.any?
   rescue ActiveStorage::FileNotFoundError
@@ -181,25 +183,27 @@ class Crm::Ai::LeitorDeMidia
   # credencial da conta, passou do teto do dia ou a falha foi passageira (fica pendente).
   def ler(attachment)
     tipo = self.class.tipo(attachment)
-    return false if tipo.nil? || !Crm::Ai::ReservaDaMidia.reservar(attachment) { a_ler?(attachment) && credencial_para?(tipo) && cabe_no_dia? }
+    @dono = tipo && Crm::Ai::ReservaDaMidia.reservar(attachment) { a_ler?(attachment) && credencial_para?(tipo) && cabe_no_dia? }
+    return false unless @dono
 
     gravado = false
     begin
       gravado = ler_reservado(attachment, tipo)
     rescue *Crm::Ai::FalhaDaMidia::FALHAS_DA_LEITURA => e
-      gravado = true
-      falhou(attachment, tipo, e)
+      falhou(attachment, tipo, e).tap { gravado = true } # se `falhou` não gravar (erro de banco), o ensure libera a marca
     ensure
-      Crm::Ai::ReservaDaMidia.liberar(attachment) unless gravado
+      Crm::Ai::ReservaDaMidia.liberar(attachment, dono: @dono) unless gravado
     end
   end
 
   # Os primeiros de cada tipo, até o teto por mensagem, que ainda não foram lidos. Todo consumidor (o job da chegada, a
-  # leitura em linha, a varredura e o Crm::Ai::MediaEnricher da avaliação) lê por esta seleção.
+  # leitura em linha, a varredura e o Crm::Ai::MediaEnricher da avaliação) lê por esta seleção. Anexos já carregados (a
+  # varredura pré-carrega anexos e blobs, #2141) não são consultados de novo; a reserva confere tudo sob a trava.
   def escolhidos
-    @message.attachments.reorder(:id).group_by { |attachment| self.class.tipo(attachment) }
-            .flat_map { |tipo, anexos| tipo ? anexos.first(MAX_POR_MENSAGEM[tipo]) : [] }
-            .select { |attachment| a_ler?(attachment) }
+    anexos = @message.attachments.loaded? ? @message.attachments.sort_by(&:id) : @message.attachments.reorder(:id)
+    anexos.group_by { |attachment| self.class.tipo(attachment) }
+          .flat_map { |tipo, do_tipo| tipo ? do_tipo.first(MAX_POR_MENSAGEM[tipo]) : [] }
+          .select { |attachment| a_ler?(attachment) }
   end
 
   private
@@ -212,10 +216,7 @@ class Crm::Ai::LeitorDeMidia
     PAGOS.exclude?(tipo) || credencial.present?
   end
 
-  def credencial
-    @credencial = Crm::Ai::CredentialResolver.new(account: @account).resolve unless defined?(@credencial)
-    @credencial
-  end
+  def credencial = defined?(@credencial) ? @credencial : (@credencial = Crm::Ai::CredentialResolver.new(account: @account).resolve)
 
   def teto = @teto ||= Crm::Ai::TetoDaMidia.new(@account)
 
@@ -262,7 +263,7 @@ class Crm::Ai::LeitorDeMidia
     @api_fora ||= falha.passageira?
     return guardar(attachment, tipo, nil, falha.motivo) if falha.marca?
 
-    Crm::Ai::ReservaDaMidia.gravar(attachment) { |meta| meta.merge(falha.espera) }
+    Crm::Ai::ReservaDaMidia.gravar(attachment, dono: @dono) { |meta| meta.merge(falha.espera) }
     @passageiras << attachment.id
     false
   end
@@ -282,7 +283,7 @@ class Crm::Ai::LeitorDeMidia
   # Com texto, sai o motivo de uma falha anterior (a releitura deu certo) e a espera; a classe do erro e as tentativas
   # ficam, para medir.
   def guardar(attachment, tipo, texto, motivo = {})
-    Crm::Ai::ReservaDaMidia.gravar(attachment) do |atual|
+    Crm::Ai::ReservaDaMidia.gravar(attachment, dono: @dono) do |atual|
       meta = atual.except(Crm::Ai::FalhaDaMidia::PROXIMA).merge(motivo)
       if texto.present?
         meta = meta.except(Crm::Ai::FalhaDaMidia::FALHA, Crm::Ai::FalhaDaMidia::RELEITURAS_DO_EXPIRADO).merge(CHAVE[tipo] => texto.to_s)

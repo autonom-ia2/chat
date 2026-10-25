@@ -1,5 +1,6 @@
 # Anúncios da Meta, F4a (#1100): a IA no painel. Administrador ou `meta_ads_view` (#1794, policy Crm::MetaAdsConnection
-# :show?). As propostas paradas do consultor mostram só as conversas visíveis para a pessoa.
+# :show?). As propostas paradas do consultor mostram só as conversas visíveis para a pessoa, e os valores de venda em R$
+# seguem a mesma pessoa (#2075, Crm::MetaAds::Advisor::Advice).
 #
 # POST daily_action  {days}    → o texto do consultor (F5, #1110) pela IA: o `Advice` do dia. `days` é aceito e
 #                                ignorado (D5.2: o consultor não depende do período da tela). Já escrito, pela
@@ -19,9 +20,9 @@ class Api::V1::Accounts::Crm::MetaAdsAiController < Api::V1::Accounts::Crm::Base
     connection = current_connection
     return render json: { daily_action: nil } if connection.blank? || connection.ad_account_id.blank?
 
-    advice = advisor.current(connection, locale: I18n.locale.to_s, shown: !authenticate_by_access_token?)
+    advice = advisor.current(connection, locale: I18n.locale.to_s, shown: !authenticate_by_access_token?, visible: viewer)
     immediate = immediate_daily_action(advice)
-    return render json: { daily_action: ::Crm::MetaAds::VisibleConversations.current.advice(immediate) } if immediate
+    return render json: { daily_action: viewer.advice(immediate) } if immediate
 
     defer_interactive_ai('meta_ads_daily_action', { run_id: advice[:run_id], language: I18n.locale.to_s })
   end
@@ -60,11 +61,15 @@ class Api::V1::Accounts::Crm::MetaAdsAiController < Api::V1::Accounts::Crm::Base
     return if reason.nil?
 
     advisor.rule!(run, reason)
-    advisor.serialize(run.reload, I18n.locale.to_s)
+    advisor.serialize(run.reload, I18n.locale.to_s, visible: viewer)
   end
 
   def advisor
     ::Crm::MetaAds::Advisor::Analysis
+  end
+
+  def viewer
+    @viewer ||= ::Crm::MetaAds::VisibleConversations.current
   end
 
   def conversation_visible?(conversation)

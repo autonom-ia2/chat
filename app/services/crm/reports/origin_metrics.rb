@@ -4,6 +4,9 @@
 # (#origin_source), pela mesma regra que grava o toque (Ctwa::CampaignBuilder), para não haver "vazio = anúncio". Venda
 # sem toque em nenhuma conversa do card vai para "Sem origem" (`none`); a que tem toque numa conversa que a pessoa não
 # vê continua fora da soma.
+#
+# Valor de venda (#2075): com `value_visible: false` (sem o Crm::ValorDeVenda.ve?), `won_value_by_currency` vem nil e a
+# contagem fica.
 class Crm::Reports::OriginMetrics
   NO_ORIGIN = 'none'.freeze
 
@@ -89,10 +92,11 @@ class Crm::Reports::OriginMetrics
   SQL
 
   # visible_ids_sql: as conversas que a pessoa vê; card_filters/binds: as vendas que entram (conta, período, funil).
-  def initialize(visible_ids_sql:, card_filters:, binds:)
+  def initialize(visible_ids_sql:, card_filters:, binds:, value_visible: true)
     @visible_ids_sql = visible_ids_sql
     @card_filters = card_filters
     @binds = binds
+    @value_visible = value_visible
   end
 
   def perform
@@ -114,10 +118,13 @@ class Crm::Reports::OriginMetrics
   end
 
   def origin_row(source, rows)
-    totals = rows.group_by { |row| row['currency'] }.sort.map do |currency, list|
+    { source: source, won_count: rows.sum { |row| row['won_count'].to_i }, won_value_by_currency: (value_by_currency(rows) if @value_visible) }
+  end
+
+  def value_by_currency(rows)
+    rows.group_by { |row| row['currency'] }.sort.map do |currency, list|
       { currency: currency, value_cents: list.sum { |row| row['value_cents'].to_i } }
     end
-    { source: source, won_count: rows.sum { |row| row['won_count'].to_i }, won_value_by_currency: totals }
   end
 
   # Mais vendas primeiro; "Sem origem" sempre por último.

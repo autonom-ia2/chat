@@ -54,11 +54,16 @@ const translationKeys = {
   'account:crm_hard_delete:funil': `AUDIT_LOGS.CRM_EXCLUIR.FUNIL`,
   'account:crm_hard_delete:contato:delete': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_APAGANDO`,
   'account:crm_hard_delete:contato:keep': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO`,
+  // #2143: o contato sem card nem reunião que levou só leads da Prospecção.
+  'account:crm_hard_delete:contato:leads': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_LEADS`,
   // Com reunião cancelada; e, delas, alguma só no sistema (agenda fora de alcance). Sem reunião, a frase não fala dela.
   'account:crm_hard_delete:contato:keep:reunioes': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO_REUNIOES`,
   'account:crm_hard_delete:contato:keep:reunioes_so_aqui': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_MANTENDO_REUNIOES_SO_AQUI`,
   'account:crm_hard_delete_failed:funil': `AUDIT_LOGS.CRM_EXCLUIR.FUNIL_FALHOU`,
   'account:crm_hard_delete_failed:contato': `AUDIT_LOGS.CRM_EXCLUIR.CONTATO_FALHOU`,
+  // Pausar ou ativar um anúncio na Meta pelo painel de Anúncios (#2161).
+  'account:meta_ads_ad_status:PAUSED': `AUDIT_LOGS.META_ADS.PAUSED`,
+  'account:meta_ads_ad_status:ACTIVE': `AUDIT_LOGS.META_ADS.ACTIVE`,
 };
 
 // Por que o job do funil desistiu (Crm::ExclusaoDefinitiva::Mudou e o job): o código vira frase; código novo cai na
@@ -237,10 +242,18 @@ export function generateTranslationPayload(auditLogItem, agentList) {
     translationPayload.reunioesSoAqui = mudancas.reunioes_so_aqui ?? 0;
     translationPayload.pipelineId = mudancas.pipeline_id ?? '';
     translationPayload.contactId = mudancas.contact_id ?? '';
+    translationPayload.leadsApagados = mudancas.leads_apagados ?? 0;
+    translationPayload.leadsMinimizados = mudancas.leads_minimizados ?? 0;
     if (action === 'crm_hard_delete_failed')
       translationPayload.motivo =
         crmExcluirMotivos[mudancas.motivo] ||
         'AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.OUTRO';
+  }
+
+  if (auditableType === 'account' && action === 'meta_ads_ad_status') {
+    const mudancas = auditLogItem.audited_changes || {};
+    translationPayload.adId = mudancas.ad_id ?? '';
+    translationPayload.adName = mudancas.ad_name || mudancas.ad_id || '';
   }
 
   if (auditableType === 'accountuser') {
@@ -310,6 +323,10 @@ export const generateLogActionKey = auditLogItem => {
     logActionKey += `:${mudancas.alvo}`;
     if (mudancas.alvo === 'contato' && action === 'crm_hard_delete')
       logActionKey += `:${mudancas.modo}${sufixoDasReunioes(mudancas)}`;
+  }
+
+  if (auditableType === 'account' && action === 'meta_ads_ad_status') {
+    logActionKey += `:${auditLogItem.audited_changes?.status}`;
   }
 
   return translationKeys[logActionKey] || '';

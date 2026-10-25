@@ -20,6 +20,7 @@
 #
 #  idx_autonomia_events_agent_created                  (autonomia_agent_id,created_at)
 #  idx_autonomia_events_agent_type                     (autonomia_agent_id,event_type)
+#  idx_autonomia_events_conversation                   (conversation_id) WHERE (conversation_id IS NOT NULL)
 #  idx_autonomia_events_message                        (message_id)
 #  idx_autonomia_events_used_entry_ids                 (used_entry_ids) USING gin
 #  index_autonomia_agent_events_on_account_id          (account_id)

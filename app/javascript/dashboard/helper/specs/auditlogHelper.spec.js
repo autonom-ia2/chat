@@ -486,6 +486,25 @@ describe('excluir de vez no CRM (#2096)', () => {
     });
   });
 
+  // #2143: o contato sem card nem reunião que levou só leads da Prospecção tem frase própria, com as duas contagens.
+  it('o contato que levou só leads tem frase própria', () => {
+    const leads = item('crm_hard_delete', {
+      alvo: 'contato',
+      modo: 'leads',
+      contact_id: 7,
+      leads_apagados: 2,
+      leads_minimizados: 1,
+    });
+    expect(generateLogActionKey(leads)).toBe(
+      'AUDIT_LOGS.CRM_EXCLUIR.CONTATO_LEADS'
+    );
+    expect(generateTranslationPayload(leads, agentes)).toMatchObject({
+      contactId: 7,
+      leadsApagados: 2,
+      leadsMinimizados: 1,
+    });
+  });
+
   it('o contato que a ação em massa não excluiu tem frase própria', () => {
     expect(
       generateLogActionKey(
@@ -519,5 +538,33 @@ describe('excluir de vez no CRM (#2096)', () => {
     expect(translateLogPayload(novo, t).motivo).toBe(
       't(AUDIT_LOGS.CRM_EXCLUIR.MOTIVOS.OUTRO)'
     );
+  });
+});
+
+describe('pausar ou ativar anúncio da Meta (#2161)', () => {
+  const item = audited_changes => ({
+    auditable_type: 'Account',
+    action: 'meta_ads_ad_status',
+    user_id: 1,
+    auditable_id: 7,
+    audited_changes,
+  });
+
+  it('uma frase para pausar e outra para ativar, com o nome do anúncio', () => {
+    const pausou = item({ ad_id: '123', ad_name: 'Capa', status: 'PAUSED' });
+
+    expect(generateLogActionKey(pausou)).toBe('AUDIT_LOGS.META_ADS.PAUSED');
+    expect(generateLogActionKey(item({ ad_id: '123', status: 'ACTIVE' }))).toBe(
+      'AUDIT_LOGS.META_ADS.ACTIVE'
+    );
+    expect(
+      generateTranslationPayload(pausou, [{ id: 1, name: 'Marta' }])
+    ).toMatchObject({ agentName: 'Marta', adId: '123', adName: 'Capa' });
+  });
+
+  it('sem nome no cache, mostra o id', () => {
+    expect(
+      generateTranslationPayload(item({ ad_id: '123', status: 'PAUSED' }), [])
+    ).toMatchObject({ adName: '123' });
   });
 });

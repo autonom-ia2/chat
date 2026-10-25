@@ -407,6 +407,7 @@ pt_BR:
       delete: '%{contact_name} está Online, por favor, tente novamente mais tarde'
     # #2096: excluir o contato cancela antes as reuniões futuras dos cards; se uma falhar, nada é apagado.
     meeting_cancel_failed: 'Uma reunião futura deste contato não foi cancelada na agenda, então nada foi apagado. Tente de novo.'
+    busy_try_again: "Este contato estava sendo alterado no mesmo instante, então nada foi apagado. Tente de novo."
     crm_cards_changed: 'Um card do CRM deste contato mudou durante a exclusão (uma reunião acabou de ser marcada), então nada foi apagado. Tente de novo.'
     opt_out:
       undo_only_manual: 'Aqui só se desfaz a recusa marcada pela equipe ou o pedido de parar reconhecido na resposta a uma campanha. A da Prospecção sai no lead, pelo "Desfazer: pode ser contatado"; o pedido de parar no follow-up sai quando o "Reativar retorno automático" é usado em todos os cards do CRM em que a pessoa pediu para parar; o descadastro de e-mail não se desfaz por aqui.'
@@ -1159,6 +1160,8 @@ pt_BR:
           sem_principal: "O agente principal de %{canal} não está atendendo agora. O agente da equipe precisa do principal atendendo no canal."
           robo_externo: "Um agente externo atende em %{canal}. O agente da equipe ainda não entra em canal com agente externo."
     prospecting:
+      # Nome do lead que recusou contato e ficou só como prova da recusa, depois de excluído o contato (#2143).
+      lead_removido: "Lead removido #"
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
       # Jogadas salvas (#732): frases que a tela mostra como vieram.

@@ -420,6 +420,7 @@ en:
       delete: '%{contact_name} is Online, please try again later'
     # #2096: deleting the contact cancels the future meetings of its CRM cards first; nothing is deleted if one fails.
     meeting_cancel_failed: 'A future meeting of this contact could not be canceled in the calendar, so nothing was deleted. Please try again.'
+    busy_try_again: "This contact was being changed at the same moment, so nothing was deleted. Please try again."
     crm_cards_changed: 'A CRM card of this contact changed while it was being deleted (a meeting was just booked), so nothing was deleted. Please try again.'
     opt_out:
       undo_only_manual: 'Only an opt-out marked by the team, or a request to stop recognized in a reply to a campaign, can be undone here. Opt-outs from Prospecting are undone on the lead in Prospecting; a request to stop in a follow-up reply ends when the follow-up is reactivated on every CRM card where the contact asked to stop; email unsubscribes are not undone here.'
@@ -706,6 +707,8 @@ en:
     # Em português também aqui, como insurance.errors: a Prospecção é produto brasileiro e o texto não pode cair em
     # inglês para conta com locale en.
     prospecting:
+      # Nome do lead que recusou contato e ficou só como prova da recusa, depois de excluído o contato (#2143).
+      lead_removido: "Lead removido #"
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
       # Jogadas salvas (#732): frases que a tela mostra como vieram.

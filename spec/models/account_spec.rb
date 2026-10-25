@@ -267,12 +267,14 @@ RSpec.describe Account do
         # #2138: posição 59 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10).
         feature_painel_contato_enxuto: 1 << 58,
         # #2154: posição 60 (1 << 59), PROVISÓRIA da Orquestração (24/10); definitiva na vez do PR.
-        feature_agente_so_informa: 1 << 59
+        feature_agente_so_informa: 1 << 59,
+        # #2161: posição 61 (1 << 60), depois da 60 do agente_so_informa #2166 (Orquestração, 25/10).
+        feature_meta_ads_gestao: 1 << 60
       }
     end
 
     it 'configures the account feature flag extension column' do
-      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1')
+      expect(described_class.flag_columns).to include('feature_flags', 'feature_flags_ext_1', 'feature_flags_ext_2')
       expect(described_class.flag_mapping['feature_flags_ext_1']).to eq(mapa_ext_1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

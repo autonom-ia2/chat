@@ -48,7 +48,7 @@ const openConfirmDeleteContactDialog = () => {
       >
         <div class="overflow-hidden min-h-0">
           <span class="inline-flex text-n-slate-11 text-sm items-center gap-1">
-            {{ t('CONTACTS_LAYOUT.CARD.DELETE_CONTACT.MESSAGE') }}
+            {{ t('APAGAR_CONTATO.UM') }}
             <Button
               :label="t('CONTACTS_LAYOUT.CARD.DELETE_CONTACT.BUTTON')"
               sm
