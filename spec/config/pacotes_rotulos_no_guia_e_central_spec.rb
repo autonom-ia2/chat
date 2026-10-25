@@ -28,6 +28,10 @@ RSpec.describe 'rótulos trocados pelo pacote no Guia e na Central' do
     %w[corretora Financeiro 01.01] => 'item Financeiro do menu lateral, não a família da Central',
     %w[corretora Financeiro 04.06] => 'perfil de função Financeiro, não a família da Central',
     %w[corretora Financeiro 17.01] => 'item Financeiro do menu lateral, não a família da Central',
+    %w[saude_beneficios Plano 10.03] => 'cartão Plano do card (o plano de saúde), não o resumo da assinatura',
+    %w[saude_beneficios Plano 10.08] => 'cartão Plano do card (o plano de saúde), não o resumo da assinatura',
+    ['saude_beneficios', 'Plano', 'guia: Mover card, marcar como implantado ou que não fechou, resolver, cancelar ou reabrir'] =>
+      'cartão Plano do card (o plano de saúde), não o resumo da assinatura',
     ['corretora', 'Novo card', 'guia: Criar um card pela ficha do contato'] =>
       'botão Novo card da ficha do contato, que não é CRM_KANBAN.ACTIONS.NEW_CARD'
   }
