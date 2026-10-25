@@ -134,5 +134,9 @@
       "PRONTO": "Done.",
       "ERRO": "Could not save it now. Try again."
     }
+  },
+  "APAGAR_CONTATO": {
+    "UM": "This contact's conversations and messages will be deleted too. This can't be undone.",
+    "VARIOS": "The conversations and messages of these {count} contacts will be deleted too. This can't be undone."
   }
 }

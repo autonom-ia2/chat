@@ -29,8 +29,8 @@ const nomesDasRotas = rotas =>
     ...nomesDasRotas(rota.children || []),
   ]);
 
-const apagar = async () => {
-  const wrapper = mount(ContactDeleteModal, {
+const montar = () =>
+  mount(ContactDeleteModal, {
     props: { contact: { id: 5, name: 'Ana' } },
     global: {
       mocks: { $t: key => key },
@@ -46,6 +46,9 @@ const apagar = async () => {
       },
     },
   });
+
+const apagar = async () => {
+  const wrapper = montar();
   const sim = wrapper
     .findAll('button')
     .find(botao => botao.text() === 'DELETE_CONTACT.CONFIRM.YES');
@@ -66,5 +69,10 @@ describe('ContactDeleteModal', () => {
     expect(push).toHaveBeenCalledWith({ name: 'contacts_dashboard_index' });
     expect(nomesDasRotas(contactRoutes)).toContain('contacts_dashboard_index');
     expect(alerta).toHaveBeenCalledWith('DELETE_CONTACT.API.SUCCESS_MESSAGE');
+  });
+
+  // #2138: as conversas e mensagens do contato saem junto; o aviso diz isso antes do "Sim".
+  it('avisa que as conversas e mensagens também são apagadas', () => {
+    expect(montar().text()).toContain('APAGAR_CONTATO.UM');
   });
 });

@@ -89,10 +89,8 @@ const bulkDeleteDialogTitle = computed(() =>
 );
 const bulkDeleteDialogDescription = computed(() =>
   selectedCount.value > 1
-    ? t('CONTACTS_BULK_ACTIONS.DELETE_DIALOG.DESCRIPTION', {
-        count: selectedCount.value,
-      })
-    : t('CONTACTS_BULK_ACTIONS.DELETE_DIALOG.SINGULAR_DESCRIPTION')
+    ? t('APAGAR_CONTATO.VARIOS', { count: selectedCount.value })
+    : t('APAGAR_CONTATO.UM')
 );
 const bulkDeleteDialogConfirmLabel = computed(() =>
   selectedCount.value > 1
