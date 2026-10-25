@@ -115,6 +115,27 @@ RSpec.describe 'CRM: arquivar e restaurar funil', type: :request do
       expect([first.reload.pipeline_id, second.reload.pipeline_id]).to eq([pipeline.id, pipeline.id])
     end
 
+    # #2145: em lotes, a recusa pode vir depois de um lote confirmado; a resposta diz quantos cards já foram.
+    it 'destino arquivado entre dois lotes: recusa com quantos cards já foram (moved_count)' do
+      stub_const('Crm::Pipelines::Archiver::LOTE', 1)
+      create_crm_pipeline(account: account, user: admin, name: 'Terceiro')
+      first = card(title: 'Primeiro')
+      card(title: 'Segundo')
+      card(title: 'Terceiro')
+      destino = target_stage.pipeline
+      allow(Crm::Activity).to receive(:insert_all!).and_wrap_original do |original, *args|
+        original.call(*args).tap { Crm::Pipeline.where(id: destino.id).update_all(status: Crm::Pipeline.statuses[:archived]) } # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      delete "#{base}/#{pipeline.id}", params: { move_to_stage_id: target_stage.id }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => Crm::Pipelines::Archiver::INVALID_TARGET, 'moved_count' => 1)
+      expect(pipeline.reload).to be_active
+      expect(first.reload.pipeline_id).to eq(destino.id)
+      expect(pipeline.cards.open.count).to eq(2)
+    end
+
     it 'recusa arquivar o último funil ativo pelo DELETE, como o PATCH (Parte A), e não move nada' do
       open_card = card
       target_pipeline_and_stage.first.archived!

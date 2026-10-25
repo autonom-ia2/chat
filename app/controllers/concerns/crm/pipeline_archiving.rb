@@ -30,16 +30,11 @@ module Crm::PipelineArchiving
     # clique, outra aba), não há o que fazer: 422, em vez de repetir caixas, principal ou "Guardar junto".
     return render_unprocessable(ARCHIVE_ALREADY_ARCHIVED) if @pipeline.archived? && params[:move_to_stage_id].blank?
 
-    result = ::Crm::Pipelines::Archiver.new(
-      pipeline: @pipeline, actor: Current.user, target_stage: archive_target_stage,
-      inboxes_target: other_active_pipeline(params[:inboxes_to_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_INBOXES_TARGET),
-      new_default: other_active_pipeline(params[:new_default_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_DEFAULT),
-      stop_follow_ups: ActiveModel::Type::Boolean.new.cast(params[:stop_follow_ups]) == true
-    ).perform
-    assign_archive_result(result)
+    @archiver = build_archiver
+    assign_archive_result(@archiver.perform)
     render :show
   rescue ::Crm::Pipelines::Archiver::InvalidTarget => e
-    render_unprocessable(e.message)
+    render json: { error: e.message, moved_count: archive_moved_before_failure }, status: :unprocessable_entity
   rescue ::Crm::Pipelines::Archiver::Blocked => e
     @archive_blocked = e.motivo
     render_archive_blocked
@@ -67,6 +62,20 @@ module Crm::PipelineArchiving
 
   def fetch_pipeline_to_archive
     fetch_pipeline
+  end
+
+  def build_archiver
+    ::Crm::Pipelines::Archiver.new(
+      pipeline: @pipeline, actor: Current.user, target_stage: archive_target_stage,
+      inboxes_target: other_active_pipeline(params[:inboxes_to_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_INBOXES_TARGET),
+      new_default: other_active_pipeline(params[:new_default_pipeline_id], ::Crm::Pipelines::Archiver::INVALID_DEFAULT),
+      stop_follow_ups: ActiveModel::Type::Boolean.new.cast(params[:stop_follow_ups]) == true
+    )
+  end
+
+  # Recusa depois de lotes já confirmados (#2145): quantos cards já foram levados ao destino, para a tela dizer.
+  def archive_moved_before_failure
+    @archiver&.moved_before_failure.to_i
   end
 
   def assign_archive_result(result)

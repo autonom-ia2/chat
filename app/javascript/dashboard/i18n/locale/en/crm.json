@@ -6589,7 +6589,8 @@
       "DESTINO_CAIXAS_INVALIDO": "the pipeline chosen for the inboxes is no longer available",
       "PRINCIPAL_INVALIDO": "the pipeline chosen as main is no longer available",
       "ULTIMO_FUNIL": "it is the only active pipeline; create another one first",
-      "UNICO_PRINCIPAL": "it is the main pipeline; choose another main pipeline first"
+      "UNICO_PRINCIPAL": "it is the main pipeline; choose another main pipeline first",
+      "FUNIL_MUDOU": "someone else archived or restored this pipeline in the meantime; close the window and open it again"
     },
     "MOTIVO_IA": {
       "FORA_DO_NEGOCIO": "it was not a deal",
@@ -6687,6 +6688,7 @@
       "CAIXA_VAI_PARA_OUTRO": "New customers from {caixa} become cards in {funil}, another pipeline linked to it.",
       "BOTAO": "Archive pipeline",
       "ERRO": "Could not archive the pipeline: {motivo}. Nothing changed.",
+      "ERRO_PARCIAL": "Could not finish archiving the pipeline: {motivo}. Before that, 1 card had already left for the chosen stage. Check the board before trying again. | Could not finish archiving the pipeline: {motivo}. Before that, {count} cards had already left for the chosen stage. Check the board before trying again.",
       "ERRO_PREVIA": "Could not check the pipeline: {motivo}. Close and try again.",
       "ERRO_ETAPAS": "Could not load the stages of that pipeline: {motivo}. Choose it again.",
       "ARQUIVADO": "Pipeline {funil} archived.",
