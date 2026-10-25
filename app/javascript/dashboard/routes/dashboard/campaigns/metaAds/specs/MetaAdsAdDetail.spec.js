@@ -1,12 +1,24 @@
+import { computed, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsAdDetail from '../components/MetaAdsAdDetail.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { lerGestao } from '../gestaoDoAnuncio';
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: { panelAd: vi.fn() },
 }));
+// Gestão mínima (#2161): a flag meta_ads_gestao e a situação/post vêm do adaptador.
+const flags = ref({});
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: () =>
+    computed(() => (_accountId, flag) => Boolean(flags.value[flag])),
+}));
+vi.mock('dashboard/composables/useCanManage', () => ({
+  usePermissionGranted: () => computed(() => true),
+}));
+vi.mock('../gestaoDoAnuncio', () => ({ lerGestao: vi.fn() }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '18' }, query: {} }),
 }));
@@ -86,6 +98,7 @@ const answer = ad => ({ data: { ad } });
 describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    flags.value = {};
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(answer(AD));
   });
 
@@ -338,5 +351,30 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
 
     expect(wrapper.find('[data-ad-detail-name]').exists()).toBe(true);
     expect(wrapper.find('[data-ad-detail-error]').exists()).toBe(false);
+  });
+  it('without the meta_ads_gestao flag, asks nothing about the ad and shows no status or post (#2161)', async () => {
+    const wrapper = await mountDetail();
+
+    expect(lerGestao).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-ad-status]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-post]').exists()).toBe(false);
+  });
+
+  it('with the flag, shows the status in the hero and the Page post under the image (#2161)', async () => {
+    flags.value = { meta_ads_gestao: true };
+    lerGestao.mockResolvedValue({
+      status: 'ACTIVE',
+      effective_status: 'ACTIVE',
+      can_change: true,
+      needs_login: false,
+      post: { message: 'Texto do post', reactions: 3, comments: 1, shares: 0 },
+    });
+    const wrapper = await mountDetail();
+
+    expect(lerGestao).toHaveBeenCalledWith('1');
+    expect(
+      wrapper.find('[data-ad-detail-hero] [data-ad-status]').exists()
+    ).toBe(true);
+    expect(wrapper.find('[data-ad-post-message]').text()).toBe('Texto do post');
   });
 });

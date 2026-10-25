@@ -1,11 +1,23 @@
+import { computed, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsSummary from '../components/MetaAdsSummary.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { lerPagina } from '../gestaoDoAnuncio';
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// Página da conexão (#2161): só com a flag meta_ads_gestao.
+const flags = ref({});
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: () =>
+    computed(() => (_accountId, flag) => Boolean(flags.value[flag])),
+}));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ params: { accountId: '18' }, query: {} }),
+}));
+vi.mock('../gestaoDoAnuncio', () => ({ lerPagina: vi.fn() }));
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: { funnels: vi.fn(), insights: vi.fn(), remove: vi.fn() },
 }));
@@ -51,6 +63,7 @@ const replyInsights = insights =>
 describe('Anúncios da Meta · resumo com o gasto (#1073)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    flags.value = {};
     CrmMetaAdsConnectionAPI.funnels.mockResolvedValue({
       data: { funnels: [] },
     });
@@ -310,5 +323,20 @@ describe('Anúncios da Meta · resumo com o gasto (#1073)', () => {
     expect(CrmMetaAdsConnectionAPI.insights).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('ACCESS_LOST_HINT');
     expect(wrapper.find('[data-summary-spend]').exists()).toBe(false);
+  });
+  it('shows the connected Page only with the meta_ads_gestao flag (#2161)', async () => {
+    replyInsights(null);
+    lerPagina.mockResolvedValue({ name: 'Loja Exemplo' });
+
+    let wrapper = await mountSummary();
+    expect(lerPagina).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-summary-page]').exists()).toBe(false);
+    wrapper.unmount();
+
+    flags.value = { meta_ads_gestao: true };
+    wrapper = await mountSummary();
+    expect(wrapper.find('[data-summary-page]').text()).toContain(
+      'Loja Exemplo'
+    );
   });
 });
