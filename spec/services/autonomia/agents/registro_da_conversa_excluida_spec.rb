@@ -15,13 +15,13 @@ RSpec.describe Autonomia::Agents::RegistroDaConversaExcluida do
   let(:segredo) { 'Placa ABC1D23 de Maria Cliente, CPF 123.456.789-09' }
   let(:message_id) { 987_654 }
 
-  def criar_execucao(conversa, status:, slug: 'cotar_seguro')
+  # O handle como o motor o deixa: o que a ferramenta devolveu, a identidade do pedido e as marcas (o `submitted` é true).
+  def criar_execucao(conversa, status:, slug: 'cotar_seguro', marcas: { Autonomia::Agents::ToolRun::SUBMITTED_KEY => true })
     Autonomia::Agents::ToolRun.create!(
       account: account, agent: agent, conversation_id: conversa.id, slug: slug, status: status,
       execution_key: SecureRandom.uuid, origin_message_id: message_id, arguments: { 'pedido' => segredo },
-      handle: { 'cotacao' => segredo, Autonomia::Agents::ToolRun::PEDIDO => 'digest-do-pedido',
-                Autonomia::Agents::ToolRun::SUBMITTED_KEY => 'numero-no-portal', Autonomia::Agents::ToolRun::INTENCOES => 1,
-                Autonomia::Agents::ToolRun::ENCERRADA_EM => '2026-10-24T10:00:00.000Z' },
+      handle: { 'cotacao' => segredo, 'numero_no_portal' => '998877', Autonomia::Agents::ToolRun::PEDIDO => 'digest-do-pedido',
+                Autonomia::Agents::ToolRun::INTENCOES => 1 }.merge(marcas),
       attempts: 3, delivered_count: 2
     )
   end
@@ -42,18 +42,21 @@ RSpec.describe Autonomia::Agents::RegistroDaConversaExcluida do
 
   it 'DELETE da conversa: as linhas ficam sem argumento, resultado, mensagem nem texto; a viva para' do
     viva = criar_execucao(conversation, status: 'running')
-    feita = criar_execucao(conversation, status: 'done', slug: 'agendar_reuniao')
+    encerrada = { Autonomia::Agents::ToolRun::SUBMITTED_KEY => true, Autonomia::Agents::ToolRun::ENCERRADA_EM => '2026-10-24T10:00:00.000Z',
+                  Autonomia::Agents::Tools::Encerramento::CLOSED_KEY => true }
+    feita = criar_execucao(conversation, status: 'done', slug: 'agendar_reuniao', marcas: encerrada)
     evento = criar_evento(conversation)
 
-    conversation.destroy!
+    freeze_time { conversation.destroy! }
 
     expect(sobra_do_cliente?).to be(false)
     expect(viva.reload).to have_attributes(status: 'blocked', failure_code: 'conversa_excluida', arguments: {},
                                            origin_message_id: nil, conversation_id: conversation.id, attempts: 3,
                                            delivered_count: 2)
-    expect(viva.handle).to eq(Autonomia::Agents::ToolRun::INTENCOES => 1,
-                              Autonomia::Agents::ToolRun::ENCERRADA_EM => '2026-10-24T10:00:00.000Z')
+    expect(viva.handle).to eq(Autonomia::Agents::ToolRun::INTENCOES => 1, Autonomia::Agents::ToolRun::SUBMITTED_KEY => true,
+                              Autonomia::Agents::ToolRun::ENCERRADA_EM => viva.updated_at.iso8601(3))
     expect(feita.reload).to have_attributes(status: 'done', failure_code: nil, arguments: {})
+    expect(feita.handle).to eq(encerrada.merge(Autonomia::Agents::ToolRun::INTENCOES => 1))
     expect(evento.reload).to have_attributes(message_id: nil, conversation_id: conversation.id, event_type: 'consulted',
                                              confidence: 0.8, handoff_reason: 'other')
     expect(evento.metadata).to eq('principal_id' => 7, 'custo_usd' => 0.0012, 'rodadas' => 2)
@@ -68,6 +71,42 @@ RSpec.describe Autonomia::Agents::RegistroDaConversaExcluida do
     expect(no_job.record_attempt!(handle: { 'cotacao' => segredo })).to be(false)
     expect(no_job.finish!('done')).to be(false)
     expect(sobra_do_cliente?).to be(false)
+  end
+
+  it 'a viva que decidiu submeter e não recebeu o número fica marcada como possivelmente duplicada, como no finish!' do
+    incerta = criar_execucao(conversation, status: 'running', marcas: {})
+    pendente = criar_execucao(conversation, status: 'pending', slug: 'agendar_reuniao', marcas: {})
+    Autonomia::Agents::ToolRun.where(id: pendente.id).update_all(handle: {}) # rubocop:disable Rails/SkipsModelValidations
+
+    conversation.destroy!
+
+    expect(incerta.reload).to have_attributes(status: 'blocked', failure_code: 'conversa_excluida')
+    expect(incerta.handle).to include(Autonomia::Agents::ToolRun::POSSIVELMENTE_DUPLICADA => true, Autonomia::Agents::ToolRun::INTENCOES => 1)
+    expect(incerta.handle).to have_key(Autonomia::Agents::ToolRun::ENCERRADA_EM)
+    expect(Autonomia::Agents::ToolRun.possivelmente_duplicadas).to contain_exactly(incerta)
+    expect(pendente.reload.status).to eq('blocked')
+  end
+
+  it 'uma segunda exclusão (ou a limpeza repetida) não regrava linha já limpa' do
+    run = criar_execucao(conversation, status: 'done')
+    evento = criar_evento(conversation)
+    described_class.new(account_id: account.id, conversation_id: conversation.id).perform
+    antes = [run.reload.updated_at, evento.reload.attributes]
+
+    travel(1.minute) { described_class.new(account_id: account.id, conversation_id: conversation.id).perform }
+
+    expect([run.reload.updated_at, evento.reload.attributes]).to eq(antes)
+  end
+
+  # Fica para a Issue de seguimento: um turno em andamento que abre uma execução depois da limpeza grava os argumentos
+  # numa conversa que não existe mais. Este exemplo registra o limite de hoje.
+  it 'limite conhecido: execução aberta depois do destroy não é limpa por este serviço' do
+    conversation.destroy!
+
+    tardia = Autonomia::Agents::ToolRun.open!(agent: agent, slug: 'cotar_seguro', arguments: { 'pedido' => segredo },
+                                              scope: { conversation_id: conversation.id })
+
+    expect(tardia.arguments).to eq('pedido' => segredo)
   end
 
   it 'o registro de outra conversa não é tocado' do
