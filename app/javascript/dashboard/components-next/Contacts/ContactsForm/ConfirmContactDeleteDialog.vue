@@ -48,6 +48,7 @@ const contato = computed(() => ({
 const descricao = computed(() =>
   [
     t('CONTACTS_LAYOUT.DETAILS.DELETE_DIALOG.DESCRIPTION'),
+    t('APAGAR_CONTATO.UM'),
     crmLigado.value ? t('CRM_EXCLUIR.CONTATO.NOTA_CARDS') : '',
   ]
     .filter(Boolean)

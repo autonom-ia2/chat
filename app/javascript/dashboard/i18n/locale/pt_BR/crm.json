@@ -2377,7 +2377,9 @@
           "TEXT_PHONE": "Seu WhatsApp {phone} está pronto: quem vier de anúncio aparece aqui.",
           "TEXT": "Seu WhatsApp está pronto: quem vier de anúncio aparece aqui.",
           "TEXT_MANY": "Seus WhatsApp estão prontos: quem vier de anúncio aparece aqui.",
-          "EXAMPLE": "Ver um exemplo"
+          "EXAMPLE": "Ver um exemplo",
+          "CONNECT_TEXT": "Já anuncia no Facebook ou no Instagram, ou vai começar? Conecte a sua conta de anúncios para ver quanto investiu.",
+          "CONNECT_CTA": "Conectar minha conta de anúncios"
         },
         "EXAMPLE": {
           "BADGE": "Exemplo",
@@ -2844,6 +2846,7 @@
           "STALLED_QUOTES": {
             "TEXT": "1 proposta de anúncio está parada há mais de {days} dias. Ela veio de \"{ad}\". | {count} propostas de anúncio estão paradas há mais de {days} dias. A maior parte veio de \"{ad}\".",
             "WHY": "Por quê: somam {value} em negociação. Retomar quem já pediu proposta custa menos que anunciar de novo.",
+            "WHY_NO_VALUE": "Por quê: retomar quem já pediu proposta custa menos que anunciar de novo.",
             "BUTTON": "Ver a proposta | Ver as {count} propostas"
           },
           "FIX_TRACKING": {
@@ -3161,6 +3164,7 @@
         "DISCARD": "Descartar mudanças",
         "TEST": "Enviar teste",
         "TEST_HINT": "Envia agora o resumo de ontem, marcado como teste.",
+        "NEEDS_SALES_VALUE": "O resumo mostra quanto foi vendido. Para ligar, mudar e testar, é preciso ter permissão para ver os valores de venda.",
         "TEST_NEEDS_SAVE": "Salve o número que envia e o número que recebe antes de testar.",
         "TEST_NEEDS_SAVE_CHANGES": "Salve ou descarte as mudanças antes de testar.",
         "TEST_NEEDS_ORIGIN": "O número que envia não está conectado agora. Escolha outro e salve antes de testar.",
@@ -3184,6 +3188,7 @@
           "SEND_FAILED": "O WhatsApp não aceitou o envio. Confira a conexão do número que envia.",
           "SEND_UNCERTAIN": "Não deu para confirmar se chegou. Confira o seu WhatsApp antes de tentar de novo.",
           "WHATSAPP_NUMBER_NOT_FOUND": "Este número não tem WhatsApp.",
+          "SALES_VALUE_FORBIDDEN": "Para mudar ou testar o resumo, é preciso ter permissão para ver os valores de venda.",
           "GENERIC": "Não deu certo agora. Tente de novo."
         }
       }
@@ -5719,6 +5724,7 @@
       "QUEM_MARCOU": "Quem marcou",
       "MARCOU_CLIENTE": "O cliente, pelo link",
       "MARCOU_ASSISTENTE": "O assistente",
+      "PESSOA_REMOVIDA": "Pessoa removida",
       "CONVIDADOS": "Mais convidados",
       "N_CONVIDADOS": "{n} pessoa | {n} pessoas",
       "ESTA_AQUI": "Está aqui",
@@ -6620,7 +6626,8 @@
       "DESTINO_CAIXAS_INVALIDO": "o funil escolhido para as caixas não está mais disponível",
       "PRINCIPAL_INVALIDO": "o funil escolhido para ser o principal não está mais disponível",
       "ULTIMO_FUNIL": "é o único funil ativo; crie outro antes",
-      "UNICO_PRINCIPAL": "é o funil principal; escolha outro principal antes"
+      "UNICO_PRINCIPAL": "é o funil principal; escolha outro principal antes",
+      "FUNIL_MUDOU": "outra pessoa arquivou ou restaurou este funil nesse meio-tempo; feche a janela e abra de novo"
     },
     "MOTIVO_IA": {
       "FORA_DO_NEGOCIO": "não era negócio",
@@ -6718,10 +6725,14 @@
       "CAIXA_VAI_PARA_OUTRO": "Clientes novos de {caixa} viram card em {funil}, outro funil ligado a ela.",
       "BOTAO": "Arquivar funil",
       "ERRO": "Não deu para arquivar o funil: {motivo}. Nada mudou.",
+      "ERRO_PARCIAL": "Não deu para terminar de arquivar o funil: {motivo}. Antes disso, 1 card já tinha saído para a etapa escolhida. Confira o quadro antes de tentar de novo. | Não deu para terminar de arquivar o funil: {motivo}. Antes disso, {count} cards já tinham saído para a etapa escolhida. Confira o quadro antes de tentar de novo.",
       "ERRO_PREVIA": "Não deu para conferir o funil: {motivo}. Feche e tente de novo.",
       "ERRO_ETAPAS": "Não deu para trazer as etapas desse funil: {motivo}. Escolha de novo.",
       "ARQUIVADO": "Funil {funil} arquivado.",
       "FORAM_PARA": "1 card foi para {funil}. | {count} cards foram para {funil}.",
+      "MAIS_DE_UM_ABERTO": "1 cliente ficou com mais de um card aberto em {funil}. | {count} clientes ficaram com mais de um card aberto em {funil}.",
+      "MAIS_DE_UM_ABERTO_QUEM": "1 cliente ficou com mais de um card aberto em {funil}: {nomes}. | {count} clientes ficaram com mais de um card aberto em {funil}: {nomes}.",
+      "MAIS_N": "mais 1 | mais {count}",
       "FICARAM_GUARDADOS": "1 card aberto ficou guardado com ele. | {count} cards abertos ficaram guardados com ele.",
       "CAIXAS_AGORA": "Clientes novos de {caixas} agora entram em {funil}.",
       "CAIXAS_PARARAM": "Clientes novos de {caixas} deixam de entrar neste funil."

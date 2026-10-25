@@ -3,7 +3,8 @@
 # Com `visible` (Crm::MetaAds::VisibleConversations, #1794) as listas trazem só as conversas que a pessoa já vê; os
 # totais são da conta toda, como na tela. Serve à conta conectada (com gasto) e à sem login (só WhatsApp).
 # Sem `com_pessoas` (quem não pode exportar o CRM, crm_export: dado pessoal em lote) o arquivo leva só os números,
-# sem as listas de pessoas.
+# sem as listas de pessoas. Os valores de venda em R$ seguem a mesma pessoa (#2075): sem `sales_value_view`, o painel
+# vem sem o dinheiro dos cards (Panel::SalesValue) e o arquivo tira as colunas e linhas de valor (`valores?`).
 class Crm::MetaAds::Relatorio::Dados
   # Linhas da lista de conversas na planilha; o resto fica de fora e a planilha diz quantas.
   LIMITE = 5_000
@@ -16,11 +17,15 @@ class Crm::MetaAds::Relatorio::Dados
     @account = account
     @visible = visible
     @com_pessoas = com_pessoas
-    @report = Crm::MetaAds::Panel::Report.new(connection, period: period, account: account)
+    @report = Crm::MetaAds::Panel::Report.new(connection, period: period, account: account, visible: visible)
   end
 
   def com_pessoas?
     @com_pessoas
+  end
+
+  def valores?
+    Crm::MetaAds::Panel::SalesValue.visible?(@visible)
   end
 
   def painel

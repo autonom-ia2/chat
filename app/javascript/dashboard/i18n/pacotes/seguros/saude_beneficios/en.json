@@ -1009,6 +1009,9 @@
         "CRM": {
           "HINT": "Sales and portfolio pipelines, and the calendar",
           "LEVEL_MANAGE": "Creates, edits and moves cards: quotes and portfolio plans."
+        },
+        "FINANCE": {
+          "LEVEL_VIEW": "Sees the Meta charge authorization and, for whoever also has CRM reports, what AI costs in money. Subscription and invoices stay with the administrator."
         }
       }
     }
@@ -1075,6 +1078,10 @@
       },
       "USUARIOS": {
         "TEXTO": "Who at the brokerage signs in and what each person can do."
+      },
+      "PLANO": {
+        "TITULO": "Subscription and invoices",
+        "TEXTO": "Your subscription, the next payment and the invoices."
       }
     },
     "GRUPOS": {
@@ -1284,6 +1291,16 @@
     "PLACEHOLDERS": {
       "ENTER_COMPANY_NAME": "Your brokerage name",
       "ENTER_WEBSITE": "www.yourbrokerage.com"
+    }
+  },
+  "FINANCIAL": {
+    "SUBSCRIPTION": {
+      "DESCRIPTION": "See your subscription and how your charge is made up.",
+      "SUMMARY": {
+        "TITLE": "Subscription summary",
+        "DESCRIPTION": "Base subscription and the items that make up the charge.",
+        "PLAN": "Subscription"
+      }
     }
   }
 }

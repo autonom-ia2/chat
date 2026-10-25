@@ -1009,6 +1009,9 @@
         "CRM": {
           "HINT": "Funis de venda e de carteira, e a agenda",
           "LEVEL_MANAGE": "Cria, edita e move cards: cotações e planos da carteira."
+        },
+        "FINANCE": {
+          "LEVEL_VIEW": "Vê a autorização de cobranças da Meta e, para quem também tem os relatórios do CRM, quanto a IA custa em reais. Assinatura e faturas ficam com o administrador."
         }
       }
     }
@@ -1075,6 +1078,10 @@
       },
       "USUARIOS": {
         "TEXTO": "Quem da corretora entra na plataforma e o que cada pessoa pode fazer."
+      },
+      "PLANO": {
+        "TITULO": "Assinatura e faturas",
+        "TEXTO": "Sua assinatura, o próximo pagamento e as faturas."
       }
     },
     "GRUPOS": {
@@ -1284,6 +1291,16 @@
     "PLACEHOLDERS": {
       "ENTER_COMPANY_NAME": "Nome da sua corretora",
       "ENTER_WEBSITE": "www.suacorretora.com.br"
+    }
+  },
+  "FINANCIAL": {
+    "SUBSCRIPTION": {
+      "DESCRIPTION": "Veja a assinatura contratada e a composição da cobrança.",
+      "SUMMARY": {
+        "TITLE": "Resumo da assinatura",
+        "DESCRIPTION": "Assinatura base contratada e itens que compõem a cobrança.",
+        "PLAN": "Assinatura"
+      }
     }
   }
 }

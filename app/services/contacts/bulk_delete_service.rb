@@ -31,7 +31,8 @@ class Contacts::BulkDeleteService
     anonimizador.cancelar_reunioes!
     contact.crm_anonimizador = anonimizador
     contact.crm_excluido_por = @user
-    contact.destroy!
+    # Impasse com a conversão de um lead do mesmo contato (#2143): refaz, como a exclusão definitiva.
+    Crm::ExclusaoDefinitiva.com_retentativa { contact.destroy! }
   rescue StandardError => e
     contato_ficou(contact, e)
   end

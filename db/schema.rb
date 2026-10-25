@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_380000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_440000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -89,6 +89,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_380000) do
     t.jsonb "settings", default: {}
     t.bigint "flags", default: 0, null: false
     t.bigint "feature_flags_ext_1", default: 0, null: false
+    t.bigint "feature_flags_ext_2", default: 0, null: false
     t.index ["status"], name: "index_accounts_on_status"
   end
 
@@ -387,6 +388,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_380000) do
     t.index ["autonomia_agent_id", "created_at"], name: "idx_autonomia_events_agent_created"
     t.index ["autonomia_agent_id", "event_type"], name: "idx_autonomia_events_agent_type"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_events_on_autonomia_agent_id"
+    t.index ["conversation_id"], name: "idx_autonomia_events_conversation", where: "(conversation_id IS NOT NULL)"
     t.index ["message_id"], name: "idx_autonomia_events_message"
     t.index ["used_entry_ids"], name: "idx_autonomia_events_used_entry_ids", using: :gin
   end
@@ -2465,7 +2467,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_380000) do
     t.bigint "account_id", null: false
     t.bigint "card_id", null: false
     t.bigint "inbox_id"
-    t.bigint "created_by_id", null: false
+    t.bigint "created_by_id"
     t.bigint "reminder_id"
     t.string "title", null: false
     t.text "description"
@@ -4063,7 +4065,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_380000) do
   create_table "whatsapp_api_campaigns", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
-    t.bigint "created_by_id", null: false
+    t.bigint "created_by_id"
     t.bigint "whatsapp_api_message_template_id"
     t.string "title", null: false
     t.integer "status", default: 0, null: false
@@ -4095,7 +4097,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_380000) do
   create_table "whatsapp_api_message_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
-    t.bigint "created_by_id", null: false
+    t.bigint "created_by_id"
     t.bigint "updated_by_id"
     t.string "name", null: false
     t.text "body", null: false

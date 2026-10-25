@@ -17,6 +17,11 @@
 # reunião cancelada grava uma linha na Auditoria da conta: quem fez, quantos cards e quantas reuniões, só ids e contagens
 # (Crm::ExclusaoDefinitiva.auditar_contato_excluido!). O modo 'keep' já auditou antes e chega aqui sem card.
 #
+# O lead da Prospecção que é desta pessoa sai de vez, e o que recusou contato fica só com a prova da recusa (#2143,
+# Autonomia::Prospecting::LeadsDoContatoExcluido); entram na mesma linha da Auditoria. O contato é travado primeiro, como
+# no Crm::ExclusaoDefinitiva.travar_contato!: a conversão de um lead que o use espera, e os leads dos cards são lidos sob
+# essa trava, antes de o anonimizador soltá-los.
+#
 # A FK crm_cards.contact_id é ON DELETE CASCADE: um DELETE em SQL, sem callbacks (Internal::RemoveStaleContactsService,
 # que só pega contato sem card), apagaria os cards em vez de soltá-los.
 module ContactCrmCards
@@ -34,12 +39,18 @@ module ContactCrmCards
   def anonimizar_cards_do_crm
     return if Crm::Cards::Anonimizador.conta_saindo? || !Crm::Cards::Anonimizador.ligado?(account)
 
+    Contact.where(id: id).lock.pluck(:id)
+    leads = Autonomia::Prospecting::LeadsDoContatoExcluido.new(contact: self)
     anonimizador = crm_anonimizador || Crm::Cards::Anonimizador.new(contact: self)
     ids = anonimizador.perform
-    return if ids.empty? && anonimizador.reunioes_canceladas.empty?
+    auditar_exclusao_do_crm(ids, anonimizador, leads.perform)
+  end
+
+  def auditar_exclusao_do_crm(card_ids, anonimizador, leads)
+    return if card_ids.empty? && anonimizador.reunioes_canceladas.empty? && leads.apagados.empty? && leads.minimizados.empty?
 
     Crm::ExclusaoDefinitiva.auditar_contato_excluido!(
-      contact: self, user: crm_excluido_por || Current.user, card_ids: ids, anonimizador: anonimizador
+      contact: self, user: crm_excluido_por || Current.user, card_ids: card_ids, anonimizador: anonimizador, leads: leads
     )
   end
 end

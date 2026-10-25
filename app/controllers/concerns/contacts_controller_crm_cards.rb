@@ -12,6 +12,8 @@ module ContactsControllerCrmCards
   included do
     rescue_from Crm::ExclusaoDefinitiva::ReuniaoNaoCancelada, with: :render_crm_meeting_cancel_failed
     rescue_from Crm::ExclusaoDefinitiva::Mudou, with: :render_crm_cards_changed
+    # Impasse com a conversão de um lead do mesmo contato (#2143): nada saiu, e a pessoa tenta de novo.
+    rescue_from ActiveRecord::Deadlocked, with: :render_contact_busy
   end
 
   private
@@ -19,6 +21,10 @@ module ContactsControllerCrmCards
   def render_crm_meeting_cancel_failed(error)
     render json: { message: I18n.t('contacts.meeting_cancel_failed'), error: 'crm.permanent_delete.meeting_cancel_failed',
                    meeting_id: error.meeting_id, canceled_meeting_ids: error.canceladas }, status: :unprocessable_entity
+  end
+
+  def render_contact_busy
+    render json: { message: I18n.t('contacts.busy_try_again'), error: 'contact_busy' }, status: :conflict
   end
 
   def render_crm_cards_changed(error)

@@ -134,5 +134,9 @@
       "PRONTO": "Pronto.",
       "ERRO": "Não deu para salvar agora. Tente de novo."
     }
+  },
+  "APAGAR_CONTATO": {
+    "UM": "O contato, as conversas e as mensagens dele serão apagados. Não dá para desfazer.",
+    "VARIOS": "Os {count} contatos, as conversas e as mensagens deles serão apagados. Não dá para desfazer."
   }
 }

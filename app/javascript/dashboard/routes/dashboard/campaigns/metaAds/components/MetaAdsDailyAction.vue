@@ -162,6 +162,12 @@ const onlyUnanswered = action => {
   return Number(median) <= Number(action.facts?.target_seconds);
 };
 
+// #2075 — sem a chave de valores de venda a soma das propostas paradas não vem: o porquê sai sem o valor.
+const whyKey = (action, base, suffix) =>
+  action.kind === 'stalled_quotes' && action.facts?.value == null
+    ? `${base}.WHY_NO_VALUE`
+    : `${base}.WHY${suffix}`;
+
 const ruleText = action => {
   const base = `${KEY}.${action.kind.toUpperCase()}`;
   const suffix = action.variant ? `_${action.variant.toUpperCase()}` : '';
@@ -173,7 +179,7 @@ const ruleText = action => {
   return {
     headline: t(textKey, params, pluralOf(action)),
     body: null,
-    why: t(`${base}.WHY${suffix}`, params),
+    why: t(whyKey(action, base, suffix), params),
   };
 };
 
