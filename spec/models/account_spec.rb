@@ -268,8 +268,10 @@ RSpec.describe Account do
         feature_painel_contato_enxuto: 1 << 58,
         # #2154: posição 60 (1 << 59), PROVISÓRIA da Orquestração (24/10); definitiva na vez do PR.
         feature_agente_so_informa: 1 << 59,
-        # #2163: posição 61 (1 << 60), PROVISÓRIA; a definitiva é da Orquestração, no fim da main na vez do PR.
-        feature_crm_ia_nome_provisorio: 1 << 60
+        # #2161: posição 61 (1 << 60), depois da 60 do agente_so_informa #2166 (Orquestração, 25/10).
+        feature_meta_ads_gestao: 1 << 60,
+        # #2163: posição 62 (1 << 61), definitiva da Orquestração (25/10), depois da 61 do meta_ads_gestao #2164.
+        feature_crm_ia_nome_provisorio: 1 << 61
       }
     end
 

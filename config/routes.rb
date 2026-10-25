@@ -395,6 +395,10 @@ Rails.application.routes.draw do
               get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
               patch :whatsapp_report, to: 'meta_ads_whatsapp_reports#update'
               post 'whatsapp_report/test', to: 'meta_ads_whatsapp_reports#test_send'
+              # Gestão mínima do anúncio (#2161): situação, pausar/ativar, post da Página e Páginas da conexão.
+              get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
+              post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
+              get :pages, to: 'meta_ads_ad_management#pages'
               # F5 (#1110): abrir, aceitar e dispensar cada ação do consultor.
               post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
               post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'
