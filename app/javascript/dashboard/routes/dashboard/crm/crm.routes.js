@@ -12,6 +12,7 @@ import {
 const CrmKanbanPage = () => import('./pages/CrmKanbanPage.vue');
 // CRM › Números (#1897): o painel de hoje sem a flag `crm_numeros_lentes`; com ela, "Só eu · Equipe".
 const CrmNumerosPage = () => import('./pages/CrmNumerosPage.vue');
+const CrmNumerosOrigensPage = () => import('./pages/CrmNumerosOrigensPage.vue');
 const CrmAiUsagePage = () => import('./pages/CrmAiUsagePage.vue');
 const CrmSlaPage = () => import('./pages/CrmSlaPage.vue');
 const CaixasPage = () => import('./caixas/pages/CaixasPage.vue');
@@ -134,6 +135,15 @@ export const routes = [
     meta: numerosMeta,
     beforeEnter: ensureCrmEnabled,
     component: CrmNumerosPage,
+  },
+  {
+    // Números › "De onde vieram os clientes" (#2001, F6), aberta pela visão "Equipe" de Números. A página volta para
+    // Números sem a flag `crm_numeros_origens` ou sem a visão "Equipe".
+    path: frontendURL('accounts/:accountId/crm/dashboard/origens'),
+    name: 'crm_numeros_origens',
+    meta: numerosMeta,
+    beforeEnter: ensureCrmEnabled,
+    component: CrmNumerosOrigensPage,
   },
   {
     path: frontendURL('accounts/:accountId/crm/ai-usage'),

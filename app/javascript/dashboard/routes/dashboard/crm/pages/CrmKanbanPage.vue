@@ -40,6 +40,7 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import CrmKanbanCard from '../components/CrmKanbanCard.vue';
+import { nomeDoMes } from '../components/numeros/v2/numerosTextos';
 import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
 import { useCrmKanbanZoom } from '../composables/useCrmKanbanZoom';
 import { useCrmKanbanAutoScroll } from '../composables/useCrmKanbanAutoScroll';
@@ -747,6 +748,29 @@ const activeFilterChips = computed(() => {
     chips.push({
       key: 'closedIn',
       label: t('CRM_FILTRO_DO_LINK.FECHADO_NO_MES'),
+    });
+  }
+  // Números › Origens (#2001, F6): os filtros que chegam do "Ver" (só da Lista).
+  if (f.origem && viewMode.value === 'list') {
+    chips.push({
+      key: 'origem',
+      label: `${t('CRM_FILTRO_DO_LINK.ORIGEM')}: ${t(`CRM_NUMEROS_ORIGENS.NOMES.${f.origem.toUpperCase()}`)}`,
+    });
+  }
+  if (f.anuncio && viewMode.value === 'list') {
+    chips.push({
+      key: 'anuncio',
+      label: `${t('CRM_FILTRO_DO_LINK.ANUNCIO')}: ${labelForOption(campaignFilterOptions, f.anuncio)}`,
+    });
+  }
+  if (f.entrouEm && viewMode.value === 'list') {
+    chips.push({
+      key: 'entrouEm',
+      label: t('CRM_FILTRO_DO_LINK.ENTROU_EM_MES', {
+        mes: nomeDoMes(f.entrouEm, {
+          locale: String(locale.value).replace('_', '-'),
+        }),
+      }),
     });
   }
   if (f.stageIds?.length) {

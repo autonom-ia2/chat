@@ -417,6 +417,9 @@ Rails.application.routes.draw do
             get :kanban, to: 'kanban#index'
             # CRM › Números por papel (#1897): a visão "Só eu" de quem abre, atrás da flag `crm_numeros_lentes`.
             get :numeros, to: 'numeros#show'
+            # Números › "De onde vieram os clientes" (#2001, F6 do #1871), atrás da flag `crm_numeros_origens`.
+            get 'numeros/origens', to: 'numeros_origens#show'
+            get 'numeros/origens/report', to: 'numeros_origens#report'
             # Metas do mês por pessoa (#1991, F4 do #1871): a gaveta "Metas do mês", atrás da flag `crm_metas`.
             get :metas, to: 'metas#show'
             put :metas, to: 'metas#update'

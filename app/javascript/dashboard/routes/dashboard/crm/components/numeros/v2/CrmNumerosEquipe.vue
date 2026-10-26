@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue';
 import { rotuloDoFuso } from 'dashboard/helper/fusoDaConta';
 import { usePodeAbrir } from 'dashboard/components-next/sidebar/fork/usePodeAbrir';
+import { useMapGetter } from 'dashboard/composables/store';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import ResultsToggle from 'dashboard/routes/dashboard/settings/booking/results/ResultsToggle.vue';
 import CrmVistasNumeros from '../CrmVistasNumeros.vue';
@@ -13,6 +15,7 @@ import NumerosAjuda from './NumerosAjuda.vue';
 import NumerosQuemCuidou from './NumerosQuemCuidou.vue';
 import NumerosComoContamos from './NumerosComoContamos.vue';
 import NumerosEspera from './NumerosEspera.vue';
+import NumerosOrigensAtalho from './origens/NumerosOrigensAtalho.vue';
 import { destinoDaEquipe } from './destinosEquipe';
 import { P } from './numerosTextos';
 import { useNumerosFormato } from './useNumerosFormato';
@@ -41,6 +44,20 @@ const {
   rotuloDoMes,
 } = useNumerosDoMes({ t, locale, visao: 'equipe' });
 const comoContamos = ref(null);
+
+// "De onde vieram os clientes" (#2001, F6): o atalho só com a flag `crm_numeros_origens` da conta.
+const accountId = useMapGetter('getCurrentAccountId');
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const origensLigada = computed(() =>
+  Boolean(
+    isFeatureEnabledonAccount.value(
+      accountId.value,
+      FEATURE_FLAGS.CRM_NUMEROS_ORIGENS
+    )
+  )
+);
 
 const opcoesDeVisao = computed(() =>
   props.visoes.map(v => ({
@@ -169,6 +186,11 @@ const proximo = computed(() =>
           :bloco="dados.vendendo"
           :moeda="dados.moeda"
           :destino-de="destinoDe"
+        />
+        <!-- #2001 (F6): a porta para "De onde vieram os clientes". -->
+        <NumerosOrigensAtalho
+          v-if="dados.vendendo && origensLigada"
+          :mes-chave="dados.mes.chave"
         />
         <NumerosBloco
           v-if="dados.atendendo"
