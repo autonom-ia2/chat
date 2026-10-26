@@ -884,9 +884,8 @@
 # CRM › Números › "De onde vieram os clientes" (#2001, F6 do #1871). Ligada: a visão "Equipe" de Números ganha o
 # atalho e a tela das origens (mês e funil, anúncios, gasto só em "Todos os funis" para quem vê os anúncios) e o
 # relatório em PDF e planilha. Desligada: nada disso aparece e a API responde 404. Depende de crm_numeros_lentes e
-# crm_numeros_equipe. Sem migration. Posição 5 PROVISÓRIA na feature_flags_ext_2 (1 << 4), da Orquestração (26/10):
-# as posições 1 a 4 são de contato_relacao, meta_ads_formularios, meta_ads_organico e meta_ads_comentarios_ia, que
-# entram antes; a definitiva vem antes da fila. Para trocar: só a ordem nesta lista (nenhum spec fixa o bit).
+# crm_numeros_equipe. Sem migration. Posição 2 na feature_flags_ext_2 (1 << 1), logo depois de contato_relacao,
+# DEFINITIVA da Orquestração (26/10).
 - name: crm_numeros_origens
   display_name: CRM › Números · De onde vieram os clientes
   enabled: false

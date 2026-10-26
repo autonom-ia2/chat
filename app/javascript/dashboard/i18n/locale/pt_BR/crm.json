@@ -6824,7 +6824,8 @@
       "REGRA_ORIGEM": "A origem é o primeiro caminho por onde a pessoa chegou. Se ela voltar depois por outro anúncio, a origem não muda.",
       "REGRA_VENDA": "A venda conta no mês em que foi fechada, mesmo que o cliente tenha entrado antes. Por isso a lista mostra quem entrou ou fechou no mês.",
       "REGRA_DIRETO": "Chegou direto: mandou mensagem sem vir de anúncio nem do seu site ou link.",
-      "REGRA_GASTO": "O gasto vem do Facebook e aparece só em \"Todos os funis\", porque é da conta toda. O custo por cliente novo usa os clientes que entraram nos funis, por isso pode ser diferente do número do Facebook."
+      "REGRA_GASTO": "O gasto vem do Facebook e aparece só em \"Todos os funis\", porque é da conta toda. O custo por cliente novo usa os clientes que entraram nos funis, por isso pode ser diferente do número do Facebook.",
+      "REGRA_GASTO_TOTAL": "O gasto é o total da conta com anúncios no mês, inclusive anúncios que não trouxeram conversa. Por isso pode ser maior que a soma dos anúncios da lista e diferente da tela de Anúncios."
     },
     "GASTO_OCULTO": "O gasto com anúncios aparece só para quem pode ver os anúncios. Peça a quem administra a conta.",
     "FUNIL": {

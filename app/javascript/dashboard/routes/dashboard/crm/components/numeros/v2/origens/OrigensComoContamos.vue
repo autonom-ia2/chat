@@ -22,6 +22,7 @@ const regras = computed(() =>
     t(`${O}.COMO_CONTAMOS.REGRA_VENDA`),
     t(`${O}.COMO_CONTAMOS.REGRA_DIRETO`),
     props.comGasto && t(`${O}.COMO_CONTAMOS.REGRA_GASTO`),
+    props.comGasto && t(`${O}.COMO_CONTAMOS.REGRA_GASTO_TOTAL`),
   ].filter(Boolean)
 );
 </script>

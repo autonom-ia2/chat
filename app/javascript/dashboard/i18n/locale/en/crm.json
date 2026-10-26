@@ -6823,7 +6823,8 @@
       "REGRA_ORIGEM": "The origin is the first way the person came in. If they come back later through another ad, the origin does not change.",
       "REGRA_VENDA": "A sale counts in the month it was closed, even if the customer entered earlier. That is why the list shows who entered or closed in the month.",
       "REGRA_DIRETO": "Came in directly: sent a message without coming from an ad or from your website or link.",
-      "REGRA_GASTO": "Spend comes from Facebook and shows only in \"All pipelines\", because it belongs to the whole account. Cost per new customer uses the customers who entered the pipelines, so it can differ from the Facebook number."
+      "REGRA_GASTO": "Spend comes from Facebook and shows only in \"All pipelines\", because it belongs to the whole account. Cost per new customer uses the customers who entered the pipelines, so it can differ from the Facebook number.",
+      "REGRA_GASTO_TOTAL": "Spend is the account total on ads in the month, including ads that brought no conversation. So it can be higher than the sum of the ads listed and differ from the Ads screen."
     },
     "GASTO_OCULTO": "Ad spend is shown only to people who can see the ads. Ask the account administrator.",
     "FUNIL": {

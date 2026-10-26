@@ -284,8 +284,7 @@ RSpec.describe Account do
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(16)
       # #2084: primeira flag da feature_flags_ext_2 (posição provisória da Orquestração).
-      # #2001: crm_numeros_origens, posição PROVISÓRIA (a Orquestração reservou a 5, 1 << 4); aqui fica logo depois
-      # da contato_relacao até as flags dos anúncios entrarem na main.
+      # #2001: crm_numeros_origens, posição 2 (1 << 1), DEFINITIVA da Orquestração (26/10).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(feature_contato_relacao: 1, feature_crm_numeros_origens: 2)
     end
 
