@@ -870,3 +870,13 @@
   display_name: CRM › Dúvida da IA de assunto vira sugestão
   enabled: false
   column: feature_flags_ext_1
+
+# Este contato é (#2084/#2085): interessado (o padrão), parceiro do mercado ou não é negócio, na coluna contacts.relacao.
+# Ligada: parceiro e não é negócio não viram card sozinhos e ficam fora dos Números (Crm::Relacao). Card criado à mão
+# continua valendo. Desligada: todo contato é do funil, como antes. Este PR só traz a coluna, a regra e a flag; as
+# travas, os Números, a API e as telas vêm nos PRs seguintes do #2084. Posição 1 na feature_flags_ext_2 (1 << 0), a
+# primeira da coluna, confirmada pela Orquestração (25/10): chega à main antes das flags de anúncio (#2195, #2199, #2212).
+- name: contato_relacao
+  display_name: Contatos › este contato é interessado, parceiro ou não é negócio
+  enabled: false
+  column: feature_flags_ext_2

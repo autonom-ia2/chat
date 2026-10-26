@@ -93,6 +93,33 @@ describe ContactMergeAction do
       end
     end
 
+    context 'when um dos contatos foi marcado fora do funil (#2084)' do
+      it 'o que fica, interessado, herda a marca do absorvido' do
+        mergee_contact.update!(relacao: :parceiro)
+
+        contact_merge
+
+        expect(base_contact.reload).to be_relacao_parceiro
+      end
+
+      it 'se os dois foram marcados, vale a do que fica' do
+        base_contact.update!(relacao: :nao_e_negocio)
+        mergee_contact.update!(relacao: :parceiro)
+
+        contact_merge
+
+        expect(base_contact.reload).to be_relacao_nao_e_negocio
+      end
+
+      it 'se só o que fica foi marcado, a marca continua' do
+        base_contact.update!(relacao: :parceiro)
+
+        contact_merge
+
+        expect(base_contact.reload).to be_relacao_parceiro
+      end
+    end
+
     context 'when um dos contatos recusou mensagens ativas (chat#713)' do
       let(:admin) { create(:user, account: account) }
 
