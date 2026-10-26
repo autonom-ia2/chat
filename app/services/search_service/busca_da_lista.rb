@@ -1,12 +1,14 @@
 # #2211 — a busca dentro da lista de conversas, no banco (sem OpenSearch). Entra no SearchService por prepend, com o
 # tipo 'Lista'; os outros tipos seguem o caminho de sempre.
 #
-# Acesso: a base é a mesma da lista de conversas (Conversations::PermissionFilterService com for_reading), que já cobre
-# caixa, funil e funções personalizadas. As mensagens só vêm dessas conversas. "Pessoas sem conversa" pede a permissão
-# de ver contatos (contact_view); "Começar conversa com +55 …" pede a de criar contato (ContactPolicy#create?).
+# Acesso: as conversas são as que a lista mostra (SearchService::ConversasVisiveisNaLista: caixa, funil, funções
+# personalizadas, sem a Integração WhatsApp, sem Spam e Lixeira do e-mail). As mensagens só vêm dessas conversas.
+# "Pessoas" pede a permissão de ver contatos (contact_view) e traz quem não tem conversa que eu veja — dá para começar
+# uma pelas minhas caixas, como em Contatos; a conversa alheia não aparece. "Começar conversa com +55 …" pede a de
+# criar contato (ContactPolicy#create?).
 #
-# - telefone pelos dígitos (SearchService::TelefoneDigitado): "11 97862-2068" acha "+5511978622068"; com "+" na
-#   frente, o número precisa começar com o que foi digitado (número estrangeiro);
+# - telefone pelos dígitos (SearchService::TelefoneDigitado): "11 97862-2068" acha "+5511978622068", com e sem o nono
+#   dígito; com "+" na frente, o número precisa começar com o que foi digitado (número estrangeiro);
 # - "#1234" acha a conversa 1234;
 # - sem diferença de acento: lower(translate(...)) de SearchService::SemAcento, a mesma expressão dos índices trigram da
 #   migration 20261108520000;
@@ -65,8 +67,9 @@ module SearchService::BuscaDaLista
     @tempo_anterior ||= ActiveRecord::Base.connection.select_value('SHOW statement_timeout')
   end
 
+  # O NUL não cabe num texto do Postgres (dava 500).
   def consulta
-    @consulta ||= search_query[0, MAXIMO_DE_CARACTERES]
+    @consulta ||= search_query.delete("\u0000")[0, MAXIMO_DE_CARACTERES]
   end
 
   def termos
@@ -97,20 +100,19 @@ module SearchService::BuscaDaLista
     ["(#{nome_sql}) OR contacts.email ILIKE ? OR contacts.identifier ILIKE ?", *nome_valores, parecido, parecido]
   end
 
-  # 0 = exato, 1 = começa com, 2 = contém (no telefone, SearchService::TelefoneDigitado#ordem).
+  # 0 = exato, 1 = começa com, 2 = contém (no telefone, SearchService::TelefoneDigitado#ordem). O texto digitado passa
+  # pela mesma expressão no banco, como o nome.
   def ordem_do_nome
     return telefone.ordem if telefone.telefone?
 
     nome = SearchService::SemAcento.sql('contacts.name')
-    sql = "CASE WHEN #{nome} = ? THEN 0 WHEN #{nome} LIKE ? THEN 1 ELSE 2 END"
-    sem_acento = SearchService::SemAcento.texto(consulta)
-    ActiveRecord::Base.sanitize_sql_array([sql, sem_acento, "#{como_like(sem_acento)}%"])
+    digitado = SearchService::SemAcento.sql('?')
+    sql = "CASE WHEN #{nome} = #{digitado} THEN 0 WHEN #{nome} LIKE #{digitado} || '%' THEN 1 ELSE 2 END"
+    ActiveRecord::Base.sanitize_sql_array([sql, consulta, como_like(consulta)])
   end
 
   def conversas_permitidas
-    @conversas_permitidas ||= Conversations::PermissionFilterService.new(
-      current_account.conversations, current_user, current_account, for_reading: true
-    ).perform
+    @conversas_permitidas ||= SearchService::ConversasVisiveisNaLista.new(user: current_user, account: current_account).conversas
   end
 
   def com_o_que_o_card_usa(conversas)
@@ -166,12 +168,13 @@ module SearchService::BuscaDaLista
            .reorder('messages.created_at DESC, messages.id DESC')
   end
 
-  # Pessoas da conta sem nenhuma conversa. Quem não pode ver a base de contatos (contact_view, #1849) não vê esta seção.
+  # Pessoas da conta sem conversa que eu veja (inclusive quem só tem conversa numa caixa que não é minha). Quem não pode
+  # ver a base de contatos (contact_view, #1849) não vê esta seção.
   def pessoas_sem_conversa
     return Contact.none if busca_por_numero_da_conversa? || !politica_de_contato.index?
 
     current_account.contacts.where(condicao_do_contato).includes(avatar_attachment: :blob)
-                   .where('NOT EXISTS (SELECT 1 FROM conversations WHERE conversations.contact_id = contacts.id)')
+                   .where.not(id: conversas_permitidas.where.not(contact_id: nil).reselect(:contact_id))
                    .order(Arel.sql(ordem_do_nome), :name)
                    .limit(LIMITE)
   end
@@ -185,6 +188,6 @@ module SearchService::BuscaDaLista
     numero = telefone.numero_completo
     return if numero.nil? || !politica_de_contato.create?
 
-    current_account.contacts.exists?(phone_number: numero) ? nil : numero
+    current_account.contacts.exists?(phone_number: telefone.variantes) ? nil : numero
   end
 end

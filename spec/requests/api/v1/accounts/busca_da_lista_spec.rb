@@ -32,6 +32,11 @@ RSpec.describe 'Busca da lista de conversas', type: :request do
     expect(payload['parcial']).to eq([])
   end
 
+  it 'com NUL no q, responde 200' do
+    get url, params: { q: "jo\u0000ao" }, headers: agent.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:success)
+  end
+
   it 'com um telefone que ninguém tem, oferece o número' do
     get url, params: { q: '21 99999-0000' }, headers: agent.create_new_auth_token, as: :json
     expect(response.parsed_body['payload']['telefone_novo']).to eq('+5521999990000')

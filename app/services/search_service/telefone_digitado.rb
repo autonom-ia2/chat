@@ -30,17 +30,25 @@ class SearchService::TelefoneDigitado
   end
 
   # Comparado pelos dígitos. Com "+", o número começa com o que foi digitado; sem "+", os dígitos podem estar em
-  # qualquer lugar.
+  # qualquer lugar. Número inteiro do Brasil vale também com e sem o nono dígito (#variantes).
   def condicao
     padrao = internacional? ? "+#{como_like}%" : "%#{como_like}%"
-    ['contacts.phone_number LIKE ?', padrao]
+    ['(contacts.phone_number LIKE ? OR contacts.phone_number IN (?))', padrao, variantes]
   end
 
-  # 0 = o número termina nos dígitos digitados (quem digita "11 97862-2068" quer o "+5511978622068"), 1 = começa com
-  # eles, 2 = contém.
+  # 0 = o número é o digitado (com ou sem o nono dígito) ou termina nos dígitos digitados (quem digita "11 97862-2068"
+  # quer o "+5511978622068"), 1 = começa com eles, 2 = contém.
   def ordem
-    sql = 'CASE WHEN contacts.phone_number LIKE ? THEN 0 WHEN contacts.phone_number LIKE ? THEN 1 ELSE 2 END'
-    ActiveRecord::Base.sanitize_sql_array([sql, "%#{como_like}", "+#{como_like}%"])
+    sql = 'CASE WHEN contacts.phone_number IN (?) OR contacts.phone_number LIKE ? THEN 0 ' \
+          'WHEN contacts.phone_number LIKE ? THEN 1 ELSE 2 END'
+    ActiveRecord::Base.sanitize_sql_array([sql, variantes, "%#{como_like}", "+#{como_like}%"])
+  end
+
+  # O número inteiro como pode estar gravado: celular do Brasil com e sem o nono dígito, pelo mesmo critério do
+  # Contacts::NinthDigitDuplicateMerger (Whatsapp::PhoneNormalizers::BrazilPhoneNormalizer#contact_candidates). Sem
+  # número inteiro, nenhuma.
+  def variantes
+    @variantes ||= formas_gravadas(numero_completo)
   end
 
   # O número inteiro, para criar o contato. Com "+", é o que a pessoa digitou. Sem "+", é do Brasil: põe o 55 se ainda
@@ -54,6 +62,13 @@ class SearchService::TelefoneDigitado
   end
 
   private
+
+  def formas_gravadas(numero)
+    return [] if numero.nil?
+    return [numero] unless numero.start_with?("+#{DDI_DO_BRASIL}")
+
+    Whatsapp::PhoneNormalizers::BrazilPhoneNormalizer.new.contact_candidates(numero.delete_prefix('+')).map { |forma| "+#{forma}" }
+  end
 
   def com_ddi
     return digitos if internacional? || (digitos.start_with?(DDI_DO_BRASIL) && digitos.length > 11)

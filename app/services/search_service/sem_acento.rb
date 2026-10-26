@@ -39,13 +39,15 @@ module SearchService::SemAcento
     "lower(translate(normalize(#{coluna}, NFD), '#{ACENTOS_COMBINANTES}', ''))"
   end
 
-  # Cada palavra precisa aparecer na expressão, em qualquer ordem e sem diferença de acento. Devolve [sql, *valores].
+  # Cada palavra precisa aparecer na expressão, em qualquer ordem e sem diferença de acento. A palavra passa pela mesma
+  # expressão no banco (bind), não pelo Ruby: o resultado não depende da collation. O Postgres resolve a expressão da
+  # palavra antes de planejar, e o índice trigram continua valendo. Devolve [sql, *valores].
   def todas_as_palavras(expressao, palavras)
-    condicoes = palavras.map { "#{sql(expressao)} LIKE ?" }.join(' AND ')
-    [condicoes, *palavras.map { |palavra| "%#{ActiveRecord::Base.sanitize_sql_like(texto(palavra))}%" }]
+    condicoes = palavras.map { "#{sql(expressao)} LIKE '%' || #{sql('?')} || '%'" }.join(' AND ')
+    [condicoes, *palavras.map { |palavra| ActiveRecord::Base.sanitize_sql_like(palavra) }]
   end
 
-  # O mesmo, no Ruby, para o texto buscado.
+  # O mesmo, no Ruby (só para conferir nos specs que o banco e o Ruby concordam).
   def texto(valor)
     valor.to_s.unicode_normalize(:nfd).delete(ACENTOS_COMBINANTES).downcase
   end

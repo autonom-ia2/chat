@@ -24,7 +24,7 @@ class SearchService::MensagensDaLista
   end
 
   def ids
-    recentes = ActiveRecord::Base.connection.select_values(nas_recentes)
+    recentes = nas_recentes
     recentes.size >= LIMITE ? recentes : ActiveRecord::Base.connection.select_values(pelo_indice)
   end
 
@@ -38,18 +38,15 @@ class SearchService::MensagensDaLista
     SearchService::SemAcento.todas_as_palavras(expressao, @palavras)
   end
 
+  # As palavras entram por where com bind, cada parte na sua relação; nada de `?` por cima de SQL já montado.
   def nas_recentes
     janela = da_conta.where(conversation_id: @permitidas).reselect('messages.id, messages.created_at, messages.content')
                      .reorder('messages.created_at DESC, messages.id DESC').limit(JANELA_DE_RECENTES)
-    texto_sql, *texto_valores = palavras_em('recentes.content')
-    audio_sql, *audio_valores = palavras_em(TRANSCRICAO)
-    sql = <<~SQL.squish
-      SELECT recentes.id FROM (#{janela.to_sql}) recentes
-      WHERE (#{texto_sql})
-         OR EXISTS (SELECT 1 FROM attachments WHERE attachments.message_id = recentes.id AND #{audio_sql})
-      ORDER BY recentes.created_at DESC, recentes.id DESC LIMIT #{LIMITE}
-    SQL
-    ActiveRecord::Base.sanitize_sql_array([sql, *texto_valores, *audio_valores])
+    recentes = Message.unscoped.from(janela, :recentes)
+    no_audio = Attachment.unscoped.where('attachments.message_id = recentes.id').where(*palavras_em(TRANSCRICAO))
+    recentes.where(*palavras_em('recentes.content')).or(recentes.where(no_audio.arel.exists))
+            .reorder(Arel.sql('recentes.created_at DESC, recentes.id DESC')).limit(LIMITE)
+            .pluck(Arel.sql('recentes.id'))
   end
 
   # Texto e áudio em consultas separadas, cada uma no seu índice trigram e num CTE MATERIALIZED: o Postgres acha as

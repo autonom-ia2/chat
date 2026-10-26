@@ -33,6 +33,14 @@ RSpec.describe SearchService::BuscaDaLista do
     criada
   end
 
+  def audio(alvo, transcricao)
+    com_audio = mensagem(alvo, nil)
+    anexo = com_audio.attachments.new(account: account, file_type: :audio, meta: { 'transcribed_text' => transcricao })
+    anexo.file.attach(io: StringIO.new('audio'), filename: 'audio.ogg', content_type: 'audio/ogg')
+    anexo.save!
+    com_audio
+  end
+
   def mensagem(alvo, texto, quando: Time.current)
     alvo.messages.create!(account: account, inbox: alvo.inbox, message_type: :incoming, content: texto, sender: alvo.contact,
                           created_at: quando)
@@ -43,6 +51,12 @@ RSpec.describe SearchService::BuscaDaLista do
 
   it 'não busca com texto vazio' do
     expect(buscar('  ')).to eq(conversations: [], messages: [], contacts: [], telefone_novo: nil, parcial: [])
+  end
+
+  it 'o NUL na consulta não derruba a busca' do
+    pessoa = contato('Bruna Teles')
+    conversa(pessoa)
+    expect(buscar("bru\u0000na")[:conversations].map(&:contact)).to eq([pessoa])
   end
 
   it 'usa só os primeiros 100 caracteres' do
@@ -134,6 +148,20 @@ RSpec.describe SearchService::BuscaDaLista do
       expect(buscar('+0 11 91234-5678')[:telefone_novo]).to be_nil
     end
 
+    it 'nono dígito: o número digitado com o 9 acha o gravado sem, e não oferece duplicar' do
+      antigo = contato('Wagner Lima', telefone: '+551178622068')
+      conversa(antigo)
+      resultado = buscar('11 97862-2068')
+      expect(resultado[:conversations].map(&:contact)).to include(antigo)
+      expect(resultado[:telefone_novo]).to be_nil
+    end
+
+    it 'nono dígito: o número digitado sem o 9 acha o gravado com, e não oferece duplicar' do
+      resultado = buscar('11 7862-2068')
+      expect(resultado[:conversations].map(&:contact)).to eq([joao])
+      expect(resultado[:telefone_novo]).to be_nil
+    end
+
     it 'quem não cria contato não recebe a oferta' do
       com_funcao(%w[conversation_manage contact_view])
       expect(buscar('11 91234-5678')[:telefone_novo]).to be_nil
@@ -151,6 +179,13 @@ RSpec.describe SearchService::BuscaDaLista do
 
     it 'acha sem acento' do
       expect(buscar('joao conceicao')[:conversations].map(&:contact)).to eq([joao])
+    end
+
+    it 'o termo passa pela mesma expressão no banco: não depende da collation (Ø, Ł)' do
+      polones = contato('Ølsen Łódź')
+      conversa(polones)
+      expect(buscar('ØLSEN ŁÓDŹ')[:conversations].map(&:contact)).to eq([polones])
+      expect(buscar('Ølsen Lodz')[:conversations]).to be_empty
     end
 
     it 'acha com acento digitado onde o nome não tem' do
@@ -286,6 +321,57 @@ RSpec.describe SearchService::BuscaDaLista do
   end
 
   describe 'acesso' do
+    it 'a janela das recentes só olha mensagens das conversas que a pessoa vê' do
+      stub_const('SearchService::MensagensDaLista::LIMITE', 2)
+      stub_const('SearchService::MensagensDaLista::JANELA_DE_RECENTES', 3)
+      minha = mensagem(conversa(contato('Rita Melo')), 'sinistro aberto', quando: 2.days.ago)
+      alheia = conversa(contato('Sara Dias'), caixa: outra_caixa)
+      3.times { |vez| mensagem(alheia, "sinistro alheio #{vez}") }
+      expect(buscar('sinistro')[:messages]).to eq([minha])
+    end
+
+    it 'o áudio transcrito de conversa alheia não aparece' do
+      audio(conversa(contato('Sara Dias'), caixa: outra_caixa), 'franquia reduzida no contrato')
+      expect(buscar('franquia')[:messages]).to be_empty
+    end
+
+    it 'com a função de só ler (conversation_view), acha a conversa de outro responsável' do
+      outro = create(:user, account: account, role: :agent)
+      alvo = conversa(contato('Talita Reis'))
+      alvo.update!(assignee: outro)
+      com_funcao(%w[conversation_view])
+      expect(buscar('talita')[:conversations]).to eq([alvo])
+    end
+
+    it 'a conversa "Integração WhatsApp" do conector não aparece, como na lista' do
+      integracao = account.contacts.create!(name: 'Integração WhatsApp', identifier: Waha::IntegracaoDoConector::IDENTIFIER)
+      mensagem(conversa(integracao), 'integracao com erro de tarefa')
+      resultado = buscar('integracao')
+      expect(resultado[:conversations]).to be_empty
+      expect(resultado[:messages]).to be_empty
+    end
+
+    it 'com a conversa de e-mail nova, o que está no Spam e na Lixeira não aparece, como na lista' do
+      account.enable_features!('conversa_email_nova')
+      %w[spam lixeira].each do |pasta|
+        alvo = conversa(contato("Ulisses #{pasta}"))
+        mensagem(alvo, "promocao imperdivel #{pasta}")
+        ConversaCanal::PastaDoEmail.create!(account: account, conversation: alvo, pasta: pasta)
+      end
+      fora = conversa(contato('Ulisses Entrada'))
+      resultado = buscar('ulisses')
+      expect(resultado[:conversations]).to eq([fora])
+      expect(buscar('promocao')[:messages]).to be_empty
+    end
+
+    it 'contato com conversa só numa caixa que a pessoa não vê aparece em Pessoas, sem a conversa' do
+      pessoa = contato('Vitor Alves')
+      conversa(pessoa, caixa: outra_caixa)
+      resultado = buscar('vitor')
+      expect(resultado[:conversations]).to be_empty
+      expect(resultado[:contacts]).to eq([pessoa])
+    end
+
     it 'não mostra conversa de caixa que a pessoa não tem' do
       conversa(contato('Diego Vaz'), caixa: outra_caixa)
       expect(buscar('diego')[:conversations]).to be_empty
