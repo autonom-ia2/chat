@@ -1,5 +1,11 @@
+import { defineComponent, h, nextTick } from 'vue';
+import { createStore } from 'vuex';
+import { mount } from '@vue/test-utils';
 import MessagesView from 'dashboard/components/widgets/conversation/MessagesView.vue';
+import ConversationView from 'dashboard/routes/dashboard/conversation/ConversationView.vue';
+import conversas from 'dashboard/store/modules/conversations';
 import { emitter } from 'shared/helpers/mitt';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { mensagemDestacada } from '../destaqueDaCitada';
 import { TETO_DE_PAGINAS } from '../rolagemDaPele';
 
@@ -202,5 +208,109 @@ describe('citação com a pele', () => {
       action: null,
     });
     emitter.off('newToastMessage', avisos);
+  });
+});
+
+// #2211: a conversa aberta pelo link com ?messageId= (busca do Chatwoot, busca da lista).
+describe('abrir a conversa já indo à mensagem pedida', () => {
+  const comMensagemNaTela = id => {
+    const linha = document.createElement('div');
+    linha.id = `message${id}`;
+    linha.scrollIntoView = vi.fn();
+    document.body.appendChild(linha);
+    return linha;
+  };
+
+  it('pedido que chega com a conversa ainda abrindo: abre e vai à mensagem', async () => {
+    const ctx = contexto({
+      mensagens: [daLoja(50, 0, 900)],
+      maisAntigas: [[daLoja(10, 0, 800)], [daLoja(30, 0, 850)]],
+    });
+    const linha = comMensagemNaTela(10);
+    const abrindo = ctx.rolarNaPele();
+    await ctx.rolarNaPele(10);
+    await abrindo;
+    expect(linha.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    expect(mensagemDestacada.value).toBe(10);
+    // Quem já abria pôs no fim; a ida à mensagem vem depois e é onde a tela fica.
+    const [paraOFim = 0] = ctx.scrollToBottom.mock.invocationCallOrder;
+    expect(linha.scrollIntoView.mock.invocationCallOrder[0]).toBeGreaterThan(
+      paraOFim
+    );
+  });
+
+  it('pedido de outra conversa não vale para esta', async () => {
+    const ctx = contexto({ mensagens: [daLoja(7, 0, 900)] });
+    const linha = comMensagemNaTela(7);
+    ctx.citadaPendente = { conversaId: 99, id: 7 };
+    await ctx.rolarNaPele();
+    expect(linha.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  // A ordem de verdade: a loja (setActiveChat) e o ConversationView reais, o Vue de
+  // verdade montando a tela. Conversa que já tinha sido aberta (dataFetched) e não está
+  // na tela: a tela monta e começa a abrir (mounted -> $nextTick) antes de o aviso com
+  // ?messageId= chegar. A mensagem pedida está fora da página carregada.
+  it('conversa já carregada aberta pelo link: vai à mensagem pedida', async () => {
+    const conversa = {
+      id: 9,
+      dataFetched: true,
+      agent_last_seen_at: 1000,
+      messages: [daLoja(50, 0, 900)],
+    };
+    const loja = createStore({
+      modules: {
+        conversations: {
+          ...conversas,
+          state: {
+            ...conversas.state,
+            allConversations: [conversa],
+            selectedChatId: null,
+          },
+        },
+      },
+    });
+    const ctx = contexto({
+      mensagens: [],
+      maisAntigas: [[daLoja(10, 0, 800)], [daLoja(30, 0, 850)]],
+    });
+    Object.defineProperty(ctx, 'currentChat', {
+      get: () => loja.getters.getSelectedChat || {},
+    });
+    ctx.$nextTick = nextTick;
+    ctx.makeMessagesRead = vi.fn();
+    const linha = comMensagemNaTela(10);
+    // Como no MessagesView.mounted: conversa já carregada não espera o aviso de abrir.
+    const TelaDaConversa = {
+      mounted() {
+        this.$nextTick(() => ctx.rolarNaPele());
+      },
+      render: () => null,
+    };
+    const Caixa = defineComponent({
+      setup: () => () =>
+        loja.getters.getSelectedChat?.id ? h(TelaDaConversa) : null,
+    });
+    mount(Caixa, { global: { plugins: [loja] } });
+    emitter.on(BUS_EVENTS.SCROLL_TO_MESSAGE, ctx.onScrollToMessage);
+
+    try {
+      ConversationView.methods.setActiveChat.call({
+        conversationId: '9',
+        findConversation: () => conversa,
+        currentChat: {},
+        $route: { query: { messageId: '10' } },
+        $store: loja,
+      });
+      await vi.waitFor(() => expect(linha.scrollIntoView).toHaveBeenCalled(), {
+        timeout: 500,
+      });
+      expect(mensagemDestacada.value).toBe(10);
+    } finally {
+      emitter.off(BUS_EVENTS.SCROLL_TO_MESSAGE, ctx.onScrollToMessage);
+    }
   });
 });

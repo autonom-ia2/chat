@@ -826,7 +826,8 @@ provideMessageContext({
         'relative ltr:pl-12 rtl:pr-12': encaminhar.emSelecao.value,
         'bg-[#000]/[0.06] dark:bg-white/[0.06]': encaminhar.marcada.value,
         'transition-colors duration-500': pele,
-        'bg-[#000]/[0.1] dark:bg-white/[0.1]': destacadaPelaCitacao,
+        // #2211: faixa âmbar com contorno amber-11 (≥ 3:1 contra o fundo nos dois temas).
+        'bg-n-amber-3 ring-2 ring-inset ring-n-amber-11': destacadaPelaCitacao,
       },
     ]"
   >

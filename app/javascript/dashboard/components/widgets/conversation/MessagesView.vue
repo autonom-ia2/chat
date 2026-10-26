@@ -161,6 +161,8 @@ export default {
       labelSuggestions: [],
       // #1702: faixa de não lidas da pele; some depois de lida (alguns segundos na tela).
       naoLidasDaPele: null,
+      // #2211: a mensagem pedida (?messageId=) que chegou enquanto a conversa ainda abria.
+      citadaPendente: null,
       cancelarFimDaFaixa: null,
       ultimaDaPele: null,
     };
@@ -482,18 +484,30 @@ export default {
     // lidas; citação: busca a mensagem e a destaca; mensagem nova: só desce quem estava
     // no fim ou quando o atendente enviou.
     async rolarNaPele(messageId) {
-      if (this.naoLidasDaPele?.conversaId !== this.currentChat.id) {
+      const conversaId = this.currentChat.id;
+      // #2211: o pedido de ir à mensagem (link com ?messageId=, da busca) podia chegar com a
+      // conversa ainda abrindo (a faixa não pronta) e se perdia: a conversa abria na faixa ou
+      // no fim. Fica guardado e quem terminar de abrir leva até ela.
+      if (messageId) this.citadaPendente = { conversaId, id: messageId };
+      const abrindoAgora = this.naoLidasDaPele?.conversaId !== conversaId;
+      if (abrindoAgora) {
         // Antes das mensagens chegarem não há o que contar.
         if (this.currentChat.dataFetched !== true) return;
-        await this.abrirNaPele(!messageId);
-        if (!messageId) return;
+        await this.abrirNaPele(!this.citadaDestaConversa());
       }
       if (!this.faixaDaPele) return;
-      if (messageId) {
-        await this.irParaCitada(messageId);
+      const citada = this.citadaDestaConversa();
+      if (citada) {
+        this.citadaPendente = null;
+        await this.irParaCitada(citada);
         return;
       }
+      if (abrindoAgora) return;
       this.acompanharNovas();
+    },
+    citadaDestaConversa() {
+      const pendente = this.citadaPendente;
+      return pendente?.conversaId === this.currentChat.id ? pendente.id : null;
     },
     async abrirNaPele(posicionar) {
       const conversaId = this.currentChat.id;
