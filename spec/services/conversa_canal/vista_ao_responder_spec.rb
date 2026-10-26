@@ -1,58 +1,70 @@
 require 'rails_helper'
 
-# Resposta nossa marca a conversa como vista até ela (#2202, PR 0): como no WhatsApp, se eu respondi, já li.
+# Resposta nossa marca a conversa como vista (#2202, PR 0): como no WhatsApp, se eu respondi, já li.
+# As mensagens do cliente nascem num segundo e as respostas em outro: o "visto" vai até o começo do segundo da resposta.
 RSpec.describe ConversaCanal::VistaAoResponder do
   let(:account) { create(:account) }
   let(:ana) { create(:user, account: account, role: :agent) }
   let(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
-  let(:conversation) { create(:conversation, account: account, inbox: inbox, status: :open) }
+  let(:conversation) { create(:conversation, account: account, inbox: inbox, status: :open, agent_last_seen_at: inicio - 1.hour) }
   let(:bot) { create(:agent_bot, account: account) }
+  let(:inicio) { Time.zone.parse('2026-10-26 10:00:00') }
 
   before do
     create(:inbox_member, inbox: inbox, user: ana)
     allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+    conversation
   end
 
   after { Current.reset }
 
-  def do_cliente(content = 'Oi, tudo bem?')
-    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
-                     sender: conversation.contact, content: content)
+  def do_cliente(segundos = 0, content: 'Oi, tudo bem?')
+    travel_to(inicio + segundos) do
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
+                       sender: conversation.contact, content: content)
+    end
   end
 
-  def nossa(sender: ana, **attrs)
-    message = build(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
-                              content: 'Tudo, e você?', **attrs)
-    message.sender = sender
-    message.save!
-    message
+  def nossa(segundos = 10, sender: ana, **attrs)
+    travel_to(inicio + segundos) do
+      message = build(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                                content: 'Tudo, e você?', **attrs)
+      message.sender = sender
+      message.save!
+      message
+    end
+  end
+
+  def eco(segundos = 10, **attrs)
+    nossa(segundos, sender: nil, content_attributes: { 'external_echo' => true }.merge(attrs))
   end
 
   def nao_lidas
     conversation.reload.unread_incoming_messages.count
   end
 
-  describe 'mensagem nossa e pública' do
-    before { 2.times { do_cliente } }
+  def eventos_de_lida
+    Rails.configuration.dispatcher
+  end
 
-    it 'resposta pelo painel zera a não lida', :aggregate_failures do
+  describe 'resposta nossa e pública' do
+    before do
+      do_cliente(0)
+      do_cliente(1)
+    end
+
+    it 'pelo painel zera a não lida', :aggregate_failures do
       Current.user = ana
       expect(nao_lidas).to eq(2)
 
-      resposta = nossa
+      nossa
 
       expect(nao_lidas).to eq(0)
-      expect(conversation.reload.agent_last_seen_at).to be_within(1.second).of(resposta.created_at)
+      expect(conversation.reload.agent_last_seen_at).to eq(inicio + 10.seconds - Rational(1, 1_000_000))
     end
 
     it 'eco do celular (sem remetente) zera' do
-      nossa(sender: nil, content_attributes: { 'external_echo' => true })
-
-      expect(nao_lidas).to eq(0)
-    end
-
-    it 'robô zera' do
-      nossa(sender: bot)
+      eco
 
       expect(nao_lidas).to eq(0)
     end
@@ -62,9 +74,15 @@ RSpec.describe ConversaCanal::VistaAoResponder do
 
       expect(nao_lidas).to eq(0)
     end
+
+    it 'robô zera (decisão pendente: ConversaCanal::VistaAoResponder::Robo::APAGA_A_BOLINHA)' do
+      nossa(sender: bot)
+
+      expect(nao_lidas).to eq(0)
+    end
   end
 
-  describe 'mensagem que não diz que alguém leu' do
+  describe 'o que sai sem ninguém responder nesta conversa' do
     before { do_cliente }
 
     it 'nota privada não zera' do
@@ -87,46 +105,107 @@ RSpec.describe ConversaCanal::VistaAoResponder do
       expect(nao_lidas).to eq(1)
     end
 
-    it 'mensagem importada do histórico não zera' do
-      nossa(sender: nil, content_attributes: { 'external_echo' => true, 'history_import' => true })
+    it 'pesquisa de satisfação que sai como mensagem (WhatsApp) não zera' do
+      nossa(sender: nil, content_type: :input_csat, content: 'Avalie o atendimento')
+
+      expect(nao_lidas).to eq(1)
+    end
+
+    it 'cópia encaminhada de outra conversa não zera' do
+      nossa(content_attributes: { 'forwarded' => true, 'forwarded_from' => { 'conversation_id' => 1, 'message_id' => 2 } })
+
+      expect(nao_lidas).to eq(1)
+    end
+
+    it 'modelo reenviado no encaminhamento não zera' do
+      nossa(content_attributes: { 'reenvio_do_modelo' => { 'mensagem_original_id' => 3 } })
+
+      expect(nao_lidas).to eq(1)
+    end
+
+    it 'mensagem que falhou não zera' do
+      nossa(status: :failed)
 
       expect(nao_lidas).to eq(1)
     end
   end
 
-  it 'mensagem do cliente depois da nossa volta a contar', :aggregate_failures do
-    do_cliente
-    nossa
-    expect(nao_lidas).to eq(0)
+  describe 'até onde fica vista' do
+    it 'mensagem do cliente depois da nossa volta a contar', :aggregate_failures do
+      do_cliente(0)
+      nossa(10)
+      expect(nao_lidas).to eq(0)
 
-    travel 1.second do
-      do_cliente('E aí?')
+      do_cliente(20, content: 'E aí?')
+
+      expect(nao_lidas).to eq(1)
     end
 
-    expect(nao_lidas).to eq(1)
+    it 'eco: vai até a hora em que saiu do celular, não até a hora em que chegou aqui' do
+      do_cliente(0)
+      do_cliente(5, content: 'escrevi enquanto o eco não chegava')
+
+      eco(60, 'external_created_at' => (inicio + 3.seconds).to_i)
+
+      expect(nao_lidas).to eq(1)
+    end
+
+    it 'mensagem do cliente no mesmo segundo da resposta continua não lida, no servidor e na tela', :aggregate_failures do
+      mesmo_instante = inicio + 10.5.seconds
+      cliente = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
+                                 sender: conversation.contact, created_at: mesmo_instante)
+      resposta = build(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing,
+                                 created_at: mesmo_instante)
+      resposta.sender = ana
+      resposta.save!
+
+      expect(nao_lidas).to eq(1)
+      # A tela compara segundos inteiros (getters.js getUnreadCount, conversationHelper.js getUnreadMessages).
+      expect(conversation.reload.agent_last_seen_at.to_i).to be < cliente.created_at.to_i
+    end
+
+    it 'nunca volta o "visto" para trás (eco atrasado de mensagem antiga)' do
+      do_cliente(0)
+      visto = inicio + 1.hour
+      conversation.update_columns(agent_last_seen_at: visto) # rubocop:disable Rails/SkipsModelValidations
+
+      eco(30)
+
+      expect(conversation.reload.agent_last_seen_at).to eq(visto)
+    end
   end
 
-  it 'nunca volta o "visto" para trás (eco atrasado de mensagem antiga)' do
-    visto = 1.minute.from_now.change(usec: 0)
-    conversation.update_columns(agent_last_seen_at: visto) # rubocop:disable Rails/SkipsModelValidations
+  describe 'robô' do
+    it 'cliente que mandou enquanto a resposta era gerada continua não lido' do
+      pergunta = do_cliente(0)
+      do_cliente(5, content: 'mandei enquanto o robô pensava')
 
-    nossa(sender: nil, content_attributes: { 'external_echo' => true })
+      nossa(10, sender: bot, content_attributes: { 'autonomia_reply_to_message_id' => pergunta.id })
 
-    expect(conversation.reload.agent_last_seen_at).to eq(visto)
+      expect(nao_lidas).to eq(1)
+    end
+
+    it 'na passagem para a equipe, a resposta do robô não apaga a bolinha' do
+      do_cliente(0)
+      conversation.update!(additional_attributes: { Conversation::BOT_HANDOFF_WAITING_SINCE_KEY => inicio.iso8601 })
+
+      nossa(10, sender: bot)
+
+      expect(nao_lidas).to eq(1)
+    end
   end
 
-  describe 'evento para a tela' do
+  describe 'avisos' do
     before do
       do_cliente
       Current.user = ana
+      allow(eventos_de_lida).to receive(:dispatch).and_call_original
     end
 
     it 'sai o conversation.read com a conversa já vista, para a lista apagar a bolinha', :aggregate_failures do
-      allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
-
       nossa
 
-      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+      expect(eventos_de_lida).to have_received(:dispatch)
         .with(Events::Types::CONVERSATION_READ, anything, hash_including(conversation: conversation))
       expect(ActionCableBroadcastJob).to have_been_enqueued
         .with(array_including(ana.pubsub_token), Events::Types::CONVERSATION_READ, hash_including(id: conversation.display_id))
@@ -139,25 +218,60 @@ RSpec.describe ConversaCanal::VistaAoResponder do
         .with(anything, Events::Types::MESSAGE_CREATED, hash_including(id: resposta.id, conversation: hash_including(unread_count: 0)))
     end
 
-    it 'nota privada não manda o evento' do
-      allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
+    it 'resposta em sequência não refaz a contagem' do
+      nossa(10)
+      nossa(20)
 
+      expect(eventos_de_lida).to have_received(:dispatch).with(Events::Types::CONVERSATION_READ, anything, anything).once
+    end
+
+    it 'nota privada não manda o evento' do
       nossa(private: true)
 
-      expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
-        .with(Events::Types::CONVERSATION_READ, anything, anything)
+      expect(eventos_de_lida).not_to have_received(:dispatch).with(Events::Types::CONVERSATION_READ, anything, anything)
+    end
+
+    it 'marca como lidos os avisos do sino desta conversa só de quem respondeu', :aggregate_failures do
+      bruno = create(:user, account: account, role: :agent)
+      da_ana = create(:notification, user: ana, account: account, primary_actor: conversation)
+      do_bruno = create(:notification, user: bruno, account: account, primary_actor: conversation)
+
+      nossa
+
+      expect(da_ana.reload.read_at).to be_present
+      expect(do_bruno.reload.read_at).to be_nil
+    end
+
+    it 'o eco não marca os avisos do sino de ninguém' do
+      aviso = create(:notification, user: ana, account: account, primary_actor: conversation)
+
+      nossa(sender: ana, content_attributes: { 'external_echo' => true })
+
+      expect(aviso.reload.read_at).to be_nil
     end
   end
 
-  it 'falha ao marcar não impede o envio', :aggregate_failures do
-    do_cliente
-    allow(described_class).to receive(:marcar!).and_raise(ActiveRecord::StatementInvalid, 'boom')
-    allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+  describe 'falha ao marcar' do
+    before do
+      do_cliente
+      allow(described_class).to receive(:marcar!).and_raise(ActiveRecord::StatementInvalid, 'boom')
+    end
 
-    resposta = nil
-    expect { resposta = nossa }.to have_enqueued_job(SendReplyJob)
+    it 'no teste, o erro sobe' do
+      expect { nossa }.to raise_error(ActiveRecord::StatementInvalid)
+    end
 
-    expect(resposta).to be_persisted
-    expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveRecord::StatementInvalid), account: account)
+    it 'fora do teste, não impede o envio e vai para o log e o rastreador', :aggregate_failures do
+      allow(described_class).to receive(:relancar?).and_return(false)
+      allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+      allow(Rails.logger).to receive(:error).and_call_original
+
+      resposta = nil
+      expect { resposta = nossa }.to have_enqueued_job(SendReplyJob)
+
+      expect(resposta).to be_persisted
+      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveRecord::StatementInvalid), account: account)
+      expect(Rails.logger).to have_received(:error).with(include('[conversa][vista_ao_responder]', 'StatementInvalid: boom'))
+    end
   end
 end

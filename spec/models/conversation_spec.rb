@@ -700,9 +700,9 @@ RSpec.describe Conversation do
       create(:message, message_type: :incoming, **message_params)
     end
 
-    # A resposta vem antes da mensagem do cliente: resposta nossa marca a conversa como vista até ela (#2202).
+    # Uma saída que não marca a conversa como vista (campanha, #2202), no mesmo instante: prova o filtro de recebidas.
     before do
-      create(:message, message_type: :outgoing, **message_params.merge(created_at: 2.minutes.ago))
+      create(:message, message_type: :outgoing, **message_params, additional_attributes: { 'campaign_id' => 1 })
     end
 
     it 'returns unread incoming messages' do

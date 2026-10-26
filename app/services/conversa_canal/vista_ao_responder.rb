@@ -1,63 +1,118 @@
-# Prepend em Message (#2202, PR 0): resposta nossa marca a conversa como vista até ela, como no WhatsApp ("se eu
-# respondi, já li"). Antes, só abrir a conversa no painel gravava o "visto" (agent_last_seen_at, no update_last_seen do
+# Prepend em Message (#2202, PR 0): resposta nossa marca a conversa como vista, como no WhatsApp ("se eu respondi, já
+# li"). Antes, só abrir a conversa no painel gravava o "visto" (agent_last_seen_at, no update_last_seen do
 # Api::V1::Accounts::ConversationsController). Quem respondia pelo celular (eco), o robô e a API nunca abriam a conversa
 # no painel, e a bolinha de não lida ficava parada com a conversa já respondida.
 #
-# O que conta (VistaAoResponder.conta?): mensagem que sai (outgoing), pública, da pessoa pelo painel ou pela API, do
-# eco do celular (com ou sem remetente), do robô, e o modelo do WhatsApp mandado na conversa (quem manda o modelo está
-# respondendo nela, e no WhatsApp mandar qualquer coisa numa conversa a deixa lida).
-# O que não conta: nota privada (o cliente não vê), campanha (disparo em massa: ninguém abriu a conversa, e no WhatsApp
-# a lista de transmissão não marca a conversa como lida) e envio automático em nome de alguém (automação, follow-up,
-# convite e aviso do Agendamento: Autonomia::Agents::Operate::PessoaDaEquipe.envio_automatico?). Mensagem automática da
-# caixa (saudação, fora do horário, pesquisa) é `template`, não `outgoing`: já fica de fora. A importação do histórico
-# não chega aqui (Message#execute_after_create_commit_callbacks sai antes).
+# O que conta (conta?): mensagem que sai (outgoing), pública, que não falhou e que é alguém respondendo nesta conversa:
+# a pessoa pelo painel ou pela API, o eco do celular (com ou sem remetente), o modelo do WhatsApp mandado na conversa
+# (quem manda o modelo está respondendo nela, e no WhatsApp mandar qualquer coisa numa conversa a deixa lida) e o robô,
+# pela regra própria dele (VistaAoResponder::Robo, o único ponto dela).
+# O que não conta: nota privada (o cliente não vê), mensagem que falhou e o que sai sem ninguém responder nesta
+# conversa, na lista única de Messages::NaoEResposta (envio automático em nome de alguém, campanha, pesquisa de
+# satisfação, cópia encaminhada, modelo reenviado). Mensagem automática da caixa (saudação, fora do horário) é
+# `template`, não `outgoing`. A importação do histórico não chega aqui (Message#execute_after_create_commit_callbacks
+# sai antes).
 #
-# O "visto" vai até a hora da nossa mensagem, e nunca para trás: o eco atrasado de uma mensagem antiga não desfaz uma
-# leitura mais nova. A mensagem do cliente que chegar depois volta a contar. Roda antes do `dispatch_create_events`
-# original, para o message.created da resposta já levar a não lida zerada; e só avisa a tela (conversation.read, que só
-# o ActionCable ouve) e os contadores quando havia não lida: resposta em sequência não refaz a contagem.
+# Até onde fica vista (antes_do_envio): até o começo do segundo em que a resposta SAIU, menos 1 µs.
+# - "Saiu": a hora do canal quando ele manda (external_created_at: o `timestamp` do eco da Cloud e do Híbrido,
+#   gravado por ConversaCanal::HoraDoEco; o WAHA comum só se o conector mandar o parâmetro `external_created_at` na
+#   API), senão a hora em que a mensagem chegou aqui. O eco do celular chega depois de sair: o cliente que escreveu
+#   no meio continua não lido.
+# - Começo do segundo: a tela compara em segundos inteiros (getters.js getUnreadCount e conversationHelper.js
+#   getUnreadMessages, `created_at * 1000 > agent_last_seen_at * 1000`, com os dois em .to_i). Gravando o visto no
+#   meio do segundo, a mensagem do cliente no mesmo segundo da resposta seria não lida no servidor (bolinha) e lida na
+#   tela (divisor). Começando no segundo, os dois concordam: o segundo da resposta inteiro fica não lido.
+# O "visto" nunca anda para trás: o eco atrasado de uma mensagem antiga não desfaz uma leitura mais nova.
+#
+# Roda antes do `dispatch_create_events` original, para o message.created da resposta já levar a não lida zerada.
+# Só avisa a tela e os contadores quando havia não lida: resposta em sequência não refaz a contagem.
 module ConversaCanal::VistaAoResponder
+  UM_MICROSSEGUNDO = Rational(1, 1_000_000)
+  LINHAS_DO_BACKTRACE = 5
+
   def self.conta?(message)
-    message.outgoing? && !message.private? && !::Autonomia::Agents::Operate::PessoaDaEquipe.envio_automatico?(message)
+    message.outgoing? && !message.private? && !message.failed? && !::Messages::NaoEResposta.nao_e_resposta?(message)
   end
 
   # -> true quando o "visto" andou.
   def self.marcar!(message)
     conversation = message.conversation
-    momento = message.created_at
-    havia_nao_lida = nao_lida_ate?(conversation, momento)
-    agora = Time.current
-    # rubocop:disable Rails/SkipsModelValidations
-    andou = Conversation.where(id: conversation.id).where(visto_antes_de(momento))
-                        .update_all(agent_last_seen_at: momento, updated_at: agora).positive?
-    # rubocop:enable Rails/SkipsModelValidations
-    return false unless andou
+    visto = Robo.robo?(message) ? Robo.ate_onde(message) : antes_do_envio(message)
+    marcar_avisos_de_quem_respondeu(message, conversation)
+    return false if visto.nil?
 
-    conversation.agent_last_seen_at = momento
-    conversation.updated_at = agora
-    conversation.clear_attribute_changes(%w[agent_last_seen_at updated_at])
+    havia_nao_lida = nao_lida_ate?(conversation, visto)
+    return false unless gravar(conversation, visto)
+
     avisar(conversation) if havia_nao_lida
     true
   end
 
-  def self.visto_antes_de(momento)
-    visto = Conversation.arel_table[:agent_last_seen_at]
-    visto.eq(nil).or(visto.lt(momento))
+  def self.antes_do_envio(message)
+    externo = ::Waha::RichNative::EventTime.at(message.content_attributes.to_h.with_indifferent_access['external_created_at'])
+    [message.created_at, externo].compact.min.change(usec: 0) - UM_MICROSSEGUNDO
   end
 
-  # Alguma mensagem do cliente entre o "visto" atual e a nossa resposta.
-  def self.nao_lida_ate?(conversation, momento)
+  # Uma gravação só, condicionada a andar para a frente (a leitura do painel no meio não volta).
+  def self.gravar(conversation, visto)
+    agora = Time.current
+    # rubocop:disable Rails/SkipsModelValidations
+    andou = Conversation.where(id: conversation.id).where(visto_antes_de(visto))
+                        .update_all(agent_last_seen_at: visto, updated_at: agora).positive?
+    # rubocop:enable Rails/SkipsModelValidations
+    return false unless andou
+
+    conversation.agent_last_seen_at = visto
+    conversation.updated_at = agora
+    conversation.clear_attribute_changes(%w[agent_last_seen_at updated_at])
+    true
+  end
+
+  def self.visto_antes_de(visto)
+    coluna = Conversation.arel_table[:agent_last_seen_at]
+    coluna.eq(nil).or(coluna.lt(visto))
+  end
+
+  # Alguma mensagem do cliente entre o "visto" atual e o novo.
+  def self.nao_lida_ate?(conversation, visto)
     recebidas = conversation.messages.where(account_id: conversation.account_id).incoming
-                            .where(Message.arel_table[:created_at].lteq(momento))
+                            .where(Message.arel_table[:created_at].lteq(visto))
     recebidas = recebidas.created_since(conversation.agent_last_seen_at) if conversation.agent_last_seen_at.present?
     recebidas.exists?
   end
 
+  # Os avisos do sino desta conversa, só para a pessoa que respondeu (o remetente). O eco não conta: no WAHA comum o
+  # remetente dele é o dono do token do conector, não quem respondeu no celular.
+  def self.marcar_avisos_de_quem_respondeu(message, conversation)
+    return unless message.sender.is_a?(User) && message.content_attributes.to_h.with_indifferent_access['external_echo'].blank?
+
+    ::Notification::MarkConversationReadService.new(user: message.sender, account: message.account, conversation: conversation).perform
+  end
+
   # Os mesmos avisos do "lido" ao abrir (ConversaCanal::LidoDaConversa) e o evento para a lista apagar a bolinha.
+  # Por que `conversation.read`: é também o evento de "o contato leu" (Conversation#notify_status_change, quando muda
+  # contact_last_seen_at). Só o ActionCableListener o ouve (nada de webhook, automação ou CRM, como no
+  # conversation.updated), vai só para a equipe da caixa, o ActionCableBroadcastJob relê a conversa do banco, e a tela o
+  # trata como atualização da conversa (actionCable.js onConversationRead -> updateConversation), o que traz o
+  # unread_count novo para o item da lista. O `conversation.unread_count_changed` não serve para isso: vai vazio ({}) e
+  # a tela só recarrega os números da barra lateral; ele já sai pelo Notifier abaixo.
   def self.avisar(conversation)
     ::Conversations::UnreadCounts::Notifier.new(conversation).perform
     ::Conversations::UnreadCounts::FilteredCountInvalidator.new(conversation.account).conversation_changed!
     Rails.configuration.dispatcher.dispatch(Events::Types::CONVERSATION_READ, Time.zone.now, conversation: conversation)
+  end
+
+  # No teste o erro sobe, para o spec não passar com a marcação quebrada.
+  def self.relancar?
+    Rails.env.test?
+  end
+
+  def self.registrar_falha(message, error)
+    detalhe = ::CampaignImports::SafeLogMessage.call(error.message)
+    rastro = Array(error.backtrace).first(LINHAS_DO_BACKTRACE).join(' | ')
+    Rails.logger.error("[conversa][vista_ao_responder] conversa=#{message.conversation_id} mensagem=#{message.id} " \
+                       "#{error.class}: #{detalhe} | #{rastro}")
+    ChatwootExceptionTracker.new(error, account: message.account).capture_exception
   end
 
   private
@@ -67,14 +122,16 @@ module ConversaCanal::VistaAoResponder
     super
   end
 
-  # A mensagem já está gravada e o envio vem depois: falhar aqui não pode impedir o envio nem devolver erro a quem postou
-  # (o n8n reenviaria e o cliente receberia duas vezes). A falha vai para o rastreador; a próxima resposta marca de novo.
+  # A mensagem já está gravada e o envio vem depois: em produção, falhar aqui não pode impedir o envio nem devolver
+  # erro a quem postou (o n8n reenviaria e o cliente receberia duas vezes). A falha vai para o log e o rastreador; a
+  # próxima resposta marca de novo.
   def marcar_conversa_vista
     return unless ConversaCanal::VistaAoResponder.conta?(self)
 
     ConversaCanal::VistaAoResponder.marcar!(self)
   rescue StandardError => e
-    Rails.logger.error("[conversa][vista_ao_responder] conversa=#{conversation_id} mensagem=#{id} #{e.class}")
-    ChatwootExceptionTracker.new(e, account: account).capture_exception
+    raise if ConversaCanal::VistaAoResponder.relancar?
+
+    ConversaCanal::VistaAoResponder.registrar_falha(self, e)
   end
 end
