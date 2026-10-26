@@ -353,6 +353,12 @@
     "controller": "api/v1/accounts/branded_email_layouts#show",
     "parametros": []
   },
+  "busca_da_lista": {
+    "controller": "api/v1/accounts/busca_da_lista#show",
+    "parametros": [
+      "q"
+    ]
+  },
   "callbacks/register_facebook_page": {
     "controller": "api/v1/accounts/callbacks#register_facebook_page",
     "parametros": [
