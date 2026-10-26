@@ -479,4 +479,34 @@ describe('abrir a conversa já indo à mensagem pedida', () => {
     expect(linha.scrollIntoView).not.toHaveBeenCalled();
     expect(avisos).not.toHaveBeenCalled();
   });
+
+  // Fechou a conversa (a tela saiu) enquanto a página com a mensagem vinha: a página
+  // chega, mas não há mais tela para rolar nem a quem avisar.
+  it('a tela fechou enquanto buscava a mensagem: para sem aviso nem rolagem', async () => {
+    const avisos = vi.fn();
+    emitter.on('newToastMessage', avisos);
+    aoFim.push(() => emitter.off('newToastMessage', avisos));
+    const ctx = contexto({ mensagens: [daLoja(50, 0, 900)] });
+    await ctx.rolarNaPele();
+    let liberar;
+    const portao = new Promise(resolve => {
+      liberar = resolve;
+    });
+    ctx.$store.dispatch = vi.fn(async () => {
+      await portao;
+      ctx.currentChat.messages = [
+        daLoja(10, 0, 800),
+        ...ctx.currentChat.messages,
+      ];
+    });
+    const linha = comMensagemNaTela(10);
+    const indo = ctx.rolarNaPele(10);
+    await assentar();
+    ctx.desmontada = true;
+    liberar();
+    await indo;
+    expect(ctx.$store.dispatch).toHaveBeenCalledTimes(1);
+    expect(linha.scrollIntoView).not.toHaveBeenCalled();
+    expect(avisos).not.toHaveBeenCalled();
+  });
 });
