@@ -54,6 +54,8 @@ RSpec.describe AddIndicesDaBuscaSemAcento do
     expect(validos.keys).to match_array(described_class::INDICES.map(&:last))
   end
 
+  # Vale enquanto esta for a última migration da lista. No dia em que a lista mudar, com uma migration nova, troque este
+  # teste para comparar a migration nova com o código.
   it 'a lista congelada na migration é a mesma do código' do
     expect(described_class::ACENTOS_COMBINANTES).to eq(SearchService::SemAcento::ACENTOS_COMBINANTES)
   end

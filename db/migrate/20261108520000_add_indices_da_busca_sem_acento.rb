@@ -13,9 +13,9 @@
 # - existe e é inválido (rodada interrompida): é apagado, concurrently;
 # - é criado concurrently, sem IF NOT EXISTS, e conferido depois: se não ficou válido, a migration para com erro.
 # CREATE INDEX CONCURRENTLY não trava leitura nem escrita, mas espera quem está escrevendo na tabela. Com o lock_timeout
-# do StrongMigrations a espera estourava, o índice ficava inválido, e a nova tentativa da gem com IF NOT EXISTS o dava
-# por pronto. Por isso o lock_timeout e o statement_timeout ficam zerados só durante cada CREATE/DROP INDEX
-# CONCURRENTLY e voltam no ensure.
+# do StrongMigrations (5 s) a espera estourava, o índice ficava inválido, e a nova tentativa da gem com IF NOT EXISTS o
+# dava por pronto. Por isso, só durante cada CREATE/DROP INDEX CONCURRENTLY, o lock_timeout sobe para 15 min e o
+# statement_timeout fica zerado; os dois voltam no ensure.
 class AddIndicesDaBuscaSemAcento < ActiveRecord::Migration[7.2]
   disable_ddl_transaction!
 
@@ -47,7 +47,10 @@ class AddIndicesDaBuscaSemAcento < ActiveRecord::Migration[7.2]
     INDICES.each do |tabela, coluna, nome|
       next if valido?(nome) == true
 
-      sem_espera_limitada do
+      com_espera_longa do
+        # Índice inválido também pode ser o CREATE CONCURRENTLY de outro processo que ainda está rodando (órfão de um
+        # deploy interrompido). Quem impede apagar o índice debaixo dele hoje é a trava de migration do Rails (advisory
+        # lock da sessão): enquanto a sessão daquele processo estiver viva, esta migration nem começa.
         remove_index tabela, name: nome, algorithm: :concurrently if valido?(nome) == false
         add_index tabela, "lower(translate(normalize(#{coluna}, NFD), '#{ACENTOS_COMBINANTES}', '')) gin_trgm_ops",
                   using: :gin, name: nome, algorithm: :concurrently
@@ -58,15 +61,18 @@ class AddIndicesDaBuscaSemAcento < ActiveRecord::Migration[7.2]
 
   def down
     INDICES.reverse_each do |tabela, _coluna, nome|
-      sem_espera_limitada { remove_index tabela, name: nome, algorithm: :concurrently, if_exists: true }
+      com_espera_longa { remove_index tabela, name: nome, algorithm: :concurrently, if_exists: true }
     end
   end
 
   private
 
-  def sem_espera_limitada
+  # lock_timeout finito e alto, não zero: espera sem fim prenderia o deploy. Se estourar, o CREATE falha alto: sem IF NOT
+  # EXISTS, a nova tentativa do StrongMigrations bate no índice inválido que sobrou e também falha, e a rodada seguinte
+  # desta migration apaga o inválido e refaz.
+  def com_espera_longa
     anteriores = { 'lock_timeout' => select_value('SHOW lock_timeout'), 'statement_timeout' => select_value('SHOW statement_timeout') }
-    safety_assured { execute 'SET lock_timeout = 0; SET statement_timeout = 0' }
+    safety_assured { execute "SET lock_timeout = '15min'; SET statement_timeout = 0" }
     yield
   ensure
     anteriores&.each { |nome, valor| safety_assured { execute "SET #{nome} = #{connection.quote(valor)}" } }
