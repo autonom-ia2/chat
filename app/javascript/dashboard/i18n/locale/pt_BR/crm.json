@@ -3884,7 +3884,10 @@
     }
   },
   "CRM_FILTRO_DO_LINK": {
-    "FECHADO_NO_MES": "Fechado: este mês"
+    "FECHADO_NO_MES": "Fechado: este mês",
+    "ORIGEM": "Origem",
+    "ANUNCIO": "Anúncio",
+    "ENTROU_EM_MES": "Entrou ou fechou: {mes}"
   },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Copiloto Autonom.ia",
@@ -6753,6 +6756,106 @@
       "VOLTOU": "Funil {funil} voltou.",
       "ABERTOS_VOLTARAM": "1 card aberto voltou para o quadro. | {count} cards abertos voltaram para o quadro.",
       "CAIXAS_VOLTARAM": "Clientes novos de {caixas} voltam a entrar aqui."
+    }
+  },
+  "CRM_NUMEROS_ORIGENS": {
+    "TITULO": "De onde vêm os clientes",
+    "VOLTAR": "Números",
+    "NOVA_ABA": "(abre em outra aba)",
+    "NOMES": {
+      "ANUNCIO_META": "Anúncio no Facebook ou Instagram",
+      "GOOGLE": "Anúncio no Google",
+      "SITE": "Seu site ou link",
+      "DIRETO": "Chegou direto",
+      "OUTRAS": "Outros caminhos"
+    },
+    "EXPLICA": {
+      "DIRETO": "Mandou mensagem sem vir de anúncio nem do seu site ou link.",
+      "OUTRAS": "Publicação sem anúncio, anúncio de outra rede, mensagem que você mandou para muitos e outros caminhos."
+    },
+    "DE_ONDE": {
+      "TITULO": "De onde vieram os clientes em {mes}?",
+      "RESUMO": "{n} cliente novo {onde} | {n} clientes novos {onde}",
+      "CLIENTES": "{n} cliente novo | {n} clientes novos",
+      "VENDAS": "{n} venda | {n} vendas",
+      "SEM_VENDA": "nenhuma venda ainda",
+      "VER": "Ver lista",
+      "DESTAQUE": "{n} dos {total} clientes novos vieram de: {origem}.",
+      "VER_ARIA": "Ver o cliente de {origem}: {vendas} | Ver os {n} clientes de {origem}: {vendas}",
+      "SEM_VENDA_FUNIL": "Nenhuma venda neste funil em {mes}.",
+      "SEM_VENDA_TODOS": "Nenhuma venda em {mes}.",
+      "SEPARADOR": "·"
+    },
+    "ANUNCIOS": {
+      "TITULO": "Qual anúncio trouxe venda?",
+      "SEM_VENDA": "ainda sem venda",
+      "GASTOU": "gastou {valor}",
+      "POR_VENDA": "{valor} por venda",
+      "VER": "Ver os clientes deste anúncio",
+      "VER_ARIA": "Ver os clientes do anúncio {anuncio}: {numeros}",
+      "SEM_NOME": "Anúncio sem nome"
+    },
+    "GASTO": {
+      "TITULO": "Quanto você pagou por cada venda?",
+      "TOTAL": "gastos em anúncios em {mes}",
+      "POR_VENDA": "por venda",
+      "RETORNO": "Cada {um} gasto em anúncio trouxe {valor} em vendas.",
+      "POR_CLIENTE": "por cliente novo"
+    },
+    "NAO_MANDARAM": {
+      "TITULO": "Quantos tocaram no anúncio e não mandaram mensagem?",
+      "FRASE": "De {toques} toques nos anúncios, {n} virou cliente novo. | De {toques} toques nos anúncios, {n} viraram clientes novos.",
+      "EXPLICA": "Os outros tocaram e não mandaram mensagem, ou tocaram mais de uma vez. O Facebook não diz quem são.",
+      "VER": "Abrir os anúncios no Facebook"
+    },
+    "VAZIO": {
+      "TITULO": "Nenhum cliente novo em {mes}.",
+      "ACAO": "Abrir o funil",
+      "TITULO_FUNIL": "Ninguém entrou no funil {funil} em {mes}."
+    },
+    "ATALHO": {
+      "TEXTO": "{n} dos {total} clientes novos vieram de: {origem}."
+    },
+    "COMO_CONTAMOS": {
+      "LINK": "Como contamos",
+      "TITULO": "Como contamos",
+      "DESCRICAO": "As regras que valem para os números desta tela.",
+      "REGRA_QUEM": "Clientes novos são os que entraram no funil escolhido no mês, no fuso da conta ({fuso}).",
+      "REGRA_ORIGEM": "A origem é o primeiro caminho por onde a pessoa chegou. Se ela voltar depois por outro anúncio, a origem não muda.",
+      "REGRA_VENDA": "A venda conta no mês em que foi fechada, mesmo que o cliente tenha entrado antes. Por isso a lista mostra quem entrou ou fechou no mês.",
+      "REGRA_DIRETO": "Chegou direto: mandou mensagem sem vir de anúncio nem do seu site ou link.",
+      "REGRA_GASTO": "O gasto vem do Facebook e aparece só em \"Todos os funis\", porque é da conta toda. O custo por cliente novo usa os clientes que entraram nos funis, por isso pode ser diferente do número do Facebook.",
+      "REGRA_GASTO_TOTAL": "O gasto é o total da conta com anúncios no mês, inclusive anúncios que não trouxeram conversa. Por isso pode ser maior que a soma dos anúncios da lista e diferente da tela de Anúncios."
+    },
+    "GASTO_OCULTO": "O gasto com anúncios aparece só para quem pode ver os anúncios. Peça a quem administra a conta.",
+    "FUNIL": {
+      "ROTULO": "Funil",
+      "PRINCIPAL": "{nome} (principal)",
+      "NOME": "{nome}",
+      "TODOS": "Todos os funis",
+      "ONDE": "no funil {nome}",
+      "ONDE_TODOS": "em todos os funis",
+      "SEM_LISTA": "Escolha um funil para ver a lista"
+    },
+    "RELATORIO": {
+      "BUTTON": "Baixar relatório",
+      "TITLE": "Baixar o relatório",
+      "DESCRIPTION": "{filtro}. Leva os mesmos números desta tela.",
+      "FILTRO_FUNIL": "{mes}, funil {funil}",
+      "FILTRO_TODOS": "{mes}, todos os funis",
+      "PDF_TITLE": "PDF para apresentar",
+      "PDF_HINT": "Página pronta para mostrar ou mandar para alguém.",
+      "SHEET_TITLE": "Planilha para trabalhar os números",
+      "SHEET_HINT": "Abre no Excel ou no Google Planilhas, com cada origem e cada anúncio.",
+      "CONFIRM": "Baixar",
+      "WITH_PEOPLE": "A lista de clientes vai junto.",
+      "NO_PEOPLE": "Sem a permissão \"Exportar a lista do CRM para Excel\", o arquivo leva só os números, sem a lista de pessoas.",
+      "ALTERAR": "Alterar mês ou funil",
+      "ERROR": "Não deu para baixar o relatório. Tente de novo."
+    },
+    "GASTO_EM_TODOS": {
+      "TEXTO": "O gasto com anúncios é da conta toda. Para ver quanto custou cada venda, escolha Todos os funis.",
+      "ACAO": "Ver todos os funis"
     }
   }
 }

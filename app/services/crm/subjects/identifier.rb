@@ -31,7 +31,7 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
 
   def perform
     setting = Crm::InboxSetting.find_by(account_id: @account.id, inbox_id: @conversation.inbox_id, crm_enabled: true)
-    return if setting.nil? || setting.subject_ai_off? || !Crm::Ai::Config.enabled?
+    return unless perguntar?(setting)
 
     anterior = existente
     return anterior if pipelines.empty?
@@ -46,6 +46,14 @@ class Crm::Subjects::Identifier # rubocop:disable Metrics/ClassLength -- passou 
   end
 
   private
+
+  # #2084: contato marcado parceiro ou não é negócio não passa pela IA de assunto: nem card, nem sugestão, nem
+  # pergunta ao modelo. O IdentifyJob segue e grava o marco que o ReplyJob espera.
+  def perguntar?(setting)
+    return false if setting.nil? || setting.subject_ai_off? || !Crm::Ai::Config.enabled?
+
+    !Crm::Relacao.fora_do_funil?(@conversation.contact)
+  end
 
   def existente = Crm::SubjectDecision.find_by(conversation_id: @conversation.id, message_id: @message.id)
 

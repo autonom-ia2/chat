@@ -71,6 +71,53 @@ RSpec.describe Crm::Subjects::Identifier do
     expect(Crm::SubjectDecision.count).to eq(0)
   end
 
+  # #2084: contato marcado parceiro ou não é negócio não passa pela IA de assunto, nem em Sugerir.
+  context 'with the contact out of the funnel (contato_relacao)' do
+    before { account.enable_features!('contato_relacao') }
+
+    %i[parceiro nao_e_negocio].each do |relacao|
+      it "#{relacao}: não pergunta ao Jev nem ao modelo maior, não cria card nem decisão" do
+        contact.update!(relacao: relacao)
+        requests = stub_jev("novo_#{comercial.id}")
+        stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+        expect(identify(incoming('E o Chat2You, quanto custa para 5 atendentes?'))).to be_nil
+        expect(requests).to be_empty
+        expect(cliente).not_to have_received(:create)
+        expect(account.crm_cards.count).to eq(0)
+        expect(Crm::SubjectDecision.count).to eq(0)
+      end
+    end
+
+    it 'em Sugerir também não sugere nada' do
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(subject_ai_mode: :suggest)
+      contact.update!(relacao: :parceiro)
+      requests = stub_jev("novo_#{comercial.id}")
+
+      expect(identify(incoming('Queria também o plano anual'))).to be_nil
+      expect(requests).to be_empty
+      expect(Crm::SubjectDecision.where(state: 'suggested')).to be_empty
+    end
+
+    it 'interessado segue como sempre: o assunto novo vira card' do
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+      expect(identify(incoming('E o Chat2You, quanto custa?'))).to have_attributes(state: 'applied')
+      expect(account.crm_cards.count).to eq(1)
+    end
+
+    it 'com a flag desligada, a marca não muda nada' do
+      account.disable_features!('contato_relacao')
+      contact.update!(relacao: :parceiro)
+      stub_jev("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+      expect(identify(incoming('E o Chat2You, quanto custa?'))).to have_attributes(state: 'applied')
+      expect(account.crm_cards.count).to eq(1)
+    end
+  end
+
   it '"Oi, bom dia" não cria card nem dá nome: o Jev diz que ainda não há assunto e o modelo maior não é chamado' do
     card = create_card(title: 'Joana Lima')
     requests = stub_jev('sem_assunto')

@@ -20,8 +20,9 @@ class Crm::Subjects::Abrir
     end
   end
 
+  # fora_do_funil (#2084): o contato foi marcado parceiro do mercado ou não é negócio.
   RECUSAS = %i[sem_crm funil_invalido sem_agente_responsavel agente_fora_da_caixa pessoa_atribuida esperando_pessoa
-               assunto_escolhido_por_pessoa].freeze
+               assunto_escolhido_por_pessoa fora_do_funil].freeze
   EVENTO = 'ai_subject_opened'.freeze
   # Teto de cada texto livre na atividade (o payload do card recusa texto maior que 1500).
   MAX_TEXTO = 1_000
@@ -52,6 +53,7 @@ class Crm::Subjects::Abrir
 
   def recusa_previa
     return :sem_crm unless crm_ligado?
+    return :fora_do_funil if Crm::Relacao.fora_do_funil?(@conversation.contact)
     return :funil_invalido unless Crm::Ai::Config.funil_de_destino?(@pipeline, @conversation.inbox)
     return :sem_agente_responsavel if agente.nil?
 

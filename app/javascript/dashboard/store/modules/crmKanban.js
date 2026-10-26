@@ -35,6 +35,11 @@ export const defaultFilters = () => ({
   // #1883: "fechado neste mês" (`this_month`), só da Lista, como o `result`. O mês
   // é calculado no servidor, no fuso da conta; por isso força o refetch no realtime.
   closedIn: '',
+  // Números › Origens (#2001, F6): os "Ver" da tela. Só da Lista, como o `closedIn`:
+  // origem de primeiro toque, anúncio de primeiro toque e "entrou no funil este mês".
+  origem: '',
+  anuncio: '',
+  entrouEm: '',
   // PR14.7b/c high-value filters. Realtime contract per filter:
   //  - stageIds / teamId / valueMin / valueMax / staleDays / campaignSourceIds
   //    are evaluable from a single card payload and ARE mirrored in
@@ -73,6 +78,9 @@ export const SERVER_ONLY_FILTER_KEYS = [
   'aiPending',
   'labelIds',
   'closedIn',
+  'origem',
+  'anuncio',
+  'entrouEm',
 ];
 
 export const hasServerOnlyFilters = filters =>
@@ -280,6 +288,9 @@ const normalizeFilters = filters => {
   // List-only "Resultado" filter; the board strips it in fetchBoard.
   if (filters.result) params.result = filters.result;
   if (filters.closedIn) params.closed_in = filters.closedIn;
+  if (filters.origem) params.origem = filters.origem;
+  if (filters.anuncio) params.anuncio = filters.anuncio;
+  if (filters.entrouEm) params.entrou_em = filters.entrouEm;
   if (filters.stageIds?.length) params.stage_ids = filters.stageIds.join(',');
   if (filters.labelIds?.length) params.label_ids = filters.labelIds.join(',');
   if (filters.campaignSourceIds?.length)
@@ -534,6 +545,9 @@ export const actions = {
       const {
         result,
         closed_in: _closedIn,
+        origem: _origem,
+        anuncio: _anuncio,
+        entrou_em: _entrouEm,
         ...boardFilters
       } = normalizeFilters($state.filters);
       // An explicit stageIds payload (used to refetch specific columns) wins;
