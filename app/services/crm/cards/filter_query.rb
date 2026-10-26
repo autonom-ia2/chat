@@ -25,6 +25,8 @@ class Crm::Cards::FilterQuery
 
   # #1883: "fechado neste mês" (`closed_in=this_month`), para os links do Números. List-only, como o `result`.
   CLOSED_IN_THIS_MONTH = 'this_month'.freeze
+  # #2001 (F6): o "Ver" de Números › "De onde vieram os clientes".
+  ORIGENS_PARAMS = %i[entrou_em origem anuncio].freeze
 
   def initialize(scope:, params:, conversation_visibility:, account: Current.account, account_user: Current.account_user)
     @scope = scope
@@ -122,12 +124,15 @@ class Crm::Cards::FilterQuery
   # foi ganho no mês, no fuso da conta) e, dentro disso, `origem` (o grupo da origem de primeiro toque) ou `anuncio`
   # (o id do anúncio do primeiro toque). A seleção e a origem são as mesmas da tela (Crm::Numeros::Origens::Cards e
   # Classificador), então a lista tem o tamanho que a tela mostra. List-only, como o `closed_in`. Origem e anúncio só
-  # valem junto do mês: sem ele a classificação leria o funil inteiro.
+  # valem junto do mês (sem ele a classificação leria o funil inteiro): link com mês inválido, fora do limite de meses ou
+  # com origem/anúncio sem mês mostra a lista vazia, nunca o funil inteiro sem filtro.
   def apply_origens_filter(cards)
-    range = entrou_em_range
-    return cards if range.nil?
+    return cards if ORIGENS_PARAMS.all? { |chave| @params[chave].blank? }
 
-    cards = Crm::Numeros::Origens::Cards.do_mes(cards, range)
+    range = entrou_em_range
+    return cards.none if range.nil?
+
+    cards = Crm::Numeros::Origens::Cards.do_mes(cards, range, account: @account)
     origem = Crm::Numeros::Origens::Classificador::ORIGENS.find { |grupo| grupo == @params[:origem].to_s }
     anuncio = @params[:anuncio].to_s.presence
     return cards if origem.nil? && anuncio.nil?

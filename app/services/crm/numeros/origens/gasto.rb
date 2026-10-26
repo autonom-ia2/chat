@@ -1,6 +1,7 @@
 # O gasto com anúncios do mês em Números › "De onde vieram os clientes" (#2001, F6 do #1871): o que a coleta diária
 # da Meta guardou (Crm::MetaAdInsightDaily, a mesma fonte do painel de Anúncios) para a conta de anúncios conectada,
-# nos dias do mês. Os dias são os da Meta (o fuso da conta de anúncios), como no painel.
+# nos dias do mês da tela (no fuso da conta). A Meta grava cada dia no fuso da conta de anúncios; quando os dois fusos
+# diferem, a virada do mês pode cair num dia vizinho, como no painel de Anúncios no período "Este mês".
 #
 # Só existe com a conexão ativa e uma conta de anúncios escolhida; sem isso, ou com gasto zero, `existe?` é falso e a
 # tela não mostra nada de gasto (regra do Rodrigo, 21/10: nem zero, nem traço).
@@ -22,6 +23,13 @@ class Crm::Numeros::Origens::Gasto
 
   def total
     @total ||= por_anuncio.values.sum.round(2)
+  end
+
+  # A moeda da conta de anúncios (nil quando não há gasto guardado).
+  def moeda
+    return @moeda if defined?(@moeda)
+
+    @moeda = insights.where.not(currency: nil).pick(:currency)
   end
 
   def toques

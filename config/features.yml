@@ -871,6 +871,16 @@
   enabled: false
   column: feature_flags_ext_1
 
+# Este contato é (#2084/#2085): interessado (o padrão), parceiro do mercado ou não é negócio, na coluna contacts.relacao.
+# Ligada: parceiro e não é negócio não viram card sozinhos e ficam fora dos Números (Crm::Relacao). Card criado à mão
+# continua valendo. Desligada: todo contato é do funil, como antes. Este PR só traz a coluna, a regra e a flag; as
+# travas, os Números, a API e as telas vêm nos PRs seguintes do #2084. Posição 1 na feature_flags_ext_2 (1 << 0), a
+# primeira da coluna, confirmada pela Orquestração (25/10): chega à main antes das flags de anúncio (#2195, #2199, #2212).
+- name: contato_relacao
+  display_name: Contatos › este contato é interessado, parceiro ou não é negócio
+  enabled: false
+  column: feature_flags_ext_2
+
 # CRM › Números › "De onde vieram os clientes" (#2001, F6 do #1871). Ligada: a visão "Equipe" de Números ganha o
 # atalho e a tela das origens (mês e funil, anúncios, gasto só em "Todos os funis" para quem vê os anúncios) e o
 # relatório em PDF e planilha. Desligada: nada disso aparece e a API responde 404. Depende de crm_numeros_lentes e

@@ -33,7 +33,8 @@ RSpec.describe Crm::Cards::FilterQuery do
   end
 
   def lista(params)
-    described_class.new(scope: account.crm_cards, params: params.merge(pipeline_id: vendas.first.id), conversation_visibility: visibility)
+    described_class.new(scope: account.crm_cards, params: params.merge(pipeline_id: vendas.first.id), conversation_visibility: visibility,
+                        account: account)
                    .perform.to_a
   end
 
@@ -52,8 +53,10 @@ RSpec.describe Crm::Cards::FilterQuery do
     expect(tela[:anuncios].first[:lista]).to eq(2)
   end
 
-  it 'sem o mês, origem e anúncio não filtram; mês inválido é ignorado' do
-    expect(lista(origem: 'direto')).to contain_exactly(do_anuncio, fechou_agora, direto, mes_passado)
-    expect(lista(entrou_em: '2026-13', origem: 'direto')).to contain_exactly(do_anuncio, fechou_agora, direto, mes_passado)
+  it 'link quebrado (origem sem mês, mês inválido ou fora do limite) mostra a lista vazia, nunca o funil inteiro' do
+    expect(lista({})).to contain_exactly(do_anuncio, fechou_agora, direto, mes_passado)
+    expect(lista(origem: 'direto')).to be_empty
+    expect(lista(entrou_em: '2026-13', origem: 'direto')).to be_empty
+    expect(lista(entrou_em: '2024-01')).to be_empty
   end
 end

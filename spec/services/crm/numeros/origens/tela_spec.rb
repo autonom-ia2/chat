@@ -24,7 +24,8 @@ RSpec.describe Crm::Numeros::Origens::Tela do
     pipeline, stage = funil
     conversation = create_crm_conversation(account: account, inbox: inbox, contact: create(:contact, account: account))
     conversation.update_columns(additional_attributes: { 'campaign' => campaign }) if campaign # rubocop:disable Rails/SkipsModelValidations
-    account.crm_cards.create!(pipeline: pipeline, stage: stage, primary_conversation: conversation, title: "Card #{SecureRandom.hex(3)}",
+    account.crm_cards.create!(pipeline: pipeline, stage: stage, primary_conversation: conversation, contact: conversation.contact,
+                              title: "Card #{SecureRandom.hex(3)}",
                               value_cents: valor, created_at: criado, **attrs)
   end
 
@@ -112,6 +113,23 @@ RSpec.describe Crm::Numeros::Origens::Tela do
     expect(tela[:origens].map { |linha| linha[:tipo] }).to eq(%w[google])
   end
 
+  # #2084/#2085: contato parceiro do mercado ou "não é negócio" sai dos Números pela regra única (Crm::Relacao), com a flag.
+  it 'tira o contato marcado como parceiro ou "não é negócio" com a flag contato_relacao, e card sem contato conta' do
+    parceiro = card(funil: vendas, campaign: toque('google_ads'))
+    parceiro.contact.update!(relacao: :parceiro)
+    card(funil: vendas, campaign: toque('google_ads')).contact.update!(relacao: :nao_e_negocio)
+    card(funil: vendas, campaign: toque('google_ads'))
+    sem_contato = card(funil: vendas)
+    sem_contato.update_columns(contact_id: nil) # rubocop:disable Rails/SkipsModelValidations
+
+    expect(origem(tela, 'google')[:clientes]).to eq(3)
+
+    account.enable_features!('contato_relacao')
+
+    expect(origem(tela, 'google')[:clientes]).to eq(1)
+    expect(origem(tela, 'direto')[:clientes]).to eq(1)
+  end
+
   it 'mês sem ninguém: vazio, com o seletor de funil' do
     vendas
 
@@ -163,6 +181,13 @@ RSpec.describe Crm::Numeros::Origens::Tela do
 
     it 'sem o R$ de venda, o retorno some (é tirado do dinheiro)' do
       expect(tela(funil: 'todos', valor: false)[:gasto]).to include(retorno: nil, total: 400.0)
+    end
+
+    it 'gasto em outra moeda que a das vendas: nada de gasto, custo nem retorno' do
+      Crm::MetaAdInsightDaily.where(account_id: account.id).update_all(currency: 'USD') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(tela(funil: 'todos')).to include(gasto: nil, gastoOculto: false)
+      expect(tela[:gastoEmTodos]).to be(false)
     end
 
     it 'conexão parada: nada de gasto nem aviso' do

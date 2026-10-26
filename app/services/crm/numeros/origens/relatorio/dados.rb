@@ -77,7 +77,7 @@ class Crm::Numeros::Origens::Relatorio::Dados
   private
 
   def visiveis
-    ids = @cards_visiveis.where(id: @tela.linhas.map(&:id)).pluck(:id).to_set
+    ids = @cards_visiveis.where(id: @tela.cards_do_mes.select(:id)).pluck(:id).to_set
     @tela.linhas.select { |linha| ids.include?(linha.id) }
   end
 

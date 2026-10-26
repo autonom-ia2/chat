@@ -33,6 +33,12 @@ class Crm::Numeros::Origens::Tela
                gastoEmTodos: gasto_em_todos?)
   end
 
+  # Os cards do mês nos funis escolhidos. Os números são da equipe, como na visão "Equipe" (Crm::Numeros::Equipe): o
+  # acesso é por funil (Funis), não por card; os nomes de clientes só saem no arquivo, com o policy_scope da pessoa.
+  def cards_do_mes
+    Crm::Numeros::Origens::Cards.do_mes(@account.crm_cards.where(pipeline_id: @funis.ids), @mes.range, account: @account)
+  end
+
   # O resto da tela (relatório baixado) lê os mesmos números.
   def linhas
     @linhas ||= Crm::Numeros::Origens::Classificador.new(cards_do_mes, @mes.range).linhas
@@ -61,7 +67,7 @@ class Crm::Numeros::Origens::Tela
   def gasto_da_tela
     return @gasto_da_tela if defined?(@gasto_da_tela)
 
-    @gasto_da_tela = (resumo_do_gasto if @funis.todos? && @gasto_permitido && gasto.existe?)
+    @gasto_da_tela = (resumo_do_gasto if @funis.todos? && @gasto_permitido && gasto_comparavel?)
   end
 
   private
@@ -88,20 +94,21 @@ class Crm::Numeros::Origens::Tela
     [-anuncio[:valor].to_f, -anuncio[:vendas], -anuncio[:clientes], anuncio[:id]]
   end
 
-  def cards_do_mes
-    Crm::Numeros::Origens::Cards.do_mes(@account.crm_cards.where(pipeline_id: @funis.ids), @mes.range)
-  end
-
   def gasto
     @gasto ||= Crm::Numeros::Origens::Gasto.new(account: @account, mes: @mes)
   end
 
+  # Gasto em outra moeda que a das vendas não se divide pelas vendas: a tela não mostra (nem custo, nem retorno).
+  def gasto_comparavel?
+    gasto.existe? && [nil, moeda].include?(gasto.moeda)
+  end
+
   def gasto_oculto?
-    @funis.todos? && !@gasto_permitido && gasto.existe?
+    @funis.todos? && !@gasto_permitido && gasto_comparavel?
   end
 
   def gasto_em_todos?
-    !@funis.todos? && @funis.ve_todos? && @gasto_permitido && gasto.existe?
+    !@funis.todos? && @funis.ve_todos? && @gasto_permitido && gasto_comparavel?
   end
 
   def numeros(cards)
