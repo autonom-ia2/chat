@@ -46,13 +46,13 @@ class Crm::Numeros::MeusCards
   def fechados_na_lista(tipo, desde)
     return [] if funil(tipo).nil?
 
-    @account.crm_cards.where(pipeline_id: funil(tipo), owner_id: @user.id, status: FECHADOS, closed_at: desde..).pluck(:id)
+    Crm::Relacao.cards_do_funil(@account).where(pipeline_id: funil(tipo), owner_id: @user.id, status: FECHADOS, closed_at: desde..).pluck(:id)
   end
 
   private
 
   def abertos(pipeline_ids)
-    @account.crm_cards.where(status: Crm::Card.statuses[:open], owner_id: @user.id, pipeline_id: pipeline_ids)
+    Crm::Relacao.cards_do_funil(@account).where(status: Crm::Card.statuses[:open], owner_id: @user.id, pipeline_id: pipeline_ids)
   end
 
   def principal(tipo)

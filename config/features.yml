@@ -575,12 +575,12 @@
 # robô, follow-up, automação; não campanha) marca a conversa como lida antes de sair (ConversaCanal::LeituraAoResponder,
 # que usa a lida do #1702 e depende também de `conversa_cara_do_canal`). Posição 39 na feature_flags_ext_1, bit 38
 # (274877906944), logo depois de `conversa_email_nova` (tabela da Orquestração, 19/10): a posição na lista é o bit; se
-# outra flag entrar antes na main, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb). Desligada
-# (padrão): tudo como antes.
-# Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+# outra flag entrar antes na main, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb). Desligada:
+# tudo como antes. Padrão das contas novas: ligada desde o #2221 (migration 20261108500000), pedido do Rodrigo em
+# 26/10/2026, que mandou ligar em todas as contas das duas stacks. Antes, só nas contas 1, 16, 17 e 18 da stack Hub2You.
 - name: whatsapp_agenda_do_contato
   display_name: Contato na agenda do aparelho e lida ao responder (WhatsApp API)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # "Lido" do e-mail sincronizado com o servidor do cliente (#1870): na caixa de e-mail com IMAP (Gmail e Microsoft por

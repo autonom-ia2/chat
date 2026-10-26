@@ -67,7 +67,7 @@ module Crm
       end
 
       def pipeline_cards
-        account.crm_cards.where(pipeline_id: pipeline.id)
+        Crm::Relacao.cards_do_funil(account).where(pipeline_id: pipeline.id)
       end
 
       def open_cards
