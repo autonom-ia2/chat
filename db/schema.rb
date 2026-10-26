@@ -282,7 +282,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_520000) do
     t.string "fallback_title"
     t.string "extension"
     t.jsonb "meta", default: {}
-    t.index "lower(translate((meta ->> 'transcribed_text'::text), 'ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝàáâãäåçèéêëìíîïñòóôõöùúûüýÿĀāĂăĄąĆćĈĉĊċČčĎďĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĨĩĪīĬĭĮįİĴĵĶķĹĺĻļĽľŃńŅņŇňŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽž'::text, 'AAAAAACEEEEIIIINOOOOOUUUUYaaaaaaceeeeiiiinooooouuuuyyAaAaAaCcCcCcCcDdEeEeEeEeEeGgGgGgGgHhIiIiIiIiIJjKkLlLlLlNnNnNnOoOoOoRrRrRrSsSsSsSsTtTtUuUuUuUuUuUuWwYyYZzZzZz'::text)) gin_trgm_ops", name: "idx_attachments_transcricao_sem_acento_trgm", using: :gin
+    t.index "lower(translate(NORMALIZE((meta ->> 'transcribed_text'::text), NFD), '̧̨̀́̂̃̄̆̇̈̊̋̌'::text, ''::text)) gin_trgm_ops", name: "idx_attachments_transcricao_sem_acento_trgm", using: :gin
     t.index ["account_id"], name: "index_attachments_on_account_id"
     t.index ["message_id"], name: "index_attachments_on_message_id"
   end
@@ -1786,7 +1786,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_520000) do
     t.index "account_id, lower((custom_attributes ->> 'waha_whatsapp_lid'::text))", name: "idx_contacts_account_lower_waha_whatsapp_lid"
     t.index "account_id, lower((identifier)::text)", name: "idx_contacts_account_lower_identifier"
     t.index "lower((email)::text), account_id", name: "index_contacts_on_lower_email_account_id"
-    t.index "lower(translate((name)::text, 'ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝàáâãäåçèéêëìíîïñòóôõöùúûüýÿĀāĂăĄąĆćĈĉĊċČčĎďĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĨĩĪīĬĭĮįİĴĵĶķĹĺĻļĽľŃńŅņŇňŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽž'::text, 'AAAAAACEEEEIIIINOOOOOUUUUYaaaaaaceeeeiiiinooooouuuuyyAaAaAaCcCcCcCcDdEeEeEeEeEeGgGgGgGgHhIiIiIiIiIJjKkLlLlLlNnNnNnOoOoOoRrRrRrSsSsSsSsTtTtUuUuUuUuUuUuWwYyYZzZzZz'::text)) gin_trgm_ops", name: "idx_contacts_nome_sem_acento_trgm", using: :gin
+    t.index "lower(translate(NORMALIZE(name, NFD), '̧̨̀́̂̃̄̆̇̈̊̋̌'::text, ''::text)) gin_trgm_ops", name: "idx_contacts_nome_sem_acento_trgm", using: :gin
     t.index ["account_id", "contact_type"], name: "index_contacts_on_account_id_and_contact_type"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["account_id", "last_activity_at"], name: "index_contacts_on_account_id_and_last_activity_at", order: { last_activity_at: "DESC NULLS LAST" }
@@ -2222,6 +2222,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_520000) do
     t.string "external_id"
     t.jsonb "custom_attributes", default: {}, null: false
     t.index "lower((title)::text) gin_trgm_ops", name: "idx_crm_cards_title_trgm", using: :gin
+    t.index "lower(translate(NORMALIZE(title, NFD), '̧̨̀́̂̃̄̆̇̈̊̋̌'::text, ''::text)) gin_trgm_ops", name: "idx_crm_cards_titulo_sem_acento_trgm", using: :gin
     t.index ["account_id", "contact_id"], name: "idx_crm_cards_contact"
     t.index ["account_id", "conversation_id", "status", "id"], name: "idx_crm_cards_conversation"
     t.index ["account_id", "entered_stage_at"], name: "idx_crm_cards_entered_stage"
@@ -3709,7 +3710,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_520000) do
     t.jsonb "sentiment", default: {}
     t.index "((additional_attributes -> 'campaign_id'::text))", name: "index_messages_on_additional_attributes_campaign_id", using: :gin
     t.index "((additional_attributes ->> 'convite_uid_sha256'::text))", name: "index_messages_on_convite_uid_sha256", where: "((additional_attributes ->> 'convite_uid_sha256'::text) IS NOT NULL)"
-    t.index "lower(translate(content, 'ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝàáâãäåçèéêëìíîïñòóôõöùúûüýÿĀāĂăĄąĆćĈĉĊċČčĎďĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĨĩĪīĬĭĮįİĴĵĶķĹĺĻļĽľŃńŅņŇňŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽž'::text, 'AAAAAACEEEEIIIINOOOOOUUUUYaaaaaaceeeeiiiinooooouuuuyyAaAaAaCcCcCcCcDdEeEeEeEeEeGgGgGgGgHhIiIiIiIiIJjKkLlLlLlNnNnNnOoOoOoRrRrRrSsSsSsSsTtTtUuUuUuUuUuUuWwYyYZzZzZz'::text)) gin_trgm_ops", name: "idx_messages_conteudo_sem_acento_trgm", using: :gin
+    t.index "lower(translate(NORMALIZE(content, NFD), '̧̨̀́̂̃̄̆̇̈̊̋̌'::text, ''::text)) gin_trgm_ops", name: "idx_messages_conteudo_sem_acento_trgm", using: :gin
     t.index ["account_id", "content_type", "created_at"], name: "idx_messages_account_content_created"
     t.index ["account_id", "created_at", "message_type"], name: "index_messages_on_account_created_type"
     t.index ["account_id", "inbox_id"], name: "index_messages_on_account_id_and_inbox_id"
