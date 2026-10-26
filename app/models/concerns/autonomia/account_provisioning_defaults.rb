@@ -29,7 +29,7 @@ module Autonomia::AccountProvisioningDefaults
     self.internal_attributes = {
       Autonomia::Agents::Fase2::INTERNAL_ATTR_KEY => true,
       Autonomia::Agents::AgenteIaPorCaixa::INTERNAL_ATTR_KEY => true
-    }.merge(internal_attributes.to_h)
+    }.merge(internal_attributes.to_h.stringify_keys)
   end
 
   def autonomia_named_default_features
