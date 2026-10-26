@@ -70,7 +70,9 @@ class Crm::MetaAds::Panel::Cohort
     links = card_links
     return [] if links.empty?
 
-    Crm::Card.where(account_id: @account_id, id: links.keys).includes(:stage).map { |card| card_row(card, links[card.id]) }
+    # #2084: card de contato fora do funil (parceiro, não é negócio) não conta como proposta nem venda do anúncio.
+    Crm::Relacao.cards_do_funil(Account.find(@account_id)).where(id: links.keys).includes(:stage)
+                .map { |card| card_row(card, links[card.id]) }
   end
 
   def card_row(card, conversation_id)

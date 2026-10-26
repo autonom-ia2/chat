@@ -39,7 +39,7 @@ class Crm::Numeros::Credito
 
   # Só os funis ativos, como as Metas (Crm::Metas::Escopo): o funil arquivado sai dos Números.
   def fechados
-    @fechados ||= linhas(@account.crm_cards.where(pipeline_id: @account.crm_pipelines.active.select(:id), closed_at: @range))
+    @fechados ||= linhas(Crm::Relacao.cards_do_funil(@account).where(pipeline_id: @account.crm_pipelines.active.select(:id), closed_at: @range))
   end
 
   # O card arquivado depois de fechado conta pelo desfecho que tinha (Crm::Card::DESFECHO_ARQUIVADO).
