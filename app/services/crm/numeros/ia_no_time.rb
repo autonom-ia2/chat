@@ -44,7 +44,7 @@ class Crm::Numeros::IaNoTime
   end
 
   def venda
-    vendas = @account.crm_cards.where(id: @ganhos, pipeline_id: @cards.ids(:venda)).where(card_com_robo_sql)
+    vendas = Crm::Relacao.cards_do_funil(@account).where(id: @ganhos, pipeline_id: @cards.ids(:venda)).where(card_com_robo_sql)
     { participou: vendas.count, valor: @valor ? (vendas.where(currency: @moeda).sum(:value_cents) / 100.0).round(2) : nil }
   end
 
@@ -70,7 +70,7 @@ class Crm::Numeros::IaNoTime
   end
 
   def conversas_de(pipeline_ids)
-    cards = @account.crm_cards.where(pipeline_id: pipeline_ids)
+    cards = Crm::Relacao.cards_do_funil(@account).where(pipeline_id: pipeline_ids)
     principais = cards.where.not(conversation_id: nil).select(:conversation_id)
     vinculadas = Crm::CardConversation.where(account_id: @account.id, card_id: cards.select(:id)).select(:conversation_id)
     Conversation.where(account_id: @account.id).where(id: principais)

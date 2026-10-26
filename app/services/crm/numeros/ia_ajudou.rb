@@ -18,7 +18,7 @@ class Crm::Numeros::IaAjudou
     ids = (passagens.map(&:first) + marcadas).uniq
     return if ids.empty?
 
-    viraram = @account.crm_cards.where(id: @ganhos, conversation_id: ids).distinct.count(:conversation_id)
+    viraram = Crm::Relacao.cards_do_funil(@account).where(id: @ganhos, conversation_id: ids).distinct.count(:conversation_id)
     { ia: nome_da_ia, passou: ids.size, viraram: viraram }
   end
 

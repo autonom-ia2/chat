@@ -33,7 +33,7 @@ module Crm
         scope = account.crm_follow_ups
         return scope if pipeline.blank?
 
-        scope.where(card_id: account.crm_cards.where(pipeline_id: pipeline.id).select(:id))
+        scope.where(card_id: Crm::Relacao.cards_do_funil(account).where(pipeline_id: pipeline.id).select(:id))
       end
 
       # A chave do enum vem como texto ("pending"); a leitura antiga procurava pelo número e tudo saía 0.

@@ -9,7 +9,7 @@ class Crm::Metas::Vendido < Crm::Numeros::Credito
   # Vendas: { [pipeline_id, user_id, moeda] => centavos }
   def por_pessoa
     ganhos = fechados.select { |fechado| fechado[:status] == 'won' }
-    funis = @account.crm_cards.where(id: ganhos.pluck(:id)).pluck(:id, :pipeline_id).to_h
+    funis = Crm::Relacao.cards_do_funil(@account).where(id: ganhos.pluck(:id)).pluck(:id, :pipeline_id).to_h
     ganhos.each_with_object(Hash.new(0)) do |fechado, soma|
       dono = responsavel_de(fechado)
       soma[[funis[fechado[:id]], dono, fechado[:currency]]] += fechado[:value_cents].to_i if dono
