@@ -42,8 +42,8 @@ module ConversaCanal::VistaAoResponder
   LINHAS_DO_BACKTRACE = 5
 
   def self.conta?(message)
-    message.outgoing? && !message.private? && !message.failed? && de_pessoa?(message) &&
-      !::Messages::NaoEResposta.nao_e_resposta?(message)
+    message.outgoing? && !message.private? && !message.failed? &&
+      !::Messages::NaoEResposta.nao_e_resposta?(message) && de_pessoa?(message)
   end
 
   def self.de_pessoa?(message)

@@ -55,7 +55,7 @@ RSpec.describe 'Resposta pela API e a bolinha de não lida (#2202)', type: :requ
     responder({ 'api_access_token' => token.access_token.token, 'Idempotency-Key' => "m-#{SecureRandom.hex(6)}" })
 
     expect(response).to have_http_status(:success)
-    expect(conversa.messages.outgoing.last.sender_type).to eq('User')
+    expect(conversa.messages.outgoing.last.sender).to eq(token.account_user.user)
     expect(nao_lidas).to eq(1)
   end
 

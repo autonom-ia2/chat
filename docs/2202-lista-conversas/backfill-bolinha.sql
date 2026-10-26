@@ -219,6 +219,7 @@ ROLLBACK;
 -- -- (lock_timeout) e confere o número de linhas: o que travou para escrever tem de ser o que o UPDATE gravou; se
 -- -- divergir, o RAISE desfaz o lote e para (os lotes anteriores ficam, e o rollback acima os desfaz). Nenhuma trava
 -- -- fica aberta enquanto alguém confere à mão: a conferência é o RAISE, e o resultado sai no NOTICE de cada lote.
+-- -- Se parar por lock_timeout, rode o DO de novo; os lotes já gravados contam 0.
 -- DO $$
 -- DECLARE
 --   lote record;
@@ -233,6 +234,7 @@ ROLLBACK;
 --   LOOP
 --     PERFORM set_config('lock_timeout', '5s', true);
 --     PERFORM set_config('statement_timeout', '60s', true);
+--     -- Um comando só: trava as conversas do lote e grava só as travadas; a contagem compara as duas.
 --     WITH travadas AS (
 --       SELECT c.id
 --       FROM conversations c
@@ -240,16 +242,16 @@ ROLLBACK;
 --       WHERE b.id BETWEEN lote.de AND lote.ate
 --         AND (c.agent_last_seen_at IS NULL OR c.agent_last_seen_at < b.novo_visto)
 --       FOR NO KEY UPDATE OF c
+--     ), gravadas AS (
+--       UPDATE conversations c
+--       SET agent_last_seen_at = b.novo_visto
+--       FROM backup_2202_agent_last_seen b
+--       WHERE c.id = b.id
+--         AND c.id IN (SELECT id FROM travadas)
+--         AND (c.agent_last_seen_at IS NULL OR c.agent_last_seen_at < b.novo_visto)
+--       RETURNING c.id
 --     )
---     SELECT COUNT(*) INTO esperado FROM travadas;
---
---     UPDATE conversations c
---     SET agent_last_seen_at = b.novo_visto
---     FROM backup_2202_agent_last_seen b
---     WHERE c.id = b.id
---       AND b.id BETWEEN lote.de AND lote.ate
---       AND (c.agent_last_seen_at IS NULL OR c.agent_last_seen_at < b.novo_visto);
---     GET DIAGNOSTICS gravado = ROW_COUNT;
+--     SELECT (SELECT COUNT(*) FROM travadas), (SELECT COUNT(*) FROM gravadas) INTO esperado, gravado;
 --
 --     IF gravado <> esperado THEN
 --       RAISE EXCEPTION 'backfill 2202: lote % a % gravou % linhas, esperava %', lote.de, lote.ate, gravado, esperado;
@@ -283,7 +285,10 @@ ROLLBACK;
 -- contou 2.503; o PASSO 1 copiou 2.503; o DO do PASSO 2 gravou 3 lotes (1.000, 1.000, 503), total 2.503, em 0,7 s.
 -- Gravadas entre os casos: só os 3 esperados; o de integração ficou com a bolinha. Prova do RAISE: com um gatilho que
 -- descarta a escrita de uma conversa do 2º lote, o DO parou com "lote ... gravou 999 linhas, esperava 1000"; o 1º lote
--- ficou gravado (1.000) e o 2º foi desfeito inteiro.
+-- ficou gravado (1.000) e o 2º foi desfeito inteiro. Com o UPDATE só sobre as travadas (um comando só), de novo: os
+-- mesmos 2.503 e 1,6,7; rodar o DO outra vez grava 0 em cada lote; com uma conversa do 2º lote presa por outra
+-- transação, o DO parou com "canceling statement due to lock timeout" depois de gravar o 1º lote, e rodar de novo
+-- gravou 0 + 1.000 + 503; o RAISE da contagem continuou parando o lote com a escrita descartada.
 -- Ordem de grandeza: linear no número de conversas (um laço por conversa). Em produção (ordem de 10^4 a 10^5
 -- conversas por stack) deve ficar em segundos, não minutos; o pior caso é conversa com muitas saídas que NÃO contam
 -- depois do "visto" (o Limit 1 lê todas elas antes de achar uma que conta). Por isso o statement_timeout da PARTE 1.
