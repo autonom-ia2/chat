@@ -28,4 +28,18 @@ RSpec.describe 'Começar conversa com quem só lê (#2216)', type: :request do
     expect(response).to have_http_status(:unauthorized)
     expect(conversa.reload).to be_resolved
   end
+
+  it 'recusa a mensagem com o sinal da gaveta e não reabre a conversa resolvida' do
+    conversa = create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox,
+                                     status: :resolved)
+
+    expect do
+      post "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/messages",
+           params: { content: 'oi', private: false, reabrir_ao_escrever: true },
+           headers: leitora.create_new_auth_token, as: :json
+    end.not_to change(Message, :count)
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(conversa.reload).to be_resolved
+  end
 end

@@ -39,11 +39,11 @@ const EMAIL = {
   email: 'oi@loja.com',
 };
 
-const montar = () => {
+const montar = (conversa = { displayId: 77, visible: true }) => {
   const contato = ref(ANA);
   const canal = ref(EMAIL);
   const continuar = {
-    conversa: ref({ displayId: 77, visible: true }),
+    conversa: ref(conversa),
     tipo: ref(TIPOS.EMAIL),
     esperando: ref(false),
     oculta: ref(false),
@@ -130,5 +130,30 @@ describe('useNovaConversa — continuar a conversa', () => {
       numero: 77,
     });
     expect(envio.form.mensagem).toBe('Rascunho da Bia');
+  });
+
+  // #2216: a conversa visível de caixa com "Reabrir a mesma conversa" leva o sinal
+  // para o servidor reabrir; a de caixa que cria conversas novas, não.
+  it('conversa visível de caixa com "Reabrir a mesma conversa" manda reabrir_ao_escrever', async () => {
+    const envio = montar({ displayId: 77, visible: true, locked: true });
+    envio.form.mensagem = 'Oi de novo';
+
+    await envio.enviar(() => null);
+    await flushPromises();
+
+    const [pedido] = pedidos();
+    expect(pedido.url).toBe('/api/v1/accounts/7/conversations/77/messages');
+    expect(pedido.data.reabrir_ao_escrever).toBe(true);
+  });
+
+  it('"Continuar" em caixa que cria conversas novas não manda o sinal', async () => {
+    const envio = montar({ displayId: 77, visible: true, locked: false });
+    envio.form.mensagem = 'Oi de novo';
+
+    await envio.enviar(() => null);
+    await flushPromises();
+
+    const [pedido] = pedidos();
+    expect(pedido.data).not.toHaveProperty('reabrir_ao_escrever');
   });
 });

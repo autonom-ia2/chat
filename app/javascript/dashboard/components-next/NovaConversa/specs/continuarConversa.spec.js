@@ -6,6 +6,7 @@ import {
   conversaDeDestino,
   conversaDoCanal,
   conversaOculta,
+  reabreAoEscrever,
   tipoAoContinuar,
 } from '../continuarConversa';
 import { TIPOS, oQueFalta } from '../novaConversa';
@@ -168,6 +169,36 @@ describe('continuarConversa', () => {
           comAssunto: false,
         })
       ).toBe('');
+    });
+  });
+
+  // #2216: o sinal vai só no caminho da conversa visível de caixa com "Reabrir a
+  // mesma conversa"; a oculta reabre pela criação.
+  describe('reabreAoEscrever', () => {
+    const sinal = (conversa, destino) =>
+      reabreAoEscrever(
+        conversaDeDestino({ canal: comConversa(conversa), destino })
+      );
+
+    it('conversa visível de caixa com "Reabrir a mesma conversa": leva o sinal', () => {
+      expect(sinal(TRAVADA, DESTINOS.CONTINUAR)).toBe(true);
+      expect(sinal(TRAVADA, DESTINOS.NOVA)).toBe(true);
+    });
+
+    it('conversa oculta: vai pela criação, sem o sinal', () => {
+      expect(sinal(OCULTA, DESTINOS.CONTINUAR)).toBe(false);
+    });
+
+    it('"Continuar" em caixa que cria conversas novas: sem o sinal', () => {
+      expect(sinal(ABERTA, DESTINOS.CONTINUAR)).toBe(false);
+      expect(sinal({ ...ABERTA, status: 'snoozed' }, DESTINOS.CONTINUAR)).toBe(
+        false
+      );
+    });
+
+    it('conversa nova ou sem conversa: sem o sinal', () => {
+      expect(sinal(ABERTA, DESTINOS.NOVA)).toBe(false);
+      expect(reabreAoEscrever(null)).toBe(false);
     });
   });
 });

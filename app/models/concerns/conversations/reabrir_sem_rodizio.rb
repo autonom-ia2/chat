@@ -5,6 +5,14 @@
 # automática desta troca fica de fora. Com Assignment V2, o job da fila da caixa ainda pode pegar a conversa aberta sem
 # ninguém numa rodada disparada por outra conversa, como faz com qualquer aberta sem dono.
 module Conversations::ReabrirSemRodizio
+  # Começar conversa pela gaveta Nova conversa (criação ou mensagem com o sinal) numa caixa com "Reabrir a mesma
+  # conversa": a resolvida ou adiada reabre; aberta ou pendente fica como está.
+  def reabrir_ao_escrever!
+    return unless inbox.lock_to_single_conversation? && (resolved? || snoozed?)
+
+    reabrir_sem_rodizio!
+  end
+
   def reabrir_sem_rodizio!
     @reabrindo_sem_rodizio = true
     open!

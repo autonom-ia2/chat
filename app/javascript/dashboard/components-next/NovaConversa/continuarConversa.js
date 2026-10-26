@@ -30,6 +30,14 @@ export const conversaDeDestino = ({ canal, destino }) => {
   return destino === DESTINOS.CONTINUAR ? conversa : null;
 };
 
+// #2216 — começar conversa na conversa visível de uma caixa com "Reabrir a
+// mesma conversa" leva o sinal `reabrir_ao_escrever`: o servidor reabre a
+// resolvida ou adiada sem mudar quem cuida. A oculta vai pela criação (que
+// reabre sozinha); "Continuar" em caixa que cria conversas novas e conversa
+// nova não levam o sinal. `conversa` é a de conversaDeDestino.
+export const reabreAoEscrever = conversa =>
+  Boolean(conversa?.visible && conversa.locked);
+
 // O que dá para mandar dentro de uma conversa que já existe: quem decide é o
 // servidor (`can_reply`, que já conta a janela de 24 h e o WhatsApp Híbrido).
 // Pode responder: texto livre. Não pode: só mensagem pronta, no WhatsApp.
