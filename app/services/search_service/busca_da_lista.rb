@@ -13,17 +13,15 @@
 # - palavras em qualquer ordem: cada palavra precisa aparecer; nas mensagens, só palavras de 3 letras ou mais;
 # - ordem: nome exato, depois começo do nome, depois contém; empate pela última atividade;
 # - conversas: uma por pessoa, a de atividade mais recente; acha também pelo título do card e pelo assunto do e-mail;
-# - mensagens dos últimos 12 meses, pelo texto e pelo áudio transcrito.
+# - mensagens dos últimos 12 meses, pelo texto e pelo áudio transcrito (SearchService::MensagensDaLista).
 # Cada seção tem no máximo TEMPO_MAXIMO por consulta; a que estourar volta vazia e entra em `parcial`.
 module SearchService::BuscaDaLista
   TIPO = 'Lista'.freeze
-  LIMITE = 15
-  MESES_DE_MENSAGENS = 12
+  LIMITE = SearchService::MensagensDaLista::LIMITE
   MAXIMO_DE_CARACTERES = 100
   MAXIMO_DE_PALAVRAS = 6
   MINIMO_DE_LETRAS_NA_MENSAGEM = 3
   TEMPO_MAXIMO = '1500ms'.freeze
-  TIPOS_DE_MENSAGEM = %w[incoming outgoing template].freeze
   # O que o card da lista usa, como em ConversationFinder#conversations_base_query.
   CARREGAR_COM_A_CONVERSA = [:taggings, :team, :contact_inbox, { assignee: { avatar_attachment: [:blob] } },
                              { contact: { avatar_attachment: [:blob] } }].freeze
@@ -87,10 +85,8 @@ module SearchService::BuscaDaLista
     ActiveRecord::Base.sanitize_sql_like(texto)
   end
 
-  # Cada palavra precisa aparecer na expressão, em qualquer ordem e sem diferença de acento.
-  def todas_as_palavras(expressao, palavras = termos)
-    sql = palavras.map { "#{SearchService::SemAcento.sql(expressao)} LIKE ?" }.join(' AND ')
-    [sql, *palavras.map { |palavra| "%#{como_like(SearchService::SemAcento.texto(palavra))}%" }]
+  def todas_as_palavras(expressao)
+    SearchService::SemAcento.todas_as_palavras(expressao, termos)
   end
 
   def condicao_do_contato
@@ -161,36 +157,13 @@ module SearchService::BuscaDaLista
     @palavras_da_mensagem ||= termos.select { |termo| termo.length >= MINIMO_DE_LETRAS_NA_MENSAGEM }
   end
 
-  # Sem o filtro de acesso: ele entra depois, sobre o que o índice trigram achou.
-  def mensagens_da_conta
-    current_account.messages.where(created_at: MESES_DE_MENSAGENS.months.ago.., message_type: TIPOS_DE_MENSAGEM)
-                   .reselect('messages.id, messages.created_at, messages.conversation_id')
-  end
-
-  # Texto e áudio em consultas separadas, cada uma no seu índice trigram e num CTE MATERIALIZED: o Postgres acha as
-  # mensagens pelo índice primeiro e só depois confere o acesso e ordena. Sem isso, para quem vê poucas caixas, ele
-  # descia conversa por conversa e lia todas as mensagens delas (2 s com o volume da hub).
-  def ids_das_mensagens
-    texto = mensagens_da_conta.where(*todas_as_palavras('messages.content', palavras_da_mensagem))
-    # Uma linha por mensagem, mesmo com mais de um áudio transcrito.
-    audio = mensagens_da_conta.joins(:attachments).distinct
-                              .where(*todas_as_palavras("(attachments.meta ->> 'transcribed_text')", palavras_da_mensagem))
-    permitidas = conversas_permitidas.reselect(:id).to_sql
-    <<~SQL.squish
-      WITH texto AS MATERIALIZED (#{texto.to_sql}), audio AS MATERIALIZED (#{audio.to_sql})
-      (SELECT id FROM texto WHERE conversation_id IN (#{permitidas}) ORDER BY created_at DESC, id DESC LIMIT #{LIMITE})
-      UNION ALL
-      (SELECT id FROM audio WHERE conversation_id IN (#{permitidas}) ORDER BY created_at DESC, id DESC LIMIT #{LIMITE})
-    SQL
-  end
-
   def mensagens_da_lista
     return Message.none if palavras_da_mensagem.empty? || busca_por_numero_da_conversa?
 
-    Message.where("messages.id IN (#{ids_das_mensagens})")
-           .includes(:attachments, :sender, conversation: :contact)
+    ids = SearchService::MensagensDaLista.new(conta: current_account, conversas_permitidas: conversas_permitidas,
+                                              palavras: palavras_da_mensagem).ids
+    Message.where(id: ids).includes(:attachments, :sender, conversation: :contact)
            .reorder('messages.created_at DESC, messages.id DESC')
-           .limit(LIMITE)
   end
 
   # Pessoas da conta sem nenhuma conversa. Quem não pode ver a base de contatos (contact_view, #1849) não vê esta seção.

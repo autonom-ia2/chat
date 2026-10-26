@@ -37,6 +37,12 @@ module SearchService::SemAcento
     "lower(translate(normalize(#{coluna}, NFD), '#{ACENTOS_COMBINANTES}', ''))"
   end
 
+  # Cada palavra precisa aparecer na expressão, em qualquer ordem e sem diferença de acento. Devolve [sql, *valores].
+  def todas_as_palavras(expressao, palavras)
+    condicoes = palavras.map { "#{sql(expressao)} LIKE ?" }.join(' AND ')
+    [condicoes, *palavras.map { |palavra| "%#{ActiveRecord::Base.sanitize_sql_like(texto(palavra))}%" }]
+  end
+
   # O mesmo, no Ruby, para o texto buscado.
   def texto(valor)
     valor.to_s.unicode_normalize(:nfd).delete(ACENTOS_COMBINANTES).downcase

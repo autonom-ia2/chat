@@ -232,6 +232,38 @@ RSpec.describe SearchService::BuscaDaLista do
       expect(buscar('franquia')[:messages]).to be_empty
     end
 
+    # A seção de mensagens, com espião no caminho do índice.
+    def secao_de_mensagens
+      instancias = []
+      allow(SearchService::MensagensDaLista).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap do |instancia|
+          allow(instancia).to receive(:pelo_indice).and_call_original
+          instancias << instancia
+        end
+      end
+      instancias
+    end
+
+    it 'termo comum: com LIMITE na janela das recentes, para ali, sem ir ao índice' do
+      stub_const('SearchService::MensagensDaLista::LIMITE', 2)
+      stub_const('SearchService::MensagensDaLista::JANELA_DE_RECENTES', 3)
+      mensagem(alvo, 'boleto antigo', quando: 2.days.ago)
+      media = mensagem(alvo, 'boleto do mês', quando: 1.day.ago)
+      nova = mensagem(alvo, 'boleto pago', quando: 1.hour.ago)
+      instancias = secao_de_mensagens
+      expect(buscar('boleto')[:messages]).to eq([nova, media])
+      expect(instancias.first).not_to have_received(:pelo_indice)
+    end
+
+    it 'termo raro: fora da janela das recentes, acha pelo índice' do
+      stub_const('SearchService::MensagensDaLista::JANELA_DE_RECENTES', 2)
+      rara = mensagem(alvo, 'vistoria cautelar', quando: 3.months.ago)
+      3.times { |vez| mensagem(alvo, "bom dia #{vez}") }
+      instancias = secao_de_mensagens
+      expect(buscar('cautelar')[:messages]).to eq([rara])
+      expect(instancias.first).to have_received(:pelo_indice)
+    end
+
     it 'acha pelo áudio transcrito' do
       audio = mensagem(alvo, nil)
       anexo = audio.attachments.new(account: account, file_type: :audio, meta: { 'transcribed_text' => 'meu carro foi batido' })
