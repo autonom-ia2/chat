@@ -13816,6 +13816,10 @@
       "private": {
         "padrao": false,
         "tipo": "booleano"
+      },
+      "reabrir_ao_escrever": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
       }
     },
     "completo": false,
@@ -13825,8 +13829,10 @@
       "params inteiro repassado a Messages::MessageBuilder.new"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:10",
+      "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:15",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:81",
+      "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:29",
+      "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:28",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
