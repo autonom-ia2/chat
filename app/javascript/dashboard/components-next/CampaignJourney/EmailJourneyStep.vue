@@ -30,17 +30,34 @@ const { t } = useI18n();
 const senderOptions = computed(() => [
   ...props.identities.filter(isVerifiedIdentity).map(identity => ({
     value: `identity:${identity.id}`,
-    label: t(`${NS}.SENDER_DOMAIN`, {
-      email: identity.from_email || identity.domain,
-    }),
+    label: t(`${NS}.SENDER_DOMAIN`, { domain: identity.domain }),
   })),
   ...props.inboxes.filter(isDirectSendInbox).map(inbox => ({
     value: `inbox:${inbox.id}`,
     label: t(`${NS}.SENDER_INBOX`, { email: inbox.email }),
   })),
 ]);
+// #2237: the domain is the sender and the address is chosen per campaign. With no reply inbox
+// chosen, replies go to the domain's default inbox when it has one, otherwise to the campaign
+// From (EmailCampaigns::ReplyTo); the empty option says which.
+const selectedIdentity = computed(() => {
+  const [kind, id] = String(props.draft.emailSender || '').split(':');
+  const identityId =
+    kind === 'identity' ? id : props.emailCampaign?.sender_identity_id;
+  return identityId
+    ? props.identities.find(item => String(item.id) === String(identityId))
+    : null;
+});
+const senderDomain = computed(() => selectedIdentity.value?.domain || '');
+const defaultReplyLabel = computed(() => {
+  const inboxId = selectedIdentity.value?.reply_to_inbox_id;
+  const inbox = inboxId && props.inboxes.find(item => item.id === inboxId);
+  return inbox
+    ? t(`${NS}.REPLY_DOMAIN_DEFAULT`, { name: inbox.name })
+    : t(`${NS}.REPLY_NONE`);
+});
 const replyOptions = computed(() => [
-  { value: '', label: t(`${NS}.REPLY_NONE`) },
+  { value: '', label: defaultReplyLabel.value },
   ...props.inboxes
     .filter(inbox => inbox.channel_type === 'Channel::Email' && inbox.email)
     .map(inbox => ({
@@ -105,6 +122,7 @@ const chooseSender = value => {
         :model-value="draft.fromEmail"
         type="email"
         :label="t(`${NS}.FROM_EMAIL_LABEL`)"
+        :message="t(`${NS}.FROM_EMAIL_HINT`, { domain: senderDomain })"
         custom-input-class="!h-11"
         data-test="email-from"
         @update:model-value="fromEmail => emit('update', { fromEmail })"
@@ -161,7 +179,7 @@ const chooseSender = value => {
         </dd>
         <dt class="text-n-slate-11">{{ t(`${NS}.REPLY_LABEL`) }}</dt>
         <dd class="m-0 truncate text-n-slate-12">
-          {{ replyInbox ? replyInbox.name : t(`${NS}.REPLY_NONE`) }}
+          {{ replyInbox ? replyInbox.name : defaultReplyLabel }}
         </dd>
         <dt v-if="emailCampaign.preheader" class="text-n-slate-11">
           {{ t(`${NS}.PREHEADER_LABEL`) }}
