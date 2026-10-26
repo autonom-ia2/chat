@@ -47,6 +47,24 @@ RSpec.describe 'Crm::Relacao nos Números' do # rubocop:disable RSpec/DescribeCl
     expect(abertos_da_equipe).to contain_exactly(do_interessado)
   end
 
+  it 'com a flag ligada, a venda do parceiro sai do crédito do mês e das metas' do
+    mes = 1.day.ago..1.day.from_now
+    credito = -> { Crm::Numeros::Credito.new(account: account, user: user, range: mes).perform }
+    vendido = -> { Crm::Metas::Vendido.new(account: account, range: mes).por_pessoa.values.sum }
+    expect([credito.call[:vendas], vendido.call]).to eq([2, 200])
+
+    account.enable_features!('contato_relacao')
+
+    expect([credito.call[:vendas], vendido.call]).to eq([1, 100])
+  end
+
+  it 'com a flag ligada, card sem contato continua contando' do
+    account.enable_features!('contato_relacao')
+    do_parceiro.update_columns(contact_id: nil) # rubocop:disable Rails/SkipsModelValidations
+
+    expect(Crm::Relacao.cards_do_funil(account)).to include(do_parceiro)
+  end
+
   it 'a condição em SQL é a mesma regra do escopo' do
     account.enable_features!('contato_relacao')
 

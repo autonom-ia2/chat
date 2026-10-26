@@ -13,8 +13,8 @@ module Crm::Relacao
 
   FLAG = 'contato_relacao'.freeze
 
-  # NOT EXISTS, e não NOT IN: card sem contato continua contando. A conta no filtro usa o índice parcial
-  # idx_contacts_relacao_fora_do_funil e não deixa contato de outra conta tirar card desta.
+  # NOT EXISTS, e não NOT IN: card sem contato continua contando. A busca vai pela chave do contato; a conta no
+  # filtro não deixa contato de outra conta tirar card desta.
   CONDICAO_SQL = <<~SQL.squish.freeze
     NOT EXISTS (
       SELECT 1 FROM contacts fora

@@ -70,7 +70,7 @@ class Crm::Numeros::IaNoTime
   end
 
   def conversas_de(pipeline_ids)
-    cards = Crm::Relacao.cards_do_funil(@account).where(pipeline_id: pipeline_ids)
+    cards = @account.crm_cards.where(pipeline_id: pipeline_ids)
     principais = cards.where.not(conversation_id: nil).select(:conversation_id)
     vinculadas = Crm::CardConversation.where(account_id: @account.id, card_id: cards.select(:id)).select(:conversation_id)
     Conversation.where(account_id: @account.id).where(id: principais)
