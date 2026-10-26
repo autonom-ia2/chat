@@ -3,20 +3,28 @@
 # Api::V1::Accounts::ConversationsController); quem respondia pela API com token de pessoa nunca abria a conversa no
 # painel, e a bolinha de não lida ficava parada com a conversa já respondida.
 #
-# O que conta (conta?): mensagem que sai (outgoing), pública, que não falhou, mandada por uma pessoa pelo painel ou pela
-# API com token de pessoa (remetente User, sem `external_echo`). O modelo do WhatsApp mandado por uma pessoa conta: no
-# WhatsApp mandar qualquer coisa numa conversa a deixa lida.
+# O que conta (conta?): mensagem que sai (outgoing), pública, mandada por uma pessoa da conta pelo painel ou pela API
+# com token de pessoa: remetente User que é membro humano da conta (account_users.integration = false, AccountUser.human)
+# e sem `external_echo`. O modelo do WhatsApp (template da Meta) mandado por uma pessoa CONTA: ela leu a conversa para
+# responder, e no WhatsApp mandar qualquer coisa numa conversa a deixa lida. Campanha (marca campaign_id ou
+# whatsapp_api_campaign_id) e mensagem `message_type: :template` (a automática da caixa: saudação, fora do horário,
+# pesquisa) NÃO contam.
 # O que não conta (decisões do Rodrigo, #2202):
-# - robô (AgentBot, Captain::Assistant) e toda saída sem pessoa: a bolinha fica para a equipe ver o que só o robô
-#   respondeu;
+# - robô (AgentBot, Captain::Assistant), toda saída sem pessoa e o usuário de integração (token do MCP ou do CRM entra
+#   como um User sintético da conta, com account_users.integration = true, Mcp::IntegrationToken#create_managed_user):
+#   a bolinha fica para a equipe ver o que só o robô ou a integração respondeu;
 # - o eco do celular (`external_echo`), com ou sem remetente (no WAHA comum o remetente do eco é o dono do token do
 #   conector). Nenhum canal informa se o eco foi uma pessoa digitando, a resposta automática do app Business (ausência,
 #   saudação) ou um robô mandando direto pela WAHA: a Cloud (smb_message_echoes) não tem campo de origem, e o `source`
 #   da WAHA ("app"/"api") não separa a pessoa da resposta automática do celular. A Issue do sinal de leitura no celular
 #   (a pessoa abriu a conversa no aparelho) vai cuidar do eco;
-# - nota privada (o cliente não vê), mensagem que falhou e o que uma pessoa manda sem estar respondendo nesta conversa,
-#   na lista única de Messages::NaoEResposta (envio automático em nome dela, campanha, cópia encaminhada, modelo
-#   reenviado). A importação do histórico não chega aqui (Message#execute_after_create_commit_callbacks sai antes).
+# - nota privada (o cliente não vê);
+# - a mensagem que já NASCE com falha (status failed na criação). A falha do envio em si só chega depois, no
+#   SendReplyJob, e não desfaz o "visto": a pessoa leu a conversa para responder. O backfill do passado
+#   (docs/2202-lista-conversas/backfill-bolinha.sql) exclui toda falhada, porque lá a falha já é sabida;
+# - o que uma pessoa manda sem estar respondendo nesta conversa, na lista única de Messages::NaoEResposta (envio
+#   automático em nome dela, campanha, cópia encaminhada, modelo reenviado). A importação do histórico não chega aqui
+#   (Message#execute_after_create_commit_callbacks sai antes).
 #
 # Até onde fica vista (antes_do_envio): até o começo do segundo em que a resposta foi criada, menos 1 µs. A tela
 # compara em segundos inteiros (getters.js getUnreadCount e conversationHelper.js getUnreadMessages,
@@ -39,7 +47,8 @@ module ConversaCanal::VistaAoResponder
   end
 
   def self.de_pessoa?(message)
-    message.sender_type == 'User' && !eco?(message)
+    message.sender_type == 'User' && !eco?(message) &&
+      ::AccountUser.human.exists?(account_id: message.account_id, user_id: message.sender_id)
   end
 
   def self.eco?(message)
@@ -114,12 +123,23 @@ module ConversaCanal::VistaAoResponder
     Rails.env.test?
   end
 
+  # O erro original vai para os dois canais, cada um por conta própria: se o log quebra, o rastreador ainda recebe; se o
+  # rastreador quebra, o log já recebeu. Só o erro DO PRÓPRIO REGISTRO é descartado aqui, para nunca subir e impedir o
+  # send_reply que vem depois.
   def self.registrar_falha(message, error)
+    registros = [-> { Rails.logger.error(linha_do_log(message, error)) },
+                 -> { ChatwootExceptionTracker.new(error, account: message.account).capture_exception }]
+    registros.each do |registro|
+      registro.call
+    rescue StandardError
+      next
+    end
+  end
+
+  def self.linha_do_log(message, error)
     detalhe = ::CampaignImports::SafeLogMessage.call(error.message)
     rastro = Array(error.backtrace).first(LINHAS_DO_BACKTRACE).join(' | ')
-    Rails.logger.error("[conversa][vista_ao_responder] conversa=#{message.conversation_id} mensagem=#{message.id} " \
-                       "#{error.class}: #{detalhe} | #{rastro}")
-    ChatwootExceptionTracker.new(error, account: message.account).capture_exception
+    "[conversa][vista_ao_responder] conversa=#{message.conversation_id} mensagem=#{message.id} #{error.class}: #{detalhe} | #{rastro}"
   end
 
   private

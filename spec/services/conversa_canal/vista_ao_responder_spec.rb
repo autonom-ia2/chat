@@ -189,6 +189,26 @@ RSpec.describe ConversaCanal::VistaAoResponder do
 
       expect(nao_lidas).to eq(0)
     end
+
+    # O token de integração (MCP, CRM) entra como um usuário sintético da conta, com account_users.integration = true
+    # (Mcp::IntegrationToken#create_managed_user): o remetente é User, mas não é uma pessoa.
+    it 'usuário de integração (MCP, CRM) não apaga' do
+      sintetico = create(:user, name: 'MCP Integration (teste)')
+      AccountUser.create!(account: account, user: sintetico, role: :agent, integration: true)
+
+      nossa(10, sender: sintetico)
+
+      expect(nao_lidas).to eq(1)
+    end
+
+    it 'mensagem automática da caixa (message_type template) não apaga' do
+      travel_to(inicio + 10) do
+        create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :template,
+                         sender: nil, content: 'Estamos fora do horário')
+      end
+
+      expect(nao_lidas).to eq(1)
+    end
   end
 
   describe 'avisos' do
@@ -277,6 +297,29 @@ RSpec.describe ConversaCanal::VistaAoResponder do
       expect(resposta).to be_persisted
       expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveRecord::StatementInvalid), account: account)
       expect(Rails.logger).to have_received(:error).with(include('[conversa][vista_ao_responder]', 'StatementInvalid: boom'))
+    end
+
+    it 'se o próprio registro da falha quebrar, não sobe, o envio sai e o outro canal registra', :aggregate_failures do
+      allow(described_class).to receive(:relancar?).and_return(false)
+      allow(Rails.logger).to receive(:error).and_raise(IOError, 'log fora')
+      allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+
+      resposta = nil
+      expect { resposta = nossa }.to have_enqueued_job(SendReplyJob)
+
+      expect(resposta).to be_persisted
+      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(ActiveRecord::StatementInvalid), account: account)
+    end
+
+    it 'com o log e o rastreador quebrados, ainda assim não sobe e o envio sai', :aggregate_failures do
+      allow(described_class).to receive(:relancar?).and_return(false)
+      allow(Rails.logger).to receive(:error).and_raise(IOError, 'log fora')
+      allow(ChatwootExceptionTracker).to receive(:new).and_raise(SocketError, 'rastreador fora')
+
+      resposta = nil
+      expect { resposta = nossa }.to have_enqueued_job(SendReplyJob)
+
+      expect(resposta).to be_persisted
     end
   end
 end
