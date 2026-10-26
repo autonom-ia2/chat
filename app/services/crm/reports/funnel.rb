@@ -26,7 +26,7 @@ module Crm
       end
 
       def open_cards
-        account.crm_cards.where(pipeline_id: pipeline.id, status: Crm::Card.statuses[:open])
+        Crm::Relacao.cards_do_funil(account).where(pipeline_id: pipeline.id, status: Crm::Card.statuses[:open])
       end
 
       def stage_entry(stage, counts, values)

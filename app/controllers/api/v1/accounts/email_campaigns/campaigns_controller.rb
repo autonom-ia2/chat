@@ -11,7 +11,8 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   def index
     authorize EmailCampaign
     query = EmailCampaigns::CampaignQuery.new(account: Current.account, params: report_filter_params(%w[status campaign_status q since until]))
-    @campaigns = query.call.includes(:sender_identity, latest_recipient_import: :source_file_attachment)
+    @campaigns = query.call.includes({ sender_identity: { reply_to_inbox: :channel } }, { reply_to_inbox: :channel },
+                                     latest_recipient_import: :source_file_attachment)
     @campaign_presenter = EmailCampaigns::Presentation::Campaign.new(account: Current.account, actor: Current.user, campaigns: @campaigns.to_a)
   end
 

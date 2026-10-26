@@ -149,6 +149,26 @@ describe('#ConversationAPI', () => {
       ).toBeNull();
     });
 
+    it('sends reabrir_ao_escrever only when asked (#2216)', () => {
+      expect(
+        buildCreatePayload({ message: 'oi', reabrirAoEscrever: true })
+          .reabrir_ao_escrever
+      ).toBe(true);
+      expect(buildCreatePayload({ message: 'oi' })).not.toHaveProperty(
+        'reabrir_ao_escrever'
+      );
+
+      const files = [new Blob(['png'], { type: 'image/png' })];
+      expect(
+        buildCreatePayload({ files, reabrirAoEscrever: true }).get(
+          'reabrir_ao_escrever'
+        )
+      ).toBe('true');
+      expect(
+        buildCreatePayload({ files }).get('reabrir_ao_escrever')
+      ).toBeNull();
+    });
+
     it('does not append is_voice_message when isVoiceMessage is false', () => {
       const formPayload = buildCreatePayload({
         message: 'regular audio',
