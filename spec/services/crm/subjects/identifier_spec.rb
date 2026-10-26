@@ -89,6 +89,16 @@ RSpec.describe Crm::Subjects::Identifier do
       end
     end
 
+    it 'em Sugerir também não sugere nada' do
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(subject_ai_mode: :suggest)
+      contact.update!(relacao: :parceiro)
+      requests = stub_jev("novo_#{comercial.id}")
+
+      expect(identify(incoming('Queria também o plano anual'))).to be_nil
+      expect(requests).to be_empty
+      expect(Crm::SubjectDecision.where(state: 'suggested')).to be_empty
+    end
+
     it 'interessado segue como sempre: o assunto novo vira card' do
       stub_jev("novo_#{comercial.id}")
       stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')

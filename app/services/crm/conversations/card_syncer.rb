@@ -131,9 +131,6 @@ class Crm::Conversations::CardSyncer
   end
 
   def auto_create_pipeline_inbox
-    # #2084: contato fora do funil (parceiro, não é negócio) não ganha card sozinho; o card feito à mão segue a conversa.
-    return if Crm::Relacao.fora_do_funil?(@conversation.contact)
-
     setting = @account.crm_inbox_settings.find_by(inbox_id: @conversation.inbox_id)
     return if inbox_auto_create_disabled?(setting)
 
@@ -169,7 +166,11 @@ class Crm::Conversations::CardSyncer
     result.card
   end
 
+  # #2084: contato fora do funil (parceiro, não é negócio) não ganha card sozinho. A reutilização do card aberto que já
+  # existe (o feito à mão, o de outra caixa) continua: ele segue a conversa.
   def create_card(pipeline_inbox)
+    return if Crm::Relacao.fora_do_funil?(@conversation.contact)
+
     stage = default_stage_for(pipeline_inbox)
     return if stage.blank?
 

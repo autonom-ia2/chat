@@ -50,7 +50,7 @@ RSpec.describe Crm::Conversations::CardSyncer do
       conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin)
       pipeline, stage = create_crm_pipeline(account: account, user: admin)
       account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
-      [account, conversation, create_crm_message(conversation: conversation, sender: contact)]
+      [account, conversation, create_crm_message(conversation: conversation, sender: contact), pipeline, stage]
     end
 
     %i[parceiro nao_e_negocio].each do |relacao|
@@ -61,6 +61,17 @@ RSpec.describe Crm::Conversations::CardSyncer do
 
         expect(account.crm_cards).to be_blank
       end
+    end
+
+    it 'keeps the card made by hand following the conversation of a contact marked parceiro' do
+      account, conversation, message, pipeline, stage = cenario(:parceiro)
+      feito_a_mao = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: conversation.contact,
+                                              inbox: conversation.inbox, title: 'Feito à mão')
+
+      described_class.new(conversation: conversation, message: message).perform
+
+      expect(account.crm_cards).to contain_exactly(feito_a_mao)
+      expect(Crm::CardConversation.where(card: feito_a_mao, conversation: conversation)).to exist
     end
 
     it 'still auto-creates the card for an interessado contact' do

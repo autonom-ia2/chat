@@ -36,6 +36,9 @@ RSpec.describe AutomationRules::CrmActions do
       conversation.contact.update!(relacao: :nao_e_negocio)
 
       expect { run_action('crm_create_card', [next_stage.id]) }.not_to change(Crm::Card, :count)
+
+      conversation.contact.update!(relacao: :interessado)
+      expect { run_action('crm_create_card', [next_stage.id]) }.to change(Crm::Card, :count).by(1)
     end
 
     it 'crm_create_card não duplica quando a conversa já tem card' do
