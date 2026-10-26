@@ -169,11 +169,13 @@ module SearchService::BuscaDaLista
   end
 
   # Pessoas da conta sem conversa que eu veja (inclusive quem só tem conversa numa caixa que não é minha). Quem não pode
-  # ver a base de contatos (contact_view, #1849) não vê esta seção.
+  # ver a base de contatos (contact_view, #1849) não vê esta seção. O contato de sistema "Integração WhatsApp" do
+  # conector fica de fora, como a conversa dele fica de fora da lista (IS DISTINCT FROM mantém quem não tem identifier).
   def pessoas_sem_conversa
     return Contact.none if busca_por_numero_da_conversa? || !politica_de_contato.index?
 
     current_account.contacts.where(condicao_do_contato).includes(avatar_attachment: :blob)
+                   .where('contacts.identifier IS DISTINCT FROM ?', Waha::IntegracaoDoConector::IDENTIFIER)
                    .where.not(id: conversas_permitidas.where.not(contact_id: nil).reselect(:contact_id))
                    .order(Arel.sql(ordem_do_nome), :name)
                    .limit(LIMITE)

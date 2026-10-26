@@ -318,6 +318,12 @@ RSpec.describe SearchService::BuscaDaLista do
       expect(resultado[:contacts]).to eq([sem_conversa])
       expect(resultado[:conversations].map(&:contact)).to eq([com_conversa])
     end
+
+    it 'o contato de sistema "Integração WhatsApp" do conector não aparece' do
+      account.contacts.create!(name: 'Integração WhatsApp', identifier: Waha::IntegracaoDoConector::IDENTIFIER)
+      contato('Integração Silva')
+      expect(buscar('integracao', quem: admin)[:contacts].map(&:name)).to eq(['Integração Silva'])
+    end
   end
 
   describe 'acesso' do
