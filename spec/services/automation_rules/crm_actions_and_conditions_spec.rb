@@ -30,6 +30,17 @@ RSpec.describe AutomationRules::CrmActions do
       expect(card).to have_attributes(pipeline_id: pipeline.id, stage_id: next_stage.id, contact_id: conversation.contact_id)
     end
 
+    # #2084: contato marcado parceiro do mercado ou não é negócio não ganha card pela automação.
+    it 'crm_create_card não cria card para contato fora do funil, com a flag contato_relacao' do
+      account.enable_features!('contato_relacao')
+      conversation.contact.update!(relacao: :nao_e_negocio)
+
+      expect { run_action('crm_create_card', [next_stage.id]) }.not_to change(Crm::Card, :count)
+
+      conversation.contact.update!(relacao: :interessado)
+      expect { run_action('crm_create_card', [next_stage.id]) }.to change(Crm::Card, :count).by(1)
+    end
+
     it 'crm_create_card não duplica quando a conversa já tem card' do
       create_card
 
