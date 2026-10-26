@@ -6,9 +6,13 @@
 # ninguém numa rodada disparada por outra conversa, como faz com qualquer aberta sem dono.
 module Conversations::ReabrirSemRodizio
   # Começar conversa pela gaveta Nova conversa (criação ou mensagem com o sinal) numa caixa com "Reabrir a mesma
-  # conversa": a resolvida ou adiada reabre; aberta ou pendente fica como está.
+  # conversa": a resolvida ou adiada reabre; aberta ou pendente fica como está. A situação é conferida sob a trava da
+  # conversa (quem chama está numa transação): dois envios ao mesmo tempo não reabrem duas vezes.
   def reabrir_ao_escrever!
-    return unless inbox.lock_to_single_conversation? && (resolved? || snoozed?)
+    return unless inbox.lock_to_single_conversation?
+
+    lock!
+    return unless resolved? || snoozed?
 
     reabrir_sem_rodizio!
   end

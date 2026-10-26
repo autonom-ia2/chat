@@ -1,8 +1,9 @@
 require 'rails_helper'
 
-# #2216 com #1800: quem só lê (conversation_view sem o trio) continua sem começar conversa, e a conversa resolvida que a
-# criação acharia continua resolvida.
-RSpec.describe 'Começar conversa com quem só lê (#2216)', type: :request do
+# #2216 com #1800, funções personalizadas e MCP: a reabertura ao escrever não passa da permissão de quem escreve.
+# Quem só lê não começa conversa; quem só atende as conversas em que participa não reabre a conversa de outra pessoa;
+# o token do MCP manda mensagem, mas não reabre (ele também não troca status).
+RSpec.describe 'Começar conversa: quem pode reabrir (#2216)', type: :request do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account, lock_to_single_conversation: true) }
   let(:contact) { create(:contact, account: account) }
@@ -40,6 +41,62 @@ RSpec.describe 'Começar conversa com quem só lê (#2216)', type: :request do
     end.not_to change(Message, :count)
 
     expect(response).to have_http_status(:unauthorized)
+    expect(conversa.reload).to be_resolved
+  end
+
+  describe 'função só com conversation_participating_manage' do
+    let(:dona) { create(:user, account: account, role: :agent) }
+    let(:participante) do
+      user = create(:user, account: account, role: :agent)
+      role = CustomRole.create!(account: account, name: "Cargo #{SecureRandom.hex(4)}",
+                                permissions: %w[conversation_participating_manage])
+      AccountUser.find_by(account: account, user: user).update!(custom_role: role)
+      inbox.add_members([user.id, dona.id])
+      user
+    end
+    let!(:conversa) do
+      create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox,
+                            status: :resolved, assignee: dona)
+    end
+
+    it 'não reabre pela criação a conversa de outra pessoa' do
+      post "/api/v1/accounts/#{account.id}/conversations",
+           params: { source_id: contact_inbox.source_id, inbox_id: inbox.id, contact_id: contact.id,
+                     message: { content: 'oi' }, reabrir_ao_escrever: true },
+           headers: participante.create_new_auth_token, as: :json
+
+      expect(conversa.reload).to be_resolved
+      expect(conversa.assignee).to eq(dona)
+    end
+
+    it 'recebe 401 ao mandar mensagem com o sinal na conversa de outra pessoa' do
+      post "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/messages",
+           params: { content: 'oi', private: false, reabrir_ao_escrever: true },
+           headers: participante.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(conversa.reload).to be_resolved
+    end
+  end
+
+  it 'o token do MCP manda a mensagem, mas não reabre (ele também não troca status)' do
+    admin = create(:user, account: account, role: :administrator)
+    link = Autonomia::UserLink.create!(identity_user_id: "mcp-#{SecureRandom.hex(3)}", user: admin, email: admin.email)
+    token = Mcp::IntegrationToken.create!(account: account, created_by: admin, identity_subject: link.identity_user_id,
+                                          name: 'MCP', scopes: Mcp::IntegrationToken::DEFAULT_SCOPES)
+    conversa = create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox,
+                                     status: :resolved)
+    headers = { 'api_access_token' => token.access_token.token, 'Idempotency-Key' => "t-#{SecureRandom.hex(6)}" }
+
+    post "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/toggle_status",
+         params: { status: 'open' }, headers: headers, as: :json
+    expect(response).to have_http_status(:unauthorized)
+
+    post "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/messages",
+         params: { content: 'oi', reabrir_ao_escrever: true },
+         headers: headers.merge('Idempotency-Key' => "m-#{SecureRandom.hex(6)}"), as: :json
+
+    expect(response).to have_http_status(:success)
     expect(conversa.reload).to be_resolved
   end
 end

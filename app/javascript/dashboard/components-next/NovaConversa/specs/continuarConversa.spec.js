@@ -62,7 +62,7 @@ describe('continuarConversa', () => {
       expect(conversaDeDestino({ canal, destino: DESTINOS.NOVA })).toBeNull();
     });
 
-    it('conversa oculta vai pela criação, que o servidor reabre', () => {
+    it('conversa oculta vai pela criação', () => {
       expect(
         conversaDeDestino({
           canal: comConversa(OCULTA),
@@ -172,8 +172,8 @@ describe('continuarConversa', () => {
     });
   });
 
-  // #2216: o sinal vai só no caminho da conversa visível de caixa com "Reabrir a
-  // mesma conversa"; a oculta reabre pela criação.
+  // #2216: pela API de mensagem, o sinal vai só para a conversa visível de caixa
+  // com "Reabrir a mesma conversa"; a oculta leva o sinal na criação.
   describe('reabreAoEscrever', () => {
     const sinal = (conversa, destino) =>
       reabreAoEscrever(
@@ -185,7 +185,7 @@ describe('continuarConversa', () => {
       expect(sinal(TRAVADA, DESTINOS.NOVA)).toBe(true);
     });
 
-    it('conversa oculta: vai pela criação, sem o sinal', () => {
+    it('conversa oculta: não há mensagem na conversa, vai pela criação', () => {
       expect(sinal(OCULTA, DESTINOS.CONTINUAR)).toBe(false);
     });
 

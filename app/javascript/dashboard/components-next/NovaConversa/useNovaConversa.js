@@ -254,9 +254,13 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   );
 
   // Cria a conversa com a primeira mensagem; devolve onde ela entrou.
+  // #2216: com a conversa oculta da caixa com "Reabrir a mesma conversa", a criação
+  // entra nela e pede para reabrir.
   const criarConversa = (params, isFromWhatsApp) => async () => {
     const conversa = await store.dispatch('contactConversations/create', {
-      params,
+      params: continuar?.oculta.value
+        ? { ...params, reabrirAoEscrever: true }
+        : params,
       isFromWhatsApp,
     });
     return { id: conversa.id, contaId: conversa.account_id, numero: null };

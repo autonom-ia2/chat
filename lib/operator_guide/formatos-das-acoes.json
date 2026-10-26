@@ -13718,6 +13718,10 @@
         "tipo": "inteiro"
       },
       "message": {},
+      "reabrir_ao_escrever": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
       "source_id": {
         "tipo": "string"
       }
@@ -13730,8 +13734,9 @@
       "leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)"
     ],
     "origem": [
-      "app/controllers/concerns/conversations/reabrir_ao_escrever.rb:13",
-      "app/controllers/concerns/conversations/reabrir_ao_escrever.rb:25",
+      "app/controllers/concerns/conversations/reabrir_ao_escrever.rb:16",
+      "app/controllers/concerns/conversations/pedido_de_reabrir.rb:10",
+      "app/controllers/concerns/conversations/reabrir_ao_escrever.rb:28",
       "app/controllers/api/v1/accounts/conversations_controller.rb:43",
       "app/controllers/api/v1/accounts/conversations_controller.rb:205",
       "app/controllers/api/v1/accounts/conversations_controller.rb:203",
@@ -13830,10 +13835,10 @@
       "params inteiro repassado a Messages::MessageBuilder.new"
     ],
     "origem": [
-      "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:10",
+      "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:14",
       "app/controllers/api/v1/accounts/conversations/messages_controller.rb:81",
-      "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:24",
-      "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:23",
+      "app/controllers/concerns/conversations/pedido_de_reabrir.rb:10",
+      "app/controllers/concerns/conversations/reabrir_ao_escrever_na_mensagem.rb:15",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false

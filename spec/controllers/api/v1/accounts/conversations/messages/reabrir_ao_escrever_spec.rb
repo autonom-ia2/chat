@@ -18,11 +18,11 @@ RSpec.describe 'Mensagem da gaveta reabre a conversa (#2216)', type: :request do
     create(:conversation, account: account, inbox: inbox, status: status, assignee: assignee, **extra)
   end
 
-  def escrever(conversa, sinal: true, **extra)
+  def escrever(conversa, sinal: true, headers: agent.create_new_auth_token, **extra)
     params = { content: 'Oi, tudo bem?', private: false }.merge(extra)
     params[:reabrir_ao_escrever] = sinal unless sinal.nil?
     post "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/messages",
-         headers: agent.create_new_auth_token, params: params, as: :json
+         headers: headers, params: params, as: :json
   end
 
   it 'com o sinal, a conversa resolvida reabre, a mensagem entra e quem cuida não muda' do
@@ -116,11 +116,31 @@ RSpec.describe 'Mensagem da gaveta reabre a conversa (#2216)', type: :request do
     conversa = conversa_com(status: :resolved)
     builder = instance_double(Messages::MessageBuilder)
     allow(Messages::MessageBuilder).to receive(:new).and_return(builder)
-    allow(builder).to receive(:perform).and_raise(ActiveRecord::RecordInvalid)
+    allow(builder).to receive(:perform).and_raise(ActiveRecord::RecordInvalid.new(Message.new))
 
     escrever(conversa)
 
     expect(response).to have_http_status(:unprocessable_entity)
+    expect(conversa.reload).to be_resolved
+  end
+
+  it 'robô (token de AgentBot) não reabre, mesmo com o sinal' do
+    conversa = conversa_com(status: :snoozed, snoozed_until: 2.days.from_now)
+    robo = create(:agent_bot, account: account)
+    create(:agent_bot_inbox, inbox: inbox, agent_bot: robo)
+
+    escrever(conversa, headers: { api_access_token: robo.access_token.token })
+
+    expect(response).to have_http_status(:success)
+    expect(conversa.reload).to be_snoozed
+  end
+
+  it 'integração com o token de API de uma pessoa não reabre, mesmo com o sinal' do
+    conversa = conversa_com(status: :resolved)
+
+    escrever(conversa, headers: { api_access_token: agent.access_token.token })
+
+    expect(response).to have_http_status(:success)
     expect(conversa.reload).to be_resolved
   end
 end

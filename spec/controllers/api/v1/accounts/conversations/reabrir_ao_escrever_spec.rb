@@ -1,8 +1,9 @@
 require 'rails_helper'
 
 # #2216: começar conversa numa caixa com "Reabrir a mesma conversa" (lock_to_single_conversation) cai na última conversa
-# do contato. Resolvida ou adiada, ela reabre quando vem mensagem, sem mudar quem cuida (#2067: atendente responde, não
-# assume). Só a criação pelo painel/API da conta: o ConversationBuilder (widget, campanhas, avisos) fica como está.
+# do contato. Resolvida ou adiada, ela reabre quando vem mensagem com o sinal da gaveta (`reabrir_ao_escrever`), sem
+# mudar quem cuida (#2067: atendente responde, não assume). Só pessoa com sessão do painel: robô, token de API e
+# integração não reabrem. O ConversationBuilder (widget, campanhas, avisos) fica como está.
 RSpec.describe 'Começar conversa reabre a resolvida ou adiada (#2216)', type: :request do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account, lock_to_single_conversation: true) }
@@ -18,10 +19,16 @@ RSpec.describe 'Começar conversa reabre a resolvida ou adiada (#2216)', type: :
     allow(Rails.configuration.dispatcher).to receive(:dispatch)
   end
 
-  def comecar(message: { content: 'Oi, tudo bem?' })
+  def comecar(message: { content: 'Oi, tudo bem?' }, sinal: true, headers: agent.create_new_auth_token)
     params = { source_id: contact_inbox.source_id, inbox_id: inbox.id, contact_id: contact.id }
     params[:message] = message if message
-    post "/api/v1/accounts/#{account.id}/conversations", headers: agent.create_new_auth_token, params: params, as: :json
+    params[:reabrir_ao_escrever] = sinal unless sinal.nil?
+    post "/api/v1/accounts/#{account.id}/conversations", headers: headers, params: params, as: :json
+  end
+
+  def resolvida_da_dona
+    create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox,
+                          status: :resolved, assignee: dona)
   end
 
   it 'reabre a conversa resolvida e a mensagem entra nela' do
@@ -120,10 +127,49 @@ RSpec.describe 'Começar conversa reabre a resolvida ou adiada (#2216)', type: :
                                      status: :resolved, assignee: dona)
     builder = instance_double(Messages::MessageBuilder)
     allow(Messages::MessageBuilder).to receive(:new).and_return(builder)
-    allow(builder).to receive(:perform).and_raise(ActiveRecord::RecordInvalid)
+    allow(builder).to receive(:perform).and_raise(ActiveRecord::RecordInvalid.new(Message.new))
 
     comecar
 
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(conversa.reload).to be_resolved
+  end
+
+  it 'sem o sinal da gaveta, não reabre' do
+    conversa = resolvida_da_dona
+
+    comecar(sinal: nil)
+
+    expect(response).to have_http_status(:success)
+    expect(conversa.reload).to be_resolved
+  end
+
+  it 'nota privada não reabre' do
+    conversa = resolvida_da_dona
+
+    comecar(message: { content: 'Anotação', private: true })
+
+    expect(response).to have_http_status(:success)
+    expect(conversa.reload).to be_resolved
+  end
+
+  it 'robô (token de AgentBot, o n8n) não reabre, mesmo com o sinal' do
+    conversa = resolvida_da_dona
+    robo = create(:agent_bot, account: account)
+    create(:agent_bot_inbox, inbox: inbox, agent_bot: robo)
+
+    comecar(headers: { api_access_token: robo.access_token.token })
+
+    expect(response).to have_http_status(:success)
+    expect(conversa.reload).to be_resolved
+  end
+
+  it 'integração com o token de API de uma pessoa não reabre, mesmo com o sinal' do
+    conversa = resolvida_da_dona
+
+    comecar(headers: { api_access_token: agent.access_token.token })
+
+    expect(response).to have_http_status(:success)
     expect(conversa.reload).to be_resolved
   end
 

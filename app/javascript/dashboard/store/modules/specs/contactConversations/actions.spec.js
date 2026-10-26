@@ -264,6 +264,36 @@ describe('createMessagePayload', () => {
 });
 
 describe('createConversationPayload', () => {
+  it('sends reabrir_ao_escrever only when asked (#2216)', () => {
+    const params = {
+      inboxId: '1',
+      message: { content: 'Oi' },
+      sourceId: '12',
+      assigneeId: '123',
+    };
+    expect(
+      createConversationPayload({
+        params: { ...params, reabrirAoEscrever: true },
+        contactId: '23',
+      }).get('reabrir_ao_escrever')
+    ).toBe('true');
+    expect(
+      createConversationPayload({ params, contactId: '23' }).get(
+        'reabrir_ao_escrever'
+      )
+    ).toBeNull();
+    expect(
+      createWhatsAppConversationPayload({
+        params: { ...params, contactId: '23', reabrirAoEscrever: true },
+      }).reabrir_ao_escrever
+    ).toBe(true);
+    expect(
+      createWhatsAppConversationPayload({
+        params: { ...params, contactId: '23' },
+      })
+    ).not.toHaveProperty('reabrir_ao_escrever');
+  });
+
   it('creates conversation payload with message and attachments', () => {
     const options = {
       params: {

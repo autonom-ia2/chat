@@ -39,14 +39,17 @@ const EMAIL = {
   email: 'oi@loja.com',
 };
 
-const montar = (conversa = { displayId: 77, visible: true }) => {
+const montar = (
+  conversa = { displayId: 77, visible: true },
+  oculta = false
+) => {
   const contato = ref(ANA);
   const canal = ref(EMAIL);
   const continuar = {
     conversa: ref(conversa),
     tipo: ref(TIPOS.EMAIL),
     esperando: ref(false),
-    oculta: ref(false),
+    oculta: ref(oculta),
     assunto: ref(''),
     ultimoEmail: ref(null),
     carregar: vi.fn(),
@@ -155,5 +158,34 @@ describe('useNovaConversa — continuar a conversa', () => {
 
     const [pedido] = pedidos();
     expect(pedido.data).not.toHaveProperty('reabrir_ao_escrever');
+  });
+
+  // #2216: a conversa oculta vai pela criação, que leva o sinal; a conversa nova não.
+  it('conversa oculta: a criação manda reabrir_ao_escrever', async () => {
+    const envio = montar(null, true);
+    Object.assign(envio.form, { mensagem: 'Oi de novo', assunto: 'Proposta' });
+    expect(envio.falta.value).toBe('');
+
+    await envio.enviar(() => null);
+    await flushPromises();
+
+    const criacao = estado.dispatch.mock.calls.find(
+      ([acao]) => acao === 'contactConversations/create'
+    );
+    expect(criacao[1].params.reabrirAoEscrever).toBe(true);
+  });
+
+  it('conversa nova: a criação não manda o sinal', async () => {
+    const envio = montar(null, false);
+    Object.assign(envio.form, { mensagem: 'Oi', assunto: 'Proposta' });
+    expect(envio.falta.value).toBe('');
+
+    await envio.enviar(() => null);
+    await flushPromises();
+
+    const criacao = estado.dispatch.mock.calls.find(
+      ([acao]) => acao === 'contactConversations/create'
+    );
+    expect(criacao[1].params).not.toHaveProperty('reabrirAoEscrever');
   });
 });
