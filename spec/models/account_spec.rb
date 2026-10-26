@@ -283,6 +283,8 @@ RSpec.describe Account do
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(16)
+      # #2084: primeira flag da feature_flags_ext_2 (posição provisória da Orquestração).
+      expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(feature_contato_relacao: 1)
     end
 
     it 'keeps Relationships opt-in and each extension independent of existing flags' do
