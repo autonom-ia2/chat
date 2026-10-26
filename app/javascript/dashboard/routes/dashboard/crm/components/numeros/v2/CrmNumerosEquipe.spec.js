@@ -29,6 +29,16 @@ vi.mock('dashboard/components-next/sidebar/fork/usePodeAbrir', () => ({
   usePodeAbrir: () => ({ podeAbrir: () => true }),
 }));
 vi.mock('dashboard/api/crmNumeros', () => ({ default: { show: vi.fn() } }));
+// #2001 (F6): o atalho para "De onde vieram os clientes" segue a flag da conta.
+const origensLigada = ref(false);
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: nome =>
+    nome === 'accounts/isFeatureEnabledonAccount'
+      ? ref((_conta, flag) =>
+          flag === 'crm_numeros_origens' ? origensLigada.value : false
+        )
+      : ref(1),
+}));
 
 const MES = {
   chave: '2026-10',
@@ -143,6 +153,10 @@ const montar = async resposta => {
     global: {
       stubs: {
         CrmVistasNumeros: true,
+        NumerosOrigensAtalho: {
+          props: ['mesChave'],
+          template: '<a data-origens-atalho-stub :data-mes="mesChave" />',
+        },
         NumerosComoContamos: true,
         ResultsToggle: true,
         RouterLink: { props: ['to'], template: '<a><slot /></a>' },
@@ -158,7 +172,23 @@ const montar = async resposta => {
 };
 
 describe('CrmNumerosEquipe', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    origensLigada.value = false;
+  });
+
+  it('mostra o atalho de "De onde vieram os clientes" só com a flag crm_numeros_origens', async () => {
+    expect(
+      (await montar(dados())).find('[data-origens-atalho-stub]').exists()
+    ).toBe(false);
+
+    origensLigada.value = true;
+    const wrapper = await montar(dados());
+
+    expect(
+      wrapper.find('[data-origens-atalho-stub]').attributes('data-mes')
+    ).toBe('2026-10');
+  });
 
   it('pede a visão da equipe e mostra as seções na ordem do protótipo', async () => {
     const wrapper = await montar(dados());

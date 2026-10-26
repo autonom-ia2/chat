@@ -10,3 +10,4 @@ pt_BR:
           pessoa_atribuida: "Uma pessoa já está atendendo esta conversa."
           esperando_pessoa: "Esta conversa está esperando uma pessoa."
           assunto_escolhido_por_pessoa: "Uma pessoa escolheu há pouco o assunto atual desta conversa."
+          fora_do_funil: "Este contato foi marcado como parceiro do mercado ou não é negócio: não vira card sozinho."
