@@ -171,7 +171,11 @@ export default {
             after: messageId,
           })
           .then(() => {
-            emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE, { messageId });
+            // #2211: diz de qual conversa é o pedido; se já trocaram, a tela ignora.
+            emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE, {
+              messageId,
+              conversationId: selectedConversation.id,
+            });
           });
       } else {
         this.$store.dispatch('clearSelectedState');

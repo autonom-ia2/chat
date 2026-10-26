@@ -27,6 +27,6 @@ class Crm::Numeros::CreditoDaEquipe < Crm::Numeros::Credito
   end
 
   def fechados
-    @fechados ||= linhas(@account.crm_cards.where(pipeline_id: @pipeline_ids, closed_at: @range))
+    @fechados ||= linhas(Crm::Relacao.cards_do_funil(@account).where(pipeline_id: @pipeline_ids, closed_at: @range))
   end
 end

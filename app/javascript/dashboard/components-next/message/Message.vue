@@ -407,7 +407,8 @@ const linhaDoInstagram = computed(
     !props.contentAttributes?.externalError &&
     balaoDoInstagram(props) !== null
 );
-// #1702: a citação levou até aqui: a linha pisca por um instante (só com a pele).
+// #1702/#2211: a citação ou o link com ?messageId= levou até aqui: a linha fica destacada
+// 3 s em âmbar (só com a pele).
 const destacadaPelaCitacao = computed(
   () => !!pele.value && mensagemDestacada.value === props.id
 );
@@ -826,7 +827,8 @@ provideMessageContext({
         'relative ltr:pl-12 rtl:pr-12': encaminhar.emSelecao.value,
         'bg-[#000]/[0.06] dark:bg-white/[0.06]': encaminhar.marcada.value,
         'transition-colors duration-500': pele,
-        'bg-[#000]/[0.1] dark:bg-white/[0.1]': destacadaPelaCitacao,
+        // #2211: faixa âmbar com contorno amber-11 (≥ 3:1 contra o fundo nos dois temas).
+        'bg-n-amber-3 ring-2 ring-inset ring-n-amber-11': destacadaPelaCitacao,
       },
     ]"
   >

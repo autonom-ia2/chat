@@ -17,15 +17,20 @@ class Crm::Numeros::Origens::Classificador
   # Id de objeto da Meta: só dígitos, de 6 a 30 (a mesma regra do Crm::MetaAds::NameResolver).
   ID_DA_META = (6..30)
 
+  # Duas buscas pela chave de `conversations` (a principal e as ligadas), unidas, com o desempate por fora (#2232): um
+  # OR entre as duas fazia o banco ler todas as conversas da conta para cada card. Repetida nas duas, dá o mesmo toque.
   TOQUE_SQL = Arel.sql(<<~SQL.squish)
-    (SELECT (c.additional_attributes -> 'campaign') - 'body'
-     FROM conversations c
-     WHERE c.account_id = crm_cards.account_id
-       AND jsonb_typeof(c.additional_attributes -> 'campaign') = 'object'
-       AND (c.id = crm_cards.conversation_id
-            OR c.id IN (SELECT cc.conversation_id FROM crm_card_conversations cc
-                        WHERE cc.card_id = crm_cards.id AND cc.account_id = crm_cards.account_id))
-     ORDER BY NULLIF(c.additional_attributes -> 'campaign' ->> 'touched_at', '') ASC NULLS FIRST, c.id ASC
+    (SELECT t.campanha - 'body'
+     FROM (SELECT c.id, c.additional_attributes -> 'campaign' AS campanha
+           FROM conversations c
+           WHERE c.id = crm_cards.conversation_id AND c.account_id = crm_cards.account_id
+           UNION ALL
+           SELECT c.id, c.additional_attributes -> 'campaign'
+           FROM crm_card_conversations cc
+           JOIN conversations c ON c.id = cc.conversation_id AND c.account_id = crm_cards.account_id
+           WHERE cc.card_id = crm_cards.id AND cc.account_id = crm_cards.account_id) t
+     WHERE jsonb_typeof(t.campanha) = 'object'
+     ORDER BY NULLIF(t.campanha ->> 'touched_at', '') ASC NULLS FIRST, t.id ASC
      LIMIT 1)
   SQL
   COLUNAS = [:id, :pipeline_id, :title, :created_at, :status, :closed_at, :value_cents, :currency, :owner_id, :stage_id,
