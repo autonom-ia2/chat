@@ -74,12 +74,6 @@ RSpec.describe ConversaCanal::VistaAoResponder do
 
       expect(nao_lidas).to eq(0)
     end
-
-    it 'robô zera (decisão pendente: ConversaCanal::VistaAoResponder::Robo::APAGA_A_BOLINHA)' do
-      nossa(sender: bot)
-
-      expect(nao_lidas).to eq(0)
-    end
   end
 
   describe 'o que sai sem ninguém responder nesta conversa' do
@@ -175,23 +169,29 @@ RSpec.describe ConversaCanal::VistaAoResponder do
     end
   end
 
+  # Decisão do Rodrigo (#2202): só resposta de pessoa apaga a bolinha.
   describe 'robô' do
-    it 'cliente que mandou enquanto a resposta era gerada continua não lido' do
-      pergunta = do_cliente(0)
-      do_cliente(5, content: 'mandei enquanto o robô pensava')
+    before { do_cliente(0) }
 
-      nossa(10, sender: bot, content_attributes: { 'autonomia_reply_to_message_id' => pergunta.id })
+    it 'robô não apaga' do
+      nossa(10, sender: bot)
 
       expect(nao_lidas).to eq(1)
     end
 
-    it 'na passagem para a equipe, a resposta do robô não apaga a bolinha' do
-      do_cliente(0)
-      conversation.update!(additional_attributes: { Conversation::BOT_HANDOFF_WAITING_SINCE_KEY => inicio.iso8601 })
-
-      nossa(10, sender: bot)
+    it 'saída sem remetente que não é eco do celular não apaga' do
+      nossa(10, sender: nil)
 
       expect(nao_lidas).to eq(1)
+    end
+
+    it 'robô responde e depois a pessoa responde: apaga', :aggregate_failures do
+      nossa(10, sender: bot)
+      expect(nao_lidas).to eq(1)
+
+      nossa(20, sender: ana)
+
+      expect(nao_lidas).to eq(0)
     end
   end
 

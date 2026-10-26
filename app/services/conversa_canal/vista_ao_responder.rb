@@ -1,17 +1,16 @@
-# Prepend em Message (#2202, PR 0): resposta nossa marca a conversa como vista, como no WhatsApp ("se eu respondi, já
-# li"). Antes, só abrir a conversa no painel gravava o "visto" (agent_last_seen_at, no update_last_seen do
+# Prepend em Message (#2202, PR 0): resposta de uma PESSOA marca a conversa como vista, como no WhatsApp ("se eu
+# respondi, já li"). Antes, só abrir a conversa no painel gravava o "visto" (agent_last_seen_at, no update_last_seen do
 # Api::V1::Accounts::ConversationsController). Quem respondia pelo celular (eco), o robô e a API nunca abriam a conversa
 # no painel, e a bolinha de não lida ficava parada com a conversa já respondida.
 #
-# O que conta (conta?): mensagem que sai (outgoing), pública, que não falhou e que é alguém respondendo nesta conversa:
-# a pessoa pelo painel ou pela API, o eco do celular (com ou sem remetente), o modelo do WhatsApp mandado na conversa
-# (quem manda o modelo está respondendo nela, e no WhatsApp mandar qualquer coisa numa conversa a deixa lida) e o robô,
-# pela regra própria dele (VistaAoResponder::Robo, o único ponto dela).
-# O que não conta: nota privada (o cliente não vê), mensagem que falhou e o que sai sem ninguém responder nesta
-# conversa, na lista única de Messages::NaoEResposta (envio automático em nome de alguém, campanha, pesquisa de
-# satisfação, cópia encaminhada, modelo reenviado). Mensagem automática da caixa (saudação, fora do horário) é
-# `template`, não `outgoing`. A importação do histórico não chega aqui (Message#execute_after_create_commit_callbacks
-# sai antes).
+# O que conta (conta?): mensagem que sai (outgoing), pública, que não falhou, mandada por uma pessoa: pelo painel ou
+# pela API com token de pessoa (remetente User) ou pelo celular (eco, `external_echo`, com ou sem remetente). O modelo
+# do WhatsApp mandado por uma pessoa conta: no WhatsApp mandar qualquer coisa numa conversa a deixa lida.
+# O que não conta: robô (AgentBot, Captain::Assistant) e toda saída sem pessoa (decisão do Rodrigo, #2202: a bolinha
+# fica para a equipe ver o que só o robô respondeu), nota privada (o cliente não vê), mensagem que falhou e o que uma
+# pessoa manda sem estar respondendo nesta conversa, na lista única de Messages::NaoEResposta (envio automático em nome
+# dela, campanha, cópia encaminhada, modelo reenviado). A importação do histórico não chega aqui
+# (Message#execute_after_create_commit_callbacks sai antes).
 #
 # Até onde fica vista (antes_do_envio): até o começo do segundo em que a resposta SAIU, menos 1 µs.
 # - "Saiu": a hora do canal quando ele manda (external_created_at: o `timestamp` do eco da Cloud e do Híbrido,
@@ -31,15 +30,23 @@ module ConversaCanal::VistaAoResponder
   LINHAS_DO_BACKTRACE = 5
 
   def self.conta?(message)
-    message.outgoing? && !message.private? && !message.failed? && !::Messages::NaoEResposta.nao_e_resposta?(message)
+    message.outgoing? && !message.private? && !message.failed? && de_pessoa?(message) &&
+      !::Messages::NaoEResposta.nao_e_resposta?(message)
+  end
+
+  def self.de_pessoa?(message)
+    message.sender_type == 'User' || eco?(message)
+  end
+
+  def self.eco?(message)
+    message.content_attributes.to_h.with_indifferent_access['external_echo'].present?
   end
 
   # -> true quando o "visto" andou.
   def self.marcar!(message)
     conversation = message.conversation
-    visto = Robo.robo?(message) ? Robo.ate_onde(message) : antes_do_envio(message)
+    visto = antes_do_envio(message)
     marcar_avisos_de_quem_respondeu(message, conversation)
-    return false if visto.nil?
 
     havia_nao_lida = nao_lida_ate?(conversation, visto)
     return false unless gravar(conversation, visto)
@@ -84,7 +91,7 @@ module ConversaCanal::VistaAoResponder
   # Os avisos do sino desta conversa, só para a pessoa que respondeu (o remetente). O eco não conta: no WAHA comum o
   # remetente dele é o dono do token do conector, não quem respondeu no celular.
   def self.marcar_avisos_de_quem_respondeu(message, conversation)
-    return unless message.sender.is_a?(User) && message.content_attributes.to_h.with_indifferent_access['external_echo'].blank?
+    return if eco?(message) || !message.sender.is_a?(User)
 
     ::Notification::MarkConversationReadService.new(user: message.sender, account: message.account, conversation: conversation).perform
   end

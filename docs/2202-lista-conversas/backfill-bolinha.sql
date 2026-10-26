@@ -4,33 +4,27 @@
 -- (SSM + docker exec), nunca rails runner. Rode a PARTE 1 (só leitura) primeiro; a PARTE 2 só com OK explícito,
 -- depois do deploy do PR 0 (antes dele, a próxima resposta pelo celular voltaria a deixar bolinha parada).
 --
--- A regra é a do código (app/services/conversa_canal/vista_ao_responder.rb, ...vista_ao_responder/robo.rb e
--- app/services/messages/nao_e_resposta.rb), com três diferenças, todas para o lado seguro (marcar menos):
--- - o "visto" vai até a última resposta nossa que conta, no começo do segundo dela menos 1 µs (a tela compara em
+-- A regra é a do código (app/services/conversa_canal/vista_ao_responder.rb e app/services/messages/nao_e_resposta.rb):
+-- SÓ RESPOSTA DE PESSOA apaga a bolinha (decisão do Rodrigo, #2202), também no passado. Duas observações:
+-- - o "visto" vai até a última resposta de pessoa que conta, no começo do segundo dela menos 1 µs (a tela compara em
 --   segundos inteiros), e nunca para trás;
 -- - a hora do envio do eco (external_created_at) só existe nos ecos gravados depois do PR 0: no passado vale a hora
---   em que a mensagem chegou aqui;
--- - o robô do agente nativo (autonomia_reply_to_message_id) é tratado como qualquer resposta: vai até a hora dela,
---   não até a mensagem que ele respondeu. Ver o aviso do robô abaixo.
+--   em que a mensagem chegou aqui (marca menos: é o lado seguro).
 --
--- Conta: mensagem que sai (message_type = 1), pública (private = false), que não falhou (status <> 3).
+-- Conta: mensagem que sai (message_type = 1), pública (private = false), que não falhou (status <> 3), de pessoa:
+-- remetente User (painel, API com token de pessoa) ou eco do celular (external_echo). Robô (AgentBot,
+-- Captain::Assistant), pesquisa de satisfação e toda saída sem remetente que não é eco ficam de fora por aí.
 -- Não conta (Messages::NaoEResposta): campanha (campaign_id, whatsapp_api_campaign_id), envio automático em nome de
--- alguém (automation_rule_id, crm_follow_up_id, crm_booking_invite_id, crm_booking_notice), pesquisa de satisfação que
--- sai como mensagem (content_type = 9, input_csat), cópia encaminhada (forwarded), modelo reenviado
--- (reenvio_do_modelo) e importação do histórico (history_import).
---
--- AVISO DO ROBÔ: a decisão "o robô apaga a bolinha?" está com o Rodrigo. Do jeito que está aqui, ela vale também para
--- o PASSADO: toda conversa respondida só pelo robô perde a bolinha. Se a decisão for "não apaga", descomente as
--- linhas "ROBÔ" (sender_type fora de AgentBot e Captain::Assistant) nos dois blocos. Também fica de fora do robô a
--- conversa que hoje espera pessoa (bot_handoff_waiting_since): a linha "PASSAGEM" vale nos dois casos.
+-- alguém (automation_rule_id, crm_follow_up_id, crm_booking_invite_id, crm_booking_notice), cópia encaminhada
+-- (forwarded), modelo reenviado (reenvio_do_modelo) e importação do histórico (history_import).
 --
 -- Por que COALESCE(...::text, '') NOT LIKE e não ->> / ?: em produção messages.content_attributes é JSON dentro de
 -- string (JSON duplo), e ->> devolve NULL. O COALESCE é para coluna NULL: NULL NOT LIKE dá NULL, e a mensagem sairia
 -- da conta calada. LIKE '%campaign_id%' também pega whatsapp_api_campaign_id (as duas ficam de fora, de propósito).
 -- Uma chave gravada com valor null também sai: errar para menos (não marcar) é o lado seguro.
 --
--- Uma conversa entra quando: (a) tem resposta nossa que conta depois do "visto" atual; e (b) tem mensagem do cliente
--- entre o "visto" atual e o novo (é a bolinha parada). Mensagem do cliente depois da nossa última resposta continua
+-- Uma conversa entra quando: (a) tem resposta de pessoa que conta depois do "visto" atual; e (b) tem mensagem do cliente
+-- entre o "visto" atual e o novo (é a bolinha parada). Mensagem do cliente depois da última resposta de pessoa continua
 -- não lida, de propósito.
 --
 -- CUSTO DO LATERAL (medido num banco de rascunho local, com dados SINTÉTICOS, não em produção: 50 mil conversas,
@@ -62,7 +56,7 @@ WITH alvo AS (
       AND m.message_type = 1
       AND m.private = false
       AND m.status <> 3
-      AND m.content_type <> 9
+      AND (m.sender_type = 'User' OR COALESCE(m.content_attributes::text, '') LIKE '%external_echo%')
       AND (c.agent_last_seen_at IS NULL OR m.created_at > c.agent_last_seen_at)
       AND COALESCE(m.additional_attributes::text, '') NOT LIKE '%campaign_id%'
       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%automation_rule_id%'
@@ -72,10 +66,6 @@ WITH alvo AS (
       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%history_import%'
       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%forwarded%'
       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%reenvio_do_modelo%'
-      -- ROBÔ: AND COALESCE(m.sender_type, '') NOT IN ('AgentBot', 'Captain::Assistant')
-      -- PASSAGEM (vale sempre): o robô não apaga a bolinha da conversa que espera pessoa.
-      AND NOT (COALESCE(m.sender_type, '') IN ('AgentBot', 'Captain::Assistant')
-               AND COALESCE(c.additional_attributes::text, '') LIKE '%bot_handoff_waiting_since%')
   ) r
   WHERE r.novo_visto IS NOT NULL
     AND (c.agent_last_seen_at IS NULL OR c.agent_last_seen_at < r.novo_visto)
@@ -119,7 +109,7 @@ ROLLBACK;
 -- =====================================================================================================
 -- PARTE 2 — RASCUNHO DE ESCRITA. NÃO RODAR SEM OK DO RODRIGO.
 -- =====================================================================================================
--- Antes: conferir o número da PARTE 1, a decisão do robô (linhas ROBÔ) e avisar a Orquestração (escrita em produção).
+-- Antes: conferir o número da PARTE 1 e avisar a Orquestração (escrita em produção).
 -- Backup: a tabela backup_2202_agent_last_seen guarda id, o "visto" antigo e o novo de cada conversa tocada.
 -- Rollback (comando exato, segundos):
 --   UPDATE conversations c SET agent_last_seen_at = b.agent_last_seen_at
@@ -147,7 +137,7 @@ ROLLBACK;
 --       AND m.message_type = 1
 --       AND m.private = false
 --       AND m.status <> 3
---       AND m.content_type <> 9
+--       AND (m.sender_type = 'User' OR COALESCE(m.content_attributes::text, '') LIKE '%external_echo%')
 --       AND (c.agent_last_seen_at IS NULL OR m.created_at > c.agent_last_seen_at)
 --       AND COALESCE(m.additional_attributes::text, '') NOT LIKE '%campaign_id%'
 --       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%automation_rule_id%'
@@ -157,9 +147,6 @@ ROLLBACK;
 --       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%history_import%'
 --       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%forwarded%'
 --       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%reenvio_do_modelo%'
---       -- ROBÔ: AND COALESCE(m.sender_type, '') NOT IN ('AgentBot', 'Captain::Assistant')
---       AND NOT (COALESCE(m.sender_type, '') IN ('AgentBot', 'Captain::Assistant')
---                AND COALESCE(c.additional_attributes::text, '') LIKE '%bot_handoff_waiting_since%')
 --   ) r
 --   WHERE r.novo_visto IS NOT NULL
 --     AND (c.agent_last_seen_at IS NULL OR c.agent_last_seen_at < r.novo_visto)
@@ -198,6 +185,8 @@ ROLLBACK;
 --      0,002 ms cada (o MAX vira Limit 1 de trás para frente, parando na primeira saída que passa nos filtros)
 --   -> EXISTS: Index Only Scan no mesmo índice, 10.000 laços
 --   Buffers: shared hit=643.059 read=705 · Planning 1,9 ms · Execution 146 ms.
+-- A medida foi feita antes do filtro de pessoa (sender_type = User ou eco), que é só mais uma condição sobre as
+-- mesmas linhas lidas pelo índice: o plano e a ordem de grandeza não mudam.
 -- Ordem de grandeza: linear no número de conversas (um laço por conversa). Em produção (ordem de 10^4 a 10^5
 -- conversas por stack) deve ficar em segundos, não minutos; o pior caso é conversa com muitas saídas que NÃO contam
 -- depois do "visto" (o Limit 1 lê todas elas antes de achar uma que conta). Por isso o statement_timeout da PARTE 1.
