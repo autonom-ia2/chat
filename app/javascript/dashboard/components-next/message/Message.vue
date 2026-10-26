@@ -407,7 +407,8 @@ const linhaDoInstagram = computed(
     !props.contentAttributes?.externalError &&
     balaoDoInstagram(props) !== null
 );
-// #1702: a citação levou até aqui: a linha pisca por um instante (só com a pele).
+// #1702/#2211: a citação ou o link com ?messageId= levou até aqui: a linha fica destacada
+// 3 s em âmbar (só com a pele).
 const destacadaPelaCitacao = computed(
   () => !!pele.value && mensagemDestacada.value === props.id
 );
