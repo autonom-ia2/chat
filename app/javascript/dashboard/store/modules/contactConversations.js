@@ -21,14 +21,7 @@ export const createMessagePayload = (payload, message) => {
 };
 
 export const createConversationPayload = ({ params, contactId, files }) => {
-  const {
-    inboxId,
-    message,
-    sourceId,
-    mailSubject,
-    assigneeId,
-    reabrirAoEscrever,
-  } = params;
+  const { inboxId, message, sourceId, mailSubject, assigneeId } = params;
   const payload = new FormData();
 
   if (message) {
@@ -46,22 +39,12 @@ export const createConversationPayload = ({ params, contactId, files }) => {
     payload.append('additional_attributes[mail_subject]', mailSubject);
   }
   payload.append('assignee_id', assigneeId);
-  // #2216: a gaveta Nova conversa pede para reabrir a conversa oculta da caixa com
-  // "Reabrir a mesma conversa" (o servidor confere quem pede e se a pessoa opera a conversa).
-  if (reabrirAoEscrever) payload.append('reabrir_ao_escrever', true);
 
   return payload;
 };
 
 export const createWhatsAppConversationPayload = ({ params }) => {
-  const {
-    inboxId,
-    message,
-    contactId,
-    sourceId,
-    assigneeId,
-    reabrirAoEscrever,
-  } = params;
+  const { inboxId, message, contactId, sourceId, assigneeId } = params;
 
   const payload = {
     inbox_id: inboxId,
@@ -69,8 +52,6 @@ export const createWhatsAppConversationPayload = ({ params }) => {
     source_id: sourceId,
     message,
     assignee_id: assigneeId,
-    // #2216: ver createConversationPayload.
-    ...(reabrirAoEscrever ? { reabrir_ao_escrever: true } : {}),
   };
 
   return payload;

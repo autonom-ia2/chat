@@ -22,7 +22,8 @@ export const conversaOculta = canal => {
 };
 
 // Em que conversa a mensagem vai entrar pela API de mensagem; null = envia
-// pela criação de conversa (nova, ou a oculta, em que a criação entra).
+// pela criação de conversa (nova, ou a oculta, em que a criação entra sem
+// reabrir: ela continua resolvida ou adiada até o cliente responder).
 export const conversaDeDestino = ({ canal, destino }) => {
   const conversa = conversaDoCanal(canal);
   if (!conversa || !conversa.visible) return null;
@@ -32,9 +33,9 @@ export const conversaDeDestino = ({ canal, destino }) => {
 
 // #2216 — começar conversa na conversa visível de uma caixa com "Reabrir a
 // mesma conversa" leva o sinal `reabrir_ao_escrever`: o servidor reabre a
-// resolvida ou adiada sem mudar quem cuida. A oculta vai pela criação, com o
-// mesmo sinal (useNovaConversa); "Continuar" em caixa que cria conversas novas
-// e conversa nova não levam. `conversa` é a de conversaDeDestino.
+// resolvida ou adiada sem mudar quem cuida. A oculta (a pessoa não pode vê-la)
+// vai pela criação e não reabre; "Continuar" em caixa que cria conversas novas
+// e conversa nova não levam o sinal. `conversa` é a de conversaDeDestino.
 export const reabreAoEscrever = conversa =>
   Boolean(conversa?.visible && conversa.locked);
 

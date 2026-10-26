@@ -35,8 +35,17 @@ RSpec.describe Conversations::ReabrirSemRodizio do
 
     it 'trava a conversa antes de conferir a situação' do
       lida = Conversation.find(conversa.id)
-      expect(lida).to receive(:lock!).ordered.and_call_original
+      expect(lida).to receive(:lock!).with('FOR NO KEY UPDATE').ordered.and_call_original
       expect(lida).to receive(:open!).ordered.and_call_original
+
+      ActiveRecord::Base.transaction { lida.reabrir_ao_escrever! }
+      expect(lida.reload).to be_open
+    end
+
+    it 'conversa aberta não trava nada' do
+      conversa.update!(status: :open)
+      lida = Conversation.find(conversa.id)
+      expect(lida).not_to receive(:lock!)
 
       ActiveRecord::Base.transaction { lida.reabrir_ao_escrever! }
       expect(lida.reload).to be_open

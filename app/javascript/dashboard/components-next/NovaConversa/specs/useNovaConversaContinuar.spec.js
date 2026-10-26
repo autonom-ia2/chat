@@ -160,24 +160,10 @@ describe('useNovaConversa — continuar a conversa', () => {
     expect(pedido.data).not.toHaveProperty('reabrir_ao_escrever');
   });
 
-  // #2216: a conversa oculta vai pela criação, que leva o sinal; a conversa nova não.
-  it('conversa oculta: a criação manda reabrir_ao_escrever', async () => {
+  // #2216: a conversa oculta vai pela criação, que não reabre: nada de sinal.
+  it('conversa oculta: a criação não manda o sinal de reabrir', async () => {
     const envio = montar(null, true);
     Object.assign(envio.form, { mensagem: 'Oi de novo', assunto: 'Proposta' });
-    expect(envio.falta.value).toBe('');
-
-    await envio.enviar(() => null);
-    await flushPromises();
-
-    const criacao = estado.dispatch.mock.calls.find(
-      ([acao]) => acao === 'contactConversations/create'
-    );
-    expect(criacao[1].params.reabrirAoEscrever).toBe(true);
-  });
-
-  it('conversa nova: a criação não manda o sinal', async () => {
-    const envio = montar(null, false);
-    Object.assign(envio.form, { mensagem: 'Oi', assunto: 'Proposta' });
     expect(envio.falta.value).toBe('');
 
     await envio.enviar(() => null);

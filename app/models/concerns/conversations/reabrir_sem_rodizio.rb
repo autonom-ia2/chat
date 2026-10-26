@@ -5,13 +5,15 @@
 # automática desta troca fica de fora. Com Assignment V2, o job da fila da caixa ainda pode pegar a conversa aberta sem
 # ninguém numa rodada disparada por outra conversa, como faz com qualquer aberta sem dono.
 module Conversations::ReabrirSemRodizio
-  # Começar conversa pela gaveta Nova conversa (criação ou mensagem com o sinal) numa caixa com "Reabrir a mesma
-  # conversa": a resolvida ou adiada reabre; aberta ou pendente fica como está. A situação é conferida sob a trava da
-  # conversa (quem chama está numa transação): dois envios ao mesmo tempo não reabrem duas vezes.
+  # A mensagem da gaveta Nova conversa (com o sinal) numa caixa com "Reabrir a mesma conversa": a resolvida ou adiada
+  # reabre; aberta ou pendente fica como está, sem travar nada. A situação é conferida de novo sob a trava da conversa
+  # (quem chama está numa transação), para dois envios ao mesmo tempo não reabrirem duas vezes. FOR NO KEY UPDATE não
+  # bloqueia o insert de outra mensagem (a chave estrangeira da mensagem só pede FOR KEY SHARE).
   def reabrir_ao_escrever!
     return unless inbox.lock_to_single_conversation?
+    return unless resolved? || snoozed?
 
-    lock!
+    lock!('FOR NO KEY UPDATE')
     return unless resolved? || snoozed?
 
     reabrir_sem_rodizio!

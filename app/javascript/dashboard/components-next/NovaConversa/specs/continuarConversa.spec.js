@@ -173,7 +173,7 @@ describe('continuarConversa', () => {
   });
 
   // #2216: pela API de mensagem, o sinal vai só para a conversa visível de caixa
-  // com "Reabrir a mesma conversa"; a oculta leva o sinal na criação.
+  // com "Reabrir a mesma conversa"; a oculta vai pela criação e não reabre.
   describe('reabreAoEscrever', () => {
     const sinal = (conversa, destino) =>
       reabreAoEscrever(
