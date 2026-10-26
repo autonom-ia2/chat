@@ -49,24 +49,27 @@ const texto = computed(() =>
 </script>
 
 <template>
-  <RouterLink
-    v-if="mostrar"
-    :to="{ name: 'crm_numeros_origens' }"
-    data-origens-atalho
-    :data-total="total"
-    class="group flex min-h-12 items-center justify-between gap-3 rounded-xl bg-n-solid-1 px-4 py-3 ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 hover:ring-n-slate-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand motion-reduce:transition-none"
-  >
-    <span class="flex min-w-0 flex-col gap-0.5">
-      <span class="text-sm font-semibold text-n-slate-12">
-        {{ t(`${O}.TITULO`) }}
+  <!-- Sempre presente e sem caixa própria (contents): o cartão só aparece quando há o que dizer. -->
+  <div class="contents">
+    <RouterLink
+      v-if="mostrar"
+      :to="{ name: 'crm_numeros_origens' }"
+      data-origens-atalho
+      :data-total="total"
+      class="group flex min-h-12 items-center justify-between gap-3 rounded-xl bg-n-solid-1 px-4 py-3 ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 hover:ring-n-slate-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand motion-reduce:transition-none"
+    >
+      <span class="flex min-w-0 flex-col gap-0.5">
+        <span class="text-sm font-semibold text-n-slate-12">
+          {{ t(`${O}.TITULO`) }}
+        </span>
+        <span class="text-sm text-n-slate-11" data-origens-atalho-total>
+          {{ texto }}
+        </span>
       </span>
-      <span class="text-sm text-n-slate-11" data-origens-atalho-total>
-        {{ texto }}
-      </span>
-    </span>
-    <span
-      class="i-lucide-chevron-right size-4 shrink-0 text-n-slate-10 rtl:rotate-180"
-      aria-hidden="true"
-    />
-  </RouterLink>
+      <span
+        class="i-lucide-chevron-right size-4 shrink-0 text-n-slate-10 rtl:rotate-180"
+        aria-hidden="true"
+      />
+    </RouterLink>
+  </div>
 </template>

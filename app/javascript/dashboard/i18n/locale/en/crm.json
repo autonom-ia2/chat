@@ -6782,7 +6782,8 @@
       "DESTAQUE": "{n} of the {total} new customers came from: {origem}.",
       "VER_ARIA": "See the customer from {origem}: {vendas} | See the {n} customers from {origem}: {vendas}",
       "SEM_VENDA_FUNIL": "No sales in this pipeline in {mes}.",
-      "SEM_VENDA_TODOS": "No sales in {mes}."
+      "SEM_VENDA_TODOS": "No sales in {mes}.",
+      "SEPARADOR": "·"
     },
     "ANUNCIOS": {
       "TITULO": "Which ad brought a sale?",

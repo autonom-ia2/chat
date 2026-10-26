@@ -6783,7 +6783,8 @@
       "DESTAQUE": "{n} dos {total} clientes novos vieram de: {origem}.",
       "VER_ARIA": "Ver o cliente de {origem}: {vendas} | Ver os {n} clientes de {origem}: {vendas}",
       "SEM_VENDA_FUNIL": "Nenhuma venda neste funil em {mes}.",
-      "SEM_VENDA_TODOS": "Nenhuma venda em {mes}."
+      "SEM_VENDA_TODOS": "Nenhuma venda em {mes}.",
+      "SEPARADOR": "·"
     },
     "ANUNCIOS": {
       "TITULO": "Qual anúncio trouxe venda?",

@@ -140,7 +140,7 @@ const fraseSemVenda = computed(() =>
                 {{ linha.clientesTexto }}
               </strong>
               <template v-if="linha.vendasTexto">
-                · {{ linha.vendasTexto }}
+                {{ t(`${O}.DE_ONDE.SEPARADOR`) }} {{ linha.vendasTexto }}
               </template>
             </span>
           </span>

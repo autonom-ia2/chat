@@ -2759,6 +2759,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "10.19",
+     "titulo": "De onde vieram os clientes e quanto rende cada anúncio",
+     "para_que_serve": "Ver, mês a mês e por funil, por onde chegaram os clientes novos, quantas vendas vieram de cada caminho e, em todos os funis, quanto custou cada venda nos anúncios.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "crm_numeros_origens"
+     ],
+     "me_leve_ate_la": {
+      "rota": "crm_numeros_origens",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Ver de onde vieram os clientes e quanto rende cada anúncio"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },
