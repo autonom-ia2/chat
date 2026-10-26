@@ -162,6 +162,7 @@
       },
       "SALVO": "This contact is now {relacao}.",
       "ARQUIVADOS": "1 card archived. | {count} cards archived.",
+      "NAO_ARQUIVADOS": "1 card stayed open: you cannot archive it. | {count} cards stayed open: you cannot archive them.",
       "ERRO": "Could not change it now. Try again."
     }
   },

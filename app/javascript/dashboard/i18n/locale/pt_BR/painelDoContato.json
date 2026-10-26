@@ -162,6 +162,7 @@
       },
       "SALVO": "Agora este contato é {relacao}.",
       "ARQUIVADOS": "1 card arquivado. | {count} cards arquivados.",
+      "NAO_ARQUIVADOS": "1 card ficou aberto: você não pode arquivá-lo. | {count} cards ficaram abertos: você não pode arquivá-los.",
       "ERRO": "Não deu para mudar agora. Tente de novo."
     }
   },

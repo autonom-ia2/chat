@@ -119,6 +119,77 @@ describe('EscolhaDaRelacao', () => {
     });
   });
 
+  it('avisa os cards que ficaram abertos porque a regra não deixou arquivar', async () => {
+    CrmContatoRelacaoAPI.show.mockResolvedValue(lido({ cardsAbertos: 2 }));
+    CrmContatoRelacaoAPI.update.mockResolvedValue({
+      data: { relacao: 'parceiro', cardsArquivados: 1, cardsNaoArquivados: 1 },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    await escolher(wrapper, 'parceiro');
+    wrapper.findComponent(DialogStub).vm.$emit('confirm');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(
+      'Agora este contato é Parceiro do mercado. 1 card arquivado. 1 card ficou aberto: você não pode arquivá-lo.'
+    );
+  });
+
+  it('trocar de contato com a pergunta aberta não grava nada', async () => {
+    CrmContatoRelacaoAPI.show.mockResolvedValue(lido({ cardsAbertos: 1 }));
+    const wrapper = montar();
+    await flushPromises();
+
+    await escolher(wrapper, 'parceiro');
+    await wrapper.setProps({ contactId: 10 });
+    await flushPromises();
+    wrapper.findComponent(DialogStub).vm.$emit('confirm');
+    wrapper.findComponent(DialogStub).vm.$emit('close');
+    await flushPromises();
+
+    expect(fechar).toHaveBeenCalled();
+    expect(CrmContatoRelacaoAPI.update).not.toHaveBeenCalled();
+    expect(CrmContatoRelacaoAPI.show).toHaveBeenLastCalledWith(10);
+  });
+
+  it('entre Parceiro e Não é negócio não pergunta de novo', async () => {
+    CrmContatoRelacaoAPI.show.mockResolvedValue(
+      lido({ relacao: 'parceiro', cardsAbertos: 1 })
+    );
+    CrmContatoRelacaoAPI.update.mockResolvedValue({
+      data: {
+        relacao: 'nao_e_negocio',
+        cardsArquivados: 0,
+        cardsNaoArquivados: 0,
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    await escolher(wrapper, 'nao_e_negocio');
+
+    expect(abrir).not.toHaveBeenCalled();
+    expect(CrmContatoRelacaoAPI.update).toHaveBeenCalledWith(9, {
+      relacao: 'nao_e_negocio',
+      arquivarCards: false,
+    });
+  });
+
+  it.each([401, 403, 404])(
+    'some quando o servidor responde %s (o pai esconde o título)',
+    async status => {
+      CrmContatoRelacaoAPI.show.mockRejectedValue(
+        Object.assign(new Error('x'), { response: { status } })
+      );
+      const wrapper = montar();
+      await flushPromises();
+
+      expect(wrapper.emitted('estado').at(-1)).toEqual(['escondido']);
+      expect(wrapper.text()).not.toContain('Não deu para');
+    }
+  );
+
   it('volta a escolha e avisa quando o servidor recusa', async () => {
     CrmContatoRelacaoAPI.show.mockResolvedValue(lido());
     CrmContatoRelacaoAPI.update.mockRejectedValue(new Error('x'));
