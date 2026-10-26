@@ -169,20 +169,27 @@ describe Contacts::FilterService do
 
     context 'with standard attributes - relacao' do
       def por_relacao(operador, valor)
-        filtro = { payload: [{ attribute_key: 'relacao', filter_operator: operador, values: [valor], query_operator: nil }.with_indifferent_access] }
-        filter_service.new(account, first_user, filtro).perform
+        condicao = { attribute_key: 'relacao', filter_operator: operador, values: Array.wrap(valor), query_operator: nil }
+        filter_service.new(account, first_user, { payload: [condicao.with_indifferent_access] }).perform
       end
+
+      let!(:parceiro) { create(:contact, account: account, relacao: :parceiro, email: Faker::Internet.unique.email) }
+
+      before { account.enable_features!('contato_relacao') }
 
       it 'filtra pelo nome da relação (#2084)' do
-        parceiro = create(:contact, account: account, relacao: :parceiro, email: Faker::Internet.unique.email)
+        interessados = account.contacts.where.not(id: parceiro.id)
 
-        expect(por_relacao('equal_to', 'parceiro')[:contacts]).to contain_exactly(parceiro)
-        expect(por_relacao('not_equal_to', 'parceiro')[:count]).to be 3
-        expect(por_relacao('equal_to', 'interessado')[:contacts]).not_to include(parceiro)
+        expect(por_relacao('equal_to', 'Parceiro')[:contacts]).to contain_exactly(parceiro)
+        expect(por_relacao('not_equal_to', 'parceiro')[:contacts]).to match_array(interessados)
+        expect(por_relacao('equal_to', 'interessado')[:contacts]).to match_array(interessados)
       end
 
-      it 'recusa relação desconhecida' do
+      it 'recusa relação desconhecida, mais de um valor e a flag desligada' do
         expect { por_relacao('equal_to', 'cliente') }.to raise_error(CustomExceptions::CustomFilter::InvalidValue)
+        expect { por_relacao('equal_to', %w[parceiro interessado]) }.to raise_error(CustomExceptions::CustomFilter::InvalidValue)
+        account.disable_features!('contato_relacao')
+        expect { por_relacao('equal_to', 'parceiro') }.to raise_error(CustomExceptions::CustomFilter::InvalidValue)
       end
     end
 
