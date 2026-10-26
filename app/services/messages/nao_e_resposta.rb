@@ -7,6 +7,7 @@
 # - cópia encaminhada de outra conversa (`forwarded`, ConversaCanal::Encaminhamento): quem encaminhou estava na origem;
 # - modelo reenviado no encaminhamento fora da janela (`reenvio_do_modelo`, Whatsapp::Templates::ReenvioDoModelo).
 # Só estrutura (marcas gravadas pela plataforma); nada do texto.
+# A mesma lista está no backfill do passado, em docs/2202-lista-conversas/backfill-bolinha.sql: mudou aqui, mude lá.
 module Messages::NaoEResposta
   MARCAS = %w[forwarded reenvio_do_modelo].freeze
 

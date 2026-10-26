@@ -21,6 +21,11 @@
 #   getUnreadMessages, `created_at * 1000 > agent_last_seen_at * 1000`, com os dois em .to_i). Gravando o visto no
 #   meio do segundo, a mensagem do cliente no mesmo segundo da resposta seria não lida no servidor (bolinha) e lida na
 #   tela (divisor). Começando no segundo, os dois concordam: o segundo da resposta inteiro fica não lido.
+#   EFEITO DO CORTE: a mensagem do cliente que chegou no MESMO segundo em que a resposta saiu, antes ou depois dela,
+#   continua não lida (bolinha e divisor). Não há como saber a ordem dentro do segundo na tela; errar para "não lida"
+#   é o lado seguro. Fora desse segundo, nada muda.
+# - A hora do canal só vale se for mais cedo que a chegada (o menor dos dois) e uma hora plausível
+#   (Waha::RichNative::EventTime.at): hora no futuro não passa da chegada, hora ilegível é ignorada.
 # O "visto" nunca anda para trás: o eco atrasado de uma mensagem antiga não desfaz uma leitura mais nova.
 #
 # Roda antes do `dispatch_create_events` original, para o message.created da resposta já levar a não lida zerada.
@@ -46,11 +51,10 @@ module ConversaCanal::VistaAoResponder
   def self.marcar!(message)
     conversation = message.conversation
     visto = antes_do_envio(message)
-    marcar_avisos_de_quem_respondeu(message, conversation)
-
     havia_nao_lida = nao_lida_ate?(conversation, visto)
     return false unless gravar(conversation, visto)
 
+    marcar_avisos_de_quem_respondeu(message, conversation)
     avisar(conversation) if havia_nao_lida
     true
   end
@@ -88,8 +92,8 @@ module ConversaCanal::VistaAoResponder
     recebidas.exists?
   end
 
-  # Os avisos do sino desta conversa, só para a pessoa que respondeu (o remetente). O eco não conta: no WAHA comum o
-  # remetente dele é o dono do token do conector, não quem respondeu no celular.
+  # Os avisos do sino desta conversa, só para a pessoa que respondeu (o remetente) e só quando o "visto" andou. O eco
+  # não conta: no WAHA comum o remetente dele é o dono do token do conector, não quem respondeu no celular.
   def self.marcar_avisos_de_quem_respondeu(message, conversation)
     return if eco?(message) || !message.sender.is_a?(User)
 

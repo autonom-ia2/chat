@@ -158,6 +158,26 @@ RSpec.describe ConversaCanal::VistaAoResponder do
       expect(conversation.reload.agent_last_seen_at.to_i).to be < cliente.created_at.to_i
     end
 
+    it 'hora do canal no futuro não passa da hora de chegada', :aggregate_failures do
+      do_cliente(0)
+      do_cliente(20, content: 'escrevi depois do eco chegar')
+
+      eco(10, 'external_created_at' => (inicio + 1.hour).to_i)
+
+      expect(nao_lidas).to eq(1)
+      expect(conversation.reload.agent_last_seen_at).to eq(inicio + 10.seconds - Rational(1, 1_000_000))
+    end
+
+    it 'hora do canal ilegível ou implausível usa a hora de chegada', :aggregate_failures do
+      do_cliente(0)
+
+      eco(10, 'external_created_at' => 'ontem à tarde')
+      expect(conversation.reload.agent_last_seen_at).to eq(inicio + 10.seconds - Rational(1, 1_000_000))
+
+      eco(20, 'external_created_at' => -5)
+      expect(conversation.reload.agent_last_seen_at).to eq(inicio + 20.seconds - Rational(1, 1_000_000))
+    end
+
     it 'nunca volta o "visto" para trás (eco atrasado de mensagem antiga)' do
       do_cliente(0)
       visto = inicio + 1.hour
@@ -240,6 +260,15 @@ RSpec.describe ConversaCanal::VistaAoResponder do
 
       expect(da_ana.reload.read_at).to be_present
       expect(do_bruno.reload.read_at).to be_nil
+    end
+
+    it 'não marca os avisos do sino quando o "visto" não anda' do
+      aviso = create(:notification, user: ana, account: account, primary_actor: conversation)
+      conversation.update_columns(agent_last_seen_at: inicio + 1.hour) # rubocop:disable Rails/SkipsModelValidations
+
+      nossa
+
+      expect(aviso.reload.read_at).to be_nil
     end
 
     it 'o eco não marca os avisos do sino de ninguém' do

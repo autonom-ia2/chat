@@ -11,17 +11,21 @@
 -- - a hora do envio do eco (external_created_at) só existe nos ecos gravados depois do PR 0: no passado vale a hora
 --   em que a mensagem chegou aqui (marca menos: é o lado seguro).
 --
--- Conta: mensagem que sai (message_type = 1), pública (private = false), que não falhou (status <> 3), de pessoa:
+-- Conta: mensagem que sai (message_type = 1), pública (private = false), que não falhou (COALESCE(status, 0) <> 3), de pessoa:
 -- remetente User (painel, API com token de pessoa) ou eco do celular (external_echo). Robô (AgentBot,
 -- Captain::Assistant), pesquisa de satisfação e toda saída sem remetente que não é eco ficam de fora por aí.
 -- Não conta (Messages::NaoEResposta): campanha (campaign_id, whatsapp_api_campaign_id), envio automático em nome de
 -- alguém (automation_rule_id, crm_follow_up_id, crm_booking_invite_id, crm_booking_notice), cópia encaminhada
 -- (forwarded), modelo reenviado (reenvio_do_modelo) e importação do histórico (history_import).
 --
--- Por que COALESCE(...::text, '') NOT LIKE e não ->> / ?: em produção messages.content_attributes é JSON dentro de
--- string (JSON duplo), e ->> devolve NULL. O COALESCE é para coluna NULL: NULL NOT LIKE dá NULL, e a mensagem sairia
--- da conta calada. LIKE '%campaign_id%' também pega whatsapp_api_campaign_id (as duas ficam de fora, de propósito).
--- Uma chave gravada com valor null também sai: errar para menos (não marcar) é o lado seguro.
+-- As marcas são lidas POR CHAVE, com a mesma regra do código (present? do Ruby: a chave existe e não é null, false
+-- nem vazia), e não por LIKE no texto: LIKE '%forwarded%' pegava a palavra em qualquer lugar do JSON (o texto de um
+-- e-mail guardado em content_attributes, por exemplo), e LIKE '%"forwarded":true%' não acha nada no JSON duplo, onde
+-- as aspas vêm escapadas. Em produção messages.content_attributes é JSON dentro de string (JSON duplo), e ->> direto
+-- devolve NULL; `(coluna #>> '{}')::jsonb` lê os dois formatos (é o que o Enterprise já faz no scope
+-- captain_response_triggering). Atributo ilegível como JSON faz a mensagem sair da conta (lado seguro).
+-- REQUER Postgres 16 ou mais novo (pg_input_is_valid). Em versão mais antiga a consulta falha na hora, com erro de
+-- função inexistente: não roda errado em silêncio.
 --
 -- Uma conversa entra quando: (a) tem resposta de pessoa que conta depois do "visto" atual; e (b) tem mensagem do cliente
 -- entre o "visto" atual e o novo (é a bolinha parada). Mensagem do cliente depois da última resposta de pessoa continua
@@ -30,7 +34,7 @@
 -- CUSTO DO LATERAL (medido num banco de rascunho local, com dados SINTÉTICOS, não em produção: 50 mil conversas,
 -- 1 milhão de mensagens, Postgres 16, os índices de produção de messages): ver o fim deste arquivo. O LATERAL roda uma
 -- vez por conversa e usa index_messages_on_conversation_account_type_created (conversation_id, account_id,
--- message_type, created_at); o filtro de LIKE só lê as linhas de saída depois do "visto". Antes de rodar em produção,
+-- message_type, created_at); os filtros só leem as linhas de saída depois do "visto". Antes de rodar em produção,
 -- rode o EXPLAIN (sem ANALYZE) da PARTE 0 e confira que o plano usa esse índice; se aparecer Seq Scan em messages,
 -- pare e rode por conta (acrescente AND c.account_id = <id> no WHERE de alvo).
 
@@ -51,21 +55,35 @@ WITH alvo AS (
   CROSS JOIN LATERAL (
     SELECT date_trunc('second', MAX(m.created_at)) - interval '1 microsecond' AS novo_visto
     FROM messages m
+    -- Os atributos como jsonb, nos dois formatos gravados: objeto JSON ou JSON dentro de string (JSON duplo, como em
+    -- produção). `#>> '{}'` devolve o texto do objeto ou o de dentro da string; ilegível vira NULL e a linha sai.
+    CROSS JOIN LATERAL (
+      SELECT CASE WHEN pg_input_is_valid(m.content_attributes #>> '{}', 'jsonb')
+                  THEN (m.content_attributes #>> '{}')::jsonb END AS ca,
+             CASE WHEN pg_input_is_valid(m.additional_attributes #>> '{}', 'jsonb')
+                  THEN (m.additional_attributes #>> '{}')::jsonb END AS aa
+    ) x
     WHERE m.conversation_id = c.id
       AND m.account_id = c.account_id
       AND m.message_type = 1
       AND m.private = false
-      AND m.status <> 3
-      AND (m.sender_type = 'User' OR COALESCE(m.content_attributes::text, '') LIKE '%external_echo%')
+      AND COALESCE(m.status, 0) <> 3
+      AND (m.content_attributes IS NULL OR x.ca IS NOT NULL)
+      AND (m.additional_attributes IS NULL OR x.aa IS NOT NULL)
+      -- De pessoa: remetente User ou eco do celular. "Presente" = como o present? do Ruby: nem ausente, nem null,
+      -- nem false, nem vazio.
+      AND (m.sender_type = 'User' OR COALESCE(x.ca ->> 'external_echo', '') NOT IN ('', 'false', '{}', '[]'))
       AND (c.agent_last_seen_at IS NULL OR m.created_at > c.agent_last_seen_at)
-      AND COALESCE(m.additional_attributes::text, '') NOT LIKE '%campaign_id%'
-      AND COALESCE(m.content_attributes::text, '') NOT LIKE '%automation_rule_id%'
-      AND COALESCE(m.content_attributes::text, '') NOT LIKE '%crm_follow_up_id%'
-      AND COALESCE(m.content_attributes::text, '') NOT LIKE '%crm_booking_invite_id%'
-      AND COALESCE(m.content_attributes::text, '') NOT LIKE '%crm_booking_notice%'
-      AND COALESCE(m.content_attributes::text, '') NOT LIKE '%history_import%'
-      AND COALESCE(m.content_attributes::text, '') NOT LIKE '%forwarded%'
-      AND COALESCE(m.content_attributes::text, '') NOT LIKE '%reenvio_do_modelo%'
+      -- Messages::NaoEResposta e a importação do histórico: nenhuma destas chaves presente.
+      AND COALESCE(x.aa ->> 'campaign_id', '') IN ('', 'false', '{}', '[]')
+      AND COALESCE(x.aa ->> 'whatsapp_api_campaign_id', '') IN ('', 'false', '{}', '[]')
+      AND COALESCE(x.ca ->> 'automation_rule_id', '') IN ('', 'false', '{}', '[]')
+      AND COALESCE(x.ca ->> 'crm_follow_up_id', '') IN ('', 'false', '{}', '[]')
+      AND COALESCE(x.ca ->> 'crm_booking_invite_id', '') IN ('', 'false', '{}', '[]')
+      AND COALESCE(x.ca ->> 'crm_booking_notice', '') IN ('', 'false', '{}', '[]')
+      AND COALESCE(x.ca ->> 'forwarded', '') IN ('', 'false', '{}', '[]')
+      AND COALESCE(x.ca ->> 'reenvio_do_modelo', '') IN ('', 'false', '{}', '[]')
+      AND COALESCE(x.ca ->> 'history_import', '') IN ('', 'false', '{}', '[]')
   ) r
   WHERE r.novo_visto IS NOT NULL
     AND (c.agent_last_seen_at IS NULL OR c.agent_last_seen_at < r.novo_visto)
@@ -132,21 +150,35 @@ ROLLBACK;
 --   CROSS JOIN LATERAL (
 --     SELECT date_trunc('second', MAX(m.created_at)) - interval '1 microsecond' AS novo_visto
 --     FROM messages m
+--     -- Os atributos como jsonb, nos dois formatos gravados: objeto JSON ou JSON dentro de string (JSON duplo, como em
+--     -- produção). `#>> '{}'` devolve o texto do objeto ou o de dentro da string; ilegível vira NULL e a linha sai.
+--     CROSS JOIN LATERAL (
+--       SELECT CASE WHEN pg_input_is_valid(m.content_attributes #>> '{}', 'jsonb')
+--                   THEN (m.content_attributes #>> '{}')::jsonb END AS ca,
+--              CASE WHEN pg_input_is_valid(m.additional_attributes #>> '{}', 'jsonb')
+--                   THEN (m.additional_attributes #>> '{}')::jsonb END AS aa
+--     ) x
 --     WHERE m.conversation_id = c.id
 --       AND m.account_id = c.account_id
 --       AND m.message_type = 1
 --       AND m.private = false
---       AND m.status <> 3
---       AND (m.sender_type = 'User' OR COALESCE(m.content_attributes::text, '') LIKE '%external_echo%')
+--       AND COALESCE(m.status, 0) <> 3
+--       AND (m.content_attributes IS NULL OR x.ca IS NOT NULL)
+--       AND (m.additional_attributes IS NULL OR x.aa IS NOT NULL)
+--       -- De pessoa: remetente User ou eco do celular. "Presente" = como o present? do Ruby: nem ausente, nem null,
+--       -- nem false, nem vazio.
+--       AND (m.sender_type = 'User' OR COALESCE(x.ca ->> 'external_echo', '') NOT IN ('', 'false', '{}', '[]'))
 --       AND (c.agent_last_seen_at IS NULL OR m.created_at > c.agent_last_seen_at)
---       AND COALESCE(m.additional_attributes::text, '') NOT LIKE '%campaign_id%'
---       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%automation_rule_id%'
---       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%crm_follow_up_id%'
---       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%crm_booking_invite_id%'
---       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%crm_booking_notice%'
---       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%history_import%'
---       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%forwarded%'
---       AND COALESCE(m.content_attributes::text, '') NOT LIKE '%reenvio_do_modelo%'
+--       -- Messages::NaoEResposta e a importação do histórico: nenhuma destas chaves presente.
+--       AND COALESCE(x.aa ->> 'campaign_id', '') IN ('', 'false', '{}', '[]')
+--       AND COALESCE(x.aa ->> 'whatsapp_api_campaign_id', '') IN ('', 'false', '{}', '[]')
+--       AND COALESCE(x.ca ->> 'automation_rule_id', '') IN ('', 'false', '{}', '[]')
+--       AND COALESCE(x.ca ->> 'crm_follow_up_id', '') IN ('', 'false', '{}', '[]')
+--       AND COALESCE(x.ca ->> 'crm_booking_invite_id', '') IN ('', 'false', '{}', '[]')
+--       AND COALESCE(x.ca ->> 'crm_booking_notice', '') IN ('', 'false', '{}', '[]')
+--       AND COALESCE(x.ca ->> 'forwarded', '') IN ('', 'false', '{}', '[]')
+--       AND COALESCE(x.ca ->> 'reenvio_do_modelo', '') IN ('', 'false', '{}', '[]')
+--       AND COALESCE(x.ca ->> 'history_import', '') IN ('', 'false', '{}', '[]')
 --   ) r
 --   WHERE r.novo_visto IS NOT NULL
 --     AND (c.agent_last_seen_at IS NULL OR c.agent_last_seen_at < r.novo_visto)
@@ -185,8 +217,12 @@ ROLLBACK;
 --      0,002 ms cada (o MAX vira Limit 1 de trás para frente, parando na primeira saída que passa nos filtros)
 --   -> EXISTS: Index Only Scan no mesmo índice, 10.000 laços
 --   Buffers: shared hit=643.059 read=705 · Planning 1,9 ms · Execution 146 ms.
--- A medida foi feita antes do filtro de pessoa (sender_type = User ou eco), que é só mais uma condição sobre as
--- mesmas linhas lidas pelo índice: o plano e a ordem de grandeza não mudam.
+-- Medida de novo depois da leitura por chave (jsonb) e do filtro de pessoa, mesmos dados sintéticos: o mesmo plano
+-- (Index Scan Backward no índice acima, 50.000 laços de 0,003 ms; EXISTS em Index Only Scan) · Planning 0,9 ms ·
+-- Execution 177 ms. A leitura do JSON custa por mensagem de saída depois do "visto", não por conversa.
+-- Nos dados sintéticos a leitura por chave foi conferida em 8 casos (objeto e JSON duplo, encaminhada nos dois
+-- formatos, eco sem remetente, robô, status NULL, a palavra "forwarded" dentro de um e-mail, campanha): entraram só
+-- os 4 esperados.
 -- Ordem de grandeza: linear no número de conversas (um laço por conversa). Em produção (ordem de 10^4 a 10^5
 -- conversas por stack) deve ficar em segundos, não minutos; o pior caso é conversa com muitas saídas que NÃO contam
 -- depois do "visto" (o Limit 1 lê todas elas antes de achar uma que conta). Por isso o statement_timeout da PARTE 1.
