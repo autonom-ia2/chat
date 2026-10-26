@@ -98,7 +98,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Rasterizacao do
 
   # O neto não é filho do Ruby: depois do SIGKILL ele morre e o init o colhe quando puder; até lá o pid ainda existe.
   # Por isso a conferência espera ele sumir, com prazo, em vez de olhar uma vez só logo depois do kill (#2234).
-  def some_ate(pid, prazo: 5)
+  def sumiu?(pid, prazo: 5)
     limite = Process.clock_gettime(Process::CLOCK_MONOTONIC) + prazo
     loop do
       Process.kill(0, pid)
@@ -116,7 +116,8 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Rasterizacao do
     programa_falso('magick', "sleep 30 & echo $! > #{filho}; wait")
 
     expect { rasterizar(tempo: 1) }.to raise_error(described_class::Falhou, 'rasterizacao_timeout')
-    expect(some_ate(File.read(filho).to_i)).to be(true)
+    neto = File.read(filho).to_i
+    expect(sumiu?(neto)).to be(true), "o neto #{neto} ainda existe 5 s depois do kill do grupo"
   end
 
   it 'removes the temporary page when the reading fails' do
