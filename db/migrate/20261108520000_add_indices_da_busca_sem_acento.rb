@@ -1,16 +1,18 @@
-# #2211 — a busca da lista de conversas acha "João" digitando "joao", no nome do contato, no texto da mensagem e no áudio
-# transcrito. Três índices trigram (GIN) sobre lower(translate(coluna, ...)) escrito por extenso, com a tabela de letras
-# de SearchService::SemAcento — a mesma expressão que a consulta usa. Sem extensão (unaccent) e sem função no banco: o
+# #2211 — a busca da lista de conversas acha "João" digitando "joao", no nome do contato, no título do card, no texto da
+# mensagem e no áudio transcrito. Quatro índices trigram (GIN) sobre a expressão de SearchService::SemAcento — a mesma
+# que a consulta usa: lower(translate(normalize(coluna, NFD), <acentos combinantes>, '')). Só funções que já vêm no
+# Postgres (normalize existe desde o 13 e é IMMUTABLE; banco UTF8), sem extensão e sem função nossa no banco: o
 # db/schema.rb guarda a expressão e carrega num banco novo.
 # - Criados concurrently, fora da transação, sem travar escrita. O statement_timeout de 14 s do database.yml é zerado só
 #   durante cada CREATE INDEX: messages é grande, e o CREATE INDEX CONCURRENTLY morto no meio deixaria um índice
-#   inválido.
+#   inválido. O lock_timeout do StrongMigrations continua valendo.
 # - Se uma rodada anterior caiu no meio, o índice inválido é apagado e refeito. Rodar de novo não muda nada.
 class AddIndicesDaBuscaSemAcento < ActiveRecord::Migration[7.2]
   disable_ddl_transaction!
 
   INDICES = [
     [:contacts, 'name', 'idx_contacts_nome_sem_acento_trgm'],
+    [:crm_cards, 'title', 'idx_crm_cards_titulo_sem_acento_trgm'],
     [:messages, 'content', 'idx_messages_conteudo_sem_acento_trgm'],
     [:attachments, "(meta ->> 'transcribed_text')", 'idx_attachments_transcricao_sem_acento_trgm']
   ].freeze
