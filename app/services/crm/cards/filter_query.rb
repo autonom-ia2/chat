@@ -39,6 +39,7 @@ class Crm::Cards::FilterQuery
     cards = apply_shared_filters(cards)
     cards = apply_standalone_filter(cards)
     cards = apply_search(apply_follow_up_filter(apply_closed_in_filter(apply_result_filter(cards))))
+    cards = apply_origens_filter(cards)
     apply_sort(cards)
   end
 
@@ -115,6 +116,32 @@ class Crm::Cards::FilterQuery
 
     month_start = Crm::Timezone::Resolver.new(account: @account).zone_or_default.now.beginning_of_month
     cards.where(closed_at: month_start..)
+  end
+
+  # Números › "De onde vieram os clientes" (#2001, F6): o "Ver" abre a Lista com `entrou_em=AAAA-MM` (quem entrou ou
+  # foi ganho no mês, no fuso da conta) e, dentro disso, `origem` (o grupo da origem de primeiro toque) ou `anuncio`
+  # (o id do anúncio do primeiro toque). A seleção e a origem são as mesmas da tela (Crm::Numeros::Origens::Cards e
+  # Classificador), então a lista tem o tamanho que a tela mostra. List-only, como o `closed_in`. Origem e anúncio só
+  # valem junto do mês: sem ele a classificação leria o funil inteiro.
+  def apply_origens_filter(cards)
+    range = entrou_em_range
+    return cards if range.nil?
+
+    cards = Crm::Numeros::Origens::Cards.do_mes(cards, range)
+    origem = Crm::Numeros::Origens::Classificador::ORIGENS.find { |grupo| grupo == @params[:origem].to_s }
+    anuncio = @params[:anuncio].to_s.presence
+    return cards if origem.nil? && anuncio.nil?
+
+    cards.where(id: Crm::Numeros::Origens::Classificador.new(cards, range).ids_de(origem: origem, anuncio: anuncio))
+  end
+
+  def entrou_em_range
+    return if @params[:entrou_em].blank?
+
+    inicio = Crm::Numeros::Mes.new(account: @account, chave: @params[:entrou_em].to_s).inicio
+    inicio..inicio.end_of_month
+  rescue Crm::Numeros::Mes::Invalido
+    nil
   end
 
   def apply_search(cards)

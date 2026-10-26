@@ -120,6 +120,7 @@ export const GUIDE_ROUTE_REGISTRY = new Set([
   'crm_integration_tokens_index',
   'crm_kanban_index',
   'crm_my_booking_hours',
+  'crm_numeros_origens',
   'crm_sla_index',
   'csat_reports',
   'custom_roles_edit',

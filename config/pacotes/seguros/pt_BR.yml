@@ -16,6 +16,10 @@ pt_BR:
     # a corretora e a saúde têm a sua.
     ai:
       vocabulario: 'Fale de seguro, apólice e sinistro; chame de cliente só quem já contratou e de segurado só quem tem apólice.'
+  # Relatório baixado de Números › "De onde vieram os clientes" (#2001, F6): a situação do cliente do mês.
+  numeros_origens_report:
+    situation:
+      lost: 'Não fechou'
   # Relatório baixado de Anúncios (#1960): a situação de quem veio do anúncio e o que cada palavra quer dizer.
   meta_ads_report:
     glossary: 'Conversa: alguém chamou no WhatsApp depois de tocar num anúncio. Proposta: o card chegou a uma etapa de oportunidade ou negociação. Venda: o card foi marcado como seguro fechado.'

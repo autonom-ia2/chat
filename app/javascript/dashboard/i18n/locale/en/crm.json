@@ -3883,7 +3883,10 @@
     }
   },
   "CRM_FILTRO_DO_LINK": {
-    "FECHADO_NO_MES": "Closed: this month"
+    "FECHADO_NO_MES": "Closed: this month",
+    "ORIGEM": "Origin",
+    "ANUNCIO": "Ad",
+    "ENTROU_EM_MES": "Entered or closed: {mes}"
   },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Autonom.ia Copilot",
@@ -6752,6 +6755,104 @@
       "VOLTOU": "Pipeline {funil} is back.",
       "ABERTOS_VOLTARAM": "1 open card is back on the board. | {count} open cards are back on the board.",
       "CAIXAS_VOLTARAM": "New customers from {caixas} go into it again."
+    }
+  },
+  "CRM_NUMEROS_ORIGENS": {
+    "TITULO": "Where customers come from",
+    "VOLTAR": "Numbers",
+    "NOVA_ABA": "(opens in a new tab)",
+    "NOMES": {
+      "ANUNCIO_META": "Facebook or Instagram ad",
+      "GOOGLE": "Google ad",
+      "SITE": "Your website or link",
+      "DIRETO": "Came in directly",
+      "OUTRAS": "Other ways"
+    },
+    "EXPLICA": {
+      "DIRETO": "Sent a message without coming from an ad or from your website or link.",
+      "OUTRAS": "Posts without ads, ads on other networks, messages you sent to many people and other ways."
+    },
+    "DE_ONDE": {
+      "TITULO": "Where did customers come from in {mes}?",
+      "RESUMO": "{n} new customer {onde} | {n} new customers {onde}",
+      "CLIENTES": "{n} new customer | {n} new customers",
+      "VENDAS": "{n} sale | {n} sales",
+      "SEM_VENDA": "no sales yet",
+      "VER": "See list",
+      "DESTAQUE": "{n} of the {total} new customers came from: {origem}.",
+      "VER_ARIA": "See the customer from {origem}: {vendas} | See the {n} customers from {origem}: {vendas}",
+      "SEM_VENDA_FUNIL": "No sales in this pipeline in {mes}.",
+      "SEM_VENDA_TODOS": "No sales in {mes}."
+    },
+    "ANUNCIOS": {
+      "TITULO": "Which ad brought a sale?",
+      "SEM_VENDA": "no sale yet",
+      "GASTOU": "spent {valor}",
+      "POR_VENDA": "{valor} per sale",
+      "VER": "See the customers from this ad",
+      "VER_ARIA": "See the customers from the ad {anuncio}: {numeros}",
+      "SEM_NOME": "Unnamed ad"
+    },
+    "GASTO": {
+      "TITULO": "How much did you pay for each sale?",
+      "TOTAL": "spent on ads in {mes}",
+      "POR_VENDA": "per sale",
+      "RETORNO": "Each {um} spent on ads brought {valor} in sales.",
+      "POR_CLIENTE": "per new customer"
+    },
+    "NAO_MANDARAM": {
+      "TITULO": "How many tapped the ad and did not send a message?",
+      "FRASE": "Of {toques} taps on the ads, {n} became a new customer. | Of {toques} taps on the ads, {n} became new customers.",
+      "EXPLICA": "The others tapped and did not send a message, or tapped more than once. Facebook does not say who they are.",
+      "VER": "Open the ads on Facebook"
+    },
+    "VAZIO": {
+      "TITULO": "No new customers in {mes}.",
+      "ACAO": "Open the pipeline",
+      "TITULO_FUNIL": "Nobody entered the {funil} pipeline in {mes}."
+    },
+    "ATALHO": {
+      "TEXTO": "{n} of the {total} new customers came from: {origem}."
+    },
+    "COMO_CONTAMOS": {
+      "LINK": "How we count",
+      "TITULO": "How we count",
+      "DESCRICAO": "The rules behind the numbers on this screen.",
+      "REGRA_QUEM": "New customers are the ones who entered the chosen pipeline in the month, in the account time zone ({fuso}).",
+      "REGRA_ORIGEM": "The origin is the first way the person came in. If they come back later through another ad, the origin does not change.",
+      "REGRA_VENDA": "A sale counts in the month it was closed, even if the customer entered earlier. That is why the list shows who entered or closed in the month.",
+      "REGRA_DIRETO": "Came in directly: sent a message without coming from an ad or from your website or link.",
+      "REGRA_GASTO": "Spend comes from Facebook and shows only in \"All pipelines\", because it belongs to the whole account. Cost per new customer uses the customers who entered the pipelines, so it can differ from the Facebook number."
+    },
+    "GASTO_OCULTO": "Ad spend is shown only to people who can see the ads. Ask the account administrator.",
+    "FUNIL": {
+      "ROTULO": "Pipeline",
+      "PRINCIPAL": "{nome} (main)",
+      "NOME": "{nome}",
+      "TODOS": "All pipelines",
+      "ONDE": "in the {nome} pipeline",
+      "ONDE_TODOS": "in all pipelines",
+      "SEM_LISTA": "Choose a pipeline to see the list"
+    },
+    "RELATORIO": {
+      "BUTTON": "Download report",
+      "TITLE": "Download the report",
+      "DESCRIPTION": "{filtro}. It has the same numbers as this screen.",
+      "FILTRO_FUNIL": "{mes}, {funil} pipeline",
+      "FILTRO_TODOS": "{mes}, all pipelines",
+      "PDF_TITLE": "PDF to present",
+      "PDF_HINT": "A page ready to show or send to someone.",
+      "SHEET_TITLE": "Spreadsheet to work the numbers",
+      "SHEET_HINT": "Opens in Excel or Google Sheets, with each source and each ad.",
+      "CONFIRM": "Download",
+      "WITH_PEOPLE": "The customer list goes along.",
+      "NO_PEOPLE": "Without the \"Export the CRM list to Excel\" permission, the file has only the numbers, without the list of people.",
+      "ALTERAR": "Change month or pipeline",
+      "ERROR": "Could not download the report. Try again."
+    },
+    "GASTO_EM_TODOS": {
+      "TEXTO": "Ad spend belongs to the whole account. To see how much each sale cost, choose All pipelines.",
+      "ACAO": "See all pipelines"
     }
   }
 }

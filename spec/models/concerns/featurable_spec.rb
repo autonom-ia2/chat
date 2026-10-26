@@ -126,7 +126,7 @@ RSpec.describe Featurable do
       expect(column.null).to be(false)
       expect(create(:account).feature_flags_ext_2).to eq(0)
       expect(Account.flag_columns).to include('feature_flags_ext_2')
-      expect(Account.flag_mapping['feature_flags_ext_2']).to eq(described_class::FEATURES_BY_COLUMN['feature_flags_ext_2'])
+      expect(Account.flag_mapping['feature_flags_ext_2']).to eq(described_class::FEATURES_BY_COLUMN['feature_flags_ext_2'].invert)
     end
 
     it 'turns a flag on in feature_flags_ext_2 only and reads it back from the database' do
@@ -154,17 +154,21 @@ RSpec.describe Featurable do
       expect(model.feature_ext2_two.pluck(:id)).to be_empty
     end
 
-    context 'with the real Account and feature_flags_ext_2 still empty, as in production' do
+    # A primeira flag real da coluna (crm_numeros_origens, #2001) nasce desligada: nada da ext_2 vem selecionado.
+    context 'with the real Account and no feature_flags_ext_2 flag turned on, as in production' do
       let(:account) { create(:account) }
       let(:flags_das_outras_colunas) do
         described_class::FEATURES_BY_COLUMN.slice('feature_flags', 'feature_flags_ext_1').values.flat_map(&:values)
       end
 
-      it 'lists all and selected feature flags without anything from feature_flags_ext_2' do
+      it 'lists all feature flags and selects nothing from feature_flags_ext_2' do
         account.enable_features!('data_import')
+        da_ext2 = described_class::FEATURES_BY_COLUMN['feature_flags_ext_2'].values
 
-        expect(described_class::FEATURES_BY_COLUMN['feature_flags_ext_2']).to eq({})
-        expect(account.all_feature_flags).to match_array(flags_das_outras_colunas)
+        padroes = Featurable::FEATURE_LIST.select { |flag| flag['column'] == 'feature_flags_ext_2' }.pluck('enabled')
+
+        expect(padroes).to all(be(false))
+        expect(account.all_feature_flags).to match_array(flags_das_outras_colunas + da_ext2)
         expect(account.reload.selected_feature_flags).to include(:feature_data_import)
         expect(account.selected_feature_flags - flags_das_outras_colunas).to be_empty
         expect(account.feature_flags_ext_2).to eq(0)
