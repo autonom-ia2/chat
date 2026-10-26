@@ -13730,7 +13730,8 @@
       "leitura crua sem tipo: message (repassada a Messages::MessageBuilder.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversations_controller.rb:40",
+      "app/controllers/concerns/conversations/reabrir_ao_escrever.rb:12",
+      "app/controllers/concerns/conversations/reabrir_ao_escrever.rb:22",
       "app/controllers/api/v1/accounts/conversations_controller.rb:43",
       "app/controllers/api/v1/accounts/conversations_controller.rb:205",
       "app/controllers/api/v1/accounts/conversations_controller.rb:203",
