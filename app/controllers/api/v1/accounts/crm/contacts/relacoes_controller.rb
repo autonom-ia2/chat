@@ -5,7 +5,7 @@
 # quem vê a conversa, e na ficha do contato. Gravar é editar o contato (ContactPolicy#update?, contact_manage no EE).
 #
 #   GET /api/v1/accounts/:account_id/crm/contacts/:contact_id/relacao
-#     -> { relacao, cardsAbertos, podeEditar }  (cardsAbertos: os abertos que a pessoa vê, para perguntar "Arquivar?")
+#     -> { relacao, cardsAbertos, podeEditar }  (cardsAbertos: os abertos que a pessoa pode arquivar, para perguntar "Arquivar?")
 #   PUT /api/v1/accounts/:account_id/crm/contacts/:contact_id/relacao  { relacao, arquivar_cards }
 #     -> { relacao, cardsArquivados, cardsNaoArquivados }
 class Api::V1::Accounts::Crm::Contacts::RelacoesController < Api::V1::Accounts::Crm::BaseController
@@ -14,7 +14,7 @@ class Api::V1::Accounts::Crm::Contacts::RelacoesController < Api::V1::Accounts::
 
   def show
     authorize @contact, :origins?
-    render json: { relacao: @contact.relacao, cardsAbertos: cards_abertos.count, podeEditar: policy(@contact).update? }
+    render json: { relacao: @contact.relacao, cardsAbertos: cards_abertos.size, podeEditar: policy(@contact).update? }
   end
 
   def update
@@ -41,10 +41,8 @@ class Api::V1::Accounts::Crm::Contacts::RelacoesController < Api::V1::Accounts::
     ActiveModel::Type::Boolean.new.cast(params[:arquivar_cards]) == true
   end
 
+  # Os mesmos cards que o "Arquivar" alcança (Crm::Relacao::Marcar.arquivaveis): a pergunta não promete mais do que faz.
   def cards_abertos
-    ::Crm::Cards::VisibleScopeQuery.new(
-      scope: Current.account.crm_cards.where(contact_id: @contact.id, status: :open),
-      account: Current.account, user: Current.user, account_user: Current.account_user
-    ).perform
+    ::Crm::Relacao::Marcar.arquivaveis(contact: @contact, user: Current.user, account_user: Current.account_user)
   end
 end

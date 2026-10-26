@@ -88,6 +88,29 @@ RSpec.describe 'CRM contato relação API', type: :request do
     expect(pendente.reload.state).to eq('suggested')
   end
 
+  it 'arquiva em lotes: contato com mais cards abertos que o lote não fica pela metade' do
+    stub_const('Crm::Cards::BulkAction::MAX_IDS', 1)
+    outro = card(:open)
+
+    marcar('parceiro', arquivar_cards: true)
+
+    expect(response.parsed_body).to include('cardsArquivados' => 2, 'cardsNaoArquivados' => 0)
+    expect([aberto.reload, outro.reload]).to all(be_archived)
+  end
+
+  it 'avisa o painel Assuntos da conversa que tinha sugestão' do
+    sugestao
+    allow(Crm::Subjects::Notifier).to receive(:notify)
+
+    marcar('parceiro')
+
+    expect(Crm::Subjects::Notifier).to have_received(:notify).with(conversation).once
+  end
+
+  it 'o Guia pede confirmação antes de gravar (arquiva em lote e expira sugestões)' do
+    expect(Autonomia::Guide::Acoes::SEM_DESFAZER).to include('PUT crm/contacts/:contact_id/relacao')
+  end
+
   it 'recusa relação desconhecida sem mudar nada' do
     marcar('cliente')
 
