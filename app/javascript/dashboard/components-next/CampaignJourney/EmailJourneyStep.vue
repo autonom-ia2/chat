@@ -5,7 +5,7 @@
 // editor (EmailBuilderPage: "Como você quer começar?", AI, library, blocks, details) opens
 // unchanged. Back here (?email=<id>, #1093) the page reads the e-mail again, so the content
 // summary shows and the journey goes on to Revisar.
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -56,22 +56,58 @@ const defaultReplyLabel = computed(() => {
     ? t(`${NS}.REPLY_DOMAIN_DEFAULT`, { name: inbox.name })
     : t(`${NS}.REPLY_NONE`);
 });
+const isDomain = computed(() =>
+  String(props.draft.emailSender || '').startsWith('identity:')
+);
+const emailInboxes = computed(() =>
+  props.inboxes.filter(
+    inbox => inbox.channel_type === 'Channel::Email' && inbox.email
+  )
+);
+const normalized = address =>
+  String(address || '')
+    .trim()
+    .toLowerCase();
+// #2237 (decision A): replies should land in the platform. For a domain sender the journey
+// suggests the domain's reply inbox or an e-mail inbox of the same domain — visible and
+// changeable — instead of leaving replies on whoever's address sends.
+const suggestedReplyInbox = identity => {
+  if (!identity) return null;
+  return (
+    emailInboxes.value.find(inbox => inbox.id === identity.reply_to_inbox_id) ||
+    emailInboxes.value.find(inbox =>
+      inbox.email.toLowerCase().endsWith(`@${identity.domain}`.toLowerCase())
+    ) ||
+    null
+  );
+};
+// With "same as the sender" and no domain inbox, replies go to the From itself; say so when
+// that address is not an inbox here, because those replies never reach the platform.
+const replyOutsideAddress = computed(() => {
+  const domainInboxId = selectedIdentity.value?.reply_to_inbox_id;
+  const domainInboxHere =
+    domainInboxId &&
+    emailInboxes.value.some(inbox => inbox.id === domainInboxId);
+  if (props.draft.replyInboxId || domainInboxHere) return '';
+  const from = String(props.draft.fromEmail || '').trim();
+  if (!isDomain.value || !from) return '';
+  return emailInboxes.value.some(
+    inbox => normalized(inbox.email) === normalized(from)
+  )
+    ? ''
+    : from;
+});
 const replyOptions = computed(() => [
   { value: '', label: defaultReplyLabel.value },
-  ...props.inboxes
-    .filter(inbox => inbox.channel_type === 'Channel::Email' && inbox.email)
-    .map(inbox => ({
-      value: inbox.id,
-      label: `${inbox.name} · ${inbox.email}`,
-    })),
+  ...emailInboxes.value.map(inbox => ({
+    value: inbox.id,
+    label: `${inbox.name} · ${inbox.email}`,
+  })),
 ]);
 const replyInbox = computed(() =>
   props.inboxes.find(
     inbox => inbox.id === props.emailCampaign?.reply_to_inbox_id
   )
-);
-const isDomain = computed(() =>
-  String(props.draft.emailSender || '').startsWith('identity:')
 );
 const canCreate = computed(
   () =>
@@ -80,15 +116,42 @@ const canCreate = computed(
     (!isDomain.value || Boolean(String(props.draft.fromEmail || '').trim()))
 );
 
+// The reply inbox is a suggestion until the person picks one themselves; while it is, each
+// change of sender recomputes it, so a suggestion made for one domain never sticks to another.
+const replyTouched = ref(false);
+const chooseReply = replyInboxId => {
+  replyTouched.value = true;
+  emit('update', { replyInboxId });
+};
+
 const chooseSender = value => {
   const [kind, id] = String(value).split(':');
   const identity =
     kind === 'identity'
       ? props.identities.find(item => String(item.id) === id)
       : null;
+  const keepReply = replyTouched.value;
+  if (!identity) {
+    emit('update', {
+      emailSender: value,
+      fromEmail: '',
+      ...(keepReply ? {} : { replyInboxId: '' }),
+    });
+    return;
+  }
+  // The domain's saved address belongs to whoever registered it (#2237), so it is never filled
+  // in for you: the field starts with the suggested inbox's address when it is of this domain,
+  // or empty for you to type.
+  const inbox = suggestedReplyInbox(identity);
+  const inboxFrom =
+    inbox &&
+    inbox.email.toLowerCase().endsWith(`@${identity.domain}`.toLowerCase())
+      ? inbox.email
+      : '';
   emit('update', {
     emailSender: value,
-    fromEmail: identity?.from_email || '',
+    fromEmail: inboxFrom,
+    ...(keepReply ? {} : { replyInboxId: inbox ? inbox.id : '' }),
   });
 };
 </script>
@@ -136,8 +199,15 @@ const chooseSender = value => {
           :options="replyOptions"
           :aria-label="t(`${NS}.REPLY_LABEL`)"
           data-test="email-reply-choice"
-          @update:model-value="replyInboxId => emit('update', { replyInboxId })"
+          @update:model-value="chooseReply"
         />
+        <p
+          v-if="replyOutsideAddress"
+          class="m-0 text-xs text-n-amber-11"
+          data-test="email-reply-outside"
+        >
+          {{ t(`${NS}.REPLY_OUTSIDE`, { email: replyOutsideAddress }) }}
+        </p>
       </div>
       <BrandIdentityLine
         :kit-id="draft.brandKitId"
@@ -179,7 +249,11 @@ const chooseSender = value => {
         </dd>
         <dt class="text-n-slate-11">{{ t(`${NS}.REPLY_LABEL`) }}</dt>
         <dd class="m-0 truncate text-n-slate-12">
-          {{ replyInbox ? replyInbox.name : defaultReplyLabel }}
+          {{
+            replyInbox
+              ? replyInbox.name
+              : emailCampaign.reply_to_address || defaultReplyLabel
+          }}
         </dd>
         <dt v-if="emailCampaign.preheader" class="text-n-slate-11">
           {{ t(`${NS}.PREHEADER_LABEL`) }}

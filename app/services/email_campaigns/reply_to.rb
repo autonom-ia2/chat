@@ -29,7 +29,7 @@ class EmailCampaigns::ReplyTo
     identity = @campaign.sender_identity
     return if @campaign.direct_inbox? || identity&.reply_to_inbox_id.blank?
 
-    inbox_address(@campaign.account.inboxes.find_by(id: identity.reply_to_inbox_id))
+    inbox_address(identity.reply_to_inbox)
   end
 
   def inbox_address(inbox)
@@ -40,8 +40,6 @@ class EmailCampaigns::ReplyTo
   end
 
   def sender_address
-    return @campaign.from_email.presence if @campaign.direct_inbox?
-
-    @campaign.from_email.presence || @campaign.sender_identity&.from_email.presence
+    @campaign.sender_address
   end
 end

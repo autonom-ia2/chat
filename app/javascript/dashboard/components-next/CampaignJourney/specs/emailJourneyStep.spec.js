@@ -73,4 +73,105 @@ describe('EmailJourneyStep sender (#2237)', () => {
       'Domain default · Comunicação'
     );
   });
+
+  // #2237 decision A: the reply lands in the platform when it can, and the screen says so
+  // when it cannot.
+  it('suggests the same-domain inbox for replies and as the sender address', async () => {
+    const wrapper = montar();
+    await wrapper
+      .findComponent({ name: 'ChoiceSelect' })
+      .vm.$emit('update:modelValue', 'identity:4');
+
+    expect(wrapper.emitted('update').at(-1)[0]).toEqual({
+      emailSender: 'identity:4',
+      fromEmail: 'comunicacao@empresa.com.br',
+      replyInboxId: 48,
+    });
+  });
+
+  const senderChoice = wrapper =>
+    wrapper
+      .findAllComponents({ name: 'ChoiceSelect' })
+      .find(choice => choice.attributes('data-test') === 'email-sender-choice');
+
+  it('keeps a reply inbox the person picked, even "same as the sender"', async () => {
+    const wrapper = montar();
+    await replyChoice(wrapper).vm.$emit('update:modelValue', '');
+    await senderChoice(wrapper).vm.$emit('update:modelValue', 'identity:4');
+
+    expect(wrapper.emitted('update').at(-1)[0]).toEqual({
+      emailSender: 'identity:4',
+      fromEmail: 'comunicacao@empresa.com.br',
+    });
+  });
+
+  it('recomputes the suggestion when the sender changes', async () => {
+    const wrapper = mount(EmailJourneyStep, {
+      props: {
+        draft: { title: '', emailSender: '', fromEmail: '' },
+        identities: [
+          identity,
+          {
+            id: 5,
+            domain: 'outra.com.br',
+            from_email: 'ana@outra.com.br',
+            status: 'verified',
+          },
+        ],
+        inboxes: [replies],
+      },
+      global: {
+        plugins: [
+          createI18n({ legacy: false, locale: 'en', messages: { en } }),
+        ],
+        stubs: { BrandIdentityLine: true },
+      },
+    });
+    await senderChoice(wrapper).vm.$emit('update:modelValue', 'identity:4');
+    await senderChoice(wrapper).vm.$emit('update:modelValue', 'identity:5');
+
+    // No inbox of outra.com.br: no suggestion, and the saved address is not filled in.
+    expect(wrapper.emitted('update').at(-1)[0]).toEqual({
+      emailSender: 'identity:5',
+      fromEmail: '',
+      replyInboxId: '',
+    });
+  });
+
+  it('warns when the domain default reply inbox is not an inbox here', () => {
+    const wrapper = montar(
+      { emailSender: 'identity:4', fromEmail: 'lucas@empresa.com.br' },
+      { reply_to_inbox_id: 999 }
+    );
+    expect(wrapper.find('[data-test="email-reply-outside"]').exists()).toBe(
+      true
+    );
+  });
+
+  it('warns when replies would go to an address outside the platform', () => {
+    const outside = montar({
+      emailSender: 'identity:4',
+      fromEmail: 'lucas@empresa.com.br',
+    });
+    expect(outside.find('[data-test="email-reply-outside"]').text()).toContain(
+      'lucas@empresa.com.br'
+    );
+
+    const inside = montar({
+      emailSender: 'identity:4',
+      fromEmail: 'comunicacao@empresa.com.br',
+    });
+    expect(inside.find('[data-test="email-reply-outside"]').exists()).toBe(
+      false
+    );
+
+    const chosen = montar({
+      emailSender: 'identity:4',
+      fromEmail: 'lucas@empresa.com.br',
+      replyInboxId: 48,
+    });
+    expect(chosen.find('[data-test="email-reply-outside"]').exists()).toBe(
+      false
+    );
+  });
 });

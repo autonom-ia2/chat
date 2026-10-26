@@ -96,6 +96,26 @@ RSpec.describe 'E-mail campaign reply-to inbox (#999, L5)', :aggregate_failures,
     expect(delivered.first).to include(from_email: 'jhuliene@example.org', reply_to: 'jhuliene@example.org')
   end
 
+  it 'shows on the campaign the Reply-To the send will really use (#2237)' do
+    admin = create(:user, account: account, role: :administrator)
+    campaign.sender_identity.update!(from_email: 'lucas@example.org')
+    campaign.update!(reply_to_inbox: nil, reply_to: nil, from_email: 'jhuliene@example.org')
+
+    get "/api/v1/accounts/#{account.id}/email_campaigns/campaigns/#{campaign.id}", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('payload', 'reply_to_address')).to eq('jhuliene@example.org')
+  end
+
+  it 'uses one From chain for the send, the test send and the Reply-To (#2237)' do
+    identity = campaign.sender_identity
+    campaign.update!(reply_to_inbox: nil, reply_to: nil, from_email: nil)
+    identity.update!(from_email: nil)
+
+    expect(campaign.reload.sender_address).to eq("no-reply@#{identity.domain}")
+    expect(EmailCampaigns::ReplyTo.for(campaign)).to eq("no-reply@#{identity.domain}")
+  end
+
   it 'sends by the inbox (direct) with the reply inbox as Reply-To' do
     sender_inbox = create(:channel_email, account: account, email: 'vendas@empresa.com.br').inbox
     campaign.update!(delivery_mode: :direct_inbox, sender_inbox: sender_inbox, sender_identity: nil)

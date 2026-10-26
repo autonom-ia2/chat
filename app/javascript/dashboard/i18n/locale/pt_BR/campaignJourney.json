@@ -498,6 +498,7 @@
         "REPLY_LABEL": "Respostas vão para a caixa",
         "REPLY_NONE": "A mesma do remetente",
         "REPLY_DOMAIN_DEFAULT": "Padrão do domínio · {name}",
+        "REPLY_OUTSIDE": "As respostas vão direto para {email}, fora da plataforma. Escolha uma caixa para recebê-las aqui.",
         "CREATE": "Continuar para o conteúdo",
         "CONTENT_TITLE": "Conteúdo e detalhes do envio",
         "CONTENT_HINT": "O conteúdo é feito no editor: crie com ajuda, escolha um modelo ou comece do zero. Depois volte aqui para revisar e agendar.",

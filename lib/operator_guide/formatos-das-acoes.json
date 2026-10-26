@@ -784,8 +784,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#destroy",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:37",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:38",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": true
   },
@@ -6525,9 +6525,9 @@
     "envelope": "email_campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:28",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:153",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:29",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:154",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": false
   },
@@ -16920,8 +16920,8 @@
     "envelope": "email_campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:20",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:153"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:21",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:154"
     ],
     "sem_corpo": false
   },
@@ -16963,8 +16963,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#cancel",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:106",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:107",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": true
   },
@@ -16973,8 +16973,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#duplicate",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:112",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:113",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": true
   },
@@ -16983,8 +16983,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#pause",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:73",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:74",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": true
   },
@@ -16993,8 +16993,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#recheck",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:93",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:94",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": true
   },
@@ -17003,8 +17003,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#reevaluate",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:88",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:89",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": true
   },
@@ -17045,8 +17045,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#resume",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:78",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:79",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": true
   },
@@ -17060,10 +17060,10 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#schedule",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:64",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:67",
       "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:65",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:68",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:66",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": false
   },
@@ -17072,8 +17072,8 @@
     "controller": "api/v1/accounts/email_campaigns/campaigns#send_now",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:49",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:50",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": true
   },
@@ -25079,9 +25079,9 @@
     "envelope": "email_campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:28",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:153",
-      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:148"
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:29",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:154",
+      "app/controllers/api/v1/accounts/email_campaigns/campaigns_controller.rb:149"
     ],
     "sem_corpo": false
   },

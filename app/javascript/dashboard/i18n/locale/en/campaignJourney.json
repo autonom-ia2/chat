@@ -498,6 +498,7 @@
         "REPLY_LABEL": "Replies go to the inbox",
         "REPLY_NONE": "Same as the sender",
         "REPLY_DOMAIN_DEFAULT": "Domain default · {name}",
+        "REPLY_OUTSIDE": "Replies will go straight to {email}, outside the platform. Choose an inbox to receive them here.",
         "CREATE": "Continue to the content",
         "CONTENT_TITLE": "Email content and sending details",
         "CONTENT_HINT": "The content is made in the editor: create it with help, pick a template or start from scratch. Then come back here to review and schedule.",
