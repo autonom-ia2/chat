@@ -1,6 +1,7 @@
 {
   "sobre": "#1550 — textos do catálogo base que falam em ganho/perda mas NÃO são o resultado da venda, então ficam fora dos pacotes de segmento. Cada chave leva o motivo. A trava (scripts/i18n-pacotes/cobertura.mjs) reprova chave nova sem decisão e exceção que não serve mais. Veja docs/segmentos/README.md.",
   "painel": {
+    "PAINEL_DO_CONTATO.RELACAO.ARQUIVAR.TEXTO": "Arquivar o card não perde nada, dá para reabrir (#2084); não é resultado de venda.",
     "CUSTOM_ROLE.EDITOR.LOST_ACCESS.TITLE": "Pessoas que perdem acesso ao salvar a função (#2185); não é resultado de venda.",
     "CUSTOM_ROLE.EDITOR.LOST_ACCESS.DESCRIPTION": "Áreas que as pessoas da função perdem ao salvar (#2185); não é resultado de venda.",
     "AGENTS.JORNADA.EXCLUIR.TEXTO": "Perder o que foi digitado ao excluir o rascunho do agente; não é resultado de venda.",

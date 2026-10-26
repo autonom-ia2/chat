@@ -133,6 +133,36 @@
       "CANCELAR": "Cancel",
       "PRONTO": "Done.",
       "ERRO": "Could not save it now. Try again."
+    },
+    "RELACAO": {
+      "TITULO": "This contact is",
+      "OPCOES": {
+        "INTERESSADO": {
+          "ROTULO": "Prospect",
+          "DICA": "Buys or may buy from you."
+        },
+        "PARCEIRO": {
+          "ROTULO": "Market partner",
+          "DICA": "Supplier or peer in your field."
+        },
+        "NAO_E_NEGOCIO": {
+          "ROTULO": "Not business",
+          "DICA": "Wrong number, spam or personal."
+        }
+      },
+      "EFEITO": {
+        "INTERESSADO": "Their conversations become cards in the pipeline and count in the Numbers.",
+        "FORA": "Their conversations do not become cards on their own and stay out of the Numbers. You can still create a card by hand."
+      },
+      "ARQUIVAR": {
+        "TITULO": "This contact has 1 open card. Archive it? | This contact has {count} open cards. Archive them?",
+        "TEXTO": "An archived card leaves the pipeline and the Numbers. Nothing is lost: you can reopen it from the CRM.",
+        "SIM": "Archive",
+        "NAO": "Keep"
+      },
+      "SALVO": "This contact is now {relacao}.",
+      "ARQUIVADOS": "1 card archived. | {count} cards archived.",
+      "ERRO": "Could not change it now. Try again."
     }
   },
   "APAGAR_CONTATO": {
