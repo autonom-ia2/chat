@@ -5,15 +5,15 @@
 -- depois do deploy do PR 0 (antes dele, a próxima resposta pelo celular voltaria a deixar bolinha parada).
 --
 -- A regra é a do código (app/services/conversa_canal/vista_ao_responder.rb e app/services/messages/nao_e_resposta.rb):
--- SÓ RESPOSTA DE PESSOA apaga a bolinha (decisão do Rodrigo, #2202), também no passado. Duas observações:
--- - o "visto" vai até a última resposta de pessoa que conta, no começo do segundo dela menos 1 µs (a tela compara em
---   segundos inteiros), e nunca para trás;
--- - a hora do envio do eco (external_created_at) só existe nos ecos gravados depois do PR 0: no passado vale a hora
---   em que a mensagem chegou aqui (marca menos: é o lado seguro).
+-- SÓ RESPOSTA DE PESSOA pelo painel ou pela API com token de pessoa apaga a bolinha (decisões do Rodrigo, #2202), também
+-- no passado. O robô e o eco do celular não apagam: nenhum canal diz se o eco foi uma pessoa ou resposta automática.
+-- O "visto" vai até a última resposta de pessoa que conta, no começo do segundo dela menos 1 µs (a tela compara em
+-- segundos inteiros), e nunca para trás.
 --
 -- Conta: mensagem que sai (message_type = 1), pública (private = false), que não falhou (COALESCE(status, 0) <> 3), de pessoa:
--- remetente User (painel, API com token de pessoa) ou eco do celular (external_echo). Robô (AgentBot,
--- Captain::Assistant), pesquisa de satisfação e toda saída sem remetente que não é eco ficam de fora por aí.
+-- remetente User (painel, API com token de pessoa) que não é eco. Robô (AgentBot, Captain::Assistant), pesquisa de
+-- satisfação e toda saída sem remetente ficam de fora por aí. O eco sai pela chave external_echo: no WAHA comum o eco
+-- chega com remetente User (o dono do token do conector), então só o sender_type não basta.
 -- Não conta (Messages::NaoEResposta): campanha (campaign_id, whatsapp_api_campaign_id), envio automático em nome de
 -- alguém (automation_rule_id, crm_follow_up_id, crm_booking_invite_id, crm_booking_notice), cópia encaminhada
 -- (forwarded), modelo reenviado (reenvio_do_modelo) e importação do histórico (history_import).
@@ -70,11 +70,11 @@ WITH alvo AS (
       AND COALESCE(m.status, 0) <> 3
       AND (m.content_attributes IS NULL OR x.ca IS NOT NULL)
       AND (m.additional_attributes IS NULL OR x.aa IS NOT NULL)
-      -- De pessoa: remetente User ou eco do celular. "Presente" = como o present? do Ruby: nem ausente, nem null,
-      -- nem false, nem vazio.
-      AND (m.sender_type = 'User' OR COALESCE(x.ca ->> 'external_echo', '') NOT IN ('', 'false', '{}', '[]'))
+      -- De pessoa: remetente User. "Presente" (abaixo) = como o present? do Ruby: nem ausente, nem null, nem false, nem vazio.
+      AND m.sender_type = 'User'
       AND (c.agent_last_seen_at IS NULL OR m.created_at > c.agent_last_seen_at)
-      -- Messages::NaoEResposta e a importação do histórico: nenhuma destas chaves presente.
+      -- O eco do celular, Messages::NaoEResposta e a importação do histórico: nenhuma destas chaves presente.
+      AND COALESCE(x.ca ->> 'external_echo', '') IN ('', 'false', '{}', '[]')
       AND COALESCE(x.aa ->> 'campaign_id', '') IN ('', 'false', '{}', '[]')
       AND COALESCE(x.aa ->> 'whatsapp_api_campaign_id', '') IN ('', 'false', '{}', '[]')
       AND COALESCE(x.ca ->> 'automation_rule_id', '') IN ('', 'false', '{}', '[]')
@@ -165,11 +165,11 @@ ROLLBACK;
 --       AND COALESCE(m.status, 0) <> 3
 --       AND (m.content_attributes IS NULL OR x.ca IS NOT NULL)
 --       AND (m.additional_attributes IS NULL OR x.aa IS NOT NULL)
---       -- De pessoa: remetente User ou eco do celular. "Presente" = como o present? do Ruby: nem ausente, nem null,
---       -- nem false, nem vazio.
---       AND (m.sender_type = 'User' OR COALESCE(x.ca ->> 'external_echo', '') NOT IN ('', 'false', '{}', '[]'))
+--       -- De pessoa: remetente User. "Presente" (abaixo) = como o present? do Ruby: nem ausente, nem null, nem false, nem vazio.
+--       AND m.sender_type = 'User'
 --       AND (c.agent_last_seen_at IS NULL OR m.created_at > c.agent_last_seen_at)
---       -- Messages::NaoEResposta e a importação do histórico: nenhuma destas chaves presente.
+--       -- O eco do celular, Messages::NaoEResposta e a importação do histórico: nenhuma destas chaves presente.
+--       AND COALESCE(x.ca ->> 'external_echo', '') IN ('', 'false', '{}', '[]')
 --       AND COALESCE(x.aa ->> 'campaign_id', '') IN ('', 'false', '{}', '[]')
 --       AND COALESCE(x.aa ->> 'whatsapp_api_campaign_id', '') IN ('', 'false', '{}', '[]')
 --       AND COALESCE(x.ca ->> 'automation_rule_id', '') IN ('', 'false', '{}', '[]')
@@ -220,9 +220,9 @@ ROLLBACK;
 -- Medida de novo depois da leitura por chave (jsonb) e do filtro de pessoa, mesmos dados sintéticos: o mesmo plano
 -- (Index Scan Backward no índice acima, 50.000 laços de 0,003 ms; EXISTS em Index Only Scan) · Planning 0,9 ms ·
 -- Execution 177 ms. A leitura do JSON custa por mensagem de saída depois do "visto", não por conversa.
--- Nos dados sintéticos a leitura por chave foi conferida em 8 casos (objeto e JSON duplo, encaminhada nos dois
--- formatos, eco sem remetente, robô, status NULL, a palavra "forwarded" dentro de um e-mail, campanha): entraram só
--- os 4 esperados.
+-- Nos dados sintéticos a leitura por chave foi conferida em 9 casos (objeto e JSON duplo, encaminhada nos dois
+-- formatos, eco sem remetente, eco com remetente User como no WAHA comum, robô, status NULL, a palavra "forwarded"
+-- dentro de um e-mail, campanha): entraram só os 3 esperados (resposta comum, status NULL, e-mail com a palavra).
 -- Ordem de grandeza: linear no número de conversas (um laço por conversa). Em produção (ordem de 10^4 a 10^5
 -- conversas por stack) deve ficar em segundos, não minutos; o pior caso é conversa com muitas saídas que NÃO contam
 -- depois do "visto" (o Limit 1 lê todas elas antes de achar uma que conta). Por isso o statement_timeout da PARTE 1.

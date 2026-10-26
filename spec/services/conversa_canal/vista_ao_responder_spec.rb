@@ -35,8 +35,8 @@ RSpec.describe ConversaCanal::VistaAoResponder do
     end
   end
 
-  def eco(segundos = 10, **attrs)
-    nossa(segundos, sender: nil, content_attributes: { 'external_echo' => true }.merge(attrs))
+  def eco(segundos = 10)
+    nossa(segundos, sender: nil, content_attributes: { 'external_echo' => true })
   end
 
   def nao_lidas
@@ -63,10 +63,15 @@ RSpec.describe ConversaCanal::VistaAoResponder do
       expect(conversation.reload.agent_last_seen_at).to eq(inicio + 10.seconds - Rational(1, 1_000_000))
     end
 
-    it 'eco do celular (sem remetente) zera' do
-      eco
+    # Decisão do Rodrigo (#2202, opção B): nenhum canal diz se o eco foi uma pessoa digitando, resposta automática do
+    # celular ou robô mandando direto pela WAHA. Sem remetente (Cloud, Híbrido) ou com o dono do token do conector
+    # como remetente (WAHA comum), o eco não apaga.
+    it 'eco não apaga', :aggregate_failures do
+      eco(10)
+      expect(nao_lidas).to eq(2)
 
-      expect(nao_lidas).to eq(0)
+      nossa(20, sender: ana, content_attributes: { 'external_echo' => true })
+      expect(nao_lidas).to eq(2)
     end
 
     it 'modelo do WhatsApp mandado na conversa zera' do
@@ -135,15 +140,6 @@ RSpec.describe ConversaCanal::VistaAoResponder do
       expect(nao_lidas).to eq(1)
     end
 
-    it 'eco: vai até a hora em que saiu do celular, não até a hora em que chegou aqui' do
-      do_cliente(0)
-      do_cliente(5, content: 'escrevi enquanto o eco não chegava')
-
-      eco(60, 'external_created_at' => (inicio + 3.seconds).to_i)
-
-      expect(nao_lidas).to eq(1)
-    end
-
     it 'mensagem do cliente no mesmo segundo da resposta continua não lida, no servidor e na tela', :aggregate_failures do
       mesmo_instante = inicio + 10.5.seconds
       cliente = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming,
@@ -158,32 +154,12 @@ RSpec.describe ConversaCanal::VistaAoResponder do
       expect(conversation.reload.agent_last_seen_at.to_i).to be < cliente.created_at.to_i
     end
 
-    it 'hora do canal no futuro não passa da hora de chegada', :aggregate_failures do
-      do_cliente(0)
-      do_cliente(20, content: 'escrevi depois do eco chegar')
-
-      eco(10, 'external_created_at' => (inicio + 1.hour).to_i)
-
-      expect(nao_lidas).to eq(1)
-      expect(conversation.reload.agent_last_seen_at).to eq(inicio + 10.seconds - Rational(1, 1_000_000))
-    end
-
-    it 'hora do canal ilegível ou implausível usa a hora de chegada', :aggregate_failures do
-      do_cliente(0)
-
-      eco(10, 'external_created_at' => 'ontem à tarde')
-      expect(conversation.reload.agent_last_seen_at).to eq(inicio + 10.seconds - Rational(1, 1_000_000))
-
-      eco(20, 'external_created_at' => -5)
-      expect(conversation.reload.agent_last_seen_at).to eq(inicio + 20.seconds - Rational(1, 1_000_000))
-    end
-
-    it 'nunca volta o "visto" para trás (eco atrasado de mensagem antiga)' do
+    it 'nunca volta o "visto" para trás (a leitura no painel mais nova fica)' do
       do_cliente(0)
       visto = inicio + 1.hour
       conversation.update_columns(agent_last_seen_at: visto) # rubocop:disable Rails/SkipsModelValidations
 
-      eco(30)
+      nossa(30)
 
       expect(conversation.reload.agent_last_seen_at).to eq(visto)
     end
@@ -199,7 +175,7 @@ RSpec.describe ConversaCanal::VistaAoResponder do
       expect(nao_lidas).to eq(1)
     end
 
-    it 'saída sem remetente que não é eco do celular não apaga' do
+    it 'saída sem remetente não apaga' do
       nossa(10, sender: nil)
 
       expect(nao_lidas).to eq(1)

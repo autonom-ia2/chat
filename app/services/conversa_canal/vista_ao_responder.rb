@@ -1,32 +1,31 @@
 # Prepend em Message (#2202, PR 0): resposta de uma PESSOA marca a conversa como vista, como no WhatsApp ("se eu
 # respondi, já li"). Antes, só abrir a conversa no painel gravava o "visto" (agent_last_seen_at, no update_last_seen do
-# Api::V1::Accounts::ConversationsController). Quem respondia pelo celular (eco), o robô e a API nunca abriam a conversa
-# no painel, e a bolinha de não lida ficava parada com a conversa já respondida.
+# Api::V1::Accounts::ConversationsController); quem respondia pela API com token de pessoa nunca abria a conversa no
+# painel, e a bolinha de não lida ficava parada com a conversa já respondida.
 #
-# O que conta (conta?): mensagem que sai (outgoing), pública, que não falhou, mandada por uma pessoa: pelo painel ou
-# pela API com token de pessoa (remetente User) ou pelo celular (eco, `external_echo`, com ou sem remetente). O modelo
-# do WhatsApp mandado por uma pessoa conta: no WhatsApp mandar qualquer coisa numa conversa a deixa lida.
-# O que não conta: robô (AgentBot, Captain::Assistant) e toda saída sem pessoa (decisão do Rodrigo, #2202: a bolinha
-# fica para a equipe ver o que só o robô respondeu), nota privada (o cliente não vê), mensagem que falhou e o que uma
-# pessoa manda sem estar respondendo nesta conversa, na lista única de Messages::NaoEResposta (envio automático em nome
-# dela, campanha, cópia encaminhada, modelo reenviado). A importação do histórico não chega aqui
-# (Message#execute_after_create_commit_callbacks sai antes).
+# O que conta (conta?): mensagem que sai (outgoing), pública, que não falhou, mandada por uma pessoa pelo painel ou pela
+# API com token de pessoa (remetente User, sem `external_echo`). O modelo do WhatsApp mandado por uma pessoa conta: no
+# WhatsApp mandar qualquer coisa numa conversa a deixa lida.
+# O que não conta (decisões do Rodrigo, #2202):
+# - robô (AgentBot, Captain::Assistant) e toda saída sem pessoa: a bolinha fica para a equipe ver o que só o robô
+#   respondeu;
+# - o eco do celular (`external_echo`), com ou sem remetente (no WAHA comum o remetente do eco é o dono do token do
+#   conector). Nenhum canal informa se o eco foi uma pessoa digitando, a resposta automática do app Business (ausência,
+#   saudação) ou um robô mandando direto pela WAHA: a Cloud (smb_message_echoes) não tem campo de origem, e o `source`
+#   da WAHA ("app"/"api") não separa a pessoa da resposta automática do celular. A Issue do sinal de leitura no celular
+#   (a pessoa abriu a conversa no aparelho) vai cuidar do eco;
+# - nota privada (o cliente não vê), mensagem que falhou e o que uma pessoa manda sem estar respondendo nesta conversa,
+#   na lista única de Messages::NaoEResposta (envio automático em nome dela, campanha, cópia encaminhada, modelo
+#   reenviado). A importação do histórico não chega aqui (Message#execute_after_create_commit_callbacks sai antes).
 #
-# Até onde fica vista (antes_do_envio): até o começo do segundo em que a resposta SAIU, menos 1 µs.
-# - "Saiu": a hora do canal quando ele manda (external_created_at: o `timestamp` do eco da Cloud e do Híbrido,
-#   gravado por ConversaCanal::HoraDoEco; o WAHA comum só se o conector mandar o parâmetro `external_created_at` na
-#   API), senão a hora em que a mensagem chegou aqui. O eco do celular chega depois de sair: o cliente que escreveu
-#   no meio continua não lido.
-# - Começo do segundo: a tela compara em segundos inteiros (getters.js getUnreadCount e conversationHelper.js
-#   getUnreadMessages, `created_at * 1000 > agent_last_seen_at * 1000`, com os dois em .to_i). Gravando o visto no
-#   meio do segundo, a mensagem do cliente no mesmo segundo da resposta seria não lida no servidor (bolinha) e lida na
-#   tela (divisor). Começando no segundo, os dois concordam: o segundo da resposta inteiro fica não lido.
-#   EFEITO DO CORTE: a mensagem do cliente que chegou no MESMO segundo em que a resposta saiu, antes ou depois dela,
-#   continua não lida (bolinha e divisor). Não há como saber a ordem dentro do segundo na tela; errar para "não lida"
-#   é o lado seguro. Fora desse segundo, nada muda.
-# - A hora do canal só vale se for mais cedo que a chegada (o menor dos dois) e uma hora plausível
-#   (Waha::RichNative::EventTime.at): hora no futuro não passa da chegada, hora ilegível é ignorada.
-# O "visto" nunca anda para trás: o eco atrasado de uma mensagem antiga não desfaz uma leitura mais nova.
+# Até onde fica vista (antes_do_envio): até o começo do segundo em que a resposta foi criada, menos 1 µs. A tela
+# compara em segundos inteiros (getters.js getUnreadCount e conversationHelper.js getUnreadMessages,
+# `created_at * 1000 > agent_last_seen_at * 1000`, com os dois em .to_i). Gravando o visto no meio do segundo, a
+# mensagem do cliente no mesmo segundo da resposta seria não lida no servidor (bolinha) e lida na tela (divisor).
+# Começando no segundo, os dois concordam. EFEITO DO CORTE: a mensagem do cliente que chegou no MESMO segundo da
+# resposta, antes ou depois dela, continua não lida (bolinha e divisor). Não há como saber a ordem dentro do segundo
+# na tela; errar para "não lida" é o lado seguro. Fora desse segundo, nada muda.
+# O "visto" nunca anda para trás: uma leitura mais nova no painel fica.
 #
 # Roda antes do `dispatch_create_events` original, para o message.created da resposta já levar a não lida zerada.
 # Só avisa a tela e os contadores quando havia não lida: resposta em sequência não refaz a contagem.
@@ -40,7 +39,7 @@ module ConversaCanal::VistaAoResponder
   end
 
   def self.de_pessoa?(message)
-    message.sender_type == 'User' || eco?(message)
+    message.sender_type == 'User' && !eco?(message)
   end
 
   def self.eco?(message)
@@ -60,8 +59,7 @@ module ConversaCanal::VistaAoResponder
   end
 
   def self.antes_do_envio(message)
-    externo = ::Waha::RichNative::EventTime.at(message.content_attributes.to_h.with_indifferent_access['external_created_at'])
-    [message.created_at, externo].compact.min.change(usec: 0) - UM_MICROSSEGUNDO
+    message.created_at.change(usec: 0) - UM_MICROSSEGUNDO
   end
 
   # Uma gravação só, condicionada a andar para a frente (a leitura do painel no meio não volta).
@@ -92,11 +90,9 @@ module ConversaCanal::VistaAoResponder
     recebidas.exists?
   end
 
-  # Os avisos do sino desta conversa, só para a pessoa que respondeu (o remetente) e só quando o "visto" andou. O eco
-  # não conta: no WAHA comum o remetente dele é o dono do token do conector, não quem respondeu no celular.
+  # Os avisos do sino desta conversa, só para a pessoa que respondeu (o remetente, que conta? garante ser User) e só
+  # quando o "visto" andou.
   def self.marcar_avisos_de_quem_respondeu(message, conversation)
-    return if eco?(message) || !message.sender.is_a?(User)
-
     ::Notification::MarkConversationReadService.new(user: message.sender, account: message.account, conversation: conversation).perform
   end
 

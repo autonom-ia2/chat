@@ -1,6 +1,6 @@
 # Mensagem que uma pessoa manda pela conversa sem estar respondendo nela (#2202): não diz que alguém leu a conversa,
 # então não apaga a bolinha de não lida (ConversaCanal::VistaAoResponder, que já deixa de fora tudo que não é de
-# pessoa: robô, pesquisa de satisfação, saída sem remetente). A lista é uma só, aqui:
+# pessoa: robô, eco do celular, pesquisa de satisfação, saída sem remetente). A lista é uma só, aqui:
 # - envio automático em nome de alguém e campanha: as marcas de Autonomia::Agents::Operate::PessoaDaEquipe
 #   (automação, follow-up, convite e aviso do Agendamento, campaign_id, whatsapp_api_campaign_id), a mesma lista que
 #   Messages::EnvioAutomatico lê e que a guarda por AST mantém em dia;
