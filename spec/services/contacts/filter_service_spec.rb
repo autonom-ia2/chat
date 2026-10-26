@@ -167,6 +167,25 @@ describe Contacts::FilterService do
       end
     end
 
+    context 'with standard attributes - relacao' do
+      def por_relacao(operador, valor)
+        filtro = { payload: [{ attribute_key: 'relacao', filter_operator: operador, values: [valor], query_operator: nil }.with_indifferent_access] }
+        filter_service.new(account, first_user, filtro).perform
+      end
+
+      it 'filtra pelo nome da relação (#2084)' do
+        parceiro = create(:contact, account: account, relacao: :parceiro, email: Faker::Internet.unique.email)
+
+        expect(por_relacao('equal_to', 'parceiro')[:contacts]).to contain_exactly(parceiro)
+        expect(por_relacao('not_equal_to', 'parceiro')[:count]).to be 3
+        expect(por_relacao('equal_to', 'interessado')[:contacts]).not_to include(parceiro)
+      end
+
+      it 'recusa relação desconhecida' do
+        expect { por_relacao('equal_to', 'cliente') }.to raise_error(CustomExceptions::CustomFilter::InvalidValue)
+      end
+    end
+
     context 'with standard attributes - label' do
       it 'returns equal_to filter results properly' do
         params[:payload] = [

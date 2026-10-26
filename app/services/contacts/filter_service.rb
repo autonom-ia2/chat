@@ -24,6 +24,8 @@ class Contacts::FilterService < FilterService
       "+#{current_val&.delete('+')}"
     elsif query_hash['attribute_key'] == 'country_code'
       current_val.downcase
+    elsif query_hash['attribute_key'] == 'relacao'
+      relacao_value(current_val)
     else
       current_val.is_a?(String) ? current_val.downcase : current_val
     end
@@ -41,6 +43,13 @@ class Contacts::FilterService < FilterService
   end
 
   private
+
+  # Este contato é (#2084/#2085): a tela manda o nome ("parceiro"); a coluna guarda o número do enum.
+  def relacao_value(nome)
+    Contact.defined_enums.fetch('relacao').fetch(nome.to_s) do
+      raise CustomExceptions::CustomFilter::InvalidValue.new(attribute_name: 'relacao')
+    end
+  end
 
   def equals_to_filter_string(filter_operator, current_index)
     return "= :value_#{current_index}" if filter_operator == 'equal_to'
