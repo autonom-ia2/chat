@@ -1,14 +1,40 @@
 # #2211 — a busca da lista de conversas acha "João" digitando "joao", no nome do contato, no título do card, no texto da
-# mensagem e no áudio transcrito. Quatro índices trigram (GIN) sobre a expressão de SearchService::SemAcento — a mesma
-# que a consulta usa: lower(translate(normalize(coluna, NFD), <acentos combinantes>, '')). Só funções que já vêm no
-# Postgres (normalize existe desde o 13 e é IMMUTABLE; banco UTF8), sem extensão e sem função nossa no banco: o
-# db/schema.rb guarda a expressão e carrega num banco novo.
-# - Criados concurrently, fora da transação, sem travar escrita. O statement_timeout de 14 s do database.yml é zerado só
-#   durante cada CREATE INDEX: messages é grande, e o CREATE INDEX CONCURRENTLY morto no meio deixaria um índice
-#   inválido. O lock_timeout do StrongMigrations continua valendo.
-# - Se uma rodada anterior caiu no meio, o índice inválido é apagado e refeito. Rodar de novo não muda nada.
+# mensagem e no áudio transcrito. Quatro índices trigram (GIN) sobre
+#   lower(translate(normalize(coluna, NFD), <acentos combinantes>, ''))
+# — a mesma expressão de SearchService::SemAcento, que a consulta usa. Só funções que já vêm no Postgres (normalize
+# existe desde o 13 e é IMMUTABLE; banco UTF8), sem extensão e sem função nossa no banco: o db/schema.rb guarda a
+# expressão e carrega num banco novo.
+#
+# A lista de acentos está escrita aqui, congelada: migration não muda depois de rodar. O spec sem_acento_spec confere
+# que o db/schema.rb, o banco e a constante do código continuam iguais.
+#
+# Cada índice:
+# - já existe e é válido: fica como está;
+# - existe e é inválido (rodada interrompida): é apagado, concurrently;
+# - é criado concurrently, sem IF NOT EXISTS, e conferido depois: se não ficou válido, a migration para com erro.
+# CREATE INDEX CONCURRENTLY não trava leitura nem escrita, mas espera quem está escrevendo na tabela. Com o lock_timeout
+# do StrongMigrations a espera estourava, o índice ficava inválido, e a nova tentativa da gem com IF NOT EXISTS o dava
+# por pronto. Por isso o lock_timeout e o statement_timeout ficam zerados só durante cada CREATE/DROP INDEX
+# CONCURRENTLY e voltam no ensure.
 class AddIndicesDaBuscaSemAcento < ActiveRecord::Migration[7.2]
   disable_ddl_transaction!
+
+  # Os acentos que a NFD gera para as letras de U+00C0 a U+017F, na ordem canônica do Unicode.
+  ACENTOS_COMBINANTES = [
+    '̧', # U+0327 cedilha: ç
+    '̨', # U+0328 ogonek: ą
+    '̀', # U+0300 acento grave: à
+    '́', # U+0301 acento agudo: á
+    '̂', # U+0302 circunflexo: â
+    '̃', # U+0303 til: ã
+    '̄', # U+0304 mácron: ā
+    '̆', # U+0306 breve: ă
+    '̇', # U+0307 ponto em cima: ċ, İ
+    '̈', # U+0308 trema: ü
+    '̊', # U+030A anel: å
+    '̋', # U+030B agudo duplo: ő
+    '̌'  # U+030C caron: č
+  ].join.freeze
 
   INDICES = [
     [:contacts, 'name', 'idx_contacts_nome_sem_acento_trgm'],
@@ -19,31 +45,35 @@ class AddIndicesDaBuscaSemAcento < ActiveRecord::Migration[7.2]
 
   def up
     INDICES.each do |tabela, coluna, nome|
-      sem_limite_de_tempo do
-        remove_index tabela, name: nome, algorithm: :concurrently if indice_invalido?(nome)
-        add_index tabela, "#{SearchService::SemAcento.sql(coluna)} gin_trgm_ops",
-                  using: :gin, name: nome, algorithm: :concurrently, if_not_exists: true
+      next if valido?(nome) == true
+
+      sem_espera_limitada do
+        remove_index tabela, name: nome, algorithm: :concurrently if valido?(nome) == false
+        add_index tabela, "lower(translate(normalize(#{coluna}, NFD), '#{ACENTOS_COMBINANTES}', '')) gin_trgm_ops",
+                  using: :gin, name: nome, algorithm: :concurrently
       end
+      raise "#2211: o índice #{nome} foi criado, mas ficou inválido" unless valido?(nome) == true
     end
   end
 
   def down
     INDICES.reverse_each do |tabela, _coluna, nome|
-      sem_limite_de_tempo { remove_index tabela, name: nome, algorithm: :concurrently, if_exists: true }
+      sem_espera_limitada { remove_index tabela, name: nome, algorithm: :concurrently, if_exists: true }
     end
   end
 
   private
 
-  def sem_limite_de_tempo
-    anterior = select_value('SHOW statement_timeout')
-    safety_assured { execute 'SET statement_timeout = 0' }
+  def sem_espera_limitada
+    anteriores = { 'lock_timeout' => select_value('SHOW lock_timeout'), 'statement_timeout' => select_value('SHOW statement_timeout') }
+    safety_assured { execute 'SET lock_timeout = 0; SET statement_timeout = 0' }
     yield
   ensure
-    safety_assured { execute "SET statement_timeout = #{connection.quote(anterior)}" } if anterior
+    anteriores&.each { |nome, valor| safety_assured { execute "SET #{nome} = #{connection.quote(valor)}" } }
   end
 
-  def indice_invalido?(nome)
-    select_value("SELECT NOT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid WHERE c.relname = '#{nome}'") == true
+  # true = existe e é válido; false = existe e é inválido; nil = não existe.
+  def valido?(nome)
+    select_value("SELECT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid WHERE c.relname = #{connection.quote(nome)}")
   end
 end
