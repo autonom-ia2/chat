@@ -23856,6 +23856,34 @@
     ],
     "sem_corpo": false
   },
+  "PUT crm/contacts/:contact_id/relacao": {
+    "campos": {
+      "arquivar_cards": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "relacao": {
+        "padrao": "interessado",
+        "tipo": "string",
+        "um_de": [
+          "interessado",
+          "parceiro",
+          "nao_e_negocio"
+        ]
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/contacts/relacoes#update",
+    "modelo": "Contact",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/contacts/relacoes_controller.rb:20",
+      "app/controllers/api/v1/accounts/crm/contacts/relacoes_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/contacts/relacoes_controller.rb:25",
+      "app/controllers/api/v1/accounts/crm/contacts/relacoes_controller.rb:22",
+      "app/controllers/api/v1/accounts/crm/contacts/relacoes_controller.rb:37"
+    ],
+    "sem_corpo": false
+  },
   "PUT crm/follow_up_series/:id": {
     "campos": {
       "description": {
