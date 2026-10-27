@@ -272,6 +272,9 @@ Rails.application.routes.draw do
             # prévia lista os cards para a janela perguntar.
             post 'contacts/:contact_id/permanent_delete', to: 'contacts/permanent_deletions#create'
             get 'contacts/:contact_id/permanent_delete_preview', to: 'contacts/permanent_deletions#preview'
+            # Este contato é (#2084/#2085): interessado, parceiro do mercado ou não é negócio; só com a flag contato_relacao.
+            get 'contacts/:contact_id/relacao', to: 'contacts/relacoes#show'
+            put 'contacts/:contact_id/relacao', to: 'contacts/relacoes#update'
             get 'companies/:company_id/opportunities', to: 'company_opportunities#index' if ChatwootApp.enterprise?
             resources :pipelines, only: [:index, :create, :show, :update, :destroy] do
               # Excluir de vez um funil arquivado (#2096), só administrador.

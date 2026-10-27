@@ -96,7 +96,10 @@ class Autonomia::Guide::Acoes
     # #1069 — entrar com o Facebook grava uma credencial nova da Meta e troca de onde a plataforma lê.
     'POST crm/meta_ads_connection/facebook_login',
     # #1809 — "Excluir para sempre" da Lixeira do e-mail apaga a conversa pelo DeleteObjectJob, como o DELETE da conversa.
-    'DELETE conversa_canal/pastas_do_email/:conversation_id'
+    'DELETE conversa_canal/pastas_do_email/:conversation_id',
+    # #2084 — "Este contato é" fora do funil expira as sugestões de card do contato e, com arquivar_cards, arquiva os
+    # cards abertos dele em lote: o desfazer do Guia não alcança isso.
+    'PUT crm/contacts/:contact_id/relacao'
   ].freeze
 
   # O que só a pessoa faz, na tela, e por isso nem entra no catálogo (nem com confirmação). #1586: o aceite do dono
