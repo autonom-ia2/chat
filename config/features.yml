@@ -922,3 +922,15 @@
   display_name: Anúncios da Meta - resultados orgânicos da Página e do Instagram
   enabled: false
   column: feature_flags_ext_2
+
+# Leitura no celular apaga a bolinha (#2246, opção C). Ligada: quando o celular do negócio lê as mensagens do cliente,
+# o "visto" do agente anda até elas e a bolinha de não lida apaga, sem sino (ConversaCanal::VistaNoCelular). Hoje só
+# na caixa oficial com WhatsApp Híbrido, pela sessão auxiliar (WhatsappHybrid::LeituraNoCelular); a caixa WhatsApp API
+# (WAHA comum) depende de patch no conector e a Cloud sem Híbrido não recebe o sinal da Meta. Desligada: a bolinha só
+# apaga pelo painel ou pela resposta de uma pessoa, como antes. Sem migration. Fim da feature_flags_ext_2, depois de
+# meta_ads_organico: posição 6 (valor 32, 1 << 5), confirmada pela Orquestração (27/10). Nasce desligada em todas;
+# primeiro liga só numa conta de teste com Híbrido, para medir (Orquestração, com OK do Rodrigo).
+- name: leitura_no_celular
+  display_name: Conversas › leitura no celular apaga a bolinha
+  enabled: false
+  column: feature_flags_ext_2
