@@ -137,6 +137,18 @@ describe('CardDaConversa (#2202)', () => {
     expect(wrapper.find('.i-lucide-user').exists()).toBe(true);
   });
 
+  it('nome gravado que é outro número: fica no nome, e o Avatar mostra o ícone de pessoa (#2255)', () => {
+    const wrapper = montar({
+      currentContact: {
+        name: '+55 11 93333-2222',
+        phone_number: '+5511955554444',
+      },
+    });
+    expect(wrapper.find('[data-nome]').text()).toBe('+55 11 93333-2222');
+    expect(wrapper.find('.i-lucide-user').exists()).toBe(true);
+    expect(wrapper.find('.select-none').exists()).toBe(false);
+  });
+
   it('raiz div.conversation e o mesmo contrato do card antigo (click e contextmenu)', async () => {
     const wrapper = montar({ isActiveChat: true });
     expect(wrapper.classes()).toEqual(

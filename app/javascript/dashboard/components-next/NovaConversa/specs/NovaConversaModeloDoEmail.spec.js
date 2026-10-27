@@ -22,6 +22,11 @@ vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (chave, dados) => (dados?.nome ? `${chave}:${dados.nome}` : chave),
   }),
+  // O título da gaveta põe o nome por slot (#2255).
+  I18nT: {
+    props: ['keypath'],
+    template: '<span>{{ keypath }}:<slot name="nome" /></span>',
+  },
 }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ name: 'home', params: { accountId: 7 } }),

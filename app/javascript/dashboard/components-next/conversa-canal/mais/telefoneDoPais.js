@@ -126,3 +126,11 @@ export const nomeOuTelefone = (nome, telefone) => {
   if (mesmoNumero) return telefoneLegivel(telefone);
   return nome || telefoneLegivel(telefone);
 };
+
+// O nome do contato para mostrar na tela (#2255), com o telefone em snake_case (servidor) ou camelCase (store).
+// Só exibição: o nome gravado não muda.
+export const nomeDoContatoNaTela = contato =>
+  nomeOuTelefone(
+    contato?.name || '',
+    contato?.phone_number || contato?.phoneNumber || ''
+  );

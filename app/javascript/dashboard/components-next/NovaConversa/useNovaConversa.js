@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
 import { createPendingMessage } from 'dashboard/helper/commons';
@@ -306,7 +307,7 @@ export function useNovaConversa({
     const email = tipo.value === TIPOS.EMAIL;
     return {
       contatoId: contato.value?.id ?? null,
-      nome: contato.value?.name || '',
+      nome: nomeDoContatoNaTela(contato.value),
       texto,
       assunto: email ? assuntoNaPrevia.value : '',
       email,

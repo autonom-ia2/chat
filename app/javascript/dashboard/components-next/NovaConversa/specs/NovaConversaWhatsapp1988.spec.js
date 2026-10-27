@@ -25,7 +25,14 @@ const estado = vi.hoisted(() => ({
 const traduz = (chave, dados) =>
   dados ? `${chave}:${Object.values(dados).join(',')}` : chave;
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: traduz }) }));
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({ t: traduz }),
+  // O título da gaveta põe o nome por slot (#2255).
+  I18nT: {
+    props: ['keypath'],
+    template: '<span>{{ keypath }}:<slot name="nome" /></span>',
+  },
+}));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ name: 'home', params: { accountId: 7 } }),
   useRouter: () => ({ push: vi.fn(), hasRoute: () => true }),

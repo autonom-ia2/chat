@@ -1,7 +1,10 @@
-import parsePhoneNumber from 'libphonenumber-js';
-import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { INBOX_TYPES, ehWhatsappDoCelular } from 'dashboard/helper/inbox';
 import { AUDIO_FORMATS } from 'shared/constants/messages';
 import { canStartWithWhatsappApi } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper';
+import {
+  nomeEhTelefone,
+  telefoneLegivel,
+} from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 // #1459 — as regras da tela "Nova conversa", em funções puras: que tipo de
 // mensagem o canal pede, como ele se chama para a pessoa e o que ainda falta
@@ -42,20 +45,17 @@ export const chaveDoCanal = canal => {
   if (tipo === INBOX_TYPES.WHATSAPP || ehWhatsappTwilio(canal)) {
     return 'WHATSAPP';
   }
+  // #2255: a caixa API ligada ao WAHA é o WhatsApp do celular, não "Outro canal".
+  if (ehWhatsappDoCelular(canal)) return 'WHATSAPP_CELULAR';
   if (tipo === INBOX_TYPES.EMAIL) return 'EMAIL';
   if (tipo === INBOX_TYPES.SMS || tipo === INBOX_TYPES.TWILIO) return 'SMS';
   if (tipo === INBOX_TYPES.WEB) return 'SITE';
   return 'OUTRO';
 };
 
-// "+551140000001" → "+55 (11) 4000-0001": o código do país e o número como
-// se escreve naquele país. O que a biblioteca não reconhece como telefone
-// completo (com DDI) volta como veio.
-export const telefoneLegivel = (numero = '') => {
-  const telefone = parsePhoneNumber(numero);
-  if (!telefone?.isPossible()) return numero;
-  return `+${telefone.countryCallingCode} ${telefone.formatNational()}`;
-};
+// "+551140000001" → "+55 11 4000-0001". Um jeito só de mostrar telefone no painel
+// (#2255): a regra mora em telefoneDoPais.
+export { telefoneLegivel };
 
 // O telefone ou o e-mail de uma pessoa, para a linha de baixo do nome.
 export const contatoLegivel = pessoa =>
@@ -66,7 +66,14 @@ export const contatoLegivel = pessoa =>
 // A ordem dos canais na gaveta: WhatsApp primeiro (o que aceita texto livre
 // antes do que só aceita mensagem pronta), depois e-mail, SMS, site e o
 // resto; no mesmo tipo, por nome. O primeiro da lista é o que já vem marcado.
-const ORDEM_DOS_CANAIS = ['WHATSAPP', 'EMAIL', 'SMS', 'SITE', 'OUTRO'];
+const ORDEM_DOS_CANAIS = [
+  'WHATSAPP',
+  'WHATSAPP_CELULAR',
+  'EMAIL',
+  'SMS',
+  'SITE',
+  'OUTRO',
+];
 
 const pesoDoCanal = canal => {
   const chave = chaveDoCanal(canal);
@@ -86,7 +93,8 @@ export const ordenarCanais = (canais = []) =>
 export const linhaDoCanal = canal => {
   if (!canal) return '';
   if (canal.channelType === INBOX_TYPES.EMAIL) return canal.email || '';
-  const numero = canal.phoneNumber || '';
+  // WhatsApp pelo celular (caixa API do WAHA): o número da sessão (#2255).
+  const numero = canal.phoneNumber || canal.wahaPhoneNumber || '';
   return telefoneLegivel(
     numero.startsWith(PREFIXO_TWILIO)
       ? numero.slice(PREFIXO_TWILIO.length)
@@ -101,8 +109,7 @@ export const aceitaAnexo = canal =>
 // #1988 — WhatsApp oficial (Cloud API) e WhatsApp comum (caixa API ligada ao WAHA),
 // os mesmos que ganham a pele do WhatsApp na conversa (pele.js). O Twilio fica de fora.
 export const ehCanalWhatsapp = canal =>
-  canal?.channelType === INBOX_TYPES.WHATSAPP ||
-  (canal?.channelType === INBOX_TYPES.API && Boolean(canal?.wahaProvider));
+  canal?.channelType === INBOX_TYPES.WHATSAPP || ehWhatsappDoCelular(canal);
 
 // #1988 — a caixa de escrever do WhatsApp (texto, "+", emoji, microfone e assinatura)
 // vale onde o texto é livre: o WhatsApp oficial que pode responder e o WhatsApp comum.
@@ -193,7 +200,11 @@ export const lugarDeOrigem = ({ rota = '', comContato = false }) => {
 };
 
 // O primeiro nome de uma pessoa, para as frases que falam dela.
-export const primeiroNome = (nome = '') => nome.trim().split(' ')[0] || '';
+// Nome que é só telefone ("+55 11 95555-4444") vai inteiro: o "primeiro nome" seria "+55" (#2255).
+export const primeiroNome = (nome = '') => {
+  if (nomeEhTelefone(nome)) return nome.trim();
+  return nome.trim().split(' ')[0] || '';
+};
 
 // Em que momento a gaveta está, para o cabeçalho, a prévia e o rodapé
 // mudarem juntos.
