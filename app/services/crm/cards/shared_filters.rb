@@ -15,6 +15,8 @@ module Crm::Cards::SharedFilters
   include Crm::Cards::CompanyFilters
 
   RESPONSIBLE_KINDS = %w[agent bot none].freeze
+  # Parado: sem mensagem real e sem mudar de etapa (GREATEST ignora o NULL). Também é o grupo "Parados" da Lista nova.
+  STALE_SQL = 'GREATEST(crm_cards.last_message_at, crm_cards.entered_stage_at)'.freeze
 
   def apply_stage_ids_filter(cards)
     ids = parse_stage_ids
@@ -42,8 +44,7 @@ module Crm::Cards::SharedFilters
     days = @params[:stale_days].presence&.to_i
     return cards if days.blank? || days <= 0
 
-    stale_sql = 'GREATEST(crm_cards.last_message_at, crm_cards.entered_stage_at)'
-    cards.where("#{stale_sql} IS NULL OR #{stale_sql} < ?", days.days.ago)
+    cards.where("#{STALE_SQL} IS NULL OR #{STALE_SQL} < ?", days.days.ago)
   end
 
   def apply_team_filter(cards)
@@ -140,15 +141,17 @@ module Crm::Cards::SharedFilters
 
   # A human is responsible when the linked conversation has an assignee, or (for cards
   # without a linked conversation) when an owner is set. Mirrors Crm::Card#responsible_descriptor.
-  def human_responsible_sql
-    '(crm_cards.conversation_id IS NOT NULL AND conversations.assignee_id IS NOT NULL) OR ' \
+  # `conversation` é o nome da conversa principal na consulta (a Lista nova, #2283, junta com outro nome).
+  def human_responsible_sql(conversation = 'conversations')
+    "(crm_cards.conversation_id IS NOT NULL AND #{conversation}.assignee_id IS NOT NULL) OR " \
       '(crm_cards.conversation_id IS NULL AND crm_cards.owner_id IS NOT NULL)'
   end
 
   # Robô responsável: o atribuído à conversa (#1377) ou o robô ativo da caixa. Mirrors Crm::Card#responsible_agent_bot.
-  def bot_responsible_sql
-    "(conversations.assignee_agent_bot_id IS NOT NULL AND COALESCE(conversations.ai_assignee_type, '') = 'AgentBot') " \
-      'OR agent_bot_inboxes.id IS NOT NULL'
+  # `inbox_bot` diz como a consulta acha o robô ativo da caixa (aqui, pelo LEFT JOIN em agent_bot_inboxes).
+  def bot_responsible_sql(conversation = 'conversations', inbox_bot = 'agent_bot_inboxes.id IS NOT NULL')
+    "(#{conversation}.assignee_agent_bot_id IS NOT NULL AND COALESCE(#{conversation}.ai_assignee_type, '') = 'AgentBot') " \
+      "OR #{inbox_bot}"
   end
 
   def parse_stage_ids

@@ -82,6 +82,9 @@ class Crm::FollowUp < ApplicationRecord
   enum status: { pending: 0, done: 1, canceled: 2, overdue: 3 }
   enum automation_mode: { reminder_only: 0, snooze_conversation: 1, auto_send_message: 2 }
 
+  # Marca do toque da cadência da IA (Crm::FollowUps::AutoFollowupTouchBuilder).
+  AI_FOLLOWUP_SOURCE = 'ai_followup'.freeze
+
   validates :title, :due_at, :timezone, presence: true
   validates :metadata, jsonb_attributes_length: true
   validate :linked_records_must_belong_to_account
@@ -91,9 +94,25 @@ class Crm::FollowUp < ApplicationRecord
   validate :without_card_only_reminds
 
   scope :active, -> { where(status: [statuses[:pending], statuses[:overdue]]) }
+  # Retorno que a pessoa faz (Lista nova, #2283): ativo (o vencido vira overdue no DueProcessor), lembrete ou adiar a
+  # conversa. Envio automático e toque da cadência da IA também têm hora, mas quem age é o sistema: ficam fora.
+  scope :retorno_da_pessoa, lambda {
+    active.where(automation_mode: [automation_modes[:reminder_only], automation_modes[:snooze_conversation]])
+          .where("COALESCE(crm_follow_ups.metadata->>'source', '') <> ?", AI_FOLLOWUP_SOURCE)
+  }
   scope :due, ->(time = Time.current) { pending.where(due_at: ..time) }
   # Pré-voo (#1624): o que vence depois de `from` e até `to`; o que já venceu é do DueProcessor.
   scope :due_within, ->(from, to) { pending.where('crm_follow_ups.due_at > ? AND crm_follow_ups.due_at <= ?', from, to) }
+
+  # O retorno da pessoa mais perto de cada card, { card_id => id }, numa consulta (a página da Lista).
+  def self.proximos_retornos_da_pessoa(card_ids)
+    return {} if card_ids.blank?
+
+    retorno_da_pessoa.where(card_id: card_ids)
+                     .select('DISTINCT ON (crm_follow_ups.card_id) crm_follow_ups.card_id, crm_follow_ups.id')
+                     .reorder(Arel.sql('crm_follow_ups.card_id, crm_follow_ups.due_at, crm_follow_ups.id'))
+                     .to_h { |follow_up| [follow_up.card_id, follow_up.id] }
+  end
 
   private
 

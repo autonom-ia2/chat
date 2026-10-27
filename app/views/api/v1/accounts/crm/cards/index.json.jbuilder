@@ -12,7 +12,8 @@ json.payload do
       user: Current.user,
       account_user: Current.account_user,
       conversation_visibility: conversation_visibility,
-      company: @card_companies[card.id]
+      company: @card_companies[card.id],
+      next_follow_up_id: @next_follow_up_ids[card.id]
     ).perform
   end
 end

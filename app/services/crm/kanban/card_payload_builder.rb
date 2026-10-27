@@ -89,7 +89,7 @@ class Crm::Kanban::CardPayloadBuilder
       contact: compact_contact,
       company: (Crm::Cards::CompanyResolver.payload(@company) if full_contact?),
       owner: compact_user(@card.owner),
-      responsible: @card.responsible_descriptor,
+      responsible: responsible_payload,
       inbox: compact_inbox,
       conversation: compact_conversation,
       labels: labels_payload,
@@ -184,6 +184,14 @@ class Crm::Kanban::CardPayloadBuilder
     return unless @card.account.feature_enabled?('sla')
 
     conversation.applied_sla&.push_event_data
+  end
+
+  # Conversa que a pessoa não vê (#2283): o nome de quem conversa não vai, como no Crm::Cards::PayloadBuilder (o tempo
+  # real do quadro chega por ele). Card sem conversa segue com o dono.
+  def responsible_payload
+    return if @card.primary_conversation.present? && visible_primary_conversation.nil?
+
+    @card.responsible_descriptor
   end
 
   def visible_primary_conversation
