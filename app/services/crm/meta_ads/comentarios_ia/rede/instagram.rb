@@ -1,0 +1,48 @@
+# IA cuida dos comentários (#2212): as ações no Instagram, com os serviços do #2196.
+#
+# O privado vai só com texto: o InstagramPrivateReply manda texto, e o botão do WhatsApp fica no Messenger até a chamada
+# real confirmar que o Private Reply do Instagram aceita modelo (docs/comentarios-ia/DEMO.md, "A confirmar").
+class Crm::MetaAds::ComentariosIa::Rede::Instagram
+  REGISTRO = Crm::MetaAds::ComentariosIa::Registro
+
+  def initialize(inbox, comentario)
+    @inbox = inbox
+    @comentario = comentario
+  end
+
+  def privado(care)
+    resultado = Crm::MetaAds::InstagramPrivateReply.new(@inbox.channel).perform!(comment: comment, text: care.message, actor: REGISTRO::ACTOR)
+    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: resultado[:conversation])
+  rescue Crm::MetaAds::InstagramPrivateReply::Error => e
+    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: e.code)
+  end
+
+  def responder(texto)
+    acao('reply') { cliente.reply(@comentario.comment_id, texto) }
+  end
+
+  def esconder
+    acao('hide') { cliente.hide(@comentario.comment_id, hidden: true) }
+  end
+
+  private
+
+  # Reivindica antes da Meta; recusada, a linha sai.
+  def acao(nome)
+    return false unless REGISTRO.reivindicar!(@comentario, nome)
+    return true if yield.ok
+
+    REGISTRO.soltar!(@comentario, nome)
+    false
+  end
+
+  # O comentário no formato do webhook e da Graph, que o serviço do #2196 recebe.
+  def comment
+    { 'id' => @comentario.comment_id, 'timestamp' => @comentario.momento&.iso8601,
+      'from' => { 'id' => @comentario.from_id, 'username' => @comentario.from_name } }
+  end
+
+  def cliente
+    @cliente ||= Instagram::CommentsClient.new(@inbox.channel)
+  end
+end

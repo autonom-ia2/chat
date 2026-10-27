@@ -29,6 +29,11 @@ RSpec.describe Crm::MetaAdsComentariosIaListener do
         .with(hash_including('comment_id' => 'c-1', 'owner_id' => 'ig-1', 'post_id' => '1790', 'created_time' => '2026-10-27T10:00:00Z'))
     end
 
+    it 'aceita a hora como texto' do
+      expect { listener.meta_ads_comment_received(evento(dados.merge(created_time: '2026-10-27T10:00:00+00:00'))) }
+        .to have_enqueued_job(Crm::MetaAds::ComentariosIa::CuidarJob).with(hash_including('created_time' => '2026-10-27T10:00:00Z'))
+    end
+
     it 'com a flag desligada, nem enfileira' do
       account.disable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
 

@@ -60,7 +60,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
     expect(classificador.decidir('Quanto custa?')).to be_nil
   end
 
-  it 'registra o custo com a feature própria' do
-    expect(described_class::FEATURE).to eq('meta_ads_comentarios_ia')
+  it 'registra o custo do Jev com a feature própria' do
+    cliente = instance_double(TypesafeAi::Client)
+    allow(cliente).to receive(:evaluate).and_return(
+      'model' => TypesafeAi::Config.model, 'usage' => { 'input_tokens' => 570, 'output_tokens' => 0 },
+      'answers' => { 'decisao' => { 'type' => 'choice', 'choice' => 'price', 'confidence' => 0.9 } }
+    )
+    allow(Crm::Ai::UsageRecorder).to receive(:record)
+
+    decisao = described_class.new(care: care, jev: TypesafeAi::Decisor.new(client: cliente, feature: described_class::FEATURE))
+                             .decidir('Quanto custa?')
+
+    expect(decisao).to eq('price')
+    expect(Crm::Ai::UsageRecorder).to have_received(:record).with(hash_including(account: account, feature: 'meta_ads_comentarios_ia'))
   end
 end

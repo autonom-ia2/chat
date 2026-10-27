@@ -16,9 +16,9 @@ Crm::MetaAds::ComentariosIa::Comentario = Struct.new(
         text: dados[:text], created_time: dados[:created_time])
   end
 
-  # Para o job: só valores simples (o ActiveJob não serializa Struct).
+  # Para o job: só valores simples (o ActiveJob não serializa Struct). A hora pode chegar como Time ou como texto.
   def para_o_job
-    to_h.merge(created_time: created_time&.iso8601)
+    to_h.merge(created_time: momento&.iso8601)
   end
 
   def resposta?
@@ -27,5 +27,7 @@ Crm::MetaAds::ComentariosIa::Comentario = Struct.new(
 
   def momento
     created_time.is_a?(String) ? Time.zone.parse(created_time) : created_time
+  rescue ArgumentError
+    nil
   end
 end

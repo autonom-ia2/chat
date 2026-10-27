@@ -348,7 +348,7 @@ en:
         commented_page_post: 'Commented on the Page post: “%{text}”'
         commented_ad: 'Commented on the ad: “%{text}”'
         to_you: "Complaint: I didn't reply and passed it to you."
-        failed: "I couldn't send the message. Reply yourself, if you want."
+        private_reply_failed: "I couldn't send the message. Reply yourself, if you want."
       captain:
         resolved: 'Conversation was marked resolved by %{user_name} due to inactivity'
         resolved_with_reason: 'Conversation was marked resolved by %{user_name} (%{reason})'

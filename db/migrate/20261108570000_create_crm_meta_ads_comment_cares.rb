@@ -6,6 +6,8 @@ class CreateCrmMetaAdsCommentCares < ActiveRecord::Migration[7.2]
       t.references :account, null: false, foreign_key: { on_delete: :cascade }, index: false
       t.string :target_kind, null: false
       t.string :target_id, null: false
+      # No anúncio, os posts do criativo (Facebook: effective_object_story_id; Instagram: a mídia), por onde chega o comentário.
+      t.jsonb :post_ids, null: false, default: []
       t.string :network, null: false
       t.string :status, null: false, default: 'on'
       t.jsonb :offer
@@ -15,11 +17,10 @@ class CreateCrmMetaAdsCommentCares < ActiveRecord::Migration[7.2]
       t.jsonb :phrases, null: false, default: []
       t.text :price_reply
       t.string :handoff, null: false, default: 'assignment'
-      t.references :created_by, foreign_key: { to_table: :users, on_delete: :nullify }, index: false
+      t.references :created_by, foreign_key: { to_table: :users, on_delete: :nullify }
       t.datetime :started_at, null: false
       t.timestamps
+      t.index [:account_id, :target_kind, :target_id], unique: true, name: 'idx_crm_meta_ads_comment_cares_target'
     end
-    add_index :crm_meta_ads_comment_cares, [:account_id, :target_kind, :target_id],
-              unique: true, name: 'idx_crm_meta_ads_comment_cares_target'
   end
 end

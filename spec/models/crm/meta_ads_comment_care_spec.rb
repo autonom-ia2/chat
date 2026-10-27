@@ -80,6 +80,13 @@ RSpec.describe Crm::MetaAdsCommentCare do
       expect(described_class.cuidando(account_id: account.id, post_id: '179', ad_id: '120')).to eq(anuncio)
     end
 
+    it 'acha o anúncio pelo post do criativo quando o comentário chega sem o id do anúncio' do
+      anuncio.update!(post_ids: %w[555_888 17900])
+
+      expect(described_class.cuidando(account_id: account.id, post_id: '555_888', ad_id: nil)).to eq(anuncio)
+      expect(described_class.cuidando(account_id: account.id, post_id: '555_999', ad_id: nil)).to be_nil
+    end
+
     it 'ignora cuidado pausado e de outra conta' do
       post.update!(status: 'paused')
 

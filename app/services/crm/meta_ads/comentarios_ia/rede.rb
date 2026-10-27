@@ -1,44 +1,24 @@
-# IA cuida dos comentários (#2212): as três ações da IA no comentário, iguais nas duas redes — o privado (Private
-# Reply: a mensagem que responde a um comentário, a única que a Meta deixa mandar a quem nunca escreveu), a resposta
-# pública e o esconder. Cada rede tem o seu cliente, com o token da caixa:
-# - Instagram: Instagram::CommentsClient (#2196), na graph.instagram.com;
-# - Facebook: Crm::MetaAds::ComentariosIa::Rede::Pagina, na graph.facebook.com com o token da Página (pages_messaging).
+# IA cuida dos comentários (#2212): as três ações da IA num comentário — o privado (Private Reply: a mensagem que
+# responde a um comentário, a única que a Meta deixa mandar a quem nunca escreveu), a resposta pública e o esconder.
+# Cada rede tem o seu adaptador, que usa os serviços do #2196 e do #2197 sempre que eles existem:
+# - Instagram (Rede::Instagram): o privado pelo Crm::MetaAds::InstagramPrivateReply, que reivindica, confere a janela
+#   de 7 dias, envia e abre a conversa; a resposta e o esconder pelo Instagram::CommentsClient;
+# - Facebook (Rede::Facebook): o privado pelo Messenger é nosso (Rede::Pagina, token da caixa); a resposta e o
+#   esconder pelo Crm::MetaAds::FacebookComments, que grava a ação.
 #
-# O botão "Chamar no WhatsApp" vai como modelo de botão. A Meta não diz se o Private Reply aceita modelo: se recusar, o
-# privado conta como falha e aparece em "Para você ver" (a confirmar na chamada real, docs/comentarios-ia/DEMO.md).
-class Crm::MetaAds::ComentariosIa::Rede
-  Envio = Struct.new(:ok, :recipient_id, :message_id, :erro, keyword_init: true)
+# Todo adaptador responde `privado(care)` com um Envio (ok, conversation, erro) e `responder(texto)` e `esconder` com
+# true ou false. Nada levanta para o job: a recusa da Meta é um resultado.
+module Crm::MetaAds::ComentariosIa::Rede
+  Envio = Struct.new(:ok, :recipient_id, :message_id, :conversation, :erro, keyword_init: true)
+  # O privado já tinha saído (pela pessoa, na tela do #2196, ou por outro job): nada a fazer, nem falha a mostrar.
+  JA_FEITO = 'private_reply_done'.freeze
 
-  def self.para(inbox)
-    cliente = case inbox.channel
-              when Channel::Instagram then Instagram::CommentsClient.new(inbox.channel)
-              when Channel::FacebookPage then Pagina.new(inbox.channel)
-              end
-    cliente && new(cliente)
-  end
+  module_function
 
-  def initialize(cliente)
-    @cliente = cliente
-  end
-
-  def private_reply(comment_id, texto, button:)
-    @cliente.private_reply(comment_id, mensagem(texto, button))
-  end
-
-  def reply(comment_id, texto)
-    @cliente.reply(comment_id, texto)
-  end
-
-  def hide(comment_id)
-    @cliente.hide(comment_id)
-  end
-
-  private
-
-  def mensagem(texto, button)
-    return { text: texto } if button.blank?
-
-    { attachment: { type: 'template', payload: { template_type: 'button', text: texto,
-                                                 buttons: [{ type: 'web_url', url: button['url'], title: button['title'] }] } } }
+  def para(inbox, comentario)
+    case inbox.channel
+    when Channel::Instagram then Instagram.new(inbox, comentario)
+    when Channel::FacebookPage then Facebook.new(inbox, comentario)
+    end
   end
 end

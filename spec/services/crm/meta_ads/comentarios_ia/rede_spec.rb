@@ -1,64 +1,152 @@
 require 'rails_helper'
 
 RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
-  describe 'Página do Facebook' do
+  let(:account) { create(:account) }
+  let(:care) { create(:crm_meta_ads_comment_care, account: account) }
+  let(:registro) { Crm::MetaAds::ComentariosIa::Registro }
+  let(:conversation) { instance_double(Conversation, id: 9) }
+
+  def comentario(**mudancas)
+    Crm::MetaAds::ComentariosIa::Comentario.new(
+      network: 'instagram', account_id: account.id, inbox_id: 1, owner_id: 'ig-1', post_id: '555_888', ad_id: nil,
+      comment_id: '555_777', parent_id: nil, from_id: 'igsid-1', from_name: 'carla', text: 'Quanto custa?',
+      created_time: Time.zone.parse('2026-10-27 10:00'), **mudancas
+    )
+  end
+
+  before { allow(registro).to receive_messages(reivindicar!: true, soltar!: 0) }
+
+  describe 'Página (o Private Reply pelo Messenger)' do
     let(:channel) { instance_double(Channel::FacebookPage, page_id: '555', page_access_token: 'token-da-pagina') }
-    let(:inbox) { instance_double(Inbox, channel: channel) }
-    let(:rede) { described_class.new(described_class::Pagina.new(channel)) }
+    let(:pagina) { described_class::Pagina.new(channel) }
     let(:graph) { 'https://graph.facebook.com/v22.0' }
 
-    before { allow(channel).to receive(:is_a?) { |klass| klass == Channel::FacebookPage } }
-
-    it 'manda o privado pelo Messenger em resposta ao comentário, com o token da Página no cabeçalho' do
+    it 'responde ao comentário pelo Messenger, com o token da Página só no cabeçalho' do
       pedido = stub_request(:post, "#{graph}/555/messages")
                .with(headers: { 'Authorization' => 'Bearer token-da-pagina' },
-                     body: hash_including('recipient' => { 'comment_id' => 'c-1' }, 'message' => { 'text' => 'Oi!' },
+                     body: hash_including('recipient' => { 'comment_id' => '555_777' }, 'message' => { 'text' => 'Oi!' },
                                           'messaging_type' => 'RESPONSE'))
                .to_return(status: 200, body: { recipient_id: 'psid-1', message_id: 'mid-1' }.to_json)
 
-      envio = rede.private_reply('c-1', 'Oi!', button: nil)
+      envio = pagina.private_reply('555_777', { text: 'Oi!' })
 
       expect(pedido).to have_been_made
       expect(envio).to have_attributes(ok: true, recipient_id: 'psid-1', message_id: 'mid-1')
     end
 
-    it 'com botão, manda o modelo de botão que abre o WhatsApp' do
-      pedido = stub_request(:post, "#{graph}/555/messages").with(body: hash_including(
-        'message' => { 'attachment' => { 'type' => 'template', 'payload' => {
-          'template_type' => 'button', 'text' => 'Oi!',
-          'buttons' => [{ 'type' => 'web_url', 'url' => 'https://wa.me/55119', 'title' => 'Chamar no WhatsApp' }]
-        } } }
-      )).to_return(status: 200, body: { recipient_id: 'psid-1', message_id: 'mid-1' }.to_json)
+    it 'recusa da Meta e falha de rede viram envio sem sucesso, com o erro limpo' do
+      stub_request(:post, "#{graph}/555/messages").to_return(status: 400, body: { error: { code: 10, message: 'Fora' } }.to_json)
+      expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, erro: '10 - Fora')
 
-      rede.private_reply('c-1', 'Oi!', button: { 'title' => 'Chamar no WhatsApp', 'url' => 'https://wa.me/55119' })
-
-      expect(pedido).to have_been_made
+      stub_request(:post, "#{graph}/555/messages").to_raise(Net::OpenTimeout)
+      expect(pagina.private_reply('555_777', { text: 'Oi!' }).ok).to be(false)
     end
 
-    it 'recusa da Meta vira envio sem sucesso, com o erro limpo' do
-      stub_request(:post, "#{graph}/555/messages")
-        .to_return(status: 400, body: { error: { code: 10, message: 'Fora da janela' } }.to_json)
+    it 'id com cara de caminho não chega à Graph' do
+      expect(pagina.reply('1/../me?x=1', 'oi')).to have_attributes(ok: false, erro: 'id_invalido')
+      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    end
+  end
 
-      expect(rede.private_reply('c-1', 'Oi!', button: nil)).to have_attributes(ok: false, erro: '10 - Fora da janela')
+  describe 'Facebook' do
+    let(:inbox) { instance_double(Inbox, channel: instance_double(Channel::FacebookPage)) }
+    let(:pagina) { instance_double(described_class::Pagina) }
+    let(:servico) { double }
+    let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook')) }
+
+    before do
+      stub_const('Crm::MetaAds::FacebookComments', Class.new { def initialize(_conexao); end })
+      stub_const('Crm::MetaAds::FacebookComments::Error', Class.new(StandardError))
+      allow(Crm::MetaAds::FacebookComments).to receive(:new).and_return(servico)
+      allow(Crm::MetaAdsConnection).to receive(:find_by).with(account_id: account.id).and_return(instance_double(Crm::MetaAdsConnection))
+      allow(described_class::Pagina).to receive(:new).and_return(pagina)
+      allow(Crm::MetaAds::ComentariosIa::Conversa).to receive(:no_messenger!).and_return(conversation)
     end
 
-    it 'responde no comentário e esconde o comentário' do
-      resposta = stub_request(:post, "#{graph}/c-1/comments")
-                 .with(body: hash_including('message' => 'Te chamei no Messenger'))
-                 .to_return(status: 200, body: { id: 'c-2' }.to_json)
-      esconder = stub_request(:post, "#{graph}/c-1")
-                 .with(body: hash_including('is_hidden' => true))
-                 .to_return(status: 200, body: { success: true }.to_json)
+    it 'reivindica, manda o privado com o botão do WhatsApp e abre a conversa no Messenger' do
+      envio = described_class::Envio.new(ok: true, recipient_id: 'psid-1', message_id: 'mid-1')
+      allow(pagina).to receive(:private_reply).and_return(envio)
 
-      expect(rede.reply('c-1', 'Te chamei no Messenger').ok).to be(true)
-      expect(rede.hide('c-1').ok).to be(true)
-      expect([resposta, esconder]).to all(have_been_made)
+      resultado = rede.privado(care)
+
+      expect(registro).to have_received(:reivindicar!).with(an_object_having_attributes(comment_id: '555_777'), 'private_reply')
+      expect(pagina).to have_received(:private_reply).with('555_777', hash_including(attachment: hash_including(type: 'template')))
+      expect(resultado).to have_attributes(ok: true, conversation: conversation)
     end
 
-    it 'falha de rede não derruba o job' do
-      stub_request(:post, "#{graph}/c-1").to_raise(Net::OpenTimeout)
+    it 'privado recusado: a reivindicação sai' do
+      allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, erro: '10 - Fora'))
 
-      expect(rede.hide('c-1').ok).to be(false)
+      expect(rede.privado(care).ok).to be(false)
+      expect(registro).to have_received(:soltar!).with(anything, 'private_reply')
+      expect(Crm::MetaAds::ComentariosIa::Conversa).not_to have_received(:no_messenger!)
+    end
+
+    it 'privado já reivindicado: não chama a Meta' do
+      allow(registro).to receive(:reivindicar!).and_return(false)
+      allow(pagina).to receive(:private_reply)
+
+      expect(rede.privado(care).erro).to eq(described_class::JA_FEITO)
+      expect(pagina).not_to have_received(:private_reply)
+    end
+
+    it 'responde e esconde pelo serviço do #2197, como IA' do
+      allow(servico).to receive_messages(reply_on_post!: { id: 'c-2' }, hide_on_post!: true)
+
+      expect(rede.responder('Te chamei no Messenger')).to be(true)
+      expect(rede.esconder).to be(true)
+      expect(servico).to have_received(:reply_on_post!).with('555_888', '555_777', 'Te chamei no Messenger', actor: 'ai')
+      expect(servico).to have_received(:hide_on_post!).with('555_888', '555_777', true, actor: 'ai')
+    end
+
+    it 'recusa do serviço vira false' do
+      allow(servico).to receive(:reply_on_post!).and_raise(Crm::MetaAds::FacebookComments::Error)
+
+      expect(rede.responder('oi')).to be(false)
+    end
+  end
+
+  describe 'Instagram' do
+    let(:channel) { instance_double(Channel::Instagram) }
+    let(:inbox) { instance_double(Inbox, channel: channel) }
+    let(:privado) { double }
+    let(:cliente) { double }
+    let(:rede) { described_class::Instagram.new(inbox, comentario) }
+    let(:ok) { Struct.new(:ok).new(true) }
+    let(:recusa) { Struct.new(:ok).new(false) }
+
+    before do
+      stub_const('Crm::MetaAds::InstagramPrivateReply', Class.new { def initialize(_channel); end })
+      stub_const('Crm::MetaAds::InstagramPrivateReply::Error', Class.new(StandardError) { def code = 'meta_refused' })
+      stub_const('Instagram::CommentsClient', Class.new { def initialize(_channel); end })
+      allow(Crm::MetaAds::InstagramPrivateReply).to receive(:new).with(channel).and_return(privado)
+      allow(Instagram::CommentsClient).to receive(:new).with(channel).and_return(cliente)
+    end
+
+    it 'manda o privado pelo serviço do #2196, como IA, com o comentário no formato do webhook' do
+      allow(privado).to receive(:perform!).and_return({ conversation: conversation, message: double })
+
+      expect(rede.privado(care)).to have_attributes(ok: true, conversation: conversation)
+      expect(privado).to have_received(:perform!).with(
+        comment: { 'id' => '555_777', 'timestamp' => '2026-10-27T10:00:00Z', 'from' => { 'id' => 'igsid-1', 'username' => 'carla' } },
+        text: care.message, actor: 'ai'
+      )
+    end
+
+    it 'erro do serviço vira envio sem sucesso com o código' do
+      allow(privado).to receive(:perform!).and_raise(Crm::MetaAds::InstagramPrivateReply::Error)
+
+      expect(rede.privado(care)).to have_attributes(ok: false, erro: 'meta_refused')
+    end
+
+    it 'responde e esconde reivindicando antes; recusa da Meta solta a linha' do
+      allow(cliente).to receive_messages(reply: ok, hide: recusa)
+
+      expect(rede.responder('Te chamei no privado')).to be(true)
+      expect(rede.esconder).to be(false)
+      expect(cliente).to have_received(:hide).with('555_777', hidden: true)
+      expect(registro).to have_received(:soltar!).with(anything, 'hide')
+      expect(registro).not_to have_received(:soltar!).with(anything, 'reply')
     end
   end
 end

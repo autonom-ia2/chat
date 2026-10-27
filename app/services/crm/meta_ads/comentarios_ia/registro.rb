@@ -1,35 +1,52 @@
 # IA cuida dos comentários (#2212): o que a IA fez com cada comentário, na tabela de ações do #2196
-# (crm_meta_ads_comment_actions, uma linha por comentário e ação), com actor 'ai'. Serve para três coisas:
-# - não cuidar duas vezes do mesmo comentário, porque a Meta reenvia o webhook;
-# - o teto do dia;
-# - o resultado e o "Para você ver" da tela.
+# (crm_meta_ads_comment_actions, única por rede, comentário e ação), com actor 'ai'.
 #
-# Ações: private_reply, reply, hide, no_reply, to_you (reclamação passada à pessoa) e failed (privado recusado pela Meta).
+# A linha é a reivindicação, como no #2196: é gravada ANTES de chamar o Jev ou a Meta, e quem bate no índice único sai
+# sem fazer nada. Assim o webhook que a Meta reenvia, ou dois jobs do mesmo comentário, não repetem o privado nem pagam
+# o Jev de novo. Se a Meta recusa, a linha da ação sai (soltar!); a do `ai_seen` fica.
+#
+# Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
+# passada à pessoa) e private_reply_failed (o privado que a Meta recusou). As duas últimas formam o "Para você ver".
 module Crm::MetaAds::ComentariosIa::Registro
   ACTOR = 'ai'.freeze
+  LIDO = 'ai_seen'.freeze
 
   module_function
 
-  def ja_cuidado?(comentario)
-    acoes(comentario.account_id).exists?(comment_id: comentario.comment_id)
+  # true só para quem gravou primeiro.
+  def reservar!(comentario)
+    reivindicar!(comentario, LIDO)
   end
 
-  # Comentários de que a IA cuidou hoje na conta, no fuso da plataforma.
+  # Comentários que a IA leu hoje na conta, no fuso da plataforma.
   def hoje(account_id)
-    acoes(account_id).where(at: Time.current.all_day).distinct.count(:comment_id)
+    acoes(account_id).where(action: LIDO, at: Time.current.all_day).count
   end
 
   # Quantas respostas públicas a IA já deu na conta: escolhe a frase da vez, para não repetir a mesma em seguida.
-  def vez(comentario)
-    acoes(comentario.account_id).where(action: 'reply').count
+  def vez(account_id)
+    acoes(account_id).where(action: 'reply').count
   end
 
-  # A Meta reenvia o webhook: duas gravações da mesma ação no mesmo comentário valem uma.
-  def gravar!(comentario, acao, conversation: nil)
+  def reivindicar!(comentario, acao)
     Crm::MetaAdsCommentAction.create!(account_id: comentario.account_id, network: comentario.network, comment_id: comentario.comment_id,
-                                      action: acao, conversation_id: conversation&.id, actor: ACTOR, at: Time.current)
+                                      action: acao, actor: ACTOR, at: Time.current)
+    true
   rescue ActiveRecord::RecordNotUnique
-    nil
+    false
+  end
+
+  # A conversa nasce depois da reivindicação: o id dela entra na linha.
+  def vincular!(comentario, acao, conversation)
+    linha(comentario, acao).update_all(conversation_id: conversation.id) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def soltar!(comentario, acao)
+    linha(comentario, acao).delete_all
+  end
+
+  def linha(comentario, acao)
+    acoes(comentario.account_id).where(network: comentario.network, comment_id: comentario.comment_id, action: acao)
   end
 
   def acoes(account_id)

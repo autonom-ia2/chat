@@ -2665,6 +2665,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_570000) do
     t.bigint "account_id", null: false
     t.string "target_kind", null: false
     t.string "target_id", null: false
+    t.jsonb "post_ids", default: [], null: false
     t.string "network", null: false
     t.string "status", default: "on", null: false
     t.jsonb "offer"
@@ -2679,6 +2680,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_570000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "target_kind", "target_id"], name: "idx_crm_meta_ads_comment_cares_target", unique: true
+    t.index ["created_by_id"], name: "index_crm_meta_ads_comment_cares_on_created_by_id"
   end
 
   create_table "crm_meta_ads_connections", force: :cascade do |t|

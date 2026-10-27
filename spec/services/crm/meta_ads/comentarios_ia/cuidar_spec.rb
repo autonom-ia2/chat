@@ -4,13 +4,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
   let!(:care) { create(:crm_meta_ads_comment_care, account: account, target_id: '1790') }
-  let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede) }
+  let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Facebook, responder: true, esconder: true) }
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:conversa) { class_double(Crm::MetaAds::ComentariosIa::Conversa) }
   let(:registro) { class_double(Crm::MetaAds::ComentariosIa::Registro) }
   let(:conversation) { instance_double(Conversation, id: 77) }
-  let(:enviado) { Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, recipient_id: 'igsid-1', message_id: 'mid-1') }
-  let(:recusado) { Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: '10 - fora da janela') }
+  let(:enviado) { Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: conversation) }
   let(:agora) { 1.minute.ago }
 
   def comentario(**mudancas)
@@ -25,142 +24,170 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     described_class.new(item, rede: rede, classificador: classificador, conversa: conversa, registro: registro).call
   end
 
-  before do
-    account.enable_features!(described_class::FLAG)
-    allow(registro).to receive_messages(ja_cuidado?: false, hoje: 0, gravar!: true, vez: 0)
-    allow(conversa).to receive_messages(do_privado!: conversation, para_voce!: conversation)
-    allow(rede).to receive_messages(private_reply: enviado, reply: enviado, hide: enviado)
+  def decide(decisao)
+    allow(classificador).to receive(:decidir).and_return(decisao)
   end
 
-  it 'manda o privado, abre a conversa e responde no comentário com a frase da vez' do
-    allow(classificador).to receive(:decidir).and_return('private')
+  before do
+    account.enable_features!(described_class::FLAG)
+    allow(registro).to receive_messages(reservar!: true, hoje: 0, vez: 0, reivindicar!: true, vincular!: 1)
+    allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
+    allow(rede).to receive(:privado).and_return(enviado)
+  end
+
+  it 'manda o privado, põe o comentário no topo da conversa e responde no comentário com a frase da vez' do
+    decide('private')
     allow(registro).to receive(:vez).and_return(1)
 
     cuidar
 
-    expect(rede).to have_received(:private_reply).with('c-1', care.message, button: care.button)
-    expect(conversa).to have_received(:do_privado!).with(comentario, care, enviado)
-    expect(rede).to have_received(:reply).with('c-1', 'Te mandei os detalhes no privado!')
-    expect(registro).to have_received(:gravar!).with(comentario, 'private_reply', conversation: conversation)
-    expect(registro).to have_received(:gravar!).with(comentario, 'reply')
+    expect(rede).to have_received(:privado).with(care)
+    expect(conversa).to have_received(:anotar!).with(conversation, comentario, care)
+    expect(rede).to have_received(:responder).with('Te mandei os detalhes no privado!')
   end
 
   it 'responde o preço em público quando a pessoa perguntou o preço e a chave está ligada' do
-    allow(classificador).to receive(:decidir).and_return('price')
+    decide('price')
 
     cuidar
 
-    expect(rede).to have_received(:reply).with('c-1', care.price_reply)
+    expect(rede).to have_received(:responder).with(care.price_reply)
   end
 
   it 'privado recusado pela Meta: nada em público, a conversa fica para a pessoa' do
-    allow(classificador).to receive(:decidir).and_return('private')
-    allow(rede).to receive(:private_reply).and_return(recusado)
+    decide('private')
+    allow(rede).to receive(:privado).and_return(Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: 'meta_refused'))
 
     cuidar
 
-    expect(rede).not_to have_received(:reply)
-    expect(conversa).to have_received(:para_voce!).with(comentario, care, 'failed')
-    expect(registro).to have_received(:gravar!).with(comentario, 'failed', conversation: conversation)
+    expect(rede).not_to have_received(:responder)
+    expect(registro).to have_received(:reivindicar!).with(comentario, 'private_reply_failed')
+    expect(conversa).to have_received(:para_voce!).with(comentario, care, 'private_reply_failed')
+    expect(registro).to have_received(:vincular!).with(comentario, 'private_reply_failed', conversation)
+  end
+
+  it 'privado que já tinha saído (pela pessoa ou outro job): não faz mais nada' do
+    decide('private')
+    allow(rede).to receive(:privado)
+      .and_return(Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: Crm::MetaAds::ComentariosIa::Rede::JA_FEITO))
+
+    cuidar
+
+    expect(rede).not_to have_received(:responder)
+    expect(conversa).not_to have_received(:para_voce!)
   end
 
   it 'reclamação: não responde, abre a conversa urgente para a pessoa' do
-    allow(classificador).to receive(:decidir).and_return('to_you')
+    decide('to_you')
 
     cuidar
 
-    expect(rede).not_to have_received(:private_reply)
-    expect(rede).not_to have_received(:reply)
+    expect(rede).not_to have_received(:privado)
+    expect(rede).not_to have_received(:responder)
     expect(conversa).to have_received(:para_voce!).with(comentario, care, 'to_you')
-    expect(registro).to have_received(:gravar!).with(comentario, 'to_you', conversation: conversation)
+  end
+
+  it 'o mesmo comentário nunca abre duas conversas para a pessoa' do
+    decide('to_you')
+    allow(registro).to receive(:reivindicar!).with(comentario, 'to_you').and_return(false)
+
+    cuidar
+
+    expect(conversa).not_to have_received(:para_voce!)
   end
 
   it 'propaganda: esconde o comentário' do
-    allow(classificador).to receive(:decidir).and_return('hide')
+    decide('hide')
 
     cuidar
 
-    expect(rede).to have_received(:hide).with('c-1')
-    expect(registro).to have_received(:gravar!).with(comentario, 'hide')
+    expect(rede).to have_received(:esconder)
   end
 
-  it 'marcação de amigo ou elogio: só registra' do
-    allow(classificador).to receive(:decidir).and_return('no_reply')
+  it 'marcação de amigo ou elogio: não faz nada além de ler' do
+    decide('no_reply')
 
     cuidar
 
-    expect(rede).not_to have_received(:private_reply)
-    expect(registro).to have_received(:gravar!).with(comentario, 'no_reply')
+    expect(rede).not_to have_received(:privado)
+    expect(rede).not_to have_received(:esconder)
+    expect(registro).to have_received(:reservar!).with(comentario)
   end
 
   it 'post sem oferta nunca manda privado, mesmo se o Jev pedir' do
     care.update!(offer: nil)
-    allow(classificador).to receive(:decidir).and_return('price')
+    decide('price')
 
     cuidar
 
-    expect(rede).not_to have_received(:private_reply)
-    expect(registro).to have_received(:gravar!).with(comentario, 'no_reply')
+    expect(rede).not_to have_received(:privado)
   end
 
   it 'sem certeza do Jev, não faz nada' do
-    allow(classificador).to receive(:decidir).and_return(nil)
+    decide(nil)
 
     cuidar
 
-    expect(registro).not_to have_received(:gravar!)
+    expect(rede).not_to have_received(:privado)
+    expect(conversa).not_to have_received(:para_voce!)
   end
 
   describe 'o que não chega ao Jev' do
     before { allow(classificador).to receive(:decidir) }
 
+    it 'comentário já reivindicado (a Meta reenvia o webhook, ou outro job pegou antes)' do
+      allow(registro).to receive(:reservar!).and_return(false)
+      cuidar
+      expect(classificador).not_to have_received(:decidir)
+    end
+
     it 'flag desligada' do
       account.disable_features!(described_class::FLAG)
       cuidar
       expect(classificador).not_to have_received(:decidir)
+      expect(registro).not_to have_received(:reservar!)
     end
 
     it 'post sem cuidado, ou com o cuidado pausado' do
       care.update!(status: 'paused')
       cuidar
-      expect(classificador).not_to have_received(:decidir)
+      expect(registro).not_to have_received(:reservar!)
     end
 
     it 'resposta a outro comentário' do
       cuidar(comentario(parent_id: 'c-0'))
-      expect(classificador).not_to have_received(:decidir)
-    end
-
-    it 'comentário já cuidado (a Meta reenvia o webhook)' do
-      allow(registro).to receive(:ja_cuidado?).and_return(true)
-      cuidar
-      expect(classificador).not_to have_received(:decidir)
+      expect(registro).not_to have_received(:reservar!)
     end
 
     it 'teto do dia atingido: os próximos ficam para a pessoa' do
       allow(registro).to receive(:hoje).and_return(described_class::TETO_DIARIO)
       cuidar
-      expect(classificador).not_to have_received(:decidir)
+      expect(registro).not_to have_received(:reservar!)
     end
 
     it 'comentário com mais de 7 dias, que não aceita mais privado' do
       cuidar(comentario(created_time: 8.days.ago))
-      expect(classificador).not_to have_received(:decidir)
+      expect(registro).not_to have_received(:reservar!)
     end
 
     it 'caixa de outra conta' do
       cuidar(comentario(inbox_id: create(:inbox).id))
-      expect(classificador).not_to have_received(:decidir)
+      expect(registro).not_to have_received(:reservar!)
+    end
+
+    it 'caixa que não é do Instagram nem do Messenger' do
+      described_class.new(comentario, classificador: classificador, conversa: conversa, registro: registro).call
+      expect(registro).not_to have_received(:reservar!)
     end
   end
 
   it 'usa o cuidado do anúncio quando o comentário veio dele' do
     anuncio = create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '120', network: 'both',
                                                  message: 'Mensagem do anúncio')
-    allow(classificador).to receive(:decidir).and_return('private')
+    decide('private')
 
     cuidar(comentario(ad_id: '120'))
 
-    expect(rede).to have_received(:private_reply).with('c-1', anuncio.message, button: anuncio.button)
+    expect(rede).to have_received(:privado).with(anuncio)
   end
 end

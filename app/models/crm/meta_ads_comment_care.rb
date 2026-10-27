@@ -38,11 +38,17 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
 
   scope :on, -> { where(status: 'on') }
 
-  # O cuidado que vale para um comentário: o do anúncio, quando ele veio de um, senão o do post.
+  # O cuidado que vale para um comentário: o do anúncio, quando ele veio de um (pelo id do anúncio ou por um dos posts
+  # do criativo), senão o do post.
   def self.cuidando(account_id:, post_id:, ad_id:)
     escopo = on.where(account_id: account_id)
-    (ad_id.present? && escopo.find_by(target_kind: 'ad', target_id: ad_id.to_s)) ||
-      (post_id.present? && escopo.find_by(target_kind: 'post', target_id: post_id.to_s)) || nil
+    do_anuncio(escopo, post_id, ad_id) || (post_id.present? && escopo.find_by(target_kind: 'post', target_id: post_id.to_s)) || nil
+  end
+
+  def self.do_anuncio(escopo, post_id, ad_id)
+    anuncios = escopo.where(target_kind: 'ad')
+    (ad_id.present? && anuncios.find_by(target_id: ad_id.to_s)) ||
+      (post_id.present? && anuncios.find_by('post_ids @> ?', [post_id.to_s].to_json)) || nil
   end
 
   # Post sem produto: a IA só esconde propaganda e avisa reclamação.

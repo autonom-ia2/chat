@@ -25,6 +25,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
     expect(described_class.para_reabrir(escopo)).to be_nil
   end
 
+  it 'com outra conversa aberta do contato, a resposta vai para ela' do
+    conversa(status: :resolved)
+    conversa(status: :open, comentario: false, criada: 3.days.ago)
+
+    expect(described_class.para_reabrir(escopo)).to be_nil
+  end
+
   it 'só a mais recente vale: depois dela, outra conversa já existe' do
     conversa(status: :resolved, criada: 2.days.ago)
     conversa(status: :resolved, comentario: false, criada: 1.day.ago)

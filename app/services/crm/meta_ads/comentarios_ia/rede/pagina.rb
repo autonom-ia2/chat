@@ -13,21 +13,31 @@ class Crm::MetaAds::ComentariosIa::Rede::Pagina
   end
 
   def private_reply(comment_id, mensagem)
-    enviar("#{@channel.page_id}/messages", recipient: { comment_id: comment_id }, message: mensagem, messaging_type: 'RESPONSE')
+    return falha('id_invalido') unless id_simples?(comment_id)
+
+    enviar(@channel.page_id, '/messages', recipient: { comment_id: comment_id }, message: mensagem, messaging_type: 'RESPONSE')
   end
 
   def reply(comment_id, texto)
-    enviar("#{comment_id}/comments", message: texto)
+    enviar(comment_id, '/comments', message: texto)
   end
 
   def hide(comment_id)
-    enviar(comment_id.to_s, is_hidden: true)
+    enviar(comment_id, '', is_hidden: true)
   end
 
   private
 
-  def enviar(caminho, corpo)
-    response = HTTParty.post("#{Meta::ConversionsApiClient::BASE_URI}/#{versao}/#{caminho}",
+  # Os ids entram no caminho da Graph: só dígitos e `_` (o id do comentário do Facebook é `<post>_<comentário>`), para
+  # que `/`, `?` ou `&` não virem outro endereço chamado com o token da Página.
+  def id_simples?(id)
+    id.to_s.present? && id.to_s.each_char.all? { |char| char.between?('0', '9') || char == '_' }
+  end
+
+  def enviar(id, sufixo, corpo)
+    return falha('id_invalido') unless id_simples?(id)
+
+    response = HTTParty.post("#{Meta::ConversionsApiClient::BASE_URI}/#{versao}/#{id}#{sufixo}",
                              body: corpo.to_json, timeout: TIMEOUT_SECONDS,
                              headers: { 'Authorization' => "Bearer #{@channel.page_access_token}", 'Content-Type' => 'application/json' })
     envio(response)
