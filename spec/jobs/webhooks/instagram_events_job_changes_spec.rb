@@ -18,15 +18,22 @@ describe Webhooks::InstagramEventsJob do
     allow(Instagram::TestEventService).to receive(:new).and_call_original
   end
 
-  it 'hands a real comment to the comment job with the account id, the field, the raw value and the time' do
-    described_class.perform_now([entry_with('comments', comment_value)])
+  it 'hands a real comment to the comment job with only the ids, never the text or the author name' do
+    value = comment_value.merge('parent_id' => '17800000000000001', 'media' => { 'id' => '123123', 'ad_id' => '999', 'media_product_type' => 'AD' })
 
-    expect(comment_job).to have_received(:perform_later).with('17841400000000000', 'comments', comment_value, 1_761_000_000)
+    described_class.perform_now([entry_with('comments', value)])
+
+    expect(comment_job).to have_received(:perform_later).with(
+      '17841400000000000', 'comments',
+      { 'id' => '17865799348089039', 'parent_id' => '17800000000000001', 'from' => { 'id' => '232323' },
+        'media' => { 'id' => '123123', 'ad_id' => '999' } },
+      1_761_000_000
+    )
     expect(Instagram::TestEventService).not_to have_received(:new)
   end
 
-  it 'hands mentions to the comment job too' do
-    described_class.perform_now([entry_with('mentions', { 'comment_id' => '1', 'media_id' => '2' })])
+  it 'hands mentions to the comment job with only the ids' do
+    described_class.perform_now([entry_with('mentions', { 'comment_id' => '1', 'media_id' => '2', 'text' => 'oi @loja' })])
 
     expect(comment_job).to have_received(:perform_later).with('17841400000000000', 'mentions', { 'comment_id' => '1', 'media_id' => '2' },
                                                               1_761_000_000)

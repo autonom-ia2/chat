@@ -69,7 +69,16 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
     return Rails.logger.info("Instagram webhook: no job for field #{change[:field].inspect}") if job.nil?
     return Rails.logger.warn("Instagram webhook: #{change[:field]} without an object value, skipped") unless change[:value].is_a?(Hash)
 
-    job.perform_later(entry[:id].to_s, change[:field], change[:value].to_h, entry[:time])
+    job.perform_later(entry[:id].to_s, change[:field], comment_ids(change[:field], change[:value].to_h), entry[:time])
+  end
+
+  # Só os ids vão para a fila: os argumentos ficam em claro no Redis do Sidekiq (retry e dead set), e o job busca o
+  # texto e o autor na Graph (#2196). Nada de texto do comentário nem de username.
+  def comment_ids(field, value)
+    return value.slice('comment_id', 'media_id') if field == 'mentions'
+
+    { 'id' => value['id'], 'parent_id' => value['parent_id'], 'from' => value['from']&.slice('id'),
+      'media' => value['media']&.slice('id', 'ad_id') }.compact
   end
 
   def process_messages(entry)
