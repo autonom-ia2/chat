@@ -40,8 +40,11 @@ const props = defineProps({
   para: { type: Object, default: null },
   // O que vem da gaveta (EMAIL_DA_GAVETA): o modelo de e-mail e o histórico; null fora dela.
   daGaveta: { type: Object, default: null },
+  // #2211: a conversa vazia da busca pede o assunto na própria caixa, numa linha como a do "Para".
+  comAssunto: { type: Boolean, default: false },
 });
 
+const assunto = defineModel('assunto', { type: String, default: '' });
 const mensagem = defineModel('mensagem', { type: String, default: '' });
 const cc = defineModel('cc', { type: String, default: '' });
 const bcc = defineModel('bcc', { type: String, default: '' });
@@ -149,6 +152,23 @@ const EDITOR =
           :rotulo="$t('CONVERSA_CANAL.EMAIL.CCO')"
           data-campo-cco
         />
+        <label
+          v-if="comAssunto"
+          class="mb-0 flex min-h-11 items-center gap-2 border-b border-n-weak ps-1 text-sm"
+          data-assunto-do-email
+        >
+          <span class="flex-shrink-0 whitespace-nowrap text-n-slate-11">
+            {{ $t('NOVA_CONVERSA.MENSAGEM.ASSUNTO') }}
+          </span>
+          <input
+            v-model="assunto"
+            type="text"
+            autocomplete="off"
+            data-assunto
+            :placeholder="$t('NOVA_CONVERSA.MENSAGEM.ASSUNTO_PLACEHOLDER')"
+            class="reset-base !mb-0 !h-auto min-h-10 min-w-0 flex-1 !border-0 !bg-transparent !px-0 text-sm text-n-slate-12 !shadow-none outline-none placeholder:text-n-slate-10"
+          />
+        </label>
       </div>
 
       <div class="px-4 pt-3" :class="EDITOR">

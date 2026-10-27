@@ -2,6 +2,13 @@ import { mount } from '@vue/test-utils';
 import TelaInicialResumo from '../TelaInicialResumo.vue';
 
 // #1801 — uma ação principal; sem nada esperando, troca pela ação do vazio.
+// #2211: "3 das suas 4" só com a chave lista_quem_espera.
+const listaNova = vi.hoisted(() => ({ value: true }));
+vi.mock(
+  'dashboard/components-next/Conversation/ListaDeConversas/useListaNova',
+  () => ({ useListaNova: () => listaNova })
+);
+
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key, valores) => `${key}=${valores?.count}`,
@@ -202,5 +209,49 @@ describe('rodapé "Como vai o seu mês" (#1897)', () => {
 
   it('sem destino, não há rodapé', () => {
     expect(comRodape(null).find('[data-como-vai-o-mes]').exists()).toBe(false);
+  });
+});
+
+describe('"3 das suas 4 esperam você" (#2211)', () => {
+  beforeEach(() => {
+    listaNova.value = true;
+  });
+
+  it('com a chave desligada, fica "Esperam você" como na main', () => {
+    listaNova.value = false;
+    const wrapper = montar(
+      TelaInicialResumo,
+      dadosCom({ esperamVoce: 3, comVoce: 4 })
+    );
+    const texto = wrapper.find('[data-numero="ESPERAM"]').text();
+    expect(texto).toContain('TELA_INICIAL.RESUMO.NUMEROS.ESPERAM');
+    expect(texto).not.toContain('ESPERAM_DAS_SUAS');
+  });
+
+  it('com mais de uma conversa, o rótulo diz de quantas', () => {
+    const wrapper = montar(
+      TelaInicialResumo,
+      dadosCom({ esperamVoce: 3, comVoce: 4 })
+    );
+    expect(wrapper.find('[data-numero="ESPERAM"]').text()).toContain(
+      'TELA_INICIAL.RESUMO.NUMEROS.ESPERAM_DAS_SUAS'
+    );
+  });
+
+  it('com uma conversa só, fica "Esperam você"', () => {
+    const wrapper = montar(
+      TelaInicialResumo,
+      dadosCom({ esperamVoce: 1, comVoce: 1 })
+    );
+    const texto = wrapper.find('[data-numero="ESPERAM"]').text();
+    expect(texto).toContain('TELA_INICIAL.RESUMO.NUMEROS.ESPERAM');
+    expect(texto).not.toContain('ESPERAM_DAS_SUAS');
+  });
+
+  it('o número de "Sem responsável" não muda de rótulo', () => {
+    const wrapper = montar(TelaInicialResumo, dadosCom({ comVoce: 4 }));
+    expect(wrapper.find('[data-numero="SEM_RESPONSAVEL"]').text()).toContain(
+      'TELA_INICIAL.RESUMO.NUMEROS.SEM_RESPONSAVEL'
+    );
   });
 });

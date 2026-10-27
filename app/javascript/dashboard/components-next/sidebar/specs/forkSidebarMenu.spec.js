@@ -378,6 +378,8 @@ const estado = { relacionamentos: false };
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ fullPath: '/', params: {} }),
+  // #2211: o Sidebar instala o ⌘K da busca da lista (useAtalhoDaBusca).
+  useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock('vuex', () => ({ useStore: () => ({ dispatch: vi.fn() }) }));
 vi.mock('dashboard/composables/store', () => ({

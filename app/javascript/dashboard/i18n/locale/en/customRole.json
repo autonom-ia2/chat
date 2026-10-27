@@ -159,6 +159,11 @@
           "LEVEL_VIEW": "Opens the agents and chats in the playground.",
           "LEVEL_MANAGE": "Creates, trains and publishes agents."
         },
+        "DESEMPENHO": {
+          "NAME": "Agent performance",
+          "HINT": "What people look for, results and exports",
+          "LEVEL_VIEW": "Opens the performance panel, with the numbers of the inboxes they see. Downloading the PDF and spreadsheet also needs Export contacts."
+        },
         "PROSPECTING": {
           "NAME": "Prospecting",
           "HINT": "Lead searches and lists",

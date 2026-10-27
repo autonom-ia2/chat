@@ -116,3 +116,6 @@ credential.env
 
 # Python
 __pycache__/
+
+# Painel de desempenho (#2226/#2251): o arquivo da vida real e as exportações dele são dados de cliente, só locais.
+public/desempenho-vida-real*

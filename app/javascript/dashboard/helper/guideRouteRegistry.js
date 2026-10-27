@@ -24,6 +24,7 @@ export const GUIDE_ROUTE_REGISTRY = new Set([
   'automacoes_lista',
   'automacoes_nova',
   'automation_list',
+  'autonomia_agent_desempenho',
   'autonomia_agent_panel',
   'autonomia_agents_builder',
   'autonomia_agents_index',

@@ -48,6 +48,8 @@
 # - 'contact_export': export the contact base (split from contact_manage in #1845; roles that had contact_manage kept it).
 # - 'contact_delete': delete contacts and companies, one by one or in bulk (#1845).
 # - 'autonomia_view': view and test Autonom.ia agents. 'autonomia_manage': create, train and publish them.
+# - 'desempenho_view': the agent performance panel and its PDF/spreadsheet export (#2251). Independent from
+#   autonomia_view; the panel shows a conversation only to who sees its inbox. View only (no _manage).
 # - 'campaign_view': view campaigns and their reports. 'campaign_manage': build campaigns and import lists.
 #   'campaign_send': send, schedule and resume them (#1898; roles that had campaign_manage kept sending).
 # - 'inbox_view': view every inbox configuration. 'inbox_manage': create, connect and configure inboxes.
@@ -128,6 +130,7 @@ class CustomRole < ApplicationRecord
     knowledge_base_view
     autonomia_view
     autonomia_manage
+    desempenho_view
     campaign_view
     campaign_manage
     campaign_send

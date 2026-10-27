@@ -184,3 +184,67 @@ describe('entrada da lista de agentes (#1181)', () => {
     expect(next).toHaveBeenCalledWith();
   });
 });
+
+// #2226 — o painel de desempenho do agente: rota própria (não é uma aba do :tab), com a nova
+// jornada e a flag agentes_painel_desempenho na conta. Sem uma das duas, vai para home.
+describe('painel de desempenho (#2226)', () => {
+  const ligada = {
+    id: 9,
+    autonomia_agents_enabled: true,
+    features: {
+      autonomia_agents_journey: true,
+      agentes_painel_desempenho: true,
+    },
+  };
+
+  beforeEach(() => {
+    store.dispatch.mockReset();
+    window.globalConfig = { AUTONOMIA_AGENTS_ENABLED: 'true' };
+  });
+
+  it('tem caminho próprio, a chave desempenho_view (#2251) e o id pelo props', () => {
+    const desempenho = rota('autonomia_agent_desempenho');
+    expect(desempenho.path).toBe(
+      '/app/accounts/:accountId/agents/:agentId/desempenho'
+    );
+    expect(desempenho.meta).toEqual({
+      permissions: ['administrator', 'desempenho_view'],
+    });
+    expect(desempenho.props({ params: { agentId: '7' } })).toEqual({
+      agentId: '7',
+    });
+  });
+
+  it('entra com a jornada e a flag ligadas, esperando a conta', async () => {
+    contaCarregaDepois(ligada);
+    const next = await entrar('autonomia_agent_desempenho');
+    expect(store.dispatch).toHaveBeenCalledWith('accounts/get');
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it.each([
+    ['sem a flag', { ...ligada, features: { autonomia_agents_journey: true } }],
+    [
+      'sem a nova jornada',
+      { ...ligada, features: { agentes_painel_desempenho: true } },
+    ],
+    ['com Agentes desligado', { ...ligada, autonomia_agents_enabled: false }],
+  ])('%s vai para home', async (_caso, conta) => {
+    contaCarregaDepois(conta);
+    const next = await entrar('autonomia_agent_desempenho');
+    expect(next).toHaveBeenCalledWith({
+      name: 'home',
+      params: { accountId: '9' },
+    });
+  });
+
+  it('com o ENV master desligado vai para home sem buscar a conta', async () => {
+    window.globalConfig = { AUTONOMIA_AGENTS_ENABLED: 'false' };
+    const next = await entrar('autonomia_agent_desempenho');
+    expect(store.dispatch).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith({
+      name: 'home',
+      params: { accountId: '9' },
+    });
+  });
+});

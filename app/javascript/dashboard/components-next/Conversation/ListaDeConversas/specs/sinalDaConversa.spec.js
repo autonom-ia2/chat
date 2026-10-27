@@ -219,3 +219,23 @@ describe('sinalDaConversa (#2202, linha 3)', () => {
     ).toBe('respondeu');
   });
 });
+
+describe('sinalDaConversa: Resolvida na busca (#2211)', () => {
+  it('no resultado da busca, a conversa resolvida diz "Resolvida"', () => {
+    const achado = sinal(conversa({ status: 'resolved' }), {
+      marcarResolvida: true,
+    });
+    expect(achado.sinal.texto).toBe('Resolvida');
+    expect(achado.sinal.icone).toBe('i-lucide-circle-check');
+  });
+
+  it('fora da busca, a resolvida segue as outras regras', () => {
+    const achado = sinal(conversa({ status: 'resolved' }));
+    expect(achado.sinal.familia).not.toBe('resolvida');
+  });
+
+  it('na busca, a aberta não ganha "Resolvida"', () => {
+    const achado = sinal(conversa(), { marcarResolvida: true });
+    expect(achado.sinal.familia).not.toBe('resolvida');
+  });
+});

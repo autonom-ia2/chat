@@ -52,6 +52,8 @@ import EmojiIcon from 'next/emoji-icon-picker/EmojiIcon.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
 import ForkSidebarNav from './fork/ForkSidebarNav.vue';
 import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
+import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
+import { useAtalhoDaBusca } from 'dashboard/components-next/Conversation/ListaDeConversas/busca/atalhoDaBusca';
 import { useQuemVeNumeros } from 'dashboard/routes/dashboard/crm/components/numeros/useQuemVeNumeros';
 import {
   SIDEBAR_SORT_SECTIONS,
@@ -84,6 +86,10 @@ const isCallsAvailable = computed(
   () => isOnChatwootCloud.value || isEnterprise
 );
 const searchShortcut = useKbd([`$mod`, 'k']);
+// #2211: com a lista nova, a busca mora no topo da lista de conversas e ⌘/Ctrl+K foca o campo dela.
+// A página /search continua existindo (link antigo, Guia 08.12), só sem entrada aqui.
+const listaNova = useListaNova();
+useAtalhoDaBusca();
 const { t } = useI18n();
 
 const isACustomBrandedInstance = useMapGetter(
@@ -1486,7 +1492,10 @@ const menuItems = computed(() => {
           />
         </template>
       </div>
+      <!-- #2211: com a lista nova, a busca e o começo de conversa moram no topo da lista ("Escrever" na
+        pessoa achada); a linha da busca e do lápis sai do menu. -->
       <div
+        v-if="!listaNova"
         class="flex gap-2"
         :class="isEffectivelyCollapsed ? 'flex-col items-center' : 'px-2'"
       >

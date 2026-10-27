@@ -148,3 +148,39 @@ describe('ChatList com a chave lista_quem_espera (#2202)', () => {
     expect(lista.attributes('aria-labelledby')).toBeUndefined();
   });
 });
+
+// #2211 — a busca no topo da lista nova. Desligada a chave, nada de busca: a lista é a de sempre.
+describe('ChatList: busca na lista (#2211)', () => {
+  it('desligada: sem campo de busca nem resultado', async () => {
+    const wrapper = await montar({ chaveLigada: false });
+    expect(wrapper.findComponent({ name: 'CampoDaBusca' }).exists()).toBe(
+      false
+    );
+    expect(wrapper.findComponent({ name: 'ResultadoDaBusca' }).exists()).toBe(
+      false
+    );
+    expect(
+      wrapper.findComponent({ name: 'ConversationList' }).isVisible()
+    ).toBe(true);
+  });
+
+  it('ligada: o campo fica no topo; com texto, o resultado toma o lugar da lista, que só se esconde', async () => {
+    const wrapper = await montar({ chaveLigada: true });
+    const campo = wrapper.findComponent({ name: 'CampoDaBusca' });
+    expect(campo.exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'ResultadoDaBusca' }).exists()).toBe(
+      false
+    );
+
+    campo.vm.$emit('update:modelValue', 'joana');
+    await flushPromises();
+
+    expect(wrapper.findComponent({ name: 'ResultadoDaBusca' }).exists()).toBe(
+      true
+    );
+    const lista = wrapper.findComponent({ name: 'ConversationList' });
+    expect(lista.exists()).toBe(true);
+    expect(lista.attributes('style')).toContain('display: none');
+    expect(wrapper.find('[data-lista-vazia]').exists()).toBe(false);
+  });
+});

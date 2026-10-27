@@ -16,6 +16,8 @@ import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/Contac
 import ConfirmContactDeleteDialog from 'dashboard/components-next/Contacts/ContactsForm/ConfirmContactDeleteDialog.vue';
 import ContactOptOutSection from 'dashboard/components-next/Contacts/ContactOptOut/ContactOptOutSection.vue';
 import ContactCustomerSection from 'dashboard/components-next/Contacts/ContactCustomer/ContactCustomerSection.vue';
+import SecaoDaRelacao from 'dashboard/components-next/contato-relacao/SecaoDaRelacao.vue';
+import { useRelacaoLigada } from 'dashboard/components-next/contato-relacao/useRelacaoLigada';
 import Policy from 'dashboard/components/policy.vue';
 
 const props = defineProps({
@@ -29,6 +31,7 @@ const props = defineProps({
 const emit = defineEmits(['goToContactsList']);
 
 const exactTimestamp = useExactTimestamp();
+const relacaoLigada = useRelacaoLigada();
 
 const { t, locale } = useI18n();
 const store = useStore();
@@ -253,6 +256,11 @@ const handleAvatarDelete = async () => {
       :record="selectedContact"
       entity="contact"
       surface="contact_details"
+      :read-only="readOnly"
+    />
+    <SecaoDaRelacao
+      v-if="relacaoLigada && selectedContact?.id"
+      :contact-id="selectedContact.id"
       :read-only="readOnly"
     />
     <ContactCustomerSection :contact="selectedContact" :read-only="readOnly" />

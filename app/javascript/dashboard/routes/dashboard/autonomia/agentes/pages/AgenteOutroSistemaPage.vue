@@ -7,6 +7,7 @@ import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import AgentBotsAPI from 'dashboard/api/agentBots';
 import { useCanaisOcupados } from '../composables/useCanaisOcupados';
+import { usePainelDesempenho } from '../composables/usePainelDesempenho';
 import {
   agentesDeOutroSistema,
   canaisDoAgenteDeOutroSistema,
@@ -71,6 +72,23 @@ const hrefLista = computed(
   () => router.resolve({ name: 'autonomia_agents_index' }).href
 );
 const irParaLista = () => router.push({ name: 'autonomia_agents_index' });
+// #2226 — "Ver tudo de {nome}": o painel de desempenho do agente de outro sistema, só com a flag.
+const painelDesempenho = usePainelDesempenho();
+const rotaDoDesempenho = computed(() => ({
+  name: 'autonomia_agent_desempenho',
+  params: { agentId: props.botId },
+  query: { origem: 'webhook' },
+}));
+const hrefDesempenho = computed(() =>
+  painelDesempenho.value ? router.resolve(rotaDoDesempenho.value).href : ''
+);
+const verDesempenho = evento => {
+  if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button) {
+    return;
+  }
+  evento.preventDefault();
+  router.push(rotaDoDesempenho.value);
+};
 const rotaDoCanal = canal => ({
   name: 'settings_inbox_show',
   params: { inboxId: canal.inbox_id, tab: 'bot-configuration' },
@@ -164,6 +182,20 @@ onBeforeUnmount(() => clearTimeout(relogio));
           @voltar-lista="irParaLista"
           @mais="escolherMais"
         />
+
+        <a
+          v-if="hrefDesempenho"
+          data-ver-tudo
+          :href="hrefDesempenho"
+          class="inline-flex items-center gap-1 px-1 text-sm font-semibold rounded-lg min-h-11 w-fit text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+          @click="verDesempenho"
+        >
+          {{ t('AGENTS.DESEMPENHO.VER_TUDO', { nome }) }}
+          <span
+            class="i-lucide-arrow-right size-4 rtl:rotate-180"
+            aria-hidden="true"
+          />
+        </a>
 
         <section
           data-bloco="outro-sistema"

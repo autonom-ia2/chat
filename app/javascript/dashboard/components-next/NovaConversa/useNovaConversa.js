@@ -73,7 +73,15 @@ const textoDoErro = error => {
   return typeof doServidor === 'string' ? doServidor : '';
 };
 
-export function useNovaConversa({ contato, canal, continuar = null }) {
+// `donoDoRascunho` (#2211): de quem é o que está escrito. Por padrão, o id do contato. A
+// conversa vazia com um telefone novo cria o contato só ao enviar: o dono é o número, e o
+// texto não se perde quando o contato ganha id no meio do envio.
+export function useNovaConversa({
+  contato,
+  canal,
+  continuar = null,
+  donoDoRascunho = null,
+}) {
   const store = useStore();
   const { t } = useI18n();
   const { fetchSignatureFlagFromUISettings } = useUISettings();
@@ -246,7 +254,7 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
   // o contato for o mesmo. Fica DEPOIS do watch do canal de propósito: na
   // troca de contato os dois disparam, e é este que dá a palavra final.
   watch(
-    () => contato.value?.id ?? null,
+    () => (donoDoRascunho ? donoDoRascunho.value : (contato.value?.id ?? null)),
     (novo, antigo) => {
       if (String(novo) === String(antigo)) return;
       limpar();

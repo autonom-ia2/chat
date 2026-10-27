@@ -7,6 +7,7 @@ import {
   watch,
   onMounted,
   onBeforeUnmount,
+  nextTick,
 } from 'vue';
 import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import { usePastaDoEmail } from 'dashboard/components-next/conversa-canal/email/pastaDoEmail';
@@ -38,6 +39,9 @@ import FunnelFilter from 'dashboard/components-next/Conversation/FunnelFilter.vu
 import ListaCabecalho from 'dashboard/components-next/Conversation/ListaDeConversas/ListaCabecalho.vue';
 import ListaAbas from 'dashboard/components-next/Conversation/ListaDeConversas/ListaAbas.vue';
 import ChipDoStatus from 'dashboard/components-next/Conversation/ListaDeConversas/ChipDoStatus.vue';
+import CampoDaBusca from 'dashboard/components-next/Conversation/ListaDeConversas/busca/CampoDaBusca.vue';
+import ResultadoDaBusca from 'dashboard/components-next/Conversation/ListaDeConversas/busca/ResultadoDaBusca.vue';
+import { useBuscaDaLista } from 'dashboard/components-next/Conversation/ListaDeConversas/busca/useBuscaDaLista';
 import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 import FaixaDoWhatsapp from 'dashboard/components-next/conversa-canal/faixa-whatsapp/FaixaDoWhatsapp.vue';
 import {
@@ -1010,6 +1014,22 @@ function abrirAbaDaTelaInicial(aba) {
 useEmitter(BUS_EVENTS.TELA_INICIAL_ABA, abrirAbaDaTelaInicial);
 // #1883: a releitura voltou a lista longa (mais de 5 páginas) para a primeira página.
 const conversationListComponentRef = ref(null);
+// #2211: a busca no topo da lista. Enquanto busca, a lista some (sem desmontar) e o resultado aparece no
+// lugar; o ✕ volta a lista como estava: aba, filtro e a posição da rolagem.
+const busca = useBuscaDaLista();
+const buscaAtiva = computed(() => usaCabecalhoNovo.value && busca.ativa.value);
+let rolagemAntesDaBusca = 0;
+watch(buscaAtiva, async (ativa, antes) => {
+  const lista = conversationListComponentRef.value?.conversationListRef;
+  if (ativa && !antes) {
+    rolagemAntesDaBusca = lista?.scrollTop || 0;
+    return;
+  }
+  if (!ativa && antes) {
+    await nextTick();
+    if (lista) lista.scrollTop = rolagemAntesDaBusca;
+  }
+});
 useEmitter(BUS_EVENTS.LISTA_DO_FILTRO_DO_LINK_NO_TOPO, () => {
   const lista = conversationListComponentRef.value?.conversationListRef;
   if (lista) lista.scrollTop = 0;
@@ -1129,7 +1149,7 @@ watch(appliedFilters, () => resetBulkActions());
   <div
     class="flex flex-col flex-shrink-0 conversations-list-wrap bg-n-surface-1 relative"
     :class="[
-      { hidden: !showConversationList },
+      { hidden: !showConversationList, 'min-w-0': usaCabecalhoNovo },
       isOnExpandedLayout ? 'basis-full' : 'w-[340px] 2xl:w-[412px]',
     ]"
   >
@@ -1161,6 +1181,7 @@ watch(appliedFilters, () => resetBulkActions());
       @reset-filters="onResetFilters"
       @basic-filter-change="onBasicFilterChange"
     />
+    <CampoDaBusca v-if="usaCabecalhoNovo" v-model="busca.texto.value" />
 
     <!-- #1941: lista de uma caixa WAHA comum cujo WhatsApp parou. -->
     <FaixaDoWhatsapp :caixa="inbox" />
@@ -1190,6 +1211,7 @@ watch(appliedFilters, () => resetBulkActions());
       v-if="
         isCrmEnabled && !hasAppliedFiltersOrActiveFolders && !temFiltroDoLink
       "
+      v-show="!buscaAtiva"
       v-model="crmPipelineId"
       :lista-nova="listaNova"
     >
@@ -1197,13 +1219,18 @@ watch(appliedFilters, () => resetBulkActions());
         <ChipDoStatus :status="activeStatus" @limpar="voltarParaAbertas" />
       </template>
     </FunnelFilter>
-    <div v-else-if="mostraChipDoStatus" class="flex px-4 pb-2">
+    <div
+      v-else-if="mostraChipDoStatus"
+      v-show="!buscaAtiva"
+      class="flex px-4 pb-2"
+    >
       <ChipDoStatus :status="activeStatus" @limpar="voltarParaAbertas" />
     </div>
 
     <template v-if="!hasAppliedFiltersOrActiveFolders && !listaJuntaDoLink">
       <ListaAbas
         v-if="listaNova"
+        v-show="!buscaAtiva"
         :painel-id="PAINEL_DA_LISTA"
         :items="assigneeTabItems"
         :active-tab="activeAssigneeTab"
@@ -1218,8 +1245,17 @@ watch(appliedFilters, () => resetBulkActions());
       />
     </template>
 
+    <ResultadoDaBusca
+      v-if="buscaAtiva"
+      :resultado="busca.resultado.value"
+      :buscado="busca.buscado.value"
+      :texto="busca.texto.value"
+      :carregando="busca.carregando.value"
+      :erro="busca.erro.value"
+      @tentar="busca.buscar"
+    />
     <p
-      v-if="!chatListLoading && !conversationList.length"
+      v-if="!buscaAtiva && !chatListLoading && !conversationList.length"
       class="flex overflow-auto justify-center items-center p-4"
       :class="usaCabecalhoNovo && 'text-center text-sm text-n-slate-11'"
       :data-lista-vazia="usaCabecalhoNovo || undefined"
@@ -1227,6 +1263,7 @@ watch(appliedFilters, () => resetBulkActions());
       {{ textoDaListaVazia }}
     </p>
     <ConversationBulkActions
+      v-show="!buscaAtiva"
       :conversations="selectedConversations"
       :all-conversations-selected="allConversationsSelected"
       :selected-inboxes="uniqueInboxes"
@@ -1237,6 +1274,7 @@ watch(appliedFilters, () => resetBulkActions());
       @select-all-conversations="toggleSelectAll"
     />
     <ConversationList
+      v-show="!buscaAtiva"
       :id="listaNova ? PAINEL_DA_LISTA : undefined"
       ref="conversationListComponentRef"
       :role="listaComAbas ? 'tabpanel' : undefined"

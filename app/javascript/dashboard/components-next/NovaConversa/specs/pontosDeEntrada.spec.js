@@ -47,6 +47,8 @@ const getters = {
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ fullPath: '/', params: { contactId: '9' } }),
+  // O menu lateral liga o ⌘K da busca da lista (#2211), que navega pelo router.
+  useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock('vuex', async original => ({
   ...(await original()),

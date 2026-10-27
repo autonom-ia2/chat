@@ -57,6 +57,11 @@ export default {
       type: Boolean,
       default: false,
     },
+    // #2211: a conversa vazia: só "Responder" (sem nota privada) e sem a IA, que pede conversa.
+    soResposta: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ['setReplyMode', 'toggleEditorSize', 'executeCopilotAction'],
   setup(props, { emit }) {
@@ -158,6 +163,7 @@ export default {
       :mode="mode"
       :disabled="disabled"
       :is-reply-restricted="isReplyRestricted"
+      :so-resposta="soResposta"
       @toggle-mode="handleModeToggle"
     />
     <div class="flex items-center mx-4 my-0">
@@ -167,7 +173,10 @@ export default {
         </span>
       </div>
     </div>
-    <div v-if="captainTasksEnabled" class="flex items-center gap-2">
+    <div
+      v-if="captainTasksEnabled && !soResposta"
+      class="flex items-center gap-2"
+    >
       <div class="relative">
         <NextButton
           ref="copilotToggleRef"
