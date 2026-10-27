@@ -10,6 +10,7 @@ import CrmOpportunityForm from '../CrmOpportunityForm.vue';
 import CardHeroi from './CardHeroi.vue';
 import CardFaixa from './CardFaixa.vue';
 import CardProximoPasso from './CardProximoPasso.vue';
+import OrigemAnuncioMeta from './origem/OrigemAnuncioMeta.vue';
 import CardResumo from './CardResumo.vue';
 import CardLado from './CardLado.vue';
 import CardRodape from './CardRodape.vue';
@@ -198,12 +199,22 @@ const conversao = useCardConversao({
   cardId,
 });
 
+// #2195 — quem chegou pelo formulário do anúncio da Meta e ainda não tem conversa: a origem e as respostas ficam
+// abertas no card, e o próximo passo é chamar no WhatsApp.
+const formularioMeta = computed(() => {
+  const formulario = card.value.metadata?.meta_lead_form;
+  return formulario?.fields?.length && !card.value.conversation?.display_id
+    ? formulario
+    : null;
+});
+
 const passos = computed(() =>
   passosDoCard({
     reuniao: reuniao.reuniao.value,
     retornos: props.followUps,
     esperaDesde: card.value.conversation?.waiting_since || null,
     sugestao: leSugestao.value ? sugestao.sugestao.value : null,
+    formulario: formularioMeta.value,
     status: status.value,
   })
 );
@@ -766,6 +777,7 @@ defineExpose({
                 :ocupado="isSavingFollowUp || sugestao.respondendo.value"
                 :status="desfecho.status"
                 :venda="venda"
+                :contato-id="card.contact_id ? String(card.contact_id) : null"
                 @responder="abrirConversa()"
                 @feito="feito"
                 @retorno="novoRetorno"
@@ -773,6 +785,10 @@ defineExpose({
                 @aceitar="sugestao.aceitar"
                 @dispensar="sugestao.dispensar"
                 @reabrir="reabrir"
+              />
+              <OrigemAnuncioMeta
+                v-if="formularioMeta"
+                :formulario="formularioMeta"
               />
               <CardResumo
                 :card="card"

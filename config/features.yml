@@ -922,3 +922,15 @@
   display_name: Anúncios da Meta - resultados orgânicos da Página e do Instagram
   enabled: false
   column: feature_flags_ext_2
+
+# Anúncios da Meta › Formulários (#2195). Ligada: a aba Formulários mostra as Páginas que a pessoa concedeu ao entrar com
+# o Facebook e os formulários instantâneos de cada uma; escolher o funil e a etapa de um formulário liga o recebimento
+# da Página (assina o campo leadgen, pages_manage_metadata), e quem preenche vira contato e card ali, com o anúncio de
+# origem e as respostas no card (leads_retrieval). Também traz quem preencheu nos últimos 90 dias. Desligada: a aba
+# some, a API responde 404 e o webhook leadgen não cria nada. Com migration (20261108590000). Fim da
+# feature_flags_ext_2: posição 6 (valor 32, 1 << 5), depois do meta_ads_organico (#2199), que chegou antes à main
+# (27/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+- name: meta_ads_formularios
+  display_name: Anúncios da Meta › Formulários (leads no funil)
+  enabled: false
+  column: feature_flags_ext_2
