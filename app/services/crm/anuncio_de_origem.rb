@@ -14,6 +14,8 @@ module Crm::AnuncioDeOrigem
   CHAVE = 'meta_ads_view'.freeze
   FONTES_DE_ANUNCIO = %w[meta_ctwa meta_paid google_ads tiktok_ads].freeze
   CAMPOS_QUE_FICAM = %i[source source_type touched_at conversation_id].freeze
+  # Origens em que a regra de "pago" é refeita sobre o toque: sem origem gravada, link e publicação.
+  ORIGENS_REFEITAS = ['', 'tracked_link', Ctwa::CampaignBuilder::ORGANIC_SOURCE].freeze
 
   module_function
 
@@ -33,10 +35,13 @@ module Crm::AnuncioDeOrigem
   # A origem de anúncio do toque, ou nil. Vale o `source` gravado e também a regra de hoje do próprio código para
   # "pago" (Ctwa::CampaignBuilder.source_for: ctwa_clid ou source_type 'ad', gclid, ttclid, fbclid ou as UTMs da Meta
   # pagas), refeita sobre o toque: o toque gravado antes da regra mudar (UTMs do #1011, `source` que não existia)
-  # ficou com outra origem, mas carrega os mesmos sinais.
+  # ficou com outra origem, mas carrega os mesmos sinais. A regra só é refeita sobre o toque sem origem ou gravado como
+  # link ou publicação, que é onde a regra de "pago" cai quando não vê o sinal. Origem explícita que não é anúncio
+  # (divulgação por WhatsApp, e-mail, SMS, chat do site) fica como foi gravada, mesmo com fbclid ou UTM da Meta.
   def fonte_de_anuncio(toque)
     gravada = toque['source'].to_s
     return gravada if FONTES_DE_ANUNCIO.include?(gravada)
+    return unless ORIGENS_REFEITAS.include?(gravada)
 
     pela_regra = Ctwa::CampaignBuilder.source_for(toque.symbolize_keys)
     pela_regra if FONTES_DE_ANUNCIO.include?(pela_regra)

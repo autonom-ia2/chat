@@ -119,13 +119,23 @@ RSpec.describe 'Anúncio de origem no card com meta_ads_view (#2271)', :aggregat
   end
 
   describe 'planilha' do
-    # Um segundo card, cujo primeiro toque é o anúncio da Meta com todos os campos: a planilha tem mais de uma linha
-    # e cada linha passa pela regra.
-    before do
+    # Mais dois cards: um cujo primeiro toque é o anúncio da Meta com todos os campos, e um cujo primeiro toque é antigo,
+    # gravado como link, mas com as UTMs pagas da Meta (o anúncio só aparece pela regra de "pago" refeita). A planilha
+    # tem várias linhas e cada uma passa pela regra.
+    def card_com_toque(titulo, toque)
       outra = create_crm_conversation(account: account, inbox: inbox, contact: contato)
-      outra.update!(additional_attributes: { campaign_touches: [conversa.additional_attributes['campaign_touches'][0]] })
+      outra.update!(additional_attributes: { campaign_touches: [toque] })
       account.crm_cards.create!(pipeline: card.pipeline, stage: card.stage, inbox: inbox, contact: contato, owner: admin,
-                                primary_conversation: outra, title: 'Outro negócio com anúncio')
+                                primary_conversation: outra, title: titulo)
+    end
+
+    before do
+      card_com_toque('Outro negócio com anúncio', conversa.additional_attributes['campaign_touches'][0])
+      card_com_toque('Negócio de link antigo', { 'source' => 'tracked_link', 'source_type' => 'tracked_link',
+                                                 'source_id' => 'site:AB:1', 'headline' => 'LP · Campanha Primavera',
+                                                 'utm_source' => 'facebook', 'utm_medium' => 'cpc',
+                                                 'utm_campaign' => 'utm-campanha-x', 'source_url' => 'https://fb.me/anuncio-x',
+                                                 'touched_at' => '2026-09-15T12:00:00Z' })
     end
 
     def planilha_de(user)
@@ -142,7 +152,8 @@ RSpec.describe 'Anúncio de origem no card com meta_ads_view (#2271)', :aggregat
       inbox.add_members([exportador.id])
       linhas, origens = planilha_de(exportador)
 
-      expect(origens).to eq('Negócio com anúncio' => 'meta_ctwa', 'Outro negócio com anúncio' => 'meta_ctwa')
+      expect(origens).to eq('Negócio com anúncio' => 'meta_ctwa', 'Outro negócio com anúncio' => 'meta_ctwa',
+                            'Negócio de link antigo' => 'meta_paid')
       expect(linhas.flatten.compact.map(&:to_s).join("\n")).not_to include(*identificadores)
     end
 
@@ -150,7 +161,8 @@ RSpec.describe 'Anúncio de origem no card com meta_ads_view (#2271)', :aggregat
       _linhas, origens = planilha_de(admin)
 
       expect(origens).to eq('Negócio com anúncio' => 'Anúncio antigo sem origem',
-                            'Outro negócio com anúncio' => 'meta_ctwa — Título do anúncio X')
+                            'Outro negócio com anúncio' => 'meta_ctwa — Título do anúncio X',
+                            'Negócio de link antigo' => 'tracked_link — LP · Campanha Primavera')
     end
   end
 
@@ -172,6 +184,25 @@ RSpec.describe 'Anúncio de origem no card com meta_ads_view (#2271)', :aggregat
     expect(toques.pluck('source', 'ad_hidden')).to eq([['meta_paid', true], ['meta_ctwa', true], ['meta_paid', true]])
     expect(response.body).not_to include(*identificadores)
     expect(campanhas(:cards, admin).pluck('headline')).to eq(['LP · Campanha Primavera', 'Título do anúncio X', 'Grupo Sul'])
+  end
+
+  # Origem explícita que não é anúncio fica como foi gravada: a regra de "pago" só é refeita sobre o toque sem origem,
+  # link ou publicação. A divulgação clicada a partir do Facebook (fbclid, UTM da Meta paga) continua visível.
+  it 'divulgação com fbclid ou UTM da Meta continua visível para quem não tem a chave' do
+    conversa.update!(additional_attributes: { campaign_touches: [
+                       { source: 'campaign_whatsapp', source_type: 'campaign_whatsapp', source_id: 'divulgacao-1',
+                         headline: 'Divulgação de outubro', fbclid: 'fb-1', utm_source: 'facebook', utm_medium: 'cpc',
+                         utm_campaign: 'outubro', touched_at: '2026-10-03T12:00:00Z' },
+                       { source: 'campaign_email', source_type: 'campaign_email', source_id: 'email-1',
+                         headline: 'E-mail de outubro', fbclid: 'fb-2', touched_at: '2026-10-04T12:00:00Z' }
+                     ] })
+
+    toques = campanhas(:cards, sem_chave)
+
+    expect(toques.pluck('source', 'headline', 'source_id', 'utm_campaign'))
+      .to eq([['campaign_whatsapp', 'Divulgação de outubro', 'divulgacao-1', 'outubro'],
+              ['campaign_email', 'E-mail de outubro', 'email-1', nil]])
+    expect(toques).to all(satisfy { |toque| !toque.key?('ad_hidden') })
   end
 
   it 'tempo real: cada destinatário recebe o card com o anúncio que a chave dele permite' do
