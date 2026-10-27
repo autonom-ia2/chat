@@ -174,7 +174,9 @@ RSpec.describe Featurable do
       end
 
       it 'sets selected_feature_flags (the Super Admin path) with ext_1 flags without touching feature_flags_ext_2' do
-        account.update_columns(feature_flags_ext_2: 4) # rubocop:disable Rails/SkipsModelValidations
+        # O primeiro bit da ext_2 que ainda não tem flag: cada flag nova ocupa o próximo (#2202 tomou o valor 4).
+        bit_sem_flag = 1 << described_class::FEATURES_BY_COLUMN['feature_flags_ext_2'].keys.max
+        account.update_columns(feature_flags_ext_2: bit_sem_flag) # rubocop:disable Rails/SkipsModelValidations
         account.reload
 
         account.selected_feature_flags = [:feature_data_import, :feature_audit_log_ip_address]
@@ -182,7 +184,7 @@ RSpec.describe Featurable do
         account.reload
 
         expect(account.selected_feature_flags).to contain_exactly(:feature_data_import, :feature_audit_log_ip_address)
-        expect(account.feature_flags_ext_2).to eq(4)
+        expect(account.feature_flags_ext_2).to eq(bit_sem_flag)
       end
     end
 
