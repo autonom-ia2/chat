@@ -8,9 +8,70 @@ import {
   getInboxWarningIconClass,
   getVoiceCallIcon,
   searchInboxes,
+  ehWhatsappDoCelular,
 } from '../inbox';
 
 describe('#Inbox Helpers', () => {
+  describe('WhatsApp pelo celular (#2255)', () => {
+    it('reconhece a caixa API ligada ao WAHA, em snake_case e camelCase', () => {
+      expect(
+        ehWhatsappDoCelular({
+          channel_type: INBOX_TYPES.API,
+          waha_provider: true,
+        })
+      ).toBe(true);
+      expect(
+        ehWhatsappDoCelular({
+          channelType: INBOX_TYPES.API,
+          wahaProvider: true,
+        })
+      ).toBe(true);
+    });
+
+    it('caixa API comum, outro canal ou nada não é', () => {
+      expect(ehWhatsappDoCelular({ channel_type: INBOX_TYPES.API })).toBe(
+        false
+      );
+      expect(
+        ehWhatsappDoCelular({
+          channel_type: INBOX_TYPES.API,
+          waha_provider: false,
+        })
+      ).toBe(false);
+      expect(
+        ehWhatsappDoCelular({
+          channel_type: INBOX_TYPES.SMS,
+          waha_provider: true,
+        })
+      ).toBe(false);
+      expect(ehWhatsappDoCelular(null)).toBe(false);
+    });
+
+    it('mostra o número da sessão legível no lugar do token da API', () => {
+      expect(
+        getInboxIdentifier({
+          channel_type: INBOX_TYPES.API,
+          waha_provider: true,
+          waha_phone_number: '+5511900003303',
+          inbox_identifier: 'token-da-api',
+        })
+      ).toBe('+55 11 90000-3303');
+      expect(
+        getInboxIdentifier({
+          channel_type: INBOX_TYPES.API,
+          waha_provider: true,
+          inbox_identifier: 'token-da-api',
+        })
+      ).toBe('');
+      expect(
+        getInboxIdentifier({
+          channel_type: INBOX_TYPES.API,
+          inbox_identifier: 'token-da-api',
+        })
+      ).toBe('token-da-api');
+    });
+  });
+
   describe('getInboxIdentifier', () => {
     it.each([
       [

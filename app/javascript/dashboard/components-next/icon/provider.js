@@ -1,6 +1,7 @@
 import {
   INBOX_TYPES,
   TWILIO_CHANNEL_MEDIUM,
+  ehWhatsappDoCelular,
   isVoiceCallEnabled,
   getInboxVoiceIcon,
 } from 'dashboard/helper/inbox';
@@ -46,11 +47,6 @@ const providerBrandIconMap = {
 
 const resolveInbox = inbox => inbox?.value ?? inbox;
 
-// #2255 — WhatsApp pelo celular: caixa API ligada ao WAHA. Para a pessoa é WhatsApp,
-// então leva o ícone do WhatsApp, não o "{ }" da API. Caixa API sem WAHA não muda.
-const ehWhatsappDoCelular = (type, inboxDetails) =>
-  type === INBOX_TYPES.API && Boolean(inboxDetails.waha_provider);
-
 export function useChannelIcon(inbox) {
   const channelIcon = computed(() => {
     const inboxDetails = resolveInbox(inbox);
@@ -63,7 +59,8 @@ export function useChannelIcon(inbox) {
       }
     }
 
-    if (ehWhatsappDoCelular(type, inboxDetails)) {
+    // #2255: WhatsApp pelo celular leva o ícone do WhatsApp, não o "{ }" da API.
+    if (ehWhatsappDoCelular(inboxDetails)) {
       icon = channelTypeIconMap['Channel::Whatsapp'];
     }
 
@@ -105,7 +102,7 @@ export function useChannelBrandIcon(inbox) {
       icon = channelTypeBrandIconMap['Channel::Whatsapp'];
     }
 
-    if (ehWhatsappDoCelular(type, inboxDetails)) {
+    if (ehWhatsappDoCelular(inboxDetails)) {
       icon = channelTypeBrandIconMap['Channel::Whatsapp'];
     }
 

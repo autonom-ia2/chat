@@ -1,4 +1,5 @@
 import { picoSearch } from '@chatwoot/pico-search';
+import { telefoneLegivel } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 export const INBOX_TYPES = {
   WEB: 'Channel::WebWidget',
@@ -111,6 +112,12 @@ const INBOX_ICON_MAP_LINE = {
 
 const DEFAULT_ICON_LINE = 'i-ri-chat-1-line';
 
+// #2255 — WhatsApp pelo celular: caixa API ligada ao WAHA. Para a pessoa é WhatsApp, em todo lugar.
+// Aceita a caixa como vem do servidor (snake_case) ou já em camelCase.
+export const ehWhatsappDoCelular = caixa =>
+  (caixa?.channel_type || caixa?.channelType) === INBOX_TYPES.API &&
+  Boolean(caixa?.waha_provider || caixa?.wahaProvider);
+
 // Facebook, Instagram, TikTok, and X initialize the editable inbox name from
 // the provider account name; their opaque routing IDs should not be displayed.
 const INBOX_IDENTIFIER_RESOLVERS = {
@@ -132,8 +139,13 @@ const INBOX_IDENTIFIER_RESOLVERS = {
   },
 };
 
-export const getInboxIdentifier = inbox =>
-  INBOX_IDENTIFIER_RESOLVERS[inbox?.channel_type]?.(inbox) || '';
+// #2255: o WhatsApp do celular mostra o número da sessão, legível, no lugar do token da API.
+export const getInboxIdentifier = inbox => {
+  if (ehWhatsappDoCelular(inbox)) {
+    return telefoneLegivel(inbox.waha_phone_number || '');
+  }
+  return INBOX_IDENTIFIER_RESOLVERS[inbox?.channel_type]?.(inbox) || '';
+};
 
 export const searchInboxes = (inboxes, query) => {
   const primaryMatches = picoSearch(inboxes, query, ['name', 'channel_type']);

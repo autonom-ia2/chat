@@ -62,4 +62,20 @@ describe('CRM card identity', () => {
       ).business
     ).toBe('');
   });
+
+  it('shows a phone-only contact name readable, only on screen (#2255)', () => {
+    const contact = { name: '5511955554444', phone_number: '+5511955554444' };
+    expect(
+      buildCrmCardIdentity({ title: '+5511955554444', contact }, 'Card avulso')
+    ).toEqual({
+      company: '',
+      person: '',
+      business: '',
+      main: '+55 11 95555-4444',
+    });
+    expect(contact.name).toBe('5511955554444');
+    expect(
+      buildCrmCardIdentity({ contact: { name: 'Joana' } }, 'Card avulso').main
+    ).toBe('Joana');
+  });
 });

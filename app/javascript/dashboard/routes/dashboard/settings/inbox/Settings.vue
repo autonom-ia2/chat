@@ -56,6 +56,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import SpinnerLoader from 'dashboard/components-next/spinner/Spinner.vue';
 import {
   getInboxIconByType,
+  ehWhatsappDoCelular,
   getInboxIdentifier,
   INBOX_TYPES,
 } from 'dashboard/helper/inbox';
@@ -384,7 +385,11 @@ export default {
         channel_type: type,
         voice_enabled: voiceEnabled,
       } = this.inbox;
-      return getInboxIconByType(type, medium, 'line', voiceEnabled);
+      // #2255: o WhatsApp do celular (caixa API do WAHA) leva o ícone do WhatsApp.
+      const tipoDoIcone = ehWhatsappDoCelular(this.inbox)
+        ? INBOX_TYPES.WHATSAPP
+        : type;
+      return getInboxIconByType(tipoDoIcone, medium, 'line', voiceEnabled);
     },
     bannerMaxWidth() {
       const narrowTabs = ['collaborators', 'bot-configuration'];

@@ -76,6 +76,13 @@ describe('chaveDoCanal e linhaDoCanal', () => {
     expect(chaveDoCanal(null)).toBe('OUTRO');
   });
 
+  it('a caixa API ligada ao WAHA é o WhatsApp do celular (#2255)', () => {
+    expect(chaveDoCanal({ ...api, wahaProvider: true })).toBe(
+      'WHATSAPP_CELULAR'
+    );
+    expect(chaveDoCanal({ ...api, wahaProvider: false })).toBe('OUTRO');
+  });
+
   it('mostra o e-mail ou o número legível, sem o prefixo do Twilio', () => {
     expect(linhaDoCanal(email)).toBe('oi@loja.com');
     expect(linhaDoCanal({ ...whatsapp, phoneNumber: '+5511988887777' })).toBe(
@@ -128,6 +135,22 @@ describe('ordenarCanais', () => {
     ];
 
     expect(nomes(canais)).toEqual(['Oficial', 'Twilio', 'E-mail']);
+  });
+
+  it('o WhatsApp do celular vem logo depois do oficial e antes do e-mail (#2255)', () => {
+    const canais = [
+      { ...api, name: 'API comum' },
+      { ...email, name: 'E-mail' },
+      { ...api, wahaProvider: true, name: 'Celular' },
+      { ...whatsapp, name: 'Oficial' },
+    ];
+
+    expect(nomes(canais)).toEqual([
+      'Oficial',
+      'Celular',
+      'E-mail',
+      'API comum',
+    ]);
   });
 
   it('ordena por nome dentro do mesmo tipo e não mexe na lista recebida', () => {
@@ -272,6 +295,10 @@ describe('primeiroNome', () => {
     expect(primeiroNome('Ana')).toBe('Ana');
     expect(primeiroNome('')).toBe('');
     expect(primeiroNome()).toBe('');
+  });
+
+  it('nome que é só telefone vai inteiro, não "+55" (#2255)', () => {
+    expect(primeiroNome('+55 11 95555-4444')).toBe('+55 11 95555-4444');
   });
 });
 
