@@ -959,3 +959,14 @@
   display_name: Anúncios da Meta › comentários do anúncio no Instagram
   enabled: false
   column: feature_flags_ext_2
+
+# Anúncios da Meta: o Gerenciador simples (#2198, PR 1). Ligada: "Criar anúncio" no Resultado abre o anúncio novo
+# (WhatsApp ou site, só os destinos e lugares que a chamada real confirmou), o detalhe do anúncio mostra o orçamento e
+# as datas com "Mudar", e os anúncios criados aqui que seguem pausados aparecem no topo. Tudo nasce pausado: nada gasta
+# até a pessoa tocar em "Ativar anúncio". Desligada: o painel de sempre; nenhuma rota de criar chama a Meta (404).
+# Migration 20261108580000 (tabela nova crm_meta_ads_created_objects). Fim da feature_flags_ext_2, posição pela ordem
+# na main, confirmada pela Orquestração na hora da fila (hoje 9, valor 256, 1 << 8, depois do meta_ads_comentarios_instagram).
+- name: meta_ads_criar
+  display_name: Anúncios da Meta › criar anúncio, orçamento e datas
+  enabled: false
+  column: feature_flags_ext_2

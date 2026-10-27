@@ -87,6 +87,7 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Crm::MetaAdFrequencyWindow', :por_conta],
     ['Crm::MetaAdLink', :por_conta],
     ['Crm::MetaAdObject', :por_conta],
+    ['Crm::MetaAdsCreatedObject', :por_conta],
     ['Crm::MetaAdsConnection', :por_conta],
     ['Crm::MetaAdsPage', :por_conta],
     ['Ctwa::TrackedLinkClick', :por_conta],

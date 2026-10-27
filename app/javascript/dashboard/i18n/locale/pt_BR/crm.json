@@ -3095,7 +3095,23 @@
           "ACTIVATE_DONE": "Anúncio ativado.",
           "CANCEL": "Cancelar",
           "ERROR": "A Meta não aceitou a mudança agora. Tente de novo daqui a pouco.",
-          "NEEDS_LOGIN": "Para pausar por aqui, entre de novo com o Facebook na Conexão."
+          "NEEDS_LOGIN": "Para pausar por aqui, entre de novo com o Facebook na Conexão.",
+          "PARTIAL": "Parte do anúncio ficou ligada na Meta e não deu para pausar de volta. Confira no Gerenciador de Anúncios.",
+          "PAUSE_PARTIAL": "Não deu para pausar tudo: parte do anúncio pode continuar ligada na Meta. Confira no Gerenciador de Anúncios.",
+          "IN_PROGRESS": "Este anúncio já está sendo mudado. Espere um instante e olhe de novo.",
+          "ACTIVATE_SPEND_END": "Ao ativar, o anúncio começa a gastar {value} por dia, até {end}. No total, no máximo {total}.",
+          "ACTIVATE_SPEND_NO_END": "Ao ativar, o anúncio começa a gastar {value} por dia, sem data para terminar. Ele só para quando você pausar.",
+          "ACTIVATE_SPEND_BUTTON": "Ativar e começar a gastar",
+          "ACTIVATE_SPEND_TOTAL": "Ao ativar, o anúncio começa a gastar do orçamento total de {total}, até {end}. Ele não passa disso.",
+          "ACTIVATE_SPEND_SHARED": "Ao ativar, este anúncio passa a dividir os {value} por dia do grupo \"{name}\" com o outro anúncio no ar. O gasto do grupo não aumenta. | Ao ativar, este anúncio passa a dividir os {value} por dia do grupo \"{name}\" com os outros {others} anúncios no ar. O gasto do grupo não aumenta.",
+          "ACTIVATE_SPEND_SHARED_CAMPAIGN": "Ao ativar, este anúncio passa a dividir os {value} por dia da campanha \"{name}\" com o outro anúncio no ar. O gasto da campanha não aumenta. | Ao ativar, este anúncio passa a dividir os {value} por dia da campanha \"{name}\" com os outros {others} anúncios no ar. O gasto da campanha não aumenta.",
+          "BUDGET_PENDING": "Lendo o orçamento para mostrar quanto vai gastar…",
+          "BUDGET_FAILED": "Não deu para ler o orçamento agora. Sem ele, não dá para ativar.",
+          "BUDGET_RETRY": "Tentar de novo",
+          "HELD": {
+            "CAMPAIGN": "Anúncio ativado, mas a campanha está pausada no Gerenciador de Anúncios da Meta. Ative a campanha lá para ele começar a rodar.",
+            "ADSET": "Anúncio ativado, mas o conjunto de anúncios está pausado no Gerenciador de Anúncios da Meta. Ative o conjunto lá para ele começar a rodar."
+          }
         },
         "POST": {
           "TITLE": "Post do anúncio",
@@ -3106,6 +3122,55 @@
           "OPEN": "Ver no Facebook"
         },
         "PAGE": "Página: {page}",
+        "BUDGET": {
+          "TITLE": "Orçamento e datas",
+          "SCOPE_ADSET": "Vale para o 1 anúncio do grupo \"{name}\". | Vale para os {count} anúncios do grupo \"{name}\". Eles dividem este dinheiro.",
+          "SCOPE_CAMPAIGN": "Vale para o 1 anúncio da campanha \"{name}\". | Vale para os {count} anúncios da campanha \"{name}\". Eles dividem este dinheiro.",
+          "PER_DAY": "{value} por dia",
+          "TOTAL": "{value} no total",
+          "DATES": "De {start} até {end}",
+          "DATES_NO_END": "Desde {start} · sem data para terminar",
+          "EDIT": "Mudar orçamento e datas",
+          "EDIT_TITLE": "Mudar orçamento e datas",
+          "REVIEW_TITLE": "Confira antes de mudar",
+          "REVIEW": "Conferir a mudança",
+          "CONFIRM_PER_DAY": "Mudar para {value} por dia",
+          "CONFIRM_TOTAL": "Mudar para {value} no total",
+          "CONFIRM_END": "Mudar a data para terminar",
+          "CANCEL": "Cancelar",
+          "BACK": "Alterar os valores",
+          "AMOUNT_DAILY": "Quanto por dia",
+          "AMOUNT_TOTAL": "Orçamento total",
+          "LIMITS": "De {min} a {max} por dia.",
+          "BIG_CHANGE": "Mudar muito de uma vez faz a Meta testar de novo para quem mostrar. Por uns dias, os resultados podem variar.",
+          "NO_END": "sem data para terminar",
+          "CHANGE": {
+            "AMOUNT": "Orçamento",
+            "END": "Data para terminar"
+          },
+          "FROM": "Antes:",
+          "TO": "Depois:",
+          "PROJECTION_UNTIL": "Até {end} ({days} dias), gasta no máximo {value} no total.",
+          "PROJECTION_NO_END": "Sem data para terminar: gasta até {value} a cada 30 dias, até você pausar.",
+          "DAY_LIMITS": "Num dia a Meta pode gastar até {day}. Na semana, nunca passa de {week}.",
+          "AUDIT": "A mudança fica na Auditoria da conta, com o seu nome.",
+          "DONE": "Orçamento mudado. A mudança também aparece no Gerenciador de Anúncios da Meta.",
+          "ERROR": "A Meta não aceitou a mudança agora. Tente de novo daqui a pouco.",
+          "ERRORS": {
+            "AMOUNT": "Digite um valor, como 45,00.",
+            "MIN": "A Meta pede pelo menos {value} por dia.",
+            "MAX": "O limite por aqui é {value} por dia. Para mais, use o Gerenciador de Anúncios da Meta.",
+            "END_REQUIRED": "Escolha a data para terminar.",
+            "TOTAL_MIN": "O total precisa ser de pelo menos {value}.",
+            "TOTAL_MAX": "Até essa data, o total pode ser de no máximo {value} ({daily} por dia que falta). Para mais, use o Gerenciador de Anúncios da Meta."
+          },
+          "FAILURES": {
+            "INVALID_AMOUNT": "A Meta não aceitou esse valor. Confira os limites e tente de novo.",
+            "INVALID_DATES": "Essa data não vale: o fim precisa ser depois de hoje e do começo do anúncio.",
+            "CANNOT_CLEAR_END": "Por aqui ainda não dá para tirar a data de fim. Escolha outra data ou mude no Gerenciador de Anúncios da Meta.",
+            "META_PARTIAL": "Só parte da mudança foi feita na Meta. Confira o orçamento e as datas no Gerenciador de Anúncios."
+          }
+        },
         "COMMENTS": {
           "TITLE": "Comentários",
           "EMPTY": "Ninguém comentou neste anúncio ainda.",
@@ -3337,6 +3402,313 @@
           "WHATSAPP_NUMBER_NOT_FOUND": "Este número não tem WhatsApp.",
           "SALES_VALUE_FORBIDDEN": "Para mudar ou testar o resumo, é preciso ter permissão para ver os valores de venda.",
           "GENERIC": "Não deu certo agora. Tente de novo."
+        }
+      },
+      "CRIAR": {
+        "BUTTON": "Criar anúncio",
+        "BACK": "Voltar",
+        "BACK_TO_PANEL": "Voltar ao painel",
+        "PROGRESS": "Passo {step} de {total}",
+        "NEXT": "Continuar",
+        "CREATE": "Criar anúncio pausado",
+        "PREVIEW": {
+          "LABEL": "Como o anúncio aparece",
+          "FEED": "Feed",
+          "STORIES": "Stories e Reels",
+          "SPONSORED": "· Patrocinado",
+          "CTA": "Enviar mensagem",
+          "NOTE_FEED": "No feed {where}, se a Meta mostrar lá.",
+          "NOTE_FEED_VERTICAL": "No feed, foto ou vídeo em pé aparece um pouco cortado em cima e embaixo.",
+          "NOTE_STORIES_VERTICAL": "Nos Stories e Reels {where}, em tela cheia, se a Meta mostrar lá.",
+          "NOTE_STORIES_FIT": "Foto quadrada pode ficar menor nos Stories e Reels. Para tela cheia, use foto ou vídeo em pé.",
+          "EMPTY": "Sua foto ou vídeo aparece aqui.",
+          "NOTE_CAROUSEL": "Carrossel: a pessoa passa os cartões para o lado. A Meta escolhe onde mostrar.",
+          "CAROUSEL_COUNT": "1 de {count}",
+          "WHERE": {
+            "AUTO": "Instagram e Facebook",
+            "INSTAGRAM": "Só Instagram",
+            "FACEBOOK": "Só Facebook"
+          },
+          "IN": {
+            "AUTO": "do Instagram e do Facebook",
+            "INSTAGRAM": "do Instagram",
+            "FACEBOOK": "do Facebook"
+          },
+          "NOTE_STORIES_PORTRAIT": "Foto um pouco em pé pode ficar menor nos Stories e Reels."
+        },
+        "FAILED": {
+          "TITLE": "Não conseguimos falar com a Meta agora. Nada foi criado.",
+          "RETRY": "Tentar de novo"
+        },
+        "RECREATE": "Não está no Gerenciador, criar de novo",
+        "BLOCKERS": {
+          "LOGIN": {
+            "TITLE": "Para criar anúncios por aqui, entre de novo com o Facebook.",
+            "ACTION": "Entrar com o Facebook",
+            "POPUP": "A janela do Facebook fechou antes do fim. Tente de novo e toque em Continuar até o fim.",
+            "ERROR": "Não deu para entrar com o Facebook agora. Tente de novo daqui a pouco.",
+            "ACTION_CONNECTION": "Ir para a Conexão e entrar"
+          },
+          "NO_PAGE": {
+            "TITLE": "Para anunciar, a sua Página do Facebook precisa estar conectada.",
+            "ACTION": "Ir para a Conexão"
+          },
+          "CURRENCY": {
+            "TITLE": "Criar anúncio por aqui só vale para conta de anúncios em reais. Esta conta usa outra moeda.",
+            "ACTION": "Ir para a Conexão"
+          },
+          "NO_NUMBER": {
+            "TITLE": "Conecte um número de WhatsApp para o anúncio abrir conversa.",
+            "ACTION": "Conectar número",
+            "OTHER": "Anunciar com outro destino"
+          }
+        },
+        "DATE": {
+          "PREVIOUS": "Mês anterior",
+          "NEXT": "Próximo mês"
+        },
+        "END": {
+          "LABEL": "Até quando",
+          "NONE": "Sem data para terminar",
+          "D7": "Por 7 dias",
+          "D30": "Por 30 dias",
+          "PICK": "Escolher data",
+          "PICK_LABEL": "Termina em",
+          "PICK_PLACEHOLDER": "Escolha o dia"
+        },
+        "KIND": {
+          "TITLE": "O que você quer fazer?",
+          "HINT": "Anúncio e impulsionamento nascem pausados. Só gastam depois que você ativar.",
+          "AD": "Anúncio novo",
+          "AD_HINT": "Sua foto ou vídeo com um botão que chama você no WhatsApp.",
+          "REASONS": {
+            "NO_DESTINATION": "Ainda não dá para criar anúncio novo nesta conta. {support}"
+          },
+          "SUPPORT": "Fale com o suporte."
+        },
+        "WHERE": {
+          "TITLE": "Página e número do WhatsApp",
+          "HINT": "O anúncio aparece em nome da Página e abre conversa com este número.",
+          "PAGE": "Página do Facebook",
+          "NUMBER": "Número do WhatsApp",
+          "CHOOSE": "Escolha"
+        },
+        "CONTENT": {
+          "TITLE": "Foto ou vídeo e texto",
+          "HINT": "Instagram e Facebook. A Meta escolhe onde mostrar: feed, Stories ou Reels.",
+          "TEXT": "Texto",
+          "TEXT_PLACEHOLDER": "Conte numa frase o que você oferece",
+          "HEADLINE": "Título",
+          "HEADLINE_PLACEHOLDER": "Por exemplo: Bolo de pote a R$ 12",
+          "READY_MESSAGE": "Mensagem que a pessoa envia",
+          "READY_MESSAGE_HINT": "Ela já vem escrita no WhatsApp. A pessoa pode mudar antes de enviar.",
+          "READY_MESSAGE_DEFAULT": "Olá! Vi o anúncio e quero saber mais.",
+          "OFFER": "O que você quer vender?",
+          "OFFER_PLACEHOLDER": "Por exemplo: bolo de pote a R$ 12",
+          "OFFER_HINT": "Com isso montamos o texto e o título. Dá para mudar depois.",
+          "HEADLINE_HINT": "Aparece em negrito embaixo da foto.",
+          "NEED_OFFER": "Escreva o que você quer vender para continuar.",
+          "NEED_MEDIA": "Escolha uma foto ou vídeo para continuar.",
+          "NEED_TEXT": "Escreva o texto do anúncio para continuar.",
+          "TEXT_FROM_OFFER": {
+            "WHATSAPP": "{offer}. Chame no WhatsApp e faça seu pedido.",
+            "INSTAGRAM_DIRECT": "{offer}. Chame no Direct e faça seu pedido.",
+            "MESSENGER": "{offer}. Chame no Messenger e faça seu pedido.",
+            "WEBSITE": "{offer}. Veja no site e faça seu pedido."
+          },
+          "NEED_SITE": "Digite o endereço do site para continuar.",
+          "TEXT_READY": "Texto pronto: «{text}»",
+          "TEXT_READY_EMPTY": "O texto sai do que você vende.",
+          "TEXT_CHANGE": "Mudar texto",
+          "UPLOADING": "Espere a foto ou o vídeo terminar de enviar para continuar."
+        },
+        "AUDIENCE": {
+          "TITLE": "Quem vê o anúncio",
+          "HINT": "Entre essas pessoas, a Meta mostra o anúncio a quem tem mais chance de responder.",
+          "SPECIAL": "O anúncio fala de seguro, crédito, empréstimo ou investimento?",
+          "YES": "Sim",
+          "NO": "Não",
+          "SPECIAL_HINT": "A Meta pede que anúncios assim sejam marcados. A idade fica de 18 a 65+ e não dá para escolher gênero.",
+          "WHERE": "Onde",
+          "ALL_BRAZIL": "Brasil todo",
+          "SOME_STATES": "Alguns estados",
+          "STATE_SEARCH": "Digite o estado",
+          "STATE_NONE": "Nenhum estado com esse nome.",
+          "AGE": "Idade",
+          "AGE_LOCKED": "De 18 a 65+ anos (regra da Meta para estes anúncios).",
+          "FROM": "De",
+          "TO": "a",
+          "YEARS": "anos",
+          "AGE_MIN": "Idade mínima",
+          "AGE_MAX": "Idade máxima",
+          "AGE_ERROR": "A idade inicial precisa ser menor que a final."
+        },
+        "BUDGET": {
+          "TITLE": "Quanto investir",
+          "HINT": "Você escolhe o valor por dia. Só começa a gastar depois que você ativar o anúncio.",
+          "AMOUNT": "Quanto por dia",
+          "SUGGESTION": "Sugestão para começar: {value} por dia. Dá para mudar depois. De {min} a {max}.",
+          "DAY_LIMITS": "Num dia a Meta pode gastar até {day}. Na semana, nunca passa de {week}.",
+          "START": "Começa em",
+          "ERRORS": {
+            "AMOUNT": "Digite um valor, como 20,00.",
+            "MIN": "A Meta pede pelo menos {value} por dia.",
+            "MAX": "O limite por aqui é {value} por dia. Para mais, use o Gerenciador de Anúncios da Meta."
+          }
+        },
+        "REVIEW": {
+          "TITLE": "Confira e crie",
+          "HINT": "É isto que vai para a Meta.",
+          "WHAT": "O quê",
+          "WHO": "Quem vê",
+          "WHO_LINE": "{where} · {ages}",
+          "SPECIAL": "Marcado como serviço financeiro (seguro, crédito, empréstimo ou investimento).",
+          "AGES": "{min} a {max} anos",
+          "MONEY": "Dinheiro",
+          "PER_DAY": "{value} por dia",
+          "TOTAL_DAYS": "Até {end} ({days} dias), no máximo {value} no total.",
+          "TOTAL_NO_END": "Sem data para terminar: gasta até {value} a cada 30 dias, até você pausar.",
+          "DATES": "De {start} até {end}",
+          "DATES_NO_END": "Começa em {start} · sem data para terminar",
+          "NAME": "Nome",
+          "NAME_HINT": "Só você vê, no painel e no Gerenciador de Anúncios.",
+          "PAUSED": "O anúncio nasce pausado. Ele não gasta nada até você ativar.",
+          "AUDIT": "A criação fica na Auditoria da conta, com o seu nome.",
+          "WHAT_AD": {
+            "WHATSAPP": "Anúncio novo que chama no WhatsApp ({number})",
+            "INSTAGRAM_DIRECT": "Anúncio novo que chama no Direct do Instagram ({'@'}{username})",
+            "MESSENGER": "Anúncio novo que chama no Messenger",
+            "WEBSITE": "Anúncio novo que leva ao site ({url})"
+          },
+          "WHAT_CAROUSEL": "Carrossel com {count} cartões",
+          "TAP": {
+            "WHATSAPP": "Quem toca começa uma conversa com você no WhatsApp.",
+            "INSTAGRAM_DIRECT": "Quem toca começa uma conversa com você no Direct do Instagram.",
+            "MESSENGER": "Quem toca começa uma conversa com você no Messenger.",
+            "WEBSITE": "Quem toca abre o seu site."
+          },
+          "DEFAULT_NAME_AD": "{where} · {date}"
+        },
+        "DONE": {
+          "TITLE": "\"{name}\" criado e pausado",
+          "HINT": "A Meta revisa todo anúncio novo, em geral em até um dia. Quando quiser começar, toque em \"Ativar anúncio\".",
+          "TITLE_ACTIVE": "\"{name}\" no ar",
+          "HINT_ACTIVE": "A Meta revisa todo anúncio novo, em geral em até um dia.",
+          "TITLE_HELD": "\"{name}\" ativado"
+        },
+        "PAUSED_LIST": {
+          "TITLE": "Pausados, esperando você ativar ({count})",
+          "HINT": "Foram criados por aqui e não gastam nada até você ativar.",
+          "LINE": "Criado em {date} · Valor ao criar: {value} por dia",
+          "FAILED": "Não deu para ler os anúncios pausados agora.",
+          "RETRY": "Tentar de novo"
+        },
+        "MEDIA": {
+          "LABEL": "Foto ou vídeo",
+          "DROP": "Escolher foto ou vídeo",
+          "DROP_HINT": "Foto ou vídeo de até 1 minuto. Em pé fica melhor nos Stories e Reels.",
+          "CHOSEN_IMAGE": "Foto escolhida",
+          "CHOSEN_VIDEO": "Vídeo escolhido · {seconds} s",
+          "CHANGE": "Trocar",
+          "LIBRARY": "Usar uma imagem de anúncio antigo",
+          "LIBRARY_PICK": "Usar a imagem {number} de {total}",
+          "SHAPES": {
+            "VERTICAL": "Em pé: tela cheia nos Stories e Reels.",
+            "PORTRAIT": "Um pouco em pé: fica bem no feed.",
+            "SQUARE": "Quadrada: fica bem no feed.",
+            "LANDSCAPE": "Deitada: aparece menor no celular."
+          },
+          "ERRORS": {
+            "TYPE": "Esse arquivo não serve. Escolha uma foto ou um vídeo do celular.",
+            "IMAGE_SIZE": "Essa foto é pesada demais. Escolha outra ou mande um print dela.",
+            "VIDEO_SIZE": "Esse vídeo é pesado demais. Corte no app de fotos do celular e escolha de novo.",
+            "VIDEO_LONG": "O vídeo tem mais de 1 minuto. Corte no app de fotos do celular e escolha de novo.",
+            "READ": "Não deu para abrir esse arquivo. Tente outro.",
+            "UPLOAD": "Não deu para enviar esse arquivo para a Meta agora. Tente de novo."
+          },
+          "DROP_WHERE": "Do celular ou do computador: toque aqui ou arraste o arquivo.",
+          "CAROUSEL": {
+            "LABEL": "Carrossel com {count} cartões",
+            "ADD": "Adicionar outra foto ou vídeo (carrossel)",
+            "REMOVE": "Tirar o cartão {number}",
+            "HINT": "Com 2 ou mais, vira carrossel: a pessoa passa para o lado. Até 10.",
+            "FULL": "Chegou ao máximo: 10 cartões."
+          },
+          "UPLOADING": "Enviando para a Meta…"
+        },
+        "DESTINATION": {
+          "GOES_TO": "Quem tocar vai para:",
+          "CHANGE": "Trocar",
+          "CURRENT_WHATSAPP": "WhatsApp ({phone})",
+          "CURRENT_INSTAGRAM_DIRECT": "Direct do Instagram ({'@'}{username})",
+          "OPTIONS": {
+            "WHATSAPP": "WhatsApp",
+            "INSTAGRAM_DIRECT": "Direct do Instagram",
+            "MESSENGER": "Messenger",
+            "WEBSITE": "Seu site"
+          },
+          "HINTS": {
+            "WHATSAPP": "Abre conversa com o seu número.",
+            "INSTAGRAM_DIRECT": "Abre conversa no Direct de {'@'}{username}.",
+            "MESSENGER": "Abre conversa com a sua Página no Messenger.",
+            "WEBSITE": "Leva para o endereço que você escolher."
+          },
+          "REASONS": {
+            "NO_NUMBER": "Conecte um número de WhatsApp para usar.",
+            "NO_INSTAGRAM": "Ligue uma conta profissional do Instagram à Página para usar.",
+            "CAROUSEL": "Carrossel só funciona com WhatsApp ou site. Tire os cartões extras para usar."
+          },
+          "SITE_URL": "Endereço do site",
+          "SITE_URL_PLACEHOLDER": "lojaexemplo.com.br",
+          "SITE_URL_ERROR": "Digite o endereço do site. Por exemplo: lojaexemplo.com.br",
+          "SITE_ACTION": "Texto do botão",
+          "ACTIONS": {
+            "LEARN_MORE": "Saiba mais",
+            "SHOP_NOW": "Comprar"
+          },
+          "SHORT": {
+            "WHATSAPP": "WhatsApp",
+            "INSTAGRAM_DIRECT": "Direct",
+            "MESSENGER": "Messenger",
+            "WEBSITE": "Site"
+          }
+        },
+        "PLACEMENT": {
+          "TITLE": "Onde aparece",
+          "CHANGE": "Trocar",
+          "OPTIONS": {
+            "AUTO": "Automático (recomendado): Instagram e Facebook",
+            "INSTAGRAM": "Só Instagram",
+            "FACEBOOK": "Só Facebook"
+          },
+          "HINTS": {
+            "AUTO": "A Meta mostra onde tiver mais chance de resultado: feed, Stories ou Reels.",
+            "INSTAGRAM": "Feed, Stories e Reels do Instagram, onde a Meta escolher.",
+            "FACEBOOK": "Feed, Stories e Reels do Facebook, onde a Meta escolher."
+          }
+        },
+        "ERRORS": {
+          "INVALID_PARAMS": "Falta alguma informação do anúncio, como o nome ou o texto. Confira e tente de novo.",
+          "INVALID_DESTINATION": "Esse destino ainda não está liberado para esta conta.",
+          "INVALID_PLACEMENT": "Esse lugar não vale para este destino. Escolha outro em \"Onde aparece\".",
+          "INVALID_AMOUNT": "O valor por dia está fora do limite. Volte e mude o valor.",
+          "INVALID_DATES": "As datas não valem: o começo não pode ser antes de hoje, e o fim precisa vir depois do começo.",
+          "INVALID_SITE": "O endereço do site não vale. Confira se ele está certo, como lojaexemplo.com.br.",
+          "INVALID_WHATSAPP_NUMBER": "Esse número de WhatsApp não é desta conta. Escolha outro.",
+          "INVALID_PAGE": "A Página do Facebook não está liberada para a plataforma. Entre de novo com o Facebook na Conexão.",
+          "INVALID_MEDIA": "A Meta não aceitou a foto ou o vídeo. Escolha de novo.",
+          "INVALID_AUDIENCE": "O público não vale. Confira os estados e a idade.",
+          "VIDEO_PROCESSING": "A Meta ainda está preparando o vídeo. Tente de novo em um minuto.",
+          "CANNOT_CREATE": "Para criar anúncios por aqui, entre de novo com o Facebook na Conexão.",
+          "META_UNAVAILABLE": "Não conseguimos falar com a Meta agora. Tente de novo daqui a pouco.",
+          "META_REFUSED": "A Meta recusou o anúncio.",
+          "CURRENCY_NOT_SUPPORTED": "Criar anúncio por aqui só vale para conta de anúncios em reais.",
+          "UNCONFIRMED": "Não deu para confirmar com a Meta se a campanha foi criada. Confira no Gerenciador de Anúncios antes de tentar de novo.",
+          "UNKNOWN": "Não deu para criar o anúncio agora.",
+          "NOTHING_CREATED": "Nada foi criado.",
+          "CHECK_META": "Pode ter ficado uma campanha pela metade: confira no Gerenciador de Anúncios da Meta antes de tentar de novo.",
+          "NETWORK": "A conexão caiu antes da resposta. Toque em \"Criar anúncio pausado\" de novo: o anúncio não vai ser criado duas vezes.",
+          "IN_PROGRESS": "Este anúncio ainda está sendo criado. Espere um pouco e toque de novo."
         }
       }
     },

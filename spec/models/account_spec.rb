@@ -290,10 +290,11 @@ RSpec.describe Account do
       # #2199: meta_ads_organico, 5 (1 << 4 = 16). #2246: leitura_no_celular logo depois, 6 (1 << 5 = 32), confirmada
       # pela Orquestração (27/10).
       # #2195: meta_ads_formularios depois dela, 7 (1 << 6 = 64). #2196: meta_ads_comentarios_instagram, 8 (1 << 7 = 128).
+      # #2198: meta_ads_criar depois dela, 9 (1 << 8 = 256), pela ordem da main (Orquestração, 27/10).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
-        feature_meta_ads_formularios: 64, feature_meta_ads_comentarios_instagram: 128
+        feature_meta_ads_formularios: 64, feature_meta_ads_comentarios_instagram: 128, feature_meta_ads_criar: 256
       )
     end
 

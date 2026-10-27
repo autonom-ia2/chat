@@ -29,6 +29,8 @@ import MetaAdsComments from './comentarios/MetaAdsComments.vue';
 import comentariosInstagram from './comentarios/comentariosInstagram';
 import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 import MetaAdsAdPost from './MetaAdsAdPost.vue';
+import MetaAdsBudget from './MetaAdsBudget.vue';
+import { lerOrcamento } from '../criacaoNaMeta';
 
 // Anúncios da Meta (#1088, F3b): o anúncio por dentro, passos 3 e 4 da jornada "O painel do dia a dia". A
 // imagem no formato dela, o veredito com o porquê em números, o custo por venda ao lado da média da conta, o
@@ -318,6 +320,34 @@ const loadGestao = async () => {
   if (asked === props.adId) gestao.value = data;
 };
 
+// Orçamento e datas (#2198, flag meta_ads_criar): de quem guarda o dinheiro (grupo ou campanha). `budgetState`: ''
+// (flag desligada), 'loading', 'failed' ou 'ok'. Sem orçamento o cartão some e o "Ativar" espera; na falha, diz e
+// deixa tentar de novo.
+const budgetOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_CRIAR
+  )
+);
+const budget = ref(null);
+const budgetState = ref('');
+const loadBudget = async () => {
+  budget.value = null;
+  budgetState.value = '';
+  if (!budgetOn.value) return;
+  budgetState.value = 'loading';
+  const asked = props.adId;
+  try {
+    const data = await lerOrcamento(asked);
+    if (asked !== props.adId) return;
+    budget.value = data;
+    budgetState.value = data ? 'ok' : 'failed';
+  } catch {
+    if (asked === props.adId) budgetState.value = 'failed';
+  }
+};
+watch(() => props.adId, loadBudget);
+
 watch(() => props.adId, loadGestao);
 
 // A entrega (`effective_status`) é a Meta quem diz: depois de mudar, a situação é lida de novo, sem tirar o selo.
@@ -331,6 +361,7 @@ const statusChanged = async status => {
 onMounted(() => {
   live.start();
   loadGestao();
+  loadBudget();
 });
 
 // Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
@@ -424,6 +455,9 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           :ad-name="ad.name || ''"
           :gestao="gestao"
           :can-manage="canManage"
+          :budget="budget"
+          :budget-state="budgetState"
+          @retry-budget="loadBudget"
           @changed="statusChanged"
         />
       </header>
@@ -476,6 +510,14 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         </div>
 
         <div class="flex flex-col gap-5">
+          <!-- Orçamento e datas (#2198) no topo: é o que a pessoa muda depois de ver o resultado. -->
+          <MetaAdsBudget
+            v-if="budget"
+            :ad-id="adId"
+            :budget="budget"
+            :can-manage="canManage"
+            @changed="budget = $event"
+          />
           <span
             v-if="ad.verdict"
             :data-verdict="ad.verdict"

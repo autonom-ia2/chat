@@ -8,7 +8,7 @@ import { lerGestao } from '../gestaoDoAnuncio';
 import comentariosInstagram from '../components/comentarios/comentariosInstagram';
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
-  default: { panelAd: vi.fn() },
+  default: { panelAd: vi.fn(), adBudget: vi.fn() },
 }));
 // Gestão mínima (#2161): a flag meta_ads_gestao e a situação/post vêm do adaptador.
 const flags = ref({});
@@ -423,5 +423,66 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
       wrapper.find('[data-ad-detail-hero] [data-ad-status]').exists()
     ).toBe(true);
     expect(wrapper.find('[data-ad-post-message]').text()).toBe('Texto do post');
+  });
+
+  it('without the meta_ads_criar flag, reads no budget and shows no budget card (#2198)', async () => {
+    flags.value = { meta_ads_gestao: true };
+    lerGestao.mockResolvedValue({
+      status: 'PAUSED',
+      effective_status: 'PAUSED',
+      can_change: true,
+    });
+    const wrapper = await mountDetail();
+
+    expect(CrmMetaAdsConnectionAPI.adBudget).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-ad-budget]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(true);
+  });
+
+  it('with meta_ads_criar, shows the budget and dates of the ad (#2198)', async () => {
+    flags.value = { meta_ads_criar: true };
+    CrmMetaAdsConnectionAPI.adBudget.mockResolvedValue({
+      data: {
+        budget: {
+          level: 'adset',
+          object_name: 'Público',
+          kind: 'daily',
+          amount: 30,
+          currency: 'BRL',
+          start_time: '2026-10-01T09:00:00-0300',
+          end_time: null,
+          ads_count: 1,
+          active_ads_count: 0,
+          min_daily: 6,
+          max_daily: 500,
+          can_change: true,
+        },
+      },
+    });
+    const wrapper = await mountDetail();
+
+    expect(CrmMetaAdsConnectionAPI.adBudget).toHaveBeenCalledWith('1');
+    expect(wrapper.find('[data-ad-budget]').exists()).toBe(true);
+  });
+
+  it('a failed budget read keeps "Activate" from guessing and offers to try again (#2198)', async () => {
+    flags.value = { meta_ads_gestao: true, meta_ads_criar: true };
+    lerGestao.mockResolvedValue({
+      status: 'PAUSED',
+      effective_status: 'PAUSED',
+      can_change: true,
+    });
+    CrmMetaAdsConnectionAPI.adBudget.mockRejectedValue({
+      response: { status: 422, data: { error: 'meta_unavailable' } },
+    });
+    const wrapper = await mountDetail();
+
+    expect(wrapper.find('[data-ad-budget]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-status-budget-failed]').exists()).toBe(true);
+
+    await wrapper.find('[data-ad-status-budget-retry]').trigger('click');
+    await flushPromises();
+    expect(CrmMetaAdsConnectionAPI.adBudget).toHaveBeenCalledTimes(2);
   });
 });
