@@ -1,7 +1,7 @@
 # #2212 — IA cuida dos comentários: o cuidado de cada post ou anúncio. O que a IA fez com cada comentário fica em
 # crm_meta_ads_comment_actions (#2196); o comentário em si não é gravado (dado de terceiro, lido ao vivo).
 class CreateCrmMetaAdsCommentCares < ActiveRecord::Migration[7.2]
-  def change
+  def change # rubocop:disable Metrics/MethodLength -- uma tabela, uma coluna por linha
     create_table :crm_meta_ads_comment_cares do |t|
       t.references :account, null: false, foreign_key: { on_delete: :cascade }, index: false
       t.string :target_kind, null: false
@@ -21,6 +21,7 @@ class CreateCrmMetaAdsCommentCares < ActiveRecord::Migration[7.2]
       t.datetime :started_at, null: false
       t.timestamps
       t.index [:account_id, :target_kind, :target_id], unique: true, name: 'idx_crm_meta_ads_comment_cares_target'
+      t.index :post_ids, using: :gin
     end
   end
 end

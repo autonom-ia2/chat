@@ -13,6 +13,9 @@
 #    - propaganda: esconde;
 #    - o resto: nada (a reivindicação já registra que a IA leu).
 #    Post sem oferta nunca manda privado.
+#
+# Erro antes de a IA agir na Meta solta a reivindicação e sobe: o job tenta de novo. Depois de agir, a reivindicação
+# fica, para o reenvio não mandar o privado de novo.
 class Crm::MetaAds::ComentariosIa::Cuidar
   FLAG = 'meta_ads_comentarios_ia'.freeze
   TETO_DIARIO = 200
@@ -29,16 +32,22 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def call
-    return unless cuidar? && @registro.reservar!(@comentario)
+    cuidar if cuidar? && @registro.reservar!(@comentario)
+  end
 
+  private
+
+  # Depois da reserva: um erro antes de agir na Meta solta a leitura, para o job tentar de novo. Depois de agir, não.
+  def cuidar
     decisao = classificador.decidir(@comentario.text)
     return if decisao.nil?
 
     decisao = 'no_reply' if %w[private price].include?(decisao) && !care.offer?
     executar(decisao)
+  rescue StandardError
+    @registro.soltar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::LIDO) unless @agiu
+    raise
   end
-
-  private
 
   def cuidar?
     return false if inbox.nil? || @comentario.resposta? || care.nil? || rede.nil?
@@ -52,6 +61,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def executar(decisao)
+    @agiu = %w[private price to_you hide].include?(decisao)
     case decisao
     when 'private', 'price' then privado(decisao)
     when 'to_you' then para_voce('to_you')
@@ -60,12 +70,21 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def privado(decisao)
+    inicio = Time.current
     envio = rede.privado(care)
     return if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
     return para_voce('private_reply_failed') unless envio.ok
 
-    @conversa.anotar!(envio.conversation, @comentario, care)
+    na_conversa(envio.conversation, inicio)
     rede.responder(care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
+  end
+
+  # O comentário no topo da conversa do privado, e o id dela na linha do privado.
+  def na_conversa(conversation, inicio)
+    return if conversation.nil?
+
+    @conversa.anotar!(conversation, @comentario, care, nova: conversation.created_at >= inicio)
+    @registro.vincular!(@comentario, 'private_reply', conversation)
   end
 
   # Uma vez só por comentário: o `ai_seen` já deixou um job só cuidando dele.
@@ -80,8 +99,8 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def care
-    @care ||= Crm::MetaAdsCommentCare.cuidando(account_id: @comentario.account_id, post_id: @comentario.post_id,
-                                               ad_id: @comentario.ad_id)
+    @care ||= Crm::MetaAdsCommentCare.cuidando(account_id: @comentario.account_id, network: @comentario.network,
+                                               post_id: @comentario.post_id, ad_id: @comentario.ad_id)
   end
 
   def classificador

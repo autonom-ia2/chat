@@ -17,7 +17,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     envio = Crm::MetaAds::ComentariosIa::Rede::Pagina.new(@inbox.channel).private_reply(@comentario.comment_id, mensagem(care))
     return soltar(envio) unless envio.ok
 
-    envio.conversation = Crm::MetaAds::ComentariosIa::Conversa.no_messenger!(@comentario, envio, care.message)
+    envio.conversation = na_caixa(envio, care)
     envio
   end
 
@@ -34,6 +34,14 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   private
+
+  # O privado já saiu: uma falha ao abrir a conversa não pode soltar a reivindicação (o reenvio mandaria de novo).
+  def na_caixa(envio, care)
+    Crm::MetaAds::ComentariosIa::Conversa.no_messenger!(@comentario, envio, care.message)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
+    nil
+  end
 
   def reivindicou?
     REGISTRO.reivindicar!(@comentario, 'private_reply')

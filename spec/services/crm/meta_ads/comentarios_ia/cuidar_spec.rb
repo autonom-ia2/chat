@@ -8,7 +8,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:conversa) { class_double(Crm::MetaAds::ComentariosIa::Conversa) }
   let(:registro) { class_double(Crm::MetaAds::ComentariosIa::Registro) }
-  let(:conversation) { instance_double(Conversation, id: 77) }
+  let(:conversation) { instance_double(Conversation, id: 77, created_at: 1.minute.from_now) }
   let(:enviado) { Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: conversation) }
   let(:agora) { 1.minute.ago }
 
@@ -30,7 +30,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
   before do
     account.enable_features!(described_class::FLAG)
-    allow(registro).to receive_messages(reservar!: true, hoje: 0, vez: 0, gravar!: true)
+    allow(registro).to receive_messages(reservar!: true, hoje: 0, vez: 0, gravar!: true, vincular!: 1, soltar!: 1)
     allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
     allow(rede).to receive(:privado).and_return(enviado)
   end
@@ -42,8 +42,40 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(rede).to have_received(:privado).with(care)
-    expect(conversa).to have_received(:anotar!).with(conversation, comentario, care)
+    expect(conversa).to have_received(:anotar!).with(conversation, comentario, care, nova: true)
+    expect(registro).to have_received(:vincular!).with(comentario, 'private_reply', conversation)
     expect(rede).to have_received(:responder).with('Te mandei os detalhes no privado!')
+  end
+
+  it 'conversa que a pessoa já tinha aberta na caixa não conta como nova' do
+    decide('private')
+    allow(conversation).to receive(:created_at).and_return(1.day.ago)
+
+    cuidar
+
+    expect(conversa).to have_received(:anotar!).with(conversation, comentario, care, nova: false)
+  end
+
+  it 'erro antes de agir na Meta solta a leitura, para o job tentar de novo' do
+    allow(classificador).to receive(:decidir).and_raise(ActiveRecord::ConnectionTimeoutError)
+
+    expect { cuidar }.to raise_error(ActiveRecord::ConnectionTimeoutError)
+    expect(registro).to have_received(:soltar!).with(comentario, 'ai_seen')
+  end
+
+  it 'erro antes de reservar não solta a leitura de outro job' do
+    allow(registro).to receive(:hoje).and_raise(ActiveRecord::ConnectionTimeoutError)
+
+    expect { cuidar }.to raise_error(ActiveRecord::ConnectionTimeoutError)
+    expect(registro).not_to have_received(:soltar!)
+  end
+
+  it 'erro depois do privado não solta a leitura: o reenvio não manda de novo' do
+    decide('private')
+    allow(conversa).to receive(:anotar!).and_raise(ActiveRecord::StatementInvalid)
+
+    expect { cuidar }.to raise_error(ActiveRecord::StatementInvalid)
+    expect(registro).not_to have_received(:soltar!)
   end
 
   it 'responde o preço em público quando a pessoa perguntou o preço e a chave está ligada' do

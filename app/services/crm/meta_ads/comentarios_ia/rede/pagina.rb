@@ -1,7 +1,6 @@
-# IA cuida dos comentários (#2212): as ações na Página do Facebook, com o token da caixa do Messenger.
-# - privado: POST /{page_id}/messages com recipient.comment_id (Private Replies da Messenger Platform, pages_messaging);
-# - resposta pública: POST /{comment_id}/comments;
-# - esconder: POST /{comment_id} com is_hidden.
+# IA cuida dos comentários (#2212): o privado pelo Messenger, com o token da caixa: POST /{page_id}/messages com
+# recipient.comment_id (Private Replies da Messenger Platform, pages_messaging). A resposta pública e o esconder são do
+# Crm::MetaAds::FacebookComments (#2197).
 #
 # Mesmas regras do Meta::AdsGraphClient: o token vai só no cabeçalho Authorization, a versão da Graph é a do resto da
 # superfície Meta, e o erro da Meta passa pela limpeza de trechos com cara de segredo antes de ir para log ou tela.
@@ -16,14 +15,6 @@ class Crm::MetaAds::ComentariosIa::Rede::Pagina
     return falha('id_invalido') unless id_simples?(comment_id)
 
     enviar(@channel.page_id, '/messages', recipient: { comment_id: comment_id }, message: mensagem, messaging_type: 'RESPONSE')
-  end
-
-  def reply(comment_id, texto)
-    enviar(comment_id, '/comments', message: texto)
-  end
-
-  def hide(comment_id)
-    enviar(comment_id, '', is_hidden: true)
   end
 
   private

@@ -43,7 +43,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     end
 
     it 'id com cara de caminho não chega à Graph' do
-      expect(pagina.reply('1/../me?x=1', 'oi')).to have_attributes(ok: false, erro: 'id_invalido')
+      expect(pagina.private_reply('1/../me?x=1', { text: 'oi' })).to have_attributes(ok: false, erro: 'id_invalido')
       expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
     end
   end

@@ -73,25 +73,32 @@ RSpec.describe Crm::MetaAdsCommentCare do
     let!(:anuncio) { create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '120') }
 
     it 'acha o cuidado do post do comentário' do
-      expect(described_class.cuidando(account_id: account.id, post_id: '179', ad_id: nil)).to eq(post)
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: nil)).to eq(post)
     end
 
     it 'prefere o cuidado do anúncio quando o comentário veio dele' do
-      expect(described_class.cuidando(account_id: account.id, post_id: '179', ad_id: '120')).to eq(anuncio)
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: '120')).to eq(anuncio)
     end
 
     it 'acha o anúncio pelo post do criativo quando o comentário chega sem o id do anúncio' do
       anuncio.update!(post_ids: %w[555_888 17900])
 
-      expect(described_class.cuidando(account_id: account.id, post_id: '555_888', ad_id: nil)).to eq(anuncio)
-      expect(described_class.cuidando(account_id: account.id, post_id: '555_999', ad_id: nil)).to be_nil
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '555_888', ad_id: nil)).to eq(anuncio)
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '555_999', ad_id: nil)).to be_nil
+    end
+
+    it 'só vale na rede do cuidado; o anúncio das duas redes vale nas duas' do
+      expect(described_class.cuidando(network: 'facebook', account_id: account.id, post_id: '179', ad_id: nil)).to be_nil
+
+      anuncio.update!(network: 'both')
+      expect(described_class.cuidando(network: 'facebook', account_id: account.id, post_id: nil, ad_id: '120')).to eq(anuncio)
     end
 
     it 'ignora cuidado pausado e de outra conta' do
       post.update!(status: 'paused')
 
-      expect(described_class.cuidando(account_id: account.id, post_id: '179', ad_id: nil)).to be_nil
-      expect(described_class.cuidando(account_id: create(:account).id, post_id: '179', ad_id: nil)).to be_nil
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: nil)).to be_nil
+      expect(described_class.cuidando(network: 'instagram', account_id: create(:account).id, post_id: '179', ad_id: nil)).to be_nil
     end
   end
 end

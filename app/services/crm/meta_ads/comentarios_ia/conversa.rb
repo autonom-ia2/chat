@@ -17,18 +17,19 @@ module Crm::MetaAds::ComentariosIa::Conversa
 
   module_function
 
-  def anotar!(conversation, comentario, care)
+  # `nova`: a conversa nasceu com este privado (e não é uma que a pessoa já tinha aberta na caixa).
+  def anotar!(conversation, comentario, care, nova:)
     primeira = conversation.messages.reorder(:created_at, :id).first
-    nova = conversation.messages.where.not(message_type: :activity).count == 1
     atividade!(conversation, comentou(comentario), antes_de: primeira && (primeira.created_at - 1.second))
     atributos = conversation.additional_attributes.to_h.merge('meta_ads_comment' => origem(comentario, care))
     conversation.update!(additional_attributes: atributos, **(nova ? { status: :resolved } : {}))
     conversation
   end
 
-  # O privado que saiu pelo Messenger vira conversa na caixa, no contato da resposta da Meta (o PSID).
+  # O privado que saiu pelo Messenger entra na caixa, no contato da resposta da Meta (o PSID): na conversa que a pessoa
+  # já tem aberta, ou numa nova. Igual ao que o #2196 faz no Instagram.
   def no_messenger!(comentario, envio, texto)
-    conversation = criar!(comentario, envio.recipient_id, status: :open)
+    conversation = criar!(comentario, envio.recipient_id, status: :open, reaproveitar: true)
     Message.create!(account_id: conversation.account_id, inbox_id: conversation.inbox_id, conversation: conversation,
                     message_type: :outgoing, content: texto, source_id: envio.message_id)
     conversation
@@ -64,12 +65,13 @@ module Crm::MetaAds::ComentariosIa::Conversa
     Crm::Entrega.new(conversation: conversation, motivo: MOTIVO, origem: ORIGEM).call
   end
 
-  def criar!(comentario, source_id, status:, priority: nil)
+  def criar!(comentario, source_id, status:, priority: nil, reaproveitar: false)
     inbox = Inbox.find_by!(id: comentario.inbox_id, account_id: comentario.account_id)
     contact_inbox = ContactInboxWithContactBuilder.new(source_id: source_id, inbox: inbox,
                                                        contact_attributes: { name: comentario.from_name }).perform
-    Conversation.create!(account_id: inbox.account_id, inbox: inbox, contact: contact_inbox.contact, contact_inbox: contact_inbox,
-                         status: status, priority: priority)
+    aberta = reaproveitar && contact_inbox.conversations.where.not(status: :resolved).order(created_at: :desc).first
+    aberta || Conversation.create!(account_id: inbox.account_id, inbox: inbox, contact: contact_inbox.contact,
+                                   contact_inbox: contact_inbox, status: status, priority: priority)
   end
 
   def atividade!(conversation, texto, antes_de: nil)

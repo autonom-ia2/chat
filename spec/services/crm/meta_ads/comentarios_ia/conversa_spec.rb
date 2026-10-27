@@ -25,7 +25,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
 
   describe '.anotar!' do
     it 'põe o comentário no topo, marca a origem e resolve a conversa nova' do
-      conversation = described_class.anotar!(conversa_do_privado, comentario, care)
+      conversation = described_class.anotar!(conversa_do_privado, comentario, care, nova: true)
 
       expect(conversation.reload).to be_resolved
       expect(conversation.additional_attributes['meta_ads_comment'])
@@ -38,11 +38,11 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
       aberta = create(:conversation, account: account, inbox: inbox, status: :open)
       create(:message, account: account, inbox: inbox, conversation: aberta, message_type: :incoming, content: 'Oi')
 
-      expect(described_class.anotar!(conversa_do_privado(aberta), comentario, care).reload).to be_open
+      expect(described_class.anotar!(conversa_do_privado(aberta), comentario, care, nova: false).reload).to be_open
     end
 
     it 'no anúncio, diz que o comentário veio do anúncio' do
-      conversation = described_class.anotar!(conversa_do_privado, comentario(ad_id: '120'), care)
+      conversation = described_class.anotar!(conversa_do_privado, comentario(ad_id: '120'), care, nova: true)
 
       expect(conversation.messages.activity.first.content).to eq('Comentou no anúncio: “Quanto custa?”')
     end
@@ -74,6 +74,17 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
       conversation = described_class.no_messenger!(comentario(network: 'facebook', inbox_id: pagina.id), envio, care.message)
 
       expect(conversation.contact).to eq(contato)
+    end
+
+    it 'usa a conversa que a pessoa já tem aberta na caixa do Messenger' do
+      contato = create(:contact, account: account)
+      contact_inbox = create(:contact_inbox, contact: contato, inbox: pagina, source_id: 'psid-1')
+      aberta = create(:conversation, account: account, inbox: pagina, contact: contato, contact_inbox: contact_inbox, status: :open)
+
+      conversation = described_class.no_messenger!(comentario(network: 'facebook', inbox_id: pagina.id), envio, care.message)
+
+      expect(conversation).to eq(aberta)
+      expect(aberta.messages.outgoing.sole.source_id).to eq('mid-9')
     end
   end
 
