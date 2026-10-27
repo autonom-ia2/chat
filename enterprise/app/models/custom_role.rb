@@ -61,7 +61,8 @@
 # - 'whatsapp_templates_view' / 'whatsapp_templates_manage': WhatsApp (Cloud) message templates of the inboxes (#1330).
 #   manage creates, edits, duplicates and deletes them at Meta; platform templates stay read-only.
 # - 'meta_ads_view': Meta Ads panel, connection state and the panel AI (#1794). Lists that lead to a conversation show
-#   only the conversations the person already sees.
+#   only the conversations the person already sees. It also shows each ad's budget and dates in R$ and the ads created
+#   here that are still paused (#2198).
 # - 'meta_ads_manage': connect, configure and disconnect Meta Ads (token, Facebook login, ad account and Pixel choice,
 #   destinations, funnel sale signal, insights refresh, the owner's WhatsApp report) and act on the advisor (#2070).
 #   It also pauses and activates ads (#2161; activating is what spends), creates new ads (always born paused), uploads

@@ -10,7 +10,7 @@ RSpec.describe Crm::MetaAds::Creation::PausedAds do
 
   def created(ad_id, status: 'created', at: Time.current)
     Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: "k#{ad_id}", status: status, name: "Anúncio #{ad_id}",
-                                      ad_id: ad_id, budget: budget, created_at: at)
+                                      ad_id: ad_id, ad_account_id: connection.ad_account_id, budget: budget, created_at: at)
   end
 
   def stub_ad(ad_id, effective, http: 200)

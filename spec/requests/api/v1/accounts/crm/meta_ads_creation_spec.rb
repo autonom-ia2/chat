@@ -115,9 +115,34 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
     expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_ad_created')).to be_empty
   end
 
+  it 'anúncio de outra conta de anúncios: 404 no orçamento' do
+    stub_permissions
+    stub_graph(ad_id, { id: ad_id, account_id: '999', adset: { id: adset_id, daily_budget: '3000' } },
+               fields: Meta::AdsGraphClient::AD_BUDGET_FIELDS)
+
+    get "#{path}/ads/#{ad_id}/budget", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:not_found)
+    expect(response.parsed_body).to eq('error' => 'ad_not_found')
+  end
+
+  it 'pausados não trazem linha de outra conta da plataforma nem da conta de anúncios anterior' do
+    other = create(:account)
+    Crm::MetaAdsCreatedObject.create!(account: other, idempotency_key: 'k9', status: 'created', name: 'Outra', ad_id: '555',
+                                      ad_account_id: connection.ad_account_id)
+    Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: 'k8', status: 'created', name: 'Antiga', ad_id: '556',
+                                      ad_account_id: '111')
+
+    get "#{path}/paused_ads", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['ads']).to eq([])
+    expect(a_request(:get, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
   it 'lista os pausados criados aqui' do
     Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: 'k1', status: 'created', name: 'Bolo', ad_id: ad_id,
-                                      budget: { 'kind' => 'daily', 'amount' => 20.0 })
+                                      ad_account_id: connection.ad_account_id, budget: { 'kind' => 'daily', 'amount' => 20.0 })
     stub_request(:get, meta_graph_url(ad_id)).with(query: { fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS })
                                              .to_return(status: 200, headers: json,
                                                         body: { id: ad_id, account_id: connection.ad_account_id, status: 'PAUSED',
