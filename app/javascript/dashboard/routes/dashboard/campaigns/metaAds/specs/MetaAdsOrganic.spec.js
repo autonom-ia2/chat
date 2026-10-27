@@ -1,5 +1,7 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { config, flushPromises, mount } from '@vue/test-utils';
 import { ref } from 'vue';
+import { createI18n } from 'vue-i18n';
+import ptBR from 'dashboard/i18n/locale/pt_BR/metaAdsOrganico.json';
 import MetaAdsOrganic from '../organico/MetaAdsOrganic.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import FBChannel from 'dashboard/api/channel/fbChannel';
@@ -204,6 +206,108 @@ describe('Anúncios · Seus posts (#2199)', () => {
 
     expect(wrapper.find('[data-organic-connect="instagram"]').exists()).toBe(
       false
+    );
+  });
+
+  // Sem anúncio (#2199, conta real de 27/10): o alcance do Instagram é soma por tipo, sem deduplicar; o destaque
+  // passa a ser as vezes que apareceu.
+  it('leads with times shown and reads Instagram reach as "up to"', async () => {
+    answer(ready({ name: 'Studio Acme', views_from_ads: 4064 }), ready());
+
+    const wrapper = await mountScreen();
+    const instagramCard = wrapper.find('[data-organic-source="instagram"]');
+    const tiles = instagramCard.findAll('[data-organic-tile]');
+
+    expect(tiles[0].attributes('data-organic-tile')).toBe('views');
+    expect(instagramCard.find('[data-organic-tile="reach"]').text()).toContain(
+      'META_ADS_ORGANIC.TILES.UP_TO'
+    );
+    expect(
+      wrapper
+        .find('[data-organic-source="page"] [data-organic-tile="reach"]')
+        .text()
+    ).not.toContain('META_ADS_ORGANIC.TILES.UP_TO');
+  });
+
+  it('without posts in the previous period, says so instead of "X more"', async () => {
+    answer(
+      ready({ name: 'Studio Acme', views_from_ads: 4064 }),
+      ready({ previous: null, first_period: true })
+    );
+
+    const wrapper = await mountScreen();
+    const instagramCard = wrapper.find('[data-organic-source="instagram"]');
+
+    expect(instagramCard.find('[data-organic-first-period]').text()).toBe(
+      'META_ADS_ORGANIC.TILES.FIRST_PERIOD'
+    );
+    expect(instagramCard.find('[data-organic-change]').exists()).toBe(false);
+  });
+
+  // Página: views já vem sem anúncio; a barra "vale pagar?" soma o anúncio de volta para o total.
+  it('Page bar splits free and paid times from views without ads', async () => {
+    answer(ready({ name: 'Studio Acme', views: 8636, views_from_ads: 4064 }), {
+      status: 'not_connected',
+    });
+
+    const wrapper = await mountScreen();
+    const bar = wrapper.findComponent({ name: 'OrganicShareBar' });
+
+    expect(bar.props()).toMatchObject({ part: 8636, total: 12700 });
+  });
+});
+
+// Com os textos reais (o i18n vazio do setup dá lugar ao pt_BR só neste bloco): os números que a pessoa lê.
+describe('Anúncios · Seus posts sem anúncio, textos reais (#2199)', () => {
+  let savedPlugins;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    granted.value = ['integration_manage', 'inbox_manage'];
+    savedPlugins = config.global.plugins;
+    config.global.plugins = [
+      createI18n({
+        legacy: false,
+        locale: 'pt_BR',
+        messages: { pt_BR: ptBR },
+        missingWarn: false,
+        fallbackWarn: false,
+      }),
+    ];
+  });
+
+  afterEach(() => {
+    config.global.plugins = savedPlugins;
+  });
+
+  it('headline counts times shown without ads; Instagram reach reads "até N" with no "X a mais"', async () => {
+    answer(
+      ready({ name: 'Studio Acme', views: 8636, views_from_ads: 4064 }),
+      ready({ reach: 349, previous: { reach: 77, views: 350 } })
+    );
+
+    const wrapper = await mountScreen();
+    const reach = wrapper.find(
+      '[data-organic-source="instagram"] [data-organic-tile="reach"]'
+    );
+
+    expect(wrapper.text()).toContain(
+      'Seus posts apareceram 8.636 vezes no Facebook e 12.700 no Instagram, sem contar anúncios.'
+    );
+    expect(reach.text()).toContain('até 349');
+    expect(reach.find('[data-organic-change]').exists()).toBe(false);
+  });
+
+  it('without posts in the previous period, explains the missing comparison', async () => {
+    answer(
+      { status: 'not_connected' },
+      ready({ previous: null, first_period: true })
+    );
+
+    const wrapper = await mountScreen();
+
+    expect(wrapper.find('[data-organic-first-period]').text()).toBe(
+      'Sem comparação: você não postou nos 30 dias anteriores.'
     );
   });
 });

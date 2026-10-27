@@ -109,22 +109,28 @@ const followersExtra = computed(() =>
 // Instagram no período de 90 dias: a Meta só guarda 90 dias, então não há período anterior. Uma frase acima dos
 // quadros diz por quê, uma vez só.
 const noCompare = computed(() => !isPage.value && props.days === HISTORY_DAYS);
+// Sem post no período anterior, o servidor não manda a comparação (first_period): "X a mais" compararia com um período
+// parado.
+const firstPeriod = computed(() => Boolean(props.data.first_period));
 
-// Seguidores mostra o total de hoje, sem comparação: o que mudou no período já está na linha "+N".
+// Seguidores mostra o total de hoje, sem comparação: o que mudou no período já está na linha "+N". Vezes que apareceu
+// vem primeiro: soma certo nos dois lugares. No Instagram, quem viu é soma por tipo de post (a Meta não deduplica):
+// o quadro diz "até N".
 const tiles = computed(() => {
   const previous = props.data.previous || {};
   return [
-    {
-      name: 'REACH',
-      icon: 'i-lucide-users',
-      value: props.data.reach,
-      previous: previous.reach ?? null,
-    },
     {
       name: 'VIEWS',
       icon: 'i-lucide-eye',
       value: props.data.views,
       previous: previous.views ?? null,
+    },
+    {
+      name: 'REACH',
+      icon: 'i-lucide-users',
+      value: props.data.reach,
+      previous: previous.reach ?? null,
+      upTo: !isPage.value,
     },
     {
       name: 'INTERACTIONS',
@@ -146,8 +152,8 @@ const share = computed(() =>
   isPage.value
     ? {
         textKey: 'ADS_SHARE',
-        part: props.data.views - props.data.views_from_ads,
-        total: props.data.views,
+        part: props.data.views,
+        total: props.data.views + props.data.views_from_ads,
       }
     : {
         textKey: 'NEW_PEOPLE',
@@ -295,6 +301,13 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
       >
         {{ $t('META_ADS_ORGANIC.TILES.NO_COMPARE') }}
       </p>
+      <p
+        v-else-if="firstPeriod"
+        data-organic-first-period
+        class="m-0 -mb-2 text-sm text-n-slate-11"
+      >
+        {{ $t('META_ADS_ORGANIC.TILES.FIRST_PERIOD', { days }) }}
+      </p>
       <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
         <OrganicTile
           v-for="tile in tiles"
@@ -305,6 +318,7 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
           :previous="tile.previous"
           :days="days"
           :extra="tile.extra"
+          :up-to="tile.upTo"
         />
       </div>
 

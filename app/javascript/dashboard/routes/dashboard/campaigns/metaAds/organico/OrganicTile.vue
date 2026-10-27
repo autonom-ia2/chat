@@ -12,6 +12,8 @@ const props = defineProps({
   previous: { type: Number, default: null },
   days: { type: Number, required: true },
   extra: { type: String, default: '' },
+  // O número é teto, não conta exata (quem viu no Instagram: a Meta não deduplica entre tipos de post).
+  upTo: { type: Boolean, default: false },
 });
 
 const { t, locale } = useI18n();
@@ -19,7 +21,9 @@ const { t, locale } = useI18n();
 const tileTexts = () => ({
   REACH: {
     label: t('META_ADS_ORGANIC.TILES.REACH.LABEL'),
-    help: t('META_ADS_ORGANIC.TILES.REACH.HELP'),
+    help: props.upTo
+      ? t('META_ADS_ORGANIC.TILES.REACH.HELP_UP_TO')
+      : t('META_ADS_ORGANIC.TILES.REACH.HELP'),
   },
   VIEWS: {
     label: t('META_ADS_ORGANIC.TILES.VIEWS.LABEL'),
@@ -39,8 +43,15 @@ const texts = computed(() => tileTexts()[props.name]);
 const format = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
 
+const shown = computed(() =>
+  props.upTo && props.value
+    ? t('META_ADS_ORGANIC.TILES.UP_TO', { count: format(props.value) })
+    : format(props.value)
+);
+
+// Teto contra teto não dá diferença exata: o quadro "até N" fica sem a linha "X a mais".
 const change = computed(() => {
-  if (props.previous === null) return null;
+  if (props.previous === null || props.upTo) return null;
   const diff = props.value - props.previous;
   if (diff === 0)
     return {
@@ -85,7 +96,7 @@ const TONES = {
     <p
       class="m-0 text-2xl font-bold tabular-nums tracking-tight text-n-slate-12"
     >
-      {{ format(value) }}
+      {{ shown }}
     </p>
     <p
       v-if="change"

@@ -25,6 +25,11 @@ module Meta::AdsGraphClient::Organico
     organic_posts("#{page_id}/published_posts", window.merge(fields: ORGANIC_PAGE_POST_FIELDS))
   end
 
+  # O primeiro post publicado na janela, só o id: diz se houve post no período anterior.
+  def page_first_post(page_id, window)
+    get("#{page_id}/published_posts", window.merge(fields: 'id', limit: 1))
+  end
+
   def instagram_profile
     get('me', fields: ORGANIC_INSTAGRAM_PROFILE_FIELDS)
   end
@@ -35,6 +40,10 @@ module Meta::AdsGraphClient::Organico
 
   def instagram_media(window)
     organic_posts('me/media', window.merge(fields: ORGANIC_INSTAGRAM_MEDIA_FIELDS))
+  end
+
+  def instagram_first_post(window)
+    get('me/media', window.merge(fields: 'id', limit: 1))
   end
 
   def instagram_media_reach(media_id)

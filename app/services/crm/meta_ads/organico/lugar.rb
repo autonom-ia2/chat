@@ -3,6 +3,8 @@
 # (needs_permission); qualquer outra falha sobe como Indisponivel.
 class Crm::MetaAds::Organico::Lugar
   TOP_POSTS = 3
+  # Os números que a tela compara com o período anterior.
+  COMPARADOS = %i[reach views interactions new_followers].freeze
 
   # Permissão (código 10 e 200–299) ou token (190) recusados.
   class Recusa < StandardError; end
@@ -35,6 +37,19 @@ class Crm::MetaAds::Organico::Lugar
     return if !result.ok && (result.object_error? || result.scope_error?)
 
     ler(result)
+  end
+
+  # O período anterior só serve de comparação se houve post nele. Sem post, "X a mais" compararia o período com um
+  # período parado; a tela diz então que este é o primeiro período com post (first_period).
+  def comparacao
+    return { previous: nil } unless compara?
+    return { previous: nil, first_period: true } if Array(ler(primeiro_post(periodo.anterior))['data']).empty?
+
+    { previous: janela(periodo.anterior).slice(*COMPARADOS) }
+  end
+
+  def compara?
+    true
   end
 
   def melhores(posts)

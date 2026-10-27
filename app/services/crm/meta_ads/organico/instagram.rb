@@ -3,18 +3,22 @@
 # devolve um total por métrica no período, inclusive em 90 dias; follows_and_unfollows e o recorte follow_type vêm em
 # total_value.breakdowns. Com menos de 100 seguidores a Meta não manda follows_and_unfollows: seguidores novos nulos.
 # Em 90 dias não há período anterior (a Meta guarda 90 dias do Instagram).
+#
+# Sem anúncio: o total da conta soma o que os anúncios alcançaram (media_product_type AD, inclusive dark post). Na conta
+# real conferida em 27/10, o anúncio era quase todo o alcance, que passava das vezes que apareceu. Os números vêm do
+# recorte por tipo de conteúdo, sem o AD. Vezes que apareceu e interações somam certo entre tipos; o alcance não (a Meta
+# não deduplica: a mesma pessoa pode ter visto um post e um story), então é o teto e a tela diz "até N pessoas".
 class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
   HISTORY_DAYS = 90
+  ANUNCIO = 'AD'.freeze
 
   private
 
   def numeros
     @perfil = ler(api.instagram_profile)
-    atual = janela(periodo.atual)
     {
       status: 'ok', username: @perfil['username'], link: "https://www.instagram.com/#{@perfil['username']}",
-      followers: @perfil['followers_count'].to_i, **atual, reach_non_followers: quem_nao_segue,
-      previous: periodo.dias < HISTORY_DAYS ? janela(periodo.anterior) : nil, top_posts: top_posts
+      followers: @perfil['followers_count'].to_i, **janela(periodo.atual), **comparacao, top_posts: top_posts
     }
   end
 
@@ -22,21 +26,47 @@ class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
     { status: 'needs_permission', username: @perfil&.dig('username') }.compact
   end
 
+  def compara?
+    periodo.dias < HISTORY_DAYS
+  end
+
+  def primeiro_post(window)
+    api.instagram_first_post(window)
+  end
+
   def janela(window)
-    dados = ler(api.instagram_insights(window.merge(metric: 'reach,views,total_interactions', metric_type: 'total_value', period: 'day')))
+    alcance = ler(api.instagram_insights(window.merge(metric: 'reach', metric_type: 'total_value', period: 'day',
+                                                      breakdown: 'media_product_type,follow_type')))
+    resto = ler(api.instagram_insights(window.merge(metric: 'views,total_interactions', metric_type: 'total_value', period: 'day',
+                                                    breakdown: 'media_product_type')))
     follows = ler(api.instagram_insights(window.merge(metric: 'follows_and_unfollows', metric_type: 'total_value',
                                                       breakdown: 'follow_type', period: 'day')))
     {
-      reach: total(dados, 'reach').to_i, views: total(dados, 'views').to_i,
-      interactions: total(dados, 'total_interactions').to_i,
+      reach: sem_anuncio(alcance, 'reach'), reach_non_followers: sem_anuncio(alcance, 'reach', follow_type: 'NON_FOLLOWER'),
+      views: sem_anuncio(resto, 'views'), interactions: sem_anuncio(resto, 'total_interactions'),
       new_followers: total(follows, 'follows_and_unfollows', dimensao: 'FOLLOWER')
     }
   end
 
-  def quem_nao_segue
-    data = ler(api.instagram_insights(periodo.atual.merge(metric: 'reach', metric_type: 'total_value', breakdown: 'follow_type',
-                                                          period: 'day')))
-    total(data, 'reach', dimensao: 'NON_FOLLOWER')
+  # Soma dos lados do recorte que não são anúncio; com follow_type, só os desse lado.
+  def sem_anuncio(data, name, follow_type: nil)
+    recorte = recorte_por_tipo(data, name)
+    Array(recorte['results']).sum do |resultado|
+      lado = Array(recorte['dimension_keys']).zip(Array(resultado['dimension_values'])).to_h
+      next 0 if lado['media_product_type'] == ANUNCIO || (follow_type && lado['follow_type'] != follow_type)
+
+      resultado['value'].to_i
+    end
+  end
+
+  # Lado sem nada: a Meta não manda `results`. Número sem o recorte não dá para separar o anúncio, e a tela não mostra
+  # o total com o pago.
+  def recorte_por_tipo(data, name)
+    valor = metrica(data, name)&.dig('total_value').to_h
+    recorte = Array(valor['breakdowns']).first
+    raise Crm::MetaAds::Organico::Indisponivel, "#{name} sem o recorte media_product_type" if recorte.nil? && valor['value'].to_i.positive?
+
+    recorte.to_h
   end
 
   def top_posts

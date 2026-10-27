@@ -11,9 +11,9 @@
     "LOADING": "Carregando seus posts",
     "RANGE": "{range} · números da Meta podem levar até 2 dias",
     "HEADLINE": {
-      "BOTH": "{page} pessoas viram seus posts no Facebook e {instagram} no Instagram.",
-      "PAGE": "{count} pessoas viram os posts da sua Página.",
-      "INSTAGRAM": "{count} pessoas viram os posts do seu Instagram.",
+      "BOTH": "Seus posts apareceram {page} vezes no Facebook e {instagram} no Instagram, sem contar anúncios.",
+      "PAGE": "Os posts da sua Página apareceram {count} vezes, sem contar anúncios.",
+      "INSTAGRAM": "Os posts do seu Instagram apareceram {count} vezes, sem contar anúncios.",
       "ZERO": "Você não postou nos últimos {days} dias. Um post novo traz as pessoas de volta.",
       "NONE": "Libere o acesso para ver quantas pessoas sua Página e seu Instagram alcançam."
     },
@@ -63,7 +63,8 @@
     "TILES": {
       "REACH": {
         "LABEL": "Pessoas que viram",
-        "HELP": "Cada pessoa conta uma vez."
+        "HELP": "Cada pessoa conta uma vez.",
+        "HELP_UP_TO": "A mesma pessoa pode contar mais de uma vez, se viu um post e um story."
       },
       "VIEWS": {
         "LABEL": "Vezes que apareceu",
@@ -82,7 +83,9 @@
       "MORE": "{count} a mais que nos {days} dias anteriores",
       "FEWER": "{count} a menos que nos {days} dias anteriores",
       "SAME": "Igual aos {days} dias anteriores",
-      "NO_COMPARE": "Sem comparação no Instagram: a Meta só guarda 90 dias."
+      "NO_COMPARE": "Sem comparação no Instagram: a Meta só guarda 90 dias.",
+      "FIRST_PERIOD": "Sem comparação: você não postou nos {days} dias anteriores.",
+      "UP_TO": "até {count}"
     },
     "ADS_SHARE": {
       "TEXT": "{first}% das vezes que sua Página apareceu foram sem pagar. {second}% vieram de anúncios.",

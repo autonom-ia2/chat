@@ -9,6 +9,8 @@
 # (integration_manage).
 class Crm::MetaAds::Organico::Tela
   CACHE_TTL = 15.minutes
+  # Muda quando o formato guardado muda, para a leitura antiga não ser servida depois do deploy (v2: sem anúncio).
+  CACHE_VERSION = 'v2'.freeze
 
   # viewer: o pundit_user do controller ({ user:, account:, account_user: }).
   def initialize(account:, days:, viewer:)
@@ -59,7 +61,7 @@ class Crm::MetaAds::Organico::Tela
   end
 
   def ler_meta(channel, klass)
-    chave = "crm:meta_ads:organico:#{@account.id}:#{klass.name.demodulize}:#{channel.id}:#{@periodo.dias}"
+    chave = "crm:meta_ads:organico:#{CACHE_VERSION}:#{@account.id}:#{klass.name.demodulize}:#{channel.id}:#{@periodo.dias}"
     guardado = Rails.cache.read(chave)
     return guardado if guardado
 
