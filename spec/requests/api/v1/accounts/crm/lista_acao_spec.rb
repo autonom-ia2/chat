@@ -208,10 +208,16 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
   end
 
   describe 'consultas por página' do
+    # A leitura da conta por card no selo de SLA do Quadro (Crm::Kanban::CardPayloadBuilder#applied_sla_payload) é anterior a
+    # este PR e tem Issue própria: fica fora da conta para não esconder o resto.
+    def account_by_id?(sql)
+      sql == 'SELECT "accounts".* FROM "accounts" WHERE "accounts"."id" = $1 LIMIT $2'
+    end
+
     def sql_count(&)
       count = 0
       counter = lambda { |*, payload|
-        next if payload[:name] == 'SCHEMA' || payload[:sql].start_with?('BEGIN', 'COMMIT')
+        next if payload[:name] == 'SCHEMA' || payload[:sql].start_with?('BEGIN', 'COMMIT') || account_by_id?(payload[:sql])
 
         count += 1
       }
@@ -219,24 +225,41 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
       count
     end
 
-    def seed_cards(count)
-      bot_inbox = create_crm_inbox(account: account, name: "Robô #{SecureRandom.hex(2)}", members: [admin, agent])
-      AgentBotInbox.create!(inbox: bot_inbox, agent_bot: create(:agent_bot, account: account), status: :active)
-      count.times do |index|
-        card("Atendido #{index}", inbox: inbox, conversation: conversation(inbox: inbox, assignee: agent))
-        card("Robô #{index}", inbox: bot_inbox, conversation: conversation(inbox: bot_inbox))
+    # Cada rodada traz caixas novas, cada uma com o próprio robô ativo: uma que o agente vê e outra que ele não vê (a
+    # conversa oculta, atendida pela gestora, cai no robô da caixa no lugar do atendente).
+    def seed_round(pairs)
+      pairs.times do
+        tag = SecureRandom.hex(3)
+        shown = create_crm_inbox(account: account, name: "Robô visível #{tag}", members: [admin, agent])
+        hidden = create_crm_inbox(account: account, name: "Robô oculto #{tag}", members: [admin])
+        [shown, hidden].each { |box| AgentBotInbox.create!(inbox: box, agent_bot: create(:agent_bot, account: account), status: :active) }
+        card("Atendido #{tag}", inbox: inbox, conversation: conversation(inbox: inbox, assignee: agent))
+        card("Robô #{tag}", inbox: shown, conversation: conversation(inbox: shown))
+        card("Oculta #{tag}", inbox: inbox, conversation: conversation(inbox: hidden, assignee: admin))
       end
     end
 
-    it 'não cresce com o número de cards na lista nova, na legada e na planilha' do
-      seed_cards(2)
-      paths = { nova: ["#{api}/cards", { sort: 'acao' }], legada: ["#{api}/cards", {}], planilha: ["#{api}/cards/export", {}] }
-      before = paths.transform_values { |(path, params)| sql_count { get path, params: params, headers: auth_headers(admin) } }
-      seed_cards(4)
-      after = paths.transform_values { |(path, params)| sql_count { get path, params: params, headers: auth_headers(admin) } }
+    def surfaces(user)
+      pipeline_id = pipeline_and_stage.first.id
+      list = { nova: ["#{api}/cards", { sort: 'acao' }], legada: ["#{api}/cards", {}],
+               quadro: ["#{api}/kanban", { pipeline_id: pipeline_id }] }
+      user == admin ? list.merge(planilha: ["#{api}/cards/export", {}]) : list
+    end
 
-      # Um preload pode até sair quando não há id nenhum para buscar; o que não pode é crescer com os cards.
-      after.each { |surface, queries| expect(queries).to be <= before[surface], "#{surface}: #{before[surface]} -> #{queries}" }
+    def measure(user)
+      surfaces(user).transform_values do |(path, params)|
+        get path, params: params, headers: auth_headers(user) # aquece (cache de conta, permissões)
+        sql_count { get path, params: params, headers: auth_headers(user) }
+      end
+    end
+
+    it 'não cresce com cards nem com caixas de robô, para gestor e agente, em todas as telas' do
+      seed_round(1)
+      before = { admin: measure(admin), agent: measure(agent) }
+      seed_round(3)
+      after = { admin: measure(admin), agent: measure(agent) }
+
+      expect(after).to eq(before)
     end
   end
 

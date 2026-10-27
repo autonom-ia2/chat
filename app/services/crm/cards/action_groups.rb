@@ -20,6 +20,10 @@ module Crm::Cards::ActionGroups
   GROUP_SQL = 'acao.grupo'.freeze
   CONVERSATION = 'acao_conversa'.freeze
   VISIBLE = 'acao_visivel'.freeze
+  # Caixas com robô ativo, num LEFT JOIN: um EXISTS no CASE se repetia como SubPlan no SELECT, no ORDER e no WHERE.
+  ACTIVE_BOT = 'acao_robo'.freeze
+  ACTIVE_BOT_JOIN = 'LEFT JOIN (SELECT DISTINCT agent_bot_inboxes.inbox_id FROM agent_bot_inboxes WHERE agent_bot_inboxes.status = 0) ' \
+                    "#{ACTIVE_BOT} ON #{ACTIVE_BOT}.inbox_id = COALESCE(#{CONVERSATION}.inbox_id, crm_cards.inbox_id)".freeze
 
   def self.sort?(params)
     params[:sort].to_s == SORT
@@ -29,12 +33,14 @@ module Crm::Cards::ActionGroups
 
   def apply_action_groups(cards)
     return cards unless action_groups_needed?
+    # O fim de hoje é o do fuso da conta: sem a conta, o grupo "retorno" sairia no fuso errado, em silêncio.
+    raise ArgumentError, 'Crm::Cards::FilterQuery precisa da conta para os grupos da Lista nova' if @account.nil?
 
     # Condição e ordem em texto ou nó Arel, nunca hash com "acao.grupo": a chave com ponto põe `acao` em references_values
     # e liga o eager_load do includes da base (JOIN das conversas vinculadas, linhas repetidas, select descartado).
     cards = cards.joins(action_conversation_join)
     cards = cards.joins(action_visibility_join) unless @conversation_visibility.all_conversations?
-    cards = cards.joins(action_follow_up_join).joins(action_group_lateral)
+    cards = cards.joins(action_follow_up_join).joins(ACTIVE_BOT_JOIN).joins(action_group_lateral)
     cards = cards.where("#{GROUP_SQL} = 1") if boolean_param(:waiting)
     cards = cards.where('acao.retorno_em <= ?', end_of_today) if @params[:follow_up_status].to_s == FOLLOW_UP_DUE
     cards = apply_action_group_filter(cards)
@@ -112,26 +118,27 @@ module Crm::Cards::ActionGroups
     SQL
   end
 
-  # O retorno da pessoa mais perto de cada card, agregado uma vez para a conta (não por card, dentro do LATERAL): a
-  # visibilidade das conversas dos lembretes vira um hash só, e o planejador não cobra a montagem dele a cada card. Só o
+  # O retorno da pessoa mais perto de cada card, agregado uma vez (não por card, dentro do LATERAL): a visibilidade das
+  # conversas dos lembretes vira um hash só. A agregação lê só os lembretes dos cards da conta e, com `pipeline_id`, do
+  # funil (`retorno_cards`): é um conjunto que contém o da lista e sai barato pelo índice; o JOIN com crm_cards faz o
+  # resto. Repetir aqui a consulta inteira da lista custava mais que o ganho (as regras de acesso do card de novo). Só o
   # retorno sem conversa ou de conversa que a pessoa vê (Crm::FollowUp.retorno_visivel): o grupo, o filtro, a ordem e o
   # next_follow_up_id nunca revelam lembrete de conversa oculta.
   def action_follow_up_join
-    retornos = Crm::FollowUp.unscoped.retorno_visivel(follow_up_visibility_sql)
-                            .where(account_id: @account.id).where.not(card_id: nil)
+    all = @conversation_visibility.all_conversations?
+    retornos = Crm::FollowUp.unscoped.retorno_visivel(all ? nil : visible_conversation_ids_sql, all: all)
+                            .where(card_id: retorno_cards.select(:id))
                             .group(:card_id).select('crm_follow_ups.card_id, MIN(crm_follow_ups.due_at) AS em')
     "LEFT JOIN (#{retornos.to_sql}) acao_retorno ON acao_retorno.card_id = crm_cards.id"
   end
 
-  # Quem vê todas as conversas da conta (Crm::Conversations::Visibility#all_conversations?) não paga o filtro.
-  def follow_up_visibility_sql
-    visible_conversation_ids_sql unless @conversation_visibility.all_conversations?
+  def retorno_cards
+    cards = Crm::Card.unscoped.where(account_id: @account.id)
+    @params[:pipeline_id].present? ? cards.where(pipeline_id: @params[:pipeline_id]) : cards
   end
 
   def nobody_cares_sql
-    inbox_bot = 'EXISTS (SELECT 1 FROM agent_bot_inboxes acao_robo ' \
-                "WHERE acao_robo.inbox_id = COALESCE(#{CONVERSATION}.inbox_id, crm_cards.inbox_id) " \
-                "AND acao_robo.status = #{AgentBotInbox.statuses[:active]})"
+    inbox_bot = "#{ACTIVE_BOT}.inbox_id IS NOT NULL"
     "crm_cards.owner_id IS NULL AND (crm_cards.conversation_id IS NULL OR #{visible_action_conversation_sql}) " \
       "AND NOT (#{human_responsible_sql(CONVERSATION)}) AND NOT (#{bot_responsible_sql(CONVERSATION, inbox_bot)})"
   end

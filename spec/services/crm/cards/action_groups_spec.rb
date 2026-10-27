@@ -110,9 +110,10 @@ RSpec.describe Crm::Cards::ActionGroups do
       card('Pessoa na conversa', conversation: conversation(assignee: colleague))
       card('Tem dono', owner: colleague, conversation: conversation)
       card('Sem conversa e sem dono')
+      card('Sem conversa, caixa com robô', inbox: bot_inbox)
 
       expect(groups).to eq('Robô cuida' => 'demais', 'Pessoa na conversa' => 'demais', 'Tem dono' => 'demais',
-                           'Sem conversa e sem dono' => 'ninguem')
+                           'Sem conversa e sem dono' => 'ninguem', 'Sem conversa, caixa com robô' => 'demais')
     end
 
     it 'tira de "parado" o card com retorno da pessoa marcado para depois' do

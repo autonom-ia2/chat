@@ -109,10 +109,11 @@ class Crm::FollowUp < ApplicationRecord
   # Pré-voo (#1624): o que vence depois de `from` e até `to`; o que já venceu é do DueProcessor.
   scope :due_within, ->(from, to) { pending.where('crm_follow_ups.due_at > ? AND crm_follow_ups.due_at <= ?', from, to) }
 
-  # O retorno da pessoa sem conversa ou de conversa visível (SQL de ids de Crm::Conversations::Visibility#scope); nil = a
-  # pessoa vê todas as conversas da conta.
-  scope :retorno_visivel, lambda { |visible_conversation_ids_sql|
-    next retorno_da_pessoa if visible_conversation_ids_sql.nil?
+  # O retorno da pessoa sem conversa ou de conversa visível (SQL de ids de Crm::Conversations::Visibility#scope). `all: true`
+  # só para quem vê todas as conversas da conta (Visibility#all_conversations?): aí não há filtro.
+  scope :retorno_visivel, lambda { |visible_conversation_ids_sql, all: false|
+    next retorno_da_pessoa if all
+    raise ArgumentError, 'retorno_visivel precisa das conversas visíveis' if visible_conversation_ids_sql.blank?
 
     retorno_da_pessoa.where("crm_follow_ups.conversation_id IS NULL OR crm_follow_ups.conversation_id IN (#{visible_conversation_ids_sql})")
   }
@@ -121,8 +122,9 @@ class Crm::FollowUp < ApplicationRecord
   def self.proximos_retornos_da_pessoa(card_ids, conversation_visibility:)
     return {} if card_ids.blank?
 
-    visible_sql = conversation_visibility.scope(Conversation.all).select(:id).to_sql unless conversation_visibility.all_conversations?
-    retorno_visivel(visible_sql)
+    all = conversation_visibility.all_conversations?
+    visible_sql = conversation_visibility.scope(Conversation.all).select(:id).to_sql unless all
+    retorno_visivel(visible_sql, all: all)
       .where(card_id: card_ids)
       .select('DISTINCT ON (crm_follow_ups.card_id) crm_follow_ups.card_id, crm_follow_ups.id')
       .reorder(Arel.sql('crm_follow_ups.card_id, crm_follow_ups.due_at, crm_follow_ups.id'))
