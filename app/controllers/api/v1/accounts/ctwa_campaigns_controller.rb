@@ -55,7 +55,8 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
     aggregation = format(AGGREGATION_SQL, visible_ids: visible_conversations.reorder(nil).select(:id).to_sql)
     sql = ActiveRecord::Base.sanitize_sql_array([aggregation, Current.account.id])
 
-    ActiveRecord::Base.connection.select_all(sql).map do |row|
+    rows = without_hidden_ads(ActiveRecord::Base.connection.select_all(sql).to_a)
+    rows.map do |row|
       {
         source_id: row['source_id'],
         source: row['source'],
@@ -64,6 +65,17 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
         last_touch_at: row['last_touch_at']
       }
     end
+  end
+
+  # Anúncio de origem (#2271): a função personalizada sem meta_ads_view não recebe as linhas de anúncio (nome e id),
+  # aqui e no filtro de Conversas, que usa as mesmas opções. Divulgação, link e publicação continuam; o robô vê tudo e,
+  # sem identidade, não vê. O id que foi anúncio em qualquer toque da conta conta como anúncio, como no filtro
+  # (Crm::AnuncioDeOrigem::Ids: uma consulta só, com todas as campanhas da lista).
+  def without_hidden_ads(rows)
+    return rows if Crm::AnuncioDeOrigem.ve_no_contexto?(Current.user, Current.account_user)
+
+    ads = Crm::AnuncioDeOrigem::Ids.de_anuncio(Current.account, rows.pluck('source_id')).to_set
+    rows.reject { |row| ads.include?(row['source_id']) }
   end
 
   def include_origin_metrics?

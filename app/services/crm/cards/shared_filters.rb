@@ -5,12 +5,12 @@
 # (crmKanban.js) OR force a refetch-on-realtime. Per-filter realtime contract:
 #   * client-predicate (mirrored in cardMatchesFilters): stage_ids, value_min/value_max,
 #     score_min/score_max,
-#     stale_days, standalone, team_id, priority, inbox_id, owner_id, search, follow_up,
-#     campaign_source_ids (mirrored via card.campaigns.some(t => ids.includes(t.source_id))).
+#     stale_days, standalone, team_id, priority, inbox_id, owner_id, search, follow_up.
 #   * server-only + refetch-on-realtime (cannot be derived from a single upsert payload):
 #     responsible_kind (bot/none rely on the agent_bot_inbox join + conversation assignee),
 #     ai_pending (the pending-suggestion set is computed per board load) and label_ids
-#     (matches taggings of the primary conversation, source of truth for labels).
+#     (matches taggings of the primary conversation, source of truth for labels) and campaign_source_ids (without
+#     meta_ads_view the ad touch comes without source_id, #2271).
 module Crm::Cards::SharedFilters
   include Crm::Cards::CompanyFilters
 
@@ -166,12 +166,22 @@ module Crm::Cards::SharedFilters
   end
 
   # source_ids are opaque Meta ad ids — keep them as strings (never Integer-cast).
+  # Anúncio de origem (#2271): para a função personalizada sem meta_ads_view, os ids de anúncio saem do filtro (filtrar
+  # por eles revelaria qual card veio de qual anúncio); os de divulgação (WhatsApp, e-mail, SMS) continuam filtrando.
+  # Só com ids de anúncio, o filtro fica vazio e é ignorado, como o filtro por valor (#2075).
+  # O robô filtra por tudo; sem identidade, não (Crm::AnuncioDeOrigem.ve_no_contexto?).
   def parse_campaign_source_ids
-    Array(@params[:campaign_source_ids].presence)
-      .flat_map { |source_id| source_id.to_s.split(',') }
-      .map(&:strip)
-      .reject(&:blank?)
-      .uniq
+    ids = Array(@params[:campaign_source_ids].presence)
+          .flat_map { |source_id| source_id.to_s.split(',') }
+          .map(&:strip)
+          .reject(&:blank?)
+          .uniq
+    @conversation_visibility.anuncio_visivel? ? ids : sem_ids_de_anuncio(ids)
+  end
+
+  def sem_ids_de_anuncio(ids)
+    account = @account_user&.account || @account
+    account ? ids - Crm::AnuncioDeOrigem::Ids.de_anuncio(account, ids) : []
   end
 
   # Valor de venda (#2075): sem `sales_value_view` o filtro por valor é ignorado, porque revelaria o valor. Também vale

@@ -14,7 +14,10 @@ class ActionCableBroadcastJob < ApplicationJob
     return if members.blank?
 
     broadcast_data = prepare_broadcast_data(event_name, data)
-    broadcast_to_members(members, event_name, broadcast_data)
+    # Anúncio de origem (#2271): quem não vê o anúncio recebe a conversa sem ele, no mesmo job e depois da busca acima.
+    Crm::AnuncioDeOrigem::TempoReal.envios(broadcast_data[:account_id], members, broadcast_data).each do |destino, dados|
+      broadcast_to_members(destino, event_name, dados)
+    end
   end
 
   private

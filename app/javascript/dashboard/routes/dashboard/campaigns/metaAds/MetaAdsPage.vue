@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { META_ADS_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -20,6 +20,7 @@ import MetaAdsPanel from './components/MetaAdsPanel.vue';
 import AnunciosSemLogin from './semLogin/AnunciosSemLogin.vue';
 import MetaAdsOrganic from './organico/MetaAdsOrganic.vue';
 import MetaAdsViewTabs from './components/MetaAdsViewTabs.vue';
+import MetaAdsLeadForms from './leadForms/MetaAdsLeadForms.vue';
 import { currentStep } from './metaAdsHelpers';
 
 // Campanhas › Anúncios da Meta (#1047, F1b): a conexão guiada num lugar só, em 4 passos —
@@ -56,11 +57,13 @@ const rememberMode = value => {
 // Conectado (#1088): "Resultado" (o painel do dia a dia) ou "Conexão" (o resumo da conexão), lembrado no
 // endereço (?aba=). Conexão que precisa de atenção abre direto na conexão.
 // "Orgânico" (#2199) só com a flag meta_ads_organico: o que a Página e o Instagram alcançam sem anúncio.
-const ALL_VIEWS = ['resultado', 'organico', 'conexao'];
+// Formulários (#2195) só com a flag meta_ads_formularios: quem preenche o formulário do anúncio entra no funil.
+const ALL_VIEWS = ['resultado', 'organico', 'formularios', 'conexao'];
 const { t } = useI18n();
 const tabLabels = computed(() => ({
   resultado: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.RESULT'),
   organico: t('META_ADS_ORGANIC.TAB'),
+  formularios: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.LEAD_FORMS'),
   conexao: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.CONNECTION'),
 }));
 const view = ref(
@@ -128,11 +131,18 @@ const organicOn = computed(() =>
     FEATURE_FLAGS.META_ADS_ORGANICO
   )
 );
-// Quem só vê (meta_ads_view) fica sem a Conexão: as abas dele são Resultado e Seus posts.
+const leadFormsOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_FORMULARIOS
+  )
+);
+// Quem só vê (meta_ads_view) fica sem a Conexão: as abas dele são Resultado, Seus posts e Formulários.
 const VIEWS = computed(() =>
   ALL_VIEWS.filter(
     name =>
       (name !== 'organico' || organicOn.value) &&
+      (name !== 'formularios' || leadFormsOn.value) &&
       (name !== 'conexao' || !readOnly.value)
   )
 );
@@ -143,6 +153,7 @@ const activeView = computed(() => {
 });
 const showPanel = computed(() => activeView.value === 'resultado');
 const showOrganic = computed(() => activeView.value === 'organico');
+const showLeadForms = computed(() => activeView.value === 'formularios');
 // Na aba Seus posts o subtítulo fala de post, não de anúncio.
 const subtitle = computed(() =>
   showOrganic.value && !openStep.value
@@ -156,7 +167,7 @@ const showChecklist = computed(
     !(
       step.value === DONE &&
       !openStep.value &&
-      (showPanel.value || showOrganic.value)
+      (showPanel.value || showOrganic.value || showLeadForms.value)
     )
 );
 // Anúncios sem login (#1960, degrau 0): com a flag e sem conexão de anúncios nenhuma (o servidor diz em
@@ -329,6 +340,7 @@ onMounted(load);
             @choose="chooseView"
           />
           <MetaAdsOrganic v-if="showOrganic" read-only />
+          <MetaAdsLeadForms v-else-if="showLeadForms" read-only />
           <MetaAdsPanel v-else read-only />
         </div>
         <div
@@ -363,6 +375,11 @@ onMounted(load);
             />
             <MetaAdsPanel v-if="showPanel" @open="openStep = $event" />
             <MetaAdsOrganic v-else-if="showOrganic" :read-only="readOnly" />
+            <MetaAdsLeadForms
+              v-else-if="showLeadForms"
+              :read-only="readOnly"
+              @connect="chooseView('conexao')"
+            />
             <MetaAdsSummary
               v-else
               :connection="connection"
