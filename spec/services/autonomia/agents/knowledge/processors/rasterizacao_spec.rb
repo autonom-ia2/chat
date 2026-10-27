@@ -96,13 +96,28 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Rasterizacao do
       .to raise_error(described_class::Falhou, 'imagemagick_ausente')
   end
 
+  # O neto não é filho do Ruby: depois do SIGKILL ele morre e o init o colhe quando puder; até lá o pid ainda existe.
+  # Por isso a conferência espera ele sumir, com prazo, em vez de olhar uma vez só logo depois do kill (#2234).
+  def sumiu?(pid, prazo: 5)
+    limite = Process.clock_gettime(Process::CLOCK_MONOTONIC) + prazo
+    loop do
+      Process.kill(0, pid)
+      return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) > limite
+
+      sleep 0.05
+    end
+  rescue Errno::ESRCH
+    true
+  end
+
   # V4 — o tempo estourado mata o GRUPO (o ImageMagick chama o ghostscript): o filho também morre.
   it 'kills the whole process group on timeout, children included' do
     filho = File.join(pasta, 'filho')
     programa_falso('magick', "sleep 30 & echo $! > #{filho}; wait")
 
     expect { rasterizar(tempo: 1) }.to raise_error(described_class::Falhou, 'rasterizacao_timeout')
-    expect { Process.kill(0, File.read(filho).to_i) }.to raise_error(Errno::ESRCH)
+    neto = File.read(filho).to_i
+    expect(sumiu?(neto)).to be(true), "o neto #{neto} ainda existe 5 s depois do kill do grupo"
   end
 
   it 'removes the temporary page when the reading fails' do

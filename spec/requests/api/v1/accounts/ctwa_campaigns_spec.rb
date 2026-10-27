@@ -264,6 +264,30 @@ RSpec.describe 'CTWA campaigns API', type: :request do
     expect(response.parsed_body['origin_metrics']).to eq([])
   end
 
+  # #2084: venda de contato marcado parceiro do mercado ou não é negócio não conta em "De onde vieram".
+  it 'leaves out the sale of a contact out of the funnel when contato_relacao is on' do
+    account, user = create_account_and_user
+    inbox = create_crm_inbox(account: account, members: [user])
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    closed_at = Time.zone.parse('2026-07-04T10:00:00Z')
+    [10_000, 3_000].each_with_index do |value_cents, indice|
+      conversation = create_source_conversation(account: account, inbox: inbox, source_id: "ad-#{indice}", source: 'meta_ctwa', headline: 'Meta')
+      conversation.contact.update!(relacao: :parceiro) if indice == 1
+      create_closed_card(account: account, pipeline: pipeline, stage: stage, conversation: conversation,
+                         value_cents: value_cents, currency: 'BRL', status: :won, closed_at: closed_at)
+    end
+    window = { include_origin_metrics: true, since: '2026-07-01T00:00:00Z', until: '2026-07-31T23:59:59Z' }
+    vendas = lambda do
+      get "/api/v1/accounts/#{account.id}/ctwa_campaigns", params: window, headers: auth_headers(user)
+      response.parsed_body['origin_metrics'].sum { |row| row['won_count'] }
+    end
+
+    expect(vendas.call).to eq(2)
+
+    account.enable_features!('contato_relacao')
+    expect(vendas.call).to eq(1)
+  end
+
   # #1876: origem sem `source` não é anúncio por padrão; a origem sai do próprio toque. Venda sem toque nenhum entra na
   # linha "Sem origem" (`none`), em vez de sumir da soma.
   it 'derives a blank origin from the touch itself and counts sales with no origin as none' do
