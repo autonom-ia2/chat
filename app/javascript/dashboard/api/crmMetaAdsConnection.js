@@ -232,6 +232,53 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.get(`${this.url}/pages`);
   }
 
+  // Instagram comments of the ad (#2196, flag meta_ads_comentarios_instagram),
+  // live from Meta → { status: ready | needs_login | not_connected | no_post,
+  //   account, permalink_url, comments, total, next_cursor }.
+  instagramComments(adId, after) {
+    return axios.get(this.instagramCommentsUrl(adId), {
+      params: after ? { after } : {},
+    });
+  }
+
+  // Each action answers 422 { error } (invalid_text, needs_login,
+  // meta_unavailable, meta_refused, private_reply_done,
+  // private_reply_expired) or 404 comment_not_found.
+  replyInstagramComment(adId, commentId, text) {
+    return axios.post(`${this.instagramCommentsUrl(adId, commentId)}/reply`, {
+      text,
+    });
+  }
+
+  hideInstagramComment(adId, commentId, hidden) {
+    return axios.post(`${this.instagramCommentsUrl(adId, commentId)}/hide`, {
+      hidden,
+    });
+  }
+
+  deleteInstagramComment(adId, commentId) {
+    return axios.delete(this.instagramCommentsUrl(adId, commentId));
+  }
+
+  // → { sent_at, conversation_path }
+  privateReplyInstagramComment(adId, commentId, text) {
+    return axios.post(
+      `${this.instagramCommentsUrl(adId, commentId)}/private_reply`,
+      { text }
+    );
+  }
+
+  releaseInstagramPrivateReply(adId, commentId) {
+    return axios.post(
+      `${this.instagramCommentsUrl(adId, commentId)}/private_reply/release`
+    );
+  }
+
+  instagramCommentsUrl(adId, commentId) {
+    const base = `${this.url}/ads/${encodeURIComponent(adId)}/instagram_comments`;
+    return commentId ? `${base}/${encodeURIComponent(commentId)}` : base;
+  }
+
   // Suggested message to resume a stalled quote. Never sent by the server →
   // { quote_message: { card_id, conversation_id, applies, reason, message,
   //   source_quote } }.

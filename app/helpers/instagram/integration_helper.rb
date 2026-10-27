@@ -5,8 +5,12 @@ module Instagram::IntegrationHelper
   # dele ligada. `return_query` é a aba para onde a pessoa volta (lista fixa: nunca endereço livre).
   # Contrato comum com o #2196 (comentários dos anúncios no Instagram), que soma a entrada dele.
   # - meta_ads_organico (#2199): Seus posts.
+  # - meta_ads_comentarios_instagram (#2196): comentários do anúncio, na aba Resultado; volta ao anúncio (`ad_id`, só
+  #   em purpose com `ad: true`).
   REAUTH_PURPOSES = {
-    'meta_ads_organico' => { flag: 'meta_ads_organico', scopes: %w[instagram_business_manage_insights], return_query: 'aba=organico' }
+    'meta_ads_organico' => { flag: 'meta_ads_organico', scopes: %w[instagram_business_manage_insights], return_query: 'aba=organico' },
+    'meta_ads_comentarios_instagram' => { flag: 'meta_ads_comentarios_instagram', scopes: %w[instagram_business_manage_comments],
+                                          return_query: 'aba=resultado', ad: true }
   }.freeze
 
   # Generates a signed JWT token for Instagram integration
@@ -14,7 +18,8 @@ module Instagram::IntegrationHelper
   # @param account_id [Integer] The account ID to encode in the token
   # @param actor_id [Integer] The user who is authorized to manage account inboxes
   # @param return_to [String, nil] Optional onboarding return hint
-  # @param reauth [Hash] inbox: a caixa que se reautoriza; purpose: a entrada de REAUTH_PURPOSES (#2199/#2196)
+  # @param reauth [Hash] inbox: a caixa que se reautoriza; purpose: a entrada de REAUTH_PURPOSES (#2199/#2196);
+  #   ad_id: o anúncio para onde a pessoa volta (#2196, só dígitos, conferido por quem chama)
   # @return [String, nil] The bound JWT token or nil if signing/configuration fails
   def generate_instagram_token(account_id, return_to = nil, actor_id:, tester_selection: nil, **reauth)
     return if client_secret.blank?
@@ -35,8 +40,9 @@ module Instagram::IntegrationHelper
     reauth_payload(payload, **reauth)
   end
 
-  def reauth_payload(payload, inbox: nil, purpose: nil)
+  def reauth_payload(payload, inbox: nil, purpose: nil, ad_id: nil)
     payload[:purpose] = purpose if purpose
+    payload[:ad_id] = ad_id if ad_id
     if inbox
       payload[:inbox_id] = inbox.id
       payload[:instagram_id] = inbox.channel.instagram_id

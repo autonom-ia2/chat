@@ -2746,6 +2746,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
     t.index ["account_id", "ad_account_id", "ad_id", "date", "publisher_platform", "platform_position"], name: "idx_crm_meta_ad_placements_daily_unique", unique: true
   end
 
+  create_table "crm_meta_ads_comment_actions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "network", null: false
+    t.string "ad_id"
+    t.string "comment_id", null: false
+    t.string "action", null: false
+    t.bigint "conversation_id"
+    t.string "actor", null: false
+    t.bigint "user_id"
+    t.datetime "at", null: false
+    t.datetime "attempted_at"
+    t.datetime "failed_at"
+    t.datetime "confirmed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "network", "comment_id"], name: "idx_crm_meta_ads_comment_actions_lookup"
+    t.index ["conversation_id"], name: "idx_crm_meta_ads_comment_actions_conversation"
+    t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_once", unique: true, where: "((action)::text = ANY (ARRAY['private_reply'::text, 'ai_seen'::text]))"
+    t.index ["user_id"], name: "idx_crm_meta_ads_comment_actions_user"
+  end
+
   create_table "crm_meta_ads_connections", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.text "access_token"
@@ -4632,6 +4653,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
   add_foreign_key "crm_meta_ad_links", "conversations", on_delete: :cascade
   add_foreign_key "crm_meta_ad_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_placements_daily", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_comment_actions", "accounts"
+  add_foreign_key "crm_meta_ads_comment_actions", "conversations", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_comment_actions", "users", on_delete: :nullify
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_created_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_lead_forms", "accounts", on_delete: :cascade

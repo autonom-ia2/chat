@@ -5,6 +5,7 @@ import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { lerGestao } from '../gestaoDoAnuncio';
+import comentariosInstagram from '../components/comentarios/comentariosInstagram';
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: { panelAd: vi.fn(), adBudget: vi.fn() },
@@ -19,6 +20,10 @@ vi.mock('dashboard/composables/useCanManage', () => ({
   usePermissionGranted: () => computed(() => true),
 }));
 vi.mock('../gestaoDoAnuncio', () => ({ lerGestao: vi.fn() }));
+// Comentários (#2196): o adaptador do Instagram responde sem chamar a API.
+vi.mock('../components/comentarios/comentariosInstagram', () => ({
+  default: { listar: vi.fn() },
+}));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '18' }, query: {} }),
 }));
@@ -371,6 +376,29 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     expect(wrapper.find('[data-ad-detail-name]').exists()).toBe(true);
     expect(wrapper.find('[data-ad-detail-error]').exists()).toBe(false);
   });
+  it('shows the comments only with the Instagram comments flag on (#2196)', async () => {
+    lerGestao.mockResolvedValue(null);
+    flags.value = { meta_ads_gestao: true };
+    const off = await mountDetail();
+    expect(off.find('[data-ad-comments]').exists()).toBe(false);
+    off.unmount();
+
+    comentariosInstagram.listar.mockResolvedValue({
+      status: 'ready',
+      account: { username: 'lojaexemplo' },
+      comments: [],
+      total: 0,
+      next_cursor: null,
+    });
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+    const on = await mountDetail();
+    expect(on.find('[data-ad-comments]').exists()).toBe(true);
+    expect(on.find('[data-ad-comments-empty]').exists()).toBe(true);
+  });
+
   it('without the meta_ads_gestao flag, asks nothing about the ad and shows no status or post (#2161)', async () => {
     const wrapper = await mountDetail();
 

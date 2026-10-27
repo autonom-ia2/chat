@@ -25,6 +25,8 @@ import { useMetaAdsLive } from '../useMetaAdsLive';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { lerGestao } from '../gestaoDoAnuncio';
+import MetaAdsComments from './comentarios/MetaAdsComments.vue';
+import comentariosInstagram from './comentarios/comentariosInstagram';
 import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 import MetaAdsAdPost from './MetaAdsAdPost.vue';
 import MetaAdsBudget from './MetaAdsBudget.vue';
@@ -293,6 +295,21 @@ const gestaoOn = computed(() =>
   )
 );
 const canManage = usePermissionGranted('meta_ads_manage');
+
+// Comentários do anúncio, uma aba por rede, cada uma atrás da própria flag: Instagram (#2196); o Facebook (#2197)
+// entra com o adaptador dele e a flag meta_ads_comentarios_facebook. Sem nenhuma aba ligada, a seção não aparece.
+const COMMENT_TABS = [
+  {
+    key: 'INSTAGRAM',
+    flag: FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
+    adaptador: comentariosInstagram,
+  },
+];
+const commentTabs = computed(() =>
+  COMMENT_TABS.filter(tab =>
+    isFeatureEnabledonAccount.value(Number(route.params.accountId), tab.flag)
+  )
+);
 const gestao = ref(null);
 
 const loadGestao = async () => {
@@ -744,6 +761,13 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           </table>
         </details>
       </div>
+
+      <MetaAdsComments
+        v-if="gestaoOn && !withoutSpend && commentTabs.length"
+        :ad-id="adId"
+        :abas="commentTabs"
+        :can-manage="canManage"
+      />
 
       <div
         v-if="withoutSpend"
