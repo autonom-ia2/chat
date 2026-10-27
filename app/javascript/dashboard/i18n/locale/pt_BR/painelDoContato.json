@@ -168,7 +168,8 @@
     },
     "ETIQUETAS": {
       "TITULO": "Etiquetas",
-      "MUDAR": "Mudar as etiquetas desta conversa",
+      "MUDAR": "Mudar as etiquetas desta conversa: {etiquetas}",
+      "CRIAR": "Criar etiqueta",
       "DIALOGO_TITULO": "Etiquetas desta conversa",
       "DIALOGO_FRASE": "Toque numa etiqueta para pôr ou tirar.",
       "PRONTO": "Pronto",

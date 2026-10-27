@@ -168,7 +168,8 @@
     },
     "ETIQUETAS": {
       "TITULO": "Labels",
-      "MUDAR": "Change the labels of this conversation",
+      "MUDAR": "Change the labels of this conversation: {etiquetas}",
+      "CRIAR": "Create a label",
       "DIALOGO_TITULO": "Labels for this conversation",
       "DIALOGO_FRASE": "Tap a label to add it or take it off.",
       "PRONTO": "Done",
