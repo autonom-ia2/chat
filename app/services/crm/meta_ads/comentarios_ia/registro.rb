@@ -5,8 +5,8 @@
 # - `ai_seen`, antes do Jev: o webhook que a Meta reenvia, ou outro job do mesmo comentário, sai sem gastar nada. Com
 #   ela, só um job cuida de cada comentário, e as outras ações saem uma vez só;
 # - `private_reply`, antes da Meta, como no #2196; se a Meta recusa, a linha sai (soltar!). Quando a Meta aceita, o
-#   adaptador confirma a linha (`confirm!`); sem confirmação, ela vence em Crm::MetaAdsCommentAction::UNCONFIRMED_TTL
-#   e pode ser refeita (soltar_vencida!).
+#   adaptador confirma a linha (`confirm!`). Sem resposta da Meta, a linha fica sem confirmação e nunca sai: a Meta
+#   pode ter entregado, e um segundo envio seria privado duplicado.
 # As outras são registro do que já aconteceu, gravadas depois (gravar!).
 #
 # Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
@@ -42,13 +42,6 @@ module Crm::MetaAds::ComentariosIa::Registro
   def gravar!(comentario, acao, conversation: nil)
     registrar!(comentario, acao, conversation: conversation)
     true
-  end
-
-  # A reivindicação do privado que ninguém confirmou e já venceu, de qualquer autor, como o #2196 faz no Instagram.
-  def soltar_vencida!(comentario)
-    Crm::MetaAdsCommentAction.where(account_id: comentario.account_id, network: comentario.network, comment_id: comentario.comment_id,
-                                    action: 'private_reply', confirmed_at: nil)
-                             .where(at: ...Crm::MetaAdsCommentAction::UNCONFIRMED_TTL.ago).delete_all
   end
 
   def registrar!(comentario, acao, conversation: nil)

@@ -1,8 +1,7 @@
 # IA cuida dos comentários (#2212): as ações na Página do Facebook.
-# - privado pelo Messenger: nosso (Rede::Pagina, com o token da caixa). Reivindica antes (soltando a reivindicação vencida
-#   sem confirmação), confirma quando a Meta aceita e abre a conversa na caixa do Messenger com a mensagem que saiu
-#   (Conversa.no_messenger!). Recusado (4xx), a linha sai; sem resposta ou 5xx, a Meta pode ter entregado: a linha fica
-#   sem confirmação até vencer, como no #2196;
+# - privado pelo Messenger: nosso (Rede::Pagina, com o token da caixa). Reivindica antes, confirma quando a Meta aceita
+#   e abre a conversa na caixa do Messenger com a mensagem que saiu (Conversa.no_messenger!). Recusado (4xx), a linha
+#   sai; sem resposta ou 5xx, a Meta pode ter entregado: a linha fica sem confirmação e não sai, como no #2196;
 # - resposta e esconder: Crm::MetaAds::FacebookComments do #2197, com a conexão de anúncios da conta. Ele confere que o
 #   comentário é do post e que a Página é da conta, e grava a ação com actor 'ai'.
 class Crm::MetaAds::ComentariosIa::Rede::Facebook
@@ -48,7 +47,6 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   def reivindicar
-    REGISTRO.soltar_vencida!(@comentario)
     REGISTRO.reivindicar!(@comentario, 'private_reply')
   end
 

@@ -18,7 +18,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
   before do
     allow(reivindicacao).to receive(:confirm!)
-    allow(registro).to receive_messages(reivindicar!: reivindicacao, soltar!: 0, soltar_vencida!: 0, gravar!: true)
+    allow(registro).to receive_messages(reivindicar!: reivindicacao, soltar!: 0, gravar!: true)
   end
 
   describe 'Página (o Private Reply pelo Messenger)' do
@@ -82,8 +82,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
       resultado = rede.privado(care)
 
-      expect(registro).to have_received(:soltar_vencida!).with(an_object_having_attributes(comment_id: '555_777')).ordered
-      expect(registro).to have_received(:reivindicar!).with(an_object_having_attributes(comment_id: '555_777'), 'private_reply').ordered
+      expect(registro).to have_received(:reivindicar!).with(an_object_having_attributes(comment_id: '555_777'), 'private_reply')
       expect(reivindicacao).to have_received(:confirm!)
       expect(pagina).to have_received(:private_reply).with('555_777', hash_including(attachment: hash_including(type: 'template')))
       expect(resultado).to have_attributes(ok: true, conversation: conversation)
@@ -98,7 +97,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(Crm::MetaAds::ComentariosIa::Conversa).not_to have_received(:no_messenger!)
     end
 
-    it 'privado que talvez saiu (rede, 5xx): a reivindicação fica, sem confirmar, até vencer' do
+    it 'privado que talvez saiu (rede, 5xx): a reivindicação fica, sem confirmar' do
       allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, erro: 'HTTP 503', talvez_entregue: true))
 
       expect(rede.privado(care).ok).to be(false)
