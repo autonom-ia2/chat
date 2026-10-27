@@ -7,8 +7,8 @@
 # Onde o evento leva a conversa: na raiz (eventos da conversa), em `conversation` (digitando) e no `primary_actor` da
 # notificação. O token do contato (widget) não é de um usuário e recebe o evento inteiro, como antes.
 #
-# Se o recorte falhar (exceção), o evento nunca sai inteiro para uma pessoa e o job não deixa de enviar; o erro (só a
-# classe) vai para o log:
+# Se o recorte falhar (exceção), o evento nunca sai inteiro para uma pessoa e o job não deixa de enviar; o erro vai para
+# o log e para o ChatwootExceptionTracker:
 # - os tokens de pessoa recebem a conversa sem o anúncio; o de contato e widget, a conversa inteira;
 # - se nem isso der para saber, todos recebem sem o anúncio;
 # - se esconder o anúncio também falhar, a conversa sai sem os campos de campanha (campaign, campaign_touches e
@@ -56,8 +56,18 @@ class Crm::AnuncioDeOrigem::TempoReal
     [[@tokens, payload_seguro]]
   end
 
+  # Os logs de produção somem e o Sentry pode estar desligado: vai para os dois. A mensagem é a da exceção (banco,
+  # conexão), sem o payload da conversa.
   def registra(erro)
-    Rails.logger.error("[anuncio_de_origem] tempo real sem o recorte por destinatário (account #{@account_id}): #{erro.class.name}")
+    Rails.logger.error("[anuncio_de_origem] tempo real sem o recorte por destinatário (account #{@account_id}): " \
+                       "#{erro.class.name}: #{erro.message.to_s.truncate(300)}")
+    ChatwootExceptionTracker.new(erro, account: conta_do_evento).capture_exception
+  end
+
+  def conta_do_evento
+    Account.find_by(id: @account_id)
+  rescue StandardError
+    nil
   end
 
   def com_anuncio?

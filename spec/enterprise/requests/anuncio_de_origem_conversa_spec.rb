@@ -247,9 +247,12 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
         end
       end
 
-      it 'ao achar quem vê: as pessoas recebem sem o anúncio, o contato inteiro, e o erro vai para o log' do
-        allow(AccountUser).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished)
+      it 'ao achar quem vê: as pessoas recebem sem o anúncio, o contato inteiro, e o erro vai para o log e o rastreador' do
+        allow(AccountUser).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished, 'sem conexão')
+        allow(ChatwootExceptionTracker).to receive(:new).and_call_original
         recebidos = enviar
+        expect(ChatwootExceptionTracker).to have_received(:new).with(instance_of(ActiveRecord::ConnectionNotEstablished), account: account)
+        expect(Rails.logger).to have_received(:error).with(include('ActiveRecord::ConnectionNotEstablished: sem conexão'))
 
         tokens.each do |token|
           expect(recebidos.fetch(token).sole[:additional_attributes]).to include(atributos_oculto)
@@ -356,6 +359,17 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
           .to contain_exactly('Card do anúncio', 'Card da divulgação', 'Card sem origem', 'Card só do anúncio')
       end
 
+      it "#{superficie}: pessoa sem a chave pelo token de API também descarta o anúncio" do
+        get "#{api}/crm/#{superficie}", params: { pipeline_id: pipeline_and_stage.first.id, campaign_source_ids: '120200000000000001' },
+                                        headers: { api_access_token: sem_chave.access_token.token }, as: :json
+        expect(response).to have_http_status(:ok)
+        corpo = response.parsed_body['payload']
+        cards = superficie == 'kanban' ? corpo['stages'].flat_map { |coluna| coluna['cards'] } : corpo
+
+        expect(cards.pluck('title')).to contain_exactly('Card do anúncio', 'Card da divulgação', 'Card sem origem', 'Card só do anúncio')
+        expect(response.body).not_to include(*fora_do_referral)
+      end
+
       it "#{superficie}: sem a chave, filtro salvo com 51 ids funciona e descarta o anúncio" do
         ids = Array.new(49) { |indice| "outra-#{indice}" }.unshift('120200000000000001', 'divulgacao-1').join(',')
 
@@ -433,15 +447,64 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
     end
 
     # A contagem de não lidas de um filtro salvo segue a lista do dono do filtro.
-    it 'contagem de não lidas do filtro salvo: sem a chave, o id de anúncio não conta' do
-      conversa_divulgacao.messages.create!(account: account, inbox: inbox, message_type: :incoming, sender: conversa_divulgacao.contact,
-                                           content: 'Oi')
-      consulta = { payload: [{ attribute_key: 'campaign_source_ids', filter_operator: 'contains',
-                               values: ['"120200000000000001"'], query_operator: nil }] }
-      contar = ->(user) { Conversations::UnreadCounts::FilterQueryCounter.new(account: account, user: user, query: consulta).perform }
+    describe 'contagem de não lidas do filtro salvo' do
+      before do
+        conversa_divulgacao.messages.create!(account: account, inbox: inbox, message_type: :incoming,
+                                             sender: conversa_divulgacao.contact, content: 'Oi')
+        sozinho = create_crm_conversation(account: account, inbox: inbox, contact: contato)
+        sozinho.update!(additional_attributes: { 'campaign_touches' => [toque_anuncio], 'campaign_source_ids' => %w[120200000000000001] })
+        sozinho.messages.create!(account: account, inbox: inbox, message_type: :incoming, sender: contato, content: 'Oi')
+      end
 
-      expect(contar.call(com_view)).to eq(1)
-      expect(contar.call(sem_chave)).to eq(2)
+      after { chaves_da_contagem.each { |chave| Redis::Alfred.delete(chave) } }
+
+      def consulta(valores)
+        { payload: [{ attribute_key: 'campaign_source_ids', filter_operator: 'contains', values: valores, query_operator: nil }] }
+      end
+
+      def contar(user, valores)
+        Conversations::UnreadCounts::FilterQueryCounter.new(account: account, user: user, query: consulta(valores)).perform
+      end
+
+      def chaves_por_pessoa
+        %i[built_in_filter_version_key built_in_filter_counts_key built_in_filter_build_lock_key built_in_filter_refresh_throttle_key
+           folder_index_version_key folder_index_key folder_index_build_lock_key folder_index_refresh_throttle_key]
+      end
+
+      def chaves_por_filtro = %i[filter_version_key filter_count_key filter_build_lock_key filter_refresh_throttle_key]
+
+      def chaves_da_contagem
+        store = Conversations::UnreadCounts::FilteredCountStore
+        pessoas = [sem_chave, com_view].product(chaves_por_pessoa).map { |user, chave| store.public_send(chave, account.id, user.id) }
+        filtros = CustomFilter.where(account: account).to_a.product(chaves_por_filtro)
+                              .map { |filtro, chave| store.public_send(chave, account.id, filtro.id) }
+        pessoas + filtros + [store.conversation_version_key(account.id)]
+      end
+
+      it 'só o anúncio: sem a chave, a condição sai e conta tudo; com a chave, só o anúncio' do
+        expect(contar(com_view, ['"120200000000000001"'])).to eq(2)
+        expect(contar(sem_chave, ['"120200000000000001"'])).to eq(3)
+      end
+
+      it 'misto (anúncio + divulgação): sem a chave, conta só pela divulgação' do
+        misto = ['"120200000000000001"', '"divulgacao-1"']
+
+        expect(contar(com_view, misto)).to eq(3)
+        expect(contar(sem_chave, misto)).to eq(2)
+      end
+
+      it 'de ponta a ponta pelo FilteredCounter#perform: a pasta do filtro salvo conta como a lista do dono' do
+        pastas = [sem_chave, com_view].to_h do |user|
+          filtro = CustomFilter.create!(account: account, user: user, name: "Misto #{user.id}", filter_type: :conversation,
+                                        query: consulta(['"120200000000000001"', '"divulgacao-1"']))
+          [user, filtro.id.to_s]
+        end
+
+        expect(Conversations::UnreadCounts::FilteredCounter.new(account: account, user: sem_chave).perform[:folders])
+          .to eq(pastas[sem_chave] => 2)
+        expect(Conversations::UnreadCounts::FilteredCounter.new(account: account, user: com_view).perform[:folders])
+          .to eq(pastas[com_view] => 3)
+      end
     end
 
     # O toque antigo, gravado só em `campaign` (sem lista nem espelho), conta igual com poucos e com muitos ids.
