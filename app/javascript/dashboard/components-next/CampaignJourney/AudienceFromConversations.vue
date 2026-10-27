@@ -3,12 +3,14 @@
 // the period), Confira (one question when the request can be read two ways, then the plan with time and cost on
 // the account's own AI) and Revise (the list fills up while the conversations are read and becomes the review).
 // After Conte the request stays in sight in a dark band. Leaving the screen does not cancel the search; a paid
-// list is never thrown away without asking. The data comes from the demo adapter until the backend exists.
+// list is never thrown away without asking. The search lives on the server (conversationAudienceApi): coming back
+// to the screen, or from the bell (`?busca=`), opens the person's search where it stands.
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import AudienceSearchSteps from './AudienceSearchSteps.vue';
@@ -18,7 +20,7 @@ import AudienceSearchCheck from './AudienceSearchCheck.vue';
 import AudienceSearchReview from './AudienceSearchReview.vue';
 import AudienceSearchSaved from './AudienceSearchSaved.vue';
 import AudienceConversationPeek from './AudienceConversationPeek.vue';
-import { createConversationAudienceDemo } from './conversationAudienceDemo';
+import { createConversationAudienceApi } from './conversationAudienceApi';
 import { formatMoney } from './localeTag';
 
 // `active`: the search is past the request (or cannot start), so the page hides the switch to the spreadsheet.
@@ -37,7 +39,7 @@ const route = useRoute();
 const router = useRouter();
 const { isAdmin } = useAdmin();
 const accountId = useMapGetter('getCurrentAccountId');
-const api = createConversationAudienceDemo({ mode: route.query.demo });
+const api = createConversationAudienceApi();
 
 const step = ref('pedido');
 const hasOwnKey = ref(true);
@@ -57,13 +59,6 @@ const peeking = ref(null);
 const peekMessages = ref([]);
 const confirmRestart = ref(null);
 
-api.status().then(result => {
-  hasOwnKey.value = result.hasOwnKey;
-  periods.value = result.periods;
-  // Without the key the card already offers the spreadsheet; the page's switch would say it twice.
-  if (!result.hasOwnKey) emit('active', true);
-});
-
 const hasPaidList = computed(
   () => step.value === 'revise' && progress.value.people.length > 0
 );
@@ -75,15 +70,29 @@ const restartText = computed(() =>
 
 const ask = async answer => {
   isBusy.value = true;
-  const result = await api.plan({
-    request: request.value,
-    period: period.value,
-    answer,
-  });
-  isBusy.value = false;
-  question.value = result.question || null;
-  plan.value = result.question ? null : result;
-  step.value = 'confira';
+  try {
+    const result = await api.plan({
+      request: request.value,
+      period: period.value,
+      answer,
+      anyLabel: t(`${NS}.QUESTION_ANY`),
+    });
+    question.value = result.question || null;
+    plan.value = result.question ? null : result;
+    step.value = 'confira';
+  } catch (error) {
+    const code = error?.response?.data?.error || error?.code;
+    if (code === 'left') return;
+    useAlert(
+      t(
+        code === 'search_in_progress'
+          ? `${NS}.SEARCH_IN_PROGRESS`
+          : `${NS}.PLAN_ERROR`
+      )
+    );
+  } finally {
+    isBusy.value = false;
+  }
 };
 
 const onAsk = () => ask();
@@ -101,10 +110,52 @@ const onProgress = update => {
   searchState.value = update.state;
 };
 
+// A search left open comes back where it stands: the question or the plan, or the list being read.
+const reopen = async id => {
+  const opened = await api.open(id);
+  if (!opened) return;
+  request.value = opened.request;
+  period.value = opened.period;
+  if (opened.check) {
+    question.value = opened.check.question || null;
+    plan.value = opened.check.question ? null : opened.check;
+    step.value = 'confira';
+    return;
+  }
+  plan.value = opened.plan;
+  audienceName.value = opened.plan.name || '';
+  onProgress(opened.progress);
+  step.value = 'revise';
+  if (['fila', 'lendo'].includes(opened.progress.state)) {
+    api.watch(plan.value, onProgress);
+  }
+};
+
+const load = async () => {
+  const result = await api.status();
+  hasOwnKey.value = result.hasOwnKey;
+  periods.value = result.periods;
+  // Without the key the card already offers the spreadsheet; the page's switch would say it twice.
+  if (!result.hasOwnKey) {
+    emit('active', true);
+    return;
+  }
+  const openId = Number(route.query.busca) || result.openSearchId;
+  if (openId) await reopen(openId);
+};
+load().catch(() => useAlert(t(`${NS}.LOAD_ERROR`)));
+
 const begin = async () => {
   isBusy.value = true;
-  const started = await api.start();
-  isBusy.value = false;
+  let started;
+  try {
+    started = await api.start();
+  } catch {
+    useAlert(t(`${NS}.ACTION_ERROR`));
+    return;
+  } finally {
+    isBusy.value = false;
+  }
   seen.clear();
   leftOut.value = new Set();
   progress.value = {
@@ -119,22 +170,48 @@ const begin = async () => {
   api.watch(plan.value, onProgress);
 };
 
-const stop = () => {
-  api.stop();
-  searchState.value = 'parado';
+const stop = async () => {
+  try {
+    await api.stop();
+    searchState.value = 'parado';
+  } catch {
+    useAlert(t(`${NS}.ACTION_ERROR`));
+  }
 };
-const resume = () => {
-  searchState.value = 'lendo';
-  api.resume(plan.value, onProgress);
+const resume = async () => {
+  try {
+    await api.resume(plan.value, onProgress);
+    searchState.value = 'lendo';
+  } catch {
+    useAlert(t(`${NS}.ACTION_ERROR`));
+  }
 };
-// Still in line: nothing was paid, so giving up needs no confirmation.
-const cancelQueued = () => {
-  api.stop();
-  step.value = 'confira';
+// Still in line: nothing was paid, so giving up needs no confirmation (the server puts the plan back).
+const cancelQueued = async () => {
+  try {
+    await api.stop();
+    step.value = 'confira';
+  } catch {
+    useAlert(t(`${NS}.ACTION_ERROR`));
+  }
 };
 
-const backToRequest = () => {
-  api.stop();
+// A new request starts a new search; the one left behind stays on the server, unsaved (and stopped, if it was
+// still reading: one search at a time per person).
+const backToRequest = async () => {
+  if (
+    ['fila', 'lendo'].includes(searchState.value) &&
+    step.value === 'revise'
+  ) {
+    try {
+      await api.stop();
+    } catch {
+      // Still reading on the server: the screen stays on it rather than hiding a search that keeps paying.
+      useAlert(t(`${NS}.ACTION_ERROR`));
+      return;
+    }
+  }
+  api.reset();
   step.value = 'pedido';
   question.value = null;
   plan.value = null;
@@ -168,7 +245,12 @@ const setAll = (level, include) => {
 
 const peek = async person => {
   peeking.value = person;
-  peekMessages.value = await api.conversation(person.conversationId);
+  peekMessages.value = [];
+  try {
+    peekMessages.value = await api.conversation(person.id);
+  } catch {
+    useAlert(t(`${NS}.LOAD_ERROR`));
+  }
 };
 const peekIndex = computed(() =>
   progress.value.people.findIndex(p => p.id === peeking.value?.id)
@@ -189,13 +271,19 @@ const campaignWith = audienceId =>
 
 const save = async withCampaign => {
   isBusy.value = true;
-  saved.value = await api.save({
-    name: audienceName.value.trim(),
-    ids: progress.value.people
-      .filter(person => !leftOut.value.has(person.id))
-      .map(person => person.id),
-  });
-  isBusy.value = false;
+  try {
+    saved.value = await api.save({
+      name: audienceName.value.trim(),
+      ids: progress.value.people
+        .filter(person => !leftOut.value.has(person.id))
+        .map(person => person.id),
+    });
+  } catch {
+    useAlert(t(`${NS}.SAVE_ERROR`));
+    return;
+  } finally {
+    isBusy.value = false;
+  }
   if (withCampaign) {
     campaignWith(saved.value.id);
     return;
@@ -208,7 +296,7 @@ const connectKey = () => router.push(AI_KEY_ROUTE);
 
 watch(step, value => emit('active', value !== 'pedido'));
 
-// The real search keeps going on the server when the person leaves; only the demo clock stops here.
+// The search keeps going on the server when the person leaves; only the polling stops here.
 onBeforeUnmount(() => api.detach());
 </script>
 

@@ -318,8 +318,13 @@ en:
       sla_missed_next_response: 'SLA target next response missed for conversation (#%{display_id})'
       sla_missed_resolution: 'SLA target resolution missed for conversation (#%{display_id})'
       guide_alert: 'The Guide has an urgent warning for you'
+      conversation_audience_ready: 'Your audience from conversations is done'
     attachment: 'Attachment'
     no_content: 'No content'
+    conversation_audience:
+      done: "the list is ready to review"
+      ceiling: "stopped at the agreed cost and waits for you"
+      failed: "stopped because the account's AI did not answer"
   conversations:
     captain:
       handoff: 'Transferring to another agent for further assistance.'

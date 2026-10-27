@@ -41,7 +41,12 @@ export const actions = {
   ) => {
     commit(types.SET_NOTIFICATIONS_UI_FLAG, { isUpdating: true });
     try {
-      await NotificationsAPI.read(primaryActorType, primaryActorId);
+      // #2277: the audience search notification is read by its own id.
+      if (primaryActorType === 'ConversationAudienceSearch') {
+        await NotificationsAPI.readOne(id);
+      } else {
+        await NotificationsAPI.read(primaryActorType, primaryActorId);
+      }
       commit(types.SET_NOTIFICATIONS_UNREAD_COUNT, unreadCount - 1);
       commit(types.READ_NOTIFICATION, { id, read_at: new Date() });
       commit(types.SET_NOTIFICATIONS_UI_FLAG, { isUpdating: false });

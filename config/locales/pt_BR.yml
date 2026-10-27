@@ -305,8 +305,13 @@ pt_BR:
       sla_missed_next_response: 'Meta de SLA de Próxima Resposta não alcançada para a conversa (#%{display_id})'
       sla_missed_resolution: 'Meta de SLA de Resolução não alcançada para a conversa (#%{display_id})'
       guide_alert: 'O Guia tem um aviso urgente para você'
+      conversation_audience_ready: 'Seu público pelas conversas terminou'
     attachment: 'Anexo'
     no_content: 'Sem conteúdo'
+    conversation_audience:
+      done: "a lista está pronta para revisar"
+      ceiling: "parou no custo combinado e espera você"
+      failed: "parou porque a IA da conta não respondeu"
   conversations:
     captain:
       handoff: 'Transferindo para que outro agente dê assistência.'

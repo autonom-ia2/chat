@@ -21,7 +21,7 @@ import AudienceCompanies from 'dashboard/components-next/CampaignJourney/Audienc
 import AudienceChannelBadges from 'dashboard/components-next/CampaignJourney/AudienceChannelBadges.vue';
 import AudienceFromConversations from 'dashboard/components-next/CampaignJourney/AudienceFromConversations.vue';
 import AudienceSourceChoice from 'dashboard/components-next/CampaignJourney/AudienceSourceChoice.vue';
-import { createConversationAudienceDemo } from 'dashboard/components-next/CampaignJourney/conversationAudienceDemo';
+import ConversationAudiencesAPI from 'dashboard/api/campaignJourneyConversationAudiences';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { audiencesAPI } from 'dashboard/api/campaignJourney';
 import {
@@ -59,14 +59,20 @@ const canSearchConversations = computed(() =>
     FEATURE_FLAGS.CAMPANHAS_PUBLICO_POR_CONVERSA
   )
 );
-const chosenSource = ref(null);
-// Without the account's own AI the conversations card says it needs a one-time setup (demo adapter for now).
+// `?busca=` (the bell, #2277) opens the conversations straight away, on that search.
+const chosenSource = ref(route.query.busca ? 'conversas' : null);
+// Without the account's own AI the conversations card says it needs a one-time setup.
 const conversationsNeedSetup = ref(false);
-createConversationAudienceDemo({ mode: route.query.demo })
-  .status()
-  .then(result => {
-    conversationsNeedSetup.value = !result.hasOwnKey;
-  });
+if (canSearchConversations.value) {
+  ConversationAudiencesAPI.status()
+    .then(({ data }) => {
+      conversationsNeedSetup.value = !data.has_own_key;
+    })
+    // The card stays as it is; the conversations screen asks again when opened and says if it fails.
+    .catch(() => {
+      conversationsNeedSetup.value = false;
+    });
+}
 const source = computed(() =>
   canSearchConversations.value ? chosenSource.value : 'planilha'
 );

@@ -410,7 +410,12 @@
         "SAVE_PARTIAL": "Stop and save these {count}",
         "CHANGE_SHORT": "Change",
         "PERIOD_COUNT_BELOW": "(conversations below)",
-        "PEEK_WHY_ADDED": "Outside the rule · you added them"
+        "PEEK_WHY_ADDED": "Outside the rule · you added them",
+        "PLAN_ERROR": "The AI could not understand the request now. Try again in a moment.",
+        "LOAD_ERROR": "Could not load now. Try again in a moment.",
+        "ACTION_ERROR": "Could not do that now. Try again.",
+        "SAVE_ERROR": "Could not save the audience now. Try again.",
+        "SEARCH_IN_PROGRESS": "You already have a search running. Wait for it to finish or stop it first."
       },
       "SOURCE": {
         "QUESTION": "Where do the people come from?",

@@ -410,7 +410,12 @@
         "SAVE_PARTIAL": "Parar e salvar estas {count}",
         "CHANGE_SHORT": "Mudar",
         "PERIOD_COUNT_BELOW": "(embaixo, quantas conversas)",
-        "PEEK_WHY_ADDED": "Fora da regra · você pôs na lista"
+        "PEEK_WHY_ADDED": "Fora da regra · você pôs na lista",
+        "PLAN_ERROR": "A IA não conseguiu entender o pedido agora. Tente de novo daqui a pouco.",
+        "LOAD_ERROR": "Não deu para carregar agora. Tente de novo daqui a pouco.",
+        "ACTION_ERROR": "Não deu para fazer isso agora. Tente de novo.",
+        "SAVE_ERROR": "Não deu para salvar o público agora. Tente de novo.",
+        "SEARCH_IN_PROGRESS": "Você já tem uma procura em andamento. Espere terminar ou pare a procura antes."
       },
       "SOURCE": {
         "QUESTION": "De onde vêm as pessoas?",

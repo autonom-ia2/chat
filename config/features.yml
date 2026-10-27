@@ -962,9 +962,9 @@
 
 # Novo público pedindo em palavras (#2277). Ligada: em Campanhas › Público › Novo público, além da planilha, a pessoa
 # pede o público com as próprias palavras e a plataforma lê as conversas da conta (com a IA da própria conta) e monta a
-# lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Fim da feature_flags_ext_2,
-# depois de meta_ads_comentarios_instagram: posição 9 (valor 256, 1 << 8), provisória pela ordem de chegada à main (a
-# Orquestração confere antes de enfileirar).
+# lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Fim da feature_flags_ext_2:
+# hoje posição 9 (valor 256, 1 << 8) pela ordem do arquivo; a Orquestração reservou a 9 para o #2269 e deu a 10 (512)
+# como provisória. No dia da fila, merge da main e fica a seguinte à última da main (a Orquestração confere).
 - name: campanhas_publico_por_conversa
   display_name: Campanhas › Novo público pedindo em palavras
   enabled: false

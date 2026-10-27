@@ -12528,6 +12528,100 @@
     ],
     "sem_corpo": false
   },
+  "POST campaign_journey/conversation_audiences": {
+    "campos": {
+      "period": {
+        "tipo": "string",
+        "um_de": [
+          "7d",
+          "30d",
+          "3m",
+          "12m",
+          "all"
+        ]
+      },
+      "request": {
+        "max_caracteres": 1000,
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#create",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:41",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:44"
+    ],
+    "sem_corpo": false
+  },
+  "POST campaign_journey/conversation_audiences/:id/answer": {
+    "campos": {
+      "answer": {
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#answer",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:49",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:50",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:115"
+    ],
+    "sem_corpo": false
+  },
+  "POST campaign_journey/conversation_audiences/:id/resume": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#resume",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:63",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:115"
+    ],
+    "sem_corpo": true
+  },
+  "POST campaign_journey/conversation_audiences/:id/save": {
+    "campos": {
+      "name": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "person_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#save",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:93",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:97",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:96",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:115"
+    ],
+    "sem_corpo": false
+  },
+  "POST campaign_journey/conversation_audiences/:id/start": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#start",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:59",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:115"
+    ],
+    "sem_corpo": true
+  },
+  "POST campaign_journey/conversation_audiences/:id/stop": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#stop",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:74",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:115"
+    ],
+    "sem_corpo": true
+  },
   "POST campaign_journey/drafts": {
     "campos": {
       "channel": {
