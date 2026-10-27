@@ -14,7 +14,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     )
   end
 
-  before { allow(registro).to receive_messages(reivindicar!: true, soltar!: 0) }
+  before { allow(registro).to receive_messages(reivindicar!: true, soltar!: 0, gravar!: true) }
 
   describe 'Página (o Private Reply pelo Messenger)' do
     let(:channel) { instance_double(Channel::FacebookPage, page_id: '555', page_access_token: 'token-da-pagina') }
@@ -129,7 +129,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(rede.privado(care)).to have_attributes(ok: true, conversation: conversation)
       expect(privado).to have_received(:perform!).with(
         comment: { 'id' => '555_777', 'timestamp' => '2026-10-27T10:00:00Z', 'from' => { 'id' => 'igsid-1', 'username' => 'carla' } },
-        text: care.message, actor: 'ai'
+        text: care.message, actor: 'ai', ad_id: nil
       )
     end
 
@@ -139,14 +139,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(rede.privado(care)).to have_attributes(ok: false, erro: 'meta_refused')
     end
 
-    it 'responde e esconde reivindicando antes; recusa da Meta solta a linha' do
+    it 'responde e esconde; só grava o que a Meta aceitou' do
       allow(cliente).to receive_messages(reply: ok, hide: recusa)
 
       expect(rede.responder('Te chamei no privado')).to be(true)
       expect(rede.esconder).to be(false)
       expect(cliente).to have_received(:hide).with('555_777', hidden: true)
-      expect(registro).to have_received(:soltar!).with(anything, 'hide')
-      expect(registro).not_to have_received(:soltar!).with(anything, 'reply')
+      expect(registro).to have_received(:gravar!).with(anything, 'reply')
+      expect(registro).not_to have_received(:gravar!).with(anything, 'hide')
     end
   end
 end

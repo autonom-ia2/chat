@@ -68,11 +68,9 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     rede.responder(care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
   end
 
-  # Reivindica antes de abrir a conversa: o mesmo comentário nunca abre duas.
+  # Uma vez só por comentário: o `ai_seen` já deixou um job só cuidando dele.
   def para_voce(motivo)
-    return unless @registro.reivindicar!(@comentario, motivo)
-
-    @registro.vincular!(@comentario, motivo, @conversa.para_voce!(@comentario, care, motivo))
+    @registro.gravar!(@comentario, motivo, conversation: @conversa.para_voce!(@comentario, care, motivo))
   end
 
   def inbox

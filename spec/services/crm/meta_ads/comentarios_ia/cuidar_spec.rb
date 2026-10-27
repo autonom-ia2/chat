@@ -30,7 +30,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
   before do
     account.enable_features!(described_class::FLAG)
-    allow(registro).to receive_messages(reservar!: true, hoje: 0, vez: 0, reivindicar!: true, vincular!: 1)
+    allow(registro).to receive_messages(reservar!: true, hoje: 0, vez: 0, gravar!: true)
     allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
     allow(rede).to receive(:privado).and_return(enviado)
   end
@@ -61,9 +61,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(rede).not_to have_received(:responder)
-    expect(registro).to have_received(:reivindicar!).with(comentario, 'private_reply_failed')
     expect(conversa).to have_received(:para_voce!).with(comentario, care, 'private_reply_failed')
-    expect(registro).to have_received(:vincular!).with(comentario, 'private_reply_failed', conversation)
+    expect(registro).to have_received(:gravar!).with(comentario, 'private_reply_failed', conversation: conversation)
   end
 
   it 'privado que já tinha saído (pela pessoa ou outro job): não faz mais nada' do
@@ -85,15 +84,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(rede).not_to have_received(:privado)
     expect(rede).not_to have_received(:responder)
     expect(conversa).to have_received(:para_voce!).with(comentario, care, 'to_you')
-  end
-
-  it 'o mesmo comentário nunca abre duas conversas para a pessoa' do
-    decide('to_you')
-    allow(registro).to receive(:reivindicar!).with(comentario, 'to_you').and_return(false)
-
-    cuidar
-
-    expect(conversa).not_to have_received(:para_voce!)
+    expect(registro).to have_received(:gravar!).with(comentario, 'to_you', conversation: conversation)
   end
 
   it 'propaganda: esconde o comentário' do

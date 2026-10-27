@@ -11,7 +11,8 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   end
 
   def privado(care)
-    resultado = Crm::MetaAds::InstagramPrivateReply.new(@inbox.channel).perform!(comment: comment, text: care.message, actor: REGISTRO::ACTOR)
+    resultado = Crm::MetaAds::InstagramPrivateReply.new(@inbox.channel)
+                                                   .perform!(comment: comment, text: care.message, actor: REGISTRO::ACTOR, ad_id: @comentario.ad_id)
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: resultado[:conversation])
   rescue Crm::MetaAds::InstagramPrivateReply::Error => e
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: e.code)
@@ -27,13 +28,11 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
 
   private
 
-  # Reivindica antes da Meta; recusada, a linha sai.
+  # Grava depois que a Meta aceitou: a resposta e o esconder não são únicos, e o `ai_seen` já garante um job só.
   def acao(nome)
-    return false unless REGISTRO.reivindicar!(@comentario, nome)
-    return true if yield.ok
+    return false unless yield.ok
 
-    REGISTRO.soltar!(@comentario, nome)
-    false
+    REGISTRO.gravar!(@comentario, nome)
   end
 
   # O comentário no formato do webhook e da Graph, que o serviço do #2196 recebe.

@@ -1,9 +1,11 @@
 # IA cuida dos comentários (#2212): o que a IA fez com cada comentário, na tabela de ações do #2196
-# (crm_meta_ads_comment_actions, única por rede, comentário e ação), com actor 'ai'.
+# (crm_meta_ads_comment_actions, Crm::MetaAdsCommentAction), com actor 'ai'.
 #
-# A linha é a reivindicação, como no #2196: é gravada ANTES de chamar o Jev ou a Meta, e quem bate no índice único sai
-# sem fazer nada. Assim o webhook que a Meta reenvia, ou dois jobs do mesmo comentário, não repetem o privado nem pagam
-# o Jev de novo. Se a Meta recusa, a linha da ação sai (soltar!); a do `ai_seen` fica.
+# Duas ações são únicas por comentário (índice único parcial do #2196) e servem de reivindicação, gravadas ANTES:
+# - `ai_seen`, antes do Jev: o webhook que a Meta reenvia, ou outro job do mesmo comentário, sai sem gastar nada. Com
+#   ela, só um job cuida de cada comentário, e as outras ações saem uma vez só;
+# - `private_reply`, antes da Meta, como no #2196; se a Meta recusa, a linha sai (soltar!).
+# As outras são registro do que já aconteceu, gravadas depois (gravar!).
 #
 # Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
 # passada à pessoa) e private_reply_failed (o privado que a Meta recusou). As duas últimas formam o "Para você ver".
@@ -28,12 +30,18 @@ module Crm::MetaAds::ComentariosIa::Registro
     acoes(account_id).where(action: 'reply').count
   end
 
+  # Só para as ações únicas (ai_seen, private_reply): true só para quem gravou primeiro.
   def reivindicar!(comentario, acao)
-    Crm::MetaAdsCommentAction.create!(account_id: comentario.account_id, network: comentario.network, comment_id: comentario.comment_id,
-                                      action: acao, actor: ACTOR, at: Time.current)
-    true
+    gravar!(comentario, acao)
   rescue ActiveRecord::RecordNotUnique
     false
+  end
+
+  def gravar!(comentario, acao, conversation: nil)
+    Crm::MetaAdsCommentAction.record!(account: Account.find(comentario.account_id), network: comentario.network,
+                                      comment_id: comentario.comment_id, action: acao, actor: ACTOR, ad_id: comentario.ad_id,
+                                      conversation: conversation)
+    true
   end
 
   # A conversa nasce depois da reivindicação: o id dela entra na linha.
