@@ -285,7 +285,12 @@ RSpec.describe Account do
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(16)
       # #2084: primeira flag da feature_flags_ext_2 (posição provisória da Orquestração).
       # #2001: crm_numeros_origens, posição 2 (1 << 1), DEFINITIVA da Orquestração (26/10).
-      expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(feature_contato_relacao: 1, feature_crm_numeros_origens: 2)
+      # #2202: lista_quem_espera no fim da ext_2, posição pela ordem de chegada à main; hoje 3 (1 << 2 = 4).
+      # #2251: agentes_painel_desempenho depois dela, posição 4 (1 << 3 = 8), confirmada pela Orquestração (27/10).
+      expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
+        feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
+        feature_agentes_painel_desempenho: 8
+      )
     end
 
     it 'keeps Relationships opt-in and each extension independent of existing flags' do

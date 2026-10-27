@@ -6,6 +6,7 @@ import wootConstants from 'dashboard/constants/globals';
 
 import ConversationBasicFilter from './widgets/conversation/ConversationBasicFilter.vue';
 import SwitchLayout from 'dashboard/routes/dashboard/conversation/search/SwitchLayout.vue';
+import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
 const props = defineProps({
@@ -30,6 +31,8 @@ const emit = defineEmits([
 ]);
 
 const { uiSettings, updateUISettings } = useUISettings();
+// #2202: com a lista nova o layout não muda no computador, então o botão de trocar some.
+const listaNova = useListaNova();
 
 const onBasicFilterChange = (value, type) => {
   emit('basicFilterChange', value, type);
@@ -179,6 +182,7 @@ const toggleConversationLayout = () => {
         @change-filter="onBasicFilterChange"
       />
       <SwitchLayout
+        v-if="!listaNova"
         :is-on-expanded-layout="isOnExpandedLayout"
         @toggle="toggleConversationLayout"
       />

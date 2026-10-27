@@ -35,6 +35,8 @@ json.provider_name resource.channel.try(:provider_name) if resource.facebook? ||
 
 ## WhatsApp API (conector via motor externo) — sinaliza a aba/conexão dedicada
 json.waha_provider resource.channel.try(:waha_provider?) || false
+# #2211: o número do WhatsApp do celular (a tela mostra por onde a mensagem sai). Ver Waha::NumeroDoCelular.
+json.waha_phone_number Waha::NumeroDoCelular.de(resource.channel) if resource.channel.try(:waha_provider?)
 
 ## WebWidget Attributes
 json.allowed_domains resource.channel.try(:allowed_domains)

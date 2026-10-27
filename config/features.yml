@@ -892,11 +892,21 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Lista de conversas "Quem está esperando" (#2202, PR1). Ligada: o item da lista vira o CardDaConversa (2 ou 3 linhas:
+# nome e horário, quem disse e o quê, e o sinal de espera), e o topo da lista ganha "Recentes ▾", "Filtrar ▾" e as abas
+# Minhas, Para pegar e Todas. Desligada: a lista de sempre, idêntica. Só frontend, sem migration. Fim da
+# feature_flags_ext_2, posição pela ordem de chegada à main; hoje 3 (valor 4, 1 << 2), confirmada pela Orquestração.
+# Se outra flag da ext_2 entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+- name: lista_quem_espera
+  display_name: Lista de conversas › quem está esperando
+  enabled: false
+  column: feature_flags_ext_2
+
 # Painel de desempenho do agente (#2226 protótipo, #2251 leitura guardada no banco). Ligada: a página Agentes › {nome} ›
 # Desempenho, o link "Ver tudo de {nome}" na página do agente (nosso e de outro sistema) e a API do painel e da
 # exportação (PDF/planilha). Desligada: nada aparece, a rota volta para o início e a API responde 404. Ver o painel
 # pede desempenho_view (função personalizada) ou admin; baixar o arquivo pede também contact_export. No fim da
-# feature_flags_ext_2; a posição (e o valor do bit) é confirmada pela Orquestração antes da fila.
+# feature_flags_ext_2, depois de lista_quem_espera: posição 4 (valor 8, 1 << 3), confirmada pela Orquestração (27/10).
 - name: agentes_painel_desempenho
   display_name: Agentes IA › painel de desempenho do agente
   enabled: false

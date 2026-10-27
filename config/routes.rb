@@ -835,6 +835,8 @@ Rails.application.routes.draw do
             end
           end
 
+          # #2211: a busca dentro da lista de conversas (SearchService::BuscaDaLista).
+          resource :busca_da_lista, only: [:show], controller: :busca_da_lista
           resources :search, only: [:index] do
             collection do
               get :conversations

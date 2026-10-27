@@ -2,6 +2,7 @@
 import { mapGetters } from 'vuex';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { useLayoutExpandidoDaLista } from 'dashboard/components-next/Conversation/ListaDeConversas/useLayoutDaLista';
 import ChatList from '../../../components/ChatList.vue';
 import ConversationBox from '../../../components/widgets/conversation/ConversationBox.vue';
 import wootConstants from 'dashboard/constants/globals';
@@ -54,8 +55,9 @@ export default {
     },
   },
   setup() {
-    const { uiSettings, updateUISettings, isOnExpandedLayout } =
-      useUISettings();
+    const { uiSettings, updateUISettings } = useUISettings();
+    // #2202: com a lista nova, o layout é sempre o condensado (a preferência salva fica como está).
+    const isOnExpandedLayout = useLayoutExpandidoDaLista();
     const { accountId } = useAccount();
 
     return {

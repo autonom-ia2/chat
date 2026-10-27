@@ -35,6 +35,10 @@ import ConversationFilter from 'next/filter/ConversationFilter.vue';
 import SaveCustomView from 'next/filter/SaveCustomView.vue';
 import ChatTypeTabs from './widgets/ChatTypeTabs.vue';
 import FunnelFilter from 'dashboard/components-next/Conversation/FunnelFilter.vue';
+import ListaCabecalho from 'dashboard/components-next/Conversation/ListaDeConversas/ListaCabecalho.vue';
+import ListaAbas from 'dashboard/components-next/Conversation/ListaDeConversas/ListaAbas.vue';
+import ChipDoStatus from 'dashboard/components-next/Conversation/ListaDeConversas/ChipDoStatus.vue';
+import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 import FaixaDoWhatsapp from 'dashboard/components-next/conversa-canal/faixa-whatsapp/FaixaDoWhatsapp.vue';
 import {
   FUNNEL_ALL,
@@ -369,6 +373,51 @@ onBeforeUnmount(cancelarReleituraDoFiltroDoLink);
 const temFiltroDoLink = computed(() =>
   Boolean(filtroDoLink.value.daIa || filtroDoLink.value.esperandoMin)
 );
+// #2202: com a chave lista_quem_espera, o topo novo ("Recentes ▾", "Filtrar ▾", abas
+// Minhas · Para pegar · Todas). Filtro avançado, pasta salva, escopo de contato, filtro do link e pastas
+// do e-mail continuam no topo de sempre, que já mostra e limpa o filtro do jeito dele.
+const listaNova = useListaNova();
+const cabecalhoNovo = ref(null);
+const usaCabecalhoNovo = computed(
+  () =>
+    listaNova.value &&
+    !hasAppliedFiltersOrActiveFolders.value &&
+    !appliedContactFilter.value &&
+    !temFiltroDoLink.value &&
+    !pastaDoEmail.value
+);
+// Fora das abertas (resolvidas, adiadas, pendentes, todos os status), o chip mostra o status e volta.
+const mostraChipDoStatus = computed(
+  () =>
+    usaCabecalhoNovo.value &&
+    activeStatus.value !== wootConstants.STATUS_TYPE.OPEN
+);
+const voltarParaAbertas = () => cabecalhoNovo.value?.voltarParaAbertas();
+// O painel que as abas da lista nova controlam (aria-controls).
+const PAINEL_DA_LISTA = 'lista-de-conversas-painel';
+// A lista só é o painel das abas quando as abas novas aparecem.
+const listaComAbas = computed(
+  () =>
+    listaNova.value &&
+    !hasAppliedFiltersOrActiveFolders.value &&
+    !listaJuntaDoLink.value
+);
+const VAZIA_POR_ABA = { me: 'MINHAS', unassigned: 'PARA_PEGAR', all: 'TODAS' };
+// A lista vazia fala do status antes da aba: em "Pendentes", não adianta dizer "nada para pegar".
+const VAZIA_POR_STATUS = {
+  resolved: 'RESOLVIDAS',
+  snoozed: 'ADIADAS',
+  pending: 'PENDENTES',
+  all: 'TODOS_OS_STATUS',
+};
+const textoDaListaVazia = computed(() => {
+  if (!usaCabecalhoNovo.value) return t('CHAT_LIST.LIST.404');
+  const chave =
+    VAZIA_POR_STATUS[activeStatus.value] || VAZIA_POR_ABA[abaDaLista.value];
+  return chave
+    ? t(`LISTA_DE_CONVERSAS.VAZIA.${chave}`)
+    : t('CHAT_LIST.LIST.404');
+});
 const tituloDoFiltroDoLink = computed(() => {
   const { daIa, esperandoMin: n } = filtroDoLink.value;
   if (daIa && n) {
@@ -1085,7 +1134,18 @@ watch(appliedFilters, () => resetBulkActions());
     ]"
   >
     <slot />
+    <ListaCabecalho
+      v-if="usaCabecalhoNovo"
+      ref="cabecalhoNovo"
+      :page-title="pageTitle"
+      :active-status="activeStatus"
+      :active-sort-by="activeSortBy"
+      :is-on-expanded-layout="isOnExpandedLayout"
+      @basic-filter-change="onBasicFilterChange"
+      @filters-modal="onToggleAdvanceFiltersModal"
+    />
     <ChatListHeader
+      v-else
       :page-title="pageTitle"
       :contact-filter="appliedContactFilter"
       :has-applied-filters="hasAppliedFilters"
@@ -1131,21 +1191,40 @@ watch(appliedFilters, () => resetBulkActions());
         isCrmEnabled && !hasAppliedFiltersOrActiveFolders && !temFiltroDoLink
       "
       v-model="crmPipelineId"
-    />
+      :lista-nova="listaNova"
+    >
+      <template v-if="mostraChipDoStatus" #antes>
+        <ChipDoStatus :status="activeStatus" @limpar="voltarParaAbertas" />
+      </template>
+    </FunnelFilter>
+    <div v-else-if="mostraChipDoStatus" class="flex px-4 pb-2">
+      <ChipDoStatus :status="activeStatus" @limpar="voltarParaAbertas" />
+    </div>
 
-    <ChatTypeTabs
-      v-if="!hasAppliedFiltersOrActiveFolders && !listaJuntaDoLink"
-      :items="assigneeTabItems"
-      :active-tab="activeAssigneeTab"
-      is-compact
-      @chat-tab-change="updateAssigneeTab"
-    />
+    <template v-if="!hasAppliedFiltersOrActiveFolders && !listaJuntaDoLink">
+      <ListaAbas
+        v-if="listaNova"
+        :painel-id="PAINEL_DA_LISTA"
+        :items="assigneeTabItems"
+        :active-tab="activeAssigneeTab"
+        @chat-tab-change="updateAssigneeTab"
+      />
+      <ChatTypeTabs
+        v-else
+        :items="assigneeTabItems"
+        :active-tab="activeAssigneeTab"
+        is-compact
+        @chat-tab-change="updateAssigneeTab"
+      />
+    </template>
 
     <p
       v-if="!chatListLoading && !conversationList.length"
       class="flex overflow-auto justify-center items-center p-4"
+      :class="usaCabecalhoNovo && 'text-center text-sm text-n-slate-11'"
+      :data-lista-vazia="usaCabecalhoNovo || undefined"
     >
-      {{ $t('CHAT_LIST.LIST.404') }}
+      {{ textoDaListaVazia }}
     </p>
     <ConversationBulkActions
       :conversations="selectedConversations"
@@ -1158,7 +1237,10 @@ watch(appliedFilters, () => resetBulkActions());
       @select-all-conversations="toggleSelectAll"
     />
     <ConversationList
+      :id="listaNova ? PAINEL_DA_LISTA : undefined"
       ref="conversationListComponentRef"
+      :role="listaComAbas ? 'tabpanel' : undefined"
+      :aria-labelledby="listaComAbas ? `lista-aba-${abaDaLista}` : undefined"
       :conversation-list="conversationList"
       :is-loading="chatListLoading"
       :show-end-of-list-message="showEndOfListMessage"
