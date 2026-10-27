@@ -14,6 +14,10 @@ RSpec.describe Webhooks::InstagramCommentJob do
 
   before { allow(Rails.configuration.dispatcher).to receive(:dispatch) }
 
+  it 'não grava os argumentos (texto e autor do comentário) no log' do
+    expect(described_class.log_arguments?).to be(false)
+  end
+
   it 'publica o comentário no evento comum, com a caixa e o anúncio' do
     described_class.perform_now('17841400000000001', 'comments', value, time)
 

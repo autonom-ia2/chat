@@ -10,6 +10,8 @@
 # do formato (sem `from` ou `id`, tempo que não é número) é descartado em silêncio: é dado da Meta, não nosso.
 class Webhooks::InstagramCommentJob < ApplicationJob
   queue_as :default
+  # Os argumentos trazem o texto do comentário, o id e o username de quem comentou: fora do log (como o relay, #2200).
+  self.log_arguments = false
 
   def perform(instagram_id, field, value, time)
     return unless field == 'comments' && well_formed?(value, time)
