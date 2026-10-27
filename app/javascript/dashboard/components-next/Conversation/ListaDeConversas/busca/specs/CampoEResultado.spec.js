@@ -105,6 +105,8 @@ describe('ResultadoDaBusca', () => {
 
   it('mostra as três seções, nesta ordem', () => {
     const wrapper = montarResultado({
+      buscado: 'joa',
+      texto: 'joa',
       resultado: resultado({
         conversas: [{ id: 5 }],
         mensagens: [
@@ -123,7 +125,7 @@ describe('ResultadoDaBusca', () => {
     expect(
       wrapper.findAll('[data-secao]').map(s => s.attributes('data-secao'))
     ).toEqual(['conversas', 'mensagens', 'pessoas']);
-    expect(wrapper.find('mark').text()).toBe('Jo');
+    expect(wrapper.find('mark').text()).toBe('Joa');
   });
 
   it('pessoa sem conversa abre "Começar conversa" na área da direita', async () => {
@@ -228,5 +230,75 @@ describe('ResultadoDaBusca', () => {
     const wrapper = montarResultado({ erro: true, resultado: resultado() });
     await wrapper.find('[data-erro-da-busca] button').trigger('click');
     expect(wrapper.emitted('tentar')).toHaveLength(1);
+  });
+
+  describe('o que o leitor de tela ouve (#2211)', () => {
+    it('a lista não é região viva; uma região à parte diz só quantos achou', () => {
+      const wrapper = montarResultado({
+        resultado: resultado({
+          conversas: [{ id: 5 }],
+          pessoas: [{ id: 3, name: 'Joaquim' }],
+        }),
+      });
+      expect(wrapper.find('[aria-live]').exists()).toBe(false);
+      const anuncio = wrapper.find('[role="status"]');
+      expect(anuncio.text()).toBe('2 resultados');
+      expect(wrapper.findAll('[role="status"]')).toHaveLength(1);
+    });
+
+    it('um só: no singular', () => {
+      const wrapper = montarResultado({
+        resultado: resultado({ conversas: [{ id: 5 }] }),
+      });
+      expect(wrapper.find('[role="status"]').text()).toBe('1 resultado');
+    });
+
+    it('buscando e nada achado', () => {
+      const buscando = montarResultado({
+        buscado: 'jo',
+        texto: 'joa',
+        resultado: resultado(),
+      });
+      expect(buscando.find('[role="status"]').text()).toBe('Buscando…');
+      const nada = montarResultado({ resultado: resultado() });
+      expect(nada.find('[role="status"]').text()).toBe(
+        nada.find('[data-nada-achado]').text()
+      );
+    });
+  });
+
+  describe('e-mail novo (#2211)', () => {
+    it('sem o campo do servidor, nada aparece', () => {
+      const wrapper = montarResultado({
+        buscado: 'nova@exemplo.test',
+        texto: 'nova@exemplo.test',
+        resultado: resultado(),
+      });
+      expect(wrapper.find('[data-comecar-com-email]').exists()).toBe(false);
+    });
+
+    it('com o campo: "Escrever para" abre a conversa vazia com o e-mail', async () => {
+      const wrapper = montarResultado({
+        buscado: 'nova@exemplo.test',
+        texto: 'nova@exemplo.test',
+        resultado: resultado({ emailNovo: 'nova@exemplo.test' }),
+      });
+      const botao = wrapper.find('[data-comecar-com-email]');
+      expect(botao.text()).toContain('Escrever para nova@exemplo.test');
+      await botao.trigger('click');
+      expect(push).toHaveBeenCalledWith({
+        name: 'home',
+        params: { accountId: 1 },
+        query: { email: 'nova@exemplo.test' },
+      });
+    });
+
+    it('quem só lê conversas não vê', () => {
+      podeComecar.ref.value = false;
+      const wrapper = montarResultado({
+        resultado: resultado({ emailNovo: 'nova@exemplo.test' }),
+      });
+      expect(wrapper.find('[data-comecar-com-email]').exists()).toBe(false);
+    });
   });
 });

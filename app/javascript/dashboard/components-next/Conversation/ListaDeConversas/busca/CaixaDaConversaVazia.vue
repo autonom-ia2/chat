@@ -48,6 +48,8 @@ const props = defineProps({
   enviando: { type: Boolean, default: false },
   // { nome, email } do contato, para o "Para" do e-mail.
   para: { type: Object, default: null },
+  // O Assunto só na conversa nova; continuando uma conversa de e-mail, vale o assunto dela.
+  comAssunto: { type: Boolean, default: true },
 });
 const emit = defineEmits([
   'enviar',
@@ -180,7 +182,7 @@ defineExpose({ montar: () => pronta.value?.montar() ?? null });
         v-model:cc="cc"
         v-model:bcc="bcc"
         v-model:anexos="anexos"
-        com-assunto
+        :com-assunto="comAssunto"
         :canal="canal"
         :assinatura="assinatura"
         :com-assinatura="comAssinatura"

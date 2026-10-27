@@ -1,26 +1,51 @@
 import { ref } from 'vue';
 import { useEventListener } from '@vueuse/core';
-import { useRouter } from 'vue-router';
-import { useMapGetter } from 'dashboard/composables/store';
+import { useRoute } from 'vue-router';
 import { useListaNova } from '../useListaNova';
 
-// #2211 — ⌘/Ctrl+K foca o campo "Buscar conversa" da lista. De outra tela, abre Conversas com o
-// campo focado. Com a chave lista_quem_espera; sem ela, ⌘K segue abrindo a barra de comandos.
-// O pedido de foco fica guardado até o campo existir na tela.
+// #2211 — ⌘/Ctrl+K foca o campo "Buscar" da lista, só na tela de Conversas (a lista e a conversa
+// aberta) e com a chave lista_quem_espera (decisão do Rodrigo). Fora de Conversas, ou sem a chave,
+// o ⌘K segue abrindo a barra de comandos, como antes; o atalho não navega para lugar nenhum.
 export const pedidoDeFoco = ref(0);
 export const pedirFoco = () => {
   pedidoDeFoco.value += 1;
 };
-// O último pedido que um campo já atendeu: o campo que monta depois do pedido (vindo de outra
-// tela) foca uma vez, e o que monta sem pedido não rouba o foco.
+// O último pedido que um campo já atendeu: o campo que monta depois do pedido foca uma vez, e o
+// que monta sem pedido não rouba o foco.
 export const focoAtendido = ref(0);
+
+// As rotas que mostram a lista de conversas (ConversationView, em conversation.routes.js).
+export const ROTAS_DE_CONVERSAS = [
+  'home',
+  'inbox_conversation',
+  'inbox_dashboard',
+  'conversation_through_inbox',
+  'label_conversations',
+  'conversations_through_label',
+  'team_conversations',
+  'conversations_through_team',
+  'folder_conversations',
+  'conversations_through_folders',
+  'conversation_mentions',
+  'conversation_through_mentions',
+  'conversation_unattended',
+  'conversation_through_unattended',
+  'conversation_participating',
+  'conversation_through_participating',
+];
 
 const CAMPO = '[data-campo-da-busca]';
 
+// O campo está na tela e visível (com filtro avançado, pasta salva ou a conversa aberta no celular,
+// ele não aparece).
+const campoVisivel = () => {
+  const campo = document.querySelector(CAMPO);
+  return Boolean(campo && campo.getClientRects().length);
+};
+
 export function useAtalhoDaBusca() {
   const listaNova = useListaNova();
-  const router = useRouter();
-  const contaId = useMapGetter('getCurrentAccountId');
+  const route = useRoute();
 
   // Na fase de captura, antes da barra de comandos (que escuta no documento) e do editor.
   useEventListener(
@@ -30,12 +55,16 @@ export function useAtalhoDaBusca() {
       if (!listaNova.value) return;
       if (!(evento.metaKey || evento.ctrlKey) || evento.code !== 'KeyK') return;
       if (evento.altKey || evento.shiftKey) return;
+      if (!ROTAS_DE_CONVERSAS.includes(route?.name)) return;
+      if (!campoVisivel()) {
+        // Campo escondido (filtro avançado, pasta salva, conversa aberta no celular): a barra de
+        // comandos abre, e nenhum pedido fica pendente para roubar o foco depois.
+        focoAtendido.value = pedidoDeFoco.value;
+        return;
+      }
       evento.preventDefault();
       evento.stopImmediatePropagation();
       pedirFoco();
-      if (!document.querySelector(CAMPO)) {
-        router.push({ name: 'home', params: { accountId: contaId.value } });
-      }
     },
     { capture: true }
   );

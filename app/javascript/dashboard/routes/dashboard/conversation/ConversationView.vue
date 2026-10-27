@@ -65,7 +65,7 @@ export default {
     // #2202: com a lista nova, o layout é sempre o condensado (a preferência salva fica como está).
     const isOnExpandedLayout = useLayoutExpandidoDaLista();
     // #2211: a conversa vazia pelo resultado da busca da lista (?comecar=<contato> ou
-    // ?telefone=<número novo>). Quem só lê conversas (#1800) não começa conversa.
+    // ?telefone=<número novo> ou ?email=<e-mail novo>). Quem só lê conversas (#1800) não começa conversa.
     const listaNova = useListaNova();
     const podeComecar = usePodeComecarConversa();
     const { width: larguraDaJanela } = useWindowSize();
@@ -209,7 +209,7 @@ export default {
       }
     },
     voltarDaConversaNova() {
-      const { comecar, telefone, ...resto } = this.$route.query;
+      const { comecar, telefone, email, ...resto } = this.$route.query;
       this.$router.replace({ query: resto });
     },
     onSearch() {
@@ -238,6 +238,7 @@ export default {
       v-if="conversaVazia"
       :contato-id="conversaVazia.contatoId"
       :telefone="conversaVazia.telefone"
+      :email="conversaVazia.email"
       @voltar="voltarDaConversaNova"
     />
     <ConversationBox

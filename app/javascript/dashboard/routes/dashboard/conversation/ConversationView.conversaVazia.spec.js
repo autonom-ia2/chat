@@ -27,15 +27,28 @@ describe('ConversationView: conversa vazia (#2211)', () => {
         $route: { query: { telefone: '+5511955554444' } },
       }).conversaVazia
     ).toBeNull();
+    expect(
+      tela({
+        listaNova: false,
+        $route: { query: { email: 'nova@exemplo.test' } },
+      }).conversaVazia
+    ).toBeNull();
     const noCelular = tela({ listaNova: false, noCelular: true });
     expect(showConversationList.call(noCelular)).toBe(true);
   });
 
   it('chave ligada: abre a conversa vazia do contato ou do telefone novo', () => {
-    expect(tela().conversaVazia).toEqual({ contatoId: '3', telefone: '' });
+    expect(tela().conversaVazia).toEqual({
+      contatoId: '3',
+      telefone: '',
+      email: '',
+    });
     expect(
       tela({ $route: { query: { telefone: '+5511955554444' } } }).conversaVazia
-    ).toEqual({ contatoId: '', telefone: '+5511955554444' });
+    ).toEqual({ contatoId: '', telefone: '+5511955554444', email: '' });
+    expect(
+      tela({ $route: { query: { email: 'nova@exemplo.test' } } }).conversaVazia
+    ).toEqual({ contatoId: '', telefone: '', email: 'nova@exemplo.test' });
   });
 
   it('quem só lê conversas não começa conversa', () => {

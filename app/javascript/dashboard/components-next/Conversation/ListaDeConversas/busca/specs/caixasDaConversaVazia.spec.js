@@ -1,9 +1,11 @@
 import {
   caixaJaEscolhida,
+  caixasParaEmail,
   caixasParaTelefone,
   linhaDaCaixa,
   pedidoDeConversaVazia,
   semInstagram,
+  telefonePossivel,
   temInstagram,
 } from '../caixasDaConversaVazia';
 
@@ -17,9 +19,10 @@ describe('caixasDaConversaVazia (#2211)', () => {
     ).toEqual([1]);
   });
 
-  it('telefone novo: só as caixas que mandam para número, WhatsApp primeiro', () => {
+  it('telefone novo: só as caixas que mandam para número (API só a do WAHA), WhatsApp primeiro', () => {
     const caixas = caixasParaTelefone([
-      { id: 1, name: 'B', channel_type: 'Channel::Api' },
+      { id: 1, name: 'B', channel_type: 'Channel::Api', waha_provider: true },
+      { id: 6, name: 'Webhook', channel_type: 'Channel::Api' },
       { id: 2, name: 'E-mail', channel_type: 'Channel::Email' },
       { id: 3, name: 'A', channel_type: 'Channel::Whatsapp' },
       { id: 4, name: 'Insta', channel_type: 'Channel::Instagram' },
@@ -44,13 +47,49 @@ describe('caixasDaConversaVazia (#2211)', () => {
     expect(pedidoDeConversaVazia({ comecar: '3' })).toEqual({
       contatoId: '3',
       telefone: '',
+      email: '',
     });
     expect(pedidoDeConversaVazia({ telefone: '+5511955554444' })).toEqual({
       contatoId: '',
       telefone: '+5511955554444',
+      email: '',
     });
+    expect(pedidoDeConversaVazia({ email: 'nova@exemplo.test' })).toEqual({
+      contatoId: '',
+      telefone: '',
+      email: 'nova@exemplo.test',
+    });
+    // ?comecar= repetido: vale o primeiro.
+    expect(pedidoDeConversaVazia({ comecar: ['3', '4'] }).contatoId).toBe('3');
     expect(pedidoDeConversaVazia({ messageId: '9' })).toBeNull();
     expect(pedidoDeConversaVazia()).toBeNull();
+  });
+});
+
+describe('e-mail e telefone novos (#2211)', () => {
+  it('e-mail novo: só as caixas de e-mail', () => {
+    expect(
+      caixasParaEmail([
+        { id: 1, name: 'W', channel_type: 'Channel::Whatsapp' },
+        { id: 2, name: 'E', channel_type: 'Channel::Email' },
+        {
+          id: 3,
+          name: 'API',
+          channel_type: 'Channel::Api',
+          waha_provider: true,
+        },
+      ]).map(caixa => caixa.id)
+    ).toEqual([2]);
+  });
+
+  it.each([
+    ['+5511955554444', true],
+    ['+551140000001', true],
+    ['+55119', false],
+    ['', false],
+    ['abc', false],
+  ])('telefonePossivel(%s) = %s', (telefone, possivel) => {
+    expect(telefonePossivel(telefone)).toBe(possivel);
   });
 });
 

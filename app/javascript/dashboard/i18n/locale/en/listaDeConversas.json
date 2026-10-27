@@ -128,7 +128,10 @@
       "COMECAR_COM_TELEFONE_AJUDA": "Nobody has this number. The contact is created when you send.",
       "SEM_DADOS": "No phone or e-mail",
       "ESCREVER": "Write",
-      "PARCIAL": "Part of the results took too long and was left out. Try a longer word."
+      "PARCIAL": "Part of the results took too long and was left out. Try a longer word.",
+      "ESCREVER_PARA_EMAIL": "Write to {email}",
+      "ESCREVER_PARA_EMAIL_AJUDA": "Nobody has this e-mail. The contact is created when you send.",
+      "RESULTADOS": "{count} result | {count} results"
     },
     "CONVERSA_VAZIA": {
       "CARREGANDO": "Loading…",
@@ -148,7 +151,10 @@
       "ENVIAR": "Send",
       "ENVIANDO": "Sending…",
       "ERRO_CONTATO": "Couldn't create the contact.",
-      "ENVIADA_OCULTA": "Message sent. It went into a conversation that is with someone else."
+      "ENVIADA_OCULTA": "Message sent. It went into a conversation that is with someone else.",
+      "CAIXA_NAO_VOLTOU": "The contact was created, but the inbox didn't come back for it. Try sending again.",
+      "TIPO_MUDOU": "This inbox changed what can be sent first. Check the message and send again: what you wrote was kept.",
+      "TELEFONE_INVALIDO": "{telefone} isn't a valid phone number. Go back to the list and check the number."
     }
   }
 }

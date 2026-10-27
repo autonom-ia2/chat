@@ -15,6 +15,7 @@ const VAZIO = {
   mensagens: [],
   pessoas: [],
   telefoneNovo: null,
+  emailNovo: null,
   parcial: false,
 };
 
@@ -51,6 +52,8 @@ export function useBuscaDaLista() {
         mensagens: payload.messages || [],
         pessoas: payload.contacts || [],
         telefoneNovo: payload.telefone_novo || null,
+        // E-mail que ainda não é de ninguém: quem decide que é e-mail é o servidor; sem o campo, nada.
+        emailNovo: payload.email_novo || null,
         // Seção que passou do tempo no servidor volta vazia: a tela avisa.
         parcial: Boolean(payload.parcial?.length),
       };

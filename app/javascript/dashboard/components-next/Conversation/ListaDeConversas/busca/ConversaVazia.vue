@@ -31,6 +31,7 @@ import {
 import { useNovaConversaContato } from 'dashboard/components-next/NovaConversa/useNovaConversaContato';
 import { useContinuarConversa } from 'dashboard/components-next/NovaConversa/useContinuarConversa';
 import { useNovaConversa } from 'dashboard/components-next/NovaConversa/useNovaConversa';
+import { tipoDeMensagem } from 'dashboard/components-next/NovaConversa/novaConversa';
 import {
   PELES,
   fornecerPele,
@@ -49,8 +50,10 @@ import CaixaDaConversaVazia from './CaixaDaConversaVazia.vue';
 import PorOndeMandar from './PorOndeMandar.vue';
 import {
   caixaJaEscolhida,
+  caixasParaEmail,
   caixasParaTelefone,
   semInstagram,
+  telefonePossivel,
   temInstagram,
 } from './caixasDaConversaVazia';
 import { BUSCA_DESATUALIZADA } from './buscaDaLista';
@@ -58,6 +61,8 @@ import { BUSCA_DESATUALIZADA } from './buscaDaLista';
 const props = defineProps({
   contatoId: { type: [String, Number], default: '' },
   telefone: { type: String, default: '' },
+  // #2211: e-mail que ainda não é de ninguém (o servidor da busca disse que é e-mail).
+  email: { type: String, default: '' },
 });
 const emit = defineEmits(['voltar']);
 
@@ -71,20 +76,29 @@ const contaId = useMapGetter('getCurrentAccountId');
 
 const doContato = useNovaConversaContato();
 const peloTelefone = computed(() => Boolean(props.telefone));
+const peloEmail = computed(() => !peloTelefone.value && Boolean(props.email));
+// Telefone ou e-mail que ainda não é contato: o contato só nasce ao enviar.
+const destinoNovo = computed(() => peloTelefone.value || peloEmail.value);
+// O número do link não é telefone possível: a tela avisa já na abertura.
+const telefoneInvalido = computed(
+  () => peloTelefone.value && !telefonePossivel(props.telefone)
+);
 
-// Telefone novo: um contato provisório até o envio; depois, o criado.
-const PROVISORIO = 'telefone-novo';
-const contatoDoTelefone = ref(null);
+// Destino novo: um contato provisório até o envio; depois, o criado.
+const PROVISORIO = 'destino-novo';
+const contatoNovo = ref(null);
 const contato = computed(() =>
-  peloTelefone.value ? contatoDoTelefone.value : doContato.contato.value
+  destinoNovo.value ? contatoNovo.value : doContato.contato.value
 );
-const caixas = computed(() =>
-  peloTelefone.value
-    ? caixasParaTelefone(caixasDaConta.value)
-    : semInstagram(doContato.canais.value)
-);
+const caixas = computed(() => {
+  if (telefoneInvalido.value) return [];
+  if (peloTelefone.value) return caixasParaTelefone(caixasDaConta.value);
+  if (peloEmail.value) return caixasParaEmail(caixasDaConta.value);
+  return semInstagram(doContato.canais.value);
+});
 const caixaId = ref(null);
-// A caixa do envio do telefone novo, com o source_id do contato criado.
+// A caixa do envio do destino novo, como o servidor devolveu para o contato criado (com o
+// source_id e a decisão de modelo ou texto livre).
 const caixaDoEnvio = ref(null);
 const canal = computed(
   () =>
@@ -98,14 +112,16 @@ const nova = useNovaConversa({
   contato,
   canal,
   continuar,
-  donoDoRascunho: computed(() => props.telefone || contato.value?.id || null),
+  donoDoRascunho: computed(
+    () => props.telefone || props.email || contato.value?.id || null
+  ),
 });
 const { form } = nova;
 
 const erroAoCarregar = ref(false);
 const carregando = computed(
   () =>
-    !peloTelefone.value &&
+    !destinoNovo.value &&
     !erroAoCarregar.value &&
     (!contato.value || doContato.carregandoCanais.value)
 );
@@ -113,21 +129,24 @@ const gavetaAberta = ref(false);
 const criandoContato = ref(false);
 const caixaDeResposta = useTemplateRef('caixaDeResposta');
 
-const nome = computed(() =>
-  peloTelefone.value
-    ? telefoneLegivel(props.telefone)
-    : nomeOuTelefone(contato.value?.name, contato.value?.phoneNumber)
-);
+const nome = computed(() => {
+  if (peloTelefone.value) return telefoneLegivel(props.telefone);
+  if (peloEmail.value) return props.email;
+  return nomeOuTelefone(contato.value?.name, contato.value?.phoneNumber);
+});
 const comInstagram = computed(() => temInstagram(caixasDaConta.value));
 const semCaixa = computed(
-  () => !carregando.value && !erroAoCarregar.value && !caixas.value.length
+  () =>
+    !telefoneInvalido.value &&
+    !carregando.value &&
+    !erroAoCarregar.value &&
+    !caixas.value.length
 );
 // Sem caixa porque falta telefone e e-mail no contato: a tela diz isso e leva a completar o contato.
 const semComoFalar = computed(
   () =>
-    !peloTelefone.value && !contato.value?.phoneNumber && !contato.value?.email
+    !destinoNovo.value && !contato.value?.phoneNumber && !contato.value?.email
 );
-
 // O fundo e o topo da conversa do WhatsApp, quando a conta usa a cara do canal (#1702).
 const caraDoWhatsapp = computed(() =>
   Boolean(
@@ -165,11 +184,12 @@ const comecar = () => {
   caixaId.value = null;
   caixaDoEnvio.value = null;
   gavetaAberta.value = false;
-  if (peloTelefone.value) {
-    contatoDoTelefone.value = {
+  if (destinoNovo.value) {
+    contatoNovo.value = {
       id: PROVISORIO,
-      name: telefoneLegivel(props.telefone),
+      name: nome.value,
       phoneNumber: props.telefone,
+      email: peloEmail.value ? props.email : '',
     };
     return;
   }
@@ -180,7 +200,9 @@ onMounted(() => {
   // Os modelos aprovados há pouco aparecem (mesmo pedido da Nova conversa).
   store.dispatch('inboxes/get');
 });
-watch(() => [props.contatoId, props.telefone], comecar, { immediate: true });
+watch(() => [props.contatoId, props.telefone, props.email], comecar, {
+  immediate: true,
+});
 
 // As caixas chegaram: uma só já vem escolhida; mais de uma, a gaveta abre.
 watch(
@@ -196,51 +218,101 @@ watch(
 
 const escolherCaixa = id => {
   caixaId.value = id;
+  caixaDoEnvio.value = null;
   gavetaAberta.value = false;
 };
 
-// Telefone novo: cria o contato e pede ao servidor a caixa escolhida para ele (com o
-// source_id). O que foi escrito fica: o dono do rascunho é o número.
-const criarContatoDoTelefone = async () => {
-  criandoContato.value = true;
+const avisarErroDoServidor = (falha, nosso) => {
+  // Erro do servidor (telefone ou e-mail já usado, inválido) com texto: ele; senão, o nosso.
+  const doServidor = falha?.response ? parseAPIErrorResponse(falha) : '';
+  useAlert(typeof doServidor === 'string' && doServidor ? doServidor : nosso);
+};
+
+// Cria o contato do destino novo. Já criado numa tentativa anterior (a caixa não voltou, o tipo
+// mudou): usa esse, sem pedir de novo ao servidor (que diria "telefone já em uso").
+const garantirContato = async () => {
+  if (contatoNovo.value?.id !== PROVISORIO) return true;
   try {
-    const { data } = await ContactAPI.create({
-      name: telefoneLegivel(props.telefone),
-      phone_number: props.telefone,
-    });
-    const criado = camelcaseKeys(data.payload.contact, { deep: true });
-    const alcancaveis = mergeInboxDetails(
-      await fetchContactableInboxes(criado.id),
-      caixasDaConta.value
+    const { data } = await ContactAPI.create(
+      peloEmail.value
+        ? { name: props.email, email: props.email }
+        : {
+            name: telefoneLegivel(props.telefone),
+            phone_number: props.telefone,
+          }
     );
-    const daCaixa = alcancaveis.find(
-      caixa => String(caixa.id) === String(caixaId.value)
-    );
-    contatoDoTelefone.value = criado;
-    if (!daCaixa) throw new Error('caixa');
-    caixaDoEnvio.value = daCaixa;
-    await nextTick();
+    contatoNovo.value = camelcaseKeys(data.payload.contact, { deep: true });
     return true;
   } catch (falha) {
-    // Erro do servidor (telefone já usado, inválido) com texto: ele; senão, o nosso.
-    const doServidor = falha?.response ? parseAPIErrorResponse(falha) : '';
-    useAlert(
-      typeof doServidor === 'string' && doServidor
-        ? doServidor
-        : t('LISTA_DE_CONVERSAS.CONVERSA_VAZIA.ERRO_CONTATO')
+    avisarErroDoServidor(
+      falha,
+      t('LISTA_DE_CONVERSAS.CONVERSA_VAZIA.ERRO_CONTATO')
     );
     return false;
+  }
+};
+
+// A caixa escolhida, como o servidor a devolve para o contato criado. A decisão "modelo ou texto
+// livre" (o Híbrido, no WhatsApp oficial) é dele: se ela não for a que a tela mostrava, a tela passa
+// a mostrar a do servidor, avisa e não envia; o que foi escrito fica (o dono do rascunho é o
+// telefone ou o e-mail, e a caixa é a mesma).
+const garantirCaixa = async () => {
+  if (caixaDoEnvio.value) return true;
+  const antes = canal.value;
+  let daCaixa = null;
+  try {
+    const alcancaveis = mergeInboxDetails(
+      await fetchContactableInboxes(contatoNovo.value.id),
+      caixasDaConta.value
+    );
+    daCaixa = alcancaveis.find(
+      caixa => String(caixa.id) === String(caixaId.value)
+    );
+  } catch (falha) {
+    avisarErroDoServidor(
+      falha,
+      t('LISTA_DE_CONVERSAS.CONVERSA_VAZIA.CAIXA_NAO_VOLTOU')
+    );
+    return false;
+  }
+  if (!daCaixa) {
+    useAlert(t('LISTA_DE_CONVERSAS.CONVERSA_VAZIA.CAIXA_NAO_VOLTOU'));
+    return false;
+  }
+  caixaDoEnvio.value = daCaixa;
+  if (tipoDeMensagem(antes) !== tipoDeMensagem(daCaixa)) {
+    useAlert(t('LISTA_DE_CONVERSAS.CONVERSA_VAZIA.TIPO_MUDOU'));
+    return false;
+  }
+  await nextTick();
+  return true;
+};
+
+// Antes de enviar para um destino novo: o contato e a caixa dele. Um envio por vez (clique duplo).
+const prepararEnvio = async () => {
+  if (!destinoNovo.value) return true;
+  criandoContato.value = true;
+  try {
+    return (await garantirContato()) && (await garantirCaixa());
   } finally {
     criandoContato.value = false;
   }
 };
 
+const ocupado = () => nova.enviando.value || criandoContato.value;
+
 const mandar = async () => {
-  if (nova.falta.value || nova.enviando.value || criandoContato.value) return;
-  const precisaCriar =
-    peloTelefone.value && contatoDoTelefone.value?.id === PROVISORIO;
-  if (precisaCriar && !(await criarContatoDoTelefone())) return;
+  if (nova.falta.value || ocupado()) return;
+  if (!(await prepararEnvio())) return;
   nova.enviar(() => caixaDeResposta.value?.montar() ?? null);
+};
+
+// O modelo do Twilio (ContentTemplateSelector) entrega a mensagem pronta: o mesmo caminho do
+// mandar, com o contato criado antes.
+const mandarPronta = async pronta => {
+  if (ocupado()) return;
+  if (!(await prepararEnvio())) return;
+  nova.enviarPronta(pronta);
 };
 
 // Enviou: a tela vira a conversa. A oculta (#1505) a pessoa não pode abrir: avisa e volta.
@@ -300,6 +372,18 @@ watch(nova.erro, erro => {
           </button>
         </p>
         <p
+          v-else-if="telefoneInvalido"
+          role="alert"
+          class="m-0 text-sm text-n-slate-11"
+          data-telefone-invalido
+        >
+          {{
+            t('LISTA_DE_CONVERSAS.CONVERSA_VAZIA.TELEFONE_INVALIDO', {
+              telefone,
+            })
+          }}
+        </p>
+        <p
           v-else-if="semCaixa"
           class="flex flex-col items-center gap-1 m-0 text-sm text-n-slate-11"
           data-sem-caixa
@@ -355,13 +439,14 @@ watch(nova.erro, erro => {
           :tipo="nova.tipo.value"
           :com-modelo="nova.comModelo.value"
           :caixa-do-whatsapp="nova.caixaDoWhatsapp.value"
+          :com-assunto="!nova.destino.value"
           :so-texto="nova.soTexto.value"
           :assinatura="nova.assinatura.value || ''"
           :com-assinatura="nova.comAssinatura.value"
           :pode-enviar="!nova.falta.value"
           :enviando="nova.enviando.value || criandoContato"
           @enviar="mandar"
-          @enviar-pronta="nova.enviarPronta"
+          @enviar-pronta="mandarPronta"
           @update:campos-prontos="form.camposProntos = $event"
           @update:texto-do-modelo="form.textoDoModelo = $event"
         />

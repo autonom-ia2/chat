@@ -62,7 +62,8 @@ const contaPorId = useMapGetter('accounts/getAccount');
 const caixas = useMapGetter('inboxes/getInboxes');
 
 const fuso = computed(() => fusoDaConta(contaPorId.value?.(contaId.value)));
-// #2211: no resultado da busca, a conversa resolvida diz "Resolvida" na linha 3.
+// #2211: no resultado da busca, a conversa resolvida diz "Resolvida" na linha 3, e o card não tem a
+// caixa de seleção (a seleção em lote é da lista, que fica escondida durante a busca).
 const naBusca = inject('cardNaBusca', false);
 const agentePorId = id => store.getters['agents/getAgentById'](id);
 const nomeDoAgente = id => {
@@ -316,7 +317,7 @@ const selecionada = computed({
       >
         <template #overlay>
           <label
-            v-if="selectable && (hovered || selected)"
+            v-if="selectable && !naBusca && (hovered || selected)"
             class="absolute inset-0 z-10 flex items-center justify-center rounded-full cursor-pointer backdrop-blur-[2px]"
             :class="avatar.marcador"
             @click.stop

@@ -4,6 +4,9 @@
 import { nomeEhTelefone } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 export const MINIMO_DE_LETRAS = 2;
+// Nas mensagens, o servidor só procura palavras de 3 letras ou mais (SearchService::BuscaDaLista):
+// o destaque segue a mesma regra, para não marcar o que não foi buscado.
+export const MINIMO_DE_LETRAS_NA_MENSAGEM = 3;
 export const MINIMO_DE_DIGITOS = 4;
 export const ESPERA_DA_DIGITACAO_MS = 300;
 // A conversa vazia enviou (contato e conversa novos): a busca aberta na lista refaz o pedido.
@@ -80,7 +83,10 @@ const comecoDoTrecho = (original, primeiro) => {
 // O trecho da mensagem a partir do primeiro achado, em partes { texto, destaque }.
 export const trechoComDestaque = (texto, busca) => {
   const original = [...(texto || '')];
-  const palavras = (busca || '').trim().split(' ').filter(Boolean);
+  const palavras = (busca || '')
+    .trim()
+    .split(' ')
+    .filter(palavra => [...palavra].length >= MINIMO_DE_LETRAS_NA_MENSAGEM);
   if (!original.length) return [];
   const letras = original.map(letraSemAcento);
   const destacado = marcas(letras, palavras);

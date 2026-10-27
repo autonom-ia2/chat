@@ -30,12 +30,12 @@ const router = useRouter();
 const contaId = useMapGetter('getCurrentAccountId');
 const podeComecar = usePodeComecarConversa();
 
-const { conversas, mensagens, pessoas, telefoneNovo } = Object.fromEntries(
-  ['conversas', 'mensagens', 'pessoas', 'telefoneNovo'].map(chave => [
-    chave,
-    computed(() => props.resultado[chave]),
-  ])
-);
+const { conversas, mensagens, pessoas, telefoneNovo, emailNovo } =
+  Object.fromEntries(
+    ['conversas', 'mensagens', 'pessoas', 'telefoneNovo', 'emailNovo'].map(
+      chave => [chave, computed(() => props.resultado[chave])]
+    )
+  );
 
 const vazio = computed(
   () =>
@@ -43,6 +43,7 @@ const vazio = computed(
     !mensagens.value.length &&
     !pessoas.value.length &&
     !telefoneNovo.value &&
+    !emailNovo.value &&
     !props.resultado.parcial
 );
 const respondeuAoTexto = computed(
@@ -57,15 +58,38 @@ const comecarCom = contatoId => abrirConversaVazia({ comecar: contatoId });
 // Telefone novo: o contato só nasce ao enviar, na conversa vazia.
 const comecarComTelefone = () =>
   abrirConversaVazia({ telefone: telefoneNovo.value });
+// E-mail novo (#2211): o servidor diz que é e-mail; o contato só nasce ao enviar.
+const comecarComEmail = () => abrirConversaVazia({ email: emailNovo.value });
+
+// O que o leitor de tela ouve, numa região à parte: buscando, quantos achou ou nada.
+const total = computed(
+  () =>
+    conversas.value.length +
+    mensagens.value.length +
+    pessoas.value.length +
+    (telefoneNovo.value ? 1 : 0) +
+    (emailNovo.value ? 1 : 0)
+);
+const anuncio = computed(() => {
+  if (props.erro) return t('LISTA_DE_CONVERSAS.BUSCA.ERRO');
+  if (props.carregando || !respondeuAoTexto.value)
+    return t('LISTA_DE_CONVERSAS.BUSCA.BUSCANDO');
+  if (vazio.value)
+    return t('LISTA_DE_CONVERSAS.BUSCA.NADA', { texto: props.buscado });
+  return t(
+    'LISTA_DE_CONVERSAS.BUSCA.RESULTADOS',
+    { count: total.value },
+    total.value
+  );
+});
 </script>
 
 <template>
   <div
     class="flex-1 min-h-0 pb-20 overflow-y-auto md:pb-0"
     data-resultado-da-busca
-    aria-live="polite"
-    :aria-busy="carregando"
   >
+    <p role="status" class="sr-only" data-anuncio-da-busca>{{ anuncio }}</p>
     <p
       v-if="erro"
       class="px-4 py-6 m-0 text-sm text-center text-n-slate-11"
@@ -129,6 +153,32 @@ const comecarComTelefone = () =>
           </I18nT>
           <span class="text-xs text-n-slate-11">
             {{ t('LISTA_DE_CONVERSAS.BUSCA.COMECAR_COM_TELEFONE_AJUDA') }}
+          </span>
+        </span>
+      </button>
+      <button
+        v-if="emailNovo && podeComecar"
+        type="button"
+        data-comecar-com-email
+        class="flex items-center w-full gap-3 px-4 py-3 bg-transparent border-0 border-b text-start border-n-weak hover:bg-n-alpha-1"
+        @click="comecarComEmail"
+      >
+        <span
+          class="flex items-center justify-center flex-shrink-0 rounded-full size-9 bg-n-brand/10 text-n-brand"
+          aria-hidden="true"
+        >
+          <span class="i-lucide-mail-plus size-5" />
+        </span>
+        <span class="flex flex-col min-w-0">
+          <span class="text-sm font-medium break-all text-n-slate-12">
+            {{
+              t('LISTA_DE_CONVERSAS.BUSCA.ESCREVER_PARA_EMAIL', {
+                email: emailNovo,
+              })
+            }}
+          </span>
+          <span class="text-xs text-n-slate-11">
+            {{ t('LISTA_DE_CONVERSAS.BUSCA.ESCREVER_PARA_EMAIL_AJUDA') }}
           </span>
         </span>
       </button>

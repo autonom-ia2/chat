@@ -128,7 +128,10 @@
       "COMECAR_COM_TELEFONE_AJUDA": "Ninguém tem este número. O contato é criado quando você enviar.",
       "SEM_DADOS": "Sem telefone nem e-mail",
       "ESCREVER": "Escrever",
-      "PARCIAL": "Parte do resultado demorou demais e ficou de fora. Tente uma palavra mais longa."
+      "PARCIAL": "Parte do resultado demorou demais e ficou de fora. Tente uma palavra mais longa.",
+      "ESCREVER_PARA_EMAIL": "Escrever para {email}",
+      "ESCREVER_PARA_EMAIL_AJUDA": "Ninguém tem este e-mail. O contato é criado quando você enviar.",
+      "RESULTADOS": "{count} resultado | {count} resultados"
     },
     "CONVERSA_VAZIA": {
       "CARREGANDO": "Carregando…",
@@ -148,7 +151,10 @@
       "ENVIAR": "Enviar",
       "ENVIANDO": "Enviando…",
       "ERRO_CONTATO": "Não deu para criar o contato.",
-      "ENVIADA_OCULTA": "Mensagem enviada. Ela entrou numa conversa que está com outra pessoa."
+      "ENVIADA_OCULTA": "Mensagem enviada. Ela entrou numa conversa que está com outra pessoa.",
+      "CAIXA_NAO_VOLTOU": "O contato foi criado, mas a caixa não voltou para ele. Tente enviar de novo.",
+      "TIPO_MUDOU": "Esta caixa mudou o que dá para mandar primeiro. Confira a mensagem e envie de novo: o que você escreveu ficou.",
+      "TELEFONE_INVALIDO": "{telefone} não é um telefone válido. Volte para a lista e confira o número."
     }
   }
 }

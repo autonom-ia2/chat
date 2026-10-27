@@ -50,6 +50,11 @@ describe('buscaDaLista (#2211)', () => {
       );
     });
 
+    it('só destaca palavra de 3 letras ou mais (a regra do servidor)', () => {
+      const partes = trechoComDestaque('Oi, é a Ana do seguro', 'a do ana');
+      expect(destacados(partes)).toEqual(['Ana']);
+    });
+
     it('destaca cada palavra, em qualquer ordem', () => {
       const partes = trechoComDestaque(
         'Preciso da apólice do carro',
