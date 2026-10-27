@@ -1,15 +1,19 @@
 # Comentários do post da Página por trás do anúncio, no Facebook (#2197): ler, responder como a Página, ocultar e
-# apagar. Chama a Meta ao vivo; nada aqui é gravado (comentário é dado de terceiro).
+# apagar. Chama a Meta ao vivo; o comentário não é gravado (dado de terceiro), só a ação em
+# crm_meta_ads_comment_actions (#2196), sem o texto.
 #
-# - Só o post do anúncio da conta de anúncios da conexão (Crm::MetaAds::AdManagement#ad): anúncio de outra conta é
-#   `ad_not_found`.
+# - Pela tela: só o post do anúncio da conta de anúncios da conexão (Crm::MetaAds::AdManagement#ad); anúncio de outra
+#   conta é `ad_not_found`. Pela IA (#2212): `*_on_post!`, só em post de Página da conta (Crm::MetaAdsPage, #2195).
 # - Tudo com o token da Página, pedido com o token da pessoa. Ler exige `pages_read_user_content`; responder, ocultar e
 #   apagar, `pages_manage_engagement`. Sem a primeira (ou no modo `partner`, em que o token é o da plataforma), a aba
-#   pede para entrar de novo com o Facebook (`needs_login`); sem a segunda, lê e não age.
-# - Só age em comentário do post do anúncio. O id de comentário da Graph é `<id do post>_<id do comentário>`, em que
-#   o id do post é a parte depois do `_` do id do post da Página (`<página>_<post>`); vale também para as respostas.
-#   Qualquer outro formato é `comment_not_found`, sem chamar a Meta.
-# - Resposta no privado (Private Reply) fica fora: exige pages_messaging (decisão de 25/10 na #2197).
+#   pede para entrar de novo com o Facebook (`needs_login`); sem a segunda, lê e não age. Falha passageira da Meta ao
+#   conferir permissão ou pedir o token da Página é `meta_unavailable`, não `needs_login`.
+# - Só age em comentário do post. O id de comentário da Graph é `<id do post>_<id do comentário>`, em que o id do post
+#   é a parte depois do `_` do id do post da Página (`<página>_<post>`); respostas idem (a confirmar na chamada real,
+#   até 07/11). Qualquer outro formato é `comment_not_found`, sem chamar a Meta.
+# - Ao ler, a Página entra em Crm::MetaAdsPage e, na primeira vez, o app assina o campo `feed` dela
+#   (Crm::MetaAds::PageSubscription, #2200) para o webhook de comentário novo (Crm::MetaAds::FacebookFeed).
+# - Resposta no privado (Private Reply) fica fora: exige pages_messaging (decisão de 25/10 na #2197; é do #2212).
 #
 # Erros: `ad_not_found`, `comment_not_found`, `needs_login`, `invalid_message`, `meta_unavailable` (rede, 5xx, limite)
 # e `meta_refused` (qualquer outra recusa da Meta).
@@ -18,6 +22,8 @@ class Crm::MetaAds::FacebookComments
 
   READ = 'pages_read_user_content'.freeze
   MANAGE = 'pages_manage_engagement'.freeze
+  NETWORK = 'facebook'.freeze
+  FEED = %w[feed].freeze
   # Limite de texto de comentário no Facebook.
   MESSAGE_MAX = 8000
 
@@ -43,32 +49,56 @@ class Crm::MetaAds::FacebookComments
   end
 
   def more(ad_id, cursor)
-    raise Error, 'needs_login' unless granted?(READ)
+    return empty('needs_login') unless granted?(READ)
 
     post_id = post_id!(ad_id)
-    data = graph!(page_client!(post_id).more_post_comments(post_id, cursor.to_s))
-    { comments: rows(data['data'], page_id(post_id)), next_cursor: next_cursor(data) }
+    client = page_client(post_id)
+    return empty('needs_login') if client.nil?
+
+    data = graph!(client.more_post_comments(post_id, cursor.to_s))
+    { status: 'ready', comments: rows(data['data'], page_id(post_id)), next_cursor: next_cursor(data) }
   end
 
-  def reply!(ad_id, comment_id, message)
-    text = message.to_s.strip
-    raise Error, 'invalid_message' if text.empty? || text.length > MESSAGE_MAX
-
-    client = manage_client!(ad_id, comment_id)
-    { id: graph!(client.reply_comment(comment_id, text))['id'] }
+  # Pela tela: quem age é a pessoa (`user`), no post do anúncio.
+  def reply!(ad_id, comment_id, message, user: nil)
+    reply_to(post_id!(ad_id), comment_id, message, by_user(ad_id, user))
   end
 
-  def hide!(ad_id, comment_id, hidden)
-    graph!(manage_client!(ad_id, comment_id).hide_comment(comment_id, hidden == true))
-    hidden == true
+  def hide!(ad_id, comment_id, hidden, user: nil)
+    hide_in(post_id!(ad_id), comment_id, hidden, by_user(ad_id, user))
   end
 
-  def delete!(ad_id, comment_id)
-    graph!(manage_client!(ad_id, comment_id).delete_comment(comment_id))
+  def delete!(ad_id, comment_id, user: nil)
+    act!(post_id!(ad_id), comment_id, 'delete', by_user(ad_id, user)) { |client| client.delete_comment(comment_id) }
     true
   end
 
+  # Pela IA (#2212), por post: sem anúncio, o post precisa ser de Página da conta.
+  def reply_on_post!(post_id, comment_id, message, actor:)
+    reply_to(post_id, comment_id, message, { actor: actor, user: nil, ad_id: nil })
+  end
+
+  def hide_on_post!(post_id, comment_id, hidden, actor:)
+    hide_in(post_id, comment_id, hidden, { actor: actor, user: nil, ad_id: nil })
+  end
+
   private
+
+  def by_user(ad_id, user)
+    { actor: 'user', user: user, ad_id: ad_id }
+  end
+
+  def reply_to(post_id, comment_id, message, by)
+    text = message.to_s.strip
+    raise Error, 'invalid_message' if text.empty? || text.length > MESSAGE_MAX
+
+    { id: act!(post_id, comment_id, 'reply', by) { |client| client.reply_comment(comment_id, text) }['id'] }
+  end
+
+  def hide_in(post_id, comment_id, hidden, by)
+    act!(post_id, comment_id, hidden ? 'hide' : 'show', by) { |client| client.hide_comment(comment_id, hidden) }
+    hidden
+  end
 
   def empty(status)
     { status: status, comments: [], total: 0, next_cursor: nil }
@@ -79,14 +109,17 @@ class Crm::MetaAds::FacebookComments
   end
 
   def granted?(permission)
-    return false unless @connection.own_token?
+    @connection.own_token? && granted_permissions.include?(permission)
+  end
 
-    @granted ||= begin
+  def granted_permissions
+    @granted_permissions ||= begin
       result = user_client.permissions
+      raise Error, 'meta_unavailable' if result.transient?
+
       entries = result.ok ? Array(result.data.to_h['data']) : []
       entries.filter_map { |entry| entry['permission'] if entry.is_a?(Hash) && entry['status'] == Meta::AdsGraphClient::GRANTED }
     end
-    @granted.include?(permission)
   end
 
   def management
@@ -112,31 +145,61 @@ class Crm::MetaAds::FacebookComments
 
   def page_client(post_id)
     @page_clients ||= {}
-    return @page_clients[post_id] if @page_clients.key?(post_id)
+    page = page_id(post_id)
+    return @page_clients[page] if @page_clients.key?(page)
 
-    result = user_client.page_access_token(page_id(post_id))
-    token = result.data.to_h['access_token'] if result.ok
-    @page_clients[post_id] = token.present? ? Meta::AdsGraphClient.new(access_token: token) : nil
+    result = user_client.page_access(page)
+    raise Error, 'meta_unavailable' if result.transient?
+
+    data = result.ok ? result.data.to_h : {}
+    @page_clients[page] = data['access_token'].present? ? remember_page(page, data) : nil
   end
 
-  def page_client!(post_id)
-    page_client(post_id) || raise(Error, 'needs_login')
+  # A Página entra no resolvedor do webhook; o `feed` é assinado uma vez. Falha aqui não tira a lista da tela.
+  def remember_page(page, data)
+    client = Meta::AdsGraphClient.new(access_token: data['access_token'])
+    record = Crm::MetaAdsPage.remember!(@connection.account, [{ 'id' => page, 'name' => data['name'] }]).first
+    subscribe_feed(record, page, data['access_token']) if record && !record.feed_receiving
+    client
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @connection.account).capture_exception
+    client
   end
 
-  def manage_client!(ad_id, comment_id)
-    raise Error, 'needs_login' unless granted?(MANAGE)
+  def subscribe_feed(record, page, token)
+    Crm::MetaAds::PageSubscription.new(page_id: page, access_token: token, app_id: Crm::MetaAds::FacebookLogin.app_id).add!(FEED)
+    record.update!(feed_receiving: true)
+  end
 
-    post_id = post_id!(ad_id)
+  # `by`: { actor:, user:, ad_id: }. Com anúncio, o post já veio dele; sem, a Página precisa ser da conta.
+  def act!(post_id, comment_id, acao, by)
     raise Error, 'comment_not_found' unless comment_of_post?(comment_id, post_id)
+    raise Error, 'needs_login' unless granted?(MANAGE)
+    raise Error, 'comment_not_found' unless by[:ad_id] || own_page?(post_id)
 
-    page_client!(post_id)
+    client = page_client(post_id) || raise(Error, 'needs_login')
+    data = graph!(yield(client))
+    record_action(acao, comment_id, by)
+    data
+  end
+
+  def own_page?(post_id)
+    Crm::MetaAdsPage.account_ids_for(page_id(post_id)).include?(@connection.account_id)
+  end
+
+  # A Meta já agiu quando isto roda: falha ao gravar vai ao rastreador e a resposta continua dizendo a verdade.
+  def record_action(acao, comment_id, by)
+    Crm::MetaAdsCommentAction.record!(account: @connection.account, network: NETWORK, ad_id: by[:ad_id], comment_id: comment_id,
+                                      action: acao, actor: by[:actor], user: by[:user])
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @connection.account).capture_exception
   end
 
   def comment_of_post?(comment_id, post_id)
-    return false unless comment_id.is_a?(String)
+    return false unless comment_id.is_a?(String) && post_id.is_a?(String)
 
     parts = comment_id.split('_', -1)
-    parts.length == 2 && parts.all? { |part| digits?(part) } && parts.first == post_id.to_s.split('_').last
+    parts.length == 2 && parts.all? { |part| digits?(part) } && parts.first == post_id.split('_').last
   end
 
   def digits?(text)

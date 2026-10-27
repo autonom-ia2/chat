@@ -13,6 +13,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
   let(:page_token) { 'PAGETOKEN123' }
   let(:json) { { 'Content-Type' => 'application/json' } }
   let(:all_permissions) { %w[pages_read_user_content pages_manage_engagement] }
+  let!(:page_record) { simulate_meta_ads_comment_pieces(account_ids: [account.id]) }
 
   def stub_permissions(*granted)
     stub_request(:get, meta_graph_url('me/permissions'))
@@ -27,8 +28,9 @@ RSpec.describe Crm::MetaAds::FacebookComments do
   end
 
   def stub_page_token
-    stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token' })
-                                               .to_return(status: 200, body: { access_token: page_token }.to_json, headers: json)
+    stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token,name' })
+                                               .to_return(status: 200, body: { access_token: page_token, name: 'Loja Exemplo' }.to_json,
+                                                          headers: json)
   end
 
   def comment(id, name:, message:, **opts)
@@ -116,10 +118,39 @@ RSpec.describe Crm::MetaAds::FacebookComments do
     it 'sem token da Página (a pessoa não administra a Página do anúncio): pede para entrar de novo' do
       stub_permissions(*all_permissions)
       stub_ad
-      stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token' })
+      stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token,name' })
                                                  .to_return(status: 200, body: { id: page_id }.to_json, headers: json)
 
       expect(described_class.new(connection).list(ad_id)).to include(status: 'needs_login')
+    end
+
+    it 'falha passageira ao conferir permissão é meta_unavailable, não pedido de entrar de novo' do
+      stub_request(:get, meta_graph_url('me/permissions')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+      allow(Rails.logger).to receive(:warn)
+
+      expect { described_class.new(connection).list(ad_id) }.to raise_error(described_class::Error, 'meta_unavailable')
+    end
+
+    it 'guarda a Página e assina o feed dela na primeira leitura' do
+      page_record.feed_receiving = false
+      subscription = instance_double(Crm::MetaAds::PageSubscription, add!: true)
+      allow(Crm::MetaAds::PageSubscription).to receive(:new).and_return(subscription)
+      ready!(*all_permissions)
+      stub_comments
+
+      described_class.new(connection).list(ad_id)
+      described_class.new(connection).list(ad_id)
+
+      expect(Crm::MetaAdsPage).to have_received(:remember!).with(account, [{ 'id' => page_id, 'name' => 'Loja Exemplo' }]).twice
+      expect(Crm::MetaAds::PageSubscription).to have_received(:new)
+        .with(page_id: page_id, access_token: page_token, app_id: Crm::MetaAds::FacebookLogin.app_id).once
+      expect(subscription).to have_received(:add!).with(%w[feed]).once
+    end
+
+    it 'mais comentários sem permissão: mesmo estado da primeira página' do
+      stub_permissions('ads_read')
+
+      expect(described_class.new(connection).more(ad_id, 'CURSOR1')).to include(status: 'needs_login', comments: [])
     end
 
     it 'mais comentários pelo cursor' do
@@ -131,7 +162,8 @@ RSpec.describe Crm::MetaAds::FacebookComments do
 
       result = described_class.new(connection).more(ad_id, 'CURSOR1')
 
-      expect(result).to match(comments: [hash_including(id: '200000000000002_600', text: 'Outras cores?')], next_cursor: nil)
+      expect(result).to match(status: 'ready', comments: [hash_including(id: '200000000000002_600', text: 'Outras cores?')],
+                              next_cursor: nil)
     end
   end
 
@@ -143,8 +175,11 @@ RSpec.describe Crm::MetaAds::FacebookComments do
               .with(body: { message: 'Entregamos sim!' }, headers: { 'Authorization' => "Bearer #{page_token}" })
               .to_return(status: 200, body: { id: '200000000000002_700' }.to_json, headers: json)
 
-      expect(described_class.new(connection).reply!(ad_id, comment_id, '  Entregamos sim!  ')).to eq(id: '200000000000002_700')
+      user = create(:user)
+      expect(described_class.new(connection).reply!(ad_id, comment_id, '  Entregamos sim!  ', user: user)).to eq(id: '200000000000002_700')
       expect(reply).to have_been_requested.once
+      expect(Crm::MetaAdsCommentAction).to have_received(:record!)
+        .with(account: account, network: 'facebook', ad_id: ad_id, comment_id: comment_id, action: 'reply', actor: 'user', user: user)
     end
 
     it 'oculta e mostra' do
@@ -195,6 +230,29 @@ RSpec.describe Crm::MetaAds::FacebookComments do
 
       stub_request(:delete, meta_graph_url(comment_id)).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
       expect { described_class.new(connection).delete!(ad_id, comment_id) }.to raise_error(described_class::Error, 'meta_unavailable')
+    end
+
+    it 'pela IA, por post: só em Página da conta, e a ação fica gravada com actor ai' do
+      hide = stub_request(:post, meta_graph_url(comment_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)
+
+      expect(described_class.new(connection).hide_on_post!(post_id, comment_id, true, actor: 'ai')).to be(true)
+      expect(hide).to have_been_requested.once
+      expect(Crm::MetaAdsCommentAction).to have_received(:record!).with(hash_including(action: 'hide', actor: 'ai', ad_id: nil))
+
+      allow(Crm::MetaAdsPage).to receive(:account_ids_for).and_return([account.id + 1])
+      expect { described_class.new(connection).hide_on_post!(post_id, comment_id, true, actor: 'ai') }
+        .to raise_error(described_class::Error, 'comment_not_found')
+      expect(hide).to have_been_requested.once
+    end
+
+    it 'falha ao gravar a ação não desfaz o que a Meta já fez' do
+      stub_request(:delete, meta_graph_url(comment_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)
+      allow(Crm::MetaAdsCommentAction).to receive(:record!).and_raise(ActiveRecord::RecordInvalid)
+      tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+      expect(described_class.new(connection).delete!(ad_id, comment_id)).to be(true)
+      expect(tracker).to have_received(:capture_exception)
     end
   end
 end

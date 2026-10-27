@@ -1,13 +1,20 @@
 # Comentários do post da Página por trás do anúncio (#2197), parte do Meta::AdsGraphClient: mesmas regras de token,
 # versão e limpeza de erro. Sempre com o token da Página (pages_read_user_content para ler, pages_manage_engagement
 # para responder, ocultar e apagar). Comentário de primeiro nível do mais novo para o mais antigo, com uma camada de
-# respostas (o Facebook não aninha mais que isso).
+# respostas (o Facebook não aninha mais que isso), até REPLIES_LIMIT por comentário: anúncio raramente passa disso, e
+# a casca não pagina respostas.
 module Meta::AdsGraphClient::PageComments
   COMMENTS_PAGE_SIZE = 25
+  REPLIES_LIMIT = 100
   COMMENT_FIELDS = 'id,from{id,name},message,created_time,is_hidden,can_hide,can_remove,can_comment'.freeze
-  COMMENT_FIELDS_WITH_REPLIES = "#{COMMENT_FIELDS},comments.limit(#{COMMENTS_PAGE_SIZE}){#{COMMENT_FIELDS}}".freeze
+  COMMENT_FIELDS_WITH_REPLIES = "#{COMMENT_FIELDS},comments.limit(#{REPLIES_LIMIT}){#{COMMENT_FIELDS}}".freeze
   POST_COMMENTS_FIELDS = 'permalink_url,comments.filter(toplevel).order(reverse_chronological)' \
                          ".limit(#{COMMENTS_PAGE_SIZE}).summary(total_count){#{COMMENT_FIELDS_WITH_REPLIES}}".freeze
+
+  # Token e nome da Página, pedidos com o token da pessoa.
+  def page_access(page_id)
+    get(page_id.to_s, fields: 'access_token,name')
+  end
 
   # Primeira página, com o link do post e o total, numa chamada só.
   def post_comments(post_id)

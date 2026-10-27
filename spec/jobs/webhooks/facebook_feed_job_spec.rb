@@ -18,9 +18,7 @@ RSpec.describe Webhooks::FacebookFeedJob do
 
   before do
     account.enable_features!('meta_ads_comentarios_facebook')
-    # TODO(#2195): trocar pela tabela crm_meta_ads_pages quando ela chegar à main.
-    stub_const('Crm::MetaAdsPage', Module.new { def self.account_ids_for(_page_id) = [] })
-    allow(Crm::MetaAdsPage).to receive(:account_ids_for).and_return([account.id])
+    simulate_meta_ads_comment_pieces(account_ids: [account.id])
     allow(Rails.configuration).to receive(:dispatcher).and_return(dispatcher)
   end
 

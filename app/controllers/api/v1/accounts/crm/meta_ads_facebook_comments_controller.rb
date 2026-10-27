@@ -10,8 +10,8 @@
 # As três ações: administrador ou `meta_ads_manage`.
 #
 # Sem conexão ativa com conta de anúncios: 404 not_connected. Anúncio de outra conta ou comentário de outro post: 404.
-# Cada ação fica na Auditoria da conta com pessoa, anúncio, comentário e ação — nunca o texto (dado de terceiro) nem o
-# token.
+# Cada ação fica na Auditoria da conta e em crm_meta_ads_comment_actions (#2196) com pessoa, anúncio, comentário e
+# ação — nunca o texto (dado de terceiro) nem o token.
 class Api::V1::Accounts::Crm::MetaAdsFacebookCommentsController < Api::V1::Accounts::Crm::BaseController
   AUDIT_ACTION = 'meta_ads_facebook_comment'.freeze
   NOT_FOUND = %w[ad_not_found comment_not_found].freeze
@@ -30,15 +30,18 @@ class Api::V1::Accounts::Crm::MetaAdsFacebookCommentsController < Api::V1::Accou
   end
 
   def reply
-    result = comments.reply!(ad_id, comment_id, params[:message])
+    result = comments.reply!(ad_id, comment_id, params[:message], user: Current.user)
     audit!('reply')
     render json: result
   rescue ::Crm::MetaAds::FacebookComments::Error => e
     render_error(e.code)
   end
 
+  # `hidden` precisa vir true ou false: sem ele, mostrar por engano deixaria público um comentário que alguém ocultou.
   def update
-    hidden = comments.hide!(ad_id, comment_id, ActiveModel::Type::Boolean.new.cast(params[:hidden]) == true)
+    return render_unprocessable('invalid_hidden') unless [true, false].include?(params[:hidden])
+
+    hidden = comments.hide!(ad_id, comment_id, params[:hidden], user: Current.user)
     audit!(hidden ? 'hide' : 'show')
     render json: { hidden: hidden }
   rescue ::Crm::MetaAds::FacebookComments::Error => e
@@ -46,7 +49,7 @@ class Api::V1::Accounts::Crm::MetaAdsFacebookCommentsController < Api::V1::Accou
   end
 
   def destroy
-    comments.delete!(ad_id, comment_id)
+    comments.delete!(ad_id, comment_id, user: Current.user)
     audit!('delete')
     render json: { deleted: true }
   rescue ::Crm::MetaAds::FacebookComments::Error => e

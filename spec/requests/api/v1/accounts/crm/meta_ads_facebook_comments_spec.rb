@@ -23,6 +23,7 @@ RSpec.describe 'CRM meta_ads_connection Facebook comments (#2197)', type: :reque
   before do
     account.enable_features!('meta_ads_comentarios_facebook')
     create_meta_ads_insights_connection(account)
+    simulate_meta_ads_comment_pieces(account_ids: [account.id])
   end
 
   def stub_meta
@@ -33,7 +34,7 @@ RSpec.describe 'CRM meta_ads_connection Facebook comments (#2197)', type: :reque
                                              .to_return(status: 200, headers: json,
                                                         body: { id: ad_id, account_id: '2196424464528988', status: 'ACTIVE',
                                                                 creative: { id: '9', effective_object_story_id: post_id } }.to_json)
-    stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token' })
+    stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token,name' })
                                                .to_return(status: 200, body: { access_token: 'PAGETOKEN123' }.to_json, headers: json)
   end
 
@@ -97,6 +98,16 @@ RSpec.describe 'CRM meta_ads_connection Facebook comments (#2197)', type: :reque
     expect(response).to have_http_status(:ok)
     expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_facebook_comment').map { |a| a.audited_changes['acao'] })
       .to eq(%w[hide delete])
+  end
+
+  it 'ocultar sem dizer true ou false é recusado sem chamar a Meta (não mostra comentário por engano)' do
+    stub_meta
+
+    patch "#{path}/#{comment_id}", params: {}, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error' => 'invalid_hidden')
+    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
   end
 
   it 'comentário de outro post: 404 comment_not_found' do

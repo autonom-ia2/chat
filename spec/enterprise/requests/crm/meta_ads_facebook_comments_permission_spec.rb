@@ -21,6 +21,7 @@ RSpec.describe 'Anúncios da Meta: comentários do Facebook com funções (#2197
   before do
     account.enable_features!('meta_ads_comentarios_facebook')
     create_meta_ads_insights_connection(account)
+    simulate_meta_ads_comment_pieces(account_ids: [account.id])
     stub_request(:get, meta_graph_url('me/permissions'))
       .to_return(status: 200, headers: json, body: { data: %w[pages_read_user_content pages_manage_engagement]
         .map { |name| { permission: name, status: 'granted' } } }.to_json)
@@ -28,7 +29,7 @@ RSpec.describe 'Anúncios da Meta: comentários do Facebook com funções (#2197
                                              .to_return(status: 200, headers: json,
                                                         body: { id: ad_id, account_id: '2196424464528988', status: 'ACTIVE',
                                                                 creative: { id: '9', effective_object_story_id: post_id } }.to_json)
-    stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token' })
+    stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token,name' })
                                                .to_return(status: 200, body: { access_token: 'PAGETOKEN123' }.to_json, headers: json)
   end
 
