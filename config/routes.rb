@@ -416,6 +416,12 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
               post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
               get :pages, to: 'meta_ads_ad_management#pages'
+              get :create_options, to: 'meta_ads_creation#options'
+              post :media, to: 'meta_ads_creation#media'
+              post :ads, to: 'meta_ads_creation#create'
+              get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
+              patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
+              get :paused_ads, to: 'meta_ads_creation#paused'
               # Comentários do anúncio no Instagram (#2196): ler, responder, ocultar, apagar e responder no privado.
               get 'ads/:ad_id/instagram_comments', to: 'meta_ads_instagram_comments#index'
               post 'ads/:ad_id/instagram_comments/:comment_id/reply', to: 'meta_ads_instagram_comments#reply'

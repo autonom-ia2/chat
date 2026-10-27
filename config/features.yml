@@ -960,11 +960,22 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Anúncios da Meta: o Gerenciador simples (#2198, PR 1). Ligada: "Criar anúncio" no Resultado abre o anúncio novo
+# (WhatsApp ou site, só os destinos e lugares que a chamada real confirmou), o detalhe do anúncio mostra o orçamento e
+# as datas com "Mudar", e os anúncios criados aqui que seguem pausados aparecem no topo. Tudo nasce pausado: nada gasta
+# até a pessoa tocar em "Ativar anúncio". Desligada: o painel de sempre; nenhuma rota de criar chama a Meta (404).
+# Migration 20261108580000 (tabela nova crm_meta_ads_created_objects). Fim da feature_flags_ext_2, posição pela ordem
+# na main, confirmada pela Orquestração na hora da fila (hoje 9, valor 256, 1 << 8, depois do meta_ads_comentarios_instagram).
+- name: meta_ads_criar
+  display_name: Anúncios da Meta › criar anúncio, orçamento e datas
+  enabled: false
+  column: feature_flags_ext_2
+
 # Novo público pedindo em palavras (#2277). Ligada: em Campanhas › Público › Novo público, além da planilha, a pessoa
 # pede o público com as próprias palavras e a plataforma lê as conversas da conta (com a IA da própria conta) e monta a
-# lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Fim da feature_flags_ext_2:
-# hoje posição 9 (valor 256, 1 << 8) pela ordem do arquivo; a Orquestração reservou a 9 para o #2269 e deu a 10 (512)
-# como provisória. No dia da fila, merge da main e fica a seguinte à última da main (a Orquestração confere).
+# lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Migration 20261108600000
+# (conversation_audience_*). Fim da feature_flags_ext_2, depois de meta_ads_criar (#2198): posição 10 (valor 512,
+# 1 << 9), confirmada pela Orquestração em 27/10.
 - name: campanhas_publico_por_conversa
   display_name: Campanhas › Novo público pedindo em palavras
   enabled: false
