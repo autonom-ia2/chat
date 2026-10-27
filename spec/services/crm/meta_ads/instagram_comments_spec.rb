@@ -4,7 +4,7 @@ require 'rails_helper'
 # Instagram da conta lê e age pela Graph do login do Instagram. Cada ação confere que o comentário é da mídia do
 # anúncio. A resposta no privado vai uma vez só, até 7 dias depois do comentário, e abre a conversa na caixa.
 RSpec.describe Crm::MetaAds::InstagramComments do
-  subject(:service) { described_class.new(connection) }
+  subject(:service) { described_class.new(connection, inbox_access: ->(_inbox) { true }) }
 
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: :administrator) }
@@ -61,7 +61,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
                                 account: { username: 'lojaexemplo', name: channel.inbox.name })
       first, second = result[:comments]
       expect(first).to include(id: 'c1', text: 'Tem M?', hidden: false, can_reply: true, can_hide: true, can_delete: true,
-                               can_reply_private: true, private_reply_expired: false, private_reply: nil)
+                               can_reply_private: true, private_reply_not_member: false, private_reply_expired: false,
+                               private_reply: nil)
       expect(first[:author]).to eq(name: nil, username: 'carla.dias', is_page: false)
       expect(first[:replies].first).to include(id: 'c1r', can_reply: false, can_hide: false, can_reply_private: false)
       expect(first[:replies].first[:author]).to include(is_page: true)

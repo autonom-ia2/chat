@@ -7,6 +7,8 @@ import { relativeTime } from '../../metaAdsHelpers';
 // Anúncios da Meta (#2196 Instagram, #2197 Facebook): um comentário do anúncio, com as respostas recuadas. As ações
 // vêm dos dados (`can_reply`, `can_hide`, `can_delete`, `can_reply_private`), nunca da plataforma: a linha não sabe
 // se é Instagram ou Facebook. Só aparecem para quem pode gerir (`canManage`). Apagar pede confirmação na casca.
+// Sem o privado, a linha diz o motivo: passou de 7 dias (`private_reply_expired`) ou quem vê não é da caixa que
+// receberia a conversa (`private_reply_not_member`).
 //
 // Mensagem para o cliente só sai pelo botão: Enter quebra linha (no celular, a tecla de quebrar linha mandaria uma
 // mensagem pela metade, e o privado só vai uma vez). Fechar a caixa guarda o rascunho; ele só some depois de enviar
@@ -297,6 +299,13 @@ const DANGER =
           class="m-0 text-sm text-n-slate-11"
         >
           {{ $t(`${KEY}.PRIVATE_EXPIRED`) }}
+        </p>
+        <p
+          v-else-if="canManage && comment.private_reply_not_member"
+          data-ad-comment-private-not-member
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{ $t(`${KEY}.PRIVATE_NOT_MEMBER`) }}
         </p>
         <div
           v-if="canManage && hasActions"

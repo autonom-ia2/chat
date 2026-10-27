@@ -104,6 +104,22 @@ describe('MetaAdsComments (#2196)', () => {
     expect(useAlert).toHaveBeenCalledWith(said('LOGIN_ADMIN'));
   });
 
+  it('says why there is no private reply for someone outside the Instagram inbox', async () => {
+    const outsider = {
+      ...comment('1'),
+      can_reply_private: false,
+      private_reply_not_member: true,
+    };
+    const shell = await mountShell([
+      { key: 'INSTAGRAM', adaptador: adaptador(ready([outsider])) },
+    ]);
+
+    expect(shell.find('[data-ad-comment-private]').exists()).toBe(false);
+    expect(shell.find('[data-ad-comment-private-not-member]').text()).toBe(
+      said('PRIVATE_NOT_MEMBER')
+    );
+  });
+
   it('keeps the next page in the tab that asked for it when the tab changes meanwhile', async () => {
     const many = ['1', '2', '3'].map(id => comment(id));
     const ig = adaptador({ ...ready(many), next_cursor: 'C2' });

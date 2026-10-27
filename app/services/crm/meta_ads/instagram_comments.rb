@@ -12,15 +12,20 @@
 #
 # Cada ação confere antes que o comentário é da mídia do anúncio: sem isso, quem gere os anúncios agiria em qualquer
 # comentário do Instagram da caixa pelo id. Erros (Error#code): `ad_not_found`, `no_post`, `not_connected`,
-# `comment_not_found`, `invalid_text`, `needs_login`, `meta_unavailable`, `meta_refused` e os do privado
-# (Crm::MetaAds::InstagramPrivateReply).
+# `comment_not_found`, `invalid_text`, `needs_login`, `meta_unavailable`, `meta_refused`, `not_inbox_member` e os do
+# privado (Crm::MetaAds::InstagramPrivateReply).
+#
+# Responder no privado cria contato, conversa e mensagem na caixa do Instagram em nome de quem clicou: além de gerir os
+# anúncios, pede ser da caixa (`inbox_access`, InboxPolicy#show? de quem chama, parecer da sessão Funções). Quem não é
+# vê `private_reply_not_member` no lugar do botão.
 class Crm::MetaAds::InstagramComments
   Error = Crm::MetaAds::InstagramPrivateReply::Error
 
   MAX_TEXT = 2200
 
-  def initialize(connection)
+  def initialize(connection, inbox_access:)
     @connection = connection
+    @inbox_access = inbox_access
   end
 
   def payload(ad_id, after: nil)
@@ -71,7 +76,10 @@ class Crm::MetaAds::InstagramComments
 
   def private_reply!(ad_id, comment_id, text, user:)
     valid_text!(text, Crm::MetaAds::InstagramPrivateReply::MAX_TEXT)
-    found = comment_of_ad!(ad_id, comment_id)
+    target = ready_target!(ad_id)
+    raise Error, 'not_inbox_member' unless member?(target[:channel])
+
+    found = comment_of!(target, comment_id)
     sent = Crm::MetaAds::InstagramPrivateReply.new(found[:channel]).perform!(comment: found[:comment], text: text, actor: 'user', user: user,
                                                                              ad_id: ad_id)
     { sent_at: Time.current.iso8601, conversation_path: conversation_path(sent[:conversation]) }
@@ -104,10 +112,18 @@ class Crm::MetaAds::InstagramComments
   end
 
   def comment_of_ad!(ad_id, comment_id)
+    comment_of!(ready_target!(ad_id), comment_id)
+  end
+
+  def ready_target!(ad_id)
     target = target(ad_id)
     raise Error, 'ad_not_found' if target.nil?
     raise Error, target[:status] unless target[:status] == 'ready'
 
+    target
+  end
+
+  def comment_of!(target, comment_id)
     result = client(target[:channel]).comment(comment_id)
     raise Error, 'needs_login' if login_error?(result)
     raise Error, 'comment_not_found' if !result.ok || result.data.dig('media', 'id').to_s != target[:media_id]
@@ -137,17 +153,33 @@ class Crm::MetaAds::InstagramComments
       id: item['id'].to_s, author: { name: nil, username: item.dig('from', 'username'), is_page: own }, text: item['text'],
       created_time: item['timestamp'], hidden: item['hidden'] == true, replies: [],
       can_reply: !own, can_hide: !own, can_delete: true
-    }.merge(private_state(item, own, actions[item['id'].to_s]))
+    }.merge(private_state(item, own, actions[item['id'].to_s], member?(channel)))
+  end
+
+  def member?(channel)
+    @member ||= {}
+    @member.fetch(channel.id) { @member[channel.id] = @inbox_access.call(channel.inbox) == true }
   end
 
   # Responder no privado: uma vez só (a linha em Crm::MetaAdsCommentAction diz que já foi) e só até 7 dias depois.
-  def private_state(item, own, action)
-    created = Time.zone.parse(item['timestamp'].to_s)
-    expired = !own && created.present? && created.before?(Crm::MetaAds::InstagramPrivateReply::WINDOW.ago)
+  def private_state(item, own, action, member)
+    expired = !own && expired?(item)
+    open = !own && !expired && action.nil?
     {
-      can_reply_private: !own && !expired && action.nil?, private_reply_expired: expired && action.nil?,
-      private_reply: action && { sent_at: action.at.iso8601, conversation_path: conversation_path(action.conversation) }
+      can_reply_private: open && member, private_reply_not_member: open && !member, private_reply_expired: expired && action.nil?,
+      private_reply: private_reply(action)
     }
+  end
+
+  def private_reply(action)
+    return if action.nil?
+
+    { sent_at: action.at.iso8601, conversation_path: conversation_path(action.conversation) }
+  end
+
+  def expired?(item)
+    created = Time.zone.parse(item['timestamp'].to_s)
+    created.present? && created.before?(Crm::MetaAds::InstagramPrivateReply::WINDOW.ago)
   end
 
   def next_cursor(data)

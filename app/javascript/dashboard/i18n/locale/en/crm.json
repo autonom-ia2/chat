@@ -3063,6 +3063,7 @@
           "DELETE_DONE": "Comment deleted.",
           "ACTION_ERROR": "That didn't work right now. Your text is still here. Try again in a minute.",
           "PRIVATE_EXPIRED": "It's been over 7 days, so you can't reply privately anymore.",
+          "PRIVATE_NOT_MEMBER": "You don't handle the Instagram inbox, so you can't reply privately.",
           "UNANSWERED": "No reply yet",
           "TAB_UNANSWERED": "1 with no reply | {count} with no reply",
           "MORE_ACTIONS": "More actions",

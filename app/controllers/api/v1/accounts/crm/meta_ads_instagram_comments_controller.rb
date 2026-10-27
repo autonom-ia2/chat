@@ -7,14 +7,15 @@
 # POST   .../instagram_comments/:comment_id/hide           hidden=         → ocultar ou mostrar de novo.
 # POST   .../instagram_comments/:comment_id/private_reply  text=           → responder no privado (Private Reply).
 # DELETE .../instagram_comments/:comment_id                                → apagar (a tela confirma antes).
-#        Agir: administrador ou `meta_ads_manage`.
+#        Agir: administrador ou `meta_ads_manage`. O privado pede também ser da caixa do Instagram (InboxPolicy#show?):
+#        cria conversa nela em nome de quem clicou. Sem ser: 403 `not_inbox_member`, antes de chamar o Instagram.
 #
 # Erros de regra: 422 com { error: code }; comentário de outra mídia ou anúncio de outra conta: 404. Toda ação fica
 # na Auditoria da conta com quem, o anúncio, o comentário e a ação (nunca o texto: o do
 # comentário é de terceiro e o da resposta já fica na conversa ou no próprio Instagram).
 class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Accounts::Crm::BaseController
   AUDIT_ACTION = 'meta_ads_comment'.freeze
-  NOT_FOUND = %w[ad_not_found comment_not_found].freeze
+  STATUS = { 'ad_not_found' => :not_found, 'comment_not_found' => :not_found, 'not_inbox_member' => :forbidden }.freeze
 
   before_action :ensure_feature
   before_action :ensure_view
@@ -92,7 +93,9 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
   end
 
   def comments
-    @comments ||= ::Crm::MetaAds::InstagramComments.new(@connection)
+    @comments ||= ::Crm::MetaAds::InstagramComments.new(
+      @connection, inbox_access: ->(inbox) { inbox.present? && Pundit.policy!(pundit_user, inbox).show? }
+    )
   end
 
   def ad_id
@@ -104,8 +107,7 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
   end
 
   def render_error(error)
-    status = NOT_FOUND.include?(error.code) ? :not_found : :unprocessable_content
-    render json: { error: error.code }, status: status
+    render json: { error: error.code }, status: STATUS.fetch(error.code, :unprocessable_content)
   end
 
   # A Meta já agiu quando isto roda: falha ao gravar vai para o rastreador de erros e a resposta continua dizendo a
