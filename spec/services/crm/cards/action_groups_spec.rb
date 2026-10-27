@@ -213,12 +213,15 @@ RSpec.describe Crm::Cards::ActionGroups do
     end
 
     it 'devolve os cinco grupos na ordem, com zero e com valor' do
+      Current.account = account # como no controller: o FilterQuery lê a conta do Current
       result = Crm::Cards::GroupSummary.new(scope: account.crm_cards, params: { group_by: 'acao' }.with_indifferent_access,
                                             group_by: 'acao', conversation_visibility: visibility).perform
 
       expect(result[:group_by]).to eq('acao')
       expect(result[:groups].pluck(:key)).to eq(%w[esperando retorno ninguem parado demais])
       expect(result[:groups].find { |group| group[:key] == 'parado' }).to include(count: 0, sum_cents: 0, currency: 'BRL')
+    ensure
+      Current.reset
     end
   end
 

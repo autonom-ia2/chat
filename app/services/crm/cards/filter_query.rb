@@ -74,6 +74,9 @@ class Crm::Cards::FilterQuery
                     contact: Crm::Cards::CompanyResolver.contact_preload,
                     primary_conversation: [:conversation_participants, { applied_sla: :sla_policy }])
           .preload(primary_conversation: :ai_assignee) # robô responsável (#1377), sem N+1 por card
+          # Quem cuida (responsible e current_responsible, #2283): o atendente e o robô ativo da caixa, sem N+1 por card.
+          .preload(primary_conversation: [:assignee, { inbox: { agent_bot_inbox: :agent_bot } }],
+                   inbox: { agent_bot_inbox: :agent_bot }, account: [])
   end
 
   def apply_filters(cards)

@@ -19,6 +19,7 @@ module Crm::Cards::ActionGroups
   SELECT = 'acao.grupo AS acao_grupo'.freeze
   GROUP_SQL = 'acao.grupo'.freeze
   CONVERSATION = 'acao_conversa'.freeze
+  VISIBLE = 'acao_visivel'.freeze
 
   def self.sort?(params)
     params[:sort].to_s == SORT
@@ -31,7 +32,9 @@ module Crm::Cards::ActionGroups
 
     # Condição e ordem em texto ou nó Arel, nunca hash com "acao.grupo": a chave com ponto põe `acao` em references_values
     # e liga o eager_load do includes da base (JOIN das conversas vinculadas, linhas repetidas, select descartado).
-    cards = cards.joins(action_conversation_join).joins(action_group_lateral)
+    cards = cards.joins(action_conversation_join)
+    cards = cards.joins(action_visibility_join) unless @conversation_visibility.all_conversations?
+    cards = cards.joins(action_follow_up_join).joins(action_group_lateral)
     cards = cards.where("#{GROUP_SQL} = 1") if boolean_param(:waiting)
     cards = cards.where('acao.retorno_em <= ?', end_of_today) if @params[:follow_up_status].to_s == FOLLOW_UP_DUE
     cards = apply_action_group_filter(cards)
@@ -96,26 +99,33 @@ module Crm::Cards::ActionGroups
     stale_since = ActiveRecord::Base.connection.quote(STALE_DAYS.days.ago)
     <<~SQL.squish
       LEFT JOIN LATERAL (
-        SELECT retorno.em AS retorno_em,
+        SELECT acao_retorno.em AS retorno_em,
           CASE
             WHEN #{visible_action_conversation_sql} AND #{CONVERSATION}.waiting_since IS NOT NULL THEN 1
-            WHEN retorno.em <= #{today_end} THEN 2
+            WHEN acao_retorno.em <= #{today_end} THEN 2
             WHEN #{nobody_cares_sql} THEN 3
-            WHEN retorno.em IS NULL AND (#{Crm::Cards::SharedFilters::STALE_SQL} IS NULL
+            WHEN acao_retorno.em IS NULL AND (#{Crm::Cards::SharedFilters::STALE_SQL} IS NULL
               OR #{Crm::Cards::SharedFilters::STALE_SQL} < #{stale_since}) THEN 4
             ELSE 5
           END AS grupo
-        FROM (#{next_person_follow_up_sql}) retorno
       ) acao ON TRUE
     SQL
   end
 
-  # Só o retorno sem conversa ou de conversa que a pessoa vê (Crm::FollowUp.retorno_visivel): o grupo, o filtro, a ordem e
-  # o next_follow_up_id nunca revelam lembrete de conversa oculta.
-  def next_person_follow_up_sql
-    Crm::FollowUp.unscoped.retorno_visivel(visible_conversation_ids_sql)
-                 .where('crm_follow_ups.account_id = crm_cards.account_id AND crm_follow_ups.card_id = crm_cards.id')
-                 .select('MIN(crm_follow_ups.due_at) AS em').to_sql
+  # O retorno da pessoa mais perto de cada card, agregado uma vez para a conta (não por card, dentro do LATERAL): a
+  # visibilidade das conversas dos lembretes vira um hash só, e o planejador não cobra a montagem dele a cada card. Só o
+  # retorno sem conversa ou de conversa que a pessoa vê (Crm::FollowUp.retorno_visivel): o grupo, o filtro, a ordem e o
+  # next_follow_up_id nunca revelam lembrete de conversa oculta.
+  def action_follow_up_join
+    retornos = Crm::FollowUp.unscoped.retorno_visivel(follow_up_visibility_sql)
+                            .where(account_id: @account.id).where.not(card_id: nil)
+                            .group(:card_id).select('crm_follow_ups.card_id, MIN(crm_follow_ups.due_at) AS em')
+    "LEFT JOIN (#{retornos.to_sql}) acao_retorno ON acao_retorno.card_id = crm_cards.id"
+  end
+
+  # Quem vê todas as conversas da conta (Crm::Conversations::Visibility#all_conversations?) não paga o filtro.
+  def follow_up_visibility_sql
+    visible_conversation_ids_sql unless @conversation_visibility.all_conversations?
   end
 
   def nobody_cares_sql
@@ -126,8 +136,17 @@ module Crm::Cards::ActionGroups
       "AND NOT (#{human_responsible_sql(CONVERSATION)}) AND NOT (#{bot_responsible_sql(CONVERSATION, inbox_bot)})"
   end
 
+  # A conversa principal é visível? Uma junção só com os ids visíveis (um hash por consulta), em vez de um IN em cada
+  # ponto do CASE, do "Só meus" e do filtro. Quem vê todas as conversas da conta não paga a junção: a conversa principal
+  # já vem da conta pelo JOIN.
+  def action_visibility_join
+    "LEFT JOIN (#{visible_conversation_ids_sql}) #{VISIBLE} ON #{VISIBLE}.id = crm_cards.conversation_id"
+  end
+
   def visible_action_conversation_sql
-    "#{CONVERSATION}.id IN (#{visible_conversation_ids_sql})"
+    return "#{CONVERSATION}.id IS NOT NULL" if @conversation_visibility.all_conversations?
+
+    "#{VISIBLE}.id IS NOT NULL"
   end
 
   # Prazo de SLA no relógio corrido (o selo do card usa o calendário de expediente): só ordena dentro de "esperando".

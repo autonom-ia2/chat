@@ -153,7 +153,8 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
     row = response.parsed_body['payload'].first
     expect(row).not_to have_key('action_group')
     expect(row['current_responsible']).to include('type' => 'agent', 'name' => 'Atendente Beto')
-    expect(row).not_to have_key('next_follow_up_id')
+    expect(row).to have_key('next_follow_up_id')
+    expect(row['next_follow_up_id']).to be_nil
   end
 
   it 'devolve lista vazia, e não a lista inteira, com grupo inválido' do
@@ -206,21 +207,66 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
     end
   end
 
+  describe 'consultas por página' do
+    def sql_count(&)
+      count = 0
+      counter = lambda { |*, payload|
+        next if payload[:name] == 'SCHEMA' || payload[:sql].start_with?('BEGIN', 'COMMIT')
+
+        count += 1
+      }
+      ActiveSupport::Notifications.subscribed(counter, 'sql.active_record', &)
+      count
+    end
+
+    def seed_cards(count)
+      bot_inbox = create_crm_inbox(account: account, name: "Robô #{SecureRandom.hex(2)}", members: [admin, agent])
+      AgentBotInbox.create!(inbox: bot_inbox, agent_bot: create(:agent_bot, account: account), status: :active)
+      count.times do |index|
+        card("Atendido #{index}", inbox: inbox, conversation: conversation(inbox: inbox, assignee: agent))
+        card("Robô #{index}", inbox: bot_inbox, conversation: conversation(inbox: bot_inbox))
+      end
+    end
+
+    it 'não cresce com o número de cards na lista nova, na legada e na planilha' do
+      seed_cards(2)
+      paths = { nova: ["#{api}/cards", { sort: 'acao' }], legada: ["#{api}/cards", {}], planilha: ["#{api}/cards/export", {}] }
+      before = paths.transform_values { |(path, params)| sql_count { get path, params: params, headers: auth_headers(admin) } }
+      seed_cards(4)
+      after = paths.transform_values { |(path, params)| sql_count { get path, params: params, headers: auth_headers(admin) } }
+
+      # Um preload pode até sair quando não há id nenhum para buscar; o que não pode é crescer com os cards.
+      after.each { |surface, queries| expect(queries).to be <= before[surface], "#{surface}: #{before[surface]} -> #{queries}" }
+    end
+  end
+
   describe 'quem cuida com a conversa oculta' do
     def board_row(card)
       get "#{api}/kanban", params: { pipeline_id: card.pipeline_id }, headers: auth_headers(agent)
       response.parsed_body.dig('payload', 'stages').flat_map { |stage| stage['cards'] }.find { |item| item['id'] == card.id }
     end
 
-    it 'mostra o dono do card e esconde só quem atende a conversa oculta' do
+    it 'mostra o dono do card no lugar de quem atende a conversa oculta' do
       owned = card('Com dono', inbox: inbox, owner: agent, conversation: conversation(inbox: hidden_inbox, assignee: admin))
 
       row = list(agent)['payload'].find { |item| item['id'] == owned.id }
 
       expect(row['current_responsible']).to include('type' => 'agent', 'name' => 'Atendente Beto')
-      expect(row).not_to have_key('responsible')
+      expect(row['responsible']).to include('type' => 'agent', 'name' => 'Atendente Beto')
       expect(row.dig('owner', 'name')).to eq('Atendente Beto')
-      expect(board_row(owned)['responsible']).to be_nil
+      expect(response.body).not_to include('Gestora Ana')
+      expect(board_row(owned)['responsible']).to include('type' => 'agent', 'name' => 'Atendente Beto')
+      expect(response.body).not_to include('Gestora Ana')
+    end
+
+    it 'mostra o robô da caixa no lugar de quem atende a conversa oculta, num card sem dono' do
+      AgentBotInbox.create!(inbox: hidden_inbox, agent_bot: create(:agent_bot, account: account, name: 'Assistente Bia'), status: :active)
+      attended = card('Atendida sem dono', inbox: inbox, conversation: conversation(inbox: hidden_inbox, assignee: admin))
+
+      row = list(agent)['payload'].find { |item| item['id'] == attended.id }
+
+      expect(row['current_responsible']).to include('type' => 'bot', 'name' => 'Assistente Bia')
+      expect(board_row(attended)['responsible']).to include('type' => 'bot', 'name' => 'Assistente Bia')
       expect(response.body).not_to include('Gestora Ana')
     end
 

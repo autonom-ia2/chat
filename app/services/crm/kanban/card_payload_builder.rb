@@ -187,10 +187,12 @@ class Crm::Kanban::CardPayloadBuilder
   end
 
   # Conversa que a pessoa não vê (#2283): o nome de quem atende essa conversa não vai, como no Crm::Cards::PayloadBuilder
-  # (o tempo real do quadro chega por ele). O robô e o card sem conversa seguem como antes.
+  # (o tempo real do quadro chega por ele); no lugar, o dono do card, senão o robô.
   def responsible_payload
     conversation = @card.primary_conversation
-    return if conversation&.assignee_id.present? && visible_primary_conversation.nil?
+    if conversation&.assignee_id.present? && visible_primary_conversation.nil?
+      return Crm::Cards::PayloadBuilder.responsible_without_conversation_agent(@card)
+    end
 
     @card.responsible_descriptor
   end

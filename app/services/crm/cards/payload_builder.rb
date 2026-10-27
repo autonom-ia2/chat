@@ -52,9 +52,18 @@ class Crm::Cards::PayloadBuilder
     end
   end
 
+  # Quem cuida sem o atendente da conversa principal (#2283): para quem não vê essa conversa, o nome do atendente não vai;
+  # vale o dono do card, senão o robô (a mesma ordem de Crm::Card#current_responsible). O Quadro usa o mesmo.
+  def self.responsible_without_conversation_agent(card)
+    return { type: 'agent', id: card.owner.id, name: card.owner.name } if card.owner.present?
+
+    bot = card.responsible_agent_bot
+    { type: 'bot', id: bot.id, name: bot.name } if bot.present?
+  end
+
   UNRESOLVED_COMPANY = Object.new.freeze
   UNRESOLVED_FOLLOW_UP = Object.new.freeze
-  # Lista legada e planilha não usam o next_follow_up_id: o campo não vai e a consulta não roda.
+  # Lista legada e planilha não usam o next_follow_up_id: o campo vai nil e a consulta não roda.
   SKIP_FOLLOW_UP = Object.new.freeze
 
   # next_follow_up_id: a página da Lista nova manda o de todos os cards de uma vez
@@ -86,7 +95,7 @@ class Crm::Cards::PayloadBuilder
   end
 
   # Conversa que a pessoa não vê (#2283, item 7): o nome de quem atende essa conversa não vai, nem como responsável nem
-  # como quem cuida. O dono do card e o robô continuam (não vêm da conversa oculta).
+  # como quem cuida. No lugar dele, o próximo da ordem: o dono do card, senão o robô.
   def sanitize_hidden_conversation!(payload)
     return if primary_conversation_visible?
 
@@ -94,8 +103,9 @@ class Crm::Cards::PayloadBuilder
     payload[:metadata] = sanitized_metadata(payload[:metadata])
     return unless hidden_conversation_assignee?
 
-    payload.delete(:responsible)
-    payload[:current_responsible] = nil if @card.owner.blank?
+    fallback = self.class.responsible_without_conversation_agent(@card)
+    fallback ? payload[:responsible] = fallback : payload.delete(:responsible)
+    payload[:current_responsible] = fallback
   end
 
   def hidden_conversation_assignee?
@@ -122,7 +132,7 @@ class Crm::Cards::PayloadBuilder
   # pessoa mais perto (o "Feito" usa o id) e, com sort=acao, o grupo do card (Crm::Cards::ActionGroups).
   def append_action_list_payload(payload)
     payload[:current_responsible] = @card.current_responsible
-    payload[:next_follow_up_id] = next_follow_up_id unless @next_follow_up_id.equal?(SKIP_FOLLOW_UP)
+    payload[:next_follow_up_id] = @next_follow_up_id.equal?(SKIP_FOLLOW_UP) ? nil : next_follow_up_id
     payload[:action_group] = Crm::Cards::ActionGroups::KEYS[@card[:acao_grupo]] if @card.has_attribute?(:acao_grupo)
   end
 
