@@ -16,7 +16,9 @@ RSpec.describe 'Webhooks::InstagramController', type: :request do
   end
 
   before do
-    InstallationConfig.where(name: %w[FB_APP_SECRET IG_VERIFY_TOKEN INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN]).delete_all
+    InstallationConfig.where(
+      name: %w[FB_APP_SECRET IG_VERIFY_TOKEN INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN INSTAGRAM_WEBHOOK_RELAY_URLS]
+    ).delete_all
     GlobalConfig.clear_cache
   end
 
@@ -102,6 +104,50 @@ RSpec.describe 'Webhooks::InstagramController', type: :request do
         expect(response).to have_http_status(:success)
         expect(Webhooks::InstagramEventsJob).to have_received(:set).with(wait: 2.seconds)
         expect(job_double).to have_received(:perform_later)
+      end
+    end
+
+    context 'when relaying to another stack (#2200)' do
+      let(:relay_url) { 'https://other-stack.example.com/webhooks/instagram' }
+      let(:comment_body) do
+        { object: 'instagram',
+          entry: [{ id: 'local-ig-1', time: 1, changes: [{ field: 'comments', value: { id: 'c1', text: 'oi' } }] }] }.to_json
+      end
+
+      before do
+        allow(Webhooks::InstagramEventsJob).to receive(:perform_later)
+        allow(Webhooks::InstagramRelayJob).to receive(:perform_later)
+        create(:channel_instagram, instagram_id: 'local-ig-1')
+      end
+
+      it 'relays every body with changes, even for an account connected here' do
+        post_instagram_webhook(comment_body, env: { INSTAGRAM_APP_SECRET: client_secret, INSTAGRAM_WEBHOOK_RELAY_URLS: relay_url })
+
+        expect(Webhooks::InstagramRelayJob).to have_received(:perform_later).with(relay_url, comment_body, signature_for(comment_body))
+      end
+
+      it 'does not relay the dashboard test event (each stack would write it into one of its inboxes)' do
+        test_body = { object: 'instagram', entry: [{ id: 'local-ig-1', time: 1, changes: [{ field: 'messages', value: { text: 'x' } }] }] }.to_json
+
+        post_instagram_webhook(test_body, env: { INSTAGRAM_APP_SECRET: client_secret, INSTAGRAM_WEBHOOK_RELAY_URLS: relay_url })
+
+        expect(Webhooks::InstagramRelayJob).not_to have_received(:perform_later)
+      end
+
+      it 'does not relay when no relay URL is configured' do
+        post_instagram_webhook(comment_body)
+
+        expect(Webhooks::InstagramRelayJob).not_to have_received(:perform_later)
+      end
+
+      it 'does not relay a body that was already relayed' do
+        with_modified_env INSTAGRAM_APP_SECRET: client_secret, INSTAGRAM_WEBHOOK_RELAY_URLS: relay_url do
+          post '/webhooks/instagram', params: comment_body,
+                                      headers: { 'CONTENT_TYPE' => 'application/json', 'X-Hub-Signature-256' => signature_for(comment_body),
+                                                 Webhooks::InstagramRelayJob::RELAY_HEADER => '1' }
+        end
+
+        expect(Webhooks::InstagramRelayJob).not_to have_received(:perform_later)
       end
     end
   end

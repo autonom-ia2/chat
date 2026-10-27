@@ -38,8 +38,17 @@ class Webhooks::InstagramController < ActionController::API
 
   def relay_needed?
     return false if instagram_relay_urls.empty? || request.headers[::Webhooks::InstagramRelayJob::RELAY_HEADER].present?
+    # #2200: comentário e menção chegam em `changes`; cada stack ignora a conta que não conhece, então vão sempre. O
+    # evento de teste do painel (field `messages`) não vai: cada stack o gravaria numa caixa dela.
+    return true if comment_changes?
 
     payload_instagram_ids.any? { |instagram_id| !local_instagram_account?(instagram_id) }
+  end
+
+  def comment_changes?
+    Array(params.to_unsafe_hash[:entry]).any? do |entry|
+      Array(entry.with_indifferent_access[:changes]).any? { |change| ::Webhooks::InstagramEventsJob::COMMENT_FIELDS.include?(change[:field]) }
+    end
   end
 
   def instagram_relay_urls
