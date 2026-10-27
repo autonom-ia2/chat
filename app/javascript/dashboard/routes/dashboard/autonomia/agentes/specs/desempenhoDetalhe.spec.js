@@ -409,6 +409,27 @@ describe('filtros e endereço', () => {
     expect(tabelaDoEndereco({ tabela: 'nada' })).toBe('procuras');
   });
 
+  it('keeps origem=webhook (robot from another system) when the Detail tab rewrites the address', () => {
+    const atual = { aba: 'detalhe', origem: 'webhook', periodo: '30' };
+    expect(enderecoDaAba(atual, 'periodo', FILTROS_VAZIOS)).toEqual({
+      aba: 'detalhe',
+      origem: 'webhook',
+      periodo: '30',
+      tabela: 'periodo',
+    });
+    const comFiltro = enderecoDaAba(atual, 'procuras', {
+      ...FILTROS_VAZIOS,
+      origem: 'site',
+    });
+    expect(comFiltro).toEqual({
+      aba: 'detalhe',
+      origem: 'webhook',
+      periodo: '30',
+      veio_de: 'site',
+    });
+    expect(filtrosDoEndereco(comFiltro).origem).toBe('site');
+  });
+
   it('as opções usam os nomes do catálogo e o nome do negócio para "fechou"', () => {
     const opcoes = opcoesDosFiltros(painel, t);
     expect(opcoes.temas.map(o => o.label)).toEqual([
