@@ -113,24 +113,27 @@ const devolver = async () => {
 </script>
 
 <template>
-  <p
-    v-if="visivel"
-    class="flex flex-wrap items-center gap-x-2 mx-2 mb-1 text-xs leading-5 text-n-slate-11"
-    data-devolver-para-ia
-  >
-    <span
-      class="i-lucide-sparkles size-3.5 flex-shrink-0 text-n-iris-11"
-      aria-hidden="true"
-    />
-    <span>{{ veioDe }}</span>
-    <button
-      v-tooltip.top="t('CONVERSA_CANAL.DEVOLVER.DICA', { nome })"
-      type="button"
-      :disabled="devolvendo"
-      class="inline-flex items-center px-2 -mx-2 -my-3 text-xs font-medium rounded outline-none min-h-11 text-n-iris-11 hover:underline disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-n-iris-8"
-      @click="devolver"
+  <!-- Raiz fixa (contents: sem caixa no layout) para o v-if não ficar na raiz (vue/no-root-v-if). -->
+  <div class="contents">
+    <p
+      v-if="visivel"
+      class="flex flex-wrap items-center gap-x-2 mx-2 mb-1 text-xs leading-5 text-n-slate-11"
+      data-devolver-para-ia
     >
-      {{ t('CONVERSA_CANAL.DEVOLVER.PARA', { nome }) }}
-    </button>
-  </p>
+      <span
+        class="i-lucide-sparkles size-3.5 flex-shrink-0 text-n-iris-11"
+        aria-hidden="true"
+      />
+      <span>{{ veioDe }}</span>
+      <button
+        v-tooltip.top="t('CONVERSA_CANAL.DEVOLVER.DICA', { nome })"
+        type="button"
+        :disabled="devolvendo"
+        class="inline-flex items-center px-2 -mx-2 -my-3 text-xs font-medium rounded outline-none min-h-11 text-n-iris-11 hover:underline disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-n-iris-8"
+        @click="devolver"
+      >
+        {{ t('CONVERSA_CANAL.DEVOLVER.PARA', { nome }) }}
+      </button>
+    </p>
+  </div>
 </template>
