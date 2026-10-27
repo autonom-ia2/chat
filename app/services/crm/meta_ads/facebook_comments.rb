@@ -171,7 +171,7 @@ class Crm::MetaAds::FacebookComments
     record = Crm::MetaAdsPage.find_by(account_id: @connection.account_id, page_id: page)
     return if record.nil? || record.feed_receiving
 
-    Crm::MetaAds::PageSubscription.new(page_id: page, access_token: token, app_id: Crm::MetaAds::FacebookLogin.app_id).add!(FEED)
+    Crm::MetaAds::PageSubscription.new(page_id: page, access_token: token).add!(FEED)
     record.update!(feed_receiving: true)
   end
 

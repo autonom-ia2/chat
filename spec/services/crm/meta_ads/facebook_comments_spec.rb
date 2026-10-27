@@ -144,7 +144,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
 
       expect(Crm::MetaAdsPage).to have_received(:remember!).with(account, [{ 'id' => page_id, 'name' => 'Loja Exemplo' }]).twice
       expect(Crm::MetaAds::PageSubscription).to have_received(:new)
-        .with(page_id: page_id, access_token: page_token, app_id: Crm::MetaAds::FacebookLogin.app_id).once
+        .with(page_id: page_id, access_token: page_token).once
       expect(subscription).to have_received(:add!).with(%w[feed]).once
     end
 
