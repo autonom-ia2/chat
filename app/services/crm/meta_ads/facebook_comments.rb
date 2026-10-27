@@ -11,7 +11,7 @@
 # - Só age em comentário do post. O id de comentário da Graph é `<id do post>_<id do comentário>`, em que o id do post
 #   é a parte depois do `_` do id do post da Página (`<página>_<post>`); respostas idem (a confirmar na chamada real,
 #   até 07/11). Qualquer outro formato é `comment_not_found`, sem chamar a Meta.
-# - Ao ler, a Página entra em Crm::MetaAdsPage e, na primeira vez, o app assina o campo `feed` dela
+# - Ao ler, a Página entra em Crm::MetaAdsPage e o app assina o campo `feed` dela (no máximo uma vez por dia)
 #   (Crm::MetaAds::PageSubscription, #2200) para o webhook de comentário novo (Crm::MetaAds::FacebookFeed).
 # - Resposta no privado (Private Reply) fica fora: exige pages_messaging (decisão de 25/10 na #2197; é do #2212).
 #
@@ -24,6 +24,7 @@ class Crm::MetaAds::FacebookComments
   MANAGE = 'pages_manage_engagement'.freeze
   NETWORK = 'facebook'.freeze
   FEED = %w[feed].freeze
+  FEED_KEY = 'meta_ads:feed_assinado:%<page_id>s'.freeze
   # Limite de texto de comentário no Facebook.
   MESSAGE_MAX = 8000
 
@@ -155,20 +156,24 @@ class Crm::MetaAds::FacebookComments
     @page_clients[page] = data['access_token'].present? ? remember_page(page, data) : nil
   end
 
-  # A Página entra no resolvedor do webhook; o `feed` é assinado uma vez. Falha aqui não tira a lista da tela.
+  # A Página entra no resolvedor do webhook e o `feed` dela é assinado, no máximo uma vez por dia (a assinatura une os
+  # campos, então repetir é inofensivo; o Redis só poupa as chamadas). Falha aqui não tira a lista da tela.
   def remember_page(page, data)
     client = Meta::AdsGraphClient.new(access_token: data['access_token'])
-    record = Crm::MetaAdsPage.remember!(@connection.account, [{ 'id' => page, 'name' => data['name'] }]).first
-    subscribe_feed(record, page, data['access_token']) if record && !record.feed_receiving
+    Crm::MetaAdsPage.remember!(@connection.account, [{ 'id' => page, 'name' => data['name'] }])
+    subscribe_feed(page, data['access_token'])
     client
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @connection.account).capture_exception
     client
   end
 
-  def subscribe_feed(record, page, token)
+  def subscribe_feed(page, token)
+    key = format(FEED_KEY, page_id: page)
+    return if Redis::Alfred.get(key).present?
+
     Crm::MetaAds::PageSubscription.new(page_id: page, access_token: token, app_id: Crm::MetaAds::FacebookLogin.app_id).add!(FEED)
-    record.update!(feed_receiving: true)
+    Redis::Alfred.set(key, '1', ex: 1.day.to_i)
   end
 
   # `by`: { actor:, user:, ad_id: }. Com anúncio, o post já veio dele; sem, a Página precisa ser da conta.

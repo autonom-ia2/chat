@@ -13,7 +13,8 @@ RSpec.describe Crm::MetaAds::FacebookComments do
   let(:page_token) { 'PAGETOKEN123' }
   let(:json) { { 'Content-Type' => 'application/json' } }
   let(:all_permissions) { %w[pages_read_user_content pages_manage_engagement] }
-  let!(:page_record) { simulate_meta_ads_comment_pieces(account_ids: [account.id]) }
+
+  before { simulate_meta_ads_comment_pieces(account_ids: [account.id]) }
 
   def stub_permissions(*granted)
     stub_request(:get, meta_graph_url('me/permissions'))
@@ -131,8 +132,8 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       expect { described_class.new(connection).list(ad_id) }.to raise_error(described_class::Error, 'meta_unavailable')
     end
 
-    it 'guarda a Página e assina o feed dela na primeira leitura' do
-      page_record.feed_receiving = false
+    it 'guarda a Página e assina o feed dela uma vez (lembrado por um dia)' do
+      Redis::Alfred.delete(format(described_class::FEED_KEY, page_id: page_id))
       subscription = instance_double(Crm::MetaAds::PageSubscription, add!: true)
       allow(Crm::MetaAds::PageSubscription).to receive(:new).and_return(subscription)
       ready!(*all_permissions)
