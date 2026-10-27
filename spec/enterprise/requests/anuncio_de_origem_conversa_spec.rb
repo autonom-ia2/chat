@@ -235,20 +235,50 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
       expect(recebidos.keys).to match_array(tokens)
     end
 
-    it 'se achar quem vê falhar, todos recebem a conversa sem o anúncio e o erro vai para o log' do
-      allow(User).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished)
-      allow(Rails.logger).to receive(:error)
-      recebidos = entregas do
-        ActionCableBroadcastJob.perform_now(tokens, Events::Types::CONVERSATION_UPDATED,
-                                            { id: conversa_anuncio.display_id, account_id: account.id })
+    # Recorte falhou: nenhuma pessoa recebe o anúncio, o contato (widget) continua recebendo o dele e o job envia.
+    describe 'recorte que falha' do
+      def contato_token = conversa_anuncio.contact_inbox.pubsub_token
+
+      def enviar
+        allow(Rails.logger).to receive(:error)
+        entregas do
+          ActionCableBroadcastJob.perform_now(tokens + [contato_token], Events::Types::CONVERSATION_UPDATED,
+                                              { id: conversa_anuncio.display_id, account_id: account.id })
+        end
       end
 
-      expect(recebidos.keys).to match_array(tokens)
-      recebidos.each_value do |mensagens|
-        expect(mensagens.sole[:additional_attributes]).to include(atributos_oculto)
-        expect(mensagens.sole.to_json).not_to include(*fora_do_referral)
+      it 'ao achar quem vê: as pessoas recebem sem o anúncio, o contato inteiro, e o erro vai para o log' do
+        allow(AccountUser).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished)
+        recebidos = enviar
+
+        tokens.each do |token|
+          expect(recebidos.fetch(token).sole[:additional_attributes]).to include(atributos_oculto)
+          expect(recebidos.fetch(token).sole.to_json).not_to include(*fora_do_referral)
+        end
+        expect(recebidos.fetch(contato_token).sole[:additional_attributes]['campaign_touches'].first).to eq(toque_anuncio)
+        expect(Rails.logger).to have_received(:error).with(include('ActiveRecord::ConnectionNotEstablished'))
       end
-      expect(Rails.logger).to have_received(:error).with(include('ActiveRecord::ConnectionNotEstablished'))
+
+      it 'sem saber nem quem é pessoa: todos recebem sem o anúncio' do
+        allow(User).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished)
+        recebidos = enviar
+
+        expect(recebidos.keys).to match_array(tokens + [contato_token])
+        recebidos.each_value { |mensagens| expect(mensagens.sole[:additional_attributes]).to include(atributos_oculto) }
+      end
+
+      it 'ao esconder o anúncio: as pessoas recebem sem os campos de campanha, o contato inteiro' do
+        allow(Crm::AnuncioDeOrigem).to receive(:oculta_atributos).and_raise(NoMethodError)
+        recebidos = enviar
+
+        tokens.each do |token|
+          atributos = recebidos.fetch(token).sole[:additional_attributes]
+          expect(atributos.keys.map(&:to_s)).not_to include('campaign', 'campaign_touches', 'campaign_source_ids')
+          expect(recebidos.fetch(token).sole.to_json).not_to include(*fora_do_referral)
+        end
+        expect(recebidos.fetch(contato_token).sole[:additional_attributes]['campaign_touches'].first).to eq(toque_anuncio)
+        expect(Rails.logger).to have_received(:error).with(include('NoMethodError')).at_least(:once)
+      end
     end
 
     it 'VisibilitySync: o evento que ele manda direto pelo job também sai sem o anúncio para quem não vê' do
@@ -279,6 +309,16 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
       [admin, plain_agent, com_view, com_manage].each do |user|
         expect(opcoes(user)).to contain_exactly('120200000000000001', 'divulgacao-1')
       end
+    end
+
+    it 'com 51 campanhas: sem a chave, todas menos o anúncio' do
+      lote = Array.new(51) { |indice| toque_divulgacao.merge('source_id' => "lote-#{indice}") }
+      conversa = create_crm_conversation(account: account, inbox: inbox, contact: contato)
+      conversa.update!(additional_attributes: { 'campaign_touches' => lote + [toque_anuncio],
+                                                'campaign_source_ids' => lote.pluck('source_id') + %w[120200000000000001] })
+
+      expect(opcoes(sem_chave)).to match_array(lote.pluck('source_id') + %w[divulgacao-1])
+      expect(opcoes(com_view)).to include('120200000000000001')
     end
   end
 
@@ -316,13 +356,10 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
           .to contain_exactly('Card do anúncio', 'Card da divulgação', 'Card sem origem', 'Card só do anúncio')
       end
 
-      it "#{superficie}: sem a chave, mais de #{Crm::AnuncioDeOrigem::Ids::MAX_IDS} ids dá 422" do
-        ids = Array.new(Crm::AnuncioDeOrigem::Ids::MAX_IDS + 1) { |indice| "id-#{indice}" }.join(',')
-        get "#{api}/crm/#{superficie}", params: { pipeline_id: pipeline_and_stage.first.id, campaign_source_ids: ids },
-                                        headers: auth_headers(sem_chave)
+      it "#{superficie}: sem a chave, filtro salvo com 51 ids funciona e descarta o anúncio" do
+        ids = Array.new(49) { |indice| "outra-#{indice}" }.unshift('120200000000000001', 'divulgacao-1').join(',')
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.parsed_body['error']).to eq(I18n.t('errors.custom_filters.too_many_campaigns', limit: 50))
+        expect(titulos(superficie, sem_chave, ids)).to contain_exactly('Card do anúncio', 'Card da divulgação')
       end
 
       it "#{superficie}: com a chave, administrador e agente sem função filtram pelo anúncio" do
@@ -387,14 +424,24 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
       end
     end
 
-    it "mais de #{Crm::AnuncioDeOrigem::Ids::MAX_IDS} ids: 422 com a mensagem do limite" do
-      valores = Array.new(Crm::AnuncioDeOrigem::Ids::MAX_IDS + 1) { |indice| "\"id-#{indice}\"" }
-      post "#{api}/conversations/filter", headers: auth_headers(sem_chave), as: :json,
-                                          params: { payload: [{ attribute_key: 'campaign_source_ids', filter_operator: 'contains',
-                                                                values: valores, query_operator: nil }] }
+    it 'filtro salvo com 51 ids, sem a chave: funciona e descarta o anúncio' do
+      sozinho = create_crm_conversation(account: account, inbox: inbox, contact: contato)
+      sozinho.update!(additional_attributes: { 'campaign_touches' => [toque_anuncio], 'campaign_source_ids' => %w[120200000000000001] })
+      valores = ['"120200000000000001"', '"divulgacao-1"'] + Array.new(49) { |indice| "\"outra-#{indice}\"" }
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq(I18n.t('errors.custom_filters.too_many_campaigns', limit: 50))
+      expect(filtrar_conversas(sem_chave, valores)).to contain_exactly(conversa_anuncio.display_id, conversa_divulgacao.display_id)
+    end
+
+    # A contagem de não lidas de um filtro salvo segue a lista do dono do filtro.
+    it 'contagem de não lidas do filtro salvo: sem a chave, o id de anúncio não conta' do
+      conversa_divulgacao.messages.create!(account: account, inbox: inbox, message_type: :incoming, sender: conversa_divulgacao.contact,
+                                           content: 'Oi')
+      consulta = { payload: [{ attribute_key: 'campaign_source_ids', filter_operator: 'contains',
+                               values: ['"120200000000000001"'], query_operator: nil }] }
+      contar = ->(user) { Conversations::UnreadCounts::FilterQueryCounter.new(account: account, user: user, query: consulta).perform }
+
+      expect(contar.call(com_view)).to eq(1)
+      expect(contar.call(sem_chave)).to eq(2)
     end
 
     # O toque antigo, gravado só em `campaign` (sem lista nem espelho), conta igual com poucos e com muitos ids.

@@ -4,15 +4,20 @@
 # mesmo job entrega o evento inteiro a quem vê e o sem o anúncio a quem não vê. Sem toque de anúncio (a maioria, inclusive
 # digitando), não há consulta: um envio só, como antes.
 #
-# Se achar quem vê falhar (exceção), o evento NUNCA sai inteiro: todos recebem a conversa sem o anúncio, e o erro vai
-# para o log.
-#
 # Onde o evento leva a conversa: na raiz (eventos da conversa), em `conversation` (digitando) e no `primary_actor` da
 # notificação. O token do contato (widget) não é de um usuário e recebe o evento inteiro, como antes.
+#
+# Se o recorte falhar (exceção), o evento nunca sai inteiro para uma pessoa e o job não deixa de enviar; o erro (só a
+# classe) vai para o log:
+# - os tokens de pessoa recebem a conversa sem o anúncio; o de contato e widget, a conversa inteira;
+# - se nem isso der para saber, todos recebem sem o anúncio;
+# - se esconder o anúncio também falhar, a conversa sai sem os campos de campanha (campaign, campaign_touches e
+#   campaign_source_ids).
 #
 #   Crm::AnuncioDeOrigem::TempoReal.envios(account_id, tokens, payload) -> [[tokens, payload], ...]
 class Crm::AnuncioDeOrigem::TempoReal
   CAMINHOS = [[], [:conversation], %i[notification primary_actor]].freeze
+  CHAVES_DE_CAMPANHA = %w[campaign campaign_touches campaign_source_ids].freeze
 
   def self.envios(account_id, tokens, payload)
     new(account_id, tokens, payload).envios
@@ -29,8 +34,8 @@ class Crm::AnuncioDeOrigem::TempoReal
 
     separados
   rescue StandardError => e
-    Rails.logger.error("[anuncio_de_origem] tempo real sem o recorte por destinatário (account #{@account_id}): #{e.class.name}")
-    [[@tokens, payload_oculto]]
+    registra(e)
+    sem_recorte
   end
 
   private
@@ -40,6 +45,19 @@ class Crm::AnuncioDeOrigem::TempoReal
     return [[@tokens, @payload]] if ocultos.empty?
 
     [[@tokens - ocultos, @payload], [ocultos, payload_oculto]].reject { |tokens, _payload| tokens.empty? }
+  end
+
+  # Sem o recorte: as pessoas recebem sem o anúncio; contato e widget, inteiro. Sem saber quem é pessoa, todos sem.
+  def sem_recorte
+    pessoas = tokens_de_pessoas
+    [[@tokens - pessoas, @payload], [pessoas, payload_seguro]].reject { |tokens, _payload| tokens.empty? }
+  rescue StandardError => e
+    registra(e)
+    [[@tokens, payload_seguro]]
+  end
+
+  def registra(erro)
+    Rails.logger.error("[anuncio_de_origem] tempo real sem o recorte por destinatário (account #{@account_id}): #{erro.class.name}")
   end
 
   def com_anuncio?
@@ -54,32 +72,48 @@ class Crm::AnuncioDeOrigem::TempoReal
     alvo[:additional_attributes] if alvo.is_a?(Hash)
   end
 
+  def usuarios
+    @usuarios ||= User.where(pubsub_token: @tokens).select(:id, :pubsub_token).to_a
+  end
+
+  def tokens_de_pessoas = usuarios.map(&:pubsub_token)
+
   # Usuário fora da conta (ou conta não achada) não vê. Token que não é de usuário (contato, widget) não entra aqui.
   def tokens_que_nao_veem
-    usuarios = User.where(pubsub_token: @tokens).select(:id, :pubsub_token).to_a
     return [] if usuarios.empty?
 
     membros = AccountUser.where(account_id: @account_id, user_id: usuarios.map(&:id)).index_by(&:user_id)
     usuarios.reject { |usuario| Crm::AnuncioDeOrigem.ve?(membros[usuario.id]) }.map(&:pubsub_token)
   end
 
-  # Cópia só ao longo de cada caminho (sem deep_dup: o payload leva registros, como o contact_inbox).
   def payload_oculto
-    CAMINHOS.reduce(@payload) { |payload, caminho| oculta_em(payload, caminho) }
+    troca_atributos { |atributos| Crm::AnuncioDeOrigem.oculta_atributos(atributos.stringify_keys) }
   end
 
-  def oculta_em(alvo, caminho)
+  def payload_seguro
+    payload_oculto
+  rescue StandardError => e
+    registra(e)
+    troca_atributos { |atributos| atributos.except(*CHAVES_DE_CAMPANHA, *CHAVES_DE_CAMPANHA.map(&:to_sym)) }
+  end
+
+  # Cópia só ao longo de cada caminho (sem deep_dup: o payload leva registros, como o contact_inbox).
+  def troca_atributos(&)
+    CAMINHOS.reduce(@payload) { |payload, caminho| troca_em(payload, caminho, &) }
+  end
+
+  def troca_em(alvo, caminho, &)
     return alvo unless alvo.is_a?(Hash)
-    return oculta_atributos_de(alvo) if caminho.empty?
+    return troca_atributos_de(alvo, &) if caminho.empty?
 
     chave, *resto = caminho
-    alvo.key?(chave) ? alvo.merge(chave => oculta_em(alvo[chave], resto)) : alvo
+    alvo.key?(chave) ? alvo.merge(chave => troca_em(alvo[chave], resto, &)) : alvo
   end
 
-  def oculta_atributos_de(alvo)
+  def troca_atributos_de(alvo)
     atributos = alvo[:additional_attributes]
     return alvo unless atributos.is_a?(Hash)
 
-    alvo.merge(additional_attributes: Crm::AnuncioDeOrigem.oculta_atributos(atributos.stringify_keys))
+    alvo.merge(additional_attributes: yield(atributos))
   end
 end

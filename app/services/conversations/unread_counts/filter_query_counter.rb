@@ -21,6 +21,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
   end
 
   def perform
+    @params[:payload] = payload_para_o_dono(@params[:payload])
     return unless valid_query?
     return unless valid_typed_values?
 
@@ -42,6 +43,15 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
   end
 
   private
+
+  # Anúncio de origem (#2271): o filtro salvo conta como a lista do dono mostra; quem não vê o anúncio não conta
+  # conversas por id de anúncio (Crm::AnuncioDeOrigem::FiltroDeConversas).
+  def payload_para_o_dono(payload)
+    filtro = Crm::AnuncioDeOrigem::FiltroDeConversas
+    return payload unless filtro.por_campanha_em?(payload)
+
+    filtro.payload(payload, user: @user, account_user: @account.account_users.find_by(user: @user), account: @account)
+  end
 
   def valid_query?
     @params[:payload].is_a?(Array) && valid_query_operator_positions?

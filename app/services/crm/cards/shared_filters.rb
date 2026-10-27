@@ -169,8 +169,7 @@ module Crm::Cards::SharedFilters
   # Anúncio de origem (#2271): para a função personalizada sem meta_ads_view, os ids de anúncio saem do filtro (filtrar
   # por eles revelaria qual card veio de qual anúncio); os de divulgação (WhatsApp, e-mail, SMS) continuam filtrando.
   # Só com ids de anúncio, o filtro fica vazio e é ignorado, como o filtro por valor (#2075).
-  # O robô filtra por tudo; sem identidade, não (Crm::AnuncioDeOrigem.ve_no_contexto?). Acima de
-  # Crm::AnuncioDeOrigem::Ids::MAX_IDS ids, 422.
+  # O robô filtra por tudo; sem identidade, não (Crm::AnuncioDeOrigem.ve_no_contexto?).
   def parse_campaign_source_ids
     ids = Array(@params[:campaign_source_ids].presence)
           .flat_map { |source_id| source_id.to_s.split(',') }

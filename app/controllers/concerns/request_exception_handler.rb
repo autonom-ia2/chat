@@ -11,7 +11,6 @@ module RequestExceptionHandler
     rescue_from ActiveRecord::RecordInvalid, with: :render_record_invalid
     rescue_from CustomExceptions::Inbox::LimitExceeded,
                 CustomExceptions::Account::EmailLimitExceeded,
-                CustomExceptions::CustomFilter::TooManyCampaigns,
                 with: :render_error_response
   end
 

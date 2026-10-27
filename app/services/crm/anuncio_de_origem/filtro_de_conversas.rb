@@ -7,8 +7,8 @@
 # `is_present`/`is_not_present` ficam como estão: dizem só se a conversa veio de alguma campanha ou anúncio, e quem não vê
 # o anúncio já vê em cada conversa que ela veio de anúncio (só não vê qual).
 #
-# Quem lê vem de Current.user e Current.account_user (o token de API de uma pessoa só preenche o Current; o
-# `current_user` do Devise vem vazio). Até Crm::AnuncioDeOrigem::Ids::MAX_IDS ids; acima, 422.
+# Quem lê vem de quem chama, explícito: a lista lê Current.user e Current.account_user (não o `current_user` que o
+# controller passa ao FilterService); a contagem de não lidas por filtro salvo, o dono do filtro. Sem limite de ids.
 #
 #   Crm::AnuncioDeOrigem::FiltroDeConversas.payload(payload, user:, account_user:, account:) -> o payload para quem lê
 module Crm::AnuncioDeOrigem::FiltroDeConversas
@@ -19,12 +19,18 @@ module Crm::AnuncioDeOrigem::FiltroDeConversas
   module_function
 
   def payload(payload, user:, account_user:, account:)
-    condicoes = Array(payload).map { |condicao| condicao.to_h.with_indifferent_access }
-    return payload unless condicoes.any? { |condicao| por_campanha?(condicao) }
+    return payload unless por_campanha_em?(payload)
     return payload if Crm::AnuncioDeOrigem.ve_no_contexto?(user, account_user)
 
-    fecha(condicoes.filter_map { |condicao| por_campanha?(condicao) ? sem_anuncio(condicao, account) : condicao })
+    fecha(condicoes_de(payload).filter_map { |condicao| por_campanha?(condicao) ? sem_anuncio(condicao, account) : condicao })
   end
+
+  # O payload tem condição por campanha? (A contagem de não lidas só procura o dono do filtro quando tem.)
+  def por_campanha_em?(payload)
+    condicoes_de(payload).any? { |condicao| por_campanha?(condicao) }
+  end
+
+  def condicoes_de(payload) = Array(payload).map { |condicao| condicao.to_h.with_indifferent_access }
 
   def por_campanha?(condicao)
     condicao[:attribute_key] == CHAVE && OPERADORES.include?(condicao[:filter_operator])
