@@ -923,12 +923,24 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Leitura no celular apaga a bolinha (#2246, opção C). Ligada: quando o celular do negócio lê as mensagens do cliente,
+# o "visto" do agente anda até elas e a bolinha de não lida apaga, sem sino (ConversaCanal::VistaNoCelular). Hoje só
+# na caixa oficial com WhatsApp Híbrido, pela sessão auxiliar (WhatsappHybrid::LeituraNoCelular); a caixa WhatsApp API
+# (WAHA comum) depende de patch no conector e a Cloud sem Híbrido não recebe o sinal da Meta. Desligada: a bolinha só
+# apaga pelo painel ou pela resposta de uma pessoa, como antes. Sem migration. Fim da feature_flags_ext_2, depois de
+# meta_ads_organico: posição 6 (valor 32, 1 << 5), confirmada pela Orquestração (27/10). Nasce desligada em todas;
+# primeiro liga só numa conta de teste com Híbrido, para medir (Orquestração, com OK do Rodrigo).
+- name: leitura_no_celular
+  display_name: Conversas › leitura no celular apaga a bolinha
+  enabled: false
+  column: feature_flags_ext_2
+
 # Anúncios da Meta: o Gerenciador simples (#2198, PR 1). Ligada: "Criar anúncio" no Resultado abre o anúncio novo
 # (WhatsApp ou site, só os destinos e lugares que a chamada real confirmou), o detalhe do anúncio mostra o orçamento e
 # as datas com "Mudar", e os anúncios criados aqui que seguem pausados aparecem no topo. Tudo nasce pausado: nada gasta
 # até a pessoa tocar em "Ativar anúncio". Desligada: o painel de sempre; nenhuma rota de criar chama a Meta (404).
 # Migration 20261108580000 (tabela nova crm_meta_ads_created_objects). Fim da feature_flags_ext_2, posição pela ordem
-# na main, confirmada pela Orquestração na hora da fila (hoje 6, valor 32, 1 << 5, depois do meta_ads_organico).
+# na main, confirmada pela Orquestração na hora da fila (hoje 7, valor 64, 1 << 6, depois do leitura_no_celular).
 - name: meta_ads_criar
   display_name: Anúncios da Meta › criar anúncio, orçamento e datas
   enabled: false
