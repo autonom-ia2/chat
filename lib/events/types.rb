@@ -36,6 +36,9 @@ module Events::Types
   CONVERSATION_TYPING_OFF = 'conversation.typing_off'
   CONVERSATION_MENTIONED = 'conversation.mentioned'
 
+  # comentário novo em anúncio da Meta (Facebook #2197, Instagram #2196), consumido pelo #2212
+  META_ADS_COMMENT_RECEIVED = 'meta_ads.comment_received'
+
   # message events
   MESSAGE_CREATED = 'message.created'
   FIRST_REPLY_CREATED = 'first.reply.created'
