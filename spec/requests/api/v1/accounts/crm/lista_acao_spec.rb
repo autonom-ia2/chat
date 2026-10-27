@@ -108,6 +108,24 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
       expect(counts(agent)['retorno']).to eq(1)
       expect(list(agent, follow_up_status: 'due')['payload'].pluck('id')).to eq([overdue_card.id])
     end
+
+    it 'põe no grupo 2 o lembrete da IA para a equipe que já disparou, com o id dele para o "Feito"' do
+      ai_card = card('Lembrete da IA', inbox: inbox, owner: agent, conversation: conversation(inbox: inbox, assignee: agent))
+      # Como o AutoFollowupRunner#create_reminder deixa o toque no modo "IA lembra a equipe", vencido pelo DueProcessor.
+      reminder = account.crm_follow_ups.create!(card: ai_card, created_by: agent, title: 'Lembrete da IA', due_at: 2.hours.ago,
+                                                timezone: 'America/Sao_Paulo', status: :overdue, follow_up_type: :message,
+                                                metadata: { 'source' => Crm::FollowUp::AI_FOLLOWUP_SOURCE, 'touch' => 1,
+                                                            'action_mode' => Crm::FollowUp::AI_REMINDER_ACTION_MODE })
+      # O próximo toque da cadência, ainda sem disparar, segue fora.
+      account.crm_follow_ups.create!(card: ai_card, created_by: agent, title: 'Toque 2', due_at: 3.hours.ago,
+                                     timezone: 'America/Sao_Paulo', follow_up_type: :message,
+                                     metadata: { 'source' => Crm::FollowUp::AI_FOLLOWUP_SOURCE, 'touch' => 2 })
+
+      row = list(agent)['payload'].find { |item| item['id'] == ai_card.id }
+
+      expect(row).to include('action_group' => 'retorno', 'next_follow_up_id' => reminder.id)
+      expect(counts(agent)['retorno']).to eq(1)
+    end
   end
 
   describe 'só meus' do

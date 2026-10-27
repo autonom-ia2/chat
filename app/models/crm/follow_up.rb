@@ -84,6 +84,9 @@ class Crm::FollowUp < ApplicationRecord
 
   # Marca do toque da cadência da IA (Crm::FollowUps::AutoFollowupTouchBuilder).
   AI_FOLLOWUP_SOURCE = 'ai_followup'.freeze
+  # No modo "IA lembra a equipe", o toque que dispara vira lembrete para a pessoa com esta marca
+  # (Crm::FollowUps::AutoFollowupRunner#create_reminder).
+  AI_REMINDER_ACTION_MODE = 'ai_reminder'.freeze
 
   validates :title, :due_at, :timezone, presence: true
   validates :metadata, jsonb_attributes_length: true
@@ -95,10 +98,12 @@ class Crm::FollowUp < ApplicationRecord
 
   scope :active, -> { where(status: [statuses[:pending], statuses[:overdue]]) }
   # Retorno que a pessoa faz (Lista nova, #2283): ativo (o vencido vira overdue no DueProcessor), lembrete ou adiar a
-  # conversa. Envio automático e toque da cadência da IA também têm hora, mas quem age é o sistema: ficam fora.
+  # conversa. Envio automático e toque da cadência da IA também têm hora, mas quem age é o sistema: ficam fora. O toque
+  # da IA que já virou lembrete para a equipe (action_mode ai_reminder) é da pessoa e entra.
   scope :retorno_da_pessoa, lambda {
     active.where(automation_mode: [automation_modes[:reminder_only], automation_modes[:snooze_conversation]])
-          .where("COALESCE(crm_follow_ups.metadata->>'source', '') <> ?", AI_FOLLOWUP_SOURCE)
+          .where("COALESCE(crm_follow_ups.metadata->>'source', '') <> ? OR crm_follow_ups.metadata->>'action_mode' = ?",
+                 AI_FOLLOWUP_SOURCE, AI_REMINDER_ACTION_MODE)
   }
   scope :due, ->(time = Time.current) { pending.where(due_at: ..time) }
   # Pré-voo (#1624): o que vence depois de `from` e até `to`; o que já venceu é do DueProcessor.
