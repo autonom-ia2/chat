@@ -92,13 +92,15 @@ RSpec.describe 'Autonomia agent performance panel', type: :request do
     expect(response.parsed_body).not_to have_key('procuras')
   end
 
-  it 'leaves the money out for a role without sales_value_view, and in for one with it' do
+  it 'leaves the money out for a role without sales_value_view, and in for one with it (seeing every inbox)' do
     ticket = { 'com_valor' => 3, 'medio' => 100.0, 'mediano' => 90.0, 'moeda' => 'BRL', 'nota' => nil }
     Autonomia::Desempenho::Ficha.last.update!(referencias: { 'ticket' => ticket, 'confianca' => nil, 'exemplos' => {} })
 
     base = %w[desempenho_view conversation_view]
     sem_valor, com_valor = [[], ['sales_value_view']].map do |extra|
-      com_funcao(base + extra).tap { |usuario| create(:inbox_member, user: usuario, inbox: caixa) }
+      com_funcao(base + extra).tap do |usuario|
+        [caixa, outra_caixa].each { |inbox| create(:inbox_member, user: usuario, inbox: inbox) }
+      end
     end
 
     get endereco, params: { origem: 'webhook' }, headers: sem_valor.create_new_auth_token, as: :json

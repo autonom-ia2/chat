@@ -71,6 +71,9 @@ RSpec.describe Autonomia::Desempenho::Painel do
     AgentBot.create!(id: sujeito_id, name: 'Robô', account: conta)
     semear_mensagens(g3, conta, semear_conversas(g3, conta))
     rodar_carga(File.join(pasta, 'carga', alvo['carga']))
+    # As tabelas acabaram de receber dezenas de milhares de linhas: sem estatística, o planejador do banco de teste
+    # escolhe mal o plano das mensagens (em produção o autovacuum mantém as estatísticas).
+    ActiveRecord::Base.connection.execute('ANALYZE messages, conversations, autonomia_desempenho_procuras')
 
     painel = described_class.new(account: conta, sujeito_type: sujeito_type, sujeito_id: sujeito_id)
     falhas = described_class::PERIODOS.to_h do |chave|

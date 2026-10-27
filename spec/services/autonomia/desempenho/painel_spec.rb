@@ -127,6 +127,46 @@ RSpec.describe Autonomia::Desempenho::Painel do
     expect(painel.call('7')['catalogo']['temas']['entrega']).to eq('Entrega')
   end
 
+  it 'lê do banco só o período e o anterior, e conta conversa nova pela primeira procura do histórico' do
+    antiga = procura_da_loja!(outra_conversa, sujeito_id: robo.id, inicio: '2026-09-01 10:00', ordem: 9)
+
+    resultado = painel.call('7')
+
+    expect(resultado['procuras'].pluck('procura')).not_to include(antiga.ordem)
+    expect(resultado['evolucao']['pontos'].sum { |ponto| ponto['conversas_novas'] }).to eq(1)
+  end
+
+  it 'mostra só as procuras mais recentes acima do teto da lista e diz quantas são' do
+    stub_const("#{described_class}::LIMITE_DA_LISTA", 2)
+
+    resultado = painel.call('7')
+
+    expect(resultado['procuras'].size).to eq(2)
+    expect(resultado['meta']['lista']).to eq('total' => 3, 'mostradas' => 2)
+    expect(resultado['meta']['base']['procuras']).to eq(3)
+  end
+
+  it 'conta a equipe por mês no histórico, fora da janela do período' do
+    equipe = create(:user, account: account)
+    mensagem(conversa, :outgoing, '2026-08-10 10:00:00', remetente: equipe)
+    mensagem(conversa, :outgoing, '2026-10-20 10:00:00', remetente: equipe)
+
+    expect(painel.call('7')['pessoa']['equipe_por_mes']).to include({ 'mes' => '2026-08', 'n' => 1 }, { 'mes' => '2026-10', 'n' => 1 })
+  end
+
+  describe '.fuso_de' do
+    let(:ficha) { Autonomia::Desempenho::Ficha.vigente(account, 'robo', robo.id) }
+
+    it 'usa o fuso da conta, o da ficha como reserva e nunca um nome inválido' do
+      expect(described_class.fuso_de(account, ficha)).to eq('America/Sao_Paulo')
+      account.update!(reporting_timezone: 'Europe/Lisbon')
+      expect(described_class.fuso_de(account.reload, ficha)).to eq('Europe/Lisbon')
+      account.update!(reporting_timezone: nil)
+      ficha.configuracao['meta']['fuso'] = 'Lugar/Nenhum'
+      expect(described_class.fuso_de(account.reload, ficha)).to eq(ActiveSupport::TimeZone[Crm::Timezone::Resolver.default_timezone].tzinfo.name)
+    end
+  end
+
   describe '.intervalo' do
     it 'corta no começo dos dados e só traz o período anterior quando ele cabe inteiro' do
       inicio_dos_dados = Date.new(2026, 10, 1)

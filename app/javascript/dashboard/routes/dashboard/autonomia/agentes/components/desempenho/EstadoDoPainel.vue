@@ -40,7 +40,7 @@ const frase = computed(() => {
   return t(`${NS}.${chave}`, { nome: props.nome });
 });
 const botao = computed(() => {
-  if (config.value.faixa) return '';
+  if (config.value.faixa || config.value.semBotao) return '';
   if (!semAcesso.value) return t(`${NS}.${config.value.chave}_BOTAO`);
   return config.value.botaoSemAcesso
     ? t(`${NS}.${config.value.chave}_SEM_ACESSO_BOTAO`)

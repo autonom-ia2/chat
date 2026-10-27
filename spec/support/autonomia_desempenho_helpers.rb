@@ -22,8 +22,9 @@ module AutonomiaDesempenhoHelpers
                 'nomes' => { 'compra' => 'Pedidos de compra' }, 'definicoes' => [] },
     'compra_pedidos' => ['comprar'], 'duvida_pedidos' => ['duvida'], 'duvida_resolvida' => ['duvida_resolvida'],
     'funil' => [{ 'id' => 'pedido', 'nome' => 'Pediu', 'marcos' => [] },
-                { 'id' => 'orcamento_enviado', 'nome' => 'Recebeu o orçamento', 'marcos' => ['orcamento_enviado'] },
-                { 'id' => 'pagou', 'nome' => 'Pagou', 'marcos' => ['pagou'] }],
+                # Etapa cujo id difere dos marcos (vale a lista) e etapa sem lista (vale o id): a regra dos três lados.
+                { 'id' => 'recebeu_orcamento', 'nome' => 'Recebeu o orçamento', 'marcos' => ['orcamento_enviado'] },
+                { 'id' => 'pagou', 'nome' => 'Pagou', 'marcos' => [] }],
     'funil_nota' => nil, 'comparacoes' => [], 'cortes' => [{ 'id' => 'pedido', 'nome' => 'Pedido', 'base' => 'todas', 'campo' => 'pedido' }],
     'regras_sistemicas' => [], 'nomes_horario' => { 'fora' => 'Fora do horário', 'dentro' => 'No horário' },
     'marcos_da_passagem' => nil, 'anuncios_ligados' => false, 'anuncios' => [], 'origem_nota' => nil,

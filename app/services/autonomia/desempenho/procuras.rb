@@ -1,19 +1,21 @@
 # As procuras lidas de um agente (#2251), no formato do contrato v2: `conversa` é o número que a pessoa vê na caixa
 # (`display_id`, o do link da conversa), `inicio` vem no fuso da ficha ('AAAA-MM-DDTHH:MM'). A lista sai na ordem
-# (conversa, procura), como no protótipo. Com `visiveis` (as conversas que a pessoa vê), só as procuras delas.
+# (conversa, procura), como no protótipo. Com `visiveis` (as conversas que a pessoa vê), só as procuras delas; com
+# `faixa` (Time..Time), só as que começam nela: o painel lê do banco o período e o anterior, não o histórico todo.
 class Autonomia::Desempenho::Procuras
   COLUNAS = %w[
     conversation_id ordem inicio_em teste quem_id origem_id anuncio_id pedido_id tema_id resultado_id qualidade_id
     marcos motivo_ids regra_ids perda_evitavel precisava_pessoa teve_pessoa dados
   ].freeze
 
-  def initialize(account:, sujeito_type:, sujeito_id:, configuracao:, fuso:, visiveis: nil) # rubocop:disable Metrics/ParameterLists
+  def initialize(account:, sujeito_type:, sujeito_id:, configuracao:, fuso:, visiveis: nil, faixa: nil) # rubocop:disable Metrics/ParameterLists
     @account = account
     @sujeito_type = sujeito_type
     @sujeito_id = sujeito_id
     @compra_ids = Array(configuracao['compra_pedidos']).to_set
     @fuso = fuso
     @visiveis = visiveis
+    @faixa = faixa
   end
 
   def lista
@@ -33,6 +35,15 @@ class Autonomia::Desempenho::Procuras
     @por_que
   end
 
+  # {display_id => 'AAAA-MM-DD'}: o dia da primeira procura (sem as de teste) de cada conversa da lista, olhando o
+  # histórico inteiro, para "conversas novas" da evolução não depender de a faixa carregada começar antes.
+  def primeiras
+    carregar
+    @primeiras ||= escopo.where(teste: false, conversation_id: @conversas.values).joins(:conversation)
+                         .group('conversations.display_id').minimum(:inicio_em)
+                         .transform_values { |em| em.in_time_zone(@fuso).to_date.iso8601 }
+  end
+
   # Os exemplos da ficha ({grupo => {id => [[conversation_id, ordem]]}}) com o número da caixa no lugar do id interno.
   def exemplos(referencias)
     display = conversas.invert
@@ -48,13 +59,17 @@ class Autonomia::Desempenho::Procuras
   def carregar
     return if @lista
 
-    escopo = Autonomia::Desempenho::Procura.do_sujeito(@account, @sujeito_type, @sujeito_id)
-    escopo = escopo.where(conversation_id: @visiveis.select(:id)) if @visiveis
-    linhas = escopo.joins(:conversation)
-                   .pluck(Arel.sql('conversations.display_id'), *COLUNAS.map { |c| "autonomia_desempenho_procuras.#{c}" })
+    na_faixa = @faixa ? escopo.where(inicio_em: @faixa) : escopo
+    colunas = [Arel.sql('conversations.display_id'), *COLUNAS.map { |c| "autonomia_desempenho_procuras.#{c}" }]
+    linhas = na_faixa.joins(:conversation).pluck(*colunas)
     @conversas = {}
     @por_que = {}
     @lista = linhas.map { |linha| procura(linha) }.sort_by { |p| [p['conversa'], p['procura']] }
+  end
+
+  def escopo
+    todas = Autonomia::Desempenho::Procura.do_sujeito(@account, @sujeito_type, @sujeito_id)
+    @visiveis ? todas.where(conversation_id: @visiveis.select(:id)) : todas
   end
 
   def procura(linha) # rubocop:disable Metrics/AbcSize

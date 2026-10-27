@@ -84,8 +84,18 @@ celular e PDF de temas.
 
 ## O que ainda falta antes do produto
 
-- Endpoint de exportação, com permissão `desempenho_view`. Os serviços Ruby já recebem o contrato.
-- Leitura automática no servidor, que substitui o arquivo local, conforme a ESPEC.
-- Ligar a conversa da tabela ao número que aparece na caixa. O número da análise difere do número da caixa na
-  maioria das conversas e precisa ser conferido antes de o link ir para produção.
-- Posição da flag em `feature_flags_ext_2`, a confirmar com a Orquestração antes do PR.
+Feito no #2251: a leitura guardada no banco (fichas, leituras, procuras e sugestões), o painel calculado no servidor
+com a API como fonte da tela, a exportação em PDF e Excel pelo servidor (`desempenho_view` e `contact_export`), os
+números só das caixas que a pessoa vê e o número da conversa igual ao da caixa (`display_id`, conferido na conta de
+referência).
+
+Ainda falta:
+
+- Leitura automática no servidor (Issue de atualização automática): hoje a leitura entra por carga manual. Ela também
+  preenche `chave_de_leitura` e `instrucao_hash` da ficha, que existem desde já e ficam vazias até lá.
+- Gravar o que a tela hoje só mostra: colar a instrução do agente de outro sistema e definir o que conta como
+  resultado. As gavetas saíram desta entrega e voltam no PR que grava.
+- Detalhe paginado no servidor: por ora a lista do período vai inteira até 5 mil procuras, e acima disso só as mais
+  recentes, com aviso.
+- Entrada própria no menu para quem tem só `desempenho_view` (hoje chega pela página do agente ou pelo endereço).
+- Posição final da flag em `feature_flags_ext_2`, confirmada pela Orquestração antes da fila.

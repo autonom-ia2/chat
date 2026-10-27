@@ -6,13 +6,13 @@ module Autonomia::Desempenho::Agregador::Funil
 
   def etapas_cfg = Array(cfg['funil'])
 
-  # Chegou à etapa i: tem o marco dela ou de uma etapa depois. A 1ª etapa é o próprio pedido (toda procura de compra
+  # Chegou à etapa i: tem um marco dela (Conta.marcos_da_etapa) ou de uma etapa depois. A 1ª etapa é o próprio pedido (toda procura de compra
   # chegou a ela; assim o 1º cartão é a base, 100%).
   def chegou?(item, indice)
     return true if indice.zero?
 
     marcos = Array(item['marcos'])
-    etapas_cfg.drop(indice).any? { |etapa| Array(etapa['marcos']).intersect?(marcos) }
+    etapas_cfg.drop(indice).any? { |etapa| Autonomia::Desempenho::Conta.marcos_da_etapa(etapa).intersect?(marcos) }
   end
 
   def indice_da_etapa(etapa_id)

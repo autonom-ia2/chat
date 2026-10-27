@@ -5,7 +5,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { useAdmin } from 'dashboard/composables/useAdmin';
-import { useCanManage } from 'dashboard/composables/useCanManage';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { CONTACT_EXPORT_PERMISSION } from 'dashboard/constants/permissions';
 import { CRM_AI_INTEGRATION_ID } from 'dashboard/helper/crmAiKey';
 import desempenhoApi from 'dashboard/api/autonomia/desempenho';
 import { useAgenteDaPagina } from '../composables/useAgenteDaPagina';
@@ -21,8 +22,6 @@ import {
 import FaixaDoPainel from '../components/desempenho/FaixaDoPainel.vue';
 import BarraDoPainel from '../components/desempenho/BarraDoPainel.vue';
 import EstadoDoPainel from '../components/desempenho/EstadoDoPainel.vue';
-import GavetaMarcos from '../components/desempenho/GavetaMarcos.vue';
-import GavetaColarInstrucao from '../components/desempenho/GavetaColarInstrucao.vue';
 import DemoInterruptor from '../components/desempenho/DemoInterruptor.vue';
 import Segmento from '../components/desempenho/comum/Segmento.vue';
 import Ressalva from '../components/desempenho/comum/Ressalva.vue';
@@ -55,7 +54,6 @@ const route = useRoute();
 const router = useRouter();
 const store = useStore();
 const { isAdmin: ehAdmin } = useAdmin();
-const podeGerenciar = useCanManage('autonomia_manage');
 const contaId = useMapGetter('getCurrentAccountId');
 const bots = useMapGetter('agentBots/getBots');
 // #2251: os números vêm da API; ?fonte=demo (e, no desenvolvimento, ?fonte=vida_real) continua para montar a tela.
@@ -100,8 +98,6 @@ const periodo = computed({
 const painel = ref(null);
 const vidaReal = ref(false);
 const exportacao = ref({});
-const gaveta = ref(null);
-const faixa = ref('');
 
 const pedido = computed(() => ({
   accountId: contaId.value,
@@ -118,7 +114,13 @@ const pedido = computed(() => ({
 // Cada formato: 'verificando' enquanto pergunta se o arquivo existe, 'pronto' ou 'sem_arquivo'.
 // A conta de pedidos descarta a resposta de um período que a pessoa já trocou.
 let pedidos = 0;
+// Baixar o arquivo pede também contact_export (ESPEC 6.3); sem ela, os botões nem aparecem.
+const podeExportar = usePermissionGranted(CONTACT_EXPORT_PERMISSION);
 const verificarExportacao = async (atual, numero) => {
+  if (!podeExportar.value) {
+    exportacao.value = {};
+    return;
+  }
   exportacao.value = Object.fromEntries(
     FORMATOS.map(formato => [formato, { estado: 'verificando' }])
   );
@@ -147,11 +149,9 @@ const carregar = async () => {
 // A troca de aba não recarrega: só o que muda os números (período, fonte, anúncio, estado).
 watch(() => JSON.stringify(pedido.value), carregar, { immediate: true });
 
-// O interruptor da demonstração é ferramenta de quem monta o painel: aparece no ambiente de
-// desenvolvimento ou quando o endereço já escolheu a fonte.
-const mostrarInterruptor = computed(
-  () => import.meta.env.DEV || route.query?.fonte !== undefined
-);
+// O interruptor da demonstração é ferramenta de quem monta o painel: só no ambiente de desenvolvimento
+// (em produção a fonte é sempre a API).
+const mostrarInterruptor = computed(() => Boolean(import.meta.env.DEV));
 
 onMounted(async () => {
   // O nome e a foto do agente não seguram a página: sem eles, vale o nome dos dados.
@@ -274,34 +274,12 @@ const exportar = async formato => {
 const aoEstado = variante => {
   if (variante === 'sem_conversas') periodo.value = 'tudo';
   else if (variante === 'leitura_desligada') trocar({ estado: undefined });
-  else if (variante === 'sem_resultado') gaveta.value = 'marcos';
   else if (variante === 'sem_ia' && ehAdmin.value) {
     router.push({
       name: 'settings_applications_integration',
       params: { integration_id: CRM_AI_INTEGRATION_ID },
     });
   } else rolarAte('pessoa');
-};
-
-const marcosPropostos = computed(() =>
-  Object.entries(painel.value?.catalogo?.marcos || {}).map(([id, texto]) => ({
-    id,
-    nome: texto,
-  }))
-);
-
-const aoConfirmarMarcos = marcos => {
-  gaveta.value = null;
-  faixa.value = t('AGENTS.DESEMPENHO.MARCOS.FEITO', {
-    resultado: marcos[0].nome,
-    nome: nome.value,
-  });
-  if (situacao.value === 'sem_resultado') trocar({ estado: undefined });
-};
-
-const aoColar = () => {
-  gaveta.value = null;
-  useAlert(t('AGENTS.DESEMPENHO.INSTRUCAO.SALVOU', { nome: nome.value }));
 };
 
 const aoMigalha = item => router.push(item.destino);
@@ -354,6 +332,7 @@ const aoMigalha = item => router.push(item.destino);
         :periodo="textoDoPeriodo"
         :dados-ate="meta.dados_ate || ''"
         :exportacao="exportacao"
+        :pode-exportar="podeExportar"
         @migalha="aoMigalha"
         @exportar="exportar"
       />
@@ -395,6 +374,17 @@ const aoMigalha = item => router.push(item.destino);
           "
         />
         <Ressalva
+          v-if="meta.lista"
+          data-aviso-lista
+          :destaque="t(`${NS}.FONTE.LISTA_TITULO`)"
+          :texto="
+            t(`${NS}.FONTE.LISTA_TEXTO`, {
+              mostradas: fmt.n(meta.lista.mostradas),
+              total: fmt.n(meta.lista.total),
+            })
+          "
+        />
+        <Ressalva
           v-if="ehDemo"
           data-aviso-demo
           :destaque="t(`${NS}.FONTE.DEMO_TITULO`)"
@@ -420,37 +410,11 @@ const aoMigalha = item => router.push(item.destino);
                 }}
               </span>
             </template>
-            <button
-              v-if="podeGerenciar"
-              type="button"
-              data-colar-instrucao
-              class="inline-flex items-center px-1 font-semibold underline rounded-lg min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
-              @click="gaveta = 'colar'"
-            >
-              {{
-                meta.instrucao
-                  ? t('AGENTS.DESEMPENHO.INSTRUCAO.ALTERAR')
-                  : t('AGENTS.DESEMPENHO.INSTRUCAO.TITULO', { nome })
-              }}
-            </button>
           </p>
           <p v-if="meta.instrucao" class="m-0 text-xs text-n-slate-11">
             {{ t('AGENTS.DESEMPENHO.INSTRUCAO.AVISO') }}
           </p>
         </div>
-
-        <p
-          v-if="faixa"
-          data-faixa-feito
-          role="status"
-          class="flex items-start gap-3 p-4 m-0 text-sm rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6 text-n-slate-12"
-        >
-          <span
-            class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
-            aria-hidden="true"
-          />
-          {{ faixa }}
-        </p>
 
         <EstadoDoPainel
           v-if="estado"
@@ -493,19 +457,5 @@ const aoMigalha = item => router.push(item.destino);
         />
       </main>
     </template>
-
-    <GavetaMarcos
-      v-if="gaveta === 'marcos' && painel"
-      :nome="nome"
-      :propostos="marcosPropostos"
-      @fechar="gaveta = null"
-      @confirmar="aoConfirmarMarcos"
-    />
-    <GavetaColarInstrucao
-      v-if="gaveta === 'colar'"
-      :nome="nome"
-      @fechar="gaveta = null"
-      @salvar="aoColar"
-    />
   </div>
 </template>

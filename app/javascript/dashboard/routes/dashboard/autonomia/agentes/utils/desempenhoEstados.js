@@ -15,10 +15,11 @@ export const VARIANTES = {
     soQuemGerencia: true,
     botaoSemAcesso: true,
   },
+  // Definir o que conta como resultado volta no PR que grava a escolha (o #2251 tirou a gaveta que não gravava).
   sem_resultado: {
     chave: 'SEM_RESULTADO',
     icone: 'i-lucide-flag',
-    soQuemGerencia: true,
+    semBotao: true,
   },
   conferencia_baixa: {
     chave: 'CONFERENCIA_BAIXA',

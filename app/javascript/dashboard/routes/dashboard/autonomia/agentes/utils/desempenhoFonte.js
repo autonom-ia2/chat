@@ -12,7 +12,7 @@ import { diaDe, pct } from './desempenhoContrato';
 //      e só é lido no ambiente de desenvolvimento, quando o endereço pede (`?fonte=vida_real`); se a
 //      leitura falhar, a tela mostra a demonstração com o aviso `meta.aviso_fonte`, nunca em
 //      silêncio.
-//   3. demonstração (`?fonte=demo`): `desempenhoDemo.json` (uma loja inventada, 30 dias, com
+//   3. demonstração (`?fonte=demo`, só no desenvolvimento): `desempenhoDemo.json` (loja inventada, 30 dias, com
 //      anúncios) e `desempenhoDemoPeriodos.json` (os períodos 7, 90 e tudo, recalculados das mesmas
 //      procuras pelo mesmo gerador, para que as partes fechem com o todo em todo período).
 
@@ -157,13 +157,23 @@ export const comSituacao = (painel, situacao) =>
 
 const pediuSemAnuncio = anuncios => anuncios === false || anuncios === '0';
 
-// Os JSON da demonstração ficam fora do pacote principal do painel: só baixam quando usados.
+// Os JSON da demonstração só existem no ambiente de desenvolvimento (#2251): o `import.meta.env.DEV` é trocado
+// por `false` no build de produção, o ramo some e os dois arquivos nem entram no pacote. Em produção o painel lê
+// só a API, e `painelDemo` devolve null.
+const ARQUIVOS_DA_DEMO = import.meta.env.DEV
+  ? {
+      painel: () => import('./desempenhoDemo.json'),
+      periodos: () => import('./desempenhoDemoPeriodos.json'),
+    }
+  : null;
+
 export const painelDemo = async ({ periodo, anuncios } = {}) => {
+  if (!ARQUIVOS_DA_DEMO) return null;
   const chave = periodoValido(periodo);
-  const { default: demo } = await import('./desempenhoDemo.json');
+  const { default: demo } = await ARQUIVOS_DA_DEMO.painel();
   let painel = demo;
   if (chave !== PERIODO_DA_DEMO) {
-    const { default: outros } = await import('./desempenhoDemoPeriodos.json');
+    const { default: outros } = await ARQUIVOS_DA_DEMO.periodos();
     painel = comporPainel(
       {
         catalogo: demo.catalogo,
@@ -235,13 +245,14 @@ const exportarDaApi = (api, painel, formato, pedido) => {
 
 const buscarPadrao = (...args) => globalThis.fetch(...args);
 
-// A vida real só existe no ambiente de desenvolvimento (o arquivo é local e nunca vai para servidor):
-// em produção, `?fonte=vida_real` mostra a demonstração, sem nem tentar ler o arquivo.
-// `api`: o cliente da API do painel (#2251). Com ele, o padrão é a API; sem ele (testes da vida real e da
-// demonstração), o padrão continua o arquivo local.
+// A vida real e a demonstração só existem no ambiente de desenvolvimento (#2251): em produção o painel lê só a
+// API, e `?fonte=` no endereço não muda nada.
+// `api`: o cliente da API do painel. Com ele, o padrão é a API; sem ele (testes da vida real e da demonstração),
+// o padrão continua o arquivo local.
 export const fonteDoPainel = ({
   buscar = buscarPadrao,
-  vidaRealPermitida = Boolean(import.meta.env?.DEV),
+  vidaRealPermitida = Boolean(import.meta.env.DEV),
+  demoPermitida = Boolean(import.meta.env.DEV),
   api = null,
 } = {}) => {
   // Uma ida só ao arquivo por fonte (o pacote tem ~3 MB); quem quiser reler cria outra fonte.
@@ -271,10 +282,13 @@ export const fonteDoPainel = ({
     origem,
   } = {}) => {
     const chave = periodoValido(periodo);
-    // Com a API, ela é a fonte sempre que o endereço não pede o arquivo local ou a demonstração.
-    if (api && (demo.fonte === undefined || demo.fonte === FONTE_API)) {
+    // Com a API, ela é a fonte sempre em produção e, no desenvolvimento, quando o endereço não pede o arquivo
+    // local ou a demonstração.
+    const pediuOutra = demo.fonte !== undefined && demo.fonte !== FONTE_API;
+    if (api && !(demoPermitida && pediuOutra)) {
       return lerDaApi(api, { accountId, agentId, origem, chave });
     }
+    if (!demoPermitida) return painelVazio(chave, { aviso: FONTE_API });
     // Sem a API e sem ?fonte= no endereço, o painel abre na vida real quando o arquivo existe; a demonstração
     // fica para ?fonte=demo ou para quando o arquivo não está lá (aí sem aviso, porque ninguém pediu).
     const pediuVidaReal = demo.fonte === 'vida_real';
@@ -305,7 +319,7 @@ export const fonteDoPainel = ({
       return api ? exportarDaApi(api, painel, formato, pedido) : null;
     }
     const nomeDaFonte = NOME_NO_ARQUIVO[fonte];
-    if (!nomeDaFonte) return null;
+    if (!nomeDaFonte || !demoPermitida) return null;
     if (fonte === 'demo' && (situacao || anuncios === false)) return null;
     const nome = `desempenho-${nomeDaFonte}-${painel.meta.periodo.chave}.${formato}`;
     const url = `/${nome}`;

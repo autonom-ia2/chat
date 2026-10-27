@@ -5,6 +5,8 @@
 #   remetentes que falam pelo agente, nomes e definições).
 # - `referencias`: o que veio uma vez da conferência e do histórico (valor típico da venda, conferência, conversas de
 #   exemplo por [conversation_id, ordem]).
+# - `chave_de_leitura` e `instrucao_hash`: ficam vazias na carga manual. A Issue da atualização automática as preenche:
+#   a ficha guarda a chave com que a leitura foi feita e o hash da instrução do agente, para saber quando reler.
 # Tudo é dado da conta: nada disto vai para o repositório.
 class Autonomia::Desempenho::Ficha < ApplicationRecord
   self.table_name = 'autonomia_desempenho_fichas'

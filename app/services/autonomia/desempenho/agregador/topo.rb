@@ -66,7 +66,11 @@ module Autonomia::Desempenho::Agregador::Topo
     { 'unidade' => unidade, 'pontos' => pontos }
   end
 
+  # {conversa => dia da primeira procura}. O painel do servidor manda pronto (`fixos[:primeiras]`, do histórico
+  # inteiro), porque carrega do banco só o período e o anterior; sem ele, sai das procuras recebidas, como no protótipo.
   def primeira_procura_da_conversa
+    return fixos[:primeiras] if fixos[:primeiras]
+
     todas.reject { |p| p['teste'] }.each_with_object({}) { |p, primeira| primeira[p['conversa']] ||= dia_de(p['inicio']) }
   end
 

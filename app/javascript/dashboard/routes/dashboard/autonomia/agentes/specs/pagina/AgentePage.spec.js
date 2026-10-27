@@ -832,6 +832,30 @@ describe('AgentePage', () => {
       wrapper.unmount();
     });
 
+    it('links the performance panel for a support agent, never for the quoting agent (#2251)', async () => {
+      const ligarPainel = () => {
+        store.state.getCurrentAccountId = 1;
+        store.state['accounts/getAccount'] = () => ({
+          autonomia_agents_enabled: true,
+          features: {
+            autonomia_agents_journey: true,
+            agentes_painel_desempenho: true,
+          },
+        });
+      };
+      preparar({ agente: bia() });
+      ligarPainel();
+      const atendimento = await montar();
+      expect(no('[data-ver-tudo]')).not.toBeNull();
+      atendimento.unmount();
+
+      preparar({ agente: bia({ agent_type: 'insurance_quote' }) });
+      ligarPainel();
+      const cotacao = await montar();
+      expect(no('[data-ver-tudo]')).toBeNull();
+      cotacao.unmount();
+    });
+
     it('shows an active quoting agent as answering and lets it stop', async () => {
       preparar({ agente: bia({ agent_type: 'insurance_quote' }) });
       const wrapper = await montar();

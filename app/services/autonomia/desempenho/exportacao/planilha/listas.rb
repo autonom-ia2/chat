@@ -85,10 +85,12 @@ module Autonomia::Desempenho::Exportacao::Planilha::Listas
     t("grupos.#{catalogo.dig('resultados', procura['resultado_id'].to_s, 'grupo')}", default: '')
   end
 
-  # A etapa do funil mais avançada que a procura alcançou.
+  # A etapa do funil mais avançada que a procura alcançou (a mesma regra do funil: os marcos da etapa).
   def procura_marco(procura)
     marcos = Array(procura['marcos'])
-    Array(@painel.dig('funil', 'etapas')).reverse.find { |etapa| marcos.include?(etapa['id']) }&.dig('nome')
+    Array(@painel.dig('funil', 'etapas')).reverse.find do |etapa|
+      Autonomia::Desempenho::Conta.marcos_da_etapa(etapa).intersect?(marcos)
+    end&.dig('nome')
   end
 
   def procura_anuncio(procura)

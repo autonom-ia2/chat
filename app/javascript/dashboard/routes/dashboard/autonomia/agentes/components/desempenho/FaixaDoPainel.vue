@@ -15,6 +15,8 @@ const props = defineProps({
   dadosAte: { type: String, default: '' },
   // { pdf: { estado: 'verificando'|'pronto'|'sem_arquivo'|'baixando' }, xlsx: {…} }
   exportacao: { type: Object, default: () => ({}) },
+  // #2251 — sem contact_export, a pessoa vê o painel mas não baixa o arquivo: os botões nem aparecem.
+  podeExportar: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['migalha', 'exportar']);
@@ -112,7 +114,7 @@ const aoNavegar = (evento, item) => {
           </div>
         </div>
       </div>
-      <div class="flex flex-col gap-1 lg:items-end">
+      <div v-if="podeExportar" class="flex flex-col gap-1 lg:items-end">
         <div class="flex flex-wrap gap-2">
           <AgenteBotao
             v-for="formato in FORMATOS"

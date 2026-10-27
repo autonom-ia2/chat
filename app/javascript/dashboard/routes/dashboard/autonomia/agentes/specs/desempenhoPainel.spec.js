@@ -27,7 +27,11 @@ vi.mock('vue-router', () => ({
   useRoute: () => rota.atual,
   useRouter: () => router,
 }));
-const estado = vi.hoisted(() => ({ admin: true, gerencia: true }));
+const estado = vi.hoisted(() => ({
+  admin: true,
+  gerencia: true,
+  exporta: true,
+}));
 const store = vi.hoisted(() => ({
   dispatch: vi.fn(),
   getters: { 'autonomiaAgents/getRecord': () => null },
@@ -46,7 +50,11 @@ vi.mock('dashboard/composables/useAdmin', async () => {
 });
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
-  return { useCanManage: () => computed(() => estado.gerencia) };
+  return {
+    useCanManage: () => computed(() => estado.gerencia),
+    usePermissionGranted: chave =>
+      computed(() => chave !== 'contact_export' || estado.exporta),
+  };
 });
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/api/autonomia/agents', () => ({
@@ -99,6 +107,7 @@ describe('DesempenhoPage', () => {
   beforeEach(() => {
     estado.admin = true;
     estado.gerencia = true;
+    estado.exporta = true;
     respostaDaApi.painel = null;
     respostaDaApi.arquivo = null;
     // Nenhum arquivo local (vida real nem exportação): a página cai na demonstração.
@@ -344,6 +353,22 @@ describe('DesempenhoPage', () => {
     expect(semOcultas.find('[data-aviso-caixas]').exists()).toBe(false);
   });
 
+  it('hides the export buttons from whoever lacks contact_export (#2251)', async () => {
+    respostaDaApi.painel = { ...demo, meta: { ...demo.meta, fonte: 'api' } };
+    estado.exporta = false;
+    const wrapper = await abrir();
+    expect(wrapper.find('[data-exportar]').exists()).toBe(false);
+    expect(wrapper.find('[data-sem-exportacao]').exists()).toBe(false);
+    const { default: api } = await import('dashboard/api/autonomia/desempenho');
+    expect(api.exportar).not.toHaveBeenCalled();
+  });
+
+  it('has no drawer that pretends to save the instruction or the result (#2251)', async () => {
+    const wrapper = await abrir({ fonte: 'demo', estado: 'sem_resultado' });
+    expect(wrapper.find('[data-colar-instrucao]').exists()).toBe(false);
+    expect(wrapper.find('[data-acao-estado]').exists()).toBe(false);
+  });
+
   it('downloads the file from the API with the authenticated request (#2251)', async () => {
     respostaDaApi.painel = { ...demo, meta: { ...demo.meta, fonte: 'api' } };
     respostaDaApi.arquivo = new Blob(['pdf']);
@@ -492,18 +517,21 @@ describe('EstadoDoPainel', () => {
         `AGENTS.DESEMPENHO.ESTADO.${VARIANTES[variante].chave}`
       );
       const botoes = wrapper.findAll('[data-acao-estado]');
-      expect(botoes).toHaveLength(VARIANTES[variante].faixa ? 0 : 1);
+      const semBotao =
+        VARIANTES[variante].faixa || VARIANTES[variante].semBotao;
+      expect(botoes).toHaveLength(semBotao ? 0 : 1);
     }
   );
 
-  it.each(Object.keys(VARIANTES).filter(v => !VARIANTES[v].faixa))(
-    'the %s button emits its variant',
-    async variante => {
-      const wrapper = montar({ variante });
-      await wrapper.get('[data-acao-estado]').trigger('click');
-      expect(wrapper.emitted('acao')[0]).toEqual([variante]);
-    }
-  );
+  it.each(
+    Object.keys(VARIANTES).filter(
+      v => !VARIANTES[v].faixa && !VARIANTES[v].semBotao
+    )
+  )('the %s button emits its variant', async variante => {
+    const wrapper = montar({ variante });
+    await wrapper.get('[data-acao-estado]').trigger('click');
+    expect(wrapper.emitted('acao')[0]).toEqual([variante]);
+  });
 
   it('whoever only sees gets no button to turn reading on', () => {
     const wrapper = montar({

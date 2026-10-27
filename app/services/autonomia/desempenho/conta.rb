@@ -20,6 +20,13 @@ module Autonomia::Desempenho::Conta
     valores.tally.sort_by { |id, vezes| [-vezes, texto(id)] }
   end
 
+  # Os marcos que fazem uma procura chegar a uma etapa do funil: os da etapa; sem lista, o próprio id da etapa.
+  # Regra única do agregador, da planilha e da tela (desempenhoContrato.js, marcosDaEtapa).
+  def marcos_da_etapa(etapa)
+    marcos = Array(etapa['marcos'])
+    marcos.empty? ? [etapa['id']] : marcos
+  end
+
   # 'AAAA-MM-DDTHH:MM' -> 'AAAA-MM-DD' (o texto já está no fuso da conta).
   def dia_de(data_hora)
     data_hora.to_s[0, 10]

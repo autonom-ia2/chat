@@ -351,14 +351,17 @@ const hrefLista = computed(
   () => router.resolve({ name: 'autonomia_agents_index' }).href
 );
 const irParaLista = () => router.push({ name: 'autonomia_agents_index' });
-// #2226 — "Ver tudo de {nome}": o painel de desempenho, só com a flag ligada na conta.
+// #2226 — "Ver tudo de {nome}": o painel de desempenho, só com a flag ligada na conta. O agente de cotação não tem
+// painel (#2251: a leitura é de atendimento, não de cotação), então o link não aparece nele.
 const painelDesempenho = usePainelDesempenho();
 const rotaDoDesempenho = computed(() => ({
   name: 'autonomia_agent_desempenho',
   params: { agentId: props.agentId },
 }));
 const hrefDesempenho = computed(() =>
-  painelDesempenho.value ? router.resolve(rotaDoDesempenho.value).href : ''
+  painelDesempenho.value && !cotacao.value
+    ? router.resolve(rotaDoDesempenho.value).href
+    : ''
 );
 
 // ---------- gavetas ----------

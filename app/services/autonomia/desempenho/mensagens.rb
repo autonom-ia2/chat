@@ -4,20 +4,23 @@
 #   notas (saída privada); o resto (eventos) não conta;
 # - tempo de resposta: da primeira mensagem do contato depois da última resposta (do agente ou da equipe) até a
 #   resposta do agente; a resposta da equipe zera a espera. O dia é o da resposta, no fuso da ficha.
-# Uma consulta para as contagens por dia e outra para as respostas; os períodos somam em memória. Com `visiveis`,
-# só as conversas que a pessoa vê.
+# Uma consulta para as contagens por dia, só na `faixa` de datas que o painel mostra (o período e o anterior); outra
+# para as respostas, com o histórico das conversas que têm mensagem na faixa (a espera pode ter começado antes); e uma
+# terceira para a equipe por mês, que é do histórico. Com `visiveis`, só as conversas que a pessoa vê.
 class Autonomia::Desempenho::Mensagens
   AUTORES = %w[contato agente equipe notas].freeze
   CINCO_MINUTOS = 300
   UMA_HORA = 3600
 
-  def initialize(account:, sujeito_type:, sujeito_id:, remetentes:, fuso:, visiveis: nil) # rubocop:disable Metrics/ParameterLists
+  # `faixa`: Date..Date no fuso (nil = tudo).
+  def initialize(account:, sujeito_type:, sujeito_id:, remetentes:, fuso:, visiveis: nil, faixa: nil) # rubocop:disable Metrics/ParameterLists
     @account = account
     @sujeito_type = sujeito_type
     @sujeito_id = sujeito_id
     @remetentes = Array(remetentes)
     @fuso = ActiveSupport::TimeZone[fuso.to_s]&.tzinfo&.name || 'UTC'
     @visiveis = visiveis
+    @faixa = faixa
   end
 
   # [mensagens, tempo] do período [inicio, fim] (datas no fuso da ficha, inclusivas).
@@ -29,9 +32,8 @@ class Autonomia::Desempenho::Mensagens
 
   # Mensagens da equipe por mês (AAAA-MM), até `ate`; o mês com mensagem e sem a equipe aparece com 0.
   def equipe_por_mes(ate)
-    meses = Hash.new(0)
-    por_dia.each { |(dia, autor), n| meses[dia.strftime('%Y-%m')] += (autor == 'equipe' ? n : 0) if dia <= ate }
-    meses.keys.sort.map { |mes| { 'mes' => mes, 'n' => meses[mes] } }
+    linhas = ActiveRecord::Base.connection.select_rows(sql_equipe_por_mes(ate))
+    linhas.map { |mes, n| { 'mes' => mes, 'n' => n.to_i } }
   end
 
   private
@@ -65,6 +67,15 @@ class Autonomia::Desempenho::Mensagens
     end
   end
 
+  def sql_equipe_por_mes(ate)
+    sanitize(<<~SQL.squish, ate: ate.iso8601)
+      WITH m AS (#{mensagens_com_autor(recorte: nil)}),
+      d AS (SELECT (created_at AT TIME ZONE 'UTC' AT TIME ZONE :fuso)::date AS dia, autor FROM m WHERE autor <> 'evento')
+      SELECT to_char(dia, 'YYYY-MM') AS mes, COUNT(*) FILTER (WHERE autor = 'equipe')
+      FROM d WHERE dia <= CAST(:ate AS date) GROUP BY 1 ORDER BY 1
+    SQL
+  end
+
   def sql_por_dia
     sanitize(<<~SQL.squish)
       WITH m AS (#{mensagens_com_autor})
@@ -78,7 +89,7 @@ class Autonomia::Desempenho::Mensagens
   # janelas, sem juntar a consulta com ela mesma.
   def sql_respostas
     sanitize(<<~SQL.squish)
-      WITH m AS (#{mensagens_com_autor}),
+      WITH m AS (#{mensagens_com_autor(recorte: :conversas_da_faixa)}),
       c AS (
         SELECT conversation_id, created_at, autor,
                COUNT(*) FILTER (WHERE autor IN ('agente', 'equipe'))
@@ -95,7 +106,9 @@ class Autonomia::Desempenho::Mensagens
     SQL
   end
 
-  def mensagens_com_autor
+  # `recorte`: :faixa (só as mensagens da faixa), :conversas_da_faixa (o histórico até o fim da faixa das conversas que
+  # têm mensagem nela: a espera de uma resposta pode ter começado muito antes) ou nil (tudo).
+  def mensagens_com_autor(recorte: :faixa)
     <<~SQL.squish
       SELECT m.id, m.conversation_id, m.created_at,
              CASE WHEN m.message_type = 0 THEN 'contato'
@@ -107,8 +120,24 @@ class Autonomia::Desempenho::Mensagens
       WHERE m.account_id = :conta
         AND m.conversation_id IN (SELECT conversation_id FROM autonomia_desempenho_leituras
                                   WHERE account_id = :conta AND sujeito_type = :tipo AND sujeito_id = :sujeito)
-        #{so_visiveis}
+        #{so_visiveis} #{recorte_sql(recorte)}
     SQL
+  end
+
+  def recorte_sql(recorte)
+    return '' if @faixa.nil? || recorte.nil?
+
+    zona = ActiveSupport::TimeZone[@fuso]
+    desde = zona.parse(@faixa.first.iso8601).beginning_of_day.utc
+    ate = zona.parse(@faixa.last.iso8601).end_of_day.utc
+    if recorte == :faixa
+      ActiveRecord::Base.sanitize_sql_array(['AND m.created_at BETWEEN ? AND ?', desde, ate])
+    else
+      ActiveRecord::Base.sanitize_sql_array([<<~SQL.squish, desde, ate, ate])
+        AND m.conversation_id IN (SELECT a.conversation_id FROM messages a WHERE a.account_id = :conta AND a.created_at BETWEEN ? AND ?)
+        AND m.created_at <= ?
+      SQL
+    end
   end
 
   # A relation das conversas que a pessoa vê vira subconsulta (o SQL é o do próprio Rails, sem texto de fora).
@@ -126,7 +155,8 @@ class Autonomia::Desempenho::Mensagens
     end.join(' OR ')
   end
 
-  def sanitize(sql)
-    ActiveRecord::Base.sanitize_sql_array([sql, { fuso: @fuso, conta: @account.id, tipo: @sujeito_type, sujeito: @sujeito_id }])
+  def sanitize(sql, extras = {})
+    binds = { fuso: @fuso, conta: @account.id, tipo: @sujeito_type, sujeito: @sujeito_id }.merge(extras)
+    ActiveRecord::Base.sanitize_sql_array([sql, binds])
   end
 end

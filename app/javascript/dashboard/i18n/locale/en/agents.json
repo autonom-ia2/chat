@@ -2091,33 +2091,12 @@
         "SEM_IA_BOTAO": "Connect the key",
         "SEM_IA_SEM_ACESSO": "Reading isn't working in this account right now. We already told whoever runs the account.",
         "SEM_IA_SEM_ACESSO_BOTAO": "See the numbers",
-        "SEM_RESULTADO": "Tell us what counts as a result for {nome}.",
-        "SEM_RESULTADO_BOTAO": "Tell us now",
-        "SEM_RESULTADO_SEM_ACESSO": "We don't know yet what counts as a result for {nome}. Whoever runs the account can tell us.",
+        "SEM_RESULTADO": "We don't know yet what counts as a result for {nome}.",
         "CONFERENCIA_BAIXA": "The subjects may be inaccurate. We are reviewing them."
-      },
-      "MARCOS": {
-        "TITULO": "What counts as a result",
-        "TEXTO": "We read {nome}'s instruction and found these results. Check and confirm.",
-        "LISTA": "{nome}'s results",
-        "PRINCIPAL": "The main one",
-        "TAMBEM": "Also counts",
-        "ALTERAR": "Change",
-        "ESCOLHA": "Choose the result",
-        "CONFIRMAR": "Confirm",
-        "NOTA": "You can change it whenever you want.",
-        "FEITO": "Done: we now count “{resultado}” as {nome}'s result."
       },
       "INSTRUCAO": {
         "COLADA": "Instruction pasted by {autor} on {data}",
-        "ALTERAR": "Change",
-        "AVISO": "It is the text pasted here, not necessarily what the other system uses.",
-        "TITULO": "Paste {nome}'s instruction",
-        "TEXTO": "Paste here the instruction {nome} uses in the other system. Then we can check whether it does what it should.",
-        "CAMPO": "{nome}'s instruction",
-        "NAO_COLE": "Don't paste passwords or keys.",
-        "SALVAR": "Save",
-        "SALVOU": "Instruction pasted. You can now see whether {nome} does what it should."
+        "AVISO": "It is the text pasted here, not necessarily what the other system uses."
       },
       "ALTERAR": "Change"
     },
@@ -2597,6 +2576,8 @@
         "FONTE": {
           "CAIXAS_TITULO": "Numbers from your inboxes only.",
           "CAIXAS_TEXTO": "The numbers and lists count only the inboxes you see. {n} requests from other inboxes are left out, and the suggestions, made with the whole account, are not shown.",
+          "LISTA_TITULO": "Recent requests only.",
+          "LISTA_TEXTO": "Detail lists the {mostradas} most recent requests of {total}. The numbers above count all of them.",
           "DEMO_TITULO": "Made-up data.",
           "DEMO_TEXTO": "These numbers come from an example, to show how the panel works. They are not from your account.",
           "FALHOU_TITULO": "We could not read the real data.",

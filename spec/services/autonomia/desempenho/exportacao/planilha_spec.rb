@@ -45,6 +45,16 @@ RSpec.describe Autonomia::Desempenho::Exportacao::Planilha do
     expect(resumo.formula(6, 2)).to include("COUNTIF('Procuras'!")
   end
 
+  it 'acha a etapa da procura pelos marcos da etapa, com o id como reserva, como o funil e a tela' do
+    painel['funil']['etapas'] = [{ 'id' => 'pedido_feito', 'nome' => 'Pediu', 'marcos' => [] },
+                                 { 'id' => 'etapa_x', 'nome' => 'Etapa com outro nome', 'marcos' => %w[marco_y marco_z] }]
+    painel['procuras'].first['marcos'] = ['marco_z']
+    painel['procuras'].second['marcos'] = ['pedido_feito']
+    textos = arquivo.sheet('Procuras').to_a.flatten.compact.map(&:to_s)
+
+    expect(textos).to include('Etapa com outro nome', 'Pediu')
+  end
+
   it 'diz em Recomendações de que período é cada ganho' do
     painel['recomendacoes'].first['ganho'] = { 'fechamentos' => 19, 'valor' => nil, 'conta' => 'x', 'historico' => true,
                                                'periodo' => { 'inicio' => '2026-06-25', 'fim' => '2026-10-26', 'dias' => 124 } }

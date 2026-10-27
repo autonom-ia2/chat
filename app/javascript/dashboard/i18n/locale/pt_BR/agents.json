@@ -2091,33 +2091,12 @@
         "SEM_IA_BOTAO": "Conectar a chave",
         "SEM_IA_SEM_ACESSO": "A leitura não está funcionando nesta conta agora. Já avisamos quem cuida da conta.",
         "SEM_IA_SEM_ACESSO_BOTAO": "Ver os números",
-        "SEM_RESULTADO": "Diga o que conta como resultado para {nome}.",
-        "SEM_RESULTADO_BOTAO": "Dizer agora",
-        "SEM_RESULTADO_SEM_ACESSO": "Ainda não sabemos o que conta como resultado para {nome}. Quem cuida da conta pode dizer.",
+        "SEM_RESULTADO": "Ainda não sabemos o que conta como resultado para {nome}.",
         "CONFERENCIA_BAIXA": "Os assuntos podem estar imprecisos. Estamos revisando."
-      },
-      "MARCOS": {
-        "TITULO": "O que conta como resultado",
-        "TEXTO": "Lemos a instrução de {nome} e achamos estes resultados. Confira e confirme.",
-        "LISTA": "Resultados de {nome}",
-        "PRINCIPAL": "O principal",
-        "TAMBEM": "Também conta",
-        "ALTERAR": "Alterar",
-        "ESCOLHA": "Escolha o resultado",
-        "CONFIRMAR": "Confirmar",
-        "NOTA": "Você pode mudar quando quiser.",
-        "FEITO": "Pronto: agora contamos “{resultado}” como resultado de {nome}."
       },
       "INSTRUCAO": {
         "COLADA": "Instrução colada por {autor} em {data}",
-        "ALTERAR": "Alterar",
-        "AVISO": "É o texto que foi colado aqui, não necessariamente o que o outro sistema usa.",
-        "TITULO": "Colar a instrução de {nome}",
-        "TEXTO": "Cole aqui a instrução que {nome} usa no outro sistema. Assim conferimos se ele faz o que deveria.",
-        "CAMPO": "Instrução de {nome}",
-        "NAO_COLE": "Não cole senhas nem chaves.",
-        "SALVAR": "Salvar",
-        "SALVOU": "Instrução colada. Já dá para ver se {nome} faz o que deveria."
+        "AVISO": "É o texto que foi colado aqui, não necessariamente o que o outro sistema usa."
       },
       "ALTERAR": "Alterar"
     },
@@ -2597,6 +2576,8 @@
         "FONTE": {
           "CAIXAS_TITULO": "Números só das suas caixas.",
           "CAIXAS_TEXTO": "Os números e as listas contam só as caixas que você vê. {n} procuras de outras caixas ficam de fora, e as sugestões, feitas com a conta inteira, não aparecem.",
+          "LISTA_TITULO": "Só as procuras mais recentes.",
+          "LISTA_TEXTO": "O Detalhe lista as {mostradas} procuras mais recentes de {total}. Os números de cima contam todas.",
           "DEMO_TITULO": "Dados inventados.",
           "DEMO_TEXTO": "Estes números são de um exemplo, para mostrar como o painel funciona. Não são da sua conta.",
           "FALHOU_TITULO": "Não conseguimos ler os dados reais.",
