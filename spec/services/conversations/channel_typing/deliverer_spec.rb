@@ -36,13 +36,14 @@ describe Conversations::ChannelTyping::Deliverer do
       )
     end
 
-    it 'marks the read as made by the system, so it does not count as read on the phone (#2246)' do
-      create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :incoming, source_id: 'wamid.LAST')
+    it 'marks the read as made by the system up to the marked message, so it does not count as read on the phone (#2246)' do
+      last = create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :incoming,
+                              source_id: 'wamid.LAST')
       Redis::Alfred.delete(ConversaCanal::LeituraDoSistema.chave(conversation))
 
       deliver(conversation, 'on')
 
-      expect(ConversaCanal::LeituraDoSistema.recente?(conversation)).to be(true)
+      expect(ConversaCanal::LeituraDoSistema.ate(conversation)).to eq(last.reload.created_at)
     end
 
     it 'does nothing when the installation turned channel typing off' do

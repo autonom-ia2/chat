@@ -11,7 +11,8 @@ describe WhatsappHybrid::LeituraNoCelular do
     WhatsappHybrid::Connection.create!(account: account, inbox: inbox, session_name: 'hybrid-leitura', status: 'connected',
                                        connected_phone: channel.phone_number.delete('^0-9'), risk_accepted_at: Time.current)
   end
-  # Amostra do spike F0 (spec do Wamid): wamid de mensagem recebida, com o id físico dentro.
+  # Amostra do spike F0 (spec do Wamid): é o wamid de um ECO de mensagem enviada, com o id físico dentro. Recebida real
+  # ainda não capturada (hipótese do passo 0 da Issue); trocar pela recebida anonimizada quando houver a captura.
   let(:wamid) { 'wamid.HBgNNTUxMTkzNzAxNjA5NBUCABIYFDJBNUQyRDhEQTA4OUJFNDJFNEQ1AA==' }
   let(:physical_id) { '2A5D2D8DA089BE42E4D5' }
   let(:inicio) { Time.zone.parse('2026-10-27 10:00:00') }
@@ -109,7 +110,7 @@ describe WhatsappHybrid::LeituraNoCelular do
     it 'anda o visto até o fim do segundo da mensagem lida, sem marcar as que chegaram depois', :aggregate_failures do
       expect(nao_lidas).to eq(2)
 
-      expect(aplicar).to be(true)
+      expect(aplicar).to eq(:andou)
 
       expect(conversation.reload.agent_last_seen_at).to eq(inicio + 1.second - Rational(1, 1_000_000))
       expect(nao_lidas).to eq(1)
@@ -126,46 +127,74 @@ describe WhatsappHybrid::LeituraNoCelular do
     end
 
     it 'vale também para o ack de ouvido (4)' do
-      expect(aplicar(ack('ack' => 4))).to be(true)
+      expect(aplicar(ack('ack' => 4))).to eq(:andou)
     end
 
     it 'nunca anda o visto para trás' do
       conversation.update_columns(agent_last_seen_at: inicio + 1.minute) # rubocop:disable Rails/SkipsModelValidations
 
-      expect(aplicar).to be(false)
+      expect(aplicar).to eq(:ja_visto)
       expect(conversation.reload.agent_last_seen_at).to eq(inicio + 1.minute)
     end
 
     it 'não conta leitura de aparelho vinculado (WhatsApp Web, a Cloud, outra automação)' do
-      expect(aplicar(ack('aparelho' => '2'))).to be(false)
+      expect(aplicar(ack('aparelho' => '2'))).to eq(:aparelho_vinculado)
       expect(nao_lidas).to eq(2)
     end
 
     it 'não conta ack sem o aparelho que leu' do
-      expect(aplicar(ack.except('aparelho'))).to be(false)
+      expect(aplicar(ack.except('aparelho'))).to eq(:aparelho_vinculado)
       expect(nao_lidas).to eq(2)
     end
 
-    it 'não conta leitura logo depois de uma lida mandada pelo próprio sistema (robô respondendo)' do
-      ConversaCanal::LeituraDoSistema.registrar(conversation)
+    it 'não conta leitura de mensagem que o próprio sistema já marcou como lida (robô respondendo)' do
+      ConversaCanal::LeituraDoSistema.registrar(conversation, ate: lida.created_at)
 
-      expect(aplicar).to be(false)
+      expect(aplicar).to eq(:marca_do_sistema)
       expect(nao_lidas).to eq(2)
+    end
+
+    it 'segue descartando a lida do sistema mesmo com a fila atrasada minutos' do
+      ConversaCanal::LeituraDoSistema.registrar(conversation, ate: lida.created_at)
+
+      travel_to(inicio + 3.minutes) { expect(aplicar).to eq(:marca_do_sistema) }
+      expect(nao_lidas).to eq(2)
+    end
+
+    it 'conta a leitura de mensagem que chegou depois da última lida do sistema (robô digitando antes)' do
+      ConversaCanal::LeituraDoSistema.registrar(conversation, ate: lida.created_at - 1.second)
+
+      expect(aplicar).to eq(:andou)
+      expect(nao_lidas).to eq(1)
+    end
+
+    it 'acha o id físico também no formato de grupo do WAHA' do
+      expect(aplicar(ack('id' => "false_120363000000000000@g.us_#{physical_id}_5511937016094@c.us"))).to eq(:andou)
+    end
+
+    it 'deixa uma linha de log por decisão, sem telefone e sem id de mensagem' do
+      allow(Rails.logger).to receive(:info).and_call_original
+
+      aplicar(ack('aparelho' => '5'))
+
+      expect(Rails.logger).to have_received(:info).with(
+        "[whatsapp_hybrid][leitura_no_celular] connection=#{connection.id} motivo=aparelho_vinculado ack=3 aparelho=5 tentativa=0"
+      )
     end
 
     it 'não conta ack de entrega (2)' do
-      expect(aplicar(ack('ack' => 2))).to be(false)
+      expect(aplicar(ack('ack' => 2))).to eq(:nao_e_leitura)
     end
 
     it 'não faz nada sem a flag' do
       account.disable_features!(ConversaCanal::VistaNoCelular::FLAG)
 
-      expect(aplicar).to be(false)
+      expect(aplicar).to eq(:flag_desligada)
       expect(nao_lidas).to eq(2)
     end
 
     it 'ignora id físico que não é de mensagem recebida conhecida' do
-      expect(aplicar(ack('id' => 'false_5511937016094@c.us_DESCONHECIDO'))).to be(false)
+      expect(aplicar(ack('id' => 'false_5511937016094@c.us_DESCONHECIDO'))).to eq(:sem_indice)
     end
   end
 end

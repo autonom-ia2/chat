@@ -8,6 +8,8 @@ class WhatsappHybrid::WebhookEventJob < ApplicationJob
 
   # Números do WAHA: 1 servidor, 2 aparelho, 3 lido, 4 ouvido.
   ACK_STATUS = { 2 => 'delivered', 3 => 'read', 4 => 'read' }.freeze
+  # Leitura no celular de mensagem ainda sem índice (#2246): até 3 novas tentativas, cobrindo ~1 min de fila.
+  ESPERAS_SEM_INDICE = [5.seconds, 15.seconds, 45.seconds].freeze
 
   def perform(connection_id, event, payload)
     connection = WhatsappHybrid::Connection.find_by(id: connection_id)
@@ -27,12 +29,23 @@ class WhatsappHybrid::WebhookEventJob < ApplicationJob
   end
 
   def apply_ack(connection, payload)
-    return WhatsappHybrid::LeituraNoCelular.new(connection).aplicar(payload) if payload['from_me'] == false
+    return ler_no_celular(connection, payload) if payload['from_me'] == false
 
     status = ACK_STATUS[payload['ack'].to_i]
     return if status.nil?
 
     message = WhatsappHybrid::WebTransport.message_for(connection, payload['id'].to_s.split('_').last)
     Messages::StatusUpdateService.new(message, status).perform if message
+  end
+
+  # O índice da recebida é gravado no fim do Webhooks::WhatsappEventsJob (outra fila, depois da transação). Com a
+  # conversa aberta no celular, o ack chega antes: sem esta nova tentativa, a leitura sumiria (o aparelho não reenvia).
+  def ler_no_celular(connection, payload)
+    motivo = WhatsappHybrid::LeituraNoCelular.new(connection).aplicar(payload)
+    tentativa = payload['tentativa'].to_i
+    return unless motivo == :sem_indice && tentativa < ESPERAS_SEM_INDICE.size
+
+    self.class.set(wait: ESPERAS_SEM_INDICE[tentativa])
+        .perform_later(connection.id, 'message.ack', payload.merge('tentativa' => tentativa + 1))
   end
 end
