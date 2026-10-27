@@ -897,9 +897,11 @@
 # Minhas, Para pegar e Todas. Desligada: a lista de sempre, idêntica. Só frontend, sem migration. Fim da
 # feature_flags_ext_2, posição pela ordem de chegada à main; hoje 3 (valor 4, 1 << 2), confirmada pela Orquestração.
 # Se outra flag da ext_2 entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+# Ligada em todas as contas em 27/10 (Orquestração, psql, com backup). Padrão das contas novas: ligada desde o #2253
+# (migration 20261108560000).
 - name: lista_quem_espera
   display_name: Lista de conversas › quem está esperando
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Painel de desempenho do agente (#2226 protótipo, #2251 leitura guardada no banco). Ligada: a página Agentes › {nome} ›
@@ -923,12 +925,24 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Leitura no celular apaga a bolinha (#2246, opção C). Ligada: quando o celular do negócio lê as mensagens do cliente,
+# o "visto" do agente anda até elas e a bolinha de não lida apaga, sem sino (ConversaCanal::VistaNoCelular). Hoje só
+# na caixa oficial com WhatsApp Híbrido, pela sessão auxiliar (WhatsappHybrid::LeituraNoCelular); a caixa WhatsApp API
+# (WAHA comum) depende de patch no conector e a Cloud sem Híbrido não recebe o sinal da Meta. Desligada: a bolinha só
+# apaga pelo painel ou pela resposta de uma pessoa, como antes. Sem migration. Fim da feature_flags_ext_2, depois de
+# meta_ads_organico: posição 6 (valor 32, 1 << 5), confirmada pela Orquestração (27/10). Nasce desligada em todas;
+# primeiro liga só numa conta de teste com Híbrido, para medir (Orquestração, com OK do Rodrigo).
+- name: leitura_no_celular
+  display_name: Conversas › leitura no celular apaga a bolinha
+  enabled: false
+  column: feature_flags_ext_2
+
 # Anúncios da Meta › Formulários (#2195). Ligada: a aba Formulários mostra as Páginas que a pessoa concedeu ao entrar com
 # o Facebook e os formulários instantâneos de cada uma; escolher o funil e a etapa de um formulário liga o recebimento
 # da Página (assina o campo leadgen, pages_manage_metadata), e quem preenche vira contato e card ali, com o anúncio de
 # origem e as respostas no card (leads_retrieval). Também traz quem preencheu nos últimos 90 dias. Desligada: a aba
 # some, a API responde 404 e o webhook leadgen não cria nada. Com migration (20261108590000). Fim da
-# feature_flags_ext_2: posição 6 (valor 32, 1 << 5), depois do meta_ads_organico (#2199), que chegou antes à main
+# feature_flags_ext_2: posição 7 (valor 64, 1 << 6), depois da leitura_no_celular (#2246), que chegou antes à main
 # (27/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
 - name: meta_ads_formularios
   display_name: Anúncios da Meta › Formulários (leads no funil)

@@ -48,6 +48,8 @@ class ConversaCanal::LeituraNoCanal
     return unless pendente?
     return unless reservar
 
+    # #2246: antes do pedido, porque a leitura pode voltar do motor antes da resposta do canal.
+    ConversaCanal::LeituraDoSistema.registrar(@conversation, ate: ate_onde_marca)
     enviar ? registrar : soltar
   end
 
@@ -66,6 +68,11 @@ class ConversaCanal::LeituraNoCanal
     recebidas = recebidas.where.not(source_id: [nil, '']) if canal.is_a?(Channel::Whatsapp)
     ultima = recebidas.reorder(created_at: :desc, id: :desc).first
     @mensagem = ultima if ultima && ultima.created_at >= PRAZO.ago
+  end
+
+  # #2246: a Cloud marca a mensagem e as anteriores; o sendSeen do WAHA marca o chat inteiro, inclusive o que chegou agora.
+  def ate_onde_marca
+    canal.is_a?(Channel::Api) ? Time.current : mensagem.created_at
   end
 
   def chave_da_reserva

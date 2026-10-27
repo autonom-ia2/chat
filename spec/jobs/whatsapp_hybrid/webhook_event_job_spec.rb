@@ -87,6 +87,60 @@ RSpec.describe WhatsappHybrid::WebhookEventJob do
       expect(message.reload.status).to eq('read')
     end
 
+    it 'keeps the ✓✓ on our own messages when the ack says fromMe=true (#2246)' do
+      described_class.perform_now(connection.id, 'message.ack',
+                                  { 'id' => 'true_5511937016094@c.us_3EB0ACK', 'ack' => 3, 'from_me' => true, 'aparelho' => '0' })
+
+      expect(message.reload.status).to eq('read')
+    end
+
+    it 'sends the ack of a received message read on the phone to the phone reading, not to the ✓✓ (#2246)' do
+      ack = { 'id' => '3EB0ACK', 'ack' => 3, 'from_me' => false, 'aparelho' => '0' }
+      leitura = instance_double(WhatsappHybrid::LeituraNoCelular, aplicar: :andou)
+      allow(WhatsappHybrid::LeituraNoCelular).to receive(:new).with(connection).and_return(leitura)
+
+      expect { described_class.perform_now(connection.id, 'message.ack', ack) }.not_to have_enqueued_job(described_class)
+
+      expect(leitura).to have_received(:aplicar).with(ack)
+      expect(message.reload.status).to eq('sent')
+    end
+
+    context 'when the phone read arrives before the received message was indexed (#2246)' do
+      let(:ack) { { 'id' => '3EB0IN', 'ack' => 3, 'from_me' => false, 'aparelho' => '0' } }
+
+      before { inbox.account.enable_features!(ConversaCanal::VistaNoCelular::FLAG) }
+
+      it 'tries again later, with a growing wait' do
+        freeze_time do
+          expect { described_class.perform_now(connection.id, 'message.ack', ack) }
+            .to have_enqueued_job(described_class).with(connection.id, 'message.ack', ack.merge('tentativa' => 1)).at(5.seconds.from_now)
+        end
+      end
+
+      it 'moves the agent seen time once the index arrives and the retry runs' do
+        allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+        Redis::Alfred.delete(WhatsappHybrid::Config.inbox_flag_key(inbox.id))
+        received = create(:message, message_type: :incoming, conversation: conversation, account: inbox.account, inbox: inbox,
+                                    sender: contact, source_id: 'wamid.HBgNNTUxMTkzNzAxNjA5NBUCABIYFDJBNUQyRDhEQTA4OUJFNDJFNEQ1AA==')
+        read = ack.merge('id' => '2A5D2D8DA089BE42E4D5')
+
+        described_class.perform_now(connection.id, 'message.ack', read)
+        expect(conversation.reload.unread_incoming_messages).to include(received)
+
+        WhatsappHybrid::LeituraNoCelular.indexar(received)
+        perform_enqueued_jobs(only: described_class)
+
+        expect(conversation.reload.unread_incoming_messages).not_to include(received)
+      ensure
+        Redis::Alfred.delete(WhatsappHybrid::LeituraNoCelular.chave(inbox.id, '2A5D2D8DA089BE42E4D5'))
+      end
+
+      it 'gives up after the last try' do
+        expect { described_class.perform_now(connection.id, 'message.ack', ack.merge('tentativa' => 3)) }
+          .not_to have_enqueued_job(described_class)
+      end
+    end
+
     it 'ignores acks of messages it does not know' do
       described_class.perform_now(connection.id, 'message.ack', { 'id' => 'true_x@c.us_OUTRO', 'ack' => 3 })
 
