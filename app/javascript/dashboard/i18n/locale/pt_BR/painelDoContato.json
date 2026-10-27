@@ -133,6 +133,37 @@
       "CANCELAR": "Cancelar",
       "PRONTO": "Pronto.",
       "ERRO": "Não deu para salvar agora. Tente de novo."
+    },
+    "RELACAO": {
+      "TITULO": "Este contato é",
+      "OPCOES": {
+        "INTERESSADO": {
+          "ROTULO": "Interessado",
+          "DICA": "Compra ou pode comprar de você."
+        },
+        "PARCEIRO": {
+          "ROTULO": "Parceiro do mercado",
+          "DICA": "Fornecedor ou colega do seu ramo."
+        },
+        "NAO_E_NEGOCIO": {
+          "ROTULO": "Não é negócio",
+          "DICA": "Engano, propaganda ou pessoal."
+        }
+      },
+      "EFEITO": {
+        "INTERESSADO": "As conversas deste contato viram card no funil e contam nos Números.",
+        "FORA": "As conversas deste contato não viram card sozinhas e ficam fora dos Números. Você ainda pode criar um card à mão."
+      },
+      "ARQUIVAR": {
+        "TITULO": "Este contato tem 1 card aberto. Arquivar? | Este contato tem {count} cards abertos. Arquivar?",
+        "TEXTO": "O card arquivado sai do funil e dos Números. Nada se perde: dá para reabrir pelo CRM.",
+        "SIM": "Arquivar",
+        "NAO": "Deixar"
+      },
+      "SALVO": "Agora este contato é {relacao}.",
+      "ARQUIVADOS": "1 card arquivado. | {count} cards arquivados.",
+      "NAO_ARQUIVADOS": "1 card ficou aberto: você não pode arquivá-lo. | {count} cards ficaram abertos: você não pode arquivá-los.",
+      "ERRO": "Não deu para mudar agora. Tente de novo."
     }
   },
   "APAGAR_CONTATO": {
