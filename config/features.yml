@@ -897,9 +897,11 @@
 # Minhas, Para pegar e Todas. Desligada: a lista de sempre, idêntica. Só frontend, sem migration. Fim da
 # feature_flags_ext_2, posição pela ordem de chegada à main; hoje 3 (valor 4, 1 << 2), confirmada pela Orquestração.
 # Se outra flag da ext_2 entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+# Ligada em todas as contas em 27/10 (Orquestração, psql, com backup). Padrão das contas novas: ligada desde o #2253
+# (migration 20261108560000).
 - name: lista_quem_espera
   display_name: Lista de conversas › quem está esperando
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Painel de desempenho do agente (#2226 protótipo, #2251 leitura guardada no banco). Ligada: a página Agentes › {nome} ›
@@ -923,12 +925,24 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Leitura no celular apaga a bolinha (#2246, opção C). Ligada: quando o celular do negócio lê as mensagens do cliente,
+# o "visto" do agente anda até elas e a bolinha de não lida apaga, sem sino (ConversaCanal::VistaNoCelular). Hoje só
+# na caixa oficial com WhatsApp Híbrido, pela sessão auxiliar (WhatsappHybrid::LeituraNoCelular); a caixa WhatsApp API
+# (WAHA comum) depende de patch no conector e a Cloud sem Híbrido não recebe o sinal da Meta. Desligada: a bolinha só
+# apaga pelo painel ou pela resposta de uma pessoa, como antes. Sem migration. Fim da feature_flags_ext_2, depois de
+# meta_ads_organico: posição 6 (valor 32, 1 << 5), confirmada pela Orquestração (27/10). Nasce desligada em todas;
+# primeiro liga só numa conta de teste com Híbrido, para medir (Orquestração, com OK do Rodrigo).
+- name: leitura_no_celular
+  display_name: Conversas › leitura no celular apaga a bolinha
+  enabled: false
+  column: feature_flags_ext_2
+
 # Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada (com meta_ads_gestao): o detalhe
 # do anúncio ganha a aba Instagram dos comentários (ver, responder, ocultar, apagar e responder no privado), e a caixa
 # do Instagram pode pedir de novo o login com instagram_business_manage_comments, voltando ao anúncio. Desligada: a aba
 # não aparece e a API responde 404. Migration 20261108550000 (crm_meta_ads_comment_actions). Fim da
-# feature_flags_ext_2: a posição é a ordem de chegada à main, e a flag fica na última na hora do merge (a Orquestração
-# confere antes de enfileirar).
+# feature_flags_ext_2, depois de leitura_no_celular: hoje posição 7 (valor 64, 1 << 6). Se outra flag da ext_2 entrar
+# antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
 - name: meta_ads_comentarios_instagram
   display_name: Anúncios da Meta › comentários do anúncio no Instagram
   enabled: false

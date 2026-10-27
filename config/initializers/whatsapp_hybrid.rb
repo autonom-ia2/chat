@@ -17,6 +17,10 @@ Rails.application.config.to_prepare do
   unless Whatsapp::IncomingMessageBaseService <= WhatsappHybrid::UnsupportedMessageExtension
     Whatsapp::IncomingMessageBaseService.prepend(WhatsappHybrid::UnsupportedMessageExtension)
   end
+  # #2246: a recebida guarda o id físico, para a leitura feita no celular encontrá-la.
+  unless Whatsapp::IncomingMessageBaseService <= WhatsappHybrid::RecebidaIndexada
+    Whatsapp::IncomingMessageBaseService.prepend(WhatsappHybrid::RecebidaIndexada)
+  end
   # Excluir a caixa oficial apaga a conexão, que desliga a sessão no motor.
   unless Inbox.reflect_on_association(:whatsapp_hybrid_connection)
     Inbox.has_one :whatsapp_hybrid_connection, class_name: 'WhatsappHybrid::Connection', dependent: :destroy
