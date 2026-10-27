@@ -216,6 +216,41 @@ describe('#Inbox Helpers', () => {
       expect(searchInboxes(inboxes, 'team@example.com')).toEqual([inboxes[1]]);
       expect(searchInboxes(inboxes, 'Billing')).toEqual([inboxes[0]]);
     });
+
+    // #2255 — a lista mostra o telefone legível; quem digita o número cru ou só os dígitos
+    // continua achando a caixa (do WhatsApp oficial e do celular).
+    it('finds a phone inbox by the raw number, the digits or the readable phone', () => {
+      const telefones = [
+        {
+          id: 3,
+          name: 'Vendas',
+          channel_type: INBOX_TYPES.WHATSAPP,
+          phone_number: '+5511900000104',
+        },
+        {
+          id: 4,
+          name: 'Celular',
+          channel_type: INBOX_TYPES.API,
+          waha_provider: true,
+          waha_phone_number: '+5541900000105',
+        },
+      ].map(inbox => ({
+        ...inbox,
+        channel_identifier: getInboxIdentifier(inbox),
+      }));
+
+      [
+        '+5511900000104',
+        '5511900000104',
+        '900000104',
+        '+55 11 90000-0104',
+      ].forEach(termo =>
+        expect(searchInboxes(telefones, termo)).toEqual([telefones[0]])
+      );
+      ['+5541900000105', '5541900000105', '+55 41 90000-0105'].forEach(termo =>
+        expect(searchInboxes(telefones, termo)).toEqual([telefones[1]])
+      );
+    });
   });
 
   describe('getInboxClassByType', () => {
