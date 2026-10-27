@@ -104,15 +104,28 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       ]
     end
 
-    def stub_pagina(dias: 30)
+    def stub_pagina(dias: 30, anterior: { reach: 4100, views: 11_000, ads: 3000, engajamento: [400, 300], seguidores: [60, 42] })
       stub_request(:get, "#{fb}/1001")
         .with(query: hash_including(fields: 'name,link,followers_count'))
         .to_return(json(name: 'Studio Acme', link: 'https://www.facebook.com/studioacme', followers_count: 8412))
       stub_pagina_janela(dias, anterior: false,
                                numeros: { reach: 4900, views: 12_700, ads: 4064, engajamento: [300, 491], seguidores: [100, 46] })
-      stub_pagina_janela(dias, anterior: true,
-                               numeros: { reach: 4100, views: 11_000, ads: 3000, engajamento: [400, 300], seguidores: [60, 42] })
+      stub_pagina_janela(dias, anterior: true, numeros: anterior)
       stub_get("#{fb}/1001/published_posts", janela(dias), posts_da_pagina)
+    end
+
+    it 'período anterior em que os posts não apareceram sem anúncio não compara: primeiro período com dado' do
+      stub_pagina(anterior: { reach: 900, views: 3000, ads: 3000, engajamento: [10], seguidores: [0] })
+
+      expect(tela(days: 30).perform[:page]).to include(previous: nil, first_period: true)
+    end
+
+    it 'sem o recorte is_from_ads a Página não mostra número com o pago: o cartão fica indisponível' do
+      stub_pagina
+      stub_get("#{fb}/1001/insights", janela(30).merge(metric: 'page_media_view', breakdown: 'is_from_ads'),
+               [diario('page_media_view', [6000, 6700])])
+
+      expect(tela(days: 30).perform[:page]).to eq(status: 'unavailable')
     end
 
     it 'devolve os números da Página com o período anterior, a parte de anúncios e os 3 posts com mais curtidas' do
@@ -123,8 +136,9 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       page = tela(days: 30).perform[:page]
 
       expect(page).to include(status: 'ok', name: 'Studio Acme', link: 'https://www.facebook.com/studioacme', followers: 8412,
-                              reach: 4900, views: 12_700, views_from_ads: 4064, interactions: 791, new_followers: 146)
-      expect(page[:previous]).to eq(reach: 4100, views: 11_000, interactions: 700, new_followers: 102)
+                              reach: 4900, views: 8636, views_from_ads: 4064, interactions: 791, new_followers: 146)
+      # Vezes que apareceu é só sem anúncio (12.700 − 4.064); o anúncio vai à parte, para a barra "vale pagar?".
+      expect(page[:previous]).to eq(reach: 4100, views: 8000, interactions: 700, new_followers: 102)
       expect(page[:messages]).to eq(count: 2, inbox_id: inbox.id)
       expect(page[:top_posts].pluck(:id)).to eq(%w[p1 p2 p3])
       expect(page[:top_posts].first).to eq(id: 'p1', text: 'Agenda aberta', image_url: 'https://img/p1.jpg', reach: 1840,
@@ -183,10 +197,47 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(page).to eq(status: 'needs_permission', name: 'Studio Acme', inbox_id: inbox.id)
     end
 
-    it 'avisa que a Meta está fora quando ela falha por outro motivo' do
+    it 'o log do lugar indisponível leva o lugar, o status e o código, nunca a mensagem da Meta' do
+      stub_request(:get, "#{fb}/1001").with(query: hash_including({}))
+                                      .to_return(json({ error: { code: 2, message: 'texto da Meta' } }, status: 500))
+      avisos = []
+      allow(Rails.logger).to receive(:warn) { |aviso| avisos << aviso }
+
+      tela(days: 7).perform
+
+      da_tela = avisos.select { |aviso| aviso.start_with?('[MetaAdsOrganico]') }
+      expect(da_tela).to contain_exactly(a_string_including('Pagina', 'unavailable', 'code=2'))
+      expect(da_tela.join).not_to include('texto da Meta')
+    end
+
+    it 'Meta fora só na Página: o cartão dela fica indisponível, o resto da tela segue' do
       stub_request(:get, "#{fb}/1001").with(query: hash_including({})).to_return(erro(2, status: 500))
 
-      expect { tela(days: 7).perform }.to raise_error(Crm::MetaAds::Organico::Indisponivel)
+      expect(tela(days: 7).perform).to include(page: { status: 'unavailable' }, instagram: { status: 'not_connected' })
+    end
+
+    context 'with Instagram conectado' do
+      before do
+        create(:channel_instagram, account: account)
+        token = instance_double(Instagram::RefreshOauthTokenService, access_token: 'ig-token')
+        allow(Instagram::RefreshOauthTokenService).to receive(:new).and_return(token)
+        stub_request(:get, %r{\A#{ig}/}).to_return(erro(2, status: 500))
+      end
+
+      it 'Instagram indisponível e Página ok: a Página aparece, só o Instagram pede "Tentar de novo"' do
+        stub_pagina
+
+        resultado = tela(days: 30).perform
+
+        expect(resultado[:page]).to include(status: 'ok', views: 8636)
+        expect(resultado[:instagram]).to eq(status: 'unavailable')
+      end
+
+      it 'os dois indisponíveis: a tela inteira fica indisponível (503)' do
+        stub_request(:get, "#{fb}/1001").with(query: hash_including({})).to_return(erro(2, status: 500))
+
+        expect { tela(days: 30).perform }.to raise_error(Crm::MetaAds::Organico::Indisponivel)
+      end
     end
 
     it 'guarda a leitura da Meta por 15 minutos, mas conta as conversas na hora' do
@@ -220,26 +271,58 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
              breakdown: recorte('follow_type', 'FOLLOWER' => follows.first, 'NON_FOLLOWER' => follows.last))]
     end
 
+    # Recorte por tipo de conteúdo (media_product_type), no formato da chamada real de 27/10: a Meta soma no total da conta
+    # o que os anúncios alcançaram (AD, inclusive dark post) e não deduplica entre tipos. Números sintéticos.
+    def por_tipo(name, valores, chaves: ['media_product_type'])
+      results = valores.map { |lados, valor| { 'dimension_values' => Array(lados), 'value' => valor } }
+      recorte = { 'dimension_keys' => chaves }
+      recorte['results'] = results if results.any?
+      total(name, valores.values.sum, breakdown: recorte)
+    end
+
+    # alcance: { [tipo, follow_type] => pessoas }; vistas e interacoes: { tipo => valor }.
     def stub_instagram_janela(dias, anterior:, numeros:)
       query = janela(dias, anterior: anterior)
       stub_request(:get, "#{ig}/me/insights")
-        .with(query: hash_including(query.merge(metric: 'reach,views,total_interactions', metric_type: 'total_value')))
-        .to_return(json(data: [total('reach', numeros[:reach]), total('views', numeros[:views]),
-                               total('total_interactions', numeros[:interacoes])]))
+        .with(query: hash_including(query.merge(metric: 'reach', metric_type: 'total_value', breakdown: 'media_product_type,follow_type')))
+        .to_return(json(data: [por_tipo('reach', numeros[:alcance], chaves: %w[media_product_type follow_type])]))
+      stub_request(:get, "#{ig}/me/insights")
+        .with(query: hash_including(query.merge(metric: 'views,total_interactions', metric_type: 'total_value', breakdown: 'media_product_type')))
+        .to_return(json(data: [por_tipo('views', numeros[:vistas]), por_tipo('total_interactions', numeros[:interacoes])]))
+      stub_instagram_follows(query, numeros[:follows])
+    end
+
+    def stub_instagram_follows(query, follows)
       stub_request(:get, "#{ig}/me/insights")
         .with(query: hash_including(query.merge(metric: 'follows_and_unfollows', breakdown: 'follow_type')))
-        .to_return(json(data: follows_data(numeros[:follows])))
+        .to_return(json(data: follows_data(follows)))
+    end
+
+    def numeros_atuais
+      {
+        alcance: { %w[AD NON_FOLLOWER] => 41_000, %w[AD FOLLOWER] => 12, %w[STORY FOLLOWER] => 30, %w[STORY NON_FOLLOWER] => 4,
+                   %w[POST FOLLOWER] => 20, %w[POST NON_FOLLOWER] => 60, %w[REEL FOLLOWER] => 10, %w[REEL NON_FOLLOWER] => 80,
+                   %w[CAROUSEL_CONTAINER FOLLOWER] => 25, %w[CAROUSEL_CONTAINER NON_FOLLOWER] => 120 },
+        vistas: { 'AD' => 9800, 'STORY' => 250, 'POST' => 300, 'REEL' => 200, 'CAROUSEL_CONTAINER' => 500 },
+        interacoes: { 'AD' => 120, 'STORY' => 10, 'POST' => 90, 'REEL' => 20 }
+      }
+    end
+
+    def numeros_anteriores
+      {
+        alcance: { %w[AD NON_FOLLOWER] => 9000, %w[STORY FOLLOWER] => 20, %w[STORY NON_FOLLOWER] => 2, %w[POST FOLLOWER] => 15,
+                   %w[POST NON_FOLLOWER] => 40 },
+        vistas: { 'AD' => 3000, 'STORY' => 150, 'POST' => 200 },
+        interacoes: { 'AD' => 40, 'POST' => 60 }
+      }
     end
 
     def stub_instagram(dias: 30, follows: [212, 40], anterior: true)
       stub_request(:get, "#{ig}/me")
         .with(query: hash_including(fields: 'username,followers_count'))
         .to_return(json(username: 'studioacme', followers_count: 5230))
-      stub_instagram_janela(dias, anterior: false, numeros: { reach: 7640, views: 23_700, interacoes: 1536, follows: follows })
-      stub_request(:get, "#{ig}/me/insights")
-        .with(query: hash_including(janela(dias).merge(metric: 'reach', breakdown: 'follow_type')))
-        .to_return(json(data: [total('reach', 7640, breakdown: recorte('follow_type', 'FOLLOWER' => 2904, 'NON_FOLLOWER' => 4736))]))
-      stub_instagram_janela(dias, anterior: true, numeros: { reach: 6400, views: 20_000, interacoes: 1700, follows: [150, 30] }) if anterior
+      stub_instagram_janela(dias, anterior: false, numeros: numeros_atuais.merge(follows: follows))
+      stub_instagram_janela(dias, anterior: true, numeros: numeros_anteriores.merge(follows: [150, 30])) if anterior
       stub_instagram_media(dias)
     end
 
@@ -263,8 +346,8 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       instagram = tela(days: 30).perform[:instagram]
 
       expect(instagram).to include(status: 'ok', username: 'studioacme', link: 'https://www.instagram.com/studioacme', followers: 5230,
-                                   reach: 7640, views: 23_700, interactions: 1536, reach_non_followers: 4736, new_followers: 212)
-      expect(instagram[:previous]).to eq(reach: 6400, views: 20_000, interactions: 1700, new_followers: 150)
+                                   reach: 349, views: 1250, interactions: 120, reach_non_followers: 264, new_followers: 212)
+      expect(instagram[:previous]).to eq(reach: 77, views: 350, interactions: 60, new_followers: 150)
       expect(instagram[:messages]).to eq(count: 1, inbox_id: inbox.id)
       expect(instagram[:top_posts].pluck(:id, :reach, :interactions, :image_url)).to eq(
         [['i1', 3340, 412, 'https://img/i1.jpg'], ['i2', 2120, 236, 'https://img/i2.jpg']]
@@ -282,10 +365,120 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(instagram[:top_posts].pluck(:id, :reach)).to eq([['i1', 3340], ['i2', nil]])
     end
 
+    it 'tira o anúncio de todos os números: a Meta soma o pago no total da conta' do
+      stub_instagram
+
+      instagram = tela(days: 30).perform[:instagram]
+
+      # Sem o recorte, o alcance (41.361) passaria das vezes que apareceu (11.050), e "ainda não segue" daria 99%.
+      expect(instagram.values_at(:reach, :views, :interactions, :reach_non_followers)).to eq([349, 1250, 120, 264])
+    end
+
+    # Formato do período anterior da conta real: só anúncio nas vistas, interações com o recorte vazio e total 0.
+    it 'período anterior em que os posts não apareceram sem anúncio não compara: primeiro período com dado' do
+      stub_instagram(anterior: false)
+      stub_instagram_janela(30, anterior: true, numeros: { alcance: { %w[AD NON_FOLLOWER] => 3 }, vistas: { 'AD' => 5 },
+                                                           interacoes: {}, follows: nil })
+
+      expect(tela(days: 30).perform[:instagram]).to include(previous: nil, first_period: true)
+    end
+
+    def stub_vistas(data)
+      stub_request(:get, "#{ig}/me/insights")
+        .with(query: hash_including(janela(30).merge(metric: 'views,total_interactions')))
+        .to_return(json(data: data))
+    end
+
+    # Só o cartão do Instagram fica indisponível: a Página (aqui sem caixa) segue o próprio estado.
+    def expect_indisponivel
+      expect(tela(days: 30).perform).to include(instagram: { status: 'unavailable' }, page: { status: 'not_connected' })
+    end
+
+    it 'número sem o recorte por tipo não vira total com anúncio: a Meta fica indisponível' do
+      stub_instagram
+      stub_vistas([total('views', 11_050), total('total_interactions', 240)])
+
+      expect_indisponivel
+    end
+
+    it 'recorte com outra dimensão no lugar de media_product_type: indisponível' do
+      stub_instagram
+      stub_vistas([por_tipo('views', { 'AD' => 9800, 'POST' => 300 }, chaves: ['content_type']),
+                   por_tipo('total_interactions', { 'POST' => 90 })])
+
+      expect_indisponivel
+    end
+
+    it 'tipo de conteúdo desconhecido: indisponível, sem chutar se é anúncio' do
+      stub_instagram
+      stub_vistas([por_tipo('views', { 'POST' => 300, 'PROMOTED' => 9800 }), por_tipo('total_interactions', { 'POST' => 90 })])
+
+      expect_indisponivel
+    end
+
+    it 'recorte com os lados vazios e total acima de zero: indisponível, nunca "você não postou"' do
+      stub_instagram
+      vazio = total('views', 11_050, breakdown: { 'dimension_keys' => ['media_product_type'], 'results' => [] })
+      stub_vistas([vazio, por_tipo('total_interactions', { 'POST' => 90 })])
+
+      expect_indisponivel
+    end
+
+    # Formato real (conta real, janela parada, 27/10): HTTP 200, value 0 no topo e o recorte só com dimension_keys.
+    it 'janela parada no formato real: zero, sem indisponível' do
+      stub_instagram
+      parado = lambda do |name, chaves|
+        { 'name' => name, 'period' => 'day', 'total_value' => { 'value' => 0, 'breakdowns' => [{ 'dimension_keys' => chaves }] } }
+      end
+      stub_vistas([parado.call('views', ['media_product_type']), parado.call('total_interactions', ['media_product_type'])])
+      stub_request(:get, "#{ig}/me/insights")
+        .with(query: hash_including(janela(30).merge(metric: 'reach', breakdown: 'media_product_type,follow_type')))
+        .to_return(json(data: [parado.call('reach', %w[media_product_type follow_type])]))
+
+      expect(tela(days: 30).perform[:instagram]).to include(status: 'ok', reach: 0, views: 0, interactions: 0, reach_non_followers: 0)
+    end
+
+    it 'zero de verdade vindo só nos lados, sem o total: zero, sem indisponível' do
+      stub_instagram
+      recorte = { 'dimension_keys' => ['media_product_type'],
+                  'results' => [{ 'dimension_values' => ['POST'], 'value' => 0 }, { 'dimension_values' => ['AD'], 'value' => 0 }] }
+      sem_total = { 'name' => 'total_interactions', 'period' => 'day', 'total_value' => { 'breakdowns' => [recorte] } }
+      stub_vistas([por_tipo('views', { 'POST' => 300 }), sem_total])
+
+      expect(tela(days: 30).perform[:instagram]).to include(status: 'ok', interactions: 0)
+    end
+
+    it 'recorte sem os lados com total acima de zero: indisponível' do
+      stub_instagram
+      sem_lados = total('views', 11_050, breakdown: { 'dimension_keys' => ['media_product_type'] })
+      stub_vistas([sem_lados, por_tipo('total_interactions', { 'POST' => 90 })])
+
+      expect_indisponivel
+    end
+
+    it 'métrica que não veio na resposta: indisponível' do
+      stub_instagram
+      stub_vistas([por_tipo('total_interactions', { 'POST' => 90 })])
+
+      expect_indisponivel
+    end
+
+    it 'alcance sem follow_type no recorte: "ainda não segue" não vira 0, fica indisponível' do
+      stub_instagram
+      stub_request(:get, "#{ig}/me/insights")
+        .with(query: hash_including(janela(30).merge(metric: 'reach', breakdown: 'media_product_type,follow_type')))
+        .to_return(json(data: [por_tipo('reach', { 'AD' => 41_000, 'POST' => 80 })]))
+
+      expect_indisponivel
+    end
+
     it 'em 90 dias não compara: a Meta só guarda 90 dias do Instagram' do
       stub_instagram(dias: 90, anterior: false)
 
-      expect(tela(days: 90).perform[:instagram][:previous]).to be_nil
+      instagram = tela(days: 90).perform[:instagram]
+
+      expect(instagram[:previous]).to be_nil
+      expect(instagram).not_to have_key(:first_period)
     end
 
     it 'com menos de 100 seguidores a Meta não manda os seguidores novos' do
