@@ -17,8 +17,8 @@ class Instagram::CommentsClient
   # A Graph não respondeu (rede, 5xx, limite): quem roda em job sobe para o retry.
   class Unavailable < StandardError; end
   # Sem resposta da Meta: quem chama trata como "pode ter chegado" (http_code nil). Qualquer outro erro é nosso e sobe.
-  NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Timeout::Error, EOFError, SocketError,
-                    SystemCallError, OpenSSL::SSL::SSLError].freeze
+  NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Net::ProtocolError, Timeout::Error, EOFError,
+                    SocketError, SystemCallError, OpenSSL::SSL::SSLError, Zlib::Error, HTTParty::Error].freeze
 
   def initialize(channel)
     @channel = channel

@@ -141,7 +141,7 @@ class Crm::MetaAds::InstagramComments
   def present(rows, channel)
     actions = Crm::MetaAdsCommentAction.where(account_id: @connection.account_id, network: 'instagram', action: 'private_reply',
                                               comment_id: rows.flat_map { |item| [item['id'], *replies(item).pluck('id')] })
-                                       .includes(:conversation).reject(&:stale?).index_by(&:comment_id)
+                                       .includes(:conversation).index_by(&:comment_id)
     rows.map do |item|
       row(item, channel, actions: actions).merge(replies: replies(item).map { |reply| row(reply, channel, actions: actions, nested: true) })
     end

@@ -7,9 +7,9 @@
 # - `conversation_id`: na resposta no privado, a conversa da caixa onde ela continua.
 #
 # ONCE (`private_reply`, `ai_seen`) é única por comentário (índice único parcial): quem age grava ANTES de chamar a
-# Meta e apaga se a Meta recusar. O privado ganha `confirmed_at` quando a Meta aceita; sem ele (rede caiu, 5xx, processo
-# morreu no meio), a reivindicação vence em UNCONFIRMED_TTL e pode ser refeita: se a Meta tiver entregado, ela mesma
-# recusa a segunda (um privado por comentário). Bater no índice quer dizer que outra pessoa, a IA ou um webhook reenviado já fez ou
+# Meta e apaga se a Meta recusar com 4xx. O privado ganha `confirmed_at` quando a Meta aceita; sem ele (rede caiu, 5xx,
+# processo morreu no meio), a linha FICA para sempre: a Meta pode ter entregado, e um segundo envio seria DM duplicada.
+# Nada libera por tempo. Bater no índice quer dizer que outra pessoa, a IA ou um webhook reenviado já fez ou
 # está fazendo. As outras ações podem se repetir (ocultar, mostrar de novo, ocultar).
 class Crm::MetaAdsCommentAction < ApplicationRecord
   self.table_name = 'crm_meta_ads_comment_actions'
@@ -18,7 +18,6 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
   ACTIONS = %w[private_reply reply hide show delete ai_seen to_you private_reply_failed].freeze
   ONCE = %w[private_reply ai_seen].freeze
   ACTORS = %w[user ai].freeze
-  UNCONFIRMED_TTL = 15.minutes
 
   belongs_to :account
   belongs_to :conversation, optional: true
@@ -35,13 +34,8 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
     create!(attributes.merge(at: Time.current))
   end
 
-  # A Meta aceitou o privado: a reivindicação passa a valer para sempre.
+  # A Meta aceitou o privado.
   def confirm!
     update!(confirmed_at: Time.current)
-  end
-
-  # Reivindicação do privado sem confirmação da Meta e já vencida: não vale mais como "já respondido".
-  def stale?
-    confirmed_at.nil? && at.before?(UNCONFIRMED_TTL.ago)
   end
 end

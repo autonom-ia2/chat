@@ -220,18 +220,21 @@ RSpec.describe Crm::MetaAds::InstagramComments do
         expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to have_attributes(confirmed_at: nil)
       end
 
-      it 'sem confirmação, a lista diz "enviado, sem confirmação"; vencida, o botão volta e o privado sai de novo' do
+      it 'sem confirmação, a lista diz "sem confirmação" e o privado nunca sai de novo, nem dias depois' do
         stub_comments
-        claim = Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: 'c1', action: 'private_reply',
-                                                  actor: 'user', at: 5.minutes.ago)
+        Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: 'c1', action: 'private_reply',
+                                          actor: 'user', at: 3.days.ago)
+
         expect(service.payload(ad_id)[:comments].first).to include(can_reply_private: false,
                                                                    private_reply: include(confirmed: false))
+        expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_done') }
+        expect(a_request(:post, %r{/messages})).not_to have_been_made
+      end
 
-        claim.update!(at: (Crm::MetaAdsCommentAction::UNCONFIRMED_TTL + 1.minute).ago)
-        expect(described_class.new(connection, inbox_access: ->(_inbox) { true }, can_manage: true)
-                 .payload(ad_id)[:comments].first).to include(can_reply_private: true, private_reply: nil)
-
+      it 'aceito pela Meta, fica confirmado' do
         service.private_reply!(ad_id, 'c1', 'Oi!', user: user)
+
         expect(Crm::MetaAdsCommentAction.where(comment_id: 'c1').sole.confirmed_at).to be_present
       end
 

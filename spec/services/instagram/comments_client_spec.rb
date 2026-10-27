@@ -65,6 +65,11 @@ RSpec.describe Instagram::CommentsClient do
     stub_request(:post, %r{graph\.instagram\.com/v22\.0/18000000000000001/replies}).to_timeout
     expect(client.reply('18000000000000001', 'Oi')).to have_attributes(ok: false, http_code: nil)
 
+    [Net::ProtocolError, Zlib::DataError, HTTParty::RedirectionTooDeep.new(nil)].each do |error|
+      allow(HTTParty).to receive(:post).and_raise(error)
+      expect(client.reply('18000000000000001', 'Oi')).to have_attributes(ok: false, http_code: nil)
+    end
+
     allow(HTTParty).to receive(:post).and_raise(NoMethodError)
     expect { client.reply('18000000000000001', 'Oi') }.to raise_error(NoMethodError)
   end

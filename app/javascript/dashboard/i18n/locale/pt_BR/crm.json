@@ -3064,7 +3064,7 @@
           "DELETE_DONE": "Comentário apagado.",
           "ACTION_ERROR": "Não deu certo agora. Seu texto continua aqui. Tente de novo em um minuto.",
           "PRIVATE_EXPIRED": "Passou de 7 dias: não dá mais para responder no privado.",
-          "PRIVATE_UNCONFIRMED": "Enviado no privado, mas o Instagram ainda não confirmou.",
+          "PRIVATE_UNCONFIRMED": "Enviado no privado, sem confirmação do Instagram.",
           "PRIVATE_NOT_MEMBER": "Você não atende a caixa do Instagram, por isso não pode responder no privado.",
           "UNANSWERED": "Sem resposta",
           "TAB_UNANSWERED": "1 sem resposta | {count} sem resposta",

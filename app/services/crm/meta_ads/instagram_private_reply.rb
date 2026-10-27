@@ -8,10 +8,10 @@
 # eco chegar antes, a mensagem dele é a que fica).
 #
 # Recusa explícita da Meta (4xx com código): a linha é apagada e o comentário volta a aceitar a resposta. Falha
-# passageira (rede, tempo esgotado, 5xx): a linha FICA sem `confirmed_at`, porque a Meta pode ter entregado; a tela
-# mostra "enviado, sem confirmação". Ela vence em Crm::MetaAdsCommentAction::UNCONFIRMED_TTL (também se o processo
-# morrer no meio) e o botão volta; se a Meta tiver entregado, ela mesma recusa a segunda. Depois de a Meta aceitar,
-# erro ao abrir a conversa não vira falha: vai para o rastreador e a resposta diz que foi.
+# passageira (rede, tempo esgotado, 5xx) ou processo que morre no meio: a linha FICA sem `confirmed_at`, para sempre,
+# porque a Meta pode ter entregado e um segundo envio seria DM duplicada. A tela mostra "Enviado no privado, sem
+# confirmação do Instagram" e o botão não volta. Depois de a Meta aceitar, erro ao abrir a conversa não vira falha: vai
+# para o rastreador e a resposta diz que foi.
 #
 # Só comentário de primeiro nível: resposta a comentário (com `parent_id`) não recebe o privado.
 #
@@ -36,7 +36,6 @@ class Crm::MetaAds::InstagramPrivateReply
   def perform!(comment:, text:, actor:, user: nil, ad_id: nil)
     text = valid_text!(text)
     validate_comment!(comment)
-    release_stale!(comment['id'])
     action = claim!(comment['id'], actor, user, ad_id)
     result = Instagram::CommentsClient.new(@channel).private_reply(comment['id'], text)
     unless result.ok
@@ -66,11 +65,6 @@ class Crm::MetaAds::InstagramPrivateReply
     Time.zone.parse(timestamp.to_s)&.after?(WINDOW.ago)
   rescue ArgumentError
     false
-  end
-
-  def release_stale!(comment_id)
-    Crm::MetaAdsCommentAction.where(network: 'instagram', comment_id: comment_id.to_s, action: 'private_reply', confirmed_at: nil)
-                             .where(at: ...Crm::MetaAdsCommentAction::UNCONFIRMED_TTL.ago).delete_all
   end
 
   def claim!(comment_id, actor, user, ad_id)

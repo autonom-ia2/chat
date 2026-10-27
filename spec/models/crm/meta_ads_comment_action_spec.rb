@@ -26,12 +26,10 @@ RSpec.describe Crm::MetaAdsCommentAction do
     expect { record('hide', actor: 'robo') }.to raise_error(ActiveRecord::RecordInvalid)
   end
 
-  it 'reivindicação sem confirmação vence em UNCONFIRMED_TTL; confirmada, nunca' do
+  it 'confirm! marca quando a Meta aceitou o privado' do
     action = described_class.record!(account: create(:account), network: 'instagram', comment_id: 'c1', action: 'private_reply',
                                      actor: 'ai')
-    travel(described_class::UNCONFIRMED_TTL + 1.minute) { expect(action.stale?).to be(true) }
 
-    action.confirm!
-    travel(1.day) { expect(action.stale?).to be(false) }
+    expect { action.confirm! }.to change { action.reload.confirmed_at }.from(nil)
   end
 end
