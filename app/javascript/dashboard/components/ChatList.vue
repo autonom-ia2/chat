@@ -363,11 +363,16 @@ const funilDaLista = computed(() =>
 );
 // #1999: com o filtro do link, a caixa abre em "Todas" (se a pessoa tem) e em "Abertas", para bater com o número do
 // Números.
+// #2199: "Ver conversas" da aba Seus posts (Anúncios da Meta) abre a caixa em "Todas" (?aba=todas), se a pessoa tem.
 function abaAoAbrir() {
   const abas = assigneeTabItems.value.map(item => item.key);
   const todas = wootConstants.ASSIGNEE_TYPE.ALL;
+  const pedeTodas =
+    router.currentRoute.value.query.aba === 'todas' && abas.includes(todas);
   return (
-    abaDoFiltroDoLink(filtroDoLink.value, abas, todas) || defaultAssigneeTab()
+    abaDoFiltroDoLink(filtroDoLink.value, abas, todas) ||
+    (pedeTodas ? todas : null) ||
+    defaultAssigneeTab()
   );
 }
 // A conversa aberta fica na lista filtrada enquanto estiver aberta.

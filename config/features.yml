@@ -913,3 +913,14 @@
   display_name: Agentes IA › painel de desempenho do agente
   enabled: false
   column: feature_flags_ext_2
+
+# Anúncios da Meta: resultados orgânicos (#2199). Ligada: a página de Anúncios da Meta ganha a aba "Seus posts", ao
+# lado do Resultado, com quem viu os posts da Página do Facebook (read_insights) e do Instagram
+# (instagram_business_manage_insights), quem mandou mensagem por ali e os posts com mais curtidas e comentários.
+# Desligada: Resultado e Conexão de sempre. Fim da feature_flags_ext_2, posição pela ordem de chegada à main; hoje 5
+# (valor 16, 1 << 4), depois de agentes_painel_desempenho. Se outra flag da ext_2 entrar antes, esta vai para depois
+# dela (a Orquestração confere antes de enfileirar).
+- name: meta_ads_organico
+  display_name: Anúncios da Meta - resultados orgânicos da Página e do Instagram
+  enabled: false
+  column: feature_flags_ext_2

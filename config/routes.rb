@@ -393,6 +393,8 @@ Rails.application.routes.draw do
             scope 'meta_ads_connection' do
               # Relatório baixado (#1960): PDF ou planilha do painel no período.
               get :report, to: 'meta_ads_reports#show'
+              # Seus posts (#2199): resultado orgânico da Página e do Instagram.
+              get :organico, to: 'meta_ads_organico#show'
               post :daily_action, to: 'meta_ads_ai#daily_action'
               post :quote_message, to: 'meta_ads_ai#quote_message'
               get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
@@ -1407,6 +1409,8 @@ Rails.application.routes.draw do
 
   # ----------------------------------------------------------------------
   # Routes for channel integrations
+  # #2200: o POST do webhook de Página passa pelo nosso controller (leadgen, feed, repasse); o GET de verificação fica na gem.
+  post 'bot', to: 'webhooks/facebook_page#events'
   mount Facebook::Messenger::Server, at: 'bot'
   get 'webhooks/twitter', to: 'api/v1/webhooks#twitter_crc'
   post 'webhooks/twitter', to: 'api/v1/webhooks#twitter_events'

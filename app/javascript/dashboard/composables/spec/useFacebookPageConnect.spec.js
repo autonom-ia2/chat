@@ -75,6 +75,17 @@ describe('useFacebookPageConnect', () => {
     });
   });
 
+  it('asks the extra scopes on top of the page scopes (Your posts #2199)', async () => {
+    const { preloadSdk, login } = useFacebookPageConnect();
+    await preloadSdk();
+
+    await expect(login(['read_insights'])).resolves.toBe('user-token');
+    expect(window.FB.login).toHaveBeenCalledWith(expect.any(Function), {
+      scope:
+        'pages_manage_metadata,business_management,pages_messaging,pages_show_list,pages_read_engagement,read_insights',
+    });
+  });
+
   it('resolves null when the user is not authorized', async () => {
     stubLogin({ status: 'not_authorized' });
     const { loginAndFetchPages } = useFacebookPageConnect();
