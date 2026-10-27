@@ -10,6 +10,8 @@ RSpec.describe ConversaCanal::LeituraDoSistema do
     travel_to(inicio + segundos) { create(:message, conversation: conversation, account: conversation.account, inbox: conversation.inbox) }
   end
 
+  before { conversation.account.enable_features!(ConversaCanal::VistaNoCelular::FLAG) }
+
   after { Redis::Alfred.delete(described_class.chave(conversation)) }
 
   it 'cobre a mensagem marcada e as anteriores, não as que chegaram depois' do
@@ -33,6 +35,21 @@ RSpec.describe ConversaCanal::LeituraDoSistema do
     described_class.registrar(conversation, ate: inicio)
 
     expect(described_class.ate(conversation)).to eq(inicio + 5.seconds)
+  end
+
+  it 'não grava nada com a flag desligada' do
+    conversation.account.disable_features!(ConversaCanal::VistaNoCelular::FLAG)
+    expect(Redis::Alfred).not_to receive(:with)
+
+    described_class.registrar(conversation, ate: inicio)
+
+    expect(described_class.ate(conversation)).to be_nil
+  end
+
+  it 'nunca levanta ao gravar: a leitura ao canal e o "digitando" seguem' do
+    allow(Redis::Alfred).to receive(:with).and_raise(ConnectionPool::TimeoutError)
+
+    expect { described_class.registrar(conversation, ate: inicio) }.not_to raise_error
   end
 
   it 'descarta a leitura quando o Redis falha (erra para "não lida")' do

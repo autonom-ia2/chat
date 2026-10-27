@@ -22,7 +22,8 @@
 # `read-self` e descarta: nada chega, e a bolinha fica como antes.
 #
 # Grupo: o id do WAHA é `false_<chat>_<ID>` e, em grupo, `false_<grupo>_<ID>_<participante>`; o id físico é sempre o
-# terceiro pedaço (o JID não tem "_").
+# terceiro pedaço (o JID não tem "_"). O controller já entrega só o id físico (`id_fisico`): o chat do id do WAHA é o
+# telefone do cliente, e nada dele vai para a fila nem para as novas tentativas agendadas.
 class WhatsappHybrid::LeituraNoCelular
   ACKS_DE_LEITURA = [3, 4].freeze
   CELULAR_PRINCIPAL = '0'.freeze
@@ -33,12 +34,21 @@ class WhatsappHybrid::LeituraNoCelular
     "whatsapp_hybrid:in:#{inbox_id}:#{physical_id}"
   end
 
-  # Só o número do aparelho, para nada do número de telefone ir para a fila.
+  # Só o número do aparelho, para nada do número de telefone ir para a fila. Fora do formato "<número>[:<aparelho>]@...",
+  # nil (conta como aparelho vinculado: erra para "não lida").
   def self.aparelho(sender)
-    usuario = sender.to_s.split('@').first.to_s
+    return unless sender.is_a?(String)
+
+    usuario = sender.split('@').first.to_s
     return if usuario.blank?
 
-    usuario.include?(':') ? usuario.split(':').last : CELULAR_PRINCIPAL
+    aparelho = usuario.include?(':') ? usuario.split(':').last : CELULAR_PRINCIPAL
+    Integer(aparelho, 10, exception: false)&.to_s
+  end
+
+  # Só o id físico da mensagem lida, sem o chat (o telefone do cliente).
+  def self.id_fisico(waha_id)
+    waha_id.to_s.split('_')[POSICAO_DO_ID_FISICO].presence if waha_id.is_a?(String)
   end
 
   def self.indexar(message)
@@ -72,7 +82,7 @@ class WhatsappHybrid::LeituraNoCelular
     return :nao_e_leitura unless payload['from_me'] == false && ACKS_DE_LEITURA.include?(payload['ack'].to_i)
     return :aparelho_vinculado unless payload['aparelho'] == CELULAR_PRINCIPAL
 
-    mensagem = recebida(payload['id'].to_s.split('_')[POSICAO_DO_ID_FISICO])
+    mensagem = recebida(payload['id'].to_s)
     return :sem_indice if mensagem.nil?
     return :marca_do_sistema if ConversaCanal::LeituraDoSistema.cobre?(mensagem)
 

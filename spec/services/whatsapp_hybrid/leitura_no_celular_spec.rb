@@ -30,7 +30,7 @@ describe WhatsappHybrid::LeituraNoCelular do
   end
 
   def ack(overrides = {})
-    { 'id' => "false_5511937016094@c.us_#{physical_id}", 'ack' => 3, 'from_me' => false, 'aparelho' => '0' }.merge(overrides)
+    { 'id' => physical_id, 'ack' => 3, 'from_me' => false, 'aparelho' => '0' }.merge(overrides)
   end
 
   def aplicar(payload = ack)
@@ -60,6 +60,21 @@ describe WhatsappHybrid::LeituraNoCelular do
       expect(described_class.aparelho('5511999990000@s.whatsapp.net')).to eq('0')
       expect(described_class.aparelho('123456789012345:0@lid')).to eq('0')
       expect(described_class.aparelho(nil)).to be_nil
+    end
+
+    it 'devolve nil fora do formato, para não virar o celular principal por engano' do
+      expect(described_class.aparelho({ 'User' => '5511999990000', 'Device' => 0 })).to be_nil
+      expect(described_class.aparelho('5511999990000:abc@s.whatsapp.net')).to be_nil
+      expect(described_class.aparelho('@s.whatsapp.net')).to be_nil
+    end
+  end
+
+  describe '.id_fisico' do
+    it 'tira só o id físico, sem o chat (o telefone), também no formato de grupo do WAHA' do
+      expect(described_class.id_fisico("false_5511937016094@c.us_#{physical_id}")).to eq(physical_id)
+      expect(described_class.id_fisico("false_120363000000000000@g.us_#{physical_id}_5511937016094@c.us")).to eq(physical_id)
+      expect(described_class.id_fisico('false_5511937016094@c.us')).to be_nil
+      expect(described_class.id_fisico(nil)).to be_nil
     end
   end
 
@@ -168,10 +183,6 @@ describe WhatsappHybrid::LeituraNoCelular do
       expect(nao_lidas).to eq(1)
     end
 
-    it 'acha o id físico também no formato de grupo do WAHA' do
-      expect(aplicar(ack('id' => "false_120363000000000000@g.us_#{physical_id}_5511937016094@c.us"))).to eq(:andou)
-    end
-
     it 'deixa uma linha de log por decisão, sem telefone e sem id de mensagem' do
       allow(Rails.logger).to receive(:info).and_call_original
 
@@ -194,7 +205,7 @@ describe WhatsappHybrid::LeituraNoCelular do
     end
 
     it 'ignora id físico que não é de mensagem recebida conhecida' do
-      expect(aplicar(ack('id' => 'false_5511937016094@c.us_DESCONHECIDO'))).to eq(:sem_indice)
+      expect(aplicar(ack('id' => 'DESCONHECIDO'))).to eq(:sem_indice)
     end
   end
 end

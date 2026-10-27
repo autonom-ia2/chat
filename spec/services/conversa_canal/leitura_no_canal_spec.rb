@@ -51,6 +51,7 @@ describe ConversaCanal::LeituraNoCanal do
     end
 
     it 'deixa a marca de leitura do sistema até a mensagem marcada, para ela não voltar como leitura no celular (#2246)' do
+      account.enable_features!(ConversaCanal::VistaNoCelular::FLAG)
       Redis::Alfred.delete(ConversaCanal::LeituraDoSistema.chave(conversa))
 
       marcar(conversa)

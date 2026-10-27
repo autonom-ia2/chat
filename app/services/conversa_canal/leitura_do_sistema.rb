@@ -14,13 +14,17 @@
 # - perder uma leitura coberta não custa nada: o celular não manda leitura de mensagem que já está lida. Só se perde
 #   quando a marcação do sistema falhou no canal, e aí erra para "não lida", o lado seguro.
 # A marca só anda para a frente (WATCH/MULTI, como Crm::Subjects::Marco) e dura MEMORIA, bem mais que qualquer atraso
-# de fila. Sem Redis, `cobre?` responde true (descarta) e `registrar` só deixa log: a leitura ao canal segue.
+# de fila. Só é gravada com a flag `leitura_no_celular` da conta: desligada, nada muda na leitura ao canal nem no
+# "digitando" (nem uma ida ao Redis a mais). Sem Redis, `cobre?` responde true (descarta) e `registrar` só deixa log:
+# a falha da marca nunca impede a leitura ao canal nem o "digitando".
 module ConversaCanal::LeituraDoSistema
   MEMORIA = 1.day
   TENTATIVAS = 5
   MICROSSEGUNDOS = 1_000_000
 
   def self.registrar(conversation, ate:)
+    return unless ConversaCanal::VistaNoCelular.enabled?(conversation.account)
+
     chave = chave(conversation)
     valor = (ate.to_r * MICROSSEGUNDOS).to_i
     gravado = ::Redis::Alfred.with do |conn|
@@ -32,7 +36,7 @@ module ConversaCanal::LeituraDoSistema
       end
     end
     Rails.logger.warn("[conversa_canal][leitura_do_sistema] marca não gravada conversation=#{conversation.id} concorrência") unless gravado
-  rescue Redis::BaseError => e
+  rescue StandardError => e
     Rails.logger.warn("[conversa_canal][leitura_do_sistema] marca não gravada conversation=#{conversation.id} #{e.class}")
   end
 

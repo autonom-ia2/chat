@@ -95,7 +95,7 @@ RSpec.describe WhatsappHybrid::WebhookEventJob do
     end
 
     it 'sends the ack of a received message read on the phone to the phone reading, not to the ✓✓ (#2246)' do
-      ack = { 'id' => 'false_5511937016094@c.us_3EB0ACK', 'ack' => 3, 'from_me' => false, 'aparelho' => '0' }
+      ack = { 'id' => '3EB0ACK', 'ack' => 3, 'from_me' => false, 'aparelho' => '0' }
       leitura = instance_double(WhatsappHybrid::LeituraNoCelular, aplicar: :andou)
       allow(WhatsappHybrid::LeituraNoCelular).to receive(:new).with(connection).and_return(leitura)
 
@@ -106,7 +106,7 @@ RSpec.describe WhatsappHybrid::WebhookEventJob do
     end
 
     context 'when the phone read arrives before the received message was indexed (#2246)' do
-      let(:ack) { { 'id' => 'false_5511937016094@c.us_3EB0IN', 'ack' => 3, 'from_me' => false, 'aparelho' => '0' } }
+      let(:ack) { { 'id' => '3EB0IN', 'ack' => 3, 'from_me' => false, 'aparelho' => '0' } }
 
       before { inbox.account.enable_features!(ConversaCanal::VistaNoCelular::FLAG) }
 
@@ -122,7 +122,7 @@ RSpec.describe WhatsappHybrid::WebhookEventJob do
         Redis::Alfred.delete(WhatsappHybrid::Config.inbox_flag_key(inbox.id))
         received = create(:message, message_type: :incoming, conversation: conversation, account: inbox.account, inbox: inbox,
                                     sender: contact, source_id: 'wamid.HBgNNTUxMTkzNzAxNjA5NBUCABIYFDJBNUQyRDhEQTA4OUJFNDJFNEQ1AA==')
-        read = ack.merge('id' => 'false_5511937016094@c.us_2A5D2D8DA089BE42E4D5')
+        read = ack.merge('id' => '2A5D2D8DA089BE42E4D5')
 
         described_class.perform_now(connection.id, 'message.ack', read)
         expect(conversation.reload.unread_incoming_messages).to include(received)
