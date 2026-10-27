@@ -22,6 +22,8 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
 
   def perform(entries)
     @entries = entries
+    # Comentário e evento de teste (#2200) só viram job ou o serviço de teste: sem contato, o lock não protege nada.
+    return process_entries(entries) if contact_instagram_id.nil?
 
     key = format(::Redis::Alfred::IG_MESSAGE_MUTEX, sender_id: contact_instagram_id, ig_account_id: ig_account_id)
     # Keep the lock TTL just long enough for the first job to fetch profile data and
@@ -47,8 +49,7 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   private
 
   def process_single_entry(entry)
-    return process_changes(entry) if entry[:changes].present?
-
+    process_changes(entry) if entry[:changes].present?
     process_messages(entry)
   end
 
@@ -59,11 +60,16 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
     entry[:changes].each do |change|
       next process_test_event(change) if change[:field] == TEST_EVENT_FIELD
 
-      job = COMMENT_FIELDS.include?(change[:field]) ? COMMENT_JOB.safe_constantize : nil
-      next Rails.logger.info("Instagram webhook: no job for field #{change[:field].inspect}") if job.nil?
-
-      job.perform_later(entry[:id].to_s, change[:field], change[:value].to_h, entry[:time])
+      enqueue_comment(entry, change)
     end
+  end
+
+  def enqueue_comment(entry, change)
+    job = COMMENT_FIELDS.include?(change[:field]) ? COMMENT_JOB.safe_constantize : nil
+    return Rails.logger.info("Instagram webhook: no job for field #{change[:field].inspect}") if job.nil?
+    return Rails.logger.warn("Instagram webhook: #{change[:field]} without an object value, skipped") unless change[:value].is_a?(Hash)
+
+    job.perform_later(entry[:id].to_s, change[:field], change[:value].to_h, entry[:time])
   end
 
   def process_messages(entry)

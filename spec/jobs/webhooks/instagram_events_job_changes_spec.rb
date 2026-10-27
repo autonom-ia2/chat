@@ -49,6 +49,47 @@ describe Webhooks::InstagramEventsJob do
     expect { described_class.perform_now([entry_with('comments', comment_value)]) }.not_to raise_error
   end
 
+  it 'handles a test event and a comment in the same entry, each on its own path' do
+    test_service = instance_double(Instagram::TestEventService, perform: true)
+    allow(Instagram::TestEventService).to receive(:new).and_return(test_service)
+    entry = entry_with('messages', { 'sender' => { 'id' => '1' }, 'recipient' => { 'id' => '2' }, 'message' => { 'mid' => 'm', 'text' => 't' } })
+    entry[:changes] << { field: 'comments', value: comment_value }.with_indifferent_access
+
+    described_class.perform_now([entry])
+
+    expect(test_service).to have_received(:perform).once
+    expect(comment_job).to have_received(:perform_later).once
+  end
+
+  it 'still processes a DM that comes in the same entry as changes' do
+    entry = entry_with('comments', comment_value).merge(messaging: [{ sender: { id: '1' }, recipient: { id: '2' } }])
+    job = described_class.new
+    allow(job).to receive(:process_messages)
+
+    job.perform([entry])
+
+    expect(job).to have_received(:process_messages)
+    expect(comment_job).to have_received(:perform_later)
+  end
+
+  it 'skips a change whose value is not an object without stopping the next ones' do
+    entry = entry_with('comments', 'not-an-object')
+    entry[:changes] << { field: 'comments', value: comment_value }.with_indifferent_access
+
+    described_class.perform_now([entry])
+
+    expect(comment_job).to have_received(:perform_later).once
+  end
+
+  it 'hands the job arguments that survive ActiveJob serialization' do
+    args = nil
+    allow(comment_job).to receive(:perform_later) { |*received| args = received }
+
+    described_class.perform_now([entry_with('comments', comment_value.merge('from' => { 'id' => '1', 'self_ig_scoped_id' => '2' }))])
+
+    expect(ActiveJob::Arguments.deserialize(ActiveJob::Arguments.serialize(args))).to eq(args)
+  end
+
   it 'ignores fields without a consumer' do
     described_class.perform_now([entry_with('story_insights', { 'media_id' => '1' })])
 

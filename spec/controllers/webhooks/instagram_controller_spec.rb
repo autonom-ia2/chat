@@ -126,6 +126,20 @@ RSpec.describe 'Webhooks::InstagramController', type: :request do
         expect(Webhooks::InstagramRelayJob).to have_received(:perform_later).with(relay_url, comment_body, signature_for(comment_body))
       end
 
+      it 'does not relay the dashboard test event (each stack would write it into one of its inboxes)' do
+        test_body = { object: 'instagram', entry: [{ id: 'local-ig-1', time: 1, changes: [{ field: 'messages', value: { text: 'x' } }] }] }.to_json
+
+        post_instagram_webhook(test_body, env: { INSTAGRAM_APP_SECRET: client_secret, INSTAGRAM_WEBHOOK_RELAY_URLS: relay_url })
+
+        expect(Webhooks::InstagramRelayJob).not_to have_received(:perform_later)
+      end
+
+      it 'does not relay when no relay URL is configured' do
+        post_instagram_webhook(comment_body)
+
+        expect(Webhooks::InstagramRelayJob).not_to have_received(:perform_later)
+      end
+
       it 'does not relay a body that was already relayed' do
         with_modified_env INSTAGRAM_APP_SECRET: client_secret, INSTAGRAM_WEBHOOK_RELAY_URLS: relay_url do
           post '/webhooks/instagram', params: comment_body,
