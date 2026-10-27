@@ -6,7 +6,8 @@
 #
 # - `creating` com sinal de vida: `in_progress`.
 # - `creating` parado há mais que Crm::MetaAds::Creation::Attempt::STALE_AFTER, ou `unconfirmed`: `unconfirmed`. Nunca
-#   cria sozinho; só o "Não está no Gerenciador, criar de novo" libera.
+#   cria sem saber: a tela segue com a chave dela, que, com a campanha achada, desfaz e refaz; com a busca vazia, fica
+#   `unconfirmed` até a pessoa recriar ("Não está no Gerenciador, criar de novo").
 # - `rollback_failed`: `meta_unavailable`, sem "nada criado". A mesma chave desfaz o que ficou antes de criar.
 class Crm::MetaAds::Creation::Twin
   def initialize(account, ad_account_id)

@@ -8,7 +8,8 @@
 #   vazia. A Meta pode ter criado depois, ou ainda não mostrar na busca: a tela pede para conferir no Gerenciador de
 #   Anúncios. A mesma chave procura de novo antes de criar; se achar, desfaz e refaz. Vazia de novo, continua
 #   `unconfirmed`, por mais tempo que passe. `creating` parado há mais que STALE_AFTER (o processo caiu) segue a mesma
-#   regra: busca vazia vira `unconfirmed`, nunca criar sozinho. A pessoa libera criar de novo (`recreate_unconfirmed`,
+#   regra: nunca cria sem saber. Com a campanha achada, desfaz e refaz; com a busca vazia, fica `unconfirmed` até a
+#   pessoa recriar. A pessoa libera criar de novo (`recreate_unconfirmed`,
 #   só com uma linha `unconfirmed` desta chave) depois de conferir no Gerenciador. Aí, se a campanha antiga aparecer
 #   mais tarde, as duas existem: a Auditoria guarda o nome com a marca da tentativa antiga para achá-la.
 #
@@ -108,7 +109,7 @@ class Crm::MetaAds::Creation::Attempt
   end
 
   # Já com a linha em `creating`: confere na Meta e desfaz o que ficou da tentativa anterior. Se não der, a linha volta
-  # para a situação de antes, com os ids que tinha; `creating` parado volta como `unconfirmed` (nunca criar sozinho).
+  # para a situação de antes, com os ids que tinha; `creating` parado volta como `unconfirmed` (nunca cria sem saber).
   def clear_leftover!(record, status, recreate)
     outcome = @undo.undo(record, unknown: true)
     raise Crm::MetaAds::Creation::Error.new('meta_unavailable', nothing_created: false) if outcome == :failed

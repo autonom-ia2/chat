@@ -390,8 +390,9 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   Gerenciador de Anúncios. A mesma chave procura de novo antes de criar: se
   achar, desfaz e refaz; vazia de novo, continua `unconfirmed`, por mais tempo
   que passe. Tentativa `creating` parada há mais de 10 minutos (o processo
-  caiu) segue a mesma regra: busca vazia vira `unconfirmed`, nunca cria
-  sozinha. Só a pessoa libera, no botão "Não está no Gerenciador, criar de
+  caiu) segue a mesma regra: nunca cria sem saber. Com a campanha achada,
+  desfaz e refaz; com a busca vazia, fica `unconfirmed` até a pessoa recriar.
+  Só a pessoa libera, no botão "Não está no Gerenciador, criar de
   novo" (quem tem `meta_ads_manage`), só para uma tentativa `unconfirmed` desta
   chave, e isso fica na Auditoria (`meta_ads_create_recreated`, com o nome e a
   marca da tentativa antiga). Depois que ela libera, se a campanha antiga
@@ -409,7 +410,9 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   tentativa: `in_progress` se ela está criando, `unconfirmed` se não foi
   confirmada (ou parou de criar), `meta_unavailable` sem "nada criado" se nem
   desfazer deu. Sem a pessoa liberar, atraso da Meta não vira campanha
-  duplicada.
+  duplicada. Tentativa já `created` fica fora do índice de propósito: pedir o
+  mesmo anúncio de novo depois de criado é uma intenção legítima, e o segundo
+  também nasce pausado.
 - Campanha da tentativa que já não existe na Meta (apagada pelo Gerenciador)
   conta como desfeita: a chave não fica presa. "Não existe" é só o erro 100
   com subcódigo 33, ou a releitura dizer `DELETED`/`ARCHIVED`; o 100 puro é

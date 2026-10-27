@@ -402,7 +402,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       expect { create! }.to raise_error(ActiveRecord::RecordInvalid)
     end
 
-    it 'tentativa presa há mais de 10 minutos sem campanha achada: vira não confirmada, nunca cria sozinha' do
+    it 'tentativa presa há mais de 10 minutos sem campanha achada: vira não confirmada, nunca cria sem saber' do
       Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: draft[:idempotency_key], status: 'creating',
                                         name: draft[:name], updated_at: 11.minutes.ago)
       stub_campaign_search
@@ -673,7 +673,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
           [error&.code, error&.attempt_key]
         end
 
-        it 'tentativa gêmea ainda criando: in_progress; parada há mais de 10 minutos: não confirmada, nunca cria sozinho' do
+        it 'tentativa gêmea ainda criando: in_progress; parada há mais de 10 minutos: não confirmada, nunca cria sem saber' do
           row = Crm::MetaAdsCreatedObject.find_by!(idempotency_key: draft[:idempotency_key])
           row.update_columns(status: 'creating', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
           expect(twin_error_for_other_key).to eq(['in_progress', draft[:idempotency_key]])
