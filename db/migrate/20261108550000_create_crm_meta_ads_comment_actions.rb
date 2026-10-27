@@ -4,25 +4,26 @@
 # Quem grava: o painel (#2196 Instagram, #2197 Facebook) e a IA dos comentários (#2212).
 #
 # Só as ações que acontecem uma vez por comentário são únicas (a linha é a reivindicação, gravada antes de chamar a
-# Meta): a resposta no privado e a leitura da IA. Responder, ocultar e mostrar podem se repetir.
+# Meta): a resposta no privado e a leitura da IA. Responder, ocultar e mostrar podem se repetir. `confirmed_at`: quando a
+# Meta confirmou o privado; sem ele, a reivindicação vence depois de um tempo (Crm::MetaAdsCommentAction::UNCONFIRMED_TTL).
 class CreateCrmMetaAdsCommentActions < ActiveRecord::Migration[7.2]
   def change
     create_table :crm_meta_ads_comment_actions do |t|
-      t.references :account, null: false, index: false
+      t.references :account, null: false, index: false, foreign_key: true
       t.string :network, null: false
       t.string :ad_id
       t.string :comment_id, null: false
       t.string :action, null: false
-      t.bigint :conversation_id
+      t.references :conversation, index: { name: 'idx_crm_meta_ads_comment_actions_conversation' }, foreign_key: { on_delete: :nullify }
       t.string :actor, null: false
-      t.bigint :user_id
+      t.references :user, index: { name: 'idx_crm_meta_ads_comment_actions_user' }, foreign_key: { on_delete: :nullify }
       t.datetime :at, null: false
+      t.datetime :confirmed_at
       t.timestamps
     end
     add_index :crm_meta_ads_comment_actions, [:network, :comment_id, :action], unique: true,
                                                                                where: "action IN ('private_reply', 'ai_seen')",
                                                                                name: 'idx_crm_meta_ads_comment_actions_once'
     add_index :crm_meta_ads_comment_actions, [:account_id, :network, :comment_id], name: 'idx_crm_meta_ads_comment_actions_lookup'
-    add_index :crm_meta_ads_comment_actions, [:account_id, :actor, :at], name: 'idx_crm_meta_ads_comment_actions_actor_day'
   end
 end

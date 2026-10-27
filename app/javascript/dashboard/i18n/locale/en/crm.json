@@ -3063,6 +3063,7 @@
           "DELETE_DONE": "Comment deleted.",
           "ACTION_ERROR": "That didn't work right now. Your text is still here. Try again in a minute.",
           "PRIVATE_EXPIRED": "It's been over 7 days, so you can't reply privately anymore.",
+          "PRIVATE_UNCONFIRMED": "Sent privately, but Instagram didn't confirm it yet.",
           "PRIVATE_NOT_MEMBER": "You don't handle the Instagram inbox, so you can't reply privately.",
           "UNANSWERED": "No reply yet",
           "TAB_UNANSWERED": "1 with no reply | {count} with no reply",
@@ -3096,7 +3097,11 @@
             "PRIVATE_REPLY_EXPIRED": "The 7 days to reply privately to this comment are over.",
             "NEEDS_LOGIN": "Comment access is missing. Log in with Instagram again.",
             "META_UNAVAILABLE": "Instagram didn't answer. Try again in a minute.",
-            "INVALID_TEXT": "Write the reply before sending."
+            "INVALID_TEXT": "Write the reply before sending.",
+            "NOT_INBOX_MEMBER": "You don't handle the Instagram inbox, so you can't reply privately.",
+            "META_REFUSED": "Instagram refused this action. Reload the comments and try again.",
+            "COMMENT_NOT_FOUND": "This comment is no longer on the ad. Reload the comments.",
+            "PRIVATE_REPLY_TOP_ONLY": "Private replies only work on comments, not on replies."
           }
         }
       },

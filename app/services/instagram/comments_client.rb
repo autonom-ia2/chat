@@ -14,6 +14,11 @@ class Instagram::CommentsClient
   FIELDS = 'id,text,timestamp,hidden,from{id,username}'.freeze
   COMMENT_FIELDS = "#{FIELDS},replies{#{FIELDS}}".freeze
   Result = Meta::AdsGraphClient::Result
+  # A Graph não respondeu (rede, 5xx, limite): quem roda em job sobe para o retry.
+  class Unavailable < StandardError; end
+  # Sem resposta da Meta: quem chama trata como "pode ter chegado" (http_code nil). Qualquer outro erro é nosso e sobe.
+  NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Timeout::Error, EOFError, SocketError,
+                    SystemCallError, OpenSSL::SSL::SSLError].freeze
 
   def initialize(channel)
     @channel = channel
@@ -27,9 +32,9 @@ class Instagram::CommentsClient
     request(:get, media_id.to_s, { fields: 'comments_count' })
   end
 
-  # Um comentário só, com a mídia dele: quem age confere que ele é do anúncio.
+  # Um comentário só, com a mídia dele: quem age confere que ele é do anúncio; o webhook lê o texto aqui.
   def comment(comment_id)
-    request(:get, comment_id.to_s, { fields: 'id,timestamp,parent_id,from{id,username},media{id}' })
+    request(:get, comment_id.to_s, { fields: 'id,text,timestamp,parent_id,from{id,username},media{id}' })
   end
 
   def reply(comment_id, text)
@@ -57,7 +62,7 @@ class Instagram::CommentsClient
     response = HTTParty.public_send(verb, "#{base_uri}/#{path}", query: query.merge(access_token: @channel.access_token),
                                                                  timeout: TIMEOUT_SECONDS, **)
     log_failure(verb, path, build_result(response))
-  rescue StandardError => e
+  rescue *NETWORK_ERRORS => e
     log_failure(verb, path, Result.new(ok: false, http_code: nil, data: nil, error_code: nil, error_message: e.class.name))
   end
 

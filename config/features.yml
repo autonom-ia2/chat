@@ -927,8 +927,8 @@
 # do anúncio ganha a aba Instagram dos comentários (ver, responder, ocultar, apagar e responder no privado), e a caixa
 # do Instagram pode pedir de novo o login com instagram_business_manage_comments, voltando ao anúncio. Desligada: a aba
 # não aparece e a API responde 404. Migration 20261108550000 (crm_meta_ads_comment_actions). Fim da
-# feature_flags_ext_2, depois de meta_ads_organico: posição pela ordem de chegada à main, hoje 6 (valor 32, 1 << 5);
-# a Orquestração confere antes de enfileirar.
+# feature_flags_ext_2: a posição é a ordem de chegada à main, e a flag fica na última na hora do merge (a Orquestração
+# confere antes de enfileirar).
 - name: meta_ads_comentarios_instagram
   display_name: Anúncios da Meta › comentários do anúncio no Instagram
   enabled: false

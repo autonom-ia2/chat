@@ -2756,11 +2756,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
     t.string "actor", null: false
     t.bigint "user_id"
     t.datetime "at", null: false
+    t.datetime "confirmed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "actor", "at"], name: "idx_crm_meta_ads_comment_actions_actor_day"
     t.index ["account_id", "network", "comment_id"], name: "idx_crm_meta_ads_comment_actions_lookup"
+    t.index ["conversation_id"], name: "idx_crm_meta_ads_comment_actions_conversation"
     t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_once", unique: true, where: "((action)::text = ANY ((ARRAY['private_reply'::character varying, 'ai_seen'::character varying])::text[]))"
+    t.index ["user_id"], name: "idx_crm_meta_ads_comment_actions_user"
   end
 
   create_table "crm_meta_ads_connections", force: :cascade do |t|
@@ -4585,6 +4587,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
   add_foreign_key "crm_meta_ad_links", "conversations", on_delete: :cascade
   add_foreign_key "crm_meta_ad_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_placements_daily", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_comment_actions", "accounts"
+  add_foreign_key "crm_meta_ads_comment_actions", "conversations", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_comment_actions", "users", on_delete: :nullify
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_pages", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "accounts", on_delete: :cascade

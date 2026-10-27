@@ -138,6 +138,14 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
     expect(Crm::MetaAdsCommentAction.count).to eq(0)
   end
 
+  it 'ocultar sem dizer se oculta ou mostra: 422, sem chamar o Instagram' do
+    post "#{path}/18000000000000001/hide", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'invalid_hidden')
+    expect(meta_call(/graph\.instagram\.com/)).not_to have_been_made
+  end
+
   it 'erro de regra vira 422 com o código' do
     post "#{path}/18000000000000001/reply", params: { text: ' ' }, headers: admin.create_new_auth_token, as: :json
 

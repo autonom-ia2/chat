@@ -217,7 +217,30 @@ RSpec.describe Crm::MetaAds::InstagramComments do
 
         expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }
           .to raise_error(described_class::Error) { |e| expect(e.code).to eq('meta_unavailable') }
-        expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to be_present
+        expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to have_attributes(confirmed_at: nil)
+      end
+
+      it 'sem confirmação, a lista diz "enviado, sem confirmação"; vencida, o botão volta e o privado sai de novo' do
+        stub_comments
+        claim = Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: 'c1', action: 'private_reply',
+                                                  actor: 'user', at: 5.minutes.ago)
+        expect(service.payload(ad_id)[:comments].first).to include(can_reply_private: false,
+                                                                   private_reply: include(confirmed: false))
+
+        claim.update!(at: (Crm::MetaAdsCommentAction::UNCONFIRMED_TTL + 1.minute).ago)
+        expect(described_class.new(connection, inbox_access: ->(_inbox) { true }, can_manage: true)
+                 .payload(ad_id)[:comments].first).to include(can_reply_private: true, private_reply: nil)
+
+        service.private_reply!(ad_id, 'c1', 'Oi!', user: user)
+        expect(Crm::MetaAdsCommentAction.where(comment_id: 'c1').sole.confirmed_at).to be_present
+      end
+
+      it 'resposta a comentário não recebe o privado' do
+        stub_comment('c9', parent_id: 'c1')
+
+        expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_top_only') }
+        expect(a_request(:post, %r{/messages})).not_to have_been_made
       end
 
       it 'depois de a Meta aceitar, erro ao abrir a conversa não vira falha' do

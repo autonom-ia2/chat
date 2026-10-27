@@ -141,21 +141,24 @@ class Crm::MetaAds::InstagramComments
   def present(rows, channel)
     actions = Crm::MetaAdsCommentAction.where(account_id: @connection.account_id, network: 'instagram', action: 'private_reply',
                                               comment_id: rows.flat_map { |item| [item['id'], *replies(item).pluck('id')] })
-                                       .includes(:conversation).index_by(&:comment_id)
-    rows.map { |item| row(item, channel, actions: actions).merge(replies: replies(item).map { |reply| row(reply, channel, actions: actions) }) }
+                                       .includes(:conversation).reject(&:stale?).index_by(&:comment_id)
+    rows.map do |item|
+      row(item, channel, actions: actions).merge(replies: replies(item).map { |reply| row(reply, channel, actions: actions, nested: true) })
+    end
   end
 
   def replies(item)
     Array(item.dig('replies', 'data'))
   end
 
-  def row(item, channel, actions:)
+  # O privado só vale em comentário de primeiro nível de outra pessoa (`nested`: resposta dentro de um comentário).
+  def row(item, channel, actions:, nested: false)
     own = item.dig('from', 'id').to_s == channel.instagram_id
     {
       id: item['id'].to_s, author: { name: nil, username: item.dig('from', 'username'), is_page: own }, text: item['text'],
       created_time: item['timestamp'], hidden: item['hidden'] == true, replies: [],
       can_reply: @can_manage && !own, can_hide: @can_manage && !own, can_delete: @can_manage
-    }.merge(private_state(item, own, actions[item['id'].to_s], member?(channel)))
+    }.merge(private_state(item, !own && !nested, actions[item['id'].to_s], member?(channel)))
   end
 
   def member?(channel)
@@ -164,23 +167,23 @@ class Crm::MetaAds::InstagramComments
   end
 
   # Responder no privado: uma vez só (a linha em Crm::MetaAdsCommentAction diz que já foi) e só até 7 dias depois.
-  def private_state(item, own, action, member)
-    expired = !own && expired?(item)
-    open = private_open?(own, expired, action)
+  def private_state(item, eligible, action, member)
+    expired = eligible && expired?(item)
+    open = private_open?(eligible, expired, action)
     {
       can_reply_private: open && member, private_reply_not_member: open && !member, private_reply_expired: expired && action.nil?,
       private_reply: private_reply(action)
     }
   end
 
-  def private_open?(own, expired, action)
-    @can_manage && !own && !expired && action.nil?
+  def private_open?(eligible, expired, action)
+    @can_manage && eligible && !expired && action.nil?
   end
 
   def private_reply(action)
     return if action.nil?
 
-    { sent_at: action.at.iso8601, conversation_path: conversation_path(action.conversation) }
+    { sent_at: action.at.iso8601, confirmed: action.confirmed_at.present?, conversation_path: conversation_path(action.conversation) }
   end
 
   def expired?(item)

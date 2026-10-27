@@ -39,7 +39,9 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
   end
 
   def hide
-    hidden = ActiveModel::Type::Boolean.new.cast(params[:hidden]) == true
+    hidden = ActiveModel::Type::Boolean.new.cast(params[:hidden])
+    return render json: { error: 'invalid_hidden' }, status: :unprocessable_content unless [true, false].include?(hidden)
+
     result = comments.hide!(ad_id, comment_id, hidden: hidden)
     audit!(hidden ? 'hide' : 'show')
     render json: result

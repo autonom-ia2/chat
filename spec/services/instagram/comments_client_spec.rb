@@ -60,4 +60,12 @@ RSpec.describe Instagram::CommentsClient do
     expect(result.ok).to be(false)
     expect(result.transient?).to be(true)
   end
+
+  it 'erro de rede vira resultado sem http_code; erro nosso sobe' do
+    stub_request(:post, %r{graph\.instagram\.com/v22\.0/18000000000000001/replies}).to_timeout
+    expect(client.reply('18000000000000001', 'Oi')).to have_attributes(ok: false, http_code: nil)
+
+    allow(HTTParty).to receive(:post).and_raise(NoMethodError)
+    expect { client.reply('18000000000000001', 'Oi') }.to raise_error(NoMethodError)
+  end
 end

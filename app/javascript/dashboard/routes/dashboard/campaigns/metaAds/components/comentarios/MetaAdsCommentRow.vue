@@ -7,6 +7,7 @@ import { relativeTime } from '../../metaAdsHelpers';
 // Anúncios da Meta (#2196 Instagram, #2197 Facebook): um comentário do anúncio, com as respostas recuadas. As ações
 // vêm dos dados (`can_reply`, `can_hide`, `can_delete`, `can_reply_private`), nunca da plataforma: a linha não sabe
 // se é Instagram ou Facebook. Só aparecem para quem pode gerir (`canManage`). Apagar pede confirmação na casca.
+// Privado enviado sem a Meta confirmar (rede caiu no meio): `private_reply.confirmed` false, e a linha diz isso.
 // Sem o privado, a linha diz o motivo: passou de 7 dias (`private_reply_expired`) ou quem vê não é da caixa que
 // receberia a conversa (`private_reply_not_member`).
 //
@@ -284,7 +285,13 @@ const DANGER =
           class="m-0 inline-flex flex-wrap items-center gap-x-2 text-sm text-n-slate-11"
         >
           <span class="i-lucide-send size-3.5" aria-hidden="true" />
-          {{ $t(`${KEY}.PRIVATE_SENT`) }}
+          {{
+            $t(
+              privateSent.confirmed === false
+                ? `${KEY}.PRIVATE_UNCONFIRMED`
+                : `${KEY}.PRIVATE_SENT`
+            )
+          }}
           <router-link
             v-if="privateSent.conversation_path"
             :to="privateSent.conversation_path"

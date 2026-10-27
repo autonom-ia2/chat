@@ -8,11 +8,14 @@
 # eco chegar antes, a mensagem dele é a que fica).
 #
 # Recusa explícita da Meta (4xx com código): a linha é apagada e o comentário volta a aceitar a resposta. Falha
-# passageira (rede, tempo esgotado, 5xx): a linha FICA, porque a Meta pode ter entregado; a tela mostra "respondido no
-# privado" sem o link, e o eco do Direct traz a conversa para a caixa. Depois de a Meta aceitar, erro ao abrir a
-# conversa não vira falha: vai para o rastreador e a resposta diz que foi.
+# passageira (rede, tempo esgotado, 5xx): a linha FICA sem `confirmed_at`, porque a Meta pode ter entregado; a tela
+# mostra "enviado, sem confirmação". Ela vence em Crm::MetaAdsCommentAction::UNCONFIRMED_TTL (também se o processo
+# morrer no meio) e o botão volta; se a Meta tiver entregado, ela mesma recusa a segunda. Depois de a Meta aceitar,
+# erro ao abrir a conversa não vira falha: vai para o rastreador e a resposta diz que foi.
 #
-# `comment` vem como a Graph ou o webhook mandam: { 'id', 'timestamp', 'from' => { 'id', 'username' } }.
+# Só comentário de primeiro nível: resposta a comentário (com `parent_id`) não recebe o privado.
+#
+# `comment` vem como a Graph ou o webhook mandam: { 'id', 'timestamp', 'parent_id', 'from' => { 'id', 'username' } }.
 class Crm::MetaAds::InstagramPrivateReply
   class Error < StandardError
     attr_reader :code
@@ -31,10 +34,9 @@ class Crm::MetaAds::InstagramPrivateReply
   end
 
   def perform!(comment:, text:, actor:, user: nil, ad_id: nil)
-    text = text.to_s.strip
-    raise Error, 'invalid_text' if text.blank? || text.length > MAX_TEXT
-    raise Error, 'private_reply_expired' unless within_window?(comment['timestamp'])
-
+    text = valid_text!(text)
+    validate_comment!(comment)
+    release_stale!(comment['id'])
     action = claim!(comment['id'], actor, user, ad_id)
     result = Instagram::CommentsClient.new(@channel).private_reply(comment['id'], text)
     unless result.ok
@@ -42,15 +44,33 @@ class Crm::MetaAds::InstagramPrivateReply
       raise Error, error_code(result)
     end
 
+    action.update!(confirmed_at: Time.current)
     record_safely!(action, comment, text, result.data, user)
   end
 
   private
 
+  def valid_text!(text)
+    text = text.to_s.strip
+    raise Error, 'invalid_text' if text.blank? || text.length > MAX_TEXT
+
+    text
+  end
+
+  def validate_comment!(comment)
+    raise Error, 'private_reply_top_only' if comment['parent_id'].present?
+    raise Error, 'private_reply_expired' unless within_window?(comment['timestamp'])
+  end
+
   def within_window?(timestamp)
     Time.zone.parse(timestamp.to_s)&.after?(WINDOW.ago)
   rescue ArgumentError
     false
+  end
+
+  def release_stale!(comment_id)
+    Crm::MetaAdsCommentAction.where(network: 'instagram', comment_id: comment_id.to_s, action: 'private_reply', confirmed_at: nil)
+                             .where(at: ...Crm::MetaAdsCommentAction::UNCONFIRMED_TTL.ago).delete_all
   end
 
   def claim!(comment_id, actor, user, ad_id)

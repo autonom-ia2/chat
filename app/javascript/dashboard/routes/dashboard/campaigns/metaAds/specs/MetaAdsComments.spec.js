@@ -80,7 +80,7 @@ describe('MetaAdsComments (#2196)', () => {
 
   it('falls back to the generic message for an unknown code', async () => {
     const ig = adaptador(ready([comment('1')]));
-    ig.ocultar.mockRejectedValue(refused(422, 'meta_refused'));
+    ig.ocultar.mockRejectedValue(refused(422, 'something_new'));
     const shell = await mountShell([{ key: 'INSTAGRAM', adaptador: ig }]);
 
     await shell
@@ -117,6 +117,21 @@ describe('MetaAdsComments (#2196)', () => {
     expect(shell.find('[data-ad-comment-private]').exists()).toBe(false);
     expect(shell.find('[data-ad-comment-private-not-member]').text()).toBe(
       said('PRIVATE_NOT_MEMBER')
+    );
+  });
+
+  it('says when Instagram did not confirm the private reply yet', async () => {
+    const pending = {
+      ...comment('1'),
+      can_reply_private: false,
+      private_reply: { sent_at: new Date().toISOString(), confirmed: false },
+    };
+    const shell = await mountShell([
+      { key: 'INSTAGRAM', adaptador: adaptador(ready([pending])) },
+    ]);
+
+    expect(shell.find('[data-ad-comment-private-sent]').text()).toContain(
+      said('PRIVATE_UNCONFIRMED')
     );
   });
 
