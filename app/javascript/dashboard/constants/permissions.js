@@ -16,6 +16,8 @@ export const SALES_VALUE_VIEW_PERMISSION = 'sales_value_view';
 export const CONTACT_VIEW_PERMISSION = 'contact_view';
 export const KNOWLEDGE_BASE_VIEW_PERMISSION = 'knowledge_base_view';
 export const AUTONOMIA_PERMISSIONS = ['autonomia_view', 'autonomia_manage'];
+// #2251 — painel de desempenho do agente (e a exportação dele): só ver, chave própria, independente de agentes.
+export const DESEMPENHO_VIEW_PERMISSION = 'desempenho_view';
 export const CAMPAIGN_PERMISSIONS = ['campaign_view', 'campaign_manage'];
 export const INBOX_PERMISSIONS = ['inbox_view', 'inbox_manage'];
 export const CANNED_RESPONSE_MANAGE_PERMISSION = 'canned_response_manage';

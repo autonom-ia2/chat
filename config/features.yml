@@ -891,3 +891,14 @@
   display_name: CRM › Números · De onde vieram os clientes
   enabled: false
   column: feature_flags_ext_2
+
+# Painel de desempenho do agente (#2226 protótipo, #2251 leitura guardada no banco). Ligada: a página Agentes › {nome} ›
+# Desempenho, o link "Ver tudo de {nome}" na página do agente (nosso e de outro sistema) e a API do painel e da
+# exportação (PDF/planilha). Desligada: nada aparece, a rota volta para o início e a API responde 404. Ver o painel
+# pede desempenho_view (função personalizada) ou admin; baixar o arquivo pede também contact_export. No fim da
+# feature_flags_ext_2: hoje posição 3, valor 4 (1 << 2), depois de crm_numeros_origens. A posição final é confirmada
+# pela Orquestração antes da fila (o #2252 mira a mesma).
+- name: agentes_painel_desempenho
+  display_name: Agentes IA › painel de desempenho do agente
+  enabled: false
+  column: feature_flags_ext_2

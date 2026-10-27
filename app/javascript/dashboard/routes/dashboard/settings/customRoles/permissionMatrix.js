@@ -3,6 +3,7 @@
 // A `<module>_manage` key implies `<module>_view` on the backend, so only the highest key is stored.
 import {
   CUSTOM_ROLE_MANAGE_PERMISSION,
+  DESEMPENHO_VIEW_PERMISSION,
   FINANCIAL_MANAGE_PERMISSION,
   FINANCIAL_VIEW_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
@@ -145,6 +146,12 @@ export const MODULE_GROUPS = [
         key: 'AUTONOMIA',
         icon: 'i-lucide-bot',
         levels: { view: 'autonomia_view', manage: 'autonomia_manage' },
+      },
+      {
+        // #2251 — painel de desempenho do agente e a exportação dele. Só ver; independente de Agentes.
+        key: 'DESEMPENHO',
+        icon: 'i-lucide-chart-line',
+        levels: { view: DESEMPENHO_VIEW_PERMISSION },
       },
       {
         key: 'PROSPECTING',

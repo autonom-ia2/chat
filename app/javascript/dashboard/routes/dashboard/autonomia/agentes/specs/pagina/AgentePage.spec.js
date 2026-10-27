@@ -26,7 +26,10 @@ vi.mock('dashboard/composables/store', async () => {
 });
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
-  return { useCanManage: () => computed(() => estado.podeGerenciar) };
+  return {
+    useCanManage: () => computed(() => estado.podeGerenciar),
+    usePermissionGranted: () => computed(() => true),
+  };
 });
 vi.mock('../../composables/usePermissoesDaJornada', async () => {
   const { computed } = await import('vue');
