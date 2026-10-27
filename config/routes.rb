@@ -402,6 +402,12 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
               post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
               get :pages, to: 'meta_ads_ad_management#pages'
+              get :create_options, to: 'meta_ads_creation#options'
+              post :media, to: 'meta_ads_creation#media'
+              post :ads, to: 'meta_ads_creation#create'
+              get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
+              patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
+              get :paused_ads, to: 'meta_ads_creation#paused'
               # F5 (#1110): abrir, aceitar e dispensar cada ação do consultor.
               post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
               post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'

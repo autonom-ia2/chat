@@ -27,7 +27,7 @@ class Api::V1::Accounts::Crm::MetaAdsAdManagementController < Api::V1::Accounts:
   def status
     status = management.change!(params[:ad_id].to_s, params[:status].to_s)
     audit!(params[:ad_id].to_s, status)
-    render json: { status: status }
+    render json: { status: status }.merge(activation(status))
   rescue ::Crm::MetaAds::AdManagement::Error => e
     return render json: { error: e.code }, status: :not_found if e.code == 'ad_not_found'
 
@@ -63,6 +63,13 @@ class Api::V1::Accounts::Crm::MetaAdsAdManagementController < Api::V1::Accounts:
   def load_connection
     @connection = ::Crm::MetaAdsConnection.active.find_by(account_id: Current.account.id)
     render json: { error: 'not_connected' }, status: :not_found if @connection&.ad_account_id.blank?
+  end
+
+  # Gerenciador simples (#2198, ponto 6): ao ativar, diz se a campanha ou o grupo seguram o anúncio (`held_by`).
+  def activation(status)
+    return {} unless status == 'ACTIVE' && Current.account.feature_enabled?('meta_ads_criar')
+
+    { held_by: ::Crm::MetaAds::Creation::Activation.new(@connection).held_by(params[:ad_id].to_s) }
   end
 
   def management

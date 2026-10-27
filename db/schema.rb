@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_520000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_580000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2687,6 +2687,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_520000) do
     t.index ["ad_account_id"], name: "idx_crm_meta_ads_connections_partner_ad_account", unique: true, where: "((mode)::text = 'partner'::text)"
   end
 
+  create_table "crm_meta_ads_created_objects", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "kind", default: "ad", null: false
+    t.string "idempotency_key", null: false
+    t.string "status", default: "creating", null: false
+    t.string "name", limit: 255
+    t.string "ad_account_id"
+    t.string "campaign_id"
+    t.string "adset_id"
+    t.string "creative_id"
+    t.string "ad_id"
+    t.jsonb "budget", default: {}, null: false
+    t.string "error_code"
+    t.datetime "activated_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "ad_id"], name: "idx_crm_meta_ads_created_objects_ad"
+    t.index ["account_id", "idempotency_key"], name: "idx_crm_meta_ads_created_objects_key", unique: true
+  end
+
   create_table "crm_meta_advisor_actions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "run_id"
@@ -4466,6 +4487,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_520000) do
   add_foreign_key "crm_meta_ad_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_placements_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_created_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "last_run_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "run_id", on_delete: :nullify

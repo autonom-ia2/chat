@@ -159,6 +159,7 @@ class Meta::AdsGraphClient
   end
 
   include Meta::AdsGraphClient::Management
+  include Meta::AdsGraphClient::Creation
 
   private
 
