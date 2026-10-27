@@ -269,6 +269,16 @@ RSpec.describe Instagram::CallbacksController do
       expect(response).to redirect_to(app_instagram_inbox_settings_url(account_id: account.id, inbox_id: channel.inbox.id))
     end
 
+    it 'volta para Seus posts quando a reautorização saiu de lá (#2199)' do
+      signed_state = controller.generate_instagram_token(account.id, 'meta_ads', actor_id: actor.id, inbox: channel.inbox,
+                                                                                 purpose: 'meta_ads_organico')
+
+      get :show, params: { code: 'valid_code', state: signed_state }
+
+      expect(channel.reload.access_token).to eq('long_lived_test_token')
+      expect(response).to redirect_to("/app/accounts/#{account.id}/campaigns/meta-ads?aba=organico")
+    end
+
     it 'rejects a different returned Instagram profile without creating or updating a channel' do
       signed_state = state
       user_details['user_id'] = '54321'

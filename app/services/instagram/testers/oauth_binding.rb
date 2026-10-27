@@ -95,7 +95,13 @@ class Instagram::Testers::OauthBinding
 
     payload['inbox_id'].is_a?(Integer) && payload['inbox_id'].positive? &&
       Instagram::Testers::Validation.id?(payload['instagram_id']) &&
-      payload['return_to'] == 'inbox' && !payload.key?('tester_selection')
+      reauthorization_return_to?(payload['return_to']) && !payload.key?('tester_selection')
+  end
+
+  # Pela própria caixa ou por Anúncios da Meta com escopo a mais (#2199/#2196). O purpose e a flag dele são conferidos
+  # ao assinar o state: um state assinado com a flag ligada ainda vale até expirar (TTL), mesmo se a flag desligar.
+  def self.reauthorization_return_to?(return_to)
+    %w[inbox meta_ads].include?(return_to)
   end
 
   def self.valid_timing?(payload)
@@ -103,5 +109,6 @@ class Instagram::Testers::OauthBinding
       payload['iat'] <= Time.current.to_i && (payload['exp'] - payload['iat']).between?(1, TTL.to_i)
   end
 
-  private_class_method :authorize_connection!, :valid_context?, :validate_selection!, :valid_reauthorization?, :valid_timing?
+  private_class_method :authorize_connection!, :valid_context?, :validate_selection!, :valid_reauthorization?,
+                       :reauthorization_return_to?, :valid_timing?
 end

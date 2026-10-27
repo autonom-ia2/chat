@@ -71,6 +71,7 @@ export const FEATURE_FLAGS = {
   PAINEL_CONTATO_ENXUTO: 'painel_contato_enxuto',
   META_ADS_GESTAO: 'meta_ads_gestao',
   CONTATO_RELACAO: 'contato_relacao',
+  META_ADS_ORGANICO: 'meta_ads_organico',
   EMAIL_LIDO_SINCRONIZADO: 'email_lido_sincronizado',
   CRM_NUMEROS_LENTES: 'crm_numeros_lentes',
   CRM_METAS: 'crm_metas',
