@@ -285,9 +285,27 @@ describe('MoreActions (⋯ do topo) com os itens do fork', () => {
     });
     await flushPromises();
     expect(abrirEtiquetas).toHaveBeenCalledTimes(1);
-    // Ao fechar a escolha, o foco volta ao ⋯ (não cai no <body>).
+  });
+
+  it('voltarFoco do ⋯: ao fechar a escolha, o foco volta ao botão ⋯ (não cai no <body>)', async () => {
+    const { wrapper } = montarMenu({ features: {} });
+    await flushPromises();
+    await abrirMenu(wrapper);
+    wrapper.findComponent({ name: 'DropdownMenu' }).vm.$emit('action', {
+      action: 'etiquetas_da_conversa',
+    });
+    await flushPromises();
     const [voltarFoco] = abrirEtiquetas.mock.calls[0];
+    expect(voltarFoco).toEqual(expect.any(Function));
+    document.activeElement.blur();
+    expect(document.activeElement).toBe(document.body);
+
     voltarFoco();
-    expect(document.activeElement).toBe(wrapper.get('button').element);
+
+    const mais = wrapper.findAll('button')[0].element;
+    expect(document.activeElement).toBe(mais);
+    expect(mais.getAttribute('icon') || mais.innerHTML).toContain(
+      'i-lucide-more-vertical'
+    );
   });
 });

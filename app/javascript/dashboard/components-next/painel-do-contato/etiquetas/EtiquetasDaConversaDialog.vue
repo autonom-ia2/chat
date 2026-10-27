@@ -1,11 +1,12 @@
 <script setup>
 // #2202 (PR 3) — "Etiquetas desta conversa": a escolha de etiquetas da conversa
-// aberta, pelo ⋯ do topo e pelo bloco "Etiquetas" do painel. A lista é a mesma
-// do painel antigo (LabelDropdown), com a mesma action (conversationLabels/update):
-// tocar numa etiqueta põe ou tira na hora.
-import { computed, nextTick, ref, shallowRef, watch } from 'vue';
+// aberta, pelo ⋯ do topo e pelo bloco do painel. A lista é a do painel antigo
+// (LabelDropdown). Tocar numa etiqueta põe ou tira só ela, na hora: o servidor
+// aplica a intenção sobre o que a conversa tem (useEtiquetasDaConversa), e as
+// duas janelas mostram as mesmas marcas.
+import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import {
   getUserPermissions,
@@ -17,14 +18,13 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import LabelDropdown from 'shared/components/ui/label/LabelDropdown.vue';
 import AddLabelModal from 'dashboard/routes/dashboard/settings/labels/AddLabel.vue';
+import { useEtiquetasDaConversa } from './useEtiquetasDaConversa';
 
 const { t } = useI18n();
-const store = useStore();
 const dialogo = ref(null);
 const lista = ref(null);
 const eu = useMapGetter('getCurrentUser');
 const contaId = useMapGetter('getCurrentAccountId');
-const flags = useMapGetter('conversationLabels/getUIFlags');
 const conversaAberta = useMapGetter('getSelectedChat');
 const conversaId = computed(() => conversaAberta.value?.id);
 // Como no painel antigo (LabelBox): criar etiqueta é de quem administra etiquetas.
@@ -35,9 +35,10 @@ const podeCriar = computed(() =>
   )
 );
 const { savedLabels, accountLabels } = useConversationLabels();
-// Enquanto as etiquetas da conversa carregam, a lista não aparece: um toque ali
-// gravaria só a nova e apagaria as que a conversa já tem (como no LabelBox).
-const carregando = computed(() => Boolean(flags.value?.isFetching));
+const { temRegistro, carregar, marcadasEm, tocar } = useEtiquetasDaConversa();
+// Sem o registro das etiquetas desta conversa, a lista não aparece: mostraria
+// como tiradas as que ela tem. Nada se grava até ele chegar.
+const carregando = computed(() => !temRegistro(conversaId.value));
 
 // As que a conversa já tem vêm primeiro, mas só na hora de abrir: depois a ordem
 // fica parada, para a etiqueta não pular de lugar debaixo do dedo.
@@ -49,60 +50,20 @@ const etiquetasEmOrdem = computed(() =>
       Number(primeirasAoAbrir.value.includes(a.title))
   )
 );
-
-// Cada toque vira uma intenção — pôr ou tirar uma etiqueta — presa à conversa em
-// que a pessoa tocou. As gravações saem uma de cada vez, na ordem dos toques, e
-// cada uma aplica a intenção sobre o que aquela conversa tem no store na hora em
-// que sai. Assim a etiqueta não vai para outra conversa, a mudança que outra
-// pessoa fez nesse meio-tempo não se perde e, depois de um erro, a próxima parte
-// do que está gravado.
-const aplicar = (titulos, { acao, titulo }) => {
-  if (acao === 'tirar') return titulos.filter(item => item !== titulo);
-  return titulos.includes(titulo) ? titulos : [...titulos, titulo];
-};
-const gravadasEm = id =>
-  store.getters['conversationLabels/getConversationLabels'](id);
-
-// Na tela: o que está gravado, com as intenções desta conversa que ainda não
-// voltaram do servidor por cima (a marca aparece na hora do toque).
-const pendentes = shallowRef([]);
 const marcadas = computed(() =>
-  pendentes.value
-    .filter(intencao => intencao.conversaId === conversaId.value)
-    .reduce(aplicar, savedLabels.value)
+  marcadasEm(conversaId.value, savedLabels.value)
 );
 
-let fila = Promise.resolve();
-let ultimaIntencao = 0;
-const gravar = async intencao => {
-  await store.dispatch('conversationLabels/update', {
-    conversationId: intencao.conversaId,
-    labels: aplicar(gravadasEm(intencao.conversaId), intencao),
-  });
-  // A action não rejeita: o erro do servidor chega pela flag.
-  if (store.getters['conversationLabels/getUIFlags']?.isError)
-    throw new Error('etiquetas da conversa não gravadas');
+// Cada toque leva a conversa do momento do toque. O aviso de erro sai do
+// resultado desta chamada, não de uma flag que outra gravação pode ter mudado.
+const mudar = async (acao, titulo) => {
+  const id = conversaId.value;
+  if (!temRegistro(id)) return;
+  const gravou = await tocar(id, acao, titulo);
+  if (!gravou) useAlert(t('PAINEL_DO_CONTATO.ETIQUETAS.ERRO'));
 };
-const tocar = (acao, titulo) => {
-  ultimaIntencao += 1;
-  const intencao = {
-    id: ultimaIntencao,
-    acao,
-    titulo,
-    conversaId: conversaId.value,
-  };
-  pendentes.value = [...pendentes.value, intencao];
-  fila = fila
-    .then(() => gravar(intencao))
-    .catch(() => useAlert(t('PAINEL_DO_CONTATO.ETIQUETAS.ERRO')))
-    .finally(() => {
-      // Respondeu (ou falhou): na tela passa a valer o que está gravado.
-      pendentes.value = pendentes.value.filter(item => item.id !== intencao.id);
-    });
-  return fila;
-};
-const por = label => tocar('por', label.title);
-const tirar = titulo => tocar('tirar', titulo);
+const por = label => mudar('por', label.title);
+const tirar = titulo => mudar('tirar', titulo);
 
 // Enter na busca não pode virar o envio do <form> do Dialog: o navegador
 // "clicaria" o primeiro botão da lista e poria ou tiraria a primeira etiqueta.
@@ -114,8 +75,10 @@ const segurarEnterDaBusca = evento => {
 // Ao fechar, o foco volta para quem abriu (o ⋯ do topo ou o bloco do painel).
 const aberta = ref(false);
 let devolverFoco = null;
+let fecharSemDevolver = false;
 const abrir = paraOndeVoltar => {
   if (paraOndeVoltar) devolverFoco = paraOndeVoltar;
+  if (!temRegistro(conversaId.value)) carregar(conversaId.value);
   primeirasAoAbrir.value = [...savedLabels.value];
   aberta.value = true;
   dialogo.value?.open();
@@ -129,8 +92,9 @@ const textoParaCriar = ref('');
 let conversaAoCriar = null;
 const aoFechar = () => {
   aberta.value = false;
-  if (criando.value) return;
-  nextTick(() => devolverFoco?.());
+  const devolver = !fecharSemDevolver && !criando.value;
+  fecharSemDevolver = false;
+  if (devolver) nextTick(() => devolverFoco?.());
 };
 const criar = () => {
   // Como no LabelDropdown antigo: a janela de criar já vem com o que foi buscado.
@@ -149,11 +113,13 @@ const terminouDeCriar = () => {
   nextTick(() => devolverFoco?.());
 };
 
-// Trocar de conversa (Alt+J/K, a lista) fecha a escolha e larga as marcas que
-// ainda não voltaram; o que já está na fila continua indo para a conversa certa.
+// Trocar de conversa (Alt+J/K, a lista) fecha a escolha sem puxar o foco para
+// trás. As marcas que ainda não voltaram continuam: são da conversa do toque, e
+// a tela só as mostra nela.
 watch(conversaId, () => {
-  pendentes.value = [];
-  if (aberta.value) fechar();
+  if (!aberta.value) return;
+  fecharSemDevolver = true;
+  fechar();
 });
 
 defineExpose({ abrir });
@@ -171,6 +137,8 @@ defineExpose({ abrir });
     <div
       v-if="carregando"
       class="flex justify-center w-full py-6"
+      role="status"
+      :aria-label="t('PAINEL_DO_CONTATO.CARREGANDO')"
       data-test-id="etiquetas-carregando"
     >
       <Spinner />

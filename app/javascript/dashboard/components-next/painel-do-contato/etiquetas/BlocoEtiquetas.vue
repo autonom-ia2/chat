@@ -13,7 +13,7 @@ import EtiquetasDaConversaDialog from './EtiquetasDaConversaDialog.vue';
 const props = defineProps({
   podeOperar: { type: Boolean, default: false },
   // Para onde vai o foco quando a escolha fecha e o bloco já sumiu.
-  focarPainel: { type: Function, default: null },
+  focarAoSumir: { type: Function, default: null },
 });
 
 const { t } = useI18n();
@@ -22,10 +22,10 @@ const { nomeDe } = useNomeDaEtiqueta();
 const escolha = ref(null);
 const botao = ref(null);
 // Ao fechar a escolha, o foco volta para o bloco; se tirar a última etiqueta fez
-// o bloco sumir, vai para o painel.
+// o bloco sumir, vai para onde o painel manda (o título de "Quem cuida").
 const devolverFoco = () => {
   if (botao.value) botao.value.focus();
-  else props.focarPainel?.();
+  else props.focarAoSumir?.();
 };
 // O nome do botão diz quais etiquetas a conversa tem (o leitor de tela lê só ele).
 const nomeDoBotao = computed(() =>

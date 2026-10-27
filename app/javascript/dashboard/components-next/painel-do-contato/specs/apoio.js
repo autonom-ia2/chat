@@ -33,7 +33,9 @@ export const criarI18n = () =>
 
 // `estado` muda o que os getters devolvem; `acoes` recebe as chamadas.
 // `maisGetters`: getters a mais de um spec (ex.: o ContactPanel lê o painel antigo).
-export const criarStore = (estado = {}, maisGetters = {}) => {
+// `modulos`: módulos de verdade do store (ex.: conversationLabels); o que eles
+// trazem sai dos getters fingidos daqui.
+export const criarStore = (estado = {}, maisGetters = {}, modulos = {}) => {
   const dados = {
     contaId: 1,
     eu: { id: 7, name: 'Bia' },
@@ -59,9 +61,15 @@ export const criarStore = (estado = {}, maisGetters = {}) => {
     acoes.push([nome, payload]);
     return r.respostas?.[nome]?.(payload, r);
   };
+  const doModulo = nome => Object.keys(modulos).includes(nome.split('/')[0]);
+  const semOsDosModulos = lista =>
+    Object.fromEntries(
+      Object.entries(lista).filter(([nome]) => !doModulo(nome))
+    );
   const store = createStore({
     state: () => ({ dados }),
-    getters: {
+    modules: modulos,
+    getters: semOsDosModulos({
       getCurrentAccountId: () => r.contaId,
       // Sem função personalizada, o agente tem tudo; com ela, valem as chaves.
       getCurrentRole: () => r.papel,
@@ -98,7 +106,6 @@ export const criarStore = (estado = {}, maisGetters = {}) => {
       'labels/getLabels': () => r.etiquetasDaConta || [],
       'conversationLabels/getConversationLabels': () => id =>
         r.etiquetasDaConversa?.[id] || [],
-      'conversationLabels/getUIFlags': () => r.uiEtiquetas || {},
       canOperateConversation: () => () => r.podeOperar !== false,
       'inboxAssignableAgents/getAssignableAgents': () => () => r.agentes,
       'contacts/getUIFlags': () => r.uiContatos,
@@ -108,7 +115,7 @@ export const criarStore = (estado = {}, maisGetters = {}) => {
         gettersDosCampos.getAttributesByModel({ records: r.definicoes }),
       'globalConfig/get': () => ({ crmKanbanEnabled: true }),
       ...maisGetters,
-    },
+    }),
     mutations: {
       'conversationWatchers/SET_CONVERSATION_PARTICIPANTS'(
         _s,
@@ -125,7 +132,6 @@ export const criarStore = (estado = {}, maisGetters = {}) => {
         'conversationWatchers/show',
         'conversationWatchers/update',
         'contactLabels/get',
-        'conversationLabels/update',
         'contacts/show',
         'contacts/update',
         'contacts/deleteCustomAttributes',

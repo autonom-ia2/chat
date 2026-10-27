@@ -61,10 +61,10 @@ const crmLigado = computed(
 );
 
 const editando = ref(false);
-// Quando um bloco some com o foco dentro (ex.: tirar a última etiqueta), o foco
-// volta para o painel, não para o <body>.
-const raiz = ref(null);
-const focarPainel = () => raiz.value?.focus();
+// Quando o bloco das etiquetas some com o foco dentro (tirou a última), o foco
+// vai para o título do bloco de cima ("Quem cuida"), não para o <body>.
+const quemCuida = ref(null);
+const focarAoSumir = () => quemCuida.value?.focarTitulo();
 const aberta = ref(null);
 watch(
   () => props.conversation.id,
@@ -147,12 +147,7 @@ const verPagina = () =>
 </script>
 
 <template>
-  <div
-    ref="raiz"
-    class="flex flex-col w-full min-h-full focus:outline-none"
-    tabindex="-1"
-    data-painel-do-contato
-  >
+  <div class="flex flex-col w-full min-h-full" data-painel-do-contato>
     <TelaDaLista
       v-if="aberta"
       :tipo="aberta"
@@ -220,12 +215,16 @@ const verPagina = () =>
       />
       <div class="flex flex-col border-t border-n-weak">
         <BlocoQuemCuida
+          ref="quemCuida"
           :conversation="conversation"
           :pode-operar="podeOperar"
           :fase2="fase2"
         />
         <!-- #2202 (PR 3): as etiquetas da conversa, só quando ela tem alguma. -->
-        <BlocoEtiquetas :pode-operar="podeOperar" :focar-painel="focarPainel" />
+        <BlocoEtiquetas
+          :pode-operar="podeOperar"
+          :focar-ao-sumir="focarAoSumir"
+        />
         <BlocoCombinado v-if="crmLigado" :contact-id="contact.id" />
         <BlocoRelacao
           v-if="
