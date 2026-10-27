@@ -11,6 +11,11 @@
 # Instagram (login do Instagram) não passa por aqui: lá os campos valem pelo painel do app e o subscribed_apps da conta
 # não filtra campo (doc da Meta, Limitations; conferido no #2136).
 #
+# Vários recursos e várias contas mexem na mesma Página ao mesmo tempo (#2200): GET → junta → POST de dois deles em
+# paralelo faria um apagar o campo do outro. Por isso a escrita roda sob uma trava por Página (Redis) e, depois do POST,
+# relê a lista: se o campo pedido não ficou (outro processo sem trava, ou a Meta), grava de novo; se ainda não ficar,
+# erro passageiro para quem chamou tentar de novo.
+#
 # Mesmas regras do Meta::ConversionsApiClient: o token vai só no header Authorization e todo texto de erro passa
 # pela limpeza de trechos com cara de segredo.
 class Crm::MetaAds::PageSubscription
@@ -37,8 +42,16 @@ class Crm::MetaAds::PageSubscription
 
   BASE_URI = Meta::ConversionsApiClient::BASE_URI
   TIMEOUT_SECONDS = 8
+  LOCK_TTL = 60.seconds # cobre as até 6 chamadas de TIMEOUT_SECONDS de uma escrita
+  LOCK_WAIT = 15.seconds
+  LOCK_POLL = 0.2
+  WRITE_ATTEMPTS = 2
   NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET,
                     OpenSSL::SSL::SSLError, HTTParty::Error, JSON::ParserError].freeze
+
+  def self.lock_key(page_id)
+    "meta:page_subscription:#{page_id}"
+  end
 
   def initialize(page_id:, access_token:, api_version: nil)
     @page_id = page_id
@@ -52,23 +65,55 @@ class Crm::MetaAds::PageSubscription
   end
 
   def add!(new_fields)
-    current = fields
-    wanted = (current + new_fields).uniq
-    return if wanted == current
+    change!(present: new_fields, absent: [])
+  end
+
+  def remove!(old_fields)
+    change!(present: [], absent: old_fields)
+  end
+
+  private
+
+  def change!(present:, absent:)
+    with_page_lock do
+      WRITE_ATTEMPTS.times do
+        current = fields
+        return if settled?(current, present, absent)
+
+        write((current - absent + present).uniq)
+      end
+      return if settled?(fields, present, absent)
+
+      raise Error, "subscribed_apps did not keep the change on page #{@page_id}"
+    end
+  end
+
+  def settled?(current, present, absent)
+    (present - current).empty? && !current.intersect?(absent)
+  end
+
+  def write(wanted)
+    return request(:delete, subscribed_apps_url) if wanted.empty?
 
     request(:post, subscribed_apps_url, body: { subscribed_fields: wanted.join(',') })
   end
 
-  def remove!(old_fields)
-    current = fields
-    remaining = current - old_fields
-    return if remaining == current
-    return request(:delete, subscribed_apps_url) if remaining.empty?
+  def with_page_lock
+    key = self.class.lock_key(@page_id)
+    lock_manager = Redis::LockManager.new
+    deadline = Time.current + LOCK_WAIT
+    until lock_manager.lock(key, LOCK_TTL.to_i)
+      raise Error, "subscribed_apps busy on page #{@page_id}" if Time.current >= deadline
 
-    request(:post, subscribed_apps_url, body: { subscribed_fields: remaining.join(',') })
+      sleep(LOCK_POLL)
+    end
+
+    begin
+      yield
+    ensure
+      lock_manager.unlock(key)
+    end
   end
-
-  private
 
   def token_app_id
     @token_app_id ||= request(:get, "#{BASE_URI}/#{@api_version}/app")['id'].to_s
