@@ -159,6 +159,11 @@
           "LEVEL_VIEW": "Abre os agentes e conversa no playground.",
           "LEVEL_MANAGE": "Cria, treina e publica agentes."
         },
+        "DESEMPENHO": {
+          "NAME": "Desempenho do agente",
+          "HINT": "O que as pessoas procuram, resultados e exportação",
+          "LEVEL_VIEW": "Abre o painel de desempenho, com os números das caixas que vê. Baixar o PDF e a planilha pede também Exportar contatos."
+        },
         "PROSPECTING": {
           "NAME": "Prospecção",
           "HINT": "Buscas de leads e listas",
