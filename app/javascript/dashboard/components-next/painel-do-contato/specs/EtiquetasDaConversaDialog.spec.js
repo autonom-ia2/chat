@@ -361,6 +361,83 @@ describe('EtiquetasDaConversaDialog — sem o registro das etiquetas', () => {
     expect(marcadas(wrapper)).toEqual(['vip']);
     expect(EtiquetasAPI.alterar).not.toHaveBeenCalled();
   });
+
+  it('as que a conversa tem vêm primeiro também quando o registro chega depois de abrir', async () => {
+    // Revisão #2290: a ordem era pega ao abrir, com o registro ainda vazio.
+    let entregar;
+    ConversationAPI.getLabels.mockReturnValue(
+      new Promise(resolve => {
+        entregar = resolve;
+      })
+    );
+    const { wrapper, servidor } = await abrirCom({
+      gravadas: { 42: ['boleto'] },
+      registros: {},
+    });
+
+    entregar({ data: { payload: ['boleto'] } });
+    await flushPromises();
+    expect(nomes(wrapper)).toEqual(['boleto', 'vip', 'retorno']);
+
+    // Depois de chegar, a ordem fica parada com os toques.
+    await tocar(wrapper, 'retorno');
+    await servidor.responderTodas();
+    expect(marcadas(wrapper)).toEqual(['boleto', 'retorno']);
+    expect(nomes(wrapper)).toEqual(['boleto', 'vip', 'retorno']);
+  });
+
+  it('a busca falhou: avisa na janela, sem carregar para sempre, e tentar de novo traz a lista', async () => {
+    // Revisão #2290: a action do store engolia o erro e o carregando não saía.
+    ConversationAPI.getLabels.mockRejectedValueOnce(new Error('Network Error'));
+    const { wrapper } = await abrirCom({
+      gravadas: { 42: ['retorno'] },
+      registros: {},
+    });
+
+    expect(wrapper.find('[data-test-id="etiquetas-carregando"]').exists()).toBe(
+      false
+    );
+    expect(wrapper.find('li button').exists()).toBe(false);
+    const aviso = wrapper.get('[data-test-id="etiquetas-falhou"]');
+    expect(aviso.attributes('role')).toBe('alert');
+    expect(aviso.text()).toContain(
+      'Não deu para carregar as etiquetas desta conversa.'
+    );
+    const tentar = wrapper.get('[data-test-id="etiquetas-tentar-de-novo"]');
+    expect(tentar.text()).toBe('Tentar de novo');
+    expect(tentar.classes()).toContain('!min-h-11');
+
+    ConversationAPI.getLabels.mockResolvedValueOnce({
+      data: { payload: ['retorno'] },
+    });
+    await tentar.trigger('click');
+    await flushPromises();
+
+    expect(ConversationAPI.getLabels).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-test-id="etiquetas-falhou"]').exists()).toBe(
+      false
+    );
+    expect(nomes(wrapper)).toEqual(['retorno', 'vip', 'boleto']);
+    expect(marcadas(wrapper)).toEqual(['retorno']);
+    expect(EtiquetasAPI.alterar).not.toHaveBeenCalled();
+  });
+
+  it('tentar de novo mostra carregando enquanto espera', async () => {
+    ConversationAPI.getLabels.mockRejectedValueOnce(new Error('Network Error'));
+    const { wrapper } = await abrirCom({ registros: {} });
+    ConversationAPI.getLabels.mockReturnValueOnce(new Promise(() => {}));
+
+    await wrapper
+      .get('[data-test-id="etiquetas-tentar-de-novo"]')
+      .trigger('click');
+
+    expect(wrapper.find('[data-test-id="etiquetas-carregando"]').exists()).toBe(
+      true
+    );
+    expect(wrapper.find('[data-test-id="etiquetas-falhou"]').exists()).toBe(
+      false
+    );
+  });
 });
 
 describe('EtiquetasDaConversaDialog — trocar de conversa', () => {

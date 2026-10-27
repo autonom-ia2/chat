@@ -144,6 +144,9 @@ RSpec.describe 'Pôr e tirar etiquetas da conversa uma a uma', type: :request do
       [{ por: [1] }, 'número em vez de nome'],
       [{ por: [''] }, 'nome vazio'],
       [{ por: ['a' * 256] }, 'nome comprido demais'],
+      [{ por: ['a,b'] }, 'vírgula no nome'],
+      [{ por: ['"x,y"'] }, 'aspas e vírgula no nome'],
+      [{ tirar: ["d'agua"] }, 'apóstrofo no nome'],
       [{ por: Array.new(51) { |i| "e#{i}" } }, 'etiquetas demais'],
       [{ por: ['vip'], tirar: ['vip'] }, 'a mesma posta e tirada']
     ].each do |params, caso|

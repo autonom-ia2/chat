@@ -37,8 +37,17 @@ const podeCriar = computed(() =>
 const { savedLabels, accountLabels } = useConversationLabels();
 const { temRegistro, carregar, marcadasEm, tocar } = useEtiquetasDaConversa();
 // Sem o registro das etiquetas desta conversa, a lista não aparece: mostraria
-// como tiradas as que ela tem. Nada se grava até ele chegar.
-const carregando = computed(() => !temRegistro(conversaId.value));
+// como tiradas as que ela tem. Nada se grava até ele chegar. Se a busca falhar,
+// a janela diz isso e oferece tentar de novo, em vez de carregar para sempre.
+const falhouAoCarregar = ref(false);
+const semRegistro = computed(() => !temRegistro(conversaId.value));
+const carregando = computed(() => semRegistro.value && !falhouAoCarregar.value);
+const buscarRegistro = async () => {
+  const id = conversaId.value;
+  falhouAoCarregar.value = false;
+  const chegou = await carregar(id);
+  if (!chegou && id === conversaId.value) falhouAoCarregar.value = true;
+};
 
 // As que a conversa já tem vêm primeiro, mas só na hora de abrir: depois a ordem
 // fica parada, para a etiqueta não pular de lugar debaixo do dedo.
@@ -78,7 +87,7 @@ let devolverFoco = null;
 let fecharSemDevolver = false;
 const abrir = paraOndeVoltar => {
   if (paraOndeVoltar) devolverFoco = paraOndeVoltar;
-  if (!temRegistro(conversaId.value)) carregar(conversaId.value);
+  if (semRegistro.value) buscarRegistro();
   primeirasAoAbrir.value = [...savedLabels.value];
   aberta.value = true;
   dialogo.value?.open();
@@ -113,6 +122,14 @@ const terminouDeCriar = () => {
   nextTick(() => devolverFoco?.());
 };
 
+// Aberta sem o registro, a ordem é pega quando ele chega: senão as que a
+// conversa tem não viriam primeiro.
+watch(carregando, (agora, antes) => {
+  if (aberta.value && antes && !agora && !semRegistro.value) {
+    primeirasAoAbrir.value = [...savedLabels.value];
+  }
+});
+
 // Trocar de conversa (Alt+J/K, a lista) fecha a escolha sem puxar o foco para
 // trás. As marcas que ainda não voltaram continuam: são da conversa do toque, e
 // a tela só as mostra nela.
@@ -142,6 +159,26 @@ defineExpose({ abrir });
       data-test-id="etiquetas-carregando"
     >
       <Spinner />
+    </div>
+    <div
+      v-else-if="semRegistro"
+      class="flex flex-col items-center w-full gap-3 py-6 text-center"
+      role="alert"
+      data-test-id="etiquetas-falhou"
+    >
+      <p class="m-0 text-sm text-n-slate-12">
+        {{ t('PAINEL_DO_CONTATO.ETIQUETAS.ERRO_AO_CARREGAR') }}
+      </p>
+      <Button
+        type="button"
+        slate
+        faded
+        icon="i-lucide-rotate-cw"
+        :label="t('PAINEL_DO_CONTATO.ETIQUETAS.TENTAR_DE_NOVO')"
+        class="!min-h-11"
+        data-test-id="etiquetas-tentar-de-novo"
+        @click="buscarRegistro"
+      />
     </div>
     <!-- A lista do painel antigo, sem o cabeçalho dela ("Adicionar etiquetas" e o
     atalho L, que só vale lá), com a caixa da busca do tamanho do campo e alvos

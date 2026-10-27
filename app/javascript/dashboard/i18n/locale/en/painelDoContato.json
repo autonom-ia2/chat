@@ -173,7 +173,9 @@
       "DIALOGO_TITULO": "Labels for this conversation",
       "DIALOGO_FRASE": "Tap a label to add it or take it off.",
       "PRONTO": "Done",
-      "ERRO": "Could not change the label. Try again."
+      "ERRO": "Could not change the label. Try again.",
+      "ERRO_AO_CARREGAR": "Could not load the labels of this conversation.",
+      "TENTAR_DE_NOVO": "Try again"
     }
   },
   "APAGAR_CONTATO": {

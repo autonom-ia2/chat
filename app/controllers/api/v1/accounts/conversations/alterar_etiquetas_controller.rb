@@ -4,9 +4,13 @@
 # `tirar` e grava pelo mesmo caminho (update_labels), que mantém a mensagem de atividade, o tempo real, a automação
 # e os relatórios. Quem pode é quem opera a conversa, como na rota de sempre (BaseController: show?).
 # Responde `{ payload: [lista final] }`, no formato do create.
+# Etiqueta que a conta não tem cadastrada é aceita, como no labels#create (paridade de propósito): nenhuma das
+# duas rotas confere o cadastro da conta.
 class Api::V1::Accounts::Conversations::AlterarEtiquetasController < Api::V1::Accounts::Conversations::BaseController
   LIMITE = 50
   TAMANHO_MAXIMO = 255
+  # A vírgula separa etiquetas na lista do taggable, e as aspas mudam como ela é lida: "a,b" viraria duas.
+  CARACTERES_PROIBIDOS = [',', '"', "'"].freeze
 
   def update
     erro = motivo_da_recusa
@@ -44,7 +48,8 @@ class Api::V1::Accounts::Conversations::AlterarEtiquetasController < Api::V1::Ac
   end
 
   def nome_valido?(item)
-    item.is_a?(String) && item.strip.present? && item.size <= TAMANHO_MAXIMO
+    item.is_a?(String) && item.strip.present? && item.size <= TAMANHO_MAXIMO &&
+      CARACTERES_PROIBIDOS.none? { |caractere| item.include?(caractere) }
   end
 
   def por

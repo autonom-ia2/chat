@@ -4783,8 +4783,8 @@
     "completo": true,
     "controller": "api/v1/accounts/conversations/alterar_etiquetas#update",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:11",
-      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:63",
+      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:15",
+      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:68",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false

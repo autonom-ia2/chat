@@ -173,7 +173,9 @@
       "DIALOGO_TITULO": "Etiquetas desta conversa",
       "DIALOGO_FRASE": "Toque numa etiqueta para pôr ou tirar.",
       "PRONTO": "Pronto",
-      "ERRO": "Não deu para mudar a etiqueta. Tente de novo."
+      "ERRO": "Não deu para mudar a etiqueta. Tente de novo.",
+      "ERRO_AO_CARREGAR": "Não deu para carregar as etiquetas desta conversa.",
+      "TENTAR_DE_NOVO": "Tentar de novo"
     }
   },
   "APAGAR_CONTATO": {

@@ -10,6 +10,7 @@
 // dos toques (pôr e logo tirar a mesma etiqueta).
 import { shallowRef } from 'vue';
 import { useStore } from 'dashboard/composables/store';
+import ConversationAPI from 'dashboard/api/conversations';
 import EtiquetasDaConversaAPI from 'dashboard/api/etiquetasDaConversa';
 
 const pendentes = shallowRef([]);
@@ -34,7 +35,21 @@ export function useEtiquetasDaConversa() {
   // vazia e a tela mostraria como tiradas etiquetas que a conversa tem.
   const temRegistro = id =>
     store.state.conversationLabels?.records?.[Number(id)] !== undefined;
-  const carregar = id => store.dispatch('conversationLabels/get', id);
+  // true quando o registro chegou; false quando a busca falhou. Não usa a action
+  // conversationLabels/get: ela engole o erro, e a janela ficaria carregando
+  // para sempre. A resposta entra no store pela mesma mutation.
+  const carregar = async id => {
+    try {
+      const { data } = await ConversationAPI.getLabels(id);
+      await store.dispatch('conversationLabels/setConversationLabel', {
+        id,
+        data: data.payload,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   // O que está gravado, com as intenções desta conversa que ainda não voltaram
   // por cima (a marca aparece na hora do toque).
