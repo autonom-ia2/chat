@@ -34,21 +34,23 @@ class Crm::Cards::PayloadBuilder
   # truth for the shape — Crm::Kanban::CardPayloadBuilder delegates here so board,
   # list and websocket payloads never drift. Legacy touches without touched_at sort
   # first via to_s -> '' (they are the origin touch, so oldest-first stays correct).
-  def self.aggregated_campaigns_for(card, conversation_visibility:)
+  # ad_visible: Crm::AnuncioDeOrigem.ve? de quem lê (#2271); false tira do toque de anúncio o que identifica o anúncio.
+  def self.aggregated_campaigns_for(card, conversation_visibility:, ad_visible:)
     conversations = (card.linked_conversations.to_a + [card.primary_conversation]).compact.uniq(&:id)
     conversations.select { |conversation| conversation_visibility.visible?(conversation) }
-                 .flat_map { |conversation| campaign_touches_for(conversation) }
+                 .flat_map { |conversation| campaign_touches_for(conversation, ad_visible: ad_visible) }
                  .sort_by { |touch| touch[:touched_at].to_s }
   end
 
-  def self.campaign_touches_for(conversation)
+  def self.campaign_touches_for(conversation, ad_visible:)
     touches = conversation.additional_attributes&.dig('campaign_touches')
     return [] unless touches.is_a?(Array)
 
     touches.filter_map do |touch|
       next unless touch.is_a?(Hash)
 
-      CAMPAIGN_TOUCH_FIELDS.to_h { |field| [field.to_sym, touch[field]] }.merge(conversation_id: conversation.id)
+      item = CAMPAIGN_TOUCH_FIELDS.to_h { |field| [field.to_sym, touch[field]] }.merge(conversation_id: conversation.id)
+      ad_visible ? item : Crm::AnuncioDeOrigem.para_quem_nao_ve(touch, item)
     end
   end
 
@@ -66,6 +68,7 @@ class Crm::Cards::PayloadBuilder
     ATTRIBUTES.index_with { |attribute| @card.public_send(attribute) }
               .merge(timestamp_payload)
               .tap { |payload| sanitize_hidden_conversation!(payload) }
+              .tap { |payload| sanitize_lead_form_answers!(payload) }
               .tap { |payload| append_nested_payloads(payload) }
               .tap { |payload| Crm::ValorDeVenda.oculta_card!(payload) unless value_visible? }
   end
@@ -75,6 +78,11 @@ class Crm::Cards::PayloadBuilder
   # Valor de venda (#2075): sem `sales_value_view`, o card sai sem value_cents, menos o card de que a pessoa é dona.
   def value_visible?
     Crm::ValorDeVenda.ve_o_card?(@account_user, @card)
+  end
+
+  # Respostas do formulário do anúncio da Meta (#2195) trazem nome, telefone e e-mail: só para quem vê o contato inteiro.
+  def sanitize_lead_form_answers!(payload)
+    payload[:metadata] = Crm::MetaAds::LeadForms::Answers.without(payload[:metadata]) unless full_contact?
   end
 
   def sanitize_hidden_conversation!(payload)
@@ -124,8 +132,9 @@ class Crm::Cards::PayloadBuilder
 
   # Each campaign uses the permission of its own source conversation. A hidden
   # primary must not hide an authorized secondary that the same filters match.
+  # Anúncio de origem (#2271): sem `meta_ads_view`, o toque de anúncio sai sem título, nomes, prévia e miniatura.
   def campaigns_payload
-    self.class.aggregated_campaigns_for(@card, conversation_visibility: visibility)
+    self.class.aggregated_campaigns_for(@card, conversation_visibility: visibility, ad_visible: visibility.anuncio_visivel?)
   end
 
   # Typed AI summary surfaced to the card drawer. Gated on conversation

@@ -393,6 +393,8 @@ Rails.application.routes.draw do
             scope 'meta_ads_connection' do
               # Relatório baixado (#1960): PDF ou planilha do painel no período.
               get :report, to: 'meta_ads_reports#show'
+              # Seus posts (#2199): resultado orgânico da Página e do Instagram.
+              get :organico, to: 'meta_ads_organico#show'
               post :daily_action, to: 'meta_ads_ai#daily_action'
               post :quote_message, to: 'meta_ads_ai#quote_message'
               get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
@@ -402,11 +404,26 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
               post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
               get :pages, to: 'meta_ads_ad_management#pages'
+              # Comentários do anúncio no Instagram (#2196): ler, responder, ocultar, apagar e responder no privado.
+              get 'ads/:ad_id/instagram_comments', to: 'meta_ads_instagram_comments#index'
+              post 'ads/:ad_id/instagram_comments/:comment_id/reply', to: 'meta_ads_instagram_comments#reply'
+              post 'ads/:ad_id/instagram_comments/:comment_id/hide', to: 'meta_ads_instagram_comments#hide'
+              post 'ads/:ad_id/instagram_comments/:comment_id/private_reply', to: 'meta_ads_instagram_comments#private_reply'
+              post 'ads/:ad_id/instagram_comments/:comment_id/private_reply/release',
+                   to: 'meta_ads_instagram_comments#release_private_reply'
+              delete 'ads/:ad_id/instagram_comments/:comment_id', to: 'meta_ads_instagram_comments#destroy'
               # F5 (#1110): abrir, aceitar e dispensar cada ação do consultor.
               post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
               post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'
               post 'advisor_actions/:id/dismiss', to: 'meta_ads_advisor_actions#dismiss'
             end
+            # Formulários dos anúncios (#2195): Páginas, formulários e para onde vai quem preenche.
+            get 'meta_ads_lead_forms', to: 'meta_ads_lead_forms#index'
+            post 'meta_ads_lead_forms/pages/:page_id/receive', to: 'meta_ads_lead_forms#receive'
+            delete 'meta_ads_lead_forms/pages/:page_id/receive', to: 'meta_ads_lead_forms#stop'
+            put 'meta_ads_lead_forms/forms/:form_id/destination', to: 'meta_ads_lead_forms#save_destination'
+            delete 'meta_ads_lead_forms/forms/:form_id/destination', to: 'meta_ads_lead_forms#remove_destination'
+            post 'meta_ads_lead_forms/forms/:form_id/bring_past', to: 'meta_ads_lead_forms#bring_past'
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'

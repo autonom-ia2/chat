@@ -20,6 +20,7 @@ import sidebarFork from './sidebarFork.json';
 import telaInicial from './telaInicial.json';
 import painelDoContato from './painelDoContato.json';
 import listaDeConversas from './listaDeConversas.json';
+import metaAdsOrganico from './metaAdsOrganico.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -94,6 +95,7 @@ export default {
   ...telaInicial,
   ...painelDoContato,
   ...listaDeConversas,
+  ...metaAdsOrganico,
   ...brandKits,
   ...booking,
   ...resultJourney,
