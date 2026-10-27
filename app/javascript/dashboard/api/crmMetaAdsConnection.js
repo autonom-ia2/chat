@@ -181,6 +181,42 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.get(`${this.url}/pages`);
   }
 
+  // Facebook comments on the ad's Page post (#2197, flag
+  // meta_ads_comentarios_facebook), live from Meta → { comments: { status,
+  // permalink_url, comments, total, next_cursor } }; with `after`, the next
+  // page → { comments: { comments, next_cursor } }.
+  facebookComments(adId, after = null) {
+    return axios.get(this.facebookCommentsUrl(adId), {
+      params: after ? { after } : {},
+    });
+  }
+
+  // Replies as the Page → { id }.
+  replyFacebookComment(adId, commentId, message) {
+    return axios.post(
+      `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}/reply`,
+      { message }
+    );
+  }
+
+  hideFacebookComment(adId, commentId, hidden) {
+    return axios.patch(
+      `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}`,
+      { hidden }
+    );
+  }
+
+  // Irreversible: the screen confirms first.
+  deleteFacebookComment(adId, commentId) {
+    return axios.delete(
+      `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}`
+    );
+  }
+
+  facebookCommentsUrl(adId) {
+    return `${this.url}/ads/${encodeURIComponent(adId)}/facebook_comments`;
+  }
+
   // Suggested message to resume a stalled quote. Never sent by the server →
   // { quote_message: { card_id, conversation_id, applies, reason, message,
   //   source_quote } }.
