@@ -226,6 +226,19 @@ describe Instagram::SendOnInstagramService do
             .with(anything, hash_including(body: hash_including(messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT')))
         end
 
+        it 'tags every part of a person reply with an attachment' do
+          message = build(:message, content: 'segue', message_type: 'outgoing', inbox: instagram_inbox, account: account,
+                                    conversation: conversation, sender: agent)
+          attachment = message.attachments.new(account_id: message.account_id, file_type: :image)
+          attachment.file.attach(io: Rails.root.join('spec/assets/avatar.png').open, filename: 'avatar.png', content_type: 'image/png')
+          message.save!
+
+          described_class.new(message: message).perform
+
+          tagged = hash_including(body: hash_including(messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT'))
+          expect(HTTParty).to have_received(:post).with(anything, tagged).twice
+        end
+
         it 'does not tag a bot reply' do
           message = create(:message, message_type: 'outgoing', inbox: instagram_inbox, account: account, conversation: conversation,
                                      sender: create(:agent_bot, account: account))

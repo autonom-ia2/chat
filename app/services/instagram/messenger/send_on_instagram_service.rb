@@ -31,7 +31,7 @@ class Instagram::Messenger::SendOnInstagramService < Instagram::BaseSendService
   end
 
   def merge_human_agent_tag(params)
-    return params unless Meta::HumanAgentTag.apply?(message, 'ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT')
+    return params unless human_agent_tag?('ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT')
 
     params[:messaging_type] = 'MESSAGE_TAG'
     params[:tag] = 'HUMAN_AGENT'

@@ -28,6 +28,6 @@ module Meta::HumanAgentTag
     last_incoming = conversation.messages.where(account_id: conversation.account_id).incoming.last
     return false if last_incoming.nil?
 
-    Time.current >= last_incoming.created_at + STANDARD_WINDOW
+    Time.current > last_incoming.created_at + STANDARD_WINDOW
   end
 end
