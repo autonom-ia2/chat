@@ -47,7 +47,8 @@
       "VOCE_RESPONDEU": "You replied without taking it",
       "COM": "With {nome}",
       "SEM_NINGUEM": "No one",
-      "SEPARADOR": "·"
+      "SEPARADOR": "·",
+      "RESOLVIDA": "Resolved"
     },
     "PRIORIDADE": {
       "URGENTE": "Urgent",
@@ -105,6 +106,49 @@
       "TODOS": "All",
       "ERRO": "Couldn't load the pipelines.",
       "TENTAR": "Try again"
+    },
+    "BUSCA": {
+      "CAMPO": "Search name, phone or message",
+      "CAMPO_ARIA": "Search a conversation, message or person",
+      "LIMPAR": "Clear search",
+      "BUSCANDO": "Searching…",
+      "ERRO": "Couldn't search right now.",
+      "TENTAR": "Try again",
+      "NADA": "Nothing found for “{texto}”.",
+      "SECOES": {
+        "CONVERSAS": "Conversations",
+        "MENSAGENS": "Messages",
+        "PESSOAS": "People without a conversation"
+      },
+      "MENSAGEM_ARIA": "Message from {quem} on {quando}, in the conversation with {contato}",
+      "NOTA": "Note",
+      "AUDIO": "Audio",
+      "VOCE": "You",
+      "COMECAR_COM_TELEFONE": "Start a conversation with {telefone}",
+      "COMECAR_COM_TELEFONE_AJUDA": "Nobody has this number. The contact is created when you send.",
+      "SEM_DADOS": "No phone or e-mail",
+      "ESCREVER": "Write",
+      "PARCIAL": "Part of the results took too long and was left out. Try a longer word."
+    },
+    "CONVERSA_VAZIA": {
+      "CARREGANDO": "Loading…",
+      "ERRO": "Couldn't open the conversation.",
+      "TENTAR": "Try again",
+      "POR_ONDE": "Send through?",
+      "FECHAR": "Close",
+      "TROCAR": "Change",
+      "TROCAR_ARIA": "Sending through {caixa}. Change",
+      "ESCOLHER_CAIXA": "Choose where to send from",
+      "SEM_CAIXA": "You can't write to {nome}: the contact has no phone or e-mail.",
+      "COMPLETAR_CONTATO": "Complete the contact",
+      "SEM_CAIXA_NA_CONTA": "No inbox in this account can message {nome}.",
+      "SEM_INSTAGRAM": "Instagram isn't listed: there, only the person can send the first message.",
+      "MODELO_LINHA": "On the official WhatsApp, the first message is an approved template. Once the person replies, you can write freely.",
+      "ESCOLHER_MODELO": "Choose the template",
+      "ENVIAR": "Send",
+      "ENVIANDO": "Sending…",
+      "ERRO_CONTATO": "Couldn't create the contact.",
+      "ENVIADA_OCULTA": "Message sent. It went into a conversation that is with someone else."
     }
   }
 }

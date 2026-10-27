@@ -18,7 +18,8 @@
       "NUMEROS": {
         "ESPERAM": "Esperam você",
         "SEM_RESPONSAVEL": "Sem responsável",
-        "FORA_DO_PRAZO": "Fora do prazo"
+        "FORA_DO_PRAZO": "Fora do prazo",
+        "ESPERAM_DAS_SUAS": "das suas {total} espera você | das suas {total} esperam você"
       },
       "ERRO": "Não deu para carregar os números agora.",
       "TENTAR_DE_NOVO": "Tentar de novo",

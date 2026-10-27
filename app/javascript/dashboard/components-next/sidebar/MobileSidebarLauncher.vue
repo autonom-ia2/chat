@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
+import { pedidoDeConversaVazia } from 'dashboard/components-next/Conversation/ListaDeConversas/busca/caixasDaConversaVazia';
+import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 
 defineProps({
   isMobileSidebarOpen: {
@@ -14,6 +16,7 @@ defineProps({
 const emit = defineEmits(['toggle']);
 
 const route = useRoute();
+const listaNova = useListaNova();
 
 const isConversationRoute = computed(() => {
   const CONVERSATION_ROUTES = [
@@ -27,7 +30,11 @@ const isConversationRoute = computed(() => {
     'conversation_through_participating',
     'inbox_view_conversation',
   ];
-  return CONVERSATION_ROUTES.includes(route.name);
+  // #2211: com a lista nova, a conversa vazia ("Escrever" na busca da lista) também é tela de conversa.
+  return (
+    CONVERSATION_ROUTES.includes(route.name) ||
+    (listaNova.value && Boolean(pedidoDeConversaVazia(route.query)))
+  );
 });
 
 const toggleSidebar = () => {

@@ -7,7 +7,7 @@
 //      e, à direita, a etapa (que desce inteira quando não cabe).
 // Mesmas props e eventos do ConversationCard antigo; raiz div.conversation(.active)
 // para o Alt+J/K continuar achando o item.
-import { computed, ref, watch } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
@@ -62,6 +62,8 @@ const contaPorId = useMapGetter('accounts/getAccount');
 const caixas = useMapGetter('inboxes/getInboxes');
 
 const fuso = computed(() => fusoDaConta(contaPorId.value?.(contaId.value)));
+// #2211: no resultado da busca, a conversa resolvida diz "Resolvida" na linha 3.
+const naBusca = inject('cardNaBusca', false);
 const agentePorId = id => store.getters['agents/getAgentById'](id);
 const nomeDoAgente = id => {
   const agente = agentePorId(id);
@@ -147,6 +149,7 @@ const linha3 = computed(() =>
     nomeDoUltimoRobo: nomeDoUltimoRobo.value,
     nomeDoAgente,
     mostrarResponsavel: props.showAssignee,
+    marcarResolvida: naBusca,
   })
 );
 

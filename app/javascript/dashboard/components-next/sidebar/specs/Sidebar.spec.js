@@ -11,6 +11,8 @@ const getters = {};
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ fullPath: '/', params: {} }),
+  // #2211: o Sidebar instala o ⌘K da busca da lista (useAtalhoDaBusca).
+  useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock('vuex', () => ({ useStore: () => ({ dispatch: vi.fn() }) }));
 vi.mock('dashboard/composables/store', () => ({
@@ -276,5 +278,49 @@ describe('Sidebar: Anúncios da Meta em Campanhas', () => {
 
   it('função sem chave de Anúncios da Meta não vê o item', () => {
     expect(campanhasCom(['campaign_view'])).not.toContain('Campaign Meta Ads');
+  });
+});
+
+// #2211 — com a chave lista_quem_espera, a busca e o lápis saem do menu (a busca mora no topo da lista
+// e "Escrever" começa a conversa). Desligada, o menu fica como na main: a busca e o lápis continuam.
+describe('Sidebar: busca e lápis com a lista nova (#2211)', () => {
+  const comChave = ligada => {
+    seat({ keys: ['administrator'] });
+    getters['accounts/isFeatureEnabledonAccount'] = ref(
+      (_conta, chave) => ligada && chave === 'lista_quem_espera'
+    );
+    return shallowMount(Sidebar, {
+      global: {
+        stubs: {
+          RouterLink: {
+            name: 'RouterLink',
+            props: ['to'],
+            template: '<a><slot /></a>',
+          },
+          SidebarGroup: {
+            name: 'SidebarGroup',
+            props: ['name', 'children'],
+            template: '<li />',
+          },
+        },
+      },
+    });
+  };
+  const linkDaBusca = wrapper =>
+    wrapper
+      .findAllComponents({ name: 'RouterLink' })
+      .filter(link => link.props('to')?.name === 'search');
+  const lapis = wrapper => wrapper.find('compose-conversation-stub');
+
+  it('desligada, mostra a busca e o lápis como na main', () => {
+    const wrapper = comChave(false);
+    expect(linkDaBusca(wrapper)).toHaveLength(1);
+    expect(lapis(wrapper).exists()).toBe(true);
+  });
+
+  it('ligada, tira a busca e o lápis do menu', () => {
+    const wrapper = comChave(true);
+    expect(linkDaBusca(wrapper)).toHaveLength(0);
+    expect(lapis(wrapper).exists()).toBe(false);
   });
 });

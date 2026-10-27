@@ -1,5 +1,6 @@
 // #2202 — a linha 3 da lista: o que pede atenção, um sinal só. A regra é igual em
 // todas as abas: vale a primeira condição verdadeira.
+//   R  Resolvida (só no resultado da busca, #2211: lá aparece conversa resolvida)
 //   0  Sua vez (convite para mim)        0b Reservada (convite para outra pessoa)
 //   1  Adiada (só aparece na lista de adiadas, que só tem adiadas)
 //   2  O robô pediu ajuda               3  O cliente espera
@@ -86,6 +87,16 @@ const convite = (chat, contexto) => {
     aria,
     icone: 'i-lucide-user-round',
   });
+};
+
+const resolvida = (chat, contexto) => {
+  if (!contexto.marcarResolvida || chat.status !== 'resolved') return null;
+  return sinal(
+    'resolvida',
+    contexto.t('LISTA_DE_CONVERSAS.SINAL.RESOLVIDA'),
+    FAIXA_NEUTRA,
+    { icone: 'i-lucide-circle-check' }
+  );
 };
 
 const adiada = (chat, contexto) => {
@@ -185,10 +196,10 @@ const quemCuida = (chat, contexto) => {
   );
 };
 
-const REGRAS = [convite, adiada, pediuAjuda, esperando, quemCuida];
+const REGRAS = [resolvida, convite, adiada, pediuAjuda, esperando, quemCuida];
 
 // contexto: { t, agora, fuso, euId, ultima (prefixoDoRemetente), nomeDoUltimoRobo,
-//             nomeDoAgente(id), mostrarResponsavel }
+//             nomeDoAgente(id), mostrarResponsavel, marcarResolvida }
 export const sinalDaConversa = (chat, contexto) => {
   const chave = PRIORIDADES[chat.priority];
   const prioridade = chave

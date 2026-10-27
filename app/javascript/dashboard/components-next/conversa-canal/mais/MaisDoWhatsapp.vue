@@ -16,6 +16,9 @@ const props = defineProps({
   caixa: { type: Object, required: true },
   // pedido → Promise (o envio da caixa de resposta).
   enviar: { type: Function, required: true },
+  // #2211: antes de existir conversa (conversa vazia da busca), só Documento e Fotos e vídeos:
+  // localização, contato e os outros saem numa conversa que já existe.
+  soArquivos: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['arquivos']);
@@ -123,7 +126,8 @@ const itens = computed(() =>
     item =>
       (!item.soOficial || !viraTexto.value) &&
       (!item.soComEnquete || Boolean(enquete.value)) &&
-      (!SELETORES[item.tipo] || !soTexto.value)
+      (!SELETORES[item.tipo] || !soTexto.value) &&
+      (!props.soArquivos || Boolean(SELETORES[item.tipo]))
   )
 );
 

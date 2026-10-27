@@ -167,6 +167,11 @@ export default {
       type: Boolean,
       default: false,
     },
+    // #2211: a conversa vazia da busca (ainda sem conversa): o "+" só anexa e sem vídeo.
+    semConversa: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: [
     'toggleInsertArticle',
@@ -369,6 +374,7 @@ export default {
         v-if="ehWhatsapp && !isOnPrivateNote && !isEditorDisabled"
         :caixa="inbox"
         :enviar="enviarRico"
+        :so-arquivos="semConversa"
         @arquivos="escolha => anexarArquivos(escolha, onFileUpload)"
       />
       <NextButton
@@ -473,6 +479,7 @@ export default {
         v-if="
           (isAWebWidgetInbox || isAPIInbox) &&
           !isOnPrivateNote &&
+          !semConversa &&
           !isEditorDisabled
         "
         :conversation-id="conversationId"
