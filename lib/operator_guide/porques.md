@@ -115,10 +115,10 @@
 - titulo: Aplicar etiquetas na conversa
 - rota: inbox_conversation
 - intent: Como coloco etiqueta em uma conversa?; Onde removo uma tag do atendimento?; Como organizo conversas por etiquetas?
-- onde_fica: Conversas > abrir conversa > painel de acoes > etiquetas
+- onde_fica: Conversas > abrir conversa > ⋯ no topo da conversa > Etiquetas desta conversa; quando a conversa ja tem etiqueta, tambem no bloco Etiquetas do painel do contato (toque nas etiquetas)
 - pre_requisitos: etiqueta criada em Configuracoes > Etiquetas
-- passos: 1. Abra a conversa; 2. Clique em etiquetas no painel lateral; 3. Pesquise a etiqueta; 4. Adicione ou remova; 5. Use a sidebar de etiquetas para consultar depois.
-- gotchas: etiquetas ocultas ou especificas de importacao custom podem nao aparecer na sidebar; etiquetas de conversa e contato podem ser usadas em contextos diferentes.
+- passos: 1. Abra a conversa; 2. Toque no ⋯ no topo da conversa e escolha Etiquetas desta conversa (ou toque nas etiquetas do bloco Etiquetas no painel do contato); 3. Pesquise a etiqueta; 4. Toque nela para por ou tirar; 5. Toque em Pronto.
+- gotchas: so quem pode atender a conversa poe ou tira etiqueta; quem so le ve o bloco Etiquetas sem poder mudar; o bloco Etiquetas so aparece quando a conversa tem etiqueta; criar etiqueta nova pela lista e de quem administra etiquetas; etiquetas de conversa e de contato sao diferentes (as do contato ficam no bloco do nome); etiquetas ocultas ou de importacao custom podem nao aparecer.
 
 ### filtrar_conversas
 - titulo: Filtrar conversas

@@ -22,6 +22,7 @@ import BlocoCombinado from './BlocoCombinado.vue';
 import BlocoAssunto from './BlocoAssunto.vue';
 import BlocoOrigem from './BlocoOrigem.vue';
 import BlocoRelacao from './BlocoRelacao.vue';
+import BlocoEtiquetas from './etiquetas/BlocoEtiquetas.vue';
 import { useRelacaoLigada } from 'dashboard/components-next/contato-relacao/useRelacaoLigada';
 import BlocoDoPainel from './BlocoDoPainel.vue';
 import LinhaQueAbre from './LinhaQueAbre.vue';
@@ -214,6 +215,8 @@ const verPagina = () =>
           :pode-operar="podeOperar"
           :fase2="fase2"
         />
+        <!-- #2202 (PR 3): as etiquetas da conversa, só quando ela tem alguma. -->
+        <BlocoEtiquetas :pode-operar="podeOperar" />
         <BlocoCombinado v-if="crmLigado" :contact-id="contact.id" />
         <BlocoRelacao
           v-if="

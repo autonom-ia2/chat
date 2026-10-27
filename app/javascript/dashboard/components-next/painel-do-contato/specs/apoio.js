@@ -93,7 +93,13 @@ export const criarStore = (estado = {}, maisGetters = {}) => {
       'conversationWatchers/getByConversationId': () => id =>
         r.acompanhantes[id],
       'contactLabels/getContactLabels': () => id => r.etiquetas[id] || [],
-      'labels/getLabels': () => [],
+      // #2202 (PR 3): etiquetas da conta e da conversa; `podeOperar` imita o
+      // getter canOperateConversation (quem só lê não etiqueta).
+      'labels/getLabels': () => r.etiquetasDaConta || [],
+      'conversationLabels/getConversationLabels': () => id =>
+        r.etiquetasDaConversa?.[id] || [],
+      'conversationLabels/getUIFlags': () => r.uiEtiquetas || {},
+      canOperateConversation: () => () => r.podeOperar !== false,
       'inboxAssignableAgents/getAssignableAgents': () => () => r.agentes,
       'contacts/getUIFlags': () => r.uiContatos,
       getSelectedChatAttachments: () => r.anexos,
@@ -119,6 +125,7 @@ export const criarStore = (estado = {}, maisGetters = {}) => {
         'conversationWatchers/show',
         'conversationWatchers/update',
         'contactLabels/get',
+        'conversationLabels/update',
         'contacts/show',
         'contacts/update',
         'contacts/deleteCustomAttributes',
