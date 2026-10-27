@@ -23,15 +23,15 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
   end
 
   def stub_ads(object_id, statuses)
+    body = { data: statuses.map { |status| { effective_status: status } } }
     stub_request(:get, meta_graph_url("#{object_id}/ads")).with(query: hash_including('fields' => 'effective_status'))
-                                                          .to_return(status: 200, body: { data: statuses.map { |s| { effective_status: s } } }.to_json,
-                                                                     headers: json)
+                                                          .to_return(status: 200, body: body.to_json, headers: json)
   end
 
   def stub_currency(currency = 'BRL')
+    body = { id: "act_#{connection.ad_account_id}", currency: currency }
     stub_request(:get, meta_graph_url("act_#{connection.ad_account_id}")).with(query: hash_including({}))
-                                                                         .to_return(status: 200, body: { id: "act_#{connection.ad_account_id}", currency: currency }.to_json,
-                                                                                    headers: json)
+                                                                         .to_return(status: 200, body: body.to_json, headers: json)
   end
 
   before do
@@ -75,17 +75,23 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
     it 'Meta fora do ar vira erro, nunca orçamento vazio (ponto 11)' do
       stub_budget(status: 500)
 
-      expect { described_class.new(connection).read(ad_id) }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('meta_unavailable') }
+      expect { described_class.new(connection).read(ad_id) }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
+        expect(e.code).to eq('meta_unavailable')
+      }
     end
 
     it 'anúncio de outra conta de anúncios não existe' do
       stub_budget(adset: { daily_budget: '3000' }, account_id: '999')
 
-      expect { described_class.new(connection).read(ad_id) }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('ad_not_found') }
+      expect { described_class.new(connection).read(ad_id) }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
+        expect(e.code).to eq('ad_not_found')
+      }
     end
 
     it 'id com caractere que não é dígito não chega à Meta' do
-      expect { described_class.new(connection).read('1/ads') }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('ad_not_found') }
+      expect { described_class.new(connection).read('1/ads') }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
+        expect(e.code).to eq('ad_not_found')
+      }
       expect(a_request(:get, /graph\.facebook\.com/)).not_to have_been_made
     end
   end
@@ -110,7 +116,7 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
 
     it 'só manda o que mudou' do
       update = stub_request(:post, meta_graph_url(adset_id)).with(body: { 'daily_budget' => '5000' })
-                                                           .to_return(status: 200, body: { success: true }.to_json, headers: json)
+                                                            .to_return(status: 200, body: { success: true }.to_json, headers: json)
 
       described_class.new(connection).change!(ad_id, amount: '50', end_time: nil)
 

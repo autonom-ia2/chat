@@ -5476,6 +5476,23 @@
     ],
     "sem_corpo": false
   },
+  "PATCH crm/meta_ads_connection/ads/:ad_id/budget": {
+    "campos": {
+      "amount": {},
+      "end_time": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#update_budget",
+    "motivos": [
+      "leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:46",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:50",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:48"
+    ],
+    "sem_corpo": false
+  },
   "PATCH crm/meta_ads_connection/destinations": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_connections#destinations",
@@ -15563,6 +15580,56 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/meta_ads_connection/ads": {
+    "campos": {
+      "age_max": {},
+      "age_min": {},
+      "cards": {
+        "campos": {
+          "hash": {},
+          "image_hash": {},
+          "kind": {},
+          "video_id": {}
+        },
+        "tipo": "objeto"
+      },
+      "daily_amount": {},
+      "destination": {},
+      "end_date": {},
+      "headline": {},
+      "idempotency_key": {},
+      "media": {
+        "campos": {
+          "hash": {},
+          "image_hash": {},
+          "kind": {},
+          "video_id": {}
+        },
+        "tipo": "objeto"
+      },
+      "name": {},
+      "page_id": {},
+      "placement": {},
+      "ready_message": {},
+      "region": {},
+      "site_action": {},
+      "site_url": {},
+      "special_category": {},
+      "start_date": {},
+      "states": {
+        "tipo": "lista"
+      },
+      "text": {},
+      "whatsapp_number": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:62"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/ads/:ad_id/status": {
     "campos": {
       "status": {
@@ -15573,6 +15640,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#status",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:27",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:72",
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:29",
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:28"
     ],
@@ -15640,6 +15708,21 @@
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:97"
     ],
     "sem_corpo": true
+  },
+  "POST crm/meta_ads_connection/media": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#media",
+    "motivos": [
+      "leitura crua sem tipo: file"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:29",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:30"
+    ],
+    "sem_corpo": false
   },
   "POST crm/meta_ads_connection/quote_message": {
     "campos": {

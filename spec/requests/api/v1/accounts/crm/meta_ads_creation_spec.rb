@@ -25,19 +25,23 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
     account.enable_features!('meta_ads_criar', 'meta_ads_gestao')
   end
 
+  def stub_graph(path, body, fields: nil, verb: :get)
+    stub = stub_request(verb, meta_graph_url(path))
+    stub = stub.with(query: fields ? { fields: fields } : hash_including({})) if verb == :get
+    stub.to_return(status: 200, body: body.to_json, headers: json)
+  end
+
+  def stub_permissions
+    stub_graph('me/permissions', { data: [{ permission: 'ads_management', status: 'granted' }] })
+  end
+
   def stub_budget
-    stub_request(:get, meta_graph_url('me/permissions'))
-      .to_return(status: 200, body: { data: [{ permission: 'ads_management', status: 'granted' }] }.to_json, headers: json)
-    stub_request(:get, meta_graph_url(ad_id)).with(query: { fields: Meta::AdsGraphClient::AD_BUDGET_FIELDS })
-                                             .to_return(status: 200, headers: json, body: {
-                                               id: ad_id, account_id: connection.ad_account_id,
-                                               adset: { id: adset_id, name: 'Público', daily_budget: '3000', start_time: '2026-10-01T09:00:00-0300' },
-                                               campaign: { id: '1', name: 'Vendas' }
-                                             }.to_json)
-    stub_request(:get, meta_graph_url("#{adset_id}/ads")).with(query: hash_including({}))
-                                                         .to_return(status: 200, body: { data: [{ effective_status: 'ACTIVE' }] }.to_json, headers: json)
-    stub_request(:get, meta_graph_url("act_#{connection.ad_account_id}")).with(query: hash_including({}))
-                                                                         .to_return(status: 200, body: { currency: 'BRL' }.to_json, headers: json)
+    stub_permissions
+    stub_graph(ad_id, { id: ad_id, account_id: connection.ad_account_id, campaign: { id: '1', name: 'Vendas' },
+                        adset: { id: adset_id, name: 'Público', daily_budget: '3000', start_time: '2026-10-01T09:00:00-0300' } },
+               fields: Meta::AdsGraphClient::AD_BUDGET_FIELDS)
+    stub_graph("#{adset_id}/ads", { data: [{ effective_status: 'ACTIVE' }] })
+    stub_graph("act_#{connection.ad_account_id}", { currency: 'BRL' })
   end
 
   it 'sem a flag responde 404 e não chama a Meta' do
@@ -118,18 +122,12 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
     end
 
     def stub_activation(campaign: 'ACTIVE', adset: 'ACTIVE')
-      stub_request(:get, meta_graph_url('me/permissions'))
-        .to_return(status: 200, body: { data: [{ permission: 'ads_management', status: 'granted' }] }.to_json, headers: json)
-      stub_request(:get, meta_graph_url(ad_id)).with(query: { fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS })
-                                               .to_return(status: 200, headers: json,
-                                                          body: { id: ad_id, account_id: connection.ad_account_id, status: 'PAUSED',
-                                                                  effective_status: 'PAUSED' }.to_json)
-      stub_request(:post, meta_graph_url(ad_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)
-      stub_request(:get, meta_graph_url(ad_id)).with(query: { fields: Meta::AdsGraphClient::AD_BUDGET_FIELDS })
-                                               .to_return(status: 200, headers: json, body: {
-                                                 id: ad_id, account_id: connection.ad_account_id,
-                                                 adset: { id: adset_id, effective_status: adset }, campaign: { id: '1', effective_status: campaign }
-                                               }.to_json)
+      stub_permissions
+      stub_graph(ad_id, { id: ad_id, account_id: connection.ad_account_id, status: 'PAUSED', effective_status: 'PAUSED' },
+                 fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS)
+      stub_graph(ad_id, { success: true }, verb: :post)
+      stub_graph(ad_id, { id: ad_id, account_id: connection.ad_account_id, adset: { id: adset_id, effective_status: adset },
+                          campaign: { id: '1', effective_status: campaign } }, fields: Meta::AdsGraphClient::AD_BUDGET_FIELDS)
     end
 
     it 'com campanha e grupo no ar: marca como ativado e não avisa nada' do

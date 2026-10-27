@@ -33,12 +33,12 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
                                                      .to_return(ok(data: [page]))
   end
 
-  def stub_creation(campaign: ok(id: '900'), adset: ok(id: '901'), creative: ok(id: '902'), ad: ok(id: '903'))
+  def stub_creation(campaign: ok(id: '900'), adset: ok(id: '901'), creative: ok(id: '902'), advert: ok(id: '903'))
     {
       campaign: stub_request(:post, meta_graph_url("#{act}/campaigns")).to_return(campaign),
       adset: stub_request(:post, meta_graph_url("#{act}/adsets")).to_return(adset),
       creative: stub_request(:post, meta_graph_url("#{act}/adcreatives")).to_return(creative),
-      ad: stub_request(:post, meta_graph_url("#{act}/ads")).to_return(ad)
+      ad: stub_request(:post, meta_graph_url("#{act}/ads")).to_return(advert)
     }
   end
 
@@ -71,11 +71,11 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     result = create!
 
     expect(result).to include(ad_id: '903', name: 'Bolo de pote · WhatsApp', status: 'PAUSED')
-    expect(stubs[:campaign].with { |req|
+    campaign_ok = lambda do |req|
       body = form(req)
       body['objective'] == 'OUTCOME_ENGAGEMENT' && body['status'] == 'ACTIVE' && body['special_ad_categories'] == '[]'
-    }).to have_been_made.once
-    expect(stubs[:adset].with { |req|
+    end
+    adset_ok = lambda do |req|
       body = form(req)
       targeting = JSON.parse(body['targeting'])
       body['status'] == 'ACTIVE' && body['campaign_id'] == '900' && body['daily_budget'] == '2000' &&
@@ -83,15 +83,18 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
         JSON.parse(body['promoted_object']) == { 'page_id' => page_id, 'whatsapp_phone_number' => whatsapp_number } &&
         targeting['geo_locations'] == { 'countries' => ['BR'] } && targeting['age_min'] == 25 && targeting['age_max'] == 45 &&
         targeting['publisher_platforms'] == %w[facebook instagram] && body['end_time'].nil?
-    }).to have_been_made.once
-    expect(stubs[:creative].with { |req|
+    end
+    creative_ok = lambda do |req|
       spec = JSON.parse(form(req)['object_story_spec'])
       spec['page_id'] == page_id && spec.dig('link_data', 'image_hash') == 'abc123' &&
         spec.dig('link_data', 'call_to_action') == { 'type' => 'WHATSAPP_MESSAGE', 'value' => { 'app_destination' => 'WHATSAPP' } }
-    }).to have_been_made.once
+    end
+    expect(stubs[:campaign].with(&campaign_ok)).to have_been_made.once
+    expect(stubs[:adset].with(&adset_ok)).to have_been_made.once
+    expect(stubs[:creative].with(&creative_ok)).to have_been_made.once
     expect(stubs[:ad].with { |req| form(req).values_at('status', 'adset_id') == %w[PAUSED 901] }).to have_been_made.once
     expect(Crm::MetaAdsCreatedObject.last).to have_attributes(status: 'created', campaign_id: '900', adset_id: '901',
-                                                               creative_id: '902', ad_id: '903', user_id: user.id)
+                                                              creative_id: '902', ad_id: '903', user_id: user.id)
   end
 
   it 'anúncio que não voltou pausado é pausado na hora e fica na Auditoria (ponto 2)' do
@@ -127,7 +130,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
   end
 
   it 'se nem apagar der, a campanha é arquivada e a tela não diz que nada foi criado' do
-    stub_creation(ad: { status: 500, body: meta_graph_error(1).to_json, headers: json })
+    stub_creation(advert: { status: 500, body: meta_graph_error(1).to_json, headers: json })
     stub_request(:delete, meta_graph_url('900')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
     stub_request(:post, meta_graph_url('900')).with(body: { 'status' => 'ARCHIVED' })
                                               .to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
@@ -147,15 +150,17 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     create!(site)
 
     expect(stubs[:campaign].with { |req| form(req)['objective'] == 'OUTCOME_TRAFFIC' }).to have_been_made
-    expect(stubs[:adset].with { |req|
+    adset_ok = lambda do |req|
       body = form(req)
       body['optimization_goal'] == 'LINK_CLICKS' && body['promoted_object'].nil? &&
         JSON.parse(body['targeting'])['publisher_platforms'] == ['instagram']
-    }).to have_been_made
-    expect(stubs[:creative].with { |req|
+    end
+    creative_ok = lambda do |req|
       JSON.parse(form(req)['object_story_spec']).dig('link_data', 'call_to_action') ==
         { 'type' => 'SHOP_NOW', 'value' => { 'link' => 'https://lojaexemplo.com.br' } }
-    }).to have_been_made
+    end
+    expect(stubs[:adset].with(&adset_ok)).to have_been_made
+    expect(stubs[:creative].with(&creative_ok)).to have_been_made
   end
 
   it 'categoria especial marca crédito/seguro e trava a idade em 18 a 65' do
@@ -186,9 +191,10 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
     create!(draft.merge(cards: [{ kind: 'image', hash: 'def456' }]))
 
-    expect(stubs[:creative].with { |req|
+    cards_ok = lambda do |req|
       JSON.parse(form(req)['object_story_spec']).dig('link_data', 'child_attachments').pluck('image_hash') == %w[abc123 def456]
-    }).to have_been_made
+    end
+    expect(stubs[:creative].with(&cards_ok)).to have_been_made
   end
 
   it 'vídeo ainda em processamento na Meta: avisa antes de criar qualquer coisa' do

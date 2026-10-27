@@ -26,7 +26,7 @@ class Crm::MetaAds::Creation::Targeting
 
   # draft: region ('BR' | 'STATES'), states, age_min, age_max, special_category, placement.
   def build(draft)
-    ages = draft[:special_category] ? [AGES.min, AGES.max] : [draft[:age_min], draft[:age_max]]
+    ages = draft[:special_category] ? AGES.minmax : [draft[:age_min], draft[:age_max]]
     {
       geo_locations: geo(draft), age_min: ages.first, age_max: ages.last,
       publisher_platforms: PLATFORMS.fetch(draft[:placement]), targeting_automation: { advantage_audience: 0 }
@@ -38,11 +38,11 @@ class Crm::MetaAds::Creation::Targeting
   def geo(draft)
     return { countries: ['BR'] } if draft[:region] == 'BR'
 
-    { regions: draft[:states].map { |uf| { key: region_key(uf) } } }
+    { regions: draft[:states].map { |state| { key: region_key(state) } } }
   end
 
-  def region_key(uf)
-    Rails.cache.fetch("meta_ads:region:BR:#{uf}", expires_in: REGION_CACHE_TTL) { search(STATES.fetch(uf)) }
+  def region_key(state)
+    Rails.cache.fetch("meta_ads:region:BR:#{state}", expires_in: REGION_CACHE_TTL) { search(STATES.fetch(state)) }
   end
 
   # O nome que bate (sem acento e sem diferença de maiúscula) ou, quando a Meta devolve um só, ele.
@@ -50,11 +50,18 @@ class Crm::MetaAds::Creation::Targeting
     result = @client.search_regions(name)
     raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
 
-    regions = Array(result.data['data']).select { |row| row.is_a?(Hash) && row['country_code'] == 'BR' && row['type'] == 'region' }
-    found = regions.find { |row| plain(row['name']) == plain(name) } || (regions.first if regions.one?)
+    found = pick(brazilian_regions(result.data['data']), name)
     raise Crm::MetaAds::Creation::Error, 'invalid_audience' if found.nil?
 
     found['key'].to_s
+  end
+
+  def brazilian_regions(rows)
+    Array(rows).select { |row| row.is_a?(Hash) && row['country_code'] == 'BR' && row['type'] == 'region' }
+  end
+
+  def pick(regions, name)
+    regions.find { |row| plain(row['name']) == plain(name) } || (regions.first if regions.one?)
   end
 
   def plain(text)

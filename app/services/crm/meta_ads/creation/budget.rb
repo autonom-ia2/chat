@@ -101,19 +101,22 @@ class Crm::MetaAds::Creation::Budget
 
   # Sem fim: só no orçamento por dia (o total precisa de data para acabar).
   def parse_end(end_time, before)
-    if end_time.blank?
-      raise Crm::MetaAds::Creation::Error, 'invalid_dates' if before[:kind] == 'lifetime'
-
-      return
-    end
+    return no_end(before) if end_time.blank?
 
     parsed = zone.parse(end_time.to_s)
-    start = before[:start_time].present? ? Time.zone.parse(before[:start_time].to_s) : nil
-    raise Crm::MetaAds::Creation::Error, 'invalid_dates' if parsed.nil? || parsed <= Time.current || (start && parsed <= start)
+    raise Crm::MetaAds::Creation::Error, 'invalid_dates' unless parsed && parsed > [Time.current, time(before[:start_time])].compact.max
 
     parsed
   rescue ArgumentError
     raise Crm::MetaAds::Creation::Error, 'invalid_dates'
+  end
+
+  def no_end(before)
+    raise Crm::MetaAds::Creation::Error, 'invalid_dates' if before[:kind] == 'lifetime'
+  end
+
+  def time(value)
+    value.present? ? Time.zone.parse(value.to_s) : nil
   end
 
   def zone
@@ -122,16 +125,16 @@ class Crm::MetaAds::Creation::Budget
 
   # O valor vai para onde está o dinheiro; o fim vai para o grupo. Tirar o fim manda 0 (confirmar na chamada real).
   def apply!(before, value, new_end)
-    changes = {}
-    old_end = before[:end_time].present? ? Time.zone.parse(before[:end_time].to_s) : nil
-    changes[before[:object_id]] = { "#{before[:kind]}_budget" => (value * CENTS).round } if value != before[:amount]
-    end_changed = new_end.nil? ? old_end.present? : old_end.nil? || old_end.to_i != new_end.to_i
-    if end_changed
-      (changes[before[:adset_id]] ||= {})['end_time'] = new_end ? new_end.iso8601 : 0
-    end
+    changes = Hash.new { |hash, key| hash[key] = {} }
+    changes[before[:object_id]]["#{before[:kind]}_budget"] = (value * CENTS).round if value != before[:amount]
+    changes[before[:adset_id]]['end_time'] = new_end ? new_end.iso8601 : 0 if end_changed?(time(before[:end_time]), new_end)
     changes.each do |object_id, params|
       result = client.update_object(object_id, params)
       raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
     end
+  end
+
+  def end_changed?(old_end, new_end)
+    old_end&.to_i != new_end&.to_i
   end
 end

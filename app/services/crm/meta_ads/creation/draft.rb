@@ -111,11 +111,20 @@ class Crm::MetaAds::Creation::Draft
   def audience
     region = @params[:region].to_s == 'BR' ? 'BR' : 'STATES'
     states = Array(@params[:states]).map(&:to_s).uniq
-    fail!('invalid_audience') if region == 'STATES' && (states.empty? || (states - Crm::MetaAds::Creation::Targeting::STATES.keys).any?)
-    ages = [@params[:age_min], @params[:age_max]].map { |age| Integer(age.to_s, exception: false) }
-    ages_ok = ages.all? { |age| age && Crm::MetaAds::Creation::Targeting::AGES.cover?(age) } && ages.first <= ages.last
-    fail!('invalid_audience') unless ages_ok
-    { region: region, states: states, age_min: ages.first, age_max: ages.last }
+    fail!('invalid_audience') if region == 'STATES' && !valid_states?(states)
+    age_min, age_max = ages
+    { region: region, states: states, age_min: age_min, age_max: age_max }
+  end
+
+  def valid_states?(states)
+    states.any? && (states - Crm::MetaAds::Creation::Targeting::STATES.keys).empty?
+  end
+
+  # De 18 a 65 (65 quer dizer 65+), a primeira menor ou igual à segunda.
+  def ages
+    values = [@params[:age_min], @params[:age_max]].map { |age| Integer(age.to_s, exception: false) }
+    valid = values.all? { |age| age && Crm::MetaAds::Creation::Targeting::AGES.cover?(age) } && values.first <= values.last
+    valid ? values : fail!('invalid_audience')
   end
 
   def budget

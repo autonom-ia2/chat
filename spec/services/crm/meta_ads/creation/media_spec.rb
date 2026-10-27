@@ -15,12 +15,13 @@ RSpec.describe Crm::MetaAds::Creation::Media do
 
   it 'foto: sobe em base64 e devolve hash, endereço e tamanho' do
     file = upload('avatar.png', 'image/png')
+    image = { hash: 'h1', url: 'https://scontent.example/h1.png', width: 600, height: 400 }
     request = stub_request(:post, meta_graph_url("#{act}/adimages"))
               .with { |req| Rack::Utils.parse_nested_query(req.body)['bytes'] == Base64.strict_encode64(File.binread(file.path)) }
-              .to_return(status: 200, body: { images: { 'avatar.png' => { hash: 'h1', url: 'https://scontent.example/h1.png', width: 600, height: 400 } } }.to_json,
-                         headers: json)
+              .to_return(status: 200, body: { images: { 'avatar.png' => image } }.to_json, headers: json)
 
-    expect(described_class.new(connection).upload!(file)).to eq(kind: 'image', hash: 'h1', url: 'https://scontent.example/h1.png', width: 600, height: 400)
+    expect(described_class.new(connection).upload!(file)).to eq(kind: 'image', hash: 'h1', url: 'https://scontent.example/h1.png', width: 600,
+                                                                height: 400)
     expect(request).to have_been_made.once
   end
 

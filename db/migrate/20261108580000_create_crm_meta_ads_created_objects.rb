@@ -24,8 +24,7 @@ class CreateCrmMetaAdsCreatedObjects < ActiveRecord::Migration[7.2]
       t.datetime :activated_at
       t.timestamps
     end
-    add_index :crm_meta_ads_created_objects, [:account_id, :idempotency_key], unique: true,
-                                                                               name: 'idx_crm_meta_ads_created_objects_key'
+    add_index :crm_meta_ads_created_objects, [:account_id, :idempotency_key], unique: true, name: 'idx_crm_meta_ads_created_objects_key'
     add_index :crm_meta_ads_created_objects, [:account_id, :ad_id], name: 'idx_crm_meta_ads_created_objects_ad'
   end
 end
