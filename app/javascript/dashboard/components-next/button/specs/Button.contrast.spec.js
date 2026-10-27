@@ -25,6 +25,7 @@ const lerTokens = linhas => {
 const temas = () => {
   const linhas = readFileSync(SCSS, 'utf8').split('\n');
   const inicioEscuro = linhas.findIndex(l => l.trim() === '.dark {');
+  if (inicioEscuro < 0) throw new Error('bloco .dark não achado no SCSS');
   const claro = lerTokens(linhas.slice(0, inicioEscuro));
   return {
     claro,
@@ -47,10 +48,15 @@ const contraste = (a, b) => {
 
 // Ordem de precedência no Tailwind: base < dark: < hover < dark:hover.
 const PRECEDENCIA = {
-  claro: { parado: [''], hover: ['', 'hover:enabled:'] },
+  claro: {
+    parado: [''],
+    hover: ['', 'hover:enabled:'],
+    foco: ['', 'focus-visible:'],
+  },
   escuro: {
     parado: ['', 'dark:'],
     hover: ['', 'dark:', 'hover:enabled:', 'dark:hover:enabled:'],
+    foco: ['', 'dark:', 'focus-visible:', 'dark:focus-visible:'],
   },
 };
 
@@ -92,7 +98,10 @@ describe('Button cheio: contraste AA do texto', () => {
   const ESTADOS = [
     ['parado', 'parado'],
     ['com o cursor em cima', 'hover'],
+    ['com foco do teclado', 'foco'],
   ];
+  // O cinza usa fundo translúcido (n-alpha-2) no hover e no foco do tema claro.
+  const TRANSLUCIDO_NO_CLARO = ['slate'];
 
   CORES.forEach(nomeDaCor => {
     const wrapper = mount(Button, {
@@ -108,9 +117,12 @@ describe('Button cheio: contraste AA do texto', () => {
           tema,
           tokensPorTema[tema]
         );
-        // Só o hover pode ficar de fora: o cinza usa fundo translúcido nele.
-        // Parado, a cor tem de vir de um token do painel (nada de hex solto).
-        if (estado === 'hover' && !fundo) return;
+        // Fora isso, a cor tem de vir de um token do painel (nada de hex solto).
+        const translucido =
+          tema === 'claro' &&
+          estado !== 'parado' &&
+          TRANSLUCIDO_NO_CLARO.includes(nomeDaCor);
+        if (translucido) return;
 
         it(`${nomeDaCor}, tema ${tema}, ${rotulo}: passa de 4,5:1`, () => {
           expect(fundo).toBeTruthy();
