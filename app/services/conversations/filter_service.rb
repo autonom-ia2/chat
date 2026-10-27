@@ -7,6 +7,8 @@ class Conversations::FilterService < FilterService
   end
 
   def perform
+    # Anúncio de origem (#2271): para quem não vê o anúncio, o filtro por campanha sai sem os ids de anúncio.
+    @params[:payload] = Crm::AnuncioDeOrigem::FiltroDeConversas.payload(@params[:payload], user: @user, account: @account)
     validate_query_operator
     @conversations = query_builder(@filters['conversations'])
     mine_count, unassigned_count, all_count, = set_count_for_all_conversations

@@ -227,8 +227,7 @@ class ActionCableListener < BaseListener
     # Useful in cases like conversation assignment for generating a notification with assigner name.
     payload[:performer] = Current.user&.push_event_data if Current.user.present?
 
-    # Anúncio de origem (#2271): quem não vê o anúncio recebe a conversa sem ele, num envio à parte.
-    Crm::AnuncioDeOrigem::TempoReal.transmite(account, tokens.uniq, event_name, payload)
+    ::ActionCableBroadcastJob.perform_later(tokens.uniq, event_name, payload)
   end
 end
 

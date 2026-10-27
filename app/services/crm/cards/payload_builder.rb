@@ -128,7 +128,7 @@ class Crm::Cards::PayloadBuilder
   # primary must not hide an authorized secondary that the same filters match.
   # Anúncio de origem (#2271): sem `meta_ads_view`, o toque de anúncio sai sem título, nomes, prévia e miniatura.
   def campaigns_payload
-    self.class.aggregated_campaigns_for(@card, conversation_visibility: visibility, ad_visible: Crm::AnuncioDeOrigem.ve?(@account_user))
+    self.class.aggregated_campaigns_for(@card, conversation_visibility: visibility, ad_visible: visibility.anuncio_visivel?)
   end
 
   # Typed AI summary surfaced to the card drawer. Gated on conversation

@@ -129,7 +129,7 @@ class Crm::Kanban::CardPayloadBuilder
   # Anúncio de origem (#2271): sem `meta_ads_view`, o toque de anúncio sai sem título, nomes, prévia e miniatura.
   def campaigns_payload
     Crm::Cards::PayloadBuilder.aggregated_campaigns_for(@card, conversation_visibility: @conversation_visibility,
-                                                               ad_visible: Crm::AnuncioDeOrigem.ve?(@account_user))
+                                                               ad_visible: @conversation_visibility.anuncio_visivel?)
   end
 
   def compact_contact

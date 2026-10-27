@@ -18,8 +18,7 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
         FILTER (WHERE COALESCE(elem ->> 'headline', '') <> ''))[1] AS headline,
       (ARRAY_AGG(elem ->> 'source' ORDER BY elem ->> 'touched_at' DESC NULLS LAST))[1] AS source,
       COUNT(DISTINCT conversations.id) AS conversations_count,
-      MAX(elem ->> 'touched_at') AS last_touch_at,
-      ((ARRAY_AGG(elem ORDER BY elem ->> 'touched_at' DESC NULLS LAST))[1])::text AS last_touch
+      MAX(elem ->> 'touched_at') AS last_touch_at
     FROM conversations
     CROSS JOIN LATERAL jsonb_array_elements(conversations.additional_attributes -> 'campaign_touches') AS elem
     WHERE conversations.account_id = ?
@@ -56,8 +55,7 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
     aggregation = format(AGGREGATION_SQL, visible_ids: visible_conversations.reorder(nil).select(:id).to_sql)
     sql = ActiveRecord::Base.sanitize_sql_array([aggregation, Current.account.id])
 
-    rows = ActiveRecord::Base.connection.select_all(sql).to_a
-    rows = rows.reject { |row| anuncio?(row) } unless ve_anuncios?
+    rows = without_hidden_ads(ActiveRecord::Base.connection.select_all(sql).to_a)
     rows.map do |row|
       {
         source_id: row['source_id'],
@@ -70,15 +68,14 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
   end
 
   # Anúncio de origem (#2271): a função personalizada sem meta_ads_view não recebe as linhas de anúncio (nome e id),
-  # aqui e no filtro de Conversas, que usa as mesmas opções. Divulgação, link e publicação continuam. Sem account_user
-  # (robô), segue inteiro, como antes. O anúncio é reconhecido pelo toque mais recente daquele id.
-  def ve_anuncios?
-    Current.account_user.blank? || Crm::AnuncioDeOrigem.ve?(Current.account_user)
-  end
+  # aqui e no filtro de Conversas, que usa as mesmas opções. Divulgação, link e publicação continuam; o robô e a chamada
+  # interna veem tudo. O id que foi anúncio em qualquer toque da conta conta como anúncio, como no filtro
+  # (Crm::AnuncioDeOrigem::Ids).
+  def without_hidden_ads(rows)
+    return rows if Crm::AnuncioDeOrigem.ve_no_contexto?(Current.user, Current.account_user)
 
-  def anuncio?(row)
-    toque = JSON.parse(row['last_touch'])
-    toque.is_a?(Hash) && Crm::AnuncioDeOrigem.fonte_de_anuncio(toque).present?
+    ads = Crm::AnuncioDeOrigem::Ids.de_anuncio(Current.account, rows.pluck('source_id'))
+    rows.reject { |row| ads.include?(row['source_id']) }
   end
 
   def include_origin_metrics?

@@ -169,16 +169,19 @@ module Crm::Cards::SharedFilters
   # Anúncio de origem (#2271): para a função personalizada sem meta_ads_view, os ids de anúncio saem do filtro (filtrar
   # por eles revelaria qual card veio de qual anúncio); os de divulgação (WhatsApp, e-mail, SMS) continuam filtrando.
   # Só com ids de anúncio, o filtro fica vazio e é ignorado, como o filtro por valor (#2075).
-  # Sem account_user (chamada interna, sem uma pessoa), o filtro segue inteiro.
+  # O robô e a chamada interna (Crm::AnuncioDeOrigem.ve_no_contexto?) filtram por tudo.
   def parse_campaign_source_ids
     ids = Array(@params[:campaign_source_ids].presence)
           .flat_map { |source_id| source_id.to_s.split(',') }
           .map(&:strip)
           .reject(&:blank?)
           .uniq
-    return ids if @account_user.blank? || Crm::AnuncioDeOrigem.ve?(@account_user)
+    @conversation_visibility.anuncio_visivel? ? ids : sem_ids_de_anuncio(ids)
+  end
 
-    ids - Crm::AnuncioDeOrigem.ids_de_anuncio(@account_user.account, ids)
+  def sem_ids_de_anuncio(ids)
+    account = @account_user&.account || @account
+    account ? ids - Crm::AnuncioDeOrigem::Ids.de_anuncio(account, ids) : []
   end
 
   # Valor de venda (#2075): sem `sales_value_view` o filtro por valor é ignorado, porque revelaria o valor. Também vale

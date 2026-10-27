@@ -35,7 +35,7 @@ class Api::V1::Accounts::CampaignJourney::ContactOriginsController < Api::V1::Ac
   def hide_ads?
     return @hide_ads if defined?(@hide_ads)
 
-    @hide_ads = Current.account_user.present? && !Crm::AnuncioDeOrigem.ve?(Current.account_user)
+    @hide_ads = !Crm::AnuncioDeOrigem.ve_no_contexto?(Current.user, Current.account_user)
   end
 
   # Same visibility the conversation list uses (Conversations::PermissionFilterService).

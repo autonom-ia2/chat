@@ -12,6 +12,13 @@ class Crm::Conversations::Visibility
     @full_contact = Crm::Cards::ContactReading.full?(user: @user, account_user: @account_user)
   end
 
+  # Anúncio de origem (#2271): quem lê (pessoa, robô ou chamada interna) vê o anúncio que trouxe o card?
+  def anuncio_visivel?
+    return @anuncio_visivel if defined?(@anuncio_visivel)
+
+    @anuncio_visivel = Crm::AnuncioDeOrigem.ve_no_contexto?(@user, @account_user)
+  end
+
   # Acesso por funil (#1148, parte C): o CRM passa pela mesma regra da lista de conversas.
   def visible?(conversation)
     return false unless base_visible?(conversation)

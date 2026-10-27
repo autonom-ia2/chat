@@ -2,23 +2,26 @@
 # Crm::ValorDeVenda.ve?) e da leitura de relacionamentos (Relationships::RecordPermissions): vê o administrador, o
 # agente sem função personalizada e a função com `meta_ads_view` ou `meta_ads_manage` (manage implica view,
 # Enterprise::AccountUser#permission_granted?). Só a função personalizada sem a chave deixa de ver: ela vê que o cliente
-# veio de anúncio, por onde e quando, como já acontece com o gasto.
+# veio de anúncio, por onde e quando, como já acontece com o gasto. Fora das pessoas, vê tudo o robô (token do AgentBot)
+# e a chamada interna, sem usuário (ve_no_contexto?). Contato e widget (token do contact_inbox) continuam recebendo o
+# próprio anúncio, como antes.
 #
 # "Anúncio" é o anúncio que trouxe o card, não só o da Meta: Google Ads e TikTok Ads ficam escondidos junto (decisão do
 # Rodrigo, 27/10). É de anúncio pelo `source` gravado ou pela regra de "pago" do próprio Ctwa::CampaignBuilder.source_for,
 # refeita sobre o toque sem origem, de link ou de publicação (pega o toque antigo). Visita do site com UTM fora de
 # `PAID_UTM_MEDIUMS` (ex.: utm_medium=ads) continua visita do site. Toque que não é anúncio (publicação, link do site,
-# divulgação por WhatsApp, e-mail, SMS ou chat do site) não muda.
+# divulgação por WhatsApp, e-mail, SMS ou chat do site) não muda. Um id que foi anúncio em qualquer toque conta como
+# anúncio (Crm::AnuncioDeOrigem::Ids).
 #
 # O toque de anúncio sai sem o que identifica o anúncio: título, texto, nomes de campanha/grupo/anúncio, prévia,
 # miniatura, endereço, UTMs, ids de clique e o id do anúncio. Fica a origem (`source`), `source_type` e `touched_at`
 # (no card, também `conversation_id`), com `ad_hidden: true`.
 #
-#   Crm::AnuncioDeOrigem.ve?(account_user)                 -> true | false
-#   Crm::AnuncioDeOrigem.para_quem_nao_ve(toque, item)     -> o item do card, sem o anúncio quando o toque é de anúncio
-#   Crm::AnuncioDeOrigem.atributos_para(account_user, attrs) -> additional_attributes da conversa como a pessoa pode ver
-#   Crm::AnuncioDeOrigem.oculta_toque(toque)               -> o toque gravado (chaves em texto), sem o anúncio
-#   Crm::AnuncioDeOrigem.ids_de_anuncio(account, ids)      -> os ids, dentre `ids`, que são de anúncio na conta
+#   Crm::AnuncioDeOrigem.ve?(account_user)                          -> a pessoa vê?
+#   Crm::AnuncioDeOrigem.ve_no_contexto?(user, account_user)        -> quem lê (pessoa, robô ou chamada interna) vê?
+#   Crm::AnuncioDeOrigem.para_quem_nao_ve(toque, item)              -> o item do card, sem o anúncio
+#   Crm::AnuncioDeOrigem.atributos_para(user, account_user, attrs)  -> additional_attributes da conversa como quem lê vê
+#   Crm::AnuncioDeOrigem.oculta_toque(toque)                        -> o toque gravado (chaves em texto), sem o anúncio
 #
 # O balão do referral na mensagem (content_attributes da MENSAGEM, WhatsappReferral.vue) fica como está.
 module Crm::AnuncioDeOrigem
@@ -29,22 +32,6 @@ module Crm::AnuncioDeOrigem
   # Origens em que a regra de "pago" é refeita sobre o toque: sem origem gravada, link e publicação.
   ORIGENS_REFEITAS = ['', 'tracked_link', Ctwa::CampaignBuilder::ORGANIC_SOURCE].freeze
 
-  # Os toques gravados (a lista e a origem) das conversas da conta com um dos ids. O espelho `campaign_source_ids` filtra
-  # primeiro, pelo índice trigram (mesma sonda do filtro do CRM).
-  TOQUES_SQL = <<~SQL.squish.freeze
-    SELECT DISTINCT toque::text
-    FROM conversations
-    CROSS JOIN LATERAL jsonb_array_elements(
-      (CASE WHEN jsonb_typeof(conversations.additional_attributes -> 'campaign_touches') = 'array'
-            THEN conversations.additional_attributes -> 'campaign_touches' ELSE '[]'::jsonb END) ||
-      (CASE WHEN jsonb_typeof(conversations.additional_attributes -> 'campaign') = 'object'
-            THEN jsonb_build_array(conversations.additional_attributes -> 'campaign') ELSE '[]'::jsonb END)
-    ) AS toque
-    WHERE conversations.account_id = :account_id
-      AND conversations.additional_attributes ->> 'campaign_source_ids' ILIKE ANY (ARRAY[:sondas])
-      AND toque ->> 'source_id' IN (:ids)
-  SQL
-
   module_function
 
   def ve?(account_user)
@@ -52,6 +39,15 @@ module Crm::AnuncioDeOrigem
     return true if account_user.administrator? || account_user.custom_role_id.blank?
 
     account_user.permission_granted?(CHAVE)
+  end
+
+  # Quem lê: a pessoa (User + AccountUser) segue ve?; o robô (AgentBot, token do robô) e a chamada interna (sem usuário
+  # nem account_user, como job e console) veem tudo. O mesmo para card, conversa, opções e filtros.
+  def ve_no_contexto?(user, account_user)
+    return true if user.nil? && account_user.nil?
+    return true if user.is_a?(AgentBot)
+
+    ve?(account_user)
   end
 
   # toque: o toque gravado na conversa (chaves em texto); item: o mesmo toque já no formato do card.
@@ -74,24 +70,23 @@ module Crm::AnuncioDeOrigem
 
   # additional_attributes da conversa (chaves em texto, como vêm do banco): para quem não vê, a origem (`campaign`), a
   # lista (`campaign_touches`) e o espelho de ids (`campaign_source_ids`) saem sem o anúncio. O resto não muda.
-  # Sem account_user, quem lê não é uma pessoa da conta (robô ou integração pelo token do robô, como o n8n): a regra é
-  # de função personalizada, e a resposta segue inteira, como antes.
-  def atributos_para(account_user, atributos)
-    return atributos unless atributos.is_a?(Hash) && com_toques?(atributos)
-    return atributos if account_user.blank? || ve?(account_user)
+  def atributos_para(user, account_user, atributos)
+    return atributos unless atributos.is_a?(Hash) && com_anuncio?(atributos)
+    return atributos if ve_no_contexto?(user, account_user)
 
     oculta_atributos(atributos)
   end
 
-  # O push_event_data da conversa (notificação): o mesmo, com os additional_attributes como a pessoa pode ver.
-  def evento_para(account_user, dados)
+  # O push_event_data da conversa (notificação): o mesmo, com os additional_attributes como quem lê vê.
+  def evento_para(user, account_user, dados)
     return dados unless dados.is_a?(Hash) && dados[:additional_attributes].is_a?(Hash)
 
-    dados.merge(additional_attributes: atributos_para(account_user, dados[:additional_attributes].stringify_keys))
+    dados.merge(additional_attributes: atributos_para(user, account_user, dados[:additional_attributes].stringify_keys))
   end
 
-  def com_toques?(atributos)
-    atributos.key?('campaign') || atributos.key?('campaign_touches')
+  # A conversa tem algum toque de anúncio? Sem ele não há nada a esconder (e o tempo real não consulta quem vê).
+  def com_anuncio?(atributos)
+    toques_de(atributos).any? { |toque| fonte_de_anuncio(toque) }
   end
 
   def oculta_atributos(atributos)
@@ -104,19 +99,11 @@ module Crm::AnuncioDeOrigem
   end
 
   def ids_de_anuncio_nos(atributos)
-    toques = Array(atributos['campaign_touches']) + [atributos['campaign']]
-    toques.select { |toque| toque.is_a?(Hash) && fonte_de_anuncio(toque) }.pluck('source_id')
+    toques_de(atributos).select { |toque| fonte_de_anuncio(toque) }.pluck('source_id')
   end
 
-  def ids_de_anuncio(account, ids)
-    return [] if ids.blank?
-
-    sondas = ids.map { |id| "%\"#{ActiveRecord::Base.sanitize_sql_like(id)}\"%" }
-    sql = ActiveRecord::Base.sanitize_sql_array([TOQUES_SQL, { account_id: account.id, sondas: sondas, ids: ids }])
-    ActiveRecord::Base.connection.select_values(sql).filter_map do |texto|
-      toque = JSON.parse(texto)
-      toque['source_id'] if fonte_de_anuncio(toque)
-    end.uniq
+  def toques_de(atributos)
+    (Array(atributos['campaign_touches']) + [atributos['campaign']]).select { |toque| toque.is_a?(Hash) }
   end
 
   # A origem de anúncio do toque, ou nil. Vale o `source` gravado e também a regra de hoje do próprio código para

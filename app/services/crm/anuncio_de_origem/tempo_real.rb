@@ -1,33 +1,28 @@
-# O tempo real da conversa (#2271): o mesmo evento vai a vários destinatários. Quando ele leva os toques de anúncio da
-# conversa e algum destinatário não vê o anúncio (Crm::AnuncioDeOrigem.ve?), o evento sai em dois envios: o inteiro para
-# quem vê e o sem o anúncio para quem não vê. Sem toque na conversa ou com todos vendo, sai num envio só, como antes.
+# O tempo real da conversa (#2271), aplicado no próprio ActionCableBroadcastJob, depois de ele buscar a conversa de novo
+# (prepare_broadcast_data): um ponto só cobre o ActionCableListener, o Crm::Access::VisibilitySync e qualquer outro
+# chamador. Quando o evento leva um toque de anúncio e algum destinatário não vê o anúncio (Crm::AnuncioDeOrigem.ve?), o
+# mesmo job entrega o evento inteiro a quem vê e o sem o anúncio a quem não vê. Sem toque de anúncio (a maioria, inclusive
+# digitando), não há consulta: um envio só, como antes.
 #
 # Onde o evento leva a conversa: na raiz (eventos da conversa), em `conversation` (digitando) e no `primary_actor` da
 # notificação. O token do contato (widget) não é de um usuário e recebe o evento inteiro, como antes.
 #
-#   Crm::AnuncioDeOrigem::TempoReal.envios(account, tokens, payload)              -> [[tokens, payload], ...]
-#   Crm::AnuncioDeOrigem::TempoReal.transmite(account, tokens, event_name, payload) -> um ActionCableBroadcastJob por envio
+#   Crm::AnuncioDeOrigem::TempoReal.envios(account_id, tokens, payload) -> [[tokens, payload], ...]
 class Crm::AnuncioDeOrigem::TempoReal
   CAMINHOS = [[], [:conversation], %i[notification primary_actor]].freeze
 
-  def self.envios(account, tokens, payload)
-    new(account, tokens, payload).envios
+  def self.envios(account_id, tokens, payload)
+    new(account_id, tokens, payload).envios
   end
 
-  def self.transmite(account, tokens, event_name, payload)
-    envios(account, tokens, payload).each do |destino, dados|
-      ::ActionCableBroadcastJob.perform_later(destino, event_name, dados)
-    end
-  end
-
-  def initialize(account, tokens, payload)
-    @account = account
+  def initialize(account_id, tokens, payload)
+    @account_id = account_id
     @tokens = tokens
     @payload = payload
   end
 
   def envios
-    return [[@tokens, @payload]] unless com_toques?
+    return [[@tokens, @payload]] unless @payload.is_a?(Hash) && com_anuncio?
 
     ocultos = tokens_que_nao_veem
     return [[@tokens, @payload]] if ocultos.empty?
@@ -37,10 +32,10 @@ class Crm::AnuncioDeOrigem::TempoReal
 
   private
 
-  def com_toques?
+  def com_anuncio?
     CAMINHOS.any? do |caminho|
       atributos = atributos_em(caminho)
-      atributos.is_a?(Hash) && Crm::AnuncioDeOrigem.com_toques?(atributos.stringify_keys)
+      atributos.is_a?(Hash) && Crm::AnuncioDeOrigem.com_anuncio?(atributos.stringify_keys)
     end
   end
 
@@ -49,30 +44,32 @@ class Crm::AnuncioDeOrigem::TempoReal
     alvo[:additional_attributes] if alvo.is_a?(Hash)
   end
 
+  # Usuário fora da conta (ou conta não achada) não vê. Token que não é de usuário (contato, widget) não entra aqui.
   def tokens_que_nao_veem
     usuarios = User.where(pubsub_token: @tokens).select(:id, :pubsub_token).to_a
     return [] if usuarios.empty?
 
-    membros = @account.account_users.where(user_id: usuarios.map(&:id)).index_by(&:user_id)
+    membros = AccountUser.where(account_id: @account_id, user_id: usuarios.map(&:id)).index_by(&:user_id)
     usuarios.reject { |usuario| Crm::AnuncioDeOrigem.ve?(membros[usuario.id]) }.map(&:pubsub_token)
   end
 
-  # Cópia só ao longo de cada caminho (sem deep_dup: o payload leva registros, como o contact_inbox, que o job serializa).
+  # Cópia só ao longo de cada caminho (sem deep_dup: o payload leva registros, como o contact_inbox).
   def payload_oculto
     CAMINHOS.reduce(@payload) { |payload, caminho| oculta_em(payload, caminho) }
   end
 
   def oculta_em(alvo, caminho)
     return alvo unless alvo.is_a?(Hash)
-
-    if caminho.empty?
-      atributos = alvo[:additional_attributes]
-      return alvo unless atributos.is_a?(Hash)
-
-      return alvo.merge(additional_attributes: Crm::AnuncioDeOrigem.oculta_atributos(atributos.stringify_keys))
-    end
+    return oculta_atributos_de(alvo) if caminho.empty?
 
     chave, *resto = caminho
     alvo.key?(chave) ? alvo.merge(chave => oculta_em(alvo[chave], resto)) : alvo
+  end
+
+  def oculta_atributos_de(alvo)
+    atributos = alvo[:additional_attributes]
+    return alvo unless atributos.is_a?(Hash)
+
+    alvo.merge(additional_attributes: Crm::AnuncioDeOrigem.oculta_atributos(atributos.stringify_keys))
   end
 end
