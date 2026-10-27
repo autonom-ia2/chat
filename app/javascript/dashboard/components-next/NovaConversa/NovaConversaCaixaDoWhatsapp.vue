@@ -6,14 +6,12 @@
 // (GravadorDoWhatsapp): lixeira cancela; a seta para a gravação, anexa como mensagem
 // de voz e envia, como na caixa de resposta. Se o envio não sair, a gravação fica na
 // caixa, com o player, para tentar de novo pelo Enviar.
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useAlert } from 'dashboard/composables';
+import { computed, nextTick, useTemplateRef } from 'vue';
 import AttachmentPreviews from 'dashboard/components-next/NewConversation/components/AttachmentPreviews.vue';
 import AvisoDeAssinatura from 'dashboard/components-next/conversa-canal/email/AvisoDeAssinatura.vue';
 import GravadorDoWhatsapp from 'dashboard/components-next/conversa-canal/GravadorDoWhatsapp.vue';
 import NovaConversaBarraDoWhatsapp from './NovaConversaBarraDoWhatsapp.vue';
-import { useAnexarNaNovaConversa } from './useAnexarNaNovaConversa';
+import { useVozNaNovaConversa } from './useVozNaNovaConversa';
 import { formatoDoAudio } from './novaConversa';
 
 defineProps({
@@ -28,9 +26,22 @@ const emit = defineEmits(['enviar']);
 const mensagem = defineModel('mensagem', { type: String, default: '' });
 const anexos = defineModel('anexos', { type: Array, default: () => [] });
 
-const { t } = useI18n();
 const campo = useTemplateRef('campo');
 const gravador = useTemplateRef('gravador');
+
+// A gravação: o mesmo gravador e o mesmo anexo de mensagem de voz da caixa de resposta.
+const {
+  vozes,
+  gravando,
+  duracao,
+  gravar,
+  cancelar,
+  enviarGravacao,
+  terminou,
+  semMicrofone,
+  falhou,
+  progresso,
+} = useVozNaNovaConversa({ anexos, gravador, aoAnexar: () => emit('enviar') });
 
 // O emoji entra no ponto do cursor, e o cursor fica logo depois dele.
 const inserir = async texto => {
@@ -44,7 +55,6 @@ const inserir = async texto => {
   campo.value?.setSelectionRange(depois, depois);
 };
 
-const vozes = computed(() => anexos.value.filter(item => item.isVoiceMessage));
 const arquivos = computed(() =>
   anexos.value.filter(item => !item.isVoiceMessage)
 );
@@ -54,50 +64,6 @@ const trocarArquivos = lista => {
 const tirarVoz = voz => {
   anexos.value = anexos.value.filter(item => item !== voz);
 };
-
-// A gravação: o mesmo gravador e o mesmo anexo de mensagem de voz da caixa de resposta.
-const gravando = ref(false);
-const duracao = ref('');
-const enviarAoAnexar = ref(false);
-const { onFileUpload } = useAnexarNaNovaConversa(anexos);
-
-const parar = () => {
-  gravando.value = false;
-  duracao.value = '';
-};
-const gravar = () => {
-  enviarAoAnexar.value = false;
-  gravando.value = true;
-};
-const cancelar = () => {
-  enviarAoAnexar.value = false;
-  parar();
-};
-const enviarGravacao = () => {
-  enviarAoAnexar.value = true;
-  gravador.value?.stopRecording();
-};
-const terminou = arquivo => {
-  parar();
-  if (arquivo) onFileUpload({ ...arquivo, isVoiceMessage: true });
-};
-const semMicrofone = () => {
-  cancelar();
-  useAlert(t('CONVERSA_CANAL.GRAVACAO.SEM_MICROFONE'));
-};
-const falhou = () => {
-  cancelar();
-  useAlert(t('CONVERSATION.REPLYBOX.AUDIO_CONVERSION_FAILED'));
-};
-// O anexo chega depois de lido (e enviado, com envio direto): só então a seta envia.
-watch(
-  () => vozes.value.length,
-  (agora, antes) => {
-    if (!enviarAoAnexar.value || agora <= antes) return;
-    enviarAoAnexar.value = false;
-    emit('enviar');
-  }
-);
 </script>
 
 <template>
@@ -179,7 +145,7 @@ watch(
             ref="gravador"
             :audio-record-format="formatoDoAudio(canal)"
             :duracao="duracao"
-            @recorder-progress-changed="tempo => (duracao = tempo)"
+            @recorder-progress-changed="progresso"
             @finish-record="terminou"
             @record-error="falhou"
             @mic-error="semMicrofone"

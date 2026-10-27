@@ -28,7 +28,8 @@ RSpec.describe 'Busca da lista de conversas', type: :request do
     expect(payload['conversations'].first).to include('waiting_since', 'last_non_activity_message', 'status')
     expect(payload['messages'].first).to include('content' => 'O João pediu a cotação', 'conversation_id' => kind_of(Integer))
     expect(payload['contacts'].pluck('name')).to eq(['Joana Sem Conversa'])
-    expect(payload).to include('telefone_novo' => nil, 'texto_livre_nas_caixas' => [], 'email_novo' => nil, 'parcial' => [])
+    expect(payload).to include('telefone_novo' => nil, 'texto_livre_nas_caixas' => [], 'email_novo' => nil,
+                               'caixas_para_comecar' => [], 'parcial' => [])
   end
 
   it 'com NUL no q, responde 200' do
@@ -52,6 +53,23 @@ RSpec.describe 'Busca da lista de conversas', type: :request do
       get url, params: { q: '21 99999-0000' }, headers: agent.create_new_auth_token, as: :json
     end
     expect(response.parsed_body['payload']).to include('telefone_novo' => '+5521999990000', 'texto_livre_nas_caixas' => [canal.inbox.id])
+  end
+
+  # O create da conversa pede InboxPolicy#show?: a caixa que inbox_view mostra sem ser membro não vem (#2211).
+  it 'com telefone ou e-mail novo, diz em quais caixas dá para começar conversa' do
+    alheia = create(:inbox, account: account)
+    funcao = create(:custom_role, account: account, permissions: %w[conversation_manage contact_manage inbox_view])
+    agent.account_users.find_by!(account: account).update!(custom_role: funcao)
+    admin = create(:user, account: account, role: :administrator)
+
+    get url, params: { q: '21 99999-0000' }, headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['payload']['caixas_para_comecar']).to eq([inbox.id])
+    get url, params: { q: 'nova@example.test' }, headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['payload']['caixas_para_comecar']).to eq([inbox.id])
+    get url, params: { q: 'nova@example.test' }, headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body['payload']['caixas_para_comecar']).to eq([inbox.id, alheia.id])
+    get url, params: { q: 'joa' }, headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body['payload']['caixas_para_comecar']).to eq([])
   end
 
   it 'com um e-mail que ninguém tem, oferece o e-mail em minúsculas' do

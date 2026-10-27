@@ -61,8 +61,9 @@ const chat = (extras = {}) => ({
   ...extras,
 });
 
-const montar = (props = {}) =>
+const montar = (props = {}, provide = {}, opcoes = {}) =>
   mount(CardDaConversa, {
+    ...opcoes,
     props: {
       chat: chat(),
       currentContact: { name: 'Marina Costa' },
@@ -80,6 +81,7 @@ const montar = (props = {}) =>
         criarI18n({ CHAT_LIST: { NO_MESSAGES: 'Sem mensagens' } }),
       ],
       stubs: { CustomerBadge: true },
+      provide,
     },
   });
 
@@ -207,5 +209,35 @@ describe('CardDaConversa (#2202)', () => {
     );
     expect(aberto.classes()).toContain('text-n-amber-12');
     expect(aberto.classes()).not.toContain('text-n-amber-11');
+  });
+
+  describe('no resultado da busca (#2211)', () => {
+    it('sem a caixa de seleção, mesmo marcada', () => {
+      const naLista = montar({ selected: true });
+      expect(naLista.find('input[type="checkbox"]').exists()).toBe(true);
+      const naBusca = montar({ selected: true }, { cardNaBusca: true });
+      expect(naBusca.find('input[type="checkbox"]').exists()).toBe(false);
+    });
+
+    it('o card é um botão nativo (Tab chega, Enter e Espaço abrem) e o clique dele abre a conversa', async () => {
+      const wrapper = montar(
+        {},
+        { cardNaBusca: true },
+        { attachTo: document.body }
+      );
+      const botao = wrapper.find('[data-card-texto]');
+      // Na ordem do Tab: botão habilitado, sem tabindex negativo, nada escondido em volta.
+      expect(botao.element.disabled).toBe(false);
+      expect(botao.element.closest('[aria-hidden="true"], [inert]')).toBeNull();
+      botao.element.focus();
+      expect(document.activeElement).toBe(botao.element);
+      // Enter e Espaço num <button> o navegador transforma em clique (o jsdom não simula essa
+      // ativação; a jornada da demo aperta Tab e Enter de verdade).
+      expect(botao.element.tagName).toBe('BUTTON');
+      expect(botao.attributes('type')).toBe('button');
+      expect(botao.attributes('tabindex')).toBeUndefined();
+      await botao.trigger('click');
+      expect(wrapper.emitted('click')).toHaveLength(1);
+    });
   });
 });

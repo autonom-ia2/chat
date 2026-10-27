@@ -180,6 +180,37 @@ describe('citação com a pele', () => {
     expect(mensagemDestacada.value).toBe(10);
   });
 
+  // #2211: a busca da lista abre a conversa com ?messageId=; o pedido chega enquanto a
+  // conversa ainda abre (a faixa não está pronta) e não pode se perder.
+  it('pedido que chega com a conversa ainda abrindo: abre e vai à mensagem', async () => {
+    const ctx = contexto({
+      mensagens: [daLoja(50, 0, 900)],
+      maisAntigas: [[daLoja(10, 0, 800)], [daLoja(30, 0, 850)]],
+    });
+    const linha = comMensagemNaTela(10);
+    const abrindo = ctx.rolarNaPele();
+    await ctx.rolarNaPele(10);
+    await abrindo;
+    expect(linha.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    expect(mensagemDestacada.value).toBe(10);
+    // Quem já abria pôs no fim; a ida à mensagem vem depois e é onde a tela fica.
+    const [paraOFim = 0] = ctx.scrollToBottom.mock.invocationCallOrder;
+    expect(linha.scrollIntoView.mock.invocationCallOrder[0]).toBeGreaterThan(
+      paraOFim
+    );
+  });
+
+  it('pedido de outra conversa não vale para esta', async () => {
+    const ctx = contexto({ mensagens: [daLoja(7, 0, 900)] });
+    const linha = comMensagemNaTela(7);
+    ctx.citadaPendente = { conversaId: 99, id: 7 };
+    await ctx.rolarNaPele();
+    expect(linha.scrollIntoView).not.toHaveBeenCalled();
+  });
+
   it('já na tela: só rola e destaca', async () => {
     const ctx = contexto({ mensagens: [daLoja(7, 0, 900)] });
     await ctx.rolarNaPele();

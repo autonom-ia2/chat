@@ -11,6 +11,11 @@ import CmdBarConversationSnooze from 'dashboard/routes/dashboard/commands/CmdBar
 import { emitter } from 'shared/helpers/mitt';
 import SidepanelSwitch from 'dashboard/components-next/Conversation/SidepanelSwitch.vue';
 import ConversationSidebar from 'dashboard/components/widgets/conversation/ConversationSidebar.vue';
+import { useWindowSize } from '@vueuse/core';
+import ConversaVazia from 'dashboard/components-next/Conversation/ListaDeConversas/busca/ConversaVazia.vue';
+import { pedidoDeConversaVazia } from 'dashboard/components-next/Conversation/ListaDeConversas/busca/caixasDaConversaVazia';
+import { usePodeComecarConversa } from 'dashboard/components-next/NovaConversa/usePodeComecarConversa';
+import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 
 export default {
   components: {
@@ -19,6 +24,7 @@ export default {
     CmdBarConversationSnooze,
     SidepanelSwitch,
     ConversationSidebar,
+    ConversaVazia,
   },
   beforeRouteLeave(to, from, next) {
     // Clear selected state if navigating away from a conversation to a route without a conversationId to prevent stale data issues
@@ -58,6 +64,11 @@ export default {
     const { uiSettings, updateUISettings } = useUISettings();
     // #2202: com a lista nova, o layout é sempre o condensado (a preferência salva fica como está).
     const isOnExpandedLayout = useLayoutExpandidoDaLista();
+    // #2211: a conversa vazia pelo resultado da busca da lista (?comecar=<contato> ou
+    // ?telefone=<número novo> ou ?email=<e-mail novo>). Quem só lê conversas (#1800) não começa conversa.
+    const listaNova = useListaNova();
+    const podeComecar = usePodeComecarConversa();
+    const { width: larguraDaJanela } = useWindowSize();
     const { accountId } = useAccount();
 
     return {
@@ -65,6 +76,9 @@ export default {
       updateUISettings,
       isOnExpandedLayout,
       accountId,
+      listaNova,
+      podeComecar,
+      larguraDaJanela,
     };
   },
   data() {
@@ -77,7 +91,18 @@ export default {
       chatList: 'getAllConversations',
       currentChat: 'getSelectedChat',
     }),
+    conversaVazia() {
+      if (!this.listaNova || !this.podeComecar || this.conversationId) {
+        return null;
+      }
+      return pedidoDeConversaVazia(this.$route.query);
+    },
+    noCelular() {
+      return this.larguraDaJanela < wootConstants.SMALL_SCREEN_BREAKPOINT;
+    },
     showConversationList() {
+      // No celular, a conversa vazia ocupa a tela; o "Voltar" traz a lista de volta como estava.
+      if (this.conversaVazia && this.noCelular) return false;
       return this.isOnExpandedLayout ? !this.conversationId : true;
     },
     showMessageView() {
@@ -183,6 +208,10 @@ export default {
         this.$store.dispatch('clearSelectedState');
       }
     },
+    voltarDaConversaNova() {
+      const { comecar, telefone, email, livre, ...resto } = this.$route.query;
+      this.$router.replace({ query: resto });
+    },
     onSearch() {
       this.showSearchModal = true;
     },
@@ -205,8 +234,17 @@ export default {
       :is-on-expanded-layout="isOnExpandedLayout"
       @conversation-load="onConversationLoad"
     />
+    <ConversaVazia
+      v-if="conversaVazia"
+      :contato-id="conversaVazia.contatoId"
+      :telefone="conversaVazia.telefone"
+      :email="conversaVazia.email"
+      :caixas-livres="conversaVazia.caixasLivres"
+      :caixas-permitidas="conversaVazia.caixasPermitidas"
+      @voltar="voltarDaConversaNova"
+    />
     <ConversationBox
-      v-if="showMessageView"
+      v-else-if="showMessageView"
       :inbox-id="inboxId"
       :is-on-expanded-layout="isOnExpandedLayout"
     >
