@@ -91,7 +91,8 @@ class Instagram::Testers::OauthBinding
   end
 
   def self.valid_reauthorization?(payload)
-    return true unless payload.key?('inbox_id')
+    # Sem caixa é conexão nova; a volta para Anúncios da Meta só existe reautorizando uma caixa (#2199/#2196).
+    return payload['return_to'] != 'meta_ads' unless payload.key?('inbox_id')
 
     payload['inbox_id'].is_a?(Integer) && payload['inbox_id'].positive? &&
       Instagram::Testers::Validation.id?(payload['instagram_id']) &&
