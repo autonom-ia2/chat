@@ -1407,6 +1407,8 @@ Rails.application.routes.draw do
 
   # ----------------------------------------------------------------------
   # Routes for channel integrations
+  # #2200: o POST do webhook de Página passa pelo nosso controller (leadgen, feed, repasse); o GET de verificação fica na gem.
+  post 'bot', to: 'webhooks/facebook_page#events'
   mount Facebook::Messenger::Server, at: 'bot'
   get 'webhooks/twitter', to: 'api/v1/webhooks#twitter_crc'
   post 'webhooks/twitter', to: 'api/v1/webhooks#twitter_events'
