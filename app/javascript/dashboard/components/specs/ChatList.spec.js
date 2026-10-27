@@ -9,7 +9,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 // aviso de lista vazia são os de sempre.
 const Vazio = { render: () => null };
 
-const montar = async ({ chaveLigada, status = 'open' }) => {
+const montar = async ({ chaveLigada, status = 'open', filtros = [] }) => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/app/accounts/:accountId/dashboard', name: 'home' }].map(
@@ -30,7 +30,7 @@ const montar = async ({ chaveLigada, status = 'open' }) => {
     getChatListLoadingStatus: () => false,
     getSelectedInbox: () => null,
     'conversationStats/getStats': () => ({}),
-    getAppliedConversationFiltersV2: () => [],
+    getAppliedConversationFiltersV2: () => filtros,
     getAppliedContactFilter: () => null,
     'customViews/getConversationCustomViews': () => [],
     'customViews/getActiveFolderContactId': () => null,
@@ -135,5 +135,16 @@ describe('ChatList com a chave lista_quem_espera (#2202)', () => {
     expect(wrapper.findComponent({ name: 'ListaAbas' }).props('painelId')).toBe(
       'lista-de-conversas-painel'
     );
+  });
+
+  it('ligada com filtro avançado (sem as abas novas): a lista não é tabpanel', async () => {
+    const wrapper = await montar({
+      chaveLigada: true,
+      filtros: [{ attributeKey: 'status', values: ['open'] }],
+    });
+    const lista = wrapper.findComponent({ name: 'ConversationList' });
+    expect(wrapper.findComponent({ name: 'ListaAbas' }).exists()).toBe(false);
+    expect(lista.attributes('role')).toBeUndefined();
+    expect(lista.attributes('aria-labelledby')).toBeUndefined();
   });
 });

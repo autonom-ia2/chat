@@ -395,6 +395,13 @@ const mostraChipDoStatus = computed(
 const voltarParaAbertas = () => cabecalhoNovo.value?.voltarParaAbertas();
 // O painel que as abas da lista nova controlam (aria-controls).
 const PAINEL_DA_LISTA = 'lista-de-conversas-painel';
+// A lista só é o painel das abas quando as abas novas aparecem.
+const listaComAbas = computed(
+  () =>
+    listaNova.value &&
+    !hasAppliedFiltersOrActiveFolders.value &&
+    !listaJuntaDoLink.value
+);
 const VAZIA_POR_ABA = { me: 'MINHAS', unassigned: 'PARA_PEGAR', all: 'TODAS' };
 // A lista vazia fala do status antes da aba: em "Pendentes", não adianta dizer "nada para pegar".
 const VAZIA_POR_STATUS = {
@@ -1232,8 +1239,8 @@ watch(appliedFilters, () => resetBulkActions());
     <ConversationList
       :id="listaNova ? PAINEL_DA_LISTA : undefined"
       ref="conversationListComponentRef"
-      :role="listaNova ? 'tabpanel' : undefined"
-      :aria-labelledby="listaNova ? `lista-aba-${abaDaLista}` : undefined"
+      :role="listaComAbas ? 'tabpanel' : undefined"
+      :aria-labelledby="listaComAbas ? `lista-aba-${abaDaLista}` : undefined"
       :conversation-list="conversationList"
       :is-loading="chatListLoading"
       :show-end-of-list-message="showEndOfListMessage"
