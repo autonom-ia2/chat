@@ -51,7 +51,10 @@ import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
 import { trimContent, debounce, getRecipients } from '@chatwoot/utils';
 import { semQuemSaiuDaCopia } from 'dashboard/helper/semQuemSaiuDaCopia';
-import { humanAssigneeId } from 'dashboard/helper/assigneeHelper';
+import {
+  humanAssigneeId,
+  isAssignedToUser,
+} from 'dashboard/helper/assigneeHelper';
 import wootConstants from 'dashboard/constants/globals';
 import {
   extractQuotedEmailText,
@@ -1296,10 +1299,7 @@ export default {
     },
     async relerSeODonoNaoChegou(conversationId) {
       const conversa = this.$store.getters.getConversationById(conversationId);
-      const meta = conversa?.meta;
-      const jaEMinha =
-        meta?.assignee_type === 'User' &&
-        meta?.assignee?.id === this.currentUser?.id;
+      const jaEMinha = isAssignedToUser(conversa, this.currentUser?.id);
       if (!conversationId || jaEMinha) return;
       try {
         await this.$store.dispatch('getConversation', conversationId);

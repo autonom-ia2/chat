@@ -15,6 +15,7 @@ import ConversationApi from 'dashboard/api/inbox/conversation';
 import PassarParaAPI from 'dashboard/api/passarPara';
 import { useAlert } from 'dashboard/composables';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { isAssignedToUser } from 'dashboard/helper/assigneeHelper';
 
 const props = defineProps({
   conversation: { type: Object, required: true },
@@ -50,16 +51,12 @@ const veioDe = computed(() =>
     ? t('CONVERSA_CANAL.DEVOLVER.VEIO_DE', { nome: ia.value.name })
     : t('CONVERSA_CANAL.DEVOLVER.VEIO_DA_IA')
 );
-const visivel = computed(() => {
-  const meta = props.conversation?.meta;
-  return (
+const visivel = computed(
+  () =>
     ligado.value &&
-    meta?.assignee_type === 'User' &&
-    Boolean(eu.value?.id) &&
-    meta?.assignee?.id === eu.value.id &&
+    isAssignedToUser(props.conversation, eu.value?.id) &&
     Boolean(ia.value?.id)
-  );
-});
+);
 
 const devolverPeloPassarPara = async conversationId => {
   const { data } = await PassarParaAPI.passar(conversationId, {

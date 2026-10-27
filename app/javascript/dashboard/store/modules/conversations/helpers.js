@@ -1,5 +1,5 @@
 import { CONVERSATION_PRIORITY_ORDER } from 'shared/constants/messages';
-import { isAssignedToUser as isAssignedToPerson } from 'dashboard/helper/assigneeHelper';
+import { isAssignedToUser } from 'dashboard/helper/assigneeHelper';
 
 export const findPendingMessageIndex = (chat, message) => {
   const { echo_id: tempMessageId } = message;
@@ -155,16 +155,16 @@ export const canOperateConversation = (
   }
 
   // Só a pessoa responsável: AgentBot e Captain::Assistant com o mesmo id não contam (#2249).
-  const isAssignedToUser = isAssignedToPerson(conversation, currentUserId);
+  const souOResponsavel = isAssignedToUser(conversation, currentUserId);
 
   // Check unassigned management permission
   if (permissions.includes('conversation_unassigned_manage')) {
-    return isAwaitingPerson(conversation) || isAssignedToUser;
+    return isAwaitingPerson(conversation) || souOResponsavel;
   }
 
   // Check participating conversation management permission
   if (permissions.includes('conversation_participating_manage')) {
-    return isAssignedToUser || isParticipant;
+    return souOResponsavel || isParticipant;
   }
 
   return false;

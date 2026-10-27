@@ -97,12 +97,12 @@ const wasDeclinedByAgent = computed(
     endReason.value === VOICE_CALL_END_REASON.AGENT_REJECTED
 );
 const acceptedByAgentId = computed(() => call.value?.acceptedByAgentId);
-const conversationAssignee = computed(() => {
-  const conversation = store.getters.getConversationById?.(
-    conversationId?.value
-  );
-  return conversation?.meta?.assignee || null;
-});
+const conversation = computed(() =>
+  store.getters.getConversationById?.(conversationId?.value)
+);
+const conversationAssignee = computed(
+  () => conversation.value?.meta?.assignee || null
+);
 const displayAgentName = computed(() => {
   if (call.value?.acceptedByAgentName) return call.value.acceptedByAgentName;
   if (acceptedByAgentId.value) {
@@ -217,9 +217,7 @@ const canJoinCall = computed(() => {
   if (hasActiveCall.value && activeCall.value?.callSid === callSid.value)
     return false;
   // Só pessoa: robô responsável com outro id não é "outro agente" (#2249).
-  const assigneeId = humanAssigneeId(
-    store.getters.getConversationById?.(conversationId?.value)
-  );
+  const assigneeId = humanAssigneeId(conversation.value);
   if (assigneeId && assigneeId !== currentUserId.value) return false;
   return true;
 });
