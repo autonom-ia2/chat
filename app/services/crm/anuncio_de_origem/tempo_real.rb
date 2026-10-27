@@ -8,7 +8,7 @@
 # notificação. O token do contato (widget) não é de um usuário e recebe o evento inteiro, como antes.
 #
 # Se o recorte falhar (exceção), o evento nunca sai inteiro para uma pessoa e o job não deixa de enviar; o erro vai para
-# o log e para o ChatwootExceptionTracker:
+# o log e para o ChatwootExceptionTracker (só a classe e o stack):
 # - os tokens de pessoa recebem a conversa sem o anúncio; o de contato e widget, a conversa inteira;
 # - se nem isso der para saber, todos recebem sem o anúncio;
 # - se esconder o anúncio também falhar, a conversa sai sem os campos de campanha (campaign, campaign_touches e
@@ -56,12 +56,14 @@ class Crm::AnuncioDeOrigem::TempoReal
     [[@tokens, payload_seguro]]
   end
 
-  # Os logs de produção somem e o Sentry pode estar desligado: vai para os dois. A mensagem é a da exceção (banco,
-  # conexão), sem o payload da conversa.
+  # Os logs de produção somem e o Sentry pode estar desligado: vai para os dois. Só a classe e o stack, nunca a mensagem
+  # original (pode trazer o SQL com os pubsub_token; Crm::AnuncioDeOrigem::FalhaNoRecorte).
   def registra(erro)
-    Rails.logger.error("[anuncio_de_origem] tempo real sem o recorte por destinatário (account #{@account_id}): " \
-                       "#{erro.class.name}: #{erro.message.to_s.truncate(300)}")
-    ChatwootExceptionTracker.new(erro, account: conta_do_evento).capture_exception
+    Rails.logger.error("[anuncio_de_origem] tempo real sem o recorte por destinatário (account #{@account_id}): #{erro.class.name}")
+    ChatwootExceptionTracker.new(Crm::AnuncioDeOrigem::FalhaNoRecorte.de(erro), account: conta_do_evento).capture_exception
+  rescue StandardError
+    # Já estamos no caminho de erro: registrar não pode impedir o envio.
+    nil
   end
 
   def conta_do_evento

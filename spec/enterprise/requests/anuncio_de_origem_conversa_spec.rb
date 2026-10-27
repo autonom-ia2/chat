@@ -239,27 +239,51 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
     describe 'recorte que falha' do
       def contato_token = conversa_anuncio.contact_inbox.pubsub_token
 
+      def logados = (@logados ||= [])
+
       def enviar
-        allow(Rails.logger).to receive(:error)
+        allow(Rails.logger).to receive(:error) { |mensagem = nil| logados << mensagem.to_s }
         entregas do
           ActionCableBroadcastJob.perform_now(tokens + [contato_token], Events::Types::CONVERSATION_UPDATED,
                                               { id: conversa_anuncio.display_id, account_id: account.id })
         end
       end
 
-      it 'ao achar quem vê: as pessoas recebem sem o anúncio, o contato inteiro, e o erro vai para o log e o rastreador' do
-        allow(AccountUser).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished, 'sem conexão')
+      # A mensagem original pode trazer o SQL com os pubsub_token: nem o log nem o rastreador a recebem.
+      def erro_com_marcador
+        ActiveRecord::StatementInvalid.new('SELECT ... WHERE pubsub_token IN (MARCADOR-TOKEN-SECRETO)').tap do |erro|
+          erro.set_backtrace(['linha-original.rb:1'])
+        end
+      end
+
+      it 'ao achar quem vê: as pessoas recebem sem o anúncio, o contato inteiro; log e rastreador sem a mensagem original' do
+        allow(AccountUser).to receive(:where).and_raise(erro_com_marcador)
         allow(ChatwootExceptionTracker).to receive(:new).and_call_original
         recebidos = enviar
-        expect(ChatwootExceptionTracker).to have_received(:new).with(instance_of(ActiveRecord::ConnectionNotEstablished), account: account)
-        expect(Rails.logger).to have_received(:error).with(include('ActiveRecord::ConnectionNotEstablished: sem conexão'))
+
+        expect(ChatwootExceptionTracker).to have_received(:new).with(
+          an_instance_of(Crm::AnuncioDeOrigem::FalhaNoRecorte).and(
+            having_attributes(message: 'ActiveRecord::StatementInvalid no recorte por destinatário', backtrace: ['linha-original.rb:1'])
+          ),
+          account: account
+        )
+        expect(logados.join).not_to include('MARCADOR')
+        expect(logados.join).to include('ActiveRecord::StatementInvalid')
 
         tokens.each do |token|
           expect(recebidos.fetch(token).sole[:additional_attributes]).to include(atributos_oculto)
           expect(recebidos.fetch(token).sole.to_json).not_to include(*fora_do_referral)
         end
         expect(recebidos.fetch(contato_token).sole[:additional_attributes]['campaign_touches'].first).to eq(toque_anuncio)
-        expect(Rails.logger).to have_received(:error).with(include('ActiveRecord::ConnectionNotEstablished'))
+      end
+
+      it 'se o rastreador também falhar, o evento continua saindo sem o anúncio para as pessoas' do
+        allow(AccountUser).to receive(:where).and_raise(erro_com_marcador)
+        allow(ChatwootExceptionTracker).to receive(:new).and_raise(RuntimeError)
+        recebidos = enviar
+
+        tokens.each { |token| expect(recebidos.fetch(token).sole[:additional_attributes]).to include(atributos_oculto) }
+        expect(recebidos.fetch(contato_token).sole[:additional_attributes]['campaign_touches'].first).to eq(toque_anuncio)
       end
 
       it 'sem saber nem quem é pessoa: todos recebem sem o anúncio' do
