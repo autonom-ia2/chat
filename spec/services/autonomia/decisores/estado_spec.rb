@@ -76,6 +76,22 @@ RSpec.describe Autonomia::Decisores::Estado do
     expect(estado(%w[conversa]).para_o_jev(decisor)[:conversation]).to include(inbox: 'WhatsApp Vendas', labels: ['frota'])
   end
 
+  # MOTIVO (#2195): as respostas do formulário do anúncio ficam dentro do metadata do card, num nível abaixo, e trazem
+  # telefone e e-mail; o Jev recebe a origem (formulário e anúncio), sem as respostas.
+  it 'card que veio do formulário do anúncio: vai a origem, sem as respostas' do
+    admin = create(:user, account: account)
+    pipeline, stage = create_crm_pipeline(account: account, user: admin, name: 'Auto')
+    origem = { 'form_name' => 'Orçamento', 'ad_name' => 'Carrossel',
+               'fields' => [{ 'key' => 'phone_number', 'value' => '+5511988887777' }, { 'key' => 'email', 'value' => 'joana@cliente.com' }] }
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, title: 'Joana', metadata: { 'meta_lead_form' => origem })
+
+    lido = described_class.new(card: card, leituras: %w[card]).para_o_jev(decisor)
+
+    expect(lido[:card][:metadata]['meta_lead_form']).to include('Orçamento')
+    expect(lido.to_json).not_to include('988887777')
+    expect(lido.to_json).not_to include('joana@cliente.com')
+  end
+
   it 'mensagens com respostas leem os dois lados, marcados; a última mensagem é a que disparou' do
     mensagem('Fui mal atendido')
     disparo = mensagem('Vou cancelar', :outgoing)

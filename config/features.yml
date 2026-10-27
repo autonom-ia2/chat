@@ -936,3 +936,15 @@
   display_name: Conversas › leitura no celular apaga a bolinha
   enabled: false
   column: feature_flags_ext_2
+
+# Anúncios da Meta › Formulários (#2195). Ligada: a aba Formulários mostra as Páginas que a pessoa concedeu ao entrar com
+# o Facebook e os formulários instantâneos de cada uma; escolher o funil e a etapa de um formulário liga o recebimento
+# da Página (assina o campo leadgen, pages_manage_metadata), e quem preenche vira contato e card ali, com o anúncio de
+# origem e as respostas no card (leads_retrieval). Também traz quem preencheu nos últimos 90 dias. Desligada: a aba
+# some, a API responde 404 e o webhook leadgen não cria nada. Com migration (20261108590000). Fim da
+# feature_flags_ext_2: posição 7 (valor 64, 1 << 6), depois da leitura_no_celular (#2246), que chegou antes à main
+# (27/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+- name: meta_ads_formularios
+  display_name: Anúncios da Meta › Formulários (leads no funil)
+  enabled: false
+  column: feature_flags_ext_2

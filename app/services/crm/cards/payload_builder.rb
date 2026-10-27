@@ -68,6 +68,7 @@ class Crm::Cards::PayloadBuilder
     ATTRIBUTES.index_with { |attribute| @card.public_send(attribute) }
               .merge(timestamp_payload)
               .tap { |payload| sanitize_hidden_conversation!(payload) }
+              .tap { |payload| sanitize_lead_form_answers!(payload) }
               .tap { |payload| append_nested_payloads(payload) }
               .tap { |payload| Crm::ValorDeVenda.oculta_card!(payload) unless value_visible? }
   end
@@ -77,6 +78,11 @@ class Crm::Cards::PayloadBuilder
   # Valor de venda (#2075): sem `sales_value_view`, o card sai sem value_cents, menos o card de que a pessoa é dona.
   def value_visible?
     Crm::ValorDeVenda.ve_o_card?(@account_user, @card)
+  end
+
+  # Respostas do formulário do anúncio da Meta (#2195) trazem nome, telefone e e-mail: só para quem vê o contato inteiro.
+  def sanitize_lead_form_answers!(payload)
+    payload[:metadata] = Crm::MetaAds::LeadForms::Answers.without(payload[:metadata]) unless full_contact?
   end
 
   def sanitize_hidden_conversation!(payload)
