@@ -16,6 +16,7 @@ import { useCallActions } from 'dashboard/composables/useCallSession';
 import { useWhatsappCallSession } from 'dashboard/composables/useWhatsappCallSession';
 import { useCallsStore } from 'dashboard/stores/calls';
 import { VOICE_CALL_PROVIDERS } from 'dashboard/helper/inbox';
+import { humanAssigneeId } from 'dashboard/helper/assigneeHelper';
 import { formatDuration } from 'shared/helpers/timeHelper';
 import { useAlert } from 'dashboard/composables';
 
@@ -215,8 +216,11 @@ const canJoinCall = computed(() => {
   if (!callSid.value || !inboxId.value || !conversationId.value) return false;
   if (hasActiveCall.value && activeCall.value?.callSid === callSid.value)
     return false;
-  const assignee = conversationAssignee.value;
-  if (assignee?.id && assignee.id !== currentUserId.value) return false;
+  // Só pessoa: robô responsável com outro id não é "outro agente" (#2249).
+  const assigneeId = humanAssigneeId(
+    store.getters.getConversationById?.(conversationId?.value)
+  );
+  if (assigneeId && assigneeId !== currentUserId.value) return false;
   return true;
 });
 

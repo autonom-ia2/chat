@@ -83,6 +83,7 @@ import {
   filterItemsByPermission,
 } from 'dashboard/helper/permissionsHelper.js';
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
+import { isAssignedToUser } from 'dashboard/helper/assigneeHelper';
 import {
   sortComparator,
   filterPeloFiltroDoLink,
@@ -493,8 +494,8 @@ const pageTitle = computed(() => {
 
 function filterByAssigneeTab(conversations) {
   if (abaDaLista.value === wootConstants.ASSIGNEE_TYPE.ME) {
-    return conversations.filter(
-      c => c.meta?.assignee?.id === currentUser.value?.id
+    return conversations.filter(c =>
+      isAssignedToUser(c, currentUser.value?.id)
     );
   }
   if (abaDaLista.value === wootConstants.ASSIGNEE_TYPE.UNASSIGNED) {
