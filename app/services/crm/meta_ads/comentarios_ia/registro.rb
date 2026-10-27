@@ -4,9 +4,10 @@
 # Duas ações são únicas por comentário (índice único parcial do #2196) e servem de reivindicação, gravadas ANTES:
 # - `ai_seen`, antes do Jev: o webhook que a Meta reenvia, ou outro job do mesmo comentário, sai sem gastar nada. Com
 #   ela, só um job cuida de cada comentário, e as outras ações saem uma vez só;
-# - `private_reply`, antes da Meta, como no #2196; se a Meta recusa, a linha sai (soltar!). Quando a Meta aceita, o
-#   adaptador confirma a linha (`confirm!`). Sem resposta da Meta, a linha fica sem confirmação e nunca sai: a Meta
-#   pode ter entregado, e um segundo envio seria privado duplicado.
+# - `private_reply`, antes da Meta, com os estados do #2196 (docs/meta/comentarios-instagram.md): reservado
+#   (record!), `attempt!` logo antes da chamada, `confirm!` quando a Meta aceita. Recusa 4xx: a linha sai (soltar!).
+#   Sem resposta ou 5xx: a linha fica sem confirmação e travada, porque a Meta pode ter entregado. A reserva que nunca
+#   chegou à chamada vence em Crm::MetaAdsCommentAction::RESERVED_TTL e sai antes da próxima (soltar_abandonada!).
 # As outras são registro do que já aconteceu, gravadas depois (gravar!).
 #
 # Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
@@ -42,6 +43,13 @@ module Crm::MetaAds::ComentariosIa::Registro
   def gravar!(comentario, acao, conversation: nil)
     registrar!(comentario, acao, conversation: conversation)
     true
+  end
+
+  # A reserva do privado cuja chamada nunca saiu (o processo morreu antes), de qualquer autor, como no #2196.
+  def soltar_abandonada!(comentario)
+    Crm::MetaAdsCommentAction.where(account_id: comentario.account_id, network: comentario.network, comment_id: comentario.comment_id,
+                                    action: 'private_reply', attempted_at: nil, confirmed_at: nil)
+                             .where(at: ...Crm::MetaAdsCommentAction::RESERVED_TTL.ago).delete_all
   end
 
   def registrar!(comentario, acao, conversation: nil)

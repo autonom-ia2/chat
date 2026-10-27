@@ -50,6 +50,21 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
     expect(Crm::MetaAdsCommentAction.sole.confirmed_at).to be_present
   end
 
+  it 'solta só a reserva do privado que nunca saiu e passou de 2 min, de qualquer autor' do
+    travel_to(3.minutes.ago) do
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'facebook', comment_id: 'c-1', action: 'private_reply', actor: 'user',
+                                        user: create(:user, account: account))
+      described_class.reivindicar!(comentario('c-2', network: 'facebook'), 'private_reply').attempt!
+      described_class.reservar!(comentario('c-1', network: 'facebook'))
+    end
+    described_class.reivindicar!(comentario('c-3', network: 'facebook'), 'private_reply')
+
+    %w[c-1 c-2 c-3].each { |id| described_class.soltar_abandonada!(comentario(id, network: 'facebook')) }
+
+    expect(Crm::MetaAdsCommentAction.order(:comment_id, :action).pluck(:comment_id, :action))
+      .to eq([%w[c-1 ai_seen], %w[c-2 private_reply], %w[c-3 private_reply]])
+  end
+
   it 'vincula a conversa que nasce depois da reivindicação' do
     conversation = create(:conversation, account: account)
     described_class.reivindicar!(comentario, 'private_reply')

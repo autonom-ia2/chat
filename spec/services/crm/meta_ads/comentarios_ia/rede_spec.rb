@@ -17,8 +17,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
   end
 
   before do
-    allow(reivindicacao).to receive(:confirm!)
-    allow(registro).to receive_messages(reivindicar!: reivindicacao, soltar!: 0, gravar!: true)
+    allow(reivindicacao).to receive_messages(attempt!: true, confirm!: true)
+    allow(registro).to receive_messages(reivindicar!: reivindicacao, soltar!: 0, soltar_abandonada!: 0, gravar!: true)
   end
 
   describe 'Página (o Private Reply pelo Messenger)' do
@@ -82,8 +82,11 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
       resultado = rede.privado(care)
 
-      expect(registro).to have_received(:reivindicar!).with(an_object_having_attributes(comment_id: '555_777'), 'private_reply')
-      expect(reivindicacao).to have_received(:confirm!)
+      expect(registro).to have_received(:soltar_abandonada!).with(an_object_having_attributes(comment_id: '555_777')).ordered
+      expect(registro).to have_received(:reivindicar!).with(an_object_having_attributes(comment_id: '555_777'), 'private_reply').ordered
+      expect(reivindicacao).to have_received(:attempt!).ordered
+      expect(pagina).to have_received(:private_reply).ordered
+      expect(reivindicacao).to have_received(:confirm!).ordered
       expect(pagina).to have_received(:private_reply).with('555_777', hash_including(attachment: hash_including(type: 'template')))
       expect(resultado).to have_attributes(ok: true, conversation: conversation)
     end
@@ -111,6 +114,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
       expect(rede.privado(care).erro).to eq(described_class::JA_FEITO)
       expect(pagina).not_to have_received(:private_reply)
+      expect(reivindicacao).not_to have_received(:attempt!)
     end
 
     it 'responde e esconde pelo serviço do #2197, como IA' do
