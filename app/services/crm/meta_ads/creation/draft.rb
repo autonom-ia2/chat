@@ -1,12 +1,16 @@
 # O rascunho do anúncio novo como a tela manda (#2198), revalidado antes de qualquer chamada à Meta (ponto 5). Cada
-# recusa tem um código que a tela traduz. Valores em reais; datas como a tela mostrou ("2026-10-27"), no fuso da conta de
-# anúncios. A Página e a conta do Instagram dela são conferidas no criar, contra as Páginas que o token alcança.
+# recusa tem um código que a tela traduz. Valores em reais, sem float; datas como a tela mostrou ("2026-10-27"), no
+# fuso da conta de anúncios. A Página e a conta do Instagram dela são conferidas no criar, contra as Páginas que o token
+# alcança.
 class Crm::MetaAds::Creation::Draft
   SITE_ACTIONS = %w[LEARN_MORE SHOP_NOW].freeze
   MEDIA_KINDS = %w[image video].freeze
   CARDS_MAX = 10
   NAME_LIMIT = 255
   TEXT_LIMIT = 2_000
+  # A chave de idempotência é o UUID que a tela gera (crypto.randomUUID): 8-4-4-4-12 dígitos hexadecimais.
+  UUID_GROUPS = [8, 4, 4, 4, 12].freeze
+  HEX_DIGITS = '0-9a-fA-F'.freeze
 
   attr_reader :values
 
@@ -18,7 +22,7 @@ class Crm::MetaAds::Creation::Draft
 
   def validate!
     @values = {
-      idempotency_key: required_string(:idempotency_key, 'invalid_params'), name: name, destination: destination,
+      idempotency_key: idempotency_key, name: name, destination: destination,
       page_id: page_id, whatsapp_number: whatsapp_number, site_url: site_url, site_action: site_action,
       media: media(@params[:media]), cards: cards, text: text, headline: @params[:headline].to_s.strip.presence,
       ready_message: @params[:ready_message].to_s.strip.presence, placement: placement,
@@ -39,6 +43,13 @@ class Crm::MetaAds::Creation::Draft
 
   def required_string(key, code)
     @params[key].to_s.strip.presence || fail!(code)
+  end
+
+  # Só UUID: cabe no índice único e não carrega texto livre.
+  def idempotency_key
+    value = @params[:idempotency_key].to_s.strip
+    uuid = value.split('-', -1).map(&:length) == UUID_GROUPS && value.delete('-').delete(HEX_DIGITS).empty?
+    uuid ? value : fail!('invalid_params')
   end
 
   def name
@@ -127,12 +138,13 @@ class Crm::MetaAds::Creation::Draft
     valid ? values : fail!('invalid_audience')
   end
 
+  # Em reais, BigDecimal com até 2 casas (Crm::MetaAds::Creation::Money); a Meta recebe em centavos inteiros.
   def budget
-    amount = BigDecimal(@params[:daily_amount].to_s, exception: false)
+    amount = Crm::MetaAds::Creation::Money.parse(@params[:daily_amount])
     limits = Crm::MetaAds::Creation::Options::MIN_DAILY..Crm::MetaAds::Creation::Options::MAX_DAILY
     fail!('invalid_amount') unless amount && limits.cover?(amount)
     start_date, end_date = dates
-    { daily_amount: amount.to_f, start_date: start_date, end_date: end_date }
+    { daily_amount: amount, start_date: start_date, end_date: end_date }
   end
 
   # Início não antes de hoje; fim, se houver, depois do início.

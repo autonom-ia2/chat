@@ -12,7 +12,7 @@ import {
   longDate,
   money,
   parseAmount,
-  todayIso,
+  todayOfAccount,
   withWords,
 } from '../dinheiroDoAnuncio';
 import { mudarOrcamento } from '../criacaoNaMeta';
@@ -45,6 +45,8 @@ const amountText = ref('');
 const endDate = ref('');
 
 const currency = computed(() => props.budget.currency);
+// Hoje no fuso da conta de anúncios, como o servidor conta.
+const today = computed(() => todayOfAccount(props.budget.today));
 const fmt = value => money(value, currency.value, locale.value);
 const spelled = value => withWords(value, currency.value, locale.value);
 
@@ -81,7 +83,7 @@ const newAmount = computed(() => parseAmount(amountText.value));
 const totalMax = computed(() => {
   if (daily.value || !endDate.value) return null;
   const start = props.budget.start_time?.slice(0, 10);
-  const from = start && start > todayIso() ? start : todayIso();
+  const from = start && start > today.value ? start : today.value;
   return props.budget.max_daily * Math.max(daysBetween(from, endDate.value), 1);
 });
 
@@ -163,7 +165,7 @@ const projection = computed(() => {
       value: spelled(value * ROLLING_DAYS),
     });
   }
-  const days = daysBetween(todayIso(), endDate.value);
+  const days = daysBetween(today.value, endDate.value);
   return t(`${KEY}.PROJECTION_UNTIL`, {
     end: longDate(endDate.value, locale.value),
     days,
@@ -329,7 +331,7 @@ const confirmLabel = computed(() => {
         </p>
         <MetaAdsEndDate
           v-model="endDate"
-          :from="todayIso()"
+          :from="today"
           :allow-no-end="daily && !oldEnd"
         />
       </div>

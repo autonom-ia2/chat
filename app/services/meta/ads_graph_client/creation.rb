@@ -9,6 +9,7 @@ module Meta::AdsGraphClient::Creation
   PAGES_FIELDS = 'id,name,instagram_business_account{id,username}'.freeze
   IMAGE_FIELDS = 'hash,url,width,height'.freeze
   IMAGES_LIMIT = 30
+  CAMPAIGNS_LIMIT = 25
 
   def create_campaign(ad_account_id, params)
     post("act_#{ad_account_id}/campaigns", params)
@@ -66,6 +67,12 @@ module Meta::AdsGraphClient::Creation
 
   def delete_object(object_id)
     request(:delete, object_id.to_s)
+  end
+
+  # Campanhas da conta cujo nome contém `text` (a marca da tentativa de criar), inclusive as que nunca ativaram.
+  def campaigns_named(ad_account_id, text)
+    get("act_#{ad_account_id}/campaigns", fields: 'id,name,effective_status', limit: CAMPAIGNS_LIMIT,
+                                          filtering: [{ field: 'name', operator: 'CONTAIN', value: text }].to_json)
   end
 
   # Estados do Brasil como a Meta os chama no público (`regions: [{ key }]`).

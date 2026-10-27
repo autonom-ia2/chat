@@ -6,7 +6,7 @@ import { frontendURL } from 'dashboard/helper/URLHelper';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
-import { todayIso } from '../dinheiroDoAnuncio';
+import { todayIso, todayOfAccount } from '../dinheiroDoAnuncio';
 import { useDinheiroDoRascunho } from '../useDinheiroDoRascunho';
 import {
   botaoDoAnuncio,
@@ -62,7 +62,10 @@ const CREATE_ERRORS = [
   'cannot_create',
   'meta_unavailable',
   'meta_refused',
+  'currency_not_supported',
 ];
+// Os limites e o valor são em reais: conta de anúncios em outra moeda não cria por aqui.
+const ACCOUNT_CURRENCY = 'BRL';
 const HTTP_CONFLICT = 409;
 
 const options = ref(null);
@@ -145,6 +148,7 @@ const total = computed(() => STEPS.value.length - 1);
 const blocker = computed(() => {
   if (!options.value) return null;
   if (options.value.needs_login) return 'LOGIN';
+  if (options.value.currency !== ACCOUNT_CURRENCY) return 'CURRENCY';
   if (!draft.value.kind) return null;
   if (!pages.value.length) return 'NO_PAGE';
   if (draft.value.destination === 'WHATSAPP' && !numbers.value.length) {
@@ -338,6 +342,8 @@ const prefill = data => {
     // Sem destino confirmado, o "Anúncio novo" fica apagado na escolha, com o motivo.
     kind: kind === 'ad' && !destination ? null : kind,
     destination,
+    // O dia de hoje no fuso da conta de anúncios, como o servidor confere.
+    start_date: todayOfAccount(data.today),
     page_id: data.pages.length === 1 ? data.pages[0].id : null,
     whatsapp_number:
       data.whatsapp_numbers.length === 1 ? data.whatsapp_numbers[0].id : null,
@@ -407,6 +413,7 @@ const blockerAction = computed(() =>
 const BLOCKERS = {
   LOGIN: { icon: 'i-lucide-log-in', action: signIn },
   NO_PAGE: { icon: 'i-lucide-flag', action: goToConnection },
+  CURRENCY: { icon: 'i-lucide-banknote', action: goToConnection },
   NO_NUMBER: {
     icon: 'i-ri-whatsapp-line',
     action: goToInboxes,

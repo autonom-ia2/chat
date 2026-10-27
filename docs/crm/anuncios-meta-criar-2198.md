@@ -346,7 +346,7 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
 
 | Rota | O que faz | Quem |
 |---|---|---|
-| `GET create_options` | Opções de criar (pontos 8 e 12) | `meta_ads_view` |
+| `GET create_options` | Opções de criar (pontos 8 e 12), com moeda, hoje e fuso da conta de anúncios | `meta_ads_manage` |
 | `POST media` | Foto ou vídeo do celular → `hash` ou `video_id` | `meta_ads_manage` |
 | `POST ads` | Anúncio novo, sempre pausado | `meta_ads_manage` |
 | `GET ads/:ad_id/budget` | Orçamento e datas (pontos 10 e 11) | `meta_ads_view` |
@@ -359,7 +359,18 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   token.
 - A tabela `crm_meta_ads_created_objects` guarda cada tentativa de criar pela
   chave de idempotência, os ids criados na Meta (para desfazer e para a lista
-  de pausados) e o orçamento de quando criou.
+  de pausados) e o orçamento de quando criou. A linha nasce `creating` antes da
+  primeira chamada, e o nome da campanha leva a marca da tentativa
+  (`Nome [1a2b3c4d]`, os 8 primeiros caracteres da chave). Se a resposta da
+  campanha se perde, o desfazer procura a campanha na Meta por essa marca antes
+  de dizer "Nada foi criado"; sem conseguir procurar, a resposta é
+  `nothing_created: false`.
+- Moeda: o criar lê a moeda da conta de anúncios na Meta e só cria em real
+  (`currency_not_supported`). Sem moeda confirmada, as opções dão erro e a tela
+  não mostra valor. Dinheiro sem float: mais de 2 casas é recusa, e a Meta
+  recebe centavos inteiros.
+- "Hoje" das datas é o do fuso da conta de anúncios: o servidor manda `today`
+  e `time_zone` nas opções e `today` no orçamento.
 - O que a chamada real confirmou fica em `Crm::MetaAds::Creation::Confirmed`.
   Hoje é o caso mínimo do `?demo=so-confirmado`: WhatsApp só em Automático e
   site nos três lugares. Cada item confirmado entra ali num PR.

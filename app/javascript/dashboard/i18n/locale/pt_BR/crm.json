@@ -3302,6 +3302,10 @@
             "TITLE": "Para anunciar, a sua Página do Facebook precisa estar conectada.",
             "ACTION": "Ir para a Conexão"
           },
+          "CURRENCY": {
+            "TITLE": "Criar anúncio por aqui só vale para conta de anúncios em reais. Esta conta usa outra moeda.",
+            "ACTION": "Ir para a Conexão"
+          },
           "NO_NUMBER": {
             "TITLE": "Conecte um número de WhatsApp para o anúncio abrir conversa.",
             "ACTION": "Conectar número",
@@ -3547,6 +3551,7 @@
           "CANNOT_CREATE": "Para criar anúncios por aqui, entre de novo com o Facebook na Conexão.",
           "META_UNAVAILABLE": "Não conseguimos falar com a Meta agora. Tente de novo daqui a pouco.",
           "META_REFUSED": "A Meta recusou o anúncio.",
+          "CURRENCY_NOT_SUPPORTED": "Criar anúncio por aqui só vale para conta de anúncios em reais.",
           "UNKNOWN": "Não deu para criar o anúncio agora.",
           "NOTHING_CREATED": "Nada foi criado.",
           "CHECK_META": "Pode ter ficado uma campanha pela metade: confira no Gerenciador de Anúncios da Meta antes de tentar de novo.",

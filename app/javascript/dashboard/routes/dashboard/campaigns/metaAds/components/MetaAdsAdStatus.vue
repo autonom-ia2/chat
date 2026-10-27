@@ -8,7 +8,7 @@ import { mudarStatus } from '../gestaoDoAnuncio';
 import {
   daysBetween,
   longDate,
-  todayIso,
+  todayOfAccount,
   withWords,
 } from '../dinheiroDoAnuncio';
 
@@ -100,7 +100,8 @@ const spend = computed(() => {
   const value = fmt(budget.amount);
   if (!end) return t(`${KEY}.ACTIVATE_SPEND_NO_END`, { value });
   const start = budget.start_time?.slice(0, 10);
-  const from = start && start > todayIso() ? start : todayIso();
+  const today = todayOfAccount(budget.today);
+  const from = start && start > today ? start : today;
   return t(`${KEY}.ACTIVATE_SPEND_END`, {
     value,
     end: longDate(end, locale.value),

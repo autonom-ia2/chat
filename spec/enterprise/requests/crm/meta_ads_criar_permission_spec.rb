@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# Gerenciador simples (#2198, PR 1) com funções personalizadas: `meta_ads_view` vê orçamento e pausados, mas não sobe
-# mídia, não cria anúncio e não muda orçamento (403 sem chamar a Meta); `meta_ads_manage` muda. Fica em spec/enterprise:
+# Gerenciador simples (#2198, PR 1) com funções personalizadas: `meta_ads_view` vê orçamento e pausados, mas não lê as
+# opções de criar (Páginas, Instagram, números e fotos), não sobe mídia, não cria anúncio e não muda orçamento (403 sem
+# chamar a Meta); `meta_ads_manage` muda. Fica em spec/enterprise:
 # a metade de função personalizada do permission_granted? é EE.
 RSpec.describe 'Anúncios da Meta: criar e orçamento com funções (#2198)', type: :request do
   around do |example|
@@ -38,6 +39,13 @@ RSpec.describe 'Anúncios da Meta: criar e orçamento com funções (#2198)', ty
     role = CustomRole.create!(account: account, name: "Cargo #{SecureRandom.hex(4)}", permissions: permissions)
     AccountUser.find_by(account: account, user: user).update!(custom_role: role)
     user
+  end
+
+  it 'meta_ads_view não lê as opções de criar (Páginas, Instagram, números e fotos), sem chamar a Meta' do
+    get "#{path}/create_options", headers: pessoa_com(%w[meta_ads_view]).create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:forbidden)
+    expect(a_request(:get, meta_graph_url('me/accounts')).with(query: hash_including({}))).not_to have_been_made
   end
 
   it 'meta_ads_view lê o orçamento, mas não sobe mídia, não cria e não muda orçamento, sem chamar a Meta' do

@@ -10,8 +10,10 @@
 # - Quando o valor fica na campanha e o fim no grupo, são duas chamadas. Se a segunda falha, a primeira é desfeita; se
 #   nem isso der, o erro é `meta_partial`, com o que mudou, para a Auditoria registrar a verdade.
 # - Só o token do próprio cliente com ads_management muda; conta em outra moeda lê, mas não muda (os limites são em reais).
+# - Dinheiro sem float (Crm::MetaAds::Creation::Money): mais de 2 casas é recusa. `today`: o dia de hoje no fuso da conta
+#   de anúncios, para a tela não usar o relógio do navegador.
 class Crm::MetaAds::Creation::Budget
-  CENTS = 100
+  MONEY = Crm::MetaAds::Creation::Money
 
   def initialize(connection)
     @connection = connection
@@ -35,7 +37,7 @@ class Crm::MetaAds::Creation::Budget
     new_end = parse_end(end_time, before)
     value = parse_amount(amount, before, new_end)
     apply!(before, value, new_end)
-    { before: before, after: before.merge(amount: value, end_time: new_end&.iso8601) }
+    { before: before, after: before.merge(amount: value.to_f, end_time: new_end&.iso8601) }
   end
 
   private
@@ -61,16 +63,21 @@ class Crm::MetaAds::Creation::Budget
   def payload(holder, adset, level)
     daily = holder['daily_budget'].to_i.positive?
     ads = count_ads(holder['id'])
-    currency = read_currency
+    currency = MONEY.currency!(client, @connection.ad_account_id)
     {
       level: level, object_id: holder['id'].to_s, object_name: holder['name'], kind: daily ? 'daily' : 'lifetime',
-      amount: (daily ? holder['daily_budget'] : holder['lifetime_budget']).to_i / CENTS.to_f, currency: currency,
+      amount: amount_of(holder, daily), currency: currency,
       start_time: adset['start_time'], end_time: adset['end_time'].presence, started: started?(adset['start_time']),
       ads_count: ads.size, active_ads_count: ads.count('ACTIVE'),
       min_daily: Crm::MetaAds::Creation::Options::MIN_DAILY, max_daily: Crm::MetaAds::Creation::Options::MAX_DAILY,
-      can_change: currency == Crm::MetaAds::Creation::Options::CURRENCY && @access.can_change_ads?,
-      adset_id: adset['id'].to_s
+      can_change: currency == MONEY::CURRENCY && @access.can_change_ads?,
+      adset_id: adset['id'].to_s, today: zone.today.iso8601
     }
+  end
+
+  # Em reais, para a tela; a conta e a comparação usam os centavos (MONEY.cents).
+  def amount_of(holder, daily)
+    MONEY.from_cents(daily ? holder['daily_budget'] : holder['lifetime_budget']).to_f
   end
 
   def count_ads(object_id)
@@ -80,22 +87,15 @@ class Crm::MetaAds::Creation::Budget
     Array(result.data['data']).map { |ad| ad.to_h['effective_status'] }
   end
 
-  def read_currency
-    result = client.ad_account(@connection.ad_account_id)
-    raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
-
-    result.data['currency'].to_s
-  end
-
   def started?(start_time)
     start_time.present? && Time.zone.parse(start_time.to_s) <= Time.current
   end
 
   def parse_amount(amount, before, new_end)
-    value = BigDecimal(amount.to_s, exception: false)
-    raise Crm::MetaAds::Creation::Error, 'invalid_amount' unless value&.finite? && limits(before, new_end).cover?(value)
+    value = MONEY.parse(amount)
+    raise Crm::MetaAds::Creation::Error, 'invalid_amount' unless value && limits(before, new_end).cover?(value)
 
-    value.to_f
+    value
   end
 
   # Por dia: R$ 6 a R$ 500. Total: R$ 6 até R$ 500 vezes os dias de veiculação que faltam.
@@ -137,7 +137,7 @@ class Crm::MetaAds::Creation::Budget
   # O valor vai para onde está o dinheiro; o fim vai para o grupo (no mesmo objeto, uma chamada só).
   def apply!(before, value, new_end)
     changes = Hash.new { |hash, key| hash[key] = { new: {}, old: {} } }
-    add_change(changes[before[:object_id]], "#{before[:kind]}_budget", cents(value), cents(before[:amount])) if value != before[:amount]
+    add_change(changes[before[:object_id]], "#{before[:kind]}_budget", cents(value), cents(before[:amount])) if cents(value) != cents(before[:amount])
     add_change(changes[before[:adset_id]], 'end_time', new_end.iso8601, before[:end_time]) if end_changed?(time(before[:end_time]), new_end)
     send_all!(changes)
   end
@@ -166,7 +166,7 @@ class Crm::MetaAds::Creation::Budget
   end
 
   def cents(value)
-    (value * CENTS).round
+    MONEY.cents(value)
   end
 
   def end_changed?(old_end, new_end)

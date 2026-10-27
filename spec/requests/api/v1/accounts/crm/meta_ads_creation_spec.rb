@@ -1,8 +1,8 @@
 require 'rails_helper'
 
-# Gerenciador simples (#2198, PR 1): sem a flag meta_ads_criar 404 sem chamar a Meta; ver opções, orçamento e pausados
-# pede meta_ads_view; criar, subir mídia e mudar orçamento pedem meta_ads_manage (agente comum: 403). Criar e mudar o
-# orçamento ficam na Auditoria da conta com quem fez, sem o token.
+# Gerenciador simples (#2198, PR 1): sem a flag meta_ads_criar 404 sem chamar a Meta; ver orçamento e pausados pede
+# meta_ads_view; opções de criar, criar, subir mídia e mudar orçamento pedem meta_ads_manage (agente comum: 403). Criar e
+# mudar o orçamento ficam na Auditoria da conta com quem fez, sem o token.
 RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
   around do |example|
     with_modified_env CRM_KANBAN_ENABLED: 'true' do
@@ -95,7 +95,9 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
   end
 
   it 'falha ao criar devolve o código e se nada foi criado' do
-    post "#{path}/ads", params: { idempotency_key: 'k', name: 'Bolo', destination: 'MESSENGER' }, headers: admin.create_new_auth_token, as: :json
+    params = { idempotency_key: SecureRandom.uuid, name: 'Bolo', destination: 'MESSENGER' }
+
+    post "#{path}/ads", params: params, headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body).to eq('error' => 'invalid_destination', 'nothing_created' => true)

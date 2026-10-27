@@ -49,7 +49,7 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
       expect(described_class.new(connection).read(ad_id)).to eq(
         level: 'adset', object_id: adset_id, object_name: 'Público 25-45', kind: 'daily', amount: 30.0, currency: 'BRL',
         start_time: '2026-10-01T09:00:00-0300', end_time: nil, started: true, ads_count: 3, active_ads_count: 2,
-        min_daily: 6, max_daily: 500, can_change: true, adset_id: adset_id
+        min_daily: 6, max_daily: 500, can_change: true, adset_id: adset_id, today: '2026-10-27'
       )
     end
 
@@ -180,6 +180,33 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
 
       expect { described_class.new(connection).change!(ad_id, amount: '30', end_time: nil) }
         .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('cannot_clear_end') }
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'valor com mais de 2 casas é recusado, nunca arredondado' do
+      %w[45.555 20.001].each do |amount|
+        expect { described_class.new(connection).change!(ad_id, amount: amount, end_time: nil) }
+          .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_amount') }
+      end
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'centavos exatos: 25,57 vai como 2557, sem erro de float' do
+      update = stub_request(:post, meta_graph_url(adset_id)).with(body: { 'daily_budget' => '2557' })
+                                                            .to_return(status: 200, body: { success: true }.to_json, headers: json)
+
+      result = described_class.new(connection).change!(ad_id, amount: '25.57', end_time: nil)
+
+      expect(update).to have_been_made.once
+      expect(result[:after][:amount]).to eq(25.57)
+    end
+
+    it 'sem conseguir ler a moeda: erro, nunca valor sem moeda' do
+      stub_request(:get, meta_graph_url("act_#{connection.ad_account_id}")).with(query: hash_including({}))
+                                                                           .to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+
+      expect { described_class.new(connection).change!(ad_id, amount: '40', end_time: nil) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('meta_unavailable') }
       expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
     end
 

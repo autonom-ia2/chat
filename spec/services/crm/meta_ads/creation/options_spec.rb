@@ -22,9 +22,10 @@ RSpec.describe Crm::MetaAds::Creation::Options do
       .with(query: hash_including('fields' => Meta::AdsGraphClient::IMAGE_FIELDS)).to_return(status: status, body: body.to_json, headers: json)
   end
 
-  def stub_currency
+  def stub_currency(status: 200)
+    body = status == 200 ? { currency: 'BRL' } : meta_graph_error(1)
     stub_request(:get, meta_graph_url("act_#{connection.ad_account_id}")).with(query: hash_including({}))
-                                                                         .to_return(status: 200, body: { currency: 'BRL' }.to_json, headers: json)
+                                                                         .to_return(status: status, body: body.to_json, headers: json)
   end
 
   before do
@@ -32,7 +33,8 @@ RSpec.describe Crm::MetaAds::Creation::Options do
     stub_currency
   end
 
-  it 'traz Páginas, Instagram da Página, números da conta, fotos já usadas, limites e só o confirmado' do
+  it 'traz Páginas, Instagram da Página, números da conta, fotos já usadas, limites, moeda, hoje e fuso da conta e só o confirmado' do
+    travel_to Time.zone.parse('2026-10-28 01:30:00 UTC')
     stub_permissions('ads_read', 'ads_management', 'pages_manage_ads', 'pages_show_list')
     stub_pages([{ id: '110', name: 'Loja Exemplo', instagram_business_account: { id: '178', username: 'lojaexemplo' } }])
     stub_images
@@ -45,6 +47,8 @@ RSpec.describe Crm::MetaAds::Creation::Options do
       instagram: { id: '178', username: 'lojaexemplo', posts: [], publish_left: nil }, posts: [],
       images: [{ hash: 'abc', url: 'https://scontent.example/abc.jpg', width: 600, height: 600 }],
       currency: 'BRL', min_daily: 6, max_daily: 500, kinds: ['ad'],
+      # 01:30 UTC de 28/10 ainda é 27/10 no fuso da conta de anúncios (São Paulo).
+      today: '2026-10-27', time_zone: 'America/Sao_Paulo',
       destinations: %w[WHATSAPP WEBSITE],
       placements_by_destination: { 'WHATSAPP' => %w[AUTO], 'WEBSITE' => %w[AUTO INSTAGRAM FACEBOOK] }
     )
@@ -56,12 +60,22 @@ RSpec.describe Crm::MetaAds::Creation::Options do
 
     payload = described_class.new(account, connection).payload
 
-    expect(payload).to include(needs_login: true, pages: [], images: [], instagram: nil)
+    expect(payload).to include(needs_login: true, pages: [], images: [], instagram: nil, currency: nil, today: nil)
     expect(a_request(:get, meta_graph_url('me/accounts'))).not_to have_been_made
   end
 
   it 'queda da Meta ao ler permissões é erro, não pedido de entrar de novo' do
     stub_request(:get, meta_graph_url('me/permissions')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+
+    expect { described_class.new(account, connection).payload }
+      .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('meta_unavailable') }
+  end
+
+  it 'sem conseguir ler a moeda: erro, nunca real presumido' do
+    stub_permissions('ads_management', 'pages_manage_ads')
+    stub_pages([])
+    stub_images
+    stub_currency(status: 500)
 
     expect { described_class.new(account, connection).payload }
       .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('meta_unavailable') }

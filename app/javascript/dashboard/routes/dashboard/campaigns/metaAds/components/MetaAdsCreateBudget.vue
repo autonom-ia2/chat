@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { money, todayIso } from '../dinheiroDoAnuncio';
+import { money, todayOfAccount } from '../dinheiroDoAnuncio';
 import CampoDeData from './CampoDeData.vue';
 import CampoDeValor from './CampoDeValor.vue';
 import MetaAdsEndDate from './MetaAdsEndDate.vue';
@@ -70,7 +70,7 @@ const hint = computed(
       :model-value="draft.start_date"
       data-create-start
       :label="$t(`${KEY}.START`)"
-      :min="todayIso()"
+      :min="todayOfAccount(limits.today)"
       @update:model-value="setStart"
     />
     <MetaAdsEndDate

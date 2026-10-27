@@ -40,6 +40,9 @@ const OPTIONS = {
   posts: [],
   images: [{ hash: 'h1', url: 'https://img/1.jpg', width: 600, height: 600 }],
   currency: 'BRL',
+  // Hoje no fuso da conta de anúncios, como o servidor manda: longe do relógio do teste, para provar que vale este.
+  today: '2030-01-15',
+  time_zone: 'America/Sao_Paulo',
   min_daily: 6,
   max_daily: 500,
   destinations: ['WHATSAPP', 'WEBSITE'],
@@ -151,6 +154,23 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     ).toBe('LOGIN');
   });
 
+  it('an ad account in another currency stops before the steps: limits and values are in reais', async () => {
+    const wrapper = await mountCreate({ ...OPTIONS, currency: 'USD' });
+
+    expect(
+      wrapper.find('[data-create-blocker]').attributes('data-create-blocker')
+    ).toBe('CURRENCY');
+    expect(wrapper.find('[data-create-form]').exists()).toBe(false);
+  });
+
+  it('without a confirmed currency, never assumes reais', async () => {
+    const wrapper = await mountCreate({ ...OPTIONS, currency: null });
+
+    expect(
+      wrapper.find('[data-create-blocker]').attributes('data-create-blocker')
+    ).toBe('CURRENCY');
+  });
+
   it('Meta down while reading permissions (422 meta_unavailable) is a failure to retry, not a sign-in', async () => {
     CrmMetaAdsConnectionAPI.createOptions
       .mockRejectedValueOnce(refusal(422, { error: 'meta_unavailable' }))
@@ -201,6 +221,7 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
         age_max: 65,
         special_category: false,
         daily_amount: 20,
+        start_date: '2030-01-15',
         end_date: '',
         media: { kind: 'image', hash: 'h1' },
         cards: [],

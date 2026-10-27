@@ -22,18 +22,26 @@ export const withWords = (value, currency, locale) => {
 };
 
 // "45,50", "45.50", "R$ 45" e "1.000,00": fica só com dígitos, vírgula e ponto (o símbolo da moeda e os espaços
-// saem). Com vírgula, ela é o decimal e o ponto é milhar; sem vírgula, o ponto é o decimal.
+// saem). Com vírgula, ela é o decimal e o ponto é milhar. Sem vírgula, o ponto só vale como decimal com 1 ou 2 casas
+// ("6.5", "6.50"): "6.000" e "1.000.000" são recusados, para não virarem R$ 6,00 por engano. Mais de 2 casas também é
+// recusa: o valor nunca é arredondado em silêncio.
 const AMOUNT_CHARS = '0123456789,.';
+const MAX_DECIMALS = 2;
 export const parseAmount = text => {
   const clean = [...String(text ?? '')]
     .filter(char => AMOUNT_CHARS.includes(char))
     .join('');
   if (!clean) return null;
-  const normalized = clean.includes(',')
-    ? clean.split('.').join('').split(',').join('.')
-    : clean;
-  const number = Number(normalized);
-  return Number.isFinite(number) ? Math.round(number * 100) / 100 : null;
+  const comma = clean.includes(',');
+  const separator = comma ? ',' : '.';
+  const digits = comma ? clean.split('.').join('') : clean;
+  const [whole, decimals, ...rest] = digits.split(separator);
+  if (rest.length) return null;
+  if (decimals !== undefined) {
+    if (!decimals.length || decimals.length > MAX_DECIMALS) return null;
+  }
+  const number = Number(`${whole || '0'}.${decimals || '0'}`);
+  return Number.isFinite(number) ? number : null;
 };
 
 // Dias do calendário como 'AAAA-MM-DD', no relógio de quem vê, sem fuso.
@@ -43,7 +51,11 @@ const isoOf = date => {
   return `${date.getFullYear()}-${month}-${day}`;
 };
 
+// Hoje no relógio de quem vê. Para as datas do anúncio, vale o dia que o servidor manda no fuso da conta de anúncios
+// (`today` das opções de criar e do orçamento); este é só o recurso de quem ainda não recebeu.
 export const todayIso = () => isoOf(new Date());
+
+export const todayOfAccount = serverToday => serverToday || todayIso();
 
 export const addDays = (iso, days) => {
   const date = new Date(`${iso}T12:00:00`);

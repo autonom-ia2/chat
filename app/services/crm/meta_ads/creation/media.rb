@@ -48,10 +48,12 @@ class Crm::MetaAds::Creation::Media
   def video!(file)
     raise Crm::MetaAds::Creation::Error, 'media_too_large' if file.size > VIDEO_MAX_BYTES
 
+    host = frontend_host!
+
     blob = ActiveStorage::Blob.create_and_upload!(io: File.open(file.path), filename: file.original_filename.presence || 'video.mp4',
                                                   content_type: file.content_type)
     ActiveStorage::PurgeJob.set(wait: VIDEO_KEEP).perform_later(blob)
-    result = @client.upload_video(@connection.ad_account_id, public_url(blob))
+    result = @client.upload_video(@connection.ad_account_id, public_url(blob, host))
     raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok && result.data['id'].present?
 
     { kind: 'video', video_id: result.data['id'].to_s }
@@ -70,9 +72,15 @@ class Crm::MetaAds::Creation::Media
     VIDEO_BOXES.include?(head(file, 8).byteslice(4, 4))
   end
 
+  # O endereço da plataforma, para o armazenamento em disco montar a URL. Sem ele, a Meta receberia um endereço que não
+  # alcança: falha antes de guardar o vídeo, e o erro vai para o rastreador (é configuração, não escolha da pessoa).
+  def frontend_host!
+    ENV.fetch('FRONTEND_URL', '').presence || raise(ArgumentError, 'FRONTEND_URL vazio: o vídeo do anúncio não teria endereço')
+  end
+
   # Endereço direto do armazenamento (no S3, assinado e com prazo), que a Meta lê sem login.
-  def public_url(blob)
-    ActiveStorage::Current.set(url_options: { host: ENV.fetch('FRONTEND_URL', 'http://localhost:3000') }) do
+  def public_url(blob, host)
+    ActiveStorage::Current.set(url_options: { host: host }) do
       blob.url(expires_in: VIDEO_URL_TTL)
     end
   end

@@ -71,7 +71,8 @@
 #   photos and videos to the ad account, and changes an ad's budget and end date (#2198).
 #   Protected key (two-list rule, #1782; decision D7 of lote 11): only an administrator hands it out, or whoever holds
 #   grant_above_own, which only an administrator turns on. Choosing an ad account grants the platform system user
-#   access to the client's ad account. Money figures (spend, sales value) are out of its scope (lote 13).
+#   access to the client's ad account. CRM sales values are out of its scope (sales_value_view, lote 13); the ad
+#   budget it shows and changes is the ad's own money at Meta, in the ad account's currency (#2198).
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 # - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
 # - 'people_manage': add, invite, edit and remove agents, and manage teams (#1931). Never administrators, never one's own

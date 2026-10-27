@@ -30,9 +30,20 @@ RSpec.describe Crm::MetaAds::Creation::Media do
               .with { |req| Rack::Utils.parse_nested_query(req.body)['file_url'].to_s.start_with?('http') }
               .to_return(status: 200, body: { id: '777' }.to_json, headers: json)
 
-    expect { expect(described_class.new(connection).upload!(upload('sample.mp4', 'video/mp4'))).to eq(kind: 'video', video_id: '777') }
-      .to change(ActiveStorage::Blob, :count).by(1)
+    with_modified_env FRONTEND_URL: 'https://app.example.com' do
+      expect { expect(described_class.new(connection).upload!(upload('sample.mp4', 'video/mp4'))).to eq(kind: 'video', video_id: '777') }
+        .to change(ActiveStorage::Blob, :count).by(1)
+    end
     expect(request).to have_been_made.once
+  end
+
+  it 'vídeo sem FRONTEND_URL: falha antes de guardar o arquivo, nunca manda endereço de localhost' do
+    with_modified_env FRONTEND_URL: '' do
+      expect { described_class.new(connection).upload!(upload('sample.mp4', 'video/mp4')) }
+        .to raise_error(ArgumentError, 'FRONTEND_URL vazio: o vídeo do anúncio não teria endereço')
+        .and(not_change(ActiveStorage::Blob, :count))
+    end
+    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
   end
 
   it 'arquivo que não é foto nem vídeo aceito: recusa sem chamar a Meta' do

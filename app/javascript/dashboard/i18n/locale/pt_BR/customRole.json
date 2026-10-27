@@ -192,8 +192,8 @@
         "META_ADS": {
           "NAME": "Anúncios da Meta",
           "HINT": "Painel dos anúncios do Facebook e do Instagram",
-          "LEVEL_VIEW": "Vê o painel dos anúncios e os resultados. Conectar e configurar pede Editar.",
-          "LEVEL_MANAGE": "Também conecta, configura e desconecta a conta de anúncios, para onde os anúncios levam, o aviso de vendas no funil e o resumo no WhatsApp, e age sobre o consultor."
+          "LEVEL_VIEW": "Vê o painel dos anúncios, os resultados e o orçamento e as datas de cada anúncio. Criar, conectar e configurar pede Editar.",
+          "LEVEL_MANAGE": "Também conecta, configura e desconecta a conta de anúncios, para onde os anúncios levam, o aviso de vendas no funil e o resumo no WhatsApp, age sobre o consultor, cria anúncios (sempre pausados), ativa e muda o orçamento e as datas."
         },
         "INBOXES": {
           "NAME": "Caixas de entrada",

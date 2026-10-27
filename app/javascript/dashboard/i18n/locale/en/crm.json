@@ -3301,6 +3301,10 @@
             "TITLE": "To advertise, your Facebook Page needs to be connected.",
             "ACTION": "Go to Connection"
           },
+          "CURRENCY": {
+            "TITLE": "Creating ads here works only for ad accounts in reais (BRL). This ad account uses another currency.",
+            "ACTION": "Go to Connection"
+          },
           "NO_NUMBER": {
             "TITLE": "Connect a WhatsApp number so the ad opens a chat.",
             "ACTION": "Connect number",
@@ -3546,6 +3550,7 @@
           "CANNOT_CREATE": "To create ads here, sign in with Facebook again under Connection.",
           "META_UNAVAILABLE": "We couldn't reach Meta right now. Try again in a little while.",
           "META_REFUSED": "Meta refused the ad.",
+          "CURRENCY_NOT_SUPPORTED": "Creating ads here works only for ad accounts in reais (BRL). Nothing was created.",
           "UNKNOWN": "We couldn't create the ad right now.",
           "NOTHING_CREATED": "Nothing was created.",
           "CHECK_META": "A campaign may have been left half done: check Meta Ads Manager before trying again.",

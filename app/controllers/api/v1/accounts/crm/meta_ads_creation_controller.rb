@@ -7,9 +7,10 @@
 # PATCH meta_ads_connection/ads/:ad_id/budget → { amount, end_time } → orçamento novo.
 # GET   meta_ads_connection/paused_ads        → anúncios criados aqui que seguem pausados.
 #
-# Ver: administrador ou `meta_ads_view`. Criar, subir mídia e mudar orçamento mexem no dinheiro do cliente:
-# administrador ou `meta_ads_manage`, e ficam na Auditoria da conta com quem fez (nunca o token). Sem conexão ativa com
-# conta de anúncios: 404 not_connected.
+# Ver orçamento e pausados: administrador ou `meta_ads_view`. As opções de criar (Páginas, Instagram, números do
+# WhatsApp e fotos da conta de anúncios), criar, subir mídia e mudar orçamento: administrador ou `meta_ads_manage`. O
+# que muda fica na Auditoria da conta com quem fez (nunca o token). Sem conexão ativa com conta de anúncios: 404
+# not_connected.
 class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm::BaseController
   CREATED_ACTION = 'meta_ads_ad_created'.freeze
   BUDGET_ACTION = 'meta_ads_budget_change'.freeze
@@ -17,7 +18,7 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
 
   before_action :ensure_feature
   before_action :ensure_view
-  before_action :ensure_manage, only: [:media, :create, :update_budget]
+  before_action :ensure_manage, only: [:options, :media, :create, :update_budget]
   before_action :load_connection
 
   rescue_from ::Crm::MetaAds::Creation::Error, with: :render_creation_error

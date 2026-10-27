@@ -11,7 +11,7 @@ import {
 } from '../criacaoNaMeta';
 import { capaEmArquivo } from '../midiaDoAnuncio';
 import { siteNormalizado, siteValido } from '../anuncioNovo';
-import { parseAmount } from '../dinheiroDoAnuncio';
+import { parseAmount, todayOfAccount } from '../dinheiroDoAnuncio';
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: {
@@ -269,6 +269,22 @@ describe('Anúncios da Meta · ajudas do anúncio novo (#2198)', () => {
     expect(parseAmount('20,00')).toBe(20);
     expect(parseAmount('R$ 1.000,50')).toBe(1000.5);
     expect(parseAmount('45.5')).toBe(45.5);
+    expect(parseAmount('6,50')).toBe(6.5);
+    expect(parseAmount('25.57')).toBe(25.57);
     expect(parseAmount('')).toBeNull();
+  });
+
+  it("uses the ad account's today from the server, not the browser clock", () => {
+    expect(todayOfAccount('2030-01-15')).toBe('2030-01-15');
+  });
+
+  it('refuses what could be read wrong, never rounds in silence', () => {
+    // Ponto com 3 casas é milhar para quem digita em português: não vira R$ 6,00.
+    expect(parseAmount('6.000')).toBeNull();
+    expect(parseAmount('1.000.000')).toBeNull();
+    expect(parseAmount('20.005')).toBeNull();
+    expect(parseAmount('20,005')).toBeNull();
+    expect(parseAmount('6.')).toBeNull();
+    expect(parseAmount('1,2,3')).toBeNull();
   });
 });

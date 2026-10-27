@@ -11,10 +11,12 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
   let(:page_id) { '110000000002161' }
   let(:json) { { 'Content-Type' => 'application/json' } }
   let(:whatsapp_number) { '+5511900002161' }
+  # A campanha da tentativa leva a marca da chave no nome (os 8 primeiros caracteres).
+  let(:campaign_name) { 'Bolo de pote · WhatsApp [a1b2c3d4]' }
 
   let(:draft) do
     {
-      idempotency_key: 'a1b2c3', name: 'Bolo de pote · WhatsApp', destination: 'WHATSAPP', page_id: page_id,
+      idempotency_key: 'a1b2c3d4-0000-4000-8000-000000002198', name: 'Bolo de pote · WhatsApp', destination: 'WHATSAPP', page_id: page_id,
       whatsapp_number: whatsapp_number, media: { kind: 'image', hash: 'abc123' }, cards: [],
       text: 'Bolo de pote a R$ 12. Chame no WhatsApp.', headline: 'Bolo de pote a R$ 12', ready_message: 'Quero um bolo',
       placement: 'AUTO', region: 'BR', states: [], age_min: 25, age_max: 45, special_category: false,
@@ -48,6 +50,18 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
                                                            effective_status: effective))
   end
 
+  def stub_currency(currency = 'BRL', timezone: nil)
+    stub_request(:get, meta_graph_url(act)).with(query: hash_including({}))
+                                           .to_return(ok({ id: act, currency: currency, timezone_name: timezone }.compact))
+  end
+
+  def stub_campaign_search(found = [], status: 200)
+    response = status == 200 ? ok(data: found) : { status: status, body: meta_graph_error(1).to_json, headers: json }
+    stub_request(:get, meta_graph_url("#{act}/campaigns"))
+      .with(query: hash_including('filtering' => [{ field: 'name', operator: 'CONTAIN', value: 'a1b2c3d4' }].to_json))
+      .to_return(response)
+  end
+
   def form(request_signature)
     Rack::Utils.parse_nested_query(request_signature.body)
   end
@@ -60,6 +74,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     travel_to Time.zone.parse('2026-10-27 12:00:00 -0300')
     create(:channel_whatsapp, account: account, phone_number: whatsapp_number, validate_provider_config: false, sync_templates: false)
     stub_pages
+    stub_currency
+    stub_campaign_search
     stub_request(:get, meta_graph_url('me/permissions'))
       .to_return(ok(data: %w[ads_management pages_manage_ads].map { |name| { permission: name, status: 'granted' } }))
   end
@@ -73,7 +89,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect(result).to include(ad_id: '903', name: 'Bolo de pote · WhatsApp', status: 'PAUSED')
     campaign_ok = lambda do |req|
       body = form(req)
-      body['objective'] == 'OUTCOME_ENGAGEMENT' && body['status'] == 'ACTIVE' && body['special_ad_categories'] == '[]'
+      body['objective'] == 'OUTCOME_ENGAGEMENT' && body['status'] == 'ACTIVE' && body['special_ad_categories'] == '[]' &&
+        body['name'] == campaign_name
     end
     adset_ok = lambda do |req|
       body = form(req)
@@ -260,6 +277,28 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       expect(stubs[:campaign]).not_to have_been_made
     end
 
+    it 'tentativa presa sem o id da campanha: acha pela marca na Meta, apaga e refaz' do
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: draft[:idempotency_key], status: 'creating',
+                                        name: draft[:name], updated_at: 11.minutes.ago)
+      stub_campaign_search([{ id: '950', name: campaign_name, effective_status: 'ACTIVE' }])
+      undo = stub_request(:delete, meta_graph_url('950')).to_return(ok(success: true))
+      stubs = stub_creation
+      stub_reread
+
+      expect(create!).to include(ad_id: '903')
+      expect(undo).to have_been_made.once
+      expect(stubs[:campaign]).to have_been_made.once
+    end
+
+    it 'corrida: outra linha com a mesma chave nasceu no mesmo instante → in_progress, não 500' do
+      allow(Crm::MetaAdsCreatedObject).to receive(:find_or_create_by!)
+        .and_raise(ActiveRecord::RecordInvalid.new(Crm::MetaAdsCreatedObject.new))
+      stubs = stub_creation
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('in_progress') }
+      expect(stubs[:campaign]).not_to have_been_made
+    end
+
     it 'tentativa presa há mais de 10 minutos é desfeita e refeita' do
       leftover(status: 'creating', updated_at: 11.minutes.ago)
       undo = stub_request(:delete, meta_graph_url('800')).to_return(ok(success: true))
@@ -305,8 +344,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
   it 'sem o fuso da conta de anúncios guardado, lê na Meta e guarda antes de usar as datas' do
     connection.update!(ad_account_timezone: nil)
-    stub_request(:get, meta_graph_url(act)).with(query: hash_including({}))
-                                           .to_return(ok(id: act, timezone_name: 'America/Sao_Paulo'))
+    stub_currency(timezone: 'America/Sao_Paulo')
     stub_creation
     stub_reread
 
@@ -325,12 +363,92 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect(stubs[:campaign]).not_to have_been_made
   end
 
+  it 'valor com centavos vai para a Meta em centavos inteiros, sem float' do
+    stubs = stub_creation
+    stub_reread
+
+    result = create!(draft.merge(daily_amount: '20.57'))
+
+    expect(stubs[:adset].with { |req| form(req)['daily_budget'] == '2057' }).to have_been_made
+    expect(result[:budget]['amount']).to eq(20.57)
+  end
+
+  describe 'moeda da conta de anúncios (só real)' do
+    it 'conta em outra moeda: recusa antes de criar qualquer coisa' do
+      stub_currency('USD')
+      stubs = stub_creation
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
+        expect(e.code).to eq('currency_not_supported')
+        expect(e.nothing_created).to be(true)
+      }
+      expect(stubs[:campaign]).not_to have_been_made
+      expect(Crm::MetaAdsCreatedObject.count).to eq(0)
+    end
+
+    it 'sem conseguir ler a moeda: não cria' do
+      stub_request(:get, meta_graph_url(act)).with(query: hash_including({}))
+                                             .to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+      stubs = stub_creation
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('meta_unavailable') }
+      expect(stubs[:campaign]).not_to have_been_made
+    end
+  end
+
+  describe 'resposta da campanha perdida (tempo esgotado): a Meta é conferida pela marca no nome' do
+    before do
+      stub_creation
+      stub_request(:post, meta_graph_url("#{act}/campaigns")).to_timeout
+    end
+
+    it 'a campanha existe: apaga e só então diz que nada foi criado' do
+      stub_campaign_search([{ id: '950', name: campaign_name, effective_status: 'PAUSED' },
+                            { id: '951', name: 'Outra campanha [a1b2c3d4] cópia', effective_status: 'ACTIVE' }])
+      delete = stub_request(:delete, meta_graph_url('950')).to_return(ok(success: true))
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(true) }
+      expect(delete).to have_been_made.once
+      expect(a_request(:delete, meta_graph_url('951'))).not_to have_been_made
+      expect(Crm::MetaAdsCreatedObject.last.status).to eq('rolled_back')
+    end
+
+    it 'nenhuma campanha da tentativa na Meta: nada foi criado' do
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(true) }
+      expect(a_request(:delete, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'sem conseguir procurar: não diz que nada foi criado, e a próxima tentativa confere de novo' do
+      stub_campaign_search(status: 500)
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(false) }
+      expect(Crm::MetaAdsCreatedObject.last).to have_attributes(status: 'rollback_failed', campaign_id: nil)
+    end
+  end
+
+  it 'a campanha foi criada mas o id não chegou a ser gravado: acha pela marca e apaga' do
+    stub_creation(campaign: ok(id: '950'))
+    stub_campaign_search([{ id: '950', name: campaign_name, effective_status: 'ACTIVE' }])
+    delete = stub_request(:delete, meta_graph_url('950')).to_return(ok(success: true))
+    allow_any_instance_of(Crm::MetaAdsCreatedObject).to receive(:update!).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+      raise ActiveRecord::StatementInvalid, 'queda do banco' if args.first.is_a?(Hash) && args.first.key?(:campaign_id) && args.first[:campaign_id]
+
+      original.call(*args)
+    end
+
+    expect { create! }.to raise_error(ActiveRecord::StatementInvalid)
+    expect(delete).to have_been_made.once
+  end
+
   describe 'revalida no servidor, sem chamar a Meta para criar (ponto 5)' do
     {
       'destino não confirmado' => [{ destination: 'MESSENGER' }, 'invalid_destination'],
       'lugar não confirmado para o destino' => [{ placement: 'INSTAGRAM' }, 'invalid_placement'],
       'valor por dia abaixo de R$ 6' => [{ daily_amount: '5' }, 'invalid_amount'],
       'valor por dia acima de R$ 500' => [{ daily_amount: '501' }, 'invalid_amount'],
+      'valor com mais de 2 casas' => [{ daily_amount: '20.005' }, 'invalid_amount'],
+      'chave que não é UUID' => [{ idempotency_key: 'a1b2c3' }, 'invalid_params'],
+      'chave longa demais' => [{ idempotency_key: "#{'a' * 8}-#{'b' * 4}-#{'c' * 4}-#{'d' * 4}-#{'e' * 60}" }, 'invalid_params'],
       'início antes de hoje' => [{ start_date: '2026-10-26' }, 'invalid_dates'],
       'fim antes do início' => [{ end_date: '2026-10-27', start_date: '2026-10-28' }, 'invalid_dates'],
       'site sem https' => [{ destination: 'WEBSITE', site_url: 'http://lojaexemplo.com.br' }, 'invalid_site'],
