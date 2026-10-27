@@ -5,7 +5,7 @@
 # personalizadas, sem a Integração WhatsApp, sem Spam e Lixeira do e-mail). As mensagens só vêm dessas conversas.
 # "Pessoas" pede a permissão de ver contatos (contact_view) e traz quem não tem conversa que eu veja — dá para começar
 # uma pelas minhas caixas, como em Contatos; a conversa alheia não aparece. "Começar conversa com +55 …" pede a de
-# criar contato (ContactPolicy#create?).
+# criar contato (ContactPolicy#create?), e "Escrever para fulano@…" também.
 #
 # - telefone pelos dígitos (SearchService::TelefoneDigitado): "11 97862-2068" acha "+5511978622068", com e sem o nono
 #   dígito; com "+" na frente, o número precisa começar com o que foi digitado (número estrangeiro);
@@ -39,13 +39,14 @@ module SearchService::BuscaDaLista
       contacts: -> { pessoas_sem_conversa }
     }.transform_values { |secao| com_tempo_maximo(&secao) }
     secoes.transform_values { |linhas| linhas || [] }
-          .merge(telefone_novo: telefone_novo, parcial: secoes.select { |_secao, linhas| linhas.nil? }.keys)
+          .merge(telefone_novo: telefone_novo, email_novo: email_novo,
+                 parcial: secoes.select { |_secao, linhas| linhas.nil? }.keys)
   end
 
   private
 
   def vazio
-    { conversations: [], messages: [], contacts: [], telefone_novo: nil, parcial: [] }
+    { conversations: [], messages: [], contacts: [], telefone_novo: nil, email_novo: nil, parcial: [] }
   end
 
   # Cada seção na sua transação, com teto de tempo por consulta. Estourou: nil (a seção volta vazia e parcial).
@@ -191,5 +192,15 @@ module SearchService::BuscaDaLista
     return if numero.nil? || !politica_de_contato.create?
 
     current_account.contacts.exists?(phone_number: telefone.variantes) ? nil : numero
+  end
+
+  # E-mail que ninguém da conta tem: a lista oferece "Escrever para …", para quem cria contato. É e-mail o que o Contact
+  # aceita (a validação de formato dele, Devise.email_regexp), gravado como ele grava (minúsculas). "Já existe" com o
+  # critério da unicidade do Contact, sem diferença de maiúsculas (índice lower(email), account_id).
+  def email_novo
+    email = consulta.strip.downcase
+    return unless Devise.email_regexp.match?(email) && politica_de_contato.create?
+
+    current_account.contacts.exists?(['LOWER(contacts.email) = ?', email]) ? nil : email
   end
 end

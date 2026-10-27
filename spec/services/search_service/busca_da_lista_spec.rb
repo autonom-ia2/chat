@@ -50,7 +50,7 @@ RSpec.describe SearchService::BuscaDaLista do
   after { Current.account = nil }
 
   it 'não busca com texto vazio' do
-    expect(buscar('  ')).to eq(conversations: [], messages: [], contacts: [], telefone_novo: nil, parcial: [])
+    expect(buscar('  ')).to eq(conversations: [], messages: [], contacts: [], telefone_novo: nil, email_novo: nil, parcial: [])
   end
 
   it 'o NUL na consulta não derruba a busca' do
@@ -169,6 +169,50 @@ RSpec.describe SearchService::BuscaDaLista do
 
     it 'não oferece telefone que já é de alguém' do
       expect(buscar('11 97862-2068')[:telefone_novo]).to be_nil
+    end
+  end
+
+  describe 'e-mail' do
+    let!(:com_conversa) { account.contacts.create!(name: 'Marta Reis', email: 'marta@example.test') }
+    let!(:sem_conversa) { account.contacts.create!(name: 'Caio Prates', email: 'caio@example.test') }
+
+    before { conversa(com_conversa) }
+
+    it 'oferece começar conversa com um e-mail que ninguém da conta tem, como o contato grava' do
+      expect(buscar('  Novo.Cliente@Example.TEST ')[:email_novo]).to eq('novo.cliente@example.test')
+    end
+
+    it 'não oferece e-mail que já é de alguém, nem com maiúsculas diferentes, e acha a pessoa como hoje' do
+      resultado = buscar('MARTA@Example.test')
+      expect(resultado[:email_novo]).to be_nil
+      expect(resultado[:conversations].map(&:contact)).to eq([com_conversa])
+      sem_conversa_achado = buscar('Caio@EXAMPLE.test')
+      expect(sem_conversa_achado[:email_novo]).to be_nil
+      expect(sem_conversa_achado[:contacts]).to eq([sem_conversa])
+    end
+
+    it 'e-mail de contato de outra conta continua novo nesta' do
+      create(:account).contacts.create!(name: 'Lia Outra', email: 'lia@example.test')
+      expect(buscar('lia@example.test')[:email_novo]).to eq('lia@example.test')
+    end
+
+    it 'texto que não é e-mail não traz a oferta' do
+      %w[marta example.test @example.test marta@ marta@@example.test].each do |texto|
+        expect(buscar(texto)[:email_novo]).to be_nil
+      end
+      expect(buscar('ana @example.test')[:email_novo]).to be_nil
+    end
+
+    it 'quem não cria contato não recebe a oferta' do
+      com_funcao(%w[conversation_manage contact_view])
+      expect(buscar('novo@example.test')[:email_novo]).to be_nil
+    end
+
+    it 'telefone não vira e-mail, e o telefone novo continua igual' do
+      resultado = buscar('11 91234-5678')
+      expect(resultado[:email_novo]).to be_nil
+      expect(resultado[:telefone_novo]).to eq('+5511912345678')
+      expect(buscar('novo@example.test')[:telefone_novo]).to be_nil
     end
   end
 

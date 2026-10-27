@@ -22,6 +22,8 @@ json.payload do
     end
   end
   json.telefone_novo @result[:telefone_novo]
+  # E-mail que ninguém da conta tem, em minúsculas (nil quando não é e-mail, já existe ou falta poder criar contato).
+  json.email_novo @result[:email_novo]
   # Seções que passaram do tempo e voltaram vazias.
   json.parcial @result[:parcial]
 end
