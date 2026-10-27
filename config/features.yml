@@ -891,3 +891,13 @@
   display_name: CRM › Números · De onde vieram os clientes
   enabled: false
   column: feature_flags_ext_2
+
+# Lista de conversas "Quem está esperando" (#2202, PR1). Ligada: o item da lista vira o CardDaConversa (2 ou 3 linhas:
+# nome e horário, quem disse e o quê, e o sinal de espera), e o topo da lista ganha "Recentes ▾", "Filtrar ▾" e as abas
+# Minhas, Para pegar e Todas. Desligada: a lista de sempre, idêntica. Só frontend, sem migration. Fim da
+# feature_flags_ext_2, posição pela ordem de chegada à main; hoje 3 (valor 4, 1 << 2), confirmada pela Orquestração.
+# Se outra flag da ext_2 entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+- name: lista_quem_espera
+  display_name: Lista de conversas › quem está esperando
+  enabled: false
+  column: feature_flags_ext_2

@@ -23,6 +23,11 @@ export default {
       type: String,
       default: '',
     },
+    // #2202: dentro de um <button> (card da lista nova) a prévia precisa ser `span`.
+    tag: {
+      type: String,
+      default: 'div',
+    },
   },
   setup(props) {
     const { getPlainText } = useMessageFormatter();
@@ -87,7 +92,7 @@ export default {
 </script>
 
 <template>
-  <div class="overflow-hidden text-ellipsis whitespace-nowrap">
+  <component :is="tag" class="overflow-hidden text-ellipsis whitespace-nowrap">
     <template v-if="showMessageType">
       <fluent-icon
         v-if="isMessagePrivate"
@@ -134,5 +139,5 @@ export default {
     <span v-else>
       {{ defaultEmptyMessage || $t('CHAT_LIST.NO_CONTENT') }}
     </span>
-  </div>
+  </component>
 </template>

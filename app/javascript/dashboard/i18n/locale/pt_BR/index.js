@@ -20,6 +20,7 @@ import horarioDoCanal from './horarioDoCanal.json';
 import sidebarFork from './sidebarFork.json';
 import telaInicial from './telaInicial.json';
 import painelDoContato from './painelDoContato.json';
+import listaDeConversas from './listaDeConversas.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -94,6 +95,7 @@ export default {
   ...sidebarFork,
   ...telaInicial,
   ...painelDoContato,
+  ...listaDeConversas,
   ...brandKits,
   ...booking,
   ...resultJourney,

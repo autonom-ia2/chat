@@ -6,6 +6,9 @@ import {
   posicaoDepoisDosDigitos,
   separarTelefone,
   telefoneCompleto,
+  telefoneLegivel,
+  nomeOuTelefone,
+  nomeEhTelefone,
 } from '../mais/telefoneDoPais';
 
 describe('telefone do contato com país (#1702)', () => {
@@ -84,4 +87,36 @@ describe('telefone do contato com país (#1702)', () => {
     expect(posicaoDepoisDosDigitos('(11) 98765-4321', 0)).toBe(0);
     expect(posicaoDepoisDosDigitos('(11) 9', 9)).toBe(6);
   });
+});
+
+describe('telefone legível (#2202)', () => {
+  it('formata o telefone gravado com o país', () => {
+    expect(telefoneLegivel('+5541966665555')).toBe('+55 41 96666-5555');
+    expect(telefoneLegivel('+14155550132')).toBe('+1 415 555 0132');
+  });
+
+  it('o que não é número volta como veio', () => {
+    expect(telefoneLegivel('abc')).toBe('abc');
+    expect(telefoneLegivel(null)).toBe('');
+  });
+
+  it('nome que é só o número vira o telefone legível', () => {
+    expect(nomeOuTelefone('5511955554444', '+5511955554444')).toBe(
+      '+55 11 95555-4444'
+    );
+    expect(nomeOuTelefone('Joana', '+5511955554444')).toBe('Joana');
+    expect(nomeOuTelefone('+5511955554444', '+5511955554444')).toBe(
+      '+55 11 95555-4444'
+    );
+  });
+});
+
+describe('nome que é só telefone (#2202)', () => {
+  it.each(['+55 11 95555-4444', '5511955554444', '(11) 95555-4444'])(
+    '%s é telefone',
+    nome => expect(nomeEhTelefone(nome)).toBe(true)
+  );
+  it.each(['Maria', 'Loja 24 horas', '+1', '', null])('%s não é', nome =>
+    expect(nomeEhTelefone(nome)).toBe(false)
+  );
 });
