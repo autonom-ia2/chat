@@ -330,6 +330,12 @@ pt_BR:
       delivery_status:
         error_code: 'Código de erro: %{error_code}'
     activity:
+      meta_ads_comment:
+        commented_post: 'Comentou no post: “%{text}”'
+        commented_page_post: 'Comentou no post da Página: “%{text}”'
+        commented_ad: 'Comentou no anúncio: “%{text}”'
+        to_you: 'Reclamação: não respondi e passei para você.'
+        failed: 'Não consegui mandar a mensagem. Responda você, se quiser.'
       captain:
         resolved: 'A conversa foi marcada como resolvida por %{user_name} por inatividade'
         resolved_with_reason: 'A conversa foi marcada como resolvida por %{user_name} (%{reason})'
