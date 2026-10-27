@@ -154,6 +154,7 @@
       "ENVIADA_OCULTA": "Message sent. It went into a conversation that is with someone else.",
       "CAIXA_NAO_VOLTOU": "The contact was created, but the inbox didn't come back for it. Try sending again.",
       "TIPO_MUDOU": "This inbox changed what can be sent first. Check the message and send again: what you wrote was kept.",
+      "TIPO_MUDOU_PARA_MODELO": "This number needs an approved message now. Pick one to start.",
       "TELEFONE_INVALIDO": "{telefone} isn't a valid phone number. Go back to the list and check the number."
     }
   }

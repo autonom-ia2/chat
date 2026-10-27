@@ -154,6 +154,7 @@
       "ENVIADA_OCULTA": "Mensagem enviada. Ela entrou numa conversa que está com outra pessoa.",
       "CAIXA_NAO_VOLTOU": "O contato foi criado, mas a caixa não voltou para ele. Tente enviar de novo.",
       "TIPO_MUDOU": "Esta caixa mudou o que dá para mandar primeiro. Confira a mensagem e envie de novo: o que você escreveu ficou.",
+      "TIPO_MUDOU_PARA_MODELO": "Este número precisa de uma mensagem aprovada agora. Escolha uma para começar.",
       "TELEFONE_INVALIDO": "{telefone} não é um telefone válido. Volte para a lista e confira o número."
     }
   }

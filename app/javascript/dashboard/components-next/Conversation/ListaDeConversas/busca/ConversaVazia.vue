@@ -31,7 +31,10 @@ import {
 import { useNovaConversaContato } from 'dashboard/components-next/NovaConversa/useNovaConversaContato';
 import { useContinuarConversa } from 'dashboard/components-next/NovaConversa/useContinuarConversa';
 import { useNovaConversa } from 'dashboard/components-next/NovaConversa/useNovaConversa';
-import { tipoDeMensagem } from 'dashboard/components-next/NovaConversa/novaConversa';
+import {
+  TIPOS,
+  tipoDeMensagem,
+} from 'dashboard/components-next/NovaConversa/novaConversa';
 import {
   PELES,
   fornecerPele,
@@ -284,8 +287,15 @@ const garantirCaixa = async () => {
     return false;
   }
   caixaDoEnvio.value = daCaixa;
-  if (tipoDeMensagem(antes) !== tipoDeMensagem(daCaixa)) {
-    useAlert(t('LISTA_DE_CONVERSAS.CONVERSA_VAZIA.TIPO_MUDOU'));
+  const tipoDoServidor = tipoDeMensagem(daCaixa);
+  if (tipoDeMensagem(antes) !== tipoDoServidor) {
+    // Passou a pedir modelo: o texto escrito não aparece na escolha do modelo, então o aviso não
+    // promete que "ficou"; diz o que fazer agora.
+    useAlert(
+      tipoDoServidor === TIPOS.WHATSAPP_PRONTA
+        ? t('LISTA_DE_CONVERSAS.CONVERSA_VAZIA.TIPO_MUDOU_PARA_MODELO')
+        : t('LISTA_DE_CONVERSAS.CONVERSA_VAZIA.TIPO_MUDOU')
+    );
     return false;
   }
   await nextTick();

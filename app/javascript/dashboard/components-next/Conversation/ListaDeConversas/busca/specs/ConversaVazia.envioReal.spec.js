@@ -216,9 +216,11 @@ describe('ConversaVazia com o useNovaConversa de verdade', () => {
     await wrapper.find('[data-escrever]').trigger('click');
     await wrapper.find('[data-enviar]').trigger('click');
     await flushPromises();
+    // O texto não aparece na escolha do modelo: o aviso não promete que ele ficou.
     expect(useAlert).toHaveBeenCalledWith(
-      'Esta caixa mudou o que dá para mandar primeiro. Confira a mensagem e envie de novo: o que você escreveu ficou.'
+      'Este número precisa de uma mensagem aprovada agora. Escolha uma para começar.'
     );
+    expect(useAlert).toHaveBeenCalledTimes(1);
     expect(criacoes()).toHaveLength(0);
     const caixa = wrapper.find('[data-caixa]');
     expect(caixa.attributes('data-tipo')).toBe('whatsapp_pronta');
@@ -255,6 +257,7 @@ describe('ConversaVazia com o useNovaConversa de verdade', () => {
     expect(useAlert).toHaveBeenCalledWith(
       'Esta caixa mudou o que dá para mandar primeiro. Confira a mensagem e envie de novo: o que você escreveu ficou.'
     );
+    expect(useAlert).toHaveBeenCalledTimes(1);
     expect(criacoes()).toHaveLength(0);
     const caixa = wrapper.find('[data-caixa]');
     expect(caixa.attributes('data-tipo')).toBe('whatsapp_livre');
