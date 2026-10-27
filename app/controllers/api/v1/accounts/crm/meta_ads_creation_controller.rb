@@ -34,8 +34,9 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
   end
 
   def create
-    created = ::Crm::MetaAds::Creation::NewAd.new(@connection, user: Current.user).create!(create_params)
-    audit!(CREATED_ACTION, 'ad_id' => created[:ad_id], 'ad_name' => created[:name], 'budget' => created[:budget])
+    service = ::Crm::MetaAds::Creation::NewAd.new(@connection, user: Current.user)
+    created = service.create!(create_params)
+    audit!(CREATED_ACTION, 'ad_id' => created[:ad_id], 'ad_name' => created[:name], 'budget' => created[:budget]) if service.created_now
     render json: created
   end
 
@@ -46,10 +47,12 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
   def update_budget
     change = ::Crm::MetaAds::Creation::Budget.new(@connection)
                                              .change!(params[:ad_id].to_s, amount: params[:amount], end_time: params[:end_time])
-    before, after = change.values_at(:before, :after)
-    audit!(BUDGET_ACTION, 'ad_id' => params[:ad_id].to_s, 'level' => before[:level], 'object_id' => before[:object_id],
-                          'amount' => [before[:amount], after[:amount]], 'end_time' => [before[:end_time], after[:end_time]])
-    render json: { budget: after }
+    audit_budget!(*change.values_at(:before, :after))
+    render json: { budget: change[:after] }
+  rescue ::Crm::MetaAds::Creation::Error => e
+    # Parou no meio e não deu para desfazer: a Auditoria registra o que ficou mudado na Meta.
+    audit!(BUDGET_ACTION, 'ad_id' => params[:ad_id].to_s, 'partial' => e.details) if e.code == 'meta_partial'
+    raise
   end
 
   def paused
@@ -93,6 +96,11 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
     body = { error: error.code }
     body[:nothing_created] = error.nothing_created if action_name == 'create'
     render json: body, status: :unprocessable_entity
+  end
+
+  def audit_budget!(before, after)
+    audit!(BUDGET_ACTION, 'ad_id' => params[:ad_id].to_s, 'level' => before[:level], 'object_id' => before[:object_id],
+                          'amount' => [before[:amount], after[:amount]], 'end_time' => [before[:end_time], after[:end_time]])
   end
 
   # A Meta já mudou quando isto roda: falha ao gravar vai para o rastreador de erros e a resposta continua dizendo a

@@ -27,6 +27,9 @@ class Crm::MetaAds::Creation::Access
     return @granted if defined?(@granted)
 
     result = client.permissions
+    # Queda da Meta não é falta de permissão: não manda a pessoa entrar de novo nem guarda a resposta.
+    raise Crm::MetaAds::Creation::Error, 'meta_unavailable' if result.transient?
+
     @granted = Array(result.ok ? result.data.to_h['data'] : nil).filter_map do |entry|
       entry['permission'] if entry.is_a?(Hash) && entry['status'] == Meta::AdsGraphClient::GRANTED
     end

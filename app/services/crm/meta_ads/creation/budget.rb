@@ -3,9 +3,12 @@
 #
 # - `read` nunca devolve vazio: falha vira erro (`meta_unavailable`), e a tela diz "Não deu para ler o orçamento agora".
 # - `active_ads_count`: quantos anúncios de onde está o dinheiro estão no ar. É com eles que um anúncio ativado divide.
-# - `change!` revalida o valor (R$ 6 a R$ 500 por dia; o total só precisa ser positivo e ter fim) e as datas (o fim
-#   depois de agora e do início), lê o orçamento de antes (para a Auditoria) e manda só o que mudou. O fim chega como a
-#   tela mostrou ("2026-11-30T23:59:00") e vale no fuso da conta de anúncios.
+# - `change!` revalida o valor (R$ 6 a R$ 500 por dia; o total, de R$ 6 até R$ 500 por dia de veiculação que falta) e
+#   as datas (o fim depois de agora e do início), lê o orçamento de antes (para a Auditoria) e manda só o que mudou. O
+#   fim chega como a tela mostrou ("2026-11-30T23:59:00") e vale no fuso da conta de anúncios. Tirar a data de fim que
+#   já existe fica recusado até a chamada real confirmar como a Meta aceita (item 11 do contrato).
+# - Quando o valor fica na campanha e o fim no grupo, são duas chamadas. Se a segunda falha, a primeira é desfeita; se
+#   nem isso der, o erro é `meta_partial`, com o que mudou, para a Auditoria registrar a verdade.
 # - Só o token do próprio cliente com ads_management muda; conta em outra moeda lê, mas não muda (os limites são em reais).
 class Crm::MetaAds::Creation::Budget
   CENTS = 100
@@ -29,8 +32,8 @@ class Crm::MetaAds::Creation::Budget
     before = read(ad_id)
     raise Crm::MetaAds::Creation::Error, 'cannot_change' unless before[:can_change]
 
-    value = parse_amount(amount, before[:kind])
     new_end = parse_end(end_time, before)
+    value = parse_amount(amount, before, new_end)
     apply!(before, value, new_end)
     { before: before, after: before.merge(amount: value, end_time: new_end&.iso8601) }
   end
@@ -88,15 +91,22 @@ class Crm::MetaAds::Creation::Budget
     start_time.present? && Time.zone.parse(start_time.to_s) <= Time.current
   end
 
-  def parse_amount(amount, kind)
+  def parse_amount(amount, before, new_end)
     value = BigDecimal(amount.to_s, exception: false)
-    raise Crm::MetaAds::Creation::Error, 'invalid_amount' if value.nil? || !value.positive?
-    return value.to_f if kind == 'lifetime'
-
-    limits = Crm::MetaAds::Creation::Options::MIN_DAILY..Crm::MetaAds::Creation::Options::MAX_DAILY
-    raise Crm::MetaAds::Creation::Error, 'invalid_amount' unless limits.cover?(value)
+    raise Crm::MetaAds::Creation::Error, 'invalid_amount' unless value&.finite? && limits(before, new_end).cover?(value)
 
     value.to_f
+  end
+
+  # Por dia: R$ 6 a R$ 500. Total: R$ 6 até R$ 500 vezes os dias de veiculação que faltam.
+  def limits(before, new_end)
+    min = Crm::MetaAds::Creation::Options::MIN_DAILY
+    max = Crm::MetaAds::Creation::Options::MAX_DAILY
+    return min..max if before[:kind] == 'daily'
+
+    from = [Time.current, time(before[:start_time])].compact.max
+    days = [((new_end - from) / 1.day).ceil, 1].max
+    min..(max * days)
   end
 
   # Sem fim: só no orçamento por dia (o total precisa de data para acabar).
@@ -113,6 +123,7 @@ class Crm::MetaAds::Creation::Budget
 
   def no_end(before)
     raise Crm::MetaAds::Creation::Error, 'invalid_dates' if before[:kind] == 'lifetime'
+    raise Crm::MetaAds::Creation::Error, 'cannot_clear_end' if before[:end_time].present?
   end
 
   def time(value)
@@ -120,18 +131,42 @@ class Crm::MetaAds::Creation::Budget
   end
 
   def zone
-    ActiveSupport::TimeZone[@connection.ad_account_timezone.to_s] || Time.zone
+    @zone ||= Crm::MetaAds::Creation::AccountZone.new(@connection, client).zone
   end
 
-  # O valor vai para onde está o dinheiro; o fim vai para o grupo. Tirar o fim manda 0 (confirmar na chamada real).
+  # O valor vai para onde está o dinheiro; o fim vai para o grupo (no mesmo objeto, uma chamada só).
   def apply!(before, value, new_end)
-    changes = Hash.new { |hash, key| hash[key] = {} }
-    changes[before[:object_id]]["#{before[:kind]}_budget"] = (value * CENTS).round if value != before[:amount]
-    changes[before[:adset_id]]['end_time'] = new_end ? new_end.iso8601 : 0 if end_changed?(time(before[:end_time]), new_end)
+    changes = Hash.new { |hash, key| hash[key] = { new: {}, old: {} } }
+    add_change(changes[before[:object_id]], "#{before[:kind]}_budget", cents(value), cents(before[:amount])) if value != before[:amount]
+    add_change(changes[before[:adset_id]], 'end_time', new_end.iso8601, before[:end_time]) if end_changed?(time(before[:end_time]), new_end)
+    send_all!(changes)
+  end
+
+  def add_change(target, key, new_value, old_value)
+    target[:new][key] = new_value
+    target[:old][key] = old_value if old_value.present?
+  end
+
+  def send_all!(changes)
+    done = []
     changes.each do |object_id, params|
-      result = client.update_object(object_id, params)
-      raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
+      result = client.update_object(object_id, params[:new])
+      raise undo_partial(done, result) unless result.ok
+
+      done << [object_id, params]
     end
+  end
+
+  # Desfaz o que já mudou. Sem conseguir, `meta_partial` com o que ficou mudado na Meta.
+  def undo_partial(done, failure)
+    left = done.reject { |object_id, params| params[:old].present? && client.update_object(object_id, params[:old]).ok }
+    return Crm::MetaAds::Creation::Error.from_result(failure) if left.empty?
+
+    Crm::MetaAds::Creation::Error.new('meta_partial', nothing_created: false, details: left.to_h.transform_values { |params| params[:new] })
+  end
+
+  def cents(value)
+    (value * CENTS).round
   end
 
   def end_changed?(old_end, new_end)

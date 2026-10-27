@@ -41,6 +41,12 @@ RSpec.describe Crm::MetaAds::Creation::Media do
     expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
   end
 
+  it 'arquivo que diz ser foto mas não é: recusa sem chamar a Meta' do
+    expect { described_class.new(connection).upload!(upload('sample.pdf', 'image/png')) }
+      .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_media') }
+    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
   it 'foto acima de 30 MB: recusa' do
     stub_const("#{described_class}::IMAGE_MAX_BYTES", 10)
 

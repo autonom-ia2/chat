@@ -101,6 +101,20 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
     expect(response.parsed_body).to eq('error' => 'invalid_destination', 'nothing_created' => true)
   end
 
+  it 'a mesma chave de novo não grava outro "anúncio criado" na Auditoria' do
+    Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: 'k1', status: 'created', name: 'Bolo', ad_id: ad_id)
+    create(:channel_whatsapp, account: account, phone_number: '+5511900002161', validate_provider_config: false, sync_templates: false)
+    params = { idempotency_key: 'k1', name: 'Bolo', destination: 'WHATSAPP', page_id: '110', whatsapp_number: '+5511900002161',
+               media: { kind: 'image', hash: 'abc' }, text: 'Bolo', placement: 'AUTO', region: 'BR', age_min: 18, age_max: 65,
+               daily_amount: '20', start_date: '2026-10-27' }
+
+    post "#{path}/ads", params: params, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['ad_id']).to eq(ad_id)
+    expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_ad_created')).to be_empty
+  end
+
   it 'lista os pausados criados aqui' do
     Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: 'k1', status: 'created', name: 'Bolo', ad_id: ad_id,
                                       budget: { 'kind' => 'daily', 'amount' => 20.0 })

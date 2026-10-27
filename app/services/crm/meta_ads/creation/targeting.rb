@@ -45,7 +45,7 @@ class Crm::MetaAds::Creation::Targeting
     Rails.cache.fetch("meta_ads:region:BR:#{state}", expires_in: REGION_CACHE_TTL) { search(STATES.fetch(state)) }
   end
 
-  # O nome que bate (sem acento e sem diferença de maiúscula) ou, quando a Meta devolve um só, ele.
+  # Só o nome que bate (sem acento e sem diferença de maiúscula): outro nome seria outro lugar.
   def search(name)
     result = @client.search_regions(name)
     raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
@@ -61,7 +61,7 @@ class Crm::MetaAds::Creation::Targeting
   end
 
   def pick(regions, name)
-    regions.find { |row| plain(row['name']) == plain(name) } || (regions.first if regions.one?)
+    regions.find { |row| plain(row['name']) == plain(name) }
   end
 
   def plain(text)

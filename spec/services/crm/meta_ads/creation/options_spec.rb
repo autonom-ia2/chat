@@ -60,6 +60,13 @@ RSpec.describe Crm::MetaAds::Creation::Options do
     expect(a_request(:get, meta_graph_url('me/accounts'))).not_to have_been_made
   end
 
+  it 'queda da Meta ao ler permissões é erro, não pedido de entrar de novo' do
+    stub_request(:get, meta_graph_url('me/permissions')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+
+    expect { described_class.new(account, connection).payload }
+      .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('meta_unavailable') }
+  end
+
   it 'modo parceiro sempre pede para entrar com o Facebook' do
     connection.update!(mode: 'partner', access_token: nil)
 

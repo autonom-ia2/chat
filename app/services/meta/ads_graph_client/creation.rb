@@ -46,9 +46,9 @@ module Meta::AdsGraphClient::Creation
     get("act_#{ad_account_id}/adimages", fields: IMAGE_FIELDS, limit: IMAGES_LIMIT)
   end
 
-  # Páginas que a pessoa concedeu, com a conta do Instagram ligada a cada uma.
+  # Páginas que a pessoa concedeu, com a conta do Instagram ligada a cada uma (todas as páginas da lista).
   def pages_with_instagram
-    get('me/accounts', fields: PAGES_FIELDS, limit: Meta::AdsGraphClient::Management::PAGES_LIMIT)
+    paged('me/accounts', fields: PAGES_FIELDS)
   end
 
   def ad_budget(ad_id)

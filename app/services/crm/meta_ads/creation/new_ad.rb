@@ -6,7 +6,9 @@
 # 2. Relê o anúncio depois de criar; se não vier pausado (ou a leitura falhar), pausa na hora e registra na Auditoria.
 # 3. Falha no meio desfaz o começo: apaga a campanha (o grupo e o anúncio vão junto) ou, se a Meta não deixar, arquiva.
 #    Só quando isso dá certo a tela pode dizer "Nada foi criado".
-# 4. Chave de idempotência por tentativa: a mesma chave devolve o mesmo anúncio e nunca cria duas campanhas.
+# 4. Chave de idempotência por tentativa: a mesma chave devolve o mesmo anúncio e nunca cria duas campanhas. Tentativa
+#    que ficou na Meta (desfazer falhou, ou o processo caiu no meio) é desfeita antes de tentar de novo; se nem assim der,
+#    recusa sem criar outra campanha.
 # 5. Valor, datas, destino, lugar, público e mídia revalidados aqui (Crm::MetaAds::Creation::Draft).
 class Crm::MetaAds::Creation::NewAd
   CENTS = 100
@@ -14,6 +16,11 @@ class Crm::MetaAds::Creation::NewAd
   OBJECTIVES = { 'WHATSAPP' => 'OUTCOME_ENGAGEMENT', 'MESSENGER' => 'OUTCOME_ENGAGEMENT',
                  'INSTAGRAM_DIRECT' => 'OUTCOME_ENGAGEMENT', 'WEBSITE' => 'OUTCOME_TRAFFIC' }.freeze
   SPECIAL_CATEGORY = 'FINANCIAL_PRODUCTS_SERVICES'.freeze
+  # Tentativa em `creating` há mais que isso: o processo que criava caiu.
+  STALE_AFTER = 10.minutes
+
+  # true quando esta chamada criou o anúncio (a mesma chave de novo devolve o que já existia).
+  attr_reader :created_now
 
   def initialize(connection, user:)
     @connection = connection
@@ -31,10 +38,13 @@ class Crm::MetaAds::Creation::NewAd
 
     page = find_page!(draft[:page_id])
     ensure_video_ready!(draft)
+    # O público (estados → regiões da Meta) se resolve antes de criar qualquer coisa.
+    @targeting = Crm::MetaAds::Creation::Targeting.new(client).build(draft.values)
     record = claim!(draft)
     return result(record) if record.status == 'created'
 
     build!(record, draft, page)
+    @created_now = true
     result(record)
   end
 
@@ -45,22 +55,30 @@ class Crm::MetaAds::Creation::NewAd
   end
 
   def zone
-    ActiveSupport::TimeZone[@connection.ad_account_timezone.to_s] || Time.zone
+    @zone ||= Crm::MetaAds::Creation::AccountZone.new(@connection, client).zone
   end
 
-  # A linha da tentativa. Já criada: devolve. Em andamento por outro pedido: recusa. Falhou antes: tenta de novo.
+  # A linha da tentativa. Já criada: devolve. Em andamento por outro pedido: recusa. Falhou antes, ou ficou presa em
+  # `creating`: desfaz o que tiver ficado na Meta e tenta de novo.
   def claim!(draft)
     record = Crm::MetaAdsCreatedObject.find_or_create_by!(account: @account, idempotency_key: draft[:idempotency_key]) do |row|
       row.assign_attributes(user_id: @user&.id, name: draft[:name], ad_account_id: @connection.ad_account_id, budget: budget(draft))
       @claimed = true
     end
     return record if @claimed || record.status == 'created'
-    raise Crm::MetaAds::Creation::Error, 'in_progress' if record.status == 'creating'
+
+    recover!(record)
+  rescue ActiveRecord::RecordNotUnique
+    raise Crm::MetaAds::Creation::Error, 'in_progress'
+  end
+
+  def recover!(record)
+    stale = record.status == 'creating' && record.updated_at < STALE_AFTER.ago
+    raise Crm::MetaAds::Creation::Error, 'in_progress' if record.status == 'creating' && !stale
+    raise Crm::MetaAds::Creation::Error.new('meta_unavailable', nothing_created: false) unless undo(record.campaign_id)
 
     record.update!(status: 'creating', error_code: nil, campaign_id: nil, adset_id: nil, creative_id: nil, ad_id: nil)
     record
-  rescue ActiveRecord::RecordNotUnique
-    raise Crm::MetaAds::Creation::Error, 'in_progress'
   end
 
   def budget(draft)
@@ -93,6 +111,9 @@ class Crm::MetaAds::Creation::NewAd
     record.update!(status: 'created')
   rescue Crm::MetaAds::Creation::Error => e
     raise rollback!(record, e)
+  rescue StandardError => e
+    rollback!(record, Crm::MetaAds::Creation::Error.new('meta_refused'))
+    raise e
   end
 
   def meta_create!(call, params)
@@ -115,7 +136,7 @@ class Crm::MetaAds::Creation::NewAd
       billing_event: 'IMPRESSIONS', bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
       optimization_goal: draft[:destination] == 'WEBSITE' ? 'LINK_CLICKS' : 'CONVERSATIONS',
       destination_type: draft[:destination], promoted_object: promoted_object(draft)&.to_json,
-      targeting: Crm::MetaAds::Creation::Targeting.new(client).build(draft.values).to_json,
+      targeting: @targeting.to_json,
       start_time: start_time(draft[:start_date]).iso8601, end_time: end_time(draft[:end_date])&.iso8601
     }.compact
   end
@@ -147,26 +168,34 @@ class Crm::MetaAds::Creation::NewAd
     return if reread.ok && reread.data['effective_status'] == 'PAUSED'
 
     result = client.update_ad_status(record.ad_id, 'PAUSED')
+    audit_repause(record, reread, result)
+    raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
+  end
+
+  # A pausa já aconteceu (ou não) na Meta: falha ao gravar a Auditoria vai para o rastreador, nunca impede a pausa nem
+  # o desfazer.
+  def audit_repause(record, reread, result)
     Audited.audit_class.create!(
       auditable: @account, user: @user, action: REPAUSED_ACTION,
       audited_changes: { 'ad_id' => record.ad_id, 'effective_status' => reread.ok ? reread.data['effective_status'] : 'unread',
                          'paused' => result.ok }
     )
-    raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @account).capture_exception
   end
 
-  # Apaga a campanha; se não der, arquiva. Devolve o erro original dizendo se a Meta ficou como estava.
+  # Apaga a campanha (o grupo e o anúncio vão junto); se não der, arquiva. Devolve o erro original dizendo se a Meta
+  # ficou como estava.
   def rollback!(record, error)
-    return mark!(record, 'rolled_back', error, nothing_created: true) if record.campaign_id.blank?
-    return mark!(record, 'rolled_back', error, nothing_created: true) if client.delete_object(record.campaign_id).ok
-
-    archived = client.update_object(record.campaign_id, status: 'ARCHIVED').ok
-    mark!(record, archived ? 'rolled_back' : 'rollback_failed', error, nothing_created: archived)
+    undone = undo(record.campaign_id)
+    record.update!(status: undone ? 'rolled_back' : 'rollback_failed', error_code: error.code)
+    Crm::MetaAds::Creation::Error.new(error.code, nothing_created: undone)
   end
 
-  def mark!(record, status, error, nothing_created:)
-    record.update!(status: status, error_code: error.code)
-    Crm::MetaAds::Creation::Error.new(error.code, nothing_created: nothing_created)
+  def undo(campaign_id)
+    return true if campaign_id.blank?
+
+    client.delete_object(campaign_id).ok || client.update_object(campaign_id, status: 'ARCHIVED').ok
   end
 
   def result(record)

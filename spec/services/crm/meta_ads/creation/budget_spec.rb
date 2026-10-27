@@ -96,6 +96,45 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
     end
   end
 
+  describe '#change! com o dinheiro na campanha e o fim no grupo' do
+    before do
+      stub_budget(adset: { end_time: '2026-11-30T23:59:00-0300' }, campaign: { lifetime_budget: '90000' })
+      stub_ads(campaign_id, %w[ACTIVE])
+      stub_currency
+    end
+
+    it 'total acima de R$ 500 por dia que falta é recusado' do
+      expect { described_class.new(connection).change!(ad_id, amount: '20000', end_time: '2026-11-30T23:59:00') }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_amount') }
+    end
+
+    it 'se o fim falha, o valor da campanha volta ao que era' do
+      changed = stub_request(:post, meta_graph_url(campaign_id)).with(body: { 'lifetime_budget' => '100000' })
+                                                                .to_return(status: 200, body: { success: true }.to_json, headers: json)
+      reverted = stub_request(:post, meta_graph_url(campaign_id)).with(body: { 'lifetime_budget' => '90000' })
+                                                                 .to_return(status: 200, body: { success: true }.to_json, headers: json)
+      stub_request(:post, meta_graph_url(adset_id)).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+
+      expect { described_class.new(connection).change!(ad_id, amount: '1000', end_time: '2026-12-15T23:59:00') }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('meta_unavailable') }
+      expect([changed, reverted]).to all(have_been_made.once)
+    end
+
+    it 'se nem desfazer der: meta_partial com o que ficou mudado' do
+      stub_request(:post, meta_graph_url(campaign_id)).with(body: { 'lifetime_budget' => '100000' })
+                                                      .to_return(status: 200, body: { success: true }.to_json, headers: json)
+      stub_request(:post, meta_graph_url(campaign_id)).with(body: { 'lifetime_budget' => '90000' })
+                                                      .to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+      stub_request(:post, meta_graph_url(adset_id)).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+
+      expect { described_class.new(connection).change!(ad_id, amount: '1000', end_time: '2026-12-15T23:59:00') }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |e|
+          expect(e.code).to eq('meta_partial')
+          expect(e.details).to eq(campaign_id => { 'lifetime_budget' => 100_000 })
+        }
+    end
+  end
+
   describe '#change!' do
     before do
       stub_budget(adset: { daily_budget: '3000' })
@@ -134,6 +173,19 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
     it 'recusa fim que já passou' do
       expect { described_class.new(connection).change!(ad_id, amount: '30', end_time: '2026-10-26T23:59:00') }
         .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_dates') }
+    end
+
+    it 'tirar a data de fim que já existe fica recusado até a chamada real confirmar (item 11)' do
+      stub_budget(adset: { daily_budget: '3000', end_time: '2026-11-30T23:59:00-0300' })
+
+      expect { described_class.new(connection).change!(ad_id, amount: '30', end_time: nil) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('cannot_clear_end') }
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'valor que não é número finito é recusado' do
+      expect { described_class.new(connection).change!(ad_id, amount: 'Infinity', end_time: nil) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_amount') }
     end
 
     it 'Meta recusou: erro meta_refused' do

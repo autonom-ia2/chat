@@ -206,6 +206,107 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect(stubs[:campaign]).not_to have_been_made
   end
 
+  describe 'nova tentativa com a mesma chave (ponto 4)' do
+    def leftover(status:, updated_at: Time.current)
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: draft[:idempotency_key], status: status,
+                                        campaign_id: '800', updated_at: updated_at)
+    end
+
+    it 'o que ficou na Meta é apagado antes de criar de novo' do
+      leftover(status: 'rollback_failed')
+      undo = stub_request(:delete, meta_graph_url('800')).to_return(ok(success: true))
+      stubs = stub_creation
+      stub_reread
+
+      expect(create!).to include(ad_id: '903')
+      expect(undo).to have_been_made.once
+      expect(stubs[:campaign]).to have_been_made.once
+    end
+
+    it 'se o que ficou na Meta não sai, recusa sem criar outra campanha' do
+      leftover(status: 'rollback_failed')
+      stub_request(:delete, meta_graph_url('800')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+      stub_request(:post, meta_graph_url('800')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+      stubs = stub_creation
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(false) }
+      expect(stubs[:campaign]).not_to have_been_made
+      expect(Crm::MetaAdsCreatedObject.last.campaign_id).to eq('800')
+    end
+
+    it 'tentativa em andamento há pouco: in_progress, sem chamar a Meta para criar' do
+      leftover(status: 'creating')
+      stubs = stub_creation
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('in_progress') }
+      expect(stubs[:campaign]).not_to have_been_made
+    end
+
+    it 'tentativa presa há mais de 10 minutos é desfeita e refeita' do
+      leftover(status: 'creating', updated_at: 11.minutes.ago)
+      undo = stub_request(:delete, meta_graph_url('800')).to_return(ok(success: true))
+      stub_creation
+      stub_reread
+
+      expect(create!).to include(ad_id: '903')
+      expect(undo).to have_been_made.once
+    end
+
+    it 'devolver o que já existia não conta como criado agora' do
+      stub_creation
+      stub_reread
+      first = described_class.new(connection, user: user)
+      first.create!(draft)
+      second = described_class.new(connection, user: user)
+      second.create!(draft)
+
+      expect([first.created_now, second.created_now]).to eq([true, nil])
+    end
+  end
+
+  it 'erro inesperado no meio também desfaz o começo' do
+    stub_creation
+    delete = stub_request(:delete, meta_graph_url('900')).to_return(ok(success: true))
+    allow(Crm::MetaAds::Creation::Story).to receive(:new).and_raise(NoMethodError)
+
+    expect { create! }.to raise_error(NoMethodError)
+    expect(delete).to have_been_made.once
+    expect(Crm::MetaAdsCreatedObject.last.status).to eq('rolled_back')
+  end
+
+  it 'pausa que falha, mesmo com a Auditoria fora, desfaz tudo' do
+    stub_creation
+    stub_reread(effective: 'ACTIVE')
+    stub_request(:post, meta_graph_url('903')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+    delete = stub_request(:delete, meta_graph_url('900')).to_return(ok(success: true))
+    allow(Audited.audit_class).to receive(:create!).and_raise(ActiveRecord::RecordInvalid)
+
+    expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(true) }
+    expect(delete).to have_been_made.once
+  end
+
+  it 'sem o fuso da conta de anúncios guardado, lê na Meta e guarda antes de usar as datas' do
+    connection.update!(ad_account_timezone: nil)
+    stub_request(:get, meta_graph_url(act)).with(query: hash_including({}))
+                                           .to_return(ok(id: act, timezone_name: 'America/Sao_Paulo'))
+    stub_creation
+    stub_reread
+
+    create!
+
+    expect(connection.reload.ad_account_timezone).to eq('America/Sao_Paulo')
+  end
+
+  it 'busca de estado que volta só com outro nome não vira público' do
+    stubs = stub_creation
+    stub_request(:get, meta_graph_url('search')).with(query: hash_including('q' => 'Acre'))
+                                                .to_return(ok(data: [{ key: '999', name: 'Acre Province', type: 'region', country_code: 'BR' }]))
+
+    expect { create!(draft.merge(region: 'STATES', states: ['AC'])) }
+      .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_audience') }
+    expect(stubs[:campaign]).not_to have_been_made
+  end
+
   describe 'revalida no servidor, sem chamar a Meta para criar (ponto 5)' do
     {
       'destino não confirmado' => [{ destination: 'MESSENGER' }, 'invalid_destination'],

@@ -17,10 +17,16 @@ class Crm::MetaAds::Creation::Media
     @client = Crm::MetaAds::Creation::Access.new(connection).client
   end
 
+  # Assinatura do começo do arquivo: o tipo que o navegador diz não basta.
+  JPEG_START = "\xFF\xD8\xFF".b.freeze
+  PNG_START = "\x89PNG\r\n\x1A\n".b.freeze
+  # MP4 e MOV: a primeira caixa (a partir do 5º byte) é uma destas.
+  VIDEO_BOXES = %w[ftyp moov wide mdat free skip].freeze
+
   def upload!(file)
     type = file.content_type.to_s
-    return image!(file) if IMAGE_TYPES.include?(type)
-    return video!(file) if VIDEO_TYPES.include?(type)
+    return image!(file) if IMAGE_TYPES.include?(type) && image_bytes?(file)
+    return video!(file) if VIDEO_TYPES.include?(type) && video_bytes?(file)
 
     raise Crm::MetaAds::Creation::Error, 'invalid_media'
   end
@@ -49,6 +55,19 @@ class Crm::MetaAds::Creation::Media
     raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok && result.data['id'].present?
 
     { kind: 'video', video_id: result.data['id'].to_s }
+  end
+
+  def head(file, size)
+    File.open(file.path, 'rb') { |io| io.read(size).to_s }
+  end
+
+  def image_bytes?(file)
+    start = head(file, PNG_START.bytesize)
+    start.start_with?(JPEG_START) || start == PNG_START
+  end
+
+  def video_bytes?(file)
+    VIDEO_BOXES.include?(head(file, 8).byteslice(4, 4))
   end
 
   # Endereço direto do armazenamento (no S3, assinado e com prazo), que a Meta lê sem login.
