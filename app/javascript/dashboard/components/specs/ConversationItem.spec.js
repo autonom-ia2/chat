@@ -14,7 +14,10 @@ const CartaoStub = defineComponent({
   },
 });
 
-const montar = async (inicio, { listaNova = false } = {}) => {
+const montar = async (
+  inicio,
+  { listaNova = false, showExpanded = false } = {}
+) => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -59,11 +62,15 @@ const montar = async (inicio, { listaNova = false } = {}) => {
   );
   provides.isConversationSelected = () => false;
   const wrapper = shallowMount(ConversationItem, {
-    props: { source: { id: 7, inbox_id: 1, meta: {} } },
+    props: { source: { id: 7, inbox_id: 1, meta: {} }, showExpanded },
     global: {
       plugins: [router, store],
       provide: provides,
-      stubs: { ConversationCard: CartaoStub, CardDaConversa: true },
+      stubs: {
+        ConversationCard: CartaoStub,
+        CardDaConversa: true,
+        ConversationCardExpanded: true,
+      },
     },
   });
   return { wrapper, router };
@@ -140,6 +147,31 @@ describe('ConversationItem com a chave lista_quem_espera (#2202)', () => {
     expect(card.props('chat')).toEqual({ id: 7, inbox_id: 1, meta: {} });
     expect(card.props('selectable')).toBe(true);
     expect(wrapper.findComponent({ name: 'ConversationCard' }).exists()).toBe(
+      false
+    );
+  });
+
+  it('layout expandido salvo e chave ligada: o item novo, condensado', async () => {
+    const { wrapper } = await montar('/app/accounts/1/dashboard', {
+      listaNova: true,
+      showExpanded: true,
+    });
+    expect(wrapper.findComponent({ name: 'CardDaConversa' }).exists()).toBe(
+      true
+    );
+    expect(
+      wrapper.findComponent({ name: 'ConversationCardExpanded' }).exists()
+    ).toBe(false);
+  });
+
+  it('layout expandido salvo e chave desligada: o card expandido, como na main', async () => {
+    const { wrapper } = await montar('/app/accounts/1/dashboard', {
+      showExpanded: true,
+    });
+    expect(
+      wrapper.findComponent({ name: 'ConversationCardExpanded' }).exists()
+    ).toBe(true);
+    expect(wrapper.findComponent({ name: 'CardDaConversa' }).exists()).toBe(
       false
     );
   });

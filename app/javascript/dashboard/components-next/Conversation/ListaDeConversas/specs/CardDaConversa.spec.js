@@ -23,8 +23,8 @@ vi.mock('dashboard/api/crmKanban', () => ({
 }));
 vi.mock('dashboard/components/widgets/conversation/MessagePreview.vue', () => ({
   default: {
-    props: ['message'],
-    template: '<span data-previa>{{ message.content }}</span>',
+    props: ['message', 'tag'],
+    template: '<span data-previa :data-tag="tag">{{ message.content }}</span>',
   },
 }));
 
@@ -99,6 +99,32 @@ describe('CardDaConversa (#2202)', () => {
     const sinal = wrapper.find('[data-sinal]');
     expect(sinal.text()).toBe('Esperando há 2 horas');
     expect(sinal.classes()).toContain('text-n-ruby-11');
+  });
+
+  it('sem nome e sem telefone: o e-mail; sem e-mail, o identificador (no texto e no leitor de tela)', () => {
+    const comEmail = montar({
+      currentContact: { email: 'cliente@exemplo.test' },
+    });
+    expect(comEmail.find('[data-nome]').text()).toBe('cliente@exemplo.test');
+    expect(
+      comEmail.find('[data-card-texto]').attributes('aria-label')
+    ).toContain('cliente@exemplo.test');
+    expect(comEmail.find('.i-lucide-user').exists()).toBe(true);
+    const soId = montar({ currentContact: { identifier: 'id-externo-7' } });
+    expect(soId.find('[data-nome]').text()).toBe('id-externo-7');
+  });
+
+  it('avatar de 36 px no celular e 40 no resto, por classe (sem medir a janela)', () => {
+    const wrapper = montar();
+    expect(wrapper.find('[data-avatar="36"]').classes()).toContain('md:hidden');
+    expect(wrapper.find('[data-avatar="40"]').classes()).toEqual(
+      expect.arrayContaining(['hidden', 'md:inline-flex'])
+    );
+  });
+
+  it('a prévia dentro do botão é span', () => {
+    const wrapper = montar();
+    expect(wrapper.find('[data-previa]').attributes('data-tag')).toBe('span');
   });
 
   it('contato que só tem o número: telefone legível no nome e ícone de pessoa no avatar', () => {

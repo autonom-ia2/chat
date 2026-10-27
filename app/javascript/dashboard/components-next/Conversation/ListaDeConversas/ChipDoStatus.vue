@@ -1,7 +1,6 @@
 <script setup>
-// #2202 — o chip "Resolvidas ✕" / "Adiadas ✕" no começo da linha das pílulas, quando o
-// status escolhido no "Filtrar ▾" é Resolvidas ou Adiadas (quem usa decide quando
-// mostrar, por ESTADOS_COM_CHIP). O ✕ volta para as abertas.
+// #2202 — o chip do status ("Resolvidas ✕", "Adiadas ✕", "Pendentes ✕", "Todos os status ✕") no
+// começo da linha das pílulas, sempre que a lista não está nas abertas. O ✕ volta para as abertas.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -11,11 +10,17 @@ const props = defineProps({
 const emit = defineEmits(['limpar']);
 const { t } = useI18n();
 
-const NOMES = { resolved: 'RESOLVIDAS', snoozed: 'ADIADAS' };
+const NOMES = {
+  resolved: 'RESOLVIDAS',
+  snoozed: 'ADIADAS',
+  pending: 'PENDENTES',
+  all: 'TODOS_OS_STATUS',
+};
+// Status que a lista nova não nomeia: o nome que o filtro de sempre dá a ele.
 const nome = computed(() =>
   NOMES[props.status]
     ? t(`LISTA_DE_CONVERSAS.CABECALHO.${NOMES[props.status]}`)
-    : ''
+    : t(`CHAT_LIST.CHAT_STATUS_FILTER_ITEMS.${props.status}.TEXT`)
 );
 </script>
 

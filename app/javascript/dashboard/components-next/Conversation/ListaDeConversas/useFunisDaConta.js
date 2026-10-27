@@ -1,5 +1,5 @@
 // #2202 — a conta tem funil? Uma leitura por conta, dividida por todos os cards. Sem
-// funil (contas 17 e 47), o lugar da etapa mostra o nome da caixa.
+// funil, o lugar da etapa mostra o nome da caixa. Se a leitura falhar, a próxima montagem tenta de novo.
 import { computed, reactive, watch } from 'vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 
@@ -15,8 +15,9 @@ const ler = async contaId => {
       quantos: (data?.payload || []).length,
     };
   } catch {
-    // Sem a resposta, a conta conta como "com funil": o card não troca a etapa pela caixa.
-    porConta[contaId] = { carregado: false, quantos: 0 };
+    // Sem a resposta, a conta conta como "com funil" (o card não troca a etapa pela caixa) e a
+    // falha não fica guardada: a próxima montagem lê de novo.
+    delete porConta[contaId];
   }
 };
 

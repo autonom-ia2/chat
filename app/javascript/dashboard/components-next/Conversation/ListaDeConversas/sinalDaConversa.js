@@ -12,6 +12,7 @@ import { horaComDia } from './horaDaLista';
 import {
   REMETENTE,
   ehRespostaDePessoa,
+  ehTipoDeRobo,
   primeiroNome,
 } from './prefixoDoRemetente';
 
@@ -36,12 +37,12 @@ const responsavel = chat => ({
 
 const temPessoaResponsavel = chat => {
   const { tipo, pessoa } = responsavel(chat);
-  return Boolean(pessoa?.id) && tipo !== 'AgentBot';
+  return Boolean(pessoa?.id) && !ehTipoDeRobo(tipo);
 };
 
 const nomeDoRobo = (chat, contexto) => {
   const { tipo, pessoa } = responsavel(chat);
-  if (tipo === 'AgentBot' && pessoa?.name) return pessoa.name;
+  if (ehTipoDeRobo(tipo) && pessoa?.name) return pessoa.name;
   return contexto.nomeDoUltimoRobo || '';
 };
 
@@ -156,7 +157,7 @@ const quemCuida = (chat, contexto) => {
   }
   if (!mostrarResponsavel) return null;
   const { tipo, pessoa } = responsavel(chat);
-  if (pessoa?.id && tipo === 'AgentBot') {
+  if (pessoa?.id && ehTipoDeRobo(tipo)) {
     const nome = pessoa.name;
     return sinal(
       'com_robo',

@@ -113,4 +113,11 @@ describe('ChipDoStatus (#2202)', () => {
     await adiadas.find('button').trigger('click');
     expect(adiadas.emitted('limpar')).toHaveLength(1);
   });
+
+  it('"Pendentes ✕" e "Todos os status ✕": todo status fora das abertas tem nome', () => {
+    const chip = status =>
+      mount(ChipDoStatus, { props: { status }, global: { plugins: [i18n] } });
+    expect(chip('pending').text()).toBe('Pendentes');
+    expect(chip('all').text()).toBe('Todos os status');
+  });
 });

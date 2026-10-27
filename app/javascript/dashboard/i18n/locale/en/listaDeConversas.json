@@ -81,6 +81,8 @@
       "ABERTAS": "Open",
       "RESOLVIDAS": "Resolved",
       "ADIADAS": "Snoozed",
+      "PENDENTES": "Pending",
+      "TODOS_OS_STATUS": "All statuses",
       "MAIS_FILTROS": "More filters…",
       "VOLTAR_ABERTAS": "Back to open"
     },
@@ -95,7 +97,9 @@
       "PARA_PEGAR": "Nothing to pick up. All caught up.",
       "TODAS": "No open conversations.",
       "RESOLVIDAS": "No resolved conversations.",
-      "ADIADAS": "No snoozed conversations. When you snooze one, it shows up here until it's time to come back."
+      "ADIADAS": "No snoozed conversations. When you snooze one, it shows up here until it's time to come back.",
+      "PENDENTES": "No pending conversations.",
+      "TODOS_OS_STATUS": "No conversations in this tab."
     },
     "FUNIS": {
       "TODOS": "All",

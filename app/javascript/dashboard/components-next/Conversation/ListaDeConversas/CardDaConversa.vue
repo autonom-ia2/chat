@@ -9,7 +9,6 @@
 // para o Alt+J/K continuar achando o item.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useWindowSize } from '@vueuse/core';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
@@ -20,7 +19,6 @@ import {
 import { iconeDaCaixa } from './iconeDaCaixa';
 import { dataEHoraDaMensagem } from 'dashboard/components-next/conversa-canal/dataDaConversa';
 import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
-import wootConstants from 'dashboard/constants/globals';
 import Avatar from 'next/avatar/Avatar.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
@@ -57,7 +55,6 @@ const emit = defineEmits([
 
 const { t } = useI18n();
 const store = useStore();
-const { width } = useWindowSize();
 const agora = useRelogioDaLista();
 const eu = useMapGetter('getCurrentUser');
 const contaId = useMapGetter('getCurrentAccountId');
@@ -71,9 +68,12 @@ const nomeDoAgente = id => {
   return agente?.available_name || agente?.name || '';
 };
 
-const noCelular = computed(
-  () => width.value < wootConstants.SMALL_SCREEN_BREAKPOINT
-);
+// O avatar tem 36 px no celular e 40 no resto, pela classe responsiva (sem medir a janela em
+// cada card): o Avatar recebe o tamanho em número, então são dois, e só um aparece.
+const AVATARES = [
+  { tamanho: 36, classe: 'md:hidden', marcador: 'size-9' },
+  { tamanho: 40, classe: 'hidden md:inline-flex', marcador: 'size-10' },
+];
 const hovered = ref(false);
 watch(
   () => props.chat.id,
@@ -82,16 +82,23 @@ watch(
   }
 );
 
-// Contato que só tem o número aparece com o telefone legível ("+55 11 94444-3333"), e o avatar
-// fica com o ícone de pessoa em vez das iniciais ("+5").
-const nome = computed(() => {
-  const pessoa = props.currentContact.name
-    ? props.currentContact
-    : props.chat.meta?.sender;
-  return nomeOuTelefone(pessoa?.name || '', pessoa?.phone_number) || '';
-});
+// Quem é: o nome; sem nome, o telefone legível ("+55 11 94444-3333"); sem telefone, o e-mail;
+// sem e-mail, o identificador. O avatar só mostra iniciais de um nome de verdade: com telefone,
+// e-mail ou identificador no lugar do nome, fica o ícone de pessoa (as iniciais seriam "+5").
+const pessoas = computed(() =>
+  [props.currentContact, props.chat.meta?.sender].filter(Boolean)
+);
+const primeiroCampo = campo =>
+  pessoas.value.map(pessoa => pessoa[campo]).find(Boolean) || '';
+const nomeGravado = computed(() => primeiroCampo('name'));
+const nome = computed(
+  () =>
+    nomeOuTelefone(nomeGravado.value, primeiroCampo('phone_number')) ||
+    primeiroCampo('email') ||
+    primeiroCampo('identifier')
+);
 const nomeNoAvatar = computed(() =>
-  nomeEhTelefone(nome.value) ? '' : nome.value
+  nomeGravado.value && !nomeEhTelefone(nomeGravado.value) ? nome.value : ''
 );
 const ultima = computed(() => getLastMessage(props.chat));
 const prefixo = computed(() =>
@@ -293,18 +300,22 @@ const selecionada = computed({
       @mouseleave="hovered = false"
     >
       <Avatar
+        v-for="avatar in AVATARES"
+        :key="avatar.tamanho"
+        :class="avatar.classe"
         :name="nomeNoAvatar"
         :src="currentContact.thumbnail"
-        :size="noCelular ? 36 : 40"
+        :size="avatar.tamanho"
         :status="currentContact.availability_status"
         hide-offline-status
         rounded-full
+        :data-avatar="avatar.tamanho"
       >
-        <template #overlay="{ size }">
+        <template #overlay>
           <label
             v-if="selectable && (hovered || selected)"
             class="absolute inset-0 z-10 flex items-center justify-center rounded-full cursor-pointer backdrop-blur-[2px]"
-            :style="{ width: `${size}px`, height: `${size}px` }"
+            :class="avatar.marcador"
             @click.stop
           >
             <Checkbox v-model="selecionada" />
@@ -360,6 +371,7 @@ const selecionada = computed({
             v-if="ultima"
             :message="ultima"
             :show-message-type="false"
+            tag="span"
             class="flex-1 min-w-0 leading-5"
           />
           <span v-else class="truncate">

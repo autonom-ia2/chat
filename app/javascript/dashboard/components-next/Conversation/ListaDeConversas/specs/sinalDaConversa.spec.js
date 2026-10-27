@@ -201,4 +201,21 @@ describe('sinalDaConversa (#2202, linha 3)', () => {
     ).toBe('Prioridade alta');
     expect(sinal(conversa({ priority: 'medium' })).prioridade).toBe('');
   });
+
+  it('Captain::Assistant responsável conta como robô, como o AgentBot', () => {
+    const captain = conversa({
+      meta: {
+        assignee_type: 'Captain::Assistant',
+        assignee: { id: 9, name: 'Clara' },
+      },
+    });
+    expect(
+      sinal(captain, { ultima: { tipo: REMETENTE.ROBO, nome: 'Clara' } }).sinal
+    ).toMatchObject({ familia: 'com_robo', texto: 'Com Clara', selo: true });
+    // Robô responsável não é pessoa: a resposta da equipe sem pegar aparece.
+    expect(
+      sinal(captain, { ultima: { tipo: REMETENTE.PESSOA, nome: 'Ana' } }).sinal
+        .familia
+    ).toBe('respondeu');
+  });
 });

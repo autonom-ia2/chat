@@ -81,6 +81,8 @@
       "ABERTAS": "Abertas",
       "RESOLVIDAS": "Resolvidas",
       "ADIADAS": "Adiadas",
+      "PENDENTES": "Pendentes",
+      "TODOS_OS_STATUS": "Todos os status",
       "MAIS_FILTROS": "Mais filtros…",
       "VOLTAR_ABERTAS": "Voltar para as abertas"
     },
@@ -95,7 +97,9 @@
       "PARA_PEGAR": "Nada para pegar. Tudo em dia.",
       "TODAS": "Nenhuma conversa aberta.",
       "RESOLVIDAS": "Nenhuma conversa resolvida.",
-      "ADIADAS": "Nenhuma conversa adiada. Quando você adiar uma, ela aparece aqui até a hora de voltar."
+      "ADIADAS": "Nenhuma conversa adiada. Quando você adiar uma, ela aparece aqui até a hora de voltar.",
+      "PENDENTES": "Nenhuma conversa pendente.",
+      "TODOS_OS_STATUS": "Nenhuma conversa nesta aba."
     },
     "FUNIS": {
       "TODOS": "Todos",

@@ -9,7 +9,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 // aviso de lista vazia são os de sempre.
 const Vazio = { render: () => null };
 
-const montar = async ({ chaveLigada }) => {
+const montar = async ({ chaveLigada, status = 'open' }) => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/app/accounts/:accountId/dashboard', name: 'home' }].map(
@@ -62,7 +62,12 @@ const montar = async ({ chaveLigada }) => {
   const wrapper = shallowMount(ChatList, {
     global: { plugins: [router, store, i18n] },
   });
-  await flushPromises();
+  if (status !== 'open') {
+    wrapper
+      .findComponent({ name: 'ListaCabecalho' })
+      .vm.$emit('basicFilterChange', status, 'status');
+    await flushPromises();
+  }
   return wrapper;
 };
 
@@ -103,6 +108,32 @@ describe('ChatList com a chave lista_quem_espera (#2202)', () => {
     );
     expect(wrapper.find('[data-lista-vazia]').text()).toBe(
       'LISTA_DE_CONVERSAS.VAZIA.MINHAS'
+    );
+  });
+
+  it.each([
+    ['pending', 'LISTA_DE_CONVERSAS.VAZIA.PENDENTES'],
+    ['all', 'LISTA_DE_CONVERSAS.VAZIA.TODOS_OS_STATUS'],
+  ])(
+    'ligada, status %s: o chip do status e a lista vazia falando do status',
+    async (status, texto) => {
+      const wrapper = await montar({ chaveLigada: true, status });
+
+      const chip = wrapper.findComponent({ name: 'ChipDoStatus' });
+      expect(chip.exists()).toBe(true);
+      expect(chip.props('status')).toBe(status);
+      expect(wrapper.find('[data-lista-vazia]').text()).toBe(texto);
+    }
+  );
+
+  it('ligada: a lista é o painel das abas', async () => {
+    const wrapper = await montar({ chaveLigada: true });
+    const lista = wrapper.findComponent({ name: 'ConversationList' });
+    expect(lista.attributes('id')).toBe('lista-de-conversas-painel');
+    expect(lista.attributes('role')).toBe('tabpanel');
+    expect(lista.attributes('aria-labelledby')).toBe('lista-aba-me');
+    expect(wrapper.findComponent({ name: 'ListaAbas' }).props('painelId')).toBe(
+      'lista-de-conversas-painel'
     );
   });
 });

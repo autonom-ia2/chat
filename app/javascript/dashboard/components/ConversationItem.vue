@@ -58,7 +58,8 @@ watch(
 );
 
 const currentChat = useMapGetter('getSelectedChat');
-// #2202: com a chave lista_quem_espera, o item novo da lista (mesmas props e eventos).
+// #2202: com a chave lista_quem_espera, o item novo da lista (mesmas props e eventos), sempre
+// condensado: o layout expandido salvo não vale enquanto a chave estiver ligada.
 const listaNova = useListaNova();
 // Quem só lê a conversa (#1800): sem seleção em massa e, no menu, só abrir em nova aba e copiar o link.
 const canOperate = useCanOperateConversation(computed(() => props.source));
@@ -192,7 +193,7 @@ const onDeleteConversation = () => {
 <template>
   <!-- Expanded layout: wide screen + expanded setting -->
   <ConversationCardExpanded
-    v-if="showExpanded"
+    v-if="showExpanded && !listaNova"
     :chat="source"
     :current-contact="currentContact"
     :assignee="assignee"

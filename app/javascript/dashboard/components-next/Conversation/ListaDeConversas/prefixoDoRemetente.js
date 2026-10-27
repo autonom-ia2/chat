@@ -25,6 +25,8 @@ export const REMETENTE = {
 
 const TIPO_DA_MENSAGEM = { INCOMING: 0, OUTGOING: 1, ACTIVITY: 2, TEMPLATE: 3 };
 const ROBOS = ['AgentBot', 'Captain::Assistant'];
+// Responsável ou remetente que é robô (AgentBot ou Captain::Assistant), pelo tipo do servidor.
+export const ehTipoDeRobo = tipo => ROBOS.includes(tipo);
 const ROBOS_NO_SENDER = ['agent_bot', 'captain_assistant'];
 
 export const primeiroNome = nome =>

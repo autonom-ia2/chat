@@ -386,14 +386,23 @@ const usaCabecalhoNovo = computed(
     !temFiltroDoLink.value &&
     !pastaDoEmail.value
 );
+// Fora das abertas (resolvidas, adiadas, pendentes, todos os status), o chip mostra o status e volta.
 const mostraChipDoStatus = computed(
   () =>
     usaCabecalhoNovo.value &&
-    ['resolved', 'snoozed'].includes(activeStatus.value)
+    activeStatus.value !== wootConstants.STATUS_TYPE.OPEN
 );
 const voltarParaAbertas = () => cabecalhoNovo.value?.voltarParaAbertas();
+// O painel que as abas da lista nova controlam (aria-controls).
+const PAINEL_DA_LISTA = 'lista-de-conversas-painel';
 const VAZIA_POR_ABA = { me: 'MINHAS', unassigned: 'PARA_PEGAR', all: 'TODAS' };
-const VAZIA_POR_STATUS = { resolved: 'RESOLVIDAS', snoozed: 'ADIADAS' };
+// A lista vazia fala do status antes da aba: em "Pendentes", não adianta dizer "nada para pegar".
+const VAZIA_POR_STATUS = {
+  resolved: 'RESOLVIDAS',
+  snoozed: 'ADIADAS',
+  pending: 'PENDENTES',
+  all: 'TODOS_OS_STATUS',
+};
 const textoDaListaVazia = computed(() => {
   if (!usaCabecalhoNovo.value) return t('CHAT_LIST.LIST.404');
   const chave =
@@ -1188,6 +1197,7 @@ watch(appliedFilters, () => resetBulkActions());
     <template v-if="!hasAppliedFiltersOrActiveFolders && !listaJuntaDoLink">
       <ListaAbas
         v-if="listaNova"
+        :painel-id="PAINEL_DA_LISTA"
         :items="assigneeTabItems"
         :active-tab="activeAssigneeTab"
         @chat-tab-change="updateAssigneeTab"
@@ -1220,7 +1230,10 @@ watch(appliedFilters, () => resetBulkActions());
       @select-all-conversations="toggleSelectAll"
     />
     <ConversationList
+      :id="listaNova ? PAINEL_DA_LISTA : undefined"
       ref="conversationListComponentRef"
+      :role="listaNova ? 'tabpanel' : undefined"
+      :aria-labelledby="listaNova ? `lista-aba-${abaDaLista}` : undefined"
       :conversation-list="conversationList"
       :is-loading="chatListLoading"
       :show-end-of-list-message="showEndOfListMessage"
