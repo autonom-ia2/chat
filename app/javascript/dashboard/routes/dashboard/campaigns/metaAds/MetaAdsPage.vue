@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { META_ADS_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -17,6 +18,8 @@ import MetaAdsFunnelStep from './components/MetaAdsFunnelStep.vue';
 import MetaAdsSummary from './components/MetaAdsSummary.vue';
 import MetaAdsPanel from './components/MetaAdsPanel.vue';
 import AnunciosSemLogin from './semLogin/AnunciosSemLogin.vue';
+import MetaAdsOrganic from './organico/MetaAdsOrganic.vue';
+import MetaAdsViewTabs from './components/MetaAdsViewTabs.vue';
 import { currentStep } from './metaAdsHelpers';
 
 // Campanhas › Anúncios da Meta (#1047, F1b): a conexão guiada num lugar só, em 4 passos —
@@ -52,9 +55,16 @@ const rememberMode = value => {
 };
 // Conectado (#1088): "Resultado" (o painel do dia a dia) ou "Conexão" (o resumo da conexão), lembrado no
 // endereço (?aba=). Conexão que precisa de atenção abre direto na conexão.
-const VIEWS = ['resultado', 'conexao'];
+// "Orgânico" (#2199) só com a flag meta_ads_organico: o que a Página e o Instagram alcançam sem anúncio.
+const ALL_VIEWS = ['resultado', 'organico', 'conexao'];
+const { t } = useI18n();
+const tabLabels = computed(() => ({
+  resultado: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.RESULT'),
+  organico: t('META_ADS_ORGANIC.TAB'),
+  conexao: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.CONNECTION'),
+}));
 const view = ref(
-  VIEWS.includes(route.query.aba) ? route.query.aba : 'resultado'
+  ALL_VIEWS.includes(route.query.aba) ? route.query.aba : 'resultado'
 );
 const chooseView = value => {
   view.value = value;
@@ -112,13 +122,42 @@ const panelAvailable = computed(
     connection.value?.status === 'active' &&
     Boolean(connection.value?.ad_account)
 );
-const showPanel = computed(
-  () => view.value === 'resultado' && panelAvailable.value
+const organicOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_ORGANICO
+  )
+);
+// Quem só vê (meta_ads_view) fica sem a Conexão: as abas dele são Resultado e Seus posts.
+const VIEWS = computed(() =>
+  ALL_VIEWS.filter(
+    name =>
+      (name !== 'organico' || organicOn.value) &&
+      (name !== 'conexao' || !readOnly.value)
+  )
+);
+// Aba que a tela mostra: sem painel, só a Conexão; aba fora da lista (flag desligada), o Resultado.
+const activeView = computed(() => {
+  if (!panelAvailable.value) return 'conexao';
+  return VIEWS.value.includes(view.value) ? view.value : 'resultado';
+});
+const showPanel = computed(() => activeView.value === 'resultado');
+const showOrganic = computed(() => activeView.value === 'organico');
+// Na aba Seus posts o subtítulo fala de post, não de anúncio.
+const subtitle = computed(() =>
+  showOrganic.value && !openStep.value
+    ? t('META_ADS_ORGANIC.SUBTITLE')
+    : t('CRM_KANBAN.META_ADS_HUB.PAGE.SUBTITLE')
 );
 // Painel conectado (#2054): a lista dos 4 passos sai da lateral do Resultado e o painel usa a largura toda. Ela
 // aparece na aba Conexão e enquanto um passo está aberto ou falta configurar.
 const showChecklist = computed(
-  () => !(step.value === DONE && !openStep.value && showPanel.value)
+  () =>
+    !(
+      step.value === DONE &&
+      !openStep.value &&
+      (showPanel.value || showOrganic.value)
+    )
 );
 // Anúncios sem login (#1960, degrau 0): com a flag e sem conexão de anúncios nenhuma (o servidor diz em
 // whatsapp_result.enabled), a página abre pronta com o resultado que chega pelo WhatsApp. Quem já tem
@@ -247,7 +286,7 @@ onMounted(load);
           {{ $t('CRM_KANBAN.META_ADS_HUB.PAGE.TITLE') }}
         </h1>
         <p class="mt-2 mb-0 text-sm leading-6 text-n-slate-11">
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PAGE.SUBTITLE') }}
+          {{ subtitle }}
         </p>
       </header>
 
@@ -281,7 +320,17 @@ onMounted(load);
       />
 
       <template v-else-if="readOnly">
-        <MetaAdsPanel v-if="panelAvailable" read-only />
+        <div v-if="panelAvailable" class="flex flex-col min-w-0 gap-5">
+          <MetaAdsViewTabs
+            v-if="VIEWS.length > 1"
+            :views="VIEWS"
+            :active="activeView"
+            :labels="tabLabels"
+            @choose="chooseView"
+          />
+          <MetaAdsOrganic v-if="showOrganic" read-only />
+          <MetaAdsPanel v-else read-only />
+        </div>
         <div
           v-else
           data-meta-ads-not-connected
@@ -305,34 +354,15 @@ onMounted(load);
       >
         <div class="flex flex-col min-w-0 gap-5">
           <template v-if="step === 5 && !openStep">
-            <div
+            <MetaAdsViewTabs
               v-if="panelAvailable"
-              role="group"
-              :aria-label="$t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.LABEL')"
-              class="flex gap-1 p-1 rounded-lg bg-n-alpha-1 w-fit"
-            >
-              <button
-                v-for="name in VIEWS"
-                :key="name"
-                type="button"
-                :data-view-tab="name"
-                :aria-pressed="(showPanel ? 'resultado' : 'conexao') === name"
-                class="px-4 text-[13px] font-520 border-0 rounded-md min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-                :class="
-                  (showPanel ? 'resultado' : 'conexao') === name
-                    ? 'bg-n-solid-1 text-n-slate-12 shadow-[0_1px_2px_rgba(0,0,0,0.06)]'
-                    : 'bg-transparent text-n-slate-11 hover:text-n-slate-12'
-                "
-                @click="chooseView(name)"
-              >
-                {{
-                  name === 'resultado'
-                    ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.RESULT')
-                    : $t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.CONNECTION')
-                }}
-              </button>
-            </div>
+              :views="VIEWS"
+              :active="activeView"
+              :labels="tabLabels"
+              @choose="chooseView"
+            />
             <MetaAdsPanel v-if="showPanel" @open="openStep = $event" />
+            <MetaAdsOrganic v-else-if="showOrganic" :read-only="readOnly" />
             <MetaAdsSummary
               v-else
               :connection="connection"
