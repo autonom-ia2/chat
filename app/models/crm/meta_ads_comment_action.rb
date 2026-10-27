@@ -35,6 +35,11 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
     create!(attributes.merge(at: Time.current))
   end
 
+  # A Meta aceitou o privado: a reivindicação passa a valer para sempre.
+  def confirm!
+    update!(confirmed_at: Time.current)
+  end
+
   # Reivindicação do privado sem confirmação da Meta e já vencida: não vale mais como "já respondido".
   def stale?
     confirmed_at.nil? && at.before?(UNCONFIRMED_TTL.ago)

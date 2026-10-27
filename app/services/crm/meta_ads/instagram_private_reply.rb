@@ -44,7 +44,7 @@ class Crm::MetaAds::InstagramPrivateReply
       raise Error, error_code(result)
     end
 
-    action.update!(confirmed_at: Time.current)
+    action.confirm!
     record_safely!(action, comment, text, result.data, user)
   end
 
