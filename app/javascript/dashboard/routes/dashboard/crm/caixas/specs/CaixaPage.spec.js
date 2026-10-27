@@ -17,6 +17,7 @@ vi.mock('dashboard/composables/store', async () => {
       autonomia_agents_fase2: estado.fase2,
     }),
     getCurrentAccountId: () => 1,
+    'inboxes/getInboxById': () => () => ({}),
   };
   conta.estado = estado;
   return { useMapGetter: nome => computed(() => getters[nome]()) };

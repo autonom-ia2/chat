@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import {
   ROUND_ROBIN,
   EARLIEST_CREATED,
@@ -79,15 +79,21 @@ const breadcrumbItems = computed(() => {
 });
 
 const buildInboxList = allInboxes =>
-  allInboxes?.map(
-    ({ name, id, email, phoneNumber, channelType, medium, voiceEnabled }) => ({
+  allInboxes?.map(inbox => {
+    const { name, id, email, phoneNumber, medium, voiceEnabled } = inbox;
+    return {
       name,
       id,
       email,
       phoneNumber,
-      icon: getInboxIconByType(channelType, medium, 'line', voiceEnabled),
-    })
-  ) || [];
+      icon: getInboxIconByType(
+        tipoDoIconeDaCaixa(inbox),
+        medium,
+        'line',
+        voiceEnabled
+      ),
+    };
+  }) || [];
 
 const policyInboxes = computed(() =>
   buildInboxList(selectedPolicy.value?.inboxes)

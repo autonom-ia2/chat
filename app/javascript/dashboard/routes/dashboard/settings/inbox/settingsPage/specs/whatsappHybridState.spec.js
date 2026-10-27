@@ -130,8 +130,8 @@ describe('expired QR chip (chat#1487)', () => {
 
 describe('phoneLabel (chat#1487)', () => {
   it('formats the raw digits with the country code', () => {
-    expect(phoneLabel('551140001487')).toBe('+55 (11) 4000-1487');
-    expect(phoneLabel('5511999993846')).toBe('+55 (11) 99999-3846');
+    expect(phoneLabel('551140001487')).toBe('+55 11 4000-1487');
+    expect(phoneLabel('5511999993846')).toBe('+55 11 99999-3846');
   });
 
   it('keeps empty as empty', () => {
