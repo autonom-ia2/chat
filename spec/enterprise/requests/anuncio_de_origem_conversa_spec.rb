@@ -552,6 +552,116 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
     end
   end
 
+  # Condição descartada no meio de outras (#2271): ela vale como verdadeira e o filtro se simplifica pela precedência do
+  # FilterService#query_builder (string SQL sem parênteses: AND antes de OR).
+  describe 'filtro de Conversas com a condição do anúncio entre outras' do
+    def anuncio(operador = nil) = condicao('campaign_source_ids', 'contains', ['"120200000000000001"'], operador)
+    def status(valor, operador = nil) = condicao('status', 'equal_to', [valor], operador)
+    def numero(conversa, operador = nil) = condicao('display_id', 'equal_to', [conversa.display_id.to_s], operador)
+
+    def condicao(chave, filtro, valores, operador)
+      { 'attribute_key' => chave, 'filter_operator' => filtro, 'values' => valores, 'query_operator' => operador }
+    end
+
+    # O payload como sai para quem não vê: [chave, valores, operador] de cada condição.
+    def simplificado(*condicoes)
+      Crm::AnuncioDeOrigem::FiltroDeConversas.payload(condicoes, user: sem_chave, account_user: AccountUser.find_by(user: sem_chave),
+                                                                 account: account)
+                                             .map { |item| [item[:attribute_key], item[:values], item[:query_operator]] }
+    end
+
+    def resumo(condicao) = [condicao['attribute_key'], condicao['values'], condicao['query_operator']]
+
+    it 'do meio: A(and) B(or) C vira A(or) C; A(or) B(and) C vira A(or) C' do
+      expect(simplificado(status('open', 'and'), anuncio('or'), status('resolved')))
+        .to eq([resumo(status('open', 'or')), resumo(status('resolved'))])
+      expect(simplificado(status('open', 'or'), anuncio('and'), status('resolved')))
+        .to eq([resumo(status('open', 'or')), resumo(status('resolved'))])
+    end
+
+    it 'primeira: B(and) C(or) D vira C(or) D; B(or) C(and) D vira tudo' do
+      expect(simplificado(anuncio('and'), status('open', 'or'), status('resolved')))
+        .to eq([resumo(status('open', 'or')), resumo(status('resolved'))])
+      expect(simplificado(anuncio('or'), status('open', 'and'), status('resolved'))).to eq([])
+    end
+
+    it 'última: A(or) B vira tudo; A(and) B vira A' do
+      expect(simplificado(status('open', 'or'), anuncio)).to eq([])
+      expect(simplificado(status('open', 'and'), anuncio)).to eq([resumo(status('open'))])
+    end
+
+    it 'duas seguidas: A(and) B(and) B(or) D vira A(or) D; A(or) B(and) B(or) D vira tudo' do
+      expect(simplificado(status('open', 'and'), anuncio('and'), anuncio('or'), status('resolved')))
+        .to eq([resumo(status('open', 'or')), resumo(status('resolved'))])
+      expect(simplificado(status('open', 'or'), anuncio('and'), anuncio('or'), status('resolved'))).to eq([])
+    end
+
+    it 'A(and) B(and) C vira A(and) C' do
+      expect(simplificado(status('open', 'and'), anuncio('and'), status('resolved')))
+        .to eq([resumo(status('open', 'and')), resumo(status('resolved'))])
+    end
+
+    describe 'de ponta a ponta, dentro do acesso de quem filtra' do
+      before { [sem_campanha, resolvida, de_outra_caixa] }
+
+      def sem_campanha = (@sem_campanha ||= create_crm_conversation(account: account, inbox: inbox, contact: contato))
+
+      def resolvida
+        @resolvida ||= create_crm_conversation(account: account, inbox: inbox, contact: contato).tap { |item| item.update!(status: :resolved) }
+      end
+
+      # Caixa em que a pessoa sem a chave não está: nada dela pode voltar, nem quando o filtro vira "tudo".
+      def de_outra_caixa
+        @de_outra_caixa ||= begin
+          escondida = create_crm_inbox(account: account, name: 'Caixa de outra equipe', members: [])
+          create_crm_conversation(account: account, inbox: escondida, contact: contato).tap do |item|
+            item.update!(status: :resolved, additional_attributes: { 'campaign_touches' => [toque_anuncio],
+                                                                     'campaign_source_ids' => %w[120200000000000001] })
+          end
+        end
+      end
+
+      def filtrar(user, *condicoes)
+        post "#{api}/conversations/filter", headers: auth_headers(user), as: :json, params: { payload: condicoes }
+        expect(response).to have_http_status(:ok)
+        response.parsed_body['payload'].pluck('id')
+      end
+
+      # A(or) B(and) C: com AND antes de OR é A OR (B AND C); da esquerda para a direita seria (A OR B) AND C, que aqui
+      # não acha nada (A e o anúncio estão abertos). O resultado bate com AND antes de OR, antes e depois do descarte.
+      it 'A(or) B(and) C: AND antes de OR com a chave; sem a chave, A(or) C, só nas caixas da pessoa' do
+        filtro = [numero(sem_campanha, 'or'), anuncio('and'), status('resolved')]
+
+        expect(filtrar(com_view, *filtro)).to eq([sem_campanha.display_id])
+        expect(filtrar(sem_chave, *filtro)).to contain_exactly(sem_campanha.display_id, resolvida.display_id)
+        expect(filtrar(admin, *filtro)).to contain_exactly(sem_campanha.display_id, de_outra_caixa.display_id)
+      end
+
+      it 'filtro que vira tudo: só o que a pessoa já vê, nunca a caixa de outra equipe' do
+        resultado = filtrar(sem_chave, status('open', 'or'), anuncio)
+
+        expect(resultado).to match_array(todas_as_conversas(sem_chave) + [resolvida.display_id])
+        expect(resultado).not_to include(de_outra_caixa.display_id)
+      end
+
+      it 'contagem de não lidas: tudo e A(or) C ficam nas caixas da pessoa' do
+        [sem_campanha, resolvida, de_outra_caixa].each do |conversa|
+          conversa.messages.create!(account: account, inbox: conversa.inbox, message_type: :incoming, sender: contato, content: 'Oi')
+        end
+        # Mensagem recebida reabre a conversa: resolve de novo DEPOIS dela, e confere, para o dado não enganar.
+        [resolvida, de_outra_caixa].each { |conversa| conversa.update!(status: :resolved) }
+        expect([resolvida, de_outra_caixa].map { |conversa| conversa.reload.status }).to eq(%w[resolved resolved])
+        contar = lambda do |*condicoes|
+          Conversations::UnreadCounts::FilterQueryCounter.new(account: account, user: sem_chave, query: { payload: condicoes }).perform
+        end
+
+        # Não lidas que a pessoa vê: conversa_anuncio (mensagem do referral), sem_campanha e resolvida.
+        expect(contar.call(status('open', 'or'), anuncio)).to eq(3)
+        expect(contar.call(numero(sem_campanha, 'or'), anuncio('and'), status('resolved'))).to eq(2)
+      end
+    end
+  end
+
   def filtrar_conversas(user, valores, operador = 'contains')
     post "#{api}/conversations/filter", headers: auth_headers(user), as: :json,
                                         params: { payload: [{ attribute_key: 'campaign_source_ids', filter_operator: operador,

@@ -1,8 +1,8 @@
 # O filtro avançado de Conversas por campanha (`campaign_source_ids`, contains/does_not_contain; #2271), com a regra do
 # filtro do CRM: para quem não vê o anúncio de origem, os ids de anúncio saem da condição e a divulgação continua
-# filtrando; sobrando só ids de anúncio, a condição é ignorada. Só fica o id que existe na conta e nunca foi anúncio
-# (Crm::AnuncioDeOrigem::Ids.sem_anuncio), sempre como token exato (`"id"`, o mesmo formato do picker): um pedaço de id
-# digitado à mão não sonda o id do anúncio.
+# filtrando; sobrando só ids de anúncio, a condição é ignorada: vale como verdadeira (ver `simplifica`). Só fica o id
+# que existe na conta e nunca foi anúncio (Crm::AnuncioDeOrigem::Ids.sem_anuncio), sempre como token exato (`"id"`, o
+# mesmo formato do picker): um pedaço de id digitado à mão não sonda o id do anúncio.
 #
 # `is_present`/`is_not_present` ficam como estão: dizem só se a conversa veio de alguma campanha ou anúncio, e quem não vê
 # o anúncio já vê em cada conversa que ela veio de anúncio (só não vê qual).
@@ -15,6 +15,7 @@ module Crm::AnuncioDeOrigem::FiltroDeConversas
   CHAVE = 'campaign_source_ids'.freeze
   OPERADORES = %w[contains does_not_contain].freeze
   ASPAS = '"'.freeze
+  OU = 'or'.freeze
 
   module_function
 
@@ -22,7 +23,35 @@ module Crm::AnuncioDeOrigem::FiltroDeConversas
     return payload unless por_campanha_em?(payload)
     return payload if Crm::AnuncioDeOrigem.ve_no_contexto?(user, account_user)
 
-    fecha(condicoes_de(payload).filter_map { |condicao| por_campanha?(condicao) ? sem_anuncio(condicao, account) : condicao })
+    simplifica(grupos_de(condicoes_de(payload)), account)
+  end
+
+  # O FilterService#query_builder emenda as condições numa string SQL sem parênteses: vale a precedência do SQL, AND liga
+  # antes de OR. `A(and) B(or) C` é `(A AND B) OR C`; `A(or) B(and) C` é `A OR (B AND C)`. Por isso as condições se
+  # separam em grupos ligados por OR, e dentro de cada grupo vale AND.
+  def grupos_de(condicoes)
+    condicoes.slice_after { |condicao| condicao[:query_operator].to_s.casecmp?(OU) }.to_a
+  end
+
+  # A condição ignorada vale como verdadeira. Num grupo (AND), ela some. O grupo que só tinha condições ignoradas vira
+  # verdadeiro, e o OR com verdadeiro é tudo: o filtro sai sem condição nenhuma (lista tudo, como a condição sozinha).
+  def simplifica(grupos, account)
+    restantes = grupos.map do |grupo|
+      grupo.filter_map { |condicao| por_campanha?(condicao) ? sem_anuncio(condicao, account) : condicao }
+    end
+    return [] if restantes.any?(&:empty?)
+
+    remonta(grupos, restantes)
+  end
+
+  # Dentro do grupo, cada condição fica com o operador dela (AND). A última de cada grupo liga ao próximo com o OR do
+  # grupo original; a última de todas fica sem operador (FilterService#validate_query_operator).
+  def remonta(grupos, restantes)
+    restantes.each_with_index.flat_map do |grupo, indice|
+      ultima = grupo.last
+      fim = indice == restantes.size - 1 ? ultima.except(:query_operator) : ultima.merge(query_operator: grupos[indice].last[:query_operator])
+      grupo[0...-1] + [fim]
+    end
   end
 
   # O payload tem condição por campanha? (A contagem de não lidas só procura o dono do filtro quando tem.)
@@ -42,12 +71,5 @@ module Crm::AnuncioDeOrigem::FiltroDeConversas
     return if restantes.empty?
 
     condicao.merge(values: restantes.map { |id| "#{ASPAS}#{id}#{ASPAS}" })
-  end
-
-  # A última condição não leva operador de junção (FilterService#validate_query_operator).
-  def fecha(condicoes)
-    return condicoes if condicoes.empty?
-
-    condicoes[0...-1] + [condicoes.last.except(:query_operator)]
   end
 end
