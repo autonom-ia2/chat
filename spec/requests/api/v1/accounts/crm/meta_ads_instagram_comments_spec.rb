@@ -103,6 +103,41 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
     expect(response.parsed_body['conversation_path']).to eq("/app/accounts/#{account.id}/conversations/#{conversation.display_id}")
   end
 
+  it 'anúncio de outra conta de anúncios: 404 na lista e na ação, sem tocar no Instagram' do
+    stub_request(:get, meta_graph_url(ad_id)).with(query: hash_including({}))
+                                             .to_return(status: 200, headers: json,
+                                                        body: { id: ad_id, account_id: '999',
+                                                                creative: { effective_instagram_media_id: media_id,
+                                                                            instagram_user_id: ig_id } }.to_json)
+
+    get path, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+    delete "#{path}/18000000000000001", headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+
+    expect(meta_call(/graph\.instagram\.com/)).not_to have_been_made
+  end
+
+  it 'comentário de outra mídia: 404 em apagar, responder e no privado, sem agir' do
+    stub_request(:get, %r{#{ig}/18000000000000009\?}).to_return(
+      status: 200, headers: json,
+      body: { id: '18000000000000009', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
+              media: { id: '17900000000000999' } }.to_json
+    )
+    headers = admin.create_new_auth_token
+
+    delete "#{path}/18000000000000009", headers: headers, as: :json
+    expect(response).to have_http_status(:not_found)
+    post "#{path}/18000000000000009/reply", params: { text: 'Oi' }, headers: headers, as: :json
+    expect(response).to have_http_status(:not_found)
+    post "#{path}/18000000000000009/private_reply", params: { text: 'Oi' }, headers: headers, as: :json
+    expect(response).to have_http_status(:not_found)
+
+    expect(a_request(:delete, /graph\.instagram\.com/)).not_to have_been_made
+    expect(a_request(:post, /graph\.instagram\.com/).with { |request| !request.uri.path.end_with?('subscribed_apps') }).not_to have_been_made
+    expect(Crm::MetaAdsCommentAction.count).to eq(0)
+  end
+
   it 'erro de regra vira 422 com o código' do
     post "#{path}/18000000000000001/reply", params: { text: ' ' }, headers: admin.create_new_auth_token, as: :json
 

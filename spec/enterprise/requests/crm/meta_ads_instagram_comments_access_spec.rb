@@ -13,6 +13,7 @@ RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2
 
   let(:account) { create(:account) }
   let(:manager) { create(:user, account: account, role: :agent) }
+  let(:viewer) { create(:user, account: account, role: :agent) }
   let(:ad_id) { '120254710382770416' }
   let(:path) { "/api/v1/accounts/#{account.id}/crm/meta_ads_connection/ads/#{ad_id}/instagram_comments" }
   let(:media_id) { '17900000000000001' }
@@ -24,6 +25,8 @@ RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2
   before do
     role = CustomRole.create!(account: account, name: 'Anúncios', permissions: %w[meta_ads_manage])
     AccountUser.find_by(account: account, user: manager).update!(custom_role: role)
+    viewer_role = CustomRole.create!(account: account, name: 'Só vê anúncios', permissions: %w[meta_ads_view])
+    AccountUser.find_by(account: account, user: viewer).update!(custom_role: viewer_role)
     account.enable_features!('meta_ads_gestao', 'meta_ads_comentarios_instagram')
     create_meta_ads_insights_connection(account)
     stub_request(:get, meta_graph_url(ad_id)).with(query: hash_including({}))
@@ -48,6 +51,41 @@ RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2
     a_request(:any, /graph\.instagram\.com/).with { |request| !request.uri.path.end_with?('subscribed_apps') }
   end
 
+  def stub_list
+    stub_request(:get, %r{#{ig}/#{media_id}/comments})
+      .to_return(status: 200, headers: json, body: { data: [{ id: '18000000000000001', text: 'Tem M?', timestamp: 1.hour.ago.iso8601,
+                                                              from: { id: '501', username: 'carla.dias' },
+                                                              replies: { data: [{ id: '18000000000000002', text: 'Eu também',
+                                                                                  timestamp: 1.hour.ago.iso8601,
+                                                                                  from: { id: '502', username: 'ana' } }] } }] }.to_json)
+    stub_request(:get, %r{#{ig}/#{media_id}\?}).to_return(status: 200, headers: json, body: { comments_count: 2 }.to_json)
+  end
+
+  it 'quem só vê os anúncios lê a lista sem nenhuma ação, nem nas respostas' do
+    stub_list
+
+    get path, headers: viewer.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    first = response.parsed_body['comments'].first
+    flags = %w[can_reply can_hide can_delete can_reply_private private_reply_not_member]
+    [first, first['replies'].first].each { |row| expect(row.slice(*flags).values).to all(be(false)) }
+  end
+
+  it 'quem só vê os anúncios recebe 403 em toda ação, sem chamar o Instagram' do
+    headers = viewer.create_new_auth_token
+    post "#{path}/18000000000000001/reply", params: { text: 'Oi' }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+    post "#{path}/18000000000000001/hide", params: { hidden: true }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+    delete "#{path}/18000000000000001", headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+    post "#{path}/18000000000000001/private_reply", params: { text: 'Oi' }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+
+    expect(instagram_call).not_to have_been_made
+  end
+
   it 'quem gere os anúncios sem ser da caixa recebe 403 e o Instagram não é chamado' do
     expect { private_reply }.not_to change(Message, :count)
 
@@ -67,10 +105,7 @@ RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2
   end
 
   it 'a lista diz o motivo em vez de oferecer o privado a quem não é da caixa' do
-    stub_request(:get, %r{#{ig}/#{media_id}/comments})
-      .to_return(status: 200, headers: json, body: { data: [{ id: '18000000000000001', text: 'Tem M?', timestamp: 1.hour.ago.iso8601,
-                                                              from: { id: '501', username: 'carla.dias' } }] }.to_json)
-    stub_request(:get, %r{#{ig}/#{media_id}\?}).to_return(status: 200, headers: json, body: { comments_count: 1 }.to_json)
+    stub_list
 
     get path, headers: manager.create_new_auth_token, as: :json
 

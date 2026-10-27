@@ -83,7 +83,7 @@ class Crm::MetaAds::InstagramPrivateReply
   # Sem `message_id` a mensagem não é criada: sem source_id, o envio da caixa mandaria o texto de novo.
   def record!(action, comment, text, sent, user)
     conversation = conversation_for(sent['recipient_id'].to_s, comment.dig('from', 'username'))
-    message = Message.find_by(source_id: sent['message_id']) || conversation.messages.create!(
+    message = Message.find_by(inbox_id: conversation.inbox_id, source_id: sent['message_id']) || conversation.messages.create!(
       account_id: conversation.account_id, inbox_id: conversation.inbox_id, message_type: :outgoing, status: :sent,
       content: text, sender: user, source_id: sent['message_id']
     )

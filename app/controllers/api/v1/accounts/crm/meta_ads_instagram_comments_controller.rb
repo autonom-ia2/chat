@@ -94,7 +94,7 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
 
   def comments
     @comments ||= ::Crm::MetaAds::InstagramComments.new(
-      @connection, inbox_access: ->(inbox) { inbox.present? && Pundit.policy!(pundit_user, inbox).show? }
+      @connection, inbox_access: ->(inbox) { inbox.present? && Pundit.policy!(pundit_user, inbox).show? }, can_manage: policy.update?
     )
   end
 

@@ -17,15 +17,17 @@
 #
 # Responder no privado cria contato, conversa e mensagem na caixa do Instagram em nome de quem clicou: além de gerir os
 # anúncios, pede ser da caixa (`inbox_access`, InboxPolicy#show? de quem chama, parecer da sessão Funções). Quem não é
-# vê `private_reply_not_member` no lugar do botão.
+# vê `private_reply_not_member` no lugar do botão. Quem só vê os anúncios (`can_manage: false`) recebe todos os `can_*`
+# falsos: a lista não oferece ação que o servidor recusaria.
 class Crm::MetaAds::InstagramComments
   Error = Crm::MetaAds::InstagramPrivateReply::Error
 
   MAX_TEXT = 2200
 
-  def initialize(connection, inbox_access:)
+  def initialize(connection, inbox_access:, can_manage:)
     @connection = connection
     @inbox_access = inbox_access
+    @can_manage = can_manage
   end
 
   def payload(ad_id, after: nil)
@@ -152,7 +154,7 @@ class Crm::MetaAds::InstagramComments
     {
       id: item['id'].to_s, author: { name: nil, username: item.dig('from', 'username'), is_page: own }, text: item['text'],
       created_time: item['timestamp'], hidden: item['hidden'] == true, replies: [],
-      can_reply: !own, can_hide: !own, can_delete: true
+      can_reply: @can_manage && !own, can_hide: @can_manage && !own, can_delete: @can_manage
     }.merge(private_state(item, own, actions[item['id'].to_s], member?(channel)))
   end
 
@@ -164,11 +166,15 @@ class Crm::MetaAds::InstagramComments
   # Responder no privado: uma vez só (a linha em Crm::MetaAdsCommentAction diz que já foi) e só até 7 dias depois.
   def private_state(item, own, action, member)
     expired = !own && expired?(item)
-    open = !own && !expired && action.nil?
+    open = private_open?(own, expired, action)
     {
       can_reply_private: open && member, private_reply_not_member: open && !member, private_reply_expired: expired && action.nil?,
       private_reply: private_reply(action)
     }
+  end
+
+  def private_open?(own, expired, action)
+    @can_manage && !own && !expired && action.nil?
   end
 
   def private_reply(action)
