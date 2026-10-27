@@ -96,8 +96,7 @@ describe('comentariosInstagram (#2196)', () => {
 
     expect(instagramClient.generateAuthorization).toHaveBeenCalledWith({
       inbox_id: 55,
-      return_to: 'meta_ads',
-      purpose: 'meta_ads_comments',
+      return_to: 'comentarios_ig',
       ad_id: '120',
     });
     expect(assign).toHaveBeenCalledWith(

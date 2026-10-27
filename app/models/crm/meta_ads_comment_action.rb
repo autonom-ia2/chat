@@ -1,17 +1,20 @@
-# O que já foi feito num comentário de anúncio da Meta (#2196). A Meta aceita a resposta no privado (Private Reply) uma
-# vez só por comentário e não diz depois se já foi. Uma linha por comentário · ação (índice único).
+# O que já foi feito num comentário de anúncio da Meta (#2196), nas duas redes. O comentário em si nunca é gravado.
 #
-# A linha é a reivindicação: quem age grava ANTES de chamar a Meta e apaga se a Meta recusar. Bater no índice único
-# quer dizer que outra pessoa (ou a IA, ou um webhook reenviado) já fez ou está fazendo.
+# - `network`: `instagram` ou `facebook`; `comment_id` é o id da Meta; `ad_id` quando a ação veio do anúncio.
+# - `action`: o que a pessoa (#2196, #2197) ou a IA dos comentários (#2212) fez. `ai_seen`, `to_you` e
+#   `private_reply_failed` são só da IA: a leitura do comentário, a reclamação passada à pessoa e o privado recusado.
+# - `actor`: `user` (com `user_id`) ou `ai`.
+# - `conversation_id`: na resposta no privado, a conversa da caixa onde ela continua.
 #
-# - `network`: `instagram` ou `facebook`; `comment_id` é o id da Meta.
-# - `actor`: `user` (pela tela, com `user_id`) ou `ai` (a IA dos comentários, #2212).
-# - `conversation_id`: a conversa da caixa onde a resposta no privado continua.
+# ONCE (`private_reply`, `ai_seen`) é única por comentário (índice único parcial): quem age grava ANTES de chamar a
+# Meta e apaga se a Meta recusar. Bater no índice quer dizer que outra pessoa, a IA ou um webhook reenviado já fez ou
+# está fazendo. As outras ações podem se repetir (ocultar, mostrar de novo, ocultar).
 class Crm::MetaAdsCommentAction < ApplicationRecord
   self.table_name = 'crm_meta_ads_comment_actions'
 
   NETWORKS = %w[instagram facebook].freeze
-  ACTIONS = %w[private_reply reply hide delete].freeze
+  ACTIONS = %w[private_reply reply hide show delete ai_seen to_you private_reply_failed].freeze
+  ONCE = %w[private_reply ai_seen].freeze
   ACTORS = %w[user ai].freeze
 
   belongs_to :account
@@ -22,4 +25,10 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
   validates :network, inclusion: { in: NETWORKS }
   validates :action, inclusion: { in: ACTIONS }
   validates :actor, inclusion: { in: ACTORS }
+
+  # Grava agora: account:, network:, comment_id:, action:, actor: e, quando houver, ad_id:, user:, conversation:. Numa
+  # ação ONCE já feita, levanta ActiveRecord::RecordNotUnique: quem chama decide (em geral, não age).
+  def self.record!(**attributes)
+    create!(attributes.merge(at: Time.current))
+  end
 end

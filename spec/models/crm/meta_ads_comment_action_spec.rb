@@ -1,0 +1,28 @@
+require 'rails_helper'
+
+# O que já foi feito num comentário de anúncio (#2196): só a resposta no privado e a leitura da IA acontecem uma vez
+# por comentário (a linha é a reivindicação); ocultar e mostrar podem se repetir.
+RSpec.describe Crm::MetaAdsCommentAction do
+  let(:account) { create(:account) }
+
+  def record(action, actor: 'user')
+    described_class.record!(account: account, network: 'instagram', comment_id: '1801', action: action, actor: actor)
+  end
+
+  it 'barra a segunda resposta no privado e a segunda leitura da IA do mesmo comentário' do
+    record('private_reply')
+    record('ai_seen', actor: 'ai')
+
+    expect { record('private_reply') }.to raise_error(ActiveRecord::RecordNotUnique)
+    expect { record('ai_seen', actor: 'ai') }.to raise_error(ActiveRecord::RecordNotUnique)
+  end
+
+  it 'deixa ocultar e mostrar de novo quantas vezes for preciso' do
+    expect { 2.times { record('hide') && record('show') } }.to change(described_class, :count).by(4)
+  end
+
+  it 'recusa ação e autor desconhecidos' do
+    expect { record('pin') }.to raise_error(ActiveRecord::RecordInvalid)
+    expect { record('hide', actor: 'robo') }.to raise_error(ActiveRecord::RecordInvalid)
+  end
+end

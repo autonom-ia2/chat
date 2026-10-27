@@ -98,11 +98,12 @@ class Instagram::Testers::OauthBinding
       valid_return?(payload) && !payload.key?('tester_selection')
   end
 
-  # Volta da reautorização: à caixa, ou a Anúncios por um purpose conhecido (#2196), com `ad_id` só de dígitos.
+  # Volta da reautorização: à caixa, ou à tela de Anúncios que pediu o escopo a mais (EXTRA_SCOPES, #2196), com
+  # `ad_id` só de dígitos.
   def self.valid_return?(payload)
-    return payload['return_to'] == 'inbox' && !payload.key?('purpose') unless payload['return_to'] == 'meta_ads'
+    return payload['return_to'] == 'inbox' && !payload.key?('ad_id') unless Instagram::IntegrationHelper::EXTRA_SCOPES.key?(payload['return_to'])
 
-    Instagram::IntegrationHelper::REAUTH_PURPOSES.key?(payload['purpose']) && (!payload.key?('ad_id') || ad_id?(payload['ad_id']))
+    !payload.key?('ad_id') || ad_id?(payload['ad_id'])
   end
 
   # Id de anúncio: 1 a 32 dígitos (ele entra no caminho de volta).

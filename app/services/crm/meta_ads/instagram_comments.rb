@@ -7,7 +7,7 @@
 # - `ready`: a lista; `no_post`: o anúncio não aparece no Instagram;
 # - `not_connected`: o Instagram do anúncio não tem caixa nesta conta;
 # - `needs_login`: a caixa existe, mas sem a permissão de comentários (ou esperando nova autorização); vem com o
-#   `inbox_id`, que a tela usa para pedir o login de novo (Instagram::IntegrationHelper::REAUTH_PURPOSES).
+#   `inbox_id`, que a tela usa para pedir o login de novo (Instagram::IntegrationHelper::EXTRA_SCOPES).
 # nil quando o anúncio não é da conta de anúncios da conexão (a tela trata como inexistente).
 #
 # Cada ação confere antes que o comentário é da mídia do anúncio: sem isso, quem gere os anúncios agiria em qualquer
@@ -71,7 +71,8 @@ class Crm::MetaAds::InstagramComments
   def private_reply!(ad_id, comment_id, text, user:)
     valid_text!(text, Crm::MetaAds::InstagramPrivateReply::MAX_TEXT)
     found = comment_of_ad!(ad_id, comment_id)
-    sent = Crm::MetaAds::InstagramPrivateReply.new(found[:channel]).perform!(comment: found[:comment], text: text, actor: 'user', user: user)
+    sent = Crm::MetaAds::InstagramPrivateReply.new(found[:channel]).perform!(comment: found[:comment], text: text, actor: 'user', user: user,
+                                                                             ad_id: ad_id)
     { sent_at: Time.current.iso8601, conversation_path: conversation_path(sent[:conversation]) }
   end
 

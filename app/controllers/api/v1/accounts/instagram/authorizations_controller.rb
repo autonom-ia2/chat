@@ -21,7 +21,7 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
     raise Instagram::Testers::Error, 'meta_unavailable' if oauth_state.blank?
 
     # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#step-1--get-authorization
-    redirect_url = instagram_authorization_url(oauth_state, extra_scopes: reauth_purpose&.fetch(:scopes) || [])
+    redirect_url = instagram_authorization_url(oauth_state, extra_scopes: extra_scopes_entry&.fetch(:scopes) || [])
     if redirect_url
       render json: { success: true, url: redirect_url }
     else
@@ -40,7 +40,7 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
   def browser_assisted_authorization?
     Instagram::Testers::BrowserOperationStore.runtime_enabled? &&
       Current.account.feature_enabled?('instagram_assisted_onboarding') &&
-      !params.key?(:inbox_id) && params[:return_to] != 'inbox'
+      !params.key?(:inbox_id) && !reauthorization_return?
   end
 
   def ensure_meta_available
@@ -49,17 +49,19 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
   end
 
   def authorization_state
-    inbox = reauthorization_inbox if params.key?(:inbox_id) || REAUTH_RETURNS.include?(params[:return_to])
-    return meta_ads_state(inbox) if inbox && params[:return_to] == 'meta_ads'
+    inbox = reauthorization_inbox if params.key?(:inbox_id) || reauthorization_return?
+    return extra_scopes_state(inbox) if inbox && extra_scopes_entry
 
     selection = tester_selection if inbox.nil? && Current.account.feature_enabled?('instagram_assisted_onboarding')
     generate_instagram_token(Current.account.id, params.permit(:return_to)[:return_to],
                              actor_id: current_user.id, tester_selection: selection, inbox: inbox)
   end
 
-  # Reautorização pela tela da caixa (`inbox`) ou por um cartão de Anúncios (`meta_ads`, #2196), que pede o escopo a
-  # mais do `purpose` e volta para a aba de Anúncios.
-  REAUTH_RETURNS = %w[inbox meta_ads].freeze
+  # Reautorização pela tela da caixa (`inbox`) ou por um cartão de Anúncios (uma chave de EXTRA_SCOPES, #2196), que
+  # pede o escopo a mais da entrada e volta para a aba de Anúncios.
+  def reauthorization_return?
+    params[:return_to] == 'inbox' || EXTRA_SCOPES.key?(params[:return_to].to_s)
+  end
 
   def reauthorization_inbox
     inbox_id = params[:inbox_id]
@@ -72,25 +74,24 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
     inbox
   end
 
-  def meta_ads_state(inbox)
-    generate_meta_ads_reauth_token(Current.account.id, actor_id: current_user.id, inbox: inbox, purpose: params[:purpose],
-                                                       ad_id: params[:ad_id].presence)
+  def extra_scopes_state(inbox)
+    generate_extra_scopes_token(Current.account.id, params[:return_to], actor_id: current_user.id, inbox: inbox,
+                                                                        ad_id: params[:ad_id].presence)
   end
 
   def valid_reauthorization_return?
-    params[:return_to] == 'inbox' || reauth_purpose.present?
+    params[:return_to] == 'inbox' || extra_scopes_entry.present?
   end
 
-  # O purpose de Anúncios, só com a flag dele ligada e `ad_id` só de dígitos (ele vira o caminho de volta).
-  def reauth_purpose
-    return unless params[:return_to] == 'meta_ads'
-
-    purpose = REAUTH_PURPOSES[params[:purpose].to_s]
+  # A entrada de EXTRA_SCOPES do `return_to`, só com a flag da tela ligada e `ad_id` só de dígitos (ele vira o caminho
+  # de volta).
+  def extra_scopes_entry
+    entry = EXTRA_SCOPES[params[:return_to].to_s]
     ad_id = params[:ad_id]
-    return unless purpose && Current.account.feature_enabled?(purpose[:flag])
+    return unless entry && Current.account.feature_enabled?(entry[:flag])
     return unless ad_id.nil? || Instagram::Testers::OauthBinding.ad_id?(ad_id)
 
-    purpose
+    entry
   end
 
   def tester_selection

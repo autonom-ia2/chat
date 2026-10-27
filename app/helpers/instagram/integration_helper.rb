@@ -2,12 +2,12 @@ module Instagram::IntegrationHelper
   REQUIRED_SCOPES = %w[instagram_business_basic instagram_business_manage_messages].freeze
 
   # Permissões a mais pedidas só na reautorização de uma caixa que já existe, a partir de um cartão da tela, enquanto
-  # a Meta não aprova a permissão para todo login (#2196). O escopo sai daqui, nunca do front: o pedido diz só o
-  # `purpose`. Cada um tem a flag que o libera e a aba de Anúncios para onde a pessoa volta (com `anuncio=<ad_id>`
-  # quando vier). Somar um purpose aqui não muda o login de quem conecta pela tela das caixas.
-  REAUTH_PURPOSES = {
-    'meta_ads_comments' => { flag: 'meta_ads_comentarios_instagram', scopes: %w[instagram_business_manage_comments],
-                             return_query: { 'aba' => 'resultado' } }
+  # a Meta não aprova a permissão para todo login (#2196, #2199). A chave é o `return_to`: a tela que pede é a tela
+  # para onde a pessoa volta, na aba `return_query` de Anúncios (com `anuncio=<ad_id>` quando vier). O escopo sai
+  # daqui, nunca do front, e só com a flag da tela ligada. Somar uma entrada não muda o login pela tela das caixas.
+  EXTRA_SCOPES = {
+    'comentarios_ig' => { flag: 'meta_ads_comentarios_instagram', scopes: %w[instagram_business_manage_comments],
+                          return_query: { 'aba' => 'resultado' } }
   }.freeze
 
   # Generates a signed JWT token for Instagram integration
@@ -26,12 +26,12 @@ module Instagram::IntegrationHelper
     nil
   end
 
-  # Reautorização da caixa a partir de um cartão de Anúncios (#2196): o state leva o purpose (REAUTH_PURPOSES) e, quando
-  # houver, o anúncio para onde a pessoa volta.
-  def generate_meta_ads_reauth_token(account_id, actor_id:, inbox:, purpose:, ad_id: nil)
+  # Reautorização da caixa a partir de um cartão de Anúncios (EXTRA_SCOPES): o state leva a tela de volta e, quando
+  # houver, o anúncio.
+  def generate_extra_scopes_token(account_id, return_to, actor_id:, inbox:, ad_id: nil)
     return if client_secret.blank?
 
-    payload = token_payload(account_id, 'meta_ads', actor_id: actor_id, inbox: inbox).merge(purpose: purpose, ad_id: ad_id).compact
+    payload = token_payload(account_id, return_to, actor_id: actor_id, inbox: inbox).merge(ad_id: ad_id).compact
     JWT.encode(payload, client_secret, 'HS256')
   rescue StandardError
     Rails.logger.error('Instagram token generation failed')

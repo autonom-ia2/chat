@@ -25,12 +25,12 @@ class Crm::MetaAds::InstagramPrivateReply
     @channel = channel
   end
 
-  def perform!(comment:, text:, actor:, user: nil)
+  def perform!(comment:, text:, actor:, user: nil, ad_id: nil)
     text = text.to_s.strip
     raise Error, 'invalid_text' if text.blank? || text.length > MAX_TEXT
     raise Error, 'private_reply_expired' unless within_window?(comment['timestamp'])
 
-    action = claim!(comment['id'], actor, user)
+    action = claim!(comment['id'], actor, user, ad_id)
     result = Instagram::CommentsClient.new(@channel).private_reply(comment['id'], text)
     unless result.ok
       action.destroy!
@@ -48,9 +48,9 @@ class Crm::MetaAds::InstagramPrivateReply
     false
   end
 
-  def claim!(comment_id, actor, user)
-    Crm::MetaAdsCommentAction.create!(account_id: @channel.account_id, network: 'instagram', comment_id: comment_id.to_s,
-                                      action: 'private_reply', actor: actor, user: user, at: Time.current)
+  def claim!(comment_id, actor, user, ad_id)
+    Crm::MetaAdsCommentAction.record!(account: @channel.account, network: 'instagram', ad_id: ad_id&.to_s, comment_id: comment_id.to_s,
+                                      action: 'private_reply', actor: actor, user: user)
   rescue ActiveRecord::RecordNotUnique
     raise Error, 'private_reply_done'
   end

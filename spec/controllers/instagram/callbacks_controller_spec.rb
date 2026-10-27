@@ -270,8 +270,8 @@ RSpec.describe Instagram::CallbacksController do
     end
 
     it 'volta ao anúncio quando a reautorização veio do cartão dos comentários (#2196)' do
-      signed_state = controller.generate_meta_ads_reauth_token(account.id, actor_id: actor.id, inbox: channel.inbox,
-                                                                           purpose: 'meta_ads_comments', ad_id: '120254710382770416')
+      signed_state = controller.generate_extra_scopes_token(account.id, 'comentarios_ig', actor_id: actor.id, inbox: channel.inbox,
+                                                                                          ad_id: '120254710382770416')
 
       get :show, params: { code: 'valid_code', state: signed_state }
 
@@ -279,8 +279,8 @@ RSpec.describe Instagram::CallbacksController do
       expect(response).to redirect_to("/app/accounts/#{account.id}/campaigns/meta-ads?aba=resultado&anuncio=120254710382770416")
     end
 
-    it 'recusa volta a Anúncios com purpose desconhecido, sem trocar o token (#2196)' do
-      signed_state = controller.generate_meta_ads_reauth_token(account.id, actor_id: actor.id, inbox: channel.inbox, purpose: 'outro')
+    it 'recusa volta a uma tela desconhecida, sem trocar o token (#2196)' do
+      signed_state = controller.generate_extra_scopes_token(account.id, 'outra_tela', actor_id: actor.id, inbox: channel.inbox)
 
       get :show, params: { code: 'valid_code', state: signed_state }
 

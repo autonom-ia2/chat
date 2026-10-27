@@ -2664,6 +2664,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
   create_table "crm_meta_ads_comment_actions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "network", null: false
+    t.string "ad_id"
     t.string "comment_id", null: false
     t.string "action", null: false
     t.bigint "conversation_id"
@@ -2672,8 +2673,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
     t.datetime "at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id", "actor", "at"], name: "idx_crm_meta_ads_comment_actions_actor_day"
     t.index ["account_id", "network", "comment_id"], name: "idx_crm_meta_ads_comment_actions_lookup"
-    t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_unique", unique: true
+    t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_once", unique: true, where: "((action)::text = ANY ((ARRAY['private_reply'::character varying, 'ai_seen'::character varying])::text[]))"
   end
 
   create_table "crm_meta_ads_connections", force: :cascade do |t|
