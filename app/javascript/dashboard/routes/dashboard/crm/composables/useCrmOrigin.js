@@ -116,9 +116,18 @@ const sourceForCampaign = campaign => {
     : FALLBACK_SOURCE;
 };
 
-export const buildCrmOrigin = campaign => {
-  if (!campaign || typeof campaign !== 'object') return null;
+// #2271: without meta_ads_view the server sends an ad touch with only where and
+// when it came from (ad_hidden). The screen uses nothing else from it either.
+const AD_HIDDEN_FIELDS = ['source', 'source_type', 'touched_at'];
+const visibleTouch = touch =>
+  touch.ad_hidden
+    ? Object.fromEntries(AD_HIDDEN_FIELDS.map(field => [field, touch[field]]))
+    : touch;
 
+export const buildCrmOrigin = touch => {
+  if (!touch || typeof touch !== 'object') return null;
+
+  const campaign = visibleTouch(touch);
   const source = sourceForCampaign(campaign);
   const meta = sourceMetaFor(source);
   const headline = text(campaign.headline);
@@ -139,6 +148,7 @@ export const buildCrmOrigin = campaign => {
     adPreviewUrl: safeSourceUrl(campaign.ad_preview_url),
     adThumbnailUrl: safeSourceUrl(campaign.ad_thumbnail_url),
     touchedAt: campaign.touched_at || null,
+    adHidden: Boolean(touch.ad_hidden),
     // Names resolved from the Meta API (#1034) win; otherwise the UTMs pasted in
     // the ad (#1011): utm_campaign = campaign, utm_term = ad set, utm_content = ad.
     // Meta's automatic parameters send IDs there — see hierarchyItems.

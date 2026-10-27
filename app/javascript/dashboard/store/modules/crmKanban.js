@@ -41,14 +41,14 @@ export const defaultFilters = () => ({
   anuncio: '',
   entrouEm: '',
   // PR14.7b/c high-value filters. Realtime contract per filter:
-  //  - stageIds / teamId / valueMin / valueMax / staleDays / campaignSourceIds
-  //    are evaluable from a single card payload and ARE mirrored in
-  //    cardMatchesFilters below (campaignSourceIds reads card.campaigns, the
-  //    CTWA multi-touch aggregate carried by both payload builders).
-  //  - companyId, search, responsibleKind (bot/none), aiPending and labelIds are server-truth only;
-  //    a realtime upsert cannot be reliably classified client-side (label
-  //    add/remove never emits a card upsert), so they force a refetch
-  //    (see SERVER_ONLY_FILTER_KEYS / hasServerOnlyFilters).
+  //  - stageIds / teamId / valueMin / valueMax / staleDays are evaluable from
+  //    a single card payload and ARE mirrored in cardMatchesFilters below.
+  //  - companyId, search, responsibleKind (bot/none), aiPending, labelIds and
+  //    campaignSourceIds are server-truth only; a realtime upsert cannot be
+  //    reliably classified client-side (label add/remove never emits a card
+  //    upsert; without meta_ads_view the ad touch comes without source_id,
+  //    #2271), so they force a refetch (see SERVER_ONLY_FILTER_KEYS /
+  //    hasServerOnlyFilters).
   stageIds: [],
   teamId: '',
   valueMin: '',
@@ -71,12 +71,15 @@ export const defaultFilters = () => ({
 // matching card drop out — the exact class of bug the old Status filter caused).
 // labelIds is here because adding/removing a label on a conversation does NOT
 // broadcast a card upsert, so the payload's labels can be stale mid-session.
+// campaignSourceIds is here because, without meta_ads_view, the ad touch comes
+// without source_id (#2271) while the server still matches the card.
 export const SERVER_ONLY_FILTER_KEYS = [
   'companyId',
   'search',
   'responsibleKind',
   'aiPending',
   'labelIds',
+  'campaignSourceIds',
   'closedIn',
   'origem',
   'anuncio',
@@ -443,19 +446,7 @@ const cardMatchesFilters = (card, filters) => {
   ) {
     return false;
   }
-  // Campaign filter mirror: OR over the card's aggregated CTWA touches
-  // (card.campaigns carries one slim touch per linked-conversation click).
-  // source_id comparison is String-based on BOTH sides — Meta ad ids overflow
-  // Number.MAX_SAFE_INTEGER, so Number() coercion would corrupt them.
-  if (filters.campaignSourceIds?.length) {
-    const touchIds = (card.campaigns || []).map(touch =>
-      String(touch.source_id)
-    );
-    if (!filters.campaignSourceIds.some(id => touchIds.includes(String(id)))) {
-      return false;
-    }
-  }
-  // companyId, search, responsibleKind, aiPending and labelIds are intentionally
+  // companyId, search, responsibleKind, aiPending, labelIds and campaignSourceIds are intentionally
   // NOT evaluated here — they are server-truth filters (see
   // SERVER_ONLY_FILTER_KEYS). When active, the page refetches on realtime
   // instead of relying on this predicate.

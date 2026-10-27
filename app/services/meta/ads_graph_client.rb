@@ -170,6 +170,7 @@ class Meta::AdsGraphClient
   include Meta::AdsGraphClient::Management
   include Meta::AdsGraphClient::Creation
   include Meta::AdsGraphClient::Organico
+  include Meta::AdsGraphClient::LeadForms
 
   private
 

@@ -70,6 +70,7 @@ export const FEATURE_FLAGS = {
   CONVERSA_INSTAGRAM: 'conversa_instagram',
   PAINEL_CONTATO_ENXUTO: 'painel_contato_enxuto',
   META_ADS_GESTAO: 'meta_ads_gestao',
+  META_ADS_FORMULARIOS: 'meta_ads_formularios',
   META_ADS_CRIAR: 'meta_ads_criar',
   CONTATO_RELACAO: 'contato_relacao',
   META_ADS_ORGANICO: 'meta_ads_organico',
