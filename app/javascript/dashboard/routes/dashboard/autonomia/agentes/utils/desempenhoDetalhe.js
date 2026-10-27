@@ -52,10 +52,14 @@ const CHAVES_DE_TEXTO = [
   'corte',
 ];
 const CHAVES_LIGA_DESLIGA = ['perda', 'pessoa', 'testes'];
-// Tudo o que a aba Detalhe põe no endereço (a página guarda aba e período).
+// No endereço, o filtro de origem se chama `veio_de`: `origem` é da página (`origem=webhook`, o robô de outro
+// sistema). Com o mesmo nome, trocar de tabela apagava o `origem=webhook` e o painel pedia o agente errado (#2251).
+const NO_ENDERECO = { origem: 'veio_de' };
+const noEndereco = chave => NO_ENDERECO[chave] || chave;
+// Tudo o que a aba Detalhe põe no endereço (a página guarda aba, período e origem).
 export const CHAVES_DO_ENDERECO = [
   'tabela',
-  ...CHAVES_DE_TEXTO,
+  ...CHAVES_DE_TEXTO.map(noEndereco),
   ...CHAVES_LIGA_DESLIGA,
   'pagina',
   'tamanho',
@@ -317,7 +321,10 @@ export function filtrosDoEndereco(query = {}) {
   const tamanho = inteiroPositivo(query.tamanho, TAMANHO_PADRAO);
   return {
     ...Object.fromEntries(
-      CHAVES_DE_TEXTO.map(chave => [chave, textoDoEndereco(query[chave])])
+      CHAVES_DE_TEXTO.map(chave => [
+        chave,
+        textoDoEndereco(query[noEndereco(chave)]),
+      ])
     ),
     ...Object.fromEntries(
       CHAVES_LIGA_DESLIGA.map(chave => [chave, ligadoNoEndereco(query[chave])])
@@ -332,7 +339,7 @@ export function enderecoDosFiltros(filtros) {
   const query = {};
   CHAVES_DE_TEXTO.forEach(chave => {
     const valor = String(filtros[chave] ?? '');
-    if (valor.trim()) query[chave] = valor;
+    if (valor.trim()) query[noEndereco(chave)] = valor;
   });
   CHAVES_LIGA_DESLIGA.forEach(chave => {
     if (filtros[chave]) query[chave] = '1';
