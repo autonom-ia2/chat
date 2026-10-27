@@ -1,0 +1,703 @@
+<script setup>
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
+import { frontendURL } from 'dashboard/helper/URLHelper';
+import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import { todayIso } from '../dinheiroDoAnuncio';
+import { useDinheiroDoRascunho } from '../useDinheiroDoRascunho';
+import {
+  botaoDoAnuncio,
+  destinosDaConta,
+  lugaresDoDestino,
+  siteValido,
+} from '../anuncioNovo';
+import {
+  criarAnuncio,
+  lerOpcoesDeCriacao,
+  pedidoDoAnuncio,
+} from '../criacaoNaMeta';
+import { useMetaAdsFacebookLogin } from '../useMetaAdsFacebookLogin';
+import MetaAdsCreateAudience from './MetaAdsCreateAudience.vue';
+import MetaAdsCreateBudget from './MetaAdsCreateBudget.vue';
+import MetaAdsCreateContent from './MetaAdsCreateContent.vue';
+import MetaAdsCreateDone from './MetaAdsCreateDone.vue';
+import MetaAdsCreateKind from './MetaAdsCreateKind.vue';
+import MetaAdsCreateReview from './MetaAdsCreateReview.vue';
+
+// Anúncios da Meta (#2198), o Gerenciador simples, sem sair do painel. Anúncio novo, uma pergunta por tela: foto,
+// vídeo ou carrossel e o texto (com "Quem tocar vai para: WhatsApp · Trocar" no topo) → quem vê → quanto investir →
+// conferir (com "Onde aparece: Automático · Trocar"). A escolha "O que fazer" só aparece quando o servidor oferece
+// mais de um tipo (`kinds` das opções); com um só, a tela entra direto nele. A Página e o número só viram passo
+// quando há mais de um. O resto começa pronto (R$ 20,00 por dia, hoje, sem data para terminar). O anúncio nasce
+// PAUSADO (campanha e grupo ativos, gasto zero); a tela final já traz o "Ativar anúncio", que mostra quanto vai
+// gastar antes de o dinheiro começar a sair.
+const props = defineProps({
+  // 'ad' (anúncio novo): o botão que abriu já escolhe.
+  kind: { type: String, default: null },
+});
+
+const emit = defineEmits(['back']);
+
+const { t, locale } = useI18n();
+const route = useRoute();
+const router = useRouter();
+const KEY = 'CRM_KANBAN.META_ADS_HUB.CRIAR';
+const SUGGESTED_DAILY = 20;
+// Recusas que a tela sabe explicar; outra vira a frase geral.
+const CREATE_ERRORS = [
+  'invalid_params',
+  'invalid_destination',
+  'invalid_placement',
+  'invalid_amount',
+  'invalid_dates',
+  'invalid_site',
+  'invalid_whatsapp_number',
+  'invalid_page',
+  'invalid_media',
+  'invalid_audience',
+  'video_processing',
+  'cannot_create',
+  'meta_unavailable',
+  'meta_refused',
+];
+const HTTP_CONFLICT = 409;
+const HTTP_SERVER_ERROR = 500;
+
+const options = ref(null);
+const loading = ref(true);
+const loadFailed = ref(false);
+const heading = ref(null);
+const created = ref(null);
+const saving = ref(false);
+const createError = ref('');
+
+// O valor no campo como a pessoa escreveria: "20,00" em português, "20.00" em inglês.
+const editable = value =>
+  new Intl.NumberFormat(locale.value.startsWith('pt') ? 'pt-BR' : 'en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: false,
+  }).format(value);
+
+const draft = ref({
+  kind: props.kind,
+  page_id: null,
+  whatsapp_number: null,
+  // Para onde vai quem toca no anúncio novo: o primeiro destino confirmado para a conta (WhatsApp, quando veio).
+  destination: null,
+  site_url: '',
+  site_action: 'LEARN_MORE',
+  media: null,
+  // Carrossel: as mídias depois da primeira.
+  more_media: [],
+  // A foto (ou um cartão do carrossel) ainda subindo para a Meta.
+  uploading_media: false,
+  uploading_cards: false,
+  offer: '',
+  text: '',
+  headline: '',
+  // A pessoa mexeu no texto ou no título: mudar o que vende não reescreve mais.
+  text_edited: false,
+  headline_edited: false,
+  ready_message: '',
+  placement: 'AUTO',
+  region: 'BR',
+  states: [],
+  age_min: 18,
+  age_max: 65,
+  special_category: null,
+  daily_amount: '',
+  start_date: todayIso(),
+  end_date: '',
+  name: '',
+});
+
+const step = ref(0);
+
+const pages = computed(() => options.value?.pages || []);
+const numbers = computed(() => options.value?.whatsapp_numbers || []);
+const instagram = computed(() => options.value?.instagram || null);
+const kinds = computed(() => options.value?.kinds || []);
+// O tipo já decidido: pelo botão que abriu, ou porque o servidor só oferece um.
+const fixedKind = computed(
+  () => props.kind || (kinds.value.length === 1 ? kinds.value[0] : null)
+);
+
+// Página e número só perguntam quando há escolha a fazer.
+const needsWhere = computed(
+  () => pages.value.length > 1 || numbers.value.length > 1
+);
+
+const STEPS = computed(() => [
+  'KIND',
+  ...(needsWhere.value ? ['WHERE'] : []),
+  'CONTENT',
+  'AUDIENCE',
+  'BUDGET',
+  'REVIEW',
+]);
+const current = computed(() => STEPS.value[step.value]);
+const total = computed(() => STEPS.value.length - 1);
+
+// O que impede criar, antes do primeiro passo da escolha: entrar de novo, sem Página ou sem número.
+const blocker = computed(() => {
+  if (!options.value) return null;
+  if (options.value.needs_login) return 'LOGIN';
+  if (!draft.value.kind) return null;
+  if (!pages.value.length) return 'NO_PAGE';
+  if (draft.value.destination === 'WHATSAPP' && !numbers.value.length) {
+    return 'NO_NUMBER';
+  }
+  return null;
+});
+
+const focusHeading = () => nextTick(() => heading.value?.focus());
+watch(step, () => {
+  createError.value = '';
+  focusHeading();
+});
+
+const { dailyAmount, amountError, perDayLine, totalLine, dayLimitsLine } =
+  useDinheiroDoRascunho({ draft, options, locale, t });
+
+const chosenNumber = computed(() =>
+  numbers.value.find(number => number.id === draft.value.whatsapp_number)
+);
+const chosenPage = computed(() =>
+  pages.value.find(page => page.id === draft.value.page_id)
+);
+
+// O botão do anúncio: o do destino.
+const action = computed(() => botaoDoAnuncio(draft.value));
+// Só o que a chamada real já confirmou para a conta: os destinos e, para o destino do anúncio, os lugares. Lugar
+// escolhido que deixa de valer (trocou o destino) volta para Automático.
+const destinations = computed(() => destinosDaConta(options.value));
+const placements = computed(() =>
+  lugaresDoDestino(options.value, draft.value.destination)
+);
+watch(placements, list => {
+  if (!list.includes(draft.value.placement)) {
+    draft.value = { ...draft.value, placement: 'AUTO' };
+  }
+});
+
+const adCards = computed(() =>
+  draft.value.media ? [draft.value.media, ...draft.value.more_media] : []
+);
+
+const pageOptions = computed(() =>
+  pages.value.map(page => ({ value: page.id, label: page.name }))
+);
+const numberOptions = computed(() =>
+  numbers.value.map(number => ({
+    value: number.id,
+    label: `${number.name} · ${number.phone}`,
+  }))
+);
+
+// O que falta para o "Continuar", na ordem dos campos da tela; '' quando nada falta.
+const contentMissing = computed(() => {
+  const { destination, site_url: url, offer, media, text } = draft.value;
+  if (destination === 'WEBSITE' && !siteValido(url)) return 'NEED_SITE';
+  if (!offer.trim()) return 'NEED_OFFER';
+  if (draft.value.uploading_media || draft.value.uploading_cards) {
+    return 'UPLOADING';
+  }
+  if (!media) return 'NEED_MEDIA';
+  if (!text.trim()) return 'NEED_TEXT';
+  return '';
+});
+const STEP_READY = {
+  KIND: () => Boolean(draft.value.kind),
+  // Com um número só (ou nenhum), ele não é pergunta: já vem escolhido ou o destino não é o WhatsApp.
+  WHERE: () =>
+    Boolean(
+      draft.value.page_id &&
+        (numbers.value.length <= 1 || draft.value.whatsapp_number)
+    ),
+  CONTENT: () => !contentMissing.value,
+  AUDIENCE: () =>
+    draft.value.special_category !== null &&
+    (draft.value.region === 'BR' || draft.value.states.length > 0) &&
+    draft.value.age_min <= draft.value.age_max,
+  BUDGET: () => !amountError.value,
+  REVIEW: () => Boolean(draft.value.name.trim()),
+};
+const ready = computed(() => STEP_READY[current.value]());
+
+const blockReason = computed(() =>
+  current.value === 'CONTENT' && contentMissing.value
+    ? t(`${KEY}.CONTENT.${contentMissing.value}`)
+    : ''
+);
+
+// Idade mínima maior que a máxima: o "Continuar" desliga e a tela diz por quê.
+const ageError = computed(
+  () =>
+    current.value === 'AUDIENCE' && draft.value.age_min > draft.value.age_max
+);
+// No celular a frase nasce perto do rodapé, atrás da barra fixa: a tela rola até ela (scroll-mb-28 desconta a barra).
+const ageErrorEl = ref(null);
+watch(ageError, async shown => {
+  if (!shown) return;
+  await nextTick();
+  ageErrorEl.value?.scrollIntoView({ block: 'nearest' });
+});
+
+const defaultName = () => {
+  const date = new Date().toLocaleDateString(
+    locale.value.startsWith('pt') ? 'pt-BR' : 'en-US',
+    { day: 'numeric', month: 'short' }
+  );
+  return t(`${KEY}.REVIEW.DEFAULT_NAME_AD`, {
+    where: t(`${KEY}.DESTINATION.SHORT.${draft.value.destination}`),
+    date,
+  });
+};
+
+const next = () => {
+  if (!ready.value) return;
+  if (STEPS.value[step.value + 1] === 'REVIEW' && !draft.value.name) {
+    draft.value = { ...draft.value, name: defaultName() };
+  }
+  step.value += 1;
+};
+
+// Voltar sai para o painel no primeiro passo (o da escolha, ou o seguinte quando o tipo já veio decidido).
+const leavesToPanel = computed(
+  () => step.value === 0 || (fixedKind.value && step.value === 1)
+);
+const back = () => {
+  // No bloqueio depois de escolher o que fazer: volta à escolha.
+  if (blocker.value && draft.value.kind && !fixedKind.value) {
+    draft.value = { ...draft.value, kind: null };
+    return;
+  }
+  if (leavesToPanel.value) {
+    emit('back');
+    return;
+  }
+  step.value -= 1;
+};
+
+const chooseKind = kind => {
+  draft.value = { ...draft.value, kind };
+  if (!blocker.value) step.value = 1;
+};
+
+// A tentativa de criar: a chave de idempotência vale para o mesmo pedido. Tocar de novo depois de falha de rede,
+// tempo esgotado ou "ainda criando" manda a mesma chave, e o servidor devolve o mesmo anúncio em vez de criar outro.
+// Recusa do servidor encerra a tentativa; pedido diferente (a pessoa mudou algo) é tentativa nova.
+let attempt = null;
+const keyFor = pedido => {
+  const signature = JSON.stringify(pedido);
+  if (attempt?.signature !== signature) {
+    attempt = { key: crypto.randomUUID(), signature };
+  }
+  return attempt.key;
+};
+const uncertain = error => {
+  const status = error?.response?.status;
+  return !status || status === HTTP_CONFLICT || status >= HTTP_SERVER_ERROR;
+};
+
+// "Nada foi criado" só quando o servidor garante (`nothing_created`). Sem garantia, pede para conferir na Meta.
+const createErrorText = error => {
+  const response = error?.response;
+  if (!response) return t(`${KEY}.ERRORS.NETWORK`);
+  if (response.status === HTTP_CONFLICT) return t(`${KEY}.ERRORS.IN_PROGRESS`);
+  const { error: code, nothing_created: nothingCreated } = response.data || {};
+  const reason = CREATE_ERRORS.includes(code)
+    ? t(`${KEY}.ERRORS.${code.toUpperCase()}`)
+    : t(`${KEY}.ERRORS.UNKNOWN`);
+  if (nothingCreated === true) {
+    return `${reason} ${t(`${KEY}.ERRORS.NOTHING_CREATED`)}`;
+  }
+  if (nothingCreated === false) {
+    return `${reason} ${t(`${KEY}.ERRORS.CHECK_META`)}`;
+  }
+  return reason;
+};
+
+const create = async () => {
+  if (!ready.value || saving.value) return;
+  saving.value = true;
+  createError.value = '';
+  const pedido = pedidoDoAnuncio(draft.value, dailyAmount.value);
+  try {
+    created.value = await criarAnuncio(pedido, keyFor(pedido));
+    attempt = null;
+    focusHeading();
+  } catch (error) {
+    if (!uncertain(error)) attempt = null;
+    createError.value = createErrorText(error);
+  } finally {
+    saving.value = false;
+  }
+};
+
+const submitLabel = computed(() =>
+  current.value === 'REVIEW' ? t(`${KEY}.CREATE`) : t(`${KEY}.NEXT`)
+);
+
+const submit = () => {
+  if (current.value === 'REVIEW') create();
+  else next();
+};
+
+// Com uma opção só, ela já vem escolhida.
+const prefill = data => {
+  const [destination = null] = destinosDaConta(data);
+  const kind = draft.value.kind || fixedKind.value;
+  draft.value = {
+    ...draft.value,
+    // Sem destino confirmado, o "Anúncio novo" fica apagado na escolha, com o motivo.
+    kind: kind === 'ad' && !destination ? null : kind,
+    destination,
+    page_id: data.pages.length === 1 ? data.pages[0].id : null,
+    whatsapp_number:
+      data.whatsapp_numbers.length === 1 ? data.whatsapp_numbers[0].id : null,
+    ready_message: t(`${KEY}.CONTENT.READY_MESSAGE_DEFAULT`),
+    daily_amount: editable(SUGGESTED_DAILY),
+  };
+};
+
+const load = async () => {
+  loading.value = true;
+  loadFailed.value = false;
+  try {
+    const data = await lerOpcoesDeCriacao();
+    options.value = data;
+    prefill(data);
+    if (draft.value.kind && !blocker.value) step.value = 1;
+  } catch {
+    loadFailed.value = true;
+  } finally {
+    loading.value = false;
+    focusHeading();
+  }
+};
+
+onMounted(load);
+
+// Saídas dos bloqueios: entrar com o Facebook ali mesmo (a configuração vem nas opções), Conexão (Página), caixas
+// de entrada (número).
+const goToConnection = () => router.replace({ query: { aba: 'conexao' } });
+const { isConnecting, connect } = useMetaAdsFacebookLogin();
+const loginNotice = ref('');
+const signIn = async () => {
+  const config = options.value?.facebook_login;
+  if (!config?.configuration_id) {
+    goToConnection();
+    return;
+  }
+  loginNotice.value = '';
+  try {
+    const data = await connect(config);
+    if (data) await load();
+    else loginNotice.value = t(`${KEY}.BLOCKERS.LOGIN.POPUP`);
+  } catch {
+    loginNotice.value = t(`${KEY}.BLOCKERS.LOGIN.ERROR`);
+  }
+};
+const goToInboxes = () =>
+  router.push(
+    frontendURL(`accounts/${route.params.accountId}/settings/inboxes/new`)
+  );
+// Sem número de WhatsApp: dá para anunciar com outro destino confirmado (o primeiro da lista), em vez de parar.
+const otherDestination = computed(() =>
+  destinations.value.find(option => option !== 'WHATSAPP')
+);
+const adWithoutWhatsapp = () => {
+  draft.value = { ...draft.value, destination: otherDestination.value };
+  step.value = 1;
+};
+
+// Sem a configuração do login no servidor, o botão diz a verdade: leva à Conexão.
+const blockerAction = computed(() =>
+  blocker.value === 'LOGIN' && !options.value?.facebook_login?.configuration_id
+    ? t(`${KEY}.BLOCKERS.LOGIN.ACTION_CONNECTION`)
+    : t(`${KEY}.BLOCKERS.${blocker.value}.ACTION`)
+);
+
+const BLOCKERS = {
+  LOGIN: { icon: 'i-lucide-log-in', action: signIn },
+  NO_PAGE: { icon: 'i-lucide-flag', action: goToConnection },
+  NO_NUMBER: {
+    icon: 'i-ri-whatsapp-line',
+    action: goToInboxes,
+    other: adWithoutWhatsapp,
+  },
+};
+</script>
+
+<template>
+  <section
+    data-meta-ads-create
+    class="flex min-w-0 flex-col gap-5 pb-28 md:pb-0"
+  >
+    <button
+      v-if="!created"
+      type="button"
+      data-create-back
+      class="inline-flex min-h-11 items-center gap-1.5 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+      @click="back"
+    >
+      <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
+      {{
+        leavesToPanel && !(blocker && draft.kind && !fixedKind)
+          ? $t(`${KEY}.BACK_TO_PANEL`)
+          : $t(`${KEY}.BACK`)
+      }}
+    </button>
+
+    <div v-if="loading" class="flex justify-center p-12"><Spinner /></div>
+
+    <!-- Falha ao falar com a Meta: nada foi criado, e dá para tentar de novo. -->
+    <div
+      v-else-if="loadFailed"
+      data-create-failed
+      class="flex flex-col items-start gap-4 rounded-2xl bg-n-solid-1 p-6 ring-1 ring-inset ring-n-weak sm:p-8"
+    >
+      <span
+        class="i-lucide-cloud-off size-8 text-n-ruby-11"
+        aria-hidden="true"
+      />
+      <h2
+        ref="heading"
+        tabindex="-1"
+        class="m-0 text-lg font-semibold text-n-slate-12 focus:outline-none"
+      >
+        {{ $t(`${KEY}.FAILED.TITLE`) }}
+      </h2>
+      <Button :label="$t(`${KEY}.FAILED.RETRY`)" @click="load" />
+    </div>
+
+    <!-- Criado: pausado, com o "Ativar anúncio" à mão. -->
+    <MetaAdsCreateDone
+      v-else-if="created"
+      :created="created"
+      :budget="created.budget"
+      @back="emit('back')"
+    />
+
+    <!-- Bloqueio antes de começar: uma frase e a saída. -->
+    <div
+      v-else-if="blocker"
+      :data-create-blocker="blocker"
+      class="flex flex-col items-start gap-4 rounded-2xl bg-n-solid-1 p-6 ring-1 ring-inset ring-n-weak sm:p-8"
+    >
+      <span
+        :class="BLOCKERS[blocker].icon"
+        class="size-8 text-n-brand"
+        aria-hidden="true"
+      />
+      <h2
+        ref="heading"
+        tabindex="-1"
+        class="m-0 text-lg font-semibold text-n-slate-12 focus:outline-none"
+      >
+        {{ $t(`${KEY}.BLOCKERS.${blocker}.TITLE`) }}
+      </h2>
+      <Button
+        :data-create-blocker-action="blocker"
+        :label="blockerAction"
+        :is-loading="blocker === 'LOGIN' && isConnecting"
+        @click="BLOCKERS[blocker].action"
+      />
+      <button
+        v-if="BLOCKERS[blocker].other && otherDestination"
+        type="button"
+        :data-create-blocker-other="blocker"
+        class="inline-flex min-h-11 items-center rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        @click="BLOCKERS[blocker].other"
+      >
+        {{ $t(`${KEY}.BLOCKERS.${blocker}.OTHER`) }}
+      </button>
+      <p
+        v-if="blocker === 'LOGIN' && loginNotice"
+        data-create-login-notice
+        role="status"
+        class="m-0 text-sm text-n-amber-11"
+      >
+        {{ loginNotice }}
+      </p>
+    </div>
+
+    <form
+      v-else
+      data-create-form
+      :data-create-step="current"
+      class="flex min-w-0 flex-col gap-6 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-8"
+      @submit.prevent="submit"
+    >
+      <div class="flex flex-col gap-2">
+        <div v-if="step > 0" data-create-progress class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-n-slate-10">
+            {{ $t(`${KEY}.PROGRESS`, { step, total }) }}
+          </span>
+          <span
+            role="progressbar"
+            :aria-valuenow="step"
+            aria-valuemin="0"
+            :aria-valuemax="total"
+            :aria-label="$t(`${KEY}.PROGRESS`, { step, total })"
+            class="block h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-n-alpha-2"
+          >
+            <span
+              class="block h-full rounded-full bg-n-brand transition-all"
+              :style="{ width: `${(step / total) * 100}%` }"
+            />
+          </span>
+        </div>
+        <h2
+          ref="heading"
+          tabindex="-1"
+          class="m-0 text-xl font-semibold text-n-slate-12 focus:outline-none"
+        >
+          {{ $t(`${KEY}.${current}.TITLE`) }}
+        </h2>
+        <p class="m-0 max-w-prose text-sm leading-6 text-n-slate-11">
+          {{ $t(`${KEY}.${current}.HINT`) }}
+        </p>
+      </div>
+
+      <MetaAdsCreateKind
+        v-if="current === 'KIND'"
+        :model-value="draft.kind"
+        :kinds="kinds"
+        :unavailable="destinations.length ? {} : { ad: 'NO_DESTINATION' }"
+        @choose="chooseKind"
+      />
+
+      <div
+        v-else-if="current === 'WHERE'"
+        class="flex min-w-0 max-w-xl flex-col gap-5"
+      >
+        <div v-if="pages.length > 1" class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(`${KEY}.WHERE.PAGE`) }}
+          </span>
+          <ChoiceSelect
+            :model-value="draft.page_id"
+            data-create-page
+            :options="pageOptions"
+            :aria-label="$t(`${KEY}.WHERE.PAGE`)"
+            :placeholder="$t(`${KEY}.WHERE.CHOOSE`)"
+            class="w-full"
+            @update:model-value="draft = { ...draft, page_id: $event }"
+          />
+        </div>
+        <div v-if="numbers.length > 1" class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(`${KEY}.WHERE.NUMBER`) }}
+          </span>
+          <ChoiceSelect
+            :model-value="draft.whatsapp_number"
+            data-create-number
+            :options="numberOptions"
+            :aria-label="$t(`${KEY}.WHERE.NUMBER`)"
+            :placeholder="$t(`${KEY}.WHERE.CHOOSE`)"
+            class="w-full"
+            @update:model-value="draft = { ...draft, whatsapp_number: $event }"
+          />
+        </div>
+      </div>
+
+      <MetaAdsCreateContent
+        v-else-if="current === 'CONTENT'"
+        v-model="draft"
+        :library="options.images"
+        :page-name="chosenPage?.name"
+        :phone="chosenNumber?.phone"
+        :has-number="numbers.length > 0"
+        :instagram="instagram"
+        :destinations="destinations"
+      />
+
+      <MetaAdsCreateAudience
+        v-else-if="current === 'AUDIENCE'"
+        v-model="draft"
+      />
+
+      <MetaAdsCreateBudget
+        v-else-if="current === 'BUDGET'"
+        v-model="draft"
+        :limits="options"
+        :amount-error="amountError"
+        :total-line="totalLine"
+        :day-limits-line="dayLimitsLine"
+        :suggestion="SUGGESTED_DAILY"
+      />
+
+      <MetaAdsCreateReview
+        v-else-if="current === 'REVIEW'"
+        v-model="draft"
+        :page-name="chosenPage?.name"
+        :phone="chosenNumber?.phone"
+        :username="instagram?.username"
+        :media="draft.media"
+        :cards="adCards"
+        :action="action"
+        :per-day-line="perDayLine"
+        :total-line="totalLine"
+        :day-limits-line="dayLimitsLine"
+        :placements="placements"
+      />
+
+      <p
+        v-if="ageError"
+        ref="ageErrorEl"
+        data-create-age-error
+        role="status"
+        class="m-0 scroll-mb-28 text-sm text-n-ruby-11"
+      >
+        {{ $t(`${KEY}.AUDIENCE.AGE_ERROR`) }}
+      </p>
+      <!-- Recusa ao criar: a frase fica na tela até a pessoa tentar de novo. -->
+      <p
+        v-if="createError"
+        data-create-error
+        role="alert"
+        class="m-0 flex gap-2 rounded-xl bg-n-ruby-2 p-3 text-sm text-n-ruby-12"
+      >
+        <span
+          class="i-lucide-circle-alert mt-0.5 size-4 shrink-0"
+          aria-hidden="true"
+        />
+        {{ createError }}
+      </p>
+      <!-- No celular o "Continuar" fica preso no rodapé, sempre à mão. O botão do menu (☰) fica no canto da barra,
+           ao lado do "Continuar": a margem da esquerda é dele. -->
+      <div
+        v-if="current !== 'KIND'"
+        data-create-actions
+        class="fixed inset-x-0 bottom-0 z-30 flex gap-3 border-t border-n-weak bg-n-solid-1 pb-[calc(1rem+env(safe-area-inset-bottom))] pl-20 pr-4 pt-3 md:static md:z-auto md:border-0 md:bg-transparent md:p-0"
+      >
+        <div
+          class="flex min-w-0 flex-1 flex-col gap-2 md:flex-row md:items-center md:gap-4"
+        >
+          <Button
+            class="w-full md:w-auto"
+            type="submit"
+            :data-create-next="current"
+            :label="submitLabel"
+            :disabled="!ready"
+            :is-loading="saving"
+          />
+          <p
+            v-if="blockReason"
+            data-create-block-reason
+            role="status"
+            class="order-first m-0 text-xs text-n-slate-11 md:order-none md:text-sm"
+          >
+            {{ blockReason }}
+          </p>
+        </div>
+      </div>
+    </form>
+  </section>
+</template>

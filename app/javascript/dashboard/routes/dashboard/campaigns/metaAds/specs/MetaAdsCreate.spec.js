@@ -1,0 +1,312 @@
+import { flushPromises, mount } from '@vue/test-utils';
+import MetaAdsCreate from '../components/MetaAdsCreate.vue';
+import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
+
+vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
+  default: {
+    createOptions: vi.fn(),
+    createAd: vi.fn(),
+    uploadMedia: vi.fn(),
+    setAdStatus: vi.fn(),
+  },
+}));
+vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ params: { accountId: '18' }, query: {} }),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+}));
+vi.mock('../useMetaAdsFacebookLogin', async () => {
+  const { ref } = await import('vue');
+  return {
+    useMetaAdsFacebookLogin: () => ({
+      isConnecting: ref(false),
+      connect: vi.fn(),
+    }),
+  };
+});
+
+const KEY = 'CRM_KANBAN.META_ADS_HUB.CRIAR';
+
+const OPTIONS = {
+  needs_login: false,
+  facebook_login: { app_id: '1', api_version: 'v23.0', configuration_id: '2' },
+  kinds: ['ad'],
+  pages: [{ id: '110000000002161', name: 'Loja' }],
+  instagram: null,
+  whatsapp_numbers: [
+    { id: '+5511900002161', name: 'Loja', phone: '+5511900002161' },
+  ],
+  posts: [],
+  images: [{ hash: 'h1', url: 'https://img/1.jpg', width: 600, height: 600 }],
+  currency: 'BRL',
+  min_daily: 6,
+  max_daily: 500,
+  destinations: ['WHATSAPP', 'WEBSITE'],
+  placements_by_destination: {
+    WHATSAPP: ['AUTO'],
+    WEBSITE: ['AUTO', 'INSTAGRAM', 'FACEBOOK'],
+  },
+};
+
+const CREATED = {
+  ad_id: '120000000000990001',
+  name: 'Bolo',
+  status: 'PAUSED',
+  budget: {
+    kind: 'daily',
+    amount: 20,
+    currency: 'BRL',
+    start_time: '2026-10-27',
+    end_time: null,
+    active_ads_count: 0,
+  },
+};
+
+// O Dialog real abre um <dialog> nativo (e lê a loja); aqui só mostra o conteúdo.
+const DialogStub = {
+  methods: { open() {}, close() {} },
+  template: '<div data-dialog />',
+};
+const STUBS = { Spinner: true, RouterLink: true, Dialog: DialogStub };
+
+let mounted = null;
+const mountCreate = async (options = OPTIONS) => {
+  CrmMetaAdsConnectionAPI.createOptions.mockResolvedValue({
+    data: { options },
+  });
+  mounted = mount(MetaAdsCreate, {
+    global: {
+      mocks: { $t: key => key },
+      stubs: STUBS,
+    },
+  });
+  await flushPromises();
+  return mounted;
+};
+
+const step = wrapper =>
+  wrapper.find('[data-create-form]').attributes('data-create-step');
+const submit = async wrapper => {
+  await wrapper.find('[data-create-form]').trigger('submit');
+  await flushPromises();
+};
+
+// Do primeiro passo até a conferência, com a foto de um anúncio antigo (já tem `hash`, não sobe nada).
+const fillUntilReview = async wrapper => {
+  await wrapper.find('input[data-create-offer]').setValue('bolo de pote');
+  await wrapper.find('[data-create-media-library-toggle]').trigger('click');
+  await wrapper.find('[data-create-image="h1"]').trigger('click');
+  await submit(wrapper);
+  await wrapper.find('[data-create-special="false"]').trigger('click');
+  await submit(wrapper);
+  await submit(wrapper);
+  expect(step(wrapper)).toBe('REVIEW');
+};
+
+const refusal = (status, data) =>
+  Object.assign(new Error('refused'), { response: { status, data } });
+
+describe('Anúncios da Meta · anúncio novo (#2198)', () => {
+  beforeEach(() => {
+    let count = 0;
+    vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
+      count += 1;
+      return `key-${count}`;
+    });
+  });
+
+  afterEach(() => {
+    mounted?.unmount();
+    mounted = null;
+    vi.restoreAllMocks();
+  });
+
+  it('with only one kind offered, enters it directly, without "What to do"', async () => {
+    const wrapper = await mountCreate();
+
+    expect(CrmMetaAdsConnectionAPI.createOptions).toHaveBeenCalledTimes(1);
+    expect(step(wrapper)).toBe('CONTENT');
+    expect(wrapper.find('[data-create-kind]').exists()).toBe(false);
+    expect(wrapper.find('[data-create-back]').text()).toBe(
+      `${KEY}.BACK_TO_PANEL`
+    );
+  });
+
+  it('without a confirmed destination, shows the kind as unavailable with the reason', async () => {
+    const wrapper = await mountCreate({ ...OPTIONS, destinations: [] });
+
+    expect(step(wrapper)).toBe('KIND');
+    expect(wrapper.find('[data-create-kind-unavailable="ad"]').exists()).toBe(
+      true
+    );
+  });
+
+  it('asks to sign in again before anything when the token cannot create', async () => {
+    const wrapper = await mountCreate({ ...OPTIONS, needs_login: true });
+
+    expect(
+      wrapper.find('[data-create-blocker]').attributes('data-create-blocker')
+    ).toBe('LOGIN');
+  });
+
+  it('a failed read says so and lets the person try again', async () => {
+    CrmMetaAdsConnectionAPI.createOptions.mockRejectedValue(new Error('down'));
+    mounted = mount(MetaAdsCreate, {
+      global: { mocks: { $t: key => key }, stubs: STUBS },
+    });
+    await flushPromises();
+
+    expect(mounted.find('[data-create-failed]').exists()).toBe(true);
+  });
+
+  it('creates the paused ad with what the screen showed, then offers to activate', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledTimes(1);
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        idempotency_key: 'key-1',
+        destination: 'WHATSAPP',
+        page_id: '110000000002161',
+        whatsapp_number: '+5511900002161',
+        site_url: null,
+        text: `${KEY}.CONTENT.TEXT_FROM_OFFER.WHATSAPP`,
+        placement: 'AUTO',
+        region: 'BR',
+        states: [],
+        age_min: 18,
+        age_max: 65,
+        special_category: false,
+        daily_amount: 20,
+        end_date: '',
+        media: { kind: 'image', hash: 'h1' },
+        cards: [],
+      })
+    );
+    expect(wrapper.find('[data-create-done]').exists()).toBe(true);
+    expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(true);
+  });
+
+  it('sends the same idempotency key again after a network failure of the same attempt', async () => {
+    CrmMetaAdsConnectionAPI.createAd
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValueOnce({ data: CREATED });
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+    expect(wrapper.find('[data-create-error]').text()).toBe(
+      `${KEY}.ERRORS.NETWORK`
+    );
+    await submit(wrapper);
+
+    const keys = CrmMetaAdsConnectionAPI.createAd.mock.calls.map(
+      ([body]) => body.idempotency_key
+    );
+    expect(keys).toEqual(['key-1', 'key-1']);
+    expect(wrapper.find('[data-create-done]').exists()).toBe(true);
+  });
+
+  it('keeps the key while the server says the same attempt is still in progress (409)', async () => {
+    CrmMetaAdsConnectionAPI.createAd
+      .mockRejectedValueOnce(refusal(409, { error: 'in_progress' }))
+      .mockResolvedValueOnce({ data: CREATED });
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+    expect(wrapper.find('[data-create-error]').text()).toBe(
+      `${KEY}.ERRORS.IN_PROGRESS`
+    );
+    await submit(wrapper);
+
+    const keys = CrmMetaAdsConnectionAPI.createAd.mock.calls.map(
+      ([body]) => body.idempotency_key
+    );
+    expect(keys).toEqual(['key-1', 'key-1']);
+  });
+
+  it('a refusal ends the attempt: tapping again is a new attempt with a new key', async () => {
+    CrmMetaAdsConnectionAPI.createAd
+      .mockRejectedValueOnce(
+        refusal(422, { error: 'meta_unavailable', nothing_created: true })
+      )
+      .mockResolvedValueOnce({ data: CREATED });
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+    await submit(wrapper);
+
+    const keys = CrmMetaAdsConnectionAPI.createAd.mock.calls.map(
+      ([body]) => body.idempotency_key
+    );
+    expect(keys).toEqual(['key-1', 'key-2']);
+  });
+
+  it('says "Nothing was created" only when the server guarantees it', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockRejectedValueOnce(
+      refusal(422, { error: 'meta_refused', nothing_created: true })
+    );
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(wrapper.find('[data-create-error]').text()).toBe(
+      `${KEY}.ERRORS.META_REFUSED ${KEY}.ERRORS.NOTHING_CREATED`
+    );
+  });
+
+  it('without that guarantee, asks to check Meta and never says nothing was created', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockRejectedValueOnce(
+      refusal(422, { error: 'meta_refused', nothing_created: false })
+    );
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    const text = wrapper.find('[data-create-error]').text();
+    expect(text).toBe(`${KEY}.ERRORS.META_REFUSED ${KEY}.ERRORS.CHECK_META`);
+    expect(text).not.toContain('NOTHING_CREATED');
+  });
+
+  it('a video still processing at Meta asks to try again in a minute', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockRejectedValueOnce(
+      refusal(422, { error: 'video_processing', nothing_created: true })
+    );
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(wrapper.find('[data-create-error]').text()).toBe(
+      `${KEY}.ERRORS.VIDEO_PROCESSING ${KEY}.ERRORS.NOTHING_CREATED`
+    );
+  });
+
+  it('a website ad sends the address with https and no WhatsApp number', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
+    const wrapper = await mountCreate();
+    await wrapper.find('[data-create-destination-change]').trigger('click');
+    await wrapper
+      .find('[data-create-destination-option="WEBSITE"]')
+      .trigger('click');
+    await wrapper.find('input[data-create-site-url]').setValue('loja.com.br');
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: 'WEBSITE',
+        site_url: 'https://loja.com.br',
+        site_action: 'LEARN_MORE',
+        whatsapp_number: null,
+        ready_message: null,
+      })
+    );
+  });
+});

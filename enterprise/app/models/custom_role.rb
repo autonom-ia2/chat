@@ -64,6 +64,8 @@
 #   only the conversations the person already sees.
 # - 'meta_ads_manage': connect, configure and disconnect Meta Ads (token, Facebook login, ad account and Pixel choice,
 #   destinations, funnel sale signal, insights refresh, the owner's WhatsApp report) and act on the advisor (#2070).
+#   It also pauses and activates ads (#2161; activating is what spends), creates new ads (always born paused), uploads
+#   photos and videos to the ad account, and changes an ad's budget and end date (#2198).
 #   Protected key (two-list rule, #1782; decision D7 of lote 11): only an administrator hands it out, or whoever holds
 #   grant_above_own, which only an administrator turns on. Choosing an ad account grants the platform system user
 #   access to the client's ad account. Money figures (spend, sales value) are out of its scope (lote 13).
