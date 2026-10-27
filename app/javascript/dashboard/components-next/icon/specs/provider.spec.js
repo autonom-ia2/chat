@@ -1,10 +1,35 @@
-import { useChannelIcon } from '../provider';
+import { useChannelIcon, useChannelBrandIcon } from '../provider';
 
 describe('useChannelIcon', () => {
   it('returns correct icon for API channel', () => {
     const inbox = { channel_type: 'Channel::Api' };
     const { value: icon } = useChannelIcon(inbox);
     expect(icon).toBe('i-woot-api');
+  });
+
+  describe('WhatsApp pelo celular (caixa API ligada ao WAHA, #2255)', () => {
+    it('usa o ícone do WhatsApp, no simples e no colorido', () => {
+      const inbox = { channel_type: 'Channel::Api', waha_provider: true };
+      expect(useChannelIcon(inbox).value).toBe('i-woot-whatsapp');
+      expect(useChannelBrandIcon(inbox).value).toBe('i-logos-whatsapp-icon');
+    });
+
+    it('caixa API comum, sem WAHA, continua com o ícone da API', () => {
+      [
+        { channel_type: 'Channel::Api' },
+        { channel_type: 'Channel::Api', waha_provider: false },
+        { channel_type: 'Channel::Api', waha_provider: null },
+      ].forEach(inbox => {
+        expect(useChannelIcon(inbox).value).toBe('i-woot-api');
+        expect(useChannelBrandIcon(inbox).value).toBeNull();
+      });
+    });
+
+    it('waha_provider em caixa que não é API não muda nada', () => {
+      const inbox = { channel_type: 'Channel::Sms', waha_provider: true };
+      expect(useChannelIcon(inbox).value).toBe('i-woot-sms');
+      expect(useChannelBrandIcon(inbox).value).toBeNull();
+    });
   });
 
   it('returns correct icon for Facebook channel', () => {

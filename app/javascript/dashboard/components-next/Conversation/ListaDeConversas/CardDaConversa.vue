@@ -12,10 +12,7 @@ import { useI18n } from 'vue-i18n';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
-import {
-  nomeEhTelefone,
-  nomeOuTelefone,
-} from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
+import { nomeOuTelefone } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { iconeDaCaixa } from './iconeDaCaixa';
 import { dataEHoraDaMensagem } from 'dashboard/components-next/conversa-canal/dataDaConversa';
 import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
@@ -86,8 +83,8 @@ watch(
 );
 
 // Quem é: o nome; sem nome, o telefone legível ("+55 11 94444-3333"); sem telefone, o e-mail;
-// sem e-mail, o identificador. O avatar só mostra iniciais de um nome de verdade: com telefone,
-// e-mail ou identificador no lugar do nome, fica o ícone de pessoa (as iniciais seriam "+5").
+// sem e-mail, o identificador. Sem nome gravado, o avatar fica com o ícone de pessoa (e-mail e
+// identificador não viram iniciais); nome que é só telefone o próprio Avatar resolve (#2255).
 const pessoas = computed(() =>
   [props.currentContact, props.chat.meta?.sender].filter(Boolean)
 );
@@ -100,9 +97,7 @@ const nome = computed(
     primeiroCampo('email') ||
     primeiroCampo('identifier')
 );
-const nomeNoAvatar = computed(() =>
-  nomeGravado.value && !nomeEhTelefone(nomeGravado.value) ? nome.value : ''
-);
+const nomeNoAvatar = computed(() => (nomeGravado.value ? nome.value : ''));
 const ultima = computed(() => getLastMessage(props.chat));
 const prefixo = computed(() =>
   prefixoDoRemetente(ultima.value, {

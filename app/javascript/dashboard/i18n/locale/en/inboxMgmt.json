@@ -1971,6 +1971,7 @@
       "TWITTER_PROFILE": "Twitter",
       "TWILIO_SMS": "Twilio SMS",
       "WHATSAPP": "WhatsApp",
+      "WHATSAPP_CELULAR": "WhatsApp on the phone",
       "SMS": "SMS",
       "EMAIL": "Email",
       "TELEGRAM": "Telegram",

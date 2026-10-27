@@ -717,6 +717,7 @@ describe('CrmPipelineDrawer — inboxes are read only', () => {
           CrmStageAutomationsPanel: true,
           CrmAiSettingsPanel: true,
           RouterLink: RouterLinkStub,
+          CaixaIcone: true,
         },
       },
     });

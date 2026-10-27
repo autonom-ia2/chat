@@ -6,6 +6,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
 import ContactInfoRow from './ContactInfoRow.vue';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 defineProps({
   contact: { type: Object, required: true },
@@ -24,7 +25,7 @@ defineProps({
     <h3
       class="my-0 text-base font-medium break-words text-n-slate-12 capitalize"
     >
-      {{ contact.name }}
+      {{ nomeDoContatoNaTela(contact) }}
     </h3>
     <div class="flex flex-col items-start w-full gap-2">
       <ContactInfoRow

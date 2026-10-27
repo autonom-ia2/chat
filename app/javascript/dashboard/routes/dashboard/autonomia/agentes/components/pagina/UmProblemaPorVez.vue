@@ -202,7 +202,7 @@ const corrigirResposta = () =>
       class="flex flex-col gap-3 p-4 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6"
     >
       <p
-        class="flex items-center gap-2 m-0 text-xs font-semibold uppercase text-n-amber-11"
+        class="flex items-center gap-2 m-0 text-xs font-semibold text-n-amber-11"
       >
         <span class="i-lucide-hand size-4" aria-hidden="true" />
         <span data-contagem>

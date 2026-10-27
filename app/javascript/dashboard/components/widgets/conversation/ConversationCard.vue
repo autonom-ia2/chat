@@ -17,6 +17,7 @@ import CrmConversationStageChip from 'dashboard/components-next/Conversation/Con
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
 import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 const props = defineProps({
   chat: { type: Object, required: true },
@@ -219,7 +220,7 @@ watch(
           class="conversation--user text-sm my-0 capitalize text-ellipsis overflow-hidden whitespace-nowrap min-w-0 text-n-slate-12"
           :class="hasUnread ? 'font-semibold' : 'font-medium'"
         >
-          {{ currentContact.name }}
+          {{ nomeDoContatoNaTela(currentContact) }}
         </h4>
         <CustomerBadge :contact="currentContact" />
       </div>

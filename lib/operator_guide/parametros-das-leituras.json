@@ -124,6 +124,21 @@
     "controller": "api/v1/accounts/autonomia/agents/channels#index",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/desempenho": {
+    "controller": "api/v1/accounts/autonomia/agents/desempenho#show",
+    "parametros": [
+      "origem",
+      "periodo"
+    ]
+  },
+  "autonomia/agents/:agent_id/desempenho/exportar": {
+    "controller": "api/v1/accounts/autonomia/agents/desempenho#exportar",
+    "parametros": [
+      "formato",
+      "origem",
+      "periodo"
+    ]
+  },
   "autonomia/agents/:agent_id/faq_suggestions": {
     "controller": "api/v1/accounts/autonomia/agents/faq_suggestions#index",
     "parametros": [

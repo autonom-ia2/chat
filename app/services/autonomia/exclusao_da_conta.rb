@@ -101,6 +101,9 @@ class Autonomia::ExclusaoDaConta
     ['Autonomia::Agents::BuildThread', :por_conta],
     ['Autonomia::Agents::AgentInbox', :por_conta],
     ['Autonomia::Agents::Agent', :por_conta],
+    # Painel de desempenho (#2251): a leitura guardada das conversas.
+    ['Autonomia::Desempenho::Procura', :por_conta], ['Autonomia::Desempenho::Leitura', :por_conta],
+    ['Autonomia::Desempenho::Recomendacao', :por_conta], ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
     # Guia da Plataforma.
