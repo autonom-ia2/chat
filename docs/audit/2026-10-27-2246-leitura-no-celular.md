@@ -22,7 +22,8 @@
 
 O visto vai até o fim do segundo da mensagem lida (não a hora da leitura), só para a frente, sem sino.
 A recebida pela Cloud guarda no Redis o id físico tirado do wamid (7 dias), para o ack encontrá-la. O id físico sai do
-terceiro pedaço do id do WAHA (`false_<chat>_<ID>`, ou `false_<grupo>_<ID>_<participante>` em grupo).
+terceiro pedaço do id do WAHA (`false_<chat>_<ID>`, ou `false_<grupo>_<ID>_<participante>` em grupo), já no controller:
+o chat é o telefone do cliente e não vai para a fila.
 
 ## Ajustes da revisão adversarial
 
@@ -41,6 +42,24 @@ terceiro pedaço do id do WAHA (`false_<chat>_<ID>`, ou `false_<grupo>_<ID>_<par
 - **Descarte silencioso (MÉDIO).** Cada decisão (com a flag ligada) vira uma linha de log info, sem telefone e sem id de
   mensagem: `[whatsapp_hybrid][leitura_no_celular] connection=<id> motivo=<...> ack=<n> aparelho=<n> tentativa=<n>`.
   Motivos: `nao_e_leitura`, `aparelho_vinculado`, `sem_indice`, `marca_do_sistema`, `ja_visto`, `andou`.
+
+## Revisão independente (27/10, depois do merge da main)
+
+- **Marca do sistema gravada em toda conta (MÉDIO, corrigido).** `LeituraDoSistema.registrar` rodava WATCH/MULTI no
+  Redis a cada "digitando" e a cada leitura ao canal de qualquer conta. Agora só com a flag; com ela desligada não há
+  ida a mais ao Redis. E qualquer falha da marca (não só `Redis::BaseError`, também o pool) vira log e não impede a
+  leitura ao canal nem o "digitando".
+- **Telefone na fila (MÉDIO, corrigido).** O `id` do ack de mensagem recebida (`false_<telefone>@c.us_<ID>`) ia para o
+  Sidekiq e, com a nova tentativa, ficava até ~1 min no conjunto agendado. Agora o controller manda só o id físico.
+- **Aparelho fora do formato (BAIXO, corrigido).** `_data.Sender` que não é texto, ou aparelho não numérico, dava `0`
+  (celular principal). Agora dá nil e conta como aparelho vinculado.
+- Conferido sem achado: ✓✓ das que saem (`fromMe=true` segue o caminho antigo), índice da recebida só com a flag e só
+  em caixa híbrida, sino intocado (`MarkConversationReadService` fora; `conversation.read` só vai ao ActionCable),
+  novas tentativas limitadas a 3 e sem campo de tentativa vindo de fora, HMAC antes de qualquer leitura do corpo,
+  WAHA comum sem mudança de comportamento.
+- Aberto, BAIXO: grupo do Híbrido chega pela sessão auxiliar, não pela Cloud, e não é indexado: leitura de mensagem de
+  grupo não apaga a bolinha e custa até 4 execuções do job (desiste em ~1 min). O mesmo para ack de mensagem anterior à
+  flag ou mais velha que 7 dias.
 
 ## O que o piloto mede pelo log
 
