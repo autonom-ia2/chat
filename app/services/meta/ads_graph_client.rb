@@ -60,8 +60,10 @@ class Meta::AdsGraphClient
     end
   end
 
-  def initialize(access_token:, api_version: nil)
+  # base_uri: o Instagram com o login do Instagram fala com graph.instagram.com (#2199), com as mesmas regras.
+  def initialize(access_token:, api_version: nil, base_uri: BASE_URI)
     @access_token = access_token
+    @base_uri = base_uri
     @api_version = api_version.presence || GlobalConfigService.load('WHATSAPP_API_VERSION', Meta::ConversionsApiClient::DEFAULT_API_VERSION)
   end
 
@@ -160,6 +162,7 @@ class Meta::AdsGraphClient
 
   include Meta::AdsGraphClient::Management
   include Meta::AdsGraphClient::Creation
+  include Meta::AdsGraphClient::Organico
 
   private
 
@@ -200,7 +203,7 @@ class Meta::AdsGraphClient
   def request(verb, path, **)
     response = HTTParty.public_send(
       verb,
-      "#{BASE_URI}/#{@api_version}/#{path}",
+      "#{@base_uri}/#{@api_version}/#{path}",
       headers: { 'Authorization' => "Bearer #{@access_token}" },
       timeout: TIMEOUT_SECONDS,
       **

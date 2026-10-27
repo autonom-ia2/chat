@@ -8,15 +8,15 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | No catálogo | 650 |
 | Sem corpo | 189 |
 | Com corpo | 461 |
-| Com corpo e formato completo | 379 (82,2%) |
-| Com corpo e formato incompleto | 82 |
+| Com corpo e formato completo | 378 (82,0%) |
+| Com corpo e formato incompleto | 83 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 175 de 266 |
+| Leituras cruas tipadas | 175 de 267 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 68 |
+| leitura crua sem tipo | 69 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -98,6 +98,7 @@ Uma ação pode ter mais de um motivo.
 - `POST inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
 - `POST inboxes/:inbox_id/whatsapp_conversation_assets/media` — leitura crua sem tipo: file
 - `POST inboxes/:inbox_id/whatsapp_templates/media` — leitura crua sem tipo: file (repassada a manager.upload)
+- `POST instagram/authorization` — leitura crua sem tipo: purpose (repassada a REAUTH_PURPOSES.[])
 - `POST integrations/hooks/:id/process_event` — leitura crua sem tipo: event (repassada a @hook.process_event)
 - `POST integrations/slack` — leitura crua sem tipo: code (repassada a Integrations::Slack::HookBuilder.new)
 - `POST portals` — leitura crua sem tipo: portal.config.analytics
@@ -197,6 +198,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/inboxes#set_agent_bot` agent_bot — repassada a AgentBot.accessible_to(Current.account).find
 - `api/v1/accounts/inboxes/whatsapp_conversation_assets#media` file — o código não converte nem compara o valor
 - `api/v1/accounts/inboxes/whatsapp_templates#media` file — repassada a manager.upload
+- `api/v1/accounts/instagram/authorizations#create` purpose — repassada a REAUTH_PURPOSES.[]
 - `api/v1/accounts/integrations/hooks#process_event` event — repassada a @hook.process_event
 - `api/v1/accounts/integrations/slack#create` code — repassada a Integrations::Slack::HookBuilder.new
 - `api/v1/accounts/portals#create` portal.config.analytics — o código não converte nem compara o valor
@@ -216,8 +218,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 403 |
-| Com parâmetros conhecidos | 352 |
+| No catálogo | 404 |
+| Com parâmetros conhecidos | 353 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

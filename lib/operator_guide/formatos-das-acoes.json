@@ -18101,22 +18101,30 @@
         "tipo": "id",
         "tipo_pela_leitura": "nome"
       },
+      "purpose": {},
       "return_to": {},
       "tester_authorization_attestation": {},
       "tester_selection_token": {}
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/instagram/authorizations#create",
     "modelo": "Inbox",
+    "motivos": [
+      "leitura crua sem tipo: purpose (repassada a REAUTH_PURPOSES.[])"
+    ],
     "origem": [
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:54",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:72",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:86",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:15",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:14",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:13",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:79",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:77",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:56",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:61",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:73",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:60",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:59",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:52",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:43"
     ],

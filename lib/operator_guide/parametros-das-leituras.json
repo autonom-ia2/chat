@@ -1397,6 +1397,12 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnels",
     "parametros": []
   },
+  "crm/meta_ads_connection/organico": {
+    "controller": "api/v1/accounts/crm/meta_ads_organico#show",
+    "parametros": [
+      "days"
+    ]
+  },
   "crm/meta_ads_connection/pages": {
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#pages",
     "parametros": []

@@ -912,12 +912,23 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Anúncios da Meta: resultados orgânicos (#2199). Ligada: a página de Anúncios da Meta ganha a aba "Seus posts", ao
+# lado do Resultado, com quem viu os posts da Página do Facebook (read_insights) e do Instagram
+# (instagram_business_manage_insights), quem mandou mensagem por ali e os posts com mais curtidas e comentários.
+# Desligada: Resultado e Conexão de sempre. Fim da feature_flags_ext_2, posição pela ordem de chegada à main; hoje 5
+# (valor 16, 1 << 4), depois de agentes_painel_desempenho. Se outra flag da ext_2 entrar antes, esta vai para depois
+# dela (a Orquestração confere antes de enfileirar).
+- name: meta_ads_organico
+  display_name: Anúncios da Meta - resultados orgânicos da Página e do Instagram
+  enabled: false
+  column: feature_flags_ext_2
+
 # Anúncios da Meta: o Gerenciador simples (#2198, PR 1). Ligada: "Criar anúncio" no Resultado abre o anúncio novo
 # (WhatsApp ou site, só os destinos e lugares que a chamada real confirmou), o detalhe do anúncio mostra o orçamento e
 # as datas com "Mudar", e os anúncios criados aqui que seguem pausados aparecem no topo. Tudo nasce pausado: nada gasta
 # até a pessoa tocar em "Ativar anúncio". Desligada: o painel de sempre; nenhuma rota de criar chama a Meta (404).
 # Migration 20261108580000 (tabela nova crm_meta_ads_created_objects). Fim da feature_flags_ext_2, posição pela ordem
-# na main, confirmada pela Orquestração na hora da fila (hoje 5, valor 16, depois do agentes_painel_desempenho).
+# na main, confirmada pela Orquestração na hora da fila (hoje 6, valor 32, 1 << 5, depois do meta_ads_organico).
 - name: meta_ads_criar
   display_name: Anúncios da Meta › criar anúncio, orçamento e datas
   enabled: false

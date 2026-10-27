@@ -393,6 +393,8 @@ Rails.application.routes.draw do
             scope 'meta_ads_connection' do
               # Relatório baixado (#1960): PDF ou planilha do painel no período.
               get :report, to: 'meta_ads_reports#show'
+              # Seus posts (#2199): resultado orgânico da Página e do Instagram.
+              get :organico, to: 'meta_ads_organico#show'
               post :daily_action, to: 'meta_ads_ai#daily_action'
               post :quote_message, to: 'meta_ads_ai#quote_message'
               get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'

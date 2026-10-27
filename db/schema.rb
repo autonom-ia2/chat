@@ -2793,6 +2793,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_580000) do
     t.index ["account_id", "idempotency_key"], name: "idx_crm_meta_ads_created_objects_key", unique: true
   end
 
+  create_table "crm_meta_ads_pages", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "page_id", null: false
+    t.string "name", limit: 255
+    t.boolean "leadgen_receiving", default: false, null: false
+    t.boolean "feed_receiving", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "page_id"], name: "index_crm_meta_ads_pages_on_account_id_and_page_id", unique: true
+    t.index ["page_id"], name: "index_crm_meta_ads_pages_on_page_id"
+  end
+
   create_table "crm_meta_advisor_actions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "run_id"
@@ -4579,6 +4591,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_580000) do
   add_foreign_key "crm_meta_ad_placements_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_created_objects", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_pages", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "last_run_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "run_id", on_delete: :nullify

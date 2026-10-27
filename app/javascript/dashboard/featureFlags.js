@@ -72,6 +72,7 @@ export const FEATURE_FLAGS = {
   META_ADS_GESTAO: 'meta_ads_gestao',
   META_ADS_CRIAR: 'meta_ads_criar',
   CONTATO_RELACAO: 'contato_relacao',
+  META_ADS_ORGANICO: 'meta_ads_organico',
   EMAIL_LIDO_SINCRONIZADO: 'email_lido_sincronizado',
   CRM_NUMEROS_LENTES: 'crm_numeros_lentes',
   CRM_METAS: 'crm_metas',
