@@ -61,8 +61,9 @@ const chat = (extras = {}) => ({
   ...extras,
 });
 
-const montar = (props = {}, provide = {}) =>
+const montar = (props = {}, provide = {}, opcoes = {}) =>
   mount(CardDaConversa, {
+    ...opcoes,
     props: {
       chat: chat(),
       currentContact: { name: 'Marina Costa' },
@@ -219,8 +220,19 @@ describe('CardDaConversa (#2202)', () => {
     });
 
     it('o card é um botão nativo (Tab chega, Enter e Espaço abrem) e o clique dele abre a conversa', async () => {
-      const wrapper = montar({}, { cardNaBusca: true });
+      const wrapper = montar(
+        {},
+        { cardNaBusca: true },
+        { attachTo: document.body }
+      );
       const botao = wrapper.find('[data-card-texto]');
+      // Na ordem do Tab: botão habilitado, sem tabindex negativo, nada escondido em volta.
+      expect(botao.element.disabled).toBe(false);
+      expect(botao.element.closest('[aria-hidden="true"], [inert]')).toBeNull();
+      botao.element.focus();
+      expect(document.activeElement).toBe(botao.element);
+      // Enter e Espaço num <button> o navegador transforma em clique (o jsdom não simula essa
+      // ativação; a jornada da demo aperta Tab e Enter de verdade).
       expect(botao.element.tagName).toBe('BUTTON');
       expect(botao.attributes('type')).toBe('button');
       expect(botao.attributes('tabindex')).toBeUndefined();

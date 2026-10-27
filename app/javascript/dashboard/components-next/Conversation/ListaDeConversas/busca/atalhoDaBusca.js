@@ -36,6 +36,10 @@ export const ROTAS_DE_CONVERSAS = [
 
 const CAMPO = '[data-campo-da-busca]';
 
+// A barra de comandos (ninja-keys) já está aberta: o ⌘K é dela, e o foco não vai para a busca atrás.
+const barraDeComandosAberta = () =>
+  Boolean(document.querySelector('ninja-keys')?.visible);
+
 // O campo está na tela e visível (com filtro avançado, pasta salva ou a conversa aberta no celular,
 // ele não aparece).
 const campoVisivel = () => {
@@ -56,9 +60,9 @@ export function useAtalhoDaBusca() {
       if (!(evento.metaKey || evento.ctrlKey) || evento.code !== 'KeyK') return;
       if (evento.altKey || evento.shiftKey) return;
       if (!ROTAS_DE_CONVERSAS.includes(route?.name)) return;
-      if (!campoVisivel()) {
-        // Campo escondido (filtro avançado, pasta salva, conversa aberta no celular): a barra de
-        // comandos abre, e nenhum pedido fica pendente para roubar o foco depois.
+      if (barraDeComandosAberta() || !campoVisivel()) {
+        // Barra de comandos já aberta, ou campo escondido (filtro avançado, pasta salva, conversa
+        // aberta no celular): o ⌘K fica com a barra, e nenhum pedido fica pendente para roubar o foco.
         focoAtendido.value = pedidoDeFoco.value;
         return;
       }

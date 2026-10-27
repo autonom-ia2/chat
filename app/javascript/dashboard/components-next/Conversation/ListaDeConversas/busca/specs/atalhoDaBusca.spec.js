@@ -89,6 +89,25 @@ describe('useAtalhoDaBusca', () => {
     expect(focoAtendido.value).toBe(pedidoDeFoco.value);
   });
 
+  it('barra de comandos já aberta: o ⌘K fica com ela e o foco não vai para a busca atrás', () => {
+    campoNaTela();
+    const barra = document.createElement('ninja-keys');
+    barra.visible = true;
+    document.body.appendChild(barra);
+    montar();
+    const antes = pedidoDeFoco.value;
+    const evento = apertar();
+    expect(evento.defaultPrevented).toBe(false);
+    expect(barraDeComandos).toHaveBeenCalledTimes(1);
+    expect(pedidoDeFoco.value).toBe(antes);
+    expect(focoAtendido.value).toBe(pedidoDeFoco.value);
+
+    // Fechada, o ⌘K volta a focar a busca.
+    barra.visible = false;
+    expect(apertar().defaultPrevented).toBe(true);
+    expect(pedidoDeFoco.value).toBe(antes + 1);
+  });
+
   it('sem a chave lista_quem_espera, igual à main: o ⌘K passa para a barra de comandos', () => {
     ligada.value = false;
     campoNaTela();

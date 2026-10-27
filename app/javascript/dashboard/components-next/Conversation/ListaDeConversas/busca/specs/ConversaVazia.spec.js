@@ -414,8 +414,9 @@ describe('ConversaVazia', () => {
       ]);
       await wrapper.find('[data-caixa-falsa]').trigger('click');
       await flushPromises();
+      // O nome é o da Nova conversa: a parte antes do @, com a primeira letra maiúscula.
       expect(ContactAPI.create).toHaveBeenCalledWith({
-        name: 'nova@exemplo.test',
+        name: 'Nova',
         email: 'nova@exemplo.test',
       });
       expect(nova.enviar).toHaveBeenCalledTimes(1);

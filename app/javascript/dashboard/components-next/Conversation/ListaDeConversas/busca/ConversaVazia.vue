@@ -26,6 +26,7 @@ import ContactAPI from 'dashboard/api/contacts';
 import { emitter } from 'shared/helpers/mitt';
 import {
   fetchContactableInboxes,
+  getCapitalizedNameFromEmail,
   mergeInboxDetails,
 } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper';
 import { useNovaConversaContato } from 'dashboard/components-next/NovaConversa/useNovaConversaContato';
@@ -241,7 +242,8 @@ const garantirContato = async () => {
   try {
     const { data } = await ContactAPI.create(
       peloEmail.value
-        ? { name: props.email, email: props.email }
+        ? // O mesmo nome que a Nova conversa dá ao contato criado por e-mail.
+          { name: getCapitalizedNameFromEmail(props.email), email: props.email }
         : {
             name: telefoneLegivel(props.telefone),
             phone_number: props.telefone,
