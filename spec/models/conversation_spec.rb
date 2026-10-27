@@ -700,8 +700,11 @@ RSpec.describe Conversation do
       create(:message, message_type: :incoming, **message_params)
     end
 
+    # #2202: a resposta de uma pessoa marca a conversa como vista (ConversaCanal::VistaAoResponder), o que zeraria esta
+    # mensagem do cliente no mesmo instante. Por isso a saída aqui é de campanha, que não marca: prova o filtro de
+    # recebidas sem depender do #2202.
     before do
-      create(:message, message_type: :outgoing, **message_params)
+      create(:message, message_type: :outgoing, **message_params, additional_attributes: { 'campaign_id' => 1 })
     end
 
     it 'returns unread incoming messages' do
