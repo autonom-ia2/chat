@@ -7,7 +7,10 @@
 # `is_present`/`is_not_present` ficam como estão: dizem só se a conversa veio de alguma campanha ou anúncio, e quem não vê
 # o anúncio já vê em cada conversa que ela veio de anúncio (só não vê qual).
 #
-#   Crm::AnuncioDeOrigem::FiltroDeConversas.payload(payload, user:, account:) -> o payload do filtro para quem lê
+# Quem lê vem de Current.user e Current.account_user (o token de API de uma pessoa só preenche o Current; o
+# `current_user` do Devise vem vazio). Até Crm::AnuncioDeOrigem::Ids::MAX_IDS ids; acima, 422.
+#
+#   Crm::AnuncioDeOrigem::FiltroDeConversas.payload(payload, user:, account_user:, account:) -> o payload para quem lê
 module Crm::AnuncioDeOrigem::FiltroDeConversas
   CHAVE = 'campaign_source_ids'.freeze
   OPERADORES = %w[contains does_not_contain].freeze
@@ -15,20 +18,16 @@ module Crm::AnuncioDeOrigem::FiltroDeConversas
 
   module_function
 
-  def payload(payload, user:, account:)
+  def payload(payload, user:, account_user:, account:)
     condicoes = Array(payload).map { |condicao| condicao.to_h.with_indifferent_access }
     return payload unless condicoes.any? { |condicao| por_campanha?(condicao) }
-    return payload if Crm::AnuncioDeOrigem.ve_no_contexto?(user, account_user_de(user, account))
+    return payload if Crm::AnuncioDeOrigem.ve_no_contexto?(user, account_user)
 
     fecha(condicoes.filter_map { |condicao| por_campanha?(condicao) ? sem_anuncio(condicao, account) : condicao })
   end
 
   def por_campanha?(condicao)
     condicao[:attribute_key] == CHAVE && OPERADORES.include?(condicao[:filter_operator])
-  end
-
-  def account_user_de(user, account)
-    account.account_users.find_by(user: user) if user.is_a?(User)
   end
 
   def sem_anuncio(condicao, account)

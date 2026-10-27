@@ -4,6 +4,9 @@
 # mesmo job entrega o evento inteiro a quem vê e o sem o anúncio a quem não vê. Sem toque de anúncio (a maioria, inclusive
 # digitando), não há consulta: um envio só, como antes.
 #
+# Se achar quem vê falhar (exceção), o evento NUNCA sai inteiro: todos recebem a conversa sem o anúncio, e o erro vai
+# para o log.
+#
 # Onde o evento leva a conversa: na raiz (eventos da conversa), em `conversation` (digitando) e no `primary_actor` da
 # notificação. O token do contato (widget) não é de um usuário e recebe o evento inteiro, como antes.
 #
@@ -24,13 +27,20 @@ class Crm::AnuncioDeOrigem::TempoReal
   def envios
     return [[@tokens, @payload]] unless @payload.is_a?(Hash) && com_anuncio?
 
+    separados
+  rescue StandardError => e
+    Rails.logger.error("[anuncio_de_origem] tempo real sem o recorte por destinatário (account #{@account_id}): #{e.class.name}")
+    [[@tokens, payload_oculto]]
+  end
+
+  private
+
+  def separados
     ocultos = tokens_que_nao_veem
     return [[@tokens, @payload]] if ocultos.empty?
 
     [[@tokens - ocultos, @payload], [ocultos, payload_oculto]].reject { |tokens, _payload| tokens.empty? }
   end
-
-  private
 
   def com_anuncio?
     CAMINHOS.any? do |caminho|

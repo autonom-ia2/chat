@@ -169,6 +169,31 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
 
       expect(ler("conversations/#{conversa_anuncio.display_id}", sem_chave)['additional_attributes']).to include(atributos_oculto)
     end
+
+    # O token de API de uma pessoa só preenche o Current (o `current_user` do Devise vem vazio): a regra vale igual.
+    it 'pessoa sem a chave pelo token de API: não vê o anúncio na conversa nem filtra por ele' do
+      token = { api_access_token: sem_chave.access_token.token }
+      get "#{api}/conversations/#{conversa_anuncio.display_id}", headers: token, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['additional_attributes']).to include(atributos_oculto)
+
+      post "#{api}/conversations/filter", headers: token, as: :json,
+                                          params: { payload: [{ attribute_key: 'campaign_source_ids', filter_operator: 'contains',
+                                                                values: ['"120200000000000001"'], query_operator: nil }] }
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload'].pluck('id')).to match_array(todas_as_conversas(sem_chave))
+      expect(response.body).not_to include(*fora_do_referral)
+    end
+  end
+
+  # Sem identidade não vê (fail-closed); a chamada interna diz que é interna.
+  describe 'quem lê' do
+    it 'sem usuário nem account_user não vê; interno: true vê; o robô vê' do
+      expect(Crm::AnuncioDeOrigem.ve_no_contexto?(nil, nil)).to be(false)
+      expect(Crm::AnuncioDeOrigem.ve_no_contexto?(nil, nil, interno: true)).to be(true)
+      expect(Crm::AnuncioDeOrigem.ve_no_contexto?(create(:agent_bot, account: account), nil)).to be(true)
+      expect(Crm::AnuncioDeOrigem.ve_no_contexto?(create(:user), nil)).to be(false)
+    end
   end
 
   # O ActionCableBroadcastJob busca a conversa de novo (prepare_broadcast_data) e aplica a visão por destinatário no
@@ -208,6 +233,22 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
 
       expect(recebidos.values.map(&:sole).uniq.size).to eq(1)
       expect(recebidos.keys).to match_array(tokens)
+    end
+
+    it 'se achar quem vê falhar, todos recebem a conversa sem o anúncio e o erro vai para o log' do
+      allow(User).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished)
+      allow(Rails.logger).to receive(:error)
+      recebidos = entregas do
+        ActionCableBroadcastJob.perform_now(tokens, Events::Types::CONVERSATION_UPDATED,
+                                            { id: conversa_anuncio.display_id, account_id: account.id })
+      end
+
+      expect(recebidos.keys).to match_array(tokens)
+      recebidos.each_value do |mensagens|
+        expect(mensagens.sole[:additional_attributes]).to include(atributos_oculto)
+        expect(mensagens.sole.to_json).not_to include(*fora_do_referral)
+      end
+      expect(Rails.logger).to have_received(:error).with(include('ActiveRecord::ConnectionNotEstablished'))
     end
 
     it 'VisibilitySync: o evento que ele manda direto pelo job também sai sem o anúncio para quem não vê' do
@@ -275,6 +316,15 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
           .to contain_exactly('Card do anúncio', 'Card da divulgação', 'Card sem origem', 'Card só do anúncio')
       end
 
+      it "#{superficie}: sem a chave, mais de #{Crm::AnuncioDeOrigem::Ids::MAX_IDS} ids dá 422" do
+        ids = Array.new(Crm::AnuncioDeOrigem::Ids::MAX_IDS + 1) { |indice| "id-#{indice}" }.join(',')
+        get "#{api}/crm/#{superficie}", params: { pipeline_id: pipeline_and_stage.first.id, campaign_source_ids: ids },
+                                        headers: auth_headers(sem_chave)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq(I18n.t('errors.custom_filters.too_many_campaigns', limit: 50))
+      end
+
       it "#{superficie}: com a chave, administrador e agente sem função filtram pelo anúncio" do
         [com_view, com_manage, admin, plain_agent].each do |user|
           expect(titulos(superficie, user, '120200000000000001')).to contain_exactly('Card do anúncio', 'Card só do anúncio')
@@ -335,6 +385,31 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
       [com_view, plain_agent, admin].each do |user|
         expect(filtrar_conversas(user, ['"120200000000000001"'])).to eq([conversa_anuncio.display_id])
       end
+    end
+
+    it "mais de #{Crm::AnuncioDeOrigem::Ids::MAX_IDS} ids: 422 com a mensagem do limite" do
+      valores = Array.new(Crm::AnuncioDeOrigem::Ids::MAX_IDS + 1) { |indice| "\"id-#{indice}\"" }
+      post "#{api}/conversations/filter", headers: auth_headers(sem_chave), as: :json,
+                                          params: { payload: [{ attribute_key: 'campaign_source_ids', filter_operator: 'contains',
+                                                                values: valores, query_operator: nil }] }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('errors.custom_filters.too_many_campaigns', limit: 50))
+    end
+
+    # O toque antigo, gravado só em `campaign` (sem lista nem espelho), conta igual com poucos e com muitos ids.
+    it 'toque antigo só em campaign: o id é anúncio com 1 e com 25 ids' do
+      antiga = create_crm_conversation(account: account, inbox: inbox, contact: contato)
+      antiga.update!(additional_attributes: { 'campaign' => toque_anuncio.merge('source' => '', 'source_id' => 'legado-1') })
+      conversa_divulgacao.update!(additional_attributes: {
+                                    'campaign_touches' => [toque_divulgacao, toque_divulgacao.merge('source_id' => 'legado-1')],
+                                    'campaign_source_ids' => %w[divulgacao-1 legado-1]
+                                  })
+      muitos = ['"legado-1"'] + Array.new(24) { |indice| "\"inexistente-#{indice}\"" }
+
+      expect(filtrar_conversas(sem_chave, ['"legado-1"'])).to match_array(todas)
+      expect(filtrar_conversas(sem_chave, muitos)).to match_array(todas)
+      expect(filtrar_conversas(com_view, ['"legado-1"'])).to eq([conversa_divulgacao.display_id])
     end
 
     it 'is_present continua valendo (diz só que veio de campanha, o que a conversa já mostra)' do

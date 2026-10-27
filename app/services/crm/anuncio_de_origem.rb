@@ -3,8 +3,8 @@
 # agente sem função personalizada e a função com `meta_ads_view` ou `meta_ads_manage` (manage implica view,
 # Enterprise::AccountUser#permission_granted?). Só a função personalizada sem a chave deixa de ver: ela vê que o cliente
 # veio de anúncio, por onde e quando, como já acontece com o gasto. Fora das pessoas, vê tudo o robô (token do AgentBot)
-# e a chamada interna, sem usuário (ve_no_contexto?). Contato e widget (token do contact_inbox) continuam recebendo o
-# próprio anúncio, como antes.
+# e a chamada interna que se declara (`interno: true`); sem identidade, não vê (ve_no_contexto?). Super admin ou usuário
+# sem AccountUser na conta também não vê. Contato e widget (token do contact_inbox) continuam recebendo o próprio anúncio.
 #
 # "Anúncio" é o anúncio que trouxe o card, não só o da Meta: Google Ads e TikTok Ads ficam escondidos junto (decisão do
 # Rodrigo, 27/10). É de anúncio pelo `source` gravado ou pela regra de "pago" do próprio Ctwa::CampaignBuilder.source_for,
@@ -18,7 +18,7 @@
 # (no card, também `conversation_id`), com `ad_hidden: true`.
 #
 #   Crm::AnuncioDeOrigem.ve?(account_user)                          -> a pessoa vê?
-#   Crm::AnuncioDeOrigem.ve_no_contexto?(user, account_user)        -> quem lê (pessoa, robô ou chamada interna) vê?
+#   Crm::AnuncioDeOrigem.ve_no_contexto?(user, account_user, interno: false) -> quem lê (pessoa, robô, interno) vê?
 #   Crm::AnuncioDeOrigem.para_quem_nao_ve(toque, item)              -> o item do card, sem o anúncio
 #   Crm::AnuncioDeOrigem.atributos_para(user, account_user, attrs)  -> additional_attributes da conversa como quem lê vê
 #   Crm::AnuncioDeOrigem.oculta_toque(toque)                        -> o toque gravado (chaves em texto), sem o anúncio
@@ -41,10 +41,11 @@ module Crm::AnuncioDeOrigem
     account_user.permission_granted?(CHAVE)
   end
 
-  # Quem lê: a pessoa (User + AccountUser) segue ve?; o robô (AgentBot, token do robô) e a chamada interna (sem usuário
-  # nem account_user, como job e console) veem tudo. O mesmo para card, conversa, opções e filtros.
-  def ve_no_contexto?(user, account_user)
-    return true if user.nil? && account_user.nil?
+  # Quem lê: a pessoa (User + AccountUser) segue ve?; o robô (Current.user AgentBot, token do robô) vê tudo; a chamada
+  # interna só vê tudo quando diz `interno: true`. Qualquer outro contexto sem identidade NÃO vê (fail-closed): super
+  # admin ou usuário sem AccountUser na conta, token sem dono reconhecido. O mesmo para card, conversa, opções e filtros.
+  def ve_no_contexto?(user, account_user, interno: false)
+    return true if interno
     return true if user.is_a?(AgentBot)
 
     ve?(account_user)

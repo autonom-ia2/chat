@@ -12,7 +12,7 @@ class Crm::Conversations::Visibility
     @full_contact = Crm::Cards::ContactReading.full?(user: @user, account_user: @account_user)
   end
 
-  # Anúncio de origem (#2271): quem lê (pessoa, robô ou chamada interna) vê o anúncio que trouxe o card?
+  # Anúncio de origem (#2271): quem lê (pessoa ou robô) vê o anúncio que trouxe o card? Sem identidade, não.
   def anuncio_visivel?
     return @anuncio_visivel if defined?(@anuncio_visivel)
 

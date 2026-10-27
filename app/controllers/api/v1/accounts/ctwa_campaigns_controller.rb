@@ -68,13 +68,13 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
   end
 
   # Anúncio de origem (#2271): a função personalizada sem meta_ads_view não recebe as linhas de anúncio (nome e id),
-  # aqui e no filtro de Conversas, que usa as mesmas opções. Divulgação, link e publicação continuam; o robô e a chamada
-  # interna veem tudo. O id que foi anúncio em qualquer toque da conta conta como anúncio, como no filtro
-  # (Crm::AnuncioDeOrigem::Ids).
+  # aqui e no filtro de Conversas, que usa as mesmas opções. Divulgação, link e publicação continuam; o robô vê tudo e,
+  # sem identidade, não vê. O id que foi anúncio em qualquer toque da conta conta como anúncio, como no filtro
+  # (Crm::AnuncioDeOrigem::Ids, sem o limite do filtro: uma consulta só, com todas as campanhas da lista).
   def without_hidden_ads(rows)
     return rows if Crm::AnuncioDeOrigem.ve_no_contexto?(Current.user, Current.account_user)
 
-    ads = Crm::AnuncioDeOrigem::Ids.de_anuncio(Current.account, rows.pluck('source_id'))
+    ads = Crm::AnuncioDeOrigem::Ids.de_anuncio(Current.account, rows.pluck('source_id'), limite: nil)
     rows.reject { |row| ads.include?(row['source_id']) }
   end
 
