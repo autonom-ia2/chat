@@ -911,3 +911,13 @@
   display_name: Agentes IA › painel de desempenho do agente
   enabled: false
   column: feature_flags_ext_2
+
+# Novo público pedindo em palavras (#2277). Ligada: abaixo da planilha, em Campanhas › Público › Novo público, a pessoa
+# pede o público com as próprias palavras e a plataforma lê as conversas da conta (com a IA da própria conta) e monta a
+# lista para revisar e salvar. Desligada: só a planilha, como sempre. Posição PROVISÓRIA 7 (valor 64, 1 << 6) no fim da
+# feature_flags_ext_2, só para o protótipo; no PR de verdade vai para a posição seguinte à última da main, conferida
+# pela Orquestração na hora da fila.
+- name: campanhas_publico_por_conversa
+  display_name: Campanhas › Novo público pedindo em palavras
+  enabled: false
+  column: feature_flags_ext_2
