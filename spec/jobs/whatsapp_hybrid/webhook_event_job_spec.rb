@@ -87,6 +87,24 @@ RSpec.describe WhatsappHybrid::WebhookEventJob do
       expect(message.reload.status).to eq('read')
     end
 
+    it 'keeps the ✓✓ on our own messages when the ack says fromMe=true (#2246)' do
+      described_class.perform_now(connection.id, 'message.ack',
+                                  { 'id' => 'true_5511937016094@c.us_3EB0ACK', 'ack' => 3, 'from_me' => true, 'aparelho' => '0' })
+
+      expect(message.reload.status).to eq('read')
+    end
+
+    it 'sends the ack of a received message read on the phone to the phone reading, not to the ✓✓ (#2246)' do
+      ack = { 'id' => 'false_5511937016094@c.us_3EB0ACK', 'ack' => 3, 'from_me' => false, 'aparelho' => '0' }
+      leitura = instance_double(WhatsappHybrid::LeituraNoCelular, aplicar: true)
+      allow(WhatsappHybrid::LeituraNoCelular).to receive(:new).with(connection).and_return(leitura)
+
+      described_class.perform_now(connection.id, 'message.ack', ack)
+
+      expect(leitura).to have_received(:aplicar).with(ack)
+      expect(message.reload.status).to eq('sent')
+    end
+
     it 'ignores acks of messages it does not know' do
       described_class.perform_now(connection.id, 'message.ack', { 'id' => 'true_x@c.us_OUTRO', 'ack' => 3 })
 

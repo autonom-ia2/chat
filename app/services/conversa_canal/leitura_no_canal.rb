@@ -48,6 +48,8 @@ class ConversaCanal::LeituraNoCanal
     return unless pendente?
     return unless reservar
 
+    # #2246: antes do pedido, porque a leitura pode voltar do motor antes da resposta do canal.
+    ConversaCanal::LeituraDoSistema.registrar(@conversation)
     enviar ? registrar : soltar
   end
 

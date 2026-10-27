@@ -911,3 +911,15 @@
   display_name: Agentes IA › painel de desempenho do agente
   enabled: false
   column: feature_flags_ext_2
+
+# Leitura no celular apaga a bolinha (#2246, opção C). Ligada: quando o celular do negócio lê as mensagens do cliente,
+# o "visto" do agente anda até elas e a bolinha de não lida apaga, sem sino (ConversaCanal::VistaNoCelular). Hoje só
+# na caixa oficial com WhatsApp Híbrido, pela sessão auxiliar (WhatsappHybrid::LeituraNoCelular); a caixa WhatsApp API
+# (WAHA comum) depende de patch no conector e a Cloud sem Híbrido não recebe o sinal da Meta. Desligada: a bolinha só
+# apaga pelo painel ou pela resposta de uma pessoa, como antes. Sem migration. No fim da feature_flags_ext_2, depois de
+# agentes_painel_desempenho: posição 5 (valor 16, 1 << 4), PROVISÓRIA até a Orquestração confirmar. Nasce ligada nas
+# contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+- name: leitura_no_celular
+  display_name: Conversas › leitura no celular apaga a bolinha
+  enabled: false
+  column: feature_flags_ext_2

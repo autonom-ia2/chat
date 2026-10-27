@@ -64,6 +64,8 @@ class Conversations::ChannelTyping::Deliverer
 
     # reorder: Message tem default_scope por created_at asc; com order, a mais antiga venceria.
     wamid = @conversation.messages.incoming.where.not(source_id: [nil, '']).reorder(created_at: :desc).pick(:source_id)
+    # #2246: esta lida é do robô, não de uma pessoa no celular.
+    ConversaCanal::LeituraDoSistema.registrar(@conversation) if wamid.present?
     channel.provider_service.send_typing_indicator(wamid, timeout: @timeout)
   end
 

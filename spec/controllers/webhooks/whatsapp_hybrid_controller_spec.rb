@@ -52,6 +52,18 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
       )
   end
 
+  it 'passes fromMe and only the device that read, never the phone in _data (#2246)' do
+    read = { id: 'evt_read', timestamp: now_ms, event: 'message.ack', session: 'hybrid-test',
+             payload: { id: 'false_5511900000000@c.us_ABC123', from: '5511900000000@c.us', fromMe: false, ack: 3, ackName: 'READ',
+                        _data: { Type: 'read', IsFromMe: true, MessageIDs: ['ABC123'], Sender: '5511999993846:0@s.whatsapp.net' } } }.to_json
+
+    expect { post_signed(read, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', read)) }
+      .to have_enqueued_job(WhatsappHybrid::WebhookEventJob).with(
+        connection.id, 'message.ack',
+        { 'ack' => 3, 'id' => 'false_5511900000000@c.us_ABC123', 'from_me' => false, 'aparelho' => '0' }
+      )
+  end
+
   it 'applies a replayed event only once' do
     signature = OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', body)
     post_signed(body, signature)

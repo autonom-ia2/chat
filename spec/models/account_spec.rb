@@ -287,9 +287,10 @@ RSpec.describe Account do
       # #2001: crm_numeros_origens, posição 2 (1 << 1), DEFINITIVA da Orquestração (26/10).
       # #2202: lista_quem_espera no fim da ext_2, posição pela ordem de chegada à main; hoje 3 (1 << 2 = 4).
       # #2251: agentes_painel_desempenho depois dela, posição 4 (1 << 3 = 8), confirmada pela Orquestração (27/10).
+      # #2246: leitura_no_celular depois dela, posição 5 (1 << 4 = 16), provisória até a Orquestração confirmar.
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
-        feature_agentes_painel_desempenho: 8
+        feature_agentes_painel_desempenho: 8, feature_leitura_no_celular: 16
       )
     end
 

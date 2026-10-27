@@ -50,6 +50,14 @@ describe ConversaCanal::LeituraNoCanal do
       expect(anterior.reload.content_attributes['read_receipt_sent_at']).to be_nil
     end
 
+    it 'deixa a marca de leitura do sistema, para ela não voltar como leitura no celular (#2246)' do
+      Redis::Alfred.delete(ConversaCanal::LeituraDoSistema.chave(conversa))
+
+      marcar(conversa)
+
+      expect(ConversaCanal::LeituraDoSistema.recente?(conversa)).to be(true)
+    end
+
     it 'não reenvia para a mesma mensagem' do
       marcar(conversa)
       marcar(conversa)
