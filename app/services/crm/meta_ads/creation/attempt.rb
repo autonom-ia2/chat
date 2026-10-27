@@ -7,10 +7,15 @@
 # - `unconfirmed`: a campanha ficou sem resposta (tempo esgotado ou falha da Meta) e a busca pela marca no nome veio
 #   vazia. A Meta pode ter criado depois, ou ainda não mostrar na busca: a tela pede para conferir no Gerenciador de
 #   Anúncios. A mesma chave procura de novo antes de criar; se achar, desfaz e refaz. Vazia de novo, continua
-#   `unconfirmed`, por mais tempo que passe: sem a pessoa liberar, atraso da Meta não vira campanha duplicada. Ela
-#   libera criar de novo (`recreate_unconfirmed`, só com uma linha `unconfirmed` desta chave) depois de conferir no
-#   Gerenciador. Aí, se a campanha antiga aparecer mais tarde, as duas existem: a Auditoria guarda o nome com a marca
-#   da tentativa antiga para achá-la.
+#   `unconfirmed`, por mais tempo que passe. Ela libera criar de novo (`recreate_unconfirmed`, só com uma linha
+#   `unconfirmed` desta chave) depois de conferir no Gerenciador. Aí, se a campanha antiga aparecer mais tarde, as duas
+#   existem: a Auditoria guarda o nome com a marca da tentativa antiga para achá-la.
+#
+# O mesmo pedido com outra chave (outra aba, outro aparelho, a tela reaberta) não cria a segunda campanha: cada linha
+# guarda o SHA-256 do pedido validado (`request_digest`), e um pedido igual a uma tentativa `unconfirmed`, ou `creating`
+# ainda viva, da mesma conta e da mesma conta de anúncios recebe `unconfirmed`/`in_progress` com a chave dela, para a
+# tela seguir com essa tentativa. Sem a pessoa liberar, atraso da Meta não vira campanha duplicada. Dois pedidos iguais
+# no mesmo instante, antes de qualquer linha existir, ainda passam os dois (a busca não é trava).
 #
 # Nenhuma trava de banco fica presa durante uma chamada à Meta. Retomar começa por um UPDATE condicional na situação
 # lida (compare-and-set) que leva a linha para `creating`; só quem ganha desfaz o que ficou e cria. Quem perde recebe
@@ -33,7 +38,7 @@ class Crm::MetaAds::Creation::Attempt
   # A linha da tentativa, pronta para criar, ou já criada. `recreate`: a pessoa conferiu no Gerenciador de Anúncios
   # que a campanha da tentativa não confirmada não está lá e pediu para criar de novo.
   def claim!(key, attributes, recreate: false)
-    ensure_recreatable!(key) if recreate
+    recreate ? ensure_recreatable!(key) : ensure_no_twin!(key, attributes[:request_digest])
     record, claimed = find_or_claim(key, attributes)
     claimed || record.status == 'created' ? record : recover!(record, recreate)
   end
@@ -65,6 +70,19 @@ class Crm::MetaAds::Creation::Attempt
     raise unless e.record.errors.of_kind?(:idempotency_key, :taken)
 
     raise Crm::MetaAds::Creation::Error, 'in_progress'
+  end
+
+  # Outra tentativa, com outra chave, do mesmo pedido, que ainda pode ter criado a campanha: a tela segue com ela.
+  def ensure_no_twin!(key, digest)
+    return if digest.blank?
+
+    scope = Crm::MetaAdsCreatedObject.where(account: @account, ad_account_id: @connection.ad_account_id, request_digest: digest)
+                                     .where.not(idempotency_key: key)
+    twin = scope.where(status: 'unconfirmed').or(scope.where(status: 'creating', updated_at: STALE_AFTER.ago..)).last
+    return if twin.nil?
+
+    code = twin.status == 'creating' ? 'in_progress' : 'unconfirmed'
+    raise Crm::MetaAds::Creation::Error.new(code, nothing_created: false, attempt_key: twin.idempotency_key)
   end
 
   # Recriar só vale para uma tentativa desta chave que está `unconfirmed`. Outra em andamento: `in_progress`.

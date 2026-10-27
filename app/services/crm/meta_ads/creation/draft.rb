@@ -11,6 +11,7 @@ class Crm::MetaAds::Creation::Draft
   # A chave de idempotência é o UUID que a tela gera (crypto.randomUUID): 8-4-4-4-12 dígitos hexadecimais.
   UUID_GROUPS = [8, 4, 4, 4, 12].freeze
   HEX_DIGITS = '0-9a-fA-F'.freeze
+  DIGEST_IGNORED = %i[idempotency_key recreate_unconfirmed].freeze
 
   attr_reader :values
 
@@ -36,7 +37,22 @@ class Crm::MetaAds::Creation::Draft
     @values[key]
   end
 
+  # SHA-256 do pedido validado, sem a chave da tentativa nem a liberação de recriar: o mesmo anúncio pedido com outra
+  # chave tem o mesmo digest (Crm::MetaAds::Creation::Attempt).
+  def digest
+    Digest::SHA256.hexdigest(canonical(@values.except(*DIGEST_IGNORED)).to_json)
+  end
+
   private
+
+  # Hashes com as chaves em ordem, para o mesmo pedido dar o mesmo texto.
+  def canonical(value)
+    case value
+    when Hash then value.to_h { |key, item| [key.to_s, canonical(item)] }.sort.to_h
+    when Array then value.map { |item| canonical(item) }
+    else value
+    end
+  end
 
   def fail!(code)
     raise Crm::MetaAds::Creation::Error, code

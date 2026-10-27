@@ -42,7 +42,7 @@ class Crm::MetaAds::Creation::NewAd
     ensure_video_ready!(draft)
     # O público (estados → regiões da Meta) se resolve antes de criar qualquer coisa.
     @targeting = Crm::MetaAds::Creation::Targeting.new(client).build(draft.values)
-    record = @attempt.claim!(draft[:idempotency_key], { name: draft[:name], budget: budget(draft) },
+    record = @attempt.claim!(draft[:idempotency_key], { name: draft[:name], budget: budget(draft), request_digest: draft.digest },
                              recreate: draft[:recreate_unconfirmed])
     return result(record) if record.status == 'created'
 

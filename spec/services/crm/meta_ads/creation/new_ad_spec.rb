@@ -582,6 +582,58 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
         expect(Crm::MetaAdsCreatedObject.last.status).to eq('unconfirmed')
       end
 
+      describe 'o mesmo pedido com outra chave (outra aba, outro aparelho, a tela reaberta): o servidor deduplica' do
+        let(:other_key) { 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e' }
+        let(:campaign_posts) { a_request(:post, meta_graph_url("#{act}/campaigns")) }
+
+        it '(a) não cria: responde não confirmada com a chave da tentativa que já cuida do pedido' do
+          expect { create!(draft.merge(idempotency_key: other_key)) }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
+            expect([e.code, e.nothing_created, e.attempt_key]).to eq(['unconfirmed', false, draft[:idempotency_key]])
+          }
+          expect(campaign_posts).to have_been_made.once
+          expect(Crm::MetaAdsCreatedObject.where(idempotency_key: other_key)).to be_empty
+        end
+
+        it '(b) pedido diferente é outra tentativa: cria' do
+          expect(create!(draft.merge(idempotency_key: other_key, name: 'Outro anúncio'))).to include(ad_id: '903')
+          expect(campaign_posts).to have_been_made.twice
+        end
+
+        it '(c) recriar com a chave que o servidor apontou libera, com a Auditoria' do
+          attempt_key = nil
+          begin
+            create!(draft.merge(idempotency_key: other_key))
+          rescue Crm::MetaAds::Creation::Error => e
+            attempt_key = e.attempt_key
+          end
+
+          expect(create!(draft.merge(idempotency_key: attempt_key, recreate_unconfirmed: true))).to include(ad_id: '903')
+          expect(campaign_posts).to have_been_made.twice
+          expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_create_recreated')).to exist
+        end
+
+        it '(d) a mesma tentativa em outra conta, ou em outra conta de anúncios, não bloqueia' do
+          row = Crm::MetaAdsCreatedObject.find_by!(idempotency_key: draft[:idempotency_key])
+          row.update_columns(account_id: create(:account).id) # rubocop:disable Rails/SkipsModelValidations
+          expect(create!(draft.merge(idempotency_key: other_key))).to include(ad_id: '903')
+
+          row.update_columns(account_id: account.id, ad_account_id: '999999') # rubocop:disable Rails/SkipsModelValidations
+          third_key = 'c3d4e5f6-a7b8-4c9d-8e0f-2a3b4c5d6e7f'
+          expect(create!(draft.merge(idempotency_key: third_key))).to include(ad_id: '903')
+        end
+
+        it 'tentativa gêmea ainda criando: in_progress com a chave dela; parada há mais de 10 minutos não bloqueia' do
+          row = Crm::MetaAdsCreatedObject.find_by!(idempotency_key: draft[:idempotency_key])
+          row.update_columns(status: 'creating', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          expect { create!(draft.merge(idempotency_key: other_key)) }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
+            expect([e.code, e.attempt_key]).to eq(['in_progress', draft[:idempotency_key]])
+          }
+
+          row.update_columns(updated_at: 11.minutes.ago) # rubocop:disable Rails/SkipsModelValidations
+          expect(create!(draft.merge(idempotency_key: other_key))).to include(ad_id: '903')
+        end
+      end
+
       it 'pedir para criar de novo com a campanha aparecendo na busca: desfaz a antiga antes, sem Auditoria de recriar' do
         stub_campaign_search([{ id: '950', name: campaign_name, effective_status: 'PAUSED' }])
         delete = stub_request(:delete, meta_graph_url('950')).to_return(ok(success: true))

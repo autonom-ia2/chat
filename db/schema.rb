@@ -2788,8 +2788,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_580000) do
     t.string "error_code"
     t.datetime "activated_at"
     t.datetime "switching_at"
+    t.string "request_digest", limit: 64
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id", "ad_account_id", "request_digest"], name: "idx_crm_meta_ads_created_objects_digest"
     t.index ["account_id", "ad_id"], name: "idx_crm_meta_ads_created_objects_ad"
     t.index ["account_id", "idempotency_key"], name: "idx_crm_meta_ads_created_objects_key", unique: true
   end

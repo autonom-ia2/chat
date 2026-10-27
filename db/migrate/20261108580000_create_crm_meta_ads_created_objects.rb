@@ -15,18 +15,20 @@ class CreateCrmMetaAdsCreatedObjects < ActiveRecord::Migration[7.2]
       t.string :status, null: false, default: 'creating'
       t.string :name, limit: 255
       t.string :ad_account_id
-      t.string :campaign_id
-      t.string :adset_id
-      t.string :creative_id
-      t.string :ad_id
+      t.string :campaign_id, :adset_id, :creative_id, :ad_id
       t.jsonb :budget, null: false, default: {}
       t.string :error_code
       # `switching_at`: trava do "Ativar"/"Pausar" de um anúncio criado aqui. Enquanto liga ou pausa os três níveis, um
       # segundo clique recebe in_progress (Crm::MetaAds::Creation::Activation).
       t.datetime :activated_at, :switching_at
+      # SHA-256 do pedido validado (Crm::MetaAds::Creation::Draft#digest): o mesmo pedido com outra chave (outra aba,
+      # outro aparelho, a tela reaberta) acha a tentativa não confirmada ou em andamento e não cria a segunda campanha.
+      t.string :request_digest, limit: 64
       t.timestamps
     end
     add_index :crm_meta_ads_created_objects, [:account_id, :idempotency_key], unique: true, name: 'idx_crm_meta_ads_created_objects_key'
     add_index :crm_meta_ads_created_objects, [:account_id, :ad_id], name: 'idx_crm_meta_ads_created_objects_ad'
+    add_index :crm_meta_ads_created_objects, [:account_id, :ad_account_id, :request_digest],
+              name: 'idx_crm_meta_ads_created_objects_digest'
   end
 end

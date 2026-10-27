@@ -7,6 +7,7 @@ import {
   lerOrcamento,
   lerPausadosEsperando,
   mudarOrcamento,
+  novaChave,
   pedidoDoAnuncio,
 } from '../criacaoNaMeta';
 import { capaEmArquivo } from '../midiaDoAnuncio';
@@ -183,49 +184,60 @@ describe('Anúncios da Meta · pedidos ao servidor (#2198)', () => {
       expect(keys()).toEqual(['key-1', 'key-2', 'key-3']);
     });
 
-    it('a reload of the page keeps the key of the attempt (sessionStorage)', async () => {
-      CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(new Error('Network'));
-      await expect(criarAnuncio({ name: 'x' })).rejects.toThrow();
-
-      vi.resetModules();
-      const recarregado = await import('../criacaoNaMeta');
-      await expect(recarregado.criarAnuncio({ name: 'x' })).rejects.toThrow();
-
-      expect(keys()).toEqual(['key-1', 'key-1']);
-    });
-
-    it('the saved entry is named by the SHA-256 of the request, never by the request (it has the WhatsApp number)', async () => {
+    it('the key lives only in memory: nothing of the request goes to the browser storage', async () => {
       CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(new Error('Network'));
       await expect(
         criarAnuncio({ name: 'x', whatsapp_number: '+5511987654321' })
       ).rejects.toThrow();
-
-      const raw = window.sessionStorage.getItem('metaAdsCriar.tentativas');
-      const [name] = Object.keys(JSON.parse(raw));
-      expect(name).toHaveLength(64);
-      expect([...name].every(char => '0123456789abcdef'.includes(char))).toBe(
-        true
-      );
-      expect(raw).not.toContain('5511987654321');
-
-      esquecerTentativas();
-      expect(
-        window.sessionStorage.getItem('metaAdsCriar.tentativas')
-      ).toBeNull();
-    });
-
-    it('without sessionStorage, the key still holds while the page is open', async () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-        throw new Error('blocked');
-      });
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new Error('blocked');
-      });
-      CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(new Error('Network'));
-      await expect(criarAnuncio({ name: 'x' })).rejects.toThrow();
-      await expect(criarAnuncio({ name: 'x' })).rejects.toThrow();
+      await expect(
+        criarAnuncio({ name: 'x', whatsapp_number: '+5511987654321' })
+      ).rejects.toThrow();
 
       expect(keys()).toEqual(['key-1', 'key-1']);
+      expect(window.sessionStorage.length).toBe(0);
+      expect(window.localStorage.length).toBe(0);
+    });
+
+    it('when the server points to the attempt that already handles this request, goes on with its key', async () => {
+      const twin = '0f1e2d3c-4b5a-4987-8a6b-5c4d3e2f1a0b';
+      CrmMetaAdsConnectionAPI.createAd
+        .mockRejectedValueOnce(
+          refusal(422, {
+            error: 'unconfirmed',
+            nothing_created: false,
+            idempotency_key: twin,
+          })
+        )
+        .mockResolvedValueOnce({ data: { ad_id: '9', status: 'PAUSED' } });
+      await expect(criarAnuncio({ name: 'x' })).rejects.toThrow();
+      await criarAnuncio({ name: 'x' }, { recriar: true });
+
+      expect(keys()).toEqual(['key-1', twin]);
+    });
+
+    it('without crypto.randomUUID (page outside HTTPS), still makes a valid UUID v4', () => {
+      vi.restoreAllMocks();
+      const original = crypto.randomUUID;
+      Object.defineProperty(crypto, 'randomUUID', {
+        value: undefined,
+        configurable: true,
+      });
+      try {
+        const key = novaChave();
+        const groups = key.split('-');
+        expect(groups.map(group => group.length)).toEqual([8, 4, 4, 4, 12]);
+        expect(
+          [...groups.join('')].every(char => '0123456789abcdef'.includes(char))
+        ).toBe(true);
+        expect(groups[2][0]).toBe('4');
+        expect('89ab').toContain(groups[3][0]);
+        expect(novaChave()).not.toBe(key);
+      } finally {
+        Object.defineProperty(crypto, 'randomUUID', {
+          value: original,
+          configurable: true,
+        });
+      }
     });
 
     it("create again after unconfirmed goes with the same key and the person's release", async () => {

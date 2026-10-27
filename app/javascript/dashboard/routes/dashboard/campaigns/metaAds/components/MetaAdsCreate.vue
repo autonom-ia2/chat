@@ -349,7 +349,8 @@ const create = async ({ recriar = false } = {}) => {
 
 const recreate = () => create({ recriar: true });
 
-// Saiu do fluxo: a chave guardada da tentativa não fica para trás (recarregar a página não desmonta e a mantém).
+// Saiu do fluxo: a chave da tentativa sai da memória. Voltar com o mesmo pedido não cria outra campanha: o servidor
+// acha a tentativa pelo pedido e devolve a chave dela.
 onBeforeUnmount(esquecerTentativas);
 
 const submitLabel = computed(() =>

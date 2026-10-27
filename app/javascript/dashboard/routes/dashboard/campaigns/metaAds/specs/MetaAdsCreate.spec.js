@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsCreate from '../components/MetaAdsCreate.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
@@ -119,10 +118,6 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
       count += 1;
       return `key-${count}`;
     });
-    // O SHA-256 de verdade, mas resolvido na hora: o do navegador termina fora da fila que o flushPromises espera.
-    vi.spyOn(crypto.subtle, 'digest').mockImplementation(async (_name, bytes) =>
-      createHash('sha256').update(bytes).digest()
-    );
   });
 
   afterEach(() => {
@@ -292,7 +287,6 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
       ([body]) => body.idempotency_key
     );
     expect(keys).toEqual(['key-1', 'key-2']);
-    expect(window.sessionStorage.getItem('metaAdsCriar.tentativas')).toBeNull();
   });
 
   it('a refusal that left something at Meta (nothing_created false) keeps the same key', async () => {

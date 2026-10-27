@@ -392,11 +392,19 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   que passe. Só a pessoa libera, no botão "Não está no Gerenciador, criar de
   novo" (quem tem `meta_ads_manage`), só para uma tentativa `unconfirmed` desta
   chave, e isso fica na Auditoria (`meta_ads_create_recreated`, com o nome e a
-  marca da tentativa antiga). Sem a pessoa liberar, atraso da Meta não vira
-  campanha duplicada. Depois que ela libera, se a campanha antiga aparecer mais
-  tarde, as duas existem: a marca na Auditoria é o jeito de achar a antiga no
-  Gerenciador. A tela recria com o pedido guardado da tentativa e não deixa
-  editar enquanto ela está `unconfirmed`.
+  marca da tentativa antiga). Depois que ela libera, se a campanha antiga
+  aparecer mais tarde, as duas existem: a marca na Auditoria é o jeito de achar
+  a antiga no Gerenciador. A tela recria com o pedido guardado da tentativa e
+  não deixa editar enquanto ela está `unconfirmed`.
+- O mesmo pedido com outra chave (outra aba, outro aparelho, a tela reaberta)
+  não cria a segunda campanha. Quem deduplica é o servidor: cada tentativa
+  guarda o SHA-256 do pedido validado (`request_digest`, sem a chave), e um
+  pedido igual a uma tentativa `unconfirmed`, ou `creating` ainda viva, da
+  mesma conta e da mesma conta de anúncios recebe `unconfirmed`/`in_progress`
+  com a chave dela (`idempotency_key` na resposta); a tela segue com essa
+  tentativa. Sem a pessoa liberar, atraso da Meta não vira campanha duplicada.
+  Dois pedidos iguais no mesmo instante, antes de existir qualquer linha, ainda
+  passam os dois.
 - Campanha da tentativa que já não existe na Meta (apagada pelo Gerenciador)
   conta como desfeita: a chave não fica presa. "Não existe" é só o erro 100
   com subcódigo 33, ou a releitura dizer `DELETED`/`ARCHIVED`; o 100 puro é
@@ -404,10 +412,9 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
 - Nenhuma trava de banco fica presa durante uma chamada à Meta. Retomar uma
   tentativa começa por um UPDATE condicional que a leva para `creating`; só
   quem ganha desfaz o que ficou e cria, e, se desfazer falhar, a linha volta
-  para a situação de antes. A chave de idempotência da tela fica também no
-  `sessionStorage` da aba, para um recarregar não gerar chave nova. O nome da
-  entrada é um SHA-256 do pedido (o pedido tem número de WhatsApp e textos), e
-  ela é apagada ao concluir ou sair do fluxo.
+  para a situação de antes. A chave de idempotência da tela fica só na
+  memória da página (nada do pedido vai para o armazenamento do navegador): um
+  UUID, com recurso para navegador sem `crypto.randomUUID`.
 - O que a chamada real confirmou fica em `Crm::MetaAds::Creation::Confirmed`.
   Hoje é o caso mínimo do `?demo=so-confirmado`: WhatsApp só em Automático e
   site nos três lugares. Cada item confirmado entra ali num PR.

@@ -5489,7 +5489,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:48",
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:103",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:104",
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:50"
     ],
     "sem_corpo": false

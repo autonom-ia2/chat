@@ -95,47 +95,32 @@ export const pedidoDoAnuncio = draft => {
 };
 
 // A tentativa de criar, pelo conteúdo do pedido: o mesmo pedido leva a mesma chave de idempotência até chegar uma
-// resposta definitiva, e o servidor devolve o mesmo anúncio em vez de criar outro. Mora aqui, fora da tela, e também
-// no sessionStorage da aba: quem sai com o pedido em voo e volta, toca de novo ou recarrega a página não gera chave
-// nova. Pedido diferente (a pessoa mudou algo) é outra tentativa. Sem sessionStorage (modo privado, bloqueio), a
-// chave vale só enquanto a página está aberta.
+// resposta definitiva, e o servidor devolve o mesmo anúncio em vez de criar outro. A chave fica só na memória desta
+// página; nada do pedido vai para o armazenamento do navegador. Quem garante que o mesmo pedido com outra chave (outra
+// aba, outro aparelho, a tela reaberta) não cria a segunda campanha é o servidor: ele responde com a chave da tentativa
+// que já cuida do pedido (`idempotency_key`), e a tela segue com ela. Pedido diferente (a pessoa mudou algo) é outra
+// tentativa.
 const HTTP_CONFLICT = 409;
 const HTTP_SERVER_ERROR = 500;
-// Chave de idempotência de cada tentativa, na memória e no sessionStorage da aba (um recarregar não gera chave nova).
-// O nome da entrada é o SHA-256 do pedido, nunca o pedido: ele tem número de WhatsApp e textos.
-const STORAGE_KEY = 'metaAdsCriar.tentativas';
+const UUID_BYTES = 16;
 const tentativas = new Map();
 
-const assinaturaDoPedido = async pedido => {
-  const bytes = new TextEncoder().encode(JSON.stringify(pedido));
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return [...new Uint8Array(digest)]
+// UUID v4. Navegador sem `crypto.randomUUID` (página fora de HTTPS, navegador antigo): monta com getRandomValues.
+export const novaChave = () => {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(UUID_BYTES));
+  bytes[6] = 0x40 + (bytes[6] % 0x10); // versão 4
+  bytes[8] = 0x80 + (bytes[8] % 0x40); // variante RFC 4122
+  const hex = [...bytes]
     .map(byte => byte.toString(16).padStart(2, '0'))
     .join('');
-};
-
-const lerGuardadas = () => {
-  try {
-    return JSON.parse(window.sessionStorage.getItem(STORAGE_KEY) || '{}') || {};
-  } catch {
-    return {};
-  }
-};
-
-const guardar = changes => {
-  try {
-    const saved = { ...lerGuardadas(), ...changes };
-    Object.keys(saved).forEach(signature => {
-      if (saved[signature] === null) delete saved[signature];
-    });
-    if (Object.keys(saved).length) {
-      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-    } else {
-      window.sessionStorage.removeItem(STORAGE_KEY);
-    }
-  } catch {
-    // Sem sessionStorage: a chave fica só na memória desta página.
-  }
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20),
+  ].join('-');
 };
 
 // Sem resposta, tempo esgotado, falha do servidor, "ainda criando" (409) ou recusa que deixou algo na Meta
@@ -150,23 +135,14 @@ const tentativaContinua = error => {
 };
 
 const chaveDoPedido = signature => {
-  if (!tentativas.has(signature)) {
-    tentativas.set(signature, lerGuardadas()[signature] || crypto.randomUUID());
-  }
-  const key = tentativas.get(signature);
-  guardar({ [signature]: key });
-  return key;
-};
-
-const esquecer = signature => {
-  tentativas.delete(signature);
-  guardar({ [signature]: null });
+  if (!tentativas.has(signature)) tentativas.set(signature, novaChave());
+  return tentativas.get(signature);
 };
 
 // Cria pausado. `recriar`: a tentativa ficou não confirmada na Meta, a pessoa conferiu no Gerenciador de Anúncios
 // que a campanha não está lá e pediu para criar de novo (mesma chave; o servidor grava na Auditoria).
 export const criarAnuncio = async (pedido, { recriar = false } = {}) => {
-  const signature = await assinaturaDoPedido(pedido);
+  const signature = JSON.stringify(pedido);
   const key = chaveDoPedido(signature);
   try {
     const { data } = await CrmMetaAdsConnectionAPI.createAd({
@@ -174,20 +150,18 @@ export const criarAnuncio = async (pedido, { recriar = false } = {}) => {
       idempotency_key: key,
       ...(recriar ? { recreate_unconfirmed: true } : {}),
     });
-    esquecer(signature);
+    tentativas.delete(signature);
     return { ...data, budget: orcamentoNaTela(data.budget) };
   } catch (error) {
-    if (!tentativaContinua(error)) esquecer(signature);
+    // O servidor achou outra tentativa deste mesmo pedido: daqui em diante, é ela.
+    const atual = error?.response?.data?.idempotency_key;
+    if (atual) tentativas.set(signature, atual);
+    if (!tentativaContinua(error)) tentativas.delete(signature);
     throw error;
   }
 };
 
-// Ao sair do fluxo de criar (e nos testes): nenhuma tentativa fica guardada.
+// Ao sair do fluxo de criar (e nos testes): nenhuma tentativa fica na memória.
 export const esquecerTentativas = () => {
   tentativas.clear();
-  try {
-    window.sessionStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Sem sessionStorage: nada guardado.
-  }
 };

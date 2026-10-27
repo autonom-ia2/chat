@@ -115,6 +115,25 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
     expect(response.parsed_body).to eq('error' => 'invalid_destination', 'nothing_created' => true)
   end
 
+  it 'o mesmo pedido de outra tentativa: a resposta leva a chave dela (não confirmada 422, em andamento 409)' do
+    twin = SecureRandom.uuid
+    service = instance_double(Crm::MetaAds::Creation::NewAd)
+    allow(Crm::MetaAds::Creation::NewAd).to receive(:new).and_return(service)
+    unconfirmed = Crm::MetaAds::Creation::Error.new('unconfirmed', nothing_created: false, attempt_key: twin)
+    allow(service).to receive(:create!).and_raise(unconfirmed)
+
+    post "#{path}/ads", params: { idempotency_key: SecureRandom.uuid }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error' => 'unconfirmed', 'nothing_created' => false, 'idempotency_key' => twin)
+
+    allow(service).to receive(:create!).and_raise(Crm::MetaAds::Creation::Error.new('in_progress', attempt_key: twin))
+    post "#{path}/ads", params: { idempotency_key: SecureRandom.uuid }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:conflict)
+    expect(response.parsed_body).to eq('error' => 'in_progress', 'idempotency_key' => twin)
+  end
+
   it 'a mesma chave de novo não grava outro "anúncio criado" na Auditoria' do
     Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: 'k1', status: 'created', name: 'Bolo', ad_id: ad_id)
     create(:channel_whatsapp, account: account, phone_number: '+5511900002161', validate_provider_config: false, sync_templates: false)

@@ -92,9 +92,10 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
 
   def render_creation_error(error)
     return render json: { error: error.code }, status: :not_found if NOT_FOUND_CODES.include?(error.code)
-    return render json: { error: error.code }, status: :conflict if error.code == 'in_progress'
 
-    body = { error: error.code }
+    body = { error: error.code, idempotency_key: error.attempt_key }.compact
+    return render json: body, status: :conflict if error.code == 'in_progress'
+
     body[:nothing_created] = error.nothing_created if action_name == 'create'
     render json: body, status: :unprocessable_entity
   end
