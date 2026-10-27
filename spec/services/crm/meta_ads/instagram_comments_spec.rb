@@ -222,13 +222,33 @@ RSpec.describe Crm::MetaAds::InstagramComments do
         expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to be_releasable
       end
 
+      it 'falha ao gravar a confirmação tenta de novo uma vez; se insistir, vai para o log e o privado segue' do
+        failures = 1
+        allow(Crm::MetaAdsCommentAction).to receive(:record!).and_wrap_original do |original, **attributes|
+          original.call(**attributes).tap do |action|
+            allow(action).to receive(:confirm!).and_wrap_original do |confirm|
+              (failures -= 1).negative? ? confirm.call : raise(ActiveRecord::ConnectionTimeoutError)
+            end
+          end
+        end
+        service.private_reply!(ad_id, 'c1', 'Oi!', user: user)
+        expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1').confirmed_at).to be_present
+
+        Crm::MetaAdsCommentAction.delete_all
+        failures = 2
+        allow(Rails.logger).to receive(:error)
+        expect(service.private_reply!(ad_id, 'c1', 'Oi!', user: user)).to include(:sent_at)
+        expect(Rails.logger).to have_received(:error).with(/confirm failed action_id=\d+ error=ActiveRecord::ConnectionTimeoutError/)
+        expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to have_attributes(confirmed_at: nil, attempted_at: be_present)
+      end
+
       it 'quem perdeu a reserva no meio (outra requisição a apagou e refez) não chama a Meta' do
         allow(Crm::MetaAdsCommentAction).to receive(:record!).and_wrap_original do |original, **attributes|
           original.call(**attributes).tap { |action| Crm::MetaAdsCommentAction.where(id: action.id).delete_all }
         end
 
         expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }
-          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_done') }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_retry') }
         expect(a_request(:post, %r{/messages})).not_to have_been_made
       end
 

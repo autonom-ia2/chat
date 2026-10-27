@@ -39,7 +39,7 @@ linha em `crm_meta_ads_comment_actions` (`action = 'private_reply'`) diz em que 
 |---|---|---|---|
 | Reservado | `attempted_at` nulo | Nada muda até a resposta | A chamada sai (`attempted_at`, uma vez só, por UPDATE condicional). Se o processo morrer antes, nada foi enviado: depois de `RESERVED_TTL` (2 min) a reserva não vale mais, e quem a perdeu no meio não chama a Meta |
 | Em andamento | `attempted_at` recente, sem `failed_at` nem `confirmed_at` | "Enviado no privado, sem confirmação do Instagram. Confira no Direct.", sem o botão | Resposta da Meta |
-| Sem confirmação | `failed_at` preenchido (rede, tempo esgotado, 5xx), ou `attempted_at` mais velho que `IN_FLIGHT` (1 min, quando o processo morreu durante a chamada), e `confirmed_at` nulo | O mesmo texto e o botão "Não foi enviado" | Só pela ação "Não foi enviado", depois de conferir no Direct. Nunca por tempo |
+| Sem confirmação | `failed_at` preenchido (rede, tempo esgotado, 5xx), ou `attempted_at` mais velho que `IN_FLIGHT` (1 min sem resposta: processo morreu durante a chamada, ou a confirmação não foi gravada), e `confirmed_at` nulo | O mesmo texto, com "Se a mensagem estiver lá, não clique", e o botão "Não foi enviado" | O botão aparece na hora com falha de rede, ou depois de 1 min sem resposta. O envio só é liberado pela ação manual de quem gere, depois de conferir o Direct |
 | Confirmado | `confirmed_at` preenchido | "Respondido no privado" e o link da conversa | Não sai |
 
 Recusa explícita da Meta (4xx) apaga a linha, e o botão volta na hora.

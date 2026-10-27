@@ -39,7 +39,7 @@ class Crm::MetaAds::InstagramPrivateReply
     validate_comment!(comment)
     release_abandoned!(comment['id'])
     action = claim!(comment['id'], actor, user, ad_id)
-    raise Error, 'private_reply_done' unless action.attempt!
+    raise Error, 'private_reply_retry' unless action.attempt!
 
     result = Instagram::CommentsClient.new(@channel).private_reply(comment['id'], text)
     unless result.ok
@@ -47,11 +47,24 @@ class Crm::MetaAds::InstagramPrivateReply
       raise Error, error_code(result)
     end
 
-    action.confirm!
+    confirm_safely!(action)
     record_safely!(action, comment, text, result.data, user)
   end
 
   private
+
+  # A Meta já aceitou: falha ao gravar a confirmação tenta de novo uma vez e, se insistir, só vai para o log. A linha
+  # fica sem confirmação e, passado Crm::MetaAdsCommentAction::IN_FLIGHT, quem gere confere no Direct.
+  def confirm_safely!(action)
+    attempts = 0
+    begin
+      attempts += 1
+      action.confirm!
+    rescue StandardError => e
+      retry if attempts < 2
+      Rails.logger.error("[InstagramPrivateReply] confirm failed action_id=#{action.id} error=#{e.class.name}")
+    end
+  end
 
   def valid_text!(text)
     text = text.to_s.strip
