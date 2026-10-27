@@ -142,6 +142,21 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
       expect(counts(agent, mine: 'true')).to eq('esperando' => 1, 'retorno' => 0, 'ninguem' => 1, 'parado' => 0, 'demais' => 0)
       expect(body.dig('meta', 'count')).to eq(2)
     end
+
+    # A conversa é da pessoa, mas numa caixa que ela não vê: o card não entra em "Só meus" (nem esperando, nem ninguém
+    # cuidando) e, na lista inteira, fica em "demais" sem quem cuida, sem a conversa e sem o retorno dela.
+    it 'deixa fora o card cuja conversa é minha numa caixa que não vejo' do
+      mine_hidden = conversation(inbox: hidden_inbox, assignee: agent, waiting: true)
+      hidden_card = card('Minha, caixa oculta', inbox: inbox, conversation: mine_hidden)
+      account.crm_follow_ups.create!(card: hidden_card, conversation: mine_hidden, created_by: agent, title: 'Retorno oculto',
+                                     due_at: 1.day.ago, timezone: 'America/Sao_Paulo', status: :overdue)
+
+      expect(list(agent, mine: 'true')['payload']).to eq([])
+      expect(counts(agent, mine: 'true').values.sum).to eq(0)
+      row = list(agent)['payload'].find { |item| item['id'] == hidden_card.id }
+      expect(row).to include('action_group' => 'demais', 'current_responsible' => nil, 'conversation_id' => nil,
+                             'next_follow_up_id' => nil)
+    end
   end
 
   it 'mantém a Lista atual sem os campos de grupo quando não pede sort=acao' do

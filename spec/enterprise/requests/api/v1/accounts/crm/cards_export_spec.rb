@@ -62,6 +62,31 @@ RSpec.describe 'CRM cards export (Enterprise policy)', type: :request do
     expect(response).to have_http_status(:ok)
   end
 
+  # #2283: na coluna "responsável", a conversa que o agente não vê sai como o dono do card, senão o robô da caixa,
+  # senão vazio; nunca quem atende a conversa.
+  it 'com conversa oculta, a coluna responsável traz dono ou robô, nunca o atendente' do
+    account, admin = create_account_and_user
+    admin.update!(name: 'Gestora Ana')
+    agent = custom_role_agent(account: account, permissions: %w[crm_view crm_export])
+    agent.update!(name: 'Atendente Beto')
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    inbox_dele = create_crm_inbox(account: account, name: 'Inbox dele', members: [agent])
+    oculta = create_crm_inbox(account: account, name: 'Caixa da gestão')
+    AgentBotInbox.create!(inbox: oculta, agent_bot: create(:agent_bot, account: account, name: 'Assistente Bia'), status: :active)
+    sem_robo = create_crm_inbox(account: account, name: 'Caixa sem robô')
+    { 'Com dono' => [oculta, agent], 'Sem dono' => [oculta, nil], 'Sem dono nem robô' => [sem_robo, nil] }.each do |titulo, (caixa, dono)|
+      conversa = create_crm_conversation(account: account, inbox: caixa, contact: account.contacts.create!(name: titulo), assignee: admin)
+      account.crm_cards.create!(pipeline: pipeline, stage: stage, inbox: inbox_dele, owner: dono, primary_conversation: conversa, title: titulo)
+    end
+
+    exportar(account, agent, pipeline)
+
+    expect(response).to have_http_status(:ok)
+    coluna = Crm::Cards::XlsxExport::COLUMNS.index(:responsible) + 1
+    responsaveis = (primeira..planilha.last_row.to_i).to_h { |linha| [planilha.cell(linha, 1), planilha.cell(linha, coluna)] }
+    expect(responsaveis).to eq('Com dono' => 'Atendente Beto', 'Sem dono' => 'Assistente Bia', 'Sem dono nem robô' => nil)
+  end
+
   it 'com crm_export, traz só os cards e campos que o agente vê' do
     account, admin = create_account_and_user
     agent = custom_role_agent(account: account, permissions: %w[crm_view crm_export])
