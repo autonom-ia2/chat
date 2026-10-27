@@ -1,4 +1,5 @@
 # Forwards an Instagram webhook to another stack that shares the same Meta app.
+# The Page webhook (/bot, Webhooks::FacebookPageController, #2200) reuses it the same way.
 #
 # Meta allows a single Instagram webhook URL per app, so the stack that receives it relays
 # events for Instagram accounts it doesn't know. The original body and X-Hub-Signature-256

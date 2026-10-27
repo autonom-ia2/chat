@@ -38,16 +38,26 @@ RSpec.describe Channel::FacebookPage do
 
   describe '#subscribe' do
     let(:channel) { build(:channel_facebook_page) }
+    let(:subscription) { instance_double(Crm::MetaAds::PageSubscription, add!: true, remove!: true) }
 
-    it 'subscribes to messaging postbacks' do
-      expect(Facebook::Messenger::Subscriptions).to receive(:subscribe).with(
-        hash_including(
-          access_token: channel.page_access_token,
-          subscribed_fields: include('messaging_postbacks')
-        )
-      )
+    before do
+      allow(GlobalConfigService).to receive(:load).and_call_original
+      allow(GlobalConfigService).to receive(:load).with('FB_APP_ID', nil).and_return('fb-app-id')
+      allow(Crm::MetaAds::PageSubscription).to receive(:new).and_return(subscription)
+    end
 
+    it 'adds the messenger fields without replacing the other fields of the page' do
       channel.subscribe
+
+      expect(Crm::MetaAds::PageSubscription).to have_received(:new)
+        .with(page_id: channel.page_id, access_token: channel.page_access_token, app_id: 'fb-app-id')
+      expect(subscription).to have_received(:add!).with(include('messages', 'messaging_postbacks'))
+    end
+
+    it 'removes only the messenger fields on unsubscribe, keeping leadgen and feed' do
+      channel.unsubscribe
+
+      expect(subscription).to have_received(:remove!).with(Channel::FacebookPage::MESSENGER_FIELDS)
     end
   end
 end

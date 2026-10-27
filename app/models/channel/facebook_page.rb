@@ -29,6 +29,10 @@ class Channel::FacebookPage < ApplicationRecord
 
   self.table_name = 'channel_facebook_pages'
 
+  MESSENGER_FIELDS = %w[
+    messages message_deliveries message_echoes message_reads standby messaging_handovers messaging_postbacks
+  ].freeze
+
   validates :page_id, uniqueness: { scope: :account_id }
 
   after_create_commit :subscribe
@@ -48,21 +52,23 @@ class Channel::FacebookPage < ApplicationRecord
 
   def subscribe
     # ref https://developers.facebook.com/docs/messenger-platform/reference/webhook-events
-    Facebook::Messenger::Subscriptions.subscribe(
-      access_token: page_access_token,
-      subscribed_fields: %w[
-        messages message_deliveries message_echoes message_reads standby messaging_handovers messaging_postbacks
-      ]
-    )
+    # #2200: soma só os campos do Messenger; leadgen e feed da mesma Página continuam inscritos.
+    page_subscription.add!(MESSENGER_FIELDS)
   rescue StandardError => e
     Rails.logger.debug { "Rescued: #{e.inspect}" }
     true
   end
 
   def unsubscribe
-    Facebook::Messenger::Subscriptions.unsubscribe(access_token: page_access_token)
+    page_subscription.remove!(MESSENGER_FIELDS)
   rescue StandardError => e
     Rails.logger.debug { "Rescued: #{e.inspect}" }
     true
+  end
+
+  private
+
+  def page_subscription
+    Crm::MetaAds::PageSubscription.new(page_id: page_id, access_token: page_access_token, app_id: GlobalConfigService.load('FB_APP_ID', nil))
   end
 end
