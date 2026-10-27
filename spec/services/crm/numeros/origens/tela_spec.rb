@@ -113,6 +113,29 @@ RSpec.describe Crm::Numeros::Origens::Tela do
     expect(tela[:origens].map { |linha| linha[:tipo] }).to eq(%w[google])
   end
 
+  # #2232: a primeira conversa vem da principal ou das ligadas, pelo mesmo desempate (sem data primeiro, depois a mais
+  # antiga, depois o menor id), e a principal ligada de novo não muda nada.
+  it 'escolhe o primeiro toque entre a principal e as ligadas, com o toque sem data na frente' do
+    ligar = lambda do |alvo, campaign|
+      conversa = create_crm_conversation(account: account, inbox: inbox, contact: alvo.contact)
+      conversa.update_columns(additional_attributes: { 'campaign' => campaign }) # rubocop:disable Rails/SkipsModelValidations
+      Crm::CardConversation.create!(account: account, card: alvo, conversation: conversa)
+    end
+    ligada_antes = card(funil: vendas, campaign: toque('google_ads', touched_at: '2026-10-04T10:00:00Z'))
+    ligar.call(ligada_antes, toque('meta_ctwa', source_id: anuncio, touched_at: '2026-10-01T10:00:00Z'))
+    sem_data = card(funil: vendas, campaign: toque('google_ads', touched_at: '2026-10-01T10:00:00Z'))
+    ligar.call(sem_data, toque('tracked_link'))
+    principal_ligada = card(funil: vendas, campaign: toque('google_ads', touched_at: '2026-10-02T10:00:00Z'))
+    Crm::CardConversation.create!(account: account, card: principal_ligada, conversation: principal_ligada.primary_conversation)
+    ligar.call(principal_ligada, toque('meta_organic', touched_at: '2026-10-03T10:00:00Z'))
+
+    linhas = Crm::Numeros::Origens::Classificador.new(account.crm_cards, Crm::Numeros::Mes.new(account: account, chave: nil).range).linhas
+
+    expect(linhas.to_h { |linha| [linha.id, [linha.tipo, linha.ad_id]] }).to eq(
+      ligada_antes.id => ['anuncio_meta', anuncio], sem_data.id => ['site', nil], principal_ligada.id => ['google', nil]
+    )
+  end
+
   # #2084/#2085: contato parceiro do mercado ou "não é negócio" sai dos Números pela regra única (Crm::Relacao), com a flag.
   it 'tira o contato marcado como parceiro ou "não é negócio" com a flag contato_relacao, e card sem contato conta' do
     parceiro = card(funil: vendas, campaign: toque('google_ads'))

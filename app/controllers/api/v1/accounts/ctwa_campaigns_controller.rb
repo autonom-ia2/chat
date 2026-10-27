@@ -96,10 +96,16 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
       filters << 'crm_cards.pipeline_id = ?'
       binds << params[:pipeline_id]
     end
-    # Acesso por funil (#1148, PR D, decisão do Rodrigo em 11/10): a soma conta só os cards que a pessoa vê no CRM.
-    filters << Crm::Access::CardScope.new(user: Current.user, account: Current.account, account_user: Current.account_user).ids_condition
+    [(filters + origin_metric_scope_filters).compact, binds]
+  end
 
-    [filters.compact, binds]
+  # Acesso por funil (#1148, PR D, decisão do Rodrigo em 11/10): a soma conta só os cards que a pessoa vê no CRM.
+  # Este contato é (#2084): e, por cima, sem a venda de contato fora do funil (parceiro, não é negócio).
+  def origin_metric_scope_filters
+    [
+      Crm::Access::CardScope.new(user: Current.user, account: Current.account, account_user: Current.account_user).ids_condition,
+      Crm::Relacao.condicao_sql(Current.account)
+    ]
   end
 
   # #1876: o período é o do fuso da conta, igual aos relatórios do CRM (Crm::Reports::BaseReport).

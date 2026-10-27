@@ -113,7 +113,7 @@ class Api::V1::Accounts::EmailCampaigns::TestSendsController < Api::V1::Accounts
 
   def from_email(campaign)
     name = campaign.from_name.presence
-    addr = campaign.from_email.presence || campaign.sender_identity.from_email.presence
+    addr = campaign.sender_address
     addr.present? && name.present? ? "#{name} <#{addr}>" : addr
   end
 

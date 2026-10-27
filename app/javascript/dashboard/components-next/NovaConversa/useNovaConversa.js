@@ -28,6 +28,7 @@ import {
   usaCaixaDoWhatsapp,
   usaModelo,
 } from './novaConversa';
+import { reabreAoEscrever } from './continuarConversa';
 import { partesDoWhatsapp } from './envioNoWhatsapp';
 import { useModeloDoEmailNaGaveta } from './useModeloDoEmailNaGaveta';
 import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
@@ -273,6 +274,8 @@ export function useNovaConversa({ contato, canal, continuar = null }) {
         private: false,
         ...dados,
         ...camposDoEnvio(decisaoDoEnvio, { parte: partesDoEnvio }),
+        // #2216: a conversa visível da caixa com "Reabrir a mesma conversa" reabre.
+        reabrirAoEscrever: reabreAoEscrever(destino.value),
       })
     );
     partesDoEnvio += 1;
