@@ -87,6 +87,27 @@ async function estadoDeLogin(browser) {
   return arquivo;
 }
 
+// Leva o elemento ao topo da área que rola (respeita o scroll-margin); o clique só rola quando ele está fora da tela.
+async function rolarAteOTopo(p, seletor) {
+  const alvo = p.locator(seletor).first();
+  // Instantâneo: com rolagem suave, o print sai no meio do caminho.
+  await alvo.evaluate(el => el.scrollIntoView({ block: 'start', behavior: 'instant' }));
+}
+
+// `elemento`: o print é só daquele bloco, inteiro. A página rola dentro de um contêiner (não no documento), e o
+// print de elemento do Playwright sai cortado quando o bloco é mais alto que a tela: a tela cresce até caber o bloco,
+// o print recorta a caixa dele e a tela volta ao tamanho de antes.
+async function printDoBloco(p, seletor, arquivo) {
+  const alvo = p.locator(seletor).first();
+  const tela = p.viewportSize();
+  const altura = await alvo.evaluate(el => el.getBoundingClientRect().height);
+  await p.setViewportSize({ width: tela.width, height: Math.max(tela.height, Math.ceil(altura) + 240) });
+  await rolarAteOTopo(p, seletor);
+  await p.waitForTimeout(800);
+  await p.screenshot({ path: arquivo, clip: await alvo.boundingBox() });
+  await p.setViewportSize(tela);
+}
+
 async function executarPasso(p, passo) {
   const opcoes = { timeout: 60000 };
   if (passo.clicar) await p.locator(passo.clicar).first().click(opcoes);
@@ -94,6 +115,7 @@ async function executarPasso(p, passo) {
   else if (passo.tecla) await p.keyboard.press(passo.tecla);
   else if (passo.esperar) await p.locator(passo.esperar).first().waitFor({ state: 'visible', ...opcoes });
   else if (passo.pausa) await p.waitForTimeout(passo.pausa);
+  else if (passo.rolar) await rolarAteOTopo(p, passo.rolar);
   else throw new Error(`passo desconhecido: ${JSON.stringify(passo)}`);
 }
 
@@ -139,7 +161,8 @@ async function rodarJornada(browser, estado, jornada, tema, largura) {
       item.rolagem_lateral = larguraConteudo > largura;
       const arquivo = path.join(saida, jornada.nome, `${nome}.png`);
       fs.mkdirSync(path.dirname(arquivo), { recursive: true });
-      await p.screenshot({ path: arquivo, fullPage: Boolean(etapa.pagina_inteira) });
+      if (etapa.elemento) await printDoBloco(p, etapa.elemento, arquivo);
+      else await p.screenshot({ path: arquivo, fullPage: Boolean(etapa.pagina_inteira) });
       item.png = path.relative(saida, arquivo);
     } catch (e) {
       item.falhou = e.message.slice(0, 300);

@@ -127,9 +127,10 @@ entrada → todas as conversas):
   `docs/<pasta>/<jornada>/<NN>-<etapa>-<tema>-<largura>.png`. O `relato.json` fica no M2
   (`/Users/Shared/chat2you-demos/<slug>/relato.json`): tem URL local e erro, não vai para o repositório público.
 - `larguras`: só `1440` e `390`. `temas`: só `light` e `dark`.
-- Etapa: `url` (opcional; `{conta}` é trocado), `passos` (`clicar`, `preencher: [seletor, texto]`, `tecla`,
+- Etapa: `url` (opcional; `{conta}` é trocado), `passos` (`clicar`, `preencher: [seletor, texto]`, `tecla`, `rolar` (seletor que vai ao topo da tela),
   `esperar`, `pausa`), `esperar` (seletor que precisa aparecer), `pausa` (ms, padrão 1500), `sem_login` (aba
-  anônima, para a tela de login ou página pública) e `pagina_inteira`.
+  anônima, para a tela de login ou página pública), `pagina_inteira` e `elemento` (seletor: o print sai só daquele
+  bloco, inteiro, mesmo quando ele é mais alto que a tela).
 - Etapas da mesma jornada continuam na mesma aba: dá para encadear cliques.
 - Nomes de jornada e etapa: minúsculas, dígitos e hífen.
 - O relato lista, por etapa, respostas `>= 400`, erros de página e rolagem lateral. Etapa que falha (seletor que
