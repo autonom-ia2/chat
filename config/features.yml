@@ -948,3 +948,14 @@
   display_name: Anúncios da Meta › Formulários (leads no funil)
   enabled: false
   column: feature_flags_ext_2
+
+# Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada (com meta_ads_gestao): o detalhe
+# do anúncio ganha a aba Instagram dos comentários (ver, responder, ocultar, apagar e responder no privado), e a caixa
+# do Instagram pode pedir de novo o login com instagram_business_manage_comments, voltando ao anúncio. Desligada: a aba
+# não aparece e a API responde 404. Migration 20261108550000 (crm_meta_ads_comment_actions). Fim da
+# feature_flags_ext_2, depois de meta_ads_formularios (#2195): posição 8 (valor 128, 1 << 7). Se outra flag da ext_2
+# entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+- name: meta_ads_comentarios_instagram
+  display_name: Anúncios da Meta › comentários do anúncio no Instagram
+  enabled: false
+  column: feature_flags_ext_2

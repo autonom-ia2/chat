@@ -192,9 +192,11 @@ class Instagram::CallbacksController < ApplicationController
     @oauth_payload&.fetch('sub')
   end
 
-  # Reautorização que saiu de Anúncios da Meta (#2199/#2196): volta para a aba do purpose, da lista fixa.
+  # Reautorização que saiu de Anúncios da Meta (#2199/#2196): volta para a aba do purpose, da lista fixa, e ao anúncio
+  # quando houver (`ad_id`, só dígitos, conferido no state por Instagram::Testers::OauthBinding).
   def meta_ads_return_path
     query = REAUTH_PURPOSES.dig(@oauth_payload['purpose'], :return_query)
+    query = [query, "anuncio=#{@oauth_payload['ad_id']}"].compact.join('&') if @oauth_payload['ad_id']
     ["/app/accounts/#{account_id}/campaigns/meta-ads", query].compact.join('?')
   end
 

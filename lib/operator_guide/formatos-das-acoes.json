@@ -591,6 +591,18 @@
     ],
     "sem_corpo": true
   },
+  "DELETE crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#destroy",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": true
+  },
   "DELETE crm/meta_ads_lead_forms/forms/:form_id/destination": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#remove_destination",
@@ -15586,6 +15598,75 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/hide": {
+    "campos": {
+      "hidden": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#hide",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:43",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/private_reply": {
+    "campos": {
+      "text": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#private_reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:58",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/private_reply/release": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#release_private_reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:64",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/reply": {
+    "campos": {
+      "text": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/ads/:ad_id/status": {
     "campos": {
       "status": {
@@ -18066,6 +18147,10 @@
   },
   "POST instagram/authorization": {
     "campos": {
+      "ad_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
       "inbox_id": {
         "tipo": "id",
         "tipo_pela_leitura": "nome"
@@ -18084,16 +18169,17 @@
     "origem": [
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:54",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:86",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:96",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:15",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:14",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:13",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:79",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:77",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:89",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:87",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:62",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:56",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:61",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:73",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:60",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:71",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:83",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:70",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:52",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:43"
     ],
