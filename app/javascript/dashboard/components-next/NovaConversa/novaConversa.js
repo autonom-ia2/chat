@@ -1,7 +1,7 @@
-import parsePhoneNumber from 'libphonenumber-js';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { AUDIO_FORMATS } from 'shared/constants/messages';
 import { canStartWithWhatsappApi } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper';
+import { telefoneLegivel } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 // #1459 — as regras da tela "Nova conversa", em funções puras: que tipo de
 // mensagem o canal pede, como ele se chama para a pessoa e o que ainda falta
@@ -48,14 +48,9 @@ export const chaveDoCanal = canal => {
   return 'OUTRO';
 };
 
-// "+551140000001" → "+55 (11) 4000-0001": o código do país e o número como
-// se escreve naquele país. O que a biblioteca não reconhece como telefone
-// completo (com DDI) volta como veio.
-export const telefoneLegivel = (numero = '') => {
-  const telefone = parsePhoneNumber(numero);
-  if (!telefone?.isPossible()) return numero;
-  return `+${telefone.countryCallingCode} ${telefone.formatNational()}`;
-};
+// "+551140000001" → "+55 11 4000-0001". Um jeito só de mostrar telefone no painel
+// (#2255): a regra mora em telefoneDoPais.
+export { telefoneLegivel };
 
 // O telefone ou o e-mail de uma pessoa, para a linha de baixo do nome.
 export const contatoLegivel = pessoa =>
@@ -86,7 +81,8 @@ export const ordenarCanais = (canais = []) =>
 export const linhaDoCanal = canal => {
   if (!canal) return '';
   if (canal.channelType === INBOX_TYPES.EMAIL) return canal.email || '';
-  const numero = canal.phoneNumber || '';
+  // WhatsApp pelo celular (caixa API do WAHA): o número da sessão (#2255).
+  const numero = canal.phoneNumber || canal.wahaPhoneNumber || '';
   return telefoneLegivel(
     numero.startsWith(PREFIXO_TWILIO)
       ? numero.slice(PREFIXO_TWILIO.length)

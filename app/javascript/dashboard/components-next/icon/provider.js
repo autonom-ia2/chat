@@ -46,6 +46,11 @@ const providerBrandIconMap = {
 
 const resolveInbox = inbox => inbox?.value ?? inbox;
 
+// #2255 — WhatsApp pelo celular: caixa API ligada ao WAHA. Para a pessoa é WhatsApp,
+// então leva o ícone do WhatsApp, não o "{ }" da API. Caixa API sem WAHA não muda.
+const ehWhatsappDoCelular = (type, inboxDetails) =>
+  type === INBOX_TYPES.API && Boolean(inboxDetails.waha_provider);
+
 export function useChannelIcon(inbox) {
   const channelIcon = computed(() => {
     const inboxDetails = resolveInbox(inbox);
@@ -56,6 +61,10 @@ export function useChannelIcon(inbox) {
       if (Object.keys(providerIconMap).includes(inboxDetails.provider)) {
         icon = providerIconMap[inboxDetails.provider];
       }
+    }
+
+    if (ehWhatsappDoCelular(type, inboxDetails)) {
+      icon = channelTypeIconMap['Channel::Whatsapp'];
     }
 
     // Special case for Twilio whatsapp
@@ -93,6 +102,10 @@ export function useChannelBrandIcon(inbox) {
       type === INBOX_TYPES.TWILIO &&
       inboxDetails.medium === TWILIO_CHANNEL_MEDIUM.WHATSAPP
     ) {
+      icon = channelTypeBrandIconMap['Channel::Whatsapp'];
+    }
+
+    if (ehWhatsappDoCelular(type, inboxDetails)) {
       icon = channelTypeBrandIconMap['Channel::Whatsapp'];
     }
 

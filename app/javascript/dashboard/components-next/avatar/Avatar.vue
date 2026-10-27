@@ -6,6 +6,7 @@ import { removeEmoji } from 'shared/helpers/emoji';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import ChannelIcon from 'dashboard/components-next/icon/ChannelIcon.vue';
 import wootConstants from 'dashboard/constants/globals';
+import { nomeEhTelefone } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 const props = defineProps({
   src: {
@@ -81,7 +82,12 @@ const STATUS_CLASSES = computed(() => ({
   ...(props.hideOfflineStatus ? {} : { offline: 'bg-n-slate-10' }),
 }));
 
-const showDefaultAvatar = computed(() => !props.src && !props.name);
+// #2255: nome que é só telefone ("+55 11 95555-4444") fica com o ícone de pessoa, como o nome
+// vazio: as iniciais seriam "+5". Com foto, a foto continua; se ela não carregar, o ícone.
+const showDefaultAvatar = computed(() => {
+  if (!props.name) return !props.src;
+  return nomeEhTelefone(props.name) && (!props.src || !isImageValid.value);
+});
 
 const initials = computed(() => {
   if (!props.name) return '';

@@ -455,7 +455,7 @@ describe('NovaConversaGaveta', () => {
     expect(opcoes[0].element.value).toBe('1');
     expect(opcoes[0].element.checked).toBe(true);
     expect(wrapper.find('fieldset').classes()).toContain('sm:grid-cols-2');
-    expect(wrapper.text()).toContain('+55 (11) 99999-0000');
+    expect(wrapper.text()).toContain('+55 11 99999-0000');
 
     await opcoes[1].setValue();
     expect(wrapper.find('#nova-conversa-texto').exists()).toBe(true);
