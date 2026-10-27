@@ -42,13 +42,24 @@ describe('ConversationView: conversa vazia (#2211)', () => {
       contatoId: '3',
       telefone: '',
       email: '',
+      caixasLivres: [],
     });
     expect(
       tela({ $route: { query: { telefone: '+5511955554444' } } }).conversaVazia
-    ).toEqual({ contatoId: '', telefone: '+5511955554444', email: '' });
+    ).toEqual({
+      contatoId: '',
+      telefone: '+5511955554444',
+      email: '',
+      caixasLivres: [],
+    });
     expect(
       tela({ $route: { query: { email: 'nova@exemplo.test' } } }).conversaVazia
-    ).toEqual({ contatoId: '', telefone: '', email: 'nova@exemplo.test' });
+    ).toEqual({
+      contatoId: '',
+      telefone: '',
+      email: 'nova@exemplo.test',
+      caixasLivres: [],
+    });
   });
 
   it('quem só lê conversas não começa conversa', () => {

@@ -63,6 +63,8 @@ const props = defineProps({
   telefone: { type: String, default: '' },
   // #2211: e-mail que ainda não é de ninguém (o servidor da busca disse que é e-mail).
   email: { type: String, default: '' },
+  // #2257: ids (texto) das caixas em que o telefone novo já pode receber texto livre.
+  caixasLivres: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['voltar']);
 
@@ -92,7 +94,8 @@ const contato = computed(() =>
 );
 const caixas = computed(() => {
   if (telefoneInvalido.value) return [];
-  if (peloTelefone.value) return caixasParaTelefone(caixasDaConta.value);
+  if (peloTelefone.value)
+    return caixasParaTelefone(caixasDaConta.value, props.caixasLivres);
   if (peloEmail.value) return caixasParaEmail(caixasDaConta.value);
   return semInstagram(doContato.canais.value);
 });
@@ -253,8 +256,9 @@ const garantirContato = async () => {
 };
 
 // A caixa escolhida, como o servidor a devolve para o contato criado. A decisão "modelo ou texto
-// livre" (o Híbrido, no WhatsApp oficial) é dele: se ela não for a que a tela mostrava, a tela passa
-// a mostrar a do servidor, avisa e não envia; o que foi escrito fica (o dono do rascunho é o
+// livre" (o Híbrido, no WhatsApp oficial) é dele; a tela já começa nela (caixasLivres, #2257). Se a
+// resposta mudar entre a busca e o envio (a trava de tempo no meio), a tela passa a mostrar a do
+// servidor, avisa e não envia — nunca em silêncio; o que foi escrito fica (o dono do rascunho é o
 // telefone ou o e-mail, e a caixa é a mesma).
 const garantirCaixa = async () => {
   if (caixaDoEnvio.value) return true;

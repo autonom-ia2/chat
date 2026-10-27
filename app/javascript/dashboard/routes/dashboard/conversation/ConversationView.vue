@@ -209,7 +209,7 @@ export default {
       }
     },
     voltarDaConversaNova() {
-      const { comecar, telefone, email, ...resto } = this.$route.query;
+      const { comecar, telefone, email, livre, ...resto } = this.$route.query;
       this.$router.replace({ query: resto });
     },
     onSearch() {
@@ -239,6 +239,7 @@ export default {
       :contato-id="conversaVazia.contatoId"
       :telefone="conversaVazia.telefone"
       :email="conversaVazia.email"
+      :caixas-livres="conversaVazia.caixasLivres"
       @voltar="voltarDaConversaNova"
     />
     <ConversationBox

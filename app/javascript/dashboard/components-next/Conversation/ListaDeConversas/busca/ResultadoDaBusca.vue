@@ -56,8 +56,15 @@ const abrirConversaVazia = query => {
 };
 const comecarCom = contatoId => abrirConversaVazia({ comecar: contatoId });
 // Telefone novo: o contato só nasce ao enviar, na conversa vazia.
-const comecarComTelefone = () =>
-  abrirConversaVazia({ telefone: telefoneNovo.value });
+// As caixas em que o número já pode receber texto livre (#2257) vão junto: a conversa vazia começa no
+// tipo certo (texto livre ou modelo).
+const comecarComTelefone = () => {
+  const livres = props.resultado.textoLivreNasCaixas || [];
+  abrirConversaVazia({
+    telefone: telefoneNovo.value,
+    ...(livres.length ? { livre: livres.join(',') } : {}),
+  });
+};
 // E-mail novo (#2211): o servidor diz que é e-mail; o contato só nasce ao enviar.
 const comecarComEmail = () => abrirConversaVazia({ email: emailNovo.value });
 

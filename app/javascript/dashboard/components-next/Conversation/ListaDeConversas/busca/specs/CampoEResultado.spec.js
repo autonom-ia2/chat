@@ -176,6 +176,21 @@ describe('ResultadoDaBusca', () => {
     });
   });
 
+  it('telefone novo leva as caixas com texto livre (#2257)', async () => {
+    const wrapper = montarResultado({
+      resultado: resultado({
+        telefoneNovo: '+5511912345678',
+        textoLivreNasCaixas: [1, 5],
+      }),
+    });
+    await wrapper.find('[data-comecar-com-telefone]').trigger('click');
+    expect(push).toHaveBeenCalledWith({
+      name: 'home',
+      params: { accountId: 1 },
+      query: { telefone: '+5511912345678', livre: '1,5' },
+    });
+  });
+
   it('quem só lê conversas não vê "Escrever" nem a oferta do telefone', async () => {
     podeComecar.ref.value = false;
     const wrapper = montarResultado({

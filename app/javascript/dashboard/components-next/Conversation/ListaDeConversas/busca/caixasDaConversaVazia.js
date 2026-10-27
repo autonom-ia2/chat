@@ -29,8 +29,15 @@ const mandaParaTelefone = caixa =>
 const paraATela = caixas =>
   ordenarCanais(caixas.map(caixa => camelcaseKeys(caixa, { deep: true })));
 
-export const caixasParaTelefone = (caixasDaConta = []) =>
-  paraATela(caixasDaConta.filter(mandaParaTelefone));
+// `livres` (#2257): os ids das caixas em que o telefone novo já pode receber texto livre, como o
+// servidor da busca respondeu (texto_livre_nas_caixas, a regra do WhatsappHybrid::NewConversation). A
+// caixa na lista começa no texto livre; fora dela, no modelo. É a mesma decisão que o servidor toma
+// depois de criar o contato (whatsapp_api_start), então o tipo não muda no envio.
+export const caixasParaTelefone = (caixasDaConta = [], livres = []) =>
+  paraATela(caixasDaConta.filter(mandaParaTelefone)).map(caixa => ({
+    ...caixa,
+    whatsappApiStart: livres.includes(String(caixa.id)),
+  }));
 
 // E-mail que ainda não é de ninguém (o servidor diz que é e-mail): só as caixas de e-mail.
 export const caixasParaEmail = (caixasDaConta = []) =>
@@ -52,7 +59,8 @@ export const temInstagram = (caixasDaConta = []) =>
   caixasDaConta.some(caixa => caixa.channel_type === INBOX_TYPES.INSTAGRAM);
 
 // A rota pede a conversa vazia: "Escrever" (?comecar=<id do contato>), o telefone novo
-// (?telefone=<número>) ou o e-mail novo (?email=<endereço>). Quem mostra a tela (ConversationView) e
+// (?telefone=<número>, com ?livre=<ids das caixas com texto livre, separados por vírgula>) ou o e-mail
+// novo (?email=<endereço>). Quem mostra a tela (ConversationView) e
 // quem some com ela (o botão do menu no celular) leem daqui. Parâmetro repetido no link
 // (?comecar=1&comecar=2) vem como lista: vale o primeiro.
 const primeiro = valor => (Array.isArray(valor) ? valor[0] : valor) || '';
@@ -61,7 +69,10 @@ export const pedidoDeConversaVazia = (query = {}) => {
   const contatoId = primeiro(query.comecar);
   const telefone = primeiro(query.telefone);
   const email = primeiro(query.email);
-  return contatoId || telefone || email ? { contatoId, telefone, email } : null;
+  if (!contatoId && !telefone && !email) return null;
+  const livre = primeiro(query.livre);
+  const caixasLivres = telefone && livre ? livre.split(',') : [];
+  return { contatoId, telefone, email, caixasLivres };
 };
 
 // A linha de baixo da caixa, no topo da conversa vazia e na gaveta "Por onde mandar?": o número (como a

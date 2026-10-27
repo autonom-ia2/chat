@@ -32,6 +32,21 @@ describe('caixasDaConversaVazia (#2211)', () => {
     expect(caixas[0].channelType).toBe('Channel::Whatsapp');
   });
 
+  it('telefone novo: a caixa que o servidor disse livre começa no texto livre; as outras, no modelo (#2257)', () => {
+    const caixas = caixasParaTelefone(
+      [
+        { id: 1, name: 'A', channel_type: 'Channel::Whatsapp' },
+        { id: 2, name: 'B', channel_type: 'Channel::Whatsapp' },
+      ],
+      ['2']
+    );
+    expect(
+      Object.fromEntries(
+        caixas.map(caixa => [caixa.id, caixa.whatsappApiStart])
+      )
+    ).toEqual({ 1: false, 2: true });
+  });
+
   it('uma caixa só já vem escolhida; mais de uma, não', () => {
     expect(caixaJaEscolhida([{ id: 7 }])).toBe(7);
     expect(caixaJaEscolhida([{ id: 7 }, { id: 8 }])).toBeNull();
@@ -48,16 +63,27 @@ describe('caixasDaConversaVazia (#2211)', () => {
       contatoId: '3',
       telefone: '',
       email: '',
+      caixasLivres: [],
     });
     expect(pedidoDeConversaVazia({ telefone: '+5511955554444' })).toEqual({
       contatoId: '',
       telefone: '+5511955554444',
       email: '',
+      caixasLivres: [],
     });
+    expect(
+      pedidoDeConversaVazia({ telefone: '+5511955554444', livre: '1,5' })
+        .caixasLivres
+    ).toEqual(['1', '5']);
+    // ?livre= só vale com telefone novo.
+    expect(
+      pedidoDeConversaVazia({ comecar: '3', livre: '1' }).caixasLivres
+    ).toEqual([]);
     expect(pedidoDeConversaVazia({ email: 'nova@exemplo.test' })).toEqual({
       contatoId: '',
       telefone: '',
       email: 'nova@exemplo.test',
+      caixasLivres: [],
     });
     // ?comecar= repetido: vale o primeiro.
     expect(pedidoDeConversaVazia({ comecar: ['3', '4'] }).contatoId).toBe('3');

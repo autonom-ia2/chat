@@ -102,9 +102,9 @@ const TELEFONE = '+5511955557777';
 const CRIADO = {
   data: { payload: { contact: { id: 77, name: '+55 11 95555-7777' } } },
 };
-const montar = async () => {
+const montar = async (caixasLivres = []) => {
   const wrapper = mount(ConversaVazia, {
-    props: { telefone: TELEFONE },
+    props: { telefone: TELEFONE, caixasLivres },
     global: {
       plugins: [criarI18n()],
       stubs: { RouterLink: { template: '<a><slot /></a>' } },
@@ -165,8 +165,68 @@ describe('ConversaVazia com o useNovaConversa de verdade', () => {
     });
   });
 
-  it('Híbrido: o tipo muda depois de criar o contato — avisa, não envia, o texto fica; o segundo Enviar manda', async () => {
-    // A lista da conta não sabe do Híbrido: a tela começa no modelo.
+  it('Híbrido com a caixa na lista do servidor (#2257): já começa no texto livre e envia de primeira', async () => {
+    estado.caixasDaConta.splice(0, Infinity, {
+      id: 1,
+      name: 'WhatsApp Oficial',
+      channel_type: 'Channel::Whatsapp',
+    });
+    fetchContactableInboxes.mockResolvedValue([
+      {
+        id: 1,
+        name: 'WhatsApp Oficial',
+        channelType: 'Channel::Whatsapp',
+        sourceId: '5511955557777',
+        whatsappApiStart: true,
+      },
+    ]);
+    const wrapper = await montar(['1']);
+    expect(wrapper.find('[data-caixa]').attributes('data-tipo')).toBe(
+      'whatsapp_livre'
+    );
+    await wrapper.find('[data-escrever]').trigger('click');
+    await wrapper.find('[data-enviar]').trigger('click');
+    await flushPromises();
+    expect(useAlert).not.toHaveBeenCalled();
+    expect(criacoes()).toHaveLength(1);
+    expect(criacoes()[0][1].params).toMatchObject({
+      inboxId: 1,
+      contactId: 77,
+      message: { content: 'Olá, tudo bem?' },
+    });
+  });
+
+  it('rede de segurança: a busca disse texto livre, mas no envio o servidor pede modelo — avisa e não envia', async () => {
+    estado.caixasDaConta.splice(0, Infinity, {
+      id: 1,
+      name: 'WhatsApp Oficial',
+      channel_type: 'Channel::Whatsapp',
+    });
+    // A trava de tempo do Híbrido fechou entre a busca e o envio.
+    fetchContactableInboxes.mockResolvedValue([
+      {
+        id: 1,
+        name: 'WhatsApp Oficial',
+        channelType: 'Channel::Whatsapp',
+        sourceId: '5511955557777',
+        whatsappApiStart: false,
+      },
+    ]);
+    const wrapper = await montar(['1']);
+    await wrapper.find('[data-escrever]').trigger('click');
+    await wrapper.find('[data-enviar]').trigger('click');
+    await flushPromises();
+    expect(useAlert).toHaveBeenCalledWith(
+      'Esta caixa mudou o que dá para mandar primeiro. Confira a mensagem e envie de novo: o que você escreveu ficou.'
+    );
+    expect(criacoes()).toHaveLength(0);
+    const caixa = wrapper.find('[data-caixa]');
+    expect(caixa.attributes('data-tipo')).toBe('whatsapp_pronta');
+    expect(caixa.attributes('data-mensagem')).toBe('Olá, tudo bem?');
+  });
+
+  it('rede de segurança, ao contrário: sem a caixa na lista, o servidor libera o texto livre no envio — avisa, não envia, o texto fica; o segundo Enviar manda', async () => {
+    // Sem a caixa na lista da busca, a tela começa no modelo.
     estado.caixasDaConta.splice(0, Infinity, {
       id: 1,
       name: 'WhatsApp Oficial',

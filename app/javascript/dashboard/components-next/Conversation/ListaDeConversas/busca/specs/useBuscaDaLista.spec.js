@@ -43,6 +43,36 @@ describe('useBuscaDaLista (#2211)', () => {
     expect(busca.carregando.value).toBe(false);
   });
 
+  it('lê do servidor o e-mail novo e as caixas com texto livre (#2257)', async () => {
+    BuscaDaListaAPI.buscar.mockResolvedValue(
+      resposta({
+        conversations: [],
+        messages: [],
+        contacts: [],
+        telefone_novo: '+5511955554444',
+        email_novo: null,
+        texto_livre_nas_caixas: [1, 5],
+      })
+    );
+    const busca = useBuscaDaLista();
+    busca.texto.value = '11 95555-4444';
+    await nextTick();
+    vi.advanceTimersByTime(300);
+    await flushPromises();
+    expect(busca.resultado.value.textoLivreNasCaixas).toEqual([1, 5]);
+    expect(busca.resultado.value.emailNovo).toBeNull();
+  });
+
+  it('servidor sem os campos novos: nada de e-mail, nenhuma caixa livre', async () => {
+    const busca = useBuscaDaLista();
+    busca.texto.value = 'jo';
+    await nextTick();
+    vi.advanceTimersByTime(300);
+    await flushPromises();
+    expect(busca.resultado.value.textoLivreNasCaixas).toEqual([]);
+    expect(busca.resultado.value.emailNovo).toBeNull();
+  });
+
   it('com 1 letra não busca e a lista volta', async () => {
     const busca = useBuscaDaLista();
     busca.texto.value = 'j';

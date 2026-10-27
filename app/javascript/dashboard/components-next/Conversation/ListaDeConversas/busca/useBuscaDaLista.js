@@ -16,6 +16,7 @@ const VAZIO = {
   pessoas: [],
   telefoneNovo: null,
   emailNovo: null,
+  textoLivreNasCaixas: [],
   parcial: false,
 };
 
@@ -54,6 +55,8 @@ export function useBuscaDaLista() {
         telefoneNovo: payload.telefone_novo || null,
         // E-mail que ainda não é de ninguém: quem decide que é e-mail é o servidor; sem o campo, nada.
         emailNovo: payload.email_novo || null,
+        // #2257: caixas em que o telefone novo já pode receber texto livre (Híbrido).
+        textoLivreNasCaixas: payload.texto_livre_nas_caixas || [],
         // Seção que passou do tempo no servidor volta vazia: a tela avisa.
         parcial: Boolean(payload.parcial?.length),
       };
