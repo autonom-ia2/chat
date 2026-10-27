@@ -102,9 +102,13 @@ class Instagram::Testers::OauthBinding
     payload['inbox_id'].is_a?(Integer) && payload['inbox_id'].positive? && Instagram::Testers::Validation.id?(payload['instagram_id'])
   end
 
-  # O anúncio de volta (#2196) só existe na volta a Anúncios da Meta, e só de dígitos (entra no endereço de volta).
+  # O anúncio de volta (#2196) só existe na volta a Anúncios da Meta, num purpose que volta a um anúncio (`ad: true`), e
+  # só de dígitos (entra no endereço de volta).
   def self.valid_ad_id?(payload)
-    !payload.key?('ad_id') || (payload['return_to'] == 'meta_ads' && ad_id?(payload['ad_id']))
+    return true unless payload.key?('ad_id')
+
+    payload['return_to'] == 'meta_ads' && Instagram::IntegrationHelper::REAUTH_PURPOSES.dig(payload['purpose'], :ad) == true &&
+      ad_id?(payload['ad_id'])
   end
 
   # Id de anúncio: 1 a 32 dígitos.

@@ -5,11 +5,12 @@ module Instagram::IntegrationHelper
   # dele ligada. `return_query` é a aba para onde a pessoa volta (lista fixa: nunca endereço livre).
   # Contrato comum com o #2196 (comentários dos anúncios no Instagram), que soma a entrada dele.
   # - meta_ads_organico (#2199): Seus posts.
-  # - meta_ads_comentarios_instagram (#2196): comentários do anúncio, na aba Resultado; volta ao anúncio (`ad_id`).
+  # - meta_ads_comentarios_instagram (#2196): comentários do anúncio, na aba Resultado; volta ao anúncio (`ad_id`, só
+  #   em purpose com `ad: true`).
   REAUTH_PURPOSES = {
     'meta_ads_organico' => { flag: 'meta_ads_organico', scopes: %w[instagram_business_manage_insights], return_query: 'aba=organico' },
     'meta_ads_comentarios_instagram' => { flag: 'meta_ads_comentarios_instagram', scopes: %w[instagram_business_manage_comments],
-                                          return_query: 'aba=resultado' }
+                                          return_query: 'aba=resultado', ad: true }
   }.freeze
 
   # Generates a signed JWT token for Instagram integration

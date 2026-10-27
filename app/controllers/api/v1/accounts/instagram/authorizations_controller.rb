@@ -56,12 +56,12 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
                              purpose: (params[:purpose] if reauth_purpose), ad_id: reauth_ad_id)
   end
 
-  # O anúncio para onde a pessoa volta (#2196): só numa volta a Anúncios da Meta e só de dígitos, porque vira parte do
-  # endereço de volta.
+  # O anúncio para onde a pessoa volta (#2196): só num purpose que volta a um anúncio (`ad: true`) e só de dígitos,
+  # porque vira parte do endereço de volta.
   def reauth_ad_id
     ad_id = params[:ad_id]
     return if ad_id.nil?
-    raise Instagram::Testers::Error, 'invalid_selection' unless reauth_purpose && Instagram::Testers::OauthBinding.ad_id?(ad_id)
+    raise Instagram::Testers::Error, 'invalid_selection' unless reauth_purpose&.dig(:ad) && Instagram::Testers::OauthBinding.ad_id?(ad_id)
 
     ad_id
   end

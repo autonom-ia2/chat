@@ -14,7 +14,7 @@ RSpec.describe 'Instagram reauthorization from Meta ads (#2196)', type: :request
   end
 
   before do
-    account.enable_features!(:channel_instagram, :meta_ads_comentarios_instagram)
+    account.enable_features!(:channel_instagram, :meta_ads_comentarios_instagram, :meta_ads_organico)
     allow(GlobalConfig).to receive(:get_value).and_call_original
     allow(GlobalConfig).to receive(:get_value).with('DISABLE_META_INBOX_CREATION').and_return(false)
     allow(GlobalConfigService).to receive(:load).and_call_original
@@ -48,11 +48,12 @@ RSpec.describe 'Instagram reauthorization from Meta ads (#2196)', type: :request
     expect(state).not_to have_key('ad_id')
   end
 
-  it 'recusa tela desconhecida, flag desligada, ad_id que não é número e ad_id fora da volta a Anúncios' do
+  it 'recusa tela desconhecida, flag desligada, ad_id que não é número e ad_id fora da volta ao anúncio' do
     comments = { inbox_id: inbox.id, return_to: 'meta_ads', purpose: 'meta_ads_comentarios_instagram' }
     [{ inbox_id: inbox.id, return_to: 'outra_tela' },
      comments.merge(ad_id: '12?x=1'),
-     { inbox_id: inbox.id, return_to: 'inbox', ad_id: '120254710382770416' }].each do |params|
+     { inbox_id: inbox.id, return_to: 'inbox', ad_id: '120254710382770416' },
+     { inbox_id: inbox.id, return_to: 'meta_ads', purpose: 'meta_ads_organico', ad_id: '120254710382770416' }].each do |params|
       authorize(params)
       expect(response).to have_http_status(:unprocessable_entity)
     end

@@ -301,6 +301,16 @@ RSpec.describe Instagram::CallbacksController do
       expect(response).to redirect_to('/app')
     end
 
+    it 'recusa anúncio de volta num purpose que não volta a anúncio, sem trocar o token (#2196)' do
+      signed_state = controller.generate_instagram_token(account.id, 'meta_ads', actor_id: actor.id, inbox: channel.inbox,
+                                                                                 purpose: 'meta_ads_organico', ad_id: '120254710382770416')
+
+      get :show, params: { code: 'valid_code', state: signed_state }
+
+      expect(channel.reload.access_token).to eq('old_token')
+      expect(response).to redirect_to('/app')
+    end
+
     it 'rejects a different returned Instagram profile without creating or updating a channel' do
       signed_state = state
       user_details['user_id'] = '54321'
