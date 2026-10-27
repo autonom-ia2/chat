@@ -38,7 +38,7 @@ class Crm::MetaAds::InstagramPrivateReply
     action = claim!(comment['id'], actor, user, ad_id)
     result = Instagram::CommentsClient.new(@channel).private_reply(comment['id'], text)
     unless result.ok
-      action.destroy! unless result.transient?
+      action.destroy! unless maybe_delivered?(result)
       raise Error, error_code(result)
     end
 
@@ -58,6 +58,11 @@ class Crm::MetaAds::InstagramPrivateReply
                                       action: 'private_reply', actor: actor, user: user)
   rescue ActiveRecord::RecordNotUnique
     raise Error, 'private_reply_done'
+  end
+
+  # Sem resposta (rede, tempo esgotado) ou 5xx: a Meta pode ter entregado. Qualquer 4xx é recusa.
+  def maybe_delivered?(result)
+    result.network_error? || result.http_code.to_i >= 500
   end
 
   def error_code(result)

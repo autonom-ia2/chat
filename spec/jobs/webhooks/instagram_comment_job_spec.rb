@@ -48,6 +48,13 @@ RSpec.describe Webhooks::InstagramCommentJob do
     expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
   end
 
+  it 'aceita o tempo em texto, como pode chegar pelo relay' do
+    described_class.perform_now('17841400000000001', 'comments', value, time.to_s)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+      .with(anything, anything, hash_including(created_time: Time.zone.at(time)))
+  end
+
   it 'ignora outros campos (mentions)' do
     described_class.perform_now('17841400000000001', 'mentions', value, time)
 

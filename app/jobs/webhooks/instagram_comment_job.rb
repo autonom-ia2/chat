@@ -26,7 +26,7 @@ class Webhooks::InstagramCommentJob < ApplicationJob
   private
 
   def well_formed?(value, time)
-    value.is_a?(Hash) && time.is_a?(Numeric) && value.with_indifferent_access[:from].is_a?(Hash) &&
+    value.is_a?(Hash) && Integer(time.to_s, exception: false).present? && value.with_indifferent_access[:from].is_a?(Hash) &&
       value.with_indifferent_access[:id].present?
   end
 
@@ -36,7 +36,7 @@ class Webhooks::InstagramCommentJob < ApplicationJob
       network: 'instagram', account_id: channel.account_id, inbox_id: channel.inbox.id, instagram_id: channel.instagram_id,
       media_id: media[:id]&.to_s, ad_id: media[:ad_id]&.to_s, comment_id: value[:id].to_s,
       parent_id: value[:parent_id]&.to_s, from_id: value.dig(:from, :id)&.to_s, from_name: value.dig(:from, :username),
-      text: value[:text], created_time: Time.zone.at(time.to_i)
+      text: value[:text], created_time: Time.zone.at(Integer(time.to_s))
     }
   end
 end

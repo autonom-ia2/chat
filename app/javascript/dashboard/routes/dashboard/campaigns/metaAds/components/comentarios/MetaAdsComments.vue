@@ -353,6 +353,7 @@ const tabCount = aba => {
             }}
           </p>
           <button
+            v-if="canManage"
             type="button"
             :data-ad-comments-action="status"
             class="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-lg border-0 bg-n-brand px-4 text-sm font-medium text-white hover:bg-n-brand/90"
@@ -366,7 +367,10 @@ const tabCount = aba => {
             {{ $t(`${KEY}.${current.key}.${status.toUpperCase()}_BUTTON`) }}
           </button>
           <p
-            v-if="$te(`${KEY}.${current.key}.${status.toUpperCase()}_AFTER`)"
+            v-if="
+              canManage &&
+              $te(`${KEY}.${current.key}.${status.toUpperCase()}_AFTER`)
+            "
             class="m-0 text-sm text-n-slate-11"
           >
             {{ $t(`${KEY}.${current.key}.${status.toUpperCase()}_AFTER`) }}
