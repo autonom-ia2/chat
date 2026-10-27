@@ -35,6 +35,26 @@ RSpec.describe Crm::MetaAdsPage do
         .to have_attributes(name: 'Studio Aurora', leadgen_receiving: true, feed_receiving: true)
     end
 
+    it 'leitura sem nome não apaga o nome guardado' do
+      described_class.create!(account: account, page_id: '104882', name: 'Studio Aurora')
+
+      described_class.remember!(account, [{ 'id' => '104882' }])
+
+      expect(described_class.find_by(account: account, page_id: '104882').name).to eq('Studio Aurora')
+    end
+
+    it 'a mesma Página repetida na lista não quebra o upsert' do
+      described_class.remember!(account, [{ 'id' => '1', 'name' => 'A' }, { 'id' => '1', 'name' => 'A' }])
+
+      expect(described_class.where(account: account).count).to eq(1)
+    end
+
+    it 'sem nome não levanta erro, e repetir não duplica' do
+      2.times { described_class.remember!(account, [{ 'id' => '104882' }]) }
+
+      expect(described_class.where(account: account).pluck(:page_id, :name)).to eq([['104882', nil]])
+    end
+
     it 'não apaga a Página que sumiu da lista e não cruza contas' do
       described_class.create!(account: account, page_id: '111')
 
@@ -42,6 +62,13 @@ RSpec.describe Crm::MetaAdsPage do
 
       expect(described_class.where(page_id: '111').pluck(:account_id)).to contain_exactly(account.id, other_account.id)
       expect(described_class.find_by(account: account, page_id: '111').name).to be_nil
+    end
+
+    it 'corta o nome no limite da coluna e ignora id que não é texto nem número' do
+      described_class.remember!(account, [{ 'id' => '1', 'name' => 'a' * 300 }, { 'id' => ['2'] }, { 'id' => { 'x' => 1 } }])
+
+      expect(described_class.where(account: account).pluck(:page_id)).to eq(['1'])
+      expect(described_class.find_by(account: account, page_id: '1').name.length).to eq(described_class::NAME_LIMIT)
     end
 
     it 'lista vazia não faz nada' do

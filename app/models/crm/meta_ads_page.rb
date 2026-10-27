@@ -19,14 +19,25 @@ class Crm::MetaAdsPage < ApplicationRecord
   end
 
   # pages: [{ 'id' =>, 'name' => }] como a Graph devolve em me/accounts. Guarda id e nome; não apaga a Página que sumiu
-  # da lista (a pessoa pode ter tirado o acesso só por um tempo) nem mexe no que cada frente assinou.
+  # da lista (a pessoa pode ter tirado o acesso só por um tempo) nem mexe no que já foi assinado. Leitura sem nome (a
+  # Graph pode não devolver) cria a Página sem nome, mas não apaga o nome que já estava guardado.
+  # Só id e nome, validados aqui; upsert/insert evitam a corrida de duas leituras da mesma Página ao mesmo tempo.
+  # rubocop:disable Rails/SkipsModelValidations
   def self.remember!(account, pages)
+    named, unnamed = remember_rows(account, pages).partition { |row| row[:name] }
+    upsert_all(named, unique_by: %i[account_id page_id], update_only: [:name]) if named.any?
+    insert_all(unnamed, unique_by: %i[account_id page_id]) if unnamed.any?
+  end
+  # rubocop:enable Rails/SkipsModelValidations
+
+  # O id da Página é número (a Graph manda como texto); outro tipo é lixo e fica fora.
+  def self.remember_rows(account, pages)
     rows = Array(pages).filter_map do |page|
-      next unless page.is_a?(Hash) && page['id'].present?
+      next unless page.is_a?(Hash) && (page['id'].is_a?(String) || page['id'].is_a?(Integer)) && page['id'].to_s.present?
 
       { account_id: account.id, page_id: page['id'].to_s, name: page['name'].to_s.first(NAME_LIMIT).presence }
     end
-    # Só id e nome, validados acima; o upsert evita a corrida de duas leituras da mesma Página ao mesmo tempo.
-    upsert_all(rows, unique_by: %i[account_id page_id], update_only: [:name]) if rows.any? # rubocop:disable Rails/SkipsModelValidations
+    rows.uniq { |row| row[:page_id] }
   end
+  private_class_method :remember_rows
 end
