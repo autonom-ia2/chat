@@ -33,16 +33,18 @@ class Crm::MetaAds::ComentariosIa::Rede::Pagina
                              headers: { 'Authorization' => "Bearer #{@channel.page_access_token}", 'Content-Type' => 'application/json' })
     envio(response)
   rescue StandardError => e
-    falha("#{e.class}: #{e.message}")
+    falha("#{e.class}: #{e.message}", talvez_entregue: true)
   end
 
+  # Sem resposta ou 5xx, a Meta pode ter entregado; 4xx é recusa.
   def envio(response)
+    talvez = response.code.to_i >= 500
     dados = JSON.parse(response.body.to_s)
-    return falha(erro(dados)) unless response.success? && dados.is_a?(Hash) && dados['error'].blank?
+    return falha(erro(dados), talvez_entregue: talvez) unless response.success? && dados.is_a?(Hash) && dados['error'].blank?
 
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, recipient_id: dados['recipient_id'], message_id: dados['message_id'])
   rescue JSON::ParserError
-    falha("HTTP #{response.code}")
+    falha("HTTP #{response.code}", talvez_entregue: talvez)
   end
 
   def erro(dados)
@@ -50,10 +52,10 @@ class Crm::MetaAds::ComentariosIa::Rede::Pagina
     "#{detalhe['code']} - #{detalhe['message']}"
   end
 
-  def falha(texto)
+  def falha(texto, talvez_entregue: false)
     limpo = texto.to_s.gsub(Meta::ConversionsApiClient::SENSITIVE_PATTERN, '<REDACTED>')
     Rails.logger.warn("[comentarios_ia][pagina] page=#{@channel.page_id} erro=#{limpo}")
-    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: limpo)
+    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: limpo, talvez_entregue: talvez_entregue)
   end
 
   def versao

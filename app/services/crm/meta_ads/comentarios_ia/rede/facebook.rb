@@ -1,6 +1,8 @@
 # IA cuida dos comentários (#2212): as ações na Página do Facebook.
-# - privado pelo Messenger: nosso (Rede::Pagina, com o token da caixa). Reivindica antes, abre a conversa na caixa do
-#   Messenger com a mensagem que saiu (Conversa.no_messenger!); recusado, a linha sai;
+# - privado pelo Messenger: nosso (Rede::Pagina, com o token da caixa). Reivindica antes (soltando a reivindicação vencida
+#   sem confirmação), confirma quando a Meta aceita e abre a conversa na caixa do Messenger com a mensagem que saiu
+#   (Conversa.no_messenger!). Recusado (4xx), a linha sai; sem resposta ou 5xx, a Meta pode ter entregado: a linha fica
+#   sem confirmação até vencer, como no #2196;
 # - resposta e esconder: Crm::MetaAds::FacebookComments do #2197, com a conexão de anúncios da conta. Ele confere que o
 #   comentário é do post e que a Página é da conta, e grava a ação com actor 'ai'.
 class Crm::MetaAds::ComentariosIa::Rede::Facebook
@@ -12,11 +14,13 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   def privado(care)
-    return Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: Crm::MetaAds::ComentariosIa::Rede::JA_FEITO) unless reivindicou?
+    reivindicacao = reivindicar
+    return Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: Crm::MetaAds::ComentariosIa::Rede::JA_FEITO) unless reivindicacao
 
     envio = Crm::MetaAds::ComentariosIa::Rede::Pagina.new(@inbox.channel).private_reply(@comentario.comment_id, mensagem(care))
-    return soltar(envio) unless envio.ok
+    return falhou(envio) unless envio.ok
 
+    reivindicacao.confirm!
     envio.conversation = na_caixa(envio, care)
     envio
   end
@@ -43,12 +47,13 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     nil
   end
 
-  def reivindicou?
+  def reivindicar
+    REGISTRO.soltar_vencida!(@comentario)
     REGISTRO.reivindicar!(@comentario, 'private_reply')
   end
 
-  def soltar(envio)
-    REGISTRO.soltar!(@comentario, 'private_reply')
+  def falhou(envio)
+    REGISTRO.soltar!(@comentario, 'private_reply') unless envio.talvez_entregue
     envio
   end
 

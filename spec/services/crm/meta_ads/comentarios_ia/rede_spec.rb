@@ -5,6 +5,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
   let(:care) { create(:crm_meta_ads_comment_care, account: account) }
   let(:registro) { Crm::MetaAds::ComentariosIa::Registro }
   let(:conversation) { instance_double(Conversation, id: 9) }
+  # A linha de Crm::MetaAdsCommentAction (#2196) que a reivindicação devolve.
+  let(:reivindicacao) { double }
 
   def comentario(**mudancas)
     Crm::MetaAds::ComentariosIa::Comentario.new(
@@ -14,7 +16,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     )
   end
 
-  before { allow(registro).to receive_messages(reivindicar!: true, soltar!: 0, gravar!: true) }
+  before do
+    allow(reivindicacao).to receive(:confirm!)
+    allow(registro).to receive_messages(reivindicar!: reivindicacao, soltar!: 0, soltar_vencida!: 0, gravar!: true)
+  end
 
   describe 'Página (o Private Reply pelo Messenger)' do
     let(:channel) { instance_double(Channel::FacebookPage, page_id: '555', page_access_token: 'token-da-pagina') }
@@ -39,7 +44,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, erro: '10 - Fora')
 
       stub_request(:post, "#{graph}/555/messages").to_raise(Net::OpenTimeout)
-      expect(pagina.private_reply('555_777', { text: 'Oi!' }).ok).to be(false)
+      expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, talvez_entregue: true)
+    end
+
+    it 'só a recusa explícita (4xx) é certa; 5xx e rede podem ter entregado' do
+      stub_request(:post, "#{graph}/555/messages").to_return(status: 400, body: { error: { code: 10, message: 'Fora' } }.to_json)
+      expect(pagina.private_reply('555_777', { text: 'Oi!' }).talvez_entregue).to be_falsey
+
+      stub_request(:post, "#{graph}/555/messages").to_return(status: 503, body: 'indisponível')
+      expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, talvez_entregue: true)
     end
 
     it 'id com cara de caminho não chega à Graph' do
@@ -69,7 +82,9 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
       resultado = rede.privado(care)
 
-      expect(registro).to have_received(:reivindicar!).with(an_object_having_attributes(comment_id: '555_777'), 'private_reply')
+      expect(registro).to have_received(:soltar_vencida!).with(an_object_having_attributes(comment_id: '555_777')).ordered
+      expect(registro).to have_received(:reivindicar!).with(an_object_having_attributes(comment_id: '555_777'), 'private_reply').ordered
+      expect(reivindicacao).to have_received(:confirm!)
       expect(pagina).to have_received(:private_reply).with('555_777', hash_including(attachment: hash_including(type: 'template')))
       expect(resultado).to have_attributes(ok: true, conversation: conversation)
     end
@@ -79,7 +94,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
       expect(rede.privado(care).ok).to be(false)
       expect(registro).to have_received(:soltar!).with(anything, 'private_reply')
+      expect(reivindicacao).not_to have_received(:confirm!)
       expect(Crm::MetaAds::ComentariosIa::Conversa).not_to have_received(:no_messenger!)
+    end
+
+    it 'privado que talvez saiu (rede, 5xx): a reivindicação fica, sem confirmar, até vencer' do
+      allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, erro: 'HTTP 503', talvez_entregue: true))
+
+      expect(rede.privado(care).ok).to be(false)
+      expect(registro).not_to have_received(:soltar!)
+      expect(reivindicacao).not_to have_received(:confirm!)
     end
 
     it 'privado já reivindicado: não chama a Meta' do

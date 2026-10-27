@@ -9,7 +9,7 @@
 # Todo adaptador responde `privado(care)` com um Envio (ok, conversation, erro) e `responder(texto)` e `esconder` com
 # true ou false. Nada levanta para o job: a recusa da Meta é um resultado.
 module Crm::MetaAds::ComentariosIa::Rede
-  Envio = Struct.new(:ok, :recipient_id, :message_id, :conversation, :erro, keyword_init: true)
+  Envio = Struct.new(:ok, :recipient_id, :message_id, :conversation, :erro, :talvez_entregue, keyword_init: true)
   # O privado já tinha saído (pela pessoa, na tela do #2196, ou por outro job): nada a fazer, nem falha a mostrar.
   JA_FEITO = 'private_reply_done'.freeze
 

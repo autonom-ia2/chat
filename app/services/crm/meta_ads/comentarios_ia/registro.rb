@@ -4,7 +4,9 @@
 # Duas ações são únicas por comentário (índice único parcial do #2196) e servem de reivindicação, gravadas ANTES:
 # - `ai_seen`, antes do Jev: o webhook que a Meta reenvia, ou outro job do mesmo comentário, sai sem gastar nada. Com
 #   ela, só um job cuida de cada comentário, e as outras ações saem uma vez só;
-# - `private_reply`, antes da Meta, como no #2196; se a Meta recusa, a linha sai (soltar!).
+# - `private_reply`, antes da Meta, como no #2196; se a Meta recusa, a linha sai (soltar!). Quando a Meta aceita, o
+#   adaptador confirma a linha (`confirm!`); sem confirmação, ela vence em Crm::MetaAdsCommentAction::UNCONFIRMED_TTL
+#   e pode ser refeita (soltar_vencida!).
 # As outras são registro do que já aconteceu, gravadas depois (gravar!).
 #
 # Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
@@ -17,7 +19,7 @@ module Crm::MetaAds::ComentariosIa::Registro
 
   # true só para quem gravou primeiro.
   def reservar!(comentario)
-    reivindicar!(comentario, LIDO)
+    reivindicar!(comentario, LIDO).present?
   end
 
   # Comentários que a IA leu hoje na conta, no fuso da plataforma.
@@ -30,18 +32,29 @@ module Crm::MetaAds::ComentariosIa::Registro
     acoes(account_id).where(action: 'reply').count
   end
 
-  # Só para as ações únicas (ai_seen, private_reply): true só para quem gravou primeiro.
+  # Só para as ações únicas (ai_seen, private_reply): a linha gravada só para quem gravou primeiro; senão, false.
   def reivindicar!(comentario, acao)
-    gravar!(comentario, acao)
+    registrar!(comentario, acao)
   rescue ActiveRecord::RecordNotUnique
     false
   end
 
   def gravar!(comentario, acao, conversation: nil)
+    registrar!(comentario, acao, conversation: conversation)
+    true
+  end
+
+  # A reivindicação do privado que ninguém confirmou e já venceu, de qualquer autor, como o #2196 faz no Instagram.
+  def soltar_vencida!(comentario)
+    Crm::MetaAdsCommentAction.where(account_id: comentario.account_id, network: comentario.network, comment_id: comentario.comment_id,
+                                    action: 'private_reply', confirmed_at: nil)
+                             .where(at: ...Crm::MetaAdsCommentAction::UNCONFIRMED_TTL.ago).delete_all
+  end
+
+  def registrar!(comentario, acao, conversation: nil)
     Crm::MetaAdsCommentAction.record!(account: Account.find(comentario.account_id), network: comentario.network,
                                       comment_id: comentario.comment_id, action: acao, actor: ACTOR, ad_id: comentario.ad_id,
                                       conversation: conversation)
-    true
   end
 
   # A conversa nasce depois da reivindicação: o id dela entra na linha.
