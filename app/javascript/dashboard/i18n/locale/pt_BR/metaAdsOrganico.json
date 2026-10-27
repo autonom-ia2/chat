@@ -15,7 +15,8 @@
       "PAGE": "Os posts da sua Página apareceram {count} vezes, sem contar anúncios.",
       "INSTAGRAM": "Os posts do seu Instagram apareceram {count} vezes, sem contar anúncios.",
       "ZERO": "Você não postou nos últimos {days} dias. Um post novo traz as pessoas de volta.",
-      "NONE": "Libere o acesso para ver quantas pessoas sua Página e seu Instagram alcançam."
+      "NONE": "Libere o acesso para ver quantas pessoas sua Página e seu Instagram alcançam.",
+      "UNAVAILABLE": "Não deu para ler os números agora. Tente de novo."
     },
     "BEST_POST": "Seu post com mais curtidas foi no {place}. Faça mais posts como este: “{text}”",
     "STEP": "{step}. {text}",
@@ -102,7 +103,7 @@
     "TOP_POSTS": {
       "TITLE": "Posts com mais curtidas e comentários",
       "EMPTY": "Nenhum post nos últimos {days} dias.",
-      "REACH": "{count} pessoas",
+      "REACH": "alcance {count}",
       "INTERACTIONS": "{count} curtidas e comentários"
     },
     "QUIET": {

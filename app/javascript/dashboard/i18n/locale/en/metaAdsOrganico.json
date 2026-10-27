@@ -15,7 +15,8 @@
       "PAGE": "Your Page posts showed up {count} times, not counting ads.",
       "INSTAGRAM": "Your Instagram posts showed up {count} times, not counting ads.",
       "ZERO": "You haven't posted in the last {days} days. A new post brings people back.",
-      "NONE": "Allow access to see how many people your Page and your Instagram reach."
+      "NONE": "Allow access to see how many people your Page and your Instagram reach.",
+      "UNAVAILABLE": "We couldn't read the numbers right now. Try again."
     },
     "BEST_POST": "Your most-liked post was on {place}. Make more posts like this one: “{text}”",
     "STEP": "{step}. {text}",
@@ -102,7 +103,7 @@
     "TOP_POSTS": {
       "TITLE": "Posts with the most likes and comments",
       "EMPTY": "No posts in the last {days} days.",
-      "REACH": "{count} people",
+      "REACH": "reach {count}",
       "INTERACTIONS": "{count} likes and comments"
     },
     "QUIET": {

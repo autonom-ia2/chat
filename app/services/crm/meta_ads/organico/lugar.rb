@@ -31,7 +31,7 @@ class Crm::MetaAds::Organico::Lugar
     return result.data if result.ok
     raise Recusa if result.token_invalid? || result.scope_error?
 
-    raise Crm::MetaAds::Organico::Indisponivel, result.error_message
+    raise Crm::MetaAds::Organico::Indisponivel.new(result.error_message, codigo: result.error_code || result.http_code)
   end
 
   # Número de um post só (alcance do post): objeto apagado ou sem leitura (100, 803) ou recusa só daquele post
@@ -54,7 +54,7 @@ class Crm::MetaAds::Organico::Lugar
   end
 
   def indisponivel!(motivo)
-    raise Crm::MetaAds::Organico::Indisponivel, motivo
+    raise Crm::MetaAds::Organico::Indisponivel.new(motivo, codigo: 'recorte')
   end
 
   def compara?

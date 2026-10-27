@@ -320,6 +320,16 @@ describe('Anúncios · Seus posts sem anúncio, textos reais (#2199)', () => {
     expect(reach.find('[data-organic-change]').exists()).toBe(false);
   });
 
+  it('Meta down with nothing else to show: the headline says so, not "allow access"', async () => {
+    answer({ status: 'unavailable' }, { status: 'not_connected' });
+
+    const wrapper = await mountScreen();
+
+    expect(wrapper.find('[data-organic-headline]').text()).toBe(
+      'Não deu para ler os números agora. Tente de novo.'
+    );
+  });
+
   it('previous period without views, explains the missing comparison', async () => {
     answer(
       { status: 'not_connected' },

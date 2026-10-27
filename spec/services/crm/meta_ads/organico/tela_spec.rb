@@ -197,6 +197,19 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(page).to eq(status: 'needs_permission', name: 'Studio Acme', inbox_id: inbox.id)
     end
 
+    it 'o log do lugar indisponível leva o lugar, o status e o código, nunca a mensagem da Meta' do
+      stub_request(:get, "#{fb}/1001").with(query: hash_including({}))
+                                      .to_return(json({ error: { code: 2, message: 'texto da Meta' } }, status: 500))
+      avisos = []
+      allow(Rails.logger).to receive(:warn) { |aviso| avisos << aviso }
+
+      tela(days: 7).perform
+
+      da_tela = avisos.select { |aviso| aviso.start_with?('[MetaAdsOrganico]') }
+      expect(da_tela).to contain_exactly(a_string_including('Pagina', 'unavailable', 'code=2'))
+      expect(da_tela.join).not_to include('texto da Meta')
+    end
+
     it 'Meta fora só na Página: o cartão dela fica indisponível, o resto da tela segue' do
       stub_request(:get, "#{fb}/1001").with(query: hash_including({})).to_return(erro(2, status: 500))
 
@@ -409,6 +422,20 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       stub_vistas([vazio, por_tipo('total_interactions', { 'POST' => 90 })])
 
       expect_indisponivel
+    end
+
+    # Formato real (conta real, janela parada, 27/10): HTTP 200, value 0 no topo e o recorte só com dimension_keys.
+    it 'janela parada no formato real: zero, sem indisponível' do
+      stub_instagram
+      parado = lambda do |name, chaves|
+        { 'name' => name, 'period' => 'day', 'total_value' => { 'value' => 0, 'breakdowns' => [{ 'dimension_keys' => chaves }] } }
+      end
+      stub_vistas([parado.call('views', ['media_product_type']), parado.call('total_interactions', ['media_product_type'])])
+      stub_request(:get, "#{ig}/me/insights")
+        .with(query: hash_including(janela(30).merge(metric: 'reach', breakdown: 'media_product_type,follow_type')))
+        .to_return(json(data: [parado.call('reach', %w[media_product_type follow_type])]))
+
+      expect(tela(days: 30).perform[:instagram]).to include(status: 'ok', reach: 0, views: 0, interactions: 0, reach_non_followers: 0)
     end
 
     it 'zero de verdade vindo só nos lados, sem o total: zero, sem indisponível' do

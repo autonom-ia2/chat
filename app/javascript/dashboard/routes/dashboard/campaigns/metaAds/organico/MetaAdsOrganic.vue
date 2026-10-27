@@ -91,8 +91,15 @@ const format = value =>
 // lado, nunca somadas. Não é "quem viu": no Instagram a Meta não deduplica quem viu entre tipos de post, e na Página o
 // "quem viu" pode incluir o pago.
 const organicViews = place => (isReady(place) ? place.views : 0);
+// Nenhum lugar com números e algum com a Meta fora: "Libere o acesso" seria falso.
+const anyUnavailable = computed(() =>
+  [page.value, instagram.value].some(place => place?.status === 'unavailable')
+);
 const headline = computed(() => {
-  if (!anyReady.value) return t('META_ADS_ORGANIC.HEADLINE.NONE');
+  if (!anyReady.value)
+    return anyUnavailable.value
+      ? t('META_ADS_ORGANIC.HEADLINE.UNAVAILABLE')
+      : t('META_ADS_ORGANIC.HEADLINE.NONE');
   const pageViews = organicViews(page.value);
   const instagramViews = organicViews(instagram.value);
   if (!pageViews && !instagramViews)

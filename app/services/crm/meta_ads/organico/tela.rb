@@ -65,7 +65,8 @@ class Crm::MetaAds::Organico::Tela
   def ler_meta_do_lugar(channel, klass)
     ler_meta(channel, klass)
   rescue Crm::MetaAds::Organico::Indisponivel => e
-    Rails.logger.warn("[MetaAdsOrganico] #{klass.name.demodulize} indisponível na conta #{@account.id}: #{e.message}")
+    # Só o lugar, o status e o código: a mensagem da Meta não vai para o log.
+    Rails.logger.warn("[MetaAdsOrganico] conta=#{@account.id} lugar=#{klass.name.demodulize} status=unavailable code=#{e.codigo}")
     { status: 'unavailable' }
   end
 
