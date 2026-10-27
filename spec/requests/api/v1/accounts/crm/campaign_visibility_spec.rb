@@ -23,6 +23,9 @@ RSpec.describe 'CRM conversation-derived campaign visibility', type: :request do
   end
 
   before do
+    # Este spec trata da visibilidade por conversa. Quem vê o anúncio de origem (#2271, meta_ads_view) está em
+    # spec/enterprise/requests/crm/anuncio_de_origem_permission_spec.rb; aqui todos o veem.
+    allow(Crm::AnuncioDeOrigem).to receive(:ve?).and_return(true)
     primary.update!(additional_attributes: { campaign_source_ids: ['visible-ad'], campaign_touches: [
                       { source: 'meta_ctwa', source_id: 'visible-ad', headline: 'Permitted campaign', touched_at: '2026-09-20T12:00:00Z' }
                     ] })

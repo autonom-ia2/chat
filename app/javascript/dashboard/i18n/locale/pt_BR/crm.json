@@ -5492,6 +5492,7 @@
       "TEXTO": "O caminho até aqui e a que este cliente está ligado.",
       "CAMINHO": "Caminho até aqui",
       "SEM_ORIGEM": "Não sabemos de onde veio. Ele pode ter chegado direto pela conversa.",
+      "ANUNCIO_OCULTO": "O nome e a imagem do anúncio aparecem só para quem pode ver os anúncios.",
       "PREENCHEU": "O que preencheu na página",
       "AVISO": "Aviso ao Facebook e ao Instagram",
       "AVISO_TEXTO": "Quando o negócio anda, avisamos os anúncios para trazerem clientes parecidos.",
