@@ -141,6 +141,16 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(page).to eq(status: 'needs_permission', name: 'Studio Acme', inbox_id: inbox.id)
     end
 
+    it 'quem não vê a caixa nem pode reautorizá-la não recebe o nome nem o id da caixa' do
+      stub_request(:get, "#{fb}/1001").with(query: hash_including({})).to_return(json(name: 'Studio Acme', followers_count: 1))
+      stub_request(:get, "#{fb}/1001/insights").with(query: hash_including({})).to_return(erro(10, status: 403))
+      agente = create(:user, account: account, role: :agent)
+
+      page = tela(days: 7, user: agente).perform[:page]
+
+      expect(page).to eq(status: 'needs_permission', inbox_id: nil)
+    end
+
     it 'quem não vê a caixa recebe a contagem nula e não recebe o id da caixa' do
       stub_pagina
       create(:conversation, account: account, inbox: inbox)

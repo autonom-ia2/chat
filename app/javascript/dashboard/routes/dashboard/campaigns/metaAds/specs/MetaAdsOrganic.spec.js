@@ -191,4 +191,19 @@ describe('Anúncios · Seus posts (#2199)', () => {
     expect(wrapper.find('[data-organic-connect="page"]').exists()).toBe(false);
     expect(wrapper.text()).toContain('META_ADS_ORGANIC.ASK_ADMIN');
   });
+
+  // A volta do login do Instagram exige também inbox_manage (OauthBinding), mesmo para reautorizar.
+  it('Instagram reauthorization asks for inbox_manage too', async () => {
+    granted.value = ['integration_manage'];
+    answer(ready({ name: 'Studio Acme' }), {
+      status: 'needs_permission',
+      inbox_id: 9,
+    });
+
+    const wrapper = await mountScreen();
+
+    expect(wrapper.find('[data-organic-connect="instagram"]').exists()).toBe(
+      false
+    );
+  });
 });

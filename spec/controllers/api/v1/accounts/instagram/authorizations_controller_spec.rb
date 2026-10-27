@@ -97,6 +97,16 @@ RSpec.describe 'Instagram Authorization API', type: :request do
           expect(payload).to include('inbox_id' => channel.inbox.id, 'return_to' => 'meta_ads', 'purpose' => 'meta_ads_organico')
         end
 
+        it 'agente sem integration_manage, recusa' do
+          account.enable_features!('meta_ads_organico')
+
+          post "/api/v1/accounts/#{account.id}/instagram/authorization", params: params,
+                                                                         headers: agent.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:unauthorized)
+          expect(response.parsed_body).not_to have_key('url')
+        end
+
         it 'com a flag desligada, recusa' do
           post "/api/v1/accounts/#{account.id}/instagram/authorization", params: params,
                                                                          headers: administrator.create_new_auth_token, as: :json

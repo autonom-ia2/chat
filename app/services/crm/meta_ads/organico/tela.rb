@@ -32,10 +32,15 @@ class Crm::MetaAds::Organico::Tela
 
     inbox = channel.inbox
     dados = ler_meta(channel, klass)
-    # "Libere…" reautoriza esta caixa.
-    return dados.merge(inbox_id: inbox_id_para_quem_age(inbox)) unless dados[:status] == 'ok'
+    return bloqueado(dados, inbox) unless dados[:status] == 'ok'
 
     dados.merge(messages: { count: conversas_visiveis(inbox), inbox_id: inbox_id_para_quem_age(inbox) })
+  end
+
+  # "Libere…" reautoriza esta caixa. Na Página, o nome que vai junto é o da caixa: só para quem recebe o id dela.
+  def bloqueado(dados, inbox)
+    inbox_id = inbox_id_para_quem_age(inbox)
+    (inbox_id ? dados : dados.except(:name)).merge(inbox_id: inbox_id)
   end
 
   def conversas_visiveis(inbox)

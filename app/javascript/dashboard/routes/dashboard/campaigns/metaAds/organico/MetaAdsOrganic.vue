@@ -176,13 +176,16 @@ const bothQuiet = computed(
 // pedindo o escopo de Seus posts (integration_manage, a régua do servidor para trocar a credencial da caixa):
 // Página → Entrar com Facebook com read_insights, e a tela relê; Instagram → login do Instagram com
 // instagram_business_manage_insights, que volta para esta aba (purpose meta_ads_organico, contrato com o #2196).
+// A volta do login do Instagram também exige inbox_manage (OauthBinding), mesmo para reautorizar.
 const PAGE_EXTRA_SCOPES = ['read_insights'];
 const canReauthorize = usePermissionGranted('integration_manage');
 const canCreateInbox = usePermissionGranted('inbox_manage');
-const canConnect = place =>
-  place?.status === 'needs_permission'
-    ? canReauthorize.value
-    : canCreateInbox.value;
+const canConnect = place => {
+  if (place?.status !== 'needs_permission') return canCreateInbox.value;
+  if (place === instagram.value)
+    return canReauthorize.value && canCreateInbox.value;
+  return canReauthorize.value;
+};
 
 const { preloadSdk, login } = useFacebookPageConnect();
 watch(
