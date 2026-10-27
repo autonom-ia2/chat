@@ -180,6 +180,24 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
     expect(counts(agent).values.sum).to eq(1)
   end
 
+  describe 'lembrete de outra conta' do
+    it 'não põe o card em retorno nem manda o id, com e sem funil' do
+      own = card('Card desta conta', inbox: inbox, owner: agent, conversation: conversation(inbox: inbox, assignee: agent))
+      stranger = account.crm_follow_ups.create!(card: own, created_by: agent, title: 'De outra conta', due_at: 1.day.ago,
+                                                timezone: 'America/Sao_Paulo', status: :overdue)
+      stranger.update_columns(account_id: create(:account).id) # rubocop:disable Rails/SkipsModelValidations
+
+      [{}, { pipeline_id: own.pipeline_id }].each do |params|
+        row = list(agent, params)['payload'].find { |item| item['id'] == own.id }
+
+        expect(row).to include('action_group' => 'demais', 'next_follow_up_id' => nil)
+        expect(counts(agent, params)['retorno']).to eq(0)
+      end
+      get "#{api}/cards/#{own.id}", headers: auth_headers(agent)
+      expect(response.parsed_body.dig('payload', 'next_follow_up_id')).to be_nil
+    end
+  end
+
   describe 'retorno de conversa oculta' do
     let(:hidden_conversation) { conversation(inbox: hidden_inbox, assignee: admin) }
     let!(:shown_card) { card('Card visível, conversa oculta', inbox: inbox, owner: agent, conversation: hidden_conversation) }
@@ -209,15 +227,16 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
 
   describe 'consultas por página' do
     # A leitura da conta por card no selo de SLA do Quadro (Crm::Kanban::CardPayloadBuilder#applied_sla_payload) é anterior a
-    # este PR e tem Issue própria: fica fora da conta para não esconder o resto.
+    # este PR e tem Issue própria (#2295): fica fora da conta só no Quadro.
     def account_by_id?(sql)
       sql == 'SELECT "accounts".* FROM "accounts" WHERE "accounts"."id" = $1 LIMIT $2'
     end
 
-    def sql_count(&)
+    def sql_count(skip_account_by_id: false, &)
       count = 0
       counter = lambda { |*, payload|
-        next if payload[:name] == 'SCHEMA' || payload[:sql].start_with?('BEGIN', 'COMMIT') || account_by_id?(payload[:sql])
+        next if payload[:name] == 'SCHEMA' || payload[:sql].start_with?('BEGIN', 'COMMIT')
+        next if skip_account_by_id && account_by_id?(payload[:sql])
 
         count += 1
       }
@@ -249,7 +268,8 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
     def measure(user)
       surfaces(user).transform_values do |(path, params)|
         get path, params: params, headers: auth_headers(user) # aquece (cache de conta, permissões)
-        sql_count { get path, params: params, headers: auth_headers(user) }
+        # Só no Quadro: a conta por card do selo de SLA é anterior a este PR e tem Issue própria (#2295).
+        sql_count(skip_account_by_id: path.end_with?('/kanban')) { get path, params: params, headers: auth_headers(user) }
       end
     end
 

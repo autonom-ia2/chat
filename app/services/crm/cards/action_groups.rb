@@ -22,7 +22,8 @@ module Crm::Cards::ActionGroups
   VISIBLE = 'acao_visivel'.freeze
   # Caixas com robô ativo, num LEFT JOIN: um EXISTS no CASE se repetia como SubPlan no SELECT, no ORDER e no WHERE.
   ACTIVE_BOT = 'acao_robo'.freeze
-  ACTIVE_BOT_JOIN = 'LEFT JOIN (SELECT DISTINCT agent_bot_inboxes.inbox_id FROM agent_bot_inboxes WHERE agent_bot_inboxes.status = 0) ' \
+  ACTIVE_BOT_JOIN = 'LEFT JOIN (SELECT DISTINCT agent_bot_inboxes.inbox_id FROM agent_bot_inboxes ' \
+                    "WHERE agent_bot_inboxes.status = #{AgentBotInbox.statuses[:active]}) " \
                     "#{ACTIVE_BOT} ON #{ACTIVE_BOT}.inbox_id = COALESCE(#{CONVERSATION}.inbox_id, crm_cards.inbox_id)".freeze
 
   def self.sort?(params)
@@ -127,14 +128,16 @@ module Crm::Cards::ActionGroups
   def action_follow_up_join
     all = @conversation_visibility.all_conversations?
     retornos = Crm::FollowUp.unscoped.retorno_visivel(all ? nil : visible_conversation_ids_sql, all: all)
-                            .where(card_id: retorno_cards.select(:id))
-                            .group(:card_id).select('crm_follow_ups.card_id, MIN(crm_follow_ups.due_at) AS em')
+                            .where(account_id: @account.id)
+    retornos = restrict_to_funnel(retornos).group(:card_id).select('crm_follow_ups.card_id, MIN(crm_follow_ups.due_at) AS em')
     "LEFT JOIN (#{retornos.to_sql}) acao_retorno ON acao_retorno.card_id = crm_cards.id"
   end
 
-  def retorno_cards
-    cards = Crm::Card.unscoped.where(account_id: @account.id)
-    @params[:pipeline_id].present? ? cards.where(pipeline_id: @params[:pipeline_id]) : cards
+  # Lembrete da conta (account_id) e, com `pipeline_id`, só dos cards do funil; sem funil, todos os da conta que têm card.
+  def restrict_to_funnel(retornos)
+    return retornos.where.not(card_id: nil) if @params[:pipeline_id].blank?
+
+    retornos.where(card_id: Crm::Card.unscoped.where(account_id: @account.id, pipeline_id: @params[:pipeline_id]).select(:id))
   end
 
   def nobody_cares_sql

@@ -125,6 +125,7 @@ class Crm::FollowUp < ApplicationRecord
     all = conversation_visibility.all_conversations?
     visible_sql = conversation_visibility.scope(Conversation.all).select(:id).to_sql unless all
     retorno_visivel(visible_sql, all: all)
+      .joins(:card).where('crm_follow_ups.account_id = crm_cards.account_id') # lembrete de outra conta não conta
       .where(card_id: card_ids)
       .select('DISTINCT ON (crm_follow_ups.card_id) crm_follow_ups.card_id, crm_follow_ups.id')
       .reorder(Arel.sql('crm_follow_ups.card_id, crm_follow_ups.due_at, crm_follow_ups.id'))
