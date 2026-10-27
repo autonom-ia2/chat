@@ -2141,7 +2141,11 @@
           "AGENTE": "the AI agent",
           "POUCOS_CASOS": "Few cases: compare with care",
           "HISTORICO_COMPLETO": "Full history",
-          "EXEMPLOS": "Examples ({n})"
+          "EXEMPLOS": "Examples ({n})",
+          "SEPARADOR": "·",
+          "SEM_VALOR": "—",
+          "MARCA_PARCIAL": "*",
+          "ROTULO_E_VALOR": "{rotulo}: {valor}"
         },
         "DELTA": {
           "DIAS_ANTES": "in the {dias} days before",

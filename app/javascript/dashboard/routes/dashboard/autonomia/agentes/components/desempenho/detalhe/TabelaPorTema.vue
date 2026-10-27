@@ -131,7 +131,7 @@ const maiorTaxa = computed(() =>
           <span aria-hidden="true">{{ setaDoDelta(valor) }}</span>
           {{ textoDoDelta(valor) }}
         </span>
-        <span v-else>—</span>
+        <span v-else>{{ t('AGENTS.DESEMPENHO2.A.COMUM.SEM_VALOR') }}</span>
       </template>
     </TabelaDoPainel>
   </CartaoDoPainel>

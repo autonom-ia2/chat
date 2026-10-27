@@ -132,7 +132,9 @@ const colunas = computed(() => [
             porSemana
               ? t(`${B}.SEMANA_DE`, { data: data(linha.inicio) })
               : data(linha.inicio)
-          }}<span v-if="linha.parcial" class="text-n-amber-11">*</span>
+          }}<span v-if="linha.parcial" class="text-n-amber-11">{{
+            t('AGENTS.DESEMPENHO2.A.COMUM.MARCA_PARCIAL')
+          }}</span>
         </span>
       </template>
       <template #celula-fecharam="{ valor }">

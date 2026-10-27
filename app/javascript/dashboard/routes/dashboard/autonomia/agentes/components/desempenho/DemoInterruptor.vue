@@ -63,6 +63,7 @@ const situacaoEscolhida = computed({
 });
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <section
     v-if="visivel"

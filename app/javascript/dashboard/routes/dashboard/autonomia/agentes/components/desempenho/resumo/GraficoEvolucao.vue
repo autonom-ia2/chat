@@ -233,7 +233,10 @@ const somaDe = valores => valores.reduce((acc, valor) => acc + (valor || 0), 0);
               :class="alinhamentoDaCaixa(i)"
             >
               <span class="font-semibold">
-                {{ rotuloDoPonto(ponto) }}{{ ponto.parcial ? ' *' : '' }}
+                {{ rotuloDoPonto(ponto) }}
+                <template v-if="ponto.parcial">{{
+                  fmt.t('AGENTS.DESEMPENHO2.A.COMUM.MARCA_PARCIAL')
+                }}</template>
               </span>
               <span
                 v-for="serie in [...series, ...faixas]"
@@ -264,7 +267,10 @@ const somaDe = valores => valores.reduce((acc, valor) => acc + (valor || 0), 0);
           class="flex justify-center flex-1 min-w-0 text-[0.6875rem] tabular-nums text-n-slate-11 whitespace-nowrap"
         >
           <template v-if="datasNoEixo.has(i)">
-            {{ fmt.data(ponto.inicio) }}{{ ponto.parcial ? '*' : '' }}
+            {{ fmt.data(ponto.inicio)
+            }}<template v-if="ponto.parcial">{{
+              fmt.t('AGENTS.DESEMPENHO2.A.COMUM.MARCA_PARCIAL')
+            }}</template>
           </template>
         </span>
       </div>

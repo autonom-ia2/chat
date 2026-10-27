@@ -400,7 +400,9 @@ const aoMigalha = item => router.push(item.destino);
             />
             {{ t('AGENTS.DESEMPENHO.DE_FORA') }}
             <template v-if="meta.instrucao">
-              <span aria-hidden="true">·</span>
+              <span aria-hidden="true">{{
+                t('AGENTS.DESEMPENHO2.A.COMUM.SEPARADOR')
+              }}</span>
               <span data-instrucao-colada>
                 {{
                   t('AGENTS.DESEMPENHO.INSTRUCAO.COLADA', {

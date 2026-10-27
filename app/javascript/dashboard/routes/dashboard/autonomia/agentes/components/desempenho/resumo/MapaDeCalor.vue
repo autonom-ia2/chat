@@ -148,7 +148,9 @@ const rotuloDaCelula = (dia, hora, valor) =>
         aria-hidden="true"
       />
       {{ fmt.t(`${NS}.MAIS`) }}
-      <span aria-hidden="true">·</span>
+      <span aria-hidden="true">{{
+        fmt.t('AGENTS.DESEMPENHO2.A.COMUM.SEPARADOR')
+      }}</span>
       <span class="tabular-nums">
         {{ fmt.t(`${NS}.MAXIMO`, { n: fmt.n(maximo) }) }}
       </span>

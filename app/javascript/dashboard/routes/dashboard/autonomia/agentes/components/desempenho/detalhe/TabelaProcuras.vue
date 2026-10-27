@@ -179,7 +179,7 @@ const alternarResumo = chave => {
         t(`${B}.CONTADOR`, { n: n(contagem.total) })
       }}</span>
       <span class="text-n-slate-11">
-        ·
+        {{ t('AGENTS.DESEMPENHO2.A.COMUM.SEPARADOR') }}
         {{
           t(`${B}.CONTADOR_FECHARAM`, {
             fechou: nomeDoFechou,
@@ -213,7 +213,9 @@ const alternarResumo = chave => {
       >
         <span class="flex items-center justify-between gap-3">
           <span class="text-xs tabular-nums text-n-slate-11">
-            {{ data(diaDe(linha.inicio)) }} · {{ hora(linha.inicio) }}
+            {{ data(diaDe(linha.inicio)) }}
+            {{ t('AGENTS.DESEMPENHO2.A.COMUM.SEPARADOR') }}
+            {{ hora(linha.inicio) }}
           </span>
           <a
             v-if="linha.visivel"
@@ -250,7 +252,12 @@ const alternarResumo = chave => {
               corDaQualidade(linha.qualidade).texto,
             ]"
           >
-            {{ nomeDaIa }}: {{ textoDaQualidade(linha.qualidade) }}
+            {{
+              t('AGENTS.DESEMPENHO2.A.COMUM.ROTULO_E_VALOR', {
+                rotulo: nomeDaIa,
+                valor: textoDaQualidade(linha.qualidade),
+              })
+            }}
           </span>
         </span>
         <span class="text-xs text-n-slate-11 line-clamp-2">{{
@@ -294,22 +301,19 @@ const alternarResumo = chave => {
         <span
           v-if="linha.teste"
           class="block text-xs text-n-amber-11 whitespace-nowrap"
-          >{{ t(`${B}.TESTE`) }}</span
         >
+          {{ t(`${B}.TESTE`) }}
+        </span>
       </template>
       <template #celula-tema="{ linha }">
-        <span
-          class="block max-w-[12rem] truncate"
-          :title="semNome(linha.tema)"
-          >{{ semNome(linha.tema) }}</span
-        >
+        <span class="block max-w-[12rem] truncate" :title="semNome(linha.tema)">
+          {{ semNome(linha.tema) }}
+        </span>
       </template>
       <template #celula-pedido="{ linha }">
-        <span
-          class="block max-w-[10rem] truncate"
-          :title="linha.pedido || ''"
-          >{{ linha.pedido || '—' }}</span
-        >
+        <span class="block max-w-[10rem] truncate" :title="linha.pedido || ''">
+          {{ linha.pedido || t('AGENTS.DESEMPENHO2.A.COMUM.SEM_VALOR') }}
+        </span>
       </template>
       <template #celula-marco="{ linha }">
         <span class="block max-w-[10rem] truncate" :title="linha.marco || ''">{{
@@ -338,14 +342,15 @@ const alternarResumo = chave => {
         >
           {{ textoDaQualidade(linha.qualidade) }}
         </span>
-        <span v-else>—</span>
+        <span v-else>{{ t('AGENTS.DESEMPENHO2.A.COMUM.SEM_VALOR') }}</span>
       </template>
       <template #celula-origem="{ linha }">
         <span
           class="block max-w-[9rem] truncate"
           :title="semNome(linha.origem)"
-          >{{ semNome(linha.origem) }}</span
         >
+          {{ semNome(linha.origem) }}
+        </span>
       </template>
       <template #celula-resumo="{ linha }">
         <span class="flex flex-col items-start gap-1 min-w-[16rem]">

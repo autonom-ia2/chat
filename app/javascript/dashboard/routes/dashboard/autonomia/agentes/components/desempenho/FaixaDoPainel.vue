@@ -103,7 +103,9 @@ const aoNavegar = (evento, item) => {
             >
               <span>{{ periodo }}</span>
               <template v-if="dadosAte">
-                <span aria-hidden="true">·</span>
+                <span aria-hidden="true">{{
+                  fmt.t('AGENTS.DESEMPENHO2.A.COMUM.SEPARADOR')
+                }}</span>
                 <span data-dados-ate>
                   {{
                     fmt.t(`${NS}.DADOS_ATE`, { quando: fmt.dataHora(dadosAte) })

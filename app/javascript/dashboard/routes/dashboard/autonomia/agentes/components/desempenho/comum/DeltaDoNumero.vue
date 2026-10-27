@@ -50,6 +50,7 @@ const seta = computed(() => {
 });
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <p
     v-if="mudanca"

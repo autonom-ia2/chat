@@ -2141,7 +2141,11 @@
           "AGENTE": "o agente de IA",
           "POUCOS_CASOS": "Poucos casos: compare com cuidado",
           "HISTORICO_COMPLETO": "Histórico completo",
-          "EXEMPLOS": "Exemplos ({n})"
+          "EXEMPLOS": "Exemplos ({n})",
+          "SEPARADOR": "·",
+          "SEM_VALOR": "—",
+          "MARCA_PARCIAL": "*",
+          "ROTULO_E_VALOR": "{rotulo}: {valor}"
         },
         "DELTA": {
           "DIAS_ANTES": "nos {dias} dias antes",
