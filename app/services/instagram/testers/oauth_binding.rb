@@ -95,7 +95,19 @@ class Instagram::Testers::OauthBinding
 
     payload['inbox_id'].is_a?(Integer) && payload['inbox_id'].positive? &&
       Instagram::Testers::Validation.id?(payload['instagram_id']) &&
-      payload['return_to'] == 'inbox' && !payload.key?('tester_selection')
+      valid_return?(payload) && !payload.key?('tester_selection')
+  end
+
+  # Volta da reautorização: à caixa, ou a Anúncios por um purpose conhecido (#2196), com `ad_id` só de dígitos.
+  def self.valid_return?(payload)
+    return payload['return_to'] == 'inbox' && !payload.key?('purpose') unless payload['return_to'] == 'meta_ads'
+
+    Instagram::IntegrationHelper::REAUTH_PURPOSES.key?(payload['purpose']) && (!payload.key?('ad_id') || ad_id?(payload['ad_id']))
+  end
+
+  # Id de anúncio: 1 a 32 dígitos (ele entra no caminho de volta).
+  def self.ad_id?(value)
+    value.is_a?(String) && value.length.between?(1, 32) && value.each_char.all? { |char| char.between?('0', '9') }
   end
 
   def self.valid_timing?(payload)
@@ -103,5 +115,6 @@ class Instagram::Testers::OauthBinding
       payload['iat'] <= Time.current.to_i && (payload['exp'] - payload['iat']).between?(1, TTL.to_i)
   end
 
-  private_class_method :authorize_connection!, :valid_context?, :validate_selection!, :valid_reauthorization?, :valid_timing?
+  private_class_method :authorize_connection!, :valid_context?, :validate_selection!, :valid_reauthorization?, :valid_return?,
+                       :valid_timing?
 end

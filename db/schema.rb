@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_520000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2659,6 +2659,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_520000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "ad_account_id", "ad_id", "date", "publisher_platform", "platform_position"], name: "idx_crm_meta_ad_placements_daily_unique", unique: true
+  end
+
+  create_table "crm_meta_ads_comment_actions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "network", null: false
+    t.string "comment_id", null: false
+    t.string "action", null: false
+    t.bigint "conversation_id"
+    t.string "actor", null: false
+    t.bigint "user_id"
+    t.datetime "at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "network", "comment_id"], name: "idx_crm_meta_ads_comment_actions_lookup"
+    t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_unique", unique: true
   end
 
   create_table "crm_meta_ads_connections", force: :cascade do |t|

@@ -1366,6 +1366,13 @@
       "mode"
     ]
   },
+  "crm/meta_ads_connection/ads/:ad_id/instagram_comments": {
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#index",
+    "parametros": [
+      "after",
+      "comment_id"
+    ]
+  },
   "crm/meta_ads_connection/ads/:ad_id/management": {
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#show",
     "parametros": []

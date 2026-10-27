@@ -402,6 +402,12 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
               post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
               get :pages, to: 'meta_ads_ad_management#pages'
+              # Comentários do anúncio no Instagram (#2196): ler, responder, ocultar, apagar e responder no privado.
+              get 'ads/:ad_id/instagram_comments', to: 'meta_ads_instagram_comments#index'
+              post 'ads/:ad_id/instagram_comments/:comment_id/reply', to: 'meta_ads_instagram_comments#reply'
+              post 'ads/:ad_id/instagram_comments/:comment_id/hide', to: 'meta_ads_instagram_comments#hide'
+              post 'ads/:ad_id/instagram_comments/:comment_id/private_reply', to: 'meta_ads_instagram_comments#private_reply'
+              delete 'ads/:ad_id/instagram_comments/:comment_id', to: 'meta_ads_instagram_comments#destroy'
               # F5 (#1110): abrir, aceitar e dispensar cada ação do consultor.
               post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
               post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'

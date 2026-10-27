@@ -1,6 +1,15 @@
 module Instagram::IntegrationHelper
   REQUIRED_SCOPES = %w[instagram_business_basic instagram_business_manage_messages].freeze
 
+  # Permissões a mais pedidas só na reautorização de uma caixa que já existe, a partir de um cartão da tela, enquanto
+  # a Meta não aprova a permissão para todo login (#2196). O escopo sai daqui, nunca do front: o pedido diz só o
+  # `purpose`. Cada um tem a flag que o libera e a aba de Anúncios para onde a pessoa volta (com `anuncio=<ad_id>`
+  # quando vier). Somar um purpose aqui não muda o login de quem conecta pela tela das caixas.
+  REAUTH_PURPOSES = {
+    'meta_ads_comments' => { flag: 'meta_ads_comentarios_instagram', scopes: %w[instagram_business_manage_comments],
+                             return_query: { 'aba' => 'resultado' } }
+  }.freeze
+
   # Generates a signed JWT token for Instagram integration
   #
   # @param account_id [Integer] The account ID to encode in the token
@@ -11,6 +20,18 @@ module Instagram::IntegrationHelper
     return if client_secret.blank?
 
     payload = token_payload(account_id, return_to, actor_id: actor_id, tester_selection: tester_selection, inbox: inbox)
+    JWT.encode(payload, client_secret, 'HS256')
+  rescue StandardError
+    Rails.logger.error('Instagram token generation failed')
+    nil
+  end
+
+  # Reautorização da caixa a partir de um cartão de Anúncios (#2196): o state leva o purpose (REAUTH_PURPOSES) e, quando
+  # houver, o anúncio para onde a pessoa volta.
+  def generate_meta_ads_reauth_token(account_id, actor_id:, inbox:, purpose:, ad_id: nil)
+    return if client_secret.blank?
+
+    payload = token_payload(account_id, 'meta_ads', actor_id: actor_id, inbox: inbox).merge(purpose: purpose, ad_id: ad_id).compact
     JWT.encode(payload, client_secret, 'HS256')
   rescue StandardError
     Rails.logger.error('Instagram token generation failed')
@@ -30,11 +51,11 @@ module Instagram::IntegrationHelper
     payload
   end
 
-  def instagram_authorization_url(oauth_state)
+  def instagram_authorization_url(oauth_state, extra_scopes: [])
     instagram_client.auth_code.authorize_url(
       {
         redirect_uri: "#{base_url}/instagram/callback",
-        scope: REQUIRED_SCOPES.join(','),
+        scope: (REQUIRED_SCOPES + extra_scopes).uniq.join(','),
         enable_fb_login: '0',
         force_reauth: 'true',
         response_type: 'code',
