@@ -1,7 +1,7 @@
 <script setup>
 // Anúncios da Meta: as abas da página (Resultado, Seus posts #2199, Conexão…), a mesma linha para quem gerencia e
-// para quem só vê (#2199: quem tem meta_ads_view vê Resultado e Seus posts, sem Conexão). A lista e os rótulos vêm
-// da página.
+// para quem só vê (#2199: quem tem meta_ads_view vê Resultado e Seus posts, sem Conexão). A lista e os rótulos, já
+// traduzidos, vêm da página.
 defineProps({
   views: { type: Array, required: true },
   active: { type: String, required: true },
@@ -31,7 +31,7 @@ const emit = defineEmits(['choose']);
       "
       @click="emit('choose', name)"
     >
-      {{ $t(labels[name]) }}
+      {{ labels[name] }}
     </button>
   </div>
 </template>

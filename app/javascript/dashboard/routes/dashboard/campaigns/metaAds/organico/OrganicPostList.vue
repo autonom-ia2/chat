@@ -11,7 +11,6 @@ defineProps({
 });
 
 const { locale } = useI18n();
-const KEY = 'META_ADS_ORGANIC.TOP_POSTS';
 
 const format = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
@@ -27,14 +26,14 @@ const failed = ref([]);
 <template>
   <section class="flex flex-col gap-2" data-organic-top-posts>
     <h4 class="m-0 text-sm font-semibold text-n-slate-12">
-      {{ $t(`${KEY}.TITLE`) }}
+      {{ $t('META_ADS_ORGANIC.TOP_POSTS.TITLE') }}
     </h4>
     <p
       v-if="!posts.length"
       data-organic-no-posts
       class="m-0 text-sm text-n-slate-11"
     >
-      {{ $t(`${KEY}.EMPTY`, { days }) }}
+      {{ $t('META_ADS_ORGANIC.TOP_POSTS.EMPTY', { days }) }}
     </p>
     <ol v-else class="m-0 flex list-none flex-col gap-1 p-0">
       <li v-for="post in posts" :key="post.id">
@@ -72,18 +71,21 @@ const failed = ref([]);
               class="flex flex-col text-sm text-n-slate-11 min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:gap-x-1.5"
             >
               <span v-if="post.reach != null" class="whitespace-nowrap">
-                {{ $t(`${KEY}.REACH`, { count: format(post.reach) }) }}
+                {{
+                  $t('META_ADS_ORGANIC.TOP_POSTS.REACH', {
+                    count: format(post.reach),
+                  })
+                }}
               </span>
+              <!-- O ponto entre os números é enfeite (CSS), não texto. -->
               <span
                 v-if="post.reach != null"
                 aria-hidden="true"
-                class="hidden min-[420px]:inline"
-              >
-                ·
-              </span>
+                class="hidden before:content-['·'] min-[420px]:inline"
+              />
               <span class="whitespace-nowrap">
                 {{
-                  $t(`${KEY}.INTERACTIONS`, {
+                  $t('META_ADS_ORGANIC.TOP_POSTS.INTERACTIONS', {
                     count: format(post.interactions),
                   })
                 }}

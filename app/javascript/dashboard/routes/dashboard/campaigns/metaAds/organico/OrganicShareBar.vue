@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 // Seus posts (#2199): a frase que responde "vale pagar?" (Página: vezes que apareceu sem pagar × por anúncio) ou
 // "estou chegando a gente nova?" (Instagram: quem viu e ainda não segue × quem já segue), com a barra das duas partes.
@@ -14,6 +15,22 @@ const props = defineProps({
   secondTone: { type: String, default: 'blue' },
 });
 
+const { t } = useI18n();
+
+// Frase e legendas de cada barra com a chave escrita inteira: a checagem de i18n confere cada uma.
+const barTexts = (first, second) => ({
+  ADS_SHARE: {
+    text: t('META_ADS_ORGANIC.ADS_SHARE.TEXT', { first, second }),
+    first: t('META_ADS_ORGANIC.ADS_SHARE.FIRST'),
+    second: t('META_ADS_ORGANIC.ADS_SHARE.SECOND'),
+  },
+  NEW_PEOPLE: {
+    text: t('META_ADS_ORGANIC.NEW_PEOPLE.TEXT', { first, second }),
+    first: t('META_ADS_ORGANIC.NEW_PEOPLE.FIRST'),
+    second: t('META_ADS_ORGANIC.NEW_PEOPLE.SECOND'),
+  },
+});
+
 const SECOND = {
   blue: { fill: 'fill-n-blue-9', dot: 'bg-n-blue-9' },
   slate: { fill: 'fill-n-slate-6', dot: 'bg-n-slate-6' },
@@ -23,6 +40,9 @@ const first = computed(() =>
   props.total ? Math.round((props.part / props.total) * 100) : 0
 );
 const second = computed(() => 100 - first.value);
+const texts = computed(
+  () => barTexts(first.value, second.value)[props.textKey]
+);
 </script>
 
 <template>
@@ -33,12 +53,12 @@ const second = computed(() => 100 - first.value);
     <p
       class="m-0 text-pretty text-base font-semibold leading-snug text-n-slate-12"
     >
-      {{ $t(`META_ADS_ORGANIC.${textKey}.TEXT`, { first, second }) }}
+      {{ texts.text }}
     </p>
     <svg
       class="h-3 w-full overflow-hidden rounded-full"
       role="img"
-      :aria-label="$t(`META_ADS_ORGANIC.${textKey}.TEXT`, { first, second })"
+      :aria-label="texts.text"
     >
       <rect
         x="0"
@@ -58,7 +78,7 @@ const second = computed(() => 100 - first.value);
     <p class="m-0 flex flex-wrap gap-x-4 gap-y-1 text-sm text-n-slate-11">
       <span class="inline-flex items-center gap-1.5">
         <span class="size-2.5 rounded-full bg-n-teal-9" aria-hidden="true" />
-        {{ $t(`META_ADS_ORGANIC.${textKey}.FIRST`) }}
+        {{ texts.first }}
       </span>
       <span class="inline-flex items-center gap-1.5">
         <span
@@ -66,7 +86,7 @@ const second = computed(() => 100 - first.value);
           :class="SECOND[secondTone].dot"
           aria-hidden="true"
         />
-        {{ $t(`META_ADS_ORGANIC.${textKey}.SECOND`) }}
+        {{ texts.second }}
       </span>
     </p>
   </div>

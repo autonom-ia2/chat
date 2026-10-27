@@ -15,7 +15,26 @@ const props = defineProps({
 });
 
 const { t, locale } = useI18n();
-const KEY = 'META_ADS_ORGANIC.TILES';
+// Nome e explicação de cada quadro com a chave escrita inteira: a checagem de i18n confere cada uma.
+const tileTexts = () => ({
+  REACH: {
+    label: t('META_ADS_ORGANIC.TILES.REACH.LABEL'),
+    help: t('META_ADS_ORGANIC.TILES.REACH.HELP'),
+  },
+  VIEWS: {
+    label: t('META_ADS_ORGANIC.TILES.VIEWS.LABEL'),
+    help: t('META_ADS_ORGANIC.TILES.VIEWS.HELP'),
+  },
+  INTERACTIONS: {
+    label: t('META_ADS_ORGANIC.TILES.INTERACTIONS.LABEL'),
+    help: t('META_ADS_ORGANIC.TILES.INTERACTIONS.HELP'),
+  },
+  FOLLOWERS: {
+    label: t('META_ADS_ORGANIC.TILES.FOLLOWERS.LABEL'),
+    help: t('META_ADS_ORGANIC.TILES.FOLLOWERS.HELP'),
+  },
+});
+const texts = computed(() => tileTexts()[props.name]);
 
 const format = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
@@ -24,14 +43,23 @@ const change = computed(() => {
   if (props.previous === null) return null;
   const diff = props.value - props.previous;
   if (diff === 0)
-    return { text: t(`${KEY}.SAME`, { days: props.days }), tone: 'same' };
+    return {
+      text: t('META_ADS_ORGANIC.TILES.SAME', { days: props.days }),
+      tone: 'same',
+    };
   return diff > 0
     ? {
-        text: t(`${KEY}.MORE`, { count: format(diff), days: props.days }),
+        text: t('META_ADS_ORGANIC.TILES.MORE', {
+          count: format(diff),
+          days: props.days,
+        }),
         tone: 'up',
       }
     : {
-        text: t(`${KEY}.FEWER`, { count: format(-diff), days: props.days }),
+        text: t('META_ADS_ORGANIC.TILES.FEWER', {
+          count: format(-diff),
+          days: props.days,
+        }),
         tone: 'down',
       };
 });
@@ -52,7 +80,7 @@ const TONES = {
       class="m-0 flex items-center gap-1.5 text-sm font-medium text-n-slate-12"
     >
       <span :class="icon" class="size-4 shrink-0" aria-hidden="true" />
-      {{ $t(`${KEY}.${name}.LABEL`) }}
+      {{ texts.label }}
     </p>
     <p
       class="m-0 text-2xl font-bold tabular-nums tracking-tight text-n-slate-12"
@@ -74,7 +102,7 @@ const TONES = {
     </p>
     <p v-if="extra" class="m-0 text-sm text-n-slate-11">{{ extra }}</p>
     <p class="m-0 text-sm text-n-slate-11">
-      {{ $t(`${KEY}.${name}.HELP`) }}
+      {{ texts.help }}
     </p>
   </div>
 </template>

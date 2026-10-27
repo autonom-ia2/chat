@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { META_ADS_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -56,11 +57,12 @@ const rememberMode = value => {
 // endereço (?aba=). Conexão que precisa de atenção abre direto na conexão.
 // "Orgânico" (#2199) só com a flag meta_ads_organico: o que a Página e o Instagram alcançam sem anúncio.
 const ALL_VIEWS = ['resultado', 'organico', 'conexao'];
-const TAB_LABELS = {
-  resultado: 'CRM_KANBAN.META_ADS_HUB.PANEL.TABS.RESULT',
-  organico: 'META_ADS_ORGANIC.TAB',
-  conexao: 'CRM_KANBAN.META_ADS_HUB.PANEL.TABS.CONNECTION',
-};
+const { t } = useI18n();
+const tabLabels = computed(() => ({
+  resultado: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.RESULT'),
+  organico: t('META_ADS_ORGANIC.TAB'),
+  conexao: t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.CONNECTION'),
+}));
 const view = ref(
   ALL_VIEWS.includes(route.query.aba) ? route.query.aba : 'resultado'
 );
@@ -142,10 +144,10 @@ const activeView = computed(() => {
 const showPanel = computed(() => activeView.value === 'resultado');
 const showOrganic = computed(() => activeView.value === 'organico');
 // Na aba Seus posts o subtítulo fala de post, não de anúncio.
-const subtitleKey = computed(() =>
+const subtitle = computed(() =>
   showOrganic.value && !openStep.value
-    ? 'META_ADS_ORGANIC.SUBTITLE'
-    : 'CRM_KANBAN.META_ADS_HUB.PAGE.SUBTITLE'
+    ? t('META_ADS_ORGANIC.SUBTITLE')
+    : t('CRM_KANBAN.META_ADS_HUB.PAGE.SUBTITLE')
 );
 // Painel conectado (#2054): a lista dos 4 passos sai da lateral do Resultado e o painel usa a largura toda. Ela
 // aparece na aba Conexão e enquanto um passo está aberto ou falta configurar.
@@ -284,7 +286,7 @@ onMounted(load);
           {{ $t('CRM_KANBAN.META_ADS_HUB.PAGE.TITLE') }}
         </h1>
         <p class="mt-2 mb-0 text-sm leading-6 text-n-slate-11">
-          {{ $t(subtitleKey) }}
+          {{ subtitle }}
         </p>
       </header>
 
@@ -323,7 +325,7 @@ onMounted(load);
             v-if="VIEWS.length > 1"
             :views="VIEWS"
             :active="activeView"
-            :labels="TAB_LABELS"
+            :labels="tabLabels"
             @choose="chooseView"
           />
           <MetaAdsOrganic v-if="showOrganic" read-only />
@@ -356,7 +358,7 @@ onMounted(load);
               v-if="panelAvailable"
               :views="VIEWS"
               :active="activeView"
-              :labels="TAB_LABELS"
+              :labels="tabLabels"
               @choose="chooseView"
             />
             <MetaAdsPanel v-if="showPanel" @open="openStep = $event" />

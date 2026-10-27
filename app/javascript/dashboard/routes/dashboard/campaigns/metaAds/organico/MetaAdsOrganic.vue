@@ -31,7 +31,6 @@ defineProps({
 const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const KEY = 'META_ADS_ORGANIC';
 const BEST_POST_CHARS = 90;
 const SENTENCE_ENDS = ['. ', '? ', '! '];
 // Corte na frase só quando sobra uma citação de verdade ("Oi!" sozinho não diz qual foi o post).
@@ -45,6 +44,17 @@ const choosePeriod = value => {
   router.replace({ query: { ...route.query, periodo: value } });
 };
 const days = computed(() => rollingDays(period.value));
+
+// Textos por período e por lugar com a chave escrita inteira: a checagem de i18n confere cada uma.
+const periodLabels = computed(() => ({
+  '7d': t('META_ADS_ORGANIC.PERIODS.7d'),
+  '30d': t('META_ADS_ORGANIC.PERIODS.30d'),
+  '90d': t('META_ADS_ORGANIC.PERIODS.90d'),
+}));
+const seeConversationsLabels = computed(() => ({
+  page: t('META_ADS_ORGANIC.SOURCE.PAGE.SEE_CONVERSATIONS'),
+  instagram: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.SEE_CONVERSATIONS'),
+}));
 
 const data = ref(null);
 const loading = ref(true);
@@ -79,19 +89,20 @@ const format = value =>
 
 // Quem viu na Página e no Instagram lado a lado, nunca somados: a mesma pessoa pode ter visto os dois.
 const headline = computed(() => {
-  if (!anyReady.value) return t(`${KEY}.HEADLINE.NONE`);
+  if (!anyReady.value) return t('META_ADS_ORGANIC.HEADLINE.NONE');
   const pageReach = isReady(page.value) ? page.value.reach : 0;
   const instagramReach = isReady(instagram.value) ? instagram.value.reach : 0;
   if (!pageReach && !instagramReach)
-    return t(`${KEY}.HEADLINE.ZERO`, { days: days.value });
+    return t('META_ADS_ORGANIC.HEADLINE.ZERO', { days: days.value });
   if (pageReach && instagramReach)
-    return t(`${KEY}.HEADLINE.BOTH`, {
+    return t('META_ADS_ORGANIC.HEADLINE.BOTH', {
       page: format(pageReach),
       instagram: format(instagramReach),
     });
-  return t(`${KEY}.HEADLINE.${pageReach ? 'PAGE' : 'INSTAGRAM'}`, {
-    count: format(pageReach || instagramReach),
-  });
+  const count = format(pageReach || instagramReach);
+  return pageReach
+    ? t('META_ADS_ORGANIC.HEADLINE.PAGE', { count })
+    : t('META_ADS_ORGANIC.HEADLINE.INSTAGRAM', { count });
 });
 
 // Até 90 caracteres, o post inteiro. Mais longo: até o fim da última frase que cabe, se ela tiver 40 caracteres ou
@@ -210,7 +221,7 @@ const connect = async source => {
     if (source === 'page') await reauthorizePage(place.inbox_id);
     else await reauthorizeInstagram(place.inbox_id);
   } catch {
-    useAlert(t(`${KEY}.CONNECT_ERROR`));
+    useAlert(t('META_ADS_ORGANIC.CONNECT_ERROR'));
   }
 };
 </script>
@@ -222,7 +233,7 @@ const connect = async source => {
       data-organic-loading
       class="grid items-start gap-5 lg:grid-cols-2"
       aria-busy="true"
-      :aria-label="$t(`${KEY}.LOADING`)"
+      :aria-label="$t('META_ADS_ORGANIC.LOADING')"
     >
       <div
         v-for="index in 2"
@@ -248,11 +259,11 @@ const connect = async source => {
       class="flex flex-col items-start gap-3 rounded-2xl bg-n-solid-1 p-6 ring-1 ring-inset ring-n-weak"
     >
       <p class="m-0 text-base font-semibold text-n-slate-12">
-        {{ $t(`${KEY}.ERROR.TEXT`) }}
+        {{ $t('META_ADS_ORGANIC.ERROR.TEXT') }}
       </p>
       <Button
         icon="i-lucide-refresh-cw"
-        :label="$t(`${KEY}.ERROR.RETRY`)"
+        :label="$t('META_ADS_ORGANIC.ERROR.RETRY')"
         class="!min-h-11 !rounded-xl"
         @click="load"
       />
@@ -262,7 +273,7 @@ const connect = async source => {
       <div
         v-if="anyReady"
         role="group"
-        :aria-label="$t(`${KEY}.PERIOD_LABEL`)"
+        :aria-label="$t('META_ADS_ORGANIC.PERIOD_LABEL')"
         class="flex w-fit gap-1 rounded-2xl bg-n-alpha-1 p-1"
       >
         <button
@@ -279,7 +290,7 @@ const connect = async source => {
           "
           @click="choosePeriod(key)"
         >
-          {{ $t(`${KEY}.PERIODS.${key}`) }}
+          {{ periodLabels[key] }}
         </button>
       </div>
 
@@ -297,7 +308,7 @@ const connect = async source => {
           data-organic-range
           class="relative m-0 text-pretty text-sm font-medium text-white/70"
         >
-          {{ $t(`${KEY}.RANGE`, { range }) }}
+          {{ $t('META_ADS_ORGANIC.RANGE', { range }) }}
         </p>
         <h3
           data-organic-headline
@@ -310,7 +321,7 @@ const connect = async source => {
           data-organic-best-post
           class="relative m-0 max-w-3xl text-base text-white/85"
         >
-          {{ $t(`${KEY}.BEST_POST`, bestPost) }}
+          {{ $t('META_ADS_ORGANIC.BEST_POST', bestPost) }}
         </p>
         <button
           v-if="mainConversations"
@@ -320,11 +331,7 @@ const connect = async source => {
           @click="openConversations(mainConversations.place.messages.inbox_id)"
         >
           <span class="i-lucide-message-circle size-4" aria-hidden="true" />
-          {{
-            $t(
-              `${KEY}.SOURCE.${mainConversations.source.toUpperCase()}.SEE_CONVERSATIONS`
-            )
-          }}
+          {{ seeConversationsLabels[mainConversations.source] }}
         </button>
       </div>
 

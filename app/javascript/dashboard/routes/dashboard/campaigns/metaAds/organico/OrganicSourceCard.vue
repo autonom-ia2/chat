@@ -27,17 +27,56 @@ const props = defineProps({
 const emit = defineEmits(['connect', 'conversations']);
 
 const { t, locale } = useI18n();
-const KEY = 'META_ADS_ORGANIC';
 const HISTORY_DAYS = 90;
-const sourceKey = computed(() => `${KEY}.SOURCE.${props.source.toUpperCase()}`);
 const isPage = computed(() => props.source === 'page');
 const ready = computed(() => props.data.status === 'ok');
-const statusKey = computed(
-  () => `${sourceKey.value}.${props.data.status.toUpperCase()}`
-);
 
 const format = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
+
+// Textos de cada lugar com a chave escrita inteira: a checagem de i18n confere cada uma.
+const pageTexts = () => ({
+  name: t('META_ADS_ORGANIC.SOURCE.PAGE.NAME'),
+  open: t('META_ADS_ORGANIC.SOURCE.PAGE.OPEN'),
+  post: t('META_ADS_ORGANIC.SOURCE.PAGE.POST'),
+  seeConversations: t('META_ADS_ORGANIC.SOURCE.PAGE.SEE_CONVERSATIONS'),
+  messages: count =>
+    t('META_ADS_ORGANIC.SOURCE.PAGE.MESSAGES', { count: format(count) }, count),
+  needs_permission: {
+    title: t('META_ADS_ORGANIC.SOURCE.PAGE.NEEDS_PERMISSION.TITLE'),
+    text: t('META_ADS_ORGANIC.SOURCE.PAGE.NEEDS_PERMISSION.TEXT'),
+    button: t('META_ADS_ORGANIC.SOURCE.PAGE.NEEDS_PERMISSION.BUTTON'),
+  },
+  not_connected: {
+    title: t('META_ADS_ORGANIC.SOURCE.PAGE.NOT_CONNECTED.TITLE'),
+    text: t('META_ADS_ORGANIC.SOURCE.PAGE.NOT_CONNECTED.TEXT'),
+    button: t('META_ADS_ORGANIC.SOURCE.PAGE.NOT_CONNECTED.BUTTON'),
+  },
+});
+const instagramTexts = () => ({
+  name: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NAME'),
+  open: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.OPEN'),
+  post: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.POST'),
+  seeConversations: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.SEE_CONVERSATIONS'),
+  messages: count =>
+    t(
+      'META_ADS_ORGANIC.SOURCE.INSTAGRAM.MESSAGES',
+      { count: format(count) },
+      count
+    ),
+  needs_permission: {
+    title: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NEEDS_PERMISSION.TITLE'),
+    text: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NEEDS_PERMISSION.TEXT'),
+    button: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NEEDS_PERMISSION.BUTTON'),
+  },
+  not_connected: {
+    title: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NOT_CONNECTED.TITLE'),
+    text: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NOT_CONNECTED.TEXT'),
+    button: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NOT_CONNECTED.BUTTON'),
+  },
+});
+const texts = computed(() => (isPage.value ? pageTexts() : instagramTexts()));
+const blockedTexts = computed(() => texts.value[props.data.status]);
 
 const title = computed(() =>
   isPage.value
@@ -51,15 +90,17 @@ const quiet = computed(
 );
 
 const blockedTitle = computed(() => {
-  const text = t(`${statusKey.value}.TITLE`);
-  return props.step ? t(`${KEY}.STEP`, { step: props.step, text }) : text;
+  const text = blockedTexts.value.title;
+  return props.step
+    ? t('META_ADS_ORGANIC.STEP', { step: props.step, text })
+    : text;
 });
 
 // Instagram com menos de 100 seguidores: a Meta não conta os seguidores novos (follower_count). O total vem do perfil.
 const followersExtra = computed(() =>
   props.data.new_followers === null
-    ? t(`${KEY}.TILES.FOLLOWERS.SMALL_ACCOUNT`)
-    : t(`${KEY}.TILES.FOLLOWERS.NEW`, {
+    ? t('META_ADS_ORGANIC.TILES.FOLLOWERS.SMALL_ACCOUNT')
+    : t('META_ADS_ORGANIC.TILES.FOLLOWERS.NEW', {
         count: format(props.data.new_followers),
         days: props.days,
       })
@@ -120,12 +161,8 @@ const messages = computed(() => props.data.messages);
 // Contagem nula: a pessoa não vê as conversas desta caixa (o servidor conta só o que ela vê). Nunca vira "0".
 const messagesText = computed(() =>
   messages.value.count === null
-    ? t(`${KEY}.MESSAGES_NO_ACCESS`)
-    : t(
-        `${sourceKey.value}.MESSAGES`,
-        { count: format(messages.value.count) },
-        messages.value.count
-      )
+    ? t('META_ADS_ORGANIC.MESSAGES_NO_ACCESS')
+    : texts.value.messages(messages.value.count)
 );
 
 const openLink = () => window.open(props.data.link, '_blank', 'noopener');
@@ -149,10 +186,10 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
       </span>
       <div class="flex min-w-0 flex-col">
         <h3 class="m-0 truncate text-base font-semibold text-n-slate-12">
-          {{ title || $t(`${sourceKey}.NAME`) }}
+          {{ title || texts.name }}
         </h3>
         <p v-if="title" class="m-0 text-sm text-n-slate-11">
-          {{ $t(`${sourceKey}.NAME`) }}
+          {{ texts.name }}
         </p>
       </div>
       <a
@@ -162,7 +199,7 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
         rel="noopener noreferrer"
         class="ms-auto inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
       >
-        {{ $t(`${sourceKey}.OPEN`) }}
+        {{ texts.open }}
         <span class="i-lucide-external-link size-3.5" aria-hidden="true" />
       </a>
     </header>
@@ -176,7 +213,7 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
         {{ blockedTitle }}
       </p>
       <p class="m-0 text-sm leading-6 text-n-slate-11">
-        {{ $t(`${statusKey}.TEXT`) }}
+        {{ blockedTexts.text }}
       </p>
       <Button
         v-if="!readOnly"
@@ -184,12 +221,12 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
         :variant="primary ? 'solid' : 'faded'"
         :color="primary ? 'blue' : 'slate'"
         :icon="isPage ? 'i-woot-facebook' : 'i-woot-instagram'"
-        :label="$t(`${statusKey}.BUTTON`)"
+        :label="blockedTexts.button"
         class="!min-h-11 !rounded-xl"
         @click="emit('connect', source)"
       />
       <p v-else class="m-0 text-sm text-n-slate-11">
-        {{ $t(`${KEY}.ASK_ADMIN`) }}
+        {{ $t('META_ADS_ORGANIC.ASK_ADMIN') }}
       </p>
     </div>
 
@@ -199,11 +236,13 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
       class="flex flex-col items-start gap-3 rounded-xl bg-n-alpha-1 p-5"
     >
       <p class="m-0 text-base font-semibold text-n-slate-12">
-        {{ $t(`${KEY}.QUIET.TITLE`, { days }) }}
+        {{ $t('META_ADS_ORGANIC.QUIET.TITLE', { days }) }}
       </p>
       <p class="m-0 text-sm leading-6 text-n-slate-11">
         {{
-          $t(`${KEY}.QUIET.TEXT`, { followers: format(data.followers || 0) })
+          $t('META_ADS_ORGANIC.QUIET.TEXT', {
+            followers: format(data.followers || 0),
+          })
         }}
       </p>
       <Button
@@ -212,7 +251,7 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
         :variant="primary ? 'solid' : 'faded'"
         :color="primary ? 'blue' : 'slate'"
         icon="i-lucide-external-link"
-        :label="$t(`${sourceKey}.POST`)"
+        :label="texts.post"
         class="!min-h-11 !rounded-xl"
         @click="openLink"
       />
@@ -243,7 +282,7 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
           v-if="messages.inbox_id && messages.count && !main"
           data-organic-see-conversations
           variant="link"
-          :label="$t(`${sourceKey}.SEE_CONVERSATIONS`)"
+          :label="texts.seeConversations"
           class="!min-h-11"
           @click="emit('conversations', messages.inbox_id)"
         />
@@ -254,7 +293,7 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
         data-organic-no-compare
         class="m-0 -mb-2 text-sm text-n-slate-11"
       >
-        {{ $t(`${KEY}.TILES.NO_COMPARE`) }}
+        {{ $t('META_ADS_ORGANIC.TILES.NO_COMPARE') }}
       </p>
       <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
         <OrganicTile
