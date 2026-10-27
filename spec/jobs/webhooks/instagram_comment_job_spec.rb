@@ -71,6 +71,13 @@ RSpec.describe Webhooks::InstagramCommentJob do
     expect(Rails.configuration.dispatcher).to have_received(:dispatch).twice
   end
 
+  it 'desligamento do Sidekiq no meio (exceção fora de StandardError) também solta a chave' do
+    allow(Rails.configuration.dispatcher).to receive(:dispatch).and_raise(Interrupt)
+    expect { described_class.new.perform(ig_id, 'comments', value_ids, time) }.to raise_error(Interrupt)
+
+    expect(Redis::Alfred.get("instagram:comment_received:#{ig_id}:#{comment_id}")).to be_nil
+  end
+
   it 'Graph fora do ar sobe para o retry; sem permissão ou comentário apagado não publica e não prende a chave' do
     stub_request(:get, graph).to_return(status: 503, body: '{}').then
                              .to_return(status: 400, body: { error: { code: 190 } }.to_json).then

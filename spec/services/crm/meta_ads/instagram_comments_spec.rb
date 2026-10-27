@@ -218,7 +218,31 @@ RSpec.describe Crm::MetaAds::InstagramComments do
 
         expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }
           .to raise_error(described_class::Error) { |e| expect(e.code).to eq('meta_unavailable') }
-        expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to have_attributes(confirmed_at: nil)
+        expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to have_attributes(confirmed_at: nil, failed_at: be_present)
+        expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to be_releasable
+      end
+
+      it 'quem perdeu a reserva no meio (outra requisição a apagou e refez) não chama a Meta' do
+        allow(Crm::MetaAdsCommentAction).to receive(:record!).and_wrap_original do |original, **attributes|
+          original.call(**attributes).tap { |action| Crm::MetaAdsCommentAction.where(id: action.id).delete_all }
+        end
+
+        expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_done') }
+        expect(a_request(:post, %r{/messages})).not_to have_been_made
+      end
+
+      it 'com o envio em andamento, "Não foi enviado" não vale; parado há mais de IN_FLIGHT, vale' do
+        stub_comments
+        row = Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: 'c1', action: 'private_reply',
+                                                actor: 'user', ad_id: ad_id, at: 10.seconds.ago, attempted_at: 10.seconds.ago)
+
+        expect(service.payload(ad_id)[:comments].first[:private_reply]).to include(confirmed: false, can_release: false)
+        expect { service.release_private_reply!(ad_id, 'c1') }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_not_pending') }
+
+        row.update!(attempted_at: (Crm::MetaAdsCommentAction::IN_FLIGHT + 1.second).ago)
+        expect { service.release_private_reply!(ad_id, 'c1') }.to change(Crm::MetaAdsCommentAction, :count).by(-1)
       end
 
       def private_row(**attributes)

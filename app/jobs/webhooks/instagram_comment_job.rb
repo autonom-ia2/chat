@@ -12,7 +12,8 @@
 # campos (`mentions`), o eco das respostas da própria conta, Instagram sem caixa na plataforma (o relay entre stacks
 # entrega o mesmo corpo às duas; cada uma só publica o que é dela), conta sem a flag `meta_ads_comentarios_instagram`
 # (sem ela a caixa não tem a permissão de ler comentários) e o mesmo comentário de novo em DEDUP (webhook reenviado).
-# O dedupe só fica depois de publicar: qualquer falha antes solta a chave, e o retry ou o reenvio leem de novo. Nada do
+# A chave do dedupe é gravada antes da leitura na Graph e só fica se o evento saiu: qualquer outro desfecho a solta, e o
+# retry ou o reenvio leem de novo. Nada do
 # comentário é gravado aqui. Ids fora do formato são descartados em silêncio; Graph fora do ar sobe para o retry.
 class Webhooks::InstagramCommentJob < ApplicationJob
   queue_as :default
@@ -54,16 +55,18 @@ class Webhooks::InstagramCommentJob < ApplicationJob
     channel if channel&.inbox.present? && channel.account.feature_enabled?('meta_ads_comentarios_instagram')
   end
 
+  # A chave do dedupe só fica se o evento saiu: em qualquer outro desfecho (sem resultado, eco, erro, desligamento do
+  # Sidekiq) o `ensure` a solta.
   def publish(channel, instagram_id, ids, time)
+    dispatched = false
     comment = read_comment(channel, ids[:comment_id])
-    return release(instagram_id, ids[:comment_id]) if comment.nil?
-    return if comment.dig('from', 'id').to_s == instagram_id.to_s
+    return if comment.nil? || comment.dig('from', 'id').to_s == instagram_id.to_s
 
     Rails.configuration.dispatcher.dispatch(Events::Types::META_ADS_COMMENT_RECEIVED, Time.zone.now,
                                             payload(channel, comment, time, ids[:ad_id]))
-  rescue StandardError
-    release(instagram_id, ids[:comment_id])
-    raise
+    dispatched = true
+  ensure
+    release(instagram_id, ids[:comment_id]) unless dispatched
   end
 
   def dedup_key(instagram_id, comment_id)

@@ -39,10 +39,11 @@ class Crm::MetaAds::InstagramPrivateReply
     validate_comment!(comment)
     release_abandoned!(comment['id'])
     action = claim!(comment['id'], actor, user, ad_id)
-    action.attempt!
+    raise Error, 'private_reply_done' unless action.attempt!
+
     result = Instagram::CommentsClient.new(@channel).private_reply(comment['id'], text)
     unless result.ok
-      action.destroy! unless maybe_delivered?(result)
+      maybe_delivered?(result) ? action.fail! : action.destroy!
       raise Error, error_code(result)
     end
 

@@ -5,7 +5,8 @@
 #
 # Só as ações que acontecem uma vez por comentário são únicas (a linha é a reivindicação, gravada antes de chamar a
 # Meta): a resposta no privado e a leitura da IA. Responder, ocultar e mostrar podem se repetir. `attempted_at`: quando a
-# chamada do privado saiu; `confirmed_at`: quando a Meta o confirmou (estados em docs/meta/comentarios-instagram.md).
+# chamada do privado saiu; `failed_at`: quando a resposta se perdeu; `confirmed_at`: quando a Meta o confirmou (estados
+# em docs/meta/comentarios-instagram.md).
 class CreateCrmMetaAdsCommentActions < ActiveRecord::Migration[7.2]
   def change
     create_table :crm_meta_ads_comment_actions do |t|
@@ -19,6 +20,7 @@ class CreateCrmMetaAdsCommentActions < ActiveRecord::Migration[7.2]
       t.references :user, index: { name: 'idx_crm_meta_ads_comment_actions_user' }, foreign_key: { on_delete: :nullify }
       t.datetime :at, null: false
       t.datetime :attempted_at
+      t.datetime :failed_at
       t.datetime :confirmed_at
       t.timestamps
     end

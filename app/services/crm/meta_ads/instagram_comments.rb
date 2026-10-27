@@ -88,11 +88,12 @@ class Crm::MetaAds::InstagramComments
   end
 
   # "Não foi enviado": quem gere os anúncios conferiu no Direct que o privado sem confirmação não chegou e libera o
-  # botão. Só a linha sem confirmação deste anúncio, nesta conta; não chama a Meta.
+  # botão. Só a linha sem confirmação deste anúncio, nesta conta, e nunca com o envio em andamento
+  # (Crm::MetaAdsCommentAction#releasable?); não chama a Meta.
   def release_private_reply!(ad_id, comment_id)
     action = Crm::MetaAdsCommentAction.find_by(account_id: @connection.account_id, network: 'instagram', action: 'private_reply',
                                                comment_id: comment_id.to_s, ad_id: ad_id.to_s, confirmed_at: nil)
-    raise Error, 'private_reply_not_pending' if action&.attempted_at.nil?
+    raise Error, 'private_reply_not_pending' if action.nil? || !action.releasable?
 
     action.destroy!
     { id: comment_id.to_s }
@@ -195,7 +196,7 @@ class Crm::MetaAds::InstagramComments
     return if action.nil?
 
     { sent_at: action.at.iso8601, confirmed: action.confirmed_at.present?, conversation_path: conversation_path(action.conversation),
-      can_release: @can_manage && action.attempted_at.present? && action.confirmed_at.nil? }
+      can_release: @can_manage && action.releasable? }
   end
 
   def expired?(item)

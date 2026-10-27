@@ -11,7 +11,7 @@ Runbook da aba Instagram dos comentários no detalhe do anúncio (Anúncios da M
   14/11/2026. Enquanto isso, ela só funciona para um Instagram cujo dono tem função no app Autonom.ia (administrador,
   desenvolvedor ou testador).
 - **Regra:** só ligar `meta_ads_comentarios_instagram` em conta cujo Instagram pertence a alguém com função no app. Hoje
-  isso vale para as contas piloto 16 e 18 (do Rodrigo) e para a @placementseg, que é testadora.
+  isso vale para as contas piloto (lista interna) e para uma caixa de testador da equipe.
 - Numa conta fora dessa regra, "Entrar de novo" no cartão leva a um erro da própria Meta. A tela não avisa isso, porque o
   aviso ficaria errado depois da aprovação.
 - Depois da aprovação, a regra cai e a flag pode seguir o caminho normal de liberação.
@@ -37,8 +37,9 @@ linha em `crm_meta_ads_comment_actions` (`action = 'private_reply'`) diz em que 
 
 | Estado | Colunas | O que a tela mostra | Como sai |
 |---|---|---|---|
-| Reservado | `attempted_at` nulo | Nada muda até a resposta | A chamada sai (`attempted_at`). Se o processo morrer antes, nada foi enviado: depois de `RESERVED_TTL` (2 min) a reserva não vale mais |
-| Sem confirmação | `attempted_at` preenchido, `confirmed_at` nulo | "Enviado no privado, sem confirmação do Instagram. Confira no Direct." e o botão "Não foi enviado" | Só pela ação "Não foi enviado", depois de conferir no Direct. Nunca por tempo |
+| Reservado | `attempted_at` nulo | Nada muda até a resposta | A chamada sai (`attempted_at`, uma vez só, por UPDATE condicional). Se o processo morrer antes, nada foi enviado: depois de `RESERVED_TTL` (2 min) a reserva não vale mais, e quem a perdeu no meio não chama a Meta |
+| Em andamento | `attempted_at` recente, sem `failed_at` nem `confirmed_at` | "Enviado no privado, sem confirmação do Instagram. Confira no Direct.", sem o botão | Resposta da Meta |
+| Sem confirmação | `failed_at` preenchido (rede, tempo esgotado, 5xx), ou `attempted_at` mais velho que `IN_FLIGHT` (1 min, quando o processo morreu durante a chamada), e `confirmed_at` nulo | O mesmo texto e o botão "Não foi enviado" | Só pela ação "Não foi enviado", depois de conferir no Direct. Nunca por tempo |
 | Confirmado | `confirmed_at` preenchido | "Respondido no privado" e o link da conversa | Não sai |
 
 Recusa explícita da Meta (4xx) apaga a linha, e o botão volta na hora.
@@ -60,6 +61,7 @@ O roteador (`Webhooks::InstagramEventsJob#enqueue_comment`, #2200) chama
 
 - lê o texto e o autor na Graph;
 - publica `meta_ads.comment_received`, um evento em memória que nada grava;
-- descarta o mesmo comentário por 10 minutos, mas só depois de publicar.
+- descarta o mesmo comentário por 10 minutos. A chave do dedupe é gravada antes da leitura na Graph e só fica se o
+  evento saiu; em qualquer outro desfecho (sem resultado, eco, erro, desligamento do Sidekiq) ela é solta.
 
 O `value` completo antigo ainda é aceito até o fim da transição (#2291, prazo 15/11/2026).

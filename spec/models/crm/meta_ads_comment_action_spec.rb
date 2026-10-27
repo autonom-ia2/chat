@@ -35,6 +35,16 @@ RSpec.describe Crm::MetaAdsCommentAction do
     travel(30.days) { expect(action.abandoned?).to be(false) }
   end
 
+  it 'attempt! vale uma vez só e só numa linha que ainda existe' do
+    action = described_class.record!(account: create(:account), network: 'instagram', comment_id: 'c3', action: 'private_reply',
+                                     actor: 'ai')
+
+    expect(action.attempt!).to be(true)
+    expect(action.attempt!).to be(false)
+    described_class.where(id: action.id).delete_all
+    expect(action.attempt!).to be(false)
+  end
+
   it 'confirm! marca quando a Meta aceitou o privado' do
     action = described_class.record!(account: create(:account), network: 'instagram', comment_id: 'c1', action: 'private_reply',
                                      actor: 'ai')

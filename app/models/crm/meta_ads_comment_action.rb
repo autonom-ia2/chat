@@ -12,10 +12,13 @@
 #
 # Estados do privado (docs/meta/comentarios-instagram.md):
 # - reservado (`attempted_at` nulo): o envio ainda não saiu. Se o processo morrer aqui, nada foi enviado: depois de
-#   RESERVED_TTL a reserva não vale mais (`abandoned?`) e é apagada na próxima tentativa;
-# - sem confirmação (`attempted_at` sem `confirmed_at`): a chamada saiu e a resposta se perdeu (rede, 5xx). A Meta pode
-#   ter entregado, e um segundo envio seria DM duplicada: fica travado até alguém dizer "Não foi enviado"
-#   (`Crm::MetaAds::InstagramComments#release_private_reply!`, só quem gere os anúncios, na Auditoria);
+#   RESERVED_TTL a reserva não vale mais (`abandoned?`) e é apagada na próxima tentativa. `attempt!` só vale uma vez e
+#   só numa linha que ainda existe (UPDATE condicional): quem perdeu a reserva no meio não chama a Meta;
+# - em andamento (`attempted_at` recente, sem `confirmed_at` nem `failed_at`): a chamada está saindo;
+# - sem confirmação (`failed_at`, gravado quando a resposta se perdeu por rede ou 5xx; ou `attempted_at` mais velho que
+#   IN_FLIGHT, quando o processo morreu durante a chamada): a Meta pode ter entregado, e um segundo envio seria DM
+#   duplicada. Fica travado até alguém dizer "Não foi enviado" (`releasable?`,
+#   `Crm::MetaAds::InstagramComments#release_private_reply!`, só quem gere os anúncios, na Auditoria);
 # - confirmado (`confirmed_at`): a Meta aceitou. As outras ações podem se repetir (ocultar, mostrar de novo, ocultar).
 class Crm::MetaAdsCommentAction < ApplicationRecord
   self.table_name = 'crm_meta_ads_comment_actions'
@@ -25,6 +28,8 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
   ONCE = %w[private_reply ai_seen].freeze
   ACTORS = %w[user ai].freeze
   RESERVED_TTL = 2.minutes
+  # Bem acima do tempo máximo da chamada à Meta (Instagram::CommentsClient::TIMEOUT_SECONDS).
+  IN_FLIGHT = 1.minute
 
   belongs_to :account
   belongs_to :conversation, optional: true
@@ -41,9 +46,26 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
     create!(attributes.merge(at: Time.current))
   end
 
-  # A chamada à Meta vai sair agora: daqui em diante, sem confirmação a linha fica travada.
+  # A chamada à Meta vai sair agora: daqui em diante, sem confirmação a linha fica travada. Falso quando a reserva já
+  # não existe ou já foi usada: quem chama não envia.
   def attempt!
-    update!(attempted_at: Time.current)
+    now = Time.current
+    # O UPDATE condicional é a trava: só uma requisição vê 1 linha afetada.
+    updated = self.class.where(id: id, attempted_at: nil).update_all(attempted_at: now, updated_at: now) # rubocop:disable Rails/SkipsModelValidations
+    return false unless updated == 1
+
+    assign_attributes(attempted_at: now, updated_at: now)
+    clear_attribute_changes(%i[attempted_at updated_at])
+    true
+  end
+
+  # A chamada saiu e a resposta se perdeu (rede, tempo esgotado, 5xx).
+  def fail!
+    update!(failed_at: Time.current)
+  end
+
+  def releasable?
+    confirmed_at.nil? && attempted_at.present? && (failed_at.present? || attempted_at.before?(IN_FLIGHT.ago))
   end
 
   # A Meta aceitou o privado.

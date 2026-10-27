@@ -2757,6 +2757,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
     t.bigint "user_id"
     t.datetime "at", null: false
     t.datetime "attempted_at"
+    t.datetime "failed_at"
     t.datetime "confirmed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
