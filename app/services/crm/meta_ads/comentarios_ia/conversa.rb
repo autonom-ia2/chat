@@ -1,6 +1,7 @@
 # IA cuida dos comentários (#2212): a conversa que nasce de um comentário, na caixa do Instagram ou do Messenger da
 # rede dele, com o comentário no topo (mensagem de atividade). A conversa guarda de onde veio em
-# `additional_attributes.meta_ads_comment`: rede, comentário, post, anúncio e o cuidado.
+# `additional_attributes.meta_ads_comment`: rede, comentário, post, anúncio, quem comentou e o cuidado; a do privado
+# marca também `private_reply`, e ja_mandou? a usa para mandar um privado só por pessoa em cada post.
 #
 # - Depois do privado: no Instagram, a conversa vem do InstagramPrivateReply do #2196; no Messenger, de no_messenger!.
 #   Nos dois, o privado que saiu está gravado com o id da Meta (source_id): o envio ao canal não o manda de novo, e o
@@ -21,9 +22,19 @@ module Crm::MetaAds::ComentariosIa::Conversa
   def anotar!(conversation, comentario, care, nova:)
     primeira = conversation.messages.reorder(:created_at, :id).first
     atividade!(conversation, comentou(comentario), antes_de: primeira && (primeira.created_at - 1.second))
-    atributos = conversation.additional_attributes.to_h.merge('meta_ads_comment' => origem(comentario, care))
+    atributos = conversation.additional_attributes.to_h.merge('meta_ads_comment' => origem(comentario, care).merge('private_reply' => true))
     conversation.update!(additional_attributes: atributos, **(nova ? { status: :resolved } : {}))
     conversation
+  end
+
+  # A Meta não diz se o Private Reply é um por comentário ou por pessoa: até a chamada real dizer, a mesma pessoa
+  # comentando de novo no mesmo post não recebe outro privado.
+  def ja_mandou?(comentario)
+    Conversation.where(account_id: comentario.account_id, inbox_id: comentario.inbox_id)
+                .where("additional_attributes -> 'meta_ads_comment' ->> 'post_id' = ?", comentario.post_id.to_s)
+                .where("additional_attributes -> 'meta_ads_comment' ->> 'from_id' = ?", comentario.from_id.to_s)
+                .where("additional_attributes -> 'meta_ads_comment' ->> 'private_reply' = 'true'")
+                .exists?
   end
 
   # O privado que saiu pelo Messenger entra na caixa, no contato da resposta da Meta (o PSID): na conversa que a pessoa
@@ -97,6 +108,6 @@ module Crm::MetaAds::ComentariosIa::Conversa
 
   def origem(comentario, care)
     { 'network' => comentario.network, 'comment_id' => comentario.comment_id, 'post_id' => comentario.post_id,
-      'ad_id' => comentario.ad_id, 'care_id' => care.id }.compact
+      'ad_id' => comentario.ad_id, 'from_id' => comentario.from_id, 'care_id' => care.id }.compact
   end
 end

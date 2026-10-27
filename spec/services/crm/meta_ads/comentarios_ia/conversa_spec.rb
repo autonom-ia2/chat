@@ -29,7 +29,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
 
       expect(conversation.reload).to be_resolved
       expect(conversation.additional_attributes['meta_ads_comment'])
-        .to include('network' => 'instagram', 'comment_id' => 'c-1', 'post_id' => '1790', 'care_id' => care.id)
+        .to include('network' => 'instagram', 'comment_id' => 'c-1', 'post_id' => '1790', 'care_id' => care.id,
+                    'from_id' => 'igsid-1', 'private_reply' => true)
       expect(conversation.messages.reorder(:created_at, :id).map { |message| [message.message_type, message.content] })
         .to eq([['activity', 'Comentou no post: “Quanto custa?”'], ['outgoing', care.message]])
     end
@@ -45,6 +46,17 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
       conversation = described_class.anotar!(conversa_do_privado, comentario(ad_id: '120'), care, nova: true)
 
       expect(conversation.messages.activity.first.content).to eq('Comentou no anúncio: “Quanto custa?”')
+    end
+  end
+
+  describe '.ja_mandou?' do
+    it 'só vale para o privado já mandado à mesma pessoa no mesmo post, na mesma caixa' do
+      described_class.anotar!(conversa_do_privado, comentario, care, nova: true)
+      described_class.para_voce!(comentario(from_id: 'igsid-2', comment_id: 'c-2'), care, 'to_you')
+
+      expect(described_class.ja_mandou?(comentario(comment_id: 'c-9'))).to be(true)
+      expect(described_class.ja_mandou?(comentario(post_id: '1791'))).to be(false)
+      expect(described_class.ja_mandou?(comentario(from_id: 'igsid-2'))).to be(false)
     end
   end
 

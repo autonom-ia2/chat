@@ -31,7 +31,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   before do
     account.enable_features!(described_class::FLAG)
     allow(registro).to receive_messages(reservar!: true, hoje: 0, vez: 0, gravar!: true, vincular!: 1, soltar!: 1)
-    allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
+    allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation, ja_mandou?: false)
     allow(rede).to receive(:privado).and_return(enviado)
   end
 
@@ -45,6 +45,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(conversa).to have_received(:anotar!).with(conversation, comentario, care, nova: true)
     expect(registro).to have_received(:vincular!).with(comentario, 'private_reply', conversation)
     expect(rede).to have_received(:responder).with('Te mandei os detalhes no privado!')
+  end
+
+  it 'mesma pessoa comentando de novo no post: um privado só, sem resposta pública' do
+    decide('private')
+    allow(conversa).to receive(:ja_mandou?).with(comentario).and_return(true)
+
+    cuidar
+
+    expect(rede).not_to have_received(:privado)
+    expect(rede).not_to have_received(:responder)
   end
 
   it 'conversa que a pessoa já tinha aberta na caixa não conta como nova' do

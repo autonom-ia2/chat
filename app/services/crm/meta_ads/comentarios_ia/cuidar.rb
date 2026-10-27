@@ -70,6 +70,8 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def privado(decisao)
+    return if @conversa.ja_mandou?(@comentario)
+
     inicio = Time.current
     envio = rede.privado(care)
     return if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
