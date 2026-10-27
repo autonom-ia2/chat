@@ -109,10 +109,66 @@ RSpec.describe Crm::MetaAds::PageSubscription do
     subscription.add!(%w[messages])
 
     expect(post).to have_been_requested
+    expect(subscription.fields).to eq(%w[messages])
   end
 
   describe 'concurrent writers on the same page (#2200)' do
     let(:lock_key) { described_class.lock_key(page_id) }
+
+    around do |example|
+      Redis::Alfred.delete(lock_key)
+      example.run
+    ensure
+      Redis::Alfred.delete(lock_key)
+    end
+
+    # Uma Página falsa em memória, direto no HTTParty (o WebMock responde um pedido por vez e esconderia a corrida). A
+    # leitura demora o bastante para dois escritores sem trava lerem a mesma lista e um apagar o campo do outro.
+    def fake_page(initial)
+      store = { fields: initial, posts: 0 }
+      mutex = Mutex.new
+      reply = ->(body) { instance_double(HTTParty::Response, success?: true, code: 200, parsed_response: body) }
+      allow(HTTParty).to receive(:public_send) do |verb, request_url, **options|
+        next reply.call({ 'id' => app_id }) if request_url.end_with?('/app')
+
+        if verb == :post
+          mutex.synchronize do
+            store[:posts] += 1
+            store[:fields] = options[:body][:subscribed_fields].split(',')
+          end
+          next reply.call({ 'success' => true })
+        end
+
+        current = mutex.synchronize { store[:fields].dup }
+        sleep(0.1)
+        reply.call({ 'data' => [{ 'id' => app_id, 'subscribed_fields' => current }] })
+      end
+      store
+    end
+
+    it 'keeps both fields when two writers subscribe the same page at the same time, with no write lost on the way' do
+      store = fake_page(%w[messages])
+
+      [%w[leadgen], %w[feed]].map do |field|
+        Thread.new { described_class.new(page_id: page_id, access_token: token, api_version: 'v22.0').add!(field) }
+      end.each(&:join)
+
+      expect(store[:fields]).to include('messages', 'leadgen', 'feed')
+      expect(store[:posts]).to eq(2) # sem a trava, um apaga o campo do outro e a releitura precisa gravar de novo
+    end
+
+    it 'holds the page lock while it writes' do
+      held = nil
+      stub_reads(%w[feed], %w[feed leadgen])
+      stub_request(:post, url).to_return do
+        held = Redis::Alfred.exists?(lock_key)
+        { status: 200, headers: { 'Content-Type' => 'application/json' }, body: { success: true }.to_json }
+      end
+
+      subscription.add!(%w[leadgen])
+
+      expect(held).to be(true)
+    end
 
     it 'writes again when another writer dropped the field between the POST and the check' do
       stub_reads(%w[messages feed], %w[messages feed], %w[messages feed leadgen])
@@ -127,30 +183,29 @@ RSpec.describe Crm::MetaAds::PageSubscription do
       stub_reads(%w[feed], %w[feed], %w[feed])
       stub_post(%w[feed leadgen])
 
-      expect { subscription.add!(%w[leadgen]) }.to raise_error(described_class::Error, &:transient?)
+      expect { subscription.add!(%w[leadgen]) }.to raise_error(described_class::Error) { |error| expect(error).to be_transient }
     end
 
     it 'waits for the page lock and gives up with a transient error, without writing' do
       stub_const("#{described_class}::LOCK_WAIT", 0.3.seconds)
-      Redis::LockManager.new.lock(lock_key, 10)
+      Redis::Alfred.set(lock_key, 'outro-processo', nx: true, ex: 10)
       stub_reads(%w[feed])
 
-      expect { subscription.add!(%w[leadgen]) }.to raise_error(described_class::Error, &:transient?)
+      expect { subscription.add!(%w[leadgen]) }.to raise_error(described_class::Error) { |error| expect(error).to be_transient }
       expect(a_request(:post, url)).not_to have_been_made
-    ensure
-      Redis::LockManager.new.unlock(lock_key)
+      expect(Redis::Alfred.get(lock_key)).to eq('outro-processo')
     end
 
     it 'releases the page lock after writing and after failing' do
       stub_reads(%w[feed], %w[feed leadgen])
       stub_post(%w[feed leadgen])
       subscription.add!(%w[leadgen])
-      expect(Redis::LockManager.new.locked?(lock_key)).to be(false)
+      expect(Redis::Alfred.exists?(lock_key)).to be(false)
 
       stub_request(:get, url).to_return(status: 500, body: '{}')
       expect { described_class.new(page_id: page_id, access_token: token, api_version: 'v22.0').add!(%w[feed]) }
         .to raise_error(described_class::Error)
-      expect(Redis::LockManager.new.locked?(lock_key)).to be(false)
+      expect(Redis::Alfred.exists?(lock_key)).to be(false)
     end
   end
 
@@ -180,7 +235,7 @@ RSpec.describe Crm::MetaAds::PageSubscription do
     stub_request(:get, url).to_return(status: 400, headers: { 'Content-Type' => 'application/json' },
                                       body: { error: { code: 4, message: 'Application request limit reached' } }.to_json)
 
-    expect { subscription.fields }.to raise_error(described_class::Error, &:transient?)
+    expect { subscription.fields }.to raise_error(described_class::Error) { |error| expect(error).to be_transient }
   end
 
   it 'marks a network failure as transient' do

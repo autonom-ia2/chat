@@ -14,7 +14,9 @@
 # Vários recursos e várias contas mexem na mesma Página ao mesmo tempo (#2200): GET → junta → POST de dois deles em
 # paralelo faria um apagar o campo do outro. Por isso a escrita roda sob uma trava por Página (Redis) e, depois do POST,
 # relê a lista: se o campo pedido não ficou (outro processo sem trava, ou a Meta), grava de novo; se ainda não ficar,
-# erro passageiro para quem chamou tentar de novo.
+# erro passageiro para quem chamou tentar de novo. A trava é de quem a tomou: só o dono a apaga (compare-and-delete),
+# então uma escrita que passe do TTL não libera a de outro processo. Ela vale dentro de uma stack (cada uma tem o seu
+# Redis); a releitura depois do POST é o que pega a escrita de fora (outra stack, painel da Meta).
 #
 # Mesmas regras do Meta::ConversionsApiClient: o token vai só no header Authorization e todo texto de erro passa
 # pela limpeza de trechos com cara de segredo.
@@ -42,8 +44,8 @@ class Crm::MetaAds::PageSubscription
 
   BASE_URI = Meta::ConversionsApiClient::BASE_URI
   TIMEOUT_SECONDS = 8
-  LOCK_TTL = 60.seconds # cobre as até 6 chamadas de TIMEOUT_SECONDS de uma escrita
-  LOCK_WAIT = 15.seconds
+  LOCK_TTL = 120.seconds # folga sobre as até 6 chamadas de TIMEOUT_SECONDS de uma escrita
+  LOCK_WAIT = 5.seconds
   LOCK_POLL = 0.2
   WRITE_ATTEMPTS = 2
   NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET,
@@ -100,9 +102,9 @@ class Crm::MetaAds::PageSubscription
 
   def with_page_lock
     key = self.class.lock_key(@page_id)
-    lock_manager = Redis::LockManager.new
+    owner = SecureRandom.uuid
     deadline = Time.current + LOCK_WAIT
-    until lock_manager.lock(key, LOCK_TTL.to_i)
+    until Redis::Alfred.set(key, owner, nx: true, ex: LOCK_TTL.to_i)
       raise Error, "subscribed_apps busy on page #{@page_id}" if Time.current >= deadline
 
       sleep(LOCK_POLL)
@@ -111,7 +113,7 @@ class Crm::MetaAds::PageSubscription
     begin
       yield
     ensure
-      lock_manager.unlock(key)
+      Redis::Alfred.delete_if_equals(key, owner)
     end
   end
 
