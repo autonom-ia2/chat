@@ -16,6 +16,9 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   # `:message_edit`: o cliente editou a mensagem (#2113, Instagram::MessageEditService). Só chega com o campo de edição
   # inscrito no app da Meta (ver Channel::Instagram#subscribe).
   SUPPORTED_EVENTS = [:message, :read, :postback, :reaction, :message_edit].freeze
+  TEST_EVENT_FIELD = 'messages'.freeze
+  COMMENT_FIELDS = %w[comments mentions].freeze
+  COMMENT_JOB = 'Webhooks::InstagramCommentJob'.freeze
 
   def perform(entries)
     @entries = entries
@@ -44,12 +47,23 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   private
 
   def process_single_entry(entry)
-    if test_event?(entry)
-      process_test_event(entry)
-      return
-    end
+    return process_changes(entry) if entry[:changes].present?
 
     process_messages(entry)
+  end
+
+  # `changes` (#2200): o evento de teste do painel da Meta chega como field `messages`; comentário real e menção chegam
+  # como `comments` e `mentions` e vão para o job dos comentários (#2196), com (instagram_id, field, value, time). Esse
+  # job ignora conta que não conhece nesta stack. Sem a classe publicada, o evento só fica no log.
+  def process_changes(entry)
+    entry[:changes].each do |change|
+      next process_test_event(change) if change[:field] == TEST_EVENT_FIELD
+
+      job = COMMENT_FIELDS.include?(change[:field]) ? COMMENT_JOB.safe_constantize : nil
+      next Rails.logger.info("Instagram webhook: no job for field #{change[:field].inspect}") if job.nil?
+
+      job.perform_later(entry[:id].to_s, change[:field], change[:value].to_h, entry[:time])
+    end
   end
 
   def process_messages(entry)
@@ -71,18 +85,10 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
     messaging[:message].present? && messaging[:message][:is_echo].present?
   end
 
-  def test_event?(entry)
-    entry[:changes].present?
-  end
-
-  def process_test_event(entry)
-    messaging = extract_messaging_from_test_event(entry)
+  def process_test_event(change)
+    messaging = change[:value]
 
     Instagram::TestEventService.new(messaging).perform if messaging.present?
-  end
-
-  def extract_messaging_from_test_event(entry)
-    entry[:changes].first&.dig(:value) if entry[:changes].present?
   end
 
   def instagram_id(messaging)

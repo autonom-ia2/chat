@@ -38,6 +38,8 @@ class Webhooks::InstagramController < ActionController::API
 
   def relay_needed?
     return false if instagram_relay_urls.empty? || request.headers[::Webhooks::InstagramRelayJob::RELAY_HEADER].present?
+    # #2200: comentário e menção chegam em `changes`; cada stack ignora a conta que não conhece, então vai sempre.
+    return true if Array(params.to_unsafe_hash[:entry]).any? { |entry| entry.with_indifferent_access[:changes].present? }
 
     payload_instagram_ids.any? { |instagram_id| !local_instagram_account?(instagram_id) }
   end
