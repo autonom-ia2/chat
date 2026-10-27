@@ -5,7 +5,7 @@
 # personalizadas, sem a Integração WhatsApp, sem Spam e Lixeira do e-mail). As mensagens só vêm dessas conversas.
 # "Pessoas" pede a permissão de ver contatos (contact_view) e traz quem não tem conversa que eu veja — dá para começar
 # uma pelas minhas caixas, como em Contatos; a conversa alheia não aparece. "Começar conversa com +55 …" pede a de
-# criar contato (ContactPolicy#create?).
+# criar contato (ContactPolicy#create?), e "Escrever para fulano@…" também.
 #
 # - telefone pelos dígitos (SearchService::TelefoneDigitado): "11 97862-2068" acha "+5511978622068", com e sem o nono
 #   dígito; com "+" na frente, o número precisa começar com o que foi digitado (número estrangeiro);
@@ -39,13 +39,13 @@ module SearchService::BuscaDaLista
       contacts: -> { pessoas_sem_conversa }
     }.transform_values { |secao| com_tempo_maximo(&secao) }
     secoes.transform_values { |linhas| linhas || [] }
-          .merge(telefone_novo: telefone_novo, parcial: secoes.select { |_secao, linhas| linhas.nil? }.keys)
+          .merge(ofertas, parcial: secoes.select { |_secao, linhas| linhas.nil? }.keys)
   end
 
   private
 
   def vazio
-    { conversations: [], messages: [], contacts: [], telefone_novo: nil, parcial: [] }
+    { conversations: [], messages: [], contacts: [], telefone_novo: nil, texto_livre_nas_caixas: [], email_novo: nil, parcial: [] }
   end
 
   # Cada seção na sua transação, com teto de tempo por consulta. Estourou: nil (a seção volta vazia e parcial).
@@ -181,8 +181,18 @@ module SearchService::BuscaDaLista
                    .limit(LIMITE)
   end
 
+  def contexto_de_acesso
+    { user: current_user, account: current_account, account_user: account_user }
+  end
+
   def politica_de_contato
-    @politica_de_contato ||= ContactPolicy.new({ user: current_user, account: current_account, account_user: account_user }, Contact)
+    @politica_de_contato ||= ContactPolicy.new(contexto_de_acesso, Contact)
+  end
+
+  # Começar conversa com quem ainda não é contato: o telefone ou o e-mail novo.
+  def ofertas
+    numero = telefone_novo
+    { telefone_novo: numero, texto_livre_nas_caixas: texto_livre_nas_caixas(numero), email_novo: email_novo }
   end
 
   # Telefone completo que ninguém da conta tem: a lista oferece "Começar conversa com +55 …", para quem cria contato.
@@ -191,5 +201,29 @@ module SearchService::BuscaDaLista
     return if numero.nil? || !politica_de_contato.create?
 
     current_account.contacts.exists?(phone_number: telefone.variantes) ? nil : numero
+  end
+
+  # #2257 — no telefone novo, as caixas do WhatsApp em que a primeira mensagem pode ser texto livre (Híbrido pronto), para
+  # a tela não começar pedindo modelo. A regra é a da nova conversa (WhatsappHybrid::NewConversation), com um contato em
+  # memória, sem gravar: dele a regra só usa o telefone. Só as caixas que a pessoa pode usar, como em contactable_inboxes
+  # (InboxPolicy#show?); para WhatsApp, o ContactableInboxesService só pede o telefone, que aqui sempre existe.
+  def texto_livre_nas_caixas(numero)
+    return [] if numero.nil?
+
+    contato = Contact.new(account: current_account, phone_number: numero)
+    current_account.inboxes.where(channel_type: 'Channel::Whatsapp').order(:id).select do |caixa|
+      InboxPolicy.new(contexto_de_acesso, caixa).show? &&
+        WhatsappHybrid::NewConversation.new(inbox: caixa, contact: contato).free_text_available?
+    end.map(&:id)
+  end
+
+  # E-mail que ninguém da conta tem: a lista oferece "Escrever para …", para quem cria contato. É e-mail o que o Contact
+  # aceita (a validação de formato dele, Devise.email_regexp), gravado como ele grava (minúsculas). "Já existe" com o
+  # critério da unicidade do Contact, sem diferença de maiúsculas (índice lower(email), account_id).
+  def email_novo
+    email = consulta.strip.downcase
+    return unless Devise.email_regexp.match?(email) && politica_de_contato.create?
+
+    current_account.contacts.exists?(['LOWER(contacts.email) = ?', email]) ? nil : email
   end
 end

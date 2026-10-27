@@ -21,6 +21,8 @@ import BlocoQuemCuida from './BlocoQuemCuida.vue';
 import BlocoCombinado from './BlocoCombinado.vue';
 import BlocoAssunto from './BlocoAssunto.vue';
 import BlocoOrigem from './BlocoOrigem.vue';
+import BlocoRelacao from './BlocoRelacao.vue';
+import { useRelacaoLigada } from 'dashboard/components-next/contato-relacao/useRelacaoLigada';
 import BlocoDoPainel from './BlocoDoPainel.vue';
 import LinhaQueAbre from './LinhaQueAbre.vue';
 import TelaDaLista from './TelaDaLista.vue';
@@ -45,6 +47,7 @@ const contaId = useMapGetter('getCurrentAccountId');
 const { canManageRelationshipRecords } = useRelationshipPermissions();
 const { canViewCrm } = useCrmPermissions();
 const fase2 = useFase2();
+const relacaoLigada = useRelacaoLigada();
 
 const noCelular = computed(
   () => width.value < wootConstants.SMALL_SCREEN_BREAKPOINT
@@ -212,6 +215,13 @@ const verPagina = () =>
           :fase2="fase2"
         />
         <BlocoCombinado v-if="crmLigado" :contact-id="contact.id" />
+        <BlocoRelacao
+          v-if="
+            relacaoLigada && crmLigado && podeVerContatos && contatoCarregado
+          "
+          :contact-id="contact.id"
+          :pode-editar="canManageRelationshipRecords && podeOperar"
+        />
         <BlocoAssunto
           v-if="crmLigado && !podeOperar"
           :conversation="conversation"
