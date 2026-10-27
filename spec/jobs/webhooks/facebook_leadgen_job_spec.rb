@@ -136,6 +136,21 @@ RSpec.describe Webhooks::FacebookLeadgenJob do
     expect(account.crm_cards.count).to eq(0)
   end
 
+  it 'conexão no modo parceira (token da plataforma): não chama a Meta' do
+    Crm::MetaAdsConnection.find_by(account_id: account.id).update_columns(mode: 'partner') # rubocop:disable Rails/SkipsModelValidations
+
+    described_class.perform_now('104882', value, nil)
+
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
+  it 'formulário que esta conta não configurou: não chama a Meta' do
+    described_class.perform_now('104882', value.merge('form_id' => '5555'), nil)
+
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    expect(account.crm_cards.count).to eq(0)
+  end
+
   it 'falha passageira da Meta: levanta para o job tentar de novo' do
     stub_meta(status: 500)
 

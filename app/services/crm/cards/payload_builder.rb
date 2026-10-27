@@ -80,9 +80,7 @@ class Crm::Cards::PayloadBuilder
 
   # Respostas do formulário do anúncio da Meta (#2195) trazem nome, telefone e e-mail: só para quem vê o contato inteiro.
   def sanitize_lead_form_answers!(payload)
-    return if full_contact? || !payload[:metadata].is_a?(Hash) || payload[:metadata]['meta_lead_form'].blank?
-
-    payload[:metadata] = payload[:metadata].merge('meta_lead_form' => payload[:metadata]['meta_lead_form'].except('fields'))
+    payload[:metadata] = Crm::MetaAds::LeadForms::Answers.without(payload[:metadata]) unless full_contact?
   end
 
   def sanitize_hidden_conversation!(payload)

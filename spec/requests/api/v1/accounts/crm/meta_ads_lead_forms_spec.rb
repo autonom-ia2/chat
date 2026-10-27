@@ -344,6 +344,31 @@ RSpec.describe 'CRM meta ads lead forms (#2195)', type: :request do
     expect(Crm::MetaAds::PageSubscription).not_to have_received(:new)
   end
 
+  it 'outra conta com a mesma Página não vê nem mexe nos formulários e leads desta' do
+    stub_pages
+    stub_leads('9001', [])
+    stub_leads('9003', [])
+    Crm::MetaAdsLeadForm.create!(account: account, page_id: '104882', form_id: '9001', pipeline: pipeline, stage: stage)
+    Crm::MetaAds::LeadForms::Importer.new(account: account, pipeline: pipeline, stage: stage, form_name: 'Orçamento')
+                                     .import(meta_lead('L01', 'Ana').deep_stringify_keys)
+    other, other_admin = create_account_and_user
+    other.enable_features!('meta_ads_formularios')
+    create_meta_ads_insights_connection(other)
+    other_path = "/api/v1/accounts/#{other.id}/crm/meta_ads_lead_forms"
+
+    get other_path, headers: other_admin.create_new_auth_token, as: :json
+
+    forms = response.parsed_body['pages'].sole['forms']
+    expect(forms.pluck('destination').compact).to be_empty
+    expect(response.parsed_body['recent_leads']).to eq([])
+    expect(response.body).not_to include('Ana')
+
+    delete "#{other_path}/forms/9001/destination", headers: other_admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:not_found)
+    expect(Crm::MetaAdsLeadForm.find_by(account: account, form_id: '9001').pipeline_id).to eq(pipeline.id)
+  end
+
   it 'quem chegou num card que a pessoa não enxerga não aparece na lista' do
     stub_pages
     stub_leads('9001', [])

@@ -162,8 +162,10 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength -- no t
   def ler_card
     return {} if card.nil?
 
+    # As respostas do formulário do anúncio (#2195) trazem telefone e e-mail um nível abaixo, onde o curto não olha.
+    metadata = curto(Crm::MetaAds::LeadForms::Answers.without(card.metadata))
     { card: { title: card.title, stage: card.stage&.name, pipeline: card.pipeline&.name, value: valor_do_card, status: card.status,
-              metadata: curto(card.metadata), attributes: curto(card.custom_attributes) }.compact_blank }
+              metadata: metadata, attributes: curto(card.custom_attributes) }.compact_blank }
   end
 
   def valor_do_card
