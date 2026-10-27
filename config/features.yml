@@ -916,9 +916,11 @@
 # o "visto" do agente anda até elas e a bolinha de não lida apaga, sem sino (ConversaCanal::VistaNoCelular). Hoje só
 # na caixa oficial com WhatsApp Híbrido, pela sessão auxiliar (WhatsappHybrid::LeituraNoCelular); a caixa WhatsApp API
 # (WAHA comum) depende de patch no conector e a Cloud sem Híbrido não recebe o sinal da Meta. Desligada: a bolinha só
-# apaga pelo painel ou pela resposta de uma pessoa, como antes. Sem migration. No fim da feature_flags_ext_2, depois de
-# agentes_painel_desempenho: posição 5 (valor 16, 1 << 4), PROVISÓRIA até a Orquestração confirmar. Nasce ligada nas
-# contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+# apaga pelo painel ou pela resposta de uma pessoa, como antes. Sem migration. Fica SEMPRE no fim da
+# feature_flags_ext_2: a posição é a seguinte à última da main no dia da fila (o bit sai da ordem neste arquivo, não
+# deste comentário). Previsão PROVISÓRIA da Orquestração (27/10): posição 8 (valor 128, 1 << 7), depois do #2266 (5),
+# #2269 (6) e #2277 (7), sem reserva. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do
+# deploy).
 - name: leitura_no_celular
   display_name: Conversas › leitura no celular apaga a bolinha
   enabled: false

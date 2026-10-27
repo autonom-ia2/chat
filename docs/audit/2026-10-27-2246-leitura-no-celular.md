@@ -12,7 +12,7 @@
 
 ## Regra (o que conta como "pessoa leu no celular")
 
-1. flag `leitura_no_celular` da conta (ext_2, posição 5 provisória);
+1. flag `leitura_no_celular` da conta (fim da ext_2; posição = seguinte à última da main no dia da fila; previsão provisória 8, valor 128, `1 << 7`);
 2. `fromMe=false` e ack 3 (lido) ou 4 (ouvido);
 3. aparelho que leu = 0 (celular principal), lido do `_data.Sender`; só o número do aparelho vai para a fila;
 4. a mensagem lida **não está coberta** por uma leitura que o próprio sistema mandou ao canal
