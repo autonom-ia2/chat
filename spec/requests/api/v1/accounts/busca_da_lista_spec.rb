@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# #2211 — a porta da busca da lista: pede login, e devolve as três seções e o telefone novo no formato que a lista usa.
+# #2211 — a porta da busca da lista: pede login, e devolve as três seções, o telefone novo e o e-mail novo no formato que a lista usa.
 RSpec.describe 'Busca da lista de conversas', type: :request do
   let(:account) { create(:account) }
   let(:agent) { create(:user, account: account, role: :agent) }
@@ -28,8 +28,7 @@ RSpec.describe 'Busca da lista de conversas', type: :request do
     expect(payload['conversations'].first).to include('waiting_since', 'last_non_activity_message', 'status')
     expect(payload['messages'].first).to include('content' => 'O João pediu a cotação', 'conversation_id' => kind_of(Integer))
     expect(payload['contacts'].pluck('name')).to eq(['Joana Sem Conversa'])
-    expect(payload['telefone_novo']).to be_nil
-    expect(payload['parcial']).to eq([])
+    expect(payload).to include('telefone_novo' => nil, 'texto_livre_nas_caixas' => [], 'email_novo' => nil, 'parcial' => [])
   end
 
   it 'com NUL no q, responde 200' do
@@ -40,5 +39,23 @@ RSpec.describe 'Busca da lista de conversas', type: :request do
   it 'com um telefone que ninguém tem, oferece o número' do
     get url, params: { q: '21 99999-0000' }, headers: agent.create_new_auth_token, as: :json
     expect(response.parsed_body['payload']['telefone_novo']).to eq('+5521999990000')
+    expect(response.parsed_body['payload']['email_novo']).to be_nil
+  end
+
+  it 'com um telefone novo, diz em quais caixas do WhatsApp Híbrido a primeira mensagem pode ser texto livre' do
+    canal = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+    create(:inbox_member, user: agent, inbox: canal.inbox)
+    WhatsappHybrid::Connection.create!(account: account, inbox: canal.inbox, session_name: 'hibrida-request', status: 'connected',
+                                       connected_phone: canal.phone_number.delete('^0-9'), risk_accepted_at: Time.current,
+                                       status_checked_at: Time.current)
+    with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: account.id.to_s) do
+      get url, params: { q: '21 99999-0000' }, headers: agent.create_new_auth_token, as: :json
+    end
+    expect(response.parsed_body['payload']).to include('telefone_novo' => '+5521999990000', 'texto_livre_nas_caixas' => [canal.inbox.id])
+  end
+
+  it 'com um e-mail que ninguém tem, oferece o e-mail em minúsculas' do
+    get url, params: { q: ' Nova.Pessoa@Example.TEST ' }, headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['payload']).to include('email_novo' => 'nova.pessoa@example.test', 'telefone_novo' => nil)
   end
 end
