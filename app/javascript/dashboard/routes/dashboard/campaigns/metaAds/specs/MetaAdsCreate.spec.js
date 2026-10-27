@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsCreate from '../components/MetaAdsCreate.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
+import { esquecerTentativas } from '../criacaoNaMeta';
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: {
@@ -108,6 +109,7 @@ const refusal = (status, data) =>
 
 describe('Anúncios da Meta · anúncio novo (#2198)', () => {
   beforeEach(() => {
+    esquecerTentativas();
     let count = 0;
     vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
       count += 1;
@@ -147,6 +149,23 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     expect(
       wrapper.find('[data-create-blocker]').attributes('data-create-blocker')
     ).toBe('LOGIN');
+  });
+
+  it('Meta down while reading permissions (422 meta_unavailable) is a failure to retry, not a sign-in', async () => {
+    CrmMetaAdsConnectionAPI.createOptions
+      .mockRejectedValueOnce(refusal(422, { error: 'meta_unavailable' }))
+      .mockResolvedValueOnce({ data: { options: OPTIONS } });
+    mounted = mount(MetaAdsCreate, {
+      global: { mocks: { $t: key => key }, stubs: STUBS },
+    });
+    await flushPromises();
+
+    expect(mounted.find('[data-create-failed]').exists()).toBe(true);
+    expect(mounted.find('[data-create-blocker]').exists()).toBe(false);
+
+    await mounted.find('[data-create-failed] button').trigger('click');
+    await flushPromises();
+    expect(step(mounted)).toBe('CONTENT');
   });
 
   it('a failed read says so and lets the person try again', async () => {
@@ -230,7 +249,44 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     expect(keys).toEqual(['key-1', 'key-1']);
   });
 
-  it('a refusal ends the attempt: tapping again is a new attempt with a new key', async () => {
+  it('leaving with the request in flight and coming back keeps the same key', async () => {
+    CrmMetaAdsConnectionAPI.createAd
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValueOnce({ data: CREATED });
+    const first = await mountCreate();
+    await fillUntilReview(first);
+    await submit(first);
+    first.unmount();
+
+    const again = await mountCreate();
+    await fillUntilReview(again);
+    await submit(again);
+
+    const keys = CrmMetaAdsConnectionAPI.createAd.mock.calls.map(
+      ([body]) => body.idempotency_key
+    );
+    expect(keys).toEqual(['key-1', 'key-1']);
+  });
+
+  it('a refusal that left something at Meta (nothing_created false) keeps the same key', async () => {
+    CrmMetaAdsConnectionAPI.createAd
+      .mockRejectedValueOnce(
+        refusal(422, { error: 'meta_refused', nothing_created: false })
+      )
+      .mockResolvedValueOnce({ data: CREATED });
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+    await submit(wrapper);
+
+    const keys = CrmMetaAdsConnectionAPI.createAd.mock.calls.map(
+      ([body]) => body.idempotency_key
+    );
+    expect(keys).toEqual(['key-1', 'key-1']);
+  });
+
+  it('a refusal with nothing created ends the attempt: tapping again uses a new key', async () => {
     CrmMetaAdsConnectionAPI.createAd
       .mockRejectedValueOnce(
         refusal(422, { error: 'meta_unavailable', nothing_created: true })

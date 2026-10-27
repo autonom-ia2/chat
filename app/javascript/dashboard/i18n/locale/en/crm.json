@@ -3084,7 +3084,15 @@
             "AMOUNT": "Type an amount, like 45.00.",
             "MIN": "Meta asks for at least {value} per day.",
             "MAX": "The limit here is {value} per day. For more, use Meta Ads Manager.",
-            "END_REQUIRED": "Choose the end date."
+            "END_REQUIRED": "Choose the end date.",
+            "TOTAL_MIN": "The total must be at least {value}.",
+            "TOTAL_MAX": "Until that date, the total can be at most {value} ({daily} per remaining day). For more, use Meta Ads Manager."
+          },
+          "FAILURES": {
+            "INVALID_AMOUNT": "Meta did not accept this amount. Check the limits and try again.",
+            "INVALID_DATES": "This date does not work: the end must be after today and after the ad start.",
+            "CANNOT_CLEAR_END": "Removing the end date is not available here yet. Pick another date or change it in Meta Ads Manager.",
+            "META_PARTIAL": "Only part of the change was made at Meta. Check the budget and dates in Meta Ads Manager."
           }
         }
       },
@@ -3435,7 +3443,7 @@
         "PAUSED_LIST": {
           "TITLE": "Paused, waiting for you to turn on ({count})",
           "HINT": "They were created here and do not spend anything until you turn them on.",
-          "LINE": "Created on {date} · {value} per day",
+          "LINE": "Created on {date} · Amount when created: {value} per day",
           "FAILED": "We couldn't load your paused ads right now.",
           "RETRY": "Try again"
         },

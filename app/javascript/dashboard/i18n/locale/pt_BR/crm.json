@@ -3085,7 +3085,15 @@
             "AMOUNT": "Digite um valor, como 45,00.",
             "MIN": "A Meta pede pelo menos {value} por dia.",
             "MAX": "O limite por aqui é {value} por dia. Para mais, use o Gerenciador de Anúncios da Meta.",
-            "END_REQUIRED": "Escolha a data para terminar."
+            "END_REQUIRED": "Escolha a data para terminar.",
+            "TOTAL_MIN": "O total precisa ser de pelo menos {value}.",
+            "TOTAL_MAX": "Até essa data, o total pode ser de no máximo {value} ({daily} por dia que falta). Para mais, use o Gerenciador de Anúncios da Meta."
+          },
+          "FAILURES": {
+            "INVALID_AMOUNT": "A Meta não aceitou esse valor. Confira os limites e tente de novo.",
+            "INVALID_DATES": "Essa data não vale: o fim precisa ser depois de hoje e do começo do anúncio.",
+            "CANNOT_CLEAR_END": "Por aqui ainda não dá para tirar a data de fim. Escolha outra data ou mude no Gerenciador de Anúncios da Meta.",
+            "META_PARTIAL": "Só parte da mudança foi feita na Meta. Confira o orçamento e as datas no Gerenciador de Anúncios."
           }
         }
       },
@@ -3436,7 +3444,7 @@
         "PAUSED_LIST": {
           "TITLE": "Pausados, esperando você ativar ({count})",
           "HINT": "Foram criados por aqui e não gastam nada até você ativar.",
-          "LINE": "Criado em {date} · {value} por dia",
+          "LINE": "Criado em {date} · Valor ao criar: {value} por dia",
           "FAILED": "Não deu para ler os anúncios pausados agora.",
           "RETRY": "Tentar de novo"
         },

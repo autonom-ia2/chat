@@ -78,12 +78,48 @@ export const pedidoDoAnuncio = (draft, dailyAmount) => {
   };
 };
 
-// Cria pausado. `idempotency_key` é da tentativa: o mesmo pedido de novo (depois de falha de rede) devolve o mesmo
-// anúncio, nunca dois.
-export const criarAnuncio = async (pedido, idempotencyKey) => {
-  const { data } = await CrmMetaAdsConnectionAPI.createAd({
-    ...pedido,
-    idempotency_key: idempotencyKey,
-  });
-  return data;
+// A tentativa de criar, pelo conteúdo do pedido: o mesmo pedido leva a mesma chave de idempotência até chegar uma
+// resposta definitiva, e o servidor devolve o mesmo anúncio em vez de criar outro. Mora aqui, fora da tela: quem sai
+// com o pedido em voo e volta (ou toca de novo) não gera chave nova. Pedido diferente (a pessoa mudou algo) é outra
+// tentativa.
+const HTTP_CONFLICT = 409;
+const HTTP_SERVER_ERROR = 500;
+const tentativas = new Map();
+
+// Sem resposta, tempo esgotado, falha do servidor, "ainda criando" (409) ou recusa que deixou algo na Meta
+// (`nothing_created: false`, que o servidor desfaz antes de criar de novo com a mesma chave): a tentativa continua.
+// Só o anúncio criado ou a recusa com nada criado encerram a tentativa.
+const tentativaContinua = error => {
+  const response = error?.response;
+  if (!response?.status) return true;
+  if (response.status === HTTP_CONFLICT) return true;
+  if (response.status >= HTTP_SERVER_ERROR) return true;
+  return response.data?.nothing_created === false;
 };
+
+const chaveDoPedido = signature => {
+  if (!tentativas.has(signature)) {
+    tentativas.set(signature, crypto.randomUUID());
+  }
+  return tentativas.get(signature);
+};
+
+// Cria pausado.
+export const criarAnuncio = async pedido => {
+  const signature = JSON.stringify(pedido);
+  const key = chaveDoPedido(signature);
+  try {
+    const { data } = await CrmMetaAdsConnectionAPI.createAd({
+      ...pedido,
+      idempotency_key: key,
+    });
+    tentativas.delete(signature);
+    return data;
+  } catch (error) {
+    if (!tentativaContinua(error)) tentativas.delete(signature);
+    throw error;
+  }
+};
+
+// Para os testes: cada um começa sem tentativa pendente.
+export const esquecerTentativas = () => tentativas.clear();

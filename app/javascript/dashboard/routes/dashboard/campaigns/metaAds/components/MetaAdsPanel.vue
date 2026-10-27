@@ -125,6 +125,8 @@ const stopCreating = () => {
   delete query.criar;
   router.replace({ query });
 };
+// Sem a flag, o topo e o botão do relatório ficam com a marcação de antes (o v-else-if do relatório); com ela, o
+// "Criar anúncio" entra ao lado do relatório.
 // Pausados à espera (#2198): com eles à vista, o "Ativar anúncio" é o primário e o "Criar anúncio" vira contorno.
 const pausedCount = ref(0);
 
@@ -445,9 +447,9 @@ onMounted(() => {
             />
           </div>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
+        <div v-if="canCreate" class="flex flex-wrap items-center gap-2">
           <button
-            v-if="canCreate && !openAd"
+            v-if="!openAd"
             type="button"
             data-panel-create
             class="inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-520 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand focus-visible:ring-offset-2"
@@ -466,6 +468,10 @@ onMounted(() => {
             :period="panel.period || period"
           />
         </div>
+        <MetaAdsReportButton
+          v-else-if="!sample && panel"
+          :period="panel.period || period"
+        />
       </div>
       <p
         data-panel-period-hint

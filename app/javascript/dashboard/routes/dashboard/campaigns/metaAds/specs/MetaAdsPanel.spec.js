@@ -201,6 +201,28 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     vi.useRealTimers();
   });
 
+  // A marcação gravada no arquivo saiu do MetaAdsPanel.vue da main de antes do #2198. Sem comentários (os do template
+  // e os marcadores <!--v-if--> do Vue), que não aparecem na tela.
+  it('with meta_ads_criar off, renders exactly the markup of the panel before #2198', async () => {
+    // Relógio parado: "há 26 dias" e "agora" não mudam com o dia em que o teste roda.
+    const now = new Date('2026-10-27T12:00:00Z');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(now);
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: { panel: { ...PANEL, synced_at: now.toISOString() } },
+    });
+    const wrapper = await mountPanel();
+    const clone = wrapper.element.cloneNode(true);
+    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT);
+    const comments = [];
+    while (walker.nextNode()) comments.push(walker.currentNode);
+    comments.forEach(node => node.remove());
+
+    await expect(clone.outerHTML).toMatchFileSnapshot(
+      './__snapshots__/MetaAdsPanel.semCriar.txt'
+    );
+  });
+
   it('with meta_ads_criar off, the panel has no "Create ad" and no paused list (#2198)', async () => {
     const wrapper = await mountPanel();
 

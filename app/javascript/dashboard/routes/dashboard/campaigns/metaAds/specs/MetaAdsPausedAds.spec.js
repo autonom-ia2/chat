@@ -5,7 +5,7 @@ import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { useAlert } from 'dashboard/composables';
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
-  default: { pausedAds: vi.fn(), updateAdBudget: vi.fn() },
+  default: { pausedAds: vi.fn(), updateAdBudget: vi.fn(), adBudget: vi.fn() },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
@@ -24,12 +24,19 @@ const StatusStub = {
     "<button data-status-stub @click=\"$emit('changed', 'ACTIVE', { status: 'ACTIVE' })\" />",
 };
 
+// Conta as aberturas: a confirmação de ativar só abre com o orçamento de agora lido.
+const dialogs = { opened: 0 };
 const DialogStub = {
-  props: ['confirmButtonLabel'],
+  props: ['confirmButtonLabel', 'description'],
   emits: ['confirm'],
-  methods: { open() {}, close() {} },
+  methods: {
+    open() {
+      dialogs.opened += 1;
+    },
+    close() {},
+  },
   template:
-    '<div data-dialog><slot /><button data-confirm @click="$emit(\'confirm\')">{{ confirmButtonLabel }}</button></div>',
+    '<div data-dialog :data-description="description"><slot /><button data-confirm @click="$emit(\'confirm\')">{{ confirmButtonLabel }}</button></div>',
 };
 
 describe('Anúncios da Meta · pausados esperando ativar (#2198)', () => {
@@ -52,6 +59,101 @@ describe('Anúncios da Meta · pausados esperando ativar (#2198)', () => {
       true
     );
     expect(wrapper.emitted('count')).toEqual([[1]]);
+  });
+
+  // Com a situação de verdade: o "Ativar" de cada linha.
+  const mountWithStatus = () =>
+    mount(MetaAdsPausedAds, {
+      global: { mocks: { $t: key => key }, stubs: { Dialog: DialogStub } },
+    });
+  const STATUS = 'CRM_KANBAN.META_ADS_HUB.GESTAO.STATUS';
+  // Orçamento de agora diferente do de quando foi criado: total, não por dia.
+  const NOW = {
+    level: 'adset',
+    object_name: 'Bolo',
+    kind: 'lifetime',
+    amount: 900,
+    currency: 'BRL',
+    start_time: '2026-10-27T00:00:00-0300',
+    end_time: '2026-11-30T23:59:00-0300',
+    ads_count: 1,
+    active_ads_count: 0,
+  };
+
+  it('opening the list reads no budget and shows the amount from when it was created', async () => {
+    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
+      data: { ads: [AD, { ...AD, ad_id: '120000000000990002' }] },
+    });
+    const wrapper = mountWithStatus();
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-panel-paused-ad]')).toHaveLength(2);
+    expect(wrapper.text()).toContain(
+      'CRM_KANBAN.META_ADS_HUB.CRIAR.PAUSED_LIST.LINE'
+    );
+    expect(CrmMetaAdsConnectionAPI.adBudget).not.toHaveBeenCalled();
+  });
+
+  it('tapping "Activate" reads the budget now, waits, then confirms with it', async () => {
+    dialogs.opened = 0;
+    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
+      data: { ads: [AD] },
+    });
+    let answer;
+    CrmMetaAdsConnectionAPI.adBudget.mockReturnValue(
+      new Promise(resolve => {
+        answer = resolve;
+      })
+    );
+    const wrapper = mountWithStatus();
+    await flushPromises();
+
+    await wrapper.find('[data-ad-status-toggle]').trigger('click');
+    expect(CrmMetaAdsConnectionAPI.adBudget).toHaveBeenCalledTimes(1);
+    expect(CrmMetaAdsConnectionAPI.adBudget).toHaveBeenCalledWith(AD.ad_id);
+    const toggle = wrapper.find('[data-ad-status-toggle]');
+    expect(toggle.attributes('disabled')).toBeDefined();
+    expect(toggle.attributes('aria-busy')).toBe('true');
+    expect(wrapper.find('[data-ad-status-budget-pending]').exists()).toBe(true);
+    expect(dialogs.opened).toBe(0);
+
+    answer({ data: { budget: NOW } });
+    await flushPromises();
+
+    expect(dialogs.opened).toBe(1);
+    expect(wrapper.find('[data-dialog]').attributes('data-description')).toBe(
+      `${STATUS}.ACTIVATE_SPEND_TOTAL`
+    );
+    expect(wrapper.find('[data-confirm]').text()).toBe(
+      `${STATUS}.ACTIVATE_SPEND_BUTTON`
+    );
+  });
+
+  it('a failed read does not open the confirmation and offers to try again', async () => {
+    dialogs.opened = 0;
+    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
+      data: { ads: [AD] },
+    });
+    CrmMetaAdsConnectionAPI.adBudget
+      .mockRejectedValueOnce({ response: { status: 422 } })
+      .mockResolvedValueOnce({ data: { budget: NOW } });
+    const wrapper = mountWithStatus();
+    await flushPromises();
+
+    await wrapper.find('[data-ad-status-toggle]').trigger('click');
+    await flushPromises();
+
+    expect(dialogs.opened).toBe(0);
+    expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-status-budget-failed]').text()).toBe(
+      `${STATUS}.BUDGET_FAILED`
+    );
+
+    await wrapper.find('[data-ad-status-budget-retry]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.adBudget).toHaveBeenCalledTimes(2);
+    expect(dialogs.opened).toBe(1);
   });
 
   it('after activating, reads the list again and the ad leaves it', async () => {
@@ -139,6 +241,57 @@ describe('Anúncios da Meta · orçamento e datas do anúncio (#2198)', () => {
     });
     expect(wrapper.emitted('changed')).toEqual([[{ ...BUDGET, amount: 45 }]]);
     expect(useAlert).toHaveBeenCalledWith(`${KEY}.DONE`);
+  });
+
+  it('with an end date already set, offers only to change it, never "no end date"', async () => {
+    const wrapper = mountBudget({
+      budget: { ...BUDGET, end_time: '2099-11-30T23:59:00-0300' },
+    });
+    await wrapper.find('[data-ad-budget-edit]').trigger('click');
+
+    expect(wrapper.find('[data-end-date-option="NONE"]').exists()).toBe(false);
+    expect(wrapper.find('[data-end-date-option="PICK"]').exists()).toBe(true);
+    expect(mountBudget().find('[data-end-date-option="NONE"]').exists()).toBe(
+      true
+    );
+  });
+
+  it('a total budget is capped at the daily limit times the days left', async () => {
+    const wrapper = mountBudget({
+      budget: {
+        ...BUDGET,
+        kind: 'lifetime',
+        amount: 900,
+        start_time: '2020-01-01T00:00:00-0300',
+        end_time: '2099-01-01T23:59:00-0300',
+      },
+    });
+    await wrapper.find('[data-ad-budget-edit]').trigger('click');
+    await wrapper.find('[data-end-date-option="D7"]').trigger('click');
+    await wrapper.find('input[data-ad-budget-input]').setValue('3600.00');
+
+    expect(wrapper.text()).toContain(`${KEY}.ERRORS.TOTAL_MAX`);
+
+    await wrapper.find('input[data-ad-budget-input]').setValue('3500.00');
+    expect(wrapper.text()).not.toContain(`${KEY}.ERRORS.TOTAL_MAX`);
+  });
+
+  it.each([
+    ['cannot_clear_end', 'CANNOT_CLEAR_END'],
+    ['meta_partial', 'META_PARTIAL'],
+    ['invalid_amount', 'INVALID_AMOUNT'],
+  ])('a %s refusal says what happened', async (code, message) => {
+    CrmMetaAdsConnectionAPI.updateAdBudget.mockRejectedValue({
+      response: { status: 422, data: { error: code } },
+    });
+    const wrapper = mountBudget();
+    await wrapper.find('[data-ad-budget-edit]').trigger('click');
+    await wrapper.find('input[data-ad-budget-input]').setValue('45.00');
+    await wrapper.find('[data-confirm]').trigger('click');
+    await wrapper.find('[data-confirm]').trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(`${KEY}.FAILURES.${message}`);
   });
 
   it('a refusal keeps the budget and warns', async () => {

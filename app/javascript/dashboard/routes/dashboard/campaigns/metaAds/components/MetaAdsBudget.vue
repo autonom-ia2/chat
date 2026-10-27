@@ -22,7 +22,8 @@ import MetaAdsEndDate from './MetaAdsEndDate.vue';
 // Anúncios da Meta (#2198): quanto o anúncio pode gastar e até quando, com o botão para mudar. O dinheiro mora no
 // grupo de anúncios (o "conjunto" da Meta) ou na campanha, e é dividido entre os anúncios dele: a tela diz isso sem
 // jargão. Mexe no dinheiro do cliente: a pessoa confere antes e depois, por extenso, antes de mudar; acima do teto,
-// só pelo Gerenciador de Anúncios. Cada mudança fica na Auditoria da conta.
+// só pelo Gerenciador de Anúncios. Cada mudança fica na Auditoria da conta. Data de fim que já existe só troca: tirar o
+// fim ainda não é aceito pelo servidor (`cannot_clear_end`), até a chamada real confirmar como a Meta aceita.
 const props = defineProps({
   adId: { type: String, required: true },
   budget: { type: Object, required: true },
@@ -75,10 +76,32 @@ const showButton = computed(() => props.canManage && props.budget.can_change);
 
 const newAmount = computed(() => parseAmount(amountText.value));
 
+// Total: de R$ 6 até R$ 500 por dia de veiculação que falta (de hoje, ou do começo se ainda não começou, até o fim),
+// a mesma conta do servidor.
+const totalMax = computed(() => {
+  if (daily.value || !endDate.value) return null;
+  const start = props.budget.start_time?.slice(0, 10);
+  const from = start && start > todayIso() ? start : todayIso();
+  return props.budget.max_daily * Math.max(daysBetween(from, endDate.value), 1);
+});
+
+const totalError = value => {
+  if (value < props.budget.min_daily) {
+    return t(`${KEY}.ERRORS.TOTAL_MIN`, { value: fmt(props.budget.min_daily) });
+  }
+  if (totalMax.value != null && value > totalMax.value) {
+    return t(`${KEY}.ERRORS.TOTAL_MAX`, {
+      value: fmt(totalMax.value),
+      daily: fmt(props.budget.max_daily),
+    });
+  }
+  return null;
+};
+
 const amountError = computed(() => {
   const value = newAmount.value;
   if (value == null) return t(`${KEY}.ERRORS.AMOUNT`);
-  if (!daily.value) return null;
+  if (!daily.value) return totalError(value);
   if (value < props.budget.min_daily) {
     return t(`${KEY}.ERRORS.MIN`, { value: fmt(props.budget.min_daily) });
   }
@@ -172,6 +195,20 @@ const open = () => {
   dialog.value?.open();
 };
 
+// Recusas que a tela sabe explicar; outra vira a frase geral.
+const FAILURES = [
+  'invalid_amount',
+  'invalid_dates',
+  'cannot_clear_end',
+  'meta_partial',
+];
+const failureMessage = error => {
+  const code = error?.response?.data?.error;
+  return FAILURES.includes(code)
+    ? t(`${KEY}.FAILURES.${code.toUpperCase()}`)
+    : t(`${KEY}.ERROR`);
+};
+
 const confirm = async () => {
   if (stage.value === 'edit') {
     if (canReview.value) stage.value = 'review';
@@ -186,8 +223,8 @@ const confirm = async () => {
     emit('changed', data);
     dialog.value?.close();
     useAlert(t(`${KEY}.DONE`));
-  } catch {
-    useAlert(t(`${KEY}.ERROR`));
+  } catch (error) {
+    useAlert(failureMessage(error));
   } finally {
     saving.value = false;
   }
@@ -293,7 +330,7 @@ const confirmLabel = computed(() => {
         <MetaAdsEndDate
           v-model="endDate"
           :from="todayIso()"
-          :allow-no-end="daily"
+          :allow-no-end="daily && !oldEnd"
         />
       </div>
 

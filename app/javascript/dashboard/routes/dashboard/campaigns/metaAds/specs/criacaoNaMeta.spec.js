@@ -2,6 +2,7 @@ import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import {
   criarAnuncio,
   enviarMidia,
+  esquecerTentativas,
   lerOpcoesDeCriacao,
   lerOrcamento,
   lerPausadosEsperando,
@@ -105,18 +106,84 @@ describe('Anúncios da Meta · pedidos ao servidor (#2198)', () => {
     });
   });
 
-  it('sends the idempotency key with the request and returns the paused ad', async () => {
-    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({
-      data: { ad_id: '9', status: 'PAUSED' },
+  describe('idempotency key of each attempt', () => {
+    beforeEach(() => {
+      esquecerTentativas();
+      let count = 0;
+      vi.spyOn(crypto, 'randomUUID').mockImplementation(() => {
+        count += 1;
+        return `key-${count}`;
+      });
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    const keys = () =>
+      CrmMetaAdsConnectionAPI.createAd.mock.calls.map(
+        ([body]) => body.idempotency_key
+      );
+    const refusal = (status, data) =>
+      Object.assign(new Error('refused'), { response: { status, data } });
+    const tryTwice = async error => {
+      CrmMetaAdsConnectionAPI.createAd
+        .mockRejectedValueOnce(error)
+        .mockResolvedValueOnce({ data: { ad_id: '9', status: 'PAUSED' } });
+      await expect(criarAnuncio({ name: 'x' })).rejects.toBe(error);
+      return criarAnuncio({ name: 'x' });
+    };
+
+    it('sends the key with the request and returns the paused ad', async () => {
+      CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({
+        data: { ad_id: '9', status: 'PAUSED' },
+      });
+
+      const result = await criarAnuncio({ name: 'x' });
+
+      expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith({
+        name: 'x',
+        idempotency_key: 'key-1',
+      });
+      expect(result).toEqual({ ad_id: '9', status: 'PAUSED' });
     });
 
-    const result = await criarAnuncio({ name: 'x' }, 'key-1');
+    it('keeps the key after no answer, a 5xx, a 409 or nothing_created false', async () => {
+      await tryTwice(new Error('Network Error'));
+      await tryTwice(refusal(502, {}));
+      await tryTwice(refusal(409, { error: 'in_progress' }));
+      await tryTwice(
+        refusal(422, { error: 'meta_refused', nothing_created: false })
+      );
 
-    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith({
-      name: 'x',
-      idempotency_key: 'key-1',
+      expect(keys()).toEqual([
+        'key-1',
+        'key-1',
+        'key-2',
+        'key-2',
+        'key-3',
+        'key-3',
+        'key-4',
+        'key-4',
+      ]);
     });
-    expect(result).toEqual({ ad_id: '9', status: 'PAUSED' });
+
+    it('a refusal with nothing created frees a new key; a success too', async () => {
+      CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({
+        data: { ad_id: '9', status: 'PAUSED' },
+      });
+      await tryTwice(
+        refusal(422, { error: 'meta_refused', nothing_created: true })
+      );
+      await criarAnuncio({ name: 'x' });
+
+      expect(keys()).toEqual(['key-1', 'key-2', 'key-3']);
+    });
+
+    it('a different request is another attempt', async () => {
+      CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(new Error('Network'));
+      await expect(criarAnuncio({ name: 'x' })).rejects.toThrow();
+      await expect(criarAnuncio({ name: 'y' })).rejects.toThrow();
+
+      expect(keys()).toEqual(['key-1', 'key-2']);
+    });
   });
 
   it('a photo goes up once and comes back with its hash', async () => {

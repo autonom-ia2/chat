@@ -64,7 +64,6 @@ const CREATE_ERRORS = [
   'meta_refused',
 ];
 const HTTP_CONFLICT = 409;
-const HTTP_SERVER_ERROR = 500;
 
 const options = ref(null);
 const loading = ref(true);
@@ -288,22 +287,6 @@ const chooseKind = kind => {
   if (!blocker.value) step.value = 1;
 };
 
-// A tentativa de criar: a chave de idempotência vale para o mesmo pedido. Tocar de novo depois de falha de rede,
-// tempo esgotado ou "ainda criando" manda a mesma chave, e o servidor devolve o mesmo anúncio em vez de criar outro.
-// Recusa do servidor encerra a tentativa; pedido diferente (a pessoa mudou algo) é tentativa nova.
-let attempt = null;
-const keyFor = pedido => {
-  const signature = JSON.stringify(pedido);
-  if (attempt?.signature !== signature) {
-    attempt = { key: crypto.randomUUID(), signature };
-  }
-  return attempt.key;
-};
-const uncertain = error => {
-  const status = error?.response?.status;
-  return !status || status === HTTP_CONFLICT || status >= HTTP_SERVER_ERROR;
-};
-
 // "Nada foi criado" só quando o servidor garante (`nothing_created`). Sem garantia, pede para conferir na Meta.
 const createErrorText = error => {
   const response = error?.response;
@@ -328,11 +311,9 @@ const create = async () => {
   createError.value = '';
   const pedido = pedidoDoAnuncio(draft.value, dailyAmount.value);
   try {
-    created.value = await criarAnuncio(pedido, keyFor(pedido));
-    attempt = null;
+    created.value = await criarAnuncio(pedido);
     focusHeading();
   } catch (error) {
-    if (!uncertain(error)) attempt = null;
     createError.value = createErrorText(error);
   } finally {
     saving.value = false;

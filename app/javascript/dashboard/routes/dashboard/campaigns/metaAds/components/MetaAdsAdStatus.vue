@@ -25,6 +25,9 @@ const props = defineProps({
   // Com a gestão de orçamento ligada ('loading' | 'failed' | 'ok'), ativar espera o orçamento: nunca ativa sem dizer
   // o valor. '' quando não há gestão de orçamento.
   budgetState: { type: String, default: '' },
+  // Leitura no toque (lista de pausados, #2198): () => Promise<orçamento>. Com ela, o toque em "Ativar" lê o orçamento
+  // de agora antes de abrir a confirmação, e `budget`/`budgetState` não valem: a frase usa só o que acabou de ler.
+  readBudget: { type: Function, default: null },
   // 'dark' no topo escuro do anúncio; 'light' nas listas do painel.
   tone: { type: String, default: 'dark' },
 });
@@ -59,8 +62,18 @@ const showLoginHint = computed(
 );
 
 // Quanto vai gastar, por extenso, contando do dia em que começa (hoje ou o começo marcado, o mais tarde).
+// Lido no toque (com `readBudget`) ou o que a tela já leu.
+const tapBudget = ref(null);
+const tapState = ref('');
+const currentBudget = computed(() =>
+  props.readBudget ? tapBudget.value : props.budget
+);
+const currentState = computed(() =>
+  props.readBudget ? tapState.value : props.budgetState
+);
+
 const spend = computed(() => {
-  const budget = props.budget;
+  const budget = currentBudget.value;
   if (action.value !== 'ACTIVATE' || !budget) return null;
   const fmt = value => withWords(value, budget.currency, locale.value);
   const end = budget.end_time?.slice(0, 10);
@@ -99,10 +112,33 @@ const spend = computed(() => {
 // "Tentar de novo" lê outra vez.
 const blockedBy = computed(() =>
   action.value === 'ACTIVATE' &&
-  ['loading', 'failed'].includes(props.budgetState)
-    ? props.budgetState
+  ['loading', 'failed'].includes(currentState.value)
+    ? currentState.value
     : ''
 );
+
+// Com leitura no toque, "Ativar" lê primeiro e só abre a confirmação com o orçamento de agora; na falha, não abre.
+const openDialog = async () => {
+  if (!props.readBudget || action.value !== 'ACTIVATE') {
+    dialog.value?.open();
+    return;
+  }
+  tapBudget.value = null;
+  tapState.value = 'loading';
+  try {
+    const budget = await props.readBudget();
+    if (!budget) throw new Error('budget_not_found');
+    tapBudget.value = budget;
+    tapState.value = '';
+    dialog.value?.open();
+  } catch {
+    tapState.value = 'failed';
+  }
+};
+const retryBudget = () => {
+  if (props.readBudget) openDialog();
+  else emit('retryBudget');
+};
 
 const light = computed(() => props.tone === 'light');
 const BADGE_CLASSES = {
@@ -190,12 +226,17 @@ const confirm = async () => {
       type="button"
       data-ad-status-toggle
       :disabled="Boolean(blockedBy)"
+      :aria-busy="blockedBy === 'loading' || undefined"
       class="inline-flex min-h-11 items-center gap-2 rounded-lg border-0 px-4 text-sm font-520 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-wait disabled:opacity-60"
       :class="primaryClass"
-      @click="dialog?.open()"
+      @click="openDialog"
     >
       <span
-        :class="active ? 'i-lucide-pause' : 'i-lucide-play'"
+        :class="{
+          'i-lucide-loader-circle animate-spin': blockedBy === 'loading',
+          'i-lucide-pause': blockedBy !== 'loading' && active,
+          'i-lucide-play': blockedBy !== 'loading' && !active,
+        }"
         class="size-4"
         aria-hidden="true"
       />
@@ -216,7 +257,7 @@ const confirm = async () => {
         data-ad-status-budget-retry
         class="inline-flex min-h-11 items-center gap-2 rounded-lg border-0 px-4 text-sm font-520 focus-visible:outline-none focus-visible:ring-2"
         :class="primaryClass"
-        @click="emit('retryBudget')"
+        @click="retryBudget"
       >
         <span class="i-lucide-refresh-cw size-4" aria-hidden="true" />
         {{ $t(`${KEY}.BUDGET_RETRY`) }}
