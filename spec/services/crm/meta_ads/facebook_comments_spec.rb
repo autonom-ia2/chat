@@ -14,7 +14,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
   let(:json) { { 'Content-Type' => 'application/json' } }
   let(:all_permissions) { %w[pages_read_user_content pages_manage_engagement] }
 
-  let!(:page_record) { simulate_meta_ads_comment_pieces(account_ids: [account.id]) }
+  let!(:page_record) { simulate_meta_ads_comment_pieces(account: account, page_id: page_id) }
 
   def stub_permissions(*granted)
     stub_request(:get, meta_graph_url('me/permissions'))
@@ -133,7 +133,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
     end
 
     it 'guarda a Página e assina o feed dela uma vez' do
-      page_record.feed_receiving = false
+      page_record.update!(feed_receiving: false)
       subscription = instance_double(Crm::MetaAds::PageSubscription, add!: true)
       allow(Crm::MetaAds::PageSubscription).to receive(:new).and_return(subscription)
       ready!(*all_permissions)
@@ -142,7 +142,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       described_class.new(connection).list(ad_id)
       described_class.new(connection).list(ad_id)
 
-      expect(Crm::MetaAdsPage).to have_received(:remember!).with(account, [{ 'id' => page_id, 'name' => 'Loja Exemplo' }]).twice
+      expect(page_record.reload).to have_attributes(name: 'Loja Exemplo', feed_receiving: true)
       expect(Crm::MetaAds::PageSubscription).to have_received(:new)
         .with(page_id: page_id, access_token: page_token).once
       expect(subscription).to have_received(:add!).with(%w[feed]).once

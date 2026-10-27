@@ -18,7 +18,7 @@ RSpec.describe Webhooks::FacebookFeedJob do
 
   before do
     account.enable_features!('meta_ads_comentarios_facebook')
-    simulate_meta_ads_comment_pieces(account_ids: [account.id])
+    simulate_meta_ads_comment_pieces(account: account, page_id: page_id)
     allow(Rails.configuration).to receive(:dispatcher).and_return(dispatcher)
   end
 

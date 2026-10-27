@@ -23,7 +23,7 @@ RSpec.describe 'CRM meta_ads_connection Facebook comments (#2197)', type: :reque
   before do
     account.enable_features!('meta_ads_comentarios_facebook')
     create_meta_ads_insights_connection(account)
-    simulate_meta_ads_comment_pieces(account_ids: [account.id])
+    simulate_meta_ads_comment_pieces(account: account, page_id: page_id)
   end
 
   def stub_meta
