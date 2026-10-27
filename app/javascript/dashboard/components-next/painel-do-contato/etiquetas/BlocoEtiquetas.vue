@@ -10,14 +10,23 @@ import { useNomeDaEtiqueta } from 'dashboard/composables/useNomeDaEtiqueta';
 import BlocoDoPainel from '../BlocoDoPainel.vue';
 import EtiquetasDaConversaDialog from './EtiquetasDaConversaDialog.vue';
 
-defineProps({
+const props = defineProps({
   podeOperar: { type: Boolean, default: false },
+  // Para onde vai o foco quando a escolha fecha e o bloco já sumiu.
+  focarPainel: { type: Function, default: null },
 });
 
 const { t } = useI18n();
 const { activeLabels } = useConversationLabels();
 const { nomeDe } = useNomeDaEtiqueta();
 const escolha = ref(null);
+const botao = ref(null);
+// Ao fechar a escolha, o foco volta para o bloco; se tirar a última etiqueta fez
+// o bloco sumir, vai para o painel.
+const devolverFoco = () => {
+  if (botao.value) botao.value.focus();
+  else props.focarPainel?.();
+};
 // O nome do botão diz quais etiquetas a conversa tem (o leitor de tela lê só ele).
 const nomeDoBotao = computed(() =>
   t('PAINEL_DO_CONTATO.ETIQUETAS.MUDAR', {
@@ -34,6 +43,7 @@ const nomeDoBotao = computed(() =>
   >
     <component
       :is="podeOperar ? 'button' : 'div'"
+      ref="botao"
       :type="podeOperar ? 'button' : undefined"
       :aria-label="podeOperar ? nomeDoBotao : undefined"
       class="flex items-center w-full gap-2 px-2 py-1.5 -mx-2 text-left rounded-lg min-h-11"
@@ -43,7 +53,7 @@ const nomeDoBotao = computed(() =>
           : ''
       "
       data-test-id="etiquetas-da-conversa"
-      @click="podeOperar && escolha?.abrir()"
+      @click="podeOperar && escolha?.abrir(devolverFoco)"
     >
       <span class="flex flex-wrap flex-1 min-w-0 gap-2">
         <span

@@ -19,6 +19,8 @@ import EtiquetasDaConversaDialog from '../etiquetas/EtiquetasDaConversaDialog.vu
 
 const props = defineProps({
   conversa: { type: Object, required: true },
+  // Devolve o foco ao ⋯ quando a escolha de etiquetas fecha.
+  voltarFoco: { type: Function, default: null },
 });
 
 const ACAO_TIME = 'painel_novo_time_e_prioridade';
@@ -127,7 +129,7 @@ const alternarAcompanhar = async () => {
 // true quando a ação é daqui (quem chama não faz mais nada).
 const agir = action => {
   if (action === ACAO_ETIQUETAS && podeOperar.value) {
-    etiquetas.value?.abrir();
+    etiquetas.value?.abrir(props.voltarFoco);
     return true;
   }
   if (!ligado.value) return false;

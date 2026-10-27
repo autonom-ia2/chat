@@ -224,6 +224,7 @@ describe('MoreActions (⋯ do topo) com os itens do fork', () => {
       ...estado,
     });
     const wrapper = mount(MoreActions, {
+      attachTo: document.body,
       global: {
         plugins: [apoio.store, criarI18n()],
         stubs: {
@@ -284,5 +285,9 @@ describe('MoreActions (⋯ do topo) com os itens do fork', () => {
     });
     await flushPromises();
     expect(abrirEtiquetas).toHaveBeenCalledTimes(1);
+    // Ao fechar a escolha, o foco volta ao ⋯ (não cai no <body>).
+    const [voltarFoco] = abrirEtiquetas.mock.calls[0];
+    voltarFoco();
+    expect(document.activeElement).toBe(wrapper.get('button').element);
   });
 });
