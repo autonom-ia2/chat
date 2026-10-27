@@ -41,8 +41,6 @@ RSpec.describe Channel::FacebookPage do
     let(:subscription) { instance_double(Crm::MetaAds::PageSubscription, add!: true, remove!: true) }
 
     before do
-      allow(GlobalConfigService).to receive(:load).and_call_original
-      allow(GlobalConfigService).to receive(:load).with('FB_APP_ID', nil).and_return('fb-app-id')
       allow(Crm::MetaAds::PageSubscription).to receive(:new).and_return(subscription)
     end
 
@@ -50,7 +48,7 @@ RSpec.describe Channel::FacebookPage do
       channel.subscribe
 
       expect(Crm::MetaAds::PageSubscription).to have_received(:new)
-        .with(page_id: channel.page_id, access_token: channel.page_access_token, app_id: 'fb-app-id')
+        .with(page_id: channel.page_id, access_token: channel.page_access_token)
       expect(subscription).to have_received(:add!).with(include('messages', 'messaging_postbacks'))
     end
 

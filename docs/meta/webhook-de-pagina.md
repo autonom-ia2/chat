@@ -33,9 +33,11 @@ Todo recurso usa `Crm::MetaAds::PageSubscription`, que lê a lista atual, soma o
 lista inteira:
 
 ```ruby
-Crm::MetaAds::PageSubscription.new(page_id:, access_token: page_token, app_id:).add!(%w[leadgen])
-Crm::MetaAds::PageSubscription.for_instagram(instagram_id:, access_token:).add!(%w[comments])
+Crm::MetaAds::PageSubscription.new(page_id:, access_token: page_token).add!(%w[leadgen])
 ```
+
+O app é o do próprio token (GET /app). No Instagram (login do Instagram) não há nada a inscrever por conta: os
+campos valem pelo painel do app.
 
 `Channel::FacebookPage#subscribe/#unsubscribe` somam e tiram só os campos do Messenger.
 

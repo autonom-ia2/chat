@@ -59,18 +59,9 @@ class Webhooks::FacebookPageController < ActionController::API
     Channel::FacebookPage.exists?(page_id: page_id.to_s)
   end
 
+  # Channel::FacebookPage não guarda segredo próprio: valem os do app (FB_APP_SECRET e WHATSAPP_APP_SECRET, o mesmo app
+  # do Entrar com Facebook dos anúncios).
   def meta_app_secrets
-    [
-      *page_channels_from_payload.flat_map { |channel| channel_meta_app_secrets(channel) },
-      GlobalConfigService.load('FB_APP_SECRET', nil),
-      GlobalConfigService.load('WHATSAPP_APP_SECRET', nil)
-    ]
-  end
-
-  def page_channels_from_payload
-    page_ids = Array(JSON.parse(meta_request_body)['entry']).map { |entry| entry['id'].to_s }
-    Channel::FacebookPage.where(page_id: page_ids)
-  rescue JSON::ParserError
-    []
+    [GlobalConfigService.load('FB_APP_SECRET', nil), GlobalConfigService.load('WHATSAPP_APP_SECRET', nil)]
   end
 end

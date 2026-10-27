@@ -1,12 +1,18 @@
 require 'rails_helper'
 
 RSpec.describe Crm::MetaAds::PageSubscription do
-  subject(:subscription) { described_class.new(page_id: page_id, access_token: token, app_id: app_id, api_version: 'v22.0') }
+  subject(:subscription) { described_class.new(page_id: page_id, access_token: token, api_version: 'v22.0') }
 
   let(:page_id) { '1234567890' }
   let(:token) { 'page-token-not-a-real-secret' }
   let(:app_id) { '544486745144318' }
   let(:url) { "https://graph.facebook.com/v22.0/#{page_id}/subscribed_apps" }
+
+  before do
+    stub_request(:get, 'https://graph.facebook.com/v22.0/app').with(headers: { 'Authorization' => "Bearer #{token}" })
+                                                              .to_return(status: 200, body: { id: app_id }.to_json,
+                                                                         headers: { 'Content-Type' => 'application/json' })
+  end
 
   def stub_current(apps)
     stub_request(:get, url).with(headers: { 'Authorization' => "Bearer #{token}" })
@@ -19,7 +25,7 @@ RSpec.describe Crm::MetaAds::PageSubscription do
   end
 
   describe '#fields' do
-    it 'returns only the fields of this app' do
+    it 'returns only the fields of the app that owns the token, never another app of the page' do
       stub_current([{ id: '1', subscribed_fields: ['feed'] }, { id: app_id, subscribed_fields: %w[messages leadgen] }])
 
       expect(subscription.fields).to eq(%w[messages leadgen])
@@ -82,19 +88,23 @@ RSpec.describe Crm::MetaAds::PageSubscription do
     end
   end
 
-  describe '.for_instagram' do
-    subject(:subscription) { described_class.for_instagram(instagram_id: '1784', access_token: token, api_version: 'v22.0') }
+  it 'reads nothing from config: with no token app, it never writes another app fields over this one' do
+    stub_current([{ id: '999', subscribed_fields: %w[leadgen feed] }])
+    post = stub_post(%w[messages])
 
-    let(:url) { 'https://graph.instagram.com/v22.0/1784/subscribed_apps' }
+    subscription.add!(%w[messages])
 
-    it 'keeps the Direct fields when adding comments on graph.instagram.com' do
-      stub_current([{ subscribed_fields: %w[messages message_reactions] }])
-      post = stub_post(%w[messages message_reactions comments])
+    expect(post).to have_been_requested
+    expect(subscription.fields).to eq([])
+  end
 
-      subscription.add!(%w[comments])
+  it 'turns an unreadable answer into a transient error without the token' do
+    stub_request(:get, url).to_return(status: 200, body: '{not json', headers: { 'Content-Type' => 'application/json' })
 
-      expect(post).to have_been_requested
-    end
+    expect { subscription.fields }.to raise_error(described_class::Error) { |error|
+      expect(error).to be_transient
+      expect(error.message).not_to include(token)
+    }
   end
 
   it 'raises with the Meta error code and never the token' do

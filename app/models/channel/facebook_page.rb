@@ -55,20 +55,20 @@ class Channel::FacebookPage < ApplicationRecord
     # #2200: soma só os campos do Messenger; leadgen e feed da mesma Página continuam inscritos.
     page_subscription.add!(MESSENGER_FIELDS)
   rescue StandardError => e
-    Rails.logger.debug { "Rescued: #{e.inspect}" }
+    Rails.logger.warn("[Channel::FacebookPage] subscribed_apps page=#{page_id} #{e.class}: #{e.message}")
     true
   end
 
   def unsubscribe
     page_subscription.remove!(MESSENGER_FIELDS)
   rescue StandardError => e
-    Rails.logger.debug { "Rescued: #{e.inspect}" }
+    Rails.logger.warn("[Channel::FacebookPage] subscribed_apps page=#{page_id} #{e.class}: #{e.message}")
     true
   end
 
   private
 
   def page_subscription
-    Crm::MetaAds::PageSubscription.new(page_id: page_id, access_token: page_access_token, app_id: GlobalConfigService.load('FB_APP_ID', nil))
+    Crm::MetaAds::PageSubscription.new(page_id: page_id, access_token: page_access_token)
   end
 end

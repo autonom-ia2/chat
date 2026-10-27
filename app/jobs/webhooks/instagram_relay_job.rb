@@ -11,7 +11,10 @@ class Webhooks::InstagramRelayJob < ApplicationJob
   RELAY_HEADER = 'X-Chatwoot-Instagram-Relay'.freeze
   TIMEOUT_SECONDS = 10
 
-  retry_on StandardError, wait: :polynomially_longer, attempts: 3
+  # O corpo leva mensagens de clientes: fora do log do ActiveJob. As tentativas cobrem um deploy da outra stack.
+  self.log_arguments = false
+
+  retry_on StandardError, wait: :polynomially_longer, attempts: 10
 
   def perform(url, raw_body, signature)
     response = HTTParty.post(
