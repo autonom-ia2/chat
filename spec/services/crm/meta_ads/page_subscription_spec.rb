@@ -124,6 +124,9 @@ RSpec.describe Crm::MetaAds::PageSubscription do
 
     # Uma Página falsa em memória, direto no HTTParty (o WebMock responde um pedido por vez e esconderia a corrida). A
     # leitura demora o bastante para dois escritores sem trava lerem a mesma lista e um apagar o campo do outro.
+    # No teste o Redis é o MockRedis, cujo SET NX lê e grava em dois passos; o RedisDeTesteSerializado
+    # (config/initializers/01_redis_compartilhado_no_teste.rb) passa cada comando por um Monitor, e o SET NX fica
+    # atômico entre threads como no Redis real.
     def fake_page(initial)
       store = { fields: initial, posts: 0 }
       mutex = Mutex.new
@@ -194,6 +197,75 @@ RSpec.describe Crm::MetaAds::PageSubscription do
       expect { subscription.add!(%w[leadgen]) }.to raise_error(described_class::Error) { |error| expect(error).to be_transient }
       expect(a_request(:post, url)).not_to have_been_made
       expect(Redis::Alfred.get(lock_key)).to eq('outro-processo')
+    end
+
+    it 'uses the key declared in Redis::RedisKeys and expires it with the TTL while it writes' do
+      ttl = nil
+      stub_reads(%w[feed], %w[feed leadgen])
+      stub_request(:post, url).to_return do
+        ttl = Redis::Alfred.ttl(lock_key)
+        { status: 200, headers: { 'Content-Type' => 'application/json' }, body: { success: true }.to_json }
+      end
+
+      subscription.add!(%w[leadgen])
+
+      expect(lock_key).to eq(format(Redis::RedisKeys::META_PAGE_SUBSCRIPTION_MUTEX, page_id: page_id))
+      expect(ttl).to be_between(1, described_class::LOCK_TTL.to_i)
+    end
+
+    it 'takes the lock once the lock of a dead writer expires' do
+      stub_const("#{described_class}::LOCK_WAIT", 3.seconds)
+      Redis::Alfred.with { |conn| conn.set(lock_key, 'processo-morto', px: 300) }
+      stub_reads(%w[feed], %w[feed leadgen])
+      post = stub_post(%w[feed leadgen])
+      allow(Redis::Alfred).to receive(:set).and_call_original
+
+      subscription.add!(%w[leadgen])
+
+      expect(Redis::Alfred).to have_received(:set).with(lock_key, anything, nx: true, ex: described_class::LOCK_TTL.to_i).at_least(:twice)
+      expect(post).to have_been_requested
+    end
+
+    it 'never releases a lock that is no longer its own (its TTL ran out and another writer took it)' do
+      stub_reads(%w[feed], %w[feed leadgen])
+      stub_request(:post, url).to_return do
+        Redis::Alfred.set(lock_key, 'outro-processo')
+        { status: 200, headers: { 'Content-Type' => 'application/json' }, body: { success: true }.to_json }
+      end
+
+      subscription.add!(%w[leadgen])
+
+      expect(Redis::Alfred.get(lock_key)).to eq('outro-processo')
+    end
+
+    it 'turns a Redis failure on the lock into a transient error, without writing' do
+      [Redis::CannotConnectError, ConnectionPool::TimeoutError].each do |failure|
+        allow(Redis::Alfred).to receive(:set).and_raise(failure)
+
+        expect { subscription.add!(%w[leadgen]) }.to raise_error(described_class::Error) { |error| expect(error).to be_transient }
+      end
+      expect(a_request(:any, url)).not_to have_been_made
+    end
+
+    it 'keeps the result of the write when releasing the lock fails' do
+      stub_reads(%w[feed], %w[feed leadgen])
+      post = stub_post(%w[feed leadgen])
+      allow(Redis::Alfred).to receive(:delete_if_equals).and_raise(Redis::CannotConnectError)
+      allow(Rails.logger).to receive(:warn)
+
+      expect { subscription.add!(%w[leadgen]) }.not_to raise_error
+      expect(post).to have_been_requested
+      expect(Rails.logger).to have_received(:warn).with(/lock release failed: Redis::CannotConnectError/)
+    end
+
+    it 'logs when another writer changed the page between its write and the check' do
+      stub_reads(%w[messages], %w[messages leadgen feed])
+      stub_post(%w[messages leadgen])
+      allow(Rails.logger).to receive(:warn)
+
+      subscription.add!(%w[leadgen])
+
+      expect(Rails.logger).to have_received(:warn).with(/read differs from write: wrote leadgen,messages, read feed,leadgen,messages/)
     end
 
     it 'releases the page lock after writing and after failing' do
