@@ -5,8 +5,10 @@
 #   antigos" depois do webhook, devolve :duplicate sem criar nada.
 # - O contato é o mesmo quando o telefone (E.164) ou o e-mail já existe na conta.
 # - Quem já tem card aberto naquele funil não ganha outro (:existing_card); o lead fica ligado ao card que já existe.
-# - Card criado pelo sistema: sem usuário, dono pela regra do Crm::Cards::Creator. Sem nome, telefone nem e-mail, o
-#   título é o nome do formulário.
+# - Card criado pelo sistema: sem usuário, dono pela regra do Crm::Cards::Creator. O título é o nome que a pessoa
+#   escreveu; sem ele, o nome do formulário; sem os dois, "Lead <id>". Nunca telefone nem e-mail: o título vai à IA
+#   (Decisor, IA de etapa) e a quem não vê o contato.
+# - E-mail que o contato não aceita fica só nas respostas; o lead entra do mesmo jeito.
 # - Lead que não dá para gravar (:failed) vai para o rastreador de erros e não para os outros do mesmo lote.
 class Crm::MetaAds::LeadForms::Importer
   SOURCE = 'meta_lead_form'.freeze
@@ -30,7 +32,7 @@ class Crm::MetaAds::LeadForms::Importer
       next :duplicate if record.nil?
 
       phone = e164(answer(lead, PHONE_KEY))
-      email = valid_email(answer(lead, EMAIL_KEY))
+      email = answer(lead, EMAIL_KEY).presence
       lock_person!(phone || email&.downcase)
       contact, new_contact = find_or_create_contact(lead, phone, email)
       card = open_card_for(contact)
@@ -74,7 +76,9 @@ class Crm::MetaAds::LeadForms::Importer
     existing = (@account.contacts.find_by(phone_number: phone) if phone) || (@account.contacts.from_email(email) if email)
     return [existing, false] if existing
 
-    contact = @account.contacts.create!(name: name_of(lead), phone_number: phone, email: email, contact_type: :lead)
+    contact = @account.contacts.new(name: name_of(lead), phone_number: phone, email: email, contact_type: :lead)
+    contact.email = nil if !contact.valid? && contact.errors.include?(:email)
+    contact.save!
     [contact, true]
   end
 
@@ -86,7 +90,7 @@ class Crm::MetaAds::LeadForms::Importer
     Crm::Cards::Creator.new(
       account: @account, user: nil,
       params: { pipeline_id: @pipeline.id, stage_id: @stage.id, contact_id: contact.id, source: SOURCE,
-                title: contact.name.presence || contact.phone_number || contact.email || @form_name.presence || lead['id'].to_s,
+                title: name_of(lead) || @form_name.presence || "Lead #{lead['id']}",
                 metadata: { 'meta_lead_form' => origin(lead) } }
     ).perform
   end
@@ -131,10 +135,6 @@ class Crm::MetaAds::LeadForms::Importer
 
     digits = value.each_char.select { |char| char.between?('0', '9') }.join
     "+#{digits}" if E164_DIGITS.cover?(digits.length) && !digits.start_with?('0')
-  end
-
-  def valid_email(value)
-    value.presence if value.present? && Devise.email_regexp.match?(value)
   end
 
   def received_at(lead)

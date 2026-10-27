@@ -73,12 +73,12 @@ const resumeReceiving = async page => {
   }
 };
 
+// Quem já preencheu entra em segundo plano (importing): o aviso diz que os cards aparecem em alguns minutos.
 const saved = async ({
   form,
   archived,
   destination,
-  imported,
-  import_error: importError,
+  importing,
   ...brought
 }) => {
   editing.value = null;
@@ -88,14 +88,9 @@ const saved = async ({
     stage: target.stage_name,
   });
   if (archived) {
-    useAlert(t(`${KEY}.BROUGHT`, { count: imported, where }, imported));
-  } else if (importError) {
-    // A Página já recebe e o destino ficou; só os antigos não vieram.
-    useAlert(t(`${KEY}.SAVED_PAST_FAILED`, { form: form.name, where }));
-  } else if (imported) {
-    useAlert(
-      t(`${KEY}.SAVED_WITH_PAST`, { form: form.name, where, count: imported })
-    );
+    useAlert(t(`${KEY}.BRINGING`, { form: form.name, where }));
+  } else if (importing) {
+    useAlert(t(`${KEY}.SAVED_BRINGING`, { form: form.name, where }));
   } else {
     useAlert(t(`${KEY}.SAVED`, { form: form.name, where }));
   }

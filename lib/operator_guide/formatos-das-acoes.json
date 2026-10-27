@@ -607,9 +607,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#stop",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:41",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:40"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:40",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:42",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:41"
     ],
     "sem_corpo": true
   },
@@ -15760,9 +15760,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#receive",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:33",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:35",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:34"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:34",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:35"
     ],
     "sem_corpo": true
   },
@@ -24172,10 +24172,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#save_destination",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:45",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:46",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:153",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:48",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:49",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:99",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:107",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:106"

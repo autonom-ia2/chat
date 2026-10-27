@@ -95,6 +95,36 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
     expect(account.crm_cards.last.title).to eq('Orçamento de verão')
   end
 
+  # O título vai à IA (Decisor, IA de etapa) e a quem não vê o contato: telefone e e-mail nunca entram nele.
+  it 'sem nome, com telefone e e-mail: o título é o nome do formulário, sem telefone nem e-mail' do
+    importer.import(lead(name: ''))
+
+    card = account.crm_cards.last
+    expect(card.title).to eq('Orçamento de verão')
+    expect(card.contact.phone_number).to eq('+5511987651201')
+    decisor = build(:autonomia_decisor, account: account)
+    estado = Autonomia::Decisores::Estado.new(card: card, leituras: %w[card contato])
+    expect([estado.para_o_jev(decisor).to_json, estado.trecho]).to all(satisfy do |texto|
+      texto.exclude?('987651201') && texto.exclude?('mariana@example.com')
+    end)
+  end
+
+  it 'sem nome e sem nome do formulário: o título é "Lead" e o id' do
+    sem_formulario = described_class.new(account: account, pipeline: pipeline, stage: stage, form_name: nil)
+
+    sem_formulario.import(lead(name: ''))
+
+    expect(account.crm_cards.last.title).to eq('Lead L1')
+  end
+
+  it 'e-mail que o contato não aceita: o lead entra, o contato nasce sem e-mail e a resposta fica no card' do
+    expect(importer.import(lead(email: 'mariana@'))).to eq(:created)
+
+    card = account.crm_cards.last
+    expect(card.contact.email).to be_nil
+    expect(card.metadata['meta_lead_form']['fields']).to include(include('key' => 'email', 'value' => 'mariana@'))
+  end
+
   it 'guarda a Página de onde o lead veio' do
     importer.import(lead)
 

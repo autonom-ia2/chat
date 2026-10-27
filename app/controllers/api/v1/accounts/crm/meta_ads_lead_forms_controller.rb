@@ -6,6 +6,7 @@
 # PUT    meta_ads_lead_forms/forms/:form_id/destination → funil e etapa do formulário; import_past traz os últimos 90 dias.
 # DELETE meta_ads_lead_forms/forms/:form_id/destination → tira o funil do formulário.
 # POST   meta_ads_lead_forms/forms/:form_id/bring_past  → formulário arquivado: traz quem preencheu, sem destino.
+# Trazer quem já preencheu roda em segundo plano (importing: true); quantos entraram fica na Auditoria.
 #
 # Acesso (parecer da sessão Funções, 27/10): ver pede `meta_ads_view`; a lista de quem chegou (nome, telefone, e-mail)
 # pede também `contact_view`. Escrever pede `meta_ads_manage`. O funil tem de ser um que a pessoa enxerga (mesmo filtro
@@ -46,8 +47,7 @@ class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Cr
     return unless import_past? ? ensure_create_cards : true
 
     result = hub.save_destination!(params[:form_id], pipeline: @pipeline, stage: @stage, import_past: import_past?)
-    audit!('meta_ads_lead_form_destination', destination_changes.merge('imported' => result[:imported],
-                                                                       'import_error' => result[:import_error]))
+    audit!('meta_ads_lead_form_destination', destination_changes.merge('importing' => result[:importing]))
     render json: result
   end
 
@@ -59,7 +59,7 @@ class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Cr
 
   def bring_past
     result = hub.bring_past!(params[:form_id], pipeline: @pipeline, stage: @stage)
-    audit!('meta_ads_lead_form_bring_past', destination_changes.merge('imported' => result[:imported]))
+    audit!('meta_ads_lead_form_bring_past', destination_changes.merge('importing' => true))
     render json: result
   end
 
@@ -113,7 +113,7 @@ class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Cr
   end
 
   def hub
-    @hub ||= ::Crm::MetaAds::LeadForms::Hub.new(connection: @connection, account: Current.account)
+    @hub ||= ::Crm::MetaAds::LeadForms::Hub.new(connection: @connection, account: Current.account, user: Current.user)
   end
 
   def payload

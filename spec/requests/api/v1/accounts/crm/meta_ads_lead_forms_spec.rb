@@ -56,6 +56,17 @@ RSpec.describe 'CRM meta ads lead forms (#2195)', type: :request do
       .to_return(status: 200, headers: json, body: { id: form_id, questions: [{ key: 'full_name', label: 'Nome' }] }.to_json)
   end
 
+  # Em segundo plano (contar e trazer os antigos), o token da Página sai do token do cliente.
+  def stub_page_token
+    stub_request(:get, meta_graph_url('104882')).with(query: { fields: 'access_token' })
+                                                .to_return(status: 200, headers: json, body: { id: '104882', access_token: page_token }.to_json)
+  end
+
+  # A contagem dos antigos fica guardada no cache (no teste, null_store): aqui um de verdade.
+  def with_real_cache
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+  end
+
   # A assinatura da Página é do Crm::MetaAds::PageSubscription (infra, #2200): aqui só o que pedimos a ele.
   def stub_subscription
     subscription = instance_double(Crm::MetaAds::PageSubscription, add!: true, remove!: true)
@@ -84,8 +95,10 @@ RSpec.describe 'CRM meta ads lead forms (#2195)', type: :request do
     expect(response).to have_http_status(:forbidden)
   end
 
-  it 'lista as Páginas com os formulários ativos e arquivados, os funis e quantos preencheram nos últimos 90 dias' do
+  it 'lista as Páginas com os formulários ativos e arquivados e os funis; quantos preencheram é contado em segundo plano' do
+    with_real_cache
     stub_pages
+    stub_page_token
     stub_leads('9001', [meta_lead('L01', 'Ana'), meta_lead('L02', 'Bia')])
     stub_leads('9003', [meta_lead('L03', 'Caio')])
     stage
@@ -96,30 +109,107 @@ RSpec.describe 'CRM meta ads lead forms (#2195)', type: :request do
     page = response.parsed_body['pages'].sole
     expect(page).to include('id' => '104882', 'name' => 'Studio Aurora', 'receiving' => false)
     expect(page['forms'].map { |form| form.slice('id', 'status', 'past_count', 'destination') }).to eq(
-      [{ 'id' => '9001', 'status' => 'ACTIVE', 'past_count' => 2, 'destination' => nil },
-       { 'id' => '9003', 'status' => 'ARCHIVED', 'past_count' => 1, 'destination' => nil }]
+      [{ 'id' => '9001', 'status' => 'ACTIVE', 'past_count' => nil, 'destination' => nil },
+       { 'id' => '9003', 'status' => 'ARCHIVED', 'past_count' => nil, 'destination' => nil }]
     )
+    expect(a_request(:get, meta_graph_url('9001/leads')).with(query: hash_including({}))).not_to have_been_made
     expect(response.parsed_body['pipelines'].sole).to include('id' => pipeline.id, 'stages' => [{ 'id' => stage.id, 'name' => stage.name }])
     expect(response.parsed_body['recent_leads']).to eq([])
     expect(response.body).not_to include(page_token)
   end
 
-  it 'escolher o funil guarda o destino, liga a Página (soma o leadgen) e traz quem já preencheu' do
+  it 'quantos preencheram nos últimos 90 dias aparece depois da contagem em segundo plano' do
+    with_real_cache
     stub_pages
+    stub_page_token
+    stub_leads('9001', [meta_lead('L01', 'Ana'), meta_lead('L02', 'Bia')])
+    stub_leads('9003', [meta_lead('L03', 'Caio')])
+
+    get path, headers: admin.create_new_auth_token, as: :json
+    perform_enqueued_jobs
+    get path, headers: admin.create_new_auth_token, as: :json
+
+    counts = response.parsed_body['pages'].sole['forms'].to_h { |form| [form['id'], form['past_count']] }
+    expect(counts).to eq('9001' => 2, '9003' => 1)
+  end
+
+  it 'abrir a tela de novo enquanto conta não pede outra contagem' do
+    with_real_cache
+    stub_pages
+
+    2.times { get path, headers: admin.create_new_auth_token, as: :json }
+
+    expect(enqueued_jobs.count { |job| job['job_class'] == 'Crm::MetaAds::LeadForms::CountPastJob' }).to eq(2)
+  end
+
+  it 'uma Página que a Meta não deixa ler agora aparece com o motivo e não derruba as outras' do
+    stub_request(:get, meta_graph_url('me/accounts')).with(query: hash_including({}))
+                                                     .to_return(status: 200, headers: json, body: {
+                                                       data: [{ id: '104882', name: 'Studio Aurora', access_token: page_token },
+                                                              { id: '555', name: 'Outra', access_token: 'outro-token' }]
+                                                     }.to_json)
+    stub_request(:get, meta_graph_url('104882/leadgen_forms')).with(query: hash_including({}))
+                                                              .to_return(status: 500, headers: json, body: '{}')
+    stub_request(:get, meta_graph_url('555/leadgen_forms')).with(query: hash_including({}))
+                                                           .to_return(status: 200, headers: json, body: { data: forms.first(1) }.to_json)
+
+    get path, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    pages = response.parsed_body['pages'].index_by { |page| page['id'] }
+    expect(pages['104882']).to include('forms' => [], 'error' => 'meta_unavailable')
+    expect(pages['555']['forms'].pluck('id')).to eq(['9001'])
+  end
+
+  it 'escolher o funil guarda o destino, liga a Página (soma o leadgen) e traz quem já preencheu em segundo plano' do
+    stub_pages
+    stub_page_token
     subscription = stub_subscription
     stub_leads('9001', [meta_lead('L01', 'Ana'), meta_lead('L02', 'Bia')])
 
     put_destination(import_past: true)
 
     expect(subscription).to have_received(:add!).with(%w[leadgen])
-
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body).to include('imported' => 2)
+    expect(response.parsed_body).to include('importing' => true)
     expect(response.parsed_body['destination']).to include('pipeline_id' => pipeline.id, 'stage_id' => stage.id, 'stage_name' => stage.name)
     expect(Crm::MetaAdsPage.find_by(account: account, page_id: '104882')).to have_attributes(leadgen_receiving: true, name: 'Studio Aurora')
-    expect(account.crm_cards.where(stage: stage).pluck(:title)).to contain_exactly('Ana', 'Bia')
+    expect(account.crm_cards.count).to eq(0)
     audit = Audited.audit_class.where(auditable: account, action: 'meta_ads_lead_form_destination').last
     expect(audit).to have_attributes(user_id: admin.id)
+  end
+
+  it 'o job traz quem já preencheu para a etapa e deixa na Auditoria quantos entraram' do
+    stub_pages
+    stub_page_token
+    stub_subscription
+    stub_leads('9001', [meta_lead('L01', 'Ana'), meta_lead('L02', 'Bia')])
+
+    perform_enqueued_jobs { put_destination(import_past: true) }
+
+    expect(account.crm_cards.where(stage: stage).pluck(:title)).to contain_exactly('Ana', 'Bia')
+    done = Audited.audit_class.where(auditable: account, action: 'meta_ads_lead_form_past_imported').last
+    expect(done).to have_attributes(user_id: admin.id)
+    expect(done.audited_changes).to include('imported' => 2, 'truncated' => false, 'brought' => false)
+  end
+
+  it 'mais leads do que o teto de segurança da leitura: entra o que coube e a Auditoria diz que cortou' do
+    stub_const('Meta::AdsGraphClient::LeadForms::LEADS_MAX_PAGES', 1)
+    stub_pages
+    stub_page_token
+    stub_subscription
+    stub_request(:get, meta_graph_url('9001/leads')).with(query: hash_including({}))
+                                                    .to_return(status: 200, headers: json, body: {
+                                                      data: [meta_lead('L01', 'Ana')],
+                                                      paging: { cursors: { after: 'X' }, next: 'https://graph.facebook.com/next' }
+                                                    }.to_json)
+    stub_request(:get, meta_graph_url('9001')).with(query: { fields: Meta::AdsGraphClient::LEAD_FORM_QUESTION_FIELDS })
+                                              .to_return(status: 200, headers: json, body: { id: '9001', questions: [] }.to_json)
+
+    perform_enqueued_jobs { put_destination(import_past: true) }
+
+    done = Audited.audit_class.where(auditable: account, action: 'meta_ads_lead_form_past_imported').last
+    expect(done.audited_changes).to include('imported' => 1, 'truncated' => true)
   end
 
   it 'etapa de outro funil: 422 sem chamar a Meta' do
@@ -177,19 +267,20 @@ RSpec.describe 'CRM meta ads lead forms (#2195)', type: :request do
 
   it 'a Meta recusa ler os antigos: o destino vale, a Página fica ligada e a Auditoria registra' do
     stub_pages
+    stub_page_token
     stub_subscription
     stub_request(:get, meta_graph_url('9001/leads')).with(query: hash_including({}))
                                                     .to_return(status: 400, headers: json, body: meta_graph_error(100).to_json)
     stub_request(:get, meta_graph_url('9001')).with(query: { fields: Meta::AdsGraphClient::LEAD_FORM_QUESTION_FIELDS })
                                               .to_return(status: 200, headers: json, body: { id: '9001', questions: [] }.to_json)
 
-    put_destination(import_past: true)
+    perform_enqueued_jobs { put_destination(import_past: true) }
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body).to include('imported' => 0, 'import_error' => 'meta_refused')
     expect(Crm::MetaAdsLeadForm.find_by(form_id: '9001').pipeline_id).to eq(pipeline.id)
-    audit = Audited.audit_class.where(auditable: account, action: 'meta_ads_lead_form_destination').last
-    expect(audit.audited_changes).to include('import_error' => 'meta_refused', 'imported' => 0)
+    expect(Crm::MetaAdsPage.find_by(account: account).leadgen_receiving).to be(true)
+    done = Audited.audit_class.where(auditable: account, action: 'meta_ads_lead_form_past_imported').last
+    expect(done.audited_changes).to include('import_error' => 'meta_refused')
   end
 
   it 'Meta fora do ar: 503 meta_unavailable' do
@@ -202,10 +293,14 @@ RSpec.describe 'CRM meta ads lead forms (#2195)', type: :request do
   end
 
   it 'falha ao contar os antigos de um formulário não derruba a tela: o número vem nil' do
+    with_real_cache
     stub_pages
+    stub_page_token
     stub_request(:get, meta_graph_url('9001/leads')).with(query: hash_including({})).to_return(status: 500, body: '{}', headers: json)
     stub_leads('9003', [meta_lead('L03', 'Caio')])
 
+    get path, headers: admin.create_new_auth_token, as: :json
+    perform_enqueued_jobs
     get path, headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
@@ -236,8 +331,9 @@ RSpec.describe 'CRM meta ads lead forms (#2195)', type: :request do
     expect(Crm::MetaAdsPage.leadgen_receiving).to be_empty
   end
 
-  it 'formulário arquivado: traz quem preencheu sem guardar destino nem ligar a Página' do
+  it 'formulário arquivado: traz quem preencheu em segundo plano, sem guardar destino nem ligar a Página' do
     stub_pages
+    stub_page_token
     stub_subscription
     stub_leads('9003', [meta_lead('L03', 'Caio')])
 
@@ -245,8 +341,12 @@ RSpec.describe 'CRM meta ads lead forms (#2195)', type: :request do
                                           headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body).to include('imported' => 1, 'pipeline_name' => pipeline.name, 'stage_name' => stage.name)
+    expect(response.parsed_body).to include('importing' => true, 'pipeline_name' => pipeline.name, 'stage_name' => stage.name)
+
+    perform_enqueued_jobs
+
     expect(Crm::MetaAdsLeadForm.find_by(form_id: '9003')).to have_attributes(pipeline_id: nil, brought_count: 1)
+    expect(account.crm_cards.pluck(:title)).to eq(['Caio'])
     expect(Crm::MetaAds::PageSubscription).not_to have_received(:new)
   end
 

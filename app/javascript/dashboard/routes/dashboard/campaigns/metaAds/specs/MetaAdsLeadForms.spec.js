@@ -110,7 +110,24 @@ describe('Anúncios da Meta · Formulários (#2195)', () => {
     expect(wrapper.find('[data-lead-page]').exists()).toBe(false);
   });
 
-  it('saving with the old ones refused says the destination holds and the old ones did not come', async () => {
+  it('a Page that Meta cannot read now shows the reason and the other Pages stay', async () => {
+    const other = { ...PAGE, id: '200', name: 'Outra Página' };
+    LeadFormsAPI.get.mockResolvedValue({
+      data: {
+        pages: [{ ...PAGE, forms: [], error: 'meta_unavailable' }, other],
+        pipelines: [],
+        recent_leads: [],
+      },
+    });
+
+    const wrapper = mountForms();
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-lead-page-error]')).toHaveLength(1);
+    expect(wrapper.findAll('[data-lead-form]').length).toBeGreaterThan(0);
+  });
+
+  it('saving and bringing the old ones says they are coming in the background', async () => {
     LeadFormsAPI.get.mockResolvedValue({
       data: { pages: [PAGE], pipelines: [], recent_leads: [] },
     });
@@ -127,13 +144,12 @@ describe('Anúncios da Meta · Formulários (#2195)', () => {
         form: PAGE.forms[0],
         archived: false,
         destination: PAGE.forms[0].destination,
-        imported: 0,
-        import_error: 'meta_refused',
+        importing: true,
       });
     await flushPromises();
 
     expect(useAlert).toHaveBeenCalledWith(
-      expect.stringContaining('SAVED_PAST_FAILED')
+      expect.stringContaining('SAVED_BRINGING')
     );
   });
 

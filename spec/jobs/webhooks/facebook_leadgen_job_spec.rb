@@ -151,6 +151,17 @@ RSpec.describe Webhooks::FacebookLeadgenJob do
     expect(account.crm_cards.count).to eq(0)
   end
 
+  it 'Meta fora do ar nas 5 tentativas: o leadgen_id vai ao rastreador para "Trazer quem preencheu" recuperar' do
+    stub_meta(status: 500)
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+    perform_enqueued_jobs { described_class.perform_later('104882', value, nil) }
+
+    expect(ChatwootExceptionTracker).to have_received(:new).with(having_attributes(message: include('leadgen_id=L77')))
+    expect(account.crm_cards.count).to eq(0)
+  end
+
   it 'falha passageira da Meta: levanta para o job tentar de novo' do
     stub_meta(status: 500)
 

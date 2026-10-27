@@ -7,8 +7,9 @@ module Meta::AdsGraphClient::LeadForms
   LEAD_FIELDS = 'id,created_time,ad_id,ad_name,campaign_name,form_id,field_data'.freeze
   LEAD_FORMS_LIMIT = 100
   LEADS_PAGE_LIMIT = 100
-  # A Meta guarda o lead por 90 dias; 10 páginas de 100 bastam para a conta pequena e média que usa a tela.
-  LEADS_MAX_PAGES = 10
+  # A Meta guarda o lead por 90 dias. 500 páginas de 100 (50 mil leads) é o teto de segurança da leitura em segundo
+  # plano: passando dele, quem chama recebe truncated e avisa.
+  LEADS_MAX_PAGES = 500
 
   # Páginas que a pessoa concedeu, com o token de cada uma (pages_show_list). O token só segue para o cliente da Graph.
   def pages_with_tokens
@@ -25,11 +26,17 @@ module Meta::AdsGraphClient::LeadForms
     get(form_id.to_s, fields: LEAD_FORM_QUESTION_FIELDS)
   end
 
-  # Quem preencheu desde `since` (leads_retrieval), página a página. Devolve o último Result.
-  def each_form_lead(form_id, since:, &)
+  # Quem preencheu desde `since` (leads_retrieval), página a página até o fim. Devolve o último Result e se parou no
+  # teto com mais páginas na Meta (truncated).
+  def each_form_lead(form_id, since:)
     filtering = [{ field: 'time_created', operator: 'GREATER_THAN', value: since.to_i }].to_json
-    each_page("#{form_id}/leads", { fields: LEAD_FIELDS, filtering: filtering, limit: LEADS_PAGE_LIMIT },
-              max_pages: LEADS_MAX_PAGES, &)
+    pages = 0
+    result = each_page("#{form_id}/leads", { fields: LEAD_FIELDS, filtering: filtering, limit: LEADS_PAGE_LIMIT },
+                       max_pages: LEADS_MAX_PAGES) do |batch|
+      pages += 1
+      yield batch
+    end
+    [result, result.ok && pages == LEADS_MAX_PAGES && result.data.to_h.dig('paging', 'next').present?]
   end
 
   # Um lead pelo id que o webhook leadgen traz (leads_retrieval).

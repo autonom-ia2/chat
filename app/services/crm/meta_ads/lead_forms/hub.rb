@@ -3,7 +3,7 @@
 # cliente; nunca é guardado, logado nem devolvido à tela.
 #
 # - Escolher o funil de um formulário liga o recebimento da Página (assina o leadgen nela, pages_manage_metadata) e,
-#   se pedido, traz quem preencheu nos últimos 90 dias (leads_retrieval).
+#   se pedido, traz quem preencheu nos últimos 90 dias (leads_retrieval), em segundo plano (ImportPastJob).
 # - Parar tira só o leadgen da Página; os destinos ficam guardados para voltar.
 # - Formulário arquivado não recebe ninguém novo: só traz quem já preencheu, sem destino e sem ligar a Página.
 #
@@ -14,9 +14,10 @@ class Crm::MetaAds::LeadForms::Hub
   ACTIVE = 'ACTIVE'.freeze
   SHOWN_STATUSES = %w[ACTIVE ARCHIVED].freeze
 
-  def initialize(connection:, account:)
+  def initialize(connection:, account:, user: nil)
     @connection = connection
     @account = account
+    @user = user
   end
 
   # visible_cards: os cards que a pessoa enxerga (nil quando ela não vê a lista de quem chegou).
@@ -49,8 +50,8 @@ class Crm::MetaAds::LeadForms::Hub
 
   # O destino é gravado antes de ligar a Página: lead que chegar logo depois já tem para onde ir. Se a Meta recusar
   # ligar, o formulário volta ao destino que tinha.
-  # A Página já está ligada e o destino guardado quando os antigos são lidos: se a Meta recusar essa leitura, o destino
-  # vale mesmo assim (imported: 0 e import_error), em vez de a tela dizer que falhou com a Página já recebendo.
+  # Quem já preencheu vem em segundo plano (ImportPastJob), com a Página já ligada e o destino guardado: a resposta não
+  # espera a leitura de milhares de leads, e falha nela não desfaz o destino.
   def save_destination!(form_id, pipeline:, stage:, import_past:)
     page, form = find_form!(form_id)
     raise Crm::MetaAds::LeadForms::Error, 'form_archived' unless form['status'] == ACTIVE
@@ -64,20 +65,17 @@ class Crm::MetaAds::LeadForms::Hub
       record.update!(previous)
       raise
     end
-    result = { destination: destination_payload(record), imported: 0 }
-    import_past ? result.merge(past_result(page, form, pipeline, stage)) : result
+    enqueue_import(page, form, pipeline, stage, brought: false) if import_past
+    { destination: destination_payload(record), importing: import_past }
   end
 
   def bring_past!(form_id, pipeline:, stage:)
     page, form = find_form!(form_id)
     raise Crm::MetaAds::LeadForms::Error, 'form_active' if form['status'] == ACTIVE
 
-    imported = past(page, form).import!(pipeline: pipeline, stage: stage)
-    record = form_record(page, form)
-    # Dois "trazer" ao mesmo tempo somam os dois.
-    Crm::MetaAdsLeadForm.update_counters(record.id, brought_count: imported) # rubocop:disable Rails/SkipsModelValidations
-    record.update!(brought_pipeline: pipeline, brought_stage: stage)
-    { imported: imported, pipeline_name: pipeline.name, stage_name: stage.name }
+    form_record(page, form).update!(brought_pipeline: pipeline, brought_stage: stage)
+    enqueue_import(page, form, pipeline, stage, brought: true)
+    { importing: true, pipeline_name: pipeline.name, stage_name: stage.name }
   end
 
   def remove_destination!(form_id)
@@ -116,10 +114,9 @@ class Crm::MetaAds::LeadForms::Hub
     Crm::MetaAdsPage.leadgen_receiving.where(page_id: page['id']).where.not(account_id: @account.id).exists?
   end
 
-  def past_result(page, form, pipeline, stage)
-    { imported: past(page, form).import!(pipeline: pipeline, stage: stage) }
-  rescue Crm::MetaAds::LeadForms::Error => e
-    { import_error: e.code }
+  def enqueue_import(page, form, pipeline, stage, brought:)
+    Crm::MetaAds::LeadForms::ImportPastJob.perform_later(@account.id, page['id'], form['id'], pipeline.id, stage.id,
+                                                         user_id: @user&.id, brought: brought)
   end
 
   def raise_meta(error)
@@ -142,12 +139,17 @@ class Crm::MetaAds::LeadForms::Hub
     pages.find { |page| page['id'] == page_id.to_s } || raise(Crm::MetaAds::LeadForms::Error, 'page_not_found')
   end
 
+  # Página que a Meta não deixa ler agora não impede achar o formulário nas outras; se ele não aparece em nenhuma, o
+  # motivo é a falha (e não "não existe").
   def find_form!(form_id)
+    failure = nil
     pages.each do |page|
       form = forms_of(page).find { |item| item['id'] == form_id.to_s }
       return [page, form] if form
+    rescue Crm::MetaAds::LeadForms::Error => e
+      failure = e
     end
-    raise Crm::MetaAds::LeadForms::Error, 'form_not_found'
+    raise failure || Crm::MetaAds::LeadForms::Error.new('form_not_found')
   end
 
   def forms_of(page)
@@ -183,10 +185,11 @@ class Crm::MetaAds::LeadForms::Hub
     records = Crm::MetaAdsLeadForm.where(account_id: @account.id, page_id: page['id'])
                                   .includes(:pipeline, :stage, :brought_pipeline, :brought_stage).index_by(&:form_id)
     receiving = Crm::MetaAdsPage.exists?(account_id: @account.id, page_id: page['id'], leadgen_receiving: true)
-    {
-      id: page['id'], name: page['name'], receiving: receiving,
-      forms: forms_of(page).map { |form| form_payload(page, form, records[form['id']]) }
-    }
+    base = { id: page['id'], name: page['name'], receiving: receiving }
+    base.merge(forms: forms_of(page).map { |form| form_payload(page, form, records[form['id']]) })
+  rescue Crm::MetaAds::LeadForms::Error => e
+    # Uma Página que a Meta não deixa ler agora não derruba as outras: ela aparece sem formulários, com o motivo.
+    base.merge(forms: [], error: e.code)
   end
 
   def form_payload(page, form, record)
@@ -195,7 +198,7 @@ class Crm::MetaAds::LeadForms::Hub
     {
       id: form['id'], name: form['name'], status: form['status'], leads_count: form['leads_count'].to_i,
       last_lead_at: last_lead_at(form['id']), destination: destination, brought: brought,
-      past_count: destination || brought ? 0 : past(page, form).count
+      past_count: destination || brought ? 0 : past_count(page, form)
     }
   end
 
@@ -223,8 +226,7 @@ class Crm::MetaAds::LeadForms::Hub
     @last_leads[form_id]&.iso8601
   end
 
-  def past(page, form)
-    @past ||= {}
-    @past[form['id']] ||= Crm::MetaAds::LeadForms::PastLeads.new(account: @account, page: page, form: form)
+  def past_count(page, form)
+    Crm::MetaAds::LeadForms::PastLeads.cached_count(account: @account, page_id: page['id'], form_id: form['id'])
   end
 end

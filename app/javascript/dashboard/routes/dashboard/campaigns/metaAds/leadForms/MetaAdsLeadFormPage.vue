@@ -144,7 +144,16 @@ const stop = () => {
     </header>
 
     <p
-      v-if="!activeForms.length"
+      v-if="page.error"
+      role="status"
+      class="m-0 text-sm text-n-slate-11"
+      data-lead-page-error
+    >
+      {{ $t(`${KEY}.PAGE_UNAVAILABLE`) }}
+    </p>
+
+    <p
+      v-else-if="!activeForms.length"
       class="m-0 text-sm text-n-slate-11"
       data-lead-page-empty
     >

@@ -7,7 +7,14 @@
 # cria o card (Crm::MetaAds::LeadForms::Importer, idempotente pelo leadgen_id). Falha passageira da Meta: tenta de novo.
 class Webhooks::FacebookLeadgenJob < ApplicationJob
   queue_as :default
-  retry_on Crm::MetaAds::LeadForms::Unavailable, wait: :polynomially_longer, attempts: 5
+  # A Meta fora do ar depois das 5 tentativas: o lead não entra agora. O leadgen_id vai ao rastreador, e "Trazer
+  # quem já preencheu" (últimos 90 dias) recupera; o Importer não duplica quem já entrou. Reconciliação sozinha: #2285.
+  retry_on Crm::MetaAds::LeadForms::Unavailable, wait: :polynomially_longer, attempts: 5 do |job, _error|
+    page_id, value = job.arguments
+    leadgen_id = value.to_h.stringify_keys['leadgen_id']
+    lost = StandardError.new("Lead do formulário não entrou: Meta fora do ar (leadgen_id=#{leadgen_id}, page_id=#{page_id})")
+    ChatwootExceptionTracker.new(lost).capture_exception
+  end
 
   FEATURE = 'meta_ads_formularios'.freeze
 
