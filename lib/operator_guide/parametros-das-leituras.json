@@ -1271,6 +1271,10 @@
     "controller": "api/v1/accounts/crm/contacts/permanent_deletions#preview",
     "parametros": []
   },
+  "crm/contacts/:contact_id/relacao": {
+    "controller": "api/v1/accounts/crm/contacts/relacoes#show",
+    "parametros": []
+  },
   "crm/conversations/:conversation_id/card": {
     "controller": "api/v1/accounts/crm/cards#by_conversation",
     "parametros": []
