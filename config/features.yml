@@ -897,9 +897,11 @@
 # Minhas, Para pegar e Todas. Desligada: a lista de sempre, idêntica. Só frontend, sem migration. Fim da
 # feature_flags_ext_2, posição pela ordem de chegada à main; hoje 3 (valor 4, 1 << 2), confirmada pela Orquestração.
 # Se outra flag da ext_2 entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+# Ligada em todas as contas em 27/10 (Orquestração, psql, com backup). Padrão das contas novas: ligada desde o #2253
+# (migration 20261108560000).
 - name: lista_quem_espera
   display_name: Lista de conversas › quem está esperando
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
 
 # Painel de desempenho do agente (#2226 protótipo, #2251 leitura guardada no banco). Ligada: a página Agentes › {nome} ›
