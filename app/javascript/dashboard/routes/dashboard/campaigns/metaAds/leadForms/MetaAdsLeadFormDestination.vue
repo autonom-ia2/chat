@@ -38,18 +38,23 @@ const archived = props.form.status !== 'ACTIVE';
 const pastCount = computed(() =>
   props.form.destination || archived ? 0 : props.form.past_count || 0
 );
+// A contagem parou no teto de leitura: o número é "N ou mais".
+const shownCount = count =>
+  props.form.past_count_truncated
+    ? t('CRM_KANBAN.META_ADS_HUB.LEAD_FORMS.OR_MORE', { count })
+    : count;
 const texts = computed(() =>
   archived
     ? {
         title: t(
           `${BRING}.TITLE`,
-          { count: props.form.past_count, form: props.form.name },
+          { count: shownCount(props.form.past_count), form: props.form.name },
           props.form.past_count
         ),
         hint: t(`${BRING}.HINT`),
         confirm: t(
           `${BRING}.CONFIRM`,
-          { count: props.form.past_count },
+          { count: shownCount(props.form.past_count) },
           props.form.past_count
         ),
       }
@@ -200,7 +205,9 @@ onMounted(() => dialog.value?.open());
           />
           <span class="flex flex-col gap-0.5">
             <span class="text-sm font-medium text-n-slate-12">
-              {{ t(`${KEY}.PAST`, { count: pastCount }, pastCount) }}
+              {{
+                t(`${KEY}.PAST`, { count: shownCount(pastCount) }, pastCount)
+              }}
             </span>
             <span class="text-xs text-n-slate-11">
               {{ t(`${KEY}.PAST_HINT`) }}

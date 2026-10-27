@@ -195,10 +195,11 @@ class Crm::MetaAds::LeadForms::Hub
   def form_payload(page, form, record)
     destination = record&.destination? ? destination_payload(record) : nil
     brought = brought_payload(record)
+    past = destination || brought ? { count: 0, truncated: false } : past_count(page, form)
     {
       id: form['id'], name: form['name'], status: form['status'], leads_count: form['leads_count'].to_i,
       last_lead_at: last_lead_at(form['id']), destination: destination, brought: brought,
-      past_count: destination || brought ? 0 : past_count(page, form)
+      past_count: past&.dig(:count), past_count_truncated: past&.dig(:truncated) || false
     }
   end
 

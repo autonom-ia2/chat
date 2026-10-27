@@ -2395,6 +2395,8 @@
         "STOP_HINT": "Quem preencher a partir de agora não entra no funil. Quem já entrou continua lá.",
         "KEEP": "Não parar",
         "PAGE_UNAVAILABLE": "Não conseguimos ler os formulários desta Página agora. Tente de novo em alguns minutos.",
+        "PAGE_REFUSED": "A Meta não deixa ler os formulários desta Página. Conecte de novo e marque a Página com acesso aos formulários.",
+        "OR_MORE": "{count} ou mais",
         "NO_FORMS": "Esta Página ainda não tem formulário nos anúncios.",
         "FILLED": "Ninguém preencheu ainda | 1 pessoa preencheu | {count} pessoas preencheram",
         "FILLED_LAST": "{filled} · última pessoa: {when}",

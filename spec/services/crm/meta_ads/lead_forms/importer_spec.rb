@@ -109,6 +109,22 @@ RSpec.describe Crm::MetaAds::LeadForms::Importer do
     end)
   end
 
+  it 'nome que é um e-mail: título e contato ficam sem ele, e o título é o nome do formulário' do
+    importer.import(lead(name: 'mariana@example.com'))
+
+    card = account.crm_cards.last
+    expect(card.title).to eq('Orçamento de verão')
+    expect(card.contact.name.to_s).not_to include('mariana@example.com')
+  end
+
+  it 'nome que é um telefone: título e contato ficam sem ele, e o título é o nome do formulário' do
+    importer.import(lead(name: '(11) 98765-1201'))
+
+    card = account.crm_cards.last
+    expect(card.title).to eq('Orçamento de verão')
+    expect(card.contact.name.to_s).not_to include('98765-1201')
+  end
+
   it 'sem nome e sem nome do formulário: o título é "Lead" e o id' do
     sem_formulario = described_class.new(account: account, pipeline: pipeline, stage: stage, form_name: nil)
 

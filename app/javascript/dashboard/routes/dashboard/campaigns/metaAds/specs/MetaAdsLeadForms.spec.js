@@ -127,6 +127,23 @@ describe('Anúncios da Meta · Formulários (#2195)', () => {
     expect(wrapper.findAll('[data-lead-form]').length).toBeGreaterThan(0);
   });
 
+  it('a Page Meta refuses for good says to connect again, not to try again', async () => {
+    LeadFormsAPI.get.mockResolvedValue({
+      data: {
+        pages: [{ ...PAGE, forms: [], error: 'meta_refused' }],
+        pipelines: [],
+        recent_leads: [],
+      },
+    });
+
+    const wrapper = mountForms();
+    await flushPromises();
+
+    const error = wrapper.find('[data-lead-page-error]').text();
+    expect(error).toContain('PAGE_REFUSED');
+    expect(error).not.toContain('PAGE_UNAVAILABLE');
+  });
+
   it('saving and bringing the old ones says they are coming in the background', async () => {
     LeadFormsAPI.get.mockResolvedValue({
       data: { pages: [PAGE], pipelines: [], recent_leads: [] },

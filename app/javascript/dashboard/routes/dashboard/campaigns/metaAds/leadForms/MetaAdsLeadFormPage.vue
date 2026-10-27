@@ -149,7 +149,13 @@ const stop = () => {
       class="m-0 text-sm text-n-slate-11"
       data-lead-page-error
     >
-      {{ $t(`${KEY}.PAGE_UNAVAILABLE`) }}
+      {{
+        $t(
+          page.error === 'meta_refused'
+            ? `${KEY}.PAGE_REFUSED`
+            : `${KEY}.PAGE_UNAVAILABLE`
+        )
+      }}
     </p>
 
     <p

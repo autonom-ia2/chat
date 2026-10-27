@@ -7,7 +7,9 @@
 class Crm::MetaAds::LeadForms::PastLeads
   WINDOW = 90.days
   COUNT_TTL = 15.minutes
-  COUNTING_TTL = 5.minutes
+  # A trava da contagem sai no fim do CountPastJob (ensure); o prazo só vale se o processo morrer no meio. Maior que
+  # 500 páginas lidas no pior caso, para não pedir uma segunda contagem com a primeira ainda rodando.
+  COUNTING_TTL = 2.hours
 
   # Monta a leitura com o token da Página tirado da conexão da conta. nil quando a conta não tem conexão com token
   # próprio. Recusa da Meta sobe como Error; queda, como Unavailable.
@@ -30,13 +32,13 @@ class Crm::MetaAds::LeadForms::PastLeads
     raise Crm::MetaAds::LeadForms::Error, 'meta_refused'
   end
 
-  # O número que ficou guardado; sem ele, pede a contagem em segundo plano (uma por vez) e a tela mostra sem número.
+  # { count:, truncated: } que ficou guardado; sem ele, pede a contagem em segundo plano (uma por vez) e a tela mostra
+  # sem número. truncated: a leitura parou no teto, e o número é "N ou mais".
   def self.cached_count(account:, page_id:, form_id:)
-    key = cache_key(account.id, form_id)
-    count = Rails.cache.read(key)
-    return count unless count.nil?
+    cached = Rails.cache.read(cache_key(account.id, form_id))
+    return cached.symbolize_keys if cached.is_a?(Hash)
 
-    if Rails.cache.write([*key, 'counting'], true, expires_in: COUNTING_TTL, unless_exist: true)
+    if Rails.cache.write(counting_key(account.id, form_id), true, expires_in: COUNTING_TTL, unless_exist: true)
       Crm::MetaAds::LeadForms::CountPastJob.perform_later(account.id, page_id.to_s, form_id.to_s)
     end
     nil
@@ -46,6 +48,10 @@ class Crm::MetaAds::LeadForms::PastLeads
     ['crm_meta_ads_lead_forms', 'past_count', account_id, form_id.to_s]
   end
 
+  def self.counting_key(account_id, form_id)
+    [*cache_key(account_id, form_id), 'counting']
+  end
+
   def initialize(account:, page:, form:)
     @account = account
     @page = page
@@ -53,9 +59,10 @@ class Crm::MetaAds::LeadForms::PastLeads
   end
 
   def count!
-    total, truncated = read
-    Rails.cache.write(self.class.cache_key(@account.id, @form['id']), total.size, expires_in: COUNT_TTL)
-    { count: total.size, truncated: truncated }
+    rows, truncated = read
+    counted = { 'count' => rows.size, 'truncated' => truncated }
+    Rails.cache.write(self.class.cache_key(@account.id, @form['id']), counted, expires_in: COUNT_TTL)
+    counted.symbolize_keys
   end
 
   # Quantos viraram card novo (os repetidos e quem já tinha card aberto no funil não contam).

@@ -6,8 +6,8 @@
 # - O contato é o mesmo quando o telefone (E.164) ou o e-mail já existe na conta.
 # - Quem já tem card aberto naquele funil não ganha outro (:existing_card); o lead fica ligado ao card que já existe.
 # - Card criado pelo sistema: sem usuário, dono pela regra do Crm::Cards::Creator. O título é o nome que a pessoa
-#   escreveu; sem ele, o nome do formulário; sem os dois, "Lead <id>". Nunca telefone nem e-mail: o título vai à IA
-#   (Decisor, IA de etapa) e a quem não vê o contato.
+#   escreveu, se não parecer e-mail nem telefone; sem ele, o nome do formulário; sem os dois, "Lead <id>". Nunca
+#   telefone nem e-mail: o título e o nome do contato vão à IA (Decisor, IA de etapa) e a quem não vê o contato.
 # - E-mail que o contato não aceita fica só nas respostas; o lead entra do mesmo jeito.
 # - Lead que não dá para gravar (:failed) vai para o rastreador de erros e não para os outros do mesmo lote.
 class Crm::MetaAds::LeadForms::Importer
@@ -76,7 +76,7 @@ class Crm::MetaAds::LeadForms::Importer
     existing = (@account.contacts.find_by(phone_number: phone) if phone) || (@account.contacts.from_email(email) if email)
     return [existing, false] if existing
 
-    contact = @account.contacts.new(name: name_of(lead), phone_number: phone, email: email, contact_type: :lead)
+    contact = @account.contacts.new(name: title_name(lead), phone_number: phone, email: email, contact_type: :lead)
     contact.email = nil if !contact.valid? && contact.errors.include?(:email)
     contact.save!
     [contact, true]
@@ -90,7 +90,7 @@ class Crm::MetaAds::LeadForms::Importer
     Crm::Cards::Creator.new(
       account: @account, user: nil,
       params: { pipeline_id: @pipeline.id, stage_id: @stage.id, contact_id: contact.id, source: SOURCE,
-                title: name_of(lead) || @form_name.presence || "Lead #{lead['id']}",
+                title: title_name(lead) || @form_name.presence || "Lead #{lead['id']}",
                 metadata: { 'meta_lead_form' => origin(lead) } }
     ).perform
   end
@@ -119,6 +119,12 @@ class Crm::MetaAds::LeadForms::Importer
 
   def answer(lead, key)
     field_data(lead).find { |field| field['name'] == key }&.dig('values')&.first.to_s.strip
+  end
+
+  # Nome que parece e-mail ou telefone (a pessoa digitou o contato no campo do nome) não vai para o título.
+  def title_name(lead)
+    name = name_of(lead)
+    name unless Autonomia::DadoDeContato.contato?(name)
   end
 
   def name_of(lead)

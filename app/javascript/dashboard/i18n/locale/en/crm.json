@@ -2394,6 +2394,8 @@
         "STOP_HINT": "People who fill in a form from now on won't go to your pipeline. People already there stay.",
         "KEEP": "Keep receiving",
         "PAGE_UNAVAILABLE": "We couldn't read this Page's forms right now. Try again in a few minutes.",
+        "PAGE_REFUSED": "Meta doesn't let us read this Page's forms. Connect again and give the Page access to its forms.",
+        "OR_MORE": "{count} or more",
         "NO_FORMS": "This Page has no forms on its ads yet.",
         "FILLED": "No one filled it in yet | 1 person filled it in | {count} people filled it in",
         "FILLED_LAST": "{filled} · last one: {when}",
