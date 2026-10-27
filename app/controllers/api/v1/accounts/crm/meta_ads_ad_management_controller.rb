@@ -25,7 +25,7 @@ class Api::V1::Accounts::Crm::MetaAdsAdManagementController < Api::V1::Accounts:
   end
 
   def status
-    status = management.change!(params[:ad_id].to_s, params[:status].to_s)
+    status = change_status!(params[:ad_id].to_s, params[:status].to_s)
     audit!(params[:ad_id].to_s, status)
     render json: { status: status }.merge(activation(status))
   rescue ::Crm::MetaAds::AdManagement::Error => e
@@ -65,11 +65,30 @@ class Api::V1::Accounts::Crm::MetaAdsAdManagementController < Api::V1::Accounts:
     render json: { error: 'not_connected' }, status: :not_found if @connection&.ad_account_id.blank?
   end
 
-  # Gerenciador simples (#2198, ponto 6): ao ativar, diz se a campanha ou o grupo seguram o anúncio (`held_by`).
-  def activation(status)
-    return {} unless status == 'ACTIVE' && Current.account.feature_enabled?('meta_ads_criar')
+  # Gerenciador simples (#2198, ponto 6): anúncio criado aqui nasceu com campanha e grupo pausados, e ativar liga os
+  # três. Outro anúncio: a ativação de sempre.
+  def change_status!(ad_id, status)
+    created = status == 'ACTIVE' && criar? ? creation_activation.created_here(ad_id) : nil
+    return management.change!(ad_id, status) if created.nil?
 
-    { held_by: ::Crm::MetaAds::Creation::Activation.new(@connection).held_by(params[:ad_id].to_s) }
+    @activated_all = true
+    creation_activation.activate!(created)
+  end
+
+  # Ao ativar, diz se a campanha ou o grupo seguram o anúncio (`held_by`). Criado aqui: os três acabaram de ser ligados.
+  def activation(status)
+    return {} unless status == 'ACTIVE' && criar?
+    return { held_by: nil } if @activated_all
+
+    { held_by: creation_activation.held_by(params[:ad_id].to_s) }
+  end
+
+  def criar?
+    Current.account.feature_enabled?('meta_ads_criar')
+  end
+
+  def creation_activation
+    @creation_activation ||= ::Crm::MetaAds::Creation::Activation.new(@connection, user: Current.user)
   end
 
   def management

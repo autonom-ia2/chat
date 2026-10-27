@@ -39,6 +39,8 @@ const dialog = ref(null);
 const saving = ref(false);
 
 const KEY = 'CRM_KANBAN.META_ADS_HUB.GESTAO.STATUS';
+// Ativar um anúncio criado aqui liga campanha, grupo e anúncio (#2198); `meta_partial`: um falhou e nem voltar deu.
+const STATUS_ERRORS = { cannot_change: 'NEEDS_LOGIN', meta_partial: 'PARTIAL' };
 
 // O botão mexe na situação do próprio anúncio. "No ar" só quando a entrega também está ativa: anúncio ativo com a
 // campanha ou o conjunto pausado (ou em análise, recusado…) fica "Fora do ar", e pausar continua valendo.
@@ -192,7 +194,7 @@ const confirm = async () => {
     useAlert(doneMessage(done, result));
   } catch (error) {
     const code = error?.response?.data?.error;
-    useAlert(t(`${KEY}.${code === 'cannot_change' ? 'NEEDS_LOGIN' : 'ERROR'}`));
+    useAlert(t(`${KEY}.${STATUS_ERRORS[code] || 'ERROR'}`));
   } finally {
     saving.value = false;
   }

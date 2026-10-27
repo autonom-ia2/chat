@@ -11,6 +11,7 @@ import {
   daysBetween,
   longDate,
   money,
+  decimalAmount,
   parseAmount,
   todayOfAccount,
   withWords,
@@ -219,7 +220,8 @@ const confirm = async () => {
   saving.value = true;
   try {
     const data = await mudarOrcamento(props.adId, {
-      amount: newAmount.value,
+      // Texto decimal ("45.50"), do jeito que a pessoa digitou, sem passar por float.
+      amount: decimalAmount(amountText.value),
       end_time: endDate.value ? `${endDate.value}T23:59:00` : null,
     });
     emit('changed', data);

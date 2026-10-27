@@ -3023,6 +3023,7 @@
           "CANCEL": "Cancel",
           "ERROR": "Meta did not accept the change now. Try again in a moment.",
           "NEEDS_LOGIN": "To pause from here, sign in with Facebook again in Connection.",
+          "PARTIAL": "Part of the ad was left on at Meta and we couldn't pause it back. Check Meta Ads Manager.",
           "ACTIVATE_SPEND_END": "When you turn it on, the ad starts spending {value} per day, until {end}. In total, at most {total}.",
           "ACTIVATE_SPEND_NO_END": "When you turn it on, the ad starts spending {value} per day, with no end date. It only stops when you pause it.",
           "ACTIVATE_SPEND_BUTTON": "Turn on and start spending",
@@ -3289,6 +3290,7 @@
           "TITLE": "We couldn't reach Meta right now. Nothing was created.",
           "RETRY": "Try again"
         },
+        "RECREATE": "It's not in Ads Manager, create again",
         "BLOCKERS": {
           "LOGIN": {
             "TITLE": "To create ads from here, sign in with Facebook again.",

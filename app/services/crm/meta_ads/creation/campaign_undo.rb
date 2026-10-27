@@ -7,6 +7,9 @@
 # - `:none`: a campanha ficou sem resposta e a busca pela marca veio vazia. A Meta pode ter criado depois, ou ainda não
 #   mostrar na busca: não é "nada criado" (Crm::MetaAds::Creation::Attempt decide o que fazer);
 # - `:failed`: não deu para apagar, arquivar ou procurar.
+#
+# Campanha que já não existe na Meta (apagada pelo Gerenciador, por exemplo) conta como desfeita: senão a chave da
+# tentativa ficaria presa em `rollback_failed` para sempre.
 class Crm::MetaAds::Creation::CampaignUndo
   MARK_LENGTH = 8
   GONE_STATUSES = %w[DELETED ARCHIVED].freeze
@@ -38,7 +41,19 @@ class Crm::MetaAds::Creation::CampaignUndo
   private
 
   def remove(ids)
-    ids.all? { |id| @client.delete_object(id).ok || @client.update_object(id, status: 'ARCHIVED').ok } ? :undone : :failed
+    ids.all? { |id| removed?(id) } ? :undone : :failed
+  end
+
+  def removed?(id)
+    @client.delete_object(id).ok || @client.update_object(id, status: 'ARCHIVED').ok || gone?(id)
+  end
+
+  # Relê a campanha: "objeto não existe" ou já apagada/arquivada.
+  def gone?(id)
+    result = @client.object_status(id)
+    return result.object_error? unless result.ok
+
+    GONE_STATUSES.include?(result.data['effective_status'])
   end
 
   # Ids das campanhas vivas com o nome desta tentativa; nil quando a Meta não respondeu.

@@ -1,6 +1,7 @@
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { capaEmArquivo } from './midiaDoAnuncio';
 import { siteNormalizado } from './anuncioNovo';
+import { decimalAmount } from './dinheiroDoAnuncio';
 
 // Anúncios da Meta (#2198), o Gerenciador simples (flag meta_ads_criar): o que a tela pede ao servidor para criar
 // anúncio, mudar orçamento e datas e listar os pausados. Valores em reais (a Meta guarda em centavos; o servidor
@@ -57,8 +58,9 @@ const midiaNaMeta = media =>
     ? { kind: 'video', video_id: media.video_id, image_hash: media.image_hash }
     : { kind: 'image', hash: media.hash };
 
-// O rascunho da tela vira o pedido do anúncio novo. Só vai o que vale para o destino escolhido.
-export const pedidoDoAnuncio = (draft, dailyAmount) => {
+// O rascunho da tela vira o pedido do anúncio novo. Só vai o que vale para o destino escolhido. O valor vai como
+// texto decimal ("20.00"), do jeito que a pessoa digitou, sem passar por float.
+export const pedidoDoAnuncio = draft => {
   const whatsapp = draft.destination === 'WHATSAPP';
   const site = draft.destination === 'WEBSITE';
   return {
@@ -77,7 +79,7 @@ export const pedidoDoAnuncio = (draft, dailyAmount) => {
     age_min: draft.age_min,
     age_max: draft.age_max,
     special_category: Boolean(draft.special_category),
-    daily_amount: dailyAmount,
+    daily_amount: decimalAmount(draft.daily_amount),
     start_date: draft.start_date,
     end_date: draft.end_date || '',
     media: midiaNaMeta(draft.media),
@@ -86,12 +88,34 @@ export const pedidoDoAnuncio = (draft, dailyAmount) => {
 };
 
 // A tentativa de criar, pelo conteúdo do pedido: o mesmo pedido leva a mesma chave de idempotência até chegar uma
-// resposta definitiva, e o servidor devolve o mesmo anúncio em vez de criar outro. Mora aqui, fora da tela: quem sai
-// com o pedido em voo e volta (ou toca de novo) não gera chave nova. Pedido diferente (a pessoa mudou algo) é outra
-// tentativa.
+// resposta definitiva, e o servidor devolve o mesmo anúncio em vez de criar outro. Mora aqui, fora da tela, e também
+// no sessionStorage da aba: quem sai com o pedido em voo e volta, toca de novo ou recarrega a página não gera chave
+// nova. Pedido diferente (a pessoa mudou algo) é outra tentativa. Sem sessionStorage (modo privado, bloqueio), a
+// chave vale só enquanto a página está aberta.
 const HTTP_CONFLICT = 409;
 const HTTP_SERVER_ERROR = 500;
+const STORAGE_KEY = 'metaAdsCriar.tentativas';
 const tentativas = new Map();
+
+const lerGuardadas = () => {
+  try {
+    return JSON.parse(window.sessionStorage.getItem(STORAGE_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+};
+
+const guardar = changes => {
+  try {
+    const saved = { ...lerGuardadas(), ...changes };
+    Object.keys(saved).forEach(signature => {
+      if (saved[signature] === null) delete saved[signature];
+    });
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+  } catch {
+    // Sem sessionStorage: a chave fica só na memória desta página.
+  }
+};
 
 // Sem resposta, tempo esgotado, falha do servidor, "ainda criando" (409) ou recusa que deixou algo na Meta
 // (`nothing_created: false`, que o servidor desfaz antes de criar de novo com a mesma chave): a tentativa continua.
@@ -106,27 +130,43 @@ const tentativaContinua = error => {
 
 const chaveDoPedido = signature => {
   if (!tentativas.has(signature)) {
-    tentativas.set(signature, crypto.randomUUID());
+    tentativas.set(signature, lerGuardadas()[signature] || crypto.randomUUID());
   }
-  return tentativas.get(signature);
+  const key = tentativas.get(signature);
+  guardar({ [signature]: key });
+  return key;
 };
 
-// Cria pausado.
-export const criarAnuncio = async pedido => {
+const esquecer = signature => {
+  tentativas.delete(signature);
+  guardar({ [signature]: null });
+};
+
+// Cria pausado. `recriar`: a tentativa ficou não confirmada na Meta, a pessoa conferiu no Gerenciador de Anúncios
+// que a campanha não está lá e pediu para criar de novo (mesma chave; o servidor grava na Auditoria).
+export const criarAnuncio = async (pedido, { recriar = false } = {}) => {
   const signature = JSON.stringify(pedido);
   const key = chaveDoPedido(signature);
   try {
     const { data } = await CrmMetaAdsConnectionAPI.createAd({
       ...pedido,
       idempotency_key: key,
+      ...(recriar ? { recreate_unconfirmed: true } : {}),
     });
-    tentativas.delete(signature);
+    esquecer(signature);
     return { ...data, budget: orcamentoNaTela(data.budget) };
   } catch (error) {
-    if (!tentativaContinua(error)) tentativas.delete(signature);
+    if (!tentativaContinua(error)) esquecer(signature);
     throw error;
   }
 };
 
 // Para os testes: cada um começa sem tentativa pendente.
-export const esquecerTentativas = () => tentativas.clear();
+export const esquecerTentativas = () => {
+  tentativas.clear();
+  try {
+    window.sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Sem sessionStorage: nada guardado.
+  }
+};

@@ -164,7 +164,7 @@ watch(step, () => {
   focusHeading();
 });
 
-const { dailyAmount, amountError, perDayLine, totalLine, dayLimitsLine } =
+const { amountError, perDayLine, totalLine, dayLimitsLine } =
   useDinheiroDoRascunho({ draft, options, locale, t });
 
 const chosenNumber = computed(() =>
@@ -312,20 +312,27 @@ const createErrorText = error => {
   return reason;
 };
 
-const create = async () => {
+// Não confirmado na Meta: a pessoa confere no Gerenciador de Anúncios e só ela libera criar de novo.
+const unconfirmed = ref(false);
+
+const create = async ({ recriar = false } = {}) => {
   if (!ready.value || saving.value) return;
   saving.value = true;
   createError.value = '';
-  const pedido = pedidoDoAnuncio(draft.value, dailyAmount.value);
+  unconfirmed.value = false;
+  const pedido = pedidoDoAnuncio(draft.value);
   try {
-    created.value = await criarAnuncio(pedido);
+    created.value = await criarAnuncio(pedido, { recriar });
     focusHeading();
   } catch (error) {
     createError.value = createErrorText(error);
+    unconfirmed.value = error?.response?.data?.error === 'unconfirmed';
   } finally {
     saving.value = false;
   }
 };
+
+const recreate = () => create({ recriar: true });
 
 const submitLabel = computed(() =>
   current.value === 'REVIEW' ? t(`${KEY}.CREATE`) : t(`${KEY}.NEXT`)
@@ -661,6 +668,14 @@ const BLOCKERS = {
         />
         {{ createError }}
       </p>
+      <Button
+        v-if="unconfirmed"
+        data-create-recreate
+        outline
+        :label="$t(`${KEY}.RECREATE`)"
+        :is-loading="saving"
+        @click="recreate"
+      />
       <!-- No celular o "Continuar" fica preso no rodapé, sempre à mão. O botão do menu (☰) fica no canto da barra,
            ao lado do "Continuar": a margem da esquerda é dele. -->
       <div

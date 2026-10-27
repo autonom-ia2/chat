@@ -12,6 +12,7 @@ import {
 import { capaEmArquivo } from '../midiaDoAnuncio';
 import { siteNormalizado, siteValido } from '../anuncioNovo';
 import {
+  decimalAmount,
   money,
   parseAmount,
   todayOfAccount,
@@ -31,6 +32,7 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
 
 const DRAFT = {
   name: ' Bolo · 27 out ',
+  daily_amount: 'R$ 35,50',
   destination: 'WHATSAPP',
   page_id: '1',
   whatsapp_number: '+5511900002161',
@@ -61,7 +63,7 @@ const DRAFT = {
 
 describe('Anúncios da Meta · pedidos ao servidor (#2198)', () => {
   it('turns the draft into the new ad request, only with what the destination uses', () => {
-    expect(pedidoDoAnuncio(DRAFT, 35.5)).toEqual({
+    expect(pedidoDoAnuncio(DRAFT)).toEqual({
       name: 'Bolo · 27 out',
       destination: 'WHATSAPP',
       page_id: '1',
@@ -77,7 +79,8 @@ describe('Anúncios da Meta · pedidos ao servidor (#2198)', () => {
       age_min: 25,
       age_max: 45,
       special_category: true,
-      daily_amount: 35.5,
+      // Texto decimal, sem passar por float.
+      daily_amount: '35.50',
       start_date: '2026-10-27',
       end_date: '2026-11-02',
       media: { kind: 'image', hash: 'h1' },
@@ -86,18 +89,15 @@ describe('Anúncios da Meta · pedidos ao servidor (#2198)', () => {
   });
 
   it('a website ad goes with https; all of Brazil sends no states', () => {
-    const pedido = pedidoDoAnuncio(
-      {
-        ...DRAFT,
-        destination: 'WEBSITE',
-        site_url: 'loja.com.br',
-        site_action: 'SHOP_NOW',
-        region: 'BR',
-        end_date: '',
-        more_media: [],
-      },
-      20
-    );
+    const pedido = pedidoDoAnuncio({
+      ...DRAFT,
+      destination: 'WEBSITE',
+      site_url: 'loja.com.br',
+      site_action: 'SHOP_NOW',
+      region: 'BR',
+      end_date: '',
+      more_media: [],
+    });
 
     expect(pedido).toMatchObject({
       site_url: 'https://loja.com.br',
@@ -180,6 +180,47 @@ describe('Anúncios da Meta · pedidos ao servidor (#2198)', () => {
       await criarAnuncio({ name: 'x' });
 
       expect(keys()).toEqual(['key-1', 'key-2', 'key-3']);
+    });
+
+    it('a reload of the page keeps the key of the attempt (sessionStorage)', async () => {
+      CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(new Error('Network'));
+      await expect(criarAnuncio({ name: 'x' })).rejects.toThrow();
+
+      vi.resetModules();
+      const recarregado = await import('../criacaoNaMeta');
+      await expect(recarregado.criarAnuncio({ name: 'x' })).rejects.toThrow();
+
+      expect(keys()).toEqual(['key-1', 'key-1']);
+    });
+
+    it('without sessionStorage, the key still holds while the page is open', async () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(new Error('Network'));
+      await expect(criarAnuncio({ name: 'x' })).rejects.toThrow();
+      await expect(criarAnuncio({ name: 'x' })).rejects.toThrow();
+
+      expect(keys()).toEqual(['key-1', 'key-1']);
+    });
+
+    it("create again after unconfirmed goes with the same key and the person's release", async () => {
+      CrmMetaAdsConnectionAPI.createAd
+        .mockRejectedValueOnce(
+          refusal(422, { error: 'unconfirmed', nothing_created: false })
+        )
+        .mockResolvedValueOnce({ data: { ad_id: '9', status: 'PAUSED' } });
+      await expect(criarAnuncio({ name: 'x' })).rejects.toThrow();
+      await criarAnuncio({ name: 'x' }, { recriar: true });
+
+      expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenLastCalledWith({
+        name: 'x',
+        idempotency_key: 'key-1',
+        recreate_unconfirmed: true,
+      });
     });
 
     it('a different request is another attempt', async () => {
@@ -296,6 +337,27 @@ describe('Anúncios da Meta · ajudas do anúncio novo (#2198)', () => {
   it('without a confirmed currency, formats nothing (never assumes reais)', () => {
     expect(money(20, null, 'pt_BR')).toBe('');
     expect(withWords(20, undefined, 'pt_BR')).toBe('');
+  });
+
+  it('a dot before the comma is a thousands separator only in groups of 3', () => {
+    expect(parseAmount('1.500,00')).toBe(1500);
+    expect(parseAmount('1.000.000,50')).toBe(1000000.5);
+    expect(parseAmount('1.5,00')).toBeNull();
+    expect(parseAmount('10,5.5')).toBeNull();
+    expect(parseAmount('.500,00')).toBeNull();
+  });
+
+  it('spaces only at the edges: a space inside is a refusal', () => {
+    expect(parseAmount('  R$ 25,00  ')).toBe(25);
+    expect(parseAmount('2 5')).toBeNull();
+    expect(parseAmount('1 000')).toBeNull();
+  });
+
+  it('sends the amount as decimal text with 2 places, never through float', () => {
+    expect(decimalAmount('6,5')).toBe('6.50');
+    expect(decimalAmount('R$ 1.500,00')).toBe('1500.00');
+    expect(decimalAmount('25.57')).toBe('25.57');
+    expect(decimalAmount('-1')).toBeNull();
   });
 
   it('refuses what could be read wrong, never rounds in silence', () => {

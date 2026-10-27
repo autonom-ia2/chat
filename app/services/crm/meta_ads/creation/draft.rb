@@ -14,6 +14,7 @@ class Crm::MetaAds::Creation::Draft
 
   attr_reader :values
 
+  # `zone`: o fuso da conta de anúncios, ou um bloco que o lê (só é chamado para as datas, a última conferência).
   def initialize(params, account:, zone:)
     @params = params.to_h.deep_symbolize_keys
     @account = account
@@ -26,7 +27,7 @@ class Crm::MetaAds::Creation::Draft
       page_id: page_id, whatsapp_number: whatsapp_number, site_url: site_url, site_action: site_action,
       media: media(@params[:media]), cards: cards, text: text, headline: @params[:headline].to_s.strip.presence,
       ready_message: @params[:ready_message].to_s.strip.presence, placement: placement,
-      special_category: ActiveModel::Type::Boolean.new.cast(@params[:special_category]) || false, **audience, **budget
+      special_category: flag(:special_category), recreate_unconfirmed: flag(:recreate_unconfirmed), **audience, **budget
     }
     self
   end
@@ -39,6 +40,10 @@ class Crm::MetaAds::Creation::Draft
 
   def fail!(code)
     raise Crm::MetaAds::Creation::Error, code
+  end
+
+  def flag(key)
+    ActiveModel::Type::Boolean.new.cast(@params[key]) || false
   end
 
   def required_string(key, code)
@@ -151,9 +156,13 @@ class Crm::MetaAds::Creation::Draft
   def dates
     start_date = Date.iso8601(@params[:start_date].to_s)
     end_date = @params[:end_date].present? ? Date.iso8601(@params[:end_date].to_s) : nil
-    fail!('invalid_dates') if start_date < @zone.today || (end_date && end_date <= start_date)
+    fail!('invalid_dates') if start_date < zone.today || (end_date && end_date <= start_date)
     [start_date, end_date]
   rescue Date::Error
     fail!('invalid_dates')
+  end
+
+  def zone
+    @zone.respond_to?(:call) ? @zone.call : @zone
   end
 end

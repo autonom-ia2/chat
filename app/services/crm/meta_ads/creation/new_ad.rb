@@ -1,9 +1,9 @@
-# Anúncio novo (#2198, Fluxo 1). Campanha e grupo nascem ATIVOS e só o anúncio nasce PAUSADO: o gasto é zero até a pessoa
-# tocar em "Ativar anúncio", e esse toque basta para pôr no ar. Os pontos obrigatórios do contrato
-# (docs/crm/anuncios-meta-criar-2198.md):
+# Anúncio novo (#2198, Fluxo 1). Tudo nasce PAUSADO: campanha, grupo e anúncio (decisão do Rodrigo, opção a, 27/10).
+# O gasto é zero até a pessoa tocar em "Ativar anúncio", que liga os três (Crm::MetaAds::Creation::Activation). Os
+# pontos obrigatórios do contrato (docs/crm/anuncios-meta-criar-2198.md):
 #
-# 1. `status: PAUSED` explícito no anúncio, nunca o padrão da Meta.
-# 2. Relê o anúncio depois de criar; se não vier pausado (ou a leitura falhar), pausa na hora e registra na Auditoria.
+# 1. `status: PAUSED` explícito nos três, nunca o padrão da Meta.
+# 2. Relê os três depois de criar; o que não vier pausado (ou não der para ler) é pausado na hora e fica na Auditoria.
 # 3. Falha no meio desfaz o começo: apaga a campanha (o grupo e o anúncio vão junto) ou, se a Meta não deixar, arquiva.
 #    Só quando isso dá certo a tela pode dizer "Nada foi criado".
 # 4. Chave de idempotência por tentativa (Crm::MetaAds::Creation::Attempt): a mesma chave devolve o mesmo anúncio e
@@ -15,7 +15,6 @@
 #    (Crm::MetaAds::Creation::CampaignUndo). Campanha sem resposta: o desfazer procura pela marca; busca vazia não é
 #    "Nada foi criado", é `unconfirmed` (a tela pede para conferir no Gerenciador de Anúncios).
 class Crm::MetaAds::Creation::NewAd
-  REPAUSED_ACTION = 'meta_ads_create_repaused'.freeze
   OBJECTIVES = { 'WHATSAPP' => 'OUTCOME_ENGAGEMENT', 'MESSENGER' => 'OUTCOME_ENGAGEMENT',
                  'INSTAGRAM_DIRECT' => 'OUTCOME_ENGAGEMENT', 'WEBSITE' => 'OUTCOME_TRAFFIC' }.freeze
   SPECIAL_CATEGORY = 'FINANCIAL_PRODUCTS_SERVICES'.freeze
@@ -35,16 +34,16 @@ class Crm::MetaAds::Creation::NewAd
     done = already_created(params)
     return result(done) if done
 
-    draft = Crm::MetaAds::Creation::Draft.new(params, account: @account, zone: zone).validate!
+    # O fuso da conta de anúncios só é lido para conferir as datas, depois de todo o resto do rascunho valer.
+    draft = Crm::MetaAds::Creation::Draft.new(params, account: @account, zone: -> { zone }).validate!
 
-    raise Crm::MetaAds::Creation::Error, 'cannot_create' unless @access.can_create?
-    raise Crm::MetaAds::Creation::Error, 'currency_not_supported' unless currency == Crm::MetaAds::Creation::Money::CURRENCY
-
+    ensure_account_ready!
     page = find_page!(draft[:page_id])
     ensure_video_ready!(draft)
     # O público (estados → regiões da Meta) se resolve antes de criar qualquer coisa.
     @targeting = Crm::MetaAds::Creation::Targeting.new(client).build(draft.values)
-    record = @attempt.claim!(draft[:idempotency_key], name: draft[:name], budget: budget(draft))
+    record = @attempt.claim!(draft[:idempotency_key], { name: draft[:name], budget: budget(draft) },
+                             recreate: draft[:recreate_unconfirmed])
     return result(record) if record.status == 'created'
 
     build!(record, draft, page)
@@ -60,6 +59,11 @@ class Crm::MetaAds::Creation::NewAd
 
   def zone
     @zone ||= Crm::MetaAds::Creation::AccountZone.new(@connection, client).zone
+  end
+
+  def ensure_account_ready!
+    raise Crm::MetaAds::Creation::Error, 'cannot_create' unless @access.can_create?
+    raise Crm::MetaAds::Creation::Error, 'currency_not_supported' unless currency == Crm::MetaAds::Creation::Money::CURRENCY
   end
 
   def currency
@@ -100,7 +104,7 @@ class Crm::MetaAds::Creation::NewAd
     step!(record, :ad_id, :create_ad, name: draft[:name], adset_id: record.adset_id,
                                       creative: { creative_id: record.creative_id }.to_json, status: 'PAUSED')
     alive!(record)
-    ensure_paused!(record)
+    Crm::MetaAds::Creation::Levels.new(client, account: @account, user: @user).ensure_paused!(record)
     record.update!(status: 'created')
   rescue Crm::MetaAds::Creation::Error => e
     raise @attempt.rollback!(record, e, unknown: @campaign_unknown)
@@ -129,7 +133,7 @@ class Crm::MetaAds::Creation::NewAd
 
   # O nome leva a marca da tentativa: é por ela que o desfazer acha a campanha se o id se perdeu.
   def campaign_params(draft, record)
-    { name: Crm::MetaAds::Creation::CampaignUndo.name_for(record), objective: OBJECTIVES.fetch(draft[:destination]), status: 'ACTIVE',
+    { name: Crm::MetaAds::Creation::CampaignUndo.name_for(record), objective: OBJECTIVES.fetch(draft[:destination]), status: 'PAUSED',
       special_ad_categories: (draft[:special_category] ? [SPECIAL_CATEGORY] : []).to_json,
       special_ad_category_country: (draft[:special_category] ? ['BR'].to_json : nil),
       is_adset_budget_sharing_enabled: false }.compact
@@ -137,7 +141,7 @@ class Crm::MetaAds::Creation::NewAd
 
   def adset_params(draft, campaign_id)
     {
-      name: draft[:name], campaign_id: campaign_id, status: 'ACTIVE', daily_budget: Crm::MetaAds::Creation::Money.cents(draft[:daily_amount]),
+      name: draft[:name], campaign_id: campaign_id, status: 'PAUSED', daily_budget: Crm::MetaAds::Creation::Money.cents(draft[:daily_amount]),
       billing_event: 'IMPRESSIONS', bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
       optimization_goal: draft[:destination] == 'WEBSITE' ? 'LINK_CLICKS' : 'CONVERSATIONS',
       destination_type: draft[:destination], promoted_object: promoted_object(draft)&.to_json,
@@ -166,27 +170,6 @@ class Crm::MetaAds::Creation::NewAd
   def creative_params(draft, page)
     story = Crm::MetaAds::Creation::Story.new(draft.values, instagram_id: page.dig(:instagram, :id))
     { name: draft[:name], object_story_spec: story.object_story_spec.to_json }
-  end
-
-  def ensure_paused!(record)
-    reread = client.ad_management(record.ad_id)
-    return if reread.ok && reread.data['effective_status'] == 'PAUSED'
-
-    result = client.update_ad_status(record.ad_id, 'PAUSED')
-    audit_repause(record, reread, result)
-    raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
-  end
-
-  # A pausa já aconteceu (ou não) na Meta: falha ao gravar a Auditoria vai para o rastreador, nunca impede a pausa nem
-  # o desfazer.
-  def audit_repause(record, reread, result)
-    Audited.audit_class.create!(
-      auditable: @account, user: @user, action: REPAUSED_ACTION,
-      audited_changes: { 'ad_id' => record.ad_id, 'effective_status' => reread.ok ? reread.data['effective_status'] : 'unread',
-                         'paused' => result.ok }
-    )
-  rescue StandardError => e
-    ChatwootExceptionTracker.new(e, account: @account).capture_exception
   end
 
   def result(record)

@@ -1,8 +1,8 @@
 require 'rails_helper'
 
-# Anúncio novo (#2198, Fluxo 1 e os sete pontos de "só o anúncio nasce pausado"): campanha e grupo ativos, anúncio
-# PAUSED explícito, relido e pausado de novo se não vier pausado, chave de idempotência, revalidação no servidor e
-# falha no meio desfazendo o começo.
+# Anúncio novo (#2198, Fluxo 1 e os sete pontos): campanha, grupo e anúncio PAUSED explícito (decisão do Rodrigo,
+# opção a), relidos e pausados de novo se não vierem pausados, chave de idempotência, revalidação no servidor e falha no
+# meio desfazendo o começo.
 RSpec.describe Crm::MetaAds::Creation::NewAd do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: :administrator) }
@@ -44,10 +44,12 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     }
   end
 
-  def stub_reread(effective: 'PAUSED')
-    stub_request(:get, meta_graph_url('903')).with(query: { fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS })
-                                             .to_return(ok(id: '903', account_id: connection.ad_account_id, status: effective,
-                                                           effective_status: effective))
+  # A releitura dos três níveis depois de criar. `ad_status:` muda só a situação do anúncio.
+  def stub_reread(ad_status: 'PAUSED')
+    { '900' => 'PAUSED', '901' => 'PAUSED', '903' => ad_status }.each do |id, status|
+      stub_request(:get, meta_graph_url(id)).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
+                                            .to_return(ok(id: id, status: status, effective_status: status))
+    end
   end
 
   def stub_currency(currency = 'BRL', timezone: nil)
@@ -80,7 +82,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       .to_return(ok(data: %w[ads_management pages_manage_ads].map { |name| { permission: name, status: 'granted' } }))
   end
 
-  it 'cria campanha e grupo ativos e o anúncio PAUSED, com destino WhatsApp e público do Brasil' do
+  it 'cria campanha, grupo e anúncio PAUSED, com destino WhatsApp e público do Brasil' do
     stubs = stub_creation
     stub_reread
 
@@ -89,13 +91,13 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect(result).to include(ad_id: '903', name: 'Bolo de pote · WhatsApp', status: 'PAUSED')
     campaign_ok = lambda do |req|
       body = form(req)
-      body['objective'] == 'OUTCOME_ENGAGEMENT' && body['status'] == 'ACTIVE' && body['special_ad_categories'] == '[]' &&
+      body['objective'] == 'OUTCOME_ENGAGEMENT' && body['status'] == 'PAUSED' && body['special_ad_categories'] == '[]' &&
         body['name'] == campaign_name
     end
     adset_ok = lambda do |req|
       body = form(req)
       targeting = JSON.parse(body['targeting'])
-      body['status'] == 'ACTIVE' && body['campaign_id'] == '900' && body['daily_budget'] == '2000' &&
+      body['status'] == 'PAUSED' && body['campaign_id'] == '900' && body['daily_budget'] == '2000' &&
         body['destination_type'] == 'WHATSAPP' && body['optimization_goal'] == 'CONVERSATIONS' &&
         JSON.parse(body['promoted_object']) == { 'page_id' => page_id, 'whatsapp_phone_number' => whatsapp_number } &&
         targeting['geo_locations'] == { 'countries' => ['BR'] } && targeting['age_min'] == 25 && targeting['age_max'] == 45 &&
@@ -116,11 +118,26 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
   it 'anúncio que não voltou pausado é pausado na hora e fica na Auditoria (ponto 2)' do
     stub_creation
-    stub_reread(effective: 'ACTIVE')
+    stub_reread(ad_status: 'ACTIVE')
     pause = stub_request(:post, meta_graph_url('903')).with(body: { 'status' => 'PAUSED' }).to_return(ok(success: true))
 
     expect { create! }.to change { Audited.audit_class.where(auditable: account, action: 'meta_ads_create_repaused').count }.by(1)
     expect(pause).to have_been_made.once
+    expect(Audited.audit_class.where(action: 'meta_ads_create_repaused').last.audited_changes)
+      .to include('level' => 'ad', 'object_id' => '903', 'paused' => true)
+  end
+
+  it 'campanha que não voltou pausada também é pausada na hora (os três níveis)' do
+    stub_creation
+    stub_reread
+    stub_request(:get, meta_graph_url('900')).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
+                                             .to_return(ok(id: '900', status: 'ACTIVE', effective_status: 'ACTIVE'))
+    pause = stub_request(:post, meta_graph_url('900')).with(body: { 'status' => 'PAUSED' }).to_return(ok(success: true))
+
+    create!
+
+    expect(pause).to have_been_made.once
+    expect(Audited.audit_class.where(action: 'meta_ads_create_repaused').last.audited_changes).to include('level' => 'campaign')
   end
 
   it 'a mesma chave não cria duas campanhas (ponto 4)' do
@@ -151,6 +168,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     stub_request(:delete, meta_graph_url('900')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
     stub_request(:post, meta_graph_url('900')).with(body: { 'status' => 'ARCHIVED' })
                                               .to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+    stub_request(:get, meta_graph_url('900')).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
+                                             .to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
 
     expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
       expect(e.code).to eq('meta_unavailable')
@@ -244,11 +263,50 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       leftover(status: 'rollback_failed')
       stub_request(:delete, meta_graph_url('800')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
       stub_request(:post, meta_graph_url('800')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+      stub_request(:get, meta_graph_url('800')).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
+                                               .to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
       stubs = stub_creation
 
       expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(false) }
       expect(stubs[:campaign]).not_to have_been_made
       expect(Crm::MetaAdsCreatedObject.last.campaign_id).to eq('800')
+    end
+
+    it 'campanha que já não existe na Meta (apagada pelo Gerenciador) conta como desfeita: a chave não fica presa' do
+      leftover(status: 'rollback_failed')
+      stub_request(:delete, meta_graph_url('800')).to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
+      stub_request(:post, meta_graph_url('800')).to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
+      stub_request(:get, meta_graph_url('800')).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
+                                               .to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
+      stubs = stub_creation
+      stub_reread
+
+      expect(create!).to include(ad_id: '903')
+      expect(stubs[:campaign]).to have_been_made.once
+    end
+
+    it 'campanha que a Meta ainda mostra viva e não deixa apagar: continua presa, sem criar outra' do
+      leftover(status: 'rollback_failed')
+      stub_request(:delete, meta_graph_url('800')).to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
+      stub_request(:post, meta_graph_url('800')).to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
+      stub_request(:get, meta_graph_url('800')).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
+                                               .to_return(ok(id: '800', effective_status: 'ACTIVE'))
+      stubs = stub_creation
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(false) }
+      expect(stubs[:campaign]).not_to have_been_made
+    end
+
+    it 'outro pedido retomou a mesma tentativa enquanto esta desfazia na Meta: in_progress, sem criar duas' do
+      row = leftover(status: 'rollback_failed')
+      allow_any_instance_of(Crm::MetaAds::Creation::CampaignUndo).to receive(:undo) do # rubocop:disable RSpec/AnyInstance
+        row.update_columns(status: 'creating') # rubocop:disable Rails/SkipsModelValidations
+        :undone
+      end
+      stubs = stub_creation
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('in_progress') }
+      expect(stubs[:campaign]).not_to have_been_made
     end
 
     it 'tentativa já desfeita refaz sem tentar apagar de novo' do
@@ -344,7 +402,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
   it 'pausa que falha, mesmo com a Auditoria fora, desfaz tudo' do
     stub_creation
-    stub_reread(effective: 'ACTIVE')
+    stub_reread(ad_status: 'ACTIVE')
     stub_request(:post, meta_graph_url('903')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
     delete = stub_request(:delete, meta_graph_url('900')).to_return(ok(success: true))
     allow(Audited.audit_class).to receive(:create!).and_raise(ActiveRecord::RecordInvalid)
@@ -372,6 +430,14 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect { create!(draft.merge(region: 'STATES', states: ['AC'])) }
       .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_audience') }
     expect(stubs[:campaign]).not_to have_been_made
+  end
+
+  it 'rascunho inválido não chama a Meta para nada, nem para ler o fuso' do
+    connection.update!(ad_account_timezone: nil)
+
+    expect { create!(draft.merge(daily_amount: '20.005')) }
+      .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_amount') }
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
   end
 
   it 'valor com centavos vai para a Meta em centavos inteiros, sem float' do
@@ -449,7 +515,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
         stub_reread
       end
 
-      it 'busca vazia de novo antes de 10 minutos: continua não confirmada e não cria' do
+      it 'busca vazia de novo: continua não confirmada e não cria' do
         expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('unconfirmed') }
         expect(a_request(:post, meta_graph_url("#{act}/campaigns"))).to have_been_made.once
       end
@@ -462,11 +528,26 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
         expect(delete).to have_been_made.once
       end
 
-      it 'busca vazia de novo depois de 10 minutos: cria' do
-        travel 11.minutes
+      it 'busca vazia mesmo depois de muito tempo: não cria sozinho (a Meta pode só estar atrasada)' do
+        travel 2.hours
 
-        expect(create!).to include(ad_id: '903')
+        expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('unconfirmed') }
+        expect(a_request(:post, meta_graph_url("#{act}/campaigns"))).to have_been_made.once
+      end
+
+      it 'a pessoa conferiu e pediu para criar de novo: cria e grava na Auditoria' do
+        expect { expect(create!(draft.merge(recreate_unconfirmed: true))).to include(ad_id: '903') }
+          .to change { Audited.audit_class.where(auditable: account, action: 'meta_ads_create_recreated', user: user).count }.by(1)
         expect(a_request(:post, meta_graph_url("#{act}/campaigns"))).to have_been_made.twice
+      end
+
+      it 'pedir para criar de novo com a campanha aparecendo na busca: desfaz a antiga antes, sem Auditoria de recriar' do
+        stub_campaign_search([{ id: '950', name: campaign_name, effective_status: 'PAUSED' }])
+        delete = stub_request(:delete, meta_graph_url('950')).to_return(ok(success: true))
+
+        expect(create!(draft.merge(recreate_unconfirmed: true))).to include(ad_id: '903')
+        expect(delete).to have_been_made.once
+        expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_create_recreated')).to be_empty
       end
     end
 

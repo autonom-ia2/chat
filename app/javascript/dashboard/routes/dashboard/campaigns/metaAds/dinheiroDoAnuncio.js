@@ -25,31 +25,67 @@ export const withWords = (value, currency, locale) => {
   return spelled ? `${number} (${spelled})` : number;
 };
 
-// "45,50", "45.50", "R$ 45" e "1.000,00": o "R$" do começo e os espaços saem; qualquer outro caractere que não seja
-// dígito, vírgula ou ponto é recusa ("-10" e "1e2" não viram 10 nem 12). Com vírgula, ela é o decimal e o ponto é
-// milhar. Sem vírgula, o ponto só vale como decimal com 1 ou 2 casas ("6.5", "6.50"): "6.000" e "1.000.000" são
-// recusados, para não virarem R$ 6,00 por engano. Mais de 2 casas também é recusa: nunca arredonda em silêncio.
-const AMOUNT_CHARS = '0123456789,.';
+// "45,50", "45.50", "R$ 45" e "1.500,00". Saem só o "R$" do começo e os espaços das bordas; qualquer outro caractere
+// que não seja dígito, vírgula ou ponto é recusa ("-10", "1e2", "2 5"). Com vírgula, ela é o decimal, e o ponto só
+// vale como milhar em grupos de 3 dígitos ("1.500,00"; "1.5,00" e "10,5.5" são recusa). Sem vírgula, o ponto só vale
+// como decimal com 1 ou 2 casas ("6.5"): "6.000" é recusa, para não virar R$ 6,00 por engano. Mais de 2 casas também:
+// nunca arredonda em silêncio.
+const DIGITS = '0123456789';
 const CURRENCY_PREFIX = 'R$';
 const MAX_DECIMALS = 2;
-const withoutPrefix = text =>
-  text.startsWith(CURRENCY_PREFIX) ? text.slice(CURRENCY_PREFIX.length) : text;
-export const parseAmount = text => {
-  const clean = [...withoutPrefix(String(text ?? '').trim())]
-    .filter(char => char.trim() !== '')
-    .join('');
+const THOUSANDS_GROUP = 3;
+
+const onlyDigits = text => [...text].every(char => DIGITS.includes(char));
+
+const withoutPrefix = text => {
+  const trimmed = text.trim();
+  return trimmed.startsWith(CURRENCY_PREFIX)
+    ? trimmed.slice(CURRENCY_PREFIX.length).trim()
+    : trimmed;
+};
+
+// "1.500" → "1500"; grupo fora do padrão (primeiro de 1 a 3 dígitos, os outros de 3) → null.
+const wholeWithThousands = text => {
+  const [first, ...groups] = text.split('.');
+  const firstOk =
+    first.length >= 1 && first.length <= THOUSANDS_GROUP && onlyDigits(first);
+  const groupsOk = groups.every(
+    group => group.length === THOUSANDS_GROUP && onlyDigits(group)
+  );
+  return firstOk && groupsOk ? [first, ...groups].join('') : null;
+};
+
+const decimalsOk = decimals =>
+  decimals === undefined ||
+  (decimals.length >= 1 &&
+    decimals.length <= MAX_DECIMALS &&
+    onlyDigits(decimals));
+
+// { whole, decimals } com só dígitos, ou null quando o texto não é um valor sem ambiguidade.
+const amountParts = text => {
+  const clean = withoutPrefix(String(text ?? ''));
   if (!clean) return null;
-  if (![...clean].every(char => AMOUNT_CHARS.includes(char))) return null;
   const comma = clean.includes(',');
-  const separator = comma ? ',' : '.';
-  const digits = comma ? clean.split('.').join('') : clean;
-  const [whole, decimals, ...rest] = digits.split(separator);
-  if (rest.length) return null;
-  if (decimals !== undefined) {
-    if (!decimals.length || decimals.length > MAX_DECIMALS) return null;
-  }
-  const number = Number(`${whole || '0'}.${decimals || '0'}`);
-  return Number.isFinite(number) ? number : null;
+  const [rawWhole, decimals, ...rest] = clean.split(comma ? ',' : '.');
+  if (rest.length || !decimalsOk(decimals)) return null;
+  const whole =
+    comma && rawWhole.includes('.') ? wholeWithThousands(rawWhole) : rawWhole;
+  if (whole === null || !onlyDigits(whole)) return null;
+  if (!whole && decimals === undefined) return null;
+  return { whole: whole || '0', decimals: decimals || '' };
+};
+
+export const parseAmount = text => {
+  const parts = amountParts(text);
+  return parts ? Number(`${parts.whole}.${parts.decimals || '0'}`) : null;
+};
+
+// O valor como o servidor recebe: texto decimal com 2 casas ("1500.00", "6.50"), sem passar por float.
+export const decimalAmount = text => {
+  const parts = amountParts(text);
+  return parts
+    ? `${parts.whole}.${parts.decimals.padEnd(MAX_DECIMALS, '0')}`
+    : null;
 };
 
 // Dias do calendário como 'AAAA-MM-DD', no relógio de quem vê, sem fuso.

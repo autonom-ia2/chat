@@ -10,6 +10,7 @@ module Meta::AdsGraphClient::Creation
   IMAGE_FIELDS = 'hash,url,width,height'.freeze
   IMAGES_LIMIT = 30
   CAMPAIGNS_LIMIT = 25
+  OBJECT_STATUS_FIELDS = 'status,effective_status'.freeze
 
   def create_campaign(ad_account_id, params)
     post("act_#{ad_account_id}/campaigns", params)
@@ -73,6 +74,11 @@ module Meta::AdsGraphClient::Creation
   def campaigns_named(ad_account_id, text)
     get("act_#{ad_account_id}/campaigns", fields: 'id,name,effective_status', limit: CAMPAIGNS_LIMIT,
                                           filtering: [{ field: 'name', operator: 'CONTAIN', value: text }].to_json)
+  end
+
+  # Situação de uma campanha, grupo ou anúncio: a escolhida (`status`) e a de entrega (`effective_status`).
+  def object_status(object_id)
+    get(object_id.to_s, fields: OBJECT_STATUS_FIELDS)
   end
 
   # Estados do Brasil como a Meta os chama no público (`regions: [{ key }]`).

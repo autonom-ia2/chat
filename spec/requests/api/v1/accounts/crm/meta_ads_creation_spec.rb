@@ -103,7 +103,7 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
 
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body).to eq('error' => 'invalid_amount', 'nothing_created' => true)
-    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
   end
 
   it 'falha ao criar devolve o código e se nada foi criado' do
@@ -168,36 +168,104 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
     expect(response.parsed_body['ads'].pluck('ad_id')).to eq([ad_id])
   end
 
-  describe 'ativar o anúncio criado aqui (ponto 6)' do
+  describe 'ativar (ponto 6): tudo nasce pausado, e ativar liga campanha, grupo e anúncio' do
+    let(:campaign_id) { '120000000000000001' }
     let!(:record) do
-      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: 'k1', status: 'created', name: 'Bolo', ad_id: ad_id,
-                                        campaign_id: '1', adset_id: adset_id)
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', name: 'Bolo',
+                                        ad_id: ad_id, campaign_id: campaign_id, adset_id: adset_id,
+                                        ad_account_id: connection.ad_account_id)
     end
 
-    def stub_activation(campaign: 'ACTIVE', adset: 'ACTIVE')
-      stub_permissions
+    def stub_level(id, accepted: true, reread: 'ACTIVE')
+      turn_on = stub_request(:post, meta_graph_url(id)).with(body: { 'status' => 'ACTIVE' })
+      if accepted
+        turn_on.to_return(status: 200, body: { success: true }.to_json, headers: json)
+      else
+        turn_on.to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
+      end
+      stub_graph(id, { id: id, status: reread, effective_status: reread }, fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS)
+      stub_request(:post, meta_graph_url(id)).with(body: { 'status' => 'PAUSED' })
+                                             .to_return(status: 200, body: { success: true }.to_json, headers: json)
+    end
+
+    def activate!
+      post "#{path}/ads/#{ad_id}/status", params: { status: 'ACTIVE' }, headers: admin.create_new_auth_token, as: :json
+    end
+
+    def turned_on(id)
+      a_request(:post, meta_graph_url(id)).with(body: { 'status' => 'ACTIVE' })
+    end
+
+    def paused_back(id)
+      a_request(:post, meta_graph_url(id)).with(body: { 'status' => 'PAUSED' })
+    end
+
+    before { stub_permissions }
+
+    it 'liga os três, em ordem, relendo cada um, e marca como ativado' do
+      [campaign_id, adset_id, ad_id].each { |id| stub_level(id) }
+
+      activate!
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('status' => 'ACTIVE', 'held_by' => nil)
+      expect([turned_on(campaign_id), turned_on(adset_id), turned_on(ad_id)]).to all(have_been_made.once)
+      expect(record.reload.activated_at).to be_present
+      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_ad_status').last.audited_changes)
+        .to include('ad_id' => ad_id, 'status' => 'ACTIVE')
+    end
+
+    it 'falha no grupo: volta a campanha (e o grupo) para pausado, não liga o anúncio e responde o erro' do
+      stub_level(campaign_id)
+      stub_level(adset_id, accepted: false)
+      stub_level(ad_id)
+
+      activate!
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('meta_refused')
+      expect(paused_back(campaign_id)).to have_been_made.once
+      expect(paused_back(adset_id)).to have_been_made.once
+      expect(turned_on(ad_id)).not_to have_been_made
+      expect(record.reload.activated_at).to be_nil
+    end
+
+    it 'o anúncio ligou mas a releitura não confirma: volta os três para pausado' do
+      stub_level(campaign_id)
+      stub_level(adset_id)
+      stub_level(ad_id, reread: 'PAUSED')
+
+      activate!
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect([paused_back(campaign_id), paused_back(adset_id), paused_back(ad_id)]).to all(have_been_made.once)
+    end
+
+    it 'sem conseguir voltar: meta_partial, e a Auditoria registra o que ficou ligado' do
+      stub_level(campaign_id)
+      stub_level(adset_id, accepted: false)
+      stub_request(:post, meta_graph_url(campaign_id)).with(body: { 'status' => 'PAUSED' })
+                                                      .to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+
+      activate!
+
+      expect(response.parsed_body['error']).to eq('meta_partial')
+      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_activate_partial').last.audited_changes)
+        .to eq('active' => { 'campaign' => campaign_id })
+    end
+
+    it 'anúncio que não foi criado aqui: a ativação de sempre (só o anúncio) e o aviso de quem segura' do
+      record.destroy!
       stub_graph(ad_id, { id: ad_id, account_id: connection.ad_account_id, status: 'PAUSED', effective_status: 'PAUSED' },
                  fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS)
       stub_graph(ad_id, { success: true }, verb: :post)
-      stub_graph(ad_id, { id: ad_id, account_id: connection.ad_account_id, adset: { id: adset_id, effective_status: adset },
-                          campaign: { id: '1', effective_status: campaign } }, fields: Meta::AdsGraphClient::AD_BUDGET_FIELDS)
-    end
+      stub_graph(ad_id, { id: ad_id, account_id: connection.ad_account_id, adset: { id: adset_id, effective_status: 'ACTIVE' },
+                          campaign: { id: campaign_id, effective_status: 'PAUSED' } }, fields: Meta::AdsGraphClient::AD_BUDGET_FIELDS)
 
-    it 'com campanha e grupo no ar: marca como ativado e não avisa nada' do
-      stub_activation
-
-      post "#{path}/ads/#{ad_id}/status", params: { status: 'ACTIVE' }, headers: admin.create_new_auth_token, as: :json
-
-      expect(response.parsed_body).to eq('status' => 'ACTIVE', 'held_by' => nil)
-      expect(record.reload.activated_at).to be_present
-    end
-
-    it 'campanha pausada no Gerenciador: avisa em vez de dizer que começou' do
-      stub_activation(campaign: 'PAUSED')
-
-      post "#{path}/ads/#{ad_id}/status", params: { status: 'ACTIVE' }, headers: admin.create_new_auth_token, as: :json
+      activate!
 
       expect(response.parsed_body).to eq('status' => 'ACTIVE', 'held_by' => 'campaign')
+      expect(turned_on(campaign_id)).not_to have_been_made
     end
   end
 end

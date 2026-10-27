@@ -220,7 +220,7 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
         age_min: 18,
         age_max: 65,
         special_category: false,
-        daily_amount: 20,
+        daily_amount: '20.00',
         start_date: '2030-01-15',
         end_date: '',
         media: { kind: 'image', hash: 'h1' },
@@ -349,6 +349,42 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     expect(wrapper.find('[data-create-error]').text()).toBe(
       `${KEY}.ERRORS.UNCONFIRMED`
     );
+  });
+
+  it('only the person releases creating again after checking: same key, with the release', async () => {
+    CrmMetaAdsConnectionAPI.createAd
+      .mockRejectedValueOnce(
+        refusal(422, { error: 'unconfirmed', nothing_created: false })
+      )
+      .mockResolvedValueOnce({ data: CREATED });
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(wrapper.find('[data-create-recreate]').exists()).toBe(true);
+    await wrapper.find('[data-create-recreate]').trigger('click');
+    await flushPromises();
+
+    const [first, second] = CrmMetaAdsConnectionAPI.createAd.mock.calls.map(
+      ([body]) => body
+    );
+    expect(first.recreate_unconfirmed).toBeUndefined();
+    expect(second).toMatchObject({
+      idempotency_key: first.idempotency_key,
+      recreate_unconfirmed: true,
+    });
+    expect(wrapper.find('[data-create-done]').exists()).toBe(true);
+  });
+
+  it('other refusals never offer to create again', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockRejectedValueOnce(
+      refusal(422, { error: 'meta_refused', nothing_created: false })
+    );
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(wrapper.find('[data-create-recreate]').exists()).toBe(false);
   });
 
   it('without that guarantee, asks to check Meta and never says nothing was created', async () => {

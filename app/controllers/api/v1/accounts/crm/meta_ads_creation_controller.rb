@@ -65,8 +65,8 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
   def create_params
     params.permit(:idempotency_key, :name, :destination, :page_id, :whatsapp_number, :site_url, :site_action, :text, :headline,
                   :ready_message, :placement, :region, :age_min, :age_max, :special_category, :daily_amount, :start_date,
-                  :end_date, states: [], media: [:kind, :hash, :video_id, :image_hash],
-                             cards: [:kind, :hash, :video_id, :image_hash]).to_h
+                  :end_date, :recreate_unconfirmed,
+                  states: [], media: [:kind, :hash, :video_id, :image_hash], cards: [:kind, :hash, :video_id, :image_hash]).to_h
   end
 
   def ensure_feature

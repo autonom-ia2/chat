@@ -3024,6 +3024,7 @@
           "CANCEL": "Cancelar",
           "ERROR": "A Meta não aceitou a mudança agora. Tente de novo daqui a pouco.",
           "NEEDS_LOGIN": "Para pausar por aqui, entre de novo com o Facebook na Conexão.",
+          "PARTIAL": "Parte do anúncio ficou ligada na Meta e não deu para pausar de volta. Confira no Gerenciador de Anúncios.",
           "ACTIVATE_SPEND_END": "Ao ativar, o anúncio começa a gastar {value} por dia, até {end}. No total, no máximo {total}.",
           "ACTIVATE_SPEND_NO_END": "Ao ativar, o anúncio começa a gastar {value} por dia, sem data para terminar. Ele só para quando você pausar.",
           "ACTIVATE_SPEND_BUTTON": "Ativar e começar a gastar",
@@ -3290,6 +3291,7 @@
           "TITLE": "Não conseguimos falar com a Meta agora. Nada foi criado.",
           "RETRY": "Tentar de novo"
         },
+        "RECREATE": "Não está no Gerenciador, criar de novo",
         "BLOCKERS": {
           "LOGIN": {
             "TITLE": "Para criar anúncios por aqui, entre de novo com o Facebook.",

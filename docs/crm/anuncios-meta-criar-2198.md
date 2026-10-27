@@ -47,18 +47,22 @@ valor por extenso.
   ("Pausados, esperando você ativar"), para quem volta ao painel sem ativar.
 - Público do CRM fica fora desta entrega.
 
-## Campanha e grupo nascem ativos; só o anúncio nasce pausado
+## Tudo nasce pausado; o "Ativar anúncio" liga os três
 
-Decisão de produto: a campanha e o grupo de anúncios são criados com
-`status: ACTIVE`, e só o anúncio com `status: PAUSED`. Assim o "Ativar anúncio"
-basta para começar, sem a pessoa procurar três chaves. O gasto continua zero
-enquanto o anúncio estiver pausado, mas só se o servidor cumprir os sete pontos
-abaixo. Cada um é obrigatório na implementação.
+Decisão do Rodrigo (opção a, 27/10): a campanha, o grupo de anúncios e o
+anúncio são criados com `status: PAUSED`. O "Ativar anúncio" (a rota de
+ativação que já existia, #2161) liga os três, nesta ordem: campanha, grupo,
+anúncio, relendo cada um. Se um falhar, os já ligados voltam para `PAUSED` e a
+tela recebe o erro; se nem voltar der, `meta_partial` e a Auditoria registra o
+que ficou ligado (`meta_ads_activate_partial`). A pessoa continua tocando em
+uma chave só. Anúncio que não foi criado aqui segue a ativação de sempre (só o
+anúncio). O gasto é zero até o toque em "Ativar anúncio", mas só se o servidor
+cumprir os sete pontos abaixo. Cada um é obrigatório na implementação.
 
-1. **Anúncio com `status: PAUSED` explícito** no `POST /act_<id>/ads`. Nunca
-   depender do padrão da Meta.
-2. **Reler depois de criar.** Ler o `effective_status` do anúncio. Se não vier
-   pausado, pausar na hora e registrar na Auditoria o que aconteceu.
+1. **`status: PAUSED` explícito nos três** (`/campaigns`, `/adsets`, `/ads`).
+   Nunca depender do padrão da Meta.
+2. **Reler depois de criar.** Ler o `status` dos três. O que não vier
+   pausado é pausado na hora e fica na Auditoria (`meta_ads_create_repaused`).
 3. **Falha no meio desfaz o começo.** Se a campanha ou o grupo foram criados e
    um passo seguinte falhou, apagar (ou arquivar, se a Meta não deixar apagar)
    o que foi criado. A tela diz "Nada foi criado" e isso precisa ser verdade.
@@ -67,9 +71,10 @@ abaixo. Cada um é obrigatório na implementação.
 5. **Revalidar no servidor** o valor (R$ 6 a R$ 500 por dia) e as datas
    (início não antes de hoje, fim depois do início). O grupo recebe
    `start_time` e `end_time` iguais aos que a tela mostrou.
-6. **Ao ativar, conferir campanha e grupo.** Se algum deles não estiver ativo
-   (pausado por alguém no Gerenciador, por exemplo), avisar a pessoa em vez de
-   dizer que o anúncio começou a rodar.
+6. **Ao ativar, ligar e conferir os três.** Anúncio criado aqui: liga e relê
+   campanha, grupo e anúncio. Outro anúncio: se a campanha ou o grupo não
+   estiver ativo (pausado no Gerenciador, por exemplo), avisar a pessoa em vez
+   de dizer que o anúncio começou a rodar.
 7. **Teste que cria, relê e confirma** `PAUSED` e gasto zero, nas contas de
    teste, antes de ligar a flag para qualquer cliente.
 
@@ -375,7 +380,16 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
 - Campanha sem resposta (tempo esgotado): a busca pela marca vazia não é "nada
   criado". A tentativa fica `unconfirmed`, e a tela pede para conferir no
   Gerenciador de Anúncios. A mesma chave procura de novo antes de criar: se
-  achar, desfaz e refaz; vazia de novo, só cria depois de 10 minutos.
+  achar, desfaz e refaz; vazia de novo, continua `unconfirmed`, por mais tempo
+  que passe. Só a pessoa libera, no botão "Não está no Gerenciador, criar de
+  novo" (quem tem `meta_ads_manage`), e isso fica na Auditoria
+  (`meta_ads_create_recreated`). Atraso da Meta nunca vira campanha duplicada.
+- Campanha da tentativa que já não existe na Meta (apagada pelo Gerenciador)
+  conta como desfeita: a chave não fica presa.
+- A trava da tentativa nunca fica presa durante uma chamada à Meta: o desfazer
+  roda solto, e a volta para `creating` é um UPDATE condicional na situação
+  lida. A chave de idempotência da tela fica também no `sessionStorage` da aba,
+  para um recarregar não gerar chave nova.
 - O que a chamada real confirmou fica em `Crm::MetaAds::Creation::Confirmed`.
   Hoje é o caso mínimo do `?demo=so-confirmado`: WhatsApp só em Automático e
   site nos três lugares. Cada item confirmado entra ali num PR.

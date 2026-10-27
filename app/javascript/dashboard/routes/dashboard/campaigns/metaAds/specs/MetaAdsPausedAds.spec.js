@@ -235,8 +235,9 @@ describe('Anúncios da Meta · orçamento e datas do anúncio (#2198)', () => {
     await wrapper.find('[data-confirm]').trigger('click');
     await flushPromises();
 
+    // Texto decimal do jeito que a pessoa digitou, sem passar por float.
     expect(CrmMetaAdsConnectionAPI.updateAdBudget).toHaveBeenCalledWith('5', {
-      amount: 45,
+      amount: '45.00',
       end_time: null,
     });
     expect(wrapper.emitted('changed')).toEqual([[{ ...BUDGET, amount: 45 }]]);
