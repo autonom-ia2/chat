@@ -1,16 +1,23 @@
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { capaEmArquivo } from './midiaDoAnuncio';
 import { siteNormalizado } from './anuncioNovo';
-import { decimalAmount } from './dinheiroDoAnuncio';
+import { amountCents, decimalAmount } from './dinheiroDoAnuncio';
 
 // Anúncios da Meta (#2198), o Gerenciador simples (flag meta_ads_criar): o que a tela pede ao servidor para criar
 // anúncio, mudar orçamento e datas e listar os pausados. Valores em reais (a Meta guarda em centavos; o servidor
 // converte). Orçamento: { level: 'adset' | 'campaign', object_name, kind: 'daily' | 'lifetime', amount, currency,
 // start_time, end_time, started, ads_count, active_ads_count, min_daily, max_daily, can_change }.
 
-// O servidor manda o valor como texto decimal ("20.57"), nunca float; a tela faz conta e formata com número.
+// O servidor manda o valor como texto decimal ("20.57"), nunca float. A tela faz as contas em centavos inteiros
+// (`amount_cents`); `amount` em número é só para mostrar.
 const orcamentoNaTela = budget =>
-  budget ? { ...budget, amount: Number(budget.amount) } : budget;
+  budget
+    ? {
+        ...budget,
+        amount: Number(budget.amount),
+        amount_cents: amountCents(budget.amount),
+      }
+    : budget;
 
 export const lerOpcoesDeCriacao = async () => {
   const { data } = await CrmMetaAdsConnectionAPI.createOptions();
@@ -94,8 +101,18 @@ export const pedidoDoAnuncio = draft => {
 // chave vale só enquanto a página está aberta.
 const HTTP_CONFLICT = 409;
 const HTTP_SERVER_ERROR = 500;
+// Chave de idempotência de cada tentativa, na memória e no sessionStorage da aba (um recarregar não gera chave nova).
+// O nome da entrada é o SHA-256 do pedido, nunca o pedido: ele tem número de WhatsApp e textos.
 const STORAGE_KEY = 'metaAdsCriar.tentativas';
 const tentativas = new Map();
+
+const assinaturaDoPedido = async pedido => {
+  const bytes = new TextEncoder().encode(JSON.stringify(pedido));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)]
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+};
 
 const lerGuardadas = () => {
   try {
@@ -111,7 +128,11 @@ const guardar = changes => {
     Object.keys(saved).forEach(signature => {
       if (saved[signature] === null) delete saved[signature];
     });
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    if (Object.keys(saved).length) {
+      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    } else {
+      window.sessionStorage.removeItem(STORAGE_KEY);
+    }
   } catch {
     // Sem sessionStorage: a chave fica só na memória desta página.
   }
@@ -145,7 +166,7 @@ const esquecer = signature => {
 // Cria pausado. `recriar`: a tentativa ficou não confirmada na Meta, a pessoa conferiu no Gerenciador de Anúncios
 // que a campanha não está lá e pediu para criar de novo (mesma chave; o servidor grava na Auditoria).
 export const criarAnuncio = async (pedido, { recriar = false } = {}) => {
-  const signature = JSON.stringify(pedido);
+  const signature = await assinaturaDoPedido(pedido);
   const key = chaveDoPedido(signature);
   try {
     const { data } = await CrmMetaAdsConnectionAPI.createAd({
@@ -161,7 +182,7 @@ export const criarAnuncio = async (pedido, { recriar = false } = {}) => {
   }
 };
 
-// Para os testes: cada um começa sem tentativa pendente.
+// Ao sair do fluxo de criar (e nos testes): nenhuma tentativa fica guardada.
 export const esquecerTentativas = () => {
   tentativas.clear();
   try {

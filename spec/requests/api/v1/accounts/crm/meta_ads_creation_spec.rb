@@ -210,9 +210,42 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq('status' => 'ACTIVE', 'held_by' => nil)
       expect([turned_on(campaign_id), turned_on(adset_id), turned_on(ad_id)]).to all(have_been_made.once)
-      expect(record.reload.activated_at).to be_present
+      expect(record.reload).to have_attributes(activated_at: be_present, switching_at: nil)
       expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_ad_status').last.audited_changes)
-        .to include('ad_id' => ad_id, 'status' => 'ACTIVE')
+        .to include('ad_id' => ad_id, 'campaign_id' => campaign_id, 'adset_id' => adset_id, 'status' => 'ACTIVE')
+    end
+
+    it 'segundo clique enquanto o primeiro liga: in_progress, sem chamar a Meta' do
+      record.update!(switching_at: 1.minute.ago)
+
+      activate!
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('in_progress')
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'trava esquecida (processo caiu) há mais de 3 minutos não prende o anúncio' do
+      record.update!(switching_at: 4.minutes.ago)
+      [campaign_id, adset_id, ad_id].each { |id| stub_level(id) }
+
+      activate!
+
+      expect(response).to have_http_status(:ok)
+      expect(record.reload.switching_at).to be_nil
+    end
+
+    it 'a Meta ligou os três e só a gravação local falhou: responde sucesso e grava a Auditoria' do
+      [campaign_id, adset_id, ad_id].each { |id| stub_level(id) }
+      allow_any_instance_of(Crm::MetaAdsCreatedObject).to receive(:update!) # rubocop:disable RSpec/AnyInstance
+        .with(hash_including(:activated_at)).and_raise(ActiveRecord::ActiveRecordError)
+
+      activate!
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['status']).to eq('ACTIVE')
+      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_ad_status').last.audited_changes)
+        .to include('ad_id' => ad_id, 'campaign_id' => campaign_id, 'adset_id' => adset_id, 'status' => 'ACTIVE')
     end
 
     it 'falha no grupo: volta a campanha (e o grupo) para pausado, não liga o anúncio e responde o erro' do
@@ -227,7 +260,7 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
       expect(paused_back(campaign_id)).to have_been_made.once
       expect(paused_back(adset_id)).to have_been_made.once
       expect(turned_on(ad_id)).not_to have_been_made
-      expect(record.reload.activated_at).to be_nil
+      expect(record.reload).to have_attributes(activated_at: nil, switching_at: nil)
     end
 
     it 'o anúncio ligou mas a releitura não confirma: volta os três para pausado' do
@@ -266,6 +299,71 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
 
       expect(response.parsed_body).to eq('status' => 'ACTIVE', 'held_by' => 'campaign')
       expect(turned_on(campaign_id)).not_to have_been_made
+    end
+  end
+
+  describe 'pausar anúncio criado aqui: pausa anúncio, grupo e campanha, nessa ordem, relendo cada um' do
+    let(:campaign_id) { '120000000000000001' }
+    let!(:record) do
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: SecureRandom.uuid, status: 'created', name: 'Bolo',
+                                        ad_id: ad_id, campaign_id: campaign_id, adset_id: adset_id,
+                                        ad_account_id: connection.ad_account_id, activated_at: 1.day.ago)
+    end
+    let(:order) { [] }
+
+    def stub_pause(id, accepted: true, reread: 'PAUSED')
+      stub_request(:post, meta_graph_url(id)).with(body: { 'status' => 'PAUSED' }).to_return do
+        order << id
+        accepted ? { status: 200, body: { success: true }.to_json, headers: json } : { status: 400, body: meta_graph_error(1).to_json, headers: json }
+      end
+      stub_graph(id, { id: id, status: reread, effective_status: reread }, fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS)
+    end
+
+    def pause!
+      post "#{path}/ads/#{ad_id}/status", params: { status: 'PAUSED' }, headers: admin.create_new_auth_token, as: :json
+    end
+
+    before { stub_permissions }
+
+    it 'pausa os três, do anúncio para a campanha, e a Auditoria guarda os três ids' do
+      [ad_id, adset_id, campaign_id].each { |id| stub_pause(id) }
+
+      pause!
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('status' => 'PAUSED')
+      expect(order).to eq([ad_id, adset_id, campaign_id])
+      expect(a_request(:post, /graph\.facebook\.com/).with(body: { 'status' => 'ACTIVE' })).not_to have_been_made
+      expect(record.reload.switching_at).to be_nil
+      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_ad_status').last.audited_changes)
+        .to include('ad_id' => ad_id, 'campaign_id' => campaign_id, 'adset_id' => adset_id, 'status' => 'PAUSED')
+    end
+
+    it 'falha no grupo: pause_partial, a Auditoria registra o que pode ter ficado ligado, e nada é religado' do
+      stub_pause(ad_id)
+      stub_pause(adset_id, accepted: false)
+      stub_pause(campaign_id)
+
+      pause!
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('pause_partial')
+      expect(order).to eq([ad_id, adset_id])
+      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_pause_partial').last.audited_changes)
+        .to eq('active' => { 'adset' => adset_id, 'campaign' => campaign_id })
+      expect(a_request(:post, /graph\.facebook\.com/).with(body: { 'status' => 'ACTIVE' })).not_to have_been_made
+    end
+
+    it 'a releitura do anúncio não confirma a pausa: o erro da Meta, sem seguir para o grupo' do
+      stub_pause(ad_id, reread: 'ACTIVE')
+      stub_pause(adset_id)
+
+      pause!
+
+      expect(response.parsed_body['error']).to eq('meta_refused')
+      expect(order).to eq([ad_id])
+      expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_pause_partial').last.audited_changes)
+        .to eq('active' => { 'ad' => ad_id, 'adset' => adset_id, 'campaign' => campaign_id })
     end
   end
 end

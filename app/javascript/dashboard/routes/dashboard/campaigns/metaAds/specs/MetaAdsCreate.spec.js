@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsCreate from '../components/MetaAdsCreate.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
@@ -118,6 +119,10 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
       count += 1;
       return `key-${count}`;
     });
+    // O SHA-256 de verdade, mas resolvido na hora: o do navegador termina fora da fila que o flushPromises espera.
+    vi.spyOn(crypto.subtle, 'digest').mockImplementation(async (_name, bytes) =>
+      createHash('sha256').update(bytes).digest()
+    );
   });
 
   afterEach(() => {
@@ -270,7 +275,7 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     expect(keys).toEqual(['key-1', 'key-1']);
   });
 
-  it('leaving with the request in flight and coming back keeps the same key', async () => {
+  it('leaving the flow forgets the attempt: coming back starts a new one', async () => {
     CrmMetaAdsConnectionAPI.createAd
       .mockRejectedValueOnce(new Error('Network Error'))
       .mockResolvedValueOnce({ data: CREATED });
@@ -286,7 +291,8 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     const keys = CrmMetaAdsConnectionAPI.createAd.mock.calls.map(
       ([body]) => body.idempotency_key
     );
-    expect(keys).toEqual(['key-1', 'key-1']);
+    expect(keys).toEqual(['key-1', 'key-2']);
+    expect(window.sessionStorage.getItem('metaAdsCriar.tentativas')).toBeNull();
   });
 
   it('a refusal that left something at Meta (nothing_created false) keeps the same key', async () => {
@@ -374,6 +380,36 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
       recreate_unconfirmed: true,
     });
     expect(wrapper.find('[data-create-done]').exists()).toBe(true);
+  });
+
+  it('while unconfirmed, nothing in the draft can change and creating again sends the saved request', async () => {
+    CrmMetaAdsConnectionAPI.createAd
+      .mockRejectedValueOnce(
+        refusal(422, { error: 'unconfirmed', nothing_created: false })
+      )
+      .mockResolvedValueOnce({ data: CREATED });
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(
+      wrapper.find('[data-create-fields]').attributes('disabled')
+    ).toBeDefined();
+    expect(
+      wrapper.find('[data-create-next="REVIEW"]').attributes('disabled')
+    ).toBeDefined();
+    expect(
+      wrapper.find('[data-create-back]').attributes('disabled')
+    ).toBeDefined();
+    await submit(wrapper);
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledTimes(1);
+
+    await wrapper.find('[data-create-recreate]').trigger('click');
+    await flushPromises();
+    const [first, second] = CrmMetaAdsConnectionAPI.createAd.mock.calls.map(
+      ([body]) => body
+    );
+    expect(second).toEqual({ ...first, recreate_unconfirmed: true });
   });
 
   it('other refusals never offer to create again', async () => {

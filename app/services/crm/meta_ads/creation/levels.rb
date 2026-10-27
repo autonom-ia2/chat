@@ -5,11 +5,16 @@
 #   (`meta_ads_create_repaused`). Sem conseguir pausar, erro: o criar desfaz tudo.
 # - `activate!`: liga campanha, grupo e anúncio, nesta ordem, relendo cada um. Se um falhar, volta os já ligados para
 #   PAUSED e sobe o erro. Se nem voltar der, `meta_partial` com os ids que ficaram ligados, e a Auditoria registra
-#   (`meta_ads_activate_partial`).
+#   (`meta_ads_activate_partial`). Se a Meta ligou os três e só a gravação local falhar, é sucesso: o erro vai para o
+#   rastreador.
+# - `pause!`: pausa anúncio, grupo e campanha, nesta ordem (simétrico ao ativar), relendo cada um. Se um falhar, sobe o
+#   erro (`pause_partial` quando algum já tinha pausado) e a Auditoria registra o que pode ter ficado ligado
+#   (`meta_ads_pause_partial`). Nada é religado.
 class Crm::MetaAds::Creation::Levels
   COLUMNS = { 'campaign' => :campaign_id, 'adset' => :adset_id, 'ad' => :ad_id }.freeze
   REPAUSED_ACTION = 'meta_ads_create_repaused'.freeze
   PARTIAL_ACTION = 'meta_ads_activate_partial'.freeze
+  PAUSE_PARTIAL_ACTION = 'meta_ads_pause_partial'.freeze
 
   def initialize(client, account:, user:)
     @client = client
@@ -40,20 +45,42 @@ class Crm::MetaAds::Creation::Levels
 
       turned << [level, id]
     end
-    record.update!(activated_at: Time.current)
+    mark_activated(record)
+  end
+
+  def pause!(record)
+    levels = COLUMNS.to_a.reverse.map { |level, column| [level, record.public_send(column)] }
+    levels.each_with_index do |(_level, id), index|
+      failure = switch(id, 'PAUSED')
+      next unless failure
+
+      audit!(PAUSE_PARTIAL_ACTION, 'active' => levels.drop(index).to_h)
+      # Já pausou algum nível: a tela diz que parte pode ter ficado ligada. No primeiro, nada mudou: o erro da Meta.
+      raise Crm::MetaAds::AdManagement::Error, index.zero? ? failure : 'pause_partial'
+    end
   end
 
   private
 
-  # nil quando ligou e a releitura confirma ACTIVE; senão, o código do erro.
+  def mark_activated(record)
+    record.update!(activated_at: Time.current)
+  rescue ActiveRecord::ActiveRecordError => e
+    ChatwootExceptionTracker.new(e, account: @account).capture_exception
+  end
+
   def turn_on(id)
-    result = @client.update_object(id, status: 'ACTIVE')
+    switch(id, 'ACTIVE')
+  end
+
+  # nil quando mudou e a releitura confirma a situação nova; senão, o código do erro.
+  def switch(id, status)
+    result = @client.update_object(id, status: status)
     return code_of(result) unless result.ok
 
     reread = @client.object_status(id)
     return code_of(reread) unless reread.ok
 
-    'meta_refused' unless reread.data['status'] == 'ACTIVE'
+    'meta_refused' unless reread.data['status'] == status
   end
 
   def code_of(result)

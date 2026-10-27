@@ -3024,6 +3024,8 @@
           "ERROR": "Meta did not accept the change now. Try again in a moment.",
           "NEEDS_LOGIN": "To pause from here, sign in with Facebook again in Connection.",
           "PARTIAL": "Part of the ad was left on at Meta and we couldn't pause it back. Check Meta Ads Manager.",
+          "PAUSE_PARTIAL": "We couldn't pause everything: part of the ad may still be on at Meta. Check Meta Ads Manager.",
+          "IN_PROGRESS": "This ad is already being changed. Wait a moment and look again.",
           "ACTIVATE_SPEND_END": "When you turn it on, the ad starts spending {value} per day, until {end}. In total, at most {total}.",
           "ACTIVATE_SPEND_NO_END": "When you turn it on, the ad starts spending {value} per day, with no end date. It only stops when you pause it.",
           "ACTIVATE_SPEND_BUTTON": "Turn on and start spending",

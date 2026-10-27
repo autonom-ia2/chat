@@ -5,14 +5,16 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import {
+  CENTS,
   META_DAY_FACTOR,
   ROLLING_DAYS,
   WEEK_DAYS,
+  amountCents,
+  centsToAmount,
   daysBetween,
   longDate,
   money,
   decimalAmount,
-  parseAmount,
   todayOfAccount,
   withWords,
 } from '../dinheiroDoAnuncio';
@@ -48,15 +50,22 @@ const endDate = ref('');
 const currency = computed(() => props.budget.currency);
 // Hoje no fuso da conta de anúncios, como o servidor conta.
 const today = computed(() => todayOfAccount(props.budget.today));
-const fmt = value => money(value, currency.value, locale.value);
-const spelled = value => withWords(value, currency.value, locale.value);
+// As contas são em centavos inteiros; estes dois recebem centavos e só convertem para mostrar.
+const fmt = cents => money(centsToAmount(cents), currency.value, locale.value);
+const spelled = cents =>
+  withWords(centsToAmount(cents), currency.value, locale.value);
+const currentCents = computed(
+  () => props.budget.amount_cents ?? amountCents(props.budget.amount)
+);
+const minCents = computed(() => props.budget.min_daily * CENTS);
+const maxCents = computed(() => props.budget.max_daily * CENTS);
 
 const daily = computed(() => props.budget.kind === 'daily');
 const oldEnd = computed(() => props.budget.end_time?.slice(0, 10) || '');
 
 const amountLine = computed(() =>
   t(`${KEY}.${daily.value ? 'PER_DAY' : 'TOTAL'}`, {
-    value: fmt(props.budget.amount),
+    value: fmt(currentCents.value),
   })
 );
 
@@ -77,7 +86,7 @@ const scopeLine = computed(() =>
 
 const showButton = computed(() => props.canManage && props.budget.can_change);
 
-const newAmount = computed(() => parseAmount(amountText.value));
+const newCents = computed(() => amountCents(amountText.value));
 
 // Total: de R$ 6 até R$ 500 por dia de veiculação que falta (de hoje, ou do começo se ainda não começou, até o fim),
 // a mesma conta do servidor.
@@ -85,31 +94,31 @@ const totalMax = computed(() => {
   if (daily.value || !endDate.value) return null;
   const start = props.budget.start_time?.slice(0, 10);
   const from = start && start > today.value ? start : today.value;
-  return props.budget.max_daily * Math.max(daysBetween(from, endDate.value), 1);
+  return maxCents.value * Math.max(daysBetween(from, endDate.value), 1);
 });
 
-const totalError = value => {
-  if (value < props.budget.min_daily) {
-    return t(`${KEY}.ERRORS.TOTAL_MIN`, { value: fmt(props.budget.min_daily) });
+const totalError = cents => {
+  if (cents < minCents.value) {
+    return t(`${KEY}.ERRORS.TOTAL_MIN`, { value: fmt(minCents.value) });
   }
-  if (totalMax.value != null && value > totalMax.value) {
+  if (totalMax.value != null && cents > totalMax.value) {
     return t(`${KEY}.ERRORS.TOTAL_MAX`, {
       value: fmt(totalMax.value),
-      daily: fmt(props.budget.max_daily),
+      daily: fmt(maxCents.value),
     });
   }
   return null;
 };
 
 const amountError = computed(() => {
-  const value = newAmount.value;
-  if (value == null) return t(`${KEY}.ERRORS.AMOUNT`);
-  if (!daily.value) return totalError(value);
-  if (value < props.budget.min_daily) {
-    return t(`${KEY}.ERRORS.MIN`, { value: fmt(props.budget.min_daily) });
+  const cents = newCents.value;
+  if (cents == null) return t(`${KEY}.ERRORS.AMOUNT`);
+  if (!daily.value) return totalError(cents);
+  if (cents < minCents.value) {
+    return t(`${KEY}.ERRORS.MIN`, { value: fmt(minCents.value) });
   }
-  if (value > props.budget.max_daily) {
-    return t(`${KEY}.ERRORS.MAX`, { value: fmt(props.budget.max_daily) });
+  if (cents > maxCents.value) {
+    return t(`${KEY}.ERRORS.MAX`, { value: fmt(maxCents.value) });
   }
   return null;
 });
@@ -120,13 +129,13 @@ const dateError = computed(() =>
 
 const bigChange = computed(
   () =>
-    newAmount.value != null &&
+    newCents.value != null &&
     !amountError.value &&
-    Math.abs(newAmount.value - props.budget.amount) / props.budget.amount >
+    Math.abs(newCents.value - currentCents.value) / currentCents.value >
       BIG_CHANGE
 );
 
-const amountChanged = computed(() => newAmount.value !== props.budget.amount);
+const amountChanged = computed(() => newCents.value !== currentCents.value);
 const endChanged = computed(() => endDate.value !== oldEnd.value);
 
 const canReview = computed(
@@ -143,8 +152,8 @@ const changes = computed(() => {
   if (amountChanged.value) {
     list.push({
       key: 'AMOUNT',
-      from: t(`${KEY}.${unit.value}`, { value: spelled(props.budget.amount) }),
-      to: t(`${KEY}.${unit.value}`, { value: spelled(newAmount.value) }),
+      from: t(`${KEY}.${unit.value}`, { value: spelled(currentCents.value) }),
+      to: t(`${KEY}.${unit.value}`, { value: spelled(newCents.value) }),
     });
   }
   if (endChanged.value) {
@@ -160,40 +169,40 @@ const changes = computed(() => {
 // Com data para terminar: o total até lá. Sem data: o que gasta a cada 30 dias, deixando claro que continua.
 const projection = computed(() => {
   if (!daily.value) return null;
-  const value = newAmount.value;
+  const cents = newCents.value;
   if (!endDate.value) {
     return t(`${KEY}.PROJECTION_NO_END`, {
-      value: spelled(value * ROLLING_DAYS),
+      value: spelled(cents * ROLLING_DAYS),
     });
   }
   const days = daysBetween(today.value, endDate.value);
   return t(`${KEY}.PROJECTION_UNTIL`, {
     end: longDate(endDate.value, locale.value),
     days,
-    value: spelled(value * days),
+    value: spelled(cents * days),
   });
 });
 
 const dayLimits = computed(() =>
   daily.value
     ? t(`${KEY}.DAY_LIMITS`, {
-        day: spelled(newAmount.value * META_DAY_FACTOR),
-        week: spelled(newAmount.value * WEEK_DAYS),
+        day: spelled(Math.round(newCents.value * META_DAY_FACTOR)),
+        week: spelled(newCents.value * WEEK_DAYS),
       })
     : null
 );
 
 // O valor atual no campo como a pessoa escreveria: "30,00" em português, "30.00" em inglês.
-const editableAmount = value =>
+const editableAmount = cents =>
   new Intl.NumberFormat(locale.value.startsWith('pt') ? 'pt-BR' : 'en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
     useGrouping: false,
-  }).format(value);
+  }).format(centsToAmount(cents));
 
 const open = () => {
   stage.value = 'edit';
-  amountText.value = editableAmount(props.budget.amount);
+  amountText.value = editableAmount(currentCents.value);
   endDate.value = oldEnd.value;
   dialog.value?.open();
 };
@@ -241,7 +250,7 @@ const dialogTitle = computed(() =>
 const confirmLabel = computed(() => {
   if (stage.value === 'edit') return t(`${KEY}.REVIEW`);
   if (!amountChanged.value) return t(`${KEY}.CONFIRM_END`);
-  return t(`${KEY}.CONFIRM_${unit.value}`, { value: fmt(newAmount.value) });
+  return t(`${KEY}.CONFIRM_${unit.value}`, { value: fmt(newCents.value) });
 });
 </script>
 
@@ -314,8 +323,8 @@ const confirmLabel = computed(() => {
             amountError ||
             (daily
               ? $t(`${KEY}.LIMITS`, {
-                  min: fmt(budget.min_daily),
-                  max: fmt(budget.max_daily),
+                  min: fmt(minCents),
+                  max: fmt(maxCents),
                 })
               : '')
           "

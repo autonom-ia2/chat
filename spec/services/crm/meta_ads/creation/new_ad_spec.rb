@@ -269,20 +269,34 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
       expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(false) }
       expect(stubs[:campaign]).not_to have_been_made
-      expect(Crm::MetaAdsCreatedObject.last.campaign_id).to eq('800')
+      # A linha volta para a situação de antes, com o id: a próxima tentativa confere de novo.
+      expect(Crm::MetaAdsCreatedObject.last).to have_attributes(status: 'rollback_failed', campaign_id: '800')
     end
 
-    it 'campanha que já não existe na Meta (apagada pelo Gerenciador) conta como desfeita: a chave não fica presa' do
+    def gone_campaign(reread_error)
       leftover(status: 'rollback_failed')
       stub_request(:delete, meta_graph_url('800')).to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
       stub_request(:post, meta_graph_url('800')).to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
       stub_request(:get, meta_graph_url('800')).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
-                                               .to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
+                                               .to_return(status: 400, body: reread_error.to_json, headers: json)
+    end
+
+    it 'campanha que já não existe na Meta (100 com subcódigo 33) conta como desfeita: a chave não fica presa' do
+      gone_campaign(meta_graph_error(100, 'Unsupported get request', subcode: 33))
       stubs = stub_creation
       stub_reread
 
       expect(create!).to include(ad_id: '903')
       expect(stubs[:campaign]).to have_been_made.once
+    end
+
+    it 'o 100 sem subcódigo é parâmetro inválido, não sumiço: continua presa, sem criar outra' do
+      gone_campaign(meta_graph_error(100))
+      stubs = stub_creation
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(false) }
+      expect(stubs[:campaign]).not_to have_been_made
+      expect(Crm::MetaAdsCreatedObject.last).to have_attributes(status: 'rollback_failed', campaign_id: '800')
     end
 
     it 'campanha que a Meta ainda mostra viva e não deixa apagar: continua presa, sem criar outra' do
@@ -297,16 +311,33 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       expect(stubs[:campaign]).not_to have_been_made
     end
 
-    it 'outro pedido retomou a mesma tentativa enquanto esta desfazia na Meta: in_progress, sem criar duas' do
+    it 'corrida A/B: B leu a mesma tentativa, mas A a pegou antes; B recebe in_progress e não desfaz nem cria' do
       row = leftover(status: 'rollback_failed')
-      allow_any_instance_of(Crm::MetaAds::Creation::CampaignUndo).to receive(:undo) do # rubocop:disable RSpec/AnyInstance
-        row.update_columns(status: 'creating') # rubocop:disable Rails/SkipsModelValidations
-        :undone
+      allow(Crm::MetaAdsCreatedObject).to receive(:find_or_create_by!).and_wrap_original do |original, *args, **kwargs, &block|
+        found = original.call(*args, **kwargs, &block)
+        # A pega a linha entre a leitura e o UPDATE condicional de B.
+        row.update_columns(status: 'creating', updated_at: 1.second.from_now) # rubocop:disable Rails/SkipsModelValidations
+        found
       end
       stubs = stub_creation
 
       expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('in_progress') }
+      expect(a_request(:delete, meta_graph_url('800'))).not_to have_been_made
       expect(stubs[:campaign]).not_to have_been_made
+    end
+
+    it 'quem pega a linha a leva para creating antes de desfazer: outro pedido no meio do desfazer recebe in_progress' do
+      leftover(status: 'rollback_failed')
+      seen = nil
+      allow_any_instance_of(Crm::MetaAds::Creation::CampaignUndo).to receive(:undo) do # rubocop:disable RSpec/AnyInstance
+        seen = Crm::MetaAdsCreatedObject.last.status
+        :undone
+      end
+      stub_creation
+      stub_reread
+
+      expect(create!).to include(ad_id: '903')
+      expect(seen).to eq('creating')
     end
 
     it 'tentativa já desfeita refaz sem tentar apagar de novo' do
@@ -535,10 +566,20 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
         expect(a_request(:post, meta_graph_url("#{act}/campaigns"))).to have_been_made.once
       end
 
-      it 'a pessoa conferiu e pediu para criar de novo: cria e grava na Auditoria' do
+      it 'a pessoa conferiu e pediu para criar de novo: cria e grava na Auditoria a marca da tentativa antiga' do
         expect { expect(create!(draft.merge(recreate_unconfirmed: true))).to include(ad_id: '903') }
           .to change { Audited.audit_class.where(auditable: account, action: 'meta_ads_create_recreated', user: user).count }.by(1)
         expect(a_request(:post, meta_graph_url("#{act}/campaigns"))).to have_been_made.twice
+        expect(Audited.audit_class.where(action: 'meta_ads_create_recreated').last.audited_changes)
+          .to include('idempotency_key' => draft[:idempotency_key], 'mark' => 'a1b2c3d4', 'campaign_name' => campaign_name)
+      end
+
+      it 'se a Auditoria do recriar falha, não cria e a tentativa continua não confirmada' do
+        allow(Audited.audit_class).to receive(:create!).and_raise(ActiveRecord::RecordInvalid)
+
+        expect { create!(draft.merge(recreate_unconfirmed: true)) }.to raise_error(ActiveRecord::RecordInvalid)
+        expect(a_request(:post, meta_graph_url("#{act}/campaigns"))).to have_been_made.once
+        expect(Crm::MetaAdsCreatedObject.last.status).to eq('unconfirmed')
       end
 
       it 'pedir para criar de novo com a campanha aparecendo na busca: desfaz a antiga antes, sem Auditoria de recriar' do
@@ -549,6 +590,15 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
         expect(delete).to have_been_made.once
         expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_create_recreated')).to be_empty
       end
+    end
+
+    it 'recriar sem uma tentativa não confirmada desta chave é recusado, sem chamar a Meta para criar' do
+      expect { create!(draft.merge(recreate_unconfirmed: true)) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_params') }
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: draft[:idempotency_key], status: 'rolled_back')
+      expect { create!(draft.merge(recreate_unconfirmed: true)) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_params') }
+      expect(a_request(:post, meta_graph_url("#{act}/campaigns"))).not_to have_been_made
     end
 
     it 'sem conseguir procurar: não diz que nada foi criado, e a próxima tentativa confere de novo' do

@@ -21,7 +21,9 @@ class CreateCrmMetaAdsCreatedObjects < ActiveRecord::Migration[7.2]
       t.string :ad_id
       t.jsonb :budget, null: false, default: {}
       t.string :error_code
-      t.datetime :activated_at
+      # `switching_at`: trava do "Ativar"/"Pausar" de um anúncio criado aqui. Enquanto liga ou pausa os três níveis, um
+      # segundo clique recebe in_progress (Crm::MetaAds::Creation::Activation).
+      t.datetime :activated_at, :switching_at
       t.timestamps
     end
     add_index :crm_meta_ads_created_objects, [:account_id, :idempotency_key], unique: true, name: 'idx_crm_meta_ads_created_objects_key'

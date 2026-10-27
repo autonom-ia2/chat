@@ -2787,6 +2787,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_580000) do
     t.jsonb "budget", default: {}, null: false
     t.string "error_code"
     t.datetime "activated_at"
+    t.datetime "switching_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "ad_id"], name: "idx_crm_meta_ads_created_objects_ad"

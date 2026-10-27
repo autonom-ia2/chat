@@ -12,6 +12,7 @@ import {
 import { capaEmArquivo } from '../midiaDoAnuncio';
 import { siteNormalizado, siteValido } from '../anuncioNovo';
 import {
+  amountCents,
   decimalAmount,
   money,
   parseAmount,
@@ -193,6 +194,26 @@ describe('Anúncios da Meta · pedidos ao servidor (#2198)', () => {
       expect(keys()).toEqual(['key-1', 'key-1']);
     });
 
+    it('the saved entry is named by the SHA-256 of the request, never by the request (it has the WhatsApp number)', async () => {
+      CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(new Error('Network'));
+      await expect(
+        criarAnuncio({ name: 'x', whatsapp_number: '+5511987654321' })
+      ).rejects.toThrow();
+
+      const raw = window.sessionStorage.getItem('metaAdsCriar.tentativas');
+      const [name] = Object.keys(JSON.parse(raw));
+      expect(name).toHaveLength(64);
+      expect([...name].every(char => '0123456789abcdef'.includes(char))).toBe(
+        true
+      );
+      expect(raw).not.toContain('5511987654321');
+
+      esquecerTentativas();
+      expect(
+        window.sessionStorage.getItem('metaAdsCriar.tentativas')
+      ).toBeNull();
+    });
+
     it('without sessionStorage, the key still holds while the page is open', async () => {
       vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
         throw new Error('blocked');
@@ -281,16 +302,18 @@ describe('Anúncios da Meta · pedidos ao servidor (#2198)', () => {
     });
 
     expect(await lerOpcoesDeCriacao()).toEqual({ kinds: ['ad'] });
-    expect(await lerOrcamento('5')).toEqual({ amount: 30 });
+    // Número só para mostrar; as contas usam os centavos inteiros.
+    expect(await lerOrcamento('5')).toEqual({ amount: 30, amount_cents: 3000 });
     expect(await mudarOrcamento('5', { amount: 45, end_time: null })).toEqual({
       amount: 45.5,
+      amount_cents: 4550,
     });
     expect(CrmMetaAdsConnectionAPI.updateAdBudget).toHaveBeenCalledWith('5', {
       amount: 45,
       end_time: null,
     });
     expect(await lerPausadosEsperando()).toEqual([
-      { ad_id: '1', budget: { amount: 20.57 } },
+      { ad_id: '1', budget: { amount: 20.57, amount_cents: 2057 } },
     ]);
   });
 });
@@ -354,6 +377,11 @@ describe('Anúncios da Meta · ajudas do anúncio novo (#2198)', () => {
   });
 
   it('sends the amount as decimal text with 2 places, never through float', () => {
+    expect(amountCents('R$ 1.500,00')).toBe(150000);
+    expect(amountCents('20.57')).toBe(2057);
+    expect(amountCents(20.57)).toBe(2057);
+    expect(amountCents('0,1')).toBe(10);
+    expect(amountCents('1e2')).toBeNull();
     expect(decimalAmount('6,5')).toBe('6.50');
     expect(decimalAmount('R$ 1.500,00')).toBe('1500.00');
     expect(decimalAmount('25.57')).toBe('25.57');

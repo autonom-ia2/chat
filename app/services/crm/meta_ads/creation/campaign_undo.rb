@@ -48,10 +48,11 @@ class Crm::MetaAds::Creation::CampaignUndo
     @client.delete_object(id).ok || @client.update_object(id, status: 'ARCHIVED').ok || gone?(id)
   end
 
-  # Relê a campanha: "objeto não existe" ou já apagada/arquivada.
+  # Relê a campanha: "objeto não existe" (100 com subcódigo 33; o 100 puro é parâmetro inválido e não prova nada) ou já
+  # apagada/arquivada.
   def gone?(id)
     result = @client.object_status(id)
-    return result.object_error? unless result.ok
+    return result.missing_object? unless result.ok
 
     GONE_STATUSES.include?(result.data['effective_status'])
   end

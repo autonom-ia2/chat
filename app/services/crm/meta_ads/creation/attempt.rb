@@ -7,11 +7,14 @@
 # - `unconfirmed`: a campanha ficou sem resposta (tempo esgotado ou falha da Meta) e a busca pela marca no nome veio
 #   vazia. A Meta pode ter criado depois, ou ainda não mostrar na busca: a tela pede para conferir no Gerenciador de
 #   Anúncios. A mesma chave procura de novo antes de criar; se achar, desfaz e refaz. Vazia de novo, continua
-#   `unconfirmed`, por mais tempo que passe: só a pessoa libera criar de novo (`recreate_unconfirmed`), depois de
-#   conferir, e isso fica na Auditoria. Atraso da Meta nunca vira campanha duplicada.
+#   `unconfirmed`, por mais tempo que passe: sem a pessoa liberar, atraso da Meta não vira campanha duplicada. Ela
+#   libera criar de novo (`recreate_unconfirmed`, só com uma linha `unconfirmed` desta chave) depois de conferir no
+#   Gerenciador. Aí, se a campanha antiga aparecer mais tarde, as duas existem: a Auditoria guarda o nome com a marca
+#   da tentativa antiga para achá-la.
 #
-# A trava da linha nunca fica presa durante uma chamada à Meta: o desfazer roda solto, e a volta para `creating` é um
-# UPDATE condicional na situação lida (compare-and-set). Quem perde a corrida recebe `in_progress`.
+# Nenhuma trava de banco fica presa durante uma chamada à Meta. Retomar começa por um UPDATE condicional na situação
+# lida (compare-and-set) que leva a linha para `creating`; só quem ganha desfaz o que ficou e cria. Quem perde recebe
+# `in_progress`. Se desfazer falhar, a linha volta para a situação de antes.
 class Crm::MetaAds::Creation::Attempt
   # Sem sinal de vida há mais que isso: o processo que criava caiu (cada passo renova a linha antes de chamar a Meta, e
   # cada chamada desiste em Meta::AdsGraphClient::TIMEOUT_SECONDS).
@@ -30,19 +33,9 @@ class Crm::MetaAds::Creation::Attempt
   # A linha da tentativa, pronta para criar, ou já criada. `recreate`: a pessoa conferiu no Gerenciador de Anúncios
   # que a campanha da tentativa não confirmada não está lá e pediu para criar de novo.
   def claim!(key, attributes, recreate: false)
-    claimed = false
-    record = Crm::MetaAdsCreatedObject.find_or_create_by!(account: @account, idempotency_key: key) do |row|
-      row.assign_attributes(attributes.merge(user_id: @user&.id, ad_account_id: @connection.ad_account_id))
-      claimed = true
-    end
+    ensure_recreatable!(key) if recreate
+    record, claimed = find_or_claim(key, attributes)
     claimed || record.status == 'created' ? record : recover!(record, recreate)
-  rescue ActiveRecord::RecordNotUnique
-    raise Crm::MetaAds::Creation::Error, 'in_progress'
-  rescue ActiveRecord::RecordInvalid => e
-    # Só a corrida pela mesma chave (outro pedido criou a linha no mesmo instante) é "em andamento"; o resto é erro real.
-    raise unless e.record.errors.of_kind?(:idempotency_key, :taken)
-
-    raise Crm::MetaAds::Creation::Error, 'in_progress'
   end
 
   # Um passo falhou. `unknown`: a campanha ficou sem resposta e pode existir mesmo sem id. Devolve o erro para a tela,
@@ -57,39 +50,72 @@ class Crm::MetaAds::Creation::Attempt
 
   private
 
+  # [linha, nasceu agora?]. A corrida pela mesma chave (outro pedido criou a linha no mesmo instante) é "em andamento".
+  def find_or_claim(key, attributes)
+    claimed = false
+    record = Crm::MetaAdsCreatedObject.find_or_create_by!(account: @account, idempotency_key: key) do |row|
+      row.assign_attributes(attributes.merge(user_id: @user&.id, ad_account_id: @connection.ad_account_id))
+      claimed = true
+    end
+    [record, claimed]
+  rescue ActiveRecord::RecordNotUnique
+    raise Crm::MetaAds::Creation::Error, 'in_progress'
+  rescue ActiveRecord::RecordInvalid => e
+    # Só a unicidade da chave é "em andamento"; o resto é erro real.
+    raise unless e.record.errors.of_kind?(:idempotency_key, :taken)
+
+    raise Crm::MetaAds::Creation::Error, 'in_progress'
+  end
+
+  # Recriar só vale para uma tentativa desta chave que está `unconfirmed`. Outra em andamento: `in_progress`.
+  def ensure_recreatable!(key)
+    status = Crm::MetaAdsCreatedObject.find_by(account: @account, idempotency_key: key)&.status
+    raise Crm::MetaAds::Creation::Error, 'in_progress' if status == 'creating'
+    raise Crm::MetaAds::Creation::Error, 'invalid_params' unless status == 'unconfirmed'
+  end
+
   def recover!(record, recreate)
     status = record.status
     raise Crm::MetaAds::Creation::Error, 'in_progress' if status == 'creating' && record.updated_at >= STALE_AFTER.ago
 
-    clear_leftover!(record, recreate) if LEFTOVER_STATUSES.include?(status)
     take!(record, status)
+    clear_leftover!(record, status, recreate) if LEFTOVER_STATUSES.include?(status)
+    record.update!(error_code: nil, campaign_id: nil, adset_id: nil, creative_id: nil, ad_id: nil)
+    record
   end
 
-  # Fora de qualquer trava: confere na Meta e desfaz o que ficou da tentativa anterior.
-  def clear_leftover!(record, recreate)
+  # Já com a linha em `creating`: confere na Meta e desfaz o que ficou da tentativa anterior. Se não der, a linha volta
+  # para a situação de antes, com os ids que tinha.
+  def clear_leftover!(record, status, recreate)
     outcome = @undo.undo(record, unknown: true)
     raise Crm::MetaAds::Creation::Error.new('meta_unavailable', nothing_created: false) if outcome == :failed
-    return unless outcome == :none && record.status == 'unconfirmed'
+    return unless outcome == :none && status == 'unconfirmed'
     raise unconfirmed_error unless recreate
 
     audit_recreate!(record)
+  rescue StandardError
+    record.update!(status: status)
+    raise
   end
 
-  # Volta a linha para `creating` só se ninguém mexeu nela desde a leitura.
+  # Leva a linha para `creating` só se ninguém mexeu nela desde a leitura.
   def take!(record, status)
     taken = Crm::MetaAdsCreatedObject.where(id: record.id, status: status, updated_at: record.updated_at)
-                                     .update_all(status: 'creating', error_code: nil, campaign_id: nil, adset_id: nil, # rubocop:disable Rails/SkipsModelValidations
-                                                 creative_id: nil, ad_id: nil, updated_at: Time.current)
+                                     .update_all(status: 'creating', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     raise Crm::MetaAds::Creation::Error, 'in_progress' unless taken == 1
 
     record.reload
   end
 
-  # A pessoa liberou criar de novo uma tentativa não confirmada. Sem a Auditoria gravada, não libera.
+  # A pessoa liberou criar de novo uma tentativa não confirmada. Guarda o nome com a marca da tentativa antiga: se a
+  # campanha dela aparecer depois, é por ele que se acha no Gerenciador. Sem a Auditoria gravada, não libera.
   def audit_recreate!(record)
     Audited.audit_class.create!(
       auditable: @account, user: @user, action: RECREATED_ACTION,
-      audited_changes: { 'idempotency_key' => record.idempotency_key, 'name' => record.name }
+      audited_changes: { 'idempotency_key' => record.idempotency_key, 'name' => record.name,
+                         'mark' => Crm::MetaAds::Creation::CampaignUndo.mark(record),
+                         'campaign_name' => Crm::MetaAds::Creation::CampaignUndo.name_for(record),
+                         'campaign_id' => record.campaign_id, 'attempt_started_at' => record.created_at&.iso8601 }.compact
     )
   end
 

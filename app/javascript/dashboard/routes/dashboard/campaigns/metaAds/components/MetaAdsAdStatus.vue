@@ -6,6 +6,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import { mudarStatus } from '../gestaoDoAnuncio';
 import {
+  amountCents,
+  centsToAmount,
   daysBetween,
   longDate,
   todayOfAccount,
@@ -40,7 +42,12 @@ const saving = ref(false);
 
 const KEY = 'CRM_KANBAN.META_ADS_HUB.GESTAO.STATUS';
 // Ativar um anúncio criado aqui liga campanha, grupo e anúncio (#2198); `meta_partial`: um falhou e nem voltar deu.
-const STATUS_ERRORS = { cannot_change: 'NEEDS_LOGIN', meta_partial: 'PARTIAL' };
+const STATUS_ERRORS = {
+  cannot_change: 'NEEDS_LOGIN',
+  meta_partial: 'PARTIAL',
+  pause_partial: 'PAUSE_PARTIAL',
+  in_progress: 'IN_PROGRESS',
+};
 
 // O botão mexe na situação do próprio anúncio. "No ar" só quando a entrega também está ativa: anúncio ativo com a
 // campanha ou o conjunto pausado (ou em análise, recusado…) fica "Fora do ar", e pausar continua valendo.
@@ -107,7 +114,12 @@ const spend = computed(() => {
   return t(`${KEY}.ACTIVATE_SPEND_END`, {
     value,
     end: longDate(end, locale.value),
-    total: fmt(budget.amount * daysBetween(from, end)),
+    total: fmt(
+      centsToAmount(
+        (budget.amount_cents ?? amountCents(budget.amount)) *
+          daysBetween(from, end)
+      )
+    ),
   });
 });
 

@@ -55,7 +55,15 @@ ativação que já existia, #2161) liga os três, nesta ordem: campanha, grupo,
 anúncio, relendo cada um. Se um falhar, os já ligados voltam para `PAUSED` e a
 tela recebe o erro; se nem voltar der, `meta_partial` e a Auditoria registra o
 que ficou ligado (`meta_ads_activate_partial`). A pessoa continua tocando em
-uma chave só. Anúncio que não foi criado aqui segue a ativação de sempre (só o
+uma chave só. Pausar um anúncio criado aqui é simétrico (decisão da revisão,
+27/10): pausa os três, na ordem anúncio, grupo, campanha, relendo cada um. Se
+a pausa falhar no meio, a tela recebe o erro e a Auditoria registra o que
+ficou ligado (`meta_ads_pause_partial`); nada é religado. Enquanto um "Ativar"
+ou "Pausar" liga ou pausa os três, um segundo clique recebe `in_progress`
+(trava `switching_at`, por UPDATE condicional). A Auditoria do
+`meta_ads_ad_status` guarda os ids da campanha, do grupo e do anúncio. Se a
+Meta ligou tudo e só a gravação local falhar, a resposta continua sendo
+sucesso. Anúncio que não foi criado aqui segue a ativação de sempre (só o
 anúncio). O gasto é zero até o toque em "Ativar anúncio", mas só se o servidor
 cumprir os sete pontos abaixo. Cada um é obrigatório na implementação.
 
@@ -382,14 +390,24 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   Gerenciador de Anúncios. A mesma chave procura de novo antes de criar: se
   achar, desfaz e refaz; vazia de novo, continua `unconfirmed`, por mais tempo
   que passe. Só a pessoa libera, no botão "Não está no Gerenciador, criar de
-  novo" (quem tem `meta_ads_manage`), e isso fica na Auditoria
-  (`meta_ads_create_recreated`). Atraso da Meta nunca vira campanha duplicada.
+  novo" (quem tem `meta_ads_manage`), só para uma tentativa `unconfirmed` desta
+  chave, e isso fica na Auditoria (`meta_ads_create_recreated`, com o nome e a
+  marca da tentativa antiga). Sem a pessoa liberar, atraso da Meta não vira
+  campanha duplicada. Depois que ela libera, se a campanha antiga aparecer mais
+  tarde, as duas existem: a marca na Auditoria é o jeito de achar a antiga no
+  Gerenciador. A tela recria com o pedido guardado da tentativa e não deixa
+  editar enquanto ela está `unconfirmed`.
 - Campanha da tentativa que já não existe na Meta (apagada pelo Gerenciador)
-  conta como desfeita: a chave não fica presa.
-- A trava da tentativa nunca fica presa durante uma chamada à Meta: o desfazer
-  roda solto, e a volta para `creating` é um UPDATE condicional na situação
-  lida. A chave de idempotência da tela fica também no `sessionStorage` da aba,
-  para um recarregar não gerar chave nova.
+  conta como desfeita: a chave não fica presa. "Não existe" é só o erro 100
+  com subcódigo 33, ou a releitura dizer `DELETED`/`ARCHIVED`; o 100 puro é
+  parâmetro inválido e não conta.
+- Nenhuma trava de banco fica presa durante uma chamada à Meta. Retomar uma
+  tentativa começa por um UPDATE condicional que a leva para `creating`; só
+  quem ganha desfaz o que ficou e cria, e, se desfazer falhar, a linha volta
+  para a situação de antes. A chave de idempotência da tela fica também no
+  `sessionStorage` da aba, para um recarregar não gerar chave nova. O nome da
+  entrada é um SHA-256 do pedido (o pedido tem número de WhatsApp e textos), e
+  ela é apagada ao concluir ou sair do fluxo.
 - O que a chamada real confirmou fica em `Crm::MetaAds::Creation::Confirmed`.
   Hoje é o caso mínimo do `?demo=so-confirmado`: WhatsApp só em Automático e
   site nos três lugares. Cada item confirmado entra ali num PR.

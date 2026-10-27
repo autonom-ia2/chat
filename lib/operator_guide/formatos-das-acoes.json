@@ -15643,7 +15643,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#status",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:27",
-      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:83",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:82",
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:29",
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:28"
     ],

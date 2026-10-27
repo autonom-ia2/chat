@@ -1,5 +1,12 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { frontendURL } from 'dashboard/helper/URLHelper';
@@ -16,6 +23,7 @@ import {
 } from '../anuncioNovo';
 import {
   criarAnuncio,
+  esquecerTentativas,
   lerOpcoesDeCriacao,
   pedidoDoAnuncio,
 } from '../criacaoNaMeta';
@@ -270,11 +278,19 @@ const next = () => {
   step.value += 1;
 };
 
+// Não confirmado na Meta: a pessoa confere no Gerenciador de Anúncios e só ela libera criar de novo. Recriar manda o
+// pedido guardado da tentativa (mesma chave), e a edição fica travada enquanto isso, para o anúncio novo ser o mesmo
+// que a pessoa conferiu.
+const unconfirmed = ref(false);
+const pendingPedido = ref(null);
+
 // Voltar sai para o painel no primeiro passo (o da escolha, ou o seguinte quando o tipo já veio decidido).
 const leavesToPanel = computed(
   () => step.value === 0 || (fixedKind.value && step.value === 1)
 );
 const back = () => {
+  // Tentativa não confirmada: o rascunho fica como foi mandado até a pessoa resolver.
+  if (unconfirmed.value) return;
   // No bloqueio depois de escolher o que fazer: volta à escolha.
   if (blocker.value && draft.value.kind && !fixedKind.value) {
     draft.value = { ...draft.value, kind: null };
@@ -312,21 +328,20 @@ const createErrorText = error => {
   return reason;
 };
 
-// Não confirmado na Meta: a pessoa confere no Gerenciador de Anúncios e só ela libera criar de novo.
-const unconfirmed = ref(false);
-
 const create = async ({ recriar = false } = {}) => {
   if (!ready.value || saving.value) return;
   saving.value = true;
   createError.value = '';
-  unconfirmed.value = false;
-  const pedido = pedidoDoAnuncio(draft.value);
+  const pedido = recriar ? pendingPedido.value : pedidoDoAnuncio(draft.value);
   try {
     created.value = await criarAnuncio(pedido, { recriar });
+    unconfirmed.value = false;
+    pendingPedido.value = null;
     focusHeading();
   } catch (error) {
     createError.value = createErrorText(error);
     unconfirmed.value = error?.response?.data?.error === 'unconfirmed';
+    pendingPedido.value = unconfirmed.value ? pedido : null;
   } finally {
     saving.value = false;
   }
@@ -334,11 +349,15 @@ const create = async ({ recriar = false } = {}) => {
 
 const recreate = () => create({ recriar: true });
 
+// Saiu do fluxo: a chave guardada da tentativa não fica para trás (recarregar a página não desmonta e a mantém).
+onBeforeUnmount(esquecerTentativas);
+
 const submitLabel = computed(() =>
   current.value === 'REVIEW' ? t(`${KEY}.CREATE`) : t(`${KEY}.NEXT`)
 );
 
 const submit = () => {
+  if (unconfirmed.value) return;
   if (current.value === 'REVIEW') create();
   else next();
 };
@@ -441,6 +460,7 @@ const BLOCKERS = {
       v-if="!created"
       type="button"
       data-create-back
+      :disabled="unconfirmed"
       class="inline-flex min-h-11 items-center gap-1.5 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
       @click="back"
     >
@@ -563,88 +583,97 @@ const BLOCKERS = {
         </p>
       </div>
 
-      <MetaAdsCreateKind
-        v-if="current === 'KIND'"
-        :model-value="draft.kind"
-        :kinds="kinds"
-        :unavailable="destinations.length ? {} : { ad: 'NO_DESTINATION' }"
-        @choose="chooseKind"
-      />
-
-      <div
-        v-else-if="current === 'WHERE'"
-        class="flex min-w-0 max-w-xl flex-col gap-5"
+      <!-- Não confirmado: nada do rascunho muda até a pessoa resolver (o recriar manda o pedido como foi). -->
+      <fieldset
+        :disabled="unconfirmed"
+        data-create-fields
+        class="contents m-0 min-w-0 border-0 p-0"
       >
-        <div v-if="pages.length > 1" class="flex flex-col gap-2">
-          <span class="text-sm font-medium text-n-slate-12">
-            {{ $t(`${KEY}.WHERE.PAGE`) }}
-          </span>
-          <ChoiceSelect
-            :model-value="draft.page_id"
-            data-create-page
-            :options="pageOptions"
-            :aria-label="$t(`${KEY}.WHERE.PAGE`)"
-            :placeholder="$t(`${KEY}.WHERE.CHOOSE`)"
-            class="w-full"
-            @update:model-value="draft = { ...draft, page_id: $event }"
-          />
+        <MetaAdsCreateKind
+          v-if="current === 'KIND'"
+          :model-value="draft.kind"
+          :kinds="kinds"
+          :unavailable="destinations.length ? {} : { ad: 'NO_DESTINATION' }"
+          @choose="chooseKind"
+        />
+
+        <div
+          v-else-if="current === 'WHERE'"
+          class="flex min-w-0 max-w-xl flex-col gap-5"
+        >
+          <div v-if="pages.length > 1" class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-n-slate-12">
+              {{ $t(`${KEY}.WHERE.PAGE`) }}
+            </span>
+            <ChoiceSelect
+              :model-value="draft.page_id"
+              data-create-page
+              :options="pageOptions"
+              :aria-label="$t(`${KEY}.WHERE.PAGE`)"
+              :placeholder="$t(`${KEY}.WHERE.CHOOSE`)"
+              class="w-full"
+              @update:model-value="draft = { ...draft, page_id: $event }"
+            />
+          </div>
+          <div v-if="numbers.length > 1" class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-n-slate-12">
+              {{ $t(`${KEY}.WHERE.NUMBER`) }}
+            </span>
+            <ChoiceSelect
+              :model-value="draft.whatsapp_number"
+              data-create-number
+              :options="numberOptions"
+              :aria-label="$t(`${KEY}.WHERE.NUMBER`)"
+              :placeholder="$t(`${KEY}.WHERE.CHOOSE`)"
+              class="w-full"
+              @update:model-value="
+                draft = { ...draft, whatsapp_number: $event }
+              "
+            />
+          </div>
         </div>
-        <div v-if="numbers.length > 1" class="flex flex-col gap-2">
-          <span class="text-sm font-medium text-n-slate-12">
-            {{ $t(`${KEY}.WHERE.NUMBER`) }}
-          </span>
-          <ChoiceSelect
-            :model-value="draft.whatsapp_number"
-            data-create-number
-            :options="numberOptions"
-            :aria-label="$t(`${KEY}.WHERE.NUMBER`)"
-            :placeholder="$t(`${KEY}.WHERE.CHOOSE`)"
-            class="w-full"
-            @update:model-value="draft = { ...draft, whatsapp_number: $event }"
-          />
-        </div>
-      </div>
 
-      <MetaAdsCreateContent
-        v-else-if="current === 'CONTENT'"
-        v-model="draft"
-        :library="options.images"
-        :page-name="chosenPage?.name"
-        :phone="chosenNumber?.phone"
-        :has-number="numbers.length > 0"
-        :instagram="instagram"
-        :destinations="destinations"
-      />
+        <MetaAdsCreateContent
+          v-else-if="current === 'CONTENT'"
+          v-model="draft"
+          :library="options.images"
+          :page-name="chosenPage?.name"
+          :phone="chosenNumber?.phone"
+          :has-number="numbers.length > 0"
+          :instagram="instagram"
+          :destinations="destinations"
+        />
 
-      <MetaAdsCreateAudience
-        v-else-if="current === 'AUDIENCE'"
-        v-model="draft"
-      />
+        <MetaAdsCreateAudience
+          v-else-if="current === 'AUDIENCE'"
+          v-model="draft"
+        />
 
-      <MetaAdsCreateBudget
-        v-else-if="current === 'BUDGET'"
-        v-model="draft"
-        :limits="options"
-        :amount-error="amountError"
-        :total-line="totalLine"
-        :day-limits-line="dayLimitsLine"
-        :suggestion="SUGGESTED_DAILY"
-      />
+        <MetaAdsCreateBudget
+          v-else-if="current === 'BUDGET'"
+          v-model="draft"
+          :limits="options"
+          :amount-error="amountError"
+          :total-line="totalLine"
+          :day-limits-line="dayLimitsLine"
+          :suggestion="SUGGESTED_DAILY"
+        />
 
-      <MetaAdsCreateReview
-        v-else-if="current === 'REVIEW'"
-        v-model="draft"
-        :page-name="chosenPage?.name"
-        :phone="chosenNumber?.phone"
-        :username="instagram?.username"
-        :media="draft.media"
-        :cards="adCards"
-        :action="action"
-        :per-day-line="perDayLine"
-        :total-line="totalLine"
-        :day-limits-line="dayLimitsLine"
-        :placements="placements"
-      />
+        <MetaAdsCreateReview
+          v-else-if="current === 'REVIEW'"
+          v-model="draft"
+          :page-name="chosenPage?.name"
+          :phone="chosenNumber?.phone"
+          :username="instagram?.username"
+          :media="draft.media"
+          :cards="adCards"
+          :action="action"
+          :per-day-line="perDayLine"
+          :total-line="totalLine"
+          :day-limits-line="dayLimitsLine"
+          :placements="placements"
+        />
+      </fieldset>
 
       <p
         v-if="ageError"
@@ -691,7 +720,7 @@ const BLOCKERS = {
             type="submit"
             :data-create-next="current"
             :label="submitLabel"
-            :disabled="!ready"
+            :disabled="!ready || unconfirmed"
             :is-loading="saving"
           />
           <p

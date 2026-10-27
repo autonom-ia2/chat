@@ -4,11 +4,26 @@
 module Crm::MetaAds::Creation::Money
   CENTS = 100
   CURRENCY = 'BRL'.freeze
+  MAX_DECIMALS = 2
+  DIGITS = '0-9'.freeze
 
-  # "45.5", 45.5 ou "45.50" → BigDecimal("45.5"). Vazio, texto, infinito ou mais de 2 casas → nil.
+  # Só o que a tela manda: dígitos e, se houver, um ponto com até 2 casas ("45", "45.5", "45.50" → BigDecimal). Inteiro
+  # do JSON também vale. Vazio, vírgula, sinal, expoente ("1e2"), sublinhado, float ou mais de 2 casas → nil.
   def self.parse(value)
-    amount = BigDecimal(value.to_s.strip, exception: false)
-    amount if amount&.finite? && (amount * CENTS).frac.zero?
+    text = case value
+           when Integer then value.to_s
+           when String then value.strip
+           end
+    BigDecimal(text) if decimal_text?(text.to_s)
+  end
+
+  def self.decimal_text?(text)
+    whole, fraction, extra = text.split('.', -1)
+    extra.nil? && digits?(whole) && (fraction.nil? || (digits?(fraction) && fraction.length <= MAX_DECIMALS))
+  end
+
+  def self.digits?(text)
+    text.present? && text.delete(DIGITS).empty?
   end
 
   def self.cents(amount)

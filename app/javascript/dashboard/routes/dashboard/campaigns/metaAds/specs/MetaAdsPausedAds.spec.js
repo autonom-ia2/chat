@@ -240,7 +240,9 @@ describe('Anúncios da Meta · orçamento e datas do anúncio (#2198)', () => {
       amount: '45.00',
       end_time: null,
     });
-    expect(wrapper.emitted('changed')).toEqual([[{ ...BUDGET, amount: 45 }]]);
+    expect(wrapper.emitted('changed')).toEqual([
+      [{ ...BUDGET, amount: 45, amount_cents: 4500 }],
+    ]);
     expect(useAlert).toHaveBeenCalledWith(`${KEY}.DONE`);
   });
 
@@ -275,6 +277,10 @@ describe('Anúncios da Meta · orçamento e datas do anúncio (#2198)', () => {
 
     await wrapper.find('input[data-ad-budget-input]').setValue('3500.00');
     expect(wrapper.text()).not.toContain(`${KEY}.ERRORS.TOTAL_MAX`);
+
+    // A conta é em centavos inteiros: um centavo acima do teto já passa do "no máximo".
+    await wrapper.find('input[data-ad-budget-input]').setValue('3500,01');
+    expect(wrapper.text()).toContain(`${KEY}.ERRORS.TOTAL_MAX`);
   });
 
   it.each([

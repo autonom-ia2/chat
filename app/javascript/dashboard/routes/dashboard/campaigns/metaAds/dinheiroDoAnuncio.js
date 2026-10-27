@@ -80,6 +80,21 @@ export const parseAmount = text => {
   return parts ? Number(`${parts.whole}.${parts.decimals || '0'}`) : null;
 };
 
+// Contas de dinheiro em centavos inteiros, nunca em float: "1.500,00" → 150000; "20.57" (do servidor) ou 20.57 →
+// 2057. Texto que não é valor → null.
+export const CENTS = 100;
+
+export const amountCents = text => {
+  const parts = amountParts(text);
+  return parts
+    ? Number(parts.whole) * CENTS +
+        Number(parts.decimals.padEnd(MAX_DECIMALS, '0'))
+    : null;
+};
+
+// Só para mostrar (money, withWords): a conta já foi feita em centavos.
+export const centsToAmount = cents => cents / CENTS;
+
 // O valor como o servidor recebe: texto decimal com 2 casas ("1500.00", "6.50"), sem passar por float.
 export const decimalAmount = text => {
   const parts = amountParts(text);
