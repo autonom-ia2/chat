@@ -9,29 +9,37 @@ export const WEEK_DAYS = 7;
 export const ROLLING_DAYS = 30;
 const DAY_MS = 86_400_000;
 
+// Sem moeda confirmada pelo servidor, não formata: nunca presume real.
 export const money = (value, currency, locale) =>
-  new Intl.NumberFormat(intlLocale(locale), {
-    style: 'currency',
-    currency: currency || 'BRL',
-  }).format(Number(value || 0));
+  currency
+    ? new Intl.NumberFormat(intlLocale(locale), {
+        style: 'currency',
+        currency,
+      }).format(Number(value || 0))
+    : '';
 
 export const withWords = (value, currency, locale) => {
+  if (!currency) return '';
   const spelled = valorPorExtenso(value, currency, locale);
   const number = money(value, currency, locale);
   return spelled ? `${number} (${spelled})` : number;
 };
 
-// "45,50", "45.50", "R$ 45" e "1.000,00": fica só com dígitos, vírgula e ponto (o símbolo da moeda e os espaços
-// saem). Com vírgula, ela é o decimal e o ponto é milhar. Sem vírgula, o ponto só vale como decimal com 1 ou 2 casas
-// ("6.5", "6.50"): "6.000" e "1.000.000" são recusados, para não virarem R$ 6,00 por engano. Mais de 2 casas também é
-// recusa: o valor nunca é arredondado em silêncio.
+// "45,50", "45.50", "R$ 45" e "1.000,00": o "R$" do começo e os espaços saem; qualquer outro caractere que não seja
+// dígito, vírgula ou ponto é recusa ("-10" e "1e2" não viram 10 nem 12). Com vírgula, ela é o decimal e o ponto é
+// milhar. Sem vírgula, o ponto só vale como decimal com 1 ou 2 casas ("6.5", "6.50"): "6.000" e "1.000.000" são
+// recusados, para não virarem R$ 6,00 por engano. Mais de 2 casas também é recusa: nunca arredonda em silêncio.
 const AMOUNT_CHARS = '0123456789,.';
+const CURRENCY_PREFIX = 'R$';
 const MAX_DECIMALS = 2;
+const withoutPrefix = text =>
+  text.startsWith(CURRENCY_PREFIX) ? text.slice(CURRENCY_PREFIX.length) : text;
 export const parseAmount = text => {
-  const clean = [...String(text ?? '')]
-    .filter(char => AMOUNT_CHARS.includes(char))
+  const clean = [...withoutPrefix(String(text ?? '').trim())]
+    .filter(char => char.trim() !== '')
     .join('');
   if (!clean) return null;
+  if (![...clean].every(char => AMOUNT_CHARS.includes(char))) return null;
   const comma = clean.includes(',');
   const separator = comma ? ',' : '.';
   const digits = comma ? clean.split('.').join('') : clean;

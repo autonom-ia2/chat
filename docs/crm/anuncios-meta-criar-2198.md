@@ -346,7 +346,7 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
 
 | Rota | O que faz | Quem |
 |---|---|---|
-| `GET create_options` | Opções de criar (pontos 8 e 12), com moeda, hoje e fuso da conta de anúncios | `meta_ads_manage` |
+| `GET create_options` | Opções de criar (pontos 8 e 12), com moeda e hoje no fuso da conta de anúncios | `meta_ads_manage` |
 | `POST media` | Foto ou vídeo do celular → `hash` ou `video_id` | `meta_ads_manage` |
 | `POST ads` | Anúncio novo, sempre pausado | `meta_ads_manage` |
 | `GET ads/:ad_id/budget` | Orçamento e datas (pontos 10 e 11) | `meta_ads_view` |
@@ -370,7 +370,12 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   não mostra valor. Dinheiro sem float: mais de 2 casas é recusa, e a Meta
   recebe centavos inteiros.
 - "Hoje" das datas é o do fuso da conta de anúncios: o servidor manda `today`
-  e `time_zone` nas opções e `today` no orçamento.
+  nas opções e no orçamento. Valores saem como texto decimal (`"20.57"`), nunca
+  float.
+- Campanha sem resposta (tempo esgotado): a busca pela marca vazia não é "nada
+  criado". A tentativa fica `unconfirmed`, e a tela pede para conferir no
+  Gerenciador de Anúncios. A mesma chave procura de novo antes de criar: se
+  achar, desfaz e refaz; vazia de novo, só cria depois de 10 minutos.
 - O que a chamada real confirmou fica em `Crm::MetaAds::Creation::Confirmed`.
   Hoje é o caso mínimo do `?demo=so-confirmado`: WhatsApp só em Automático e
   site nos três lugares. Cada item confirmado entra ali num PR.

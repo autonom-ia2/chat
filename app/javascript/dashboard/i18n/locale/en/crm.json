@@ -3551,6 +3551,7 @@
           "META_UNAVAILABLE": "We couldn't reach Meta right now. Try again in a little while.",
           "META_REFUSED": "Meta refused the ad.",
           "CURRENCY_NOT_SUPPORTED": "Creating ads here works only for ad accounts in reais (BRL). Nothing was created.",
+          "UNCONFIRMED": "We couldn't confirm with Meta whether the campaign was created. Check Meta Ads Manager before trying again.",
           "UNKNOWN": "We couldn't create the ad right now.",
           "NOTHING_CREATED": "Nothing was created.",
           "CHECK_META": "A campaign may have been left half done: check Meta Ads Manager before trying again.",

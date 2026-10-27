@@ -69,7 +69,7 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
     get "#{path}/ads/#{ad_id}/budget", headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body['budget']).to include('level' => 'adset', 'amount' => 30.0, 'active_ads_count' => 1)
+    expect(response.parsed_body['budget']).to include('level' => 'adset', 'amount' => '30.00', 'active_ads_count' => 1)
   end
 
   it 'muda o orçamento e grava na Auditoria o antes e o depois, sem o token' do
@@ -81,7 +81,7 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
     expect(response).to have_http_status(:ok)
     audit = Audited.audit_class.where(auditable: account, action: 'meta_ads_budget_change').last
     expect(audit.user).to eq(admin)
-    expect(audit.audited_changes).to include('ad_id' => ad_id, 'amount' => [30.0, 40.0])
+    expect(audit.audited_changes).to include('ad_id' => ad_id, 'amount' => %w[30.00 40.00])
     expect(audit.audited_changes.to_json).not_to include(MetaAdsHelpers::TEST_TOKEN)
   end
 
@@ -92,6 +92,18 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
 
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['error']).to eq('invalid_amount')
+  end
+
+  it 'valor com mais de 2 casas: 422 invalid_amount, sem chamar a Meta' do
+    params = { idempotency_key: SecureRandom.uuid, name: 'Bolo', destination: 'WEBSITE', site_url: 'https://loja.com.br',
+               site_action: 'SHOP_NOW', page_id: '110', media: { kind: 'image', hash: 'abc' }, text: 'Bolo', placement: 'AUTO',
+               region: 'BR', age_min: 18, age_max: 65, daily_amount: '20.005', start_date: '2026-10-27' }
+
+    post "#{path}/ads", params: params, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error' => 'invalid_amount', 'nothing_created' => true)
+    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
   end
 
   it 'falha ao criar devolve o código e se nada foi criado' do

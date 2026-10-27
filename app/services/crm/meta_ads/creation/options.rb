@@ -3,8 +3,8 @@
 # que a chamada real confirmou. `needs_login`: o token não pode criar; a tela pede para entrar de novo com o Facebook
 # (`facebook_login`, o mesmo do GET da conexão) e não lê nada na Meta. Posts para impulsionar e o limite de posts do
 # Instagram chegam nos PRs seguintes: por ora, vazios. Quem pode criar recebe também a moeda lida na Meta (sem
-# fallback: leitura que falha é erro, e a tela não mostra valor) e o dia de hoje e o fuso da conta de anúncios, que
-# valem para as datas do anúncio.
+# fallback: leitura que falha é erro, e a tela não mostra valor) e o dia de hoje no fuso da conta de anúncios, que vale
+# para as datas do anúncio.
 class Crm::MetaAds::Creation::Options
   KINDS = %w[ad].freeze
   CURRENCY = Crm::MetaAds::Creation::Money::CURRENCY
@@ -80,10 +80,9 @@ class Crm::MetaAds::Creation::Options
 
   # Sem poder criar, a tela pede para entrar de novo e não mostra valor nem data.
   def account_facts(can_create)
-    return { currency: nil, today: nil, time_zone: nil } unless can_create
+    return { currency: nil, today: nil } unless can_create
 
     zone = Crm::MetaAds::Creation::AccountZone.new(@connection, @access.client).zone
-    { currency: Crm::MetaAds::Creation::Money.currency!(@access.client, @connection.ad_account_id),
-      today: zone.today.iso8601, time_zone: zone.tzinfo.name }
+    { currency: Crm::MetaAds::Creation::Money.currency!(@access.client, @connection.ad_account_id), today: zone.today.iso8601 }
   end
 end

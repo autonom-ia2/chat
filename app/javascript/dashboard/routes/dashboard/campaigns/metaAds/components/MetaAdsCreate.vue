@@ -63,6 +63,7 @@ const CREATE_ERRORS = [
   'meta_unavailable',
   'meta_refused',
   'currency_not_supported',
+  'unconfirmed',
 ];
 // Os limites e o valor são em reais: conta de anúncios em outra moeda não cria por aqui.
 const ACCOUNT_CURRENCY = 'BRL';
@@ -300,6 +301,8 @@ const createErrorText = error => {
   const reason = CREATE_ERRORS.includes(code)
     ? t(`${KEY}.ERRORS.${code.toUpperCase()}`)
     : t(`${KEY}.ERRORS.UNKNOWN`);
+  // Não confirmado: a frase já diz para conferir no Gerenciador de Anúncios.
+  if (code === 'unconfirmed') return reason;
   if (nothingCreated === true) {
     return `${reason} ${t(`${KEY}.ERRORS.NOTHING_CREATED`)}`;
   }

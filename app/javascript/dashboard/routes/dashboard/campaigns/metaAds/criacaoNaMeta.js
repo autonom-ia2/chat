@@ -7,6 +7,10 @@ import { siteNormalizado } from './anuncioNovo';
 // converte). Orçamento: { level: 'adset' | 'campaign', object_name, kind: 'daily' | 'lifetime', amount, currency,
 // start_time, end_time, started, ads_count, active_ads_count, min_daily, max_daily, can_change }.
 
+// O servidor manda o valor como texto decimal ("20.57"), nunca float; a tela faz conta e formata com número.
+const orcamentoNaTela = budget =>
+  budget ? { ...budget, amount: Number(budget.amount) } : budget;
+
 export const lerOpcoesDeCriacao = async () => {
   const { data } = await CrmMetaAdsConnectionAPI.createOptions();
   return data.options;
@@ -15,18 +19,21 @@ export const lerOpcoesDeCriacao = async () => {
 // O servidor nunca devolve orçamento vazio: sem ele, devolve erro, e a tela diz que não deu para ler.
 export const lerOrcamento = async adId => {
   const { data } = await CrmMetaAdsConnectionAPI.adBudget(adId);
-  return data.budget;
+  return orcamentoNaTela(data.budget);
 };
 
 // { amount, end_time } → orçamento novo. A Meta recusa: o erro sobe para a tela, que avisa.
 export const mudarOrcamento = async (adId, changes) => {
   const { data } = await CrmMetaAdsConnectionAPI.updateAdBudget(adId, changes);
-  return data.budget;
+  return orcamentoNaTela(data.budget);
 };
 
 export const lerPausadosEsperando = async () => {
   const { data } = await CrmMetaAdsConnectionAPI.pausedAds();
-  return data.ads || [];
+  return (data.ads || []).map(ad => ({
+    ...ad,
+    budget: orcamentoNaTela(ad.budget),
+  }));
 };
 
 // Sobe a mídia escolhida no celular assim que a pessoa escolhe. Foto: volta com o `hash`. Vídeo: volta com o
@@ -114,7 +121,7 @@ export const criarAnuncio = async pedido => {
       idempotency_key: key,
     });
     tentativas.delete(signature);
-    return data;
+    return { ...data, budget: orcamentoNaTela(data.budget) };
   } catch (error) {
     if (!tentativaContinua(error)) tentativas.delete(signature);
     throw error;

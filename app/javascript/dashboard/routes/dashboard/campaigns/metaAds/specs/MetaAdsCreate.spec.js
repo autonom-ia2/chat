@@ -338,6 +338,19 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     );
   });
 
+  it('unconfirmed at Meta: says to check Ads Manager, never "Nothing was created"', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockRejectedValueOnce(
+      refusal(422, { error: 'unconfirmed', nothing_created: false })
+    );
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(wrapper.find('[data-create-error]').text()).toBe(
+      `${KEY}.ERRORS.UNCONFIRMED`
+    );
+  });
+
   it('without that guarantee, asks to check Meta and never says nothing was created', async () => {
     CrmMetaAdsConnectionAPI.createAd.mockRejectedValueOnce(
       refusal(422, { error: 'meta_refused', nothing_created: false })

@@ -3552,6 +3552,7 @@
           "META_UNAVAILABLE": "Não conseguimos falar com a Meta agora. Tente de novo daqui a pouco.",
           "META_REFUSED": "A Meta recusou o anúncio.",
           "CURRENCY_NOT_SUPPORTED": "Criar anúncio por aqui só vale para conta de anúncios em reais.",
+          "UNCONFIRMED": "Não deu para confirmar com a Meta se a campanha foi criada. Confira no Gerenciador de Anúncios antes de tentar de novo.",
           "UNKNOWN": "Não deu para criar o anúncio agora.",
           "NOTHING_CREATED": "Nada foi criado.",
           "CHECK_META": "Pode ter ficado uma campanha pela metade: confira no Gerenciador de Anúncios da Meta antes de tentar de novo.",

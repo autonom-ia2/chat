@@ -33,7 +33,7 @@ RSpec.describe Crm::MetaAds::Creation::Options do
     stub_currency
   end
 
-  it 'traz Páginas, Instagram da Página, números da conta, fotos já usadas, limites, moeda, hoje e fuso da conta e só o confirmado' do
+  it 'traz Páginas, Instagram da Página, números da conta, fotos já usadas, limites, moeda, hoje no fuso da conta e só o confirmado' do
     travel_to Time.zone.parse('2026-10-28 01:30:00 UTC')
     stub_permissions('ads_read', 'ads_management', 'pages_manage_ads', 'pages_show_list')
     stub_pages([{ id: '110', name: 'Loja Exemplo', instagram_business_account: { id: '178', username: 'lojaexemplo' } }])
@@ -48,7 +48,7 @@ RSpec.describe Crm::MetaAds::Creation::Options do
       images: [{ hash: 'abc', url: 'https://scontent.example/abc.jpg', width: 600, height: 600 }],
       currency: 'BRL', min_daily: 6, max_daily: 500, kinds: ['ad'],
       # 01:30 UTC de 28/10 ainda é 27/10 no fuso da conta de anúncios (São Paulo).
-      today: '2026-10-27', time_zone: 'America/Sao_Paulo',
+      today: '2026-10-27',
       destinations: %w[WHATSAPP WEBSITE],
       placements_by_destination: { 'WHATSAPP' => %w[AUTO], 'WEBSITE' => %w[AUTO INSTAGRAM FACEBOOK] }
     )

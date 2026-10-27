@@ -19,6 +19,12 @@ module Crm::MetaAds::Creation::Money
     BigDecimal(cents.to_i) / CENTS
   end
 
+  # Para a tela e a Auditoria: texto decimal com 2 casas ("20.57", "20.00"), nunca float.
+  def self.text(amount)
+    whole, fraction = BigDecimal(amount.to_s).round(2).to_s('F').split('.')
+    "#{whole}.#{fraction.to_s.ljust(2, '0')}"
+  end
+
   # A moeda da conta de anúncios, lida na Meta. Falha na leitura é erro: sem moeda confirmada, nada de valor nem de criar.
   def self.currency!(client, ad_account_id)
     result = client.ad_account(ad_account_id)

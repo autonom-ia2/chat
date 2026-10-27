@@ -47,7 +47,7 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
       stub_currency
 
       expect(described_class.new(connection).read(ad_id)).to eq(
-        level: 'adset', object_id: adset_id, object_name: 'Público 25-45', kind: 'daily', amount: 30.0, currency: 'BRL',
+        level: 'adset', object_id: adset_id, object_name: 'Público 25-45', kind: 'daily', amount: '30.00', currency: 'BRL',
         start_time: '2026-10-01T09:00:00-0300', end_time: nil, started: true, ads_count: 3, active_ads_count: 2,
         min_daily: 6, max_daily: 500, can_change: true, adset_id: adset_id, today: '2026-10-27'
       )
@@ -59,7 +59,7 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
       stub_currency
 
       expect(described_class.new(connection).read(ad_id)).to include(
-        level: 'campaign', object_id: campaign_id, object_name: 'Vendas', kind: 'lifetime', amount: 900.0,
+        level: 'campaign', object_id: campaign_id, object_name: 'Vendas', kind: 'lifetime', amount: '900.00',
         end_time: '2026-11-30T23:59:00-0300', ads_count: 1, active_ads_count: 0
       )
     end
@@ -150,7 +150,8 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
       result = described_class.new(connection).change!(ad_id, amount: '45.5', end_time: '2026-11-30T23:59:00')
 
       expect(update).to have_been_made.once
-      expect(result[:before]).to include(amount: 30.0, end_time: nil)
+      expect(result[:before]).to include(amount: '30.00', end_time: nil)
+      expect(result[:after]).to include(amount: '45.50')
     end
 
     it 'só manda o que mudou' do
@@ -198,7 +199,7 @@ RSpec.describe Crm::MetaAds::Creation::Budget do
       result = described_class.new(connection).change!(ad_id, amount: '25.57', end_time: nil)
 
       expect(update).to have_been_made.once
-      expect(result[:after][:amount]).to eq(25.57)
+      expect(result[:after][:amount]).to eq('25.57')
     end
 
     it 'sem conseguir ler a moeda: erro, nunca valor sem moeda' do

@@ -290,13 +290,24 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       expect(stubs[:campaign]).to have_been_made.once
     end
 
+    def invalid(attribute, kind)
+      row = Crm::MetaAdsCreatedObject.new
+      row.errors.add(attribute, kind)
+      ActiveRecord::RecordInvalid.new(row)
+    end
+
     it 'corrida: outra linha com a mesma chave nasceu no mesmo instante → in_progress, não 500' do
-      allow(Crm::MetaAdsCreatedObject).to receive(:find_or_create_by!)
-        .and_raise(ActiveRecord::RecordInvalid.new(Crm::MetaAdsCreatedObject.new))
+      allow(Crm::MetaAdsCreatedObject).to receive(:find_or_create_by!).and_raise(invalid(:idempotency_key, :taken))
       stubs = stub_creation
 
       expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('in_progress') }
       expect(stubs[:campaign]).not_to have_been_made
+    end
+
+    it 'outra validação que falha sobe como erro real, não como "em andamento"' do
+      allow(Crm::MetaAdsCreatedObject).to receive(:find_or_create_by!).and_raise(invalid(:status, :inclusion))
+
+      expect { create! }.to raise_error(ActiveRecord::RecordInvalid)
     end
 
     it 'tentativa presa há mais de 10 minutos é desfeita e refeita' do
@@ -370,7 +381,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     result = create!(draft.merge(daily_amount: '20.57'))
 
     expect(stubs[:adset].with { |req| form(req)['daily_budget'] == '2057' }).to have_been_made
-    expect(result[:budget]['amount']).to eq(20.57)
+    expect(result[:budget]['amount']).to eq('20.57')
   end
 
   describe 'moeda da conta de anúncios (só real)' do
@@ -413,9 +424,50 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       expect(Crm::MetaAdsCreatedObject.last.status).to eq('rolled_back')
     end
 
-    it 'nenhuma campanha da tentativa na Meta: nada foi criado' do
-      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.nothing_created).to be(true) }
+    it 'busca vazia não é "nada criado": a tentativa fica não confirmada e a tela pede para conferir' do
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
+        expect(e.code).to eq('unconfirmed')
+        expect(e.nothing_created).to be(false)
+      }
       expect(a_request(:delete, /graph\.facebook\.com/)).not_to have_been_made
+      expect(Crm::MetaAdsCreatedObject.last.status).to eq('unconfirmed')
+    end
+
+    describe 'nova tentativa com a mesma chave depois de não confirmada' do
+      # A primeira tentativa fica não confirmada (tempo esgotado e busca vazia); qualquer outra coisa quebra o teste.
+      def first_attempt_unconfirmed!
+        create!
+      rescue Crm::MetaAds::Creation::Error => e
+        raise unless e.code == 'unconfirmed'
+      else
+        raise 'a primeira tentativa devia ficar não confirmada'
+      end
+
+      before do
+        first_attempt_unconfirmed!
+        stub_creation
+        stub_reread
+      end
+
+      it 'busca vazia de novo antes de 10 minutos: continua não confirmada e não cria' do
+        expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('unconfirmed') }
+        expect(a_request(:post, meta_graph_url("#{act}/campaigns"))).to have_been_made.once
+      end
+
+      it 'a campanha apareceu na busca: desfaz e cria de novo' do
+        stub_campaign_search([{ id: '950', name: campaign_name, effective_status: 'PAUSED' }])
+        delete = stub_request(:delete, meta_graph_url('950')).to_return(ok(success: true))
+
+        expect(create!).to include(ad_id: '903')
+        expect(delete).to have_been_made.once
+      end
+
+      it 'busca vazia de novo depois de 10 minutos: cria' do
+        travel 11.minutes
+
+        expect(create!).to include(ad_id: '903')
+        expect(a_request(:post, meta_graph_url("#{act}/campaigns"))).to have_been_made.twice
+      end
     end
 
     it 'sem conseguir procurar: não diz que nada foi criado, e a próxima tentativa confere de novo' do
@@ -426,12 +478,22 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     end
   end
 
-  it 'a campanha foi criada mas o id não chegou a ser gravado: acha pela marca e apaga' do
+  it 'a Meta recusou a campanha: nada criado, sem procurar' do
+    stub_creation(campaign: { status: 400, body: meta_graph_error(100).to_json, headers: json })
+
+    expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
+      expect(e.code).to eq('meta_refused')
+      expect(e.nothing_created).to be(true)
+    }
+    expect(a_request(:get, meta_graph_url("#{act}/campaigns")).with(query: hash_including({}))).not_to have_been_made
+  end
+
+  it 'a campanha foi criada mas o id não chegou a ser gravado: o desfazer usa o id que voltou' do
     stub_creation(campaign: ok(id: '950'))
-    stub_campaign_search([{ id: '950', name: campaign_name, effective_status: 'ACTIVE' }])
     delete = stub_request(:delete, meta_graph_url('950')).to_return(ok(success: true))
-    allow_any_instance_of(Crm::MetaAdsCreatedObject).to receive(:update!).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
-      raise ActiveRecord::StatementInvalid, 'queda do banco' if args.first.is_a?(Hash) && args.first.key?(:campaign_id) && args.first[:campaign_id]
+    allow_any_instance_of(Crm::MetaAdsCreatedObject).to receive(:save!).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+      row = original.receiver
+      raise ActiveRecord::StatementInvalid, 'queda do banco' if row.campaign_id_changed? && row.status == 'creating'
 
       original.call(*args)
     end

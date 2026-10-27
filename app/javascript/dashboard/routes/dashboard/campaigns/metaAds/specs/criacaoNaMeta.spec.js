@@ -11,7 +11,12 @@ import {
 } from '../criacaoNaMeta';
 import { capaEmArquivo } from '../midiaDoAnuncio';
 import { siteNormalizado, siteValido } from '../anuncioNovo';
-import { parseAmount, todayOfAccount } from '../dinheiroDoAnuncio';
+import {
+  money,
+  parseAmount,
+  todayOfAccount,
+  withWords,
+} from '../dinheiroDoAnuncio';
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: {
@@ -220,30 +225,32 @@ describe('Anúncios da Meta · pedidos ao servidor (#2198)', () => {
     expect(media).toMatchObject({ video_id: '77', image_hash: 'capa' });
   });
 
-  it('reads the options, the budget and the paused ads; changes the budget', async () => {
+  it('reads the options, the budget and the paused ads; changes the budget (amounts come as decimal text)', async () => {
     CrmMetaAdsConnectionAPI.createOptions.mockResolvedValue({
       data: { options: { kinds: ['ad'] } },
     });
     CrmMetaAdsConnectionAPI.adBudget.mockResolvedValue({
-      data: { budget: { amount: 30 } },
+      data: { budget: { amount: '30.00' } },
     });
     CrmMetaAdsConnectionAPI.updateAdBudget.mockResolvedValue({
-      data: { budget: { amount: 45 } },
+      data: { budget: { amount: '45.50' } },
     });
     CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
-      data: { ads: [{ ad_id: '1' }] },
+      data: { ads: [{ ad_id: '1', budget: { amount: '20.57' } }] },
     });
 
     expect(await lerOpcoesDeCriacao()).toEqual({ kinds: ['ad'] });
     expect(await lerOrcamento('5')).toEqual({ amount: 30 });
     expect(await mudarOrcamento('5', { amount: 45, end_time: null })).toEqual({
-      amount: 45,
+      amount: 45.5,
     });
     expect(CrmMetaAdsConnectionAPI.updateAdBudget).toHaveBeenCalledWith('5', {
       amount: 45,
       end_time: null,
     });
-    expect(await lerPausadosEsperando()).toEqual([{ ad_id: '1' }]);
+    expect(await lerPausadosEsperando()).toEqual([
+      { ad_id: '1', budget: { amount: 20.57 } },
+    ]);
   });
 });
 
@@ -276,6 +283,19 @@ describe('Anúncios da Meta · ajudas do anúncio novo (#2198)', () => {
 
   it("uses the ad account's today from the server, not the browser clock", () => {
     expect(todayOfAccount('2030-01-15')).toBe('2030-01-15');
+  });
+
+  it('any character outside digits, comma and dot is a refusal (only the leading R$ goes)', () => {
+    expect(parseAmount('-10')).toBeNull();
+    expect(parseAmount('1e2')).toBeNull();
+    expect(parseAmount('10abc')).toBeNull();
+    expect(parseAmount('R$ 10')).toBe(10);
+    expect(parseAmount('US$ 10')).toBeNull();
+  });
+
+  it('without a confirmed currency, formats nothing (never assumes reais)', () => {
+    expect(money(20, null, 'pt_BR')).toBe('');
+    expect(withWords(20, undefined, 'pt_BR')).toBe('');
   });
 
   it('refuses what could be read wrong, never rounds in silence', () => {

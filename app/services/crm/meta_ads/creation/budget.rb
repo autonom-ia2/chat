@@ -37,7 +37,7 @@ class Crm::MetaAds::Creation::Budget
     new_end = parse_end(end_time, before)
     value = parse_amount(amount, before, new_end)
     apply!(before, value, new_end)
-    { before: before, after: before.merge(amount: value.to_f, end_time: new_end&.iso8601) }
+    { before: before, after: before.merge(amount: MONEY.text(value), end_time: new_end&.iso8601) }
   end
 
   private
@@ -75,9 +75,9 @@ class Crm::MetaAds::Creation::Budget
     }
   end
 
-  # Em reais, para a tela; a conta e a comparação usam os centavos (MONEY.cents).
+  # Em reais, texto decimal para a tela ("30.00"); a conta e a comparação usam os centavos (MONEY.cents).
   def amount_of(holder, daily)
-    MONEY.from_cents(daily ? holder['daily_budget'] : holder['lifetime_budget']).to_f
+    MONEY.text(MONEY.from_cents(daily ? holder['daily_budget'] : holder['lifetime_budget']))
   end
 
   def count_ads(object_id)

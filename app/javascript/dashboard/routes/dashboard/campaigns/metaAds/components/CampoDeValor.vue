@@ -19,14 +19,16 @@ const model = defineModel({ type: String, default: '' });
 const { locale } = useI18n();
 const uid = Math.random().toString(36).slice(2, 8);
 
-const symbol = computed(
-  () =>
-    new Intl.NumberFormat(intlLocale(locale.value), {
-      style: 'currency',
-      currency: props.currency || 'BRL',
-    })
-      .formatToParts(0)
-      .find(part => part.type === 'currency')?.value || ''
+// Sem moeda confirmada pelo servidor, sem símbolo: nunca presume real.
+const symbol = computed(() =>
+  props.currency
+    ? new Intl.NumberFormat(intlLocale(locale.value), {
+        style: 'currency',
+        currency: props.currency,
+      })
+        .formatToParts(0)
+        .find(part => part.type === 'currency')?.value || ''
+    : ''
 );
 </script>
 
