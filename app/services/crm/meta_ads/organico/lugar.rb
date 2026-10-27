@@ -5,6 +5,9 @@ class Crm::MetaAds::Organico::Lugar
   TOP_POSTS = 3
   # Os números que a tela compara com o período anterior.
   COMPARADOS = %i[reach views interactions new_followers].freeze
+  # Vezes que os posts apareceram sem anúncio no período anterior até as quais ele é tido como parado: a tela diz
+  # "primeiro período com dado" em vez de "X a mais".
+  VIEWS_SEM_ATIVIDADE = 0
 
   # Permissão (código 10 e 200–299) ou token (190) recusados.
   class Recusa < StandardError; end
@@ -39,13 +42,19 @@ class Crm::MetaAds::Organico::Lugar
     ler(result)
   end
 
-  # O período anterior só serve de comparação se houve post nele. Sem post, "X a mais" compararia o período com um
-  # período parado; a tela diz então que este é o primeiro período com post (first_period).
+  # O período anterior só serve de comparação se os posts apareceram nele sem anúncio. Parado, "X a mais" compararia
+  # com nada; a tela diz então que este é o primeiro período com dado (first_period).
   def comparacao
     return { previous: nil } unless compara?
-    return { previous: nil, first_period: true } if Array(ler(primeiro_post(periodo.anterior))['data']).empty?
 
-    { previous: janela(periodo.anterior).slice(*COMPARADOS) }
+    anterior = janela(periodo.anterior).slice(*COMPARADOS)
+    return { previous: nil, first_period: true } if anterior[:views] <= VIEWS_SEM_ATIVIDADE
+
+    { previous: anterior }
+  end
+
+  def indisponivel!(motivo)
+    raise Crm::MetaAds::Organico::Indisponivel, motivo
   end
 
   def compara?

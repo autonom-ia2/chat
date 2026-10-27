@@ -84,7 +84,7 @@
       "FEWER": "{count} fewer than the previous {days} days",
       "SAME": "Same as the previous {days} days",
       "NO_COMPARE": "No comparison on Instagram: Meta only keeps 90 days.",
-      "FIRST_PERIOD": "No comparison: you didn't post in the previous {days} days.",
+      "FIRST_PERIOD": "First period with data: your posts didn't show up without ads in the previous {days} days.",
       "UP_TO": "up to {count}"
     },
     "ADS_SHARE": {

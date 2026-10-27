@@ -29,15 +29,18 @@ class Crm::MetaAds::Organico::Pagina < Crm::MetaAds::Organico::Lugar
     resto = ler(api.page_insights(page_id, window.merge(metric: 'page_post_engagements,page_daily_follows_unique', period: 'day')))
     {
       reach: primeiro(alcance, 'page_total_media_view_unique'),
-      views: soma(vistas, 'page_media_view', is_from_ads: '0'),
+      views: soma(com_recorte_de_anuncio(vistas), 'page_media_view', is_from_ads: '0'),
       views_from_ads: soma(vistas, 'page_media_view', is_from_ads: '1'),
       interactions: soma(resto, 'page_post_engagements'),
       new_followers: soma(resto, 'page_daily_follows_unique')
     }
   end
 
-  def primeiro_post(window)
-    api.page_first_post(page_id, window)
+  # Sem a chave is_from_ads em nenhum dia, os dois lados virariam 0 em silêncio.
+  def com_recorte_de_anuncio(vistas)
+    dias = valores(vistas, 'page_media_view')
+    indisponivel!('page_media_view sem o recorte is_from_ads') if dias.any? && dias.none? { |dia| dia.key?('is_from_ads') }
+    vistas
   end
 
   def top_posts

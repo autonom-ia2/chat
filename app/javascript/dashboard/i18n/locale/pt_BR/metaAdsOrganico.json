@@ -84,7 +84,7 @@
       "FEWER": "{count} a menos que nos {days} dias anteriores",
       "SAME": "Igual aos {days} dias anteriores",
       "NO_COMPARE": "Sem comparação no Instagram: a Meta só guarda 90 dias.",
-      "FIRST_PERIOD": "Sem comparação: você não postou nos {days} dias anteriores.",
+      "FIRST_PERIOD": "Primeiro período com dado: nos {days} dias anteriores seus posts não apareceram sem anúncio.",
       "UP_TO": "até {count}"
     },
     "ADS_SHARE": {

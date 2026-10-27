@@ -109,8 +109,8 @@ const followersExtra = computed(() =>
 // Instagram no período de 90 dias: a Meta só guarda 90 dias, então não há período anterior. Uma frase acima dos
 // quadros diz por quê, uma vez só.
 const noCompare = computed(() => !isPage.value && props.days === HISTORY_DAYS);
-// Sem post no período anterior, o servidor não manda a comparação (first_period): "X a mais" compararia com um período
-// parado.
+// Período anterior em que os posts não apareceram sem anúncio: o servidor não manda a comparação (first_period), porque
+// "X a mais" compararia com um período parado.
 const firstPeriod = computed(() => Boolean(props.data.first_period));
 
 // Seguidores mostra o total de hoje, sem comparação: o que mudou no período já está na linha "+N". Vezes que apareceu

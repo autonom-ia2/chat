@@ -229,7 +229,7 @@ describe('Anúncios · Seus posts (#2199)', () => {
     ).not.toContain('META_ADS_ORGANIC.TILES.UP_TO');
   });
 
-  it('without posts in the previous period, says so instead of "X more"', async () => {
+  it('previous period without views, says so instead of "X more"', async () => {
     answer(
       ready({ name: 'Studio Acme', views_from_ads: 4064 }),
       ready({ previous: null, first_period: true })
@@ -298,7 +298,7 @@ describe('Anúncios · Seus posts sem anúncio, textos reais (#2199)', () => {
     expect(reach.find('[data-organic-change]').exists()).toBe(false);
   });
 
-  it('without posts in the previous period, explains the missing comparison', async () => {
+  it('previous period without views, explains the missing comparison', async () => {
     answer(
       { status: 'not_connected' },
       ready({ previous: null, first_period: true })
@@ -307,7 +307,7 @@ describe('Anúncios · Seus posts sem anúncio, textos reais (#2199)', () => {
     const wrapper = await mountScreen();
 
     expect(wrapper.find('[data-organic-first-period]').text()).toBe(
-      'Sem comparação: você não postou nos 30 dias anteriores.'
+      'Primeiro período com dado: nos 30 dias anteriores seus posts não apareceram sem anúncio.'
     );
   });
 });
