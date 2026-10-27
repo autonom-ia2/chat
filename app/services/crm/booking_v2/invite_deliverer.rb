@@ -35,7 +35,7 @@ class Crm::BookingV2::InviteDeliverer
 
   def validate!
     raise Crm::BookingV2::InviteError, 'invite_invalid' unless invite.active? && same_contact_conversation?
-    raise Crm::BookingV2::InviteError, 'cannot_reply' unless conversation.can_reply?
+    raise Crm::BookingV2::InviteError, 'cannot_reply' unless conversation.can_reply_automatically?
 
     value = content
     valid = value.length <= MAX_TEXT && value.include?(invite.url) && self.class.plain_text?(value)

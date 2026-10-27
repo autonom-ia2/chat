@@ -95,7 +95,7 @@ class Facebook::SendOnFacebookService < Base::SendOnChannelService
   end
 
   def merge_human_agent_tag(params)
-    unless GlobalConfigService.load('ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT', nil)
+    unless Meta::HumanAgentTag.apply?(message, 'ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT')
       params[:messaging_type] = 'RESPONSE'
       return params
     end

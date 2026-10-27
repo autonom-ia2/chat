@@ -17,7 +17,7 @@ class MessageTemplates::Template::AutoResolve
   delegate :inbox, to: :message
 
   def within_messaging_window?
-    conversation.can_reply?
+    conversation.can_reply_automatically?
   end
 
   def create_auto_resolve_not_sent_activity_message
