@@ -389,7 +389,9 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   criado". A tentativa fica `unconfirmed`, e a tela pede para conferir no
   Gerenciador de Anúncios. A mesma chave procura de novo antes de criar: se
   achar, desfaz e refaz; vazia de novo, continua `unconfirmed`, por mais tempo
-  que passe. Só a pessoa libera, no botão "Não está no Gerenciador, criar de
+  que passe. Tentativa `creating` parada há mais de 10 minutos (o processo
+  caiu) segue a mesma regra: busca vazia vira `unconfirmed`, nunca cria
+  sozinha. Só a pessoa libera, no botão "Não está no Gerenciador, criar de
   novo" (quem tem `meta_ads_manage`), só para uma tentativa `unconfirmed` desta
   chave, e isso fica na Auditoria (`meta_ads_create_recreated`, com o nome e a
   marca da tentativa antiga). Depois que ela libera, se a campanha antiga
@@ -398,13 +400,16 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   não deixa editar enquanto ela está `unconfirmed`.
 - O mesmo pedido com outra chave (outra aba, outro aparelho, a tela reaberta)
   não cria a segunda campanha. Quem deduplica é o servidor: cada tentativa
-  guarda o SHA-256 do pedido validado (`request_digest`, sem a chave), e um
-  pedido igual a uma tentativa `unconfirmed`, ou `creating` ainda viva, da
-  mesma conta e da mesma conta de anúncios recebe `unconfirmed`/`in_progress`
-  com a chave dela (`idempotency_key` na resposta); a tela segue com essa
-  tentativa. Sem a pessoa liberar, atraso da Meta não vira campanha duplicada.
-  Dois pedidos iguais no mesmo instante, antes de existir qualquer linha, ainda
-  passam os dois.
+  guarda o SHA-256 do pedido validado (`request_digest`, sem a chave; os
+  estados em ordem, os cartões do carrossel na ordem deles), e um índice único
+  parcial em (conta, conta de anúncios, digest) para `creating`, `unconfirmed`
+  e `rollback_failed` deixa só uma tentativa que ainda pode ter campanha viva
+  por pedido, mesmo com dois pedidos no mesmo instante. Quem bate nela recebe
+  a chave dela (`idempotency_key` na resposta) e a tela segue com essa
+  tentativa: `in_progress` se ela está criando, `unconfirmed` se não foi
+  confirmada (ou parou de criar), `meta_unavailable` sem "nada criado" se nem
+  desfazer deu. Sem a pessoa liberar, atraso da Meta não vira campanha
+  duplicada.
 - Campanha da tentativa que já não existe na Meta (apagada pelo Gerenciador)
   conta como desfeita: a chave não fica presa. "Não existe" é só o erro 100
   com subcódigo 33, ou a releitura dizer `DELETED`/`ARCHIVED`; o 100 puro é

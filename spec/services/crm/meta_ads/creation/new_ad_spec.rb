@@ -313,10 +313,13 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
     it 'corrida A/B: B leu a mesma tentativa, mas A a pegou antes; B recebe in_progress e não desfaz nem cria' do
       row = leftover(status: 'rollback_failed')
-      allow(Crm::MetaAdsCreatedObject).to receive(:find_or_create_by!).and_wrap_original do |original, *args, **kwargs, &block|
-        found = original.call(*args, **kwargs, &block)
-        # A pega a linha entre a leitura e o UPDATE condicional de B.
-        row.update_columns(status: 'creating', updated_at: 1.second.from_now) # rubocop:disable Rails/SkipsModelValidations
+      allow(Crm::MetaAdsCreatedObject).to receive(:find_by).and_wrap_original do |original, *args, **kwargs|
+        found = original.call(*args, **kwargs)
+        conditions = kwargs.presence || args.first.to_h
+        # A pega a linha entre a leitura de B (a da tentativa, sem filtro de situação) e o UPDATE condicional de B.
+        if conditions.key?(:idempotency_key) && !conditions.key?(:status)
+          row.update_columns(status: 'creating', updated_at: 1.second.from_now) # rubocop:disable Rails/SkipsModelValidations
+        end
         found
       end
       stubs = stub_creation
@@ -386,7 +389,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     end
 
     it 'corrida: outra linha com a mesma chave nasceu no mesmo instante → in_progress, não 500' do
-      allow(Crm::MetaAdsCreatedObject).to receive(:find_or_create_by!).and_raise(invalid(:idempotency_key, :taken))
+      allow(Crm::MetaAdsCreatedObject).to receive(:create!).and_raise(invalid(:idempotency_key, :taken))
       stubs = stub_creation
 
       expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('in_progress') }
@@ -394,9 +397,20 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     end
 
     it 'outra validação que falha sobe como erro real, não como "em andamento"' do
-      allow(Crm::MetaAdsCreatedObject).to receive(:find_or_create_by!).and_raise(invalid(:status, :inclusion))
+      allow(Crm::MetaAdsCreatedObject).to receive(:create!).and_raise(invalid(:status, :inclusion))
 
       expect { create! }.to raise_error(ActiveRecord::RecordInvalid)
+    end
+
+    it 'tentativa presa há mais de 10 minutos sem campanha achada: vira não confirmada, nunca cria sozinha' do
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: draft[:idempotency_key], status: 'creating',
+                                        name: draft[:name], updated_at: 11.minutes.ago)
+      stub_campaign_search
+      stubs = stub_creation
+
+      expect { create! }.to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('unconfirmed') }
+      expect(stubs[:campaign]).not_to have_been_made
+      expect(Crm::MetaAdsCreatedObject.last.status).to eq('unconfirmed')
     end
 
     it 'tentativa presa há mais de 10 minutos é desfeita e refeita' do
@@ -418,6 +432,33 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       second.create!(draft)
 
       expect([first.created_now, second.created_now]).to eq([true, nil])
+    end
+  end
+
+  describe 'o pedido no digest' do
+    def digest_of(params)
+      Crm::MetaAds::Creation::Draft.new(draft.merge(params), account: account,
+                                                             zone: ActiveSupport::TimeZone['America/Sao_Paulo']).validate!.digest
+    end
+
+    it 'estados são conjunto: SP→RJ e RJ→SP são o mesmo pedido; a chave e a liberação não entram' do
+      sp_rj = digest_of(region: 'STATES', states: %w[SP RJ])
+
+      expect(digest_of(region: 'STATES', states: %w[RJ SP SP])).to eq(sp_rj)
+      expect(digest_of(region: 'STATES', states: %w[SP RJ], idempotency_key: 'b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e',
+                       recreate_unconfirmed: true)).to eq(sp_rj)
+      expect(digest_of(region: 'STATES', states: %w[SP])).not_to eq(sp_rj)
+    end
+
+    it 'Brasil todo ignora estados que vierem junto' do
+      expect(digest_of(region: 'BR', states: %w[SP])).to eq(digest_of(region: 'BR', states: []))
+    end
+
+    it 'cartões do carrossel são sequência: outra ordem é outro anúncio' do
+      first = { kind: 'image', hash: 'h1' }
+      second = { kind: 'image', hash: 'h2' }
+
+      expect(digest_of(cards: [first, second])).not_to eq(digest_of(cards: [second, first]))
     end
   end
 
@@ -622,15 +663,62 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
           expect(create!(draft.merge(idempotency_key: third_key))).to include(ad_id: '903')
         end
 
-        it 'tentativa gêmea ainda criando: in_progress com a chave dela; parada há mais de 10 minutos não bloqueia' do
+        def twin_error_for_other_key
+          error = nil
+          begin
+            create!(draft.merge(idempotency_key: other_key))
+          rescue Crm::MetaAds::Creation::Error => e
+            error = e
+          end
+          [error&.code, error&.attempt_key]
+        end
+
+        it 'tentativa gêmea ainda criando: in_progress; parada há mais de 10 minutos: não confirmada, nunca cria sozinho' do
           row = Crm::MetaAdsCreatedObject.find_by!(idempotency_key: draft[:idempotency_key])
           row.update_columns(status: 'creating', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-          expect { create!(draft.merge(idempotency_key: other_key)) }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
-            expect([e.code, e.attempt_key]).to eq(['in_progress', draft[:idempotency_key]])
-          }
+          expect(twin_error_for_other_key).to eq(['in_progress', draft[:idempotency_key]])
 
           row.update_columns(updated_at: 11.minutes.ago) # rubocop:disable Rails/SkipsModelValidations
-          expect(create!(draft.merge(idempotency_key: other_key))).to include(ad_id: '903')
+          expect(twin_error_for_other_key).to eq(['unconfirmed', draft[:idempotency_key]])
+          expect(campaign_posts).to have_been_made.once
+        end
+
+        it 'tentativa gêmea que nem desfazer conseguiu (rollback_failed) também bloqueia: a campanha pode estar viva' do
+          Crm::MetaAdsCreatedObject.find_by!(idempotency_key: draft[:idempotency_key])
+                                   .update_columns(status: 'rollback_failed') # rubocop:disable Rails/SkipsModelValidations
+
+          expect(twin_error_for_other_key).to eq(['meta_unavailable', draft[:idempotency_key]])
+          expect(campaign_posts).to have_been_made.once
+        end
+
+        it 'corrida: a gêmea nasce entre a busca e o INSERT; o índice único barra e a resposta aponta para ela' do
+          checks = 0
+          allow_any_instance_of(Crm::MetaAds::Creation::Twin).to receive(:check!) # rubocop:disable RSpec/AnyInstance
+            .and_wrap_original do |original, *args|
+              checks += 1
+              # A primeira busca não vê a gêmea (ela "ainda não existia"); a de depois do INSERT barrado vê.
+              original.call(*args) unless checks == 1
+            end
+
+          expect(twin_error_for_other_key).to eq(['unconfirmed', draft[:idempotency_key]])
+          expect(Crm::MetaAdsCreatedObject.where(idempotency_key: other_key)).to be_empty
+          expect(campaign_posts).to have_been_made.once
+        end
+
+        it 'corrida no retomar: a mesma chave antiga, desfeita, não volta a criar enquanto a gêmea está viva' do
+          Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: other_key, status: 'rolled_back',
+                                            ad_account_id: connection.ad_account_id,
+                                            request_digest: Crm::MetaAdsCreatedObject.last.request_digest)
+          checks = 0
+          allow_any_instance_of(Crm::MetaAds::Creation::Twin).to receive(:check!) # rubocop:disable RSpec/AnyInstance
+            .and_wrap_original do |original, *args|
+              checks += 1
+              original.call(*args) unless checks == 1
+            end
+
+          expect(twin_error_for_other_key).to eq(['unconfirmed', draft[:idempotency_key]])
+          expect(Crm::MetaAdsCreatedObject.find_by!(idempotency_key: other_key).status).to eq('rolled_back')
+          expect(campaign_posts).to have_been_made.once
         end
       end
 

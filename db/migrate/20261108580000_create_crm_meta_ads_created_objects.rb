@@ -22,13 +22,23 @@ class CreateCrmMetaAdsCreatedObjects < ActiveRecord::Migration[7.2]
       # segundo clique recebe in_progress (Crm::MetaAds::Creation::Activation).
       t.datetime :activated_at, :switching_at
       # SHA-256 do pedido validado (Crm::MetaAds::Creation::Draft#digest): o mesmo pedido com outra chave (outra aba,
-      # outro aparelho, a tela reaberta) acha a tentativa não confirmada ou em andamento e não cria a segunda campanha.
+      # outro aparelho, a tela reaberta) não cria a segunda campanha enquanto houver uma tentativa dele que ainda pode
+      # ter campanha viva na Meta. O índice único parcial abaixo é a trava: dois pedidos iguais no mesmo instante não
+      # passam os dois.
       t.string :request_digest, limit: 64
       t.timestamps
     end
+    add_indexes
+  end
+
+  private
+
+  def add_indexes
     add_index :crm_meta_ads_created_objects, [:account_id, :idempotency_key], unique: true, name: 'idx_crm_meta_ads_created_objects_key'
     add_index :crm_meta_ads_created_objects, [:account_id, :ad_id], name: 'idx_crm_meta_ads_created_objects_ad'
     add_index :crm_meta_ads_created_objects, [:account_id, :ad_account_id, :request_digest],
-              name: 'idx_crm_meta_ads_created_objects_digest'
+              unique: true, name: 'idx_crm_meta_ads_created_objects_digest',
+              where: "((status)::text = ANY (ARRAY[('creating'::character varying)::text, " \
+                     "('unconfirmed'::character varying)::text, ('rollback_failed'::character varying)::text]))"
   end
 end

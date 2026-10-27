@@ -38,7 +38,8 @@ class Crm::MetaAds::Creation::Draft
   end
 
   # SHA-256 do pedido validado, sem a chave da tentativa nem a liberação de recriar: o mesmo anúncio pedido com outra
-  # chave tem o mesmo digest (Crm::MetaAds::Creation::Attempt).
+  # chave tem o mesmo digest (Crm::MetaAds::Creation::Attempt). As chaves dos hashes vão em ordem; lista que é conjunto
+  # (os estados) já sai em ordem do #audience; lista que é sequência (os cartões do carrossel) fica na ordem dela.
   def digest
     Digest::SHA256.hexdigest(canonical(@values.except(*DIGEST_IGNORED)).to_json)
   end
@@ -123,7 +124,8 @@ class Crm::MetaAds::Creation::Draft
     end
   end
 
-  # Carrossel: as mídias depois da primeira, até 10 no total.
+  # Carrossel: as mídias depois da primeira, até 10 no total. A ordem é a do carrossel (a primeira aparece primeiro), então
+  # entra no #digest como veio: outra ordem é outro anúncio.
   def cards
     list = Array(@params[:cards])
     fail!('invalid_media') if list.size + 1 > CARDS_MAX
@@ -142,7 +144,8 @@ class Crm::MetaAds::Creation::Draft
 
   def audience
     region = @params[:region].to_s == 'BR' ? 'BR' : 'STATES'
-    states = Array(@params[:states]).map(&:to_s).uniq
+    # Conjunto, não sequência: em ordem, para SP→RJ e RJ→SP serem o mesmo pedido (#digest). Brasil todo não leva estados.
+    states = region == 'BR' ? [] : Array(@params[:states]).map(&:to_s).uniq.sort
     fail!('invalid_audience') if region == 'STATES' && !valid_states?(states)
     age_min, age_max = ages
     { region: region, states: states, age_min: age_min, age_max: age_max }
