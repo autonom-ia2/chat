@@ -1,8 +1,9 @@
 require 'rails_helper'
 
-# #2271 (decisão do Rodrigo, 27/10): sem `meta_ads_view` (ou `meta_ads_manage`; administrador vê tudo), o card do CRM
-# diz só que o cliente veio de anúncio, por onde e quando. Título, nomes, prévia, miniatura, endereço, UTMs e id do
-# anúncio não saem do servidor: lista, quadro, detalhe e tempo real. Toque que não é anúncio não muda.
+# #2271 (decisões do Rodrigo, 27/10): a função personalizada sem `meta_ads_view` (nem `meta_ads_manage`) vê no card do CRM
+# só que o cliente veio de anúncio, por onde e quando. Título, nomes, prévia, miniatura, endereço, UTMs e id do
+# anúncio não saem do servidor: lista, quadro, detalhe e tempo real. Administrador e agente sem função personalizada veem
+# tudo, como no valor de venda (#2075). Toque que não é anúncio não muda.
 RSpec.describe 'Anúncio de origem no card com meta_ads_view (#2271)', :aggregate_failures, type: :request do
   around do |example|
     with_modified_env CRM_KANBAN_ENABLED: 'true' do
@@ -99,14 +100,8 @@ RSpec.describe 'Anúncio de origem no card com meta_ads_view (#2271)', :aggregat
       expect(response.body).not_to include(*identificadores)
     end
 
-    it "#{superficie}: agente sem função também não vê o anúncio" do
-      campanhas(superficie, plain_agent)
-
-      expect(response.body).not_to include(*identificadores)
-    end
-
-    it "#{superficie}: meta_ads_view, meta_ads_manage e administrador veem o anúncio inteiro" do
-      [com_view, com_manage, admin].each do |user|
+    it "#{superficie}: meta_ads_view, meta_ads_manage, administrador e agente sem função veem o anúncio inteiro" do
+      [com_view, com_manage, admin, plain_agent].each do |user|
         anuncio = campanhas(superficie, user).find { |toque| toque['source_id'] == '120200000000000001' }
 
         expect(anuncio).to include('headline' => 'Título do anúncio X', 'ad_name' => 'Anúncio Carrossel',
@@ -213,11 +208,9 @@ RSpec.describe 'Anúncio de origem no card com meta_ads_view (#2271)', :aggregat
 
     Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED)
 
-    [sem_chave, plain_agent].each do |user|
-      expect(enviados.fetch(user.pubsub_token).pluck(:headline)).to eq([nil, nil, nil, 'Divulgação de outubro'])
-      expect(enviados.fetch(user.pubsub_token).to_json).not_to include(*identificadores)
-    end
-    [com_view, com_manage, admin].each do |user|
+    expect(enviados.fetch(sem_chave.pubsub_token).pluck(:headline)).to eq([nil, nil, nil, 'Divulgação de outubro'])
+    expect(enviados.fetch(sem_chave.pubsub_token).to_json).not_to include(*identificadores)
+    [com_view, com_manage, admin, plain_agent].each do |user|
       expect(enviados.fetch(user.pubsub_token).pluck(:headline))
         .to eq(['Anúncio antigo sem origem', 'Título do anúncio X', 'Anúncio do Google Y', 'Divulgação de outubro'])
     end

@@ -23,9 +23,6 @@ RSpec.describe 'CRM conversation-derived campaign visibility', type: :request do
   end
 
   before do
-    # Este spec trata da visibilidade por conversa. Quem vê o anúncio de origem (#2271, meta_ads_view) está em
-    # spec/enterprise/requests/crm/anuncio_de_origem_permission_spec.rb; aqui todos o veem.
-    allow(Crm::AnuncioDeOrigem).to receive(:ve?).and_return(true)
     primary.update!(additional_attributes: { campaign_source_ids: ['visible-ad'], campaign_touches: [
                       { source: 'meta_ctwa', source_id: 'visible-ad', headline: 'Permitted campaign', touched_at: '2026-09-20T12:00:00Z' }
                     ] })
@@ -174,7 +171,8 @@ RSpec.describe 'CRM conversation-derived campaign visibility', type: :request do
   end
 
   it 'exports only the first authorized campaign, not the earlier restricted source' do
-    role = create(:custom_role, account: account, permissions: %w[crm_view crm_export])
+    # meta_ads_view: aqui o assunto é a conversa restrita; a função sem a chave (#2271) tem spec próprio.
+    role = create(:custom_role, account: account, permissions: %w[crm_view crm_export meta_ads_view])
     membership.update!(custom_role: role)
     get "#{api}/cards/export", params: { pipeline_id: card.pipeline_id }, headers: auth_headers(agent)
     expect(response).to have_http_status(:ok)

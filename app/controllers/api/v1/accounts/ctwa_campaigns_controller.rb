@@ -18,7 +18,8 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
         FILTER (WHERE COALESCE(elem ->> 'headline', '') <> ''))[1] AS headline,
       (ARRAY_AGG(elem ->> 'source' ORDER BY elem ->> 'touched_at' DESC NULLS LAST))[1] AS source,
       COUNT(DISTINCT conversations.id) AS conversations_count,
-      MAX(elem ->> 'touched_at') AS last_touch_at
+      MAX(elem ->> 'touched_at') AS last_touch_at,
+      ((ARRAY_AGG(elem ORDER BY elem ->> 'touched_at' DESC NULLS LAST))[1])::text AS last_touch
     FROM conversations
     CROSS JOIN LATERAL jsonb_array_elements(conversations.additional_attributes -> 'campaign_touches') AS elem
     WHERE conversations.account_id = ?
@@ -55,7 +56,9 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
     aggregation = format(AGGREGATION_SQL, visible_ids: visible_conversations.reorder(nil).select(:id).to_sql)
     sql = ActiveRecord::Base.sanitize_sql_array([aggregation, Current.account.id])
 
-    ActiveRecord::Base.connection.select_all(sql).map do |row|
+    rows = ActiveRecord::Base.connection.select_all(sql).to_a
+    rows = rows.reject { |row| anuncio?(row) } unless ve_anuncios?
+    rows.map do |row|
       {
         source_id: row['source_id'],
         source: row['source'],
@@ -64,6 +67,18 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
         last_touch_at: row['last_touch_at']
       }
     end
+  end
+
+  # Anúncio de origem (#2271): a função personalizada sem meta_ads_view não recebe as linhas de anúncio (nome e id),
+  # aqui e no filtro de Conversas, que usa as mesmas opções. Divulgação, link e publicação continuam. Sem account_user
+  # (robô), segue inteiro, como antes. O anúncio é reconhecido pelo toque mais recente daquele id.
+  def ve_anuncios?
+    Current.account_user.blank? || Crm::AnuncioDeOrigem.ve?(Current.account_user)
+  end
+
+  def anuncio?(row)
+    toque = JSON.parse(row['last_touch'])
+    toque.is_a?(Hash) && Crm::AnuncioDeOrigem.fonte_de_anuncio(toque).present?
   end
 
   def include_origin_metrics?
