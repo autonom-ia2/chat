@@ -3089,6 +3089,14 @@
             "NEEDS_LOGIN_BUTTON": "Ir para a Conexão",
             "NOTE": "No Facebook, responda em público. Para conversar no privado, peça para a pessoa chamar no WhatsApp.",
             "NEEDS_LOGIN_AFTER": "Depois de entrar, você volta para este anúncio."
+          },
+          "LOGIN_ADMIN": "Peça a um administrador da conta para entrar de novo com o Instagram.",
+          "ERRORS": {
+            "PRIVATE_REPLY_DONE": "Este comentário já recebeu a resposta no privado.",
+            "PRIVATE_REPLY_EXPIRED": "Já passaram os 7 dias para responder este comentário no privado.",
+            "NEEDS_LOGIN": "Falta a permissão dos comentários. Entre de novo com o Instagram.",
+            "META_UNAVAILABLE": "O Instagram não respondeu. Tente de novo em um minuto.",
+            "INVALID_TEXT": "Escreva a resposta antes de enviar."
           }
         }
       },

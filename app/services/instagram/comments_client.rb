@@ -29,7 +29,7 @@ class Instagram::CommentsClient
 
   # Um comentário só, com a mídia dele: quem age confere que ele é do anúncio.
   def comment(comment_id)
-    request(:get, comment_id.to_s, { fields: 'id,timestamp,from{id,username},media{id}' })
+    request(:get, comment_id.to_s, { fields: 'id,timestamp,parent_id,from{id,username},media{id}' })
   end
 
   def reply(comment_id, text)

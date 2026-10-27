@@ -39,6 +39,15 @@ RSpec.describe Webhooks::InstagramCommentJob do
     expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
   end
 
+  it 'descarta corpo fora do formato sem quebrar' do
+    [['comments', 'texto', time], ['comments', value.merge('from' => 'x'), time], ['comments', value, { 'a' => 1 }],
+     ['comments', value.except('id'), time]].each do |field, body, at|
+      described_class.perform_now('17841400000000001', field, body, at)
+    end
+
+    expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
+  end
+
   it 'ignora outros campos (mentions)' do
     described_class.perform_now('17841400000000001', 'mentions', value, time)
 

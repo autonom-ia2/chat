@@ -279,6 +279,14 @@ RSpec.describe Instagram::CallbacksController do
       expect(response).to redirect_to("/app/accounts/#{account.id}/campaigns/meta-ads?aba=resultado&anuncio=120254710382770416")
     end
 
+    it 'recusa volta a Anúncios sem a caixa no state (#2196)' do
+      signed_state = controller.generate_instagram_token(account.id, 'comentarios_ig', actor_id: actor.id)
+
+      get :show, params: { code: 'valid_code', state: signed_state }
+
+      expect(response).to redirect_to('/app')
+    end
+
     it 'recusa volta a uma tela desconhecida, sem trocar o token (#2196)' do
       signed_state = controller.generate_extra_scopes_token(account.id, 'outra_tela', actor_id: actor.id, inbox: channel.inbox)
 

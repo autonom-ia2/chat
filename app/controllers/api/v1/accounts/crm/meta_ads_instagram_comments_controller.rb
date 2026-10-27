@@ -9,8 +9,8 @@
 # DELETE .../instagram_comments/:comment_id                                → apagar (a tela confirma antes).
 #        Agir: administrador ou `meta_ads_manage`.
 #
-# Erros de regra: 422 com { error: code }; comentário de outra mídia ou anúncio de outra conta: 404. Ocultar, apagar e
-# responder no privado ficam na Auditoria da conta com quem, o anúncio, o comentário e a ação (nunca o texto: o do
+# Erros de regra: 422 com { error: code }; comentário de outra mídia ou anúncio de outra conta: 404. Toda ação fica
+# na Auditoria da conta com quem, o anúncio, o comentário e a ação (nunca o texto: o do
 # comentário é de terceiro e o da resposta já fica na conversa ou no próprio Instagram).
 class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Accounts::Crm::BaseController
   AUDIT_ACTION = 'meta_ads_comment'.freeze
@@ -32,7 +32,9 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
   end
 
   def reply
-    render json: comments.reply!(ad_id, comment_id, params[:text].to_s)
+    result = comments.reply!(ad_id, comment_id, params[:text].to_s)
+    audit!('reply')
+    render json: result
   end
 
   def hide

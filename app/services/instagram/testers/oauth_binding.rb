@@ -91,7 +91,7 @@ class Instagram::Testers::OauthBinding
   end
 
   def self.valid_reauthorization?(payload)
-    return true unless payload.key?('inbox_id')
+    return !Instagram::IntegrationHelper::EXTRA_SCOPES.key?(payload['return_to']) unless payload.key?('inbox_id')
 
     payload['inbox_id'].is_a?(Integer) && payload['inbox_id'].positive? &&
       Instagram::Testers::Validation.id?(payload['instagram_id']) &&

@@ -43,8 +43,9 @@ class Crm::MetaAds::InstagramComments
   # No Instagram a resposta fica num nível só: responder a uma resposta vai para o comentário de cima, como no app.
   def reply!(ad_id, comment_id, text)
     text = valid_text!(text, MAX_TEXT)
-    channel = comment_of_ad!(ad_id, comment_id)[:channel]
-    result = client(channel).reply(comment_id, text)
+    found = comment_of_ad!(ad_id, comment_id)
+    channel = found[:channel]
+    result = client(channel).reply(found[:comment]['parent_id'].presence || comment_id, text)
     raise Error, failure(result) unless result.ok
 
     row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,

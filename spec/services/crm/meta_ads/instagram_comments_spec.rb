@@ -42,10 +42,11 @@ RSpec.describe Crm::MetaAds::InstagramComments do
     a_request(:any, /graph\.instagram\.com/).with { |request| !request.uri.path.end_with?('subscribed_apps') }
   end
 
-  def stub_comment(id, media: media_id, from: '501', timestamp: 1.hour.ago)
+  def stub_comment(id, media: media_id, from: '501', timestamp: 1.hour.ago, parent_id: nil)
     stub_request(:get, %r{#{ig}/#{id}\?}).to_return(
       status: 200, headers: json,
-      body: { id: id, timestamp: timestamp.iso8601, from: { id: from, username: 'carla.dias' }, media: { id: media } }.to_json
+      body: { id: id, timestamp: timestamp.iso8601, from: { id: from, username: 'carla.dias' }, media: { id: media },
+              parent_id: parent_id }.compact.to_json
     )
   end
 
@@ -139,6 +140,15 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       expect(row[:author]).to include(username: 'lojaexemplo', is_page: true)
     end
 
+    it 'resposta a uma resposta vai para o comentário de cima, como no app' do
+      stub_comment('c1r', parent_id: 'c1')
+      to_parent = stub_request(:post, %r{#{ig}/c1/replies}).to_return(status: 200, headers: json, body: { id: 'c9' }.to_json)
+
+      service.reply!(ad_id, 'c1r', 'Temos sim')
+
+      expect(to_parent).to have_been_requested.once
+    end
+
     it 'recusa comentário de outra mídia como comment_not_found, sem agir' do
       stub_comment('c1', media: '1799999')
 
@@ -190,6 +200,41 @@ RSpec.describe Crm::MetaAds::InstagramComments do
         service.private_reply!(ad_id, 'c1', 'Oi!', user: user)
 
         expect(Message.find_by(source_id: 'mid.1').conversation).to eq(open)
+      end
+
+      it 'recusa explícita da Meta solta o comentário para tentar de novo' do
+        stub_request(:post, "#{ig}/#{ig_id}/messages").with(query: hash_including({}))
+                                                      .to_return(status: 400, headers: json, body: { error: { code: 100 } }.to_json)
+
+        expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('meta_refused') }
+        expect(Crm::MetaAdsCommentAction.count).to eq(0)
+      end
+
+      it 'falha passageira mantém a reivindicação: a Meta pode ter entregado, e o privado não sai duas vezes' do
+        stub_request(:post, "#{ig}/#{ig_id}/messages").with(query: hash_including({})).to_timeout
+
+        expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('meta_unavailable') }
+        expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to be_present
+      end
+
+      it 'depois de a Meta aceitar, erro ao abrir a conversa não vira falha' do
+        allow(ConversationBuilder).to receive(:new).and_raise(ActiveRecord::RecordInvalid)
+        tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+        allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+        expect(service.private_reply!(ad_id, 'c1', 'Oi!', user: user)).to include(conversation_path: nil)
+        expect(tracker).to have_received(:capture_exception)
+      end
+
+      it 'o eco que chegou antes não vira segunda mensagem' do
+        echo_conversation = create(:conversation, account: account, inbox: channel.inbox)
+        create(:message, conversation: echo_conversation, account: account, inbox: channel.inbox, source_id: 'mid.1',
+                         message_type: :outgoing)
+
+        expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }.not_to change(Message, :count)
+        expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1').conversation).to eq(echo_conversation)
       end
 
       it 'uma vez só por comentário' do

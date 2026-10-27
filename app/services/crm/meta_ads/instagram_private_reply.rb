@@ -4,8 +4,13 @@
 #
 # Ordem: reivindica a linha em Crm::MetaAdsCommentAction (o índice único barra a segunda vez, inclusive webhook
 # reenviado), confere a janela, chama a Meta e só então abre a conversa. A mensagem é gravada com o `message_id` da
-# Meta como source_id: o envio da caixa não a manda de novo, e o eco do webhook a reconhece em vez de duplicar. Se a Meta
-# recusar, a linha é apagada e o comentário volta a aceitar a resposta.
+# Meta como source_id: o envio da caixa não a manda de novo, e o eco do webhook a reconhece em vez de duplicar (se o
+# eco chegar antes, a mensagem dele é a que fica).
+#
+# Recusa explícita da Meta (4xx com código): a linha é apagada e o comentário volta a aceitar a resposta. Falha
+# passageira (rede, tempo esgotado, 5xx): a linha FICA, porque a Meta pode ter entregado; a tela mostra "respondido no
+# privado" sem o link, e o eco do Direct traz a conversa para a caixa. Depois de a Meta aceitar, erro ao abrir a
+# conversa não vira falha: vai para o rastreador e a resposta diz que foi.
 #
 # `comment` vem como a Graph ou o webhook mandam: { 'id', 'timestamp', 'from' => { 'id', 'username' } }.
 class Crm::MetaAds::InstagramPrivateReply
@@ -33,11 +38,11 @@ class Crm::MetaAds::InstagramPrivateReply
     action = claim!(comment['id'], actor, user, ad_id)
     result = Instagram::CommentsClient.new(@channel).private_reply(comment['id'], text)
     unless result.ok
-      action.destroy!
+      action.destroy! unless result.transient?
       raise Error, error_code(result)
     end
 
-    record!(action, comment, text, result.data, user)
+    record_safely!(action, comment, text, result.data, user)
   end
 
   private
@@ -61,14 +66,24 @@ class Crm::MetaAds::InstagramPrivateReply
     result.transient? ? 'meta_unavailable' : 'meta_refused'
   end
 
+  def record_safely!(action, comment, text, sent, user)
+    return { conversation: nil, message: nil } if sent['message_id'].blank? || sent['recipient_id'].blank?
+
+    record!(action, comment, text, sent, user)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @channel.account).capture_exception
+    { conversation: nil, message: nil }
+  end
+
+  # Sem `message_id` a mensagem não é criada: sem source_id, o envio da caixa mandaria o texto de novo.
   def record!(action, comment, text, sent, user)
     conversation = conversation_for(sent['recipient_id'].to_s, comment.dig('from', 'username'))
-    message = conversation.messages.create!(
+    message = Message.find_by(source_id: sent['message_id']) || conversation.messages.create!(
       account_id: conversation.account_id, inbox_id: conversation.inbox_id, message_type: :outgoing, status: :sent,
       content: text, sender: user, source_id: sent['message_id']
     )
-    action.update!(conversation: conversation)
-    { conversation: conversation, message: message }
+    action.update!(conversation: message.conversation)
+    { conversation: message.conversation, message: message }
   end
 
   # A conversa que a pessoa já tem aberta na caixa, como o recebimento do Direct escolhe; senão, uma nova.

@@ -26,7 +26,7 @@ const props = defineProps({
   canManage: { type: Boolean, default: false },
 });
 
-const { t, locale } = useI18n();
+const { t, te, locale } = useI18n();
 
 const KEY = 'CRM_KANBAN.META_ADS_HUB.GESTAO.COMMENTS';
 const FIRST_PAGE = 3;
@@ -133,17 +133,17 @@ const more = async () => {
     shown.value += FIRST_PAGE * 2;
     return;
   }
+  // A aba e o que ela tinha antes da espera: trocar de aba no meio não junta a página na aba errada.
+  const aba = current.value;
+  const before = result.value;
   loadingMore.value = true;
   try {
-    const data = await current.value.adaptador.mais(
-      props.adId,
-      result.value.next_cursor
-    );
+    const data = await aba.adaptador.mais(props.adId, before.next_cursor);
     results.value = {
       ...results.value,
-      [current.value.key]: {
-        ...result.value,
-        comments: [...result.value.comments, ...data.comments],
+      [aba.key]: {
+        ...before,
+        comments: [...before.comments, ...data.comments],
         next_cursor: data.next_cursor,
       },
     };
@@ -157,6 +157,8 @@ const more = async () => {
 
 // Toda ação: chama o adaptador, avisa e lê a aba de novo. Recusa da Meta vira aviso, sem tirar nada da tela: numa
 // resposta, o texto digitado continua na caixa (ACTION_ERROR); ao ocultar ou apagar, nada mudou (MANAGE_ERROR).
+// Quando o servidor diz o motivo (`ERRORS.<CODE>`: privado já enviado, prazo vencido, falta permissão…), o aviso diz
+// esse motivo; sem permissão, a aba é lida de novo e mostra o cartão de entrar.
 const act = async (call, done, failure = 'ACTION_ERROR') => {
   const aba = current.value;
   try {
@@ -164,18 +166,29 @@ const act = async (call, done, failure = 'ACTION_ERROR') => {
     useAlert(t(`${KEY}.${done}`));
     await read(aba);
     return true;
-  } catch {
-    useAlert(t(`${KEY}.${failure}`));
+  } catch (error) {
+    const code = String(error?.response?.data?.error || '').toUpperCase();
+    useAlert(
+      t(
+        code && te(`${KEY}.ERRORS.${code}`)
+          ? `${KEY}.ERRORS.${code}`
+          : `${KEY}.${failure}`
+      )
+    );
+    if (code === 'NEEDS_LOGIN' || code.startsWith('PRIVATE_REPLY'))
+      await read(aba);
     return false;
   }
 };
 
-// Entrar de novo (ou conectar) sai do painel para o login do Instagram; se nem o pedido sair, avisa.
+// Entrar de novo (ou conectar) sai do painel para o login do Instagram. Trocar a credencial da caixa é de quem
+// administra as integrações: sem essa permissão, o servidor recusa e o aviso diz a quem pedir.
 const login = async state => {
   try {
     await current.value.adaptador.entrar?.(state, props.adId);
-  } catch {
-    useAlert(t(`${KEY}.ACTION_ERROR`));
+  } catch (error) {
+    const forbidden = error?.response?.status === 403;
+    useAlert(t(`${KEY}.${forbidden ? 'LOGIN_ADMIN' : 'ACTION_ERROR'}`));
   }
 };
 
