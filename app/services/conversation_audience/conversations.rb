@@ -18,6 +18,11 @@ module ConversationAudience::Conversations
     since ? visible.where('conversations.last_activity_at >= ?', since) : visible
   end
 
+  # The ones of conversation_ids the person can still open: who was found before a lost access is neither shown nor saved.
+  def visible_ids(account, user, conversation_ids)
+    scope(account, user, nil).where(id: conversation_ids).pluck(:id).to_set
+  end
+
   # { '7d' => 64, '30d' => 286, ... } so the screen never offers an empty period.
   def counts(account, user)
     ConversationAudienceSearch::PERIODS.transform_values { |window| scope(account, user, window&.ago).count }

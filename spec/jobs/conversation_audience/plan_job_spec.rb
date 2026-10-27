@@ -74,6 +74,16 @@ RSpec.describe ConversationAudience::PlanJob do
     expect(client).to have_received(:create).with(hash_including(input: include('Resposta da pessoa à sua pergunta: "3 ou mais"')))
   end
 
+  it 'fails with no_access and never calls the AI when the person left the account before the plan ran' do
+    own_key!
+    AccountUser.find_by(account: account, user: admin).destroy!
+
+    described_class.perform_now(search.id)
+
+    expect(search.reload).to have_attributes(status: 'failed', error: 'no_access')
+    expect(client).not_to have_received(:create)
+  end
+
   it 'fails with plan_error when the AI does not answer' do
     own_key!
     allow(client).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error.new('down', status: 500))

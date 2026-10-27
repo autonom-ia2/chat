@@ -4,7 +4,8 @@
 # nothing is imported and no contact is written; each row points to its contact with the hashes of its current
 # phone and e-mail, the consent proof the send checks again.
 #
-# Only people of this search are saved, and never someone left aside (ConversationAudience::Reach).
+# Only people of this search whose conversation the person can still open are saved, and never someone left aside
+# (ConversationAudience::Reach).
 class ConversationAudience::Save
   Error = Class.new(StandardError)
   MAX_PEOPLE = 20_000
@@ -40,7 +41,9 @@ class ConversationAudience::Save
   private
 
   def contacts
-    contact_ids = @search.people.where(id: @person_ids).pluck(:contact_id)
+    people = @search.people.where(id: @person_ids)
+    visible = ConversationAudience::Conversations.visible_ids(@account, @user, people.pluck(:conversation_id))
+    contact_ids = people.where(conversation_id: visible.to_a).pluck(:contact_id)
     found = @account.contacts.where(id: contact_ids).order(:id).to_a
     aside = ConversationAudience::Reach.left_aside(found)
     found.reject { |contact| aside.key?(contact.id) }

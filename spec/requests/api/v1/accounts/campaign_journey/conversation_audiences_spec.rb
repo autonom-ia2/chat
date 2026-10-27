@@ -40,6 +40,40 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
 
     get "#{path}/status", headers: headers(with_role(%w[campaign_manage]))
     expect(response).to have_http_status(:unauthorized)
+
+    get "#{path}/status", headers: headers(with_role(%w[campaign_manage conversation_participating_manage conversation_unassigned_manage]))
+    expect(response).to have_http_status(:unauthorized)
+  end
+
+  it 'lets a role with campaign_manage and conversation_manage in (manage implies view)' do
+    get "#{path}/status", headers: headers(with_role(%w[campaign_manage conversation_manage]))
+
+    expect(response).to have_http_status(:ok)
+  end
+
+  it 'answers 404 for a search of another account' do
+    other = create(:account).tap { |conta| conta.enable_features!('campanhas_publico_por_conversa') }
+    foreign = ConversationAudienceSearch.create!(account: other, user: admin, request: 'quem cotou', period: '30d', status: 'done')
+
+    get "#{path}/#{foreign.id}", headers: headers
+
+    expect(response).to have_http_status(:not_found)
+  end
+
+  it 'answers 404 on every step of a search of someone else' do
+    search = search_of(with_role(%w[campaign_manage conversation_view]), status: 'done')
+    person = ConversationAudiencePerson.create!(search: search, contact: create(:contact, account: account),
+                                                conversation: create(:conversation, account: account), group: 'certeza')
+
+    get "#{path}/#{search.id}/conversation", params: { person_id: person.id }, headers: headers
+    expect(response).to have_http_status(:not_found)
+    post "#{path}/#{search.id}/save", params: { name: 'X', person_ids: [person.id] }, headers: headers, as: :json
+    expect(response).to have_http_status(:not_found)
+    %w[start stop resume answer].each do |step|
+      post "#{path}/#{search.id}/#{step}", headers: headers
+      expect(response).to have_http_status(:not_found)
+    end
+    expect(account.campaign_imports).to be_empty
   end
 
   it 'says whether the account has its own AI key and how many conversations each period has' do
@@ -91,6 +125,12 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
 
     get "#{path}/#{search.id}/conversation", params: { person_id: person.id }, headers: headers(user)
     expect(response.parsed_body['payload']).to eq([])
+
+    get "#{path}/#{search.id}", headers: headers(user)
+    expect(response.parsed_body['people']).to eq([])
+
+    post "#{path}/#{search.id}/save", params: { name: 'Vazou?', person_ids: [person.id] }, headers: headers(user), as: :json
+    expect(response.parsed_body['error']).to eq('no_people')
   end
 
   it 'refuses an unknown period' do

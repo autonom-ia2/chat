@@ -30,6 +30,7 @@ class ConversationAudience::ReadJob < ApplicationJob
 
   def read(search)
     return ConversationAudience::Semaphore.leave(search) unless search.running?
+    return deny(search) unless ConversationAudience::Access.allowed?(search)
 
     credential = ConversationAudience::Credential.for(search.account)
     return finish(search, ConversationAudienceSearch::FAILED, error: 'no_key') if credential.nil?
@@ -38,7 +39,8 @@ class ConversationAudience::ReadJob < ApplicationJob
 
     after(search, ConversationAudience::Wave.new(search, credential: credential).run)
   rescue StandardError => e
-    Rails.logger.error("[conversation_audience][read] search=#{search.id} #{e.class}: #{e.message}\n#{Array(e.backtrace).first(5).join("\n")}")
+    # Class and place only: the message of an AI error may echo the conversations.
+    Rails.logger.error("[conversation_audience][read] search=#{search.id} #{e.class.name}\n#{Array(e.backtrace).first(5).join("\n")}")
     finish(search, ConversationAudienceSearch::FAILED, error: 'error')
   end
 
@@ -60,6 +62,10 @@ class ConversationAudience::ReadJob < ApplicationJob
   def reading!(search)
     ConversationAudienceSearch.move(search.id, from: ConversationAudienceSearch::RUNNING, to: ConversationAudienceSearch::READING,
                                                started_at: search.started_at || Time.current, heartbeat_at: Time.current)
+  end
+
+  def deny(search)
+    finish(search, ConversationAudienceSearch::FAILED, error: ConversationAudience::Access::ERROR)
   end
 
   def finish(search, status, error: nil)

@@ -7,6 +7,7 @@ class ConversationAudience::PlanJob < ApplicationJob
   def perform(search_id)
     search = ConversationAudienceSearch.find_by(id: search_id)
     return unless search&.status == ConversationAudienceSearch::PLANNING
+    return fail!(search, ConversationAudience::Access::ERROR) unless ConversationAudience::Access.allowed?(search)
 
     credential = ConversationAudience::Credential.for(search.account)
     return fail!(search, 'no_key') if credential.nil?

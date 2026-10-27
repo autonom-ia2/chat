@@ -9,6 +9,9 @@ própria conta lê as conversas do período e monta a lista. A pessoa revisa e s
   e `CAMPAIGN_IMPORT_ENABLED`. Sem qualquer um dos três, a API responde 404.
 - Podem usar o administrador e quem tem uma função com `campaign_manage` **e** `conversation_view`.
 - Cada busca pertence a quem a fez. Ninguém mais vê a busca, nem pela API.
+- A IA só lê as conversas que a pessoa pode abrir (caixas, times e funis). A conferência acontece no plano e de novo em cada leva de leitura.
+- Os dois jobs conferem o acesso de novo antes de gastar a chave da conta. Se a pessoa perdeu a função ou saiu da conta, a busca termina como `failed` com o erro `no_access`.
+- A lista e o salvar mostram só quem veio de uma conversa que a pessoa ainda pode abrir. Quem perdeu uma caixa deixa de ver o motivo das pessoas dela.
 
 ## Quem paga
 

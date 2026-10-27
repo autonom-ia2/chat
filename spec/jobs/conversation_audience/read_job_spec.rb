@@ -106,6 +106,45 @@ RSpec.describe ConversationAudience::ReadJob do
     expect(search.batches.pending.count).to eq(2)
   end
 
+  it 'stops without calling the AI when the person left the account while the search waited' do
+    AccountUser.find_by(account: account, user: user).destroy!
+
+    described_class.perform_now(search.id)
+
+    expect(search.reload).to have_attributes(status: 'failed', error: 'no_access')
+    expect(client).not_to have_received(:create)
+    expect(Notification.where(primary_actor: search)).to be_empty
+  end
+
+  context 'with a role limited to one inbox' do
+    let(:user) do
+      create(:user, account: account, role: :agent).tap do |agent|
+        role = create(:custom_role, account: account, permissions: %w[campaign_manage conversation_view])
+        agent.account_users.find_by(account: account).update!(custom_role: role)
+        create(:inbox_member, user: agent, inbox: inbox)
+      end
+    end
+
+    it 'stops without calling the AI when the role lost conversation_view' do
+      user.account_users.find_by(account: account).custom_role.update!(permissions: %w[campaign_manage])
+
+      described_class.perform_now(search.id)
+
+      expect(search.reload).to have_attributes(status: 'failed', error: 'no_access')
+      expect(client).not_to have_received(:create)
+    end
+
+    it 'never sends the AI a conversation of an inbox the person lost between the plan and the reading' do
+      search
+      InboxMember.where(user: user, inbox: inbox).destroy_all
+
+      described_class.perform_now(search.id)
+
+      expect(client).not_to have_received(:create)
+      expect(search.reload.people).to be_empty
+    end
+  end
+
   it 'reads a batch again in the next wave after a passing failure' do
     allow(client).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error.new('busy', status: 429))
 

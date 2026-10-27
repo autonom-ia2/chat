@@ -1,7 +1,7 @@
 # What the screen reads about a search by conversation (#2277), every few seconds while it reads. Money goes in
 # dollars (what the account's AI key is charged) and in reais at the rate of the plan; people who could not receive
 # when found leave the list and are only named at the end (phone and reason written by ConversationAudience::Wave;
-# the save checks them again).
+# the save checks them again). People whose conversation the person can no longer open stay out (#2303 access review).
 class ConversationAudience::Payload
   def initialize(search)
     @search = search
@@ -45,9 +45,14 @@ class ConversationAudience::Payload
 
   Row = Struct.new(:id, :name, :phone, :group, :reason, :conversation_id, :left_aside)
 
+  # The reason sums up the conversation: only people whose conversation the person can still open.
   def rows
-    @rows ||= @search.people.joins(:contact).order(:id)
-                     .pluck(:id, 'contacts.name', :phone_masked, :group, :reason, :conversation_id, :left_aside)
-                     .map { |values| Row.new(*values) }
+    @rows ||= begin
+      all = @search.people.joins(:contact).order(:id)
+                   .pluck(:id, 'contacts.name', :phone_masked, :group, :reason, :conversation_id, :left_aside)
+                   .map { |values| Row.new(*values) }
+      visible = ConversationAudience::Conversations.visible_ids(@search.account, @search.user, all.map(&:conversation_id))
+      all.select { |row| visible.include?(row.conversation_id) }
+    end
   end
 end
