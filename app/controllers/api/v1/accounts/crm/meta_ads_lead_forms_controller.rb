@@ -19,6 +19,7 @@ class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Cr
   before_action :ensure_view
   before_action :ensure_manage, except: [:index]
   before_action :load_connection
+  before_action :ensure_current_destination_visible, only: [:save_destination, :remove_destination]
   before_action :load_destination, only: [:save_destination, :bring_past]
   before_action :ensure_create_cards, only: [:bring_past]
 
@@ -93,6 +94,14 @@ class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Cr
     render json: { error: 'not_connected' }, status: :not_found if @connection.nil?
   end
 
+  # Quem não enxerga o funil para onde o formulário manda gente não troca nem tira esse destino.
+  def ensure_current_destination_visible
+    current = ::Crm::MetaAdsLeadForm.find_by(account_id: Current.account.id, form_id: params[:form_id].to_s)&.pipeline_id
+    return if current.nil? || visible_pipelines(Current.account.crm_pipelines).exists?(id: current)
+
+    render json: { error: 'forbidden' }, status: :forbidden
+  end
+
   def load_destination
     @pipeline = visible_pipelines.find_by(id: params[:pipeline_id])
     @stage = @pipeline && selectable_stages(@pipeline).find_by(id: params[:stage_id])
@@ -108,7 +117,8 @@ class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Cr
   end
 
   def payload
-    hub.payload(pipelines: pipelines_payload, visible_cards: show_leads? ? visible_cards : nil)
+    hub.payload(pipelines: pipelines_payload, visible_cards: show_leads? ? visible_cards : nil,
+                visible_pipeline_ids: visible_pipelines(Current.account.crm_pipelines).pluck(:id))
   end
 
   # Mesmo acesso do Kanban: funis que a pessoa enxerga e, nas caixas com restrição, só os cards dela.
@@ -121,9 +131,10 @@ class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Cr
     Current.account_user&.permission_granted?('contact_view') || false
   end
 
-  def visible_pipelines
+  # Para escolher destino, só os ativos; para ver ou tirar um destino que já existe, também os arquivados.
+  def visible_pipelines(scope = Current.account.crm_pipelines.active)
     access = ::Crm::Access::VisiblePipelines.new(user: Current.user, account: Current.account, account_user: Current.account_user)
-    access.apply(Current.account.crm_pipelines.active)
+    access.apply(scope)
   end
 
   # Etapa de ganho ou perda não recebe gente nova.

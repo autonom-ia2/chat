@@ -3,8 +3,8 @@
 # foi conferida lá.
 #
 # Para cada conta em que a Página está recebendo, com a flag `meta_ads_formularios` e funil escolhido para aquele
-# formulário: busca o lead com o token da Página (leads_retrieval, tirado na hora do token do cliente) e cria o card
-# (Crm::MetaAds::LeadForms::Importer, idempotente pelo leadgen_id). Falha passageira da Meta: tenta de novo.
+# formulário (funil ativo): busca o lead com o token da Página (leads_retrieval, tirado na hora do token do cliente) e
+# cria o card (Crm::MetaAds::LeadForms::Importer, idempotente pelo leadgen_id). Falha passageira da Meta: tenta de novo.
 class Webhooks::FacebookLeadgenJob < ApplicationJob
   queue_as :default
   retry_on Crm::MetaAds::LeadForms::Unavailable, wait: :polynomially_longer, attempts: 5
@@ -35,19 +35,20 @@ class Webhooks::FacebookLeadgenJob < ApplicationJob
     return unless connection&.own_token?
 
     client = page_client(connection, page.page_id)
-    lead = client && check!(client.lead(value['leadgen_id']))
+    lead = client && check!(client.lead(value['leadgen_id']), connection)
     importer(account, form, client).import(lead.data) if lead
   end
 
   def destination_form(account, form_id)
     return unless account.feature_enabled?(FEATURE)
 
-    form = Crm::MetaAdsLeadForm.find_by(account_id: account.id, form_id: form_id.to_s)
-    form if form&.destination?
+    form = Crm::MetaAdsLeadForm.includes(:pipeline).find_by(account_id: account.id, form_id: form_id.to_s)
+    form if form&.destination? && form.pipeline.active?
   end
 
   def page_client(connection, page_id)
-    token = check!(Meta::AdsGraphClient.new(access_token: connection.read_token).page_access_token(page_id))&.data.to_h['access_token']
+    result = Meta::AdsGraphClient.new(access_token: connection.read_token).page_access_token(page_id)
+    token = check!(result, connection)&.data.to_h['access_token']
     Meta::AdsGraphClient.new(access_token: token) if token.present?
   end
 
@@ -59,11 +60,21 @@ class Webhooks::FacebookLeadgenJob < ApplicationJob
     )
   end
 
-  # Recusa (permissão tirada, lead apagado): nada a fazer, já está no log do cliente da Graph. Passageira: de novo.
-  def check!(result)
+  # Passageira: de novo. Token recusado: a conexão passa a precisar de atenção, como nas outras leituras. Sem permissão
+  # (leads_retrieval tirada): vai ao rastreador só com o código. Lead apagado: nada a fazer.
+  def check!(result, connection)
     return result if result.ok
     raise Crm::MetaAds::LeadForms::Unavailable if result.transient?
 
+    refused!(result, connection)
     nil
+  end
+
+  def refused!(result, connection)
+    return connection.mark_invalid!(result.error_message) if result.token_invalid?
+    return unless result.scope_error?
+
+    error = StandardError.new("Meta recusou ler o lead do formulário (code=#{result.error_code})")
+    ChatwootExceptionTracker.new(error, account: connection.account).capture_exception
   end
 end

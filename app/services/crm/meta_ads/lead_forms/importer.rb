@@ -29,7 +29,10 @@ class Crm::MetaAds::LeadForms::Importer
       record = claim!(lead)
       next :duplicate if record.nil?
 
-      contact, new_contact = find_or_create_contact(lead)
+      phone = e164(answer(lead, PHONE_KEY))
+      email = valid_email(answer(lead, EMAIL_KEY))
+      lock_person!(phone || email&.downcase)
+      contact, new_contact = find_or_create_contact(lead, phone, email)
       card = open_card_for(contact)
       outcome = card ? :existing_card : :created
       card ||= create_card(lead, contact)
@@ -58,9 +61,16 @@ class Crm::MetaAds::LeadForms::Importer
     nil
   end
 
-  def find_or_create_contact(lead)
-    phone = e164(answer(lead, PHONE_KEY))
-    email = valid_email(answer(lead, EMAIL_KEY))
+  # Dois leads da mesma pessoa ao mesmo tempo (dois formulários, ou o webhook junto do "trazer antigos"): o segundo
+  # espera o primeiro terminar e acha o contato e o card que ele criou. Sem telefone nem e-mail não há o que travar.
+  def lock_person!(key)
+    return if key.nil?
+
+    sql = Crm::MetaAdsLead.sanitize_sql_array(['SELECT pg_advisory_xact_lock(hashtext(?))', "crm_meta_ads_lead:#{@account.id}:#{key}"])
+    Crm::MetaAdsLead.connection.execute(sql)
+  end
+
+  def find_or_create_contact(lead, phone, email)
     existing = (@account.contacts.find_by(phone_number: phone) if phone) || (@account.contacts.from_email(email) if email)
     return [existing, false] if existing
 

@@ -101,6 +101,41 @@ RSpec.describe Webhooks::FacebookLeadgenJob do
     expect(other_connection).to be_persisted
   end
 
+  it 'funil arquivado: não recebe gente nova e não chama a Meta' do
+    pipeline_and_stage.first.update!(status: :archived)
+
+    described_class.perform_now('104882', value, nil)
+
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    expect(account.crm_cards.count).to eq(0)
+  end
+
+  it 'token do cliente recusado (190): a conexão fica precisando de atenção e nada é criado' do
+    stub_request(:get, meta_graph_url('104882')).with(query: { fields: 'access_token' })
+                                                .to_return(status: 400, headers: json, body: meta_graph_error(190).to_json)
+
+    described_class.perform_now('104882', value, nil)
+
+    expect(Crm::MetaAdsConnection.find_by(account_id: account.id).status).to eq('invalid')
+    expect(account.crm_cards.count).to eq(0)
+  end
+
+  it 'sem permissão de ler o lead: vai ao rastreador só com o código, sem token' do
+    stub_meta
+    stub_request(:get, meta_graph_url('L77')).with(query: { fields: Meta::AdsGraphClient::LEAD_FIELDS })
+                                             .to_return(status: 403, headers: json, body: meta_graph_error(200).to_json)
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+    described_class.perform_now('104882', value, nil)
+
+    expect(ChatwootExceptionTracker).to have_received(:new) do |error, **|
+      expect(error.message).to include('200')
+      expect(error.message).not_to include(page_token)
+    end
+    expect(account.crm_cards.count).to eq(0)
+  end
+
   it 'falha passageira da Meta: levanta para o job tentar de novo' do
     stub_meta(status: 500)
 

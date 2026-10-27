@@ -259,6 +259,91 @@ RSpec.describe 'CRM meta ads lead forms (#2195)', type: :request do
     expect(Crm::MetaAdsLeadForm.last).to have_attributes(pipeline_id: nil, stage_id: nil)
   end
 
+  context 'when the form destination is a funnel the user cannot see' do
+    let(:hidden) { create_crm_pipeline(account: account, user: admin, name: 'Diretoria') }
+
+    before do
+      Crm::MetaAdsLeadForm.create!(account: account, page_id: '104882', form_id: '9001', pipeline: hidden.first, stage: hidden.last)
+      hidden_id = hidden.first.id
+      allow_any_instance_of(Crm::Access::VisiblePipelines).to( # rubocop:disable RSpec/AnyInstance
+        receive(:apply).and_wrap_original { |original, scope| original.call(scope).where.not(id: hidden_id) }
+      )
+    end
+
+    it 'não troca o destino: 403 sem chamar a Meta' do
+      put_destination
+
+      expect(response).to have_http_status(:forbidden)
+      expect(Crm::MetaAdsLeadForm.last.pipeline_id).to eq(hidden.first.id)
+      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'não tira o destino: 403' do
+      delete "#{path}/forms/9001/destination", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(Crm::MetaAdsLeadForm.last.pipeline_id).to eq(hidden.first.id)
+    end
+
+    it 'a tela não mostra o nome do funil nem da etapa' do
+      stub_pages
+      stub_leads('9003', [])
+
+      get path, headers: admin.create_new_auth_token, as: :json
+
+      destination = response.parsed_body['pages'].sole['forms'].find { |form| form['id'] == '9001' }['destination']
+      expect(destination).to include('pipeline_id' => hidden.first.id, 'pipeline_name' => nil, 'stage_name' => nil)
+      expect(response.body).not_to include('Diretoria')
+    end
+  end
+
+  it 'destino num funil arquivado que a pessoa enxerga: dá para tirar' do
+    Crm::MetaAdsLeadForm.create!(account: account, page_id: '104882', form_id: '9001', pipeline: pipeline, stage: stage)
+    pipeline.update!(status: :archived)
+
+    delete "#{path}/forms/9001/destination", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:no_content)
+  end
+
+  it 'a Meta recusa ligar a Página ao escolher o funil: 422 e o formulário continua como estava' do
+    stub_pages
+    refusal = Crm::MetaAds::PageSubscription::Error.new('pages_manage_metadata', code: 200, http_code: 403)
+    allow(stub_subscription).to receive(:add!).and_raise(refusal)
+
+    put_destination
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(Crm::MetaAdsLeadForm.find_by(form_id: '9001')&.destination?).to be_falsey
+  end
+
+  it 'escolher o funil grava o destino antes de ligar a Página: lead que chega no meio já tem para onde ir' do
+    stub_pages
+    subscription = stub_subscription
+    destination_when_subscribed = nil
+    allow(subscription).to receive(:add!) do
+      destination_when_subscribed = Crm::MetaAdsLeadForm.find_by(form_id: '9001')&.destination?
+    end
+
+    put_destination
+
+    expect(response).to have_http_status(:ok)
+    expect(destination_when_subscribed).to be(true)
+  end
+
+  it 'parar uma Página que saiu do token: esta conta para, sem chamar a assinatura' do
+    stub_request(:get, meta_graph_url('me/accounts')).with(query: hash_including({}))
+                                                     .to_return(status: 200, headers: json, body: { data: [] }.to_json)
+    Crm::MetaAdsPage.create!(account: account, page_id: '104882', leadgen_receiving: true)
+    allow(Crm::MetaAds::PageSubscription).to receive(:new)
+
+    delete "#{path}/pages/104882/receive", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsPage.find_by(account: account).leadgen_receiving).to be(false)
+    expect(Crm::MetaAds::PageSubscription).not_to have_received(:new)
+  end
+
   it 'quem chegou num card que a pessoa não enxerga não aparece na lista' do
     stub_pages
     stub_leads('9001', [])
