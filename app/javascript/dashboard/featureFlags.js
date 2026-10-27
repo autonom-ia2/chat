@@ -75,6 +75,7 @@ export const FEATURE_FLAGS = {
   CRM_METAS: 'crm_metas',
   CRM_NUMEROS_EQUIPE: 'crm_numeros_equipe',
   CRM_NUMEROS_ORIGENS: 'crm_numeros_origens',
+  LISTA_QUEM_ESPERA: 'lista_quem_espera',
   CONTATO_PELO_EMAIL: 'contato_pelo_email',
   EMAIL_ENVIADOS: 'email_enviados',
   CONVITE_DA_REUNIAO: 'convite_da_reuniao',

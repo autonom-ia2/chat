@@ -7,6 +7,8 @@ import ConversationCard from './widgets/conversation/ConversationCard.vue';
 import ConversationCardExpanded from 'dashboard/components-next/Conversation/ConversationCard/ConversationCardExpanded.vue';
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import ConversationContextMenu from './widgets/conversation/contextMenu/Index.vue';
+import CardDaConversa from 'dashboard/components-next/Conversation/ListaDeConversas/CardDaConversa.vue';
+import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 import { useFiltrosDoLinkNaCaixa } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
 
@@ -56,6 +58,8 @@ watch(
 );
 
 const currentChat = useMapGetter('getSelectedChat');
+// #2202: com a chave lista_quem_espera, o item novo da lista (mesmas props e eventos).
+const listaNova = useListaNova();
 // Quem só lê a conversa (#1800): sem seleção em massa e, no menu, só abrir em nova aba e copiar o link.
 const canOperate = useCanOperateConversation(computed(() => props.source));
 const READ_ONLY_MENU = ['open-new-tab', 'copy-link'];
@@ -203,6 +207,24 @@ const onDeleteConversation = () => {
     @de-select-conversation="onExpandedSelect"
     @click="onCardClick"
     @contextmenu="openContextMenu"
+  />
+
+  <!-- #2202: item "Quem está esperando" (chave lista_quem_espera) -->
+  <CardDaConversa
+    v-else-if="listaNova"
+    :chat="source"
+    :current-contact="currentContact"
+    :assignee="assignee"
+    :inbox="inbox"
+    :selected="isConversationSelected(source.id)"
+    :is-active-chat="isActiveChat"
+    :show-assignee="showAssignee"
+    :show-inbox-name="showInboxName"
+    :selectable="canOperate"
+    @click="onCardClick"
+    @contextmenu="openContextMenu"
+    @select-conversation="selectConversation"
+    @de-select-conversation="deSelectConversation"
   />
 
   <!-- Default (condensed) layout -->

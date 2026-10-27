@@ -14,7 +14,7 @@ const CartaoStub = defineComponent({
   },
 });
 
-const montar = async inicio => {
+const montar = async (inicio, { listaNova = false } = {}) => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -37,6 +37,8 @@ const montar = async inicio => {
       getCurrentAccountId: () => 1,
       'contacts/getContact': () => () => ({}),
       canOperateConversation: () => () => true,
+      'accounts/isFeatureEnabledonAccount': () => (_conta, chave) =>
+        listaNova && chave === 'lista_quem_espera',
     },
   });
   const provides = Object.fromEntries(
@@ -61,7 +63,7 @@ const montar = async inicio => {
     global: {
       plugins: [router, store],
       provide: provides,
-      stubs: { ConversationCard: CartaoStub },
+      stubs: { ConversationCard: CartaoStub, CardDaConversa: true },
     },
   });
   return { wrapper, router };
@@ -113,5 +115,32 @@ describe('ConversationItem (#1883)', () => {
 
     expect(router.currentRoute.value.query).toEqual({ da_ia: '1' });
     expect(abrir).not.toHaveBeenCalled();
+  });
+});
+
+describe('ConversationItem com a chave lista_quem_espera (#2202)', () => {
+  it('desligada: o cartão de sempre', async () => {
+    const { wrapper } = await montar('/app/accounts/1/dashboard');
+
+    expect(wrapper.findComponent({ name: 'ConversationCard' }).exists()).toBe(
+      true
+    );
+    expect(wrapper.findComponent({ name: 'CardDaConversa' }).exists()).toBe(
+      false
+    );
+  });
+
+  it('ligada: o item novo, com a conversa e a seleção de sempre', async () => {
+    const { wrapper } = await montar('/app/accounts/1/dashboard', {
+      listaNova: true,
+    });
+
+    const card = wrapper.findComponent({ name: 'CardDaConversa' });
+    expect(card.exists()).toBe(true);
+    expect(card.props('chat')).toEqual({ id: 7, inbox_id: 1, meta: {} });
+    expect(card.props('selectable')).toBe(true);
+    expect(wrapper.findComponent({ name: 'ConversationCard' }).exists()).toBe(
+      false
+    );
   });
 });
