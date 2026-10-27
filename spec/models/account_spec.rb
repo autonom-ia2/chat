@@ -287,12 +287,11 @@ RSpec.describe Account do
       # #2001: crm_numeros_origens, posição 2 (1 << 1), DEFINITIVA da Orquestração (26/10).
       # #2202: lista_quem_espera no fim da ext_2, posição pela ordem de chegada à main; hoje 3 (1 << 2 = 4).
       # #2251: agentes_painel_desempenho depois dela, posição 4 (1 << 3 = 8), confirmada pela Orquestração (27/10).
-      # #2246: leitura_no_celular sempre no fim da ext_2, na posição seguinte à última da main no dia da fila. Nesta
-      # branch é a 5 (16); a previsão da Orquestração é 8 (1 << 7 = 128), depois do #2266, #2269 e #2277. Ao
-      # atualizar com a main depois deles, este valor acompanha a ordem do features.yml.
+      # #2199: meta_ads_organico, 5 (1 << 4 = 16). #2246: leitura_no_celular logo depois, 6 (1 << 5 = 32), confirmada
+      # pela Orquestração (27/10).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
-        feature_agentes_painel_desempenho: 8, feature_leitura_no_celular: 16
+        feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32
       )
     end
 
