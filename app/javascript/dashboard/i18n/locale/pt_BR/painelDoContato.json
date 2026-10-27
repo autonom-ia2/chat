@@ -167,7 +167,7 @@
       "ERRO": "Não deu para mudar agora. Tente de novo."
     },
     "ETIQUETAS": {
-      "TITULO": "Etiquetas",
+      "TITULO": "Etiquetas desta conversa",
       "MUDAR": "Mudar as etiquetas desta conversa: {etiquetas}",
       "CRIAR": "Criar etiqueta",
       "DIALOGO_TITULO": "Etiquetas desta conversa",

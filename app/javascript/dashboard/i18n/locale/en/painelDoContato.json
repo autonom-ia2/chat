@@ -167,7 +167,7 @@
       "ERRO": "Could not change it now. Try again."
     },
     "ETIQUETAS": {
-      "TITULO": "Labels",
+      "TITULO": "Labels for this conversation",
       "MUDAR": "Change the labels of this conversation: {etiquetas}",
       "CRIAR": "Create a label",
       "DIALOGO_TITULO": "Labels for this conversation",

@@ -1,5 +1,5 @@
 <script setup>
-// #2202 (PR 3) — bloco "Etiquetas" do painel: as etiquetas da conversa, cada uma
+// #2202 (PR 3) — bloco "Etiquetas desta conversa" do painel: as etiquetas da conversa, cada uma
 // com cor e nome. Só aparece quando a conversa tem etiqueta. Quem opera a
 // conversa toca nelas e abre a escolha ("Etiquetas desta conversa"); quem só lê
 // vê as etiquetas sem botão (o servidor recusa do mesmo jeito).

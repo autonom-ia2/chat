@@ -58,7 +58,7 @@ describe('BlocoEtiquetas', () => {
   it('com etiqueta: título, nome e cor de cada uma', () => {
     const { wrapper } = montarBloco({ etiquetas: ['vip', 'retorno'] });
     const bloco = wrapper.get('[data-test-id="bloco-etiquetas"]');
-    expect(bloco.get('h3').text()).toBe('Etiquetas');
+    expect(bloco.get('h3').text()).toBe('Etiquetas desta conversa');
     const itens = bloco.findAll('[data-test-id="etiqueta"]');
     expect(itens.map(item => item.text())).toEqual(['vip', 'retorno']);
     expect(itens[0].get('span').attributes('style')).toContain(
