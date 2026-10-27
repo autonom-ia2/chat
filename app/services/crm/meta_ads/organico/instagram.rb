@@ -87,8 +87,10 @@ class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
     valor['value'].is_a?(Numeric) && valor['value'].zero? && Array(recorte['results']).empty?
   end
 
-  # Alcance por post (media insights) sem recorte: não verificado, pode incluir parte do pago. A tela o chama só de
-  # "alcance", nunca de orgânico nem de pessoas. Dark post não está em me/media.
+  # Alcance por post (media insights) sem recorte: conferido com chamada real em 27/10/2026 em dois posts impulsionados
+  # (anúncio ativo e pausado). O anúncio entrega por outra mídia (creative.effective_instagram_media_id, fora de
+  # me/media), e o reach do post ficou ordens de grandeza abaixo do reach do anúncio: não soma o pago. Dark post não
+  # está em me/media.
   def top_posts
     posts = Array(ler(api.instagram_media(periodo.atual))['data']).map { |media| post_do_instagram(media) }
     melhores(posts).map do |post|
