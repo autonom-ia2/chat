@@ -234,6 +234,24 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       expect(Crm::MetaAdsCreatedObject.last.campaign_id).to eq('800')
     end
 
+    it 'tentativa já desfeita refaz sem tentar apagar de novo' do
+      leftover(status: 'rolled_back')
+      stubs = stub_creation
+      stub_reread
+
+      expect(create!).to include(ad_id: '903')
+      expect(a_request(:delete, meta_graph_url('800'))).not_to have_been_made
+      expect(stubs[:campaign]).to have_been_made.once
+    end
+
+    it 'replay de anúncio já criado não chama a Meta nem para o fuso' do
+      Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: draft[:idempotency_key], status: 'created', ad_id: '903')
+      connection.update!(ad_account_timezone: nil)
+
+      expect(create!).to include(ad_id: '903')
+      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
     it 'tentativa em andamento há pouco: in_progress, sem chamar a Meta para criar' do
       leftover(status: 'creating')
       stubs = stub_creation

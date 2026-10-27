@@ -30,9 +30,10 @@ class Crm::MetaAds::Creation::NewAd
   end
 
   def create!(params)
-    draft = Crm::MetaAds::Creation::Draft.new(params, account: @account, zone: zone).validate!
-    done = Crm::MetaAdsCreatedObject.find_by(account: @account, idempotency_key: draft[:idempotency_key], status: 'created')
+    done = already_created(params)
     return result(done) if done
+
+    draft = Crm::MetaAds::Creation::Draft.new(params, account: @account, zone: zone).validate!
 
     raise Crm::MetaAds::Creation::Error, 'cannot_create' unless @access.can_create?
 
@@ -58,6 +59,12 @@ class Crm::MetaAds::Creation::NewAd
     @zone ||= Crm::MetaAds::Creation::AccountZone.new(@connection, client).zone
   end
 
+  # A mesma chave de um anúncio já criado devolve o que existe, sem nenhuma chamada à Meta.
+  def already_created(params)
+    key = params.to_h.with_indifferent_access[:idempotency_key].to_s.strip
+    key.present? && Crm::MetaAdsCreatedObject.find_by(account: @account, idempotency_key: key, status: 'created')
+  end
+
   # A linha da tentativa. Já criada: devolve. Em andamento por outro pedido: recusa. Falhou antes, ou ficou presa em
   # `creating`: desfaz o que tiver ficado na Meta e tenta de novo.
   def claim!(draft)
@@ -72,13 +79,23 @@ class Crm::MetaAds::Creation::NewAd
     raise Crm::MetaAds::Creation::Error, 'in_progress'
   end
 
+  # Com a linha travada, para dois pedidos com a mesma chave não refazerem juntos. Só `creating` preso e
+  # `rollback_failed` podem ter deixado algo na Meta; `rolled_back` já foi desfeito.
   def recover!(record)
-    stale = record.status == 'creating' && record.updated_at < STALE_AFTER.ago
-    raise Crm::MetaAds::Creation::Error, 'in_progress' if record.status == 'creating' && !stale
-    raise Crm::MetaAds::Creation::Error.new('meta_unavailable', nothing_created: false) unless undo(record.campaign_id)
+    record.with_lock do
+      return record if record.status == 'created'
 
-    record.update!(status: 'creating', error_code: nil, campaign_id: nil, adset_id: nil, creative_id: nil, ad_id: nil)
+      stale = record.status == 'creating' && record.updated_at < STALE_AFTER.ago
+      raise Crm::MetaAds::Creation::Error, 'in_progress' if record.status == 'creating' && !stale
+      raise Crm::MetaAds::Creation::Error.new('meta_unavailable', nothing_created: false) if leftover?(record) && !undo(record.campaign_id)
+
+      record.update!(status: 'creating', error_code: nil, campaign_id: nil, adset_id: nil, creative_id: nil, ad_id: nil)
+    end
     record
+  end
+
+  def leftover?(record)
+    %w[creating rollback_failed].include?(record.status)
   end
 
   def budget(draft)

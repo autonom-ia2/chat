@@ -20,7 +20,8 @@ class Crm::MetaAds::Creation::AccountZone
     found = ActiveSupport::TimeZone[result.data['timezone_name'].to_s]
     raise Crm::MetaAds::Creation::Error, 'meta_refused' if found.nil?
 
-    @connection.update!(ad_account_timezone: result.data['timezone_name'])
+    # Só esta coluna: um problema antigo em outro campo da conexão não pode impedir de criar ou mudar o orçamento.
+    @connection.update_column(:ad_account_timezone, result.data['timezone_name']) # rubocop:disable Rails/SkipsModelValidations
     found
   end
 end

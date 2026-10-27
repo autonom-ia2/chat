@@ -5487,9 +5487,10 @@
       "leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:46",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:50",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:48"
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:54",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:102",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:49"
     ],
     "sem_corpo": false
   },
@@ -15626,7 +15627,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_creation#create",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:62"
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:65"
     ],
     "sem_corpo": false
   },
