@@ -19,12 +19,13 @@ class Crm::MetaAds::Organico::Tela
     @viewer = viewer
   end
 
+  # Meta fora num lugar só: aquele cartão fica indisponível ("Tentar de novo" só nele). Nos dois, a tela inteira (503).
   def perform
-    {
-      days: @periodo.dias, from: @periodo.de, to: @periodo.ate,
-      page: lugar(pagina, Crm::MetaAds::Organico::Pagina),
-      instagram: lugar(instagram, Crm::MetaAds::Organico::Instagram)
-    }
+    lugares = { page: lugar(pagina, Crm::MetaAds::Organico::Pagina),
+                instagram: lugar(instagram, Crm::MetaAds::Organico::Instagram) }
+    raise Crm::MetaAds::Organico::Indisponivel, 'Página e Instagram indisponíveis' if lugares.values.all? { |dados| dados[:status] == 'unavailable' }
+
+    { days: @periodo.dias, from: @periodo.de, to: @periodo.ate, **lugares }
   end
 
   private
@@ -33,7 +34,8 @@ class Crm::MetaAds::Organico::Tela
     return { status: 'not_connected' } unless channel
 
     inbox = channel.inbox
-    dados = ler_meta(channel, klass)
+    dados = ler_meta_do_lugar(channel, klass)
+    return dados if dados[:status] == 'unavailable'
     return bloqueado(dados, inbox) unless dados[:status] == 'ok'
 
     dados.merge(messages: { count: conversas_visiveis(inbox), inbox_id: inbox_id_para_quem_age(inbox) })
@@ -58,6 +60,13 @@ class Crm::MetaAds::Organico::Tela
 
   def ve_a_caixa?(inbox)
     Pundit.policy!(@viewer, inbox).show?
+  end
+
+  def ler_meta_do_lugar(channel, klass)
+    ler_meta(channel, klass)
+  rescue Crm::MetaAds::Organico::Indisponivel => e
+    Rails.logger.warn("[MetaAdsOrganico] #{klass.name.demodulize} indisponível na conta #{@account.id}: #{e.message}")
+    { status: 'unavailable' }
   end
 
   def ler_meta(channel, klass)

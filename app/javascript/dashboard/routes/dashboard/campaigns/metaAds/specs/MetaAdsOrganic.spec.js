@@ -244,6 +244,28 @@ describe('Anúncios · Seus posts (#2199)', () => {
     expect(instagramCard.find('[data-organic-change]').exists()).toBe(false);
   });
 
+  // Meta fora só no Instagram: a Página aparece e só o cartão do Instagram pede "Tentar de novo", até para quem só lê.
+  it('Meta down on Instagram only: retry lives in its card and reads again', async () => {
+    granted.value = [];
+    answer(ready({ name: 'Studio Acme', views_from_ads: 4064 }), {
+      status: 'unavailable',
+    });
+    const wrapper = await mountScreen();
+
+    expect(wrapper.find('[data-organic-error]').exists()).toBe(false);
+    expect(
+      wrapper.find('[data-organic-source="page"] [data-organic-tile]').exists()
+    ).toBe(true);
+    const retry = wrapper.find('[data-organic-retry="instagram"]');
+    expect(retry.exists()).toBe(true);
+    expect(wrapper.find('[data-organic-retry="page"]').exists()).toBe(false);
+
+    await retry.trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.organico).toHaveBeenCalledTimes(2);
+  });
+
   // Página: views já vem sem anúncio; a barra "vale pagar?" soma o anúncio de volta para o total.
   it('Page bar splits free and paid times from views without ads', async () => {
     answer(ready({ name: 'Studio Acme', views: 8636, views_from_ads: 4064 }), {

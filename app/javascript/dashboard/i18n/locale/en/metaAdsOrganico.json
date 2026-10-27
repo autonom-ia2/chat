@@ -35,7 +35,8 @@
           "TEXT": "Continue with Facebook and choose the Page you post on.",
           "BUTTON": "Continue with Facebook"
         },
-        "SEE_CONVERSATIONS": "See Page conversations"
+        "SEE_CONVERSATIONS": "See Page conversations",
+        "UNAVAILABLE": "We couldn't read your Page right now"
       },
       "INSTAGRAM": {
         "NAME": "Instagram",
@@ -52,7 +53,8 @@
           "TEXT": "Log in with your Instagram business account to see its results here.",
           "BUTTON": "Log in with Instagram"
         },
-        "SEE_CONVERSATIONS": "See Instagram conversations"
+        "SEE_CONVERSATIONS": "See Instagram conversations",
+        "UNAVAILABLE": "We couldn't read your Instagram right now"
       }
     },
     "ASK_ADMIN": "Ask an administrator of this account to connect.",

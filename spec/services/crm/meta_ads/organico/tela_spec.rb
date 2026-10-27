@@ -120,12 +120,12 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(tela(days: 30).perform[:page]).to include(previous: nil, first_period: true)
     end
 
-    it 'sem o recorte is_from_ads a Página não mostra número com o pago: a Meta fica indisponível' do
+    it 'sem o recorte is_from_ads a Página não mostra número com o pago: o cartão fica indisponível' do
       stub_pagina
       stub_get("#{fb}/1001/insights", janela(30).merge(metric: 'page_media_view', breakdown: 'is_from_ads'),
                [diario('page_media_view', [6000, 6700])])
 
-      expect { tela(days: 30).perform }.to raise_error(Crm::MetaAds::Organico::Indisponivel)
+      expect(tela(days: 30).perform[:page]).to eq(status: 'unavailable')
     end
 
     it 'devolve os números da Página com o período anterior, a parte de anúncios e os 3 posts com mais curtidas' do
@@ -197,10 +197,34 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(page).to eq(status: 'needs_permission', name: 'Studio Acme', inbox_id: inbox.id)
     end
 
-    it 'avisa que a Meta está fora quando ela falha por outro motivo' do
+    it 'Meta fora só na Página: o cartão dela fica indisponível, o resto da tela segue' do
       stub_request(:get, "#{fb}/1001").with(query: hash_including({})).to_return(erro(2, status: 500))
 
-      expect { tela(days: 7).perform }.to raise_error(Crm::MetaAds::Organico::Indisponivel)
+      expect(tela(days: 7).perform).to include(page: { status: 'unavailable' }, instagram: { status: 'not_connected' })
+    end
+
+    context 'with Instagram conectado' do
+      before do
+        create(:channel_instagram, account: account)
+        token = instance_double(Instagram::RefreshOauthTokenService, access_token: 'ig-token')
+        allow(Instagram::RefreshOauthTokenService).to receive(:new).and_return(token)
+        stub_request(:get, %r{\A#{ig}/}).to_return(erro(2, status: 500))
+      end
+
+      it 'Instagram indisponível e Página ok: a Página aparece, só o Instagram pede "Tentar de novo"' do
+        stub_pagina
+
+        resultado = tela(days: 30).perform
+
+        expect(resultado[:page]).to include(status: 'ok', views: 8636)
+        expect(resultado[:instagram]).to eq(status: 'unavailable')
+      end
+
+      it 'os dois indisponíveis: a tela inteira fica indisponível (503)' do
+        stub_request(:get, "#{fb}/1001").with(query: hash_including({})).to_return(erro(2, status: 500))
+
+        expect { tela(days: 30).perform }.to raise_error(Crm::MetaAds::Organico::Indisponivel)
+      end
     end
 
     it 'guarda a leitura da Meta por 15 minutos, mas conta as conversas na hora' do
@@ -352,8 +376,9 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
         .to_return(json(data: data))
     end
 
+    # Só o cartão do Instagram fica indisponível: a Página (aqui sem caixa) segue o próprio estado.
     def expect_indisponivel
-      expect { tela(days: 30).perform }.to raise_error(Crm::MetaAds::Organico::Indisponivel)
+      expect(tela(days: 30).perform).to include(instagram: { status: 'unavailable' }, page: { status: 'not_connected' })
     end
 
     it 'número sem o recorte por tipo não vira total com anúncio: a Meta fica indisponível' do
@@ -376,6 +401,24 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       stub_vistas([por_tipo('views', { 'POST' => 300, 'PROMOTED' => 9800 }), por_tipo('total_interactions', { 'POST' => 90 })])
 
       expect_indisponivel
+    end
+
+    it 'recorte com os lados vazios e total acima de zero: indisponível, nunca "você não postou"' do
+      stub_instagram
+      vazio = total('views', 11_050, breakdown: { 'dimension_keys' => ['media_product_type'], 'results' => [] })
+      stub_vistas([vazio, por_tipo('total_interactions', { 'POST' => 90 })])
+
+      expect_indisponivel
+    end
+
+    it 'zero de verdade vindo só nos lados, sem o total: zero, sem indisponível' do
+      stub_instagram
+      recorte = { 'dimension_keys' => ['media_product_type'],
+                  'results' => [{ 'dimension_values' => ['POST'], 'value' => 0 }, { 'dimension_values' => ['AD'], 'value' => 0 }] }
+      sem_total = { 'name' => 'total_interactions', 'period' => 'day', 'total_value' => { 'breakdowns' => [recorte] } }
+      stub_vistas([por_tipo('views', { 'POST' => 300 }), sem_total])
+
+      expect(tela(days: 30).perform[:instagram]).to include(status: 'ok', interactions: 0)
     end
 
     it 'recorte sem os lados com total acima de zero: indisponível' do

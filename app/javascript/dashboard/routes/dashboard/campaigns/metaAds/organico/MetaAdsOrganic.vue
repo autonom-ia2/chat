@@ -162,7 +162,9 @@ const range = computed(() =>
 
 // Um botão de destaque por tela: o do topo, quando há conversas; senão a Página primeiro, e o Instagram só quando a
 // Página já está pronta.
-const blocked = place => place && !isReady(place);
+// Bloqueado é o que pede uma ação da pessoa (liberar ou conectar); Meta fora num lugar só não conta.
+const blocked = place =>
+  ['needs_permission', 'not_connected'].includes(place?.status);
 const bothBlocked = computed(
   () => blocked(page.value) && blocked(instagram.value)
 );
@@ -356,6 +358,7 @@ const connect = async source => {
           :main="mainConversations?.source === 'page'"
           @connect="connect"
           @conversations="openConversations"
+          @retry="load"
         />
         <OrganicSourceCard
           source="instagram"
@@ -368,6 +371,7 @@ const connect = async source => {
           :class="{ 'order-first lg:order-none': bothQuiet }"
           @connect="connect"
           @conversations="openConversations"
+          @retry="load"
         />
       </div>
     </template>

@@ -69,21 +69,22 @@ class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
     indisponivel!("#{name}: tipo de conteúdo desconhecido #{tipo.inspect}")
   end
 
-  # O recorte tem de trazer as dimensões pedidas e os lados (`results`). Só a métrica que vem explicitamente 0 pode vir
-  # sem os lados (formato real do período parado). Fora disso, o número com o pago não aparece: fica indisponível.
+  # O recorte tem de trazer as dimensões pedidas e os lados (`results`, não vazio). Só a métrica que vem explicitamente
+  # 0 pode vir sem os lados (formato real do período parado); zero sem o total vale quando vem nos lados. Fora disso, o
+  # número com o pago não aparece: fica indisponível.
   def recorte_por_tipo(data, name, chaves)
     valor = metrica(data, name)&.dig('total_value') || indisponivel!("#{name} não veio")
     recorte = Array(valor['breakdowns']).first.to_h
     return {} if zerada_sem_lados?(valor, recorte)
 
     indisponivel!("#{name} sem o recorte #{chaves.join(',')}") unless (chaves - Array(recorte['dimension_keys'])).empty?
-    indisponivel!("#{name} sem os lados do recorte") if recorte['results'].nil?
+    indisponivel!("#{name} sem os lados do recorte") if Array(recorte['results']).empty?
 
     recorte
   end
 
   def zerada_sem_lados?(valor, recorte)
-    valor['value'].is_a?(Numeric) && valor['value'].zero? && recorte['results'].nil?
+    valor['value'].is_a?(Numeric) && valor['value'].zero? && Array(recorte['results']).empty?
   end
 
   # Alcance por post (media insights) sem recorte: conferido em 27/10 num post impulsionado, o número do post ficou

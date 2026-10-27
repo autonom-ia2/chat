@@ -35,7 +35,8 @@
           "TEXT": "Entre com o Facebook e escolha a Página em que você posta.",
           "BUTTON": "Entrar com Facebook"
         },
-        "SEE_CONVERSATIONS": "Ver conversas da Página"
+        "SEE_CONVERSATIONS": "Ver conversas da Página",
+        "UNAVAILABLE": "Não deu para ler sua Página agora"
       },
       "INSTAGRAM": {
         "NAME": "Instagram",
@@ -52,7 +53,8 @@
           "TEXT": "Entre com a sua conta comercial do Instagram para ver os resultados dela aqui.",
           "BUTTON": "Entrar com Instagram"
         },
-        "SEE_CONVERSATIONS": "Ver conversas do Instagram"
+        "SEE_CONVERSATIONS": "Ver conversas do Instagram",
+        "UNAVAILABLE": "Não deu para ler seu Instagram agora"
       }
     },
     "ASK_ADMIN": "Peça a um administrador desta conta para conectar.",

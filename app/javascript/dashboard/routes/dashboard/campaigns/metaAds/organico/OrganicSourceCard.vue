@@ -24,7 +24,7 @@ const props = defineProps({
   main: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['connect', 'conversations']);
+const emit = defineEmits(['connect', 'conversations', 'retry']);
 
 const { t, locale } = useI18n();
 const HISTORY_DAYS = 90;
@@ -52,6 +52,11 @@ const pageTexts = () => ({
     text: t('META_ADS_ORGANIC.SOURCE.PAGE.NOT_CONNECTED.TEXT'),
     button: t('META_ADS_ORGANIC.SOURCE.PAGE.NOT_CONNECTED.BUTTON'),
   },
+  unavailable: {
+    title: t('META_ADS_ORGANIC.SOURCE.PAGE.UNAVAILABLE'),
+    text: t('META_ADS_ORGANIC.ERROR.TEXT'),
+    button: t('META_ADS_ORGANIC.ERROR.RETRY'),
+  },
 });
 const instagramTexts = () => ({
   name: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NAME'),
@@ -74,9 +79,16 @@ const instagramTexts = () => ({
     text: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NOT_CONNECTED.TEXT'),
     button: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NOT_CONNECTED.BUTTON'),
   },
+  unavailable: {
+    title: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.UNAVAILABLE'),
+    text: t('META_ADS_ORGANIC.ERROR.TEXT'),
+    button: t('META_ADS_ORGANIC.ERROR.RETRY'),
+  },
 });
 const texts = computed(() => (isPage.value ? pageTexts() : instagramTexts()));
 const blockedTexts = computed(() => texts.value[props.data.status]);
+// Meta fora só neste lugar: "Tentar de novo" relê a tela, para quem só lê também; sem passo numerado.
+const unavailable = computed(() => props.data.status === 'unavailable');
 
 const title = computed(() =>
   isPage.value
@@ -91,7 +103,7 @@ const quiet = computed(
 
 const blockedTitle = computed(() => {
   const text = blockedTexts.value.title;
-  return props.step
+  return props.step && !unavailable.value
     ? t('META_ADS_ORGANIC.STEP', { step: props.step, text })
     : text;
 });
@@ -222,7 +234,17 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
         {{ blockedTexts.text }}
       </p>
       <Button
-        v-if="!readOnly"
+        v-if="unavailable"
+        :data-organic-retry="source"
+        variant="faded"
+        color="slate"
+        icon="i-lucide-refresh-cw"
+        :label="blockedTexts.button"
+        class="!min-h-11 !rounded-xl"
+        @click="emit('retry')"
+      />
+      <Button
+        v-else-if="!readOnly"
         :data-organic-connect="source"
         :variant="primary ? 'solid' : 'faded'"
         :color="primary ? 'blue' : 'slate'"
