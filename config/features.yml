@@ -922,3 +922,13 @@
   display_name: Anúncios da Meta - resultados orgânicos da Página e do Instagram
   enabled: false
   column: feature_flags_ext_2
+
+# Anúncios da Meta › comentários do anúncio no Facebook (#2197, épico #2194). Ligada: o detalhe do anúncio ganha a aba
+# Facebook dos comentários (ler, responder como a Página, ocultar e apagar, ao vivo na Meta) e a API responde; o
+# webhook `feed` da Página avisa comentário novo. Desligada: a aba some e a API responde 404. Sem migration. Fim da
+# feature_flags_ext_2, posição pela ordem de chegada à main: provisória 6 (1 << 5) pela Orquestração (27/10), depois
+# de meta_ads_organico. A Orquestração confere antes de enfileirar.
+- name: meta_ads_comentarios_facebook
+  display_name: Anúncios da Meta › comentários do anúncio no Facebook
+  enabled: false
+  column: feature_flags_ext_2
