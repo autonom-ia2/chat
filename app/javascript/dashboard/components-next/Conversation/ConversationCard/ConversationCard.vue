@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { useRouter, useRoute } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper.js';
 import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
@@ -51,8 +51,13 @@ const inbox = computed(() => props.stateInbox);
 const inboxName = computed(() => inbox.value?.name);
 
 const inboxIcon = computed(() => {
-  const { channelType, medium, voiceEnabled } = inbox.value;
-  return getInboxIconByType(channelType, medium, 'fill', voiceEnabled);
+  const { medium, voiceEnabled } = inbox.value;
+  return getInboxIconByType(
+    tipoDoIconeDaCaixa(inbox.value),
+    medium,
+    'fill',
+    voiceEnabled
+  );
 });
 
 const lastActivityAt = computed(() => {

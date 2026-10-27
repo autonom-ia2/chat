@@ -191,15 +191,17 @@ const tela = computed(() =>
     canais: canais.value,
   })
 );
+// A chave e o nome vão separados: o herói põe o nome num slot do <i18n-t>, para o
+// telefone não quebrar a linha no hífen (#2255).
 const titulo = computed(() => {
   if (tela.value === TELAS.ENVIADA) {
     return enviada.value.nome
-      ? t('NOVA_CONVERSA.ENVIADA.TITULO', { nome: enviada.value.nome })
-      : t('NOVA_CONVERSA.ENVIADA.TITULO_SEM_NOME');
+      ? { chave: 'NOVA_CONVERSA.ENVIADA.TITULO', nome: enviada.value.nome }
+      : { chave: 'NOVA_CONVERSA.ENVIADA.TITULO_SEM_NOME', nome: '' };
   }
   return nome.value
-    ? t('NOVA_CONVERSA.TITULO', { nome: nome.value })
-    : t('NOVA_CONVERSA.TITULO_SEM_CONTATO');
+    ? { chave: 'NOVA_CONVERSA.TITULO', nome: nome.value }
+    : { chave: 'NOVA_CONVERSA.TITULO_SEM_CONTATO', nome: '' };
 });
 // A frase do cabeçalho acompanha o momento: procurar, escrever, ou nada.
 const frase = computed(() => {

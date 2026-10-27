@@ -55,6 +55,13 @@ describe('Avatar', () => {
       );
     });
 
+    it('drops the "not available" hint when the phone is the name (#2255)', () => {
+      const comTelefone = createAvatar({ name: '+5511955554444' });
+      expect(
+        comTelefone.find('.i-lucide-user').attributes('title')
+      ).toBeUndefined();
+    });
+
     it('keeps initials for names with digits that are not a phone (#2255)', () => {
       expect(
         createAvatar({ name: 'Loja 24 horas' }).find(INITIALS).text()

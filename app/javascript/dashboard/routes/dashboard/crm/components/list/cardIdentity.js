@@ -9,12 +9,15 @@ export const buildCrmCardIdentity = (card, standaloneLabel) => {
   const title = String(card?.title || '').trim();
   const main = company || person || title || standaloneLabel;
   const secondaryPerson = company && person && company !== person ? person : '';
-  const business =
-    title &&
-    ![main, secondaryPerson].includes(title) &&
-    title !== String(card?.contact?.phone_number || '').trim()
-      ? title
-      : '';
+  // O título não repete o que o card já mostra: nem o telefone nem o nome gravado do
+  // contato, que pode ser o número cru enquanto a tela mostra o legível (#2255).
+  const repetidos = [
+    main,
+    secondaryPerson,
+    String(card?.contact?.phone_number || '').trim(),
+    String(card?.contact?.name || '').trim(),
+  ];
+  const business = title && !repetidos.includes(title) ? title : '';
 
   return { company, person: secondaryPerson, business, main };
 };

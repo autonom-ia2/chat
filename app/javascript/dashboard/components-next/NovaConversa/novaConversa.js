@@ -109,8 +109,7 @@ export const aceitaAnexo = canal =>
 // #1988 — WhatsApp oficial (Cloud API) e WhatsApp comum (caixa API ligada ao WAHA),
 // os mesmos que ganham a pele do WhatsApp na conversa (pele.js). O Twilio fica de fora.
 export const ehCanalWhatsapp = canal =>
-  canal?.channelType === INBOX_TYPES.WHATSAPP ||
-  (canal?.channelType === INBOX_TYPES.API && Boolean(canal?.wahaProvider));
+  canal?.channelType === INBOX_TYPES.WHATSAPP || ehWhatsappDoCelular(canal);
 
 // #1988 — a caixa de escrever do WhatsApp (texto, "+", emoji, microfone e assinatura)
 // vale onde o texto é livre: o WhatsApp oficial que pode responder e o WhatsApp comum.

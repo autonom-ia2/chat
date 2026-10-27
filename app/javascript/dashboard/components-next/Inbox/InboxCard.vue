@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onBeforeMount } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
 import {
@@ -53,8 +53,13 @@ const isUnread = computed(() => !props.inboxItem?.readAt);
 const inbox = computed(() => props.stateInbox);
 
 const inboxIcon = computed(() => {
-  const { channelType, medium, voiceEnabled } = inbox.value;
-  return getInboxIconByType(channelType, medium, 'fill', voiceEnabled);
+  const { medium, voiceEnabled } = inbox.value;
+  return getInboxIconByType(
+    tipoDoIconeDaCaixa(inbox.value),
+    medium,
+    'fill',
+    voiceEnabled
+  );
 });
 
 const hasSlaThreshold = computed(() => {

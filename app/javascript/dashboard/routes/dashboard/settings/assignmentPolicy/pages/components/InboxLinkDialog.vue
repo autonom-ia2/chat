@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { useMapGetter } from 'dashboard/composables/store';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 
@@ -21,16 +22,24 @@ const emit = defineEmits(['link', 'dismiss']);
 const { t } = useI18n();
 
 const dialogRef = ref(null);
+const inboxById = useMapGetter('inboxes/getInboxById');
 
 const inboxName = computed(() => props.inbox?.name || '');
 
+// A caixa pode chegar só com id e nome (caixa sugerida pela URL): o resto vem da store.
+const caixaCompleta = computed(() => ({
+  ...inboxById.value(props.inbox?.id),
+  ...props.inbox,
+}));
+
 const inboxIcon = computed(() => {
   if (!props.inbox) return 'i-lucide-inbox';
+  const { medium, voiceEnabled } = caixaCompleta.value;
   return getInboxIconByType(
-    props.inbox.channelType,
-    props.inbox.medium,
+    tipoDoIconeDaCaixa(caixaCompleta.value),
+    medium,
     'line',
-    props.inbox.voiceEnabled
+    voiceEnabled
   );
 });
 

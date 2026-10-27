@@ -78,4 +78,21 @@ describe('CRM card identity', () => {
       buildCrmCardIdentity({ contact: { name: 'Joana' } }, 'Card avulso').main
     ).toBe('Joana');
   });
+
+  it('does not repeat the raw phone-only contact name as the business line (#2255)', () => {
+    expect(
+      buildCrmCardIdentity(
+        {
+          title: '5511955554444',
+          contact: { name: '5511955554444', phone_number: '+5511955554444' },
+        },
+        'Card avulso'
+      )
+    ).toEqual({
+      company: '',
+      person: '',
+      business: '',
+      main: '+55 11 95555-4444',
+    });
+  });
 });

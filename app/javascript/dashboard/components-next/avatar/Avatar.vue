@@ -267,10 +267,10 @@ watch(
           {{ initials }}
         </span>
 
-        <!-- Fallback Icon if no name or image -->
+        <!-- Fallback Icon if no name or image. Nome-telefone tem nome: sem a dica "Não disponível" (#2255) -->
         <Icon
           v-else
-          :title="t('THUMBNAIL.AUTHOR.NOT_AVAILABLE')"
+          :title="name ? undefined : t('THUMBNAIL.AUTHOR.NOT_AVAILABLE')"
           icon="i-lucide-user"
           :style="iconStyles"
         />
