@@ -3076,6 +3076,28 @@
      ],
      "revisar": false,
      "nota": "Zero cobertura no estudo — 11.17-relatorios-do-bot (capítulo 14) já lia o resultado sem nunca apresentar a tela de configuração."
+    },
+    {
+     "id": "11.13",
+     "titulo": "Ver o desempenho do agente de IA: procuras, resultados e origem",
+     "para_que_serve": "Ler o que as pessoas pedem ao agente, quantos pedidos viraram resultado, de onde vieram e quanto confiar nos números; exportar o período em PDF ou Excel.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_agent_desempenho"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [
+      "porques: Ver o desempenho do agente"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },
