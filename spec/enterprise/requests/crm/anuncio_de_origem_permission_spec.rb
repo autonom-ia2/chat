@@ -118,15 +118,60 @@ RSpec.describe 'Anúncio de origem no card com meta_ads_view (#2271)', :aggregat
     end
   end
 
-  it 'planilha: sem a chave, a coluna Origem traz só por onde veio' do
-    exportador = pessoa_com(base + %w[crm_export])
-    inbox.add_members([exportador.id])
-    get "#{crm}/cards/export", params: { pipeline_id: card.pipeline_id }, headers: auth_headers(exportador)
+  describe 'planilha' do
+    # Um segundo card, cujo primeiro toque é o anúncio da Meta com todos os campos: a planilha tem mais de uma linha
+    # e cada linha passa pela regra.
+    before do
+      outra = create_crm_conversation(account: account, inbox: inbox, contact: contato)
+      outra.update!(additional_attributes: { campaign_touches: [conversa.additional_attributes['campaign_touches'][0]] })
+      account.crm_cards.create!(pipeline: card.pipeline, stage: card.stage, inbox: inbox, contact: contato, owner: admin,
+                                primary_conversation: outra, title: 'Outro negócio com anúncio')
+    end
 
-    expect(response).to have_http_status(:ok)
-    planilha = Roo::Excelx.new(StringIO.new(response.body)).sheet(0)
-    coluna = Crm::Cards::XlsxExport::COLUMNS.index(:campaign) + 1
-    expect(planilha.cell(Crm::Cards::XlsxExport::HEADER_ROW + 1, coluna)).to eq('meta_ctwa')
+    def planilha_de(user)
+      get "#{crm}/cards/export", params: { pipeline_id: card.pipeline_id }, headers: auth_headers(user)
+      expect(response).to have_http_status(:ok)
+      planilha = Roo::Excelx.new(StringIO.new(response.body)).sheet(0)
+      linhas = ((Crm::Cards::XlsxExport::HEADER_ROW + 1)..planilha.last_row).map { |linha| planilha.row(linha) }
+      coluna = Crm::Cards::XlsxExport::COLUMNS.index(:campaign)
+      [linhas, linhas.to_h { |linha| [linha.first, linha[coluna]] }]
+    end
+
+    it 'sem a chave: nenhuma célula de nenhuma linha traz o anúncio; a Origem diz só por onde veio' do
+      exportador = pessoa_com(base + %w[crm_export])
+      inbox.add_members([exportador.id])
+      linhas, origens = planilha_de(exportador)
+
+      expect(origens).to eq('Negócio com anúncio' => 'meta_ctwa', 'Outro negócio com anúncio' => 'meta_ctwa')
+      expect(linhas.flatten.compact.map(&:to_s).join("\n")).not_to include(*identificadores)
+    end
+
+    it 'administrador: a Origem traz o anúncio do primeiro toque de cada card' do
+      _linhas, origens = planilha_de(admin)
+
+      expect(origens).to eq('Negócio com anúncio' => 'Anúncio antigo sem origem',
+                            'Outro negócio com anúncio' => 'meta_ctwa — Título do anúncio X')
+    end
+  end
+
+  # O toque gravado antes de a regra de "pago" mudar ficou com outra origem; a regra de hoje do próprio
+  # Ctwa::CampaignBuilder.source_for, refeita sobre o toque, ainda o reconhece como anúncio.
+  it 'toque gravado com outra origem, mas com sinal de anúncio pela regra do código, também é escondido' do
+    conversa.update!(additional_attributes: { campaign_touches: [
+                       { source: 'tracked_link', source_type: 'tracked_link', source_id: 'site:AB:1', headline: 'LP · Campanha Primavera',
+                         utm_source: 'facebook', utm_medium: 'cpc', utm_campaign: 'utm-campanha-x',
+                         source_url: 'https://fb.me/anuncio-x', touched_at: '2026-10-01T12:00:00Z' },
+                       { source: 'meta_organic', source_type: 'ad', source_id: '120200000000000001',
+                         headline: 'Título do anúncio X', touched_at: '2026-10-02T12:00:00Z' },
+                       { source: 'tracked_link', source_type: 'tracked_link', source_id: 'site:AB:2', headline: 'Grupo Sul',
+                         fbclid: 'fb-1', touched_at: '2026-10-03T12:00:00Z' }
+                     ] })
+
+    toques = campanhas(:cards, sem_chave)
+
+    expect(toques.pluck('source', 'ad_hidden')).to eq([['meta_paid', true], ['meta_ctwa', true], ['meta_paid', true]])
+    expect(response.body).not_to include(*identificadores)
+    expect(campanhas(:cards, admin).pluck('headline')).to eq(['LP · Campanha Primavera', 'Título do anúncio X', 'Grupo Sul'])
   end
 
   it 'tempo real: cada destinatário recebe o card com o anúncio que a chave dele permite' do
