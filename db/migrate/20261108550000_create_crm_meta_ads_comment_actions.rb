@@ -24,8 +24,10 @@ class CreateCrmMetaAdsCommentActions < ActiveRecord::Migration[7.2]
       t.datetime :confirmed_at
       t.timestamps
     end
+    # action::text: com o cast escrito, o Postgres devolve a mesma condição quando o schema.rb é carregado de novo
+    # (sem ele, o IN em varchar volta em outra forma e o schema.rb nunca bate com a migration).
     add_index :crm_meta_ads_comment_actions, [:network, :comment_id, :action], unique: true,
-                                                                               where: "action IN ('private_reply', 'ai_seen')",
+                                                                               where: "action::text IN ('private_reply', 'ai_seen')",
                                                                                name: 'idx_crm_meta_ads_comment_actions_once'
     add_index :crm_meta_ads_comment_actions, [:account_id, :network, :comment_id], name: 'idx_crm_meta_ads_comment_actions_lookup'
   end

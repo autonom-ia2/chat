@@ -2763,7 +2763,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_560000) do
     t.datetime "updated_at", null: false
     t.index ["account_id", "network", "comment_id"], name: "idx_crm_meta_ads_comment_actions_lookup"
     t.index ["conversation_id"], name: "idx_crm_meta_ads_comment_actions_conversation"
-    t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_once", unique: true, where: "((action)::text = ANY (ARRAY[('private_reply'::character varying)::text, ('ai_seen'::character varying)::text]))"
+    t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_once", unique: true, where: "((action)::text = ANY (ARRAY['private_reply'::text, 'ai_seen'::text]))"
     t.index ["user_id"], name: "idx_crm_meta_ads_comment_actions_user"
   end
 
